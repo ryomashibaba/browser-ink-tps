@@ -221,7 +221,9 @@ export class GpuInkAtlas {
     if (!this.primed || this.clearPending || this.pending.length === 0) return { events: 0, buildMs: 0 };
 
     const started = performance.now();
-    const count = Math.min(maxEvents, this.pending.length);
+    // Four vertices per event with Uint16 indices => at most 16,383 complete quads.
+    const maxUint16BrushEvents = 16_383;
+    const count = Math.min(maxEvents, this.pending.length, maxUint16BrushEvents);
     const batch = this.pending.splice(0, count);
 
     const positions = new Float32Array(count * 4 * 3);
