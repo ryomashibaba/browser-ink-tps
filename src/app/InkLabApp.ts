@@ -178,8 +178,11 @@ export class InkLabApp {
         this.cameraController.getAimDirection(this.aimDirection);
         this.player.getMuzzlePosition(this.aimDirection, this.muzzlePosition);
         this.cameraController.getAimTarget(this.aimTarget);
-        this.aimDirection.copy(this.aimTarget).sub(this.muzzlePosition);
-        if (this.aimDirection.lengthSq() > 1e-8) this.aimDirection.normalize();
+        this.projectiles.solveLaunchDirection(
+          this.muzzlePosition,
+          this.aimTarget,
+          this.aimDirection
+        );
         this.projectiles.fixedUpdate(
           stepSeconds,
           this.input.fireHeld,
