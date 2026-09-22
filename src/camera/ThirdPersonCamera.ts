@@ -57,7 +57,18 @@ export class ThirdPersonCamera {
   }
 
   public getAimDirection(out = new Vec3()): Vec3 {
-    return out.copy(this.forward).normalize();
+    const camera = this.cameraEntity.camera;
+    if (!camera) return out.copy(this.forward).normalize();
+
+    // Fire along the exact ray through the visible center crosshair.
+    // Using the orbit-control forward vector here can diverge from the
+    // camera's actual view after lookAt/shoulder offset transforms.
+    const rect = this.canvas.getBoundingClientRect();
+    const x = rect.width * 0.5;
+    const y = rect.height * 0.5;
+    const from = camera.screenToWorld(x, y, camera.nearClip);
+    const to = camera.screenToWorld(x, y, camera.farClip);
+    return out.copy(to).sub(from).normalize();
   }
 
   public getFlatForward(out = new Vec3()): Vec3 {
