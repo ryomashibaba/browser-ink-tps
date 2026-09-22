@@ -20,7 +20,8 @@ export class FixedStepClock {
   }
 
   public advance(frameDt: number, simulateTick: (tick: number, dt: number) => void): FixedStepReport {
-    const dt = Math.min(Math.max(frameDt, 0), this.maxFrameDeltaSeconds);
+    const safeFrameDt = Number.isFinite(frameDt) ? frameDt : 0;
+    const dt = Math.min(Math.max(safeFrameDt, 0), this.maxFrameDeltaSeconds);
     this.accumulator += dt;
 
     let ticks = 0;
