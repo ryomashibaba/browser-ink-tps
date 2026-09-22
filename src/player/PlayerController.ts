@@ -27,7 +27,10 @@ export class PlayerController {
   private readonly desired = new Vec3();
   private readonly footPoint = new Vec3();
   private readonly position = new Vec3();
+  private readonly previousPosition = new Vec3();
+  private readonly renderPosition = new Vec3();
   private readonly muzzleOffset = new Vec3();
+  private positionInitialized = false;
   private mode: PlayerMode = 'HUMAN';
   private inkRelation: InkRelation = 'NONE';
   private grounded = false;
@@ -168,15 +171,41 @@ export class PlayerController {
     if (this.grounded && this.verticalVelocity < 0) this.verticalVelocity = -0.5;
   }
 
-  public syncAfterPhysics(): void {
+  public syncAfterPhysics(dt?: number): void {
     const p = this.body.translation();
-    this.position.set(p.x, p.y, p.z);
+
+    if (!this.positionInitialized) {
+      this.position.set(p.x, p.y, p.z);
+      this.previousPosition.copy(this.position);
+      this.renderPosition.copy(this.position);
+      this.positionInitialized = true;
+    } else {
+      this.previousPosition.copy(this.position);
+      this.position.set(p.x, p.y, p.z);
+    }
+
     this.entity.setPosition(this.position);
 
     this.stats.playerMode = this.mode;
     this.stats.playerGrounded = this.grounded;
-    this.stats.playerSpeedMetersPerSecond = Math.hypot(this.velocity.x, this.velocity.z);
+    this.stats.playerSpeedMetersPerSecond = dt && dt > 0
+      ? Math.hypot(
+          this.position.x - this.previousPosition.x,
+          this.position.z - this.previousPosition.z
+        ) / dt
+      : 0;
     this.stats.playerInkRelation = this.inkRelation;
+  }
+
+  public render(alpha: number, out = new Vec3()): Vec3 {
+    const t = Math.max(0, Math.min(1, alpha));
+    this.renderPosition.set(
+      this.previousPosition.x + (this.position.x - this.previousPosition.x) * t,
+      this.previousPosition.y + (this.position.y - this.previousPosition.y) * t,
+      this.previousPosition.z + (this.position.z - this.previousPosition.z) * t
+    );
+    this.entity.setPosition(this.renderPosition);
+    return out.copy(this.renderPosition);
   }
 
   public getPosition(out = new Vec3()): Vec3 {
