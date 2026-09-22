@@ -16,6 +16,15 @@ export class PerformanceStats {
   public gpuPaintBuildMs = 0;
   public dirtyTiles = 0;
 
+  public playerMode = 'HUMAN';
+  public playerGrounded = false;
+  public playerSpeedMetersPerSecond = 0;
+  public playerInkRelation = 'NONE';
+
+  public activeProjectiles = 0;
+  public projectileImpacts = 0;
+  public projectilePoolDrops = 0;
+
   public recordPaint(events: number, changedCells: number): void {
     this.paintEventCounter += events;
     this.paintCellCounter += changedCells;

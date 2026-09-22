@@ -11,9 +11,10 @@ import {
   LightComponentSystem,
   RenderComponentSystem,
   RESOLUTION_AUTO,
-  TextureHandler
+  TextureHandler,
+  Vec3
 } from 'playcanvas';
-import { OrbitInkCamera } from '../camera/OrbitInkCamera';
+import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import { FixedStepClock } from '../core/FixedStepClock';
 import { PerformanceStats } from '../core/PerformanceStats';
@@ -21,12 +22,18 @@ import { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { GpuInkAtlas } from '../ink/GpuInkAtlas';
 import { PaintCoordinator } from '../ink/PaintCoordinator';
 import { Team } from '../ink/types';
+import { PlayerInput } from '../input/PlayerInput';
+import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
+import { PlayerController } from '../player/PlayerController';
+import { ProjectileSystem } from '../projectile/ProjectileSystem';
 import { buildTestStage, defineTestSurfaces } from '../stage/TestStage';
 import { ControlPanel } from '../ui/ControlPanel';
 import { DebugOverlay } from '../ui/DebugOverlay';
 
 export class InkLabApp {
   public static async boot(canvas: HTMLCanvasElement, uiRoot: HTMLElement): Promise<InkLabApp> {
+    await initializeRapier();
+
     const device = await createGraphicsDevice(canvas, {
       deviceTypes: [DEVICETYPE_WEBGPU],
       antialias: true,
@@ -62,7 +69,15 @@ export class InkLabApp {
   private readonly coordinator: PaintCoordinator;
   private readonly overlay: DebugOverlay;
   private readonly controls: ControlPanel;
-  private readonly orbit: OrbitInkCamera;
+  private readonly input: PlayerInput;
+  private readonly physics: RapierStagePhysics;
+  private readonly cameraController: ThirdPersonCamera;
+  private readonly player: PlayerController;
+  private readonly projectiles: ProjectileSystem;
+
+  private readonly playerPosition = new Vec3();
+  private readonly aimDirection = new Vec3();
+  private readonly muzzlePosition = new Vec3();
   private selectedTeam: Team.A | Team.B = Team.A;
   private brushRadius: number = GAME_CONFIG.debug.defaultBrushRadiusMeters;
 
@@ -82,21 +97,38 @@ export class InkLabApp {
     );
 
     buildTestStage(app, surfaces, this.atlas);
-    const camera = this.createCamera();
+    const cameraEntity = this.createCamera();
     this.createLighting();
 
     this.coordinator = new PaintCoordinator(this.gameplayInk, this.atlas, this.stats);
+    this.input = new PlayerInput(canvas);
+    this.physics = new RapierStagePhysics(this.clock.stepSeconds);
+    this.cameraController = new ThirdPersonCamera(canvas, cameraEntity, surfaces);
+    this.player = new PlayerController(
+      app,
+      this.physics,
+      this.input,
+      this.cameraController,
+      this.gameplayInk,
+      this.stats
+    );
+    this.projectiles = new ProjectileSystem(app, surfaces, this.coordinator, this.stats);
+
     this.controls = new ControlPanel(uiRoot, {
-      onTeamChanged: (team) => { this.selectedTeam = team; },
+      onTeamChanged: (team) => {
+        this.selectedTeam = team;
+        this.player.setTeam(team);
+      },
       onBrushChanged: (radius) => { this.brushRadius = radius; },
       onStress: (count) => this.enqueueStressTest(count),
       onClear: () => this.coordinator.clear()
     });
     this.selectedTeam = this.controls.selectedTeam;
     this.brushRadius = this.controls.brushRadius;
+    this.player.setTeam(this.selectedTeam);
 
-    this.orbit = new OrbitInkCamera(canvas, camera, surfaces);
-    this.orbit.onInkClick = ({ hit }) => {
+    // Alt+left click preserves the T0-T3 direct-paint QA path without stealing normal fire.
+    this.cameraController.onDebugInkClick = ({ hit }) => {
       const stretch = 1.0 + Math.random() * 0.28;
       this.coordinator.enqueue(this.coordinator.makeDebugRequest(
         this.selectedTeam,
@@ -108,6 +140,7 @@ export class InkLabApp {
         stretch
       ));
     };
+    this.cameraController.update(this.player.getPosition(this.playerPosition));
 
     this.overlay = new DebugOverlay(
       uiRoot,
@@ -126,11 +159,28 @@ export class InkLabApp {
 
   private bindMainLoop(): void {
     this.app.on('update', (dt: number) => {
-      const report = this.clock.advance(dt, (tick) => {
-        // Canonical T0-T3 tick subset:
-        // input/debug request -> state-independent PaintEvent -> gameplay ink -> turf delta.
+      const report = this.clock.advance(dt, (tick, stepSeconds) => {
+        // T4-T7 fixed-step order:
+        // input/state -> KCC desired motion -> Rapier step -> authoritative state
+        // -> pooled projectile sweep -> one PaintRequest -> one immutable PaintEvent.
+        this.player.computeFixed(stepSeconds);
+        this.physics.step();
+        this.player.syncAfterPhysics();
+
+        this.cameraController.getAimDirection(this.aimDirection);
+        this.player.getMuzzlePosition(this.aimDirection, this.muzzlePosition);
+        this.projectiles.fixedUpdate(
+          stepSeconds,
+          this.input.fireHeld,
+          this.muzzlePosition,
+          this.aimDirection,
+          this.selectedTeam
+        );
+
         this.coordinator.processTick(tick);
       });
+
+      this.cameraController.update(this.player.getPosition(this.playerPosition));
 
       const gpu = this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
       this.stats.simulationTicksLastFrame = report.ticks;
@@ -153,7 +203,7 @@ export class InkLabApp {
       clearColor: new Color(...GAME_CONFIG.visual.sky, 1),
       nearClip: 0.1,
       farClip: 120,
-      fov: 55,
+      fov: 60,
       layers: [world.id]
     });
     this.app.root.addChild(camera);

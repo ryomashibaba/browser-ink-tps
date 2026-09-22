@@ -97,3 +97,17 @@ input[type="range"] { width: 100%; margin-top: 5px; }
   #control-panel { width: 250px; transform: scale(.86); transform-origin: top right; }
   #hint { max-width: 94vw; white-space: normal; text-align: center; }
 }
+
+
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 12;
+  color: rgba(238, 248, 255, 0.82);
+  font: 700 22px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-shadow: 0 1px 4px rgba(0,0,0,.9);
+  pointer-events: none;
+  user-select: none;
+}

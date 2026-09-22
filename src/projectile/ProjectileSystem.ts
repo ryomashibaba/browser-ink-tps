@@ -1,0 +1,161 @@
+import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+import { GAME_CONFIG } from '../config/game/gameConfig';
+import type { PerformanceStats } from '../core/PerformanceStats';
+import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
+import type { PaintCoordinator, PaintRequest } from '../ink/PaintCoordinator';
+import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
+
+interface ProjectileSlot {
+  active: boolean;
+  position: Vec3;
+  velocity: Vec3;
+  ttl: number;
+  team: Team.A | Team.B;
+  entity: Entity;
+}
+
+export class ProjectileSystem {
+  private readonly slots: ProjectileSlot[] = [];
+  private readonly materialA: StandardMaterial;
+  private readonly materialB: StandardMaterial;
+  private readonly delta = new Vec3();
+  private fireCooldown = 0;
+
+  public constructor(
+    private readonly app: AppBase,
+    private readonly surfaces: readonly PaintSurface[],
+    private readonly coordinator: PaintCoordinator,
+    private readonly stats: PerformanceStats
+  ) {
+    this.materialA = makeProjectileMaterial(GAME_CONFIG.visual.teamA);
+    this.materialB = makeProjectileMaterial(GAME_CONFIG.visual.teamB);
+
+    for (let i = 0; i < GAME_CONFIG.projectile.poolSize; i += 1) {
+      const entity = new Entity('Projectile:' + i);
+      entity.addComponent('render', {
+        type: 'sphere',
+        material: this.materialA,
+        castShadows: false,
+        receiveShadows: false
+      });
+      entity.setLocalScale(
+        GAME_CONFIG.projectile.visualDiameterMeters,
+        GAME_CONFIG.projectile.visualDiameterMeters,
+        GAME_CONFIG.projectile.visualDiameterMeters
+      );
+      entity.enabled = false;
+      this.app.root.addChild(entity);
+      this.slots.push({
+        active: false,
+        position: new Vec3(),
+        velocity: new Vec3(),
+        ttl: 0,
+        team: Team.A,
+        entity
+      });
+    }
+  }
+
+  public fixedUpdate(
+    dt: number,
+    fireHeld: boolean,
+    muzzlePosition: Vec3,
+    aimDirection: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.fireCooldown = Math.max(0, this.fireCooldown - dt);
+    if (fireHeld && this.fireCooldown <= 0 && aimDirection.lengthSq() > 1e-8) {
+      this.spawn(muzzlePosition, aimDirection, team);
+      this.fireCooldown = GAME_CONFIG.projectile.fireIntervalSeconds;
+    }
+
+    let active = 0;
+    for (const slot of this.slots) {
+      if (!slot.active) continue;
+
+      slot.ttl -= dt;
+      if (slot.ttl <= 0) {
+        this.deactivate(slot);
+        continue;
+      }
+
+      const previous = slot.position.clone();
+      slot.velocity.y -= GAME_CONFIG.projectile.gravityMetersPerSecond2 * dt;
+      this.delta.copy(slot.velocity).mulScalar(dt);
+      const next = slot.position.clone().add(this.delta);
+      const hit = this.findNearestSurfaceHit(previous, next);
+      if (hit) {
+        this.enqueueImpact(slot.team, hit);
+        this.stats.projectileImpacts += 1;
+        this.deactivate(slot);
+        continue;
+      }
+
+      slot.position.copy(next);
+      slot.entity.setPosition(slot.position);
+      active += 1;
+    }
+    this.stats.activeProjectiles = active;
+  }
+
+  private spawn(origin: Vec3, direction: Vec3, team: Team.A | Team.B): void {
+    const slot = this.slots.find((candidate) => !candidate.active);
+    if (!slot) {
+      this.stats.projectilePoolDrops += 1;
+      return;
+    }
+
+    slot.active = true;
+    slot.ttl = GAME_CONFIG.projectile.lifeSeconds;
+    slot.team = team;
+    slot.position.copy(origin);
+    slot.velocity.copy(direction).normalize().mulScalar(GAME_CONFIG.projectile.speedMetersPerSecond);
+
+    const meshInstance = slot.entity.render?.meshInstances[0];
+    if (meshInstance) meshInstance.material = team === Team.A ? this.materialA : this.materialB;
+
+    slot.entity.setPosition(origin);
+    slot.entity.enabled = true;
+  }
+
+  private deactivate(slot: ProjectileSlot): void {
+    slot.active = false;
+    slot.entity.enabled = false;
+  }
+
+  private findNearestSurfaceHit(from: Vec3, to: Vec3): SurfaceRayHit | null {
+    let best: SurfaceRayHit | null = null;
+    for (const surface of this.surfaces) {
+      const hit = surface.intersectSegment(from, to);
+      if (hit && (!best || hit.distance < best.distance)) best = hit;
+    }
+    return best;
+  }
+
+  private enqueueImpact(team: Team.A | Team.B, hit: SurfaceRayHit): void {
+    const isWall = (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0;
+    const request: PaintRequest = {
+      team,
+      surfaceId: hit.surface.id,
+      centerU: hit.u,
+      centerV: hit.v,
+      radiusU: GAME_CONFIG.projectile.paintRadiusMeters * 1.12,
+      radiusV: GAME_CONFIG.projectile.paintRadiusMeters,
+      angle: 0,
+      type: isWall ? PaintEventType.WallImpact : PaintEventType.Impact,
+      strength: 1
+    };
+    this.coordinator.enqueue(request);
+  }
+}
+
+function makeProjectileMaterial(rgb: readonly [number, number, number]): StandardMaterial {
+  const material = new StandardMaterial();
+  material.diffuse = new Color(rgb[0], rgb[1], rgb[2]);
+  material.emissive = new Color(rgb[0] * 0.45, rgb[1] * 0.45, rgb[2] * 0.45);
+  material.useMetalness = true;
+  material.metalness = 0.1;
+  material.gloss = 0.88;
+  material.update();
+  return material;
+}

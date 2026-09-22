@@ -20,13 +20,13 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Persistent Ink Test Stage</h1>
-      <p>CPU gameplay grid (0.125m) and GPU atlas receive the same PaintEvent. Click any paintable floor, ramp, or wall.</p>
+      <h1>Browser Ink TPS · T4–T7</h1>
+      <p>WASD movement, Space jump, Shift squid state, left mouse shooter. CPU gameplay ink remains authoritative; projectile impacts feed the existing shared PaintEvent pipeline.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
       </div>
-      <label>Brush radius <output id="brush-out">${this.radius.toFixed(2)} m</output>
+      <label>QA brush radius <output id="brush-out">${this.radius.toFixed(2)} m</output>
         <input id="brush" type="range" min="0.30" max="2.60" step="0.05" value="${this.radius}">
       </label>
       <div class="row">
@@ -56,8 +56,13 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Click: paint · Drag: orbit · Wheel: zoom · 1/2: team · R: clear · B: 2000-event stress';
+    hint.textContent = 'WASD move · Space jump · Shift squid · Left fire · Right drag camera · Wheel zoom · Alt+Left QA paint · 1/2 team · R clear';
     root.appendChild(hint);
+
+    const crosshair = document.createElement('div');
+    crosshair.id = 'crosshair';
+    crosshair.textContent = '+';
+    root.appendChild(crosshair);
 
     window.addEventListener('keydown', (event) => {
       if (event.code === 'Digit1') this.setTeam(Team.A, handlers);

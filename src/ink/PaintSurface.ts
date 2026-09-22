@@ -139,6 +139,16 @@ export class PaintSurface {
     };
   }
 
+  public intersectSegment(from: Vec3, to: Vec3): SurfaceRayHit | null {
+    const segment = to.clone().sub(from);
+    const length = segment.length();
+    if (length <= 1e-8) return null;
+
+    const hit = this.intersectRay(from, segment.mulScalar(1 / length));
+    if (!hit || hit.distance > length + 1e-5) return null;
+    return hit;
+  }
+
   private initializeWeights(): void {
     for (let y = 0; y < this.heightCells; y += 1) {
       const remainingV = this.heightMeters - y * this.cellSize;
