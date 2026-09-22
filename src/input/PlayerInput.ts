@@ -5,6 +5,7 @@ export class PlayerInput {
 
   public constructor(private readonly canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (event) => {
+      if (document.pointerLockElement !== this.canvas) return;
       this.keys.add(event.code);
       if (event.code === 'Space') {
         if (!event.repeat) this.jumpQueued = true;
@@ -12,18 +13,38 @@ export class PlayerInput {
       }
     });
     window.addEventListener('keyup', (event) => this.keys.delete(event.code));
-    window.addEventListener('blur', () => {
+
+    const clearGameplayState = (): void => {
       this.keys.clear();
       this.fire = false;
       this.jumpQueued = false;
+    };
+
+    window.addEventListener('blur', clearGameplayState);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) clearGameplayState();
+    });
+    document.addEventListener('pointerlockchange', () => {
+      if (document.pointerLockElement !== this.canvas) clearGameplayState();
     });
 
     canvas.addEventListener('pointerdown', (event) => {
-      if (event.button === 0 && !event.altKey) this.fire = true;
+      // The first left click is reserved for acquiring pointer lock.
+      // Fire only once the game already owns the mouse.
+      if (
+        event.button === 0 &&
+        !event.altKey &&
+        document.pointerLockElement === this.canvas
+      ) {
+        this.fire = true;
+      }
     });
-    canvas.addEventListener('pointerup', (event) => {
+
+    const releaseFire = (event: PointerEvent): void => {
       if (event.button === 0) this.fire = false;
-    });
+    };
+    canvas.addEventListener('pointerup', releaseFire);
+    document.addEventListener('pointerup', releaseFire);
     canvas.addEventListener('pointercancel', () => { this.fire = false; });
   }
 
