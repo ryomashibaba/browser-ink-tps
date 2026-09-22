@@ -1,12 +1,27 @@
-# CURRENT_CANONICAL — v0.1.1 / T0–T3
+# CURRENT_CANONICAL — v0.1.2 / T0–T3 STABLE
 
 Date: 2026-09-22
 
 ## Current phase
 
-**T0–T3 foundation complete in source:** engine/bootstrap, fixed 60 Hz, PaintSurface system, CPU gameplay ink, GPU persistent visual ink, debug/stress QA arena.
+**T0–T3 foundation is complete and stabilized.**
 
-Next major phase: **T4–T7**, with human movement → squid movement → standard-shooter projectile → projectile/paint integration, followed by a major technical QA gate.
+Implemented and verified:
+- engine/bootstrap
+- fixed 60 Hz simulation
+- PaintSurface system
+- CPU gameplay ink
+- GPU persistent visual ink
+- debug/stress QA arena
+- high-DPI left-click paint picking fix
+- GitHub Actions typecheck/build gate
+- GitHub Pages automatic deployment
+
+Hosted QA build:
+https://ryomashibaba.github.io/browser-ink-tps/
+
+Next major phase: **T4–T7**, implemented as one coherent batch:
+human movement → squid movement → standard-shooter projectile → projectile/paint integration → major technical QA.
 
 ## Architecture freeze
 
@@ -18,6 +33,11 @@ Do not replace these without the documented freeze-change procedure:
 - Fixed gameplay simulation at 60 Hz; rendering remains independent.
 - Future character collision: custom movement + Rapier kinematic character collision.
 - Future navigation: Recast plus a custom tactical layer.
+
+Direct dependency versions are pinned at the v0.1.2 checkpoint:
+- PlayCanvas 2.22.1
+- TypeScript 5.8.3
+- Vite 7.1.7
 
 ## Ink freeze
 
@@ -43,7 +63,6 @@ Do not replace these without the documented freeze-change procedure:
 - `SPAWN_PROTECTED` reserved for later use
 
 Test-stage behavior:
-
 - Main floor: paintable / swimmable / scoreable.
 - Upper floor: paintable / swimmable / scoreable.
 - Ramp: paintable / swimmable / scoreable.
@@ -72,7 +91,6 @@ Implementation-owned values live in `src/config/game/gameConfig.ts`.
 Inherited research/reference values live separately in `src/config/reference/splatoonReference.ts`.
 
 Important T0–T3 constants:
-
 - `tickRate = 60`
 - `cellSizeMeters = 0.125`
 - `dirtyTileCells = 16`
@@ -88,25 +106,26 @@ Do not scatter these as unexplained magic numbers.
 
 - Vite / TypeScript project shell.
 - PlayCanvas Engine 2 AppBase boot.
-- WebGPU-first device request with fallback semantics supplied by PlayCanvas.
+- WebGPU-first device request with PlayCanvas fallback semantics.
 - 60 Hz accumulator and catch-up cap.
 - Performance counters/debug overlay.
 - PaintSurface local coordinates, grids, flags, weights, dirty tiles/revisions.
 - Partial-edge score weights.
 - CPU oriented ellipse rasterization.
 - Incremental turf ownership and percentage calculation.
-- GPU atlas shelf allocation with constant pixels-per-meter within a selected packing solution.
+- GPU atlas shelf allocation.
 - Persistent offscreen atlas render target.
 - Batched GPU brush mesh; dual GLSL/WGSL shader paths.
 - Surface atlas sampler shader with cyan/magenta/neutral visualization.
 - Original test arena and orbit/click QA camera.
-- Left-click picking uses canvas CSS coordinates exactly as required by PlayCanvas `screenToWorld()`, avoiding DPR-scaled ray errors on high-DPI displays.
+- High-DPI-safe left-click picking using canvas CSS coordinates.
 - 250/2000-event paint stress triggers.
+- GitHub Actions production typecheck/build/deploy pipeline.
+- GitHub Pages fixed QA URL.
 
 ## Known / intentionally deferred items
 
-Not bugs for v0.1.1:
-
+Not bugs for v0.1.2:
 - No player character yet.
 - No Rapier dependency/use until character collision work begins.
 - No Recast dependency/use until AI/navigation work begins.
@@ -115,13 +134,30 @@ Not bugs for v0.1.1:
 - No wetness decay simulation; wetness is currently event metadata used for visual emphasis.
 - Debug dirty flags remain set until a future subsystem consumes/clears them; revisions already support consumer-side invalidation.
 
-## Validation limitation
+## Validation status
 
-Source-level TypeScript syntax/transpile validation passed during generation. Current PlayCanvas 2.22.1 documentation was used to verify graphics APIs. npm registry access timed out in the generation environment, so full dependency-resolved `npm run build` and real browser WebGPU/WebGL2 runtime QA remain a local verification step.
+Verified on 2026-09-22:
+- dependency install in GitHub Actions: PASS
+- dependency-resolved `npm run typecheck`: PASS
+- Vite production `npm run build`: PASS
+- GitHub Pages configure/artifact/deploy: PASS
+- hosted build opened successfully in the user's browser
+- high-DPI left-click painting confirmed fixed by the user
+
+The assistant's generic web fetcher could not directly open the Pages host, so browser rendering is user-confirmed rather than independently fetched by that tool.
+
+## Standard development workflow
+
+From this checkpoint onward:
+1. ChatGPT edits/pushes repository changes.
+2. GitHub Actions installs, typechecks, and builds.
+3. Only successful builds deploy to GitHub Pages.
+4. User reloads the fixed Pages URL for QA.
+5. ZIP transfer and repeated local `npm install` / `npm run dev` are no longer the default workflow.
 
 ## Next milestone
 
-Proceed as one coherent T4–T7 batch while retaining the T0–T3 data contracts:
+Proceed as one coherent T4–T7 batch while retaining all T0–T3 data contracts:
 
 1. Human movement state foundation.
 2. Squid movement / own-ink sampling hook.

@@ -1,26 +1,12 @@
-# Validation Report — T0–T3 v0.1.1
+# Validation Report — T0–T3 v0.1.2
 
 Date: 2026-09-22
 
-## Checks completed in the generation environment
+## Final stabilization results
 
-### 1. TypeScript syntax / transpile check
+### 1. CPU gameplay-ink behavior
 
-Command equivalent:
-
-```bash
-tsc --noEmit --noCheck --module ESNext --moduleResolution Bundler --target ES2022 src/main.ts
-```
-
-Result: **PASS**.
-
-This checks parsing/transpilation across the source import graph. It is not a substitute for dependency-resolved type checking.
-
-### 2. CPU gameplay-ink behavior check
-
-A temporary Node test compiled and exercised the real `GameplayInkSystem`, `FixedStepClock`, `AtlasAllocator`, and ink type modules with a lightweight surface fixture.
-
-Measured result:
+Previously measured against the real gameplay-ink/fixed-step/atlas logic:
 
 ```json
 {
@@ -33,57 +19,85 @@ Measured result:
 ```
 
 Assertions passed for:
-
-- ~1 m radius oriented ellipse changes the expected order of cells at 0.125 m/cell.
-- Rasterized score area is close to π m² within grid discretization tolerance.
-- Repainting the same cells Team A → Team B removes A area and adds the same B area.
-- Painting a non-scoreable wall changes ownership cells but does not alter turf score.
-- Dirty tiles are touched on ownership changes.
-- A 1/30 s frame produces two 60 Hz simulation ticks.
-- The representative 4096 atlas pack preserves the requested 128 px/m scale.
+- ~1 m oriented ellipse at 0.125 m/cell.
+- Turf area near π m² within grid discretization.
+- Team A → Team B repaint area transfer.
+- Non-scoreable wall painting not affecting turf score.
+- Dirty-tile marking on ownership changes.
+- 1/30 s frame producing two 60 Hz ticks.
+- Representative 4096 atlas retaining 128 px/m.
 
 Result: **PASS**.
 
-### 3. PlayCanvas API cross-check
+### 2. Left-click picking regression
 
-The source was checked against current PlayCanvas Engine 2.22.1 documentation for:
+High-DPI picking was corrected to pass canvas CSS coordinates to PlayCanvas `CameraComponent.screenToWorld()` rather than multiplying them by drawing-buffer/CSS scale.
 
-- `AppBase` + `AppOptions` initialization after awaited `createGraphicsDevice`.
-- WebGPU-preferred `deviceTypes` behavior and automatic WebGL2 fallback append.
-- `CameraComponent.renderTarget`.
-- `RenderTarget` with `RENDERTARGET_ORIGIN_TOP` for regular texture sampling.
-- `ShaderMaterial` with GLSL and WGSL versions.
-- Simplified WGSL attribute/varying/texture+sampler syntax.
-- `Mesh.clear`, dynamic mesh updates, UV channels 0–7, typed arrays, `setColors32`, and index updates.
+The user then verified in the browser that left-click painting works.
 
-Result: **API DESIGN CROSS-CHECKED**.
+Result: **PASS — browser confirmed**.
 
-### 4. Left-click picking regression check
+### 3. Dependency-resolved CI typecheck
 
-The click-to-ray conversion was corrected to use canvas CSS coordinates for `CameraComponent.screenToWorld()`. The old path multiplied local pointer coordinates by the drawing-buffer/CSS-size ratio, effectively applying device pixel ratio twice on high-DPI displays and shifting the ray away from the clicked PaintSurface.
-
-The updated source was re-run through the TypeScript syntax/transpile check after the patch.
-
-Result: **PASS (source-level regression check)**.
-
-## Check not available in the generation environment
-
-`npm install` was attempted, but npm registry access timed out. Therefore these checks could not be honestly claimed here:
-
-- dependency-resolved `tsc -b`
-- Vite production bundle
-- real Chromium WebGPU launch
-- real WebGL2 fallback launch
-- shader compilation on an actual GPU
-- measured 1080p runtime FPS
-
-Run locally:
+GitHub Actions installs dependencies on Node.js 24 and runs:
 
 ```bash
-npm install
 npm run typecheck
-npm run build
-npm run dev
 ```
 
-Then use **Stress 2000** while watching the debug overlay, and repeat once with `?inkAtlas=2048` to exercise the fallback atlas size.
+The first real CI run exposed three TypeScript literal-narrowing issues in brush-radius state. They were corrected by explicitly widening the mutable state to `number`.
+
+Final result: **PASS**.
+
+### 4. Production build
+
+GitHub Actions runs:
+
+```bash
+npm run build -- --base=/browser-ink-tps/
+```
+
+This executes the dependency-resolved TypeScript build and Vite production bundle.
+
+Result: **PASS**.
+
+### 5. GitHub Pages pipeline
+
+Verified stages:
+- Configure GitHub Pages: PASS
+- Upload Pages artifact: PASS
+- Deploy to GitHub Pages: PASS
+- Overall workflow conclusion: SUCCESS
+
+Hosted QA URL:
+https://ryomashibaba.github.io/browser-ink-tps/
+
+Result: **PASS**.
+
+### 6. Hosted browser verification
+
+The user opened the GitHub Pages deployment successfully in their browser after deployment.
+
+Result: **PASS — user confirmed**.
+
+## Static audit before T4–T7
+
+Reviewed:
+- `PaintSurface`
+- `GameplayInkSystem`
+- `PaintCoordinator`
+- `GpuInkAtlas`
+- `AtlasAllocator`
+- `InkSurfaceMaterial`
+- `OrbitInkCamera`
+- `FixedStepClock`
+- test-stage surface definitions
+- debug/performance overlay
+
+No new blocking defect was found in the T0–T3 contracts.
+
+Intentional deferred behavior remains documented in `CURRENT_CANONICAL.md`, including dirty-tile consumption/clearing and all T4+ gameplay systems.
+
+## Remaining verification caveat
+
+The assistant's generic web-fetch environment cannot directly retrieve the GitHub Pages host, so it cannot independently assert pixels-on-screen rendering. The actual hosted page was opened and confirmed by the user, and the complete GitHub Actions build/deploy pipeline succeeded.

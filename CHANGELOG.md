@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## v0.1.2 — 2026-09-22
+
+### Added
+
+- Added GitHub Actions CI/CD for automatic dependency install, TypeScript checking, Vite production build, GitHub Pages artifact upload, and deployment.
+- Added fixed hosted QA URL: https://ryomashibaba.github.io/browser-ink-tps/
+
+### Changed
+
+- Pinned direct dependency versions for the stabilized T0–T3 checkpoint.
+- Updated canonical/validation documentation to reflect actual CI and hosted-browser verification.
+
+### Fixed
+
+- Fixed three TypeScript literal-type narrowing errors discovered by the first real dependency-resolved CI typecheck.
+- Confirmed the previous high-DPI left-click painting fix works in the hosted browser build.
+
+### Validation
+
+- GitHub Actions: dependency install PASS.
+- `npm run typecheck`: PASS.
+- `npm run build`: PASS.
+- GitHub Pages configure/upload/deploy: PASS.
+- Hosted build opened successfully by the user.
+
 ## v0.1.1 — 2026-09-22
 
 ### Fixed
@@ -30,16 +55,3 @@
 - 250-event and 2000-event stress tools.
 - Central separation between inherited reference constants and original game implementation tuning.
 - `README.md` and `CURRENT_CANONICAL.md` handoff documentation.
-
-### Changed
-
-- None; this is the initial implementation baseline.
-
-### Fixed
-
-- N/A for initial release.
-
-### Known issues / validation gaps
-
-- Dependency installation was unavailable in the artifact-generation environment because npm registry access timed out; full `npm run build` and browser runtime QA therefore remain to be executed locally.
-- T4+ gameplay systems are intentionally not part of this milestone.
