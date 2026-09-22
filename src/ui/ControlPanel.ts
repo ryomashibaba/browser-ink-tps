@@ -21,7 +21,7 @@ export class ControlPanel {
     panel.className = 'panel';
     panel.innerHTML = `
       <h1>Browser Ink TPS · T4–T7</h1>
-      <p>WASD movement, Space jump, Shift squid state, left mouse shooter. CPU gameplay ink remains authoritative; projectile impacts feed the existing shared PaintEvent pipeline.</p>
+      <p>Click the game view once for TPS mouse look. WASD movement, Space jump, Shift squid state, left mouse shooter. CPU gameplay ink remains authoritative; projectile impacts feed the existing shared PaintEvent pipeline.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -56,7 +56,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'WASD move · Space jump · Shift squid · Left fire · Right drag camera · Wheel zoom · Alt+Left QA paint · 1/2 team · R clear';
+    hint.textContent = 'Click view to capture mouse · Mouse look · Esc release · WASD move · Space jump · Shift squid · Left fire · Wheel zoom · Alt+Left QA paint · 1/2 team · R clear';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
