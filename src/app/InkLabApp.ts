@@ -170,7 +170,7 @@ export class InkLabApp {
         // -> pooled projectile sweep -> one PaintRequest -> one immutable PaintEvent.
         this.player.computeFixed(stepSeconds);
         this.physics.step();
-        this.player.syncAfterPhysics();
+        this.player.syncAfterPhysics(stepSeconds);
 
         // Keep the camera transform current for every catch-up tick. This prevents
         // render-FPS-dependent aim lag when several 60 Hz ticks run in one frame.
@@ -191,7 +191,9 @@ export class InkLabApp {
         this.coordinator.processTick(tick);
       });
 
-      this.cameraController.update(this.player.getPosition(this.playerPosition));
+      this.player.render(report.alpha, this.playerPosition);
+      this.projectiles.render(report.alpha);
+      this.cameraController.update(this.playerPosition);
 
       const gpu = this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
       this.stats.simulationTicksLastFrame = report.ticks;
