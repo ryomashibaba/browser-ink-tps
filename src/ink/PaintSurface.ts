@@ -33,9 +33,23 @@ export class PaintSurface {
     public readonly baseFlags: SurfaceFlags,
     public readonly tileSizeCells: number
   ) {
+    if (!Number.isFinite(widthMeters) || widthMeters <= 0) throw new Error(`PaintSurface ${id} has invalid width.`);
+    if (!Number.isFinite(heightMeters) || heightMeters <= 0) throw new Error(`PaintSurface ${id} has invalid height.`);
+    if (!Number.isFinite(cellSize) || cellSize <= 0) throw new Error(`PaintSurface ${id} has invalid cell size.`);
+    if (!Number.isInteger(tileSizeCells) || tileSizeCells <= 0) throw new Error(`PaintSurface ${id} has invalid tile size.`);
+    if (this.uAxis.lengthSq() < 1e-10 || this.vAxis.lengthSq() < 1e-10) {
+      throw new Error(`PaintSurface ${id} has a zero-length basis axis.`);
+    }
+
     this.uAxis = this.uAxis.clone().normalize();
     this.vAxis = this.vAxis.clone().normalize();
-    this.normal = cross(this.uAxis, this.vAxis).normalize();
+    if (Math.abs(this.uAxis.dot(this.vAxis)) > 1e-4) {
+      throw new Error(`PaintSurface ${id} basis axes must be orthogonal.`);
+    }
+
+    this.normal = cross(this.uAxis, this.vAxis);
+    if (this.normal.lengthSq() < 1e-10) throw new Error(`PaintSurface ${id} has an invalid normal.`);
+    this.normal.normalize();
 
     this.widthCells = Math.ceil(widthMeters / cellSize);
     this.heightCells = Math.ceil(heightMeters / cellSize);
