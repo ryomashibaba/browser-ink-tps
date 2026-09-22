@@ -65,6 +65,7 @@ export class ControlPanel {
     root.appendChild(crosshair);
 
     window.addEventListener('keydown', (event) => {
+      if (event.repeat) return;
       if (event.code === 'Digit1') this.setTeam(Team.A, handlers);
       if (event.code === 'Digit2') this.setTeam(Team.B, handlers);
       if (event.code === 'KeyR') handlers.onClear();
