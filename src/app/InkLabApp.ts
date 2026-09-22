@@ -64,7 +64,7 @@ export class InkLabApp {
   private readonly controls: ControlPanel;
   private readonly orbit: OrbitInkCamera;
   private selectedTeam: Team.A | Team.B = Team.A;
-  private brushRadius = GAME_CONFIG.debug.defaultBrushRadiusMeters;
+  private brushRadius: number = GAME_CONFIG.debug.defaultBrushRadiusMeters;
 
   private constructor(
     private readonly app: AppBase,
