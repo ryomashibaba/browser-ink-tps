@@ -63,10 +63,14 @@ export class ProjectileSystem {
     aimDirection: Vec3,
     team: Team.A | Team.B
   ): void {
-    this.fireCooldown = Math.max(0, this.fireCooldown - dt);
+    this.fireCooldown -= dt;
     if (fireHeld && this.fireCooldown <= 0 && aimDirection.lengthSq() > 1e-8) {
       this.spawn(muzzlePosition, aimDirection, team);
-      this.fireCooldown = GAME_CONFIG.projectile.fireIntervalSeconds;
+      // Preserve the fractional remainder so a 0.105 s cadence does not get
+      // rounded up to a permanent 7-fixed-tick interval at 60 Hz.
+      this.fireCooldown += GAME_CONFIG.projectile.fireIntervalSeconds;
+    } else if (!fireHeld && this.fireCooldown < 0) {
+      this.fireCooldown = 0;
     }
 
     let active = 0;
