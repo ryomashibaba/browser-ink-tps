@@ -12,9 +12,6 @@ export class ThirdPersonCamera {
   private pitch = -12;
   private distance = 6.4;
   private shoulder = 0.72;
-  private pointerId: number | null = null;
-  private lastX = 0;
-  private lastY = 0;
   private readonly target = new Vec3();
   private readonly forward = new Vec3();
   private readonly right = new Vec3();
@@ -80,38 +77,26 @@ export class ThirdPersonCamera {
   private bind(): void {
     this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
+    // Standard browser-TPS mouse look:
+    // click the game view once to acquire pointer lock, then camera rotation follows
+    // raw mouse movement without requiring any button to remain held.
     this.canvas.addEventListener('pointerdown', (event) => {
-      if (event.button === 2) {
-        this.pointerId = event.pointerId;
-        this.lastX = event.clientX;
-        this.lastY = event.clientY;
-        this.canvas.setPointerCapture(event.pointerId);
-        event.preventDefault();
-        return;
-      }
       if (event.button === 0 && event.altKey) {
         this.tryDebugPick(event.clientX, event.clientY);
         event.preventDefault();
+        return;
+      }
+
+      if (document.pointerLockElement !== this.canvas) {
+        void this.canvas.requestPointerLock();
       }
     });
 
-    this.canvas.addEventListener('pointermove', (event) => {
-      if (this.pointerId !== event.pointerId) return;
-      const dx = event.clientX - this.lastX;
-      const dy = event.clientY - this.lastY;
-      this.lastX = event.clientX;
-      this.lastY = event.clientY;
-      this.yaw += dx * 0.22;
-      this.pitch = Math.max(-55, Math.min(28, this.pitch + dy * 0.18));
+    document.addEventListener('mousemove', (event) => {
+      if (document.pointerLockElement !== this.canvas) return;
+      this.yaw += event.movementX * 0.22;
+      this.pitch = Math.max(-55, Math.min(28, this.pitch + event.movementY * 0.18));
     });
-
-    const endPointer = (event: PointerEvent) => {
-      if (this.pointerId !== event.pointerId) return;
-      if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
-      this.pointerId = null;
-    };
-    this.canvas.addEventListener('pointerup', endPointer);
-    this.canvas.addEventListener('pointercancel', endPointer);
 
     this.canvas.addEventListener('wheel', (event) => {
       event.preventDefault();
