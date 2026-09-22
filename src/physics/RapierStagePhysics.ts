@@ -1,11 +1,11 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER, { type World } from '@dimforge/rapier3d-compat';
 
 export async function initializeRapier(): Promise<void> {
   await RAPIER.init();
 }
 
 export class RapierStagePhysics {
-  public readonly world: RAPIER.World;
+  public readonly world: World;
 
   public constructor(stepSeconds: number) {
     this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
@@ -19,7 +19,8 @@ export class RapierStagePhysics {
 
   private buildStaticStage(): void {
     const box = (x: number, y: number, z: number, sx: number, sy: number, sz: number): void => {
-      const desc = RAPIER.ColliderDesc.cuboid(sx * 0.5, sy * 0.5, sz * 0.5).setTranslation(x, y, z);
+      const desc = RAPIER.ColliderDesc.cuboid(sx * 0.5, sy * 0.5, sz * 0.5)
+        .setTranslation(x, y, z);
       this.world.createCollider(desc);
     };
 
