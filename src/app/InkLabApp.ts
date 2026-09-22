@@ -77,6 +77,7 @@ export class InkLabApp {
 
   private readonly playerPosition = new Vec3();
   private readonly aimDirection = new Vec3();
+  private readonly aimTarget = new Vec3();
   private readonly muzzlePosition = new Vec3();
   private selectedTeam: Team.A | Team.B = Team.A;
   private brushRadius: number = GAME_CONFIG.debug.defaultBrushRadiusMeters;
@@ -159,6 +160,10 @@ export class InkLabApp {
 
   private bindMainLoop(): void {
     this.app.on('update', (dt: number) => {
+      // Apply the latest mouse yaw/pitch before any fixed ticks so movement does not
+      // use the previous render frame's camera basis.
+      this.cameraController.update(this.player.getPosition(this.playerPosition));
+
       const report = this.clock.advance(dt, (tick, stepSeconds) => {
         // T4-T7 fixed-step order:
         // input/state -> KCC desired motion -> Rapier step -> authoritative state
@@ -167,8 +172,14 @@ export class InkLabApp {
         this.physics.step();
         this.player.syncAfterPhysics();
 
+        // Keep the camera transform current for every catch-up tick. This prevents
+        // render-FPS-dependent aim lag when several 60 Hz ticks run in one frame.
+        this.cameraController.update(this.player.getPosition(this.playerPosition));
         this.cameraController.getAimDirection(this.aimDirection);
         this.player.getMuzzlePosition(this.aimDirection, this.muzzlePosition);
+        this.cameraController.getAimTarget(this.aimTarget);
+        this.aimDirection.copy(this.aimTarget).sub(this.muzzlePosition);
+        if (this.aimDirection.lengthSq() > 1e-8) this.aimDirection.normalize();
         this.projectiles.fixedUpdate(
           stepSeconds,
           this.input.fireHeld,
