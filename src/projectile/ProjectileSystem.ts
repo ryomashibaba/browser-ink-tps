@@ -8,6 +8,7 @@ import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 interface ProjectileSlot {
   active: boolean;
   position: Vec3;
+  previousPosition: Vec3;
   velocity: Vec3;
   ttl: number;
   team: Team.A | Team.B;
@@ -48,6 +49,7 @@ export class ProjectileSystem {
       this.slots.push({
         active: false,
         position: new Vec3(),
+        previousPosition: new Vec3(),
         velocity: new Vec3(),
         ttl: 0,
         team: Team.A,
@@ -77,6 +79,7 @@ export class ProjectileSystem {
     for (const slot of this.slots) {
       if (!slot.active) continue;
 
+      slot.previousPosition.copy(slot.position);
       slot.ttl -= dt;
       if (slot.ttl <= 0) {
         this.deactivate(slot);
@@ -102,6 +105,18 @@ export class ProjectileSystem {
     this.stats.activeProjectiles = active;
   }
 
+  public render(alpha: number): void {
+    const t = Math.max(0, Math.min(1, alpha));
+    for (const slot of this.slots) {
+      if (!slot.active) continue;
+      slot.entity.setPosition(
+        slot.previousPosition.x + (slot.position.x - slot.previousPosition.x) * t,
+        slot.previousPosition.y + (slot.position.y - slot.previousPosition.y) * t,
+        slot.previousPosition.z + (slot.position.z - slot.previousPosition.z) * t
+      );
+    }
+  }
+
   private spawn(origin: Vec3, direction: Vec3, team: Team.A | Team.B): void {
     const slot = this.slots.find((candidate) => !candidate.active);
     if (!slot) {
@@ -113,6 +128,7 @@ export class ProjectileSystem {
     slot.ttl = GAME_CONFIG.projectile.lifeSeconds;
     slot.team = team;
     slot.position.copy(origin);
+    slot.previousPosition.copy(origin);
     slot.velocity.copy(direction).normalize().mulScalar(GAME_CONFIG.projectile.speedMetersPerSecond);
 
     const meshInstance = slot.entity.render?.meshInstances[0];
