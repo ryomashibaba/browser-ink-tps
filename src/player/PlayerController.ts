@@ -89,7 +89,12 @@ export class PlayerController {
       bodyPosition.y - PlayerController.halfHeight - PlayerController.radius + 0.06,
       bodyPosition.z
     );
-    const sample = this.gameplayInk.sampleWorld(this.footPoint, 0.40);
+    const sample = this.gameplayInk.sampleWorld(
+      this.footPoint,
+      0.40,
+      SurfaceFlags.Swimmable,
+      SurfaceFlags.Wall
+    );
     this.inkRelation = this.relationFor(sample);
 
     const nextMode: PlayerMode = this.input.squidHeld ? 'SQUID' : 'HUMAN';
