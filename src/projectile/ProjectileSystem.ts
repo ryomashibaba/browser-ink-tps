@@ -1,7 +1,7 @@
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
-import { PaintEventType, SurfaceFlags, Team, type PaintEvent } from '../ink/types';
+import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
 import type { PaintCoordinator, PaintRequest } from '../ink/PaintCoordinator';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 
@@ -18,6 +18,7 @@ export class ProjectileSystem {
   private readonly slots: ProjectileSlot[] = [];
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
+  private readonly delta = new Vec3();
   private fireCooldown = 0;
 
   public constructor(
@@ -63,7 +64,7 @@ export class ProjectileSystem {
     team: Team.A | Team.B
   ): void {
     this.fireCooldown = Math.max(0, this.fireCooldown - dt);
-    if (fireHeld && this.fireCooldown <= 0) {
+    if (fireHeld && this.fireCooldown <= 0 && aimDirection.lengthSq() > 1e-8) {
       this.spawn(muzzlePosition, aimDirection, team);
       this.fireCooldown = GAME_CONFIG.projectile.fireIntervalSeconds;
     }
@@ -71,7 +72,7 @@ export class ProjectileSystem {
     let active = 0;
     for (const slot of this.slots) {
       if (!slot.active) continue;
-      active += 1;
+
       slot.ttl -= dt;
       if (slot.ttl <= 0) {
         this.deactivate(slot);
@@ -80,7 +81,8 @@ export class ProjectileSystem {
 
       const previous = slot.position.clone();
       slot.velocity.y -= GAME_CONFIG.projectile.gravityMetersPerSecond2 * dt;
-      const next = slot.position.clone().add(slot.velocity.clone().mulScalar(dt));
+      this.delta.copy(slot.velocity).mulScalar(dt);
+      const next = slot.position.clone().add(this.delta);
       const hit = this.findNearestSurfaceHit(previous, next);
       if (hit) {
         this.enqueueImpact(slot.team, hit);
@@ -91,6 +93,7 @@ export class ProjectileSystem {
 
       slot.position.copy(next);
       slot.entity.setPosition(slot.position);
+      active += 1;
     }
     this.stats.activeProjectiles = active;
   }
@@ -107,7 +110,10 @@ export class ProjectileSystem {
     slot.team = team;
     slot.position.copy(origin);
     slot.velocity.copy(direction).normalize().mulScalar(GAME_CONFIG.projectile.speedMetersPerSecond);
-    slot.entity.render!.material = team === Team.A ? this.materialA : this.materialB;
+
+    const meshInstance = slot.entity.render?.meshInstances[0];
+    if (meshInstance) meshInstance.material = team === Team.A ? this.materialA : this.materialB;
+
     slot.entity.setPosition(origin);
     slot.entity.enabled = true;
   }
