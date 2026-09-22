@@ -58,6 +58,46 @@ export class ProjectileSystem {
     }
   }
 
+  public solveLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {
+    const dx = target.x - origin.x;
+    const dy = target.y - origin.y;
+    const dz = target.z - origin.z;
+    const horizontalDistance = Math.hypot(dx, dz);
+    const speed = GAME_CONFIG.projectile.speedMetersPerSecond;
+    const gravity = GAME_CONFIG.projectile.gravityMetersPerSecond2;
+
+    if (speed <= 0 || gravity <= 0 || horizontalDistance < 1e-5) {
+      out.set(dx, dy, dz);
+      return out.lengthSq() > 1e-8 ? out.normalize() : out.set(0, 0, -1);
+    }
+
+    // Low-arc ballistic solution:
+    // tan(theta) = (v^2 - sqrt(v^4 - g(g*x^2 + 2*y*v^2))) / (g*x)
+    // This compensates the exact projectile gravity instead of moving the
+    // visual crosshair away from the camera's true center ray.
+    const speedSq = speed * speed;
+    const discriminant = speedSq * speedSq
+      - gravity * (gravity * horizontalDistance * horizontalDistance + 2 * dy * speedSq);
+
+    if (discriminant < 0) {
+      // Target is outside the current speed/gravity envelope. Preserve a stable,
+      // predictable fallback instead of generating NaN velocity.
+      out.set(dx, dy, dz);
+      return out.lengthSq() > 1e-8 ? out.normalize() : out.set(0, 0, -1);
+    }
+
+    const tanTheta = (speedSq - Math.sqrt(discriminant)) / (gravity * horizontalDistance);
+    const cosTheta = 1 / Math.sqrt(1 + tanTheta * tanTheta);
+    const sinTheta = tanTheta * cosTheta;
+    const invHorizontal = 1 / horizontalDistance;
+
+    return out.set(
+      dx * invHorizontal * cosTheta,
+      sinTheta,
+      dz * invHorizontal * cosTheta
+    ).normalize();
+  }
+
   public fixedUpdate(
     dt: number,
     fireHeld: boolean,
