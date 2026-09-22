@@ -45,8 +45,8 @@ export class GameplayInkSystem {
   public sampleWorld(
     point: Vec3,
     maxPlaneDistance = 0.4,
-    requiredFlags: SurfaceFlags = 0,
-    excludedFlags: SurfaceFlags = 0
+    requiredFlags = 0,
+    excludedFlags = 0
   ): GameplayInkSample | null {
     let best: GameplayInkSample | null = null;
 
