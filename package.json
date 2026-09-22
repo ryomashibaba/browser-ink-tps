@@ -1,7 +1,7 @@
 {
-  "name": "browser-ink-tps-t0-t3",
+  "name": "browser-ink-tps",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -10,6 +10,7 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "0.20.0",
     "playcanvas": "2.22.1"
   },
   "devDependencies": {
