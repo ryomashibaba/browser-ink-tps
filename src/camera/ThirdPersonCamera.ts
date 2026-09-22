@@ -90,8 +90,8 @@ export class ThirdPersonCamera {
       const dy = event.clientY - this.lastY;
       this.lastX = event.clientX;
       this.lastY = event.clientY;
-      this.yaw -= dx * 0.22;
-      this.pitch = Math.max(-55, Math.min(28, this.pitch - dy * 0.18));
+      this.yaw += dx * 0.22;
+      this.pitch = Math.max(-55, Math.min(28, this.pitch + dy * 0.18));
     });
 
     const endPointer = (event: PointerEvent) => {
