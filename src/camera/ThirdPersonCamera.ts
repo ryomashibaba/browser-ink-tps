@@ -57,15 +57,31 @@ export class ThirdPersonCamera {
     const camera = this.cameraEntity.camera;
     if (!camera) return out.copy(this.forward).normalize();
 
-    // Fire along the exact ray through the visible center crosshair.
-    // Using the orbit-control forward vector here can diverge from the
-    // camera's actual view after lookAt/shoulder offset transforms.
     const rect = this.canvas.getBoundingClientRect();
-    const x = rect.width * 0.5;
-    const y = rect.height * 0.5;
-    const from = camera.screenToWorld(x, y, camera.nearClip);
-    const to = camera.screenToWorld(x, y, camera.farClip);
+    const from = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.nearClip);
+    const to = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.farClip);
     return out.copy(to).sub(from).normalize();
+  }
+
+  public getAimTarget(out = new Vec3(), fallbackDistance = 80): Vec3 {
+    const camera = this.cameraEntity.camera;
+    if (!camera) {
+      return out.copy(this.cameraEntity.getPosition()).add(this.forward.clone().mulScalar(fallbackDistance));
+    }
+
+    const rect = this.canvas.getBoundingClientRect();
+    const from = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.nearClip);
+    const to = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.farClip);
+    const direction = to.clone().sub(from).normalize();
+
+    let best: SurfaceRayHit | null = null;
+    for (const surface of this.surfaces) {
+      const hit = surface.intersectRay(from, direction);
+      if (hit && (!best || hit.distance < best.distance)) best = hit;
+    }
+
+    if (best) return out.copy(best.worldPoint);
+    return out.copy(from).add(direction.mulScalar(fallbackDistance));
   }
 
   public getFlatForward(out = new Vec3()): Vec3 {
@@ -88,14 +104,16 @@ export class ThirdPersonCamera {
       }
 
       if (document.pointerLockElement !== this.canvas) {
-        void this.canvas.requestPointerLock();
+        void this.canvas.requestPointerLock().catch(() => {
+          // Pointer lock can be denied by browser/user policy; keep normal UI usable.
+        });
       }
     });
 
     document.addEventListener('mousemove', (event) => {
       if (document.pointerLockElement !== this.canvas) return;
       this.yaw += event.movementX * 0.22;
-      this.pitch = Math.max(-55, Math.min(28, this.pitch + event.movementY * 0.18));
+      this.pitch = Math.max(-55, Math.min(28, this.pitch - event.movementY * 0.18));
     });
 
     this.canvas.addEventListener('wheel', (event) => {
@@ -108,8 +126,9 @@ export class ThirdPersonCamera {
     const camera = this.cameraEntity.camera;
     if (!camera) return;
     const rect = this.canvas.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
-    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    const locked = document.pointerLockElement === this.canvas;
+    const x = locked ? rect.width * 0.5 : Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const y = locked ? rect.height * 0.5 : Math.max(0, Math.min(rect.height, clientY - rect.top));
     const from = camera.screenToWorld(x, y, camera.nearClip);
     const to = camera.screenToWorld(x, y, camera.farClip);
     const direction = to.clone().sub(from).normalize();
