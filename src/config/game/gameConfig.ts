@@ -1,6 +1,10 @@
 import { SPLATOON_REFERENCE } from '../reference/splatoonReference';
 
-/** Project-owned values. These may be tuned without rewriting reference data. */
+/**
+ * Project-owned values. These may be tuned without rewriting reference data.
+ * T4-T7 movement/projectile numbers are original project tuning, not claims
+ * about exact Splatoon 3 internal values.
+ */
 export const GAME_CONFIG = Object.freeze({
   simulation: {
     tickRate: SPLATOON_REFERENCE.tickRate,
@@ -15,6 +19,28 @@ export const GAME_CONFIG = Object.freeze({
     atlasGutterPixels: 8,
     preferredPixelsPerMeter: 128,
     maxGpuPaintEventsPerFrame: 2048
+  },
+  player: {
+    humanSpeedMetersPerSecond: 5.2,
+    groundAccelerationMetersPerSecond2: 26,
+    decelerationMetersPerSecond2: 34,
+    gravityMetersPerSecond2: 28,
+    maxFallSpeedMetersPerSecond: 24,
+    jumpSpeedMetersPerSecond: 8.2,
+    squidOwnInkSpeedMetersPerSecond: 8.0,
+    squidOwnInkAccelerationMetersPerSecond2: 36,
+    squidNeutralSpeedMetersPerSecond: 2.4,
+    squidEnemyInkSpeedMetersPerSecond: 1.35,
+    squidDryAccelerationMetersPerSecond2: 14
+  },
+  projectile: {
+    poolSize: 128,
+    fireIntervalSeconds: 0.105,
+    speedMetersPerSecond: 28,
+    gravityMetersPerSecond2: 4,
+    lifeSeconds: 1.8,
+    paintRadiusMeters: 0.64,
+    visualDiameterMeters: 0.13
   },
   debug: {
     stressBurstSmall: 250,
