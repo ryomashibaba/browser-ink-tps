@@ -1,119 +1,104 @@
-# Browser Ink TPS — T0–T3 Foundation
+# Browser Ink TPS
 
-A standalone browser 3D ink-game prototype foundation built with **TypeScript + Vite + PlayCanvas Engine 2**. This repository currently contains the stabilized T0–T3 technical vertical slice: fixed-step simulation, surface-local gameplay ink, shared paint events, and a persistent GPU visual ink atlas.
+A standalone PC-browser 3D ink TPS built with **TypeScript + Vite + PlayCanvas Engine 2**.
 
-This is an original project inspired by the system-level idea of territory painting. It does **not** include Nintendo characters, logos, models, textures, audio, stages, UI assets, or other copied game content.
+This is an original project that uses territory-painting and third-person shooter mechanics as systems-level references. It does not copy Nintendo characters, stages, models, textures, UI assets, audio, logos, or other protected game assets.
 
-## Play the hosted QA build
+## Hosted QA build
 
 https://ryomashibaba.github.io/browser-ink-tps/
 
-The normal development workflow is now GitHub-first: changes pushed to `main` are typechecked and production-built by GitHub Actions, and successful builds deploy automatically to GitHub Pages.
+The normal workflow is GitHub-first: changes on `main` are dependency-installed, typechecked, production-built, and deployed by GitHub Actions.
 
-## What is implemented
+## Current milestone
 
-- Fixed **60 Hz** simulation clock, separated from render rate.
-- `PaintSurface` local coordinate system for floor / ramp / wall surfaces.
-- Authoritative CPU gameplay ink at **0.125 m per cell**.
-- 16×16-cell dirty tiles with per-tile revisions.
-- `PaintEvent` as the single source event consumed by CPU gameplay ink and GPU visual ink.
-- Oriented ellipse rasterization with sin/cos calculated once per event.
-- Incremental turf-area accounting; no full-stage scan every frame.
-- Scoreable and non-scoreable surfaces.
-- Persistent RGBA8 GPU ink atlas storing ownership / coverage / wetness rather than display colors.
-- WebGPU-preferred graphics-device creation with PlayCanvas WebGL2 fallback semantics.
-- Dual GLSL / WGSL `ShaderMaterial` paths.
-- One dynamic batched brush mesh rather than one decal object per paint event.
-- Bright near-future QA arena.
-- Debug overlay with frame/simulation/paint/atlas/turf metrics.
-- Paint stress buttons (250 / 2000 events).
-- High-DPI-safe click-to-paint picking.
-- GitHub Actions build gate and GitHub Pages automatic deployment.
+**v0.2.0 / T4–T7 technical vertical slice**
 
-## Local run (optional)
+The frozen T0–T3 ink foundation is retained, and the project now adds:
 
-Local npm setup is no longer required for ordinary QA; use the hosted URL above. For local development:
+- third-person Human movement
+- Rapier kinematic character collision
+- jump / gravity / slope handling
+- Human/Squid state
+- CPU-authoritative own/enemy/neutral ink sampling
+- pooled high-speed shooter projectiles
+- previous→next projectile segment sweeps
+- projectile → PaintSurface local hit → PaintRequest → one immutable PaintEvent
+- the existing shared CPU gameplay ink + GPU visual atlas fan-out
 
-```bash
-npm install
-npm run dev
+## Core ink architecture
+
+```text
+input / projectile impact
+          ↓
+      PaintRequest
+          ↓ fixed 60 Hz
+  immutable PaintEvent
+      ┌─────┴─────┐
+      ↓           ↓
+ GameplayInk    GpuInkAtlas
+      ↓           ↓
+movement/turf    visuals
 ```
 
-Production validation:
+CPU gameplay ink is authoritative. GPU ink is persistent visual data. CPU and GPU do not independently recalculate an impact.
 
-```bash
-npm run typecheck
-npm run build
-npm run preview
-```
+Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 
 ## Controls
 
-- **Left click** a paintable floor, ramp, or wall: paint.
-- **Left drag**: orbit debug camera.
-- **Mouse wheel**: zoom.
-- **1 / 2**: Team A / Team B.
-- **R**: clear CPU and GPU ink.
-- **B**: enqueue 2000 paint events.
-- UI buttons expose team, brush size, 250/2000-event stress tests, and clear.
+- WASD — move
+- Space — jump
+- Shift — Squid state
+- Left mouse — fire
+- Right mouse drag — rotate camera
+- Mouse wheel — camera distance
+- 1 / 2 — Team A / Team B
+- R — clear ink
+- B — 2000-event ink stress burst
+- Alt + Left click — direct-paint QA path retained from T0–T3
 
-## Atlas override
+## Technology
 
-```text
-?inkAtlas=4096
-?inkAtlas=2048
-```
+Pinned direct dependencies:
 
-Default request is 4096² RGBA8 with 2048² fallback.
+- PlayCanvas 2.22.1
+- @dimforge/rapier3d-compat 0.20.0
+- TypeScript 5.8.3
+- Vite 7.1.7
 
-## Architecture
-
-```text
-Debug click / future projectile impact
-              ↓
-          PaintRequest
-              ↓ fixed 60 Hz
-      immutable PaintEvent
-        ┌────────┴────────┐
-        ↓                 ↓
-CPU Gameplay Ink     GPU Visual Ink
-PaintSurface grid    Persistent atlas
-        ↓                 ↓
-Turf / movement      Surface shader
-/ future AI
-```
-
-CPU and GPU do **not** independently recalculate impact positions.
+Rendering is WebGPU-first with WebGL2 fallback. Gameplay simulation is fixed at 60 Hz and independent of render FPS.
 
 ## Important files
 
-- `src/core/FixedStepClock.ts`
-- `src/ink/PaintSurface.ts`
-- `src/ink/GameplayInkSystem.ts`
-- `src/ink/PaintCoordinator.ts`
-- `src/ink/GpuInkAtlas.ts`
-- `src/ink/InkSurfaceMaterial.ts`
-- `src/stage/TestStage.ts`
-- `src/config/reference/splatoonReference.ts`
-- `src/config/game/gameConfig.ts`
-- `CURRENT_CANONICAL.md`
-- `VALIDATION.md`
+- `src/app/InkLabApp.ts` — application composition and fixed-tick ordering
+- `src/player/PlayerController.ts` — Human/Squid movement + Rapier character controller
+- `src/input/PlayerInput.ts` — gameplay input abstraction
+- `src/camera/ThirdPersonCamera.ts` — TPS camera + QA paint picking
+- `src/physics/RapierStagePhysics.ts` — static collision representation
+- `src/projectile/ProjectileSystem.ts` — pooled swept projectiles
+- `src/ink/PaintSurface.ts` — local surface geometry/grid + segment intersection
+- `src/ink/GameplayInkSystem.ts` — authoritative ink rasterization, turf, world sampling
+- `src/ink/PaintCoordinator.ts` — single immutable PaintEvent creation/fan-out
+- `src/ink/GpuInkAtlas.ts` — persistent visual atlas
+- `src/config/game/gameConfig.ts` — project-owned tuning
+- `src/config/reference/splatoonReference.ts` — separately labeled inherited research/reference values
+- `CURRENT_CANONICAL.md` — current handoff contract
+- `VALIDATION.md` — validation state and browser QA checklist
 
-## Current scope / next phase
+## Validation state
 
-T4+ gameplay is intentionally not yet implemented: controllable third-person movement, squid movement, shooter projectiles, damage, respawn, match loop, CPUs, super jump, full HUD/map, Flow Aura, audio, and final polish.
+The first T4–T7 code deployment passed:
 
-The next coherent milestone is **T4–T7**:
-human movement → squid movement → high-speed projectile simulation → projectile-to-PaintEvent integration → major technical QA.
-
-## Validation status
-
-The stabilized v0.1.2 checkpoint has passed:
-- dependency-resolved GitHub Actions install
+- dependency install
 - `npm run typecheck`
-- Vite production build
-- GitHub Pages configure/upload/deploy
-- hosted browser launch confirmed by the user
-- left-click painting confirmed fixed in the hosted/browser workflow
+- production Vite build
+- GitHub Pages artifact upload/deploy
 
-See `VALIDATION.md` for details.
+Hands-on hosted-browser gameplay QA is still required. See `VALIDATION.md`.
+
+## Current deferred scope
+
+Damage/HP, ink tank, respawn, three-minute Turf War match flow, CPUs/Recast navigation, super jump, full HUD/map, production models/animation/audio, camera collision, and final polish are not yet implemented.
+
+Projectile sweep currently resolves PaintSurface planes; a complete non-paintable obstacle projectile collision layer is a later step.

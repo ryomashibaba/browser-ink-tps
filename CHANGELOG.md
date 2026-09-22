@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v0.2.0 — 2026-09-22
+
+### Added
+
+- Added T4 human movement with camera-relative WASD input, acceleration/deceleration, custom gravity, jump, slope handling, autostep, ground snap, and Rapier kinematic character collision.
+- Added pinned `@dimforge/rapier3d-compat 0.20.0`.
+- Added T5 Human/Squid state machine and authoritative CPU gameplay-ink sampling through each `PaintSurface` local basis.
+- Added own/enemy/neutral/non-swimmable movement hooks. Current tuning values are project-owned temporary tuning, not claimed Splatoon internals.
+- Added T6 pooled standard-shooter projectiles. Projectiles are not dynamic rigid bodies and use previous-position → next-position segment sweep each fixed tick.
+- Added T7 projectile impact resolution to `PaintSurface` identity + surface-local U/V, followed by the existing `PaintRequest → immutable PaintEvent → CPU/GPU` pipeline.
+- Added third-person camera, aiming crosshair, player/projectile debug metrics, and updated controls.
+
+### Preserved
+
+- T0–T3 CPU gameplay ink remains the only gameplay-authoritative ink representation.
+- GPU ink remains persistent visual data.
+- `PaintCoordinator` still creates exactly one immutable `PaintEvent` for each queued `PaintRequest`; CPU and GPU consume that same event.
+- Surface-local 0.125 m gameplay grids, dirty-tile architecture, turf delta accounting, atlas layout, WebGPU-first renderer, and fixed 60 Hz simulation remain intact.
+
+### Validation
+
+- GitHub Actions dependency install: PASS.
+- `npm run typecheck`: PASS.
+- Vite production build: PASS.
+- GitHub Pages configure/upload/deploy: PASS.
+- Workflow run: `35745535871`.
+- First deployed code commit: `b065157f3a86bb8aceb6c922d9791ce25403c0fa`.
+- Hosted hands-on gameplay QA is still required before calling T4–T7 fully browser-validated.
+
+### Known technical limitations of this slice
+
+- Projectile sweep currently resolves paintable `PaintSurface` planes. Decorative/non-paintable stage boxes do not yet form a complete projectile-blocking collision layer.
+- Squid state changes movement behavior and visual profile, while the Rapier character collider remains the current shared capsule for this technical slice.
+- Camera obstruction handling, damage/HP, ink tank, respawn, match loop, CPUs, super jump, final HUD/map, and production animation remain deferred.
+
 ## v0.1.2 — 2026-09-22
 
 ### Added
