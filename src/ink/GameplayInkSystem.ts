@@ -1,3 +1,4 @@
+import { Vec3 } from 'playcanvas';
 import type { PaintEvent, TurfSnapshot } from './types';
 import { Team } from './types';
 import type { PaintSurface } from './PaintSurface';
@@ -6,6 +7,15 @@ export interface PaintApplyResult {
   changedCells: number;
   testedCells: number;
   dirtyTilesTouched: number;
+}
+
+export interface GameplayInkSample {
+  surface: PaintSurface;
+  owner: Team;
+  flags: number;
+  u: number;
+  v: number;
+  planeDistance: number;
 }
 
 export class GameplayInkSystem {
@@ -28,6 +38,41 @@ export class GameplayInkSystem {
     return [...this.surfaces.values()];
   }
 
+  /**
+   * Samples the authoritative CPU gameplay ink near a world-space point.
+   * This projects onto each PaintSurface's own local basis; there is no global XZ ink grid.
+   */
+  public sampleWorld(point: Vec3, maxPlaneDistance = 0.4): GameplayInkSample | null {
+    let best: GameplayInkSample | null = null;
+
+    for (const surface of this.surfaces.values()) {
+      const rel = point.clone().sub(surface.center);
+      const signedPlaneDistance = rel.dot(surface.normal);
+      const planeDistance = Math.abs(signedPlaneDistance);
+      if (planeDistance > maxPlaneDistance) continue;
+
+      const u = rel.dot(surface.uAxis) + surface.widthMeters * 0.5;
+      const v = rel.dot(surface.vAxis) + surface.heightMeters * 0.5;
+      if (u < 0 || v < 0 || u > surface.widthMeters || v > surface.heightMeters) continue;
+
+      const x = Math.min(surface.widthCells - 1, Math.max(0, Math.floor(u / surface.cellSize)));
+      const y = Math.min(surface.heightCells - 1, Math.max(0, Math.floor(v / surface.cellSize)));
+      const index = surface.index(x, y);
+      const candidate: GameplayInkSample = {
+        surface,
+        owner: surface.ownerGrid[index] as Team,
+        flags: surface.flagsGrid[index] ?? surface.baseFlags,
+        u,
+        v,
+        planeDistance
+      };
+
+      if (!best || candidate.planeDistance < best.planeDistance) best = candidate;
+    }
+
+    return best;
+  }
+
   public apply(event: PaintEvent): PaintApplyResult {
     const surface = this.surfaces.get(event.surfaceId);
     if (!surface) throw new Error(`PaintEvent references unknown surface '${event.surfaceId}'.`);
@@ -35,7 +80,6 @@ export class GameplayInkSystem {
       return { changedCells: 0, testedCells: 0, dirtyTilesTouched: 0 };
     }
 
-    // Required freeze behavior: sin/cos are computed once per PaintEvent, not per cell.
     const c = Math.cos(event.angle);
     const s = Math.sin(event.angle);
     const boundU = Math.abs(c) * event.radiusU + Math.abs(s) * event.radiusV;
