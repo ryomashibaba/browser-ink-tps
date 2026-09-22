@@ -1,6 +1,6 @@
 import { Vec3 } from 'playcanvas';
 import type { PaintEvent, TurfSnapshot } from './types';
-import { Team } from './types';
+import { SurfaceFlags, Team } from './types';
 import type { PaintSurface } from './PaintSurface';
 
 export interface PaintApplyResult {
@@ -42,10 +42,17 @@ export class GameplayInkSystem {
    * Samples the authoritative CPU gameplay ink near a world-space point.
    * This projects onto each PaintSurface's own local basis; there is no global XZ ink grid.
    */
-  public sampleWorld(point: Vec3, maxPlaneDistance = 0.4): GameplayInkSample | null {
+  public sampleWorld(
+    point: Vec3,
+    maxPlaneDistance = 0.4,
+    requiredFlags: SurfaceFlags = 0,
+    excludedFlags: SurfaceFlags = 0
+  ): GameplayInkSample | null {
     let best: GameplayInkSample | null = null;
 
     for (const surface of this.surfaces.values()) {
+      if (requiredFlags !== 0 && (surface.baseFlags & requiredFlags) !== requiredFlags) continue;
+      if (excludedFlags !== 0 && (surface.baseFlags & excludedFlags) !== 0) continue;
       const rel = point.clone().sub(surface.center);
       const signedPlaneDistance = rel.dot(surface.normal);
       const planeDistance = Math.abs(signedPlaneDistance);
