@@ -10,7 +10,7 @@ export interface ControlPanelHandlers {
 
 export class ControlPanel {
   private team: Team.A | Team.B = Team.A;
-  private radius = GAME_CONFIG.debug.defaultBrushRadiusMeters;
+  private radius: number = GAME_CONFIG.debug.defaultBrushRadiusMeters;
   private readonly buttonA: HTMLButtonElement;
   private readonly buttonB: HTMLButtonElement;
   private readonly radiusOutput: HTMLOutputElement;
