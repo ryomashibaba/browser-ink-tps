@@ -1,4 +1,8 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER, {
+  type Collider,
+  type KinematicCharacterController,
+  type RigidBody
+} from '@dimforge/rapier3d-compat';
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
 import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { GAME_CONFIG } from '../config/game/gameConfig';
@@ -12,9 +16,9 @@ export type PlayerMode = 'HUMAN' | 'SQUID';
 export type InkRelation = 'OWN' | 'ENEMY' | 'NEUTRAL' | 'NONE';
 
 export class PlayerController {
-  private readonly body: RAPIER.RigidBody;
-  private readonly collider: RAPIER.Collider;
-  private readonly character: RAPIER.KinematicCharacterController;
+  private readonly body: RigidBody;
+  private readonly collider: Collider;
+  private readonly character: KinematicCharacterController;
   private readonly entity: Entity;
   private readonly material: StandardMaterial;
   private readonly velocity = new Vec3();
@@ -23,6 +27,7 @@ export class PlayerController {
   private readonly desired = new Vec3();
   private readonly footPoint = new Vec3();
   private readonly position = new Vec3();
+  private readonly muzzleOffset = new Vec3();
   private mode: PlayerMode = 'HUMAN';
   private inkRelation: InkRelation = 'NONE';
   private grounded = false;
@@ -110,8 +115,8 @@ export class PlayerController {
     if (this.desired.lengthSq() > 1) this.desired.normalize();
 
     const tuning = GAME_CONFIG.player;
-    let targetSpeed = tuning.humanSpeedMetersPerSecond;
-    let acceleration = tuning.groundAccelerationMetersPerSecond2;
+    let targetSpeed: number = tuning.humanSpeedMetersPerSecond;
+    let acceleration: number = tuning.groundAccelerationMetersPerSecond2;
 
     if (this.mode === 'SQUID') {
       if (this.inkRelation === 'OWN') {
@@ -176,7 +181,8 @@ export class PlayerController {
   public getMuzzlePosition(aimDirection: Vec3, out = new Vec3()): Vec3 {
     out.copy(this.position);
     out.y += this.mode === 'SQUID' ? 0.18 : 0.42;
-    out.add(aimDirection.clone().mulScalar(0.58));
+    this.muzzleOffset.copy(aimDirection).mulScalar(0.58);
+    out.add(this.muzzleOffset);
     return out;
   }
 
