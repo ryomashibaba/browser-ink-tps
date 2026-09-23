@@ -14,7 +14,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 **v0.2.0 / T4–T7 STABLE FREEZE**
 
-Stable head:
+Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
 The current stable slice includes:
