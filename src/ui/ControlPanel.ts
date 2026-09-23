@@ -35,7 +35,7 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T14 v0.9.5 Candidate</h1>
+      <h1>Browser Ink TPS · T14 Stable Freeze</h1>
       <p>11 weapon genres now use different attack models: beam, melee, roller trail, lob, charge-burst, guard canopy, delayed arrows, slash wave, dodge focus, blast, and shooter fire.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
