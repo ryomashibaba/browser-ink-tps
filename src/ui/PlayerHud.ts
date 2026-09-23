@@ -75,6 +75,11 @@ export class PlayerHud {
         <div class="hud-resource-label">HP</div>
         <div class="hud-meter"><i style="width:${clampPercent(this.stats.playerHp)}%"></i></div>
         <div class="hud-resource-value">${this.stats.playerHp.toFixed(0)}</div>
+      </div>
+      <div class="hud-resource-card special ${teamClass} ${this.stats.playerSpecialReady ? 'ready' : ''}">
+        <div class="hud-resource-label">SPECIAL</div>
+        <div class="hud-meter"><i style="width:${clampPercent(this.stats.playerSpecialPercent)}%"></i></div>
+        <div class="hud-resource-value">${this.stats.playerSpecialReady ? 'READY' : this.stats.playerSpecialPoints.toFixed(0)}</div>
       </div>`;
 
     this.state.innerHTML = `
