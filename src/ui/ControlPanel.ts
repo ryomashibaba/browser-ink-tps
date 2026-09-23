@@ -7,6 +7,9 @@ export interface ControlPanelHandlers {
   onStress(count: number): void;
   onRollQaPad(): void;
   onCoordinateQa(): void;
+  onRestartMatch(): void;
+  onSplatQa(): void;
+  onEndMatchQa(): void;
   onClear(): void;
 }
 
@@ -22,8 +25,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T10 Stable</h1>
-      <p>T0–T10 is frozen. Ink Tank / HP / combat foundation is stable; T11 will add splat, respawn, and match flow.</p>
+      <h1>Browser Ink TPS · T11 Candidate</h1>
+      <p>T0–T10 remains frozen. T11 adds 3s countdown, 180s Turf War flow, player Splat/Respawn, and result freeze.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -31,6 +34,11 @@ export class ControlPanel {
       <label>QA brush radius <output id="brush-out">${this.radius.toFixed(2)} m</output>
         <input id="brush" type="range" min="0.30" max="2.60" step="0.05" value="${this.radius}">
       </label>
+      <div class="row">
+        <button id="restart-match">Restart Match</button>
+        <button id="splat-qa">Splat QA</button>
+        <button id="end-match-qa">End Match QA</button>
+      </div>
       <div class="row">
         <button id="roll-qa">Roll QA Pad</button>
         <button id="coord-qa">Coord QA</button>
@@ -54,6 +62,9 @@ export class ControlPanel {
       handlers.onBrushChanged(this.radius);
     });
 
+    (panel.querySelector('#restart-match') as HTMLButtonElement).addEventListener('click', () => handlers.onRestartMatch());
+    (panel.querySelector('#splat-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onSplatQa());
+    (panel.querySelector('#end-match-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onEndMatchQa());
     (panel.querySelector('#roll-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onRollQaPad());
     (panel.querySelector('#coord-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onCoordinateQa());
     (panel.querySelector('#stress-small') as HTMLButtonElement).addEventListener('click', () => handlers.onStress(GAME_CONFIG.debug.stressBurstSmall));
@@ -62,7 +73,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Click view · WASD · Space jump · Shift squid · Left fire · Ink Tank consumes per shot · OWN-ink Squid refills fastest · opposite-color combat target takes damage · 1/2 team · R clear';
+    hint.textContent = 'T11: 3s countdown → 180s Turf War → result · Splat QA tests 2.5s respawn · Restart Match clears turf/resources · End Match QA resolves turf immediately';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

@@ -27,6 +27,7 @@ import { PaintCoordinator } from '../ink/PaintCoordinator';
 import type { PaintSurface } from '../ink/PaintSurface';
 import { Team } from '../ink/types';
 import { PlayerInput } from '../input/PlayerInput';
+import { MatchController } from '../match/MatchController';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
 import { PlayerController } from '../player/PlayerController';
 import { ProjectileSystem } from '../projectile/ProjectileSystem';
@@ -80,6 +81,7 @@ export class InkLabApp {
   private readonly player: PlayerController;
   private readonly resources: PlayerResources;
   private readonly combatTargets: CombatTargetSystem;
+  private readonly match: MatchController;
   private readonly projectiles: ProjectileSystem;
 
   private readonly playerPosition = new Vec3();
@@ -129,6 +131,7 @@ export class InkLabApp {
     );
     this.resources = new PlayerResources(this.stats);
     this.combatTargets = new CombatTargetSystem(app, this.stats);
+    this.match = new MatchController(this.gameplayInk, this.stats);
     this.projectiles = new ProjectileSystem(
       app,
       surfaces,
@@ -151,6 +154,16 @@ export class InkLabApp {
         this.enqueueRollQaPad();
       },
       onCoordinateQa: () => this.enqueueCoordinateVisualQa(surfaces),
+      onRestartMatch: () => this.restartMatch(),
+      onSplatQa: () => {
+        if (this.match.playerCanAct) {
+          this.resources.applyDamage(GAME_CONFIG.match.qaSplatDamage);
+        }
+      },
+      onEndMatchQa: () => {
+        this.match.forceEnd();
+        this.projectiles.reset();
+      },
       onClear: () => {
         this.clearCoordinateQaMarkers();
         this.coordinator.clear();
@@ -159,6 +172,7 @@ export class InkLabApp {
     this.selectedTeam = this.controls.selectedTeam;
     this.brushRadius = this.controls.brushRadius;
     this.player.setTeam(this.selectedTeam);
+    this.restartMatch();
 
     // Alt+left click preserves the T0-T3 direct-paint QA path without stealing normal fire.
     this.cameraController.onDebugInkClick = ({ hit }) => {
@@ -200,18 +214,39 @@ export class InkLabApp {
       this.cameraController.update(this.player.getPosition(this.playerPosition), cameraDt);
 
       const report = this.clock.advance(dt, (tick, stepSeconds) => {
-        // T4-T10 fixed-step order:
-        // input/state -> KCC desired motion -> Rapier step -> authoritative player state
-        // -> player Ink/HP resources + combat targets -> pooled projectile sweep
+        // T4-T11 fixed-step order:
+        // match/life state -> optional player KCC motion -> Rapier step -> authoritative player state
+        // -> T10 Ink/HP resources + QA combat targets -> pooled projectile sweep
         // -> one PaintRequest -> one immutable PaintEvent.
-        this.player.computeFixed(stepSeconds);
+        this.match.fixedUpdate(stepSeconds, this.resources.currentHp);
+
+        if (this.match.consumeSplatStarted()) {
+          this.player.setLifecycleActive(false);
+          this.projectiles.reset();
+        }
+
+        if (this.match.consumeRespawnRequest()) {
+          this.respawnPlayer();
+          this.match.completeRespawn();
+        }
+
+        if (this.match.consumeMatchEnded()) {
+          this.projectiles.reset();
+        }
+
+        const playerCanAct = this.match.playerCanAct;
+        if (playerCanAct) this.player.computeFixed(stepSeconds);
+
         this.physics.step();
         this.player.syncAfterPhysics(stepSeconds);
-        this.resources.fixedUpdate(
-          stepSeconds,
-          this.player.currentMode,
-          this.player.currentInkRelation
-        );
+
+        if (playerCanAct) {
+          this.resources.fixedUpdate(
+            stepSeconds,
+            this.player.currentMode,
+            this.player.currentInkRelation
+          );
+        }
         this.combatTargets.fixedUpdate(stepSeconds);
 
         // Keep the camera transform current for every catch-up tick. This prevents
@@ -227,7 +262,7 @@ export class InkLabApp {
         );
         this.projectiles.fixedUpdate(
           stepSeconds,
-          this.input.fireHeld && this.player.canShoot,
+          this.match.playerCanAct && this.input.fireHeld && this.player.canShoot,
           this.muzzlePosition,
           this.aimDirection,
           this.selectedTeam
@@ -250,6 +285,24 @@ export class InkLabApp {
       this.stats.frame(dt * 1000);
       this.overlay.update();
     });
+  }
+
+  private restartMatch(): void {
+    this.clearCoordinateQaMarkers();
+    this.coordinator.clear();
+    this.resources.reset();
+    this.combatTargets.reset();
+    this.projectiles.reset();
+    this.match.restart();
+    this.respawnPlayer();
+  }
+
+  private respawnPlayer(): void {
+    const spawn = this.match.getSpawnPosition(this.selectedTeam, this.playerPosition);
+    this.resources.reset();
+    this.player.teleport(spawn);
+    this.player.setLifecycleActive(true);
+    this.cameraController.update(this.player.getPosition(this.playerPosition));
   }
 
   private createCamera(): Entity {
