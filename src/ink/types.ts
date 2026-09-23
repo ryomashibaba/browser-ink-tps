@@ -14,6 +14,14 @@ export enum PaintEventType {
   Debug = 'DEBUG'
 }
 
+export enum PaintSource {
+  Human = 'HUMAN',
+  Cpu = 'CPU',
+  Special = 'SPECIAL',
+  Debug = 'DEBUG',
+  System = 'SYSTEM'
+}
+
 export enum SurfaceFlags {
   Paintable = 1 << 0,
   Swimmable = 1 << 1,
@@ -26,6 +34,7 @@ export enum SurfaceFlags {
 
 export interface PaintEvent {
   tick: number;
+  source: PaintSource;
   team: Team.A | Team.B;
   surfaceId: string;
   /** local surface coordinate in meters from the lower-left U edge */
