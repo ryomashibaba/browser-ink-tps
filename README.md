@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.12.0 / T17 STABLE FREEZE**
+**v0.13.0 / T18 CPU TACTICAL MOBILITY CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -366,3 +366,24 @@ The final stable ally-target rule is snapshot-based: clicking a living friendly 
 ### Next: T18 CPU Tactical Mobility
 
 The next planned phase extends long-range mobility to CPU decision-making without changing the frozen human Super Jump contracts.
+
+
+### T18 v0.13.0 CPU Tactical Mobility candidate
+
+T0–T17 remains frozen.
+
+CPU agents can now use the T17 Super Jump phase structure for two tactical purposes:
+- front-line recovery shortly after respawn
+- regrouping when significantly isolated from friendly players
+
+The CPU removes itself from Recast at jump preparation, remains vulnerable during the 80F preparation, becomes invulnerable during the 130F + 30F airborne path, then re-registers on the navmesh at the fixed snapshotted destination.
+
+Normal tuning:
+- minimum distance 8 m
+- regroup isolation threshold 12 m
+- safe target radius 4.2 m from enemies
+- minimum HP 72%
+- 8 s post-landing cooldown
+- 2.4 s respawn recovery opportunity
+
+Use **CPU Jump QA** in the ControlPanel to force one valid CPU jump without waiting for natural tactical conditions.
