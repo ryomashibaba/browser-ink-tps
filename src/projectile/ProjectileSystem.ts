@@ -69,6 +69,7 @@ export class ProjectileSystem {
   private fireCooldown = 0;
   private burstCooldown = 0;
   private burstShotsRemaining = 0;
+  private splatlingStoredChargeSeconds = 0;
   private rollPaintCooldown = 0;
   private meleeCooldown = 0;
   private chargeSeconds = 0;
@@ -151,6 +152,7 @@ export class ProjectileSystem {
     this.fireCooldown = Math.max(this.fireCooldown, 0.08);
     this.burstCooldown = 0;
     this.burstShotsRemaining = 0;
+    this.splatlingStoredChargeSeconds = 0;
     this.rollPaintCooldown = 0;
     this.meleeCooldown = 0;
     this.chargeSeconds = 0;
@@ -188,6 +190,7 @@ export class ProjectileSystem {
     this.fireCooldown = 0;
     this.burstCooldown = 0;
     this.burstShotsRemaining = 0;
+    this.splatlingStoredChargeSeconds = 0;
     this.rollPaintCooldown = 0;
     this.meleeCooldown = 0;
     this.chargeSeconds = 0;
@@ -199,6 +202,11 @@ export class ProjectileSystem {
     this.queuedCpuShots.length = 0;
     this.stats.activeProjectiles = 0;
     this.stats.playerWeaponChargePercent = 0;
+    this.stats.playerWeaponFirstRingPercent =
+      profile.firstChargeSeconds > 0 && profile.chargeSeconds > 0
+        ? profile.firstChargeSeconds / profile.chargeSeconds * 100
+        : 0;
+    this.stats.playerWeaponChargeRing = 0;
     this.stats.playerWeaponAction = 'READY';
     this.stats.playerWeaponGuarding = false;
     this.stats.playerWeaponGuardHp = 100;
@@ -303,7 +311,9 @@ export class ProjectileSystem {
     } else {
       this.chargeSeconds = 0;
       this.burstShotsRemaining = 0;
+      this.splatlingStoredChargeSeconds = 0;
       this.stats.playerWeaponChargePercent = 0;
+      this.stats.playerWeaponChargeRing = 0;
       this.stats.playerWeaponAction = 'LOCKED';
     }
 
@@ -692,13 +702,28 @@ export class ProjectileSystem {
     team: Team.A | Team.B
   ): void {
     if (this.burstShotsRemaining > 0) {
-      this.stats.playerWeaponAction = 'SPIN_BURST';
+      const stage = chargeStageProgress(profile, this.splatlingStoredChargeSeconds);
+      const speedMultiplier = lerp(0.55, 1.0, stage.first);
+      const spread = lerp(1.8, 0.8, stage.first);
+      this.stats.playerWeaponChargeRing = stage.full ? 2 : stage.firstReached ? 1 : 0;
+      this.stats.playerWeaponAction = stage.full
+        ? 'SPIN_BURST_R2'
+        : stage.firstReached ? 'SPIN_BURST_R1' : 'SPIN_BURST_PARTIAL';
+
       if (this.burstCooldown <= 0) {
-        if (this.fireProjectiles(profile, origin, direction, team, 1, 0.8, 0)) {
+        if (this.fireProjectiles(profile, origin, direction, team, 1, spread, 0, {
+          speedMultiplier
+        })) {
           this.burstShotsRemaining -= 1;
           this.burstCooldown += profile.burstIntervalSeconds;
+          if (this.burstShotsRemaining <= 0) {
+            this.splatlingStoredChargeSeconds = 0;
+            this.stats.playerWeaponChargeRing = 0;
+          }
         } else {
           this.burstShotsRemaining = 0;
+          this.splatlingStoredChargeSeconds = 0;
+          this.stats.playerWeaponChargeRing = 0;
         }
       }
       return;
@@ -706,16 +731,25 @@ export class ProjectileSystem {
 
     if (fireHeld) {
       this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
-      this.stats.playerWeaponAction = 'SPIN_CHARGE';
+      const stage = chargeStageProgress(profile, this.chargeSeconds);
       this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+      this.stats.playerWeaponChargeRing = stage.full ? 2 : stage.firstReached ? 1 : 0;
+      this.stats.playerWeaponAction = stage.firstReached ? 'SPIN_CHARGE_R2' : 'SPIN_CHARGE_R1';
       return;
     }
 
     if (fallingFire && this.chargeSeconds >= profile.minChargeSeconds) {
-      const charge = chargeFraction(profile, this.chargeSeconds);
-      this.burstShotsRemaining = Math.max(3, Math.round(profile.burstMaxShots * charge));
+      const stage = chargeStageProgress(profile, this.chargeSeconds);
+      const firstRingShots = Math.max(3, Math.round(profile.burstMaxShots * 0.5));
+      this.burstShotsRemaining = stage.firstReached
+        ? Math.round(lerp(firstRingShots, profile.burstMaxShots, stage.second))
+        : Math.max(3, Math.round(firstRingShots * stage.first));
+      this.splatlingStoredChargeSeconds = this.chargeSeconds;
       this.burstCooldown = 0;
-      this.stats.playerWeaponAction = 'SPIN_RELEASE';
+      this.stats.playerWeaponChargeRing = stage.full ? 2 : stage.firstReached ? 1 : 0;
+      this.stats.playerWeaponAction = stage.full
+        ? 'SPIN_RELEASE_R2'
+        : stage.firstReached ? 'SPIN_RELEASE_R1' : 'SPIN_RELEASE_PARTIAL';
     }
 
     this.chargeSeconds = 0;
@@ -754,28 +788,54 @@ export class ProjectileSystem {
   ): void {
     if (fireHeld) {
       this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+      const stage = chargeStageProgress(profile, this.chargeSeconds);
       this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
-      this.stats.playerWeaponAction = 'STRING_CHARGE';
+      this.stats.playerWeaponChargeRing = stage.full ? 2 : stage.firstReached ? 1 : 0;
+      this.stats.playerWeaponAction = stage.firstReached ? 'STRING_CHARGE_R2' : 'STRING_CHARGE_R1';
       return;
     }
 
-    if (fallingFire && this.fireCooldown <= 0) {
+    if (
+      fallingFire &&
+      this.fireCooldown <= 0 &&
+      this.chargeSeconds >= profile.minChargeSeconds
+    ) {
       const charge = chargeFraction(profile, this.chargeSeconds);
-      const spread = lerp(profile.spreadDegrees, 1.5, charge);
-      const firstChargeReached = charge >= (5 / 12);
+      const stage = chargeStageProgress(profile, this.chargeSeconds);
+      const spread = stage.firstReached
+        ? lerp(profile.spreadDegrees, 0, stage.second)
+        : profile.spreadDegrees;
+      const directDamage = lerp(30, 35, stage.first);
+      const speedMultiplier = stage.firstReached
+        ? lerp(1.0, profile.chargeSpeedMultiplier, stage.second)
+        : lerp(0.78, 1.0, stage.first);
+      const paintMultiplier = stage.firstReached
+        ? lerp(1.0, profile.chargePaintMultiplier, stage.second)
+        : lerp(0.88, 1.0, stage.first);
+      const inkCost = stage.firstReached
+        ? lerp(6.0, 8.5, stage.second)
+        : lerp(5.0, 6.0, stage.first);
+
       if (this.fireProjectiles(profile, origin, direction, team, 3, spread, charge, {
-        delayedBurstSeconds: firstChargeReached ? 0.75 : 0,
-        delayedBurstRadius: firstChargeReached ? lerp(0.62, 1.02, charge) : 0,
-        delayedBurstDamage: firstChargeReached ? 30 : 0,
-        delayedBurstPaintRadius: firstChargeReached ? lerp(0.56, 0.90, charge) : 0
+        inkCost,
+        damageMultiplier: directDamage / profile.damage,
+        speedMultiplier,
+        paintMultiplier,
+        delayedBurstSeconds: stage.firstReached ? 0.75 : 0,
+        delayedBurstRadius: stage.firstReached ? lerp(0.78, 1.02, stage.second) : 0,
+        delayedBurstDamage: stage.firstReached ? 30 : 0,
+        delayedBurstPaintRadius: stage.firstReached ? lerp(0.65, 0.90, stage.second) : 0
       })) {
         this.fireCooldown = profile.fireIntervalSeconds;
-        this.stats.playerWeaponAction = firstChargeReached ? 'EXPLOSIVE_TRISHOT' : 'TRISHOT';
+        this.stats.playerWeaponAction = stage.full
+          ? 'EXPLOSIVE_TRISHOT_R2'
+          : stage.firstReached ? 'EXPLOSIVE_TRISHOT_R1' : 'TRISHOT';
       }
     }
 
     this.chargeSeconds = 0;
     this.stats.playerWeaponChargePercent = 0;
+    this.stats.playerWeaponChargeRing = 0;
   }
 
   private updateSplatana(
@@ -985,22 +1045,26 @@ export class ProjectileSystem {
       delayedBurstRadius?: number;
       delayedBurstDamage?: number;
       delayedBurstPaintRadius?: number;
+      inkCost?: number;
+      damageMultiplier?: number;
+      speedMultiplier?: number;
+      paintMultiplier?: number;
     }
   ): boolean {
-    if (!this.resources.tryConsumeShotInk(profile.inkCost)) return false;
+    if (!this.resources.tryConsumeShotInk(options?.inkCost ?? profile.inkCost)) return false;
 
-    const damageMultiplier =
-      profile.weaponClass === 'STRINGER'
+    const damageMultiplier = options?.damageMultiplier ??
+      (profile.weaponClass === 'STRINGER'
         ? lerp(0.72, profile.chargeDamageMultiplier, charge)
-        : 1;
-    const speedMultiplier =
-      profile.weaponClass === 'STRINGER'
+        : 1);
+    const speedMultiplier = options?.speedMultiplier ??
+      (profile.weaponClass === 'STRINGER'
         ? lerp(0.88, profile.chargeSpeedMultiplier, charge)
-        : 1;
-    const paintMultiplier =
-      profile.weaponClass === 'STRINGER'
+        : 1);
+    const paintMultiplier = options?.paintMultiplier ??
+      (profile.weaponClass === 'STRINGER'
         ? lerp(0.78, profile.chargePaintMultiplier, charge)
-        : 1;
+        : 1);
 
     let spawned = 0;
     for (let i = 0; i < count; i += 1) {
@@ -1432,6 +1496,36 @@ function makeProjectileMaterial(rgb: readonly [number, number, number]): Standar
 function chargeFraction(profile: WeaponProfile, seconds: number): number {
   if (profile.chargeSeconds <= 1e-6) return 0;
   return clamp(seconds / profile.chargeSeconds, 0, 1);
+}
+
+function chargeStageProgress(
+  profile: WeaponProfile,
+  seconds: number
+): {
+  first: number;
+  second: number;
+  firstReached: boolean;
+  full: boolean;
+} {
+  const fullSeconds = Math.max(profile.chargeSeconds, 1e-6);
+  const firstSeconds = profile.firstChargeSeconds > 0
+    ? Math.min(profile.firstChargeSeconds, fullSeconds)
+    : fullSeconds;
+  const minSeconds = Math.min(profile.minChargeSeconds, firstSeconds);
+  const first = clamp(
+    (seconds - minSeconds) / Math.max(firstSeconds - minSeconds, 1e-6),
+    0,
+    1
+  );
+  const second = firstSeconds < fullSeconds
+    ? clamp((seconds - firstSeconds) / (fullSeconds - firstSeconds), 0, 1)
+    : 0;
+  return {
+    first,
+    second,
+    firstReached: seconds + 1e-6 >= firstSeconds,
+    full: seconds + 1e-6 >= fullSeconds
+  };
 }
 
 function rotateYaw(direction: Vec3, degrees: number): Vec3 {
