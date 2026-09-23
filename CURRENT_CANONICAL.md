@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.2.0 / T4–T7 STABLE FREEZE
+# CURRENT_CANONICAL — v0.3.0 / T8 IMPLEMENTATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T3 remains the frozen ink foundation. T4–T7 is now accepted as the current stable browser-TPS slice and should be treated as frozen unless a later phase requires a documented compatibility change.**
+**T0–T7 remains the frozen stable foundation. T8 World Interaction Foundation is implemented on `main`, has passed automated CI/deploy, and is awaiting hosted runtime QA before it may be frozen.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -23,6 +23,33 @@ Final stabilization validation:
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
 - hosted hands-on QA: user accepted the current T4–T7 slice as completed after camera/aim/ink alignment fixes
+
+## T8 candidate checkpoint
+
+Implementation commit:
+`234180436b27e0c9498c8d253348b2c366f839ce`
+
+Automated workflow:
+`35803236486`
+
+Automated results:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+T8 candidate adds:
+
+- one shared static stage-solid definition used by PlayCanvas box rendering and Rapier static colliders
+- explicit per-solid projectile/camera blocker participation
+- Rapier scene-query based world-segment tests
+- non-paintable projectile blocking without fabricating a PaintRequest/PaintEvent
+- paint-surface-vs-backing-solid priority tolerance while preserving frozen PaintSurface U/V
+- center-ray aim target stopping on non-paintable world blockers
+- third-person camera obstruction with immediate inward retraction and damped recovery
 
 ## Architecture freeze
 
@@ -214,8 +241,6 @@ The user then accepted the current state as completed for this phase.
 
 These remain future work rather than hidden bugs in the current slice:
 
-- complete projectile blocking against non-paintable stage geometry
-- third-person camera obstruction / wall avoidance
 - state-specific Squid physical collider
 - full ink tank / ink consumption / refill loop
 - player damage / HP / splat
@@ -231,19 +256,19 @@ These remain future work rather than hidden bugs in the current slice:
 - final dirty-tile consumer / clearing policy
 - bundle-size optimization
 
-## Next planned phase
+## Current validation phase
 
-**T8 — World Interaction Foundation**
+**T8 — World Interaction Foundation runtime QA**
 
-Before adding HP, CPUs, or the full match loop, the next phase should unify world interaction:
+The code and automated deployment are complete. Before T8 is frozen, hosted-browser QA must confirm:
 
-1. projectile collision against non-paintable blockers
-2. clear relationship between stage render geometry, Rapier collision geometry, and PaintSurfaces
-3. third-person camera obstruction handling
-4. collision/occlusion edge cases around ramps, walls, rails, and elevated geometry
-5. preserve all T0–T7 frozen contracts while adding the shared world-interaction layer
+1. rails, boxes, pillars, bridge/backers stop projectiles without painting surfaces behind them
+2. floor/ramp/wall PaintSurfaces still paint at the visible impact position
+3. close-range shots do not pass through blocker edges or create obvious false paint
+4. camera retracts before walls/boxes/rails and returns smoothly after obstruction clears
+5. ramp, elevated floor, box corners, shoulder offset, and ordinary movement/aim remain stable
 
-After T8, the intended order is:
+After T8 runtime acceptance, the intended order is:
 
 - T9 — complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat

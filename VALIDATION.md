@@ -1,6 +1,28 @@
-# Validation Report — v0.2.0 T4–T7 Stable Freeze
+# Validation Report — v0.3.0 T8 Implementation Candidate
 
 Date: 2026-09-23
+
+## T8 candidate checkpoint
+
+Implementation commit:
+`234180436b27e0c9498c8d253348b2c366f839ce`
+
+Workflow:
+`35803236486`
+
+Automated result:
+
+- Checkout: PASS
+- Node.js setup: PASS
+- npm dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages configure: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+The T0–T7 stable rollback checkpoint remains `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`.
 
 ## Stable checkpoint
 
@@ -45,6 +67,23 @@ Confirmed in the current stable source:
 - turf accounting remains incremental
 - feet-level movement ink sampling excludes wall surfaces
 - Pointer Lock/input state boundaries are explicitly handled
+
+## T8 world-interaction automated audit
+
+Confirmed by source audit + passing TypeScript/build pipeline:
+
+- stage static solids are declared once in `src/stage/StageDefinition.ts`
+- the same solid definitions drive PlayCanvas box rendering and Rapier static colliders
+- projectile and camera blocker participation are explicit solid properties
+- projectile sweeps compare frozen PaintSurface hits against Rapier blocker hits
+- non-paintable blocker hits consume the projectile without generating paint
+- PaintSurface hit U/V still comes from the existing `PaintSurface.intersectSegment()` path
+- `PaintCoordinator.processTick()` remains the only PaintEvent creation point
+- camera obstruction uses target→desired-camera Rapier segment queries
+- camera retracts immediately on tighter obstruction and expands with exponential damping
+- center-screen aim target now stops at the nearest non-paintable stage blocker when appropriate
+
+Runtime behavior still requires hosted hands-on QA before T8 Freeze.
 
 ## Camera / aiming validation
 
@@ -139,8 +178,6 @@ The retained Alt+Left direct-paint QA path can still be used to compare the orig
 
 The following are not part of the completed T4–T7 slice:
 
-- full projectile blocking against decorative/non-paintable stage geometry
-- camera obstruction / wall avoidance
 - state-specific Squid physical collision shape
 - ink tank / consumption / refill
 - damage / HP / splat

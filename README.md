@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.2.0 / T4–T7 STABLE FREEZE**
+**v0.3.0 / T8 IMPLEMENTATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The current stable slice includes:
+The T0–T7 stable foundation remains intact. The current `main` additionally includes the T8 world-interaction candidate:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -32,6 +32,10 @@ The current stable slice includes:
 - shared projectile → PaintRequest → immutable PaintEvent pipeline
 - persistent GPU visual ink aligned with CPU-authoritative paint
 - Pointer Lock mouse look and robust input cleanup
+- shared stage-solid source of truth for render + Rapier collision
+- non-paintable projectile blockers
+- blocker-aware center-ray aim target
+- third-person camera obstruction with smooth recovery
 
 ## Core ink architecture
 
@@ -92,7 +96,8 @@ Gameplay simulation is fixed at 60 Hz and independent of render FPS. Player and 
 - `src/player/PlayerController.ts` — Human/Squid movement + Rapier character controller + render interpolation
 - `src/input/PlayerInput.ts` — Pointer Lock-aware gameplay input
 - `src/camera/ThirdPersonCamera.ts` — TPS camera + center-ray aim target + QA paint picking
-- `src/physics/RapierStagePhysics.ts` — current static character-collision representation
+- `src/stage/StageDefinition.ts` — T8 shared static-solid / blocker definition
+- `src/physics/RapierStagePhysics.ts` — static collision + projectile/camera scene queries
 - `src/projectile/ProjectileSystem.ts` — pooled swept projectiles + fire cadence + ballistic launch solution
 - `src/ink/PaintSurface.ts` — local surface geometry/grid + segment intersection + invariants
 - `src/ink/GameplayInkSystem.ts` — authoritative rasterization, turf, filtered world sampling
@@ -104,6 +109,22 @@ Gameplay simulation is fixed at 60 Hz and independent of render FPS. Player and 
 - `VALIDATION.md` — automated + hosted QA record
 
 ## Validation state
+
+T8 implementation commit:
+`234180436b27e0c9498c8d253348b2c366f839ce`
+
+T8 automated workflow:
+`35803236486`
+
+Passed:
+
+- dependency install
+- TypeScript check
+- Vite production build
+- GitHub Pages artifact upload
+- GitHub Pages deployment
+
+Hosted runtime QA for T8 is still pending.
 
 Final T4–T7 stabilization workflow:
 `35800320770`
@@ -134,8 +155,6 @@ Do not casually replace:
 
 The stable T4–T7 slice intentionally does **not** yet include:
 
-- full projectile blocking against non-paintable stage objects
-- third-person camera obstruction / wall avoidance
 - a distinct physical Squid collider
 - ink tank / consumption / refill
 - damage / HP / splat
@@ -148,21 +167,13 @@ The stable T4–T7 slice intentionally does **not** yet include:
 - production stage
 - final performance/bundle optimization
 
-## Next phase
+## Current phase
 
-**T8 — World Interaction Foundation**
+**T8 — hosted runtime QA before Freeze**
 
-The next phase should come before HP, CPUs, or the complete match loop.
+Validate projectile blockers, visible paint impacts, camera wall avoidance/recovery, ramp/elevated geometry, box corners, close-range shooting, and T0–T7 regressions.
 
-Primary goals:
-
-1. make non-paintable world geometry correctly block projectiles
-2. define a clean relationship between render geometry, Rapier collision geometry, and PaintSurfaces
-3. add third-person camera obstruction / wall avoidance
-4. audit ramp/wall/rail/elevated-geometry collision and occlusion cases
-5. preserve every T0–T7 frozen contract
-
-Planned order after T8:
+Planned order after T8 acceptance:
 
 - T9 — complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat

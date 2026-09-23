@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## v0.3.0 T8 Implementation Candidate — 2026-09-23
+
+### Added
+
+- Added a shared stage-solid definition layer for render/physics/world-query relationships.
+- Added Rapier scene-query based projectile blockers for non-paintable stage geometry.
+- Added nearest-hit arbitration between frozen PaintSurfaces and backing solids without changing CPU-authoritative U/V.
+- Added non-paintable projectile consumption without creating fake PaintRequests/PaintEvents.
+- Added blocker-aware center-ray aim targeting.
+- Added third-person camera obstruction against stage solids.
+- Added immediate camera retraction plus damped recovery after obstruction clears.
+
+### Preserved
+
+- T0–T7 stable gameplay checkpoint remains `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`.
+- Fixed 60 Hz gameplay simulation remains unchanged.
+- Player physics remains custom movement + Rapier kinematic character controller.
+- Projectiles remain pooled swept projectiles.
+- CPU gameplay ink remains authoritative.
+- PaintSurface-local U/V remains canonical.
+- `PaintCoordinator.processTick()` remains the only PaintEvent creation point.
+- GPU visual ink still consumes the same immutable PaintEvent.
+
+### Automated validation
+
+Implementation commit:
+`234180436b27e0c9498c8d253348b2c366f839ce`
+
+Workflow:
+`35803236486`
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
+### Status
+
+T8 is an implementation candidate, **not yet frozen**. Hosted QA for projectile blockers, camera obstruction, ramps/elevated geometry, close-range shots, and existing T0–T7 behavior is required before T8 Freeze.
+
 ## v0.2.0 Stable Freeze — 2026-09-23
 
 ### Stabilized
