@@ -102,11 +102,11 @@ export class SuperJumpSystem {
   }
 
   public get isInvulnerable(): boolean {
-    return this.state === 'TRAVEL';
+    return this.state === 'TRAVEL' || this.state === 'LANDING';
   }
 
   public get usesExternalPlayerPosition(): boolean {
-    return this.state === 'TRAVEL';
+    return this.state === 'TRAVEL' || this.state === 'LANDING';
   }
 
   public canRequest(matchCanAct: boolean): boolean {
@@ -169,30 +169,44 @@ export class SuperJumpSystem {
         this.travelElapsed + dt
       );
 
+      const totalAirSeconds =
+        GAME_CONFIG.superJump.travelSeconds + GAME_CONFIG.superJump.actionSeconds;
       const t = clamp01(
-        this.travelElapsed / Math.max(GAME_CONFIG.superJump.travelSeconds, 1e-6)
+        this.travelElapsed / Math.max(totalAirSeconds, 1e-6)
       );
-      this.currentPosition.set(
-        lerp(this.startPosition.x, this.targetPosition.x, t),
-        lerp(this.startPosition.y, this.targetPosition.y, t) +
-          Math.sin(Math.PI * t) * this.arcHeight,
-        lerp(this.startPosition.z, this.targetPosition.z, t)
-      );
-
+      this.updateTravelPosition(t);
       this.updateMarker();
       this.writeTravelStats(t);
 
-      if (t >= 1) this.finishTravel();
+      if (this.travelElapsed >= GAME_CONFIG.superJump.travelSeconds) {
+        this.state = 'LANDING';
+        this.landingRemaining = GAME_CONFIG.superJump.actionSeconds;
+        this.syncStats(false);
+      }
       return;
     }
 
-    this.landingRemaining = Math.max(0, this.landingRemaining - dt);
-    if (this.landingRemaining <= 0) this.finishLanding();
-    else this.syncStats();
+    if (this.state === 'LANDING') {
+      this.previousPosition.copy(this.currentPosition);
+      this.landingRemaining = Math.max(0, this.landingRemaining - dt);
+
+      const totalAirSeconds =
+        GAME_CONFIG.superJump.travelSeconds + GAME_CONFIG.superJump.actionSeconds;
+      const elapsed =
+        GAME_CONFIG.superJump.travelSeconds +
+        (GAME_CONFIG.superJump.actionSeconds - this.landingRemaining);
+      const t = clamp01(elapsed / Math.max(totalAirSeconds, 1e-6));
+
+      this.updateTravelPosition(t);
+      this.updateMarker();
+      this.writeTravelStats(t);
+
+      if (this.landingRemaining <= 0) this.finishLanding();
+    }
   }
 
   public render(alpha: number): void {
-    if (this.state === 'TRAVEL') {
+    if (this.state === 'TRAVEL' || this.state === 'LANDING') {
       const t = clamp01(alpha);
       this.renderPosition.set(
         lerp(this.previousPosition.x, this.currentPosition.x, t),
@@ -215,21 +229,21 @@ export class SuperJumpSystem {
   }
 
   public getFocusPosition(out = new Vec3()): Vec3 {
-    if (this.state === 'TRAVEL') {
+    if (this.state === 'TRAVEL' || this.state === 'LANDING') {
       return out.copy(this.currentPosition);
     }
     return this.player.getPosition(out);
   }
 
   public getRenderFocusPosition(out = new Vec3()): Vec3 {
-    if (this.state === 'TRAVEL') {
+    if (this.state === 'TRAVEL' || this.state === 'LANDING') {
       return out.copy(this.renderPosition);
     }
     return this.player.getPosition(out);
   }
 
   public cancel(): void {
-    if (this.state === 'TRAVEL') {
+    if (this.state === 'TRAVEL' || this.state === 'LANDING') {
       this.player.teleport(this.startPosition);
       this.player.setLifecycleActive(true);
     }
@@ -284,27 +298,28 @@ export class SuperJumpSystem {
     this.writeTravelStats(0);
   }
 
-  private finishTravel(): void {
+  private finishLanding(): void {
     if (this.team === null) return;
 
-    this.travelEntity.enabled = false;
-    this.markerEntity.enabled = false;
+    this.clearVisuals();
     this.player.teleport(this.targetPosition);
     this.player.setLifecycleActive(true);
     this.feedback.superJumpLand(this.team, this.targetPosition);
 
-    this.state = 'LANDING';
-    this.landingRemaining = GAME_CONFIG.superJump.landingLockSeconds;
-    this.syncStats();
-  }
-
-  private finishLanding(): void {
-    this.clearVisuals();
     this.state = 'IDLE';
     this.target = null;
     this.team = null;
     this.landingRemaining = 0;
     this.syncStats();
+  }
+
+  private updateTravelPosition(t: number): void {
+    this.currentPosition.set(
+      lerp(this.startPosition.x, this.targetPosition.x, t),
+      lerp(this.startPosition.y, this.targetPosition.y, t) +
+        Math.sin(Math.PI * t) * this.arcHeight,
+      lerp(this.startPosition.z, this.targetPosition.z, t)
+    );
   }
 
   private resolveTargetPosition(): void {
@@ -359,7 +374,13 @@ export class SuperJumpSystem {
         this.stats.playerSuperJumpProgress =
           1 - this.prepRemaining / Math.max(GAME_CONFIG.superJump.prepareSeconds, 1e-6);
       } else if (this.state === 'LANDING') {
-        this.stats.playerSuperJumpProgress = 1;
+        const totalAirSeconds =
+          GAME_CONFIG.superJump.travelSeconds + GAME_CONFIG.superJump.actionSeconds;
+        const elapsed =
+          GAME_CONFIG.superJump.travelSeconds +
+          (GAME_CONFIG.superJump.actionSeconds - this.landingRemaining);
+        this.stats.playerSuperJumpProgress =
+          clamp01(elapsed / Math.max(totalAirSeconds, 1e-6));
       } else {
         this.stats.playerSuperJumpProgress = 0;
       }
