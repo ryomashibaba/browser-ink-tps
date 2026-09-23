@@ -6,6 +6,7 @@ import { PaintEventType, PaintSource, Team, type PaintEvent } from './types';
 export interface PaintRequest {
   source?: PaintSource;
   actorId?: string;
+  gaugeEligible?: boolean;
   team: Team.A | Team.B;
   surfaceId: string;
   centerU: number;
@@ -64,6 +65,7 @@ export class PaintCoordinator {
       } else if (
         event.source === PaintSource.Cpu &&
         event.actorId &&
+        event.gaugeEligible !== false &&
         result.scoreableAreaMeters2Changed > 0
       ) {
         cpuScoreableAreaMeters2ByActor[event.actorId] =
