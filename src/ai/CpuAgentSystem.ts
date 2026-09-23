@@ -8,6 +8,13 @@ import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
+import {
+  specialWeaponProfile,
+  subWeaponProfile,
+  weaponKit,
+  type SpecialWeaponId,
+  type SubWeaponId
+} from '../weapons/WeaponKitCatalog';
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import type { StageDefinition } from '../stage/StageDefinition';
 
@@ -26,6 +33,26 @@ export type CpuWeaponAction =
   | 'BRELLA_BURST'
   | 'STRINGER_RELEASE'
   | 'SPLATANA_RELEASE';
+
+export type CpuKitRequest =
+  | {
+      kind: 'SUB';
+      sourceId: string;
+      team: Team.A | Team.B;
+      position: Vec3;
+      target: Vec3;
+      direction: Vec3;
+      subId: SubWeaponId;
+    }
+  | {
+      kind: 'SPECIAL';
+      sourceId: string;
+      team: Team.A | Team.B;
+      position: Vec3;
+      target: Vec3;
+      direction: Vec3;
+      specialId: SpecialWeaponId;
+    };
 
 export interface CpuFireRequest {
   sourceId: string;
@@ -90,11 +117,15 @@ interface CpuBot {
   jumpCooldownSeconds: number;
   jumpRespawnWindowSeconds: number;
   jumpArcHeight: number;
+  subCooldownSeconds: number;
+  specialPoints: number;
+  specialDecisionCooldownSeconds: number;
 }
 
 export class CpuAgentSystem {
   private readonly bots: CpuBot[] = [];
   private readonly pendingShots: CpuFireRequest[] = [];
+  private readonly pendingKitRequests: CpuKitRequest[] = [];
   private readonly director: CpuTacticalDirector;
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
@@ -127,6 +158,7 @@ export class CpuAgentSystem {
     }
     this.bots.length = 0;
     this.pendingShots.length = 0;
+    this.pendingKitRequests.length = 0;
     this.stats.cpuTacticalRetargets = 0;
     this.stats.cpuPaintRequests = 0;
     this.stats.cpuShots = 0;
@@ -141,6 +173,9 @@ export class CpuAgentSystem {
     this.stats.cpuSuperJumpLast = '-';
     this.stats.cpuWeaponGuardBlocks = 0;
     this.stats.cpuAdvancedQa = 'default';
+    this.stats.cpuSubUses = 0;
+    this.stats.cpuSpecialActivations = 0;
+    this.stats.cpuKitLast = '-';
 
     const teamACount = humanTeam === Team.A ? 3 : 4;
     const teamBCount = GAME_CONFIG.cpu.cpuPlayers - teamACount;
