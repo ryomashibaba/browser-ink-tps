@@ -41,8 +41,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T16 Stable Freeze</h1>
-      <p>T0–T15 is frozen. Each main weapon now has its own fixed sub + special kit.</p>
+      <h1>Browser Ink TPS · T17 Candidate</h1>
+      <p>T0–T16 is frozen. T17 adds map-selected Super Jump to spawn or living friendly CPUs.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -113,7 +113,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'F = current Sub · G = current Special when READY · Q/E changes full weapon kit · M map';
+    hint.textContent = 'M map → click your spawn or a friendly CPU to Super Jump · F Sub · G Special · Q/E kit';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
