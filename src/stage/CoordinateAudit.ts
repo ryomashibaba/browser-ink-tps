@@ -1,4 +1,5 @@
 import { Quat, Vec3 } from 'playcanvas';
+import { assertAtlasSamplingContract } from '../ink/AtlasCoordinates';
 import type { PaintSurface } from '../ink/PaintSurface';
 import type { StageDefinition, StageSolidDefinition, StageVector3 } from './StageDefinition';
 
@@ -8,6 +9,7 @@ export interface CoordinateAuditResult {
   maxRoundTripErrorMeters: number;
   maxBackingGapMeters: number;
   maxBackingNormalErrorDegrees: number;
+  maxAtlasSamplingError: number;
   summary: string;
 }
 
@@ -19,6 +21,7 @@ export function auditStageCoordinates(
   let maxRoundTripErrorMeters = 0;
   let maxBackingGapMeters = 0;
   let maxBackingNormalErrorDegrees = 0;
+  let maxAtlasSamplingError = 0;
 
   for (const surface of surfaces) {
     maxRoundTripErrorMeters = Math.max(
@@ -52,6 +55,11 @@ export function auditStageCoordinates(
       );
     }
 
+    maxAtlasSamplingError = Math.max(
+      maxAtlasSamplingError,
+      assertAtlasSamplingContract(surface)
+    );
+
     const rect = surface.atlasRect;
     if (!rect) throw new Error(`Coordinate audit: ${surface.id} has no atlas allocation.`);
     const expectedWidth = Math.ceil(surface.widthMeters * rect.pixelsPerMeter);
@@ -69,8 +77,9 @@ export function auditStageCoordinates(
     maxRoundTripErrorMeters,
     maxBackingGapMeters,
     maxBackingNormalErrorDegrees,
+    maxAtlasSamplingError,
     summary:
-      `PASS ${surfaces.length}/${surfaces.length} · round ${maxRoundTripErrorMeters.toExponential(1)}m · solid ${maxBackingGapMeters.toFixed(3)}m · angle ${maxBackingNormalErrorDegrees.toFixed(3)}°`
+      `PASS ${surfaces.length}/${surfaces.length} · round ${maxRoundTripErrorMeters.toExponential(1)}m · solid ${maxBackingGapMeters.toFixed(3)}m · angle ${maxBackingNormalErrorDegrees.toFixed(3)}° · atlas ${maxAtlasSamplingError.toExponential(1)}`
   };
 }
 

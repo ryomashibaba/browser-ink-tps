@@ -6,6 +6,7 @@ import {
   Texture
 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
+import { surfaceTextureUvRect } from './AtlasCoordinates';
 import type { PaintSurface } from './PaintSurface';
 
 const VERTEX_GLSL = `
@@ -103,11 +104,12 @@ export function createInkSurfaceMaterial(surface: PaintSurface, atlas: Texture):
 
   material.cull = CULLFACE_NONE;
   material.setParameter('uInkAtlas', atlas);
+  const sampleRect = surfaceTextureUvRect(surface, rect);
   material.setParameter('uAtlasRect', new Float32Array([
-    rect.x / rect.atlasSize,
-    rect.y / rect.atlasSize,
-    rect.width / rect.atlasSize,
-    rect.height / rect.atlasSize
+    sampleRect.x,
+    sampleRect.y,
+    sampleRect.width,
+    sampleRect.height
   ]));
   material.setParameter('uNeutralColor', new Float32Array(GAME_CONFIG.visual.neutral));
   material.setParameter('uTeamAColor', new Float32Array(GAME_CONFIG.visual.teamA));

@@ -23,6 +23,7 @@ import {
   Texture
 } from 'playcanvas';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
+import { brushClipRect, localMetersToBrushAtlas } from './AtlasCoordinates';
 import type { PaintSurface } from './PaintSurface';
 import { Team, type PaintEvent } from './types';
 
@@ -245,20 +246,20 @@ export class GpuInkAtlas {
       const rect = surface?.atlasRect;
       if (!surface || !rect) continue;
 
-      const centerX = (rect.x + event.centerU * rect.pixelsPerMeter) / this.atlasSize;
-      const centerY = (
-        rect.y + rect.height - event.centerV * rect.pixelsPerMeter
-      ) / this.atlasSize;
+      const center = localMetersToBrushAtlas(rect, event.centerU, event.centerV);
+      const centerX = center.x;
+      const centerY = center.y;
       const radiusX = event.radiusU * rect.pixelsPerMeter / this.atlasSize;
       const radiusY = event.radiusV * rect.pixelsPerMeter / this.atlasSize;
       const c = Math.cos(event.angle);
       const s = Math.sin(event.angle);
       const corners: readonly [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
       const brushUvs: readonly [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
-      const rectMinX = rect.x / this.atlasSize;
-      const rectMinY = rect.y / this.atlasSize;
-      const rectMaxX = (rect.x + rect.width) / this.atlasSize;
-      const rectMaxY = (rect.y + rect.height) / this.atlasSize;
+      const clip = brushClipRect(rect);
+      const rectMinX = clip.minX;
+      const rectMinY = clip.minY;
+      const rectMaxX = clip.maxX;
+      const rectMaxY = clip.maxY;
       const ownerByte = event.team === Team.A ? 255 : 0;
       const wetnessByte = Math.round(Math.min(1, Math.max(0, event.strength)) * 255);
 
