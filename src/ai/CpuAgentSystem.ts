@@ -273,6 +273,33 @@ export class CpuAgentSystem {
     this.pendingShots.length = 0;
   }
 
+  public forceSuperJumpQa(
+    humanTeam: Team.A | Team.B,
+    humanPosition: Vec3,
+    humanActive: boolean
+  ): boolean {
+    for (const bot of this.bots) {
+      if (
+        bot.lifeState !== 'ACTIVE' ||
+        bot.mobilityState !== 'GROUND' ||
+        bot.jumpCooldownSeconds > 0
+      ) {
+        continue;
+      }
+
+      if (this.tryStartTacticalJump(
+        bot,
+        humanTeam,
+        humanPosition,
+        humanActive,
+        true
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public forEachMapAgent(
     visitor: (
       id: string,
@@ -397,6 +424,17 @@ export class CpuAgentSystem {
       entity.setPosition(start.x, start.y + 0.68, start.z);
       this.app.root.addChild(entity);
 
+      const jumpMarker = new Entity(`CPUJumpMarker:${team === Team.A ? 'A' : 'B'}:${slot + 1}`);
+      jumpMarker.addComponent('render', {
+        type: 'cylinder',
+        material: team === Team.A ? this.materialA : this.materialB,
+        castShadows: false,
+        receiveShadows: false
+      });
+      jumpMarker.setLocalScale(0.95, 0.025, 0.95);
+      jumpMarker.enabled = false;
+      this.app.root.addChild(jumpMarker);
+
       this.bots.push({
         id: `${team === Team.A ? 'A' : 'B'}${slot + 1}`,
         team,
@@ -420,7 +458,18 @@ export class CpuAgentSystem {
         inkRecoveryLockSeconds: 0,
         hpRecoveryDelaySeconds: 0,
         lifeState: 'ACTIVE',
-        respawnRemainingSeconds: 0
+        respawnRemainingSeconds: 0,
+        mobilityState: 'GROUND',
+        jumpMarker,
+        jumpStartPosition: start.clone(),
+        jumpTargetPosition: start.clone(),
+        jumpTargetId: '-',
+        jumpPrepRemaining: 0,
+        jumpTravelElapsed: 0,
+        jumpActionRemaining: 0,
+        jumpCooldownSeconds: 0,
+        jumpRespawnWindowSeconds: 0,
+        jumpArcHeight: GAME_CONFIG.superJump.minArcHeightMeters
       });
     }
   }
@@ -518,7 +567,8 @@ export class CpuAgentSystem {
       if (
         candidate.id === bot.id ||
         candidate.team === bot.team ||
-        candidate.lifeState !== 'ACTIVE'
+        candidate.lifeState !== 'ACTIVE' ||
+        isCpuJumpAirborne(candidate)
       ) {
         continue;
       }
@@ -540,6 +590,302 @@ export class CpuAgentSystem {
     }
 
     return this.targetPoint;
+  }
+
+  private tryStartTacticalJump(
+    bot: CpuBot,
+    humanTeam: Team.A | Team.B,
+    humanPosition: Vec3,
+    humanActive: boolean,
+    forced: boolean
+  ): boolean {
+    if (
+      bot.lifeState !== 'ACTIVE' ||
+      bot.mobilityState !== 'GROUND' ||
+      !bot.agent ||
+      bot.jumpCooldownSeconds > 0 ||
+      bot.hp < GAME_CONFIG.combat.playerMaxHp * GAME_CONFIG.cpu.superJumpMinHpFraction
+    ) {
+      return false;
+    }
+
+    const respawnRecovery = bot.jumpRespawnWindowSeconds > 0;
+    const nearestFriendlyDistance = this.nearestFriendlyDistance(
+      bot,
+      humanTeam,
+      humanPosition,
+      humanActive
+    );
+
+    let best: CpuJumpCandidate | null = null;
+
+    const consider = (
+      id: string,
+      position: Vec3,
+      isHuman: boolean
+    ): void => {
+      const snapped = this.navigation.closestPoint(position);
+      const target = new Vec3(snapped.x, snapped.y, snapped.z);
+      const targetSafe = this.isJumpTargetSafe(
+        bot.team,
+        target,
+        humanTeam,
+        humanPosition,
+        humanActive
+      );
+      const score = this.director.scoreSuperJumpCandidate({
+        team: bot.team,
+        role: bot.role,
+        currentPosition: bot.position,
+        targetPosition: target,
+        respawnRecovery,
+        nearestFriendlyDistanceMeters: nearestFriendlyDistance,
+        targetSafe,
+        targetIsHuman: isHuman
+      });
+
+      if (
+        !forced &&
+        score < GAME_CONFIG.cpu.superJumpDecisionScore
+      ) {
+        return;
+      }
+
+      if (!best || score > best.score) {
+        best = { id, position: target, isHuman, score };
+      }
+    };
+
+    for (const candidate of this.bots) {
+      if (
+        candidate.id === bot.id ||
+        candidate.team !== bot.team ||
+        candidate.lifeState !== 'ACTIVE' ||
+        candidate.mobilityState !== 'GROUND'
+      ) {
+        continue;
+      }
+      consider(candidate.id, candidate.position, false);
+    }
+
+    if (humanActive && humanTeam === bot.team) {
+      consider('HUMAN', humanPosition, true);
+    }
+
+    if (!best) {
+      if (!forced) return false;
+
+      // QA fallback: use a tactical node well ahead of the CPU when no safe
+      // friendly candidate satisfies normal scoring.
+      const enemySpawn = bot.team === Team.A
+        ? this.stage.metadata.teamBSpawn
+        : this.stage.metadata.teamASpawn;
+      const fallback = new Vec3(0, enemySpawn[1], enemySpawn[2] * 0.35);
+      const snapped = this.navigation.closestPoint(fallback);
+      best = {
+        id: 'QA_FRONT',
+        position: new Vec3(snapped.x, snapped.y, snapped.z),
+        isHuman: false,
+        score: 999
+      };
+    }
+
+    this.startCpuJumpPrep(bot, best);
+    return true;
+  }
+
+  private nearestFriendlyDistance(
+    bot: CpuBot,
+    humanTeam: Team.A | Team.B,
+    humanPosition: Vec3,
+    humanActive: boolean
+  ): number {
+    let best = Number.POSITIVE_INFINITY;
+
+    for (const candidate of this.bots) {
+      if (
+        candidate.id === bot.id ||
+        candidate.team !== bot.team ||
+        candidate.lifeState !== 'ACTIVE' ||
+        candidate.mobilityState !== 'GROUND'
+      ) {
+        continue;
+      }
+      best = Math.min(best, Math.sqrt(horizontalDistanceSq(bot.position, candidate.position)));
+    }
+
+    if (humanActive && humanTeam === bot.team) {
+      best = Math.min(best, Math.sqrt(horizontalDistanceSq(bot.position, humanPosition)));
+    }
+
+    return Number.isFinite(best) ? best : 999;
+  }
+
+  private isJumpTargetSafe(
+    team: Team.A | Team.B,
+    target: Vec3,
+    humanTeam: Team.A | Team.B,
+    humanPosition: Vec3,
+    humanActive: boolean
+  ): boolean {
+    const dangerSq = GAME_CONFIG.cpu.superJumpSafeEnemyRadiusMeters ** 2;
+
+    if (
+      humanActive &&
+      humanTeam !== team &&
+      horizontalDistanceSq(target, humanPosition) < dangerSq
+    ) {
+      return false;
+    }
+
+    for (const enemy of this.bots) {
+      if (
+        enemy.team === team ||
+        enemy.lifeState !== 'ACTIVE' ||
+        isCpuJumpAirborne(enemy)
+      ) {
+        continue;
+      }
+      if (horizontalDistanceSq(target, enemy.position) < dangerSq) return false;
+    }
+
+    return true;
+  }
+
+  private startCpuJumpPrep(bot: CpuBot, candidate: CpuJumpCandidate): void {
+    if (bot.agent) {
+      this.navigation.removeAgent(bot.agent);
+      bot.agent = null;
+    }
+
+    bot.mobilityState = 'JUMP_PREP';
+    bot.jumpTargetId = candidate.id;
+    bot.jumpTargetPosition.copy(candidate.position);
+    bot.jumpPrepRemaining = GAME_CONFIG.superJump.prepareSeconds;
+    bot.jumpTravelElapsed = 0;
+    bot.jumpActionRemaining = 0;
+    bot.jumpMarker.enabled = true;
+    bot.jumpMarker.setPosition(
+      bot.jumpTargetPosition.x,
+      bot.jumpTargetPosition.y + 0.035,
+      bot.jumpTargetPosition.z
+    );
+    this.stats.cpuSuperJumpLast = `${bot.id}->${candidate.id}`;
+  }
+
+  private beginCpuJumpTravel(bot: CpuBot): void {
+    bot.mobilityState = 'JUMP_TRAVEL';
+    bot.jumpStartPosition.copy(bot.position);
+    bot.previousPosition.copy(bot.position);
+    bot.jumpTravelElapsed = 0;
+
+    const dx = bot.jumpTargetPosition.x - bot.jumpStartPosition.x;
+    const dz = bot.jumpTargetPosition.z - bot.jumpStartPosition.z;
+    const distance = Math.hypot(dx, dz);
+    bot.jumpArcHeight = clamp(
+      GAME_CONFIG.superJump.minArcHeightMeters +
+        distance * GAME_CONFIG.superJump.arcHeightPerHorizontalMeter,
+      GAME_CONFIG.superJump.minArcHeightMeters,
+      GAME_CONFIG.superJump.maxArcHeightMeters
+    );
+
+    this.stats.cpuSuperJumps += 1;
+  }
+
+  private updateCpuJumpAirborne(bot: CpuBot, dt: number): void {
+    const total =
+      GAME_CONFIG.superJump.travelSeconds + GAME_CONFIG.superJump.actionSeconds;
+
+    if (bot.mobilityState === 'JUMP_TRAVEL') {
+      bot.jumpTravelElapsed = Math.min(
+        GAME_CONFIG.superJump.travelSeconds,
+        bot.jumpTravelElapsed + dt
+      );
+      const progress = clamp01(bot.jumpTravelElapsed / Math.max(total, 1e-6));
+      this.updateCpuJumpPosition(bot, progress);
+
+      if (bot.jumpTravelElapsed >= GAME_CONFIG.superJump.travelSeconds) {
+        bot.mobilityState = 'JUMP_LANDING';
+        bot.jumpActionRemaining = GAME_CONFIG.superJump.actionSeconds;
+      }
+      return;
+    }
+
+    bot.jumpActionRemaining = Math.max(0, bot.jumpActionRemaining - dt);
+    const elapsed =
+      GAME_CONFIG.superJump.travelSeconds +
+      (GAME_CONFIG.superJump.actionSeconds - bot.jumpActionRemaining);
+    const progress = clamp01(elapsed / Math.max(total, 1e-6));
+    this.updateCpuJumpPosition(bot, progress);
+
+    if (bot.jumpActionRemaining <= 0) this.finishCpuJump(bot);
+  }
+
+  private updateCpuJumpPosition(bot: CpuBot, progress: number): void {
+    bot.position.set(
+      lerp(bot.jumpStartPosition.x, bot.jumpTargetPosition.x, progress),
+      lerp(bot.jumpStartPosition.y, bot.jumpTargetPosition.y, progress) +
+        Math.sin(Math.PI * progress) * bot.jumpArcHeight,
+      lerp(bot.jumpStartPosition.z, bot.jumpTargetPosition.z, progress)
+    );
+  }
+
+  private finishCpuJump(bot: CpuBot): void {
+    const snapped = this.navigation.closestPoint(bot.jumpTargetPosition);
+    const landing = new Vec3(snapped.x, snapped.y, snapped.z);
+
+    bot.position.copy(landing);
+    bot.previousPosition.copy(landing);
+    bot.agent = this.navigation.addAgent(landing);
+    bot.mobilityState = 'GROUND';
+    bot.jumpMarker.enabled = false;
+    bot.jumpTargetId = '-';
+    bot.jumpPrepRemaining = 0;
+    bot.jumpTravelElapsed = 0;
+    bot.jumpActionRemaining = 0;
+    bot.jumpCooldownSeconds = GAME_CONFIG.cpu.superJumpCooldownSeconds;
+    bot.jumpRespawnWindowSeconds = 0;
+    bot.thinkRemaining = GAME_CONFIG.cpu.tacticalThinkSeconds * 0.35;
+    bot.paintRemaining = Math.max(bot.paintRemaining, 0.12);
+    bot.fireRemaining = Math.max(bot.fireRemaining, 0.18);
+    bot.entity.setLocalEulerAngles(0, 0, 0);
+    this.stats.cpuSuperJumpLandings += 1;
+  }
+
+  private cancelCpuJump(bot: CpuBot, countCancel: boolean): void {
+    if (bot.mobilityState === 'GROUND') return;
+
+    const restore = bot.mobilityState === 'JUMP_TRAVEL' ||
+      bot.mobilityState === 'JUMP_LANDING'
+      ? bot.jumpStartPosition
+      : bot.position;
+    const snapped = this.navigation.closestPoint(restore);
+    const point = new Vec3(snapped.x, snapped.y, snapped.z);
+
+    if (bot.agent) this.navigation.removeAgent(bot.agent);
+    bot.agent = this.navigation.addAgent(point);
+    bot.position.copy(point);
+    bot.previousPosition.copy(point);
+    bot.mobilityState = 'GROUND';
+    bot.jumpMarker.enabled = false;
+    bot.jumpTargetId = '-';
+    bot.jumpPrepRemaining = 0;
+    bot.jumpTravelElapsed = 0;
+    bot.jumpActionRemaining = 0;
+    bot.entity.setLocalEulerAngles(0, 0, 0);
+
+    if (countCancel) this.stats.cpuSuperJumpCancels += 1;
+  }
+
+  private resetCpuJumpState(bot: CpuBot): void {
+    bot.mobilityState = 'GROUND';
+    bot.jumpMarker.enabled = false;
+    bot.jumpTargetId = '-';
+    bot.jumpPrepRemaining = 0;
+    bot.jumpTravelElapsed = 0;
+    bot.jumpActionRemaining = 0;
+    bot.jumpArcHeight = GAME_CONFIG.superJump.minArcHeightMeters;
+    bot.entity.setLocalEulerAngles(0, 0, 0);
   }
 
   private paintAtBot(bot: CpuBot): void {
