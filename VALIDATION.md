@@ -976,6 +976,8 @@ Do not freeze T14 until the user explicitly accepts this redesigned runtime.
 
 ## T14 v0.9.3 targeted hosted QA
 
+**Historical candidate QA. Dualies input/timing and Splatling presentation checks in this section are superseded by the v0.9.4 section below.**
+
 Implementation:
 `72649bc1f896dcb2eff1d73620ec52bceaf0918c`
 
@@ -1010,10 +1012,10 @@ Do not freeze T14 until the user confirms these hosted checks.
 Required hosted checks:
 1. Select Twin Comets. Press Space without LMB: no Dualies dodge should start.
 2. Hold LMB and press Space while Human: the dodge should start.
-3. During the dodge itself, firing remains suppressed.
-4. Immediately after the dodge, firing should return before free movement; directional movement should remain briefly locked.
+3. The dodge should show the fixed-step phase structure: about 4 frames of startup, about 12 frames of roll movement, then no shooting during the roll itself.
+4. About 4 frames after roll movement completes, firing should return while directional movement remains locked for the rest of the post-roll stance.
 5. While still holding LMB during the post-roll stance, Space can chain the second dodge if a charge remains.
-6. After the post-roll lock expires, ordinary Human movement returns.
+6. From accepted dodge input to full normal-state / dodge-charge recovery should be about 48 fixed 60 Hz ticks for an unchained standard roll; ordinary Human movement returns at the end of that state.
 7. Select Rotor Cannon and hold LMB: its HUD/3D charge should now read visually closer to Charger (centered progress + forward guide) while still retaining subtle rotary identity.
 8. Squid Space jump / Squid Roll / Surge remain unchanged.
 9. T8–T13 camera, painting authority, match, CPU, stage, HUD/map behavior show no regression.
