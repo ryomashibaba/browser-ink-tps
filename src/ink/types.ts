@@ -35,6 +35,8 @@ export enum SurfaceFlags {
 export interface PaintEvent {
   tick: number;
   source: PaintSource;
+  /** Optional source actor identity. Additive metadata only; never used for coordinate authority. */
+  actorId?: string;
   team: Team.A | Team.B;
   surfaceId: string;
   /** local surface coordinate in meters from the lower-left U edge */
