@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.9.5 / T14 STABLE FREEZE
+# CURRENT_CANONICAL — v0.10.0 / T15 SUB + SPECIAL FOUNDATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T14 is the frozen stable foundation. T14 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #136 passed build/deploy.**
+**T0–T14 is the frozen stable foundation. T15 is an additive candidate built on top of that Freeze and must not alter the frozen coordinate/paint authority contracts.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1001,3 +1001,46 @@ T15 — Sub Weapon + Special Gauge Foundation:
 - human-earned turf points feed a special gauge
 - first throwable sub-weapon path with ink cost and delayed area paint/damage
 - first special activation path and player-facing gauge/HUD
+
+
+## T15 v0.10.0 Sub Weapon + Special Gauge Foundation candidate
+
+T15 adds the first gameplay layer beyond main weapons.
+
+Paint attribution extension:
+- `PaintEvent` gains additive `source` metadata only: HUMAN / CPU / SPECIAL / DEBUG / SYSTEM
+- canonical PaintSurface-local `surfaceId + U/V + radius + angle` fields are unchanged
+- `PaintCoordinator.processTick()` remains the sole immutable PaintEvent creation point
+- GameplayInk still applies the event first, and the exact same immutable event is queued to GPU ink
+- GameplayInk now reports how much scoreable area actually changed ownership during each event
+- only HUMAN-source scoreable changed area can charge the local player's special gauge
+- CPU, DEBUG, SYSTEM, and SPECIAL-source paint cannot charge the player's gauge
+
+Pulse Bomb sub weapon:
+- input: F
+- human-player only in this first candidate
+- ink cost: 70 / 100
+- pooled throwable with ballistic flight
+- fuse begins on first stage/PaintSurface contact
+- fuse: 1.0 s
+- outer damage: 30 inside 2.4 m
+- inner additional damage: 70 inside 1.0 m, for 100 total in the inner zone
+- explosion paints nearby PaintSurfaces through normal PaintRequest -> immutable PaintEvent flow
+- Pulse Bomb paint is HUMAN source, so newly covered scoreable turf contributes to the special gauge
+
+Turf Pulse special:
+- input: G when ready
+- required gauge: 180p
+- HUMAN scoreable paint conversion: 10p per 1 m² changed, therefore 18 m² for a full gauge at current project scale
+- default Splat penalty retains 50% of current gauge
+- activating consumes the full gauge
+- applies an original radial area attack and radial paint pattern
+- its paint source is SPECIAL, so it cannot refill its own gauge
+- `Special QA Ready` fills the gauge instantly for hosted validation
+
+T15 controls:
+- F: Pulse Bomb
+- G: Turf Pulse when SPECIAL is ready
+- existing RMB Brella guard remains unchanged
+
+T15 remains **IMPLEMENTATION CANDIDATE** until hosted QA is accepted.
