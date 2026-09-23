@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.13.0 / T18 STABLE FREEZE**
+**v0.14.0 / T19A CPU MAIN-WEAPON DIVERSITY CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -396,3 +396,31 @@ v0.13.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `1a097015a8217e
 ### Next: T19 CPU Loadout Diversity / Weapon Kit Parity
 
 The next planned phase removes the remaining player/CPU combat asymmetry: CPU agents still use the frozen Pulse Sprayer combat profile while the human player has the full T14/T16 weapon and kit catalog. T19 will give CPUs role-appropriate weapon variety while preserving the existing tactical, mobility, paint-authority, and lifecycle contracts.
+
+
+### T19A v0.14.0 CPU Main-Weapon Diversity candidate
+
+T0–T18 remains frozen.
+
+The old CPU-wide Pulse Sprayer combat profile has been replaced by role/slot-specific main weapons:
+
+- A1 Needle SMG
+- A2 Twin Comets
+- A3 Wave Slosher
+- A4 Rail Charger
+- B1 Pulse Sprayer
+- B2 Arc Blaster
+- B3 Needle SMG
+- B4 Rotor Cannon
+
+The CPU runtime now preserves class identity instead of treating every weapon as a different projectile count:
+- Dualies fire paired shots
+- Blaster uses blast area damage/paint
+- Slosher uses lob physics and trail paint
+- Charger charges and fires a direct ray
+- Splatling charges to first ring then releases an 18-shot burst
+- Shooter profiles keep their own cadence, damage, Ink cost, gravity, and projectile size
+
+Debug shows CPU loadouts plus active charge/burst counts, and Tactical Map labels each CPU with its weapon short name.
+
+CPU Sub/Special parity and the movement-heavy Roller / Brush / Brella / Stringer / Splatana CPU models remain intentionally deferred to the next T19 batch after this main-weapon candidate is accepted.
