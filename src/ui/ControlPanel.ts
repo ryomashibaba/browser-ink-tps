@@ -41,7 +41,7 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T16 Candidate</h1>
+      <h1>Browser Ink TPS · T16 Stable Freeze</h1>
       <p>T0–T15 is frozen. Each main weapon now has its own fixed sub + special kit.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
