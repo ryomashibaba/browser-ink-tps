@@ -9,6 +9,7 @@ export class PlayerHud {
   private readonly resources: HTMLDivElement;
   private readonly state: HTMLDivElement;
   private readonly centerMessage: HTMLDivElement;
+  private readonly chargeFx: HTMLDivElement;
   private lastUpdate = 0;
 
   public constructor(
@@ -28,7 +29,15 @@ export class PlayerHud {
     this.state.id = 'hud-state';
     this.centerMessage = document.createElement('div');
     this.centerMessage.id = 'hud-center-message';
-    this.root.append(this.top, this.resources, this.state, this.centerMessage);
+    this.chargeFx = document.createElement('div');
+    this.chargeFx.id = 'weapon-charge-vfx';
+    this.root.append(
+      this.top,
+      this.resources,
+      this.state,
+      this.centerMessage,
+      this.chargeFx
+    );
     uiRoot.appendChild(this.root);
     this.update(0, true);
   }
@@ -75,6 +84,8 @@ export class PlayerHud {
       <span>ENEMY ${enemyPercent.toFixed(1)}%</span>
       <span>${escapeHtml(this.stats.playerLocomotionState)}</span>`;
 
+    this.updateChargeFx(teamClass);
+
     this.centerMessage.className = '';
     if (this.stats.matchState === 'COUNTDOWN') {
       this.centerMessage.textContent = Math.max(1, Math.ceil(this.stats.matchCountdownSeconds)).toString();
@@ -89,6 +100,54 @@ export class PlayerHud {
       this.centerMessage.className = 'visible result';
     }
   }
+
+  private updateChargeFx(teamClass: string): void {
+    const kind = chargeKind(this.stats.playerWeaponClass);
+    const percent = clampPercent(this.stats.playerWeaponChargePercent);
+    const active = kind !== null && percent > 0.2;
+
+    if (!active || !kind) {
+      this.chargeFx.className = '';
+      this.chargeFx.innerHTML = '';
+      return;
+    }
+
+    this.chargeFx.className =
+      `active ${kind} ${teamClass} ${percent >= 99 ? 'full' : ''}`;
+    this.chargeFx.style.setProperty('--charge-deg', `${percent * 3.6}deg`);
+    this.chargeFx.style.setProperty('--charge-pct', `${percent}%`);
+    this.chargeFx.style.setProperty(
+      '--stringer-offset',
+      `${Math.max(3, 22 * (1 - percent / 100))}px`
+    );
+
+    switch (kind) {
+      case 'charger':
+        this.chargeFx.innerHTML =
+          '<div class="charger-ring"></div><div class="charger-cross h"></div><div class="charger-cross v"></div>';
+        break;
+      case 'splatling':
+        this.chargeFx.innerHTML =
+          '<div class="splatling-ring"></div><i></i><i></i><i></i><i></i>';
+        break;
+      case 'stringer':
+        this.chargeFx.innerHTML =
+          '<div class="stringer-arrow left"></div><div class="stringer-arrow mid"></div><div class="stringer-arrow right"></div>';
+        break;
+      case 'splatana':
+        this.chargeFx.innerHTML =
+          '<div class="splatana-blade"><i></i></div><div class="splatana-spark"></div>';
+        break;
+    }
+  }
+}
+
+function chargeKind(label: string): 'charger' | 'splatling' | 'stringer' | 'splatana' | null {
+  if (label === 'チャージャー') return 'charger';
+  if (label === 'スピナー') return 'splatling';
+  if (label === 'ストリンガー') return 'stringer';
+  if (label === 'ワイパー') return 'splatana';
+  return null;
 }
 
 function formatClock(seconds: number): string {

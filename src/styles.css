@@ -343,3 +343,156 @@ button.active-weapon {
   #control-panel { width: 300px; }
   .weapon-row { grid-template-columns: 1fr; }
 }
+
+
+/* T14 class-specific charge visuals */
+#weapon-charge-vfx {
+  --charge-deg: 0deg;
+  --charge-pct: 0%;
+  --stringer-offset: 22px;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translate(-50%, -50%);
+  z-index: 13;
+  pointer-events: none;
+  opacity: 0;
+}
+#weapon-charge-vfx.active { opacity: 1; }
+#weapon-charge-vfx.team-a { --charge-color: #3ff1ff; --charge-soft: rgba(63,241,255,.28); }
+#weapon-charge-vfx.team-b { --charge-color: #ff4fa8; --charge-soft: rgba(255,79,168,.28); }
+#weapon-charge-vfx.full {
+  filter: drop-shadow(0 0 10px var(--charge-color));
+  animation: charge-full-pulse .28s ease-in-out infinite alternate;
+}
+
+/* Charger: tightening circular reticle + precise cross */
+#weapon-charge-vfx.charger .charger-ring {
+  position: absolute;
+  inset: 15px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--charge-color) var(--charge-deg),
+    rgba(255,255,255,.10) 0
+  );
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%);
+  mask: radial-gradient(circle, transparent 58%, #000 60%);
+}
+#weapon-charge-vfx.charger .charger-cross {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: var(--charge-color);
+  box-shadow: 0 0 8px var(--charge-color);
+}
+#weapon-charge-vfx.charger .charger-cross.h {
+  width: 40px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+#weapon-charge-vfx.charger .charger-cross.v {
+  width: 2px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+}
+
+/* Splatling: segmented spinning charge ring */
+#weapon-charge-vfx.splatling .splatling-ring {
+  position: absolute;
+  inset: 12px;
+  border: 5px dashed var(--charge-color);
+  border-radius: 50%;
+  opacity: .78;
+  animation: splatling-spin .72s linear infinite;
+}
+#weapon-charge-vfx.splatling i {
+  position: absolute;
+  left: 43px;
+  top: 9px;
+  width: 6px;
+  height: 18px;
+  border-radius: 99px;
+  background: var(--charge-color);
+  transform-origin: 3px 37px;
+  box-shadow: 0 0 7px var(--charge-color);
+}
+#weapon-charge-vfx.splatling i:nth-child(2) { transform: rotate(0deg); }
+#weapon-charge-vfx.splatling i:nth-child(3) { transform: rotate(90deg); }
+#weapon-charge-vfx.splatling i:nth-child(4) { transform: rotate(180deg); }
+#weapon-charge-vfx.splatling i:nth-child(5) { transform: rotate(270deg); }
+
+/* Stringer: three arrows visibly converge toward the reticle */
+#weapon-charge-vfx.stringer .stringer-arrow {
+  position: absolute;
+  top: 39px;
+  width: 24px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--charge-color);
+  box-shadow: 0 0 8px var(--charge-color);
+  transition: transform .04s linear;
+}
+#weapon-charge-vfx.stringer .stringer-arrow::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: -3px;
+  border-left: 7px solid var(--charge-color);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+#weapon-charge-vfx.stringer .left {
+  left: 34px;
+  transform: translateX(calc(-1 * var(--stringer-offset))) rotate(-4deg);
+}
+#weapon-charge-vfx.stringer .mid {
+  left: 34px;
+}
+#weapon-charge-vfx.stringer .right {
+  left: 34px;
+  transform: translateX(var(--stringer-offset)) rotate(4deg);
+}
+
+/* Splatana: blade fills and flares as the charge completes */
+#weapon-charge-vfx.splatana .splatana-blade {
+  position: absolute;
+  left: 41px;
+  top: 10px;
+  width: 10px;
+  height: 72px;
+  transform: rotate(38deg);
+  border: 2px solid rgba(255,255,255,.22);
+  border-radius: 8px 8px 3px 3px;
+  overflow: hidden;
+  box-shadow: 0 0 8px var(--charge-soft);
+}
+#weapon-charge-vfx.splatana .splatana-blade i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--charge-pct);
+  background: linear-gradient(to top, var(--charge-color), #fff);
+  box-shadow: 0 0 12px var(--charge-color);
+}
+#weapon-charge-vfx.splatana .splatana-spark {
+  position: absolute;
+  left: 43px;
+  top: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--charge-color);
+  box-shadow: 0 0 12px 4px var(--charge-color);
+  opacity: calc(var(--charge-pct) / 100%);
+}
+
+@keyframes splatling-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes charge-full-pulse {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to { transform: translate(-50%, -50%) scale(1.08); }
+}
