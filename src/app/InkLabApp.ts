@@ -30,6 +30,7 @@ import type { PaintSurface } from '../ink/PaintSurface';
 import { Team } from '../ink/types';
 import { PlayerInput } from '../input/PlayerInput';
 import { MatchController } from '../match/MatchController';
+import { SuperJumpSystem } from '../mobility/SuperJumpSystem';
 import { initializeRecastNavigation, RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
 import { PlayerController } from '../player/PlayerController';
@@ -108,6 +109,7 @@ export class InkLabApp {
   private readonly projectiles: ProjectileSystem;
   private readonly subWeapons: SubWeaponSystem;
   private readonly specialGauge: SpecialGaugeSystem;
+  private readonly superJump: SuperJumpSystem;
 
   private readonly playerPosition = new Vec3();
   private readonly cpuHumanPosition = new Vec3();
@@ -173,6 +175,13 @@ export class InkLabApp {
       this.selectedTeam
     );
     this.feedback = new GameFeedback(app, canvas);
+    this.superJump = new SuperJumpSystem(
+      app,
+      this.cpuAgents,
+      this.player,
+      this.feedback,
+      this.stats
+    );
     this.projectiles = new ProjectileSystem(
       app,
       surfaces,
@@ -208,6 +217,7 @@ export class InkLabApp {
       onTeamChanged: (team) => {
         this.selectedTeam = team;
         this.player.setTeam(team);
+        this.superJump.reset();
         this.cpuAgents.reset(team);
         this.subWeapons.reset();
         this.specialGauge.reset();
@@ -228,6 +238,7 @@ export class InkLabApp {
       },
       onEndMatchQa: () => {
         this.match.forceEnd();
+        this.superJump.cancel();
         this.projectiles.reset();
         this.subWeapons.reset();
         this.specialGauge.cancelActive();
@@ -283,7 +294,9 @@ export class InkLabApp {
       this.gameplayInk,
       this.cpuAgents,
       this.stats,
-      () => this.selectedTeam
+      () => this.selectedTeam,
+      () => this.superJump.canRequest(this.match.playerCanAct),
+      (target) => this.superJump.request(target, this.selectedTeam)
     );
 
     this.bindMainLoop();
@@ -451,6 +464,7 @@ export class InkLabApp {
   private setPlayerWeaponKit(weaponId: import('../weapons/WeaponCatalog').WeaponId): void {
     const changed = this.projectiles.currentPlayerWeapon.id !== weaponId;
     if (changed) {
+      this.superJump.cancel();
       this.subWeapons.reset();
       this.specialGauge.cancelActive();
     }
@@ -465,6 +479,7 @@ export class InkLabApp {
     this.coordinator.clear();
     this.resources.reset();
     this.combatTargets.reset();
+    this.superJump.reset();
     this.projectiles.reset();
     this.subWeapons.reset();
     this.specialGauge.reset();
@@ -474,6 +489,7 @@ export class InkLabApp {
   }
 
   private respawnPlayer(): void {
+    this.superJump.cancel();
     const spawn = this.match.getSpawnPosition(this.selectedTeam, this.playerPosition);
     this.resources.reset();
     this.player.teleport(spawn);
