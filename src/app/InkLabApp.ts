@@ -297,6 +297,7 @@ export class InkLabApp {
           this.player.currentMode === 'HUMAN' &&
           !this.input.squidHeld &&
           this.input.fireHeld &&
+          (this.input.moveX !== 0 || this.input.moveY !== 0) &&
           this.input.consumeJump();
 
         if (dualieSpaceDodge) {
