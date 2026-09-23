@@ -1260,3 +1260,47 @@ Stable checkpoint:
 - GitHub Actions run #266 / `35847641772`: TypeScript check, production build, and Pages deploy success
 
 T19A is now **STABLE FREEZE**. Future work must preserve the accepted CPU Shooter / Dualies / Blaster / Slosher / Charger / Splatling behavior, per-profile Ink/cadence rules, Brella interactions, charge/burst lifecycle cleanup, and T0–T18 authority boundaries unless an explicit later Freeze-change decision is made.
+
+
+## T19B v0.15.0 CPU Advanced Main-Weapon Class Parity hosted QA
+
+Setup:
+1. Start a match and press `CPU Advanced QA` once.
+2. Debug `CPU advanced QA` should show `advanced-5`.
+3. Debug / Tactical Map should expose ROLLER, BRUSH, BRELLA, STRING, and SABER among the first five CPU agents.
+4. Restart Match after testing and confirm the accepted T19A normal loadout returns.
+
+Roller / Brush:
+5. Roller should approach a nearby enemy, lay a broad CPU-colored rolling trail at close contact, and deal contact damage.
+6. At slightly longer close range, Roller should create a wide horizontal flick paint fan rather than shooter bullets.
+7. Brush should actively close short gaps and repeatedly use fast melee swipes with a smaller five-point paint fan.
+8. Roller/Brush paint must not increase the human Special gauge.
+
+Brella:
+9. Brella should fire a visible six-pellet spread.
+10. After firing or while low on HP, a team-colored guard panel should appear in front of the Brella CPU.
+11. Shoot the guard from the front: Debug `CPU guard / blocks` should increment and CPU HP should not take the blocked damage.
+12. Break the 100-HP guard and confirm it drops for about 2.5 s before recovering.
+13. Attack from behind while it guards and confirm body damage is not incorrectly blocked.
+14. Human Charger and area-damage attacks should also respect the CPU guard direction.
+
+Stringer:
+15. At nearer valid range, Stringer should charge to first ring then release three shots with delayed explosions.
+16. At long range, Stringer should visibly charge longer to full and release a tighter three-shot group.
+17. Delayed bursts should occur about 0.75 s after impact and paint/damage as CPU-source effects.
+18. Debug CPU charge count should reflect Stringer while charging.
+
+Splatana:
+19. At medium range, Ink Saber should perform a quick slash plus ranged wave.
+20. At very close range, it should charge longer and use the stronger charged slash plus larger paint path/wave.
+21. The melee slash and ranged wave should both be able to participate in CPU-vs-human / CPU-vs-CPU combat.
+
+Lifecycle / regression:
+22. Trigger CPU Jump QA while an advanced CPU is charging/guarding; weapon transient state must clear during jump and resume cleanly after landing.
+23. Splat / Respawn / Match End / Restart must leave no stale guard, charge, burst, or advanced effect.
+24. T19A Shooter / Dualies / Blaster / Slosher / Charger / Splatling behavior must remain unchanged.
+25. Human T14/T16 weapon and kit behavior must remain unchanged.
+26. T18 CPU Super Jump and T0–T19A paint/match authority must remain unchanged.
+27. Mixed 4v4 combat should keep FPS / dropped simulation / projectile pool drops / GPU backlog acceptable.
+
+T19B remains **IMPLEMENTATION CANDIDATE** until these checks pass.
