@@ -193,6 +193,7 @@ export class CpuAgentSystem {
     humanActive: boolean
   ): void {
     if (!matchActive) {
+      this.pendingKitRequests.length = 0;
       if (this.activeLastTick) {
         for (const bot of this.bots) {
           bot.agent?.resetMoveTarget();
@@ -372,7 +373,7 @@ export class CpuAgentSystem {
     for (const [actorId, area] of Object.entries(areaByActor)) {
       if (!Number.isFinite(area) || area <= 0) continue;
       const bot = this.bots.find((candidate) => candidate.id === actorId);
-      if (!bot || bot.lifeState !== 'ACTIVE') continue;
+      if (!bot) continue;
 
       const kit = weaponKit(bot.weaponId);
       const required = specialWeaponProfile(kit.special).requiredPoints;
@@ -382,6 +383,17 @@ export class CpuAgentSystem {
           area * GAME_CONFIG.special.pointsPerScoreableSquareMeter
       );
     }
+    this.syncStats();
+  }
+
+  public resetKitGauges(): void {
+    for (const bot of this.bots) {
+      bot.specialPoints = 0;
+      bot.subCooldownSeconds = 0.6;
+      bot.specialDecisionCooldownSeconds = 0.9;
+    }
+    this.pendingKitRequests.length = 0;
+    this.stats.cpuKitLast = '-';
     this.syncStats();
   }
 
