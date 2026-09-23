@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.14.0 / T19A CPU MAIN-WEAPON DIVERSITY CANDIDATE**
+**v0.14.0 / T19A STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -424,3 +424,14 @@ The CPU runtime now preserves class identity instead of treating every weapon as
 Debug shows CPU loadouts plus active charge/burst counts, and Tactical Map labels each CPU with its weapon short name.
 
 CPU Sub/Special parity and the movement-heavy Roller / Brush / Brella / Stringer / Splatana CPU models remain intentionally deferred to the next T19 batch after this main-weapon candidate is accepted.
+
+
+### T19A Stable Freeze
+
+v0.14.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `034ee78fa3e25705332a40d2456ac5ebf90b79d4`; GitHub Actions run #266 passed TypeScript check, production build, and Pages deployment.
+
+### Next: T19B CPU Advanced Main-Weapon Class Parity
+
+The next batch completes the remaining five T14 CPU main-weapon classes: Roller, Brush, Brella, Stringer, and Splatana. These will receive genuine class-specific CPU behavior rather than generic projectile approximations.
+
+CPU Sub/Special parity remains intentionally deferred until T19C, after every T14 main-weapon class has a CPU runtime.
