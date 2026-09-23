@@ -99,6 +99,35 @@ export class GameFeedback {
     this.playTone(660, 0.022, 0.06, 'sine', 1.22);
   }
 
+  public beam(
+    team: Team.A | Team.B,
+    from: Vec3,
+    to: Vec3,
+    profile: WeaponProfile
+  ): void {
+    const samples = 9;
+    for (let i = 0; i < samples; i += 1) {
+      const t = samples <= 1 ? 0 : i / (samples - 1);
+      const point = new Vec3(
+        from.x + (to.x - from.x) * t,
+        from.y + (to.y - from.y) * t,
+        from.z + (to.z - from.z) * t
+      );
+      this.spawnFx(team, point, 0.045 * profile.fxScale, 0.075);
+    }
+    this.playTone(720 * profile.audioPitch, 0.028, 0.07, 'sawtooth', 0.74);
+  }
+
+  public melee(
+    team: Team.A | Team.B,
+    center: Vec3,
+    profile: WeaponProfile,
+    scale = 1
+  ): void {
+    this.spawnFx(team, center, 0.20 * profile.fxScale * scale, 0.12);
+    this.playTone(150 * profile.audioPitch, 0.026, 0.065, 'triangle', 0.58);
+  }
+
   private spawnFx(
     team: Team.A | Team.B,
     position: Vec3,

@@ -65,6 +65,7 @@ export class PlayerController {
   private weaponDodgeRemainingSeconds = 0;
   private weaponDodgeCooldownSeconds = 0;
   private weaponDodgeRequested = false;
+  private weaponMoveMultiplier = 1;
   private snapToGroundEnabled = true;
 
   private static readonly humanRadius = GAME_CONFIG.player.humanColliderRadiusMeters;
@@ -142,6 +143,10 @@ export class PlayerController {
     this.weaponDodgeRequested = true;
   }
 
+  public setWeaponMoveMultiplier(multiplier: number): void {
+    this.weaponMoveMultiplier = clamp(multiplier, 0.45, 1.25);
+  }
+
   public setTeam(team: Team.A | Team.B): void {
     this.team = team;
     this.updateMaterial();
@@ -176,6 +181,7 @@ export class PlayerController {
     this.weaponDodgeRemainingSeconds = 0;
     this.weaponDodgeCooldownSeconds = 0;
     this.weaponDodgeRequested = false;
+    this.weaponMoveMultiplier = 1;
     this.setSnapToGround(true);
 
     this.squidCollider.setEnabled(false);
@@ -351,7 +357,7 @@ export class PlayerController {
 
       const tuning = GAME_CONFIG.player;
       this.applyHorizontalTarget(
-        tuning.humanSpeedMetersPerSecond,
+        tuning.humanSpeedMetersPerSecond * this.weaponMoveMultiplier,
         tuning.groundAccelerationMetersPerSecond2,
         dt
       );
