@@ -917,21 +917,27 @@ export class CpuAgentSystem {
 
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
-    bot.lifeState = 'SPLATTED';
-    bot.respawnRemainingSeconds = GAME_CONFIG.match.respawnSeconds;
-    bot.entity.enabled = false;
+
     if (bot.agent) {
       this.navigation.removeAgent(bot.agent);
       bot.agent = null;
     }
+    this.resetCpuJumpState(bot);
+
+    bot.lifeState = 'SPLATTED';
+    bot.respawnRemainingSeconds = GAME_CONFIG.match.respawnSeconds;
+    bot.entity.enabled = false;
     this.stats.cpuSplats += 1;
   }
 
   private respawnBot(bot: CpuBot): void {
     const start = this.spawnPosition(bot.team, bot.slot);
+    if (bot.agent) this.navigation.removeAgent(bot.agent);
     bot.agent = this.navigation.addAgent(start);
     bot.position.copy(start);
     bot.previousPosition.copy(start);
+    bot.jumpStartPosition.copy(start);
+    bot.jumpTargetPosition.copy(start);
     bot.hp = GAME_CONFIG.combat.playerMaxHp;
     bot.ink = GAME_CONFIG.inkEconomy.capacity;
     bot.inkRecoveryLockSeconds = 0;
@@ -941,7 +947,17 @@ export class CpuAgentSystem {
     bot.fireRemaining = GAME_CONFIG.cpu.fireIntervalSeconds * 0.5;
     bot.respawnRemainingSeconds = 0;
     bot.lifeState = 'ACTIVE';
+    bot.mobilityState = 'GROUND';
+    bot.jumpMarker.enabled = false;
+    bot.jumpTargetId = '-';
+    bot.jumpPrepRemaining = 0;
+    bot.jumpTravelElapsed = 0;
+    bot.jumpActionRemaining = 0;
+    bot.jumpCooldownSeconds = 0;
+    bot.jumpRespawnWindowSeconds = GAME_CONFIG.cpu.superJumpRespawnWindowSeconds;
+    bot.jumpArcHeight = GAME_CONFIG.superJump.minArcHeightMeters;
     bot.entity.enabled = true;
+    bot.entity.setLocalEulerAngles(0, 0, 0);
     bot.entity.setPosition(start.x, start.y + 0.68, start.z);
     this.stats.cpuRespawns += 1;
   }
@@ -966,6 +982,8 @@ export class CpuAgentSystem {
     let skirmisher = 0;
     let anchor = 0;
     let alive = 0;
+    let jumpPrep = 0;
+    let jumpAirborne = 0;
     let hpTotal = 0;
     let inkTotal = 0;
 
@@ -977,6 +995,8 @@ export class CpuAgentSystem {
       else anchor += 1;
 
       if (bot.lifeState === 'ACTIVE') alive += 1;
+      if (bot.mobilityState === 'JUMP_PREP') jumpPrep += 1;
+      if (isCpuJumpAirborne(bot)) jumpAirborne += 1;
       hpTotal += bot.hp;
       inkTotal += bot.ink;
     }
@@ -986,6 +1006,8 @@ export class CpuAgentSystem {
     this.stats.cpuTeamB = teamB;
     this.stats.cpuRoles = `P${painter} / S${skirmisher} / A${anchor}`;
     this.stats.cpuAlive = alive;
+    this.stats.cpuSuperJumpPrep = jumpPrep;
+    this.stats.cpuSuperJumpAirborne = jumpAirborne;
     this.stats.cpuAverageHp = this.bots.length > 0 ? hpTotal / this.bots.length : 0;
     this.stats.cpuAverageInk = this.bots.length > 0 ? inkTotal / this.bots.length : 0;
   }
@@ -1021,6 +1043,23 @@ function raySphereDistance(
   if (discriminant < 0) return null;
   const distance = Math.max(0, -b - Math.sqrt(discriminant));
   return distance <= maxDistance ? distance : null;
+}
+
+function isCpuJumpAirborne(bot: CpuBot): boolean {
+  return bot.mobilityState === 'JUMP_TRAVEL' ||
+    bot.mobilityState === 'JUMP_LANDING';
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function makeCpuMaterial(rgb: readonly [number, number, number]): StandardMaterial {
