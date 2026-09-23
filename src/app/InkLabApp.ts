@@ -34,6 +34,7 @@ import { initializeRecastNavigation, RecastStageNavigation } from '../navigation
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
 import { PlayerController } from '../player/PlayerController';
 import { ProjectileSystem } from '../projectile/ProjectileSystem';
+import { SpecialGaugeSystem } from '../special/SpecialGaugeSystem';
 import { auditStageCoordinates } from '../stage/CoordinateAudit';
 import {
   buildTestStage,
@@ -44,6 +45,7 @@ import { ControlPanel } from '../ui/ControlPanel';
 import { DebugOverlay } from '../ui/DebugOverlay';
 import { PlayerHud } from '../ui/PlayerHud';
 import { TacticalMap } from '../ui/TacticalMap';
+import { SubWeaponSystem } from '../subweapon/SubWeaponSystem';
 
 export class InkLabApp {
   public static async boot(canvas: HTMLCanvasElement, uiRoot: HTMLElement): Promise<InkLabApp> {
@@ -100,6 +102,8 @@ export class InkLabApp {
   private readonly cpuAgents: CpuAgentSystem;
   private readonly feedback: GameFeedback;
   private readonly projectiles: ProjectileSystem;
+  private readonly subWeapons: SubWeaponSystem;
+  private readonly specialGauge: SpecialGaugeSystem;
 
   private readonly playerPosition = new Vec3();
   private readonly cpuHumanPosition = new Vec3();
@@ -176,12 +180,33 @@ export class InkLabApp {
       this.feedback,
       this.stats
     );
+    this.subWeapons = new SubWeaponSystem(
+      app,
+      surfaces,
+      this.physics,
+      this.coordinator,
+      this.resources,
+      this.combatTargets,
+      this.cpuAgents,
+      this.feedback,
+      this.stats
+    );
+    this.specialGauge = new SpecialGaugeSystem(
+      surfaces,
+      this.coordinator,
+      this.combatTargets,
+      this.cpuAgents,
+      this.feedback,
+      this.stats
+    );
 
     this.controls = new ControlPanel(uiRoot, {
       onTeamChanged: (team) => {
         this.selectedTeam = team;
         this.player.setTeam(team);
         this.cpuAgents.reset(team);
+        this.subWeapons.reset();
+        this.specialGauge.reset();
       },
       onBrushChanged: (radius) => { this.brushRadius = radius; },
       onWeaponChanged: (weaponId) => this.projectiles.setPlayerWeapon(weaponId),
@@ -200,10 +225,14 @@ export class InkLabApp {
       onEndMatchQa: () => {
         this.match.forceEnd();
         this.projectiles.reset();
+        this.subWeapons.reset();
       },
+      onSpecialQaReady: () => this.specialGauge.qaFill(),
       onClear: () => {
         this.clearCoordinateQaMarkers();
         this.coordinator.clear();
+        this.subWeapons.reset();
+        this.specialGauge.reset();
       }
     });
     this.selectedTeam = this.controls.selectedTeam;
@@ -277,6 +306,7 @@ export class InkLabApp {
             this.selectedTeam,
             this.player.getPosition(this.playerPosition)
           );
+          this.specialGauge.onPlayerSplatted();
           this.player.setLifecycleActive(false);
           this.projectiles.reset();
         }
@@ -288,6 +318,7 @@ export class InkLabApp {
 
         if (this.match.consumeMatchEnded()) {
           this.projectiles.reset();
+          this.subWeapons.reset();
         }
 
         const playerCanAct = this.match.playerCanAct;
@@ -359,12 +390,34 @@ export class InkLabApp {
           this.match.playerCanAct
         );
 
-        this.coordinator.processTick(tick);
+        const subPressed = this.input.consumeSubPressed();
+        const specialPressed = this.input.consumeSpecialPressed();
+        if (playerCanAct && subPressed) {
+          this.subWeapons.tryThrow(
+            this.selectedTeam,
+            this.muzzlePosition,
+            this.aimDirection
+          );
+        }
+        if (playerCanAct && specialPressed) {
+          this.specialGauge.tryActivate(
+            this.selectedTeam,
+            this.player.getPosition(this.playerPosition)
+          );
+        }
+
+        this.subWeapons.fixedUpdate(stepSeconds);
+
+        const paintReport = this.coordinator.processTick(tick);
+        this.specialGauge.addHumanScoreablePaint(
+          paintReport.humanScoreableAreaMeters2
+        );
       });
 
       this.player.render(report.alpha, this.playerPosition);
       this.cpuAgents.render(report.alpha);
       this.projectiles.render(report.alpha);
+      this.subWeapons.render(report.alpha);
       this.feedback.update(cameraDt);
       this.cameraController.update(this.playerPosition);
 
@@ -388,6 +441,8 @@ export class InkLabApp {
     this.resources.reset();
     this.combatTargets.reset();
     this.projectiles.reset();
+    this.subWeapons.reset();
+    this.specialGauge.reset();
     this.match.restart();
     this.cpuAgents.reset(this.selectedTeam);
     this.respawnPlayer();
