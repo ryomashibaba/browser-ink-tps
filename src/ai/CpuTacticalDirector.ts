@@ -48,7 +48,7 @@ export class CpuTacticalDirector {
   }
 
   private painterGoal(context: TacticalAgentContext, out: Vec3): Vec3 {
-    let best = NODES[context.slot % NODES.length];
+    let best = NODES[context.slot % NODES.length]!;
     let bestScore = -Infinity;
 
     for (let i = 0; i < NODES.length; i += 1) {
