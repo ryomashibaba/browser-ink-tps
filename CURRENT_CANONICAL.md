@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.14.0 / T19A CPU MAIN-WEAPON DIVERSITY CANDIDATE
+# CURRENT_CANONICAL — v0.14.0 / T19A STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T18 is the frozen stable foundation. T19A removes the old Pulse-Sprayer-only CPU combat isolation without changing the frozen human weapon, CPU tactical, mobility, match, or paint-authority contracts.**
+**T0–T19A is the frozen stable foundation. T19A hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #266 passed build/deploy.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1416,3 +1416,47 @@ T0–T18 Freeze:
 - MatchController remains unchanged
 
 T19A remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
+
+
+## T19A Stable Freeze — 2026-09-23
+
+Hosted runtime QA for v0.14.0 was completed and accepted by the user.
+
+Stable T19A checkpoint:
+- commit: `034ee78fa3e25705332a40d2456ac5ebf90b79d4`
+- GitHub Actions: run #266 / `35847641772` — success
+- CPU main-weapon diversity is frozen for:
+  - Pulse Sprayer
+  - Needle SMG
+  - Twin Comets
+  - Arc Blaster
+  - Wave Slosher
+  - Rail Charger
+  - Rotor Cannon
+- CPU profile Ink costs / cadence / gravity / damage are frozen to T14 WeaponCatalog values
+- CPU Dualies paired fire, Blaster blast, Slosher lob/trail, Charger charge/ray, and Splatling first-ring burst are included
+- CPU Charger and Blaster interactions with human Brella guard are included
+- CPU charge / burst state cleanup across T18 mobility and lifecycle transitions is included
+- CPU map/debug loadout identity is included
+- human T14/T16 behavior and T0–T18 authority contracts remain unchanged
+
+T19A is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T19B — CPU Advanced Main-Weapon Class Parity:
+- complete CPU support for the five remaining T14 classes:
+  - Metro Roller
+  - Dash Brush
+  - Canopy Guard
+  - Chord Stringer
+  - Ink Saber
+- do not approximate these as generic projectiles
+- preserve each frozen T14 class identity:
+  - Roller flick / rolling-contact paint
+  - Brush melee swipe / mobility-pressure behavior
+  - Brella pellet burst / directional guard
+  - Stringer charge rings / three-shot spread / delayed burst
+  - Splatana direct slash / ranged wave / charged slash
+- integrate class behavior with existing CPU tactical roles and T18 mobility
+- keep CPU Sub/Special parity deferred to T19C until all 11 main-weapon classes have a genuine CPU runtime
