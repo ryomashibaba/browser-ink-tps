@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.13.0 / T18 CPU TACTICAL MOBILITY CANDIDATE**
+**v0.13.0 / T18 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -387,3 +387,12 @@ Normal tuning:
 - 2.4 s respawn recovery opportunity
 
 Use **CPU Jump QA** in the ControlPanel to force one valid CPU jump without waiting for natural tactical conditions.
+
+
+### T18 Stable Freeze
+
+v0.13.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `1a097015a8217ef4fcea8689e1a5de4cf8b71b42`; GitHub Actions run #243 passed TypeScript check, production build, and Pages deployment.
+
+### Next: T19 CPU Loadout Diversity / Weapon Kit Parity
+
+The next planned phase removes the remaining player/CPU combat asymmetry: CPU agents still use the frozen Pulse Sprayer combat profile while the human player has the full T14/T16 weapon and kit catalog. T19 will give CPUs role-appropriate weapon variety while preserving the existing tactical, mobility, paint-authority, and lifecycle contracts.
