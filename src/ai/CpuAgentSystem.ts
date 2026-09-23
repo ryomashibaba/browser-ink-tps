@@ -648,6 +648,12 @@ export class CpuAgentSystem {
     const profile = weaponProfile(bot.weaponId);
     bot.fireRemaining = Math.max(0, bot.fireRemaining - dt);
     bot.weaponBurstCooldown = Math.max(0, bot.weaponBurstCooldown - dt);
+    bot.weaponRollPaintCooldown = Math.max(0, bot.weaponRollPaintCooldown - dt);
+    bot.weaponGuardBreakSeconds = Math.max(0, bot.weaponGuardBreakSeconds - dt);
+
+    if (!bot.weaponGuarding && bot.weaponGuardBreakSeconds <= 0) {
+      bot.weaponGuardHp = Math.min(100, bot.weaponGuardHp + 28 * dt);
+    }
 
     const target = this.chooseCombatTarget(
       bot,
@@ -656,26 +662,226 @@ export class CpuAgentSystem {
       humanActive
     );
 
-    if (profile.weaponClass === 'SPLATLING') {
-      this.updateCpuSplatling(bot, profile, target, dt);
+    if (target) this.updateCpuWeaponFacing(bot, target);
+
+    switch (profile.weaponClass) {
+      case 'SPLATLING':
+        bot.weaponGuarding = false;
+        this.updateCpuSplatling(bot, profile, target, dt);
+        return;
+      case 'CHARGER':
+        bot.weaponGuarding = false;
+        this.updateCpuCharger(bot, profile, target, dt);
+        return;
+      case 'ROLLER':
+        bot.weaponGuarding = false;
+        this.updateCpuRoller(bot, profile, target);
+        return;
+      case 'BRUSH':
+        bot.weaponGuarding = false;
+        this.updateCpuBrush(bot, profile, target);
+        return;
+      case 'BRELLA':
+        this.updateCpuBrella(bot, profile, target);
+        return;
+      case 'STRINGER':
+        bot.weaponGuarding = false;
+        this.updateCpuStringer(bot, profile, target, dt);
+        return;
+      case 'SPLATANA':
+        bot.weaponGuarding = false;
+        this.updateCpuSplatana(bot, profile, target, dt);
+        return;
+      default:
+        bot.weaponGuarding = false;
+        bot.weaponChargeSeconds = 0;
+        bot.weaponBurstShotsRemaining = 0;
+        if (!target || bot.fireRemaining > 0) return;
+        if (!this.cpuTargetInRange(bot, target, profile)) return;
+
+        if (this.queueCpuWeaponRequest(bot, target, 0, 'PROJECTILE')) {
+          bot.fireRemaining = profile.fireIntervalSeconds;
+        } else {
+          bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+        }
+    }
+  }
+
+  private updateCpuRoller(
+    bot: CpuBot,
+    profile: ReturnType<typeof weaponProfile>,
+    target: Vec3 | null
+  ): void {
+    bot.weaponChargeSeconds = 0;
+    bot.weaponBurstShotsRemaining = 0;
+    if (!target) return;
+
+    const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
+    if (distance <= 6.0) {
+      bot.agent?.requestMoveTarget(this.navigation.closestPoint(target));
+    }
+
+    if (distance <= 1.45 && bot.weaponRollPaintCooldown <= 0) {
+      if (this.queueCpuWeaponRequest(bot, target, 0, 'ROLLER_ROLL')) {
+        bot.weaponRollPaintCooldown = 0.075;
+      }
       return;
     }
 
-    if (profile.weaponClass === 'CHARGER') {
-      this.updateCpuCharger(bot, profile, target, dt);
-      return;
+    if (
+      distance <= 4.6 &&
+      bot.fireRemaining <= 0 &&
+      this.queueCpuWeaponRequest(bot, target, 0, 'ROLLER_FLICK')
+    ) {
+      bot.fireRemaining = profile.fireIntervalSeconds;
+    }
+  }
+
+  private updateCpuBrush(
+    bot: CpuBot,
+    profile: ReturnType<typeof weaponProfile>,
+    target: Vec3 | null
+  ): void {
+    bot.weaponChargeSeconds = 0;
+    bot.weaponBurstShotsRemaining = 0;
+    if (!target) return;
+
+    const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
+    if (distance <= 6.0 && distance > 1.15) {
+      bot.agent?.requestMoveTarget(this.navigation.closestPoint(target));
     }
 
+    if (
+      distance <= 2.45 &&
+      bot.fireRemaining <= 0 &&
+      this.queueCpuWeaponRequest(bot, target, 0, 'BRUSH_SWIPE')
+    ) {
+      bot.fireRemaining = profile.fireIntervalSeconds;
+    }
+  }
+
+  private updateCpuBrella(
+    bot: CpuBot,
+    profile: ReturnType<typeof weaponProfile>,
+    target: Vec3 | null
+  ): void {
     bot.weaponChargeSeconds = 0;
     bot.weaponBurstShotsRemaining = 0;
 
-    if (!target || bot.fireRemaining > 0) return;
-    if (!this.cpuTargetInRange(bot, target, profile)) return;
+    if (!target || !this.cpuTargetInRange(bot, target, profile)) {
+      bot.weaponGuarding = false;
+      return;
+    }
 
-    if (this.queueCpuWeaponRequest(bot, target, 0)) {
+    const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
+    const canGuard =
+      bot.weaponGuardBreakSeconds <= 0 &&
+      bot.weaponGuardHp > 0 &&
+      distance <= 7.6;
+    const lowHp = bot.hp <= 62;
+    const postShotGuard =
+      bot.fireRemaining > profile.fireIntervalSeconds * 0.34;
+
+    bot.weaponGuarding = canGuard && (lowHp || postShotGuard);
+    if (bot.weaponGuarding) return;
+
+    if (
+      bot.fireRemaining <= 0 &&
+      this.queueCpuWeaponRequest(bot, target, 0, 'BRELLA_BURST')
+    ) {
+      bot.fireRemaining = profile.fireIntervalSeconds;
+    }
+  }
+
+  private updateCpuStringer(
+    bot: CpuBot,
+    profile: ReturnType<typeof weaponProfile>,
+    target: Vec3 | null,
+    dt: number
+  ): void {
+    if (!target || !this.cpuTargetInRange(bot, target, profile)) {
+      bot.weaponChargeSeconds = 0;
+      return;
+    }
+    if (bot.fireRemaining > 0) return;
+
+    const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
+    const targetChargeSeconds =
+      distance >= 9.5 ? profile.chargeSeconds : profile.firstChargeSeconds;
+
+    bot.weaponChargeSeconds = Math.min(
+      targetChargeSeconds,
+      bot.weaponChargeSeconds + dt
+    );
+    if (bot.weaponChargeSeconds + 1e-6 < targetChargeSeconds) return;
+
+    const charge = targetChargeSeconds / Math.max(profile.chargeSeconds, 1e-6);
+    if (
+      this.queueCpuWeaponRequest(
+        bot,
+        target,
+        charge,
+        'STRINGER_RELEASE'
+      )
+    ) {
       bot.fireRemaining = profile.fireIntervalSeconds;
     } else {
       bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+    }
+    bot.weaponChargeSeconds = 0;
+  }
+
+  private updateCpuSplatana(
+    bot: CpuBot,
+    profile: ReturnType<typeof weaponProfile>,
+    target: Vec3 | null,
+    dt: number
+  ): void {
+    if (!target || !this.cpuTargetInRange(bot, target, profile)) {
+      bot.weaponChargeSeconds = 0;
+      return;
+    }
+
+    const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
+    if (distance <= 5.2 && distance > 1.05) {
+      bot.agent?.requestMoveTarget(this.navigation.closestPoint(target));
+    }
+    if (bot.fireRemaining > 0) return;
+
+    const targetChargeSeconds =
+      distance <= 2.25 ? profile.chargeSeconds : 0.16;
+    bot.weaponChargeSeconds = Math.min(
+      targetChargeSeconds,
+      bot.weaponChargeSeconds + dt
+    );
+    if (bot.weaponChargeSeconds + 1e-6 < targetChargeSeconds) return;
+
+    const charge = targetChargeSeconds / Math.max(profile.chargeSeconds, 1e-6);
+    if (
+      this.queueCpuWeaponRequest(
+        bot,
+        target,
+        charge,
+        'SPLATANA_RELEASE'
+      )
+    ) {
+      bot.fireRemaining = profile.fireIntervalSeconds;
+    } else {
+      bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+    }
+    bot.weaponChargeSeconds = 0;
+  }
+
+  private updateCpuWeaponFacing(bot: CpuBot, target: Vec3): void {
+    bot.weaponFacing.set(
+      target.x - bot.position.x,
+      0,
+      target.z - bot.position.z
+    );
+    if (bot.weaponFacing.lengthSq() <= 1e-8) {
+      bot.weaponFacing.set(0, 0, bot.team === Team.A ? -1 : 1);
+    } else {
+      bot.weaponFacing.normalize();
     }
   }
 
@@ -762,12 +968,14 @@ export class CpuAgentSystem {
   private queueCpuWeaponRequest(
     bot: CpuBot,
     target: Vec3,
-    charge: number
+    charge: number,
+    action: CpuWeaponAction = 'PROJECTILE'
   ): boolean {
     const profile = weaponProfile(bot.weaponId);
-    if (bot.ink + 1e-6 < profile.inkCost) return false;
+    const inkCost = cpuWeaponInkCost(profile, action, charge);
+    if (bot.ink + 1e-6 < inkCost) return false;
 
-    bot.ink = Math.max(0, bot.ink - profile.inkCost);
+    bot.ink = Math.max(0, bot.ink - inkCost);
     bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
 
     const origin = new Vec3(
@@ -780,9 +988,11 @@ export class CpuAgentSystem {
       sourceId: bot.id,
       team: bot.team,
       origin,
+      bodyPosition: bot.position.clone(),
       target: target.clone(),
       weaponId: bot.weaponId,
-      charge
+      charge,
+      action
     });
     this.stats.cpuShots += 1;
     return true;
