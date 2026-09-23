@@ -15,6 +15,7 @@ import {
   TextureHandler,
   Vec3
 } from 'playcanvas';
+import { CpuAgentSystem } from '../ai/CpuAgentSystem';
 import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { CombatTargetSystem } from '../combat/CombatTargetSystem';
 import { PlayerResources } from '../combat/PlayerResources';
@@ -28,6 +29,7 @@ import type { PaintSurface } from '../ink/PaintSurface';
 import { Team } from '../ink/types';
 import { PlayerInput } from '../input/PlayerInput';
 import { MatchController } from '../match/MatchController';
+import { initializeRecastNavigation, RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
 import { PlayerController } from '../player/PlayerController';
 import { ProjectileSystem } from '../projectile/ProjectileSystem';
@@ -38,7 +40,10 @@ import { DebugOverlay } from '../ui/DebugOverlay';
 
 export class InkLabApp {
   public static async boot(canvas: HTMLCanvasElement, uiRoot: HTMLElement): Promise<InkLabApp> {
-    await initializeRapier();
+    await Promise.all([
+      initializeRapier(),
+      initializeRecastNavigation()
+    ]);
 
     const device = await createGraphicsDevice(canvas, {
       deviceTypes: [DEVICETYPE_WEBGPU],
@@ -82,9 +87,12 @@ export class InkLabApp {
   private readonly resources: PlayerResources;
   private readonly combatTargets: CombatTargetSystem;
   private readonly match: MatchController;
+  private readonly navigation: RecastStageNavigation;
+  private readonly cpuAgents: CpuAgentSystem;
   private readonly projectiles: ProjectileSystem;
 
   private readonly playerPosition = new Vec3();
+  private readonly cpuHumanPosition = new Vec3();
   private readonly aimDirection = new Vec3();
   private readonly aimTarget = new Vec3();
   private readonly muzzlePosition = new Vec3();
@@ -132,6 +140,15 @@ export class InkLabApp {
     this.resources = new PlayerResources(this.stats);
     this.combatTargets = new CombatTargetSystem(app, this.stats);
     this.match = new MatchController(this.gameplayInk, this.stats);
+    this.navigation = new RecastStageNavigation(TEST_STAGE_DEFINITION, this.stats);
+    this.cpuAgents = new CpuAgentSystem(
+      app,
+      this.navigation,
+      this.gameplayInk,
+      this.coordinator,
+      this.stats,
+      this.selectedTeam
+    );
     this.projectiles = new ProjectileSystem(
       app,
       surfaces,
@@ -146,6 +163,7 @@ export class InkLabApp {
       onTeamChanged: (team) => {
         this.selectedTeam = team;
         this.player.setTeam(team);
+        this.cpuAgents.reset(team);
       },
       onBrushChanged: (radius) => { this.brushRadius = radius; },
       onStress: (count) => this.enqueueStressTest(count),
@@ -248,6 +266,12 @@ export class InkLabApp {
           );
         }
         this.combatTargets.fixedUpdate(stepSeconds);
+        this.cpuAgents.fixedUpdate(
+          stepSeconds,
+          this.match.currentState === 'PLAYING',
+          this.selectedTeam,
+          this.player.getPosition(this.cpuHumanPosition)
+        );
 
         // Keep the camera transform current for every catch-up tick. This prevents
         // render-FPS-dependent aim lag when several 60 Hz ticks run in one frame.
@@ -272,6 +296,7 @@ export class InkLabApp {
       });
 
       this.player.render(report.alpha, this.playerPosition);
+      this.cpuAgents.render(report.alpha);
       this.projectiles.render(report.alpha);
       this.cameraController.update(this.playerPosition);
 
@@ -294,6 +319,7 @@ export class InkLabApp {
     this.combatTargets.reset();
     this.projectiles.reset();
     this.match.restart();
+    this.cpuAgents.reset(this.selectedTeam);
     this.respawnPlayer();
   }
 

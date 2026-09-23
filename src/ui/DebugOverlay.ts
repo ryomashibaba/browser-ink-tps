@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T11 STABLE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T12 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -43,6 +43,12 @@ export class DebugOverlay {
         <span class="muted">Life state</span><span>${escapeHtml(last.playerLifeState)}</span>
         <span class="muted">Respawn</span><span>${last.playerRespawnSeconds.toFixed(1)} s</span>
         <span class="muted">Splats / respawns</span><span>${last.playerSplats} / ${last.playerRespawns}</span>
+        <span class="muted">Recast</span><span>${escapeHtml(last.cpuNavigationStatus)}</span>
+        <span class="muted">Nav build</span><span>${last.cpuNavigationBuildMs.toFixed(1)} ms</span>
+        <span class="muted">CPU agents</span><span>${last.cpuAgents} · A${last.cpuTeamA}/B${last.cpuTeamB}</span>
+        <span class="muted">CPU roles</span><span>${escapeHtml(last.cpuRoles)}</span>
+        <span class="muted">CPU retargets</span><span>${last.cpuTacticalRetargets}</span>
+        <span class="muted">CPU paint req</span><span>${last.cpuPaintRequests}</span>
         <span class="muted">FPS</span><span>${last.fps.toFixed(1)}</span>
         <span class="muted">Frame</span><span>${last.averageFrameMs.toFixed(2)} ms</span>
         <span class="muted">Fixed tick</span><span>${this.clock.tick} @ ${this.clock.tickRate} Hz</span>

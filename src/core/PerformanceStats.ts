@@ -61,6 +61,15 @@ export class PerformanceStats {
   public playerSplats = 0;
   public playerRespawns = 0;
 
+  public cpuNavigationStatus = 'PENDING';
+  public cpuNavigationBuildMs = 0;
+  public cpuAgents = 0;
+  public cpuTeamA = 0;
+  public cpuTeamB = 0;
+  public cpuRoles = '-';
+  public cpuTacticalRetargets = 0;
+  public cpuPaintRequests = 0;
+
   public activeProjectiles = 0;
   public projectileImpacts = 0;
   public projectilePoolDrops = 0;

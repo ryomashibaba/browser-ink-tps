@@ -25,8 +25,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T11 Stable</h1>
-      <p>T0–T11 is frozen. Match / Splat / Respawn flow is stable; T12 will add CPU players and Recast tactical navigation.</p>
+      <h1>Browser Ink TPS · T12 Candidate</h1>
+      <p>T0–T11 remains frozen. T12 adds 7 CPU players driven by Recast Crowd plus staggered Painter / Skirmisher / Anchor tactical decisions.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -73,7 +73,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T11: 3s countdown → 180s Turf War → result · Splat QA tests 2.5s respawn · Restart Match clears turf/resources · End Match QA resolves turf immediately';
+    hint.textContent = 'T12: 7 CPU agents · Recast navmesh + Crowd avoidance · staggered tactical goals · CPU turf painting via PaintRequest · Restart Match resets roster';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
