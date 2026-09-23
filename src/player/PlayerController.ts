@@ -48,6 +48,7 @@ export class PlayerController {
   private readonly previousPosition = new Vec3();
   private readonly renderPosition = new Vec3();
   private readonly muzzleOffset = new Vec3();
+  private readonly squidRollDirection = new Vec3();
   private positionInitialized = false;
   private mode: PlayerMode = 'HUMAN';
   private locomotionState: PlayerLocomotionState = 'HUMAN';
@@ -57,6 +58,7 @@ export class PlayerController {
   private team: Team.A | Team.B = Team.A;
   private wallSurfaceId = '-';
   private squidRollRemainingSeconds = 0;
+  private squidRollTurnWindowSeconds = 0;
   private surgeRemainingSeconds = 0;
   private surgeChargeSeconds = 0;
   private snapToGroundEnabled = true;
@@ -158,6 +160,7 @@ export class PlayerController {
     if (this.desired.lengthSq() > 1) this.desired.normalize();
 
     const jumpPressed = this.input.consumeJump();
+    this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
 
     if (this.squidRollRemainingSeconds > 0) {
       this.setMode('SQUID');
@@ -213,7 +216,9 @@ export class PlayerController {
         const tuning = GAME_CONFIG.player;
         if (this.inkRelation === 'OWN') {
           this.locomotionState = 'SWIM_GROUND';
-          if (jumpPressed && this.grounded && this.canStartSquidRoll()) {
+          this.captureSquidRollTurnIntent();
+
+          if (jumpPressed && this.grounded && this.squidRollTurnWindowSeconds > 0) {
             this.startSquidRoll();
           } else {
             this.applyHorizontalTarget(
@@ -225,11 +230,24 @@ export class PlayerController {
             this.applyGravity(dt);
           }
         } else {
+          this.squidRollTurnWindowSeconds = 0;
           this.locomotionState = 'SQUID_DRY';
-          const targetSpeed = this.inkRelation === 'ENEMY'
-            ? tuning.squidEnemyInkSpeedMetersPerSecond
-            : tuning.squidNeutralSpeedMetersPerSecond;
-          this.applyHorizontalTarget(targetSpeed, tuning.squidDryAccelerationMetersPerSecond2, dt);
+
+          if (this.inkRelation === 'ENEMY') {
+            this.applyHorizontalTarget(
+              tuning.squidEnemyInkSpeedMetersPerSecond,
+              tuning.squidDryAccelerationMetersPerSecond2,
+              dt
+            );
+          } else {
+            // T9 tuning: Squid form outside any ink keeps Human-equivalent mobility.
+            this.applyHorizontalTarget(
+              tuning.humanSpeedMetersPerSecond,
+              tuning.groundAccelerationMetersPerSecond2,
+              dt
+            );
+          }
+
           this.tryJump(jumpPressed, tuning.squidJumpSpeedMetersPerSecond);
           this.applyGravity(dt);
         }
@@ -239,6 +257,7 @@ export class PlayerController {
       this.locomotionState = 'HUMAN';
       this.wallSurfaceId = '-';
       this.surgeChargeSeconds = 0;
+      this.squidRollTurnWindowSeconds = 0;
       this.setSnapToGround(true);
 
       const tuning = GAME_CONFIG.player;
@@ -298,6 +317,7 @@ export class PlayerController {
     this.stats.playerSurgeCharge = GAME_CONFIG.player.surgeMaxChargeSeconds > 0
       ? this.surgeChargeSeconds / GAME_CONFIG.player.surgeMaxChargeSeconds
       : 0;
+    this.stats.playerSquidRollReady = this.squidRollTurnWindowSeconds > 0;
   }
 
   public render(alpha: number, out = new Vec3()): Vec3 {
@@ -347,27 +367,34 @@ export class PlayerController {
     );
   }
 
-  private canStartSquidRoll(): boolean {
+  private captureSquidRollTurnIntent(): void {
+    if (!this.grounded) return;
+
+    const tuning = GAME_CONFIG.player;
     const speed = Math.hypot(this.velocity.x, this.velocity.z);
-    if (speed < GAME_CONFIG.player.squidRollMinSpeedMetersPerSecond) return false;
-    if (this.desired.lengthSq() < 0.25) return false;
+    if (speed < tuning.squidRollMinSpeedMetersPerSecond) return;
+    if (this.desired.lengthSq() < 0.25) return;
 
     const dot = (
       this.velocity.x * this.desired.x +
       this.velocity.z * this.desired.z
     ) / Math.max(speed, 1e-6);
-    return dot <= GAME_CONFIG.player.squidRollReverseDotThreshold;
+
+    if (dot > tuning.squidRollReverseDotThreshold) return;
+
+    this.squidRollDirection.copy(this.desired).normalize();
+    this.squidRollTurnWindowSeconds = tuning.squidRollTurnGraceSeconds;
   }
 
   private startSquidRoll(): void {
     const tuning = GAME_CONFIG.player;
-    const directionLength = Math.hypot(this.desired.x, this.desired.z);
-    if (directionLength <= 1e-6) return;
+    if (this.squidRollDirection.lengthSq() <= 1e-6) return;
 
-    this.velocity.x = this.desired.x / directionLength * tuning.squidRollSpeedMetersPerSecond;
-    this.velocity.z = this.desired.z / directionLength * tuning.squidRollSpeedMetersPerSecond;
+    this.velocity.x = this.squidRollDirection.x * tuning.squidRollSpeedMetersPerSecond;
+    this.velocity.z = this.squidRollDirection.z * tuning.squidRollSpeedMetersPerSecond;
     this.verticalVelocity = tuning.squidRollUpSpeedMetersPerSecond;
     this.squidRollRemainingSeconds = tuning.squidRollDurationSeconds;
+    this.squidRollTurnWindowSeconds = 0;
     this.locomotionState = 'SQUID_ROLL';
     this.grounded = false;
     this.setSnapToGround(false);
@@ -491,6 +518,14 @@ export class PlayerController {
       position.y + (this.mode === 'SQUID' ? GAME_CONFIG.player.squidVisualOffsetYMeters : 0),
       position.z
     );
+
+    if (this.locomotionState === 'SQUID_ROLL') {
+      const duration = Math.max(GAME_CONFIG.player.squidRollDurationSeconds, 1e-6);
+      const progress = 1 - clamp(this.squidRollRemainingSeconds / duration, 0, 1);
+      this.entity.setLocalEulerAngles(progress * 360, 0, 0);
+    } else {
+      this.entity.setLocalEulerAngles(0, 0, 0);
+    }
   }
 
   private relationFor(sample: GameplayInkSample | null): InkRelation {

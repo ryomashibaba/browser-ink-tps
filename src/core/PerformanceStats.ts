@@ -24,6 +24,7 @@ export class PerformanceStats {
   public playerCollider = 'CAPSULE';
   public playerWallSurface = '-';
   public playerSurgeCharge = 0;
+  public playerSquidRollReady = false;
 
   public activeProjectiles = 0;
   public projectileImpacts = 0;

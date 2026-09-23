@@ -48,6 +48,7 @@ export class DebugOverlay {
         <span class="muted">Ink sample</span><span>${escapeHtml(last.playerInkRelation)}</span>
         <span class="muted">Wall surface</span><span>${escapeHtml(last.playerWallSurface)}</span>
         <span class="muted">Surge charge</span><span>${(last.playerSurgeCharge * 100).toFixed(0)}%</span>
+        <span class="muted">Roll ready</span><span>${last.playerSquidRollReady ? 'yes' : 'no'}</span>
         <span class="muted">Projectiles</span><span>${last.activeProjectiles}</span>
         <span class="muted">Impacts</span><span>${last.projectileImpacts}</span>
         <span class="muted">Pool drops</span><span>${last.projectilePoolDrops}</span>
