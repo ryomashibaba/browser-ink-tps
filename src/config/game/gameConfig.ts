@@ -127,6 +127,29 @@ export const GAME_CONFIG = Object.freeze({
     paintRadiusMeters: 0.64,
     visualDiameterMeters: 0.13
   },
+  subWeapon: {
+    inkCost: 70,
+    throwSpeedMetersPerSecond: 10.5,
+    upwardBoostMetersPerSecond: 4.6,
+    gravityMetersPerSecond2: 18,
+    maxFlightSeconds: 3.0,
+    fuseSeconds: 1.0,
+    visualDiameterMeters: 0.22,
+    paintRadiusMeters: 2.25,
+    outerDamageRadiusMeters: 2.4,
+    outerDamage: 30,
+    innerDamageRadiusMeters: 1.0,
+    innerExtraDamage: 70
+  },
+  special: {
+    requiredPoints: 180,
+    pointsPerScoreableSquareMeter: 10,
+    splatRetention: 0.50,
+    pulseDamageRadiusMeters: 2.8,
+    pulseDamage: 70,
+    pulsePaintRadiusMeters: 1.15,
+    pulseRingRadiusMeters: 2.35
+  },
   worldInteraction: {
     paintSurfacePriorityEpsilonMeters: 0.06,
     cameraCollisionPaddingMeters: 0.18,
