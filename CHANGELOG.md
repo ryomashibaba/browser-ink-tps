@@ -1,3 +1,11 @@
+## v0.10.0 T15 Stable Freeze — 2026-09-23
+
+- hosted QA accepted by the user
+- stable checkpoint: `901b8c73f5313ac39c27ebb0fc42cb3ec1810bda`
+- GitHub Actions run #165 / `35832485527` passed build and Pages deploy
+- T0–T15 is now the frozen gameplay foundation
+- next phase: T16 Weapon Kit System
+
 ## v0.10.0 T15 Sub Weapon + Special Gauge Candidate — 2026-09-23
 
 - added additive PaintSource metadata while preserving immutable PaintEvent coordinate authority
