@@ -296,7 +296,13 @@ export class InkLabApp {
       this.stats,
       () => this.selectedTeam,
       () => this.superJump.canRequest(this.match.playerCanAct),
-      (target) => this.superJump.request(target, this.selectedTeam)
+      (target) => {
+        const accepted = this.superJump.request(target, this.selectedTeam);
+        if (accepted && document.pointerLockElement !== this.canvas) {
+          void this.canvas.requestPointerLock();
+        }
+        return accepted;
+      }
     );
 
     this.bindMainLoop();
