@@ -1,3 +1,35 @@
+## v0.6.0 T11 Implementation Candidate — 2026-09-23
+
+### Match flow
+
+- added COUNTDOWN / PLAYING / ENDED match states
+- added 3-second start countdown and 180-second Turf War timer
+- added Turf result snapshot with Team A / Team B / TIE outcome
+- added Restart Match and End Match QA controls
+
+### Player lifecycle
+
+- added ACTIVE / SPLATTED life states
+- added HP-zero Splat transition
+- added 2.5-second respawn timer
+- added team-specific respawn positions
+- added Human-form / full-resource respawn reset
+- added Splat QA damage trigger through the real T10 HP path
+- clears active projectiles on splat, match end, and restart
+
+Implementation:
+`340f0f81b579d18c9072bdfd48aef77885b374af`
+`0cd939c5b681264999f77791b62b5f2b2c755c53`
+`037865af7e433499cf2a08c6f973b09131369d1a`
+
+Workflow:
+`35812515353`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.5.0 T10 Stable Freeze — 2026-09-23
 
 ### Freeze

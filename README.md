@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.5.0 / T10 STABLE FREEZE**
+**v0.6.0 / T11 IMPLEMENTATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T10 gameplay foundation is frozen. The current `main` includes:
+The T0–T10 gameplay foundation remains frozen. The current `main` additionally contains the T11 Spawn / Splat / Respawn / Turf War Match Loop candidate:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -36,6 +36,10 @@ The T0–T10 gameplay foundation is frozen. The current `main` includes:
 - 100-unit Ink Tank with per-shot cost / recovery lock / Human and OWN-Squid recovery
 - player HP / delayed recovery / non-lethal enemy-ink damage
 - Team A/B combat QA targets with enemy-only projectile damage
+- 3-second countdown / 180-second Turf War timer / ENDED result state
+- HP-zero Splat lifecycle with 2.5-second respawn
+- team-specific respawn points with Human + full HP/Ink reset
+- Restart Match / Splat QA / End Match QA controls
 - center-crosshair TPS aiming
 - projectile-gravity compensation toward the visual aim target
 - fixed 60 Hz gameplay simulation
@@ -87,6 +91,9 @@ Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 - Left mouse — fire
 - Mouse wheel — camera distance
 - 1 / 2 — Team A / Team B
+- Restart Match — clear turf/resources and begin a new 3s countdown
+- Splat QA — apply lethal QA damage through the real HP→Splat path
+- End Match QA — immediately resolve the current Turf result
 - R — clear ink
 - B — 2000-event ink stress burst
 - Alt + Left click — retained direct-paint QA path
@@ -146,6 +153,8 @@ Passed:
 Hosted runtime QA for T9 is complete and accepted.
 
 T10 automated build/deploy and hosted Ink/HP/combat QA are complete and accepted.
+
+T11 automated build/deploy is passing; hosted match/lifecycle QA is pending.
 
 Confirmed:
 
@@ -219,13 +228,13 @@ The current project intentionally does **not** yet include:
 
 ## Current phase
 
-**Next phase: T11 — spawn / splat / respawn / Turf War match loop**
+**T11 — Spawn / Splat / Respawn / Turf War Match Loop hosted runtime QA**
 
-T0–T10 is frozen. T11 must preserve the CPU-authoritative PaintEvent/GameplayInk contracts, T8 world-interaction rules, T9 Squid locomotion, and T10 Ink/HP/combat resource behavior.
+T0–T10 remains frozen. T11 adds match/life-cycle orchestration without replacing the frozen Ink, movement, projectile, or world-interaction systems.
 
-Planned order:
+After T11 acceptance:
 
-- T11 — spawn / splat / respawn / Turf War match loop
+- T11 — Freeze spawn / splat / respawn / Turf War match loop
 - T12 — CPU / Recast + tactical layer
 - T13 — production stage / HUD / map
 - T14 — content, animation, audio, weapons, polish

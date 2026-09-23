@@ -1,4 +1,4 @@
-# Validation Report — v0.5.0 T10 Stable Freeze
+# Validation Report — v0.6.0 T11 Implementation Candidate
 
 Date: 2026-09-23
 
@@ -512,3 +512,52 @@ Automated implementation workflow:
 `35811304576`
 
 T10 is now **STABLE FREEZE**.
+
+## T11 Spawn / Splat / Respawn / Match Loop candidate
+
+Implementation:
+`340f0f81b579d18c9072bdfd48aef77885b374af`
+`0cd939c5b681264999f77791b62b5f2b2c755c53`
+`037865af7e433499cf2a08c6f973b09131369d1a`
+
+Workflow:
+`35812515353`
+
+Automated result:
+
+- Checkout: PASS
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Architecture validation:
+
+- T0–T10 systems remain the stable substrate
+- MatchController owns match/life timers instead of embedding them into PlayerController
+- PlayerResources remains the single T10 Ink/HP state owner
+- player HP reaching zero is the lifecycle transition source for Splat
+- Splat QA only injects damage; it does not bypass the normal HP→Splat detection path
+- player render and both physical colliders are disabled while SPLATTED
+- respawn resets to Human form, restores Ink/HP, and teleports to team-specific spawn
+- projectiles are cleared at Splat, match end, and match restart
+- gameplay input/fire is gated by MatchController.playerCanAct
+- match timer continues during the respawn period
+- Turf result is captured when the match enters ENDED
+- Restart Match clears PaintCoordinator/GameplayInk/GPU atlas via the frozen clear path
+
+Hosted QA required before T11 Freeze:
+
+1. reload/restart and verify COUNTDOWN starts near 3.0s; movement and shooting are disabled until PLAYING
+2. verify PLAYING begins at about 3:00 and movement/shooting then work normally
+3. press Splat QA during PLAYING: HP should reach 0, player should disappear/be non-colliding, Life state should become SPLATTED, and a ~2.5s respawn timer should count down
+4. after respawn, player should reappear at the selected team's spawn as Human with 100 HP / 100 Ink and controls restored
+5. repeat after switching Team A/B and verify the two teams respawn at opposite Z-side spawn points
+6. paint unequal turf, press End Match QA, and verify state ENDED, controls/fire stop, timer is 0:00, and Result reports TEAM A or TEAM B matching turf
+7. with equal/near-equal neutral turf, End Match QA should report TIE
+8. press Restart Match and verify turf is cleared, resources/targets reset, result becomes '-', splat counters reset, and a new 3s countdown starts
+9. sanity-check T10 Ink/HP/combat targets plus T9 Squid movement and T8 paint/camera blockers for regressions
+
+T11 remains **IMPLEMENTATION CANDIDATE** until hosted QA passes.

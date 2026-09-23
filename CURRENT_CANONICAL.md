@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.5.0 / T10 STABLE FREEZE
+# CURRENT_CANONICAL — v0.6.0 / T11 IMPLEMENTATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T10 is now the frozen stable foundation. T10 Shooter + Ink Economy + Combat Foundation passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
+**T0–T10 remains the frozen stable foundation. T11 Spawn / Splat / Respawn / Turf War Match Loop is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -425,3 +425,47 @@ T10 is therefore **STABLE FREEZE**.
 - T12 — CPU / Recast + tactical layer
 - T13 — production stage / HUD / map
 - T14 — content, animation, audio, additional weapons, polish
+
+## T11 implementation candidate
+
+Foundation commit:
+`340f0f81b579d18c9072bdfd48aef77885b374af`
+
+Integration commit:
+`0cd939c5b681264999f77791b62b5f2b2c755c53`
+
+Type-fix follow-up:
+`037865af7e433499cf2a08c6f973b09131369d1a`
+
+Automated workflow:
+`35812515353`
+
+Automated results:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+T11 candidate adds:
+
+- explicit match states: COUNTDOWN / PLAYING / ENDED
+- 3-second pre-match countdown
+- 180-second Turf War timer
+- explicit player life states: ACTIVE / SPLATTED
+- player collider/render removal while splatted
+- 2.5-second respawn timer
+- respawn at team-specific main-floor spawn points
+- full Ink/HP reset on respawn
+- Human-form reset on respawn
+- active projectiles cleared on splat / match end / restart
+- automatic Turf result snapshot at match end
+- Team A / Team B / TIE result state
+- Restart Match QA control clears turf/resources/targets and restarts countdown
+- Splat QA control drives the real HP→splat→respawn path without requiring T12 CPU opponents
+- End Match QA resolves the current Turf result immediately
+- match / countdown / timer / life / respawn / splat counters in the debug overlay
+
+T10 Ink/HP behavior is reused rather than duplicated. T11 does not alter PaintEvent, gameplay ink, projectile-blocker, or T9 locomotion contracts.
