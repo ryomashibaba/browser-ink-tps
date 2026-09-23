@@ -63,7 +63,9 @@ export class PlayerController {
   private surgeRemainingSeconds = 0;
   private surgeChargeSeconds = 0;
   private weaponDodgeRemainingSeconds = 0;
-  private weaponDodgeCooldownSeconds = 0;
+  private weaponDodgeEndlagSeconds = 0;
+  private weaponDodgeRechargeSeconds = 0;
+  private weaponDodgeCharges = 2;
   private weaponDodgeRequested = false;
   private weaponMoveMultiplier = 1;
   private snapToGroundEnabled = true;
@@ -139,8 +141,17 @@ export class PlayerController {
     return this.inkRelation;
   }
 
-  public requestWeaponDodge(): void {
+  public requestWeaponDodge(): boolean {
+    if (
+      this.mode !== 'HUMAN' ||
+      this.weaponDodgeRemainingSeconds > 0 ||
+      this.weaponDodgeEndlagSeconds > 0 ||
+      this.weaponDodgeCharges <= 0
+    ) {
+      return false;
+    }
     this.weaponDodgeRequested = true;
+    return true;
   }
 
   public setWeaponMoveMultiplier(multiplier: number): void {
@@ -179,7 +190,9 @@ export class PlayerController {
     this.surgeRemainingSeconds = 0;
     this.surgeChargeSeconds = 0;
     this.weaponDodgeRemainingSeconds = 0;
-    this.weaponDodgeCooldownSeconds = 0;
+    this.weaponDodgeEndlagSeconds = 0;
+    this.weaponDodgeRechargeSeconds = 0;
+    this.weaponDodgeCharges = 2;
     this.weaponDodgeRequested = false;
     this.weaponMoveMultiplier = 1;
     this.setSnapToGround(true);
@@ -234,7 +247,13 @@ export class PlayerController {
     const jumpPressed = this.input.consumeJump();
     this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
     this.weaponDodgeRemainingSeconds = Math.max(0, this.weaponDodgeRemainingSeconds - dt);
-    this.weaponDodgeCooldownSeconds = Math.max(0, this.weaponDodgeCooldownSeconds - dt);
+    this.weaponDodgeEndlagSeconds = Math.max(0, this.weaponDodgeEndlagSeconds - dt);
+    if (this.weaponDodgeRechargeSeconds > 0) {
+      this.weaponDodgeRechargeSeconds = Math.max(0, this.weaponDodgeRechargeSeconds - dt);
+      if (this.weaponDodgeRechargeSeconds <= 0) {
+        this.weaponDodgeCharges = 2;
+      }
+    }
 
     if (this.weaponDodgeRemainingSeconds > 0) {
       this.setMode('HUMAN');
@@ -244,15 +263,27 @@ export class PlayerController {
       this.squidRollTurnWindowSeconds = 0;
       this.setSnapToGround(true);
       this.applyGravity(dt);
-    } else if (this.weaponDodgeRequested && this.mode === 'HUMAN' && this.weaponDodgeCooldownSeconds <= 0) {
+    } else if (this.weaponDodgeEndlagSeconds > 0) {
+      this.setMode('HUMAN');
+      this.locomotionState = 'DUALIE_DODGE';
+      this.velocity.x = 0;
+      this.velocity.z = 0;
+      this.wallSurfaceId = '-';
+      this.setSnapToGround(true);
+      this.applyGravity(dt);
+    } else if (this.weaponDodgeRequested && this.mode === 'HUMAN' && this.weaponDodgeCharges > 0) {
       const dodgeDirection = this.desired.lengthSq() > 0.04
         ? this.desired.clone().normalize()
         : this.flatForward.clone().normalize();
-      this.velocity.x = dodgeDirection.x * 9.6;
-      this.velocity.z = dodgeDirection.z * 9.6;
+      this.velocity.x = dodgeDirection.x * 10.2;
+      this.velocity.z = dodgeDirection.z * 10.2;
       if (this.grounded) this.verticalVelocity = 0;
       this.weaponDodgeRemainingSeconds = 0.18;
-      this.weaponDodgeCooldownSeconds = 0.52;
+      this.weaponDodgeEndlagSeconds = 0.07;
+      this.weaponDodgeCharges -= 1;
+      this.weaponDodgeRechargeSeconds = 0.78;
+      this.stats.playerWeaponDodges += 1;
+      this.stats.playerWeaponDodgeCharges = this.weaponDodgeCharges;
       this.locomotionState = 'DUALIE_DODGE';
       this.setMode('HUMAN');
       this.setSnapToGround(true);
@@ -381,6 +412,7 @@ export class PlayerController {
 
     if (this.grounded && this.verticalVelocity < 0) this.verticalVelocity = -0.5;
     this.weaponDodgeRequested = false;
+    this.stats.playerWeaponDodgeCharges = this.weaponDodgeCharges;
   }
 
   public syncAfterPhysics(dt?: number): void {

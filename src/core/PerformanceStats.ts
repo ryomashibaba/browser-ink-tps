@@ -60,6 +60,10 @@ export class PerformanceStats {
   public playerWeaponGuarding = false;
   public playerWeaponGuardBlocks = 0;
   public playerWeaponGuardHp = 100;
+  public playerWeaponDodges = 0;
+  public playerWeaponDodgeCharges = 2;
+  public stringerFuses = 0;
+  public stringerBursts = 0;
 
   public matchState = 'COUNTDOWN';
   public matchCountdownSeconds = 3;

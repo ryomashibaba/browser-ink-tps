@@ -298,8 +298,7 @@ export class InkLabApp {
           !this.input.squidHeld &&
           this.input.consumeJump();
 
-        if (dualieSpaceDodge) {
-          this.player.requestWeaponDodge();
+        if (dualieSpaceDodge && this.player.requestWeaponDodge()) {
           this.projectiles.notifyDualieDodge();
         }
 
