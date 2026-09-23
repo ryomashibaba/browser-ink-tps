@@ -1,3 +1,11 @@
+## v0.9.5 T14 Stable Freeze — 2026-09-23
+
+- final hosted runtime QA accepted by the user
+- stable checkpoint: `006f9b8ddb4a818ac0ba64a3ec18f30640a07dc4`
+- GitHub Actions run #136 / `35830846217` passed build and Pages deploy
+- T0–T14 is now the frozen gameplay foundation
+- next phase: T15 Sub Weapon + Special Gauge Foundation
+
 ## v0.9.5 T14 Two-Ring Charge Candidate — 2026-09-23
 
 - added explicit first/second charge-ring data to charge-capable weapon profiles
