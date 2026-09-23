@@ -310,7 +310,7 @@ export class InkLabApp {
           )
         );
         if (playerCanAct) this.player.computeFixed(stepSeconds);
-        if (this.player.consumeWeaponDodgeStarted()) {
+        if (this.player.consumeWeaponDodgeCompleted()) {
           this.projectiles.notifyDualieDodge();
         }
 
