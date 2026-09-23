@@ -216,6 +216,15 @@ export class ProjectileSystem {
     this.stats.playerWeaponGuardHp = 100;
   }
 
+  public applyExternalAreaDamage(
+    point: Vec3,
+    radius: number,
+    damage: number,
+    team: Team.A | Team.B
+  ): void {
+    this.applyAreaDamage(point, radius, damage, team);
+  }
+
   public queueCpuShot(request: CpuFireRequest): void {
     this.queuedCpuShots.push({
       sourceId: request.sourceId,
