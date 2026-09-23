@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.13.0 / T18 STABLE FREEZE
+# CURRENT_CANONICAL — v0.14.0 / T19A CPU MAIN-WEAPON DIVERSITY CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T18 is the frozen stable foundation. T18 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #243 passed build/deploy.**
+**T0–T18 is the frozen stable foundation. T19A removes the old Pulse-Sprayer-only CPU combat isolation without changing the frozen human weapon, CPU tactical, mobility, match, or paint-authority contracts.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1338,3 +1338,81 @@ T19 — CPU Loadout Diversity / Weapon Kit Parity:
 - preserve T16 kit assignments as the canonical main/sub/special mapping source
 - introduce CPU sub/special use only where it can be safely integrated without changing HUMAN/SPECIAL paint-source authority
 - maintain T12 CPU combat/lifecycle, T18 mobility, and T0–T18 performance contracts
+
+
+## T19A v0.14.0 CPU Main-Weapon Diversity candidate
+
+Scope:
+- this is the first T19 batch
+- CPU main weapons are diversified now
+- CPU sub/special use remains deferred to a later T19 batch until main-weapon parity is accepted
+- Roller / Brush / Brella / Stringer / Splatana CPU runtime remains deferred because those classes depend on movement, guard, delayed multi-hit, or melee state that should not be approximated as generic projectiles
+
+CPU loadout catalog:
+- Team A slot 1 — Needle SMG / PAINTER
+- Team A slot 2 — Twin Comets / SKIRMISHER
+- Team A slot 3 — Wave Slosher / PAINTER
+- Team A slot 4 — Rail Charger / ANCHOR
+- Team B slot 1 — Pulse Sprayer / PAINTER
+- Team B slot 2 — Arc Blaster / SKIRMISHER
+- Team B slot 3 — Needle SMG / PAINTER
+- Team B slot 4 — Rotor Cannon / ANCHOR
+- because the human occupies one team slot, the human team has three CPU loadouts and the opposing team has four; switching human team exposes the opposite slot-4 anchor weapon
+
+Runtime contracts:
+- every CPU stores a canonical WeaponId from the frozen T14 WeaponCatalog
+- CPU Ink consumption uses that WeaponProfile's inkCost rather than the old global shooter cost
+- CPU firing cadence uses the selected profile rather than the old global CPU interval
+- CPU weapon charge / burst state is separate per bot
+- charge / burst state is cleared on Super Jump preparation, jump cancellation, respawn, and match end
+- weapon projectiles remain in the shared pooled ProjectileSystem
+- CPU projectile/world paint remains PaintSource.Cpu and cannot charge the human special gauge
+
+Supported T19A fire models:
+- Pulse Sprayer / Needle SMG:
+  - normal profile-based automatic projectile fire
+- Twin Comets:
+  - two simultaneous projectiles using the frozen Dualies spread
+  - CPU does not receive a Dualies dodge in T19A
+- Arc Blaster:
+  - one direct projectile using frozen Blaster blast radius and blast damage
+  - enemy CPU Blaster blast area now also damages the human player when in radius
+  - Brella guard can absorb enemy CPU blast damage from the guarded direction
+- Wave Slosher:
+  - high-gravity lob trajectory
+  - frozen Slosher-style trail paint radius
+- Rail Charger:
+  - CPU charges to full before firing
+  - uses the frozen Charger direct-ray range / damage / paint scaling
+  - ray compares world blockers, enemy CPU targets, and the human target
+  - CPU Charger line paint uses PaintSource.Cpu
+  - human Brella guard can block the CPU Charger from the guarded direction
+- Rotor Cannon:
+  - charges to the frozen first ring (0.80 s)
+  - releases approximately half of the frozen 36-shot capacity: 18-shot burst
+  - uses the frozen 0.075 s burst cadence
+  - no generic shooter approximation
+
+Tactical / range tuning:
+- Charger CPU target range: 24 m
+- Splatling: 13.5 m
+- Slosher: 10.5 m
+- Blaster: 10.0 m
+- Dualies: 9.8 m
+- ordinary Shooters use the frozen CPU combat range
+- existing PAINTER / SKIRMISHER / ANCHOR target-selection logic remains authoritative
+
+Presentation / diagnostics:
+- Debug exposes the whole CPU loadout string
+- Debug exposes number of CPUs currently charging and currently bursting
+- Tactical Map labels CPU markers as id + weapon short name, e.g. A1·NEEDLE or B2·BLAST
+- existing CPU role labels, HP/Ink, combat, jump, and performance diagnostics remain available
+
+T0–T18 Freeze:
+- human T14/T16 weapon and kit behavior is unchanged
+- T12 CPU lifecycle / combat target selection remains the base
+- T18 CPU Super Jump remains unchanged
+- PaintCoordinator / GameplayInk / GPU atlas authority remains unchanged
+- MatchController remains unchanged
+
+T19A remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
