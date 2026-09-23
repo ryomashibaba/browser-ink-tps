@@ -222,6 +222,61 @@ export class GameFeedback {
     this.playTone(96 * profile.audioPitch, 0.042, 0.13, 'sawtooth', 0.52);
   }
 
+  public subThrow(team: Team.A | Team.B, position: Vec3): void {
+    this.spawnFx(team, position, 0.12, 0.11);
+    this.playTone(280, 0.022, 0.055, 'triangle', 1.35);
+  }
+
+  public subFuse(
+    team: Team.A | Team.B,
+    position: Vec3,
+    duration: number
+  ): void {
+    this.spawnFx(team, position, 0.14, Math.max(0.2, duration), 'FUSE');
+    this.playTone(430, 0.018, 0.045, 'sine', 1.18);
+  }
+
+  public subBurst(
+    team: Team.A | Team.B,
+    position: Vec3,
+    radius: number
+  ): void {
+    const base = Math.max(0.30, radius * 0.22);
+    this.spawnFx(team, position, base, 0.32);
+    for (let i = 0; i < 4; i += 1) {
+      const angle = i * Math.PI * 0.5;
+      this.spawnFx(
+        team,
+        position.clone().add(new Vec3(Math.cos(angle) * radius * 0.34, 0, Math.sin(angle) * radius * 0.34)),
+        base * 0.72,
+        0.24
+      );
+    }
+    this.playTone(82, 0.050, 0.15, 'sawtooth', 0.44);
+  }
+
+  public specialReady(): void {
+    this.playTone(760, 0.030, 0.10, 'sine', 1.50);
+  }
+
+  public specialBurst(
+    team: Team.A | Team.B,
+    position: Vec3,
+    radius: number
+  ): void {
+    this.spawnFx(team, position, Math.max(0.42, radius * 0.20), 0.38);
+    for (let i = 0; i < 8; i += 1) {
+      const angle = i * Math.PI * 2 / 8;
+      this.spawnFx(
+        team,
+        position.clone().add(new Vec3(Math.cos(angle) * radius * 0.58, 0.08, Math.sin(angle) * radius * 0.58)),
+        0.24,
+        0.30
+      );
+    }
+    this.playTone(118, 0.055, 0.18, 'sawtooth', 1.72);
+  }
+
   public splat(team: Team.A | Team.B, position: Vec3): void {
     this.spawnFx(team, position, 0.36, 0.32);
     this.playTone(82, 0.055, 0.16, 'sawtooth', 0.42);
