@@ -291,6 +291,14 @@ export class InkLabApp {
         }
 
         const playerCanAct = this.match.playerCanAct;
+        const secondaryPressed = this.input.consumeSecondaryPressed();
+        if (
+          playerCanAct &&
+          secondaryPressed &&
+          this.projectiles.currentPlayerWeapon.weaponClass === 'DUALIES'
+        ) {
+          this.player.requestWeaponDodge();
+        }
         if (playerCanAct) this.player.computeFixed(stepSeconds);
 
         this.physics.step();
@@ -329,6 +337,7 @@ export class InkLabApp {
         this.projectiles.fixedUpdate(
           stepSeconds,
           this.match.playerCanAct && this.input.fireHeld && this.player.canShoot,
+          this.match.playerCanAct && this.input.secondaryHeld && this.player.canShoot,
           this.muzzlePosition,
           this.aimDirection,
           this.selectedTeam,

@@ -70,7 +70,7 @@ export class PlayerHud {
 
     this.state.innerHTML = `
       <span class="hud-team-chip ${teamClass}">TEAM ${team === Team.A ? 'A' : 'B'}</span>
-      <span class="hud-weapon-chip">WEAPON · ${escapeHtml(this.stats.playerWeaponName)}</span>
+      <span class="hud-weapon-chip">${escapeHtml(this.stats.playerWeaponClass)} · ${escapeHtml(this.stats.playerWeaponName)}</span>
       <span>OWN ${ownPercent.toFixed(1)}%</span>
       <span>ENEMY ${enemyPercent.toFixed(1)}%</span>
       <span>${escapeHtml(this.stats.playerLocomotionState)}</span>`;

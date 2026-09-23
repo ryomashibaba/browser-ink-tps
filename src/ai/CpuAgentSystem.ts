@@ -248,6 +248,34 @@ export class CpuAgentSystem {
     if (bot.hp < previous) this.stats.cpuCombatHits += 1;
   }
 
+  public applyAreaDamage(
+    center: Vec3,
+    radius: number,
+    damage: number,
+    sourceTeam: Team.A | Team.B
+  ): number {
+    if (radius <= 0 || damage <= 0) return 0;
+    const radiusSq = radius * radius;
+    let hits = 0;
+
+    for (const bot of this.bots) {
+      if (bot.team === sourceTeam || bot.lifeState !== 'ACTIVE' || bot.hp <= 0) continue;
+      const dx = bot.position.x - center.x;
+      const dy = bot.position.y + 0.68 - center.y;
+      const dz = bot.position.z - center.z;
+      if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
+
+      const previous = bot.hp;
+      bot.hp = Math.max(0, bot.hp - damage);
+      bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
+      if (bot.hp < previous) {
+        this.stats.cpuCombatHits += 1;
+        hits += 1;
+      }
+    }
+    return hits;
+  }
+
   private spawnTeam(team: Team.A | Team.B, count: number): void {
     for (let i = 0; i < count; i += 1) {
       const slot = this.bots.filter((bot) => bot.team === team).length;

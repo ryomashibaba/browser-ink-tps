@@ -4,6 +4,7 @@ import {
   DEFAULT_WEAPON_ID,
   WEAPON_ORDER,
   WEAPON_PROFILES,
+  nextWeaponId,
   type WeaponId
 } from '../weapons/WeaponCatalog';
 
@@ -34,16 +35,18 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T14 Candidate</h1>
-      <p>T0–T13 remains frozen. T14 adds original weapon variety, audiovisual feedback, and presentation animation.</p>
+      <h1>Browser Ink TPS · T14 Weapon Classes</h1>
+      <p>11 Splatoon-style main-weapon genres are represented with original names, visuals, tuning, and audio.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
       </div>
-      <div class="row weapon-row">
-        ${WEAPON_ORDER.map((id, index) => {
+      <div class="weapon-row">
+        ${WEAPON_ORDER.map((id) => {
           const weapon = WEAPON_PROFILES[id];
-          return `<button data-weapon="${id}" class="${id === this.weapon ? 'active-weapon' : ''}">${index + 3} · ${weapon.shortName}</button>`;
+          return `<button data-weapon="${id}" class="${id === this.weapon ? 'active-weapon' : ''}">
+            <span>${weapon.classLabel}</span><strong>${weapon.displayName}</strong>
+          </button>`;
         }).join('')}
       </div>
       <label>QA brush radius <output id="brush-out">${this.radius.toFixed(2)} m</output>
@@ -79,6 +82,7 @@ export class ControlPanel {
         this.setWeapon(button.dataset.weapon as WeaponId, handlers);
       });
     }
+
     slider.addEventListener('input', () => {
       this.radius = Number(slider.value);
       this.radiusOutput.value = `${this.radius.toFixed(2)} m`;
@@ -96,7 +100,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T14 · 3 Pulse Sprayer · 4 Needle SMG · 5 Arc Blaster · procedural SFX/FX · M Tactical Map';
+    hint.textContent = 'T14 · Q/E weapon cycle · RMB class action (Dualies dodge / Brella guard) · hold/release for charge weapons · M Tactical Map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
@@ -108,9 +112,19 @@ export class ControlPanel {
       if (event.repeat) return;
       if (event.code === 'Digit1') this.setTeam(Team.A, handlers);
       if (event.code === 'Digit2') this.setTeam(Team.B, handlers);
-      if (event.code === 'Digit3') this.setWeapon(WEAPON_ORDER[0]!, handlers);
-      if (event.code === 'Digit4') this.setWeapon(WEAPON_ORDER[1]!, handlers);
-      if (event.code === 'Digit5') this.setWeapon(WEAPON_ORDER[2]!, handlers);
+
+      // Preserve the already-accepted T14 direct hotkeys.
+      if (event.code === 'Digit3') this.setWeapon('pulse-sprayer', handlers);
+      if (event.code === 'Digit4') this.setWeapon('needle-smg', handlers);
+      if (event.code === 'Digit5') this.setWeapon('arc-blaster', handlers);
+
+      if (event.code === 'KeyQ') {
+        this.setWeapon(nextWeaponId(this.weapon, -1), handlers);
+      }
+      if (event.code === 'KeyE') {
+        this.setWeapon(nextWeaponId(this.weapon, 1), handlers);
+      }
+
       if (event.code === 'KeyR') handlers.onClear();
       if (event.code === 'KeyB') handlers.onStress(GAME_CONFIG.debug.stressBurstLarge);
     });

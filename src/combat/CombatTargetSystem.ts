@@ -111,6 +111,48 @@ export class CombatTargetSystem {
     this.syncStats();
   }
 
+  public applyAreaDamage(
+    center: Vec3,
+    radius: number,
+    damage: number,
+    sourceTeam: Team.A | Team.B
+  ): number {
+    if (radius <= 0 || damage <= 0) return 0;
+    const radiusSq = radius * radius;
+    let hits = 0;
+
+    for (const target of this.targets) {
+      if (
+        target.team === sourceTeam ||
+        target.downSeconds > 0 ||
+        target.hp <= 0
+      ) {
+        continue;
+      }
+
+      const dx = target.groundPosition.x - center.x;
+      const dy =
+        target.groundPosition.y +
+        GAME_CONFIG.combat.targetVisualCenterYMeters -
+        center.y;
+      const dz = target.groundPosition.z - center.z;
+      if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
+
+      target.hp = Math.max(0, target.hp - damage);
+      this.stats.combatHits += 1;
+      hits += 1;
+
+      if (target.hp <= 0) {
+        target.downSeconds = GAME_CONFIG.combat.targetDownSeconds;
+        target.entity.enabled = false;
+        this.stats.combatTargetDowns += 1;
+      }
+    }
+
+    this.syncStats();
+    return hits;
+  }
+
   private createTarget(
     app: AppBase,
     id: 'A' | 'B',
