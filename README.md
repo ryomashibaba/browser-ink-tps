@@ -89,6 +89,7 @@ Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 - Esc — release Pointer Lock
 - WASD — move
 - Space — jump
+- Twin Comets / Dualies while Human: hold Left mouse + press Space — dodge roll (up to two chained rolls)
 - Shift — Squid form / swim
 - Shift + move into OWN-painted wall — wall swim
 - Roll QA Pad — fill the entire main floor with the selected team's ink
@@ -257,6 +258,6 @@ The first 11-class pass was rejected because too many classes still behaved like
 ### T14 v0.9.4 targeted corrections
 
 - Dualies dodge is now fire+Space only in Human form.
-- Post-roll firing recovery and movement recovery are separated; firing returns first while movement remains briefly locked.
+- Dualies recovery follows the public Splat Dualies timing structure at fixed 60 Hz: 4F startup, 12F roll, 4F until firing returns, then the remaining post-roll movement-lock / roll-recovery window.
 - The second dodge can still chain from that stance while firing.
 - Splatling charge HUD/3D feedback is intentionally closer to Charger, using a centered progress reticle and forward guide with only subtle rotary accents.
