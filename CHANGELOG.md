@@ -1,3 +1,30 @@
+## v0.9.2 T14 Weapon-Class Redesign Candidate — 2026-09-23
+
+- supersedes the rejected first-pass 11-class implementation
+- converted Charger to immediate charged ray/beam instead of ordinary projectile fire
+- converted Roller to horizontal/vertical flick + continuous rolling paint + contact melee
+- converted Brush to direct short-range swipe damage/painting with movement boost
+- added Slosher trajectory paint droplets
+- retained true charge-release Splatling burst behavior
+- upgraded Brella to visible directional canopy with HP, break, recovery, and front-only blocking
+- upgraded Stringer to charge-tightened triple arrows with delayed charged-arrow explosions
+- upgraded Splatana to direct melee slash damage/painting plus traveling slash wave
+- added Dualies post-dodge focused firing state
+- added class-specific Human movement multipliers
+
+Implementation:
+`f017d1e5de8744fc95239ff773a26b531b9c883a`
+`4c366282a20cf58a32e698259de8b51686723829`
+`bccec88cf6a4898a06305c3e2aad1e016e90d9a4`
+
+Workflow:
+`35820796731`
+
+- TypeScript: PASS
+- production build: PASS
+- Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.9.1 T14 11-Weapon-Class Candidate — 2026-09-23
 
 - expanded the weapon model from simple per-projectile tuning to 11 Splatoon-style weapon genres

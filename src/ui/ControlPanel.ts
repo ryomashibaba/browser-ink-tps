@@ -35,8 +35,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T14 Weapon Classes</h1>
-      <p>11 Splatoon-style main-weapon genres are represented with original names, visuals, tuning, and audio.</p>
+      <h1>Browser Ink TPS · T14 Class Redesign</h1>
+      <p>11 weapon genres now use different attack models: beam, melee, roller trail, lob, charge-burst, guard canopy, delayed arrows, slash wave, dodge focus, blast, and shooter fire.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -100,7 +100,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T14 · Q/E weapon cycle · RMB class action (Dualies dodge / Brella guard) · hold/release for charge weapons · M Tactical Map';
+    hint.textContent = 'Q/E weapon cycle · Dualies RMB dodge · Brella RMB guard · Charger/Splatling/Stringer/Saber hold→release · Roller hold+move · Brush hold · M map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

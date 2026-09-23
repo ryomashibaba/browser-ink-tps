@@ -840,3 +840,56 @@ Weapon UI:
 CPU agents remain on the frozen Pulse Sprayer profile for this candidate so the player-side weapon-class QA is isolated from T12 CPU behavior.
 
 T14 remains **IMPLEMENTATION CANDIDATE** until hosted weapon-class QA passes.
+
+## T14 weapon-class redesign candidate — supersedes the first 11-class attempt
+
+User feedback on the first 11-class candidate:
+
+- the weapons still behaved too much like shooters with different projectile counts
+- class-defining Splatoon-style interaction was not represented strongly enough
+
+The first 11-class candidate is therefore **not accepted and not frozen**.
+
+Redesign foundation:
+`f017d1e5de8744fc95239ff773a26b531b9c883a`
+
+Distinct class mechanics:
+`4c366282a20cf58a32e698259de8b51686723829`
+
+Movement / guard integration:
+`bccec88cf6a4898a06305c3e2aad1e016e90d9a4`
+
+Workflow:
+`35820796731`
+
+Automated result:
+
+- TypeScript: PASS
+- production build: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Class-defining runtime now implemented:
+
+- Shooter: normal automatic projectile weapon
+- Dualies: paired fire + RMB dodge + temporary post-dodge high-accuracy/high-cadence focus
+- Charger: **no normal projectile**; hold to charge and release an immediate ray/beam attack with charge-scaled range/damage and narrow line paint
+- Blaster: projectile direct hit plus radial explosion damage and splash paint
+- Roller: **no shooter bullets**; grounded horizontal flick, airborne vertical flick, held movement paints a roller trail, close roll contact deals melee damage
+- Brush: **no shooter bullets**; rapid close-range melee swipes, wide direct ground painting, and movement-speed boost while brushing
+- Slosher: high-gravity lob with visible arcing travel plus paint droplets along its trajectory
+- Splatling: cannot fire while charging; hold to charge and release into a charge-scaled rapid burst
+- Brella: shotgun-like spread fire plus visible front canopy on RMB, front-only projectile blocking, canopy HP, break and recovery
+- Stringer: three arrows, charge-tightened spread, charge-scaled power, and sufficiently charged arrows leave delayed ink explosions after landing
+- Splatana/Wiper: **melee slash is authoritative**, with close-range slash damage and direct slash paint plus a secondary traveling slash wave; longer charge produces a stronger/wider charged slash
+
+Weapon movement presentation:
+
+- Charger/Splatling charge slows Human movement
+- Brush attack raises Human movement speed
+- Roller rolling has its own movement multiplier
+- Brella guard slows movement
+- Splatana charge slows movement
+- Dualies dodge remains a dedicated locomotion state and gains post-roll focus
+
+T0–T13 contracts remain frozen. This redesign is T14-only and remains **IMPLEMENTATION CANDIDATE** until hosted QA.

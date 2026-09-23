@@ -938,3 +938,38 @@ Required hosted QA:
 14. 4v4 performance remains acceptable and projectile pool drops / GPU backlog do not run away.
 
 Do not Freeze T14 until the hosted checks are confirmed.
+
+## T14 weapon-class redesign validation candidate
+
+Supersedes the previous first-pass 11-class behavior after user rejection.
+
+Implementation:
+`f017d1e5de8744fc95239ff773a26b531b9c883a`
+`4c366282a20cf58a32e698259de8b51686723829`
+`bccec88cf6a4898a06305c3e2aad1e016e90d9a4`
+
+Workflow:
+`35820796731`
+
+Automated:
+
+- TypeScript: PASS
+- production build: PASS
+- Pages deploy: PASS
+
+Hosted QA focus:
+
+1. Charger must feel fundamentally different: no visible traveling bullet; hold/release produces an immediate beam/ray and narrow line paint.
+2. Roller must not shoot pellets: ground click gives wide horizontal flick, airborne click gives narrower forward vertical flick, holding LMB while moving leaves a continuous roller-width paint trail.
+3. Brush must not shoot pellets: repeated short-range swipes should deal close damage, paint a wide fan directly on nearby ground, and visibly allow faster movement while held.
+4. Slosher must travel in a strong arc and leave intermittent paint beneath/along the lob path.
+5. Splatling must only charge while held and fire the stored rapid burst after release; longer charge should clearly create a longer burst.
+6. Brella RMB must show a physical front canopy; front CPU shots are blocked and reduce canopy HP, rear shots are not blocked, and the canopy can break then recover.
+7. Stringer must fire three arrows; charge should tighten them and sufficiently charged arrows should produce delayed explosions after impact.
+8. Splatana must deal close slash damage/paint even without relying on the traveling wave; longer hold should create a substantially stronger charged slash.
+9. Dualies RMB dodge should move the player, then briefly tighten/improve follow-up firing.
+10. Blaster explosion must damage enemies near the impact point, not only on exact direct contact.
+11. Shooter remains the baseline automatic gun and should now be obviously different from the other ten genres.
+12. T8–T13 locomotion, camera, ink authority, match, CPU, stage and Tactical Map behavior must remain intact.
+
+Do not freeze T14 until the user explicitly accepts this redesigned runtime.

@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.9.1 / T14 11-WEAPON-CLASS CANDIDATE**
+**v0.9.2 / T14 WEAPON-CLASS REDESIGN CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -241,3 +241,7 @@ T0–T13 remains frozen. The first T14 candidate adds original weapon variety, p
 
 
 T13 hosted runtime QA is complete and accepted. The enlarged production arena, HUD, Tactical Map, shared stage metadata, and 4v4 regression/performance checks are frozen.
+
+### T14 weapon-class redesign
+
+The first 11-class pass was rejected because too many classes still behaved like shooter variants. The current candidate replaces that approach with class-specific runtime models: immediate Charger beams, non-projectile Roller/Brush melee painting, arcing Slosher paint, charge-release Splatling bursts, directional Brella canopy durability, delayed Stringer explosions, direct Splatana slashes, and Dualies dodge focus.
