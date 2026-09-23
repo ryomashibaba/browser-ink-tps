@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.15.0 / T19B CPU ADVANCED MAIN-WEAPON PARITY CANDIDATE**
+**v0.15.0 / T19B STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -458,3 +458,14 @@ T19B implements genuine class behavior rather than generic bullets:
 - Splatana: quick/charged melee slash + paint slash + ranged wave
 
 All advanced CPU paint stays PaintSource.Cpu. CPU Sub/Special parity remains deferred to T19C.
+
+
+### T19B Stable Freeze
+
+v0.15.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `d2b0b01fba9d547686399f58e3347e21f247ef38`; GitHub Actions run #287 passed TypeScript check, production build, and Pages deployment.
+
+CPU main-weapon parity now covers all frozen T14 classes. The accepted T19A normal roster remains unchanged; **CPU Advanced QA** is retained only as a verification preset.
+
+### Next: T19C CPU Sub / Special Kit Parity
+
+The next batch connects CPU loadouts to the frozen T16 WeaponKitCatalog and adds tactical CPU use of their assigned Sub and Special weapons while preserving CPU paint attribution and human gauge authority.
