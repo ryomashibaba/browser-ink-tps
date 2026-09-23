@@ -1206,3 +1206,14 @@ Lifecycle / regression:
 21. Full 4v4 activity plus one or more CPU jumps should keep FPS / dropped sim / GPU backlog acceptable.
 
 T18 remains **IMPLEMENTATION CANDIDATE** until these checks are accepted.
+
+
+## T18 Stable Freeze — accepted 2026-09-23
+
+The user confirmed the v0.13.0 hosted checks, including forced CPU jump QA, preparation/airborne phase behavior, landing recovery, and no observed regressions.
+
+Stable checkpoint:
+- commit: `1a097015a8217ef4fcea8689e1a5de4cf8b71b42`
+- GitHub Actions run #243 / `35843150398`: TypeScript check, production build, and Pages deploy success
+
+T18 is now **STABLE FREEZE**. Future phases must preserve the CPU jump state-machine timing, snapshot-destination semantics, PREP vulnerability, airborne invulnerability, Recast remove/re-register lifecycle, and tactical decision boundaries unless an explicit later Freeze-change decision is made.
