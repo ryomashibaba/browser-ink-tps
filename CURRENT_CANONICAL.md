@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.13.0 / T18 CPU TACTICAL MOBILITY CANDIDATE
+# CURRENT_CANONICAL — v0.13.0 / T18 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T17 is the frozen stable foundation. T18 is an additive CPU tactical-mobility layer built on the frozen T17 Super Jump timing and snapshot-destination contracts.**
+**T0–T18 is the frozen stable foundation. T18 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #243 passed build/deploy.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1308,3 +1308,33 @@ T0–T17 Freeze:
 - normal CPU paint/combat/Recast behavior resumes exactly after landing
 
 T18 remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
+
+
+## T18 Stable Freeze — 2026-09-23
+
+Hosted runtime QA for v0.13.0 was completed and accepted by the user.
+
+Stable T18 checkpoint:
+- commit: `1a097015a8217ef4fcea8689e1a5de4cf8b71b42`
+- GitHub Actions: run #243 / `35843150398` — success
+- CPU GROUND / JUMP_PREP / JUMP_TRAVEL / JUMP_LANDING mobility states are frozen
+- CPU Super Jump uses the frozen T17 80F / 130F / 30F timing structure
+- CPU PREP remains vulnerable; airborne CPU remains invulnerable
+- CPU jump destinations are snapshotted at tactical-decision time and never live-track moving teammates
+- respawn-recovery / isolation-regrouping rules, safety filters, HP threshold, cooldown, and role bias are included
+- PREP removes the Recast CrowdAgent; landing recreates it at the snapshotted navmesh destination
+- CPU painting/firing suspension during PREP/airborne, lifecycle cleanup, Debug metrics, and CPU Jump QA are included
+- human T17 Super Jump and T0–T17 authority contracts remain unchanged
+
+T18 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T19 — CPU Loadout Diversity / Weapon Kit Parity:
+- remove the long-standing T14 isolation where every CPU uses the Pulse Sprayer profile
+- assign CPU main weapons by role / slot while preserving the frozen seven-agent tactical roles
+- route CPU fire through the existing weapon-specific runtime models rather than generic projectile-count variation
+- keep weapon-class behavior consistent with the frozen T14 player weapon contracts
+- preserve T16 kit assignments as the canonical main/sub/special mapping source
+- introduce CPU sub/special use only where it can be safely integrated without changing HUMAN/SPECIAL paint-source authority
+- maintain T12 CPU combat/lifecycle, T18 mobility, and T0–T18 performance contracts
