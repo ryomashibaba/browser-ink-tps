@@ -55,6 +55,7 @@ export interface WeaponProfile {
   pelletCount: number;
   spreadDegrees: number;
   chargeSeconds: number;
+  firstChargeSeconds: number;
   minChargeSeconds: number;
   chargeDamageMultiplier: number;
   chargeSpeedMultiplier: number;
@@ -71,6 +72,7 @@ const BASE = {
   pelletCount: 1,
   spreadDegrees: 0,
   chargeSeconds: 0,
+  firstChargeSeconds: 0,
   minChargeSeconds: 0,
   chargeDamageMultiplier: 1,
   chargeSpeedMultiplier: 1,
@@ -284,9 +286,10 @@ export const WEAPON_PROFILES: Readonly<Record<WeaponId, WeaponProfile>> = {
     inkCost: 0.72,
     fxScale: 0.7,
     audioPitch: 1.18,
-    chargeSeconds: 1.15,
+    chargeSeconds: 1.20,
+    firstChargeSeconds: 0.80,
     minChargeSeconds: 0.16,
-    burstMaxShots: 18,
+    burstMaxShots: 36,
     burstIntervalSeconds: 0.075
   },
   'canopy-guard': {
@@ -324,17 +327,18 @@ export const WEAPON_PROFILES: Readonly<Record<WeaponId, WeaponProfile>> = {
     lifeSeconds: 1.6,
     paintRadiusMeters: 0.38,
     visualDiameterMeters: 0.085,
-    damage: 28,
-    inkCost: 4.8,
+    damage: 30,
+    inkCost: 5.0,
     fxScale: 0.9,
     audioPitch: 1.42,
     pelletCount: 3,
-    spreadDegrees: 13,
+    spreadDegrees: 8,
     chargeSeconds: 1.20,
+    firstChargeSeconds: 0.50,
     minChargeSeconds: 0.15,
-    chargeDamageMultiplier: 1.8,
+    chargeDamageMultiplier: 35 / 30,
     chargeSpeedMultiplier: 1.28,
-    chargePaintMultiplier: 1.25
+    chargePaintMultiplier: 1.20
   },
   'ink-saber': {
     ...BASE,
