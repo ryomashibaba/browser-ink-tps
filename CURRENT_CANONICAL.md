@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.6.0 / T11 IMPLEMENTATION CANDIDATE
+# CURRENT_CANONICAL — v0.6.0 / T11 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T10 remains the frozen stable foundation. T11 Spawn / Splat / Respawn / Turf War Match Loop is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
+**T0–T11 is now the frozen stable foundation. T11 Spawn / Splat / Respawn / Turf War Match Loop passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -347,7 +347,7 @@ T8 remains frozen and T9 is now frozen. The intended order from here is:
 ## Standard workflow
 
 1. Work from current GitHub `main`.
-2. Preserve the T0–T10 Freeze contracts.
+2. Preserve the T0–T11 Freeze contracts.
 3. Design the next coherent batch before implementation.
 4. Push/merge through GitHub.
 5. GitHub Actions must pass typecheck + production build.
@@ -426,7 +426,7 @@ T10 is therefore **STABLE FREEZE**.
 - T13 — production stage / HUD / map
 - T14 — content, animation, audio, additional weapons, polish
 
-## T11 implementation candidate
+## T11 stable checkpoint
 
 Foundation commit:
 `340f0f81b579d18c9072bdfd48aef77885b374af`
@@ -447,9 +447,9 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed all T11 checks on 2026-09-23**
 
-T11 candidate adds:
+T11 stable scope:
 
 - explicit match states: COUNTDOWN / PLAYING / ENDED
 - 3-second pre-match countdown
@@ -469,3 +469,30 @@ T11 candidate adds:
 - match / countdown / timer / life / respawn / splat counters in the debug overlay
 
 T10 Ink/HP behavior is reused rather than duplicated. T11 does not alter PaintEvent, gameplay ink, projectile-blocker, or T9 locomotion contracts.
+
+### Hosted T11 QA acceptance
+
+Confirmed by the user on 2026-09-23:
+
+- 3-second COUNTDOWN gates movement and firing
+- PLAYING begins with the 180-second Turf War timer
+- Splat QA drives the real T10 HP→0→SPLATTED lifecycle path
+- splatted player render/collision/input are disabled during the respawn window
+- approximately 2.5-second respawn countdown works
+- respawn restores Human form, 100 HP, 100 Ink, and player control
+- Team A / Team B respawn at opposite team-specific spawn positions
+- End Match QA freezes play at 0:00 and resolves the current Turf leader
+- neutral/equal turf resolves to TIE
+- Restart Match clears turf/resources/targets/result/splat counters and restarts COUNTDOWN
+- T8 camera/blocker/painting, T9 Squid locomotion, and T10 Ink/HP/combat regressions were not observed
+
+Stable T11 gameplay checkpoint:
+`037865af7e433499cf2a08c6f973b09131369d1a`
+
+T11 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+- T12 — CPU players / Recast navigation + tactical layer
+- T13 — production stage / HUD / tactical map
+- T14 — content, animation, audio, additional weapons, polish

@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.6.0 / T11 IMPLEMENTATION CANDIDATE**
+**v0.6.0 / T11 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T10 gameplay foundation remains frozen. The current `main` additionally contains the T11 Spawn / Splat / Respawn / Turf War Match Loop candidate:
+The T0–T11 gameplay foundation is frozen. The current `main` includes:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -154,7 +154,7 @@ Hosted runtime QA for T9 is complete and accepted.
 
 T10 automated build/deploy and hosted Ink/HP/combat QA are complete and accepted.
 
-T11 automated build/deploy is passing; hosted match/lifecycle QA is pending.
+T11 automated build/deploy and hosted match/lifecycle QA are complete and accepted.
 
 Confirmed:
 
@@ -217,8 +217,6 @@ Do not casually replace:
 
 The current project intentionally does **not** yet include:
 
-- player splat / respawn
-- full three-minute Turf War match loop
 - CPU players / Recast navigation
 - super jump
 - production HUD / tactical map
@@ -228,13 +226,12 @@ The current project intentionally does **not** yet include:
 
 ## Current phase
 
-**T11 — Spawn / Splat / Respawn / Turf War Match Loop hosted runtime QA**
+**Next phase: T12 — CPU players / Recast navigation + tactical layer**
 
-T0–T10 remains frozen. T11 adds match/life-cycle orchestration without replacing the frozen Ink, movement, projectile, or world-interaction systems.
+T0–T11 is frozen. T12 must preserve the CPU-authoritative ink pipeline, T8 world interaction, T9 locomotion, T10 combat resources, and T11 match/lifecycle contracts.
 
-After T11 acceptance:
+Planned order:
 
-- T11 — Freeze spawn / splat / respawn / Turf War match loop
-- T12 — CPU / Recast + tactical layer
+- T12 — CPU players / Recast navigation + tactical layer
 - T13 — production stage / HUD / map
 - T14 — content, animation, audio, weapons, polish

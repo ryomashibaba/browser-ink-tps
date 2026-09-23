@@ -1,3 +1,23 @@
+## v0.6.0 T11 Stable Freeze — 2026-09-23
+
+### Freeze
+
+- full hosted T11 QA accepted by the user
+- countdown / 180-second match timer accepted
+- HP-zero Splat and 2.5-second Respawn accepted
+- team-specific spawn reset accepted
+- Turf result / tie resolution accepted
+- Restart Match full reset accepted
+- T8/T9/T10 regression sanity accepted
+
+Stable T11 gameplay checkpoint:
+`037865af7e433499cf2a08c6f973b09131369d1a`
+
+Automated implementation workflow:
+`35812515353`
+
+T11 is now **STABLE FREEZE**. Next planned phase: T12 — CPU players / Recast navigation + tactical layer.
+
 ## v0.6.0 T11 Implementation Candidate — 2026-09-23
 
 ### Match flow

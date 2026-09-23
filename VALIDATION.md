@@ -1,4 +1,4 @@
-# Validation Report — v0.6.0 T11 Implementation Candidate
+# Validation Report — v0.6.0 T11 Stable Freeze
 
 Date: 2026-09-23
 
@@ -513,7 +513,7 @@ Automated implementation workflow:
 
 T10 is now **STABLE FREEZE**.
 
-## T11 Spawn / Splat / Respawn / Match Loop candidate
+## T11 Spawn / Splat / Respawn / Match Loop stable checkpoint
 
 Implementation:
 `340f0f81b579d18c9072bdfd48aef77885b374af`
@@ -531,7 +531,7 @@ Automated result:
 - production build: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed all T11 checks on 2026-09-23**
 
 Architecture validation:
 
@@ -560,4 +560,32 @@ Hosted QA required before T11 Freeze:
 8. press Restart Match and verify turf is cleared, resources/targets reset, result becomes '-', splat counters reset, and a new 3s countdown starts
 9. sanity-check T10 Ink/HP/combat targets plus T9 Squid movement and T8 paint/camera blockers for regressions
 
-T11 remains **IMPLEMENTATION CANDIDATE** until hosted QA passes.
+All hosted T11 checks passed on 2026-09-23. T11 is **STABLE FREEZE**.
+
+## T11 final hosted acceptance
+
+User confirmation date: 2026-09-23
+
+Final accepted T11 scope:
+
+- COUNTDOWN / PLAYING / ENDED match states
+- 3-second pre-match gate
+- 180-second Turf War timer
+- ACTIVE / SPLATTED player lifecycle
+- HP-zero Splat transition
+- splatted render/collider/input suppression
+- 2.5-second respawn
+- team-specific respawn locations
+- Human + 100 HP + 100 Ink respawn reset
+- current Turf result resolution with TEAM A / TEAM B / TIE
+- Restart Match full QA reset
+- projectile cleanup on Splat / match end / restart
+- preserved T8–T10 regression behavior
+
+Stable T11 gameplay checkpoint:
+`037865af7e433499cf2a08c6f973b09131369d1a`
+
+Automated implementation workflow:
+`35812515353`
+
+T11 is now **STABLE FREEZE**.

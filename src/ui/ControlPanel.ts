@@ -25,8 +25,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T11 Candidate</h1>
-      <p>T0–T10 remains frozen. T11 adds 3s countdown, 180s Turf War flow, player Splat/Respawn, and result freeze.</p>
+      <h1>Browser Ink TPS · T11 Stable</h1>
+      <p>T0–T11 is frozen. Match / Splat / Respawn flow is stable; T12 will add CPU players and Recast tactical navigation.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
