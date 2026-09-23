@@ -5,6 +5,7 @@ import { PaintEventType, PaintSource, Team, type PaintEvent } from './types';
 
 export interface PaintRequest {
   source?: PaintSource;
+  actorId?: string;
   team: Team.A | Team.B;
   surfaceId: string;
   centerU: number;
@@ -18,6 +19,7 @@ export interface PaintRequest {
 
 export interface PaintTickReport {
   humanScoreableAreaMeters2: number;
+  cpuScoreableAreaMeters2ByActor: Readonly<Record<string, number>>;
 }
 
 export class PaintCoordinator {
@@ -40,7 +42,10 @@ export class PaintCoordinator {
 
   public processTick(tick: number): PaintTickReport {
     if (this.requests.length === 0) {
-      return { humanScoreableAreaMeters2: 0 };
+      return {
+        humanScoreableAreaMeters2: 0,
+        cpuScoreableAreaMeters2ByActor: Object.freeze({})
+      };
     }
 
     // One immutable event is created once and consumed by both authoritative CPU gameplay ink
@@ -48,6 +53,7 @@ export class PaintCoordinator {
     const batch = this.requests.splice(0, this.requests.length);
     let changedCells = 0;
     let humanScoreableAreaMeters2 = 0;
+    const cpuScoreableAreaMeters2ByActor: Record<string, number> = {};
     for (const request of batch) {
       const source = request.source ?? PaintSource.System;
       const event: PaintEvent = Object.freeze({ tick, ...request, source });
@@ -55,6 +61,14 @@ export class PaintCoordinator {
       changedCells += result.changedCells;
       if (event.source === PaintSource.Human) {
         humanScoreableAreaMeters2 += result.scoreableAreaMeters2Changed;
+      } else if (
+        event.source === PaintSource.Cpu &&
+        event.actorId &&
+        result.scoreableAreaMeters2Changed > 0
+      ) {
+        cpuScoreableAreaMeters2ByActor[event.actorId] =
+          (cpuScoreableAreaMeters2ByActor[event.actorId] ?? 0) +
+          result.scoreableAreaMeters2Changed;
       }
       this.gpu.queue(event);
       this.lastEvent = event;
@@ -70,7 +84,10 @@ export class PaintCoordinator {
       }
     }
     this.stats.recordPaint(batch.length, changedCells);
-    return { humanScoreableAreaMeters2 };
+    return {
+      humanScoreableAreaMeters2,
+      cpuScoreableAreaMeters2ByActor: Object.freeze(cpuScoreableAreaMeters2ByActor)
+    };
   }
 
   public clear(): void {
