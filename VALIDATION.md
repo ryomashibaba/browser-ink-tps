@@ -1172,3 +1172,37 @@ Stable checkpoint:
 - GitHub Actions run #222 / `35841633285`: TypeScript check, production build, and Pages deploy success
 
 T17 is now **STABLE FREEZE**. Future phases must preserve the map-selection, destination-snapshot, vulnerability, phase-timing, and cleanup contracts unless an explicit later Freeze-change decision is made.
+
+
+## T18 v0.13.0 CPU Tactical Mobility hosted QA
+
+Forced-path QA:
+1. Start a normal match and press `CPU Jump QA`.
+2. Debug `CPU jump prep / air` should show one PREP CPU, then one airborne CPU.
+3. A team-colored landing marker should appear at the fixed destination.
+4. After about 80F PREP, that CPU should leave the ground, follow a high arc for the frozen 130F + 30F airborne phases, then land.
+5. Debug `CPU jumps / landings` should increment once and `CPU last jump` should show a source->target pair.
+6. The destination must remain fixed after the jump decision even if the selected friendly target moves.
+
+Vulnerability / combat:
+7. During CPU PREP, the CPU must remain hittable and may be splatted.
+8. During CPU JUMP_TRAVEL / JUMP_LANDING, projectiles and area-damage specials/subs must not damage that CPU.
+9. CPU must not fire or issue CPU paint requests while PREP or airborne.
+10. After landing, its normal firing, painting, and Recast pathing must resume.
+
+Natural tactical behavior:
+11. Splat a CPU and allow it to respawn while a safe teammate is well ahead; within the short respawn recovery window, a forward CPU jump may occur.
+12. A destination with an enemy within roughly 4.2 m must not be chosen by normal tactical logic.
+13. A CPU with less than about 72 HP must not start a normal tactical Super Jump.
+14. CPUs close to teammates should continue ordinary Recast movement rather than repeatedly jumping.
+15. After a landing, the same CPU should respect the ~8 s jump cooldown.
+16. ANCHOR should jump less aggressively than SKIRMISHER under comparable conditions.
+
+Lifecycle / regression:
+17. If a PREP CPU is splatted, its marker/jump state must clear and ordinary respawn must still work.
+18. End Match / Restart Match / team switch must leave no airborne CPU or orphan CPU landing marker.
+19. Human T17 Super Jump must remain unchanged, including map click selection and snapshot-at-selection ally destinations.
+20. T16 sub/special kits, T14 weapon behavior, CPU combat, Turf scoring, tactical map orientation, and T0–T17 ink authority must show no regression.
+21. Full 4v4 activity plus one or more CPU jumps should keep FPS / dropped sim / GPU backlog acceptable.
+
+T18 remains **IMPLEMENTATION CANDIDATE** until these checks are accepted.
