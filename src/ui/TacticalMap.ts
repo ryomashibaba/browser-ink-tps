@@ -6,6 +6,7 @@ import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { SurfaceFlags, Team } from '../ink/types';
 import type { SuperJumpTarget } from '../mobility/SuperJumpSystem';
 import type { StageDefinition } from '../stage/StageDefinition';
+import { weaponProfile } from '../weapons/WeaponCatalog';
 
 interface MapJumpCandidate {
   target: SuperJumpTarget;
@@ -213,7 +214,7 @@ export class TacticalMap {
 
   private drawAgents(): void {
     const ctx = this.context;
-    this.cpuAgents.forEachMapAgent((id, team, position, active) => {
+    this.cpuAgents.forEachMapAgent((id, team, position, active, weaponId) => {
       if (!active) return;
       const point = this.worldToMap(position.x, position.z);
       ctx.fillStyle = team === Team.A ? '#28ddf0' : '#ff3ca0';
@@ -224,7 +225,11 @@ export class TacticalMap {
       ctx.font = '700 8px ui-monospace, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(id, point.x, point.y + 0.5);
+      ctx.fillText(
+        `${id}·${weaponProfile(weaponId).shortName}`,
+        point.x,
+        point.y + 0.5
+      );
     });
 
     const player = this.worldToMap(this.stats.playerWorldX, this.stats.playerWorldZ);
