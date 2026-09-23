@@ -16,6 +16,7 @@ import {
   Vec3
 } from 'playcanvas';
 import { CpuAgentSystem } from '../ai/CpuAgentSystem';
+import { CpuKitSystem } from '../ai/CpuKitSystem';
 import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { CombatTargetSystem } from '../combat/CombatTargetSystem';
 import { PlayerResources } from '../combat/PlayerResources';
@@ -107,6 +108,7 @@ export class InkLabApp {
   private readonly cpuAgents: CpuAgentSystem;
   private readonly feedback: GameFeedback;
   private readonly projectiles: ProjectileSystem;
+  private readonly cpuKit: CpuKitSystem;
   private readonly subWeapons: SubWeaponSystem;
   private readonly specialGauge: SpecialGaugeSystem;
   private readonly superJump: SuperJumpSystem;
@@ -192,6 +194,16 @@ export class InkLabApp {
       this.feedback,
       this.stats
     );
+    this.cpuKit = new CpuKitSystem(
+      app,
+      surfaces,
+      this.physics,
+      this.coordinator,
+      this.projectiles,
+      this.cpuAgents,
+      this.feedback,
+      this.stats
+    );
     this.subWeapons = new SubWeaponSystem(
       app,
       surfaces,
@@ -218,6 +230,7 @@ export class InkLabApp {
         this.player.setTeam(team);
         this.superJump.reset();
         this.cpuAgents.reset(team);
+        this.cpuKit.reset();
         this.subWeapons.reset();
         this.specialGauge.reset();
       },
@@ -253,9 +266,13 @@ export class InkLabApp {
       onCpuAdvancedQa: () => {
         this.cpuAgents.forceAdvancedWeaponQa();
       },
+      onCpuKitQaReady: () => {
+        this.cpuAgents.forceKitQaReady();
+      },
       onClear: () => {
         this.clearCoordinateQaMarkers();
         this.coordinator.clear();
+        this.cpuKit.reset();
         this.subWeapons.reset();
         this.specialGauge.reset();
       }
@@ -357,6 +374,7 @@ export class InkLabApp {
         if (this.match.consumeMatchEnded()) {
           this.superJump.cancel();
           this.projectiles.reset();
+          this.cpuKit.reset();
           this.subWeapons.reset();
           this.specialGauge.cancelActive();
         }
@@ -415,6 +433,9 @@ export class InkLabApp {
         this.cpuAgents.drainFireRequests((request) => {
           this.projectiles.queueCpuShot(request);
         });
+        this.cpuAgents.drainKitRequests((request) => {
+          this.cpuKit.queue(request);
+        });
 
         // Keep the camera transform current for every catch-up tick. This prevents
         // render-FPS-dependent aim lag when several 60 Hz ticks run in one frame.
@@ -464,10 +485,14 @@ export class InkLabApp {
 
         this.subWeapons.fixedUpdate(stepSeconds);
         this.specialGauge.fixedUpdate(stepSeconds);
+        this.cpuKit.fixedUpdate(stepSeconds);
 
         const paintReport = this.coordinator.processTick(tick);
         this.specialGauge.addHumanScoreablePaint(
           paintReport.humanScoreableAreaMeters2
+        );
+        this.cpuAgents.addScoreablePaintByActor(
+          paintReport.cpuScoreableAreaMeters2ByActor
         );
       });
 
@@ -479,6 +504,7 @@ export class InkLabApp {
       }
       this.cpuAgents.render(report.alpha);
       this.projectiles.render(report.alpha);
+      this.cpuKit.render(report.alpha);
       this.subWeapons.render(report.alpha);
       this.feedback.update(cameraDt);
       this.cameraController.update(this.playerPosition);
@@ -517,6 +543,7 @@ export class InkLabApp {
     this.combatTargets.reset();
     this.superJump.reset();
     this.projectiles.reset();
+    this.cpuKit.reset();
     this.subWeapons.reset();
     this.specialGauge.reset();
     this.match.restart();
