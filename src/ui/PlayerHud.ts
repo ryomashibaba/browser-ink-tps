@@ -128,7 +128,7 @@ export class PlayerHud {
         break;
       case 'splatling':
         this.chargeFx.innerHTML =
-          '<div class="splatling-ring"></div><i></i><i></i><i></i><i></i>';
+          '<div class="splatling-ring"></div><div class="splatling-cross h"></div><div class="splatling-cross v"></div><i></i><i></i><i></i><i></i>';
         break;
       case 'stringer':
         this.chargeFx.innerHTML =
