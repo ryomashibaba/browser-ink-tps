@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.8.0 / T13 STABLE FREEZE
+# CURRENT_CANONICAL — v0.9.0 / T14 IMPLEMENTATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T13 is now the frozen stable foundation. T13 Production Stage / HUD / Tactical Map, including the enlarged INKWORKS JUNCTION production arena, passed automated CI/deploy and hosted runtime QA on 2026-09-23.**
+**T0–T13 remains the frozen stable foundation. T14 Content / Animation / Audio / Additional Weapons / Polish first candidate is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -727,3 +727,54 @@ T13 is therefore **STABLE FREEZE**.
 ## Next phase
 
 - T14 — content, animation, audio, additional weapons, polish
+
+## T14 first content / polish candidate
+
+Weapon/feedback foundation:
+`c65b0ea44271cffea48e5efd8bd1c4e734f8bc1a`
+
+Weapon selection / HUD integration:
+`a628b4c0b85133261b52a0b67d12d14eb83d308f`
+
+Character motion polish:
+`c85ef99f070f74b54d36d18deda01b1ae296b4dd`
+
+Combat impact feedback:
+`a4fc8f57ce55fff57e7048f8a162ba798ee8e236`
+
+Presentation polish:
+`c819e10783f2aa9e5b29641e367f53fb1dc87c29`
+
+Automated workflow:
+`35818653041`
+
+Automated results:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+T14 first candidate adds:
+
+- original multi-weapon catalog with three human-selectable weapons
+- `Pulse Sprayer` retains the frozen standard-shooter values: 0.105 s interval / 28 m/s / 4 m/s² gravity / 1.8 s life / 0.64 m paint radius / 34 damage / 0.95 Ink
+- `Needle SMG`: faster cadence and projectile speed with lower damage / Ink cost / paint radius
+- `Arc Blaster`: slower cadence with higher damage, larger projectile, larger paint radius, and higher Ink cost
+- weapon selection through keys 3 / 4 / 5 and ControlPanel buttons
+- selected weapon shown in the player-facing HUD and Debug Overlay
+- all weapons reuse the same pooled swept ProjectileSystem, ballistic aim, blocker priority, combat hit arbitration, and PaintRequest/PaintEvent pipeline
+- CPU agents intentionally remain on the frozen Pulse Sprayer profile for this first T14 batch
+- pooled muzzle / impact / Splat / Respawn visual feedback
+- original procedural Web Audio tones for shot / impact / weapon switch / Splat / Respawn; no external audio assets
+- audio is unlocked only after browser user interaction and lightly rate-limited to avoid excessive oscillator creation
+- visual-only Human movement bob/squash/sway
+- visual-only Squid breathing/pulse while preserving Squid Roll rotation
+- visual-only CPU movement bob/squash
+- animation modifies render presentation only; colliders, Rapier state, Recast state, and 60 Hz authority remain unchanged
+
+T14 project tuning is original implementation tuning. No Nintendo weapon assets, names, sounds, models, UI assets, or proprietary internal constants are used.
+
+T14 remains **IMPLEMENTATION CANDIDATE**. Do not Freeze until hosted weapon / audiovisual / animation / regression QA passes.

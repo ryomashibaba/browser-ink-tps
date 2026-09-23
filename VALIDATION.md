@@ -1,4 +1,4 @@
-# Validation Report — v0.8.0 T13 Stable Freeze
+# Validation Report — v0.9.0 T14 Implementation Candidate
 
 Date: 2026-09-23
 
@@ -854,3 +854,52 @@ Automated production-stage workflow:
 `35817233372`
 
 T13 is now **STABLE FREEZE**.
+
+## T14 first content / animation / audio / weapon candidate
+
+Implementation:
+`c65b0ea44271cffea48e5efd8bd1c4e734f8bc1a`
+`a628b4c0b85133261b52a0b67d12d14eb83d308f`
+`c85ef99f070f74b54d36d18deda01b1ae296b4dd`
+`a4fc8f57ce55fff57e7048f8a162ba798ee8e236`
+`c819e10783f2aa9e5b29641e367f53fb1dc87c29`
+
+Workflow:
+`35818653041`
+
+Automated result:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Architecture validation:
+
+- Pulse Sprayer profile directly references the frozen standard projectile / combat / Ink tuning
+- Needle SMG and Arc Blaster are separate project-owned WeaponProfiles
+- selected weapon changes only human projectile profile; CPU T12 behavior remains on Pulse Sprayer
+- all three weapons use the same pooled projectile slots and swept collision logic
+- weapon-specific damage participates in the existing nearest world/combat arbitration
+- weapon-specific paint radius still creates one PaintRequest and follows the immutable PaintEvent path
+- PlayerResources now accepts a per-shot Ink cost while preserving the frozen default cost
+- visual feedback uses a bounded 48-entity pool
+- Web Audio uses generated oscillators only and requires browser interaction before playback
+- procedural character motion is render-only and does not modify physics/collision/navigation authority
+
+Hosted QA required before this T14 batch can be accepted:
+
+1. key 3 selects Pulse Sprayer and its cadence, Ink use, 34-damage behavior, trajectory, and 0.64m-class painting should feel unchanged from T13
+2. key 4 selects Needle SMG; it should fire visibly faster with smaller/faster shots, lower damage, smaller paint marks, and lower Ink use per shot
+3. key 5 selects Arc Blaster; it should fire much slower with larger/slower shots, 70-damage hits, much larger paint marks, and noticeably higher Ink use
+4. ControlPanel selected button, HUD weapon chip, and Debug `Weapon` value should stay synchronized when switching 3/4/5
+5. center-crosshair ballistic aiming, walls/cover blockers, friendly-fire rules, CPU hits, and Turf painting must work with every weapon
+6. shot and impact visual pulses should appear without leaving permanent entities or obvious runaway FX
+7. after the first click/key interaction, weapon switch / firing / impact / Splat / Respawn tones should be audible; no severe crackling or excessive volume stacking
+8. Human movement should have subtle visual bob/squash, Squid should visibly pulse/breathe, Squid Roll should retain its 360-degree roll, and CPUs should have subtle movement motion
+9. these visual motions must not change collision, movement speed, wall swim, Surge, Splat/Respawn, CPU navigation, or Tactical Map positions
+10. full 4v4 play with FX/audio must keep FPS, dropped-simulation time, GPU backlog, and projectile pool behavior acceptable
+
+T14 remains **IMPLEMENTATION CANDIDATE**.

@@ -1,3 +1,34 @@
+## v0.9.0 T14 Content / Weapons / Feedback Candidate — 2026-09-23
+
+### Weapons
+
+- added original Pulse Sprayer / Needle SMG / Arc Blaster weapon profiles
+- preserved the pre-T14 standard shooter exactly as Pulse Sprayer
+- added 3 / 4 / 5 weapon switching and HUD/control-panel weapon state
+- added per-profile cadence, projectile speed/gravity/lifetime, damage, paint radius, visual size, and Ink cost
+
+### Feedback / animation
+
+- added pooled muzzle/impact/Splat/Respawn visual pulses
+- added original procedural Web Audio weapon/impact/lifecycle tones
+- added lightweight audio-event throttling
+- added render-only Human, Squid, Squid Roll-preserving, and CPU procedural motion
+
+Implementation:
+`c65b0ea44271cffea48e5efd8bd1c4e734f8bc1a`
+`a628b4c0b85133261b52a0b67d12d14eb83d308f`
+`c85ef99f070f74b54d36d18deda01b1ae296b4dd`
+`a4fc8f57ce55fff57e7048f8a162ba798ee8e236`
+`c819e10783f2aa9e5b29641e367f53fb1dc87c29`
+
+Workflow:
+`35818653041`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.8.0 T13 Stable Freeze — 2026-09-23
 
 ### Freeze

@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.8.0 / T13 STABLE FREEZE**
+**v0.9.0 / T14 IMPLEMENTATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T13 gameplay foundation is frozen. The current `main` includes:
+The T0–T13 gameplay foundation remains frozen. The current `main` additionally contains the first T14 content / animation / audio / additional-weapons candidate:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -218,6 +218,11 @@ Do not casually replace:
 - fixed 60 Hz gameplay simulation
 - custom movement + Rapier kinematic character collision
 - pooled swept projectiles
+- three original selectable weapon profiles: Pulse Sprayer, Needle SMG, Arc Blaster
+- 3 / 4 / 5 weapon switching with player-facing HUD state
+- pooled shot/impact/Splat/Respawn visual feedback
+- original procedural Web Audio SFX
+- render-only Human/Squid/CPU procedural motion
 - GitHub-first CI/deploy workflow
 
 ## Deferred scope
@@ -225,14 +230,14 @@ Do not casually replace:
 The current project intentionally does **not** yet include:
 
 - super jump
-- production models / animation / audio
+- production character models / authored animation assets
 - final performance/bundle optimization
 
 ## Current phase
 
-**Next phase: T14 — content, animation, audio, additional weapons, polish**
+**T14 — first content / weapons / audiovisual polish hosted QA**
 
-T0–T13 is frozen. T14 must preserve the canonical ink pipeline, T8 world interaction, T9 locomotion, T10 combat resources, T11 match/lifecycle, T12 4v4 CPU/Recast systems, and T13 production-stage/HUD/Tactical Map contracts.
+T0–T13 remains frozen. The first T14 candidate adds original weapon variety, pooled FX, procedural SFX, and render-only motion while preserving the frozen gameplay architecture. Additional T14 polish remains possible after hosted acceptance.
 
 
 T13 hosted runtime QA is complete and accepted. The enlarged production arena, HUD, Tactical Map, shared stage metadata, and 4v4 regression/performance checks are frozen.
