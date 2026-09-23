@@ -1443,6 +1443,7 @@ export class CpuAgentSystem {
 
     this.coordinator.enqueue({
       source: PaintSource.Cpu,
+      actorId: bot.id,
       team: bot.team,
       surfaceId: sample.surface.id,
       centerU: sample.u,
