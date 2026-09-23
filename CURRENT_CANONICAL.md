@@ -1,4 +1,4 @@
-# CURRENT_CANONICAL — v0.9.4 / T14 DUALIES POST-ROLL + SPLATLING CHARGE CANDIDATE
+# CURRENT_CANONICAL — v0.9.5 / T14 TWO-RING CHARGE CANDIDATE
 
 Date: 2026-09-23
 
@@ -954,3 +954,28 @@ Splatling charge presentation:
 - subtle rotary markers remain only as Splatling identity
 
 T0–T13 remains frozen. T14 remains candidate until hosted QA confirms these corrections.
+
+
+## T14 v0.9.5 two-ring charge correction
+
+Rotor Cannon / Splatling:
+- first charge ring = 0.80 s
+- full second ring = 1.20 s
+- before ring 1, projectile speed/range scales upward with charge
+- at ring 1, effective projectile speed/range reaches its maximum region
+- ring 2 does not extend that range further; it increases stored firing duration
+- reference burst count is ~18 shots at ring 1 and ~36 shots at full charge
+- HUD uses two separate concentric charge rings
+
+Chord Stringer:
+- minimum fire charge remains 0.15 s
+- first ring = 0.50 s
+- full second ring = 1.20 s
+- direct arrow damage scales 30 -> 35 by ring 1 and stays 35 through ring 2
+- ring 1 or higher gives every landed arrow an independent 0.75 s delayed burst dealing 30 area damage
+- arrow spread remains 8 degrees through ring 1, then converges toward 0 degrees across ring 2
+- projectile speed/range and paint width continue increasing through ring 2
+- ink cost follows the 5 -> 6 -> 8.5 minimum / ring-1 / full progression
+- HUD and 3D feedback expose ring 1 and ring 2 separately
+
+The implementation uses original project weapon names/assets and project-space tuning while matching the documented Splatoon 3 charge-stage relationships. T0–T13 Freeze and PaintRequest -> immutable PaintEvent authority remain unchanged.
