@@ -1,3 +1,9 @@
+## T17 ally destination correction — 2026-09-23
+
+- friendly CPU Super Jump destinations are now captured once at map selection
+- later CPU movement no longer moves the destination or landing marker
+- removed the live CPU target resolver from the jump path
+
 ## v0.12.0 T17 Super Jump Candidate — 2026-09-23
 
 - added map-driven Super Jump selection to own spawn or living friendly CPUs
