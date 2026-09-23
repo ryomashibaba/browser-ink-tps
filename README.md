@@ -174,9 +174,8 @@ Do not casually replace:
 
 ## Deferred scope
 
-The stable T4–T7 slice intentionally does **not** yet include:
+The current project intentionally does **not** yet include:
 
-- a distinct physical Squid collider
 - ink tank / consumption / refill
 - damage / HP / splat
 - respawn

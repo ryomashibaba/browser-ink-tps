@@ -192,8 +192,11 @@ Current controls:
 - Esc: release Pointer Lock
 - WASD: move
 - Space: jump
-- Shift: Squid state
-- Left mouse: fire
+- Shift: Squid form / swim
+- Shift + movement into OWN-painted wall: wall swim
+- fast OWN-ink swim + reverse direction + Space: Squid Roll
+- on OWN-painted wall, hold Space then release: Surge
+- Left mouse: fire (Human form only)
 - Mouse wheel: camera distance
 - 1 / 2: Team A / Team B
 - R: clear ink
@@ -241,7 +244,6 @@ The user then accepted the current state as completed for this phase.
 
 These remain future work rather than hidden bugs in the current slice:
 
-- state-specific Squid physical collider
 - full ink tank / ink consumption / refill loop
 - player damage / HP / splat
 - respawn
@@ -312,7 +314,7 @@ T8 remains frozen. Current work is the T9 candidate above. After T9 runtime acce
 ## Standard workflow
 
 1. Work from current GitHub `main`.
-2. Preserve the T0–T7 Freeze contracts.
+2. Preserve the T0–T8 Freeze contracts.
 3. Design the next coherent batch before implementation.
 4. Push/merge through GitHub.
 5. GitHub Actions must pass typecheck + production build.
