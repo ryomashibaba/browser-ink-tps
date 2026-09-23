@@ -153,6 +153,11 @@ export class SpecialGaugeSystem {
     }
   }
 
+  public cancelActive(): void {
+    this.scheduledStrikes.length = 0;
+    this.storms.length = 0;
+  }
+
   public qaFill(): void {
     const required = specialWeaponProfile(this.specialId).requiredPoints;
     this.points = required;
