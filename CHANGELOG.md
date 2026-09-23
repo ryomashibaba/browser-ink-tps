@@ -1,3 +1,16 @@
+## v0.13.0 T18 CPU Tactical Mobility Candidate — 2026-09-23
+
+- added GROUND / JUMP_PREP / JUMP_TRAVEL / JUMP_LANDING mobility state to CPU agents
+- CPU tactical layer can choose snapshot-based Super Jump destinations for respawn recovery or isolation regrouping
+- PREP removes the Recast CrowdAgent and remains vulnerable
+- airborne CPU travel reuses the frozen T17 80F / 130F / 30F timing structure and is invulnerable
+- landing re-registers the CPU on Recast at the snapshotted navmesh destination
+- added safe-target, HP, minimum-distance, isolation, role-bias, forward-progress, cooldown, and respawn-window decision rules
+- CPU painting/firing is suspended during PREP and airborne phases
+- splat, match end, reset, and respawn clean up CPU jump state and markers
+- added CPU Jump QA and Debug mobility metrics
+- human T17 Super Jump and T0–T17 authority contracts remain unchanged
+
 ## v0.12.0 T17 Stable Freeze — 2026-09-23
 
 - hosted QA accepted by the user
