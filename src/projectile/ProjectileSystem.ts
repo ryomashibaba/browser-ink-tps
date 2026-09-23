@@ -215,7 +215,9 @@ export class ProjectileSystem {
       sourceId: request.sourceId,
       team: request.team,
       origin: request.origin.clone(),
-      target: request.target.clone()
+      target: request.target.clone(),
+      weaponId: request.weaponId,
+      charge: request.charge
     });
   }
 
@@ -327,7 +329,7 @@ export class ProjectileSystem {
     this.wasFireHeld = fireHeld;
 
     this.processDelayedBursts(dt);
-    this.spawnQueuedCpuShots();
+    this.spawnQueuedCpuShots(team, playerPosition, playerDamageable);
 
     let active = 0;
     for (const slot of this.slots) {
@@ -1012,7 +1014,8 @@ export class ProjectileSystem {
     hit: SurfaceRayHit,
     direction: Vec3,
     radius: number,
-    charge: number
+    charge: number,
+    source: PaintSource = PaintSource.Human
   ): void {
     const uDir = direction.dot(hit.surface.uAxis);
     const vDir = direction.dot(hit.surface.vAxis);
@@ -1022,7 +1025,7 @@ export class ProjectileSystem {
     const length = lerp(1.4, 4.2, charge);
 
     this.coordinator.enqueue({
-      source: PaintSource.Human,
+      source,
       team,
       surfaceId: hit.surface.id,
       centerU: hit.u - normalizedU * length * 0.42,
@@ -1116,45 +1119,214 @@ export class ProjectileSystem {
     return false;
   }
 
-  private spawnQueuedCpuShots(): void {
+  private spawnQueuedCpuShots(
+    humanTeam: Team.A | Team.B,
+    playerPosition: Vec3,
+    playerDamageable: boolean
+  ): void {
     if (this.queuedCpuShots.length === 0) return;
 
-    const profile = weaponProfile(DEFAULT_WEAPON_ID);
     for (const request of this.queuedCpuShots) {
-      const slot = this.slots.find((candidate) => !candidate.active);
-      if (!slot) {
-        this.stats.projectilePoolDrops += 1;
+      const profile = weaponProfile(request.weaponId);
+
+      if (profile.weaponClass === 'CHARGER') {
+        this.fireCpuChargerRay(
+          request,
+          profile,
+          humanTeam,
+          playerPosition,
+          playerDamageable
+        );
         continue;
       }
 
-      this.solveLaunchDirection(request.origin, request.target, this.cpuAimDirection, profile);
+      this.solveLaunchDirection(
+        request.origin,
+        request.target,
+        this.cpuAimDirection,
+        profile
+      );
       if (this.cpuAimDirection.lengthSq() <= 1e-8) continue;
 
-      this.spawnProjectile(
-        slot,
-        profile,
-        request.origin,
-        this.cpuAimDirection,
-        request.team,
-        profile.speedMetersPerSecond,
-        profile.gravityMetersPerSecond2,
-        profile.lifeSeconds,
-        profile.visualDiameterMeters,
-        profile.damage,
-        profile.paintRadiusMeters,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        'CPU',
-        request.sourceId
-      );
-      this.feedback.shot(request.team, request.origin, profile, false);
+      let direction = this.cpuAimDirection.clone();
+      let count = 1;
+      let spread = 0;
+      let trailPaintRadius = 0;
+      let speedMultiplier = 1;
+
+      if (profile.weaponClass === 'DUALIES') {
+        count = 2;
+        spread = profile.spreadDegrees;
+      } else if (profile.weaponClass === 'SLOSHER') {
+        direction.y = Math.max(direction.y, 0.16);
+        direction.normalize();
+        trailPaintRadius = 0.34;
+      } else if (profile.weaponClass === 'SPLATLING') {
+        spread = 0.8;
+        speedMultiplier = 1.0;
+      }
+
+      let spawned = 0;
+      for (let i = 0; i < count; i += 1) {
+        const slot = this.slots.find((candidate) => !candidate.active);
+        if (!slot) {
+          this.stats.projectilePoolDrops += 1;
+          break;
+        }
+
+        const offset =
+          count <= 1
+            ? 0
+            : (i / (count - 1) - 0.5) * spread;
+        const shotDirection = rotateYaw(direction, offset);
+
+        this.spawnProjectile(
+          slot,
+          profile,
+          request.origin,
+          shotDirection,
+          request.team,
+          profile.speedMetersPerSecond * speedMultiplier,
+          profile.gravityMetersPerSecond2,
+          profile.lifeSeconds,
+          profile.visualDiameterMeters,
+          profile.damage,
+          profile.paintRadiusMeters,
+          profile.blastRadiusMeters,
+          profile.blastDamage,
+          trailPaintRadius,
+          0,
+          0,
+          0,
+          0,
+          'CPU',
+          request.sourceId
+        );
+        spawned += 1;
+      }
+
+      if (spawned > 0) {
+        this.feedback.shot(request.team, request.origin, profile, false);
+      }
     }
+
     this.queuedCpuShots.length = 0;
+  }
+
+  private fireCpuChargerRay(
+    request: CpuFireRequest,
+    profile: WeaponProfile,
+    humanTeam: Team.A | Team.B,
+    playerPosition: Vec3,
+    playerDamageable: boolean
+  ): void {
+    const direction = request.target.clone().sub(request.origin);
+    if (direction.lengthSq() <= 1e-8) return;
+    direction.normalize();
+
+    const charge = Math.max(0, Math.min(1, request.charge));
+    const range = lerp(11, 30, charge);
+    const damage = lerp(
+      profile.damage * 0.72,
+      profile.damage * profile.chargeDamageMultiplier,
+      charge
+    );
+    const paintRadius =
+      profile.paintRadiusMeters *
+      lerp(0.72, profile.chargePaintMultiplier, charge);
+    const end = request.origin.clone().add(direction.clone().mulScalar(range));
+
+    const paintHit = this.findNearestSurfaceHit(request.origin, end);
+    const blockerHit = this.physics.castStageSegment(
+      request.origin,
+      end,
+      'projectile'
+    );
+    const cpuHit = this.cpuAgents.findNearestCombatHit(
+      request.origin,
+      end,
+      request.team
+    );
+    const playerHitDistance = (
+      playerDamageable &&
+      request.team !== humanTeam
+    )
+      ? segmentSphereDistance(
+          request.origin,
+          end,
+          playerPosition,
+          GAME_CONFIG.cpu.playerHitRadiusMeters
+        )
+      : null;
+
+    const paintWins = paintHit && (
+      !blockerHit ||
+      paintHit.distance <=
+        blockerHit.distance +
+          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+    );
+    const worldDistance = paintWins
+      ? paintHit.distance
+      : (blockerHit?.distance ?? range);
+
+    let combatDistance = Number.POSITIVE_INFINITY;
+    let combatKind: 'CPU' | 'PLAYER' | null = null;
+    if (cpuHit && cpuHit.distance < combatDistance) {
+      combatDistance = cpuHit.distance;
+      combatKind = 'CPU';
+    }
+    if (
+      playerHitDistance !== null &&
+      playerHitDistance < combatDistance
+    ) {
+      combatDistance = playerHitDistance;
+      combatKind = 'PLAYER';
+    }
+
+    let endPoint = end;
+    let linePaintHit: SurfaceRayHit | null = null;
+
+    if (
+      combatKind &&
+      combatDistance +
+        GAME_CONFIG.combat.hitPriorityEpsilonMeters <
+        worldDistance
+    ) {
+      endPoint = pointOnSegment(
+        request.origin,
+        end,
+        combatDistance
+      );
+      if (combatKind === 'CPU' && cpuHit) {
+        this.cpuAgents.applyProjectileHit(cpuHit, damage);
+      } else if (combatKind === 'PLAYER') {
+        this.resources.applyDamage(damage);
+        this.stats.cpuPlayerHits += 1;
+      }
+    } else if (paintWins && paintHit) {
+      endPoint = paintHit.worldPoint.clone();
+      linePaintHit = paintHit;
+    } else if (blockerHit) {
+      endPoint = blockerHit.point.clone();
+    }
+
+    if (linePaintHit) {
+      this.enqueueChargerLine(
+        request.team,
+        linePaintHit,
+        direction,
+        paintRadius,
+        charge,
+        PaintSource.Cpu
+      );
+    }
+
+    this.feedback.beam(
+      request.team,
+      request.origin,
+      endPoint,
+      profile
+    );
   }
 
   private spawnProjectile(
