@@ -5,7 +5,7 @@ import type { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
-import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
+import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { PaintCoordinator, PaintRequest } from '../ink/PaintCoordinator';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
@@ -41,6 +41,7 @@ interface ProjectileSlot {
 }
 
 interface DelayedBurst {
+  source: PaintSource;
   team: Team.A | Team.B;
   point: Vec3;
   seconds: number;
@@ -353,7 +354,8 @@ export class ProjectileSystem {
           slot.trailPaintRadius * 0.62,
           slot.velocity,
           1.7,
-          PaintEventType.MidDroplet
+          PaintEventType.MidDroplet,
+          slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu
         );
         slot.trailPaintCooldown = 0.085;
       }
@@ -434,7 +436,12 @@ export class ProjectileSystem {
       }
 
       if (paintWins) {
-        this.enqueueImpact(slot.team, paintHit, slot.paintRadius);
+        this.enqueueImpact(
+          slot.team,
+          paintHit,
+          slot.paintRadius,
+          slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu
+        );
         this.finishProjectile(slot, paintHit.worldPoint, paintHit);
         continue;
       }
@@ -1014,6 +1021,7 @@ export class ProjectileSystem {
     const length = lerp(1.4, 4.2, charge);
 
     this.coordinator.enqueue({
+      source: PaintSource.Human,
       team,
       surfaceId: hit.surface.id,
       centerU: hit.u - normalizedU * length * 0.42,
@@ -1205,6 +1213,8 @@ export class ProjectileSystem {
     paintHit: SurfaceRayHit | null
   ): void {
     const profile = weaponProfile(slot.weaponId);
+    const paintSource =
+      slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu;
 
     if (slot.blastRadius > 0 && slot.blastDamage > 0) {
       this.applyAreaDamage(point, slot.blastRadius, slot.blastDamage, slot.team);
@@ -1215,7 +1225,8 @@ export class ProjectileSystem {
         slot.blastRadius * 0.72,
         slot.velocity,
         1.2,
-        PaintEventType.Bomb
+        PaintEventType.Bomb,
+        paintSource
       );
     }
 
@@ -1227,6 +1238,7 @@ export class ProjectileSystem {
         slot.delayedBurstSeconds
       );
       this.delayedBursts.push({
+        source: paintSource,
         team: slot.team,
         point: point.clone(),
         seconds: slot.delayedBurstSeconds,
@@ -1245,7 +1257,8 @@ export class ProjectileSystem {
         slot.paintRadius * 0.7,
         slot.velocity,
         0.52,
-        PaintEventType.Impact
+        PaintEventType.Impact,
+        paintSource
       );
     }
 
@@ -1268,7 +1281,8 @@ export class ProjectileSystem {
         burst.paintRadius,
         new Vec3(1, 0, 0),
         1.0,
-        PaintEventType.Bomb
+        PaintEventType.Bomb,
+        burst.source
       );
       this.feedback.stringerBurst(
         burst.team,
@@ -1350,7 +1364,8 @@ export class ProjectileSystem {
     radiusV: number,
     worldDirection: Vec3,
     maxPlaneDistance: number,
-    type: PaintEventType
+    type: PaintEventType,
+    source: PaintSource = PaintSource.Human
   ): boolean {
     let best:
       | {
@@ -1384,6 +1399,7 @@ export class ProjectileSystem {
     const dv = dir.dot(best.surface.vAxis);
 
     this.coordinator.enqueue({
+      source,
       team,
       surfaceId: best.surface.id,
       centerU: best.u,
@@ -1466,10 +1482,12 @@ export class ProjectileSystem {
   private enqueueImpact(
     team: Team.A | Team.B,
     hit: SurfaceRayHit,
-    paintRadius: number
+    paintRadius: number,
+    source: PaintSource
   ): void {
     const isWall = (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0;
     const request: PaintRequest = {
+      source,
       team,
       surfaceId: hit.surface.id,
       centerU: hit.u,
