@@ -122,6 +122,7 @@ export class InkLabApp {
       },
       onBrushChanged: (radius) => { this.brushRadius = radius; },
       onStress: (count) => this.enqueueStressTest(count),
+      onRollQaPad: () => this.enqueueRollQaPad(),
       onClear: () => this.coordinator.clear()
     });
     this.selectedTeam = this.controls.selectedTeam;
@@ -253,6 +254,34 @@ export class InkLabApp {
     });
     fill.setPosition(-4, 6, 4);
     this.app.root.addChild(fill);
+  }
+
+  private enqueueRollQaPad(): void {
+    const surface = this.gameplayInk.getSurface('main-floor');
+    if (!surface) {
+      console.warn('Roll QA Pad requires the main-floor PaintSurface.');
+      return;
+    }
+
+    const tuning = GAME_CONFIG.debug.rollQaPad;
+    const requests = [];
+    const startV = Math.max(tuning.marginMeters, tuning.startVMeters);
+    const endV = Math.min(surface.heightMeters - tuning.marginMeters, tuning.endVMeters);
+    const centerU = surface.widthMeters * 0.5;
+
+    for (let v = startV; v <= endV + 1e-6; v += tuning.stepMeters) {
+      requests.push(this.coordinator.makeDebugRequest(
+        this.selectedTeam,
+        surface.id,
+        centerU,
+        v,
+        tuning.brushRadiusMeters,
+        0,
+        tuning.widthStretch
+      ));
+    }
+
+    this.coordinator.enqueueMany(requests);
   }
 
   private enqueueStressTest(count: number): void {

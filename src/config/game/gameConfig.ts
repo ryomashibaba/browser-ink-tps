@@ -76,7 +76,15 @@ export const GAME_CONFIG = Object.freeze({
   debug: {
     stressBurstSmall: 250,
     stressBurstLarge: 2000,
-    defaultBrushRadiusMeters: 1.45
+    defaultBrushRadiusMeters: 1.45,
+    rollQaPad: {
+      startVMeters: 1.4,
+      endVMeters: 12.6,
+      stepMeters: 1.6,
+      brushRadiusMeters: 1.7,
+      widthStretch: 1.9,
+      marginMeters: 0.4
+    }
   },
   visual: {
     neutral: [0.24, 0.27, 0.31] as const,

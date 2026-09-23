@@ -5,6 +5,7 @@ export interface ControlPanelHandlers {
   onTeamChanged(team: Team.A | Team.B): void;
   onBrushChanged(radius: number): void;
   onStress(count: number): void;
+  onRollQaPad(): void;
   onClear(): void;
 }
 
@@ -30,6 +31,7 @@ export class ControlPanel {
         <input id="brush" type="range" min="0.30" max="2.60" step="0.05" value="${this.radius}">
       </label>
       <div class="row">
+        <button id="roll-qa">Roll QA Pad</button>
         <button id="stress-small">Stress ${GAME_CONFIG.debug.stressBurstSmall}</button>
         <button id="stress-large">Stress ${GAME_CONFIG.debug.stressBurstLarge}</button>
         <button id="clear" class="danger">Clear Ink</button>
@@ -50,13 +52,14 @@ export class ControlPanel {
       handlers.onBrushChanged(this.radius);
     });
 
+    (panel.querySelector('#roll-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onRollQaPad());
     (panel.querySelector('#stress-small') as HTMLButtonElement).addEventListener('click', () => handlers.onStress(GAME_CONFIG.debug.stressBurstSmall));
     (panel.querySelector('#stress-large') as HTMLButtonElement).addEventListener('click', () => handlers.onStress(GAME_CONFIG.debug.stressBurstLarge));
     (panel.querySelector('#clear') as HTMLButtonElement).addEventListener('click', () => handlers.onClear());
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Click view to capture mouse · Mouse look · Esc release · WASD move · Space jump · Shift squid · Left fire · Wheel zoom · Alt+Left QA paint · 1/2 team · R clear';
+    hint.textContent = 'Click view to capture mouse · Mouse look · Esc release · WASD move · Space jump · Shift squid · Left fire · Wheel zoom · Roll QA Pad creates a wide own-ink test area · Alt+Left QA paint · 1/2 team · R clear';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
