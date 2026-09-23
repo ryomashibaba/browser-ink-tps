@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T14 v0.9.4</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T14 v0.9.5</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -81,7 +81,7 @@ export class DebugOverlay {
         <span class="muted">Damage taken</span><span>${last.playerDamageTaken.toFixed(1)}</span>
         <span class="muted">Weapon</span><span>${escapeHtml(last.playerWeaponClass)} · ${escapeHtml(last.playerWeaponName)}</span>
         <span class="muted">Weapon action</span><span>${escapeHtml(last.playerWeaponAction)}</span>
-        <span class="muted">Weapon charge</span><span>${last.playerWeaponChargePercent.toFixed(0)}%</span>
+        <span class="muted">Weapon charge</span><span>${last.playerWeaponChargePercent.toFixed(0)}% · ring ${last.playerWeaponChargeRing}/2</span>
         <span class="muted">Guard / HP / blocks</span><span>${last.playerWeaponGuarding ? 'yes' : 'no'} / ${last.playerWeaponGuardHp.toFixed(0)} / ${last.playerWeaponGuardBlocks}</span>
         <span class="muted">Dualie rolls / charges</span><span>${last.playerWeaponDodges} / ${last.playerWeaponDodgeCharges}</span>
         <span class="muted">Stringer fuses / bursts</span><span>${last.stringerFuses} / ${last.stringerBursts}</span>
