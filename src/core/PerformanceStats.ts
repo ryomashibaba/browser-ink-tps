@@ -17,9 +17,13 @@ export class PerformanceStats {
   public dirtyTiles = 0;
 
   public playerMode = 'HUMAN';
+  public playerLocomotionState = 'HUMAN';
   public playerGrounded = false;
   public playerSpeedMetersPerSecond = 0;
   public playerInkRelation = 'NONE';
+  public playerCollider = 'CAPSULE';
+  public playerWallSurface = '-';
+  public playerSurgeCharge = 0;
 
   public activeProjectiles = 0;
   public projectileImpacts = 0;

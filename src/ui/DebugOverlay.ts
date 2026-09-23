@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T4–T7</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T9 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">FPS</span><span>${last.fps.toFixed(1)}</span>
@@ -40,10 +40,14 @@ export class DebugOverlay {
         <span class="muted">Fixed tick</span><span>${this.clock.tick} @ ${this.clock.tickRate} Hz</span>
         <span class="muted">Ticks/frame</span><span>${last.simulationTicksLastFrame}</span>
         <span class="muted">Dropped sim</span><span>${last.droppedSimulationSeconds.toFixed(3)} s</span>
-        <span class="muted">Player state</span><span>${escapeHtml(last.playerMode)}</span>
+        <span class="muted">Player form</span><span>${escapeHtml(last.playerMode)}</span>
+        <span class="muted">Locomotion</span><span>${escapeHtml(last.playerLocomotionState)}</span>
+        <span class="muted">Collider</span><span>${escapeHtml(last.playerCollider)}</span>
         <span class="muted">Grounded</span><span>${last.playerGrounded ? 'yes' : 'no'}</span>
         <span class="muted">Move speed</span><span>${last.playerSpeedMetersPerSecond.toFixed(2)} m/s</span>
         <span class="muted">Ink sample</span><span>${escapeHtml(last.playerInkRelation)}</span>
+        <span class="muted">Wall surface</span><span>${escapeHtml(last.playerWallSurface)}</span>
+        <span class="muted">Surge charge</span><span>${(last.playerSurgeCharge * 100).toFixed(0)}%</span>
         <span class="muted">Projectiles</span><span>${last.activeProjectiles}</span>
         <span class="muted">Impacts</span><span>${last.projectileImpacts}</span>
         <span class="muted">Pool drops</span><span>${last.projectilePoolDrops}</span>

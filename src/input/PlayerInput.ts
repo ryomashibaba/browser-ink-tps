@@ -64,6 +64,10 @@ export class PlayerInput {
     return this.fire;
   }
 
+  public get jumpHeld(): boolean {
+    return this.keys.has('Space');
+  }
+
   public consumeJump(): boolean {
     const queued = this.jumpQueued;
     this.jumpQueued = false;

@@ -168,7 +168,7 @@ export class InkLabApp {
       this.cameraController.update(this.player.getPosition(this.playerPosition), cameraDt);
 
       const report = this.clock.advance(dt, (tick, stepSeconds) => {
-        // T4-T7 fixed-step order:
+        // T4-T9 fixed-step order:
         // input/state -> KCC desired motion -> Rapier step -> authoritative state
         // -> pooled projectile sweep -> one PaintRequest -> one immutable PaintEvent.
         this.player.computeFixed(stepSeconds);
@@ -188,7 +188,7 @@ export class InkLabApp {
         );
         this.projectiles.fixedUpdate(
           stepSeconds,
-          this.input.fireHeld,
+          this.input.fireHeld && this.player.canShoot,
           this.muzzlePosition,
           this.aimDirection,
           this.selectedTeam
