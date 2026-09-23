@@ -69,6 +69,14 @@ export class PerformanceStats {
   public cpuRoles = '-';
   public cpuTacticalRetargets = 0;
   public cpuPaintRequests = 0;
+  public cpuShots = 0;
+  public cpuCombatHits = 0;
+  public cpuSplats = 0;
+  public cpuRespawns = 0;
+  public cpuAlive = 0;
+  public cpuAverageHp = 100;
+  public cpuAverageInk = 100;
+  public cpuPlayerHits = 0;
 
   public activeProjectiles = 0;
   public projectileImpacts = 0;

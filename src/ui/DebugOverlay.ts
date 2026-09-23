@@ -49,6 +49,12 @@ export class DebugOverlay {
         <span class="muted">CPU roles</span><span>${escapeHtml(last.cpuRoles)}</span>
         <span class="muted">CPU retargets</span><span>${last.cpuTacticalRetargets}</span>
         <span class="muted">CPU paint req</span><span>${last.cpuPaintRequests}</span>
+        <span class="muted">CPU alive</span><span>${last.cpuAlive} / ${last.cpuAgents}</span>
+        <span class="muted">CPU avg HP/Ink</span><span>${last.cpuAverageHp.toFixed(0)} / ${last.cpuAverageInk.toFixed(0)}</span>
+        <span class="muted">CPU shots</span><span>${last.cpuShots}</span>
+        <span class="muted">CPU combat hits</span><span>${last.cpuCombatHits}</span>
+        <span class="muted">CPU splats/respawns</span><span>${last.cpuSplats} / ${last.cpuRespawns}</span>
+        <span class="muted">CPU→Player hits</span><span>${last.cpuPlayerHits}</span>
         <span class="muted">FPS</span><span>${last.fps.toFixed(1)}</span>
         <span class="muted">Frame</span><span>${last.averageFrameMs.toFixed(2)} ms</span>
         <span class="muted">Fixed tick</span><span>${this.clock.tick} @ ${this.clock.tickRate} Hz</span>

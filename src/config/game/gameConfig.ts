@@ -108,7 +108,15 @@ export const GAME_CONFIG = Object.freeze({
     separationWeight: 2.0,
     tacticalThinkSeconds: 0.28,
     paintCadenceSeconds: 0.22,
-    paintRadiusMeters: 0.42
+    paintRadiusMeters: 0.42,
+    fireIntervalSeconds: 0.34,
+    combatRangeMeters: 9.5,
+    muzzleHeightMeters: 0.76,
+    hitRadiusMeters: 0.34,
+    hitSphereOffsetsMeters: [0.30, 0.68, 1.06] as const,
+    ownInkRecoveryPerSecond: 22,
+    ownInkHpRecoveryPerSecond: 48,
+    playerHitRadiusMeters: 0.42
   },
   projectile: {
     poolSize: 128,

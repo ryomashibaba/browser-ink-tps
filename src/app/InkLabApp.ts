@@ -156,6 +156,7 @@ export class InkLabApp {
       this.coordinator,
       this.resources,
       this.combatTargets,
+      this.cpuAgents,
       this.stats
     );
 
@@ -270,8 +271,12 @@ export class InkLabApp {
           stepSeconds,
           this.match.currentState === 'PLAYING',
           this.selectedTeam,
-          this.player.getPosition(this.cpuHumanPosition)
+          this.player.getPosition(this.cpuHumanPosition),
+          this.match.playerCanAct
         );
+        this.cpuAgents.drainFireRequests((request) => {
+          this.projectiles.queueCpuShot(request);
+        });
 
         // Keep the camera transform current for every catch-up tick. This prevents
         // render-FPS-dependent aim lag when several 60 Hz ticks run in one frame.
@@ -289,7 +294,9 @@ export class InkLabApp {
           this.match.playerCanAct && this.input.fireHeld && this.player.canShoot,
           this.muzzlePosition,
           this.aimDirection,
-          this.selectedTeam
+          this.selectedTeam,
+          this.player.getPosition(this.playerPosition),
+          this.match.playerCanAct
         );
 
         this.coordinator.processTick(tick);
