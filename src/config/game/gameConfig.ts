@@ -153,7 +153,7 @@ export const GAME_CONFIG = Object.freeze({
   superJump: {
     prepareSeconds: 80 / 60,
     travelSeconds: 130 / 60,
-    landingLockSeconds: 12 / 60,
+    actionSeconds: 30 / 60,
     minArcHeightMeters: 5.4,
     maxArcHeightMeters: 9.2,
     arcHeightPerHorizontalMeter: 0.18,
