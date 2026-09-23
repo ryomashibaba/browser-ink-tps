@@ -263,11 +263,11 @@ These remain future work rather than hidden bugs in the current slice:
 Initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
-Current T9 candidate fix commit:
-`cffcc72028863cb3c538dc9bfc16d2e470166af0`
+Current T9 coordinate-audit candidate:
+`4cabccc142e08690a169e9472e12c0812ca81532`
 
 Current automated workflow:
-`35805455465`
+`35807116117`
 
 Automated results:
 
@@ -289,6 +289,10 @@ T9 candidate adds:
 - Squid Roll from OWN-ink ground swimming with a 0.20 s reverse-turn grace window before jump, reducing 60 Hz input timing misses
 - wall Surge charge/release using jump while attached to an OWN-painted wall
 - visible Squid Roll rotation feedback
+- canonical world→PaintSurface projection shared by gameplay sampling and ray impacts
+- startup coordinate audit covering local↔world round-trip, atlas dimensions, and PaintSurface↔backing-solid face gap
+- runtime coordinate diagnostics for Player XYZ, sampled surface/U/V, and last PaintEvent local/world position
+- Roll QA Pad now fills the entire `main-floor` instead of a narrow strip
 - no-ink / neutral Squid movement uses Human-equivalent speed and acceleration; enemy ink remains slowed
 - Squid-form main-fire suppression
 - Squid-specific physical/render profile plus debug overlay state/collider/wall/charge readouts

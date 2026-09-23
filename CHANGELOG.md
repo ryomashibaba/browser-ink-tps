@@ -1,3 +1,24 @@
+## v0.4.0 T9 Coordinate Audit Candidate — 2026-09-23
+
+- unified world→PaintSurface coordinate conversion
+- added local↔world and PaintSurface↔backing-solid startup invariants
+- added atlas allocation coordinate checks
+- added runtime Player/sample/PaintEvent coordinate diagnostics
+- changed Roll QA Pad from an 85.4375 m² central strip to a complete main-floor fill
+- preserved T0–T8 coordinate and PaintEvent contracts
+
+Commits:
+`63c81fc200a7c233b88e9f10e94e3876532cad72`
+`4cabccc142e08690a169e9472e12c0812ca81532`
+
+Workflow:
+`35807116117`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted coordinate QA: PENDING
+
 ## v0.4.0 T9 Candidate Fix — 2026-09-23
 
 - made Squid Roll input forgiving by buffering a qualifying reverse turn for 0.20 s

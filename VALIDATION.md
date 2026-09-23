@@ -269,3 +269,43 @@ Hosted QA required before T9 Freeze:
 8. T8 camera obstruction and projectile/paint alignment still behave normally.
 
 T9 is **not frozen** until hosted hands-on QA passes.
+
+
+## T9 coordinate cross-audit — 2026-09-23
+
+Coordinate unification commit:
+`63c81fc200a7c233b88e9f10e94e3876532cad72`
+
+Runtime diagnostics commit:
+`4cabccc142e08690a169e9472e12c0812ca81532`
+
+Workflow:
+`35807116117`
+
+Automated result:
+
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted coordinate QA: **PENDING**
+
+Findings and hardening:
+
+- the previous Roll QA Pad deliberately painted a central local-space strip; at 0.125 m gameplay cells its expected authoritative CPU area is 85.4375 m², matching the reported 85.4 m² screenshot
+- world→PaintSurface U/V conversion is now canonicalized in `PaintSurface.projectWorldPoint()` instead of being separately recomputed by gameplay sampling
+- projectile/ray hit resolution and CPU movement ink sampling now share the same PaintSurface basis conversion
+- all PaintSurfaces declare their backing stage solid
+- startup audit validates local↔world coordinate round trips, atlas allocation dimensions, and PaintSurface distance from backing solid faces
+- current backing-plane separations are expected small visual offsets and must remain <= 0.08 m
+- runtime overlay now exposes Player XYZ, sampled PaintSurface and U/V, last PaintEvent local U/V, and last PaintEvent world XYZ
+- Roll QA Pad now fills the complete `main-floor` in PaintSurface-local coordinates, making any visible offset obvious and providing a full Squid Roll runway
+
+Expected clean-state QA after pressing Roll QA Pad:
+
+- `main-floor` should be visually filled across its full paintable rectangle
+- Team A turf should be about 76.6% when Team A is selected and all other scoreable surfaces are neutral
+- the coordinate audit row should report PASS
+- while standing on the filled main floor, sampled surface should be `main-floor` and ink relation should be OWN
+
+This remains T9 candidate validation and does not freeze T9.
