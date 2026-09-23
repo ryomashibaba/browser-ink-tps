@@ -277,6 +277,26 @@ export class GameFeedback {
     this.playTone(118, 0.055, 0.18, 'sawtooth', 1.72);
   }
 
+  public superJumpLaunch(team: Team.A | Team.B, position: Vec3): void {
+    this.spawnFx(team, position, 0.24, 0.30);
+    this.spawnFx(team, position.clone().add(new Vec3(0, 0.35, 0)), 0.16, 0.26);
+    this.playTone(520, 0.032, 0.11, 'sine', 1.72);
+  }
+
+  public superJumpLand(team: Team.A | Team.B, position: Vec3): void {
+    this.spawnFx(team, position, 0.32, 0.34);
+    for (let i = 0; i < 6; i += 1) {
+      const angle = i * Math.PI * 2 / 6;
+      this.spawnFx(
+        team,
+        position.clone().add(new Vec3(Math.cos(angle) * 0.55, 0.06, Math.sin(angle) * 0.55)),
+        0.13,
+        0.22
+      );
+    }
+    this.playTone(170, 0.045, 0.13, 'triangle', 1.48);
+  }
+
   public splat(team: Team.A | Team.B, position: Vec3): void {
     this.spawnFx(team, position, 0.36, 0.32);
     this.playTone(82, 0.055, 0.16, 'sawtooth', 0.42);
