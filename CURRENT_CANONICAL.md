@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.4.0 / T9 IMPLEMENTATION CANDIDATE
+# CURRENT_CANONICAL — v0.4.0 / T9 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T8 remains the frozen stable foundation. T9 Squid / Ink Locomotion is implemented on `main`, has passed automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
+**T0–T9 is now the frozen stable foundation. T9 Squid / Ink Locomotion passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -258,7 +258,7 @@ These remain future work rather than hidden bugs in the current slice:
 - final dirty-tile consumer / clearing policy
 - bundle-size optimization
 
-## T9 implementation candidate
+## T9 stable checkpoint
 
 Initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
@@ -276,7 +276,7 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PARTIAL PASS — coordinate pipeline, Roll QA Pad, ground Squid behavior, and Squid Roll confirmed by user; wall swim / Surge / final regressions remain**
+- hosted runtime QA: **PASS — user confirmed all T9 checks on 2026-09-23**
 
 T9 candidate adds:
 
@@ -302,7 +302,7 @@ T9 candidate adds:
 
 All values added here are project tuning, not claims of exact Nintendo internal numbers.
 
-### Hosted T9 QA progress
+### Hosted T9 QA acceptance
 
 Confirmed by the user on 2026-09-23:
 
@@ -314,11 +314,15 @@ Confirmed by the user on 2026-09-23:
 - no-ink Squid movement uses the intended Human-equivalent baseline
 - Squid Roll is now operational and was confirmed in hosted play
 
-Still required before T9 Freeze:
+Also confirmed by the user on 2026-09-23:
 
 - OWN-painted wall swimming
 - wall Surge charge/release
-- Human↔Squid switching / shooting suppression / T8 regression sanity
+- Human↔Squid switching without abnormal pop/sink
+- Squid-form main-fire suppression and retained Human fire
+- T8 camera / projectile blocker regression sanity
+
+T9 is therefore **STABLE FREEZE**.
 
 ## T8 hosted runtime validation
 
@@ -332,9 +336,8 @@ Confirmed at the phase level:
 4. third-person camera obstruction/recovery is acceptable
 5. ramp/elevated geometry/box-corner/shoulder-offset QA did not reveal a blocking regression
 
-T8 remains frozen. Current work is the T9 candidate above. After T9 runtime acceptance, the intended order is:
+T8 remains frozen and T9 is now frozen. The intended order from here is:
 
-- T9 — Freeze complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat
 - T11 — spawn / splat / respawn / Turf War match loop
 - T12 — CPU / Recast + tactical layer
@@ -344,7 +347,7 @@ T8 remains frozen. Current work is the T9 candidate above. After T9 runtime acce
 ## Standard workflow
 
 1. Work from current GitHub `main`.
-2. Preserve the T0–T8 Freeze contracts.
+2. Preserve the T0–T9 Freeze contracts.
 3. Design the next coherent batch before implementation.
 4. Push/merge through GitHub.
 5. GitHub Actions must pass typecheck + production build.

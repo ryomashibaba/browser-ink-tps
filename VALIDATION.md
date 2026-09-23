@@ -1,4 +1,4 @@
-# Validation Report — v0.4.0 T9 Implementation Candidate
+# Validation Report — v0.4.0 T9 Stable Freeze
 
 Date: 2026-09-23
 
@@ -218,7 +218,7 @@ Candidate-document workflow:
 `35803430382`
 
 
-## T9 Squid / Ink Locomotion candidate
+## T9 Squid / Ink Locomotion stable checkpoint
 
 Initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
@@ -239,7 +239,7 @@ Automated result:
 - Pages configure: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed all remaining checks on 2026-09-23**
 
 Source/architecture audit:
 
@@ -408,4 +408,30 @@ Remaining hosted checks before T9 Freeze:
 2. while attached to the OWN-painted wall, hold Space to enter `SURGE_CHARGE`, then release Space; `SURGE` should trigger cleanly
 3. Human↔Squid switching should not pop or sink the player, Squid form should not fire, Human form should still fire, and T8 camera/projectile blocking should remain intact
 
-T9 remains **IMPLEMENTATION CANDIDATE** until the remaining hosted checks pass.
+All remaining hosted checks passed on 2026-09-23. T9 is **STABLE FREEZE**.
+
+## T9 final hosted acceptance
+
+User confirmation date: 2026-09-23
+
+Final accepted T9 scope:
+
+- coordinate / GPU atlas alignment
+- Roll QA Pad full-floor behavior
+- Human↔Squid physical form switching
+- no-ink Squid Human-equivalent baseline
+- OWN-ink fast ground swimming
+- enemy-ink slowdown
+- Squid Roll
+- OWN-painted wall swimming
+- wall Surge charge/release
+- Squid-form shooting suppression with retained Human firing
+- T8 camera / projectile blocker regression sanity
+
+Stable T9 gameplay implementation checkpoint:
+`0b95810314e5f91b047577eba4a94c6f9db89100`
+
+Automated implementation workflow:
+`35810161552`
+
+T9 is now considered **STABLE FREEZE**.

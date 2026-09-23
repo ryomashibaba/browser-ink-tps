@@ -1,3 +1,25 @@
+## v0.4.0 T9 Stable Freeze — 2026-09-23
+
+### Freeze
+
+- full hosted T9 QA accepted by the user
+- coordinate / GPU atlas pipeline accepted
+- Human/Squid collider switching accepted
+- own/no-ink/enemy-ink locomotion behavior accepted
+- Squid Roll accepted
+- OWN-wall swimming accepted
+- wall Surge accepted
+- Squid fire suppression / Human fire accepted
+- T8 camera and projectile-blocker regression sanity accepted
+
+Stable T9 gameplay implementation checkpoint:
+`0b95810314e5f91b047577eba4a94c6f9db89100`
+
+Automated implementation workflow:
+`35810161552`
+
+T9 is now **STABLE FREEZE**. Next planned phase: T10 — shooter + ink economy + combat.
+
 ## v0.4.0 T9 Hosted Partial QA — 2026-09-23
 
 - hosted coordinate audit confirmed PASS 4/4

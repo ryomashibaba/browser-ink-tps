@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.4.0 / T9 IMPLEMENTATION CANDIDATE**
+**v0.4.0 / T9 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T8 stable foundation remains frozen. The current `main` additionally contains the T9 Squid / Ink Locomotion candidate:
+The T0–T9 gameplay foundation is frozen. The current `main` includes:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -140,21 +140,23 @@ Passed:
 - GitHub Pages artifact upload
 - GitHub Pages deployment
 
-Hosted runtime QA for T9 is partially complete.
+Hosted runtime QA for T9 is complete and accepted.
 
 Confirmed:
 
 - coordinate / atlas alignment
 - full-floor Roll QA Pad
 - main-floor OWN sampling
-- no-ink Squid baseline
+- Human↔Squid physical switching
+- no-ink Squid Human-equivalent baseline
+- enemy-ink slowdown
 - Squid Roll
-
-Still pending before T9 Freeze:
-
 - OWN-wall swim
 - wall Surge
-- final Human/Squid firing and T8 regression sanity
+- Squid-form shooting suppression / Human firing
+- T8 camera and projectile-blocker regression sanity
+
+T9 is **STABLE FREEZE**.
 
 T8 implementation commit:
 `234180436b27e0c9498c8d253348b2c366f839ce`
@@ -214,13 +216,12 @@ The current project intentionally does **not** yet include:
 
 ## Current phase
 
-**T9 — Squid / Ink Locomotion hosted runtime QA**
+**Next phase: T10 — shooter + ink economy + combat**
 
-T8 remains frozen. The T9 implementation candidate extends locomotion without changing the frozen CPU/GPU ink or T8 world-interaction contracts.
+T0–T9 is frozen. T10 must preserve the CPU-authoritative PaintEvent/GameplayInk contracts, T8 world-interaction rules, and the T9 Squid locomotion behavior.
 
-After T9 acceptance:
+Planned order:
 
-- T9 — Freeze complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat
 - T11 — spawn / splat / respawn / Turf War match loop
 - T12 — CPU / Recast + tactical layer
