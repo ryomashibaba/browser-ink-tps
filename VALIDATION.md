@@ -178,7 +178,6 @@ The retained Alt+Left direct-paint QA path can still be used to compare the orig
 
 The following are not part of the completed T4–T7 slice:
 
-- state-specific Squid physical collision shape
 - ink tank / consumption / refill
 - damage / HP / splat
 - respawn
@@ -221,11 +220,14 @@ Candidate-document workflow:
 
 ## T9 Squid / Ink Locomotion candidate
 
-Implementation commit:
+Initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
-Workflow:
-`35804869663`
+Current candidate fix commit:
+`cffcc72028863cb3c538dc9bfc16d2e470166af0`
+
+Current workflow:
+`35805455465`
 
 Automated result:
 
@@ -249,16 +251,19 @@ Source/architecture audit:
 - PaintEvent / GameplayInk / GpuInkAtlas flow is unchanged.
 - T8 projectile/camera world interaction is unchanged.
 - Squid Roll and Surge are locomotion-only project-tuned actions; combat effects/damage armor remain deferred to T10.
+- Squid Roll reverse intent is buffered for 0.20 s so reverse input and jump do not need to land on the same 60 Hz tick.
+- Squid Roll has explicit visual rotation feedback during the action.
+- neutral/no-ink Squid movement now uses Human-equivalent speed and acceleration; enemy ink remains the slowed case.
 - main-weapon fire is suppressed while the player is in Squid form.
 - debug overlay exposes locomotion state, active collider, wall surface, and Surge charge.
 
 Hosted QA required before T9 Freeze:
 
 1. Human↔Squid switching does not pop the player upward/downward or fall through the stage.
-2. OWN ground ink enters SWIM_GROUND and moves clearly faster; neutral/enemy/non-ink enters SQUID_DRY and remains slow.
+2. OWN ground ink enters SWIM_GROUND and moves clearly faster; neutral/no-ink SQUID_DRY moves at Human-equivalent speed; enemy ink remains clearly slower.
 3. ramps/steps remain traversable in both forms without obvious clipping or stuck states.
 4. an OWN-painted section of `wall-west` can be climbed while holding Shift and moving into it; unpainted/enemy-painted wall sections cannot be climbed.
-5. reversing direction while swimming fast in OWN ink + Space triggers SQUID_ROLL without breaking normal Squid jump.
+5. while swimming fast in OWN ink, reverse direction then press Space within roughly 0.20 s; SQUID_ROLL should trigger reliably and show a visible rotation. Ordinary Space without a qualifying reverse still performs the normal Squid jump.
 6. on an OWN-painted wall, hold Shift + movement into wall + Space to charge, then release Space to trigger SURGE.
 7. holding left mouse while Squid does not fire; Human fire remains unchanged.
 8. T8 camera obstruction and projectile/paint alignment still behave normally.

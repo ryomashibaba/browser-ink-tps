@@ -260,11 +260,14 @@ These remain future work rather than hidden bugs in the current slice:
 
 ## T9 implementation candidate
 
-Implementation commit:
+Initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
-Automated workflow:
-`35804869663`
+Current T9 candidate fix commit:
+`cffcc72028863cb3c538dc9bfc16d2e470166af0`
+
+Current automated workflow:
+`35805455465`
 
 Automated results:
 
@@ -283,8 +286,10 @@ T9 candidate adds:
 - OWN-ink high-speed ground swimming while neutral/enemy/non-ink remains slow
 - OWN-ink wall detection through the CPU-authoritative PaintSurface grid
 - Shift + movement into an OWN-painted wall for wall swimming
-- Squid Roll from OWN-ink ground swimming by reversing direction and pressing jump above the speed threshold
+- Squid Roll from OWN-ink ground swimming with a 0.20 s reverse-turn grace window before jump, reducing 60 Hz input timing misses
 - wall Surge charge/release using jump while attached to an OWN-painted wall
+- visible Squid Roll rotation feedback
+- no-ink / neutral Squid movement uses Human-equivalent speed and acceleration; enemy ink remains slowed
 - Squid-form main-fire suppression
 - Squid-specific physical/render profile plus debug overlay state/collider/wall/charge readouts
 

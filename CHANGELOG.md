@@ -1,3 +1,24 @@
+## v0.4.0 T9 Candidate Fix — 2026-09-23
+
+- made Squid Roll input forgiving by buffering a qualifying reverse turn for 0.20 s
+- loosened the reverse-angle threshold slightly so keyboard direction changes register more reliably
+- added visible rotation during SQUID_ROLL so activation is obvious during QA
+- changed neutral/no-ink Squid movement to Human-equivalent speed and acceleration
+- retained enemy-ink slowdown
+- added a `Roll ready` debug readout
+- preserved T0–T8 contracts
+
+Fix commit:
+`cffcc72028863cb3c538dc9bfc16d2e470166af0`
+
+Workflow:
+`35805455465`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.4.0 T9 Implementation Candidate — 2026-09-23
 
 ### Squid / ink locomotion

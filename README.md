@@ -25,7 +25,8 @@ The T0–T8 stable foundation remains frozen. The current `main` additionally co
 - Human/Squid form with separate capsule/ball physical colliders
 - explicit HUMAN / SQUID_DRY / SWIM_GROUND / SWIM_WALL / SQUID_ROLL / SURGE_CHARGE / SURGE locomotion states
 - CPU-authoritative OWN / ENEMY / NEUTRAL ink sampling
-- OWN-ink wall swimming, Squid Roll, and wall Surge
+- OWN-ink wall swimming, buffered/reliable Squid Roll, and wall Surge
+- neutral/no-ink Squid movement at Human-equivalent speed; enemy ink remains slowed
 - pooled swept shooter projectiles
 - center-crosshair TPS aiming
 - projectile-gravity compensation toward the visual aim target
@@ -71,7 +72,7 @@ Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 - Space — jump
 - Shift — Squid form / swim
 - Shift + move into OWN-painted wall — wall swim
-- While fast-swimming in OWN ink, reverse direction + Space — Squid Roll
+- While fast-swimming in OWN ink, reverse direction then press Space within ~0.20 s — Squid Roll
 - On OWN-painted wall, hold Space then release — Surge
 - Left mouse — fire
 - Mouse wheel — camera distance
@@ -115,11 +116,14 @@ Gameplay simulation is fixed at 60 Hz and independent of render FPS. Player and 
 
 ## Validation state
 
-T9 implementation commit:
+T9 initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
-T9 automated workflow:
-`35804869663`
+T9 current candidate fix:
+`cffcc72028863cb3c538dc9bfc16d2e470166af0`
+
+T9 current automated workflow:
+`35805455465`
 
 Passed:
 
