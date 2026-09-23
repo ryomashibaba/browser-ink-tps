@@ -1198,9 +1198,9 @@ Implementation boundary:
 
 Destination behavior:
 - spawn uses the frozen team spawn position
-- friendly CPU destinations track the currently resolved active CPU position while it remains alive
-- if that CPU becomes unavailable after selection, the jump retains the last valid destination rather than targeting an enemy or invalid location
-- the landing marker follows the resolved target during the jump
+- friendly CPU destinations are snapshotted at the exact map-selection moment
+- after selection, subsequent CPU movement does not alter the locked destination
+- the landing marker remains fixed at that snapshotted destination throughout PREP / TRAVEL / LANDING
 - Tactical Map shows selectable friendly rings and the active JUMP destination
 
 Visual / UI:
