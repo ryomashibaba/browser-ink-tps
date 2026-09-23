@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.9.3 / T14 CHARGE + DUALIES + STRINGER CANDIDATE**
+**v0.9.4 / T14 DUALIES POST-ROLL + SPLATLING CHARGE CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -252,3 +252,11 @@ The first 11-class pass was rejected because too many classes still behaved like
 - Charger, Splatling, Stringer, and Splatana now have distinct charge presentation instead of a generic charge indicator.
 - Charged Stringer arrows become visible impact fuses and detonate after a delayed interval.
 - DebugOverlay exposes roll charges plus Stringer fuse/burst counters for hosted verification.
+
+
+### T14 v0.9.4 targeted corrections
+
+- Dualies dodge is now fire+Space only in Human form.
+- Post-roll firing recovery and movement recovery are separated; firing returns first while movement remains briefly locked.
+- The second dodge can still chain from that stance while firing.
+- Splatling charge HUD/3D feedback is intentionally closer to Charger, using a centered progress reticle and forward guide with only subtle rotary accents.
