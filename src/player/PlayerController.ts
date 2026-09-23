@@ -63,7 +63,8 @@ export class PlayerController {
   private surgeRemainingSeconds = 0;
   private surgeChargeSeconds = 0;
   private weaponDodgeRemainingSeconds = 0;
-  private weaponDodgeEndlagSeconds = 0;
+  private weaponDodgeMoveLockSeconds = 0;
+  private weaponDodgeShotLockSeconds = 0;
   private weaponDodgeRechargeSeconds = 0;
   private weaponDodgeCharges = 2;
   private weaponDodgeQueued = false;
@@ -133,7 +134,7 @@ export class PlayerController {
   public get canShoot(): boolean {
     return this.mode === 'HUMAN' &&
       this.weaponDodgeRemainingSeconds <= 0 &&
-      this.weaponDodgeEndlagSeconds <= 0;
+      this.weaponDodgeShotLockSeconds <= 0;
   }
 
   public get currentMode(): PlayerMode {
@@ -198,7 +199,8 @@ export class PlayerController {
     this.surgeRemainingSeconds = 0;
     this.surgeChargeSeconds = 0;
     this.weaponDodgeRemainingSeconds = 0;
-    this.weaponDodgeEndlagSeconds = 0;
+    this.weaponDodgeMoveLockSeconds = 0;
+    this.weaponDodgeShotLockSeconds = 0;
     this.weaponDodgeRechargeSeconds = 0;
     this.weaponDodgeCharges = 2;
     this.weaponDodgeQueued = false;
@@ -258,16 +260,14 @@ export class PlayerController {
     this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
     this.weaponDodgeRemainingSeconds = Math.max(0, this.weaponDodgeRemainingSeconds - dt);
     if (this.weaponDodgeRemainingSeconds <= 0) {
-      this.weaponDodgeEndlagSeconds = Math.max(0, this.weaponDodgeEndlagSeconds - dt);
+      this.weaponDodgeMoveLockSeconds = Math.max(0, this.weaponDodgeMoveLockSeconds - dt);
+      this.weaponDodgeShotLockSeconds = Math.max(0, this.weaponDodgeShotLockSeconds - dt);
     }
-    if (
-      this.weaponDodgeRemainingSeconds <= 0 &&
-      this.weaponDodgeEndlagSeconds <= 0 &&
-      this.weaponDodgeRechargeSeconds > 0
-    ) {
+    if (this.weaponDodgeRechargeSeconds > 0) {
       this.weaponDodgeRechargeSeconds = Math.max(0, this.weaponDodgeRechargeSeconds - dt);
       if (this.weaponDodgeRechargeSeconds <= 0) {
         this.weaponDodgeCharges = 2;
+        this.stats.playerWeaponDodgeCharges = 2;
       }
     }
 
@@ -290,10 +290,14 @@ export class PlayerController {
       this.velocity.x = dodgeDirection.x * 10.2;
       this.velocity.z = dodgeDirection.z * 10.2;
       if (this.grounded) this.verticalVelocity = 0;
+      // Splatoon-style reference timing adapted to this fixed 60 Hz simulation:
+      // the roll is short, firing returns first, and locomotion stays locked longer.
+      // A chained second roll may still interrupt the movement lock.
       this.weaponDodgeRemainingSeconds = 0.20;
-      this.weaponDodgeEndlagSeconds = 0.10;
+      this.weaponDodgeShotLockSeconds = 0.067;
+      this.weaponDodgeMoveLockSeconds = 0.53;
       this.weaponDodgeCharges -= 1;
-      this.weaponDodgeRechargeSeconds = 0.82;
+      this.weaponDodgeRechargeSeconds = 0.73;
       this.weaponDodgeQueued = false;
       this.weaponDodgeStartedEvent = true;
       this.stats.playerWeaponDodges += 1;
@@ -302,11 +306,12 @@ export class PlayerController {
       this.setMode('HUMAN');
       this.setSnapToGround(true);
       this.applyGravity(dt);
-    } else if (this.weaponDodgeEndlagSeconds > 0) {
+    } else if (this.weaponDodgeMoveLockSeconds > 0) {
       this.setMode('HUMAN');
       this.locomotionState = 'DUALIE_DODGE';
-      this.velocity.x = moveToward(this.velocity.x, 0, 80 * dt);
-      this.velocity.z = moveToward(this.velocity.z, 0, 80 * dt);
+      // Post-roll firing stance: aim/fire can resume before locomotion does.
+      this.velocity.x = 0;
+      this.velocity.z = 0;
       this.wallSurfaceId = '-';
       this.setSnapToGround(true);
       this.applyGravity(dt);
