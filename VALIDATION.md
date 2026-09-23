@@ -1161,3 +1161,14 @@ Regression:
 19. FPS / dropped simulation / GPU backlog should remain acceptable during repeated jumps.
 
 T17 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
+
+
+## T17 Stable Freeze — accepted 2026-09-23
+
+The user confirmed the final v0.12.0 hosted checks, including snapshot-based friendly CPU destinations.
+
+Stable checkpoint:
+- commit: `38836bcf73f03b7623eb09e7a41436b83027ab76`
+- GitHub Actions run #222 / `35841633285`: TypeScript check, production build, and Pages deploy success
+
+T17 is now **STABLE FREEZE**. Future phases must preserve the map-selection, destination-snapshot, vulnerability, phase-timing, and cleanup contracts unless an explicit later Freeze-change decision is made.
