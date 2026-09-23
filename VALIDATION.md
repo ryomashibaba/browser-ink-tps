@@ -1217,3 +1217,35 @@ Stable checkpoint:
 - GitHub Actions run #243 / `35843150398`: TypeScript check, production build, and Pages deploy success
 
 T18 is now **STABLE FREEZE**. Future phases must preserve the CPU jump state-machine timing, snapshot-destination semantics, PREP vulnerability, airborne invulnerability, Recast remove/re-register lifecycle, and tactical decision boundaries unless an explicit later Freeze-change decision is made.
+
+
+## T19A v0.14.0 CPU Main-Weapon Diversity hosted QA
+
+Roster / identity:
+1. Start a match and confirm Debug CPU loadouts lists multiple weapon short names rather than seven Pulse Sprayers.
+2. Tactical Map CPU labels should show id + weapon, such as NEEDLE / DUAL / SLOSH / BLAST / SPIN; switch human team once to expose the opposite team's slot-4 anchor weapon.
+3. CPU role counts and A/B roster counts must remain the same as the frozen T12/T18 baseline.
+
+Weapon-class behavior:
+4. Needle SMG should visibly fire faster/smaller shots than Pulse Sprayer.
+5. Twin Comets should fire paired projectiles rather than one generic shot.
+6. Arc Blaster should produce its frozen blast-area paint/damage on impact; being near an enemy CPU Blaster blast should damage the human even without a direct body hit.
+7. Wave Slosher should visibly use a heavier lob/high-gravity path and trail paint rather than a straight shooter path.
+8. Rotor Cannon should spend time charging, then emit an obvious multi-shot burst; Debug CPU charge/burst should reflect this.
+9. Switch human team so the opposing CPU roster includes Rail Charger. It should charge before emitting a direct beam/ray rather than repeated projectile shots.
+10. Stage cover must block Rail Charger direct rays. Human Brella guard facing the Charger should absorb a guarded ray instead of HP damage.
+
+Resources / lifecycle:
+11. CPU Ink should fall according to each weapon profile and recover through the frozen CPU Ink rules.
+12. A charging/bursting CPU that begins T18 Super Jump must clear its weapon state and must not resume a stale pre-jump burst after landing.
+13. Splat / Respawn / Match End / Restart must clear charge/burst state without breaking CPU lifecycle.
+14. CPU weapon impact paint must remain CPU-source and must not charge the human special gauge.
+
+Regression / performance:
+15. Human T14/T16 weapon behavior must be unchanged.
+16. T18 CPU Super Jump behavior must remain unchanged.
+17. CPU-vs-CPU and CPU-vs-human splat/respawn combat must still work with mixed weapons.
+18. FPS, dropped simulation, projectile pool drops, and GPU backlog should remain acceptable with Rotor burst + ordinary 4v4 activity.
+19. Camera/aim, CPU/GPU ink alignment, Turf scoring, Tactical Map orientation, and fixed 60 Hz simulation must show no regression.
+
+T19A remains **IMPLEMENTATION CANDIDATE** until these checks pass.
