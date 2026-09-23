@@ -1,3 +1,24 @@
+## v0.4.0 T9 Visual Coordinate QA — 2026-09-23
+
+- extended stage-coordinate audit to backing-solid face normals and tangential OBB bounds
+- added deterministic `Coord QA` button
+- `Coord QA` stamps every PaintSurface at known local U/V coordinates
+- matching render-only 3D markers are placed at the exact local→world points
+- marker pattern is intentionally asymmetric to reveal U/V flips, rotations, and per-surface offsets
+- updated control-panel milestone label to T9 Candidate
+
+Implementation:
+`13590bcc8d7b8ee0ca6a17e106bde97f2c83c66b`
+`a152aed2f9fcc390c39172c8264b8ca775244719`
+
+Workflow:
+`35809531970`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted visual QA: PENDING
+
 ## v0.4.0 T9 Coordinate Audit Candidate — 2026-09-23
 
 - unified world→PaintSurface coordinate conversion

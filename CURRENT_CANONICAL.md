@@ -264,10 +264,10 @@ Initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
 Current T9 coordinate-audit candidate:
-`4cabccc142e08690a169e9472e12c0812ca81532`
+`a152aed2f9fcc390c39172c8264b8ca775244719`
 
 Current automated workflow:
-`35807116117`
+`35809531970`
 
 Automated results:
 
@@ -290,8 +290,9 @@ T9 candidate adds:
 - wall Surge charge/release using jump while attached to an OWN-painted wall
 - visible Squid Roll rotation feedback
 - canonical world→PaintSurface projection shared by gameplay sampling and ray impacts
-- startup coordinate audit covering local↔world round-trip, atlas dimensions, and PaintSurface↔backing-solid face gap
+- startup coordinate audit covering local↔world round-trip, atlas dimensions, PaintSurface↔backing-solid face gap, face-normal alignment, and tangential bounds
 - runtime coordinate diagnostics for Player XYZ, sampled surface/U/V, and last PaintEvent local/world position
+- `Coord QA` visual test: deterministic ink probes on every PaintSurface plus matching world-space 3D markers to expose GPU/local/world offsets
 - Roll QA Pad now fills the entire `main-floor` instead of a narrow strip
 - no-ink / neutral Squid movement uses Human-equivalent speed and acceleration; enemy ink remains slowed
 - Squid-form main-fire suppression

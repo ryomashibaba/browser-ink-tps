@@ -309,3 +309,41 @@ Expected clean-state QA after pressing Roll QA Pad:
 - while standing on the filled main floor, sampled surface should be `main-floor` and ink relation should be OWN
 
 This remains T9 candidate validation and does not freeze T9.
+
+## T9 visual coordinate QA hardening — 2026-09-23
+
+Visual QA implementation:
+`13590bcc8d7b8ee0ca6a17e106bde97f2c83c66b`
+
+Strict typing follow-up:
+`a152aed2f9fcc390c39172c8264b8ca775244719`
+
+Workflow:
+`35809531970`
+
+Automated result:
+
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted visual coordinate QA: **PENDING**
+
+Additional cross-audit coverage:
+
+- every PaintSurface corner is transformed into the backing solid's local OBB space
+- surface face-normal alignment against the declared backing solid is validated
+- maximum surface-to-backing-face gap is validated
+- tangential corner bounds are validated with only a small tolerance for the intentionally offset ramp surface
+- all current surfaces remain under the existing 0.08 m face-gap contract by design
+
+`Coord QA` clears ink and, on every PaintSurface, stamps four deterministic CPU/GPU PaintEvents while placing render-only 3D spheres at the exact corresponding `localToWorld(u,v)` points. The four probes intentionally use different team/radius/marker-size combinations, so U flip, V flip, 180° rotation, or cross-surface offset cannot hide behind a symmetric pattern.
+
+Hosted acceptance condition:
+
+- overlay `Coord audit` reports PASS
+- every cyan/magenta ink probe is centered directly under its corresponding same-color 3D marker on main floor, upper floor, ramp, and wall
+- no marker/ink pair is mirrored or displaced on only one surface
+- `Roll QA Pad` fills the complete main-floor rectangle and movement sampling on it reports `main-floor / OWN`
+
+T9 remains unfrozen until this hosted check is accepted.

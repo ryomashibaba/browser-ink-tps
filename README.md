@@ -29,6 +29,7 @@ The T0–T8 stable foundation remains frozen. The current `main` additionally co
 - neutral/no-ink Squid movement at Human-equivalent speed; enemy ink remains slowed
 - canonical PaintSurface world/local coordinate conversion with startup cross-audit
 - runtime coordinate diagnostics in the technical overlay
+- `Coord QA` deterministic ink + matching 3D world markers across all PaintSurfaces
 - Roll QA Pad fills the complete main-floor for easy locomotion QA
 - pooled swept shooter projectiles
 - center-crosshair TPS aiming
@@ -76,6 +77,7 @@ Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 - Shift — Squid form / swim
 - Shift + move into OWN-painted wall — wall swim
 - Roll QA Pad — fill the entire main floor with the selected team's ink
+- Coord QA — clear ink, stamp deterministic probes on all PaintSurfaces, and show matching 3D marker positions
 - While fast-swimming in OWN ink, reverse direction then press Space within ~0.20 s — Squid Roll
 - On OWN-painted wall, hold Space then release — Surge
 - Left mouse — fire
@@ -124,10 +126,10 @@ T9 initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
 T9 current coordinate-audit candidate:
-`4cabccc142e08690a169e9472e12c0812ca81532`
+`a152aed2f9fcc390c39172c8264b8ca775244719`
 
 T9 current automated workflow:
-`35807116117`
+`35809531970`
 
 Passed:
 
