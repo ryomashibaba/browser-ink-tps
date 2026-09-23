@@ -23,7 +23,7 @@
 
 ### Final validation
 
-Stable head:
+Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
 Workflow:
