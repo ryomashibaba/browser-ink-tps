@@ -232,7 +232,7 @@ export class InkLabApp {
       onCoordinateQa: () => this.enqueueCoordinateVisualQa(surfaces),
       onRestartMatch: () => this.restartMatch(),
       onSplatQa: () => {
-        if (this.match.playerCanAct) {
+        if (this.match.playerCanAct && !this.superJump.isInvulnerable) {
           this.resources.applyDamage(GAME_CONFIG.match.qaSplatDamage);
         }
       },
@@ -382,7 +382,7 @@ export class InkLabApp {
         const playerDamageable =
           matchPlayerCanAct && !this.superJump.isInvulnerable;
 
-        if (matchPlayerCanAct) {
+        if (matchPlayerCanAct && !this.superJump.isInvulnerable) {
           this.resources.fixedUpdate(
             stepSeconds,
             this.player.currentMode,
