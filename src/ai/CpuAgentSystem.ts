@@ -6,6 +6,8 @@ import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
+import { cpuLoadout } from './CpuLoadoutCatalog';
+import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import type { StageDefinition } from '../stage/StageDefinition';
 
@@ -20,6 +22,8 @@ export interface CpuFireRequest {
   team: Team.A | Team.B;
   origin: Vec3;
   target: Vec3;
+  weaponId: WeaponId;
+  charge: number;
 }
 
 type CpuMobilityState =
@@ -47,6 +51,10 @@ interface CpuBot {
   thinkRemaining: number;
   paintRemaining: number;
   fireRemaining: number;
+  weaponId: WeaponId;
+  weaponChargeSeconds: number;
+  weaponBurstShotsRemaining: number;
+  weaponBurstCooldown: number;
   hp: number;
   ink: number;
   inkRecoveryLockSeconds: number;
@@ -411,9 +419,12 @@ export class CpuAgentSystem {
       const slot = this.bots.filter((bot) => bot.team === team).length;
       const start = this.spawnPosition(team, slot);
       const agent = this.navigation.addAgent(start);
-      const role = roleForSlot(slot);
+      const loadout = cpuLoadout(team, slot);
+      const role = loadout.role;
 
-      const entity = new Entity(`CPU:${team === Team.A ? 'A' : 'B'}:${slot + 1}:${role}`);
+      const entity = new Entity(
+        `CPU:${team === Team.A ? 'A' : 'B'}:${slot + 1}:${role}:${loadout.weaponId}`
+      );
       entity.addComponent('render', {
         type: 'capsule',
         material: team === Team.A ? this.materialA : this.materialB,
@@ -451,8 +462,12 @@ export class CpuAgentSystem {
           GAME_CONFIG.cpu.paintCadenceSeconds *
           ((this.bots.length % GAME_CONFIG.cpu.cpuPlayers) / GAME_CONFIG.cpu.cpuPlayers),
         fireRemaining:
-          GAME_CONFIG.cpu.fireIntervalSeconds *
+          weaponProfile(loadout.weaponId).fireIntervalSeconds *
           ((this.bots.length % GAME_CONFIG.cpu.cpuPlayers) / GAME_CONFIG.cpu.cpuPlayers),
+        weaponId: loadout.weaponId,
+        weaponChargeSeconds: 0,
+        weaponBurstShotsRemaining: 0,
+        weaponBurstCooldown: 0,
         hp: GAME_CONFIG.combat.playerMaxHp,
         ink: GAME_CONFIG.inkEconomy.capacity,
         inkRecoveryLockSeconds: 0,
@@ -945,7 +960,10 @@ export class CpuAgentSystem {
     bot.hpRecoveryDelaySeconds = 0;
     bot.thinkRemaining = GAME_CONFIG.cpu.tacticalThinkSeconds * 0.25;
     bot.paintRemaining = GAME_CONFIG.cpu.paintCadenceSeconds * 0.5;
-    bot.fireRemaining = GAME_CONFIG.cpu.fireIntervalSeconds * 0.5;
+    bot.fireRemaining = weaponProfile(bot.weaponId).fireIntervalSeconds * 0.5;
+    bot.weaponChargeSeconds = 0;
+    bot.weaponBurstShotsRemaining = 0;
+    bot.weaponBurstCooldown = 0;
     bot.respawnRemainingSeconds = 0;
     bot.lifeState = 'ACTIVE';
     bot.mobilityState = 'GROUND';
