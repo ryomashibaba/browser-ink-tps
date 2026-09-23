@@ -178,7 +178,8 @@ export class TacticalMap {
     const nz = (z - bounds.minZ) / Math.max(1e-6, bounds.maxZ - bounds.minZ);
     return {
       x: 10 + nx * (this.canvas.width - 20),
-      y: 10 + (1 - nz) * (this.canvas.height - 20)
+      // Screen Y follows world +Z for the canonical tactical-map orientation.
+      y: 10 + nz * (this.canvas.height - 20)
     };
   }
 }
