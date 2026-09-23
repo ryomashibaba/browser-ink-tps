@@ -1038,3 +1038,14 @@ T14 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
 11. T0–T13 ink authority, 60 Hz simulation, CPU, camera/aim, match loop, and stage behavior must show no regression.
 
 T14 remains **IMPLEMENTATION CANDIDATE** until the hosted checks above pass.
+
+
+## T14 Stable Freeze — accepted 2026-09-23
+
+The user confirmed the final v0.9.5 hosted checks, including the two-ring Rotor Cannon / Chord Stringer behavior and the preceding Dualies corrections.
+
+Stable T14 checkpoint:
+- commit: `006f9b8ddb4a818ac0ba64a3ec18f30640a07dc4`
+- GitHub Actions run #136 / `35830846217`: build + deploy success
+
+T14 is now **STABLE FREEZE**. Future phases must preserve T0–T14 contracts unless a later explicit Freeze-change decision says otherwise.
