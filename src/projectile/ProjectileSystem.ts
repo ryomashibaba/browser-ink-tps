@@ -42,6 +42,7 @@ interface ProjectileSlot {
 
 interface DelayedBurst {
   source: PaintSource;
+  actorId?: string;
   team: Team.A | Team.B;
   point: Vec3;
   seconds: number;
@@ -376,7 +377,8 @@ export class ProjectileSystem {
           slot.velocity,
           1.7,
           PaintEventType.MidDroplet,
-          slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu
+          slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu,
+          slot.sourceKind === 'CPU' ? slot.sourceId : undefined
         );
         slot.trailPaintCooldown = 0.085;
       }
@@ -461,7 +463,8 @@ export class ProjectileSystem {
           slot.team,
           paintHit,
           slot.paintRadius,
-          slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu
+          slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu,
+          slot.sourceKind === 'CPU' ? slot.sourceId : undefined
         );
         this.finishProjectile(slot, paintHit.worldPoint, paintHit);
         continue;
@@ -1033,7 +1036,8 @@ export class ProjectileSystem {
     direction: Vec3,
     radius: number,
     charge: number,
-    source: PaintSource = PaintSource.Human
+    source: PaintSource = PaintSource.Human,
+    actorId?: string
   ): void {
     const uDir = direction.dot(hit.surface.uAxis);
     const vDir = direction.dot(hit.surface.vAxis);
@@ -1044,6 +1048,7 @@ export class ProjectileSystem {
 
     this.coordinator.enqueue({
       source,
+      actorId,
       team,
       surfaceId: hit.surface.id,
       centerU: hit.u - normalizedU * length * 0.42,
@@ -1282,7 +1287,8 @@ export class ProjectileSystem {
       7,
       0.58,
       PaintEventType.Impact,
-      PaintSource.Cpu
+      PaintSource.Cpu,
+      request.sourceId
     );
     this.feedback.melee(request.team, center, profile, 1.45);
   }
@@ -1302,7 +1308,8 @@ export class ProjectileSystem {
       forward,
       0.8,
       PaintEventType.Foot,
-      PaintSource.Cpu
+      PaintSource.Cpu,
+      request.sourceId
     );
     const contact = request.bodyPosition.clone()
       .add(forward.clone().mulScalar(0.72));
@@ -1425,7 +1432,8 @@ export class ProjectileSystem {
       request.bodyPosition,
       forward,
       charge,
-      PaintSource.Cpu
+      PaintSource.Cpu,
+      request.sourceId
     );
 
     this.solveLaunchDirection(
@@ -1596,7 +1604,8 @@ export class ProjectileSystem {
         direction,
         paintRadius,
         charge,
-        PaintSource.Cpu
+        PaintSource.Cpu,
+        request.sourceId
       );
     }
 
@@ -1678,7 +1687,8 @@ export class ProjectileSystem {
         slot.velocity,
         1.2,
         PaintEventType.Bomb,
-        paintSource
+        paintSource,
+        slot.sourceKind === 'CPU' ? slot.sourceId : undefined
       );
     }
 
@@ -1691,6 +1701,7 @@ export class ProjectileSystem {
       );
       this.delayedBursts.push({
         source: paintSource,
+        actorId: slot.sourceKind === 'CPU' ? slot.sourceId : undefined,
         team: slot.team,
         point: point.clone(),
         seconds: slot.delayedBurstSeconds,
@@ -1734,7 +1745,8 @@ export class ProjectileSystem {
         new Vec3(1, 0, 0),
         1.0,
         PaintEventType.Bomb,
-        burst.source
+        burst.source,
+        burst.actorId
       );
       this.feedback.stringerBurst(
         burst.team,
@@ -1811,7 +1823,8 @@ export class ProjectileSystem {
     count: number,
     radius: number,
     type: PaintEventType,
-    source: PaintSource = PaintSource.Human
+    source: PaintSource = PaintSource.Human,
+    actorId?: string
   ): void {
     const right = new Vec3(-forward.z, 0, forward.x);
     for (let i = 0; i < count; i += 1) {
@@ -1828,7 +1841,8 @@ export class ProjectileSystem {
         forward,
         0.85,
         type,
-        source
+        source,
+        actorId
       );
     }
   }
@@ -1838,7 +1852,8 @@ export class ProjectileSystem {
     origin: Vec3,
     forward: Vec3,
     charge: number,
-    source: PaintSource = PaintSource.Human
+    source: PaintSource = PaintSource.Human,
+    actorId?: string
   ): void {
     const length = lerp(1.8, 3.6, charge);
     const width = lerp(0.55, 0.9, charge);
@@ -1852,7 +1867,8 @@ export class ProjectileSystem {
         forward,
         0.9,
         PaintEventType.Impact,
-        source
+        source,
+        actorId
       );
     }
   }
@@ -1865,7 +1881,8 @@ export class ProjectileSystem {
     worldDirection: Vec3,
     maxPlaneDistance: number,
     type: PaintEventType,
-    source: PaintSource = PaintSource.Human
+    source: PaintSource = PaintSource.Human,
+    actorId?: string
   ): boolean {
     let best:
       | {
@@ -1900,6 +1917,7 @@ export class ProjectileSystem {
 
     this.coordinator.enqueue({
       source,
+      actorId,
       team,
       surfaceId: best.surface.id,
       centerU: best.u,
@@ -1995,11 +2013,13 @@ export class ProjectileSystem {
     team: Team.A | Team.B,
     hit: SurfaceRayHit,
     paintRadius: number,
-    source: PaintSource
+    source: PaintSource,
+    actorId?: string
   ): void {
     const isWall = (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0;
     const request: PaintRequest = {
       source,
+      actorId,
       team,
       surfaceId: hit.surface.id,
       centerU: hit.u,
