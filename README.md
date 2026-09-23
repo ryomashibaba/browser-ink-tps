@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.9.5 / T14 TWO-RING CHARGE CANDIDATE**
+**v0.9.5 / T14 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T13 gameplay foundation remains frozen. The current `main` additionally contains the first T14 content / animation / audio / additional-weapons candidate:
+The T0–T14 gameplay foundation is frozen. The next implementation phase is T15 — Sub Weapon + Special Gauge Foundation:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -275,3 +275,12 @@ The first 11-class pass was rejected because too many classes still behaved like
   - charge-scaled ink cost follows the 5 / 6 / 8.5 reference progression for minimum / first-ring / full shots
 - HUD renders separate first/second charge circles for Splatling and Stringer.
 - 3D charge feedback gives a distinct first-ring pulse and only begins Stringer convergence during the second ring.
+
+
+### T14 Stable Freeze
+
+Final v0.9.5 hosted QA was accepted on 2026-09-23. Stable checkpoint: `006f9b8ddb4a818ac0ba64a3ec18f30640a07dc4`. GitHub Actions run #136 passed build and Pages deployment.
+
+### Next: T15
+
+T15 starts the match-system expansion beyond main weapons: source-aware turf-point attribution, a player special gauge, a first throwable sub weapon, and a first special activation path. The immutable PaintEvent / PaintSurface-local CPU authority remains unchanged.
