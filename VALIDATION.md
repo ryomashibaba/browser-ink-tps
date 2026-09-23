@@ -1,4 +1,4 @@
-# Validation Report — v0.5.0 T10 Implementation Candidate
+# Validation Report — v0.5.0 T10 Stable Freeze
 
 Date: 2026-09-23
 
@@ -436,7 +436,7 @@ Automated implementation workflow:
 
 T9 is now considered **STABLE FREEZE**.
 
-## T10 Shooter / Ink Economy / Combat candidate
+## T10 Shooter / Ink Economy / Combat stable checkpoint
 
 Implementation:
 `e70b7bca293ba259a4e3f4c70668aa4d7aae9c92`
@@ -455,7 +455,7 @@ Automated result:
 - Pages configure: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed all T10 checks on 2026-09-23**
 
 Source/architecture validation:
 
@@ -482,4 +482,33 @@ Hosted QA required before T10 Freeze:
 7. stand on enemy ink and verify HP falls gradually but stops around 60; leaving enemy ink should allow delayed recovery
 8. verify T9 Squid Roll / wall swim / Surge and T8 camera / blocker / painting behavior still work
 
-T10 remains **IMPLEMENTATION CANDIDATE** until hosted QA passes.
+All hosted T10 checks passed on 2026-09-23. T10 is **STABLE FREEZE**.
+
+## T10 final hosted acceptance
+
+User confirmation date: 2026-09-23
+
+Final accepted T10 scope:
+
+- Ink Tank consumption
+- dry-fire rejection
+- recovery lock
+- Human Ink recovery
+- OWN-ink Squid fast Ink recovery
+- 100 HP combat resource state
+- delayed HP regeneration
+- non-lethal enemy-ink HP damage
+- team-aware enemy-only projectile damage
+- QA target 100→66→32→0 behavior
+- QA target down / automatic reset
+- preserved PaintSurface / blocker nearest-hit behavior
+- preserved T8 camera/blocker contracts
+- preserved T9 Squid locomotion contracts
+
+Stable T10 gameplay checkpoint:
+`b42db91f53ddbed56e1c14c571408d6f68e20871`
+
+Automated implementation workflow:
+`35811304576`
+
+T10 is now **STABLE FREEZE**.

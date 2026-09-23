@@ -22,8 +22,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T10 Candidate</h1>
-      <p>T0–T9 is frozen. T10 adds Ink Tank / HP / combat QA. Shoot the opposite-color target; same-team targets are ignored.</p>
+      <h1>Browser Ink TPS · T10 Stable</h1>
+      <p>T0–T10 is frozen. Ink Tank / HP / combat foundation is stable; T11 will add splat, respawn, and match flow.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>

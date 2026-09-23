@@ -1,3 +1,23 @@
+## v0.5.0 T10 Stable Freeze — 2026-09-23
+
+### Freeze
+
+- full hosted T10 QA accepted by the user
+- Ink Tank consumption / dry-fire / recovery accepted
+- Human and OWN-Squid recovery behavior accepted
+- player HP / enemy-ink damage / recovery accepted
+- team-aware combat target damage accepted
+- target down / QA auto-reset accepted
+- T8/T9 regression sanity accepted
+
+Stable T10 gameplay checkpoint:
+`b42db91f53ddbed56e1c14c571408d6f68e20871`
+
+Automated implementation workflow:
+`35811304576`
+
+T10 is now **STABLE FREEZE**. Next planned phase: T11 — spawn / splat / respawn / Turf War match loop.
+
 ## v0.5.0 T10 Implementation Candidate — 2026-09-23
 
 ### Ink economy

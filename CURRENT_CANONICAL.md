@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.5.0 / T10 IMPLEMENTATION CANDIDATE
+# CURRENT_CANONICAL — v0.5.0 / T10 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T9 remains the frozen stable foundation. T10 Shooter + Ink Economy + Combat Foundation is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
+**T0–T10 is now the frozen stable foundation. T10 Shooter + Ink Economy + Combat Foundation passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -347,7 +347,7 @@ T8 remains frozen and T9 is now frozen. The intended order from here is:
 ## Standard workflow
 
 1. Work from current GitHub `main`.
-2. Preserve the T0–T9 Freeze contracts.
+2. Preserve the T0–T10 Freeze contracts.
 3. Design the next coherent batch before implementation.
 4. Push/merge through GitHub.
 5. GitHub Actions must pass typecheck + production build.
@@ -355,7 +355,7 @@ T8 remains frozen and T9 is now frozen. The intended order from here is:
 7. Browser/runtime QA is performed on the hosted build.
 8. Do not return to ZIP transfer or repeated local npm setup as the normal workflow.
 
-## T10 implementation candidate
+## T10 stable checkpoint
 
 Implementation commit:
 `e70b7bca293ba259a4e3f4c70668aa4d7aae9c92`
@@ -373,9 +373,9 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed all T10 checks on 2026-09-23**
 
-T10 candidate adds:
+T10 stable scope:
 
 - 100-unit player Ink Tank
 - 0.95 Ink consumption per successful projectile spawn
@@ -397,3 +397,31 @@ T10 candidate adds:
 T11 remains responsible for player splat / spawn / respawn / match-flow state transitions. The T10 QA target down/reset behavior is diagnostic scaffolding, not the production respawn loop.
 
 T10 project tuning values are original implementation tuning. Reference constants remain separately labeled under `src/config/reference/`.
+
+### Hosted T10 QA acceptance
+
+Confirmed by the user on 2026-09-23:
+
+- Ink Tank decreases only on successful Human-form shots
+- dry-fire stops projectile creation when Ink is insufficient
+- Human Ink recovery resumes after the post-fire lock
+- OWN-ink Squid recovery is clearly faster
+- enemy-only combat target damage works for both Team A and Team B
+- 34-damage target progression and three-hit QA down behavior work
+- QA target auto-reset returns the target at full HP
+- enemy-ink HP damage is gradual and stops at the configured non-lethal floor
+- HP recovery resumes after leaving enemy ink and waiting through the delay
+- T9 Squid Roll / wall swim / Surge regressions were not observed
+- T8 camera / blocker / paint regressions were not observed
+
+Stable T10 gameplay checkpoint:
+`b42db91f53ddbed56e1c14c571408d6f68e20871`
+
+T10 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+- T11 — spawn / splat / respawn / Turf War match loop
+- T12 — CPU / Recast + tactical layer
+- T13 — production stage / HUD / map
+- T14 — content, animation, audio, additional weapons, polish

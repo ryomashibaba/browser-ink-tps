@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.5.0 / T10 IMPLEMENTATION CANDIDATE**
+**v0.5.0 / T10 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T9 gameplay foundation is frozen. The current `main` additionally contains the T10 Shooter / Ink Economy / Combat candidate:
+The T0–T10 gameplay foundation is frozen. The current `main` includes:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -145,7 +145,7 @@ Passed:
 
 Hosted runtime QA for T9 is complete and accepted.
 
-T10 automated build/deploy is passing; hosted T10 Ink/HP/combat QA is pending.
+T10 automated build/deploy and hosted Ink/HP/combat QA are complete and accepted.
 
 Confirmed:
 
@@ -208,9 +208,7 @@ Do not casually replace:
 
 The current project intentionally does **not** yet include:
 
-- ink tank / consumption / refill
-- damage / HP / splat
-- respawn
+- player splat / respawn
 - full three-minute Turf War match loop
 - CPU players / Recast navigation
 - super jump
@@ -221,14 +219,12 @@ The current project intentionally does **not** yet include:
 
 ## Current phase
 
-**T10 — Shooter + Ink Economy + Combat hosted runtime QA**
+**Next phase: T11 — spawn / splat / respawn / Turf War match loop**
 
-T0–T9 remains frozen. T10 adds an Ink Tank, player HP/recovery foundation, enemy-ink damage, and team-aware combat QA targets while preserving the frozen paint/world/locomotion contracts.
+T0–T10 is frozen. T11 must preserve the CPU-authoritative PaintEvent/GameplayInk contracts, T8 world-interaction rules, T9 Squid locomotion, and T10 Ink/HP/combat resource behavior.
 
-After T10 acceptance:
+Planned order:
 
-- T10 — Freeze shooter + ink economy + combat
-- T11 — spawn / splat / respawn / Turf War match loop
 - T11 — spawn / splat / respawn / Turf War match loop
 - T12 — CPU / Recast + tactical layer
 - T13 — production stage / HUD / map
