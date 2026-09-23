@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T15 CANDIDATE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T16 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -85,8 +85,9 @@ export class DebugOverlay {
         <span class="muted">Guard / HP / blocks</span><span>${last.playerWeaponGuarding ? 'yes' : 'no'} / ${last.playerWeaponGuardHp.toFixed(0)} / ${last.playerWeaponGuardBlocks}</span>
         <span class="muted">Dualie rolls / charges</span><span>${last.playerWeaponDodges} / ${last.playerWeaponDodgeCharges}</span>
         <span class="muted">Stringer fuses / bursts</span><span>${last.stringerFuses} / ${last.stringerBursts}</span>
+        <span class="muted">Sub</span><span>${escapeHtml(last.playerSubWeaponName)}</span>
         <span class="muted">Sub throws / bursts</span><span>${last.playerSubThrows} / ${last.playerSubExplosions}</span>
-        <span class="muted">Special</span><span>${last.playerSpecialPoints.toFixed(1)}p · ${last.playerSpecialPercent.toFixed(0)}% · ${last.playerSpecialReady ? 'READY' : 'charging'}</span>
+        <span class="muted">Special</span><span>${escapeHtml(last.playerSpecialName)} · ${last.playerSpecialPoints.toFixed(1)}p · ${last.playerSpecialPercent.toFixed(0)}% · ${last.playerSpecialReady ? 'READY' : 'charging'}</span>
         <span class="muted">Special uses</span><span>${last.playerSpecialActivations}</span>
         <span class="muted">Human scoreable paint</span><span>${last.playerHumanScoreablePaintMeters2.toFixed(2)} m²</span>
         <span class="muted">Weapon switches</span><span>${last.playerWeaponSwitches}</span>
