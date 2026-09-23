@@ -349,6 +349,8 @@ button.active-weapon {
 #weapon-charge-vfx {
   --charge-deg: 0deg;
   --charge-pct: 0%;
+  --ring1-deg: 0deg;
+  --ring2-deg: 0deg;
   --stringer-offset: 22px;
   position: fixed;
   left: 50%;
@@ -398,18 +400,33 @@ button.active-weapon {
   transform: translate(-50%, -50%);
 }
 
-/* Splatling: Charger-like progress reticle with subtle rotary ticks */
+/* Splatling: two Charger-like rings. Ring 1 reaches max range; ring 2 adds duration. */
 #weapon-charge-vfx.splatling .splatling-ring {
   position: absolute;
-  inset: 14px;
   border-radius: 50%;
+  filter: drop-shadow(0 0 5px var(--charge-soft));
+}
+#weapon-charge-vfx.splatling .splatling-ring.ring-one {
+  inset: 19px;
   background: conic-gradient(
-    var(--charge-color) var(--charge-deg),
+    var(--charge-color) var(--ring1-deg),
     rgba(255,255,255,.10) 0
   );
-  -webkit-mask: radial-gradient(circle, transparent 55%, #000 58%);
-  mask: radial-gradient(circle, transparent 55%, #000 58%);
-  filter: drop-shadow(0 0 5px var(--charge-soft));
+  -webkit-mask: radial-gradient(circle, transparent 53%, #000 57%);
+  mask: radial-gradient(circle, transparent 53%, #000 57%);
+}
+#weapon-charge-vfx.splatling .splatling-ring.ring-two {
+  inset: 7px;
+  background: conic-gradient(
+    var(--charge-color) var(--ring2-deg),
+    rgba(255,255,255,.08) 0
+  );
+  -webkit-mask: radial-gradient(circle, transparent 61%, #000 64%);
+  mask: radial-gradient(circle, transparent 61%, #000 64%);
+  opacity: .88;
+}
+#weapon-charge-vfx.splatling.ring1-ready .splatling-ring.ring-one {
+  filter: drop-shadow(0 0 9px var(--charge-color));
 }
 #weapon-charge-vfx.splatling .splatling-cross {
   position: absolute;
@@ -446,7 +463,34 @@ button.active-weapon {
 #weapon-charge-vfx.splatling i:nth-child(6) { transform: rotate(180deg); }
 #weapon-charge-vfx.splatling i:nth-child(7) { transform: rotate(270deg); }
 
-/* Stringer: three arrows visibly converge toward the reticle */
+/* Stringer: ring 1 unlocks explosive bolts; ring 2 converges the three arrows. */
+#weapon-charge-vfx.stringer .stringer-ring {
+  position: absolute;
+  border-radius: 50%;
+  z-index: -1;
+}
+#weapon-charge-vfx.stringer .stringer-ring.ring-one {
+  inset: 18px;
+  background: conic-gradient(
+    var(--charge-color) var(--ring1-deg),
+    rgba(255,255,255,.08) 0
+  );
+  -webkit-mask: radial-gradient(circle, transparent 55%, #000 59%);
+  mask: radial-gradient(circle, transparent 55%, #000 59%);
+}
+#weapon-charge-vfx.stringer .stringer-ring.ring-two {
+  inset: 7px;
+  background: conic-gradient(
+    var(--charge-color) var(--ring2-deg),
+    rgba(255,255,255,.06) 0
+  );
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 65%);
+  mask: radial-gradient(circle, transparent 62%, #000 65%);
+  opacity: .86;
+}
+#weapon-charge-vfx.stringer.ring1-ready .stringer-ring.ring-one {
+  filter: drop-shadow(0 0 8px var(--charge-color));
+}
 #weapon-charge-vfx.stringer .stringer-arrow {
   position: absolute;
   top: 39px;
