@@ -23,6 +23,7 @@ export class GameFeedback {
   private readonly chargeDots: Entity[] = [];
   private readonly chargeBars: Entity[] = [];
   private chargeClass: WeaponClass | null = null;
+  private firstChargeLatched = false;
   private fullChargeLatched = false;
 
   private audio: AudioContext | null = null;
@@ -114,9 +115,14 @@ export class GameFeedback {
 
     const t = clamp01(charge);
     if (this.chargeClass !== chargeClass) {
+      this.firstChargeLatched = false;
       this.fullChargeLatched = false;
       this.chargeClass = chargeClass;
     }
+
+    const firstRing = profile.firstChargeSeconds > 0 && profile.chargeSeconds > 0
+      ? clamp01(profile.firstChargeSeconds / profile.chargeSeconds)
+      : 0;
 
     const material = team === Team.A ? this.materialA : this.materialB;
     assignMaterial(this.chargeCore, material);
@@ -137,14 +143,26 @@ export class GameFeedback {
         this.updateChargerCharge(origin, forward, right, up, t);
         break;
       case 'SPLATLING':
-        this.updateSplatlingCharge(origin, forward, right, up, t);
+        this.updateSplatlingCharge(origin, forward, right, up, t, firstRing);
         break;
       case 'STRINGER':
-        this.updateStringerCharge(origin, forward, right, up, t);
+        this.updateStringerCharge(origin, forward, right, up, t, firstRing);
         break;
       case 'SPLATANA':
         this.updateSplatanaCharge(origin, forward, right, up, t);
         break;
+    }
+
+    if (
+      firstRing > 0 &&
+      t >= firstRing &&
+      !this.firstChargeLatched
+    ) {
+      this.firstChargeLatched = true;
+      this.spawnFx(team, origin, 0.16 * profile.fxScale, 0.16);
+      this.playTone(620 * profile.audioPitch, 0.025, 0.075, 'sine', 1.24);
+    } else if (firstRing > 0 && t < firstRing * 0.92) {
+      this.firstChargeLatched = false;
     }
 
     if (t >= 0.995 && !this.fullChargeLatched) {
@@ -284,22 +302,36 @@ export class GameFeedback {
     forward: Vec3,
     right: Vec3,
     up: Vec3,
-    charge: number
+    charge: number,
+    firstRing: number
   ): void {
-    // Charger-like read: centered core + forward guide, with subtle rotary identity.
+    const firstProgress = firstRing > 0
+      ? clamp01(charge / firstRing)
+      : charge;
+    const secondProgress = firstRing > 0 && firstRing < 1
+      ? clamp01((charge - firstRing) / (1 - firstRing))
+      : 0;
+
+    // Ring 1 establishes maximum effective range; ring 2 mainly stores fire duration.
     const corePoint = origin.clone().add(forward.clone().mulScalar(0.20));
     this.chargeCore.setPosition(corePoint);
-    const pulse = 0.075 + charge * 0.105 +
+    const pulse = 0.075 + firstProgress * 0.075 + secondProgress * 0.055 +
       Math.abs(Math.sin(performance.now() * 0.014)) * 0.018;
     this.chargeCore.setLocalScale(pulse, pulse, pulse);
 
     const guide = this.chargeBars[0]!;
     guide.enabled = true;
-    const guideLength = 3.2 + charge * 10.8;
-    placeBarAlong(guide, origin, forward, guideLength, 0.022 + charge * 0.010);
+    const guideLength = 3.2 + firstProgress * 10.8;
+    placeBarAlong(
+      guide,
+      origin,
+      forward,
+      guideLength,
+      0.022 + firstProgress * 0.008 + secondProgress * 0.004
+    );
 
-    const spin = performance.now() * (0.004 + charge * 0.010);
-    const radius = 0.24 * (1 - charge * 0.68) + 0.055;
+    const spin = performance.now() * (0.004 + firstProgress * 0.007 + secondProgress * 0.006);
+    const radius = 0.24 * (1 - firstProgress * 0.68) + 0.055;
     for (let i = 0; i < 4; i += 1) {
       const dot = this.chargeDots[i]!;
       dot.enabled = true;
@@ -308,7 +340,7 @@ export class GameFeedback {
         .add(right.clone().mulScalar(Math.cos(angle) * radius))
         .add(up.clone().mulScalar(Math.sin(angle) * radius));
       dot.setPosition(point);
-      const scale = 0.038 + charge * 0.030;
+      const scale = 0.038 + firstProgress * 0.020 + secondProgress * 0.018;
       dot.setLocalScale(scale, scale, scale);
     }
   }
@@ -318,14 +350,24 @@ export class GameFeedback {
     forward: Vec3,
     right: Vec3,
     up: Vec3,
-    charge: number
+    charge: number,
+    firstRing: number
   ): void {
+    const firstProgress = firstRing > 0
+      ? clamp01(charge / firstRing)
+      : charge;
+    const secondProgress = firstRing > 0 && firstRing < 1
+      ? clamp01((charge - firstRing) / (1 - firstRing))
+      : 0;
+
     const corePoint = origin.clone().add(forward.clone().mulScalar(0.20));
     this.chargeCore.setPosition(corePoint);
-    const coreScale = 0.055 + charge * 0.075;
+    const coreScale = 0.055 + firstProgress * 0.040 + secondProgress * 0.050;
     this.chargeCore.setLocalScale(coreScale, coreScale, coreScale);
 
-    const lateral = 0.30 * (1 - charge) + 0.045;
+    // Tri-Stringer-style: the first ring keeps the three-arrow spread;
+    // convergence only starts through the second ring.
+    const lateral = 0.30 * (1 - secondProgress * 0.85) + 0.045;
     const offsets = [-lateral, 0, lateral];
     for (let i = 0; i < 3; i += 1) {
       const bar = this.chargeBars[i]!;
@@ -333,7 +375,14 @@ export class GameFeedback {
       const start = origin.clone()
         .add(right.clone().mulScalar(offsets[i]!))
         .add(up.clone().mulScalar((i - 1) * 0.03));
-      placeBarAlong(bar, start, forward, 0.55 + charge * 0.34, 0.026 + charge * 0.012);
+      const length = 0.55 + firstProgress * 0.18 + secondProgress * 0.28;
+      placeBarAlong(
+        bar,
+        start,
+        forward,
+        length,
+        0.026 + firstProgress * 0.006 + secondProgress * 0.010
+      );
     }
   }
 
@@ -371,6 +420,7 @@ export class GameFeedback {
 
   private disableChargeVisual(): void {
     this.chargeClass = null;
+    this.firstChargeLatched = false;
     this.fullChargeLatched = false;
     this.chargeCore.enabled = false;
     this.disableChargeParts();
