@@ -644,6 +644,7 @@ export class CpuAgentSystem {
         targetIsHuman: isHuman
       });
 
+      if (!Number.isFinite(score)) return;
       if (
         !forced &&
         score < GAME_CONFIG.cpu.superJumpDecisionScore
