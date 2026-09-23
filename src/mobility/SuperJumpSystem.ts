@@ -9,7 +9,7 @@ import type { CpuAgentSystem } from '../ai/CpuAgentSystem';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
-import type { Team } from '../ink/types';
+import { Team } from '../ink/types';
 import type { PlayerController } from '../player/PlayerController';
 
 export type SuperJumpState =
@@ -266,11 +266,11 @@ export class SuperJumpSystem {
     this.travelEntity.enabled = true;
     setEntityMaterial(
       this.travelEntity,
-      this.team === 1 ? this.travelMaterialA : this.travelMaterialB
+      this.team === Team.A ? this.travelMaterialA : this.travelMaterialB
     );
     setEntityMaterial(
       this.markerEntity,
-      this.team === 1 ? this.markerMaterialA : this.markerMaterialB
+      this.team === Team.A ? this.markerMaterialA : this.markerMaterialB
     );
     this.stats.playerSuperJumps += 1;
     this.feedback.superJumpLaunch(this.team, this.startPosition);
