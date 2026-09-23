@@ -1,13 +1,16 @@
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import { Team } from '../ink/types';
-import type { WeaponProfile } from '../weapons/WeaponCatalog';
+import type { WeaponClass, WeaponProfile } from '../weapons/WeaponCatalog';
+
+type FxMode = 'BURST' | 'FUSE';
 
 interface FxSlot {
   entity: Entity;
   ttl: number;
   duration: number;
   baseScale: number;
+  mode: FxMode;
 }
 
 export class GameFeedback {
@@ -15,6 +18,13 @@ export class GameFeedback {
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private readonly neutralMaterial: StandardMaterial;
+
+  private readonly chargeCore: Entity;
+  private readonly chargeDots: Entity[] = [];
+  private readonly chargeBars: Entity[] = [];
+  private chargeClass: WeaponClass | null = null;
+  private fullChargeLatched = false;
+
   private audio: AudioContext | null = null;
   private lastAudioEventMs = 0;
 
@@ -26,7 +36,7 @@ export class GameFeedback {
     this.materialB = makeFxMaterial(GAME_CONFIG.visual.teamB);
     this.neutralMaterial = makeFxMaterial([1, 0.92, 0.62]);
 
-    for (let i = 0; i < 48; i += 1) {
+    for (let i = 0; i < 56; i += 1) {
       const entity = new Entity(`T14Fx:${i}`);
       entity.addComponent('render', {
         type: 'sphere',
@@ -36,7 +46,25 @@ export class GameFeedback {
       });
       entity.enabled = false;
       app.root.addChild(entity);
-      this.fx.push({ entity, ttl: 0, duration: 0, baseScale: 0 });
+      this.fx.push({
+        entity,
+        ttl: 0,
+        duration: 0,
+        baseScale: 0,
+        mode: 'BURST'
+      });
+    }
+
+    this.chargeCore = makeChargeEntity(app, 'ChargeCore', 'sphere', this.neutralMaterial);
+    for (let i = 0; i < 4; i += 1) {
+      this.chargeDots.push(
+        makeChargeEntity(app, `ChargeDot:${i}`, 'sphere', this.neutralMaterial)
+      );
+    }
+    for (let i = 0; i < 3; i += 1) {
+      this.chargeBars.push(
+        makeChargeEntity(app, `ChargeBar:${i}`, 'box', this.neutralMaterial)
+      );
     }
 
     const unlock = (): void => this.unlockAudio();
@@ -55,8 +83,76 @@ export class GameFeedback {
       }
 
       const progress = 1 - slot.ttl / Math.max(slot.duration, 1e-5);
-      const scale = slot.baseScale * (1 + progress * 1.8);
-      slot.entity.setLocalScale(scale, scale, scale);
+      if (slot.mode === 'FUSE') {
+        const pulse = 0.74 + Math.abs(Math.sin(progress * Math.PI * 9)) * 0.7;
+        const grow = 1 + progress * 0.75;
+        const scale = slot.baseScale * pulse * grow;
+        slot.entity.setLocalScale(scale, scale, scale);
+      } else {
+        const scale = slot.baseScale * (1 + progress * 1.8);
+        slot.entity.setLocalScale(scale, scale, scale);
+      }
+    }
+  }
+
+  public updateChargeVisual(
+    profile: WeaponProfile,
+    team: Team.A | Team.B,
+    origin: Vec3,
+    direction: Vec3,
+    charge: number,
+    active: boolean
+  ): void {
+    const chargeClass = isChargeClass(profile.weaponClass)
+      ? profile.weaponClass
+      : null;
+
+    if (!active || !chargeClass) {
+      this.disableChargeVisual();
+      return;
+    }
+
+    const t = clamp01(charge);
+    if (this.chargeClass !== chargeClass) {
+      this.fullChargeLatched = false;
+      this.chargeClass = chargeClass;
+    }
+
+    const material = team === Team.A ? this.materialA : this.materialB;
+    assignMaterial(this.chargeCore, material);
+    for (const entity of this.chargeDots) assignMaterial(entity, material);
+    for (const entity of this.chargeBars) assignMaterial(entity, material);
+
+    this.chargeCore.enabled = true;
+    const forward = direction.clone().normalize();
+    const right = new Vec3(forward.z, 0, -forward.x);
+    if (right.lengthSq() <= 1e-6) right.set(1, 0, 0);
+    else right.normalize();
+    const up = new Vec3().cross(right, forward).normalize();
+
+    this.disableChargeParts();
+
+    switch (chargeClass) {
+      case 'CHARGER':
+        this.updateChargerCharge(origin, forward, right, up, t);
+        break;
+      case 'SPLATLING':
+        this.updateSplatlingCharge(origin, forward, right, up, t);
+        break;
+      case 'STRINGER':
+        this.updateStringerCharge(origin, forward, right, up, t);
+        break;
+      case 'SPLATANA':
+        this.updateSplatanaCharge(origin, forward, right, up, t);
+        break;
+    }
+
+    if (t >= 0.995 && !this.fullChargeLatched) {
+      this.fullChargeLatched = true;
+      this.spawnFx(team, origin, 0.22 * profile.fxScale, 0.22);
+      this.playTone(820 * profile.audioPitch, 0.032, 0.10, 'sine', 1.42);
+    } else if (t < 0.94) {
+      this.fullChargeLatched = false;
     }
   }
 
@@ -85,6 +181,29 @@ export class GameFeedback {
     this.playTone(118 * profile.audioPitch, 0.018, 0.055, 'triangle', 0.72);
   }
 
+  public stringerFuse(
+    team: Team.A | Team.B,
+    position: Vec3,
+    duration: number
+  ): void {
+    this.spawnFx(team, position, 0.11, Math.max(0.12, duration), 'FUSE');
+    this.playTone(510, 0.014, 0.035, 'sine', 1.12);
+  }
+
+  public stringerBurst(
+    team: Team.A | Team.B,
+    position: Vec3,
+    profile: WeaponProfile,
+    radius: number
+  ): void {
+    const base = Math.max(0.22, radius * 0.26);
+    this.spawnFx(team, position, base, 0.26);
+    this.spawnFx(team, position.clone().add(new Vec3(radius * 0.28, 0, 0)), base * 0.68, 0.20);
+    this.spawnFx(team, position.clone().add(new Vec3(-radius * 0.28, 0, 0)), base * 0.68, 0.20);
+    this.spawnFx(team, position.clone().add(new Vec3(0, 0, radius * 0.28)), base * 0.68, 0.20);
+    this.playTone(96 * profile.audioPitch, 0.042, 0.13, 'sawtooth', 0.52);
+  }
+
   public splat(team: Team.A | Team.B, position: Vec3): void {
     this.spawnFx(team, position, 0.36, 0.32);
     this.playTone(82, 0.055, 0.16, 'sawtooth', 0.42);
@@ -96,6 +215,7 @@ export class GameFeedback {
   }
 
   public weaponSwitch(): void {
+    this.disableChargeVisual();
     this.playTone(660, 0.022, 0.06, 'sine', 1.22);
   }
 
@@ -105,7 +225,7 @@ export class GameFeedback {
     to: Vec3,
     profile: WeaponProfile
   ): void {
-    const samples = 9;
+    const samples = 11;
     for (let i = 0; i < samples; i += 1) {
       const t = samples <= 1 ? 0 : i / (samples - 1);
       const point = new Vec3(
@@ -128,11 +248,138 @@ export class GameFeedback {
     this.playTone(150 * profile.audioPitch, 0.026, 0.065, 'triangle', 0.58);
   }
 
+  private updateChargerCharge(
+    origin: Vec3,
+    forward: Vec3,
+    right: Vec3,
+    up: Vec3,
+    charge: number
+  ): void {
+    const corePoint = origin.clone().add(forward.clone().mulScalar(0.22));
+    this.chargeCore.setPosition(corePoint);
+    const coreScale = 0.08 + charge * 0.13;
+    this.chargeCore.setLocalScale(coreScale, coreScale, coreScale);
+
+    const guide = this.chargeBars[0]!;
+    guide.enabled = true;
+    const guideLength = 4 + charge * 14;
+    placeBarAlong(guide, origin, forward, guideLength, 0.018 + charge * 0.008);
+
+    for (let i = 0; i < 3; i += 1) {
+      const dot = this.chargeDots[i]!;
+      dot.enabled = true;
+      const angle = performance.now() * 0.008 + i * Math.PI * 2 / 3;
+      const radius = 0.23 * (1 - charge) + 0.035;
+      const point = corePoint.clone()
+        .add(right.clone().mulScalar(Math.cos(angle) * radius))
+        .add(up.clone().mulScalar(Math.sin(angle) * radius));
+      dot.setPosition(point);
+      const scale = 0.045 + charge * 0.025;
+      dot.setLocalScale(scale, scale, scale);
+    }
+  }
+
+  private updateSplatlingCharge(
+    origin: Vec3,
+    forward: Vec3,
+    right: Vec3,
+    up: Vec3,
+    charge: number
+  ): void {
+    const corePoint = origin.clone().add(forward.clone().mulScalar(0.16));
+    this.chargeCore.setPosition(corePoint);
+    const pulse = 0.08 + Math.abs(Math.sin(performance.now() * 0.018)) * 0.035;
+    this.chargeCore.setLocalScale(pulse, pulse, pulse);
+
+    const spin = performance.now() * (0.006 + charge * 0.022);
+    const radius = 0.18 + charge * 0.10;
+    for (let i = 0; i < 4; i += 1) {
+      const dot = this.chargeDots[i]!;
+      dot.enabled = true;
+      const angle = spin + i * Math.PI * 0.5;
+      const point = corePoint.clone()
+        .add(right.clone().mulScalar(Math.cos(angle) * radius))
+        .add(up.clone().mulScalar(Math.sin(angle) * radius));
+      dot.setPosition(point);
+      const scale = 0.035 + charge * 0.035;
+      dot.setLocalScale(scale, scale, scale);
+    }
+  }
+
+  private updateStringerCharge(
+    origin: Vec3,
+    forward: Vec3,
+    right: Vec3,
+    up: Vec3,
+    charge: number
+  ): void {
+    const corePoint = origin.clone().add(forward.clone().mulScalar(0.20));
+    this.chargeCore.setPosition(corePoint);
+    const coreScale = 0.055 + charge * 0.075;
+    this.chargeCore.setLocalScale(coreScale, coreScale, coreScale);
+
+    const lateral = 0.30 * (1 - charge) + 0.045;
+    const offsets = [-lateral, 0, lateral];
+    for (let i = 0; i < 3; i += 1) {
+      const bar = this.chargeBars[i]!;
+      bar.enabled = true;
+      const start = origin.clone()
+        .add(right.clone().mulScalar(offsets[i]!))
+        .add(up.clone().mulScalar((i - 1) * 0.03));
+      placeBarAlong(bar, start, forward, 0.55 + charge * 0.34, 0.026 + charge * 0.012);
+    }
+  }
+
+  private updateSplatanaCharge(
+    origin: Vec3,
+    forward: Vec3,
+    right: Vec3,
+    up: Vec3,
+    charge: number
+  ): void {
+    const corePoint = origin.clone()
+      .add(right.clone().mulScalar(0.14))
+      .add(up.clone().mulScalar(0.04));
+    this.chargeCore.setPosition(corePoint);
+    const coreScale = 0.07 + charge * 0.10;
+    this.chargeCore.setLocalScale(coreScale, coreScale, coreScale);
+
+    const blade = this.chargeBars[0]!;
+    blade.enabled = true;
+    const bladeDirection = forward.clone()
+      .add(up.clone().mulScalar(0.55))
+      .normalize();
+    placeBarAlong(blade, origin.clone().add(right.clone().mulScalar(0.17)), bladeDirection, 0.65 + charge * 0.85, 0.045 + charge * 0.035);
+
+    if (charge > 0.55) {
+      const spark = this.chargeDots[0]!;
+      spark.enabled = true;
+      const point = origin.clone()
+        .add(bladeDirection.clone().mulScalar(0.65 + charge * 0.7));
+      spark.setPosition(point);
+      const scale = 0.05 + charge * 0.05;
+      spark.setLocalScale(scale, scale, scale);
+    }
+  }
+
+  private disableChargeVisual(): void {
+    this.chargeClass = null;
+    this.fullChargeLatched = false;
+    this.chargeCore.enabled = false;
+    this.disableChargeParts();
+  }
+
+  private disableChargeParts(): void {
+    for (const entity of this.chargeDots) entity.enabled = false;
+    for (const entity of this.chargeBars) entity.enabled = false;
+  }
+
   private spawnFx(
     team: Team.A | Team.B,
     position: Vec3,
     baseScale: number,
-    duration: number
+    duration: number,
+    mode: FxMode = 'BURST'
   ): void {
     const slot = this.fx.find((candidate) => candidate.ttl <= 0);
     if (!slot) return;
@@ -145,6 +392,7 @@ export class GameFeedback {
     slot.ttl = duration;
     slot.duration = duration;
     slot.baseScale = baseScale;
+    slot.mode = mode;
     slot.entity.setPosition(position);
     slot.entity.setLocalScale(baseScale, baseScale, baseScale);
     slot.entity.enabled = true;
@@ -190,6 +438,55 @@ export class GameFeedback {
     oscillator.start(now);
     oscillator.stop(now + duration + 0.01);
   }
+}
+
+function makeChargeEntity(
+  app: AppBase,
+  name: string,
+  type: 'sphere' | 'box',
+  material: StandardMaterial
+): Entity {
+  const entity = new Entity(name);
+  entity.addComponent('render', {
+    type,
+    material,
+    castShadows: false,
+    receiveShadows: false
+  });
+  entity.enabled = false;
+  app.root.addChild(entity);
+  return entity;
+}
+
+function assignMaterial(entity: Entity, material: StandardMaterial): void {
+  const meshInstance = entity.render?.meshInstances[0];
+  if (meshInstance) meshInstance.material = material;
+}
+
+function placeBarAlong(
+  entity: Entity,
+  origin: Vec3,
+  direction: Vec3,
+  length: number,
+  thickness: number
+): void {
+  const dir = direction.clone().normalize();
+  const end = origin.clone().add(dir.clone().mulScalar(length));
+  const center = origin.clone().add(dir.clone().mulScalar(length * 0.5));
+  entity.setPosition(center);
+  entity.lookAt(end);
+  entity.setLocalScale(thickness, thickness, length);
+}
+
+function isChargeClass(weaponClass: WeaponClass): boolean {
+  return weaponClass === 'CHARGER' ||
+    weaponClass === 'SPLATLING' ||
+    weaponClass === 'STRINGER' ||
+    weaponClass === 'SPLATANA';
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
 function makeFxMaterial(rgb: readonly [number, number, number]): StandardMaterial {
