@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.9.5 / T14 TWO-RING CHARGE CANDIDATE
+# CURRENT_CANONICAL — v0.9.5 / T14 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T13 remains the frozen stable foundation. T14 Content / Animation / Audio / Additional Weapons / Polish first candidate is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA.**
+**T0–T14 is the frozen stable foundation. T14 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #136 passed build/deploy.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -979,3 +979,25 @@ Chord Stringer:
 - HUD and 3D feedback expose ring 1 and ring 2 separately
 
 The implementation uses original project weapon names/assets and project-space tuning while matching the documented Splatoon 3 charge-stage relationships. T0–T13 Freeze and PaintRequest -> immutable PaintEvent authority remain unchanged.
+
+
+## T14 Stable Freeze — 2026-09-23
+
+Hosted runtime QA for the final v0.9.5 candidate was completed and accepted by the user.
+
+Stable T14 checkpoint:
+- commit: `006f9b8ddb4a818ac0ba64a3ec18f30640a07dc4`
+- GitHub Actions: run #136 / `35830846217` — success
+- T0–T13 architecture and gameplay contracts remain intact
+- 11 original project weapon representatives are now frozen at the T14 gameplay-feel baseline
+- Dualies fire+move+Space dodge, post-roll recovery, class-specific charge feedback, Stringer delayed bursts, and Splatling/Stringer two-ring charge behavior are included in the stable baseline
+
+T14 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T15 — Sub Weapon + Special Gauge Foundation:
+- source-aware paint attribution without changing PaintSurface-local coordinates or CPU/GPU paint authority
+- human-earned turf points feed a special gauge
+- first throwable sub-weapon path with ink cost and delayed area paint/damage
+- first special activation path and player-facing gauge/HUD
