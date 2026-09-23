@@ -21,7 +21,8 @@ export type PlayerLocomotionState =
   | 'SWIM_WALL'
   | 'SQUID_ROLL'
   | 'SURGE_CHARGE'
-  | 'SURGE';
+  | 'SURGE'
+  | 'DUALIE_DODGE';
 
 interface OwnWallSample {
   sample: GameplayInkSample;
@@ -61,6 +62,9 @@ export class PlayerController {
   private squidRollTurnWindowSeconds = 0;
   private surgeRemainingSeconds = 0;
   private surgeChargeSeconds = 0;
+  private weaponDodgeRemainingSeconds = 0;
+  private weaponDodgeCooldownSeconds = 0;
+  private weaponDodgeRequested = false;
   private snapToGroundEnabled = true;
 
   private static readonly humanRadius = GAME_CONFIG.player.humanColliderRadiusMeters;
@@ -134,6 +138,10 @@ export class PlayerController {
     return this.inkRelation;
   }
 
+  public requestWeaponDodge(): void {
+    this.weaponDodgeRequested = true;
+  }
+
   public setTeam(team: Team.A | Team.B): void {
     this.team = team;
     this.updateMaterial();
@@ -165,6 +173,9 @@ export class PlayerController {
     this.squidRollTurnWindowSeconds = 0;
     this.surgeRemainingSeconds = 0;
     this.surgeChargeSeconds = 0;
+    this.weaponDodgeRemainingSeconds = 0;
+    this.weaponDodgeCooldownSeconds = 0;
+    this.weaponDodgeRequested = false;
     this.setSnapToGround(true);
 
     this.squidCollider.setEnabled(false);
@@ -216,8 +227,31 @@ export class PlayerController {
 
     const jumpPressed = this.input.consumeJump();
     this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
+    this.weaponDodgeRemainingSeconds = Math.max(0, this.weaponDodgeRemainingSeconds - dt);
+    this.weaponDodgeCooldownSeconds = Math.max(0, this.weaponDodgeCooldownSeconds - dt);
 
-    if (this.squidRollRemainingSeconds > 0) {
+    if (this.weaponDodgeRemainingSeconds > 0) {
+      this.setMode('HUMAN');
+      this.locomotionState = 'DUALIE_DODGE';
+      this.wallSurfaceId = '-';
+      this.surgeChargeSeconds = 0;
+      this.squidRollTurnWindowSeconds = 0;
+      this.setSnapToGround(true);
+      this.applyGravity(dt);
+    } else if (this.weaponDodgeRequested && this.mode === 'HUMAN' && this.weaponDodgeCooldownSeconds <= 0) {
+      const dodgeDirection = this.desired.lengthSq() > 0.04
+        ? this.desired.clone().normalize()
+        : this.flatForward.clone().normalize();
+      this.velocity.x = dodgeDirection.x * 9.6;
+      this.velocity.z = dodgeDirection.z * 9.6;
+      if (this.grounded) this.verticalVelocity = 0;
+      this.weaponDodgeRemainingSeconds = 0.18;
+      this.weaponDodgeCooldownSeconds = 0.52;
+      this.locomotionState = 'DUALIE_DODGE';
+      this.setMode('HUMAN');
+      this.setSnapToGround(true);
+      this.applyGravity(dt);
+    } else if (this.squidRollRemainingSeconds > 0) {
       this.setMode('SQUID');
       this.locomotionState = 'SQUID_ROLL';
       this.wallSurfaceId = '-';
@@ -340,6 +374,7 @@ export class PlayerController {
     });
 
     if (this.grounded && this.verticalVelocity < 0) this.verticalVelocity = -0.5;
+    this.weaponDodgeRequested = false;
   }
 
   public syncAfterPhysics(dt?: number): void {

@@ -53,7 +53,12 @@ export class PerformanceStats {
   public targetBHp = 100;
   public playerWeaponId = 'pulse-sprayer';
   public playerWeaponName = 'Pulse Sprayer';
+  public playerWeaponClass = 'シューター';
   public playerWeaponSwitches = 0;
+  public playerWeaponChargePercent = 0;
+  public playerWeaponAction = 'READY';
+  public playerWeaponGuarding = false;
+  public playerWeaponGuardBlocks = 0;
 
   public matchState = 'COUNTDOWN';
   public matchCountdownSeconds = 3;

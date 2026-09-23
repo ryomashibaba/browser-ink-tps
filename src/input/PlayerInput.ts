@@ -1,6 +1,8 @@
 export class PlayerInput {
   private readonly keys = new Set<string>();
   private fire = false;
+  private secondary = false;
+  private secondaryPressedQueued = false;
   private jumpQueued = false;
 
   public constructor(private readonly canvas: HTMLCanvasElement) {
@@ -17,6 +19,8 @@ export class PlayerInput {
     const clearGameplayState = (): void => {
       this.keys.clear();
       this.fire = false;
+      this.secondary = false;
+      this.secondaryPressedQueued = false;
       this.jumpQueued = false;
     };
 
@@ -38,10 +42,17 @@ export class PlayerInput {
       ) {
         this.fire = true;
       }
+      if (event.button === 2 && document.pointerLockElement === this.canvas) {
+        if (!this.secondary) this.secondaryPressedQueued = true;
+        this.secondary = true;
+        event.preventDefault();
+      }
     });
+    canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
     const releaseFire = (event: PointerEvent): void => {
       if (event.button === 0) this.fire = false;
+      if (event.button === 2) this.secondary = false;
     };
     canvas.addEventListener('pointerup', releaseFire);
     document.addEventListener('pointerup', releaseFire);
@@ -62,6 +73,16 @@ export class PlayerInput {
 
   public get fireHeld(): boolean {
     return this.fire;
+  }
+
+  public get secondaryHeld(): boolean {
+    return this.secondary;
+  }
+
+  public consumeSecondaryPressed(): boolean {
+    const queued = this.secondaryPressedQueued;
+    this.secondaryPressedQueued = false;
+    return queued;
   }
 
   public get jumpHeld(): boolean {
