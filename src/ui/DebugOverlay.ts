@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T16 STABLE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T17 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -43,6 +43,9 @@ export class DebugOverlay {
         <span class="muted">Life state</span><span>${escapeHtml(last.playerLifeState)}</span>
         <span class="muted">Respawn</span><span>${last.playerRespawnSeconds.toFixed(1)} s</span>
         <span class="muted">Splats / respawns</span><span>${last.playerSplats} / ${last.playerRespawns}</span>
+        <span class="muted">Super Jump</span><span>${escapeHtml(last.playerSuperJumpState)} · ${escapeHtml(last.playerSuperJumpTarget)}</span>
+        <span class="muted">Jump progress / uses</span><span>${(last.playerSuperJumpProgress * 100).toFixed(0)}% / ${last.playerSuperJumps}</span>
+        <span class="muted">Jump target XYZ</span><span>${formatXyz(last.playerSuperJumpTargetX, last.playerSuperJumpTargetY, last.playerSuperJumpTargetZ)}</span>
         <span class="muted">Recast</span><span>${escapeHtml(last.cpuNavigationStatus)}</span>
         <span class="muted">Nav build</span><span>${last.cpuNavigationBuildMs.toFixed(1)} ms</span>
         <span class="muted">CPU agents</span><span>${last.cpuAgents} · A${last.cpuTeamA}/B${last.cpuTeamB}</span>
