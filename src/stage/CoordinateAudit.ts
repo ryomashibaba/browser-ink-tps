@@ -86,7 +86,7 @@ function auditBackingFit(
     Math.abs(localNormal.y),
     Math.abs(localNormal.z)
   ] as const;
-  let normalAxis = 0;
+  let normalAxis: 0 | 1 | 2 = 0;
   if (components[1] > components[normalAxis]) normalAxis = 1;
   if (components[2] > components[normalAxis]) normalAxis = 2;
 
@@ -118,7 +118,7 @@ function auditBackingFit(
       Math.abs(Math.abs(values[normalAxis]) - half[normalAxis])
     );
 
-    for (let axis = 0; axis < 3; axis += 1) {
+    for (const axis of [0, 1, 2] as const) {
       if (axis === normalAxis) continue;
       if (Math.abs(values[axis]) > half[axis] + tangentialTolerance) {
         throw new Error(
