@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.10.0 / T15 SUB + SPECIAL FOUNDATION CANDIDATE
+# CURRENT_CANONICAL — v0.10.0 / T15 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T14 is the frozen stable foundation. T15 is an additive candidate built on top of that Freeze and must not alter the frozen coordinate/paint authority contracts.**
+**T0–T15 is the frozen stable foundation. T15 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #165 passed build/deploy.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1044,3 +1044,24 @@ T15 controls:
 - existing RMB Brella guard remains unchanged
 
 T15 remains **IMPLEMENTATION CANDIDATE** until hosted QA is accepted.
+
+
+## T15 Stable Freeze — 2026-09-23
+
+Hosted runtime QA for v0.10.0 was completed and accepted by the user.
+
+Stable T15 checkpoint:
+- commit: `901b8c73f5313ac39c27ebb0fc42cb3ec1810bda`
+- GitHub Actions: run #165 / `35832485527` — success
+- source-aware PaintEvent attribution is frozen as additive metadata only
+- Pulse Bomb, Turf Pulse, special-gauge scoring, Splat retention, HUD/debug integration are the stable T15 baseline
+
+T15 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T16 — Weapon Kit System:
+- each main weapon gets one fixed sub weapon and one fixed special
+- multiple sub-weapon behaviors share the frozen T15 HUMAN paint-attribution path
+- multiple special behaviors share the frozen T15 SPECIAL paint-attribution path
+- weapon switching updates the active kit and HUD without weakening T0–T15 contracts
