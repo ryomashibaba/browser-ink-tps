@@ -67,8 +67,8 @@ export class PlayerResources {
     this.syncStats(inkState, hpState);
   }
 
-  public tryConsumeShotInk(): boolean {
-    const cost = GAME_CONFIG.inkEconomy.inkPerShot;
+  public tryConsumeShotInk(cost: number = GAME_CONFIG.inkEconomy.inkPerShot): boolean {
+    if (!Number.isFinite(cost) || cost <= 0) return false;
     if (this.ink + 1e-6 < cost) {
       this.stats.inkDryFireAttempts += 1;
       return false;

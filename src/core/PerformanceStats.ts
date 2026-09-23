@@ -51,6 +51,9 @@ export class PerformanceStats {
   public combatTargetDowns = 0;
   public targetAHp = 100;
   public targetBHp = 100;
+  public playerWeaponId = 'pulse-sprayer';
+  public playerWeaponName = 'Pulse Sprayer';
+  public playerWeaponSwitches = 0;
 
   public matchState = 'COUNTDOWN';
   public matchCountdownSeconds = 3;

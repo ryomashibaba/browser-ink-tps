@@ -8,6 +8,13 @@ import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
 import type { PaintCoordinator, PaintRequest } from '../ink/PaintCoordinator';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+import type { GameFeedback } from '../feedback/GameFeedback';
+import {
+  DEFAULT_WEAPON_ID,
+  type WeaponId,
+  type WeaponProfile,
+  weaponProfile
+} from '../weapons/WeaponCatalog';
 
 interface ProjectileSlot {
   active: boolean;
@@ -19,6 +26,7 @@ interface ProjectileSlot {
   entity: Entity;
   sourceKind: 'HUMAN' | 'CPU';
   sourceId: string;
+  weaponId: WeaponId;
 }
 
 export class ProjectileSystem {
@@ -29,6 +37,7 @@ export class ProjectileSystem {
   private readonly queuedCpuShots: CpuFireRequest[] = [];
   private readonly cpuAimDirection = new Vec3();
   private fireCooldown = 0;
+  private playerWeaponId: WeaponId = DEFAULT_WEAPON_ID;
 
   public constructor(
     private readonly app: AppBase,
@@ -38,6 +47,7 @@ export class ProjectileSystem {
     private readonly resources: PlayerResources,
     private readonly combatTargets: CombatTargetSystem,
     private readonly cpuAgents: CpuAgentSystem,
+    private readonly feedback: GameFeedback,
     private readonly stats: PerformanceStats
   ) {
     this.materialA = makeProjectileMaterial(GAME_CONFIG.visual.teamA);
@@ -67,9 +77,28 @@ export class ProjectileSystem {
         team: Team.A,
         entity,
         sourceKind: 'HUMAN',
-        sourceId: 'human'
+        sourceId: 'human',
+        weaponId: DEFAULT_WEAPON_ID
       });
     }
+    this.syncWeaponStats();
+  }
+
+  public get currentPlayerWeapon(): WeaponProfile {
+    return weaponProfile(this.playerWeaponId);
+  }
+
+  public setPlayerWeapon(id: WeaponId): void {
+    if (id === this.playerWeaponId) return;
+    this.playerWeaponId = id;
+    this.fireCooldown = Math.max(this.fireCooldown, 0.08);
+    this.stats.playerWeaponSwitches += 1;
+    this.syncWeaponStats();
+    this.feedback.weaponSwitch();
+  }
+
+  public solvePlayerLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {
+    return this.solveLaunchDirection(origin, target, out, this.currentPlayerWeapon);
   }
 
   public reset(): void {
@@ -88,13 +117,18 @@ export class ProjectileSystem {
     });
   }
 
-  public solveLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {
+  public solveLaunchDirection(
+    origin: Vec3,
+    target: Vec3,
+    out = new Vec3(),
+    profile: WeaponProfile = weaponProfile(DEFAULT_WEAPON_ID)
+  ): Vec3 {
     const dx = target.x - origin.x;
     const dy = target.y - origin.y;
     const dz = target.z - origin.z;
     const horizontalDistance = Math.hypot(dx, dz);
-    const speed = GAME_CONFIG.projectile.speedMetersPerSecond;
-    const gravity = GAME_CONFIG.projectile.gravityMetersPerSecond2;
+    const speed = profile.speedMetersPerSecond;
+    const gravity = profile.gravityMetersPerSecond2;
 
     if (speed <= 0 || gravity <= 0 || horizontalDistance < 1e-5) {
       out.set(dx, dy, dz);
@@ -137,17 +171,26 @@ export class ProjectileSystem {
     playerPosition: Vec3,
     playerDamageable: boolean
   ): void {
+    const playerProfile = this.currentPlayerWeapon;
     this.fireCooldown -= dt;
     if (fireHeld && this.fireCooldown <= 0 && aimDirection.lengthSq() > 1e-8) {
       const slot = this.slots.find((candidate) => !candidate.active);
       if (!slot) {
         this.stats.projectilePoolDrops += 1;
-        this.fireCooldown += GAME_CONFIG.projectile.fireIntervalSeconds;
-      } else if (this.resources.tryConsumeShotInk()) {
-        this.spawnInto(slot, muzzlePosition, aimDirection, team, 'HUMAN', 'human');
+        this.fireCooldown += playerProfile.fireIntervalSeconds;
+      } else if (this.resources.tryConsumeShotInk(playerProfile.inkCost)) {
+        this.spawnInto(
+          slot,
+          muzzlePosition,
+          aimDirection,
+          team,
+          'HUMAN',
+          'human',
+          playerProfile.id
+        );
         // Preserve the fractional remainder so a 0.105 s cadence does not get
         // rounded up to a permanent 7-fixed-tick interval at 60 Hz.
-        this.fireCooldown += GAME_CONFIG.projectile.fireIntervalSeconds;
+        this.fireCooldown += playerProfile.fireIntervalSeconds;
       } else {
         this.fireCooldown = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
       }
@@ -169,7 +212,8 @@ export class ProjectileSystem {
       }
 
       const previous = slot.position.clone();
-      slot.velocity.y -= GAME_CONFIG.projectile.gravityMetersPerSecond2 * dt;
+      const slotProfile = weaponProfile(slot.weaponId);
+      slot.velocity.y -= slotProfile.gravityMetersPerSecond2 * dt;
       this.delta.copy(slot.velocity).mulScalar(dt);
       const next = slot.position.clone().add(this.delta);
 
@@ -223,15 +267,15 @@ export class ProjectileSystem {
         if (combatKind === 'QA' && qaHit) {
           this.combatTargets.applyProjectileHit(
             qaHit,
-            GAME_CONFIG.combat.projectileDamage
+            slotProfile.damage
           );
         } else if (combatKind === 'CPU' && cpuHit) {
           this.cpuAgents.applyProjectileHit(
             cpuHit,
-            GAME_CONFIG.combat.projectileDamage
+            slotProfile.damage
           );
         } else if (combatKind === 'PLAYER') {
-          this.resources.applyDamage(GAME_CONFIG.combat.projectileDamage);
+          this.resources.applyDamage(slotProfile.damage);
           this.stats.cpuPlayerHits += 1;
         }
         this.stats.projectileImpacts += 1;
@@ -240,7 +284,8 @@ export class ProjectileSystem {
       }
 
       if (paintWins) {
-        this.enqueueImpact(slot.team, paintHit);
+        this.enqueueImpact(slot.team, paintHit, slotProfile);
+        this.feedback.impact(slot.team, paintHit.worldPoint, slotProfile);
         this.stats.projectileImpacts += 1;
         this.deactivate(slot);
         continue;
@@ -283,7 +328,8 @@ export class ProjectileSystem {
         continue;
       }
 
-      this.solveLaunchDirection(request.origin, request.target, this.cpuAimDirection);
+      const cpuProfile = weaponProfile(DEFAULT_WEAPON_ID);
+      this.solveLaunchDirection(request.origin, request.target, this.cpuAimDirection, cpuProfile);
       if (this.cpuAimDirection.lengthSq() <= 1e-8) continue;
       this.spawnInto(
         slot,
@@ -291,7 +337,8 @@ export class ProjectileSystem {
         this.cpuAimDirection,
         request.team,
         'CPU',
-        request.sourceId
+        request.sourceId,
+        DEFAULT_WEAPON_ID
       );
     }
     this.queuedCpuShots.length = 0;
@@ -303,22 +350,37 @@ export class ProjectileSystem {
     direction: Vec3,
     team: Team.A | Team.B,
     sourceKind: 'HUMAN' | 'CPU',
-    sourceId: string
+    sourceId: string,
+    weaponId: WeaponId
   ): void {
+    const profile = weaponProfile(weaponId);
     slot.active = true;
-    slot.ttl = GAME_CONFIG.projectile.lifeSeconds;
+    slot.ttl = profile.lifeSeconds;
     slot.team = team;
     slot.sourceKind = sourceKind;
     slot.sourceId = sourceId;
+    slot.weaponId = weaponId;
     slot.position.copy(origin);
     slot.previousPosition.copy(origin);
-    slot.velocity.copy(direction).normalize().mulScalar(GAME_CONFIG.projectile.speedMetersPerSecond);
+    slot.velocity.copy(direction).normalize().mulScalar(profile.speedMetersPerSecond);
 
     const meshInstance = slot.entity.render?.meshInstances[0];
     if (meshInstance) meshInstance.material = team === Team.A ? this.materialA : this.materialB;
 
+    slot.entity.setLocalScale(
+      profile.visualDiameterMeters,
+      profile.visualDiameterMeters,
+      profile.visualDiameterMeters
+    );
     slot.entity.setPosition(origin);
     slot.entity.enabled = true;
+    this.feedback.shot(team, origin, profile, sourceKind === 'HUMAN');
+  }
+
+  private syncWeaponStats(): void {
+    const profile = this.currentPlayerWeapon;
+    this.stats.playerWeaponId = profile.id;
+    this.stats.playerWeaponName = profile.displayName;
   }
 
   private deactivate(slot: ProjectileSlot): void {
@@ -335,15 +397,19 @@ export class ProjectileSystem {
     return best;
   }
 
-  private enqueueImpact(team: Team.A | Team.B, hit: SurfaceRayHit): void {
+  private enqueueImpact(
+    team: Team.A | Team.B,
+    hit: SurfaceRayHit,
+    profile: WeaponProfile
+  ): void {
     const isWall = (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0;
     const request: PaintRequest = {
       team,
       surfaceId: hit.surface.id,
       centerU: hit.u,
       centerV: hit.v,
-      radiusU: GAME_CONFIG.projectile.paintRadiusMeters * 1.12,
-      radiusV: GAME_CONFIG.projectile.paintRadiusMeters,
+      radiusU: profile.paintRadiusMeters * 1.12,
+      radiusV: profile.paintRadiusMeters,
       angle: 0,
       type: isWall ? PaintEventType.WallImpact : PaintEventType.Impact,
       strength: 1
