@@ -250,6 +250,9 @@ export class InkLabApp {
           this.match.playerCanAct && !this.superJump.isInvulnerable
         );
       },
+      onCpuAdvancedQa: () => {
+        this.cpuAgents.forceAdvancedWeaponQa();
+      },
       onClear: () => {
         this.clearCoordinateQaMarkers();
         this.coordinator.clear();
