@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.9.4 / T14 DUALIES POST-ROLL + SPLATLING CHARGE CANDIDATE**
+**v0.9.5 / T14 TWO-RING CHARGE CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -261,3 +261,17 @@ The first 11-class pass was rejected because too many classes still behaved like
 - Dualies recovery follows the public Splat Dualies timing structure at fixed 60 Hz: 4F startup, 12F roll, 4F until firing returns, then the remaining post-roll movement-lock / roll-recovery window.
 - The second dodge can still chain from that stance while firing.
 - Splatling charge HUD/3D feedback is intentionally closer to Charger, using a centered progress reticle and forward guide with only subtle rotary accents.
+
+
+### T14 v0.9.5 two-ring charge correction
+
+- Rotor Cannon / Splatling now uses two charge rings:
+  - first ring: 0.80 s; projectile speed/range reaches its maximum region and a first-stage burst is stored
+  - second ring/full: 1.20 s; range no longer increases, while stored burst duration grows to roughly double the first-ring volley
+  - reference burst sizing is approximately 18 shots at ring 1 and 36 shots at full charge
+- Chord Stringer now uses the Tri-Stringer-style two-ring structure:
+  - first ring: 0.50 s; direct arrow damage reaches 35 and landed arrows gain the 0.75 s delayed explosion
+  - second ring/full: 1.20 s; direct damage remains 35 while the three-arrow spread converges from 8 degrees toward 0, projectile speed/range rises further, and paint width increases
+  - charge-scaled ink cost follows the 5 / 6 / 8.5 reference progression for minimum / first-ring / full shots
+- HUD renders separate first/second charge circles for Splatling and Stringer.
+- 3D charge feedback gives a distinct first-ring pulse and only begins Stringer convergence during the second ring.
