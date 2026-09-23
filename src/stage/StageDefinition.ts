@@ -16,6 +16,7 @@ export interface StageSolidDefinition {
 
 export interface StagePaintSurfaceDefinition {
   id: string;
+  backingSolidId: string;
   center: StageVector3;
   uAxis: StageVector3;
   vAxis: StageVector3;
@@ -150,6 +151,7 @@ export const TEST_STAGE_DEFINITION: StageDefinition = {
   paintSurfaces: [
     {
       id: 'main-floor',
+      backingSolidId: 'MainBase',
       center: [0, 0.03, 0],
       uAxis: [1, 0, 0],
       vAxis: [0, 0, 1],
@@ -159,6 +161,7 @@ export const TEST_STAGE_DEFINITION: StageDefinition = {
     },
     {
       id: 'upper-floor',
+      backingSolidId: 'UpperSupport',
       center: [5.1, 2.45, 1.4],
       uAxis: [1, 0, 0],
       vAxis: [0, 0, 1],
@@ -168,6 +171,7 @@ export const TEST_STAGE_DEFINITION: StageDefinition = {
     },
     {
       id: 'ramp-east',
+      backingSolidId: 'RampCollider',
       center: [5.1, 1.22, -3.25],
       uAxis: [1, 0, 0],
       vAxis: [0, Math.sin(rampAngle), Math.cos(rampAngle)],
@@ -177,6 +181,7 @@ export const TEST_STAGE_DEFINITION: StageDefinition = {
     },
     {
       id: 'wall-west',
+      backingSolidId: 'WallBacker',
       center: [-6.2, 2.55, -4.7],
       uAxis: [1, 0, 0],
       vAxis: [0, 1, 0],

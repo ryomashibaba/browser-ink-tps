@@ -9,6 +9,14 @@ export interface SurfaceRayHit {
   v: number;
 }
 
+export interface SurfaceProjection {
+  u: number;
+  v: number;
+  signedPlaneDistance: number;
+  planeDistance: number;
+  inside: boolean;
+}
+
 export class PaintSurface {
   public readonly ownerGrid: Int8Array;
   public readonly flagsGrid: Uint16Array;
@@ -124,6 +132,57 @@ export class PaintSurface {
     return out;
   }
 
+  /**
+   * Canonical world -> PaintSurface conversion.
+   * Gameplay sampling and hit resolution must use this instead of duplicating basis math.
+   */
+  public projectWorldPoint(point: Vec3): SurfaceProjection {
+    const rel = point.clone().sub(this.center);
+    const signedPlaneDistance = rel.dot(this.normal);
+    const u = rel.dot(this.uAxis) + this.widthMeters * 0.5;
+    const v = rel.dot(this.vAxis) + this.heightMeters * 0.5;
+    const epsilon = 1e-4;
+    return {
+      u,
+      v,
+      signedPlaneDistance,
+      planeDistance: Math.abs(signedPlaneDistance),
+      inside:
+        u >= -epsilon &&
+        v >= -epsilon &&
+        u <= this.widthMeters + epsilon &&
+        v <= this.heightMeters + epsilon
+    };
+  }
+
+  public assertCoordinateRoundTrip(tolerance = 1e-5): number {
+    const probes: readonly [number, number][] = [
+      [0, 0],
+      [this.widthMeters, 0],
+      [this.widthMeters, this.heightMeters],
+      [0, this.heightMeters],
+      [this.widthMeters * 0.5, this.heightMeters * 0.5],
+      [this.widthMeters * 0.25, this.heightMeters * 0.75]
+    ];
+    let maxError = 0;
+
+    for (const [u, v] of probes) {
+      const projected = this.projectWorldPoint(this.localToWorld(u, v));
+      const error = Math.max(
+        Math.abs(projected.u - u),
+        Math.abs(projected.v - v),
+        projected.planeDistance
+      );
+      maxError = Math.max(maxError, error);
+      if (!projected.inside || error > tolerance) {
+        throw new Error(
+          `PaintSurface ${this.id} coordinate round-trip failed at (${u}, ${v}); error=${error}.`
+        );
+      }
+    }
+    return maxError;
+  }
+
   public intersectRay(origin: Vec3, direction: Vec3): SurfaceRayHit | null {
     const denom = this.normal.dot(direction);
     if (Math.abs(denom) < 1e-6) return null;
@@ -133,23 +192,15 @@ export class PaintSurface {
     if (distance <= 0) return null;
 
     const worldPoint = direction.clone().mulScalar(distance).add(origin);
-    const rel = worldPoint.clone().sub(this.center);
-    const localUCentered = rel.dot(this.uAxis);
-    const localVCentered = rel.dot(this.vAxis);
-    const u = localUCentered + this.widthMeters * 0.5;
-    const v = localVCentered + this.heightMeters * 0.5;
-
-    const epsilon = 1e-4;
-    if (u < -epsilon || v < -epsilon || u > this.widthMeters + epsilon || v > this.heightMeters + epsilon) {
-      return null;
-    }
+    const projected = this.projectWorldPoint(worldPoint);
+    if (!projected.inside) return null;
 
     return {
       surface: this,
       distance,
       worldPoint,
-      u: Math.min(this.widthMeters, Math.max(0, u)),
-      v: Math.min(this.heightMeters, Math.max(0, v))
+      u: Math.min(this.widthMeters, Math.max(0, projected.u)),
+      v: Math.min(this.heightMeters, Math.max(0, projected.v))
     };
   }
 

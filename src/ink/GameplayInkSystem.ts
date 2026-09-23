@@ -53,15 +53,11 @@ export class GameplayInkSystem {
     for (const surface of this.surfaces.values()) {
       if (requiredFlags !== 0 && (surface.baseFlags & requiredFlags) !== requiredFlags) continue;
       if (excludedFlags !== 0 && (surface.baseFlags & excludedFlags) !== 0) continue;
-      const rel = point.clone().sub(surface.center);
-      const signedPlaneDistance = rel.dot(surface.normal);
-      const planeDistance = Math.abs(signedPlaneDistance);
-      if (planeDistance > maxPlaneDistance) continue;
+      const projected = surface.projectWorldPoint(point);
+      if (projected.planeDistance > maxPlaneDistance || !projected.inside) continue;
 
-      const u = rel.dot(surface.uAxis) + surface.widthMeters * 0.5;
-      const v = rel.dot(surface.vAxis) + surface.heightMeters * 0.5;
-      if (u < 0 || v < 0 || u > surface.widthMeters || v > surface.heightMeters) continue;
-
+      const u = Math.min(surface.widthMeters, Math.max(0, projected.u));
+      const v = Math.min(surface.heightMeters, Math.max(0, projected.v));
       const x = Math.min(surface.widthCells - 1, Math.max(0, Math.floor(u / surface.cellSize)));
       const y = Math.min(surface.heightCells - 1, Math.max(0, Math.floor(v / surface.cellSize)));
       const index = surface.index(x, y);
@@ -71,7 +67,7 @@ export class GameplayInkSystem {
         flags: surface.flagsGrid[index] ?? surface.baseFlags,
         u,
         v,
-        planeDistance
+        planeDistance: projected.planeDistance
       };
 
       if (!best || candidate.planeDistance < best.planeDistance) best = candidate;

@@ -26,6 +26,7 @@ import { PlayerInput } from '../input/PlayerInput';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
 import { PlayerController } from '../player/PlayerController';
 import { ProjectileSystem } from '../projectile/ProjectileSystem';
+import { auditStageCoordinates } from '../stage/CoordinateAudit';
 import { buildTestStage, defineTestSurfaces, TEST_STAGE_DEFINITION } from '../stage/TestStage';
 import { ControlPanel } from '../ui/ControlPanel';
 import { DebugOverlay } from '../ui/DebugOverlay';
@@ -98,6 +99,10 @@ export class InkLabApp {
     );
 
     buildTestStage(app, TEST_STAGE_DEFINITION, surfaces, this.atlas);
+    const coordinateAudit = auditStageCoordinates(surfaces, TEST_STAGE_DEFINITION);
+    this.stats.coordinateAudit = coordinateAudit.summary;
+    console.info('[CoordinateAudit]', coordinateAudit);
+
     const cameraEntity = this.createCamera();
     this.createLighting();
 
@@ -263,25 +268,17 @@ export class InkLabApp {
       return;
     }
 
-    const tuning = GAME_CONFIG.debug.rollQaPad;
-    const requests = [];
-    const startV = Math.max(tuning.marginMeters, tuning.startVMeters);
-    const endV = Math.min(surface.heightMeters - tuning.marginMeters, tuning.endVMeters);
-    const centerU = surface.widthMeters * 0.5;
-
-    for (let v = startV; v <= endV + 1e-6; v += tuning.stepMeters) {
-      requests.push(this.coordinator.makeDebugRequest(
-        this.selectedTeam,
-        surface.id,
-        centerU,
-        v,
-        tuning.brushRadiusMeters,
-        0,
-        tuning.widthStretch
-      ));
-    }
-
-    this.coordinator.enqueueMany(requests);
+    // Fill the entire main-floor in PaintSurface-local coordinates.
+    // CPU rasterization and GPU atlas clipping should both end at the exact surface boundary.
+    this.coordinator.enqueue(this.coordinator.makeDebugRequest(
+      this.selectedTeam,
+      surface.id,
+      surface.widthMeters * 0.5,
+      surface.heightMeters * 0.5,
+      surface.heightMeters,
+      0,
+      surface.widthMeters / surface.heightMeters
+    ));
   }
 
   private enqueueStressTest(count: number): void {
