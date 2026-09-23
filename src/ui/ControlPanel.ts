@@ -25,8 +25,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T12 Stable</h1>
-      <p>T0–T12 is frozen. Recast 4v4 CPU navigation, tactics, combat, Splat, and Respawn are stable; T13 will add the production stage and player-facing HUD/map.</p>
+      <h1>Browser Ink TPS · T13 Candidate</h1>
+      <p>T0–T12 remains frozen. T13 adds the production-stage contract, player-facing HUD, and live Tactical Map without changing frozen gameplay coordinates.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -73,7 +73,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T12: 7 CPU agents · Recast Crowd · tactical painting + shared projectile combat · CPU HP/Ink · Splat/Respawn · Restart Match resets full 4v4 state';
+    hint.textContent = 'T13: production HUD + live Tactical Map · M toggles expanded map · QA panels remain available while stage presentation is validated';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

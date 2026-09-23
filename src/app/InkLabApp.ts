@@ -34,9 +34,15 @@ import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhys
 import { PlayerController } from '../player/PlayerController';
 import { ProjectileSystem } from '../projectile/ProjectileSystem';
 import { auditStageCoordinates } from '../stage/CoordinateAudit';
-import { buildTestStage, defineTestSurfaces, TEST_STAGE_DEFINITION } from '../stage/TestStage';
+import {
+  buildTestStage,
+  defineTestSurfaces,
+  PRODUCTION_STAGE_DEFINITION
+} from '../stage/TestStage';
 import { ControlPanel } from '../ui/ControlPanel';
 import { DebugOverlay } from '../ui/DebugOverlay';
+import { PlayerHud } from '../ui/PlayerHud';
+import { TacticalMap } from '../ui/TacticalMap';
 
 export class InkLabApp {
   public static async boot(canvas: HTMLCanvasElement, uiRoot: HTMLElement): Promise<InkLabApp> {
@@ -79,6 +85,8 @@ export class InkLabApp {
   private readonly atlas: GpuInkAtlas;
   private readonly coordinator: PaintCoordinator;
   private readonly overlay: DebugOverlay;
+  private readonly hud: PlayerHud;
+  private readonly tacticalMap: TacticalMap;
   private readonly controls: ControlPanel;
   private readonly input: PlayerInput;
   private readonly physics: RapierStagePhysics;
@@ -107,7 +115,7 @@ export class InkLabApp {
     private readonly canvas: HTMLCanvasElement,
     uiRoot: HTMLElement
   ) {
-    const surfaces = defineTestSurfaces(this.gameplayInk, TEST_STAGE_DEFINITION);
+    const surfaces = defineTestSurfaces(this.gameplayInk, PRODUCTION_STAGE_DEFINITION);
     const requestedAtlas = resolveAtlasSize(app.graphicsDevice.maxTextureSize);
     this.atlas = new GpuInkAtlas(
       app,
@@ -117,8 +125,8 @@ export class InkLabApp {
       GAME_CONFIG.ink.atlasGutterPixels
     );
 
-    buildTestStage(app, TEST_STAGE_DEFINITION, surfaces, this.atlas);
-    const coordinateAudit = auditStageCoordinates(surfaces, TEST_STAGE_DEFINITION);
+    buildTestStage(app, PRODUCTION_STAGE_DEFINITION, surfaces, this.atlas);
+    const coordinateAudit = auditStageCoordinates(surfaces, PRODUCTION_STAGE_DEFINITION);
     this.stats.coordinateAudit = coordinateAudit.summary;
     console.info('[CoordinateAudit]', coordinateAudit);
 
@@ -127,7 +135,7 @@ export class InkLabApp {
 
     this.coordinator = new PaintCoordinator(this.gameplayInk, this.atlas, this.stats);
     this.input = new PlayerInput(canvas);
-    this.physics = new RapierStagePhysics(this.clock.stepSeconds, TEST_STAGE_DEFINITION);
+    this.physics = new RapierStagePhysics(this.clock.stepSeconds, PRODUCTION_STAGE_DEFINITION);
     this.cameraController = new ThirdPersonCamera(canvas, cameraEntity, surfaces, this.physics);
     this.player = new PlayerController(
       app,
@@ -140,7 +148,7 @@ export class InkLabApp {
     this.resources = new PlayerResources(this.stats);
     this.combatTargets = new CombatTargetSystem(app, this.stats);
     this.match = new MatchController(this.gameplayInk, this.stats);
-    this.navigation = new RecastStageNavigation(TEST_STAGE_DEFINITION, this.stats);
+    this.navigation = new RecastStageNavigation(PRODUCTION_STAGE_DEFINITION, this.stats);
     this.cpuAgents = new CpuAgentSystem(
       app,
       this.navigation,
@@ -216,6 +224,21 @@ export class InkLabApp {
       this.gameplayInk,
       this.atlas,
       app.graphicsDevice.deviceType
+    );
+    this.hud = new PlayerHud(
+      uiRoot,
+      this.stats,
+      this.gameplayInk,
+      PRODUCTION_STAGE_DEFINITION,
+      () => this.selectedTeam
+    );
+    this.tacticalMap = new TacticalMap(
+      uiRoot,
+      PRODUCTION_STAGE_DEFINITION,
+      this.gameplayInk,
+      this.cpuAgents,
+      this.stats,
+      () => this.selectedTeam
     );
 
     this.bindMainLoop();
@@ -315,6 +338,8 @@ export class InkLabApp {
       this.stats.gpuPaintBacklog = this.atlas.backlog;
       this.stats.dirtyTiles = this.gameplayInk.totalDirtyTiles();
       this.stats.frame(dt * 1000);
+      this.hud.update();
+      this.tacticalMap.update();
       this.overlay.update();
     });
   }
@@ -431,11 +456,11 @@ export class InkLabApp {
   }
 
   private getSurfaceOutwardNormal(surface: PaintSurface): Vec3 {
-    const spec = TEST_STAGE_DEFINITION.paintSurfaces.find(
+    const spec = PRODUCTION_STAGE_DEFINITION.paintSurfaces.find(
       (candidate) => candidate.id === surface.id
     );
     const solid = spec
-      ? TEST_STAGE_DEFINITION.solids.find((candidate) => candidate.id === spec.backingSolidId)
+      ? PRODUCTION_STAGE_DEFINITION.solids.find((candidate) => candidate.id === spec.backingSolidId)
       : undefined;
     const outward = surface.normal.clone();
     if (!solid) return outward;

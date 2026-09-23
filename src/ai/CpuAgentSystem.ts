@@ -177,6 +177,19 @@ export class CpuAgentSystem {
     this.pendingShots.length = 0;
   }
 
+  public forEachMapAgent(
+    visitor: (
+      id: string,
+      team: Team.A | Team.B,
+      position: Vec3,
+      active: boolean
+    ) => void
+  ): void {
+    for (const bot of this.bots) {
+      visitor(bot.id, bot.team, bot.position, bot.lifeState === 'ACTIVE');
+    }
+  }
+
   public findNearestCombatHit(
     from: Vec3,
     to: Vec3,
