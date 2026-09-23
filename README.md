@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.10.0 / T15 STABLE FREEZE**
+**v0.11.0 / T16 WEAPON KIT SYSTEM CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -89,8 +89,8 @@ Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 - Esc — release Pointer Lock
 - WASD — move
 - Space — jump
-- F — throw Pulse Bomb sub weapon (70 Ink)
-- G — activate Turf Pulse when SPECIAL is full
+- F — use the current main weapon's assigned sub weapon
+- G — activate the current main weapon's assigned special when SPECIAL is full
 - Twin Comets / Dualies while Human: hold Left mouse + WASD movement + press Space — dodge roll (up to two chained rolls)
 - Shift — Squid form / swim
 - Shift + move into OWN-painted wall — wall swim
@@ -306,3 +306,20 @@ v0.10.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `901b8c73f5313a
 ### Next: T16 Weapon Kits
 
 T16 expands the frozen T15 sub/special foundation into per-main-weapon kits with multiple project-original sub and special behaviors.
+
+
+### T16 v0.11.0 Weapon Kit candidate
+
+T0–T15 remains frozen. Each main weapon now owns one fixed project-original sub/special pair.
+
+Sub pool:
+- Pulse Bomb — 70 Ink, 1.0 s post-contact fuse
+- Snap Bomb — 45 Ink, impact detonation
+- Anchor Bomb — 70 Ink, 2.0 s stuck-contact fuse
+
+Special pool:
+- Turf Pulse — 180p instant radial
+- Triple Strike — 190p three staggered aim-target strikes
+- Drift Storm — 200p moving multi-pulse field
+
+Q/E or ControlPanel weapon switching changes the entire kit. The HUD and Debug overlay show the currently equipped sub and special.
