@@ -13,6 +13,7 @@ import { createInkSurfaceMaterial } from '../ink/InkSurfaceMaterial';
 import { PaintSurface } from '../ink/PaintSurface';
 import type { GpuInkAtlas } from '../ink/GpuInkAtlas';
 import {
+  PRODUCTION_STAGE_DEFINITION,
   TEST_STAGE_DEFINITION,
   type StageDefinition,
   type StageMaterialKey,
@@ -20,7 +21,7 @@ import {
   type StageVector3
 } from './StageDefinition';
 
-export { TEST_STAGE_DEFINITION } from './StageDefinition';
+export { PRODUCTION_STAGE_DEFINITION, TEST_STAGE_DEFINITION } from './StageDefinition';
 
 export interface StageBuildResult {
   surfaces: PaintSurface[];
@@ -28,7 +29,7 @@ export interface StageBuildResult {
 
 export function defineTestSurfaces(
   gameplayInk: GameplayInkSystem,
-  definition: StageDefinition = TEST_STAGE_DEFINITION
+  definition: StageDefinition = PRODUCTION_STAGE_DEFINITION
 ): PaintSurface[] {
   const cell = GAME_CONFIG.ink.cellSizeMeters;
   const tile = GAME_CONFIG.ink.dirtyTileCells;

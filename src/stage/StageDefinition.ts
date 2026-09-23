@@ -25,7 +25,23 @@ export interface StagePaintSurfaceDefinition {
   flags: SurfaceFlags;
 }
 
+export interface StageWorldBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+export interface StageMetadata {
+  id: string;
+  displayName: string;
+  worldBounds: StageWorldBounds;
+  teamASpawn: StageVector3;
+  teamBSpawn: StageVector3;
+}
+
 export interface StageDefinition {
+  metadata: StageMetadata;
   solids: readonly StageSolidDefinition[];
   paintSurfaces: readonly StagePaintSurfaceDefinition[];
 }
@@ -45,7 +61,19 @@ const rampAngle = 20 * Math.PI / 180;
  * - projectile/camera blocker participation is declared here instead of duplicated elsewhere.
  * - PaintSurface definitions remain explicit so the frozen CPU-authoritative U/V basis is unchanged.
  */
-export const TEST_STAGE_DEFINITION: StageDefinition = {
+export const PRODUCTION_STAGE_DEFINITION: StageDefinition = {
+  metadata: {
+    id: 'inkworks-junction',
+    displayName: 'INKWORKS JUNCTION',
+    worldBounds: {
+      minX: -9.4,
+      maxX: 9.4,
+      minZ: -7.4,
+      maxZ: 7.4
+    },
+    teamASpawn: [0, 0.95, 5.8],
+    teamBSpawn: [0, 0.95, -5.8]
+  },
   solids: [
     {
       id: 'MainBase',
@@ -191,3 +219,10 @@ export const TEST_STAGE_DEFINITION: StageDefinition = {
     }
   ]
 };
+
+
+/**
+ * Legacy alias retained so frozen T8-T12 imports do not need a broad rename.
+ * T13 promotes this same canonical geometry to the production-stage contract.
+ */
+export const TEST_STAGE_DEFINITION = PRODUCTION_STAGE_DEFINITION;
