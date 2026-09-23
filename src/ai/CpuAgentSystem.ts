@@ -203,19 +203,6 @@ export class CpuAgentSystem {
     }
   }
 
-  public resolveSuperJumpTarget(
-    id: string,
-    team: Team.A | Team.B,
-    out = new Vec3()
-  ): Vec3 | null {
-    const bot = this.bots.find((candidate) =>
-      candidate.id === id &&
-      candidate.team === team &&
-      candidate.lifeState === 'ACTIVE'
-    );
-    return bot ? out.copy(bot.position) : null;
-  }
-
   public findNearestCombatHit(
     from: Vec3,
     to: Vec3,
