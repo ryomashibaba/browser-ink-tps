@@ -296,6 +296,7 @@ export class InkLabApp {
           this.projectiles.currentPlayerWeapon.weaponClass === 'DUALIES' &&
           this.player.currentMode === 'HUMAN' &&
           !this.input.squidHeld &&
+          this.input.fireHeld &&
           this.input.consumeJump();
 
         if (dualieSpaceDodge) {
