@@ -627,7 +627,7 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PARTIAL PASS — HUD/Tactical Map presentation and corrected vertical map orientation confirmed; production geometry QA remains**
 
 T13 candidate adds:
 
@@ -656,3 +656,50 @@ T13 geometry policy:
 - future stage geometry must continue to drive Render / Rapier / Recast / PaintSurface / Tactical Map from shared canonical definitions
 
 T13 remains **IMPLEMENTATION CANDIDATE**.
+
+### T13 presentation / map hosted acceptance
+
+User confirmation date: 2026-09-23
+
+Accepted:
+
+- player-facing HUD renders and tracks live Turf / match / Ink / HP state
+- countdown / Splat / result center messages render correctly
+- Tactical Map compact/expanded presentation works
+- Tactical Map human/CPU/Turf world projection works
+- initial Tactical Map vertical orientation was reversed
+- vertical map projection was corrected in `c5a72770a2b3e7c05d8bca660bbe28bc20099872`
+- corrected Tactical Map orientation was confirmed by the user
+
+### T13 production geometry expansion candidate
+
+Implementation:
+`fc647806c59e43831a978897baa21e359c5305d7`
+
+Workflow:
+`35817233372`
+
+Automated results:
+
+- TypeScript check: PASS
+- production build: PASS
+- Pages deploy: PASS
+- hosted production-stage QA: **PENDING**
+
+Production geometry changes:
+
+- main playable floor expanded from 18×14m to 32×24m
+- canonical world bounds expanded to ±16.4m X / ±12.4m Z
+- human team spawns moved to ±10.2m Z
+- four CPU spawn slots per team moved into Stage metadata
+- 25 tactical navigation nodes moved into Stage metadata
+- MatchController now reads player spawn positions from Stage metadata
+- CPU tactical goals and CPU spawn positions now read Stage metadata rather than duplicated hard-coded coordinates
+- added north/south asymmetric cover pairs
+- added west/east mid-lane cover
+- added two junction-center blocks
+- added eight new scoreable paintable cover-top surfaces
+- outer rails expanded to the new stage bounds
+- original upper platform, ramp, wall, bridge, and T8/T9 validation geometry are retained
+
+T13 remains **IMPLEMENTATION CANDIDATE** until production-stage hosted QA passes.

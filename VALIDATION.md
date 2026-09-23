@@ -751,7 +751,7 @@ Automated result:
 - production build: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PARTIAL PASS — HUD/map accepted after vertical-orientation correction; production-stage geometry pending**
 
 Architecture validation:
 
@@ -777,3 +777,52 @@ Hosted QA required before the T13 production-geometry expansion:
 10. HUD/Map must not materially destabilize FPS, dropped simulation, GPU backlog, or the frozen T8–T12 gameplay behaviors
 
 T13 remains **IMPLEMENTATION CANDIDATE** until this presentation/coordinate QA passes.
+
+## T13 presentation / map hosted acceptance
+
+User confirmation date: 2026-09-23
+
+- HUD: PASS
+- Tactical Map display/markers/Turf: PASS
+- Tactical Map vertical orientation: corrected and PASS
+- correction commit: `c5a72770a2b3e7c05d8bca660bbe28bc20099872`
+
+## T13 production-stage geometry candidate
+
+Implementation:
+`fc647806c59e43831a978897baa21e359c5305d7`
+
+Workflow:
+`35817233372`
+
+Automated result:
+
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Architecture validation:
+
+- Render / Rapier / Recast / PaintSurface / Tactical Map continue to consume the shared StageDefinition
+- player spawn positions moved from duplicated GAME_CONFIG values to Stage metadata
+- CPU spawn slots and tactical nodes moved to Stage metadata
+- the original wall/ramp/upper-platform validation structures remain present
+- new cover-top PaintSurfaces each bind to an explicit backing solid
+- existing PaintRequest/PaintEvent, gameplay ink, projectile, locomotion, match, and CPU contracts are unchanged
+
+Hosted QA required before T13 Freeze:
+
+1. stage should now be visibly much larger, with broad outer lanes and additional cover while retaining the original ramp/wall/upper structures
+2. player Team A/B respawns should occur near opposite far ends of the enlarged stage
+3. all seven CPUs should spawn in four-slot team formations near those far ends and navigate the whole enlarged arena
+4. CPU Painter/Skirmisher/Anchor behavior should spread into the new outer lanes rather than clustering only in the old 18×14 area
+5. new cover boxes must block player/camera/projectiles correctly and CPUs must path around them
+6. cover tops should accept visible ink and contribute to Turf scoring
+7. wall swim / Surge on the retained wall and ramp/upper-platform traversal should still work
+8. Tactical Map should show the enlarged arena, new cover footprint, new spawn positions, Turf, player, and CPU locations with the already-corrected orientation
+9. Coordinate Audit should remain PASS and no GPU atlas cross-surface paint mismatch should reappear
+10. full 4v4 performance / dropped-simulation / GPU backlog should remain acceptable
+
+T13 remains **IMPLEMENTATION CANDIDATE**.

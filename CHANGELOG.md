@@ -1,3 +1,24 @@
+## v0.8.0 T13 Production Geometry Candidate — 2026-09-23
+
+- HUD / Tactical Map hosted QA accepted
+- fixed and accepted Tactical Map vertical orientation
+- expanded main arena to 32×24m
+- expanded outer rails and world bounds
+- added eight production cover structures with scoreable paintable tops
+- moved human spawn, CPU spawn slots, and tactical nodes into Stage metadata
+- retained original upper/ramp/wall/bridge validation structures
+
+Implementation:
+`fc647806c59e43831a978897baa21e359c5305d7`
+
+Workflow:
+`35817233372`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted production-stage QA: PENDING
+
 ## v0.8.0 T13 Stage / HUD / Tactical Map Candidate — 2026-09-23
 
 ### Production-stage contract

@@ -26,7 +26,7 @@ export class ControlPanel {
     panel.className = 'panel';
     panel.innerHTML = `
       <h1>Browser Ink TPS · T13 Candidate</h1>
-      <p>T0–T12 remains frozen. T13 adds the production-stage contract, player-facing HUD, and live Tactical Map without changing frozen gameplay coordinates.</p>
+      <p>T0–T12 remains frozen. T13 now expands INKWORKS JUNCTION to a 32×24m production arena while keeping HUD/Map/physics/Recast/ink on one StageDefinition.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -73,7 +73,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T13: production HUD + live Tactical Map · M toggles expanded map · QA panels remain available while stage presentation is validated';
+    hint.textContent = 'T13: enlarged production arena · far-end team spawns · outer lanes + new cover · paintable cover tops · M toggles Tactical Map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
