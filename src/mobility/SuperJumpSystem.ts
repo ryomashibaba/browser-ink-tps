@@ -41,7 +41,7 @@ export class SuperJumpSystem {
   private prepRemaining = 0;
   private travelElapsed = 0;
   private landingRemaining = 0;
-  private arcHeight = GAME_CONFIG.superJump.minArcHeightMeters;
+  private arcHeight: number = GAME_CONFIG.superJump.minArcHeightMeters;
 
   private readonly travelEntity: Entity;
   private readonly markerEntity: Entity;
