@@ -1,3 +1,14 @@
+## v0.9.5 T14 Two-Ring Charge Candidate — 2026-09-23
+
+- added explicit first/second charge-ring data to charge-capable weapon profiles
+- Rotor Cannon now follows Splatling-style charge staging: ring 1 establishes maximum projectile range/speed while ring 2 mainly increases firing duration
+- Rotor Cannon tuning now uses 0.80 s first ring / 1.20 s full charge and approximately 18 / 36 shot first/full volleys
+- Chord Stringer now uses 0.50 s first ring / 1.20 s full charge
+- Chord Stringer direct damage reaches 35 by ring 1, ring 1 unlocks independent 0.75 s delayed explosions, and ring 2 converges the three-arrow spread while extending range/paint
+- Stringer ink consumption now follows the 5 / 6 / 8.5 charge progression
+- added separate two-ring HUD rendering, first-ring feedback pulse, two-stage 3D charge feedback, and Debug charge-ring state
+- T0–T13 Freeze and PaintRequest -> immutable PaintEvent authority are unchanged
+
 ## v0.9.4 T14 Dualies Post-Roll / Splatling Charge Candidate — 2026-09-23
 
 - Dualies dodge now requires Human form + Dualies + primary fire held + non-zero movement input + Space; stationary fire+Space remains a normal jump.
