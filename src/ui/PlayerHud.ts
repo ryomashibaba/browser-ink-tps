@@ -104,6 +104,14 @@ export class PlayerHud {
   private updateChargeFx(teamClass: string): void {
     const kind = chargeKind(this.stats.playerWeaponClass);
     const percent = clampPercent(this.stats.playerWeaponChargePercent);
+    const firstRingPercent = clampPercent(this.stats.playerWeaponFirstRingPercent);
+    const twoRing = (kind === 'splatling' || kind === 'stringer') && firstRingPercent > 0;
+    const ring1Progress = twoRing
+      ? clampPercent(percent / Math.max(firstRingPercent, 0.001) * 100)
+      : percent;
+    const ring2Progress = twoRing
+      ? clampPercent((percent - firstRingPercent) / Math.max(100 - firstRingPercent, 0.001) * 100)
+      : 0;
     const active = kind !== null && percent > 0.2;
 
     if (!active || !kind) {
@@ -113,12 +121,14 @@ export class PlayerHud {
     }
 
     this.chargeFx.className =
-      `active ${kind} ${teamClass} ${percent >= 99 ? 'full' : ''}`;
+      `active ${kind} ${teamClass} ${this.stats.playerWeaponChargeRing >= 1 ? 'ring1-ready' : ''} ${this.stats.playerWeaponChargeRing >= 2 ? 'ring2-ready' : ''} ${percent >= 99 ? 'full' : ''}`;
     this.chargeFx.style.setProperty('--charge-deg', `${percent * 3.6}deg`);
     this.chargeFx.style.setProperty('--charge-pct', `${percent}%`);
+    this.chargeFx.style.setProperty('--ring1-deg', `${ring1Progress * 3.6}deg`);
+    this.chargeFx.style.setProperty('--ring2-deg', `${ring2Progress * 3.6}deg`);
     this.chargeFx.style.setProperty(
       '--stringer-offset',
-      `${Math.max(3, 22 * (1 - percent / 100))}px`
+      `${Math.max(3, 22 * (1 - ring2Progress / 100))}px`
     );
 
     switch (kind) {
@@ -128,11 +138,11 @@ export class PlayerHud {
         break;
       case 'splatling':
         this.chargeFx.innerHTML =
-          '<div class="splatling-ring"></div><div class="splatling-cross h"></div><div class="splatling-cross v"></div><i></i><i></i><i></i><i></i>';
+          '<div class="splatling-ring ring-one"></div><div class="splatling-ring ring-two"></div><div class="splatling-cross h"></div><div class="splatling-cross v"></div><i></i><i></i><i></i><i></i>';
         break;
       case 'stringer':
         this.chargeFx.innerHTML =
-          '<div class="stringer-arrow left"></div><div class="stringer-arrow mid"></div><div class="stringer-arrow right"></div>';
+          '<div class="stringer-ring ring-one"></div><div class="stringer-ring ring-two"></div><div class="stringer-arrow left"></div><div class="stringer-arrow mid"></div><div class="stringer-arrow right"></div>';
         break;
       case 'splatana':
         this.chargeFx.innerHTML =
