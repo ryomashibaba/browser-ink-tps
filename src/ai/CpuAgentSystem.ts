@@ -6,7 +6,7 @@ import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
-import { cpuLoadout } from './CpuLoadoutCatalog';
+import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import type { StageDefinition } from '../stage/StageDefinition';
@@ -15,15 +15,27 @@ export interface CpuCombatHit {
   botId: string;
   distance: number;
   point: Vec3;
+  guarded: boolean;
 }
+
+export type CpuWeaponAction =
+  | 'PROJECTILE'
+  | 'ROLLER_FLICK'
+  | 'ROLLER_ROLL'
+  | 'BRUSH_SWIPE'
+  | 'BRELLA_BURST'
+  | 'STRINGER_RELEASE'
+  | 'SPLATANA_RELEASE';
 
 export interface CpuFireRequest {
   sourceId: string;
   team: Team.A | Team.B;
   origin: Vec3;
+  bodyPosition: Vec3;
   target: Vec3;
   weaponId: WeaponId;
   charge: number;
+  action: CpuWeaponAction;
 }
 
 type CpuMobilityState =
@@ -55,6 +67,12 @@ interface CpuBot {
   weaponChargeSeconds: number;
   weaponBurstShotsRemaining: number;
   weaponBurstCooldown: number;
+  weaponRollPaintCooldown: number;
+  weaponFacing: Vec3;
+  weaponGuardHp: number;
+  weaponGuardBreakSeconds: number;
+  weaponGuarding: boolean;
+  guardEntity: Entity;
   hp: number;
   ink: number;
   inkRecoveryLockSeconds: number;
@@ -105,6 +123,7 @@ export class CpuAgentSystem {
       if (bot.agent) this.navigation.removeAgent(bot.agent);
       bot.entity.destroy();
       bot.jumpMarker.destroy();
+      bot.guardEntity.destroy();
     }
     this.bots.length = 0;
     this.pendingShots.length = 0;
@@ -120,6 +139,8 @@ export class CpuAgentSystem {
     this.stats.cpuSuperJumpLandings = 0;
     this.stats.cpuSuperJumpCancels = 0;
     this.stats.cpuSuperJumpLast = '-';
+    this.stats.cpuWeaponGuardBlocks = 0;
+    this.stats.cpuAdvancedQa = 'default';
 
     const teamACount = humanTeam === Team.A ? 3 : 4;
     const teamBCount = GAME_CONFIG.cpu.cpuPlayers - teamACount;
@@ -307,6 +328,26 @@ export class CpuAgentSystem {
       )) {
         return true;
       }
+    }
+    return false;
+  }
+
+  public forceAdvancedWeaponQa(): boolean {
+    if (this.bots.length === 0) return false;
+
+    let changed = 0;
+    for (let i = 0; i < this.bots.length && i < CPU_ADVANCED_QA_WEAPONS.length; i += 1) {
+      const bot = this.bots[i]!;
+      bot.weaponId = CPU_ADVANCED_QA_WEAPONS[i]!;
+      this.resetCpuWeaponRuntime(bot, true);
+      bot.fireRemaining = 0;
+      changed += 1;
+    }
+
+    if (changed > 0) {
+      this.stats.cpuAdvancedQa = 'advanced-5';
+      this.syncStats();
+      return true;
     }
     return false;
   }
