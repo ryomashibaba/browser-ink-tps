@@ -9,10 +9,16 @@ import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+import {
+  subWeaponProfile,
+  type SubWeaponId,
+  type SubWeaponProfile
+} from '../weapons/WeaponKitCatalog';
 
 interface BombSlot {
   active: boolean;
   landed: boolean;
+  subId: SubWeaponId;
   team: Team.A | Team.B;
   position: Vec3;
   previousPosition: Vec3;
@@ -42,22 +48,21 @@ export class SubWeaponSystem {
     this.materialA = makeBombMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeBombMaterial(GAME_CONFIG.visual.teamB);
 
-    for (let i = 0; i < 4; i += 1) {
-      const entity = new Entity(`PulseBomb:${i}`);
+    for (let i = 0; i < 8; i += 1) {
+      const entity = new Entity(`SubWeapon:${i}`);
       entity.addComponent('render', {
         type: 'sphere',
         material: this.materialA,
         castShadows: false,
         receiveShadows: false
       });
-      const d = GAME_CONFIG.subWeapon.visualDiameterMeters;
-      entity.setLocalScale(d, d, d);
       entity.enabled = false;
       app.root.addChild(entity);
 
       this.bombs.push({
         active: false,
         landed: false,
+        subId: 'pulse-bomb',
         team: Team.A,
         position: new Vec3(),
         previousPosition: new Vec3(),
@@ -70,31 +75,37 @@ export class SubWeaponSystem {
   }
 
   public tryThrow(
+    subId: SubWeaponId,
     team: Team.A | Team.B,
     origin: Vec3,
     direction: Vec3
   ): boolean {
+    const profile = subWeaponProfile(subId);
     const slot = this.bombs.find((candidate) => !candidate.active);
     if (!slot) return false;
-    if (!this.resources.tryConsumeSubInk(GAME_CONFIG.subWeapon.inkCost)) return false;
+    if (!this.resources.tryConsumeSubInk(profile.inkCost)) return false;
 
     const aim = direction.clone().normalize();
     slot.active = true;
     slot.landed = false;
+    slot.subId = subId;
     slot.team = team;
-    slot.ttl = GAME_CONFIG.subWeapon.maxFlightSeconds;
-    slot.fuseSeconds = GAME_CONFIG.subWeapon.fuseSeconds;
+    slot.ttl = profile.maxFlightSeconds;
+    slot.fuseSeconds = profile.fuseSeconds;
     slot.position.copy(origin);
     slot.previousPosition.copy(origin);
-    slot.velocity.copy(aim).mulScalar(GAME_CONFIG.subWeapon.throwSpeedMetersPerSecond);
-    slot.velocity.y += GAME_CONFIG.subWeapon.upwardBoostMetersPerSecond;
+    slot.velocity.copy(aim).mulScalar(profile.throwSpeedMetersPerSecond);
+    slot.velocity.y += profile.upwardBoostMetersPerSecond;
 
     const mesh = slot.entity.render?.meshInstances[0];
     if (mesh) mesh.material = team === Team.A ? this.materialA : this.materialB;
+    const d = profile.visualDiameterMeters;
+    slot.entity.setLocalScale(d, d, d);
     slot.entity.setPosition(origin);
     slot.entity.enabled = true;
 
     this.stats.playerSubThrows += 1;
+    this.stats.playerSubWeaponName = profile.displayName;
     this.feedback.subThrow(team, origin);
     return true;
   }
@@ -102,22 +113,23 @@ export class SubWeaponSystem {
   public fixedUpdate(dt: number): void {
     for (const slot of this.bombs) {
       if (!slot.active) continue;
+      const profile = subWeaponProfile(slot.subId);
 
       slot.previousPosition.copy(slot.position);
 
       if (slot.landed) {
         slot.fuseSeconds = Math.max(0, slot.fuseSeconds - dt);
-        if (slot.fuseSeconds <= 0) this.explode(slot);
+        if (slot.fuseSeconds <= 0) this.explode(slot, profile);
         continue;
       }
 
       slot.ttl -= dt;
       if (slot.ttl <= 0) {
-        this.explode(slot);
+        this.explode(slot, profile);
         continue;
       }
 
-      slot.velocity.y -= GAME_CONFIG.subWeapon.gravityMetersPerSecond2 * dt;
+      slot.velocity.y -= profile.gravityMetersPerSecond2 * dt;
       this.delta.copy(slot.velocity).mulScalar(dt);
       const next = slot.position.clone().add(this.delta);
 
@@ -131,11 +143,11 @@ export class SubWeaponSystem {
       );
 
       if (paintWins && paintHit) {
-        this.land(slot, paintHit.worldPoint);
+        this.onContact(slot, profile, paintHit.worldPoint);
         continue;
       }
       if (blockerHit) {
-        this.land(slot, blockerHit.point);
+        this.onContact(slot, profile, blockerHit.point);
         continue;
       }
 
@@ -164,58 +176,71 @@ export class SubWeaponSystem {
     for (const slot of this.bombs) this.deactivate(slot);
   }
 
-  private land(slot: BombSlot, point: Vec3): void {
+  private onContact(
+    slot: BombSlot,
+    profile: SubWeaponProfile,
+    point: Vec3
+  ): void {
     slot.position.copy(point);
     slot.previousPosition.copy(point);
     slot.velocity.set(0, 0, 0);
+
+    if (profile.detonateOnImpact) {
+      this.explode(slot, profile);
+      return;
+    }
+
     slot.landed = true;
     slot.entity.setPosition(point);
     this.feedback.subFuse(slot.team, point, slot.fuseSeconds);
   }
 
-  private explode(slot: BombSlot): void {
-    const cfg = GAME_CONFIG.subWeapon;
-
-    // Outer splash + inner extra gives 30 / 100 damage zones without double-count ambiguity.
+  private explode(slot: BombSlot, profile: SubWeaponProfile): void {
     this.cpuAgents.applyAreaDamage(
       slot.position,
-      cfg.outerDamageRadiusMeters,
-      cfg.outerDamage,
+      profile.outerDamageRadiusMeters,
+      profile.outerDamage,
       slot.team
     );
     this.combatTargets.applyAreaDamage(
       slot.position,
-      cfg.outerDamageRadiusMeters,
-      cfg.outerDamage,
+      profile.outerDamageRadiusMeters,
+      profile.outerDamage,
       slot.team
     );
-    this.cpuAgents.applyAreaDamage(
-      slot.position,
-      cfg.innerDamageRadiusMeters,
-      cfg.innerExtraDamage,
-      slot.team
-    );
-    this.combatTargets.applyAreaDamage(
-      slot.position,
-      cfg.innerDamageRadiusMeters,
-      cfg.innerExtraDamage,
-      slot.team
-    );
+    if (profile.innerExtraDamage > 0 && profile.innerDamageRadiusMeters > 0) {
+      this.cpuAgents.applyAreaDamage(
+        slot.position,
+        profile.innerDamageRadiusMeters,
+        profile.innerExtraDamage,
+        slot.team
+      );
+      this.combatTargets.applyAreaDamage(
+        slot.position,
+        profile.innerDamageRadiusMeters,
+        profile.innerExtraDamage,
+        slot.team
+      );
+    }
 
-    this.paintExplosion(slot.team, slot.position);
-    this.feedback.subBurst(slot.team, slot.position, cfg.paintRadiusMeters);
+    this.paintExplosion(slot.team, slot.position, profile.paintRadiusMeters);
+    this.feedback.subBurst(slot.team, slot.position, profile.paintRadiusMeters);
     this.stats.playerSubExplosions += 1;
     this.deactivate(slot);
   }
 
-  private paintExplosion(team: Team.A | Team.B, center: Vec3): void {
-    const cfg = GAME_CONFIG.subWeapon;
-    const innerRadius = Math.max(0.5, cfg.paintRadiusMeters * 0.52);
+  private paintExplosion(
+    team: Team.A | Team.B,
+    center: Vec3,
+    paintRadius: number
+  ): void {
+    const innerRadius = Math.max(0.42, paintRadius * 0.52);
     this.paintWorldStamp(team, center, innerRadius, 2.0);
 
-    const ringRadius = cfg.paintRadiusMeters * 0.58;
-    for (let i = 0; i < 8; i += 1) {
-      const angle = i * Math.PI * 2 / 8;
+    const ringRadius = paintRadius * 0.58;
+    const count = paintRadius < 1.6 ? 6 : 8;
+    for (let i = 0; i < count; i += 1) {
+      const angle = i * Math.PI * 2 / count;
       const point = center.clone().add(new Vec3(
         Math.cos(angle) * ringRadius,
         0,
