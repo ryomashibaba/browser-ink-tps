@@ -90,6 +90,26 @@ export const GAME_CONFIG = Object.freeze({
     resultTieEpsilonPercent: 0.01,
     qaSplatDamage: 999
   },
+  cpu: {
+    totalParticipants: 8,
+    cpuPlayers: 7,
+    navigationCellSizeMeters: 0.18,
+    navigationCellHeightMeters: 0.10,
+    navigationMaxSlopeDegrees: 52,
+    navigationWalkableHeightVoxels: 12,
+    navigationWalkableClimbVoxels: 4,
+    navigationWalkableRadiusVoxels: 2,
+    agentRadiusMeters: 0.30,
+    agentHeightMeters: 1.40,
+    maxSpeedMetersPerSecond: 4.4,
+    maxAccelerationMetersPerSecond2: 18,
+    collisionQueryRangeMeters: 2.0,
+    pathOptimizationRangeMeters: 8.0,
+    separationWeight: 2.0,
+    tacticalThinkSeconds: 0.28,
+    paintCadenceSeconds: 0.22,
+    paintRadiusMeters: 0.42
+  },
   projectile: {
     poolSize: 128,
     fireIntervalSeconds: 0.105,
