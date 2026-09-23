@@ -1,4 +1,5 @@
 import { Vec3 } from 'playcanvas';
+import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { SurfaceFlags, Team } from '../ink/types';
 import type { StageDefinition } from '../stage/StageDefinition';
@@ -12,6 +13,17 @@ export interface TacticalAgentContext {
   humanTeam: Team.A | Team.B;
   currentPosition: Vec3;
   humanPosition: Vec3;
+}
+
+export interface TacticalJumpContext {
+  team: Team.A | Team.B;
+  role: CpuRole;
+  currentPosition: Vec3;
+  targetPosition: Vec3;
+  respawnRecovery: boolean;
+  nearestFriendlyDistanceMeters: number;
+  targetSafe: boolean;
+  targetIsHuman: boolean;
 }
 
 
@@ -36,6 +48,36 @@ export class CpuTacticalDirector {
       return this.anchorGoal(context, out);
     }
     return this.painterGoal(context, out);
+  }
+
+  public scoreSuperJumpCandidate(context: TacticalJumpContext): number {
+    if (!context.targetSafe) return Number.NEGATIVE_INFINITY;
+
+    const dx = context.targetPosition.x - context.currentPosition.x;
+    const dz = context.targetPosition.z - context.currentPosition.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance < GAME_CONFIG.cpu.superJumpMinDistanceMeters) {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    const forwardAdvance = context.team === Team.A ? -dz : dz;
+    if (
+      !context.respawnRecovery &&
+      context.nearestFriendlyDistanceMeters < GAME_CONFIG.cpu.superJumpRegroupDistanceMeters
+    ) {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    let score = Math.min(distance, 20) * 0.16 + forwardAdvance * 0.58;
+    if (context.respawnRecovery) score += 5.8;
+    else score += 1.2;
+
+    if (context.role === 'SKIRMISHER') score += 1.6;
+    else if (context.role === 'PAINTER') score += 0.7;
+    else score -= 2.4;
+
+    if (context.targetIsHuman) score += 0.35;
+    return score;
   }
 
   private painterGoal(context: TacticalAgentContext, out: Vec3): Vec3 {
