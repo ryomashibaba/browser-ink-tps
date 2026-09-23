@@ -42,8 +42,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T19 Candidate</h1>
-      <p>T0–T18 is frozen. T19 gives CPU roles distinct weapon-class loadouts instead of one shared shooter.</p>
+      <h1>Browser Ink TPS · T19A Stable Freeze</h1>
+      <p>T0–T19A is frozen. CPU Shooter/Dualies/Blaster/Slosher/Charger/Splatling parity is stable.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
