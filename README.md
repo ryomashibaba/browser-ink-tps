@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.12.0 / T17 SUPER JUMP CANDIDATE**
+**v0.12.0 / T17 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -355,3 +355,14 @@ The Tactical Map, HUD, landing marker, Debug overlay, camera follow, Splat/Respa
 #### T17 ally-target correction
 
 When a living friendly CPU is selected on the Tactical Map, Super Jump now locks the destination to that CPU's world position at the exact moment of selection. The destination and landing marker do not follow later CPU movement.
+
+
+### T17 Stable Freeze
+
+v0.12.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `38836bcf73f03b7623eb09e7a41436b83027ab76`; GitHub Actions run #222 passed TypeScript check, production build, and Pages deployment.
+
+The final stable ally-target rule is snapshot-based: clicking a living friendly CPU locks the destination to that CPU's position at selection time and never follows later CPU movement.
+
+### Next: T18 CPU Tactical Mobility
+
+The next planned phase extends long-range mobility to CPU decision-making without changing the frozen human Super Jump contracts.
