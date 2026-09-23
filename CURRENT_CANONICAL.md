@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.14.0 / T19A STABLE FREEZE
+# CURRENT_CANONICAL — v0.15.0 / T19B CPU ADVANCED MAIN-WEAPON PARITY CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T19A is the frozen stable foundation. T19A hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #266 passed build/deploy.**
+**T0–T19A is the frozen stable foundation. T19B adds genuine CPU Roller / Brush / Brella / Stringer / Splatana runtime behavior without changing the frozen T19A default roster or earlier authority contracts.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1460,3 +1460,121 @@ T19B — CPU Advanced Main-Weapon Class Parity:
   - Splatana direct slash / ranged wave / charged slash
 - integrate class behavior with existing CPU tactical roles and T18 mobility
 - keep CPU Sub/Special parity deferred to T19C until all 11 main-weapon classes have a genuine CPU runtime
+
+
+## T19B v0.15.0 CPU Advanced Main-Weapon Class Parity candidate
+
+Scope:
+- completes CPU runtime support for all 11 frozen T14 main-weapon classes
+- preserves the accepted T19A default CPU roster unchanged
+- advanced classes are exposed through `CPU Advanced QA` so T19A's frozen normal loadout assignments are not silently changed
+- Restart Match / team reset restores the canonical T19A default CPU roster
+- CPU Sub/Special parity remains deferred to T19C
+
+CPU Advanced QA preset:
+- first five CPU agents are temporarily reassigned to:
+  1. Metro Roller
+  2. Dash Brush
+  3. Canopy Guard
+  4. Chord Stringer
+  5. Ink Saber
+- Debug `CPU advanced QA` becomes `advanced-5`
+- Tactical Map continues to show each CPU's active weapon short name
+
+Metro Roller CPU:
+- no generic projectile approximation
+- approaches nearby targets through Recast
+- at close contact range, performs rolling contact:
+  - CPU-source rolling paint
+  - 38 contact damage
+  - 0.075 s rolling paint cadence
+  - frozen roll paint Ink cost
+- at medium-close range, performs the frozen ground horizontal flick:
+  - 58 melee/flick damage radius
+  - seven-point paint fan
+  - frozen main-shot Ink cost / cadence
+- airborne vertical flick is not synthesized because the CPU has no ordinary airborne attack state in T19B
+
+Dash Brush CPU:
+- no projectile approximation
+- pushes toward targets inside the pressure radius
+- performs the frozen close-range brush swipe:
+  - 24 melee damage
+  - five-point paint fan
+  - frozen 0.16 s cadence and Ink cost
+- class pressure comes from target pursuit plus fast repeated melee swipes
+
+Canopy Guard CPU:
+- fires the frozen six-pellet / 18-degree Brella burst
+- owns independent directional guard state:
+  - 100 guard HP
+  - 28 HP/s guard recovery while not guarding and not broken
+  - 2.5 s guard-break lock after guard HP reaches zero
+- guard faces the latest combat target
+- guard is used after firing and while HP is low
+- guard is a visible team-colored box in front of the CPU
+- projectile / Charger ray uses a front shield hit before body hit when the guard is active
+- area damage is absorbed when the blast center lies in the guarded direction
+- guard does not apply while Super Jump airborne
+
+Chord Stringer CPU:
+- no generic three-projectile approximation
+- uses frozen two-stage charge structure:
+  - targets below 9.5 m use first-ring release
+  - targets at or above 9.5 m charge to full
+- fires three projectiles
+- spread contracts through second ring exactly through the T14 stage math
+- direct damage grows 30 -> 35 through first ring
+- speed / paint continue scaling through second ring
+- first-ring and full releases create the frozen delayed 0.75 s explosive burst
+- delayed burst damage / paint remain PaintSource.Cpu
+- CPU Ink cost follows the frozen Stringer 5 -> 6 -> 8.5 charge cost curve
+
+Ink Saber CPU:
+- no generic projectile approximation
+- within 2.25 m, charges to the frozen 0.62 s full slash
+- farther valid targets use a 0.16 s quick release
+- release combines:
+  - direct melee slash
+  - CPU-source slash paint path
+  - ranged wave projectile
+- charged slash uses the frozen 95 melee damage / larger radius
+- quick slash uses the frozen 42 melee damage
+- ranged wave speed / size / damage / paint scale with charge
+
+Shared advanced-runtime contracts:
+- CPU requests now carry an explicit action:
+  - PROJECTILE
+  - ROLLER_FLICK
+  - ROLLER_ROLL
+  - BRUSH_SWIPE
+  - BRELLA_BURST
+  - STRINGER_RELEASE
+  - SPLATANA_RELEASE
+- request includes both muzzle origin and body position
+- CPU-side Ink is consumed before the request enters ProjectileSystem
+- ProjectileSystem never charges human PlayerResources for CPU attacks
+- advanced direct/melee/paint effects use the shared Combat/Paint paths
+- CPU advanced paint always uses PaintSource.Cpu
+- advanced charge / burst / guard state is cleared on Splat, Respawn, Super Jump preparation/cancel, match end, and QA weapon reassignment
+
+Brella interaction contracts:
+- Human attacks may be blocked by CPU Canopy Guard when they approach from the guarded direction
+- Human Charger direct ray sees the CPU shield before the body when appropriate
+- Human area attacks may be absorbed by the CPU guard based on blast direction
+- existing Human Canopy Guard behavior remains unchanged
+
+Diagnostics:
+- Debug keeps the complete CPU loadout list
+- Debug charge / burst counts remain available
+- Debug adds current CPU guard count and cumulative guard blocks
+- Debug shows whether the advanced-5 QA preset is active
+
+T0–T19A Freeze:
+- T19A normal CPU assignments are unchanged
+- Human T14/T16 main/sub/special behavior is unchanged
+- T18 CPU Super Jump behavior is unchanged
+- PaintCoordinator / GameplayInk / GPU atlas authority is unchanged
+- MatchController is unchanged
+
+T19B remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
