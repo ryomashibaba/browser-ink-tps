@@ -10,9 +10,9 @@ export type PlayerLifeState = 'ACTIVE' | 'SPLATTED';
 export class MatchController {
   private state: MatchState = 'COUNTDOWN';
   private lifeState: PlayerLifeState = 'ACTIVE';
-  private countdownSeconds = GAME_CONFIG.match.countdownSeconds;
-  private remainingSeconds = GAME_CONFIG.match.durationSeconds;
-  private respawnSeconds = 0;
+  private countdownSeconds: number = GAME_CONFIG.match.countdownSeconds;
+  private remainingSeconds: number = GAME_CONFIG.match.durationSeconds;
+  private respawnSeconds: number = 0;
   private splatStartedPending = false;
   private respawnPending = false;
   private matchEndedPending = false;
