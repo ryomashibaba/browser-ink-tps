@@ -100,7 +100,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Dualies: hold LMB + SPACE dodge ×2 · post-roll fire returns before movement · Stringer: hold ≥0.5s → 0.75s fuse · Splatling charge is Charger-like · Q/E weapons · M map';
+    hint.textContent = 'Dualies: hold LMB + move + SPACE dodge ×2 · post-roll fire returns before movement · Stringer: hold ≥0.5s → 0.75s fuse · Splatling charge is Charger-like · Q/E weapons · M map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
