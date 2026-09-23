@@ -147,7 +147,11 @@ export class InkLabApp {
     );
     this.resources = new PlayerResources(this.stats);
     this.combatTargets = new CombatTargetSystem(app, this.stats);
-    this.match = new MatchController(this.gameplayInk, this.stats);
+    this.match = new MatchController(
+      this.gameplayInk,
+      this.stats,
+      PRODUCTION_STAGE_DEFINITION
+    );
     this.navigation = new RecastStageNavigation(PRODUCTION_STAGE_DEFINITION, this.stats);
     this.cpuAgents = new CpuAgentSystem(
       app,
@@ -155,6 +159,7 @@ export class InkLabApp {
       this.gameplayInk,
       this.coordinator,
       this.stats,
+      PRODUCTION_STAGE_DEFINITION,
       this.selectedTeam
     );
     this.projectiles = new ProjectileSystem(

@@ -7,6 +7,7 @@ import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
+import type { StageDefinition } from '../stage/StageDefinition';
 
 export interface CpuCombatHit {
   botId: string;
@@ -58,9 +59,10 @@ export class CpuAgentSystem {
     private readonly gameplayInk: GameplayInkSystem,
     private readonly coordinator: PaintCoordinator,
     private readonly stats: PerformanceStats,
+    private readonly stage: StageDefinition,
     humanTeam: Team.A | Team.B
   ) {
-    this.director = new CpuTacticalDirector(gameplayInk);
+    this.director = new CpuTacticalDirector(gameplayInk, stage);
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
     this.reset(humanTeam);
@@ -456,9 +458,14 @@ export class CpuAgentSystem {
   }
 
   private spawnPosition(team: Team.A | Team.B, slot: number): Vec3 {
-    const spawnZ = team === Team.A ? 5.15 : -5.15;
-    const xPositions = [-5.2, -1.8, 1.8, 5.2];
-    const desired = new Vec3(xPositions[slot] ?? 0, 0.12, spawnZ);
+    const slots = team === Team.A
+      ? this.stage.metadata.teamASpawnSlots
+      : this.stage.metadata.teamBSpawnSlots;
+    const fallback = team === Team.A
+      ? this.stage.metadata.teamASpawn
+      : this.stage.metadata.teamBSpawn;
+    const selected = slots[slot] ?? fallback;
+    const desired = new Vec3(selected[0], selected[1], selected[2]);
     const snapped = this.navigation.closestPoint(desired);
     return new Vec3(snapped.x, snapped.y, snapped.z);
   }

@@ -3,6 +3,7 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { Team } from '../ink/types';
+import type { StageDefinition } from '../stage/StageDefinition';
 
 export type MatchState = 'COUNTDOWN' | 'PLAYING' | 'ENDED';
 export type PlayerLifeState = 'ACTIVE' | 'SPLATTED';
@@ -20,7 +21,8 @@ export class MatchController {
 
   public constructor(
     private readonly gameplayInk: GameplayInkSystem,
-    private readonly stats: PerformanceStats
+    private readonly stats: PerformanceStats,
+    private readonly stage: StageDefinition
   ) {
     this.syncStats();
   }
@@ -116,8 +118,8 @@ export class MatchController {
 
   public getSpawnPosition(team: Team.A | Team.B, out = new Vec3()): Vec3 {
     const spawn = team === Team.A
-      ? GAME_CONFIG.match.teamASpawn
-      : GAME_CONFIG.match.teamBSpawn;
+      ? this.stage.metadata.teamASpawn
+      : this.stage.metadata.teamBSpawn;
     return out.set(spawn[0], spawn[1], spawn[2]);
   }
 

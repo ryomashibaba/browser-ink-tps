@@ -1,6 +1,7 @@
 import { Vec3 } from 'playcanvas';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { SurfaceFlags, Team } from '../ink/types';
+import type { StageDefinition } from '../stage/StageDefinition';
 
 export type CpuRole = 'PAINTER' | 'SKIRMISHER' | 'ANCHOR';
 
@@ -13,29 +14,19 @@ export interface TacticalAgentContext {
   humanPosition: Vec3;
 }
 
-const NODES = [
-  new Vec3(-7.0, 0.12, -4.8),
-  new Vec3(-3.5, 0.12, -4.4),
-  new Vec3( 0.0, 0.12, -4.8),
-  new Vec3( 3.5, 0.12, -4.4),
-  new Vec3( 7.0, 0.12, -4.8),
-  new Vec3(-7.0, 0.12, -1.8),
-  new Vec3(-3.8, 0.12, -1.5),
-  new Vec3( 3.8, 0.12, -1.5),
-  new Vec3( 7.0, 0.12, -1.8),
-  new Vec3(-7.0, 0.12,  1.8),
-  new Vec3(-3.8, 0.12,  1.5),
-  new Vec3( 3.8, 0.12,  1.5),
-  new Vec3( 7.0, 0.12,  1.8),
-  new Vec3(-7.0, 0.12,  4.8),
-  new Vec3(-3.5, 0.12,  4.4),
-  new Vec3( 0.0, 0.12,  4.8),
-  new Vec3( 3.5, 0.12,  4.4),
-  new Vec3( 7.0, 0.12,  4.8)
-] as const;
+
 
 export class CpuTacticalDirector {
-  public constructor(private readonly gameplayInk: GameplayInkSystem) {}
+  private readonly nodes: readonly Vec3[];
+
+  public constructor(
+    private readonly gameplayInk: GameplayInkSystem,
+    private readonly stage: StageDefinition
+  ) {
+    this.nodes = stage.metadata.tacticalNodes.map(
+      (node) => new Vec3(node[0], node[1], node[2])
+    );
+  }
 
   public chooseGoal(context: TacticalAgentContext, out = new Vec3()): Vec3 {
     if (context.role === 'SKIRMISHER') {
@@ -48,11 +39,11 @@ export class CpuTacticalDirector {
   }
 
   private painterGoal(context: TacticalAgentContext, out: Vec3): Vec3 {
-    let best = NODES[context.slot % NODES.length]!;
+    let best = this.nodes[context.slot % this.nodes.length]!;
     let bestScore = -Infinity;
 
-    for (let i = 0; i < NODES.length; i += 1) {
-      const node = NODES[i]!;
+    for (let i = 0; i < this.nodes.length; i += 1) {
+      const node = this.nodes[i]!;
       const sample = this.gameplayInk.sampleWorld(
         node,
         0.45,
@@ -86,16 +77,21 @@ export class CpuTacticalDirector {
       );
     }
 
+    const enemySpawn = context.team === Team.A
+      ? this.stage.metadata.teamBSpawn
+      : this.stage.metadata.teamASpawn;
     return out.set(
-      (context.slot % 3 - 1) * 3.2,
+      (context.slot % 3 - 1) * 5.2,
       0.12,
-      context.team === Team.A ? -1.8 : 1.8
+      enemySpawn[2] * 0.32
     );
   }
 
   private anchorGoal(context: TacticalAgentContext, out: Vec3): Vec3 {
-    const homeZ = context.team === Team.A ? 4.6 : -4.6;
-    const patrolX = ((context.slot * 5) % 3 - 1) * 3.3;
-    return out.set(patrolX, 0.12, homeZ);
+    const homeSpawn = context.team === Team.A
+      ? this.stage.metadata.teamASpawn
+      : this.stage.metadata.teamBSpawn;
+    const patrolX = ((context.slot * 5) % 3 - 1) * 5.0;
+    return out.set(patrolX, 0.12, homeSpawn[2] * 0.62);
   }
 }
