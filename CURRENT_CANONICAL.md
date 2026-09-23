@@ -9,7 +9,7 @@ Date: 2026-09-23
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
 
-Current stable head:
+Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
 Final stabilization workflow:
@@ -196,7 +196,7 @@ The current stable slice also includes:
 
 ## Final validation checkpoint
 
-Stable head:
+Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
 GitHub Actions:
