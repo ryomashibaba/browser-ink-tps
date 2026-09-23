@@ -1,3 +1,19 @@
+## v0.14.0 T19A CPU Main-Weapon Diversity Candidate — 2026-09-23
+
+- replaced the old CPU-wide Pulse Sprayer fire model with a dedicated CPU loadout catalog
+- added per-CPU WeaponId, charge state, burst state, profile Ink cost, and profile cadence
+- active CPU main-weapon set: Pulse Sprayer, Needle SMG, Twin Comets, Arc Blaster, Wave Slosher, Rail Charger, Rotor Cannon
+- Dualies fire paired shots
+- Blaster uses frozen blast radius/damage and can deal enemy blast-area damage to the human
+- Slosher uses lob physics and trail paint
+- Charger uses a CPU direct-ray path with world/enemy/human arbitration and CPU-source line paint
+- Splatling charges to first ring and releases an 18-shot burst at frozen cadence
+- Brella guard can block CPU Charger and enemy CPU blast damage from the guarded direction
+- CPU charge/burst state clears across Super Jump and lifecycle transitions
+- Debug and Tactical Map expose CPU loadout identity
+- human T14/T16 weapon behavior, T18 mobility, and T0–T18 paint/match authority remain unchanged
+- CPU Sub/Special plus Roller/Brush/Brella/Stringer/Splatana CPU behavior remain deferred to the next T19 batch
+
 ## v0.13.0 T18 Stable Freeze — 2026-09-23
 
 - hosted QA accepted by the user
