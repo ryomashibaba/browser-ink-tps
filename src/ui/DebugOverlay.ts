@@ -35,17 +35,23 @@ export class DebugOverlay {
       <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T9 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
+        <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
         <span class="muted">FPS</span><span>${last.fps.toFixed(1)}</span>
         <span class="muted">Frame</span><span>${last.averageFrameMs.toFixed(2)} ms</span>
         <span class="muted">Fixed tick</span><span>${this.clock.tick} @ ${this.clock.tickRate} Hz</span>
         <span class="muted">Ticks/frame</span><span>${last.simulationTicksLastFrame}</span>
         <span class="muted">Dropped sim</span><span>${last.droppedSimulationSeconds.toFixed(3)} s</span>
+        <span class="muted">Player XYZ</span><span>${last.playerWorldX.toFixed(2)}, ${last.playerWorldY.toFixed(2)}, ${last.playerWorldZ.toFixed(2)}</span>
         <span class="muted">Player form</span><span>${escapeHtml(last.playerMode)}</span>
         <span class="muted">Locomotion</span><span>${escapeHtml(last.playerLocomotionState)}</span>
         <span class="muted">Collider</span><span>${escapeHtml(last.playerCollider)}</span>
         <span class="muted">Grounded</span><span>${last.playerGrounded ? 'yes' : 'no'}</span>
         <span class="muted">Move speed</span><span>${last.playerSpeedMetersPerSecond.toFixed(2)} m/s</span>
         <span class="muted">Ink sample</span><span>${escapeHtml(last.playerInkRelation)}</span>
+        <span class="muted">Sample surface</span><span>${escapeHtml(last.playerSampleSurface)}</span>
+        <span class="muted">Sample U/V</span><span>${formatUv(last.playerSampleU, last.playerSampleV)}</span>
+        <span class="muted">Last paint</span><span>${escapeHtml(last.lastPaintSurface)} · ${formatUv(last.lastPaintU, last.lastPaintV)}</span>
+        <span class="muted">Paint world</span><span>${formatXyz(last.lastPaintWorldX, last.lastPaintWorldY, last.lastPaintWorldZ)}</span>
         <span class="muted">Wall surface</span><span>${escapeHtml(last.playerWallSurface)}</span>
         <span class="muted">Surge charge</span><span>${(last.playerSurgeCharge * 100).toFixed(0)}%</span>
         <span class="muted">Roll ready</span><span>${last.playerSquidRollReady ? 'yes' : 'no'}</span>
@@ -75,4 +81,14 @@ function readDrawCalls(app: AppBase): string {
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char] ?? char));
+}
+
+function formatUv(u: number, v: number): string {
+  return Number.isFinite(u) && Number.isFinite(v) ? `${u.toFixed(2)}, ${v.toFixed(2)}` : '-';
+}
+
+function formatXyz(x: number, y: number, z: number): string {
+  return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)
+    ? `${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`
+    : '-';
 }

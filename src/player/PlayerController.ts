@@ -302,6 +302,9 @@ export class PlayerController {
 
     this.applyVisualPosition(this.position);
 
+    this.stats.playerWorldX = this.position.x;
+    this.stats.playerWorldY = this.position.y;
+    this.stats.playerWorldZ = this.position.z;
     this.stats.playerMode = this.mode;
     this.stats.playerLocomotionState = this.locomotionState;
     this.stats.playerGrounded = this.grounded;
@@ -312,6 +315,15 @@ export class PlayerController {
         ) / dt
       : 0;
     this.stats.playerInkRelation = this.inkRelation;
+    const debugSample = this.gameplayInk.sampleWorld(
+      this.footPoint,
+      0.40,
+      SurfaceFlags.Swimmable,
+      SurfaceFlags.Wall
+    );
+    this.stats.playerSampleSurface = debugSample?.surface.id ?? '-';
+    this.stats.playerSampleU = debugSample?.u ?? Number.NaN;
+    this.stats.playerSampleV = debugSample?.v ?? Number.NaN;
     this.stats.playerCollider = this.mode === 'SQUID' ? 'BALL' : 'CAPSULE';
     this.stats.playerWallSurface = this.wallSurfaceId;
     this.stats.playerSurgeCharge = GAME_CONFIG.player.surgeMaxChargeSeconds > 0

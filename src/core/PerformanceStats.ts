@@ -25,6 +25,19 @@ export class PerformanceStats {
   public playerWallSurface = '-';
   public playerSurgeCharge = 0;
   public playerSquidRollReady = false;
+  public playerWorldX = 0;
+  public playerWorldY = 0;
+  public playerWorldZ = 0;
+  public playerSampleSurface = '-';
+  public playerSampleU = Number.NaN;
+  public playerSampleV = Number.NaN;
+  public lastPaintSurface = '-';
+  public lastPaintU = Number.NaN;
+  public lastPaintV = Number.NaN;
+  public lastPaintWorldX = Number.NaN;
+  public lastPaintWorldY = Number.NaN;
+  public lastPaintWorldZ = Number.NaN;
+  public coordinateAudit = 'PENDING';
 
   public activeProjectiles = 0;
   public projectileImpacts = 0;

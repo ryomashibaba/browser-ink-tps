@@ -46,6 +46,16 @@ export class PaintCoordinator {
       changedCells += result.changedCells;
       this.gpu.queue(event);
       this.lastEvent = event;
+      const surface = this.gameplay.getSurface(event.surfaceId);
+      if (surface) {
+        const world = surface.localToWorld(event.centerU, event.centerV);
+        this.stats.lastPaintSurface = event.surfaceId;
+        this.stats.lastPaintU = event.centerU;
+        this.stats.lastPaintV = event.centerV;
+        this.stats.lastPaintWorldX = world.x;
+        this.stats.lastPaintWorldY = world.y;
+        this.stats.lastPaintWorldZ = world.z;
+      }
     }
     this.stats.recordPaint(batch.length, changedCells);
   }
@@ -55,6 +65,12 @@ export class PaintCoordinator {
     this.gameplay.reset();
     this.gpu.clear();
     this.lastEvent = null;
+    this.stats.lastPaintSurface = '-';
+    this.stats.lastPaintU = Number.NaN;
+    this.stats.lastPaintV = Number.NaN;
+    this.stats.lastPaintWorldX = Number.NaN;
+    this.stats.lastPaintWorldY = Number.NaN;
+    this.stats.lastPaintWorldZ = Number.NaN;
   }
 
   public makeDebugRequest(
