@@ -1,3 +1,25 @@
+## v0.7.0 T12 Stable Freeze — 2026-09-23
+
+### Freeze
+
+- full hosted T12 navigation/tactical QA accepted
+- full hosted CPU combat/lifecycle QA accepted
+- Recast/NavMesh/Crowd routing accepted
+- seven-agent role/turf behavior accepted
+- CPU Ink/HP and shared projectile combat accepted
+- human↔CPU and CPU↔CPU damage accepted
+- CPU Splat/Respawn accepted
+- 4v4 performance sanity accepted
+- T8–T11 regression sanity accepted
+
+Stable T12 gameplay checkpoint:
+`1ecc6543d7f5f3f226a3cb0134ff129045ea09ef`
+
+Automated implementation workflow:
+`35814249152`
+
+T12 is now **STABLE FREEZE**. Next planned phase: T13 — production stage / HUD / tactical map.
+
 ## v0.7.0 T12 CPU Combat / Lifecycle Candidate — 2026-09-23
 
 - navigation/tactical hosted QA accepted

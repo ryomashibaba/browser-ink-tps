@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.7.0 / T12 IMPLEMENTATION CANDIDATE
+# CURRENT_CANONICAL — v0.7.0 / T12 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T11 remains the frozen stable foundation. T12 CPU Players / Recast Navigation + Tactical Layer is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
+**T0–T12 is now the frozen stable foundation. T12 CPU Players / Recast Navigation + Tactical Layer, including CPU combat/lifecycle, passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -347,7 +347,7 @@ T8 remains frozen and T9 is now frozen. The intended order from here is:
 ## Standard workflow
 
 1. Work from current GitHub `main`.
-2. Preserve the T0–T11 Freeze contracts.
+2. Preserve the T0–T12 Freeze contracts.
 3. Design the next coherent batch before implementation.
 4. Push/merge through GitHub.
 5. GitHub Actions must pass typecheck + production build.
@@ -497,7 +497,7 @@ T11 is therefore **STABLE FREEZE**.
 - T13 — production stage / HUD / tactical map
 - T14 — content, animation, audio, additional weapons, polish
 
-## T12 implementation candidate
+## T12 stable checkpoint
 
 Navigation foundation:
 `f8fced0a205efd5ed09b8470757a6ec2833b7e8f`
@@ -518,7 +518,7 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PARTIAL PASS — Recast READY, 7-agent roster, navigation/avoidance, role behavior, CPU painting, restart/reset, and performance sanity confirmed by user; CPU combat/lifecycle QA remains**
+- hosted runtime QA: **PASS — navigation/tactical and CPU combat/lifecycle checks confirmed by user on 2026-09-23**
 
 T12 candidate adds:
 
@@ -563,7 +563,7 @@ Second-batch automated results:
 - TypeScript check: PASS
 - production build: PASS
 - Pages deploy: PASS
-- hosted combat/lifecycle QA: **PENDING**
+- hosted combat/lifecycle QA: **PASS — user confirmed all remaining T12 combat/lifecycle checks on 2026-09-23**
 
 Second batch adds:
 
@@ -579,4 +579,32 @@ Second batch adds:
 - CPU Respawn after the T11 respawn duration recreates the Crowd agent at team spawn with full HP/Ink
 - CPU combat metrics: alive count, average HP/Ink, shots, hits, splats, respawns, and CPU→Player hits
 
-T12 remains **IMPLEMENTATION CANDIDATE** until the second-batch hosted combat/lifecycle checks pass.
+All remaining T12 combat/lifecycle checks passed on 2026-09-23. T12 is **STABLE FREEZE**.
+
+### Hosted T12 final acceptance
+
+Confirmed by the user on 2026-09-23:
+
+- CPU shots are active only during PLAYING and shared-projectile firing is visible
+- enemy CPU projectiles damage the human and friendly CPU projectiles do not
+- CPU projectile damage can drive the human through the frozen T11 Splat/Respawn path
+- human projectiles damage and Splat enemy CPU agents
+- splatted CPU agents leave Crowd navigation while inactive
+- CPU Respawn recreates a Crowd agent near the proper team spawn with full HP/Ink
+- CPU-vs-CPU combat, hits, splats, and respawns occur naturally
+- missed CPU projectiles still respect stage blockers and paint world surfaces
+- Restart Match restores all seven CPU agents and resets CPU combat counters
+- full 4v4 activity remains acceptably stable for the current QA stage
+- no regressions were observed in T8–T11 behavior
+
+Stable T12 gameplay checkpoint:
+`1ecc6543d7f5f3f226a3cb0134ff129045ea09ef`
+
+Final T12 documentation/Freeze commit follows this checkpoint.
+
+T12 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+- T13 — production stage / HUD / tactical map
+- T14 — content, animation, audio, additional weapons, polish

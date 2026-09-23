@@ -1,4 +1,4 @@
-# Validation Report — v0.7.0 T12 Implementation Candidate
+# Validation Report — v0.7.0 T12 Stable Freeze
 
 Date: 2026-09-23
 
@@ -607,7 +607,7 @@ Automated result:
 - production build: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PARTIAL PASS — navigation/tactical batch accepted; combat/lifecycle batch pending**
+- hosted runtime QA: **PASS — navigation/tactical and combat/lifecycle batches accepted by user on 2026-09-23**
 
 Architecture validation:
 
@@ -674,7 +674,7 @@ Automated result:
 - production build: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed all T12 combat/lifecycle checks on 2026-09-23**
 
 Architecture validation:
 
@@ -702,4 +702,35 @@ Hosted QA required before T12 Freeze:
 9. with full 4v4 activity, FPS/dropped-simulation/GPU backlog should remain stable enough for the current QA stage
 10. sanity-check T8–T11 behavior again for regressions
 
-T12 remains **IMPLEMENTATION CANDIDATE** until these checks pass.
+All hosted T12 combat/lifecycle checks passed on 2026-09-23. T12 is **STABLE FREEZE**.
+
+## T12 final hosted acceptance
+
+User confirmation date: 2026-09-23
+
+Final accepted T12 scope:
+
+- Recast runtime initialization and NavMesh generation
+- shared 60 Hz Detour Crowd for seven CPU agents
+- 4v4 roster balancing around the human player's selected team
+- obstacle-aware navigation and Crowd separation
+- Painter / Skirmisher / Anchor tactical roles
+- authoritative GameplayInk-aware CPU turf decisions
+- CPU turf contribution through PaintRequest/PaintEvent
+- CPU Ink/HP resource simulation
+- CPU weapon fire through the shared ProjectileSystem
+- human↔CPU and CPU↔CPU projectile damage
+- friendly-fire exclusion
+- CPU Splat removal from Crowd
+- CPU Respawn and Crowd-agent recreation with full HP/Ink
+- Restart Match full CPU reset
+- current 4v4 performance sanity
+- preserved T8–T11 behavior
+
+Stable T12 gameplay checkpoint:
+`1ecc6543d7f5f3f226a3cb0134ff129045ea09ef`
+
+Automated implementation workflow:
+`35814249152`
+
+T12 is now **STABLE FREEZE**.

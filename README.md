@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.7.0 / T12 IMPLEMENTATION CANDIDATE**
+**v0.7.0 / T12 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T11 gameplay foundation remains frozen. The current `main` additionally contains the T12 CPU / Recast tactical candidate:
+The T0–T12 gameplay foundation is frozen. The current `main` includes:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -221,7 +221,6 @@ Do not casually replace:
 
 The current project intentionally does **not** yet include:
 
-- final T12 CPU combat/lifecycle hosted acceptance
 - super jump
 - production HUD / tactical map
 - production models / animation / audio
@@ -232,7 +231,7 @@ The current project intentionally does **not** yet include:
 
 **T12 — CPU players / Recast navigation + tactical layer hosted QA**
 
-T0–T11 remains frozen. The first T12 navigation/tactical batch is hosted-QA accepted. The second T12 batch now adds CPU weapon combat, HP/Ink, Splat, and Respawn and is awaiting hosted QA before T12 Freeze.
+T0–T11 remains frozen. Both T12 batches are hosted-QA accepted: Recast/Crowd/tactical navigation and CPU weapon combat/HP/Ink/Splat/Respawn.
 
 Current T12 validation focus:
 

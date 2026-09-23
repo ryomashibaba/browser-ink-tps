@@ -25,8 +25,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T12 Candidate</h1>
-      <p>T0–T11 remains frozen. T12 now includes 7 Recast CPU players with tactical roles, shooting, HP/Ink, Splat, and Respawn.</p>
+      <h1>Browser Ink TPS · T12 Stable</h1>
+      <p>T0–T12 is frozen. Recast 4v4 CPU navigation, tactics, combat, Splat, and Respawn are stable; T13 will add the production stage and player-facing HUD/map.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
