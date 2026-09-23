@@ -114,6 +114,12 @@ export class PerformanceStats {
   public cpuWeaponGuarding = 0;
   public cpuWeaponGuardBlocks = 0;
   public cpuAdvancedQa = 'default';
+  public cpuKits = '-';
+  public cpuSubUses = 0;
+  public cpuSpecialActivations = 0;
+  public cpuSpecialReady = 0;
+  public cpuAverageSpecialPercent = 0;
+  public cpuKitLast = '-';
   public cpuSuperJumps = 0;
   public cpuSuperJumpPrep = 0;
   public cpuSuperJumpAirborne = 0;
