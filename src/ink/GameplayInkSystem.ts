@@ -7,6 +7,7 @@ export interface PaintApplyResult {
   changedCells: number;
   testedCells: number;
   dirtyTilesTouched: number;
+  scoreableAreaMeters2Changed: number;
 }
 
 export interface GameplayInkSample {
@@ -80,7 +81,7 @@ export class GameplayInkSystem {
     const surface = this.surfaces.get(event.surfaceId);
     if (!surface) throw new Error(`PaintEvent references unknown surface '${event.surfaceId}'.`);
     if (!(event.radiusU > 0) || !(event.radiusV > 0) || !(event.strength > 0)) {
-      return { changedCells: 0, testedCells: 0, dirtyTilesTouched: 0 };
+      return { changedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
     }
 
     const c = Math.cos(event.angle);
@@ -95,10 +96,11 @@ export class GameplayInkSystem {
     const minY = Math.max(0, Math.floor((event.centerV - boundV) / surface.cellSize));
     const maxY = Math.min(surface.heightCells - 1, Math.floor((event.centerV + boundV) / surface.cellSize));
 
-    if (minX > maxX || minY > maxY) return { changedCells: 0, testedCells: 0, dirtyTilesTouched: 0 };
+    if (minX > maxX || minY > maxY) return { changedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
 
     let changedCells = 0;
     let testedCells = 0;
+    let scoreableAreaMeters2Changed = 0;
     const touchedTiles = new Set<number>();
 
     for (let y = minY; y <= maxY; y += 1) {
@@ -124,6 +126,7 @@ export class GameplayInkSystem {
 
         if (surface.isScoreable) {
           const area = (surface.scoreWeightGrid[index] ?? 0) * surface.cellSize * surface.cellSize;
+          scoreableAreaMeters2Changed += area;
           if (oldOwner === Team.A) this.areaA -= area;
           else if (oldOwner === Team.B) this.areaB -= area;
 
@@ -134,7 +137,12 @@ export class GameplayInkSystem {
     }
 
     for (const tileIndex of touchedTiles) surface.markTileChanged(tileIndex);
-    return { changedCells, testedCells, dirtyTilesTouched: touchedTiles.size };
+    return {
+      changedCells,
+      testedCells,
+      dirtyTilesTouched: touchedTiles.size,
+      scoreableAreaMeters2Changed
+    };
   }
 
   public snapshot(): TurfSnapshot {
