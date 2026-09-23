@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.11.0 / T16 WEAPON KIT SYSTEM CANDIDATE**
+**v0.11.0 / T16 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -323,3 +323,12 @@ Special pool:
 - Drift Storm — 200p moving multi-pulse field
 
 Q/E or ControlPanel weapon switching changes the entire kit. The HUD and Debug overlay show the currently equipped sub and special.
+
+
+### T16 Stable Freeze
+
+v0.11.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `958a1d168ea86387701eb089437bf6da6af14514`; GitHub Actions run #184 passed build and Pages deployment.
+
+### Next: T17 Super Jump / Spawn Mobility
+
+The next planned phase is the first map-driven long-range mobility layer: destination selection, launch/travel/landing state, indicators, and safe integration with the frozen spawn/respawn lifecycle.
