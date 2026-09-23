@@ -26,6 +26,7 @@ export interface ControlPanelHandlers {
   onSpecialQaReady(): void;
   onCpuJumpQa(): void;
   onCpuAdvancedQa(): void;
+  onCpuKitQaReady(): void;
   onClear(): void;
 }
 
@@ -43,8 +44,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T19B Stable Freeze</h1>
-      <p>T0–T19B is frozen. CPU main-weapon parity now covers all frozen T14 classes.</p>
+      <h1>Browser Ink TPS · T19C Candidate</h1>
+      <p>T0–T19B is frozen. T19C adds CPU Sub/Special kit parity from the T16 kit catalog.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -72,6 +73,7 @@ export class ControlPanel {
         <button id="special-ready-qa">Special QA Ready</button>
         <button id="cpu-jump-qa">CPU Jump QA</button>
         <button id="cpu-advanced-qa">CPU Advanced QA</button>
+        <button id="cpu-kit-ready-qa">CPU Kit QA Ready</button>
       </div>
       <div class="row">
         <button id="roll-qa">Roll QA Pad</button>
@@ -111,6 +113,7 @@ export class ControlPanel {
     (panel.querySelector('#special-ready-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onSpecialQaReady());
     (panel.querySelector('#cpu-jump-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onCpuJumpQa());
     (panel.querySelector('#cpu-advanced-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onCpuAdvancedQa());
+    (panel.querySelector('#cpu-kit-ready-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onCpuKitQaReady());
     (panel.querySelector('#roll-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onRollQaPad());
     (panel.querySelector('#coord-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onCoordinateQa());
     (panel.querySelector('#stress-small') as HTMLButtonElement).addEventListener('click', () => handlers.onStress(GAME_CONFIG.debug.stressBurstSmall));
@@ -119,7 +122,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'CPU Advanced QA → Roller/Brush/Brella/Stringer/Splatana · CPU Jump QA · M map · F/G kit';
+    hint.textContent = 'CPU Kit QA Ready fills CPU specials · CPU Advanced QA · CPU Jump QA · M map · F/G kit';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
