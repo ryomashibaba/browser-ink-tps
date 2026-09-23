@@ -116,7 +116,14 @@ export const GAME_CONFIG = Object.freeze({
     hitSphereOffsetsMeters: [0.30, 0.68, 1.06] as const,
     ownInkRecoveryPerSecond: 22,
     ownInkHpRecoveryPerSecond: 48,
-    playerHitRadiusMeters: 0.42
+    playerHitRadiusMeters: 0.42,
+    superJumpCooldownSeconds: 8.0,
+    superJumpRespawnWindowSeconds: 2.4,
+    superJumpMinDistanceMeters: 8.0,
+    superJumpRegroupDistanceMeters: 12.0,
+    superJumpSafeEnemyRadiusMeters: 4.2,
+    superJumpMinHpFraction: 0.72,
+    superJumpDecisionScore: 5.4
   },
   projectile: {
     poolSize: 128,
