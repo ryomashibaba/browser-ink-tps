@@ -1,3 +1,15 @@
+## v0.11.0 T16 Weapon Kit System Candidate — 2026-09-23
+
+- added a separate WeaponKitCatalog so T14 main-weapon behavior remains isolated
+- added three project-original subs: Pulse Bomb, Snap Bomb, Anchor Bomb
+- added three project-original specials: Turf Pulse, Triple Strike, Drift Storm
+- assigned every main weapon one fixed sub + special pair
+- F/G now resolve through the currently selected main weapon's kit
+- Q/E / ControlPanel switching updates the whole kit and preserves special fill percentage across different 180p/190p/200p requirements
+- weapon switching cancels active old-kit sub/special effects for deterministic QA
+- HUD, ControlPanel, and Debug expose the selected kit
+- T15 HUMAN/SPECIAL paint attribution, special self-charge prevention, Splat retention, and T0–T15 Freeze contracts remain unchanged
+
 ## v0.10.0 T15 Stable Freeze — 2026-09-23
 
 - hosted QA accepted by the user
