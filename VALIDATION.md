@@ -1089,3 +1089,36 @@ T15 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
 The user confirmed the v0.10.0 hosted checks. Stable checkpoint: `901b8c73f5313ac39c27ebb0fc42cb3ec1810bda`. GitHub Actions run #165 / `35832485527` passed build and Pages deployment.
 
 T15 is now **STABLE FREEZE**.
+
+
+## T16 v0.11.0 Weapon Kit System hosted QA
+
+Kit switching:
+1. Cycle Q/E through multiple mains; HUD and ControlPanel must update both F sub and G special names with the main weapon.
+2. Build a partial special gauge, switch between a 180p/190p/200p kit, and verify the displayed percentage stays approximately constant.
+3. Throw a sub or activate a sustained special, then switch main weapon; active old-kit effects should be cleared for deterministic QA.
+
+Sub weapons:
+4. Pulse Sprayer: F must use Pulse Bomb, cost 70 Ink, stop on first contact, then explode about 1.0 s later.
+5. Needle SMG or Twin Comets: F must use Snap Bomb, cost 45 Ink, and explode immediately on first contact with a visibly smaller paint/damage footprint.
+6. Rail Charger / Metro Roller / Rotor Cannon / Canopy Guard: F must use Anchor Bomb, cost 70 Ink, remain at first contact, then explode about 2.0 s later with the largest paint footprint.
+7. All sub paint must stay HUMAN-source: genuinely changed Scoreable turf may charge the gauge, repainting owned turf should not materially charge it.
+8. Insufficient Ink must prevent the selected sub from being thrown.
+
+Special weapons:
+9. Pulse Sprayer kit: Special QA Ready then G -> Turf Pulse should fire immediately around the player and consume the gauge.
+10. Rail Charger or Arc Blaster kit: Special QA Ready then G -> Triple Strike should produce three staggered strikes around the current aim target, not around the player.
+11. Needle SMG / Dash Brush / Wave Slosher / Canopy Guard: Special QA Ready then G -> Drift Storm should move forward for several seconds and create repeated paint/damage pulses.
+12. Triple Strike and Drift Storm paint must be SPECIAL-source and must not refill the gauge.
+13. Special uses must increment once per G activation, not once per strike/pulse.
+
+Regression:
+14. T15 Splat retention remains about 50% and Respawn preserves the retained gauge.
+15. T14 main-weapon behavior, including Dualies dodge and two-ring Splatling/Stringer charge, is unchanged.
+16. Brella RMB guard is unchanged even though F now selects its Anchor Bomb.
+17. CPU paint must not charge the player special.
+18. CPU/main/sub/special paint continues through PaintCoordinator -> one immutable PaintEvent -> GameplayInk + GpuInk.
+19. camera/aim vertical direction, Turf scoring, match loop, 4v4 CPU, tactical map, and fixed 60 Hz behavior must show no regression.
+20. FPS, dropped simulation, GPU backlog, and projectile/sub pools remain acceptable during Drift Storm + ordinary 4v4 activity.
+
+T16 remains **IMPLEMENTATION CANDIDATE** until the checks above are accepted.
