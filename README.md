@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.10.0 / T15 SUB + SPECIAL FOUNDATION CANDIDATE**
+**v0.10.0 / T15 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -297,3 +297,12 @@ The first sub/special pair is project-original:
 - **Turf Pulse** — G at 180p, charged only by scoreable turf actually changed by HUMAN main/sub paint
 
 At current project scale, 1 m² of newly changed scoreable Human paint awards 10p. Splat retains 50% of the current gauge. Special-generated paint does not recharge itself.
+
+
+### T15 Stable Freeze
+
+v0.10.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `901b8c73f5313ac39c27ebb0fc42cb3ec1810bda`; Actions #165 passed build/deploy.
+
+### Next: T16 Weapon Kits
+
+T16 expands the frozen T15 sub/special foundation into per-main-weapon kits with multiple project-original sub and special behaviors.
