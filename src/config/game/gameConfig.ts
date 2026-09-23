@@ -150,6 +150,16 @@ export const GAME_CONFIG = Object.freeze({
     pulsePaintRadiusMeters: 1.15,
     pulseRingRadiusMeters: 2.35
   },
+  superJump: {
+    prepareSeconds: 80 / 60,
+    travelSeconds: 130 / 60,
+    landingLockSeconds: 12 / 60,
+    minArcHeightMeters: 5.4,
+    maxArcHeightMeters: 9.2,
+    arcHeightPerHorizontalMeter: 0.18,
+    allyLandingBodyOffsetMeters: 0.84,
+    mapSelectionRadiusPixels: 28
+  },
   worldInteraction: {
     paintSurfacePriorityEpsilonMeters: 0.06,
     cameraCollisionPaddingMeters: 0.18,
