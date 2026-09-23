@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.12.0 / T17 STABLE FREEZE
+# CURRENT_CANONICAL — v0.13.0 / T18 CPU TACTICAL MOBILITY CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T17 is the frozen stable foundation. T17 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #222 passed build/deploy.**
+**T0–T17 is the frozen stable foundation. T18 is an additive CPU tactical-mobility layer built on the frozen T17 Super Jump timing and snapshot-destination contracts.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1241,3 +1241,70 @@ T18 — CPU Tactical Mobility:
 - use fixed destination snapshots rather than live-tracking teammates
 - preserve the human T17 map-selection and lifecycle contracts
 - keep CPU jump behavior isolated from T0–T17 paint / combat / match authority
+
+
+## T18 v0.13.0 CPU Tactical Mobility candidate
+
+Purpose:
+- CPU agents may use Super Jump for front-line recovery after respawn and for limited regrouping when badly isolated.
+- CPU Super Jump decisions live in the tactical AI layer; normal Recast navigation remains unchanged while grounded.
+- CPU jumps never alter the human T17 map-selection or lifecycle contracts.
+
+CPU mobility states:
+- GROUND
+- JUMP_PREP
+- JUMP_TRAVEL
+- JUMP_LANDING
+
+Timing / vulnerability:
+- uses the frozen T17 phase timing:
+  - PREP: 80 fixed 60 Hz frames
+  - JUMP_TRAVEL: 130 frames
+  - JUMP_LANDING/final approach: 30 frames
+- PREP remains targetable and vulnerable
+- JUMP_TRAVEL / JUMP_LANDING are invulnerable to projectile and area damage
+- enemy-ink resource damage is skipped while airborne
+- CPU cannot paint or fire while preparing or airborne
+
+Navigation boundary:
+- at JUMP_PREP start, the CPU CrowdAgent is removed from Recast so the CPU remains stationary
+- airborne travel uses independent fixed-step world coordinates and a high arc
+- on actual landing, the snapshotted destination is projected to the navmesh and a fresh CrowdAgent is registered there
+- normal Recast pathing resumes after landing
+- match end / splat / reset safely clears jump state and markers
+
+Destination contract:
+- jump destinations are snapshotted when the CPU decides to jump
+- they never live-track a moving teammate after decision time
+- candidate destinations are living grounded friendly CPUs or the living human teammate when on the same team
+- airborne friendly CPUs are not valid destinations
+- human teammates are not valid while the human is in T17 airborne invulnerability
+
+Tactical decision rules:
+- CPU must be ACTIVE / grounded / have a live CrowdAgent
+- CPU must have at least 72% HP
+- minimum jump distance: 8.0 m
+- ordinary regrouping is considered only when nearest friendly distance is at least 12.0 m
+- after CPU respawn, a 2.4 s front-line recovery window strongly biases Super Jump
+- destination is rejected if an active enemy is within 4.2 m
+- per-CPU cooldown after landing: 8.0 s
+- SKIRMISHER has the strongest forward-jump bias
+- PAINTER has a moderate bias
+- ANCHOR is intentionally conservative
+- a forward-progress component favors destinations closer to the opposing side
+- tactical score threshold: 5.4
+
+Visual / QA:
+- each CPU owns a team-colored landing marker
+- airborne CPU uses the existing CPU entity with a spinning elongated travel presentation
+- Debug exposes CPU jump PREP count, airborne count, total jumps, landings, cancels, and last source->target pair
+- `CPU Jump QA` forces one valid CPU jump for hosted verification
+- QA fallback may use a safe front tactical position when no valid friendly candidate is far enough; normal gameplay never uses that fallback
+
+T0–T17 Freeze:
+- PaintCoordinator / GameplayInk / GpuInk authority is unchanged
+- human T17 Super Jump code and destination snapshot semantics are unchanged
+- MatchController is unchanged
+- normal CPU paint/combat/Recast behavior resumes exactly after landing
+
+T18 remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
