@@ -220,9 +220,11 @@ export class ProjectileSystem {
       sourceId: request.sourceId,
       team: request.team,
       origin: request.origin.clone(),
+      bodyPosition: request.bodyPosition.clone(),
       target: request.target.clone(),
       weaponId: request.weaponId,
-      charge: request.charge
+      charge: request.charge,
+      action: request.action
     });
   }
 
@@ -1160,6 +1162,27 @@ export class ProjectileSystem {
         continue;
       }
 
+      if (request.action === 'ROLLER_FLICK') {
+        this.executeCpuRollerFlick(request, profile);
+        continue;
+      }
+      if (request.action === 'ROLLER_ROLL') {
+        this.executeCpuRollerRoll(request, profile);
+        continue;
+      }
+      if (request.action === 'BRUSH_SWIPE') {
+        this.executeCpuBrushSwipe(request, profile);
+        continue;
+      }
+      if (request.action === 'STRINGER_RELEASE') {
+        this.executeCpuStringerRelease(request, profile);
+        continue;
+      }
+      if (request.action === 'SPLATANA_RELEASE') {
+        this.executeCpuSplatanaRelease(request, profile);
+        continue;
+      }
+
       this.solveLaunchDirection(
         request.origin,
         request.target,
@@ -1176,6 +1199,12 @@ export class ProjectileSystem {
 
       if (profile.weaponClass === 'DUALIES') {
         count = 2;
+        spread = profile.spreadDegrees;
+      } else if (
+        profile.weaponClass === 'BRELLA' ||
+        request.action === 'BRELLA_BURST'
+      ) {
+        count = profile.pelletCount;
         spread = profile.spreadDegrees;
       } else if (profile.weaponClass === 'SLOSHER') {
         direction.y = Math.max(direction.y, 0.16);
@@ -1231,6 +1260,216 @@ export class ProjectileSystem {
     }
 
     this.queuedCpuShots.length = 0;
+  }
+
+  private executeCpuRollerFlick(
+    request: CpuFireRequest,
+    profile: WeaponProfile
+  ): void {
+    const forward = flattened(
+      request.target.clone().sub(request.bodyPosition)
+    );
+    const center = request.bodyPosition.clone()
+      .add(forward.clone().mulScalar(1.25));
+
+    this.applyMeleeDamage(center, 1.55, 58, request.team);
+    this.paintFan(
+      request.team,
+      request.bodyPosition,
+      forward,
+      2.9,
+      2.4,
+      7,
+      0.58,
+      PaintEventType.Impact,
+      PaintSource.Cpu
+    );
+    this.feedback.melee(request.team, center, profile, 1.45);
+  }
+
+  private executeCpuRollerRoll(
+    request: CpuFireRequest,
+    profile: WeaponProfile
+  ): void {
+    const forward = flattened(
+      request.target.clone().sub(request.bodyPosition)
+    );
+    this.paintWorldStamp(
+      request.team,
+      request.bodyPosition,
+      profile.rollPaintRadiusMeters * 1.28,
+      profile.rollPaintRadiusMeters * 0.72,
+      forward,
+      0.8,
+      PaintEventType.Foot,
+      PaintSource.Cpu
+    );
+    const contact = request.bodyPosition.clone()
+      .add(forward.clone().mulScalar(0.72));
+    this.applyMeleeDamage(contact, 0.88, 38, request.team);
+  }
+
+  private executeCpuBrushSwipe(
+    request: CpuFireRequest,
+    profile: WeaponProfile
+  ): void {
+    const forward = flattened(
+      request.target.clone().sub(request.bodyPosition)
+    );
+    const center = request.bodyPosition.clone()
+      .add(forward.clone().mulScalar(1.05));
+
+    this.applyMeleeDamage(center, 1.22, 24, request.team);
+    this.paintFan(
+      request.team,
+      request.bodyPosition,
+      forward,
+      1.95,
+      1.35,
+      5,
+      0.42,
+      PaintEventType.Impact,
+      PaintSource.Cpu
+    );
+    this.feedback.melee(request.team, center, profile, 0.82);
+  }
+
+  private executeCpuStringerRelease(
+    request: CpuFireRequest,
+    profile: WeaponProfile
+  ): void {
+    this.solveLaunchDirection(
+      request.origin,
+      request.target,
+      this.cpuAimDirection,
+      profile
+    );
+    if (this.cpuAimDirection.lengthSq() <= 1e-8) return;
+
+    const charge = clamp01(request.charge);
+    const chargeSeconds = charge * profile.chargeSeconds;
+    const stage = chargeStageProgress(profile, chargeSeconds);
+    const spread = stage.firstReached
+      ? lerp(profile.spreadDegrees, 0, stage.second)
+      : profile.spreadDegrees;
+    const directDamage = lerp(30, 35, stage.first);
+    const speedMultiplier = stage.firstReached
+      ? lerp(1.0, profile.chargeSpeedMultiplier, stage.second)
+      : lerp(0.78, 1.0, stage.first);
+    const paintMultiplier = stage.firstReached
+      ? lerp(1.0, profile.chargePaintMultiplier, stage.second)
+      : lerp(0.88, 1.0, stage.first);
+
+    let spawned = 0;
+    for (let i = 0; i < 3; i += 1) {
+      const slot = this.slots.find((candidate) => !candidate.active);
+      if (!slot) {
+        this.stats.projectilePoolDrops += 1;
+        break;
+      }
+
+      const offset = (i / 2 - 0.5) * spread;
+      const direction = rotateYaw(this.cpuAimDirection, offset);
+      this.spawnProjectile(
+        slot,
+        profile,
+        request.origin,
+        direction,
+        request.team,
+        profile.speedMetersPerSecond * speedMultiplier,
+        profile.gravityMetersPerSecond2,
+        profile.lifeSeconds,
+        profile.visualDiameterMeters * (1 + charge * 0.18),
+        directDamage,
+        profile.paintRadiusMeters * paintMultiplier,
+        0,
+        0,
+        0,
+        stage.firstReached ? 0.75 : 0,
+        stage.firstReached ? lerp(0.78, 1.02, stage.second) : 0,
+        stage.firstReached ? 30 : 0,
+        stage.firstReached ? lerp(0.65, 0.90, stage.second) : 0,
+        'CPU',
+        request.sourceId
+      );
+      spawned += 1;
+    }
+
+    if (spawned > 0) {
+      this.feedback.shot(request.team, request.origin, profile, false);
+    }
+  }
+
+  private executeCpuSplatanaRelease(
+    request: CpuFireRequest,
+    profile: WeaponProfile
+  ): void {
+    const charge = clamp01(request.charge);
+    const forward = flattened(
+      request.target.clone().sub(request.bodyPosition)
+    );
+    const center = request.bodyPosition.clone().add(
+      forward.clone().mulScalar(charge >= 0.62 ? 1.15 : 0.92)
+    );
+    const meleeDamage = charge >= 0.62 ? 95 : 42;
+    const meleeRadius = charge >= 0.62 ? 1.05 : 0.82;
+
+    this.applyMeleeDamage(
+      center,
+      meleeRadius,
+      meleeDamage,
+      request.team
+    );
+    this.paintSlash(
+      request.team,
+      request.bodyPosition,
+      forward,
+      charge,
+      PaintSource.Cpu
+    );
+
+    this.solveLaunchDirection(
+      request.origin,
+      request.target,
+      this.cpuAimDirection,
+      profile
+    );
+    const slot = this.slots.find((candidate) => !candidate.active);
+    if (slot && this.cpuAimDirection.lengthSq() > 1e-8) {
+      this.spawnProjectile(
+        slot,
+        profile,
+        request.origin,
+        this.cpuAimDirection,
+        request.team,
+        profile.speedMetersPerSecond *
+          lerp(1, profile.chargeSpeedMultiplier, charge),
+        profile.gravityMetersPerSecond2,
+        profile.lifeSeconds,
+        profile.visualDiameterMeters * lerp(1, 1.55, charge),
+        lerp(profile.damage, profile.damage * 1.65, charge),
+        profile.paintRadiusMeters *
+          lerp(1, profile.chargePaintMultiplier, charge),
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        'CPU',
+        request.sourceId
+      );
+    } else if (!slot) {
+      this.stats.projectilePoolDrops += 1;
+    }
+
+    this.feedback.melee(
+      request.team,
+      center,
+      profile,
+      charge >= 0.62 ? 1.45 : 0.95
+    );
   }
 
   private fireCpuChargerRay(
@@ -1571,7 +1810,8 @@ export class ProjectileSystem {
     width: number,
     count: number,
     radius: number,
-    type: PaintEventType
+    type: PaintEventType,
+    source: PaintSource = PaintSource.Human
   ): void {
     const right = new Vec3(-forward.z, 0, forward.x);
     for (let i = 0; i < count; i += 1) {
@@ -1580,7 +1820,16 @@ export class ProjectileSystem {
       const point = origin.clone()
         .add(forward.clone().mulScalar(distance * (0.72 + 0.18 * Math.abs(t - 0.5))))
         .add(right.clone().mulScalar(lateral));
-      this.paintWorldStamp(team, point, radius, radius * 0.72, forward, 0.85, type);
+      this.paintWorldStamp(
+        team,
+        point,
+        radius,
+        radius * 0.72,
+        forward,
+        0.85,
+        type,
+        source
+      );
     }
   }
 
@@ -1588,7 +1837,8 @@ export class ProjectileSystem {
     team: Team.A | Team.B,
     origin: Vec3,
     forward: Vec3,
-    charge: number
+    charge: number,
+    source: PaintSource = PaintSource.Human
   ): void {
     const length = lerp(1.8, 3.6, charge);
     const width = lerp(0.55, 0.9, charge);
@@ -1601,7 +1851,8 @@ export class ProjectileSystem {
         width * 0.42,
         forward,
         0.9,
-        PaintEventType.Impact
+        PaintEventType.Impact,
+        source
       );
     }
   }
