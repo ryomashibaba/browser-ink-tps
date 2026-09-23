@@ -42,8 +42,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T18 Stable Freeze</h1>
-      <p>T0–T18 is frozen. CPU tactical Super Jump recovery and regrouping are stable.</p>
+      <h1>Browser Ink TPS · T19 Candidate</h1>
+      <p>T0–T18 is frozen. T19 gives CPU roles distinct weapon-class loadouts instead of one shared shooter.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
