@@ -1,3 +1,19 @@
+## v0.12.0 T17 Super Jump Candidate — 2026-09-23
+
+- added map-driven Super Jump selection to own spawn or living friendly CPUs
+- added WAIT_GROUND / PREP / TRAVEL / LANDING jump state machine
+- public-reference phase structure: 80F preparation, 130F main airborne phase, 30F final airborne phase
+- preparation locks actions while remaining vulnerable
+- airborne travel disables the ordinary player collider/render and is invulnerable through landing
+- flight duration is distance-independent and bypasses ordinary stage collision
+- friendly CPU landing target updates while the ally moves; invalidated targets retain the last valid location
+- tactical map shows selectable friendly jump rings and active destination
+- pointer lock is restored after a valid map selection
+- added traveler/landing marker visuals, launch/landing feedback, HUD state, and Debug jump metrics
+- ProjectileSystem now separates weapon-enabled state from player-damageable state
+- enemy-ink damage and Splat QA respect airborne invulnerability
+- T0–T16 Freeze contracts remain unchanged outside the additive T17 mobility path
+
 ## v0.11.0 T16 Stable Freeze — 2026-09-23
 
 - hosted QA accepted by the user
