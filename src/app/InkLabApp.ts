@@ -177,7 +177,6 @@ export class InkLabApp {
     this.feedback = new GameFeedback(app, canvas);
     this.superJump = new SuperJumpSystem(
       app,
-      this.cpuAgents,
       this.player,
       this.feedback,
       this.stats
