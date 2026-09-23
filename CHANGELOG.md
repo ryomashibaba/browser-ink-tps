@@ -1,3 +1,18 @@
+## v0.15.0 T19B CPU Advanced Main-Weapon Class Parity Candidate — 2026-09-23
+
+- completed CPU runtime support for all remaining T14 classes
+- added explicit advanced CPU action requests instead of generic projectile approximations
+- Metro Roller: horizontal flick + rolling contact paint/damage
+- Dash Brush: close pursuit + melee swipe / paint fan
+- Canopy Guard: six-pellet burst + directional 100-HP CPU guard, recovery, break state, visible shield, ray/area interception
+- Chord Stringer: first/full charge choice, three-projectile convergence, charge-scaled Ink, delayed 0.75 s burst
+- Ink Saber: quick/charged slash, melee damage, CPU-source slash paint, ranged wave
+- CPU advanced transient state clears across T18 mobility and lifecycle transitions
+- added CPU Advanced QA preset while preserving the frozen T19A normal roster
+- Debug adds CPU guard count / blocks and advanced QA state
+- T0–T19A Freeze remains unchanged
+- CPU Sub/Special parity remains deferred to T19C
+
 ## v0.14.0 T19A Stable Freeze — 2026-09-23
 
 - hosted QA accepted by the user
