@@ -243,6 +243,13 @@ export class InkLabApp {
         this.specialGauge.cancelActive();
       },
       onSpecialQaReady: () => this.specialGauge.qaFill(),
+      onCpuJumpQa: () => {
+        this.cpuAgents.forceSuperJumpQa(
+          this.selectedTeam,
+          this.superJump.getFocusPosition(this.cpuHumanPosition),
+          this.match.playerCanAct && !this.superJump.isInvulnerable
+        );
+      },
       onClear: () => {
         this.clearCoordinateQaMarkers();
         this.coordinator.clear();
