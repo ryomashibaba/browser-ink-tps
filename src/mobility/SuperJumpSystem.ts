@@ -216,6 +216,13 @@ export class SuperJumpSystem {
 
   public getFocusPosition(out = new Vec3()): Vec3 {
     if (this.state === 'TRAVEL') {
+      return out.copy(this.currentPosition);
+    }
+    return this.player.getPosition(out);
+  }
+
+  public getRenderFocusPosition(out = new Vec3()): Vec3 {
+    if (this.state === 'TRAVEL') {
       return out.copy(this.renderPosition);
     }
     return this.player.getPosition(out);
