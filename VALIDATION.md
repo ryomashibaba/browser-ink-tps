@@ -973,3 +973,33 @@ Hosted QA focus:
 12. T8–T13 locomotion, camera, ink authority, match, CPU, stage and Tactical Map behavior must remain intact.
 
 Do not freeze T14 until the user explicitly accepts this redesigned runtime.
+
+## T14 v0.9.3 targeted hosted QA
+
+Implementation:
+`72649bc1f896dcb2eff1d73620ec52bceaf0918c`
+
+Workflow:
+`35824436471`
+
+Automated:
+
+- TypeScript: PASS
+- production build: PASS
+- Pages deploy: PASS
+
+Hosted checks:
+
+1. Dualies: select Twin Comets, stay Human, press Space while moving; player must dodge in movement direction rather than jump.
+2. Dualies: a second Space input can chain a second dodge before charges recover; Debug `Dualie rolls / charges` must count and reach 0 remaining.
+3. Dualies: LMB must not fire during the dodge itself; follow-up fire after the roll is tighter/faster.
+4. Charger: hold LMB; dedicated circular precision reticle + 3D beam-guide charge effect must build, with full-charge pulse.
+5. Splatling: hold LMB; dedicated rotating charge ring/orbit effect must accelerate/build, distinct from Charger.
+6. Stringer: hold LMB; three visual arrows/bars must visibly converge as charge rises.
+7. Splatana: hold LMB; dedicated blade-fill/glow effect must build, distinct from the other charge classes.
+8. Stringer: release before ~0.50s — arrows should not create delayed explosions.
+9. Stringer: release at/after ~0.50s — each landed arrow should leave a visible fuse marker, then explode about 0.75s later with damage/paint.
+10. Debug `Stringer fuses / bursts` should increase when the charged arrows land and later explode.
+11. Existing Squid Space behavior (jump / Squid Roll / Surge) remains unchanged because Dualies Space interception is Human-only.
+
+Do not freeze T14 until the user confirms these hosted checks.

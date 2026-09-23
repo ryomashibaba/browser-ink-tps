@@ -35,7 +35,7 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T14 Class Redesign</h1>
+      <h1>Browser Ink TPS · T14 v0.9.3 Candidate</h1>
       <p>11 weapon genres now use different attack models: beam, melee, roller trail, lob, charge-burst, guard canopy, delayed arrows, slash wave, dodge focus, blast, and shooter fire.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
@@ -100,7 +100,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Q/E weapon cycle · Dualies SPACE dodge · Brella RMB guard · Charger/Splatling/Stringer/Saber hold→release · Roller hold+move · Brush hold · M map';
+    hint.textContent = 'Dualies: SPACE dodge ×2 · Stringer: hold ≥0.5s → 0.75s fuse explosion · Charger/Splatling/Stringer/Saber each use dedicated charge VFX · Q/E weapons · M map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

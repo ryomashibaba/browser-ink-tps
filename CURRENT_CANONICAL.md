@@ -1,4 +1,4 @@
-# CURRENT_CANONICAL — v0.9.0 / T14 IMPLEMENTATION CANDIDATE
+# CURRENT_CANONICAL — v0.9.3 / T14 CHARGE + DUALIES + STRINGER CANDIDATE
 
 Date: 2026-09-23
 
@@ -893,3 +893,45 @@ Weapon movement presentation:
 - Dualies dodge remains a dedicated locomotion state and gains post-roll focus
 
 T0–T13 contracts remain frozen. This redesign is T14-only and remains **IMPLEMENTATION CANDIDATE** until hosted QA.
+
+## T14 v0.9.3 targeted weapon-feel correction
+
+Charge VFX foundation:
+`62a26d5d6deebebcaaa01409a287eb9c30818197`
+
+Space-dodge / fuse surfacing:
+`0ebf4ec7114744d16ce1b5cd4228838d28a7678b`
+
+Dedicated charge HUD:
+`36b9143693bb890f1392dac6bcbaf72a348125f8`
+
+Final dualies/stringer mechanics:
+`72649bc1f896dcb2eff1d73620ec52bceaf0918c`
+
+Workflow:
+`35824436471`
+
+Automated result:
+
+- dependency install: PASS
+- TypeScript: PASS
+- production build: PASS
+- Pages artifact: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Targeted corrections:
+
+- Dualies dodge input is Space while Human with Dualies selected
+- standard-style Dualies can chain up to two dodges before recharge
+- shooting is suppressed during dodge / short endlag
+- post-dodge focus starts from actual dodge execution rather than keypress time
+- Charger / Splatling / Stringer / Splatana each have distinct charge HUD and 3D feedback
+- Stringer full charge time is 1.20s
+- Stringer first-charge threshold is 0.50s
+- Stringer arrows at/above first charge create independent fuses on impact
+- Stringer fuse delay is 0.75s
+- each fuse has visible pulsing anticipation and a visible burst on detonation
+- DebugOverlay exposes Dualie roll count/remaining charges and Stringer fuse/burst counters
+
+T0–T13 remains frozen. T14 remains candidate until user runtime acceptance.

@@ -1,3 +1,24 @@
+## v0.9.3 T14 Charge / Dualies / Stringer Candidate — 2026-09-23
+
+- added distinct charge HUD + 3D feedback for Charger, Splatling, Stringer, and Splatana
+- moved Dualies dodge to Space in Human form
+- upgraded Dualies to two-chain dodge charges with short endlag and post-roll focused fire
+- suppressed shooting during Dualies dodge/endlag
+- changed Stringer charge timing to 1.20s full / 0.50s first charge
+- changed charged Stringer arrows to visible independent 0.75s fuses on impact
+- added explicit fuse/burst visual feedback and debug counters
+
+Implementation:
+`72649bc1f896dcb2eff1d73620ec52bceaf0918c`
+
+Workflow:
+`35824436471`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.9.2 T14 Weapon-Class Redesign Candidate — 2026-09-23
 
 - supersedes the rejected first-pass 11-class implementation
