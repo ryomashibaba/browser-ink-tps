@@ -1,7 +1,8 @@
 ## v0.9.4 T14 Dualies Post-Roll / Splatling Charge Candidate — 2026-09-23
 
 - Dualies dodge now requires Human form + Dualies + primary fire held + Space; Space alone no longer starts a dodge.
-- Split Dualies post-roll recovery into a short firing lock and a longer locomotion lock, based on publicly documented Splatoon-style dodge timing while retaining project-owned tuning.
+- Split Dualies dodge into fixed-step startup / roll / firing-recovery / post-roll movement-recovery phases using the publicly documented 4F + 12F + 4F + 28F Splat Dualies structure as the reference.
+- Post-roll focus now begins from actual roll completion instead of being consumed during startup / roll.
 - Dualies may chain the second dodge from the post-roll stance when the player is still firing and presses Space.
 - Splatling charge presentation now uses a Charger-like centered progress reticle and forward guide, while retaining subtle rotary markers.
 - T0–T13 Freeze and PaintRequest → immutable PaintEvent authority are unchanged.
