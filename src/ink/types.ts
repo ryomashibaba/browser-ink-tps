@@ -37,6 +37,8 @@ export interface PaintEvent {
   source: PaintSource;
   /** Optional source actor identity. Additive metadata only; never used for coordinate authority. */
   actorId?: string;
+  /** false prevents this paint from contributing to the source actor's Special gauge. */
+  gaugeEligible?: boolean;
   team: Team.A | Team.B;
   surfaceId: string;
   /** local surface coordinate in meters from the lower-left U edge */
