@@ -1,8 +1,17 @@
+import { Vec3 } from 'playcanvas';
 import type { CpuAgentSystem } from '../ai/CpuAgentSystem';
+import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { SurfaceFlags, Team } from '../ink/types';
+import type { SuperJumpTarget } from '../mobility/SuperJumpSystem';
 import type { StageDefinition } from '../stage/StageDefinition';
+
+interface MapJumpCandidate {
+  target: SuperJumpTarget;
+  mapX: number;
+  mapY: number;
+}
 
 export class TacticalMap {
   private readonly shell: HTMLDivElement;
@@ -17,7 +26,9 @@ export class TacticalMap {
     private readonly gameplayInk: GameplayInkSystem,
     private readonly cpuAgents: CpuAgentSystem,
     private readonly stats: PerformanceStats,
-    private readonly getTeam: () => Team.A | Team.B
+    private readonly getTeam: () => Team.A | Team.B,
+    private readonly canSuperJump: () => boolean,
+    private readonly requestSuperJump: (target: SuperJumpTarget) => boolean
   ) {
     this.shell = document.createElement('div');
     this.shell.id = 'tactical-map';
@@ -39,11 +50,10 @@ export class TacticalMap {
 
     window.addEventListener('keydown', (event) => {
       if (event.repeat || event.code !== 'KeyM') return;
-      this.expanded = !this.expanded;
-      this.shell.classList.toggle('expanded', this.expanded);
-      this.render();
+      this.setExpanded(!this.expanded);
     });
 
+    this.canvas.addEventListener('click', (event) => this.handleMapClick(event));
     this.render();
   }
 
@@ -51,6 +61,46 @@ export class TacticalMap {
     if (now - this.lastRender < 120) return;
     this.lastRender = now;
     this.render();
+  }
+
+  private setExpanded(expanded: boolean): void {
+    this.expanded = expanded;
+    this.shell.classList.toggle('expanded', this.expanded);
+    if (expanded && document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+    this.render();
+  }
+
+  private handleMapClick(event: MouseEvent): void {
+    if (!this.expanded || !this.canSuperJump()) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const px = (event.clientX - rect.left) * this.canvas.width / rect.width;
+    const py = (event.clientY - rect.top) * this.canvas.height / rect.height;
+    const candidates = this.jumpCandidates();
+
+    let best: MapJumpCandidate | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of candidates) {
+      const distance = Math.hypot(candidate.mapX - px, candidate.mapY - py);
+      if (distance >= bestDistance) continue;
+      bestDistance = distance;
+      best = candidate;
+    }
+
+    if (
+      !best ||
+      bestDistance > GAME_CONFIG.superJump.mapSelectionRadiusPixels
+    ) {
+      return;
+    }
+
+    if (this.requestSuperJump(best.target)) {
+      this.setExpanded(false);
+    }
   }
 
   private render(): void {
@@ -67,6 +117,8 @@ export class TacticalMap {
     this.drawSpawnPoint(this.stage.metadata.teamASpawn, 'rgba(32,220,240,.95)');
     this.drawSpawnPoint(this.stage.metadata.teamBSpawn, 'rgba(255,52,156,.95)');
     this.drawAgents();
+    this.drawSuperJumpCandidates();
+    this.drawSelectedLanding();
 
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.lineWidth = 3;
@@ -81,6 +133,20 @@ export class TacticalMap {
       width * 0.5,
       24
     );
+
+    if (this.expanded) {
+      ctx.fillStyle = this.canSuperJump()
+        ? 'rgba(235,247,255,.88)'
+        : 'rgba(255,210,210,.72)';
+      ctx.font = '700 13px system-ui, sans-serif';
+      ctx.fillText(
+        this.canSuperJump()
+          ? 'CLICK YOUR SPAWN OR A FRIENDLY ALIVE CPU TO SUPER JUMP'
+          : 'SUPER JUMP UNAVAILABLE',
+        width * 0.5,
+        height - 13
+      );
+    }
   }
 
   private drawStageSolids(): void {
@@ -170,6 +236,88 @@ export class TacticalMap {
     ctx.arc(player.x, player.y, 8.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+  }
+
+  private drawSuperJumpCandidates(): void {
+    if (!this.expanded) return;
+
+    const ctx = this.context;
+    const team = this.getTeam();
+    ctx.strokeStyle = team === Team.A
+      ? 'rgba(185,251,255,.96)'
+      : 'rgba(255,209,232,.96)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([5, 4]);
+
+    for (const candidate of this.jumpCandidates()) {
+      ctx.beginPath();
+      ctx.arc(candidate.mapX, candidate.mapY, 15, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  private drawSelectedLanding(): void {
+    if (
+      this.stats.playerSuperJumpState === 'IDLE' ||
+      !Number.isFinite(this.stats.playerSuperJumpTargetX) ||
+      !Number.isFinite(this.stats.playerSuperJumpTargetZ)
+    ) {
+      return;
+    }
+
+    const point = this.worldToMap(
+      this.stats.playerSuperJumpTargetX,
+      this.stats.playerSuperJumpTargetZ
+    );
+    const ctx = this.context;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.font = '800 10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('JUMP', point.x, point.y - 21);
+  }
+
+  private jumpCandidates(): MapJumpCandidate[] {
+    const candidates: MapJumpCandidate[] = [];
+    const team = this.getTeam();
+    const spawn = team === Team.A
+      ? this.stage.metadata.teamASpawn
+      : this.stage.metadata.teamBSpawn;
+    const spawnPoint = this.worldToMap(spawn[0], spawn[2]);
+    candidates.push({
+      target: {
+        kind: 'SPAWN',
+        id: team === Team.A ? 'spawn-a' : 'spawn-b',
+        label: 'SPAWN',
+        position: new Vec3(spawn[0], spawn[1], spawn[2])
+      },
+      mapX: spawnPoint.x,
+      mapY: spawnPoint.y
+    });
+
+    this.cpuAgents.forEachMapAgent((id, agentTeam, position, active) => {
+      if (!active || agentTeam !== team) return;
+      const point = this.worldToMap(position.x, position.z);
+      candidates.push({
+        target: {
+          kind: 'ALLY',
+          id,
+          label: id,
+          position: position.clone()
+        },
+        mapX: point.x,
+        mapY: point.y
+      });
+    });
+
+    return candidates;
   }
 
   private worldToMap(x: number, z: number): { x: number; y: number } {
