@@ -18,6 +18,7 @@ export interface ControlPanelHandlers {
   onRestartMatch(): void;
   onSplatQa(): void;
   onEndMatchQa(): void;
+  onSpecialQaReady(): void;
   onClear(): void;
 }
 
@@ -35,8 +36,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T14 Stable Freeze</h1>
-      <p>11 weapon genres now use different attack models: beam, melee, roller trail, lob, charge-burst, guard canopy, delayed arrows, slash wave, dodge focus, blast, and shooter fire.</p>
+      <h1>Browser Ink TPS · T15 Candidate</h1>
+      <p>T14 weapon baseline is frozen. T15 adds Pulse Bomb sub-weapon input and a turf-earned Turf Pulse special gauge.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -56,6 +57,7 @@ export class ControlPanel {
         <button id="restart-match">Restart Match</button>
         <button id="splat-qa">Splat QA</button>
         <button id="end-match-qa">End Match QA</button>
+        <button id="special-ready-qa">Special QA Ready</button>
       </div>
       <div class="row">
         <button id="roll-qa">Roll QA Pad</button>
@@ -92,6 +94,7 @@ export class ControlPanel {
     (panel.querySelector('#restart-match') as HTMLButtonElement).addEventListener('click', () => handlers.onRestartMatch());
     (panel.querySelector('#splat-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onSplatQa());
     (panel.querySelector('#end-match-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onEndMatchQa());
+    (panel.querySelector('#special-ready-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onSpecialQaReady());
     (panel.querySelector('#roll-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onRollQaPad());
     (panel.querySelector('#coord-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onCoordinateQa());
     (panel.querySelector('#stress-small') as HTMLButtonElement).addEventListener('click', () => handlers.onStress(GAME_CONFIG.debug.stressBurstSmall));
@@ -100,7 +103,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Dualies: hold LMB + move + SPACE dodge ×2 · post-roll fire returns before movement · Splatling/Stringer: 2-ring charge · Stringer ring1 → 0.75s fuse · Q/E weapons · M map';
+    hint.textContent = 'F Pulse Bomb · G Turf Pulse when SPECIAL is ready · Dualies: LMB + move + SPACE · Q/E weapons · M map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
