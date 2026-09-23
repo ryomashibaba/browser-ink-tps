@@ -41,8 +41,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T17 Candidate</h1>
-      <p>T0–T16 is frozen. T17 adds map-selected Super Jump to spawn or living friendly CPUs.</p>
+      <h1>Browser Ink TPS · T17 Stable Freeze</h1>
+      <p>T0–T17 is frozen. Super Jump destinations are fixed at map-selection time.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
