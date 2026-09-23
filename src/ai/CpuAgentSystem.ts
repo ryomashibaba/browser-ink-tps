@@ -140,6 +140,7 @@ export class CpuAgentSystem {
       if (this.activeLastTick) {
         for (const bot of this.bots) {
           bot.agent?.resetMoveTarget();
+          this.resetCpuWeaponRuntime(bot);
           if (bot.mobilityState !== 'GROUND') this.cancelCpuJump(bot, true);
         }
       }
@@ -910,6 +911,7 @@ export class CpuAgentSystem {
     bot.jumpPrepRemaining = GAME_CONFIG.superJump.prepareSeconds;
     bot.jumpTravelElapsed = 0;
     bot.jumpActionRemaining = 0;
+    this.resetCpuWeaponRuntime(bot);
     bot.jumpMarker.enabled = true;
     bot.jumpMarker.setPosition(
       bot.jumpTargetPosition.x,
@@ -1018,9 +1020,16 @@ export class CpuAgentSystem {
     bot.jumpPrepRemaining = 0;
     bot.jumpTravelElapsed = 0;
     bot.jumpActionRemaining = 0;
+    this.resetCpuWeaponRuntime(bot);
     bot.entity.setLocalEulerAngles(0, 0, 0);
 
     if (countCancel) this.stats.cpuSuperJumpCancels += 1;
+  }
+
+  private resetCpuWeaponRuntime(bot: CpuBot): void {
+    bot.weaponChargeSeconds = 0;
+    bot.weaponBurstShotsRemaining = 0;
+    bot.weaponBurstCooldown = 0;
   }
 
   private resetCpuJumpState(bot: CpuBot): void {
