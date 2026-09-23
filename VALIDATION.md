@@ -1082,3 +1082,10 @@ Regression:
 20. 4v4 CPU, match timer/respawn, tactical map, FPS/dropped sim, projectile pool, GPU ink backlog, and T0–T14 Freeze behavior remain acceptable.
 
 T15 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
+
+
+## T15 Stable Freeze — accepted 2026-09-23
+
+The user confirmed the v0.10.0 hosted checks. Stable checkpoint: `901b8c73f5313ac39c27ebb0fc42cb3ec1810bda`. GitHub Actions run #165 / `35832485527` passed build and Pages deployment.
+
+T15 is now **STABLE FREEZE**.
