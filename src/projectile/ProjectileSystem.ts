@@ -329,7 +329,13 @@ export class ProjectileSystem {
     this.wasFireHeld = fireHeld;
 
     this.processDelayedBursts(dt);
-    this.spawnQueuedCpuShots(team, playerPosition, playerDamageable);
+    this.spawnQueuedCpuShots(
+      team,
+      playerPosition,
+      playerDamageable,
+      guarding,
+      aimDirection
+    );
 
     let active = 0;
     for (const slot of this.slots) {
@@ -1122,7 +1128,9 @@ export class ProjectileSystem {
   private spawnQueuedCpuShots(
     humanTeam: Team.A | Team.B,
     playerPosition: Vec3,
-    playerDamageable: boolean
+    playerDamageable: boolean,
+    guarding: boolean,
+    playerAimDirection: Vec3
   ): void {
     if (this.queuedCpuShots.length === 0) return;
 
@@ -1135,7 +1143,9 @@ export class ProjectileSystem {
           profile,
           humanTeam,
           playerPosition,
-          playerDamageable
+          playerDamageable,
+          guarding,
+          playerAimDirection
         );
         continue;
       }
@@ -1218,7 +1228,9 @@ export class ProjectileSystem {
     profile: WeaponProfile,
     humanTeam: Team.A | Team.B,
     playerPosition: Vec3,
-    playerDamageable: boolean
+    playerDamageable: boolean,
+    guarding: boolean,
+    playerAimDirection: Vec3
   ): void {
     const direction = request.target.clone().sub(request.origin);
     if (direction.lengthSq() <= 1e-8) return;
@@ -1300,8 +1312,26 @@ export class ProjectileSystem {
       if (combatKind === 'CPU' && cpuHit) {
         this.cpuAgents.applyProjectileHit(cpuHit, damage);
       } else if (combatKind === 'PLAYER') {
-        this.resources.applyDamage(damage);
-        this.stats.cpuPlayerHits += 1;
+        if (
+          guarding &&
+          this.isGuardBlockingPoint(
+            request.origin,
+            playerPosition,
+            playerAimDirection
+          )
+        ) {
+          this.guardHp = Math.max(0, this.guardHp - damage);
+          this.stats.playerWeaponGuardBlocks += 1;
+          this.stats.playerWeaponGuardHp = this.guardHp;
+          if (this.guardHp <= 0) {
+            this.guardBreakSeconds = 2.5;
+            this.guardEntity.enabled = false;
+            this.stats.playerWeaponAction = 'GUARD_BREAK';
+          }
+        } else {
+          this.resources.applyDamage(damage);
+          this.stats.cpuPlayerHits += 1;
+        }
       }
     } else if (paintWins && paintHit) {
       endPoint = paintHit.worldPoint.clone();
@@ -1613,9 +1643,21 @@ export class ProjectileSystem {
     playerPosition: Vec3,
     aimDirection: Vec3
   ): boolean {
+    return this.isGuardBlockingPoint(
+      slot.position,
+      playerPosition,
+      aimDirection
+    );
+  }
+
+  private isGuardBlockingPoint(
+    attackerPoint: Vec3,
+    playerPosition: Vec3,
+    aimDirection: Vec3
+  ): boolean {
     if (this.guardBreakSeconds > 0 || this.guardHp <= 0) return false;
     const forward = flattened(aimDirection);
-    const toProjectile = slot.position.clone().sub(playerPosition);
+    const toProjectile = attackerPoint.clone().sub(playerPosition);
     toProjectile.y = 0;
     if (toProjectile.lengthSq() <= 1e-8) return true;
     toProjectile.normalize();
