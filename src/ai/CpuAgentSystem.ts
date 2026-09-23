@@ -1342,10 +1342,80 @@ export class CpuAgentSystem {
     if (countCancel) this.stats.cpuSuperJumpCancels += 1;
   }
 
-  private resetCpuWeaponRuntime(bot: CpuBot): void {
+  private resetCpuWeaponRuntime(bot: CpuBot, resetGuard = false): void {
     bot.weaponChargeSeconds = 0;
     bot.weaponBurstShotsRemaining = 0;
     bot.weaponBurstCooldown = 0;
+    bot.weaponRollPaintCooldown = 0;
+    bot.weaponGuarding = false;
+    bot.guardEntity.enabled = false;
+    if (resetGuard) {
+      bot.weaponGuardHp = 100;
+      bot.weaponGuardBreakSeconds = 0;
+    }
+  }
+
+  private renderCpuGuard(
+    bot: CpuBot,
+    x: number,
+    y: number,
+    z: number
+  ): void {
+    const enabled =
+      bot.weaponId === 'canopy-guard' &&
+      bot.weaponGuarding &&
+      bot.weaponGuardBreakSeconds <= 0 &&
+      bot.weaponGuardHp > 0 &&
+      bot.mobilityState === 'GROUND';
+
+    bot.guardEntity.enabled = enabled;
+    if (!enabled) return;
+
+    const forward = bot.weaponFacing;
+    bot.guardEntity.setPosition(
+      x + forward.x * 0.82,
+      y + 0.72,
+      z + forward.z * 0.82
+    );
+    const yaw = Math.atan2(forward.x, forward.z) * 180 / Math.PI;
+    bot.guardEntity.setLocalEulerAngles(0, yaw, 0);
+  }
+
+  private isCpuGuardBlockingPoint(bot: CpuBot, attackerPoint: Vec3): boolean {
+    if (
+      bot.weaponId !== 'canopy-guard' ||
+      !bot.weaponGuarding ||
+      bot.weaponGuardBreakSeconds > 0 ||
+      bot.weaponGuardHp <= 0
+    ) {
+      return false;
+    }
+
+    const toAttacker = attackerPoint.clone().sub(bot.position);
+    toAttacker.y = 0;
+    if (toAttacker.lengthSq() <= 1e-8) return true;
+    toAttacker.normalize();
+    return bot.weaponFacing.dot(toAttacker) > -0.10;
+  }
+
+  private absorbCpuGuardDamage(bot: CpuBot, damage: number): boolean {
+    if (
+      bot.weaponId !== 'canopy-guard' ||
+      !bot.weaponGuarding ||
+      bot.weaponGuardBreakSeconds > 0 ||
+      bot.weaponGuardHp <= 0
+    ) {
+      return false;
+    }
+
+    bot.weaponGuardHp = Math.max(0, bot.weaponGuardHp - damage);
+    this.stats.cpuWeaponGuardBlocks += 1;
+    if (bot.weaponGuardHp <= 0) {
+      bot.weaponGuardBreakSeconds = 2.5;
+      bot.weaponGuarding = false;
+      bot.guardEntity.enabled = false;
+    }
+    return true;
   }
 
   private resetCpuJumpState(bot: CpuBot): void {
@@ -1393,6 +1463,7 @@ export class CpuAgentSystem {
       this.navigation.removeAgent(bot.agent);
       bot.agent = null;
     }
+    this.resetCpuWeaponRuntime(bot, true);
     this.resetCpuJumpState(bot);
 
     bot.lifeState = 'SPLATTED';
@@ -1466,6 +1537,7 @@ export class CpuAgentSystem {
     let jumpAirborne = 0;
     let weaponCharging = 0;
     let weaponBursting = 0;
+    let weaponGuarding = 0;
     const loadouts: string[] = [];
     let hpTotal = 0;
     let inkTotal = 0;
@@ -1482,6 +1554,7 @@ export class CpuAgentSystem {
       if (isCpuJumpAirborne(bot)) jumpAirborne += 1;
       if (bot.weaponChargeSeconds > 0) weaponCharging += 1;
       if (bot.weaponBurstShotsRemaining > 0) weaponBursting += 1;
+      if (bot.weaponGuarding) weaponGuarding += 1;
       loadouts.push(`${bot.id}:${weaponProfile(bot.weaponId).shortName}`);
       hpTotal += bot.hp;
       inkTotal += bot.ink;
@@ -1497,9 +1570,34 @@ export class CpuAgentSystem {
     this.stats.cpuLoadouts = loadouts.join(' · ');
     this.stats.cpuWeaponCharging = weaponCharging;
     this.stats.cpuWeaponBursting = weaponBursting;
+    this.stats.cpuWeaponGuarding = weaponGuarding;
     this.stats.cpuAverageHp = this.bots.length > 0 ? hpTotal / this.bots.length : 0;
     this.stats.cpuAverageInk = this.bots.length > 0 ? inkTotal / this.bots.length : 0;
   }
+}
+
+function cpuWeaponInkCost(
+  profile: ReturnType<typeof weaponProfile>,
+  action: CpuWeaponAction,
+  charge: number
+): number {
+  if (action === 'ROLLER_ROLL') return profile.rollPaintInkCost;
+
+  if (action === 'STRINGER_RELEASE') {
+    const firstRing = profile.chargeSeconds > 0
+      ? profile.firstChargeSeconds / profile.chargeSeconds
+      : 0;
+    if (charge >= firstRing && firstRing < 1) {
+      const second = clamp01(
+        (charge - firstRing) / Math.max(1 - firstRing, 1e-6)
+      );
+      return lerp(6.0, 8.5, second);
+    }
+    const first = firstRing > 0 ? clamp01(charge / firstRing) : clamp01(charge);
+    return lerp(5.0, 6.0, first);
+  }
+
+  return profile.inkCost;
 }
 
 function cpuWeaponRangeMeters(
@@ -1516,6 +1614,16 @@ function cpuWeaponRangeMeters(
       return 10.0;
     case 'DUALIES':
       return 9.8;
+    case 'ROLLER':
+      return 4.6;
+    case 'BRUSH':
+      return 2.45;
+    case 'BRELLA':
+      return 7.6;
+    case 'STRINGER':
+      return 15.0;
+    case 'SPLATANA':
+      return 8.5;
     default:
       return GAME_CONFIG.cpu.combatRangeMeters;
   }
