@@ -350,3 +350,8 @@ Current timing:
 The player is vulnerable during preparation and invulnerable from takeoff until actual landing. Airborne travel uses a separate high-arc state rather than ordinary Rapier movement, so jump time does not depend on distance and stage walls/floors cannot block the route.
 
 The Tactical Map, HUD, landing marker, Debug overlay, camera follow, Splat/Respawn lifecycle, and Pointer Lock recovery are integrated with the jump state.
+
+
+#### T17 ally-target correction
+
+When a living friendly CPU is selected on the Tactical Map, Super Jump now locks the destination to that CPU's world position at the exact moment of selection. The destination and landing marker do not follow later CPU movement.
