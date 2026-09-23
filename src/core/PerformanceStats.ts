@@ -66,8 +66,10 @@ export class PerformanceStats {
   public playerWeaponDodgeCharges = 2;
   public stringerFuses = 0;
   public stringerBursts = 0;
+  public playerSubWeaponName = 'Pulse Bomb';
   public playerSubThrows = 0;
   public playerSubExplosions = 0;
+  public playerSpecialName = 'Turf Pulse';
   public playerSpecialPoints = 0;
   public playerSpecialPercent = 0;
   public playerSpecialReady = false;
