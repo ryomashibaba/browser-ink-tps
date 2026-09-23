@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T18 STABLE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T19 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -50,6 +50,8 @@ export class DebugOverlay {
         <span class="muted">Nav build</span><span>${last.cpuNavigationBuildMs.toFixed(1)} ms</span>
         <span class="muted">CPU agents</span><span>${last.cpuAgents} · A${last.cpuTeamA}/B${last.cpuTeamB}</span>
         <span class="muted">CPU roles</span><span>${escapeHtml(last.cpuRoles)}</span>
+        <span class="muted">CPU loadouts</span><span>${escapeHtml(last.cpuLoadouts)}</span>
+        <span class="muted">CPU charge / burst</span><span>${last.cpuWeaponCharging} / ${last.cpuWeaponBursting}</span>
         <span class="muted">CPU retargets</span><span>${last.cpuTacticalRetargets}</span>
         <span class="muted">CPU paint req</span><span>${last.cpuPaintRequests}</span>
         <span class="muted">CPU alive</span><span>${last.cpuAlive} / ${last.cpuAgents}</span>
