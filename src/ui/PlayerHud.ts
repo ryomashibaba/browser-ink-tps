@@ -20,7 +20,6 @@ export class PlayerHud {
   ) {
     this.root = document.createElement('div');
     this.root.id = 'player-hud';
-
     this.top = document.createElement('div');
     this.top.id = 'hud-top';
     this.resources = document.createElement('div');
@@ -29,7 +28,6 @@ export class PlayerHud {
     this.state.id = 'hud-state';
     this.centerMessage = document.createElement('div');
     this.centerMessage.id = 'hud-center-message';
-
     this.root.append(this.top, this.resources, this.state, this.centerMessage);
     uiRoot.appendChild(this.root);
     this.update(0, true);
@@ -72,6 +70,7 @@ export class PlayerHud {
 
     this.state.innerHTML = `
       <span class="hud-team-chip ${teamClass}">TEAM ${team === Team.A ? 'A' : 'B'}</span>
+      <span class="hud-weapon-chip">WEAPON · ${escapeHtml(this.stats.playerWeaponName)}</span>
       <span>OWN ${ownPercent.toFixed(1)}%</span>
       <span>ENEMY ${enemyPercent.toFixed(1)}%</span>
       <span>${escapeHtml(this.stats.playerLocomotionState)}</span>`;

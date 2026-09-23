@@ -1,8 +1,15 @@
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import { Team } from '../ink/types';
+import {
+  DEFAULT_WEAPON_ID,
+  WEAPON_ORDER,
+  WEAPON_PROFILES,
+  type WeaponId
+} from '../weapons/WeaponCatalog';
 
 export interface ControlPanelHandlers {
   onTeamChanged(team: Team.A | Team.B): void;
+  onWeaponChanged(weaponId: WeaponId): void;
   onBrushChanged(radius: number): void;
   onStress(count: number): void;
   onRollQaPad(): void;
@@ -15,9 +22,11 @@ export interface ControlPanelHandlers {
 
 export class ControlPanel {
   private team: Team.A | Team.B = Team.A;
+  private weapon: WeaponId = DEFAULT_WEAPON_ID;
   private radius: number = GAME_CONFIG.debug.defaultBrushRadiusMeters;
   private readonly buttonA: HTMLButtonElement;
   private readonly buttonB: HTMLButtonElement;
+  private readonly weaponButtons: HTMLButtonElement[];
   private readonly radiusOutput: HTMLOutputElement;
 
   public constructor(root: HTMLElement, handlers: ControlPanelHandlers) {
@@ -25,11 +34,17 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T13 Stable</h1>
-      <p>T0–T13 is frozen. INKWORKS JUNCTION, HUD, Tactical Map, shared stage metadata, and 4v4 production-stage behavior are stable.</p>
+      <h1>Browser Ink TPS · T14 Candidate</h1>
+      <p>T0–T13 remains frozen. T14 adds original weapon variety, audiovisual feedback, and presentation animation.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
+      </div>
+      <div class="row weapon-row">
+        ${WEAPON_ORDER.map((id, index) => {
+          const weapon = WEAPON_PROFILES[id];
+          return `<button data-weapon="${id}" class="${id === this.weapon ? 'active-weapon' : ''}">${index + 3} · ${weapon.shortName}</button>`;
+        }).join('')}
       </div>
       <label>QA brush radius <output id="brush-out">${this.radius.toFixed(2)} m</output>
         <input id="brush" type="range" min="0.30" max="2.60" step="0.05" value="${this.radius}">
@@ -51,11 +66,19 @@ export class ControlPanel {
 
     this.buttonA = panel.querySelector('#team-a') as HTMLButtonElement;
     this.buttonB = panel.querySelector('#team-b') as HTMLButtonElement;
+    this.weaponButtons = Array.from(
+      panel.querySelectorAll<HTMLButtonElement>('[data-weapon]')
+    );
     this.radiusOutput = panel.querySelector('#brush-out') as HTMLOutputElement;
     const slider = panel.querySelector('#brush') as HTMLInputElement;
 
     this.buttonA.addEventListener('click', () => this.setTeam(Team.A, handlers));
     this.buttonB.addEventListener('click', () => this.setTeam(Team.B, handlers));
+    for (const button of this.weaponButtons) {
+      button.addEventListener('click', () => {
+        this.setWeapon(button.dataset.weapon as WeaponId, handlers);
+      });
+    }
     slider.addEventListener('input', () => {
       this.radius = Number(slider.value);
       this.radiusOutput.value = `${this.radius.toFixed(2)} m`;
@@ -73,7 +96,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T13 stable · enlarged production arena · HUD + Tactical Map · 4v4 Recast combat · M toggles Tactical Map';
+    hint.textContent = 'T14 · 3 Pulse Sprayer · 4 Needle SMG · 5 Arc Blaster · procedural SFX/FX · M Tactical Map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
@@ -85,12 +108,16 @@ export class ControlPanel {
       if (event.repeat) return;
       if (event.code === 'Digit1') this.setTeam(Team.A, handlers);
       if (event.code === 'Digit2') this.setTeam(Team.B, handlers);
+      if (event.code === 'Digit3') this.setWeapon(WEAPON_ORDER[0]!, handlers);
+      if (event.code === 'Digit4') this.setWeapon(WEAPON_ORDER[1]!, handlers);
+      if (event.code === 'Digit5') this.setWeapon(WEAPON_ORDER[2]!, handlers);
       if (event.code === 'KeyR') handlers.onClear();
       if (event.code === 'KeyB') handlers.onStress(GAME_CONFIG.debug.stressBurstLarge);
     });
   }
 
   public get selectedTeam(): Team.A | Team.B { return this.team; }
+  public get selectedWeapon(): WeaponId { return this.weapon; }
   public get brushRadius(): number { return this.radius; }
 
   private setTeam(team: Team.A | Team.B, handlers: ControlPanelHandlers): void {
@@ -98,5 +125,14 @@ export class ControlPanel {
     this.buttonA.className = team === Team.A ? 'active-a' : '';
     this.buttonB.className = team === Team.B ? 'active-b' : '';
     handlers.onTeamChanged(team);
+  }
+
+  private setWeapon(weapon: WeaponId, handlers: ControlPanelHandlers): void {
+    if (!WEAPON_PROFILES[weapon]) return;
+    this.weapon = weapon;
+    for (const button of this.weaponButtons) {
+      button.classList.toggle('active-weapon', button.dataset.weapon === weapon);
+    }
+    handlers.onWeaponChanged(weapon);
   }
 }

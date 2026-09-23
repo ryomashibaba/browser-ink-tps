@@ -22,6 +22,7 @@ import { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import { FixedStepClock } from '../core/FixedStepClock';
 import { PerformanceStats } from '../core/PerformanceStats';
+import { GameFeedback } from '../feedback/GameFeedback';
 import { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { GpuInkAtlas } from '../ink/GpuInkAtlas';
 import { PaintCoordinator } from '../ink/PaintCoordinator';
@@ -97,6 +98,7 @@ export class InkLabApp {
   private readonly match: MatchController;
   private readonly navigation: RecastStageNavigation;
   private readonly cpuAgents: CpuAgentSystem;
+  private readonly feedback: GameFeedback;
   private readonly projectiles: ProjectileSystem;
 
   private readonly playerPosition = new Vec3();
@@ -162,6 +164,7 @@ export class InkLabApp {
       PRODUCTION_STAGE_DEFINITION,
       this.selectedTeam
     );
+    this.feedback = new GameFeedback(app, canvas);
     this.projectiles = new ProjectileSystem(
       app,
       surfaces,
@@ -170,6 +173,7 @@ export class InkLabApp {
       this.resources,
       this.combatTargets,
       this.cpuAgents,
+      this.feedback,
       this.stats
     );
 
@@ -180,6 +184,7 @@ export class InkLabApp {
         this.cpuAgents.reset(team);
       },
       onBrushChanged: (radius) => { this.brushRadius = radius; },
+      onWeaponChanged: (weaponId) => this.projectiles.setPlayerWeapon(weaponId),
       onStress: (count) => this.enqueueStressTest(count),
       onRollQaPad: () => {
         this.clearCoordinateQaMarkers();
@@ -268,6 +273,10 @@ export class InkLabApp {
         this.match.fixedUpdate(stepSeconds, this.resources.currentHp);
 
         if (this.match.consumeSplatStarted()) {
+          this.feedback.splat(
+            this.selectedTeam,
+            this.player.getPosition(this.playerPosition)
+          );
           this.player.setLifecycleActive(false);
           this.projectiles.reset();
         }
@@ -312,7 +321,7 @@ export class InkLabApp {
         this.cameraController.getAimDirection(this.aimDirection);
         this.player.getMuzzlePosition(this.aimDirection, this.muzzlePosition);
         this.cameraController.getAimTarget(this.aimTarget);
-        this.projectiles.solveLaunchDirection(
+        this.projectiles.solvePlayerLaunchDirection(
           this.muzzlePosition,
           this.aimTarget,
           this.aimDirection
@@ -333,6 +342,7 @@ export class InkLabApp {
       this.player.render(report.alpha, this.playerPosition);
       this.cpuAgents.render(report.alpha);
       this.projectiles.render(report.alpha);
+      this.feedback.update(cameraDt);
       this.cameraController.update(this.playerPosition);
 
       const gpu = this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
@@ -365,6 +375,7 @@ export class InkLabApp {
     this.resources.reset();
     this.player.teleport(spawn);
     this.player.setLifecycleActive(true);
+    this.feedback.respawn(this.selectedTeam, spawn);
     this.cameraController.update(this.player.getPosition(this.playerPosition));
   }
 
