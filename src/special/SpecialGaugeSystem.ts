@@ -77,6 +77,13 @@ export class SpecialGaugeSystem {
     return true;
   }
 
+  public qaFill(): void {
+    this.points = GAME_CONFIG.special.requiredPoints;
+    this.readyLatched = true;
+    this.feedback.specialReady();
+    this.syncStats();
+  }
+
   public reset(): void {
     this.points = 0;
     this.readyLatched = false;
