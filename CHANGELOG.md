@@ -1,3 +1,12 @@
+## v0.13.0 T18 Stable Freeze — 2026-09-23
+
+- hosted QA accepted by the user
+- stable checkpoint: `1a097015a8217ef4fcea8689e1a5de4cf8b71b42`
+- GitHub Actions run #243 / `35843150398` passed TypeScript check, production build, and Pages deploy
+- CPU tactical Super Jump recovery/regrouping, safety rules, lifecycle cleanup, and QA metrics are frozen
+- T0–T18 is now the frozen gameplay foundation
+- next phase: T19 CPU Loadout Diversity / Weapon Kit Parity
+
 ## v0.13.0 T18 CPU Tactical Mobility Candidate — 2026-09-23
 
 - added GROUND / JUMP_PREP / JUMP_TRAVEL / JUMP_LANDING mobility state to CPU agents
