@@ -458,10 +458,10 @@ button.active-weapon {
   box-shadow: 0 0 6px var(--charge-color);
   opacity: .62;
 }
-#weapon-charge-vfx.splatling i:nth-child(4) { transform: rotate(0deg); }
-#weapon-charge-vfx.splatling i:nth-child(5) { transform: rotate(90deg); }
-#weapon-charge-vfx.splatling i:nth-child(6) { transform: rotate(180deg); }
-#weapon-charge-vfx.splatling i:nth-child(7) { transform: rotate(270deg); }
+#weapon-charge-vfx.splatling i:nth-child(5) { transform: rotate(0deg); }
+#weapon-charge-vfx.splatling i:nth-child(6) { transform: rotate(90deg); }
+#weapon-charge-vfx.splatling i:nth-child(7) { transform: rotate(180deg); }
+#weapon-charge-vfx.splatling i:nth-child(8) { transform: rotate(270deg); }
 
 /* Stringer: ring 1 unlocks explosive bolts; ring 2 converges the three arrows. */
 #weapon-charge-vfx.stringer .stringer-ring {
