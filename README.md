@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.6.0 / T11 STABLE FREEZE**
+**v0.7.0 / T12 IMPLEMENTATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T11 gameplay foundation is frozen. The current `main` includes:
+The T0–T11 gameplay foundation remains frozen. The current `main` additionally contains the T12 CPU / Recast tactical candidate:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -40,6 +40,10 @@ The T0–T11 gameplay foundation is frozen. The current `main` includes:
 - HP-zero Splat lifecycle with 2.5-second respawn
 - team-specific respawn points with Human + full HP/Ink reset
 - Restart Match / Splat QA / End Match QA controls
+- seven CPU participants using a shared Recast/Detour Crowd
+- Painter / Skirmisher / Anchor tactical roles
+- GameplayInk-aware tactical turf goals
+- CPU turf contribution through the canonical PaintRequest/PaintEvent pipeline
 - center-crosshair TPS aiming
 - projectile-gravity compensation toward the visual aim target
 - fixed 60 Hz gameplay simulation
@@ -217,7 +221,7 @@ Do not casually replace:
 
 The current project intentionally does **not** yet include:
 
-- CPU players / Recast navigation
+- CPU weapon combat / Splat / Respawn completion
 - super jump
 - production HUD / tactical map
 - production models / animation / audio
@@ -226,12 +230,15 @@ The current project intentionally does **not** yet include:
 
 ## Current phase
 
-**Next phase: T12 — CPU players / Recast navigation + tactical layer**
+**T12 — CPU players / Recast navigation + tactical layer hosted QA**
 
-T0–T11 is frozen. T12 must preserve the CPU-authoritative ink pipeline, T8 world interaction, T9 locomotion, T10 combat resources, and T11 match/lifecycle contracts.
+T0–T11 remains frozen. The first T12 batch adds seven Recast Crowd agents, staggered tactical roles, and CPU turf contribution. CPU weapon combat/Splat/Respawn remains to be completed before T12 Freeze.
 
-Planned order:
+Current T12 validation focus:
 
-- T12 — CPU players / Recast navigation + tactical layer
+- Recast runtime initialization / NavMesh generation
+- seven-agent Crowd movement and avoidance
+- role behavior and CPU turf painting
+- 60 Hz simulation stability with eight total participants
 - T13 — production stage / HUD / map
 - T14 — content, animation, audio, weapons, polish

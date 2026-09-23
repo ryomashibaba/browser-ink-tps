@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.6.0 / T11 STABLE FREEZE
+# CURRENT_CANONICAL — v0.7.0 / T12 IMPLEMENTATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T11 is now the frozen stable foundation. T11 Spawn / Splat / Respawn / Turf War Match Loop passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
+**T0–T11 remains the frozen stable foundation. T12 CPU Players / Recast Navigation + Tactical Layer is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -496,3 +496,53 @@ T11 is therefore **STABLE FREEZE**.
 - T12 — CPU players / Recast navigation + tactical layer
 - T13 — production stage / HUD / tactical map
 - T14 — content, animation, audio, additional weapons, polish
+
+## T12 implementation candidate
+
+Navigation foundation:
+`f8fced0a205efd5ed09b8470757a6ec2833b7e8f`
+
+Seven-CPU integration:
+`05db5bd5484105d5ca060a40dec5181ea1f033e9`
+
+Strict typing follow-up:
+`2578c83ba50911f7163beef3ce42c8e485ab4254`
+
+Automated workflow:
+`35813586805`
+
+Automated results:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+T12 candidate adds:
+
+- `recast-navigation 0.43.1` with Vite pre-bundle exclusion
+- runtime solo NavMesh generation from the shared T8 StageDefinition solid geometry
+- Recast/Detour Crowd fixed-step updates at the existing 60 Hz simulation rate
+- seven CPU agents so the match has eight participants including the human player
+- human Team A => CPU roster A3/B4; human Team B => CPU roster A4/B3
+- Crowd obstacle avoidance / separation instead of seven independent direct-chase movers
+- explicit CPU roles: Painter / Skirmisher / Anchor
+- staggered tactical retargeting around 3.6 Hz per bot rather than expensive full decisions every fixed tick
+- Painter goals score neutral/enemy turf through CPU-authoritative GameplayInk
+- opposing Skirmishers pressure positions around the human player
+- Anchors patrol the home half
+- CPU movement contributes turf through normal `PaintRequest -> PaintEvent -> GameplayInk + GPU atlas` flow
+- CPU footprint paint runs on a lower cadence rather than every 60 Hz tick
+- CPU entities are render-interpolated between fixed Crowd states
+- Restart Match and team changes rebuild the CPU roster
+- debug metrics for Recast status/build time, CPU counts, roles, tactical retargets, and CPU paint requests
+
+Current T12 boundary:
+
+- CPU navigation / avoidance / tactical movement / turf contribution are implemented
+- CPU weapon firing, HP/Splat/Respawn, and player-vs-CPU projectile damage are not yet part of this first T12 candidate batch
+- CPU agents intentionally do not replace the frozen PlayerController/Rapier KCC used by the human player
+
+T12 must not be frozen until hosted navigation/tactical QA passes and the remaining CPU combat/lifecycle work is explicitly completed or re-scoped.

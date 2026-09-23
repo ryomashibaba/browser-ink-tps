@@ -1,3 +1,38 @@
+## v0.7.0 T12 Recast / CPU Tactical Candidate — 2026-09-23
+
+### Navigation
+
+- added `recast-navigation 0.43.1`
+- added Vite optimizeDeps exclusion for Recast WASM integration
+- generated runtime solo NavMesh from canonical StageDefinition boxes
+- added shared Detour Crowd fixed at 60 Hz
+
+### CPU roster / tactics
+
+- added seven visible CPU agents
+- added balanced 4v4 roster relative to selected human team
+- added Painter / Skirmisher / Anchor roles
+- added staggered tactical retargeting
+- added authoritative GameplayInk-aware Painter target scoring
+- added Crowd separation / avoidance
+- added CPU turf contribution through PaintRequest / PaintEvent
+- added CPU render interpolation and performance/debug counters
+
+Implementation:
+`f8fced0a205efd5ed09b8470757a6ec2833b7e8f`
+`05db5bd5484105d5ca060a40dec5181ea1f033e9`
+`2578c83ba50911f7163beef3ce42c8e485ab4254`
+
+Workflow:
+`35813586805`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
+CPU combat/lifecycle remains intentionally pending inside T12.
+
 ## v0.6.0 T11 Stable Freeze — 2026-09-23
 
 ### Freeze

@@ -1,4 +1,4 @@
-# Validation Report — v0.6.0 T11 Stable Freeze
+# Validation Report — v0.7.0 T12 Implementation Candidate
 
 Date: 2026-09-23
 
@@ -589,3 +589,55 @@ Automated implementation workflow:
 `35812515353`
 
 T11 is now **STABLE FREEZE**.
+
+## T12 CPU / Recast navigation candidate
+
+Implementation:
+`f8fced0a205efd5ed09b8470757a6ec2833b7e8f`
+`05db5bd5484105d5ca060a40dec5181ea1f033e9`
+`2578c83ba50911f7163beef3ce42c8e485ab4254`
+
+Workflow:
+`35813586805`
+
+Automated result:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Architecture validation:
+
+- Recast is initialized before T12 navigation APIs are constructed
+- Vite excludes `recast-navigation` from dependency pre-bundling per library guidance
+- NavMesh input comes from the same T8 StageDefinition solids used by render/physics rather than a hand-maintained second map
+- NavMesh generation is performed once at app construction for the current static QA stage
+- Crowd simulation uses the existing fixed 60 Hz gameplay step
+- seven CPU agents share one Crowd/NavMesh rather than each running independent pathfinding
+- tactical decisions are staggered and lower frequency than the 60 Hz movement simulation
+- Painter scoring reads authoritative CPU GameplayInk only
+- CPU paint enters the existing PaintCoordinator via `PaintEventType.Foot` PaintRequests
+- CPU painting does not write directly to GPU or GameplayInk
+- T0–T11 human movement / combat / match lifecycle code remains separate and frozen
+
+Hosted QA required for this T12 candidate batch:
+
+1. page loads normally and overlay `Recast` reports `READY` rather than FAILED
+2. overlay reports 7 CPU agents and, as Team A, A3/B4; switch to Team B and verify A4/B3
+3. during the 3-second COUNTDOWN CPUs stay at their spawn area; once PLAYING begins all seven start moving
+4. CPU agents route around the center block / stage solids instead of moving straight through them
+5. when several CPUs converge, they visibly separate/avoid rather than permanently stacking at one point
+6. CPU movement produces cyan/magenta turf trails and `CPU paint req` rises, while regular player paint remains correct
+7. Painter agents should visibly spread toward neutral/enemy areas over time; opposing Skirmishers should tend to pressure the player's vicinity; Anchors should stay biased toward their home half
+8. Restart Match clears turf and resets CPU tactical/paint counters and roster positions
+9. verify FPS remains acceptably close to the previous build with all seven CPUs active; there should be no runaway dropped-simulation time
+10. sanity-check T11 countdown/match/result, T10 Ink/HP/targets, T9 Squid movement, and T8 camera/paint blockers
+
+Expected limitation of this candidate:
+
+- CPU agents currently navigate and paint but do not yet fire weapons, take projectile damage, Splat, or Respawn
+
+T12 remains **IMPLEMENTATION CANDIDATE**.

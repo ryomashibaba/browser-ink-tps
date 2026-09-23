@@ -50,6 +50,8 @@ export class CpuAgentSystem {
       bot.entity.destroy();
     }
     this.bots.length = 0;
+    this.stats.cpuTacticalRetargets = 0;
+    this.stats.cpuPaintRequests = 0;
 
     const teamACount = humanTeam === Team.A ? 3 : 4;
     const teamBCount = GAME_CONFIG.cpu.cpuPlayers - teamACount;
