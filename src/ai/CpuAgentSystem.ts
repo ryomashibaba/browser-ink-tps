@@ -216,6 +216,11 @@ export class CpuAgentSystem {
 
       bot.jumpCooldownSeconds = Math.max(0, bot.jumpCooldownSeconds - dt);
       bot.jumpRespawnWindowSeconds = Math.max(0, bot.jumpRespawnWindowSeconds - dt);
+      bot.subCooldownSeconds = Math.max(0, bot.subCooldownSeconds - dt);
+      bot.specialDecisionCooldownSeconds = Math.max(
+        0,
+        bot.specialDecisionCooldownSeconds - dt
+      );
       bot.previousPosition.copy(bot.position);
 
       if (bot.mobilityState === 'JUMP_TRAVEL' || bot.mobilityState === 'JUMP_LANDING') {
@@ -289,6 +294,12 @@ export class CpuAgentSystem {
         humanPosition,
         humanActive
       );
+      this.updateCpuKit(
+        bot,
+        humanTeam,
+        humanPosition,
+        humanActive
+      );
     }
 
     this.syncStats();
@@ -345,6 +356,48 @@ export class CpuAgentSystem {
     this.pendingShots.length = 0;
   }
 
+  public drainKitRequests(consumer: (request: CpuKitRequest) => void): void {
+    for (const request of this.pendingKitRequests) consumer(request);
+    this.pendingKitRequests.length = 0;
+  }
+
+  public addScoreablePaintByActor(
+    areaByActor: Readonly<Record<string, number>>
+  ): void {
+    for (const [actorId, area] of Object.entries(areaByActor)) {
+      if (!Number.isFinite(area) || area <= 0) continue;
+      const bot = this.bots.find((candidate) => candidate.id === actorId);
+      if (!bot || bot.lifeState !== 'ACTIVE') continue;
+
+      const kit = weaponKit(bot.weaponId);
+      const required = specialWeaponProfile(kit.special).requiredPoints;
+      bot.specialPoints = Math.min(
+        required,
+        bot.specialPoints +
+          area * GAME_CONFIG.special.pointsPerScoreableSquareMeter
+      );
+    }
+    this.syncStats();
+  }
+
+  public forceKitQaReady(): boolean {
+    let changed = 0;
+    for (const bot of this.bots) {
+      if (bot.lifeState !== 'ACTIVE') continue;
+      const special = weaponKit(bot.weaponId).special;
+      bot.specialPoints = specialWeaponProfile(special).requiredPoints;
+      bot.specialDecisionCooldownSeconds = 0;
+      bot.subCooldownSeconds = 0;
+      changed += 1;
+    }
+    if (changed > 0) {
+      this.stats.cpuKitLast = 'QA READY';
+      this.syncStats();
+      return true;
+    }
+    return false;
+  }
+
   public forceSuperJumpQa(
     humanTeam: Team.A | Team.B,
     humanPosition: Vec3,
@@ -380,6 +433,7 @@ export class CpuAgentSystem {
       const bot = this.bots[i]!;
       bot.weaponId = CPU_ADVANCED_QA_WEAPONS[i]!;
       this.resetCpuWeaponRuntime(bot, true);
+      this.resetCpuKitState(bot, true);
       bot.fireRemaining = 0;
       changed += 1;
     }
@@ -630,7 +684,10 @@ export class CpuAgentSystem {
         jumpActionRemaining: 0,
         jumpCooldownSeconds: 0,
         jumpRespawnWindowSeconds: 0,
-        jumpArcHeight: GAME_CONFIG.superJump.minArcHeightMeters
+        jumpArcHeight: GAME_CONFIG.superJump.minArcHeightMeters,
+        subCooldownSeconds: 0.7 + slot * 0.18,
+        specialPoints: 0,
+        specialDecisionCooldownSeconds: 1.4 + slot * 0.22
       });
     }
   }
