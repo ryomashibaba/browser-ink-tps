@@ -730,6 +730,104 @@ export class CpuAgentSystem {
     }
   }
 
+  private updateCpuKit(
+    bot: CpuBot,
+    humanTeam: Team.A | Team.B,
+    humanPosition: Vec3,
+    humanActive: boolean
+  ): void {
+    if (
+      bot.lifeState !== 'ACTIVE' ||
+      bot.mobilityState !== 'GROUND'
+    ) {
+      return;
+    }
+
+    const target = this.chooseCombatTarget(
+      bot,
+      humanTeam,
+      humanPosition,
+      humanActive
+    );
+    if (!target) return;
+
+    const kit = weaponKit(bot.weaponId);
+    const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
+    const direction = target.clone().sub(bot.position);
+    if (direction.lengthSq() <= 1e-8) return;
+    direction.normalize();
+
+    const specialProfile = specialWeaponProfile(kit.special);
+    const specialReady =
+      bot.specialPoints + 1e-6 >= specialProfile.requiredPoints;
+
+    if (
+      specialReady &&
+      bot.specialDecisionCooldownSeconds <= 0 &&
+      this.shouldUseCpuSpecial(bot, kit.special, distance)
+    ) {
+      this.pendingKitRequests.push({
+        kind: 'SPECIAL',
+        sourceId: bot.id,
+        team: bot.team,
+        position: bot.position.clone(),
+        target: target.clone(),
+        direction: direction.clone(),
+        specialId: kit.special
+      });
+      bot.specialPoints = 0;
+      bot.specialDecisionCooldownSeconds = 2.6;
+      bot.subCooldownSeconds = Math.max(bot.subCooldownSeconds, 0.8);
+      this.stats.cpuSpecialActivations += 1;
+      this.stats.cpuKitLast =
+        `${bot.id}:SPECIAL:${specialProfile.shortName}`;
+      return;
+    }
+
+    if (
+      bot.subCooldownSeconds > 0 ||
+      distance < 2.6 ||
+      distance > 11.5
+    ) {
+      return;
+    }
+
+    const subProfile = subWeaponProfile(kit.sub);
+    if (bot.ink + 1e-6 < subProfile.inkCost) return;
+
+    bot.ink = Math.max(0, bot.ink - subProfile.inkCost);
+    bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
+    bot.subCooldownSeconds = cpuSubCooldownSeconds(kit.sub, bot.role);
+
+    this.pendingKitRequests.push({
+      kind: 'SUB',
+      sourceId: bot.id,
+      team: bot.team,
+      position: bot.position.clone(),
+      target: target.clone(),
+      direction,
+      subId: kit.sub
+    });
+    this.stats.cpuSubUses += 1;
+    this.stats.cpuKitLast =
+      `${bot.id}:SUB:${subProfile.shortName}`;
+  }
+
+  private shouldUseCpuSpecial(
+    bot: CpuBot,
+    specialId: SpecialWeaponId,
+    distance: number
+  ): boolean {
+    switch (specialId) {
+      case 'turf-pulse':
+        return distance <= 4.2 || bot.hp <= 52;
+      case 'triple-strike':
+        return distance >= 4.0 && distance <= 18.0;
+      case 'drift-storm':
+        return distance >= 3.2 && distance <= 15.0;
+    }
+  }
+
   private updateCpuWeapon(
     bot: CpuBot,
     dt: number,
@@ -1510,6 +1608,12 @@ export class CpuAgentSystem {
     return true;
   }
 
+  private resetCpuKitState(bot: CpuBot, clearGauge: boolean): void {
+    bot.subCooldownSeconds = 0.6;
+    bot.specialDecisionCooldownSeconds = 0.9;
+    if (clearGauge) bot.specialPoints = 0;
+  }
+
   private resetCpuJumpState(bot: CpuBot): void {
     bot.mobilityState = 'GROUND';
     bot.jumpMarker.enabled = false;
@@ -1558,6 +1662,9 @@ export class CpuAgentSystem {
     }
     this.resetCpuWeaponRuntime(bot, true);
     this.resetCpuJumpState(bot);
+    bot.specialPoints *= GAME_CONFIG.special.splatRetention;
+    bot.subCooldownSeconds = 0;
+    bot.specialDecisionCooldownSeconds = 0.8;
 
     bot.lifeState = 'SPLATTED';
     bot.respawnRemainingSeconds = GAME_CONFIG.match.respawnSeconds;
@@ -1600,6 +1707,8 @@ export class CpuAgentSystem {
     bot.jumpCooldownSeconds = 0;
     bot.jumpRespawnWindowSeconds = GAME_CONFIG.cpu.superJumpRespawnWindowSeconds;
     bot.jumpArcHeight = GAME_CONFIG.superJump.minArcHeightMeters;
+    bot.subCooldownSeconds = 0.65;
+    bot.specialDecisionCooldownSeconds = 0.9;
     bot.entity.enabled = true;
     bot.entity.setLocalEulerAngles(0, 0, 0);
     bot.entity.setPosition(start.x, start.y + 0.68, start.z);
