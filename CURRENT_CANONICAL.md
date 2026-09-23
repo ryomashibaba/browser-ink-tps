@@ -192,6 +192,7 @@ Current controls:
 - Esc: release Pointer Lock
 - WASD: move
 - Space: jump
+- Twin Comets / Dualies while Human: hold primary fire + Space to dodge (up to two chained rolls)
 - Shift: Squid form / swim
 - Shift + movement into OWN-painted wall: wall swim
 - fast OWN-ink swim + reverse direction + Space: Squid Roll
@@ -943,8 +944,8 @@ Dualies input/recovery:
 - dodge is Human-only and requires Dualies selected, primary fire held, and Space
 - Space without firing is not a Dualies dodge input
 - dodge travel remains a dedicated locomotion state
-- post-roll firing lock is short while horizontal locomotion remains locked longer
-- a second dodge can interrupt the post-roll movement lock when the fire+Space requirement is met
+- fixed-60Hz reference structure is 4F startup -> 12F roll -> 4F until firing returns -> remaining post-roll movement lock / roll recovery, totaling 48F
+- a second dodge can start from the post-roll stance when the fire+Space requirement is met and one dodge charge remains
 - two-dodge charge behavior remains intact
 
 Splatling charge presentation:
