@@ -7,10 +7,31 @@ import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import type { PaintSurface } from '../ink/PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
+import {
+  specialWeaponProfile,
+  type SpecialWeaponId
+} from '../weapons/WeaponKitCatalog';
+
+interface ScheduledStrike {
+  team: Team.A | Team.B;
+  point: Vec3;
+  seconds: number;
+}
+
+interface DriftStorm {
+  team: Team.A | Team.B;
+  position: Vec3;
+  direction: Vec3;
+  seconds: number;
+  pulseCooldown: number;
+}
 
 export class SpecialGaugeSystem {
   private points = 0;
   private readyLatched = false;
+  private specialId: SpecialWeaponId = 'turf-pulse';
+  private readonly scheduledStrikes: ScheduledStrike[] = [];
+  private readonly storms: DriftStorm[] = [];
 
   public constructor(
     private readonly surfaces: readonly PaintSurface[],
@@ -23,19 +44,38 @@ export class SpecialGaugeSystem {
     this.syncStats();
   }
 
+  public setSpecial(id: SpecialWeaponId): void {
+    if (id === this.specialId) {
+      this.syncStats();
+      return;
+    }
+
+    const previousRequired = Math.max(
+      specialWeaponProfile(this.specialId).requiredPoints,
+      1e-6
+    );
+    const ratio = Math.max(0, Math.min(1, this.points / previousRequired));
+    this.specialId = id;
+    const nextRequired = specialWeaponProfile(this.specialId).requiredPoints;
+    this.points = ratio * nextRequired;
+    this.readyLatched = this.points + 1e-6 >= nextRequired;
+    this.syncStats();
+  }
+
   public addHumanScoreablePaint(areaMeters2: number): void {
     if (!Number.isFinite(areaMeters2) || areaMeters2 <= 0) return;
 
     this.stats.playerHumanScoreablePaintMeters2 += areaMeters2;
+    const required = specialWeaponProfile(this.specialId).requiredPoints;
     const previous = this.points;
     this.points = Math.min(
-      GAME_CONFIG.special.requiredPoints,
+      required,
       this.points + areaMeters2 * GAME_CONFIG.special.pointsPerScoreableSquareMeter
     );
 
     if (
-      previous < GAME_CONFIG.special.requiredPoints &&
-      this.points >= GAME_CONFIG.special.requiredPoints &&
+      previous < required &&
+      this.points >= required &&
       !this.readyLatched
     ) {
       this.readyLatched = true;
@@ -48,37 +88,74 @@ export class SpecialGaugeSystem {
   public onPlayerSplatted(): void {
     this.points *= GAME_CONFIG.special.splatRetention;
     this.readyLatched = false;
+    this.scheduledStrikes.length = 0;
+    this.storms.length = 0;
     this.syncStats();
   }
 
-  public tryActivate(team: Team.A | Team.B, playerPosition: Vec3): boolean {
-    if (this.points + 1e-6 < GAME_CONFIG.special.requiredPoints) return false;
+  public tryActivate(
+    team: Team.A | Team.B,
+    playerPosition: Vec3,
+    aimTarget: Vec3,
+    aimDirection: Vec3
+  ): boolean {
+    const profile = specialWeaponProfile(this.specialId);
+    if (this.points + 1e-6 < profile.requiredPoints) return false;
 
     this.points = 0;
     this.readyLatched = false;
     this.stats.playerSpecialActivations += 1;
 
-    this.cpuAgents.applyAreaDamage(
-      playerPosition,
-      GAME_CONFIG.special.pulseDamageRadiusMeters,
-      GAME_CONFIG.special.pulseDamage,
-      team
-    );
-    this.combatTargets.applyAreaDamage(
-      playerPosition,
-      GAME_CONFIG.special.pulseDamageRadiusMeters,
-      GAME_CONFIG.special.pulseDamage,
-      team
-    );
+    switch (this.specialId) {
+      case 'turf-pulse':
+        this.activateTurfPulse(team, playerPosition);
+        break;
+      case 'triple-strike':
+        this.activateTripleStrike(team, aimTarget, aimDirection);
+        break;
+      case 'drift-storm':
+        this.activateDriftStorm(team, playerPosition, aimDirection);
+        break;
+    }
 
-    this.paintPulse(team, playerPosition);
-    this.feedback.specialBurst(team, playerPosition, GAME_CONFIG.special.pulseRingRadiusMeters);
     this.syncStats();
     return true;
   }
 
+  public fixedUpdate(dt: number): void {
+    for (let i = this.scheduledStrikes.length - 1; i >= 0; i -= 1) {
+      const strike = this.scheduledStrikes[i]!;
+      strike.seconds -= dt;
+      if (strike.seconds > 0) continue;
+
+      this.applySpecialArea(strike.team, strike.point, 2.15, 62);
+      this.paintRadial(strike.team, strike.point, 0.92, 1.85, 10);
+      this.feedback.specialBurst(strike.team, strike.point, 1.85);
+      this.scheduledStrikes.splice(i, 1);
+    }
+
+    for (let i = this.storms.length - 1; i >= 0; i -= 1) {
+      const storm = this.storms[i]!;
+      storm.seconds -= dt;
+      storm.pulseCooldown -= dt;
+      storm.position.add(storm.direction.clone().mulScalar(1.45 * dt));
+
+      if (storm.pulseCooldown <= 0) {
+        this.applySpecialArea(storm.team, storm.position, 1.85, 16);
+        this.paintRadial(storm.team, storm.position, 0.62, 1.25, 8);
+        storm.pulseCooldown += 0.38;
+      }
+
+      if (storm.seconds <= 0) {
+        this.feedback.specialBurst(storm.team, storm.position, 1.35);
+        this.storms.splice(i, 1);
+      }
+    }
+  }
+
   public qaFill(): void {
-    this.points = GAME_CONFIG.special.requiredPoints;
+    const required = specialWeaponProfile(this.specialId).requiredPoints;
+    this.points = required;
     this.readyLatched = true;
     this.feedback.specialReady();
     this.syncStats();
@@ -87,22 +164,104 @@ export class SpecialGaugeSystem {
   public reset(): void {
     this.points = 0;
     this.readyLatched = false;
+    this.scheduledStrikes.length = 0;
+    this.storms.length = 0;
     this.stats.playerHumanScoreablePaintMeters2 = 0;
     this.syncStats();
   }
 
-  private paintPulse(team: Team.A | Team.B, center: Vec3): void {
-    const cfg = GAME_CONFIG.special;
-    this.paintWorldStamp(team, center, cfg.pulsePaintRadiusMeters, 2.0);
+  private activateTurfPulse(
+    team: Team.A | Team.B,
+    playerPosition: Vec3
+  ): void {
+    this.applySpecialArea(
+      team,
+      playerPosition,
+      GAME_CONFIG.special.pulseDamageRadiusMeters,
+      GAME_CONFIG.special.pulseDamage
+    );
+    this.paintRadial(
+      team,
+      playerPosition,
+      GAME_CONFIG.special.pulsePaintRadiusMeters,
+      GAME_CONFIG.special.pulseRingRadiusMeters,
+      12
+    );
+    this.feedback.specialBurst(
+      team,
+      playerPosition,
+      GAME_CONFIG.special.pulseRingRadiusMeters
+    );
+  }
 
-    for (let i = 0; i < 12; i += 1) {
-      const angle = i * Math.PI * 2 / 12;
+  private activateTripleStrike(
+    team: Team.A | Team.B,
+    aimTarget: Vec3,
+    aimDirection: Vec3
+  ): void {
+    const right = new Vec3(aimDirection.z, 0, -aimDirection.x);
+    if (right.lengthSq() <= 1e-6) right.set(1, 0, 0);
+    else right.normalize();
+
+    const offsets = [-1.65, 0, 1.65] as const;
+    for (let i = 0; i < offsets.length; i += 1) {
+      const point = aimTarget.clone().add(right.clone().mulScalar(offsets[i]!));
+      this.scheduledStrikes.push({
+        team,
+        point,
+        seconds: 0.72 + i * 0.16
+      });
+    }
+    this.feedback.specialBurst(team, aimTarget, 0.72);
+  }
+
+  private activateDriftStorm(
+    team: Team.A | Team.B,
+    playerPosition: Vec3,
+    aimDirection: Vec3
+  ): void {
+    const direction = new Vec3(aimDirection.x, 0, aimDirection.z);
+    if (direction.lengthSq() <= 1e-6) direction.set(0, 0, -1);
+    else direction.normalize();
+
+    const position = playerPosition.clone().add(direction.clone().mulScalar(1.1));
+    this.storms.push({
+      team,
+      position,
+      direction,
+      seconds: 4.8,
+      pulseCooldown: 0
+    });
+    this.feedback.specialBurst(team, position, 1.15);
+  }
+
+  private applySpecialArea(
+    team: Team.A | Team.B,
+    point: Vec3,
+    radius: number,
+    damage: number
+  ): void {
+    this.cpuAgents.applyAreaDamage(point, radius, damage, team);
+    this.combatTargets.applyAreaDamage(point, radius, damage, team);
+  }
+
+  private paintRadial(
+    team: Team.A | Team.B,
+    center: Vec3,
+    paintRadius: number,
+    ringRadius: number,
+    count: number
+  ): void {
+    this.paintWorldStamp(team, center, paintRadius, 2.0);
+
+    for (let i = 0; i < count; i += 1) {
+      const angle = i * Math.PI * 2 / count;
       const point = center.clone().add(new Vec3(
-        Math.cos(angle) * cfg.pulseRingRadiusMeters,
+        Math.cos(angle) * ringRadius,
         0,
-        Math.sin(angle) * cfg.pulseRingRadiusMeters
+        Math.sin(angle) * ringRadius
       ));
-      this.paintWorldStamp(team, point, cfg.pulsePaintRadiusMeters, 2.2);
+      this.paintWorldStamp(team, point, paintRadius, 2.4);
     }
   }
 
@@ -148,7 +307,9 @@ export class SpecialGaugeSystem {
   }
 
   private syncStats(): void {
-    const required = Math.max(GAME_CONFIG.special.requiredPoints, 1e-6);
+    const profile = specialWeaponProfile(this.specialId);
+    const required = Math.max(profile.requiredPoints, 1e-6);
+    this.stats.playerSpecialName = profile.displayName;
     this.stats.playerSpecialPoints = this.points;
     this.stats.playerSpecialPercent = this.points / required * 100;
     this.stats.playerSpecialReady = this.points + 1e-6 >= required;
