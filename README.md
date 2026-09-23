@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.9.5 / T14 STABLE FREEZE**
+**v0.10.0 / T15 SUB + SPECIAL FOUNDATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -89,6 +89,8 @@ Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 - Esc — release Pointer Lock
 - WASD — move
 - Space — jump
+- F — throw Pulse Bomb sub weapon (70 Ink)
+- G — activate Turf Pulse when SPECIAL is full
 - Twin Comets / Dualies while Human: hold Left mouse + WASD movement + press Space — dodge roll (up to two chained rolls)
 - Shift — Squid form / swim
 - Shift + move into OWN-painted wall — wall swim
@@ -284,3 +286,14 @@ Final v0.9.5 hosted QA was accepted on 2026-09-23. Stable checkpoint: `006f9b8dd
 ### Next: T15
 
 T15 starts the match-system expansion beyond main weapons: source-aware turf-point attribution, a player special gauge, a first throwable sub weapon, and a first special activation path. The immutable PaintEvent / PaintSurface-local CPU authority remains unchanged.
+
+
+### T15 v0.10.0 candidate
+
+T0–T14 remains frozen. T15 adds an additive paint-source attribution layer so the game can distinguish HUMAN, CPU, SPECIAL, and QA/debug paint without changing PaintSurface-local coordinates or the immutable CPU/GPU PaintEvent path.
+
+The first sub/special pair is project-original:
+- **Pulse Bomb** — F, 70 Ink, ballistic throw, 1.0 s post-contact fuse, radial paint/damage
+- **Turf Pulse** — G at 180p, charged only by scoreable turf actually changed by HUMAN main/sub paint
+
+At current project scale, 1 m² of newly changed scoreable Human paint awards 10p. Splat retains 50% of the current gauge. Special-generated paint does not recharge itself.
