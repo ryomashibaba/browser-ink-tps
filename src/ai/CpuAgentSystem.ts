@@ -826,6 +826,7 @@ export class CpuAgentSystem {
       case 'drift-storm':
         return distance >= 3.2 && distance <= 15.0;
     }
+    return false;
   }
 
   private updateCpuWeapon(
@@ -1740,7 +1741,10 @@ export class CpuAgentSystem {
     let weaponCharging = 0;
     let weaponBursting = 0;
     let weaponGuarding = 0;
+    let specialReady = 0;
+    let specialPercentTotal = 0;
     const loadouts: string[] = [];
+    const kits: string[] = [];
     let hpTotal = 0;
     let inkTotal = 0;
 
@@ -1758,6 +1762,16 @@ export class CpuAgentSystem {
       if (bot.weaponBurstShotsRemaining > 0) weaponBursting += 1;
       if (bot.weaponGuarding) weaponGuarding += 1;
       loadouts.push(`${bot.id}:${weaponProfile(bot.weaponId).shortName}`);
+      const kit = weaponKit(bot.weaponId);
+      const sub = subWeaponProfile(kit.sub);
+      const special = specialWeaponProfile(kit.special);
+      const required = Math.max(special.requiredPoints, 1e-6);
+      const specialPercent = Math.min(100, bot.specialPoints / required * 100);
+      if (bot.specialPoints + 1e-6 >= required) specialReady += 1;
+      specialPercentTotal += specialPercent;
+      kits.push(
+        `${bot.id}:${sub.shortName}/${special.shortName}:${specialPercent.toFixed(0)}%`
+      );
       hpTotal += bot.hp;
       inkTotal += bot.ink;
     }
@@ -1773,9 +1787,27 @@ export class CpuAgentSystem {
     this.stats.cpuWeaponCharging = weaponCharging;
     this.stats.cpuWeaponBursting = weaponBursting;
     this.stats.cpuWeaponGuarding = weaponGuarding;
+    this.stats.cpuKits = kits.join(' · ');
+    this.stats.cpuSpecialReady = specialReady;
+    this.stats.cpuAverageSpecialPercent =
+      this.bots.length > 0 ? specialPercentTotal / this.bots.length : 0;
     this.stats.cpuAverageHp = this.bots.length > 0 ? hpTotal / this.bots.length : 0;
     this.stats.cpuAverageInk = this.bots.length > 0 ? inkTotal / this.bots.length : 0;
   }
+}
+
+function cpuSubCooldownSeconds(
+  subId: SubWeaponId,
+  role: CpuRole
+): number {
+  const base = subId === 'snap-bomb'
+    ? 2.8
+    : subId === 'pulse-bomb'
+      ? 4.2
+      : 5.1;
+  if (role === 'SKIRMISHER') return base * 0.88;
+  if (role === 'ANCHOR') return base * 1.16;
+  return base;
 }
 
 function cpuWeaponInkCost(
