@@ -131,8 +131,16 @@ export class SuperJumpSystem {
     this.prepRemaining = GAME_CONFIG.superJump.prepareSeconds;
     this.travelElapsed = 0;
     this.landingRemaining = 0;
-    this.state = this.stats.playerGrounded ? 'PREP' : 'WAIT_GROUND';
+    this.state = this.canBeginPreparationNow() ? 'PREP' : 'WAIT_GROUND';
 
+    setEntityMaterial(
+      this.travelEntity,
+      team === Team.A ? this.travelMaterialA : this.travelMaterialB
+    );
+    setEntityMaterial(
+      this.markerEntity,
+      team === Team.A ? this.markerMaterialA : this.markerMaterialB
+    );
     this.updateMarker();
     this.markerEntity.enabled = true;
     this.syncStats();
@@ -145,7 +153,7 @@ export class SuperJumpSystem {
     this.resolveTargetPosition();
 
     if (this.state === 'WAIT_GROUND') {
-      if (this.stats.playerGrounded) {
+      if (this.canBeginPreparationNow()) {
         this.state = 'PREP';
         this.prepRemaining = GAME_CONFIG.superJump.prepareSeconds;
       }
@@ -261,6 +269,12 @@ export class SuperJumpSystem {
     this.cancel();
     this.stats.playerSuperJumps = 0;
     this.syncStats();
+  }
+
+  private canBeginPreparationNow(): boolean {
+    return this.stats.playerGrounded ||
+      this.stats.playerLocomotionState === 'SWIM_WALL' ||
+      this.stats.playerLocomotionState === 'SURGE_CHARGE';
   }
 
   private beginTravel(): void {
