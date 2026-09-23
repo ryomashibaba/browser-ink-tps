@@ -1,62 +1,72 @@
-# CURRENT_CANONICAL — v0.2.0 / T4–T7 TECHNICAL SLICE
+# CURRENT_CANONICAL — v0.2.0 / T4–T7 STABLE FREEZE
 
-Date: 2026-09-22
+Date: 2026-09-23
 
 ## Status
 
-**T0–T3 remains the frozen stable foundation. T4–T7 is now integrated on `main` and has passed dependency-resolved CI + production build + GitHub Pages deployment.**
+**T0–T3 remains the frozen ink foundation. T4–T7 is now accepted as the current stable browser-TPS slice and should be treated as frozen unless a later phase requires a documented compatibility change.**
 
-Hosted QA build:
+Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
 
-Current code commit for the first T4–T7 deployment:
-`b065157f3a86bb8aceb6c922d9791ce25403c0fa`
+Current stable head:
+`d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-Hosted hands-on gameplay QA is still required before labeling T4–T7 fully browser-validated.
+Final stabilization workflow:
+`35800320770`
 
-## Architecture freeze retained
+Final stabilization validation:
 
-Do not replace these without a documented freeze-change procedure:
+- dependency install: PASS
+- TypeScript check: PASS
+- production Vite build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted hands-on QA: user accepted the current T4–T7 slice as completed after camera/aim/ink alignment fixes
 
-- TypeScript + Vite.
-- PlayCanvas Engine 2 standalone/npm; no PlayCanvas Editor dependency.
-- PlayCanvas 2.22.1.
-- TypeScript 5.8.3.
-- Vite 7.1.7.
-- WebGPU preferred, WebGL2 fallback.
-- Gameplay simulation fixed at 60 Hz and separated from rendering.
-- Character movement is custom game movement + Rapier 3D kinematic character collision.
-- Future navigation remains Recast + custom tactical layer.
+## Architecture freeze
 
-T4 introduces:
+Do not replace these without an explicit freeze-change decision:
 
-- `@dimforge/rapier3d-compat 0.20.0`, pinned.
-- Rapier is initialized once during boot before gameplay physics objects are created.
+- TypeScript + Vite
+- PlayCanvas Engine 2 standalone/npm; no PlayCanvas Editor dependency
+- PlayCanvas 2.22.1
+- TypeScript 5.8.3
+- Vite 7.1.7
+- @dimforge/rapier3d-compat 0.20.0
+- WebGPU preferred, WebGL2 fallback
+- gameplay simulation fixed at 60 Hz
+- rendering separated from gameplay simulation
+- fixed-step state is render-interpolated for smoother high-refresh presentation
+- character movement uses custom gameplay movement + Rapier 3D kinematic character collision
+- future navigation remains Recast + custom tactical layer
 
-## Ink architecture freeze retained
+## Ink architecture freeze
 
-CPU gameplay ink is still the only gameplay-authoritative truth.
+CPU gameplay ink is the only gameplay-authoritative ink representation.
 
-GPU ink remains persistent visual data.
+GPU ink is persistent visual data only.
 
-The canonical path is still:
+Canonical flow:
 
 ```text
-Projectile/debug source
-        ↓
-   PaintRequest
-        ↓ fixed tick
-one immutable PaintEvent
-    ┌──────┴──────┐
-    ↓             ↓
-GameplayInk    GpuInkAtlas
-    ↓             ↓
-movement/turf   visuals
+Projectile / debug source
+          ↓
+      PaintRequest
+          ↓ fixed tick
+ one immutable PaintEvent
+      ┌──────┴──────┐
+      ↓             ↓
+ GameplayInk     GpuInkAtlas
+      ↓             ↓
+ movement/turf     visuals
 ```
 
-`PaintCoordinator.processTick()` remains the single PaintEvent creation/fan-out point. Projectile code does not independently paint CPU or GPU state.
+`PaintCoordinator.processTick()` remains the single PaintEvent creation/fan-out point.
 
-## PaintSurface / gameplay ink freeze retained
+CPU and GPU must not independently recompute projectile impact coordinates.
+
+## PaintSurface / gameplay ink freeze
 
 - gameplay cell: **0.125 m × 0.125 m**
 - dirty tile: **16×16 cells**
@@ -64,9 +74,9 @@ movement/turf   visuals
 - fallback atlas: **2048×2048**
 - preferred atlas density: **128 px/m**
 - GPU paint processing max: **2048 events/frame**
-- all gameplay ink is surface-local; never a global XZ grid
+- gameplay ink is always PaintSurface-local; never replace it with one global XZ grid
 
-Flags remain:
+Flags:
 
 - `PAINTABLE`
 - `SWIMMABLE`
@@ -76,67 +86,64 @@ Flags remain:
 - `RAMP`
 - `SPAWN_PROTECTED` reserved
 
-## T4 — Human Movement
+The CPU PaintEvent U/V basis remains canonical. The GPU atlas applies only the render-target orientation correction needed to display the same event at the correct visible vertical position.
 
-Implemented:
+## T4 — Human movement
 
-- `PlayerInput`
-- `ThirdPersonCamera`
-- `RapierStagePhysics`
-- `PlayerController`
+Implemented and retained:
+
 - camera-relative WASD
-- acceleration/deceleration
+- acceleration / deceleration
 - custom gravity
 - grounded state
 - jump
 - Rapier kinematic character controller
-- max climb/slide slope configuration
-- autostep + snap-to-ground
-- all gameplay movement inside the fixed 60 Hz simulation callback
+- max climb / slide slope configuration
+- autostep
+- snap-to-ground
+- fixed 60 Hz gameplay movement
+- render interpolation between fixed states
+- actual post-collision movement speed exposed in debug metrics
 
-The player is not a dynamic Rigidbody.
+The player is not a dynamic rigid body.
 
-## T5 — Squid Movement / authoritative ink sampling
+## T5 — Squid state / authoritative ink sampling
 
-`GameplayInkSystem.sampleWorld()` projects a world point onto registered PaintSurfaces and samples the authoritative CPU owner/flags in each surface's local grid.
+Implemented:
 
-This supports:
+- Human / Squid state machine
+- Shift-held Squid state
+- world-point sampling through PaintSurface-local CPU owner grids
+- OWN / ENEMY / NEUTRAL / NONE relations
+- own-ink fast Squid movement
+- reduced neutral/enemy Squid movement
+- ground sampling filters that prevent nearby wall ink from contaminating floor movement state
 
-- own ink
-- enemy ink
-- neutral ink
-- non-swimmable/no-surface
-- floor/ramp/wall architecture through the same PaintSurface basis
+Current movement numbers are project tuning, not claims about exact Splatoon internals.
 
-Current Human/Squid state is controlled by Shift.
+## T6 — Standard shooter projectile
 
-Current movement hooks:
-
-- Human speed
-- Squid + own ink: fast swim movement
-- Squid + neutral: reduced movement
-- Squid + enemy ink: strongly reduced movement
-
-These movement numbers are **project tuning**, not exact reference values.
-
-## T6 — Standard Shooter Projectile
-
-Implemented as a pool, not as one dynamic rigid body per bullet.
+Implemented as a fixed pool, not one dynamic rigid body per projectile.
 
 Current project tuning:
 
 - pool size: 128
-- fire interval: 0.105 s
+- nominal fire interval: 0.105 s
 - speed: 28 m/s
 - projectile gravity: 4 m/s²
 - lifetime: 1.8 s
 - impact paint radius: 0.64 m
 
-Each fixed tick advances a projectile from previous position to next position and uses `PaintSurface.intersectSegment()`, preventing a fast projectile from relying on point-only overlap.
+Important stabilized behavior:
+
+- previous-position → next-position swept PaintSurface intersection
+- fractional fire-cooldown remainder is preserved instead of permanently rounding cadence to fixed ticks
+- projectile rendering is interpolated between fixed states
+- center-crosshair targeting is converted to a low-arc launch vector that compensates configured projectile gravity
 
 ## T7 — Projectile → PaintEvent
 
-On a surface impact the projectile resolves:
+On impact, the projectile resolves:
 
 1. hit PaintSurface identity
 2. exact world impact
@@ -147,76 +154,111 @@ On a surface impact the projectile resolves:
 
 It then enqueues one `PaintRequest`.
 
-The existing `PaintCoordinator` creates one immutable `PaintEvent` for that request and sends that same event to authoritative CPU gameplay ink and the GPU atlas.
+The existing `PaintCoordinator` creates one immutable `PaintEvent` and sends that same event to authoritative CPU gameplay ink and persistent GPU visual ink.
 
-## Controls
+## Camera / input stable behavior
 
+Current controls:
+
+- click game view once: acquire Pointer Lock
+- mouse movement: TPS camera look without holding a mouse button
+- Esc: release Pointer Lock
 - WASD: move
 - Space: jump
 - Shift: Squid state
 - Left mouse: fire
-- Right mouse drag: rotate third-person camera
 - Mouse wheel: camera distance
 - 1 / 2: Team A / Team B
 - R: clear ink
-- B: 2000-event legacy ink stress burst
-- Alt + Left click: retained T0–T3 direct-paint QA path
-- QA brush slider affects only the retained direct-paint QA path
+- B: 2000-event QA stress burst
+- Alt + Left click: retained direct-paint QA path
 
-## Validation completed
+Stabilization rules:
 
-GitHub Actions run `35745535871`:
+- the first click used to acquire Pointer Lock does not fire
+- gameplay key/fire state is cleared on Pointer Lock release, tab visibility loss, or window blur
+- camera state is synchronized before and during fixed-step catch-up ticks
+- center-screen camera ray defines the visual aim target
+- projectile launch is solved from muzzle to that target with gravity compensation
+- GPU visual ink V orientation is corrected without changing CPU-authoritative PaintEvent coordinates
 
-- dependency install: PASS
-- `npm run typecheck`: PASS
-- Vite production build: PASS
-- Configure Pages: PASS
-- Upload Pages artifact: PASS
-- Deploy to GitHub Pages: PASS
+## Stability hardening added during T4–T7 QA
 
-The T0–T3 high-DPI click coordinate fix was not removed.
+The current stable slice also includes:
 
-## Runtime QA still required
+- invalid/non-finite fixed-step frame delta protection
+- PaintSurface dimension and orthogonal-basis invariants
+- GPU brush batch guard for Uint16 index capacity
+- QA hotkey repeat suppression
+- render interpolation for player and projectiles
+- wall exclusion in feet-level ink sampling
+- Pointer Lock/input boundary cleanup
 
-The following must be checked hands-on in the hosted build before T4–T7 is called fully browser-validated:
+## Final validation checkpoint
 
-- WASD movement and camera-relative direction
-- frame-rate-independent apparent movement
-- collision against arena geometry
-- ramp/slope behavior and jump
-- Shift Human↔Squid transition
-- own-ink vs neutral/enemy movement difference
-- sustained shooter fire
-- floor/ramp/wall projectile impacts
-- projectile impact location matching visible paint
-- CPU turf change matching GPU visual paint
-- no abnormal GPU backlog under normal fire/stress
+Stable head:
+`d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-## Intentionally deferred / current limitations
+GitHub Actions:
+`35800320770`
 
-Not bugs for this technical slice unless they break the above QA:
+Result:
 
-- no damage/HP
-- no ink tank
-- no respawn
-- no match loop
-- no CPU AI/navigation
-- no super jump
-- no full HUD/map
-- no final character animation/model
-- no wetness decay
-- dirty-tile consumer/clear policy remains deferred
-- projectile sweep currently targets PaintSurface planes; a complete non-paintable obstacle projectile-collision layer is not yet implemented
-- Squid state currently keeps the shared Rapier capsule collider
-- third-person camera obstruction avoidance is not yet implemented
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deployment: PASS
+
+The user then accepted the current state as completed for this phase.
+
+## Intentionally deferred / not part of T4–T7 Freeze
+
+These remain future work rather than hidden bugs in the current slice:
+
+- complete projectile blocking against non-paintable stage geometry
+- third-person camera obstruction / wall avoidance
+- state-specific Squid physical collider
+- full ink tank / ink consumption / refill loop
+- player damage / HP / splat
+- respawn
+- match flow / timer / result
+- 4v4 participant model
+- CPU AI / Recast navigation
+- super jump
+- final HUD / tactical map
+- production character models / animation / audio
+- production stage content
+- wetness decay
+- final dirty-tile consumer / clearing policy
+- bundle-size optimization
+
+## Next planned phase
+
+**T8 — World Interaction Foundation**
+
+Before adding HP, CPUs, or the full match loop, the next phase should unify world interaction:
+
+1. projectile collision against non-paintable blockers
+2. clear relationship between stage render geometry, Rapier collision geometry, and PaintSurfaces
+3. third-person camera obstruction handling
+4. collision/occlusion edge cases around ramps, walls, rails, and elevated geometry
+5. preserve all T0–T7 frozen contracts while adding the shared world-interaction layer
+
+After T8, the intended order is:
+
+- T9 — complete Squid / ink locomotion
+- T10 — shooter + ink economy + combat
+- T11 — spawn / splat / respawn / Turf War match loop
+- T12 — CPU / Recast + tactical layer
+- T13 — production stage / HUD / map
+- T14 — content, animation, audio, additional weapons, polish
 
 ## Standard workflow
 
 1. Work from current GitHub `main`.
-2. Preserve T0–T3 freeze contracts.
-3. Implement a coherent batch.
-4. Push/merge.
+2. Preserve the T0–T7 Freeze contracts.
+3. Design the next coherent batch before implementation.
+4. Push/merge through GitHub.
 5. GitHub Actions must pass typecheck + production build.
 6. Successful build deploys to the fixed Pages URL.
-7. Browser QA is done by reloading the fixed URL.
+7. Browser/runtime QA is performed on the hosted build.
 8. Do not return to ZIP transfer or repeated local npm setup as the normal workflow.
