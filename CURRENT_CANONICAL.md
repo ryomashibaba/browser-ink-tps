@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.10.0 / T15 STABLE FREEZE
+# CURRENT_CANONICAL — v0.11.0 / T16 WEAPON KIT SYSTEM CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T15 is the frozen stable foundation. T15 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #165 passed build/deploy.**
+**T0–T15 is the frozen stable foundation. T16 is an additive per-main-weapon kit layer and must preserve the frozen T15 paint-source and special-gauge contracts.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1065,3 +1065,72 @@ T16 — Weapon Kit System:
 - multiple sub-weapon behaviors share the frozen T15 HUMAN paint-attribution path
 - multiple special behaviors share the frozen T15 SPECIAL paint-attribution path
 - weapon switching updates the active kit and HUD without weakening T0–T15 contracts
+
+
+## T16 v0.11.0 Weapon Kit System candidate
+
+T16 turns the T15 global sub/special pair into a fixed kit per main weapon.
+
+Kit architecture:
+- `WeaponKitCatalog.ts` is independent from the frozen T14 main-weapon behavior table.
+- every main weapon resolves exactly one SubWeaponId and one SpecialWeaponId
+- F always uses the selected main weapon's sub
+- G always uses the selected main weapon's special when its gauge is ready
+- Q/E and ControlPanel weapon switching update the whole kit
+- switching weapons preserves special-gauge fill ratio while converting to the new special's required points
+- active thrown subs and ongoing special effects are cancelled on QA weapon switch so test state remains deterministic
+- T15 HUMAN/SPECIAL PaintSource attribution remains unchanged
+
+Sub weapons:
+- Pulse Bomb
+  - 70 Ink
+  - ballistic throw
+  - first stage contact starts a 1.0 s fuse
+  - outer 30 damage, inner +70 for 100 total
+  - medium radial paint
+- Snap Bomb
+  - 45 Ink
+  - faster ballistic throw
+  - detonates immediately on first stage contact
+  - outer 35 damage, inner +25 for 60 total
+  - smaller/faster radial paint
+- Anchor Bomb
+  - 70 Ink
+  - slower/heavier throw
+  - stays at first contact point and uses a 2.0 s fuse
+  - outer 30 damage, inner +70 for 100 total
+  - largest radial paint of the three
+
+Special weapons:
+- Turf Pulse — 180p
+  - immediate radial player-centered paint/damage
+- Triple Strike — 190p
+  - creates three delayed strikes centered around the current aim target
+  - strike delays are staggered from about 0.72 s onward
+  - each strike deals 62 area damage and paints through SPECIAL-source PaintEvents
+- Drift Storm — 200p
+  - starts in the player's aim direction
+  - persists for 4.8 s and drifts forward
+  - pulses roughly every 0.38 s for 16 area damage plus SPECIAL-source paint
+
+Frozen special-gauge relationships remain:
+- only HUMAN-source changed Scoreable turf charges the gauge
+- SPECIAL paint never self-charges
+- Splat retention remains 50%
+- Special QA Ready fills whichever special is currently equipped
+
+Current weapon kits:
+- Pulse Sprayer — Pulse Bomb / Turf Pulse
+- Needle SMG — Snap Bomb / Drift Storm
+- Twin Comets — Snap Bomb / Turf Pulse
+- Rail Charger — Anchor Bomb / Triple Strike
+- Arc Blaster — Pulse Bomb / Triple Strike
+- Metro Roller — Anchor Bomb / Turf Pulse
+- Dash Brush — Snap Bomb / Drift Storm
+- Wave Slosher — Pulse Bomb / Drift Storm
+- Rotor Cannon — Anchor Bomb / Triple Strike
+- Canopy Guard — Anchor Bomb / Drift Storm
+- Chord Stringer — Pulse Bomb / Triple Strike
+- Ink Saber — Snap Bomb / Turf Pulse
+
+T16 remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
