@@ -1,4 +1,4 @@
-# CURRENT_CANONICAL — v0.9.3 / T14 CHARGE + DUALIES + STRINGER CANDIDATE
+# CURRENT_CANONICAL — v0.9.4 / T14 DUALIES POST-ROLL + SPLATLING CHARGE CANDIDATE
 
 Date: 2026-09-23
 
@@ -935,3 +935,21 @@ Targeted corrections:
 - DebugOverlay exposes Dualie roll count/remaining charges and Stringer fuse/burst counters
 
 T0–T13 remains frozen. T14 remains candidate until user runtime acceptance.
+
+
+## T14 v0.9.4 targeted correction
+
+Dualies input/recovery:
+- dodge is Human-only and requires Dualies selected, primary fire held, and Space
+- Space without firing is not a Dualies dodge input
+- dodge travel remains a dedicated locomotion state
+- post-roll firing lock is short while horizontal locomotion remains locked longer
+- a second dodge can interrupt the post-roll movement lock when the fire+Space requirement is met
+- two-dodge charge behavior remains intact
+
+Splatling charge presentation:
+- HUD charge is now Charger-like: centered progress ring + crosshair
+- 3D charge feedback now includes a forward guide and centered tightening markers
+- subtle rotary markers remain only as Splatling identity
+
+T0–T13 remains frozen. T14 remains candidate until hosted QA confirms these corrections.
