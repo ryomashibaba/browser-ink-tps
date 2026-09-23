@@ -1,4 +1,4 @@
-# Validation Report — v0.7.0 T12 Stable Freeze
+# Validation Report — v0.8.0 T13 Implementation Candidate
 
 Date: 2026-09-23
 
@@ -734,3 +734,46 @@ Automated implementation workflow:
 `35814249152`
 
 T12 is now **STABLE FREEZE**.
+
+## T13 Production Stage contract / HUD / Tactical Map candidate
+
+Implementation:
+`936ab4d90c17c0d08920ccf996bfd766535aec59`
+`32a0430626034417a0e85a66511e4efb41fd17aa`
+
+Workflow:
+`35815754011`
+
+Automated result:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Architecture validation:
+
+- production-stage metadata is attached to the same StageDefinition used by frozen world systems
+- the legacy test-stage export aliases the same production definition rather than creating a second geometry copy
+- Tactical Map world projection uses StageDefinition world bounds
+- Tactical Map ink is read from CPU-authoritative GameplayInk and never writes gameplay state
+- CPU map markers are read-only views of existing T12 agent state
+- HUD reads existing T10/T11 stats and Turf snapshots only
+- no match, movement, projectile, collision, Recast, Ink, HP, or Splat ownership changed in this batch
+
+Hosted QA required before the T13 production-geometry expansion:
+
+1. page loads normally with `T13 CANDIDATE`; existing 4v4 match starts and plays normally
+2. top HUD shows `INKWORKS JUNCTION`, A/B Turf percentages, Turf bar, and a 3:00 match clock that counts down
+3. bottom HUD Ink and HP bars follow the existing T10 resource values; changing team changes the Ink/team accent
+4. COUNTDOWN shows a large center 3→2→1 message; player Splat shows SPLATTED + respawn countdown; End Match shows the resolved winner/draw
+5. compact Tactical Map appears at bottom-right and shows stage solids, A/B spawn rings, human marker, and seven CPU markers
+6. cyan/magenta map ink should broadly match the visible world Turf distribution and update while players/CPUs paint
+7. player/CPU map markers should move in the same directions/areas as their world counterparts; no north/south or east/west mirroring
+8. splatted CPU markers disappear and return after Respawn
+9. pressing `M` toggles an expanded map and pressing `M` again returns to compact view without stealing normal movement/fire input
+10. HUD/Map must not materially destabilize FPS, dropped simulation, GPU backlog, or the frozen T8–T12 gameplay behaviors
+
+T13 remains **IMPLEMENTATION CANDIDATE** until this presentation/coordinate QA passes.

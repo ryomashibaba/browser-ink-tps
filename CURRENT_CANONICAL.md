@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.7.0 / T12 STABLE FREEZE
+# CURRENT_CANONICAL — v0.8.0 / T13 IMPLEMENTATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T12 is now the frozen stable foundation. T12 CPU Players / Recast Navigation + Tactical Layer, including CPU combat/lifecycle, passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
+**T0–T12 remains the frozen stable foundation. T13 Production Stage / HUD / Tactical Map foundation is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before the production-geometry expansion.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -608,3 +608,51 @@ T12 is therefore **STABLE FREEZE**.
 
 - T13 — production stage / HUD / tactical map
 - T14 — content, animation, audio, additional weapons, polish
+
+## T13 implementation candidate — Stage contract / HUD / Tactical Map
+
+Stage/HUD/Map foundation:
+`936ab4d90c17c0d08920ccf996bfd766535aec59`
+
+App integration:
+`32a0430626034417a0e85a66511e4efb41fd17aa`
+
+Automated workflow:
+`35815754011`
+
+Automated results:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+T13 candidate adds:
+
+- canonical production-stage metadata on the existing validated geometry
+- stage id `inkworks-junction` and display name `INKWORKS JUNCTION`
+- canonical world bounds used by the Tactical Map
+- canonical team spawn metadata aligned with the frozen T11 spawn positions
+- legacy `TEST_STAGE_DEFINITION` alias retained so T8–T12 imports remain compatible
+- player-facing top HUD with stage name, live Turf percentages, Turf balance bar, and match clock
+- player-facing Ink and HP meters
+- current team / own Turf / enemy Turf / locomotion readout
+- large COUNTDOWN / SPLATTED+respawn / match-result center messages
+- live Tactical Map rendered from the same production-stage world bounds
+- scoreable CPU GameplayInk visualization on the Tactical Map
+- Team A/B spawn rings on the map
+- live human + seven CPU map markers
+- splatted CPU agents disappear from map markers until Respawn
+- `M` toggles the Tactical Map between compact and expanded modes
+- HUD and map update as presentation layers only; no gameplay authority moved out of T0–T12 systems
+
+T13 geometry policy:
+
+- this first batch deliberately preserves the already validated physical/paintable geometry
+- Production Stage metadata/HUD/map coordinates are being validated first
+- larger production-stage geometry changes will follow only after this common coordinate contract is accepted
+- future stage geometry must continue to drive Render / Rapier / Recast / PaintSurface / Tactical Map from shared canonical definitions
+
+T13 remains **IMPLEMENTATION CANDIDATE**.

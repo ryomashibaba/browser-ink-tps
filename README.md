@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.7.0 / T12 STABLE FREEZE**
+**v0.8.0 / T13 IMPLEMENTATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T12 gameplay foundation is frozen. The current `main` includes:
+The T0–T12 gameplay foundation remains frozen. The current `main` additionally contains the T13 production-stage metadata / player HUD / Tactical Map candidate:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -40,6 +40,9 @@ The T0–T12 gameplay foundation is frozen. The current `main` includes:
 - HP-zero Splat lifecycle with 2.5-second respawn
 - team-specific respawn points with Human + full HP/Ink reset
 - Restart Match / Splat QA / End Match QA controls
+- production-stage metadata for `INKWORKS JUNCTION`
+- player-facing match/Turf/Ink/HP HUD
+- live Tactical Map with Turf, spawn, human, and CPU markers
 - seven CPU participants using a shared Recast/Detour Crowd
 - Painter / Skirmisher / Anchor tactical roles
 - GameplayInk-aware tactical turf goals

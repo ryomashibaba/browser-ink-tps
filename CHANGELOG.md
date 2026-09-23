@@ -1,3 +1,36 @@
+## v0.8.0 T13 Stage / HUD / Tactical Map Candidate — 2026-09-23
+
+### Production-stage contract
+
+- promoted the validated stage definition to a production metadata contract
+- added stage id/name, world bounds, and team spawn metadata
+- retained the legacy test-stage alias for frozen-system compatibility
+
+### Player-facing HUD
+
+- added stage name, match timer, live Turf percentages and balance bar
+- added player Ink/HP meters and compact state strip
+- added countdown, Splat/Respawn, and match-result center messaging
+
+### Tactical Map
+
+- added compact bottom-right live map with M-key expansion
+- added world-bound projection of stage geometry
+- added authoritative Turf visualization
+- added team spawn rings and live human/CPU markers
+
+Implementation:
+`936ab4d90c17c0d08920ccf996bfd766535aec59`
+`32a0430626034417a0e85a66511e4efb41fd17aa`
+
+Workflow:
+`35815754011`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.7.0 T12 Stable Freeze — 2026-09-23
 
 ### Freeze
