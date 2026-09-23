@@ -1,3 +1,11 @@
+## v0.11.0 T16 Stable Freeze — 2026-09-23
+
+- hosted QA accepted by the user
+- stable checkpoint: `958a1d168ea86387701eb089437bf6da6af14514`
+- GitHub Actions run #184 / `35833765947` passed build and Pages deploy
+- T0–T16 is now the frozen gameplay foundation
+- next phase: T17 Super Jump / Spawn Mobility
+
 ## v0.11.0 T16 Weapon Kit System Candidate — 2026-09-23
 
 - added a separate WeaponKitCatalog so T14 main-weapon behavior remains isolated
