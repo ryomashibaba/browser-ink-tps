@@ -1,3 +1,15 @@
+## v0.10.0 T15 Sub Weapon + Special Gauge Candidate — 2026-09-23
+
+- added additive PaintSource metadata while preserving immutable PaintEvent coordinate authority
+- GameplayInk now reports actually changed Scoreable area per paint event
+- only HUMAN-source changed scoreable turf feeds the local special gauge
+- added F-key Pulse Bomb: 70 Ink, ballistic throw, 1.0 s post-contact fuse, radial 30/100 damage zones and HUMAN-source paint
+- added G-key Turf Pulse: 180p gauge, 10p per changed Human scoreable m², radial area damage/paint, SPECIAL-source paint cannot self-charge
+- default Splat gauge retention is 50%
+- added SPECIAL HUD meter, ready glow/audio, Pulse Bomb/Special FX, Debug counters, and Special QA Ready
+- Restart/Clear reset the T15 systems; Respawn preserves the post-Splat retained gauge
+- T0–T14 remains the Stable Freeze foundation
+
 ## v0.9.5 T14 Stable Freeze — 2026-09-23
 
 - final hosted runtime QA accepted by the user
