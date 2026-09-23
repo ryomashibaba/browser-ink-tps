@@ -56,6 +56,8 @@ export class PerformanceStats {
   public playerWeaponClass = 'シューター';
   public playerWeaponSwitches = 0;
   public playerWeaponChargePercent = 0;
+  public playerWeaponFirstRingPercent = 0;
+  public playerWeaponChargeRing = 0;
   public playerWeaponAction = 'READY';
   public playerWeaponGuarding = false;
   public playerWeaponGuardBlocks = 0;
