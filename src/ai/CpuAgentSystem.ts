@@ -1131,6 +1131,9 @@ export class CpuAgentSystem {
     let alive = 0;
     let jumpPrep = 0;
     let jumpAirborne = 0;
+    let weaponCharging = 0;
+    let weaponBursting = 0;
+    const loadouts: string[] = [];
     let hpTotal = 0;
     let inkTotal = 0;
 
@@ -1144,6 +1147,9 @@ export class CpuAgentSystem {
       if (bot.lifeState === 'ACTIVE') alive += 1;
       if (bot.mobilityState === 'JUMP_PREP') jumpPrep += 1;
       if (isCpuJumpAirborne(bot)) jumpAirborne += 1;
+      if (bot.weaponChargeSeconds > 0) weaponCharging += 1;
+      if (bot.weaponBurstShotsRemaining > 0) weaponBursting += 1;
+      loadouts.push(`${bot.id}:${weaponProfile(bot.weaponId).shortName}`);
       hpTotal += bot.hp;
       inkTotal += bot.ink;
     }
@@ -1155,6 +1161,9 @@ export class CpuAgentSystem {
     this.stats.cpuAlive = alive;
     this.stats.cpuSuperJumpPrep = jumpPrep;
     this.stats.cpuSuperJumpAirborne = jumpAirborne;
+    this.stats.cpuLoadouts = loadouts.join(' · ');
+    this.stats.cpuWeaponCharging = weaponCharging;
+    this.stats.cpuWeaponBursting = weaponBursting;
     this.stats.cpuAverageHp = this.bots.length > 0 ? hpTotal / this.bots.length : 0;
     this.stats.cpuAverageInk = this.bots.length > 0 ? inkTotal / this.bots.length : 0;
   }
