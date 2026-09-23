@@ -33,6 +33,19 @@ export const CPU_SUPPORTED_WEAPONS: readonly WeaponId[] = [
   'twin-comets',
   'rail-charger',
   'arc-blaster',
+  'metro-roller',
+  'dash-brush',
   'wave-slosher',
-  'rotor-splatling'
+  'rotor-splatling',
+  'canopy-guard',
+  'chord-stringer',
+  'ink-saber'
+];
+
+export const CPU_ADVANCED_QA_WEAPONS: readonly WeaponId[] = [
+  'metro-roller',
+  'dash-brush',
+  'canopy-guard',
+  'chord-stringer',
+  'ink-saber'
 ];
