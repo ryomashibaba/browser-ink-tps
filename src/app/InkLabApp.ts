@@ -298,7 +298,15 @@ export class InkLabApp {
           this.projectiles.currentPlayerWeapon.weaponClass === 'DUALIES'
         ) {
           this.player.requestWeaponDodge();
+          this.projectiles.notifyDualieDodge();
         }
+
+        this.player.setWeaponMoveMultiplier(
+          this.projectiles.getMovementMultiplier(
+            this.input.fireHeld,
+            this.input.secondaryHeld
+          )
+        );
         if (playerCanAct) this.player.computeFixed(stepSeconds);
 
         this.physics.step();
