@@ -81,6 +81,19 @@ export class PlayerResources {
     return true;
   }
 
+  public tryConsumeSubInk(cost: number): boolean {
+    if (!Number.isFinite(cost) || cost <= 0) return false;
+    if (this.ink + 1e-6 < cost) {
+      this.stats.inkDryFireAttempts += 1;
+      return false;
+    }
+
+    this.ink = Math.max(0, this.ink - cost);
+    this.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
+    this.syncStats('LOCKED', this.stats.playerHpRecoveryState);
+    return true;
+  }
+
   public applyDamage(amount: number): number {
     if (!Number.isFinite(amount) || amount <= 0 || this.hp <= 0) return 0;
     const previous = this.hp;
