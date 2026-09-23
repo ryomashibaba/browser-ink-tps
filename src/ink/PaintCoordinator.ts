@@ -1,9 +1,10 @@
 import { PerformanceStats } from '../core/PerformanceStats';
 import { GameplayInkSystem } from './GameplayInkSystem';
 import { GpuInkAtlas } from './GpuInkAtlas';
-import { PaintEventType, Team, type PaintEvent } from './types';
+import { PaintEventType, PaintSource, Team, type PaintEvent } from './types';
 
 export interface PaintRequest {
+  source?: PaintSource;
   team: Team.A | Team.B;
   surfaceId: string;
   centerU: number;
@@ -13,6 +14,10 @@ export interface PaintRequest {
   angle: number;
   type: PaintEventType;
   strength: number;
+}
+
+export interface PaintTickReport {
+  humanScoreableAreaMeters2: number;
 }
 
 export class PaintCoordinator {
@@ -33,17 +38,24 @@ export class PaintCoordinator {
     this.requests.push(...requests);
   }
 
-  public processTick(tick: number): void {
-    if (this.requests.length === 0) return;
+  public processTick(tick: number): PaintTickReport {
+    if (this.requests.length === 0) {
+      return { humanScoreableAreaMeters2: 0 };
+    }
 
     // One immutable event is created once and consumed by both authoritative CPU gameplay ink
     // and persistent GPU visual ink. Neither side recomputes the impact location.
     const batch = this.requests.splice(0, this.requests.length);
     let changedCells = 0;
+    let humanScoreableAreaMeters2 = 0;
     for (const request of batch) {
-      const event: PaintEvent = Object.freeze({ tick, ...request });
+      const source = request.source ?? PaintSource.System;
+      const event: PaintEvent = Object.freeze({ tick, ...request, source });
       const result = this.gameplay.apply(event);
       changedCells += result.changedCells;
+      if (event.source === PaintSource.Human) {
+        humanScoreableAreaMeters2 += result.scoreableAreaMeters2Changed;
+      }
       this.gpu.queue(event);
       this.lastEvent = event;
       const surface = this.gameplay.getSurface(event.surfaceId);
@@ -58,6 +70,7 @@ export class PaintCoordinator {
       }
     }
     this.stats.recordPaint(batch.length, changedCells);
+    return { humanScoreableAreaMeters2 };
   }
 
   public clear(): void {
@@ -83,6 +96,7 @@ export class PaintCoordinator {
     stretch = 1.0
   ): PaintRequest {
     return {
+      source: PaintSource.Debug,
       team,
       surfaceId,
       centerU,
