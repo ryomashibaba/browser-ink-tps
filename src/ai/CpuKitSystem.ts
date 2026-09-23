@@ -5,7 +5,7 @@ import {
   Vec3,
   type AppBase
 } from 'playcanvas';
-import type { CpuKitRequest } from '../ai/CpuAgentSystem';
+import type { CpuAgentSystem, CpuKitRequest } from '../ai/CpuAgentSystem';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
@@ -70,6 +70,7 @@ export class CpuKitSystem {
     private readonly physics: RapierStagePhysics,
     private readonly coordinator: PaintCoordinator,
     private readonly projectiles: ProjectileSystem,
+    private readonly cpuAgents: CpuAgentSystem,
     private readonly feedback: GameFeedback,
     private readonly stats: PerformanceStats
   ) {
@@ -411,6 +412,10 @@ export class CpuKitSystem {
   private updateTripleStrikes(dt: number): void {
     for (let i = this.scheduledStrikes.length - 1; i >= 0; i -= 1) {
       const strike = this.scheduledStrikes[i]!;
+      if (!this.cpuAgents.isActorActive(strike.actorId)) {
+        this.scheduledStrikes.splice(i, 1);
+        continue;
+      }
       strike.seconds -= dt;
       if (strike.seconds > 0) continue;
 
@@ -442,6 +447,10 @@ export class CpuKitSystem {
   private updateDriftStorms(dt: number): void {
     for (let i = this.storms.length - 1; i >= 0; i -= 1) {
       const storm = this.storms[i]!;
+      if (!this.cpuAgents.isActorActive(storm.actorId)) {
+        this.storms.splice(i, 1);
+        continue;
+      }
       storm.seconds -= dt;
       storm.pulseCooldown -= dt;
       storm.position.add(
