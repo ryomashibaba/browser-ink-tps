@@ -46,6 +46,10 @@ import { DebugOverlay } from '../ui/DebugOverlay';
 import { PlayerHud } from '../ui/PlayerHud';
 import { TacticalMap } from '../ui/TacticalMap';
 import { SubWeaponSystem } from '../subweapon/SubWeaponSystem';
+import {
+  subWeaponProfile,
+  weaponKit
+} from '../weapons/WeaponKitCatalog';
 
 export class InkLabApp {
   public static async boot(canvas: HTMLCanvasElement, uiRoot: HTMLElement): Promise<InkLabApp> {
@@ -209,7 +213,7 @@ export class InkLabApp {
         this.specialGauge.reset();
       },
       onBrushChanged: (radius) => { this.brushRadius = radius; },
-      onWeaponChanged: (weaponId) => this.projectiles.setPlayerWeapon(weaponId),
+      onWeaponChanged: (weaponId) => this.setPlayerWeaponKit(weaponId),
       onStress: (count) => this.enqueueStressTest(count),
       onRollQaPad: () => {
         this.clearCoordinateQaMarkers();
@@ -226,6 +230,7 @@ export class InkLabApp {
         this.match.forceEnd();
         this.projectiles.reset();
         this.subWeapons.reset();
+        this.specialGauge.cancelActive();
       },
       onSpecialQaReady: () => this.specialGauge.qaFill(),
       onClear: () => {
@@ -238,6 +243,7 @@ export class InkLabApp {
     this.selectedTeam = this.controls.selectedTeam;
     this.brushRadius = this.controls.brushRadius;
     this.player.setTeam(this.selectedTeam);
+    this.setPlayerWeaponKit(this.controls.selectedWeapon);
     this.restartMatch();
 
     // Alt+left click preserves the T0-T3 direct-paint QA path without stealing normal fire.
@@ -319,6 +325,7 @@ export class InkLabApp {
         if (this.match.consumeMatchEnded()) {
           this.projectiles.reset();
           this.subWeapons.reset();
+          this.specialGauge.cancelActive();
         }
 
         const playerCanAct = this.match.playerCanAct;
@@ -392,8 +399,11 @@ export class InkLabApp {
 
         const subPressed = this.input.consumeSubPressed();
         const specialPressed = this.input.consumeSpecialPressed();
+        const activeKit = weaponKit(this.projectiles.currentPlayerWeapon.id);
+
         if (playerCanAct && subPressed) {
           this.subWeapons.tryThrow(
+            activeKit.sub,
             this.selectedTeam,
             this.muzzlePosition,
             this.aimDirection
@@ -402,11 +412,14 @@ export class InkLabApp {
         if (playerCanAct && specialPressed) {
           this.specialGauge.tryActivate(
             this.selectedTeam,
-            this.player.getPosition(this.playerPosition)
+            this.player.getPosition(this.playerPosition),
+            this.aimTarget,
+            this.aimDirection
           );
         }
 
         this.subWeapons.fixedUpdate(stepSeconds);
+        this.specialGauge.fixedUpdate(stepSeconds);
 
         const paintReport = this.coordinator.processTick(tick);
         this.specialGauge.addHumanScoreablePaint(
@@ -433,6 +446,13 @@ export class InkLabApp {
       this.tacticalMap.update();
       this.overlay.update();
     });
+  }
+
+  private setPlayerWeaponKit(weaponId: import('../weapons/WeaponCatalog').WeaponId): void {
+    this.projectiles.setPlayerWeapon(weaponId);
+    const kit = weaponKit(weaponId);
+    this.stats.playerSubWeaponName = subWeaponProfile(kit.sub).displayName;
+    this.specialGauge.setSpecial(kit.special);
   }
 
   private restartMatch(): void {
