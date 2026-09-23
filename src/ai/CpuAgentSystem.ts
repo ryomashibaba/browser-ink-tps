@@ -130,7 +130,10 @@ export class CpuAgentSystem {
   ): void {
     if (!matchActive) {
       if (this.activeLastTick) {
-        for (const bot of this.bots) bot.agent?.resetMoveTarget();
+        for (const bot of this.bots) {
+          bot.agent?.resetMoveTarget();
+          if (bot.mobilityState !== 'GROUND') this.cancelCpuJump(bot, true);
+        }
       }
       this.activeLastTick = false;
       this.syncStats();
@@ -146,33 +149,64 @@ export class CpuAgentSystem {
         continue;
       }
 
+      bot.jumpCooldownSeconds = Math.max(0, bot.jumpCooldownSeconds - dt);
+      bot.jumpRespawnWindowSeconds = Math.max(0, bot.jumpRespawnWindowSeconds - dt);
+      bot.previousPosition.copy(bot.position);
+
+      if (bot.mobilityState === 'JUMP_TRAVEL' || bot.mobilityState === 'JUMP_LANDING') {
+        this.updateCpuJumpAirborne(bot, dt);
+        continue;
+      }
+
       this.updateResources(bot, dt);
       if (bot.hp <= 0) {
         this.splatBot(bot);
         continue;
       }
 
-      bot.previousPosition.copy(bot.position);
+      if (bot.mobilityState === 'JUMP_PREP') {
+        bot.jumpPrepRemaining = Math.max(0, bot.jumpPrepRemaining - dt);
+        if (bot.jumpPrepRemaining <= 0) this.beginCpuJumpTravel(bot);
+        continue;
+      }
+
       bot.thinkRemaining -= dt;
       if (bot.thinkRemaining <= 0) {
-        this.director.chooseGoal({
-          team: bot.team,
-          role: bot.role,
-          slot: bot.slot,
+        const jumpStarted = this.tryStartTacticalJump(
+          bot,
           humanTeam,
-          currentPosition: bot.position,
-          humanPosition
-        }, this.goal);
-        bot.agent?.requestMoveTarget(this.navigation.closestPoint(this.goal));
+          humanPosition,
+          humanActive,
+          false
+        );
+
+        if (!jumpStarted) {
+          this.director.chooseGoal({
+            team: bot.team,
+            role: bot.role,
+            slot: bot.slot,
+            humanTeam,
+            currentPosition: bot.position,
+            humanPosition
+          }, this.goal);
+          bot.agent?.requestMoveTarget(this.navigation.closestPoint(this.goal));
+          this.stats.cpuTacticalRetargets += 1;
+        }
+
         bot.thinkRemaining += GAME_CONFIG.cpu.tacticalThinkSeconds;
-        this.stats.cpuTacticalRetargets += 1;
       }
     }
 
     this.navigation.fixedUpdate(dt);
 
     for (const bot of this.bots) {
-      if (bot.lifeState !== 'ACTIVE' || !bot.agent) continue;
+      if (
+        bot.lifeState !== 'ACTIVE' ||
+        bot.mobilityState !== 'GROUND' ||
+        !bot.agent
+      ) {
+        continue;
+      }
 
       const p = bot.agent.position();
       bot.position.set(p.x, p.y, p.z);
@@ -197,22 +231,40 @@ export class CpuAgentSystem {
     const t = Math.max(0, Math.min(1, alpha));
     for (const bot of this.bots) {
       if (bot.lifeState !== 'ACTIVE') continue;
+
+      const x = lerp(bot.previousPosition.x, bot.position.x, t);
+      const y = lerp(bot.previousPosition.y, bot.position.y, t);
+      const z = lerp(bot.previousPosition.z, bot.position.z, t);
+
+      if (bot.mobilityState === 'JUMP_TRAVEL' || bot.mobilityState === 'JUMP_LANDING') {
+        const total =
+          GAME_CONFIG.superJump.travelSeconds + GAME_CONFIG.superJump.actionSeconds;
+        const elapsed = bot.mobilityState === 'JUMP_TRAVEL'
+          ? bot.jumpTravelElapsed
+          : GAME_CONFIG.superJump.travelSeconds +
+            (GAME_CONFIG.superJump.actionSeconds - bot.jumpActionRemaining);
+        const progress = Math.max(0, Math.min(1, elapsed / Math.max(total, 1e-6)));
+        bot.entity.setPosition(x, y + 0.68, z);
+        bot.entity.setLocalScale(0.50, 1.02, 0.50);
+        bot.entity.setLocalEulerAngles(progress * 720, progress * 300, 0);
+        continue;
+      }
+
       const dx = bot.position.x - bot.previousPosition.x;
       const dz = bot.position.z - bot.previousPosition.z;
-      const moving = Math.min(1, Math.hypot(dx, dz) / 0.055);
+      const moving = bot.mobilityState === 'GROUND'
+        ? Math.min(1, Math.hypot(dx, dz) / 0.055)
+        : 0;
       const phase = performance.now() * 0.008 + bot.slot * 1.7;
       const bob = Math.sin(phase * 1.8) * 0.025 * moving;
       const squash = Math.abs(Math.sin(phase * 1.8)) * 0.025 * moving;
-      bot.entity.setPosition(
-        bot.previousPosition.x + dx * t,
-        bot.previousPosition.y + (bot.position.y - bot.previousPosition.y) * t + 0.68 + bob,
-        bot.previousPosition.z + dz * t
-      );
+      bot.entity.setPosition(x, y + 0.68 + bob, z);
       bot.entity.setLocalScale(
         0.58 * (1 + squash),
         0.88 * (1 - squash * 1.35),
         0.58 * (1 + squash)
       );
+      bot.entity.setLocalEulerAngles(0, 0, 0);
     }
   }
 
@@ -230,7 +282,13 @@ export class CpuAgentSystem {
     ) => void
   ): void {
     for (const bot of this.bots) {
-      visitor(bot.id, bot.team, bot.position, bot.lifeState === 'ACTIVE');
+      visitor(
+        bot.id,
+        bot.team,
+        bot.position,
+        bot.lifeState === 'ACTIVE' &&
+          (bot.mobilityState === 'GROUND' || bot.mobilityState === 'JUMP_PREP')
+      );
     }
   }
 
@@ -246,7 +304,11 @@ export class CpuAgentSystem {
 
     let best: CpuCombatHit | null = null;
     for (const bot of this.bots) {
-      if (bot.team === sourceTeam || bot.lifeState !== 'ACTIVE') continue;
+      if (
+        bot.team === sourceTeam ||
+        bot.lifeState !== 'ACTIVE' ||
+        isCpuJumpAirborne(bot)
+      ) continue;
 
       for (const yOffset of GAME_CONFIG.cpu.hitSphereOffsetsMeters) {
         const center = bot.position.clone();
@@ -271,7 +333,12 @@ export class CpuAgentSystem {
 
   public applyProjectileHit(hit: CpuCombatHit, damage: number): void {
     const bot = this.bots.find((candidate) => candidate.id === hit.botId);
-    if (!bot || bot.lifeState !== 'ACTIVE' || bot.hp <= 0) return;
+    if (
+      !bot ||
+      bot.lifeState !== 'ACTIVE' ||
+      bot.hp <= 0 ||
+      isCpuJumpAirborne(bot)
+    ) return;
 
     const previous = bot.hp;
     bot.hp = Math.max(0, bot.hp - damage);
@@ -290,7 +357,12 @@ export class CpuAgentSystem {
     let hits = 0;
 
     for (const bot of this.bots) {
-      if (bot.team === sourceTeam || bot.lifeState !== 'ACTIVE' || bot.hp <= 0) continue;
+      if (
+        bot.team === sourceTeam ||
+        bot.lifeState !== 'ACTIVE' ||
+        bot.hp <= 0 ||
+        isCpuJumpAirborne(bot)
+      ) continue;
       const dx = bot.position.x - center.x;
       const dy = bot.position.y + 0.68 - center.y;
       const dz = bot.position.z - center.z;
