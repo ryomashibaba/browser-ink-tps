@@ -5,7 +5,6 @@ import {
   Vec3,
   type AppBase
 } from 'playcanvas';
-import type { CpuAgentSystem } from '../ai/CpuAgentSystem';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
@@ -36,7 +35,6 @@ export class SuperJumpSystem {
   private readonly currentPosition = new Vec3();
   private readonly previousPosition = new Vec3();
   private readonly renderPosition = new Vec3();
-  private readonly allyPosition = new Vec3();
 
   private prepRemaining = 0;
   private travelElapsed = 0;
@@ -52,7 +50,6 @@ export class SuperJumpSystem {
 
   public constructor(
     app: AppBase,
-    private readonly cpuAgents: CpuAgentSystem,
     private readonly player: PlayerController,
     private readonly feedback: GameFeedback,
     private readonly stats: PerformanceStats
@@ -126,7 +123,7 @@ export class SuperJumpSystem {
       position: target.position.clone()
     };
     this.team = team;
-    this.resolveTargetPosition();
+    this.lockTargetPosition();
 
     this.prepRemaining = GAME_CONFIG.superJump.prepareSeconds;
     this.travelElapsed = 0;
@@ -149,8 +146,6 @@ export class SuperJumpSystem {
 
   public fixedUpdate(dt: number): void {
     if (this.state === 'IDLE' || !this.target || this.team === null) return;
-
-    this.resolveTargetPosition();
 
     if (this.state === 'WAIT_GROUND') {
       if (this.canBeginPreparationNow()) {
@@ -336,25 +331,13 @@ export class SuperJumpSystem {
     );
   }
 
-  private resolveTargetPosition(): void {
-    if (!this.target || this.team === null) return;
-
-    if (this.target.kind === 'SPAWN') {
-      this.targetPosition.copy(this.target.position);
-      return;
-    }
-
-    const resolved = this.cpuAgents.resolveSuperJumpTarget(
-      this.target.id,
-      this.team,
-      this.allyPosition
-    );
-    if (resolved) {
-      this.target.position.copy(resolved);
-    }
+  private lockTargetPosition(): void {
+    if (!this.target) return;
 
     this.targetPosition.copy(this.target.position);
-    this.targetPosition.y += GAME_CONFIG.superJump.allyLandingBodyOffsetMeters;
+    if (this.target.kind === 'ALLY') {
+      this.targetPosition.y += GAME_CONFIG.superJump.allyLandingBodyOffsetMeters;
+    }
   }
 
   private updateMarker(): void {
