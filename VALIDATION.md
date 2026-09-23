@@ -1147,7 +1147,7 @@ Phase behavior:
 
 Targets / lifecycle:
 9. Jump to your own spawn and confirm landing at the correct team spawn.
-10. Jump to a living friendly CPU and confirm the landing destination follows that ally while they move.
+10. Jump to a living friendly CPU and confirm the landing destination stays at the CPU position captured when you clicked it, even if that CPU moves away afterward.
 11. If a jump is selected while airborne, HUD should show WAIT_GROUND and the preparation should begin after the player reaches valid ground.
 12. Starting from an OWN-painted wall-swim state should allow preparation without forcing a fall first.
 13. On actual landing, ordinary movement/fire should resume and the player should be back on the normal PlayerController collider/render.
