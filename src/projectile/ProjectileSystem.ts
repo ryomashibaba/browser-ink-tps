@@ -266,6 +266,7 @@ export class ProjectileSystem {
     aimDirection: Vec3,
     team: Team.A | Team.B,
     playerPosition: Vec3,
+    playerWeaponEnabled: boolean,
     playerDamageable: boolean
   ): void {
     const profile = this.currentPlayerWeapon;
@@ -284,7 +285,7 @@ export class ProjectileSystem {
       secondaryHeld &&
       this.guardBreakSeconds <= 0 &&
       this.guardHp > 0 &&
-      playerDamageable;
+      playerWeaponEnabled;
 
     if (!guarding && this.guardBreakSeconds <= 0) {
       this.guardHp = Math.min(100, this.guardHp + 28 * dt);
@@ -293,7 +294,7 @@ export class ProjectileSystem {
     this.stats.playerWeaponGuardHp = this.guardHp;
     this.updateGuardVisual(guarding, team, playerPosition, aimDirection);
 
-    if (playerDamageable) {
+    if (playerWeaponEnabled) {
       this.updatePlayerWeapon(
         dt,
         profile,
