@@ -246,7 +246,9 @@ export class GpuInkAtlas {
       if (!surface || !rect) continue;
 
       const centerX = (rect.x + event.centerU * rect.pixelsPerMeter) / this.atlasSize;
-      const centerY = (rect.y + event.centerV * rect.pixelsPerMeter) / this.atlasSize;
+      const centerY = (
+        rect.y + rect.height - event.centerV * rect.pixelsPerMeter
+      ) / this.atlasSize;
       const radiusX = event.radiusU * rect.pixelsPerMeter / this.atlasSize;
       const radiusY = event.radiusV * rect.pixelsPerMeter / this.atlasSize;
       const c = Math.cos(event.angle);
@@ -263,7 +265,7 @@ export class GpuInkAtlas {
       for (let i = 0; i < 4; i += 1) {
         const [su, sv] = corners[i]!;
         const dx = su * radiusX * c - sv * radiusY * s;
-        const dy = su * radiusX * s + sv * radiusY * c;
+        const dy = -(su * radiusX * s + sv * radiusY * c);
         positions[p++] = centerX + dx;
         positions[p++] = centerY + dy;
         positions[p++] = 0;
