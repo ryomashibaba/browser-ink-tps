@@ -1,3 +1,33 @@
+## v0.5.0 T10 Implementation Candidate — 2026-09-23
+
+### Ink economy
+
+- added 100-unit Ink Tank
+- added per-shot Ink consumption and dry-fire rejection
+- added post-fire recovery lock
+- added Human slow recovery and OWN-ink Squid fast recovery
+
+### Combat foundation
+
+- added player HP / recovery state
+- added non-lethal enemy-ink HP damage
+- added Team A/B damageable QA targets
+- added enemy-only projectile damage and nearest-hit arbitration
+- added QA target down / short auto-reset behavior
+- added combat / Ink / HP debug metrics
+
+Implementation:
+`e70b7bca293ba259a4e3f4c70668aa4d7aae9c92`
+`b42db91f53ddbed56e1c14c571408d6f68e20871`
+
+Workflow:
+`35811304576`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.4.0 T9 Stable Freeze — 2026-09-23
 
 ### Freeze

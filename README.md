@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.4.0 / T9 STABLE FREEZE**
+**v0.5.0 / T10 IMPLEMENTATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T9 gameplay foundation is frozen. The current `main` includes:
+The T0–T9 gameplay foundation is frozen. The current `main` additionally contains the T10 Shooter / Ink Economy / Combat candidate:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -33,6 +33,9 @@ The T0–T9 gameplay foundation is frozen. The current `main` includes:
 - corrected GPU atlas top-origin render placement vs bottom-origin texture sampling mismatch
 - Roll QA Pad fills the complete main-floor for easy locomotion QA
 - pooled swept shooter projectiles
+- 100-unit Ink Tank with per-shot cost / recovery lock / Human and OWN-Squid recovery
+- player HP / delayed recovery / non-lethal enemy-ink damage
+- Team A/B combat QA targets with enemy-only projectile damage
 - center-crosshair TPS aiming
 - projectile-gravity compensation toward the visual aim target
 - fixed 60 Hz gameplay simulation
@@ -142,6 +145,8 @@ Passed:
 
 Hosted runtime QA for T9 is complete and accepted.
 
+T10 automated build/deploy is passing; hosted T10 Ink/HP/combat QA is pending.
+
 Confirmed:
 
 - coordinate / atlas alignment
@@ -216,13 +221,14 @@ The current project intentionally does **not** yet include:
 
 ## Current phase
 
-**Next phase: T10 — shooter + ink economy + combat**
+**T10 — Shooter + Ink Economy + Combat hosted runtime QA**
 
-T0–T9 is frozen. T10 must preserve the CPU-authoritative PaintEvent/GameplayInk contracts, T8 world-interaction rules, and the T9 Squid locomotion behavior.
+T0–T9 remains frozen. T10 adds an Ink Tank, player HP/recovery foundation, enemy-ink damage, and team-aware combat QA targets while preserving the frozen paint/world/locomotion contracts.
 
-Planned order:
+After T10 acceptance:
 
-- T10 — shooter + ink economy + combat
+- T10 — Freeze shooter + ink economy + combat
+- T11 — spawn / splat / respawn / Turf War match loop
 - T11 — spawn / splat / respawn / Turf War match loop
 - T12 — CPU / Recast + tactical layer
 - T13 — production stage / HUD / map

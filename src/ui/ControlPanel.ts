@@ -22,8 +22,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T9 Candidate</h1>
-      <p>Click the game view once for TPS mouse look. T0–T8 remains frozen; T9 locomotion and coordinate QA are under validation.</p>
+      <h1>Browser Ink TPS · T10 Candidate</h1>
+      <p>T0–T9 is frozen. T10 adds Ink Tank / HP / combat QA. Shoot the opposite-color target; same-team targets are ignored.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -62,7 +62,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Click view to capture mouse · Mouse look · Esc release · WASD move · Space jump · Shift squid · Left fire · Wheel zoom · Roll QA Pad fills main floor · Coord QA places ink under 3D markers · Alt+Left QA paint · 1/2 team · R clear';
+    hint.textContent = 'Click view · WASD · Space jump · Shift squid · Left fire · Ink Tank consumes per shot · OWN-ink Squid refills fastest · opposite-color combat target takes damage · 1/2 team · R clear';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

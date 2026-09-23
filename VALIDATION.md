@@ -1,4 +1,4 @@
-# Validation Report — v0.4.0 T9 Stable Freeze
+# Validation Report — v0.5.0 T10 Implementation Candidate
 
 Date: 2026-09-23
 
@@ -435,3 +435,51 @@ Automated implementation workflow:
 `35810161552`
 
 T9 is now considered **STABLE FREEZE**.
+
+## T10 Shooter / Ink Economy / Combat candidate
+
+Implementation:
+`e70b7bca293ba259a4e3f4c70668aa4d7aae9c92`
+`b42db91f53ddbed56e1c14c571408d6f68e20871`
+
+Workflow:
+`35811304576`
+
+Automated result:
+
+- Checkout: PASS
+- Node.js setup: PASS
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages configure: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Source/architecture validation:
+
+- T9 locomotion state is read by `PlayerResources` but not rewritten by T10
+- Ink is consumed only when a pooled projectile slot exists and a shot is actually spawned
+- insufficient Ink rejects the shot without creating a projectile or PaintEvent
+- firing recovery lock and fixed-step recovery are simulation-time based
+- OWN-ink Squid recovery is faster than Human recovery
+- enemy-ink HP damage is non-lethal by itself and cannot reduce HP below the configured floor
+- combat targets are ignored when same-team and only enemy targets participate in hit tests
+- projectile combat hits are compared against the already-frozen nearest PaintSurface/blocker result
+- a combat target only wins if it is physically closer than the resolved world hit
+- PaintSurface hits still enqueue exactly one PaintRequest and retain the frozen PaintCoordinator path
+- target down/reset is QA-only; player Splat/Respawn remains deferred to T11
+
+Hosted QA required before T10 Freeze:
+
+1. hold fire in Human form and verify Ink Tank decreases while shots/paint remain normal
+2. empty the tank and verify firing stops / dry count rises without phantom projectiles
+3. after firing, Human Ink recovery begins after the short lock and restores slowly
+4. enter Squid form in OWN ink and verify Ink recovery becomes clearly faster
+5. as Team A, shooting the magenta Target B should reduce Target B HP by about 34 per hit while Target A is ignored; Team B should behave symmetrically
+6. three hits should down the enemy QA target, after which it briefly disappears and returns at 100 HP
+7. stand on enemy ink and verify HP falls gradually but stops around 60; leaving enemy ink should allow delayed recovery
+8. verify T9 Squid Roll / wall swim / Surge and T8 camera / blocker / painting behavior still work
+
+T10 remains **IMPLEMENTATION CANDIDATE** until hosted QA passes.

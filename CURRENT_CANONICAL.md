@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.4.0 / T9 STABLE FREEZE
+# CURRENT_CANONICAL — v0.5.0 / T10 IMPLEMENTATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T9 is now the frozen stable foundation. T9 Squid / Ink Locomotion passed automated CI/deploy and full hosted runtime QA on 2026-09-23.**
+**T0–T9 remains the frozen stable foundation. T10 Shooter + Ink Economy + Combat Foundation is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -354,3 +354,46 @@ T8 remains frozen and T9 is now frozen. The intended order from here is:
 6. Successful build deploys to the fixed Pages URL.
 7. Browser/runtime QA is performed on the hosted build.
 8. Do not return to ZIP transfer or repeated local npm setup as the normal workflow.
+
+## T10 implementation candidate
+
+Implementation commit:
+`e70b7bca293ba259a4e3f4c70668aa4d7aae9c92`
+
+Type-fix follow-up:
+`b42db91f53ddbed56e1c14c571408d6f68e20871`
+
+Automated workflow:
+`35811304576`
+
+Automated results:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+T10 candidate adds:
+
+- 100-unit player Ink Tank
+- 0.95 Ink consumption per successful projectile spawn
+- 0.35 s recovery lock after firing
+- Human-form passive Ink recovery
+- fast Ink recovery while Squid in OWN ink
+- dry-fire rejection when Ink is insufficient
+- 100 HP player resource state
+- delayed HP regeneration after damage
+- accelerated HP regeneration while Squid in OWN ink
+- non-lethal enemy-ink damage floor at 60 HP
+- deterministic enemy-only projectile damage against combat QA targets
+- 34 damage per standard projectile hit
+- Team A / Team B QA targets with 100 HP and short automatic QA reset
+- projectile nearest-hit arbitration extended to PaintSurface / blocker / enemy combat target
+- same-team combat targets are ignored by damage queries
+- debug metrics for Ink, HP, recovery states, fired/dry shots, combat hits, target downs, and target HP
+
+T11 remains responsible for player splat / spawn / respawn / match-flow state transitions. The T10 QA target down/reset behavior is diagnostic scaffolding, not the production respawn loop.
+
+T10 project tuning values are original implementation tuning. Reference constants remain separately labeled under `src/config/reference/`.
