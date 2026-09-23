@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T13 STABLE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T14 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -79,6 +79,8 @@ export class DebugOverlay {
         <span class="muted">HP</span><span>${last.playerHp.toFixed(1)} / 100</span>
         <span class="muted">HP recovery</span><span>${escapeHtml(last.playerHpRecoveryState)}</span>
         <span class="muted">Damage taken</span><span>${last.playerDamageTaken.toFixed(1)}</span>
+        <span class="muted">Weapon</span><span>${escapeHtml(last.playerWeaponName)}</span>
+        <span class="muted">Weapon switches</span><span>${last.playerWeaponSwitches}</span>
         <span class="muted">Shots / dry</span><span>${last.shotsFired} / ${last.inkDryFireAttempts}</span>
         <span class="muted">Combat hits</span><span>${last.combatHits}</span>
         <span class="muted">Target downs</span><span>${last.combatTargetDowns}</span>
