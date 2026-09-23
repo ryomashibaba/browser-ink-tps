@@ -1,3 +1,12 @@
+## v0.12.0 T17 Stable Freeze — 2026-09-23
+
+- hosted QA accepted by the user
+- stable checkpoint: `38836bcf73f03b7623eb09e7a41436b83027ab76`
+- GitHub Actions run #222 / `35841633285` passed TypeScript check, production build, and Pages deploy
+- final ally-target rule is snapshot-at-selection; later CPU movement never changes the destination
+- T0–T17 is now the frozen gameplay foundation
+- next phase: T18 CPU Tactical Mobility
+
 ## T17 ally destination correction — 2026-09-23
 
 - friendly CPU Super Jump destinations are now captured once at map selection
