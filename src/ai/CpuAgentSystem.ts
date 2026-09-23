@@ -166,10 +166,21 @@ export class CpuAgentSystem {
     const t = Math.max(0, Math.min(1, alpha));
     for (const bot of this.bots) {
       if (bot.lifeState !== 'ACTIVE') continue;
+      const dx = bot.position.x - bot.previousPosition.x;
+      const dz = bot.position.z - bot.previousPosition.z;
+      const moving = Math.min(1, Math.hypot(dx, dz) / 0.055);
+      const phase = performance.now() * 0.008 + bot.slot * 1.7;
+      const bob = Math.sin(phase * 1.8) * 0.025 * moving;
+      const squash = Math.abs(Math.sin(phase * 1.8)) * 0.025 * moving;
       bot.entity.setPosition(
-        bot.previousPosition.x + (bot.position.x - bot.previousPosition.x) * t,
-        bot.previousPosition.y + (bot.position.y - bot.previousPosition.y) * t + 0.68,
-        bot.previousPosition.z + (bot.position.z - bot.previousPosition.z) * t
+        bot.previousPosition.x + dx * t,
+        bot.previousPosition.y + (bot.position.y - bot.previousPosition.y) * t + 0.68 + bob,
+        bot.previousPosition.z + dz * t
+      );
+      bot.entity.setLocalScale(
+        0.58 * (1 + squash),
+        0.88 * (1 - squash * 1.35),
+        0.58 * (1 + squash)
       );
     }
   }

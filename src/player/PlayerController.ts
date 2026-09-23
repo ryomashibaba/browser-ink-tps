@@ -394,7 +394,7 @@ export class PlayerController {
       this.previousPosition.y + (this.position.y - this.previousPosition.y) * t,
       this.previousPosition.z + (this.position.z - this.previousPosition.z) * t
     );
-    this.applyVisualPosition(this.renderPosition);
+    this.applyVisualPosition(this.renderPosition, true);
     return out.copy(this.renderPosition);
   }
 
@@ -579,20 +579,57 @@ export class PlayerController {
     else this.character.disableSnapToGround();
   }
 
-  private applyVisualPosition(position: Vec3): void {
+  private applyVisualPosition(position: Vec3, animated = false): void {
+    const time = performance.now() * 0.001;
+    const speedRatio = clamp(
+      this.stats.playerSpeedMetersPerSecond /
+        Math.max(GAME_CONFIG.player.humanSpeedMetersPerSecond, 1e-6),
+      0,
+      1.4
+    );
+    const groundedBob = animated && this.grounded && this.mode === 'HUMAN'
+      ? Math.sin(time * 13.5) * 0.035 * Math.min(speedRatio, 1)
+      : 0;
+
     this.entity.setPosition(
       position.x,
-      position.y + (this.mode === 'SQUID' ? GAME_CONFIG.player.squidVisualOffsetYMeters : 0),
+      position.y +
+        (this.mode === 'SQUID' ? GAME_CONFIG.player.squidVisualOffsetYMeters : 0) +
+        groundedBob,
       position.z
     );
 
     if (this.locomotionState === 'SQUID_ROLL') {
       const duration = Math.max(GAME_CONFIG.player.squidRollDurationSeconds, 1e-6);
       const progress = 1 - clamp(this.squidRollRemainingSeconds / duration, 0, 1);
+      this.entity.setLocalScale(0.86, 0.48, 1.08);
       this.entity.setLocalEulerAngles(progress * 360, 0, 0);
-    } else {
-      this.entity.setLocalEulerAngles(0, 0, 0);
+      return;
     }
+
+    if (this.mode === 'SQUID') {
+      const pulse = animated ? Math.sin(time * 7.2) * 0.035 : 0;
+      this.entity.setLocalScale(
+        0.86 * (1 + pulse),
+        0.48 * (1 - pulse * 0.55),
+        1.08 * (1 + pulse * 0.35)
+      );
+      this.entity.setLocalEulerAngles(0, 0, 0);
+      return;
+    }
+
+    const step = animated && this.grounded
+      ? Math.abs(Math.sin(time * 13.5)) * Math.min(speedRatio, 1)
+      : 0;
+    const sway = animated && this.grounded
+      ? Math.sin(time * 6.75) * Math.min(speedRatio, 1) * 2.8
+      : 0;
+    this.entity.setLocalScale(
+      0.72 * (1 + step * 0.018),
+      0.92 * (1 - step * 0.026),
+      0.72 * (1 + step * 0.018)
+    );
+    this.entity.setLocalEulerAngles(0, 0, sway);
   }
 
   private relationFor(sample: GameplayInkSample | null): InkRelation {
