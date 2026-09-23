@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.3.0 / T8 IMPLEMENTATION CANDIDATE
+# CURRENT_CANONICAL — v0.3.0 / T8 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T7 remains the frozen stable foundation. T8 World Interaction Foundation is implemented on `main`, has passed automated CI/deploy, and is awaiting hosted runtime QA before it may be frozen.**
+**T0–T8 is now the frozen stable foundation. T8 World Interaction Foundation passed automated CI/deploy and hosted runtime QA on 2026-09-23.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -24,7 +24,7 @@ Final stabilization validation:
 - GitHub Pages deploy: PASS
 - hosted hands-on QA: user accepted the current T4–T7 slice as completed after camera/aim/ink alignment fixes
 
-## T8 candidate checkpoint
+## T8 stable checkpoint
 
 Implementation commit:
 `234180436b27e0c9498c8d253348b2c366f839ce`
@@ -39,7 +39,7 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed**
 
 T8 candidate adds:
 
@@ -256,19 +256,19 @@ These remain future work rather than hidden bugs in the current slice:
 - final dirty-tile consumer / clearing policy
 - bundle-size optimization
 
-## Current validation phase
+## T8 hosted runtime validation
 
-**T8 — World Interaction Foundation runtime QA**
+Hosted-browser QA was completed and accepted by the user on 2026-09-23.
 
-The code and automated deployment are complete. Before T8 is frozen, hosted-browser QA must confirm:
+Confirmed at the phase level:
 
-1. rails, boxes, pillars, bridge/backers stop projectiles without painting surfaces behind them
-2. floor/ramp/wall PaintSurfaces still paint at the visible impact position
-3. close-range shots do not pass through blocker edges or create obvious false paint
-4. camera retracts before walls/boxes/rails and returns smoothly after obstruction clears
-5. ramp, elevated floor, box corners, shoulder offset, and ordinary movement/aim remain stable
+1. projectile blockers operate acceptably against non-paintable stage solids
+2. PaintSurface impacts remain visually/functionally aligned
+3. close-range blocker behavior is acceptable for this phase
+4. third-person camera obstruction/recovery is acceptable
+5. ramp/elevated geometry/box-corner/shoulder-offset QA did not reveal a blocking regression
 
-After T8 runtime acceptance, the intended order is:
+T8 is therefore frozen. The intended order from here is:
 
 - T9 — complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat

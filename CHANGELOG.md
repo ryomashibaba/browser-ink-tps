@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v0.3.0 T8 Implementation Candidate — 2026-09-23
+## v0.3.0 T8 Stable Freeze — 2026-09-23
 
 ### Added
 
@@ -36,11 +36,14 @@ Workflow:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: PENDING
+- hosted runtime QA: PASS — user confirmed
 
-### Status
+### Freeze
 
-T8 is an implementation candidate, **not yet frozen**. Hosted QA for projectile blockers, camera obstruction, ramps/elevated geometry, close-range shots, and existing T0–T7 behavior is required before T8 Freeze.
+Hosted QA was completed and accepted by the user on 2026-09-23. T8 is now **STABLE FREEZE**.
+
+Stable T8 gameplay implementation checkpoint:
+`234180436b27e0c9498c8d253348b2c366f839ce`
 
 ## v0.2.0 Stable Freeze — 2026-09-23
 

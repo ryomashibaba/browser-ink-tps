@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.3.0 / T8 IMPLEMENTATION CANDIDATE**
+**v0.3.0 / T8 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T7 stable foundation remains intact. The current `main` additionally includes the T8 world-interaction candidate:
+The T0–T8 stable foundation is frozen. The current `main` includes:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -124,7 +124,7 @@ Passed:
 - GitHub Pages artifact upload
 - GitHub Pages deployment
 
-Hosted runtime QA for T8 is still pending.
+Hosted runtime QA for T8 was completed and accepted by the user on 2026-09-23.
 
 Final T4–T7 stabilization workflow:
 `35800320770`
@@ -167,13 +167,13 @@ The stable T4–T7 slice intentionally does **not** yet include:
 - production stage
 - final performance/bundle optimization
 
-## Current phase
+## Next phase
 
-**T8 — hosted runtime QA before Freeze**
+**T9 — complete Squid / ink locomotion**
 
-Validate projectile blockers, visible paint impacts, camera wall avoidance/recovery, ramp/elevated geometry, box corners, close-range shooting, and T0–T7 regressions.
+T8 is frozen. The next implementation phase may extend locomotion, but must preserve the T0–T8 frozen world-interaction and ink contracts.
 
-Planned order after T8 acceptance:
+Planned order:
 
 - T9 — complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat

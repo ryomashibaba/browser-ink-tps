@@ -1,8 +1,8 @@
-# Validation Report — v0.3.0 T8 Implementation Candidate
+# Validation Report — v0.3.0 T8 Stable Freeze
 
 Date: 2026-09-23
 
-## T8 candidate checkpoint
+## T8 stable checkpoint
 
 Implementation commit:
 `234180436b27e0c9498c8d253348b2c366f839ce`
@@ -20,7 +20,7 @@ Automated result:
 - Pages configure: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed 2026-09-23**
 
 The T0–T7 stable rollback checkpoint remains `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`.
 
@@ -83,7 +83,7 @@ Confirmed by source audit + passing TypeScript/build pipeline:
 - camera retracts immediately on tighter obstruction and expands with exponential damping
 - center-screen aim target now stops at the nearest non-paintable stage blocker when appropriate
 
-Runtime behavior still requires hosted hands-on QA before T8 Freeze.
+Hosted hands-on QA was subsequently completed and accepted by the user. T8 is frozen.
 
 ## Camera / aiming validation
 
@@ -193,3 +193,27 @@ The following are not part of the completed T4–T7 slice:
 - bundle-size optimization
 
 These should be handled in later phases instead of weakening the current freeze.
+
+
+## T8 hosted acceptance
+
+The user completed the hosted-browser T8 QA pass and confirmed completion on 2026-09-23.
+
+Accepted phase scope includes:
+
+- projectile blocking by non-paintable stage geometry
+- retained paint behavior on floor/ramp/wall PaintSurfaces
+- camera obstruction and smooth recovery
+- ramp/elevated-floor/box-corner/close-range/shoulder-offset checks
+- no blocking regression reported in the T0–T7 frozen gameplay foundation
+
+T8 is now considered **STABLE FREEZE**.
+
+Stable T8 gameplay implementation checkpoint:
+`234180436b27e0c9498c8d253348b2c366f839ce`
+
+Automated implementation workflow:
+`35803236486`
+
+Candidate-document workflow:
+`35803430382`
