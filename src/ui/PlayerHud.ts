@@ -86,6 +86,9 @@ export class PlayerHud {
       <span class="hud-team-chip ${teamClass}">TEAM ${team === Team.A ? 'A' : 'B'}</span>
       <span class="hud-weapon-chip">${escapeHtml(this.stats.playerWeaponClass)} · ${escapeHtml(this.stats.playerWeaponName)} · ${escapeHtml(this.stats.playerWeaponAction)}</span>
       <span class="hud-kit-chip">F ${escapeHtml(this.stats.playerSubWeaponName)} · G ${escapeHtml(this.stats.playerSpecialName)}</span>
+      ${this.stats.playerSuperJumpState !== 'IDLE'
+        ? `<span class="hud-jump-chip">JUMP ${escapeHtml(this.stats.playerSuperJumpState)} · ${escapeHtml(this.stats.playerSuperJumpTarget)}</span>`
+        : ''}
       <span>OWN ${ownPercent.toFixed(1)}%</span>
       <span>ENEMY ${enemyPercent.toFixed(1)}%</span>
       <span>${escapeHtml(this.stats.playerLocomotionState)}</span>`;
@@ -104,6 +107,20 @@ export class PlayerHud {
         ? 'DRAW'
         : `${this.stats.matchResult} WINS`;
       this.centerMessage.className = 'visible result';
+    } else if (this.stats.playerSuperJumpState === 'WAIT_GROUND') {
+      this.centerMessage.textContent = 'SUPER JUMP · LAND FIRST';
+      this.centerMessage.className = 'visible super-jump';
+    } else if (this.stats.playerSuperJumpState === 'PREP') {
+      this.centerMessage.textContent =
+        `SUPER JUMP · PREP ${Math.round(this.stats.playerSuperJumpProgress * 100)}%`;
+      this.centerMessage.className = 'visible super-jump';
+    } else if (this.stats.playerSuperJumpState === 'TRAVEL') {
+      this.centerMessage.textContent =
+        `SUPER JUMP → ${this.stats.playerSuperJumpTarget}`;
+      this.centerMessage.className = 'visible super-jump';
+    } else if (this.stats.playerSuperJumpState === 'LANDING') {
+      this.centerMessage.textContent = 'LANDING';
+      this.centerMessage.className = 'visible super-jump landing';
     }
   }
 
