@@ -4,6 +4,7 @@ import type { PerformanceStats } from '../core/PerformanceStats';
 import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
 import type { PaintCoordinator, PaintRequest } from '../ink/PaintCoordinator';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
+import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 
 interface ProjectileSlot {
   active: boolean;
@@ -25,6 +26,7 @@ export class ProjectileSystem {
   public constructor(
     private readonly app: AppBase,
     private readonly surfaces: readonly PaintSurface[],
+    private readonly physics: RapierStagePhysics,
     private readonly coordinator: PaintCoordinator,
     private readonly stats: PerformanceStats
   ) {
@@ -130,9 +132,25 @@ export class ProjectileSystem {
       slot.velocity.y -= GAME_CONFIG.projectile.gravityMetersPerSecond2 * dt;
       this.delta.copy(slot.velocity).mulScalar(dt);
       const next = slot.position.clone().add(this.delta);
-      const hit = this.findNearestSurfaceHit(previous, next);
-      if (hit) {
-        this.enqueueImpact(slot.team, hit);
+
+      const paintHit = this.findNearestSurfaceHit(previous, next);
+      const blockerHit = this.physics.castStageSegment(previous, next, 'projectile');
+      const paintWins = paintHit && (
+        !blockerHit ||
+        paintHit.distance <=
+          blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+      );
+
+      if (paintWins) {
+        this.enqueueImpact(slot.team, paintHit);
+        this.stats.projectileImpacts += 1;
+        this.deactivate(slot);
+        continue;
+      }
+
+      if (blockerHit) {
+        // T8: non-paintable stage geometry consumes the projectile without
+        // fabricating a PaintRequest/PaintEvent.
         this.stats.projectileImpacts += 1;
         this.deactivate(slot);
         continue;

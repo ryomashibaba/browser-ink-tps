@@ -1,5 +1,7 @@
 import { Entity, Vec3 } from 'playcanvas';
+import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
+import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 
 export interface DebugInkClick {
   hit: SurfaceRayHit;
@@ -12,21 +14,25 @@ export class ThirdPersonCamera {
   private pitch = -12;
   private distance = 6.4;
   private shoulder = 0.72;
+  private currentCameraDistance = Number.NaN;
   private readonly target = new Vec3();
   private readonly forward = new Vec3();
   private readonly right = new Vec3();
+  private readonly desiredCameraPosition = new Vec3();
+  private readonly cameraDirection = new Vec3();
 
   public onDebugInkClick: ((click: DebugInkClick) => void) | null = null;
 
   public constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly cameraEntity: Entity,
-    private readonly surfaces: readonly PaintSurface[]
+    private readonly surfaces: readonly PaintSurface[],
+    private readonly physics: RapierStagePhysics
   ) {
     this.bind();
   }
 
-  public update(playerPosition: Vec3): void {
+  public update(playerPosition: Vec3, recoveryDtSeconds = 0): void {
     const pitchRadians = this.pitch * Math.PI / 180;
     const yawRadians = this.yaw * Math.PI / 180;
     const cosPitch = Math.cos(pitchRadians);
@@ -45,11 +51,54 @@ export class ThirdPersonCamera {
     }
 
     this.target.set(playerPosition.x, playerPosition.y + 0.55, playerPosition.z);
-    const cameraPosition = this.target.clone()
+    this.desiredCameraPosition.copy(this.target)
       .sub(this.forward.clone().mulScalar(this.distance))
       .add(this.right.clone().mulScalar(this.shoulder));
 
-    this.cameraEntity.setPosition(cameraPosition);
+    this.cameraDirection.copy(this.desiredCameraPosition).sub(this.target);
+    const desiredDistance = this.cameraDirection.length();
+    if (desiredDistance <= 1e-8) {
+      this.cameraEntity.setPosition(this.target);
+      return;
+    }
+    this.cameraDirection.mulScalar(1 / desiredDistance);
+
+    const blocker = this.physics.castStageSegment(
+      this.target,
+      this.desiredCameraPosition,
+      'camera'
+    );
+    const targetDistance = blocker
+      ? Math.max(
+          GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
+          Math.min(
+            desiredDistance,
+            blocker.distance - GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters
+          )
+        )
+      : desiredDistance;
+
+    if (!Number.isFinite(this.currentCameraDistance)) {
+      this.currentCameraDistance = targetDistance;
+    } else if (targetDistance < this.currentCameraDistance) {
+      // Retract immediately so the camera never spends a frame inside geometry.
+      this.currentCameraDistance = targetDistance;
+    } else if (recoveryDtSeconds > 0 && Number.isFinite(recoveryDtSeconds)) {
+      // Expansion is intentionally damped so leaving an obstruction does not snap.
+      const dt = Math.min(recoveryDtSeconds, GAME_CONFIG.simulation.maxFrameDeltaSeconds);
+      const blend = 1 - Math.exp(
+        -GAME_CONFIG.worldInteraction.cameraRecoverySharpness * dt
+      );
+      this.currentCameraDistance +=
+        (targetDistance - this.currentCameraDistance) * blend;
+    }
+
+    this.currentCameraDistance = Math.min(this.currentCameraDistance, targetDistance);
+    this.cameraEntity.setPosition(
+      this.target.x + this.cameraDirection.x * this.currentCameraDistance,
+      this.target.y + this.cameraDirection.y * this.currentCameraDistance,
+      this.target.z + this.cameraDirection.z * this.currentCameraDistance
+    );
     this.cameraEntity.lookAt(this.target.clone().add(this.forward.clone().mulScalar(12)));
   }
 
@@ -80,7 +129,17 @@ export class ThirdPersonCamera {
       if (hit && (!best || hit.distance < best.distance)) best = hit;
     }
 
-    if (best) return out.copy(best.worldPoint);
+    const blockerEnd = from.clone().add(direction.clone().mulScalar(fallbackDistance));
+    const blocker = this.physics.castStageSegment(from, blockerEnd, 'projectile');
+    if (
+      best &&
+      (!blocker ||
+        best.distance <=
+          blocker.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
+    ) {
+      return out.copy(best.worldPoint);
+    }
+    if (blocker) return out.copy(blocker.point);
     return out.copy(from).add(direction.mulScalar(fallbackDistance));
   }
 

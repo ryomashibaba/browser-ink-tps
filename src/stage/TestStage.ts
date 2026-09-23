@@ -11,75 +11,74 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { createInkSurfaceMaterial } from '../ink/InkSurfaceMaterial';
 import { PaintSurface } from '../ink/PaintSurface';
-import { SurfaceFlags } from '../ink/types';
 import type { GpuInkAtlas } from '../ink/GpuInkAtlas';
+import {
+  TEST_STAGE_DEFINITION,
+  type StageDefinition,
+  type StageMaterialKey,
+  type StageSolidDefinition,
+  type StageVector3
+} from './StageDefinition';
+
+export { TEST_STAGE_DEFINITION } from './StageDefinition';
 
 export interface StageBuildResult {
   surfaces: PaintSurface[];
 }
 
-export function defineTestSurfaces(gameplayInk: GameplayInkSystem): PaintSurface[] {
+export function defineTestSurfaces(
+  gameplayInk: GameplayInkSystem,
+  definition: StageDefinition = TEST_STAGE_DEFINITION
+): PaintSurface[] {
   const cell = GAME_CONFIG.ink.cellSizeMeters;
   const tile = GAME_CONFIG.ink.dirtyTileCells;
-  const scoreableFloor = SurfaceFlags.Paintable | SurfaceFlags.Swimmable | SurfaceFlags.Scoreable | SurfaceFlags.Floor;
-  const scoreableRamp = SurfaceFlags.Paintable | SurfaceFlags.Swimmable | SurfaceFlags.Scoreable | SurfaceFlags.Ramp;
-  const wall = SurfaceFlags.Paintable | SurfaceFlags.Swimmable | SurfaceFlags.Wall;
-
-  const rampAngle = 20 * Math.PI / 180;
-  const surfaces = [
-    new PaintSurface(
-      'main-floor', new Vec3(0, 0.03, 0), new Vec3(1, 0, 0), new Vec3(0, 0, 1),
-      18, 14, cell, scoreableFloor, tile
-    ),
-    new PaintSurface(
-      'upper-floor', new Vec3(5.1, 2.45, 1.4), new Vec3(1, 0, 0), new Vec3(0, 0, 1),
-      7.4, 5.4, cell, scoreableFloor, tile
-    ),
-    new PaintSurface(
-      'ramp-east', new Vec3(5.1, 1.22, -3.25), new Vec3(1, 0, 0), new Vec3(0, Math.sin(rampAngle), Math.cos(rampAngle)),
-      5.2, 7.1, cell, scoreableRamp, tile
-    ),
-    new PaintSurface(
-      'wall-west', new Vec3(-6.2, 2.55, -4.7), new Vec3(1, 0, 0), new Vec3(0, 1, 0),
-      8.4, 5.0, cell, wall, tile
-    )
-  ];
+  const surfaces = definition.paintSurfaces.map((surface) => new PaintSurface(
+    surface.id,
+    vec3(surface.center),
+    vec3(surface.uAxis),
+    vec3(surface.vAxis),
+    surface.widthMeters,
+    surface.heightMeters,
+    cell,
+    surface.flags,
+    tile
+  ));
 
   for (const surface of surfaces) gameplayInk.registerSurface(surface);
   return surfaces;
 }
 
-export function buildTestStage(app: AppBase, surfaces: readonly PaintSurface[], atlas: GpuInkAtlas): StageBuildResult {
+export function buildTestStage(
+  app: AppBase,
+  definition: StageDefinition,
+  surfaces: readonly PaintSurface[],
+  atlas: GpuInkAtlas
+): StageBuildResult {
   const root = new Entity('StageRoot');
   app.root.addChild(root);
 
-  // Paintable geometry is generated from the exact same surface basis used by gameplay ink.
+  // Paintable geometry remains generated from the exact frozen PaintSurface basis.
   for (const surface of surfaces) {
     const material = createInkSurfaceMaterial(surface, atlas.texture);
     const mesh = createSurfaceMesh(app, surface);
     const meshInstance = new MeshInstance(mesh, material);
-    const entity = new Entity(`PaintSurface:${surface.id}`);
+    const entity = new Entity('PaintSurface:' + surface.id);
     entity.addComponent('render', { meshInstances: [meshInstance], castShadows: false, receiveShadows: false });
     root.addChild(entity);
   }
 
-  const dark = makeMaterial(new Color(0.08, 0.11, 0.14), 0.25, 0.78);
-  const medium = makeMaterial(new Color(0.16, 0.20, 0.23), 0.2, 0.64);
-  const light = makeMaterial(new Color(0.30, 0.35, 0.38), 0.15, 0.55);
-  const accent = makeMaterial(new Color(0.44, 0.72, 0.77), 0.35, 0.68);
+  const materials: Record<StageMaterialKey, StandardMaterial> = {
+    dark: makeMaterial(new Color(0.08, 0.11, 0.14), 0.25, 0.78),
+    medium: makeMaterial(new Color(0.16, 0.20, 0.23), 0.2, 0.64),
+    light: makeMaterial(new Color(0.30, 0.35, 0.38), 0.15, 0.55),
+    accent: makeMaterial(new Color(0.44, 0.72, 0.77), 0.35, 0.68)
+  };
 
-  createBox(root, 'MainBase', new Vec3(0, -0.19, 0), new Vec3(18.5, 0.4, 14.5), dark);
-  createBox(root, 'UpperSupport', new Vec3(5.1, 1.30, 1.4), new Vec3(7.8, 2.25, 5.8), medium);
-  createBox(root, 'LeftPillar', new Vec3(-6.8, 1.25, 3.3), new Vec3(1.6, 2.5, 1.6), medium);
-  createBox(root, 'CenterBlock', new Vec3(-1.2, 0.75, -0.7), new Vec3(2.3, 1.5, 2.0), light);
-  createBox(root, 'Bridge', new Vec3(-1.0, 2.25, 4.7), new Vec3(7.2, 0.32, 1.25), accent);
-  createBox(root, 'WallBacker', new Vec3(-6.2, 2.55, -4.82), new Vec3(8.8, 5.1, 0.18), dark);
-
-  // Non-scoreable decorative boundary rails make the test stage read as a deliberate arena.
-  createBox(root, 'RailNorth', new Vec3(0, 0.42, 7.18), new Vec3(18.6, 0.84, 0.25), medium);
-  createBox(root, 'RailSouth', new Vec3(0, 0.42, -7.18), new Vec3(18.6, 0.84, 0.25), medium);
-  createBox(root, 'RailEast', new Vec3(9.18, 0.42, 0), new Vec3(0.25, 0.84, 14.6), medium);
-  createBox(root, 'RailWest', new Vec3(-9.18, 0.42, 0), new Vec3(0.25, 0.84, 14.6), medium);
+  // T8: the same solid definitions now drive visible box geometry and Rapier blockers.
+  for (const solid of definition.solids) {
+    if (!solid.render) continue;
+    createSolidBox(root, solid, materials[solid.material]);
+  }
 
   return { surfaces: [...surfaces] };
 }
@@ -117,6 +116,10 @@ function point(center: Vec3, u: Vec3, du: number, v: Vec3, dv: number): Vec3 {
   );
 }
 
+function vec3(value: StageVector3): Vec3 {
+  return new Vec3(value[0], value[1], value[2]);
+}
+
 function makeMaterial(color: Color, metalness: number, gloss: number): StandardMaterial {
   const material = new StandardMaterial();
   material.diffuse = color;
@@ -127,11 +130,19 @@ function makeMaterial(color: Color, metalness: number, gloss: number): StandardM
   return material;
 }
 
-function createBox(parent: Entity, name: string, position: Vec3, scale: Vec3, material: StandardMaterial): Entity {
-  const entity = new Entity(name);
+function createSolidBox(
+  parent: Entity,
+  solid: StageSolidDefinition,
+  material: StandardMaterial
+): Entity {
+  const entity = new Entity(solid.id);
   entity.addComponent('render', { type: 'box', material, castShadows: true, receiveShadows: true });
-  entity.setPosition(position);
-  entity.setLocalScale(scale);
+  entity.setPosition(vec3(solid.center));
+  entity.setLocalScale(vec3(solid.size));
+  if (solid.rotationEulerDegrees) {
+    const rotation = solid.rotationEulerDegrees;
+    entity.setEulerAngles(rotation[0], rotation[1], rotation[2]);
+  }
   parent.addChild(entity);
   return entity;
 }

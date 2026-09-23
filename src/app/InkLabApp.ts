@@ -26,7 +26,7 @@ import { PlayerInput } from '../input/PlayerInput';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
 import { PlayerController } from '../player/PlayerController';
 import { ProjectileSystem } from '../projectile/ProjectileSystem';
-import { buildTestStage, defineTestSurfaces } from '../stage/TestStage';
+import { buildTestStage, defineTestSurfaces, TEST_STAGE_DEFINITION } from '../stage/TestStage';
 import { ControlPanel } from '../ui/ControlPanel';
 import { DebugOverlay } from '../ui/DebugOverlay';
 
@@ -87,7 +87,7 @@ export class InkLabApp {
     private readonly canvas: HTMLCanvasElement,
     uiRoot: HTMLElement
   ) {
-    const surfaces = defineTestSurfaces(this.gameplayInk);
+    const surfaces = defineTestSurfaces(this.gameplayInk, TEST_STAGE_DEFINITION);
     const requestedAtlas = resolveAtlasSize(app.graphicsDevice.maxTextureSize);
     this.atlas = new GpuInkAtlas(
       app,
@@ -97,14 +97,14 @@ export class InkLabApp {
       GAME_CONFIG.ink.atlasGutterPixels
     );
 
-    buildTestStage(app, surfaces, this.atlas);
+    buildTestStage(app, TEST_STAGE_DEFINITION, surfaces, this.atlas);
     const cameraEntity = this.createCamera();
     this.createLighting();
 
     this.coordinator = new PaintCoordinator(this.gameplayInk, this.atlas, this.stats);
     this.input = new PlayerInput(canvas);
-    this.physics = new RapierStagePhysics(this.clock.stepSeconds);
-    this.cameraController = new ThirdPersonCamera(canvas, cameraEntity, surfaces);
+    this.physics = new RapierStagePhysics(this.clock.stepSeconds, TEST_STAGE_DEFINITION);
+    this.cameraController = new ThirdPersonCamera(canvas, cameraEntity, surfaces, this.physics);
     this.player = new PlayerController(
       app,
       this.physics,
@@ -113,7 +113,7 @@ export class InkLabApp {
       this.gameplayInk,
       this.stats
     );
-    this.projectiles = new ProjectileSystem(app, surfaces, this.coordinator, this.stats);
+    this.projectiles = new ProjectileSystem(app, surfaces, this.physics, this.coordinator, this.stats);
 
     this.controls = new ControlPanel(uiRoot, {
       onTeamChanged: (team) => {
@@ -162,7 +162,10 @@ export class InkLabApp {
     this.app.on('update', (dt: number) => {
       // Apply the latest mouse yaw/pitch before any fixed ticks so movement does not
       // use the previous render frame's camera basis.
-      this.cameraController.update(this.player.getPosition(this.playerPosition));
+      const cameraDt = Number.isFinite(dt) && dt > 0
+        ? Math.min(dt, GAME_CONFIG.simulation.maxFrameDeltaSeconds)
+        : 0;
+      this.cameraController.update(this.player.getPosition(this.playerPosition), cameraDt);
 
       const report = this.clock.advance(dt, (tick, stepSeconds) => {
         // T4-T7 fixed-step order:

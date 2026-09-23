@@ -42,6 +42,12 @@ export const GAME_CONFIG = Object.freeze({
     paintRadiusMeters: 0.64,
     visualDiameterMeters: 0.13
   },
+  worldInteraction: {
+    paintSurfacePriorityEpsilonMeters: 0.06,
+    cameraCollisionPaddingMeters: 0.18,
+    cameraMinDistanceMeters: 0.12,
+    cameraRecoverySharpness: 10
+  },
   debug: {
     stressBurstSmall: 250,
     stressBurstLarge: 2000,

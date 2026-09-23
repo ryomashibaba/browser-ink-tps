@@ -1,44 +1,96 @@
-import RAPIER, { type World } from '@dimforge/rapier3d-compat';
+import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
+import { Quat, Vec3 } from 'playcanvas';
+import type { StageDefinition, StageSolidDefinition } from '../stage/StageDefinition';
 
 export async function initializeRapier(): Promise<void> {
   await RAPIER.init();
 }
 
+export type StageQueryPurpose = 'projectile' | 'camera';
+
+export interface StageRayHit {
+  distance: number;
+  point: Vec3;
+  collider: Collider;
+  solidId: string;
+}
+
 export class RapierStagePhysics {
   public readonly world: World;
+  private readonly solidByColliderHandle = new Map<number, StageSolidDefinition>();
+  private readonly rayDirection = new Vec3();
 
-  public constructor(stepSeconds: number) {
+  public constructor(stepSeconds: number, stage: StageDefinition) {
     this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
     this.world.timestep = stepSeconds;
-    this.buildStaticStage();
+    this.buildStaticStage(stage.solids);
   }
 
   public step(): void {
     this.world.step();
   }
 
-  private buildStaticStage(): void {
-    const box = (x: number, y: number, z: number, sx: number, sy: number, sz: number): void => {
-      const desc = RAPIER.ColliderDesc.cuboid(sx * 0.5, sy * 0.5, sz * 0.5)
-        .setTranslation(x, y, z);
-      this.world.createCollider(desc);
+  public castStageSegment(
+    from: Vec3,
+    to: Vec3,
+    purpose: StageQueryPurpose
+  ): StageRayHit | null {
+    this.rayDirection.copy(to).sub(from);
+    const length = this.rayDirection.length();
+    if (length <= 1e-8) return null;
+    this.rayDirection.mulScalar(1 / length);
+
+    const ray = new RAPIER.Ray(
+      { x: from.x, y: from.y, z: from.z },
+      { x: this.rayDirection.x, y: this.rayDirection.y, z: this.rayDirection.z }
+    );
+    const hit = this.world.castRay(
+      ray,
+      length,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      (collider: Collider) => {
+        const solid = this.solidByColliderHandle.get(collider.handle);
+        if (!solid) return false;
+        return purpose === 'projectile' ? solid.projectileBlocker : solid.cameraBlocker;
+      }
+    );
+    if (!hit) return null;
+
+    const solid = this.solidByColliderHandle.get(hit.collider.handle);
+    if (!solid) return null;
+
+    return {
+      distance: hit.timeOfImpact,
+      point: new Vec3(
+        from.x + this.rayDirection.x * hit.timeOfImpact,
+        from.y + this.rayDirection.y * hit.timeOfImpact,
+        from.z + this.rayDirection.z * hit.timeOfImpact
+      ),
+      collider: hit.collider,
+      solidId: solid.id
     };
+  }
 
-    box(0, -0.19, 0, 18.5, 0.4, 14.5);
-    box(5.1, 1.30, 1.4, 7.8, 2.25, 5.8);
-    box(-6.8, 1.25, 3.3, 1.6, 2.5, 1.6);
-    box(-1.2, 0.75, -0.7, 2.3, 1.5, 2.0);
-    box(-1.0, 2.25, 4.7, 7.2, 0.32, 1.25);
-    box(-6.2, 2.55, -4.82, 8.8, 5.1, 0.18);
-    box(0, 0.42, 7.18, 18.6, 0.84, 0.25);
-    box(0, 0.42, -7.18, 18.6, 0.84, 0.25);
-    box(9.18, 0.42, 0, 0.25, 0.84, 14.6);
-    box(-9.18, 0.42, 0, 0.25, 0.84, 14.6);
+  private buildStaticStage(solids: readonly StageSolidDefinition[]): void {
+    for (const solid of solids) {
+      const desc = RAPIER.ColliderDesc.cuboid(
+        solid.size[0] * 0.5,
+        solid.size[1] * 0.5,
+        solid.size[2] * 0.5
+      ).setTranslation(solid.center[0], solid.center[1], solid.center[2]);
 
-    const angle = -20 * Math.PI / 180;
-    const ramp = RAPIER.ColliderDesc.cuboid(2.6, 0.09, 3.55)
-      .setTranslation(5.1, 1.13, -3.25)
-      .setRotation({ x: Math.sin(angle * 0.5), y: 0, z: 0, w: Math.cos(angle * 0.5) });
-    this.world.createCollider(ramp);
+      if (solid.rotationEulerDegrees) {
+        const rotation = solid.rotationEulerDegrees;
+        const q = new Quat().setFromEulerAngles(rotation[0], rotation[1], rotation[2]);
+        desc.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
+      }
+
+      const collider = this.world.createCollider(desc);
+      this.solidByColliderHandle.set(collider.handle, solid);
+    }
   }
 }
