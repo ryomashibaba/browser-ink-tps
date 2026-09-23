@@ -276,7 +276,7 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PARTIAL PASS — coordinate pipeline, Roll QA Pad, ground Squid behavior, and Squid Roll confirmed by user; wall swim / Surge / final regressions remain**
 
 T9 candidate adds:
 
@@ -301,6 +301,24 @@ T9 candidate adds:
 - Squid-specific physical/render profile plus debug overlay state/collider/wall/charge readouts
 
 All values added here are project tuning, not claims of exact Nintendo internal numbers.
+
+### Hosted T9 QA progress
+
+Confirmed by the user on 2026-09-23:
+
+- coordinate audit reports PASS 4/4
+- GPU atlas write↔sample contract reports zero error
+- Roll QA Pad visually fills the complete main-floor
+- CPU turf for full main-floor is 252.0 m² / 76.62% of current scoreable area
+- player sampling on the filled main-floor reports `main-floor / OWN`
+- no-ink Squid movement uses the intended Human-equivalent baseline
+- Squid Roll is now operational and was confirmed in hosted play
+
+Still required before T9 Freeze:
+
+- OWN-painted wall swimming
+- wall Surge charge/release
+- Human↔Squid switching / shooting suppression / T8 regression sanity
 
 ## T8 hosted runtime validation
 

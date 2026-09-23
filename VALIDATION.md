@@ -383,3 +383,29 @@ Fix:
 - CPU authoritative ink coordinates were not flipped or modified
 
 T9 remains a candidate until the hosted Roll QA Pad / Coord QA visual check passes.
+
+## T9 hosted partial acceptance — ground locomotion / coordinate pipeline
+
+User confirmation date: 2026-09-23
+
+Hosted observations accepted:
+
+- `Coord audit`: PASS 4/4
+- coordinate round-trip error: approximately 8.9e-16 m
+- backing-solid face gap: 0.030 m
+- backing normal error: 0.000 degrees
+- atlas write↔sample error: 0.0e+0
+- Roll QA Pad visibly fills the complete `main-floor`
+- authoritative Team A turf after full main-floor fill: 252.0 m² / 76.62%
+- player foot sampling on the filled floor reports `main-floor` and OWN
+- Squid Roll was successfully triggered and confirmed by the user
+
+These observations validate the previously fixed GPU atlas origin bug and the ground portion of T9 Squid locomotion.
+
+Remaining hosted checks before T9 Freeze:
+
+1. paint `wall-west` with the active team, hold Shift and move into it; `Locomotion` should become `SWIM_WALL` and upward movement should occur only on OWN-painted cells
+2. while attached to the OWN-painted wall, hold Space to enter `SURGE_CHARGE`, then release Space; `SURGE` should trigger cleanly
+3. Human↔Squid switching should not pop or sink the player, Squid form should not fire, Human form should still fire, and T8 camera/projectile blocking should remain intact
+
+T9 remains **IMPLEMENTATION CANDIDATE** until the remaining hosted checks pass.

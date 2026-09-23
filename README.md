@@ -140,7 +140,21 @@ Passed:
 - GitHub Pages artifact upload
 - GitHub Pages deployment
 
-Hosted runtime QA for T9 is pending; T9 is not frozen yet.
+Hosted runtime QA for T9 is partially complete.
+
+Confirmed:
+
+- coordinate / atlas alignment
+- full-floor Roll QA Pad
+- main-floor OWN sampling
+- no-ink Squid baseline
+- Squid Roll
+
+Still pending before T9 Freeze:
+
+- OWN-wall swim
+- wall Surge
+- final Human/Squid firing and T8 regression sanity
 
 T8 implementation commit:
 `234180436b27e0c9498c8d253348b2c366f839ce`

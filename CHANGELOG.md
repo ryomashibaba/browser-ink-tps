@@ -1,3 +1,13 @@
+## v0.4.0 T9 Hosted Partial QA — 2026-09-23
+
+- hosted coordinate audit confirmed PASS 4/4
+- hosted GPU atlas origin fix confirmed visually
+- Roll QA Pad full-floor rendering confirmed
+- authoritative full main-floor turf confirmed at 252.0 m² / 76.62%
+- main-floor OWN sampling confirmed
+- Squid Roll confirmed operational by the user
+- T9 remains unfrozen pending wall swim, Surge, and final regression checks
+
 ## v0.4.0 T9 GPU Atlas Origin Fix — 2026-09-23
 
 - isolated reported main-floor visual failure to GPU atlas sampling rather than CPU/world coordinates
