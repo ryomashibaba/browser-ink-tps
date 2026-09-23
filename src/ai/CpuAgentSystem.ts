@@ -743,7 +743,18 @@ export class CpuAgentSystem {
   ): void {
     if (
       bot.lifeState !== 'ACTIVE' ||
-      bot.mobilityState !== 'GROUND'
+      bot.mobilityState !== 'GROUND' ||
+      bot.weaponGuarding ||
+      bot.weaponChargeSeconds > 0 ||
+      bot.weaponBurstShotsRemaining > 0
+    ) {
+      return;
+    }
+
+    const weapon = weaponProfile(bot.weaponId);
+    if (
+      weapon.fireIntervalSeconds > 0 &&
+      bot.fireRemaining > weapon.fireIntervalSeconds * 0.85
     ) {
       return;
     }
