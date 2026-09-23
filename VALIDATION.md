@@ -1122,3 +1122,10 @@ Regression:
 20. FPS, dropped simulation, GPU backlog, and projectile/sub pools remain acceptable during Drift Storm + ordinary 4v4 activity.
 
 T16 remains **IMPLEMENTATION CANDIDATE** until the checks above are accepted.
+
+
+## T16 Stable Freeze — accepted 2026-09-23
+
+The user confirmed the v0.11.0 hosted checks. Stable checkpoint: `958a1d168ea86387701eb089437bf6da6af14514`. GitHub Actions run #184 / `35833765947` passed build and Pages deployment.
+
+T16 is now **STABLE FREEZE**. Future phases must preserve the per-main-weapon kit assignments and T15 paint-source/special-gauge contracts unless an explicit later Freeze-change decision is made.
