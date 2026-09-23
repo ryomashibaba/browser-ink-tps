@@ -1129,3 +1129,35 @@ T16 remains **IMPLEMENTATION CANDIDATE** until the checks above are accepted.
 The user confirmed the v0.11.0 hosted checks. Stable checkpoint: `958a1d168ea86387701eb089437bf6da6af14514`. GitHub Actions run #184 / `35833765947` passed build and Pages deployment.
 
 T16 is now **STABLE FREEZE**. Future phases must preserve the per-main-weapon kit assignments and T15 paint-source/special-gauge contracts unless an explicit later Freeze-change decision is made.
+
+
+## T17 v0.12.0 Super Jump hosted QA
+
+Map selection:
+1. During PLAYING, press M. The tactical map should expand and Pointer Lock should release.
+2. Friendly alive CPUs and your own spawn should show selectable jump rings; enemies must not be valid targets.
+3. Click a valid friendly CPU. The map should close, Pointer Lock should return, and HUD/Debug should enter PREP (or WAIT_GROUND first if airborne).
+
+Phase behavior:
+4. During PREP, movement/fire/sub/special should be locked but enemy shots and Splat QA should still be able to damage/splat the player.
+5. After about 80 frames, the player should launch on a high arc. During TRAVEL and the final LANDING/approach phase, enemy projectiles, enemy-ink resource damage, and Splat QA must not damage the player.
+6. The airborne trip should take the same amount of time for a nearby ally and a distant spawn/ally.
+7. The jump should pass through/over stage blockers instead of being stopped by Rapier collision.
+8. The landing marker should remain visible at the destination until landing.
+
+Targets / lifecycle:
+9. Jump to your own spawn and confirm landing at the correct team spawn.
+10. Jump to a living friendly CPU and confirm the landing destination follows that ally while they move.
+11. If a jump is selected while airborne, HUD should show WAIT_GROUND and the preparation should begin after the player reaches valid ground.
+12. Starting from an OWN-painted wall-swim state should allow preparation without forcing a fall first.
+13. On actual landing, ordinary movement/fire should resume and the player should be back on the normal PlayerController collider/render.
+14. Splat/Respawn, Restart Match, team switch, weapon switch, or match end must not leave an orphan traveler/landing marker or disabled player collider.
+
+Regression:
+15. Dualies fire+move+Space dodge, Squid Roll, wall swim, Surge, and T14 two-ring charge must remain unchanged outside Super Jump.
+16. T16 F/G weapon kits and special-gauge behavior must remain unchanged.
+17. CPU targeting/combat should target the player during PREP, ignore the player while airborne, and resume after landing.
+18. camera aim direction, CPU/GPU ink alignment, Turf scoring, 4v4 CPU, tactical map orientation, and fixed 60 Hz simulation must show no regression.
+19. FPS / dropped simulation / GPU backlog should remain acceptable during repeated jumps.
+
+T17 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
