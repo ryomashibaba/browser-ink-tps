@@ -1003,3 +1003,19 @@ Hosted checks:
 11. Existing Squid Space behavior (jump / Squid Roll / Surge) remains unchanged because Dualies Space interception is Human-only.
 
 Do not freeze T14 until the user confirms these hosted checks.
+
+
+## T14 v0.9.4 Dualies / Splatling hosted QA
+
+Required hosted checks:
+1. Select Twin Comets. Press Space without LMB: no Dualies dodge should start.
+2. Hold LMB and press Space while Human: the dodge should start.
+3. During the dodge itself, firing remains suppressed.
+4. Immediately after the dodge, firing should return before free movement; directional movement should remain briefly locked.
+5. While still holding LMB during the post-roll stance, Space can chain the second dodge if a charge remains.
+6. After the post-roll lock expires, ordinary Human movement returns.
+7. Select Rotor Cannon and hold LMB: its HUD/3D charge should now read visually closer to Charger (centered progress + forward guide) while still retaining subtle rotary identity.
+8. Squid Space jump / Squid Roll / Surge remain unchanged.
+9. T8–T13 camera, painting authority, match, CPU, stage, HUD/map behavior show no regression.
+
+T14 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
