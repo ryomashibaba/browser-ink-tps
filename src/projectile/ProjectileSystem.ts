@@ -1346,7 +1346,7 @@ export class ProjectileSystem {
     );
     if (this.cpuAimDirection.lengthSq() <= 1e-8) return;
 
-    const charge = clamp01(request.charge);
+    const charge = clamp(request.charge, 0, 1);
     const chargeSeconds = charge * profile.chargeSeconds;
     const stage = chargeStageProgress(profile, chargeSeconds);
     const spread = stage.firstReached
@@ -1404,7 +1404,7 @@ export class ProjectileSystem {
     request: CpuFireRequest,
     profile: WeaponProfile
   ): void {
-    const charge = clamp01(request.charge);
+    const charge = clamp(request.charge, 0, 1);
     const forward = flattened(
       request.target.clone().sub(request.bodyPosition)
     );
