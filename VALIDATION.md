@@ -1,4 +1,4 @@
-# Validation Report — v0.3.0 T8 Stable Freeze
+# Validation Report — v0.4.0 T9 Implementation Candidate
 
 Date: 2026-09-23
 
@@ -217,3 +217,50 @@ Automated implementation workflow:
 
 Candidate-document workflow:
 `35803430382`
+
+
+## T9 Squid / Ink Locomotion candidate
+
+Implementation commit:
+`110f925fe830ea2aa3865b3c88525c81d1e08f92`
+
+Workflow:
+`35804869663`
+
+Automated result:
+
+- Checkout: PASS
+- Node.js setup: PASS
+- npm dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages configure: PASS
+- Pages artifact upload: PASS
+- Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Source/architecture audit:
+
+- Human remains a capsule collider and Squid now uses a separate ball collider attached to the same position-based kinematic rigid body.
+- The inactive form collider is disabled; the existing Rapier character controller drives the active form collider.
+- Squid collider placement preserves the existing foot baseline instead of moving the player upward on form change.
+- CPU-authoritative PaintSurface sampling remains the only source for OWN / ENEMY / NEUTRAL locomotion decisions.
+- wall swimming only attaches to a SWIMMABLE + WALL PaintSurface cell owned by the current team.
+- PaintEvent / GameplayInk / GpuInkAtlas flow is unchanged.
+- T8 projectile/camera world interaction is unchanged.
+- Squid Roll and Surge are locomotion-only project-tuned actions; combat effects/damage armor remain deferred to T10.
+- main-weapon fire is suppressed while the player is in Squid form.
+- debug overlay exposes locomotion state, active collider, wall surface, and Surge charge.
+
+Hosted QA required before T9 Freeze:
+
+1. Human↔Squid switching does not pop the player upward/downward or fall through the stage.
+2. OWN ground ink enters SWIM_GROUND and moves clearly faster; neutral/enemy/non-ink enters SQUID_DRY and remains slow.
+3. ramps/steps remain traversable in both forms without obvious clipping or stuck states.
+4. an OWN-painted section of `wall-west` can be climbed while holding Shift and moving into it; unpainted/enemy-painted wall sections cannot be climbed.
+5. reversing direction while swimming fast in OWN ink + Space triggers SQUID_ROLL without breaking normal Squid jump.
+6. on an OWN-painted wall, hold Shift + movement into wall + Space to charge, then release Space to trigger SURGE.
+7. holding left mouse while Squid does not fire; Human fire remains unchanged.
+8. T8 camera obstruction and projectile/paint alignment still behave normally.
+
+T9 is **not frozen** until hosted hands-on QA passes.

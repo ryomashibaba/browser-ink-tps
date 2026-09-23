@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.3.0 / T8 STABLE FREEZE
+# CURRENT_CANONICAL — v0.4.0 / T9 IMPLEMENTATION CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T8 is now the frozen stable foundation. T8 World Interaction Foundation passed automated CI/deploy and hosted runtime QA on 2026-09-23.**
+**T0–T8 remains the frozen stable foundation. T9 Squid / Ink Locomotion is implemented on `main`, has passed automated CI/deploy, and is awaiting hosted runtime QA before Freeze.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -256,6 +256,38 @@ These remain future work rather than hidden bugs in the current slice:
 - final dirty-tile consumer / clearing policy
 - bundle-size optimization
 
+## T9 implementation candidate
+
+Implementation commit:
+`110f925fe830ea2aa3865b3c88525c81d1e08f92`
+
+Automated workflow:
+`35804869663`
+
+Automated results:
+
+- dependency install: PASS
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+T9 candidate adds:
+
+- distinct Human capsule and Squid ball Rapier colliders on the same kinematic body
+- foot-height-preserving Squid collider offset
+- explicit locomotion states: HUMAN / SQUID_DRY / SWIM_GROUND / SWIM_WALL / SQUID_ROLL / SURGE_CHARGE / SURGE
+- OWN-ink high-speed ground swimming while neutral/enemy/non-ink remains slow
+- OWN-ink wall detection through the CPU-authoritative PaintSurface grid
+- Shift + movement into an OWN-painted wall for wall swimming
+- Squid Roll from OWN-ink ground swimming by reversing direction and pressing jump above the speed threshold
+- wall Surge charge/release using jump while attached to an OWN-painted wall
+- Squid-form main-fire suppression
+- Squid-specific physical/render profile plus debug overlay state/collider/wall/charge readouts
+
+All values added here are project tuning, not claims of exact Nintendo internal numbers.
+
 ## T8 hosted runtime validation
 
 Hosted-browser QA was completed and accepted by the user on 2026-09-23.
@@ -268,9 +300,9 @@ Confirmed at the phase level:
 4. third-person camera obstruction/recovery is acceptable
 5. ramp/elevated geometry/box-corner/shoulder-offset QA did not reveal a blocking regression
 
-T8 is therefore frozen. The intended order from here is:
+T8 remains frozen. Current work is the T9 candidate above. After T9 runtime acceptance, the intended order is:
 
-- T9 — complete Squid / ink locomotion
+- T9 — Freeze complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat
 - T11 — spawn / splat / respawn / Turf War match loop
 - T12 — CPU / Recast + tactical layer

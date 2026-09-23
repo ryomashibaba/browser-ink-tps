@@ -12,18 +12,20 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.3.0 / T8 STABLE FREEZE**
+**v0.4.0 / T9 IMPLEMENTATION CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T8 stable foundation is frozen. The current `main` includes:
+The T0–T8 stable foundation remains frozen. The current `main` additionally contains the T9 Squid / Ink Locomotion candidate:
 
 - third-person Human movement
 - Rapier kinematic character collision
 - jump / gravity / slope handling
-- Human/Squid state
+- Human/Squid form with separate capsule/ball physical colliders
+- explicit HUMAN / SQUID_DRY / SWIM_GROUND / SWIM_WALL / SQUID_ROLL / SURGE_CHARGE / SURGE locomotion states
 - CPU-authoritative OWN / ENEMY / NEUTRAL ink sampling
+- OWN-ink wall swimming, Squid Roll, and wall Surge
 - pooled swept shooter projectiles
 - center-crosshair TPS aiming
 - projectile-gravity compensation toward the visual aim target
@@ -67,7 +69,10 @@ Ink remains PaintSurface-local at **0.125 m/cell**, never a global XZ grid.
 - Esc — release Pointer Lock
 - WASD — move
 - Space — jump
-- Shift — Squid state
+- Shift — Squid form / swim
+- Shift + move into OWN-painted wall — wall swim
+- While fast-swimming in OWN ink, reverse direction + Space — Squid Roll
+- On OWN-painted wall, hold Space then release — Surge
 - Left mouse — fire
 - Mouse wheel — camera distance
 - 1 / 2 — Team A / Team B
@@ -109,6 +114,22 @@ Gameplay simulation is fixed at 60 Hz and independent of render FPS. Player and 
 - `VALIDATION.md` — automated + hosted QA record
 
 ## Validation state
+
+T9 implementation commit:
+`110f925fe830ea2aa3865b3c88525c81d1e08f92`
+
+T9 automated workflow:
+`35804869663`
+
+Passed:
+
+- dependency install
+- TypeScript check
+- Vite production build
+- GitHub Pages artifact upload
+- GitHub Pages deployment
+
+Hosted runtime QA for T9 is pending; T9 is not frozen yet.
 
 T8 implementation commit:
 `234180436b27e0c9498c8d253348b2c366f839ce`
@@ -167,15 +188,15 @@ The stable T4–T7 slice intentionally does **not** yet include:
 - production stage
 - final performance/bundle optimization
 
-## Next phase
+## Current phase
 
-**T9 — complete Squid / ink locomotion**
+**T9 — Squid / Ink Locomotion hosted runtime QA**
 
-T8 is frozen. The next implementation phase may extend locomotion, but must preserve the T0–T8 frozen world-interaction and ink contracts.
+T8 remains frozen. The T9 implementation candidate extends locomotion without changing the frozen CPU/GPU ink or T8 world-interaction contracts.
 
-Planned order:
+After T9 acceptance:
 
-- T9 — complete Squid / ink locomotion
+- T9 — Freeze complete Squid / ink locomotion
 - T10 — shooter + ink economy + combat
 - T11 — spawn / splat / respawn / Turf War match loop
 - T12 — CPU / Recast + tactical layer

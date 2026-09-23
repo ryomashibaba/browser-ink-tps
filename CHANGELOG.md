@@ -1,3 +1,32 @@
+## v0.4.0 T9 Implementation Candidate — 2026-09-23
+
+### Squid / ink locomotion
+
+- added separate Human capsule and Squid ball Rapier colliders on one kinematic body
+- preserved foot baseline across form switching
+- added explicit HUMAN / SQUID_DRY / SWIM_GROUND / SWIM_WALL / SQUID_ROLL / SURGE_CHARGE / SURGE states
+- retained CPU-authoritative floor ink relation and added OWN-wall sampling
+- added OWN-ink wall swimming
+- added project-tuned Squid Roll and wall Surge locomotion actions
+- suppressed main fire while in Squid form
+- expanded debug overlay with locomotion/collider/wall/Surge state
+- preserved T0–T8 ink and world-interaction contracts
+
+### Validation
+
+Implementation commit:
+`110f925fe830ea2aa3865b3c88525c81d1e08f92`
+
+Workflow:
+`35804869663`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: PENDING
+
+T9 remains an implementation candidate until hosted QA is accepted.
+
 # CHANGELOG
 
 ## v0.3.0 T8 Stable Freeze — 2026-09-23
