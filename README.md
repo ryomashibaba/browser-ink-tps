@@ -221,7 +221,7 @@ Do not casually replace:
 
 The current project intentionally does **not** yet include:
 
-- CPU weapon combat / Splat / Respawn completion
+- final T12 CPU combat/lifecycle hosted acceptance
 - super jump
 - production HUD / tactical map
 - production models / animation / audio
@@ -232,7 +232,7 @@ The current project intentionally does **not** yet include:
 
 **T12 — CPU players / Recast navigation + tactical layer hosted QA**
 
-T0–T11 remains frozen. The first T12 batch adds seven Recast Crowd agents, staggered tactical roles, and CPU turf contribution. CPU weapon combat/Splat/Respawn remains to be completed before T12 Freeze.
+T0–T11 remains frozen. The first T12 navigation/tactical batch is hosted-QA accepted. The second T12 batch now adds CPU weapon combat, HP/Ink, Splat, and Respawn and is awaiting hosted QA before T12 Freeze.
 
 Current T12 validation focus:
 

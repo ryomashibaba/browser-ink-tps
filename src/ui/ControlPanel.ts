@@ -26,7 +26,7 @@ export class ControlPanel {
     panel.className = 'panel';
     panel.innerHTML = `
       <h1>Browser Ink TPS · T12 Candidate</h1>
-      <p>T0–T11 remains frozen. T12 adds 7 CPU players driven by Recast Crowd plus staggered Painter / Skirmisher / Anchor tactical decisions.</p>
+      <p>T0–T11 remains frozen. T12 now includes 7 Recast CPU players with tactical roles, shooting, HP/Ink, Splat, and Respawn.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -73,7 +73,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T12: 7 CPU agents · Recast navmesh + Crowd avoidance · staggered tactical goals · CPU turf painting via PaintRequest · Restart Match resets roster';
+    hint.textContent = 'T12: 7 CPU agents · Recast Crowd · tactical painting + shared projectile combat · CPU HP/Ink · Splat/Respawn · Restart Match resets full 4v4 state';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

@@ -518,7 +518,7 @@ Automated results:
 - production build: PASS
 - Pages artifact upload: PASS
 - GitHub Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PARTIAL PASS — Recast READY, 7-agent roster, navigation/avoidance, role behavior, CPU painting, restart/reset, and performance sanity confirmed by user; CPU combat/lifecycle QA remains**
 
 T12 candidate adds:
 
@@ -539,10 +539,44 @@ T12 candidate adds:
 - Restart Match and team changes rebuild the CPU roster
 - debug metrics for Recast status/build time, CPU counts, roles, tactical retargets, and CPU paint requests
 
-Current T12 boundary:
+Hosted T12 navigation/tactical QA accepted by the user on 2026-09-23:
 
-- CPU navigation / avoidance / tactical movement / turf contribution are implemented
-- CPU weapon firing, HP/Splat/Respawn, and player-vs-CPU projectile damage are not yet part of this first T12 candidate batch
-- CPU agents intentionally do not replace the frozen PlayerController/Rapier KCC used by the human player
+- Recast reports READY
+- 7 CPU agents and team roster split behave correctly
+- COUNTDOWN/PLAYING gating behaves correctly
+- Crowd routing avoids stage solids
+- multi-agent separation/avoidance is acceptable
+- CPU turf trails and PaintRequest counters behave correctly
+- Painter / Skirmisher / Anchor behavior is directionally correct
+- Restart Match resets CPU roster/counters/turf
+- no unacceptable FPS / dropped-simulation regression was observed
+- no T8–T11 regression was reported
 
-T12 must not be frozen until hosted navigation/tactical QA passes and the remaining CPU combat/lifecycle work is explicitly completed or re-scoped.
+Second T12 combat/lifecycle implementation:
+`1ecc6543d7f5f3f226a3cb0134ff129045ea09ef`
+
+Workflow:
+`35814249152`
+
+Second-batch automated results:
+
+- TypeScript check: PASS
+- production build: PASS
+- Pages deploy: PASS
+- hosted combat/lifecycle QA: **PENDING**
+
+Second batch adds:
+
+- CPU Ink/HP resource state
+- CPU Ink recovery and enemy-ink non-lethal damage behavior
+- CPU weapon fire requests with per-shot Ink consumption
+- CPU projectiles reuse the frozen pooled ProjectileSystem
+- CPU projectiles use the same ballistic solver and stage blocker/PaintSurface sweep logic
+- human projectiles can damage enemy CPU agents
+- CPU projectiles can damage enemy CPU agents and the human player
+- friendly-fire exclusion remains team-based
+- CPU Splat removes the Crowd agent and render entity from active play
+- CPU Respawn after the T11 respawn duration recreates the Crowd agent at team spawn with full HP/Ink
+- CPU combat metrics: alive count, average HP/Ink, shots, hits, splats, respawns, and CPU→Player hits
+
+T12 remains **IMPLEMENTATION CANDIDATE** until the second-batch hosted combat/lifecycle checks pass.

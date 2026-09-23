@@ -1,3 +1,25 @@
+## v0.7.0 T12 CPU Combat / Lifecycle Candidate — 2026-09-23
+
+- navigation/tactical hosted QA accepted
+- added CPU Ink/HP resource state
+- added CPU weapon fire intents through shared ProjectileSystem
+- added human↔CPU and CPU↔CPU projectile damage
+- added team-based friendly-fire exclusion
+- added CPU Splat removal from Crowd
+- added CPU Respawn with full HP/Ink and recreated Crowd agent
+- added CPU combat/lifecycle debug metrics
+
+Implementation:
+`1ecc6543d7f5f3f226a3cb0134ff129045ea09ef`
+
+Workflow:
+`35814249152`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted combat/lifecycle QA: PENDING
+
 ## v0.7.0 T12 Recast / CPU Tactical Candidate — 2026-09-23
 
 ### Navigation
