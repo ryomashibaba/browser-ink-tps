@@ -315,7 +315,8 @@ export class CpuAgentSystem {
       id: string,
       team: Team.A | Team.B,
       position: Vec3,
-      active: boolean
+      active: boolean,
+      weaponId: WeaponId
     ) => void
   ): void {
     for (const bot of this.bots) {
@@ -324,7 +325,8 @@ export class CpuAgentSystem {
         bot.team,
         bot.position,
         bot.lifeState === 'ACTIVE' &&
-          (bot.mobilityState === 'GROUND' || bot.mobilityState === 'JUMP_PREP')
+          (bot.mobilityState === 'GROUND' || bot.mobilityState === 'JUMP_PREP'),
+        bot.weaponId
       );
     }
   }
