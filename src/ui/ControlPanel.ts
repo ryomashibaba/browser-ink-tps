@@ -42,8 +42,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T18 Candidate</h1>
-      <p>T0–T17 is frozen. T18 adds tactical CPU Super Jump for recovery and regrouping.</p>
+      <h1>Browser Ink TPS · T18 Stable Freeze</h1>
+      <p>T0–T18 is frozen. CPU tactical Super Jump recovery and regrouping are stable.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
