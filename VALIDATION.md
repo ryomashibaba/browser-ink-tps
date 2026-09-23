@@ -1249,3 +1249,14 @@ Regression / performance:
 19. Camera/aim, CPU/GPU ink alignment, Turf scoring, Tactical Map orientation, and fixed 60 Hz simulation must show no regression.
 
 T19A remains **IMPLEMENTATION CANDIDATE** until these checks pass.
+
+
+## T19A Stable Freeze — accepted 2026-09-23
+
+The user confirmed the v0.14.0 hosted checks for CPU loadout diversity and class-specific behavior.
+
+Stable checkpoint:
+- commit: `034ee78fa3e25705332a40d2456ac5ebf90b79d4`
+- GitHub Actions run #266 / `35847641772`: TypeScript check, production build, and Pages deploy success
+
+T19A is now **STABLE FREEZE**. Future work must preserve the accepted CPU Shooter / Dualies / Blaster / Slosher / Charger / Splatling behavior, per-profile Ink/cadence rules, Brella interactions, charge/burst lifecycle cleanup, and T0–T18 authority boundaries unless an explicit later Freeze-change decision is made.
