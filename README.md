@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.14.0 / T19A STABLE FREEZE**
+**v0.15.0 / T19B CPU ADVANCED MAIN-WEAPON PARITY CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -435,3 +435,26 @@ v0.14.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `034ee78fa3e257
 The next batch completes the remaining five T14 CPU main-weapon classes: Roller, Brush, Brella, Stringer, and Splatana. These will receive genuine class-specific CPU behavior rather than generic projectile approximations.
 
 CPU Sub/Special parity remains intentionally deferred until T19C, after every T14 main-weapon class has a CPU runtime.
+
+
+### T19B v0.15.0 CPU Advanced Main-Weapon Class Parity candidate
+
+T0–T19A remains frozen.
+
+Press **CPU Advanced QA** to temporarily assign the first five CPUs:
+- Metro Roller
+- Dash Brush
+- Canopy Guard
+- Chord Stringer
+- Ink Saber
+
+This preserves the accepted T19A normal roster while allowing all remaining classes to be verified in one match. Restart Match restores the normal roster.
+
+T19B implements genuine class behavior rather than generic bullets:
+- Roller: horizontal flick + rolling contact paint/damage
+- Brush: close pursuit + melee swipe/paint fan
+- Brella: six-pellet burst + 100-HP directional guard / guard break
+- Stringer: first/full charge, three-shot convergence, delayed 0.75 s bursts
+- Splatana: quick/charged melee slash + paint slash + ranged wave
+
+All advanced CPU paint stays PaintSource.Cpu. CPU Sub/Special parity remains deferred to T19C.
