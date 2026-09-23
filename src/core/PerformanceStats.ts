@@ -108,6 +108,9 @@ export class PerformanceStats {
   public cpuAverageHp = 100;
   public cpuAverageInk = 100;
   public cpuPlayerHits = 0;
+  public cpuLoadouts = '-';
+  public cpuWeaponCharging = 0;
+  public cpuWeaponBursting = 0;
   public cpuSuperJumps = 0;
   public cpuSuperJumpPrep = 0;
   public cpuSuperJumpAirborne = 0;
