@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.11.0 / T16 STABLE FREEZE
+# CURRENT_CANONICAL — v0.12.0 / T17 SUPER JUMP CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T16 is the frozen stable foundation. T16 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #184 passed build/deploy.**
+**T0–T16 is the frozen stable foundation. T17 adds map-driven Super Jump / spawn mobility without altering the frozen T0–T16 paint, weapon-kit, match, or locomotion contracts.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1159,3 +1159,59 @@ T17 — Super Jump / Spawn Mobility:
 - teammate/spawn destination handling without weakening existing respawn contracts
 - visible landing indicator / travel feedback
 - interruption and safety rules isolated from T0–T16 Freeze
+
+
+## T17 v0.12.0 Super Jump / Spawn Mobility candidate
+
+Selection:
+- press M to expand the tactical map
+- opening the map releases Pointer Lock
+- the local player may click:
+  - their own team spawn
+  - any currently alive friendly CPU
+- enemy CPUs and splatted friendly CPUs are not valid destinations
+- after a valid destination is selected, Pointer Lock is requested again automatically
+- starting a jump while falling enters WAIT_GROUND and begins preparation only after reaching the ground
+- wall-swim / Surge-charge states may begin preparation directly without first dropping to the floor
+
+Timing and vulnerability:
+- preparation phase: 80 fixed 60 Hz frames
+- main airborne phase: 130 frames
+- final airborne action/approach phase: 30 frames
+- preparation is grounded/anchored and remains vulnerable
+- from takeoff through the final airborne phase, the player is invulnerable
+- travel time is distance-independent
+- the jump path bypasses ordinary stage collision so walls/floors cannot block the jump
+- after actual landing, ordinary movement/weapon control resumes immediately
+
+Implementation boundary:
+- ordinary player locomotion still uses the frozen Rapier kinematic controller
+- Super Jump uses a separate T17 state machine and external travel entity only while airborne
+- the normal player colliders/render are disabled only during airborne travel
+- landing teleports the existing PlayerController body to the resolved destination and restores its ordinary collider/render state
+- ProjectileSystem now receives separate `playerWeaponEnabled` and `playerDamageable` flags:
+  - PREP: weapon disabled, damageable
+  - TRAVEL / final approach: weapon disabled, not damageable
+  - ordinary play: both enabled
+- enemy-ink resource damage and Splat QA also respect airborne invulnerability
+- previously-fired projectiles, active subs, and active specials continue independently
+
+Destination behavior:
+- spawn uses the frozen team spawn position
+- friendly CPU destinations track the currently resolved active CPU position while it remains alive
+- if that CPU becomes unavailable after selection, the jump retains the last valid destination rather than targeting an enemy or invalid location
+- the landing marker follows the resolved target during the jump
+- Tactical Map shows selectable friendly rings and the active JUMP destination
+
+Visual / UI:
+- dedicated high-arc traveler entity
+- visible landing marker
+- launch and landing FX/audio
+- HUD states: WAIT_GROUND / PREP / TRAVEL / LANDING
+- Debug shows jump state, target, progress, target XYZ, and completed jump count
+
+Reference relationship:
+- the 80F preparation / 130F main / 30F final phase structure follows public Splatoon Super Jump reference timing
+- the browser implementation remains project-owned; arc height, selection radius, visual treatment, and other presentation details are project tuning
+
+T17 remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
