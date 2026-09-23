@@ -59,6 +59,7 @@ export class PerformanceStats {
   public playerWeaponAction = 'READY';
   public playerWeaponGuarding = false;
   public playerWeaponGuardBlocks = 0;
+  public playerWeaponGuardHp = 100;
 
   public matchState = 'COUNTDOWN';
   public matchCountdownSeconds = 3;

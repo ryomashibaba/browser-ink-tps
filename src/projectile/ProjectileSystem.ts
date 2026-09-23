@@ -32,21 +32,50 @@ interface ProjectileSlot {
   paintRadius: number;
   blastRadius: number;
   blastDamage: number;
+  delayedBurstSeconds: number;
+  delayedBurstRadius: number;
+  delayedBurstDamage: number;
+  delayedBurstPaintRadius: number;
+  trailPaintRadius: number;
+  trailPaintCooldown: number;
+}
+
+interface DelayedBurst {
+  team: Team.A | Team.B;
+  point: Vec3;
+  seconds: number;
+  radius: number;
+  damage: number;
+  paintRadius: number;
+  weaponId: WeaponId;
+}
+
+interface DirectRayResult {
+  point: Vec3;
+  paintHit: SurfaceRayHit | null;
+  hitCombat: boolean;
 }
 
 export class ProjectileSystem {
   private readonly slots: ProjectileSlot[] = [];
+  private readonly delayedBursts: DelayedBurst[] = [];
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
+  private readonly guardEntity: Entity;
   private readonly delta = new Vec3();
   private readonly queuedCpuShots: CpuFireRequest[] = [];
   private readonly cpuAimDirection = new Vec3();
+  private readonly tempForward = new Vec3();
   private fireCooldown = 0;
   private burstCooldown = 0;
   private burstShotsRemaining = 0;
   private rollPaintCooldown = 0;
+  private meleeCooldown = 0;
   private chargeSeconds = 0;
   private wasFireHeld = false;
+  private dualiesFocusSeconds = 0;
+  private guardHp = 100;
+  private guardBreakSeconds = 0;
   private playerWeaponId: WeaponId = DEFAULT_WEAPON_ID;
 
   public constructor(
@@ -88,9 +117,27 @@ export class ProjectileSystem {
         damage: GAME_CONFIG.combat.projectileDamage,
         paintRadius: GAME_CONFIG.projectile.paintRadiusMeters,
         blastRadius: 0,
-        blastDamage: 0
+        blastDamage: 0,
+        delayedBurstSeconds: 0,
+        delayedBurstRadius: 0,
+        delayedBurstDamage: 0,
+        delayedBurstPaintRadius: 0,
+        trailPaintRadius: 0,
+        trailPaintCooldown: 0
       });
     }
+
+    this.guardEntity = new Entity('BrellaGuard');
+    this.guardEntity.addComponent('render', {
+      type: 'box',
+      material: this.materialA,
+      castShadows: false,
+      receiveShadows: false
+    });
+    this.guardEntity.setLocalScale(1.65, 1.15, 0.08);
+    this.guardEntity.enabled = false;
+    this.app.root.addChild(this.guardEntity);
+
     this.syncWeaponStats();
   }
 
@@ -102,13 +149,33 @@ export class ProjectileSystem {
     if (id === this.playerWeaponId) return;
     this.playerWeaponId = id;
     this.fireCooldown = Math.max(this.fireCooldown, 0.08);
-    this.burstShotsRemaining = 0;
     this.burstCooldown = 0;
+    this.burstShotsRemaining = 0;
+    this.rollPaintCooldown = 0;
+    this.meleeCooldown = 0;
     this.chargeSeconds = 0;
     this.wasFireHeld = false;
+    this.dualiesFocusSeconds = 0;
+    this.guardEntity.enabled = false;
     this.stats.playerWeaponSwitches += 1;
     this.syncWeaponStats();
     this.feedback.weaponSwitch();
+  }
+
+  public notifyDualieDodge(): void {
+    if (this.currentPlayerWeapon.weaponClass !== 'DUALIES') return;
+    this.dualiesFocusSeconds = 0.48;
+  }
+
+  public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
+    const weaponClass = this.currentPlayerWeapon.weaponClass;
+    if (weaponClass === 'BRUSH' && fireHeld) return 1.15;
+    if (weaponClass === 'ROLLER' && fireHeld) return 0.92;
+    if (weaponClass === 'CHARGER' && fireHeld) return 0.66;
+    if (weaponClass === 'SPLATLING' && fireHeld) return 0.72;
+    if (weaponClass === 'SPLATANA' && fireHeld) return 0.82;
+    if (weaponClass === 'BRELLA' && secondaryHeld) return 0.74;
+    return 1;
   }
 
   public solvePlayerLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {
@@ -117,17 +184,24 @@ export class ProjectileSystem {
 
   public reset(): void {
     for (const slot of this.slots) this.deactivate(slot);
+    this.delayedBursts.length = 0;
     this.fireCooldown = 0;
     this.burstCooldown = 0;
     this.burstShotsRemaining = 0;
     this.rollPaintCooldown = 0;
+    this.meleeCooldown = 0;
     this.chargeSeconds = 0;
     this.wasFireHeld = false;
+    this.dualiesFocusSeconds = 0;
+    this.guardEntity.enabled = false;
+    this.guardHp = 100;
+    this.guardBreakSeconds = 0;
     this.queuedCpuShots.length = 0;
     this.stats.activeProjectiles = 0;
     this.stats.playerWeaponChargePercent = 0;
     this.stats.playerWeaponAction = 'READY';
     this.stats.playerWeaponGuarding = false;
+    this.stats.playerWeaponGuardHp = 100;
   }
 
   public queueCpuShot(request: CpuFireRequest): void {
@@ -188,22 +262,35 @@ export class ProjectileSystem {
     playerPosition: Vec3,
     playerDamageable: boolean
   ): void {
-    const playerProfile = this.currentPlayerWeapon;
+    const profile = this.currentPlayerWeapon;
     const risingFire = fireHeld && !this.wasFireHeld;
     const fallingFire = !fireHeld && this.wasFireHeld;
-    const guarding = playerProfile.weaponClass === 'BRELLA' && secondaryHeld;
 
     this.fireCooldown = Math.max(-0.5, this.fireCooldown - dt);
     this.burstCooldown = Math.max(-0.5, this.burstCooldown - dt);
     this.rollPaintCooldown = Math.max(-0.5, this.rollPaintCooldown - dt);
+    this.meleeCooldown = Math.max(-0.5, this.meleeCooldown - dt);
+    this.dualiesFocusSeconds = Math.max(0, this.dualiesFocusSeconds - dt);
+    this.guardBreakSeconds = Math.max(0, this.guardBreakSeconds - dt);
 
+    const guarding =
+      profile.weaponClass === 'BRELLA' &&
+      secondaryHeld &&
+      this.guardBreakSeconds <= 0 &&
+      this.guardHp > 0 &&
+      playerDamageable;
+
+    if (!guarding && this.guardBreakSeconds <= 0) {
+      this.guardHp = Math.min(100, this.guardHp + 28 * dt);
+    }
     this.stats.playerWeaponGuarding = guarding;
-    this.stats.playerWeaponAction = guarding ? 'GUARD' : 'READY';
+    this.stats.playerWeaponGuardHp = this.guardHp;
+    this.updateGuardVisual(guarding, team, playerPosition, aimDirection);
 
     if (playerDamageable) {
       this.updatePlayerWeapon(
         dt,
-        playerProfile,
+        profile,
         fireHeld,
         risingFire,
         fallingFire,
@@ -221,6 +308,7 @@ export class ProjectileSystem {
     }
     this.wasFireHeld = fireHeld;
 
+    this.processDelayedBursts(dt);
     this.spawnQueuedCpuShots();
 
     let active = 0;
@@ -229,9 +317,10 @@ export class ProjectileSystem {
 
       slot.previousPosition.copy(slot.position);
       slot.ttl -= dt;
+      slot.trailPaintCooldown -= dt;
+
       if (slot.ttl <= 0) {
-        if (slot.blastRadius > 0) this.applyBlast(slot, slot.position);
-        this.deactivate(slot);
+        this.finishProjectile(slot, slot.position, null);
         continue;
       }
 
@@ -239,6 +328,19 @@ export class ProjectileSystem {
       slot.velocity.y -= slot.gravity * dt;
       this.delta.copy(slot.velocity).mulScalar(dt);
       const next = slot.position.clone().add(this.delta);
+
+      if (slot.trailPaintRadius > 0 && slot.trailPaintCooldown <= 0) {
+        this.paintWorldStamp(
+          slot.team,
+          next,
+          slot.trailPaintRadius * 1.15,
+          slot.trailPaintRadius * 0.62,
+          slot.velocity,
+          1.7,
+          PaintEventType.MidDroplet
+        );
+        slot.trailPaintCooldown = 0.085;
+      }
 
       const paintHit = this.findNearestSurfaceHit(previous, next);
       const blockerHit = this.physics.castStageSegment(previous, next, 'projectile');
@@ -258,6 +360,7 @@ export class ProjectileSystem {
             GAME_CONFIG.cpu.playerHitRadiusMeters
           )
         : null;
+
       const paintWins = paintHit && (
         !blockerHit ||
         paintHit.distance <=
@@ -269,7 +372,6 @@ export class ProjectileSystem {
 
       let combatDistance = Number.POSITIVE_INFINITY;
       let combatKind: 'QA' | 'CPU' | 'PLAYER' | null = null;
-
       if (qaHit && qaHit.distance < combatDistance) {
         combatDistance = qaHit.distance;
         combatKind = 'QA';
@@ -296,34 +398,33 @@ export class ProjectileSystem {
           this.cpuAgents.applyProjectileHit(cpuHit, slot.damage);
         } else if (combatKind === 'PLAYER') {
           combatPoint = pointOnSegment(previous, next, combatDistance);
-          if (guarding) {
+          if (guarding && this.isGuardBlocking(slot, playerPosition, aimDirection)) {
+            this.guardHp = Math.max(0, this.guardHp - slot.damage);
             this.stats.playerWeaponGuardBlocks += 1;
+            this.stats.playerWeaponGuardHp = this.guardHp;
+            if (this.guardHp <= 0) {
+              this.guardBreakSeconds = 2.5;
+              this.guardEntity.enabled = false;
+              this.stats.playerWeaponAction = 'GUARD_BREAK';
+            }
           } else {
             this.resources.applyDamage(slot.damage);
             this.stats.cpuPlayerHits += 1;
           }
         }
-        if (slot.blastRadius > 0) this.applyBlast(slot, combatPoint);
-        this.feedback.impact(slot.team, combatPoint, weaponProfile(slot.weaponId));
-        this.stats.projectileImpacts += 1;
-        this.deactivate(slot);
+
+        this.finishProjectile(slot, combatPoint, null);
         continue;
       }
 
       if (paintWins) {
         this.enqueueImpact(slot.team, paintHit, slot.paintRadius);
-        if (slot.blastRadius > 0) this.applyBlast(slot, paintHit.worldPoint);
-        this.feedback.impact(slot.team, paintHit.worldPoint, weaponProfile(slot.weaponId));
-        this.stats.projectileImpacts += 1;
-        this.deactivate(slot);
+        this.finishProjectile(slot, paintHit.worldPoint, paintHit);
         continue;
       }
 
       if (blockerHit) {
-        if (slot.blastRadius > 0) this.applyBlast(slot, blockerHit.point);
-        this.feedback.impact(slot.team, blockerHit.point, weaponProfile(slot.weaponId));
-        this.stats.projectileImpacts += 1;
-        this.deactivate(slot);
+        this.finishProjectile(slot, blockerHit.point, null);
         continue;
       }
 
@@ -331,6 +432,7 @@ export class ProjectileSystem {
       slot.entity.setPosition(slot.position);
       active += 1;
     }
+
     this.stats.activeProjectiles = active;
   }
 
@@ -358,159 +460,572 @@ export class ProjectileSystem {
     team: Team.A | Team.B,
     playerPosition: Vec3
   ): void {
-    if (guarding) {
-      this.chargeSeconds = 0;
-      this.stats.playerWeaponChargePercent = 0;
+    this.stats.playerWeaponAction = guarding ? 'GUARD' : 'READY';
+
+    switch (profile.weaponClass) {
+      case 'SHOOTER':
+        this.updateShooter(profile, fireHeld, muzzlePosition, aimDirection, team);
+        break;
+      case 'DUALIES':
+        this.updateDualies(profile, fireHeld, muzzlePosition, aimDirection, team);
+        break;
+      case 'CHARGER':
+        this.updateCharger(dt, profile, fireHeld, fallingFire, muzzlePosition, aimDirection, team);
+        break;
+      case 'BLASTER':
+        this.updateBlaster(profile, fireHeld, muzzlePosition, aimDirection, team);
+        break;
+      case 'ROLLER':
+        this.updateRoller(profile, fireHeld, risingFire, playerPosition, aimDirection, team);
+        break;
+      case 'BRUSH':
+        this.updateBrush(profile, fireHeld, playerPosition, aimDirection, team);
+        break;
+      case 'SLOSHER':
+        this.updateSlosher(profile, fireHeld, muzzlePosition, aimDirection, team);
+        break;
+      case 'SPLATLING':
+        this.updateSplatling(dt, profile, fireHeld, fallingFire, muzzlePosition, aimDirection, team);
+        break;
+      case 'BRELLA':
+        this.updateBrella(profile, fireHeld, guarding, muzzlePosition, aimDirection, team);
+        break;
+      case 'STRINGER':
+        this.updateStringer(dt, profile, fireHeld, fallingFire, muzzlePosition, aimDirection, team);
+        break;
+      case 'SPLATANA':
+        this.updateSplatana(dt, profile, fireHeld, fallingFire, playerPosition, muzzlePosition, aimDirection, team);
+        break;
+    }
+  }
+
+  private updateShooter(
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.stats.playerWeaponChargePercent = 0;
+    if (!fireHeld || this.fireCooldown > 0) return;
+    if (this.fireProjectiles(profile, origin, direction, team, 1, profile.spreadDegrees, 0)) {
+      this.fireCooldown += profile.fireIntervalSeconds;
+      this.stats.playerWeaponAction = 'AUTO_FIRE';
+    } else {
+      this.fireCooldown = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+    }
+  }
+
+  private updateDualies(
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.stats.playerWeaponChargePercent = 0;
+    if (!fireHeld || this.fireCooldown > 0) {
+      if (this.dualiesFocusSeconds > 0) this.stats.playerWeaponAction = 'POST_ROLL_FOCUS';
       return;
     }
 
-    if (profile.trigger === 'AUTO') {
-      this.chargeSeconds = 0;
-      this.stats.playerWeaponChargePercent = 0;
-      if (fireHeld && this.fireCooldown <= 0) {
-        if (this.tryFirePattern(profile, muzzlePosition, aimDirection, team, 0)) {
-          this.fireCooldown += profile.fireIntervalSeconds;
-          this.stats.playerWeaponAction = 'FIRING';
-        } else {
-          this.fireCooldown = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
-        }
-      }
+    const focused = this.dualiesFocusSeconds > 0;
+    const spread = focused ? 0.65 : profile.spreadDegrees;
+    const cadence = focused ? 0.062 : profile.fireIntervalSeconds;
+    if (this.fireProjectiles(profile, origin, direction, team, 2, spread, 0)) {
+      this.fireCooldown += cadence;
+      this.stats.playerWeaponAction = focused ? 'DUAL_FOCUS' : 'DUAL_FIRE';
+    } else {
+      this.fireCooldown = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+    }
+  }
+
+  private updateCharger(
+    dt: number,
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    fallingFire: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    if (fireHeld) {
+      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+      this.stats.playerWeaponAction = 'CHARGING_BEAM';
       return;
     }
 
-    if (profile.trigger === 'ROLLER') {
-      this.stats.playerWeaponChargePercent = 0;
-      if (risingFire && this.fireCooldown <= 0) {
-        if (this.tryFirePattern(profile, muzzlePosition, aimDirection, team, 0)) {
-          this.fireCooldown = profile.fireIntervalSeconds;
-          this.stats.playerWeaponAction = 'SWING';
-        }
+    if (fallingFire && this.chargeSeconds >= profile.minChargeSeconds && this.fireCooldown <= 0) {
+      const charge = chargeFraction(profile, this.chargeSeconds);
+      if (this.fireChargerRay(profile, origin, direction, team, charge)) {
+        this.fireCooldown = profile.fireIntervalSeconds;
+        this.stats.playerWeaponAction = charge >= 0.98 ? 'FULL_CHARGE_SHOT' : 'PARTIAL_CHARGE_SHOT';
       }
-      if (
-        fireHeld &&
-        this.stats.playerSpeedMetersPerSecond > 0.30 &&
-        this.rollPaintCooldown <= 0
-      ) {
-        if (this.paintRollerGround(profile, playerPosition, aimDirection, team)) {
-          this.rollPaintCooldown = 0.085;
-          this.stats.playerWeaponAction = 'ROLLING';
-        }
-      }
-      return;
     }
 
-    if (profile.trigger === 'SPLATLING') {
-      if (this.burstShotsRemaining > 0) {
-        this.stats.playerWeaponAction = 'BURST';
-        if (this.burstCooldown <= 0) {
-          if (this.tryFirePattern(profile, muzzlePosition, aimDirection, team, 0)) {
-            this.burstShotsRemaining -= 1;
-            this.burstCooldown += profile.burstIntervalSeconds;
-          } else {
-            this.burstShotsRemaining = 0;
-          }
-        }
-        return;
-      }
+    this.chargeSeconds = 0;
+    this.stats.playerWeaponChargePercent = 0;
+  }
 
-      if (fireHeld) {
-        this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
-        this.stats.playerWeaponAction = 'CHARGING';
-        this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
-      } else if (fallingFire && this.chargeSeconds >= profile.minChargeSeconds) {
-        const fraction = chargeFraction(profile, this.chargeSeconds);
-        this.burstShotsRemaining = Math.max(3, Math.round(profile.burstMaxShots * fraction));
-        this.burstCooldown = 0;
-        this.chargeSeconds = 0;
-        this.stats.playerWeaponChargePercent = 0;
-      } else if (!fireHeld) {
-        this.chargeSeconds = 0;
-        this.stats.playerWeaponChargePercent = 0;
+  private updateBlaster(
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.stats.playerWeaponChargePercent = 0;
+    if (!fireHeld || this.fireCooldown > 0) return;
+    if (this.fireProjectiles(profile, origin, direction, team, 1, 0, 0)) {
+      this.fireCooldown = profile.fireIntervalSeconds;
+      this.stats.playerWeaponAction = 'BLAST_SHOT';
+    }
+  }
+
+  private updateRoller(
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    risingFire: boolean,
+    playerPosition: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.stats.playerWeaponChargePercent = 0;
+
+    if (risingFire && this.fireCooldown <= 0) {
+      if (this.resources.tryConsumeShotInk(profile.inkCost)) {
+        const airborne = !this.stats.playerGrounded;
+        this.rollerFlick(profile, playerPosition, direction, team, airborne);
+        this.fireCooldown = profile.fireIntervalSeconds;
+        this.stats.playerWeaponAction = airborne ? 'VERTICAL_FLICK' : 'HORIZONTAL_FLICK';
       }
-      return;
     }
 
-    if (profile.trigger === 'CHARGE_RELEASE' || profile.trigger === 'SPLATANA') {
-      if (fireHeld) {
-        this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
-        this.stats.playerWeaponAction = 'CHARGING';
-        this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
-        return;
-      }
-
-      if (fallingFire && this.fireCooldown <= 0) {
-        const enoughCharge = this.chargeSeconds >= profile.minChargeSeconds;
-        const fraction = enoughCharge ? chargeFraction(profile, this.chargeSeconds) : 0;
-        if (profile.trigger === 'SPLATANA' || enoughCharge) {
-          if (this.tryFirePattern(profile, muzzlePosition, aimDirection, team, fraction)) {
-            this.fireCooldown = profile.fireIntervalSeconds;
-            this.stats.playerWeaponAction =
-              profile.trigger === 'SPLATANA' && fraction >= 0.55 ? 'CHARGED_SLASH' : 'RELEASE';
-          }
+    if (
+      fireHeld &&
+      this.stats.playerSpeedMetersPerSecond > 0.25 &&
+      this.rollPaintCooldown <= 0
+    ) {
+      if (this.resources.tryConsumeShotInk(profile.rollPaintInkCost)) {
+        this.paintWorldStamp(
+          team,
+          playerPosition,
+          profile.rollPaintRadiusMeters * 1.28,
+          profile.rollPaintRadiusMeters * 0.72,
+          direction,
+          0.8,
+          PaintEventType.Foot
+        );
+        if (this.meleeCooldown <= 0) {
+          const contact = playerPosition.clone().add(flattened(direction).mulScalar(0.72));
+          this.applyMeleeDamage(contact, 0.88, 38, team);
+          this.meleeCooldown = 0.18;
         }
-      }
-
-      if (!fireHeld) {
-        this.chargeSeconds = 0;
-        this.stats.playerWeaponChargePercent = 0;
+        this.rollPaintCooldown = 0.075;
+        this.stats.playerWeaponAction = 'ROLLING';
       }
     }
   }
 
-  private tryFirePattern(
+  private updateBrush(
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    playerPosition: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.stats.playerWeaponChargePercent = 0;
+    if (!fireHeld || this.fireCooldown > 0) return;
+    if (!this.resources.tryConsumeShotInk(profile.inkCost)) {
+      this.fireCooldown = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+      return;
+    }
+
+    const forward = flattened(direction);
+    const center = playerPosition.clone().add(forward.clone().mulScalar(1.05));
+    this.applyMeleeDamage(center, 1.22, 24, team);
+    this.paintFan(team, playerPosition, forward, 1.95, 1.35, 5, 0.42, PaintEventType.Impact);
+    this.feedback.melee(team, center, profile, 0.82);
+    this.fireCooldown = profile.fireIntervalSeconds;
+    this.stats.playerWeaponAction = 'BRUSH_SWIPE';
+  }
+
+  private updateSlosher(
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.stats.playerWeaponChargePercent = 0;
+    if (!fireHeld || this.fireCooldown > 0) return;
+
+    const lobDirection = direction.clone();
+    lobDirection.y = Math.max(lobDirection.y, 0.16);
+    lobDirection.normalize();
+
+    if (this.fireProjectiles(profile, origin, lobDirection, team, 1, 0, 0, {
+      trailPaintRadius: 0.34
+    })) {
+      this.fireCooldown = profile.fireIntervalSeconds;
+      this.stats.playerWeaponAction = 'SLOSH';
+    }
+  }
+
+  private updateSplatling(
+    dt: number,
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    fallingFire: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    if (this.burstShotsRemaining > 0) {
+      this.stats.playerWeaponAction = 'SPIN_BURST';
+      if (this.burstCooldown <= 0) {
+        if (this.fireProjectiles(profile, origin, direction, team, 1, 0.8, 0)) {
+          this.burstShotsRemaining -= 1;
+          this.burstCooldown += profile.burstIntervalSeconds;
+        } else {
+          this.burstShotsRemaining = 0;
+        }
+      }
+      return;
+    }
+
+    if (fireHeld) {
+      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+      this.stats.playerWeaponAction = 'SPIN_CHARGE';
+      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+      return;
+    }
+
+    if (fallingFire && this.chargeSeconds >= profile.minChargeSeconds) {
+      const charge = chargeFraction(profile, this.chargeSeconds);
+      this.burstShotsRemaining = Math.max(3, Math.round(profile.burstMaxShots * charge));
+      this.burstCooldown = 0;
+      this.stats.playerWeaponAction = 'SPIN_RELEASE';
+    }
+
+    this.chargeSeconds = 0;
+    this.stats.playerWeaponChargePercent = 0;
+  }
+
+  private updateBrella(
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    guarding: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    this.stats.playerWeaponChargePercent = 0;
+    if (guarding) {
+      this.stats.playerWeaponAction = this.guardBreakSeconds > 0 ? 'GUARD_BREAK' : 'GUARD';
+      return;
+    }
+    if (!fireHeld || this.fireCooldown > 0) return;
+
+    if (this.fireProjectiles(profile, origin, direction, team, profile.pelletCount, profile.spreadDegrees, 0)) {
+      this.fireCooldown = profile.fireIntervalSeconds;
+      this.stats.playerWeaponAction = 'BRELLA_BURST';
+    }
+  }
+
+  private updateStringer(
+    dt: number,
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    fallingFire: boolean,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    if (fireHeld) {
+      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+      this.stats.playerWeaponAction = 'STRING_CHARGE';
+      return;
+    }
+
+    if (fallingFire && this.fireCooldown <= 0) {
+      const charge = chargeFraction(profile, this.chargeSeconds);
+      const spread = lerp(profile.spreadDegrees, 1.5, charge);
+      const delayedBurst = charge >= 0.52;
+      if (this.fireProjectiles(profile, origin, direction, team, 3, spread, charge, {
+        delayedBurstSeconds: delayedBurst ? 0.48 : 0,
+        delayedBurstRadius: delayedBurst ? lerp(0.55, 0.95, charge) : 0,
+        delayedBurstDamage: delayedBurst ? lerp(16, 30, charge) : 0,
+        delayedBurstPaintRadius: delayedBurst ? lerp(0.48, 0.82, charge) : 0
+      })) {
+        this.fireCooldown = profile.fireIntervalSeconds;
+        this.stats.playerWeaponAction = delayedBurst ? 'CHARGED_TRISHOT' : 'TRISHOT';
+      }
+    }
+
+    this.chargeSeconds = 0;
+    this.stats.playerWeaponChargePercent = 0;
+  }
+
+  private updateSplatana(
+    dt: number,
+    profile: WeaponProfile,
+    fireHeld: boolean,
+    fallingFire: boolean,
+    playerPosition: Vec3,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
+    if (fireHeld) {
+      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+      this.stats.playerWeaponAction = 'SABER_CHARGE';
+      return;
+    }
+
+    if (fallingFire && this.fireCooldown <= 0) {
+      const charge = chargeFraction(profile, this.chargeSeconds);
+      if (this.resources.tryConsumeShotInk(profile.inkCost)) {
+        const forward = flattened(direction);
+        const center = playerPosition.clone().add(forward.clone().mulScalar(charge >= 0.62 ? 1.15 : 0.92));
+        const meleeDamage = charge >= 0.62 ? 95 : 42;
+        const meleeRadius = charge >= 0.62 ? 1.05 : 0.82;
+        this.applyMeleeDamage(center, meleeRadius, meleeDamage, team);
+        this.paintSlash(team, playerPosition, forward, charge);
+
+        const slot = this.slots.find((candidate) => !candidate.active);
+        if (slot) {
+          this.spawnProjectile(
+            slot,
+            profile,
+            origin,
+            direction,
+            team,
+            profile.speedMetersPerSecond * lerp(1, profile.chargeSpeedMultiplier, charge),
+            profile.gravityMetersPerSecond2,
+            profile.lifeSeconds,
+            profile.visualDiameterMeters * lerp(1, 1.55, charge),
+            lerp(profile.damage, profile.damage * 1.65, charge),
+            profile.paintRadiusMeters * lerp(1, profile.chargePaintMultiplier, charge),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          );
+        }
+
+        this.feedback.melee(team, center, profile, charge >= 0.62 ? 1.45 : 0.95);
+        this.fireCooldown = profile.fireIntervalSeconds;
+        this.stats.playerWeaponAction = charge >= 0.62 ? 'CHARGED_SLASH' : 'QUICK_SLASH';
+      }
+    }
+
+    this.chargeSeconds = 0;
+    this.stats.playerWeaponChargePercent = 0;
+  }
+
+  private rollerFlick(
+    profile: WeaponProfile,
+    playerPosition: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B,
+    airborne: boolean
+  ): void {
+    const forward = flattened(direction);
+    const center = playerPosition.clone().add(forward.clone().mulScalar(airborne ? 1.65 : 1.25));
+    this.applyMeleeDamage(center, airborne ? 1.05 : 1.55, airborne ? 72 : 58, team);
+
+    if (airborne) {
+      for (let i = 1; i <= 5; i += 1) {
+        const point = playerPosition.clone().add(forward.clone().mulScalar(i * 0.85));
+        this.paintWorldStamp(team, point, 0.48, 0.26, forward, 1.2, PaintEventType.Impact);
+      }
+    } else {
+      this.paintFan(team, playerPosition, forward, 2.9, 2.4, 7, 0.58, PaintEventType.Impact);
+    }
+
+    this.feedback.melee(team, center, profile, airborne ? 1.15 : 1.45);
+  }
+
+  private fireChargerRay(
     profile: WeaponProfile,
     origin: Vec3,
     direction: Vec3,
     team: Team.A | Team.B,
     charge: number
   ): boolean {
-    if (direction.lengthSq() <= 1e-8) return false;
     if (!this.resources.tryConsumeShotInk(profile.inkCost)) return false;
 
-    const charged = profile.trigger === 'CHARGE_RELEASE' || profile.trigger === 'SPLATANA';
-    const damageMultiplier = charged
-      ? lerp(1, profile.chargeDamageMultiplier, charge)
-      : 1;
-    const speedMultiplier = charged
-      ? lerp(1, profile.chargeSpeedMultiplier, charge)
-      : 1;
-    const paintMultiplier = charged
-      ? lerp(1, profile.chargePaintMultiplier, charge)
-      : 1;
-    const spreadScale = profile.weaponClass === 'STRINGER'
-      ? lerp(1, 0.18, charge)
-      : 1;
+    const range = lerp(11, 30, charge);
+    const damage = lerp(profile.damage * 0.72, profile.damage * profile.chargeDamageMultiplier, charge);
+    const paintRadius = profile.paintRadiusMeters * lerp(0.72, profile.chargePaintMultiplier, charge);
+    const result = this.resolveDirectRay(origin, direction, range, team, damage);
+
+    if (result.paintHit) {
+      this.enqueueChargerLine(team, result.paintHit, direction, paintRadius, charge);
+    }
+
+    this.feedback.beam(team, origin, result.point, profile);
+    return true;
+  }
+
+  private resolveDirectRay(
+    origin: Vec3,
+    direction: Vec3,
+    range: number,
+    team: Team.A | Team.B,
+    damage: number
+  ): DirectRayResult {
+    const rayDirection = direction.clone().normalize();
+    const end = origin.clone().add(rayDirection.clone().mulScalar(range));
+
+    const paintHit = this.findNearestSurfaceHit(origin, end);
+    const blockerHit = this.physics.castStageSegment(origin, end, 'projectile');
+    const qaHit = this.combatTargets.findNearestHit(origin, end, team);
+    const cpuHit = this.cpuAgents.findNearestCombatHit(origin, end, team);
+
+    const paintWins = paintHit && (
+      !blockerHit ||
+      paintHit.distance <= blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+    );
+    const worldDistance = paintWins
+      ? paintHit.distance
+      : (blockerHit?.distance ?? range);
+
+    let combatDistance = Number.POSITIVE_INFINITY;
+    let combatKind: 'QA' | 'CPU' | null = null;
+    if (qaHit && qaHit.distance < combatDistance) {
+      combatDistance = qaHit.distance;
+      combatKind = 'QA';
+    }
+    if (cpuHit && cpuHit.distance < combatDistance) {
+      combatDistance = cpuHit.distance;
+      combatKind = 'CPU';
+    }
+
+    if (
+      combatKind &&
+      combatDistance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < worldDistance
+    ) {
+      if (combatKind === 'QA' && qaHit) this.combatTargets.applyProjectileHit(qaHit, damage);
+      if (combatKind === 'CPU' && cpuHit) this.cpuAgents.applyProjectileHit(cpuHit, damage);
+      return {
+        point: origin.clone().add(rayDirection.mulScalar(combatDistance)),
+        paintHit: null,
+        hitCombat: true
+      };
+    }
+
+    if (paintWins && paintHit) {
+      return { point: paintHit.worldPoint.clone(), paintHit, hitCombat: false };
+    }
+
+    if (blockerHit) {
+      return { point: blockerHit.point.clone(), paintHit: null, hitCombat: false };
+    }
+
+    return { point: end, paintHit: null, hitCombat: false };
+  }
+
+  private enqueueChargerLine(
+    team: Team.A | Team.B,
+    hit: SurfaceRayHit,
+    direction: Vec3,
+    radius: number,
+    charge: number
+  ): void {
+    const uDir = direction.dot(hit.surface.uAxis);
+    const vDir = direction.dot(hit.surface.vAxis);
+    const mag = Math.hypot(uDir, vDir);
+    const normalizedU = mag > 1e-5 ? uDir / mag : 1;
+    const normalizedV = mag > 1e-5 ? vDir / mag : 0;
+    const length = lerp(1.4, 4.2, charge);
+
+    this.coordinator.enqueue({
+      team,
+      surfaceId: hit.surface.id,
+      centerU: hit.u - normalizedU * length * 0.42,
+      centerV: hit.v - normalizedV * length * 0.42,
+      radiusU: length * 0.52,
+      radiusV: radius * 0.46,
+      angle: Math.atan2(normalizedV, normalizedU),
+      type: (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0
+        ? PaintEventType.WallImpact
+        : PaintEventType.Impact,
+      strength: 1
+    });
+  }
+
+  private fireProjectiles(
+    profile: WeaponProfile,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B,
+    count: number,
+    spreadDegrees: number,
+    charge: number,
+    options?: {
+      trailPaintRadius?: number;
+      delayedBurstSeconds?: number;
+      delayedBurstRadius?: number;
+      delayedBurstDamage?: number;
+      delayedBurstPaintRadius?: number;
+    }
+  ): boolean {
+    if (!this.resources.tryConsumeShotInk(profile.inkCost)) return false;
+
+    const damageMultiplier =
+      profile.weaponClass === 'STRINGER'
+        ? lerp(0.72, profile.chargeDamageMultiplier, charge)
+        : 1;
+    const speedMultiplier =
+      profile.weaponClass === 'STRINGER'
+        ? lerp(0.88, profile.chargeSpeedMultiplier, charge)
+        : 1;
+    const paintMultiplier =
+      profile.weaponClass === 'STRINGER'
+        ? lerp(0.78, profile.chargePaintMultiplier, charge)
+        : 1;
 
     let spawned = 0;
-    const pelletCount = Math.max(1, profile.pelletCount);
-    for (let i = 0; i < pelletCount; i += 1) {
+    for (let i = 0; i < count; i += 1) {
       const slot = this.slots.find((candidate) => !candidate.active);
       if (!slot) {
         this.stats.projectilePoolDrops += 1;
         break;
       }
 
-      const offset = pelletCount <= 1
-        ? 0
-        : (i / (pelletCount - 1) - 0.5) * profile.spreadDegrees * spreadScale;
-      const pelletDirection = rotateYaw(direction, offset);
+      const offset =
+        count <= 1
+          ? 0
+          : (i / (count - 1) - 0.5) * spreadDegrees;
+      const shotDirection = rotateYaw(direction, offset);
 
-      this.spawnInto(
+      this.spawnProjectile(
         slot,
+        profile,
         origin,
-        pelletDirection,
+        shotDirection,
         team,
-        'HUMAN',
-        'human',
-        profile.id,
         profile.speedMetersPerSecond * speedMultiplier,
         profile.gravityMetersPerSecond2,
         profile.lifeSeconds,
-        profile.visualDiameterMeters * (1 + charge * 0.22),
+        profile.visualDiameterMeters * (1 + charge * 0.18),
         profile.damage * damageMultiplier,
         profile.paintRadiusMeters * paintMultiplier,
         profile.blastRadiusMeters,
-        profile.blastDamage
+        profile.blastDamage,
+        options?.trailPaintRadius ?? 0,
+        options?.delayedBurstSeconds ?? 0,
+        options?.delayedBurstRadius ?? 0,
+        options?.delayedBurstDamage ?? 0,
+        options?.delayedBurstPaintRadius ?? 0
       );
       spawned += 1;
     }
@@ -522,51 +1037,10 @@ export class ProjectileSystem {
     return false;
   }
 
-  private paintRollerGround(
-    profile: WeaponProfile,
-    playerPosition: Vec3,
-    aimDirection: Vec3,
-    team: Team.A | Team.B
-  ): boolean {
-    if (profile.rollPaintRadiusMeters <= 0) return false;
-    if (!this.resources.tryConsumeShotInk(profile.rollPaintInkCost)) return false;
-
-    let best: { surface: PaintSurface; u: number; v: number; distance: number } | null = null;
-    for (const surface of this.surfaces) {
-      if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
-      if ((surface.baseFlags & SurfaceFlags.Wall) !== 0) continue;
-      const projected = surface.projectWorldPoint(playerPosition);
-      if (!projected.inside || projected.planeDistance > 0.72) continue;
-      if (!best || projected.planeDistance < best.distance) {
-        best = {
-          surface,
-          u: projected.u,
-          v: projected.v,
-          distance: projected.planeDistance
-        };
-      }
-    }
-    if (!best) return false;
-
-    const heading = Math.atan2(aimDirection.z, aimDirection.x);
-    this.coordinator.enqueue({
-      team,
-      surfaceId: best.surface.id,
-      centerU: best.u,
-      centerV: best.v,
-      radiusU: profile.rollPaintRadiusMeters * 1.25,
-      radiusV: profile.rollPaintRadiusMeters * 0.72,
-      angle: heading,
-      type: PaintEventType.Foot,
-      strength: 1
-    });
-    return true;
-  }
-
   private spawnQueuedCpuShots(): void {
     if (this.queuedCpuShots.length === 0) return;
 
-    const cpuProfile = weaponProfile(DEFAULT_WEAPON_ID);
+    const profile = weaponProfile(DEFAULT_WEAPON_ID);
     for (const request of this.queuedCpuShots) {
       const slot = this.slots.find((candidate) => !candidate.active);
       if (!slot) {
@@ -574,38 +1048,42 @@ export class ProjectileSystem {
         continue;
       }
 
-      this.solveLaunchDirection(request.origin, request.target, this.cpuAimDirection, cpuProfile);
+      this.solveLaunchDirection(request.origin, request.target, this.cpuAimDirection, profile);
       if (this.cpuAimDirection.lengthSq() <= 1e-8) continue;
-      this.spawnInto(
+
+      this.spawnProjectile(
         slot,
+        profile,
         request.origin,
         this.cpuAimDirection,
         request.team,
-        'CPU',
-        request.sourceId,
-        DEFAULT_WEAPON_ID,
-        cpuProfile.speedMetersPerSecond,
-        cpuProfile.gravityMetersPerSecond2,
-        cpuProfile.lifeSeconds,
-        cpuProfile.visualDiameterMeters,
-        cpuProfile.damage,
-        cpuProfile.paintRadiusMeters,
+        profile.speedMetersPerSecond,
+        profile.gravityMetersPerSecond2,
+        profile.lifeSeconds,
+        profile.visualDiameterMeters,
+        profile.damage,
+        profile.paintRadiusMeters,
         0,
-        0
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        'CPU',
+        request.sourceId
       );
-      this.feedback.shot(request.team, request.origin, cpuProfile, false);
+      this.feedback.shot(request.team, request.origin, profile, false);
     }
     this.queuedCpuShots.length = 0;
   }
 
-  private spawnInto(
+  private spawnProjectile(
     slot: ProjectileSlot,
+    profile: WeaponProfile,
     origin: Vec3,
     direction: Vec3,
     team: Team.A | Team.B,
-    sourceKind: 'HUMAN' | 'CPU',
-    sourceId: string,
-    weaponId: WeaponId,
     speed: number,
     gravity: number,
     life: number,
@@ -613,19 +1091,32 @@ export class ProjectileSystem {
     damage: number,
     paintRadius: number,
     blastRadius: number,
-    blastDamage: number
+    blastDamage: number,
+    trailPaintRadius: number,
+    delayedBurstSeconds: number,
+    delayedBurstRadius: number,
+    delayedBurstDamage: number,
+    delayedBurstPaintRadius: number,
+    sourceKind: 'HUMAN' | 'CPU' = 'HUMAN',
+    sourceId = 'human'
   ): void {
     slot.active = true;
     slot.ttl = life;
     slot.team = team;
     slot.sourceKind = sourceKind;
     slot.sourceId = sourceId;
-    slot.weaponId = weaponId;
+    slot.weaponId = profile.id;
     slot.gravity = gravity;
     slot.damage = damage;
     slot.paintRadius = paintRadius;
     slot.blastRadius = blastRadius;
     slot.blastDamage = blastDamage;
+    slot.delayedBurstSeconds = delayedBurstSeconds;
+    slot.delayedBurstRadius = delayedBurstRadius;
+    slot.delayedBurstDamage = delayedBurstDamage;
+    slot.delayedBurstPaintRadius = delayedBurstPaintRadius;
+    slot.trailPaintRadius = trailPaintRadius;
+    slot.trailPaintCooldown = 0;
     slot.position.copy(origin);
     slot.previousPosition.copy(origin);
     slot.velocity.copy(direction).normalize().mulScalar(speed);
@@ -638,22 +1129,230 @@ export class ProjectileSystem {
     slot.entity.enabled = true;
   }
 
-  private applyBlast(slot: ProjectileSlot, point: Vec3): void {
-    if (slot.blastRadius <= 0 || slot.blastDamage <= 0) return;
-    if (slot.sourceKind === 'HUMAN') {
-      this.cpuAgents.applyAreaDamage(
+  private finishProjectile(
+    slot: ProjectileSlot,
+    point: Vec3,
+    paintHit: SurfaceRayHit | null
+  ): void {
+    const profile = weaponProfile(slot.weaponId);
+
+    if (slot.blastRadius > 0 && slot.blastDamage > 0) {
+      this.applyAreaDamage(point, slot.blastRadius, slot.blastDamage, slot.team);
+      this.paintWorldStamp(
+        slot.team,
         point,
-        slot.blastRadius,
-        slot.blastDamage,
-        slot.team
-      );
-      this.combatTargets.applyAreaDamage(
-        point,
-        slot.blastRadius,
-        slot.blastDamage,
-        slot.team
+        slot.blastRadius * 0.72,
+        slot.blastRadius * 0.72,
+        slot.velocity,
+        1.2,
+        PaintEventType.Bomb
       );
     }
+
+    if (slot.delayedBurstSeconds > 0) {
+      this.delayedBursts.push({
+        team: slot.team,
+        point: point.clone(),
+        seconds: slot.delayedBurstSeconds,
+        radius: slot.delayedBurstRadius,
+        damage: slot.delayedBurstDamage,
+        paintRadius: slot.delayedBurstPaintRadius,
+        weaponId: slot.weaponId
+      });
+    }
+
+    if (!paintHit && slot.paintRadius > 0 && slot.sourceKind === 'HUMAN') {
+      this.paintWorldStamp(
+        slot.team,
+        point,
+        slot.paintRadius * 0.9,
+        slot.paintRadius * 0.7,
+        slot.velocity,
+        0.52,
+        PaintEventType.Impact
+      );
+    }
+
+    this.feedback.impact(slot.team, point, profile);
+    this.stats.projectileImpacts += 1;
+    this.deactivate(slot);
+  }
+
+  private processDelayedBursts(dt: number): void {
+    for (let i = this.delayedBursts.length - 1; i >= 0; i -= 1) {
+      const burst = this.delayedBursts[i]!;
+      burst.seconds -= dt;
+      if (burst.seconds > 0) continue;
+
+      this.applyAreaDamage(burst.point, burst.radius, burst.damage, burst.team);
+      this.paintWorldStamp(
+        burst.team,
+        burst.point,
+        burst.paintRadius,
+        burst.paintRadius,
+        new Vec3(1, 0, 0),
+        1.0,
+        PaintEventType.Bomb
+      );
+      this.feedback.impact(
+        burst.team,
+        burst.point,
+        weaponProfile(burst.weaponId)
+      );
+      this.delayedBursts.splice(i, 1);
+    }
+  }
+
+  private applyAreaDamage(
+    point: Vec3,
+    radius: number,
+    damage: number,
+    team: Team.A | Team.B
+  ): void {
+    this.cpuAgents.applyAreaDamage(point, radius, damage, team);
+    this.combatTargets.applyAreaDamage(point, radius, damage, team);
+  }
+
+  private applyMeleeDamage(
+    point: Vec3,
+    radius: number,
+    damage: number,
+    team: Team.A | Team.B
+  ): void {
+    this.applyAreaDamage(point, radius, damage, team);
+  }
+
+  private paintFan(
+    team: Team.A | Team.B,
+    origin: Vec3,
+    forward: Vec3,
+    distance: number,
+    width: number,
+    count: number,
+    radius: number,
+    type: PaintEventType
+  ): void {
+    const right = new Vec3(-forward.z, 0, forward.x);
+    for (let i = 0; i < count; i += 1) {
+      const t = count <= 1 ? 0.5 : i / (count - 1);
+      const lateral = (t - 0.5) * width;
+      const point = origin.clone()
+        .add(forward.clone().mulScalar(distance * (0.72 + 0.18 * Math.abs(t - 0.5))))
+        .add(right.clone().mulScalar(lateral));
+      this.paintWorldStamp(team, point, radius, radius * 0.72, forward, 0.85, type);
+    }
+  }
+
+  private paintSlash(
+    team: Team.A | Team.B,
+    origin: Vec3,
+    forward: Vec3,
+    charge: number
+  ): void {
+    const length = lerp(1.8, 3.6, charge);
+    const width = lerp(0.55, 0.9, charge);
+    for (let i = 1; i <= 4; i += 1) {
+      const point = origin.clone().add(forward.clone().mulScalar(length * i / 4));
+      this.paintWorldStamp(
+        team,
+        point,
+        width,
+        width * 0.42,
+        forward,
+        0.9,
+        PaintEventType.Impact
+      );
+    }
+  }
+
+  private paintWorldStamp(
+    team: Team.A | Team.B,
+    worldPoint: Vec3,
+    radiusU: number,
+    radiusV: number,
+    worldDirection: Vec3,
+    maxPlaneDistance: number,
+    type: PaintEventType
+  ): boolean {
+    let best:
+      | {
+          surface: PaintSurface;
+          u: number;
+          v: number;
+          planeDistance: number;
+        }
+      | null = null;
+
+    for (const surface of this.surfaces) {
+      if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
+      const projected = surface.projectWorldPoint(worldPoint);
+      if (!projected.inside || projected.planeDistance > maxPlaneDistance) continue;
+      if (!best || projected.planeDistance < best.planeDistance) {
+        best = {
+          surface,
+          u: projected.u,
+          v: projected.v,
+          planeDistance: projected.planeDistance
+        };
+      }
+    }
+
+    if (!best) return false;
+
+    const dir = worldDirection.lengthSq() > 1e-8
+      ? worldDirection.clone().normalize()
+      : new Vec3(1, 0, 0);
+    const du = dir.dot(best.surface.uAxis);
+    const dv = dir.dot(best.surface.vAxis);
+
+    this.coordinator.enqueue({
+      team,
+      surfaceId: best.surface.id,
+      centerU: best.u,
+      centerV: best.v,
+      radiusU,
+      radiusV,
+      angle: Math.atan2(dv, du),
+      type,
+      strength: 1
+    });
+    return true;
+  }
+
+  private updateGuardVisual(
+    guarding: boolean,
+    team: Team.A | Team.B,
+    playerPosition: Vec3,
+    aimDirection: Vec3
+  ): void {
+    this.guardEntity.enabled = guarding;
+    if (!guarding) return;
+
+    const forward = flattened(aimDirection);
+    const point = playerPosition.clone().add(forward.clone().mulScalar(0.9));
+    point.y += 0.48;
+    this.guardEntity.setPosition(point);
+    const yaw = Math.atan2(forward.x, forward.z) * 180 / Math.PI;
+    this.guardEntity.setLocalEulerAngles(0, yaw, 0);
+
+    const meshInstance = this.guardEntity.render?.meshInstances[0];
+    if (meshInstance) {
+      meshInstance.material = team === Team.A ? this.materialA : this.materialB;
+    }
+  }
+
+  private isGuardBlocking(
+    slot: ProjectileSlot,
+    playerPosition: Vec3,
+    aimDirection: Vec3
+  ): boolean {
+    if (this.guardBreakSeconds > 0 || this.guardHp <= 0) return false;
+    const forward = flattened(aimDirection);
+    const toProjectile = slot.position.clone().sub(playerPosition);
+    toProjectile.y = 0;
+    if (toProjectile.lengthSq() <= 1e-8) return true;
+    toProjectile.normalize();
+    return forward.dot(toProjectile) > -0.10;
   }
 
   private syncWeaponStats(): void {
@@ -664,6 +1363,7 @@ export class ProjectileSystem {
     this.stats.playerWeaponChargePercent = 0;
     this.stats.playerWeaponAction = 'READY';
     this.stats.playerWeaponGuarding = false;
+    this.stats.playerWeaponGuardHp = this.guardHp;
   }
 
   private deactivate(slot: ProjectileSlot): void {
@@ -727,6 +1427,11 @@ function rotateYaw(direction: Vec3, degrees: number): Vec3 {
     direction.y,
     direction.x * s + direction.z * c
   ).normalize();
+}
+
+function flattened(direction: Vec3): Vec3 {
+  const result = new Vec3(direction.x, 0, direction.z);
+  return result.lengthSq() > 1e-8 ? result.normalize() : result.set(0, 0, -1);
 }
 
 function segmentSphereDistance(
