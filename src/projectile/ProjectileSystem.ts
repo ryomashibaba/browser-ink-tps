@@ -202,10 +202,7 @@ export class ProjectileSystem {
     this.queuedCpuShots.length = 0;
     this.stats.activeProjectiles = 0;
     this.stats.playerWeaponChargePercent = 0;
-    this.stats.playerWeaponFirstRingPercent =
-      profile.firstChargeSeconds > 0 && profile.chargeSeconds > 0
-        ? profile.firstChargeSeconds / profile.chargeSeconds * 100
-        : 0;
+    this.stats.playerWeaponFirstRingPercent = 0;
     this.stats.playerWeaponChargeRing = 0;
     this.stats.playerWeaponAction = 'READY';
     this.stats.playerWeaponGuarding = false;
@@ -1442,6 +1439,11 @@ export class ProjectileSystem {
     this.stats.playerWeaponName = profile.displayName;
     this.stats.playerWeaponClass = profile.classLabel;
     this.stats.playerWeaponChargePercent = 0;
+    this.stats.playerWeaponFirstRingPercent =
+      profile.firstChargeSeconds > 0 && profile.chargeSeconds > 0
+        ? profile.firstChargeSeconds / profile.chargeSeconds * 100
+        : 0;
+    this.stats.playerWeaponChargeRing = 0;
     this.stats.playerWeaponAction = 'READY';
     this.stats.playerWeaponGuarding = false;
     this.stats.playerWeaponGuardHp = this.guardHp;
