@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.11.0 / T16 WEAPON KIT SYSTEM CANDIDATE
+# CURRENT_CANONICAL — v0.11.0 / T16 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T15 is the frozen stable foundation. T16 is an additive per-main-weapon kit layer and must preserve the frozen T15 paint-source and special-gauge contracts.**
+**T0–T16 is the frozen stable foundation. T16 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #184 passed build/deploy.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1134,3 +1134,28 @@ Current weapon kits:
 - Ink Saber — Snap Bomb / Turf Pulse
 
 T16 remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
+
+
+## T16 Stable Freeze — 2026-09-23
+
+Hosted runtime QA for v0.11.0 was completed and accepted by the user.
+
+Stable T16 checkpoint:
+- commit: `958a1d168ea86387701eb089437bf6da6af14514`
+- GitHub Actions: run #184 / `35833765947` — success
+- per-main-weapon fixed kit assignment is frozen
+- Pulse Bomb / Snap Bomb / Anchor Bomb are the stable sub baseline
+- Turf Pulse / Triple Strike / Drift Storm are the stable special baseline
+- weapon-switch kit updates and special fill-ratio preservation are included
+- T15 HUMAN/SPECIAL paint-source and special-gauge contracts remain unchanged
+
+T16 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T17 — Super Jump / Spawn Mobility:
+- map-driven destination selection
+- launch / travel / landing state integrated into fixed 60 Hz player lifecycle
+- teammate/spawn destination handling without weakening existing respawn contracts
+- visible landing indicator / travel feedback
+- interruption and safety rules isolated from T0–T16 Freeze
