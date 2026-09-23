@@ -120,6 +120,10 @@ export class PerformanceStats {
   public cpuSpecialReady = 0;
   public cpuAverageSpecialPercent = 0;
   public cpuKitLast = '-';
+  public cpuActiveSubs = 0;
+  public cpuActiveSpecialEffects = 0;
+  public cpuSubExplosions = 0;
+  public cpuKitPoolDrops = 0;
   public cpuSuperJumps = 0;
   public cpuSuperJumpPrep = 0;
   public cpuSuperJumpAirborne = 0;
