@@ -3,8 +3,8 @@ import type { PerformanceStats } from '../core/PerformanceStats';
 import type { InkRelation, PlayerMode } from '../player/PlayerController';
 
 export class PlayerResources {
-  private ink = GAME_CONFIG.inkEconomy.capacity;
-  private hp = GAME_CONFIG.combat.playerMaxHp;
+  private ink: number = GAME_CONFIG.inkEconomy.capacity;
+  private hp: number = GAME_CONFIG.combat.playerMaxHp;
   private inkRecoveryLockSeconds = 0;
   private hpRecoveryDelaySeconds = 0;
 
