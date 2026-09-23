@@ -84,6 +84,13 @@ export class PerformanceStats {
   public playerRespawnSeconds = 0;
   public playerSplats = 0;
   public playerRespawns = 0;
+  public playerSuperJumpState = 'IDLE';
+  public playerSuperJumpTarget = '-';
+  public playerSuperJumpProgress = 0;
+  public playerSuperJumpTargetX = Number.NaN;
+  public playerSuperJumpTargetY = Number.NaN;
+  public playerSuperJumpTargetZ = Number.NaN;
+  public playerSuperJumps = 0;
 
   public cpuNavigationStatus = 'PENDING';
   public cpuNavigationBuildMs = 0;
