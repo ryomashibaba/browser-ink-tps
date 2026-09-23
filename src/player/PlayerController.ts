@@ -50,6 +50,7 @@ export class PlayerController {
   private readonly renderPosition = new Vec3();
   private readonly muzzleOffset = new Vec3();
   private readonly squidRollDirection = new Vec3();
+  private readonly weaponDodgeDirection = new Vec3();
   private positionInitialized = false;
   private mode: PlayerMode = 'HUMAN';
   private locomotionState: PlayerLocomotionState = 'HUMAN';
@@ -62,13 +63,14 @@ export class PlayerController {
   private squidRollTurnWindowSeconds = 0;
   private surgeRemainingSeconds = 0;
   private surgeChargeSeconds = 0;
+  private weaponDodgeStartupSeconds = 0;
   private weaponDodgeRemainingSeconds = 0;
   private weaponDodgeMoveLockSeconds = 0;
   private weaponDodgeShotLockSeconds = 0;
   private weaponDodgeRechargeSeconds = 0;
   private weaponDodgeCharges = 2;
   private weaponDodgeQueued = false;
-  private weaponDodgeStartedEvent = false;
+  private weaponDodgeCompletedEvent = false;
   private weaponMoveMultiplier = 1;
   private snapToGroundEnabled = true;
 
@@ -133,6 +135,7 @@ export class PlayerController {
 
   public get canShoot(): boolean {
     return this.mode === 'HUMAN' &&
+      this.weaponDodgeStartupSeconds <= 0 &&
       this.weaponDodgeRemainingSeconds <= 0 &&
       this.weaponDodgeShotLockSeconds <= 0;
   }
@@ -149,6 +152,8 @@ export class PlayerController {
     if (
       this.mode !== 'HUMAN' ||
       this.weaponDodgeCharges <= 0 ||
+      this.weaponDodgeStartupSeconds > 0 ||
+      this.weaponDodgeRemainingSeconds > 0 ||
       this.weaponDodgeQueued
     ) {
       return false;
@@ -157,9 +162,9 @@ export class PlayerController {
     return true;
   }
 
-  public consumeWeaponDodgeStarted(): boolean {
-    const started = this.weaponDodgeStartedEvent;
-    this.weaponDodgeStartedEvent = false;
+  public consumeWeaponDodgeCompleted(): boolean {
+    const started = this.weaponDodgeCompletedEvent;
+    this.weaponDodgeCompletedEvent = false;
     return started;
   }
 
@@ -198,13 +203,14 @@ export class PlayerController {
     this.squidRollTurnWindowSeconds = 0;
     this.surgeRemainingSeconds = 0;
     this.surgeChargeSeconds = 0;
+    this.weaponDodgeStartupSeconds = 0;
     this.weaponDodgeRemainingSeconds = 0;
     this.weaponDodgeMoveLockSeconds = 0;
     this.weaponDodgeShotLockSeconds = 0;
     this.weaponDodgeRechargeSeconds = 0;
     this.weaponDodgeCharges = 2;
     this.weaponDodgeQueued = false;
-    this.weaponDodgeStartedEvent = false;
+    this.weaponDodgeCompletedEvent = false;
     this.weaponMoveMultiplier = 1;
     this.stats.playerWeaponDodgeCharges = 2;
     this.setSnapToGround(true);
@@ -258,8 +264,24 @@ export class PlayerController {
 
     const jumpPressed = this.input.consumeJump();
     this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
-    this.weaponDodgeRemainingSeconds = Math.max(0, this.weaponDodgeRemainingSeconds - dt);
-    if (this.weaponDodgeRemainingSeconds <= 0) {
+
+    const dodgeStartupWasActive = this.weaponDodgeStartupSeconds > 0;
+    const dodgeRollWasActive = this.weaponDodgeRemainingSeconds > 0;
+    this.weaponDodgeStartupSeconds = Math.max(0, this.weaponDodgeStartupSeconds - dt);
+    const dodgeMovementStartsThisTick =
+      dodgeStartupWasActive && this.weaponDodgeStartupSeconds <= 0;
+
+    if (!dodgeStartupWasActive) {
+      this.weaponDodgeRemainingSeconds = Math.max(0, this.weaponDodgeRemainingSeconds - dt);
+    }
+    if (
+      dodgeRollWasActive &&
+      !dodgeStartupWasActive &&
+      this.weaponDodgeRemainingSeconds <= 0
+    ) {
+      this.weaponDodgeCompletedEvent = true;
+    }
+    if (!dodgeStartupWasActive && !dodgeRollWasActive) {
       this.weaponDodgeMoveLockSeconds = Math.max(0, this.weaponDodgeMoveLockSeconds - dt);
       this.weaponDodgeShotLockSeconds = Math.max(0, this.weaponDodgeShotLockSeconds - dt);
     }
@@ -271,7 +293,21 @@ export class PlayerController {
       }
     }
 
-    if (this.weaponDodgeRemainingSeconds > 0) {
+    if (this.weaponDodgeStartupSeconds > 0) {
+      this.setMode('HUMAN');
+      this.locomotionState = 'DUALIE_DODGE';
+      this.velocity.x = 0;
+      this.velocity.z = 0;
+      this.wallSurfaceId = '-';
+      this.surgeChargeSeconds = 0;
+      this.squidRollTurnWindowSeconds = 0;
+      this.setSnapToGround(true);
+      this.applyGravity(dt);
+    } else if (this.weaponDodgeRemainingSeconds > 0) {
+      if (dodgeMovementStartsThisTick) {
+        this.velocity.x = this.weaponDodgeDirection.x * 10.2;
+        this.velocity.z = this.weaponDodgeDirection.z * 10.2;
+      }
       this.setMode('HUMAN');
       this.locomotionState = 'DUALIE_DODGE';
       this.wallSurfaceId = '-';
@@ -284,22 +320,24 @@ export class PlayerController {
       this.mode === 'HUMAN' &&
       this.weaponDodgeCharges > 0
     ) {
-      const dodgeDirection = this.desired.lengthSq() > 0.04
-        ? this.desired.clone().normalize()
-        : this.flatForward.clone().normalize();
-      this.velocity.x = dodgeDirection.x * 10.2;
-      this.velocity.z = dodgeDirection.z * 10.2;
+      if (this.desired.lengthSq() > 0.04) {
+        this.weaponDodgeDirection.copy(this.desired).normalize();
+      } else {
+        this.weaponDodgeDirection.copy(this.flatForward).normalize();
+      }
+      this.velocity.x = 0;
+      this.velocity.z = 0;
       if (this.grounded) this.verticalVelocity = 0;
-      // Splatoon-style reference timing adapted to this fixed 60 Hz simulation:
-      // the roll is short, firing returns first, and locomotion stays locked longer.
-      // A chained second roll may still interrupt the movement lock.
-      this.weaponDodgeRemainingSeconds = 0.20;
-      this.weaponDodgeShotLockSeconds = 0.067;
-      this.weaponDodgeMoveLockSeconds = 0.53;
+
+      // Public Splat Dualies reference structure at 60 Hz:
+      // 4F startup -> 12F roll -> 4F until fire returns -> +28F post-roll stance.
+      this.weaponDodgeStartupSeconds = 4 / 60;
+      this.weaponDodgeRemainingSeconds = 12 / 60;
+      this.weaponDodgeShotLockSeconds = 4 / 60;
+      this.weaponDodgeMoveLockSeconds = 32 / 60;
       this.weaponDodgeCharges -= 1;
-      this.weaponDodgeRechargeSeconds = 0.73;
+      this.weaponDodgeRechargeSeconds = 48 / 60;
       this.weaponDodgeQueued = false;
-      this.weaponDodgeStartedEvent = true;
       this.stats.playerWeaponDodges += 1;
       this.stats.playerWeaponDodgeCharges = this.weaponDodgeCharges;
       this.locomotionState = 'DUALIE_DODGE';
