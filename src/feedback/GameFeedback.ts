@@ -286,13 +286,20 @@ export class GameFeedback {
     up: Vec3,
     charge: number
   ): void {
-    const corePoint = origin.clone().add(forward.clone().mulScalar(0.16));
+    // Charger-like read: centered core + forward guide, with subtle rotary identity.
+    const corePoint = origin.clone().add(forward.clone().mulScalar(0.20));
     this.chargeCore.setPosition(corePoint);
-    const pulse = 0.08 + Math.abs(Math.sin(performance.now() * 0.018)) * 0.035;
+    const pulse = 0.075 + charge * 0.105 +
+      Math.abs(Math.sin(performance.now() * 0.014)) * 0.018;
     this.chargeCore.setLocalScale(pulse, pulse, pulse);
 
-    const spin = performance.now() * (0.006 + charge * 0.022);
-    const radius = 0.18 + charge * 0.10;
+    const guide = this.chargeBars[0]!;
+    guide.enabled = true;
+    const guideLength = 3.2 + charge * 10.8;
+    placeBarAlong(guide, origin, forward, guideLength, 0.022 + charge * 0.010);
+
+    const spin = performance.now() * (0.004 + charge * 0.010);
+    const radius = 0.24 * (1 - charge * 0.68) + 0.055;
     for (let i = 0; i < 4; i += 1) {
       const dot = this.chargeDots[i]!;
       dot.enabled = true;
@@ -301,7 +308,7 @@ export class GameFeedback {
         .add(right.clone().mulScalar(Math.cos(angle) * radius))
         .add(up.clone().mulScalar(Math.sin(angle) * radius));
       dot.setPosition(point);
-      const scale = 0.035 + charge * 0.035;
+      const scale = 0.038 + charge * 0.030;
       dot.setLocalScale(scale, scale, scale);
     }
   }
