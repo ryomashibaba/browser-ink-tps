@@ -164,7 +164,7 @@ export class ProjectileSystem {
 
   public notifyDualieDodge(): void {
     if (this.currentPlayerWeapon.weaponClass !== 'DUALIES') return;
-    this.dualiesFocusSeconds = 0.48;
+    this.dualiesFocusSeconds = 0.62;
   }
 
   public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
@@ -762,15 +762,15 @@ export class ProjectileSystem {
     if (fallingFire && this.fireCooldown <= 0) {
       const charge = chargeFraction(profile, this.chargeSeconds);
       const spread = lerp(profile.spreadDegrees, 1.5, charge);
-      const delayedBurst = charge >= 0.52;
+      const firstChargeReached = charge >= (5 / 12);
       if (this.fireProjectiles(profile, origin, direction, team, 3, spread, charge, {
-        delayedBurstSeconds: delayedBurst ? 0.62 : 0,
-        delayedBurstRadius: delayedBurst ? lerp(0.55, 0.95, charge) : 0,
-        delayedBurstDamage: delayedBurst ? lerp(16, 30, charge) : 0,
-        delayedBurstPaintRadius: delayedBurst ? lerp(0.48, 0.82, charge) : 0
+        delayedBurstSeconds: firstChargeReached ? 0.75 : 0,
+        delayedBurstRadius: firstChargeReached ? lerp(0.62, 1.02, charge) : 0,
+        delayedBurstDamage: firstChargeReached ? 30 : 0,
+        delayedBurstPaintRadius: firstChargeReached ? lerp(0.56, 0.90, charge) : 0
       })) {
         this.fireCooldown = profile.fireIntervalSeconds;
-        this.stats.playerWeaponAction = delayedBurst ? 'CHARGED_TRISHOT' : 'TRISHOT';
+        this.stats.playerWeaponAction = firstChargeReached ? 'EXPLOSIVE_TRISHOT' : 'TRISHOT';
       }
     }
 
@@ -1159,6 +1159,7 @@ export class ProjectileSystem {
     }
 
     if (slot.delayedBurstSeconds > 0) {
+      this.stats.stringerFuses += 1;
       this.feedback.stringerFuse(
         slot.team,
         point,
@@ -1214,6 +1215,7 @@ export class ProjectileSystem {
         weaponProfile(burst.weaponId),
         burst.radius
       );
+      this.stats.stringerBursts += 1;
       this.delayedBursts.splice(i, 1);
     }
   }

@@ -83,6 +83,8 @@ export class DebugOverlay {
         <span class="muted">Weapon action</span><span>${escapeHtml(last.playerWeaponAction)}</span>
         <span class="muted">Weapon charge</span><span>${last.playerWeaponChargePercent.toFixed(0)}%</span>
         <span class="muted">Guard / HP / blocks</span><span>${last.playerWeaponGuarding ? 'yes' : 'no'} / ${last.playerWeaponGuardHp.toFixed(0)} / ${last.playerWeaponGuardBlocks}</span>
+        <span class="muted">Dualie rolls / charges</span><span>${last.playerWeaponDodges} / ${last.playerWeaponDodgeCharges}</span>
+        <span class="muted">Stringer fuses / bursts</span><span>${last.stringerFuses} / ${last.stringerBursts}</span>
         <span class="muted">Weapon switches</span><span>${last.playerWeaponSwitches}</span>
         <span class="muted">Shots / dry</span><span>${last.shotsFired} / ${last.inkDryFireAttempts}</span>
         <span class="muted">Combat hits</span><span>${last.combatHits}</span>

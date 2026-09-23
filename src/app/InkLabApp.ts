@@ -298,8 +298,8 @@ export class InkLabApp {
           !this.input.squidHeld &&
           this.input.consumeJump();
 
-        if (dualieSpaceDodge && this.player.requestWeaponDodge()) {
-          this.projectiles.notifyDualieDodge();
+        if (dualieSpaceDodge) {
+          this.player.requestWeaponDodge();
         }
 
         this.player.setWeaponMoveMultiplier(
@@ -309,6 +309,9 @@ export class InkLabApp {
           )
         );
         if (playerCanAct) this.player.computeFixed(stepSeconds);
+        if (this.player.consumeWeaponDodgeStarted()) {
+          this.projectiles.notifyDualieDodge();
+        }
 
         this.physics.step();
         this.player.syncAfterPhysics(stepSeconds);

@@ -330,8 +330,8 @@ export const WEAPON_PROFILES: Readonly<Record<WeaponId, WeaponProfile>> = {
     audioPitch: 1.42,
     pelletCount: 3,
     spreadDegrees: 13,
-    chargeSeconds: 0.78,
-    minChargeSeconds: 0.08,
+    chargeSeconds: 1.20,
+    minChargeSeconds: 0.15,
     chargeDamageMultiplier: 1.8,
     chargeSpeedMultiplier: 1.28,
     chargePaintMultiplier: 1.25
