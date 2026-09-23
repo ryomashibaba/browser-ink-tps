@@ -361,6 +361,11 @@ export class CpuAgentSystem {
     this.pendingKitRequests.length = 0;
   }
 
+  public isActorActive(actorId: string): boolean {
+    const bot = this.bots.find((candidate) => candidate.id === actorId);
+    return Boolean(bot && bot.lifeState === 'ACTIVE');
+  }
+
   public addScoreablePaintByActor(
     areaByActor: Readonly<Record<string, number>>
   ): void {
