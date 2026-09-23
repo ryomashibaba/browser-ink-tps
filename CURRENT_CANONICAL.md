@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.12.0 / T17 SUPER JUMP CANDIDATE
+# CURRENT_CANONICAL — v0.12.0 / T17 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T16 is the frozen stable foundation. T17 adds map-driven Super Jump / spawn mobility without altering the frozen T0–T16 paint, weapon-kit, match, or locomotion contracts.**
+**T0–T17 is the frozen stable foundation. T17 hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #222 passed build/deploy.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1215,3 +1215,29 @@ Reference relationship:
 - the browser implementation remains project-owned; arc height, selection radius, visual treatment, and other presentation details are project tuning
 
 T17 remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
+
+
+## T17 Stable Freeze — 2026-09-23
+
+Hosted runtime QA for v0.12.0 was completed and accepted by the user.
+
+Stable T17 checkpoint:
+- commit: `38836bcf73f03b7623eb09e7a41436b83027ab76`
+- GitHub Actions: run #222 / `35841633285` — success
+- Super Jump map selection to own spawn or living friendly CPUs is frozen
+- friendly CPU jump destinations are snapshotted at the exact map-selection moment and do not track later CPU movement
+- phase structure is frozen at 80F preparation / 130F main airborne / 30F final airborne approach
+- preparation remains vulnerable; airborne phases remain invulnerable
+- distance-independent high-arc travel, landing marker, Pointer Lock recovery, HUD/debug state, and lifecycle cleanup are included
+- T0–T16 contracts remain unchanged outside the additive T17 mobility path
+
+T17 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T18 — CPU Tactical Mobility:
+- let CPU agents use the frozen T17 Super Jump concept for tactical front-line recovery / regrouping
+- keep CPU jump decisions in the tactical layer instead of normal Recast pathing
+- use fixed destination snapshots rather than live-tracking teammates
+- preserve the human T17 map-selection and lifecycle contracts
+- keep CPU jump behavior isolated from T0–T17 paint / combat / match authority
