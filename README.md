@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.11.0 / T16 STABLE FREEZE**
+**v0.12.0 / T17 SUPER JUMP CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -332,3 +332,21 @@ v0.11.0 hosted QA was accepted on 2026-09-23. Stable checkpoint: `958a1d168ea863
 ### Next: T17 Super Jump / Spawn Mobility
 
 The next planned phase is the first map-driven long-range mobility layer: destination selection, launch/travel/landing state, indicators, and safe integration with the frozen spawn/respawn lifecycle.
+
+
+### T17 v0.12.0 Super Jump candidate
+
+T0–T16 remains frozen.
+
+Controls:
+- **M** — expand/collapse Tactical Map
+- while the map is expanded, click your own spawn or a living friendly CPU to Super Jump
+
+Current timing:
+- 80F preparation
+- 130F main flight
+- 30F final airborne approach/action phase
+
+The player is vulnerable during preparation and invulnerable from takeoff until actual landing. Airborne travel uses a separate high-arc state rather than ordinary Rapier movement, so jump time does not depend on distance and stage walls/floors cannot block the route.
+
+The Tactical Map, HUD, landing marker, Debug overlay, camera follow, Splat/Respawn lifecycle, and Pointer Lock recovery are integrated with the jump state.
