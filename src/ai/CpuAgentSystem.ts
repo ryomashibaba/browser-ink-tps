@@ -262,7 +262,10 @@ export class CpuAgentSystem {
   public render(alpha: number): void {
     const t = Math.max(0, Math.min(1, alpha));
     for (const bot of this.bots) {
-      if (bot.lifeState !== 'ACTIVE') continue;
+      if (bot.lifeState !== 'ACTIVE') {
+        bot.guardEntity.enabled = false;
+        continue;
+      }
 
       const x = lerp(bot.previousPosition.x, bot.position.x, t);
       const y = lerp(bot.previousPosition.y, bot.position.y, t);
@@ -279,6 +282,7 @@ export class CpuAgentSystem {
         bot.entity.setPosition(x, y + 0.68, z);
         bot.entity.setLocalScale(0.50, 1.02, 0.50);
         bot.entity.setLocalEulerAngles(progress * 720, progress * 300, 0);
+        bot.guardEntity.enabled = false;
         continue;
       }
 
@@ -297,6 +301,7 @@ export class CpuAgentSystem {
         0.58 * (1 + squash)
       );
       bot.entity.setLocalEulerAngles(0, 0, 0);
+      this.renderCpuGuard(bot, x, y, z);
     }
   }
 
@@ -391,6 +396,35 @@ export class CpuAgentSystem {
         isCpuJumpAirborne(bot)
       ) continue;
 
+      if (
+        bot.weaponGuarding &&
+        bot.weaponGuardBreakSeconds <= 0 &&
+        bot.weaponGuardHp > 0 &&
+        this.isCpuGuardBlockingPoint(bot, from)
+      ) {
+        const shieldCenter = bot.position.clone()
+          .add(bot.weaponFacing.clone().mulScalar(0.82));
+        shieldCenter.y += 0.72;
+        const shieldDistance = raySphereDistance(
+          from,
+          direction,
+          length,
+          shieldCenter,
+          0.82
+        );
+        if (
+          shieldDistance !== null &&
+          (!best || shieldDistance < best.distance)
+        ) {
+          best = {
+            botId: bot.id,
+            distance: shieldDistance,
+            point: from.clone().add(direction.clone().mulScalar(shieldDistance)),
+            guarded: true
+          };
+        }
+      }
+
       for (const yOffset of GAME_CONFIG.cpu.hitSphereOffsetsMeters) {
         const center = bot.position.clone();
         center.y += yOffset;
@@ -405,7 +439,8 @@ export class CpuAgentSystem {
         best = {
           botId: bot.id,
           distance,
-          point: from.clone().add(direction.clone().mulScalar(distance))
+          point: from.clone().add(direction.clone().mulScalar(distance)),
+          guarded: false
         };
       }
     }
@@ -420,6 +455,8 @@ export class CpuAgentSystem {
       bot.hp <= 0 ||
       isCpuJumpAirborne(bot)
     ) return;
+
+    if (hit.guarded && this.absorbCpuGuardDamage(bot, damage)) return;
 
     const previous = bot.hp;
     bot.hp = Math.max(0, bot.hp - damage);
@@ -448,6 +485,15 @@ export class CpuAgentSystem {
       const dy = bot.position.y + 0.68 - center.y;
       const dz = bot.position.z - center.z;
       if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
+
+      if (
+        bot.weaponGuarding &&
+        this.isCpuGuardBlockingPoint(bot, center) &&
+        this.absorbCpuGuardDamage(bot, damage)
+      ) {
+        hits += 1;
+        continue;
+      }
 
       const previous = bot.hp;
       bot.hp = Math.max(0, bot.hp - damage);
@@ -492,6 +538,19 @@ export class CpuAgentSystem {
       jumpMarker.enabled = false;
       this.app.root.addChild(jumpMarker);
 
+      const guardEntity = new Entity(
+        `CPUGuard:${team === Team.A ? 'A' : 'B'}:${slot + 1}`
+      );
+      guardEntity.addComponent('render', {
+        type: 'box',
+        material: team === Team.A ? this.materialA : this.materialB,
+        castShadows: false,
+        receiveShadows: false
+      });
+      guardEntity.setLocalScale(1.55, 1.05, 0.08);
+      guardEntity.enabled = false;
+      this.app.root.addChild(guardEntity);
+
       this.bots.push({
         id: `${team === Team.A ? 'A' : 'B'}${slot + 1}`,
         team,
@@ -514,6 +573,12 @@ export class CpuAgentSystem {
         weaponChargeSeconds: 0,
         weaponBurstShotsRemaining: 0,
         weaponBurstCooldown: 0,
+        weaponRollPaintCooldown: 0,
+        weaponFacing: new Vec3(0, 0, team === Team.A ? -1 : 1),
+        weaponGuardHp: 100,
+        weaponGuardBreakSeconds: 0,
+        weaponGuarding: false,
+        guardEntity,
         hp: GAME_CONFIG.combat.playerMaxHp,
         ink: GAME_CONFIG.inkEconomy.capacity,
         inkRecoveryLockSeconds: 0,
@@ -1144,6 +1209,12 @@ export class CpuAgentSystem {
     bot.weaponChargeSeconds = 0;
     bot.weaponBurstShotsRemaining = 0;
     bot.weaponBurstCooldown = 0;
+    bot.weaponRollPaintCooldown = 0;
+    bot.weaponFacing.set(0, 0, bot.team === Team.A ? -1 : 1);
+    bot.weaponGuardHp = 100;
+    bot.weaponGuardBreakSeconds = 0;
+    bot.weaponGuarding = false;
+    bot.guardEntity.enabled = false;
     bot.respawnRemainingSeconds = 0;
     bot.lifeState = 'ACTIVE';
     bot.mobilityState = 'GROUND';
