@@ -1010,8 +1010,8 @@ Do not freeze T14 until the user confirms these hosted checks.
 ## T14 v0.9.4 Dualies / Splatling hosted QA
 
 Required hosted checks:
-1. Select Twin Comets. Press Space without LMB: no Dualies dodge should start.
-2. Hold LMB and press Space while Human: the dodge should start.
+1. Select Twin Comets. Space without LMB, and stationary LMB+Space, must not start a Dualies dodge; both should remain normal jump input.
+2. While Human, hold LMB + any WASD movement direction and press Space: the dodge should start in the movement-input direction.
 3. The dodge should show the fixed-step phase structure: about 4 frames of startup, about 12 frames of roll movement, then no shooting during the roll itself.
 4. About 4 frames after roll movement completes, firing should return while directional movement remains locked for the rest of the post-roll stance.
 5. While still holding LMB during the post-roll stance, Space can chain the second dodge if a charge remains.
