@@ -78,6 +78,11 @@ export class ProjectileSystem {
   private dualiesFocusSeconds = 0;
   private guardHp = 100;
   private guardBreakSeconds = 0;
+  private readonly currentHumanPosition = new Vec3();
+  private readonly currentHumanAimDirection = new Vec3(0, 0, -1);
+  private currentHumanTeam: Team.A | Team.B = Team.A;
+  private currentHumanDamageable = false;
+  private currentHumanGuarding = false;
   private playerWeaponId: WeaponId = DEFAULT_WEAPON_ID;
 
   public constructor(
@@ -294,6 +299,11 @@ export class ProjectileSystem {
     }
     this.stats.playerWeaponGuarding = guarding;
     this.stats.playerWeaponGuardHp = this.guardHp;
+    this.currentHumanTeam = team;
+    this.currentHumanPosition.copy(playerPosition);
+    this.currentHumanAimDirection.copy(aimDirection);
+    this.currentHumanDamageable = playerDamageable;
+    this.currentHumanGuarding = guarding;
     this.updateGuardVisual(guarding, team, playerPosition, aimDirection);
 
     if (playerWeaponEnabled) {
@@ -1506,6 +1516,42 @@ export class ProjectileSystem {
   ): void {
     this.cpuAgents.applyAreaDamage(point, radius, damage, team);
     this.combatTargets.applyAreaDamage(point, radius, damage, team);
+
+    if (
+      !this.currentHumanDamageable ||
+      team === this.currentHumanTeam ||
+      radius <= 0 ||
+      damage <= 0
+    ) {
+      return;
+    }
+
+    const dx = this.currentHumanPosition.x - point.x;
+    const dy = this.currentHumanPosition.y + 0.68 - point.y;
+    const dz = this.currentHumanPosition.z - point.z;
+    if (dx * dx + dy * dy + dz * dz > radius * radius) return;
+
+    if (
+      this.currentHumanGuarding &&
+      this.isGuardBlockingPoint(
+        point,
+        this.currentHumanPosition,
+        this.currentHumanAimDirection
+      )
+    ) {
+      this.guardHp = Math.max(0, this.guardHp - damage);
+      this.stats.playerWeaponGuardBlocks += 1;
+      this.stats.playerWeaponGuardHp = this.guardHp;
+      if (this.guardHp <= 0) {
+        this.guardBreakSeconds = 2.5;
+        this.guardEntity.enabled = false;
+        this.stats.playerWeaponAction = 'GUARD_BREAK';
+      }
+      return;
+    }
+
+    this.resources.applyDamage(damage);
+    this.stats.cpuPlayerHits += 1;
   }
 
   private applyMeleeDamage(
