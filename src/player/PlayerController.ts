@@ -126,6 +126,14 @@ export class PlayerController {
     return this.mode === 'HUMAN';
   }
 
+  public get currentMode(): PlayerMode {
+    return this.mode;
+  }
+
+  public get currentInkRelation(): InkRelation {
+    return this.inkRelation;
+  }
+
   public setTeam(team: Team.A | Team.B): void {
     this.team = team;
     this.updateMaterial();

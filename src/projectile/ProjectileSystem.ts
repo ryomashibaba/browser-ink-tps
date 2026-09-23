@@ -1,4 +1,6 @@
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+import type { CombatTargetSystem } from '../combat/CombatTargetSystem';
+import type { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
@@ -28,6 +30,8 @@ export class ProjectileSystem {
     private readonly surfaces: readonly PaintSurface[],
     private readonly physics: RapierStagePhysics,
     private readonly coordinator: PaintCoordinator,
+    private readonly resources: PlayerResources,
+    private readonly combatTargets: CombatTargetSystem,
     private readonly stats: PerformanceStats
   ) {
     this.materialA = makeProjectileMaterial(GAME_CONFIG.visual.teamA);
@@ -109,10 +113,18 @@ export class ProjectileSystem {
   ): void {
     this.fireCooldown -= dt;
     if (fireHeld && this.fireCooldown <= 0 && aimDirection.lengthSq() > 1e-8) {
-      this.spawn(muzzlePosition, aimDirection, team);
-      // Preserve the fractional remainder so a 0.105 s cadence does not get
-      // rounded up to a permanent 7-fixed-tick interval at 60 Hz.
-      this.fireCooldown += GAME_CONFIG.projectile.fireIntervalSeconds;
+      const slot = this.slots.find((candidate) => !candidate.active);
+      if (!slot) {
+        this.stats.projectilePoolDrops += 1;
+        this.fireCooldown += GAME_CONFIG.projectile.fireIntervalSeconds;
+      } else if (this.resources.tryConsumeShotInk()) {
+        this.spawnInto(slot, muzzlePosition, aimDirection, team);
+        // Preserve the fractional remainder so a 0.105 s cadence does not get
+        // rounded up to a permanent 7-fixed-tick interval at 60 Hz.
+        this.fireCooldown += GAME_CONFIG.projectile.fireIntervalSeconds;
+      } else {
+        this.fireCooldown = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+      }
     } else if (!fireHeld && this.fireCooldown < 0) {
       this.fireCooldown = 0;
     }
@@ -135,11 +147,28 @@ export class ProjectileSystem {
 
       const paintHit = this.findNearestSurfaceHit(previous, next);
       const blockerHit = this.physics.castStageSegment(previous, next, 'projectile');
+      const combatHit = this.combatTargets.findNearestHit(previous, next, slot.team);
       const paintWins = paintHit && (
         !blockerHit ||
         paintHit.distance <=
           blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
       );
+      const worldDistance = paintWins
+        ? paintHit.distance
+        : (blockerHit?.distance ?? Number.POSITIVE_INFINITY);
+
+      if (
+        combatHit &&
+        combatHit.distance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < worldDistance
+      ) {
+        this.combatTargets.applyProjectileHit(
+          combatHit,
+          GAME_CONFIG.combat.projectileDamage
+        );
+        this.stats.projectileImpacts += 1;
+        this.deactivate(slot);
+        continue;
+      }
 
       if (paintWins) {
         this.enqueueImpact(slot.team, paintHit);
@@ -175,13 +204,12 @@ export class ProjectileSystem {
     }
   }
 
-  private spawn(origin: Vec3, direction: Vec3, team: Team.A | Team.B): void {
-    const slot = this.slots.find((candidate) => !candidate.active);
-    if (!slot) {
-      this.stats.projectilePoolDrops += 1;
-      return;
-    }
-
+  private spawnInto(
+    slot: ProjectileSlot,
+    origin: Vec3,
+    direction: Vec3,
+    team: Team.A | Team.B
+  ): void {
     slot.active = true;
     slot.ttl = GAME_CONFIG.projectile.lifeSeconds;
     slot.team = team;

@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T9 CANDIDATE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T10 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -55,6 +55,16 @@ export class DebugOverlay {
         <span class="muted">Wall surface</span><span>${escapeHtml(last.playerWallSurface)}</span>
         <span class="muted">Surge charge</span><span>${(last.playerSurgeCharge * 100).toFixed(0)}%</span>
         <span class="muted">Roll ready</span><span>${last.playerSquidRollReady ? 'yes' : 'no'}</span>
+        <span class="muted">Ink tank</span><span>${last.playerInk.toFixed(1)} / 100 · ${last.playerInkPercent.toFixed(0)}%</span>
+        <span class="muted">Ink recovery</span><span>${escapeHtml(last.playerInkRecoveryState)}</span>
+        <span class="muted">HP</span><span>${last.playerHp.toFixed(1)} / 100</span>
+        <span class="muted">HP recovery</span><span>${escapeHtml(last.playerHpRecoveryState)}</span>
+        <span class="muted">Damage taken</span><span>${last.playerDamageTaken.toFixed(1)}</span>
+        <span class="muted">Shots / dry</span><span>${last.shotsFired} / ${last.inkDryFireAttempts}</span>
+        <span class="muted">Combat hits</span><span>${last.combatHits}</span>
+        <span class="muted">Target downs</span><span>${last.combatTargetDowns}</span>
+        <span class="muted">Target A HP</span><span>${last.targetAHp.toFixed(0)}</span>
+        <span class="muted">Target B HP</span><span>${last.targetBHp.toFixed(0)}</span>
         <span class="muted">Projectiles</span><span>${last.activeProjectiles}</span>
         <span class="muted">Impacts</span><span>${last.projectileImpacts}</span>
         <span class="muted">Pool drops</span><span>${last.projectilePoolDrops}</span>

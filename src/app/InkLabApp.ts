@@ -16,6 +16,8 @@ import {
   Vec3
 } from 'playcanvas';
 import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
+import { CombatTargetSystem } from '../combat/CombatTargetSystem';
+import { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import { FixedStepClock } from '../core/FixedStepClock';
 import { PerformanceStats } from '../core/PerformanceStats';
@@ -76,6 +78,8 @@ export class InkLabApp {
   private readonly physics: RapierStagePhysics;
   private readonly cameraController: ThirdPersonCamera;
   private readonly player: PlayerController;
+  private readonly resources: PlayerResources;
+  private readonly combatTargets: CombatTargetSystem;
   private readonly projectiles: ProjectileSystem;
 
   private readonly playerPosition = new Vec3();
@@ -123,7 +127,17 @@ export class InkLabApp {
       this.gameplayInk,
       this.stats
     );
-    this.projectiles = new ProjectileSystem(app, surfaces, this.physics, this.coordinator, this.stats);
+    this.resources = new PlayerResources(this.stats);
+    this.combatTargets = new CombatTargetSystem(app, this.stats);
+    this.projectiles = new ProjectileSystem(
+      app,
+      surfaces,
+      this.physics,
+      this.coordinator,
+      this.resources,
+      this.combatTargets,
+      this.stats
+    );
 
     this.controls = new ControlPanel(uiRoot, {
       onTeamChanged: (team) => {
@@ -186,12 +200,19 @@ export class InkLabApp {
       this.cameraController.update(this.player.getPosition(this.playerPosition), cameraDt);
 
       const report = this.clock.advance(dt, (tick, stepSeconds) => {
-        // T4-T9 fixed-step order:
-        // input/state -> KCC desired motion -> Rapier step -> authoritative state
-        // -> pooled projectile sweep -> one PaintRequest -> one immutable PaintEvent.
+        // T4-T10 fixed-step order:
+        // input/state -> KCC desired motion -> Rapier step -> authoritative player state
+        // -> player Ink/HP resources + combat targets -> pooled projectile sweep
+        // -> one PaintRequest -> one immutable PaintEvent.
         this.player.computeFixed(stepSeconds);
         this.physics.step();
         this.player.syncAfterPhysics(stepSeconds);
+        this.resources.fixedUpdate(
+          stepSeconds,
+          this.player.currentMode,
+          this.player.currentInkRelation
+        );
+        this.combatTargets.fixedUpdate(stepSeconds);
 
         // Keep the camera transform current for every catch-up tick. This prevents
         // render-FPS-dependent aim lag when several 60 Hz ticks run in one frame.

@@ -58,6 +58,29 @@ export const GAME_CONFIG = Object.freeze({
     surgeDurationSeconds: 0.24,
     surgeGravityMetersPerSecond2: 18
   },
+  inkEconomy: {
+    capacity: 100,
+    inkPerShot: 0.95,
+    recoveryLockSeconds: 0.35,
+    dryFireRetrySeconds: 0.12,
+    humanRecoveryPerSecond: 10,
+    squidOwnRecoveryPerSecond: 34
+  },
+  combat: {
+    playerMaxHp: 100,
+    projectileDamage: 34,
+    hpRecoveryDelaySeconds: 1.0,
+    humanHpRecoveryPerSecond: 12.5,
+    squidOwnHpRecoveryPerSecond: 100,
+    enemyInkDamagePerSecond: 18,
+    enemyInkMinimumHp: 60,
+    targetMaxHp: 100,
+    targetDownSeconds: 1.5,
+    targetHitRadiusMeters: 0.36,
+    targetHitSphereOffsetsMeters: [0.34, 0.72, 1.10] as const,
+    targetVisualCenterYMeters: 0.72,
+    hitPriorityEpsilonMeters: 0.01
+  },
   projectile: {
     poolSize: 128,
     fireIntervalSeconds: 0.105,

@@ -39,6 +39,19 @@ export class PerformanceStats {
   public lastPaintWorldZ = Number.NaN;
   public coordinateAudit = 'PENDING';
 
+  public playerInk = 100;
+  public playerInkPercent = 100;
+  public playerHp = 100;
+  public playerInkRecoveryState = 'READY';
+  public playerHpRecoveryState = 'READY';
+  public playerDamageTaken = 0;
+  public shotsFired = 0;
+  public inkDryFireAttempts = 0;
+  public combatHits = 0;
+  public combatTargetDowns = 0;
+  public targetAHp = 100;
+  public targetBHp = 100;
+
   public activeProjectiles = 0;
   public projectileImpacts = 0;
   public projectilePoolDrops = 0;
