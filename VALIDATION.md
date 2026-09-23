@@ -1049,3 +1049,36 @@ Stable T14 checkpoint:
 - GitHub Actions run #136 / `35830846217`: build + deploy success
 
 T14 is now **STABLE FREEZE**. Future phases must preserve T0–T14 contracts unless a later explicit Freeze-change decision says otherwise.
+
+
+## T15 v0.10.0 Sub Weapon + Special Gauge hosted QA
+
+Architecture / attribution:
+1. Existing main-weapon paint must continue to match CPU gameplay ink and GPU visuals exactly; no U/V or vertical aiming regression.
+2. Human main-weapon paint on previously neutral/enemy Scoreable turf must increase Debug `Human scoreable paint` and SPECIAL.
+3. Repainting already-owned turf must not materially increase SPECIAL.
+4. CPU paint must not increase the human SPECIAL gauge.
+5. Coord QA / Roll QA Pad / stress/debug paint must not increase the human SPECIAL gauge.
+
+Pulse Bomb:
+6. With at least 70 Ink, press F while playing: one visible Pulse Bomb should launch along the aim direction with a ballistic arc and consume 70 Ink.
+7. With less than 70 Ink, F must not throw a bomb.
+8. After first contact with stage geometry/PaintSurface, the bomb should remain at the contact point and explode about 1.0 s later.
+9. Explosion must paint nearby valid PaintSurfaces, damage enemy CPU/QA targets, and increment Debug `Sub throws / bursts`.
+10. Newly changed Scoreable turf painted by Pulse Bomb must contribute to SPECIAL.
+
+Turf Pulse:
+11. Paint normally until SPECIAL reaches 100%, or press `Special QA Ready`; HUD should show SPECIAL READY and Debug should report the full gauge.
+12. Press G while not ready: nothing activates and the partial gauge is preserved.
+13. Press G while ready: Turf Pulse activates once, consumes the gauge to 0, emits radial paint/feedback, damages nearby enemies, and increments `Special uses`.
+14. Turf Pulse's own SPECIAL-source paint must not refill the gauge during the same tick.
+15. Build a partial gauge, use Splat QA, and verify the gauge is reduced to about 50%; after Respawn the retained amount remains.
+16. Restart Match and Clear Ink must reset the gauge to 0 and clear active Pulse Bombs.
+
+Regression:
+17. Brella RMB guard remains functional.
+18. Dualies LMB + movement + Space dodge remains functional.
+19. Charger/Splatling/Stringer/Splatana charge behavior, including T14 two-ring charge, remains unchanged.
+20. 4v4 CPU, match timer/respawn, tactical map, FPS/dropped sim, projectile pool, GPU ink backlog, and T0–T14 Freeze behavior remain acceptable.
+
+T15 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
