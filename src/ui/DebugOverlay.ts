@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T17 STABLE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T18 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
@@ -57,6 +57,10 @@ export class DebugOverlay {
         <span class="muted">CPU shots</span><span>${last.cpuShots}</span>
         <span class="muted">CPU combat hits</span><span>${last.cpuCombatHits}</span>
         <span class="muted">CPU splats/respawns</span><span>${last.cpuSplats} / ${last.cpuRespawns}</span>
+        <span class="muted">CPU jump prep / air</span><span>${last.cpuSuperJumpPrep} / ${last.cpuSuperJumpAirborne}</span>
+        <span class="muted">CPU jumps / landings</span><span>${last.cpuSuperJumps} / ${last.cpuSuperJumpLandings}</span>
+        <span class="muted">CPU jump cancels</span><span>${last.cpuSuperJumpCancels}</span>
+        <span class="muted">CPU last jump</span><span>${escapeHtml(last.cpuSuperJumpLast)}</span>
         <span class="muted">CPU→Player hits</span><span>${last.cpuPlayerHits}</span>
         <span class="muted">FPS</span><span>${last.fps.toFixed(1)}</span>
         <span class="muted">Frame</span><span>${last.averageFrameMs.toFixed(2)} ms</span>
