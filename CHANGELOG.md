@@ -1,3 +1,13 @@
+## v0.14.0 T19A Stable Freeze — 2026-09-23
+
+- hosted QA accepted by the user
+- stable checkpoint: `034ee78fa3e25705332a40d2456ac5ebf90b79d4`
+- GitHub Actions run #266 / `35847641772` passed TypeScript check, production build, and Pages deploy
+- CPU Shooter / Dualies / Blaster / Slosher / Charger / Splatling behavior is frozen
+- T0–T19A is now the frozen gameplay foundation
+- next phase: T19B CPU Advanced Main-Weapon Class Parity
+- CPU Sub/Special parity remains deferred to T19C
+
 ## v0.14.0 T19A CPU Main-Weapon Diversity Candidate — 2026-09-23
 
 - replaced the old CPU-wide Pulse Sprayer fire model with a dedicated CPU loadout catalog
