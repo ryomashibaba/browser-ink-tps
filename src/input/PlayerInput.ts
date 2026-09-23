@@ -4,6 +4,8 @@ export class PlayerInput {
   private secondary = false;
   private secondaryPressedQueued = false;
   private jumpQueued = false;
+  private subPressedQueued = false;
+  private specialPressedQueued = false;
 
   public constructor(private readonly canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (event) => {
@@ -11,6 +13,14 @@ export class PlayerInput {
       this.keys.add(event.code);
       if (event.code === 'Space') {
         if (!event.repeat) this.jumpQueued = true;
+        event.preventDefault();
+      }
+      if (event.code === 'KeyF' && !event.repeat) {
+        this.subPressedQueued = true;
+        event.preventDefault();
+      }
+      if (event.code === 'KeyG' && !event.repeat) {
+        this.specialPressedQueued = true;
         event.preventDefault();
       }
     });
@@ -22,6 +32,8 @@ export class PlayerInput {
       this.secondary = false;
       this.secondaryPressedQueued = false;
       this.jumpQueued = false;
+      this.subPressedQueued = false;
+      this.specialPressedQueued = false;
     };
 
     window.addEventListener('blur', clearGameplayState);
@@ -82,6 +94,18 @@ export class PlayerInput {
   public consumeSecondaryPressed(): boolean {
     const queued = this.secondaryPressedQueued;
     this.secondaryPressedQueued = false;
+    return queued;
+  }
+
+  public consumeSubPressed(): boolean {
+    const queued = this.subPressedQueued;
+    this.subPressedQueued = false;
+    return queued;
+  }
+
+  public consumeSpecialPressed(): boolean {
+    const queued = this.specialPressedQueued;
+    this.specialPressedQueued = false;
     return queued;
   }
 
