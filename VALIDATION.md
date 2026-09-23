@@ -1304,3 +1304,14 @@ Lifecycle / regression:
 27. Mixed 4v4 combat should keep FPS / dropped simulation / projectile pool drops / GPU backlog acceptable.
 
 T19B remains **IMPLEMENTATION CANDIDATE** until these checks pass.
+
+
+## T19B Stable Freeze — accepted 2026-09-23
+
+The user confirmed the v0.15.0 hosted checks for CPU Roller / Brush / Brella / Stringer / Splatana behavior and reported no observed problems.
+
+Stable checkpoint:
+- commit: `d2b0b01fba9d547686399f58e3347e21f247ef38`
+- GitHub Actions run #287 / `35867101317`: TypeScript check, production build, and Pages deploy success
+
+T19B is now **STABLE FREEZE**. Future work must preserve the accepted advanced main-weapon behavior, CPU Brella guard contracts, CPU-source advanced paint, T19A default roster, and T0–T19A authority boundaries unless an explicit later Freeze-change decision is made.
