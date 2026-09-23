@@ -1,4 +1,4 @@
-# Validation Report — v0.8.0 T13 Implementation Candidate
+# Validation Report — v0.8.0 T13 Stable Freeze
 
 Date: 2026-09-23
 
@@ -751,7 +751,7 @@ Automated result:
 - production build: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PARTIAL PASS — HUD/map accepted after vertical-orientation correction; production-stage geometry pending**
+- hosted runtime QA: **PASS — HUD/map and production-stage geometry accepted by user on 2026-09-23**
 
 Architecture validation:
 
@@ -801,7 +801,7 @@ Automated result:
 - production build: PASS
 - Pages artifact upload: PASS
 - Pages deploy: PASS
-- hosted runtime QA: **PENDING**
+- hosted runtime QA: **PASS — user confirmed all remaining T13 production-stage checks on 2026-09-23**
 
 Architecture validation:
 
@@ -825,4 +825,32 @@ Hosted QA required before T13 Freeze:
 9. Coordinate Audit should remain PASS and no GPU atlas cross-surface paint mismatch should reappear
 10. full 4v4 performance / dropped-simulation / GPU backlog should remain acceptable
 
-T13 remains **IMPLEMENTATION CANDIDATE**.
+All hosted T13 checks passed on 2026-09-23. T13 is **STABLE FREEZE**.
+
+## T13 final hosted acceptance
+
+User confirmation date: 2026-09-23
+
+Final accepted T13 scope:
+
+- production-stage metadata and shared world bounds
+- player-facing Turf / match / Ink / HP HUD
+- Tactical Map compact/expanded modes
+- corrected Tactical Map vertical orientation
+- enlarged 32×24m INKWORKS JUNCTION arena
+- far-end human and CPU spawn metadata
+- StageDefinition-owned CPU spawn slots and tactical nodes
+- new outer-lane / mid-lane / junction cover geometry
+- new scoreable paintable cover-top surfaces
+- preserved wall/ramp/upper-platform validation structures
+- shared Render / Rapier / Recast / PaintSurface / Tactical Map coordinate contract
+- production-stage 4v4 performance sanity
+- preserved T8–T12 behavior
+
+Stable T13 production-stage checkpoint:
+`fc647806c59e43831a978897baa21e359c5305d7`
+
+Automated production-stage workflow:
+`35817233372`
+
+T13 is now **STABLE FREEZE**.

@@ -25,8 +25,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T13 Candidate</h1>
-      <p>T0–T12 remains frozen. T13 now expands INKWORKS JUNCTION to a 32×24m production arena while keeping HUD/Map/physics/Recast/ink on one StageDefinition.</p>
+      <h1>Browser Ink TPS · T13 Stable</h1>
+      <p>T0–T13 is frozen. INKWORKS JUNCTION, HUD, Tactical Map, shared stage metadata, and 4v4 production-stage behavior are stable.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -73,7 +73,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'T13: enlarged production arena · far-end team spawns · outer lanes + new cover · paintable cover tops · M toggles Tactical Map';
+    hint.textContent = 'T13 stable · enlarged production arena · HUD + Tactical Map · 4v4 Recast combat · M toggles Tactical Map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

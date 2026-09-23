@@ -1,3 +1,26 @@
+## v0.8.0 T13 Stable Freeze — 2026-09-23
+
+### Freeze
+
+- full hosted T13 HUD/Tactical Map QA accepted
+- Tactical Map vertical-orientation correction accepted
+- enlarged 32×24m INKWORKS JUNCTION production arena accepted
+- far-end spawn / CPU spawn / tactical-node metadata accepted
+- new cover collision / pathing / projectile blocking accepted
+- scoreable paintable cover tops accepted
+- Tactical Map enlarged-stage alignment accepted
+- Coordinate Audit and GPU ink alignment accepted
+- 4v4 performance sanity accepted
+- T8–T12 regression sanity accepted
+
+Stable T13 production-stage checkpoint:
+`fc647806c59e43831a978897baa21e359c5305d7`
+
+Automated production-stage workflow:
+`35817233372`
+
+T13 is now **STABLE FREEZE**. Next planned phase: T14 — content, animation, audio, additional weapons, polish.
+
 ## v0.8.0 T13 Production Geometry Candidate — 2026-09-23
 
 - HUD / Tactical Map hosted QA accepted

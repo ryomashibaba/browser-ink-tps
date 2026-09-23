@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.8.0 / T13 IMPLEMENTATION CANDIDATE
+# CURRENT_CANONICAL — v0.8.0 / T13 STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T12 remains the frozen stable foundation. T13 Production Stage / HUD / Tactical Map foundation is implemented on `main`, passes automated CI/deploy, and is awaiting hosted runtime QA before the production-geometry expansion.**
+**T0–T13 is now the frozen stable foundation. T13 Production Stage / HUD / Tactical Map, including the enlarged INKWORKS JUNCTION production arena, passed automated CI/deploy and hosted runtime QA on 2026-09-23.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -347,7 +347,7 @@ T8 remains frozen and T9 is now frozen. The intended order from here is:
 ## Standard workflow
 
 1. Work from current GitHub `main`.
-2. Preserve the T0–T12 Freeze contracts.
+2. Preserve the T0–T13 Freeze contracts.
 3. Design the next coherent batch before implementation.
 4. Push/merge through GitHub.
 5. GitHub Actions must pass typecheck + production build.
@@ -684,7 +684,7 @@ Automated results:
 - TypeScript check: PASS
 - production build: PASS
 - Pages deploy: PASS
-- hosted production-stage QA: **PENDING**
+- hosted production-stage QA: **PASS — user confirmed the enlarged stage, spawns, CPU navigation, cover collision/painting, Tactical Map, Coordinate Audit, and performance sanity on 2026-09-23**
 
 Production geometry changes:
 
@@ -702,4 +702,28 @@ Production geometry changes:
 - outer rails expanded to the new stage bounds
 - original upper platform, ramp, wall, bridge, and T8/T9 validation geometry are retained
 
-T13 remains **IMPLEMENTATION CANDIDATE** until production-stage hosted QA passes.
+All remaining T13 production-stage checks passed on 2026-09-23. T13 is **STABLE FREEZE**.
+
+### Hosted T13 final acceptance
+
+Confirmed by the user on 2026-09-23:
+
+- enlarged 32×24m INKWORKS JUNCTION arena is visually present and playable
+- far-end Team A / Team B respawns are correct
+- seven CPU agents spawn correctly and spread into the expanded lanes
+- new cover blocks player/camera/projectiles correctly
+- new cover tops accept ink and contribute to Turf scoring
+- retained wall swim / Surge / ramp / upper-platform behavior still works
+- Tactical Map shows enlarged bounds, spawns, Turf, human, and CPU positions with the corrected orientation
+- Coordinate Audit remains PASS
+- no GPU atlas cross-surface paint regression was observed
+- 4v4 FPS / dropped-simulation / GPU-backlog behavior remains acceptable for the current stage
+
+Stable T13 production-stage checkpoint:
+`fc647806c59e43831a978897baa21e359c5305d7`
+
+T13 is therefore **STABLE FREEZE**.
+
+## Next phase
+
+- T14 — content, animation, audio, additional weapons, polish

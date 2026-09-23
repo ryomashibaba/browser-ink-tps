@@ -12,12 +12,12 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.8.0 / T13 IMPLEMENTATION CANDIDATE**
+**v0.8.0 / T13 STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
 
-The T0–T12 gameplay foundation remains frozen. The current `main` additionally contains the T13 production-stage metadata / player HUD / Tactical Map candidate:
+The T0–T13 gameplay foundation is frozen. The current `main` includes:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -225,22 +225,14 @@ Do not casually replace:
 The current project intentionally does **not** yet include:
 
 - super jump
-- production HUD / tactical map
 - production models / animation / audio
-- production stage
 - final performance/bundle optimization
 
 ## Current phase
 
-**T12 — CPU players / Recast navigation + tactical layer hosted QA**
+**Next phase: T14 — content, animation, audio, additional weapons, polish**
 
-T0–T11 remains frozen. Both T12 batches are hosted-QA accepted: Recast/Crowd/tactical navigation and CPU weapon combat/HP/Ink/Splat/Respawn.
+T0–T13 is frozen. T14 must preserve the canonical ink pipeline, T8 world interaction, T9 locomotion, T10 combat resources, T11 match/lifecycle, T12 4v4 CPU/Recast systems, and T13 production-stage/HUD/Tactical Map contracts.
 
-Current T12 validation focus:
 
-- Recast runtime initialization / NavMesh generation
-- seven-agent Crowd movement and avoidance
-- role behavior and CPU turf painting
-- 60 Hz simulation stability with eight total participants
-- T13 — production stage / HUD / map
-- T14 — content, animation, audio, weapons, polish
+T13 hosted runtime QA is complete and accepted. The enlarged production arena, HUD, Tactical Map, shared stage metadata, and 4v4 regression/performance checks are frozen.
