@@ -311,7 +311,10 @@ export class InkLabApp {
       const cameraDt = Number.isFinite(dt) && dt > 0
         ? Math.min(dt, GAME_CONFIG.simulation.maxFrameDeltaSeconds)
         : 0;
-      this.cameraController.update(this.player.getPosition(this.playerPosition), cameraDt);
+      this.cameraController.update(
+        this.superJump.getRenderFocusPosition(this.playerPosition),
+        cameraDt
+      );
 
       const report = this.clock.advance(dt, (tick, stepSeconds) => {
         // T4-T11 fixed-step order:
@@ -326,6 +329,7 @@ export class InkLabApp {
             this.player.getPosition(this.playerPosition)
           );
           this.specialGauge.onPlayerSplatted();
+          this.superJump.cancel();
           this.player.setLifecycleActive(false);
           this.projectiles.reset();
         }
@@ -336,14 +340,17 @@ export class InkLabApp {
         }
 
         if (this.match.consumeMatchEnded()) {
+          this.superJump.cancel();
           this.projectiles.reset();
           this.subWeapons.reset();
           this.specialGauge.cancelActive();
         }
 
-        const playerCanAct = this.match.playerCanAct;
+        const matchPlayerCanAct = this.match.playerCanAct;
+        const movementAllowed =
+          matchPlayerCanAct && !this.superJump.blocksPlayerControl;
         const dualieSpaceDodge =
-          playerCanAct &&
+          movementAllowed &&
           this.projectiles.currentPlayerWeapon.weaponClass === 'DUALIES' &&
           this.player.currentMode === 'HUMAN' &&
           !this.input.squidHeld &&
@@ -361,15 +368,21 @@ export class InkLabApp {
             this.input.secondaryHeld
           )
         );
-        if (playerCanAct) this.player.computeFixed(stepSeconds);
+        if (movementAllowed) this.player.computeFixed(stepSeconds);
         if (this.player.consumeWeaponDodgeCompleted()) {
           this.projectiles.notifyDualieDodge();
         }
 
         this.physics.step();
         this.player.syncAfterPhysics(stepSeconds);
+        this.superJump.fixedUpdate(stepSeconds);
 
-        if (playerCanAct) {
+        const playerCanAct =
+          matchPlayerCanAct && !this.superJump.blocksPlayerControl;
+        const playerDamageable =
+          matchPlayerCanAct && !this.superJump.isInvulnerable;
+
+        if (matchPlayerCanAct) {
           this.resources.fixedUpdate(
             stepSeconds,
             this.player.currentMode,
@@ -381,8 +394,8 @@ export class InkLabApp {
           stepSeconds,
           this.match.currentState === 'PLAYING',
           this.selectedTeam,
-          this.player.getPosition(this.cpuHumanPosition),
-          this.match.playerCanAct
+          this.superJump.getFocusPosition(this.cpuHumanPosition),
+          playerDamageable
         );
         this.cpuAgents.drainFireRequests((request) => {
           this.projectiles.queueCpuShot(request);
@@ -390,7 +403,9 @@ export class InkLabApp {
 
         // Keep the camera transform current for every catch-up tick. This prevents
         // render-FPS-dependent aim lag when several 60 Hz ticks run in one frame.
-        this.cameraController.update(this.player.getPosition(this.playerPosition));
+        this.cameraController.update(
+          this.superJump.getFocusPosition(this.playerPosition)
+        );
         this.cameraController.getAimDirection(this.aimDirection);
         this.player.getMuzzlePosition(this.aimDirection, this.muzzlePosition);
         this.cameraController.getAimTarget(this.aimTarget);
@@ -406,8 +421,9 @@ export class InkLabApp {
           this.muzzlePosition,
           this.aimDirection,
           this.selectedTeam,
-          this.player.getPosition(this.playerPosition),
-          this.match.playerCanAct
+          this.superJump.getFocusPosition(this.playerPosition),
+          playerCanAct,
+          playerDamageable
         );
 
         const subPressed = this.input.consumeSubPressed();
@@ -440,7 +456,12 @@ export class InkLabApp {
         );
       });
 
-      this.player.render(report.alpha, this.playerPosition);
+      this.superJump.render(report.alpha);
+      if (this.superJump.usesExternalPlayerPosition) {
+        this.superJump.getRenderFocusPosition(this.playerPosition);
+      } else {
+        this.player.render(report.alpha, this.playerPosition);
+      }
       this.cpuAgents.render(report.alpha);
       this.projectiles.render(report.alpha);
       this.subWeapons.render(report.alpha);
