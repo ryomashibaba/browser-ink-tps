@@ -16,6 +16,7 @@ export class GameFeedback {
   private readonly materialB: StandardMaterial;
   private readonly neutralMaterial: StandardMaterial;
   private audio: AudioContext | null = null;
+  private lastAudioEventMs = 0;
 
   public constructor(
     private readonly app: AppBase,
@@ -139,6 +140,10 @@ export class GameFeedback {
   ): void {
     const audio = this.audio;
     if (!audio || audio.state !== 'running') return;
+
+    const wallNow = performance.now();
+    if (wallNow - this.lastAudioEventMs < 12) return;
+    this.lastAudioEventMs = wallNow;
 
     const now = audio.currentTime;
     const oscillator = audio.createOscillator();

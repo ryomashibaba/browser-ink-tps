@@ -264,20 +264,25 @@ export class ProjectileSystem {
         combatKind &&
         combatDistance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < worldDistance
       ) {
+        let combatPoint = next.clone();
         if (combatKind === 'QA' && qaHit) {
+          combatPoint = qaHit.point.clone();
           this.combatTargets.applyProjectileHit(
             qaHit,
             slotProfile.damage
           );
         } else if (combatKind === 'CPU' && cpuHit) {
+          combatPoint = cpuHit.point.clone();
           this.cpuAgents.applyProjectileHit(
             cpuHit,
             slotProfile.damage
           );
         } else if (combatKind === 'PLAYER') {
+          combatPoint = pointOnSegment(previous, next, combatDistance);
           this.resources.applyDamage(slotProfile.damage);
           this.stats.cpuPlayerHits += 1;
         }
+        this.feedback.impact(slot.team, combatPoint, slotProfile);
         this.stats.projectileImpacts += 1;
         this.deactivate(slot);
         continue;
@@ -448,4 +453,12 @@ function segmentSphereDistance(
   if (discriminant < 0) return null;
   const distance = Math.max(0, -b - Math.sqrt(discriminant));
   return distance <= length ? distance : null;
+}
+
+
+function pointOnSegment(from: Vec3, to: Vec3, distance: number): Vec3 {
+  const direction = to.clone().sub(from);
+  const length = direction.length();
+  if (length <= 1e-8) return from.clone();
+  return from.clone().add(direction.mulScalar(distance / length));
 }
