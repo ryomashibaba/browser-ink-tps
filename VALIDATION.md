@@ -1,16 +1,21 @@
-# Validation Report — v0.2.0 T4–T7 Technical Slice
+# Validation Report — v0.2.0 T4–T7 Stable Freeze
 
-Date: 2026-09-22
+Date: 2026-09-23
+
+## Stable checkpoint
+
+Current stable head:
+`d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
+
+Final stabilization workflow:
+`35800320770`
+
+Hosted build:
+https://ryomashibaba.github.io/browser-ink-tps/
 
 ## Automated validation
 
-First T4–T7 deployment commit:
-`b065157f3a86bb8aceb6c922d9791ce25403c0fa`
-
-GitHub Actions workflow run:
-`35745535871`
-
-Results:
+Final stabilization results:
 
 - Checkout: PASS
 - Node.js setup: PASS
@@ -21,72 +26,133 @@ Results:
 - Pages artifact upload: PASS
 - Pages deploy: PASS
 
+The final workflow validates the complete stabilized source tree, not only the original first T4–T7 implementation.
+
 ## Architecture audit
 
-Confirmed in the integrated source:
+Confirmed in the current stable source:
 
-- gameplay simulation still advances through `FixedStepClock` at 60 Hz
-- Human/Squid movement is called from the fixed-tick callback
-- Rapier character movement uses a kinematic-position-based body and Rapier character controller
-- standard shooter bullets use a fixed-size object pool instead of dynamic rigid bodies
-- projectile movement performs previous→next segment intersection against PaintSurfaces
-- projectile impact creates a `PaintRequest`, not separate CPU/GPU paint
-- `PaintCoordinator.processTick()` still creates the immutable `PaintEvent` once
-- the same event is consumed by `GameplayInkSystem` and `GpuInkAtlas`
-- `GameplayInkSystem.sampleWorld()` samples the existing CPU owner grid using PaintSurface-local coordinates
+- gameplay simulation remains fixed at 60 Hz
+- render presentation is interpolated between fixed states
+- player movement remains custom movement + Rapier kinematic character collision
+- projectiles remain pooled rather than dynamic rigid bodies
+- projectile motion uses previous→next segment sweeps against PaintSurfaces
+- projectile impact produces one `PaintRequest`
+- `PaintCoordinator.processTick()` remains the single immutable PaintEvent creation point
+- CPU gameplay ink remains authoritative
+- GPU visual ink consumes the same PaintEvent rather than recomputing impact
+- gameplay ink remains surface-local
 - turf accounting remains incremental
+- feet-level movement ink sampling excludes wall surfaces
+- Pointer Lock/input state boundaries are explicitly handled
 
-## T4/T5 verification hooks exposed in the build
+## Camera / aiming validation
 
-Debug overlay now exposes:
+The stabilized camera path now uses:
+
+1. one click to acquire Pointer Lock
+2. raw mouse movement for TPS camera control
+3. center-screen camera ray for the visual target
+4. muzzle position as the projectile origin
+5. a gravity-compensated low-arc launch solution toward the center-ray target
+
+Additional protections:
+
+- activation click is not treated as a shot
+- Esc releases Pointer Lock
+- movement/fire states clear when Pointer Lock is lost
+- states also clear on tab visibility loss or window blur
+- latest camera yaw/pitch is applied before fixed ticks
+- catch-up ticks refresh the camera transform before aiming
+
+## Ink visual alignment validation
+
+CPU PaintEvent U/V remains canonical.
+
+The GPU atlas performs the required visual V-orientation correction inside each PaintSurface atlas rectangle. This fixes the observed failure where aiming upward visibly painted below and aiming downward painted above.
+
+The correction does not alter:
+
+- projectile world impact
+- CPU ownership grid
+- turf scoring
+- PaintEvent coordinates
+- PaintSurface local basis
+
+## Fixed-step / presentation validation
+
+The stabilized slice additionally verifies:
+
+- invalid/non-finite frame deltas do not poison the fixed-step accumulator
+- player render position interpolates using `FixedStepClock.alpha`
+- projectile render positions interpolate using the same fixed-step alpha
+- gameplay simulation itself remains 60 Hz
+- projectile fire cadence preserves fractional timing remainder rather than being permanently rounded to a 7-tick cadence
+
+## Defensive validation / invariants
+
+Added and retained:
+
+- PaintSurface dimensions must be finite and positive
+- PaintSurface cell/tile sizes must be valid
+- U/V basis axes must be non-zero and orthogonal
+- invalid PaintSurface normals fail fast
+- GPU brush batch size is capped below Uint16 index overflow
+- QA keyboard shortcuts ignore key-repeat event storms
+
+## Hands-on hosted QA
+
+The user performed iterative hosted-browser QA throughout T4–T7 stabilization and reported issues as they appeared.
+
+Resolved from that QA include:
+
+- reversed camera drag direction from the earlier camera implementation
+- replacement of hold-to-drag camera operation with Pointer Lock TPS mouse look
+- camera/shot vertical disagreement
+- crosshair/projectile direction mismatch
+- projectile-gravity vertical offset
+- final visible ink vertical inversion
+
+After the final visual ink orientation correction, the user accepted the current phase as completed.
+
+This is considered the T4–T7 Stable Freeze checkpoint.
+
+## Observable debug hooks retained
+
+Debug overlay exposes:
 
 - Human/Squid state
 - grounded state
-- horizontal movement speed
-- sampled ink relationship: OWN / ENEMY / NEUTRAL / NONE
-
-This makes hosted QA observable without adding a second gameplay truth.
-
-## T6/T7 verification hooks exposed in the build
-
-Debug overlay now exposes:
-
-- active pooled projectile count
+- measured horizontal movement speed
+- OWN / ENEMY / NEUTRAL / NONE ink relation
+- active projectile count
 - projectile impact count
 - projectile pool drops
-- existing paint events/s
+- paint events/s
 - ink cells/s
 - GPU paint backlog
 - turf percentages
 
-The aiming crosshair and retained Alt+Left direct-paint path allow projectile paint to be compared against the pre-existing T0–T3 debug paint path.
+The retained Alt+Left direct-paint QA path can still be used to compare the original paint path against projectile-generated PaintEvents.
 
-## Hands-on hosted QA pending
+## Known boundaries intentionally deferred
 
-CI validates compilation and production bundling; it does not prove browser input/physics/render behavior.
+The following are not part of the completed T4–T7 slice:
 
-The hosted build should therefore be checked for:
+- full projectile blocking against decorative/non-paintable stage geometry
+- camera obstruction / wall avoidance
+- state-specific Squid physical collision shape
+- ink tank / consumption / refill
+- damage / HP / splat
+- respawn
+- match timer / result / complete Turf War loop
+- CPU players / Recast navigation
+- super jump
+- production HUD / tactical map
+- production character art / animation / audio
+- production stage
+- wetness decay
+- final dirty-tile consumer policy
+- bundle-size optimization
 
-1. WASD movement in camera-relative directions.
-2. Space jump and stable landing.
-3. no obvious collision tunneling through arena geometry.
-4. traversal of the ramp/slope.
-5. Shift Human↔Squid state transition.
-6. OWN ink causing the intended fast Squid movement.
-7. NEUTRAL/ENEMY producing visibly slower Squid movement.
-8. sustained left-click shooter fire.
-9. floor impact painting.
-10. ramp impact painting.
-11. wall impact painting without adding wall area to Turf score.
-12. visible paint centered on the projectile impact.
-13. Team A/B switching affecting both player/projectile team and paint.
-14. CPU turf and GPU visual ink remaining aligned.
-15. GPU backlog returning toward zero under normal fire and after stress.
-
-## Known validation boundary
-
-Projectile segment collision currently resolves the paintable PaintSurface planes. A full projectile-blocking representation of decorative/non-paintable boxes is not part of v0.2.0.
-
-Squid movement is authoritative-ink-driven, but this slice retains the shared character collision capsule rather than changing the physical capsule per state.
-
-These are documented follow-up items rather than hidden assumptions.
+These should be handled in later phases instead of weakening the current freeze.
