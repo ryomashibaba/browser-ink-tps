@@ -7,6 +7,11 @@ import {
   nextWeaponId,
   type WeaponId
 } from '../weapons/WeaponCatalog';
+import {
+  specialWeaponProfile,
+  subWeaponProfile,
+  weaponKit
+} from '../weapons/WeaponKitCatalog';
 
 export interface ControlPanelHandlers {
   onTeamChanged(team: Team.A | Team.B): void;
@@ -36,8 +41,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T15 Candidate</h1>
-      <p>T14 weapon baseline is frozen. T15 adds Pulse Bomb sub-weapon input and a turf-earned Turf Pulse special gauge.</p>
+      <h1>Browser Ink TPS · T16 Candidate</h1>
+      <p>T0–T15 is frozen. Each main weapon now has its own fixed sub + special kit.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -45,8 +50,13 @@ export class ControlPanel {
       <div class="weapon-row">
         ${WEAPON_ORDER.map((id) => {
           const weapon = WEAPON_PROFILES[id];
+          const kit = weaponKit(id);
+          const sub = subWeaponProfile(kit.sub);
+          const special = specialWeaponProfile(kit.special);
           return `<button data-weapon="${id}" class="${id === this.weapon ? 'active-weapon' : ''}">
-            <span>${weapon.classLabel}</span><strong>${weapon.displayName}</strong>
+            <span>${weapon.classLabel}</span>
+            <strong>${weapon.displayName}</strong>
+            <small>F ${sub.displayName} · G ${special.displayName}</small>
           </button>`;
         }).join('')}
       </div>
@@ -103,7 +113,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'F Pulse Bomb · G Turf Pulse when SPECIAL is ready · Dualies: LMB + move + SPACE · Q/E weapons · M map';
+    hint.textContent = 'F = current Sub · G = current Special when READY · Q/E changes full weapon kit · M map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
