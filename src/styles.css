@@ -576,3 +576,21 @@ button.active-weapon {
   from { transform: translate(-50%, -50%) scale(1); }
   to { transform: translate(-50%, -50%) scale(1.08); }
 }
+
+
+/* T16 weapon-kit presentation */
+.weapon-row button small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(225,239,248,.60);
+  font: 700 8px/1.25 system-ui, sans-serif;
+  letter-spacing: 0;
+}
+.hud-kit-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.055);
+  color: rgba(225,239,248,.76);
+  white-space: nowrap;
+}
