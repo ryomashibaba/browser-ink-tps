@@ -30,6 +30,7 @@ The T0–T8 stable foundation remains frozen. The current `main` additionally co
 - canonical PaintSurface world/local coordinate conversion with startup cross-audit
 - runtime coordinate diagnostics in the technical overlay
 - `Coord QA` deterministic ink + matching 3D world markers across all PaintSurfaces
+- corrected GPU atlas top-origin render placement vs bottom-origin texture sampling mismatch
 - Roll QA Pad fills the complete main-floor for easy locomotion QA
 - pooled swept shooter projectiles
 - center-crosshair TPS aiming
@@ -126,10 +127,10 @@ T9 initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
 T9 current coordinate-audit candidate:
-`a152aed2f9fcc390c39172c8264b8ca775244719`
+`0b95810314e5f91b047577eba4a94c6f9db89100`
 
 T9 current automated workflow:
-`35809531970`
+`35810161552`
 
 Passed:
 

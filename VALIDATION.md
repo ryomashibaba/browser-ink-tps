@@ -347,3 +347,39 @@ Hosted acceptance condition:
 - `Roll QA Pad` fills the complete main-floor rectangle and movement sampling on it reports `main-floor / OWN`
 
 T9 remains unfrozen until this hosted check is accepted.
+
+## T9 GPU atlas origin root-cause fix — 2026-09-23
+
+Fix commit:
+`0b95810314e5f91b047577eba4a94c6f9db89100`
+
+Workflow:
+`35810161552`
+
+Automated result:
+
+- TypeScript check: PASS
+- production build: PASS
+- Pages artifact upload: PASS
+- GitHub Pages deploy: PASS
+- hosted visual recheck: **PENDING**
+
+Root cause:
+
+- runtime screenshot showed `Team A turf = 252.0 m²`, exactly equal to the full 18 m × 14 m `main-floor` area
+- `Last paint = main-floor / 9.00, 7.00` and `Paint world = 0.00, 0.03, 0.00` also matched the expected surface center
+- therefore CPU PaintEvent, GameplayInk rasterization, PaintSurface local U/V, and local→world conversion were correct
+- the visual failure was isolated to GPU atlas sampling
+- atlas rectangles are allocated/rendered in top-origin render-target space, but the surface shader had been sampling `rect.y / atlasSize` as a bottom-origin texture UV
+- this caused one PaintSurface to sample texels belonging to a different vertical atlas region
+
+Fix:
+
+- added `AtlasCoordinates.ts` as the single GPU atlas coordinate contract
+- GPU brush placement still uses top-origin render-target coordinates
+- surface shader now converts the packed top-origin rect into bottom-origin texture UVs
+- shader sampling uses the exact active PaintSurface pixel span rather than the ceil-packed extent
+- startup audit now verifies that each local U/V point written by the GPU brush resolves to the same sampled texel after origin conversion
+- CPU authoritative ink coordinates were not flipped or modified
+
+T9 remains a candidate until the hosted Roll QA Pad / Coord QA visual check passes.

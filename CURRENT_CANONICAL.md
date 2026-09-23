@@ -264,10 +264,10 @@ Initial implementation commit:
 `110f925fe830ea2aa3865b3c88525c81d1e08f92`
 
 Current T9 coordinate-audit candidate:
-`a152aed2f9fcc390c39172c8264b8ca775244719`
+`0b95810314e5f91b047577eba4a94c6f9db89100`
 
 Current automated workflow:
-`35809531970`
+`35810161552`
 
 Automated results:
 
@@ -293,6 +293,8 @@ T9 candidate adds:
 - startup coordinate audit covering local↔world round-trip, atlas dimensions, PaintSurface↔backing-solid face gap, face-normal alignment, and tangential bounds
 - runtime coordinate diagnostics for Player XYZ, sampled surface/U/V, and last PaintEvent local/world position
 - `Coord QA` visual test: deterministic ink probes on every PaintSurface plus matching world-space 3D markers to expose GPU/local/world offsets
+- fixed GPU atlas sampling-origin mismatch: atlas render placement is top-origin while surface texture sampling is bottom-origin; conversion is now centralized in `AtlasCoordinates.ts`
+- CPU PaintEvent / GameplayInk U/V and world coordinates remain unchanged
 - Roll QA Pad now fills the entire `main-floor` instead of a narrow strip
 - no-ink / neutral Squid movement uses Human-equivalent speed and acceleration; enemy ink remains slowed
 - Squid-form main-fire suppression

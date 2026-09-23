@@ -1,3 +1,22 @@
+## v0.4.0 T9 GPU Atlas Origin Fix — 2026-09-23
+
+- isolated reported main-floor visual failure to GPU atlas sampling rather than CPU/world coordinates
+- corrected top-origin atlas allocation/render coordinates to bottom-origin surface texture UV sampling
+- centralized GPU atlas transforms in `AtlasCoordinates.ts`
+- added startup atlas write↔sample coordinate contract checks
+- preserved canonical CPU PaintEvent U/V and GameplayInk ownership
+
+Fix commit:
+`0b95810314e5f91b047577eba4a94c6f9db89100`
+
+Workflow:
+`35810161552`
+
+- TypeScript: PASS
+- production build: PASS
+- GitHub Pages deploy: PASS
+- hosted visual recheck: PENDING
+
 ## v0.4.0 T9 Visual Coordinate QA — 2026-09-23
 
 - extended stage-coordinate audit to backing-solid face normals and tangential OBB bounds
