@@ -6,6 +6,7 @@ export interface ControlPanelHandlers {
   onBrushChanged(radius: number): void;
   onStress(count: number): void;
   onRollQaPad(): void;
+  onCoordinateQa(): void;
   onClear(): void;
 }
 
@@ -21,8 +22,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T4–T7</h1>
-      <p>Click the game view once for TPS mouse look. WASD movement, Space jump, Shift squid state, left mouse shooter. CPU gameplay ink remains authoritative; projectile impacts feed the existing shared PaintEvent pipeline.</p>
+      <h1>Browser Ink TPS · T9 Candidate</h1>
+      <p>Click the game view once for TPS mouse look. T0–T8 remains frozen; T9 locomotion and coordinate QA are under validation.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -32,6 +33,7 @@ export class ControlPanel {
       </label>
       <div class="row">
         <button id="roll-qa">Roll QA Pad</button>
+        <button id="coord-qa">Coord QA</button>
         <button id="stress-small">Stress ${GAME_CONFIG.debug.stressBurstSmall}</button>
         <button id="stress-large">Stress ${GAME_CONFIG.debug.stressBurstLarge}</button>
         <button id="clear" class="danger">Clear Ink</button>
@@ -53,13 +55,14 @@ export class ControlPanel {
     });
 
     (panel.querySelector('#roll-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onRollQaPad());
+    (panel.querySelector('#coord-qa') as HTMLButtonElement).addEventListener('click', () => handlers.onCoordinateQa());
     (panel.querySelector('#stress-small') as HTMLButtonElement).addEventListener('click', () => handlers.onStress(GAME_CONFIG.debug.stressBurstSmall));
     (panel.querySelector('#stress-large') as HTMLButtonElement).addEventListener('click', () => handlers.onStress(GAME_CONFIG.debug.stressBurstLarge));
     (panel.querySelector('#clear') as HTMLButtonElement).addEventListener('click', () => handlers.onClear());
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Click view to capture mouse · Mouse look · Esc release · WASD move · Space jump · Shift squid · Left fire · Wheel zoom · Roll QA Pad creates a wide own-ink test area · Alt+Left QA paint · 1/2 team · R clear';
+    hint.textContent = 'Click view to capture mouse · Mouse look · Esc release · WASD move · Space jump · Shift squid · Left fire · Wheel zoom · Roll QA Pad fills main floor · Coord QA places ink under 3D markers · Alt+Left QA paint · 1/2 team · R clear';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');

@@ -7,6 +7,7 @@ export interface CoordinateAuditResult {
   checkedSurfaces: number;
   maxRoundTripErrorMeters: number;
   maxBackingGapMeters: number;
+  maxBackingNormalErrorDegrees: number;
   summary: string;
 }
 
@@ -17,6 +18,7 @@ export function auditStageCoordinates(
 ): CoordinateAuditResult {
   let maxRoundTripErrorMeters = 0;
   let maxBackingGapMeters = 0;
+  let maxBackingNormalErrorDegrees = 0;
 
   for (const surface of surfaces) {
     maxRoundTripErrorMeters = Math.max(
@@ -33,11 +35,20 @@ export function auditStageCoordinates(
       );
     }
 
-    const gap = backingFaceGap(surface, solid);
-    maxBackingGapMeters = Math.max(maxBackingGapMeters, gap);
-    if (gap > backingGapToleranceMeters) {
+    const backing = auditBackingFit(surface, solid);
+    maxBackingGapMeters = Math.max(maxBackingGapMeters, backing.maxFaceGapMeters);
+    maxBackingNormalErrorDegrees = Math.max(
+      maxBackingNormalErrorDegrees,
+      backing.normalErrorDegrees
+    );
+    if (backing.maxFaceGapMeters > backingGapToleranceMeters) {
       throw new Error(
-        `Coordinate audit: ${surface.id} is ${gap.toFixed(4)}m from ${solid.id} face.`
+        `Coordinate audit: ${surface.id} is ${backing.maxFaceGapMeters.toFixed(4)}m from ${solid.id} face.`
+      );
+    }
+    if (backing.normalErrorDegrees > 0.25) {
+      throw new Error(
+        `Coordinate audit: ${surface.id} normal differs from ${solid.id} face by ${backing.normalErrorDegrees.toFixed(3)} degrees.`
       );
     }
 
@@ -57,33 +68,67 @@ export function auditStageCoordinates(
     checkedSurfaces: surfaces.length,
     maxRoundTripErrorMeters,
     maxBackingGapMeters,
+    maxBackingNormalErrorDegrees,
     summary:
-      `PASS ${surfaces.length}/${surfaces.length} · round ${maxRoundTripErrorMeters.toExponential(1)}m · solid ${maxBackingGapMeters.toFixed(3)}m`
+      `PASS ${surfaces.length}/${surfaces.length} · round ${maxRoundTripErrorMeters.toExponential(1)}m · solid ${maxBackingGapMeters.toFixed(3)}m · angle ${maxBackingNormalErrorDegrees.toFixed(3)}°`
   };
 }
 
-function backingFaceGap(surface: PaintSurface, solid: StageSolidDefinition): number {
+function auditBackingFit(
+  surface: PaintSurface,
+  solid: StageSolidDefinition
+): { maxFaceGapMeters: number; normalErrorDegrees: number } {
   const solidCenter = vec3(solid.center);
   const inverse = inverseRotation(solid);
-  const localCenter = rotate(surface.center.clone().sub(solidCenter), inverse);
   const localNormal = rotate(surface.normal.clone(), inverse);
-  const ax = Math.abs(localNormal.x);
-  const ay = Math.abs(localNormal.y);
-  const az = Math.abs(localNormal.z);
+  const components = [
+    Math.abs(localNormal.x),
+    Math.abs(localNormal.y),
+    Math.abs(localNormal.z)
+  ] as const;
+  let normalAxis = 0;
+  if (components[1] > components[normalAxis]) normalAxis = 1;
+  if (components[2] > components[normalAxis]) normalAxis = 2;
 
-  let planeCoord: number;
-  let halfExtent: number;
-  if (ay >= ax && ay >= az) {
-    planeCoord = Math.abs(localCenter.y);
-    halfExtent = solid.size[1] * 0.5;
-  } else if (az >= ax && az >= ay) {
-    planeCoord = Math.abs(localCenter.z);
-    halfExtent = solid.size[2] * 0.5;
-  } else {
-    planeCoord = Math.abs(localCenter.x);
-    halfExtent = solid.size[0] * 0.5;
+  const dominant = Math.min(1, Math.max(0, components[normalAxis]));
+  const normalErrorDegrees = Math.acos(dominant) * 180 / Math.PI;
+  const half = [
+    solid.size[0] * 0.5,
+    solid.size[1] * 0.5,
+    solid.size[2] * 0.5
+  ] as const;
+
+  let maxFaceGapMeters = 0;
+  const tangentialTolerance = 0.10;
+  const corners: readonly [number, number][] = [
+    [0, 0],
+    [surface.widthMeters, 0],
+    [surface.widthMeters, surface.heightMeters],
+    [0, surface.heightMeters]
+  ];
+
+  for (const [u, v] of corners) {
+    const local = rotate(
+      surface.localToWorld(u, v).sub(solidCenter),
+      inverse
+    );
+    const values = [local.x, local.y, local.z] as const;
+    maxFaceGapMeters = Math.max(
+      maxFaceGapMeters,
+      Math.abs(Math.abs(values[normalAxis]) - half[normalAxis])
+    );
+
+    for (let axis = 0; axis < 3; axis += 1) {
+      if (axis === normalAxis) continue;
+      if (Math.abs(values[axis]) > half[axis] + tangentialTolerance) {
+        throw new Error(
+          `Coordinate audit: ${surface.id} corner (${u.toFixed(2)}, ${v.toFixed(2)}) exceeds ${solid.id} tangential bounds on axis ${axis}.`
+        );
+      }
+    }
   }
-  return Math.abs(planeCoord - halfExtent);
+
+  return { maxFaceGapMeters, normalErrorDegrees };
 }
 
 function inverseRotation(solid: StageSolidDefinition): Quat {

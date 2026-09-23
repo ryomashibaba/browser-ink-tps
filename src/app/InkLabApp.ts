@@ -11,6 +11,7 @@ import {
   LightComponentSystem,
   RenderComponentSystem,
   RESOLUTION_AUTO,
+  StandardMaterial,
   TextureHandler,
   Vec3
 } from 'playcanvas';
@@ -21,6 +22,7 @@ import { PerformanceStats } from '../core/PerformanceStats';
 import { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { GpuInkAtlas } from '../ink/GpuInkAtlas';
 import { PaintCoordinator } from '../ink/PaintCoordinator';
+import type { PaintSurface } from '../ink/PaintSurface';
 import { Team } from '../ink/types';
 import { PlayerInput } from '../input/PlayerInput';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
@@ -80,6 +82,9 @@ export class InkLabApp {
   private readonly aimDirection = new Vec3();
   private readonly aimTarget = new Vec3();
   private readonly muzzlePosition = new Vec3();
+  private readonly coordinateQaMarkers: Entity[] = [];
+  private readonly coordinateQaMaterialA = makeQaMarkerMaterial(GAME_CONFIG.visual.teamA);
+  private readonly coordinateQaMaterialB = makeQaMarkerMaterial(GAME_CONFIG.visual.teamB);
   private selectedTeam: Team.A | Team.B = Team.A;
   private brushRadius: number = GAME_CONFIG.debug.defaultBrushRadiusMeters;
 
@@ -127,8 +132,15 @@ export class InkLabApp {
       },
       onBrushChanged: (radius) => { this.brushRadius = radius; },
       onStress: (count) => this.enqueueStressTest(count),
-      onRollQaPad: () => this.enqueueRollQaPad(),
-      onClear: () => this.coordinator.clear()
+      onRollQaPad: () => {
+        this.clearCoordinateQaMarkers();
+        this.enqueueRollQaPad();
+      },
+      onCoordinateQa: () => this.enqueueCoordinateVisualQa(surfaces),
+      onClear: () => {
+        this.clearCoordinateQaMarkers();
+        this.coordinator.clear();
+      }
     });
     this.selectedTeam = this.controls.selectedTeam;
     this.brushRadius = this.controls.brushRadius;
@@ -261,6 +273,75 @@ export class InkLabApp {
     this.app.root.addChild(fill);
   }
 
+  private enqueueCoordinateVisualQa(surfaces: readonly PaintSurface[]): void {
+    this.clearCoordinateQaMarkers();
+    this.coordinator.clear();
+
+    const probes = [
+      { u: 0.18, v: 0.18, team: Team.A, radius: 0.30, marker: 0.13 },
+      { u: 0.82, v: 0.18, team: Team.A, radius: 0.55, marker: 0.22 },
+      { u: 0.82, v: 0.82, team: Team.B, radius: 0.32, marker: 0.14 },
+      { u: 0.18, v: 0.82, team: Team.B, radius: 0.58, marker: 0.23 }
+    ] as const;
+
+    for (const surface of surfaces) {
+      const outward = this.getSurfaceOutwardNormal(surface);
+      probes.forEach((probe, index) => {
+        const u = surface.widthMeters * probe.u;
+        const v = surface.heightMeters * probe.v;
+        this.coordinator.enqueue(this.coordinator.makeDebugRequest(
+          probe.team,
+          surface.id,
+          u,
+          v,
+          probe.radius,
+          0,
+          1
+        ));
+
+        const marker = new Entity(`CoordQA:${surface.id}:${index}`);
+        marker.addComponent('render', {
+          type: 'sphere',
+          material: probe.team === Team.A
+            ? this.coordinateQaMaterialA
+            : this.coordinateQaMaterialB,
+          castShadows: false,
+          receiveShadows: false
+        });
+        marker.setLocalScale(probe.marker, probe.marker, probe.marker);
+        const world = surface.localToWorld(u, v);
+        world.add(outward.clone().mulScalar(0.10));
+        marker.setPosition(world);
+        this.app.root.addChild(marker);
+        this.coordinateQaMarkers.push(marker);
+      });
+    }
+  }
+
+  private clearCoordinateQaMarkers(): void {
+    for (const marker of this.coordinateQaMarkers) marker.destroy();
+    this.coordinateQaMarkers.length = 0;
+  }
+
+  private getSurfaceOutwardNormal(surface: PaintSurface): Vec3 {
+    const spec = TEST_STAGE_DEFINITION.paintSurfaces.find(
+      (candidate) => candidate.id === surface.id
+    );
+    const solid = spec
+      ? TEST_STAGE_DEFINITION.solids.find((candidate) => candidate.id === spec.backingSolidId)
+      : undefined;
+    const outward = surface.normal.clone();
+    if (!solid) return outward;
+
+    const toSurface = surface.center.clone().sub(new Vec3(
+      solid.center[0],
+      solid.center[1],
+      solid.center[2]
+    ));
+    if (toSurface.dot(outward) < 0) outward.mulScalar(-1);
+    return outward;
+  }
+
   private enqueueRollQaPad(): void {
     const surface = this.gameplayInk.getSurface('main-floor');
     if (!surface) {
@@ -313,4 +394,16 @@ function resolveAtlasSize(maxTextureSize: number): number {
   if (maxTextureSize >= GAME_CONFIG.ink.requestedAtlasSize) return GAME_CONFIG.ink.requestedAtlasSize;
   if (maxTextureSize >= GAME_CONFIG.ink.fallbackAtlasSize) return GAME_CONFIG.ink.fallbackAtlasSize;
   throw new Error(`GPU max texture size ${maxTextureSize} is below the 2048 ink-atlas fallback requirement.`);
+}
+
+
+function makeQaMarkerMaterial(rgb: readonly [number, number, number]): StandardMaterial {
+  const material = new StandardMaterial();
+  material.diffuse = new Color(rgb[0], rgb[1], rgb[2]);
+  material.emissive = new Color(rgb[0] * 0.75, rgb[1] * 0.75, rgb[2] * 0.75);
+  material.useMetalness = true;
+  material.metalness = 0.05;
+  material.gloss = 0.92;
+  material.update();
+  return material;
 }
