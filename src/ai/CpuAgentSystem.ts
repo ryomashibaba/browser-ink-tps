@@ -22,6 +22,19 @@ export interface CpuFireRequest {
   target: Vec3;
 }
 
+type CpuMobilityState =
+  | 'GROUND'
+  | 'JUMP_PREP'
+  | 'JUMP_TRAVEL'
+  | 'JUMP_LANDING';
+
+interface CpuJumpCandidate {
+  id: string;
+  position: Vec3;
+  isHuman: boolean;
+  score: number;
+}
+
 interface CpuBot {
   id: string;
   team: Team.A | Team.B;
@@ -40,6 +53,17 @@ interface CpuBot {
   hpRecoveryDelaySeconds: number;
   lifeState: 'ACTIVE' | 'SPLATTED';
   respawnRemainingSeconds: number;
+  mobilityState: CpuMobilityState;
+  jumpMarker: Entity;
+  jumpStartPosition: Vec3;
+  jumpTargetPosition: Vec3;
+  jumpTargetId: string;
+  jumpPrepRemaining: number;
+  jumpTravelElapsed: number;
+  jumpActionRemaining: number;
+  jumpCooldownSeconds: number;
+  jumpRespawnWindowSeconds: number;
+  jumpArcHeight: number;
 }
 
 export class CpuAgentSystem {
@@ -72,6 +96,7 @@ export class CpuAgentSystem {
     for (const bot of this.bots) {
       if (bot.agent) this.navigation.removeAgent(bot.agent);
       bot.entity.destroy();
+      bot.jumpMarker.destroy();
     }
     this.bots.length = 0;
     this.pendingShots.length = 0;
@@ -81,6 +106,12 @@ export class CpuAgentSystem {
     this.stats.cpuCombatHits = 0;
     this.stats.cpuSplats = 0;
     this.stats.cpuRespawns = 0;
+    this.stats.cpuSuperJumps = 0;
+    this.stats.cpuSuperJumpPrep = 0;
+    this.stats.cpuSuperJumpAirborne = 0;
+    this.stats.cpuSuperJumpLandings = 0;
+    this.stats.cpuSuperJumpCancels = 0;
+    this.stats.cpuSuperJumpLast = '-';
 
     const teamACount = humanTeam === Team.A ? 3 : 4;
     const teamBCount = GAME_CONFIG.cpu.cpuPlayers - teamACount;
