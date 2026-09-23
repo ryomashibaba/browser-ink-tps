@@ -1345,7 +1345,8 @@ export class ProjectileSystem {
       5,
       0.42,
       PaintEventType.Impact,
-      PaintSource.Cpu
+      PaintSource.Cpu,
+      request.sourceId
     );
     this.feedback.melee(request.team, center, profile, 0.82);
   }
