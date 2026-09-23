@@ -32,7 +32,7 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T19 CANDIDATE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T19A STABLE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
