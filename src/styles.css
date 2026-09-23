@@ -594,3 +594,29 @@ button.active-weapon {
   color: rgba(225,239,248,.76);
   white-space: nowrap;
 }
+
+
+/* T17 Super Jump */
+#tactical-map.expanded canvas {
+  cursor: crosshair;
+}
+#tactical-map.expanded {
+  border-color: rgba(235,247,255,.28);
+  box-shadow: 0 20px 62px rgba(0,0,0,.54);
+}
+#hud-center-message.super-jump {
+  font-size: 27px;
+  color: #e8fbff;
+  text-shadow: 0 0 18px rgba(115,233,247,.52), 0 5px 18px rgba(0,0,0,.78);
+}
+#hud-center-message.super-jump.landing {
+  font-size: 22px;
+}
+.hud-jump-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(185,251,255,.24);
+  background: rgba(115,233,247,.09);
+  color: rgba(225,252,255,.88);
+  white-space: nowrap;
+}
