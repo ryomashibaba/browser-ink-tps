@@ -1021,3 +1021,20 @@ Required hosted checks:
 9. T8–T13 camera, painting authority, match, CPU, stage, HUD/map behavior show no regression.
 
 T14 remains **IMPLEMENTATION CANDIDATE** until these hosted checks pass.
+
+
+## T14 v0.9.5 two-ring Splatling / Stringer hosted QA
+
+1. Rotor Cannon: hold LMB. The inner/first charge ring should fill first and complete at about 0.80 s; the outer/second ring then fills until about 1.20 s.
+2. Rotor Cannon: release below ring 1, at ring 1, and at full charge. Projectile range should grow only up to ring 1; ring 2 should mainly increase burst duration.
+3. Rotor Cannon: ring-1 release should produce roughly half the full-charge volley (~18 vs ~36 shots with current project cadence).
+4. Chord Stringer: first ring must complete at about 0.50 s; second/full ring at about 1.20 s.
+5. Chord Stringer below ring 1: no delayed fuse explosion; the three arrows retain the wide ~8 degree spread.
+6. Chord Stringer at ring 1: landed arrows create independent 0.75 s fuses and delayed 30-damage bursts; direct arrow damage has reached its 35-damage stage.
+7. Chord Stringer through ring 2: direct arrow damage stays at the ring-1 level while the three-arrow spread visibly converges toward 0, projectile speed/range rises, and paint width grows.
+8. Stringer ink consumption should rise with charge: approximately 5 at minimum, 6 at ring 1, 8.5 at full charge from the 100-point project tank.
+9. HUD must show two distinct charge circles for Rotor Cannon and Chord Stringer, and Debug must report charge ring 0/2, 1/2, then 2/2.
+10. Charger and Splatana charge presentation and behavior must remain unchanged.
+11. T0–T13 ink authority, 60 Hz simulation, CPU, camera/aim, match loop, and stage behavior must show no regression.
+
+T14 remains **IMPLEMENTATION CANDIDATE** until the hosted checks above pass.
