@@ -225,11 +225,13 @@ export class CpuAgentSystem {
         this.paintAtBot(bot);
       }
 
-      bot.fireRemaining -= dt;
-      if (bot.fireRemaining <= 0) {
-        bot.fireRemaining += cpuFireInterval(bot);
-        this.tryQueueShot(bot, humanTeam, humanPosition, humanActive);
-      }
+      this.updateCpuWeapon(
+        bot,
+        dt,
+        humanTeam,
+        humanPosition,
+        humanActive
+      );
     }
 
     this.syncStats();
@@ -527,23 +529,136 @@ export class CpuAgentSystem {
     }
   }
 
-  private tryQueueShot(
+  private updateCpuWeapon(
     bot: CpuBot,
+    dt: number,
     humanTeam: Team.A | Team.B,
     humanPosition: Vec3,
     humanActive: boolean
   ): void {
-    if (bot.ink + 1e-6 < GAME_CONFIG.inkEconomy.inkPerShot) return;
+    const profile = weaponProfile(bot.weaponId);
+    bot.fireRemaining = Math.max(0, bot.fireRemaining - dt);
+    bot.weaponBurstCooldown = Math.max(0, bot.weaponBurstCooldown - dt);
 
-    const target = this.chooseCombatTarget(bot, humanTeam, humanPosition, humanActive);
-    if (!target) return;
+    const target = this.chooseCombatTarget(
+      bot,
+      humanTeam,
+      humanPosition,
+      humanActive
+    );
 
-    const dx = target.x - bot.position.x;
-    const dy = target.y - (bot.position.y + GAME_CONFIG.cpu.muzzleHeightMeters);
-    const dz = target.z - bot.position.z;
-    if (dx * dx + dy * dy + dz * dz > GAME_CONFIG.cpu.combatRangeMeters ** 2) return;
+    if (profile.weaponClass === 'SPLATLING') {
+      this.updateCpuSplatling(bot, profile, target, dt);
+      return;
+    }
 
-    bot.ink = Math.max(0, bot.ink - GAME_CONFIG.inkEconomy.inkPerShot);
+    if (profile.weaponClass === 'CHARGER') {
+      this.updateCpuCharger(bot, profile, target, dt);
+      return;
+    }
+
+    bot.weaponChargeSeconds = 0;
+    bot.weaponBurstShotsRemaining = 0;
+
+    if (!target || bot.fireRemaining > 0) return;
+    if (!this.cpuTargetInRange(bot, target, profile)) return;
+
+    if (this.queueCpuWeaponRequest(bot, target, 0)) {
+      bot.fireRemaining = profile.fireIntervalSeconds;
+    } else {
+      bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+    }
+  }
+
+  private updateCpuCharger(
+    bot: CpuBot,
+    profile: ReturnType<typeof weaponProfile>,
+    target: Vec3 | null,
+    dt: number
+  ): void {
+    if (!target || !this.cpuTargetInRange(bot, target, profile)) {
+      bot.weaponChargeSeconds = 0;
+      return;
+    }
+
+    if (bot.fireRemaining > 0) return;
+
+    bot.weaponChargeSeconds = Math.min(
+      profile.chargeSeconds,
+      bot.weaponChargeSeconds + dt
+    );
+
+    if (bot.weaponChargeSeconds + 1e-6 < profile.chargeSeconds) return;
+
+    if (this.queueCpuWeaponRequest(bot, target, 1)) {
+      bot.fireRemaining = profile.fireIntervalSeconds;
+    } else {
+      bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+    }
+    bot.weaponChargeSeconds = 0;
+  }
+
+  private updateCpuSplatling(
+    bot: CpuBot,
+    profile: ReturnType<typeof weaponProfile>,
+    target: Vec3 | null,
+    dt: number
+  ): void {
+    if (bot.weaponBurstShotsRemaining > 0) {
+      if (!target || !this.cpuTargetInRange(bot, target, profile)) {
+        bot.weaponBurstShotsRemaining = 0;
+        bot.weaponChargeSeconds = 0;
+        return;
+      }
+      if (bot.weaponBurstCooldown > 0) return;
+
+      if (this.queueCpuWeaponRequest(bot, target, 1)) {
+        bot.weaponBurstShotsRemaining -= 1;
+        bot.weaponBurstCooldown = profile.burstIntervalSeconds;
+      } else {
+        bot.weaponBurstShotsRemaining = 0;
+        bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
+      }
+      return;
+    }
+
+    if (!target || !this.cpuTargetInRange(bot, target, profile)) {
+      bot.weaponChargeSeconds = 0;
+      return;
+    }
+
+    if (bot.fireRemaining > 0) return;
+
+    bot.weaponChargeSeconds = Math.min(
+      profile.firstChargeSeconds,
+      bot.weaponChargeSeconds + dt
+    );
+
+    if (
+      bot.weaponChargeSeconds + 1e-6 <
+      Math.max(profile.minChargeSeconds, profile.firstChargeSeconds)
+    ) {
+      return;
+    }
+
+    bot.weaponBurstShotsRemaining = Math.max(
+      3,
+      Math.round(profile.burstMaxShots * 0.5)
+    );
+    bot.weaponBurstCooldown = 0;
+    bot.weaponChargeSeconds = 0;
+    bot.fireRemaining = profile.fireIntervalSeconds;
+  }
+
+  private queueCpuWeaponRequest(
+    bot: CpuBot,
+    target: Vec3,
+    charge: number
+  ): boolean {
+    const profile = weaponProfile(bot.weaponId);
+    if (bot.ink + 1e-6 < profile.inkCost) return false;
+
+    bot.ink = Math.max(0, bot.ink - profile.inkCost);
     bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
 
     const origin = new Vec3(
@@ -551,13 +666,26 @@ export class CpuAgentSystem {
       bot.position.y + GAME_CONFIG.cpu.muzzleHeightMeters,
       bot.position.z
     );
+
     this.pendingShots.push({
       sourceId: bot.id,
       team: bot.team,
       origin,
-      target: target.clone()
+      target: target.clone(),
+      weaponId: bot.weaponId,
+      charge
     });
     this.stats.cpuShots += 1;
+    return true;
+  }
+
+  private cpuTargetInRange(
+    bot: CpuBot,
+    target: Vec3,
+    profile: ReturnType<typeof weaponProfile>
+  ): boolean {
+    const range = cpuWeaponRangeMeters(profile);
+    return horizontalDistanceSq(bot.position, target) <= range * range;
   }
 
   private chooseCombatTarget(
@@ -1032,13 +1160,23 @@ export class CpuAgentSystem {
   }
 }
 
-function roleForSlot(slot: number): CpuRole {
-  const cycle: readonly CpuRole[] = ['PAINTER', 'SKIRMISHER', 'PAINTER', 'ANCHOR'];
-  return cycle[slot % cycle.length] ?? 'PAINTER';
-}
-
-function cpuFireInterval(bot: CpuBot): number {
-  return GAME_CONFIG.cpu.fireIntervalSeconds + (bot.slot % 3) * 0.035;
+function cpuWeaponRangeMeters(
+  profile: ReturnType<typeof weaponProfile>
+): number {
+  switch (profile.weaponClass) {
+    case 'CHARGER':
+      return 24;
+    case 'SPLATLING':
+      return 13.5;
+    case 'SLOSHER':
+      return 10.5;
+    case 'BLASTER':
+      return 10.0;
+    case 'DUALIES':
+      return 9.8;
+    default:
+      return GAME_CONFIG.cpu.combatRangeMeters;
+  }
 }
 
 function horizontalDistanceSq(a: Vec3, b: Vec3): number {
