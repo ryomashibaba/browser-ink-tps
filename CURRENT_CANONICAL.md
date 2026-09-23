@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.15.0 / T19B CPU ADVANCED MAIN-WEAPON PARITY CANDIDATE
+# CURRENT_CANONICAL — v0.15.0 / T19B STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T19A is the frozen stable foundation. T19B adds genuine CPU Roller / Brush / Brella / Stringer / Splatana runtime behavior without changing the frozen T19A default roster or earlier authority contracts.**
+**T0–T19B is the frozen stable foundation. T19B hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #287 passed TypeScript check, production build, and Pages deploy.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1578,3 +1578,42 @@ T0–T19A Freeze:
 - MatchController is unchanged
 
 T19B remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
+
+
+## T19B Stable Freeze — 2026-09-23
+
+Hosted runtime QA for v0.15.0 was completed and accepted by the user.
+
+Stable T19B checkpoint:
+- commit: `d2b0b01fba9d547686399f58e3347e21f247ef38`
+- GitHub Actions: run #287 / `35867101317` — success
+- CPU runtime now has genuine class-specific behavior for all frozen T14 weapon classes
+- accepted advanced classes:
+  - Metro Roller
+  - Dash Brush
+  - Canopy Guard
+  - Chord Stringer
+  - Ink Saber
+- Roller rolling contact / flick behavior is included
+- Brush pursuit / melee swipe behavior is included
+- CPU Brella directional guard, guard HP, guard recovery, guard break, and front-hit interception are included
+- CPU Stringer first/full charge, three-shot convergence, and delayed 0.75 s burst are included
+- CPU Splatana quick/charged slash plus ranged wave is included
+- advanced CPU paint remains PaintSource.Cpu
+- T19A default roster remains unchanged; `CPU Advanced QA` is a hosted verification preset only
+- advanced transient state cleanup across Splat / Respawn / T18 Super Jump / Match End / Restart is included
+- human T14/T16 behavior and T0–T19A authority contracts remain unchanged
+
+T19B is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T19C — CPU Sub / Special Kit Parity:
+- use the frozen T16 WeaponKitCatalog as the only main->sub/special assignment authority
+- give each CPU the sub and special belonging to its current main weapon
+- preserve CPU-source paint attribution for CPU subs/specials
+- do not allow CPU sub/special paint to charge the human Special gauge
+- add tactical usage rules so CPUs do not spam subs/specials on cooldown
+- keep main-weapon identity and T19B advanced class behavior unchanged
+- integrate Sub / Special use with CPU Ink, Splat/Respawn, Super Jump, and match lifecycle
+- keep human T16 kit controls and HUMAN/SPECIAL source contracts unchanged
