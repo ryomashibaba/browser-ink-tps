@@ -306,6 +306,15 @@ export class ProjectileSystem {
       this.stats.playerWeaponChargePercent = 0;
       this.stats.playerWeaponAction = 'LOCKED';
     }
+
+    this.feedback.updateChargeVisual(
+      profile,
+      team,
+      muzzlePosition,
+      aimDirection,
+      chargeFraction(profile, this.chargeSeconds),
+      playerDamageable && fireHeld && isChargeWeaponClass(profile.weaponClass)
+    );
     this.wasFireHeld = fireHeld;
 
     this.processDelayedBursts(dt);
@@ -755,7 +764,7 @@ export class ProjectileSystem {
       const spread = lerp(profile.spreadDegrees, 1.5, charge);
       const delayedBurst = charge >= 0.52;
       if (this.fireProjectiles(profile, origin, direction, team, 3, spread, charge, {
-        delayedBurstSeconds: delayedBurst ? 0.48 : 0,
+        delayedBurstSeconds: delayedBurst ? 0.62 : 0,
         delayedBurstRadius: delayedBurst ? lerp(0.55, 0.95, charge) : 0,
         delayedBurstDamage: delayedBurst ? lerp(16, 30, charge) : 0,
         delayedBurstPaintRadius: delayedBurst ? lerp(0.48, 0.82, charge) : 0
@@ -1150,6 +1159,11 @@ export class ProjectileSystem {
     }
 
     if (slot.delayedBurstSeconds > 0) {
+      this.feedback.stringerFuse(
+        slot.team,
+        point,
+        slot.delayedBurstSeconds
+      );
       this.delayedBursts.push({
         team: slot.team,
         point: point.clone(),
@@ -1194,10 +1208,11 @@ export class ProjectileSystem {
         1.0,
         PaintEventType.Bomb
       );
-      this.feedback.impact(
+      this.feedback.stringerBurst(
         burst.team,
         burst.point,
-        weaponProfile(burst.weaponId)
+        weaponProfile(burst.weaponId),
+        burst.radius
       );
       this.delayedBursts.splice(i, 1);
     }
@@ -1467,4 +1482,12 @@ function lerp(a: number, b: number, t: number): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+
+function isChargeWeaponClass(weaponClass: WeaponProfile['weaponClass']): boolean {
+  return weaponClass === 'CHARGER' ||
+    weaponClass === 'SPLATLING' ||
+    weaponClass === 'STRINGER' ||
+    weaponClass === 'SPLATANA';
 }

@@ -291,12 +291,14 @@ export class InkLabApp {
         }
 
         const playerCanAct = this.match.playerCanAct;
-        const secondaryPressed = this.input.consumeSecondaryPressed();
-        if (
+        const dualieSpaceDodge =
           playerCanAct &&
-          secondaryPressed &&
-          this.projectiles.currentPlayerWeapon.weaponClass === 'DUALIES'
-        ) {
+          this.projectiles.currentPlayerWeapon.weaponClass === 'DUALIES' &&
+          this.player.currentMode === 'HUMAN' &&
+          !this.input.squidHeld &&
+          this.input.consumeJump();
+
+        if (dualieSpaceDodge) {
           this.player.requestWeaponDodge();
           this.projectiles.notifyDualieDodge();
         }

@@ -100,7 +100,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'Q/E weapon cycle · Dualies RMB dodge · Brella RMB guard · Charger/Splatling/Stringer/Saber hold→release · Roller hold+move · Brush hold · M map';
+    hint.textContent = 'Q/E weapon cycle · Dualies SPACE dodge · Brella RMB guard · Charger/Splatling/Stringer/Saber hold→release · Roller hold+move · Brush hold · M map';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
