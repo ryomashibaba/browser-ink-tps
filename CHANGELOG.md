@@ -1,3 +1,14 @@
+## v0.15.0 T19B Stable Freeze — 2026-09-23
+
+- hosted QA accepted by the user
+- stable checkpoint: `d2b0b01fba9d547686399f58e3347e21f247ef38`
+- GitHub Actions run #287 / `35867101317` passed TypeScript check, production build, and Pages deploy
+- CPU Roller / Brush / Brella / Stringer / Splatana class behavior is frozen
+- CPU advanced paint remains PaintSource.Cpu
+- T19A normal CPU roster remains frozen; CPU Advanced QA remains verification-only
+- T0–T19B is now the frozen gameplay foundation
+- next phase: T19C CPU Sub / Special Kit Parity
+
 ## v0.15.0 T19B CPU Advanced Main-Weapon Class Parity Candidate — 2026-09-23
 
 - completed CPU runtime support for all remaining T14 classes
