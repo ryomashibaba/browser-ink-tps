@@ -43,8 +43,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T19B Candidate</h1>
-      <p>T0–T19A is frozen. T19B adds genuine CPU Roller/Brush/Brella/Stringer/Splatana behavior.</p>
+      <h1>Browser Ink TPS · T19B Stable Freeze</h1>
+      <p>T0–T19B is frozen. CPU main-weapon parity now covers all frozen T14 classes.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
