@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.9.0 / T14 IMPLEMENTATION CANDIDATE**
+**v0.9.1 / T14 11-WEAPON-CLASS CANDIDATE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -218,8 +218,8 @@ Do not casually replace:
 - fixed 60 Hz gameplay simulation
 - custom movement + Rapier kinematic character collision
 - pooled swept projectiles
-- three original selectable weapon profiles: Pulse Sprayer, Needle SMG, Arc Blaster
-- 3 / 4 / 5 weapon switching with player-facing HUD state
+- 11 Splatoon-style weapon genres with original project weapons: Shooter, Dualies, Charger, Blaster, Roller, Brush, Slosher, Splatling, Brella, Stringer, and Splatana/Wiper
+- Q / E full weapon cycling plus preserved 3 / 4 / 5 Pulse / Needle / Arc shortcuts with player-facing HUD state
 - pooled shot/impact/Splat/Respawn visual feedback
 - original procedural Web Audio SFX
 - render-only Human/Squid/CPU procedural motion
@@ -235,7 +235,7 @@ The current project intentionally does **not** yet include:
 
 ## Current phase
 
-**T14 — first content / weapons / audiovisual polish hosted QA**
+**T14 — 11 weapon-class hosted QA and further Splatoon-like gameplay polish**
 
 T0–T13 remains frozen. The first T14 candidate adds original weapon variety, pooled FX, procedural SFX, and render-only motion while preserving the frozen gameplay architecture. Additional T14 polish remains possible after hosted acceptance.
 

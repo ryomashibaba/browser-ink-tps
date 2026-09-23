@@ -778,3 +778,65 @@ T14 first candidate adds:
 T14 project tuning is original implementation tuning. No Nintendo weapon assets, names, sounds, models, UI assets, or proprietary internal constants are used.
 
 T14 remains **IMPLEMENTATION CANDIDATE**. Do not Freeze until hosted weapon / audiovisual / animation / regression QA passes.
+
+## T14 11-weapon-class expansion candidate
+
+Foundation:
+`c1b3f5a6219375a9bb01a2aaf9c59d16e9c18914`
+
+Multi-class runtime:
+`24d384d60fb7937f76a424ff1f5e845cfaeb0f38`
+
+Gameplay/UI integration:
+`31f441f13740536ed5ceecde518df879fbef21ef`
+
+Workflow:
+`35819670569`
+
+Automated result:
+
+- dependency install: PASS
+- TypeScript: PASS
+- production build: PASS
+- Pages artifact: PASS
+- GitHub Pages deploy: PASS
+- hosted runtime QA: **PENDING**
+
+Implemented weapon genres:
+
+- Shooter — Pulse Sprayer / Needle SMG
+- Dualies — Twin Comets
+- Charger — Rail Charger
+- Blaster — Arc Blaster
+- Roller — Metro Roller
+- Brush — Dash Brush
+- Slosher — Wave Slosher
+- Splatling — Rotor Cannon
+- Brella — Canopy Guard
+- Stringer — Chord Stringer
+- Splatana / Wiper — Ink Saber
+
+Genre mechanics currently implemented:
+
+- Shooter: continuous automatic fire
+- Dualies: paired shots plus RMB dodge roll
+- Charger: hold primary to charge, release to fire; charge scales damage / speed / paint
+- Blaster: slower projectile plus area blast damage
+- Roller: initial wide swing plus held rolling turf paint while moving
+- Brush: fast short-range fan attack
+- Slosher: high-gravity arcing projectile
+- Splatling: hold to charge, release into a charge-scaled rapid burst
+- Brella: pellet shot plus RMB projectile guard
+- Stringer: three-projectile charge shot whose spread tightens with charge
+- Splatana: tap/release slash wave plus stronger charged slash wave
+
+Weapon UI:
+
+- Q / E cycles all weapons
+- 3 / 4 / 5 preserve the previous direct shortcuts for Pulse Sprayer / Needle SMG / Arc Blaster
+- ControlPanel exposes all weapon representatives
+- HUD and DebugOverlay display weapon class, action, charge, and guard state
+
+CPU agents remain on the frozen Pulse Sprayer profile for this candidate so the player-side weapon-class QA is isolated from T12 CPU behavior.
+
+T14 remains **IMPLEMENTATION CANDIDATE** until hosted weapon-class QA passes.

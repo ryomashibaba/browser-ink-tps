@@ -903,3 +903,38 @@ Hosted QA required before this T14 batch can be accepted:
 10. full 4v4 play with FX/audio must keep FPS, dropped-simulation time, GPU backlog, and projectile pool behavior acceptable
 
 T14 remains **IMPLEMENTATION CANDIDATE**.
+
+## T14 11-weapon-class hosted QA candidate
+
+Implementation:
+`c1b3f5a6219375a9bb01a2aaf9c59d16e9c18914`
+`24d384d60fb7937f76a424ff1f5e845cfaeb0f38`
+`31f441f13740536ed5ceecde518df879fbef21ef`
+
+Workflow:
+`35819670569`
+
+Automated:
+
+- TypeScript: PASS
+- production build: PASS
+- Pages deploy: PASS
+
+Required hosted QA:
+
+1. Shooter: Pulse/Needle retain automatic fire and existing T14 behavior.
+2. Dualies: Twin Comets fire paired shots; RMB causes a short directional dodge without breaking normal Squid Roll.
+3. Charger: Rail Charger charges while LMB is held and fires only on release; higher charge visibly increases shot strength.
+4. Blaster: Arc Blaster direct hits and nearby blast damage work against enemy CPU/QA targets.
+5. Roller: Metro Roller produces a wide swing on press and paints turf under/around the player while LMB is held and the player moves.
+6. Brush: Dash Brush repeatedly throws a short, wide fan of ink.
+7. Slosher: Wave Slosher follows a visibly arcing trajectory and can attack over low cover.
+8. Splatling: Rotor Cannon charges while held and releases a burst whose duration increases with charge.
+9. Brella: Canopy Guard fires a spread shot; RMB guard blocks incoming CPU projectile damage while held.
+10. Stringer: Chord Stringer releases three shots; higher charge narrows the spread and increases shot strength.
+11. Splatana: Ink Saber tap/release creates a fast slash wave; longer hold produces the stronger charged slash.
+12. Q/E cycling and all ControlPanel weapon buttons stay synchronized with HUD/Debug weapon class/name.
+13. Human/Squid movement, wall swim, Surge, Squid Roll, Splat/Respawn, Turf scoring, CPU navigation, Tactical Map, camera blocking, and immutable PaintEvent flow show no regression.
+14. 4v4 performance remains acceptable and projectile pool drops / GPU backlog do not run away.
+
+Do not Freeze T14 until the hosted checks are confirmed.

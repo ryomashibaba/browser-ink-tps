@@ -1,3 +1,27 @@
+## v0.9.1 T14 11-Weapon-Class Candidate — 2026-09-23
+
+- expanded the weapon model from simple per-projectile tuning to 11 Splatoon-style weapon genres
+- added original representatives for Dualies, Charger, Roller, Brush, Slosher, Splatling, Brella, Stringer, and Splatana/Wiper while retaining Shooter and Blaster representatives
+- added charge/release, burst, spread, blast, rolling paint, guard, and charge-scaled multi-shot runtime behavior
+- added RMB Dualies dodge and Brella guard
+- added Q/E full weapon cycling while preserving 3/4/5 Pulse/Needle/Arc shortcuts
+- added weapon class/action/charge/guard debug and HUD state
+- added CPU/QA area-damage support for Blaster explosions
+- CPU combat weapon remains Pulse Sprayer for isolation of player-side QA
+
+Implementation:
+`c1b3f5a6219375a9bb01a2aaf9c59d16e9c18914`
+`24d384d60fb7937f76a424ff1f5e845cfaeb0f38`
+`31f441f13740536ed5ceecde518df879fbef21ef`
+
+Workflow:
+`35819670569`
+
+- TypeScript: PASS
+- production build: PASS
+- Pages deploy: PASS
+- hosted runtime QA: PENDING
+
 ## v0.9.0 T14 Content / Weapons / Feedback Candidate — 2026-09-23
 
 ### Weapons
