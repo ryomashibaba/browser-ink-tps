@@ -273,6 +273,7 @@ export class InkLabApp {
         this.clearCoordinateQaMarkers();
         this.coordinator.clear();
         this.cpuKit.reset();
+        this.cpuAgents.resetKitGauges();
         this.subWeapons.reset();
         this.specialGauge.reset();
       }
