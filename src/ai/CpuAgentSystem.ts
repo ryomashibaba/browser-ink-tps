@@ -4,7 +4,7 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
-import { PaintEventType, SurfaceFlags, Team } from '../ink/types';
+import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import type { StageDefinition } from '../stage/StageDefinition';
@@ -452,6 +452,7 @@ export class CpuAgentSystem {
     if (!sample) return;
 
     this.coordinator.enqueue({
+      source: PaintSource.Cpu,
       team: bot.team,
       surfaceId: sample.surface.id,
       centerU: sample.u,
