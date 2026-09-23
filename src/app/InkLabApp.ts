@@ -449,6 +449,11 @@ export class InkLabApp {
   }
 
   private setPlayerWeaponKit(weaponId: import('../weapons/WeaponCatalog').WeaponId): void {
+    const changed = this.projectiles.currentPlayerWeapon.id !== weaponId;
+    if (changed) {
+      this.subWeapons.reset();
+      this.specialGauge.cancelActive();
+    }
     this.projectiles.setPlayerWeapon(weaponId);
     const kit = weaponKit(weaponId);
     this.stats.playerSubWeaponName = subWeaponProfile(kit.sub).displayName;
