@@ -52,6 +52,15 @@ export class PerformanceStats {
   public targetAHp = 100;
   public targetBHp = 100;
 
+  public matchState = 'COUNTDOWN';
+  public matchCountdownSeconds = 3;
+  public matchTimeRemainingSeconds = 180;
+  public matchResult = '-';
+  public playerLifeState = 'ACTIVE';
+  public playerRespawnSeconds = 0;
+  public playerSplats = 0;
+  public playerRespawns = 0;
+
   public activeProjectiles = 0;
   public projectileImpacts = 0;
   public projectilePoolDrops = 0;

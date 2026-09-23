@@ -64,6 +64,12 @@ export class ProjectileSystem {
     }
   }
 
+  public reset(): void {
+    for (const slot of this.slots) this.deactivate(slot);
+    this.fireCooldown = 0;
+    this.stats.activeProjectiles = 0;
+  }
+
   public solveLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {
     const dx = target.x - origin.x;
     const dy = target.y - origin.y;

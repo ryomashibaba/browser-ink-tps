@@ -139,6 +139,53 @@ export class PlayerController {
     this.updateMaterial();
   }
 
+  public setLifecycleActive(active: boolean): void {
+    this.entity.enabled = active;
+    if (!active) {
+      this.humanCollider.setEnabled(false);
+      this.squidCollider.setEnabled(false);
+      return;
+    }
+
+    this.humanCollider.setEnabled(this.mode === 'HUMAN');
+    this.squidCollider.setEnabled(this.mode === 'SQUID');
+    this.activeCollider = this.mode === 'HUMAN' ? this.humanCollider : this.squidCollider;
+  }
+
+  public teleport(position: Vec3): void {
+    this.mode = 'HUMAN';
+    this.locomotionState = 'HUMAN';
+    this.inkRelation = 'NONE';
+    this.velocity.set(0, 0, 0);
+    this.desired.set(0, 0, 0);
+    this.verticalVelocity = 0;
+    this.grounded = false;
+    this.wallSurfaceId = '-';
+    this.squidRollRemainingSeconds = 0;
+    this.squidRollTurnWindowSeconds = 0;
+    this.surgeRemainingSeconds = 0;
+    this.surgeChargeSeconds = 0;
+    this.setSnapToGround(true);
+
+    this.squidCollider.setEnabled(false);
+    this.humanCollider.setEnabled(true);
+    this.activeCollider = this.humanCollider;
+    this.entity.enabled = true;
+    this.entity.setLocalScale(0.72, 0.92, 0.72);
+
+    this.body.setTranslation({ x: position.x, y: position.y, z: position.z }, true);
+    this.body.setNextKinematicTranslation({ x: position.x, y: position.y, z: position.z });
+    this.position.copy(position);
+    this.previousPosition.copy(position);
+    this.renderPosition.copy(position);
+    this.footPoint.set(
+      position.x,
+      position.y - PlayerController.humanFootOffset + 0.06,
+      position.z
+    );
+    this.applyVisualPosition(position);
+  }
+
   public computeFixed(dt: number): void {
     const bodyPosition = this.body.translation();
 

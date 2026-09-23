@@ -32,6 +32,15 @@ export class CombatTargetSystem {
     this.syncStats();
   }
 
+  public reset(): void {
+    for (const target of this.targets) {
+      target.hp = GAME_CONFIG.combat.targetMaxHp;
+      target.downSeconds = 0;
+      target.entity.enabled = true;
+    }
+    this.syncStats();
+  }
+
   public fixedUpdate(dt: number): void {
     for (const target of this.targets) {
       if (target.downSeconds <= 0) continue;

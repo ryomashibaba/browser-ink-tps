@@ -81,6 +81,15 @@ export const GAME_CONFIG = Object.freeze({
     targetVisualCenterYMeters: 0.72,
     hitPriorityEpsilonMeters: 0.01
   },
+  match: {
+    countdownSeconds: 3,
+    durationSeconds: 180,
+    respawnSeconds: 2.5,
+    teamASpawn: [0, 0.95, 5.8] as const,
+    teamBSpawn: [0, 0.95, -5.8] as const,
+    resultTieEpsilonPercent: 0.01,
+    qaSplatDamage: 999
+  },
   projectile: {
     poolSize: 128,
     fireIntervalSeconds: 0.105,

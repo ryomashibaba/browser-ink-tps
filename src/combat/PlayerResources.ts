@@ -12,6 +12,10 @@ export class PlayerResources {
     this.syncStats('READY', 'READY');
   }
 
+  public get currentHp(): number {
+    return this.hp;
+  }
+
   public fixedUpdate(dt: number, mode: PlayerMode, relation: InkRelation): void {
     this.inkRecoveryLockSeconds = Math.max(0, this.inkRecoveryLockSeconds - dt);
     this.hpRecoveryDelaySeconds = Math.max(0, this.hpRecoveryDelaySeconds - dt);
