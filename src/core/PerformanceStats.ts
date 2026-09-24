@@ -119,6 +119,7 @@ export class PerformanceStats {
   public cpuSpecialActivations = 0;
   public cpuSpecialReady = 0;
   public cpuAverageSpecialPercent = 0;
+  public cpuScoreablePaintMeters2 = 0;
   public cpuKitLast = '-';
   public cpuActiveSubs = 0;
   public cpuActiveSpecialEffects = 0;
