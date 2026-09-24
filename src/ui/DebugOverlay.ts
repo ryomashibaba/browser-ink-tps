@@ -32,11 +32,16 @@ export class DebugOverlay {
     const healthy = last.averageFrameMs === 0 || last.averageFrameMs < 16.8;
 
     this.element.innerHTML = `
-      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T19C STABLE</span></div>
+      <div class="title">TECHNICAL VERTICAL SLICE <span class="${healthy ? 'ok' : 'warn'}">T20 CANDIDATE</span></div>
       <div class="grid">
         <span class="muted">Renderer</span><span>${escapeHtml(this.rendererName)}</span>
         <span class="muted">Coord audit</span><span>${escapeHtml(last.coordinateAudit)}</span>
-        <span class="muted">Match</span><span>${escapeHtml(last.matchState)}</span>
+        <span class="muted">Mode</span><span>${escapeHtml(last.matchModeLabel)}</span>
+        <span class="muted">Match</span><span>${escapeHtml(last.matchState)}${last.matchOvertime ? ' · OVERTIME' : ''}</span>
+        <span class="muted">Zones control</span><span>${escapeHtml(last.zonesControl)}</span>
+        <span class="muted">Zones A/B count</span><span>${last.zonesCountA.toFixed(1)} / ${last.zonesCountB.toFixed(1)}</span>
+        <span class="muted">Zones A/B paint</span><span>${last.zonesPercentA.toFixed(0)}% / ${last.zonesPercentB.toFixed(0)}%</span>
+        <span class="muted">Zones A/B penalty</span><span>${last.zonesPenaltyA.toFixed(1)} / ${last.zonesPenaltyB.toFixed(1)}</span>
         <span class="muted">Countdown</span><span>${last.matchCountdownSeconds.toFixed(1)} s</span>
         <span class="muted">Match time</span><span>${formatClock(last.matchTimeRemainingSeconds)}</span>
         <span class="muted">Result</span><span>${escapeHtml(last.matchResult)}</span>

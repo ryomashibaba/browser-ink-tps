@@ -88,7 +88,18 @@ export const GAME_CONFIG = Object.freeze({
     teamASpawn: [0, 0.95, 5.8] as const,
     teamBSpawn: [0, 0.95, -5.8] as const,
     resultTieEpsilonPercent: 0.01,
-    qaSplatDamage: 999
+    qaSplatDamage: 999,
+    splatZones: {
+      durationSeconds: 300,
+      initialCount: 100,
+      countPerSecond: 1,
+      captureFraction: 0.62,
+      captureLeadFraction: 0.18,
+      retainFraction: 0.42,
+      penaltyProgressMultiplier: 0.50,
+      maxPenalty: 75,
+      penaltyClearPerSecond: 1
+    }
   },
   cpu: {
     totalParticipants: 8,

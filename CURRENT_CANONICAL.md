@@ -1786,8 +1786,34 @@ Frozen T19C scope includes:
 
 T19C is therefore **STABLE FREEZE**.
 
-## Next phase
+## T20 v0.17.0 implementation candidate — Game Mode Foundation + Splat Zones
 
-T20 is intentionally not pre-selected here.
+T20 is additive on top of the frozen T0–T19C foundation.
 
-Start the next chat by auditing the current repository and frozen T0–T19C foundation, then choose the next large phase based on the highest-value remaining gameplay gap. Do not reopen frozen systems merely to reorganize them.
+Candidate implementation checkpoint before documentation:
+- commit: `4c856e871dd491e4217659d8e47320def1930df9`
+- PR: #3
+- the first PR CI run exposed and fixed a TypeScript literal-state issue in the new objective counter; the corrected run passed TypeScript check, unit tests, and production build before the PR-only deploy job was isolated from Pages deployment
+
+T20 candidate scope:
+- `GameModeId` introduces `TURF_WAR` and `SPLAT_ZONES`; Turf War remains the default
+- `SplatZonesObjectiveSystem` reads only existing authoritative GameplayInk owner cells
+- the stage declares the central objective as PaintSurface-local U/V metadata; no global-XZ ink authority is introduced
+- zone cells are precomputed once and only that bounded set is sampled each fixed tick
+- capture/retain hysteresis, 100-count scoring, control-loss penalty, knockout, and overtime are mode-local rules
+- `MatchController` is mode-aware while preserving the frozen Turf result path and player lifecycle
+- CPU tactical goals become zone-aware through `CpuTacticalDirector`; all frozen CPU weapon, kit, Recast, Super Jump, damage, and lifecycle runtimes remain unchanged
+- HUD / Tactical Map / DebugOverlay expose mode, control, counters, paint share, penalties, and overtime
+- deterministic rule tests cover capture thresholds, retain hysteresis, and count-based winner resolution
+- PR CI runs TypeScript check + unit tests + production build; Pages deploy is main-only
+
+Freeze boundaries:
+- `PaintCoordinator.processTick()` remains the sole immutable PaintEvent creation point
+- GameplayInk remains the only gameplay truth; GPU ink remains visual-only
+- PaintSurface-local coordinates remain canonical
+- T14 Human weapon runtime and T19 CPU main-weapon parity are unchanged
+- T16/T19C Sub/Special assignment, gauge attribution, and lifecycle semantics are unchanged
+- T17/T18 Super Jump behavior is unchanged
+- no broad refactor of ProjectileSystem, CpuAgentSystem, or PlayerController is part of T20
+
+T20 remains **IMPLEMENTATION CANDIDATE** until hosted Pages QA and the final horizontal regression pass are accepted.

@@ -12,12 +12,13 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.16.0 / T19C STABLE FREEZE**
+**v0.17.0 / T20 IMPLEMENTATION CANDIDATE**
 
-Stable gameplay checkpoint:
-`d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
+Frozen foundation:
+- T0–T19C stable main HEAD before T20: `d34c46953b38d9ad7244d19054b0c6c56c4a08c4`
+- T19C gameplay implementation checkpoint: `c1807e5c70c7869d346ce1fa6ed0a5def31c59f9`
 
-The T0–T14 gameplay foundation is frozen. The next implementation phase is T15 — Sub Weapon + Special Gauge Foundation:
+T0–T19C remains frozen. T20 adds an additive Game Mode Foundation plus the first objective mode, Splat Zones, while preserving the existing ink/movement/weapon/CPU/kit authority contracts:
 
 - third-person Human movement
 - Rapier kinematic character collision
@@ -232,15 +233,14 @@ Do not casually replace:
 
 The current project intentionally does **not** yet include:
 
-- super jump
 - production character models / authored animation assets
 - final performance/bundle optimization
 
 ## Current phase
 
-**T14 — 11 weapon-class hosted QA and further Splatoon-like gameplay polish**
+**T20 — Game Mode Foundation + Splat Zones**
 
-T0–T13 remains frozen. The first T14 candidate adds original weapon variety, pooled FX, procedural SFX, and render-only motion while preserving the frozen gameplay architecture. Additional T14 polish remains possible after hosted acceptance.
+T0–T19C remains the frozen gameplay foundation. The T20 candidate keeps Turf War as the default mode and adds Splat Zones through a separate objective layer driven only by authoritative GameplayInk. The candidate also adds zone-aware CPU tactical goals, mode-aware match/overtime handling, HUD/Tactical Map objective presentation, and deterministic rule tests.
 
 
 T13 hosted runtime QA is complete and accepted. The enlarged production arena, HUD, Tactical Map, shared stage metadata, and 4v4 regression/performance checks are frozen.
@@ -497,3 +497,15 @@ Use **CPU Kit QA Ready** to fill all active CPU Specials for hosted verification
 v0.16.0 hosted QA was accepted on 2026-09-24 after the T19C cross-system debug pass. Stable implementation checkpoint: `c1807e5c70c7869d346ce1fa6ed0a5def31c59f9`; GitHub Actions run #335 passed TypeScript check, production build, and Pages deployment.
 
 T0–T19C is now the frozen gameplay foundation. The next major phase should be chosen from a fresh repository/roadmap audit rather than pre-committed in this thread.
+
+
+### T20 v0.17.0 candidate
+
+- Turf War remains the default and retains its frozen percentage result path.
+- Splat Zones uses the canonical `main-floor` PaintSurface and precomputed zone cells; GPU ink is never consulted for control.
+- Zone control has capture/retain hysteresis, 100-count scoring, control-loss penalty, knockout, and overtime handling.
+- CPU PAINTER / SKIRMISHER / ANCHOR goals become zone-aware only while Splat Zones is active; weapon, Sub/Special, Recast, Super Jump, and lifecycle runtimes are unchanged.
+- HUD, Tactical Map, debug metrics, and mode selection expose the new rule without replacing the frozen T13/T17 UI contracts.
+- PR CI now runs TypeScript check, deterministic Vitest rules tests, and production build. Pages deployment remains main-only.
+
+T20 remains an **IMPLEMENTATION CANDIDATE** until hosted Pages QA is accepted.

@@ -114,6 +114,7 @@ export class TacticalMap {
     ctx.fillRect(0, 0, width, height);
 
     this.drawStageSolids();
+    this.drawSplatZones();
     this.drawInk();
     this.drawSpawnPoint(this.stage.metadata.teamASpawn, 'rgba(32,220,240,.95)');
     this.drawSpawnPoint(this.stage.metadata.teamBSpawn, 'rgba(255,52,156,.95)');
@@ -130,7 +131,7 @@ export class TacticalMap {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(
-      `${this.stats.matchState} · ${formatClock(this.stats.matchTimeRemainingSeconds)}`,
+      `${this.stats.matchModeLabel} · ${this.stats.matchState} · ${this.stats.matchOvertime ? 'OT' : formatClock(this.stats.matchTimeRemainingSeconds)}`,
       width * 0.5,
       24
     );
@@ -169,6 +170,46 @@ export class TacticalMap {
       ctx.fillRect(x, y, w, h);
       ctx.strokeRect(x, y, w, h);
     }
+  }
+
+  private drawSplatZones(): void {
+    if (this.stats.matchMode !== 'SPLAT_ZONES') return;
+    const zone = this.stage.metadata.splatZones[0];
+    if (!zone) return;
+    const surface = this.gameplayInk.getSurface(zone.surfaceId);
+    if (!surface) return;
+
+    const minU = zone.centerU - zone.widthMeters * 0.5;
+    const maxU = zone.centerU + zone.widthMeters * 0.5;
+    const minV = zone.centerV - zone.heightMeters * 0.5;
+    const maxV = zone.centerV + zone.heightMeters * 0.5;
+    const corners = [
+      surface.localToWorld(minU, minV),
+      surface.localToWorld(maxU, minV),
+      surface.localToWorld(maxU, maxV),
+      surface.localToWorld(minU, maxV)
+    ].map((point) => this.worldToMap(point.x, point.z));
+
+    const ctx = this.context;
+    ctx.beginPath();
+    ctx.moveTo(corners[0]!.x, corners[0]!.y);
+    for (let i = 1; i < corners.length; i += 1) {
+      ctx.lineTo(corners[i]!.x, corners[i]!.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = this.stats.zonesControl === 'TEAM A'
+      ? 'rgba(40,221,240,.16)'
+      : this.stats.zonesControl === 'TEAM B'
+        ? 'rgba(255,60,160,.16)'
+        : 'rgba(255,255,255,.08)';
+    ctx.strokeStyle = this.stats.zonesControl === 'TEAM A'
+      ? 'rgba(40,221,240,.95)'
+      : this.stats.zonesControl === 'TEAM B'
+        ? 'rgba(255,60,160,.95)'
+        : 'rgba(255,255,255,.72)';
+    ctx.lineWidth = 3;
+    ctx.fill();
+    ctx.stroke();
   }
 
   private drawInk(): void {

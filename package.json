@@ -1,13 +1,14 @@
 {
   "name": "browser-ink-tps",
   "private": true,
-  "version": "0.9.3",
+  "version": "0.17.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.20.0",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "typescript": "5.8.3",
-    "vite": "7.1.7"
+    "vite": "7.1.7",
+    "vitest": "4.1.11"
   }
 }

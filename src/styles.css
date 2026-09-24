@@ -58,6 +58,8 @@ button {
 button:hover { background: rgba(255,255,255,0.12); }
 button.active-a { outline: 2px solid #28ddf0; background: rgba(0,220,255,.15); }
 button.active-b { outline: 2px solid #ff3ca0; background: rgba(255,40,150,.15); }
+button.active-mode { outline: 2px solid rgba(255,255,255,.72); background: rgba(255,255,255,.14); }
+.mode-row button { flex: 1 1 0; }
 button.danger { border-color: rgba(255,120,120,.35); }
 label { display: block; font-size: 12px; color: #c5d3dd; margin-top: 9px; }
 label output { float: right; color: white; font-variant-numeric: tabular-nums; }
@@ -167,6 +169,22 @@ input[type="range"] { width: 100%; margin-top: 5px; }
 .hud-turf-fill-a { background: #28ddf0; }
 .hud-turf-neutral { background: rgba(210,220,226,.24); }
 .hud-turf-fill-b { background: #ff3ca0; }
+.hud-zones {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 7px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(5,10,15,.72);
+  border: 1px solid rgba(255,255,255,.14);
+  font: 900 13px/1 system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.hud-zones .team-a { color: #40e9fa; text-align: right; }
+.hud-zones .team-b { color: #ff4ca5; text-align: left; }
+.hud-zones .zone-control { color: rgba(255,255,255,.86); font-size: 11px; }
 
 #hud-resources {
   position: absolute;

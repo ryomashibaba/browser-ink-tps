@@ -3,6 +3,8 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { Team } from '../ink/types';
+import type { SplatZonesObjectiveSystem } from '../objective/SplatZonesObjectiveSystem';
+import { gameModeLabel, resolveZonesTimeout, zonesResult, type GameModeId } from './GameMode';
 import type { StageDefinition } from '../stage/StageDefinition';
 
 export type MatchState = 'COUNTDOWN' | 'PLAYING' | 'ENDED';
@@ -11,18 +13,22 @@ export type PlayerLifeState = 'ACTIVE' | 'SPLATTED';
 export class MatchController {
   private state: MatchState = 'COUNTDOWN';
   private lifeState: PlayerLifeState = 'ACTIVE';
+  private mode: GameModeId = 'TURF_WAR';
   private countdownSeconds: number = GAME_CONFIG.match.countdownSeconds;
   private remainingSeconds: number = GAME_CONFIG.match.durationSeconds;
   private respawnSeconds: number = 0;
   private splatStartedPending = false;
   private respawnPending = false;
   private matchEndedPending = false;
+  private overtime = false;
+  private overtimeTeam: Team = Team.Neutral;
   private result = '-';
 
   public constructor(
     private readonly gameplayInk: GameplayInkSystem,
     private readonly stats: PerformanceStats,
-    private readonly stage: StageDefinition
+    private readonly stage: StageDefinition,
+    private readonly splatZones: SplatZonesObjectiveSystem
   ) {
     this.syncStats();
   }
@@ -35,18 +41,33 @@ export class MatchController {
     return this.state;
   }
 
+  public get currentMode(): GameModeId {
+    return this.mode;
+  }
+
+  public setGameMode(mode: GameModeId): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    this.restart();
+  }
+
   public restart(): void {
     this.state = 'COUNTDOWN';
     this.lifeState = 'ACTIVE';
     this.countdownSeconds = GAME_CONFIG.match.countdownSeconds;
-    this.remainingSeconds = GAME_CONFIG.match.durationSeconds;
+    this.remainingSeconds = this.mode === 'SPLAT_ZONES'
+      ? GAME_CONFIG.match.splatZones.durationSeconds
+      : GAME_CONFIG.match.durationSeconds;
     this.respawnSeconds = 0;
     this.splatStartedPending = false;
     this.respawnPending = false;
     this.matchEndedPending = false;
+    this.overtime = false;
+    this.overtimeTeam = Team.Neutral;
     this.result = '-';
     this.stats.playerSplats = 0;
     this.stats.playerRespawns = 0;
+    this.splatZones.reset();
     this.syncStats();
   }
 
@@ -63,7 +84,9 @@ export class MatchController {
       return;
     }
 
-    this.remainingSeconds = Math.max(0, this.remainingSeconds - dt);
+    if (!this.overtime) {
+      this.remainingSeconds = Math.max(0, this.remainingSeconds - dt);
+    }
 
     if (this.lifeState === 'ACTIVE' && playerHp <= 0) {
       this.lifeState = 'SPLATTED';
@@ -74,19 +97,35 @@ export class MatchController {
 
     if (this.lifeState === 'SPLATTED') {
       this.respawnSeconds = Math.max(0, this.respawnSeconds - dt);
-      if (this.respawnSeconds <= 0 && this.remainingSeconds > 0) {
+      if (this.respawnSeconds <= 0 && (this.remainingSeconds > 0 || this.overtime)) {
         this.respawnPending = true;
       }
     }
 
-    if (this.remainingSeconds <= 0) this.finishMatch();
+    if (this.mode === 'SPLAT_ZONES') {
+      const knockout = this.splatZones.knockoutWinner();
+      if (knockout !== Team.Neutral) {
+        this.finishMatch(knockout === Team.A ? 'TEAM A' : 'TEAM B');
+      } else if (this.remainingSeconds <= 0) {
+        this.resolveZonesTimeExpired();
+      }
+    } else if (this.remainingSeconds <= 0) {
+      this.finishTurfMatch();
+    }
+
     this.syncStats();
   }
 
   public forceEnd(): void {
     if (this.state === 'ENDED') return;
     this.remainingSeconds = 0;
-    this.finishMatch();
+    this.overtime = false;
+    this.overtimeTeam = Team.Neutral;
+    if (this.mode === 'SPLAT_ZONES') {
+      this.finishMatch(zonesResult(this.splatZones.snapshot()));
+    } else {
+      this.finishTurfMatch();
+    }
     this.syncStats();
   }
 
@@ -123,24 +162,50 @@ export class MatchController {
     return out.set(spawn[0], spawn[1], spawn[2]);
   }
 
-  private finishMatch(): void {
-    if (this.state === 'ENDED') return;
-    this.state = 'ENDED';
-    this.respawnPending = false;
-    this.matchEndedPending = true;
+  private resolveZonesTimeExpired(): void {
+    const decision = resolveZonesTimeout(
+      this.splatZones.snapshot(),
+      this.overtime,
+      this.overtimeTeam
+    );
+    if (decision.kind === 'START_OVERTIME') {
+      this.overtime = true;
+      this.overtimeTeam = decision.team;
+      return;
+    }
+    if (decision.kind === 'FINISH') {
+      this.finishMatch(decision.result);
+    }
+  }
 
+  private finishTurfMatch(): void {
     const turf = this.gameplayInk.snapshot();
     const epsilon = GAME_CONFIG.match.resultTieEpsilonPercent;
     const difference = turf.percentA - turf.percentB;
-    this.result = Math.abs(difference) <= epsilon
-      ? 'TIE'
-      : difference > 0 ? 'TEAM A' : 'TEAM B';
+    this.finishMatch(
+      Math.abs(difference) <= epsilon
+        ? 'TIE'
+        : difference > 0 ? 'TEAM A' : 'TEAM B'
+    );
+  }
+
+  private finishMatch(result: 'TEAM A' | 'TEAM B' | 'TIE'): void {
+    if (this.state === 'ENDED') return;
+    this.state = 'ENDED';
+    this.overtime = false;
+    this.overtimeTeam = Team.Neutral;
+    this.respawnPending = false;
+    this.matchEndedPending = true;
+    this.result = result;
   }
 
   private syncStats(): void {
     this.stats.matchState = this.state;
+    this.stats.matchMode = this.mode;
+    this.stats.matchModeLabel = gameModeLabel(this.mode);
     this.stats.matchCountdownSeconds = this.countdownSeconds;
     this.stats.matchTimeRemainingSeconds = this.remainingSeconds;
+    this.stats.matchOvertime = this.overtime;
     this.stats.playerLifeState = this.lifeState;
     this.stats.playerRespawnSeconds = this.respawnSeconds;
     this.stats.matchResult = this.result;

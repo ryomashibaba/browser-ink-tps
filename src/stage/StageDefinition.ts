@@ -32,6 +32,15 @@ export interface StageWorldBounds {
   maxZ: number;
 }
 
+export interface SplatZoneDefinition {
+  id: string;
+  surfaceId: string;
+  centerU: number;
+  centerV: number;
+  widthMeters: number;
+  heightMeters: number;
+}
+
 export interface StageMetadata {
   id: string;
   displayName: string;
@@ -41,6 +50,7 @@ export interface StageMetadata {
   teamASpawnSlots: readonly StageVector3[];
   teamBSpawnSlots: readonly StageVector3[];
   tacticalNodes: readonly StageVector3[];
+  splatZones: readonly SplatZoneDefinition[];
 }
 
 export interface StageDefinition {
@@ -94,6 +104,16 @@ export const PRODUCTION_STAGE_DEFINITION: StageDefinition = {
       [-12, 0.12, 0], [-6, 0.12, 0], [0, 0.12, 0], [6, 0.12, 0], [12, 0.12, 0],
       [-10, 0.12, 4], [-4, 0.12, 4], [2, 0.12, 4], [7, 0.12, 4], [13, 0.12, 4],
       [-12, 0.12, 8], [-6, 0.12, 8], [0, 0.12, 8], [6, 0.12, 8], [12, 0.12, 8]
+    ],
+    splatZones: [
+      {
+        id: 'central-zone',
+        surfaceId: 'main-floor',
+        centerU: 16,
+        centerV: 12,
+        widthMeters: 8,
+        heightMeters: 6
+      }
     ]
   },
   solids: [
