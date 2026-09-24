@@ -3,6 +3,12 @@ import type {
   StageMeasurementLedger,
   StageRuleFact
 } from '../measurement/StageMeasurementLedger';
+import {
+  UNDERTOW_PROJECT_SPAWNS,
+  UNDERTOW_TURF_MAP_AUDIT,
+  UNDERTOW_TURF_MAP_ORIGIN_PIXEL,
+  UNDERTOW_TURF_RULE_MAP_SOURCE
+} from './UndertowSpillwayMapCalibration';
 
 const ALL_RULES = ['TURF', 'ZONES', 'TOWER', 'RAINMAKER', 'CLAMS'] as const;
 const handoff = ['handoff-t21-masterplan'] as const;
@@ -285,7 +291,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: maps,
-    xz: unresolvedXz('Spawn footprint remains for T21-B.'),
+    xz: {
+      kind: 'POINT',
+      pointMeters: UNDERTOW_PROJECT_SPAWNS.teamA,
+      confidence: 'HIGH',
+      evidenceIds: ['user-five-rule-maps', 'handoff-t21-masterplan'],
+      notes: 'Measured spawn center only. Full spawn-floor polygon remains unresolved.'
+    },
     y: unknownY('Historical 7.5m hypothesis is intentionally not promoted to canonical.'),
     transition: noTransition,
     surface: {
@@ -302,7 +314,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: maps,
-    xz: unresolvedXz('Spawn footprint remains for T21-B.'),
+    xz: {
+      kind: 'POINT',
+      pointMeters: UNDERTOW_PROJECT_SPAWNS.teamB,
+      confidence: 'HIGH',
+      evidenceIds: ['user-five-rule-maps', 'handoff-t21-masterplan'],
+      notes: 'Measured spawn center only. Full spawn-floor polygon remains unresolved.'
+    },
     y: unknownY('Absolute Y remains unresolved.'),
     transition: noTransition,
     surface: {
@@ -543,26 +561,56 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
     },
     {
       id: 'spawn-distance-meters',
-      value: 134,
+      value: UNDERTOW_TURF_MAP_AUDIT.spawnSeparationMeters,
       unit: 'm',
       confidence: 'HIGH',
-      evidenceIds: ['handoff-t21-masterplan', 'user-five-rule-maps']
+      evidenceIds: ['handoff-t21-masterplan', 'user-five-rule-maps'],
+      notes: 'Derived from measured spawn pixels using the 20px/m working transform.'
     },
     {
       id: 'outer-span-x-meters',
-      value: 146,
-      unit: 'm',
-      confidence: 'PROVISIONAL',
-      evidenceIds: handoff,
-      notes: 'Not Freeze-safe until T21-B whole-map reconstruction.'
-    },
-    {
-      id: 'outer-span-z-meters',
       value: 87,
       unit: 'm',
       confidence: 'PROVISIONAL',
       evidenceIds: handoff,
-      notes: 'Not Freeze-safe until T21-B whole-map reconstruction.'
+      notes: 'Cross-stage span in the project X axis. Not Freeze-safe until T21-B polygon tracing.'
+    },
+    {
+      id: 'outer-span-z-meters',
+      value: 146,
+      unit: 'm',
+      confidence: 'PROVISIONAL',
+      evidenceIds: handoff,
+      notes: 'Spawn-axis span in the project Z axis. Not Freeze-safe until T21-B polygon tracing.'
+    },
+    {
+      id: 'turf-rule-map-width-pixels',
+      value: UNDERTOW_TURF_RULE_MAP_SOURCE.widthPixels,
+      unit: 'px',
+      confidence: 'HIGH',
+      evidenceIds: ['user-five-rule-maps'],
+      notes: 'Measured source image dimensions from the previous T21 map pass.'
+    },
+    {
+      id: 'turf-rule-map-height-pixels',
+      value: UNDERTOW_TURF_RULE_MAP_SOURCE.heightPixels,
+      unit: 'px',
+      confidence: 'HIGH',
+      evidenceIds: ['user-five-rule-maps']
+    },
+    {
+      id: 'turf-map-origin-pixel-x',
+      value: UNDERTOW_TURF_MAP_ORIGIN_PIXEL[0],
+      unit: 'px',
+      confidence: 'HIGH',
+      evidenceIds: ['user-five-rule-maps']
+    },
+    {
+      id: 'turf-map-origin-pixel-y',
+      value: UNDERTOW_TURF_MAP_ORIGIN_PIXEL[1],
+      unit: 'px',
+      confidence: 'HIGH',
+      evidenceIds: ['user-five-rule-maps']
     },
     {
       id: 'vertical-grid-meters',
