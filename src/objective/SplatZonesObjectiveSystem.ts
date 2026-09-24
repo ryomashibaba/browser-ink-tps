@@ -38,12 +38,12 @@ export function resolveZoneControl(
 export class SplatZonesObjectiveSystem {
   private readonly cells: readonly ZoneCell[];
   private control: Team = Team.Neutral;
-  private countA = GAME_CONFIG.match.splatZones.initialCount;
-  private countB = GAME_CONFIG.match.splatZones.initialCount;
-  private penaltyA = 0;
-  private penaltyB = 0;
-  private percentA = 0;
-  private percentB = 0;
+  private countA: number = GAME_CONFIG.match.splatZones.initialCount;
+  private countB: number = GAME_CONFIG.match.splatZones.initialCount;
+  private penaltyA: number = 0;
+  private penaltyB: number = 0;
+  private percentA: number = 0;
+  private percentB: number = 0;
 
   public constructor(
     gameplayInk: GameplayInkSystem,
