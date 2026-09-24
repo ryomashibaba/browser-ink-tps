@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.15.0 / T19B STABLE FREEZE
+# CURRENT_CANONICAL — v0.16.0 / T19C CPU SUB-SPECIAL KIT PARITY CANDIDATE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T19B is the frozen stable foundation. T19B hosted runtime QA was accepted by the user on 2026-09-23 and GitHub Actions run #287 passed TypeScript check, production build, and Pages deploy.**
+**T0–T19B is the frozen stable foundation. T19C adds CPU Sub/Special kit parity using the frozen T16 WeaponKitCatalog while preserving T0–T19B gameplay, paint-authority, and lifecycle contracts.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1617,3 +1617,135 @@ T19C — CPU Sub / Special Kit Parity:
 - keep main-weapon identity and T19B advanced class behavior unchanged
 - integrate Sub / Special use with CPU Ink, Splat/Respawn, Super Jump, and match lifecycle
 - keep human T16 kit controls and HUMAN/SPECIAL source contracts unchanged
+
+
+## T19C v0.16.0 CPU Sub / Special Kit Parity candidate
+
+Architecture:
+- `WeaponKitCatalog` remains the only main-weapon -> Sub/Special assignment authority
+- every CPU resolves its current kit directly from its current `WeaponId`
+- no duplicate CPU-only kit mapping exists
+- CPU kit execution is isolated in `CpuKitSystem`
+- Human `SubWeaponSystem` and `SpecialGaugeSystem` remain unchanged
+- CPU kit requests are emitted by `CpuAgentSystem` and executed later in the same fixed 60 Hz tick
+
+Paint attribution / Special gauge:
+- `PaintEvent` / `PaintRequest` gained optional `actorId` metadata only
+- coordinate authority, local U/V semantics, source authority, and immutable-event flow are unchanged
+- `PaintTickReport` reports actual changed scoreable area by CPU actor
+- CPU main-weapon paint, movement paint, and CPU Sub paint use:
+  - `PaintSource.Cpu`
+  - the source CPU's actor id
+  - gauge-eligible paint
+- CPU Special paint uses:
+  - `PaintSource.Cpu`
+  - the source CPU's actor id
+  - `gaugeEligible: false`
+- therefore CPU Special paint cannot self-charge
+- CPU paint never contributes to the Human Special gauge
+- CPU gauge gain uses the same frozen T15 conversion:
+  - actual newly changed scoreable area only
+  - `GAME_CONFIG.special.pointsPerScoreableSquareMeter = 10`
+- same-team already-owned cells do not charge a CPU gauge
+
+CPU kit state:
+- per CPU:
+  - Sub cooldown
+  - Special points
+  - Special tactical decision cooldown
+- Special required points come from the T16 Special profile:
+  - Turf Pulse 180p
+  - Triple Strike 190p
+  - Drift Storm 200p
+- Splat retains 50% of CPU Special points, matching the frozen Human retention factor
+- lingering CPU Sub paint after source Splat may add gauge after the retention event, matching the Human lingering-Sub behavior
+- Advanced Weapon QA resets affected CPU kit gauges because it changes the CPU's main weapon / kit
+- Clear Ink clears CPU kit gauges and attributed paint diagnostics
+
+CPU Sub runtime:
+- separate 16-slot pooled CPU bomb runtime
+- Pulse Bomb / Snap Bomb / Anchor Bomb use the frozen T16 profile values
+- flight speed, upward boost, gravity, fuse, damage, and paint radii match the Human profiles
+- Snap Bomb detonates on world impact
+- Pulse / Anchor use their frozen fuse timings after contact
+- CPU Sub damage uses the shared guard-aware area-damage route
+- CPU Sub paint is CPU-source and gauge-eligible
+- thrown CPU Subs persist if their source CPU is Splatted
+- bomb paint geometry matches the frozen Human Sub geometry, including ring stamp scale / plane distance
+
+CPU Special runtime:
+- Turf Pulse:
+  - frozen Human pulse damage radius / damage / paint radius / ring radius
+- Triple Strike:
+  - three fixed activation-time target points at -1.65 / 0 / +1.65 m
+  - delays 0.72 / 0.88 / 1.04 s
+  - each strike radius 2.15 m / damage 62
+  - paint radius 0.92 / ring 1.85 / 10 ring stamps
+- Drift Storm:
+  - begins 1.1 m forward
+  - duration 4.8 s
+  - travel 1.45 m/s
+  - pulse every 0.38 s
+  - radius 1.85 / damage 16
+  - paint 0.62 / ring 1.25 / 8 ring stamps
+- CPU Special radial paint geometry now exactly matches the frozen Human Special ring-stamp size
+- active Triple Strike / Drift Storm effects are cancelled if their source CPU is Splatted
+- Turf Pulse is instantaneous
+- active CPU Specials may continue through Super Jump because the source CPU remains ACTIVE, matching the Human jump contract
+- Match End / Restart / Team change / Clear Ink reset active CPU kit effects
+
+Shared damage routing:
+- CPU Sub / Special area damage routes through `ProjectileSystem.applyExternalAreaDamage()`
+- this reuses the frozen combat path for:
+  - enemy CPUs
+  - QA combat targets
+  - Human player
+  - Human Super Jump invulnerability
+  - Human Canopy Guard directional blocking
+  - CPU Canopy Guard directional blocking via `CpuAgentSystem.applyAreaDamage()`
+
+Tactical CPU kit usage:
+- CPU cannot use a kit while not grounded, while guarding, charging, or releasing a stored burst
+- a recent main-weapon action briefly wins over kit use
+- Special is evaluated before Sub so one CPU cannot emit both in the same decision
+- Sub target window: 2.6–11.5 m
+- base Sub cooldown:
+  - Snap Bomb 2.8 s
+  - Pulse Bomb 4.2 s
+  - Anchor Bomb 5.1 s
+- role multiplier:
+  - SKIRMISHER x0.88
+  - PAINTER x1.00
+  - ANCHOR x1.16
+- Turf Pulse: use within 4.2 m or at HP <= 52
+- Triple Strike: use at 4.0–18.0 m
+- Drift Storm: use at 3.2–15.0 m
+- post-Special decision cooldown: 2.6 s
+- post-Special Sub lock: 0.8 s
+- all T19C tuning lives under `GAME_CONFIG.cpu.kit`
+
+QA / diagnostics:
+- `CPU Kit QA Ready` fills every active CPU's currently assigned Special and clears kit decision cooldowns
+- Debug exposes:
+  - each CPU's Sub/Special pair and current Special %
+  - number of ready CPUs
+  - average CPU Special %
+  - cumulative actual CPU scoreable paint driving gauges
+  - Sub uses / Special activations
+  - active CPU Subs / active Special effects
+  - Sub explosions / CPU kit pool drops
+  - last CPU kit action
+- `CPU Advanced QA` first clears active CPU kit effects, then changes the five advanced weapon classes
+- Restart Match restores the frozen T19A default roster and clears T19C runtime state
+
+Cross-system regression audit:
+- T19B advanced main-weapon behavior remains unchanged
+- T19A default CPU roster remains unchanged
+- T18 Super Jump state/timing remains unchanged
+- Human T16 Sub/Special controls and profiles remain unchanged
+- Human T15 Special gauge and HUMAN/SPECIAL source contracts remain unchanged
+- PaintCoordinator remains the sole immutable PaintEvent creator
+- CPU/GPU paint coordinates remain unchanged
+- MatchController remains unchanged
+
+T19C remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
