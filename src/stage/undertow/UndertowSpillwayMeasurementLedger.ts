@@ -128,7 +128,7 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Exact glass outline remains for T21-B.'),
+    xz: unresolvedXz('Family summary only; exact A/B overhang polygons are recorded in dedicated entries below.'),
     y: {
       deltaMeters: 3,
       confidence: 'HIGH',
@@ -142,6 +142,71 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: handoff
     },
     notes: 'Render, collision, projectile blocking, passage underneath, and paintability must stay separable.'
+  }),
+  commonSurfaceEntry({
+    id: 'team-a-upper-glass-overhang',
+    feature: 'Team A-side central glass overhang',
+    region: 'Upper Glass',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.positiveZGlassOverhang.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Exact gray vector face matched to the current glass overhang. Its internal dash field proves that part of the overhang is slope-marked.'
+    },
+    y: {
+      deltaMeters: 3,
+      confidence: 'HIGH',
+      evidenceIds: handoff,
+      notes: 'Top-to-major-floor-below relationship only; do not assign a single flat Y to the entire slope-marked glass face.'
+    },
+    transition: {
+      kind: 'SLOPE',
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Slope marker exists within the glass footprint; exact start/end Y still belongs to T21-C.'
+    },
+    surface: {
+      semantics: ['UNINKABLE', 'GLASS'],
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint', 'handoff-t21-masterplan']
+    },
+    notes: 'Render/collision/projectile blocking/underpass remain separate runtime concerns.'
+  }),
+  commonSurfaceEntry({
+    id: 'team-b-upper-glass-overhang',
+    feature: 'Team B-side central glass overhang',
+    region: 'Upper Glass',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.negativeZGlassOverhang.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Exact 180-degree counterpart gray vector face matched to the current glass overhang.'
+    },
+    y: {
+      deltaMeters: 3,
+      confidence: 'HIGH',
+      evidenceIds: handoff,
+      notes: 'Top-to-major-floor-below relationship only; absolute and slope endpoint Y remain unresolved.'
+    },
+    transition: {
+      kind: 'SLOPE',
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Slope marker exists within the glass footprint; exact start/end Y still belongs to T21-C.'
+    },
+    surface: {
+      semantics: ['UNINKABLE', 'GLASS'],
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint', 'handoff-t21-masterplan']
+    }
   }),
   commonSurfaceEntry({
     id: 'upper-glass-underpass',
