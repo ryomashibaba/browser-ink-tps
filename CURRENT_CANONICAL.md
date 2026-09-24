@@ -1874,3 +1874,28 @@ A new measurement-to-geometry gate enforces:
 - PROVISIONAL/UNKNOWN values cannot silently become exact geometry
 
 No runtime stage geometry has been swapped in yet.
+
+
+## T21-C vertical constraint checkpoint — 2026-09-24
+
+The Undertow reconstruction now uses an explicit vertical constraint graph rather than a guessed absolute-height ladder.
+
+Resolved for BLOCKOUT:
+- center-low-floor = Y 0.0 m CONFIRMED
+- center-small-step-top = Y 1.5 m via HIGH +1.5 m relation
+
+Recorded but not absolute:
+- right-low -> right-small-drop-upper = +1.5 m HIGH
+- glass-lower-major-floor -> upper-glass-platform = +3.0 m HIGH
+- Team A/B spawn-floor equality = HIGH symmetry relation
+- Team A/B first-drop landing equality = HIGH symmetry relation
+
+Not resolved:
+- spawn absolute Y
+- first-drop exact magnitude (1.5 m vs 3.0 m)
+- glass lower-floor absolute Y
+- glass top absolute Y
+- right-low absolute Y
+- broad +4.5 to +6.0 m upper-level band
+
+The resolver cannot propagate candidate-only relations, and STABLE_FREEZE accepts CONFIRMED relations only. Historical Spawn 7.5 -> first 4.5 -> second 1.5 -> center 0 remains excluded from exact geometry.
