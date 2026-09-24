@@ -9,12 +9,21 @@ import {
   UNDERTOW_TURF_MAP_ORIGIN_PIXEL,
   UNDERTOW_TURF_RULE_MAP_SOURCE
 } from './UndertowSpillwayMapCalibration';
+import {
+  UNDERTOW_VECTOR_BLUEPRINT_AUDIT,
+  UNDERTOW_VECTOR_BLUEPRINT_SOURCE,
+  UNDERTOW_VECTOR_TRACES
+} from './UndertowSpillwayVectorBlueprint';
 
 const ALL_RULES = ['TURF', 'ZONES', 'TOWER', 'RAINMAKER', 'CLAMS'] as const;
 const handoff = ['handoff-t21-masterplan'] as const;
 const maps = ['user-five-rule-maps', 'web-post-7-2-overhead'] as const;
 const centerEvidence = ['user-center-stills', 'user-center-videos', 'web-post-7-2-gameplay'] as const;
-const firstDropEvidence = ['user-first-drop-video', 'handoff-t21-masterplan'] as const;
+const firstDropEvidence = [
+  'user-first-drop-video',
+  'user-turf-vector-blueprint',
+  'handoff-t21-masterplan'
+] as const;
 
 const unresolvedXz = (notes: string) => ({
   kind: 'UNRESOLVED' as const,
@@ -216,7 +225,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: firstDropEvidence,
-    xz: unresolvedXz('Drop lip footprint remains for T21-B.'),
+    xz: {
+      kind: 'POLYLINE',
+      polylineMeters: UNDERTOW_VECTOR_TRACES.teamAFirstDropLip.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-first-drop-video'],
+      notes: 'Vector-PDF hard edge measured exactly in plan; the video confirms one-way traversal semantics.'
+    },
     y: {
       candidatesMeters: [1.5, 3],
       confidence: 'PROVISIONAL',
@@ -243,7 +258,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: firstDropEvidence,
-    xz: unresolvedXz('Counterpart footprint remains for T21-B symmetry audit.'),
+    xz: {
+      kind: 'POLYLINE',
+      polylineMeters: UNDERTOW_VECTOR_TRACES.teamBFirstDropLip.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-first-drop-video'],
+      notes: 'Vector-PDF 180-degree counterpart of the Team A first-drop lip.'
+    },
     y: {
       candidatesMeters: [1.5, 3],
       confidence: 'PROVISIONAL',
@@ -293,10 +314,10 @@ const entries: readonly StageMeasurementEntry[] = [
     evidenceIds: maps,
     xz: {
       kind: 'POINT',
-      pointMeters: UNDERTOW_PROJECT_SPAWNS.teamA,
+      pointMeters: UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0],
       confidence: 'HIGH',
-      evidenceIds: ['user-five-rule-maps', 'handoff-t21-masterplan'],
-      notes: 'Measured spawn center only. Full spawn-floor polygon remains unresolved.'
+      evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
+      notes: 'Vector spawn-ring center only. Full spawn-floor polygon remains unresolved.'
     },
     y: unknownY('Historical 7.5m hypothesis is intentionally not promoted to canonical.'),
     transition: noTransition,
@@ -316,10 +337,10 @@ const entries: readonly StageMeasurementEntry[] = [
     evidenceIds: maps,
     xz: {
       kind: 'POINT',
-      pointMeters: UNDERTOW_PROJECT_SPAWNS.teamB,
+      pointMeters: UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0],
       confidence: 'HIGH',
-      evidenceIds: ['user-five-rule-maps', 'handoff-t21-masterplan'],
-      notes: 'Measured spawn center only. Full spawn-floor polygon remains unresolved.'
+      evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
+      notes: 'Vector spawn-ring center only. Full spawn-floor polygon remains unresolved.'
     },
     y: unknownY('Absolute Y remains unresolved.'),
     transition: noTransition,
@@ -381,13 +402,57 @@ const entries: readonly StageMeasurementEntry[] = [
     }
   }),
   commonSurfaceEntry({
+    id: 'team-a-water-region',
+    feature: 'Team A-side mapped water hazard',
+    region: 'Team A Spawn / Outer Environment',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.teamAWaterRegion.metricPoints,
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Exact cyan-fill polygon extracted from the vector PDF.'
+    },
+    y: unknownY('Water visual plane and kill threshold remain for T21-C/D.'),
+    transition: noTransition,
+    surface: {
+      semantics: ['WATER', 'KILL', 'UNINKABLE'],
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint']
+    }
+  }),
+  commonSurfaceEntry({
+    id: 'team-b-water-region',
+    feature: 'Team B-side mapped water hazard',
+    region: 'Team B Spawn / Outer Environment',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.teamBWaterRegion.metricPoints,
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Exact 180-degree counterpart cyan-fill polygon extracted from the vector PDF.'
+    },
+    y: unknownY('Water visual plane and kill threshold remain for T21-C/D.'),
+    transition: noTransition,
+    surface: {
+      semantics: ['WATER', 'KILL', 'UNINKABLE'],
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint']
+    }
+  }),
+  commonSurfaceEntry({
     id: 'water-kill-regions',
     feature: 'water / fall-out regions',
     region: 'Outer Environment',
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Kill polygons remain for T21-B.'),
+    xz: unresolvedXz('Mapped cyan water polygons are now exact; the broader fall-out/void kill boundary remains unresolved.'),
     y: unknownY('Water visual level and kill threshold remain for T21-C/D.'),
     transition: noTransition,
     surface: {
@@ -505,6 +570,13 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       sourceVersion: 'Ver.7.2.0+ target'
     },
     {
+      id: 'user-turf-vector-blueprint',
+      kind: 'USER_RULE_MAP',
+      label: 'User-provided Sunfish Undertow Spillway Turf vector PDF + matching 3508x2482 JPEG',
+      sourceVersion: 'map updated 2024-05-06 / post-Ver.7.2.0 layout',
+      notes: 'Primary T21-B planimetric source. PDF linework is vector CAD output; JPEG is used for visual cross-checking.'
+    },
+    {
       id: 'nintendo-7-2-changelog',
       kind: 'NINTENDO_CHANGELOG',
       label: 'Nintendo Ver.7.2.0 stage-change record for Undertow Spillway',
@@ -561,11 +633,19 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
     },
     {
       id: 'spawn-distance-meters',
-      value: UNDERTOW_TURF_MAP_AUDIT.spawnSeparationMeters,
+      value: UNDERTOW_VECTOR_BLUEPRINT_AUDIT.spawnSeparationMeters,
       unit: 'm',
       confidence: 'HIGH',
-      evidenceIds: ['handoff-t21-masterplan', 'user-five-rule-maps'],
-      notes: 'Derived from measured spawn pixels using the 20px/m working transform.'
+      evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
+      notes: 'Refined from exact vector spawn-ring centers using the same HIGH project-meter calibration.'
+    },
+    {
+      id: 'pdf-points-per-meter',
+      value: UNDERTOW_VECTOR_BLUEPRINT_SOURCE.pointsPerProjectMeter,
+      unit: 'pt/m',
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: '20 px/m at the 300-dpi horizontal JPEG export corresponds to 4.8 PDF points per project meter.'
     },
     {
       id: 'outer-span-x-meters',
