@@ -252,6 +252,7 @@ export class InkLabApp {
         this.match.forceEnd();
         this.superJump.cancel();
         this.projectiles.reset();
+        this.cpuKit.reset();
         this.subWeapons.reset();
         this.specialGauge.cancelActive();
       },
@@ -264,6 +265,7 @@ export class InkLabApp {
         );
       },
       onCpuAdvancedQa: () => {
+        this.cpuKit.reset();
         this.cpuAgents.forceAdvancedWeaponQa();
       },
       onCpuKitQaReady: () => {
