@@ -7,7 +7,7 @@ import {
 describe('T21-B Undertow common trace plan', () => {
   it('promotes only source-measured XZ traces', () => {
     const coverage = undertowTraceCoverage();
-    expect(coverage.measured).toBe(6);
+    expect(coverage.measured).toBe(7);
     expect(coverage.total).toBe(18);
 
     expect(coverage.missingIds).not.toContain('team-a-first-drop-lip');
@@ -16,6 +16,7 @@ describe('T21-B Undertow common trace plan', () => {
 
     expect(coverage.missingIds).toContain('common-playable-boundary');
     expect(coverage.missingIds).not.toContain('upper-glass-platform-outline');
+    expect(coverage.missingIds).not.toContain('center-grate-outline');
     expect(coverage.missingIds).toContain('fall-out-void-kill-boundary');
   });
 
