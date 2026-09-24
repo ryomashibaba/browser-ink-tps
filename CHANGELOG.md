@@ -1,3 +1,17 @@
+## v0.17.0 T20 Splat Zones Fidelity / Cross-Debug Follow-up — 2026-09-24
+
+- initial T20 PR #3 merged to main at `61ab9aa492595468973141572179753c38115fe4`; main run #352 deployed successfully
+- corrected clean 100-count pacing from ~100 seconds to series-style ~60 seconds
+- raised capture to 70%; opposing 50% neutralization remains explicit project tuning because the exact Splatoon 3 internal value is not independently confirmed
+- replaced cumulative 50% penalty approximation with a control-period 0.75 progress formula and opening-bonus behavior covered by tests
+- penalty is deferred until the opposing team actually takes control instead of firing at the first neutralization
+- added recent-control-loss age, 10-second overtime grace, winning-team retake termination, overtime-team overtake win, and 5-minute overtime cap
+- added an in-world neutral/Cyan/Magenta four-edge Splat Zone outline
+- Tactical Map objective now renders above map ink
+- Clear Ink QA resets T20 objective state to prevent stale control/penalty
+- PR #4 head `a3a6153010579b71db10a99a84e2e58d7fa1a66d`; run #354 passed TypeScript, unit tests, and production build
+- T0–T19C frozen gameplay authority remains unchanged
+
 ## v0.17.0 T20 Game Mode Foundation + Splat Zones Candidate — 2026-09-24
 
 - preserved T0–T19C as the frozen gameplay foundation

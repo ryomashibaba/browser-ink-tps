@@ -1790,21 +1790,29 @@ T19C is therefore **STABLE FREEZE**.
 
 T20 is additive on top of the frozen T0–T19C foundation.
 
-Candidate implementation checkpoint before documentation:
-- commit: `4c856e871dd491e4217659d8e47320def1930df9`
-- PR: #3
-- the first PR CI run exposed and fixed a TypeScript literal-state issue in the new objective counter; the corrected run passed TypeScript check, unit tests, and production build before the PR-only deploy job was isolated from Pages deployment
+Initial T20 integration:
+- PR #3 merged to main as `61ab9aa492595468973141572179753c38115fe4`
+- main GitHub Actions run #352 / `35983355005`: TypeScript check, unit tests, production build, and Pages deploy all PASS
+
+T20 cross-debug / rule-fidelity follow-up:
+- PR #4 head: `a3a6153010579b71db10a99a84e2e58d7fa1a66d`
+- PR GitHub Actions run #354 / `35986533331`: TypeScript check, unit tests, and production build PASS; deploy correctly skipped for PR
+- this follow-up remains candidate until merged and hosted runtime QA is accepted
 
 T20 candidate scope:
 - `GameModeId` introduces `TURF_WAR` and `SPLAT_ZONES`; Turf War remains the default
 - `SplatZonesObjectiveSystem` reads only existing authoritative GameplayInk owner cells
 - the stage declares the central objective as PaintSurface-local U/V metadata; no global-XZ ink authority is introduced
 - zone cells are precomputed once and only that bounded set is sampled each fixed tick
-- capture/retain hysteresis, 100-count scoring, control-loss penalty, knockout, and overtime are mode-local rules
+- Splat Zones uses 100 counts with a series-style ~60 s clean hold, 70% capture threshold, and 50% opposing-coverage neutralization as project tuning
+- control-period penalty follows a 0.75 progress formula and is applied when the opposing team takes control rather than merely when the zone becomes neutral
+- overtime supports a 10 s recent-control-loss grace and a 5 min safety cap; these rules remain mode-local
 - `MatchController` is mode-aware while preserving the frozen Turf result path and player lifecycle
 - CPU tactical goals become zone-aware through `CpuTacticalDirector`; all frozen CPU weapon, kit, Recast, Super Jump, damage, and lifecycle runtimes remain unchanged
-- HUD / Tactical Map / DebugOverlay expose mode, control, counters, paint share, penalties, and overtime
-- deterministic rule tests cover capture thresholds, retain hysteresis, and count-based winner resolution
+- HUD / Tactical Map / DebugOverlay expose mode, control, counters, paint share, penalties, loss age, overtime elapsed/grace, and result
+- an in-world four-edge objective outline is visible only in Splat Zones and changes neutral/A/B color with control
+- Tactical Map draws the objective overlay after ink so the border cannot be hidden by map ink
+- deterministic rule tests cover 70% capture, neutralization, ~60 s count pace, documented penalty examples, overtime entry/grace/retake/overtake/cap, and count-based winner resolution
 - PR CI runs TypeScript check + unit tests + production build; Pages deploy is main-only
 
 Freeze boundaries:
@@ -1816,4 +1824,6 @@ Freeze boundaries:
 - T17/T18 Super Jump behavior is unchanged
 - no broad refactor of ProjectileSystem, CpuAgentSystem, or PlayerController is part of T20
 
-T20 remains **IMPLEMENTATION CANDIDATE** until hosted Pages QA and the final horizontal regression pass are accepted.
+Reference audit note: Nintendo publicly describes the 100-count objective; Inkipedia documents the 70% series capture threshold, 36-frame count pacing, 0.75 control-period penalty formula, and Splat Zones overtime grace. The exact Splatoon 3 internal neutralization threshold was not independently confirmed, so the current 50% value is explicitly project tuning rather than an exact-internal-value claim.
+
+T20 remains **IMPLEMENTATION CANDIDATE** until PR #4 is merged, Pages is redeployed from main, hosted Pages QA is accepted, and the final horizontal regression pass is closed.
