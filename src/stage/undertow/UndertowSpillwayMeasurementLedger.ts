@@ -78,7 +78,7 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Family summary only; exact A/B small-drop hard edges are recorded in dedicated entries below.'),
+    xz: unresolvedXz('Footprint remains for T21-B.'),
     y: {
       deltaMeters: 1.5,
       confidence: 'HIGH',
@@ -98,12 +98,12 @@ const entries: readonly StageMeasurementEntry[] = [
   }),
   commonSurfaceEntry({
     id: 'right-small-drop',
-    feature: 'right-side small drop',
-    region: 'Center / Right',
+    feature: 'right-side small drop family',
+    region: 'Spawn-side right route',
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Footprint remains for T21-B.'),
+    xz: unresolvedXz('Family summary only; exact A/B small-drop hard edges are recorded in dedicated entries below.'),
     y: {
       deltaMeters: -1.5,
       confidence: 'HIGH',
