@@ -260,8 +260,8 @@ Author/source semantics used in this checkpoint:
 
 Two symmetric gray source rectangles near the middle are now bound to the current glass overhang family:
 
-- negative-Z overhang plan area: ~62.799 m²
-- positive-Z overhang plan area: ~62.799 m²
+- negative-Z overhang plan area: ~62.796 m²
+- positive-Z overhang plan area: ~62.796 m²
 - 180-degree plan residual: <0.03 m
 - XZ confidence: HIGH
 - surface semantics: GLASS + UNINKABLE CONFIRMED
