@@ -7,6 +7,8 @@ export type UndertowBlueprintSourceClass =
   | 'HARD_EDGE'
   | 'WHITE_SOURCE_FACE'
   | 'UNINKABLE_GRAY'
+  | 'UNINKABLE_GLASS_OVERHANG'
+  | 'SLOPE_MARKER_FIELD'
   | 'WATER_CYAN';
 
 export interface UndertowVectorTrace {
@@ -164,6 +166,58 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'WATER_CYAN',
     'CONFIRMED',
     '180-degree counterpart of the positive-Z water region.'
+  ),
+  negativeZGlassOverhang: vectorTrace(
+    'negative-z-glass-overhang',
+    'POLYGON',
+    [
+      [382.44, 230.28],
+      [420.96, 230.28],
+      [420.96, 267.84],
+      [382.44, 267.84]
+    ],
+    'UNINKABLE_GLASS_OVERHANG',
+    'HIGH',
+    'Exact symmetric gray source face matched to the current glass overhang in user gameplay captures. Gray confirms uninkable source semantics; gameplay evidence confirms glass and traversable space below.'
+  ),
+  positiveZGlassOverhang: vectorTrace(
+    'positive-z-glass-overhang',
+    'POLYGON',
+    [
+      [420.96, 327.36],
+      [459.48, 327.36],
+      [459.48, 364.92],
+      [420.96, 364.92]
+    ],
+    'UNINKABLE_GLASS_OVERHANG',
+    'HIGH',
+    '180-degree counterpart of the negative-Z glass overhang.'
+  ),
+  negativeZGlassSlopeMarkers: vectorTrace(
+    'negative-z-glass-slope-marker-envelope',
+    'POLYGON',
+    [
+      [384.36, 244.9166666667],
+      [418.92, 244.9166666667],
+      [418.92, 261.25],
+      [384.36, 261.25]
+    ],
+    'SLOPE_MARKER_FIELD',
+    'HIGH',
+    'Envelope of the horizontal dash field inside the gray glass source face. This proves a slope-marked subregion but is not itself a collision boundary.'
+  ),
+  positiveZGlassSlopeMarkers: vectorTrace(
+    'positive-z-glass-slope-marker-envelope',
+    'POLYGON',
+    [
+      [422.88, 334.0],
+      [457.44, 334.0],
+      [457.44, 350.25],
+      [422.88, 350.25]
+    ],
+    'SLOPE_MARKER_FIELD',
+    'HIGH',
+    '180-degree counterpart slope-marker envelope inside the positive-Z glass source face.'
   ),
   centerOriginFace: vectorTrace(
     'center-origin-source-face',
