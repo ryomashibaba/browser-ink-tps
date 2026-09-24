@@ -119,6 +119,19 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(entry('upper-glass-underpass').xz.kind).toBe('UNRESOLVED');
   });
 
+  it('binds both right-side small-drop hard edges while retaining the 1.5m HIGH vertical relation', () => {
+    for (const id of ['team-a-right-small-drop', 'team-b-right-small-drop']) {
+      const drop = entry(id);
+      expect(drop.xz.kind).toBe('POLYLINE');
+      expect(drop.xz.confidence).toBe('HIGH');
+      expect(drop.xz.polylineMeters).toHaveLength(3);
+      expect(drop.transition.kind).toBe('DROP');
+      expect(drop.transition.deltaYMeters).toBe(-1.5);
+      expect(drop.transition.confidence).toBe('HIGH');
+    }
+    expect(entry('center-small-step').xz.kind).toBe('UNRESOLVED');
+  });
+
   it('binds the symmetric grate pair as exact XZ without mixing in water semantics', () => {
     for (const id of ['negative-z-grate-mesh', 'positive-z-grate-mesh']) {
       const grate = entry(id);
