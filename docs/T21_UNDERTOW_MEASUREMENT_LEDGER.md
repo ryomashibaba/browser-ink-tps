@@ -132,3 +132,17 @@ Still unresolved before full T21-C completion:
 - absolute Y for the lower tunnels/right low area
 - exact start/end Y for both center slopes
 - full upper-platform absolute height
+
+
+## Source-version guard
+
+The repository now keeps a five-map Ver.7.2.0 reference catalog for Turf / Zones / Tower / Rainmaker / Clams.
+
+These 1280 x 720 in-game tactical-map captures are **visual cross-checks only**. They must never inherit the 20 px/m scale from the user's 3508 x 2482 rule map because their projection is different.
+
+The catalog deliberately excludes:
+- pre-7.2 layouts
+- Big Run
+- legacy Tricolor
+
+This makes an accidental old-map import detectable in tests before rule-variant geometry is built.
