@@ -87,10 +87,10 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
   {
     id: 'right-small-drop-edge',
     geometryKind: 'POLYLINE',
-    region: 'Center / Right',
-    status: 'UNTRACED',
+    region: 'Spawn-side Right Route',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '~1.5m relation is HIGH; edge remains unmeasured.'
+    notes: 'Both symmetric second-drop L-shaped hard edges are measured; vertical drop remains -1.5m HIGH.'
   },
   {
     id: 'upper-glass-platform-outline',
