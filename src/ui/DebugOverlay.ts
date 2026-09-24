@@ -56,6 +56,7 @@ export class DebugOverlay {
         <span class="muted">CPU advanced QA</span><span>${escapeHtml(last.cpuAdvancedQa)}</span>
         <span class="muted">CPU kits</span><span>${escapeHtml(last.cpuKits)}</span>
         <span class="muted">CPU special ready / avg</span><span>${last.cpuSpecialReady} / ${last.cpuAverageSpecialPercent.toFixed(0)}%</span>
+        <span class="muted">CPU scoreable paint</span><span>${last.cpuScoreablePaintMeters2.toFixed(1)} m²</span>
         <span class="muted">CPU sub / special uses</span><span>${last.cpuSubUses} / ${last.cpuSpecialActivations}</span>
         <span class="muted">CPU active sub / special FX</span><span>${last.cpuActiveSubs} / ${last.cpuActiveSpecialEffects}</span>
         <span class="muted">CPU sub explosions / pool drops</span><span>${last.cpuSubExplosions} / ${last.cpuKitPoolDrops}</span>
