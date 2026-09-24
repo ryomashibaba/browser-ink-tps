@@ -176,6 +176,7 @@ export class CpuAgentSystem {
     this.stats.cpuSubUses = 0;
     this.stats.cpuSpecialActivations = 0;
     this.stats.cpuKitLast = '-';
+    this.stats.cpuScoreablePaintMeters2 = 0;
 
     const teamACount = humanTeam === Team.A ? 3 : 4;
     const teamBCount = GAME_CONFIG.cpu.cpuPlayers - teamACount;
@@ -372,6 +373,7 @@ export class CpuAgentSystem {
   ): void {
     for (const [actorId, area] of Object.entries(areaByActor)) {
       if (!Number.isFinite(area) || area <= 0) continue;
+      this.stats.cpuScoreablePaintMeters2 += area;
       const bot = this.bots.find((candidate) => candidate.id === actorId);
       if (!bot) continue;
 
@@ -395,6 +397,7 @@ export class CpuAgentSystem {
     }
     this.pendingKitRequests.length = 0;
     this.stats.cpuKitLast = '-';
+    this.stats.cpuScoreablePaintMeters2 = 0;
     this.syncStats();
   }
 
