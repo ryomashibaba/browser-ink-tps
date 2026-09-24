@@ -146,3 +146,27 @@ The catalog deliberately excludes:
 - legacy Tricolor
 
 This makes an accidental old-map import detectable in tests before rule-variant geometry is built.
+
+
+## T21-C — vertical constraint graph checkpoint
+
+Vertical reconstruction is now represented as a constraint graph instead of a single guessed floor ladder.
+
+Current exact/usable blockout relationship:
+- center-low-floor = Y 0.0 m, CONFIRMED
+- center-low-floor -> center-small-step-top = +1.5 m, HIGH
+
+Known relative relationships that remain unresolved in absolute Y:
+- right-low-floor -> right-small-drop-upper = +1.5 m, HIGH
+- glass-lower-major-floor -> upper-glass-platform = +3.0 m, HIGH
+- Team A/B spawn floors are symmetry-linked at equal Y, HIGH
+- Team A/B first-drop landing floors are symmetry-linked at equal Y, HIGH
+
+Still candidate-only:
+- each spawn -> first-drop landing = -1.5 m or -3.0 m, PROVISIONAL
+- center upper band relative to center-low = +4.5 to +6.0 m, PROVISIONAL
+- raised/high platform absolute Y = +4.5 m candidate, PROVISIONAL
+
+The resolver only propagates an exact relation when an allowed-confidence chain has an absolute seed. Therefore the 3m glass clearance does not fabricate a glass-top absolute Y while the lower floor is unknown, and the first-drop candidate relation never fabricates a spawn or landing Y.
+
+At BLOCKOUT level, HIGH exact relations may propagate. At STABLE_FREEZE level, only CONFIRMED exact relations propagate.
