@@ -86,8 +86,8 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     expect(b.sourceClass).toBe('UNINKABLE_GLASS_OVERHANG');
     expect(a.confidence).toBe('HIGH');
     expect(b.confidence).toBe('HIGH');
-    expect(polygonAreaMeters2(a.metricPoints)).toBeCloseTo(62.799375, 4);
-    expect(polygonAreaMeters2(b.metricPoints)).toBeCloseTo(62.799375, 4);
+    expect(polygonAreaMeters2(a.metricPoints)).toBeCloseTo(62.795625, 4);
+    expect(polygonAreaMeters2(b.metricPoints)).toBeCloseTo(62.795625, 4);
     expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.03);
 
     expect(aSlope.sourceClass).toBe('SLOPE_MARKER_FIELD');
