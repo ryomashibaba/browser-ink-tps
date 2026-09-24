@@ -240,7 +240,7 @@ The current project intentionally does **not** yet include:
 
 **T20 — Game Mode Foundation + Splat Zones**
 
-T0–T19C remains the frozen gameplay foundation. The T20 candidate keeps Turf War as the default mode and adds Splat Zones through a separate objective layer driven only by authoritative GameplayInk. The candidate also adds zone-aware CPU tactical goals, mode-aware match/overtime handling, HUD/Tactical Map objective presentation, and deterministic rule tests.
+T0–T19C remains the frozen gameplay foundation. The T20 candidate keeps Turf War as the default mode and adds Splat Zones through a separate objective layer driven only by authoritative GameplayInk. The candidate also adds zone-aware CPU tactical goals, mode-aware match/overtime handling, HUD/Tactical Map objective presentation, an in-world control-colored zone outline, and deterministic rule tests. The cross-debug pass uses a series-style ~60-second clean 100-count hold, 70% capture, progress-based penalty, and overtime grace; the exact Splatoon 3 neutralization threshold is not independently confirmed, so the current 50% opposing-coverage threshold is project tuning.
 
 
 T13 hosted runtime QA is complete and accepted. The enlarged production arena, HUD, Tactical Map, shared stage metadata, and 4v4 regression/performance checks are frozen.

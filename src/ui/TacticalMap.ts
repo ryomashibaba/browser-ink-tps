@@ -114,8 +114,8 @@ export class TacticalMap {
     ctx.fillRect(0, 0, width, height);
 
     this.drawStageSolids();
-    this.drawSplatZones();
     this.drawInk();
+    this.drawSplatZones();
     this.drawSpawnPoint(this.stage.metadata.teamASpawn, 'rgba(32,220,240,.95)');
     this.drawSpawnPoint(this.stage.metadata.teamBSpawn, 'rgba(255,52,156,.95)');
     this.drawAgents();

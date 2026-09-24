@@ -82,6 +82,8 @@ export class PerformanceStats {
   public matchCountdownSeconds = 3;
   public matchTimeRemainingSeconds = 180;
   public matchOvertime = false;
+  public matchOvertimeElapsedSeconds = 0;
+  public matchOvertimeGraceSeconds = 0;
   public matchResult = '-';
   public zonesControl = 'NEUTRAL';
   public zonesPercentA = 0;
@@ -90,6 +92,8 @@ export class PerformanceStats {
   public zonesCountB = 100;
   public zonesPenaltyA = 0;
   public zonesPenaltyB = 0;
+  public zonesLossAgeA = Number.POSITIVE_INFINITY;
+  public zonesLossAgeB = Number.POSITIVE_INFINITY;
   public playerLifeState = 'ACTIVE';
   public playerRespawnSeconds = 0;
   public playerSplats = 0;

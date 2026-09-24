@@ -20,30 +20,49 @@ export function resolveZoneControl(
   const fractionA = percentA / 100;
   const fractionB = percentB / 100;
 
-  if (
-    fractionA >= tuning.captureFraction &&
-    fractionA - fractionB >= tuning.captureLeadFraction
-  ) return Team.A;
+  if (current === Team.A) {
+    if (fractionB >= tuning.captureFraction) return Team.B;
+    if (fractionB >= tuning.neutralizeOpponentFraction) return Team.Neutral;
+    return Team.A;
+  }
 
-  if (
-    fractionB >= tuning.captureFraction &&
-    fractionB - fractionA >= tuning.captureLeadFraction
-  ) return Team.B;
+  if (current === Team.B) {
+    if (fractionA >= tuning.captureFraction) return Team.A;
+    if (fractionA >= tuning.neutralizeOpponentFraction) return Team.Neutral;
+    return Team.B;
+  }
 
-  if (current === Team.A && fractionA >= tuning.retainFraction) return Team.A;
-  if (current === Team.B && fractionB >= tuning.retainFraction) return Team.B;
+  if (fractionA >= tuning.captureFraction) return Team.A;
+  if (fractionB >= tuning.captureFraction) return Team.B;
   return Team.Neutral;
+}
+
+export function calculateZonePenalty(
+  startEffectiveCount: number,
+  endEffectiveCount: number
+): number {
+  const tuning = GAME_CONFIG.match.splatZones;
+  const progress = Math.max(0, startEffectiveCount - endEffectiveCount);
+  if (progress <= 1e-6) return 0;
+  const openingBonus =
+    Math.abs(startEffectiveCount - tuning.initialCount) <= 1e-6 ? 1 : 0;
+  return Math.round(progress * tuning.penaltyProgressMultiplier) + openingBonus;
 }
 
 export class SplatZonesObjectiveSystem {
   private readonly cells: readonly ZoneCell[];
   private control: Team = Team.Neutral;
+  private pendingPenaltyTeam: Team = Team.Neutral;
   private countA: number = GAME_CONFIG.match.splatZones.initialCount;
   private countB: number = GAME_CONFIG.match.splatZones.initialCount;
   private penaltyA: number = 0;
   private penaltyB: number = 0;
+  private controlStartEffectiveA: number = GAME_CONFIG.match.splatZones.initialCount;
+  private controlStartEffectiveB: number = GAME_CONFIG.match.splatZones.initialCount;
   private percentA: number = 0;
   private percentB: number = 0;
+  private lossAgeA: number = Number.POSITIVE_INFINITY;
+  private lossAgeB: number = Number.POSITIVE_INFINITY;
 
   public constructor(
     gameplayInk: GameplayInkSystem,
@@ -58,24 +77,32 @@ export class SplatZonesObjectiveSystem {
   }
 
   public reset(): void {
+    const initial = GAME_CONFIG.match.splatZones.initialCount;
     this.control = Team.Neutral;
-    this.countA = GAME_CONFIG.match.splatZones.initialCount;
-    this.countB = GAME_CONFIG.match.splatZones.initialCount;
+    this.pendingPenaltyTeam = Team.Neutral;
+    this.countA = initial;
+    this.countB = initial;
     this.penaltyA = 0;
     this.penaltyB = 0;
+    this.controlStartEffectiveA = initial;
+    this.controlStartEffectiveB = initial;
     this.percentA = 0;
     this.percentB = 0;
+    this.lossAgeA = Number.POSITIVE_INFINITY;
+    this.lossAgeB = Number.POSITIVE_INFINITY;
     this.measureControl();
     this.syncStats();
   }
 
   public fixedUpdate(dt: number, active: boolean): void {
+    if (active) this.advanceLossAges(dt);
+
     const previous = this.control;
     this.measureControl();
     this.control = resolveZoneControl(this.percentA, this.percentB, previous);
 
-    if (this.control !== previous && previous !== Team.Neutral) {
-      this.applyLossPenalty(previous);
+    if (this.control !== previous) {
+      this.handleControlTransition(previous, this.control);
     }
 
     if (active) {
@@ -94,7 +121,9 @@ export class SplatZonesObjectiveSystem {
       countA: this.countA,
       countB: this.countB,
       penaltyA: this.penaltyA,
-      penaltyB: this.penaltyB
+      penaltyB: this.penaltyB,
+      lossAgeA: this.lossAgeA,
+      lossAgeB: this.lossAgeB
     };
   }
 
@@ -145,21 +174,59 @@ export class SplatZonesObjectiveSystem {
     this.percentB = b / total * 100;
   }
 
-  private applyLossPenalty(team: Team.A | Team.B): void {
+  private advanceLossAges(dt: number): void {
+    if (Number.isFinite(this.lossAgeA)) this.lossAgeA += dt;
+    if (Number.isFinite(this.lossAgeB)) this.lossAgeB += dt;
+  }
+
+  private handleControlTransition(previous: Team, next: Team): void {
+    if (previous === Team.A) {
+      this.lossAgeA = 0;
+      this.pendingPenaltyTeam = Team.A;
+    } else if (previous === Team.B) {
+      this.lossAgeB = 0;
+      this.pendingPenaltyTeam = Team.B;
+    }
+
+    if (next === Team.A) {
+      if (this.pendingPenaltyTeam === Team.B) {
+        this.applyControlPeriodPenalty(Team.B);
+      }
+      this.pendingPenaltyTeam = Team.Neutral;
+      this.controlStartEffectiveA = this.effectiveRemaining(Team.A);
+      this.lossAgeA = Number.POSITIVE_INFINITY;
+    } else if (next === Team.B) {
+      if (this.pendingPenaltyTeam === Team.A) {
+        this.applyControlPeriodPenalty(Team.A);
+      }
+      this.pendingPenaltyTeam = Team.Neutral;
+      this.controlStartEffectiveB = this.effectiveRemaining(Team.B);
+      this.lossAgeB = Number.POSITIVE_INFINITY;
+    }
+  }
+
+  private applyControlPeriodPenalty(team: Team.A | Team.B): void {
     const tuning = GAME_CONFIG.match.splatZones;
     if (team === Team.A) {
-      const progress = tuning.initialCount - this.countA;
-      this.penaltyA = Math.max(
-        this.penaltyA,
-        Math.min(tuning.maxPenalty, progress * tuning.penaltyProgressMultiplier)
+      const added = calculateZonePenalty(
+        this.controlStartEffectiveA,
+        this.effectiveRemaining(Team.A)
       );
+      this.penaltyA = Math.min(tuning.maxPenalty, this.penaltyA + added);
       return;
     }
-    const progress = tuning.initialCount - this.countB;
-    this.penaltyB = Math.max(
-      this.penaltyB,
-      Math.min(tuning.maxPenalty, progress * tuning.penaltyProgressMultiplier)
+
+    const added = calculateZonePenalty(
+      this.controlStartEffectiveB,
+      this.effectiveRemaining(Team.B)
     );
+    this.penaltyB = Math.min(tuning.maxPenalty, this.penaltyB + added);
+  }
+
+  private effectiveRemaining(team: Team.A | Team.B): number {
+    return team === Team.A
+      ? this.countA + this.penaltyA
+      : this.countB + this.penaltyB;
   }
 
   private advanceTeam(team: Team.A | Team.B, dt: number): void {
@@ -189,5 +256,7 @@ export class SplatZonesObjectiveSystem {
     this.stats.zonesCountB = this.countB;
     this.stats.zonesPenaltyA = this.penaltyA;
     this.stats.zonesPenaltyB = this.penaltyB;
+    this.stats.zonesLossAgeA = this.lossAgeA;
+    this.stats.zonesLossAgeB = this.lossAgeB;
   }
 }
