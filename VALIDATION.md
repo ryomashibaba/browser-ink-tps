@@ -1466,3 +1466,26 @@ New deterministic coverage verifies:
 - +4.5 to +6.0m upper band and +4.5m raised-platform candidate remain PROVISIONAL
 
 No runtime stage geometry or traversal changes are introduced by this checkpoint.
+
+
+## T21-B vector-source validation
+
+The recovered user Turf archive adds an independent vector-source validation layer.
+
+Expected deterministic checks:
+- vector page is bound to the matching 3508 x 2482 Turf JPEG
+- project vector scale remains 4.8 pt/m HIGH
+- vector spawn-ring centers produce ~134.190 m separation
+- source origin differs from the spawn midpoint by <0.03 m
+- Team A/B first-drop lips are HIGH POLYLINE XZ measurements
+- each first-drop lip has 15.25 m plan length
+- first-drop pair 180-degree residual is <0.03 m
+- first-drop Y remains the PROVISIONAL [1.5, 3.0] m candidate pair
+- both mapped cyan water regions are CONFIRMED polygons
+- each mapped water polygon has ~33.004 m² plan area
+- mapped-water pair symmetry residual is <0.03 m
+- raw large spawn-side source faces are preserved as raw plan geometry and never promoted to one flat floor
+- trace-completeness reports 5 / 18 requirements measured
+- broader playable/fall-out boundaries, glass, slopes, grate, center floor and spawn-floor polygons remain UNTRACED
+
+No hosted runtime QA is required for this vector-source checkpoint because production geometry/collision/navigation is still untouched. TypeScript, Vitest, and production build must pass.
