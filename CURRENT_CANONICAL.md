@@ -1899,3 +1899,27 @@ Not resolved:
 - broad +4.5 to +6.0 m upper-level band
 
 The resolver cannot propagate candidate-only relations, and STABLE_FREEZE accepts CONFIRMED relations only. Historical Spawn 7.5 -> first 4.5 -> second 1.5 -> center 0 remains excluded from exact geometry.
+
+
+## T21-B recovered-vector source checkpoint — 2026-09-24
+
+The original Turf source is now available from the user's uploaded PDF/JPEG archives. The matching JPEG is exactly 3508 x 2482 px, and the PDF contains vector CAD linework rather than a raster page.
+
+The vector PDF is now the primary T21-B planimetric source; the JPEG and previous raster measurements remain cross-checks.
+
+Superseding measurements:
+- working vector scale: 4.8 pt/m HIGH, equivalent to the existing 20 px/m project transform
+- refined spawn separation: ~134.190 m HIGH
+- spawn centers: approximately X=+0.017 m, Z=-67.117 / +67.073 m
+- source-origin vs spawn-midpoint residual: <0.03 m
+- both first-drop lips: HIGH exact XZ polylines from vector hard edges
+- first-drop lip plan length: 15.25 m each
+- first-drop 180-degree XZ residual: <0.03 m
+- two mapped cyan water hazards: CONFIRMED exact XZ polygons, ~33.004 m² each
+- mapped-water 180-degree residual: <0.03 m
+
+First-drop traversal semantics remain ONE_WAY_DROP CONFIRMED, while its exact Y difference remains PROVISIONAL 1.5 m / 3.0 m.
+
+The PDF does not justify flattening large closed source faces into gameplay floors. Spawn-floor outlines, center floor boundaries, glass, slopes, grate, and broader fall-out/void boundaries stay unresolved until source-line semantics are bound to gameplay evidence.
+
+T21-B trace coverage is now 5 / 18 requirements measured. No runtime production stage swap has occurred.
