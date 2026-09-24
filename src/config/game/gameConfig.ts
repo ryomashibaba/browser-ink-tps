@@ -138,6 +138,7 @@ export const GAME_CONFIG = Object.freeze({
       spawnSpecialDecisionPerSlotSeconds: 0.22,
       respawnSubCooldownSeconds: 0.65,
       respawnSpecialDecisionCooldownSeconds: 0.90,
+      splatSpecialDecisionCooldownSeconds: 0.80,
       postSpecialDecisionCooldownSeconds: 2.60,
       postSpecialSubLockSeconds: 0.80,
       actionConflictFireIntervalFraction: 0.85,
