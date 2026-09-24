@@ -437,7 +437,7 @@ export class InkLabApp {
           this.projectiles.queueCpuShot(request);
         });
         this.cpuAgents.drainKitRequests((request) => {
-          this.cpuKit.queue(request);
+          return this.cpuKit.queue(request);
         });
 
         // Keep the camera transform current for every catch-up tick. This prevents
