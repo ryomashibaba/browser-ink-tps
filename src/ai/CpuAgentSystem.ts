@@ -389,8 +389,9 @@ export class CpuAgentSystem {
   public resetKitGauges(): void {
     for (const bot of this.bots) {
       bot.specialPoints = 0;
-      bot.subCooldownSeconds = 0.6;
-      bot.specialDecisionCooldownSeconds = 0.9;
+      bot.subCooldownSeconds = GAME_CONFIG.cpu.kit.respawnSubCooldownSeconds;
+      bot.specialDecisionCooldownSeconds =
+        GAME_CONFIG.cpu.kit.respawnSpecialDecisionCooldownSeconds;
     }
     this.pendingKitRequests.length = 0;
     this.stats.cpuKitLast = '-';
@@ -1714,7 +1715,8 @@ export class CpuAgentSystem {
     this.resetCpuJumpState(bot);
     bot.specialPoints *= GAME_CONFIG.special.splatRetention;
     bot.subCooldownSeconds = 0;
-    bot.specialDecisionCooldownSeconds = 0.8;
+    bot.specialDecisionCooldownSeconds =
+      GAME_CONFIG.cpu.kit.splatSpecialDecisionCooldownSeconds;
 
     bot.lifeState = 'SPLATTED';
     bot.respawnRemainingSeconds = GAME_CONFIG.match.respawnSeconds;
