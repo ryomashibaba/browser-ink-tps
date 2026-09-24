@@ -77,9 +77,19 @@ export class PerformanceStats {
   public playerHumanScoreablePaintMeters2 = 0;
 
   public matchState = 'COUNTDOWN';
+  public matchMode = 'TURF_WAR';
+  public matchModeLabel = 'Turf War';
   public matchCountdownSeconds = 3;
   public matchTimeRemainingSeconds = 180;
+  public matchOvertime = false;
   public matchResult = '-';
+  public zonesControl = 'NEUTRAL';
+  public zonesPercentA = 0;
+  public zonesPercentB = 0;
+  public zonesCountA = 100;
+  public zonesCountB = 100;
+  public zonesPenaltyA = 0;
+  public zonesPenaltyB = 0;
   public playerLifeState = 'ACTIVE';
   public playerRespawnSeconds = 0;
   public playerSplats = 0;
