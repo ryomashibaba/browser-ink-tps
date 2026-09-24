@@ -141,6 +141,7 @@ export const GAME_CONFIG = Object.freeze({
       splatSpecialDecisionCooldownSeconds: 0.80,
       postSpecialDecisionCooldownSeconds: 2.60,
       postSpecialSubLockSeconds: 0.80,
+      subPoolRetrySeconds: 0.35,
       actionConflictFireIntervalFraction: 0.85,
       turfPulseMaxDistanceMeters: 4.2,
       turfPulseLowHpThreshold: 52,
