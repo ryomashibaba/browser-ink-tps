@@ -78,7 +78,7 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Footprint remains for T21-B.'),
+    xz: unresolvedXz('Family summary only; exact A/B small-drop hard edges are recorded in dedicated entries below.'),
     y: {
       deltaMeters: 1.5,
       confidence: 'HIGH',
@@ -104,6 +104,68 @@ const entries: readonly StageMeasurementEntry[] = [
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
     xz: unresolvedXz('Footprint remains for T21-B.'),
+    y: {
+      deltaMeters: -1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    transition: {
+      kind: 'DROP',
+      deltaYMeters: -1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    surface: {
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: centerEvidence
+    }
+  }),
+  commonSurfaceEntry({
+    id: 'team-a-right-small-drop',
+    feature: 'Team A-side right small drop after first-drop open area',
+    region: 'Team A Spawn / Right',
+    featureKind: 'TRANSITION',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYLINE',
+      polylineMeters: UNDERTOW_VECTOR_TRACES.teamARightSmallDropLip.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay'],
+      notes: 'Exact L-shaped second drop edge following the first-drop open area.'
+    },
+    y: {
+      deltaMeters: -1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    transition: {
+      kind: 'DROP',
+      deltaYMeters: -1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    surface: {
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: centerEvidence
+    }
+  }),
+  commonSurfaceEntry({
+    id: 'team-b-right-small-drop',
+    feature: 'Team B-side right small drop after first-drop open area',
+    region: 'Team B Spawn / Right',
+    featureKind: 'TRANSITION',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYLINE',
+      polylineMeters: UNDERTOW_VECTOR_TRACES.teamBRightSmallDropLip.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay'],
+      notes: '180-degree counterpart of the Team A second drop edge.'
+    },
     y: {
       deltaMeters: -1.5,
       confidence: 'HIGH',
