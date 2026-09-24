@@ -50,6 +50,26 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.03);
   });
 
+  it('binds the two central glass overhang faces and keeps their internal slope markers distinct', () => {
+    const a = UNDERTOW_VECTOR_TRACES.negativeZGlassOverhang;
+    const b = UNDERTOW_VECTOR_TRACES.positiveZGlassOverhang;
+    const aSlope = UNDERTOW_VECTOR_TRACES.negativeZGlassSlopeMarkers;
+    const bSlope = UNDERTOW_VECTOR_TRACES.positiveZGlassSlopeMarkers;
+
+    expect(a.sourceClass).toBe('UNINKABLE_GLASS_OVERHANG');
+    expect(b.sourceClass).toBe('UNINKABLE_GLASS_OVERHANG');
+    expect(a.confidence).toBe('HIGH');
+    expect(b.confidence).toBe('HIGH');
+    expect(polygonAreaMeters2(a.metricPoints)).toBeCloseTo(62.799375, 4);
+    expect(polygonAreaMeters2(b.metricPoints)).toBeCloseTo(62.799375, 4);
+    expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.03);
+
+    expect(aSlope.sourceClass).toBe('SLOPE_MARKER_FIELD');
+    expect(bSlope.sourceClass).toBe('SLOPE_MARKER_FIELD');
+    expect(aSlope.notes).toContain('not itself a collision boundary');
+    expect(rotationSymmetryHausdorffMeters(aSlope.metricPoints, bSlope.metricPoints)).toBeLessThan(0.05);
+  });
+
   it('extracts the two cyan water hazards as exact source polygons', () => {
     const a = UNDERTOW_VECTOR_TRACES.teamAWaterRegion;
     const b = UNDERTOW_VECTOR_TRACES.teamBWaterRegion;
