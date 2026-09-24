@@ -51,11 +51,12 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
     }
   },
   {
-    id: 'upper-glass-platform',
+    id: 'glass-overhang-high-reference',
     absolute: {
-      floorId: 'GLASS_TOP',
+      floorId: 'GLASS_HIGH_REFERENCE',
       confidence: 'UNKNOWN',
-      evidenceIds: []
+      evidenceIds: [],
+      notes: 'Reference elevation only. The vector source contains slope markers inside the glass footprint, so this is not a single flat platform Y.'
     }
   },
   {
@@ -112,11 +113,11 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
   ),
   exactRelation(
     'glass-lower-major-floor',
-    'upper-glass-platform',
+    'glass-overhang-high-reference',
     3,
     'HIGH',
     handoff,
-    'Glass platform top is about 3m above the major floor directly below.'
+    'Glass overhang high reference is about 3m above the major floor directly below; do not flatten the slope-marked glass footprint.'
   ),
   exactRelation(
     'team-a-spawn-floor',
