@@ -307,6 +307,10 @@ export class CpuAgentSystem {
     this.syncStats();
   }
 
+  public setSplatZonesContext(active: boolean, control: Team): void {
+    this.director.setSplatZonesContext(active, control);
+  }
+
   public render(alpha: number): void {
     const t = Math.max(0, Math.min(1, alpha));
     for (const bot of this.bots) {

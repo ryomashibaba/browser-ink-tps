@@ -30,6 +30,9 @@ export interface TacticalJumpContext {
 
 export class CpuTacticalDirector {
   private readonly nodes: readonly Vec3[];
+  private readonly zoneCenter = new Vec3();
+  private zonesActive = false;
+  private zonesControl: Team = Team.Neutral;
 
   public constructor(
     private readonly gameplayInk: GameplayInkSystem,
@@ -38,9 +41,21 @@ export class CpuTacticalDirector {
     this.nodes = stage.metadata.tacticalNodes.map(
       (node) => new Vec3(node[0], node[1], node[2])
     );
+    const zone = stage.metadata.splatZones[0];
+    const zoneSurface = zone ? gameplayInk.getSurface(zone.surfaceId) : undefined;
+    if (zone && zoneSurface) {
+      this.zoneCenter.copy(zoneSurface.localToWorld(zone.centerU, zone.centerV));
+      this.zoneCenter.y = 0.12;
+    }
+  }
+
+  public setSplatZonesContext(active: boolean, control: Team): void {
+    this.zonesActive = active;
+    this.zonesControl = control;
   }
 
   public chooseGoal(context: TacticalAgentContext, out = new Vec3()): Vec3 {
+    if (this.zonesActive) return this.zonesGoal(context, out);
     if (context.role === 'SKIRMISHER') {
       return this.skirmisherGoal(context, out);
     }
@@ -78,6 +93,34 @@ export class CpuTacticalDirector {
 
     if (context.targetIsHuman) score += 0.35;
     return score;
+  }
+
+  private zonesGoal(context: TacticalAgentContext, out: Vec3): Vec3 {
+    const lane = (context.slot % 3 - 1) * 1.8;
+    const forward = context.team === Team.A ? -1 : 1;
+    const ownsZone = this.zonesControl === context.team;
+
+    if (context.role === 'ANCHOR') {
+      return out.set(
+        this.zoneCenter.x + lane * 0.7,
+        this.zoneCenter.y,
+        this.zoneCenter.z - forward * (ownsZone ? 4.2 : 3.0)
+      );
+    }
+
+    if (context.role === 'SKIRMISHER') {
+      return out.set(
+        this.zoneCenter.x + lane,
+        this.zoneCenter.y,
+        this.zoneCenter.z + forward * (ownsZone ? 2.6 : 1.2)
+      );
+    }
+
+    return out.set(
+      this.zoneCenter.x + lane,
+      this.zoneCenter.y,
+      this.zoneCenter.z + (ownsZone ? -forward * 1.3 : 0)
+    );
   }
 
   private painterGoal(context: TacticalAgentContext, out: Vec3): Vec3 {

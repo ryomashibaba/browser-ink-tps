@@ -1,5 +1,6 @@
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import { Team } from '../ink/types';
+import type { GameModeId } from '../match/GameMode';
 import {
   DEFAULT_WEAPON_ID,
   WEAPON_ORDER,
@@ -14,6 +15,7 @@ import {
 } from '../weapons/WeaponKitCatalog';
 
 export interface ControlPanelHandlers {
+  onModeChanged(mode: GameModeId): void;
   onTeamChanged(team: Team.A | Team.B): void;
   onWeaponChanged(weaponId: WeaponId): void;
   onBrushChanged(radius: number): void;
@@ -31,9 +33,12 @@ export interface ControlPanelHandlers {
 }
 
 export class ControlPanel {
+  private mode: GameModeId = 'TURF_WAR';
   private team: Team.A | Team.B = Team.A;
   private weapon: WeaponId = DEFAULT_WEAPON_ID;
   private radius: number = GAME_CONFIG.debug.defaultBrushRadiusMeters;
+  private readonly modeTurf: HTMLButtonElement;
+  private readonly modeZones: HTMLButtonElement;
   private readonly buttonA: HTMLButtonElement;
   private readonly buttonB: HTMLButtonElement;
   private readonly weaponButtons: HTMLButtonElement[];
@@ -44,8 +49,12 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T19C Stable Freeze</h1>
-      <p>T0–T19C is frozen. CPU main/Sub/Special parity and cross-system kit lifecycle are stable.</p>
+      <h1>Browser Ink TPS · T20 Candidate</h1>
+      <p>T0–T19C remains frozen. T20 adds a mode layer and Splat Zones without changing paint authority.</p>
+      <div class="row mode-row">
+        <button id="mode-turf" class="active-mode">Turf War</button>
+        <button id="mode-zones">Splat Zones</button>
+      </div>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
@@ -85,6 +94,8 @@ export class ControlPanel {
     `;
     root.appendChild(panel);
 
+    this.modeTurf = panel.querySelector('#mode-turf') as HTMLButtonElement;
+    this.modeZones = panel.querySelector('#mode-zones') as HTMLButtonElement;
     this.buttonA = panel.querySelector('#team-a') as HTMLButtonElement;
     this.buttonB = panel.querySelector('#team-b') as HTMLButtonElement;
     this.weaponButtons = Array.from(
@@ -93,6 +104,8 @@ export class ControlPanel {
     this.radiusOutput = panel.querySelector('#brush-out') as HTMLOutputElement;
     const slider = panel.querySelector('#brush') as HTMLInputElement;
 
+    this.modeTurf.addEventListener('click', () => this.setMode('TURF_WAR', handlers));
+    this.modeZones.addEventListener('click', () => this.setMode('SPLAT_ZONES', handlers));
     this.buttonA.addEventListener('click', () => this.setTeam(Team.A, handlers));
     this.buttonB.addEventListener('click', () => this.setTeam(Team.B, handlers));
     for (const button of this.weaponButtons) {
@@ -122,7 +135,7 @@ export class ControlPanel {
 
     const hint = document.createElement('div');
     hint.id = 'hint';
-    hint.textContent = 'CPU Kit QA Ready fills CPU specials · CPU Advanced QA · CPU Jump QA · M map · F/G kit';
+    hint.textContent = 'T20: choose Turf War / Splat Zones · M map · F/G kit · CPU QA controls remain available';
     root.appendChild(hint);
 
     const crosshair = document.createElement('div');
@@ -152,9 +165,18 @@ export class ControlPanel {
     });
   }
 
+  public get selectedMode(): GameModeId { return this.mode; }
   public get selectedTeam(): Team.A | Team.B { return this.team; }
   public get selectedWeapon(): WeaponId { return this.weapon; }
   public get brushRadius(): number { return this.radius; }
+
+  private setMode(mode: GameModeId, handlers: ControlPanelHandlers): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    this.modeTurf.classList.toggle('active-mode', mode === 'TURF_WAR');
+    this.modeZones.classList.toggle('active-mode', mode === 'SPLAT_ZONES');
+    handlers.onModeChanged(mode);
+  }
 
   private setTeam(team: Team.A | Team.B, handlers: ControlPanelHandlers): void {
     this.team = team;

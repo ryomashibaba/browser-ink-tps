@@ -53,17 +53,23 @@ export class PlayerHud {
     const teamClass = team === Team.A ? 'team-a' : 'team-b';
 
     this.top.innerHTML = `
-      <div class="hud-stage">${escapeHtml(this.stage.metadata.displayName)}</div>
+      <div class="hud-stage">${escapeHtml(this.stage.metadata.displayName)} · ${escapeHtml(this.stats.matchModeLabel)}</div>
       <div class="hud-match-row">
         <span class="hud-turf hud-a">A ${turf.percentA.toFixed(1)}%</span>
-        <span class="hud-clock">${formatClock(this.stats.matchTimeRemainingSeconds)}</span>
+        <span class="hud-clock">${this.stats.matchOvertime ? 'OVERTIME' : formatClock(this.stats.matchTimeRemainingSeconds)}</span>
         <span class="hud-turf hud-b">${turf.percentB.toFixed(1)}% B</span>
       </div>
       <div class="hud-turf-track">
         <div class="hud-turf-fill-a" style="width:${clampPercent(turf.percentA)}%"></div>
         <div class="hud-turf-neutral" style="width:${clampPercent(100 - turf.percentA - turf.percentB)}%"></div>
         <div class="hud-turf-fill-b" style="width:${clampPercent(turf.percentB)}%"></div>
-      </div>`;
+      </div>
+      ${this.stats.matchMode === 'SPLAT_ZONES' ? `
+        <div class="hud-zones">
+          <span class="zone-count team-a">A ${this.stats.zonesCountA.toFixed(1)}${this.stats.zonesPenaltyA > 0 ? ` +${this.stats.zonesPenaltyA.toFixed(0)}` : ''}</span>
+          <span class="zone-control">${escapeHtml(this.stats.zonesControl)} · ${this.stats.zonesPercentA.toFixed(0)}% / ${this.stats.zonesPercentB.toFixed(0)}%</span>
+          <span class="zone-count team-b">${this.stats.zonesCountB.toFixed(1)}${this.stats.zonesPenaltyB > 0 ? ` +${this.stats.zonesPenaltyB.toFixed(0)}` : ''} B</span>
+        </div>` : ''}`;
 
     this.resources.innerHTML = `
       <div class="hud-resource-card ${teamClass}">

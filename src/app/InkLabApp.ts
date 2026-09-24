@@ -30,7 +30,9 @@ import { PaintCoordinator } from '../ink/PaintCoordinator';
 import type { PaintSurface } from '../ink/PaintSurface';
 import { Team } from '../ink/types';
 import { PlayerInput } from '../input/PlayerInput';
+import type { GameModeId } from '../match/GameMode';
 import { MatchController } from '../match/MatchController';
+import { SplatZonesObjectiveSystem } from '../objective/SplatZonesObjectiveSystem';
 import { SuperJumpSystem } from '../mobility/SuperJumpSystem';
 import { initializeRecastNavigation, RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
@@ -103,6 +105,7 @@ export class InkLabApp {
   private readonly player: PlayerController;
   private readonly resources: PlayerResources;
   private readonly combatTargets: CombatTargetSystem;
+  private readonly splatZones: SplatZonesObjectiveSystem;
   private readonly match: MatchController;
   private readonly navigation: RecastStageNavigation;
   private readonly cpuAgents: CpuAgentSystem;
@@ -161,10 +164,16 @@ export class InkLabApp {
     );
     this.resources = new PlayerResources(this.stats);
     this.combatTargets = new CombatTargetSystem(app, this.stats);
+    this.splatZones = new SplatZonesObjectiveSystem(
+      this.gameplayInk,
+      PRODUCTION_STAGE_DEFINITION,
+      this.stats
+    );
     this.match = new MatchController(
       this.gameplayInk,
       this.stats,
-      PRODUCTION_STAGE_DEFINITION
+      PRODUCTION_STAGE_DEFINITION,
+      this.splatZones
     );
     this.navigation = new RecastStageNavigation(PRODUCTION_STAGE_DEFINITION, this.stats);
     this.cpuAgents = new CpuAgentSystem(
@@ -225,6 +234,10 @@ export class InkLabApp {
     );
 
     this.controls = new ControlPanel(uiRoot, {
+      onModeChanged: (mode: GameModeId) => {
+        this.match.setGameMode(mode);
+        this.restartMatch();
+      },
       onTeamChanged: (team) => {
         this.selectedTeam = team;
         this.player.setTeam(team);
@@ -282,6 +295,7 @@ export class InkLabApp {
     });
     this.selectedTeam = this.controls.selectedTeam;
     this.brushRadius = this.controls.brushRadius;
+    this.match.setGameMode(this.controls.selectedMode);
     this.player.setTeam(this.selectedTeam);
     this.setPlayerWeaponKit(this.controls.selectedWeapon);
     this.restartMatch();
@@ -426,6 +440,11 @@ export class InkLabApp {
           );
         }
         this.combatTargets.fixedUpdate(stepSeconds);
+        const zoneSnapshot = this.splatZones.snapshot();
+        this.cpuAgents.setSplatZonesContext(
+          this.match.currentMode === 'SPLAT_ZONES',
+          zoneSnapshot.control
+        );
         this.cpuAgents.fixedUpdate(
           stepSeconds,
           this.match.currentState === 'PLAYING',
@@ -496,6 +515,11 @@ export class InkLabApp {
         );
         this.cpuAgents.addScoreablePaintByActor(
           paintReport.cpuScoreableAreaMeters2ByActor
+        );
+        this.splatZones.fixedUpdate(
+          stepSeconds,
+          this.match.currentMode === 'SPLAT_ZONES' &&
+            this.match.currentState === 'PLAYING'
         );
       });
 
