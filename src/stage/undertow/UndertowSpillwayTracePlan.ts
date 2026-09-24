@@ -96,9 +96,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'upper-glass-platform-outline',
     geometryKind: 'POLYGON',
     region: 'Upper Glass',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Gameplay glass; must preserve underpass and sightlines.'
+    notes: 'Both symmetric gray vector faces are measured and matched to gameplay glass. Internal slope-marker envelopes are recorded separately.'
   },
   {
     id: 'glass-underpass-outline',
@@ -114,7 +114,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center / Left',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'No slope width/length may be guessed from navigation needs.'
+    notes: 'The central-left dashed marker envelope is measured, but the hard collision footprint still must be derived from surrounding edges and 3D evidence.'
   },
   {
     id: 'center-right-slope-footprint',
@@ -122,7 +122,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center / Right',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Counterpart residual must be audited.'
+    notes: 'The central-right dashed marker envelope is measured with near-exact 180-degree symmetry; hard collision footprint remains unresolved.'
   },
   {
     id: 'right-low-floor-outline',
