@@ -297,7 +297,9 @@ export class CpuKitSystem {
       profile.paintRadiusMeters * 0.58,
       profile.paintRadiusMeters < 1.6 ? 6 : 8,
       PaintEventType.Bomb,
-      true
+      true,
+      0.78,
+      2.2
     );
     this.feedback.subBurst(
       slot.team,
@@ -348,7 +350,9 @@ export class CpuKitSystem {
       GAME_CONFIG.special.pulseRingRadiusMeters,
       12,
       PaintEventType.Special,
-      false
+      false,
+      1.0,
+      2.4
     );
     this.feedback.specialBurst(
       team,
@@ -433,7 +437,9 @@ export class CpuKitSystem {
         1.85,
         10,
         PaintEventType.Special,
-        false
+        false,
+        1.0,
+        2.4
       );
       this.feedback.specialBurst(
         strike.team,
@@ -472,7 +478,9 @@ export class CpuKitSystem {
           1.25,
           8,
           PaintEventType.Special,
-          false
+          false,
+          1.0,
+          2.4
         );
         storm.pulseCooldown += 0.38;
       }
@@ -496,7 +504,9 @@ export class CpuKitSystem {
     ringRadius: number,
     count: number,
     type: PaintEventType,
-    gaugeEligible: boolean
+    gaugeEligible: boolean,
+    ringPaintScale: number,
+    ringPlaneDistance: number
   ): void {
     this.paintWorldStamp(
       actorId,
@@ -519,8 +529,8 @@ export class CpuKitSystem {
         actorId,
         team,
         point,
-        paintRadius * 0.78,
-        2.4,
+        paintRadius * ringPaintScale,
+        ringPlaneDistance,
         type,
         gaugeEligible
       );
