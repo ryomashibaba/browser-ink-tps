@@ -5,22 +5,31 @@ import {
 } from './UndertowSpillwayTracePlan';
 
 describe('T21-B Undertow common trace plan', () => {
-  it('marks only the two spawn centers as already measured', () => {
+  it('promotes only source-measured XZ traces', () => {
     const coverage = undertowTraceCoverage();
-    expect(coverage.measured).toBe(2);
-    expect(coverage.total).toBe(17);
+    expect(coverage.measured).toBe(5);
+    expect(coverage.total).toBe(18);
+
+    expect(coverage.missingIds).not.toContain('team-a-first-drop-lip');
+    expect(coverage.missingIds).not.toContain('team-b-first-drop-lip');
+    expect(coverage.missingIds).not.toContain('mapped-water-hazard-polygons');
+
     expect(coverage.missingIds).toContain('common-playable-boundary');
-    expect(coverage.missingIds).toContain('team-a-first-drop-lip');
     expect(coverage.missingIds).toContain('upper-glass-platform-outline');
+    expect(coverage.missingIds).toContain('fall-out-void-kill-boundary');
   });
 
-  it('does not accidentally mark gameplay-critical polygons complete', () => {
+  it('does not accidentally mark unresolved gameplay-critical polygons complete', () => {
     const forbidden = [
       'common-playable-boundary',
+      'team-a-spawn-floor-outline',
+      'team-b-spawn-floor-outline',
       'center-low-floor-outline',
       'upper-glass-platform-outline',
       'glass-underpass-outline',
-      'water-kill-boundaries'
+      'center-left-slope-footprint',
+      'center-right-slope-footprint',
+      'fall-out-void-kill-boundary'
     ];
     for (const id of forbidden) {
       expect(UNDERTOW_COMMON_TRACE_PLAN.find((item) => item.id === id)?.status)
