@@ -1430,3 +1430,23 @@ Automated scope:
 - Tower/Rainmaker/Clams geometry differences remain rule-variant facts
 
 This batch intentionally changes no runtime geometry, collision, paint authority, CPU traversal, objective scoring, or UI. Hosted gameplay QA is therefore not required for T21-A itself; PR CI must pass typecheck, Vitest, and production build before the ledger is accepted as the input to T21-B/C.
+
+
+## T21-B / T21-C automated calibration checks
+
+The branch now validates the measured Turf-map frame in addition to the T21-A evidence ledger.
+
+Expected checks:
+- 3508 x 2482 source-map frame is explicit
+- measured origin maps exactly to project X=0, Z=0
+- spawn-pixel distance converts to ~134.413 m at 20 px/m
+- both spawn centers project to the same X axis within millimetric rounding
+- negative/positive spawn Z values are approximately -67.262 / +67.150 m
+- origin differs from spawn midpoint by <0.06 m
+- 180-degree spawn symmetry residual is <0.12 m
+- pixel -> metric -> pixel round-trip is deterministic
+- ~87 m X / ~146 m Z whole-stage bounds remain PROVISIONAL
+- blockout rejects PROVISIONAL/UNKNOWN exact Y
+- Stable Freeze rejects HIGH as well as PROVISIONAL/UNKNOWN Y
+
+Runtime production geometry, collision, paint authority, Recast traversal, T20 scoring, weapons, and Super Jump remain unchanged by this checkpoint.
