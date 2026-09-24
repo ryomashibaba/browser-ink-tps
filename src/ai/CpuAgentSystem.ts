@@ -703,9 +703,13 @@ export class CpuAgentSystem {
         jumpCooldownSeconds: 0,
         jumpRespawnWindowSeconds: 0,
         jumpArcHeight: GAME_CONFIG.superJump.minArcHeightMeters,
-        subCooldownSeconds: 0.7 + slot * 0.18,
+        subCooldownSeconds:
+          GAME_CONFIG.cpu.kit.spawnSubCooldownBaseSeconds +
+          slot * GAME_CONFIG.cpu.kit.spawnSubCooldownPerSlotSeconds,
         specialPoints: 0,
-        specialDecisionCooldownSeconds: 1.4 + slot * 0.22
+        specialDecisionCooldownSeconds:
+          GAME_CONFIG.cpu.kit.spawnSpecialDecisionBaseSeconds +
+          slot * GAME_CONFIG.cpu.kit.spawnSpecialDecisionPerSlotSeconds
       });
     }
   }
@@ -767,7 +771,9 @@ export class CpuAgentSystem {
     const weapon = weaponProfile(bot.weaponId);
     if (
       weapon.fireIntervalSeconds > 0 &&
-      bot.fireRemaining > weapon.fireIntervalSeconds * 0.85
+      bot.fireRemaining >
+        weapon.fireIntervalSeconds *
+        GAME_CONFIG.cpu.kit.actionConflictFireIntervalFraction
     ) {
       return;
     }
@@ -805,8 +811,12 @@ export class CpuAgentSystem {
         specialId: kit.special
       });
       bot.specialPoints = 0;
-      bot.specialDecisionCooldownSeconds = 2.6;
-      bot.subCooldownSeconds = Math.max(bot.subCooldownSeconds, 0.8);
+      bot.specialDecisionCooldownSeconds =
+        GAME_CONFIG.cpu.kit.postSpecialDecisionCooldownSeconds;
+      bot.subCooldownSeconds = Math.max(
+        bot.subCooldownSeconds,
+        GAME_CONFIG.cpu.kit.postSpecialSubLockSeconds
+      );
       this.stats.cpuSpecialActivations += 1;
       this.stats.cpuKitLast =
         `${bot.id}:SPECIAL:${specialProfile.shortName}`;
@@ -815,8 +825,8 @@ export class CpuAgentSystem {
 
     if (
       bot.subCooldownSeconds > 0 ||
-      distance < 2.6 ||
-      distance > 11.5
+      distance < GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters ||
+      distance > GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters
     ) {
       return;
     }
@@ -849,11 +859,20 @@ export class CpuAgentSystem {
   ): boolean {
     switch (specialId) {
       case 'turf-pulse':
-        return distance <= 4.2 || bot.hp <= 52;
+        return (
+          distance <= GAME_CONFIG.cpu.kit.turfPulseMaxDistanceMeters ||
+          bot.hp <= GAME_CONFIG.cpu.kit.turfPulseLowHpThreshold
+        );
       case 'triple-strike':
-        return distance >= 4.0 && distance <= 18.0;
+        return (
+          distance >= GAME_CONFIG.cpu.kit.tripleStrikeMinDistanceMeters &&
+          distance <= GAME_CONFIG.cpu.kit.tripleStrikeMaxDistanceMeters
+        );
       case 'drift-storm':
-        return distance >= 3.2 && distance <= 15.0;
+        return (
+          distance >= GAME_CONFIG.cpu.kit.driftStormMinDistanceMeters &&
+          distance <= GAME_CONFIG.cpu.kit.driftStormMaxDistanceMeters
+        );
     }
     return false;
   }
@@ -1639,8 +1658,9 @@ export class CpuAgentSystem {
   }
 
   private resetCpuKitState(bot: CpuBot, clearGauge: boolean): void {
-    bot.subCooldownSeconds = 0.6;
-    bot.specialDecisionCooldownSeconds = 0.9;
+    bot.subCooldownSeconds = GAME_CONFIG.cpu.kit.respawnSubCooldownSeconds;
+    bot.specialDecisionCooldownSeconds =
+      GAME_CONFIG.cpu.kit.respawnSpecialDecisionCooldownSeconds;
     if (clearGauge) bot.specialPoints = 0;
   }
 
@@ -1737,8 +1757,9 @@ export class CpuAgentSystem {
     bot.jumpCooldownSeconds = 0;
     bot.jumpRespawnWindowSeconds = GAME_CONFIG.cpu.superJumpRespawnWindowSeconds;
     bot.jumpArcHeight = GAME_CONFIG.superJump.minArcHeightMeters;
-    bot.subCooldownSeconds = 0.65;
-    bot.specialDecisionCooldownSeconds = 0.9;
+    bot.subCooldownSeconds = GAME_CONFIG.cpu.kit.respawnSubCooldownSeconds;
+    bot.specialDecisionCooldownSeconds =
+      GAME_CONFIG.cpu.kit.respawnSpecialDecisionCooldownSeconds;
     bot.entity.enabled = true;
     bot.entity.setLocalEulerAngles(0, 0, 0);
     bot.entity.setPosition(start.x, start.y + 0.68, start.z);
@@ -1830,12 +1851,16 @@ function cpuSubCooldownSeconds(
   role: CpuRole
 ): number {
   const base = subId === 'snap-bomb'
-    ? 2.8
+    ? GAME_CONFIG.cpu.kit.snapBombCooldownSeconds
     : subId === 'pulse-bomb'
-      ? 4.2
-      : 5.1;
-  if (role === 'SKIRMISHER') return base * 0.88;
-  if (role === 'ANCHOR') return base * 1.16;
+      ? GAME_CONFIG.cpu.kit.pulseBombCooldownSeconds
+      : GAME_CONFIG.cpu.kit.anchorBombCooldownSeconds;
+  if (role === 'SKIRMISHER') {
+    return base * GAME_CONFIG.cpu.kit.skirmisherSubCooldownMultiplier;
+  }
+  if (role === 'ANCHOR') {
+    return base * GAME_CONFIG.cpu.kit.anchorSubCooldownMultiplier;
+  }
   return base;
 }
 
