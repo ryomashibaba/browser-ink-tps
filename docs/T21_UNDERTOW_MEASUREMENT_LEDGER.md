@@ -199,3 +199,48 @@ The following gameplay-critical features deliberately remain UNTRACED until thei
 - water/kill boundaries
 
 This is intentional: no provisional rectangle or CPU-friendly replacement is allowed to masquerade as source-derived stage geometry.
+
+
+## T21-B — recovered vector blueprint checkpoint
+
+The original source has now been recovered from the user-provided Turf archives.
+
+Primary planimetric source:
+- vector PDF: Sunfish Undertow Spillway Turf blueprint
+- matching JPEG: 3508 x 2482 px
+- source update date: 2024-05-06
+- PDF page: 841.92 x 595.32 pt
+- working project scale: 4.8 PDF pt/m, HIGH
+- the JPEG remains a visual/raster cross-check; PDF linework is the primary XZ source
+
+The 4.8 pt/m value is the vector equivalent of the existing 20 px/m working transform. It remains a project calibration, not an official Nintendo real-world meter scale.
+
+The vector spawn-ring centers refine the old raster picks:
+- spawn separation: ~134.190 m HIGH
+- negative-Z spawn center: approximately (+0.017, -67.117) m
+- positive-Z spawn center: approximately (+0.017, +67.073) m
+- source origin vs spawn midpoint residual: <0.03 m
+
+The old raster calibration remains useful as an independent cross-check, but vector coordinates take precedence for new T21-B plan measurements.
+
+Newly measured:
+- Team A first-drop lip: exact L-shaped vector hard edge, HIGH XZ
+- Team B first-drop lip: exact 180-degree counterpart, HIGH XZ
+- each first-drop lip plan length: 15.25 m
+- first-drop counterpart symmetry residual: <0.03 m
+- two cyan water-hazard source polygons: exact vector faces, CONFIRMED XZ
+- each mapped water polygon area: ~33.004 m²
+- water counterpart symmetry residual: <0.03 m
+
+The one-way nature of the first drop remains CONFIRMED from the user's gameplay video. The PDF only strengthens the plan footprint; it does **not** promote the vertical fall magnitude, which remains 1.5 m / 3.0 m PROVISIONAL.
+
+The cyan source polygons are mapped WATER / KILL / UNINKABLE because the blueprint legend identifies cyan as the water/submerge hazard. The broader off-stage fall-out/void kill boundary remains UNTRACED.
+
+Raw vector source faces were also extracted around both spawn sides and the geometric center. They are retained as source geometry only. They must not be treated as single flat floors because a 2D closed face can span multiple gameplay elevations and transitions.
+
+Trace coverage after source recovery:
+- MEASURED: 5 / 18 trace requirements
+- measured set: two spawn centers, two first-drop lips, mapped water-hazard polygon family
+- still unresolved: full playable boundary, actual spawn-floor polygons, center-low outline, small step, right drop, glass top/underpass, both central slopes, right-low floor, grate, and broader fall-out/void kill boundary
+
+This supersedes the earlier note that the original 3508 x 2482 source was unavailable.
