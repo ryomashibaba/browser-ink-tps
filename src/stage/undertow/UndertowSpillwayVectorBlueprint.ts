@@ -9,6 +9,7 @@ export type UndertowBlueprintSourceClass =
   | 'UNINKABLE_GRAY'
   | 'UNINKABLE_GLASS_OVERHANG'
   | 'SLOPE_MARKER_FIELD'
+  | 'GRATE_MESH'
   | 'WATER_CYAN';
 
 export interface UndertowVectorTrace {
@@ -166,6 +167,32 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'WATER_CYAN',
     'CONFIRMED',
     '180-degree counterpart of the positive-Z water region.'
+  ),
+  negativeZGrateMesh: vectorTrace(
+    'negative-z-grate-mesh',
+    'POLYGON',
+    [
+      [340.56, 119.88],
+      [363.48, 119.88],
+      [363.48, 150.48],
+      [340.56, 150.48]
+    ],
+    'GRATE_MESH',
+    'HIGH',
+    'White mesh-pattern source region. Matched to a traversable grate family in the current gameplay captures; no water semantics are attached to this white face.'
+  ),
+  positiveZGrateMesh: vectorTrace(
+    'positive-z-grate-mesh',
+    'POLYGON',
+    [
+      [478.44, 444.72],
+      [501.36, 444.72],
+      [501.36, 475.32],
+      [478.44, 475.32]
+    ],
+    'GRATE_MESH',
+    'HIGH',
+    '180-degree counterpart white grate mesh region.'
   ),
   negativeZGlassOverhang: vectorTrace(
     'negative-z-glass-overhang',
