@@ -138,6 +138,30 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'HIGH',
     '180-degree counterpart of the positive-Z first-drop lip.'
   ),
+  teamARightSmallDropLip: vectorTrace(
+    'team-a-right-small-drop-lip',
+    'POLYLINE',
+    [
+      [664.68, 394.2],
+      [702.36, 394.2],
+      [702.36, 350.76]
+    ],
+    'HARD_EDGE',
+    'HIGH',
+    'Second spawn-side L-shaped hard edge after the confirmed first drop. It matches the current-layout topology: the open area after the first drop has a small drop on its right.'
+  ),
+  teamBRightSmallDropLip: vectorTrace(
+    'team-b-right-small-drop-lip',
+    'POLYLINE',
+    [
+      [177.24, 201.0],
+      [139.56, 201.0],
+      [139.56, 244.44]
+    ],
+    'HARD_EDGE',
+    'HIGH',
+    '180-degree counterpart of the Team A right-side small-drop hard edge.'
+  ),
   teamAWaterRegion: vectorTrace(
     'team-a-water-region',
     'POLYGON',
