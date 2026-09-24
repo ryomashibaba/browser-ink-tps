@@ -123,7 +123,31 @@ export const GAME_CONFIG = Object.freeze({
     superJumpRegroupDistanceMeters: 12.0,
     superJumpSafeEnemyRadiusMeters: 4.2,
     superJumpMinHpFraction: 0.72,
-    superJumpDecisionScore: 5.4
+    superJumpDecisionScore: 5.4,
+    kit: {
+      subMinTargetDistanceMeters: 2.6,
+      subMaxTargetDistanceMeters: 11.5,
+      pulseBombCooldownSeconds: 4.2,
+      snapBombCooldownSeconds: 2.8,
+      anchorBombCooldownSeconds: 5.1,
+      skirmisherSubCooldownMultiplier: 0.88,
+      anchorSubCooldownMultiplier: 1.16,
+      spawnSubCooldownBaseSeconds: 0.70,
+      spawnSubCooldownPerSlotSeconds: 0.18,
+      spawnSpecialDecisionBaseSeconds: 1.40,
+      spawnSpecialDecisionPerSlotSeconds: 0.22,
+      respawnSubCooldownSeconds: 0.65,
+      respawnSpecialDecisionCooldownSeconds: 0.90,
+      postSpecialDecisionCooldownSeconds: 2.60,
+      postSpecialSubLockSeconds: 0.80,
+      actionConflictFireIntervalFraction: 0.85,
+      turfPulseMaxDistanceMeters: 4.2,
+      turfPulseLowHpThreshold: 52,
+      tripleStrikeMinDistanceMeters: 4.0,
+      tripleStrikeMaxDistanceMeters: 18.0,
+      driftStormMinDistanceMeters: 3.2,
+      driftStormMaxDistanceMeters: 15.0
+    }
   },
   projectile: {
     poolSize: 128,
