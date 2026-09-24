@@ -1,3 +1,19 @@
+## v0.17.0 T20 Game Mode Foundation + Splat Zones Candidate — 2026-09-24
+
+- preserved T0–T19C as the frozen gameplay foundation
+- added additive Turf War / Splat Zones game-mode contract
+- added PaintSurface-local central Splat Zone metadata to the canonical production stage
+- added authoritative Splat Zones control sampling from precomputed GameplayInk cells only
+- added capture/retain hysteresis, 100-count scoring, control-loss penalty, knockout, and overtime handling
+- kept the existing Turf War percentage-result path intact
+- added zone-aware PAINTER / SKIRMISHER / ANCHOR tactical goals without changing frozen CPU weapon/kit runtimes
+- added mode selector, Splat Zones HUD counters, Tactical Map objective overlay, and debug diagnostics
+- added deterministic Vitest rule coverage and PR TypeScript/test/build CI
+- fixed mutable zone counters being inferred as literal `100` from the frozen config object
+- Pages deployment remains main-only; PRs validate without publishing
+- implementation checkpoint before documentation: `4c856e871dd491e4217659d8e47320def1930df9`
+- T20 remains candidate pending hosted Pages QA and horizontal regression acceptance
+
 ## v0.16.0 T19C Stable Freeze — 2026-09-24
 
 - hosted runtime QA accepted by the user

@@ -1367,3 +1367,30 @@ Stable implementation checkpoint:
 - run #338 / `35980005463`: success
 
 T19C is now **STABLE FREEZE**. Future work must preserve CPU kit assignment authority, actual-paint Special charging, Special self-charge prevention, CPU Sub/Special lifecycle semantics, and the T0–T19B frozen contracts unless a later explicit Freeze-change decision is made.
+
+
+## T20 v0.17.0 Game Mode Foundation + Splat Zones candidate validation
+
+### Automated / structural checks
+- T0–T19C base: `d34c46953b38d9ad7244d19054b0c6c56c4a08c4`
+- candidate implementation checkpoint: `4c856e871dd491e4217659d8e47320def1930df9`
+- PR: #3
+- TypeScript check: PASS after widening the new zone counter fields from literal config types to mutable numeric runtime state
+- deterministic rule tests: PASS
+- production build: PASS
+- PR-only Pages deployment is intentionally skipped; only `main` may deploy the hosted build
+- changed systems do not replace PaintCoordinator, GameplayInk, GPU atlas, PlayerController, ProjectileSystem, Human weapon runtimes, CPU weapon/kit runtimes, or Super Jump contracts
+
+### Hosted Pages acceptance path
+1. Default launch must still be Turf War. Confirm countdown, ordinary 4v4 play, Turf percentages, Splat/Respawn, Sub/Special, and match result still behave as before.
+2. Select **Splat Zones**. Match must restart cleanly with a 5:00 timer, 100 / 100 counters, neutral central zone, and no stale Sub/Special/Super Jump state.
+3. Open the Tactical Map with M. The central objective rectangle must align with the center of the canonical stage and use the same orientation as the accepted T13 map.
+4. Paint the central zone. HUD/debug zone paint percentages must follow authoritative ink and control must change only after the configured capture threshold/lead is satisfied.
+5. While one team controls the zone, only that team's count must fall. Losing control must apply a penalty; retaking must clear penalty before the count resumes.
+6. CPUs in Splat Zones must visibly converge around the objective according to PAINTER / SKIRMISHER / ANCHOR roles without losing their T19 weapon-class or T19C kit identities.
+7. Use normal combat plus CPU Kit QA / CPU Advanced QA / CPU Jump QA during Splat Zones. Main weapons, Subs, Specials, guard, jump invulnerability, and CPU Super Jump must remain functional.
+8. Switch back to Turf War and restart. Zone counters/control must reset and Turf War must again resolve from global scoreable turf percentage.
+9. Run mixed 4v4 combat long enough to check FPS, dropped simulation, projectile/kit pool drops, dirty tiles, and GPU backlog for a regression.
+10. Report any mismatch before T20 Freeze. Do not Freeze solely from automated checks.
+
+T20 remains **IMPLEMENTATION CANDIDATE** until these hosted checks are accepted.
