@@ -449,13 +449,58 @@ const entries: readonly StageMeasurementEntry[] = [
     }
   }),
   commonSurfaceEntry({
+    id: 'negative-z-grate-mesh',
+    feature: 'negative-Z traversable grate mesh',
+    region: 'Center / Negative-Z side',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.negativeZGrateMesh.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Exact white mesh-pattern plan footprint from the vector source.'
+    },
+    y: unknownY('Absolute grate elevation remains for T21-C.'),
+    transition: noTransition,
+    surface: {
+      semantics: ['GRATE', 'UNINKABLE'],
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint', 'handoff-t21-masterplan']
+    },
+    notes: 'White source mesh carries no WATER semantic; water/submerge areas remain separate polygons.'
+  }),
+  commonSurfaceEntry({
+    id: 'positive-z-grate-mesh',
+    feature: 'positive-Z traversable grate mesh',
+    region: 'Center / Positive-Z side',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.positiveZGrateMesh.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Exact 180-degree counterpart grate footprint.'
+    },
+    y: unknownY('Absolute grate elevation remains for T21-C.'),
+    transition: noTransition,
+    surface: {
+      semantics: ['GRATE', 'UNINKABLE'],
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-turf-vector-blueprint', 'handoff-t21-masterplan']
+    }
+  }),
+  commonSurfaceEntry({
     id: 'center-grate',
     feature: 'central grate / mesh walkway',
     region: 'Center',
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Exact footprint remains for T21-B.'),
+    xz: unresolvedXz('Family summary only; exact negative-Z / positive-Z grate polygons are recorded in dedicated entries.'),
     y: unknownY('Absolute Y remains for T21-C.'),
     transition: noTransition,
     surface: {
