@@ -1315,3 +1315,35 @@ Stable checkpoint:
 - GitHub Actions run #287 / `35867101317`: TypeScript check, production build, and Pages deploy success
 
 T19B is now **STABLE FREEZE**. Future work must preserve the accepted advanced main-weapon behavior, CPU Brella guard contracts, CPU-source advanced paint, T19A default roster, and T0–T19A authority boundaries unless an explicit later Freeze-change decision is made.
+
+
+## T19C v0.16.0 CPU Sub / Special Kit Parity hosted QA
+
+### Fast acceptance path
+1. Start a normal match. Debug `CPU kits` must show each CPU's T16 Sub/Special pair and `CPU scoreable paint` should rise as CPUs capture new turf.
+2. Let the match run briefly. `CPU sub / special uses` should show Sub use; visible CPU bombs must match Pulse / Snap / Anchor behavior rather than one generic bomb.
+3. Press `CPU Kit QA Ready`. `CPU special ready / avg` should immediately show ready CPUs / 100% average before tactical activation begins.
+4. Continue combat and confirm all three Special types can appear across the roster:
+   - Turf Pulse centered on the CPU
+   - three staggered Triple Strikes at a fixed target area
+   - forward-moving Drift Storm
+5. After a CPU Special fires, its own Special paint must not immediately refill that CPU. Average / per-CPU % should restart near 0 and only rise again as CPU main/Sub paint captures new scoreable cells.
+6. Use `CPU Advanced QA`, then `CPU Kit QA Ready`. Active old kit effects must clear and the five advanced weapons must use their T16-assigned kits.
+7. Run `CPU Jump QA` during the same match. Airborne CPU must not start a new Sub/Special, while already-active Special effects may continue until normal completion.
+8. Splat CPUs during Triple Strike / Drift Storm. Remaining active effect from that source must cancel; already-thrown CPU Bombs must remain and may still explode.
+9. Test enemy CPU Bomb/Special damage against the Human Canopy Guard and during Human Super Jump; guard direction / jump invulnerability must still apply.
+10. Press `Clear Ink`, `End Match QA`, then `Restart Match` in separate checks. No stale CPU bomb, storm, strike, ready gauge, or QA loadout may survive the relevant reset.
+
+### Detailed regression checks
+11. T19A Shooter / Dualies / Blaster / Slosher / Charger / Splatling CPU behavior remains unchanged.
+12. T19B Roller / Brush / Brella / Stringer / Splatana CPU behavior remains unchanged.
+13. Human F/G Sub/Special behavior remains unchanged for all 12 main weapons.
+14. CPU Sub paint can charge its source CPU Special gauge; CPU Special paint cannot.
+15. CPU paint never changes the Human Special gauge.
+16. CPU Splat retains 50% Special points; a lingering Bomb may add new points afterward if it captures new scoreable turf.
+17. Team change rebuilds CPU roster and kit state from the frozen T16 WeaponKitCatalog.
+18. Tactical Map orientation, Human camera/aim, CPU/GPU paint alignment, Turf scoring, and fixed 60 Hz simulation show no regression.
+19. During mixed 4v4 main/Sub/Special activity, FPS, dropped simulation, projectile pool drops, CPU kit pool drops, and GPU backlog remain acceptable.
+20. Debug `CPU kits` must remain consistent with the current CPU main-weapon ids; no duplicate or independent CPU-only kit map may appear.
+
+T19C remains **IMPLEMENTATION CANDIDATE** until these checks are accepted.
