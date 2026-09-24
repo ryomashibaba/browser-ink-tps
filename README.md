@@ -12,7 +12,7 @@ The normal workflow is GitHub-first: changes on `main` are dependency-installed,
 
 ## Current milestone
 
-**v0.16.0 / T19C CPU SUB-SPECIAL KIT PARITY CANDIDATE**
+**v0.16.0 / T19C STABLE FREEZE**
 
 Stable gameplay checkpoint:
 `d93f5bf0cfb261515e5ad5081b1b7599e1efbdbf`
@@ -490,3 +490,10 @@ CPU Special:
 CPU main/Sub paint can charge that CPU's Special. CPU Special paint is explicitly ineligible for gauge gain, so Specials cannot self-charge. CPU paint never charges the Human Special gauge.
 
 Use **CPU Kit QA Ready** to fill all active CPU Specials for hosted verification. Debug shows each CPU kit, per-CPU Special percentage, actual CPU scoreable paint, kit usage, active effects, and pool drops.
+
+
+### T19C Stable Freeze
+
+v0.16.0 hosted QA was accepted on 2026-09-24 after the T19C cross-system debug pass. Stable implementation checkpoint: `c1807e5c70c7869d346ce1fa6ed0a5def31c59f9`; GitHub Actions run #335 passed TypeScript check, production build, and Pages deployment.
+
+T0–T19C is now the frozen gameplay foundation. The next major phase should be chosen from a fresh repository/roadmap audit rather than pre-committed in this thread.
