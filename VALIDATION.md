@@ -1347,3 +1347,10 @@ T19B is now **STABLE FREEZE**. Future work must preserve the accepted advanced m
 20. Debug `CPU kits` must remain consistent with the current CPU main-weapon ids; no duplicate or independent CPU-only kit map may appear.
 
 T19C remains **IMPLEMENTATION CANDIDATE** until these checks are accepted.
+
+
+### T19C cross-debug additions
+
+- CPU Sub pool exhaustion is transactional: if the CPU bomb runtime rejects a Sub request because all slots are occupied, the source CPU receives its Sub Ink back, the normal Sub cooldown is rolled back to a short retry delay, and the successful-use counter is corrected. `CPU kit pool drops` still records the overload event.
+- CPU Special activation is deferred from request intake to `CpuKitSystem.fixedUpdate()`, which runs after `ProjectileSystem.fixedUpdate()` in the same 60 Hz tick. This ensures Turf Pulse and the initial state of other CPU Specials use the current Human position, Super Jump invulnerability, and Brella guard context rather than the previous tick's values.
+- These fixes are T19C-only and do not alter the frozen T19A/T19B main-weapon runtime.
