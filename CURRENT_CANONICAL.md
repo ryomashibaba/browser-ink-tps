@@ -1827,3 +1827,25 @@ Freeze boundaries:
 Reference audit note: Nintendo publicly describes the 100-count objective; Inkipedia documents the 70% series capture threshold, 36-frame count pacing, 0.75 control-period penalty formula, and Splat Zones overtime grace. The exact Splatoon 3 internal neutralization threshold was not independently confirmed, so the current 50% value is explicitly project tuning rather than an exact-internal-value claim.
 
 T20 remains **IMPLEMENTATION CANDIDATE** until PR #4 is merged, Pages is redeployed from main, hosted Pages QA is accepted, and the final horizontal regression pass is closed.
+
+
+## T21-A — Undertow Spillway Evidence Freeze / Measurement Ledger candidate — 2026-09-24
+
+Base main HEAD: `fbd922cea900df8e1a139f21b3c61ed927b3fdd9`.
+
+Target source boundary: **Splatoon 3 normal PvP Undertow Spillway / マテガイ放水路, Ver.7.2.0+**. Pre-7.2 terrain, Big Run, and legacy Tricolor variants are excluded from common terrain.
+
+T21-A is additive and does not replace the frozen gameplay/stage runtime. `PRODUCTION_STAGE_DEFINITION`, `PaintCoordinator`, `GameplayInk`, GPU visual ink, `ProjectileSystem`, `CpuAgentSystem`, `PlayerController`, Recast runtime, and T20 objective runtime are unchanged.
+
+New canonical research layer:
+- `StageMeasurementLedger` schema with `CONFIRMED / HIGH / PROVISIONAL / UNKNOWN`
+- explicit XZ / Y / transition / surface semantics / evidence IDs
+- Undertow common-terrain and rule-variant facts
+- structural validation preventing UNKNOWN values from silently acquiring exact dimensions
+- first spawn-side descent frozen as `ONE_WAY_DROP`; no slope/stairs/bidirectional or invisible CPU ramp
+- center-low reference floor frozen at Y=0
+- 20px/m and 1.5m vertical grid retained as HIGH rather than official/confirmed dimensions
+- spawn absolute Y remains UNKNOWN
+- ~146x87m outer extent remains PROVISIONAL
+
+T21-B may convert the Turf map to metric XZ polygons using this ledger, but it must not promote PROVISIONAL/UNKNOWN dimensions without new evidence.
