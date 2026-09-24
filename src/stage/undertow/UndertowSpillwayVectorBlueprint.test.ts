@@ -50,6 +50,19 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.03);
   });
 
+  it('extracts the right-side small-drop hard-edge pair after the first drop', () => {
+    const a = UNDERTOW_VECTOR_TRACES.teamARightSmallDropLip;
+    const b = UNDERTOW_VECTOR_TRACES.teamBRightSmallDropLip;
+    expect(a.geometryKind).toBe('POLYLINE');
+    expect(b.geometryKind).toBe('POLYLINE');
+    expect(a.sourceClass).toBe('HARD_EDGE');
+    expect(a.confidence).toBe('HIGH');
+    expect(polylineLength(a.metricPoints)).toBeCloseTo(16.9, 1);
+    expect(polylineLength(b.metricPoints)).toBeCloseTo(16.9, 1);
+    expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.04);
+    expect(a.notes).toContain('after the first drop');
+  });
+
   it('extracts the symmetric white grate-mesh footprints without inheriting water semantics', () => {
     const a = UNDERTOW_VECTOR_TRACES.negativeZGrateMesh;
     const b = UNDERTOW_VECTOR_TRACES.positiveZGrateMesh;
