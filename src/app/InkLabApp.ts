@@ -33,6 +33,7 @@ import { PlayerInput } from '../input/PlayerInput';
 import type { GameModeId } from '../match/GameMode';
 import { MatchController } from '../match/MatchController';
 import { SplatZonesObjectiveSystem } from '../objective/SplatZonesObjectiveSystem';
+import { SplatZonesVisualFeedback } from '../objective/SplatZonesVisualFeedback';
 import { SuperJumpSystem } from '../mobility/SuperJumpSystem';
 import { initializeRecastNavigation, RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import { RapierStagePhysics, initializeRapier } from '../physics/RapierStagePhysics';
@@ -106,6 +107,7 @@ export class InkLabApp {
   private readonly resources: PlayerResources;
   private readonly combatTargets: CombatTargetSystem;
   private readonly splatZones: SplatZonesObjectiveSystem;
+  private readonly splatZonesVisual: SplatZonesVisualFeedback;
   private readonly match: MatchController;
   private readonly navigation: RecastStageNavigation;
   private readonly cpuAgents: CpuAgentSystem;
@@ -165,6 +167,12 @@ export class InkLabApp {
     this.resources = new PlayerResources(this.stats);
     this.combatTargets = new CombatTargetSystem(app, this.stats);
     this.splatZones = new SplatZonesObjectiveSystem(
+      this.gameplayInk,
+      PRODUCTION_STAGE_DEFINITION,
+      this.stats
+    );
+    this.splatZonesVisual = new SplatZonesVisualFeedback(
+      app,
       this.gameplayInk,
       PRODUCTION_STAGE_DEFINITION,
       this.stats
@@ -287,6 +295,7 @@ export class InkLabApp {
       onClear: () => {
         this.clearCoordinateQaMarkers();
         this.coordinator.clear();
+        this.splatZones.reset();
         this.cpuKit.reset();
         this.cpuAgents.resetKitGauges();
         this.subWeapons.reset();
@@ -533,6 +542,7 @@ export class InkLabApp {
       this.projectiles.render(report.alpha);
       this.cpuKit.render(report.alpha);
       this.subWeapons.render(report.alpha);
+      this.splatZonesVisual.update(this.match.currentMode === 'SPLAT_ZONES');
       this.feedback.update(cameraDt);
       this.cameraController.update(this.playerPosition);
 

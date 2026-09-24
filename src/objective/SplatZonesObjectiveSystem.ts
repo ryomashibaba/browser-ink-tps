@@ -45,7 +45,7 @@ export function calculateZonePenalty(
   const progress = Math.max(0, startEffectiveCount - endEffectiveCount);
   if (progress <= 1e-6) return 0;
   const openingBonus =
-    startEffectiveCount >= tuning.initialCount - 1e-6 ? 1 : 0;
+    Math.abs(startEffectiveCount - tuning.initialCount) <= 1e-6 ? 1 : 0;
   return Math.round(progress * tuning.penaltyProgressMultiplier) + openingBonus;
 }
 
