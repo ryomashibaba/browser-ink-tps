@@ -4,8 +4,6 @@ import type {
   StageRuleFact
 } from '../measurement/StageMeasurementLedger';
 import {
-  UNDERTOW_PROJECT_SPAWNS,
-  UNDERTOW_TURF_MAP_AUDIT,
   UNDERTOW_TURF_MAP_ORIGIN_PIXEL,
   UNDERTOW_TURF_RULE_MAP_SOURCE
 } from './UndertowSpillwayMapCalibration';
