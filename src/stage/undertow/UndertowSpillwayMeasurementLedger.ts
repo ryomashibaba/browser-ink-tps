@@ -289,9 +289,10 @@ const entries: readonly StageMeasurementEntry[] = [
     y: unknownY('Historical 7.5m hypothesis is intentionally not promoted to canonical.'),
     transition: noTransition,
     surface: {
-      semantics: ['PAINTABLE'],
-      confidence: 'HIGH',
-      evidenceIds: maps
+      semantics: [],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Spawn paintability/protection semantics remain for source binding.'
     }
   }),
   commonSurfaceEntry({
@@ -305,9 +306,10 @@ const entries: readonly StageMeasurementEntry[] = [
     y: unknownY('Absolute Y remains unresolved.'),
     transition: noTransition,
     surface: {
-      semantics: ['PAINTABLE'],
-      confidence: 'HIGH',
-      evidenceIds: maps
+      semantics: [],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Spawn paintability/protection semantics remain for source binding.'
     }
   }),
   commonSurfaceEntry({
@@ -321,10 +323,10 @@ const entries: readonly StageMeasurementEntry[] = [
     y: unknownY('Object extents remain for T21-C/D.'),
     transition: noTransition,
     surface: {
-      semantics: ['SOLID_DECORATION'],
-      confidence: 'HIGH',
-      evidenceIds: centerEvidence,
-      notes: 'Gameplay collision/line-of-sight role must be preserved where source evidence shows it.'
+      semantics: [],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Do not classify the pillars as decoration-only; paintability is unresolved while collision/line-of-sight evidence is preserved.'
     }
   }),
   commonSurfaceEntry({
@@ -569,6 +571,20 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       confidence: 'HIGH',
       evidenceIds: handoff,
       notes: 'Primary-floor reconstruction grid; slopes remain continuous.'
+    },
+    {
+      id: 'source-version-boundary',
+      value: 'normal PvP Ver.7.2.0+',
+      confidence: 'CONFIRMED',
+      evidenceIds: ['nintendo-7-2-changelog', 'handoff-t21-masterplan'],
+      notes: 'Pre-7.2, Big Run, and legacy Tricolor geometry must not enter UndertowCommon.'
+    },
+    {
+      id: 'team-rotation-symmetry',
+      value: 'ROTATE_180',
+      confidence: 'HIGH',
+      evidenceIds: ['user-five-rule-maps', 'web-post-7-2-overhead'],
+      notes: 'T21-B must verify residuals numerically instead of assuming perfect symmetry.'
     }
   ],
   entries,
