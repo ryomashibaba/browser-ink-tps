@@ -1,3 +1,20 @@
+## v0.16.0 T19C CPU Sub / Special Kit Parity Candidate — 2026-09-24
+
+- CPU kit assignment now resolves exclusively from the frozen T16 WeaponKitCatalog
+- added per-CPU Special gauge driven by actual newly changed scoreable CPU paint
+- added optional PaintEvent/PaintRequest actorId and gaugeEligible metadata without changing coordinate/source authority
+- CPU main / movement / Sub paint is actor-attributed and gauge-eligible
+- CPU Special paint is actor-attributed but explicitly cannot self-charge
+- added pooled CPU Pulse / Snap / Anchor Bomb runtime using frozen T16 profiles
+- added CPU Turf Pulse / Triple Strike / Drift Storm runtime using frozen T16 values
+- routed CPU kit damage through the shared guard-aware Human/CPU combat path
+- added tactical Sub/Special usage rules under GAME_CONFIG.cpu.kit
+- added 50% CPU Special retention on Splat and Human-parity lingering Sub behavior
+- added lifecycle cleanup for Match End / Restart / Team change / Clear Ink / Advanced QA
+- added CPU Kit QA Ready and detailed Debug diagnostics
+- horizontal regression audit preserved T0–T19B Freeze boundaries
+- candidate implementation validated by GitHub Actions before hosted QA
+
 ## v0.15.0 T19B Stable Freeze — 2026-09-23
 
 - hosted QA accepted by the user
