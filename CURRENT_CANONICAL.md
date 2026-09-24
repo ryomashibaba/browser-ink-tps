@@ -1,10 +1,10 @@
-# CURRENT_CANONICAL — v0.16.0 / T19C CPU SUB-SPECIAL KIT PARITY CANDIDATE
+# CURRENT_CANONICAL — v0.16.0 / T19C STABLE FREEZE
 
 Date: 2026-09-23
 
 ## Status
 
-**T0–T19B is the frozen stable foundation. T19C adds CPU Sub/Special kit parity using the frozen T16 WeaponKitCatalog while preserving T0–T19B gameplay, paint-authority, and lifecycle contracts.**
+**T0–T19C is the frozen stable foundation. T19C hosted runtime QA was accepted by the user on 2026-09-24.**
 
 Hosted build:
 https://ryomashibaba.github.io/browser-ink-tps/
@@ -1758,3 +1758,36 @@ Candidate implementation checkpoint:
   - CPU Special activation is deferred to CpuKitSystem.fixedUpdate so current-tick Human damage / guard / Super Jump context is authoritative
 - later T19C documentation commits do not change gameplay code
 
+
+
+## T19C Stable Freeze — 2026-09-24
+
+Hosted runtime QA for v0.16.0 was completed and accepted by the user after the T19C multi-stage implementation and cross-system debug pass.
+
+Stable T19C implementation checkpoint:
+- commit: `c1807e5c70c7869d346ce1fa6ed0a5def31c59f9`
+- GitHub Actions: run #335 / `35979800671` — TypeScript check, production build, and Pages deploy success
+- final candidate documentation HEAD before Freeze: `11b3bd584d80715a41f251529b06729461fa6233`
+- GitHub Actions run #338 / `35980005463` — success
+
+Frozen T19C scope includes:
+- T16 WeaponKitCatalog as the sole CPU main->Sub/Special assignment authority
+- actor-attributed CPU scoreable paint and real-paint-driven per-CPU Special gauges
+- CPU Special self-charge prevention
+- Pulse Bomb / Snap Bomb / Anchor Bomb CPU runtime
+- Turf Pulse / Triple Strike / Drift Storm CPU runtime
+- CPU kit tactical usage rules and centralized tuning
+- 50% Splat Special retention
+- Sub pool rejection rollback
+- current-tick Human guard / Super Jump-aware CPU Special damage context
+- Match End / Restart / Team change / Clear Ink / Advanced QA lifecycle cleanup
+- CPU Kit QA Ready and T19C diagnostics
+- preservation of T0–T19B main-weapon, movement, match, and paint-authority contracts
+
+T19C is therefore **STABLE FREEZE**.
+
+## Next phase
+
+T20 is intentionally not pre-selected here.
+
+Start the next chat by auditing the current repository and frozen T0–T19C foundation, then choose the next large phase based on the highest-value remaining gameplay gap. Do not reopen frozen systems merely to reorganize them.
