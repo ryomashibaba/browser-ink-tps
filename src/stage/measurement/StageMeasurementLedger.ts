@@ -52,7 +52,7 @@ export interface LedgerAssumption extends ConfidenceTag {
 }
 
 export interface XzMeasurement extends ConfidenceTag {
-  kind: 'UNRESOLVED' | 'POINT' | 'RECT' | 'POLYGON';
+  kind: 'UNRESOLVED' | 'POINT' | 'RECT' | 'POLYLINE' | 'POLYGON';
   pointMeters?: readonly [number, number];
   rectMeters?: Readonly<{
     centerX: number;
@@ -60,6 +60,7 @@ export interface XzMeasurement extends ConfidenceTag {
     width: number;
     depth: number;
   }>;
+  polylineMeters?: readonly (readonly [number, number])[];
   polygonMeters?: readonly (readonly [number, number])[];
 }
 
@@ -186,6 +187,12 @@ export function validateStageMeasurementLedger(ledger: StageMeasurementLedger): 
     }
     if (entry.xz.kind === 'RECT' && !entry.xz.rectMeters) {
       errors.push(`entry '${entry.id}': RECT XZ requires rectMeters.`);
+    }
+    if (
+      entry.xz.kind === 'POLYLINE' &&
+      (!entry.xz.polylineMeters || entry.xz.polylineMeters.length < 2)
+    ) {
+      errors.push(`entry '${entry.id}': POLYLINE XZ requires at least two points.`);
     }
     if (
       entry.xz.kind === 'POLYGON' &&
