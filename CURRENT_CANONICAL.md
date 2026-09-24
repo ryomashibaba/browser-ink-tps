@@ -1849,3 +1849,28 @@ New canonical research layer:
 - ~146x87m outer extent remains PROVISIONAL
 
 T21-B may convert the Turf map to metric XZ polygons using this ledger, but it must not promote PROVISIONAL/UNKNOWN dimensions without new evidence.
+
+
+## T21-B metric calibration / T21-C entry checkpoint — 2026-09-24
+
+The T21 research branch now contains an auditable 2D project-meter transform for the user-provided Turf rule map:
+
+- source frame: 3508 x 2482 px
+- origin: (1754, 1241) px
+- spawn-axis anchors: (547, 647) / (2959, 1834) px
+- scale: 20 px/m HIGH
+- measured spawn separation: ~134.413 m
+- project spawns: approximately Z=-67.262 m / +67.150 m
+- origin-vs-spawn-midpoint residual: ~0.056 m
+- 180-degree spawn symmetry residual: ~0.112 m
+
+Only the spawn-center XZ anchors have been promoted to HIGH. The full spawn polygons, first-drop lips, central surface polygons, glass footprint, slopes, grates, water boundaries, and all unresolved vertical values remain unpromoted.
+
+The prior ~146 x 87 m whole-stage estimate remains PROVISIONAL. In the project frame the long spawn axis is Z (~146 m) and the cross-stage axis is X (~87 m).
+
+A new measurement-to-geometry gate enforces:
+- T21-D blockout: CONFIRMED/HIGH exact values only
+- Stable Freeze: CONFIRMED exact values only
+- PROVISIONAL/UNKNOWN values cannot silently become exact geometry
+
+No runtime stage geometry has been swapped in yet.
