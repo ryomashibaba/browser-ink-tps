@@ -1495,7 +1495,7 @@ No hosted runtime QA is required for this vector-source checkpoint because produ
 
 Deterministic coverage now checks:
 
-- glass overhang pair plan area ~62.799m² each
+- glass overhang pair plan area ~62.796m² each
 - glass overhang 180-degree residual <0.03m
 - glass is HIGH exact XZ + CONFIRMED GLASS/UNINKABLE
 - glass internal slope markers remain distinct from the hard outline
