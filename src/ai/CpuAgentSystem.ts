@@ -358,8 +358,13 @@ export class CpuAgentSystem {
     this.pendingShots.length = 0;
   }
 
-  public drainKitRequests(consumer: (request: CpuKitRequest) => void): void {
-    for (const request of this.pendingKitRequests) consumer(request);
+  public drainKitRequests(
+    consumer: (request: CpuKitRequest) => boolean
+  ): void {
+    for (const request of this.pendingKitRequests) {
+      const accepted = consumer(request);
+      if (!accepted) this.rollbackRejectedKitRequest(request);
+    }
     this.pendingKitRequests.length = 0;
   }
 
@@ -854,6 +859,25 @@ export class CpuAgentSystem {
     this.stats.cpuSubUses += 1;
     this.stats.cpuKitLast =
       `${bot.id}:SUB:${subProfile.shortName}`;
+  }
+
+  private rollbackRejectedKitRequest(request: CpuKitRequest): void {
+    if (request.kind !== 'SUB') return;
+
+    const bot = this.bots.find(
+      (candidate) => candidate.id === request.sourceId
+    );
+    if (!bot) return;
+
+    const profile = subWeaponProfile(request.subId);
+    bot.ink = Math.min(
+      GAME_CONFIG.inkEconomy.capacity,
+      bot.ink + profile.inkCost
+    );
+    bot.subCooldownSeconds = GAME_CONFIG.cpu.kit.subPoolRetrySeconds;
+    this.stats.cpuSubUses = Math.max(0, this.stats.cpuSubUses - 1);
+    this.stats.cpuKitLast =
+      `${bot.id}:SUB:${profile.shortName}:POOL_DROP`;
   }
 
   private shouldUseCpuSpecial(
