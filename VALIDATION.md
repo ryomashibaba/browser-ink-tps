@@ -1408,3 +1408,25 @@ T19C is now **STABLE FREEZE**. Future work must preserve CPU kit assignment auth
 13. Report any mismatch before T20 Freeze. Do not Freeze solely from automated checks.
 
 T20 remains **IMPLEMENTATION CANDIDATE** until these hosted checks are accepted.
+
+
+## T21-A Undertow Spillway Evidence Freeze / Measurement Ledger
+
+Branch: `codex/t21-undertow-evidence-ledger`
+Base main: `fbd922cea900df8e1a139f21b3c61ed927b3fdd9`
+
+Automated scope:
+- evidence IDs are unique and every non-UNKNOWN fact cites evidence
+- unresolved XZ remains UNKNOWN
+- UNKNOWN Y cannot expose an exact numeric value
+- center reference Y=0 is CONFIRMED
+- working 20px/m scale remains HIGH
+- whole-stage ~146x87m remains PROVISIONAL
+- Team A/B first descents are CONFIRMED `ONE_WAY_DROP`
+- first-drop 1.5m/3m magnitudes remain PROVISIONAL candidates
+- spawn absolute Y remains UNKNOWN
+- upper glass is explicit UNINKABLE + GLASS gameplay geometry
+- Splat Zones objective count is recorded as two
+- Tower/Rainmaker/Clams geometry differences remain rule-variant facts
+
+This batch intentionally changes no runtime geometry, collision, paint authority, CPU traversal, objective scoring, or UI. Hosted gameplay QA is therefore not required for T21-A itself; PR CI must pass typecheck, Vitest, and production build before the ledger is accepted as the input to T21-B/C.
