@@ -1354,3 +1354,16 @@ T19C remains **IMPLEMENTATION CANDIDATE** until these checks are accepted.
 - CPU Sub pool exhaustion is transactional: if the CPU bomb runtime rejects a Sub request because all slots are occupied, the source CPU receives its Sub Ink back, the normal Sub cooldown is rolled back to a short retry delay, and the successful-use counter is corrected. `CPU kit pool drops` still records the overload event.
 - CPU Special activation is deferred from request intake to `CpuKitSystem.fixedUpdate()`, which runs after `ProjectileSystem.fixedUpdate()` in the same 60 Hz tick. This ensures Turf Pulse and the initial state of other CPU Specials use the current Human position, Super Jump invulnerability, and Brella guard context rather than the previous tick's values.
 - These fixes are T19C-only and do not alter the frozen T19A/T19B main-weapon runtime.
+
+
+## T19C Stable Freeze — accepted 2026-09-24
+
+The user completed the hosted v0.16.0 acceptance path and reported no observed problems after the large T19C implementation and cross-system debug pass.
+
+Stable implementation checkpoint:
+- commit: `c1807e5c70c7869d346ce1fa6ed0a5def31c59f9`
+- GitHub Actions run #335 / `35979800671`: TypeScript check, production build, and Pages deploy success
+- final candidate documentation HEAD before Freeze: `11b3bd584d80715a41f251529b06729461fa6233`
+- run #338 / `35980005463`: success
+
+T19C is now **STABLE FREEZE**. Future work must preserve CPU kit assignment authority, actual-paint Special charging, Special self-charge prevention, CPU Sub/Special lifecycle semantics, and the T0–T19B frozen contracts unless a later explicit Freeze-change decision is made.
