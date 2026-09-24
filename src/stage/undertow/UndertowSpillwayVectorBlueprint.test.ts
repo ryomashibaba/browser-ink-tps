@@ -50,6 +50,19 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.03);
   });
 
+  it('extracts the symmetric white grate-mesh footprints without inheriting water semantics', () => {
+    const a = UNDERTOW_VECTOR_TRACES.negativeZGrateMesh;
+    const b = UNDERTOW_VECTOR_TRACES.positiveZGrateMesh;
+    expect(a.sourceClass).toBe('GRATE_MESH');
+    expect(b.sourceClass).toBe('GRATE_MESH');
+    expect(a.confidence).toBe('HIGH');
+    expect(b.confidence).toBe('HIGH');
+    expect(polygonAreaMeters2(a.metricPoints)).toBeCloseTo(30.440625, 5);
+    expect(polygonAreaMeters2(b.metricPoints)).toBeCloseTo(30.440625, 5);
+    expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.03);
+    expect(a.notes).toContain('no water semantics');
+  });
+
   it('binds the two central glass overhang faces and keeps their internal slope markers distinct', () => {
     const a = UNDERTOW_VECTOR_TRACES.negativeZGlassOverhang;
     const b = UNDERTOW_VECTOR_TRACES.positiveZGlassOverhang;
