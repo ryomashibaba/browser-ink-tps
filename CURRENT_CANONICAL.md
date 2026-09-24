@@ -1923,3 +1923,24 @@ First-drop traversal semantics remain ONE_WAY_DROP CONFIRMED, while its exact Y 
 The PDF does not justify flattening large closed source faces into gameplay floors. Spawn-floor outlines, center floor boundaries, glass, slopes, grate, and broader fall-out/void boundaries stay unresolved until source-line semantics are bound to gameplay evidence.
 
 T21-B trace coverage is now 5 / 18 requirements measured. No runtime production stage swap has occurred.
+
+
+## T21-B semantic binding / T21-D gate checkpoint — 2026-09-25
+
+Using the recovered vector Turf PDF + matching 3508x2482 JPEG + current user gameplay captures:
+
+- two symmetric glass-overhang XZ polygons are HIGH and GLASS/UNINKABLE semantics remain CONFIRMED
+- each glass overhang plan area is ~62.799m² with <0.03m 180-degree residual
+- internal dash fields prove the glass overhang contains slope-marked subregions; it must not become a single flat Y plane
+- the glass vertical node is now a high-reference point, not a flat platform floor
+- center-left/right slope dash markers are located around project X=-9.805/+9.805m, Z≈0 with <0.03m symmetry residual, but remain marker envelopes rather than collision footprints
+- two symmetric white mesh/grate polygons are HIGH XZ, ~30.441m² each, GRATE/UNINKABLE CONFIRMED, Y UNKNOWN
+- the second right-side small-drop L-edge after the first drop is HIGH XZ on both sides, 16.90m plan length, with -1.5m HIGH vertical delta
+- right-low floor polygon itself remains unresolved
+- mapped cyan water remains separate from white grate semantics
+
+T21-B common trace coverage: **8 / 18 measured**.
+
+T21-D remains blocked by an automated readiness gate until the unresolved common boundary / spawn floors / center-low / small-step / under-glass passage / central slope hard footprints / right-low floor / broader fall-out boundary and required absolute Y constraints are resolved.
+
+No production runtime stage geometry has been replaced.
