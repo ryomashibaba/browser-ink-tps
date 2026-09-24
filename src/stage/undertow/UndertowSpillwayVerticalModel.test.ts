@@ -18,7 +18,7 @@ describe('T21-C Undertow vertical reconstruction', () => {
     expect(result.values['center-small-step-top']).toBe(1.5);
 
     expect(result.values['glass-lower-major-floor']).toBeUndefined();
-    expect(result.values['upper-glass-platform']).toBeUndefined();
+    expect(result.values['glass-overhang-high-reference']).toBeUndefined();
     expect(result.values['team-a-spawn-floor']).toBeUndefined();
     expect(result.values['team-a-first-drop-landing']).toBeUndefined();
   });
@@ -43,6 +43,14 @@ describe('T21-C Undertow vertical reconstruction', () => {
       expect(relation.candidatesMeters).toEqual([-1.5, -3]);
       expect(relation.confidence).toBe('PROVISIONAL');
     }
+  });
+
+  it('never exposes the slope-marked glass overhang as a flat platform Y', () => {
+    const glassNode = UNDERTOW_VERTICAL_NODES.find(
+      (node) => node.id === 'glass-overhang-high-reference'
+    );
+    expect(glassNode?.absolute.yMeters).toBeUndefined();
+    expect(glassNode?.absolute.notes).toContain('not a single flat platform Y');
   });
 
   it('keeps the broader upper-level hypotheses provisional', () => {
