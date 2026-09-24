@@ -1489,3 +1489,28 @@ Expected deterministic checks:
 - broader playable/fall-out boundaries, glass, slopes, grate, center floor and spawn-floor polygons remain UNTRACED
 
 No hosted runtime QA is required for this vector-source checkpoint because production geometry/collision/navigation is still untouched. TypeScript, Vitest, and production build must pass.
+
+
+## T21-B central semantic-binding validation
+
+Deterministic coverage now checks:
+
+- glass overhang pair plan area ~62.799m² each
+- glass overhang 180-degree residual <0.03m
+- glass is HIGH exact XZ + CONFIRMED GLASS/UNINKABLE
+- glass internal slope markers remain distinct from the hard outline
+- vertical reconstruction no longer treats the whole glass footprint as one flat Y
+- center-left/right slope marker centers are approximately X=-9.805/+9.805m, Z≈0
+- center slope marker pair residual <0.03m
+- marker envelopes cannot be used as collision footprints
+- grate pair plan area ~30.441m² each
+- grate pair residual <0.03m
+- grate XZ is HIGH; GRATE/UNINKABLE semantics are CONFIRMED; WATER is absent
+- right-side second-drop pair has 16.90m plan length and <0.04m symmetry residual
+- second-drop XZ is HIGH and vertical delta remains -1.5m HIGH
+- center-small-step XZ is still UNRESOLVED
+- common trace coverage is 8/18
+- T21-D readiness stays false while critical XZ/Y evidence is missing
+- confirmed center-low Y=0 does not bypass the missing center-low XZ-outline requirement
+
+Production StageDefinition, Rapier, GameplayInk, GPU ink, Recast runtime, combat, Super Jump and T20 objectives remain untouched.
