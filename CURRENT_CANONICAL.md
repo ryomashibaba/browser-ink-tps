@@ -1749,3 +1749,9 @@ Cross-system regression audit:
 - MatchController remains unchanged
 
 T19C remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
+
+Candidate implementation checkpoint:
+- implementation/code checkpoint: `170fd26aafc5fe031d65cec84a877dd725a4846c`
+- GitHub Actions run #326 / `35979146074`: TypeScript check, production build, and Pages deploy success
+- later T19C documentation commits do not change gameplay code
+
