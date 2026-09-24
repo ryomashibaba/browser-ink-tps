@@ -1450,3 +1450,19 @@ Expected checks:
 - Stable Freeze rejects HIGH as well as PROVISIONAL/UNKNOWN Y
 
 Runtime production geometry, collision, paint authority, Recast traversal, T20 scoring, weapons, and Super Jump remain unchanged by this checkpoint.
+
+
+## T21-C vertical-constraint automated checks
+
+New deterministic coverage verifies:
+- HIGH exact vertical relations propagate for BLOCKOUT only
+- HIGH relations do not enter STABLE_FREEZE
+- an unseeded HIGH relation cannot invent an absolute Y
+- contradictory exact constraints are reported
+- center-low Y=0 resolves center small-step to 1.5m at blockout level
+- glass-top absolute Y stays unresolved while its lower reference floor is unknown
+- spawn and first-drop landing absolute Y stay unresolved
+- first-drop 1.5m / 3.0m remains a PROVISIONAL candidate pair rather than an exact delta
+- +4.5 to +6.0m upper band and +4.5m raised-platform candidate remain PROVISIONAL
+
+No runtime stage geometry or traversal changes are introduced by this checkpoint.
