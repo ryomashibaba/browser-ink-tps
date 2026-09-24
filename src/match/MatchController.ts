@@ -4,7 +4,7 @@ import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { Team } from '../ink/types';
 import type { SplatZonesObjectiveSystem } from '../objective/SplatZonesObjectiveSystem';
-import { gameModeLabel, teamForResult, zonesResult, type GameModeId } from './GameMode';
+import { gameModeLabel, resolveZonesTimeout, zonesResult, type GameModeId } from './GameMode';
 import type { StageDefinition } from '../stage/StageDefinition';
 
 export type MatchState = 'COUNTDOWN' | 'PLAYING' | 'ENDED';
@@ -163,42 +163,19 @@ export class MatchController {
   }
 
   private resolveZonesTimeExpired(): void {
-    const snapshot = this.splatZones.snapshot();
-    const result = zonesResult(snapshot);
-
-    if (this.overtime) {
-      if (snapshot.control !== this.overtimeTeam) {
-        this.finishMatch(result);
-        return;
-      }
-      const overtaking =
-        (this.overtimeTeam === Team.A && snapshot.countA < snapshot.countB) ||
-        (this.overtimeTeam === Team.B && snapshot.countB < snapshot.countA);
-      if (overtaking) {
-        this.finishMatch(this.overtimeTeam === Team.A ? 'TEAM A' : 'TEAM B');
-      }
-      return;
-    }
-
-    const winnerTeam = teamForResult(result);
-    if (winnerTeam === Team.Neutral) {
-      if (snapshot.control === Team.Neutral) {
-        this.finishMatch('TIE');
-      } else {
-        this.overtime = true;
-        this.overtimeTeam = snapshot.control;
-      }
-      return;
-    }
-
-    const trailingTeam = winnerTeam === Team.A ? Team.B : Team.A;
-    if (snapshot.control === trailingTeam) {
+    const decision = resolveZonesTimeout(
+      this.splatZones.snapshot(),
+      this.overtime,
+      this.overtimeTeam
+    );
+    if (decision.kind === 'START_OVERTIME') {
       this.overtime = true;
-      this.overtimeTeam = trailingTeam;
+      this.overtimeTeam = decision.team;
       return;
     }
-
-    this.finishMatch(result);
+    if (decision.kind === 'FINISH') {
+      this.finishMatch(decision.result);
+    }
   }
 
   private finishTurfMatch(): void {
