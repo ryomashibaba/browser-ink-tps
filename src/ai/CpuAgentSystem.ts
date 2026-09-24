@@ -445,6 +445,7 @@ export class CpuAgentSystem {
   public forceAdvancedWeaponQa(): boolean {
     if (this.bots.length === 0) return false;
 
+    this.pendingKitRequests.length = 0;
     let changed = 0;
     for (let i = 0; i < this.bots.length && i < CPU_ADVANCED_QA_WEAPONS.length; i += 1) {
       const bot = this.bots[i]!;
