@@ -312,7 +312,7 @@ const entries: readonly StageMeasurementEntry[] = [
     evidenceIds: maps,
     xz: {
       kind: 'POINT',
-      pointMeters: UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0],
+      pointMeters: UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]!,
       confidence: 'HIGH',
       evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
       notes: 'Vector spawn-ring center only. Full spawn-floor polygon remains unresolved.'
@@ -335,7 +335,7 @@ const entries: readonly StageMeasurementEntry[] = [
     evidenceIds: maps,
     xz: {
       kind: 'POINT',
-      pointMeters: UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0],
+      pointMeters: UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]!,
       confidence: 'HIGH',
       evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
       notes: 'Vector spawn-ring center only. Full spawn-floor polygon remains unresolved.'
