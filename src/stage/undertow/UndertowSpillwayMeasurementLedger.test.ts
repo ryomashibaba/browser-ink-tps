@@ -40,9 +40,9 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     });
   });
 
-  it('does not promote provisional whole-stage extents to confirmed values', () => {
-    expect(assumption('outer-span-x-meters').confidence).toBe('PROVISIONAL');
-    expect(assumption('outer-span-z-meters').confidence).toBe('PROVISIONAL');
+  it('keeps whole-stage extents provisional in the chosen X/Z orientation', () => {
+    expect(assumption('outer-span-x-meters')).toMatchObject({ value: 87, confidence: 'PROVISIONAL' });
+    expect(assumption('outer-span-z-meters')).toMatchObject({ value: 146, confidence: 'PROVISIONAL' });
   });
 
   it('locks both spawn-side first descents as one-way drops only', () => {
@@ -57,11 +57,30 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     }
   });
 
-  it('keeps spawn absolute Y unresolved', () => {
+  it('binds measured spawn centers in XZ while keeping absolute Y unresolved', () => {
+    const teamA = entry('team-a-spawn-floor');
+    const teamB = entry('team-b-spawn-floor');
+    expect(teamA.xz.kind).toBe('POINT');
+    expect(teamB.xz.kind).toBe('POINT');
+    expect(teamA.xz.confidence).toBe('HIGH');
+    expect(teamB.xz.confidence).toBe('HIGH');
+    expect(teamA.xz.pointMeters?.[0]).toBeCloseTo(0, 3);
+    expect(teamB.xz.pointMeters?.[0]).toBeCloseTo(0, 3);
+    expect(teamA.xz.pointMeters?.[1]).toBeCloseTo(67.1505, 3);
+    expect(teamB.xz.pointMeters?.[1]).toBeCloseTo(-67.2623, 3);
+
     expect(entry('team-a-spawn-floor').y.confidence).toBe('UNKNOWN');
     expect(entry('team-a-spawn-floor').y.yMeters).toBeUndefined();
     expect(entry('team-b-spawn-floor').y.confidence).toBe('UNKNOWN');
     expect(entry('team-b-spawn-floor').y.yMeters).toBeUndefined();
+  });
+
+  it('records the measured Turf map frame instead of hiding calibration constants', () => {
+    expect(assumption('turf-rule-map-width-pixels').value).toBe(3508);
+    expect(assumption('turf-rule-map-height-pixels').value).toBe(2482);
+    expect(assumption('turf-map-origin-pixel-x').value).toBe(1754);
+    expect(assumption('turf-map-origin-pixel-y').value).toBe(1241);
+    expect(Number(assumption('spawn-distance-meters').value)).toBeCloseTo(134.4127, 3);
   });
 
   it('keeps glass as gameplay geometry with explicit uninkable metadata', () => {
