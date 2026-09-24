@@ -101,10 +101,22 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     }
   });
 
-  it('keeps glass as gameplay geometry with explicit uninkable metadata', () => {
+  it('keeps glass as gameplay geometry with exact symmetric XZ but non-flat vertical semantics', () => {
     expect(entry('upper-glass-platform').surface.semantics).toEqual(['UNINKABLE', 'GLASS']);
     expect(entry('upper-glass-platform').surface.confidence).toBe('CONFIRMED');
+
+    for (const id of ['team-a-upper-glass-overhang', 'team-b-upper-glass-overhang']) {
+      const glass = entry(id);
+      expect(glass.xz.kind).toBe('POLYGON');
+      expect(glass.xz.confidence).toBe('HIGH');
+      expect(glass.xz.polygonMeters).toHaveLength(4);
+      expect(glass.transition.kind).toBe('SLOPE');
+      expect(glass.transition.confidence).toBe('HIGH');
+      expect(glass.surface.semantics).toEqual(['UNINKABLE', 'GLASS']);
+    }
+
     expect(entry('upper-glass-underpass').confidence).toBe('CONFIRMED');
+    expect(entry('upper-glass-underpass').xz.kind).toBe('UNRESOLVED');
   });
 
   it('records two zones and preserves rule-specific geometry as variants', () => {
