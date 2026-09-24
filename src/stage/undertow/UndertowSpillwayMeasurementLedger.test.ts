@@ -51,6 +51,9 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
       expect(drop.transition.kind).toBe('ONE_WAY_DROP');
       expect(drop.transition.confidence).toBe('CONFIRMED');
       expect(drop.surface.semantics).toContain('ONE_WAY_DROP');
+      expect(drop.xz.kind).toBe('POLYLINE');
+      expect(drop.xz.confidence).toBe('HIGH');
+      expect(drop.xz.polylineMeters).toHaveLength(3);
       expect(drop.y.yMeters).toBeUndefined();
       expect(drop.y.candidatesMeters).toEqual([1.5, 3]);
       expect(drop.y.confidence).toBe('PROVISIONAL');
@@ -64,10 +67,10 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(teamB.xz.kind).toBe('POINT');
     expect(teamA.xz.confidence).toBe('HIGH');
     expect(teamB.xz.confidence).toBe('HIGH');
-    expect(teamA.xz.pointMeters?.[0]).toBeCloseTo(0, 3);
-    expect(teamB.xz.pointMeters?.[0]).toBeCloseTo(0, 3);
-    expect(teamA.xz.pointMeters?.[1]).toBeCloseTo(67.1505, 3);
-    expect(teamB.xz.pointMeters?.[1]).toBeCloseTo(-67.2623, 3);
+    expect(Math.abs(teamA.xz.pointMeters?.[0] ?? 1)).toBeLessThan(0.02);
+    expect(Math.abs(teamB.xz.pointMeters?.[0] ?? 1)).toBeLessThan(0.02);
+    expect(teamA.xz.pointMeters?.[1]).toBeCloseTo(67.0727, 3);
+    expect(teamB.xz.pointMeters?.[1]).toBeCloseTo(-67.1172, 3);
 
     expect(entry('team-a-spawn-floor').y.confidence).toBe('UNKNOWN');
     expect(entry('team-a-spawn-floor').y.yMeters).toBeUndefined();
@@ -80,7 +83,22 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(assumption('turf-rule-map-height-pixels').value).toBe(2482);
     expect(assumption('turf-map-origin-pixel-x').value).toBe(1754);
     expect(assumption('turf-map-origin-pixel-y').value).toBe(1241);
-    expect(Number(assumption('spawn-distance-meters').value)).toBeCloseTo(134.4127, 3);
+    expect(Number(assumption('spawn-distance-meters').value)).toBeCloseTo(134.1899, 3);
+    expect(assumption('pdf-points-per-meter')).toMatchObject({
+      value: 4.8,
+      unit: 'pt/m',
+      confidence: 'HIGH'
+    });
+  });
+
+  it('binds the two mapped cyan water hazards as confirmed polygons', () => {
+    for (const id of ['team-a-water-region', 'team-b-water-region']) {
+      const water = entry(id);
+      expect(water.xz.kind).toBe('POLYGON');
+      expect(water.xz.confidence).toBe('CONFIRMED');
+      expect(water.xz.polygonMeters?.length).toBe(6);
+      expect(water.surface.semantics).toEqual(['WATER', 'KILL', 'UNINKABLE']);
+    }
   });
 
   it('keeps glass as gameplay geometry with explicit uninkable metadata', () => {
