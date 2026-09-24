@@ -244,3 +244,89 @@ Trace coverage after source recovery:
 - still unresolved: full playable boundary, actual spawn-floor polygons, center-low outline, small step, right drop, glass top/underpass, both central slopes, right-low floor, grate, and broader fall-out/void kill boundary
 
 This supersedes the earlier note that the original 3508 x 2482 source was unavailable.
+
+
+## T21-B — central semantic binding checkpoint
+
+The recovered vector PDF is now cross-bound with the current gameplay captures and the map-author legend.
+
+Author/source semantics used in this checkpoint:
+- gray source face = uninkable
+- repeated dash field = slope / ramp
+- mesh source region = grate family
+- cyan source face = water/submerge hazard
+
+### Glass overhangs
+
+Two symmetric gray source rectangles near the middle are now bound to the current glass overhang family:
+
+- negative-Z overhang plan area: ~62.799 m²
+- positive-Z overhang plan area: ~62.799 m²
+- 180-degree plan residual: <0.03 m
+- XZ confidence: HIGH
+- surface semantics: GLASS + UNINKABLE CONFIRMED
+
+Each glass source face contains an internal slope-marker field. Therefore the overhang must **not** be represented as one flat Y plane.
+
+The glass vertical model now stores a `glass-overhang-high-reference` rather than a single `upper-glass-platform` floor elevation. The ~3m relationship remains a HIGH reference to the major floor below, not permission to flatten the whole footprint.
+
+The traversable under-glass passage remains CONFIRMED as topology but its exact collision/navigation polygon remains UNTRACED.
+
+### Center-left / center-right slope markers
+
+The PDF dash fields nearest the geometric center form an almost exact 180-degree pair:
+
+- center-left marker center: approximately X=-9.805m, Z=-0.059m
+- center-right marker center: approximately X=+9.805m, Z=+0.059m
+- marker-pair symmetry residual: <0.03m
+
+These are stored as `MARKER_ENVELOPE_ONLY`. They identify which source region contains each central slope, but they are deliberately **not** promoted to collision footprints because dash markers are inset from the real hard edges.
+
+### Grate pair
+
+Two symmetric white mesh-pattern regions are now bound to the traversable grate family:
+
+- plan area per grate: ~30.441 m²
+- 180-degree residual: <0.03m
+- XZ confidence: HIGH
+- semantics: GRATE + UNINKABLE CONFIRMED
+- absolute grate Y: still UNKNOWN
+
+No WATER semantic is attached to these white mesh faces. Cyan water polygons remain separate evidence.
+
+### Right-side second drop
+
+The hard-edge chain immediately after each confirmed first-drop open area contains a second symmetric L-shaped edge. It matches the current layout description in which the open area after the first drop has a small drop on its right.
+
+- Team A second-drop edge plan length: 16.90m
+- Team B second-drop edge plan length: 16.90m
+- 180-degree residual: <0.04m
+- XZ confidence: HIGH
+- transition: DROP
+- vertical delta: -1.5m HIGH
+
+The open floor *below* that edge is still not promoted to an exact polygon because the large surrounding source face spans multiple elevations.
+
+### Trace coverage
+
+T21-B common trace coverage is now **8 / 18** requirements measured.
+
+Measured:
+- 2 spawn centers
+- 2 first-drop lips
+- right-small-drop edge family
+- glass-overhang outline family
+- grate outline family
+- mapped water-hazard polygon family
+
+Still blocked:
+- whole playable boundary
+- both actual spawn-floor polygons
+- center-low floor outline
+- center small-step footprint
+- glass underpass hard/navigation outline
+- center-left/right slope hard footprints
+- right-low floor outline
+- broader fall-out/void kill boundary
+
+A new `UndertowSpillwayBlockoutGate` keeps T21-D disabled while those XZ items, spawn/first-drop absolute Y, and exact first-drop vertical relations remain unresolved.
