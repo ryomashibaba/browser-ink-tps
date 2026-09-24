@@ -1930,7 +1930,7 @@ T21-B trace coverage is now 5 / 18 requirements measured. No runtime production 
 Using the recovered vector Turf PDF + matching 3508x2482 JPEG + current user gameplay captures:
 
 - two symmetric glass-overhang XZ polygons are HIGH and GLASS/UNINKABLE semantics remain CONFIRMED
-- each glass overhang plan area is ~62.799m² with <0.03m 180-degree residual
+- each glass overhang plan area is ~62.796m² with <0.03m 180-degree residual
 - internal dash fields prove the glass overhang contains slope-marked subregions; it must not become a single flat Y plane
 - the glass vertical node is now a high-reference point, not a flat platform floor
 - center-left/right slope dash markers are located around project X=-9.805/+9.805m, Z≈0 with <0.03m symmetry residual, but remain marker envelopes rather than collision footprints
