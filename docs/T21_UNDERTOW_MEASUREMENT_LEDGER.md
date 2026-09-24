@@ -170,3 +170,32 @@ Still candidate-only:
 The resolver only propagates an exact relation when an allowed-confidence chain has an absolute seed. Therefore the 3m glass clearance does not fabricate a glass-top absolute Y while the lower floor is unknown, and the first-drop candidate relation never fabricates a spawn or landing Y.
 
 At BLOCKOUT level, HIGH exact relations may propagate. At STABLE_FREEZE level, only CONFIRMED exact relations propagate.
+
+
+## T21-B trace-completeness gate
+
+A map-tracing layer is now ready for the exact common-terrain outline pass:
+
+- pixel trace -> calibrated project XZ conversion
+- polygon area and bounds calculation
+- 180-degree counterpart Hausdorff residual
+- geometry-kind validation
+- explicit trace-completion plan
+
+Only the two spawn-center POINT traces are currently marked MEASURED.
+
+The following gameplay-critical features deliberately remain UNTRACED until their source pixels are available:
+- common playable boundary
+- both spawn-floor outlines
+- both first-drop lips
+- center-low floor
+- center small-step
+- right small-drop edge
+- upper glass platform
+- glass underpass
+- both central slope footprints
+- right low floor
+- central grate
+- water/kill boundaries
+
+This is intentional: no provisional rectangle or CPU-friendly replacement is allowed to masquerade as source-derived stage geometry.
