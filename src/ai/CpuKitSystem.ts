@@ -47,6 +47,8 @@ interface CpuScheduledStrike {
   seconds: number;
 }
 
+type CpuSpecialRequest = Extract<CpuKitRequest, { kind: 'SPECIAL' }>;
+
 interface CpuDriftStorm {
   actorId: string;
   team: Team.A | Team.B;
@@ -60,6 +62,7 @@ export class CpuKitSystem {
   private readonly bombs: CpuBombSlot[] = [];
   private readonly scheduledStrikes: CpuScheduledStrike[] = [];
   private readonly storms: CpuDriftStorm[] = [];
+  private readonly pendingSpecials: CpuSpecialRequest[] = [];
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private readonly delta = new Vec3();
@@ -111,18 +114,20 @@ export class CpuKitSystem {
       return this.spawnSub(request);
     }
 
-    this.activateSpecial(
-      request.sourceId,
-      request.team,
-      request.specialId,
-      request.position,
-      request.target,
-      request.direction
-    );
+    this.pendingSpecials.push({
+      kind: 'SPECIAL',
+      sourceId: request.sourceId,
+      team: request.team,
+      position: request.position.clone(),
+      target: request.target.clone(),
+      direction: request.direction.clone(),
+      specialId: request.specialId
+    });
     return true;
   }
 
   public fixedUpdate(dt: number): void {
+    this.activatePendingSpecials();
     this.updateBombs(dt);
     this.updateTripleStrikes(dt);
     this.updateDriftStorms(dt);
@@ -147,6 +152,7 @@ export class CpuKitSystem {
 
   public reset(): void {
     for (const slot of this.bombs) this.deactivateBomb(slot);
+    this.pendingSpecials.length = 0;
     this.scheduledStrikes.length = 0;
     this.storms.length = 0;
     this.syncStats();
@@ -308,6 +314,20 @@ export class CpuKitSystem {
     );
     this.stats.cpuSubExplosions += 1;
     this.deactivateBomb(slot);
+  }
+
+  private activatePendingSpecials(): void {
+    for (const request of this.pendingSpecials) {
+      this.activateSpecial(
+        request.sourceId,
+        request.team,
+        request.specialId,
+        request.position,
+        request.target,
+        request.direction
+      );
+    }
+    this.pendingSpecials.length = 0;
   }
 
   private activateSpecial(
