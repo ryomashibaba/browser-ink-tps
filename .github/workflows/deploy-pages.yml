@@ -3,6 +3,8 @@ name: Build and deploy Ink TPS to GitHub Pages
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -39,6 +41,9 @@ jobs:
 
       - name: TypeScript check
         run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
 
       - name: Build for GitHub Pages
         run: npm run build -- --base=/browser-ink-tps/
