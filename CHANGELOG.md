@@ -1,3 +1,13 @@
+## v0.16.0 T19C Stable Freeze — 2026-09-24
+
+- hosted runtime QA accepted by the user
+- stable implementation checkpoint: `c1807e5c70c7869d346ce1fa6ed0a5def31c59f9`
+- GitHub Actions run #335 / `35979800671` passed TypeScript check, production build, and Pages deploy
+- final candidate documentation HEAD `11b3bd584d80715a41f251529b06729461fa6233` also passed run #338
+- CPU Sub/Special kit parity, real-paint Special charging, self-charge prevention, lifecycle cleanup, and cross-debug fixes are frozen
+- T0–T19C is now the frozen gameplay foundation
+- T20 will be selected after a fresh roadmap/repository audit
+
 ## v0.16.0 T19C CPU Sub / Special Kit Parity Candidate — 2026-09-24
 
 - CPU kit assignment now resolves exclusively from the frozen T16 WeaponKitCatalog
