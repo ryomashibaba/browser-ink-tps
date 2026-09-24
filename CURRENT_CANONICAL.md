@@ -1751,7 +1751,10 @@ Cross-system regression audit:
 T19C remains **IMPLEMENTATION CANDIDATE** until hosted runtime QA is accepted.
 
 Candidate implementation checkpoint:
-- implementation/code checkpoint: `170fd26aafc5fe031d65cec84a877dd725a4846c`
-- GitHub Actions run #326 / `35979146074`: TypeScript check, production build, and Pages deploy success
+- implementation/code checkpoint: `c1807e5c70c7869d346ce1fa6ed0a5def31c59f9`
+- GitHub Actions run #335 / `35979800671`: TypeScript check, production build, and Pages deploy success
+- final cross-debug fixes included before this checkpoint:
+  - CPU Sub pool rejection refunds Ink and rolls back the full cooldown to a short retry delay
+  - CPU Special activation is deferred to CpuKitSystem.fixedUpdate so current-tick Human damage / guard / Super Jump context is authoritative
 - later T19C documentation commits do not change gameplay code
 
