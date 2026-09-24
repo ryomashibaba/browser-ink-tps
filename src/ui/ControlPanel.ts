@@ -44,8 +44,8 @@ export class ControlPanel {
     panel.id = 'control-panel';
     panel.className = 'panel';
     panel.innerHTML = `
-      <h1>Browser Ink TPS · T19C Candidate</h1>
-      <p>T0–T19B is frozen. T19C adds CPU Sub/Special kit parity from the T16 kit catalog.</p>
+      <h1>Browser Ink TPS · T19C Stable Freeze</h1>
+      <p>T0–T19C is frozen. CPU main/Sub/Special parity and cross-system kit lifecycle are stable.</p>
       <div class="row">
         <button id="team-a" class="active-a">Team A · Cyan</button>
         <button id="team-b">Team B · Magenta</button>
