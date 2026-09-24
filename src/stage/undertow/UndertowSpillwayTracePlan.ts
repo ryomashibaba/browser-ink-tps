@@ -136,9 +136,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'center-grate-outline',
     geometryKind: 'POLYGON',
     region: 'Center',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'GRATE + UNINKABLE semantics already confirmed.'
+    notes: 'Both symmetric white mesh-pattern grate polygons are measured; Y remains unresolved.'
   },
   {
     id: 'mapped-water-hazard-polygons',
