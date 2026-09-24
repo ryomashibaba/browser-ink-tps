@@ -13,6 +13,8 @@
 - added lifecycle cleanup for Match End / Restart / Team change / Clear Ink / Advanced QA
 - added CPU Kit QA Ready and detailed Debug diagnostics
 - horizontal regression audit preserved T0–T19B Freeze boundaries
+- cross-debug: rejected CPU Sub pool requests now refund Ink and replace the full cooldown with a short retry delay
+- cross-debug: CPU Special activation now executes after the current tick's ProjectileSystem context update so Human guard / Super Jump invulnerability is current-tick authoritative
 - candidate implementation validated by GitHub Actions before hosted QA
 
 ## v0.15.0 T19B Stable Freeze — 2026-09-23
