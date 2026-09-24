@@ -22,6 +22,7 @@ export class MatchController {
   private matchEndedPending = false;
   private overtime = false;
   private overtimeTeam: Team = Team.Neutral;
+  private overtimeElapsedSeconds = 0;
   private result = '-';
 
   public constructor(
@@ -64,6 +65,7 @@ export class MatchController {
     this.matchEndedPending = false;
     this.overtime = false;
     this.overtimeTeam = Team.Neutral;
+    this.overtimeElapsedSeconds = 0;
     this.result = '-';
     this.stats.playerSplats = 0;
     this.stats.playerRespawns = 0;
@@ -86,6 +88,8 @@ export class MatchController {
 
     if (!this.overtime) {
       this.remainingSeconds = Math.max(0, this.remainingSeconds - dt);
+    } else {
+      this.overtimeElapsedSeconds += dt;
     }
 
     if (this.lifeState === 'ACTIVE' && playerHp <= 0) {
@@ -121,6 +125,7 @@ export class MatchController {
     this.remainingSeconds = 0;
     this.overtime = false;
     this.overtimeTeam = Team.Neutral;
+    this.overtimeElapsedSeconds = 0;
     if (this.mode === 'SPLAT_ZONES') {
       this.finishMatch(zonesResult(this.splatZones.snapshot()));
     } else {
@@ -166,11 +171,13 @@ export class MatchController {
     const decision = resolveZonesTimeout(
       this.splatZones.snapshot(),
       this.overtime,
-      this.overtimeTeam
+      this.overtimeTeam,
+      this.overtimeElapsedSeconds
     );
     if (decision.kind === 'START_OVERTIME') {
       this.overtime = true;
       this.overtimeTeam = decision.team;
+      this.overtimeElapsedSeconds = 0;
       return;
     }
     if (decision.kind === 'FINISH') {
@@ -194,6 +201,7 @@ export class MatchController {
     this.state = 'ENDED';
     this.overtime = false;
     this.overtimeTeam = Team.Neutral;
+    this.overtimeElapsedSeconds = 0;
     this.respawnPending = false;
     this.matchEndedPending = true;
     this.result = result;
@@ -206,6 +214,21 @@ export class MatchController {
     this.stats.matchCountdownSeconds = this.countdownSeconds;
     this.stats.matchTimeRemainingSeconds = this.remainingSeconds;
     this.stats.matchOvertime = this.overtime;
+    this.stats.matchOvertimeElapsedSeconds = this.overtimeElapsedSeconds;
+    const zones = this.splatZones.snapshot();
+    if (this.overtime && (this.overtimeTeam === Team.A || this.overtimeTeam === Team.B)) {
+      const lossAge = this.overtimeTeam === Team.A ? zones.lossAgeA : zones.lossAgeB;
+      this.stats.matchOvertimeGraceSeconds =
+        zones.control === this.overtimeTeam
+          ? GAME_CONFIG.match.splatZones.overtimeGraceSeconds
+          : Math.max(
+              0,
+              GAME_CONFIG.match.splatZones.overtimeGraceSeconds -
+                (Number.isFinite(lossAge) ? lossAge : GAME_CONFIG.match.splatZones.overtimeGraceSeconds)
+            );
+    } else {
+      this.stats.matchOvertimeGraceSeconds = 0;
+    }
     this.stats.playerLifeState = this.lifeState;
     this.stats.playerRespawnSeconds = this.respawnSeconds;
     this.stats.matchResult = this.result;

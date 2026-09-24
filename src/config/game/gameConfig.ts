@@ -92,13 +92,18 @@ export const GAME_CONFIG = Object.freeze({
     splatZones: {
       durationSeconds: 300,
       initialCount: 100,
-      countPerSecond: 1,
-      captureFraction: 0.62,
-      captureLeadFraction: 0.18,
-      retainFraction: 0.42,
-      penaltyProgressMultiplier: 0.50,
-      maxPenalty: 75,
-      penaltyClearPerSecond: 1
+      // Series-style 36 frames per count at 60 Hz -> 100 counts in about 60 seconds.
+      countPerSecond: 60 / 36,
+      // 70% capture is documented for the series. Splatoon 3's exact internal
+      // neutralization threshold is not independently confirmed here, so 50%
+      // remains project tuning based on the established series behavior.
+      captureFraction: 0.70,
+      neutralizeOpponentFraction: 0.50,
+      penaltyProgressMultiplier: 0.75,
+      maxPenalty: 99,
+      penaltyClearPerSecond: 60 / 36,
+      overtimeGraceSeconds: 10,
+      maxOvertimeSeconds: 300
     }
   },
   cpu: {

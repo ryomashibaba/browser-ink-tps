@@ -1,3 +1,4 @@
+import { GAME_CONFIG } from '../config/game/gameConfig';
 import { Team } from '../ink/types';
 
 export type GameModeId = 'TURF_WAR' | 'SPLAT_ZONES';
@@ -19,6 +20,8 @@ export interface SplatZonesSnapshot {
   countB: number;
   penaltyA: number;
   penaltyB: number;
+  lossAgeA: number;
+  lossAgeB: number;
 }
 
 export function zonesResult(snapshot: SplatZonesSnapshot): 'TEAM A' | 'TEAM B' | 'TIE' {
@@ -41,23 +44,41 @@ export type ZonesTimeoutDecision =
 export function resolveZonesTimeout(
   snapshot: SplatZonesSnapshot,
   overtime: boolean,
-  overtimeTeam: Team
+  overtimeTeam: Team,
+  overtimeElapsedSeconds = 0
 ): ZonesTimeoutDecision {
   const result = zonesResult(snapshot);
+  const tuning = GAME_CONFIG.match.splatZones;
 
   if (overtime) {
     if (overtimeTeam !== Team.A && overtimeTeam !== Team.B) {
       return { kind: 'FINISH', result };
     }
-    if (snapshot.control !== overtimeTeam) {
+    if (overtimeElapsedSeconds >= tuning.maxOvertimeSeconds) {
       return { kind: 'FINISH', result };
     }
+
     const overtaking =
       (overtimeTeam === Team.A && snapshot.countA < snapshot.countB) ||
       (overtimeTeam === Team.B && snapshot.countB < snapshot.countA);
-    return overtaking
-      ? { kind: 'FINISH', result: overtimeTeam === Team.A ? 'TEAM A' : 'TEAM B' }
-      : { kind: 'CONTINUE' };
+    if (overtaking) {
+      return {
+        kind: 'FINISH',
+        result: overtimeTeam === Team.A ? 'TEAM A' : 'TEAM B'
+      };
+    }
+
+    const winningTeam = overtimeTeam === Team.A ? Team.B : Team.A;
+    if (snapshot.control === winningTeam) {
+      return { kind: 'FINISH', result };
+    }
+    if (snapshot.control === overtimeTeam) {
+      return { kind: 'CONTINUE' };
+    }
+
+    return zoneLossAge(snapshot, overtimeTeam) < tuning.overtimeGraceSeconds
+      ? { kind: 'CONTINUE' }
+      : { kind: 'FINISH', result };
   }
 
   const winnerTeam = teamForResult(result);
@@ -69,7 +90,21 @@ export function resolveZonesTimeout(
   }
 
   const trailingTeam = winnerTeam === Team.A ? Team.B : Team.A;
-  return snapshot.control === trailingTeam
-    ? { kind: 'START_OVERTIME', team: trailingTeam }
-    : { kind: 'FINISH', result };
+  if (snapshot.control === trailingTeam) {
+    return { kind: 'START_OVERTIME', team: trailingTeam };
+  }
+  if (
+    snapshot.control === Team.Neutral &&
+    zoneLossAge(snapshot, trailingTeam) < tuning.overtimeGraceSeconds
+  ) {
+    return { kind: 'START_OVERTIME', team: trailingTeam };
+  }
+  return { kind: 'FINISH', result };
+}
+
+export function zoneLossAge(
+  snapshot: SplatZonesSnapshot,
+  team: Team.A | Team.B
+): number {
+  return team === Team.A ? snapshot.lossAgeA : snapshot.lossAgeB;
 }
