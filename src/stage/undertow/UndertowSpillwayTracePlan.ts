@@ -56,17 +56,17 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'team-a-first-drop-lip',
     geometryKind: 'POLYLINE',
     region: 'Team A Spawn',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Topology is CONFIRMED one-way; lip XZ is not yet measured.'
+    notes: 'Vector-PDF hard edge is measured; user video independently confirms one-way traversal.'
   },
   {
     id: 'team-b-first-drop-lip',
     geometryKind: 'POLYLINE',
     region: 'Team B Spawn',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'No invisible ramp may replace this trace.'
+    notes: 'Measured 180-degree counterpart hard edge; no invisible ramp may replace this trace.'
   },
   {
     id: 'center-low-floor-outline',
@@ -141,12 +141,20 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     notes: 'GRATE + UNINKABLE semantics already confirmed.'
   },
   {
-    id: 'water-kill-boundaries',
+    id: 'mapped-water-hazard-polygons',
+    geometryKind: 'POLYGON',
+    region: 'Spawn Sides / Outer Environment',
+    status: 'MEASURED',
+    minimumConfidenceForBlockout: 'CONFIRMED',
+    notes: 'Both cyan water polygons are exact vector-PDF source faces.'
+  },
+  {
+    id: 'fall-out-void-kill-boundary',
     geometryKind: 'POLYGON',
     region: 'Outer Environment',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Do not substitute provisional outer bounds for kill polygons.'
+    notes: 'Mapped cyan water is exact, but the broader fall-out/void kill boundary remains unresolved.'
   }
 ];
 
