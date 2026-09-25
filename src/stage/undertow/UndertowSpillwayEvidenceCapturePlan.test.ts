@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN,
+  undertowReceivedCaptureIds,
   undertowRequiredCaptureIds
 } from './UndertowSpillwayEvidenceCapturePlan';
 import { unresolvedUndertowSourceTopologyLimits } from './UndertowSpillwaySourceTopologyAudit';
 
 describe('T21 Undertow targeted evidence capture plan', () => {
-  it('contains only the three source-topology gaps that survive PDF + existing-video audit', () => {
-    expect(undertowRequiredCaptureIds()).toEqual([
+  it('keeps the three source-topology gaps but does not request received captures again', () => {
+    expect(undertowReceivedCaptureIds()).toEqual([
       'RIGHT_LOW_PARTITION',
-      'GLASS_UNDERPASS_CLEARANCE',
+      'GLASS_UNDERPASS_CLEARANCE'
+    ]);
+    expect(undertowRequiredCaptureIds()).toEqual([
       'INTERNAL_VOID_CLASSIFICATION'
     ]);
     expect(UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN).toHaveLength(3);
