@@ -442,3 +442,23 @@ The center-facing edge of each central slope footprint coincides exactly with th
 Only the center-side endpoints are resolved. The far/high endpoints remain UNKNOWN, so the slope grade and upper landing height are still not fabricated.
 
 The central dash regions are now typed as `SLOPE_SEMANTIC_FOOTPRINT`; the smaller dash fields inside the gray glass faces remain `MARKER_ENVELOPE_ONLY`. This prevents both kinds of dashed source notation from being treated identically.
+
+
+## T21-B/C — existing-video re-audit and minimal capture contract
+
+All five previously supplied Undertow gameplay videos were re-audited at one-second intervals, with higher-resolution frame extraction around the central raised/glass structure and right-low route.
+
+The re-audit confirms that the remaining three XZ gaps are real source-projection limits rather than missed PDF lines:
+
+- right-low: the video clearly shows the low open/grass floor and its transitions, but not enough synchronized plan anchors to close the constant-height partition exactly
+- under-glass: the video clearly shows a traversable lower passage, roof/upper structure and support columns, but the upper PDF projection does not encode a separate lower walkable/support-clearance polygon
+- internal voids: existing views distinguish several lower passages from open gaps, but not every top-down blank region can be classified geometrically without a targeted view
+
+A minimal three-target evidence contract is now encoded in `UndertowSpillwayEvidenceCapturePlan.ts`.
+
+No spawn, first-drop, water, glass-top, grate, center-low, small-step, outer-boundary or central-slope reshoot is requested.
+
+Capture priority:
+1. right-low perimeter / transition classification
+2. under-glass entrance-to-exit support-clearance walk
+3. only the still-ambiguous internal gaps for void-vs-lower-route classification
