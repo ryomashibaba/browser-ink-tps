@@ -887,19 +887,19 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
     },
     {
       id: 'outer-span-x-meters',
-      value: 87,
+      value: UNDERTOW_VECTOR_BLUEPRINT_AUDIT.outerSpanXMeters,
       unit: 'm',
-      confidence: 'PROVISIONAL',
-      evidenceIds: handoff,
-      notes: 'Cross-stage span in the project X axis. Not Freeze-safe until T21-B polygon tracing.'
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Full outer hard-silhouette span in project X from the recovered vector source; still not an official Nintendo real-world meter dimension.'
     },
     {
       id: 'outer-span-z-meters',
-      value: 146,
+      value: UNDERTOW_VECTOR_BLUEPRINT_AUDIT.outerSpanZMeters,
       unit: 'm',
-      confidence: 'PROVISIONAL',
-      evidenceIds: handoff,
-      notes: 'Spawn-axis span in the project Z axis. Not Freeze-safe until T21-B polygon tracing.'
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Full outer hard-silhouette span in project Z from the recovered vector source; still not an official Nintendo real-world meter dimension.'
     },
     {
       id: 'turf-rule-map-width-pixels',
