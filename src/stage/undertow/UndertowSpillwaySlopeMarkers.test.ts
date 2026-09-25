@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { polygonAreaMeters2 } from '../measurement/StageMapTrace';
 import { rotationSymmetryHausdorffMeters } from '../measurement/StageMapTrace';
 import {
   UNDERTOW_CENTRAL_SLOPE_MARKERS,
@@ -16,7 +17,22 @@ describe('T21-B Undertow central slope marker catalog', () => {
     expect(rightCenter[1]).toBeCloseTo(-0.365, 3);
   });
 
-  it('keeps central slope markers as marker envelopes rather than collision footprints', () => {
+  it('measures the two central dashed slope regions as equal plan footprints', () => {
+    expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.left.pdfRect).toEqual([
+      393.6, 312.36, 409.44, 369.84
+    ]);
+    expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.right.pdfRect).toEqual([
+      432.48, 225.36, 448.32, 282.84
+    ]);
+    expect(polygonAreaMeters2(
+      UNDERTOW_CENTRAL_SLOPE_MARKERS.left.metricPolygon
+    )).toBeCloseTo(39.5175, 5);
+    expect(polygonAreaMeters2(
+      UNDERTOW_CENTRAL_SLOPE_MARKERS.right.metricPolygon
+    )).toBeCloseTo(39.5175, 5);
+  });
+
+  it('keeps central slope markers as marker envelopes rather than hard-wall footprints', () => {
     expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.left.role).toBe('MARKER_ENVELOPE_ONLY');
     expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.right.role).toBe('MARKER_ENVELOPE_ONLY');
   });
