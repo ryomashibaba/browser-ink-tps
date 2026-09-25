@@ -2011,3 +2011,15 @@ Vector adjacency now resolves the center-facing endpoint of both main central sl
 - both slope high endpoints remain UNKNOWN
 
 Main center slope dash regions are typed as semantic slope footprints; dash fields embedded inside the gray glass overhangs remain marker-only. No upper landing or slope grade is invented.
+
+
+## T21-B/C final-source-gap checkpoint — 2026-09-25
+
+The five existing gameplay videos were re-audited after the PDF topology pass. They corroborate the remaining right-low / under-glass / internal-gap topology but do not provide enough registered plan information to derive exact XZ boundaries safely.
+
+A three-target minimal evidence-capture contract is now canonical:
+1. RIGHT_LOW_PARTITION
+2. GLASS_UNDERPASS_CLEARANCE
+3. INTERNAL_VOID_CLASSIFICATION
+
+Already-resolved areas are explicitly excluded from re-shooting. T21-D remains blocked rather than substituting convenient geometry.
