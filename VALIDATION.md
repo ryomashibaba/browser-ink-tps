@@ -1587,3 +1587,21 @@ Automated tests now verify that the additional-evidence plan contains exactly th
 - INTERNAL_VOID_CLASSIFICATION
 
 The plan must not request already-resolved spawn terrain, mapped water, upper-glass outline, or first-drop geometry, and captures must include plan-registration landmarks before they can promote XZ evidence.
+
+
+## T21 2026-09-25 capture integration validation
+
+Automated checks now verify:
+- both targeted 2026-09-25 files are represented as CONFIRMED user capture evidence
+- right-low and underpass entries cite those captures but retain UNRESOLVED XZ until plan registration
+- first-drop landing -> right-small-drop upper is a 0m HIGH relation
+- right-low -> covered-underpass floor is a 0m HIGH relation
+- right-small-drop upper remains 1.5m above right-low
+- these relations do not manufacture absolute Y without a seed
+- captured topology records a same-level underpass connection, a 1.5m small drop, and a visible ramp exit
+- underpass support/wall exclusions remain explicit
+- RIGHT_LOW_PARTITION and GLASS_UNDERPASS_CLEARANCE are CAPTURE_RECEIVED
+- only INTERNAL_VOID_CLASSIFICATION remains NOT_YET_CAPTURED
+- future capture requests require marked-map annotations rather than prose-only directions
+
+T21-D remains gated while exact plan registration and outstanding vertical seeds are unresolved.
