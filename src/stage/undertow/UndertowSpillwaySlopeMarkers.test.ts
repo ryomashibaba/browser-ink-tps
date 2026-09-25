@@ -32,9 +32,9 @@ describe('T21-B Undertow central slope marker catalog', () => {
     )).toBeCloseTo(39.5175, 5);
   });
 
-  it('keeps central slope markers as marker envelopes rather than hard-wall footprints', () => {
-    expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.left.role).toBe('MARKER_ENVELOPE_ONLY');
-    expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.right.role).toBe('MARKER_ENVELOPE_ONLY');
+  it('treats center dash fields as slope semantic footprints rather than hard walls', () => {
+    expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.left.role).toBe('SLOPE_SEMANTIC_FOOTPRINT');
+    expect(UNDERTOW_CENTRAL_SLOPE_MARKERS.right.role).toBe('SLOPE_SEMANTIC_FOOTPRINT');
   });
 
   it('preserves near-exact 180-degree symmetry for the center slope marker pair', () => {
