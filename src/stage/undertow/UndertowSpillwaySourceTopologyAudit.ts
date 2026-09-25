@@ -35,7 +35,7 @@ export const UNDERTOW_SOURCE_TOPOLOGY_LIMITS: readonly UndertowSourceTopologyLim
     id: 'internal-void-kill-boundaries',
     status: 'REQUIRES_3D_BINDING',
     reason:
-      'The exact exterior silhouette and mapped cyan water hazards are known, but top-down overlap prevents every internal blank region from being classified safely as abyss versus lower-layer passage.',
+      'The exact exterior silhouette and mapped cyan water hazards are known. A dedicated void audit now classifies the central undercut pair and right-low/underpass overlap as traversable, but it does not yet prove an exhaustive absence/location set for all internal abyss regions; no concrete new capture target is currently justified.',
     safeToUseForBlockout: false
   }
 ];
