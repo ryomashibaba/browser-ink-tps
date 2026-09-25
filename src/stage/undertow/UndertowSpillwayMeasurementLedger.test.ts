@@ -98,6 +98,21 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     }
   });
 
+  it('binds the two targeted 2026-09-25 captures without pretending their XZ polygons are solved', () => {
+    const evidenceIds = ledger.evidence.map((item) => item.id);
+    expect(evidenceIds).toContain('user-underpass-capture-2026-09-25');
+    expect(evidenceIds).toContain('user-right-low-capture-2026-09-25');
+
+    const rightLow = entry('right-low-floor');
+    const underpass = entry('upper-glass-underpass');
+    expect(rightLow.evidenceIds).toContain('user-right-low-capture-2026-09-25');
+    expect(underpass.evidenceIds).toContain('user-underpass-capture-2026-09-25');
+    expect(rightLow.xz.kind).toBe('UNRESOLVED');
+    expect(underpass.xz.kind).toBe('UNRESOLVED');
+    expect(rightLow.y.notes).toContain('same-height');
+    expect(underpass.y.notes).toContain('Same-height');
+  });
+
   it('records the measured Turf map frame instead of hiding calibration constants', () => {
     expect(assumption('turf-rule-map-width-pixels').value).toBe(3508);
     expect(assumption('turf-rule-map-height-pixels').value).toBe(2482);
