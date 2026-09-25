@@ -1514,3 +1514,23 @@ Deterministic coverage now checks:
 - confirmed center-low Y=0 does not bypass the missing center-low XZ-outline requirement
 
 Production StageDefinition, Rapier, GameplayInk, GPU ink, Recast runtime, combat, Super Jump and T20 objectives remain untouched.
+
+
+## T21-B center/outer-vector validation
+
+Latest deterministic checks additionally require:
+- PDF vector coordinates declare TOP_LEFT origin and +Y DOWN
+- glass/source coordinates remain in that convention without a hidden Y flip
+- common outer boundary has 42 vertices
+- outer-boundary area is ~8970.464m² under the HIGH project transform
+- outer-boundary 180-degree residual is <0.03m
+- outer spans are ~98.798m X / ~156.528m Z and HIGH, replacing the old provisional 87/146 envelope
+- center-low exact XZ polygon is present, ~28.830m², while Y=0 remains CONFIRMED
+- both central small-step polygons are present, ~4.650m² each
+- step-strip symmetry residual is <0.03m
+- both step transitions retain +1.5m HIGH vertical relation
+- central slope dash centers use the refined vector coordinates near (-9.909,+0.354) / (+9.931,-0.365)
+- trace coverage is 11/18
+- outer-boundary completion does not automatically complete the internal fall-out/void kill-boundary requirement
+
+T21-D must remain blocked until the remaining required XZ and vertical constraints are resolved.
