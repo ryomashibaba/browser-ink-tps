@@ -1962,3 +1962,20 @@ New canonical research facts:
 T21-B trace coverage is **11 / 18 measured**.
 
 The outer silhouette does not classify internal holes as kill voids. Spawn-floor polygons, under-glass walkable outline, central slope hard footprints, right-low floor and broader fall-out/void boundaries remain unresolved. T21-D runtime blockout remains gated.
+
+
+## T21-B/C slope + readiness checkpoint — 2026-09-25
+
+The exact dashed-hatch regions beside center are now HIGH XZ slope semantic footprints:
+- each is ~3.30m x 11.975m / ~39.5175m²
+- centers approximately (-9.909,+0.354) and (+9.931,-0.365)
+- they remain continuous slope regions, not hard-wall geometry
+- start/end Y are still UNKNOWN
+
+T21-C now explicitly tracks both slopes' low/high endpoint Y values plus both grate elevations. A/B counterparts are symmetry-linked at HIGH confidence, but no absolute Y is fabricated.
+
+The T21-D readiness gate now evaluates the BLOCKOUT vertical constraint solution instead of looking only at raw absolute fields. Thus center-small-step-top correctly resolves to Y=1.5, while glass/slope/grate/spawn/drop values without a valid seed remain blocking.
+
+T21-B common trace coverage: **13 / 18 measured**.
+
+Remaining XZ blockers are the two spawn-floor polygons, exact under-glass walkable outline, right-low floor polygon, and broader fall-out/void kill boundary. Production stage runtime remains unchanged.
