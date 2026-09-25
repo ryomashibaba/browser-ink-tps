@@ -10,8 +10,8 @@ describe('T21-B Undertow common trace plan', () => {
     expect(coverage.measured).toBe(15);
     expect(coverage.total).toBe(18);
 
-    expect(coverage.missingIds).not.toContain('team-a-spawn-floor-outline');
-    expect(coverage.missingIds).not.toContain('team-b-spawn-floor-outline');
+    expect(coverage.missingIds).not.toContain('team-a-spawn-terrain-outline');
+    expect(coverage.missingIds).not.toContain('team-b-spawn-terrain-outline');
     expect(coverage.missingIds).not.toContain('team-a-first-drop-lip');
     expect(coverage.missingIds).not.toContain('team-b-first-drop-lip');
     expect(coverage.missingIds).not.toContain('mapped-water-hazard-polygons');
