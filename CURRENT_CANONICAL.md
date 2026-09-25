@@ -2023,3 +2023,26 @@ A three-target minimal evidence-capture contract is now canonical:
 3. INTERNAL_VOID_CLASSIFICATION
 
 Already-resolved areas are explicitly excluded from re-shooting. T21-D remains blocked rather than substituting convenient geometry.
+
+
+## T21 targeted-capture integration checkpoint — 2026-09-25
+
+The two requested 2026-09-25 gameplay captures are valid and are now canonical evidence.
+
+Confirmed from them:
+- right-small-drop upper descends by the existing HIGH 1.5m relation into the right-low open floor
+- current layout evidence binds the first-drop landing/open area to that small-drop upper floor at the same elevation
+- right-low connects directly into the covered underpass with no visible step/drop, so those lower floors are HIGH same-height
+- the right-low area has at least one traversable ramp exit
+- the underpass contains solid support/wall geometry that must become explicit navigation/collision exclusions
+
+No absolute Y is fabricated from those relations. The chain remains unseeded until another independently known elevation is connected.
+
+Capture state:
+- RIGHT_LOW_PARTITION: CAPTURE_RECEIVED
+- GLASS_UNDERPASS_CLEARANCE: CAPTURE_RECEIVED
+- INTERNAL_VOID_CLASSIFICATION: NOT_YET_CAPTURED
+
+The first two remain plan-registration blockers, not capture blockers. Do not ask the user to repeat them.
+
+Future Undertow capture requests must always include a marked map with capture area, start, route/view direction, target boundary, and symmetry note.
