@@ -1605,3 +1605,18 @@ Automated checks now verify:
 - future capture requests require marked-map annotations rather than prose-only directions
 
 T21-D remains gated while exact plan registration and outstanding vertical seeds are unresolved.
+
+
+## T21 targeted-capture plan-registration validation
+
+Automated checks now additionally require:
+- right-low capture is bound to the measured Team A right-small-drop lip
+- underpass capture is bound beneath the measured positive-Z glass-overhang footprint
+- every plan-registration anchor references an existing vector trace
+- both registrations remain PLAN_REGISTERED_POLYGON_UNRESOLVED
+- neither registration may promote a trace to blockout geometry
+- source-topology audit keeps right-low and underpass unsafe for blockout
+- common trace coverage remains 15/18 rather than being inflated from perspective-only geometry
+- UndertowSpillwayBlockoutGate remains false
+
+GitHub Actions run #496 passed TypeScript check, Unit tests, production build, Pages configuration and Pages artifact upload for the first plan-registration implementation. No hosted gameplay QA is required because runtime StageDefinition/collision/navigation remains untouched.
