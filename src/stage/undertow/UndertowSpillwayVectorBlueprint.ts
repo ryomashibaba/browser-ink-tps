@@ -222,10 +222,10 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'negative-z-glass-overhang',
     'POLYGON',
     [
-      [420.96, 230.4],
-      [459.48, 230.4],
-      [459.48, 267.96],
-      [420.96, 267.96]
+      [382.44, 230.28],
+      [420.96, 230.28],
+      [420.96, 267.84],
+      [382.44, 267.84]
     ],
     'UNINKABLE_GLASS_OVERHANG',
     'HIGH',
@@ -235,10 +235,10 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'positive-z-glass-overhang',
     'POLYGON',
     [
-      [382.44, 327.48],
-      [420.96, 327.48],
-      [420.96, 365.04],
-      [382.44, 365.04]
+      [420.96, 327.36],
+      [459.48, 327.36],
+      [459.48, 364.92],
+      [420.96, 364.92]
     ],
     'UNINKABLE_GLASS_OVERHANG',
     'HIGH',
@@ -248,10 +248,10 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'negative-z-glass-slope-marker-envelope',
     'POLYGON',
     [
-      [420.96, 245.04],
-      [459.48, 245.04],
-      [459.48, 261.36],
-      [420.96, 261.36]
+      [382.44, 244.92],
+      [420.96, 244.92],
+      [420.96, 261.24],
+      [382.44, 261.24]
     ],
     'SLOPE_MARKER_FIELD',
     'HIGH',
@@ -261,10 +261,10 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'positive-z-glass-slope-marker-envelope',
     'POLYGON',
     [
-      [382.44, 334.08],
-      [420.96, 334.08],
-      [420.96, 350.4],
-      [382.44, 350.4]
+      [420.96, 333.96],
+      [459.48, 333.96],
+      [459.48, 350.28],
+      [420.96, 350.28]
     ],
     'SLOPE_MARKER_FIELD',
     'HIGH',
@@ -274,10 +274,10 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'center-origin-source-face',
     'POLYGON',
     [
-      [406.08, 308.88],
-      [435.84, 308.88],
-      [435.84, 286.56],
-      [406.08, 286.56]
+      [406.08, 308.76],
+      [435.84, 308.76],
+      [435.84, 286.44],
+      [406.08, 286.44]
     ],
     'WHITE_SOURCE_FACE',
     'HIGH',
@@ -287,10 +287,10 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'negative-z-center-step-strip',
     'POLYGON',
     [
-      [406.08, 282.96],
-      [435.84, 282.96],
-      [435.84, 286.56],
-      [406.08, 286.56]
+      [406.08, 282.84],
+      [435.84, 282.84],
+      [435.84, 286.44],
+      [406.08, 286.44]
     ],
     'WHITE_SOURCE_FACE',
     'HIGH',
@@ -300,10 +300,10 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     'positive-z-center-step-strip',
     'POLYGON',
     [
-      [406.08, 308.88],
-      [435.84, 308.88],
-      [435.84, 312.48],
-      [406.08, 312.48]
+      [406.08, 308.76],
+      [435.84, 308.76],
+      [435.84, 312.36],
+      [406.08, 312.36]
     ],
     'WHITE_SOURCE_FACE',
     'HIGH',
