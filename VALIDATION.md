@@ -1534,3 +1534,21 @@ Latest deterministic checks additionally require:
 - outer-boundary completion does not automatically complete the internal fall-out/void kill-boundary requirement
 
 T21-D must remain blocked until the remaining required XZ and vertical constraints are resolved.
+
+
+## T21-B/C slope-footprint and readiness validation
+
+Latest deterministic coverage additionally verifies:
+- exact center slope dash rectangles are [393.6,312.36,409.44,369.84] and [432.48,225.36,448.32,282.84] in top-left PDF coordinates
+- each central slope semantic footprint is ~39.5175m²
+- both slope XZ entries are HIGH POLYGON measurements
+- slope transition kind remains SLOPE while endpoint Y stays UNKNOWN
+- T21-B trace coverage is 13/18
+- T21-D vertical readiness runs through the BLOCKOUT constraint resolver
+- center-small-step-top resolves to Y=1.5 and is not reported unresolved
+- glass lower/high reference remain unresolved without an absolute lower seed
+- all four central slope endpoint Y nodes remain unresolved without a seed
+- both grate Y nodes remain unresolved without a seed
+- counterpart slope/grate symmetry relations alone cannot manufacture an absolute Y
+
+The gate must remain false until the remaining XZ and vertical blockers are resolved.
