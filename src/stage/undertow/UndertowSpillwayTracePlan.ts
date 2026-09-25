@@ -72,17 +72,17 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'center-low-floor-outline',
     geometryKind: 'POLYGON',
     region: 'Center',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Y=0 is confirmed; XZ polygon is not.'
+    notes: 'Exact closed vector face containing the project origin; Y=0 remains CONFIRMED.'
   },
   {
     id: 'center-small-step-outline',
     geometryKind: 'POLYGON',
     region: 'Center',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '+1.5m relation is HIGH; footprint remains unmeasured.'
+    notes: 'Both symmetric 0.75m-deep source strips are measured; +1.5m vertical relation remains HIGH.'
   },
   {
     id: 'right-small-drop-edge',
