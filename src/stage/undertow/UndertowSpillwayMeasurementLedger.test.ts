@@ -86,6 +86,18 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(entry('team-b-spawn-floor').y.yMeters).toBeUndefined();
   });
 
+  it('binds the exact spawn-side connected terrain regions without flattening them', () => {
+    for (const id of ['team-a-spawn-terrain-region', 'team-b-spawn-terrain-region']) {
+      const spawnRegion = entry(id);
+      expect(spawnRegion.xz.kind).toBe('POLYGON');
+      expect(spawnRegion.xz.confidence).toBe('HIGH');
+      expect((spawnRegion.xz.polygonMeters?.length ?? 0)).toBeGreaterThan(20);
+      expect(spawnRegion.y.confidence).toBe('UNKNOWN');
+      expect(spawnRegion.y.yMeters).toBeUndefined();
+      expect(spawnRegion.notes).toContain('not as one flat floor');
+    }
+  });
+
   it('records the measured Turf map frame instead of hiding calibration constants', () => {
     expect(assumption('turf-rule-map-width-pixels').value).toBe(3508);
     expect(assumption('turf-rule-map-height-pixels').value).toBe(2482);
