@@ -46,9 +46,11 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     });
   });
 
-  it('keeps whole-stage extents provisional in the chosen X/Z orientation', () => {
-    expect(assumption('outer-span-x-meters')).toMatchObject({ value: 87, confidence: 'PROVISIONAL' });
-    expect(assumption('outer-span-z-meters')).toMatchObject({ value: 146, confidence: 'PROVISIONAL' });
+  it('replaces old provisional outer extents with vector hard-silhouette spans', () => {
+    expect(assumption('outer-span-x-meters').confidence).toBe('HIGH');
+    expect(Number(assumption('outer-span-x-meters').value)).toBeCloseTo(98.79789, 4);
+    expect(assumption('outer-span-z-meters').confidence).toBe('HIGH');
+    expect(Number(assumption('outer-span-z-meters').value)).toBeCloseTo(156.52791, 4);
   });
 
   it('locks both spawn-side first descents as one-way drops only', () => {
