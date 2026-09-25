@@ -2086,3 +2086,12 @@ The current HIGH/CONFIRMED vertical graph is now audited by connected component.
 - slope-high pair and grate pair remain separate unseeded components
 
 No absolute Y was added from perspective footage. The next vertical work must add evidence-backed ties rather than convenience heights.
+
+
+## T21-C first-drop evidence-request checkpoint
+
+The next vertical evidence request is narrowed to one marked-map side-profile capture comparing the unresolved first drop (1.5m / 3.0m candidates) with the adjacent right-small drop (1.5m HIGH).
+
+The request must show the upper spawn-side floor, middle first-drop landing / small-drop upper floor, and lower right-low floor together. The 180-degree counterpart is acceptable. Existing right-low and underpass clips remain accepted and are not to be re-requested.
+
+No new absolute Y or runtime geometry is promoted at this checkpoint. PR #5 remains Draft / unmerged and T21-D remains gated.
