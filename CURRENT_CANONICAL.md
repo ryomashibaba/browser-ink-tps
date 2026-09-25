@@ -1939,8 +1939,26 @@ Using the recovered vector Turf PDF + matching 3508x2482 JPEG + current user gam
 - right-low floor polygon itself remains unresolved
 - mapped cyan water remains separate from white grate semantics
 
-T21-B common trace coverage: **8 / 18 measured**.
+T21-B common trace coverage at that checkpoint: **8 / 18 measured**.
 
 T21-D remains blocked by an automated readiness gate until the unresolved common boundary / spawn floors / center-low / small-step / under-glass passage / central slope hard footprints / right-low floor / broader fall-out boundary and required absolute Y constraints are resolved.
 
 No production runtime stage geometry has been replaced.
+
+
+## T21-B center/outer-vector checkpoint — 2026-09-25
+
+The recovered Undertow PDF uses the same top-left/+Y-down coordinate convention as the matching 3508x2482 JPEG. This is now explicit and tested; PDF Y must not be inverted before the project XZ transform.
+
+New canonical research facts:
+- exact common exterior silhouette: 42 vertices, HIGH XZ
+- outer span: X ~98.798m / Z ~156.528m HIGH under the project scale
+- old X ~87m / Z ~146m PROVISIONAL envelope is superseded
+- exterior silhouette rotational residual: <0.03m
+- center-low face: exact HIGH XZ, ~28.830m²; Y=0 remains CONFIRMED
+- central small-step pair: exact HIGH XZ, ~4.650m² each, 0.75m plan depth, +1.5m HIGH Y relation
+- central slope dash envelopes refined to approximately (-9.909,+0.354) / (+9.931,-0.365) project XZ; they remain marker-only
+
+T21-B trace coverage is **11 / 18 measured**.
+
+The outer silhouette does not classify internal holes as kill voids. Spawn-floor polygons, under-glass walkable outline, central slope hard footprints, right-low floor and broader fall-out/void boundaries remain unresolved. T21-D runtime blockout remains gated.
