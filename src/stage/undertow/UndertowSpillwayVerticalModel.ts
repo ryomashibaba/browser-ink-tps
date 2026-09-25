@@ -168,6 +168,22 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
     'Glass overhang high reference is about 3m above the major floor directly below; do not flatten the slope-marked glass footprint.'
   ),
   exactRelation(
+    'center-small-step-top',
+    'center-left-slope-low',
+    0,
+    'HIGH',
+    ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    'The central-left slope footprint touches the outer edge of the +1.5m center-step strip exactly in plan.'
+  ),
+  exactRelation(
+    'center-small-step-top',
+    'center-right-slope-low',
+    0,
+    'HIGH',
+    ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    'The central-right slope footprint touches the counterpart +1.5m center-step strip exactly in plan.'
+  ),
+  exactRelation(
     'center-left-slope-low',
     'center-right-slope-low',
     0,
