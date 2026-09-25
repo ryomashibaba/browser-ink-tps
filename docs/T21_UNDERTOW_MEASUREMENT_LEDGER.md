@@ -521,3 +521,20 @@ The remaining blocker is no longer capture-location uncertainty.
 `glass-underpass-outline` stays UNTRACED because the vector PDF contains only the upper glass projection; it has no independent lower-layer support/clearance path. The traversal clip confirms supports, openings and same-height connectivity, but not unique metric corner offsets.
 
 Therefore T21-B common trace coverage remains **15 / 18**, rather than being inflated to 17 / 18 from convenience geometry. The two capture categories remain complete and must not be requested again. `UndertowSpillwayBlockoutGate.ready` remains false, and T21-D runtime geometry is still blocked.
+
+## T21-B — internal-void ambiguity audit
+
+A second pass compared the recovered vector plan, the post-7.2 visual reference set, the current-layout descriptions, and the two received 2026-09-25 clips.
+
+The following overlap regions are **HIGH traversable lower-layer topology**, not kill voids:
+- negative-Z central undercut below the high platform
+- positive-Z central undercut / covered passage
+- right-low to covered-underpass same-height connection
+
+This narrows the ambiguity but does **not** justify an exhaustive claim that there are no other internal abyss regions. No remaining internal blank can currently be localized strongly enough to draw a truthful capture box on the plan. Therefore:
+- `fall-out-void-kill-boundary` remains UNTRACED
+- `INTERNAL_VOID_CLASSIFICATION` remains `DEFERRED_PENDING_MAP_ENUMERATION`
+- no new user capture is request-ready
+- no convenience kill polygon or blanket 'everything inside the exterior is floor' rule is allowed
+
+The next evidence request may only be activated after a concrete ambiguous region is identified and can be marked on the source map.
