@@ -1577,3 +1577,13 @@ Automated checks now require:
 - BLOCKOUT constraint resolution produces Y=1.5m for both center-side slope endpoints
 - both far/high slope endpoints remain unresolved
 - Stable Freeze still accepts only independently CONFIRMED exact values
+
+
+## T21 final evidence-gap validation
+
+Automated tests now verify that the additional-evidence plan contains exactly three targets matching the unresolved source-topology audit:
+- RIGHT_LOW_PARTITION
+- GLASS_UNDERPASS_CLEARANCE
+- INTERNAL_VOID_CLASSIFICATION
+
+The plan must not request already-resolved spawn terrain, mapped water, upper-glass outline, or first-drop geometry, and captures must include plan-registration landmarks before they can promote XZ evidence.
