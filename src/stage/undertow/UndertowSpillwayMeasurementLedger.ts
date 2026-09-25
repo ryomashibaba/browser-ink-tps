@@ -523,7 +523,7 @@ const entries: readonly StageMeasurementEntry[] = [
       pointMeters: UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]!,
       confidence: 'HIGH',
       evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
-      notes: 'Vector spawn-ring center only. Full spawn-floor polygon remains unresolved.'
+      notes: 'Vector spawn-ring center for the absolute-Y node. The surrounding connected spawn terrain is recorded separately and must not be flattened.'
     },
     y: unknownY('Historical 7.5m hypothesis is intentionally not promoted to canonical.'),
     transition: noTransition,
@@ -546,7 +546,7 @@ const entries: readonly StageMeasurementEntry[] = [
       pointMeters: UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]!,
       confidence: 'HIGH',
       evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
-      notes: 'Vector spawn-ring center only. Full spawn-floor polygon remains unresolved.'
+      notes: 'Vector spawn-ring center for the absolute-Y node. The surrounding connected spawn terrain is recorded separately and must not be flattened.'
     },
     y: unknownY('Absolute Y remains unresolved.'),
     transition: noTransition,
@@ -556,6 +556,54 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: [],
       notes: 'Spawn paintability/protection semantics remain for source binding.'
     }
+  }),
+  commonSurfaceEntry({
+    id: 'team-a-spawn-terrain-region',
+    feature: 'Team A spawn-side connected terrain region',
+    region: 'Team A Spawn',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay', 'user-five-rule-maps'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.positiveZSpawnSideWhiteFace.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Exact connected white source face containing the Team A spawn ring. It contains multiple elevations/transitions and MUST NOT be flattened to one Y.'
+    },
+    y: unknownY('This connected terrain region spans multiple elevations; spawn-ring absolute Y remains a separate T21-C node.'),
+    transition: noTransition,
+    surface: {
+      semantics: [],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Per-subregion paintability/transition semantics remain attached to dedicated entries.'
+    },
+    notes: 'Used as the spawn-side XZ terrain envelope, not as one flat floor.'
+  }),
+  commonSurfaceEntry({
+    id: 'team-b-spawn-terrain-region',
+    feature: 'Team B spawn-side connected terrain region',
+    region: 'Team B Spawn',
+    featureKind: 'SURFACE',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay', 'user-five-rule-maps'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.negativeZSpawnSideWhiteFace.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint'],
+      notes: 'Exact 180-degree counterpart connected white source face containing the Team B spawn ring. It is not a single-elevation floor.'
+    },
+    y: unknownY('This connected terrain region spans multiple elevations; spawn-ring absolute Y remains unresolved separately.'),
+    transition: noTransition,
+    surface: {
+      semantics: [],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Per-subregion paintability/transition semantics remain attached to dedicated entries.'
+    },
+    notes: 'Used as the spawn-side XZ terrain envelope, not as one flat floor.'
   }),
   commonSurfaceEntry({
     id: 'center-pillars',
