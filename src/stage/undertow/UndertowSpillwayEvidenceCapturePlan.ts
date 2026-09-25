@@ -5,7 +5,8 @@ export type UndertowEvidenceCaptureId =
 
 export type UndertowEvidenceCaptureStatus =
   | 'CAPTURE_RECEIVED'
-  | 'NOT_YET_CAPTURED';
+  | 'NOT_YET_CAPTURED'
+  | 'DEFERRED_PENDING_MAP_ENUMERATION';
 
 export interface UndertowEvidenceCapture {
   id: UndertowEvidenceCaptureId;
@@ -100,7 +101,7 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
     {
       id: 'INTERNAL_VOID_CLASSIFICATION',
       priority: 3,
-      status: 'NOT_YET_CAPTURED',
+      status: 'DEFERRED_PENDING_MAP_ENUMERATION',
       blocks: ['fall-out-void-kill-boundary'],
       existingEvidence:
         'The exterior hard silhouette and cyan water hazards are exact. Remaining ambiguity is limited to internal gaps where the top-down drawing can overlap a lower route.',
@@ -123,6 +124,19 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
   ];
 
 export function undertowRequiredCaptureIds(): readonly UndertowEvidenceCaptureId[] {
+  return UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN
+    .filter((capture) => capture.status !== 'CAPTURE_RECEIVED')
+    .slice()
+    .sort((a, b) => a.priority - b.priority)
+    .map((capture) => capture.id);
+}
+
+/**
+ * Capture IDs that may be requested from the user now. A deferred capture must
+ * first have its genuinely ambiguous regions enumerated and marked on a stage
+ * map, per UNDERTOW_CAPTURE_REQUEST_POLICY.
+ */
+export function undertowRequestReadyCaptureIds(): readonly UndertowEvidenceCaptureId[] {
   return UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN
     .filter((capture) => capture.status === 'NOT_YET_CAPTURED')
     .slice()
