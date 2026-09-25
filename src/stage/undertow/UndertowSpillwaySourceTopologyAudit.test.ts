@@ -20,12 +20,28 @@ describe('T21-B Undertow vector-source topology limits', () => {
       'glass-underpass-walkable-outline',
       'internal-void-kill-boundaries'
     ]);
+
+    for (const id of [
+      'right-low-floor-partition',
+      'glass-underpass-walkable-outline'
+    ]) {
+      expect(
+        UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find((item) => item.id === id)?.status
+      ).toBe('CAPTURED_REQUIRES_PLAN_REGISTRATION');
+    }
+
+    expect(
+      UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
+        (item) => item.id === 'internal-void-kill-boundaries'
+      )?.status
+    ).toBe('REQUIRES_3D_BINDING');
   });
 
   it('records why the right-low area cannot be closed from PDF hard lines alone', () => {
     const rightLow = UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
       (item) => item.id === 'right-low-floor-partition'
     );
-    expect(rightLow?.reason).toContain('same spawn-side and central connected source faces');
+    expect(rightLow?.reason).toContain('2026-09-25 right-low capture');
+    expect(rightLow?.reason).toContain('registered to known plan landmarks');
   });
 });
