@@ -36,9 +36,17 @@ describe('T21 Undertow blockout readiness gate', () => {
     );
   });
 
-  it('recognizes the confirmed center-low Y seed and measured center-low XZ outline', () => {
+  it('uses BLOCKOUT constraint resolution for known center values but still gates missing vertical seeds', () => {
     const gate = undertowBlockoutReadiness();
     expect(gate.unresolvedVerticalIds).not.toContain('center-low-floor');
+    expect(gate.unresolvedVerticalIds).not.toContain('center-small-step-top');
     expect(gate.missingTraceIds).not.toContain('center-low-floor-outline');
+
+    expect(gate.unresolvedVerticalIds).toContain('glass-lower-major-floor');
+    expect(gate.unresolvedVerticalIds).toContain('glass-overhang-high-reference');
+    expect(gate.unresolvedVerticalIds).toContain('center-left-slope-low');
+    expect(gate.unresolvedVerticalIds).toContain('center-left-slope-high');
+    expect(gate.unresolvedVerticalIds).toContain('negative-z-grate-floor');
+    expect(gate.unresolvedVerticalIds).toContain('positive-z-grate-floor');
   });
 });
