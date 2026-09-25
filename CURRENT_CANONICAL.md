@@ -1979,3 +1979,24 @@ The T21-D readiness gate now evaluates the BLOCKOUT vertical constraint solution
 T21-B common trace coverage: **13 / 18 measured**.
 
 Remaining XZ blockers are the two spawn-floor polygons, exact under-glass walkable outline, right-low floor polygon, and broader fall-out/void kill boundary. Production stage runtime remains unchanged.
+
+
+## T21-B spawn-terrain / topology-limit checkpoint — 2026-09-25
+
+Spawn-side plan reconstruction is no longer blocked:
+
+- exact Team A/B connected white source faces containing the spawn rings are HIGH XZ
+- each is ~1168.201m² with <0.03m 180-degree residual
+- they are explicitly multi-elevation terrain envelopes, not flat spawn floors
+- spawn-ring absolute Y remains a separate UNKNOWN vertical node
+
+Trace-gate terminology is now `spawn-terrain-outline`, preventing accidental flat-floor interpretation.
+
+T21-B common trace coverage: **15 / 18 measured**.
+
+Only three XZ topology blockers remain:
+- right-low floor elevation partition
+- exact under-glass walkable/support-clearance outline
+- internal/off-stage void kill boundaries beyond the already exact exterior silhouette and cyan water hazards
+
+A structured source-topology audit documents that those three cannot be closed safely from the current top-down PDF alone. T21-D remains gated; no convenience polygons are substituted.
