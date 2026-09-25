@@ -1567,3 +1567,13 @@ Automated coverage now additionally requires:
 - the source-topology audit reports exactly those three unresolved vector-topology limits
 
 T21-D readiness must remain false until those geometry limits and the outstanding vertical constraints are resolved.
+
+
+## T21-C center-side slope endpoint validation
+
+Automated checks now require:
+- center-left/right main dash regions use `SLOPE_SEMANTIC_FOOTPRINT`
+- glass internal dash fields remain `MARKER_ENVELOPE_ONLY`
+- BLOCKOUT constraint resolution produces Y=1.5m for both center-side slope endpoints
+- both far/high slope endpoints remain unresolved
+- Stable Freeze still accepts only independently CONFIRMED exact values
