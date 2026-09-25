@@ -562,3 +562,19 @@ Minimum remaining vertical evidence classes:
 4. one grate-elevation tie
 
 This does not start T21-D and does not relax the blockout gate.
+
+
+## T21-C — first-drop magnitude capture checkpoint
+
+The vertical dependency audit reduces the next user evidence request to one side-profile comparison.
+
+Request-ready evidence:
+- `FIRST_DROP_MAGNITUDE_SIDE_PROFILE`
+- compare the CONFIRMED one-way first drop against the adjacent right-small drop, whose vertical delta is already HIGH at 1.5m
+- frame the spawn-side upper floor, first-drop landing / right-small-drop upper floor, and right-low floor together
+- 180-degree counterpart is acceptable
+- the already received right-low perimeter and underpass captures must not be requested again
+
+The purpose is only to distinguish the remaining first-drop candidates, 1.5m versus 3.0m. No candidate is promoted before the comparison evidence is received.
+
+The marked-map capture guide was produced from the exact vector-PDF lip coordinates. Runtime stage geometry remains unchanged and T21-D stays blocked.
