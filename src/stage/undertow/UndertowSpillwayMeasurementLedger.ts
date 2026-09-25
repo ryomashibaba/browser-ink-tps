@@ -12,6 +12,7 @@ import {
   UNDERTOW_VECTOR_BLUEPRINT_SOURCE,
   UNDERTOW_VECTOR_TRACES
 } from './UndertowSpillwayVectorBlueprint';
+import { UNDERTOW_CENTRAL_SLOPE_MARKERS } from './UndertowSpillwaySlopeMarkers';
 
 const ALL_RULES = ['TURF', 'ZONES', 'TOWER', 'RAINMAKER', 'CLAMS'] as const;
 const handoff = ['handoff-t21-masterplan'] as const;
@@ -362,7 +363,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Slope footprint and grade remain for T21-B/C.'),
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_CENTRAL_SLOPE_MARKERS.left.metricPolygon,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Exact dashed-hatch slope semantic footprint. This is a continuous slope region, not a hard-wall boundary.'
+    },
     y: unknownY('Start/end Y remain unresolved.'),
     transition: {
       kind: 'SLOPE',
@@ -382,7 +389,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Slope footprint and grade remain for T21-B/C.'),
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_CENTRAL_SLOPE_MARKERS.right.metricPolygon,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Near-180-degree counterpart dashed-hatch slope semantic footprint. Start/end Y remain unresolved.'
+    },
     y: unknownY('Start/end Y remain unresolved.'),
     transition: {
       kind: 'SLOPE',
