@@ -57,7 +57,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('T21-B will derive the metric polygon from the Turf map.'),
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.centerOriginFace.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Exact closed vector face containing project origin. Bound to the canonical central-low reference by current gameplay evidence.'
+    },
     y: {
       floorId: 'CENTER_LOW_0',
       yMeters: 0,
@@ -78,7 +84,69 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz('Footprint remains for T21-B.'),
+    xz: unresolvedXz('Family summary only; exact negative-Z / positive-Z step strips are recorded in dedicated entries below.'),
+    y: {
+      deltaMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    transition: {
+      kind: 'STEP',
+      deltaYMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    surface: {
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: centerEvidence
+    }
+  }),
+  commonSurfaceEntry({
+    id: 'negative-z-center-small-step',
+    feature: 'negative-Z central small-step strip',
+    region: 'Center',
+    featureKind: 'TRANSITION',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.negativeZCenterStepStrip.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: 'Exact 0.75m-deep source strip directly adjacent to the central-low face.'
+    },
+    y: {
+      deltaMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    transition: {
+      kind: 'STEP',
+      deltaYMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: handoff
+    },
+    surface: {
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: centerEvidence
+    }
+  }),
+  commonSurfaceEntry({
+    id: 'positive-z-center-small-step',
+    feature: 'positive-Z central small-step strip',
+    region: 'Center',
+    featureKind: 'TRANSITION',
+    confidence: 'CONFIRMED',
+    evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.positiveZCenterStepStrip.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
+      notes: '180-degree counterpart central small-step strip.'
+    },
     y: {
       deltaMeters: 1.5,
       confidence: 'HIGH',
