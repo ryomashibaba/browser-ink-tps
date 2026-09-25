@@ -1,3 +1,5 @@
+import { UNDERTOW_VOID_AMBIGUITY_AUDIT } from './UndertowSpillwayVoidAmbiguity';
+
 export type UndertowEvidenceCaptureId =
   | 'RIGHT_LOW_PARTITION'
   | 'GLASS_UNDERPASS_CLEARANCE'
@@ -104,7 +106,7 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
       status: 'DEFERRED_PENDING_MAP_ENUMERATION',
       blocks: ['fall-out-void-kill-boundary'],
       existingEvidence:
-        'The exterior hard silhouette and cyan water hazards are exact. Remaining ambiguity is limited to internal gaps where the top-down drawing can overlap a lower route.',
+        'The exterior hard silhouette and cyan water hazards are exact. The current void audit resolves the central undercut pair and right-low/underpass overlap as traversable lower layers, but does not yet prove an exhaustive internal-void classification.',
       unresolvedQuestion:
         'Which remaining internal blank/open regions are lethal fall voids, and which are valid lower-layer passages or floors?',
       minimumCapture: [
@@ -138,7 +140,12 @@ export function undertowRequiredCaptureIds(): readonly UndertowEvidenceCaptureId
  */
 export function undertowRequestReadyCaptureIds(): readonly UndertowEvidenceCaptureId[] {
   return UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN
-    .filter((capture) => capture.status === 'NOT_YET_CAPTURED')
+    .filter(
+      (capture) =>
+        capture.status === 'NOT_YET_CAPTURED' &&
+        (capture.id !== 'INTERNAL_VOID_CLASSIFICATION' ||
+          UNDERTOW_VOID_AMBIGUITY_AUDIT.requestReady)
+    )
     .slice()
     .sort((a, b) => a.priority - b.priority)
     .map((capture) => capture.id);
