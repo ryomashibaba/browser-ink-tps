@@ -82,6 +82,8 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     const aSlope = UNDERTOW_VECTOR_TRACES.negativeZGlassSlopeMarkers;
     const bSlope = UNDERTOW_VECTOR_TRACES.positiveZGlassSlopeMarkers;
 
+    expect(a.pdfPoints[0]).toEqual([382.44, 230.28]);
+    expect(b.pdfPoints[0]).toEqual([420.96, 327.36]);
     expect(a.sourceClass).toBe('UNINKABLE_GLASS_OVERHANG');
     expect(b.sourceClass).toBe('UNINKABLE_GLASS_OVERHANG');
     expect(a.confidence).toBe('HIGH');
@@ -119,6 +121,19 @@ describe('T21-B Undertow vector blueprint extraction', () => {
       .toBeLessThan(0.03);
     expect(negative.notes).toContain('not equivalent to one flat floor');
     expect(positive.notes).toContain('multiple elevations');
+  });
+
+  it('extracts the exact symmetric 0.75m-deep center-step source strips', () => {
+    const negative = UNDERTOW_VECTOR_TRACES.negativeZCenterStepStrip;
+    const positive = UNDERTOW_VECTOR_TRACES.positiveZCenterStepStrip;
+    expect(negative.geometryKind).toBe('POLYGON');
+    expect(positive.geometryKind).toBe('POLYGON');
+    expect(polygonAreaMeters2(negative.metricPoints)).toBeCloseTo(4.65, 6);
+    expect(polygonAreaMeters2(positive.metricPoints)).toBeCloseTo(4.65, 6);
+    expect(rotationSymmetryHausdorffMeters(
+      negative.metricPoints,
+      positive.metricPoints
+    )).toBeLessThan(0.03);
   });
 
   it('keeps the exact center-origin face as source geometry only', () => {
