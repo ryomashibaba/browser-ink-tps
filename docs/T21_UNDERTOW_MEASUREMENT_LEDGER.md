@@ -503,3 +503,21 @@ Future capture requests for Undertow must include a marked stage map. The map mu
 - whether the 180-degree symmetric counterpart is acceptable
 
 Prose-only location instructions are no longer sufficient.
+
+
+## T21-B — targeted-capture plan-registration checkpoint
+
+The two 2026-09-25 captures have now been registered to measured plan landmarks without promoting perspective-derived geometry:
+
+- right-low capture -> Team A measured right-small-drop lip
+- underpass capture -> measured positive-Z glass-overhang footprint
+- registration confidence: HIGH for **which plan feature the clips belong to**
+- trace promotion: **not allowed**
+
+The remaining blocker is no longer capture-location uncertainty.
+
+`right-low-floor-outline` stays UNTRACED because the perspective perimeter walk does not expose a second independent measured plan anchor with enough geometric precision to map every wall/ramp corner to one unique PDF vertex. Multiple candidate edges also overlap in the 2D source projection.
+
+`glass-underpass-outline` stays UNTRACED because the vector PDF contains only the upper glass projection; it has no independent lower-layer support/clearance path. The traversal clip confirms supports, openings and same-height connectivity, but not unique metric corner offsets.
+
+Therefore T21-B common trace coverage remains **15 / 18**, rather than being inflated to 17 / 18 from convenience geometry. The two capture categories remain complete and must not be requested again. `UndertowSpillwayBlockoutGate.ready` remains false, and T21-D runtime geometry is still blocked.
