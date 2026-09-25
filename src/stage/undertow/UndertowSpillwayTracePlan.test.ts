@@ -28,7 +28,6 @@ describe('T21-B Undertow common trace plan', () => {
       'common-playable-boundary',
       'team-a-spawn-floor-outline',
       'team-b-spawn-floor-outline',
-      'center-low-floor-outline',
       'glass-underpass-outline',
       'center-left-slope-footprint',
       'center-right-slope-footprint',
