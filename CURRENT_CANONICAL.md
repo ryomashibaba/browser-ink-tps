@@ -2046,3 +2046,19 @@ Capture state:
 The first two remain plan-registration blockers, not capture blockers. Do not ask the user to repeat them.
 
 Future Undertow capture requests must always include a marked map with capture area, start, route/view direction, target boundary, and symmetry note.
+
+
+## T21-B targeted-capture plan-registration checkpoint — 2026-09-25
+
+The two received targeted captures are now registered to measured plan landmarks:
+
+- right-low capture -> Team A measured right-small-drop lip
+- underpass capture -> measured positive-Z glass-overhang footprint
+- registration confidence is HIGH for capture-to-plan identity
+- neither perspective clip is promoted to an exact XZ polygon
+
+The right-low perimeter remains non-unique because the clip does not expose a second independently measured plan anchor with enough metric precision to bind every wall/ramp corner to one PDF vertex. The underpass remains non-unique because the PDF has no independent lower-layer support/clearance path beneath the upper glass projection.
+
+Source-topology status for both is now PLAN_REGISTERED_POLYGON_UNRESOLVED. Common trace coverage intentionally remains **15 / 18**. The two capture categories are complete and must not be requested again.
+
+T21-D remains blocked; production runtime geometry is unchanged.
