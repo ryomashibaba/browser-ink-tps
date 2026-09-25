@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  UNDERTOW_CAPTURE_REQUEST_POLICY,
   UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN,
   undertowReceivedCaptureIds,
   undertowRequiredCaptureIds
@@ -31,6 +32,17 @@ describe('T21 Undertow targeted evidence capture plan', () => {
     expect(allBlocks).not.toContain('mapped-water-hazard-polygons');
     expect(allBlocks).not.toContain('upper-glass-platform-outline');
     expect(allBlocks).not.toContain('first-drop-lip');
+  });
+
+  it('requires a marked-map guide for every future capture request', () => {
+    expect(UNDERTOW_CAPTURE_REQUEST_POLICY.mapAnnotationRequired).toBe(true);
+    expect(UNDERTOW_CAPTURE_REQUEST_POLICY.requiredMapAnnotations).toEqual([
+      'CAPTURE_AREA',
+      'START_POSITION',
+      'ROUTE_OR_CAMERA_DIRECTION',
+      'LOOK_AT_BOUNDARY',
+      'SYMMETRIC_COUNTERPART_IF_ALLOWED'
+    ]);
   });
 
   it('requires plan-registration landmarks before a capture can resolve XZ', () => {
