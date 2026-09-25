@@ -14,8 +14,8 @@ export interface UndertowBlockoutReadiness {
 
 const REQUIRED_TRACE_IDS = Object.freeze([
   'common-playable-boundary',
-  'team-a-spawn-floor-outline',
-  'team-b-spawn-floor-outline',
+  'team-a-spawn-terrain-outline',
+  'team-b-spawn-terrain-outline',
   'team-a-first-drop-lip',
   'team-b-first-drop-lip',
   'center-low-floor-outline',
