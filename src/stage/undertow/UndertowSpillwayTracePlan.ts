@@ -40,17 +40,17 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'team-a-spawn-floor-outline',
     geometryKind: 'POLYGON',
     region: 'Team A Spawn',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Do not infer from the spawn-center point.'
+    notes: 'Satisfied by the exact connected spawn-side terrain face containing the spawn ring. This is an XZ terrain envelope, not a single flat-Y floor.'
   },
   {
     id: 'team-b-spawn-floor-outline',
     geometryKind: 'POLYGON',
     region: 'Team B Spawn',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '180-degree counterpart must be numerically audited.'
+    notes: 'Exact 180-degree counterpart connected spawn-side terrain face. Multiple elevations are preserved through separate transition/Y constraints.'
   },
   {
     id: 'team-a-first-drop-lip',
