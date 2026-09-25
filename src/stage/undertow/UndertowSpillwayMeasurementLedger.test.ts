@@ -30,9 +30,15 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(ledger.commonTerrainId).toBe('UndertowCommon');
   });
 
-  it('freezes the central low floor as Y=0 but keeps metric map scale as HIGH', () => {
+  it('freezes the central low floor as Y=0 and binds its exact source face in XZ', () => {
     expect(ledger.coordinateSystem.centerLowestFloorY).toBe(0);
     expect(ledger.coordinateSystem.centerLowestFloorConfidence).toBe('CONFIRMED');
+    const centerLow = entry('center-lower-floor');
+    expect(centerLow.xz.kind).toBe('POLYGON');
+    expect(centerLow.xz.confidence).toBe('HIGH');
+    expect(centerLow.xz.polygonMeters).toHaveLength(4);
+    expect(centerLow.y.yMeters).toBe(0);
+    expect(centerLow.y.confidence).toBe('CONFIRMED');
     expect(assumption('map-pixels-per-meter')).toMatchObject({
       value: 20,
       unit: 'px/m',
@@ -117,6 +123,18 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
 
     expect(entry('upper-glass-underpass').confidence).toBe('CONFIRMED');
     expect(entry('upper-glass-underpass').xz.kind).toBe('UNRESOLVED');
+  });
+
+  it('binds both central small-step strips while retaining the +1.5m HIGH vertical relation', () => {
+    for (const id of ['negative-z-center-small-step', 'positive-z-center-small-step']) {
+      const step = entry(id);
+      expect(step.xz.kind).toBe('POLYGON');
+      expect(step.xz.confidence).toBe('HIGH');
+      expect(step.xz.polygonMeters).toHaveLength(4);
+      expect(step.transition.kind).toBe('STEP');
+      expect(step.transition.deltaYMeters).toBe(1.5);
+      expect(step.transition.confidence).toBe('HIGH');
+    }
   });
 
   it('binds both right-side small-drop hard edges while retaining the 1.5m HIGH vertical relation', () => {
