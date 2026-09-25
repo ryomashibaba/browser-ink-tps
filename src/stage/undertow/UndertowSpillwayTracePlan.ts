@@ -37,7 +37,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     notes: 'Exact 42-vertex exterior hard silhouette from the vector topology; ~98.80m X by ~156.53m Z under the HIGH project-meter transform.'
   },
   {
-    id: 'team-a-spawn-floor-outline',
+    id: 'team-a-spawn-terrain-outline',
     geometryKind: 'POLYGON',
     region: 'Team A Spawn',
     status: 'MEASURED',
@@ -45,7 +45,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     notes: 'Satisfied by the exact connected spawn-side terrain face containing the spawn ring. This is an XZ terrain envelope, not a single flat-Y floor.'
   },
   {
-    id: 'team-b-spawn-floor-outline',
+    id: 'team-b-spawn-terrain-outline',
     geometryKind: 'POLYGON',
     region: 'Team B Spawn',
     status: 'MEASURED',
