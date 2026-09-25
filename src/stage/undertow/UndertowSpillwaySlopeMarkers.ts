@@ -47,13 +47,13 @@ function marker(
 export const UNDERTOW_CENTRAL_SLOPE_MARKERS = Object.freeze({
   left: marker(
     'center-left-slope-marker',
-    [396.8333333333, 314.3999938965, 403.0833333333, 365.1599884033],
-    'Marker field centered at project X≈-9.8m, Z≈0; this is the central-left ramp marker family.'
+    [393.6, 312.36, 409.44, 369.84],
+    'Exact vector dash-field envelope centered near project X=-9.91m, Z=+0.35m; marker only, not the hard ramp boundary.'
   ),
   right: marker(
     'center-right-slope-marker',
-    [438.8333333333, 230.1599884033, 445.0833333333, 280.9200134277],
-    '180-degree counterpart centered at project X≈+9.8m, Z≈0.'
+    [432.48, 225.36, 448.32, 282.84],
+    'Near-180-degree counterpart centered near project X=+9.93m, Z=-0.36m.'
   ),
   negativeZGlass: marker(
     'negative-z-glass-slope-marker',
