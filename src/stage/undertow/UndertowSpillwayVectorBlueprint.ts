@@ -31,6 +31,9 @@ export interface UndertowVectorTrace {
  * output, so T21-B uses the PDF linework as the primary XZ source and the JPEG
  * only for visual cross-checking.
  *
+ * Coordinates in this module use the PDF renderer's top-left origin with +Y
+ * downward, matching the 3508x2482 JPEG pixel convention directly.
+ *
  * 20 px/m at the JPEG's 300-dpi horizontal export equals 4.8 PDF pt/m.
  * This remains a HIGH-confidence project calibration, not an official
  * Nintendo real-world meter specification.
@@ -43,6 +46,8 @@ export const UNDERTOW_VECTOR_BLUEPRINT_SOURCE = Object.freeze({
   jpegWidthPixels: 3508,
   jpegHeightPixels: 2482,
   pointsPerProjectMeter: 4.8,
+  pdfCoordinateOrigin: 'TOP_LEFT' as const,
+  pdfPositiveY: 'DOWN' as const,
   confidence: 'HIGH' as const
 });
 
