@@ -1620,3 +1620,18 @@ Automated checks now additionally require:
 - UndertowSpillwayBlockoutGate remains false
 
 GitHub Actions run #496 passed TypeScript check, Unit tests, production build, Pages configuration and Pages artifact upload for the first plan-registration implementation. No hosted gameplay QA is required because runtime StageDefinition/collision/navigation remains untouched.
+
+
+## T21 internal-void ambiguity audit validation
+
+Automated checks now additionally verify:
+- both current central undercut regions are retained as HIGH traversable lower-layer topology rather than kill voids
+- the received right-low/underpass connection remains traversable and same-height
+- the audit does not fabricate an exhaustive no-void conclusion
+- no additional user capture becomes request-ready without a concrete mapped ambiguous region
+- `fall-out-void-kill-boundary` remains UNTRACED
+- common trace coverage remains 15/18 and T21-D remains gated
+
+GitHub Actions run #502 / `36194505652` passed TypeScript check, unit tests, production build, Pages configuration and artifact upload at head `dede055dedaa10c34b6f4fa1c9d3aa7368910cc8`.
+
+No runtime StageDefinition, collision, navigation, paint authority, combat, Super Jump, or T20 objective behavior changed in this checkpoint.
