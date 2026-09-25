@@ -6,7 +6,7 @@ describe('T21 Undertow blockout readiness gate', () => {
     const gate = undertowBlockoutReadiness();
     expect(gate.ready).toBe(false);
 
-    expect(gate.missingTraceIds).toContain('common-playable-boundary');
+    expect(gate.missingTraceIds).not.toContain('common-playable-boundary');
     expect(gate.missingTraceIds).not.toContain('center-low-floor-outline');
     expect(gate.missingTraceIds).not.toContain('center-small-step-outline');
     expect(gate.missingTraceIds).toContain('glass-underpass-outline');
