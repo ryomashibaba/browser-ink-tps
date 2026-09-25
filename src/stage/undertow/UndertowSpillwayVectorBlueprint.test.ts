@@ -34,6 +34,19 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     });
   });
 
+  it('extracts the exact outer playable silhouette with near-rotational symmetry', () => {
+    const boundary = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary;
+    expect(boundary.geometryKind).toBe('POLYGON');
+    expect(boundary.sourceClass).toBe('HARD_EDGE');
+    expect(boundary.confidence).toBe('HIGH');
+    expect(boundary.pdfPoints).toHaveLength(42);
+    expect(polygonAreaMeters2(boundary.metricPoints)).toBeCloseTo(8970.464375, 5);
+    expect(rotationSymmetryHausdorffMeters(
+      boundary.metricPoints,
+      boundary.metricPoints
+    )).toBeLessThan(0.03);
+  });
+
   it('tightens the spawn-axis check using vector spawn-ring centers', () => {
     expect(UNDERTOW_VECTOR_BLUEPRINT_AUDIT.spawnSeparationMeters).toBeCloseTo(134.1899, 3);
     expect(UNDERTOW_VECTOR_BLUEPRINT_AUDIT.sourceOriginToSpawnMidpointMeters).toBeLessThan(0.03);
