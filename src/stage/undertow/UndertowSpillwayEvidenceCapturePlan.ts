@@ -3,9 +3,15 @@ export type UndertowEvidenceCaptureId =
   | 'GLASS_UNDERPASS_CLEARANCE'
   | 'INTERNAL_VOID_CLASSIFICATION';
 
+export type UndertowEvidenceCaptureStatus =
+  | 'CAPTURE_RECEIVED'
+  | 'NOT_YET_CAPTURED';
+
 export interface UndertowEvidenceCapture {
   id: UndertowEvidenceCaptureId;
   priority: 1 | 2 | 3;
+  status: UndertowEvidenceCaptureStatus;
+  receivedEvidenceIds?: readonly string[];
   blocks: readonly string[];
   existingEvidence: string;
   unresolvedQuestion: string;
@@ -23,6 +29,8 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
     {
       id: 'RIGHT_LOW_PARTITION',
       priority: 1,
+      status: 'CAPTURE_RECEIVED',
+      receivedEvidenceIds: ['user-right-low-capture-2026-09-25'],
       blocks: [
         'right-low-floor-outline',
         'right-low-floor',
@@ -50,6 +58,8 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
     {
       id: 'GLASS_UNDERPASS_CLEARANCE',
       priority: 2,
+      status: 'CAPTURE_RECEIVED',
+      receivedEvidenceIds: ['user-underpass-capture-2026-09-25'],
       blocks: [
         'glass-underpass-outline',
         'glass-lower-major-floor',
@@ -77,6 +87,7 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
     {
       id: 'INTERNAL_VOID_CLASSIFICATION',
       priority: 3,
+      status: 'NOT_YET_CAPTURED',
       blocks: ['fall-out-void-kill-boundary'],
       existingEvidence:
         'The exterior hard silhouette and cyan water hazards are exact. Remaining ambiguity is limited to internal gaps where the top-down drawing can overlap a lower route.',
@@ -100,6 +111,15 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
 
 export function undertowRequiredCaptureIds(): readonly UndertowEvidenceCaptureId[] {
   return UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN
+    .filter((capture) => capture.status === 'NOT_YET_CAPTURED')
+    .slice()
+    .sort((a, b) => a.priority - b.priority)
+    .map((capture) => capture.id);
+}
+
+export function undertowReceivedCaptureIds(): readonly UndertowEvidenceCaptureId[] {
+  return UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN
+    .filter((capture) => capture.status === 'CAPTURE_RECEIVED')
     .slice()
     .sort((a, b) => a.priority - b.priority)
     .map((capture) => capture.id);
