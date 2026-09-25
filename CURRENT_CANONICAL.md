@@ -2000,3 +2000,14 @@ Only three XZ topology blockers remain:
 - internal/off-stage void kill boundaries beyond the already exact exterior silhouette and cyan water hazards
 
 A structured source-topology audit documents that those three cannot be closed safely from the current top-down PDF alone. T21-D remains gated; no convenience polygons are substituted.
+
+
+## T21-C center-side slope endpoint checkpoint — 2026-09-25
+
+Vector adjacency now resolves the center-facing endpoint of both main central slopes:
+- center-small-step-top = Y +1.5m at BLOCKOUT
+- center-left slope low endpoint = Y +1.5m HIGH
+- center-right slope low endpoint = Y +1.5m HIGH
+- both slope high endpoints remain UNKNOWN
+
+Main center slope dash regions are typed as semantic slope footprints; dash fields embedded inside the gray glass overhangs remain marker-only. No upper landing or slope grade is invented.
