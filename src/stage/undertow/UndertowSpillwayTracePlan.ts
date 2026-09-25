@@ -112,17 +112,17 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'center-left-slope-footprint',
     geometryKind: 'POLYGON',
     region: 'Center / Left',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'The central-left dashed marker envelope is measured, but the hard collision footprint still must be derived from surrounding edges and 3D evidence.'
+    notes: 'Exact 3.30m x 11.975m dashed-hatch semantic slope region; it remains a continuous floor transition rather than a hard-wall outline.'
   },
   {
     id: 'center-right-slope-footprint',
     geometryKind: 'POLYGON',
     region: 'Center / Right',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'The central-right dashed marker envelope is measured with near-exact 180-degree symmetry; hard collision footprint remains unresolved.'
+    notes: 'Near-180-degree counterpart dashed-hatch semantic slope region; exact start/end Y is still a T21-C concern.'
   },
   {
     id: 'right-low-floor-outline',
