@@ -28,6 +28,8 @@ describe('T21-B Undertow vector blueprint extraction', () => {
       jpegWidthPixels: 3508,
       jpegHeightPixels: 2482,
       pointsPerProjectMeter: 4.8,
+      pdfCoordinateOrigin: 'TOP_LEFT',
+      pdfPositiveY: 'DOWN',
       confidence: 'HIGH'
     });
   });
