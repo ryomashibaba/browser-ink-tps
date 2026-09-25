@@ -276,8 +276,8 @@ The traversable under-glass passage remains CONFIRMED as topology but its exact 
 
 The PDF dash fields nearest the geometric center form an almost exact 180-degree pair:
 
-- center-left marker center: approximately X=-9.805m, Z=-0.059m
-- center-right marker center: approximately X=+9.805m, Z=+0.059m
+- center-left marker center (superseded coarse pass): approximately X=-9.805m, Z=-0.059m
+- center-right marker center (superseded coarse pass): approximately X=+9.805m, Z=+0.059m
 - marker-pair symmetry residual: <0.03m
 
 These are stored as `MARKER_ENVELOPE_ONLY`. They identify which source region contains each central slope, but they are deliberately **not** promoted to collision footprints because dash markers are inset from the real hard edges.
@@ -309,7 +309,7 @@ The open floor *below* that edge is still not promoted to an exact polygon becau
 
 ### Trace coverage
 
-T21-B common trace coverage is now **8 / 18** requirements measured.
+T21-B common trace coverage at that checkpoint was **8 / 18** requirements measured.
 
 Measured:
 - 2 spawn centers
@@ -330,3 +330,36 @@ Still blocked:
 - broader fall-out/void kill boundary
 
 A new `UndertowSpillwayBlockoutGate` keeps T21-D disabled while those XZ items, spawn/first-drop absolute Y, and exact first-drop vertical relations remain unresolved.
+
+
+## T21-B — center floor and outer-silhouette checkpoint
+
+A coordinate-system audit confirmed that all `PdfPoint` values in the Undertow vector module use the PDF renderer/JPEG-compatible **top-left origin with +Y downward**. This convention is now explicit in code and tests. Do not invert PDF Y before passing coordinates to `undertowPdfPointToProjectXZ`.
+
+New exact plan measurements:
+- common playable exterior hard silhouette: 42 vertices after removing collinear-only intermediate points
+- exterior polygon plan area: ~8970.464 m² under the HIGH project-meter transform
+- 180-degree self-residual: <0.03m
+- outer hard-silhouette span: ~98.798m in project X, ~156.528m in project Z, HIGH
+- these supersede the old ~87m / ~146m PROVISIONAL envelope
+- central-low source face: ~28.830m², HIGH XZ, with Y=0 still CONFIRMED
+- two central small-step source strips: ~4.650m² each
+- each step strip is 0.75m deep in plan and keeps the existing +1.5m HIGH vertical relation
+- step-strip 180-degree residual: <0.03m
+
+The outer boundary is an exterior silhouette only. Internal holes are not automatically classified as kill voids; therefore the separate fall-out/void kill-boundary requirement remains unresolved.
+
+Slope-marker extraction was also tightened directly from PDF short-line vectors:
+- center-left dash envelope center: approximately X=-9.909m, Z=+0.354m
+- center-right dash envelope center: approximately X=+9.931m, Z=-0.365m
+- the envelopes remain marker-only and are not collision footprints
+
+T21-B common trace coverage is now **11 / 18**.
+
+Still unresolved for the T21-D gate:
+- actual Team A/B spawn-floor polygons
+- exact under-glass walkable/navigation outline
+- center-left/right slope hard footprints
+- right-low floor polygon
+- broader internal/off-stage fall-out/void kill boundaries
+- required absolute spawn / first-drop / right-low / glass-lower Y relationships
