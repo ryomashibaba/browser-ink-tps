@@ -7,7 +7,6 @@ import { exactRelation } from '../measurement/VerticalConstraintGraph';
 const handoff = ['handoff-t21-masterplan'] as const;
 const center = ['user-center-stills', 'user-center-videos', 'web-post-7-2-gameplay'] as const;
 const firstDrop = ['user-first-drop-video', 'handoff-t21-masterplan'] as const;
-const rightLowCapture = ['user-right-low-capture-2026-09-25'] as const;
 const underpassCapture = [
   'user-right-low-capture-2026-09-25',
   'user-underpass-capture-2026-09-25'
