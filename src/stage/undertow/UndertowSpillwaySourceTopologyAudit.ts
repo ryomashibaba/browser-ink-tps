@@ -3,6 +3,7 @@ export interface UndertowSourceTopologyLimit {
   status:
     | 'RESOLVED_FROM_VECTOR'
     | 'CAPTURED_REQUIRES_PLAN_REGISTRATION'
+    | 'PLAN_REGISTERED_POLYGON_UNRESOLVED'
     | 'REQUIRES_3D_BINDING';
   reason: string;
   safeToUseForBlockout: boolean;
@@ -18,16 +19,16 @@ export const UNDERTOW_SOURCE_TOPOLOGY_LIMITS: readonly UndertowSourceTopologyLim
   },
   {
     id: 'right-low-floor-partition',
-    status: 'CAPTURED_REQUIRES_PLAN_REGISTRATION',
+    status: 'PLAN_REGISTERED_POLYGON_UNRESOLVED',
     reason:
-      'The 2026-09-25 right-low capture classifies the low/open floor, measured small-drop entry, same-height underpass connection and a ramp exit. The 2D PDF still does not close the constant-height partition, so the captured boundaries must be registered to known plan landmarks before an exact polygon is promoted.',
+      'The 2026-09-25 right-low capture is now registered to the measured Team A right-small-drop lip. It classifies the low/open floor, same-height underpass connection and a ramp exit, but perspective footage plus the overlapping 2D source faces still do not assign every perimeter corner to a unique PDF vertex.',
     safeToUseForBlockout: false
   },
   {
     id: 'glass-underpass-walkable-outline',
-    status: 'CAPTURED_REQUIRES_PLAN_REGISTRATION',
+    status: 'PLAN_REGISTERED_POLYGON_UNRESOLVED',
     reason:
-      'The 2026-09-25 underpass capture confirms traversal, solid support/wall exclusions and the same-height connection to right-low. The top-down PDF still lacks a separate lower-layer polygon, so support-clearance boundaries must be plan-registered before navigation geometry is promoted.',
+      'The 2026-09-25 underpass capture is now registered beneath the measured positive-Z glass-overhang footprint. Traversal, solid support/wall exclusions and the same-height connection to right-low are confirmed, but the PDF has no independent lower-layer support/clearance outline and the perspective clip cannot supply unique metric corner offsets.',
     safeToUseForBlockout: false
   },
   {
