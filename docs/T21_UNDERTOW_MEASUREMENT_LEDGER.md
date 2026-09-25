@@ -462,3 +462,44 @@ Capture priority:
 1. right-low perimeter / transition classification
 2. under-glass entrance-to-exit support-clearance walk
 3. only the still-ambiguous internal gaps for void-vs-lower-route classification
+
+
+## T21-B/C — 2026-09-25 targeted capture integration
+
+Two requested captures were received and reviewed:
+
+- `user-underpass-capture-2026-09-25`
+  - file: `20260925-01M3CC7J9A5C9AE8YTYYE6HSHM-4D9D9F84-E6A2-4AF9-8A4B-D2534454E0B1.mp4`
+  - 29.63s
+  - confirms current covered lower passage traversal
+  - confirms solid support/wall geometry must be excluded from navigation
+  - confirms a step-free connection to the adjacent low/open floor
+- `user-right-low-capture-2026-09-25`
+  - file: `20260925-01M3CC7W69VA9ZBR9NJWR0KYYG-7AD89BB0-8510-46E3-8C98-A64A14F92CAE.mp4`
+  - 29.50s
+  - confirms the measured small drop enters the right-low open/grass floor
+  - confirms at least one traversable ramp exits that floor
+  - confirms the connection into the covered underpass is same-height
+
+The captures strengthen the layered topology without inventing a simple top-down polygon.
+
+New HIGH vertical/topology relations:
+- first-drop open/landing floor = right-small-drop upper floor
+- right-small-drop upper -> right-low = -1.5m
+- right-low floor = covered underpass lower floor
+- therefore the first-drop landing / small-drop upper / right-low / underpass chain is now explicitly connected even though its absolute Y seed is still unresolved
+
+The two requested captures are now `CAPTURE_RECEIVED`; they must not be requested again. The right-low and underpass source-topology states are `CAPTURED_REQUIRES_PLAN_REGISTRATION`, meaning only the exact PDF-coordinate boundary registration remains.
+
+The only still-not-received capture category is `INTERNAL_VOID_CLASSIFICATION`. It should not be requested until the remaining ambiguous gaps are enumerated and shown on a marked map.
+
+### User capture-guidance contract
+
+Future capture requests for Undertow must include a marked stage map. The map must show:
+- capture area
+- start position
+- route or camera direction
+- boundary/object to look at
+- whether the 180-degree symmetric counterpart is acceptable
+
+Prose-only location instructions are no longer sufficient.
