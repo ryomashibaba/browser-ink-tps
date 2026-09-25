@@ -7,6 +7,11 @@ import { exactRelation } from '../measurement/VerticalConstraintGraph';
 const handoff = ['handoff-t21-masterplan'] as const;
 const center = ['user-center-stills', 'user-center-videos', 'web-post-7-2-gameplay'] as const;
 const firstDrop = ['user-first-drop-video', 'handoff-t21-masterplan'] as const;
+const rightLowCapture = ['user-right-low-capture-2026-09-25'] as const;
+const underpassCapture = [
+  'user-right-low-capture-2026-09-25',
+  'user-underpass-capture-2026-09-25'
+] as const;
 
 export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
   {
@@ -152,12 +157,28 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
     'Central small-step delta from the center-low reference.'
   ),
   exactRelation(
+    'team-a-first-drop-landing',
+    'right-small-drop-upper',
+    0,
+    'HIGH',
+    ['web-post-7-2-gameplay', 'user-right-low-capture-2026-09-25'],
+    'The documented open area immediately after the first drop is the upper floor of the small right-side drop; the new capture starts on that upper area before descending.'
+  ),
+  exactRelation(
     'right-low-floor',
     'right-small-drop-upper',
     1.5,
     'HIGH',
     handoff,
     'Right-side small drop magnitude; neither absolute floor is frozen yet.'
+  ),
+  exactRelation(
+    'right-low-floor',
+    'glass-lower-major-floor',
+    0,
+    'HIGH',
+    underpassCapture,
+    'The 2026-09-25 right-low and underpass captures show a continuous same-height walking connection with no intervening step/drop.'
   ),
   exactRelation(
     'glass-lower-major-floor',
