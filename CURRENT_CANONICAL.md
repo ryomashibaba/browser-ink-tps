@@ -2074,3 +2074,15 @@ T21-D remains blocked; production runtime geometry is unchanged.
 - `fall-out-void-kill-boundary` remains UNTRACED; trace coverage remains 15/18.
 - T21-D blockout remains disabled.
 - Validation head before this documentation checkpoint: `dede055dedaa10c34b6f4fa1c9d3aa7368910cc8`, Actions run #502 / `36194505652`: PASS.
+
+
+## T21-C vertical evidence decomposition checkpoint
+
+The current HIGH/CONFIRMED vertical graph is now audited by connected component.
+
+- center component is seeded from center-low Y=0
+- landing/right-low/underpass/glass is one exact-relative but unseeded component
+- spawn pair remains separate because first-drop magnitude is still PROVISIONAL
+- slope-high pair and grate pair remain separate unseeded components
+
+No absolute Y was added from perspective footage. The next vertical work must add evidence-backed ties rather than convenience heights.
