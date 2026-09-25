@@ -447,7 +447,16 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
   )
 });
 
+const outerBoundaryXs = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints.map(
+  ([x]) => x
+);
+const outerBoundaryZs = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints.map(
+  ([, z]) => z
+);
+
 export const UNDERTOW_VECTOR_BLUEPRINT_AUDIT = Object.freeze({
+  outerSpanXMeters: Math.max(...outerBoundaryXs) - Math.min(...outerBoundaryXs),
+  outerSpanZMeters: Math.max(...outerBoundaryZs) - Math.min(...outerBoundaryZs),
   spawnSeparationMeters: Math.hypot(
     UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]![0] -
       UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]![0],
