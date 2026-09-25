@@ -7,8 +7,8 @@ describe('T21 Undertow blockout readiness gate', () => {
     expect(gate.ready).toBe(false);
 
     expect(gate.missingTraceIds).not.toContain('common-playable-boundary');
-    expect(gate.missingTraceIds).not.toContain('team-a-spawn-floor-outline');
-    expect(gate.missingTraceIds).not.toContain('team-b-spawn-floor-outline');
+    expect(gate.missingTraceIds).not.toContain('team-a-spawn-terrain-outline');
+    expect(gate.missingTraceIds).not.toContain('team-b-spawn-terrain-outline');
     expect(gate.missingTraceIds).not.toContain('center-low-floor-outline');
     expect(gate.missingTraceIds).not.toContain('center-small-step-outline');
     expect(gate.missingTraceIds).toContain('glass-underpass-outline');
