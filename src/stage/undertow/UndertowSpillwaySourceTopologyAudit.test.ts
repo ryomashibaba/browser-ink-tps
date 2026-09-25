@@ -27,7 +27,7 @@ describe('T21-B Undertow vector-source topology limits', () => {
     ]) {
       expect(
         UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find((item) => item.id === id)?.status
-      ).toBe('CAPTURED_REQUIRES_PLAN_REGISTRATION');
+      ).toBe('PLAN_REGISTERED_POLYGON_UNRESOLVED');
     }
 
     expect(
@@ -42,6 +42,6 @@ describe('T21-B Undertow vector-source topology limits', () => {
       (item) => item.id === 'right-low-floor-partition'
     );
     expect(rightLow?.reason).toContain('2026-09-25 right-low capture');
-    expect(rightLow?.reason).toContain('registered to known plan landmarks');
+    expect(rightLow?.reason).toContain('registered to the measured Team A right-small-drop lip');
   });
 });
