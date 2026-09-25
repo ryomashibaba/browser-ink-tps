@@ -7,14 +7,14 @@ import {
 describe('T21-B Undertow common trace plan', () => {
   it('promotes only source-measured XZ traces', () => {
     const coverage = undertowTraceCoverage();
-    expect(coverage.measured).toBe(10);
+    expect(coverage.measured).toBe(11);
     expect(coverage.total).toBe(18);
 
     expect(coverage.missingIds).not.toContain('team-a-first-drop-lip');
     expect(coverage.missingIds).not.toContain('team-b-first-drop-lip');
     expect(coverage.missingIds).not.toContain('mapped-water-hazard-polygons');
 
-    expect(coverage.missingIds).toContain('common-playable-boundary');
+    expect(coverage.missingIds).not.toContain('common-playable-boundary');
     expect(coverage.missingIds).not.toContain('upper-glass-platform-outline');
     expect(coverage.missingIds).not.toContain('center-grate-outline');
     expect(coverage.missingIds).not.toContain('right-small-drop-edge');
@@ -25,7 +25,6 @@ describe('T21-B Undertow common trace plan', () => {
 
   it('does not accidentally mark unresolved gameplay-critical polygons complete', () => {
     const forbidden = [
-      'common-playable-boundary',
       'team-a-spawn-floor-outline',
       'team-b-spawn-floor-outline',
       'glass-underpass-outline',
