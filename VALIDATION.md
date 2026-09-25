@@ -1635,3 +1635,15 @@ Automated checks now additionally verify:
 GitHub Actions run #502 / `36194505652` passed TypeScript check, unit tests, production build, Pages configuration and artifact upload at head `dede055dedaa10c34b6f4fa1c9d3aa7368910cc8`.
 
 No runtime StageDefinition, collision, navigation, paint authority, combat, Super Jump, or T20 objective behavior changed in this checkpoint.
+
+
+## T21-C minimum vertical-evidence audit validation
+
+Automated checks now additionally require:
+- the exact/HIGH BLOCKOUT graph has exactly one currently seeded component: center-low / center-step / center-side slope-low
+- Team A/B first-drop landings, right-small-drop upper, right-low, glass lower and glass high reference form one internally constrained but unseeded component
+- Team A/B spawn floors remain a separate component because the first-drop 1.5m/3.0m edge is still PROVISIONAL
+- central slope high endpoints and grate elevations remain separate unseeded components
+- no perspective-only capture may fabricate a center-to-right-low absolute Y tie
+
+T21-D remains blocked pending both XZ completion and these vertical evidence classes.
