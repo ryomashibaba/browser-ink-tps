@@ -12,14 +12,14 @@ describe('T21-C Undertow vertical evidence capture plan', () => {
   });
 
   it('uses the adjacent known 1.5m right-small drop as the comparison reference', () => {
-    const request = UNDERTOW_VERTICAL_CAPTURE_REQUESTS[0];
+    const request = UNDERTOW_VERTICAL_CAPTURE_REQUESTS[0]!;
     expect(request.purpose).toContain('1.5m');
     expect(request.purpose).toContain('3.0m');
     expect(request.symmetricCounterpartAllowed).toBe(true);
   });
 
   it('requires one side-profile view of all three terrace levels without re-requesting old captures', () => {
-    const request = UNDERTOW_VERTICAL_CAPTURE_REQUESTS[0];
+    const request = UNDERTOW_VERTICAL_CAPTURE_REQUESTS[0]!;
     expect(request.mapGuideRequired).toBe(true);
     expect(request.acceptance.join(' ')).toContain('upper spawn floor');
     expect(request.acceptance.join(' ')).toContain('middle first-drop landing');
