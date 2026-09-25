@@ -21,6 +21,8 @@ describe('T21-C Undertow vertical reconstruction', () => {
     expect(result.values['glass-overhang-high-reference']).toBeUndefined();
     expect(result.values['team-a-spawn-floor']).toBeUndefined();
     expect(result.values['team-a-first-drop-landing']).toBeUndefined();
+    expect(result.values['right-small-drop-upper']).toBeUndefined();
+    expect(result.values['right-low-floor']).toBeUndefined();
   });
 
   it('resolves the center-side slope endpoints to Y=1.5 but keeps high ends/grates unseeded', () => {
@@ -40,6 +42,34 @@ describe('T21-C Undertow vertical reconstruction', () => {
     ]) {
       expect(result.values[id]).toBeUndefined();
     }
+  });
+
+  it('links first-drop landing -> small-drop upper and right-low -> underpass without inventing an absolute Y', () => {
+    const landingToUpper = UNDERTOW_VERTICAL_RELATIONS.find(
+      (relation) =>
+        relation.fromId === 'team-a-first-drop-landing' &&
+        relation.toId === 'right-small-drop-upper'
+    );
+    const lowToUnderpass = UNDERTOW_VERTICAL_RELATIONS.find(
+      (relation) =>
+        relation.fromId === 'right-low-floor' &&
+        relation.toId === 'glass-lower-major-floor'
+    );
+
+    expect(landingToUpper?.deltaMeters).toBe(0);
+    expect(landingToUpper?.confidence).toBe('HIGH');
+    expect(lowToUnderpass?.deltaMeters).toBe(0);
+    expect(lowToUnderpass?.confidence).toBe('HIGH');
+
+    const result = resolveVerticalConstraints(
+      UNDERTOW_VERTICAL_NODES,
+      UNDERTOW_VERTICAL_RELATIONS,
+      'BLOCKOUT'
+    );
+    expect(result.values['team-a-first-drop-landing']).toBeUndefined();
+    expect(result.values['right-small-drop-upper']).toBeUndefined();
+    expect(result.values['right-low-floor']).toBeUndefined();
+    expect(result.values['glass-lower-major-floor']).toBeUndefined();
   });
 
   it('keeps HIGH vertical relations out of Stable Freeze until independently confirmed', () => {
