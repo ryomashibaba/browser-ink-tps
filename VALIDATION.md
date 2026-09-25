@@ -1647,3 +1647,15 @@ Automated checks now additionally require:
 - no perspective-only capture may fabricate a center-to-right-low absolute Y tie
 
 T21-D remains blocked pending both XZ completion and these vertical evidence classes.
+
+
+## T21-C first-drop magnitude capture validation
+
+Automated checks now additionally require:
+- exactly one vertical capture request is request-ready: `FIRST_DROP_MAGNITUDE_SIDE_PROFILE`
+- the request explicitly compares the unresolved 1.5m / 3.0m first-drop candidates against the adjacent HIGH 1.5m right-small drop
+- the guide requires all three terrace levels in one approximately side-on view
+- already received right-low and underpass traversals are not requested again
+- the request remains evidence-only and cannot promote any Y before the capture is reviewed
+
+GitHub Actions run #509 / `36197224763` passed TypeScript check, unit tests, production build, Pages configuration and artifact upload at head `5d109d78c65bb4c50f55f708f5e218dd6998bdfd`.
