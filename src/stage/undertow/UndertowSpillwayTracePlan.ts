@@ -106,7 +106,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Lower Tunnels',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '2026-09-25 capture confirms traversal and solid support/wall exclusions; exact lower-layer walkable polygon still requires registration to the vector plan.'
+    notes: '2026-09-25 capture is plan-registered beneath the positive-Z glass overhang and confirms traversal plus solid support/wall exclusions; the lower-layer walkable polygon remains non-unique because the PDF has no independent support/clearance outline.'
   },
   {
     id: 'center-left-slope-footprint',
@@ -130,7 +130,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center / Right',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '2026-09-25 capture confirms the low/open floor, small-drop entry, ramp exit and same-level underpass connection; exact constant-height XZ partition still requires plan registration. Absolute Y remains unresolved separately.'
+    notes: '2026-09-25 capture is plan-registered to the Team A right-small-drop lip and confirms the low/open floor, ramp exit and same-level underpass connection; perspective footage still does not assign every perimeter corner to a unique PDF vertex. Absolute Y remains unresolved separately.'
   },
   {
     id: 'center-grate-outline',
