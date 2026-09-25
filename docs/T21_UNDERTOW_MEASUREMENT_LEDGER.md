@@ -538,3 +538,27 @@ This narrows the ambiguity but does **not** justify an exhaustive claim that the
 - no convenience kill polygon or blanket 'everything inside the exterior is floor' rule is allowed
 
 The next evidence request may only be activated after a concrete ambiguous region is identified and can be marked on the source map.
+
+
+## T21-C — minimum vertical evidence component audit
+
+The current exact/HIGH BLOCKOUT relations were decomposed into connected vertical components so missing evidence can be requested minimally rather than by guessing floor heights.
+
+Seeded now:
+- CENTER_SEEDED: center-low Y=0, center-small-step Y=1.5, and both center-side slope low endpoints Y=1.5
+
+Unseeded exact-relative components:
+- RIGHT_LOW_UNSEEDED: Team A/B first-drop landings, right-small-drop upper, right-low floor, glass lower floor, glass high reference
+- SPAWN_UNSEEDED: Team A/B spawn floors only; the edge to first-drop landing remains the PROVISIONAL 1.5m / 3.0m candidate pair
+- SLOPE_HIGH_UNSEEDED: both central slope high endpoints
+- GRATE_UNSEEDED: both grate elevations
+
+The existing 2026-09-25 right-low and underpass clips are sufficient to keep the right-low component internally constrained, but they do not contain an exact tie to center-low Y=0 or center-step Y=1.5. No absolute Y is promoted from perspective appearance.
+
+Minimum remaining vertical evidence classes:
+1. one right-low/underpass/landing -> seeded-center relation
+2. exact first-drop magnitude after the landing component is seeded
+3. one center-slope high-end tie
+4. one grate-elevation tie
+
+This does not start T21-D and does not relax the blockout gate.
