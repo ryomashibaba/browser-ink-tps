@@ -1,6 +1,9 @@
 export interface UndertowSourceTopologyLimit {
   id: string;
-  status: 'RESOLVED_FROM_VECTOR' | 'REQUIRES_3D_BINDING';
+  status:
+    | 'RESOLVED_FROM_VECTOR'
+    | 'CAPTURED_REQUIRES_PLAN_REGISTRATION'
+    | 'REQUIRES_3D_BINDING';
   reason: string;
   safeToUseForBlockout: boolean;
 }
@@ -15,16 +18,16 @@ export const UNDERTOW_SOURCE_TOPOLOGY_LIMITS: readonly UndertowSourceTopologyLim
   },
   {
     id: 'right-low-floor-partition',
-    status: 'REQUIRES_3D_BINDING',
+    status: 'CAPTURED_REQUIRES_PLAN_REGISTRATION',
     reason:
-      'The first-drop and right-small-drop hard edges both border the same spawn-side and central connected source faces. The PDF therefore does not close the right-low elevation region into an independent polygon.',
+      'The 2026-09-25 right-low capture classifies the low/open floor, measured small-drop entry, same-height underpass connection and a ramp exit. The 2D PDF still does not close the constant-height partition, so the captured boundaries must be registered to known plan landmarks before an exact polygon is promoted.',
     safeToUseForBlockout: false
   },
   {
     id: 'glass-underpass-walkable-outline',
-    status: 'REQUIRES_3D_BINDING',
+    status: 'CAPTURED_REQUIRES_PLAN_REGISTRATION',
     reason:
-      'The top-down vector source provides the upper gray glass footprint but not a separate lower-layer walkable polygon or support-column clearance boundary.',
+      'The 2026-09-25 underpass capture confirms traversal, solid support/wall exclusions and the same-height connection to right-low. The top-down PDF still lacks a separate lower-layer polygon, so support-clearance boundaries must be plan-registered before navigation geometry is promoted.',
     safeToUseForBlockout: false
   },
   {
