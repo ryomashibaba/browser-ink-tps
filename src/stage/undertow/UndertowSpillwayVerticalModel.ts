@@ -60,6 +60,54 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
     }
   },
   {
+    id: 'center-left-slope-low',
+    absolute: {
+      floorId: 'CENTER_LEFT_SLOPE_LOW',
+      confidence: 'UNKNOWN',
+      evidenceIds: []
+    }
+  },
+  {
+    id: 'center-left-slope-high',
+    absolute: {
+      floorId: 'CENTER_LEFT_SLOPE_HIGH',
+      confidence: 'UNKNOWN',
+      evidenceIds: []
+    }
+  },
+  {
+    id: 'center-right-slope-low',
+    absolute: {
+      floorId: 'CENTER_RIGHT_SLOPE_LOW',
+      confidence: 'UNKNOWN',
+      evidenceIds: []
+    }
+  },
+  {
+    id: 'center-right-slope-high',
+    absolute: {
+      floorId: 'CENTER_RIGHT_SLOPE_HIGH',
+      confidence: 'UNKNOWN',
+      evidenceIds: []
+    }
+  },
+  {
+    id: 'negative-z-grate-floor',
+    absolute: {
+      floorId: 'NEGATIVE_Z_GRATE',
+      confidence: 'UNKNOWN',
+      evidenceIds: []
+    }
+  },
+  {
+    id: 'positive-z-grate-floor',
+    absolute: {
+      floorId: 'POSITIVE_Z_GRATE',
+      confidence: 'UNKNOWN',
+      evidenceIds: []
+    }
+  },
+  {
     id: 'team-a-spawn-floor',
     absolute: {
       floorId: 'TEAM_A_SPAWN',
@@ -118,6 +166,30 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
     'HIGH',
     handoff,
     'Glass overhang high reference is about 3m above the major floor directly below; do not flatten the slope-marked glass footprint.'
+  ),
+  exactRelation(
+    'center-left-slope-low',
+    'center-right-slope-low',
+    0,
+    'HIGH',
+    center,
+    '180-degree counterpart slope low endpoints share elevation once either side is resolved.'
+  ),
+  exactRelation(
+    'center-left-slope-high',
+    'center-right-slope-high',
+    0,
+    'HIGH',
+    center,
+    '180-degree counterpart slope high endpoints share elevation once either side is resolved.'
+  ),
+  exactRelation(
+    'negative-z-grate-floor',
+    'positive-z-grate-floor',
+    0,
+    'HIGH',
+    center,
+    'Counterpart grate surfaces are symmetry-linked in Y.'
   ),
   exactRelation(
     'team-a-spawn-floor',
