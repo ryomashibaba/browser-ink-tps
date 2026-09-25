@@ -23,16 +23,17 @@ describe('T21-C Undertow vertical reconstruction', () => {
     expect(result.values['team-a-first-drop-landing']).toBeUndefined();
   });
 
-  it('keeps slope endpoints and grate elevations unresolved when symmetry has no absolute seed', () => {
+  it('resolves the center-side slope endpoints to Y=1.5 but keeps high ends/grates unseeded', () => {
     const result = resolveVerticalConstraints(
       UNDERTOW_VERTICAL_NODES,
       UNDERTOW_VERTICAL_RELATIONS,
       'BLOCKOUT'
     );
+    expect(result.values['center-left-slope-low']).toBe(1.5);
+    expect(result.values['center-right-slope-low']).toBe(1.5);
+
     for (const id of [
-      'center-left-slope-low',
       'center-left-slope-high',
-      'center-right-slope-low',
       'center-right-slope-high',
       'negative-z-grate-floor',
       'positive-z-grate-floor'
