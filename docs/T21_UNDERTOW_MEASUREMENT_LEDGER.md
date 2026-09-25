@@ -363,3 +363,35 @@ Still unresolved for the T21-D gate:
 - right-low floor polygon
 - broader internal/off-stage fall-out/void kill boundaries
 - required absolute spawn / first-drop / right-low / glass-lower Y relationships
+
+
+## T21-B/C — slope footprint and vertical-readiness checkpoint
+
+The central dashed-hatch regions are now treated as **slope semantic footprints** rather than unresolved XZ:
+
+- left footprint: 3.30m x 11.975m, ~39.5175m², HIGH XZ
+- right footprint: 3.30m x 11.975m, ~39.5175m², HIGH XZ
+- refined centers: approximately (-9.909,+0.354) and (+9.931,-0.365) project XZ
+- 180-degree residual remains small
+- these polygons describe where continuous slope interpolation occurs; they are not hard walls
+
+No slope endpoint Y has been invented. T21-C now has explicit low/high endpoint nodes for each central slope, with only A/B symmetry relations. Until one side receives an evidence-backed absolute/relative seed, both slopes remain vertically unresolved.
+
+The blockout readiness gate now resolves the vertical constraint graph at BLOCKOUT confidence before checking readiness. This allows center-small-step-top to resolve to Y=1.5 from the confirmed center-low Y=0 + HIGH 1.5m relation, while still blocking unresolved values.
+
+Additional T21-D-required vertical nodes now include:
+- center small-step top
+- glass lower floor and glass high reference
+- center-left/right slope low/high endpoints
+- negative-Z/positive-Z grate elevations
+- right-low / right-small-drop upper
+- both spawn floors and first-drop landing floors
+
+T21-B trace coverage is now **13 / 18 measured**.
+
+Remaining XZ blockers:
+- Team A spawn-floor outline
+- Team B spawn-floor outline
+- exact under-glass walkable/navigation outline
+- right-low floor outline
+- broader internal/off-stage fall-out/void kill boundary
