@@ -46,8 +46,10 @@ describe('T21 Undertow blockout readiness gate', () => {
 
     expect(gate.unresolvedVerticalIds).toContain('glass-lower-major-floor');
     expect(gate.unresolvedVerticalIds).toContain('glass-overhang-high-reference');
-    expect(gate.unresolvedVerticalIds).toContain('center-left-slope-low');
+    expect(gate.unresolvedVerticalIds).not.toContain('center-left-slope-low');
+    expect(gate.unresolvedVerticalIds).not.toContain('center-right-slope-low');
     expect(gate.unresolvedVerticalIds).toContain('center-left-slope-high');
+    expect(gate.unresolvedVerticalIds).toContain('center-right-slope-high');
     expect(gate.unresolvedVerticalIds).toContain('negative-z-grate-floor');
     expect(gate.unresolvedVerticalIds).toContain('positive-z-grate-floor');
   });
