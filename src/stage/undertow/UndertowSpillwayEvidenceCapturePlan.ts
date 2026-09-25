@@ -20,6 +20,19 @@ export interface UndertowEvidenceCapture {
   avoid: readonly string[];
 }
 
+export const UNDERTOW_CAPTURE_REQUEST_POLICY = Object.freeze({
+  mapAnnotationRequired: true,
+  requiredMapAnnotations: [
+    'CAPTURE_AREA',
+    'START_POSITION',
+    'ROUTE_OR_CAMERA_DIRECTION',
+    'LOOK_AT_BOUNDARY',
+    'SYMMETRIC_COUNTERPART_IF_ALLOWED'
+  ] as const,
+  notes:
+    'Future user capture requests must include a marked stage map; prose-only location instructions are not sufficient.'
+});
+
 /**
  * Only the evidence still capable of changing T21-D gameplay geometry belongs
  * here. This is intentionally much narrower than a general stage reshoot.
