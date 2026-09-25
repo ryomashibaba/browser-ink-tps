@@ -7,6 +7,7 @@ import {
   undertowRequiredCaptureIds
 } from './UndertowSpillwayEvidenceCapturePlan';
 import { unresolvedUndertowSourceTopologyLimits } from './UndertowSpillwaySourceTopologyAudit';
+import { undertowConcreteVoidCaptureRegionIds } from './UndertowSpillwayVoidAmbiguity';
 
 describe('T21 Undertow targeted evidence capture plan', () => {
   it('keeps the three source-topology gaps but does not request received captures again', () => {
@@ -18,6 +19,7 @@ describe('T21 Undertow targeted evidence capture plan', () => {
       'INTERNAL_VOID_CLASSIFICATION'
     ]);
     expect(undertowRequestReadyCaptureIds()).toEqual([]);
+    expect(undertowConcreteVoidCaptureRegionIds()).toEqual([]);
     expect(UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN).toHaveLength(3);
     expect(
       UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN.find(
