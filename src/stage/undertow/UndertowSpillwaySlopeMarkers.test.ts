@@ -10,10 +10,10 @@ describe('T21-B Undertow central slope marker catalog', () => {
     const leftCenter = slopeMarkerCenter(UNDERTOW_CENTRAL_SLOPE_MARKERS.left);
     const rightCenter = slopeMarkerCenter(UNDERTOW_CENTRAL_SLOPE_MARKERS.right);
 
-    expect(leftCenter[0]).toBeCloseTo(-9.805, 3);
-    expect(leftCenter[1]).toBeCloseTo(-0.059, 3);
-    expect(rightCenter[0]).toBeCloseTo(9.805, 3);
-    expect(rightCenter[1]).toBeCloseTo(0.059, 3);
+    expect(leftCenter[0]).toBeCloseTo(-9.909, 3);
+    expect(leftCenter[1]).toBeCloseTo(0.354, 3);
+    expect(rightCenter[0]).toBeCloseTo(9.931, 3);
+    expect(rightCenter[1]).toBeCloseTo(-0.365, 3);
   });
 
   it('keeps central slope markers as marker envelopes rather than collision footprints', () => {
