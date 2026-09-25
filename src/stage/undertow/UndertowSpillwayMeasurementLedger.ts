@@ -345,9 +345,13 @@ const entries: readonly StageMeasurementEntry[] = [
     region: 'Lower Tunnels',
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
-    evidenceIds: centerEvidence,
-    xz: unresolvedXz('T21-B must preserve the actual passage width and sightline.'),
-    y: unknownY('Absolute floor height remains for T21-C.'),
+    evidenceIds: [
+      ...centerEvidence,
+      'user-underpass-capture-2026-09-25',
+      'user-right-low-capture-2026-09-25'
+    ],
+    xz: unresolvedXz('The 2026-09-25 capture confirms the passage and support/wall exclusions, but perspective video still does not define a map-registered simple walkable polygon.'),
+    y: unknownY('Same-height relation to right-low is HIGH in the vertical constraint graph; absolute floor height remains unresolved.'),
     transition: noTransition,
     surface: {
       semantics: [],
@@ -414,9 +418,13 @@ const entries: readonly StageMeasurementEntry[] = [
     region: 'Center / Right',
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
-    evidenceIds: centerEvidence,
-    xz: unresolvedXz('Metric polygon remains for T21-B.'),
-    y: unknownY('Do not assume this floor is exactly Y=0 before T21-C.'),
+    evidenceIds: [
+      ...centerEvidence,
+      'user-right-low-capture-2026-09-25',
+      'user-underpass-capture-2026-09-25'
+    ],
+    xz: unresolvedXz('The 2026-09-25 perimeter capture classifies the low/open floor and exits, but the constant-height partition still does not close uniquely in the top-down source.'),
+    y: unknownY('The floor is 1.5m below the measured small-drop upper floor and same-height with the covered underpass; absolute Y remains unresolved.'),
     transition: noTransition,
     surface: {
       semantics: ['PAINTABLE'],
@@ -911,6 +919,20 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       label: 'User first-drop confirmation video',
       sourceVersion: 'current normal PvP',
       notes: 'Confirms spawn-side first descent has no downhill route and is a one-way drop.'
+    },
+    {
+      id: 'user-underpass-capture-2026-09-25',
+      kind: 'USER_CAPTURE',
+      label: 'User targeted underpass traversal capture, 2026-09-25',
+      sourceVersion: 'current normal PvP',
+      notes: '29.63s continuous traversal. Confirms walkable covered passage, solid support/wall exclusions, and a step-free connection to the adjacent low/open floor.'
+    },
+    {
+      id: 'user-right-low-capture-2026-09-25',
+      kind: 'USER_CAPTURE',
+      label: 'User targeted right-low perimeter capture, 2026-09-25',
+      sourceVersion: 'current normal PvP',
+      notes: '29.50s perimeter traversal. Confirms the small drop enters the right-low open floor, at least one ramp exits it, and the underpass connection is same-height.'
     }
   ],
   assumptions: [
