@@ -2062,3 +2062,15 @@ The right-low perimeter remains non-unique because the clip does not expose a se
 Source-topology status for both is now PLAN_REGISTERED_POLYGON_UNRESOLVED. Common trace coverage intentionally remains **15 / 18**. The two capture categories are complete and must not be requested again.
 
 T21-D remains blocked; production runtime geometry is unchanged.
+
+
+## T21-B internal-void ambiguity checkpoint
+
+- The post-7.2 central undercut pair is classified HIGH as traversable lower-layer topology, not an abyss.
+- The received right-low -> underpass overlap remains HIGH traversable/same-height.
+- No concrete remaining internal blank can currently be localized strongly enough to justify another capture.
+- `INTERNAL_VOID_CLASSIFICATION` therefore stays `DEFERRED_PENDING_MAP_ENUMERATION`; request-ready capture IDs remain empty.
+- This is deliberately **not** an exhaustive no-internal-void claim.
+- `fall-out-void-kill-boundary` remains UNTRACED; trace coverage remains 15/18.
+- T21-D blockout remains disabled.
+- Validation head before this documentation checkpoint: `dede055dedaa10c34b6f4fa1c9d3aa7368910cc8`, Actions run #502 / `36194505652`: PASS.
