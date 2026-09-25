@@ -1552,3 +1552,18 @@ Latest deterministic coverage additionally verifies:
 - counterpart slope/grate symmetry relations alone cannot manufacture an absolute Y
 
 The gate must remain false until the remaining XZ and vertical blockers are resolved.
+
+
+## T21-B spawn-terrain and source-limit validation
+
+Automated coverage now additionally requires:
+- both spawn-side connected terrain envelopes are HIGH polygons
+- each spawn region remains vertically UNKNOWN as a whole and explicitly warns against flat-floor use
+- trace gate uses `team-a/b-spawn-terrain-outline` rather than the misleading flat-floor name
+- common trace coverage is 15/18
+- right-low floor partition stays unresolved because the relevant hard edges border the same two connected source faces
+- under-glass walkable outline stays unresolved because no independent lower-layer polygon exists in the vector source
+- internal void classification stays unresolved where top-down overlap is ambiguous
+- the source-topology audit reports exactly those three unresolved vector-topology limits
+
+T21-D readiness must remain false until those geometry limits and the outstanding vertical constraints are resolved.
