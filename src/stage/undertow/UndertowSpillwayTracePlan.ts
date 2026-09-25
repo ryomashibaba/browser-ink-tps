@@ -32,9 +32,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'common-playable-boundary',
     geometryKind: 'POLYGON',
     region: 'Whole Stage',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Must replace the provisional ~87m x ~146m envelope.'
+    notes: 'Exact 42-vertex exterior hard silhouette from the vector topology; ~98.80m X by ~156.53m Z under the HIGH project-meter transform.'
   },
   {
     id: 'team-a-spawn-floor-outline',
