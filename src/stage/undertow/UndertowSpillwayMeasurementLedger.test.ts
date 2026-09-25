@@ -152,6 +152,19 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(entry('center-small-step').xz.kind).toBe('UNRESOLVED');
   });
 
+  it('binds both central slope hatch footprints without inventing endpoint Y', () => {
+    for (const id of ['center-left-slope', 'center-right-slope']) {
+      const slope = entry(id);
+      expect(slope.xz.kind).toBe('POLYGON');
+      expect(slope.xz.confidence).toBe('HIGH');
+      expect(slope.xz.polygonMeters).toHaveLength(4);
+      expect(slope.transition.kind).toBe('SLOPE');
+      expect(slope.transition.confidence).toBe('CONFIRMED');
+      expect(slope.y.confidence).toBe('UNKNOWN');
+      expect(slope.y.yMeters).toBeUndefined();
+    }
+  });
+
   it('binds the symmetric grate pair as exact XZ without mixing in water semantics', () => {
     for (const id of ['negative-z-grate-mesh', 'positive-z-grate-mesh']) {
       const grate = entry(id);
