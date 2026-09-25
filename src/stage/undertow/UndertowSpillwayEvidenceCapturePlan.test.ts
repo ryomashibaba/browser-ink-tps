@@ -3,6 +3,7 @@ import {
   UNDERTOW_CAPTURE_REQUEST_POLICY,
   UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN,
   undertowReceivedCaptureIds,
+  undertowRequestReadyCaptureIds,
   undertowRequiredCaptureIds
 } from './UndertowSpillwayEvidenceCapturePlan';
 import { unresolvedUndertowSourceTopologyLimits } from './UndertowSpillwaySourceTopologyAudit';
@@ -16,7 +17,13 @@ describe('T21 Undertow targeted evidence capture plan', () => {
     expect(undertowRequiredCaptureIds()).toEqual([
       'INTERNAL_VOID_CLASSIFICATION'
     ]);
+    expect(undertowRequestReadyCaptureIds()).toEqual([]);
     expect(UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN).toHaveLength(3);
+    expect(
+      UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN.find(
+        (capture) => capture.id === 'INTERNAL_VOID_CLASSIFICATION'
+      )?.status
+    ).toBe('DEFERRED_PENDING_MAP_ENUMERATION');
     expect(unresolvedUndertowSourceTopologyLimits()).toEqual([
       'right-low-floor-partition',
       'glass-underpass-walkable-outline',
