@@ -357,7 +357,7 @@ Slope-marker extraction was also tightened directly from PDF short-line vectors:
 T21-B common trace coverage is now **11 / 18**.
 
 Still unresolved for the T21-D gate:
-- actual Team A/B spawn-floor polygons
+- actual Team A/B spawn-side terrain envelopes
 - exact under-glass walkable/navigation outline
 - center-left/right slope hard footprints
 - right-low floor polygon
@@ -402,3 +402,30 @@ Remaining XZ blockers:
 Current public post-7.2 references independently corroborate the topology already seen in the user's gameplay captures: Ver.7.2.0 added a tunnel / pass-through space below the raised central perch area for the relevant normal-PvP layouts.
 
 This raises **existence of the passage** to strong corroboration, but it does not provide the exact walkable/navigation polygon, support-column collision margins, or ceiling-clearance profile. Therefore `glass-underpass-outline` deliberately remains UNTRACED rather than inheriting the glass-top rectangle.
+
+
+## T21-B — spawn terrain / remaining topology checkpoint
+
+The exact white vector faces containing each spawn ring are now promoted as **spawn-side connected terrain envelopes**:
+
+- Team A and Team B XZ polygons are HIGH
+- each source face is ~1168.201 m² under the project transform
+- counterpart 180-degree residual is <0.03m
+- these regions are **not** one flat floor: they contain multiple elevations and transition subregions
+- the spawn-ring center remains the separate absolute-Y node
+
+The old trace-gate names `team-*-spawn-floor-outline` were therefore corrected to `team-*-spawn-terrain-outline`. This prevents later code from interpreting the source envelope as a constant-height floor.
+
+T21-B trace coverage is now **15 / 18 measured**.
+
+A new source-topology audit records why the final three XZ blockers cannot safely be extracted from the current 2D vector source alone:
+
+1. `right-low-floor-partition`
+   - the first-drop and right-small-drop hard edges both border the same spawn-side and central connected source faces
+   - the right-low elevation region therefore does not close into an independent PDF polygon
+2. `glass-underpass-walkable-outline`
+   - the PDF has the upper glass footprint but no independent lower-layer walkable/support-clearance polygon
+3. `internal-void-kill-boundaries`
+   - exterior silhouette and cyan water are exact, but overlapping upper/lower layers make some internal blank regions ambiguous between abyss and lower passage
+
+These three stay blocked rather than being created from convenience geometry.
