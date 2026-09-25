@@ -106,7 +106,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Lower Tunnels',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Must be traced independently from the glass top.'
+    notes: '2026-09-25 capture confirms traversal and solid support/wall exclusions; exact lower-layer walkable polygon still requires registration to the vector plan.'
   },
   {
     id: 'center-left-slope-footprint',
@@ -130,7 +130,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center / Right',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Absolute Y remains unresolved separately.'
+    notes: '2026-09-25 capture confirms the low/open floor, small-drop entry, ramp exit and same-level underpass connection; exact constant-height XZ partition still requires plan registration. Absolute Y remains unresolved separately.'
   },
   {
     id: 'center-grate-outline',
@@ -154,7 +154,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Outer Environment',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Mapped cyan water is exact, but the broader fall-out/void kill boundary remains unresolved.'
+    notes: 'Mapped cyan water is exact. Only still-ambiguous internal/off-stage gaps remain; any further user capture request must be provided with a marked-map guide.'
   }
 ];
 
