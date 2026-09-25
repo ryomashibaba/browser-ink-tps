@@ -1,3 +1,4 @@
+import { resolveVerticalConstraints } from '../measurement/VerticalConstraintGraph';
 import { UNDERTOW_COMMON_TRACE_PLAN } from './UndertowSpillwayTracePlan';
 import {
   UNDERTOW_VERTICAL_NODES,
@@ -32,12 +33,21 @@ const REQUIRED_TRACE_IDS = Object.freeze([
 
 const REQUIRED_ABSOLUTE_VERTICAL_IDS = Object.freeze([
   'center-low-floor',
+  'center-small-step-top',
   'team-a-spawn-floor',
   'team-b-spawn-floor',
   'team-a-first-drop-landing',
   'team-b-first-drop-landing',
   'right-low-floor',
-  'glass-lower-major-floor'
+  'right-small-drop-upper',
+  'glass-lower-major-floor',
+  'glass-overhang-high-reference',
+  'center-left-slope-low',
+  'center-left-slope-high',
+  'center-right-slope-low',
+  'center-right-slope-high',
+  'negative-z-grate-floor',
+  'positive-z-grate-floor'
 ] as const);
 
 const REQUIRED_EXACT_RELATION_KEYS = Object.freeze([
@@ -51,11 +61,14 @@ export function undertowBlockoutReadiness(): UndertowBlockoutReadiness {
     (id) => traceById.get(id)?.status !== 'MEASURED'
   );
 
-  const verticalById = new Map(UNDERTOW_VERTICAL_NODES.map((node) => [node.id, node]));
-  const unresolvedVerticalIds = REQUIRED_ABSOLUTE_VERTICAL_IDS.filter((id) => {
-    const node = verticalById.get(id);
-    return node?.absolute.yMeters === undefined;
-  });
+  const verticalResolution = resolveVerticalConstraints(
+    UNDERTOW_VERTICAL_NODES,
+    UNDERTOW_VERTICAL_RELATIONS,
+    'BLOCKOUT'
+  );
+  const unresolvedVerticalIds = REQUIRED_ABSOLUTE_VERTICAL_IDS.filter(
+    (id) => verticalResolution.values[id] === undefined
+  );
 
   const relationByKey = new Map(
     UNDERTOW_VERTICAL_RELATIONS.map((relation) => [
