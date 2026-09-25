@@ -10,7 +10,7 @@ describe('T21 Undertow blockout readiness gate', () => {
     expect(gate.missingTraceIds).not.toContain('center-low-floor-outline');
     expect(gate.missingTraceIds).not.toContain('center-small-step-outline');
     expect(gate.missingTraceIds).toContain('glass-underpass-outline');
-    expect(gate.missingTraceIds).toContain('center-left-slope-footprint');
+    expect(gate.missingTraceIds).not.toContain('center-left-slope-footprint');
     expect(gate.missingTraceIds).toContain('right-low-floor-outline');
     expect(gate.missingTraceIds).toContain('fall-out-void-kill-boundary');
 
