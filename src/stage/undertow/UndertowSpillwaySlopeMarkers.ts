@@ -6,7 +6,7 @@ export interface UndertowSlopeMarkerEnvelope {
   pdfRect: readonly [number, number, number, number];
   metricPolygon: readonly MetricXZ[];
   confidence: 'HIGH';
-  role: 'MARKER_ENVELOPE_ONLY';
+  role: 'SLOPE_SEMANTIC_FOOTPRINT' | 'MARKER_ENVELOPE_ONLY';
   notes: string;
 }
 
@@ -25,14 +25,15 @@ function rectToMetric(
 function marker(
   id: string,
   rect: readonly [number, number, number, number],
-  notes: string
+  notes: string,
+  role: UndertowSlopeMarkerEnvelope['role'] = 'MARKER_ENVELOPE_ONLY'
 ): UndertowSlopeMarkerEnvelope {
   return {
     id,
     pdfRect: rect,
     metricPolygon: rectToMetric(rect),
     confidence: 'HIGH',
-    role: 'MARKER_ENVELOPE_ONLY',
+    role,
     notes
   };
 }
@@ -48,12 +49,14 @@ export const UNDERTOW_CENTRAL_SLOPE_MARKERS = Object.freeze({
   left: marker(
     'center-left-slope-marker',
     [393.6, 312.36, 409.44, 369.84],
-    'Exact vector dash-field envelope centered near project X=-9.91m, Z=+0.35m; marker only, not the hard ramp boundary.'
+    'Exact vector dashed-hatch slope region centered near project X=-9.91m, Z=+0.35m. It defines the continuous slope footprint, not a hard wall.',
+    'SLOPE_SEMANTIC_FOOTPRINT'
   ),
   right: marker(
     'center-right-slope-marker',
     [432.48, 225.36, 448.32, 282.84],
-    'Near-180-degree counterpart centered near project X=+9.93m, Z=-0.36m.'
+    'Near-180-degree counterpart continuous slope footprint centered near project X=+9.93m, Z=-0.36m.',
+    'SLOPE_SEMANTIC_FOOTPRINT'
   ),
   negativeZGlass: marker(
     'negative-z-glass-slope-marker',
