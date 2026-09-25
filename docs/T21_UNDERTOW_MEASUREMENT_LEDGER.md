@@ -395,3 +395,10 @@ Remaining XZ blockers:
 - exact under-glass walkable/navigation outline
 - right-low floor outline
 - broader internal/off-stage fall-out/void kill boundary
+
+
+## Under-glass passage evidence boundary
+
+Current public post-7.2 references independently corroborate the topology already seen in the user's gameplay captures: Ver.7.2.0 added a tunnel / pass-through space below the raised central perch area for the relevant normal-PvP layouts.
+
+This raises **existence of the passage** to strong corroboration, but it does not provide the exact walkable/navigation polygon, support-column collision margins, or ceiling-clearance profile. Therefore `glass-underpass-outline` deliberately remains UNTRACED rather than inheriting the glass-top rectangle.
