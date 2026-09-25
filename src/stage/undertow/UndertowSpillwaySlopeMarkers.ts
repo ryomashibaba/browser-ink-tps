@@ -57,12 +57,12 @@ export const UNDERTOW_CENTRAL_SLOPE_MARKERS = Object.freeze({
   ),
   negativeZGlass: marker(
     'negative-z-glass-slope-marker',
-    [384.36, 244.9166666667, 418.92, 261.25],
+    [382.44, 244.92, 420.96, 261.24],
     'Slope dash field inside the negative-Z gray glass overhang face.'
   ),
   positiveZGlass: marker(
     'positive-z-glass-slope-marker',
-    [422.88, 334.0, 457.44, 350.25],
+    [420.96, 333.96, 459.48, 350.28],
     'Slope dash field inside the positive-Z gray glass overhang face.'
   )
 });
