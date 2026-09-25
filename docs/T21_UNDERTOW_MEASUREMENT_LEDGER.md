@@ -429,3 +429,16 @@ A new source-topology audit records why the final three XZ blockers cannot safel
    - exterior silhouette and cyan water are exact, but overlapping upper/lower layers make some internal blank regions ambiguous between abyss and lower passage
 
 These three stay blocked rather than being created from convenience geometry.
+
+
+## T21-C — center-side slope endpoint binding
+
+The center-facing edge of each central slope footprint coincides exactly with the outer edge of its corresponding +1.5m center-step strip in the vector plan:
+
+- negative/positive center step top: Y=+1.5m at BLOCKOUT confidence
+- center-left slope center-side endpoint: Y=+1.5m HIGH
+- center-right slope center-side endpoint: Y=+1.5m HIGH
+
+Only the center-side endpoints are resolved. The far/high endpoints remain UNKNOWN, so the slope grade and upper landing height are still not fabricated.
+
+The central dash regions are now typed as `SLOPE_SEMANTIC_FOOTPRINT`; the smaller dash fields inside the gray glass faces remain `MARKER_ENVELOPE_ONLY`. This prevents both kinds of dashed source notation from being treated identically.
