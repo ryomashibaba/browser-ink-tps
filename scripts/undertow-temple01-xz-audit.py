@@ -306,6 +306,16 @@ def project_to_model(p):
 def pdf_to_model(pt):
     return project_to_model(pdf_to_project(pt))
 
+def inside_poly(x,z,poly):
+    inside=False
+    j=len(poly)-1
+    for i in range(len(poly)):
+        xi,zi=poly[i]; xj,zj=poly[j]
+        if ((zi>z)!=(zj>z)) and (x < (xj-xi)*(z-zi)/(zj-zi+1e-30)+xi):
+            inside=not inside
+        j=i
+    return inside
+
 # T21-D construction audit: split the two multi-elevation spawn-side white
 # source faces into actual flat walkable Temple01 subregions instead of ever
 # flattening the whole vector envelope to the spawn-center Y.
@@ -416,16 +426,6 @@ for spawn_name,pdfpoly in SPAWN_SIDE_PDF.items():
                     f"area={polygon_area(hole):.3f} n={len(hr)} "
                     f"pts={[tuple(round(v,3) for v in p) for p in hr]}"
                 )
-
-def inside_poly(x,z,poly):
-    inside=False
-    j=len(poly)-1
-    for i in range(len(poly)):
-        xi,zi=poly[i]; xj,zj=poly[j]
-        if ((zi>z)!=(zj>z)) and (x < (xj-xi)*(z-zi)/(zj-zi+1e-30)+xi):
-            inside=not inside
-        j=i
-    return inside
 
 glass_polys={
     "POS_GLASS":[(420.96,327.36),(459.48,327.36),(459.48,364.92),(420.96,364.92)],
