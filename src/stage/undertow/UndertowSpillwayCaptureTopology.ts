@@ -20,6 +20,14 @@ export interface UndertowCapturedConnection {
   notes: string;
 }
 
+export interface UndertowCapturedHeightOrder {
+  lowerRegion: UndertowCapturedRegionId;
+  higherRegion: UndertowCapturedRegionId;
+  confidence: 'CONFIRMED';
+  evidenceIds: readonly string[];
+  notes: string;
+}
+
 export interface UndertowCapturedObstructionFact {
   region: UndertowCapturedRegionId;
   kind: 'SOLID_SUPPORT_OR_WALL';
@@ -30,19 +38,6 @@ export interface UndertowCapturedObstructionFact {
 
 export const UNDERTOW_CAPTURED_CONNECTIONS:
   readonly UndertowCapturedConnection[] = [
-    {
-      from: 'FIRST_DROP_OPEN_AREA',
-      to: 'RIGHT_SMALL_DROP_UPPER',
-      kind: 'SAME_LEVEL',
-      deltaYMeters: 0,
-      confidence: 'HIGH',
-      evidenceIds: [
-        'web-post-7-2-gameplay',
-        'user-right-low-capture-2026-09-25'
-      ],
-      notes:
-        'The current-layout open area immediately after the first drop is the upper floor from which the right-side small drop descends.'
-    },
     {
       from: 'RIGHT_SMALL_DROP_UPPER',
       to: 'RIGHT_LOW',
@@ -77,6 +72,18 @@ export const UNDERTOW_CAPTURED_CONNECTIONS:
       evidenceIds: ['user-right-low-capture-2026-09-25'],
       notes:
         'The right-low perimeter capture visibly contains a traversable ramp rising out of the low/open floor. The ramp high-end elevation remains unresolved.'
+    }
+  ];
+
+export const UNDERTOW_CAPTURED_HEIGHT_ORDER:
+  readonly UndertowCapturedHeightOrder[] = [
+    {
+      lowerRegion: 'FIRST_DROP_OPEN_AREA',
+      higherRegion: 'RIGHT_LOW',
+      confidence: 'CONFIRMED',
+      evidenceIds: ['user-first-drop-height-stills-2026-09-26'],
+      notes:
+        'The user-provided 2026-09-26 still pair and direct in-game observation show that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. Shared XZ adjacency must not be converted into a same-Y relation.'
     }
   ];
 
