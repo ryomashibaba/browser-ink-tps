@@ -2115,3 +2115,17 @@ Canonical result:
 - the superseded three-terrace interpretation remains forbidden
 
 T21-D stays gated. No replacement capture is requested until a truthful side-registration guide is prepared.
+
+
+## T21-C current model identity / external geometry gate — 2026-09-26
+
+Current remodeled Undertow identity is now source-locked:
+
+- scene: `Vss_Temple01`
+- model: `Model/Fld_Temple01.bfres`
+- `Vss_Temple00` / `Fld_Temple00.bfres` = pre-remodel only
+- `Vss_Nagasaki03` / `Fld_Nagasaki03.bfres` = Sturgeon Shipyard; forbidden as Undertow geometry
+
+Public current-model artifacts exist, including a KiTrix `Vss_Temple01` OBJ/MTL export and Temple01 actor definitions / rule-layer path references, but no metric vertex or Translate payload has yet been read in this audit. File names, material names, LFS pointers and class definitions are not geometry evidence.
+
+The next evidence priority is current Temple01 metric geometry, not another gameplay capture. T21-D remains gated and runtime geometry remains unchanged.
