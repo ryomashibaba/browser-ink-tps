@@ -1845,8 +1845,8 @@ New canonical research layer:
 - first spawn-side descent frozen as `ONE_WAY_DROP`; no slope/stairs/bidirectional or invisible CPU ramp
 - center-low reference floor frozen at Y=0
 - 20px/m and 1.5m vertical grid retained as HIGH rather than official/confirmed dimensions
-- spawn absolute Y remains UNKNOWN
-- ~146x87m outer extent remains PROVISIONAL
+- spawn absolute Y is now HIGH at project Y=6.0 from locally registered remodeled Temple01 geometry
+- the later vector outer-silhouette measurement supersedes the old ~146x87m provisional envelope
 
 T21-B may convert the Turf map to metric XZ polygons using this ledger, but it must not promote PROVISIONAL/UNKNOWN dimensions without new evidence.
 
