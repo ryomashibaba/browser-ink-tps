@@ -72,7 +72,9 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT:
         'KiTrix contains stages/Vss_Temple01/Vss_Temple01.obj as a Git LFS object with declared size 43,263,289 bytes.',
         'Its MTL contains Fld_Temple01 and FldObj_Temple01 material/model names, including PntSet/VarSet/VclSet/VglSet/VlfSet families.',
         'KiTrix Bfres2Obj derives the output folder name by replacing Fld_ with Vss_ on the BFRES input filename.',
-        'The converter applies BFRES bone world transforms and then writes X/Y/Z vertex coordinates directly to OBJ without a custom scale or axis swap.'
+        'The converter applies BFRES bone world transforms and then writes X/Y/Z vertex coordinates directly to OBJ without a custom scale or axis swap.',
+        'KiTrix StageLoader adds OBJ child nodes directly beneath a new stage node without an extra stage scale, rotation or translation.',
+        'KiTrixScene adds that stage node directly to the scene root and computes bounds from it; StageCollider raycasts that same stage node.'
       ],
       blocker:
         'The Git LFS object body is not retrievable in the current audit environment, so no vertex, plane, or floor Y may be promoted from this source yet.'
