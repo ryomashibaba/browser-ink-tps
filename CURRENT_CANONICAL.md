@@ -2100,3 +2100,18 @@ Corrected evidence state:
 - no replacement vertical capture is request-ready until the visible guide sides are independently registered to canonical 3D floor nodes
 
 The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request remains only as an invalidated audit record. PR #5 remains Draft / unmerged and T21-D remains gated.
+
+
+## T21-C line-side semantic audit — 2026-09-26
+
+The red/blue marked-guide correction was re-audited against all existing local evidence.
+
+Canonical result:
+- vector-line geometry identities remain HIGH
+- side-of-line canonical floor identities are UNRESOLVED
+- red-guide-side < blue-guide-side is retained only as user-observed guide-side ordering
+- no canonical floor-to-floor ordering or Y edge is created from that observation
+- first-drop video, right-low capture and current-layout description are insufficient to register both line sides in one common 3D frame
+- the superseded three-terrace interpretation remains forbidden
+
+T21-D stays gated. No replacement capture is requested until a truthful side-registration guide is prepared.
