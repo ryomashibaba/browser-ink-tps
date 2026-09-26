@@ -8,6 +8,11 @@ import type {
   XzMeasurement
 } from '../measurement/StageMeasurementLedger';
 import { UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER } from './UndertowSpillwayMeasurementLedger';
+import {
+  UNDERTOW_MODEL_XZ_GEOMETRY,
+  UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT,
+  type UndertowModelXZGeometryId
+} from './UndertowSpillwayModelXZGeometry';
 
 export type UndertowRuntimeSurfaceDisposition =
   | 'FLAT_POLYGON_READY'
@@ -147,5 +152,69 @@ export function undertowRuntimeSurfacePlanErrors(): readonly string[] {
     }
   }
 
+  if (UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN.length !== 4) {
+    errors.push('spawn-side derived runtime plan must contain exactly four locally anchored flat components');
+  }
+  for (const item of UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN) {
+    if (
+      !Number.isFinite(item.yMeters) ||
+      item.paintAuthority !== 'UNKNOWN' ||
+      item.polygonCount !== 1
+    ) {
+      errors.push(`${item.id}: invalid locally derived runtime surface contract`);
+    }
+  }
+  if (
+    UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT.spawnHighMirrorXorCells !== 0 ||
+    UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT.firstDropLandingMirrorXorCells !== 0
+  ) {
+    errors.push('spawn-side locally derived runtime geometry lost exact raw-mask symmetry');
+  }
+
   return errors;
+}
+
+
+export interface UndertowDerivedRuntimeSurfacePlanItem {
+  id: UndertowModelXZGeometryId;
+  source: 'TEMPLE01_LOCAL_COMPONENT';
+  collisionReady: true;
+  paintAuthority: 'UNKNOWN';
+  yMeters: number;
+  polygonCount: 1;
+  holeCount: number;
+  notes: string;
+}
+
+const DERIVED_RUNTIME_GEOMETRY_IDS = new Set<UndertowModelXZGeometryId>([
+  'spawn-high-positive-z',
+  'spawn-high-negative-z',
+  'first-drop-landing-positive-z',
+  'first-drop-landing-negative-z'
+]);
+
+export const UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN:
+  readonly UndertowDerivedRuntimeSurfacePlanItem[] =
+  UNDERTOW_MODEL_XZ_GEOMETRY
+    .filter((item) => DERIVED_RUNTIME_GEOMETRY_IDS.has(item.id))
+    .map((item) => ({
+      id: item.id,
+      source: 'TEMPLE01_LOCAL_COMPONENT' as const,
+      collisionReady: true as const,
+      paintAuthority: 'UNKNOWN' as const,
+      yMeters: item.sourceYProjectMeters,
+      polygonCount: 1 as const,
+      holeCount: item.projectHoles.length,
+      notes:
+        'Derived from a locally anchored Temple01 flat component. It may become collision/render geometry at BLOCKOUT confidence, but no paint authority is inferred from geometry alone.'
+    }));
+
+export function undertowDerivedRuntimeSurfacePlanItem(
+  id: UndertowModelXZGeometryId
+): UndertowDerivedRuntimeSurfacePlanItem {
+  const item = UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN.find(
+    (candidate) => candidate.id === id
+  );
+  if (!item) throw new Error(`Unknown derived Undertow runtime surface plan id '${id}'.`);
+  return item;
 }

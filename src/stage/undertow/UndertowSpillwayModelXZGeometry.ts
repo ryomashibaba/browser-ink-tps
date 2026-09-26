@@ -7,7 +7,11 @@ export type UndertowModelXZGeometryId =
   | 'right-low-team-a'
   | 'right-low-team-b'
   | 'glass-underpass-positive-z'
-  | 'glass-underpass-negative-z';
+  | 'glass-underpass-negative-z'
+  | 'spawn-high-positive-z'
+  | 'spawn-high-negative-z'
+  | 'first-drop-landing-positive-z'
+  | 'first-drop-landing-negative-z';
 
 export interface UndertowModelXZPolygon {
   id: UndertowModelXZGeometryId;
@@ -175,6 +179,76 @@ const GLASS_UNDERPASS_POSITIVE_Z_HOLES: readonly (readonly MetricXZ[])[] = [
   ]
 ] as const;
 
+const SPAWN_HIGH_POSITIVE_Z_MODEL: readonly MetricXZ[] = [
+  [-35.562, 40.312],
+  [-30.562, 40.312],
+  [-30.562, 40.062],
+  [-29.938, 40.062],
+  [-29.938, 40.438],
+  [-25.438, 40.438],
+  [-25.438, 49.438],
+  [-19.438, 49.438],
+  [-19.438, 56.938],
+  [-7.438, 56.938],
+  [-7.438, 61.438],
+  [5.562, 61.562],
+  [-7.438, 61.562],
+  [-7.312, 70.062],
+  [-26.812, 70.062],
+  [-35.562, 61.312]
+] as const;
+
+const SPAWN_HIGH_POSITIVE_Z_HOLES: readonly (readonly MetricXZ[])[] = [
+  [
+    [-15.188, 59.062],
+    [-15.188, 61.688],
+    [-8.562, 61.688],
+    [-8.562, 59.062]
+  ],
+  [
+    [-23.812, 52.062],
+    [-23.812, 53.688],
+    [-21.812, 53.688],
+    [-21.812, 52.062]
+  ]
+] as const;
+
+const FIRST_DROP_LANDING_POSITIVE_Z_MODEL: readonly MetricXZ[] = [
+  [-25.562, 40.188],
+  [-25.312, 39.938],
+  [-25.188, 40.188],
+  [-19.812, 40.188],
+  [-19.812, 39.938],
+  [-19.438, 40.188],
+  [-19.438, 49.562],
+  [-25.562, 49.562]
+] as const;
+
+export const UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT = Object.freeze({
+  rasterStepMeters: 0.125,
+  simplifyToleranceMeters: 0.2,
+  spawnHighModelY: 10.5,
+  spawnHighProjectY: 7.5,
+  spawnHighCellsPerSide: 33594,
+  spawnHighAreaSquareMetersPerSide: 33594 * 0.125 * 0.125,
+  spawnHighHoleCountPerSide: 2,
+  spawnHighMirrorXorCells: 0,
+  firstDropLandingModelY: 6,
+  firstDropLandingProjectY: 3,
+  firstDropLandingCellsPerSide: 3746,
+  firstDropLandingAreaSquareMetersPerSide: 3746 * 0.125 * 0.125,
+  firstDropLandingHoleCountPerSide: 0,
+  firstDropLandingMirrorXorCells: 0,
+  confidence: 'HIGH' as const,
+  evidenceIds: [
+    'extracted-temple01-geometry',
+    'user-turf-vector-blueprint',
+    'user-first-drop-video'
+  ] as const,
+  notes:
+    'CI #648 seeds only from locally verified spawn-center / first-drop anchors, floods the matching Temple01 flat walkable components at 0.125m, and confirms exact raw-mask 180-degree symmetry. The global spawn-side vector envelope is not used as a blanket OBJ clipping mask.'
+});
+
 export const UNDERTOW_UNDERPASS_NAV_AUDIT = Object.freeze({
   sourceYModelMeters: 3,
   sourceYProjectMeters: 0,
@@ -261,6 +335,38 @@ export const UNDERTOW_MODEL_XZ_GEOMETRY:
       0.15
     ),
     polygon(
+      'spawn-high-positive-z',
+      10.5,
+      7.5,
+      SPAWN_HIGH_POSITIVE_Z_MODEL,
+      SPAWN_HIGH_POSITIVE_Z_HOLES,
+      'Temple01 model-Y=10.5 flat spawn-side component seeded from the locally verified positive-Z spawn center. The raw 0.125m component is exactly 180-degree symmetric with its counterpart.'
+    ),
+    polygon(
+      'spawn-high-negative-z',
+      10.5,
+      7.5,
+      mirror180(SPAWN_HIGH_POSITIVE_Z_MODEL),
+      SPAWN_HIGH_POSITIVE_Z_HOLES.map(mirror180),
+      'Exact 180-degree counterpart generated from the audited positive-Z spawn-high component rather than preserving an RDP-side vertex-count difference.'
+    ),
+    polygon(
+      'first-drop-landing-positive-z',
+      6,
+      3,
+      FIRST_DROP_LANDING_POSITIVE_Z_MODEL,
+      [],
+      'Temple01 model-Y=6.0 first-drop landing component seeded only from the locally registered positive-Z first-drop lip.'
+    ),
+    polygon(
+      'first-drop-landing-negative-z',
+      6,
+      3,
+      mirror180(FIRST_DROP_LANDING_POSITIVE_Z_MODEL),
+      [],
+      'Exact 180-degree counterpart of the positive-Z first-drop landing component; CI #648 raw-mask XOR is zero.'
+    ),
+    polygon(
       'right-low-team-a',
       7.5,
       4.5,
@@ -315,6 +421,42 @@ export function undertowModelXZGeometryAuditErrors(): readonly string[] {
     UNDERTOW_UNDERPASS_NAV_AUDIT.mirrorXorCells !== 0
   ) {
     errors.push('glass-underpass navigable masks must remain exact 180-degree counterparts');
+  }
+  const spawnHigh = UNDERTOW_MODEL_XZ_GEOMETRY.filter((item) =>
+    item.id.startsWith('spawn-high-')
+  );
+  if (
+    spawnHigh.length !== 2 ||
+    spawnHigh.some(
+      (item) =>
+        item.sourceYModelMeters !== 10.5 ||
+        item.sourceYProjectMeters !== 7.5 ||
+        item.modelHoles.length !== 2
+    )
+  ) {
+    errors.push('spawn-high contours must remain the two audited Y=10.5 / project-Y=7.5 components with two holes each');
+  }
+
+  const firstDropLanding = UNDERTOW_MODEL_XZ_GEOMETRY.filter((item) =>
+    item.id.startsWith('first-drop-landing-')
+  );
+  if (
+    firstDropLanding.length !== 2 ||
+    firstDropLanding.some(
+      (item) =>
+        item.sourceYModelMeters !== 6 ||
+        item.sourceYProjectMeters !== 3 ||
+        item.modelHoles.length !== 0
+    )
+  ) {
+    errors.push('first-drop landing contours must remain the two audited Y=6.0 / project-Y=3.0 components');
+  }
+
+  if (
+    UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT.spawnHighMirrorXorCells !== 0 ||
+    UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT.firstDropLandingMirrorXorCells !== 0
+  ) {
+    errors.push('spawn-side flat components must remain exact 180-degree raw-mask counterparts');
   }
   if (REG.locallyVerifiedMaxNearestDiscontinuityMeters > 0.5) {
     errors.push('local Temple01 registration no longer satisfies the 0.5m audit raster gate');

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN,
+  undertowDerivedRuntimeSurfacePlanItem,
   undertowRuntimeSurfacePlanErrors,
   undertowRuntimeSurfacePlanItem
 } from './UndertowSpillwayRuntimeBlockoutPlan';
@@ -43,6 +45,37 @@ describe('T21-D runtime blockout surface plan', () => {
       paintAuthority: 'UNINKABLE',
       yMeters: 7.4,
       polygonCount: 1
+    });
+  });
+
+  it('admits only locally anchored spawn subregions as derived collision geometry', () => {
+    expect(UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN).toHaveLength(4);
+    expect(undertowDerivedRuntimeSurfacePlanItem('spawn-high-positive-z')).toMatchObject({
+      source: 'TEMPLE01_LOCAL_COMPONENT',
+      collisionReady: true,
+      paintAuthority: 'UNKNOWN',
+      yMeters: 7.5,
+      polygonCount: 1,
+      holeCount: 2
+    });
+    expect(undertowDerivedRuntimeSurfacePlanItem('spawn-high-negative-z')).toMatchObject({
+      yMeters: 7.5,
+      holeCount: 2
+    });
+    expect(
+      undertowDerivedRuntimeSurfacePlanItem('first-drop-landing-positive-z')
+    ).toMatchObject({
+      collisionReady: true,
+      paintAuthority: 'UNKNOWN',
+      yMeters: 3,
+      polygonCount: 1,
+      holeCount: 0
+    });
+    expect(
+      undertowDerivedRuntimeSurfacePlanItem('first-drop-landing-negative-z')
+    ).toMatchObject({
+      yMeters: 3,
+      holeCount: 0
     });
   });
 
