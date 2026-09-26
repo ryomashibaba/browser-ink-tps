@@ -50,6 +50,7 @@ interface PolygonComponent {
   yMeters: number;
   material: StageSolidDefinition['material'];
   paintable: boolean;
+  collisionBehavior?: StageSolidDefinition['collisionBehavior'];
 }
 
 function ledgerEntry(id: string): StageMeasurementEntry {
@@ -63,7 +64,8 @@ function ledgerEntry(id: string): StageMeasurementEntry {
 function ledgerPolygonComponents(
   id: string,
   material: StageSolidDefinition['material'],
-  paintable: boolean
+  paintable: boolean,
+  collisionBehavior?: StageSolidDefinition['collisionBehavior']
 ): readonly PolygonComponent[] {
   const entry = ledgerEntry(id);
   const yMeters = exactYForGeometry(entry.y, 'BLOCKOUT');
@@ -81,7 +83,8 @@ function ledgerPolygonComponents(
     holes: component.holesMeters ?? [],
     yMeters,
     material,
-    paintable
+    paintable,
+    collisionBehavior
   }));
 }
 
@@ -133,6 +136,18 @@ const components: readonly PolygonComponent[] = [
     'center-origin-step-top-face',
     'medium',
     true
+  ),
+  ...ledgerPolygonComponents(
+    'negative-z-grate-mesh',
+    'accent',
+    false,
+    'GRATE'
+  ),
+  ...ledgerPolygonComponents(
+    'positive-z-grate-mesh',
+    'accent',
+    false,
+    'GRATE'
   )
 ];
 
@@ -164,8 +179,6 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     teamASpawnFloorPoint: [spawnA[0], 7.5, spawnA[1]] as const,
     teamBSpawnFloorPoint: [spawnB[0], 7.5, spawnB[1]] as const,
     deferredFeatureIds: [
-      'negative-z-grate-mesh',
-      'positive-z-grate-mesh',
       'center-slope',
       'upper-glass-platform',
       'team-a-upper-glass-overhang',
@@ -177,7 +190,6 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
       'SLOPE_RUNTIME_GEOMETRY_PENDING',
       'UPPER_GLASS_SLOPE_RUNTIME_PENDING',
       'WATER_KILL_RUNTIME_PENDING',
-      'GRATE_STAGE_SOLID_BINDING_PENDING',
       'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING',
       'TURF_SCOREABLE_MASK_PENDING',
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
@@ -212,6 +224,7 @@ function buildFlatComponent(component: PolygonComponent): {
     render: true,
     projectileBlocker: true,
     cameraBlocker: true,
+    collisionBehavior: component.collisionBehavior,
     footprint
   };
 

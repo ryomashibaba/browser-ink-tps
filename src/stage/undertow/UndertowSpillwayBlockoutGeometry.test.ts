@@ -19,13 +19,13 @@ describe('T21-D partial Undertow blockout geometry', () => {
 
   it('contains only the currently safe flat components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(11);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(13);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(5);
-    expect(
-      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.some(
-        (solid) => solid.collisionBehavior === 'GRATE'
-      )
-    ).toBe(false);
+    const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
+      (solid) => solid.collisionBehavior === 'GRATE'
+    );
+    expect(grates).toHaveLength(2);
+    expect(grates.every((solid) => solid.id.includes('grate-mesh'))).toBe(true);
   });
 
   it('keeps the audited top elevations while extruding only downward', () => {
@@ -82,8 +82,6 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds
     ).toEqual(expect.arrayContaining([
-      'negative-z-grate-mesh',
-      'positive-z-grate-mesh',
       'center-slope',
       'upper-glass-platform',
       'team-a-water-region',
