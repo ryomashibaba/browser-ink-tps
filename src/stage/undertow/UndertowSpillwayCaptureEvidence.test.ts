@@ -12,7 +12,7 @@ describe('T21 user capture evidence', () => {
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
       .toBe('RIGHT_LOW');
     expect(undertowCaptureEvidence('user-first-drop-height-stills-2026-09-26').region)
-      .toBe('FIRST_DROP_HEIGHT_ORDER');
+      .toBe('GUIDE_LINE_SIDE_HEIGHT_ORDER');
   });
 
   it('confirms the same-height right-low -> underpass walking connection', () => {
