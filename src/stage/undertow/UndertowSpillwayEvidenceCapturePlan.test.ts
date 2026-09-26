@@ -10,7 +10,7 @@ import { unresolvedUndertowSourceTopologyLimits } from './UndertowSpillwaySource
 import { undertowConcreteVoidCaptureRegionIds } from './UndertowSpillwayVoidAmbiguity';
 
 describe('T21 Undertow targeted evidence capture plan', () => {
-  it('keeps the three source-topology gaps but does not request received captures again', () => {
+  it('keeps received captures retired while only underpass and void topology remain unresolved', () => {
     expect(undertowReceivedCaptureIds()).toEqual([
       'RIGHT_LOW_PARTITION',
       'GLASS_UNDERPASS_CLEARANCE'
@@ -27,7 +27,6 @@ describe('T21 Undertow targeted evidence capture plan', () => {
       )?.status
     ).toBe('DEFERRED_PENDING_MAP_ENUMERATION');
     expect(unresolvedUndertowSourceTopologyLimits()).toEqual([
-      'right-low-floor-partition',
       'glass-underpass-walkable-outline',
       'internal-void-kill-boundaries'
     ]);
@@ -41,6 +40,7 @@ describe('T21 Undertow targeted evidence capture plan', () => {
     expect(allBlocks).not.toContain('mapped-water-hazard-polygons');
     expect(allBlocks).not.toContain('upper-glass-platform-outline');
     expect(allBlocks).not.toContain('first-drop-lip');
+    expect(allBlocks).not.toContain('right-low-floor-outline');
   });
 
   it('requires a marked-map guide for every future capture request', () => {
