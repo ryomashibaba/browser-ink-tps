@@ -364,6 +364,35 @@ for name,pdfpoly in glass_polys.items():
         f"height_hist={sorted(hist.items())}"
     )
     print(f"T21GLASS SUPPORT {name} mats={sorted(support_mats.items(),key=lambda x:-x[1])[:15]}")
+
+    overlaps={}
+    for ia,ib,ic,o,m in faces:
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if not inside_poly(cx,cz,poly):
+            continue
+        ys=[v[1] for v in tri]
+        if max(ys)<2.8 or min(ys)>14.0:
+            continue
+        s=overlaps.setdefault((o,m),{"n":0,"xs":[],"zs":[],"ys":[]})
+        s["n"]+=1
+        s["xs"].extend(v[0] for v in tri)
+        s["zs"].extend(v[2] for v in tri)
+        s["ys"].extend(ys)
+    rows=[]
+    for (o,m),s in overlaps.items():
+        rows.append((
+            s["n"],o,m,min(s["xs"]),max(s["xs"]),
+            min(s["zs"]),max(s["zs"]),min(s["ys"]),max(s["ys"])
+        ))
+    rows.sort(reverse=True)
+    for n,o,m,x0,x1,z0,z1,y0,y1 in rows[:35]:
+        print(
+            f"T21GLASS OBJ {name} n={n} obj={o} mat={m} "
+            f"x=({x0:.3f},{x1:.3f}) z=({z0:.3f},{z1:.3f}) y=({y0:.3f},{y1:.3f})"
+        )
+
     loops=boundary_loops(cells_y3)
     loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
     for i,loop in enumerate(loops[:8]):
