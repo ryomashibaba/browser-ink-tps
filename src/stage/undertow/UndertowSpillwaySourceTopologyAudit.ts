@@ -29,7 +29,7 @@ export const UNDERTOW_SOURCE_TOPOLOGY_LIMITS: readonly UndertowSourceTopologyLim
     id: 'glass-underpass-walkable-outline',
     status: 'PLAN_REGISTERED_POLYGON_UNRESOLVED',
     reason:
-      'The 2026-09-25 underpass capture is now registered beneath the measured positive-Z glass-overhang footprint. Traversal, solid support/wall exclusions and the same-height connection to right-low are confirmed, but the PDF has no independent lower-layer support/clearance outline and the perspective clip cannot supply unique metric corner offsets.',
+      'The 2026-09-25 underpass capture is registered beneath the measured positive-Z glass-overhang footprint. Traversal and solid support/wall exclusions are confirmed; Temple01 separately resolves the roofed lower floor at model Y=3.0m. The PDF has no independent lower-layer support/clearance outline and the perspective clip cannot supply unique metric corner offsets or an equal-Y claim to right-low.',
     safeToUseForBlockout: false
   },
   {

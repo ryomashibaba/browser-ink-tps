@@ -25,7 +25,7 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
       facts: [
         'The covered lower passage is traversable in current normal-PvP geometry.',
         'The passage has solid support/wall geometry that must be separated from the walkable floor.',
-        'The passage exits directly onto the adjacent low/open floor without a visible step or drop.'
+        'The passage is traversably connected to the adjacent low/open route; the perspective clip does not establish an exact canonical floor-to-floor Y delta.'
       ]
     },
     {
@@ -39,7 +39,7 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'The right-low area is a traversable low/open floor with grass and hard-edge boundaries.',
         'The measured small drop descends into this low/open floor.',
         'At least one ramp rises out of the right-low floor.',
-        'The right-low floor connects directly into the covered underpass at the same walking elevation.'
+        'The right-low route connects into the covered underpass; the perspective clip establishes connectivity, not equal canonical floor Y.'
       ]
     },
     {

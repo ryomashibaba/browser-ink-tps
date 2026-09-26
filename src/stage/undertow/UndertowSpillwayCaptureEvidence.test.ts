@@ -15,11 +15,12 @@ describe('T21 user capture evidence', () => {
       .toBe('GUIDE_LINE_SIDE_HEIGHT_ORDER');
   });
 
-  it('confirms the same-height right-low -> underpass walking connection', () => {
+  it('confirms traversal continuity without promoting a metric Y equality', () => {
     const rightLow = undertowCaptureEvidence('user-right-low-capture-2026-09-25');
     const underpass = undertowCaptureEvidence('user-underpass-capture-2026-09-25');
-    expect(rightLow.facts.join(' ')).toContain('same walking elevation');
-    expect(underpass.facts.join(' ')).toContain('without a visible step or drop');
+    expect(rightLow.facts.join(' ')).toContain('connects into the covered underpass');
+    expect(rightLow.facts.join(' ')).toContain('not equal canonical floor Y');
+    expect(underpass.facts.join(' ')).toContain('does not establish an exact canonical floor-to-floor Y delta');
   });
 
   it('uses the new stills only for qualitative ordering, not a metric delta', () => {

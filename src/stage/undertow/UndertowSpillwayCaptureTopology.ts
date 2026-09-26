@@ -6,7 +6,7 @@ export type UndertowCapturedRegionId =
   | 'RIGHT_LOW_RAMP_EXIT';
 
 export type UndertowCapturedConnectionKind =
-  | 'SAME_LEVEL'
+  | 'TRAVERSABLE_CONNECTION'
   | 'DROP'
   | 'SLOPE';
 
@@ -46,15 +46,14 @@ export const UNDERTOW_CAPTURED_CONNECTIONS:
     {
       from: 'RIGHT_LOW',
       to: 'GLASS_UNDERPASS',
-      kind: 'SAME_LEVEL',
-      deltaYMeters: 0,
+      kind: 'TRAVERSABLE_CONNECTION',
       confidence: 'HIGH',
       evidenceIds: [
         'user-right-low-capture-2026-09-25',
         'user-underpass-capture-2026-09-25'
       ],
       notes:
-        'Both captures show a continuous walking connection with no visible step/drop between the right-low floor and the covered lower passage.'
+        'Both captures establish traversable route continuity between the right-low area and the covered lower passage. Perspective traversal does not measure equal canonical floor Y; Temple01 local geometry resolves those elevations separately.'
     },
     {
       from: 'RIGHT_LOW',

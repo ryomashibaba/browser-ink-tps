@@ -31,7 +31,7 @@ describe('T21-C Undertow vertical reconstruction', () => {
       'team-b-first-drop-landing': 3,
       'right-low-floor': 4.5,
       'right-small-drop-upper': 7.5,
-      'glass-lower-major-floor': 4.5,
+      'glass-lower-major-floor': 0,
       'glass-overhang-high-reference': 7.5
     });
   });
@@ -89,11 +89,12 @@ describe('T21-C Undertow vertical reconstruction', () => {
     expect(result.values).toEqual({ 'center-low-floor': 0 });
   });
 
-  it('never exposes the slope-marked glass overhang as a single intrinsic flat-platform absolute node', () => {
+  it('stores the glass high endpoint without flattening the slope-marked glass footprint', () => {
     const glassNode = UNDERTOW_VERTICAL_NODES.find(
       (node) => node.id === 'glass-overhang-high-reference'
     );
-    expect(glassNode?.absolute.yMeters).toBeUndefined();
+    expect(glassNode?.absolute.yMeters).toBe(7.5);
+    expect(glassNode?.absolute.confidence).toBe('HIGH');
     expect(glassNode?.absolute.notes).toContain('not a single flat platform Y');
   });
 

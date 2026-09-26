@@ -9,11 +9,6 @@ const handoff = ['handoff-t21-masterplan'] as const;
 const center = ['user-center-stills', 'user-center-videos', 'web-post-7-2-gameplay'] as const;
 const firstDrop = ['user-first-drop-video', 'handoff-t21-masterplan'] as const;
 const remodelGeometry = ['extracted-temple01-geometry', 'user-turf-vector-blueprint'] as const;
-const underpassCapture = [
-  'user-right-low-capture-2026-09-25',
-  'user-underpass-capture-2026-09-25'
-] as const;
-
 export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
   {
     id: 'center-low-floor',
@@ -56,17 +51,20 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
     id: 'glass-lower-major-floor',
     absolute: {
       floorId: 'GLASS_LOWER',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.glassUnderpassFloor,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Temple01 local glass-underpass extraction resolves the roofed walkable floor to model Y=3.0m / project Y=0. Capture footage confirms traversal but is not used as a metric Y measurement.'
     }
   },
   {
     id: 'glass-overhang-high-reference',
     absolute: {
       floorId: 'GLASS_HIGH_REFERENCE',
-      confidence: 'UNKNOWN',
-      evidenceIds: [],
-      notes: 'Reference elevation only. The vector source contains slope markers inside the glass footprint, so this is not a single flat platform Y.'
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.glassOverhangHighReference,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Temple01 Glass01/BridgeMetal reaches model Y=10.5m / project Y=7.5m. This is a reference endpoint only: the vector source contains slope markers inside the glass footprint, so it is not a single flat platform Y.'
     }
   },
   {
@@ -187,18 +185,18 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
   exactRelation(
     'right-low-floor',
     'glass-lower-major-floor',
-    0,
+    UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.deltas.rightLowToGlassUnderpassMeters,
     'HIGH',
-    underpassCapture,
-    'The 2026-09-25 right-low and underpass captures show a continuous same-height walking connection with no intervening step/drop.'
+    remodelGeometry,
+    'Temple01 local geometry resolves right-low model Y=7.5m and the roofed glass-underpass floor model Y=3.0m. The captures establish traversable route continuity only, not equal physical Y.'
   ),
   exactRelation(
     'glass-lower-major-floor',
     'glass-overhang-high-reference',
-    3,
+    UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.deltas.glassUnderpassToHighReferenceMeters,
     'HIGH',
-    handoff,
-    'Glass overhang high reference is about 3m above the major floor directly below; do not flatten the slope-marked glass footprint.'
+    remodelGeometry,
+    'Temple01 local geometry resolves the underpass floor at model Y=3.0m and the Glass01/BridgeMetal high reference at model Y=10.5m. The high reference remains an endpoint, not a flat glass-plane Y.'
   ),
   exactRelation(
     'center-left-slope-low',

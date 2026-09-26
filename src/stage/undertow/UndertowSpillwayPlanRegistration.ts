@@ -40,7 +40,7 @@ export const UNDERTOW_PLAN_REGISTRATIONS:
       safeToPromoteTrace: false,
       registeredFacts: [
         'The capture starts at the measured Team A right-small-drop lip shown by the marked capture guide.',
-        'The clip classifies the destination as the right-low open/grass floor, including a traversable ramp exit and a same-height connection into the glass underpass.'
+        'The clip classifies the destination as the right-low open/grass floor, including a traversable ramp exit and route continuity into the glass underpass. It does not metrically establish equal floor Y.'
       ],
       unresolvedBecause: [
         'The clip is perspective-only and does not expose a second independent measured plan anchor with enough geometric precision to solve every perimeter corner.',
@@ -59,7 +59,7 @@ export const UNDERTOW_PLAN_REGISTRATIONS:
       safeToPromoteTrace: false,
       registeredFacts: [
         'The marked route crosses beneath the measured positive-Z glass-overhang footprint.',
-        'The clip confirms traversal through the covered lower layer, solid support/wall exclusions, and a step-free exit onto the right-low floor.'
+        'The clip confirms traversal through the covered lower layer and solid support/wall exclusions, plus route continuity toward the right-low area. Exact canonical Y is supplied by Temple01 rather than perspective footage.'
       ],
       unresolvedBecause: [
         'The vector PDF contains the upper glass projection but no independent lower-layer support/clearance outline.',

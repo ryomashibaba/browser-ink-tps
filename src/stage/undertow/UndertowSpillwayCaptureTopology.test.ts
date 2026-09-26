@@ -28,16 +28,15 @@ describe('T21 captured layered topology', () => {
   });
 
 
-  it('records the same-height right-low -> underpass connection', () => {
-    expect(
-      UNDERTOW_CAPTURED_CONNECTIONS.find(
-        (item) => item.from === 'RIGHT_LOW' && item.to === 'GLASS_UNDERPASS'
-      )
-    ).toMatchObject({
-      kind: 'SAME_LEVEL',
-      deltaYMeters: 0,
+  it('records right-low -> underpass as non-metric traversal continuity', () => {
+    const connection = UNDERTOW_CAPTURED_CONNECTIONS.find(
+      (item) => item.from === 'RIGHT_LOW' && item.to === 'GLASS_UNDERPASS'
+    );
+    expect(connection).toMatchObject({
+      kind: 'TRAVERSABLE_CONNECTION',
       confidence: 'HIGH'
     });
+    expect(connection?.deltaYMeters).toBeUndefined();
   });
 
   it('keeps the visible right-low ramp without inventing its high-end Y', () => {

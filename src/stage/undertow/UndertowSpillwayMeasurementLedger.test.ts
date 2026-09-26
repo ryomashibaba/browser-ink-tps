@@ -115,7 +115,7 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(underpass.xz.kind).toBe('UNRESOLVED');
     expect(rightLow.y.yMeters).toBe(4.5);
     expect(rightLow.y.confidence).toBe('HIGH');
-    expect(underpass.y).toMatchObject({ yMeters: 4.5, confidence: 'HIGH' });
+    expect(underpass.y).toMatchObject({ yMeters: 0, confidence: 'HIGH' });
   });
 
   it('records the audited remodeled Temple01 geometry source explicitly', () => {

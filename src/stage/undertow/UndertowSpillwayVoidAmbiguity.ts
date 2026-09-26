@@ -69,7 +69,7 @@ export const UNDERTOW_VOID_AMBIGUITY_AUDIT: UndertowVoidAmbiguityAudit = {
         'user-underpass-capture-2026-09-25'
       ],
       notes:
-        'Both received clips show a continuous same-height walking connection. This overlap must not be classified as an internal abyss.'
+        'Both received clips show continuous traversable route connectivity. This overlap must not be classified as an internal abyss; the clips do not establish equal canonical floor Y.'
     }
   ],
   unresolvedConcreteRegionIds: [],

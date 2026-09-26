@@ -13,6 +13,7 @@ import {
   UNDERTOW_VECTOR_TRACES
 } from './UndertowSpillwayVectorBlueprint';
 import { UNDERTOW_CENTRAL_SLOPE_MARKERS } from './UndertowSpillwaySlopeMarkers';
+import { UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT } from './UndertowSpillwayRemodelGeometryAudit';
 
 const ALL_RULES = ['TURF', 'ZONES', 'TOWER', 'RAINMAKER', 'CLAMS'] as const;
 const handoff = ['handoff-t21-masterplan'] as const;
@@ -381,10 +382,10 @@ const entries: readonly StageMeasurementEntry[] = [
     xz: unresolvedXz('The 2026-09-25 capture confirms the passage and support/wall exclusions, but perspective video still does not define a map-registered simple walkable polygon.'),
     y: {
       floorId: 'GLASS_LOWER',
-      yMeters: 4.5,
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.glassUnderpassFloor,
       confidence: 'HIGH',
-      evidenceIds: ['extracted-temple01-geometry', 'user-right-low-capture-2026-09-25', 'user-underpass-capture-2026-09-25'],
-      notes: 'The captured underpass is same-height with right-low; corrected Temple01 normalization resolves that shared floor to project Y=4.5m.'
+      evidenceIds: remodelGeometryEvidence,
+      notes: 'Temple01 local extraction resolves the roofed underpass walkable floor to model Y=3.0m / project Y=0. The captures confirm traversal and support/wall exclusions but do not measure equal Y with right-low.'
     },
     transition: noTransition,
     surface: {
@@ -472,7 +473,7 @@ const entries: readonly StageMeasurementEntry[] = [
     xz: unresolvedXz('The 2026-09-25 perimeter capture classifies the low/open floor and exits, but the constant-height partition still does not close uniquely in the top-down source.'),
     y: {
       floorId: 'RIGHT_LOW',
-      yMeters: 4.5,
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.rightLow,
       confidence: 'HIGH',
       evidenceIds: ['extracted-temple01-geometry', 'user-right-low-capture-2026-09-25'],
       notes: 'Temple01 local registration resolves this lower-side floor to model Y=7.5m; corrected model center-low Y=3.0m maps it to project Y=4.5m.'
@@ -1013,7 +1014,7 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       kind: 'USER_CAPTURE',
       label: 'User targeted right-low perimeter capture, 2026-09-25',
       sourceVersion: 'current normal PvP',
-      notes: '29.50s perimeter traversal. Confirms the small drop enters the right-low open floor, at least one ramp exits it, and the underpass connection is same-height.'
+      notes: '29.50s perimeter traversal. Confirms the small drop enters the right-low open floor, at least one ramp exits it, and the route connects into the underpass. The perspective clip does not establish equal canonical floor Y.'
     },
     {
       id: 'user-first-drop-height-stills-2026-09-26',
