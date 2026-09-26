@@ -1776,3 +1776,103 @@ print(
     f"T21SLOPE SYMMETRY coeff_residual={sym:.12f} "
     f"left_max={lerr:.12f} right_max={rerr:.12f}"
 )
+
+
+# T21-D central slope connected-component audit.
+#
+# The vector dashed footprint is semantic evidence, not a hard collision edge.
+# Therefore select the actual Temple01 FloorSlope00 connected mesh component
+# touched by each locally registered marker, and audit that source mesh itself.
+def face_components_by_shared_vertex(face_list):
+    vertex_to_faces=defaultdict(list)
+    for local_i,ff in enumerate(face_list):
+        for vi in ff[:3]:
+            vertex_to_faces[vi].append(local_i)
+    remaining=set(range(len(face_list)))
+    comps=[]
+    while remaining:
+        seed=remaining.pop()
+        comp={seed}
+        q=deque([seed])
+        while q:
+            fi=q.popleft()
+            for vi in face_list[fi][:3]:
+                for ni in vertex_to_faces[vi]:
+                    if ni in remaining:
+                        remaining.remove(ni)
+                        comp.add(ni)
+                        q.append(ni)
+        comps.append(sorted(comp))
+    comps.sort(key=len,reverse=True)
+    return comps
+
+slope_source_faces=[
+    ff for ff in faces
+    if ff[3]==CENTER_SLOPE_OBJECT
+    and min(vertices[i][1] for i in ff[:3])>=1.40
+    and max(vertices[i][1] for i in ff[:3])<=3.10
+]
+slope_components=face_components_by_shared_vertex(slope_source_faces)
+print(
+    f"T21SLOPE COMPONENT_SUMMARY source_faces={len(slope_source_faces)} "
+    f"components={len(slope_components)} sizes={[len(c) for c in slope_components]}"
+)
+
+component_records=[]
+for ci,component in enumerate(slope_components):
+    comp_faces=[slope_source_faces[i] for i in component]
+    unique_indices=sorted({vi for ff in comp_faces for vi in ff[:3]})
+    pverts=[slope_project_point(vertices[vi]) for vi in unique_indices]
+    xs=[p[0] for p in pverts]; ys=[p[1] for p in pverts]; zs=[p[2] for p in pverts]
+    # Detect which semantic marker(s) are touched by triangle centroids.
+    touches=[]
+    for name,pdf_poly in CENTER_SLOPE_PDF.items():
+        model_poly=[pdf_to_model(p) for p in pdf_poly]
+        n=0
+        for ff in comp_faces:
+            tri=[vertices[i] for i in ff[:3]]
+            cx=sum(v[0] for v in tri)/3
+            cz=sum(v[2] for v in tri)/3
+            if inside_poly(cx,cz,model_poly):
+                n+=1
+        if n:
+            touches.append((name,n))
+
+    # Stable local index order + project-space source triangles.
+    local_index={vi:i for i,vi in enumerate(unique_indices)}
+    indices=[local_index[vi] for ff in comp_faces for vi in ff[:3]]
+
+    # Plane residual over the complete connected component.
+    a,b,c=plane_from_triangle([
+        pverts[indices[0]],
+        pverts[indices[1]],
+        pverts[indices[2]],
+    ])
+    residuals=[
+        abs(y-(a*x+b*z+c))
+        for x,y,z in pverts
+    ]
+    print(
+        f"T21SLOPE COMPONENT {ci} faces={len(comp_faces)} verts={len(pverts)} "
+        f"touches={touches} bbox=({min(xs):.6f},{min(zs):.6f}).."
+        f"({max(xs):.6f},{max(zs):.6f}) y=({min(ys):.6f},{max(ys):.6f}) "
+        f"plane=({a:.12f},{b:.12f},{c:.12f}) "
+        f"rms={math.sqrt(sum(r*r for r in residuals)/len(residuals)):.12f} "
+        f"max={max(residuals):.12f} "
+        f"vertices={[(round(x,6),round(y,6),round(z,6)) for x,y,z in pverts]} "
+        f"indices={indices}"
+    )
+    component_records.append((ci,touches,pverts,indices,a,b,c,max(residuals)))
+
+central=[
+    rec for rec in component_records
+    if any(name in ("LEFT","RIGHT") for name,_ in rec[1])
+]
+print(
+    f"T21SLOPE CENTRAL_COMPONENTS count={len(central)} "
+    f"ids={[rec[0] for rec in central]}"
+)
+if len(central)!=2:
+    raise SystemExit(
+        f"T21 central slope component audit failed: expected 2 components, got {len(central)}"
+    )
