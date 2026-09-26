@@ -72,9 +72,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'center-low-floor-outline',
     geometryKind: 'POLYGON',
     region: 'Center',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'The former origin-face=center-low binding is superseded by Temple01 local registration. Y=0 remains CONFIRMED, but the true center-low XZ polygon must be re-extracted; the origin face is the +1.5m step-top face.'
+    notes: 'Temple01 Y=3.0m locally registered walkable components were extracted at 0.125m raster resolution and simplified with <=0.20m boundary tolerance. The two 180-degree components and their support holes are stored in UndertowSpillwayModelXZGeometry.'
   },
   {
     id: 'center-small-step-outline',
@@ -128,9 +128,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'right-low-floor-outline',
     geometryKind: 'POLYGON',
     region: 'Center / Right',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '2026-09-25 capture is plan-registered to the Team A right-small-drop lip and confirms the low/open floor, ramp exit and same-level underpass connection; perspective footage still does not assign every perimeter corner to a unique PDF vertex. Temple01 local registration independently resolves right-low project Y=4.5m after corrected center normalization.'
+    notes: 'The locally verified Team A/B right-small-drop lower sides seed symmetric Temple01 Y=7.5m connected walkable components. Their 0.125m raster contours, holes and project-space transforms are stored in UndertowSpillwayModelXZGeometry at HIGH confidence.'
   },
   {
     id: 'center-grate-outline',
