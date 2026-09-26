@@ -51,12 +51,12 @@ describe('T21-C Undertow external geometry source audit', () => {
     expect(mapping?.canPromoteCanonicalGeometry).toBe(false);
   });
 
-  it('keeps PntSet as a HIGH Turf extraction hypothesis rather than canonical geometry', () => {
+  it('records common plus PntSet as the audited Turf extraction filter without making the filter itself geometry', () => {
     const filter = UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT.find(
       (entry) => entry.id === 'KITRIX_TEMPLE01_RULE_SET_FILTER'
     );
     expect(filter).toMatchObject({
-      status: 'HIGH_FILTER_HYPOTHESIS',
+      status: 'AUDITED_TURF_FILTER',
       canPromoteCanonicalGeometry: false,
       confidence: 'HIGH'
     });
