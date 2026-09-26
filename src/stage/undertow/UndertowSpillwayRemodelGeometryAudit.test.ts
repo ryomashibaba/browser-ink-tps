@@ -27,6 +27,8 @@ describe('T21-C remodeled Undertow geometry audit', () => {
       spawnFloor: 10.5,
       firstDropLanding: 6,
       rightSmallDropLower: 7.5,
+      glassUnderpassFloor: 3,
+      glassOverhangHighReference: 10.5,
       centerSlopeLow: 1.5,
       centerSlopeHigh: 3,
       grateVisualTop: 10.4
@@ -43,6 +45,8 @@ describe('T21-C remodeled Undertow geometry audit', () => {
       firstDropLanding: 3,
       rightSmallDropUpper: 7.5,
       rightLow: 4.5,
+      glassUnderpassFloor: 0,
+      glassOverhangHighReference: 7.5,
       centerSlopeLow: -1.5,
       centerSlopeHigh: 0,
       grateVisualTop: 7.4
@@ -55,6 +59,8 @@ describe('T21-C remodeled Undertow geometry audit', () => {
     expect(y.rightLow - y.firstDropLanding).toBe(1.5);
     expect(y.centerStepTop - y.centerLow).toBe(1.5);
     expect(y.spawnFloor).toBe(7.5);
+    expect(y.glassUnderpassFloor).toBe(y.centerLow);
+    expect(y.glassOverhangHighReference).toBe(7.5);
     expect(y.centerSlopeHigh).toBe(y.centerLow);
   });
 
