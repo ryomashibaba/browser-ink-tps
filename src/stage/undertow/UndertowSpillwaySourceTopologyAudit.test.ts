@@ -14,21 +14,26 @@ describe('T21-B Undertow vector-source topology limits', () => {
     expect(spawn?.reason).toContain('multiple elevations/transitions');
   });
 
-  it('keeps right-low, underpass and internal void partitioning out of blockout', () => {
+  it('promotes right-low from Temple01 while keeping underpass and void unresolved', () => {
     expect(unresolvedUndertowSourceTopologyLimits()).toEqual([
-      'right-low-floor-partition',
       'glass-underpass-walkable-outline',
       'internal-void-kill-boundaries'
     ]);
 
-    for (const id of [
-      'right-low-floor-partition',
-      'glass-underpass-walkable-outline'
-    ]) {
-      expect(
-        UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find((item) => item.id === id)?.status
-      ).toBe('PLAN_REGISTERED_POLYGON_UNRESOLVED');
-    }
+    expect(
+      UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
+        (item) => item.id === 'right-low-floor-partition'
+      )
+    ).toMatchObject({
+      status: 'RESOLVED_FROM_TEMPLE01_MODEL',
+      safeToUseForBlockout: true
+    });
+
+    expect(
+      UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
+        (item) => item.id === 'glass-underpass-walkable-outline'
+      )?.status
+    ).toBe('PLAN_REGISTERED_POLYGON_UNRESOLVED');
 
     expect(
       UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
@@ -41,7 +46,7 @@ describe('T21-B Undertow vector-source topology limits', () => {
     const rightLow = UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
       (item) => item.id === 'right-low-floor-partition'
     );
-    expect(rightLow?.reason).toContain('2026-09-25 right-low capture');
-    expect(rightLow?.reason).toContain('registered to the measured Team A right-small-drop lip');
+    expect(rightLow?.reason).toContain('Temple01 OBJ');
+    expect(rightLow?.reason).toContain('Y=7.5m walkable component');
   });
 });
