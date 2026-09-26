@@ -48,9 +48,9 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
       region: 'FIRST_DROP_HEIGHT_ORDER',
       confidence: 'CONFIRMED',
       facts: [
-        'The floor on the lower side of the red first-drop lip is below the floor on the lower side of the blue right-small-drop lip.',
-        'Therefore plan-view adjacency between the two L-shaped lips does not imply that the first-drop landing and the right-small-drop upper floor share one elevation.',
-        'The still pair establishes only the qualitative height ordering; it does not establish an exact metric delta.'
+        'The user identifies the floor referred to as below the red guide line as lower than the floor referred to as below the blue guide line.',
+        'The guide-line-side comparison does not independently identify either observed floor as a canonical first-drop-landing, right-small-drop-upper, or right-low node.',
+        'The still pair establishes only a qualitative guide-line-side ordering; it does not establish canonical floor identities or an exact metric delta.'
       ]
     }
   ];
