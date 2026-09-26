@@ -7,6 +7,10 @@ import { SurfaceFlags, Team } from '../ink/types';
 import type { SuperJumpTarget } from '../mobility/SuperJumpSystem';
 import type { StageDefinition } from '../stage/StageDefinition';
 import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import {
+  stageSolidTriangleMeshErrors,
+  stageSolidTriangleWorldVertices
+} from '../stage/StageTriangleMesh';
 import { weaponProfile } from '../weapons/WeaponCatalog';
 
 interface MapJumpCandidate {
@@ -160,6 +164,27 @@ export class TacticalMap {
 
     for (const solid of this.stage.solids) {
       if (!solid.render) continue;
+      const meshErrors = stageSolidTriangleMeshErrors(solid);
+      if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
+
+      if (solid.triangleMesh) {
+        const world = stageSolidTriangleWorldVertices(solid);
+        const mapped = world.map((point) => this.worldToMap(point[0], point[2]));
+        for (let i = 0; i < solid.triangleMesh.indices.length; i += 3) {
+          const a = mapped[solid.triangleMesh.indices[i]!]!;
+          const b = mapped[solid.triangleMesh.indices[i + 1]!]!;
+          const c = mapped[solid.triangleMesh.indices[i + 2]!]!;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.lineTo(c.x, c.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+        continue;
+      }
+
       if (!solid.footprint) {
         const [cx, , cz] = solid.center;
         const [sx, , sz] = solid.size;

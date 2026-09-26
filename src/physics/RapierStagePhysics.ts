@@ -2,6 +2,7 @@ import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
 import { Quat, Vec3 } from 'playcanvas';
 import type { StageDefinition, StageSolidDefinition } from '../stage/StageDefinition';
 import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import { stageSolidTriangleMeshErrors } from '../stage/StageTriangleMesh';
 
 export async function initializeRapier(): Promise<void> {
   await RAPIER.init();
@@ -88,6 +89,13 @@ export class RapierStagePhysics {
 
   private buildStaticStage(solids: readonly StageSolidDefinition[]): void {
     for (const solid of solids) {
+      const meshErrors = stageSolidTriangleMeshErrors(solid);
+      if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
+
+      if (solid.triangleMesh) {
+        this.createTriangleMeshCollider(solid);
+        continue;
+      }
       if (!solid.footprint) {
         this.createBoxCollider(solid, solid.size[0], solid.size[2], 0, 0);
         continue;
@@ -108,6 +116,26 @@ export class RapierStagePhysics {
         );
       }
     }
+  }
+
+  private createTriangleMeshCollider(solid: StageSolidDefinition): void {
+    const mesh = solid.triangleMesh;
+    if (!mesh) return;
+    const vertices = new Float32Array(
+      mesh.vertices.flatMap((vertex) => [...vertex])
+    );
+    const indices = new Uint32Array(mesh.indices);
+    const desc = RAPIER.ColliderDesc.trimesh(vertices, indices)
+      .setTranslation(solid.center[0], solid.center[1], solid.center[2]);
+
+    if (solid.rotationEulerDegrees) {
+      const rotation = solid.rotationEulerDegrees;
+      const q = new Quat().setFromEulerAngles(rotation[0], rotation[1], rotation[2]);
+      desc.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
+    }
+
+    const collider = this.world.createCollider(desc);
+    this.solidByColliderHandle.set(collider.handle, solid);
   }
 
   private createBoxCollider(

@@ -21,6 +21,7 @@ import {
   type StageVector3
 } from './StageDefinition';
 import { rasterizeStageFootprint } from './StageFootprint';
+import { stageSolidTriangleMeshErrors } from './StageTriangleMesh';
 
 export { PRODUCTION_STAGE_DEFINITION, TEST_STAGE_DEFINITION } from './StageDefinition';
 
@@ -85,7 +86,7 @@ export function buildTestStage(
   // T8: the same solid definitions now drive visible box geometry and Rapier blockers.
   for (const solid of definition.solids) {
     if (!solid.render) continue;
-    createSolidBox(root, solid, materials[solid.material]);
+    createSolidBox(app, root, solid, materials[solid.material]);
   }
 
   return { surfaces: [...surfaces] };
@@ -164,6 +165,7 @@ function makeMaterial(color: Color, metalness: number, gloss: number): StandardM
 }
 
 function createSolidBox(
+  app: AppBase,
   parent: Entity,
   solid: StageSolidDefinition,
   material: StandardMaterial
@@ -173,6 +175,28 @@ function createSolidBox(
   if (solid.rotationEulerDegrees) {
     const rotation = solid.rotationEulerDegrees;
     entity.setEulerAngles(rotation[0], rotation[1], rotation[2]);
+  }
+
+  const meshErrors = stageSolidTriangleMeshErrors(solid);
+  if (meshErrors.length > 0) {
+    throw new Error(meshErrors.join('; '));
+  }
+
+  if (solid.triangleMesh) {
+    const mesh = new Mesh(app.graphicsDevice);
+    mesh.setPositions(new Float32Array(
+      solid.triangleMesh.vertices.flatMap((vertex) => [...vertex])
+    ));
+    mesh.setIndices(new Uint32Array(solid.triangleMesh.indices));
+    mesh.update();
+    const meshInstance = new MeshInstance(mesh, material);
+    entity.addComponent('render', {
+      meshInstances: [meshInstance],
+      castShadows: true,
+      receiveShadows: true
+    });
+    parent.addChild(entity);
+    return entity;
   }
 
   if (!solid.footprint) {

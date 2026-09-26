@@ -5,6 +5,13 @@ export type StageVector3 = readonly [number, number, number];
 export type StageMaterialKey = 'dark' | 'medium' | 'light' | 'accent';
 export type StageSolidCollisionBehavior = 'SOLID' | 'GRATE';
 
+export interface StageTriangleMeshGeometry {
+  /** Local-space vertices relative to StageSolidDefinition.center/rotation. */
+  vertices: readonly StageVector3[];
+  /** Triangle-list indices into vertices. */
+  indices: readonly number[];
+}
+
 export interface StageSolidDefinition {
   id: string;
   center: StageVector3;
@@ -25,6 +32,11 @@ export interface StageSolidDefinition {
    * When absent, the legacy full box remains unchanged.
    */
   footprint?: StageFootprint;
+  /**
+   * Optional exact local triangle mesh. Mutually exclusive with footprint.
+   * Used only when source geometry itself supplies a non-box planar/mesh shape.
+   */
+  triangleMesh?: StageTriangleMeshGeometry;
 }
 
 export interface StagePaintSurfaceDefinition {

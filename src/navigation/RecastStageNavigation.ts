@@ -5,6 +5,10 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { StageDefinition, StageSolidDefinition } from '../stage/StageDefinition';
 import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import {
+  stageSolidTriangleMeshErrors,
+  stageSolidTriangleWorldVertices
+} from '../stage/StageTriangleMesh';
 
 export async function initializeRecastNavigation(): Promise<void> {
   await initRecast();
@@ -91,10 +95,30 @@ function buildStageTriangleSoup(
   const indices: number[] = [];
 
   for (const solid of definition.solids) {
-    appendBoxSolid(solid, positions, indices);
+    const meshErrors = stageSolidTriangleMeshErrors(solid);
+    if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
+    if (solid.triangleMesh) {
+      appendTriangleMeshSolid(solid, positions, indices);
+    } else {
+      appendBoxSolid(solid, positions, indices);
+    }
   }
 
   return { positions, indices };
+}
+
+function appendTriangleMeshSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  const mesh = solid.triangleMesh;
+  if (!mesh) return;
+  const base = positions.length / 3;
+  for (const vertex of stageSolidTriangleWorldVertices(solid)) {
+    positions.push(vertex[0], vertex[1], vertex[2]);
+  }
+  for (const index of mesh.indices) indices.push(base + index);
 }
 
 function appendBoxSolid(
