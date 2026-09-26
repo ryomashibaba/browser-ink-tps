@@ -1658,3 +1658,16 @@ Automated checks now additionally require:
 - the false first-drop landing = right-small-drop upper relation is absent from both topology and the vertical constraint graph
 - the corrective still pair is retained as guide-line-side evidence only; it must not fabricate first-drop-landing/right-low identities or a numeric delta
 - the right-small-drop 1.5m relation and right-low -> underpass 0m relation remain intact
+
+
+## T21-C line-side semantic audit validation
+
+Automated checks now additionally require:
+- both red and blue guide lines still reference existing measured vector traces
+- both canonical lower-side and upper-side floor bindings remain null
+- the user-observed red-vs-blue ordering has no exact delta
+- that ordering is explicitly unsafe to convert into a vertical relation
+- first-drop video, right-low capture, corrective stills and current-layout cross-check all remain below canonical side-binding strength
+- no first-drop-landing/right-low ordering is present in captured topology or the vertical constraint graph
+
+This audit changes evidence semantics only. Runtime geometry, collision, navigation, paint, combat and objectives remain unchanged.
