@@ -277,3 +277,98 @@ describe("CENTER_LOW_A",3.0,(3.67,-0.135),(-18,18,-18,18))
 describe("CENTER_LOW_B",3.0,(-3.76,-0.131),(-18,18,-18,18))
 describe("RIGHT_LOW_A",7.5,(-15.05,55.40),(-32,8,25,68))
 describe("RIGHT_LOW_B",7.5,(14.96,-55.67),(-8,32,-68,-25))
+
+
+# Registered vector glass-footprint audit. This explicitly tests whether the
+# earlier capture-derived right-low == underpass Y relation agrees with Temple01.
+ORIGIN=(420.96,297.66)
+NEG=(131.82,155.58)
+POS=(709.98,439.5)
+ddx=POS[0]-NEG[0]; ddy=POS[1]-NEG[1]
+dll=math.hypot(ddx,ddy)
+zdir=(ddx/dll,ddy/dll)
+xdir=(zdir[1],-zdir[0])
+REG_SCALE=0.964211
+REG_TH=math.radians(26.1160)
+REG_C=math.cos(REG_TH); REG_S=math.sin(REG_TH)
+REG_TX=-0.0580; REG_TZ=-0.1329
+
+def pdf_to_project(pt):
+    dx=pt[0]-ORIGIN[0]; dy=pt[1]-ORIGIN[1]
+    return ((dx*xdir[0]+dy*xdir[1])/4.8,(dx*zdir[0]+dy*zdir[1])/4.8)
+
+def project_to_model(p):
+    return (
+        REG_SCALE*(REG_C*p[0]-REG_S*p[1])+REG_TX,
+        REG_SCALE*(REG_S*p[0]+REG_C*p[1])+REG_TZ
+    )
+
+def pdf_to_model(pt):
+    return project_to_model(pdf_to_project(pt))
+
+def inside_poly(x,z,poly):
+    inside=False
+    j=len(poly)-1
+    for i in range(len(poly)):
+        xi,zi=poly[i]; xj,zj=poly[j]
+        if ((zi>z)!=(zj>z)) and (x < (xj-xi)*(z-zi)/(zj-zi+1e-30)+xi):
+            inside=not inside
+        j=i
+    return inside
+
+glass_polys={
+    "POS_GLASS":[(420.96,327.36),(459.48,327.36),(459.48,364.92),(420.96,364.92)],
+    "NEG_GLASS":[(382.44,230.28),(420.96,230.28),(420.96,267.84),(382.44,267.84)],
+}
+
+for name,pdfpoly in glass_polys.items():
+    poly=[pdf_to_model(p) for p in pdfpoly]
+    xmin=min(p[0] for p in poly); xmax=max(p[0] for p in poly)
+    zmin=min(p[1] for p in poly); zmax=max(p[1] for p in poly)
+    total=0; y3=0; y75=0; glass_cover=0; any_cover=0
+    hist=defaultdict(int)
+    support_mats=defaultdict(int)
+    cells_y3=set()
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            if not inside_poly(x,z,poly):
+                continue
+            total+=1
+            h3=has_walk_surface(x,z,3.0)
+            h75=has_walk_surface(x,z,7.5)
+            if h3:
+                y3+=1; cells_y3.add((ix,iz))
+            if h75: y75+=1
+            # All horizontal-ish walk hits, grouped by 0.5m band.
+            for fi in face_candidates(x,z):
+                ia,ib,ic,o,m=faces[fi]
+                tri=[vertices[ia],vertices[ib],vertices[ic]]
+                n=tri_normal(tri)
+                if abs(n[1])<0.75 or not contains_xz(x,z,tri):
+                    continue
+                yy=interp_y(x,z,tri)
+                if any(t in m for t in WALK_TOKENS):
+                    hist[round(yy*2)/2]+=1
+                if yy>3.45:
+                    any_cover+=1
+                    if "Glass" in m:
+                        glass_cover+=1
+                    if any(k in m for k in ("Pillar","Wall","Fence","Object")):
+                        support_mats[m]+=1
+                    break
+    print(
+        f"T21GLASS {name} model={[tuple(round(v,4) for v in p) for p in poly]} "
+        f"cells={total} y3={y3} y75={y75} any_cover={any_cover} glass_cover={glass_cover} "
+        f"height_hist={sorted(hist.items())}"
+    )
+    print(f"T21GLASS SUPPORT {name} mats={sorted(support_mats.items(),key=lambda x:-x[1])[:15]}")
+    loops=boundary_loops(cells_y3)
+    loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    for i,loop in enumerate(loops[:8]):
+        rr=rdp_closed(loop,0.20)
+        print(
+            f"T21GLASS Y3LOOP {name} {i} area={polygon_area(loop):.3f} "
+            f"n={len(rr)} pts={[tuple(round(v,3) for v in p) for p in rr]}"
+        )
