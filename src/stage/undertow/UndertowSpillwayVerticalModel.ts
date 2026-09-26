@@ -73,48 +73,58 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
     id: 'center-left-slope-low',
     absolute: {
       floorId: 'CENTER_LEFT_SLOPE_LOW',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.centerSlopeLow,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Temple01 common FloorSlope00 lower endpoint: model Y=1.5m -> project Y=-1.5m.'
     }
   },
   {
     id: 'center-left-slope-high',
     absolute: {
       floorId: 'CENTER_LEFT_SLOPE_HIGH',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.centerSlopeHigh,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Temple01 common FloorSlope00 high endpoint: model Y=3.0m -> project Y=0.'
     }
   },
   {
     id: 'center-right-slope-low',
     absolute: {
       floorId: 'CENTER_RIGHT_SLOPE_LOW',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.centerSlopeLow,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry
     }
   },
   {
     id: 'center-right-slope-high',
     absolute: {
       floorId: 'CENTER_RIGHT_SLOPE_HIGH',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.centerSlopeHigh,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry
     }
   },
   {
     id: 'negative-z-grate-floor',
     absolute: {
       floorId: 'NEGATIVE_Z_GRATE',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.grateVisualTop,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Registered Temple01 FloorFence00 visual top is model Y=10.4m -> project Y=7.4m. This is BLOCKOUT geometry evidence, not a Stable-Freeze collision-plane claim.'
     }
   },
   {
     id: 'positive-z-grate-floor',
     absolute: {
       floorId: 'POSITIVE_Z_GRATE',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.grateVisualTop,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: '180-degree counterpart visual grate top; same HIGH-only caveat as negative-Z grate.'
     }
   },
   {
@@ -124,7 +134,7 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
       yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.spawnFloor,
       confidence: 'HIGH',
       evidenceIds: remodelGeometry,
-      notes: 'Temple01 spawn-center model Y=10.5m normalized to project Y=6.0m. Historical 7.5m hypothesis is superseded.'
+      notes: 'Temple01 spawn-center model Y=10.5m normalized against model center-low Y=3.0m -> project Y=7.5m. The former 7.5m hypothesis is now supported at HIGH confidence by the remodel mesh.'
     }
   },
   {
@@ -143,7 +153,7 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
       yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.firstDropLanding,
       confidence: 'HIGH',
       evidenceIds: remodelGeometry,
-      notes: 'Registered red-drop lower side: model Y=6.0m -> project Y=1.5m.'
+      notes: 'Registered red-drop lower side: model Y=6.0m -> project Y=3.0m after the corrected center-low normalization.'
     }
   },
   {
@@ -191,20 +201,36 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
     'Glass overhang high reference is about 3m above the major floor directly below; do not flatten the slope-marked glass footprint.'
   ),
   exactRelation(
-    'center-small-step-top',
     'center-left-slope-low',
-    0,
+    'center-left-slope-high',
+    1.5,
     'HIGH',
-    ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
-    'The central-left slope footprint touches the outer edge of the +1.5m center-step strip exactly in plan.'
+    remodelGeometry,
+    'Temple01 common FloorSlope00 spans model Y=1.5->3.0m inside the registered left slope footprint.'
   ),
   exactRelation(
-    'center-small-step-top',
     'center-right-slope-low',
+    'center-right-slope-high',
+    1.5,
+    'HIGH',
+    remodelGeometry,
+    '180-degree counterpart Temple01 slope span.'
+  ),
+  exactRelation(
+    'center-low-floor',
+    'center-left-slope-high',
     0,
     'HIGH',
-    ['user-turf-vector-blueprint', 'user-center-videos', 'handoff-t21-masterplan'],
-    'The central-right slope footprint touches the counterpart +1.5m center-step strip exactly in plan.'
+    remodelGeometry,
+    'Corrected center datum: the high end of the registered left central slope is model Y=3.0m, the same model elevation as canonical center-low.'
+  ),
+  exactRelation(
+    'center-low-floor',
+    'center-right-slope-high',
+    0,
+    'HIGH',
+    remodelGeometry,
+    'Corrected counterpart center datum relation.'
   ),
   exactRelation(
     'center-left-slope-low',
