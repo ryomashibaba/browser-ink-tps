@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   UNDERTOW_MODEL_XZ_GEOMETRY,
+  UNDERTOW_UNDERPASS_NAV_AUDIT,
   undertowModelXZGeometryAuditErrors
 } from './UndertowSpillwayModelXZGeometry';
 
@@ -19,6 +20,27 @@ describe('T21-B Temple01 model XZ geometry', () => {
     expect(center.every((item) => item.modelHoles.length === 1)).toBe(true);
   });
 
+  it('promotes the symmetric navigable glass-underpass polygons at project Y=0', () => {
+    const underpasses = UNDERTOW_MODEL_XZ_GEOMETRY.filter((item) =>
+      item.id.startsWith('glass-underpass-')
+    );
+    expect(underpasses).toHaveLength(2);
+    expect(underpasses.every((item) => item.sourceYModelMeters === 3)).toBe(true);
+    expect(underpasses.every((item) => item.sourceYProjectMeters === 0)).toBe(true);
+    expect(underpasses.every((item) => item.modelHoles.length === 1)).toBe(true);
+    expect(underpasses.every((item) => item.simplifyToleranceMeters === 0.15)).toBe(true);
+    expect(UNDERTOW_UNDERPASS_NAV_AUDIT).toMatchObject({
+      roofedFloorCellsPerSide: 3951,
+      floorObstacleCellsPerSide: 88,
+      walkableCellsPerSide: 3863,
+      walkableAreaSymmetryResidualSquareMeters: 0,
+      mirrorXorCells: 0,
+      confidence: 'HIGH'
+    });
+    expect(UNDERTOW_UNDERPASS_NAV_AUDIT.walkableAreaSquareMetersPerSide)
+      .toBeCloseTo(60.359375, 6);
+  });
+
   it('promotes two symmetric right-low components at project Y=4.5', () => {
     const low = UNDERTOW_MODEL_XZ_GEOMETRY.filter((item) =>
       item.id.startsWith('right-low-')
@@ -33,7 +55,11 @@ describe('T21-B Temple01 model XZ geometry', () => {
     for (const item of UNDERTOW_MODEL_XZ_GEOMETRY) {
       expect(item.confidence).toBe('HIGH');
       expect(item.rasterStepMeters).toBe(0.125);
-      expect(item.simplifyToleranceMeters).toBe(0.2);
+      if (item.id.startsWith('glass-underpass-')) {
+        expect(item.simplifyToleranceMeters).toBe(0.15);
+      } else {
+        expect(item.simplifyToleranceMeters).toBe(0.2);
+      }
     }
   });
 });

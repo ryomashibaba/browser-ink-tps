@@ -30,12 +30,14 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(ledger.commonTerrainId).toBe('UndertowCommon');
   });
 
-  it('keeps central-low Y=0 while reopening its old XZ face binding', () => {
+  it('keeps central-low Y=0 and binds the corrected Temple01 XZ polygon set', () => {
     expect(ledger.coordinateSystem.centerLowestFloorY).toBe(0);
     expect(ledger.coordinateSystem.centerLowestFloorConfidence).toBe('CONFIRMED');
     const centerLow = entry('center-lower-floor');
-    expect(centerLow.xz.kind).toBe('UNRESOLVED');
-    expect(centerLow.xz.confidence).toBe('UNKNOWN');
+    expect(centerLow.xz.kind).toBe('POLYGON_SET');
+    expect(centerLow.xz.confidence).toBe('HIGH');
+    expect(centerLow.xz.polygonSetMeters).toHaveLength(2);
+    expect(centerLow.xz.polygonSetMeters?.every((polygon) => polygon.holesMeters?.length === 1)).toBe(true);
     expect(centerLow.y.yMeters).toBe(0);
     expect(centerLow.y.confidence).toBe('CONFIRMED');
     const stepTop = entry('center-origin-step-top-face');
@@ -102,7 +104,7 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     }
   });
 
-  it('binds the two targeted 2026-09-25 captures without pretending their XZ polygons are solved', () => {
+  it('keeps targeted captures as semantic evidence while Temple01 supplies the solved XZ polygon sets', () => {
     const evidenceIds = ledger.evidence.map((item) => item.id);
     expect(evidenceIds).toContain('user-underpass-capture-2026-09-25');
     expect(evidenceIds).toContain('user-right-low-capture-2026-09-25');
@@ -111,8 +113,13 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     const underpass = entry('upper-glass-underpass');
     expect(rightLow.evidenceIds).toContain('user-right-low-capture-2026-09-25');
     expect(underpass.evidenceIds).toContain('user-underpass-capture-2026-09-25');
-    expect(rightLow.xz.kind).toBe('UNRESOLVED');
-    expect(underpass.xz.kind).toBe('UNRESOLVED');
+    expect(rightLow.xz.kind).toBe('POLYGON_SET');
+    expect(rightLow.xz.confidence).toBe('HIGH');
+    expect(rightLow.xz.polygonSetMeters).toHaveLength(2);
+    expect(underpass.xz.kind).toBe('POLYGON_SET');
+    expect(underpass.xz.confidence).toBe('HIGH');
+    expect(underpass.xz.polygonSetMeters).toHaveLength(2);
+    expect(underpass.xz.polygonSetMeters?.every((polygon) => polygon.holesMeters?.length === 1)).toBe(true);
     expect(rightLow.y.yMeters).toBe(4.5);
     expect(rightLow.y.confidence).toBe('HIGH');
     expect(underpass.y).toMatchObject({ yMeters: 0, confidence: 'HIGH' });
@@ -165,7 +172,9 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     }
 
     expect(entry('upper-glass-underpass').confidence).toBe('CONFIRMED');
-    expect(entry('upper-glass-underpass').xz.kind).toBe('UNRESOLVED');
+    expect(entry('upper-glass-underpass').xz.kind).toBe('POLYGON_SET');
+    expect(entry('upper-glass-underpass').xz.confidence).toBe('HIGH');
+    expect(entry('upper-glass-underpass').xz.polygonSetMeters).toHaveLength(2);
   });
 
   it('binds both central small-step strips while retaining the +1.5m HIGH vertical relation', () => {

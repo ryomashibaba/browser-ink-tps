@@ -5,7 +5,9 @@ export type UndertowModelXZGeometryId =
   | 'center-low-team-a'
   | 'center-low-team-b'
   | 'right-low-team-a'
-  | 'right-low-team-b';
+  | 'right-low-team-b'
+  | 'glass-underpass-positive-z'
+  | 'glass-underpass-negative-z';
 
 export interface UndertowModelXZPolygon {
   id: UndertowModelXZGeometryId;
@@ -17,7 +19,7 @@ export interface UndertowModelXZPolygon {
   projectHoles: readonly (readonly MetricXZ[])[];
   confidence: 'HIGH';
   rasterStepMeters: 0.125;
-  simplifyToleranceMeters: 0.2;
+  simplifyToleranceMeters: 0.15 | 0.2;
   evidenceIds: readonly string[];
   notes: string;
 }
@@ -140,13 +142,68 @@ const RIGHT_LOW_A_HOLES: readonly (readonly MetricXZ[])[] = [
   ]
 ] as const;
 
+const GLASS_UNDERPASS_POSITIVE_Z_MODEL: readonly MetricXZ[] = [
+  [-14.562, -3.062],
+  [-13.438, -3.062],
+  [-13.438, -1.938],
+  [-12.938, -1.938],
+  [-12.938, -1.688],
+  [-9.812, -1.688],
+  [-9.812, -1.938],
+  [-9.312, -1.938],
+  [-9.312, -1.438],
+  [-7.188, -1.438],
+  [-7.188, -1.938],
+  [-5.938, -1.688],
+  [-6.062, 6.062],
+  [-8.312, 6.188],
+  [-8.688, 5.938],
+  [-10.812, 5.938],
+  [-11.188, 6.188],
+  [-13.688, 6.188],
+  [-13.688, -2.812],
+  [-14.312, -2.812],
+  [-14.438, -0.438]
+] as const;
+
+const GLASS_UNDERPASS_POSITIVE_Z_HOLES: readonly (readonly MetricXZ[])[] = [
+  [
+    [-12.562, -0.188],
+    [-12.188, 0.688],
+    [-11.438, 0.312],
+    [-12.062, -0.312]
+  ]
+] as const;
+
+export const UNDERTOW_UNDERPASS_NAV_AUDIT = Object.freeze({
+  sourceYModelMeters: 3,
+  sourceYProjectMeters: 0,
+  rasterStepMeters: 0.125,
+  simplifyToleranceMeters: 0.15,
+  roofedFloorCellsPerSide: 3951,
+  floorObstacleCellsPerSide: 88,
+  walkableCellsPerSide: 3863,
+  walkableAreaSquareMetersPerSide: 3863 * 0.125 * 0.125,
+  walkableAreaSymmetryResidualSquareMeters: 0,
+  mirrorXorCells: 0,
+  confidence: 'HIGH' as const,
+  evidenceIds: [
+    'extracted-temple01-geometry',
+    'user-turf-vector-blueprint',
+    'user-underpass-capture-2026-09-25'
+  ] as const,
+  notes:
+    'CI #631 confirms the positive/negative underpass navigable masks are exact 180-degree counterparts at 0.125m raster resolution after subtracting floor-level Pillar/Wall exclusions.'
+});
+
 function polygon(
   id: UndertowModelXZGeometryId,
   sourceYModelMeters: number,
   sourceYProjectMeters: number,
   modelOuter: readonly MetricXZ[],
   modelHoles: readonly (readonly MetricXZ[])[],
-  notes: string
+  notes: string,
+  simplifyToleranceMeters: 0.15 | 0.2 = 0.2
 ): UndertowModelXZPolygon {
   return {
     id,
@@ -158,7 +215,7 @@ function polygon(
     projectHoles: modelHoles.map(toProject),
     confidence: 'HIGH',
     rasterStepMeters: 0.125,
-    simplifyToleranceMeters: 0.2,
+    simplifyToleranceMeters,
     evidenceIds: [
       'extracted-temple01-geometry',
       'user-turf-vector-blueprint'
@@ -184,6 +241,24 @@ export const UNDERTOW_MODEL_XZ_GEOMETRY:
       mirror180(CENTER_LOW_A_MODEL),
       CENTER_LOW_A_HOLES.map(mirror180),
       '180-degree counterpart of the independently observed center-low component; the raw raster areas/bounds matched symmetrically.'
+    ),
+    polygon(
+      'glass-underpass-positive-z',
+      3,
+      0,
+      GLASS_UNDERPASS_POSITIVE_Z_MODEL,
+      GLASS_UNDERPASS_POSITIVE_Z_HOLES,
+      'Temple01 roofed model-Y=3.0 floor beneath the positive-Z glass structure after subtracting floor-level Pillar/Wall exclusions. CI #631 confirms exact 180-degree mask symmetry.',
+      0.15
+    ),
+    polygon(
+      'glass-underpass-negative-z',
+      3,
+      0,
+      mirror180(GLASS_UNDERPASS_POSITIVE_Z_MODEL),
+      GLASS_UNDERPASS_POSITIVE_Z_HOLES.map(mirror180),
+      'Exact 180-degree counterpart of the positive-Z underpass navigable mask; CI #631 mirror XOR is zero cells.',
+      0.15
     ),
     polygon(
       'right-low-team-a',
@@ -212,6 +287,34 @@ export function undertowModelXZGeometryAuditErrors(): readonly string[] {
   }
   if (byId.get('right-low-team-a')?.sourceYProjectMeters !== 4.5) {
     errors.push('right-low model contour must remain on canonical project Y=4.5');
+  }
+  const underpasses = UNDERTOW_MODEL_XZ_GEOMETRY.filter((item) =>
+    item.id.startsWith('glass-underpass-')
+  );
+  if (
+    underpasses.length !== 2 ||
+    underpasses.some(
+      (item) =>
+        item.sourceYModelMeters !== 3 ||
+        item.sourceYProjectMeters !== 0 ||
+        item.modelHoles.length !== 1 ||
+        item.simplifyToleranceMeters !== 0.15
+    )
+  ) {
+    errors.push('glass-underpass contours must remain the two audited model-Y=3.0 / project-Y=0 polygons with one support hole each');
+  }
+  if (
+    UNDERTOW_UNDERPASS_NAV_AUDIT.roofedFloorCellsPerSide -
+      UNDERTOW_UNDERPASS_NAV_AUDIT.floorObstacleCellsPerSide !==
+    UNDERTOW_UNDERPASS_NAV_AUDIT.walkableCellsPerSide
+  ) {
+    errors.push('glass-underpass walkable-cell audit no longer balances roofed floor minus obstacles');
+  }
+  if (
+    UNDERTOW_UNDERPASS_NAV_AUDIT.walkableAreaSymmetryResidualSquareMeters !== 0 ||
+    UNDERTOW_UNDERPASS_NAV_AUDIT.mirrorXorCells !== 0
+  ) {
+    errors.push('glass-underpass navigable masks must remain exact 180-degree counterparts');
   }
   if (REG.locallyVerifiedMaxNearestDiscontinuityMeters > 0.5) {
     errors.push('local Temple01 registration no longer satisfies the 0.5m audit raster gate');

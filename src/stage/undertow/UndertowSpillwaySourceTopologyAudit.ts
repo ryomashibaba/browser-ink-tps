@@ -27,10 +27,10 @@ export const UNDERTOW_SOURCE_TOPOLOGY_LIMITS: readonly UndertowSourceTopologyLim
   },
   {
     id: 'glass-underpass-walkable-outline',
-    status: 'PLAN_REGISTERED_POLYGON_UNRESOLVED',
+    status: 'RESOLVED_FROM_TEMPLE01_MODEL',
     reason:
-      'The 2026-09-25 underpass capture is registered beneath the measured positive-Z glass-overhang footprint. Traversal and solid support/wall exclusions are confirmed; Temple01 separately resolves the roofed lower floor at model Y=3.0m. The PDF has no independent lower-layer support/clearance outline and the perspective clip cannot supply unique metric corner offsets or an equal-Y claim to right-low.',
-    safeToUseForBlockout: false
+      'The PDF/capture pair alone could not solve the lower-layer polygon, but the remodeled Temple01 OBJ now supplies the model-Y=3.0 roofed walkable masks. CI #631 subtracts floor-level Pillar/Wall exclusions and verifies the two 3863-cell masks are exact 180-degree counterparts (mirror XOR 0 cells); stored <=0.15m contours retain one support hole per side. The result is HIGH and blockout-safe.',
+    safeToUseForBlockout: true
   },
   {
     id: 'internal-void-kill-boundaries',

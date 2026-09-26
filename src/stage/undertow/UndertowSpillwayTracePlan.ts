@@ -104,9 +104,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'glass-underpass-outline',
     geometryKind: 'POLYGON',
     region: 'Lower Tunnels',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '2026-09-25 capture is plan-registered beneath the positive-Z glass overhang and confirms traversal plus solid support/wall exclusions; the lower-layer walkable polygon remains non-unique because the PDF has no independent support/clearance outline.'
+    notes: 'Temple01 model-Y=3.0 roofed floor masks are measured at 0.125m raster resolution after subtracting floor-level Pillar/Wall exclusions. CI #631 confirms both 3863-cell navigable masks are exact 180-degree counterparts; stored contours use <=0.15m simplification with support holes.'
   },
   {
     id: 'center-left-slope-footprint',

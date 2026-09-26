@@ -72,13 +72,11 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
       priority: 2,
       status: 'CAPTURE_RECEIVED',
       receivedEvidenceIds: ['user-underpass-capture-2026-09-25'],
-      blocks: [
-        'glass-underpass-outline'
-      ],
+      blocks: [],
       existingEvidence:
-        'Current gameplay video and post-7.2 references confirm a traversable passage below the raised/glass structure. The PDF fixes the upper footprint but does not encode the lower-layer support-column clearance as an independent polygon.',
+        'The 2026-09-25 capture confirms traversal and support/wall exclusions. The remodeled Temple01 OBJ subsequently resolves the model-Y=3.0 roofed floor masks in XZ after subtracting floor-level Pillar/Wall obstacles; CI #631 verifies exact 180-degree mask symmetry, so this received capture no longer blocks a trace.',
       unresolvedQuestion:
-        'What is the exact walkable lower-layer footprint under the glass/raised structure, including support-column exclusions and the two entrance/exit widths?',
+        'Historical capture question: what is the exact walkable lower-layer footprint under the glass/raised structure, including support-column exclusions and entrance/exit widths? This is now resolved for BLOCKOUT from Temple01 geometry, not from perspective footage alone.',
       minimumCapture: [
         'One continuous slow walk from one underpass entrance through to the opposite exit.',
         'At the entrance, each support column/corner, and the exit, stop briefly and look down so the floor boundary and column footprint are visible.',

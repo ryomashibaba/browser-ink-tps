@@ -7,7 +7,7 @@ import {
 describe('T21-B Undertow common trace plan', () => {
   it('promotes only source-measured XZ traces', () => {
     const coverage = undertowTraceCoverage();
-    expect(coverage.measured).toBe(16);
+    expect(coverage.measured).toBe(17);
     expect(coverage.total).toBe(18);
 
     expect(coverage.missingIds).not.toContain('team-a-spawn-terrain-outline');
@@ -24,20 +24,23 @@ describe('T21-B Undertow common trace plan', () => {
     expect(coverage.missingIds).not.toContain('center-small-step-outline');
     expect(coverage.missingIds).not.toContain('center-left-slope-footprint');
     expect(coverage.missingIds).not.toContain('center-right-slope-footprint');
+    expect(coverage.missingIds).not.toContain('glass-underpass-outline');
     expect(coverage.missingIds).toContain('fall-out-void-kill-boundary');
+    expect(coverage.missingIds).toEqual(['fall-out-void-kill-boundary']);
   });
 
   it('does not accidentally mark unresolved gameplay-critical polygons complete', () => {
-    const forbidden = [
-      'glass-underpass-outline',
-      'fall-out-void-kill-boundary'
-    ];
-    for (const id of forbidden) {
-      expect(UNDERTOW_COMMON_TRACE_PLAN.find((item) => item.id === id)?.status)
-        .toBe('UNTRACED');
-    }
+    expect(
+      UNDERTOW_COMMON_TRACE_PLAN.find(
+        (item) => item.id === 'fall-out-void-kill-boundary'
+      )?.status
+    ).toBe('UNTRACED');
 
-    for (const id of ['center-low-floor-outline', 'right-low-floor-outline']) {
+    for (const id of [
+      'center-low-floor-outline',
+      'right-low-floor-outline',
+      'glass-underpass-outline'
+    ]) {
       expect(UNDERTOW_COMMON_TRACE_PLAN.find((item) => item.id === id)?.status)
         .toBe('MEASURED');
     }

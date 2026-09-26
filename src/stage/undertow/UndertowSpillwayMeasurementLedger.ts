@@ -14,6 +14,10 @@ import {
 } from './UndertowSpillwayVectorBlueprint';
 import { UNDERTOW_CENTRAL_SLOPE_MARKERS } from './UndertowSpillwaySlopeMarkers';
 import { UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT } from './UndertowSpillwayRemodelGeometryAudit';
+import {
+  UNDERTOW_MODEL_XZ_GEOMETRY,
+  UNDERTOW_UNDERPASS_NAV_AUDIT
+} from './UndertowSpillwayModelXZGeometry';
 
 const ALL_RULES = ['TURF', 'ZONES', 'TOWER', 'RAINMAKER', 'CLAMS'] as const;
 const handoff = ['handoff-t21-masterplan'] as const;
@@ -55,6 +59,23 @@ const commonSurfaceEntry = (
   appliesTo: ALL_RULES
 });
 
+const modelPolygonSet = (prefix: string) => {
+  const polygons = UNDERTOW_MODEL_XZ_GEOMETRY
+    .filter((item) => item.id.startsWith(prefix))
+    .map((item) => ({
+      outerMeters: item.projectOuter,
+      holesMeters: item.projectHoles
+    }));
+  if (polygons.length !== 2) {
+    throw new Error(`Undertow model polygon set '${prefix}' must contain exactly two symmetric components.`);
+  }
+  return polygons;
+};
+
+const centerLowModelPolygonSet = modelPolygonSet('center-low-');
+const rightLowModelPolygonSet = modelPolygonSet('right-low-');
+const glassUnderpassModelPolygonSet = modelPolygonSet('glass-underpass-');
+
 const entries: readonly StageMeasurementEntry[] = [
   commonSurfaceEntry({
     id: 'center-lower-floor',
@@ -63,9 +84,13 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: unresolvedXz(
-      'The former center-origin face binding is superseded: Temple01 local registration shows that face is the +1.5m step-top side, not center-low. The true center-low Y=0 outline must be re-extracted.'
-    ),
+    xz: {
+      kind: 'POLYGON_SET',
+      polygonSetMeters: centerLowModelPolygonSet,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence,
+      notes: 'Temple01 model-Y=3.0 / project-Y=0 connected walkable components, extracted at 0.125m raster resolution with explicit support holes.'
+    },
     y: {
       floorId: 'CENTER_LOW_0',
       yMeters: 0,
@@ -78,7 +103,7 @@ const entries: readonly StageMeasurementEntry[] = [
       confidence: 'CONFIRMED',
       evidenceIds: handoff
     },
-    notes: 'The Y datum remains CONFIRMED; only the previous XZ face identity was invalidated.'
+    notes: 'The Y datum remains CONFIRMED; Temple01 now supplies the corrected HIGH XZ polygon set for the actual center-low floor.'
   }),
   commonSurfaceEntry({
     id: 'center-origin-step-top-face',
@@ -379,7 +404,13 @@ const entries: readonly StageMeasurementEntry[] = [
       'user-underpass-capture-2026-09-25',
       'user-right-low-capture-2026-09-25'
     ],
-    xz: unresolvedXz('The 2026-09-25 capture confirms the passage and support/wall exclusions, but perspective video still does not define a map-registered simple walkable polygon.'),
+    xz: {
+      kind: 'POLYGON_SET',
+      polygonSetMeters: glassUnderpassModelPolygonSet,
+      confidence: 'HIGH',
+      evidenceIds: UNDERTOW_UNDERPASS_NAV_AUDIT.evidenceIds,
+      notes: 'Temple01 model-Y=3.0 roofed walkable masks after subtracting floor-level Pillar/Wall exclusions. CI #631 confirms exact 180-degree raster symmetry; each side stores one support hole.'
+    },
     y: {
       floorId: 'GLASS_LOWER',
       yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.glassUnderpassFloor,
@@ -470,7 +501,13 @@ const entries: readonly StageMeasurementEntry[] = [
       'user-right-low-capture-2026-09-25',
       'user-underpass-capture-2026-09-25'
     ],
-    xz: unresolvedXz('The 2026-09-25 perimeter capture classifies the low/open floor and exits, but the constant-height partition still does not close uniquely in the top-down source.'),
+    xz: {
+      kind: 'POLYGON_SET',
+      polygonSetMeters: rightLowModelPolygonSet,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence,
+      notes: 'Temple01 model-Y=7.5 / project-Y=4.5 connected walkable components seeded from the verified right-small-drop lower side, with explicit support holes.'
+    },
     y: {
       floorId: 'RIGHT_LOW',
       yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.rightLow,

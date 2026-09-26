@@ -14,9 +14,8 @@ describe('T21-B Undertow vector-source topology limits', () => {
     expect(spawn?.reason).toContain('multiple elevations/transitions');
   });
 
-  it('promotes right-low from Temple01 while keeping underpass and void unresolved', () => {
+  it('promotes right-low and underpass from Temple01 while keeping only void unresolved', () => {
     expect(unresolvedUndertowSourceTopologyLimits()).toEqual([
-      'glass-underpass-walkable-outline',
       'internal-void-kill-boundaries'
     ]);
 
@@ -32,14 +31,26 @@ describe('T21-B Undertow vector-source topology limits', () => {
     expect(
       UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
         (item) => item.id === 'glass-underpass-walkable-outline'
-      )?.status
-    ).toBe('PLAN_REGISTERED_POLYGON_UNRESOLVED');
+      )
+    ).toMatchObject({
+      status: 'RESOLVED_FROM_TEMPLE01_MODEL',
+      safeToUseForBlockout: true
+    });
 
     expect(
       UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
         (item) => item.id === 'internal-void-kill-boundaries'
       )?.status
     ).toBe('REQUIRES_3D_BINDING');
+  });
+
+  it('records the model-derived underpass obstacle subtraction and exact mask symmetry', () => {
+    const underpass = UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
+      (item) => item.id === 'glass-underpass-walkable-outline'
+    );
+    expect(underpass?.reason).toContain('Pillar/Wall exclusions');
+    expect(underpass?.reason).toContain('3863-cell');
+    expect(underpass?.reason).toContain('mirror XOR 0 cells');
   });
 
   it('records why the right-low area cannot be closed from PDF hard lines alone', () => {

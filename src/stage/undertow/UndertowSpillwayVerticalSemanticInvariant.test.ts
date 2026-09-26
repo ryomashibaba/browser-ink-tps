@@ -81,7 +81,11 @@ describe('T21-C cross-file vertical semantic invariant', () => {
       yMeters: geometry.projectY.glassUnderpassFloor,
       confidence: 'HIGH'
     });
-    expect(topology?.reason).toContain('model Y=3.0m');
+    expect(topology).toMatchObject({
+      status: 'RESOLVED_FROM_TEMPLE01_MODEL',
+      safeToUseForBlockout: true
+    });
+    expect(topology?.reason).toContain('3863-cell');
     expect(topology?.reason).not.toContain('same-height connection');
   });
 });

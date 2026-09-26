@@ -53,7 +53,7 @@ export interface LedgerAssumption extends ConfidenceTag {
 }
 
 export interface XzMeasurement extends ConfidenceTag {
-  kind: 'UNRESOLVED' | 'POINT' | 'RECT' | 'POLYLINE' | 'POLYGON';
+  kind: 'UNRESOLVED' | 'POINT' | 'RECT' | 'POLYLINE' | 'POLYGON' | 'POLYGON_SET';
   pointMeters?: readonly [number, number];
   rectMeters?: Readonly<{
     centerX: number;
@@ -63,6 +63,10 @@ export interface XzMeasurement extends ConfidenceTag {
   }>;
   polylineMeters?: readonly (readonly [number, number])[];
   polygonMeters?: readonly (readonly [number, number])[];
+  polygonSetMeters?: readonly Readonly<{
+    outerMeters: readonly (readonly [number, number])[];
+    holesMeters?: readonly (readonly (readonly [number, number])[])[];
+  }>[];
 }
 
 export interface YMeasurement extends ConfidenceTag {
@@ -200,6 +204,28 @@ export function validateStageMeasurementLedger(ledger: StageMeasurementLedger): 
       (!entry.xz.polygonMeters || entry.xz.polygonMeters.length < 3)
     ) {
       errors.push(`entry '${entry.id}': POLYGON XZ requires at least three points.`);
+    }
+
+    if (entry.xz.kind === 'POLYGON_SET') {
+      const polygons = entry.xz.polygonSetMeters;
+      if (!polygons || polygons.length === 0) {
+        errors.push(`entry '${entry.id}': POLYGON_SET XZ requires at least one polygon.`);
+      } else {
+        polygons.forEach((polygon, polygonIndex) => {
+          if (polygon.outerMeters.length < 3) {
+            errors.push(
+              `entry '${entry.id}': POLYGON_SET polygon ${polygonIndex} requires at least three outer points.`
+            );
+          }
+          (polygon.holesMeters ?? []).forEach((hole, holeIndex) => {
+            if (hole.length < 3) {
+              errors.push(
+                `entry '${entry.id}': POLYGON_SET polygon ${polygonIndex} hole ${holeIndex} requires at least three points.`
+              );
+            }
+          });
+        });
+      }
     }
 
     if (!finite(entry.y.yMeters) || !finite(entry.y.deltaMeters)) {
