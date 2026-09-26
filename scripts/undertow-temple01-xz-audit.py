@@ -1210,3 +1210,103 @@ for name,(comp,loops,lows) in fine_voids.items():
         raise SystemExit(
             f"T21 fine void audit failed: {name} contains lower horizontal geometry"
         )
+
+
+# Measure whether the fine floorless-hole contours coincide with actual
+# Temple01 StageSide vertical wall geometry. This remains an audit only; the
+# name "StageSide" is not itself treated as proof of KILL semantics.
+def point_segment_distance_2d(p,a,b):
+    px,pz=p; ax,az=a; bx,bz=b
+    dx=bx-ax; dz=bz-az
+    den=dx*dx+dz*dz
+    if den<=1e-12:
+        return math.hypot(px-ax,pz-az)
+    t=((px-ax)*dx+(pz-az)*dz)/den
+    t=max(0.0,min(1.0,t))
+    qx=ax+t*dx; qz=az+t*dz
+    return math.hypot(px-qx,pz-qz)
+
+stage_side_segments=[]
+for ia,ib,ic,o,m in faces:
+    if "StageSide" not in o and "StageSide" not in m:
+        continue
+    tri=[vertices[ia],vertices[ib],vertices[ic]]
+    n=tri_normal(tri)
+    # Keep wall-like faces. Horizontal caps are not evidence for a hole edge.
+    if abs(n[1])>0.45:
+        continue
+    pts=[(v[0],v[2]) for v in tri]
+    pairs=[
+        (pts[0],pts[1]),
+        (pts[1],pts[2]),
+        (pts[2],pts[0]),
+    ]
+    a,b=max(pairs,key=lambda ab:(ab[0][0]-ab[1][0])**2+(ab[0][1]-ab[1][1])**2)
+    seg_len=math.hypot(a[0]-b[0],a[1]-b[1])
+    if seg_len<0.05:
+        continue
+    ys=[v[1] for v in tri]
+    if max(ys)-min(ys)<0.50:
+        continue
+    stage_side_segments.append((a,b,min(ys),max(ys),o,m))
+
+WALL_BIN=1.0
+wall_bins=defaultdict(list)
+for si,(a,b,y0,y1,o,m) in enumerate(stage_side_segments):
+    xmin=min(a[0],b[0])-0.50; xmax=max(a[0],b[0])+0.50
+    zmin=min(a[1],b[1])-0.50; zmax=max(a[1],b[1])+0.50
+    for ix in range(math.floor(xmin/WALL_BIN),math.floor(xmax/WALL_BIN)+1):
+        for iz in range(math.floor(zmin/WALL_BIN),math.floor(zmax/WALL_BIN)+1):
+            wall_bins[(ix,iz)].append(si)
+
+def nearest_stage_side_distance(x,z):
+    candidates=wall_bins.get((math.floor(x/WALL_BIN),math.floor(z/WALL_BIN)),())
+    best=None; best_meta=None
+    for si in candidates:
+        a,b,y0,y1,o,m=stage_side_segments[si]
+        d=point_segment_distance_2d((x,z),a,b)
+        if best is None or d<best:
+            best=d; best_meta=(y0,y1,o,m)
+    return best,best_meta
+
+for name,(comp,loops,lows) in fine_voids.items():
+    loop=loops[0]
+    distances=[]
+    metas=[]
+    for i,a in enumerate(loop):
+        b=loop[(i+1)%len(loop)]
+        mx=(a[0]+b[0])*0.5; mz=(a[1]+b[1])*0.5
+        d,meta=nearest_stage_side_distance(mx,mz)
+        if d is None:
+            d=999.0
+        distances.append(d)
+        metas.append(meta)
+    sd=sorted(distances)
+    def pct(q):
+        if not sd: return 999.0
+        idx=min(len(sd)-1,max(0,round((len(sd)-1)*q)))
+        return sd[idx]
+    cov15=sum(d<=0.15 for d in distances)/len(distances)
+    cov30=sum(d<=0.30 for d in distances)/len(distances)
+    cov50=sum(d<=0.50 for d in distances)/len(distances)
+    objs=defaultdict(int)
+    yranges=[]
+    for d,meta in zip(distances,metas):
+        if meta is None or d>0.30:
+            continue
+        y0,y1,o,m=meta
+        objs[(o,m)]+=1
+        yranges.append((y0,y1))
+    ysummary=None
+    if yranges:
+        ysummary=(
+            round(min(v[0] for v in yranges),3),
+            round(max(v[1] for v in yranges),3),
+        )
+    print(
+        f"T21VOID WALL {name} edges={len(distances)} "
+        f"cov015={cov15:.3f} cov030={cov30:.3f} cov050={cov50:.3f} "
+        f"p50={pct(0.50):.3f} p95={pct(0.95):.3f} max={max(distances):.3f} "
+        f"near_y_range={ysummary} "
+        f"objects={sorted(objs.items(),key=lambda kv:-kv[1])[:6]}"
+    )
