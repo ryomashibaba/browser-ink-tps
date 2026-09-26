@@ -11,7 +11,7 @@ export type UndertowExternalGeometrySourceStatus =
   | 'CONFIRMED_VERSION_BOUNDARY'
   | 'REJECTED_WRONG_MODE'
   | 'CONFIRMED_REMODEL_IDENTITY'
-  | 'PROMISING_BODY_UNAVAILABLE'
+  | 'BODY_AUDITED_LOCAL_PROMOTION'
   | 'HIGH_FILTER_HYPOTHESIS'
   | 'REJECTED_NAME_MAP'
   | 'CORROBORATING_SCHEMA_ONLY';
@@ -65,19 +65,21 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT:
     },
     {
       id: 'KITRIX_TEMPLE01_OBJ',
-      status: 'PROMISING_BODY_UNAVAILABLE',
-      canPromoteCanonicalGeometry: false,
+      status: 'BODY_AUDITED_LOCAL_PROMOTION',
+      canPromoteCanonicalGeometry: true,
       confidence: 'HIGH',
       facts: [
-        'KiTrix contains stages/Vss_Temple01/Vss_Temple01.obj as a Git LFS object with declared size 43,263,289 bytes.',
+        'KiTrix contains stages/Vss_Temple01/Vss_Temple01.obj as a Git LFS object with audited size 43,263,289 bytes.',
+        'The GitHub Actions audit successfully retrieved the LFS body and parsed 375,948 vertices.',
+        'The common Fld_Temple01 plus Turf PntSet filter produced 70,396 active triangles for local geometry inspection.',
         'Its MTL contains Fld_Temple01 and FldObj_Temple01 material/model names, including PntSet/VarSet/VclSet/VglSet/VlfSet families.',
         'KiTrix Bfres2Obj derives the output folder name by replacing Fld_ with Vss_ on the BFRES input filename.',
         'The converter applies BFRES bone world transforms and then writes X/Y/Z vertex coordinates directly to OBJ without a custom scale or axis swap.',
         'KiTrix StageLoader adds OBJ child nodes directly beneath a new stage node without an extra stage scale, rotation or translation.',
-        'KiTrixScene adds that stage node directly to the scene root and computes bounds from it; StageCollider raycasts that same stage node.'
+        'The registered first-drop and right-small-drop vector lips matched the expected local OBJ height-discontinuity contours within 0.163m in the 0.5m audit raster.'
       ],
       blocker:
-        'The Git LFS object body is not retrievable in the current audit environment, so no vertex, plane, or floor Y may be promoted from this source yet.'
+        'Promotion is restricted to locally verified landmarks/drop relations. The full exterior registration has a large p95 residual and must not be used as blanket permission to project arbitrary PDF features onto the OBJ.'
     },
     {
       id: 'KITRIX_TEMPLE01_RULE_SET_FILTER',
@@ -138,15 +140,15 @@ export function undertowExternalGeometrySourceAuditErrors(): readonly string[] {
   if (temple01?.status !== 'CONFIRMED_REMODEL_IDENTITY') {
     errors.push('Temple01 remodel identity must remain confirmed');
   }
-  if (kitrix?.canPromoteCanonicalGeometry) {
-    errors.push('KiTrix LFS geometry must not promote canonical geometry before the OBJ body is audited');
+  if (kitrix?.status !== 'BODY_AUDITED_LOCAL_PROMOTION' || !kitrix.canPromoteCanonicalGeometry) {
+    errors.push('KiTrix Temple01 OBJ must remain locally promotable after the successful body audit');
   }
   if (stick?.status !== 'REJECTED_WRONG_MODE') {
     errors.push('Salmon Run stick index must remain excluded from normal-PvP height reconstruction');
   }
   for (const entry of UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT) {
-    if (entry.canPromoteCanonicalGeometry) {
-      errors.push(`${entry.id}: no current external source is promotion-safe`);
+    if (entry.id !== 'KITRIX_TEMPLE01_OBJ' && entry.canPromoteCanonicalGeometry) {
+      errors.push(`${entry.id}: only the locally verified Temple01 OBJ may promote geometry`);
     }
   }
   return errors;
