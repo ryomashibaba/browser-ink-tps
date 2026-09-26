@@ -90,7 +90,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Spawn-side Right Route',
     status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Both symmetric second-drop L-shaped hard edges are measured; vertical drop remains -1.5m HIGH.'
+    notes: 'Both symmetric right-side L-shaped hard edges are measured; Temple01 local registration resolves the vertical drop to -3.0m HIGH.'
   },
   {
     id: 'upper-glass-platform-outline',
@@ -130,7 +130,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center / Right',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '2026-09-25 capture is plan-registered to the Team A right-small-drop lip and confirms the low/open floor, ramp exit and same-level underpass connection; perspective footage still does not assign every perimeter corner to a unique PDF vertex. Absolute Y remains unresolved separately.'
+    notes: '2026-09-25 capture is plan-registered to the Team A right-small-drop lip and confirms the low/open floor, ramp exit and same-level underpass connection; perspective footage still does not assign every perimeter corner to a unique PDF vertex. Temple01 local registration independently resolves right-low project Y=3.0m.'
   },
   {
     id: 'center-grate-outline',
