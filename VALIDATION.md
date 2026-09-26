@@ -1703,3 +1703,19 @@ Automated checks now require:
 - the `PntSet` Turf filter is verified as part of the successful common+Turf local audit
 
 Source audit may change evidence priority, but it must not open the T21-D gate or alter runtime stage geometry.
+
+
+## T21-B Temple01 local XZ contour validation
+
+Automated validation now additionally requires:
+- Temple01 model/project XZ transform round-trips every stored contour point
+- center-low extraction remains model Y=3.0m / project Y=0
+- right-low extraction remains model Y=7.5m / project Y=4.5
+- extraction resolution remains 0.125m with <=0.20m boundary simplification
+- center-low and right-low trace requirements are MEASURED
+- right-low source topology is `RESOLVED_FROM_TEMPLE01_MODEL`
+- the retired right-low user capture no longer appears as a current blocking trace
+- Blockout readiness reports exactly two missing XZ traces: `glass-underpass-outline` and `fall-out-void-kill-boundary`
+- no vertical blocker remains
+
+This checkpoint does not start T21-D and does not mark model-raster contours as Stable Freeze.
