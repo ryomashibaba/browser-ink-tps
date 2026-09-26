@@ -26,8 +26,8 @@ describe('T21-C Undertow line-side semantic audit', () => {
         trace: 'team-a-first-drop-lip',
         lower: 'team-a-first-drop-landing',
         upper: 'team-a-spawn-floor',
-        lowerY: 1.5,
-        upperY: 6,
+        lowerY: 3,
+        upperY: 7.5,
         status: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION'
       },
       {
@@ -35,8 +35,8 @@ describe('T21-C Undertow line-side semantic audit', () => {
         trace: 'team-a-right-small-drop-lip',
         lower: 'right-low-floor',
         upper: 'right-small-drop-upper',
-        lowerY: 3,
-        upperY: 6,
+        lowerY: 4.5,
+        upperY: 7.5,
         status: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION'
       }
     ]);
