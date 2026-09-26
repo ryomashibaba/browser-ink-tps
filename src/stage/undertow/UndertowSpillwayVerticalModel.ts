@@ -3,10 +3,12 @@ import type {
   VerticalRelation
 } from '../measurement/VerticalConstraintGraph';
 import { exactRelation } from '../measurement/VerticalConstraintGraph';
+import { UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT } from './UndertowSpillwayRemodelGeometryAudit';
 
 const handoff = ['handoff-t21-masterplan'] as const;
 const center = ['user-center-stills', 'user-center-videos', 'web-post-7-2-gameplay'] as const;
 const firstDrop = ['user-first-drop-video', 'handoff-t21-masterplan'] as const;
+const remodelGeometry = ['extracted-temple01-geometry', 'user-turf-vector-blueprint'] as const;
 const underpassCapture = [
   'user-right-low-capture-2026-09-25',
   'user-underpass-capture-2026-09-25'
@@ -34,16 +36,20 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
     id: 'right-low-floor',
     absolute: {
       floorId: 'RIGHT_LOW',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.rightLow,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Locally registered remodeled Temple01 blue-drop lower side.'
     }
   },
   {
     id: 'right-small-drop-upper',
     absolute: {
       floorId: 'RIGHT_DROP_UPPER',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.rightSmallDropUpper,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Registered blue-drop upper side shares model Y=10.5m with the spawn-side upper floor.'
     }
   },
   {
@@ -115,33 +121,38 @@ export const UNDERTOW_VERTICAL_NODES: readonly VerticalNode[] = [
     id: 'team-a-spawn-floor',
     absolute: {
       floorId: 'TEAM_A_SPAWN',
-      confidence: 'UNKNOWN',
-      evidenceIds: [],
-      notes: 'Historical 7.5m hypothesis is deliberately excluded.'
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.spawnFloor,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Temple01 spawn-center model Y=10.5m normalized to project Y=6.0m. Historical 7.5m hypothesis is superseded.'
     }
   },
   {
     id: 'team-b-spawn-floor',
     absolute: {
       floorId: 'TEAM_B_SPAWN',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.spawnFloor,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry
     }
   },
   {
     id: 'team-a-first-drop-landing',
     absolute: {
       floorId: 'TEAM_A_FIRST_DROP',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.firstDropLanding,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry,
+      notes: 'Registered red-drop lower side: model Y=6.0m -> project Y=1.5m.'
     }
   },
   {
     id: 'team-b-first-drop-landing',
     absolute: {
       floorId: 'TEAM_B_FIRST_DROP',
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      yMeters: UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectY.firstDropLanding,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometry
     }
   }
 ];
@@ -158,10 +169,10 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
   exactRelation(
     'right-low-floor',
     'right-small-drop-upper',
-    1.5,
+    3,
     'HIGH',
-    handoff,
-    'Right-side small drop magnitude; neither absolute floor is frozen yet.'
+    remodelGeometry,
+    'Locally registered Temple01 geometry resolves the blue/right small drop as 7.5->10.5m model Y, i.e. +3.0m from lower to upper.'
   ),
   exactRelation(
     'right-low-floor',
@@ -235,22 +246,30 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
     center,
     'Counterpart first-drop landing floors are symmetry-linked.'
   ),
-  {
-    fromId: 'team-a-spawn-floor',
-    toId: 'team-a-first-drop-landing',
-    candidatesMeters: [-1.5, -3],
-    confidence: 'PROVISIONAL',
-    evidenceIds: firstDrop,
-    notes: 'ONE_WAY_DROP is confirmed, exact fall magnitude is not.'
-  },
-  {
-    fromId: 'team-b-spawn-floor',
-    toId: 'team-b-first-drop-landing',
-    candidatesMeters: [-1.5, -3],
-    confidence: 'PROVISIONAL',
-    evidenceIds: firstDrop,
-    notes: 'ONE_WAY_DROP is confirmed, exact fall magnitude is not.'
-  }
+  exactRelation(
+    'team-a-spawn-floor',
+    'team-a-first-drop-landing',
+    -4.5,
+    'HIGH',
+    ['extracted-temple01-geometry', ...firstDrop],
+    'One-way semantics are user-confirmed; locally registered Temple01 geometry resolves the exact upper/lower model-Y levels 10.5->6.0m.'
+  ),
+  exactRelation(
+    'team-b-spawn-floor',
+    'team-b-first-drop-landing',
+    -4.5,
+    'HIGH',
+    ['extracted-temple01-geometry', ...firstDrop],
+    '180-degree counterpart exact first-drop relation.'
+  ),
+  exactRelation(
+    'team-a-first-drop-landing',
+    'right-low-floor',
+    1.5,
+    'HIGH',
+    ['extracted-temple01-geometry', 'user-first-drop-height-stills-2026-09-26'],
+    'Corrected red-vs-blue lower-side relation: first-drop landing model Y=6.0m and right-low/blue-lower model Y=7.5m.'
+  )
 ];
 
 export const UNDERTOW_VERTICAL_BANDS = Object.freeze({
