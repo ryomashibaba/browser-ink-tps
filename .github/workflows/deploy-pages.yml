@@ -508,6 +508,71 @@ jobs:
                           x=mx+nx*off*sign; z=mz+nz*off*sign
                           h=walkable_hit(x,z)
                           print(f'T21SEM SIDE {lname} seg={si} {side} off={off:.1f} point=({x:.4f},{z:.4f}) hit={h}')
+
+          # Local registration verification: compare each registered PDF lip
+          # against the rasterized OBJ height-discontinuity contour, independent
+          # of the outer-boundary ICP residual.
+          def point_segment_distance(pnt,a,b):
+              px,pz=pnt; ax,az=a; bx,bz=b
+              dx=bx-ax; dz=bz-az
+              den=dx*dx+dz*dz
+              if den<=1e-12:
+                  return math.hypot(px-ax,pz-az)
+              t=max(0.0,min(1.0,((px-ax)*dx+(pz-az)*dz)/den))
+              qx=ax+t*dx; qz=az+t*dz
+              return math.hypot(px-qx,pz-qz)
+
+          expected_pairs={
+              'A_FIRST':(6.0,10.5),
+              'B_FIRST':(6.0,10.5),
+              'A_RIGHT':(7.5,10.5),
+              'B_RIGHT':(7.5,10.5),
+          }
+          for lname,pdfpts in reg_lines.items():
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpts]
+              expected=expected_pairs[lname]
+              for si,(aa2,bb2) in enumerate(zip(rp,rp[1:])):
+                  nearby=[]
+                  exactish=[]
+                  for ex,ez,pair in edges:
+                      d=point_segment_distance((ex,ez),aa2,bb2)
+                      if d<=3.0:
+                          nearby.append((d,pair,ex,ez))
+                          if pair==expected:
+                              exactish.append((d,ex,ez))
+                  nearby.sort()
+                  pair_counts=Counter(pair for d,pair,ex,ez in nearby)
+                  exactish.sort()
+                  nearest_exact=[round(v[0],3) for v in exactish[:12]]
+                  print(
+                      f'T21VERIFY EDGE {lname} seg={si} expected={expected} '
+                      f'near_pairs={pair_counts.most_common(8)} '
+                      f'nearest_expected={nearest_exact}'
+                  )
+
+          center_checks={
+              'CENTER_FACE':centroid([(406.08,308.76),(435.84,308.76),(435.84,286.44),(406.08,286.44)]),
+              'NEG_CENTER_STEP':centroid([(406.08,282.84),(435.84,282.84),(435.84,286.44),(406.08,286.44)]),
+              'POS_CENTER_STEP':centroid([(406.08,308.76),(435.84,308.76),(435.84,312.36),(406.08,312.36)]),
+          }
+          for name,p0 in center_checks.items():
+              rp=apply_tf(p0,ra,rb,rtx,rtz)
+              print(f'T21VERIFY CENTER {name} model=({rp[0]:.4f},{rp[1]:.4f}) hit={walkable_hit(rp[0],rp[1])}')
+
+          # Probe multiple offsets around each center-step strip because the
+          # strip is only 0.75 project-m deep and registration error is sub-metric.
+          for name,pdfpoly in (
+              ('NEG_CENTER_STEP',[(406.08,282.84),(435.84,282.84),(435.84,286.44),(406.08,286.44)]),
+              ('POS_CENTER_STEP',[(406.08,308.76),(435.84,308.76),(435.84,312.36),(406.08,312.36)]),
+          ):
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpoly]
+              cx=sum(p[0] for p in rp)/len(rp); cz=sum(p[1] for p in rp)/len(rp)
+              print(f'T21VERIFY CENTERGRID {name} center=({cx:.4f},{cz:.4f})')
+              for dx0 in (-0.75,-0.35,0,0.35,0.75):
+                  for dz0 in (-0.75,-0.35,0,0.35,0.75):
+                      h=walkable_hit(cx+dx0,cz+dz0)
+                      if h is not None:
+                          print(f'T21VERIFY CENTERGRID {name} d=({dx0:+.2f},{dz0:+.2f}) hit={h}')
           PY
 
       - name: Setup Node.js
