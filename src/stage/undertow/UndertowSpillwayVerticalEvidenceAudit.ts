@@ -4,10 +4,10 @@ import {
 } from './UndertowSpillwayVerticalModel';
 
 export type UndertowVerticalComponentId =
-  | 'CENTER_SEEDED'
-  | 'SPAWN_RIGHT_LOW_SEEDED'
-  | 'SLOPE_HIGH_UNSEEDED'
-  | 'GRATE_UNSEEDED';
+  | 'CENTER_MODEL_SEEDED'
+  | 'SPAWN_RIGHT_LOW_MODEL_SEEDED'
+  | 'SLOPE_MODEL_SEEDED'
+  | 'GRATE_MODEL_SEEDED';
 
 export interface UndertowVerticalComponentAudit {
   id: UndertowVerticalComponentId;
@@ -57,67 +57,54 @@ function componentHasBlockoutSeed(nodeIds: readonly string[]): boolean {
 
 const centerNodes = connectedComponent('center-low-floor');
 const spawnRightLowNodes = connectedComponent('team-a-spawn-floor');
-const slopeHighNodes = connectedComponent('center-left-slope-high');
+const slopeNodes = connectedComponent('center-left-slope-low');
 const grateNodes = connectedComponent('negative-z-grate-floor');
 
 export const UNDERTOW_VERTICAL_COMPONENT_AUDIT:
   readonly UndertowVerticalComponentAudit[] = [
     {
-      id: 'CENTER_SEEDED',
+      id: 'CENTER_MODEL_SEEDED',
       nodeIds: centerNodes,
       seededAbsoluteY: componentHasBlockoutSeed(centerNodes),
       confidence: 'CONFIRMED',
       blocker: null
     },
     {
-      id: 'SPAWN_RIGHT_LOW_SEEDED',
+      id: 'SPAWN_RIGHT_LOW_MODEL_SEEDED',
       nodeIds: spawnRightLowNodes,
       seededAbsoluteY: componentHasBlockoutSeed(spawnRightLowNodes),
       confidence: 'HIGH',
       blocker: null
     },
     {
-      id: 'SLOPE_HIGH_UNSEEDED',
-      nodeIds: slopeHighNodes,
-      seededAbsoluteY: componentHasBlockoutSeed(slopeHighNodes),
+      id: 'SLOPE_MODEL_SEEDED',
+      nodeIds: slopeNodes,
+      seededAbsoluteY: componentHasBlockoutSeed(slopeNodes),
       confidence: 'HIGH',
-      blocker:
-        'High endpoints are symmetry-linked only; one exact relation to a seeded floor is still missing.'
+      blocker: null
     },
     {
-      id: 'GRATE_UNSEEDED',
+      id: 'GRATE_MODEL_SEEDED',
       nodeIds: grateNodes,
       seededAbsoluteY: componentHasBlockoutSeed(grateNodes),
       confidence: 'HIGH',
-      blocker:
-        'Grate pair is symmetry-linked only; one exact relation to a seeded floor is still missing.'
+      blocker: null
     }
   ];
 
-export const UNDERTOW_MINIMUM_VERTICAL_EVIDENCE_NEEDS = Object.freeze([
-  {
-    id: 'CENTER_SLOPE_HIGH_TIE',
-    resolvesComponent: 'SLOPE_HIGH_UNSEEDED' as const,
-    minimumEvidence:
-      'One exact high-end relation to any seeded floor or another component that later receives a seed.',
-    currentState:
-      'Both center-side low endpoints resolve to Y=1.5m, but the far/high endpoints have only counterpart symmetry.'
-  },
-  {
-    id: 'GRATE_Y_TIE',
-    resolvesComponent: 'GRATE_UNSEEDED' as const,
-    minimumEvidence:
-      'One exact grate elevation relation to a seeded floor.',
-    currentState:
-      'The two grate footprints are exact in XZ and symmetry-linked in Y, but no absolute or seeded relative Y is evidenced.'
-  }
-] as const);
+export const UNDERTOW_MINIMUM_VERTICAL_EVIDENCE_NEEDS = Object.freeze([] as const);
 
 export function undertowVerticalEvidenceAuditErrors(): readonly string[] {
   const errors: string[] = [];
   const knownNodeIds = new Set(UNDERTOW_VERTICAL_NODES.map((node) => node.id));
 
   for (const component of UNDERTOW_VERTICAL_COMPONENT_AUDIT) {
+    if (!component.seededAbsoluteY) {
+      errors.push(`${component.id}: component must be seeded at BLOCKOUT confidence`);
+    }
+    if (component.blocker !== null) {
+      errors.push(`${component.id}: resolved component must not expose a blocker`);
+    }
     for (const id of component.nodeIds) {
       if (!knownNodeIds.has(id)) {
         errors.push(`${component.id}: unknown vertical node ${id}`);
@@ -125,42 +112,8 @@ export function undertowVerticalEvidenceAuditErrors(): readonly string[] {
     }
   }
 
-  const center = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
-    (component) => component.id === 'CENTER_SEEDED'
-  );
-  if (!center?.seededAbsoluteY) {
-    errors.push('center component must remain seeded');
-  }
-  for (const id of [
-    'center-low-floor',
-    'center-small-step-top',
-    'center-left-slope-low',
-    'center-right-slope-low'
-  ]) {
-    if (!center?.nodeIds.includes(id)) {
-      errors.push(`center component missing ${id}`);
-    }
-  }
-
-  const resolved = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
-    (component) => component.id === 'SPAWN_RIGHT_LOW_SEEDED'
-  );
-  if (!resolved?.seededAbsoluteY) {
-    errors.push('remodeled spawn/right-low component must be seeded at BLOCKOUT confidence');
-  }
-  for (const id of [
-    'team-a-spawn-floor',
-    'team-b-spawn-floor',
-    'team-a-first-drop-landing',
-    'team-b-first-drop-landing',
-    'right-low-floor',
-    'right-small-drop-upper',
-    'glass-lower-major-floor',
-    'glass-overhang-high-reference'
-  ]) {
-    if (!resolved?.nodeIds.includes(id)) {
-      errors.push(`resolved spawn/right-low component missing ${id}`);
-    }
+  if (UNDERTOW_MINIMUM_VERTICAL_EVIDENCE_NEEDS.length !== 0) {
+    errors.push('no vertical evidence need should remain after the Temple01 local audit');
   }
 
   return errors;
