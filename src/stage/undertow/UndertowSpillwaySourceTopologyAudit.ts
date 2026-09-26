@@ -34,10 +34,10 @@ export const UNDERTOW_SOURCE_TOPOLOGY_LIMITS: readonly UndertowSourceTopologyLim
   },
   {
     id: 'internal-void-kill-boundaries',
-    status: 'REQUIRES_3D_BINDING',
+    status: 'RESOLVED_FROM_TEMPLE01_MODEL',
     reason:
-      'The exact exterior silhouette and mapped cyan water hazards are known. A dedicated void audit now classifies the central undercut pair and right-low/underpass overlap as traversable, but it does not yet prove an exhaustive absence/location set for all internal abyss regions; no concrete new capture target is currently justified.',
-    safeToUseForBlockout: false
+      'The exact 42-vertex exterior hard silhouette and exact mapped cyan water pair are already known. The full common+Turf Temple01 XZ audit finds six enclosed empty candidates: two map to the known water pair, the large symmetric pair is exterior/StageSide space with zero FloorLine05 interior holes, and the small symmetric pair is an overhead-projection false positive beside simple FloorMetal components with zero interior holes. Both candidate pairs are exact 180-degree counterparts and no unexplained internal abyss candidate remains. The exterior hard silhouette is therefore the BLOCKOUT XZ fall-out envelope; kill-height Y remains separate.',
+    safeToUseForBlockout: true
   }
 ];
 

@@ -8,7 +8,8 @@ export type UndertowEvidenceCaptureId =
 export type UndertowEvidenceCaptureStatus =
   | 'CAPTURE_RECEIVED'
   | 'NOT_YET_CAPTURED'
-  | 'DEFERRED_PENDING_MAP_ENUMERATION';
+  | 'DEFERRED_PENDING_MAP_ENUMERATION'
+  | 'RESOLVED_BY_TEMPLE01_AUDIT';
 
 export interface UndertowEvidenceCapture {
   id: UndertowEvidenceCaptureId;
@@ -95,12 +96,12 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
     {
       id: 'INTERNAL_VOID_CLASSIFICATION',
       priority: 3,
-      status: 'DEFERRED_PENDING_MAP_ENUMERATION',
-      blocks: ['fall-out-void-kill-boundary'],
+      status: 'RESOLVED_BY_TEMPLE01_AUDIT',
+      blocks: [],
       existingEvidence:
-        'The exterior hard silhouette and cyan water hazards are exact. The current void audit resolves the central undercut pair and right-low/underpass overlap as traversable lower layers, but does not yet prove an exhaustive internal-void classification.',
+        'The exact exterior hard silhouette and cyan water pair were combined with the exhaustive common+Turf Temple01 XZ audit. All six enclosed-empty candidates are accounted for: two known water hazards, two exterior/StageSide spaces, and two overhead-projection false positives beside simple floor meshes with zero interior holes. No unexplained internal abyss polygon remains at BLOCKOUT XZ confidence.',
       unresolvedQuestion:
-        'Which remaining internal blank/open regions are lethal fall voids, and which are valid lower-layer passages or floors?',
+        'Historical question only: which remaining internal blank/open regions are lethal fall voids, and which are valid lower-layer passages or floors? The Temple01 audit now resolves this without requiring another user capture.',
       minimumCapture: [
         'Only the ambiguous internal gaps need to be shown; no full-stage reshoot.',
         'For each ambiguous gap, show the surrounding ledges from above and then the space below/behind from a reachable side if it is traversable.',
@@ -119,7 +120,11 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
 
 export function undertowRequiredCaptureIds(): readonly UndertowEvidenceCaptureId[] {
   return UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN
-    .filter((capture) => capture.status !== 'CAPTURE_RECEIVED')
+    .filter(
+      (capture) =>
+        capture.status === 'NOT_YET_CAPTURED' ||
+        capture.status === 'DEFERRED_PENDING_MAP_ENUMERATION'
+    )
     .slice()
     .sort((a, b) => a.priority - b.priority)
     .map((capture) => capture.id);

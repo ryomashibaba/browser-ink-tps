@@ -14,10 +14,8 @@ describe('T21-B Undertow vector-source topology limits', () => {
     expect(spawn?.reason).toContain('multiple elevations/transitions');
   });
 
-  it('promotes right-low and underpass from Temple01 while keeping only void unresolved', () => {
-    expect(unresolvedUndertowSourceTopologyLimits()).toEqual([
-      'internal-void-kill-boundaries'
-    ]);
+  it('promotes all BLOCKOUT topology limits after the Temple01 void audit', () => {
+    expect(unresolvedUndertowSourceTopologyLimits()).toEqual([]);
 
     expect(
       UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
@@ -40,8 +38,21 @@ describe('T21-B Undertow vector-source topology limits', () => {
     expect(
       UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
         (item) => item.id === 'internal-void-kill-boundaries'
-      )?.status
-    ).toBe('REQUIRES_3D_BINDING');
+      )
+    ).toMatchObject({
+      status: 'RESOLVED_FROM_TEMPLE01_MODEL',
+      safeToUseForBlockout: true
+    });
+  });
+
+  it('records the exhaustive model-derived void closure', () => {
+    const voidLimit = UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
+      (item) => item.id === 'internal-void-kill-boundaries'
+    );
+    expect(voidLimit?.reason).toContain('six enclosed empty candidates');
+    expect(voidLimit?.reason).toContain('FloorMetal');
+    expect(voidLimit?.reason).toContain('zero interior holes');
+    expect(voidLimit?.reason).toContain('no unexplained internal abyss candidate remains');
   });
 
   it('records the model-derived underpass obstacle subtraction and exact mask symmetry', () => {

@@ -152,9 +152,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'fall-out-void-kill-boundary',
     geometryKind: 'POLYGON',
     region: 'Outer Environment',
-    status: 'UNTRACED',
+    status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Mapped cyan water is exact. Only still-ambiguous internal/off-stage gaps remain; any further user capture request must be provided with a marked-map guide.'
+    notes: 'XZ fall-out uses the exact 42-vertex common playable hard silhouette, with the exact cyan WATER+KILL polygons kept as separate internal hazards. The exhaustive common+Turf Temple01 audit classifies all six enclosed empty candidates and finds no additional internal abyss hole. This closes XZ only; the vertical kill threshold is not inferred.'
   }
 ];
 

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { undertowBlockoutReadiness } from './UndertowSpillwayBlockoutGate';
 
 describe('T21 Undertow blockout readiness gate', () => {
-  it('keeps T21-D blocked while critical XZ evidence is unresolved', () => {
+  it('opens the T21-D BLOCKOUT gate after all required XZ and vertical evidence resolves', () => {
     const gate = undertowBlockoutReadiness();
-    expect(gate.ready).toBe(false);
+    expect(gate.ready).toBe(true);
 
     expect(gate.missingTraceIds).not.toContain('common-playable-boundary');
     expect(gate.missingTraceIds).not.toContain('team-a-spawn-terrain-outline');
@@ -14,10 +14,8 @@ describe('T21 Undertow blockout readiness gate', () => {
     expect(gate.missingTraceIds).not.toContain('glass-underpass-outline');
     expect(gate.missingTraceIds).not.toContain('center-left-slope-footprint');
     expect(gate.missingTraceIds).not.toContain('right-low-floor-outline');
-    expect(gate.missingTraceIds).toContain('fall-out-void-kill-boundary');
-    expect(gate.missingTraceIds).toEqual([
-      'fall-out-void-kill-boundary'
-    ]);
+    expect(gate.missingTraceIds).not.toContain('fall-out-void-kill-boundary');
+    expect(gate.missingTraceIds).toEqual([]);
 
     expect(gate.missingTraceIds).not.toContain('team-a-first-drop-lip');
     expect(gate.missingTraceIds).not.toContain('right-small-drop-edge');

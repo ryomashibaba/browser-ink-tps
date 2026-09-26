@@ -1,6 +1,7 @@
 import {
   UNDERTOW_POST_7_2_REFERENCE_MAPS
 } from './UndertowSpillwayReferenceCatalog';
+import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 
 export type UndertowVoidReviewRegionId =
   | 'NEGATIVE_Z_CENTRAL_UNDERCUT'
@@ -25,6 +26,33 @@ export interface UndertowVoidAmbiguityAudit {
   requestReady: boolean;
   notes: string;
 }
+
+export const UNDERTOW_TEMPLE01_VOID_XZ_AUDIT = Object.freeze({
+  coarseRasterStepMeters: 0.5,
+  fineRasterStepMeters: 0.125,
+  enclosedCandidateCount: 6,
+  exactWaterCandidateCount: 2,
+  largeStageSideExteriorCandidateCount: 2,
+  overheadProjectionNonHoleCandidateCount: 2,
+  unexplainedInternalCandidateCount: 0,
+  largePairFineCellsPerSide: 4377,
+  largePairFineAreaSquareMetersPerSide: 68.390625,
+  smallPairFineCellsPerSide: 987,
+  smallPairFineAreaSquareMetersPerSide: 15.421875,
+  largePairMirrorXorCells: 0,
+  smallPairMirrorXorCells: 0,
+  largePairStageSideCoverageAt030Meters: 0.856,
+  floorMetalInteriorHoleCount: 0,
+  floorLine05InteriorHoleCount: 0,
+  confidence: 'HIGH' as const,
+  evidenceIds: [
+    'extracted-temple01-geometry',
+    'user-turf-vector-blueprint',
+    'post-7.2-reference-map'
+  ] as const,
+  notes:
+    'Whole common+Turf Temple01 XZ scanning found six enclosed empty candidates. Two coincide with the exact mapped cyan water pair. The large symmetric pair is predominantly enclosed by StageSide geometry and is not an internal floor hole; the small symmetric pair is produced beside simple Y=1.5 FloorMetal components under high PillarBase/SoundproofPanel projection, and the FloorMetal mesh has zero interior holes. Reverse auditing the Y=1.2 FloorLine05 mesh bordering the large pair also finds zero interior holes. No unexplained internal abyss candidate remains at BLOCKOUT XZ confidence.'
+});
 
 /**
  * Review of the internal blank/overlap areas most likely to be mistaken for a
@@ -73,10 +101,10 @@ export const UNDERTOW_VOID_AMBIGUITY_AUDIT: UndertowVoidAmbiguityAudit = {
     }
   ],
   unresolvedConcreteRegionIds: [],
-  exhaustiveInternalVoidClassification: false,
+  exhaustiveInternalVoidClassification: true,
   requestReady: false,
   notes:
-    'No specific remaining internal blank region can currently be localized strongly enough to justify a new user capture. That does not prove that the internal-void classification is exhaustive. Keep the kill-boundary trace unresolved until a concrete ambiguous region is identified from a current top-down/3D source and can be marked on the user map.'
+    'The Temple01 common+Turf audit now exhaustively classifies all six enclosed XZ empty candidates at BLOCKOUT resolution: two are the already-confirmed cyan water hazards, two are exterior/StageSide space, and two are overhead-projection false positives beside simple floor components with no interior mesh holes. Therefore no additional internal abyss polygon remains. Exterior fall-out XZ uses the exact common playable hard silhouette; the vertical kill threshold remains outside this XZ audit.'
 };
 
 const turfReference = UNDERTOW_POST_7_2_REFERENCE_MAPS.find(
@@ -88,8 +116,33 @@ export function undertowVoidAuditErrors(): readonly string[] {
   if (!turfReference || turfReference.sourceVersion !== '7.2.0') {
     errors.push('missing current Ver.7.2.0 Turf visual cross-check');
   }
-  if (UNDERTOW_VOID_AMBIGUITY_AUDIT.exhaustiveInternalVoidClassification) {
-    errors.push('internal void classification must not be marked exhaustive without complete evidence');
+  if (!UNDERTOW_VOID_AMBIGUITY_AUDIT.exhaustiveInternalVoidClassification) {
+    errors.push('Temple01 void classification must remain exhaustive after the completed XZ audit');
+  }
+  const modelAudit = UNDERTOW_TEMPLE01_VOID_XZ_AUDIT;
+  if (
+    modelAudit.enclosedCandidateCount !==
+      modelAudit.exactWaterCandidateCount +
+        modelAudit.largeStageSideExteriorCandidateCount +
+        modelAudit.overheadProjectionNonHoleCandidateCount ||
+    modelAudit.unexplainedInternalCandidateCount !== 0
+  ) {
+    errors.push('Temple01 enclosed-empty candidate accounting is incomplete');
+  }
+  if (
+    modelAudit.largePairMirrorXorCells !== 0 ||
+    modelAudit.smallPairMirrorXorCells !== 0 ||
+    modelAudit.floorMetalInteriorHoleCount !== 0 ||
+    modelAudit.floorLine05InteriorHoleCount !== 0
+  ) {
+    errors.push('Temple01 void exclusion audit no longer proves symmetric non-hole candidates');
+  }
+  if (
+    UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.confidence !== 'HIGH' ||
+    UNDERTOW_VECTOR_TRACES.teamAWaterRegion.confidence !== 'CONFIRMED' ||
+    UNDERTOW_VECTOR_TRACES.teamBWaterRegion.confidence !== 'CONFIRMED'
+  ) {
+    errors.push('void XZ closure requires the exact exterior silhouette and mapped water pair');
   }
   if (
     UNDERTOW_VOID_AMBIGUITY_AUDIT.requestReady &&

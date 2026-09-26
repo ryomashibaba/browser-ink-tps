@@ -10,14 +10,12 @@ import { unresolvedUndertowSourceTopologyLimits } from './UndertowSpillwaySource
 import { undertowConcreteVoidCaptureRegionIds } from './UndertowSpillwayVoidAmbiguity';
 
 describe('T21 Undertow targeted evidence capture plan', () => {
-  it('keeps received captures retired while only internal void topology remains unresolved', () => {
+  it('retires every T21 evidence request after the Temple01 void audit closes', () => {
     expect(undertowReceivedCaptureIds()).toEqual([
       'RIGHT_LOW_PARTITION',
       'GLASS_UNDERPASS_CLEARANCE'
     ]);
-    expect(undertowRequiredCaptureIds()).toEqual([
-      'INTERNAL_VOID_CLASSIFICATION'
-    ]);
+    expect(undertowRequiredCaptureIds()).toEqual([]);
     expect(undertowRequestReadyCaptureIds()).toEqual([]);
     expect(undertowConcreteVoidCaptureRegionIds()).toEqual([]);
     expect(UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN).toHaveLength(3);
@@ -25,10 +23,8 @@ describe('T21 Undertow targeted evidence capture plan', () => {
       UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN.find(
         (capture) => capture.id === 'INTERNAL_VOID_CLASSIFICATION'
       )?.status
-    ).toBe('DEFERRED_PENDING_MAP_ENUMERATION');
-    expect(unresolvedUndertowSourceTopologyLimits()).toEqual([
-      'internal-void-kill-boundaries'
-    ]);
+    ).toBe('RESOLVED_BY_TEMPLE01_AUDIT');
+    expect(unresolvedUndertowSourceTopologyLimits()).toEqual([]);
   });
 
   it('does not ask for already-resolved spawn, water, glass-top or first-drop evidence', () => {
