@@ -657,6 +657,81 @@ jobs:
                       f'T21REMAIN OBJ {pname} n={n} obj={obj} mat={mat} '
                       f'y=({y0:.3f},{y1:.3f}) centroidXZ=({x0:.3f},{z0:.3f})..({x1:.3f},{z1:.3f})'
                   )
+
+          # Verify the central 1.5m step semantic direction. The old ledger
+          # bound the origin face to center-low; Temple01 suggests the origin
+          # face may instead be the upper step face.
+          center_step_lines={
+              'NEG_STEP_OUTER':[(406.08,282.84),(435.84,282.84)],
+              'NEG_STEP_CENTER_EDGE':[(406.08,286.44),(435.84,286.44)],
+              'POS_STEP_CENTER_EDGE':[(406.08,308.76),(435.84,308.76)],
+              'POS_STEP_OUTER':[(406.08,312.36),(435.84,312.36)],
+          }
+          for lname,pdfseg in center_step_lines.items():
+              rp=[apply_tf(conv(p0),ra,rb,rtx,rtz) for p0 in pdfseg]
+              aa2,bb2=rp
+              dx=bb2[0]-aa2[0]; dz=bb2[1]-aa2[1]
+              ln=math.hypot(dx,dz); nx,nz=-dz/ln,dx/ln
+              mx=(aa2[0]+bb2[0])*0.5; mz=(aa2[1]+bb2[1])*0.5
+              nearby=[]
+              for ex,ez,pair in edges:
+                  d=point_segment_distance((ex,ez),aa2,bb2)
+                  if d<=2.0:
+                      nearby.append((d,pair,ex,ez))
+              nearby.sort()
+              print(
+                  f'T21CENTEREDGE {lname} model={[(round(v[0],4),round(v[1],4)) for v in rp]} '
+                  f'near={[(round(d,3),pair) for d,pair,ex,ez in nearby[:20]]}'
+              )
+              for side,sign in [('LEFT',1),('RIGHT',-1)]:
+                  for off in (0.35,0.75,1.25):
+                      x=mx+nx*off*sign; z=mz+nz*off*sign
+                      print(
+                          f'T21CENTEREDGE SIDE {lname} {side} off={off:.2f} '
+                          f'point=({x:.4f},{z:.4f}) all={[(round(h[0],3),h[1],h[2]) for h in floor_hits(x,z)[:8]]} '
+                          f'walk={walkable_hit(x,z)}'
+                      )
+
+          # Inspect the exact common/PntSet central floor objects that can
+          # distinguish the 3.0m lower face from the 4.5m upper face.
+          for target_obj in (
+              'Fld_Temple01_pCube21595_1__FloorConcrete01',
+              'FldObj_Temple01_PntSet_A4_1__FloorConcrete00',
+              'FldObj_Temple01_PntSet_pCube21622_1__FloorConcrete02',
+          ):
+              target_faces=[ff for ff in faces if ff[3]==target_obj]
+              ys=sorted({round(vertices[i][1],4) for ff in target_faces for i in ff[:3]})
+              xs=[vertices[i][0] for ff in target_faces for i in ff[:3]]
+              zs=[vertices[i][2] for ff in target_faces for i in ff[:3]]
+              print(
+                  f'T21CENTEROBJ {target_obj} faces={len(target_faces)} ys={ys} '
+                  f'x=({min(xs) if xs else None},{max(xs) if xs else None}) '
+                  f'z=({min(zs) if zs else None},{max(zs) if zs else None})'
+              )
+
+          # Grate object exact top/bottom levels and component symmetry.
+          grate_obj='Fld_Temple01_pPlane157_1__FloorFence00'
+          gf=[ff for ff in faces if ff[3]==grate_obj]
+          gy=Counter(round(vertices[i][1],4) for ff in gf for i in ff[:3])
+          print(f'T21GRATEOBJ faces={len(gf)} y_hist={gy.most_common()}')
+          for side_name,pred in (
+              ('NEG',lambda x,z:x>0),
+              ('POS',lambda x,z:x<0),
+          ):
+              sf=[]
+              for ff in gf:
+                  tri=[vertices[i] for i in ff[:3]]
+                  cx=sum(v[0] for v in tri)/3; cz=sum(v[2] for v in tri)/3
+                  if pred(cx,cz):
+                      sf.append((ff,tri,cx,cz))
+              xs=[v[0] for ff,tri,cx,cz in sf for v in tri]
+              zs=[v[2] for ff,tri,cx,cz in sf for v in tri]
+              ys=[v[1] for ff,tri,cx,cz in sf for v in tri]
+              print(
+                  f'T21GRATEOBJ {side_name} tris={len(sf)} '
+                  f'x=({min(xs):.4f},{max(xs):.4f}) z=({min(zs):.4f},{max(zs):.4f}) '
+                  f'y=({min(ys):.4f},{max(ys):.4f}) top={max(ys):.4f}'
+              )
           PY
 
       - name: Setup Node.js
