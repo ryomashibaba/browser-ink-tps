@@ -1864,15 +1864,36 @@ for ci,component in enumerate(slope_components):
     )
     component_records.append((ci,touches,pverts,indices,a,b,c,max(residuals)))
 
-central=[
-    rec for rec in component_records
-    if any(name in ("LEFT","RIGHT") for name,_ in rec[1])
-]
+central=[]
+central_by_marker=defaultdict(list)
+for rec in component_records:
+    ci,touches,pverts,indices,a,b,c,max_res=rec
+    face_count=len(indices)//3
+    full_markers=[
+        name for name,count in touches
+        if name in ("LEFT","RIGHT") and count==face_count
+    ]
+    if not full_markers:
+        continue
+    if len(full_markers)!=1:
+        raise SystemExit(
+            f"T21 central slope component audit failed: component {ci} fully belongs to {full_markers}"
+        )
+    marker=full_markers[0]
+    central.append(rec)
+    central_by_marker[marker].append(rec)
+
 print(
     f"T21SLOPE CENTRAL_COMPONENTS count={len(central)} "
-    f"ids={[rec[0] for rec in central]}"
+    f"ids={[rec[0] for rec in central]} "
+    f"left={[rec[0] for rec in central_by_marker['LEFT']]} "
+    f"right={[rec[0] for rec in central_by_marker['RIGHT']]}"
 )
-if len(central)!=2:
+if len(central)!=4 or any(len(central_by_marker[name])!=2 for name in ("LEFT","RIGHT")):
     raise SystemExit(
-        f"T21 central slope component audit failed: expected 2 components, got {len(central)}"
+        "T21 central slope component audit failed: expected two fully-contained source quads per marker"
+    )
+if any(len(rec[3])!=6 or len(rec[2])!=4 or rec[7]>1e-9 for rec in central):
+    raise SystemExit(
+        "T21 central slope component audit failed: selected central components must remain exact planar quads"
     )
