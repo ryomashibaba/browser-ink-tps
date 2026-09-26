@@ -1060,3 +1060,52 @@ if walk_vertices:
         )
 else:
     print("T21VOID SUMMARY no walkable vertices")
+
+
+# Context classification for the significant enclosed-empty components.
+# Registered vector overlays are comparison hints only: the global PDF->OBJ
+# fit is not accurate enough to promote a candidate by overlap alone.
+if walk_vertices:
+    known_overlay_pdf={
+        "WATER_A":[(556.8,444.72),(598.8,444.72),(598.8,426.12),(561.36,426.12),(561.36,430.68),(556.8,430.68)],
+        "WATER_B":[(243.12,150.48),(243.12,169.08),(280.56,169.08),(280.56,164.52),(285.12,164.52),(285.12,150.48)],
+        "GRATE_NEG":[(340.56,119.88),(363.48,119.88),(363.48,150.48),(340.56,150.48)],
+        "GRATE_POS":[(478.44,444.72),(501.36,444.72),(501.36,475.32),(478.44,475.32)],
+    }
+    known_overlay_model={
+        name:[pdf_to_model(pt) for pt in poly]
+        for name,poly in known_overlay_pdf.items()
+    }
+
+    for j,cc in enumerate(significant[:30]):
+        overlay_counts={}
+        for name,poly in known_overlay_model.items():
+            overlay_counts[name]=sum(
+                1 for c in cc
+                if inside_poly(c[0]*VOID_STEP,c[1]*VOID_STEP,poly)
+            )
+
+        adjacent_walk=defaultdict(int)
+        adjacent_stage_side=defaultdict(int)
+        seen_neighbor=set()
+        for c in cc:
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                n=(c[0]+d[0],c[1]+d[1])
+                if n in cc or n in seen_neighbor:
+                    continue
+                seen_neighbor.add(n)
+                x=n[0]*VOID_STEP; z=n[1]*VOID_STEP
+                walk,solid,water=void_column_class(x,z)
+                if walk:
+                    y,o,m=walk[0]
+                    adjacent_walk[(o,m,round(y,2))]+=1
+                for fi in face_candidates(x,z):
+                    ia,ib,ic,o,m=faces[fi]
+                    if "StageSide" in o or "StageSide" in m:
+                        adjacent_stage_side[(o,m)]+=1
+
+        print(
+            f"T21VOID CONTEXT {j} overlays={overlay_counts} "
+            f"walk_top={sorted(adjacent_walk.items(),key=lambda kv:-kv[1])[:8]} "
+            f"stage_side={sorted(adjacent_stage_side.items(),key=lambda kv:-kv[1])[:8]}"
+        )
