@@ -5,12 +5,14 @@ import {
 } from './UndertowSpillwayCaptureEvidence';
 
 describe('T21 user capture evidence', () => {
-  it('binds the two 2026-09-25 captures to the requested regions', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(2);
+  it('binds the two 2026-09-25 traversal captures and the 2026-09-26 corrective still pair', () => {
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(3);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
       .toBe('RIGHT_LOW');
+    expect(undertowCaptureEvidence('user-first-drop-height-stills-2026-09-26').region)
+      .toBe('FIRST_DROP_HEIGHT_ORDER');
   });
 
   it('confirms the same-height right-low -> underpass walking connection', () => {
@@ -18,6 +20,13 @@ describe('T21 user capture evidence', () => {
     const underpass = undertowCaptureEvidence('user-underpass-capture-2026-09-25');
     expect(rightLow.facts.join(' ')).toContain('same walking elevation');
     expect(underpass.facts.join(' ')).toContain('without a visible step or drop');
+  });
+
+  it('uses the new stills only for qualitative ordering, not a metric delta', () => {
+    const stills = undertowCaptureEvidence('user-first-drop-height-stills-2026-09-26');
+    expect(stills.filenames).toEqual(['IMG_6112.jpeg', 'IMG_6111.jpeg']);
+    expect(stills.facts.join(' ')).toContain('below the floor on the lower side');
+    expect(stills.facts.join(' ')).toContain('does not establish an exact metric delta');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {
