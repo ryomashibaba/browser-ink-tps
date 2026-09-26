@@ -1,12 +1,14 @@
 export type UndertowUserCaptureEvidenceId =
   | 'user-underpass-capture-2026-09-25'
-  | 'user-right-low-capture-2026-09-25';
+  | 'user-right-low-capture-2026-09-25'
+  | 'user-first-drop-height-stills-2026-09-26';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
-  filename: string;
-  durationSeconds: number;
-  region: 'GLASS_UNDERPASS' | 'RIGHT_LOW';
+  filename?: string;
+  filenames?: readonly string[];
+  durationSeconds?: number;
+  region: 'GLASS_UNDERPASS' | 'RIGHT_LOW' | 'FIRST_DROP_HEIGHT_ORDER';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -38,6 +40,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'The measured small drop descends into this low/open floor.',
         'At least one ramp rises out of the right-low floor.',
         'The right-low floor connects directly into the covered underpass at the same walking elevation.'
+      ]
+    },
+    {
+      id: 'user-first-drop-height-stills-2026-09-26',
+      filenames: ['IMG_6112.jpeg', 'IMG_6111.jpeg'],
+      region: 'FIRST_DROP_HEIGHT_ORDER',
+      confidence: 'CONFIRMED',
+      facts: [
+        'The floor on the lower side of the red first-drop lip is below the floor on the lower side of the blue right-small-drop lip.',
+        'Therefore plan-view adjacency between the two L-shaped lips does not imply that the first-drop landing and the right-small-drop upper floor share one elevation.',
+        'The still pair establishes only the qualitative height ordering; it does not establish an exact metric delta.'
       ]
     }
   ];
