@@ -29,17 +29,18 @@ describe('T21-C Undertow external geometry source audit', () => {
     });
   });
 
-  it('keeps the KiTrix Temple01 OBJ promising but non-promotable until LFS vertices are readable', () => {
+  it('allows only locally verified Temple01 geometry promotion after the LFS body audit', () => {
     const kitrix = UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT.find(
       (entry) => entry.id === 'KITRIX_TEMPLE01_OBJ'
     );
     expect(kitrix).toMatchObject({
-      status: 'PROMISING_BODY_UNAVAILABLE',
-      canPromoteCanonicalGeometry: false,
+      status: 'BODY_AUDITED_LOCAL_PROMOTION',
+      canPromoteCanonicalGeometry: true,
       confidence: 'HIGH'
     });
-    expect(kitrix?.facts.join(' ')).toContain('43,263,289');
-    expect(kitrix?.blocker).toContain('Git LFS object body');
+    expect(kitrix?.facts.join(' ')).toContain('375,948 vertices');
+    expect(kitrix?.facts.join(' ')).toContain('0.163m');
+    expect(kitrix?.blocker).toContain('full exterior registration');
   });
 
   it('does not trust the KiTrix display-name mapping as provenance', () => {
