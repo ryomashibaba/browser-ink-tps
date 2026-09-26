@@ -182,6 +182,31 @@ jobs:
               rows.append((round(cx,3),round(cz,3),round(ymin,3),round(ymax,3),round(xmin,3),round(xmax,3),round(zmin,3),round(zmax,3)))
           for row in sorted(set(rows)):
               print('T21RAY SLOPE_TRI',row)
+
+          def walkable_hit(x,z):
+              hits=floor_hits(x,z)
+              for y,obj,mat,up in hits:
+                  if any(k in mat for k in (
+                      'FloorConcrete','FloorLine','FloorSlope','FloorGrass',
+                      'GrassFloor','FloorMetal','FloorRubber','BridgeMetal'
+                  )):
+                      return (y,obj,mat)
+              return None
+
+          for lname in ('A_FIRST','A_RIGHT'):
+              pts=[conv(p) for p in lines[lname]]
+              for si,(a,b) in enumerate(zip(pts,pts[1:])):
+                  tx=b[0]-a[0]; tz=b[1]-a[1]
+                  ln=math.hypot(tx,tz)
+                  nx,nz=-tz/ln,tx/ln
+                  mx=(a[0]+b[0])*0.5; mz=(a[1]+b[1])*0.5
+                  vals=[]
+                  for step in range(-20,21):
+                      off=step*0.5
+                      x=mx+nx*off; z=mz+nz*off
+                      h=walkable_hit(x,z)
+                      vals.append((off,None if h is None else round(h[0],3),None if h is None else h[2]))
+                  print(f'T21RAY TRANSECT {lname} seg={si} mid=({mx:.3f},{mz:.3f}) values={vals}')
           PY
 
       - name: Setup Node.js
