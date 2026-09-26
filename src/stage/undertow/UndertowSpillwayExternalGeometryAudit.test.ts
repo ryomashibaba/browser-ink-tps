@@ -19,23 +19,26 @@ describe('T21-C current Temple01 external geometry audit', () => {
       .toContain('Vss_Nagasaki03');
   });
 
-  it('does not promote Y from source names, MTL data, LFS pointers or class definitions', () => {
-    expect(
-      UNDERTOW_EXTERNAL_GEOMETRY_SOURCES.filter(
-        (source) => source.usableForVerticalPromotion
-      )
-    ).toEqual([]);
-    expect(
-      UNDERTOW_EXTERNAL_GEOMETRY_SOURCES.filter(
-        (source) => source.exposesMetricGeometry
-      )
-    ).toEqual([]);
+  it('allows only the actually parsed Temple01 OBJ to promote locally verified metric geometry', () => {
+    const metric = UNDERTOW_EXTERNAL_GEOMETRY_SOURCES.filter(
+      (source) => source.exposesMetricGeometry
+    );
+    const promotable = UNDERTOW_EXTERNAL_GEOMETRY_SOURCES.filter(
+      (source) => source.usableForVerticalPromotion
+    );
+
+    expect(metric.map((source) => source.id)).toEqual(['KITRIX_TEMPLE01_OBJ_LFS']);
+    expect(promotable.map((source) => source.id)).toEqual(['KITRIX_TEMPLE01_OBJ_LFS']);
+    expect(promotable[0]?.notes).toContain('375,948 vertices');
+    expect(promotable[0]?.notes).toContain('0.163m');
   });
 
-  it('keeps external current-model geometry ahead of another user capture', () => {
+  it('moves the next target past first-drop recapture to the remaining T21 evidence', () => {
     expect(UNDERTOW_EXTERNAL_GEOMETRY_NEXT_TARGET.id)
-      .toBe('TEMPLE01_METRIC_PAYLOAD');
+      .toBe('REMAINING_T21C_EVIDENCE');
     expect(UNDERTOW_EXTERNAL_GEOMETRY_NEXT_TARGET.blocksUserRecapture)
-      .toBe(true);
+      .toBe(false);
+    expect(UNDERTOW_EXTERNAL_GEOMETRY_NEXT_TARGET.preferredInputs.join(' '))
+      .toContain('grate');
   });
 });
