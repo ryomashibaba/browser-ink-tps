@@ -605,3 +605,28 @@ Consequences:
 - a future capture, if needed, must first register visible line sides to canonical 3D floor identities before attempting height measurement
 
 No runtime stage geometry changes are allowed from this audit alone.
+
+
+## T21-C — current Temple01 external-geometry audit
+
+Public extracted-data cross-checks establish the current remodeled Undertow identity before any more vertical inference:
+
+- current remodeled scene row: `Vss_Temple01`
+- current model resource: `Model/Fld_Temple01.bfres`
+- pre-remodel scene/model: `Vss_Temple00` / `Model/Fld_Temple00.bfres`
+- `Vss_Nagasaki03` / `Fld_Nagasaki03.bfres` is Sturgeon Shipyard and is explicitly excluded from Undertow geometry
+
+Additional public-source findings:
+- KiTrix contains `Vss_Temple01` OBJ/MTL data whose material names are `Fld_Temple01_*` and include the current environment's concrete floors, slopes, glass, pillars and ceiling
+- the OBJ bodies are stored as Git LFS objects; the current audit connection can read only the LFS pointers, not the vertex payload
+- Splatoon-3-Map-Editor contains `Fld_Temple01` / `Lft_FldObj_Temple01_*` actor classes, but its inspected repository tree contains no Temple01 layout BYML/BCETT payload
+- Leanny LeagueTypeInfo names current Temple01 rule-layer BCETT paths, but the coordinate payloads themselves are not present in the inspected public dataset
+
+Therefore none of those sources currently promotes an XZ/Y coordinate.
+
+Next preferred evidence is an actual current `Temple01` metric payload:
+1. KiTrix `Vss_Temple01` OBJ vertex bodies,
+2. current `Vss_Temple01` BCETT/BYML Translate data, or
+3. another independently extracted `Fld_Temple01` mesh/collision representation.
+
+Do **not** ask the user for another gameplay capture while one of those current-model paths remains a realistic unresolved source route.
