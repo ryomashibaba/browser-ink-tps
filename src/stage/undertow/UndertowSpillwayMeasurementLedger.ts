@@ -939,7 +939,7 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       kind: 'USER_CAPTURE',
       label: 'User corrective first-drop / right-small-drop height still pair, 2026-09-26',
       sourceVersion: 'current normal PvP',
-      notes: 'IMG_6112.jpeg + IMG_6111.jpeg. Direct user observation and the stills establish that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. This is qualitative ordering only; no exact delta is promoted.'
+      notes: 'IMG_6112.jpeg + IMG_6111.jpeg. Direct user observation establishes that the floor referred to as below the red guide line is lower than the floor referred to as below the blue guide line. The guide did not independently register those visible floors to canonical floor nodes, so this evidence is line-side ordering only and promotes no floor identity or exact delta.'
     }
   ],
   assumptions: [
