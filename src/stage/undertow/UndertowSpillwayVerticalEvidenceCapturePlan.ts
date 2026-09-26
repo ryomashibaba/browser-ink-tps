@@ -17,8 +17,9 @@ export interface UndertowVerticalCaptureRequest {
 
 /**
  * The original side-profile request assumed that first-drop landing and
- * right-small-drop upper shared one elevation. The user's 2026-09-26 stills
- * disprove that assumption, so the request is retained only as an audit record
+ * right-small-drop upper shared one elevation. The 2026-09-26 stills exposed
+ * that the guide had not registered its visible line sides to canonical floor
+ * identities, so the request is retained only as an audit record
  * and must not be shown as request-ready.
  */
 export const UNDERTOW_VERTICAL_CAPTURE_REQUESTS:
@@ -36,7 +37,7 @@ export const UNDERTOW_VERTICAL_CAPTURE_REQUESTS:
       purpose:
         'Former plan: compare the first drop against the adjacent known 1.5m right-small drop.',
       invalidatedBecause:
-        'The 2026-09-26 corrective stills and direct user observation show that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. The two lips do not form the assumed consecutive three-terrace chain, so the blue 1.5m drop cannot be used as a direct first-drop magnitude reference.'
+        'The 2026-09-26 corrective stills and direct user observation establish a red-guide-side versus blue-guide-side height ordering, but the guide did not independently register those observed floors to canonical first-drop/right-low nodes. The assumed consecutive three-terrace semantic chain is therefore invalid, so the blue 1.5m drop cannot be used as a direct first-drop magnitude reference.'
     }
   ];
 
