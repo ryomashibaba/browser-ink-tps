@@ -48,9 +48,7 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
       status: 'CAPTURE_RECEIVED',
       receivedEvidenceIds: ['user-right-low-capture-2026-09-25'],
       blocks: [
-        'right-low-floor-outline',
-        'right-low-floor',
-        'right-small-drop-upper'
+        'right-low-floor-outline'
       ],
       existingEvidence:
         'The PDF fixes the first-drop and second-drop hard edges, while existing gameplay video confirms the low grassy/open area. Both edges border the same connected 2D source faces, so the low-elevation partition does not close in plan.',
@@ -77,9 +75,7 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
       status: 'CAPTURE_RECEIVED',
       receivedEvidenceIds: ['user-underpass-capture-2026-09-25'],
       blocks: [
-        'glass-underpass-outline',
-        'glass-lower-major-floor',
-        'glass-overhang-high-reference'
+        'glass-underpass-outline'
       ],
       existingEvidence:
         'Current gameplay video and post-7.2 references confirm a traversable passage below the raised/glass structure. The PDF fixes the upper footprint but does not encode the lower-layer support-column clearance as an independent polygon.',
