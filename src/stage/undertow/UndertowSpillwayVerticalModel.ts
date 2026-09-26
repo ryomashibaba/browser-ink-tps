@@ -156,14 +156,6 @@ export const UNDERTOW_VERTICAL_RELATIONS: readonly VerticalRelation[] = [
     'Central small-step delta from the center-low reference.'
   ),
   exactRelation(
-    'team-a-first-drop-landing',
-    'right-small-drop-upper',
-    0,
-    'HIGH',
-    ['web-post-7-2-gameplay', 'user-right-low-capture-2026-09-25'],
-    'The documented open area immediately after the first drop is the upper floor of the small right-side drop; the new capture starts on that upper area before descending.'
-  ),
-  exactRelation(
     'right-low-floor',
     'right-small-drop-upper',
     1.5,
