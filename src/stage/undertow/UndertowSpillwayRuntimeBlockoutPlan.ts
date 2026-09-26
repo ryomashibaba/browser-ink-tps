@@ -27,7 +27,7 @@ export type UndertowPaintAuthority =
 
 export type UndertowRuntimeCollisionMode =
   | 'SOLID_FLOOR'
-  | 'GRATE_SPECIAL_REQUIRED'
+  | 'GRATE_FILTERED'
   | 'NONE';
 
 export interface UndertowRuntimeSurfacePlanItem {
@@ -124,7 +124,7 @@ function classify(entry: StageMeasurementEntry): UndertowRuntimeSurfacePlanItem 
     disposition: 'FLAT_POLYGON_READY',
     geometryReady: true,
     legacySolidCollisionCompatible: !grate,
-    collisionMode: grate ? 'GRATE_SPECIAL_REQUIRED' : 'SOLID_FLOOR',
+    collisionMode: grate ? 'GRATE_FILTERED' : 'SOLID_FLOOR',
     paintAuthority: paintAuthority(
       entry.surface.semantics,
       entry.surface.confidence
@@ -132,7 +132,7 @@ function classify(entry: StageMeasurementEntry): UndertowRuntimeSurfacePlanItem 
     yMeters,
     polygonCount: count,
     notes: grate
-      ? 'The flat XZ/Y geometry is ready, but Splatoon grate behavior is semi-solid: humanoid players stand on it while swim form and ink shots pass through. Do not represent it with the legacy all-purpose solid collider.'
+      ? 'The flat XZ/Y geometry is ready. Runtime support must use StageSolid collisionBehavior=GRATE so Human form and thrown subs collide while Squid form and ordinary ink projectiles pass through. It remains intentionally non-compatible with the legacy default SOLID behavior.'
       : 'Exact/HIGH-or-stronger polygon XZ and absolute Y are available for a flat BLOCKOUT solid floor. Paint authority remains independent.'
   };
 }
@@ -160,7 +160,7 @@ export function undertowRuntimeSurfacePlanErrors(): readonly string[] {
         errors.push(`${item.id}: ready flat surface lacks exact Y or polygon area`);
       }
       if (
-        item.collisionMode === 'GRATE_SPECIAL_REQUIRED' &&
+        item.collisionMode === 'GRATE_FILTERED' &&
         item.legacySolidCollisionCompatible
       ) {
         errors.push(`${item.id}: grate must never be declared legacy-solid compatible`);

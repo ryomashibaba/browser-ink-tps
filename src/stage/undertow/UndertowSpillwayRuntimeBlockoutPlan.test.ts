@@ -49,7 +49,7 @@ describe('T21-D runtime blockout surface plan', () => {
       disposition: 'FLAT_POLYGON_READY',
       geometryReady: true,
       legacySolidCollisionCompatible: false,
-      collisionMode: 'GRATE_SPECIAL_REQUIRED',
+      collisionMode: 'GRATE_FILTERED',
       paintAuthority: 'UNINKABLE',
       yMeters: 7.4,
       polygonCount: 1
