@@ -933,6 +933,13 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       label: 'User targeted right-low perimeter capture, 2026-09-25',
       sourceVersion: 'current normal PvP',
       notes: '29.50s perimeter traversal. Confirms the small drop enters the right-low open floor, at least one ramp exits it, and the underpass connection is same-height.'
+    },
+    {
+      id: 'user-first-drop-height-stills-2026-09-26',
+      kind: 'USER_CAPTURE',
+      label: 'User corrective first-drop / right-small-drop height still pair, 2026-09-26',
+      sourceVersion: 'current normal PvP',
+      notes: 'IMG_6112.jpeg + IMG_6111.jpeg. Direct user observation and the stills establish that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. This is qualitative ordering only; no exact delta is promoted.'
     }
   ],
   assumptions: [
