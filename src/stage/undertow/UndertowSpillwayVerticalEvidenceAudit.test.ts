@@ -15,27 +15,33 @@ describe('T21-C Undertow vertical evidence sufficiency audit', () => {
     expect(seeded).toEqual(['CENTER_SEEDED']);
   });
 
-  it('groups the complete right-low / underpass / landing chain without inventing absolute Y', () => {
+  it('keeps right-low and first-drop landing in separate components after the corrective stills', () => {
     const rightLow = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
       (component) => component.id === 'RIGHT_LOW_UNSEEDED'
+    );
+    const landing = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
+      (component) => component.id === 'FIRST_DROP_LANDING_UNSEEDED'
     );
 
     expect(rightLow?.nodeIds).toEqual([
       'glass-lower-major-floor',
       'glass-overhang-high-reference',
       'right-low-floor',
-      'right-small-drop-upper',
+      'right-small-drop-upper'
+    ]);
+    expect(landing?.nodeIds).toEqual([
       'team-a-first-drop-landing',
       'team-b-first-drop-landing'
     ]);
-    expect(rightLow?.seededAbsoluteY).toBe(false);
+    expect(rightLow?.nodeIds).not.toContain('team-a-first-drop-landing');
   });
 
-  it('keeps spawn, slope-high and grate elevations as separate evidence needs', () => {
+  it('adds an exact landing tie as a separate evidence need', () => {
     expect(
       UNDERTOW_MINIMUM_VERTICAL_EVIDENCE_NEEDS.map((need) => need.id)
     ).toEqual([
       'RIGHT_LOW_TO_CENTER_SEED',
+      'FIRST_DROP_LANDING_EXACT_TIE',
       'FIRST_DROP_MAGNITUDE',
       'CENTER_SLOPE_HIGH_TIE',
       'GRATE_Y_TIE'
@@ -46,14 +52,14 @@ describe('T21-C Undertow vertical evidence sufficiency audit', () => {
     const spawn = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
       (component) => component.id === 'SPAWN_UNSEEDED'
     );
-    const rightLow = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
-      (component) => component.id === 'RIGHT_LOW_UNSEEDED'
+    const landing = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
+      (component) => component.id === 'FIRST_DROP_LANDING_UNSEEDED'
     );
 
     expect(spawn?.nodeIds).toEqual([
       'team-a-spawn-floor',
       'team-b-spawn-floor'
     ]);
-    expect(rightLow?.nodeIds).not.toContain('team-a-spawn-floor');
+    expect(landing?.nodeIds).not.toContain('team-a-spawn-floor');
   });
 });
