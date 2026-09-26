@@ -306,6 +306,117 @@ def project_to_model(p):
 def pdf_to_model(pt):
     return project_to_model(pdf_to_project(pt))
 
+# T21-D construction audit: split the two multi-elevation spawn-side white
+# source faces into actual flat walkable Temple01 subregions instead of ever
+# flattening the whole vector envelope to the spawn-center Y.
+SPAWN_SIDE_PDF={
+    "POS_SPAWN_TERRAIN":[
+        (520.08,444.72),(501.36,444.72),(501.36,475.32),(556.8,475.32),
+        (556.8,505.92),(583.56,505.92),(598.8,490.56),(598.8,475.32),
+        (732.48,475.32),(771.24,436.56),(771.24,232.92),(732.12,186.24),
+        (660.72,186.24),(660.72,208.32),(668.4,208.32),(668.4,216.0),
+        (710.04,216.0),(710.04,245.76),(725.4,245.76),(725.4,335.52),
+        (710.04,335.52),(710.04,350.76),(702.36,350.76),(702.36,394.2),
+        (664.68,394.2),(664.68,423.12),(620.4,423.12),(620.4,444.72),
+        (556.8,444.72),(556.8,452.28),(520.08,452.28)
+    ],
+    "NEG_SPAWN_TERRAIN":[
+        (221.52,150.48),(285.12,150.48),(285.12,142.92),(321.84,142.92),
+        (321.84,150.48),(340.56,150.48),(340.56,119.88),(285.12,119.88),
+        (285.12,89.28),(258.36,89.28),(243.12,104.64),(243.12,119.88),
+        (109.44,119.88),(70.68,158.64),(70.68,362.28),(109.8,408.96),
+        (181.2,408.96),(181.2,386.88),(173.52,386.88),(173.52,379.2),
+        (131.88,379.2),(131.88,349.44),(116.52,349.44),(116.52,259.68),
+        (131.88,259.68),(131.88,244.44),(139.56,244.44),(139.56,201.0),
+        (177.24,201.0),(177.24,172.08),(221.52,172.08)
+    ],
+}
+
+def flat_walk_top(x,z):
+    best=None
+    for fi in face_candidates(x,z):
+        ia,ib,ic,o,m=faces[fi]
+        if not any(t in m for t in WALK_TOKENS):
+            continue
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        n=tri_normal(tri)
+        # Deliberately exclude slopes from this flat-surface construction pass.
+        if abs(n[1])<0.98 or not contains_xz(x,z,tri):
+            continue
+        y=interp_y(x,z,tri)
+        if best is None or y>best[0]:
+            best=(y,o,m)
+    return best
+
+def connected_cell_components(cells):
+    rem=set(cells); comps=[]
+    while rem:
+        seed=rem.pop(); cc={seed}; q=deque([seed])
+        while q:
+            c=q.popleft()
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                n=(c[0]+d[0],c[1]+d[1])
+                if n in rem:
+                    rem.remove(n); cc.add(n); q.append(n)
+        comps.append(cc)
+    comps.sort(key=len,reverse=True)
+    return comps
+
+for spawn_name,pdfpoly in SPAWN_SIDE_PDF.items():
+    poly=[pdf_to_model(p) for p in pdfpoly]
+    xmin=min(p[0] for p in poly); xmax=max(p[0] for p in poly)
+    zmin=min(p[1] for p in poly); zmax=max(p[1] for p in poly)
+    bands=defaultdict(set)
+    mats=defaultdict(lambda: defaultdict(int))
+    sampled=0
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            if not inside_poly(x,z,poly):
+                continue
+            sampled+=1
+            hit=flat_walk_top(x,z)
+            if hit is None:
+                continue
+            y,o,m=hit
+            band=round(y*2)/2
+            bands[band].add((ix,iz))
+            mats[band][(o,m)]+=1
+
+    print(
+        f"T21SPAWN FLAT_SUMMARY {spawn_name} sampled={sampled} "
+        f"bands={[(y,len(c),round(len(c)*STEP*STEP,3)) for y,c in sorted(bands.items())]}"
+    )
+    for y,cells in sorted(bands.items()):
+        for ci,cc in enumerate(connected_cell_components(cells)):
+            area=len(cc)*STEP*STEP
+            if area<1.0:
+                continue
+            loops=boundary_loops(cc)
+            loops.sort(key=lambda loop:abs(polygon_area(loop)),reverse=True)
+            if not loops:
+                continue
+            xs=[cell_xy(c)[0] for c in cc]; zs=[cell_xy(c)[1] for c in cc]
+            rr=rdp_closed(loops[0],0.20)
+            print(
+                f"T21SPAWN FLAT_COMP {spawn_name} y={y:.3f} comp={ci} "
+                f"cells={len(cc)} area={area:.3f} "
+                f"bbox=({min(xs):.3f},{min(zs):.3f})..({max(xs):.3f},{max(zs):.3f}) "
+                f"outer_area={polygon_area(loops[0]):.3f} n={len(rr)} "
+                f"pts={[tuple(round(v,3) for v in p) for p in rr]} "
+                f"mats={sorted(mats[y].items(),key=lambda kv:-kv[1])[:8]}"
+            )
+            for hi,hole in enumerate(loops[1:8]):
+                if polygon_area(hole)>=-0.25:
+                    continue
+                hr=rdp_closed(hole,0.20)
+                print(
+                    f"T21SPAWN FLAT_HOLE {spawn_name} y={y:.3f} comp={ci} hole={hi} "
+                    f"area={polygon_area(hole):.3f} n={len(hr)} "
+                    f"pts={[tuple(round(v,3) for v in p) for p in hr]}"
+                )
+
 def inside_poly(x,z,poly):
     inside=False
     j=len(poly)-1
