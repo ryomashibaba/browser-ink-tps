@@ -1685,3 +1685,16 @@ Automated checks now additionally require:
 - a Temple01 rule-layer path reference does not count as the missing BCETT payload
 - no external source may promote Y unless metric geometry is actually read
 - current-model metric payload retrieval stays ahead of any new user recapture request
+
+
+## T21-C external remodeled-geometry source validation
+
+Automated checks now require:
+- the Salmon Run Temple Low/Mid/High source to remain rejected for normal-PvP Y reconstruction
+- Leanny Temple01 metadata to remain the confirmed remodel identity
+- KiTrix Temple01 OBJ to remain non-promotable while only its Git LFS pointer/MTL/exporter are readable
+- KiTrix StageLoader display-name mapping to remain rejected as provenance
+- no external source may currently promote canonical geometry
+- the `PntSet` Turf extraction rule remains HIGH/non-promotable until verified against readable Temple01 geometry
+
+Source audit may change evidence priority, but it must not open the T21-D gate or alter runtime stage geometry.
