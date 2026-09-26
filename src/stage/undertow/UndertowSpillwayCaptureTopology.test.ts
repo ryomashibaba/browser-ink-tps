@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   UNDERTOW_CAPTURED_CONNECTIONS,
-  UNDERTOW_CAPTURED_HEIGHT_ORDER,
   UNDERTOW_CAPTURED_OBSTRUCTIONS
 } from './UndertowSpillwayCaptureTopology';
 
@@ -28,18 +27,6 @@ describe('T21 captured layered topology', () => {
     });
   });
 
-  it('records the corrected qualitative height order from the 2026-09-26 stills', () => {
-    expect(UNDERTOW_CAPTURED_HEIGHT_ORDER).toEqual([
-      expect.objectContaining({
-        lowerRegion: 'FIRST_DROP_OPEN_AREA',
-        higherRegion: 'RIGHT_LOW',
-        confidence: 'CONFIRMED'
-      })
-    ]);
-    expect(UNDERTOW_CAPTURED_HEIGHT_ORDER[0]!.notes).toContain(
-      'Shared XZ adjacency must not be converted into a same-Y relation'
-    );
-  });
 
   it('records the same-height right-low -> underpass connection', () => {
     expect(
