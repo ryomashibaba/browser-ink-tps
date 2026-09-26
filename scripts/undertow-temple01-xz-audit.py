@@ -481,6 +481,91 @@ for name,pdfpoly in glass_polys.items():
         )
 
 
+# Expanded underpass audit: start from the registered glass footprint, flood the
+# connected model-Y=3.0 walkable floor, then retain the portion that is
+# physically roofed by the Temple01 bridge/glass structure. This deliberately
+# avoids treating the vector glass rectangle itself as the lower-floor outline.
+UNDERPASS_ROOF_TOKENS=("BridgeMetal","Glass01","Glass02","GlassEdge")
+
+def roofed_underpass_cells(pdfpoly):
+    poly=[pdf_to_model(p) for p in pdfpoly]
+    cx=sum(p[0] for p in poly)/len(poly)
+    cz=sum(p[1] for p in poly)/len(poly)
+    # Pick the nearest Y=3 floor sample inside the registered glass footprint.
+    seeds=[]
+    xmin=min(p[0] for p in poly); xmax=max(p[0] for p in poly)
+    zmin=min(p[1] for p in poly); zmax=max(p[1] for p in poly)
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            if inside_poly(x,z,poly) and has_walk_surface(x,z,3.0):
+                seeds.append((ix,iz))
+    if not seeds:
+        return set(),set(),set(),None
+    seed=min(seeds,key=lambda q:(cell_xy(q)[0]-cx)**2+(cell_xy(q)[1]-cz)**2)
+    sx,sz=cell_xy(seed)
+    comp,seed_cell,_=flood_component(
+        3.0,(sx,sz),(xmin-14,xmax+14,zmin-14,zmax+14)
+    )
+
+    roofed=set()
+    for cell in comp:
+        x,z=cell_xy(cell)
+        hits=overhead_hits(x,z,3.0)
+        if any(
+            y>=7.0 and any(t in o or t in m for t in UNDERPASS_ROOF_TOKENS)
+            for y,o,m in hits
+        ):
+            roofed.add(cell)
+
+    # Keep only roofed component(s) that actually intersect the registered
+    # vector glass projection.
+    glass_cells={
+        cell for cell in roofed
+        if inside_poly(*cell_xy(cell),poly)
+    }
+    if not glass_cells:
+        return comp,roofed,set(),seed_cell
+
+    keep=set()
+    unseen=set(roofed)
+    while unseen:
+        s=unseen.pop(); cc={s}; q=deque([s])
+        while q:
+            cur=q.popleft()
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                n=(cur[0]+d[0],cur[1]+d[1])
+                if n in unseen:
+                    unseen.remove(n); cc.add(n); q.append(n)
+        if cc & glass_cells:
+            keep |= cc
+    return comp,roofed,keep,seed_cell
+
+for name,pdfpoly in glass_polys.items():
+    comp,roofed,keep,seed=roofed_underpass_cells(pdfpoly)
+    print(
+        f"T21UNDERPASS COVER {name} seed={seed} floor_comp={len(comp)} "
+        f"roofed={len(roofed)} linked={len(keep)} area={len(keep)*STEP*STEP:.3f}"
+    )
+    if not keep:
+        continue
+    xs=[cell_xy(v)[0] for v in keep]; zs=[cell_xy(v)[1] for v in keep]
+    print(
+        f"T21UNDERPASS COVERBBOX {name} "
+        f"x=({min(xs):.3f},{max(xs):.3f}) z=({min(zs):.3f},{max(zs):.3f})"
+    )
+    loops=boundary_loops(keep)
+    loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    for j,loop in enumerate(loops[:12]):
+        rr=rdp_closed(loop,0.15)
+        print(
+            f"T21UNDERPASS COVERLOOP {name} {j} area={polygon_area(loop):.3f} "
+            f"raw={len(loop)} n={len(rr)} pts="
+            f"{[tuple(round(v,3) for v in p) for p in rr]}"
+        )
+
+
 # OBJ-native glass projection: avoid using the globally registered PDF glass
 # rectangle as the clipping mask for promotion.
 def convex_hull(points):
