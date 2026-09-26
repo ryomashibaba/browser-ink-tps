@@ -2,6 +2,7 @@ export interface UndertowSourceTopologyLimit {
   id: string;
   status:
     | 'RESOLVED_FROM_VECTOR'
+    | 'RESOLVED_FROM_TEMPLE01_MODEL'
     | 'CAPTURED_REQUIRES_PLAN_REGISTRATION'
     | 'PLAN_REGISTERED_POLYGON_UNRESOLVED'
     | 'REQUIRES_3D_BINDING';
@@ -19,10 +20,10 @@ export const UNDERTOW_SOURCE_TOPOLOGY_LIMITS: readonly UndertowSourceTopologyLim
   },
   {
     id: 'right-low-floor-partition',
-    status: 'PLAN_REGISTERED_POLYGON_UNRESOLVED',
+    status: 'RESOLVED_FROM_TEMPLE01_MODEL',
     reason:
-      'The 2026-09-25 right-low capture is now registered to the measured Team A right-small-drop lip. It classifies the low/open floor, same-height underpass connection and a ramp exit, but perspective footage plus the overlapping 2D source faces still do not assign every perimeter corner to a unique PDF vertex.',
-    safeToUseForBlockout: false
+      'The capture-based plan registration alone was insufficient, but the remodeled Temple01 OBJ now supplies the connected Y=7.5m walkable component seeded from the locally verified right-small-drop lower side. Independent A/B extraction is symmetric; the stored 0.125m raster contour is HIGH and blockout-safe.',
+    safeToUseForBlockout: true
   },
   {
     id: 'glass-underpass-walkable-outline',
