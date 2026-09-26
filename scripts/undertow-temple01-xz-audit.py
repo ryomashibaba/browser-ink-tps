@@ -1346,3 +1346,117 @@ for name,(comp,loops,lows) in fine_voids.items():
         f"walk_top={sorted(walk_top.items(),key=lambda kv:-kv[1])[:10]} "
         f"solid_top={sorted(solid_top.items(),key=lambda kv:-kv[1])[:10]}"
     )
+
+
+# Reverse audit from the actual Y=1.5 FloorMetal mesh.
+#
+# The small enclosed-air candidates touch this object along their only walkable
+# perimeter. A genuine open pit cut into that floor should therefore appear as
+# an interior (negative-area) boundary loop of the FloorMetal top surface.
+FLOOR_METAL_VOID_TARGET="Fld_Temple01_pCube21772_1__FloorMetal00"
+floor_metal_faces=[]
+for ff in faces:
+    ia,ib,ic,o,m=ff
+    if o != FLOOR_METAL_VOID_TARGET:
+        continue
+    tri=[vertices[ia],vertices[ib],vertices[ic]]
+    n=tri_normal(tri)
+    if abs(n[1])<0.75:
+        continue
+    cy=sum(v[1] for v in tri)/3
+    if abs(cy-1.5)>0.10:
+        continue
+    floor_metal_faces.append(ff)
+
+if not floor_metal_faces:
+    raise SystemExit("T21 floor-metal hole audit failed: target Y=1.5 faces missing")
+
+fm_x=[vertices[i][0] for ff in floor_metal_faces for i in ff[:3]]
+fm_z=[vertices[i][2] for ff in floor_metal_faces for i in ff[:3]]
+fm_cells=set()
+for ix in range(math.floor(min(fm_x)/STEP),math.ceil(max(fm_x)/STEP)+1):
+    x=ix*STEP
+    for iz in range(math.floor(min(fm_z)/STEP),math.ceil(max(fm_z)/STEP)+1):
+        z=iz*STEP
+        for ia,ib,ic,o,m in floor_metal_faces:
+            tri=[vertices[ia],vertices[ib],vertices[ic]]
+            if contains_xz(x,z,tri) and abs(interp_y(x,z,tri)-1.5)<=0.10:
+                fm_cells.add((ix,iz))
+                break
+
+fm_components=[]
+fm_rem=set(fm_cells)
+while fm_rem:
+    seed=fm_rem.pop(); cc={seed}; q=deque([seed])
+    while q:
+        c=q.popleft()
+        for d in ((1,0),(-1,0),(0,1),(0,-1)):
+            n=(c[0]+d[0],c[1]+d[1])
+            if n in fm_rem:
+                fm_rem.remove(n); cc.add(n); q.append(n)
+    fm_components.append(cc)
+fm_components.sort(key=len,reverse=True)
+
+print(
+    f"T21VOID FLOORMETAL object={FLOOR_METAL_VOID_TARGET} "
+    f"faces={len(floor_metal_faces)} cells={len(fm_cells)} comps={len(fm_components)} "
+    f"bbox=({min(fm_x):.3f},{min(fm_z):.3f})..({max(fm_x):.3f},{max(fm_z):.3f})"
+)
+
+fm_loops=[]
+for ci,cc in enumerate(fm_components):
+    loops=boundary_loops(cc)
+    loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    for li,loop in enumerate(loops):
+        area=polygon_area(loop)
+        xs=[p[0] for p in loop]; zs=[p[1] for p in loop]
+        rr=rdp_closed(loop,0.15)
+        fm_loops.append((ci,li,area,loop,rr))
+        if li<12:
+            print(
+                f"T21VOID FLOORMETAL_LOOP comp={ci} loop={li} "
+                f"signed_area={area:.6f} raw={len(loop)} n={len(rr)} "
+                f"bbox=({min(xs):.3f},{min(zs):.3f})..({max(xs):.3f},{max(zs):.3f}) "
+                f"pts={[tuple(round(v,3) for v in p) for p in rr]}"
+            )
+
+negative_loops=[item for item in fm_loops if item[2] < -0.25]
+print(
+    f"T21VOID FLOORMETAL_HOLES count={len(negative_loops)} "
+    f"areas={[round(-item[2],6) for item in negative_loops]}"
+)
+
+def loop_midpoints(loop):
+    out=[]
+    for i,a in enumerate(loop):
+        b=loop[(i+1)%len(loop)]
+        out.append(((a[0]+b[0])*0.5,(a[1]+b[1])*0.5))
+    return out
+
+def loop_nearest_stats(source_loop,target_loop):
+    target_segments=[
+        (target_loop[i],target_loop[(i+1)%len(target_loop)])
+        for i in range(len(target_loop))
+    ]
+    ds=[]
+    for p in loop_midpoints(source_loop):
+        ds.append(min(point_segment_distance_2d(p,a,b) for a,b in target_segments))
+    ds.sort()
+    if not ds:
+        return (999.0,999.0,999.0)
+    p50=ds[min(len(ds)-1,round((len(ds)-1)*0.50))]
+    p95=ds[min(len(ds)-1,round((len(ds)-1)*0.95))]
+    return (p50,p95,max(ds))
+
+for void_name in ("SMALL_NEG","SMALL_POS"):
+    void_loop=fine_voids[void_name][1][0]
+    best=None
+    for ci,li,area,loop,rr in negative_loops:
+        p50,p95,mx=loop_nearest_stats(void_loop,loop)
+        candidate=(p95,p50,mx,ci,li,-area)
+        if best is None or candidate<best:
+            best=candidate
+    print(
+        f"T21VOID FLOORMETAL_MATCH {void_name} "
+        f"best={best}"
+    )
