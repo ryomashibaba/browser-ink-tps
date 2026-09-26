@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   UNDERTOW_GUIDE_LINE_SIDE_OBSERVATIONS,
   UNDERTOW_LINE_SEMANTIC_BINDING_AUDIT,
+  UNDERTOW_SIDE_REGISTRATION_FINDINGS,
   undertowLineSemanticAuditErrors
 } from './UndertowSpillwayLineSideSemanticAudit';
 
@@ -47,4 +48,20 @@ describe('T21-C Undertow line-side semantic audit', () => {
     expect(UNDERTOW_GUIDE_LINE_SIDE_OBSERVATIONS[0]!.exactDeltaMeters)
       .toBeUndefined();
   });
+
+  it('keeps every existing-media finding below canonical floor-side binding strength', () => {
+    expect(
+      UNDERTOW_SIDE_REGISTRATION_FINDINGS.map((finding) => finding.result)
+    ).toEqual([
+      'NO_SHARED_SIDE_REGISTRATION',
+      'LOCAL_TOPOLOGY_ONLY',
+      'GUIDE_SIDE_ORDER_ONLY',
+      'SEMANTIC_CROSSCHECK_ONLY'
+    ]);
+
+    for (const finding of UNDERTOW_SIDE_REGISTRATION_FINDINGS) {
+      expect(finding.canBindCanonicalFloorSides).toBe(false);
+    }
+  });
+
 });
