@@ -1,4 +1,5 @@
 export type UndertowExternalGeometrySourceId =
+  | 'NINTENDO_POST_7_2_UPDATE_HISTORY'
   | 'LEANNY_TEMPLE_STICK_INDEX'
   | 'LEANNY_TEMPLE01_SCENE_METADATA'
   | 'KITRIX_TEMPLE01_OBJ'
@@ -6,6 +7,7 @@ export type UndertowExternalGeometrySourceId =
   | 'OCTOSQUIDDY_TEMPLE01_ACTOR_CLASSES';
 
 export type UndertowExternalGeometrySourceStatus =
+  | 'CONFIRMED_VERSION_BOUNDARY'
   | 'REJECTED_WRONG_MODE'
   | 'CONFIRMED_REMODEL_IDENTITY'
   | 'PROMISING_BODY_UNAVAILABLE'
@@ -24,6 +26,18 @@ export interface UndertowExternalGeometrySourceAuditEntry {
 export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT:
   readonly UndertowExternalGeometrySourceAuditEntry[] = [
     {
+      id: 'NINTENDO_POST_7_2_UPDATE_HISTORY',
+      status: 'CONFIRMED_VERSION_BOUNDARY',
+      canPromoteCanonicalGeometry: false,
+      confidence: 'HIGH',
+      facts: [
+        'Nintendo Ver.7.2.0 update history explicitly states that Undertow Spillway terrain changed in all modes.',
+        'Later documented Undertow entries through Ver.11.3.0 are bug/rule-behavior fixes rather than another documented terrain redesign.'
+      ],
+      blocker:
+        'Official patch notes establish the documented version boundary, not mesh coordinates; they cannot promote XZ/Y values by themselves.'
+    },
+    {
       id: 'LEANNY_TEMPLE_STICK_INDEX',
       status: 'REJECTED_WRONG_MODE',
       canPromoteCanonicalGeometry: false,
@@ -39,7 +53,8 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT:
       canPromoteCanonicalGeometry: false,
       confidence: 'CONFIRMED',
       facts: [
-        'SceneInfo identifies Vss_Temple01 as マテガイ放水路（改修後）.',
+        'Leanny commit 458cbf271a161fea78db893aec6ee958e4684121 is explicitly named 7.2.0 update and adds data/mush/720/SceneInfo.json.',
+        'That 7.2.0 SceneInfo identifies Vss_Temple01 as マテガイ放水路（改修後）.',
         'Its sequence is Versus and its preload resource is Model/Fld_Temple01.bfres.',
         'Vss_Temple00 is retained separately as the pre-remodel マテガイ放水路 scene.'
       ],
@@ -87,6 +102,9 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT:
 
 export function undertowExternalGeometrySourceAuditErrors(): readonly string[] {
   const errors: string[] = [];
+  const nintendo = UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT.find(
+    (entry) => entry.id === 'NINTENDO_POST_7_2_UPDATE_HISTORY'
+  );
   const temple01 = UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT.find(
     (entry) => entry.id === 'LEANNY_TEMPLE01_SCENE_METADATA'
   );
@@ -97,6 +115,9 @@ export function undertowExternalGeometrySourceAuditErrors(): readonly string[] {
     (entry) => entry.id === 'LEANNY_TEMPLE_STICK_INDEX'
   );
 
+  if (nintendo?.status !== 'CONFIRMED_VERSION_BOUNDARY') {
+    errors.push('Nintendo 7.2+ version boundary must remain explicit');
+  }
   if (temple01?.status !== 'CONFIRMED_REMODEL_IDENTITY') {
     errors.push('Temple01 remodel identity must remain confirmed');
   }
