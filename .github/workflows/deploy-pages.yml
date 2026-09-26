@@ -319,14 +319,168 @@ jobs:
               for pnt in sorted(pts,key=lambda p:(p[2],p[0],p[1])):
                   print('T21OUTER V',target,pnt)
 
-          # Compact positive-Z height map, one sample every 2m.
-          print('T21EDGE POSZ_ROWS')
-          for z in range(70,39,-2):
-              row=[]
-              for x in range(-30,31,2):
-                  h=fast_top(float(x),float(z))
-                  row.append(' .' if h is None else f'{int(round(h)):2d}')
-              print(f'T21EDGE Z={z:2d} ' + ' '.join(row))
+          # Solve a 2D similarity registration from the vector-PDF exterior
+          # to the OBJ walkable exterior.  The PDF's project frame was defined
+          # independently, so identity XZ must not be assumed.
+          pdf_outer=[
+              (340.56,119.88),(285.12,119.88),(285.12,89.28),(258.36,89.28),
+              (243.12,104.64),(243.12,119.88),(109.44,119.88),(70.68,158.64),
+              (70.68,362.28),(109.8,408.96),(259.8,408.96),(259.8,444.72),
+              (336.0,444.72),(336.0,414.84),(345.36,414.84),(345.36,444.72),
+              (393.6,444.72),(393.6,408.96),(406.08,408.96),(406.08,444.72),
+              (501.36,444.72),(501.36,475.32),(556.8,475.32),(556.8,505.92),
+              (583.56,505.92),(598.8,490.56),(598.8,475.32),(732.48,475.32),
+              (771.24,436.56),(771.24,232.92),(732.12,186.24),(582.12,186.24),
+              (582.12,150.48),(505.92,150.48),(505.92,180.36),(496.56,180.36),
+              (496.56,150.48),(448.32,150.48),(448.32,186.24),(435.84,186.24),
+              (435.84,150.48),(340.56,150.48)
+          ]
+          src_poly=[conv(p) for p in pdf_outer]
+
+          def densify(poly, spacing=0.5):
+              out=[]
+              for a,b in zip(poly,poly[1:]+poly[:1]):
+                  dx=b[0]-a[0]; dz=b[1]-a[1]
+                  ln=math.hypot(dx,dz)
+                  n=max(1,int(math.ceil(ln/spacing)))
+                  for i in range(n):
+                      t=i/n
+                      out.append((a[0]+dx*t,a[1]+dz*t))
+              return out
+
+          src=densify(src_poly,0.5)
+
+          # Exterior boundary of the rasterized walkable union:
+          # flood-fill empty cells from the raster box and retain occupied cells
+          # adjacent to that outside component.
+          occ=set(k for k,h in grid.items() if h is not None)
+          outside=set()
+          q=[]
+          max_ix=len(xs)-1; max_iz=len(zs)-1
+          for ix in range(max_ix+1):
+              for iz in (0,max_iz):
+                  if (ix,iz) not in occ and (ix,iz) not in outside:
+                      outside.add((ix,iz)); q.append((ix,iz))
+          for iz in range(max_iz+1):
+              for ix in (0,max_ix):
+                  if (ix,iz) not in occ and (ix,iz) not in outside:
+                      outside.add((ix,iz)); q.append((ix,iz))
+          qi=0
+          while qi<len(q):
+              ix,iz=q[qi]; qi+=1
+              for dix,diz in ((1,0),(-1,0),(0,1),(0,-1)):
+                  j=(ix+dix,iz+diz)
+                  if 0<=j[0]<=max_ix and 0<=j[1]<=max_iz and j not in occ and j not in outside:
+                      outside.add(j); q.append(j)
+
+          target=[]
+          for ix,iz in occ:
+              if any((ix+dx,iz+dz) in outside for dx,dz in ((1,0),(-1,0),(0,1),(0,-1))):
+                  target.append((xs[ix],zs[iz]))
+          print(f'T21REG src={len(src)} target_outer={len(target)}')
+
+          # Spatial hash for nearest-boundary lookup.
+          nb=2.0
+          tbin={}
+          for p2 in target:
+              tbin.setdefault((math.floor(p2[0]/nb),math.floor(p2[1]/nb)),[]).append(p2)
+
+          def nearest(p2,max_ring=6):
+              bx=math.floor(p2[0]/nb); bz=math.floor(p2[1]/nb)
+              best=None; bd=1e30
+              for ring in range(max_ring+1):
+                  found=False
+                  for dx in range(-ring,ring+1):
+                      for dz in range(-ring,ring+1):
+                          if ring and abs(dx)!=ring and abs(dz)!=ring:
+                              continue
+                          for q2 in tbin.get((bx+dx,bz+dz),()):
+                              d=(p2[0]-q2[0])**2+(p2[1]-q2[1])**2
+                              if d<bd:
+                                  bd=d; best=q2; found=True
+                  if found and bd <= ((ring+1)*nb)**2:
+                      break
+              return best,math.sqrt(bd)
+
+          def apply_tf(p2,a,b,tx,tz):
+              return (a*p2[0]-b*p2[1]+tx,b*p2[0]+a*p2[1]+tz)
+
+          def solve_similarity(pairs):
+              ps=[p for p,q in pairs]; qs=[q for p,q in pairs]
+              pc=(sum(p[0] for p in ps)/len(ps),sum(p[1] for p in ps)/len(ps))
+              qc=(sum(q[0] for q in qs)/len(qs),sum(q[1] for q in qs)/len(qs))
+              den=aa=bb=0.0
+              for p2,q2 in pairs:
+                  x=p2[0]-pc[0]; z=p2[1]-pc[1]
+                  u=q2[0]-qc[0]; v=q2[1]-qc[1]
+                  den+=x*x+z*z
+                  aa+=x*u+z*v
+                  bb+=x*v-z*u
+              a=aa/den; b=bb/den
+              tx=qc[0]-(a*pc[0]-b*pc[1])
+              tz=qc[1]-(b*pc[0]+a*pc[1])
+              return a,b,tx,tz
+
+          def icp(theta0,scale0):
+              a=scale0*math.cos(theta0); b=scale0*math.sin(theta0)
+              tx=tz=0.0
+              for _ in range(35):
+                  matched=[]
+                  scored=[]
+                  for p2 in src:
+                      tp=apply_tf(p2,a,b,tx,tz)
+                      q2,d=nearest(tp)
+                      if q2 is not None:
+                          scored.append((d,p2,q2))
+                  scored.sort(key=lambda x:x[0])
+                  keep=scored[:max(20,int(len(scored)*0.78))]
+                  matched=[(p2,q2) for d,p2,q2 in keep]
+                  na,nbb,ntx,ntz=solve_similarity(matched)
+                  if max(abs(na-a),abs(nbb-b),abs(ntx-tx),abs(ntz-tz))<1e-6:
+                      a,b,tx,tz=na,nbb,ntx,ntz
+                      break
+                  a,b,tx,tz=na,nbb,ntx,ntz
+              ds=[]
+              for p2 in src:
+                  _,d=nearest(apply_tf(p2,a,b,tx,tz))
+                  ds.append(d)
+              ds.sort()
+              trim=ds[:max(1,int(len(ds)*0.78))]
+              rms=math.sqrt(sum(d*d for d in trim)/len(trim))
+              p95=ds[min(len(ds)-1,int(len(ds)*0.95))]
+              return rms,p95,a,b,tx,tz
+
+          sols=[]
+          for deg in range(-180,180,15):
+              for s0 in (0.75,0.85,0.95,1.05):
+                  sols.append(icp(math.radians(deg),s0))
+          sols.sort(key=lambda v:v[0])
+          for rank,sol in enumerate(sols[:8]):
+              rms,p95,a,b,tx,tz=sol
+              sc=math.hypot(a,b); th=math.degrees(math.atan2(b,a))
+              print(f'T21REG SOL {rank} rms={rms:.4f} p95={p95:.4f} scale={sc:.6f} rot_deg={th:.4f} tx={tx:.4f} tz={tz:.4f}')
+
+          best=sols[0]
+          _,_,ra,rb,rtx,rtz=best
+          reg_lines={
+              'A_FIRST':[(620.4,423.12),(664.68,423.12),(664.68,394.2)],
+              'A_RIGHT':[(664.68,394.2),(702.36,394.2),(702.36,350.76)],
+              'B_FIRST':[(221.52,172.08),(177.24,172.08),(177.24,201.0)],
+              'B_RIGHT':[(177.24,201.0),(139.56,201.0),(139.56,244.44)],
+          }
+          for lname,pdfpts in reg_lines.items():
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpts]
+              print(f'T21REG LINE {lname} pts={[tuple(round(v,4) for v in p) for p in rp]}')
+              for si,(aa2,bb2) in enumerate(zip(rp,rp[1:])):
+                  dx=bb2[0]-aa2[0]; dz=bb2[1]-aa2[1]
+                  ln=math.hypot(dx,dz); nx,nz=-dz/ln,dx/ln
+                  mx=(aa2[0]+bb2[0])*0.5; mz=(aa2[1]+bb2[1])*0.5
+                  for side,sign in [('LEFT',1),('RIGHT',-1)]:
+                      vals=[]
+                      for off in (0.35,0.75,1.25,2.0):
+                          h=fast_top(mx+nx*off*sign,mz+nz*off*sign)
+                          vals.append(None if h is None else round(h,3))
+                      print(f'T21REG SIDE {lname} seg={si} {side} top={vals}')
           PY
 
       - name: Setup Node.js
