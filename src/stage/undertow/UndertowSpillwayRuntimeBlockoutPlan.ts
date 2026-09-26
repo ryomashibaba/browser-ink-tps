@@ -1,0 +1,151 @@
+import {
+  confidenceAllowedForGeometry,
+  exactYForGeometry
+} from '../measurement/MeasurementGeometryGate';
+import type {
+  StageMeasurementEntry,
+  SurfaceSemantic,
+  XzMeasurement
+} from '../measurement/StageMeasurementLedger';
+import { UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER } from './UndertowSpillwayMeasurementLedger';
+
+export type UndertowRuntimeSurfaceDisposition =
+  | 'FLAT_POLYGON_READY'
+  | 'XZ_NOT_AREA'
+  | 'Y_UNRESOLVED'
+  | 'NOT_A_SURFACE';
+
+export type UndertowPaintAuthority =
+  | 'PAINTABLE'
+  | 'UNINKABLE'
+  | 'UNKNOWN';
+
+export interface UndertowRuntimeSurfacePlanItem {
+  id: string;
+  disposition: UndertowRuntimeSurfaceDisposition;
+  collisionReady: boolean;
+  paintAuthority: UndertowPaintAuthority;
+  yMeters?: number;
+  polygonCount: number;
+  notes: string;
+}
+
+function polygonCount(xz: XzMeasurement): number {
+  if (xz.kind === 'POLYGON') return xz.polygonMeters ? 1 : 0;
+  if (xz.kind === 'POLYGON_SET') return xz.polygonSetMeters?.length ?? 0;
+  return 0;
+}
+
+function paintAuthority(
+  semantics: readonly SurfaceSemantic[],
+  confidence: StageMeasurementEntry['surface']['confidence']
+): UndertowPaintAuthority {
+  if (!confidenceAllowedForGeometry(confidence, 'BLOCKOUT')) return 'UNKNOWN';
+  if (semantics.includes('PAINTABLE')) return 'PAINTABLE';
+  if (
+    semantics.includes('UNINKABLE') ||
+    semantics.includes('GLASS') ||
+    semantics.includes('GRATE') ||
+    semantics.includes('WATER') ||
+    semantics.includes('KILL')
+  ) {
+    return 'UNINKABLE';
+  }
+  return 'UNKNOWN';
+}
+
+function classify(entry: StageMeasurementEntry): UndertowRuntimeSurfacePlanItem {
+  if (entry.featureKind !== 'SURFACE') {
+    return {
+      id: entry.id,
+      disposition: 'NOT_A_SURFACE',
+      collisionReady: false,
+      paintAuthority: 'UNKNOWN',
+      polygonCount: 0,
+      notes: 'Only SURFACE entries can become flat footprint solids through this adapter.'
+    };
+  }
+
+  const count = confidenceAllowedForGeometry(entry.xz.confidence, 'BLOCKOUT')
+    ? polygonCount(entry.xz)
+    : 0;
+  if (count === 0) {
+    return {
+      id: entry.id,
+      disposition: 'XZ_NOT_AREA',
+      collisionReady: false,
+      paintAuthority: paintAuthority(
+        entry.surface.semantics,
+        entry.surface.confidence
+      ),
+      polygonCount: 0,
+      notes:
+        'BLOCKOUT-safe polygon XZ is not available. POINT/POLYLINE/UNRESOLVED entries must not be expanded into convenience slabs.'
+    };
+  }
+
+  const yMeters = exactYForGeometry(entry.y, 'BLOCKOUT');
+  if (yMeters === null) {
+    return {
+      id: entry.id,
+      disposition: 'Y_UNRESOLVED',
+      collisionReady: false,
+      paintAuthority: paintAuthority(
+        entry.surface.semantics,
+        entry.surface.confidence
+      ),
+      polygonCount: count,
+      notes:
+        'The XZ area is known but no single BLOCKOUT-safe absolute Y exists. Multi-elevation envelopes must not be flattened.'
+    };
+  }
+
+  return {
+    id: entry.id,
+    disposition: 'FLAT_POLYGON_READY',
+    collisionReady: true,
+    paintAuthority: paintAuthority(
+      entry.surface.semantics,
+      entry.surface.confidence
+    ),
+    yMeters,
+    polygonCount: count,
+    notes:
+      'Exact/HIGH-or-stronger polygon XZ and absolute Y are available for a flat BLOCKOUT footprint. Paint authority remains independent.'
+  };
+}
+
+export const UNDERTOW_RUNTIME_SURFACE_PLAN:
+  readonly UndertowRuntimeSurfacePlanItem[] =
+  UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER.entries.map(classify);
+
+export function undertowRuntimeSurfacePlanItem(
+  id: string
+): UndertowRuntimeSurfacePlanItem {
+  const item = UNDERTOW_RUNTIME_SURFACE_PLAN.find((candidate) => candidate.id === id);
+  if (!item) throw new Error(`Unknown Undertow runtime surface plan id '${id}'.`);
+  return item;
+}
+
+export function undertowRuntimeSurfacePlanErrors(): readonly string[] {
+  const errors: string[] = [];
+  for (const item of UNDERTOW_RUNTIME_SURFACE_PLAN) {
+    if (item.collisionReady !== (item.disposition === 'FLAT_POLYGON_READY')) {
+      errors.push(`${item.id}: collisionReady/disposition mismatch`);
+    }
+    if (item.disposition === 'FLAT_POLYGON_READY') {
+      if (!Number.isFinite(item.yMeters) || item.polygonCount < 1) {
+        errors.push(`${item.id}: ready flat surface lacks exact Y or polygon area`);
+      }
+    }
+  }
+
+  for (const id of ['team-a-spawn-terrain-region', 'team-b-spawn-terrain-region']) {
+    const item = undertowRuntimeSurfacePlanItem(id);
+    if (item.disposition !== 'Y_UNRESOLVED') {
+      errors.push(`${id}: multi-elevation spawn terrain must never be flattened`);
+    }
+  }
+
+  return errors;
+}

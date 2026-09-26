@@ -78,9 +78,13 @@ export function rasterizeStageFootprint(
   const active = new Uint8Array(widthCells * depthCells);
 
   for (let z = 0; z < depthCells; z += 1) {
-    const v = Math.min(depthMeters, (z + 0.5) * cell);
+    const minV = z * cell;
+    const maxV = Math.min(depthMeters, (z + 1) * cell);
+    const v = (minV + maxV) * 0.5;
     for (let x = 0; x < widthCells; x += 1) {
-      const u = Math.min(widthMeters, (x + 0.5) * cell);
+      const minU = x * cell;
+      const maxU = Math.min(widthMeters, (x + 1) * cell);
+      const u = (minU + maxU) * 0.5;
       if (pointInStageFootprint(u, v, footprint)) {
         active[z * widthCells + x] = 1;
       }

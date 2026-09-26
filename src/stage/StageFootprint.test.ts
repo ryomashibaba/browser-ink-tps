@@ -50,6 +50,20 @@ describe('StageFootprint', () => {
     ).toBe(false);
   });
 
+  it('samples the actual center of a trailing partial cell', () => {
+    const partial: StageFootprint = {
+      outer: [[0, 0], [4.1, 0], [4.1, 1], [0, 1]],
+      cellSizeMeters: 1
+    };
+    const raster = rasterizeStageFootprint(4.1, 1, partial);
+    expect([...raster.active]).toEqual([1, 1, 1, 1, 1]);
+    const area = raster.rectangles.reduce(
+      (sum, rect) => sum + rect.widthMeters * rect.depthMeters,
+      0
+    );
+    expect(area).toBeCloseTo(4.1, 8);
+  });
+
   it('rejects vertices outside the declared surface bounds', () => {
     expect(
       validateStageFootprint(
