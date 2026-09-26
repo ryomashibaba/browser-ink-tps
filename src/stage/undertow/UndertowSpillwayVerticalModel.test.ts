@@ -7,71 +7,81 @@ import {
 } from './UndertowSpillwayVerticalModel';
 
 describe('T21-C Undertow vertical reconstruction', () => {
-  it('resolves only the center small step from the confirmed center-low seed at blockout level', () => {
+  it('resolves the remodeled spawn / first-drop / right-low chain at BLOCKOUT confidence', () => {
     const result = resolveVerticalConstraints(
       UNDERTOW_VERTICAL_NODES,
       UNDERTOW_VERTICAL_RELATIONS,
       'BLOCKOUT'
     );
     expect(result.conflicts).toEqual([]);
+
     expect(result.values['center-low-floor']).toBe(0);
     expect(result.values['center-small-step-top']).toBe(1.5);
+    expect(result.values['center-left-slope-low']).toBe(1.5);
+    expect(result.values['center-right-slope-low']).toBe(1.5);
 
-    expect(result.values['glass-lower-major-floor']).toBeUndefined();
-    expect(result.values['glass-overhang-high-reference']).toBeUndefined();
-    expect(result.values['team-a-spawn-floor']).toBeUndefined();
-    expect(result.values['team-a-first-drop-landing']).toBeUndefined();
-    expect(result.values['right-small-drop-upper']).toBeUndefined();
-    expect(result.values['right-low-floor']).toBeUndefined();
+    expect(result.values['team-a-spawn-floor']).toBe(6);
+    expect(result.values['team-b-spawn-floor']).toBe(6);
+    expect(result.values['team-a-first-drop-landing']).toBe(1.5);
+    expect(result.values['team-b-first-drop-landing']).toBe(1.5);
+    expect(result.values['right-low-floor']).toBe(3);
+    expect(result.values['right-small-drop-upper']).toBe(6);
+    expect(result.values['glass-lower-major-floor']).toBe(3);
+    expect(result.values['glass-overhang-high-reference']).toBe(6);
   });
 
-  it('resolves the center-side slope endpoints to Y=1.5 but keeps high ends/grates unseeded', () => {
+  it('resolves the first drop as 4.5m one-way descent instead of the old 1.5/3m candidate pair', () => {
+    const firstDropRelations = UNDERTOW_VERTICAL_RELATIONS.filter(
+      (relation) => relation.fromId.includes('spawn-floor') &&
+        relation.toId.includes('first-drop-landing')
+    );
+    expect(firstDropRelations).toHaveLength(2);
+    for (const relation of firstDropRelations) {
+      expect(relation.deltaMeters).toBe(-4.5);
+      expect(relation.candidatesMeters).toBeUndefined();
+      expect(relation.confidence).toBe('HIGH');
+    }
+  });
+
+  it('resolves the blue/right small drop to 3m and keeps first-drop landing 1.5m below right-low', () => {
+    expect(
+      UNDERTOW_VERTICAL_RELATIONS.find(
+        (relation) =>
+          relation.fromId === 'right-low-floor' &&
+          relation.toId === 'right-small-drop-upper'
+      )
+    ).toMatchObject({
+      deltaMeters: 3,
+      confidence: 'HIGH'
+    });
+
+    expect(
+      UNDERTOW_VERTICAL_RELATIONS.find(
+        (relation) =>
+          relation.fromId === 'team-a-first-drop-landing' &&
+          relation.toId === 'right-low-floor'
+      )
+    ).toMatchObject({
+      deltaMeters: 1.5,
+      confidence: 'HIGH'
+    });
+  });
+
+  it('keeps only slope-high endpoints and grate elevations unresolved at BLOCKOUT confidence', () => {
     const result = resolveVerticalConstraints(
       UNDERTOW_VERTICAL_NODES,
       UNDERTOW_VERTICAL_RELATIONS,
       'BLOCKOUT'
     );
-    expect(result.values['center-left-slope-low']).toBe(1.5);
-    expect(result.values['center-right-slope-low']).toBe(1.5);
-
-    for (const id of [
+    expect(result.unresolved).toEqual([
       'center-left-slope-high',
       'center-right-slope-high',
       'negative-z-grate-floor',
       'positive-z-grate-floor'
-    ]) {
-      expect(result.values[id]).toBeUndefined();
-    }
+    ]);
   });
 
-  it('keeps first-drop landing separate from the right-small-drop level while retaining right-low -> underpass', () => {
-    const falseLandingToUpper = UNDERTOW_VERTICAL_RELATIONS.find(
-      (relation) =>
-        relation.fromId === 'team-a-first-drop-landing' &&
-        relation.toId === 'right-small-drop-upper'
-    );
-    const lowToUnderpass = UNDERTOW_VERTICAL_RELATIONS.find(
-      (relation) =>
-        relation.fromId === 'right-low-floor' &&
-        relation.toId === 'glass-lower-major-floor'
-    );
-
-    expect(falseLandingToUpper).toBeUndefined();
-    expect(lowToUnderpass?.deltaMeters).toBe(0);
-    expect(lowToUnderpass?.confidence).toBe('HIGH');
-
-    const result = resolveVerticalConstraints(
-      UNDERTOW_VERTICAL_NODES,
-      UNDERTOW_VERTICAL_RELATIONS,
-      'BLOCKOUT'
-    );
-    expect(result.values['team-a-first-drop-landing']).toBeUndefined();
-    expect(result.values['right-small-drop-upper']).toBeUndefined();
-    expect(result.values['right-low-floor']).toBeUndefined();
-    expect(result.values['glass-lower-major-floor']).toBeUndefined();
-  });
-
-  it('keeps HIGH vertical relations out of Stable Freeze until independently confirmed', () => {
+  it('keeps HIGH remodel values out of Stable Freeze until independently confirmed', () => {
     const result = resolveVerticalConstraints(
       UNDERTOW_VERTICAL_NODES,
       UNDERTOW_VERTICAL_RELATIONS,
@@ -80,20 +90,7 @@ describe('T21-C Undertow vertical reconstruction', () => {
     expect(result.values).toEqual({ 'center-low-floor': 0 });
   });
 
-  it('keeps first-drop magnitude as candidates rather than an exact relation', () => {
-    const firstDropRelations = UNDERTOW_VERTICAL_RELATIONS.filter(
-      (relation) => relation.fromId.includes('spawn-floor') &&
-        relation.toId.includes('first-drop-landing')
-    );
-    expect(firstDropRelations).toHaveLength(2);
-    for (const relation of firstDropRelations) {
-      expect(relation.deltaMeters).toBeUndefined();
-      expect(relation.candidatesMeters).toEqual([-1.5, -3]);
-      expect(relation.confidence).toBe('PROVISIONAL');
-    }
-  });
-
-  it('never exposes the slope-marked glass overhang as a flat platform Y', () => {
+  it('never exposes the slope-marked glass overhang as a single intrinsic flat-platform absolute node', () => {
     const glassNode = UNDERTOW_VERTICAL_NODES.find(
       (node) => node.id === 'glass-overhang-high-reference'
     );
