@@ -34,14 +34,14 @@ export const UNDERTOW_CAPTURED_CONNECTIONS:
       from: 'RIGHT_SMALL_DROP_UPPER',
       to: 'RIGHT_LOW',
       kind: 'DROP',
-      deltaYMeters: -1.5,
+      deltaYMeters: -3,
       confidence: 'HIGH',
       evidenceIds: [
         'user-right-low-capture-2026-09-25',
-        'handoff-t21-masterplan'
+        'extracted-temple01-geometry'
       ],
       notes:
-        'The targeted capture begins on the upper floor and descends into the right-low open/grass floor; the existing vertical measurement is 1.5m.'
+        'The targeted capture binds the blue/right drop to the right-low destination. Locally registered remodeled Temple01 geometry resolves the upper/lower model-Y surfaces to 10.5/7.5m, a 3.0m descent.'
     },
     {
       from: 'RIGHT_LOW',
