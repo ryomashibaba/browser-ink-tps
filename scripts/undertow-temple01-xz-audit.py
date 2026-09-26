@@ -479,3 +479,101 @@ for name,pdfpoly in glass_polys.items():
             f"x=({min(xs):.3f},{max(xs):.3f}) z=({min(zs):.3f},{max(zs):.3f}) "
             f"n={len(rr)} pts={[tuple(round(v,3) for v in p) for p in rr]}"
         )
+
+
+# OBJ-native glass projection: avoid using the globally registered PDF glass
+# rectangle as the clipping mask for promotion.
+def convex_hull(points):
+    pts=sorted(set((round(x,6),round(z,6)) for x,z in points))
+    if len(pts)<=1:
+        return pts
+    def cross(o,a,b):
+        return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])
+    lo=[]
+    for p0 in pts:
+        while len(lo)>=2 and cross(lo[-2],lo[-1],p0)<=0:
+            lo.pop()
+        lo.append(p0)
+    hi=[]
+    for p0 in reversed(pts):
+        while len(hi)>=2 and cross(hi[-2],hi[-1],p0)<=0:
+            hi.pop()
+        hi.append(p0)
+    return lo[:-1]+hi[:-1]
+
+glass_obj="FldObj_Temple01_PntSet_pCube21560_1__Glass01"
+glass_faces=[ff for ff in faces if ff[3]==glass_obj]
+for side_name,pred in (
+    ("POS_NATIVE",lambda x,z:x<0),
+    ("NEG_NATIVE",lambda x,z:x>0),
+):
+    pts=[]
+    for ff in glass_faces:
+        tri=[vertices[i] for i in ff[:3]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if pred(cx,cz):
+            pts.extend((v[0],v[2]) for v in tri)
+    hull=convex_hull(pts)
+    print(f"T21NATIVE HULL {side_name} n={len(hull)} pts={[tuple(round(v,3) for v in p) for p in hull]}")
+    if not hull:
+        continue
+    xmin=min(p[0] for p in hull); xmax=max(p[0] for p in hull)
+    zmin=min(p[1] for p in hull); zmax=max(p[1] for p in hull)
+    floor_cells=set()
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            if inside_poly(x,z,hull) and has_walk_surface(x,z,3.0):
+                floor_cells.add((ix,iz))
+    loops=boundary_loops(floor_cells)
+    loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    print(f"T21NATIVE FLOOR {side_name} cells={len(floor_cells)} area={len(floor_cells)*STEP*STEP:.3f}")
+    for j,loop in enumerate(loops[:8]):
+        rr=rdp_closed(loop,0.20)
+        print(
+            f"T21NATIVE FLOORLOOP {side_name} {j} area={polygon_area(loop):.3f} "
+            f"n={len(rr)} pts={[tuple(round(v,3) for v in p) for p in rr]}"
+        )
+
+    # Solid floor-level exclusions intersected with this actual lower floor.
+    obstacle_cells=set()
+    for ix,iz in floor_cells:
+        x,z=cell_xy((ix,iz))
+        for fi in face_candidates(x,z):
+            ia,ib,ic,o,m=faces[fi]
+            st=obj_ranges[o]
+            if st["y0"]>3.15 or st["y1"]<4.30:
+                continue
+            if not any(t in o or t in m for t in OBSTACLE_TOKENS):
+                continue
+            tri=[vertices[ia],vertices[ib],vertices[ic]]
+            n=tri_normal(tri)
+            if abs(n[1])<0.50 or not contains_xz(x,z,tri):
+                continue
+            yy=interp_y(x,z,tri)
+            if 2.85<=yy<=6.5:
+                obstacle_cells.add((ix,iz))
+                break
+    rem=set(obstacle_cells); comps=[]
+    while rem:
+        seed=rem.pop(); cc={seed}; q=deque([seed])
+        while q:
+            c0=q.popleft()
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                nn=(c0[0]+d[0],c0[1]+d[1])
+                if nn in rem:
+                    rem.remove(nn); cc.add(nn); q.append(nn)
+        comps.append(cc)
+    comps.sort(key=len,reverse=True)
+    print(f"T21NATIVE OBST {side_name} cells={len(obstacle_cells)} area={len(obstacle_cells)*STEP*STEP:.3f}")
+    for j,cc in enumerate(comps[:10]):
+        loops2=boundary_loops(cc)
+        loops2.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+        if not loops2: continue
+        rr=rdp_closed(loops2[0],0.15)
+        print(
+            f"T21NATIVE OBSTLOOP {side_name} {j} cells={len(cc)} n={len(rr)} "
+            f"pts={[tuple(round(v,3) for v in p) for p in rr]}"
+        )
