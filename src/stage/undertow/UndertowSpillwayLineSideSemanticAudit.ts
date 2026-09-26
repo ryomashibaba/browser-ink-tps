@@ -105,12 +105,12 @@ export const UNDERTOW_LINE_SEMANTIC_BINDING_AUDIT:
       geometryIdentityConfidence: 'HIGH',
       lowerSideCanonicalFloorId: 'team-a-first-drop-landing',
       upperSideCanonicalFloorId: 'team-a-spawn-floor',
-      lowerSideProjectY: 1.5,
-      upperSideProjectY: 6,
+      lowerSideProjectY: 3,
+      upperSideProjectY: 7.5,
       sideBindingStatus: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION',
       evidenceIds: ['extracted-temple01-geometry', 'user-turf-vector-blueprint', 'user-first-drop-video'],
       notes:
-        'Registered red lip: upper-side model Y=10.5m and lower-side model Y=6.0m. With model center reference 4.5m normalized to canonical center Y=0, these become project Y=6.0m and 1.5m.'
+        'Registered red lip: upper-side model Y=10.5m and lower-side model Y=6.0m. With model center-low Y=3.0m normalized to canonical center-low Y=0, these become project Y=7.5m and 3.0m.'
     },
     {
       lineId: 'TEAM_A_RIGHT_SMALL_DROP_BLUE',
@@ -118,12 +118,12 @@ export const UNDERTOW_LINE_SEMANTIC_BINDING_AUDIT:
       geometryIdentityConfidence: 'HIGH',
       lowerSideCanonicalFloorId: 'right-low-floor',
       upperSideCanonicalFloorId: 'right-small-drop-upper',
-      lowerSideProjectY: 3,
-      upperSideProjectY: 6,
+      lowerSideProjectY: 4.5,
+      upperSideProjectY: 7.5,
       sideBindingStatus: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION',
       evidenceIds: ['extracted-temple01-geometry', 'user-turf-vector-blueprint', 'user-right-low-capture-2026-09-25'],
       notes:
-        'Registered blue lip: upper-side model Y=10.5m and lower-side model Y=7.5m, normalized to project Y=6.0m and 3.0m. The lower side is independently bound to the captured right-low destination.'
+        'Registered blue lip: upper-side model Y=10.5m and lower-side model Y=7.5m, normalized to project Y=7.5m and 4.5m. The lower side is independently bound to the captured right-low destination.'
     }
   ];
 
