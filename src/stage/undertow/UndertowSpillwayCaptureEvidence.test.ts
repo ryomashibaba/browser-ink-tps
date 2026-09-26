@@ -25,8 +25,8 @@ describe('T21 user capture evidence', () => {
   it('uses the new stills only for qualitative ordering, not a metric delta', () => {
     const stills = undertowCaptureEvidence('user-first-drop-height-stills-2026-09-26');
     expect(stills.filenames).toEqual(['IMG_6112.jpeg', 'IMG_6111.jpeg']);
-    expect(stills.facts.join(' ')).toContain('below the floor on the lower side');
-    expect(stills.facts.join(' ')).toContain('does not establish an exact metric delta');
+    expect(stills.facts.join(' ')).toContain('below the red guide line');
+    expect(stills.facts.join(' ')).toContain('does not establish canonical floor identities or an exact metric delta');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {
