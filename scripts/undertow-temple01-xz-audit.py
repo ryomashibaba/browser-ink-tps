@@ -542,6 +542,29 @@ def roofed_underpass_cells(pdfpoly):
             keep |= cc
     return comp,roofed,keep,seed_cell
 
+def underpass_floor_obstacle_cells(floor_cells):
+    obstacle_cells=set()
+    for ix,iz in floor_cells:
+        x,z=cell_xy((ix,iz))
+        for fi in face_candidates(x,z):
+            ia,ib,ic,o,m=faces[fi]
+            st=obj_ranges[o]
+            if st["y0"]>3.15 or st["y1"]<4.30:
+                continue
+            if not any(t in o or t in m for t in OBSTACLE_TOKENS):
+                continue
+            tri=[vertices[ia],vertices[ib],vertices[ic]]
+            n=tri_normal(tri)
+            if abs(n[1])<0.50 or not contains_xz(x,z,tri):
+                continue
+            yy=interp_y(x,z,tri)
+            if 2.85<=yy<=6.5:
+                obstacle_cells.add((ix,iz))
+                break
+    return obstacle_cells
+
+
+underpass_nav={}
 for name,pdfpoly in glass_polys.items():
     comp,roofed,keep,seed=roofed_underpass_cells(pdfpoly)
     print(
@@ -549,7 +572,8 @@ for name,pdfpoly in glass_polys.items():
         f"roofed={len(roofed)} linked={len(keep)} area={len(keep)*STEP*STEP:.3f}"
     )
     if not keep:
-        continue
+        raise SystemExit(f"T21 underpass audit failed: no roof-linked floor for {name}")
+
     xs=[cell_xy(v)[0] for v in keep]; zs=[cell_xy(v)[1] for v in keep]
     print(
         f"T21UNDERPASS COVERBBOX {name} "
@@ -564,6 +588,45 @@ for name,pdfpoly in glass_polys.items():
             f"raw={len(loop)} n={len(rr)} pts="
             f"{[tuple(round(v,3) for v in p) for p in rr]}"
         )
+
+    obstacles=underpass_floor_obstacle_cells(keep)
+    navigable=keep-obstacles
+    if not navigable:
+        raise SystemExit(f"T21 underpass audit failed: obstacles removed all floor for {name}")
+    if not obstacles:
+        raise SystemExit(f"T21 underpass audit failed: expected floor-level exclusions for {name}")
+
+    nav_loops=boundary_loops(navigable)
+    nav_loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    if not nav_loops:
+        raise SystemExit(f"T21 underpass audit failed: no navigable contour for {name}")
+
+    print(
+        f"T21UNDERPASS NAV {name} floor={len(keep)} obstacles={len(obstacles)} "
+        f"walkable={len(navigable)} area={len(navigable)*STEP*STEP:.3f}"
+    )
+    for j,loop in enumerate(nav_loops[:12]):
+        rr=rdp_closed(loop,0.15)
+        print(
+            f"T21UNDERPASS NAVLOOP {name} {j} signed_area={polygon_area(loop):.3f} "
+            f"raw={len(loop)} n={len(rr)} pts="
+            f"{[tuple(round(v,3) for v in p) for p in rr]}"
+        )
+    underpass_nav[name]=(navigable,nav_loops)
+
+if set(underpass_nav) != {"POS_GLASS","NEG_GLASS"}:
+    raise SystemExit("T21 underpass audit failed: both symmetric underpasses are required")
+pos_nav=underpass_nav["POS_GLASS"][0]
+neg_nav=underpass_nav["NEG_GLASS"][0]
+nav_area_residual=abs(len(pos_nav)-len(neg_nav))*STEP*STEP
+print(
+    f"T21UNDERPASS SYMMETRY pos_cells={len(pos_nav)} neg_cells={len(neg_nav)} "
+    f"area_residual={nav_area_residual:.3f}"
+)
+if nav_area_residual>0.50:
+    raise SystemExit(
+        f"T21 underpass audit failed: symmetric navigable area residual {nav_area_residual:.3f}m2 exceeds 0.50m2"
+    )
 
 
 # OBJ-native glass projection: avoid using the globally registered PDF glass
