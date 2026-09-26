@@ -2219,3 +2219,42 @@ Canonical consequences:
 - all BLOCKOUT vertical blockers remain closed
 - T21-D remains gated; production runtime geometry is still unchanged
 - PR #5 remains Draft / unmerged
+
+
+## T21-B final fall-out / internal-void XZ closure checkpoint — 2026-09-26
+
+The last BLOCKOUT XZ blocker is now closed by an exhaustive common+Turf Temple01 geometry audit.
+
+Audit sequence:
+- scan common+Turf Temple01 horizontal geometry for enclosed empty XZ candidates
+- coarse pass: 0.5m
+- fine pass: 0.125m
+- require exact 180-degree pairing where applicable
+- classify candidate context against exact mapped water, walkable floors, StageSide walls, and higher solid geometry
+- reverse-audit the actual adjacent floor meshes for interior holes instead of treating top-down empty projection as a pit
+
+Six enclosed-empty candidates were found and all six are accounted for:
+- 2 = the already exact mapped cyan water pair
+- 2 large symmetric regions = exterior/StageSide space; 0.125m masks are exact 180-degree counterparts and about 85.6% of their perimeter lies within 0.30m of StageSide wall geometry
+- 2 small symmetric regions = top-down projection false positives beside Y=1.5 FloorMetal, largely enclosed by high PillarBase / SoundproofPanel projection rather than a floor cutout
+
+Reverse floor audits:
+- Y=1.5 `Fld_Temple01_pCube21772_1__FloorMetal00`: two simple components, **0 interior holes**
+- Y=1.2 `Fld_Temple01_group21978_1__FloorLine05`: two simple components, **0 interior holes**
+- neither candidate pair matches an interior floor-mesh hole
+
+Canonical result:
+- unexplained internal abyss candidates = **0**
+- exact 42-vertex common playable hard silhouette is the BLOCKOUT XZ fall-out envelope
+- exact cyan water polygons remain separate WATER+KILL hazards
+- no extra internal kill polygon is fabricated
+- `fall-out-void-kill-boundary` -> MEASURED HIGH
+- `internal-void-kill-boundaries` -> `RESOLVED_FROM_TEMPLE01_MODEL`
+- common trace coverage = **18/18**
+- required/request-ready T21 evidence captures = **0**
+- `UndertowSpillwayBlockoutGate.ready` = **true**
+- all BLOCKOUT vertical blockers remain closed
+
+This closes **XZ BLOCKOUT evidence only**. The vertical death/kill threshold is not inferred by this audit. Stable Freeze still requires its stricter CONFIRMED-exact evidence rules.
+
+T21-D is now permitted to start from the audited BLOCKOUT dataset, but **production runtime geometry remains unchanged at this checkpoint**. PR #5 remains Draft / unmerged.

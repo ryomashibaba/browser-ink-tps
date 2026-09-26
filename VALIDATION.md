@@ -1754,3 +1754,30 @@ Automated/CI evidence now additionally requires:
 - unresolved vertical IDs and relations remain empty
 
 The capture-only plan-registration records remain non-promotable on their own; the XZ promotion comes from independently audited Temple01 geometry. T21-D must remain closed until the remaining void boundary is resolved.
+
+
+## T21-B final void-XZ closure / T21-D gate validation — 2026-09-26
+
+Current validation must additionally require:
+- the common+Turf Temple01 empty-space scan enumerates exactly 6 significant enclosed candidates
+- exactly 2 candidates are the already mapped cyan water pair
+- both non-water candidate pairs are exact 180-degree counterparts at 0.125m
+- the large pair has no matching Y=1.2 FloorLine05 interior hole
+- the small pair has no matching Y=1.5 FloorMetal interior hole
+- FloorMetal interior-hole count = 0
+- FloorLine05 interior-hole count = 0
+- unexplained internal abyss candidate count = 0
+- no new convenience internal kill polygon is introduced
+- `fall-out-void-kill-boundary` is MEASURED HIGH
+- `internal-void-kill-boundaries` is `RESOLVED_FROM_TEMPLE01_MODEL` and BLOCKOUT-safe
+- common trace coverage = **18/18**
+- unresolved source-topology limits = []
+- required capture IDs = []
+- request-ready capture IDs = []
+- Blockout readiness reports:
+  - `ready === true`
+  - `missingTraceIds === []`
+  - `unresolvedVerticalIds === []`
+  - `unresolvedVerticalRelations === []`
+
+The XZ gate opening must not be interpreted as a measured vertical kill plane. No runtime stage geometry, collision, navigation, paint authority, combat, Super Jump, or T20 objective behavior changes merely because the evidence gate is now open. T21-D implementation begins only as a subsequent explicit phase.

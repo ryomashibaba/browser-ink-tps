@@ -770,3 +770,35 @@ Only remaining XZ blocker:
 1. `fall-out-void-kill-boundary`
 
 The 2026-09-25 underpass capture remains valid semantic/traversal evidence, but it is not the metric polygon source. Its capture-only plan registration remains non-promotable by itself. T21-D remains gated until the void boundary is resolved.
+
+
+## T21-B — final fall-out / internal-void XZ closure
+
+The former final XZ blocker, `fall-out-void-kill-boundary`, is now resolved at HIGH/BLOCKOUT confidence from the exact vector exterior plus an exhaustive Temple01 common+Turf 3D audit.
+
+The model audit first found six significant enclosed top-down empty candidates. Empty projection was **not** assumed to mean KILL.
+
+Classification:
+- 2 candidates coincide with the exact cyan WATER+KILL polygons
+- 2 large symmetric candidates are exterior/StageSide space
+- 2 small symmetric candidates are projection artifacts beside the Y=1.5 FloorMetal floor under high PillarBase/SoundproofPanel geometry
+
+Independent reverse-audit from the bordering floor meshes:
+- `Fld_Temple01_pCube21772_1__FloorMetal00` at Y=1.5: 2 components, 0 interior holes
+- `Fld_Temple01_group21978_1__FloorLine05` at Y=1.2: 2 components, 0 interior holes
+- candidate-to-floor-hole matches: none
+
+Both non-water candidate pairs have raw 0.125m 180-degree XOR = 0 cells. No unexplained internal abyss candidate remains.
+
+Therefore the BLOCKOUT XZ hazard model is:
+1. exact 42-vertex common playable exterior hard silhouette = fall-out envelope
+2. exact mapped cyan polygons = separate WATER+KILL hazards
+3. no additional internal abyss polygon
+
+Current common trace coverage: **18 / 18**.
+
+T21 evidence capture requirements: **0**.
+
+`UndertowSpillwayBlockoutGate.ready === true`.
+
+This does not invent a vertical kill threshold and does not make HIGH raster/model geometry Stable-Freeze exact. Production runtime remains unchanged until T21-D explicitly consumes the audited BLOCKOUT dataset.
