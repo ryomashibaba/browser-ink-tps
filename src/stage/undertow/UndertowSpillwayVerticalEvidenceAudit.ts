@@ -6,6 +6,7 @@ import {
 export type UndertowVerticalComponentId =
   | 'CENTER_SEEDED'
   | 'RIGHT_LOW_UNSEEDED'
+  | 'FIRST_DROP_LANDING_UNSEEDED'
   | 'SPAWN_UNSEEDED'
   | 'SLOPE_HIGH_UNSEEDED'
   | 'GRATE_UNSEEDED';
@@ -64,7 +65,15 @@ export const UNDERTOW_VERTICAL_COMPONENT_AUDIT:
       seededAbsoluteY: false,
       confidence: 'HIGH',
       blocker:
-        'Needs one evidence-backed exact vertical tie from any member of this component to the seeded center component.'
+        'Needs one evidence-backed exact vertical tie from the right-low / underpass / glass component to the seeded center component.'
+    },
+    {
+      id: 'FIRST_DROP_LANDING_UNSEEDED',
+      nodeIds: componentFor('team-a-first-drop-landing'),
+      seededAbsoluteY: false,
+      confidence: 'HIGH',
+      blocker:
+        'The 2026-09-26 stills prove that the first-drop landing is below the right-small-drop lower-side floor, but they do not provide an exact metric delta. The former landing = right-small-drop-upper edge is removed.'
     },
     {
       id: 'SPAWN_UNSEEDED',
@@ -97,17 +106,25 @@ export const UNDERTOW_MINIMUM_VERTICAL_EVIDENCE_NEEDS = Object.freeze([
     id: 'RIGHT_LOW_TO_CENTER_SEED',
     resolvesComponent: 'RIGHT_LOW_UNSEEDED' as const,
     minimumEvidence:
-      'One continuous, unambiguous traversal or metric observation that ties right-low / underpass / first-drop-landing elevation to a floor already in the center-seeded component.',
+      'One continuous, unambiguous traversal or metric observation that ties right-low / underpass elevation to a floor already in the center-seeded component.',
     currentState:
       'Existing right-low and underpass clips establish internal same-height/drop relations but never establish an exact relation to center-low Y=0 or center-step Y=1.5.'
+  },
+  {
+    id: 'FIRST_DROP_LANDING_EXACT_TIE',
+    resolvesComponent: 'FIRST_DROP_LANDING_UNSEEDED' as const,
+    minimumEvidence:
+      'One exact metric tie from the first-drop landing to a known/seeded floor. The 2026-09-26 stills currently provide only the ordering first-drop landing < right-low.',
+    currentState:
+      'The earlier same-height binding to right-small-drop upper was invalidated by direct user observation and the corrective still pair.'
   },
   {
     id: 'FIRST_DROP_MAGNITUDE',
     resolvesComponent: 'SPAWN_UNSEEDED' as const,
     minimumEvidence:
-      'An exact classification of the one-way spawn first drop as 1.5m or 3.0m, after the landing component itself has a seeded Y.',
+      'An exact classification of the one-way spawn first drop as 1.5m or 3.0m plus a seeded spawn-or-landing side.',
     currentState:
-      'ONE_WAY_DROP is CONFIRMED; exact magnitude remains PROVISIONAL [1.5, 3.0]m.'
+      'ONE_WAY_DROP is CONFIRMED; exact magnitude remains PROVISIONAL [1.5, 3.0]m. The adjacent blue-lip comparison is not a valid metric shortcut.'
   },
   {
     id: 'CENTER_SLOPE_HIGH_TIE',
@@ -153,8 +170,6 @@ export function undertowVerticalEvidenceAuditErrors(): readonly string[] {
     (component) => component.id === 'RIGHT_LOW_UNSEEDED'
   );
   for (const id of [
-    'team-a-first-drop-landing',
-    'team-b-first-drop-landing',
     'right-small-drop-upper',
     'right-low-floor',
     'glass-lower-major-floor',
@@ -164,9 +179,20 @@ export function undertowVerticalEvidenceAuditErrors(): readonly string[] {
       errors.push(`right-low component missing ${id}`);
     }
   }
+  if (rightLow?.nodeIds.includes('team-a-first-drop-landing')) {
+    errors.push('right-low component must not contain first-drop landing after 2026-09-26 correction');
+  }
 
-  if (rightLow?.seededAbsoluteY) {
-    errors.push('right-low component must remain unseeded with current evidence');
+  const landing = UNDERTOW_VERTICAL_COMPONENT_AUDIT.find(
+    (component) => component.id === 'FIRST_DROP_LANDING_UNSEEDED'
+  );
+  for (const id of [
+    'team-a-first-drop-landing',
+    'team-b-first-drop-landing'
+  ]) {
+    if (!landing?.nodeIds.includes(id)) {
+      errors.push(`first-drop landing component missing ${id}`);
+    }
   }
 
   return errors;
