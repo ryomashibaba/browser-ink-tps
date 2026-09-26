@@ -6,7 +6,8 @@ export type EvidenceKind =
   | 'USER_CAPTURE'
   | 'NINTENDO_CHANGELOG'
   | 'WEB_OVERHEAD'
-  | 'WEB_GAMEPLAY_REFERENCE';
+  | 'WEB_GAMEPLAY_REFERENCE'
+  | 'EXTRACTED_GAME_GEOMETRY';
 
 export type RuleVariantId = 'TURF' | 'ZONES' | 'TOWER' | 'RAINMAKER' | 'CLAMS';
 
