@@ -481,6 +481,33 @@ jobs:
                           h=fast_top(mx+nx*off*sign,mz+nz*off*sign)
                           vals.append(None if h is None else round(h,3))
                       print(f'T21REG SIDE {lname} seg={si} {side} top={vals}')
+
+          # Registered semantic landmarks and material-backed side samples.
+          landmarks={
+              'CENTER_ORIGIN':(0.0,0.0),
+              'NEG_SPAWN':conv(NEG),
+              'POS_SPAWN':conv(POS),
+              'NEG_GRATE':centroid([(340.56,119.88),(363.48,119.88),(363.48,150.48),(340.56,150.48)]),
+              'POS_GRATE':centroid([(478.44,444.72),(501.36,444.72),(501.36,475.32),(478.44,475.32)]),
+              'NEG_GLASS':centroid([(382.44,230.28),(420.96,230.28),(420.96,267.84),(382.44,267.84)]),
+              'POS_GLASS':centroid([(420.96,327.36),(459.48,327.36),(459.48,364.92),(420.96,364.92)]),
+          }
+          for name,p0 in landmarks.items():
+              rp=apply_tf(p0,ra,rb,rtx,rtz)
+              h=walkable_hit(rp[0],rp[1])
+              print(f'T21SEM LANDMARK {name} model=({rp[0]:.4f},{rp[1]:.4f}) hit={h}')
+
+          for lname,pdfpts in reg_lines.items():
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpts]
+              for si,(aa2,bb2) in enumerate(zip(rp,rp[1:])):
+                  dx=bb2[0]-aa2[0]; dz=bb2[1]-aa2[1]
+                  ln=math.hypot(dx,dz); nx,nz=-dz/ln,dx/ln
+                  mx=(aa2[0]+bb2[0])*0.5; mz=(aa2[1]+bb2[1])*0.5
+                  for side,sign in [('LEFT',1),('RIGHT',-1)]:
+                      for off in (1.0,2.0):
+                          x=mx+nx*off*sign; z=mz+nz*off*sign
+                          h=walkable_hit(x,z)
+                          print(f'T21SEM SIDE {lname} seg={si} {side} off={off:.1f} point=({x:.4f},{z:.4f}) hit={h}')
           PY
 
       - name: Setup Node.js
