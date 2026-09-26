@@ -12,7 +12,7 @@ export type UndertowExternalGeometrySourceStatus =
   | 'REJECTED_WRONG_MODE'
   | 'CONFIRMED_REMODEL_IDENTITY'
   | 'BODY_AUDITED_LOCAL_PROMOTION'
-  | 'HIGH_FILTER_HYPOTHESIS'
+  | 'AUDITED_TURF_FILTER'
   | 'REJECTED_NAME_MAP'
   | 'CORROBORATING_SCHEMA_ONLY';
 
@@ -83,16 +83,16 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT:
     },
     {
       id: 'KITRIX_TEMPLE01_RULE_SET_FILTER',
-      status: 'HIGH_FILTER_HYPOTHESIS',
+      status: 'AUDITED_TURF_FILTER',
       canPromoteCanonicalGeometry: false,
       confidence: 'HIGH',
       facts: [
         'Temple01 MTL contains five rule-set families: PntSet, VarSet, VclSet, VglSet and VlfSet.',
         'The established Splatoon internal rule-code convention maps cPnt to Turf War, cVar to Splat Zones, cVgl to Rainmaker and cVlf to Tower Control; cVcl denotes Clam Blitz.',
-        'Therefore a future Turf-War mesh audit should test common Fld_Temple01 geometry plus PntSet rather than treating every rule-set family as simultaneously active.'
+        'The successful Temple01 local audit used common Fld_Temple01 geometry plus PntSet rather than treating every rule-set family as simultaneously active.'
       ],
       blocker:
-        'The exact active-shape selection must still be verified against the readable Temple01 OBJ/placement data before PntSet is used as canonical geometry.'
+        'This validates the Turf audit filter, not every rule-specific object activation detail; mode-wide production extraction still requires explicit variant handling.'
     },
     {
       id: 'KITRIX_STAGE_NAME_MAP',
