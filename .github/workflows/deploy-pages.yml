@@ -23,6 +23,107 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: T21 temporary Temple01 geometry probe
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/kitrix
+          GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/kirakira-dev/KiTrix.git /tmp/kitrix
+          cd /tmp/kitrix
+          git sparse-checkout init --no-cone
+          printf '/stages/Vss_Temple01/Vss_Temple01.obj\n' > .git/info/sparse-checkout
+          git checkout
+          git lfs pull --include='stages/Vss_Temple01/Vss_Temple01.obj' --exclude=''
+          python - <<'PY'
+          from collections import Counter, defaultdict
+          from pathlib import Path
+
+          p = Path('/tmp/kitrix/stages/Vss_Temple01/Vss_Temple01.obj')
+          print(f'T21OBJ file_bytes={p.stat().st_size}')
+
+          current_object = '(none)'
+          current_material = '(none)'
+          objects = {}
+          materials = {}
+          y_hist = Counter()
+          global_min = [float('inf')] * 3
+          global_max = [float('-inf')] * 3
+
+          def touch(store, key, x, y, z):
+              s = store.setdefault(key, {
+                  'count': 0,
+                  'min': [float('inf')] * 3,
+                  'max': [float('-inf')] * 3,
+              })
+              s['count'] += 1
+              for i, v in enumerate((x, y, z)):
+                  s['min'][i] = min(s['min'][i], v)
+                  s['max'][i] = max(s['max'][i], v)
+
+          with p.open('r', encoding='utf-8', errors='replace') as fh:
+              for line in fh:
+                  if line.startswith('o '):
+                      current_object = line[2:].strip()
+                  elif line.startswith('usemtl '):
+                      current_material = line[7:].strip()
+                  elif line.startswith('v '):
+                      parts = line.split()
+                      if len(parts) < 4:
+                          continue
+                      x, y, z = map(float, parts[1:4])
+                      touch(objects, current_object, x, y, z)
+                      touch(materials, current_material, x, y, z)
+                      y_hist[round(y, 2)] += 1
+                      for i, v in enumerate((x, y, z)):
+                          global_min[i] = min(global_min[i], v)
+                          global_max[i] = max(global_max[i], v)
+
+          print('T21OBJ global_bounds '
+                f'min={tuple(round(v,4) for v in global_min)} '
+                f'max={tuple(round(v,4) for v in global_max)} '
+                f'span={tuple(round(global_max[i]-global_min[i],4) for i in range(3))}')
+          print(f'T21OBJ objects={len(objects)} materials={len(materials)}')
+
+          print('T21OBJ y_hist_top')
+          for y, count in y_hist.most_common(40):
+              print(f'Y {y:.2f} count={count}')
+
+          def emit(prefix, store, predicate):
+              rows = []
+              for name, s in store.items():
+                  if not predicate(name):
+                      continue
+                  span = [s['max'][i] - s['min'][i] for i in range(3)]
+                  rows.append((name, s, span))
+              rows.sort(key=lambda row: row[0])
+              print(f'T21OBJ {prefix}_count={len(rows)}')
+              for name, s, span in rows:
+                  print(
+                      f'{prefix} {name} vertices={s["count"]} '
+                      f'min=({s["min"][0]:.4f},{s["min"][1]:.4f},{s["min"][2]:.4f}) '
+                      f'max=({s["max"][0]:.4f},{s["max"][1]:.4f},{s["max"][2]:.4f}) '
+                      f'span=({span[0]:.4f},{span[1]:.4f},{span[2]:.4f})'
+                  )
+
+          emit(
+              'MAT',
+              materials,
+              lambda n: (
+                  n.startswith('Fld_Temple01_') or
+                  n.startswith('FldObj_Temple01_PntSet_')
+              )
+          )
+          emit(
+              'OBJ',
+              objects,
+              lambda n: (
+                  'Fld_Temple01' in n or
+                  'FldObj_Temple01_PntSet' in n
+              )
+          )
+          PY
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
