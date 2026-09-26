@@ -7,15 +7,15 @@ import math
 import sys
 
 OBJ = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/kitrix-lfs/Vss_Temple01.obj")
-STEP = 0.25
+STEP = 0.125
 Y_TOL = 0.08
 
 WALK_TOKENS = (
     "FloorConcrete", "FloorLine", "FloorSlope", "FloorGrass",
     "GrassFloor", "FloorMetal", "FloorRubber", "BridgeMetal", "FloorFence"
 )
-OVERHEAD_TOKENS = (
-    "Glass", "BridgeMetal", "Pillar", "Object", "Wall", "Fence"
+OVERHEAD_TOKENS = WALK_TOKENS + (
+    "Glass", "Pillar", "Object", "Wall", "Fence"
 )
 
 vertices=[None]
