@@ -2164,13 +2164,13 @@ Temple01 local floor extraction now promotes two XZ blockers to HIGH/BLOCKOUT-sa
   - seeded from the locally verified lower side of the right-small-drop lip
   - two symmetric connected components with explicit holes
 
-Current trace coverage is **16/18**.
+At this checkpoint trace coverage was **16/18**. It is superseded by the later glass-underpass promotion checkpoint below.
 
-The only remaining XZ blockers are:
+At this checkpoint the remaining XZ blockers were:
 - `glass-underpass-outline`
 - `fall-out-void-kill-boundary`
 
-Vertical BLOCKOUT blockers are closed. PR #5 remains Draft / unmerged and T21-D remains gated only by those two XZ traces.
+Vertical BLOCKOUT blockers were already closed.
 
 
 ## T21-C cross-file vertical semantic reconciliation — 2026-09-26
@@ -2187,3 +2187,35 @@ Current canonical project Y:
 The two 2026-09-25 traversal captures remain canonical topology evidence, but their former same-height interpretation is superseded. RIGHT_LOW -> GLASS_UNDERPASS is represented as non-metric traversable route continuity; it carries no capture-derived delta-Y.
 
 UndertowSpillwayVerticalSemanticInvariant.test.ts now cross-checks RemodelGeometryAudit, VerticalModel, CaptureTopology, MeasurementLedger, and SourceTopologyAudit so green CI cannot silently preserve conflicting vertical authorities.
+
+
+## T21-B glass-underpass XZ promotion checkpoint — 2026-09-26
+
+The remaining under-glass XZ blocker is now resolved from remodeled Temple01 geometry at HIGH/BLOCKOUT confidence.
+
+Audit method:
+- seed the connected model-Y=3.0 / project-Y=0 walkable floor beneath each registered glass structure
+- retain only cells physically roofed by Temple01 BridgeMetal / Glass geometry
+- subtract floor-level Pillar/Wall solid cells
+- raster resolution = 0.125m
+- contour simplification <=0.15m
+- preserve support/obstruction holes explicitly
+
+CI #631 results per side:
+- roofed floor = 3951 cells
+- floor-level obstacles = 88 cells
+- navigable floor = 3863 cells = 60.359375m²
+- outer contour signed area ≈61.094m²
+- one support hole ≈0.672m²
+- 180-degree raw-mask XOR = 0 cells
+- missing = 0, extra = 0, mirror-XOR area = 0.000m²
+
+Canonical consequences:
+- `glass-underpass-outline` -> MEASURED HIGH
+- source topology -> `RESOLVED_FROM_TEMPLE01_MODEL`
+- MeasurementLedger stores center-low, right-low, and glass-underpass layered geometry as `POLYGON_SET` so multiple symmetric components and holes are not flattened
+- common trace coverage = **17/18**
+- the only remaining XZ blocker is `fall-out-void-kill-boundary`
+- all BLOCKOUT vertical blockers remain closed
+- T21-D remains gated; production runtime geometry is still unchanged
+- PR #5 remains Draft / unmerged

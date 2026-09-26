@@ -1715,7 +1715,7 @@ Automated validation now additionally requires:
 - center-low and right-low trace requirements are MEASURED
 - right-low source topology is `RESOLVED_FROM_TEMPLE01_MODEL`
 - the retired right-low user capture no longer appears as a current blocking trace
-- Blockout readiness reports exactly two missing XZ traces: `glass-underpass-outline` and `fall-out-void-kill-boundary`
+- at that checkpoint Blockout readiness reported two missing XZ traces: `glass-underpass-outline` and `fall-out-void-kill-boundary`; the later underpass promotion supersedes this
 - no vertical blocker remains
 
 This checkpoint does not start T21-D and does not mark model-raster contours as Stable Freeze.
@@ -1732,4 +1732,25 @@ Current head must additionally verify:
 - the capture-topology edge is TRAVERSABLE_CONNECTION with no deltaYMeters
 - the measurement ledger uses the same Temple01-derived underpass/right-low values
 - source-topology text does not promote the traversal clips to a same-height metric claim
-- the blockout gate remains closed only by the two XZ traces, not by a vertical inconsistency
+- the blockout gate remains closed by XZ evidence rather than any vertical inconsistency; after the later underpass promotion only the void boundary remains
+
+
+## T21-B glass-underpass XZ promotion validation — 2026-09-26
+
+Automated/CI evidence now additionally requires:
+- Temple01 model-Y=3.0 / project-Y=0 roofed floor is used rather than the upper PDF glass rectangle
+- floor-level Pillar/Wall exclusions are subtracted before promotion
+- each side has 3951 roofed-floor cells, 88 obstacle cells, and 3863 navigable cells
+- navigable area is 60.359375m² per side
+- the positive/negative raw navigable masks are exact 180-degree counterparts: mirror XOR 0 cells, missing 0, extra 0
+- stored underpass contours retain one support hole per side
+- underpass contour simplification remains <=0.15m at 0.125m raster resolution
+- MeasurementLedger supports POLYGON_SET and stores both symmetric underpass components plus holes
+- center-low/right-low ledger XZ values are also aligned with their already-promoted Temple01 polygon sets
+- `glass-underpass-outline` is MEASURED
+- `glass-underpass-walkable-outline` source topology is `RESOLVED_FROM_TEMPLE01_MODEL`
+- common trace coverage is **17/18**
+- Blockout readiness reports exactly one missing XZ trace: `fall-out-void-kill-boundary`
+- unresolved vertical IDs and relations remain empty
+
+The capture-only plan-registration records remain non-promotable on their own; the XZ promotion comes from independently audited Temple01 geometry. T21-D must remain closed until the remaining void boundary is resolved.

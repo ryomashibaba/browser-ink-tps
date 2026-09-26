@@ -682,16 +682,23 @@ Because Temple01 contains matching `PntSet / VarSet / VglSet / VlfSet / VclSet` 
 
 ### Current vertical result
 
-Locally verified project-frame values:
-- center-low reference = 0
-- spawn floor = 6.0
-- first-drop landing = 1.5
-- right-small-drop upper = 6.0
-- right-low = 3.0
+Locally verified project-frame values after final center-low normalization:
+- center-low reference = 0.0
+- center small-step top = 1.5
+- spawn floor = 7.5
+- first-drop landing = 3.0
+- right-small-drop upper = 7.5
+- right-low = 4.5
+- glass-underpass floor = 0.0
+- glass high reference = 7.5
+- center slope low/high = -1.5 / 0.0
+- grate visual top ≈7.4
 - first drop = -4.5
 - right small drop = -3.0
+- right-low -> underpass = -4.5
+- underpass -> glass high reference = +7.5
 
-Remaining vertical blockers are the central slope high endpoints and grate elevations.
+No BLOCKOUT vertical blocker remains. These HIGH values are still not Stable-Freeze exactness unless independently CONFIRMED.
 
 
 ## T21-B — Temple01 local XZ contour promotion checkpoint
@@ -712,13 +719,13 @@ Promoted at HIGH:
 
 The contours are stored in `UndertowSpillwayModelXZGeometry.ts`, with both model-space and project-space coordinates. They are BLOCKOUT-safe but not Stable-Freeze exact geometry.
 
-Current common trace coverage: **16 / 18**.
+At this checkpoint common trace coverage was **16 / 18**.
 
-Remaining XZ blockers:
+At this checkpoint the remaining XZ blockers were:
 1. `glass-underpass-outline`
 2. `fall-out-void-kill-boundary`
 
-All BLOCKOUT vertical evidence is currently resolved at HIGH-or-stronger confidence. T21-D remains blocked only by the two XZ items above.
+The later underpass-promotion checkpoint below supersedes this blocker list. All BLOCKOUT vertical evidence was already resolved.
 
 
 ## T21-C — cross-file vertical semantic reconciliation (2026-09-26)
@@ -733,3 +740,33 @@ Metric authority:
 - underpass -> glass high reference: +7.5m HIGH
 
 Capture authority is deliberately narrower: the 2026-09-25 videos prove traversable route continuity and support/wall exclusions, but do not measure an equal floor Y. The current capture-topology edge therefore has no numeric delta.
+
+
+## T21-B — glass-underpass navigable contour promotion
+
+The glass-underpass XZ blocker is now resolved from the remodeled Temple01 OBJ rather than from perspective footage or the upper glass PDF rectangle.
+
+Extraction:
+- connected walkable floor at model Y=3.0m / project Y=0
+- retain cells with Temple01 BridgeMetal/Glass roof above
+- subtract floor-level Pillar/Wall solid footprints
+- 0.125m raster
+- <=0.15m contour simplification
+- preserve interior support holes
+
+CI #631:
+- roofed floor: 3951 cells per side
+- excluded obstacles: 88 cells per side
+- navigable mask: 3863 cells / 60.359375m² per side
+- outer signed area: ~61.094m²
+- support hole: ~0.672m²
+- exact 180-degree raw-mask symmetry: XOR 0 cells, missing 0, extra 0
+
+The contours are stored in `UndertowSpillwayModelXZGeometry.ts` as two HIGH components. `StageMeasurementLedger.XzMeasurement` now supports `POLYGON_SET`, allowing center-low, right-low, and underpass geometry to retain symmetric components and holes without flattening.
+
+Current common trace coverage: **17 / 18**.
+
+Only remaining XZ blocker:
+1. `fall-out-void-kill-boundary`
+
+The 2026-09-25 underpass capture remains valid semantic/traversal evidence, but it is not the metric polygon source. Its capture-only plan registration remains non-promotable by itself. T21-D remains gated until the void boundary is resolved.
