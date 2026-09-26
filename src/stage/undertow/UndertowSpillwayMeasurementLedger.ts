@@ -314,12 +314,7 @@ const entries: readonly StageMeasurementEntry[] = [
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
     xz: unresolvedXz('Family summary only; exact A/B overhang polygons are recorded in dedicated entries below.'),
-    y: {
-      deltaMeters: 3,
-      confidence: 'HIGH',
-      evidenceIds: handoff,
-      notes: 'Difference between the glass top and the major floor directly below.'
-    },
+    y: unknownY('The glass family is slope-marked/non-flat. Do not attach one intrinsic delta-Y; use the dedicated Temple01 vertical-model underpass floor and glass high-reference nodes instead.'),
     transition: noTransition,
     surface: {
       semantics: ['UNINKABLE', 'GLASS'],
@@ -342,12 +337,7 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
       notes: 'Exact gray vector face matched to the current glass overhang. Its internal dash field proves that part of the overhang is slope-marked.'
     },
-    y: {
-      deltaMeters: 3,
-      confidence: 'HIGH',
-      evidenceIds: handoff,
-      notes: 'Top-to-major-floor-below relationship only; do not assign a single flat Y to the entire slope-marked glass face.'
-    },
+    y: unknownY('This exact XZ glass face is slope-marked/non-flat. Its metric endpoint references live in the vertical model; no single intrinsic delta-Y is promoted for the whole face.'),
     transition: {
       kind: 'SLOPE',
       confidence: 'HIGH',
@@ -375,12 +365,7 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
       notes: 'Exact 180-degree counterpart gray vector face matched to the current glass overhang.'
     },
-    y: {
-      deltaMeters: 3,
-      confidence: 'HIGH',
-      evidenceIds: handoff,
-      notes: 'Top-to-major-floor-below relationship only; absolute and slope endpoint Y remain unresolved.'
-    },
+    y: unknownY('This exact XZ counterpart glass face is slope-marked/non-flat. Its metric endpoint references live in the vertical model; no single intrinsic delta-Y is promoted for the whole face.'),
     transition: {
       kind: 'SLOPE',
       confidence: 'HIGH',

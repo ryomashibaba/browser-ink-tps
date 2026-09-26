@@ -168,6 +168,9 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
       expect(glass.xz.polygonMeters).toHaveLength(4);
       expect(glass.transition.kind).toBe('SLOPE');
       expect(glass.transition.confidence).toBe('HIGH');
+      expect(glass.y.confidence).toBe('UNKNOWN');
+      expect(glass.y.deltaMeters).toBeUndefined();
+      expect(glass.y.yMeters).toBeUndefined();
       expect(glass.surface.semantics).toEqual(['UNINKABLE', 'GLASS']);
     }
 
