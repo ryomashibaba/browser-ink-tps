@@ -15,6 +15,61 @@ export interface UndertowGuideLineSideObservation {
   notes: string;
 }
 
+
+export type UndertowSideRegistrationFindingId =
+  | 'FIRST_DROP_VIDEO'
+  | 'RIGHT_LOW_CAPTURE'
+  | 'CORRECTIVE_STILLS'
+  | 'POST_7_2_LAYOUT_CROSSCHECK';
+
+export interface UndertowSideRegistrationFinding {
+  id: UndertowSideRegistrationFindingId;
+  evidenceIds: readonly string[];
+  result:
+    | 'NO_SHARED_SIDE_REGISTRATION'
+    | 'LOCAL_TOPOLOGY_ONLY'
+    | 'GUIDE_SIDE_ORDER_ONLY'
+    | 'SEMANTIC_CROSSCHECK_ONLY';
+  canBindCanonicalFloorSides: false;
+  notes: string;
+}
+
+export const UNDERTOW_SIDE_REGISTRATION_FINDINGS:
+  readonly UndertowSideRegistrationFinding[] = [
+    {
+      id: 'FIRST_DROP_VIDEO',
+      evidenceIds: ['user-first-drop-video'],
+      result: 'NO_SHARED_SIDE_REGISTRATION',
+      canBindCanonicalFloorSides: false,
+      notes:
+        'The first-drop video confirms a one-way descent into a recessed area, then shows additional walls, ramps and floor transitions. It never supplies one calibrated view that simultaneously identifies both red- and blue-guide sides.'
+    },
+    {
+      id: 'RIGHT_LOW_CAPTURE',
+      evidenceIds: ['user-right-low-capture-2026-09-25'],
+      result: 'LOCAL_TOPOLOGY_ONLY',
+      canBindCanonicalFloorSides: false,
+      notes:
+        'The targeted right-low capture confirms the local 1.5m small-drop topology, open floor, ramp exit and underpass connection, but it does not independently register the red first-drop guide side in the same 3D frame.'
+    },
+    {
+      id: 'CORRECTIVE_STILLS',
+      evidenceIds: ['user-first-drop-height-stills-2026-09-26'],
+      result: 'GUIDE_SIDE_ORDER_ONLY',
+      canBindCanonicalFloorSides: false,
+      notes:
+        'The still pair plus direct user observation establishes a relative order between the floors referred to as below the red and blue guide lines, without canonical floor-node identity or metric delta.'
+    },
+    {
+      id: 'POST_7_2_LAYOUT_CROSSCHECK',
+      evidenceIds: ['web-post-7-2-gameplay'],
+      result: 'SEMANTIC_CROSSCHECK_ONLY',
+      canBindCanonicalFloorSides: false,
+      notes:
+        'The current-layout description distinguishes the open area after the first drop from the separate open area reached by the small drop. This is consistent with rejecting the guide\'s former shared-middle-floor assumption, but does not by itself identify each visible line side in 3D.'
+    }
+  ];
+
 export interface UndertowLineSemanticBindingAudit {
   lineId: UndertowGuideLineId;
   vectorTraceId: string;
@@ -93,6 +148,12 @@ export function undertowLineSemanticAuditErrors(): readonly string[] {
   for (const observation of UNDERTOW_GUIDE_LINE_SIDE_OBSERVATIONS) {
     if (observation.safeToCreateVerticalRelation) {
       errors.push('guide-line-side observation must not create a vertical relation');
+    }
+  }
+
+  for (const finding of UNDERTOW_SIDE_REGISTRATION_FINDINGS) {
+    if (finding.canBindCanonicalFloorSides) {
+      errors.push(`${finding.id}: existing media must not bind canonical floor sides`);
     }
   }
 
