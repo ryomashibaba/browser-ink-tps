@@ -74,9 +74,16 @@ export interface UndertowLineSemanticBindingAudit {
   lineId: UndertowGuideLineId;
   vectorTraceId: string;
   geometryIdentityConfidence: 'HIGH';
-  lowerSideCanonicalFloorId: null;
-  upperSideCanonicalFloorId: null;
-  sideBindingStatus: 'UNRESOLVED_AFTER_2026_09_26_CORRECTION';
+  lowerSideCanonicalFloorId:
+    | 'team-a-first-drop-landing'
+    | 'right-low-floor';
+  upperSideCanonicalFloorId:
+    | 'team-a-spawn-floor'
+    | 'right-small-drop-upper';
+  lowerSideProjectY: number;
+  upperSideProjectY: number;
+  sideBindingStatus: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION';
+  evidenceIds: readonly string[];
   notes: string;
 }
 
@@ -85,9 +92,10 @@ export interface UndertowLineSemanticBindingAudit {
  * measured vector lips were treated as if their map-side faces directly named
  * canonical gameplay floor nodes.
  *
- * Keep the measured line geometry, but do not bind either visible side of a
- * line to first-drop landing / right-small-drop upper / right-low until that
- * side identity is independently registered in 3D.
+ * The guide-side identities were initially cleared. They are now rebound only
+ * because the remodeled Temple01 OBJ was independently registered to the
+ * vector plan and both A/B lips matched the expected local height-discontinuity
+ * contours within the 0.5m audit raster.
  */
 export const UNDERTOW_LINE_SEMANTIC_BINDING_AUDIT:
   readonly UndertowLineSemanticBindingAudit[] = [
@@ -95,21 +103,27 @@ export const UNDERTOW_LINE_SEMANTIC_BINDING_AUDIT:
       lineId: 'TEAM_A_FIRST_DROP_RED',
       vectorTraceId: UNDERTOW_VECTOR_TRACES.teamAFirstDropLip.id,
       geometryIdentityConfidence: 'HIGH',
-      lowerSideCanonicalFloorId: null,
-      upperSideCanonicalFloorId: null,
-      sideBindingStatus: 'UNRESOLVED_AFTER_2026_09_26_CORRECTION',
+      lowerSideCanonicalFloorId: 'team-a-first-drop-landing',
+      upperSideCanonicalFloorId: 'team-a-spawn-floor',
+      lowerSideProjectY: 1.5,
+      upperSideProjectY: 6,
+      sideBindingStatus: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION',
+      evidenceIds: ['extracted-temple01-geometry', 'user-turf-vector-blueprint', 'user-first-drop-video'],
       notes:
-        'The red guide line remains the measured Team A first-drop hard edge, but the guide did not prove which visible/map side is the canonical first-drop landing floor.'
+        'Registered red lip: upper-side model Y=10.5m and lower-side model Y=6.0m. With model center reference 4.5m normalized to canonical center Y=0, these become project Y=6.0m and 1.5m.'
     },
     {
       lineId: 'TEAM_A_RIGHT_SMALL_DROP_BLUE',
       vectorTraceId: UNDERTOW_VECTOR_TRACES.teamARightSmallDropLip.id,
       geometryIdentityConfidence: 'HIGH',
-      lowerSideCanonicalFloorId: null,
-      upperSideCanonicalFloorId: null,
-      sideBindingStatus: 'UNRESOLVED_AFTER_2026_09_26_CORRECTION',
+      lowerSideCanonicalFloorId: 'right-low-floor',
+      upperSideCanonicalFloorId: 'right-small-drop-upper',
+      lowerSideProjectY: 3,
+      upperSideProjectY: 6,
+      sideBindingStatus: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION',
+      evidenceIds: ['extracted-temple01-geometry', 'user-turf-vector-blueprint', 'user-right-low-capture-2026-09-25'],
       notes:
-        'The blue guide line remains the measured Team A right-small-drop hard edge, but the screenshot comparison must not be converted into a right-low floor binding without 3D side registration.'
+        'Registered blue lip: upper-side model Y=10.5m and lower-side model Y=7.5m, normalized to project Y=6.0m and 3.0m. The lower side is independently bound to the captured right-low destination.'
     }
   ];
 
@@ -137,11 +151,11 @@ export function undertowLineSemanticAuditErrors(): readonly string[] {
     if (!vectorTraceIds.has(binding.vectorTraceId)) {
       errors.push(`${binding.lineId}: missing vector trace ${binding.vectorTraceId}`);
     }
-    if (
-      binding.lowerSideCanonicalFloorId !== null ||
-      binding.upperSideCanonicalFloorId !== null
-    ) {
-      errors.push(`${binding.lineId}: canonical floor side binding must remain unresolved`);
+    if (binding.sideBindingStatus !== 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION') {
+      errors.push(`${binding.lineId}: canonical floor side binding must be resolved by local Temple01 registration`);
+    }
+    if (!(binding.upperSideProjectY > binding.lowerSideProjectY)) {
+      errors.push(`${binding.lineId}: resolved upper side must be above lower side`);
     }
   }
 
