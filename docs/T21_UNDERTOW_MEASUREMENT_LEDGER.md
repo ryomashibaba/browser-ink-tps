@@ -52,13 +52,13 @@ An `UNKNOWN` Y value is not allowed to carry an exact Y number. An unresolved XZ
 - first-drop magnitude: **4.5m HIGH** from locally registered remodeled Temple01 geometry
 - center small step: **~1.5m HIGH**
 - right small drop: **3.0m HIGH** from locally registered remodeled Temple01 geometry
-- glass-top to main floor directly below: **~3m HIGH**
+- glass-underpass floor -> glass high reference: **+7.5m HIGH** from locally registered Temple01 geometry; the high reference is not a flat glass-plane Y
 - primary vertical reconstruction grid: **1.5m HIGH**
 - training-range normalization: **~5m per line HIGH**
 - rule-map working transform: **~20px/m HIGH**
 - spawn-to-spawn distance: **~134m HIGH**
 - whole-stage ~146x87m: **PROVISIONAL**
-- spawn absolute Y: **Y=6.0 HIGH** in the project frame
+- spawn absolute Y: **Y=7.5 HIGH** in the project frame after final center-low normalization
 - raised/high-platform ~4.5m: **PROVISIONAL**
 - two Splat Zones: **CONFIRMED**
 
@@ -155,15 +155,16 @@ Current exact/usable blockout relationship:
 - center-low-floor = Y 0.0 m, CONFIRMED
 - center-low-floor -> center-small-step-top = +1.5 m, HIGH
 
-Resolved BLOCKOUT/HIGH remodel chain:
-- Team A/B spawn floors = Y 6.0
-- Team A/B first-drop landings = Y 1.5
+Resolved BLOCKOUT/HIGH remodel chain after final Temple01 normalization:
+- Team A/B spawn floors = Y 7.5
+- Team A/B first-drop landings = Y 3.0
 - each spawn -> first-drop landing = -4.5 m
-- right-low floor = Y 3.0
+- right-low floor = Y 4.5
 - right-low -> right-small-drop-upper = +3.0 m
 - first-drop landing -> right-low = +1.5 m
-- right-low -> glass-lower-major-floor = 0m
-- glass-lower-major-floor -> glass high reference = +3.0m
+- glass-underpass walkable floor = Y 0.0
+- right-low -> glass-underpass floor = -4.5m
+- glass-underpass floor -> glass high reference = +7.5m
 
 Still candidate-only:
 - center upper band relative to center-low = +4.5 to +6.0 m, PROVISIONAL
@@ -475,13 +476,13 @@ Two requested captures were received and reviewed:
   - 29.63s
   - confirms current covered lower passage traversal
   - confirms solid support/wall geometry must be excluded from navigation
-  - confirms a step-free connection to the adjacent low/open floor
+  - confirms traversable route continuity to the adjacent low/open route; the perspective clip does not measure an exact canonical Y delta
 - `user-right-low-capture-2026-09-25`
   - file: `20260925-01M3CC7W69VA9ZBR9NJWR0KYYG-7AD89BB0-8510-46E3-8C98-A64A14F92CAE.mp4`
   - 29.50s
   - confirms the measured small drop enters the right-low open/grass floor
   - confirms at least one traversable ramp exits that floor
-  - confirms the connection into the covered underpass is same-height
+  - confirms route continuity into the covered underpass; equal canonical floor Y is not established by the perspective clip
 
 The captures strengthen the layered topology without inventing a simple top-down polygon.
 
@@ -489,7 +490,7 @@ Current HIGH vertical/topology relations:
 - first-drop upper -> landing = -4.5m
 - right-small-drop upper -> right-low = -3.0m
 - first-drop landing -> right-low = +1.5m
-- right-low floor = covered underpass lower floor
+- right-low -> covered underpass lower floor = -4.5m HIGH from Temple01 geometry; capture footage contributes connectivity only
 
 The previous claim that first-drop open/landing floor = right-small-drop upper floor is **superseded and invalid**. The corrective still pair itself remains qualitative; exact floor identities and metric deltas come from the independently registered remodeled Temple01 OBJ.
 
@@ -522,7 +523,7 @@ The remaining blocker is no longer capture-location uncertainty.
 
 `right-low-floor-outline` stays UNTRACED because the perspective perimeter walk does not expose a second independent measured plan anchor with enough geometric precision to map every wall/ramp corner to one unique PDF vertex. Multiple candidate edges also overlap in the 2D source projection.
 
-`glass-underpass-outline` stays UNTRACED because the vector PDF contains only the upper glass projection; it has no independent lower-layer support/clearance path. The traversal clip confirms supports, openings and same-height connectivity, but not unique metric corner offsets.
+`glass-underpass-outline` stays UNTRACED because the vector PDF contains only the upper glass projection; it has no independent lower-layer support/clearance path. The traversal clip confirms supports, openings and route connectivity, while Temple01 resolves the lower floor Y separately; perspective footage still does not provide unique metric corner offsets.
 
 Therefore T21-B common trace coverage remains **15 / 18**, rather than being inflated to 17 / 18 from convenience geometry. The two capture categories remain complete and must not be requested again. `UndertowSpillwayBlockoutGate.ready` remains false, and T21-D runtime geometry is still blocked.
 
@@ -533,7 +534,7 @@ A second pass compared the recovered vector plan, the post-7.2 visual reference 
 The following overlap regions are **HIGH traversable lower-layer topology**, not kill voids:
 - negative-Z central undercut below the high platform
 - positive-Z central undercut / covered passage
-- right-low to covered-underpass same-height connection
+- right-low to covered-underpass traversable route connection; equal-Y semantics are not inferred from the clips
 
 This narrows the ambiguity but does **not** justify an exhaustive claim that there are no other internal abyss regions. No remaining internal blank can currently be localized strongly enough to draw a truthful capture box on the plan. Therefore:
 - `fall-out-void-kill-boundary` remains UNTRACED
@@ -553,7 +554,7 @@ Seeded now:
 
 Seeded exact/HIGH components:
 - CENTER_SEEDED: center-low Y=0, center-small-step Y=1.5, both center-side slope low endpoints Y=1.5
-- SPAWN_RIGHT_LOW_SEEDED: Team A/B spawn Y=6.0, first-drop landings Y=1.5, right-low Y=3.0, right-small-drop upper Y=6.0, glass lower/high references resolved through the captured relations
+- SPAWN_RIGHT_LOW_SEEDED: Team A/B spawn Y=7.5, first-drop landings Y=3.0, right-low Y=4.5, right-small-drop upper Y=7.5, glass-underpass Y=0.0 and glass high reference Y=7.5 resolved through Temple01 geometry
 
 Unseeded:
 - SLOPE_HIGH_UNSEEDED: both central slope high endpoints
@@ -575,8 +576,8 @@ spawn upper -> first-drop landing / right-small-drop upper -> right-low.
 
 The user's direct in-game observation plus `IMG_6112.jpeg` / `IMG_6111.jpeg` disproved the guide's shared-middle-level assumption. The later Temple01 local registration resolves the sides independently:
 - user-observed red-guide-side floor < blue-guide-side floor — CONFIRMED qualitative ordering
-- red upper/lower = project Y 6.0 / 1.5 HIGH
-- blue upper/lower = project Y 6.0 / 3.0 HIGH
+- red upper/lower = project Y 7.5 / 3.0 HIGH
+- blue upper/lower = project Y 7.5 / 4.5 HIGH
 - first-drop landing = right-small-drop upper — removed / invalid
 - exact first-drop magnitude = 4.5m HIGH
 - exact right-small-drop magnitude = 3.0m HIGH
@@ -718,3 +719,17 @@ Remaining XZ blockers:
 2. `fall-out-void-kill-boundary`
 
 All BLOCKOUT vertical evidence is currently resolved at HIGH-or-stronger confidence. T21-D remains blocked only by the two XZ items above.
+
+
+## T21-C — cross-file vertical semantic reconciliation (2026-09-26)
+
+The final Temple01 local-geometry audit supersedes the earlier capture-only same-level interpretation.
+
+Metric authority:
+- right-low: model Y=7.5m / project Y=4.5m HIGH
+- roofed glass-underpass walkable floor: model Y=3.0m / project Y=0.0m HIGH
+- glass-overhang high reference: model Y=10.5m / project Y=7.5m HIGH
+- right-low -> underpass: -4.5m HIGH
+- underpass -> glass high reference: +7.5m HIGH
+
+Capture authority is deliberately narrower: the 2026-09-25 videos prove traversable route continuity and support/wall exclusions, but do not measure an equal floor Y. The current capture-topology edge therefore has no numeric delta.

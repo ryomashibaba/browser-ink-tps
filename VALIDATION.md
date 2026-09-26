@@ -1424,7 +1424,7 @@ Automated scope:
 - whole-stage ~146x87m remains PROVISIONAL
 - Team A/B first descents are CONFIRMED `ONE_WAY_DROP`
 - Temple01 local registration resolves first-drop magnitude to 4.5m HIGH
-- Temple01 local registration resolves both spawn centers to project Y=6.0 HIGH
+- Temple01 local registration resolves both spawn centers to project Y=7.5 HIGH after final center-low normalization
 - upper glass is explicit UNINKABLE + GLASS gameplay geometry
 - Splat Zones objective count is recorded as two
 - Tower/Rainmaker/Clams geometry differences remain rule-variant facts
@@ -1461,9 +1461,9 @@ New deterministic coverage verifies:
 - contradictory exact constraints are reported
 - center-low Y=0 resolves center small-step to 1.5m at blockout level
 - the remodeled spawn/right-low chain resolves at BLOCKOUT confidence without conflicts
-- Team A/B spawn Y=6.0, first-drop landing Y=1.5, right-low Y=3.0, right-small-drop upper Y=6.0
+- Team A/B spawn Y=7.5, first-drop landing Y=3.0, right-low Y=4.5, right-small-drop upper Y=7.5
 - first drop is exact -4.5m HIGH and right small drop is exact -3.0m HIGH
-- glass lower/high reference resolve through the captured 0m / +3m relations
+- glass underpass/high reference resolve from Temple01 geometry at Y=0.0 / 7.5; capture traversal is non-metric
 - slope-high endpoints and grate elevations remain unresolved
 - +4.5 to +6.0m broad upper-band hypothesis and +4.5m raised-platform candidate remain PROVISIONAL
 
@@ -1599,10 +1599,10 @@ Automated checks now verify:
 - the former first-drop landing -> right-small-drop upper 0m edge is absent
 - the corrective stills themselves remain qualitative red-guide-side < blue-guide-side evidence
 - Temple01 local registration independently resolves red/blue canonical floor sides
-- right-low -> covered-underpass floor remains a 0m HIGH relation
+- right-low -> covered-underpass floor is -4.5m HIGH from Temple01 geometry; capture footage contributes connectivity only
 - right-small-drop upper is 3.0m above right-low
 - first-drop landing is 1.5m below right-low
-- captured topology records a same-level underpass connection, a 3.0m right drop, and a visible ramp exit
+- captured topology records non-metric traversable underpass connectivity, a 3.0m right drop, and a visible ramp exit
 - underpass support/wall exclusions remain explicit
 - RIGHT_LOW_PARTITION and GLASS_UNDERPASS_CLEARANCE are CAPTURE_RECEIVED
 - future capture requests require marked-map annotations rather than prose-only directions
@@ -1629,7 +1629,7 @@ GitHub Actions run #496 passed TypeScript check, Unit tests, production build, P
 
 Automated checks now additionally verify:
 - both current central undercut regions are retained as HIGH traversable lower-layer topology rather than kill voids
-- the received right-low/underpass connection remains traversable and same-height
+- the received right-low/underpass connection remains traversable; equal canonical Y is not inferred from the clips
 - the audit does not fabricate an exhaustive no-void conclusion
 - no additional user capture becomes request-ready without a concrete mapped ambiguous region
 - `fall-out-void-kill-boundary` remains UNTRACED
@@ -1662,7 +1662,7 @@ Automated checks now additionally require:
 - the false first-drop landing = right-small-drop upper relation remains absent
 - the corrective still pair remains qualitative evidence only
 - Temple01 local registration supplies the exact 4.5m first-drop and 3.0m right-drop magnitudes
-- right-low -> underpass 0m relation remains intact
+- right-low -> underpass is -4.5m HIGH from Temple01 geometry; the former capture-only 0m relation is absent
 
 
 ## T21-C line-side semantic audit validation
@@ -1673,7 +1673,7 @@ Automated checks now additionally require:
 - blue lower/upper bind to right-low / right-small-drop upper only through Temple01 local registration
 - the user-observed red-vs-blue ordering itself still has no exact delta
 - pre-model media findings remain below canonical side-binding strength
-- the resolved project Y values are red 1.5/6.0 and blue 3.0/6.0
+- the resolved project Y values after final normalization are red lower/upper 3.0/7.5 and blue lower/upper 4.5/7.5
 
 This audit changes evidence semantics only. Runtime geometry, collision, navigation, paint, combat and objectives remain unchanged.
 
@@ -1719,3 +1719,17 @@ Automated validation now additionally requires:
 - no vertical blocker remains
 
 This checkpoint does not start T21-D and does not mark model-raster contours as Stable Freeze.
+
+
+## T21-C cross-file vertical semantic invariant validation — 2026-09-26
+
+Current head must additionally verify:
+- right-low = project Y 4.5 HIGH
+- glass-underpass floor = project Y 0.0 HIGH
+- glass-overhang high reference = project Y 7.5 HIGH
+- right-low -> underpass = -4.5m HIGH from Temple01 geometry
+- underpass -> glass high reference = +7.5m HIGH from Temple01 geometry
+- the capture-topology edge is TRAVERSABLE_CONNECTION with no deltaYMeters
+- the measurement ledger uses the same Temple01-derived underpass/right-low values
+- source-topology text does not promote the traversal clips to a same-height metric claim
+- the blockout gate remains closed only by the two XZ traces, not by a vertical inconsistency

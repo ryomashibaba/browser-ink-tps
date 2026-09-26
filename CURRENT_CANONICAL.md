@@ -1845,7 +1845,7 @@ New canonical research layer:
 - first spawn-side descent frozen as `ONE_WAY_DROP`; no slope/stairs/bidirectional or invisible CPU ramp
 - center-low reference floor frozen at Y=0
 - 20px/m and 1.5m vertical grid retained as HIGH rather than official/confirmed dimensions
-- spawn absolute Y is now HIGH at project Y=6.0 from locally registered remodeled Temple01 geometry
+- historical checkpoint value: spawn project Y=6.0 was superseded by the final Temple01 center-low normalization; current canonical spawn Y is 7.5
 - the later vector outer-silhouette measurement supersedes the old ~146x87m provisional envelope
 
 T21-B may convert the Turf map to metric XZ polygons using this ledger, but it must not promote PROVISIONAL/UNKNOWN dimensions without new evidence.
@@ -1886,15 +1886,15 @@ Resolved for BLOCKOUT:
 
 **Superseded by the 2026-09-26 Temple01 local-geometry audit.** The earlier unseeded/candidate state is no longer current.
 
-Current BLOCKOUT/HIGH vertical results:
-- Team A/B spawn floor = project Y 6.0
-- Team A/B first-drop landing = project Y 1.5
+Current BLOCKOUT/HIGH vertical results after the final Temple01 center-low normalization:
+- Team A/B spawn floor = project Y 7.5
+- Team A/B first-drop landing = project Y 3.0
 - first drop = -4.5m, ONE_WAY_DROP semantics retained
-- right-small-drop upper = project Y 6.0
-- right-low = project Y 3.0
+- right-small-drop upper = project Y 7.5
+- right-low = project Y 4.5
 - right small drop = -3.0m
-- right-low -> glass-lower = 0m HIGH
-- glass-lower -> glass high reference = +3.0m HIGH
+- right-low -> glass-underpass floor = -4.5m HIGH
+- glass-underpass floor -> glass high reference = +7.5m HIGH
 - first-drop landing -> right-low = +1.5m HIGH
 
 These HIGH values remain BLOCKOUT-only; STABLE_FREEZE still accepts CONFIRMED exact values only.
@@ -2030,7 +2030,7 @@ The two requested 2026-09-25 gameplay captures are valid and are now canonical e
 
 Confirmed from the 2026-09-25 traversals:
 - right-small-drop upper descends into the captured right-low open floor; Temple01 local registration later resolves this drop to 3.0m HIGH
-- right-low connects directly into the covered underpass with no visible step/drop, so those lower floors are HIGH same-height
+- right-low route connects into the covered underpass; the clips confirm traversable continuity only and do not establish equal canonical floor Y
 - the right-low area has at least one traversable ramp exit
 - the underpass contains solid support/wall geometry that must become explicit navigation/collision exclusions
 
@@ -2065,7 +2065,7 @@ T21-D remains blocked; production runtime geometry is unchanged.
 ## T21-B internal-void ambiguity checkpoint
 
 - The post-7.2 central undercut pair is classified HIGH as traversable lower-layer topology, not an abyss.
-- The received right-low -> underpass overlap remains HIGH traversable/same-height.
+- The received right-low -> underpass overlap remains HIGH traversable. Equal-Y semantics are explicitly not inferred from the perspective clips.
 - No concrete remaining internal blank can currently be localized strongly enough to justify another capture.
 - `INTERNAL_VOID_CLASSIFICATION` therefore stays `DEFERRED_PENDING_MAP_ENUMERATION`; request-ready capture IDs remain empty.
 - This is deliberately **not** an exhaustive no-internal-void claim.
@@ -2089,12 +2089,12 @@ The corrective stills themselves remain qualitative only; the exact graph edges 
 
 The previous marked side-profile request is invalidated because its topology premise was wrong.
 
-Corrected evidence state:
+Corrected evidence state after final Temple01 normalization:
 - user-observed red-guide-side floor < blue-guide-side floor — CONFIRMED qualitative ordering
-- red lower side -> Team A first-drop landing = project Y 1.5 HIGH
-- red upper side -> Team A spawn floor = project Y 6.0 HIGH
-- blue lower side -> right-low = project Y 3.0 HIGH
-- blue upper side -> right-small-drop upper = project Y 6.0 HIGH
+- red lower side -> Team A first-drop landing = project Y 3.0 HIGH
+- red upper side -> Team A spawn floor = project Y 7.5 HIGH
+- blue lower side -> right-low = project Y 4.5 HIGH
+- blue upper side -> right-small-drop upper = project Y 7.5 HIGH
 - first-drop landing = right-small-drop upper — REMOVED / INVALID
 - first-drop exact magnitude = 4.5m HIGH
 - right-small-drop exact magnitude = 3.0m HIGH
@@ -2112,8 +2112,8 @@ Canonical result:
 - Temple01 OBJ local registration now resolves the red/blue canonical floor sides at HIGH confidence
 - registered first-drop lips match the 10.5<->6.0 model-Y discontinuity
 - registered right-small-drop lips match the 10.5<->7.5 model-Y discontinuity
-- after center-reference normalization, these are project Y 6.0<->1.5 and 6.0<->3.0
-- the user's red-lower < blue-lower observation is reproduced by 1.5 < 3.0
+- after the final center-low model-Y=3.0 normalization, these are project Y 7.5<->3.0 and 7.5<->4.5
+- the user's red-lower < blue-lower observation is reproduced by 3.0 < 4.5
 - the superseded three-terrace interpretation remains forbidden
 
 T21-D stays gated for remaining geometry evidence; no first-drop recapture is needed.
@@ -2148,7 +2148,7 @@ External-source audit now fixes the correct remodel model family:
 - KiTrix StageLoader display-name mapping is known-wrong and is not provenance evidence
 - locally verified drop-lip geometry is promotable at HIGH confidence; blanket full-model registration is not
 
-Promoted BLOCKOUT/HIGH Y values are limited to the locally verified chain: spawn 6.0, first-drop landing 1.5, right-low 3.0, right-small-drop upper 6.0, first drop -4.5, right drop -3.0.
+Promoted BLOCKOUT/HIGH Y values are limited to the locally verified chain: spawn 7.5, first-drop landing 3.0, right-low 4.5, right-small-drop upper 7.5, glass-underpass floor 0, glass high reference 7.5, first drop -4.5, right drop -3.0, right-low -> underpass -4.5, underpass -> glass high reference +7.5.
 
 
 ## T21-B Temple01 XZ contour checkpoint — 2026-09-26
@@ -2171,3 +2171,19 @@ The only remaining XZ blockers are:
 - `fall-out-void-kill-boundary`
 
 Vertical BLOCKOUT blockers are closed. PR #5 remains Draft / unmerged and T21-D remains gated only by those two XZ traces.
+
+
+## T21-C cross-file vertical semantic reconciliation — 2026-09-26
+
+The Temple01 local geometry audit is the single metric authority for the right-low / glass-underpass / glass-high-reference chain.
+
+Current canonical project Y:
+- right-low = 4.5m HIGH
+- glass-underpass walkable floor = 0.0m HIGH (model Y=3.0m)
+- glass-overhang high reference = 7.5m HIGH (model Y=10.5m)
+- right-low -> glass-underpass = -4.5m HIGH
+- glass-underpass -> glass-high-reference = +7.5m HIGH
+
+The two 2026-09-25 traversal captures remain canonical topology evidence, but their former same-height interpretation is superseded. RIGHT_LOW -> GLASS_UNDERPASS is represented as non-metric traversable route continuity; it carries no capture-derived delta-Y.
+
+UndertowSpillwayVerticalSemanticInvariant.test.ts now cross-checks RemodelGeometryAudit, VerticalModel, CaptureTopology, MeasurementLedger, and SourceTopologyAudit so green CI cannot silently preserve conflicting vertical authorities.
