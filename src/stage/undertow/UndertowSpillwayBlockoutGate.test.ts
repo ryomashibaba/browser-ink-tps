@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { undertowBlockoutReadiness } from './UndertowSpillwayBlockoutGate';
 
 describe('T21 Undertow blockout readiness gate', () => {
-  it('keeps T21-D blocked while critical XZ and Y evidence is unresolved', () => {
+  it('keeps T21-D blocked while critical XZ evidence is unresolved', () => {
     const gate = undertowBlockoutReadiness();
     expect(gate.ready).toBe(false);
 
@@ -23,34 +23,38 @@ describe('T21 Undertow blockout readiness gate', () => {
     expect(gate.missingTraceIds).not.toContain('mapped-water-hazard-polygons');
   });
 
-  it('keeps unresolved spawn and first-drop Y out of T21-D', () => {
+  it('accepts the remodeled spawn / first-drop / right-low chain for BLOCKOUT', () => {
     const gate = undertowBlockoutReadiness();
-    expect(gate.unresolvedVerticalIds).toContain('team-a-spawn-floor');
-    expect(gate.unresolvedVerticalIds).toContain('team-b-spawn-floor');
-    expect(gate.unresolvedVerticalIds).toContain('team-a-first-drop-landing');
-    expect(gate.unresolvedVerticalIds).toContain('team-b-first-drop-landing');
 
-    expect(gate.unresolvedVerticalRelations).toContain(
-      'team-a-spawn-floor->team-a-first-drop-landing'
-    );
-    expect(gate.unresolvedVerticalRelations).toContain(
-      'team-b-spawn-floor->team-b-first-drop-landing'
-    );
+    for (const id of [
+      'team-a-spawn-floor',
+      'team-b-spawn-floor',
+      'team-a-first-drop-landing',
+      'team-b-first-drop-landing',
+      'right-low-floor',
+      'right-small-drop-upper',
+      'glass-lower-major-floor',
+      'glass-overhang-high-reference'
+    ]) {
+      expect(gate.unresolvedVerticalIds).not.toContain(id);
+    }
+
+    expect(gate.unresolvedVerticalRelations).toEqual([]);
   });
 
-  it('uses BLOCKOUT constraint resolution for known center values but still gates missing vertical seeds', () => {
+  it('keeps only slope-high and grate Y as vertical blockout blockers', () => {
     const gate = undertowBlockoutReadiness();
+
     expect(gate.unresolvedVerticalIds).not.toContain('center-low-floor');
     expect(gate.unresolvedVerticalIds).not.toContain('center-small-step-top');
-    expect(gate.missingTraceIds).not.toContain('center-low-floor-outline');
-
-    expect(gate.unresolvedVerticalIds).toContain('glass-lower-major-floor');
-    expect(gate.unresolvedVerticalIds).toContain('glass-overhang-high-reference');
     expect(gate.unresolvedVerticalIds).not.toContain('center-left-slope-low');
     expect(gate.unresolvedVerticalIds).not.toContain('center-right-slope-low');
-    expect(gate.unresolvedVerticalIds).toContain('center-left-slope-high');
-    expect(gate.unresolvedVerticalIds).toContain('center-right-slope-high');
-    expect(gate.unresolvedVerticalIds).toContain('negative-z-grate-floor');
-    expect(gate.unresolvedVerticalIds).toContain('positive-z-grate-floor');
+
+    expect(gate.unresolvedVerticalIds).toEqual([
+      'center-left-slope-high',
+      'center-right-slope-high',
+      'negative-z-grate-floor',
+      'positive-z-grate-floor'
+    ]);
   });
 });
