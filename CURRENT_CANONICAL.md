@@ -2149,3 +2149,25 @@ External-source audit now fixes the correct remodel model family:
 - locally verified drop-lip geometry is promotable at HIGH confidence; blanket full-model registration is not
 
 Promoted BLOCKOUT/HIGH Y values are limited to the locally verified chain: spawn 6.0, first-drop landing 1.5, right-low 3.0, right-small-drop upper 6.0, first drop -4.5, right drop -3.0.
+
+
+## T21-B Temple01 XZ contour checkpoint — 2026-09-26
+
+Temple01 local floor extraction now promotes two XZ blockers to HIGH/BLOCKOUT-safe:
+
+- `center-low-floor-outline` -> MEASURED
+  - model Y=3.0m = canonical project Y=0
+  - two symmetric connected components
+  - 0.125m raster, <=0.20m contour simplification
+- `right-low-floor-outline` -> MEASURED
+  - model Y=7.5m = project Y=4.5
+  - seeded from the locally verified lower side of the right-small-drop lip
+  - two symmetric connected components with explicit holes
+
+Current trace coverage is **16/18**.
+
+The only remaining XZ blockers are:
+- `glass-underpass-outline`
+- `fall-out-void-kill-boundary`
+
+Vertical BLOCKOUT blockers are closed. PR #5 remains Draft / unmerged and T21-D remains gated only by those two XZ traces.
