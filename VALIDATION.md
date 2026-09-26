@@ -1589,19 +1589,19 @@ Automated tests now verify that the additional-evidence plan contains exactly th
 The plan must not request already-resolved spawn terrain, mapped water, upper-glass outline, or first-drop geometry, and captures must include plan-registration landmarks before they can promote XZ evidence.
 
 
-## T21 2026-09-25 capture integration validation
+## T21 2026-09-25/26 capture integration validation
 
 Automated checks now verify:
-- both targeted 2026-09-25 files are represented as CONFIRMED user capture evidence
-- right-low and underpass entries cite those captures but retain UNRESOLVED XZ until plan registration
-- first-drop landing -> right-small-drop upper is a 0m HIGH relation
-- right-low -> covered-underpass floor is a 0m HIGH relation
+- both targeted 2026-09-25 traversal files plus the 2026-09-26 corrective still pair are represented as CONFIRMED user capture evidence
+- right-low and underpass entries cite the traversal captures but retain UNRESOLVED XZ until plan registration
+- the former first-drop landing -> right-small-drop upper 0m edge is absent
+- the corrective stills record only the qualitative order: first-drop landing < right-low
+- right-low -> covered-underpass floor remains a 0m HIGH relation
 - right-small-drop upper remains 1.5m above right-low
 - these relations do not manufacture absolute Y without a seed
-- captured topology records a same-level underpass connection, a 1.5m small drop, and a visible ramp exit
+- captured topology records a same-level underpass connection, a 1.5m small drop, a visible ramp exit, and the corrected first-drop height ordering
 - underpass support/wall exclusions remain explicit
 - RIGHT_LOW_PARTITION and GLASS_UNDERPASS_CLEARANCE are CAPTURE_RECEIVED
-- only INTERNAL_VOID_CLASSIFICATION remains NOT_YET_CAPTURED
 - future capture requests require marked-map annotations rather than prose-only directions
 
 T21-D remains gated while exact plan registration and outstanding vertical seeds are unresolved.
@@ -1641,21 +1641,20 @@ No runtime StageDefinition, collision, navigation, paint authority, combat, Supe
 
 Automated checks now additionally require:
 - the exact/HIGH BLOCKOUT graph has exactly one currently seeded component: center-low / center-step / center-side slope-low
-- Team A/B first-drop landings, right-small-drop upper, right-low, glass lower and glass high reference form one internally constrained but unseeded component
-- Team A/B spawn floors remain a separate component because the first-drop 1.5m/3.0m edge is still PROVISIONAL
+- right-small-drop upper, right-low, glass lower and glass high reference form one internally constrained but unseeded component
+- Team A/B first-drop landings form a separate symmetry-linked unseeded component
+- Team A/B spawn floors remain another separate component because the first-drop 1.5m/3.0m edge is still PROVISIONAL
 - central slope high endpoints and grate elevations remain separate unseeded components
-- no perspective-only capture may fabricate a center-to-right-low absolute Y tie
+- the 2026-09-26 qualitative ordering must not be converted into a numeric graph edge
 
 T21-D remains blocked pending both XZ completion and these vertical evidence classes.
 
 
-## T21-C first-drop magnitude capture validation
+## T21-C first-drop interpretation-correction validation
 
 Automated checks now additionally require:
-- exactly one vertical capture request is request-ready: `FIRST_DROP_MAGNITUDE_SIDE_PROFILE`
-- the request explicitly compares the unresolved 1.5m / 3.0m first-drop candidates against the adjacent HIGH 1.5m right-small drop
-- the guide requires all three terrace levels in one approximately side-on view
-- already received right-low and underpass traversals are not requested again
-- the request remains evidence-only and cannot promote any Y before the capture is reviewed
-
-GitHub Actions run #509 / `36197224763` passed TypeScript check, unit tests, production build, Pages configuration and artifact upload at head `5d109d78c65bb4c50f55f708f5e218dd6998bdfd`.
+- no vertical capture request is request-ready after the 2026-09-26 correction
+- `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` is retained only with status `INVALIDATED_BY_HEIGHT_ORDER_CORRECTION`
+- the false first-drop landing = right-small-drop upper relation is absent from both topology and the vertical constraint graph
+- the corrective still pair records first-drop landing < right-low qualitatively without fabricating a numeric delta
+- the right-small-drop 1.5m relation and right-low -> underpass 0m relation remain intact
