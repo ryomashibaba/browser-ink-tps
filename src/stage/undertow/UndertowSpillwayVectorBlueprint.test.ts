@@ -65,7 +65,7 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.03);
   });
 
-  it('extracts the right-side small-drop hard-edge pair after the first drop', () => {
+  it('extracts the separate right-side drop hard-edge pair without reusing the first-drop landing', () => {
     const a = UNDERTOW_VECTOR_TRACES.teamARightSmallDropLip;
     const b = UNDERTOW_VECTOR_TRACES.teamBRightSmallDropLip;
     expect(a.geometryKind).toBe('POLYLINE');
@@ -75,7 +75,7 @@ describe('T21-B Undertow vector blueprint extraction', () => {
     expect(polylineLength(a.metricPoints)).toBeCloseTo(16.9, 1);
     expect(polylineLength(b.metricPoints)).toBeCloseTo(16.9, 1);
     expect(rotationSymmetryHausdorffMeters(a.metricPoints, b.metricPoints)).toBeLessThan(0.04);
-    expect(a.notes).toContain('after the first drop');
+    expect(a.notes).toContain('Do not infer that its upper side is the first-drop landing');
   });
 
   it('extracts the symmetric white grate-mesh footprints without inheriting water semantics', () => {
