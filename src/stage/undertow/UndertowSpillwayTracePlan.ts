@@ -72,9 +72,9 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     id: 'center-low-floor-outline',
     geometryKind: 'POLYGON',
     region: 'Center',
-    status: 'MEASURED',
+    status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Exact closed vector face containing the project origin; Y=0 remains CONFIRMED.'
+    notes: 'The former origin-face=center-low binding is superseded by Temple01 local registration. Y=0 remains CONFIRMED, but the true center-low XZ polygon must be re-extracted; the origin face is the +1.5m step-top face.'
   },
   {
     id: 'center-small-step-outline',
@@ -82,7 +82,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center',
     status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Both symmetric 0.75m-deep source strips are measured; +1.5m vertical relation remains HIGH.'
+    notes: 'Both symmetric 0.75m-deep transition strips are measured; Temple01 confirms the adjacent origin face is the +1.5m step-top side and the lower side is canonical Y=0.'
   },
   {
     id: 'right-small-drop-edge',
@@ -122,7 +122,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center / Right',
     status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Near-180-degree counterpart dashed-hatch semantic slope region; exact start/end Y is still a T21-C concern.'
+    notes: 'Near-180-degree counterpart dashed-hatch semantic slope region; Temple01 locally resolves the slope span to project Y=-1.5m..0m at HIGH confidence.'
   },
   {
     id: 'right-low-floor-outline',
@@ -130,7 +130,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center / Right',
     status: 'UNTRACED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: '2026-09-25 capture is plan-registered to the Team A right-small-drop lip and confirms the low/open floor, ramp exit and same-level underpass connection; perspective footage still does not assign every perimeter corner to a unique PDF vertex. Temple01 local registration independently resolves right-low project Y=3.0m.'
+    notes: '2026-09-25 capture is plan-registered to the Team A right-small-drop lip and confirms the low/open floor, ramp exit and same-level underpass connection; perspective footage still does not assign every perimeter corner to a unique PDF vertex. Temple01 local registration independently resolves right-low project Y=4.5m after corrected center normalization.'
   },
   {
     id: 'center-grate-outline',
@@ -138,7 +138,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Center',
     status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'Both symmetric white mesh-pattern grate polygons are measured; Y remains unresolved.'
+    notes: 'Both symmetric white mesh-pattern grate polygons are measured; Temple01 FloorFence00 locally resolves the visible top to project Y=7.4m HIGH for blockout/render use.'
   },
   {
     id: 'mapped-water-hazard-polygons',
