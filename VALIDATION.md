@@ -1671,3 +1671,17 @@ Automated checks now additionally require:
 - no first-drop-landing/right-low ordering is present in captured topology or the vertical constraint graph
 
 This audit changes evidence semantics only. Runtime geometry, collision, navigation, paint, combat and objectives remain unchanged.
+
+
+## T21-C current Temple01 external-geometry validation
+
+Automated checks now additionally require:
+- remodeled Undertow is identified as `Vss_Temple01` / `Model/Fld_Temple01.bfres`
+- `Vss_Temple00` is retained only as the pre-remodel identity
+- `Vss_Nagasaki03` is explicitly excluded from Undertow geometry
+- SceneInfo / VersusSceneInfo names alone do not expose metric geometry
+- KiTrix MTL data and Git LFS OBJ pointers do not promote vertex coordinates
+- Splatoon-3-Map-Editor actor classes do not promote layout coordinates
+- a Temple01 rule-layer path reference does not count as the missing BCETT payload
+- no external source may promote Y unless metric geometry is actually read
+- current-model metric payload retrieval stays ahead of any new user recapture request
