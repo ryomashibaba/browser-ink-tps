@@ -196,7 +196,7 @@ const entries: readonly StageMeasurementEntry[] = [
   }),
   commonSurfaceEntry({
     id: 'team-a-right-small-drop',
-    feature: 'Team A-side right small drop after first-drop open area',
+    feature: 'Team A-side separate right small drop',
     region: 'Team A Spawn / Right',
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
@@ -206,7 +206,7 @@ const entries: readonly StageMeasurementEntry[] = [
       polylineMeters: UNDERTOW_VECTOR_TRACES.teamARightSmallDropLip.metricPoints,
       confidence: 'HIGH',
       evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay'],
-      notes: 'Exact L-shaped second drop edge following the first-drop open area.'
+      notes: 'Exact L-shaped right-side drop edge. Temple01 local registration proves it is a separate 10.5->7.5m model-Y discontinuity rather than the continuation of the red first-drop landing.'
     },
     y: {
       deltaMeters: -3,
@@ -227,7 +227,7 @@ const entries: readonly StageMeasurementEntry[] = [
   }),
   commonSurfaceEntry({
     id: 'team-b-right-small-drop',
-    feature: 'Team B-side right small drop after first-drop open area',
+    feature: 'Team B-side separate right small drop',
     region: 'Team B Spawn / Right',
     featureKind: 'TRANSITION',
     confidence: 'CONFIRMED',
@@ -237,7 +237,7 @@ const entries: readonly StageMeasurementEntry[] = [
       polylineMeters: UNDERTOW_VECTOR_TRACES.teamBRightSmallDropLip.metricPoints,
       confidence: 'HIGH',
       evidenceIds: ['user-turf-vector-blueprint', 'web-post-7-2-gameplay'],
-      notes: '180-degree counterpart of the Team A second drop edge.'
+      notes: '180-degree counterpart of the Team A separate right-side drop edge.'
     },
     y: {
       deltaMeters: -3,
