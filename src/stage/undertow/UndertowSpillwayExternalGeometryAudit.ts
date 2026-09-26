@@ -32,7 +32,7 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCES:
       exposesMetricGeometry: false,
       usableForVerticalPromotion: false,
       notes:
-        'SceneInfo identifies Vss_Temple01 as マテガイ放水路（改修後） and preloads Model/Fld_Temple01.bfres. It also identifies Vss_Nagasaki03 / Fld_Nagasaki03 as チョウザメ造船, so Nagasaki03 must not be used as Undertow geometry.'
+        'SceneInfo identifies Vss_Temple01 as マテガイ放水路（改修後） and preloads Model/Fld_Temple01.bfres. It also excludes Nagasaki03 by identifying it as Sturgeon Shipyard.'
     },
     {
       id: 'LEANNY_VERSUSSCENEINFO_1130',
@@ -40,7 +40,7 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCES:
       exposesMetricGeometry: false,
       usableForVerticalPromotion: false,
       notes:
-        'VersusSceneInfo exposes Vss_Temple01 as the stage-list row used for the remodel. TclSceneName references Vss_Temple00, but this field is not treated as geometry or as permission to substitute the pre-remodel model.'
+        'VersusSceneInfo corroborates the Vss_Temple01 remodel row but does not expose metric vertices.'
     },
     {
       id: 'LEANNY_LEAGUETYPEINFO_1130',
@@ -48,7 +48,7 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCES:
       exposesMetricGeometry: false,
       usableForVerticalPromotion: false,
       notes:
-        'LeagueTypeInfo references rule-layer paths such as Work/Banc/BinLayer/Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json, but the referenced BCETT coordinate payload is not present in the inspected public data.'
+        'Rule-layer BCETT path references corroborate Temple01 variant structure; path names alone are not coordinate evidence.'
     },
     {
       id: 'KITRIX_TEMPLE01_MTL',
@@ -56,15 +56,15 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCES:
       exposesMetricGeometry: false,
       usableForVerticalPromotion: false,
       notes:
-        'The public Vss_Temple01 material file contains Fld_Temple01_* materials including concrete floors, slopes, glass, pillars and ceiling assets consistent with the current Undertow environment. Material names alone do not expose vertex coordinates.'
+        'Temple01 material names corroborate the remodeled environment and Turf PntSet family, but MTL names alone are not metric geometry.'
     },
     {
       id: 'KITRIX_TEMPLE01_OBJ_LFS',
       confirmsCurrentStageIdentity: true,
-      exposesMetricGeometry: false,
-      usableForVerticalPromotion: false,
+      exposesMetricGeometry: true,
+      usableForVerticalPromotion: true,
       notes:
-        'Vss_Temple01 OBJ parts exist publicly, but the inspected GitHub paths resolve only to Git LFS pointers in the current audit environment. Until actual OBJ vertex bodies are read and registered to the canonical plan, no XZ/Y value may be promoted.'
+        'The branch CI successfully retrieved the 43,263,289-byte Git LFS OBJ body and parsed 375,948 vertices. Common Fld_Temple01 plus Turf PntSet produced 70,396 audit triangles. Promotion is restricted to locally registered landmarks/drop discontinuities verified within 0.163m in the 0.5m raster; the full exterior fit is not blanket registration.'
     },
     {
       id: 'S3_MAP_EDITOR_TEMPLE01_CLASSES',
@@ -72,20 +72,21 @@ export const UNDERTOW_EXTERNAL_GEOMETRY_SOURCES:
       exposesMetricGeometry: false,
       usableForVerticalPromotion: false,
       notes:
-        'Splatoon-3-Map-Editor contains Fld_Temple01 and Lft_FldObj_Temple01_* actor classes, but the inspected repository tree contains no Temple01 stage-layout BYML/BCETT payload with placement coordinates.'
+        'Temple01 actor classes corroborate the remodel/rule families but expose no stage placement coordinates by themselves.'
     }
   ];
 
 export const UNDERTOW_EXTERNAL_GEOMETRY_NEXT_TARGET = Object.freeze({
-  id: 'TEMPLE01_METRIC_PAYLOAD',
+  id: 'REMAINING_T21C_EVIDENCE',
   preferredInputs: [
-    'actual Vss_Temple01 OBJ vertex bodies from the public KiTrix LFS objects',
-    'actual Vss_Temple01 BCETT/BYML stage-layout payload with Translate coordinates',
-    'another independently extracted current Fld_Temple01 mesh/collision representation'
+    'Temple01-local evidence for center slope high-end Y',
+    'Temple01-local evidence for the two grate elevations',
+    'metric lower-layer geometry for right-low / underpass XZ partition',
+    'metric evidence for remaining internal fall-out / void boundaries'
   ] as const,
-  blocksUserRecapture: true,
+  blocksUserRecapture: false,
   purpose:
-    'Resolve side-of-line floor identity and metric Y from current Temple01 geometry before asking the user for another gameplay capture.'
+    'Finish the remaining T21-C/T21-B gates after the first-drop/right-drop chain was resolved from the remodeled Temple01 OBJ.'
 });
 
 export function undertowExternalGeometryAuditErrors(): readonly string[] {
@@ -99,6 +100,17 @@ export function undertowExternalGeometryAuditErrors(): readonly string[] {
   }
   if (!UNDERTOW_CURRENT_STAGE_ASSET_IDENTITY.explicitlyExcludedSceneIds.includes('Vss_Nagasaki03')) {
     errors.push('Vss_Nagasaki03 must stay explicitly excluded from Undertow geometry');
+  }
+
+  const promotable = UNDERTOW_EXTERNAL_GEOMETRY_SOURCES.filter(
+    (source) => source.usableForVerticalPromotion
+  );
+  if (
+    promotable.length !== 1 ||
+    promotable[0]?.id !== 'KITRIX_TEMPLE01_OBJ_LFS' ||
+    !promotable[0].exposesMetricGeometry
+  ) {
+    errors.push('only the audited Temple01 OBJ may promote locally verified vertical geometry');
   }
 
   for (const source of UNDERTOW_EXTERNAL_GEOMETRY_SOURCES) {
