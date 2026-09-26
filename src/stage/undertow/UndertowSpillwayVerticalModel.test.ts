@@ -44,8 +44,8 @@ describe('T21-C Undertow vertical reconstruction', () => {
     }
   });
 
-  it('links first-drop landing -> small-drop upper and right-low -> underpass without inventing an absolute Y', () => {
-    const landingToUpper = UNDERTOW_VERTICAL_RELATIONS.find(
+  it('keeps first-drop landing separate from the right-small-drop level while retaining right-low -> underpass', () => {
+    const falseLandingToUpper = UNDERTOW_VERTICAL_RELATIONS.find(
       (relation) =>
         relation.fromId === 'team-a-first-drop-landing' &&
         relation.toId === 'right-small-drop-upper'
@@ -56,8 +56,7 @@ describe('T21-C Undertow vertical reconstruction', () => {
         relation.toId === 'glass-lower-major-floor'
     );
 
-    expect(landingToUpper?.deltaMeters).toBe(0);
-    expect(landingToUpper?.confidence).toBe('HIGH');
+    expect(falseLandingToUpper).toBeUndefined();
     expect(lowToUnderpass?.deltaMeters).toBe(0);
     expect(lowToUnderpass?.confidence).toBe('HIGH');
 
