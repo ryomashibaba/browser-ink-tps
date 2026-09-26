@@ -13,7 +13,7 @@ describe('T21-C Undertow vertical evidence capture plan', () => {
     const request = UNDERTOW_VERTICAL_CAPTURE_REQUESTS[0]!;
     expect(request.status).toBe('INVALIDATED_BY_HEIGHT_ORDER_CORRECTION');
     expect(request.invalidatedBecause).toContain(
-      'floor below the red first-drop lip is lower'
+      'red-guide-side versus blue-guide-side height ordering'
     );
     expect(request.invalidatedBecause).toContain(
       'cannot be used as a direct first-drop magnitude reference'
