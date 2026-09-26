@@ -23,6 +23,10 @@ const firstDropEvidence = [
   'user-turf-vector-blueprint',
   'handoff-t21-masterplan'
 ] as const;
+const remodelGeometryEvidence = [
+  'extracted-temple01-geometry',
+  'user-turf-vector-blueprint'
+] as const;
 
 const unresolvedXz = (notes: string) => ({
   kind: 'UNRESOLVED' as const,
@@ -174,15 +178,15 @@ const entries: readonly StageMeasurementEntry[] = [
     evidenceIds: centerEvidence,
     xz: unresolvedXz('Family summary only; exact A/B small-drop hard edges are recorded in dedicated entries below.'),
     y: {
-      deltaMeters: -1.5,
+      deltaMeters: -3,
       confidence: 'HIGH',
-      evidenceIds: handoff
+      evidenceIds: remodelGeometryEvidence
     },
     transition: {
       kind: 'DROP',
-      deltaYMeters: -1.5,
+      deltaYMeters: -3,
       confidence: 'HIGH',
-      evidenceIds: handoff
+      evidenceIds: remodelGeometryEvidence
     },
     surface: {
       semantics: ['PAINTABLE'],
@@ -205,15 +209,15 @@ const entries: readonly StageMeasurementEntry[] = [
       notes: 'Exact L-shaped second drop edge following the first-drop open area.'
     },
     y: {
-      deltaMeters: -1.5,
+      deltaMeters: -3,
       confidence: 'HIGH',
-      evidenceIds: handoff
+      evidenceIds: remodelGeometryEvidence
     },
     transition: {
       kind: 'DROP',
-      deltaYMeters: -1.5,
+      deltaYMeters: -3,
       confidence: 'HIGH',
-      evidenceIds: handoff
+      evidenceIds: remodelGeometryEvidence
     },
     surface: {
       semantics: ['PAINTABLE'],
@@ -236,15 +240,15 @@ const entries: readonly StageMeasurementEntry[] = [
       notes: '180-degree counterpart of the Team A second drop edge.'
     },
     y: {
-      deltaMeters: -1.5,
+      deltaMeters: -3,
       confidence: 'HIGH',
-      evidenceIds: handoff
+      evidenceIds: remodelGeometryEvidence
     },
     transition: {
       kind: 'DROP',
-      deltaYMeters: -1.5,
+      deltaYMeters: -3,
       confidence: 'HIGH',
-      evidenceIds: handoff
+      evidenceIds: remodelGeometryEvidence
     },
     surface: {
       semantics: ['PAINTABLE'],
@@ -424,7 +428,13 @@ const entries: readonly StageMeasurementEntry[] = [
       'user-underpass-capture-2026-09-25'
     ],
     xz: unresolvedXz('The 2026-09-25 perimeter capture classifies the low/open floor and exits, but the constant-height partition still does not close uniquely in the top-down source.'),
-    y: unknownY('The floor is 1.5m below the measured small-drop upper floor and same-height with the covered underpass; absolute Y remains unresolved.'),
+    y: {
+      floorId: 'RIGHT_LOW',
+      yMeters: 3,
+      confidence: 'HIGH',
+      evidenceIds: ['extracted-temple01-geometry', 'user-right-low-capture-2026-09-25'],
+      notes: 'Temple01 local registration resolves this lower-side floor to project Y=3.0m; the user capture independently binds the blue-lip destination to the right-low area.'
+    },
     transition: noTransition,
     surface: {
       semantics: ['PAINTABLE'],
@@ -447,17 +457,17 @@ const entries: readonly StageMeasurementEntry[] = [
       notes: 'Vector-PDF hard edge measured exactly in plan; the video confirms one-way traversal semantics.'
     },
     y: {
-      candidatesMeters: [1.5, 3],
-      confidence: 'PROVISIONAL',
-      evidenceIds: handoff,
-      notes: 'Candidate drop magnitudes only; no exact value is frozen.'
+      deltaMeters: -4.5,
+      confidence: 'HIGH',
+      evidenceIds: ['extracted-temple01-geometry', 'user-first-drop-video'],
+      notes: 'Locally registered Temple01 geometry resolves the first-drop upper/lower surfaces to model Y=10.5/6.0m, a 4.5m descent.'
     },
     transition: {
       kind: 'ONE_WAY_DROP',
-      candidatesMeters: [1.5, 3],
+      deltaYMeters: -4.5,
       confidence: 'CONFIRMED',
-      evidenceIds: firstDropEvidence,
-      notes: 'No slope, stairs, bidirectional nav connection, or invisible CPU ramp.'
+      evidenceIds: ['extracted-temple01-geometry', ...firstDropEvidence],
+      notes: 'One-way semantics come from gameplay; the exact 4.5m magnitude is supplied by locally verified remodeled geometry. No slope, stairs, bidirectional nav connection, or invisible CPU ramp.'
     },
     surface: {
       semantics: ['ONE_WAY_DROP'],
@@ -480,16 +490,16 @@ const entries: readonly StageMeasurementEntry[] = [
       notes: 'Vector-PDF 180-degree counterpart of the Team A first-drop lip.'
     },
     y: {
-      candidatesMeters: [1.5, 3],
-      confidence: 'PROVISIONAL',
-      evidenceIds: handoff,
-      notes: 'Candidate drop magnitudes only; no exact value is frozen.'
+      deltaMeters: -4.5,
+      confidence: 'HIGH',
+      evidenceIds: ['extracted-temple01-geometry', 'user-first-drop-video'],
+      notes: '180-degree counterpart resolves to the same 10.5->6.0m model-Y descent.'
     },
     transition: {
       kind: 'ONE_WAY_DROP',
-      candidatesMeters: [1.5, 3],
+      deltaYMeters: -4.5,
       confidence: 'CONFIRMED',
-      evidenceIds: firstDropEvidence,
+      evidenceIds: ['extracted-temple01-geometry', ...firstDropEvidence],
       notes: 'Must be traversed by CPU using one-way traversal support rather than hidden geometry.'
     },
     surface: {
@@ -533,7 +543,13 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
       notes: 'Vector spawn-ring center for the absolute-Y node. The surrounding connected spawn terrain is recorded separately and must not be flattened.'
     },
-    y: unknownY('Historical 7.5m hypothesis is intentionally not promoted to canonical.'),
+    y: {
+      floorId: 'TEAM_A_SPAWN',
+      yMeters: 6,
+      confidence: 'HIGH',
+      evidenceIds: ['extracted-temple01-geometry'],
+      notes: 'Temple01 spawn-center sample is model Y=10.5m; normalized against the registered center reference model Y=4.5m -> canonical center Y=0.'
+    },
     transition: noTransition,
     surface: {
       semantics: [],
@@ -556,7 +572,13 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint', 'user-five-rule-maps'],
       notes: 'Vector spawn-ring center for the absolute-Y node. The surrounding connected spawn terrain is recorded separately and must not be flattened.'
     },
-    y: unknownY('Absolute Y remains unresolved.'),
+    y: {
+      floorId: 'TEAM_B_SPAWN',
+      yMeters: 6,
+      confidence: 'HIGH',
+      evidenceIds: ['extracted-temple01-geometry'],
+      notes: '180-degree counterpart spawn center resolves to the same normalized Y=6.0m.'
+    },
     transition: noTransition,
     surface: {
       semantics: [],
@@ -882,6 +904,13 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       label: 'User-provided Sunfish Undertow Spillway Turf vector PDF + matching 3508x2482 JPEG',
       sourceVersion: 'map updated 2024-05-06 / post-Ver.7.2.0 layout',
       notes: 'Primary T21-B planimetric source. PDF linework is vector CAD output; JPEG is used for visual cross-checking.'
+    },
+    {
+      id: 'extracted-temple01-geometry',
+      kind: 'EXTRACTED_GAME_GEOMETRY',
+      label: 'KiTrix BFRES-derived Vss_Temple01 OBJ audited against the user vector blueprint',
+      sourceVersion: 'Fld_Temple01 / remodeled Ver.7.2.0+ model family',
+      notes: 'Git LFS object sha256:a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046, 43,263,289 bytes. Only locally verified drop-lip registration and normalized Y relationships are promoted at HIGH confidence.'
     },
     {
       id: 'nintendo-7-2-changelog',
