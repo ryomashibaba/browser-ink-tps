@@ -619,9 +619,15 @@ if set(underpass_nav) != {"POS_GLASS","NEG_GLASS"}:
 pos_nav=underpass_nav["POS_GLASS"][0]
 neg_nav=underpass_nav["NEG_GLASS"][0]
 nav_area_residual=abs(len(pos_nav)-len(neg_nav))*STEP*STEP
+mirrored_pos={(-ix,-iz) for ix,iz in pos_nav}
+mirror_xor=mirrored_pos ^ neg_nav
+mirror_missing=mirrored_pos-neg_nav
+mirror_extra=neg_nav-mirrored_pos
 print(
     f"T21UNDERPASS SYMMETRY pos_cells={len(pos_nav)} neg_cells={len(neg_nav)} "
-    f"area_residual={nav_area_residual:.3f}"
+    f"area_residual={nav_area_residual:.3f} mirror_xor_cells={len(mirror_xor)} "
+    f"missing={len(mirror_missing)} extra={len(mirror_extra)} "
+    f"mirror_xor_area={len(mirror_xor)*STEP*STEP:.3f}"
 )
 if nav_area_residual>0.50:
     raise SystemExit(
