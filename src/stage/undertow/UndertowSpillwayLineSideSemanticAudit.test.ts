@@ -7,7 +7,7 @@ import {
 } from './UndertowSpillwayLineSideSemanticAudit';
 
 describe('T21-C Undertow line-side semantic audit', () => {
-  it('keeps measured vector-line identities while clearing canonical floor-side bindings', () => {
+  it('keeps the measured line identities and resolves their canonical floor sides only through Temple01 local registration', () => {
     expect(undertowLineSemanticAuditErrors()).toEqual([]);
 
     expect(
@@ -16,27 +16,33 @@ describe('T21-C Undertow line-side semantic audit', () => {
         trace: binding.vectorTraceId,
         lower: binding.lowerSideCanonicalFloorId,
         upper: binding.upperSideCanonicalFloorId,
+        lowerY: binding.lowerSideProjectY,
+        upperY: binding.upperSideProjectY,
         status: binding.sideBindingStatus
       }))
     ).toEqual([
       {
         id: 'TEAM_A_FIRST_DROP_RED',
         trace: 'team-a-first-drop-lip',
-        lower: null,
-        upper: null,
-        status: 'UNRESOLVED_AFTER_2026_09_26_CORRECTION'
+        lower: 'team-a-first-drop-landing',
+        upper: 'team-a-spawn-floor',
+        lowerY: 1.5,
+        upperY: 6,
+        status: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION'
       },
       {
         id: 'TEAM_A_RIGHT_SMALL_DROP_BLUE',
         trace: 'team-a-right-small-drop-lip',
-        lower: null,
-        upper: null,
-        status: 'UNRESOLVED_AFTER_2026_09_26_CORRECTION'
+        lower: 'right-low-floor',
+        upper: 'right-small-drop-upper',
+        lowerY: 3,
+        upperY: 6,
+        status: 'RESOLVED_BY_TEMPLE01_LOCAL_REGISTRATION'
       }
     ]);
   });
 
-  it('records the user-observed red-vs-blue ordering without turning it into a floor Y edge', () => {
+  it('retains the user stills as qualitative ordering evidence rather than pretending they measured the exact deltas', () => {
     expect(UNDERTOW_GUIDE_LINE_SIDE_OBSERVATIONS).toEqual([
       expect.objectContaining({
         lowerGuideSideLineId: 'TEAM_A_FIRST_DROP_RED',
@@ -49,7 +55,7 @@ describe('T21-C Undertow line-side semantic audit', () => {
       .toBeUndefined();
   });
 
-  it('keeps every existing-media finding below canonical floor-side binding strength', () => {
+  it('keeps every pre-model media finding below canonical floor-side binding strength', () => {
     expect(
       UNDERTOW_SIDE_REGISTRATION_FINDINGS.map((finding) => finding.result)
     ).toEqual([
@@ -63,5 +69,4 @@ describe('T21-C Undertow line-side semantic audit', () => {
       expect(finding.canBindCanonicalFloorSides).toBe(false);
     }
   });
-
 });
