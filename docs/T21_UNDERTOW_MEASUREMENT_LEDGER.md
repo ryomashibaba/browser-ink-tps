@@ -483,11 +483,11 @@ Two requested captures were received and reviewed:
 
 The captures strengthen the layered topology without inventing a simple top-down polygon.
 
-New HIGH vertical/topology relations:
-- first-drop open/landing floor = right-small-drop upper floor
+New HIGH vertical/topology relations retained after the 2026-09-26 correction:
 - right-small-drop upper -> right-low = -1.5m
 - right-low floor = covered underpass lower floor
-- therefore the first-drop landing / small-drop upper / right-low / underpass chain is now explicitly connected even though its absolute Y seed is still unresolved
+
+The previous claim that first-drop open/landing floor = right-small-drop upper floor is **superseded and invalid**. The corrective still pair shows that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. Plan-view adjacency between the two L-shaped lips does not imply shared Y.
 
 The two requested captures are now `CAPTURE_RECEIVED`; they must not be requested again. The right-low and underpass source-topology states are `CAPTURED_REQUIRES_PLAN_REGISTRATION`, meaning only the exact PDF-coordinate boundary registration remains.
 
@@ -548,7 +548,8 @@ Seeded now:
 - CENTER_SEEDED: center-low Y=0, center-small-step Y=1.5, and both center-side slope low endpoints Y=1.5
 
 Unseeded exact-relative components:
-- RIGHT_LOW_UNSEEDED: Team A/B first-drop landings, right-small-drop upper, right-low floor, glass lower floor, glass high reference
+- RIGHT_LOW_UNSEEDED: right-small-drop upper, right-low floor, glass lower floor, glass high reference
+- FIRST_DROP_LANDING_UNSEEDED: Team A/B first-drop landing floors, symmetry-linked only
 - SPAWN_UNSEEDED: Team A/B spawn floors only; the edge to first-drop landing remains the PROVISIONAL 1.5m / 3.0m candidate pair
 - SLOPE_HIGH_UNSEEDED: both central slope high endpoints
 - GRATE_UNSEEDED: both grate elevations
@@ -556,25 +557,26 @@ Unseeded exact-relative components:
 The existing 2026-09-25 right-low and underpass clips are sufficient to keep the right-low component internally constrained, but they do not contain an exact tie to center-low Y=0 or center-step Y=1.5. No absolute Y is promoted from perspective appearance.
 
 Minimum remaining vertical evidence classes:
-1. one right-low/underpass/landing -> seeded-center relation
-2. exact first-drop magnitude after the landing component is seeded
-3. one center-slope high-end tie
-4. one grate-elevation tie
+1. one right-low/underpass -> seeded-center relation
+2. one exact first-drop-landing tie to a known/seeded level
+3. exact first-drop magnitude (1.5m vs 3.0m) with a seeded spawn-or-landing side
+4. one center-slope high-end tie
+5. one grate-elevation tie
 
 This does not start T21-D and does not relax the blockout gate.
 
 
-## T21-C — first-drop magnitude capture checkpoint
+## T21-C — 2026-09-26 first-drop interpretation correction
 
-The vertical dependency audit reduces the next user evidence request to one side-profile comparison.
+The marked side-profile request is **invalidated**.
 
-Request-ready evidence:
-- `FIRST_DROP_MAGNITUDE_SIDE_PROFILE`
-- compare the CONFIRMED one-way first drop against the adjacent right-small drop, whose vertical delta is already HIGH at 1.5m
-- frame the spawn-side upper floor, first-drop landing / right-small-drop upper floor, and right-low floor together
-- 180-degree counterpart is acceptable
-- the already received right-low perimeter and underpass captures must not be requested again
+The guide assumed a three-terrace chain:
+spawn upper -> first-drop landing / right-small-drop upper -> right-low.
 
-The purpose is only to distinguish the remaining first-drop candidates, 1.5m versus 3.0m. No candidate is promoted before the comparison evidence is received.
+The user's direct in-game observation plus `IMG_6112.jpeg` / `IMG_6111.jpeg` disproves the shared-middle-level assumption:
+- the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip
+- therefore first-drop landing != right-small-drop upper
+- the exact difference between those lower-side floors is still UNKNOWN
+- the 1.5m blue right-small drop is not a valid direct scale reference for first-drop magnitude
 
-The marked-map capture guide was produced from the exact vector-PDF lip coordinates. Runtime stage geometry remains unchanged and T21-D stays blocked.
+No replacement capture is request-ready yet. The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request remains only as an invalidated audit record. Runtime geometry remains unchanged and T21-D stays blocked.
