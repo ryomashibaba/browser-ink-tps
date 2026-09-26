@@ -1310,3 +1310,39 @@ for name,(comp,loops,lows) in fine_voids.items():
         f"near_y_range={ysummary} "
         f"objects={sorted(objs.items(),key=lambda kv:-kv[1])[:6]}"
     )
+
+
+# Classify every fine void perimeter edge by the immediately adjacent column.
+# This distinguishes inaccessible space behind StageSide walls from open
+# floor cutouts bordered directly by walkable material.
+for name,(comp,loops,lows) in fine_voids.items():
+    edge_class=defaultdict(int)
+    walk_top=defaultdict(int)
+    solid_top=defaultdict(int)
+    for c in comp:
+        for d in ((1,0),(-1,0),(0,1),(0,-1)):
+            n=(c[0]+d[0],c[1]+d[1])
+            if n in comp:
+                continue
+            x=n[0]*STEP; z=n[1]*STEP
+            walk,solid,water=void_column_class(x,z)
+            if walk:
+                edge_class["WALK"]+=1
+                y,o,m=walk[0]
+                walk_top[(o,m,round(y,3))]+=1
+            elif water:
+                edge_class["WATER"]+=1
+            elif solid and solid[0][0]>=VOID_SOLID_TOP_Y:
+                edge_class["SOLID_CAP"]+=1
+                y,o,m=solid[0]
+                solid_top[(o,m,round(y,3))]+=1
+            elif solid:
+                edge_class["LOW_ONLY"]+=1
+            else:
+                edge_class["EMPTY"]+=1
+    total=sum(edge_class.values())
+    print(
+        f"T21VOID EDGECLASS {name} total={total} classes={dict(sorted(edge_class.items()))} "
+        f"walk_top={sorted(walk_top.items(),key=lambda kv:-kv[1])[:10]} "
+        f"solid_top={sorted(solid_top.items(),key=lambda kv:-kv[1])[:10]}"
+    )
