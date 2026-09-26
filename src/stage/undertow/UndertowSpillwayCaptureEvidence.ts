@@ -8,7 +8,7 @@ export interface UndertowUserCaptureEvidence {
   filename?: string;
   filenames?: readonly string[];
   durationSeconds?: number;
-  region: 'GLASS_UNDERPASS' | 'RIGHT_LOW' | 'FIRST_DROP_HEIGHT_ORDER';
+  region: 'GLASS_UNDERPASS' | 'RIGHT_LOW' | 'GUIDE_LINE_SIDE_HEIGHT_ORDER';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -45,7 +45,7 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
     {
       id: 'user-first-drop-height-stills-2026-09-26',
       filenames: ['IMG_6112.jpeg', 'IMG_6111.jpeg'],
-      region: 'FIRST_DROP_HEIGHT_ORDER',
+      region: 'GUIDE_LINE_SIDE_HEIGHT_ORDER',
       confidence: 'CONFIRMED',
       facts: [
         'The user identifies the floor referred to as below the red guide line as lower than the floor referred to as below the blue guide line.',
