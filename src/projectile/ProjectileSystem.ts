@@ -393,7 +393,7 @@ export class ProjectileSystem {
       }
 
       const paintHit = this.findNearestSurfaceHit(previous, next);
-      const blockerHit = this.physics.castStageSegment(previous, next, 'projectile');
+      const blockerHit = this.physics.castStageSegment(previous, next, 'ink-projectile');
       const qaHit = slot.sourceKind === 'HUMAN'
         ? this.combatTargets.findNearestHit(previous, next, slot.team)
         : null;
@@ -992,7 +992,7 @@ export class ProjectileSystem {
     const end = origin.clone().add(rayDirection.clone().mulScalar(range));
 
     const paintHit = this.findNearestSurfaceHit(origin, end);
-    const blockerHit = this.physics.castStageSegment(origin, end, 'projectile');
+    const blockerHit = this.physics.castStageSegment(origin, end, 'ink-projectile');
     const qaHit = this.combatTargets.findNearestHit(origin, end, team);
     const cpuHit = this.cpuAgents.findNearestCombatHit(origin, end, team);
 
@@ -1519,7 +1519,7 @@ export class ProjectileSystem {
     const blockerHit = this.physics.castStageSegment(
       request.origin,
       end,
-      'projectile'
+      'ink-projectile'
     );
     const cpuHit = this.cpuAgents.findNearestCombatHit(
       request.origin,

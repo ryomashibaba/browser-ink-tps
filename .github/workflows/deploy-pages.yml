@@ -23,6 +23,722 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: T21 temporary Temple01 geometry probe
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/kitrix-lfs
+          mkdir -p /tmp/kitrix-lfs
+          cd /tmp/kitrix-lfs
+          git init -q
+          git remote add origin https://github.com/kirakira-dev/KiTrix.git
+          git lfs install --local
+          cat > temple01.pointer <<'PTR'
+          version https://git-lfs.github.com/spec/v1
+          oid sha256:a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046
+          size 43263289
+          PTR
+          timeout 180s git lfs smudge < temple01.pointer > Vss_Temple01.obj
+          python - <<'PY'
+          from collections import Counter
+          from pathlib import Path
+          import math
+
+          p = Path('/tmp/kitrix-lfs/Vss_Temple01.obj')
+          vertices = [None]
+          faces = []
+          current_object = '(none)'
+          current_material = '(none)'
+
+          def active(name):
+              return (
+                  name.startswith('Fld_Temple01_') or
+                  name.startswith('FldObj_Temple01_PntSet_')
+              )
+
+          with p.open('r', encoding='utf-8', errors='replace') as fh:
+              for line in fh:
+                  if line.startswith('o '):
+                      current_object = line[2:].strip()
+                  elif line.startswith('usemtl '):
+                      current_material = line[7:].strip()
+                  elif line.startswith('v '):
+                      q=line.split()
+                      vertices.append(tuple(map(float,q[1:4])))
+                  elif line.startswith('f ') and active(current_object):
+                      ids=[]
+                      for token in line.split()[1:]:
+                          ids.append(int(token.split('/')[0]))
+                      if len(ids)>=3:
+                          for i in range(1,len(ids)-1):
+                              faces.append((ids[0],ids[i],ids[i+1],current_object,current_material))
+
+          print(f'T21RAY file_bytes={p.stat().st_size} vertices={len(vertices)-1} active_faces={len(faces)}')
+
+          def floor_hits(x,z):
+              raw=[]
+              for ia,ib,ic,obj,mat in faces:
+                  a=vertices[ia]; b=vertices[ib]; c=vertices[ic]
+                  x1,y1,z1=a; x2,y2,z2=b; x3,y3,z3=c
+                  den=(z2-z3)*(x1-x3)+(x3-x2)*(z1-z3)
+                  if abs(den)<1e-9:
+                      continue
+                  wa=((z2-z3)*(x-x3)+(x3-x2)*(z-z3))/den
+                  wb=((z3-z1)*(x-x3)+(x1-x3)*(z-z3))/den
+                  wc=1.0-wa-wb
+                  if min(wa,wb,wc)<-1e-5 or max(wa,wb,wc)>1.00001:
+                      continue
+                  ux,uy,uz=x2-x1,y2-y1,z2-z1
+                  vx,vy,vz=x3-x1,y3-y1,z3-z1
+                  nx=uy*vz-uz*vy
+                  ny=uz*vx-ux*vz
+                  nz=ux*vy-uy*vx
+                  norm=math.sqrt(nx*nx+ny*ny+nz*nz)
+                  if norm<1e-9 or abs(ny)/norm<0.35:
+                      continue
+                  y=wa*y1+wb*y2+wc*y3
+                  raw.append((y,obj,mat,abs(ny)/norm))
+              raw.sort(reverse=True,key=lambda r:r[0])
+              out=[]
+              for hit in raw:
+                  if not out or abs(hit[0]-out[-1][0])>0.03:
+                      out.append(hit)
+              return out
+
+          ORIGIN=(420.96,297.66)
+          NEG=(131.82,155.58)
+          POS=(709.98,439.5)
+          dx=POS[0]-NEG[0]; dy=POS[1]-NEG[1]
+          ll=math.hypot(dx,dy)
+          zdir=(dx/ll,dy/ll)
+          xdir=(zdir[1],-zdir[0])
+
+          def conv(pt):
+              dx=pt[0]-ORIGIN[0]; dy=pt[1]-ORIGIN[1]
+              return (
+                  (dx*xdir[0]+dy*xdir[1])/4.8,
+                  (dx*zdir[0]+dy*zdir[1])/4.8
+              )
+
+          def centroid(points):
+              pts=[conv(p) for p in points]
+              return (sum(p[0] for p in pts)/len(pts),sum(p[1] for p in pts)/len(pts))
+
+          targets={
+              'CENTER_ORIGIN':(0.0,0.0),
+              'NEG_SPAWN':conv(NEG),
+              'POS_SPAWN':conv(POS),
+              'CENTER_FACE':centroid([(406.08,308.76),(435.84,308.76),(435.84,286.44),(406.08,286.44)]),
+              'NEG_CENTER_STEP':centroid([(406.08,282.84),(435.84,282.84),(435.84,286.44),(406.08,286.44)]),
+              'POS_CENTER_STEP':centroid([(406.08,308.76),(435.84,308.76),(435.84,312.36),(406.08,312.36)]),
+              'NEG_GRATE':centroid([(340.56,119.88),(363.48,119.88),(363.48,150.48),(340.56,150.48)]),
+              'POS_GRATE':centroid([(478.44,444.72),(501.36,444.72),(501.36,475.32),(478.44,475.32)]),
+              'NEG_GLASS':centroid([(382.44,230.28),(420.96,230.28),(420.96,267.84),(382.44,267.84)]),
+              'POS_GLASS':centroid([(420.96,327.36),(459.48,327.36),(459.48,364.92),(420.96,364.92)]),
+              'NEG_GLASS_MARKER':centroid([(382.44,244.92),(420.96,244.92),(420.96,261.24),(382.44,261.24)]),
+              'POS_GLASS_MARKER':centroid([(420.96,333.96),(459.48,333.96),(459.48,350.28),(420.96,350.28)]),
+          }
+
+          for name,(x,z) in targets.items():
+              hits=floor_hits(x,z)
+              brief=[(round(y,3),obj,mat) for y,obj,mat,_ in hits[:8]]
+              print(f'T21RAY POINT {name} x={x:.4f} z={z:.4f} hits={brief}')
+
+          lines={
+              'A_FIRST':[(620.4,423.12),(664.68,423.12),(664.68,394.2)],
+              'A_RIGHT':[(664.68,394.2),(702.36,394.2),(702.36,350.76)],
+              'B_FIRST':[(221.52,172.08),(177.24,172.08),(177.24,201.0)],
+              'B_RIGHT':[(177.24,201.0),(139.56,201.0),(139.56,244.44)],
+          }
+
+          for lname,pdfpts in lines.items():
+              pts=[conv(p) for p in pdfpts]
+              for si,(a,b) in enumerate(zip(pts,pts[1:])):
+                  tx=b[0]-a[0]; tz=b[1]-a[1]
+                  ln=math.hypot(tx,tz)
+                  nx,nz=-tz/ln,tx/ln
+                  for side,sign in [('LEFT',1),('RIGHT',-1)]:
+                      for off in (0.35,0.75,1.25):
+                          vals=[]
+                          for t in (0.25,0.5,0.75):
+                              x=a[0]+tx*t+nx*off*sign
+                              z=a[1]+tz*t+nz*off*sign
+                              hits=floor_hits(x,z)
+                              vals.append(None if not hits else round(hits[0][0],3))
+                          print(f'T21RAY LINE {lname} seg={si} side={side} off={off:.2f} top={vals}')
+
+          # Inspect the compact Turf-only central slope object directly.
+          slope_name='FldObj_Temple01_PntSet_pCube21531_1__FloorSlope00'
+          slope_faces=[f for f in faces if f[3]==slope_name]
+          print(f'T21RAY SLOPE_OBJECT faces={len(slope_faces)}')
+          rows=[]
+          for ia,ib,ic,obj,mat in slope_faces:
+              tri=[vertices[ia],vertices[ib],vertices[ic]]
+              cx=sum(v[0] for v in tri)/3; cz=sum(v[2] for v in tri)/3
+              ymin=min(v[1] for v in tri); ymax=max(v[1] for v in tri)
+              xmin=min(v[0] for v in tri); xmax=max(v[0] for v in tri)
+              zmin=min(v[2] for v in tri); zmax=max(v[2] for v in tri)
+              rows.append((round(cx,3),round(cz,3),round(ymin,3),round(ymax,3),round(xmin,3),round(xmax,3),round(zmin,3),round(zmax,3)))
+          for row in sorted(set(rows)):
+              print('T21RAY SLOPE_TRI',row)
+
+          def walkable_hit(x,z):
+              hits=floor_hits(x,z)
+              for y,obj,mat,up in hits:
+                  if any(k in mat for k in (
+                      'FloorConcrete','FloorLine','FloorSlope','FloorGrass',
+                      'GrassFloor','FloorMetal','FloorRubber','BridgeMetal'
+                  )):
+                      return (y,obj,mat)
+              return None
+
+          # Build a spatial index for floor-height rasterization.
+          walk_tokens=(
+              'FloorConcrete','FloorLine','FloorSlope','FloorGrass',
+              'GrassFloor','FloorMetal','FloorRubber','BridgeMetal'
+          )
+          walk_faces=[f for f in faces if any(k in f[4] for k in walk_tokens)]
+          cell_size=2.0
+          bins={}
+          for fi,(ia,ib,ic,obj,mat) in enumerate(walk_faces):
+              tri=[vertices[ia],vertices[ib],vertices[ic]]
+              xmin=min(v[0] for v in tri); xmax=max(v[0] for v in tri)
+              zmin=min(v[2] for v in tri); zmax=max(v[2] for v in tri)
+              ix0=math.floor(xmin/cell_size); ix1=math.floor(xmax/cell_size)
+              iz0=math.floor(zmin/cell_size); iz1=math.floor(zmax/cell_size)
+              for ix in range(ix0,ix1+1):
+                  for iz in range(iz0,iz1+1):
+                      bins.setdefault((ix,iz),[]).append(fi)
+
+          def fast_top(x,z):
+              candidates=bins.get((math.floor(x/cell_size),math.floor(z/cell_size)),())
+              best=None
+              for fi in candidates:
+                  ia,ib,ic,obj,mat=walk_faces[fi]
+                  a=vertices[ia]; b=vertices[ib]; cc=vertices[ic]
+                  x1,y1,z1=a; x2,y2,z2=b; x3,y3,z3=cc
+                  den=(z2-z3)*(x1-x3)+(x3-x2)*(z1-z3)
+                  if abs(den)<1e-9:
+                      continue
+                  wa=((z2-z3)*(x-x3)+(x3-x2)*(z-z3))/den
+                  wb=((z3-z1)*(x-x3)+(x1-x3)*(z-z3))/den
+                  wc=1-wa-wb
+                  if min(wa,wb,wc)<-1e-6:
+                      continue
+                  ux,uy,uz=x2-x1,y2-y1,z2-z1
+                  vx,vy,vz=x3-x1,y3-y1,z3-z1
+                  nx=uy*vz-uz*vy; ny=uz*vx-ux*vz; nz=ux*vy-uy*vx
+                  norm=math.sqrt(nx*nx+ny*ny+nz*nz)
+                  if norm<1e-9 or abs(ny)/norm<0.35:
+                      continue
+                  y=wa*y1+wb*y2+wc*y3
+                  if best is None or y>best:
+                      best=y
+              return best
+
+          # Rasterize model walkable top surfaces and extract connected
+          # discontinuity contours. These are used only to register the PDF
+          # plan to the remodel mesh; no Y is promoted from this temporary step.
+          step=0.5
+          xs=[-42.0+i*step for i in range(int(84/step)+1)]
+          zs=[-70.0+i*step for i in range(int(140/step)+1)]
+          grid={}
+          for ix,x in enumerate(xs):
+              for iz,z in enumerate(zs):
+                  grid[(ix,iz)]=fast_top(x,z)
+
+          edges=[]
+          for ix,x in enumerate(xs):
+              for iz,z in enumerate(zs):
+                  h=grid[(ix,iz)]
+                  if h is None:
+                      continue
+                  for dix,diz in ((1,0),(0,1)):
+                      j=(ix+dix,iz+diz)
+                      if j not in grid or grid[j] is None:
+                          continue
+                      h2=grid[j]
+                      if abs(h2-h)>=1.0:
+                          ex=x+dix*step*0.5
+                          ez=z+diz*step*0.5
+                          pair=tuple(sorted((round(h*2)/2,round(h2*2)/2)))
+                          edges.append((round(ex,3),round(ez,3),pair))
+
+          edge_at={}
+          for x,z,pair in edges:
+              edge_at.setdefault((x,z),Counter())[pair]+=1
+
+          # Connectivity in metric space, allowing adjacent half-meter edge samples.
+          points=set(edge_at)
+          comps=[]
+          while points:
+              seed=points.pop()
+              q=[seed]; comp=[seed]
+              while q:
+                  px,pz=q.pop()
+                  near=[]
+                  for dx in (-0.5,-0.25,0,0.25,0.5):
+                      for dz in (-0.5,-0.25,0,0.25,0.5):
+                          if dx==0 and dz==0:
+                              continue
+                          np=(round(px+dx,3),round(pz+dz,3))
+                          if np in points:
+                              points.remove(np); q.append(np); comp.append(np)
+              comps.append(comp)
+
+          comps.sort(key=len,reverse=True)
+          print(f'T21EDGE total={len(edges)} components={len(comps)}')
+          for ci,comp in enumerate(comps[:30]):
+              if len(comp)<4:
+                  continue
+              xvals=[p[0] for p in comp]; zvals=[p[1] for p in comp]
+              pairs=Counter()
+              for p in comp:
+                  pairs.update(edge_at[p])
+              print(
+                  f'T21EDGE COMP {ci} n={len(comp)} '
+                  f'bbox=({min(xvals):.2f},{min(zvals):.2f})..({max(xvals):.2f},{max(zvals):.2f}) '
+                  f'pairs={pairs.most_common(5)}'
+              )
+
+          # Extract candidate outer StageSide upper-edge vertices.
+          for target in (
+              'Fld_Temple01_mesh01_low146_1__StageSide00',
+              'FldObj_Temple01_PntSet_mesh01_low153_1__StageSide00'
+          ):
+              pts=set()
+              for ia,ib,ic,obj,mat in faces:
+                  if obj != target:
+                      continue
+                  for vi in (ia,ib,ic):
+                      x,y,z=vertices[vi]
+                      if y >= 5.95:
+                          pts.add((round(x,4),round(y,4),round(z,4)))
+              print(f'T21OUTER {target} count={len(pts)}')
+              for pnt in sorted(pts,key=lambda p:(p[2],p[0],p[1])):
+                  print('T21OUTER V',target,pnt)
+
+          # Solve a 2D similarity registration from the vector-PDF exterior
+          # to the OBJ walkable exterior.  The PDF's project frame was defined
+          # independently, so identity XZ must not be assumed.
+          pdf_outer=[
+              (340.56,119.88),(285.12,119.88),(285.12,89.28),(258.36,89.28),
+              (243.12,104.64),(243.12,119.88),(109.44,119.88),(70.68,158.64),
+              (70.68,362.28),(109.8,408.96),(259.8,408.96),(259.8,444.72),
+              (336.0,444.72),(336.0,414.84),(345.36,414.84),(345.36,444.72),
+              (393.6,444.72),(393.6,408.96),(406.08,408.96),(406.08,444.72),
+              (501.36,444.72),(501.36,475.32),(556.8,475.32),(556.8,505.92),
+              (583.56,505.92),(598.8,490.56),(598.8,475.32),(732.48,475.32),
+              (771.24,436.56),(771.24,232.92),(732.12,186.24),(582.12,186.24),
+              (582.12,150.48),(505.92,150.48),(505.92,180.36),(496.56,180.36),
+              (496.56,150.48),(448.32,150.48),(448.32,186.24),(435.84,186.24),
+              (435.84,150.48),(340.56,150.48)
+          ]
+          src_poly=[conv(p) for p in pdf_outer]
+
+          def densify(poly, spacing=0.5):
+              out=[]
+              for a,b in zip(poly,poly[1:]+poly[:1]):
+                  dx=b[0]-a[0]; dz=b[1]-a[1]
+                  ln=math.hypot(dx,dz)
+                  n=max(1,int(math.ceil(ln/spacing)))
+                  for i in range(n):
+                      t=i/n
+                      out.append((a[0]+dx*t,a[1]+dz*t))
+              return out
+
+          src=densify(src_poly,0.5)
+
+          # Exterior boundary of the rasterized walkable union:
+          # flood-fill empty cells from the raster box and retain occupied cells
+          # adjacent to that outside component.
+          occ=set(k for k,h in grid.items() if h is not None)
+          outside=set()
+          q=[]
+          max_ix=len(xs)-1; max_iz=len(zs)-1
+          for ix in range(max_ix+1):
+              for iz in (0,max_iz):
+                  if (ix,iz) not in occ and (ix,iz) not in outside:
+                      outside.add((ix,iz)); q.append((ix,iz))
+          for iz in range(max_iz+1):
+              for ix in (0,max_ix):
+                  if (ix,iz) not in occ and (ix,iz) not in outside:
+                      outside.add((ix,iz)); q.append((ix,iz))
+          qi=0
+          while qi<len(q):
+              ix,iz=q[qi]; qi+=1
+              for dix,diz in ((1,0),(-1,0),(0,1),(0,-1)):
+                  j=(ix+dix,iz+diz)
+                  if 0<=j[0]<=max_ix and 0<=j[1]<=max_iz and j not in occ and j not in outside:
+                      outside.add(j); q.append(j)
+
+          target=[]
+          for ix,iz in occ:
+              if any((ix+dx,iz+dz) in outside for dx,dz in ((1,0),(-1,0),(0,1),(0,-1))):
+                  target.append((xs[ix],zs[iz]))
+          print(f'T21REG src={len(src)} target_outer={len(target)}')
+
+          # Spatial hash for nearest-boundary lookup.
+          nb=2.0
+          tbin={}
+          for p2 in target:
+              tbin.setdefault((math.floor(p2[0]/nb),math.floor(p2[1]/nb)),[]).append(p2)
+
+          def nearest(p2,max_ring=6):
+              bx=math.floor(p2[0]/nb); bz=math.floor(p2[1]/nb)
+              best=None; bd=1e30
+              for ring in range(max_ring+1):
+                  found=False
+                  for dx in range(-ring,ring+1):
+                      for dz in range(-ring,ring+1):
+                          if ring and abs(dx)!=ring and abs(dz)!=ring:
+                              continue
+                          for q2 in tbin.get((bx+dx,bz+dz),()):
+                              d=(p2[0]-q2[0])**2+(p2[1]-q2[1])**2
+                              if d<bd:
+                                  bd=d; best=q2; found=True
+                  if found and bd <= ((ring+1)*nb)**2:
+                      break
+              return best,math.sqrt(bd)
+
+          def apply_tf(p2,a,b,tx,tz):
+              return (a*p2[0]-b*p2[1]+tx,b*p2[0]+a*p2[1]+tz)
+
+          def solve_similarity(pairs):
+              ps=[p for p,q in pairs]; qs=[q for p,q in pairs]
+              pc=(sum(p[0] for p in ps)/len(ps),sum(p[1] for p in ps)/len(ps))
+              qc=(sum(q[0] for q in qs)/len(qs),sum(q[1] for q in qs)/len(qs))
+              den=aa=bb=0.0
+              for p2,q2 in pairs:
+                  x=p2[0]-pc[0]; z=p2[1]-pc[1]
+                  u=q2[0]-qc[0]; v=q2[1]-qc[1]
+                  den+=x*x+z*z
+                  aa+=x*u+z*v
+                  bb+=x*v-z*u
+              a=aa/den; b=bb/den
+              tx=qc[0]-(a*pc[0]-b*pc[1])
+              tz=qc[1]-(b*pc[0]+a*pc[1])
+              return a,b,tx,tz
+
+          def icp(theta0,scale0):
+              a=scale0*math.cos(theta0); b=scale0*math.sin(theta0)
+              tx=tz=0.0
+              for _ in range(35):
+                  matched=[]
+                  scored=[]
+                  for p2 in src:
+                      tp=apply_tf(p2,a,b,tx,tz)
+                      q2,d=nearest(tp)
+                      if q2 is not None:
+                          scored.append((d,p2,q2))
+                  scored.sort(key=lambda x:x[0])
+                  keep=scored[:max(20,int(len(scored)*0.78))]
+                  matched=[(p2,q2) for d,p2,q2 in keep]
+                  na,nbb,ntx,ntz=solve_similarity(matched)
+                  if max(abs(na-a),abs(nbb-b),abs(ntx-tx),abs(ntz-tz))<1e-6:
+                      a,b,tx,tz=na,nbb,ntx,ntz
+                      break
+                  a,b,tx,tz=na,nbb,ntx,ntz
+              ds=[]
+              for p2 in src:
+                  _,d=nearest(apply_tf(p2,a,b,tx,tz))
+                  ds.append(d)
+              ds.sort()
+              trim=ds[:max(1,int(len(ds)*0.78))]
+              rms=math.sqrt(sum(d*d for d in trim)/len(trim))
+              p95=ds[min(len(ds)-1,int(len(ds)*0.95))]
+              return rms,p95,a,b,tx,tz
+
+          sols=[]
+          for deg in range(-180,180,15):
+              for s0 in (0.75,0.85,0.95,1.05):
+                  sols.append(icp(math.radians(deg),s0))
+          sols.sort(key=lambda v:v[0])
+          for rank,sol in enumerate(sols[:8]):
+              rms,p95,a,b,tx,tz=sol
+              sc=math.hypot(a,b); th=math.degrees(math.atan2(b,a))
+              print(f'T21REG SOL {rank} rms={rms:.4f} p95={p95:.4f} scale={sc:.6f} rot_deg={th:.4f} tx={tx:.4f} tz={tz:.4f}')
+
+          best=sols[0]
+          _,_,ra,rb,rtx,rtz=best
+          reg_lines={
+              'A_FIRST':[(620.4,423.12),(664.68,423.12),(664.68,394.2)],
+              'A_RIGHT':[(664.68,394.2),(702.36,394.2),(702.36,350.76)],
+              'B_FIRST':[(221.52,172.08),(177.24,172.08),(177.24,201.0)],
+              'B_RIGHT':[(177.24,201.0),(139.56,201.0),(139.56,244.44)],
+          }
+          for lname,pdfpts in reg_lines.items():
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpts]
+              print(f'T21REG LINE {lname} pts={[tuple(round(v,4) for v in p) for p in rp]}')
+              for si,(aa2,bb2) in enumerate(zip(rp,rp[1:])):
+                  dx=bb2[0]-aa2[0]; dz=bb2[1]-aa2[1]
+                  ln=math.hypot(dx,dz); nx,nz=-dz/ln,dx/ln
+                  mx=(aa2[0]+bb2[0])*0.5; mz=(aa2[1]+bb2[1])*0.5
+                  for side,sign in [('LEFT',1),('RIGHT',-1)]:
+                      vals=[]
+                      for off in (0.35,0.75,1.25,2.0):
+                          h=fast_top(mx+nx*off*sign,mz+nz*off*sign)
+                          vals.append(None if h is None else round(h,3))
+                      print(f'T21REG SIDE {lname} seg={si} {side} top={vals}')
+
+          # Registered semantic landmarks and material-backed side samples.
+          landmarks={
+              'CENTER_ORIGIN':(0.0,0.0),
+              'NEG_SPAWN':conv(NEG),
+              'POS_SPAWN':conv(POS),
+              'NEG_GRATE':centroid([(340.56,119.88),(363.48,119.88),(363.48,150.48),(340.56,150.48)]),
+              'POS_GRATE':centroid([(478.44,444.72),(501.36,444.72),(501.36,475.32),(478.44,475.32)]),
+              'NEG_GLASS':centroid([(382.44,230.28),(420.96,230.28),(420.96,267.84),(382.44,267.84)]),
+              'POS_GLASS':centroid([(420.96,327.36),(459.48,327.36),(459.48,364.92),(420.96,364.92)]),
+          }
+          for name,p0 in landmarks.items():
+              rp=apply_tf(p0,ra,rb,rtx,rtz)
+              h=walkable_hit(rp[0],rp[1])
+              print(f'T21SEM LANDMARK {name} model=({rp[0]:.4f},{rp[1]:.4f}) hit={h}')
+
+          for lname,pdfpts in reg_lines.items():
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpts]
+              for si,(aa2,bb2) in enumerate(zip(rp,rp[1:])):
+                  dx=bb2[0]-aa2[0]; dz=bb2[1]-aa2[1]
+                  ln=math.hypot(dx,dz); nx,nz=-dz/ln,dx/ln
+                  mx=(aa2[0]+bb2[0])*0.5; mz=(aa2[1]+bb2[1])*0.5
+                  for side,sign in [('LEFT',1),('RIGHT',-1)]:
+                      for off in (1.0,2.0):
+                          x=mx+nx*off*sign; z=mz+nz*off*sign
+                          h=walkable_hit(x,z)
+                          print(f'T21SEM SIDE {lname} seg={si} {side} off={off:.1f} point=({x:.4f},{z:.4f}) hit={h}')
+
+          # Local registration verification: compare each registered PDF lip
+          # against the rasterized OBJ height-discontinuity contour, independent
+          # of the outer-boundary ICP residual.
+          def point_segment_distance(pnt,a,b):
+              px,pz=pnt; ax,az=a; bx,bz=b
+              dx=bx-ax; dz=bz-az
+              den=dx*dx+dz*dz
+              if den<=1e-12:
+                  return math.hypot(px-ax,pz-az)
+              t=max(0.0,min(1.0,((px-ax)*dx+(pz-az)*dz)/den))
+              qx=ax+t*dx; qz=az+t*dz
+              return math.hypot(px-qx,pz-qz)
+
+          expected_pairs={
+              'A_FIRST':(6.0,10.5),
+              'B_FIRST':(6.0,10.5),
+              'A_RIGHT':(7.5,10.5),
+              'B_RIGHT':(7.5,10.5),
+          }
+          for lname,pdfpts in reg_lines.items():
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpts]
+              expected=expected_pairs[lname]
+              for si,(aa2,bb2) in enumerate(zip(rp,rp[1:])):
+                  nearby=[]
+                  exactish=[]
+                  for ex,ez,pair in edges:
+                      d=point_segment_distance((ex,ez),aa2,bb2)
+                      if d<=3.0:
+                          nearby.append((d,pair,ex,ez))
+                          if pair==expected:
+                              exactish.append((d,ex,ez))
+                  nearby.sort()
+                  pair_counts=Counter(pair for d,pair,ex,ez in nearby)
+                  exactish.sort()
+                  nearest_exact=[round(v[0],3) for v in exactish[:12]]
+                  print(
+                      f'T21VERIFY EDGE {lname} seg={si} expected={expected} '
+                      f'near_pairs={pair_counts.most_common(8)} '
+                      f'nearest_expected={nearest_exact}'
+                  )
+
+          center_checks={
+              'CENTER_FACE':centroid([(406.08,308.76),(435.84,308.76),(435.84,286.44),(406.08,286.44)]),
+              'NEG_CENTER_STEP':centroid([(406.08,282.84),(435.84,282.84),(435.84,286.44),(406.08,286.44)]),
+              'POS_CENTER_STEP':centroid([(406.08,308.76),(435.84,308.76),(435.84,312.36),(406.08,312.36)]),
+          }
+          for name,p0 in center_checks.items():
+              rp=apply_tf(p0,ra,rb,rtx,rtz)
+              print(f'T21VERIFY CENTER {name} model=({rp[0]:.4f},{rp[1]:.4f}) hit={walkable_hit(rp[0],rp[1])}')
+
+          # Probe multiple offsets around each center-step strip because the
+          # strip is only 0.75 project-m deep and registration error is sub-metric.
+          for name,pdfpoly in (
+              ('NEG_CENTER_STEP',[(406.08,282.84),(435.84,282.84),(435.84,286.44),(406.08,286.44)]),
+              ('POS_CENTER_STEP',[(406.08,308.76),(435.84,308.76),(435.84,312.36),(406.08,312.36)]),
+          ):
+              rp=[apply_tf(conv(p),ra,rb,rtx,rtz) for p in pdfpoly]
+              cx=sum(p[0] for p in rp)/len(rp); cz=sum(p[1] for p in rp)/len(rp)
+              print(f'T21VERIFY CENTERGRID {name} center=({cx:.4f},{cz:.4f})')
+              for dx0 in (-0.75,-0.35,0,0.35,0.75):
+                  for dz0 in (-0.75,-0.35,0,0.35,0.75):
+                      h=walkable_hit(cx+dx0,cz+dz0)
+                      if h is not None:
+                          print(f'T21VERIFY CENTERGRID {name} d=({dx0:+.2f},{dz0:+.2f}) hit={h}')
+
+          # Probe the two remaining vertical blockers against registered Temple01
+          # geometry: central slope high ends and the symmetric grate pair.
+          def point_in_poly(x,z,poly,margin=0.0):
+              # Convex/near-rectangular footprint; margin is handled by bbox fallback.
+              inside=False
+              j=len(poly)-1
+              for i in range(len(poly)):
+                  xi,zi=poly[i]; xj,zj=poly[j]
+                  if ((zi>z)!=(zj>z)) and (x < (xj-xi)*(z-zi)/(zj-zi+1e-30)+xi):
+                      inside=not inside
+                  j=i
+              if inside:
+                  return True
+              if margin<=0:
+                  return False
+              xmin=min(p[0] for p in poly)-margin; xmax=max(p[0] for p in poly)+margin
+              zmin=min(p[1] for p in poly)-margin; zmax=max(p[1] for p in poly)+margin
+              return xmin<=x<=xmax and zmin<=z<=zmax
+
+          remaining_polys={
+              'CENTER_SLOPE_LEFT':[(393.6,312.36),(409.44,312.36),(409.44,369.84),(393.6,369.84)],
+              'CENTER_SLOPE_RIGHT':[(432.48,225.36),(448.32,225.36),(448.32,282.84),(432.48,282.84)],
+              'NEG_GRATE':[(340.56,119.88),(363.48,119.88),(363.48,150.48),(340.56,150.48)],
+              'POS_GRATE':[(478.44,444.72),(501.36,444.72),(501.36,475.32),(478.44,475.32)],
+          }
+
+          for pname,pdfpoly in remaining_polys.items():
+              poly=[apply_tf(conv(p0),ra,rb,rtx,rtz) for p0 in pdfpoly]
+              print(f'T21REMAIN POLY {pname} model={[tuple(round(v,4) for v in p0) for p0 in poly]}')
+              xmin=min(p0[0] for p0 in poly); xmax=max(p0[0] for p0 in poly)
+              zmin=min(p0[1] for p0 in poly); zmax=max(p0[1] for p0 in poly)
+
+              # Dense point samples: report all nearly-horizontal hits, not just
+              # paintable-floor tokens, so grates are visible too.
+              sample_hits=Counter()
+              sample_material_y=Counter()
+              for ix in range(17):
+                  x=xmin+(xmax-xmin)*ix/16
+                  for iz in range(25):
+                      z=zmin+(zmax-zmin)*iz/24
+                      if not point_in_poly(x,z,poly,0):
+                          continue
+                      hits=floor_hits(x,z)
+                      if hits:
+                          for y,obj,mat,up in hits[:5]:
+                              sample_hits[(round(y,2),mat)]+=1
+                              sample_material_y[(mat,round(y,2))]+=1
+              print(f'T21REMAIN HITS {pname} top={sample_hits.most_common(30)}')
+
+              # Object/face overlap by triangle centroid, with a 0.75m envelope
+              # to tolerate the sub-meter plan-registration residual.
+              overlaps={}
+              for ia,ib,ic,obj,mat in faces:
+                  tri=[vertices[ia],vertices[ib],vertices[ic]]
+                  cx=sum(v[0] for v in tri)/3
+                  cz=sum(v[2] for v in tri)/3
+                  if not point_in_poly(cx,cz,poly,0.75):
+                      continue
+                  # Ignore near-vertical walls; keep walkable/grate/slope planes.
+                  a,b,cc=tri
+                  ux,uy,uz=b[0]-a[0],b[1]-a[1],b[2]-a[2]
+                  vx,vy,vz=cc[0]-a[0],cc[1]-a[1],cc[2]-a[2]
+                  nx=uy*vz-uz*vy; ny=uz*vx-ux*vz; nz=ux*vy-uy*vx
+                  norm=math.sqrt(nx*nx+ny*ny+nz*nz)
+                  if norm<1e-9 or abs(ny)/norm<0.25:
+                      continue
+                  s=overlaps.setdefault((obj,mat),{'n':0,'ys':[],'cx':[],'cz':[]})
+                  s['n']+=1
+                  s['ys'].extend(v[1] for v in tri)
+                  s['cx'].append(cx); s['cz'].append(cz)
+              rows=[]
+              for (obj,mat),s in overlaps.items():
+                  rows.append((
+                      s['n'],obj,mat,min(s['ys']),max(s['ys']),
+                      min(s['cx']),max(s['cx']),min(s['cz']),max(s['cz'])
+                  ))
+              rows.sort(reverse=True)
+              for row in rows[:40]:
+                  n,obj,mat,y0,y1,x0,x1,z0,z1=row
+                  print(
+                      f'T21REMAIN OBJ {pname} n={n} obj={obj} mat={mat} '
+                      f'y=({y0:.3f},{y1:.3f}) centroidXZ=({x0:.3f},{z0:.3f})..({x1:.3f},{z1:.3f})'
+                  )
+
+          # Verify the central 1.5m step semantic direction. The old ledger
+          # bound the origin face to center-low; Temple01 suggests the origin
+          # face may instead be the upper step face.
+          center_step_lines={
+              'NEG_STEP_OUTER':[(406.08,282.84),(435.84,282.84)],
+              'NEG_STEP_CENTER_EDGE':[(406.08,286.44),(435.84,286.44)],
+              'POS_STEP_CENTER_EDGE':[(406.08,308.76),(435.84,308.76)],
+              'POS_STEP_OUTER':[(406.08,312.36),(435.84,312.36)],
+          }
+          for lname,pdfseg in center_step_lines.items():
+              rp=[apply_tf(conv(p0),ra,rb,rtx,rtz) for p0 in pdfseg]
+              aa2,bb2=rp
+              dx=bb2[0]-aa2[0]; dz=bb2[1]-aa2[1]
+              ln=math.hypot(dx,dz); nx,nz=-dz/ln,dx/ln
+              mx=(aa2[0]+bb2[0])*0.5; mz=(aa2[1]+bb2[1])*0.5
+              nearby=[]
+              for ex,ez,pair in edges:
+                  d=point_segment_distance((ex,ez),aa2,bb2)
+                  if d<=2.0:
+                      nearby.append((d,pair,ex,ez))
+              nearby.sort()
+              print(
+                  f'T21CENTEREDGE {lname} model={[(round(v[0],4),round(v[1],4)) for v in rp]} '
+                  f'near={[(round(d,3),pair) for d,pair,ex,ez in nearby[:20]]}'
+              )
+              for side,sign in [('LEFT',1),('RIGHT',-1)]:
+                  for off in (0.35,0.75,1.25):
+                      x=mx+nx*off*sign; z=mz+nz*off*sign
+                      print(
+                          f'T21CENTEREDGE SIDE {lname} {side} off={off:.2f} '
+                          f'point=({x:.4f},{z:.4f}) all={[(round(h[0],3),h[1],h[2]) for h in floor_hits(x,z)[:8]]} '
+                          f'walk={walkable_hit(x,z)}'
+                      )
+
+          # Inspect the exact common/PntSet central floor objects that can
+          # distinguish the 3.0m lower face from the 4.5m upper face.
+          for target_obj in (
+              'Fld_Temple01_pCube21595_1__FloorConcrete01',
+              'FldObj_Temple01_PntSet_A4_1__FloorConcrete00',
+              'FldObj_Temple01_PntSet_pCube21622_1__FloorConcrete02',
+          ):
+              target_faces=[ff for ff in faces if ff[3]==target_obj]
+              ys=sorted({round(vertices[i][1],4) for ff in target_faces for i in ff[:3]})
+              xs=[vertices[i][0] for ff in target_faces for i in ff[:3]]
+              zs=[vertices[i][2] for ff in target_faces for i in ff[:3]]
+              print(
+                  f'T21CENTEROBJ {target_obj} faces={len(target_faces)} ys={ys} '
+                  f'x=({min(xs) if xs else None},{max(xs) if xs else None}) '
+                  f'z=({min(zs) if zs else None},{max(zs) if zs else None})'
+              )
+
+          # Grate object exact top/bottom levels and component symmetry.
+          grate_obj='Fld_Temple01_pPlane157_1__FloorFence00'
+          gf=[ff for ff in faces if ff[3]==grate_obj]
+          gy=Counter(round(vertices[i][1],4) for ff in gf for i in ff[:3])
+          print(f'T21GRATEOBJ faces={len(gf)} y_hist={gy.most_common()}')
+          for side_name,pred in (
+              ('NEG',lambda x,z:x>0),
+              ('POS',lambda x,z:x<0),
+          ):
+              sf=[]
+              for ff in gf:
+                  tri=[vertices[i] for i in ff[:3]]
+                  cx=sum(v[0] for v in tri)/3; cz=sum(v[2] for v in tri)/3
+                  if pred(cx,cz):
+                      sf.append((ff,tri,cx,cz))
+              xs=[v[0] for ff,tri,cx,cz in sf for v in tri]
+              zs=[v[2] for ff,tri,cx,cz in sf for v in tri]
+              ys=[v[1] for ff,tri,cx,cz in sf for v in tri]
+              print(
+                  f'T21GRATEOBJ {side_name} tris={len(sf)} '
+                  f'x=({min(xs):.4f},{max(xs):.4f}) z=({min(zs):.4f},{max(zs):.4f}) '
+                  f'y=({min(ys):.4f},{max(ys):.4f}) top={max(ys):.4f}'
+              )
+          PY
+
+      - name: T21 Temple01 local XZ contour audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-temple01-xz-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:

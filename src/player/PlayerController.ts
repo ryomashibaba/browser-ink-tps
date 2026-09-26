@@ -36,6 +36,7 @@ export class PlayerController {
   private readonly squidCollider: Collider;
   private activeCollider: Collider;
   private readonly character: KinematicCharacterController;
+  private readonly characterCollisionFilter: (collider: Collider) => boolean;
   private readonly entity: Entity;
   private readonly material: StandardMaterial;
   private readonly velocity = new Vec3();
@@ -114,6 +115,8 @@ export class PlayerController {
     this.character.enableSnapToGround(0.24);
     this.character.setMaxSlopeClimbAngle(50 * Math.PI / 180);
     this.character.setMinSlopeSlideAngle(55 * Math.PI / 180);
+    this.characterCollisionFilter = (collider: Collider) =>
+      this.physics.shouldCharacterCollide(collider, this.mode);
 
     this.material = new StandardMaterial();
     this.material.useMetalness = true;
@@ -461,11 +464,17 @@ export class PlayerController {
       this.applyGravity(dt);
     }
 
-    this.character.computeColliderMovement(this.activeCollider, {
-      x: this.velocity.x * dt,
-      y: this.verticalVelocity * dt,
-      z: this.velocity.z * dt
-    });
+    this.character.computeColliderMovement(
+      this.activeCollider,
+      {
+        x: this.velocity.x * dt,
+        y: this.verticalVelocity * dt,
+        z: this.velocity.z * dt
+      },
+      undefined,
+      undefined,
+      this.characterCollisionFilter
+    );
     const corrected = this.character.computedMovement();
     this.grounded = this.character.computedGrounded();
 

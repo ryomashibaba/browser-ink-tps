@@ -230,7 +230,7 @@ export class CpuKitSystem {
       const blockerHit = this.physics.castStageSegment(
         slot.position,
         next,
-        'projectile'
+        'thrown-sub'
       );
       const paintWins = paintHit && (
         !blockerHit ||

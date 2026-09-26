@@ -1,7 +1,16 @@
 import { SurfaceFlags } from '../ink/types';
+import type { StageFootprint } from './StageFootprint';
 
 export type StageVector3 = readonly [number, number, number];
 export type StageMaterialKey = 'dark' | 'medium' | 'light' | 'accent';
+export type StageSolidCollisionBehavior = 'SOLID' | 'GRATE';
+
+export interface StageTriangleMeshGeometry {
+  /** Local-space vertices relative to StageSolidDefinition.center/rotation. */
+  vertices: readonly StageVector3[];
+  /** Triangle-list indices into vertices. */
+  indices: readonly number[];
+}
 
 export interface StageSolidDefinition {
   id: string;
@@ -12,6 +21,22 @@ export interface StageSolidDefinition {
   render: boolean;
   projectileBlocker: boolean;
   cameraBlocker: boolean;
+  /**
+   * SOLID is the frozen default. GRATE is semi-solid: Human form and thrown
+   * subs collide, while Squid form and ordinary ink projectiles pass through.
+   */
+  collisionBehavior?: StageSolidCollisionBehavior;
+  /**
+   * Optional canonical local-XZ footprint for polygonal BLOCKOUT solids.
+   * Coordinates use the solid's lower-left local X/Z bounds as (0,0).
+   * When absent, the legacy full box remains unchanged.
+   */
+  footprint?: StageFootprint;
+  /**
+   * Optional exact local triangle mesh. Mutually exclusive with footprint.
+   * Used only when source geometry itself supplies a non-box planar/mesh shape.
+   */
+  triangleMesh?: StageTriangleMeshGeometry;
 }
 
 export interface StagePaintSurfaceDefinition {

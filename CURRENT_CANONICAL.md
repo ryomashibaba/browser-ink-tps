@@ -1827,3 +1827,434 @@ Freeze boundaries:
 Reference audit note: Nintendo publicly describes the 100-count objective; Inkipedia documents the 70% series capture threshold, 36-frame count pacing, 0.75 control-period penalty formula, and Splat Zones overtime grace. The exact Splatoon 3 internal neutralization threshold was not independently confirmed, so the current 50% value is explicitly project tuning rather than an exact-internal-value claim.
 
 T20 remains **IMPLEMENTATION CANDIDATE** until PR #4 is merged, Pages is redeployed from main, hosted Pages QA is accepted, and the final horizontal regression pass is closed.
+
+
+## T21-A — Undertow Spillway Evidence Freeze / Measurement Ledger candidate — 2026-09-24
+
+Base main HEAD: `fbd922cea900df8e1a139f21b3c61ed927b3fdd9`.
+
+Target source boundary: **Splatoon 3 normal PvP Undertow Spillway / マテガイ放水路, Ver.7.2.0+**. Pre-7.2 terrain, Big Run, and legacy Tricolor variants are excluded from common terrain.
+
+T21-A is additive and does not replace the frozen gameplay/stage runtime. `PRODUCTION_STAGE_DEFINITION`, `PaintCoordinator`, `GameplayInk`, GPU visual ink, `ProjectileSystem`, `CpuAgentSystem`, `PlayerController`, Recast runtime, and T20 objective runtime are unchanged.
+
+New canonical research layer:
+- `StageMeasurementLedger` schema with `CONFIRMED / HIGH / PROVISIONAL / UNKNOWN`
+- explicit XZ / Y / transition / surface semantics / evidence IDs
+- Undertow common-terrain and rule-variant facts
+- structural validation preventing UNKNOWN values from silently acquiring exact dimensions
+- first spawn-side descent frozen as `ONE_WAY_DROP`; no slope/stairs/bidirectional or invisible CPU ramp
+- center-low reference floor frozen at Y=0
+- 20px/m and 1.5m vertical grid retained as HIGH rather than official/confirmed dimensions
+- historical checkpoint value: spawn project Y=6.0 was superseded by the final Temple01 center-low normalization; current canonical spawn Y is 7.5
+- the later vector outer-silhouette measurement supersedes the old ~146x87m provisional envelope
+
+T21-B may convert the Turf map to metric XZ polygons using this ledger, but it must not promote PROVISIONAL/UNKNOWN dimensions without new evidence.
+
+
+## T21-B metric calibration / T21-C entry checkpoint — 2026-09-24
+
+The T21 research branch now contains an auditable 2D project-meter transform for the user-provided Turf rule map:
+
+- source frame: 3508 x 2482 px
+- origin: (1754, 1241) px
+- spawn-axis anchors: (547, 647) / (2959, 1834) px
+- scale: 20 px/m HIGH
+- measured spawn separation: ~134.413 m
+- project spawns: approximately Z=-67.262 m / +67.150 m
+- origin-vs-spawn-midpoint residual: ~0.056 m
+- 180-degree spawn symmetry residual: ~0.112 m
+
+Only the spawn-center XZ anchors have been promoted to HIGH. The full spawn polygons, first-drop lips, central surface polygons, glass footprint, slopes, grates, water boundaries, and all unresolved vertical values remain unpromoted.
+
+The prior ~146 x 87 m whole-stage estimate remains PROVISIONAL. In the project frame the long spawn axis is Z (~146 m) and the cross-stage axis is X (~87 m).
+
+A new measurement-to-geometry gate enforces:
+- T21-D blockout: CONFIRMED/HIGH exact values only
+- Stable Freeze: CONFIRMED exact values only
+- PROVISIONAL/UNKNOWN values cannot silently become exact geometry
+
+No runtime stage geometry has been swapped in yet.
+
+
+## T21-C vertical constraint checkpoint — 2026-09-24
+
+The Undertow reconstruction now uses an explicit vertical constraint graph rather than a guessed absolute-height ladder.
+
+Resolved for BLOCKOUT:
+- center-low-floor = Y 0.0 m CONFIRMED
+- center-small-step-top = Y 1.5 m via HIGH +1.5 m relation
+
+**Superseded by the 2026-09-26 Temple01 local-geometry audit.** The earlier unseeded/candidate state is no longer current.
+
+Current BLOCKOUT/HIGH vertical results after the final Temple01 center-low normalization:
+- Team A/B spawn floor = project Y 7.5
+- Team A/B first-drop landing = project Y 3.0
+- first drop = -4.5m, ONE_WAY_DROP semantics retained
+- right-small-drop upper = project Y 7.5
+- right-low = project Y 4.5
+- right small drop = -3.0m
+- right-low -> glass-underpass floor = -4.5m HIGH
+- glass-underpass floor -> glass high reference = +7.5m HIGH
+- first-drop landing -> right-low = +1.5m HIGH
+
+These HIGH values remain BLOCKOUT-only; STABLE_FREEZE still accepts CONFIRMED exact values only.
+
+
+## T21-B recovered-vector source checkpoint — 2026-09-24
+
+The original Turf source is now available from the user's uploaded PDF/JPEG archives. The matching JPEG is exactly 3508 x 2482 px, and the PDF contains vector CAD linework rather than a raster page.
+
+The vector PDF is now the primary T21-B planimetric source; the JPEG and previous raster measurements remain cross-checks.
+
+Superseding measurements:
+- working vector scale: 4.8 pt/m HIGH, equivalent to the existing 20 px/m project transform
+- refined spawn separation: ~134.190 m HIGH
+- spawn centers: approximately X=+0.017 m, Z=-67.117 / +67.073 m
+- source-origin vs spawn-midpoint residual: <0.03 m
+- both first-drop lips: HIGH exact XZ polylines from vector hard edges
+- first-drop lip plan length: 15.25 m each
+- first-drop 180-degree XZ residual: <0.03 m
+- two mapped cyan water hazards: CONFIRMED exact XZ polygons, ~33.004 m² each
+- mapped-water 180-degree residual: <0.03 m
+
+First-drop traversal semantics remain ONE_WAY_DROP CONFIRMED. Its later Temple01 local registration resolves the exact BLOCKOUT/HIGH magnitude to 4.5m; this supersedes the earlier candidate-only state.
+
+The PDF does not justify flattening large closed source faces into gameplay floors. Spawn-floor outlines, center floor boundaries, glass, slopes, grate, and broader fall-out/void boundaries stay unresolved until source-line semantics are bound to gameplay evidence.
+
+T21-B trace coverage is now 5 / 18 requirements measured. No runtime production stage swap has occurred.
+
+
+## T21-B semantic binding / T21-D gate checkpoint — 2026-09-25
+
+Using the recovered vector Turf PDF + matching 3508x2482 JPEG + current user gameplay captures:
+
+- two symmetric glass-overhang XZ polygons are HIGH and GLASS/UNINKABLE semantics remain CONFIRMED
+- each glass overhang plan area is ~62.796m² with <0.03m 180-degree residual
+- internal dash fields prove the glass overhang contains slope-marked subregions; it must not become a single flat Y plane
+- the glass vertical node is now a high-reference point, not a flat platform floor
+- center-left/right slope dash markers are located around project X=-9.805/+9.805m, Z≈0 with <0.03m symmetry residual, but remain marker envelopes rather than collision footprints
+- two symmetric white mesh/grate polygons are HIGH XZ, ~30.441m² each, GRATE/UNINKABLE CONFIRMED, Y UNKNOWN
+- the second right-side L-edge is HIGH XZ on both sides, 16.90m plan length; later Temple01 local registration resolves its vertical delta to -3.0m HIGH
+- right-low floor polygon itself remains unresolved
+- mapped cyan water remains separate from white grate semantics
+
+T21-B common trace coverage at that checkpoint: **8 / 18 measured**.
+
+T21-D remains blocked by an automated readiness gate until the unresolved common boundary / spawn floors / center-low / small-step / under-glass passage / central slope hard footprints / right-low floor / broader fall-out boundary and required absolute Y constraints are resolved.
+
+No production runtime stage geometry has been replaced.
+
+
+## T21-B center/outer-vector checkpoint — 2026-09-25
+
+The recovered Undertow PDF uses the same top-left/+Y-down coordinate convention as the matching 3508x2482 JPEG. This is now explicit and tested; PDF Y must not be inverted before the project XZ transform.
+
+New canonical research facts:
+- exact common exterior silhouette: 42 vertices, HIGH XZ
+- outer span: X ~98.798m / Z ~156.528m HIGH under the project scale
+- old X ~87m / Z ~146m PROVISIONAL envelope is superseded
+- exterior silhouette rotational residual: <0.03m
+- center-low face: exact HIGH XZ, ~28.830m²; Y=0 remains CONFIRMED
+- central small-step pair: exact HIGH XZ, ~4.650m² each, 0.75m plan depth, +1.5m HIGH Y relation
+- central slope dash envelopes refined to approximately (-9.909,+0.354) / (+9.931,-0.365) project XZ; they remain marker-only
+
+T21-B trace coverage is **11 / 18 measured**.
+
+The outer silhouette does not classify internal holes as kill voids. Spawn-floor polygons, under-glass walkable outline, central slope hard footprints, right-low floor and broader fall-out/void boundaries remain unresolved. T21-D runtime blockout remains gated.
+
+
+## T21-B/C slope + readiness checkpoint — 2026-09-25
+
+The exact dashed-hatch regions beside center are now HIGH XZ slope semantic footprints:
+- each is ~3.30m x 11.975m / ~39.5175m²
+- centers approximately (-9.909,+0.354) and (+9.931,-0.365)
+- they remain continuous slope regions, not hard-wall geometry
+- start/end Y are still UNKNOWN
+
+T21-C now explicitly tracks both slopes' low/high endpoint Y values plus both grate elevations. A/B counterparts are symmetry-linked at HIGH confidence, but no absolute Y is fabricated.
+
+The T21-D readiness gate now evaluates the BLOCKOUT vertical constraint solution instead of looking only at raw absolute fields. Thus center-small-step-top correctly resolves to Y=1.5, while glass/slope/grate/spawn/drop values without a valid seed remain blocking.
+
+T21-B common trace coverage: **13 / 18 measured**.
+
+Remaining XZ blockers are the two spawn-floor polygons, exact under-glass walkable outline, right-low floor polygon, and broader fall-out/void kill boundary. Production stage runtime remains unchanged.
+
+
+## T21-B spawn-terrain / topology-limit checkpoint — 2026-09-25
+
+Spawn-side plan reconstruction is no longer blocked:
+
+- exact Team A/B connected white source faces containing the spawn rings are HIGH XZ
+- each is ~1168.201m² with <0.03m 180-degree residual
+- they are explicitly multi-elevation terrain envelopes, not flat spawn floors
+- spawn-ring absolute Y remains a separate UNKNOWN vertical node
+
+Trace-gate terminology is now `spawn-terrain-outline`, preventing accidental flat-floor interpretation.
+
+T21-B common trace coverage: **15 / 18 measured**.
+
+Only three XZ topology blockers remain:
+- right-low floor elevation partition
+- exact under-glass walkable/support-clearance outline
+- internal/off-stage void kill boundaries beyond the already exact exterior silhouette and cyan water hazards
+
+A structured source-topology audit documents that those three cannot be closed safely from the current top-down PDF alone. T21-D remains gated; no convenience polygons are substituted.
+
+
+## T21-C center-side slope endpoint checkpoint — 2026-09-25
+
+Vector adjacency now resolves the center-facing endpoint of both main central slopes:
+- center-small-step-top = Y +1.5m at BLOCKOUT
+- center-left slope low endpoint = Y +1.5m HIGH
+- center-right slope low endpoint = Y +1.5m HIGH
+- both slope high endpoints remain UNKNOWN
+
+Main center slope dash regions are typed as semantic slope footprints; dash fields embedded inside the gray glass overhangs remain marker-only. No upper landing or slope grade is invented.
+
+
+## T21-B/C final-source-gap checkpoint — 2026-09-25
+
+The five existing gameplay videos were re-audited after the PDF topology pass. They corroborate the remaining right-low / under-glass / internal-gap topology but do not provide enough registered plan information to derive exact XZ boundaries safely.
+
+A three-target minimal evidence-capture contract is now canonical:
+1. RIGHT_LOW_PARTITION
+2. GLASS_UNDERPASS_CLEARANCE
+3. INTERNAL_VOID_CLASSIFICATION
+
+Already-resolved areas are explicitly excluded from re-shooting. T21-D remains blocked rather than substituting convenient geometry.
+
+
+## T21 targeted-capture integration checkpoint — 2026-09-25
+
+The two requested 2026-09-25 gameplay captures are valid and are now canonical evidence.
+
+Confirmed from the 2026-09-25 traversals:
+- right-small-drop upper descends into the captured right-low open floor; Temple01 local registration later resolves this drop to 3.0m HIGH
+- right-low route connects into the covered underpass; the clips confirm traversable continuity only and do not establish equal canonical floor Y
+- the right-low area has at least one traversable ramp exit
+- the underpass contains solid support/wall geometry that must become explicit navigation/collision exclusions
+
+**2026-09-26 correction:** the earlier same-height binding between first-drop landing/open area and right-small-drop upper is invalid. IMG_6112.jpeg / IMG_6111.jpeg plus direct user observation establish only a red-guide-side < blue-guide-side floor ordering. The guide did not independently bind either visible side to a canonical floor node, so no first-drop-landing/right-low ordering or exact delta is promoted.
+
+Capture state:
+- RIGHT_LOW_PARTITION: CAPTURE_RECEIVED
+- GLASS_UNDERPASS_CLEARANCE: CAPTURE_RECEIVED
+- INTERNAL_VOID_CLASSIFICATION: NOT_YET_CAPTURED
+
+The first two remain plan-registration blockers, not capture blockers. Do not ask the user to repeat them.
+
+Future Undertow capture requests must always include a marked map with capture area, start, route/view direction, target boundary, and symmetry note.
+
+
+## T21-B targeted-capture plan-registration checkpoint — 2026-09-25
+
+The two received targeted captures are now registered to measured plan landmarks:
+
+- right-low capture -> Team A measured right-small-drop lip
+- underpass capture -> measured positive-Z glass-overhang footprint
+- registration confidence is HIGH for capture-to-plan identity
+- neither perspective clip is promoted to an exact XZ polygon
+
+The right-low perimeter remains non-unique because the clip does not expose a second independently measured plan anchor with enough metric precision to bind every wall/ramp corner to one PDF vertex. The underpass remains non-unique because the PDF has no independent lower-layer support/clearance path beneath the upper glass projection.
+
+Source-topology status for both is now PLAN_REGISTERED_POLYGON_UNRESOLVED. Common trace coverage intentionally remains **15 / 18**. The two capture categories are complete and must not be requested again.
+
+T21-D remains blocked; production runtime geometry is unchanged.
+
+
+## T21-B internal-void ambiguity checkpoint
+
+- The post-7.2 central undercut pair is classified HIGH as traversable lower-layer topology, not an abyss.
+- The received right-low -> underpass overlap remains HIGH traversable. Equal-Y semantics are explicitly not inferred from the perspective clips.
+- No concrete remaining internal blank can currently be localized strongly enough to justify another capture.
+- `INTERNAL_VOID_CLASSIFICATION` therefore stays `DEFERRED_PENDING_MAP_ENUMERATION`; request-ready capture IDs remain empty.
+- This is deliberately **not** an exhaustive no-internal-void claim.
+- `fall-out-void-kill-boundary` remains UNTRACED; trace coverage remains 15/18.
+- T21-D blockout remains disabled.
+- Validation head before this documentation checkpoint: `dede055dedaa10c34b6f4fa1c9d3aa7368910cc8`, Actions run #502 / `36194505652`: PASS.
+
+
+## T21-C vertical evidence decomposition checkpoint
+
+The current HIGH/CONFIRMED vertical graph is audited by connected component.
+
+- center component is seeded from center-low Y=0
+- spawn / first-drop landing / right-low / right-small-drop upper / glass references now form one exact HIGH seeded component through the Temple01 local registration
+- slope-high pair and grate pair remain separate unseeded components
+
+The corrective stills themselves remain qualitative only; the exact graph edges come from the independently registered Temple01 OBJ.
+
+
+## T21-C first-drop interpretation correction — 2026-09-26
+
+The previous marked side-profile request is invalidated because its topology premise was wrong.
+
+Corrected evidence state after final Temple01 normalization:
+- user-observed red-guide-side floor < blue-guide-side floor — CONFIRMED qualitative ordering
+- red lower side -> Team A first-drop landing = project Y 3.0 HIGH
+- red upper side -> Team A spawn floor = project Y 7.5 HIGH
+- blue lower side -> right-low = project Y 4.5 HIGH
+- blue upper side -> right-small-drop upper = project Y 7.5 HIGH
+- first-drop landing = right-small-drop upper — REMOVED / INVALID
+- first-drop exact magnitude = 4.5m HIGH
+- right-small-drop exact magnitude = 3.0m HIGH
+
+The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request is now `SUPERSEDED_BY_TEMPLE01_GEOMETRY`; no replacement user capture is needed for these magnitudes. PR #5 remains Draft / unmerged and T21-D remains gated by remaining XZ plus slope-high/grate Y blockers.
+
+
+## T21-C line-side semantic audit — 2026-09-26
+
+The red/blue marked-guide correction was re-audited against all existing local evidence.
+
+Canonical result:
+- vector-line geometry identities remain HIGH
+- pre-model media alone was insufficient to bind the line sides
+- Temple01 OBJ local registration now resolves the red/blue canonical floor sides at HIGH confidence
+- registered first-drop lips match the 10.5<->6.0 model-Y discontinuity
+- registered right-small-drop lips match the 10.5<->7.5 model-Y discontinuity
+- after the final center-low model-Y=3.0 normalization, these are project Y 7.5<->3.0 and 7.5<->4.5
+- the user's red-lower < blue-lower observation is reproduced by 3.0 < 4.5
+- the superseded three-terrace interpretation remains forbidden
+
+T21-D stays gated for remaining geometry evidence; no first-drop recapture is needed.
+
+
+## T21-C current model identity / external geometry gate — 2026-09-26
+
+Current remodeled Undertow identity is now source-locked:
+
+- scene: `Vss_Temple01`
+- model: `Model/Fld_Temple01.bfres`
+- `Vss_Temple00` / `Fld_Temple00.bfres` = pre-remodel only
+- `Vss_Nagasaki03` / `Fld_Nagasaki03.bfres` = Sturgeon Shipyard; forbidden as Undertow geometry
+
+The KiTrix `Vss_Temple01.obj` LFS body has now been read in CI: 43,263,289 bytes, 375,948 vertices. Common `Fld_Temple01` plus Turf `PntSet` geometry yields 70,396 active audit triangles.
+
+Only locally verified registration is promotable. The four red/blue drop-lip segments coincide with the expected OBJ height-discontinuity contours within 0.163m in the 0.5m audit raster. The full exterior registration still has a large p95 residual, so arbitrary PDF->OBJ projection remains forbidden.
+
+T21-D remains gated and runtime geometry remains unchanged.
+
+
+## T21-C remodeled 3D source checkpoint
+
+External-source audit now fixes the correct remodel model family:
+
+- Nintendo Ver.7.2.0: Undertow terrain changed in all modes
+- Leanny 7.2.0 metadata: `Vss_Temple01` = マテガイ放水路（改修後）, preload `Fld_Temple01.bfres`
+- `Vss_Temple00 / Fld_Temple00` is pre-remodel and must not be used for the current T21 target
+- Salmon Run `Temple_Low/Mid/High` images are wrong-mode evidence and excluded
+- KiTrix BFRES-derived 43,263,289-byte `Vss_Temple01.obj` LFS body is now readable through the CI audit
+- 375,948 vertices were parsed; common + Turf `PntSet` local geometry was audited
+- KiTrix StageLoader display-name mapping is known-wrong and is not provenance evidence
+- locally verified drop-lip geometry is promotable at HIGH confidence; blanket full-model registration is not
+
+Promoted BLOCKOUT/HIGH Y values are limited to the locally verified chain: spawn 7.5, first-drop landing 3.0, right-low 4.5, right-small-drop upper 7.5, glass-underpass floor 0, glass high reference 7.5, first drop -4.5, right drop -3.0, right-low -> underpass -4.5, underpass -> glass high reference +7.5.
+
+
+## T21-B Temple01 XZ contour checkpoint — 2026-09-26
+
+Temple01 local floor extraction now promotes two XZ blockers to HIGH/BLOCKOUT-safe:
+
+- `center-low-floor-outline` -> MEASURED
+  - model Y=3.0m = canonical project Y=0
+  - two symmetric connected components
+  - 0.125m raster, <=0.20m contour simplification
+- `right-low-floor-outline` -> MEASURED
+  - model Y=7.5m = project Y=4.5
+  - seeded from the locally verified lower side of the right-small-drop lip
+  - two symmetric connected components with explicit holes
+
+At this checkpoint trace coverage was **16/18**. It is superseded by the later glass-underpass promotion checkpoint below.
+
+At this checkpoint the remaining XZ blockers were:
+- `glass-underpass-outline`
+- `fall-out-void-kill-boundary`
+
+Vertical BLOCKOUT blockers were already closed.
+
+
+## T21-C cross-file vertical semantic reconciliation — 2026-09-26
+
+The Temple01 local geometry audit is the single metric authority for the right-low / glass-underpass / glass-high-reference chain.
+
+Current canonical project Y:
+- right-low = 4.5m HIGH
+- glass-underpass walkable floor = 0.0m HIGH (model Y=3.0m)
+- glass-overhang high reference = 7.5m HIGH (model Y=10.5m)
+- right-low -> glass-underpass = -4.5m HIGH
+- glass-underpass -> glass-high-reference = +7.5m HIGH
+
+The two 2026-09-25 traversal captures remain canonical topology evidence, but their former same-height interpretation is superseded. RIGHT_LOW -> GLASS_UNDERPASS is represented as non-metric traversable route continuity; it carries no capture-derived delta-Y.
+
+UndertowSpillwayVerticalSemanticInvariant.test.ts now cross-checks RemodelGeometryAudit, VerticalModel, CaptureTopology, MeasurementLedger, and SourceTopologyAudit so green CI cannot silently preserve conflicting vertical authorities.
+
+
+## T21-B glass-underpass XZ promotion checkpoint — 2026-09-26
+
+The remaining under-glass XZ blocker is now resolved from remodeled Temple01 geometry at HIGH/BLOCKOUT confidence.
+
+Audit method:
+- seed the connected model-Y=3.0 / project-Y=0 walkable floor beneath each registered glass structure
+- retain only cells physically roofed by Temple01 BridgeMetal / Glass geometry
+- subtract floor-level Pillar/Wall solid cells
+- raster resolution = 0.125m
+- contour simplification <=0.15m
+- preserve support/obstruction holes explicitly
+
+CI #631 results per side:
+- roofed floor = 3951 cells
+- floor-level obstacles = 88 cells
+- navigable floor = 3863 cells = 60.359375m²
+- outer contour signed area ≈61.094m²
+- one support hole ≈0.672m²
+- 180-degree raw-mask XOR = 0 cells
+- missing = 0, extra = 0, mirror-XOR area = 0.000m²
+
+Canonical consequences:
+- `glass-underpass-outline` -> MEASURED HIGH
+- source topology -> `RESOLVED_FROM_TEMPLE01_MODEL`
+- MeasurementLedger stores center-low, right-low, and glass-underpass layered geometry as `POLYGON_SET` so multiple symmetric components and holes are not flattened
+- common trace coverage = **17/18**
+- the only remaining XZ blocker is `fall-out-void-kill-boundary`
+- all BLOCKOUT vertical blockers remain closed
+- T21-D remains gated; production runtime geometry is still unchanged
+- PR #5 remains Draft / unmerged
+
+
+## T21-B final fall-out / internal-void XZ closure checkpoint — 2026-09-26
+
+The last BLOCKOUT XZ blocker is now closed by an exhaustive common+Turf Temple01 geometry audit.
+
+Audit sequence:
+- scan common+Turf Temple01 horizontal geometry for enclosed empty XZ candidates
+- coarse pass: 0.5m
+- fine pass: 0.125m
+- require exact 180-degree pairing where applicable
+- classify candidate context against exact mapped water, walkable floors, StageSide walls, and higher solid geometry
+- reverse-audit the actual adjacent floor meshes for interior holes instead of treating top-down empty projection as a pit
+
+Six enclosed-empty candidates were found and all six are accounted for:
+- 2 = the already exact mapped cyan water pair
+- 2 large symmetric regions = exterior/StageSide space; 0.125m masks are exact 180-degree counterparts and about 85.6% of their perimeter lies within 0.30m of StageSide wall geometry
+- 2 small symmetric regions = top-down projection false positives beside Y=1.5 FloorMetal, largely enclosed by high PillarBase / SoundproofPanel projection rather than a floor cutout
+
+Reverse floor audits:
+- Y=1.5 `Fld_Temple01_pCube21772_1__FloorMetal00`: two simple components, **0 interior holes**
+- Y=1.2 `Fld_Temple01_group21978_1__FloorLine05`: two simple components, **0 interior holes**
+- neither candidate pair matches an interior floor-mesh hole
+
+Canonical result:
+- unexplained internal abyss candidates = **0**
+- exact 42-vertex common playable hard silhouette is the BLOCKOUT XZ fall-out envelope
+- exact cyan water polygons remain separate WATER+KILL hazards
+- no extra internal kill polygon is fabricated
+- `fall-out-void-kill-boundary` -> MEASURED HIGH
+- `internal-void-kill-boundaries` -> `RESOLVED_FROM_TEMPLE01_MODEL`
+- common trace coverage = **18/18**
+- required/request-ready T21 evidence captures = **0**
+- `UndertowSpillwayBlockoutGate.ready` = **true**
+- all BLOCKOUT vertical blockers remain closed
+
+This closes **XZ BLOCKOUT evidence only**. The vertical death/kill threshold is not inferred by this audit. Stable Freeze still requires its stricter CONFIRMED-exact evidence rules.
+
+T21-D is now permitted to start from the audited BLOCKOUT dataset, but **production runtime geometry remains unchanged at this checkpoint**. PR #5 remains Draft / unmerged.

@@ -4,6 +4,11 @@ import { Quat, Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { StageDefinition, StageSolidDefinition } from '../stage/StageDefinition';
+import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import {
+  stageSolidTriangleMeshErrors,
+  stageSolidTriangleWorldVertices
+} from '../stage/StageTriangleMesh';
 
 export async function initializeRecastNavigation(): Promise<void> {
   await initRecast();
@@ -90,13 +95,78 @@ function buildStageTriangleSoup(
   const indices: number[] = [];
 
   for (const solid of definition.solids) {
-    appendBoxSolid(solid, positions, indices);
+    const meshErrors = stageSolidTriangleMeshErrors(solid);
+    if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
+    if (solid.triangleMesh) {
+      appendTriangleMeshSolid(solid, positions, indices);
+    } else {
+      appendBoxSolid(solid, positions, indices);
+    }
   }
 
   return { positions, indices };
 }
 
+function appendTriangleMeshSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  const mesh = solid.triangleMesh;
+  if (!mesh) return;
+  const base = positions.length / 3;
+  for (const vertex of stageSolidTriangleWorldVertices(solid)) {
+    positions.push(vertex[0], vertex[1], vertex[2]);
+  }
+  for (const index of mesh.indices) indices.push(base + index);
+}
+
 function appendBoxSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  if (!solid.footprint) {
+    appendPlainBoxSolid(solid, positions, indices);
+    return;
+  }
+
+  const euler = solid.rotationEulerDegrees ?? [0, 0, 0];
+  const rotation = new Quat().setFromEulerAngles(euler[0], euler[1], euler[2]);
+  const center = new Vec3(solid.center[0], solid.center[1], solid.center[2]);
+  const raster = rasterizeStageFootprint(
+    solid.size[0],
+    solid.size[2],
+    solid.footprint
+  );
+
+  for (const rect of raster.rectangles) {
+    const offset = rotate(
+      new Vec3(
+        rect.centerU - solid.size[0] * 0.5,
+        0,
+        rect.centerV - solid.size[2] * 0.5
+      ),
+      rotation
+    );
+    appendPlainBoxSolid(
+      {
+        ...solid,
+        center: [
+          center.x + offset.x,
+          center.y + offset.y,
+          center.z + offset.z
+        ],
+        size: [rect.widthMeters, solid.size[1], rect.depthMeters],
+        footprint: undefined
+      },
+      positions,
+      indices
+    );
+  }
+}
+
+function appendPlainBoxSolid(
   solid: StageSolidDefinition,
   positions: number[],
   indices: number[]
