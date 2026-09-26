@@ -17,6 +17,7 @@ import {
   type UndertowModelXZPolygon
 } from './UndertowSpillwayModelXZGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
+import { undertowCenterSlopeStageSolids } from './UndertowSpillwaySlopeMeshGeometry';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
 export const UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS = 0.125;
@@ -152,7 +153,10 @@ const components: readonly PolygonComponent[] = [
 ];
 
 const built = components.map(buildFlatComponent);
-const solids = built.map((item) => item.solid);
+const solids = [
+  ...built.map((item) => item.solid),
+  ...undertowCenterSlopeStageSolids()
+];
 const paintSurfaces = built.flatMap((item) =>
   item.paintSurface ? [item.paintSurface] : []
 );
@@ -179,7 +183,6 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     teamASpawnFloorPoint: [spawnA[0], 7.5, spawnA[1]] as const,
     teamBSpawnFloorPoint: [spawnB[0], 7.5, spawnB[1]] as const,
     deferredFeatureIds: [
-      'center-slope',
       'upper-glass-platform',
       'team-a-upper-glass-overhang',
       'team-b-upper-glass-overhang',
@@ -187,7 +190,6 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
       'team-b-water-region'
     ],
     activationBlockers: [
-      'SLOPE_RUNTIME_GEOMETRY_PENDING',
       'UPPER_GLASS_SLOPE_RUNTIME_PENDING',
       'WATER_KILL_RUNTIME_PENDING',
       'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING',
@@ -281,9 +283,13 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
   for (const solid of UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids) {
     if (ids.has(solid.id)) errors.push(`duplicate solid id: ${solid.id}`);
     ids.add(solid.id);
-    if (!solid.footprint) errors.push(`${solid.id}: polygon footprint missing`);
-    const topY = solid.center[1] + solid.size[1] * 0.5;
-    if (!Number.isFinite(topY)) errors.push(`${solid.id}: non-finite top Y`);
+    if (!solid.footprint && !solid.triangleMesh) {
+      errors.push(`${solid.id}: polygon footprint or source triangle mesh missing`);
+    }
+    if (!solid.triangleMesh) {
+      const topY = solid.center[1] + solid.size[1] * 0.5;
+      if (!Number.isFinite(topY)) errors.push(`${solid.id}: non-finite top Y`);
+    }
   }
 
   for (const surface of UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces) {

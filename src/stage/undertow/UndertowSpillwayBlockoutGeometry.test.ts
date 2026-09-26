@@ -19,13 +19,20 @@ describe('T21-D partial Undertow blockout geometry', () => {
 
   it('contains only the currently safe flat components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(13);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(17);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(5);
     const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.collisionBehavior === 'GRATE'
     );
     expect(grates).toHaveLength(2);
     expect(grates.every((solid) => solid.id.includes('grate-mesh'))).toBe(true);
+
+    const slopes = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
+      (solid) => solid.id.includes('center-slope-')
+    );
+    expect(slopes).toHaveLength(4);
+    expect(slopes.every((solid) => solid.triangleMesh)).toBe(true);
+    expect(slopes.every((solid) => !solid.footprint)).toBe(true);
   });
 
   it('keeps the audited top elevations while extruding only downward', () => {
@@ -35,10 +42,13 @@ describe('T21-D partial Undertow blockout geometry', () => {
       ['glass-underpass-', 0],
       ['spawn-high-', 7.5],
       ['first-drop-landing-', 3],
-      ['center-origin-step-top-face:', 1.5]
+      ['center-origin-step-top-face:', 1.5],
+      ['negative-z-grate-mesh:', 7.4],
+      ['positive-z-grate-mesh:', 7.4]
     ]);
 
     for (const solid of UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids) {
+      if (solid.triangleMesh) continue;
       const sourceId = solid.id.replace('UndertowT21D:', '');
       const entry = [...expectedTopY.entries()].find(([prefix]) =>
         sourceId.startsWith(prefix)
@@ -82,7 +92,6 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds
     ).toEqual(expect.arrayContaining([
-      'center-slope',
       'upper-glass-platform',
       'team-a-water-region',
       'team-b-water-region'

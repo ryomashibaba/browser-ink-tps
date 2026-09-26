@@ -1,5 +1,6 @@
 import {
   AppBase,
+  calculateNormals,
   Color,
   Entity,
   Mesh,
@@ -183,11 +184,14 @@ function createSolidBox(
   }
 
   if (solid.triangleMesh) {
+    const positions = solid.triangleMesh.vertices.flatMap(
+      (vertex) => [...vertex]
+    );
+    const indices = [...solid.triangleMesh.indices];
     const mesh = new Mesh(app.graphicsDevice);
-    mesh.setPositions(new Float32Array(
-      solid.triangleMesh.vertices.flatMap((vertex) => [...vertex])
-    ));
-    mesh.setIndices(new Uint32Array(solid.triangleMesh.indices));
+    mesh.setPositions(new Float32Array(positions));
+    mesh.setNormals(new Float32Array(calculateNormals(positions, indices)));
+    mesh.setIndices(new Uint32Array(indices));
     mesh.update();
     const meshInstance = new MeshInstance(mesh, material);
     entity.addComponent('render', {
