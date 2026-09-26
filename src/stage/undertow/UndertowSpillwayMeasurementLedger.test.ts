@@ -30,15 +30,18 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(ledger.commonTerrainId).toBe('UndertowCommon');
   });
 
-  it('freezes the central low floor as Y=0 and binds its exact source face in XZ', () => {
+  it('keeps central-low Y=0 while reopening its old XZ face binding', () => {
     expect(ledger.coordinateSystem.centerLowestFloorY).toBe(0);
     expect(ledger.coordinateSystem.centerLowestFloorConfidence).toBe('CONFIRMED');
     const centerLow = entry('center-lower-floor');
-    expect(centerLow.xz.kind).toBe('POLYGON');
-    expect(centerLow.xz.confidence).toBe('HIGH');
-    expect(centerLow.xz.polygonMeters).toHaveLength(4);
+    expect(centerLow.xz.kind).toBe('UNRESOLVED');
+    expect(centerLow.xz.confidence).toBe('UNKNOWN');
     expect(centerLow.y.yMeters).toBe(0);
     expect(centerLow.y.confidence).toBe('CONFIRMED');
+    const stepTop = entry('center-origin-step-top-face');
+    expect(stepTop.xz.kind).toBe('POLYGON');
+    expect(stepTop.xz.polygonMeters).toHaveLength(4);
+    expect(stepTop.y).toMatchObject({ yMeters: 1.5, confidence: 'HIGH' });
     expect(assumption('map-pixels-per-meter')).toMatchObject({
       value: 20,
       unit: 'px/m',
@@ -82,9 +85,9 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(teamB.xz.pointMeters?.[1]).toBeCloseTo(-67.1172, 3);
 
     expect(entry('team-a-spawn-floor').y.confidence).toBe('HIGH');
-    expect(entry('team-a-spawn-floor').y.yMeters).toBe(6);
+    expect(entry('team-a-spawn-floor').y.yMeters).toBe(7.5);
     expect(entry('team-b-spawn-floor').y.confidence).toBe('HIGH');
-    expect(entry('team-b-spawn-floor').y.yMeters).toBe(6);
+    expect(entry('team-b-spawn-floor').y.yMeters).toBe(7.5);
   });
 
   it('binds the exact spawn-side connected terrain regions without flattening them', () => {
@@ -110,9 +113,9 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(underpass.evidenceIds).toContain('user-underpass-capture-2026-09-25');
     expect(rightLow.xz.kind).toBe('UNRESOLVED');
     expect(underpass.xz.kind).toBe('UNRESOLVED');
-    expect(rightLow.y.yMeters).toBe(3);
+    expect(rightLow.y.yMeters).toBe(4.5);
     expect(rightLow.y.confidence).toBe('HIGH');
-    expect(underpass.y.notes).toContain('Same-height');
+    expect(underpass.y).toMatchObject({ yMeters: 4.5, confidence: 'HIGH' });
   });
 
   it('records the audited remodeled Temple01 geometry source explicitly', () => {
@@ -190,16 +193,18 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(entry('center-small-step').xz.kind).toBe('UNRESOLVED');
   });
 
-  it('binds both central slope hatch footprints without inventing endpoint Y', () => {
+  it('binds both central slope hatch footprints to the Temple01 1.5m vertical span', () => {
     for (const id of ['center-left-slope', 'center-right-slope']) {
       const slope = entry(id);
       expect(slope.xz.kind).toBe('POLYGON');
       expect(slope.xz.confidence).toBe('HIGH');
       expect(slope.xz.polygonMeters).toHaveLength(4);
-      expect(slope.transition.kind).toBe('SLOPE');
-      expect(slope.transition.confidence).toBe('CONFIRMED');
-      expect(slope.y.confidence).toBe('UNKNOWN');
-      expect(slope.y.yMeters).toBeUndefined();
+      expect(slope.y).toMatchObject({ deltaMeters: 1.5, confidence: 'HIGH' });
+      expect(slope.transition).toMatchObject({
+        kind: 'SLOPE',
+        deltaYMeters: 1.5,
+        confidence: 'HIGH'
+      });
     }
   });
 
@@ -211,7 +216,7 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
       expect(grate.xz.polygonMeters).toHaveLength(4);
       expect(grate.surface.semantics).toEqual(['GRATE', 'UNINKABLE']);
       expect(grate.surface.semantics).not.toContain('WATER');
-      expect(grate.y.confidence).toBe('UNKNOWN');
+      expect(grate.y).toMatchObject({ yMeters: 7.4, confidence: 'HIGH' });
     }
   });
 
