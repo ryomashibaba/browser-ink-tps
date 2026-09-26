@@ -337,7 +337,7 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     ],
     'WHITE_SOURCE_FACE',
     'HIGH',
-    'Exact closed source face containing the geometric origin. Stored without promoting its vertical/floor semantic beyond existing evidence.'
+    'Exact closed source face containing the geometric origin. Temple01 local registration now identifies this as the +1.5m center-step-top face, not the canonical center-low Y=0 polygon.'
   ),
   negativeZCenterStepStrip: vectorTrace(
     'negative-z-center-step-strip',
@@ -350,7 +350,7 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     ],
     'WHITE_SOURCE_FACE',
     'HIGH',
-    'Exact 0.75m-deep source strip immediately adjacent to the central origin face. Combined with gameplay evidence and the existing +1.5m center-step measurement, this is the negative-Z center small-step footprint.'
+    'Exact 0.75m-deep transition strip immediately adjacent to the central origin face. Temple01 shows the origin-face side at model Y=4.5m and the outer lower side at model Y=3.0m.'
   ),
   positiveZCenterStepStrip: vectorTrace(
     'positive-z-center-step-strip',
