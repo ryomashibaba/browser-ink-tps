@@ -487,7 +487,7 @@ New HIGH vertical/topology relations retained after the 2026-09-26 correction:
 - right-small-drop upper -> right-low = -1.5m
 - right-low floor = covered underpass lower floor
 
-The previous claim that first-drop open/landing floor = right-small-drop upper floor is **superseded and invalid**. The corrective still pair shows that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. Plan-view adjacency between the two L-shaped lips does not imply shared Y.
+The previous claim that first-drop open/landing floor = right-small-drop upper floor is **superseded and invalid**. The corrective still pair establishes only that the floor the user refers to as below the red guide line is lower than the floor referred to as below the blue guide line. The guide did not independently prove which canonical floor node lies on either observed side, so this ordering is not promoted to first-drop-landing/right-low Y data.
 
 The two requested captures are now `CAPTURE_RECEIVED`; they must not be requested again. The right-low and underpass source-topology states are `CAPTURED_REQUIRES_PLAN_REGISTRATION`, meaning only the exact PDF-coordinate boundary registration remains.
 
@@ -549,7 +549,7 @@ Seeded now:
 
 Unseeded exact-relative components:
 - RIGHT_LOW_UNSEEDED: right-small-drop upper, right-low floor, glass lower floor, glass high reference
-- FIRST_DROP_LANDING_UNSEEDED: Team A/B first-drop landing floors, symmetry-linked only
+- FIRST_DROP_LANDING_UNSEEDED: Team A/B first-drop landing floors, symmetry-linked only; the red/blue guide-side observation does not seed this component
 - SPAWN_UNSEEDED: Team A/B spawn floors only; the edge to first-drop landing remains the PROVISIONAL 1.5m / 3.0m candidate pair
 - SLOPE_HIGH_UNSEEDED: both central slope high endpoints
 - GRATE_UNSEEDED: both grate elevations
@@ -558,7 +558,7 @@ The existing 2026-09-25 right-low and underpass clips are sufficient to keep the
 
 Minimum remaining vertical evidence classes:
 1. one right-low/underpass -> seeded-center relation
-2. one exact first-drop-landing tie to a known/seeded level
+2. one exact first-drop-landing tie to a known/seeded level after 3D side registration
 3. exact first-drop magnitude (1.5m vs 3.0m) with a seeded spawn-or-landing side
 4. one center-slope high-end tie
 5. one grate-elevation tie
@@ -573,10 +573,12 @@ The marked side-profile request is **invalidated**.
 The guide assumed a three-terrace chain:
 spawn upper -> first-drop landing / right-small-drop upper -> right-low.
 
-The user's direct in-game observation plus `IMG_6112.jpeg` / `IMG_6111.jpeg` disproves the shared-middle-level assumption:
-- the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip
-- therefore first-drop landing != right-small-drop upper
-- the exact difference between those lower-side floors is still UNKNOWN
-- the 1.5m blue right-small drop is not a valid direct scale reference for first-drop magnitude
+The user's direct in-game observation plus `IMG_6112.jpeg` / `IMG_6111.jpeg` disproves the guide's shared-middle-level assumption, but does **not** by itself bind the visible sides to canonical floor nodes:
+- user-observed red-guide-side floor < blue-guide-side floor — CONFIRMED
+- canonical identity of the observed red-side floor — UNRESOLVED
+- canonical identity of the observed blue-side floor — UNRESOLVED
+- first-drop landing = right-small-drop upper — removed / invalid
+- exact metric difference — UNKNOWN
+- the blue 1.5m drop cannot be used as a direct first-drop scale reference until its observed side is registered in 3D
 
 No replacement capture is request-ready yet. The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request remains only as an invalidated audit record. Runtime geometry remains unchanged and T21-D stays blocked.
