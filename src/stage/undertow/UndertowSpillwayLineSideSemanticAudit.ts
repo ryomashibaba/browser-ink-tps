@@ -50,7 +50,7 @@ export const UNDERTOW_SIDE_REGISTRATION_FINDINGS:
       result: 'LOCAL_TOPOLOGY_ONLY',
       canBindCanonicalFloorSides: false,
       notes:
-        'The targeted right-low capture confirms the local 1.5m small-drop topology, open floor, ramp exit and underpass connection, but it does not independently register the red first-drop guide side in the same 3D frame.'
+        'The targeted right-low capture confirms the local right-drop topology, open floor, ramp exit and underpass connection, but perspective footage alone does not measure the drop magnitude or independently register the red first-drop guide side in the same 3D frame.'
     },
     {
       id: 'CORRECTIVE_STILLS',
