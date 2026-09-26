@@ -28,18 +28,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/kitrix
-          GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/kirakira-dev/KiTrix.git /tmp/kitrix
-          cd /tmp/kitrix
-          git sparse-checkout init --no-cone
-          printf '/stages/Vss_Temple01/Vss_Temple01.obj\n' > .git/info/sparse-checkout
-          git checkout
-          git lfs pull --include='stages/Vss_Temple01/Vss_Temple01.obj' --exclude=''
+          rm -rf /tmp/kitrix-lfs
+          mkdir -p /tmp/kitrix-lfs
+          cd /tmp/kitrix-lfs
+          git init -q
+          git remote add origin https://github.com/kirakira-dev/KiTrix.git
+          git lfs install --local
+          cat > temple01.pointer <<'PTR'
+          version https://git-lfs.github.com/spec/v1
+          oid sha256:a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046
+          size 43263289
+          PTR
+          timeout 180s git lfs smudge < temple01.pointer > Vss_Temple01.obj
           python - <<'PY'
           from collections import Counter, defaultdict
           from pathlib import Path
 
-          p = Path('/tmp/kitrix/stages/Vss_Temple01/Vss_Temple01.obj')
+          p = Path('/tmp/kitrix-lfs/Vss_Temple01.obj')
           print(f'T21OBJ file_bytes={p.stat().st_size}')
 
           current_object = '(none)'
