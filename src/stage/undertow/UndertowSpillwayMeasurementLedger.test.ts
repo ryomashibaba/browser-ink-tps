@@ -62,13 +62,14 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
       expect(drop.xz.kind).toBe('POLYLINE');
       expect(drop.xz.confidence).toBe('HIGH');
       expect(drop.xz.polylineMeters).toHaveLength(3);
-      expect(drop.y.yMeters).toBeUndefined();
-      expect(drop.y.candidatesMeters).toEqual([1.5, 3]);
-      expect(drop.y.confidence).toBe('PROVISIONAL');
+      expect(drop.y.deltaMeters).toBe(-4.5);
+      expect(drop.y.candidatesMeters).toBeUndefined();
+      expect(drop.y.confidence).toBe('HIGH');
+      expect(drop.transition.deltaYMeters).toBe(-4.5);
     }
   });
 
-  it('binds measured spawn centers in XZ while keeping absolute Y unresolved', () => {
+  it('binds measured spawn centers in XZ and resolves their HIGH normalized Y from Temple01', () => {
     const teamA = entry('team-a-spawn-floor');
     const teamB = entry('team-b-spawn-floor');
     expect(teamA.xz.kind).toBe('POINT');
@@ -80,10 +81,10 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(teamA.xz.pointMeters?.[1]).toBeCloseTo(67.0727, 3);
     expect(teamB.xz.pointMeters?.[1]).toBeCloseTo(-67.1172, 3);
 
-    expect(entry('team-a-spawn-floor').y.confidence).toBe('UNKNOWN');
-    expect(entry('team-a-spawn-floor').y.yMeters).toBeUndefined();
-    expect(entry('team-b-spawn-floor').y.confidence).toBe('UNKNOWN');
-    expect(entry('team-b-spawn-floor').y.yMeters).toBeUndefined();
+    expect(entry('team-a-spawn-floor').y.confidence).toBe('HIGH');
+    expect(entry('team-a-spawn-floor').y.yMeters).toBe(6);
+    expect(entry('team-b-spawn-floor').y.confidence).toBe('HIGH');
+    expect(entry('team-b-spawn-floor').y.yMeters).toBe(6);
   });
 
   it('binds the exact spawn-side connected terrain regions without flattening them', () => {
@@ -109,8 +110,18 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(underpass.evidenceIds).toContain('user-underpass-capture-2026-09-25');
     expect(rightLow.xz.kind).toBe('UNRESOLVED');
     expect(underpass.xz.kind).toBe('UNRESOLVED');
-    expect(rightLow.y.notes).toContain('same-height');
+    expect(rightLow.y.yMeters).toBe(3);
+    expect(rightLow.y.confidence).toBe('HIGH');
     expect(underpass.y.notes).toContain('Same-height');
+  });
+
+  it('records the audited remodeled Temple01 geometry source explicitly', () => {
+    const source = ledger.evidence.find((item) => item.id === 'extracted-temple01-geometry');
+    expect(source).toMatchObject({
+      kind: 'EXTRACTED_GAME_GEOMETRY',
+      sourceVersion: 'Fld_Temple01 / remodeled Ver.7.2.0+ model family'
+    });
+    expect(source?.notes).toContain('43,263,289 bytes');
   });
 
   it('records the measured Turf map frame instead of hiding calibration constants', () => {
@@ -166,14 +177,14 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     }
   });
 
-  it('binds both right-side small-drop hard edges while retaining the 1.5m HIGH vertical relation', () => {
+  it('binds both right-side small-drop hard edges with the corrected 3m HIGH vertical relation', () => {
     for (const id of ['team-a-right-small-drop', 'team-b-right-small-drop']) {
       const drop = entry(id);
       expect(drop.xz.kind).toBe('POLYLINE');
       expect(drop.xz.confidence).toBe('HIGH');
       expect(drop.xz.polylineMeters).toHaveLength(3);
       expect(drop.transition.kind).toBe('DROP');
-      expect(drop.transition.deltaYMeters).toBe(-1.5);
+      expect(drop.transition.deltaYMeters).toBe(-3);
       expect(drop.transition.confidence).toBe('HIGH');
     }
     expect(entry('center-small-step').xz.kind).toBe('UNRESOLVED');
