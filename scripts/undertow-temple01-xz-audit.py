@@ -401,3 +401,76 @@ for name,pdfpoly in glass_polys.items():
             f"T21GLASS Y3LOOP {name} {i} area={polygon_area(loop):.3f} "
             f"n={len(rr)} pts={[tuple(round(v,3) for v in p) for p in rr]}"
         )
+
+
+# Floor-level solid exclusion audit for each glass underpass.
+obj_ranges={}
+for ia,ib,ic,o,m in faces:
+    s=obj_ranges.setdefault(o,{"y0":float("inf"),"y1":float("-inf"),"mats":set()})
+    for vi in (ia,ib,ic):
+        yy=vertices[vi][1]
+        s["y0"]=min(s["y0"],yy); s["y1"]=max(s["y1"],yy)
+    s["mats"].add(m)
+
+OBSTACLE_TOKENS=("PillarBase","Pillar00","WallConcrete","WallMetal","Megalith","MetalBox")
+
+for name,pdfpoly in glass_polys.items():
+    poly=[pdf_to_model(p) for p in pdfpoly]
+    xmin=min(p[0] for p in poly); xmax=max(p[0] for p in poly)
+    zmin=min(p[1] for p in poly); zmax=max(p[1] for p in poly)
+    obstacle_cells=set()
+    hit_objects=defaultdict(int)
+
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            if not inside_poly(x,z,poly):
+                continue
+            occupied=False
+            for fi in face_candidates(x,z):
+                ia,ib,ic,o,m=faces[fi]
+                st=obj_ranges[o]
+                if st["y0"]>3.15 or st["y1"]<4.30:
+                    continue
+                if not any(t in o or t in m for t in OBSTACLE_TOKENS):
+                    continue
+                tri=[vertices[ia],vertices[ib],vertices[ic]]
+                # Horizontal-ish cap triangles provide the filled footprint.
+                n=tri_normal(tri)
+                if abs(n[1])<0.50 or not contains_xz(x,z,tri):
+                    continue
+                yy=interp_y(x,z,tri)
+                if 3.0-0.15 <= yy <= 6.5:
+                    occupied=True
+                    hit_objects[(o,m)]+=1
+                    break
+            if occupied:
+                obstacle_cells.add((ix,iz))
+
+    print(
+        f"T21UNDERPASS OBST {name} cells={len(obstacle_cells)} "
+        f"area={len(obstacle_cells)*STEP*STEP:.3f} objects={sorted(hit_objects.items(),key=lambda x:-x[1])[:12]}"
+    )
+    rem=set(obstacle_cells); comps=[]
+    while rem:
+        s=rem.pop(); cc={s}; q=deque([s])
+        while q:
+            c0=q.popleft()
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                n=(c0[0]+d[0],c0[1]+d[1])
+                if n in rem:
+                    rem.remove(n); cc.add(n); q.append(n)
+        comps.append(cc)
+    comps.sort(key=len,reverse=True)
+    for j,cc in enumerate(comps[:10]):
+        loops=boundary_loops(cc)
+        loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+        if not loops: continue
+        rr=rdp_closed(loops[0],0.15)
+        xs=[cell_xy(v)[0] for v in cc]; zs=[cell_xy(v)[1] for v in cc]
+        print(
+            f"T21UNDERPASS OBSTCOMP {name} {j} cells={len(cc)} "
+            f"x=({min(xs):.3f},{max(xs):.3f}) z=({min(zs):.3f},{max(zs):.3f}) "
+            f"n={len(rr)} pts={[tuple(round(v,3) for v in p) for p in rr]}"
+        )
