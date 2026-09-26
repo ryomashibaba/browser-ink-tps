@@ -9,7 +9,7 @@ describe('T21 Undertow blockout readiness gate', () => {
     expect(gate.missingTraceIds).not.toContain('common-playable-boundary');
     expect(gate.missingTraceIds).not.toContain('team-a-spawn-terrain-outline');
     expect(gate.missingTraceIds).not.toContain('team-b-spawn-terrain-outline');
-    expect(gate.missingTraceIds).not.toContain('center-low-floor-outline');
+    expect(gate.missingTraceIds).toContain('center-low-floor-outline');
     expect(gate.missingTraceIds).not.toContain('center-small-step-outline');
     expect(gate.missingTraceIds).toContain('glass-underpass-outline');
     expect(gate.missingTraceIds).not.toContain('center-left-slope-footprint');
@@ -42,19 +42,9 @@ describe('T21 Undertow blockout readiness gate', () => {
     expect(gate.unresolvedVerticalRelations).toEqual([]);
   });
 
-  it('keeps only slope-high and grate Y as vertical blockout blockers', () => {
+  it('has no remaining vertical blocker at BLOCKOUT confidence', () => {
     const gate = undertowBlockoutReadiness();
-
-    expect(gate.unresolvedVerticalIds).not.toContain('center-low-floor');
-    expect(gate.unresolvedVerticalIds).not.toContain('center-small-step-top');
-    expect(gate.unresolvedVerticalIds).not.toContain('center-left-slope-low');
-    expect(gate.unresolvedVerticalIds).not.toContain('center-right-slope-low');
-
-    expect(gate.unresolvedVerticalIds).toEqual([
-      'center-left-slope-high',
-      'center-right-slope-high',
-      'negative-z-grate-floor',
-      'positive-z-grate-floor'
-    ]);
+    expect(gate.unresolvedVerticalIds).toEqual([]);
+    expect(gate.unresolvedVerticalRelations).toEqual([]);
   });
 });
