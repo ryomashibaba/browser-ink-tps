@@ -1460,3 +1460,92 @@ for void_name in ("SMALL_NEG","SMALL_POS"):
         f"T21VOID FLOORMETAL_MATCH {void_name} "
         f"best={best}"
     )
+
+
+# Reverse-audit the dominant Y=1.2 FloorLine05 mesh bordering the large pair.
+# As with FloorMetal, a genuine pit cut into this floor must appear as an
+# interior negative-area loop of the floor mesh itself.
+def audit_floor_object_holes(label,target_object,target_y,compare_void_names):
+    target_faces=[]
+    for ff in faces:
+        ia,ib,ic,o,m=ff
+        if o != target_object:
+            continue
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        n=tri_normal(tri)
+        if abs(n[1])<0.75:
+            continue
+        cy=sum(v[1] for v in tri)/3
+        if abs(cy-target_y)>0.10:
+            continue
+        target_faces.append(ff)
+    if not target_faces:
+        raise SystemExit(f"T21 {label} audit failed: target faces missing")
+
+    xs=[vertices[i][0] for ff in target_faces for i in ff[:3]]
+    zs=[vertices[i][2] for ff in target_faces for i in ff[:3]]
+    cells=set()
+    for ix in range(math.floor(min(xs)/STEP),math.ceil(max(xs)/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(min(zs)/STEP),math.ceil(max(zs)/STEP)+1):
+            z=iz*STEP
+            for ia,ib,ic,o,m in target_faces:
+                tri=[vertices[ia],vertices[ib],vertices[ic]]
+                if contains_xz(x,z,tri) and abs(interp_y(x,z,tri)-target_y)<=0.10:
+                    cells.add((ix,iz)); break
+
+    comps=[]; rem=set(cells)
+    while rem:
+        seed=rem.pop(); cc={seed}; q=deque([seed])
+        while q:
+            c=q.popleft()
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                n=(c[0]+d[0],c[1]+d[1])
+                if n in rem:
+                    rem.remove(n); cc.add(n); q.append(n)
+        comps.append(cc)
+    comps.sort(key=len,reverse=True)
+
+    all_loops=[]
+    print(
+        f"T21VOID FLOOROBJECT {label} object={target_object} y={target_y:.3f} "
+        f"faces={len(target_faces)} cells={len(cells)} comps={len(comps)} "
+        f"bbox=({min(xs):.3f},{min(zs):.3f})..({max(xs):.3f},{max(zs):.3f})"
+    )
+    for ci,cc in enumerate(comps):
+        loops=boundary_loops(cc)
+        loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+        for li,loop in enumerate(loops):
+            area=polygon_area(loop)
+            all_loops.append((ci,li,area,loop))
+            if li<12:
+                lx=[p[0] for p in loop]; lz=[p[1] for p in loop]
+                rr=rdp_closed(loop,0.15)
+                print(
+                    f"T21VOID FLOOROBJECT_LOOP {label} comp={ci} loop={li} "
+                    f"signed_area={area:.6f} raw={len(loop)} n={len(rr)} "
+                    f"bbox=({min(lx):.3f},{min(lz):.3f})..({max(lx):.3f},{max(lz):.3f}) "
+                    f"pts={[tuple(round(v,3) for v in p) for p in rr]}"
+                )
+    holes=[item for item in all_loops if item[2] < -0.25]
+    print(
+        f"T21VOID FLOOROBJECT_HOLES {label} count={len(holes)} "
+        f"areas={[round(-item[2],6) for item in holes]}"
+    )
+    for void_name in compare_void_names:
+        void_loop=fine_voids[void_name][1][0]
+        best=None
+        for ci,li,area,loop in holes:
+            p50,p95,mx=loop_nearest_stats(void_loop,loop)
+            candidate=(p95,p50,mx,ci,li,-area)
+            if best is None or candidate<best:
+                best=candidate
+        print(f"T21VOID FLOOROBJECT_MATCH {label} {void_name} best={best}")
+    return cells,holes
+
+floorline05_cells,floorline05_holes=audit_floor_object_holes(
+    "FLOORLINE05",
+    "Fld_Temple01_group21978_1__FloorLine05",
+    1.2,
+    ("LARGE_POS","LARGE_NEG")
+)
