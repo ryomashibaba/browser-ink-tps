@@ -2035,7 +2035,7 @@ Confirmed from the 2026-09-25 traversals:
 - the right-low area has at least one traversable ramp exit
 - the underpass contains solid support/wall geometry that must become explicit navigation/collision exclusions
 
-**2026-09-26 correction:** the earlier same-height binding between first-drop landing/open area and right-small-drop upper is invalid. Direct user observation plus IMG_6112.jpeg / IMG_6111.jpeg shows that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. This is qualitative ordering only; no exact delta is fabricated.
+**2026-09-26 correction:** the earlier same-height binding between first-drop landing/open area and right-small-drop upper is invalid. IMG_6112.jpeg / IMG_6111.jpeg plus direct user observation establish only a red-guide-side < blue-guide-side floor ordering. The guide did not independently bind either visible side to a canonical floor node, so no first-drop-landing/right-low ordering or exact delta is promoted.
 
 Capture state:
 - RIGHT_LOW_PARTITION: CAPTURE_RECEIVED
@@ -2085,7 +2085,7 @@ The current HIGH/CONFIRMED vertical graph is audited by connected component.
 - spawn pair remains separate because first-drop magnitude is still PROVISIONAL
 - slope-high pair and grate pair remain separate unseeded components
 
-The 2026-09-26 corrective stills add only the order first-drop landing < right-low; they do not add an exact graph edge or absolute Y.
+The 2026-09-26 corrective stills do not add any canonical floor-to-floor graph edge. They only expose that the previous red/blue guide conflated vector-line geometry with side-of-line floor semantics.
 
 
 ## T21-C first-drop interpretation correction — 2026-09-26
@@ -2093,9 +2093,10 @@ The 2026-09-26 corrective stills add only the order first-drop landing < right-l
 The previous marked side-profile request is invalidated because its topology premise was wrong.
 
 Corrected evidence state:
-- floor below red first-drop lip < floor below blue right-small-drop lip — CONFIRMED qualitative ordering
+- user-observed red-guide-side floor < blue-guide-side floor — CONFIRMED line-side ordering
+- canonical identity of both observed guide sides — UNRESOLVED
 - first-drop landing = right-small-drop upper — REMOVED / INVALID
 - first-drop exact magnitude — still PROVISIONAL 1.5m / 3.0m
-- no replacement vertical capture is request-ready until the correct floor identities can be marked without reusing the false three-terrace model
+- no replacement vertical capture is request-ready until the visible guide sides are independently registered to canonical 3D floor nodes
 
 The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request remains only as an invalidated audit record. PR #5 remains Draft / unmerged and T21-D remains gated.
