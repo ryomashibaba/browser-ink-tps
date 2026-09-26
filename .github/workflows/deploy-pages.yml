@@ -734,6 +734,11 @@ jobs:
               )
           PY
 
+      - name: T21 Temple01 local XZ contour audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-temple01-xz-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
