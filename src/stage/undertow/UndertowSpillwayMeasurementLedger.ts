@@ -62,13 +62,9 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'SURFACE',
     confidence: 'CONFIRMED',
     evidenceIds: centerEvidence,
-    xz: {
-      kind: 'POLYGON',
-      polygonMeters: UNDERTOW_VECTOR_TRACES.centerOriginFace.metricPoints,
-      confidence: 'HIGH',
-      evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
-      notes: 'Exact closed vector face containing project origin. Bound to the canonical central-low reference by current gameplay evidence.'
-    },
+    xz: unresolvedXz(
+      'The former center-origin face binding is superseded: Temple01 local registration shows that face is the +1.5m step-top side, not center-low. The true center-low Y=0 outline must be re-extracted.'
+    ),
     y: {
       floorId: 'CENTER_LOW_0',
       yMeters: 0,
@@ -80,6 +76,34 @@ const entries: readonly StageMeasurementEntry[] = [
       semantics: ['PAINTABLE'],
       confidence: 'CONFIRMED',
       evidenceIds: handoff
+    },
+    notes: 'The Y datum remains CONFIRMED; only the previous XZ face identity was invalidated.'
+  }),
+  commonSurfaceEntry({
+    id: 'center-origin-step-top-face',
+    feature: 'central +1.5m step-top face containing project origin',
+    region: 'Center',
+    featureKind: 'SURFACE',
+    confidence: 'HIGH',
+    evidenceIds: remodelGeometryEvidence,
+    xz: {
+      kind: 'POLYGON',
+      polygonMeters: UNDERTOW_VECTOR_TRACES.centerOriginFace.metricPoints,
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'extracted-temple01-geometry'],
+      notes: 'Exact vector face containing project origin; Temple01 local step probes bind this face to model Y=4.5m, 1.5m above model center-low Y=3.0m.'
+    },
+    y: {
+      floorId: 'CENTER_STEP_1',
+      yMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence
+    },
+    transition: noTransition,
+    surface: {
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence
     }
   }),
   commonSurfaceEntry({
@@ -355,7 +379,13 @@ const entries: readonly StageMeasurementEntry[] = [
       'user-right-low-capture-2026-09-25'
     ],
     xz: unresolvedXz('The 2026-09-25 capture confirms the passage and support/wall exclusions, but perspective video still does not define a map-registered simple walkable polygon.'),
-    y: unknownY('Same-height relation to right-low is HIGH in the vertical constraint graph; absolute floor height remains unresolved.'),
+    y: {
+      floorId: 'GLASS_LOWER',
+      yMeters: 4.5,
+      confidence: 'HIGH',
+      evidenceIds: ['extracted-temple01-geometry', 'user-right-low-capture-2026-09-25', 'user-underpass-capture-2026-09-25'],
+      notes: 'The captured underpass is same-height with right-low; corrected Temple01 normalization resolves that shared floor to project Y=4.5m.'
+    },
     transition: noTransition,
     surface: {
       semantics: [],
@@ -378,11 +408,17 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
       notes: 'Exact dashed-hatch slope semantic footprint. This is a continuous slope region, not a hard-wall boundary.'
     },
-    y: unknownY('Start/end Y remain unresolved.'),
+    y: {
+      deltaMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence,
+      notes: 'Temple01 FloorSlope00 overlaps the registered footprint and spans project Y=-1.5m to 0m.'
+    },
     transition: {
       kind: 'SLOPE',
-      confidence: 'CONFIRMED',
-      evidenceIds: centerEvidence
+      deltaYMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence
     },
     surface: {
       semantics: [],
@@ -402,13 +438,19 @@ const entries: readonly StageMeasurementEntry[] = [
       polygonMeters: UNDERTOW_CENTRAL_SLOPE_MARKERS.right.metricPolygon,
       confidence: 'HIGH',
       evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
-      notes: 'Near-180-degree counterpart dashed-hatch slope semantic footprint. Start/end Y remain unresolved.'
+      notes: 'Near-180-degree counterpart dashed-hatch slope semantic footprint; Temple01 locally binds its vertical span to project Y=-1.5m..0m.'
     },
-    y: unknownY('Start/end Y remain unresolved.'),
+    y: {
+      deltaMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence,
+      notes: 'Temple01 counterpart FloorSlope00 spans project Y=-1.5m to 0m.'
+    },
     transition: {
       kind: 'SLOPE',
-      confidence: 'CONFIRMED',
-      evidenceIds: centerEvidence
+      deltaYMeters: 1.5,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence
     },
     surface: {
       semantics: [],
@@ -430,10 +472,10 @@ const entries: readonly StageMeasurementEntry[] = [
     xz: unresolvedXz('The 2026-09-25 perimeter capture classifies the low/open floor and exits, but the constant-height partition still does not close uniquely in the top-down source.'),
     y: {
       floorId: 'RIGHT_LOW',
-      yMeters: 3,
+      yMeters: 4.5,
       confidence: 'HIGH',
       evidenceIds: ['extracted-temple01-geometry', 'user-right-low-capture-2026-09-25'],
-      notes: 'Temple01 local registration resolves this lower-side floor to project Y=3.0m; the user capture independently binds the blue-lip destination to the right-low area.'
+      notes: 'Temple01 local registration resolves this lower-side floor to model Y=7.5m; corrected model center-low Y=3.0m maps it to project Y=4.5m.'
     },
     transition: noTransition,
     surface: {
@@ -545,10 +587,10 @@ const entries: readonly StageMeasurementEntry[] = [
     },
     y: {
       floorId: 'TEAM_A_SPAWN',
-      yMeters: 6,
+      yMeters: 7.5,
       confidence: 'HIGH',
       evidenceIds: ['extracted-temple01-geometry'],
-      notes: 'Temple01 spawn-center sample is model Y=10.5m; normalized against the registered center reference model Y=4.5m -> canonical center Y=0.'
+      notes: 'Temple01 spawn-center sample is model Y=10.5m; corrected model center-low Y=3.0m maps it to project Y=7.5m.'
     },
     transition: noTransition,
     surface: {
@@ -574,10 +616,10 @@ const entries: readonly StageMeasurementEntry[] = [
     },
     y: {
       floorId: 'TEAM_B_SPAWN',
-      yMeters: 6,
+      yMeters: 7.5,
       confidence: 'HIGH',
       evidenceIds: ['extracted-temple01-geometry'],
-      notes: '180-degree counterpart spawn center resolves to the same normalized Y=6.0m.'
+      notes: '180-degree counterpart spawn center resolves to the same normalized Y=7.5m.'
     },
     transition: noTransition,
     surface: {
@@ -683,7 +725,12 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
       notes: 'Exact white mesh-pattern plan footprint from the vector source.'
     },
-    y: unknownY('Absolute grate elevation remains for T21-C.'),
+    y: {
+      yMeters: 7.4,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence,
+      notes: 'Registered Temple01 FloorFence00 visual top is model Y=10.4m -> project Y=7.4m. HIGH for blockout/render surface only; not a Stable-Freeze collision-plane claim.'
+    },
     transition: noTransition,
     surface: {
       semantics: ['GRATE', 'UNINKABLE'],
@@ -706,7 +753,12 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint', 'user-center-videos'],
       notes: 'Exact 180-degree counterpart grate footprint.'
     },
-    y: unknownY('Absolute grate elevation remains for T21-C.'),
+    y: {
+      yMeters: 7.4,
+      confidence: 'HIGH',
+      evidenceIds: remodelGeometryEvidence,
+      notes: '180-degree counterpart Temple01 FloorFence00 visual top, project Y=7.4m; HIGH blockout/render evidence only.'
+    },
     transition: noTransition,
     surface: {
       semantics: ['GRATE', 'UNINKABLE'],
