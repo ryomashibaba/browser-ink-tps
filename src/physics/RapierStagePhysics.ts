@@ -7,7 +7,8 @@ export async function initializeRapier(): Promise<void> {
   await RAPIER.init();
 }
 
-export type StageQueryPurpose = 'projectile' | 'camera';
+export type StageQueryPurpose = 'ink-projectile' | 'thrown-sub' | 'camera';
+export type StageCharacterMode = 'HUMAN' | 'SQUID';
 
 export interface StageRayHit {
   distance: number;
@@ -56,7 +57,7 @@ export class RapierStagePhysics {
       (collider: Collider) => {
         const solid = this.solidByColliderHandle.get(collider.handle);
         if (!solid) return false;
-        return purpose === 'projectile' ? solid.projectileBlocker : solid.cameraBlocker;
+        return stageSolidBlocksQuery(solid, purpose);
       }
     );
     if (!hit) return null;
@@ -74,6 +75,15 @@ export class RapierStagePhysics {
       collider: hit.collider,
       solidId: solid.id
     };
+  }
+
+  public shouldCharacterCollide(
+    collider: Collider,
+    mode: StageCharacterMode
+  ): boolean {
+    const solid = this.solidByColliderHandle.get(collider.handle);
+    if (!solid) return true;
+    return stageSolidAllowsCharacterMode(solid, mode);
   }
 
   private buildStaticStage(solids: readonly StageSolidDefinition[]): void {
@@ -141,4 +151,24 @@ function rotateVector(v: Vec3, q: Quat): Vec3 {
     iy * q.w + iw * -q.y + iz * -q.x - ix * -q.z,
     iz * q.w + iw * -q.z + ix * -q.y - iy * -q.x
   );
+}
+
+
+export function stageSolidBlocksQuery(
+  solid: StageSolidDefinition,
+  purpose: StageQueryPurpose
+): boolean {
+  if (purpose === 'camera') return solid.cameraBlocker;
+  if (solid.collisionBehavior === 'GRATE') {
+    return purpose === 'thrown-sub';
+  }
+  return solid.projectileBlocker;
+}
+
+export function stageSolidAllowsCharacterMode(
+  solid: StageSolidDefinition,
+  mode: StageCharacterMode
+): boolean {
+  if (solid.collisionBehavior !== 'GRATE') return true;
+  return mode === 'HUMAN';
 }

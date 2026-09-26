@@ -3,6 +3,7 @@ import type { StageFootprint } from './StageFootprint';
 
 export type StageVector3 = readonly [number, number, number];
 export type StageMaterialKey = 'dark' | 'medium' | 'light' | 'accent';
+export type StageSolidCollisionBehavior = 'SOLID' | 'GRATE';
 
 export interface StageSolidDefinition {
   id: string;
@@ -13,6 +14,11 @@ export interface StageSolidDefinition {
   render: boolean;
   projectileBlocker: boolean;
   cameraBlocker: boolean;
+  /**
+   * SOLID is the frozen default. GRATE is semi-solid: Human form and thrown
+   * subs collide, while Squid form and ordinary ink projectiles pass through.
+   */
+  collisionBehavior?: StageSolidCollisionBehavior;
   /**
    * Optional canonical local-XZ footprint for polygonal BLOCKOUT solids.
    * Coordinates use the solid's lower-left local X/Z bounds as (0,0).
