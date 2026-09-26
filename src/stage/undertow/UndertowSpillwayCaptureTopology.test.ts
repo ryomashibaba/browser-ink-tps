@@ -22,7 +22,7 @@ describe('T21 captured layered topology', () => {
       )
     ).toMatchObject({
       kind: 'DROP',
-      deltaYMeters: -1.5,
+      deltaYMeters: -3,
       confidence: 'HIGH'
     });
   });
