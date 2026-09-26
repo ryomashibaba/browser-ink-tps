@@ -2,7 +2,7 @@ export type UndertowVerticalCaptureId =
   | 'FIRST_DROP_MAGNITUDE_SIDE_PROFILE';
 
 export type UndertowVerticalCaptureStatus =
-  | 'INVALIDATED_BY_HEIGHT_ORDER_CORRECTION';
+  | 'SUPERSEDED_BY_TEMPLE01_GEOMETRY';
 
 export interface UndertowVerticalCaptureRequest {
   id: UndertowVerticalCaptureId;
@@ -16,18 +16,17 @@ export interface UndertowVerticalCaptureRequest {
 }
 
 /**
- * The original side-profile request assumed that first-drop landing and
- * right-small-drop upper shared one elevation. The 2026-09-26 stills exposed
- * that the guide had not registered its visible line sides to canonical floor
- * identities, so the request is retained only as an audit record
- * and must not be shown as request-ready.
+ * The original side-profile request used a false three-terrace interpretation.
+ * The corrective stills exposed that mistake; the later Temple01 local
+ * registration then resolved the actual drop surfaces directly. This request
+ * remains only as an audit record and must never be shown to the user again.
  */
 export const UNDERTOW_VERTICAL_CAPTURE_REQUESTS:
   readonly UndertowVerticalCaptureRequest[] = [
     {
       id: 'FIRST_DROP_MAGNITUDE_SIDE_PROFILE',
       priority: 1,
-      status: 'INVALIDATED_BY_HEIGHT_ORDER_CORRECTION',
+      status: 'SUPERSEDED_BY_TEMPLE01_GEOMETRY',
       blocks: [
         'team-a-spawn-floor->team-a-first-drop-landing',
         'team-b-spawn-floor->team-b-first-drop-landing'
@@ -35,9 +34,9 @@ export const UNDERTOW_VERTICAL_CAPTURE_REQUESTS:
       mapGuideRequired: true,
       symmetricCounterpartAllowed: true,
       purpose:
-        'Former plan: compare the first drop against the adjacent known 1.5m right-small drop.',
+        'Former plan: estimate first-drop magnitude from a side-profile comparison.',
       invalidatedBecause:
-        'The 2026-09-26 corrective stills and direct user observation establish a red-guide-side versus blue-guide-side height ordering, but the guide did not independently register those observed floors to canonical first-drop/right-low nodes. The assumed consecutive three-terrace semantic chain is therefore invalid, so the blue 1.5m drop cannot be used as a direct first-drop magnitude reference.'
+        'The locally registered remodeled Temple01 OBJ now resolves the first-drop upper/lower surfaces to model Y=10.5/6.0m (4.5m descent) and the separate blue/right drop to 10.5/7.5m (3.0m descent). No replacement user capture is needed for these magnitudes.'
     }
   ];
 
