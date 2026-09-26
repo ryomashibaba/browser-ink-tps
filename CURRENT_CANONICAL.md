@@ -2129,3 +2129,18 @@ Current remodeled Undertow identity is now source-locked:
 Public current-model artifacts exist, including a KiTrix `Vss_Temple01` OBJ/MTL export and Temple01 actor definitions / rule-layer path references, but no metric vertex or Translate payload has yet been read in this audit. File names, material names, LFS pointers and class definitions are not geometry evidence.
 
 The next evidence priority is current Temple01 metric geometry, not another gameplay capture. T21-D remains gated and runtime geometry remains unchanged.
+
+
+## T21-C remodeled 3D source checkpoint
+
+External-source audit now fixes the correct remodel model family:
+
+- Nintendo Ver.7.2.0: Undertow terrain changed in all modes
+- Leanny 7.2.0 metadata: `Vss_Temple01` = マテガイ放水路（改修後）, preload `Fld_Temple01.bfres`
+- `Vss_Temple00 / Fld_Temple00` is pre-remodel and must not be used for the current T21 target
+- Salmon Run `Temple_Low/Mid/High` images are wrong-mode evidence and excluded
+- KiTrix has a BFRES-derived 43,263,289-byte `Vss_Temple01.obj`, but its LFS body is not readable in the current audit environment
+- KiTrix StageLoader display-name mapping is known-wrong and is not provenance evidence
+- Temple01 rule-set naming strongly indicates `PntSet` is the Turf-specific family; this remains HIGH until checked against readable geometry
+
+No XZ/Y value is promoted from this checkpoint. If the Temple01 OBJ/BFRES body becomes readable, it supersedes screenshot-height estimation as the preferred next T21-C evidence source.
