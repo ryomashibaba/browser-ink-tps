@@ -204,7 +204,7 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     ],
     'HARD_EDGE',
     'HIGH',
-    'Second spawn-side L-shaped hard edge after the confirmed first drop. It matches the current-layout topology: the open area after the first drop has a small drop on its right.'
+    'Separate Team A spawn-side right L-shaped drop edge. Do not infer that its upper side is the first-drop landing; Temple01 local registration resolves the two edges as distinct 10.5->6.0m and 10.5->7.5m model-Y discontinuities.'
   ),
   teamBRightSmallDropLip: vectorTrace(
     'team-b-right-small-drop-lip',
@@ -216,7 +216,7 @@ export const UNDERTOW_VECTOR_TRACES = Object.freeze({
     ],
     'HARD_EDGE',
     'HIGH',
-    '180-degree counterpart of the Team A right-side small-drop hard edge.'
+    '180-degree counterpart of the Team A right-side drop edge. Its side identities are resolved by the Temple01 local geometry audit rather than plan adjacency.'
   ),
   teamAWaterRegion: vectorTrace(
     'team-a-water-region',
