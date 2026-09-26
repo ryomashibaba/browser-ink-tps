@@ -420,12 +420,17 @@ for name,pdfpoly in glass_polys.items():
     zmin=min(p[1] for p in poly); zmax=max(p[1] for p in poly)
     obstacle_cells=set()
     hit_objects=defaultdict(int)
+    y3_floor_cells=set()
 
     for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
         x=ix*STEP
         for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
             z=iz*STEP
             if not inside_poly(x,z,poly):
+                continue
+            if has_walk_surface(x,z,3.0):
+                y3_floor_cells.add((ix,iz))
+            else:
                 continue
             occupied=False
             for fi in face_candidates(x,z):
