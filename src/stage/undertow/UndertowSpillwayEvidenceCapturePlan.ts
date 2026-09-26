@@ -47,11 +47,9 @@ export const UNDERTOW_TARGETED_EVIDENCE_CAPTURE_PLAN:
       priority: 1,
       status: 'CAPTURE_RECEIVED',
       receivedEvidenceIds: ['user-right-low-capture-2026-09-25'],
-      blocks: [
-        'right-low-floor-outline'
-      ],
+      blocks: [],
       existingEvidence:
-        'The PDF fixes the first-drop and second-drop hard edges, while existing gameplay video confirms the low grassy/open area. Both edges border the same connected 2D source faces, so the low-elevation partition does not close in plan.',
+        'The 2026-09-25 capture supplied semantic/traversal evidence. The remodeled Temple01 OBJ subsequently resolved the locally seeded Y=7.5m right-low connected floor partition in XZ at HIGH confidence, so this capture no longer blocks a trace.',
       unresolvedQuestion:
         'Where does the right-low constant-height floor end, and which exits are steps versus continuous ramps into adjacent floor levels?',
       minimumCapture: [
