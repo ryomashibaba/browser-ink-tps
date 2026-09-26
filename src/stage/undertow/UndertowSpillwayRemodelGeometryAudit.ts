@@ -29,6 +29,8 @@ export const UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT = Object.freeze({
     spawnFloor: 10.5,
     firstDropLanding: 6.0,
     rightSmallDropLower: 7.5,
+    glassUnderpassFloor: 3.0,
+    glassOverhangHighReference: 10.5,
     centerSlopeLow: 1.5,
     centerSlopeHigh: 3.0,
     grateVisualTop: 10.4
@@ -48,6 +50,8 @@ export const UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT = Object.freeze({
     firstDropLanding: 3.0,
     rightSmallDropUpper: 7.5,
     rightLow: 4.5,
+    glassUnderpassFloor: 0,
+    glassOverhangHighReference: 7.5,
     centerSlopeLow: -1.5,
     centerSlopeHigh: 0,
     grateVisualTop: 7.4
@@ -57,6 +61,8 @@ export const UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT = Object.freeze({
     firstDropMeters: -4.5,
     rightSmallDropMeters: -3.0,
     firstDropLandingToRightLowMeters: 1.5,
+    rightLowToGlassUnderpassMeters: -4.5,
+    glassUnderpassToHighReferenceMeters: 7.5,
     centerSlopeRiseMeters: 1.5
   },
   localDiscontinuityResidualsMeters: {
@@ -74,7 +80,11 @@ export const UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT = Object.freeze({
     centerSlope:
       'Fld_Temple01_pCube21000_1__FloorSlope00 overlaps both registered central slope footprints and spans model Y=1.5~3.0',
     grate:
-      'Fld_Temple01_pPlane157_1__FloorFence00 overlaps both registered grate footprints; target top surface is model Y=10.3~10.4'
+      'Fld_Temple01_pPlane157_1__FloorFence00 overlaps both registered grate footprints; target top surface is model Y=10.3~10.4',
+    glassUnderpass:
+      'Spatially regrouped central PntSet Glass01 structures cover connected model-Y=3.0 lower floors on both sides; common/PntSet PillarBase geometry provides explicit floor-level exclusions.',
+    glassHighReference:
+      'Central PntSet Glass01 / BridgeMetal geometry reaches model Y=10.5 on both sides; this is stored only as the high endpoint/reference, not a flat glass-plane Y.'
   },
   sideMaterials: {
     dropUpper:
@@ -97,6 +107,8 @@ export const UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT = Object.freeze({
     'The registered center-step probes show lower floor model Y=3.0 and origin-face/top model Y=4.5; this supersedes the earlier origin-face=center-low binding.',
     'The two central slope footprints locally overlap the common FloorSlope00 surface spanning model Y=1.5~3.0.',
     'The two grate footprints locally overlap the symmetric FloorFence00 surface with target visual top model Y=10.4.',
+    'The central Glass01 structures sit over connected model-Y=3.0 lower floors; this supersedes the capture-only same-height right-low/underpass interpretation.',
+    'The Glass01/BridgeMetal high endpoint reaches model Y=10.5 (project Y=7.5); the former +3m glass-high-reference relation is superseded.',
     'All model-derived values remain HIGH and are excluded from Stable Freeze until independently confirmed.'
   ] as const
 });
@@ -128,6 +140,12 @@ export function undertowRemodelGeometryAuditErrors(): readonly string[] {
   }
   if (a.projectY.firstDropLanding + a.deltas.firstDropLandingToRightLowMeters !== a.projectY.rightLow) {
     errors.push('Corrected red-lower / blue-lower ordering is inconsistent.');
+  }
+  if (a.projectY.rightLow + a.deltas.rightLowToGlassUnderpassMeters !== a.projectY.glassUnderpassFloor) {
+    errors.push('Right-low to glass-underpass normalized Y values are inconsistent.');
+  }
+  if (a.projectY.glassUnderpassFloor + a.deltas.glassUnderpassToHighReferenceMeters !== a.projectY.glassOverhangHighReference) {
+    errors.push('Glass underpass/high-reference normalized Y values are inconsistent.');
   }
   if (a.projectY.centerSlopeLow + a.deltas.centerSlopeRiseMeters !== a.projectY.centerSlopeHigh) {
     errors.push('Center slope normalized Y values are inconsistent.');
