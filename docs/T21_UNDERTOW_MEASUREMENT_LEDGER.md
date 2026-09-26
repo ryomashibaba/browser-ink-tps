@@ -582,3 +582,26 @@ The user's direct in-game observation plus `IMG_6112.jpeg` / `IMG_6111.jpeg` dis
 - the blue 1.5m drop cannot be used as a direct first-drop scale reference until its observed side is registered in 3D
 
 No replacement capture is request-ready yet. The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request remains only as an invalidated audit record. Runtime geometry remains unchanged and T21-D stays blocked.
+
+
+## T21-C — existing-media line-side semantic audit
+
+A full re-audit of the first-drop video, the 2026-09-25 right-low capture, the 2026-09-26 corrective stills, and the current-layout textual cross-check separates measured hard-edge geometry from side-of-line floor semantics.
+
+Results:
+- the red guide polyline remains the HIGH measured Team A first-drop hard edge
+- the blue guide polyline remains the HIGH measured Team A right-small-drop hard edge
+- neither red nor blue visible/map side is currently bound to a canonical floor node
+- the first-drop video confirms a one-way descent into a recessed area but then passes additional walls, ramps and floor transitions
+- the right-low capture confirms local small-drop/right-low/underpass topology but does not simultaneously register the red first-drop side
+- the corrective still pair provides only red-guide-side < blue-guide-side ordering
+- the current-layout description distinguishes the open area after the first drop from the separate open area reached by the small drop, supporting rejection of the former shared-middle-floor shortcut
+
+Consequences:
+- no first-drop-landing < right-low relation is canonical
+- no first-drop-landing = right-small-drop-upper relation is canonical
+- no numeric Y delta is extracted from the red/blue still comparison
+- first-drop magnitude stays PROVISIONAL [1.5, 3.0]m
+- a future capture, if needed, must first register visible line sides to canonical 3D floor identities before attempting height measurement
+
+No runtime stage geometry changes are allowed from this audit alone.
