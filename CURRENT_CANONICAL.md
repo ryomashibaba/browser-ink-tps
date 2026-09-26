@@ -2029,14 +2029,13 @@ Already-resolved areas are explicitly excluded from re-shooting. T21-D remains b
 
 The two requested 2026-09-25 gameplay captures are valid and are now canonical evidence.
 
-Confirmed from them:
+Confirmed from the 2026-09-25 traversals:
 - right-small-drop upper descends by the existing HIGH 1.5m relation into the right-low open floor
-- current layout evidence binds the first-drop landing/open area to that small-drop upper floor at the same elevation
 - right-low connects directly into the covered underpass with no visible step/drop, so those lower floors are HIGH same-height
 - the right-low area has at least one traversable ramp exit
 - the underpass contains solid support/wall geometry that must become explicit navigation/collision exclusions
 
-No absolute Y is fabricated from those relations. The chain remains unseeded until another independently known elevation is connected.
+**2026-09-26 correction:** the earlier same-height binding between first-drop landing/open area and right-small-drop upper is invalid. Direct user observation plus IMG_6112.jpeg / IMG_6111.jpeg shows that the floor below the red first-drop lip is lower than the floor below the blue right-small-drop lip. This is qualitative ordering only; no exact delta is fabricated.
 
 Capture state:
 - RIGHT_LOW_PARTITION: CAPTURE_RECEIVED
@@ -2078,20 +2077,25 @@ T21-D remains blocked; production runtime geometry is unchanged.
 
 ## T21-C vertical evidence decomposition checkpoint
 
-The current HIGH/CONFIRMED vertical graph is now audited by connected component.
+The current HIGH/CONFIRMED vertical graph is audited by connected component.
 
 - center component is seeded from center-low Y=0
-- landing/right-low/underpass/glass is one exact-relative but unseeded component
+- right-small-drop/right-low/underpass/glass is one exact-relative but unseeded component
+- first-drop landing pair is a separate symmetry-linked, unseeded component
 - spawn pair remains separate because first-drop magnitude is still PROVISIONAL
 - slope-high pair and grate pair remain separate unseeded components
 
-No absolute Y was added from perspective footage. The next vertical work must add evidence-backed ties rather than convenience heights.
+The 2026-09-26 corrective stills add only the order first-drop landing < right-low; they do not add an exact graph edge or absolute Y.
 
 
-## T21-C first-drop evidence-request checkpoint
+## T21-C first-drop interpretation correction — 2026-09-26
 
-The next vertical evidence request is narrowed to one marked-map side-profile capture comparing the unresolved first drop (1.5m / 3.0m candidates) with the adjacent right-small drop (1.5m HIGH).
+The previous marked side-profile request is invalidated because its topology premise was wrong.
 
-The request must show the upper spawn-side floor, middle first-drop landing / small-drop upper floor, and lower right-low floor together. The 180-degree counterpart is acceptable. Existing right-low and underpass clips remain accepted and are not to be re-requested.
+Corrected evidence state:
+- floor below red first-drop lip < floor below blue right-small-drop lip — CONFIRMED qualitative ordering
+- first-drop landing = right-small-drop upper — REMOVED / INVALID
+- first-drop exact magnitude — still PROVISIONAL 1.5m / 3.0m
+- no replacement vertical capture is request-ready until the correct floor identities can be marked without reusing the false three-terrace model
 
-No new absolute Y or runtime geometry is promoted at this checkpoint. PR #5 remains Draft / unmerged and T21-D remains gated.
+The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request remains only as an invalidated audit record. PR #5 remains Draft / unmerged and T21-D remains gated.
