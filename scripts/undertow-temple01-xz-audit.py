@@ -662,3 +662,107 @@ for side_name,pred in (
             f"T21NATIVE OBSTLOOP {side_name} {j} cells={len(cc)} n={len(rr)} "
             f"pts={[tuple(round(v,3) for v in p) for p in rr]}"
         )
+
+
+# Split Glass01 into actual disconnected triangle components. The object contains
+# several instances across the stage, so sign(x) alone is not a valid instance split.
+vertex_to_glass_faces=defaultdict(list)
+for j,ff in enumerate(glass_faces):
+    for vi in ff[:3]:
+        vertex_to_glass_faces[vi].append(j)
+
+unseen=set(range(len(glass_faces)))
+glass_components=[]
+while unseen:
+    seed=unseen.pop()
+    comp={seed}; q=deque([seed])
+    while q:
+        j=q.popleft()
+        ff=glass_faces[j]
+        for vi in ff[:3]:
+            for k in vertex_to_glass_faces[vi]:
+                if k in unseen:
+                    unseen.remove(k); comp.add(k); q.append(k)
+    glass_components.append(comp)
+
+glass_component_rows=[]
+for ci,comp in enumerate(glass_components):
+    vids=set()
+    for j in comp:
+        vids.update(glass_faces[j][:3])
+    pts3=[vertices[i] for i in vids]
+    x0=min(p[0] for p in pts3); x1=max(p[0] for p in pts3)
+    z0=min(p[2] for p in pts3); z1=max(p[2] for p in pts3)
+    y0=min(p[1] for p in pts3); y1=max(p[1] for p in pts3)
+    cx=sum(p[0] for p in pts3)/len(pts3); cz=sum(p[2] for p in pts3)/len(pts3)
+    glass_component_rows.append((ci,comp,vids,cx,cz,x0,x1,z0,z1,y0,y1))
+    print(
+        f"T21GLASSCOMP {ci} faces={len(comp)} verts={len(vids)} "
+        f"centroid=({cx:.3f},{cz:.3f}) x=({x0:.3f},{x1:.3f}) "
+        f"z=({z0:.3f},{z1:.3f}) y=({y0:.3f},{y1:.3f})"
+    )
+
+central=[row for row in glass_component_rows if abs(row[3])<18 and abs(row[4])<18]
+central.sort(key=lambda row:(row[3],row[4]))
+
+for idx,row in enumerate(central):
+    ci,comp,vids,cx,cz,x0,x1,z0,z1,y0,y1=row
+    hull=convex_hull([(vertices[i][0],vertices[i][2]) for i in vids])
+    side_name="POS_CENTRAL" if cx<0 else "NEG_CENTRAL"
+    print(f"T21CENTRALGLASS HULL {side_name} comp={ci} n={len(hull)} pts={[tuple(round(v,3) for v in p) for p in hull]}")
+
+    floor_cells=set()
+    for ix in range(math.floor(min(p[0] for p in hull)/STEP),math.ceil(max(p[0] for p in hull)/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(min(p[1] for p in hull)/STEP),math.ceil(max(p[1] for p in hull)/STEP)+1):
+            z=iz*STEP
+            if inside_poly(x,z,hull) and has_walk_surface(x,z,3.0):
+                floor_cells.add((ix,iz))
+    loops=boundary_loops(floor_cells)
+    loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    print(f"T21CENTRALGLASS FLOOR {side_name} cells={len(floor_cells)} area={len(floor_cells)*STEP*STEP:.3f}")
+    for j,loop in enumerate(loops[:6]):
+        rr=rdp_closed(loop,0.20)
+        print(
+            f"T21CENTRALGLASS FLOORLOOP {side_name} {j} area={polygon_area(loop):.3f} "
+            f"n={len(rr)} pts={[tuple(round(v,3) for v in p) for p in rr]}"
+        )
+
+    obstacle_cells=set()
+    for ix,iz in floor_cells:
+        x,z=cell_xy((ix,iz))
+        for fi in face_candidates(x,z):
+            ia,ib,ic,o,m=faces[fi]
+            st=obj_ranges[o]
+            if st["y0"]>3.15 or st["y1"]<4.30:
+                continue
+            if not any(t in o or t in m for t in OBSTACLE_TOKENS):
+                continue
+            tri=[vertices[ia],vertices[ib],vertices[ic]]
+            n=tri_normal(tri)
+            if abs(n[1])<0.50 or not contains_xz(x,z,tri):
+                continue
+            yy=interp_y(x,z,tri)
+            if 2.85<=yy<=6.5:
+                obstacle_cells.add((ix,iz)); break
+    rem=set(obstacle_cells); comps=[]
+    while rem:
+        seed=rem.pop(); cc={seed}; q=deque([seed])
+        while q:
+            c0=q.popleft()
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                nn=(c0[0]+d[0],c0[1]+d[1])
+                if nn in rem:
+                    rem.remove(nn); cc.add(nn); q.append(nn)
+        comps.append(cc)
+    comps.sort(key=len,reverse=True)
+    print(f"T21CENTRALGLASS OBST {side_name} cells={len(obstacle_cells)} area={len(obstacle_cells)*STEP*STEP:.3f}")
+    for j,cc in enumerate(comps[:8]):
+        loops2=boundary_loops(cc)
+        loops2.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+        if not loops2: continue
+        rr=rdp_closed(loops2[0],0.15)
+        print(
+            f"T21CENTRALGLASS OBSTLOOP {side_name} {j} cells={len(cc)} n={len(rr)} "
+            f"pts={[tuple(round(v,3) for v in p) for p in rr]}"
+        )
