@@ -573,6 +573,90 @@ jobs:
                       h=walkable_hit(cx+dx0,cz+dz0)
                       if h is not None:
                           print(f'T21VERIFY CENTERGRID {name} d=({dx0:+.2f},{dz0:+.2f}) hit={h}')
+
+          # Probe the two remaining vertical blockers against registered Temple01
+          # geometry: central slope high ends and the symmetric grate pair.
+          def point_in_poly(x,z,poly,margin=0.0):
+              # Convex/near-rectangular footprint; margin is handled by bbox fallback.
+              inside=False
+              j=len(poly)-1
+              for i in range(len(poly)):
+                  xi,zi=poly[i]; xj,zj=poly[j]
+                  if ((zi>z)!=(zj>z)) and (x < (xj-xi)*(z-zi)/(zj-zi+1e-30)+xi):
+                      inside=not inside
+                  j=i
+              if inside:
+                  return True
+              if margin<=0:
+                  return False
+              xmin=min(p[0] for p in poly)-margin; xmax=max(p[0] for p in poly)+margin
+              zmin=min(p[1] for p in poly)-margin; zmax=max(p[1] for p in poly)+margin
+              return xmin<=x<=xmax and zmin<=z<=zmax
+
+          remaining_polys={
+              'CENTER_SLOPE_LEFT':[(393.6,312.36),(409.44,312.36),(409.44,369.84),(393.6,369.84)],
+              'CENTER_SLOPE_RIGHT':[(432.48,225.36),(448.32,225.36),(448.32,282.84),(432.48,282.84)],
+              'NEG_GRATE':[(340.56,119.88),(363.48,119.88),(363.48,150.48),(340.56,150.48)],
+              'POS_GRATE':[(478.44,444.72),(501.36,444.72),(501.36,475.32),(478.44,475.32)],
+          }
+
+          for pname,pdfpoly in remaining_polys.items():
+              poly=[apply_tf(conv(p0),ra,rb,rtx,rtz) for p0 in pdfpoly]
+              print(f'T21REMAIN POLY {pname} model={[tuple(round(v,4) for v in p0) for p0 in poly]}')
+              xmin=min(p0[0] for p0 in poly); xmax=max(p0[0] for p0 in poly)
+              zmin=min(p0[1] for p0 in poly); zmax=max(p0[1] for p0 in poly)
+
+              # Dense point samples: report all nearly-horizontal hits, not just
+              # paintable-floor tokens, so grates are visible too.
+              sample_hits=Counter()
+              sample_material_y=Counter()
+              for ix in range(17):
+                  x=xmin+(xmax-xmin)*ix/16
+                  for iz in range(25):
+                      z=zmin+(zmax-zmin)*iz/24
+                      if not point_in_poly(x,z,poly,0):
+                          continue
+                      hits=floor_hits(x,z)
+                      if hits:
+                          for y,obj,mat,up in hits[:5]:
+                              sample_hits[(round(y,2),mat)]+=1
+                              sample_material_y[(mat,round(y,2))]+=1
+              print(f'T21REMAIN HITS {pname} top={sample_hits.most_common(30)}')
+
+              # Object/face overlap by triangle centroid, with a 0.75m envelope
+              # to tolerate the sub-meter plan-registration residual.
+              overlaps={}
+              for ia,ib,ic,obj,mat in faces:
+                  tri=[vertices[ia],vertices[ib],vertices[ic]]
+                  cx=sum(v[0] for v in tri)/3
+                  cz=sum(v[2] for v in tri)/3
+                  if not point_in_poly(cx,cz,poly,0.75):
+                      continue
+                  # Ignore near-vertical walls; keep walkable/grate/slope planes.
+                  a,b,cc=tri
+                  ux,uy,uz=b[0]-a[0],b[1]-a[1],b[2]-a[2]
+                  vx,vy,vz=cc[0]-a[0],cc[1]-a[1],cc[2]-a[2]
+                  nx=uy*vz-uz*vy; ny=uz*vx-ux*vz; nz=ux*vy-uy*vx
+                  norm=math.sqrt(nx*nx+ny*ny+nz*nz)
+                  if norm<1e-9 or abs(ny)/norm<0.25:
+                      continue
+                  s=overlaps.setdefault((obj,mat),{'n':0,'ys':[],'cx':[],'cz':[]})
+                  s['n']+=1
+                  s['ys'].extend(v[1] for v in tri)
+                  s['cx'].append(cx); s['cz'].append(cz)
+              rows=[]
+              for (obj,mat),s in overlaps.items():
+                  rows.append((
+                      s['n'],obj,mat,min(s['ys']),max(s['ys']),
+                      min(s['cx']),max(s['cx']),min(s['cz']),max(s['cz'])
+                  ))
+              rows.sort(reverse=True)
+              for row in rows[:40]:
+                  n,obj,mat,y0,y1,x0,x1,z0,z1=row
+                  print(
+                      f'T21REMAIN OBJ {pname} n={n} obj={obj} mat={mat} '
+                      f'y=({y0:.3f},{y1:.3f}) centroidXZ=({x0:.3f},{z0:.3f})..({x1:.3f},{z1:.3f})'
+                  )
           PY
 
       - name: Setup Node.js
