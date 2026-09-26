@@ -193,20 +193,123 @@ jobs:
                       return (y,obj,mat)
               return None
 
-          for lname in ('A_FIRST','A_RIGHT'):
-              pts=[conv(p) for p in lines[lname]]
-              for si,(a,b) in enumerate(zip(pts,pts[1:])):
-                  tx=b[0]-a[0]; tz=b[1]-a[1]
-                  ln=math.hypot(tx,tz)
-                  nx,nz=-tz/ln,tx/ln
-                  mx=(a[0]+b[0])*0.5; mz=(a[1]+b[1])*0.5
-                  vals=[]
-                  for step in range(-20,21):
-                      off=step*0.5
-                      x=mx+nx*off; z=mz+nz*off
-                      h=walkable_hit(x,z)
-                      vals.append((off,None if h is None else round(h[0],3),None if h is None else h[2]))
-                  print(f'T21RAY TRANSECT {lname} seg={si} mid=({mx:.3f},{mz:.3f}) values={vals}')
+          # Build a spatial index for floor-height rasterization.
+          walk_tokens=(
+              'FloorConcrete','FloorLine','FloorSlope','FloorGrass',
+              'GrassFloor','FloorMetal','FloorRubber','BridgeMetal'
+          )
+          walk_faces=[f for f in faces if any(k in f[4] for k in walk_tokens)]
+          cell_size=2.0
+          bins={}
+          for fi,(ia,ib,ic,obj,mat) in enumerate(walk_faces):
+              tri=[vertices[ia],vertices[ib],vertices[ic]]
+              xmin=min(v[0] for v in tri); xmax=max(v[0] for v in tri)
+              zmin=min(v[2] for v in tri); zmax=max(v[2] for v in tri)
+              ix0=math.floor(xmin/cell_size); ix1=math.floor(xmax/cell_size)
+              iz0=math.floor(zmin/cell_size); iz1=math.floor(zmax/cell_size)
+              for ix in range(ix0,ix1+1):
+                  for iz in range(iz0,iz1+1):
+                      bins.setdefault((ix,iz),[]).append(fi)
+
+          def fast_top(x,z):
+              candidates=bins.get((math.floor(x/cell_size),math.floor(z/cell_size)),())
+              best=None
+              for fi in candidates:
+                  ia,ib,ic,obj,mat=walk_faces[fi]
+                  a=vertices[ia]; b=vertices[ib]; cc=vertices[ic]
+                  x1,y1,z1=a; x2,y2,z2=b; x3,y3,z3=cc
+                  den=(z2-z3)*(x1-x3)+(x3-x2)*(z1-z3)
+                  if abs(den)<1e-9:
+                      continue
+                  wa=((z2-z3)*(x-x3)+(x3-x2)*(z-z3))/den
+                  wb=((z3-z1)*(x-x3)+(x1-x3)*(z-z3))/den
+                  wc=1-wa-wb
+                  if min(wa,wb,wc)<-1e-6:
+                      continue
+                  ux,uy,uz=x2-x1,y2-y1,z2-z1
+                  vx,vy,vz=x3-x1,y3-y1,z3-z1
+                  nx=uy*vz-uz*vy; ny=uz*vx-ux*vz; nz=ux*vy-uy*vx
+                  norm=math.sqrt(nx*nx+ny*ny+nz*nz)
+                  if norm<1e-9 or abs(ny)/norm<0.35:
+                      continue
+                  y=wa*y1+wb*y2+wc*y3
+                  if best is None or y>best:
+                      best=y
+              return best
+
+          # Rasterize model walkable top surfaces and extract connected
+          # discontinuity contours. These are used only to register the PDF
+          # plan to the remodel mesh; no Y is promoted from this temporary step.
+          step=0.5
+          xs=[-42.0+i*step for i in range(int(84/step)+1)]
+          zs=[-70.0+i*step for i in range(int(140/step)+1)]
+          grid={}
+          for ix,x in enumerate(xs):
+              for iz,z in enumerate(zs):
+                  grid[(ix,iz)]=fast_top(x,z)
+
+          edges=[]
+          for ix,x in enumerate(xs):
+              for iz,z in enumerate(zs):
+                  h=grid[(ix,iz)]
+                  if h is None:
+                      continue
+                  for dix,diz in ((1,0),(0,1)):
+                      j=(ix+dix,iz+diz)
+                      if j not in grid or grid[j] is None:
+                          continue
+                      h2=grid[j]
+                      if abs(h2-h)>=1.0:
+                          ex=x+dix*step*0.5
+                          ez=z+diz*step*0.5
+                          pair=tuple(sorted((round(h*2)/2,round(h2*2)/2)))
+                          edges.append((round(ex,3),round(ez,3),pair))
+
+          edge_at={}
+          for x,z,pair in edges:
+              edge_at.setdefault((x,z),Counter())[pair]+=1
+
+          # Connectivity in metric space, allowing adjacent half-meter edge samples.
+          points=set(edge_at)
+          comps=[]
+          while points:
+              seed=points.pop()
+              q=[seed]; comp=[seed]
+              while q:
+                  px,pz=q.pop()
+                  near=[]
+                  for dx in (-0.5,-0.25,0,0.25,0.5):
+                      for dz in (-0.5,-0.25,0,0.25,0.5):
+                          if dx==0 and dz==0:
+                              continue
+                          np=(round(px+dx,3),round(pz+dz,3))
+                          if np in points:
+                              points.remove(np); q.append(np); comp.append(np)
+              comps.append(comp)
+
+          comps.sort(key=len,reverse=True)
+          print(f'T21EDGE total={len(edges)} components={len(comps)}')
+          for ci,comp in enumerate(comps[:30]):
+              if len(comp)<4:
+                  continue
+              xvals=[p[0] for p in comp]; zvals=[p[1] for p in comp]
+              pairs=Counter()
+              for p in comp:
+                  pairs.update(edge_at[p])
+              print(
+                  f'T21EDGE COMP {ci} n={len(comp)} '
+                  f'bbox=({min(xvals):.2f},{min(zvals):.2f})..({max(xvals):.2f},{max(zvals):.2f}) '
+                  f'pairs={pairs.most_common(5)}'
+              )
+
+          # Compact positive-Z height map, one sample every 2m.
+          print('T21EDGE POSZ_ROWS')
+          for z in range(70,39,-2):
+              row=[]
+              for x in range(-30,31,2):
+                  h=fast_top(float(x),float(z))
+                  row.append(' .' if h is None else f'{int(round(h)):2d}')
+              print(f'T21EDGE Z={z:2d} ' + ' '.join(row))
           PY
 
       - name: Setup Node.js
