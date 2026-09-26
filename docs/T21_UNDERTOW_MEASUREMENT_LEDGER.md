@@ -630,3 +630,60 @@ Next preferred evidence is an actual current `Temple01` metric payload:
 3. another independently extracted `Fld_Temple01` mesh/collision representation.
 
 Do **not** ask the user for another gameplay capture while one of those current-model paths remains a realistic unresolved source route.
+
+
+## T21-C — remodeled external 3D source audit
+
+Public reverse-engineered sources were audited specifically to avoid requesting more screenshots before exhausting available model evidence.
+
+### Version / model identity
+
+Nintendo Ver.7.2.0 explicitly changed Undertow Spillway terrain in all modes. Leanny commit `458cbf271a161fea78db893aec6ee958e4684121` is named `7.2.0 update` and adds `data/mush/720/SceneInfo.json`.
+
+That 7.2.0 scene metadata distinguishes:
+- `Vss_Temple00` -> マテガイ放水路 -> `Model/Fld_Temple00.bfres`
+- `Vss_Temple01` -> マテガイ放水路（改修後） -> `Model/Fld_Temple01.bfres`
+
+Therefore the remodel target for this project is Temple01, not Temple00.
+
+Nintendo's published update history through Ver.11.3.0 contains later Undertow bug/rule fixes but no later documented all-mode terrain redesign. Temple01 is therefore the strongest known current normal-PvP model family, while this absence of later documented redesigns must not be treated as vertex evidence.
+
+### Rejected Salmon Run source
+
+Leanny's `Temple_Low.png / Temple_Mid.png / Temple_High.png` page is titled `Salmon Run Pillar Index`. It is rejected for T21-C normal-PvP floor-height reconstruction.
+
+### KiTrix Temple01
+
+`kirakira-dev/KiTrix` contains:
+- `stages/Vss_Temple01/Vss_Temple01.obj`
+- Git LFS declared body size: 43,263,289 bytes
+- Temple01 MTL with 278 material/shape-family names
+- `Fld_Temple01_*` and `FldObj_Temple01_*` families
+- rule-set families `PntSet / VarSet / VclSet / VglSet / VlfSet`
+
+Its BFRES->OBJ converter:
+- derives `Vss_Temple01` mechanically from an input named `Fld_Temple01...`
+- applies BFRES bone world transforms
+- writes transformed vertex X/Y/Z directly to OBJ
+- does not apply a project-specific scale or axis swap at export
+
+This makes the OBJ a potentially very strong geometry source once its LFS body is readable.
+
+However, the current audit environment can read only the Git LFS pointer, not the 43 MB OBJ body. No vertex, plane, floor Y, red/blue side binding or first-drop magnitude is promoted from KiTrix yet.
+
+KiTrix's own `StageLoader.swift` display-name mapping is explicitly **not** trusted: it maps Undertow to `Vss_Nagasaki03`, while Leanny's extracted game metadata identifies `Vss_Nagasaki03` as Sturgeon Shipyard and `Vss_Temple01` as remodeled Undertow. Model-file identity and the app's display-name table are therefore treated separately.
+
+### Rule-set filtering
+
+Independent Splatoon rule-code implementations map:
+- `cPnt` -> Turf War
+- `cVar` -> Splat Zones
+- `cVgl` -> Rainmaker
+- `cVlf` -> Tower Control
+- `cVcl` -> Clam Blitz
+
+Because Temple01 contains matching `PntSet / VarSet / VglSet / VlfSet / VclSet` families, future Turf geometry extraction should test **common Temple01 + PntSet**, not blindly merge all five mode-specific sets. This filter is HIGH, not Freeze-safe, until confirmed against the readable OBJ/placement data.
+
+### Current blocker
+
+The highest-value next non-gameplay evidence is the actual `Vss_Temple01.obj` LFS body or the original `Fld_Temple01.bfres`. Until one is readable, existing public metadata improves source selection but does not resolve T21-C Y values.
