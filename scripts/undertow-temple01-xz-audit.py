@@ -190,6 +190,49 @@ def simplify_axis(loop):
 def polygon_area(loop):
     return 0.5*sum(loop[i][0]*loop[(i+1)%len(loop)][1]-loop[(i+1)%len(loop)][0]*loop[i][1] for i in range(len(loop)))
 
+def point_seg_dist(p,a,b):
+    px,pz=p; ax,az=a; bx,bz=b
+    dx=bx-ax; dz=bz-az
+    den=dx*dx+dz*dz
+    if den<=1e-15:
+        return math.hypot(px-ax,pz-az)
+    t=max(0.0,min(1.0,((px-ax)*dx+(pz-az)*dz)/den))
+    q=(ax+t*dx,az+t*dz)
+    return math.hypot(px-q[0],pz-q[1])
+
+def rdp_open(points,eps):
+    if len(points)<=2:
+        return points
+    a=points[0]; b=points[-1]
+    best_i=-1; best_d=-1.0
+    for i in range(1,len(points)-1):
+        d=point_seg_dist(points[i],a,b)
+        if d>best_d:
+            best_d=d; best_i=i
+    if best_d>eps:
+        left=rdp_open(points[:best_i+1],eps)
+        right=rdp_open(points[best_i:],eps)
+        return left[:-1]+right
+    return [a,b]
+
+def rdp_closed(loop,eps):
+    if len(loop)<=4:
+        return loop
+    # Split the ring at a point roughly opposite the lexicographically smallest
+    # vertex so RDP never shortcuts the closure across the whole polygon.
+    i0=min(range(len(loop)),key=lambda i:(loop[i][0],loop[i][1]))
+    p0=loop[i0]
+    i1=max(range(len(loop)),key=lambda i:(loop[i][0]-p0[0])**2+(loop[i][1]-p0[1])**2)
+    def ring_slice(a,b):
+        out=[loop[a]]
+        i=a
+        while i!=b:
+            i=(i+1)%len(loop); out.append(loop[i])
+        return out
+    a=rdp_open(ring_slice(i0,i1),eps)
+    b=rdp_open(ring_slice(i1,i0),eps)
+    return a[:-1]+b[:-1]
+
 def describe(name,target_y,seed,bounds):
     comp,seed_cell,covered=flood_component(target_y,seed,bounds)
     print(f"T21XZ COMP {name} y={target_y:.2f} cells={len(comp)} area={len(comp)*STEP*STEP:.3f} seed={seed} seed_cell={seed_cell} covered={len(covered)}")
@@ -200,7 +243,9 @@ def describe(name,target_y,seed,bounds):
     loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
     for i,loop in enumerate(loops[:8]):
         s=simplify_axis(loop)
+        rr=rdp_closed(loop,0.20)
         print(f"T21XZ LOOP {name} {i} area={polygon_area(loop):.3f} raw={len(loop)} simple={len(s)} pts={[tuple(round(v,3) for v in p) for p in s]}")
+        print(f"T21XZ RDP {name} {i} eps=0.20 n={len(rr)} pts={[tuple(round(v,3) for v in p) for p in rr]}")
     if covered:
         # Covered subclusters inside the target-Y component.
         rem=set(covered); clusters=[]
