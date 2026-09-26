@@ -20,6 +20,7 @@ import {
   type StageSolidDefinition,
   type StageVector3
 } from './StageDefinition';
+import { rasterizeStageFootprint } from './StageFootprint';
 
 export { PRODUCTION_STAGE_DEFINITION, TEST_STAGE_DEFINITION } from './StageDefinition';
 
@@ -33,17 +34,23 @@ export function defineTestSurfaces(
 ): PaintSurface[] {
   const cell = GAME_CONFIG.ink.cellSizeMeters;
   const tile = GAME_CONFIG.ink.dirtyTileCells;
-  const surfaces = definition.paintSurfaces.map((surface) => new PaintSurface(
-    surface.id,
-    vec3(surface.center),
-    vec3(surface.uAxis),
-    vec3(surface.vAxis),
-    surface.widthMeters,
-    surface.heightMeters,
-    cell,
-    surface.flags,
-    tile
-  ));
+  const surfaces = definition.paintSurfaces.map((surface) => {
+    const backing = definition.solids.find(
+      (candidate) => candidate.id === surface.backingSolidId
+    );
+    return new PaintSurface(
+      surface.id,
+      vec3(surface.center),
+      vec3(surface.uAxis),
+      vec3(surface.vAxis),
+      surface.widthMeters,
+      surface.heightMeters,
+      cell,
+      surface.flags,
+      tile,
+      backing?.footprint
+    );
+  });
 
   for (const surface of surfaces) gameplayInk.registerSurface(surface);
   return surfaces;
@@ -85,26 +92,51 @@ export function buildTestStage(
 }
 
 function createSurfaceMesh(app: AppBase, surface: PaintSurface): Mesh {
-  const hu = surface.widthMeters * 0.5;
-  const hv = surface.heightMeters * 0.5;
-  const p0 = point(surface.center, surface.uAxis, -hu, surface.vAxis, -hv);
-  const p1 = point(surface.center, surface.uAxis, hu, surface.vAxis, -hv);
-  const p2 = point(surface.center, surface.uAxis, hu, surface.vAxis, hv);
-  const p3 = point(surface.center, surface.uAxis, -hu, surface.vAxis, hv);
+  const footprintRects = surface.activeFootprintRectangles;
+  if (!footprintRects) {
+    const hu = surface.widthMeters * 0.5;
+    const hv = surface.heightMeters * 0.5;
+    const p0 = point(surface.center, surface.uAxis, -hu, surface.vAxis, -hv);
+    const p1 = point(surface.center, surface.uAxis, hu, surface.vAxis, -hv);
+    const p2 = point(surface.center, surface.uAxis, hu, surface.vAxis, hv);
+    const p3 = point(surface.center, surface.uAxis, -hu, surface.vAxis, hv);
 
-  const positions = new Float32Array([
-    p0.x, p0.y, p0.z,
-    p1.x, p1.y, p1.z,
-    p2.x, p2.y, p2.z,
-    p3.x, p3.y, p3.z
-  ]);
-  const uvs = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
-  const indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+    const mesh = new Mesh(app.graphicsDevice);
+    mesh.setPositions(new Float32Array([
+      p0.x, p0.y, p0.z,
+      p1.x, p1.y, p1.z,
+      p2.x, p2.y, p2.z,
+      p3.x, p3.y, p3.z
+    ]));
+    mesh.setUvs(0, new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]));
+    mesh.setIndices(new Uint16Array([0, 1, 2, 0, 2, 3]));
+    mesh.update();
+    return mesh;
+  }
+
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  for (const rect of footprintRects) {
+    const corners = [
+      [rect.minU, rect.minV],
+      [rect.maxU, rect.minV],
+      [rect.maxU, rect.maxV],
+      [rect.minU, rect.maxV]
+    ] as const;
+    const base = positions.length / 3;
+    for (const [u, v] of corners) {
+      const world = surface.localToWorld(u, v);
+      positions.push(world.x, world.y, world.z);
+      uvs.push(u / surface.widthMeters, v / surface.heightMeters);
+    }
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  }
 
   const mesh = new Mesh(app.graphicsDevice);
-  mesh.setPositions(positions);
-  mesh.setUvs(0, uvs);
-  mesh.setIndices(indices);
+  mesh.setPositions(new Float32Array(positions));
+  mesh.setUvs(0, new Float32Array(uvs));
+  mesh.setIndices(new Uint32Array(indices));
   mesh.update();
   return mesh;
 }
@@ -137,13 +169,40 @@ function createSolidBox(
   material: StandardMaterial
 ): Entity {
   const entity = new Entity(solid.id);
-  entity.addComponent('render', { type: 'box', material, castShadows: true, receiveShadows: true });
   entity.setPosition(vec3(solid.center));
-  entity.setLocalScale(vec3(solid.size));
   if (solid.rotationEulerDegrees) {
     const rotation = solid.rotationEulerDegrees;
     entity.setEulerAngles(rotation[0], rotation[1], rotation[2]);
   }
+
+  if (!solid.footprint) {
+    entity.addComponent('render', { type: 'box', material, castShadows: true, receiveShadows: true });
+    entity.setLocalScale(vec3(solid.size));
+    parent.addChild(entity);
+    return entity;
+  }
+
+  const raster = rasterizeStageFootprint(
+    solid.size[0],
+    solid.size[2],
+    solid.footprint
+  );
+  raster.rectangles.forEach((rect, index) => {
+    const piece = new Entity(`${solid.id}:footprint:${index}`);
+    piece.addComponent('render', {
+      type: 'box',
+      material,
+      castShadows: true,
+      receiveShadows: true
+    });
+    piece.setLocalPosition(
+      rect.centerU - solid.size[0] * 0.5,
+      0,
+      rect.centerV - solid.size[2] * 0.5
+    );
+    piece.setLocalScale(rect.widthMeters, solid.size[1], rect.depthMeters);
+    entity.addChild(piece);
+  });
   parent.addChild(entity);
   return entity;
 }

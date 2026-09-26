@@ -1,4 +1,5 @@
 import { SurfaceFlags } from '../ink/types';
+import type { StageFootprint } from './StageFootprint';
 
 export type StageVector3 = readonly [number, number, number];
 export type StageMaterialKey = 'dark' | 'medium' | 'light' | 'accent';
@@ -12,6 +13,12 @@ export interface StageSolidDefinition {
   render: boolean;
   projectileBlocker: boolean;
   cameraBlocker: boolean;
+  /**
+   * Optional canonical local-XZ footprint for polygonal BLOCKOUT solids.
+   * Coordinates use the solid's lower-left local X/Z bounds as (0,0).
+   * When absent, the legacy full box remains unchanged.
+   */
+  footprint?: StageFootprint;
 }
 
 export interface StagePaintSurfaceDefinition {
