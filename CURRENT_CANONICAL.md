@@ -1884,21 +1884,20 @@ Resolved for BLOCKOUT:
 - center-low-floor = Y 0.0 m CONFIRMED
 - center-small-step-top = Y 1.5 m via HIGH +1.5 m relation
 
-Recorded but not absolute:
-- right-low -> right-small-drop-upper = +1.5 m HIGH
-- glass-lower-major-floor -> upper-glass-platform = +3.0 m HIGH
-- Team A/B spawn-floor equality = HIGH symmetry relation
-- Team A/B first-drop landing equality = HIGH symmetry relation
+**Superseded by the 2026-09-26 Temple01 local-geometry audit.** The earlier unseeded/candidate state is no longer current.
 
-Not resolved:
-- spawn absolute Y
-- first-drop exact magnitude (1.5 m vs 3.0 m)
-- glass lower-floor absolute Y
-- glass top absolute Y
-- right-low absolute Y
-- broad +4.5 to +6.0 m upper-level band
+Current BLOCKOUT/HIGH vertical results:
+- Team A/B spawn floor = project Y 6.0
+- Team A/B first-drop landing = project Y 1.5
+- first drop = -4.5m, ONE_WAY_DROP semantics retained
+- right-small-drop upper = project Y 6.0
+- right-low = project Y 3.0
+- right small drop = -3.0m
+- right-low -> glass-lower = 0m HIGH
+- glass-lower -> glass high reference = +3.0m HIGH
+- first-drop landing -> right-low = +1.5m HIGH
 
-The resolver cannot propagate candidate-only relations, and STABLE_FREEZE accepts CONFIRMED relations only. Historical Spawn 7.5 -> first 4.5 -> second 1.5 -> center 0 remains excluded from exact geometry.
+These HIGH values remain BLOCKOUT-only; STABLE_FREEZE still accepts CONFIRMED exact values only.
 
 
 ## T21-B recovered-vector source checkpoint — 2026-09-24
@@ -1918,7 +1917,7 @@ Superseding measurements:
 - two mapped cyan water hazards: CONFIRMED exact XZ polygons, ~33.004 m² each
 - mapped-water 180-degree residual: <0.03 m
 
-First-drop traversal semantics remain ONE_WAY_DROP CONFIRMED, while its exact Y difference remains PROVISIONAL 1.5 m / 3.0 m.
+First-drop traversal semantics remain ONE_WAY_DROP CONFIRMED. Its later Temple01 local registration resolves the exact BLOCKOUT/HIGH magnitude to 4.5m; this supersedes the earlier candidate-only state.
 
 The PDF does not justify flattening large closed source faces into gameplay floors. Spawn-floor outlines, center floor boundaries, glass, slopes, grate, and broader fall-out/void boundaries stay unresolved until source-line semantics are bound to gameplay evidence.
 
@@ -1935,7 +1934,7 @@ Using the recovered vector Turf PDF + matching 3508x2482 JPEG + current user gam
 - the glass vertical node is now a high-reference point, not a flat platform floor
 - center-left/right slope dash markers are located around project X=-9.805/+9.805m, Z≈0 with <0.03m symmetry residual, but remain marker envelopes rather than collision footprints
 - two symmetric white mesh/grate polygons are HIGH XZ, ~30.441m² each, GRATE/UNINKABLE CONFIRMED, Y UNKNOWN
-- the second right-side small-drop L-edge after the first drop is HIGH XZ on both sides, 16.90m plan length, with -1.5m HIGH vertical delta
+- the second right-side L-edge is HIGH XZ on both sides, 16.90m plan length; later Temple01 local registration resolves its vertical delta to -3.0m HIGH
 - right-low floor polygon itself remains unresolved
 - mapped cyan water remains separate from white grate semantics
 
@@ -2030,7 +2029,7 @@ Already-resolved areas are explicitly excluded from re-shooting. T21-D remains b
 The two requested 2026-09-25 gameplay captures are valid and are now canonical evidence.
 
 Confirmed from the 2026-09-25 traversals:
-- right-small-drop upper descends by the existing HIGH 1.5m relation into the right-low open floor
+- right-small-drop upper descends into the captured right-low open floor; Temple01 local registration later resolves this drop to 3.0m HIGH
 - right-low connects directly into the covered underpass with no visible step/drop, so those lower floors are HIGH same-height
 - the right-low area has at least one traversable ramp exit
 - the underpass contains solid support/wall geometry that must become explicit navigation/collision exclusions
@@ -2080,12 +2079,10 @@ T21-D remains blocked; production runtime geometry is unchanged.
 The current HIGH/CONFIRMED vertical graph is audited by connected component.
 
 - center component is seeded from center-low Y=0
-- right-small-drop/right-low/underpass/glass is one exact-relative but unseeded component
-- first-drop landing pair is a separate symmetry-linked, unseeded component
-- spawn pair remains separate because first-drop magnitude is still PROVISIONAL
+- spawn / first-drop landing / right-low / right-small-drop upper / glass references now form one exact HIGH seeded component through the Temple01 local registration
 - slope-high pair and grate pair remain separate unseeded components
 
-The 2026-09-26 corrective stills do not add any canonical floor-to-floor graph edge. They only expose that the previous red/blue guide conflated vector-line geometry with side-of-line floor semantics.
+The corrective stills themselves remain qualitative only; the exact graph edges come from the independently registered Temple01 OBJ.
 
 
 ## T21-C first-drop interpretation correction — 2026-09-26
@@ -2093,13 +2090,16 @@ The 2026-09-26 corrective stills do not add any canonical floor-to-floor graph e
 The previous marked side-profile request is invalidated because its topology premise was wrong.
 
 Corrected evidence state:
-- user-observed red-guide-side floor < blue-guide-side floor — CONFIRMED line-side ordering
-- canonical identity of both observed guide sides — UNRESOLVED
+- user-observed red-guide-side floor < blue-guide-side floor — CONFIRMED qualitative ordering
+- red lower side -> Team A first-drop landing = project Y 1.5 HIGH
+- red upper side -> Team A spawn floor = project Y 6.0 HIGH
+- blue lower side -> right-low = project Y 3.0 HIGH
+- blue upper side -> right-small-drop upper = project Y 6.0 HIGH
 - first-drop landing = right-small-drop upper — REMOVED / INVALID
-- first-drop exact magnitude — still PROVISIONAL 1.5m / 3.0m
-- no replacement vertical capture is request-ready until the visible guide sides are independently registered to canonical 3D floor nodes
+- first-drop exact magnitude = 4.5m HIGH
+- right-small-drop exact magnitude = 3.0m HIGH
 
-The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request remains only as an invalidated audit record. PR #5 remains Draft / unmerged and T21-D remains gated.
+The old `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` request is now `SUPERSEDED_BY_TEMPLE01_GEOMETRY`; no replacement user capture is needed for these magnitudes. PR #5 remains Draft / unmerged and T21-D remains gated by remaining XZ plus slope-high/grate Y blockers.
 
 
 ## T21-C line-side semantic audit — 2026-09-26
@@ -2108,13 +2108,15 @@ The red/blue marked-guide correction was re-audited against all existing local e
 
 Canonical result:
 - vector-line geometry identities remain HIGH
-- side-of-line canonical floor identities are UNRESOLVED
-- red-guide-side < blue-guide-side is retained only as user-observed guide-side ordering
-- no canonical floor-to-floor ordering or Y edge is created from that observation
-- first-drop video, right-low capture and current-layout description are insufficient to register both line sides in one common 3D frame
+- pre-model media alone was insufficient to bind the line sides
+- Temple01 OBJ local registration now resolves the red/blue canonical floor sides at HIGH confidence
+- registered first-drop lips match the 10.5<->6.0 model-Y discontinuity
+- registered right-small-drop lips match the 10.5<->7.5 model-Y discontinuity
+- after center-reference normalization, these are project Y 6.0<->1.5 and 6.0<->3.0
+- the user's red-lower < blue-lower observation is reproduced by 1.5 < 3.0
 - the superseded three-terrace interpretation remains forbidden
 
-T21-D stays gated. No replacement capture is requested until a truthful side-registration guide is prepared.
+T21-D stays gated for remaining geometry evidence; no first-drop recapture is needed.
 
 
 ## T21-C current model identity / external geometry gate — 2026-09-26
@@ -2126,9 +2128,11 @@ Current remodeled Undertow identity is now source-locked:
 - `Vss_Temple00` / `Fld_Temple00.bfres` = pre-remodel only
 - `Vss_Nagasaki03` / `Fld_Nagasaki03.bfres` = Sturgeon Shipyard; forbidden as Undertow geometry
 
-Public current-model artifacts exist, including a KiTrix `Vss_Temple01` OBJ/MTL export and Temple01 actor definitions / rule-layer path references, but no metric vertex or Translate payload has yet been read in this audit. File names, material names, LFS pointers and class definitions are not geometry evidence.
+The KiTrix `Vss_Temple01.obj` LFS body has now been read in CI: 43,263,289 bytes, 375,948 vertices. Common `Fld_Temple01` plus Turf `PntSet` geometry yields 70,396 active audit triangles.
 
-The next evidence priority is current Temple01 metric geometry, not another gameplay capture. T21-D remains gated and runtime geometry remains unchanged.
+Only locally verified registration is promotable. The four red/blue drop-lip segments coincide with the expected OBJ height-discontinuity contours within 0.163m in the 0.5m audit raster. The full exterior registration still has a large p95 residual, so arbitrary PDF->OBJ projection remains forbidden.
+
+T21-D remains gated and runtime geometry remains unchanged.
 
 
 ## T21-C remodeled 3D source checkpoint
@@ -2139,8 +2143,9 @@ External-source audit now fixes the correct remodel model family:
 - Leanny 7.2.0 metadata: `Vss_Temple01` = マテガイ放水路（改修後）, preload `Fld_Temple01.bfres`
 - `Vss_Temple00 / Fld_Temple00` is pre-remodel and must not be used for the current T21 target
 - Salmon Run `Temple_Low/Mid/High` images are wrong-mode evidence and excluded
-- KiTrix has a BFRES-derived 43,263,289-byte `Vss_Temple01.obj`, but its LFS body is not readable in the current audit environment
+- KiTrix BFRES-derived 43,263,289-byte `Vss_Temple01.obj` LFS body is now readable through the CI audit
+- 375,948 vertices were parsed; common + Turf `PntSet` local geometry was audited
 - KiTrix StageLoader display-name mapping is known-wrong and is not provenance evidence
-- Temple01 rule-set naming strongly indicates `PntSet` is the Turf-specific family; this remains HIGH until checked against readable geometry
+- locally verified drop-lip geometry is promotable at HIGH confidence; blanket full-model registration is not
 
-No XZ/Y value is promoted from this checkpoint. If the Temple01 OBJ/BFRES body becomes readable, it supersedes screenshot-height estimation as the preferred next T21-C evidence source.
+Promoted BLOCKOUT/HIGH Y values are limited to the locally verified chain: spawn 6.0, first-drop landing 1.5, right-low 3.0, right-small-drop upper 6.0, first drop -4.5, right drop -3.0.
