@@ -73,7 +73,7 @@ export const UNDERTOW_VERTICAL_COMPONENT_AUDIT:
       seededAbsoluteY: false,
       confidence: 'HIGH',
       blocker:
-        'The 2026-09-26 stills prove that the first-drop landing is below the right-small-drop lower-side floor, but they do not provide an exact metric delta. The former landing = right-small-drop-upper edge is removed.'
+        'The former landing = right-small-drop-upper edge is removed. The 2026-09-26 red/blue guide comparison cannot seed this component because the observed line sides are not yet registered to canonical floor identities.'
     },
     {
       id: 'SPAWN_UNSEEDED',
@@ -114,9 +114,9 @@ export const UNDERTOW_MINIMUM_VERTICAL_EVIDENCE_NEEDS = Object.freeze([
     id: 'FIRST_DROP_LANDING_EXACT_TIE',
     resolvesComponent: 'FIRST_DROP_LANDING_UNSEEDED' as const,
     minimumEvidence:
-      'One exact metric tie from the first-drop landing to a known/seeded floor. The 2026-09-26 stills currently provide only the ordering first-drop landing < right-low.',
+      'One exact metric tie from the first-drop landing to a known/seeded floor, after the relevant visible floor is independently registered to the first-drop-landing node.',
     currentState:
-      'The earlier same-height binding to right-small-drop upper was invalidated by direct user observation and the corrective still pair.'
+      'The earlier same-height binding to right-small-drop upper was invalidated. The corrective still pair is retained only as guide-line-side ordering until canonical floor-side registration is established.'
   },
   {
     id: 'FIRST_DROP_MAGNITUDE',
