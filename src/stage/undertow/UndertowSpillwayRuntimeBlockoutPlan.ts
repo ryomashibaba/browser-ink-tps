@@ -25,10 +25,17 @@ export type UndertowPaintAuthority =
   | 'UNINKABLE'
   | 'UNKNOWN';
 
+export type UndertowRuntimeCollisionMode =
+  | 'SOLID_FLOOR'
+  | 'GRATE_SPECIAL_REQUIRED'
+  | 'NONE';
+
 export interface UndertowRuntimeSurfacePlanItem {
   id: string;
   disposition: UndertowRuntimeSurfaceDisposition;
-  collisionReady: boolean;
+  geometryReady: boolean;
+  legacySolidCollisionCompatible: boolean;
+  collisionMode: UndertowRuntimeCollisionMode;
   paintAuthority: UndertowPaintAuthority;
   yMeters?: number;
   polygonCount: number;
@@ -64,7 +71,9 @@ function classify(entry: StageMeasurementEntry): UndertowRuntimeSurfacePlanItem 
     return {
       id: entry.id,
       disposition: 'NOT_A_SURFACE',
-      collisionReady: false,
+      geometryReady: false,
+      legacySolidCollisionCompatible: false,
+      collisionMode: 'NONE',
       paintAuthority: 'UNKNOWN',
       polygonCount: 0,
       notes: 'Only SURFACE entries can become flat footprint solids through this adapter.'
@@ -78,7 +87,9 @@ function classify(entry: StageMeasurementEntry): UndertowRuntimeSurfacePlanItem 
     return {
       id: entry.id,
       disposition: 'XZ_NOT_AREA',
-      collisionReady: false,
+      geometryReady: false,
+      legacySolidCollisionCompatible: false,
+      collisionMode: 'NONE',
       paintAuthority: paintAuthority(
         entry.surface.semantics,
         entry.surface.confidence
@@ -94,7 +105,9 @@ function classify(entry: StageMeasurementEntry): UndertowRuntimeSurfacePlanItem 
     return {
       id: entry.id,
       disposition: 'Y_UNRESOLVED',
-      collisionReady: false,
+      geometryReady: false,
+      legacySolidCollisionCompatible: false,
+      collisionMode: 'NONE',
       paintAuthority: paintAuthority(
         entry.surface.semantics,
         entry.surface.confidence
@@ -105,18 +118,22 @@ function classify(entry: StageMeasurementEntry): UndertowRuntimeSurfacePlanItem 
     };
   }
 
+  const grate = entry.surface.semantics.includes('GRATE');
   return {
     id: entry.id,
     disposition: 'FLAT_POLYGON_READY',
-    collisionReady: true,
+    geometryReady: true,
+    legacySolidCollisionCompatible: !grate,
+    collisionMode: grate ? 'GRATE_SPECIAL_REQUIRED' : 'SOLID_FLOOR',
     paintAuthority: paintAuthority(
       entry.surface.semantics,
       entry.surface.confidence
     ),
     yMeters,
     polygonCount: count,
-    notes:
-      'Exact/HIGH-or-stronger polygon XZ and absolute Y are available for a flat BLOCKOUT footprint. Paint authority remains independent.'
+    notes: grate
+      ? 'The flat XZ/Y geometry is ready, but Splatoon grate behavior is semi-solid: humanoid players stand on it while swim form and ink shots pass through. Do not represent it with the legacy all-purpose solid collider.'
+      : 'Exact/HIGH-or-stronger polygon XZ and absolute Y are available for a flat BLOCKOUT solid floor. Paint authority remains independent.'
   };
 }
 
@@ -135,12 +152,18 @@ export function undertowRuntimeSurfacePlanItem(
 export function undertowRuntimeSurfacePlanErrors(): readonly string[] {
   const errors: string[] = [];
   for (const item of UNDERTOW_RUNTIME_SURFACE_PLAN) {
-    if (item.collisionReady !== (item.disposition === 'FLAT_POLYGON_READY')) {
-      errors.push(`${item.id}: collisionReady/disposition mismatch`);
+    if (item.geometryReady !== (item.disposition === 'FLAT_POLYGON_READY')) {
+      errors.push(`${item.id}: geometryReady/disposition mismatch`);
     }
     if (item.disposition === 'FLAT_POLYGON_READY') {
       if (!Number.isFinite(item.yMeters) || item.polygonCount < 1) {
         errors.push(`${item.id}: ready flat surface lacks exact Y or polygon area`);
+      }
+      if (
+        item.collisionMode === 'GRATE_SPECIAL_REQUIRED' &&
+        item.legacySolidCollisionCompatible
+      ) {
+        errors.push(`${item.id}: grate must never be declared legacy-solid compatible`);
       }
     }
   }
@@ -178,7 +201,9 @@ export function undertowRuntimeSurfacePlanErrors(): readonly string[] {
 export interface UndertowDerivedRuntimeSurfacePlanItem {
   id: UndertowModelXZGeometryId;
   source: 'TEMPLE01_LOCAL_COMPONENT';
-  collisionReady: true;
+  geometryReady: true;
+  legacySolidCollisionCompatible: true;
+  collisionMode: 'SOLID_FLOOR';
   paintAuthority: 'UNKNOWN';
   yMeters: number;
   polygonCount: 1;
@@ -200,7 +225,9 @@ export const UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN:
     .map((item) => ({
       id: item.id,
       source: 'TEMPLE01_LOCAL_COMPONENT' as const,
-      collisionReady: true as const,
+      geometryReady: true as const,
+      legacySolidCollisionCompatible: true as const,
+      collisionMode: 'SOLID_FLOOR' as const,
       paintAuthority: 'UNKNOWN' as const,
       yMeters: item.sourceYProjectMeters,
       polygonCount: 1 as const,

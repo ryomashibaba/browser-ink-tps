@@ -14,14 +14,18 @@ describe('T21-D runtime blockout surface plan', () => {
   it('promotes only flat polygon surfaces with BLOCKOUT-safe XZ and Y', () => {
     expect(undertowRuntimeSurfacePlanItem('center-lower-floor')).toMatchObject({
       disposition: 'FLAT_POLYGON_READY',
-      collisionReady: true,
+      geometryReady: true,
+      legacySolidCollisionCompatible: true,
+      collisionMode: 'SOLID_FLOOR',
       paintAuthority: 'PAINTABLE',
       yMeters: 0,
       polygonCount: 2
     });
     expect(undertowRuntimeSurfacePlanItem('right-low-floor')).toMatchObject({
       disposition: 'FLAT_POLYGON_READY',
-      collisionReady: true,
+      geometryReady: true,
+      legacySolidCollisionCompatible: true,
+      collisionMode: 'SOLID_FLOOR',
       paintAuthority: 'PAINTABLE',
       yMeters: 4.5,
       polygonCount: 2
@@ -31,17 +35,21 @@ describe('T21-D runtime blockout surface plan', () => {
   it('keeps geometry and paint authority separate for the underpass', () => {
     expect(undertowRuntimeSurfacePlanItem('upper-glass-underpass')).toMatchObject({
       disposition: 'FLAT_POLYGON_READY',
-      collisionReady: true,
+      geometryReady: true,
+      legacySolidCollisionCompatible: true,
+      collisionMode: 'SOLID_FLOOR',
       paintAuthority: 'UNKNOWN',
       yMeters: 0,
       polygonCount: 2
     });
   });
 
-  it('keeps known uninkable grate geometry collision-ready without making it paintable', () => {
+  it('keeps grate geometry ready while rejecting the legacy all-purpose solid collider', () => {
     expect(undertowRuntimeSurfacePlanItem('negative-z-grate-mesh')).toMatchObject({
       disposition: 'FLAT_POLYGON_READY',
-      collisionReady: true,
+      geometryReady: true,
+      legacySolidCollisionCompatible: false,
+      collisionMode: 'GRATE_SPECIAL_REQUIRED',
       paintAuthority: 'UNINKABLE',
       yMeters: 7.4,
       polygonCount: 1
@@ -52,7 +60,9 @@ describe('T21-D runtime blockout surface plan', () => {
     expect(UNDERTOW_DERIVED_RUNTIME_SURFACE_PLAN).toHaveLength(4);
     expect(undertowDerivedRuntimeSurfacePlanItem('spawn-high-positive-z')).toMatchObject({
       source: 'TEMPLE01_LOCAL_COMPONENT',
-      collisionReady: true,
+      geometryReady: true,
+      legacySolidCollisionCompatible: true,
+      collisionMode: 'SOLID_FLOOR',
       paintAuthority: 'UNKNOWN',
       yMeters: 7.5,
       polygonCount: 1,
@@ -65,7 +75,9 @@ describe('T21-D runtime blockout surface plan', () => {
     expect(
       undertowDerivedRuntimeSurfacePlanItem('first-drop-landing-positive-z')
     ).toMatchObject({
-      collisionReady: true,
+      geometryReady: true,
+      legacySolidCollisionCompatible: true,
+      collisionMode: 'SOLID_FLOOR',
       paintAuthority: 'UNKNOWN',
       yMeters: 3,
       polygonCount: 1,
@@ -82,15 +94,15 @@ describe('T21-D runtime blockout surface plan', () => {
   it('refuses to flatten point-only spawn nodes or multi-elevation spawn envelopes', () => {
     expect(undertowRuntimeSurfacePlanItem('team-a-spawn-floor')).toMatchObject({
       disposition: 'XZ_NOT_AREA',
-      collisionReady: false
+      geometryReady: false
     });
     expect(undertowRuntimeSurfacePlanItem('team-a-spawn-terrain-region')).toMatchObject({
       disposition: 'Y_UNRESOLVED',
-      collisionReady: false
+      geometryReady: false
     });
     expect(undertowRuntimeSurfacePlanItem('team-b-spawn-terrain-region')).toMatchObject({
       disposition: 'Y_UNRESOLVED',
-      collisionReady: false
+      geometryReady: false
     });
   });
 });
