@@ -913,3 +913,150 @@ for side_name,pred in central_regions.items():
             f"T21SPATIALGLASS OBSTLOOP {side_name} {j} cells={len(cc)} n={len(rr)} "
             f"pts={[tuple(round(v,3) for v in p) for p in rr]}"
         )
+
+
+# Exploratory internal-void enumeration.
+#
+# This does NOT promote KILL geometry. It only asks whether the current
+# common+Turf Temple01 mesh contains top-down holes in the gameplay surface
+# network after obvious solid caps are treated as occupied. Low catcher/base
+# geometry is reported separately rather than being assumed survivable.
+VOID_STEP=0.5
+VOID_MIN_Y=-15.0
+VOID_MAX_Y=20.0
+VOID_SOLID_TOP_Y=-1.0
+WATER_TOKENS=("Water","Sea","River")
+
+def void_column_class(x,z):
+    walk=[]
+    solid=[]
+    water=[]
+    for fi in face_candidates(x,z):
+        ia,ib,ic,o,m=faces[fi]
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        n=tri_normal(tri)
+        if abs(n[1])<0.35 or not contains_xz(x,z,tri):
+            continue
+        y=interp_y(x,z,tri)
+        if not (VOID_MIN_Y<=y<=VOID_MAX_Y):
+            continue
+        if any(t in o or t in m for t in WATER_TOKENS):
+            water.append((y,o,m))
+        elif any(t in m for t in WALK_TOKENS):
+            walk.append((y,o,m))
+        else:
+            solid.append((y,o,m))
+    walk.sort(reverse=True)
+    solid.sort(reverse=True)
+    water.sort(reverse=True)
+    return walk,solid,water
+
+walk_vertices=[]
+for ia,ib,ic,o,m in faces:
+    if any(t in m for t in WALK_TOKENS):
+        walk_vertices.extend((vertices[ia],vertices[ib],vertices[ic]))
+
+if walk_vertices:
+    vx0=min(v[0] for v in walk_vertices)-2.0
+    vx1=max(v[0] for v in walk_vertices)+2.0
+    vz0=min(v[2] for v in walk_vertices)-2.0
+    vz1=max(v[2] for v in walk_vertices)+2.0
+    ix0=math.floor(vx0/VOID_STEP); ix1=math.ceil(vx1/VOID_STEP)
+    iz0=math.floor(vz0/VOID_STEP); iz1=math.ceil(vz1/VOID_STEP)
+
+    walk_cells=set()
+    blocking_cells=set()
+    low_only_cells=set()
+    empty_cells=set()
+    water_cells=set()
+    low_top_y={}
+
+    for ix in range(ix0,ix1+1):
+        x=ix*VOID_STEP
+        for iz in range(iz0,iz1+1):
+            z=iz*VOID_STEP
+            walk,solid,water=void_column_class(x,z)
+            c=(ix,iz)
+            if walk:
+                walk_cells.add(c)
+                blocking_cells.add(c)
+            elif water:
+                water_cells.add(c)
+                blocking_cells.add(c)
+            elif solid and solid[0][0] >= VOID_SOLID_TOP_Y:
+                blocking_cells.add(c)
+            elif solid:
+                low_only_cells.add(c)
+                low_top_y[c]=solid[0][0]
+            else:
+                empty_cells.add(c)
+
+    traversable_empty=low_only_cells|empty_cells
+    outside=set()
+    q=deque()
+    for ix in range(ix0,ix1+1):
+        for iz in (iz0,iz1):
+            c=(ix,iz)
+            if c in traversable_empty and c not in outside:
+                outside.add(c); q.append(c)
+    for iz in range(iz0,iz1+1):
+        for ix in (ix0,ix1):
+            c=(ix,iz)
+            if c in traversable_empty and c not in outside:
+                outside.add(c); q.append(c)
+    while q:
+        c=q.popleft()
+        for d in ((1,0),(-1,0),(0,1),(0,-1)):
+            n=(c[0]+d[0],c[1]+d[1])
+            if n in traversable_empty and n not in outside:
+                outside.add(n); q.append(n)
+
+    enclosed=traversable_empty-outside
+    rem=set(enclosed); void_components=[]
+    while rem:
+        seed=rem.pop(); cc={seed}; qq=deque([seed])
+        while qq:
+            c=qq.popleft()
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                n=(c[0]+d[0],c[1]+d[1])
+                if n in rem:
+                    rem.remove(n); cc.add(n); qq.append(n)
+        void_components.append(cc)
+    void_components.sort(key=len,reverse=True)
+
+    print(
+        f"T21VOID SUMMARY step={VOID_STEP:.3f} walk={len(walk_cells)} "
+        f"water={len(water_cells)} low_only={len(low_only_cells)} "
+        f"empty={len(empty_cells)} outside_empty={len(outside)} "
+        f"enclosed={len(enclosed)} comps={len(void_components)}"
+    )
+
+    significant=[cc for cc in void_components if len(cc)*VOID_STEP*VOID_STEP>=1.0]
+    for j,cc in enumerate(significant[:30]):
+        xs=[c[0]*VOID_STEP for c in cc]
+        zs=[c[1]*VOID_STEP for c in cc]
+        lows=[low_top_y[c] for c in cc if c in low_top_y]
+        boundary_walk=0; boundary_block=0; boundary_water=0
+        for c in cc:
+            for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                n=(c[0]+d[0],c[1]+d[1])
+                if n in walk_cells: boundary_walk+=1
+                elif n in water_cells: boundary_water+=1
+                elif n in blocking_cells: boundary_block+=1
+        mirrored={(-c[0],-c[1]) for c in cc}
+        best_overlap=0; best_idx=None
+        for k,other in enumerate(significant):
+            ov=len(mirrored & other)
+            if ov>best_overlap:
+                best_overlap=ov; best_idx=k
+        mirror_ratio=(best_overlap/len(cc)) if cc else 0.0
+        print(
+            f"T21VOID COMP {j} cells={len(cc)} area={len(cc)*VOID_STEP*VOID_STEP:.3f} "
+            f"bbox=({min(xs):.3f},{min(zs):.3f})..({max(xs):.3f},{max(zs):.3f}) "
+            f"low_cells={len(lows)} low_top_range="
+            f"{(round(min(lows),3),round(max(lows),3)) if lows else None} "
+            f"adj_walk={boundary_walk} adj_solid={boundary_block} adj_water={boundary_water} "
+            f"mirror_best={best_idx} mirror_overlap={best_overlap} mirror_ratio={mirror_ratio:.3f}"
+        )
+else:
+    print("T21VOID SUMMARY no walkable vertices")
