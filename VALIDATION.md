@@ -1423,8 +1423,8 @@ Automated scope:
 - working 20px/m scale remains HIGH
 - whole-stage ~146x87m remains PROVISIONAL
 - Team A/B first descents are CONFIRMED `ONE_WAY_DROP`
-- first-drop 1.5m/3m magnitudes remain PROVISIONAL candidates
-- spawn absolute Y remains UNKNOWN
+- Temple01 local registration resolves first-drop magnitude to 4.5m HIGH
+- Temple01 local registration resolves both spawn centers to project Y=6.0 HIGH
 - upper glass is explicit UNINKABLE + GLASS gameplay geometry
 - Splat Zones objective count is recorded as two
 - Tower/Rainmaker/Clams geometry differences remain rule-variant facts
@@ -1460,10 +1460,12 @@ New deterministic coverage verifies:
 - an unseeded HIGH relation cannot invent an absolute Y
 - contradictory exact constraints are reported
 - center-low Y=0 resolves center small-step to 1.5m at blockout level
-- glass-top absolute Y stays unresolved while its lower reference floor is unknown
-- spawn and first-drop landing absolute Y stay unresolved
-- first-drop 1.5m / 3.0m remains a PROVISIONAL candidate pair rather than an exact delta
-- +4.5 to +6.0m upper band and +4.5m raised-platform candidate remain PROVISIONAL
+- the remodeled spawn/right-low chain resolves at BLOCKOUT confidence without conflicts
+- Team A/B spawn Y=6.0, first-drop landing Y=1.5, right-low Y=3.0, right-small-drop upper Y=6.0
+- first drop is exact -4.5m HIGH and right small drop is exact -3.0m HIGH
+- glass lower/high reference resolve through the captured 0m / +3m relations
+- slope-high endpoints and grate elevations remain unresolved
+- +4.5 to +6.0m broad upper-band hypothesis and +4.5m raised-platform candidate remain PROVISIONAL
 
 No runtime stage geometry or traversal changes are introduced by this checkpoint.
 
@@ -1480,7 +1482,7 @@ Expected deterministic checks:
 - Team A/B first-drop lips are HIGH POLYLINE XZ measurements
 - each first-drop lip has 15.25 m plan length
 - first-drop pair 180-degree residual is <0.03 m
-- first-drop Y remains the PROVISIONAL [1.5, 3.0] m candidate pair
+- the vector source alone does not determine first-drop Y; later Temple01 local registration resolves the magnitude to 4.5m HIGH
 - both mapped cyan water regions are CONFIRMED polygons
 - each mapped water polygon has ~33.004 m² plan area
 - mapped-water pair symmetry residual is <0.03 m
@@ -1595,11 +1597,12 @@ Automated checks now verify:
 - both targeted 2026-09-25 traversal files plus the 2026-09-26 corrective still pair are represented as CONFIRMED user capture evidence
 - right-low and underpass entries cite the traversal captures but retain UNRESOLVED XZ until plan registration
 - the former first-drop landing -> right-small-drop upper 0m edge is absent
-- the corrective stills record only a red-guide-side < blue-guide-side ordering; canonical floor identities remain unresolved
+- the corrective stills themselves remain qualitative red-guide-side < blue-guide-side evidence
+- Temple01 local registration independently resolves red/blue canonical floor sides
 - right-low -> covered-underpass floor remains a 0m HIGH relation
-- right-small-drop upper remains 1.5m above right-low
-- these relations do not manufacture absolute Y without a seed
-- captured topology records a same-level underpass connection, a 1.5m small drop, and a visible ramp exit; guide-line-side ordering is audited separately from floor topology
+- right-small-drop upper is 3.0m above right-low
+- first-drop landing is 1.5m below right-low
+- captured topology records a same-level underpass connection, a 3.0m right drop, and a visible ramp exit
 - underpass support/wall exclusions remain explicit
 - RIGHT_LOW_PARTITION and GLASS_UNDERPASS_CLEARANCE are CAPTURE_RECEIVED
 - future capture requests require marked-map annotations rather than prose-only directions
@@ -1640,35 +1643,37 @@ No runtime StageDefinition, collision, navigation, paint authority, combat, Supe
 ## T21-C minimum vertical-evidence audit validation
 
 Automated checks now additionally require:
-- the exact/HIGH BLOCKOUT graph has exactly one currently seeded component: center-low / center-step / center-side slope-low
-- right-small-drop upper, right-low, glass lower and glass high reference form one internally constrained but unseeded component
-- Team A/B first-drop landings form a separate symmetry-linked unseeded component
-- Team A/B spawn floors remain another separate component because the first-drop 1.5m/3.0m edge is still PROVISIONAL
-- central slope high endpoints and grate elevations remain separate unseeded components
-- the 2026-09-26 guide-line-side ordering must not be converted into either a numeric graph edge or a canonical floor ordering
+- center-low / center-step / center-side slope-low remain a seeded component
+- spawn / first-drop landing / right-low / right-small-drop upper / glass references form one seeded HIGH component
+- first-drop exact relation is -4.5m HIGH
+- right-small-drop exact relation is -3.0m HIGH
+- first-drop landing -> right-low is +1.5m HIGH
+- only central slope-high endpoints and grate elevations remain vertically unseeded
+- the user stills remain qualitative; exact numbers must cite the Temple01 geometry evidence
 
-T21-D remains blocked pending both XZ completion and these vertical evidence classes.
+T21-D remains blocked pending remaining XZ work plus slope-high/grate vertical evidence.
 
 
 ## T21-C first-drop interpretation-correction validation
 
 Automated checks now additionally require:
-- no vertical capture request is request-ready after the 2026-09-26 correction
-- `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` is retained only with status `INVALIDATED_BY_HEIGHT_ORDER_CORRECTION`
-- the false first-drop landing = right-small-drop upper relation is absent from both topology and the vertical constraint graph
-- the corrective still pair is retained as guide-line-side evidence only; it must not fabricate first-drop-landing/right-low identities or a numeric delta
-- the right-small-drop 1.5m relation and right-low -> underpass 0m relation remain intact
+- no first-drop vertical capture request is request-ready
+- `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` is retained only with status `SUPERSEDED_BY_TEMPLE01_GEOMETRY`
+- the false first-drop landing = right-small-drop upper relation remains absent
+- the corrective still pair remains qualitative evidence only
+- Temple01 local registration supplies the exact 4.5m first-drop and 3.0m right-drop magnitudes
+- right-low -> underpass 0m relation remains intact
 
 
 ## T21-C line-side semantic audit validation
 
 Automated checks now additionally require:
 - both red and blue guide lines still reference existing measured vector traces
-- both canonical lower-side and upper-side floor bindings remain null
-- the user-observed red-vs-blue ordering has no exact delta
-- that ordering is explicitly unsafe to convert into a vertical relation
-- first-drop video, right-low capture, corrective stills and current-layout cross-check all remain below canonical side-binding strength
-- no first-drop-landing/right-low ordering is present in captured topology or the vertical constraint graph
+- red lower/upper bind to first-drop landing / spawn floor only through Temple01 local registration
+- blue lower/upper bind to right-low / right-small-drop upper only through Temple01 local registration
+- the user-observed red-vs-blue ordering itself still has no exact delta
+- pre-model media findings remain below canonical side-binding strength
+- the resolved project Y values are red 1.5/6.0 and blue 3.0/6.0
 
 This audit changes evidence semantics only. Runtime geometry, collision, navigation, paint, combat and objectives remain unchanged.
 
@@ -1680,11 +1685,11 @@ Automated checks now additionally require:
 - `Vss_Temple00` is retained only as the pre-remodel identity
 - `Vss_Nagasaki03` is explicitly excluded from Undertow geometry
 - SceneInfo / VersusSceneInfo names alone do not expose metric geometry
-- KiTrix MTL data and Git LFS OBJ pointers do not promote vertex coordinates
-- Splatoon-3-Map-Editor actor classes do not promote layout coordinates
-- a Temple01 rule-layer path reference does not count as the missing BCETT payload
-- no external source may promote Y unless metric geometry is actually read
-- current-model metric payload retrieval stays ahead of any new user recapture request
+- the KiTrix LFS OBJ body is actually retrieved and parsed before any metric promotion
+- Splatoon-3-Map-Editor actor classes alone still do not promote layout coordinates
+- a Temple01 rule-layer path reference alone still does not count as metric geometry
+- local drop-lip geometry may promote HIGH values only after sub-raster discontinuity verification
+- full-exterior registration residuals prohibit blanket PDF->OBJ projection
 
 
 ## T21-C external remodeled-geometry source validation
@@ -1692,9 +1697,9 @@ Automated checks now additionally require:
 Automated checks now require:
 - the Salmon Run Temple Low/Mid/High source to remain rejected for normal-PvP Y reconstruction
 - Leanny Temple01 metadata to remain the confirmed remodel identity
-- KiTrix Temple01 OBJ to remain non-promotable while only its Git LFS pointer/MTL/exporter are readable
+- KiTrix Temple01 OBJ body audit to remain the only locally promotable external geometry source
 - KiTrix StageLoader display-name mapping to remain rejected as provenance
-- no external source may currently promote canonical geometry
-- the `PntSet` Turf extraction rule remains HIGH/non-promotable until verified against readable Temple01 geometry
+- local promotion remains limited to verified landmarks/drop relations, not arbitrary full-model projection
+- the `PntSet` Turf filter is verified as part of the successful common+Turf local audit
 
 Source audit may change evidence priority, but it must not open the T21-D gate or alter runtime stage geometry.
