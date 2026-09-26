@@ -1670,3 +1670,109 @@ floorline05_cells,floorline05_holes=audit_floor_object_holes(
     1.2,
     ("LARGE_POS","LARGE_NEG")
 )
+
+
+# T21-D central slope plane audit.
+#
+# Resolve the actual plane from the locally registered common Temple01
+# FloorSlope00 triangles. This does not assume that the long axis of the
+# vector hatch rectangle is the slope direction.
+CENTER_SLOPE_PDF={
+    "LEFT":[
+        (393.6,312.36),(409.44,312.36),
+        (409.44,369.84),(393.6,369.84)
+    ],
+    "RIGHT":[
+        (432.48,225.36),(448.32,225.36),
+        (448.32,282.84),(432.48,282.84)
+    ],
+}
+CENTER_SLOPE_OBJECT="Fld_Temple01_pCube21000_1__FloorSlope00"
+
+def model_to_project(p):
+    mx=p[0]-REG_TX
+    mz=p[1]-REG_TZ
+    return (
+        (REG_C*mx+REG_S*mz)/REG_SCALE,
+        (-REG_S*mx+REG_C*mz)/REG_SCALE
+    )
+
+def plane_from_triangle(points):
+    p0,p1,p2=points
+    ux,uy,uz=p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]
+    vx,vy,vz=p2[0]-p0[0],p2[1]-p0[1],p2[2]-p0[2]
+    nx=uy*vz-uz*vy
+    ny=uz*vx-ux*vz
+    nz=ux*vy-uy*vx
+    if abs(ny)<=1e-10:
+        raise RuntimeError("central slope triangle has near-vertical plane")
+    # y = a*x + b*z + c
+    a=-nx/ny
+    b=-nz/ny
+    c=(nx*p0[0]+ny*p0[1]+nz*p0[2])/ny
+    return a,b,c
+
+def slope_project_point(v):
+    x,z=model_to_project((v[0],v[2]))
+    return (x,v[1]-3.0,z)
+
+slope_planes={}
+for name,pdf_poly in CENTER_SLOPE_PDF.items():
+    model_poly=[pdf_to_model(p) for p in pdf_poly]
+    selected=[]
+    for ff in faces:
+        ia,ib,ic,o,m=ff
+        if o!=CENTER_SLOPE_OBJECT:
+            continue
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        ymin=min(v[1] for v in tri); ymax=max(v[1] for v in tri)
+        if ymin < 1.40 or ymax > 3.10:
+            continue
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if inside_poly(cx,cz,model_poly):
+            selected.append(ff)
+
+    if not selected:
+        raise SystemExit(f"T21 central slope audit failed: no {name} triangles")
+
+    unique={}
+    for ia,ib,ic,o,m in selected:
+        for vi in (ia,ib,ic):
+            v=vertices[vi]
+            unique[(round(v[0],9),round(v[1],9),round(v[2],9))]=v
+
+    first=selected[0]
+    tri_project=[slope_project_point(vertices[i]) for i in first[:3]]
+    a,b,c=plane_from_triangle(tri_project)
+
+    residuals=[]
+    pverts=[]
+    for v in unique.values():
+        x,y,z=slope_project_point(v)
+        pred=a*x+b*z+c
+        residuals.append(abs(y-pred))
+        pverts.append((x,y,z))
+    rms=math.sqrt(sum(r*r for r in residuals)/len(residuals))
+    max_res=max(residuals)
+
+    project_poly=[pdf_to_project(p) for p in pdf_poly]
+    corners=[(x,z,a*x+b*z+c) for x,z in project_poly]
+    ys=[p[1] for p in pverts]
+
+    print(
+        f"T21SLOPE PLANE {name} faces={len(selected)} verts={len(unique)} "
+        f"a={a:.12f} b={b:.12f} c={c:.12f} "
+        f"rms={rms:.12f} max={max_res:.12f} "
+        f"vertex_y=({min(ys):.6f},{max(ys):.6f}) "
+        f"corners={[(round(x,6),round(z,6),round(y,6)) for x,z,y in corners]}"
+    )
+    slope_planes[name]=(a,b,c,max_res)
+
+la,lb,lc,lerr=slope_planes["LEFT"]
+ra,rb,rc,rerr=slope_planes["RIGHT"]
+sym=max(abs(ra+la),abs(rb+lb),abs(rc-lc))
+print(
+    f"T21SLOPE SYMMETRY coeff_residual={sym:.12f} "
+    f"left_max={lerr:.12f} right_max={rerr:.12f}"
+)
