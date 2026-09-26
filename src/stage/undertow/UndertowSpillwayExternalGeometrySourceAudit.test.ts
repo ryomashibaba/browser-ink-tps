@@ -49,4 +49,18 @@ describe('T21-C Undertow external geometry source audit', () => {
     expect(mapping?.status).toBe('REJECTED_NAME_MAP');
     expect(mapping?.canPromoteCanonicalGeometry).toBe(false);
   });
+
+  it('keeps PntSet as a HIGH Turf extraction hypothesis rather than canonical geometry', () => {
+    const filter = UNDERTOW_EXTERNAL_GEOMETRY_SOURCE_AUDIT.find(
+      (entry) => entry.id === 'KITRIX_TEMPLE01_RULE_SET_FILTER'
+    );
+    expect(filter).toMatchObject({
+      status: 'HIGH_FILTER_HYPOTHESIS',
+      canPromoteCanonicalGeometry: false,
+      confidence: 'HIGH'
+    });
+    expect(filter?.facts.join(' ')).toContain('PntSet');
+    expect(filter?.facts.join(' ')).toContain('Turf War');
+  });
+
 });
