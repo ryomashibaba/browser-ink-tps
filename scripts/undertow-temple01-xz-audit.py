@@ -1109,3 +1109,104 @@ if walk_vertices:
             f"walk_top={sorted(adjacent_walk.items(),key=lambda kv:-kv[1])[:8]} "
             f"stage_side={sorted(adjacent_stage_side.items(),key=lambda kv:-kv[1])[:8]}"
         )
+
+
+# Fine 0.125m audit of the four non-water enclosed-empty components found by
+# the 0.5m exploratory pass. These remain candidates until this finer pass
+# proves they are closed, floorless, and exactly symmetric.
+def fine_void_component(name,seed,bounds):
+    xmin,xmax,zmin,zmax=bounds
+    candidates=set()
+    low_floor_cells=set()
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            walk,solid,water=void_column_class(x,z)
+            if walk or water or (solid and solid[0][0]>=VOID_SOLID_TOP_Y):
+                continue
+            c=(ix,iz)
+            candidates.add(c)
+            if solid:
+                low_floor_cells.add(c)
+
+    if not candidates:
+        raise SystemExit(f"T21 fine void audit failed: no candidate cells for {name}")
+    seed_cell=qcell(*seed)
+    if seed_cell not in candidates:
+        seed_cell=min(
+            candidates,
+            key=lambda c:(cell_xy(c)[0]-seed[0])**2+(cell_xy(c)[1]-seed[1])**2
+        )
+
+    comp={seed_cell}; q=deque([seed_cell])
+    while q:
+        c=q.popleft()
+        for d in ((1,0),(-1,0),(0,1),(0,-1)):
+            n=(c[0]+d[0],c[1]+d[1])
+            if n in candidates and n not in comp:
+                comp.add(n); q.append(n)
+
+    min_ix=math.floor(xmin/STEP); max_ix=math.ceil(xmax/STEP)
+    min_iz=math.floor(zmin/STEP); max_iz=math.ceil(zmax/STEP)
+    touches=any(
+        ix in (min_ix,max_ix) or iz in (min_iz,max_iz)
+        for ix,iz in comp
+    )
+    if touches:
+        raise SystemExit(f"T21 fine void audit failed: {name} touches local audit bounds")
+
+    lows=comp & low_floor_cells
+    loops=boundary_loops(comp)
+    loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    if not loops:
+        raise SystemExit(f"T21 fine void audit failed: no boundary loop for {name}")
+
+    xs=[cell_xy(c)[0] for c in comp]; zs=[cell_xy(c)[1] for c in comp]
+    print(
+        f"T21VOID FINE {name} cells={len(comp)} area={len(comp)*STEP*STEP:.6f} "
+        f"bbox=({min(xs):.3f},{min(zs):.3f})..({max(xs):.3f},{max(zs):.3f}) "
+        f"low_floor_cells={len(lows)} loops={len(loops)}"
+    )
+    for j,loop in enumerate(loops[:8]):
+        rr=rdp_closed(loop,0.15)
+        print(
+            f"T21VOID FINELOOP {name} {j} signed_area={polygon_area(loop):.6f} "
+            f"raw={len(loop)} n={len(rr)} pts="
+            f"{[tuple(round(v,3) for v in p) for p in rr]}"
+        )
+    return comp,loops,lows
+
+fine_voids={}
+fine_voids["LARGE_POS"]=fine_void_component(
+    "LARGE_POS",(33.0,9.0),(28.0,38.0,1.0,17.0)
+)
+fine_voids["LARGE_NEG"]=fine_void_component(
+    "LARGE_NEG",(-33.0,-9.0),(-38.0,-28.0,-17.0,-1.0)
+)
+fine_voids["SMALL_NEG"]=fine_void_component(
+    "SMALL_NEG",(-33.0,-18.0),(-36.0,-30.0,-23.0,-13.0)
+)
+fine_voids["SMALL_POS"]=fine_void_component(
+    "SMALL_POS",(33.0,18.0),(30.0,36.0,13.0,23.0)
+)
+
+for a,b in (("LARGE_POS","LARGE_NEG"),("SMALL_POS","SMALL_NEG")):
+    ca=fine_voids[a][0]; cb=fine_voids[b][0]
+    mirrored={(-ix,-iz) for ix,iz in ca}
+    xor=mirrored ^ cb
+    print(
+        f"T21VOID FINESYM {a}->{b} a={len(ca)} b={len(cb)} "
+        f"xor={len(xor)} missing={len(mirrored-cb)} extra={len(cb-mirrored)} "
+        f"xor_area={len(xor)*STEP*STEP:.6f}"
+    )
+    if xor:
+        raise SystemExit(
+            f"T21 fine void audit failed: {a}/{b} are not exact 180-degree counterparts"
+        )
+
+for name,(comp,loops,lows) in fine_voids.items():
+    if lows:
+        raise SystemExit(
+            f"T21 fine void audit failed: {name} contains lower horizontal geometry"
+        )
