@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+from collections import defaultdict, deque
+from pathlib import Path
+import math
+import sys
+
+OBJ = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/kitrix-lfs/Vss_Temple01.obj")
+STEP = 0.25
+Y_TOL = 0.08
+
+WALK_TOKENS = (
+    "FloorConcrete", "FloorLine", "FloorSlope", "FloorGrass",
+    "GrassFloor", "FloorMetal", "FloorRubber", "BridgeMetal", "FloorFence"
+)
+OVERHEAD_TOKENS = (
+    "Glass", "BridgeMetal", "Pillar", "Object", "Wall", "Fence"
+)
+
+vertices=[None]
+faces=[]
+obj="(none)"
+mat="(none)"
+
+def active(name:str)->bool:
+    return name.startswith("Fld_Temple01_") or name.startswith("FldObj_Temple01_PntSet_")
+
+with OBJ.open("r",encoding="utf-8",errors="replace") as fh:
+    for line in fh:
+        if line.startswith("o "):
+            obj=line[2:].strip()
+        elif line.startswith("usemtl "):
+            mat=line[7:].strip()
+        elif line.startswith("v "):
+            q=line.split()
+            vertices.append(tuple(map(float,q[1:4])))
+        elif line.startswith("f ") and active(obj):
+            ids=[int(tok.split("/")[0]) for tok in line.split()[1:]]
+            for i in range(1,len(ids)-1):
+                faces.append((ids[0],ids[i],ids[i+1],obj,mat))
+
+def tri_normal(tri):
+    a,b,c=tri
+    ux,uy,uz=b[0]-a[0],b[1]-a[1],b[2]-a[2]
+    vx,vy,vz=c[0]-a[0],c[1]-a[1],c[2]-a[2]
+    nx=uy*vz-uz*vy; ny=uz*vx-ux*vz; nz=ux*vy-uy*vx
+    n=math.sqrt(nx*nx+ny*ny+nz*nz)
+    return (nx/n,ny/n,nz/n) if n>1e-12 else (0,0,0)
+
+def contains_xz(x,z,tri):
+    (x1,_,z1),(x2,_,z2),(x3,_,z3)=tri
+    den=(z2-z3)*(x1-x3)+(x3-x2)*(z1-z3)
+    if abs(den)<1e-12: return False
+    a=((z2-z3)*(x-x3)+(x3-x2)*(z-z3))/den
+    b=((z3-z1)*(x-x3)+(x1-x3)*(z-z3))/den
+    c=1-a-b
+    return min(a,b,c)>=-1e-7
+
+def interp_y(x,z,tri):
+    (x1,y1,z1),(x2,y2,z2),(x3,y3,z3)=tri
+    den=(z2-z3)*(x1-x3)+(x3-x2)*(z1-z3)
+    a=((z2-z3)*(x-x3)+(x3-x2)*(z-z3))/den
+    b=((z3-z1)*(x-x3)+(x1-x3)*(z-z3))/den
+    c=1-a-b
+    return a*y1+b*y2+c*y3
+
+# Spatial bins over all active faces.
+BIN=2.0
+bins=defaultdict(list)
+for fi,f in enumerate(faces):
+    tri=[vertices[i] for i in f[:3]]
+    xs=[p[0] for p in tri]; zs=[p[2] for p in tri]
+    for ix in range(math.floor(min(xs)/BIN),math.floor(max(xs)/BIN)+1):
+        for iz in range(math.floor(min(zs)/BIN),math.floor(max(zs)/BIN)+1):
+            bins[(ix,iz)].append(fi)
+
+def face_candidates(x,z):
+    return bins.get((math.floor(x/BIN),math.floor(z/BIN)),())
+
+def has_walk_surface(x,z,target_y):
+    hits=[]
+    for fi in face_candidates(x,z):
+        ia,ib,ic,o,m=faces[fi]
+        if not any(t in m for t in WALK_TOKENS):
+            continue
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        n=tri_normal(tri)
+        if abs(n[1])<0.75:
+            continue
+        if not contains_xz(x,z,tri):
+            continue
+        y=interp_y(x,z,tri)
+        if abs(y-target_y)<=Y_TOL:
+            hits.append((y,o,m))
+    return hits
+
+def overhead_hits(x,z,base_y):
+    out=[]
+    for fi in face_candidates(x,z):
+        ia,ib,ic,o,m=faces[fi]
+        if not any(t in m for t in OVERHEAD_TOKENS):
+            continue
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        n=tri_normal(tri)
+        if abs(n[1])<0.20:
+            continue
+        if not contains_xz(x,z,tri):
+            continue
+        y=interp_y(x,z,tri)
+        if y>base_y+0.45:
+            out.append((y,o,m))
+    out.sort()
+    return out
+
+def qcell(x,z):
+    return (round(x/STEP),round(z/STEP))
+
+def cell_xy(c):
+    return (c[0]*STEP,c[1]*STEP)
+
+def flood_component(target_y,seed,bounds):
+    xmin,xmax,zmin,zmax=bounds
+    seed_cell=qcell(*seed)
+    candidates=set()
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            if has_walk_surface(x,z,target_y):
+                candidates.add((ix,iz))
+    if seed_cell not in candidates:
+        # Choose nearest occupied cell within 3m.
+        ranked=sorted(candidates,key=lambda c:(cell_xy(c)[0]-seed[0])**2+(cell_xy(c)[1]-seed[1])**2)
+        if not ranked:
+            return set(),None,set()
+        seed_cell=ranked[0]
+    comp={seed_cell}
+    q=deque([seed_cell])
+    while q:
+        c=q.popleft()
+        for d in ((1,0),(-1,0),(0,1),(0,-1)):
+            n=(c[0]+d[0],c[1]+d[1])
+            if n in candidates and n not in comp:
+                comp.add(n); q.append(n)
+    covered={c for c in comp if overhead_hits(*cell_xy(c),target_y)}
+    return comp,seed_cell,covered
+
+def boundary_loops(cells):
+    # Directed boundary edges around occupied square cells.
+    edges={}
+    def add(a,b):
+        edges[a]=b
+    for ix,iz in cells:
+        x0=(ix-0.5)*STEP; x1=(ix+0.5)*STEP
+        z0=(iz-0.5)*STEP; z1=(iz+0.5)*STEP
+        if (ix,iz-1) not in cells: add((x0,z0),(x1,z0))
+        if (ix+1,iz) not in cells: add((x1,z0),(x1,z1))
+        if (ix,iz+1) not in cells: add((x1,z1),(x0,z1))
+        if (ix-1,iz) not in cells: add((x0,z1),(x0,z0))
+    loops=[]
+    while edges:
+        start=next(iter(edges))
+        cur=start; loop=[start]
+        guard=0
+        while cur in edges and guard<100000:
+            nxt=edges.pop(cur)
+            loop.append(nxt); cur=nxt; guard+=1
+            if cur==start: break
+        if len(loop)>=4 and loop[-1]==loop[0]:
+            loops.append(loop[:-1])
+    return loops
+
+def simplify_axis(loop):
+    if len(loop)<3: return loop
+    pts=loop[:]
+    changed=True
+    while changed and len(pts)>3:
+        changed=False; out=[]
+        n=len(pts)
+        for i,p in enumerate(pts):
+            a=pts[i-1]; b=p; c=pts[(i+1)%n]
+            if (abs(a[0]-b[0])<1e-9 and abs(b[0]-c[0])<1e-9) or (abs(a[1]-b[1])<1e-9 and abs(b[1]-c[1])<1e-9):
+                changed=True
+            else:
+                out.append(b)
+        pts=out
+    return pts
+
+def polygon_area(loop):
+    return 0.5*sum(loop[i][0]*loop[(i+1)%len(loop)][1]-loop[(i+1)%len(loop)][0]*loop[i][1] for i in range(len(loop)))
+
+def describe(name,target_y,seed,bounds):
+    comp,seed_cell,covered=flood_component(target_y,seed,bounds)
+    print(f"T21XZ COMP {name} y={target_y:.2f} cells={len(comp)} area={len(comp)*STEP*STEP:.3f} seed={seed} seed_cell={seed_cell} covered={len(covered)}")
+    if not comp: return
+    xs=[cell_xy(c)[0] for c in comp]; zs=[cell_xy(c)[1] for c in comp]
+    print(f"T21XZ BBOX {name} x=({min(xs):.3f},{max(xs):.3f}) z=({min(zs):.3f},{max(zs):.3f})")
+    loops=boundary_loops(comp)
+    loops.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+    for i,loop in enumerate(loops[:8]):
+        s=simplify_axis(loop)
+        print(f"T21XZ LOOP {name} {i} area={polygon_area(loop):.3f} raw={len(loop)} simple={len(s)} pts={[tuple(round(v,3) for v in p) for p in s]}")
+    if covered:
+        # Covered subclusters inside the target-Y component.
+        rem=set(covered); clusters=[]
+        while rem:
+            seedc=rem.pop(); cc={seedc}; q=deque([seedc])
+            while q:
+                c=q.popleft()
+                for d in ((1,0),(-1,0),(0,1),(0,-1)):
+                    n=(c[0]+d[0],c[1]+d[1])
+                    if n in rem:
+                        rem.remove(n); cc.add(n); q.append(n)
+            clusters.append(cc)
+        clusters.sort(key=len,reverse=True)
+        for j,cc in enumerate(clusters[:10]):
+            xs=[cell_xy(c)[0] for c in cc]; zs=[cell_xy(c)[1] for c in cc]
+            mats=defaultdict(int)
+            for c0 in cc[::max(1,len(cc)//150)] if isinstance(cc,list) else list(cc)[::max(1,len(cc)//150)]:
+                for _,o,m in overhead_hits(*cell_xy(c0),target_y):
+                    mats[m]+=1
+            print(f"T21XZ COVER {name} {j} cells={len(cc)} area={len(cc)*STEP*STEP:.3f} x=({min(xs):.3f},{max(xs):.3f}) z=({min(zs):.3f},{max(zs):.3f}) mats={sorted(mats.items(),key=lambda x:-x[1])[:8]}")
+            loops2=boundary_loops(cc)
+            loops2.sort(key=lambda l:abs(polygon_area(l)),reverse=True)
+            if loops2:
+                s=simplify_axis(loops2[0])
+                print(f"T21XZ COVERLOOP {name} {j} simple={len(s)} pts={[tuple(round(v,3) for v in p) for p in s]}")
+
+# Seeds come from independently verified local registrations in run #555.
+describe("CENTER_LOW_A",3.0,(3.67,-0.135),(-18,18,-18,18))
+describe("CENTER_LOW_B",3.0,(-3.76,-0.131),(-18,18,-18,18))
+describe("RIGHT_LOW_A",7.5,(-15.05,55.40),(-32,8,25,68))
+describe("RIGHT_LOW_B",7.5,(14.96,-55.67),(-8,32,-68,-25))
