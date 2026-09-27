@@ -40,6 +40,13 @@ describe('T21 Undertow targeted evidence capture plan', () => {
   });
 
   it('requires a marked-map guide for every future capture request', () => {
+    expect(UNDERTOW_CAPTURE_REQUEST_POLICY.purposeStatementRequired).toBe(true);
+    expect(
+      UNDERTOW_CAPTURE_REQUEST_POLICY.directUserGameplayKnowledgePreferredBeforeCapture
+    ).toBe(true);
+    expect(
+      UNDERTOW_CAPTURE_REQUEST_POLICY.redundantCaptureForbiddenWhenKnowledgeSufficient
+    ).toBe(true);
     expect(UNDERTOW_CAPTURE_REQUEST_POLICY.mapAnnotationRequired).toBe(true);
     expect(UNDERTOW_CAPTURE_REQUEST_POLICY.fullTerrainContextRequired).toBe(true);
     expect(UNDERTOW_CAPTURE_REQUEST_POLICY.outlineOnlyMapForbidden).toBe(true);

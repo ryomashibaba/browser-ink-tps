@@ -25,6 +25,9 @@ export interface UndertowEvidenceCapture {
 }
 
 export const UNDERTOW_CAPTURE_REQUEST_POLICY = Object.freeze({
+  purposeStatementRequired: true,
+  directUserGameplayKnowledgePreferredBeforeCapture: true,
+  redundantCaptureForbiddenWhenKnowledgeSufficient: true,
   mapAnnotationRequired: true,
   fullTerrainContextRequired: true,
   outlineOnlyMapForbidden: true,
@@ -46,7 +49,7 @@ export const UNDERTOW_CAPTURE_REQUEST_POLICY = Object.freeze({
     'CENTER_REFERENCE'
   ] as const,
   notes:
-    'Future user capture requests must use a context-rich canonical stage map: the instruction overlay is drawn on top of the known full terrain/major-geometry context, not on an empty outer silhouette. A zoomed inset is additionally required when the target is too small to identify reliably at full-stage scale.'
+    'Every future evidence request must begin by stating the exact gameplay/geometry question the pass is trying to resolve. If the user already knows that behavior reliably from gameplay, accept the direct answer and do not demand redundant capture. Only unresolved behaviors proceed to capture, using a context-rich canonical stage map: the instruction overlay is drawn on top of known full terrain/major geometry, never an empty outer silhouette; use a zoomed inset when the target is small.'
 });
 
 /**

@@ -5,7 +5,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-underpass-outside-zone-paint-stills-2026-09-27'
   | 'user-upper-glass-support-route-videos-2026-09-27'
   | 'user-upper-glass-ordinary-projectile-knowledge-2026-09-28'
-  | 'user-upper-glass-camera-blocking-knowledge-2026-09-28';
+  | 'user-upper-glass-camera-blocking-knowledge-2026-09-28'
+  | 'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -20,7 +21,8 @@ export interface UndertowUserCaptureEvidence {
     | 'GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES'
     | 'UPPER_GLASS_PLAYER_SUPPORT_ROUTE'
     | 'UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING'
-    | 'UPPER_GLASS_CAMERA_BLOCKING';
+    | 'UPPER_GLASS_CAMERA_BLOCKING'
+    | 'UPPER_GLASS_THROWN_SUB_SOLID_COLLISION';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -115,6 +117,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'This direct gameplay knowledge resolves transparent-glass camera blocking behavior without requiring a redundant controlled capture.',
         'The answer does not identify whether the original game uses visible Glass01 triangles or a coincident hidden camera-query primitive, and it does not authorize untested thin-edge/frame geometry by itself.',
         'Player, projectile, camera and navigation authorities remain separate even where their observed blocking behavior agrees.'
+      ]
+    },
+    {
+      id: 'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28',
+      region: 'UPPER_GLASS_THROWN_SUB_SOLID_COLLISION',
+      confidence: 'CONFIRMED',
+      facts: [
+        'For Pass 13D the user selects behavior A and adds that Splash Bomb and similar thrown subs treat Undertow transparent glass like an ordinary wall, floor, or ceiling.',
+        'The thrown sub body therefore does not pass through the transparent glass and uses ordinary solid-surface contact behavior rather than a glass-specific pass-through rule.',
+        'This direct gameplay knowledge resolves thrown-sub body collision behavior without requiring a redundant controlled capture.',
+        'The answer does not by itself resolve explosion/damage/ink propagation through or around the glass, exact bounce coefficients, or the identity of the original collision primitive.'
       ]
     }
   ];

@@ -114,6 +114,11 @@ describe('T21-D upper glass collision authority audit', () => {
       currentOrdinaryMainProjectileBehaviorResolved: true,
       currentOrdinaryMainProjectilePassesThroughGlass: false,
       userDirectGameplayKnowledgeAccepted: true,
+      thrownSubBodyCollisionResolved: true,
+      thrownSubBodyPassesThroughGlass: false,
+      thrownSubTreatsGlassAsOrdinarySolidSurface: true,
+      thrownSubUserDirectGameplayKnowledgeAccepted: true,
+      explosionPropagationResolved: false,
       allProjectileClassesResolved: false,
       runtimeProjectilePromotionAuthorized: false
     });
@@ -132,6 +137,16 @@ describe('T21-D upper glass collision authority audit', () => {
     expect(
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileBehaviorResolved
     ).toBe(false);
+  });
+
+  it('accepts thrown-sub solid collision knowledge without inferring explosion propagation', () => {
+    const projectile =
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileSemanticEvidence;
+    expect(projectile.thrownSubBodyCollisionResolved).toBe(true);
+    expect(projectile.thrownSubBodyPassesThroughGlass).toBe(false);
+    expect(projectile.thrownSubTreatsGlassAsOrdinarySolidSurface).toBe(true);
+    expect(projectile.thrownSubUserDirectGameplayKnowledgeAccepted).toBe(true);
+    expect(projectile.explosionPropagationResolved).toBe(false);
   });
 
   it('accepts direct camera-blocking knowledge without inventing exact camera geometry', () => {

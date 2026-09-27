@@ -6,7 +6,7 @@ import {
 
 describe('T21 user capture evidence', () => {
   it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(7);
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(8);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -33,6 +33,11 @@ describe('T21 user capture evidence', () => {
         'user-upper-glass-camera-blocking-knowledge-2026-09-28'
       ).region
     ).toBe('UPPER_GLASS_CAMERA_BLOCKING');
+    expect(
+      undertowCaptureEvidence(
+        'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28'
+      ).region
+    ).toBe('UPPER_GLASS_THROWN_SUB_SOLID_COLLISION');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -93,6 +98,15 @@ describe('T21 user capture evidence', () => {
     expect(camera.facts.join(' ')).toContain('camera is pushed to the near side');
     expect(camera.facts.join(' ')).toContain('does not pass through the glass');
     expect(camera.facts.join(' ')).toContain('does not identify whether the original game uses visible Glass01 triangles');
+  });
+
+  it('accepts direct user gameplay knowledge for thrown-sub solid collision without inferring explosion propagation', () => {
+    const thrownSub = undertowCaptureEvidence(
+      'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28'
+    );
+    expect(thrownSub.facts.join(' ')).toContain('ordinary wall, floor, or ceiling');
+    expect(thrownSub.facts.join(' ')).toContain('does not pass through');
+    expect(thrownSub.facts.join(' ')).toContain('does not by itself resolve explosion');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {
