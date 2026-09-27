@@ -122,7 +122,7 @@ describe('T21-D partial Undertow blockout geometry', () => {
       (surface) => surface.id
     );
     expect(paintIds.filter((id) => id.includes('center-low-'))).toHaveLength(2);
-    expect(paintIds.filter((id) => id.includes('right-low-'))).toHaveLength(2);
+    expect(paintIds.filter((id) => id.includes('right-low-team-'))).toHaveLength(2);
     expect(paintIds.filter((id) => id.includes('center-origin-step-top-face'))).toHaveLength(1);
     expect(paintIds.filter((id) => id.includes('center-slope-'))).toHaveLength(4);
     const slopePaint = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.filter(
