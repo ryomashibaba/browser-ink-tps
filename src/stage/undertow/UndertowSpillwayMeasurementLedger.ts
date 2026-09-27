@@ -621,10 +621,15 @@ const entries: readonly StageMeasurementEntry[] = [
     },
     transition: noTransition,
     surface: {
-      semantics: [],
-      confidence: 'UNKNOWN',
-      evidenceIds: [],
-      notes: 'Spawn paintability/protection semantics remain for source binding.'
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: [
+        'user-turf-vector-blueprint',
+        'extracted-temple01-geometry',
+        'web-current-turf-spawn-paintability'
+      ],
+      notes:
+        'The exact flat component is seeded from the registered spawn center. Current post-Ver.7.2 Turf references describe the broad spawn/base high ground as turf/own territory that must be inked; this resolves paint acceptance only, not Turf Scoreable authority or spawn protection.'
     }
   }),
   commonSurfaceEntry({
@@ -650,10 +655,15 @@ const entries: readonly StageMeasurementEntry[] = [
     },
     transition: noTransition,
     surface: {
-      semantics: [],
-      confidence: 'UNKNOWN',
-      evidenceIds: [],
-      notes: 'Spawn paintability/protection semantics remain for source binding.'
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: [
+        'user-turf-vector-blueprint',
+        'extracted-temple01-geometry',
+        'web-current-turf-spawn-paintability'
+      ],
+      notes:
+        'The exact flat component is seeded from the registered spawn center. Current post-Ver.7.2 Turf references describe the broad spawn/base high ground as turf/own territory that must be inked; this resolves paint acceptance only, not Turf Scoreable authority or spawn protection.'
     }
   }),
   commonSurfaceEntry({
@@ -1008,6 +1018,14 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       kind: 'WEB_GAMEPLAY_REFERENCE',
       label: 'Post-Ver.7.2.0 gameplay/reference material',
       sourceVersion: 'Ver.7.2.0+'
+    },
+    {
+      id: 'web-current-turf-spawn-paintability',
+      kind: 'WEB_GAMEPLAY_REFERENCE',
+      label: 'Current Undertow Turf spawn/base paintability references (Kamigame + Inkipedia)',
+      sourceVersion: 'Ver.7.2.0+ normal Turf',
+      notes:
+        'Current references describe the spawn/base side as a broad turf/own-territory area and explicitly advise painting leftover uninked ground. Used only after registration to the exact spawn-center-seeded Temple01 component; not used as Turf Scoreable or protection-mask authority.'
     },
     {
       id: 'user-center-stills',

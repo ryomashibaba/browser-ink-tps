@@ -1,7 +1,6 @@
 import { SurfaceFlags } from '../../ink/types';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
-  UNDERTOW_PAINT_AUTHORITY_AUDIT,
   UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS
 } from './UndertowSpillwayPaintAuthorityAudit';
 import {
@@ -14,6 +13,17 @@ import { UNDERTOW_VECTOR_BLUEPRINT_SOURCE } from './UndertowSpillwayVectorBluepr
 const RESOLVED_SLOPE_IDS = UNDERTOW_CENTER_SLOPE_SOURCE_MESHES.map(
   (record) => `UndertowT21D:${record.id}`
 );
+
+const PASS4_UNRESOLVED_RUNTIME_SOLID_IDS = [
+  'UndertowT21D:glass-underpass-positive-z',
+  'UndertowT21D:glass-underpass-negative-z',
+  'UndertowT21D:spawn-high-positive-z',
+  'UndertowT21D:spawn-high-negative-z',
+  'UndertowT21D:first-drop-landing-positive-z',
+  'UndertowT21D:first-drop-landing-negative-z',
+  'UndertowT21D:right-low-route-ramp-positive-z',
+  'UndertowT21D:right-low-route-ramp-negative-z'
+] as const;
 
 export const UNDERTOW_PAINT_RESOLUTION_AUDIT = Object.freeze({
   round: 4,
@@ -57,8 +67,8 @@ export const UNDERTOW_PAINT_RESOLUTION_AUDIT = Object.freeze({
       'The existing arbitrary-plane PaintSurface basis supports these exact rectangular quads, so authority and runtime representation can be promoted together without flattening the slope.'
   }),
   unresolvedAfterPass: Object.freeze({
-    count: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount,
-    runtimeSolidIds: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds,
+    count: PASS4_UNRESOLVED_RUNTIME_SOLID_IDS.length,
+    runtimeSolidIds: PASS4_UNRESOLVED_RUNTIME_SOLID_IDS,
     underpassReason:
       'The lower underpass is hidden by the upper projection in the author plan; no face-specific paint class is encoded there.',
     spawnReason:

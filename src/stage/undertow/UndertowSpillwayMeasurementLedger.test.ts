@@ -90,6 +90,16 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     expect(entry('team-a-spawn-floor').y.yMeters).toBe(7.5);
     expect(entry('team-b-spawn-floor').y.confidence).toBe('HIGH');
     expect(entry('team-b-spawn-floor').y.yMeters).toBe(7.5);
+    expect(teamA.surface).toMatchObject({
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH'
+    });
+    expect(teamB.surface).toMatchObject({
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH'
+    });
+    expect(teamA.surface.evidenceIds).toContain('web-current-turf-spawn-paintability');
+    expect(teamB.surface.evidenceIds).toContain('web-current-turf-spawn-paintability');
   });
 
   it('binds the exact spawn-side connected terrain regions without flattening them', () => {

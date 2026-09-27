@@ -14,6 +14,7 @@ export interface UndertowRuntimePaintAuthorityRecord {
   evidenceClass:
     | 'CANONICAL_LEDGER'
     | 'AUTHOR_VECTOR_SEMANTIC'
+    | 'PUBLIC_CURRENT_GAMEPLAY'
     | 'GEOMETRY_ONLY';
   notes: string;
 }
@@ -31,9 +32,15 @@ const AUTHOR_RESOLVED_SLOPE_PAINTABLE_RUNTIME_SOLID_IDS =
     (record) => `UndertowT21D:${record.id}`
   );
 
+const PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS = [
+  'UndertowT21D:spawn-high-positive-z',
+  'UndertowT21D:spawn-high-negative-z'
+] as const;
+
 const PAINTABLE_RUNTIME_SOLID_IDS = [
   ...CANONICAL_LEDGER_PAINTABLE_RUNTIME_SOLID_IDS,
-  ...AUTHOR_RESOLVED_SLOPE_PAINTABLE_RUNTIME_SOLID_IDS
+  ...AUTHOR_RESOLVED_SLOPE_PAINTABLE_RUNTIME_SOLID_IDS,
+  ...PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS
 ] as const;
 
 const UNINKABLE_RUNTIME_SOLID_IDS = [
@@ -46,8 +53,6 @@ const UNINKABLE_RUNTIME_SOLID_IDS = [
 const UNKNOWN_FLAT_RUNTIME_SOLID_IDS = [
   'UndertowT21D:glass-underpass-positive-z',
   'UndertowT21D:glass-underpass-negative-z',
-  'UndertowT21D:spawn-high-positive-z',
-  'UndertowT21D:spawn-high-negative-z',
   'UndertowT21D:first-drop-landing-positive-z',
   'UndertowT21D:first-drop-landing-negative-z'
 ] as const;
@@ -85,11 +90,11 @@ export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
   }),
   evidenceBoundary: Object.freeze({
     confirmedPaintable:
-      'Existing canonical ledger semantics authorize the center-low pair, right-low pair, and center-origin step-top. Resolution Pass 4 additionally binds the four exact FloorSlope00 central quads to the author-defined white dashed slope field, making those four PAINTABLE.',
+      'Existing canonical ledger semantics authorize the center-low pair, right-low pair, and center-origin step-top. Resolution Pass 4 binds the four exact FloorSlope00 central quads. Resolution Pass 5 additionally binds the two exact spawn-high components to current Turf references that explicitly describe the spawn/base high ground as territory that must be inked.',
     confirmedUninkable:
       'Author/vector semantics explicitly identify the grate pair and upper-glass family as uninkable; water is also uninkable but is not a current runtime solid because its Y remains unresolved.',
     unresolved:
-      'Underpass floors, spawn-high floors, first-drop landings, and exact right-low route ramps still have geometry/traversal authority but no equally strong face-specific paint authority in the audited evidence.',
+      'Underpass floors, first-drop landings, and exact right-low route ramps still have geometry/traversal authority but no equally strong face-specific paint authority in the audited evidence.',
     materialNameRule:
       'Floor/Concrete/Slope/Grass/Line or other source object/material names are never paint authority by themselves.'
   }),
@@ -117,6 +122,13 @@ export const UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS:
     evidenceClass: 'AUTHOR_VECTOR_SEMANTIC' as const,
     notes:
       'Resolution Pass 4 binds this exact FloorSlope00 quad to the white dashed central slope field; the author legend marks gray as uninkable and dashes as slope/ramp.'
+  })),
+  ...PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS.map((runtimeSolidId) => ({
+    runtimeSolidId,
+    authority: 'PAINTABLE' as const,
+    evidenceClass: 'PUBLIC_CURRENT_GAMEPLAY' as const,
+    notes:
+      'Resolution Pass 5 registers the exact spawn-center-seeded Y=7.5m component to current Turf references that describe the broad spawn/base high ground as territory players must ink.'
   })),
   ...UNINKABLE_RUNTIME_SOLID_IDS.map((runtimeSolidId) => ({
     runtimeSolidId,
@@ -152,8 +164,8 @@ export function undertowPaintAuthorityAuditErrors(): readonly string[] {
   ) {
     errors.push('runtime paint-authority counts no longer balance');
   }
-  if (audit.unresolvedCount !== 8 || audit.paintAuthorityComplete) {
-    errors.push('the eight remaining unknown runtime paint surfaces must remain localized and activation-blocking');
+  if (audit.unresolvedCount !== 6 || audit.paintAuthorityComplete) {
+    errors.push('the six remaining unknown runtime paint surfaces must remain localized and activation-blocking');
   }
   if (audit.turfScoreabilityEvaluated) {
     errors.push('paint authority audit must not resolve Turf scoreability');
@@ -187,6 +199,16 @@ export function undertowPaintAuthorityAuditErrors(): readonly string[] {
   }
   if (undertowRuntimeSurfacePlanItem('right-low-floor').paintAuthority !== 'PAINTABLE') {
     errors.push('right-low ledger paint authority drifted from PAINTABLE');
+  }
+  for (const id of PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS) {
+    if (!records.some(
+      (record) =>
+        record.runtimeSolidId === id &&
+        record.authority === 'PAINTABLE' &&
+        record.evidenceClass === 'PUBLIC_CURRENT_GAMEPLAY'
+    )) {
+      errors.push(`${id}: current-layout spawn paint authority record missing`);
+    }
   }
   if (
     UNDERTOW_CENTER_SLOPE_SOURCE_MESHES.length !== 4 ||

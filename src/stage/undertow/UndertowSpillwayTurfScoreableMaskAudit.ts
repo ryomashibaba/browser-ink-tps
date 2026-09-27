@@ -79,11 +79,11 @@ export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
   if (audit.paintAuthorityUpstreamComplete) {
     errors.push('score-mask audit unexpectedly claims complete upstream paint authority');
   }
-  if (audit.currentConfirmedPaintableRuntimeSolidCount !== 9) {
-    errors.push('current confirmed paintable runtime-solid count drifted from nine');
+  if (audit.currentConfirmedPaintableRuntimeSolidCount !== 11) {
+    errors.push('current confirmed paintable runtime-solid count drifted from eleven');
   }
-  if (audit.currentUnknownPaintRuntimeSolidCount !== 8) {
-    errors.push('current unknown paint runtime-solid count drifted from eight');
+  if (audit.currentUnknownPaintRuntimeSolidCount !== 6) {
+    errors.push('current unknown paint runtime-solid count drifted from six');
   }
   if (
     !audit.engineRepresentation.stagePaintSurfaceHasWholeSurfaceFlags ||
@@ -114,8 +114,8 @@ export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
   ) {
     errors.push('public schema unexpectedly claims Temple01 Turf score authority');
   }
-  if (audit.candidateRuntimeSolidIds.length !== 9) {
-    errors.push('scoreability candidate inventory must track exactly nine currently confirmed paintable solids');
+  if (audit.candidateRuntimeSolidIds.length !== 11) {
+    errors.push('scoreability candidate inventory must track exactly eleven currently confirmed paintable solids');
   }
   if (audit.missingAuthoritativeEvidence.length < 3) {
     errors.push('Turf score-mask evidence gap is not sufficiently localized');
