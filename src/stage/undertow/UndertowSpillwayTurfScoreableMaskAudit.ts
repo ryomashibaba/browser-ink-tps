@@ -58,7 +58,7 @@ export const UNDERTOW_TURF_SCOREABLE_MASK_AUDIT = Object.freeze({
   }),
   candidateRuntimeSolidIds:
     UNDERTOW_PAINT_AUTHORITY_AUDIT.paintableRuntimeSolidIds,
-  candidateStatus: 'HORIZONTAL_PAINTABLE_BUT_SCORE_AUTHORITY_PENDING' as const,
+  candidateStatus: 'PAINTABLE_BUT_SCORE_AUTHORITY_PENDING' as const,
   missingAuthoritativeEvidence: [
     'Current Ver.7.2+ Temple01 Turf victory-score raster/mask, per-face score metadata, or equivalent game data that can be registered to the exact paint surfaces.',
     'Or controlled Turf War scoring evidence that isolates known Temple01 floor regions strongly enough to prove whether their full active footprint contributes to the final team percentage.',
@@ -79,11 +79,11 @@ export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
   if (audit.paintAuthorityUpstreamComplete) {
     errors.push('score-mask audit unexpectedly claims complete upstream paint authority');
   }
-  if (audit.currentConfirmedPaintableRuntimeSolidCount !== 5) {
-    errors.push('current confirmed paintable runtime-solid count drifted from five');
+  if (audit.currentConfirmedPaintableRuntimeSolidCount !== 9) {
+    errors.push('current confirmed paintable runtime-solid count drifted from nine');
   }
-  if (audit.currentUnknownPaintRuntimeSolidCount !== 12) {
-    errors.push('current unknown paint runtime-solid count drifted from twelve');
+  if (audit.currentUnknownPaintRuntimeSolidCount !== 8) {
+    errors.push('current unknown paint runtime-solid count drifted from eight');
   }
   if (
     !audit.engineRepresentation.stagePaintSurfaceHasWholeSurfaceFlags ||
@@ -114,8 +114,8 @@ export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
   ) {
     errors.push('public schema unexpectedly claims Temple01 Turf score authority');
   }
-  if (audit.candidateRuntimeSolidIds.length !== 5) {
-    errors.push('scoreability candidate inventory must track exactly five currently confirmed paintable solids');
+  if (audit.candidateRuntimeSolidIds.length !== 9) {
+    errors.push('scoreability candidate inventory must track exactly nine currently confirmed paintable solids');
   }
   if (audit.missingAuthoritativeEvidence.length < 3) {
     errors.push('Turf score-mask evidence gap is not sufficiently localized');

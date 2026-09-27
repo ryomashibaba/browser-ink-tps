@@ -1,4 +1,6 @@
+import { SurfaceFlags } from '../../ink/types';
 import type {
+  StagePaintSurfaceDefinition,
   StageSolidDefinition,
   StageTriangleMeshGeometry,
   StageVector3
@@ -16,6 +18,7 @@ export interface UndertowCenterSlopeMeshRecord {
   sourceComponentId: 2 | 3 | 4 | 5;
   plane: Readonly<{ a: number; b: number; c: number }>;
   mesh: StageTriangleMeshGeometry;
+  paintAuthority: 'PAINTABLE';
   confidence: 'HIGH';
   notes: string;
 }
@@ -38,6 +41,7 @@ export const UNDERTOW_CENTER_SLOPE_SOURCE_MESHES:
       ],
       indices: INDICES
     },
+    paintAuthority: 'PAINTABLE',
     confidence: 'HIGH',
     notes:
       'CI #658 source component 2: exact two-triangle FloorSlope00 quad fully contained by the LEFT central slope semantic marker.'
@@ -56,6 +60,7 @@ export const UNDERTOW_CENTER_SLOPE_SOURCE_MESHES:
       ],
       indices: INDICES
     },
+    paintAuthority: 'PAINTABLE',
     confidence: 'HIGH',
     notes:
       'CI #658 source component 3: exact two-triangle FloorSlope00 quad fully contained by the LEFT central slope semantic marker.'
@@ -74,6 +79,7 @@ export const UNDERTOW_CENTER_SLOPE_SOURCE_MESHES:
       ],
       indices: INDICES
     },
+    paintAuthority: 'PAINTABLE',
     confidence: 'HIGH',
     notes:
       'CI #658 source component 4: exact two-triangle FloorSlope00 quad fully contained by the RIGHT central slope semantic marker.'
@@ -92,6 +98,7 @@ export const UNDERTOW_CENTER_SLOPE_SOURCE_MESHES:
       ],
       indices: INDICES
     },
+    paintAuthority: 'PAINTABLE',
     confidence: 'HIGH',
     notes:
       'CI #658 source component 5: exact two-triangle FloorSlope00 quad fully contained by the RIGHT central slope semantic marker.'
@@ -113,6 +120,45 @@ export const UNDERTOW_CENTER_SLOPE_SOURCE_MESH_AUDIT = Object.freeze({
   notes:
     'CI #658 proves two large 22-face FloorSlope00 components only partially overlap the semantic marker and are excluded. The four selected components are fully-contained exact planar quads.'
 });
+
+const CENTER_SLOPE_PAINT_FLAGS =
+  SurfaceFlags.Paintable |
+  SurfaceFlags.Swimmable |
+  SurfaceFlags.Ramp;
+
+export function undertowCenterSlopePaintSurfaces():
+  readonly StagePaintSurfaceDefinition[] {
+  return UNDERTOW_CENTER_SLOPE_SOURCE_MESHES.map((record) => {
+    const [p0, p1, p2, p3] = record.mesh.vertices;
+    const u = subtract3(p1!, p0!);
+    const v = subtract3(p2!, p0!);
+    const width = length3(u);
+    const height = length3(v);
+    const uAxis = normalize3(u);
+    const vAxis = normalize3(v);
+    const normal = normalize3(cross3(uAxis, vAxis));
+    const centerBase: StageVector3 = [
+      (p0![0] + p1![0] + p2![0] + p3![0]) * 0.25,
+      (p0![1] + p1![1] + p2![1] + p3![1]) * 0.25,
+      (p0![2] + p1![2] + p2![2] + p3![2]) * 0.25
+    ];
+    const center: StageVector3 = [
+      centerBase[0] + normal[0] * 0.002,
+      centerBase[1] + normal[1] * 0.002,
+      centerBase[2] + normal[2] * 0.002
+    ];
+    return {
+      id: `UndertowT21D:${record.id}:paint`,
+      backingSolidId: `UndertowT21D:${record.id}`,
+      center,
+      uAxis,
+      vAxis,
+      widthMeters: width,
+      heightMeters: height,
+      flags: CENTER_SLOPE_PAINT_FLAGS
+    };
+  });
+}
 
 export function undertowCenterSlopeStageSolids():
   readonly StageSolidDefinition[] {
@@ -165,6 +211,24 @@ export function undertowCenterSlopeSourceMeshErrors(): readonly string[] {
     if (record.mesh.vertices.length !== 4 || record.mesh.indices.length !== 6) {
       errors.push(`${record.id}: selected source slope must remain one exact quad`);
     }
+    if (record.paintAuthority !== 'PAINTABLE') {
+      errors.push(`${record.id}: central slope paint authority must remain PAINTABLE`);
+    }
+    const [p0, p1, p2, p3] = record.mesh.vertices;
+    const u = subtract3(p1!, p0!);
+    const v = subtract3(p2!, p0!);
+    const oppositeResidual = length3([
+      p0![0] + p3![0] - p1![0] - p2![0],
+      p0![1] + p3![1] - p1![1] - p2![1],
+      p0![2] + p3![2] - p1![2] - p2![2]
+    ]);
+    const orthogonality = Math.abs(
+      (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) /
+        (length3(u) * length3(v))
+    );
+    if (oppositeResidual > 0.000005 || orthogonality > 0.000005) {
+      errors.push(`${record.id}: exact slope quad no longer supports rectangular PaintSurface basis`);
+    }
     const ys = record.mesh.vertices.map((vertex) => vertex[1]);
     if (Math.min(...ys) !== -1.5 || Math.max(...ys) !== 0) {
       errors.push(`${record.id}: source slope Y endpoints drifted`);
@@ -190,4 +254,29 @@ export function undertowCenterSlopeSourceMeshErrors(): readonly string[] {
     }
   }
   return errors;
+}
+
+
+function subtract3(a: StageVector3, b: StageVector3): StageVector3 {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function length3(v: StageVector3): number {
+  return Math.hypot(v[0], v[1], v[2]);
+}
+
+function normalize3(v: StageVector3): StageVector3 {
+  const length = length3(v);
+  if (length <= 1e-12) {
+    throw new Error('Undertow center slope paint basis cannot be zero-length.');
+  }
+  return [v[0] / length, v[1] / length, v[2] / length];
+}
+
+function cross3(a: StageVector3, b: StageVector3): StageVector3 {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0]
+  ];
 }

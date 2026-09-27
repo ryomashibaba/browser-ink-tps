@@ -18,7 +18,10 @@ import {
   type UndertowModelXZPolygon
 } from './UndertowSpillwayModelXZGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
-import { undertowCenterSlopeStageSolids } from './UndertowSpillwaySlopeMeshGeometry';
+import {
+  undertowCenterSlopePaintSurfaces,
+  undertowCenterSlopeStageSolids
+} from './UndertowSpillwaySlopeMeshGeometry';
 import { undertowRightLowRouteRampStageSolids } from './UndertowSpillwayRouteRampGeometry';
 import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
 import {
@@ -172,9 +175,12 @@ const solids = [
   ...undertowRightLowRouteRampStageSolids(),
   ...undertowUpperGlassVisualStageSolids()
 ];
-const paintSurfaces = built.flatMap((item) =>
-  item.paintSurface ? [item.paintSurface] : []
-);
+const paintSurfaces = [
+  ...built.flatMap((item) =>
+    item.paintSurface ? [item.paintSurface] : []
+  ),
+  ...undertowCenterSlopePaintSurfaces()
+];
 
 const outer = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints;
 const xs = outer.map((point) => point[0]);

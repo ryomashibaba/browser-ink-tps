@@ -438,9 +438,11 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: remodelGeometryEvidence
     },
     surface: {
-      semantics: [],
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'extracted-temple01-geometry'],
+      notes:
+        'The exact FloorSlope00 quads are fully contained by the white central slope-marker field. Sunfish encodes gray as uninkable and dashed white regions as slopes, so this bound central slope is paintable.'
     }
   }),
   commonSurfaceEntry({
@@ -470,9 +472,11 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: remodelGeometryEvidence
     },
     surface: {
-      semantics: [],
-      confidence: 'UNKNOWN',
-      evidenceIds: []
+      semantics: ['PAINTABLE'],
+      confidence: 'HIGH',
+      evidenceIds: ['user-turf-vector-blueprint', 'extracted-temple01-geometry'],
+      notes:
+        'The exact FloorSlope00 quads are fully contained by the white central slope-marker field. Sunfish encodes gray as uninkable and dashed white regions as slopes, so this bound central slope is paintable.'
     }
   }),
   commonSurfaceEntry({

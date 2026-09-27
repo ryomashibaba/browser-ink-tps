@@ -20,7 +20,7 @@ describe('T21-D partial Undertow blockout geometry', () => {
   it('contains only the currently safe flat components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(21);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(5);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(9);
     const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.collisionBehavior === 'GRATE'
     );
@@ -103,7 +103,7 @@ describe('T21-D partial Undertow blockout geometry', () => {
     }
   });
 
-  it('creates paint authority only for confirmed PAINTABLE flat floors without inventing Turf scoreability', () => {
+  it('creates paint authority only for confirmed PAINTABLE floors/ramps without inventing Turf scoreability', () => {
     const backingIds = new Set(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.map((solid) => solid.id)
     );
@@ -121,6 +121,12 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(paintIds.filter((id) => id.includes('center-low-'))).toHaveLength(2);
     expect(paintIds.filter((id) => id.includes('right-low-'))).toHaveLength(2);
     expect(paintIds.filter((id) => id.includes('center-origin-step-top-face'))).toHaveLength(1);
+    expect(paintIds.filter((id) => id.includes('center-slope-'))).toHaveLength(4);
+    const slopePaint = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.filter(
+      (surface) => surface.id.includes('center-slope-')
+    );
+    expect(slopePaint.every((surface) => (surface.flags & SurfaceFlags.Ramp) !== 0)).toBe(true);
+    expect(slopePaint.every((surface) => (surface.flags & SurfaceFlags.Floor) === 0)).toBe(true);
     expect(paintIds.some((id) => id.includes('glass-underpass-'))).toBe(false);
     expect(paintIds.some((id) => id.includes('spawn-high-'))).toBe(false);
     expect(paintIds.some((id) => id.includes('first-drop-landing-'))).toBe(false);

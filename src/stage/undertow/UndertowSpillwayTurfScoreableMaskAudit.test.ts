@@ -8,12 +8,12 @@ describe('T21-D Undertow Turf scoreable-mask audit', () => {
   it('keeps scoreability unresolved and authorizes no Scoreable promotion', () => {
     expect(undertowTurfScoreableMaskAuditErrors()).toEqual([]);
     expect(UNDERTOW_TURF_SCOREABLE_MASK_AUDIT).toMatchObject({
-      currentConfirmedPaintableRuntimeSolidCount: 5,
-      currentUnknownPaintRuntimeSolidCount: 12,
+      currentConfirmedPaintableRuntimeSolidCount: 9,
+      currentUnknownPaintRuntimeSolidCount: 8,
       currentScoreablePromotionsAuthorized: 0,
       scoreMaskResolved: false,
       paintAuthorityUpstreamComplete: false,
-      candidateStatus: 'HORIZONTAL_PAINTABLE_BUT_SCORE_AUTHORITY_PENDING',
+      candidateStatus: 'PAINTABLE_BUT_SCORE_AUTHORITY_PENDING',
       confidence: 'HIGH'
     });
   });
@@ -46,9 +46,9 @@ describe('T21-D Undertow Turf scoreable-mask audit', () => {
       });
   });
 
-  it('keeps all five currently paintable runtime solids as candidates only', () => {
+  it('keeps all nine currently paintable runtime solids as candidates only', () => {
     expect(UNDERTOW_TURF_SCOREABLE_MASK_AUDIT.candidateRuntimeSolidIds)
-      .toHaveLength(5);
+      .toHaveLength(9);
     expect(UNDERTOW_TURF_SCOREABLE_MASK_AUDIT.missingAuthoritativeEvidence)
       .toHaveLength(3);
   });

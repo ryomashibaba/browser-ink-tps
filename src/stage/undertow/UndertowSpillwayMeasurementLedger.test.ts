@@ -217,6 +217,10 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
         deltaYMeters: 1.5,
         confidence: 'HIGH'
       });
+      expect(slope.surface).toMatchObject({
+        semantics: ['PAINTABLE'],
+        confidence: 'HIGH'
+      });
     }
   });
 

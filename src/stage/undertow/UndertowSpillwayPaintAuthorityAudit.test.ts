@@ -10,9 +10,9 @@ describe('T21-D Undertow paint authority audit', () => {
     expect(undertowPaintAuthorityAuditErrors()).toEqual([]);
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT).toMatchObject({
       runtimeSolidCount: 21,
-      confirmedPaintableCount: 5,
+      confirmedPaintableCount: 9,
       confirmedUninkableCount: 4,
-      unresolvedCount: 12,
+      unresolvedCount: 8,
       paintAuthorityComplete: false,
       turfScoreabilityEvaluated: false,
       confidence: 'HIGH'
@@ -20,7 +20,9 @@ describe('T21-D Undertow paint authority audit', () => {
     expect(UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS).toHaveLength(21);
   });
 
-  it('keeps the exact unresolved component families localized', () => {
+  it('keeps only the eight still-unresolved component families localized', () => {
+    expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds)
+      .toHaveLength(8);
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds)
       .toEqual(expect.arrayContaining([
         'UndertowT21D:glass-underpass-positive-z',
@@ -29,10 +31,6 @@ describe('T21-D Undertow paint authority audit', () => {
         'UndertowT21D:spawn-high-negative-z',
         'UndertowT21D:first-drop-landing-positive-z',
         'UndertowT21D:first-drop-landing-negative-z',
-        'UndertowT21D:center-slope-left-a',
-        'UndertowT21D:center-slope-left-b',
-        'UndertowT21D:center-slope-right-a',
-        'UndertowT21D:center-slope-right-b',
         'UndertowT21D:right-low-route-ramp-positive-z',
         'UndertowT21D:right-low-route-ramp-negative-z'
       ]));
@@ -54,5 +52,26 @@ describe('T21-D Undertow paint authority audit', () => {
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.turfScoreabilityEvaluated).toBe(false);
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.notes)
       .toContain('TURF_SCOREABLE_MASK_PENDING');
+  });
+});
+
+
+describe('T21-D resolved central slope paint authority', () => {
+  it('promotes all four exact central slope solids to PAINTABLE', () => {
+    for (const id of [
+      'UndertowT21D:center-slope-left-a',
+      'UndertowT21D:center-slope-left-b',
+      'UndertowT21D:center-slope-right-a',
+      'UndertowT21D:center-slope-right-b'
+    ]) {
+      expect(
+        UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS.find(
+          (record) => record.runtimeSolidId === id
+        )
+      ).toMatchObject({
+        authority: 'PAINTABLE',
+        evidenceClass: 'AUTHOR_VECTOR_SEMANTIC'
+      });
+    }
   });
 });
