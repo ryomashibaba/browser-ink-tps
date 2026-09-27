@@ -2042,3 +2042,71 @@ for water_name,pdf_poly in WATER_SOURCE_PDF.items():
         f"T21WATER SOURCE {water_name} "
         f"{sorted(source_hist.items(),key=lambda kv:-kv[1])[:20]}"
     )
+
+
+# T21-D upper-glass BridgeMetal support/collision-source audit.
+#
+# Glass01 is the visual shell and is intentionally not collision authority.
+# Audit the separate current-Turf BridgeMetal object in the same two central
+# regions before deciding what may back player/projectile collision.
+BRIDGE_METAL_OBJECT="FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00"
+bridge_faces=[ff for ff in faces if ff[3]==BRIDGE_METAL_OBJECT]
+bridge_model_vertices={}
+for side_name,pred in (
+    ("POS_BRIDGE_SOURCE",lambda cx,cz: (-14.0<=cx<=-5.5 and -2.5<=cz<=7.8)),
+    ("NEG_BRIDGE_SOURCE",lambda cx,cz: (5.5<=cx<=14.0 and -7.8<=cz<=2.5)),
+):
+    selected=[]
+    model_vertex_set=set()
+    normal_hist=defaultdict(int)
+    project_y_hist=defaultdict(int)
+    for ff in bridge_faces:
+        tri=[vertices[i] for i in ff[:3]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if not pred(cx,cz):
+            continue
+        selected.append(ff)
+        for vi in ff[:3]:
+            v=vertices[vi]
+            model_vertex_set.add((round(v[0],6),round(v[1],6),round(v[2],6)))
+        n=tri_normal(tri)
+        verticality=round(abs(n[1]),2)
+        normal_hist[verticality]+=1
+        cy=sum(v[1] for v in tri)/3 - 3.0
+        project_y_hist[round(cy,2)]+=1
+
+    if not selected:
+        raise SystemExit(f"T21 bridge audit failed: no source faces for {side_name}")
+    xs=[v[0] for v in model_vertex_set]
+    ys=[v[1]-3.0 for v in model_vertex_set]
+    zs=[v[2] for v in model_vertex_set]
+    horizontal=sum(
+        count for ny,count in normal_hist.items()
+        if ny>=0.75
+    )
+    print(
+        f"T21BRIDGE MESH {side_name} faces={len(selected)} verts={len(model_vertex_set)} "
+        f"project_y=({min(ys):.6f},{max(ys):.6f}) "
+        f"x=({min(xs):.6f},{max(xs):.6f}) z=({min(zs):.6f},{max(zs):.6f}) "
+        f"horizontal_like={horizontal} wall_like={len(selected)-horizontal}"
+    )
+    print(
+        f"T21BRIDGE YHIST {side_name} "
+        f"{sorted(project_y_hist.items(),key=lambda kv:(kv[0],kv[1]))}"
+    )
+    bridge_model_vertices[side_name]=model_vertex_set
+
+pos_bridge=bridge_model_vertices["POS_BRIDGE_SOURCE"]
+neg_bridge=bridge_model_vertices["NEG_BRIDGE_SOURCE"]
+mirrored_pos_bridge={
+    (round(-x,6),round(y,6),round(-z,6))
+    for x,y,z in pos_bridge
+}
+bridge_xor=mirrored_pos_bridge ^ neg_bridge
+print(
+    f"T21BRIDGE SYMMETRY model_space=1 pos_verts={len(pos_bridge)} "
+    f"neg_verts={len(neg_bridge)} xor={len(bridge_xor)} "
+    f"missing={len(mirrored_pos_bridge-neg_bridge)} "
+    f"extra={len(neg_bridge-mirrored_pos_bridge)}"
+)
