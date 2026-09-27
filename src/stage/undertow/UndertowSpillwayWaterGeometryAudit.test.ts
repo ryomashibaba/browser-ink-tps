@@ -17,7 +17,7 @@ describe('T21-D water geometry audit', () => {
       temple01WaterSurfaceCells: 0,
       coverage: 0
     });
-    expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.resolutionPass).toBe('9B');
+    expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.resolutionPass).toBe('11B');
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.sourceTarget)
       .toBe('CURRENT_POST_VER_7_2_NORMAL_PVP');
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneResolved).toBe(false);
@@ -86,6 +86,26 @@ describe('T21-D water geometry audit', () => {
       UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
         .preloadResources
     ).toEqual(['Model/Fld_Temple01.bfres']);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
+        .verifiedSnapshots
+    ).toEqual(['720', '800', '920', '1130']);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
+        .scenePreloadStableAcrossVerifiedSnapshots
+    ).toBe(true);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
+        .versusSceneInfoContainsPlacementReference
+    ).toBe(false);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
+        .versusSceneInfoContainsBcettBody
+    ).toBe(false);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
+        .tclSceneNameProvidesWaterPlacementAuthority
+    ).toBe(false);
     expect(
       UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
         .preloadContainsExplicitWaterResource
