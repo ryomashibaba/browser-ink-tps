@@ -178,6 +178,25 @@ export function vec3([x, y, z]: StageVector3): Vec3 {
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
+  resolutionPass: '10B' as const,
+  sourceNativeRouteGapAudit: Object.freeze({
+    sourceWalkableNodeCountPerSide: 276,
+    rightLowContactNodeCountPerSide: 17,
+    underpassContactNodeCountPerSide: 8,
+    directConnectivityThresholdsMeters: [0.03, 0.08, 0.18, 0.30] as const,
+    reachableAtOrBelowMaxDirectThreshold: false,
+    relaxedDiscoveryThresholdMeters: 2.0,
+    localGapCountTotal: 8,
+    localGapCountPerSide: 4,
+    strictBridgeThresholdMeters: 0.30,
+    strictBridgesWhenAllExcludedSourceIsAllowed: 6,
+    strictBridgesAfterFloorLineAndFenceOverlayRemoval: 0,
+    ordinaryWalkSurfaceRecovered: false,
+    runtimePromotionAuthorized: false,
+    offMeshLinkAuthorized: false,
+    notes:
+      'Resolution Pass 10B reuses the source-native Temple01 route graph from CI #746. Each mirrored side contains 276 walkable candidate components, with 17 right-low contacts and 8 underpass contacts. No path exists at 0.03/0.08/0.18/0.30m adjacency. A relaxed 2.0m discovery path exposes four local gaps per side. Six apparent <=0.30m bridges exist only when excluded source classes are allowed; after removing known FloorLine/FloorFence marking overlays, all eight gaps have zero strict bridge. Therefore no omitted ordinary walk surface or justified Detour link is promoted.'
+  }),
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -200,7 +219,7 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'The current QA package can verify known partial routes but is not a full-stage navigation candidate. Exact underpass-route source faces failed the prior experimental Recast inclusion and remain audit-only; upper-glass navigation authority is also unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING therefore remains activation-blocking.'
+    'The current QA package can verify known partial routes but is not a full-stage navigation candidate. Pass 10B shows the right-low-to-underpass gap is not closed by an obvious omitted ordinary Temple01 walk surface at the audited 0.30m strict threshold; apparent excluded-source bridges depend on known floor-marking overlays. Exact connector semantics therefore remain unresolved rather than being convenience-filled. Upper-glass navigation authority is also unresolved, so FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
@@ -236,6 +255,25 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
   if (audit.knownBlockingTransitions.length !== 2) {
     errors.push('both mirrored right-low-to-underpass gaps must remain explicit');
+  }
+  if (
+    audit.resolutionPass !== '10B' ||
+    audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
+    audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
+    audit.sourceNativeRouteGapAudit.underpassContactNodeCountPerSide !== 8 ||
+    audit.sourceNativeRouteGapAudit.directConnectivityThresholdsMeters.join(',') !==
+      '0.03,0.08,0.18,0.3' ||
+    audit.sourceNativeRouteGapAudit.reachableAtOrBelowMaxDirectThreshold ||
+    audit.sourceNativeRouteGapAudit.localGapCountTotal !== 8 ||
+    audit.sourceNativeRouteGapAudit.localGapCountPerSide !== 4 ||
+    audit.sourceNativeRouteGapAudit.strictBridgeThresholdMeters !== 0.30 ||
+    audit.sourceNativeRouteGapAudit.strictBridgesWhenAllExcludedSourceIsAllowed !== 6 ||
+    audit.sourceNativeRouteGapAudit.strictBridgesAfterFloorLineAndFenceOverlayRemoval !== 0 ||
+    audit.sourceNativeRouteGapAudit.ordinaryWalkSurfaceRecovered ||
+    audit.sourceNativeRouteGapAudit.runtimePromotionAuthorized ||
+    audit.sourceNativeRouteGapAudit.offMeshLinkAuthorized
+  ) {
+    errors.push('Pass 10B source-native route-gap localization drifted or overpromoted connectivity');
   }
   if (audit.missingRequirements.length < 3) {
     errors.push('full-stage connectivity evidence gap is not sufficiently localized');
