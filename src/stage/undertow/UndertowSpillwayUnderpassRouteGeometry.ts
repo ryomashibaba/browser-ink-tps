@@ -145,12 +145,19 @@ function meshFromSource(
   return { vertices, indices };
 }
 
+function underpassRouteId(
+  sourceId: UndertowUnderpassRouteBaseId,
+  side: 'POSITIVE_Z' | 'NEGATIVE_Z'
+): UndertowUnderpassRouteId {
+  const suffix = side === 'POSITIVE_Z' ? 'positive-z' : 'negative-z';
+  return `${sourceId}-${suffix}` as UndertowUnderpassRouteId;
+}
+
 export const UNDERTOW_UNDERPASS_ROUTE_COMPONENTS:
   readonly UndertowUnderpassRouteRecord[] = SOURCE_ROUTE_COMPONENTS.flatMap(
   (source) =>
     (['POSITIVE_Z', 'NEGATIVE_Z'] as const).map((side) => ({
-      id: (`${source.id}-${side === 'POSITIVE_Z' ? 'positive-z' : 'negative-z'}`)
-        as UndertowUnderpassRouteId,
+      id: underpassRouteId(source.id, side),
       side,
       sourceObject: source.sourceObject,
       sourceMaterial: source.sourceMaterial,
