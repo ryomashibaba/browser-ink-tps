@@ -3562,36 +3562,14 @@ for region_name,nodes in route_graph.items():
                 bbox3_distance(n,b)<=ROUTE_GAP_CANDIDATE_DISTANCE
             )
         ]
-        # Candidate ranking is diagnostic only. Rank cheaply by bbox first,
-        # then compute exact source-surface distance only for the nearest local
-        # records. Strict bridge detection below still sees every candidate.
-        coarse_ranked=[]
+        # Candidate ranking is diagnostic only. Use bbox distance here so
+        # exhaustive exact triangle distance is reserved for the actual 0.30m
+        # strict-bridge BFS below.
+        ranked=[]
         for ci,candidate in enumerate(candidates):
             dba=bbox3_distance(a,candidate)
             dbb=bbox3_distance(candidate,b)
-            coarse_ranked.append((max(dba,dbb),dba+dbb,ci,dba,dbb))
-        coarse_ranked.sort()
-        ranked=[]
-        for _,_,ci,_,_ in coarse_ranked[:32]:
-            candidate=candidates[ci]
-            da=component_min_surface_distance_exact(
-                a,candidate,ROUTE_GAP_CANDIDATE_DISTANCE
-            )
-            db=component_min_surface_distance_exact(
-                candidate,b,ROUTE_GAP_CANDIDATE_DISTANCE
-            )
-            ranked.append((
-                max(
-                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if da is None else da,
-                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if db is None else db
-                ),
-                (
-                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if da is None else da
-                ) + (
-                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if db is None else db
-                ),
-                ci,da,db
-            ))
+            ranked.append((max(dba,dbb),dba+dbb,ci,dba,dbb))
         ranked.sort()
 
         bridge_path,bridge_edges,bridge_nodes=strict_bridge_through_excluded(
@@ -3621,13 +3599,13 @@ for region_name,nodes in route_graph.items():
             f"strict_bridge={bridge_path is not None} "
             f"bridge_nodes={0 if bridge_path is None else len(bridge_path)}"
         )
-        for rank_i,(_,_,ci,da,db) in enumerate(ranked[:24]):
+        for rank_i,(_,_,ci,dba,dbb) in enumerate(ranked[:24]):
             n=candidates[ci]
             print(
                 f"T21ROUTEGAPEXCLUDED CANDIDATE {region_name} "
                 f"edge={edge_i-1} rank={rank_i} "
-                f"da={None if da is None else round(da,6)} "
-                f"db={None if db is None else round(db,6)} "
+                f"bbox_da={round(dba,6)} "
+                f"bbox_db={round(dbb,6)} "
                 f"obj={n['object']} mat={n['material']} ci={n['component']} "
                 f"faces={n['faces']} verts={n['vertices']} "
                 f"y=({n['model_y'][0]:.6f},{n['model_y'][1]:.6f}) "
