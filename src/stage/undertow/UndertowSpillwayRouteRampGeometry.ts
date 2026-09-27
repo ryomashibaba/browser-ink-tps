@@ -143,6 +143,44 @@ export function undertowRightLowRouteRampPaintSurfaces():
   });
 }
 
+const RIGHT_LOW_ROUTE_RAMP_PAINT_FLAGS =
+  SurfaceFlags.Paintable |
+  SurfaceFlags.Swimmable |
+  SurfaceFlags.Ramp;
+
+export function undertowRightLowRouteRampPaintSurfaces():
+  readonly StagePaintSurfaceDefinition[] {
+  return UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.map((record) => {
+    const [p0, p1, p2, p3] = record.mesh.vertices;
+    const u = subtract3(p1!, p0!);
+    const v = subtract3(p2!, p0!);
+    const width = length3(u);
+    const height = length3(v);
+    const uAxis = normalize3(u);
+    const vAxis = normalize3(v);
+    const normal = normalize3(cross3(uAxis, vAxis));
+    const centerBase: StageVector3 = [
+      (p0![0] + p1![0] + p2![0] + p3![0]) * 0.25,
+      (p0![1] + p1![1] + p2![1] + p3![1]) * 0.25,
+      (p0![2] + p1![2] + p2![2] + p3![2]) * 0.25
+    ];
+    return {
+      id: `UndertowT21D:${record.id}:paint`,
+      backingSolidId: `UndertowT21D:${record.id}`,
+      center: [
+        centerBase[0] + normal[0] * 0.002,
+        centerBase[1] + normal[1] * 0.002,
+        centerBase[2] + normal[2] * 0.002
+      ],
+      uAxis,
+      vAxis,
+      widthMeters: width,
+      heightMeters: height,
+      flags: RIGHT_LOW_ROUTE_RAMP_PAINT_FLAGS
+    };
+  });
+}
+
 export function undertowRightLowRouteRampStageSolids():
   readonly StageSolidDefinition[] {
   return UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.map((record) => {
@@ -182,6 +220,30 @@ function meshBounds(vertices: readonly StageVector3[]): {
   };
 }
 
+function subtract3(a: StageVector3, b: StageVector3): StageVector3 {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function length3(v: StageVector3): number {
+  return Math.hypot(v[0], v[1], v[2]);
+}
+
+function normalize3(v: StageVector3): StageVector3 {
+  const length = length3(v);
+  if (length <= 1e-12) {
+    throw new Error('Undertow right-low route-ramp paint basis cannot be zero-length.');
+  }
+  return [v[0] / length, v[1] / length, v[2] / length];
+}
+
+function cross3(a: StageVector3, b: StageVector3): StageVector3 {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0]
+  ];
+}
+
 export function undertowRightLowRouteRampErrors(): readonly string[] {
   const errors: string[] = [];
   if (UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.length !== 2) {
@@ -212,6 +274,24 @@ export function undertowRightLowRouteRampErrors(): readonly string[] {
     const ys = record.mesh.vertices.map((vertex) => vertex[1]);
     if (Math.min(...ys) !== 3 || Math.max(...ys) !== 4.5) {
       errors.push(`${record.id}: route ramp Y endpoints drifted`);
+    }
+    if (record.paintAuthority !== 'PAINTABLE') {
+      errors.push(`${record.id}: Resolution Pass 10A paint authority drifted`);
+    }
+    const [p0, p1, p2, p3] = record.mesh.vertices;
+    const u = subtract3(p1!, p0!);
+    const v = subtract3(p2!, p0!);
+    const oppositeResidual = length3([
+      p0![0] + p3![0] - p1![0] - p2![0],
+      p0![1] + p3![1] - p1![1] - p2![1],
+      p0![2] + p3![2] - p1![2] - p2![2]
+    ]);
+    const orthogonality = Math.abs(
+      (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) /
+        (length3(u) * length3(v))
+    );
+    if (oppositeResidual > 0.000005 || orthogonality > 0.000005) {
+      errors.push(`${record.id}: exact route-ramp quad no longer supports rectangular PaintSurface basis`);
     }
     for (let i = 0; i < record.mesh.indices.length; i += 3) {
       const a = record.mesh.vertices[record.mesh.indices[i]!]!;
