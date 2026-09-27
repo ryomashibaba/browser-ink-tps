@@ -64,6 +64,27 @@ jobs:
         shell: bash
         run: python scripts/undertow-temple01-xz-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
 
+      - name: T21 Sunfish Zones vector recovery audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet "PyMuPDF==1.26.4"
+          python scripts/undertow-sunfish-zones-pdf-audit.py \
+            --output /tmp/undertow-zones-vector-audit.json \
+            --pdf-output /tmp/undertow-zones-sunfish.pdf
+
+      - name: Upload T21 Sunfish Zones vector audit
+        if: always() && github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-zones-vector-audit
+          path: |
+            /tmp/undertow-zones-vector-audit.json
+            /tmp/undertow-zones-sunfish.pdf
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
