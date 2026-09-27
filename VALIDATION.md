@@ -1884,8 +1884,8 @@ Validation must additionally require:
 - brightness distance remains **0** to the PAINTABLE median and **64** to the UNINKABLE median
 - exactly 2 route-ramp PaintSurfaces exist
 - both are `Paintable | Swimmable | Ramp`, neither is `Floor` or `Scoreable`
-- runtime paint inventory remains **13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN**
-- the remaining 4 UNKNOWN solids are exactly the two whole underpass solids and two first-drop landing solids
+- Pass 10A checkpoint paint inventory = **13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN**
+- at the Pass 10A checkpoint, the remaining 4 UNKNOWN solids were the two whole underpass solids and two first-drop landing solids
 - `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
 - `TURF_SCOREABLE_MASK_PENDING` remains separate with zero authorized Scoreable promotions
 - production stage remains frozen T20 `inkworks-junction`
@@ -1902,3 +1902,27 @@ Validation must additionally require:
 - no ordinary walk surface, runtime connector, or off-mesh link is promoted from this audit
 - both `right-low-to-underpass-*` probes remain diagnostic and unreached
 - `FULL_STAGE_CONNECTIVITY_QA_PENDING` remains active
+
+## T21-D first-drop paint Resolution Pass 10C validation — 2026-09-27
+
+Validation must additionally require:
+- pinned Turf PDF = **100,311 bytes**, SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- exactly 2 first-drop landing components remain bound to model Y **6.0m** / project Y **3.0m**
+- each component remains **3746 cells / 58.53125m²**, 0 holes, 8 outer vertices, mirror XOR 0
+- landing median brightness remains **255** on both sides
+- near-white fraction remains >= **0.90**:
+  - positive-Z = **0.931694**
+  - negative-Z = **0.952110**
+- adjacent author-gray control median brightness remains **191** and dark/gray fraction **1.0**
+- exact landing overlap with the adjacent gray control remains < **1%**
+- maximum first-drop-lip boundary residual remains <= **0.5m**:
+  - positive-Z = **0.347272371m**
+  - negative-Z = **0.442577995m**
+- exactly 2 first-drop PaintSurfaces exist
+- both are `Paintable | Swimmable | Floor`, neither is `Ramp` nor `Scoreable`
+- current paint inventory = **15 PAINTABLE / 4 UNINKABLE / 2 UNKNOWN**
+- the remaining 2 UNKNOWN solids are exactly the two whole underpass solids
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
+- `TURF_SCOREABLE_MASK_PENDING` remains separate with zero authorized Scoreable promotions
+- production stage remains frozen T20 `inkworks-junction`
+
