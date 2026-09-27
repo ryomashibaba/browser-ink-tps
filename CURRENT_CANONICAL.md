@@ -2441,8 +2441,8 @@ Runtime consequence:
 - flags = `Paintable | Swimmable | Ramp`
 - no `Floor` flag
 - no `Scoreable` flag
-- current runtime-solid paint inventory = **13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN**
-- current PaintSurface count = **15**
+- Pass 10A checkpoint runtime-solid paint inventory = **13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN**
+- Pass 10A checkpoint PaintSurface count = **15**
 - remaining UNKNOWN solids are only:
   - 2 whole glass-underpass solids outside the already registered Zones paint intersections
   - 2 first-drop landing solids
@@ -2469,3 +2469,46 @@ Canonical consequence:
 - `FULL_STAGE_CONNECTIVITY_QA_PENDING` remains active
 
 The remaining evidence need is now narrower: authoritative original-game connector/collision geometry or traversal semantics for this transition, not a larger Recast tolerance or a guessed bridge.
+
+## T21-D first-drop landing paint registration — Resolution Pass 10C (2026-09-27)
+
+The two exact mirrored first-drop landing components are now promoted to **PAINTABLE** from the pinned current Sunfish Turf vector source. The promotion is bound to the already-audited Temple01 model-Y=6.0 / project-Y=3.0 components and does not rely on the `FloorConcrete03` material name.
+
+Pinned source:
+- 100,311 bytes
+- SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- page 841.920044 × 595.320007pt
+- source updated 2024-05-06
+
+Exact geometry binding:
+- 2 mirrored components
+- model Y = **6.0m**
+- project Y = **3.0m**
+- **3746** raster cells / **58.53125m²** per side
+- **8** simplified outer vertices per side
+- 0 holes
+- mirror XOR = 0
+
+Author white/gray discrimination:
+- positive-Z landing: median brightness **255**, near-white **0.931694**
+- negative-Z landing: median brightness **255**, near-white **0.952110**
+- immediately adjacent author-gray negative-control faces: median brightness **191**, dark/gray fraction **1.0** on both sides
+- gray overlap fraction:
+  - positive-Z = **0.000000372**
+  - negative-Z = **0.003083965**
+- maximum first-drop-lip boundary residual:
+  - positive-Z = **0.347272371m**
+  - negative-Z = **0.442577995m**
+- both remain inside the existing **0.5m** local-registration gate
+
+Runtime consequence:
+- +2 first-drop landing PaintSurfaces
+- flags = `Paintable | Swimmable | Floor`
+- no `Ramp`
+- no `Scoreable`
+- current runtime-solid paint inventory = **15 PAINTABLE / 4 UNINKABLE / 2 UNKNOWN**
+- current PaintSurface count = **17**
+- the only remaining UNKNOWN solids are the two whole glass-underpass solids outside the registered Splat-Zone paint intersections
+
+`UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` therefore remains active, but is now localized only to the underpass remainder. `TURF_SCOREABLE_MASK_PENDING` remains fully separate, production remains frozen T20 `inkworks-junction`, and PR #5 remains Draft / unmerged.
+
