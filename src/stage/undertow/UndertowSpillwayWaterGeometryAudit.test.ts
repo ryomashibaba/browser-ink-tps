@@ -17,6 +17,9 @@ describe('T21-D water geometry audit', () => {
       temple01WaterSurfaceCells: 0,
       coverage: 0
     });
+    expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.resolutionPass).toBe('9B');
+    expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.sourceTarget)
+      .toBe('CURRENT_POST_VER_7_2_NORMAL_PVP');
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneResolved).toBe(false);
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneMeters).toBeNull();
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.killThresholdResolved).toBe(false);
@@ -54,12 +57,49 @@ describe('T21-D water geometry audit', () => {
         .placementDataForTemple01PresentInPublishedSchemaRepository
     ).toBe(false);
     expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.publicLayoutSchemaFollowup
+        .temple01LiftVariantClasses
+    ).toEqual([
+      'Lft_FldObj_Temple01_PntSet',
+      'Lft_FldObj_Temple01_VarSet',
+      'Lft_FldObj_Temple01_VclSet',
+      'Lft_FldObj_Temple01_VglSet',
+      'Lft_FldObj_Temple01_VlfSet'
+    ]);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.publicLayoutSchemaFollowup
+        .actorPlacementTransformFields
+    ).toEqual(['Translate', 'Rotate', 'Scale']);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.publicLayoutSchemaFollowup
+        .referencedTemple01RuleBinLayer
+    ).toBe('Work/Banc/BinLayer/Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json');
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.publicLayoutSchemaFollowup
+        .referencedTemple01RuleBinLayerScope
+    ).toBe('TOWER_CONTROL_MODIFIER_REFERENCE_ONLY');
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.publicLayoutSchemaFollowup
+        .referencedTemple01RuleBinLayerContentsPublished
+    ).toBe(false);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
+        .preloadResources
+    ).toEqual(['Model/Fld_Temple01.bfres']);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
+        .preloadContainsExplicitWaterResource
+    ).toBe(false);
+    expect(
       UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
         .exposesWaterVisualY
     ).toBe(false);
     expect(
       UNDERTOW_WATER_VISUAL_PLANE_AUDIT.leannySceneMetadataFollowup
         .exposesTemple01PlacementTransforms
+    ).toBe(false);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.publicPlacementRecoverySucceeded
     ).toBe(false);
     expect(
       UNDERTOW_WATER_VISUAL_PLANE_AUDIT.missingAuthoritativeEvidence.length
