@@ -65,7 +65,7 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS5_AUDIT = Object.freeze({
       const backing = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.find(
         (solid) => solid.id === surface.backingSolidId
       );
-      return backing?.footprint?.holes.length === 2;
+      return backing?.footprint?.holes?.length === 2;
     }),
     allPaintable: spawnPaintSurfaces.every(
       (surface) => (surface.flags & SurfaceFlags.Paintable) !== 0
