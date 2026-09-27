@@ -3272,6 +3272,17 @@ def component_min_surface_distance(a,b,cutoff):
                 return best
     return None if best==1e30 else best
 
+def component_min_surface_distance_exact(a,b,search_limit):
+    if bbox3_distance(a,b)>search_limit:
+        return None
+    best=1e30
+    for ta in a["model_triangles"]:
+        for tb in b["model_triangles"]:
+            d=triangle_triangle_distance_3d(ta,tb,None)
+            if d<best:
+                best=d
+    return None if best==1e30 else best
+
 def route_graph_surface_path(nodes,region_name,threshold):
     prefix=region_name[:3]
     starts=[i for i,n in enumerate(nodes) if f"{prefix}_RIGHT_LOW" in n["contacts"]]
@@ -3334,6 +3345,37 @@ for region_name,nodes in route_graph.items():
             )
         break
 
+    for threshold in ROUTE_GRAPH_DIAGNOSTIC_THRESHOLDS:
+        path,edge_distance,starts,goals=route_graph_surface_path(
+            nodes,region_name,threshold
+        )
+        print(
+            f"T21ROUTESURFACE RELAXED {region_name} threshold={threshold:.2f} "
+            f"reachable={path is not None} "
+            f"path_nodes={0 if path is None else len(path)}"
+        )
+        if path is None:
+            continue
+        for step_i,node_i in enumerate(path):
+            n=nodes[node_i]
+            prev_d=None
+            if step_i>0:
+                a=nodes[path[step_i-1]]; b=n
+                prev_d=component_min_surface_distance_exact(
+                    a,b,threshold
+                )
+            print(
+                f"T21ROUTESURFACE RELAXED_PATH {region_name} "
+                f"threshold={threshold:.2f} step={step_i} node={node_i} "
+                f"prev_d={None if prev_d is None else round(prev_d,6)} "
+                f"obj={n['object']} mat={n['material']} ci={n['component']} "
+                f"faces={n['faces']} verts={n['vertices']} "
+                f"y=({n['model_y'][0]:.6f},{n['model_y'][1]:.6f}) "
+                f"bbox={[round(v,6) for v in n['bbox']]} "
+                f"contacts={n['contacts']}"
+            )
+        break
+
     # Cross-check the known relaxed vertex-chain edge-by-edge against source
     # triangle distance. This tells us whether each ~2m vertex gap is a genuine
     # physical separation or only an independently split/T-junction mesh.
@@ -3343,7 +3385,7 @@ for region_name,nodes in route_graph.items():
             ai=vertex_path[step_i-1]; bi=vertex_path[step_i]
             a=nodes[ai]; b=nodes[bi]
             vd=vertex_edges.get((min(ai,bi),max(ai,bi)))
-            sd=component_min_surface_distance(a,b,3.00)
+            sd=component_min_surface_distance_exact(a,b,3.00)
             print(
                 f"T21ROUTESURFACE VERTEX_CHAIN_EDGE {region_name} "
                 f"step={step_i-1}->{step_i} "
