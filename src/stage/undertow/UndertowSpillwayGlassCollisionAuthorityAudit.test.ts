@@ -14,11 +14,48 @@ describe('T21-D upper glass collision authority audit', () => {
       bridgeMetalHorizontalLikeFacesPerSide: 335,
       bridgeMetalWallLikeFacesPerSide: 748,
       bridgeMetalModelSpaceMirrorXorVertices: 0,
+      resolutionPass: 9,
+      bridgeMetalConnectedComponentsPerSide: 392,
+      bridgeMetalComponentSignatureMirrorXor: 0,
+      bridgeMetalUniqueStandableComponentResolved: false,
+      playerStandabilitySemanticResolved: true,
+      navigationStandabilitySemanticResolved: true,
+      exactPlayerCollisionFaceBindingResolved: false,
+      exactNavigationFaceBindingResolved: false,
+      projectileBehaviorResolved: false,
+      cameraQueryBehaviorResolved: false,
       glassVisualShellCollisionAuthorityReady: false,
       bridgeMetalCollisionAuthorityReady: false,
       cameraQueryAuthorityReady: false,
       confidence: 'HIGH'
     });
+  });
+
+  it('separates confirmed current standability from unresolved exact collision-face binding', () => {
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.currentGameplayEvidence
+    ).toMatchObject({
+      targetIsPostVer720: true,
+      glassHighGroundStandabilityConfirmed: true,
+      glassHighGroundUsedForPositioningConfirmed: true,
+      exactGlass01VsBridgeMetalFaceBindingResolved: false
+    });
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.currentGameplayEvidence
+        .evidenceDates
+    ).toEqual(['2024-08-29', '2025-09-11', '2026-06-02']);
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
+        .bridgeMetalConnectedComponentsPerSide
+    ).toBe(392);
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
+        .bridgeMetalComponentSignatureMirrorXor
+    ).toBe(0);
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
+        .bridgeMetalUniqueStandableComponentResolved
+    ).toBe(false);
   });
 
   it('records that the published Temple01 directory has no separate collision asset', () => {
