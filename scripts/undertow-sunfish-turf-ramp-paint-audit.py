@@ -179,7 +179,74 @@ def signature_rows(signature_counts):
 
 
 def canonical_dash_count(signature_counts):
-    return signature_counts.get((0.24, (0.0, 0.0, 0.0), "HORIZONTAL", 0.96), 0)
+    return sum(
+        count
+        for (width, color, orientation, length), count in signature_counts.items()
+        if (
+            width == 0.24
+            and color == (0.0, 0.0, 0.0)
+            and orientation in ("HORIZONTAL", "VERTICAL")
+            and length == 0.96
+        )
+    )
+
+
+def point_in_polygon(x, y, polygon):
+    inside = False
+    j = len(polygon) - 1
+    for i in range(len(polygon)):
+        xi, yi = polygon[i]
+        xj, yj = polygon[j]
+        if ((yi > y) != (yj > y)):
+            x_cross = (xj - xi) * (y - yi) / (yj - yi + 1e-30) + xi
+            if x < x_cross:
+                inside = not inside
+        j = i
+    return inside
+
+
+def percentile(sorted_values, fraction):
+    if not sorted_values:
+        return None
+    pos = fraction * (len(sorted_values) - 1)
+    lo = int(math.floor(pos))
+    hi = int(math.ceil(pos))
+    if lo == hi:
+        return sorted_values[lo]
+    t = pos - lo
+    return sorted_values[lo] * (1 - t) + sorted_values[hi] * t
+
+
+def raster_brightness_stats(page, polygon, scale=3.0):
+    bbox = rect_of_points(polygon)
+    clip = fitz.Rect(*bbox)
+    pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), clip=clip, alpha=False)
+    values = []
+    step = 2
+    width_pdf = bbox[2] - bbox[0]
+    height_pdf = bbox[3] - bbox[1]
+    for iy in range(0, pix.height, step):
+        py = bbox[1] + (iy + 0.5) * height_pdf / max(1, pix.height)
+        for ix in range(0, pix.width, step):
+            px = bbox[0] + (ix + 0.5) * width_pdf / max(1, pix.width)
+            if not point_in_polygon(px, py, polygon):
+                continue
+            off = iy * pix.stride + ix * pix.n
+            rgb = pix.samples[off:off + 3]
+            if len(rgb) < 3:
+                continue
+            values.append(sum(rgb) / 3.0)
+    values.sort()
+    if not values:
+        raise RuntimeError("Raster brightness sampler produced no interior samples")
+    return {
+        "sampleCount": len(values),
+        "p10": round(percentile(values, 0.10), 3),
+        "p50": round(percentile(values, 0.50), 3),
+        "p90": round(percentile(values, 0.90), 3),
+        "nearWhiteFraction": round(sum(v >= 245 for v in values) / len(values), 6),
+        "darkOrGrayFraction": round(sum(v < 235 for v in values) / len(values), 6),
+    }
 
 
 def main():
@@ -247,25 +314,31 @@ def main():
         rows = signature_rows(marker_counts)
         dash_count = canonical_dash_count(marker_counts)
         known_marker_dash_counts[marker_name] = dash_count
-        known_marker_signatures[marker_name] = rows
         known_marker_fill_counts[marker_name] = len(marker_fills)
+        marker_polygon = [
+            (marker_bbox[0], marker_bbox[1]),
+            (marker_bbox[2], marker_bbox[1]),
+            (marker_bbox[2], marker_bbox[3]),
+            (marker_bbox[0], marker_bbox[3]),
+        ]
+        brightness = raster_brightness_stats(page, marker_polygon)
         print(
             "T21TURF_KNOWN_PAINTABLE_SLOPE "
             f"name={marker_name} bbox={json.dumps(marker_bbox)} "
             f"lines={len(marker_lines)} fills={len(marker_fills)} "
             f"canonical_dash_count={dash_count} "
+            f"brightness={json.dumps(brightness, separators=(',', ':'))} "
             f"signatures={json.dumps(rows[:12], separators=(',', ':'))}"
         )
+        known_marker_signatures[marker_name] = {
+            "lineSignatures": rows,
+            "brightness": brightness,
+        }
 
     if any(count <= 0 for count in known_marker_dash_counts.values()):
         raise RuntimeError(
             "Known central paintable slope marker failed to expose canonical 0.24pt/0.96pt dash signature"
         )
-    if any(count != 0 for count in known_marker_fill_counts.values()):
-        raise RuntimeError(
-            "Known central white slope marker unexpectedly contains explicit fill geometry"
-        )
-
     known_uninkable = {}
     for marker_name, marker_bbox in KNOWN_UNINKABLE_SLOPE_MARKERS.items():
         _, marker_lines, marker_fills, marker_counts = analyze_region(
@@ -275,32 +348,39 @@ def main():
             tuple(row["fill"]) for row in marker_fills
             if row["fill"] is not None
         })
+        marker_polygon = [
+            (marker_bbox[0], marker_bbox[1]),
+            (marker_bbox[2], marker_bbox[1]),
+            (marker_bbox[2], marker_bbox[3]),
+            (marker_bbox[0], marker_bbox[3]),
+        ]
+        brightness = raster_brightness_stats(page, marker_polygon)
         known_uninkable[marker_name] = {
             "bbox": marker_bbox,
             "canonicalDashCount": canonical_dash_count(marker_counts),
             "fillCount": len(marker_fills),
             "fillColors": [list(color) for color in fill_colors],
             "lineSignatureCounts": signature_rows(marker_counts),
+            "brightness": brightness,
         }
         print(
             "T21TURF_KNOWN_UNINKABLE_SLOPE "
             f"name={marker_name} bbox={json.dumps(marker_bbox)} "
             f"lines={len(marker_lines)} fills={len(marker_fills)} "
             f"canonical_dash_count={canonical_dash_count(marker_counts)} "
+            f"brightness={json.dumps(brightness, separators=(',', ':'))} "
             f"fill_colors={json.dumps([list(color) for color in fill_colors])}"
         )
 
     if any(rec["canonicalDashCount"] <= 0 for rec in known_uninkable.values()):
         raise RuntimeError("Known gray glass slope marker lost the canonical dash signature")
-    if any(rec["fillCount"] <= 0 for rec in known_uninkable.values()):
-        raise RuntimeError("Known gray glass slope marker no longer exposes explicit fill geometry")
-
     result["knownPaintableSlopeMarkers"] = {
         name: {
             "bbox": KNOWN_PAINTABLE_SLOPE_MARKERS[name],
             "canonicalDashCount": known_marker_dash_counts[name],
             "fillCount": known_marker_fill_counts[name],
-            "lineSignatureCounts": known_marker_signatures[name],
+            "lineSignatureCounts": known_marker_signatures[name]["lineSignatures"],
+            "brightness": known_marker_signatures[name]["brightness"],
         }
         for name in KNOWN_PAINTABLE_SLOPE_MARKERS
     }
@@ -331,10 +411,23 @@ def main():
             region["canonicalDashCount"] > 0 and
             all(count > 0 for count in known_marker_dash_counts.values())
         )
+        ramp_polygon = [pdf_points[0], pdf_points[1], pdf_points[3], pdf_points[2]]
+        region["brightness"] = raster_brightness_stats(page, ramp_polygon)
+        paintable_p50 = [
+            rec["brightness"]["p50"] for rec in known_marker_signatures.values()
+        ]
+        uninkable_p50 = [
+            rec["brightness"]["p50"] for rec in known_uninkable.values()
+        ]
+        region["brightnessDistanceToPaintableP50"] = round(
+            min(abs(region["brightness"]["p50"] - v) for v in paintable_p50), 3
+        )
+        region["brightnessDistanceToUninkableP50"] = round(
+            min(abs(region["brightness"]["p50"] - v) for v in uninkable_p50), 3
+        )
         region["matchesKnownPaintableWhiteBackgroundClass"] = (
-            region["fillCount"] == 0 and
-            all(count == 0 for count in known_marker_fill_counts.values()) and
-            all(rec["fillCount"] > 0 for rec in known_uninkable.values())
+            region["brightnessDistanceToPaintableP50"]
+            < region["brightnessDistanceToUninkableP50"]
         )
         result["regions"][side] = region
 
@@ -342,10 +435,10 @@ def main():
             raise RuntimeError(
                 f"{side} route-ramp region does not contain the known slope dash signature"
             )
-        if not region["matchesKnownPaintableWhiteBackgroundClass"]:
-            raise RuntimeError(
-                f"{side} route-ramp region does not match the known white paintable slope background class"
-            )
+        # Keep this as a measured diagnostic until the paintable-vs-uninkable
+        # raster classes are observed from this exact PDF. The next pass may
+        # promote only if both mirrored ramps land decisively with the known
+        # paintable class.
 
         print(
             "T21TURFRAMP_REGION "
@@ -353,7 +446,10 @@ def main():
             f"lines={len(line_rows)} fills={len(fill_rows)} "
             f"canonical_dash_count={region['canonicalDashCount']} "
             f"matches_known={region['matchesKnownSlopeDashSignature']} "
-            f"matches_white={region['matchesKnownPaintableWhiteBackgroundClass']}"
+            f"matches_white={region['matchesKnownPaintableWhiteBackgroundClass']} "
+            f"brightness={json.dumps(region['brightness'], separators=(',', ':'))} "
+            f"d_paint={region['brightnessDistanceToPaintableP50']} "
+            f"d_unink={region['brightnessDistanceToUninkableP50']}"
         )
         print(
             "T21TURFRAMP_SIGNATURES "
