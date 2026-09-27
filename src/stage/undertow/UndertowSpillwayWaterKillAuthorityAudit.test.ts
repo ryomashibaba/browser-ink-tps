@@ -16,8 +16,25 @@ describe('T21-D water kill authority audit', () => {
       killThresholdMeters: null,
       killVolumePlacementResolved: false,
       visualWaterYCanDefineKillThreshold: false,
+      currentGameplayWaterSurfaceContactRelationResolved: true,
+      visibleWaterContactCausesEssentiallyImmediateDeath: true,
+      largePerceptibleVisualToKillVerticalGapRuledOut: true,
+      exactVisualToKillMetricOffsetResolved: false,
+      exactVisualToKillMetricOffsetMeters: null,
+      waterContactRelationUserDirectGameplayKnowledgeAccepted: true,
       confidence: 'HIGH'
     });
+  });
+
+  it('records immediate visible-water death without promoting an exact metric threshold', () => {
+    const audit = UNDERTOW_WATER_KILL_AUTHORITY_AUDIT;
+    expect(audit.currentGameplayWaterSurfaceContactRelationResolved).toBe(true);
+    expect(audit.visibleWaterContactCausesEssentiallyImmediateDeath).toBe(true);
+    expect(audit.largePerceptibleVisualToKillVerticalGapRuledOut).toBe(true);
+    expect(audit.exactVisualToKillMetricOffsetResolved).toBe(false);
+    expect(audit.exactVisualToKillMetricOffsetMeters).toBeNull();
+    expect(audit.killThresholdResolved).toBe(false);
+    expect(audit.killThresholdMeters).toBeNull();
   });
 
   it('records Mpt_PlayerDead only as a generic death-locator mechanism candidate', () => {

@@ -6,7 +6,7 @@ import {
 
 describe('T21 user capture evidence', () => {
   it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(10);
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(11);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -48,6 +48,11 @@ describe('T21 user capture evidence', () => {
         'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28'
       ).region
     ).toBe('UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION');
+    expect(
+      undertowCaptureEvidence(
+        'user-water-surface-contact-death-knowledge-2026-09-28'
+      ).region
+    ).toBe('WATER_SURFACE_CONTACT_DEATH_RELATION');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -140,6 +145,17 @@ describe('T21 user capture evidence', () => {
     expect(facts).toContain('stops the player like an ordinary wall');
     expect(facts).toContain('solid from above, below, and from the side');
     expect(facts).toContain('does not identify whether the original game uses visible Glass01 faces');
+  });
+
+  it('records immediate water-surface death qualitatively without inventing metric Y authority', () => {
+    const water = undertowCaptureEvidence(
+      'user-water-surface-contact-death-knowledge-2026-09-28'
+    );
+    const facts = water.facts.join(' ');
+    expect(facts).toContain('results in death essentially immediately');
+    expect(facts).toContain('not separated by a large perceptible vertical gap');
+    expect(facts).toContain('does not establish an exact visual-water world Y');
+    expect(facts).toContain('does not establish whether exterior fall-out uses the same vertical death trigger');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {

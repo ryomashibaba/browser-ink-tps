@@ -64,6 +64,12 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
       'The completed XZ audit resolves the two mapped cyan WATER+KILL polygons and excludes additional internal abyss holes. It does not determine the vertical trigger extent or whether water and exterior fall-out share one death volume.'
   }),
   publicTemple01DeathPlacementRecoverySucceeded: false,
+  currentGameplayWaterSurfaceContactRelationResolved: true,
+  visibleWaterContactCausesEssentiallyImmediateDeath: true,
+  largePerceptibleVisualToKillVerticalGapRuledOut: true,
+  exactVisualToKillMetricOffsetResolved: false,
+  exactVisualToKillMetricOffsetMeters: null,
+  waterContactRelationUserDirectGameplayKnowledgeAccepted: true,
   visualWaterYCanDefineKillThreshold: false,
   killThresholdResolved: false,
   killThresholdMeters: null,
@@ -76,7 +82,7 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
     'Alternatively, controlled current normal-PvP vertical-crossing evidence registered to fixed Temple01 geometry tightly enough to bound the death trigger Y without reusing the unresolved visual-water plane.'
   ] as const,
   notes:
-    'Resolution Pass 11B keeps the Pass 9B generic-locator result and additionally verifies that public Temple01 scene metadata across 720/800/920/1130 still exposes no normal-mode placement body. The generic Mpt_PlayerDead definition is stable as Cube / Scale 1 / ControlledPlayer across snapshots 720, 800, 920, and 1130, while also proving that the public placement schema requires instance Translate/Rotate/Scale to recover an actual volume. No Temple01 death-locator instance body was recovered from the audited public sources. Therefore no global kill Y, water kill plane, or death volume is promoted; WATER_KILL_THRESHOLD_PENDING remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
+    'Pass 14A adds direct gameplay knowledge that visible-water contact causes essentially immediate death, ruling out a large perceptible vertical separation between the visual surface and water-death trigger. This does not recover either world-Y value or a metric offset. The Pass 11B public-source gap therefore remains: no Temple01 death-locator instance body was recovered, no exact kill Y is promoted, and WATER_KILL_THRESHOLD_PENDING remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
 });
 
 export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
@@ -141,6 +147,16 @@ export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
   }
   if (audit.publicTemple01DeathPlacementRecoverySucceeded) {
     errors.push('Pass 11B must not claim recovery of an unpublished Temple01 death volume');
+  }
+  if (
+    !audit.currentGameplayWaterSurfaceContactRelationResolved ||
+    !audit.visibleWaterContactCausesEssentiallyImmediateDeath ||
+    !audit.largePerceptibleVisualToKillVerticalGapRuledOut ||
+    audit.exactVisualToKillMetricOffsetResolved ||
+    audit.exactVisualToKillMetricOffsetMeters !== null ||
+    !audit.waterContactRelationUserDirectGameplayKnowledgeAccepted
+  ) {
+    errors.push('Pass 14A qualitative visual-water/death relationship drifted or overclaimed metric authority');
   }
   if (audit.visualWaterYCanDefineKillThreshold) {
     errors.push('visual water Y must not be reused as kill-threshold authority');

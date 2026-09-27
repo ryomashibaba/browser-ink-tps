@@ -8,7 +8,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-upper-glass-camera-blocking-knowledge-2026-09-28'
   | 'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28'
   | 'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28'
-  | 'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28';
+  | 'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28'
+  | 'user-water-surface-contact-death-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -26,7 +27,8 @@ export interface UndertowUserCaptureEvidence {
     | 'UPPER_GLASS_CAMERA_BLOCKING'
     | 'UPPER_GLASS_THROWN_SUB_SOLID_COLLISION'
     | 'UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT'
-    | 'UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION';
+    | 'UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION'
+    | 'WATER_SURFACE_CONTACT_DEATH_RELATION';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -156,6 +158,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'The user also states that lateral contact with the thin side/edge of the transparent glass stops the player like an ordinary wall rather than allowing passage through the transparent side.',
         'Together with Pass 13A top-surface support, direct gameplay knowledge now resolves the broad player-facing collision behavior of the transparent glass as solid from above, below, and from the side.',
         'This does not identify whether the original game uses visible Glass01 faces or a coincident hidden collision primitive, and it does not prove every tiny decorative/thin-strip face is represented one-for-one in collision.'
+      ]
+    },
+    {
+      id: 'user-water-surface-contact-death-knowledge-2026-09-28',
+      region: 'WATER_SURFACE_CONTACT_DEATH_RELATION',
+      confidence: 'CONFIRMED',
+      facts: [
+        'For Pass 14A the user selects behavior A: contacting the visible Undertow water surface results in death essentially immediately.',
+        'This resolves the qualitative gameplay relationship that the visible surface and water-death trigger are not separated by a large perceptible vertical gap.',
+        'The answer does not establish an exact visual-water world Y, an exact kill-threshold world Y, or a metric offset between them.',
+        'The answer also does not establish whether exterior fall-out uses the same vertical death trigger as the two mapped internal water hazards.'
       ]
     }
   ];
