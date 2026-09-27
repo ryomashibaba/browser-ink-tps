@@ -2804,3 +2804,223 @@ for side,links in (("POS",pos_right_links),("NEG",neg_right_links)):
             separators=(",",":")
         )
     )
+
+
+# T21-D right-low -> underpass source-native connectivity graph audit.
+#
+# Recast QA #678 proves the current partial package is disconnected between the
+# verified right-low route and the verified glass underpass. Capture evidence
+# says the route exists, but does not say it is one ramp. Build a local graph of
+# actual Temple01 walkable source components (flat or inclined), excluding
+# FloorLine/FloorFence overlays. Adjacency is measured in full model-space 3D.
+# This is discovery-only: no node is promoted by this audit alone.
+ROUTE_GRAPH_CONNECT_THRESHOLDS=(0.03,0.08,0.18,0.30)
+ROUTE_GRAPH_WALK_TOKENS=(
+    "FloorConcrete","FloorSlope","FloorGrass","GrassFloor",
+    "FloorMetal","FloorRubber","BridgeMetal"
+)
+
+def route_graph_nodes(region_name,bounds):
+    x0,x1,z0,z1=bounds
+    grouped=defaultdict(list)
+    for ff in faces:
+        ia,ib,ic,o,m=ff
+        if not any(t in m for t in ROUTE_GRAPH_WALK_TOKENS):
+            continue
+        if "FloorLine" in m or "FloorFence" in m:
+            continue
+        tri=[vertices[i] for i in ff[:3]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if not (x0<=cx<=x1 and z0<=cz<=z1):
+            continue
+        ys=[v[1] for v in tri]
+        if max(ys)<2.5 or min(ys)>8.0:
+            continue
+        n=tri_normal(tri)
+        if abs(n[1])<0.35:
+            continue
+        grouped[(o,m)].append(ff)
+
+    nodes=[]
+    prefix=region_name[:3]
+    for (o,m),source_faces in sorted(grouped.items()):
+        for local_ci,component in enumerate(face_components_by_shared_vertex(source_faces)):
+            comp_faces=[source_faces[i] for i in component]
+            unique_indices=sorted({vi for ff in comp_faces for vi in ff[:3]})
+            model_vertices=[vertices[i] for i in unique_indices]
+            if not model_vertices:
+                continue
+            xs=[v[0] for v in model_vertices]
+            ys=[v[1] for v in model_vertices]
+            zs=[v[2] for v in model_vertices]
+            contacts={}
+            for anchor in (f"{prefix}_RIGHT_LOW",f"{prefix}_UNDERPASS"):
+                mask,mask_y=spawn_route_floor_masks[anchor]
+                hits=sum(
+                    1 for v in model_vertices
+                    if near_mask_vertex(
+                        v,mask,mask_y,radius_cells=2,y_tolerance=0.22
+                    )
+                )
+                if hits:
+                    contacts[anchor]=hits
+            node={
+                "region":region_name,
+                "object":o,
+                "material":m,
+                "component":local_ci,
+                "faces":len(comp_faces),
+                "vertices":len(model_vertices),
+                "model_vertices":model_vertices,
+                "model_vertex_set":{
+                    (round(v[0],6),round(v[1],6),round(v[2],6))
+                    for v in model_vertices
+                },
+                "model_y":[min(ys),max(ys)],
+                "bbox":[min(xs),min(zs),max(xs),max(zs)],
+                "contacts":contacts,
+            }
+            nodes.append(node)
+    print(
+        f"T21ROUTEGRAPH NODES {region_name} groups={len(grouped)} "
+        f"nodes={len(nodes)} right_contacts="
+        f"{sum(1 for n in nodes if f'{prefix}_RIGHT_LOW' in n['contacts'])} "
+        f"underpass_contacts="
+        f"{sum(1 for n in nodes if f'{prefix}_UNDERPASS' in n['contacts'])}"
+    )
+    return nodes
+
+def bbox3_distance(a,b):
+    ax0,az0,ax1,az1=a["bbox"]
+    bx0,bz0,bx1,bz1=b["bbox"]
+    dx=max(0.0,bx0-ax1,ax0-bx1)
+    dz=max(0.0,bz0-az1,az0-bz1)
+    ay0,ay1=a["model_y"]; by0,by1=b["model_y"]
+    dy=max(0.0,by0-ay1,ay0-by1)
+    return math.sqrt(dx*dx+dy*dy+dz*dz)
+
+def component_min_vertex_distance(a,b,cutoff):
+    if bbox3_distance(a,b)>cutoff:
+        return None
+    best=None
+    # Components are compact after corridor clipping. Early-exit as soon as the
+    # threshold is met; exact minimum is only diagnostic.
+    for av in a["model_vertices"]:
+        for bv in b["model_vertices"]:
+            dx=av[0]-bv[0]; dy=av[1]-bv[1]; dz=av[2]-bv[2]
+            d=math.sqrt(dx*dx+dy*dy+dz*dz)
+            if best is None or d<best:
+                best=d
+            if d<=cutoff:
+                return d
+    return best
+
+def route_graph_path(nodes,region_name,threshold):
+    prefix=region_name[:3]
+    starts=[
+        i for i,n in enumerate(nodes)
+        if f"{prefix}_RIGHT_LOW" in n["contacts"]
+    ]
+    goals={
+        i for i,n in enumerate(nodes)
+        if f"{prefix}_UNDERPASS" in n["contacts"]
+    }
+    if not starts or not goals:
+        return None,{},starts,goals
+
+    adjacency=defaultdict(list)
+    edge_distance={}
+    for i in range(len(nodes)):
+        for j in range(i+1,len(nodes)):
+            if bbox3_distance(nodes[i],nodes[j])>threshold:
+                continue
+            d=component_min_vertex_distance(nodes[i],nodes[j],threshold)
+            if d is not None and d<=threshold:
+                adjacency[i].append(j)
+                adjacency[j].append(i)
+                edge_distance[(min(i,j),max(i,j))]=d
+
+    q=deque(starts)
+    parent={i:None for i in starts}
+    while q:
+        cur=q.popleft()
+        if cur in goals:
+            path=[]
+            x=cur
+            while x is not None:
+                path.append(x)
+                x=parent[x]
+            path.reverse()
+            return path,edge_distance,starts,goals
+        for nxt in adjacency[cur]:
+            if nxt in parent:
+                continue
+            parent[nxt]=cur
+            q.append(nxt)
+    return None,edge_distance,starts,goals
+
+route_graph={}
+for region_name,bounds in (
+    ("POS_ROUTE_GRAPH",(-30,10,-8,65)),
+    ("NEG_ROUTE_GRAPH",(-10,30,-65,8)),
+):
+    nodes=route_graph_nodes(region_name,bounds)
+    route_graph[region_name]=nodes
+    for threshold in ROUTE_GRAPH_CONNECT_THRESHOLDS:
+        path,edge_distance,starts,goals=route_graph_path(
+            nodes,region_name,threshold
+        )
+        print(
+            f"T21ROUTEGRAPH RESULT {region_name} threshold={threshold:.2f} "
+            f"starts={len(starts)} goals={len(goals)} "
+            f"reachable={path is not None} "
+            f"path_nodes={0 if path is None else len(path)}"
+        )
+        if path is None:
+            continue
+        for step_i,node_i in enumerate(path):
+            node=nodes[node_i]
+            prev_d=None
+            if step_i>0:
+                a=min(path[step_i-1],node_i)
+                b=max(path[step_i-1],node_i)
+                prev_d=edge_distance.get((a,b))
+            print(
+                f"T21ROUTEGRAPH PATH {region_name} threshold={threshold:.2f} "
+                f"step={step_i} node={node_i} prev_d="
+                f"{None if prev_d is None else round(prev_d,6)} "
+                f"obj={node['object']} mat={node['material']} "
+                f"ci={node['component']} faces={node['faces']} "
+                f"verts={node['vertices']} "
+                f"y=({node['model_y'][0]:.6f},{node['model_y'][1]:.6f}) "
+                f"bbox={[round(v,6) for v in node['bbox']]} "
+                f"contacts={node['contacts']}"
+            )
+        # The tightest successful threshold is the only path needed for
+        # promotion analysis.
+        break
+
+# Exact model-space symmetry diagnostic for graph nodes. This does not require
+# object names to match; it matches source vertex sets.
+pos_graph=route_graph["POS_ROUTE_GRAPH"]
+neg_graph=route_graph["NEG_ROUTE_GRAPH"]
+matched_neg=set()
+paired_graph=0
+for pi,pnode in enumerate(pos_graph):
+    mirrored={
+        (round(-x,6),round(y,6),round(-z,6))
+        for x,y,z in pnode["model_vertex_set"]
+    }
+    matches=[
+        ni for ni,nnode in enumerate(neg_graph)
+        if ni not in matched_neg and nnode["model_vertex_set"]==mirrored
+    ]
+    if len(matches)==1:
+        matched_neg.add(matches[0])
+        paired_graph+=1
+print(
+    f"T21ROUTEGRAPH MIRROR_SUMMARY pos={len(pos_graph)} neg={len(neg_graph)} "
+    f"paired={paired_graph} unmatched_pos={len(pos_graph)-paired_graph} "
+    f"unmatched_neg={len(neg_graph)-len(matched_neg)}"
+)
