@@ -50,11 +50,11 @@ describe('T21 Undertow paint authority Resolution Pass 10A', () => {
       });
   });
 
-  it('leaves four unrelated runtime solids unresolved and keeps the activation blocker', () => {
+  it('tracks the current two underpass-only unresolved solids', () => {
     expect(UNDERTOW_PAINT_RESOLUTION_PASS10_AUDIT.currentPaintInventory)
       .toMatchObject({
-        confirmedPaintableRuntimeSolidCount: 13,
-        unresolvedRuntimeSolidCount: 4,
+        confirmedPaintableRuntimeSolidCount: 15,
+        unresolvedRuntimeSolidCount: 2,
         activationBlockerCleared: false
       });
     expect(
@@ -62,9 +62,7 @@ describe('T21 Undertow paint authority Resolution Pass 10A', () => {
         .unresolvedRuntimeSolidIds
     ).toEqual([
       'UndertowT21D:glass-underpass-positive-z',
-      'UndertowT21D:glass-underpass-negative-z',
-      'UndertowT21D:first-drop-landing-positive-z',
-      'UndertowT21D:first-drop-landing-negative-z'
+      'UndertowT21D:glass-underpass-negative-z'
     ]);
   });
 });
