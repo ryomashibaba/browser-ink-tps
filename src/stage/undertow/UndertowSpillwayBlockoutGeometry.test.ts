@@ -19,7 +19,7 @@ describe('T21-D partial Undertow blockout geometry', () => {
 
   it('contains only the currently safe flat components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(19);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(21);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(5);
     const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.collisionBehavior === 'GRATE'
@@ -33,6 +33,15 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(slopes).toHaveLength(4);
     expect(slopes.every((solid) => solid.triangleMesh)).toBe(true);
     expect(slopes.every((solid) => !solid.footprint)).toBe(true);
+
+    const routeRamps = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
+      (solid) => solid.id.includes('right-low-route-ramp-')
+    );
+    expect(routeRamps).toHaveLength(2);
+    expect(routeRamps.every((solid) => solid.triangleMesh)).toBe(true);
+    expect(routeRamps.every((solid) => !solid.footprint)).toBe(true);
+    expect(routeRamps.every((solid) => solid.projectileBlocker)).toBe(true);
+    expect(routeRamps.every((solid) => solid.cameraBlocker)).toBe(true);
 
     const glassVisuals = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.id.includes('upper-glass-') && solid.id.endsWith(':visual')
