@@ -1851,3 +1851,20 @@ Validation must additionally require:
 - Glass01 remains render-only and BridgeMetal remains unpromoted
 - production stage remains frozen T20 `inkworks-junction`
 
+## T21-D water / death-volume Resolution Pass 9B validation — 2026-09-27
+
+Validation must additionally require:
+- `Vss_Temple01` current remodeled SceneInfo continues to preload only `Model/Fld_Temple01.bfres` in the audited metadata snapshot
+- no explicit water resource/visual-Y transform is claimed from SceneInfo
+- the public Temple01 actor-class family remains limited to the audited Fld/Pnt/Var/Vcl/Vgl/Vlf classes with no explicit Temple01 Water class
+- actor placement schema continues to expose `Translate / Rotate / Scale`
+- the referenced `Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json` remains classified as a Tower-Control modifier reference only and its unavailable body must not become normal-mode authority
+- `Mpt_PlayerDead` remains directly verified as Cube / Scale 1 / ControlledPlayer in snapshots 720, 800, 920, and 1130
+- generic locator stability must not be interpreted as Temple01 placement authority
+- public Temple01 water-placement recovery remains false
+- public Temple01 death-volume placement recovery remains false
+- `visualPlaneResolved === false` and `visualPlaneMeters === null`
+- `killThresholdResolved === false` and `killThresholdMeters === null`
+- no water visual plane, global kill plane, or convenience death volume is emitted
+- production stage remains `inkworks-junction`
+
