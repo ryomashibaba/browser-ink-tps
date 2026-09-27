@@ -3641,3 +3641,73 @@ print(
     f"{sum(1 for s in route_gap_excluded_summaries if s['bridge_path'] is not None)} "
     f"threshold={ROUTE_GAP_STRICT_THRESHOLD:.2f}"
 )
+
+
+# Conservative second pass: remove only known FloorLine/FloorFence overlays from
+# the excluded-material frontier. Keep Glass/Pillar/Object/etc. in the search so
+# this audit does not assume their gameplay semantics. If no 0.30m bridge
+# survives, the source does not contain an obvious unbound physical walk surface
+# in these gap-local neighborhoods.
+route_gap_nonoverlay=[]
+for region_name,nodes in route_graph.items():
+    relaxed_path,_,_,_=route_graph_surface_path(nodes,region_name,2.00)
+    if relaxed_path is None:
+        continue
+    for edge_i in range(1,len(relaxed_path)):
+        ai=relaxed_path[edge_i-1]; bi=relaxed_path[edge_i]
+        a=nodes[ai]; b=nodes[bi]
+        gap,best_pair=component_closest_triangle_pair(a,b)
+        if gap<=ROUTE_GAP_STRICT_THRESHOLD+1e-9:
+            continue
+        ta,tb=best_pair
+        local_box=bbox3_expand(
+            bbox3_union(tri_bbox3(ta),tri_bbox3(tb)),
+            ROUTE_GAP_LOCAL_MARGIN
+        )
+        candidates=[
+            n for n in local_excluded_nodes(local_box)
+            if (
+                "FloorLine" not in n["material"] and
+                "FloorFence" not in n["material"] and
+                (
+                    bbox3_distance(a,n)<=ROUTE_GAP_CANDIDATE_DISTANCE or
+                    bbox3_distance(n,b)<=ROUTE_GAP_CANDIDATE_DISTANCE
+                )
+            )
+        ]
+        path,edges,graph_nodes=strict_bridge_through_excluded(
+            a,b,candidates,ROUTE_GAP_STRICT_THRESHOLD
+        )
+        route_gap_nonoverlay.append((region_name,edge_i-1,gap,path))
+        print(
+            f"T21ROUTEGAPNONOVERLAY GAP {region_name} edge={edge_i-1} "
+            f"gap={gap:.6f} candidates={len(candidates)} "
+            f"strict_bridge={path is not None} "
+            f"bridge_nodes={0 if path is None else len(path)}"
+        )
+        if path is not None:
+            for pi,node_i in enumerate(path):
+                n=graph_nodes[node_i]
+                role=(
+                    "ALLOWLIST_A" if node_i==0 else
+                    "ALLOWLIST_B" if node_i==1 else
+                    "EXCLUDED_SOURCE"
+                )
+                prev_d=None
+                if pi>0:
+                    x=min(path[pi-1],node_i); y=max(path[pi-1],node_i)
+                    prev_d=edges.get((x,y))
+                print(
+                    f"T21ROUTEGAPNONOVERLAY BRIDGE {region_name} "
+                    f"edge={edge_i-1} step={pi} role={role} "
+                    f"prev_d={None if prev_d is None else round(prev_d,6)} "
+                    f"obj={n['object']} mat={n['material']} "
+                    f"ci={n['component']} "
+                    f"semantic={n.get('semantic','ALLOWLISTED_WALK')}"
+                )
+
+print(
+    f"T21ROUTEGAPNONOVERLAY SUMMARY gaps={len(route_gap_nonoverlay)} "
+    f"strict_bridges={sum(1 for _,_,_,p in route_gap_nonoverlay if p is not None)} "
+    f"threshold={ROUTE_GAP_STRICT_THRESHOLD:.2f}"
+)
