@@ -122,9 +122,79 @@ export class RecastStageNavigation {
       : { x: position.x, y: position.y, z: position.z };
   }
 
+  public auditPath(
+    from: Vec3,
+    to: Vec3,
+    endpointToleranceMeters = 0.6
+  ): {
+    startSnapDistanceMeters: number;
+    endSnapDistanceMeters: number;
+    querySuccess: boolean;
+    pointCount: number;
+    endpointErrorMeters: number;
+    reachedTarget: boolean;
+  } {
+    const startResult = this.query.findClosestPoint({
+      x: from.x,
+      y: from.y,
+      z: from.z
+    });
+    const endResult = this.query.findClosestPoint({
+      x: to.x,
+      y: to.y,
+      z: to.z
+    });
+
+    if (!startResult.success || !endResult.success) {
+      return {
+        startSnapDistanceMeters: Number.POSITIVE_INFINITY,
+        endSnapDistanceMeters: Number.POSITIVE_INFINITY,
+        querySuccess: false,
+        pointCount: 0,
+        endpointErrorMeters: Number.POSITIVE_INFINITY,
+        reachedTarget: false
+      };
+    }
+
+    const startSnapDistanceMeters = distance3(
+      from,
+      new Vec3(startResult.point.x, startResult.point.y, startResult.point.z)
+    );
+    const endSnapDistanceMeters = distance3(
+      to,
+      new Vec3(endResult.point.x, endResult.point.y, endResult.point.z)
+    );
+    const result = this.query.computePath(startResult.point, endResult.point);
+    const path = result.success ? result.path : [];
+    const last = path.length > 0 ? path[path.length - 1]! : null;
+    const endpointErrorMeters = last
+      ? Math.hypot(
+          last.x - endResult.point.x,
+          last.y - endResult.point.y,
+          last.z - endResult.point.z
+        )
+      : Number.POSITIVE_INFINITY;
+
+    return {
+      startSnapDistanceMeters,
+      endSnapDistanceMeters,
+      querySuccess: result.success,
+      pointCount: path.length,
+      endpointErrorMeters,
+      reachedTarget:
+        result.success &&
+        path.length > 0 &&
+        endpointErrorMeters <= endpointToleranceMeters
+    };
+  }
+
   public fixedUpdate(dt: number): void {
     this.crowd.update(dt);
   }
+}
+
+function distance3(a: Vec3, b: Vec3): number {
+  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
 function buildStageTriangleSoup(
