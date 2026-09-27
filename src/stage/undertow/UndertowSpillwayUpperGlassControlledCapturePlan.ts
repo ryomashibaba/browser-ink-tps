@@ -185,9 +185,9 @@ export const UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN:
   {
     id: 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL',
     priority: 2,
-    status: 'REQUEST_READY',
+    status: 'RESOLVED',
     blocks: ['UPPER_GLASS_COLLISION_AUTHORITY_PENDING'],
-    userActionCount: 2,
+    userActionCount: 0,
     guidePath: 'docs/T21_UNDERTOW_PASS13B_UPPER_GLASS_PROJECTILE_CAPTURE_GUIDE.svg',
     purpose:
       'Resolve ordinary-main projectile blocking at the proven broad Glass01 connector interior on both mirrored sides without borrowing player-collision or camera-query semantics.',
@@ -214,16 +214,23 @@ export const UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN:
   {
     id: 'CAMERA_GLASS_EDGE_DIFFERENTIAL',
     priority: 3,
-    status: 'DEFERRED_UNTIL_PROJECTILE_BINDING',
+    status: 'REQUEST_READY',
     blocks: ['UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING'],
     userActionCount: 0,
     guidePath: 'docs/T21_UNDERTOW_PASS13A_UPPER_GLASS_SUPPORT_CAPTURE_GUIDE.svg',
     purpose:
-      'Later isolate camera push-in/occlusion behavior at a proven Glass01 boundary without borrowing player/projectile query semantics.',
-    minimumCapture: [],
-    acceptance: [],
+      'Determine whether the third-person camera treats Undertow transparent glass as a camera-collision/occlusion obstacle, independently from player and projectile collision.',
+    minimumCapture: [
+      'First ask the user whether they already know the camera behavior from gameplay; accept a clear direct-knowledge answer without requiring a redundant capture.',
+      'Only if the behavior is unknown, design a context-rich full-terrain guide and a short controlled camera-boundary capture.'
+    ],
+    acceptance: [
+      'A reliable direct gameplay-knowledge answer clearly states whether the camera is pushed/occluded by transparent glass or can remain/view through it.',
+      'If a capture is needed, the observed camera response must be registered to the glass body rather than a black frame or nearby wall.'
+    ],
     avoid: [
-      'Do not request this until ordinary-main projectile behavior is resolved; camera queries remain an independent authority even if projectile blocking is confirmed.'
+      'Do not infer camera behavior from ordinary projectile blocking.',
+      'Do not require a capture when the user already knows the requested gameplay behavior reliably.'
     ]
   }
 ] as const;
@@ -260,9 +267,9 @@ export function undertowUpperGlassControlledCapturePlanErrors():
   const requestReady = undertowRequestReadyUpperGlassCaptureIds();
   if (
     requestReady.length !== 1 ||
-    requestReady[0] !== 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
+    requestReady[0] !== 'CAMERA_GLASS_EDGE_DIFFERENTIAL'
   ) {
-    errors.push('after Pass 13A, only the ordinary-projectile glass test may be request-ready');
+    errors.push('after Pass 13B, only the independent camera-query question may be request-ready');
   }
 
   const direct = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(

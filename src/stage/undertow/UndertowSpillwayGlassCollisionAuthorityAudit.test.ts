@@ -108,6 +108,9 @@ describe('T21-D upper glass collision authority audit', () => {
       ordinaryCrossGlassDamageShouldBeBlocked: true,
       edgeGrateOrAroundGeometryCanStillPermitAttacks: true,
       currentExactProjectileFaceBindingResolved: false,
+      currentOrdinaryMainProjectileBehaviorResolved: true,
+      currentOrdinaryMainProjectilePassesThroughGlass: false,
+      userDirectGameplayKnowledgeAccepted: true,
       allProjectileClassesResolved: false,
       runtimeProjectilePromotionAuthorized: false
     });
@@ -119,6 +122,10 @@ describe('T21-D upper glass collision authority audit', () => {
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
         .exactProjectileCollisionFaceBindingResolved
     ).toBe(false);
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileSemanticEvidence
+        .evidenceDates
+    ).toContain('2026-09-28');
     expect(
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileBehaviorResolved
     ).toBe(false);

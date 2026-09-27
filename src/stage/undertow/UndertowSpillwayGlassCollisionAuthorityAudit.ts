@@ -61,9 +61,12 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
     ordinaryCrossGlassDamageShouldBeBlocked: true,
     edgeGrateOrAroundGeometryCanStillPermitAttacks: true,
     currentExactProjectileFaceBindingResolved: false,
+    currentOrdinaryMainProjectileBehaviorResolved: true,
+    currentOrdinaryMainProjectilePassesThroughGlass: false,
+    userDirectGameplayKnowledgeAccepted: true,
     allProjectileClassesResolved: false,
     runtimeProjectilePromotionAuthorized: false,
-    evidenceDates: ['2022-11-30', '2024-08-29', '2026-04-27'] as const,
+    evidenceDates: ['2022-11-30', '2024-08-29', '2026-04-27', '2026-09-28'] as const,
     notes:
       'Nintendo explicitly fixed opposite-side damage through Undertow glass as unintended behavior. Post-Ver.7.2/current sources continue to identify the central position as glass high ground, and a Ver.11 current-stage guide specifically uses the grate edge to pass explosion coverage. Together these resolve the high-level semantic that the glass body is not a generic through-shot surface while grate/edge geometry can remain attack-permissive. They do not identify the exact current collision primitive or resolve every projectile/explosion class.'
   }),
@@ -129,16 +132,18 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
       'Nintendo Ver.2.0.0 update history states that damaging a player from the opposite side of Undertow glass was a bug, establishing intended glass-side damage occlusion.',
       'Post-Ver.7.2/current strategy evidence continues to identify the central high ground as glass.',
       'A Ver.11 current-stage guide explicitly uses the high-ground grate edge to pass explosion coverage, separating an attack-permissive edge route from the glass body.',
-      'KiTrix StageCollider performs SceneKit segment hit tests against the whole loaded stage visual tree, and BulletSimulator consumes that downstream query.'
+      'KiTrix StageCollider performs SceneKit segment hit tests against the whole loaded stage visual tree, and BulletSimulator consumes that downstream query.',
+      'On 2026-09-28 the user states from direct current-gameplay knowledge that ordinary shots do not pass through Undertow glass at all.'
     ],
     insufficientBecause: [
       'The official historical fix resolves intended glass-vs-opposite-side damage semantics but predates the Ver.7.2 terrain remodel and does not publish the collision primitive.',
       'Current grate-edge attack evidence distinguishes an edge route from the glass body but does not identify which exact Glass01/GlassEdge/BridgeMetal faces block each projectile or explosion class.',
-      'KiTrix projectile raycasts are downstream simulator behavior and are not original-game collision authority.'
+      'KiTrix projectile raycasts are downstream simulator behavior and are not original-game collision authority.',
+      'The user knowledge resolves ordinary-main pass-through behavior but not thrown-sub/explosion edge cases or the exact original collision primitive.'
     ],
     minimumAuthoritativeEvidence: [
       'Current original-game projectile collision/query data that binds the upper-glass blocker to exact current faces/primitives.',
-      'Or controlled post-Ver.7.2 shot/pass-through tests registered tightly enough to distinguish Glass01, GlassEdge, grate/fence, and BridgeMetal for the projectile classes browser-ink-tps simulates.'
+      'Ordinary-main behavior is resolved by direct user gameplay knowledge. Remaining closure requires only any additional projectile classes browser-ink-tps actually simulates plus exact runtime-geometry binding; no redundant ordinary-shot capture is needed.'
     ]
   },
   {
@@ -228,6 +233,9 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
     !audit.projectileSemanticEvidence.ordinaryCrossGlassDamageShouldBeBlocked ||
     !audit.projectileSemanticEvidence.edgeGrateOrAroundGeometryCanStillPermitAttacks ||
     audit.projectileSemanticEvidence.currentExactProjectileFaceBindingResolved ||
+    !audit.projectileSemanticEvidence.currentOrdinaryMainProjectileBehaviorResolved ||
+    audit.projectileSemanticEvidence.currentOrdinaryMainProjectilePassesThroughGlass ||
+    !audit.projectileSemanticEvidence.userDirectGameplayKnowledgeAccepted ||
     audit.projectileSemanticEvidence.allProjectileClassesResolved ||
     audit.projectileSemanticEvidence.runtimeProjectilePromotionAuthorized ||
     audit.projectileBehaviorResolved ||

@@ -3,7 +3,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-right-low-capture-2026-09-25'
   | 'user-first-drop-height-stills-2026-09-26'
   | 'user-underpass-outside-zone-paint-stills-2026-09-27'
-  | 'user-upper-glass-support-route-videos-2026-09-27';
+  | 'user-upper-glass-support-route-videos-2026-09-27'
+  | 'user-upper-glass-ordinary-projectile-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -16,7 +17,8 @@ export interface UndertowUserCaptureEvidence {
     | 'RIGHT_LOW'
     | 'GUIDE_LINE_SIDE_HEIGHT_ORDER'
     | 'GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES'
-    | 'UPPER_GLASS_PLAYER_SUPPORT_ROUTE';
+    | 'UPPER_GLASS_PLAYER_SUPPORT_ROUTE'
+    | 'UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -89,6 +91,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'No jump-assisted seam crossing is visible in the support segments; the result therefore supports the three broad Glass01 upward-component probe regions on each mirrored side independently.',
         'The narrow THIN_EDGE_STRIP was not independently probed and remains unresolved.',
         'This evidence resolves player-support geometry only. It does not establish projectile blocking, camera-query behavior, Turf Scoreable semantics, or prove that the original game collision primitive is literally the visual Glass01 mesh rather than a coincident hidden primitive.'
+      ]
+    },
+    {
+      id: 'user-upper-glass-ordinary-projectile-knowledge-2026-09-28',
+      region: 'UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING',
+      confidence: 'CONFIRMED',
+      facts: [
+        'The user states from direct gameplay knowledge that ordinary shots do not pass through Undertow glass at all.',
+        'This resolves the current ordinary-main projectile behavior requested by Pass 13B without requiring a redundant controlled capture.',
+        'The statement is scoped to ordinary shots through the glass body; it does not by itself resolve thrown subs, explosions around grate/edge geometry, camera-query behavior, or the identity of the original collision primitive.',
+        'Future evidence requests should state their purpose first and should accept direct user gameplay knowledge when the user already knows the requested behavior reliably.'
       ]
     }
   ];

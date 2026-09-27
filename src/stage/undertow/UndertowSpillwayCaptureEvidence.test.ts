@@ -6,7 +6,7 @@ import {
 
 describe('T21 user capture evidence', () => {
   it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(5);
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(6);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -23,6 +23,11 @@ describe('T21 user capture evidence', () => {
         'user-upper-glass-support-route-videos-2026-09-27'
       ).region
     ).toBe('UPPER_GLASS_PLAYER_SUPPORT_ROUTE');
+    expect(
+      undertowCaptureEvidence(
+        'user-upper-glass-ordinary-projectile-knowledge-2026-09-28'
+      ).region
+    ).toBe('UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -65,6 +70,15 @@ describe('T21 user capture evidence', () => {
     expect(support.facts.join(' ')).toContain('THIN_EDGE_STRIP');
     expect(support.facts.join(' ')).toContain('does not establish projectile blocking');
     expect(support.facts.join(' ')).toContain('coincident hidden primitive');
+  });
+
+  it('accepts direct user gameplay knowledge for ordinary projectile blocking without overextending it', () => {
+    const projectile = undertowCaptureEvidence(
+      'user-upper-glass-ordinary-projectile-knowledge-2026-09-28'
+    );
+    expect(projectile.facts.join(' ')).toContain('ordinary shots do not pass through Undertow glass at all');
+    expect(projectile.facts.join(' ')).toContain('does not by itself resolve thrown subs');
+    expect(projectile.facts.join(' ')).toContain('camera-query behavior');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {
