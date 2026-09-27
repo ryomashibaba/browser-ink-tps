@@ -957,7 +957,7 @@ Runtime:
 - +2 ramp PaintSurfaces
 - `Paintable | Swimmable | Ramp`
 - no Scoreable
-- current paint inventory = 13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN
+- Pass 10A checkpoint paint inventory = 13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN
 
 The unresolved 4 are the two whole underpass solids (outside their already-authorized Splat-Zone intersections) and two first-drop landing solids. No evidence currently authorizes those remainders.
 ## T21-D Resolution Pass 10B — right-low / underpass source-gap localization
@@ -976,3 +976,35 @@ Results:
 This is negative evidence, not connector authority. It rules out the simplest explanation (“one normal source floor was accidentally omitted”) at the audited threshold, but does not determine whether the original game uses hidden collision, another actor/resource, a jump/drop rule, or another traversal primitive.
 
 No runtime connector/off-mesh link is added. `FULL_STAGE_CONNECTIVITY_QA_PENDING` remains active.
+
+## T21-D Resolution Pass 10C — first-drop landing paint authority
+
+The exact mirrored model-Y=6.0 first-drop landing pair is now separately registered to the current Sunfish Turf author source.
+
+Geometry:
+- model Y 6.0m / project Y 3.0m
+- 3746 cells / 58.53125m² per side
+- 8 outer vertices per side
+- 0 holes
+- mirror XOR 0
+
+Pinned Turf source:
+- 100,311 bytes
+- SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+
+White/gray registration:
+- positive-Z median 255, near-white 0.931694
+- negative-Z median 255, near-white 0.952110
+- adjacent gray controls median 191, dark/gray fraction 1.0
+- gray overlap fraction: positive 0.000000372 / negative 0.003083965
+- max first-drop-lip boundary residual: positive 0.347272371m / negative 0.442577995m
+- both remain within the existing 0.5m local-registration gate
+
+Runtime:
+- +2 `Paintable | Swimmable | Floor` surfaces
+- no Ramp
+- no Scoreable
+- current paint inventory = **15 PAINTABLE / 4 UNINKABLE / 2 UNKNOWN**
+
+Only the two whole underpass solids remain UNKNOWN outside their already-authorized Splat-Zone intersection subregions. The remaining paint blocker is not cleared.
+
