@@ -3024,3 +3024,104 @@ print(
     f"paired={paired_graph} unmatched_pos={len(pos_graph)-paired_graph} "
     f"unmatched_neg={len(neg_graph)-len(matched_neg)}"
 )
+
+
+# T21-D route-graph frontier diagnostics.
+#
+# The strict graph intentionally stops at 0.30m. If it is disconnected, report
+# anchored nodes and the first path found only at larger diagnostic thresholds.
+# Such a path is NOT promotable; it exists solely to localize the missing source
+# transition or material family.
+ROUTE_GRAPH_DIAGNOSTIC_THRESHOLDS=(0.50,0.75,1.00,1.50,2.00,3.00)
+
+for region_name,nodes in route_graph.items():
+    prefix=region_name[:3]
+    right_anchor=f"{prefix}_RIGHT_LOW"
+    under_anchor=f"{prefix}_UNDERPASS"
+    for anchor in (right_anchor,under_anchor):
+        anchored=[
+            (i,n) for i,n in enumerate(nodes)
+            if anchor in n["contacts"]
+        ]
+        print(
+            f"T21ROUTEFRONTIER ANCHOR_SUMMARY {region_name} "
+            f"anchor={anchor} count={len(anchored)}"
+        )
+        for i,n in anchored[:30]:
+            print(
+                f"T21ROUTEFRONTIER ANCHOR {region_name} anchor={anchor} "
+                f"node={i} obj={n['object']} mat={n['material']} "
+                f"ci={n['component']} faces={n['faces']} verts={n['vertices']} "
+                f"y=({n['model_y'][0]:.6f},{n['model_y'][1]:.6f}) "
+                f"bbox={[round(v,6) for v in n['bbox']]} "
+                f"contacts={n['contacts']}"
+            )
+
+    for threshold in ROUTE_GRAPH_DIAGNOSTIC_THRESHOLDS:
+        path,edge_distance,starts,goals=route_graph_path(
+            nodes,region_name,threshold
+        )
+        print(
+            f"T21ROUTEFRONTIER RELAXED {region_name} threshold={threshold:.2f} "
+            f"reachable={path is not None} "
+            f"path_nodes={0 if path is None else len(path)}"
+        )
+        if path is None:
+            continue
+        for step_i,node_i in enumerate(path):
+            n=nodes[node_i]
+            prev_d=None
+            if step_i>0:
+                a=min(path[step_i-1],node_i)
+                b=max(path[step_i-1],node_i)
+                prev_d=edge_distance.get((a,b))
+            print(
+                f"T21ROUTEFRONTIER PATH {region_name} threshold={threshold:.2f} "
+                f"step={step_i} node={node_i} prev_d="
+                f"{None if prev_d is None else round(prev_d,6)} "
+                f"obj={n['object']} mat={n['material']} ci={n['component']} "
+                f"faces={n['faces']} verts={n['vertices']} "
+                f"y=({n['model_y'][0]:.6f},{n['model_y'][1]:.6f}) "
+                f"bbox={[round(v,6) for v in n['bbox']]} "
+                f"contacts={n['contacts']}"
+            )
+        break
+
+# Material census for all sufficiently horizontal/inclined active source
+# triangles in the positive corridor, independent of the current WALK token
+# allow-list. This helps identify a missing walkable material family without
+# treating it as walkable automatically.
+all_route_materials=defaultdict(lambda: [0,1e30,-1e30,1e30,-1e30,1e30,-1e30])
+for ff in faces:
+    ia,ib,ic,o,m=ff
+    tri=[vertices[i] for i in ff[:3]]
+    cx=sum(v[0] for v in tri)/3
+    cz=sum(v[2] for v in tri)/3
+    if not (-30<=cx<=10 and -8<=cz<=65):
+        continue
+    ys=[v[1] for v in tri]
+    if max(ys)<2.5 or min(ys)>8.0:
+        continue
+    n=tri_normal(tri)
+    if abs(n[1])<0.35:
+        continue
+    row=all_route_materials[(o,m)]
+    row[0]+=1
+    row[1]=min(row[1],min(v[0] for v in tri))
+    row[2]=max(row[2],max(v[0] for v in tri))
+    row[3]=min(row[3],min(ys))
+    row[4]=max(row[4],max(ys))
+    row[5]=min(row[5],min(v[2] for v in tri))
+    row[6]=max(row[6],max(v[2] for v in tri))
+
+for (o,m),row in sorted(
+    all_route_materials.items(),
+    key=lambda item:(-item[1][0],item[0][1],item[0][0])
+)[:120]:
+    print(
+        f"T21ROUTEMATERIAL faces={row[0]} obj={o} mat={m} "
+        f"x=({row[1]:.6f},{row[2]:.6f}) "
+        f"y=({row[3]:.6f},{row[4]:.6f}) "
+        f"z=({row[5]:.6f},{row[6]:.6f}) "
+        f"allowlisted={any(t in m for t in ROUTE_GRAPH_WALK_TOKENS)}"
+    )
