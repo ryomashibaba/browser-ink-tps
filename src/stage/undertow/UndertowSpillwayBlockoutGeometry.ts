@@ -20,7 +20,6 @@ import {
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import { undertowCenterSlopeStageSolids } from './UndertowSpillwaySlopeMeshGeometry';
 import { undertowRightLowRouteRampStageSolids } from './UndertowSpillwayRouteRampGeometry';
-import { undertowUnderpassRouteStageSolids } from './UndertowSpillwayUnderpassRouteGeometry';
 import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
 import {
   UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
@@ -168,7 +167,6 @@ const solids = [
   ...built.map((item) => item.solid),
   ...undertowCenterSlopeStageSolids(),
   ...undertowRightLowRouteRampStageSolids(),
-  ...undertowUnderpassRouteStageSolids(),
   ...undertowUpperGlassVisualStageSolids()
 ];
 const paintSurfaces = built.flatMap((item) =>

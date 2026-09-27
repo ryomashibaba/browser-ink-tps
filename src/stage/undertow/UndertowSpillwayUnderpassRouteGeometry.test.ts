@@ -20,6 +20,14 @@ describe('Undertow Spillway underpass route source geometry', () => {
       .toBe(false);
     expect(UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.offMeshLinkAuthorized)
       .toBe(false);
+    expect(UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.runtimePromotionAuthorized)
+      .toBe(false);
+    expect(
+      UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.experimentalRuntimeInclusionReachedTarget
+    ).toBe(false);
+    expect(
+      UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.experimentalRuntimeEndpointErrorMeters
+    ).toBeCloseTo(31.71622721122581, 9);
   });
 
   it('preserves the audited project-Y route bands', () => {
@@ -28,7 +36,7 @@ describe('Undertow Spillway underpass route source geometry', () => {
     );
     expect(Math.min(...ys)).toBeCloseTo(0, 6);
     expect(Math.max(...ys)).toBeCloseTo(2.93, 6);
-    expect(ys).toContain(0.17);
-    expect(ys).toContain(1.5);
+    expect(ys.some((y) => Math.abs(y - 0.17) <= 0.000001)).toBe(true);
+    expect(ys.some((y) => Math.abs(y - 1.5) <= 0.000001)).toBe(true);
   });
 });

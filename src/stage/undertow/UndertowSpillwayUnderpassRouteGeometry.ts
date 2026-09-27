@@ -181,9 +181,14 @@ export const UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT = Object.freeze({
   diagnosticFirstReachThresholdMeters: 2.0,
   captureEvidenceKind: 'TRAVERSABLE_CONNECTION',
   offMeshLinkAuthorized: false,
+  runtimePromotionAuthorized: false,
+  experimentalCiRun: 691,
+  experimentalRuntimeInclusionReachedTarget: false,
+  experimentalRuntimeEndpointErrorMeters: 31.71622721122581,
+  experimentalRuntimePointCount: 2,
   confidence: 'HIGH' as const,
   notes:
-    'These are exact source floor/slope faces from the localized right-low-to-underpass chain. Their inclusion is a Recast/runtime binding experiment, not evidence that the source graph itself is continuous. No jump/drop/climb link is authorized by the available capture evidence.'
+    'These are exact source floor/slope faces from the localized right-low-to-underpass chain. CI #691 temporarily bound all five missing components per side into the inert Recast QA package; right-low-to-underpass remained unreachable with the same 31.716227m endpoint error and two-point partial path. The experiment therefore does not authorize runtime promotion or a jump/drop/climb link.'
 });
 
 export function undertowUnderpassRouteStageSolids():
@@ -257,6 +262,9 @@ export function undertowUnderpassRouteErrors(): readonly string[] {
 
   if (UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.offMeshLinkAuthorized) {
     errors.push('underpass route audit must not authorize an unsupported off-mesh link');
+  }
+  if (UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.runtimePromotionAuthorized) {
+    errors.push('failed Recast experiment must not authorize runtime promotion');
   }
   return errors;
 }
