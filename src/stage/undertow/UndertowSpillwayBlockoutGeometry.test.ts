@@ -20,7 +20,7 @@ describe('T21-D partial Undertow blockout geometry', () => {
   it('contains only the currently safe flat components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(21);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(11);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(13);
     const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.collisionBehavior === 'GRATE'
     );
@@ -130,7 +130,22 @@ describe('T21-D partial Undertow blockout geometry', () => {
     );
     expect(slopePaint.every((surface) => (surface.flags & SurfaceFlags.Ramp) !== 0)).toBe(true);
     expect(slopePaint.every((surface) => (surface.flags & SurfaceFlags.Floor) === 0)).toBe(true);
-    expect(paintIds.some((id) => id.includes('glass-underpass-'))).toBe(false);
+    const zoneUnderpassPaint =
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.filter((surface) =>
+        surface.id.includes('zone-underpass-paint')
+      );
+    expect(zoneUnderpassPaint).toHaveLength(2);
+    expect(zoneUnderpassPaint.every((surface) =>
+      surface.backingSolidId.includes('glass-underpass-')
+    )).toBe(true);
+    expect(zoneUnderpassPaint.every((surface) => surface.footprint !== undefined)).toBe(true);
+    expect(zoneUnderpassPaint.every((surface) => surface.footprint?.holes?.length === 1)).toBe(true);
+    expect(zoneUnderpassPaint.every((surface) =>
+      surface.footprint?.cellSizeMeters === UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS
+    )).toBe(true);
+    expect(zoneUnderpassPaint.every((surface) =>
+      (surface.flags & SurfaceFlags.Scoreable) === 0
+    )).toBe(true);
     expect(paintIds.filter((id) => id.includes('spawn-high-'))).toHaveLength(2);
     for (const surface of UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.filter(
       (candidate) => candidate.id.includes('spawn-high-')
