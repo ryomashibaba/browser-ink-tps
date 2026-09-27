@@ -18,6 +18,40 @@ export async function initializeRecastNavigation(): Promise<void> {
   await initRecast();
 }
 
+
+
+export interface StageOffMeshConnectionConfig {
+  startPosition: { x: number; y: number; z: number };
+  endPosition: { x: number; y: number; z: number };
+  radius: number;
+  bidirectional: boolean;
+  area: number;
+  flags: number;
+  userId?: number;
+}
+
+export function stageNavigationOffMeshConnections(
+  definition: StageDefinition
+): StageOffMeshConnectionConfig[] {
+  return (definition.navigationLinks ?? []).map((link) => ({
+    startPosition: {
+      x: link.start[0],
+      y: link.start[1],
+      z: link.start[2]
+    },
+    endPosition: {
+      x: link.end[0],
+      y: link.end[1],
+      z: link.end[2]
+    },
+    radius: link.radiusMeters,
+    bidirectional: link.bidirectional,
+    area: link.area ?? 0,
+    flags: link.flags ?? 1,
+    ...(link.userId === undefined ? {} : { userId: link.userId })
+  }));
+}
+
 export class RecastStageNavigation {
   public readonly crowd: Crowd;
   private readonly query: NavMeshQuery;
@@ -41,7 +75,8 @@ export class RecastStageNavigation {
       mergeRegionArea: 8,
       maxVertsPerPoly: 6,
       detailSampleDist: 6,
-      detailSampleMaxError: 1
+      detailSampleMaxError: 1,
+      offMeshConnections: stageNavigationOffMeshConnections(definition)
     });
 
     if (!generated.success) {

@@ -2467,3 +2467,149 @@ for pi,ni in paired:
                 separators=(",",":")
             )
         )
+
+
+# T21-D first-drop one-way off-mesh-link candidate audit.
+#
+# Source lips are exact HIGH vector polylines; upper/lower floor masks and Y are
+# independently verified Temple01 local geometry. The samples below are
+# implementation candidates only. They do not turn the drop into a ramp.
+FIRST_DROP_LINK_SAMPLE_SPACING_METERS=2.0
+FIRST_DROP_LINK_SEARCH_RADIUS_METERS=1.25
+FIRST_DROP_LIPS_PDF={
+    "POS":[(620.4,423.12),(664.68,423.12),(664.68,394.2)],
+    "NEG":[(221.52,172.08),(177.24,172.08),(177.24,201.0)],
+}
+
+def sample_polyline_model(pdf_points,spacing):
+    pts=[pdf_to_model(p) for p in pdf_points]
+    out=[]
+    for a,b in zip(pts,pts[1:]):
+        dx=b[0]-a[0]; dz=b[1]-a[1]
+        length=math.hypot(dx,dz)
+        if length<=1e-9:
+            continue
+        # Interior samples only: avoid exact corner/end vertices where multiple
+        # transition semantics can meet.
+        n=max(1,int(math.floor(length/spacing)))
+        for i in range(n):
+            t=(i+0.5)/n
+            out.append((a[0]+dx*t,a[1]+dz*t))
+    return out
+
+def nearest_mask_cell(mask,point,max_radius):
+    px,pz=point
+    r=math.ceil(max_radius/STEP)
+    cx=round(px/STEP); cz=round(pz/STEP)
+    best=None
+    for dx in range(-r,r+1):
+        for dz in range(-r,r+1):
+            cell=(cx+dx,cz+dz)
+            if cell not in mask:
+                continue
+            x,z=cell_xy(cell)
+            d=math.hypot(x-px,z-pz)
+            if d<=max_radius and (best is None or d<best[0]):
+                best=(d,cell,(x,z))
+    return best
+
+first_drop_link_candidates={}
+for side in ("POS","NEG"):
+    upper_name=f"{side}_SPAWN_HIGH"
+    lower_name=f"{side}_FIRST_DROP_LANDING"
+    upper_mask,upper_y=spawn_route_floor_masks[upper_name]
+    lower_mask,lower_y=spawn_route_floor_masks[lower_name]
+    samples=sample_polyline_model(
+        FIRST_DROP_LIPS_PDF[side],
+        FIRST_DROP_LINK_SAMPLE_SPACING_METERS
+    )
+    links=[]
+    seen=set()
+    for si,sample in enumerate(samples):
+        upper=nearest_mask_cell(
+            upper_mask,sample,FIRST_DROP_LINK_SEARCH_RADIUS_METERS
+        )
+        lower=nearest_mask_cell(
+            lower_mask,sample,FIRST_DROP_LINK_SEARCH_RADIUS_METERS
+        )
+        if upper is None or lower is None:
+            print(
+                f"T21FIRSTDROP LINK_REJECT {side} sample={si} "
+                f"point=({sample[0]:.6f},{sample[1]:.6f}) "
+                f"upper={upper is not None} lower={lower is not None}"
+            )
+            continue
+        key=(upper[1],lower[1])
+        if key in seen:
+            continue
+        seen.add(key)
+        ux,uz=upper[2]; lx,lz=lower[2]
+        upx,upz=model_to_project((ux,uz))
+        lpx,lpz=model_to_project((lx,lz))
+        record={
+            "sample":si,
+            "upper_cell":upper[1],
+            "lower_cell":lower[1],
+            "upper_distance":upper[0],
+            "lower_distance":lower[0],
+            "start_project":[round(upx,6),round(upper_y-3.0,6),round(upz,6)],
+            "end_project":[round(lpx,6),round(lower_y-3.0,6),round(lpz,6)],
+        }
+        links.append(record)
+        print(
+            f"T21FIRSTDROP LINK {side} sample={si} "
+            f"upper_cell={upper[1]} lower_cell={lower[1]} "
+            f"upper_d={upper[0]:.6f} lower_d={lower[0]:.6f} "
+            f"start={record['start_project']} end={record['end_project']}"
+        )
+    first_drop_link_candidates[side]=links
+    print(
+        f"T21FIRSTDROP SUMMARY {side} samples={len(samples)} "
+        f"accepted={len(links)} rejected={len(samples)-len(links)}"
+    )
+
+pos_links=first_drop_link_candidates["POS"]
+neg_links=first_drop_link_candidates["NEG"]
+pos_pairs={
+    (tuple(rec["upper_cell"]),tuple(rec["lower_cell"]))
+    for rec in pos_links
+}
+neg_pairs={
+    (tuple(rec["upper_cell"]),tuple(rec["lower_cell"]))
+    for rec in neg_links
+}
+mirrored_pos_pairs={
+    ((-u[0],-u[1]),(-l[0],-l[1]))
+    for u,l in pos_pairs
+}
+link_pair_xor=mirrored_pos_pairs ^ neg_pairs
+print(
+    f"T21FIRSTDROP MIRROR pos={len(pos_pairs)} neg={len(neg_pairs)} "
+    f"xor={len(link_pair_xor)} missing={len(mirrored_pos_pairs-neg_pairs)} "
+    f"extra={len(neg_pairs-mirrored_pos_pairs)}"
+)
+if link_pair_xor:
+    raise SystemExit(
+        f"T21 first-drop link audit failed: mirrored pair XOR {len(link_pair_xor)}"
+    )
+if not pos_links or not neg_links:
+    raise SystemExit("T21 first-drop link audit failed: no accepted links")
+
+for side,links in first_drop_link_candidates.items():
+    print(
+        "T21FIRSTDROP CANDIDATE_JSON "
+        + side
+        + " "
+        + json.dumps(
+            [
+                {
+                    "start":rec["start_project"],
+                    "end":rec["end_project"],
+                    "upper_cell":rec["upper_cell"],
+                    "lower_cell":rec["lower_cell"],
+                }
+                for rec in links
+            ],
+            separators=(",",":")
+        )
+    )

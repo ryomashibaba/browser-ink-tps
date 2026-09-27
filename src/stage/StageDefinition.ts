@@ -86,6 +86,17 @@ export interface SplatZoneDefinition {
   heightMeters: number;
 }
 
+export interface StageNavigationLinkDefinition {
+  id: string;
+  start: StageVector3;
+  end: StageVector3;
+  radiusMeters: number;
+  bidirectional: boolean;
+  area?: number;
+  flags?: number;
+  userId?: number;
+}
+
 export interface StageMetadata {
   id: string;
   displayName: string;
@@ -102,6 +113,12 @@ export interface StageDefinition {
   metadata: StageMetadata;
   solids: readonly StageSolidDefinition[];
   paintSurfaces: readonly StagePaintSurfaceDefinition[];
+  /**
+   * Optional Detour off-mesh links. Omitted means no links, preserving every
+   * frozen T0-T20 stage. T21 Undertow may use unidirectional links for actual
+   * one-way drops instead of inventing ramps or bidirectional connectivity.
+   */
+  navigationLinks?: readonly StageNavigationLinkDefinition[];
 }
 
 const scoreableFloor =
