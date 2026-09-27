@@ -1035,7 +1035,7 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
     },
     {
       id: 'sunfish-current-zones-blueprint',
-      kind: 'USER_RULE_MAP',
+      kind: 'WEB_OVERHEAD',
       label: 'Sunfish post-Ver.7.2 Undertow Spillway Splat Zones blueprint',
       sourceVersion: 'updated 2024-05-06 / post-Ver.7.2.0 layout',
       notes:
