@@ -2554,3 +2554,76 @@ Canonical consequence:
 - public metadata discovery for `WATER_KILL_THRESHOLD_PENDING` is likewise exhausted
 - no visual-water Y, kill Y, or death volume is promoted
 - the remaining minimum evidence is the actual current Temple01 normal/Turf placement/environment body or tightly registered current in-game vertical evidence
+
+## T21-D whole-underpass public-source closure — Resolution Pass 11C (2026-09-27)
+
+The last two solid-level UNKNOWN paint records are the mirrored whole underpass floors outside their already-authorized Splat-Zone intersection subregions.
+
+The pinned current Turf author PDF was re-audited against the exact model-Y=3.0 / project-Y=0 underpass polygons.
+
+Pinned source:
+- 100,311 bytes
+- SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+
+Exact top-view result:
+- positive-Z underpass projection:
+  - median brightness **191**
+  - near-white fraction **0.009680**
+  - dark/gray fraction **0.990320**
+  - explicit overlapping fill colors = gray `[0.752941,0.752941,0.752941]` only
+  - known Glass overhang directly covers **0.772974211** of the exact floor projection
+- negative-Z underpass projection:
+  - median brightness **191**
+  - near-white fraction **0.005022**
+  - dark/gray fraction **0.994978**
+  - explicit overlapping fill colors = the same gray class only
+  - known Glass overhang directly covers **0.735104783** of the exact floor projection
+- no distinct white underpass-floor vector fill is recovered on either side
+
+Canonical interpretation:
+- these gray values are **not** evidence that the hidden floor itself is UNINKABLE
+- the author PDF is a top-view plan where the explicit gray Glass overhang visually occludes the floor below
+- therefore the pinned public Turf plan cannot classify the whole underpass remainder as either PAINTABLE or UNINKABLE
+- only the exact Splat-Zone intersections remain paint-authorized
+- both whole underpass solid authority records remain UNKNOWN
+- no new PaintSurface is added
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
+
+The minimum remaining paint evidence is now explicit: either controlled current gameplay paint tests registered to floor cells outside the objective intersections, or current Temple01 per-face/per-collider paint metadata / a paint mask that exposes the hidden floor independently of the glass overlay.
+
+## T21-D public-evidence closure checkpoint after Pass 11C (2026-09-27)
+
+This is the preferred new-chat boundary.
+
+Public/current evidence has now been exhausted or localized for every remaining activation blocker without guessing runtime behavior:
+
+- `UPPER_GLASS_COLLISION_AUTHORITY_PENDING`
+  - standability/traversal semantic resolved
+  - ordinary cross-glass damage-blocking semantic resolved
+  - exact current player/projectile/navigation collision-face or hidden-primitive binding unresolved
+  - next evidence: original current collision/query data or tightly registered controlled collision/shot tests
+- `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING`
+  - no public camera-query authority recovered
+  - next evidence: original camera collision/query metadata or controlled camera-boundary capture
+- `WATER_VISUAL_Y_PENDING`
+  - exact XZ hazard polygon known
+  - public metadata path exhausted; no placement/environment body exposes visual-water Y
+  - next evidence: current normal/Turf placement/environment body or tightly registered in-game vertical measurement
+- `WATER_KILL_THRESHOLD_PENDING`
+  - generic `Mpt_PlayerDead` shape is known, but no Temple01 instance transform
+  - next evidence: current Temple01 death-locator placement or tightly registered death-threshold measurement
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING`
+  - only two whole underpass solids remain UNKNOWN
+  - public Turf plan is proven glass-occluded for those floors
+  - next evidence: direct under-glass paint test outside Zones, or hidden-floor paint metadata/mask
+- `TURF_SCOREABLE_MASK_PENDING`
+  - all current paintable surfaces remain Scoreable=off
+  - public schema exposes no Temple01 Turf victory-score mask
+  - next evidence: current score raster/per-face score metadata or controlled scoring experiment
+- `FULL_STAGE_CONNECTIVITY_QA_PENDING`
+  - six MUST_REACH probes pass
+  - two right-low→underpass probes remain deliberate `DIAGNOSTIC_GAP`
+  - source-native search found no ordinary <=0.30m bridge after marking-overlay removal
+  - next evidence: authoritative connector/traversal semantics plus exact upper-glass nav binding, followed by final production-candidate Recast
+
+Production remains frozen T20 `inkworks-junction`. PR #5 remains Draft / open / unmerged.
