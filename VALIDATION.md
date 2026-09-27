@@ -1781,3 +1781,38 @@ Current validation must additionally require:
   - `unresolvedVerticalRelations === []`
 
 The XZ gate opening must not be interpreted as a measured vertical kill plane. No runtime stage geometry, collision, navigation, paint authority, combat, Super Jump, or T20 objective behavior changes merely because the evidence gate is now open. T21-D implementation begins only as a subsequent explicit phase.
+
+
+## T21-D route ramps / one-way drop navigation validation — 2026-09-27
+
+The current partial Undertow package must additionally satisfy:
+
+- exact right-low route ramp geometry:
+  - exactly 2 promoted `FloorConcrete03` source-mesh quads
+  - each has 4 vertices / 6 triangle indices
+  - top/bottom project Y endpoints remain 4.5 / 3.0
+  - model-space mirror validation is performed after project->Temple01 inverse registration
+  - `FloorLine00/03/04` overlays are not duplicated into collision/navigation geometry
+- frozen-stage compatibility:
+  - `StageDefinition.navigationLinks` remains optional
+  - an ordinary stage with no links maps to `offMeshConnections=[]`
+  - T20 `PRODUCTION_STAGE_DEFINITION.metadata.id === 'inkworks-junction'`
+- first drop:
+  - 6 links per side / 12 total
+  - start project Y 7.5, end project Y 3.0
+  - all `bidirectional === false`
+  - NEG model cells are exact 180-degree mirrors of POS cells
+- right-small drop:
+  - 7 links per side / 14 total
+  - start project Y 7.5, end project Y 4.5
+  - all `bidirectional === false`
+  - NEG model cells are exact 180-degree mirrors of POS cells
+- combined current partial package:
+  - exactly **26** audited one-way drop links
+  - navigation-link IDs are unique
+  - Detour user IDs are unique
+  - endpoint radius equals `GAME_CONFIG.cpu.agentRadiusMeters`
+  - no invisible ramp, stairs or bidirectional link is introduced for either hard-edge drop
+- production runtime remains unchanged because the partial package is still `activationReady: false`
+
+CI source acquisition may be optimized by removing the historical inline Temple01 probe only after its derived facts are sealed in code/docs. The LFS object byte size and SHA-256 check plus the authoritative current XZ audit must remain.

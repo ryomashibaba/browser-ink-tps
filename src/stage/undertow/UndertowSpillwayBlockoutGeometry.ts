@@ -26,7 +26,7 @@ import {
   undertowUpperGlassVisualStageSolids
 } from './UndertowSpillwayUpperGlassMeshGeometry';
 import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
-import { undertowFirstDropNavigationLinks } from './UndertowSpillwayDropNavigation';
+import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
 export const UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS = 0.125;
@@ -191,7 +191,7 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     activationReady: false as const,
     solids,
     paintSurfaces,
-    navigationLinks: undertowFirstDropNavigationLinks(),
+    navigationLinks: undertowDropNavigationLinks(),
     worldBounds,
     teamASpawnFloorPoint: [spawnA[0], 7.5, spawnA[1]] as const,
     teamBSpawnFloorPoint: [spawnB[0], 7.5, spawnB[1]] as const,
@@ -212,7 +212,7 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
     ],
     notes:
-      'Inert T21-D construction package only. It contains BLOCKOUT-safe flat XZ/Y components and does not replace PRODUCTION_STAGE_DEFINITION. Technical slab thickness is an implementation extrusion below the canonical top Y, not a claimed source measurement.'
+      'Inert T21-D construction package only. It contains BLOCKOUT-safe flat/source-mesh geometry plus audited one-way first-drop and right-small-drop CPU navigation links, and does not replace PRODUCTION_STAGE_DEFINITION. Technical slab thickness and off-mesh endpoint radius are runtime implementation values, not claimed source measurements.'
   });
 
 function buildFlatComponent(component: PolygonComponent): {

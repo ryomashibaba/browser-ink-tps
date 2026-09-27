@@ -802,3 +802,48 @@ T21 evidence capture requirements: **0**.
 `UndertowSpillwayBlockoutGate.ready === true`.
 
 This does not invent a vertical kill threshold and does not make HIGH raster/model geometry Stable-Freeze exact. Production runtime remains unchanged until T21-D explicitly consumes the audited BLOCKOUT dataset.
+
+
+## T21-D runtime route / one-way navigation binding
+
+### Right-low exit ramp
+
+A material-agnostic Temple01 route-connector audit found six exact mirrored inclined source candidates per side touching the independently measured first-drop-landing and right-low floor masks. The physical broad ramp is the `FloorConcrete03` quad:
+
+- source: `Fld_Temple01_pCube21569_1__FloorConcrete03`
+- model Y: 6.0 -> 7.5
+- project Y: 3.0 -> 4.5
+- one 2-triangle quad per side
+- model-space 180-degree mirror: exact
+- `FloorLine03/04`: coplanar marking overlays
+- `FloorLine00`: uniform +0.05m marking overlay
+
+Only the broad `FloorConcrete03` source quad is promoted to collision/navigation geometry.
+
+### First drop
+
+The exact HIGH L-shaped hard edge and the locally verified spawn-high / first-drop-landing masks are bound as one-way Detour links, not geometry:
+
+- upper = project Y 7.5
+- lower = project Y 3.0
+- 6 POS canonical links
+- 6 exact mirrored NEG links
+- total = 12
+- `bidirectional=false`
+- NEG mirror mask membership proved by CI #675
+
+### Separate right-small drop
+
+The separate HIGH L-shaped right hard edge is independently bound to spawn-high / right-low masks:
+
+- upper = project Y 7.5
+- lower = project Y 4.5
+- 7 POS canonical links
+- 7 exact mirrored NEG links
+- total = 14
+- `bidirectional=false`
+- NEG mirror mask membership proved by CI #676
+
+Combined T21-D partial one-way drop navigation: **26 links**.
+
+The 2.0m spacing used by the audit is evidence sampling only, not a source dimension. Runtime endpoint radius is derived from the existing 0.30m CPU agent radius. Full-stage connectivity QA remains required before activation.

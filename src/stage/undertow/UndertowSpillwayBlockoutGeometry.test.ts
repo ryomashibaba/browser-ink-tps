@@ -54,12 +54,23 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(glassVisuals.every((solid) => solid.cameraBlocker === false)).toBe(true);
   });
 
-  it('includes only audited one-way first-drop navigation links', () => {
+  it('includes only audited one-way drop navigation links', () => {
     const links = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.navigationLinks;
-    expect(links).toHaveLength(12);
+    expect(links).toHaveLength(26);
     expect(links.every((link) => link.bidirectional === false)).toBe(true);
     expect(links.every((link) => link.start[1] === 7.5)).toBe(true);
-    expect(links.every((link) => link.end[1] === 3)).toBe(true);
+    expect(links.filter((link) => link.id.startsWith('first-drop-'))).toHaveLength(12);
+    expect(
+      links.filter((link) => link.id.startsWith('right-small-drop-'))
+    ).toHaveLength(14);
+    expect(
+      links.filter((link) => link.id.startsWith('first-drop-'))
+        .every((link) => link.end[1] === 3)
+    ).toBe(true);
+    expect(
+      links.filter((link) => link.id.startsWith('right-small-drop-'))
+        .every((link) => link.end[1] === 4.5)
+    ).toBe(true);
   });
 
   it('keeps the audited top elevations while extruding only downward', () => {

@@ -2258,3 +2258,57 @@ Canonical result:
 This closes **XZ BLOCKOUT evidence only**. The vertical death/kill threshold is not inferred by this audit. Stable Freeze still requires its stricter CONFIRMED-exact evidence rules.
 
 T21-D is now permitted to start from the audited BLOCKOUT dataset, but **production runtime geometry remains unchanged at this checkpoint**. PR #5 remains Draft / unmerged.
+
+
+## T21-D navigation / route-geometry checkpoint — 2026-09-27
+
+T21-D remains an **inert partial blockout**. Production `PRODUCTION_STAGE_DEFINITION` is still frozen T20 `inkworks-junction`; PR #5 remains Draft / unmerged.
+
+New runtime-safe construction now includes:
+
+- exact right-low route ramp pair:
+  - source object: `Fld_Temple01_pCube21569_1__FloorConcrete03`
+  - one exact 2-triangle quad per side
+  - project Y 3.0 -> 4.5
+  - source/model-space 180-degree mirror is exact; project-origin symmetry is intentionally not assumed because local registration contains translation
+  - coplanar `FloorLine03/04` marking overlays are excluded from collision/navigation
+  - `FloorLine00` is a +0.05m visual marking overlay and is also excluded
+- Detour/Recast one-way off-mesh link support:
+  - `StageDefinition.navigationLinks` is optional; omitted = zero links, preserving all frozen T0-T20 stages
+  - links are forwarded to `generateSoloNavMesh(..., { offMeshConnections })`
+  - CPU agents already read `CrowdAgent.position()` each fixed tick, so Detour traversal feeds the existing CPU runtime without a hidden ramp/teleport path
+- first-drop links:
+  - 6 canonical POS links + 6 exact model-space mirrored NEG links
+  - start project Y = 7.5
+  - end project Y = 3.0
+  - vertical descent = 4.5m
+  - `bidirectional=false`
+- right-small-drop links:
+  - 7 canonical POS links + 7 exact model-space mirrored NEG links
+  - start project Y = 7.5
+  - end project Y = 4.5
+  - vertical descent = 3.0m
+  - `bidirectional=false`
+- total current partial navigation links = **26**
+- runtime off-mesh endpoint radius is derived from existing `GAME_CONFIG.cpu.agentRadiusMeters = 0.30m`; it is not represented as a source measurement
+
+Evidence/audit notes:
+
+- independent PDF-lip nearest-cell snapping is used only to choose the POS canonical candidates
+- NEG links are generated as exact 180-degree model-cell mirrors and must exist in independently extracted NEG floor masks
+- this avoids treating the approximate local PDF->Temple01 registration as exact global symmetry
+- CI #675: first-drop mirrored cell XOR = 0
+- CI #676: right-small-drop mirrored cell XOR = 0
+- CI #676: TypeScript, Vitest (**40 files / 171 tests**), production build and Pages artifact all PASS
+
+Still intentionally activation-blocking:
+
+1. `UPPER_GLASS_COLLISION_AUTHORITY_PENDING`
+2. `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING`
+3. `WATER_VISUAL_Y_PENDING`
+4. `WATER_KILL_THRESHOLD_PENDING`
+5. `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING`
+6. `TURF_SCOREABLE_MASK_PENDING`
+7. `FULL_STAGE_CONNECTIVITY_QA_PENDING`
+
+Do not promote any of those from geometry naming, material naming, visual similarity, or convenience assumptions.
