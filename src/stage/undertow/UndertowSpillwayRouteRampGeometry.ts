@@ -90,6 +90,14 @@ export const UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT = Object.freeze({
     canonicalDashWidthPoints: 0.24,
     canonicalDashLengthPoints: 0.96,
     routeRampCanonicalDashCountPerSide: 168,
+    positiveZDashMidpointInside: 133,
+    positiveZDashFullyInside: 126,
+    positiveZDashMidpointInsideFraction: 0.791667,
+    positiveZDashFullyInsideFraction: 0.75,
+    negativeZDashMidpointInside: 126,
+    negativeZDashFullyInside: 126,
+    negativeZDashMidpointInsideFraction: 0.75,
+    negativeZDashFullyInsideFraction: 0.75,
     knownPaintableSlopeMedianBrightness: 255,
     knownUninkableGlassSlopeMedianBrightness: 191,
     positiveZMedianBrightness: 255,
@@ -102,7 +110,7 @@ export const UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT = Object.freeze({
   }),
   confidence: 'HIGH' as const,
   notes:
-    'CI #672 binds one exact broad mirrored FloorConcrete03 source quad per side while excluding coplanar FloorLine marking overlays. Resolution Pass 10A / CI #746 independently projects those exact quads into the pinned Sunfish Turf vector PDF. Each ramp contains 168 instances of the same 0.24pt black / 0.96pt slope-dash family seen on known central paintable slopes. Both ramp interiors have median raster brightness 255 and ~88% near-white samples, matching the known white paintable slope class and separating from the gray uninkable glass-slope class at median 191. Paint authority is therefore promoted from author vector semantics, not from FloorConcrete naming.'
+    'CI #672 binds one exact broad mirrored FloorConcrete03 source quad per side while excluding coplanar FloorLine marking overlays. Resolution Pass 10A projects those exact quads into the pinned Sunfish Turf vector PDF. Each 3pt-padded query contains 168 instances of the same 0.24pt black / 0.96pt slope-dash family seen on known central paintable slopes; exact-polygon containment remains substantial (positive: 133 midpoint / 126 full, negative: 126 / 126). Both ramp interiors have median raster brightness 255 and ~88% near-white samples, matching the known white paintable slope class and separating from the gray uninkable glass-slope class at median 191. Paint authority is therefore promoted from author vector semantics, not from FloorConcrete naming.'
 });
 
 const RIGHT_LOW_ROUTE_RAMP_PAINT_FLAGS =
