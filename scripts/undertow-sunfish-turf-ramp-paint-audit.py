@@ -193,10 +193,10 @@ def canonical_dash_count(signature_counts):
 
 def is_canonical_dash_row(row):
     return (
-        row["width"] == 0.24
+        round(row["width"], 3) == 0.24
         and row["color"] == [0.0, 0.0, 0.0]
         and row["orientation"] in ("HORIZONTAL", "VERTICAL")
-        and row["length"] == 0.96
+        and round(row["length"], 3) == 0.96
     )
 
 
@@ -455,6 +455,14 @@ def main():
         region["canonicalDashPolygonStats"] = canonical_dash_polygon_stats(
             line_rows, ramp_polygon
         )
+        if (
+            region["canonicalDashPolygonStats"]["midpointInsideFraction"] < 0.70
+            or region["canonicalDashPolygonStats"]["fullyInsideFraction"] < 0.70
+        ):
+            raise RuntimeError(
+                f"{side} canonical slope dashes do not substantially occupy the exact ramp polygon: "
+                f"{region['canonicalDashPolygonStats']}"
+            )
         paintable_p50 = [
             rec["brightness"]["p50"] for rec in known_marker_signatures.values()
         ]
