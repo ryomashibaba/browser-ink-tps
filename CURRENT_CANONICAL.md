@@ -2349,3 +2349,30 @@ Authority boundary:
 - production `inkworks-junction` remains unchanged
 - PR #5 remains Draft / open / unmerged
 
+## T21-D upper-glass collision authority localization — Resolution Pass 9A (2026-09-27)
+
+Current post-Ver.7.2 gameplay evidence now resolves one semantic fact that the prior source-only audit could not: the central **glass high ground is standable/traversable and is actively used as a held position**. This is supported by post-rework strategy material dated 2024-08-29, 2025-09-11, and 2026-06-02.
+
+That does **not** by itself identify the original collision primitive.
+
+Source-side refinement in CI #728:
+- central BridgeMetal source remains 1083 faces / 709 vertices per side
+- exact model-space A/B symmetry remains intact
+- face-connected decomposition produces **392 components per side**
+- POS/NEG component signature XOR = **0**
+- many thin horizontal/support components overlap the Glass01 XZ region
+- no unique component can be identified as “the standable high-ground collision surface” from source geometry alone
+
+Canonical authority split:
+- glass-high-ground **standability semantic** = resolved
+- glass-high-ground **navigation semantic** = resolved at behavior level
+- exact player-collision face/primitive binding = unresolved
+- exact navigation face binding = unresolved
+- projectile collision/pass-through behavior = unresolved
+- camera-query behavior = unresolved
+- Glass01 remains render-only
+- BridgeMetal remains audit-only
+- no collision, Recast, projectile-blocker, or camera-blocker promotion is made
+
+Therefore both `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` and `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remain active. The remaining gap is no longer “is the high ground walkable?”; it is **which exact original-game face/primitive supplies each runtime role**.
+
