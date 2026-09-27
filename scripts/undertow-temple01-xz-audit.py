@@ -2118,10 +2118,10 @@ print(
 # source slope meshes only by contact with independently extracted flat-floor
 # components. No globally transformed white-face clipping is used.
 spawn_route_floor_masks={
-    "POS_SPAWN_HIGH": spawn_components["POS_SPAWN_HIGH"][0],
-    "NEG_SPAWN_HIGH": spawn_components["NEG_SPAWN_HIGH"][0],
-    "POS_FIRST_DROP_LANDING": spawn_components["POS_FIRST_DROP_LANDING"][0],
-    "NEG_FIRST_DROP_LANDING": spawn_components["NEG_FIRST_DROP_LANDING"][0],
+    "POS_SPAWN_HIGH": (spawn_components["POS_SPAWN_HIGH"][0],10.5),
+    "NEG_SPAWN_HIGH": (spawn_components["NEG_SPAWN_HIGH"][0],10.5),
+    "POS_FIRST_DROP_LANDING": (spawn_components["POS_FIRST_DROP_LANDING"][0],6.0),
+    "NEG_FIRST_DROP_LANDING": (spawn_components["NEG_FIRST_DROP_LANDING"][0],6.0),
 }
 for name,target_y,seed,bounds in (
     ("POS_RIGHT_LOW",7.5,(-15.05,55.40),(-32,8,25,68)),
@@ -2130,9 +2130,11 @@ for name,target_y,seed,bounds in (
     comp,_,_=flood_component(target_y,seed,bounds)
     if not comp:
         raise SystemExit(f"T21 route slope audit failed: no floor mask for {name}")
-    spawn_route_floor_masks[name]=comp
+    spawn_route_floor_masks[name]=(comp,target_y)
 
-def near_mask_vertex(v,mask,radius_cells=2):
+def near_mask_vertex(v,mask,target_y,radius_cells=2,y_tolerance=0.26):
+    if abs(v[1]-target_y)>y_tolerance:
+        return False
     ix=round(v[0]/STEP); iz=round(v[2]/STEP)
     for dx in range(-radius_cells,radius_cells+1):
         for dz in range(-radius_cells,radius_cells+1):
@@ -2169,10 +2171,13 @@ def route_slope_components(region_name,bounds):
             ys=[v[1] for v in model_vertices]
             px=[v[0] for v in project_vertices]; pz=[v[2] for v in project_vertices]
             contacts={}
-            for mask_name,mask in spawn_route_floor_masks.items():
+            for mask_name,(mask,mask_y) in spawn_route_floor_masks.items():
                 if not mask_name.startswith(region_name[:3]):
                     continue
-                hits=sum(1 for v in model_vertices if near_mask_vertex(v,mask))
+                hits=sum(
+                    1 for v in model_vertices
+                    if near_mask_vertex(v,mask,mask_y)
+                )
                 if hits:
                     contacts[mask_name]=hits
             # Count exact/near source-Y endpoints separately.
