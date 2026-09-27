@@ -50,7 +50,7 @@ describe('T21 Undertow underpass paint Resolution Pass 8', () => {
     expect(UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.runtimeState)
       .toMatchObject({
         underpassPaintSurfaceCount: 2,
-        unresolvedPaintSolidCount: 6,
+        unresolvedPaintSolidCount: 4,
         underpassRecordsRemainUnknown: true,
         wholeUnderpassStillNotPaintable: true
       });
