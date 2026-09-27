@@ -2110,3 +2110,178 @@ print(
     f"missing={len(mirrored_pos_bridge-neg_bridge)} "
     f"extra={len(neg_bridge-mirrored_pos_bridge)}"
 )
+
+
+# T21-D spawn/right-low exact slope-component audit.
+#
+# Stay inside the already locally verified spawn-side Temple01 bounds and bind
+# source slope meshes only by contact with independently extracted flat-floor
+# components. No globally transformed white-face clipping is used.
+spawn_route_floor_masks={
+    "POS_SPAWN_HIGH": spawn_components["POS_SPAWN_HIGH"][0],
+    "NEG_SPAWN_HIGH": spawn_components["NEG_SPAWN_HIGH"][0],
+    "POS_FIRST_DROP_LANDING": spawn_components["POS_FIRST_DROP_LANDING"][0],
+    "NEG_FIRST_DROP_LANDING": spawn_components["NEG_FIRST_DROP_LANDING"][0],
+}
+for name,target_y,seed,bounds in (
+    ("POS_RIGHT_LOW",7.5,(-15.05,55.40),(-32,8,25,68)),
+    ("NEG_RIGHT_LOW",7.5,(14.96,-55.67),(-8,32,-68,-25)),
+):
+    comp,_,_=flood_component(target_y,seed,bounds)
+    if not comp:
+        raise SystemExit(f"T21 route slope audit failed: no floor mask for {name}")
+    spawn_route_floor_masks[name]=comp
+
+def near_mask_vertex(v,mask,radius_cells=2):
+    ix=round(v[0]/STEP); iz=round(v[2]/STEP)
+    for dx in range(-radius_cells,radius_cells+1):
+        for dz in range(-radius_cells,radius_cells+1):
+            if (ix+dx,iz+dz) in mask:
+                return True
+    return False
+
+def route_slope_components(region_name,bounds):
+    x0,x1,z0,z1=bounds
+    by_source=defaultdict(list)
+    for ff in faces:
+        ia,ib,ic,o,m=ff
+        if "FloorSlope" not in o and "FloorSlope" not in m:
+            continue
+        tri=[vertices[i] for i in ff[:3]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if not (x0<=cx<=x1 and z0<=cz<=z1):
+            continue
+        ymin=min(v[1] for v in tri); ymax=max(v[1] for v in tri)
+        if ymax<5.5 or ymin>11.0:
+            continue
+        by_source[(o,m)].append(ff)
+
+    records=[]
+    for (o,m),source_faces in sorted(by_source.items()):
+        for local_ci,component in enumerate(face_components_by_shared_vertex(source_faces)):
+            comp_faces=[source_faces[i] for i in component]
+            unique_indices=sorted({vi for ff in comp_faces for vi in ff[:3]})
+            model_vertices=[vertices[i] for i in unique_indices]
+            project_vertices=[slope_project_point(v) for v in model_vertices]
+            local_index={vi:i for i,vi in enumerate(unique_indices)}
+            indices=[local_index[vi] for ff in comp_faces for vi in ff[:3]]
+            ys=[v[1] for v in model_vertices]
+            px=[v[0] for v in project_vertices]; pz=[v[2] for v in project_vertices]
+            contacts={}
+            for mask_name,mask in spawn_route_floor_masks.items():
+                if not mask_name.startswith(region_name[:3]):
+                    continue
+                hits=sum(1 for v in model_vertices if near_mask_vertex(v,mask))
+                if hits:
+                    contacts[mask_name]=hits
+            # Count exact/near source-Y endpoints separately.
+            ybands={
+                str(target):sum(1 for y in ys if abs(y-target)<=0.03)
+                for target in (6.0,7.5,10.5)
+            }
+            rec={
+                "region":region_name,
+                "object":o,
+                "material":m,
+                "component":local_ci,
+                "faces":len(comp_faces),
+                "vertices":len(model_vertices),
+                "model_y":[round(min(ys),6),round(max(ys),6)],
+                "project_bbox":[
+                    round(min(px),6),round(min(pz),6),
+                    round(max(px),6),round(max(pz),6)
+                ],
+                "ybands":ybands,
+                "contacts":contacts,
+                "project_vertices":[
+                    [round(x,6),round(y,6),round(z,6)]
+                    for x,y,z in project_vertices
+                ],
+                "indices":indices,
+                "model_vertex_set":{
+                    (round(v[0],6),round(v[1],6),round(v[2],6))
+                    for v in model_vertices
+                },
+            }
+            records.append(rec)
+            print(
+                f"T21ROUTESLOPE COMPONENT {region_name} obj={o} mat={m} ci={local_ci} "
+                f"faces={rec['faces']} verts={rec['vertices']} "
+                f"model_y={rec['model_y']} project_bbox={rec['project_bbox']} "
+                f"ybands={ybands} contacts={contacts}"
+            )
+    return records
+
+route_slopes={}
+for region_name,bounds in (
+    ("POS_ROUTE",(-48,18,22,78)),
+    ("NEG_ROUTE",(-18,48,-78,-22)),
+):
+    route_slopes[region_name]=route_slope_components(region_name,bounds)
+    print(
+        f"T21ROUTESLOPE SUMMARY {region_name} count={len(route_slopes[region_name])} "
+        f"faces={sum(r['faces'] for r in route_slopes[region_name])}"
+    )
+
+# Pair exact source components by Temple01 model-space 180-degree symmetry.
+pos_records=route_slopes["POS_ROUTE"]
+neg_records=route_slopes["NEG_ROUTE"]
+used_neg=set()
+pair_count=0
+for pi,p in enumerate(pos_records):
+    mirrored={
+        (round(-x,6),round(y,6),round(-z,6))
+        for x,y,z in p["model_vertex_set"]
+    }
+    matches=[
+        ni for ni,n in enumerate(neg_records)
+        if ni not in used_neg and n["model_vertex_set"]==mirrored
+    ]
+    if len(matches)==1:
+        ni=matches[0]
+        used_neg.add(ni)
+        pair_count+=1
+        print(
+            f"T21ROUTESLOPE MIRROR pos={pi} neg={ni} "
+            f"pos_obj={p['object']} neg_obj={neg_records[ni]['object']} "
+            f"faces={p['faces']} verts={p['vertices']} xor=0"
+        )
+    elif len(matches)>1:
+        raise SystemExit(
+            f"T21 route slope audit failed: ambiguous mirror for POS component {pi}: {matches}"
+        )
+    else:
+        print(
+            f"T21ROUTESLOPE UNMATCHED_POS pos={pi} obj={p['object']} "
+            f"faces={p['faces']} verts={p['vertices']}"
+        )
+
+print(
+    f"T21ROUTESLOPE MIRROR_SUMMARY pos={len(pos_records)} neg={len(neg_records)} "
+    f"paired={pair_count} unmatched_pos={len(pos_records)-pair_count} "
+    f"unmatched_neg={len(neg_records)-len(used_neg)}"
+)
+
+# Emit compact JSON only for components that actually touch at least two known
+# route-floor masks. These are promotion candidates, not automatic promotions.
+for side,records in route_slopes.items():
+    for ri,rec in enumerate(records):
+        if len(rec["contacts"])<2:
+            continue
+        print(
+            "T21ROUTESLOPE CANDIDATE_JSON "
+            + side
+            + f" {ri} "
+            + json.dumps(
+                {
+                    "object":rec["object"],
+                    "material":rec["material"],
+                    "vertices":rec["project_vertices"],
+                    "indices":rec["indices"],
+                    "contacts":rec["contacts"],
+                    "model_y":rec["model_y"],
+                },
+                separators=(",",":")
+            )
+        )
