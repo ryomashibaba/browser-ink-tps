@@ -1926,3 +1926,19 @@ Validation must additionally require:
 - `TURF_SCOREABLE_MASK_PENDING` remains separate with zero authorized Scoreable promotions
 - production stage remains frozen T20 `inkworks-junction`
 
+## T21-D upper-glass projectile Resolution Pass 11A validation — 2026-09-27
+
+Validation must additionally require:
+- Nintendo historical fix remains recorded as opposite-side glass damage being unintended
+- post-Ver.7.2/current glass-high-ground identity remains corroborated
+- Ver.11 grate-edge attack-path evidence remains distinct from glass-body behavior
+- `projectileOcclusionSemanticResolved === true`
+- ordinary cross-glass damage semantic remains blocked
+- grate/edge attack-permissive semantics remain possible
+- exact current projectile collision face binding remains unresolved
+- all-projectile-class behavior remains unresolved
+- runtime projectile promotion remains unauthorized
+- `Glass01` stays visual-only for collision authority
+- `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` remains active
+- `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remains independently active
+
