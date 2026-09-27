@@ -1,21 +1,30 @@
-import { UNDERTOW_VECTOR_BLUEPRINT_SOURCE } from './UndertowSpillwayVectorBlueprint';
 import { UNDERTOW_UNDERPASS_NAV_AUDIT } from './UndertowSpillwayModelXZGeometry';
+import { UNDERTOW_VECTOR_BLUEPRINT_SOURCE } from './UndertowSpillwayVectorBlueprint';
+import {
+  UNDERTOW_SPLAT_ZONES_VECTOR_POLYGONS,
+  UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT,
+  UNDERTOW_ZONES_VECTOR_SOURCE
+} from './UndertowSpillwayZonesVectorGeometry';
 
 export const UNDERTOW_ZONES_VECTOR_REGISTRATION_AUDIT = Object.freeze({
-  round: 7,
+  round: 8,
   scope: 'CURRENT_SPLAT_ZONES_VECTOR_REGISTRATION' as const,
   source: Object.freeze({
-    author: 'Sunfish',
-    mode: 'Splat Zones',
-    stage: 'Undertow Spillway',
-    updated: '2024-05-06',
+    author: UNDERTOW_ZONES_VECTOR_SOURCE.author,
+    mode: UNDERTOW_ZONES_VECTOR_SOURCE.mode,
+    stage: UNDERTOW_ZONES_VECTOR_SOURCE.stage,
+    updated: UNDERTOW_ZONES_VECTOR_SOURCE.updated,
+    fileBytes: UNDERTOW_ZONES_VECTOR_SOURCE.fileBytes,
+    sha256: UNDERTOW_ZONES_VECTOR_SOURCE.sha256,
     sourceIsCurrentPostVer720: true,
     sourcePdfDirectlyVerified: true,
     sourcePdfIsSinglePageVectorDocument: true,
     legendDefinesDashDotEnclosureAsZone: true,
     sourceProvidesExactDrawnZoneBoundary: true,
+    rawPdfBytesRecovered: true,
+    exactDashDotVectorSupportRecovered: true,
     notes:
-      'The current post-rework Sunfish Splat Zones PDF is directly available and the author legend explicitly defines the dash-dot enclosure as the objective zone. The blocker is no longer semantic identification; it is exact coordinate extraction/registration of that vector path.'
+      'Resolution Pass 8 recovered the actual public Sunfish PDF bytes. The 0.72pt dash-dot boundary is emitted as discrete vector fragments; grouping those fragments by support line recovers two exact six-vertex objective rings without screenshot tracing.'
   }),
   crossModeRegistration: Object.freeze({
     existingTurfPdfPageWidthPoints: UNDERTOW_VECTOR_BLUEPRINT_SOURCE.pageWidthPoints,
@@ -25,9 +34,20 @@ export const UNDERTOW_ZONES_VECTOR_REGISTRATION_AUDIT = Object.freeze({
     currentZonesSharesAuthorAndUpdateDateWithTurf: true,
     currentZonesUsesSameOverallA4DrawingConvention: true,
     currentZonesModeGeometryIsNotIdenticalToTurf: true,
-    safeToReuseTurfCoordinateTransformWithoutAnchorVerification: false,
+    commonAnchorVerificationPerformed: true,
+    comparedOuterAnchorCount:
+      UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT.comparedOuterAnchorCount,
+    sharedOuterAnchorCount:
+      UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT.sharedOuterAnchorCount,
+    modeSpecificChangedOuterAnchorCount:
+      UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT.modeSpecificChangedOuterAnchorCount,
+    maxSharedOuterAnchorResidualPoints:
+      UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT.maxSharedOuterAnchorResidualPoints,
+    maxSharedOuterAnchorResidualMeters:
+      UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT.maxSharedOuterAnchorResidualMeters,
+    safeToReuseTurfCoordinateTransformAfterAnchorVerification: true,
     notes:
-      'The current Turf and Zones drawings use the same author/date/A4 convention and visibly preserve common stage anchors, but the mode-specific geometry is not identical. Therefore the Turf PDF transform cannot be silently reused for objective vertices until common anchors are numerically verified in the Zones PDF.'
+      '40/42 exterior hard-edge anchors are exact shared coordinates to <=0.000052pt. The two excluded anchors are the mirrored mode-specific geometry changes, so the existing Turf PDF coordinate transform is reused only after this numerical verification.'
   }),
   objectiveConstraints: Object.freeze({
     objectiveCount: 2,
@@ -36,11 +56,18 @@ export const UNDERTOW_ZONES_VECTOR_REGISTRATION_AUDIT = Object.freeze({
     underpassFloorProjectY: UNDERTOW_UNDERPASS_NAV_AUDIT.sourceYProjectMeters,
     underpassFloorModelY: UNDERTOW_UNDERPASS_NAV_AUDIT.sourceYModelMeters,
     objectiveSubregionKnownToBePaintable: true,
-    exactObjectivePdfVerticesRecovered: false,
-    exactObjectiveMetricVerticesRecovered: false,
-    exactObjectiveAreaSquareMetersRecovered: false,
+    exactObjectivePdfVerticesRecovered: true,
+    exactObjectiveMetricVerticesRecovered: true,
+    exactObjectiveAreaSquareMetersRecovered: true,
+    verticesPerObjective:
+      UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT.exactPdfVertexCountPerZone,
+    areaSquareMetersPerObjective:
+      UNDERTOW_SPLAT_ZONES_VECTOR_POLYGONS.negativeZ.areaSquareMeters,
+    projectRotationSymmetryResidualMeters:
+      UNDERTOW_ZONES_VECTOR_GEOMETRY_AUDIT.projectRotationSymmetryResidualMeters,
+    registeredAgainstProjectY0Underpass: true,
     notes:
-      'The rework comparison reports unchanged Splat Zone size while central access geometry widened. This constrains future recovery but does not establish zone position or metric vertices by itself.'
+      'Each exact source objective ring is a six-vertex L polygon with 117.29875m² plan area. Only its registered intersection with the audited project-Y=0 underpass floor is promoted as a paint subregion; the whole underpass remains unresolved.'
   }),
   publicDataFallback: Object.freeze({
     temple01SplatZoneInstancePlacementFound: false,
@@ -48,28 +75,27 @@ export const UNDERTOW_ZONES_VECTOR_REGISTRATION_AUDIT = Object.freeze({
     temple01VAreaInstanceValuesFound: false,
     publicSchemaOnlyHasGenericIsIncludeVArea: true,
     oldTemple00ExactZonePlacementFound: false,
+    fallbackNoLongerRequiredForVectorRegistration: true,
     notes:
-      'Broad GitHub/public-source search found Temple01 actor schemas with IsIncludeVArea but no current Splat-Zone objective instance placement/transform payload. No authoritative old Temple00 objective placement was found either.'
+      'Actor-volume fallback remains unavailable, but it is no longer required for planimetric registration because the exact current public vector source has been recovered.'
   }),
   toolingBoundary: Object.freeze({
     webCanRenderPdfPage: true,
     webCanExposePdfText: true,
-    rawPdfVectorPathAccessibleToRepositoryAutomation: false,
+    rawPdfVectorPathAccessibleToRepositoryAutomation: true,
     rasterManualTracingAllowedForAuthorityPromotion: false,
     approximateScreenshotMeasurementAllowedForAuthorityPromotion: false,
     notes:
-      'The current browsing path can verify/render the PDF but does not expose its vector path bytes to the repo workflow. Manual screenshot tracing would introduce avoidable measurement uncertainty and is intentionally rejected for canonical geometry.'
+      'GitHub Actions now downloads the public PDF and PyMuPDF extracts its vector fragments. Raster/manual tracing remains forbidden for canonical objective geometry.'
   }),
   runtimePromotionAuthorized: false,
-  paintSurfacePromotionAuthorized: false,
+  paintSurfacePromotionAuthorized: true,
   activationBlockerCleared: false,
-  nextAcceptableInputs: [
-    'The actual current Sunfish Zones PDF/vector path bytes (or an exact vector export) so the two dash-dot polygons can be extracted in PDF points.',
-    'A current Temple01 Splat-Zone actor/volume placement payload with objective transforms.',
-    'A pixel-exact current Zones raster whose common anchors are numerically registered to the existing Turf PDF transform, followed by boundary extraction with a recorded residual.'
+  nextEvidenceNeeded: [
+    'Separate current evidence for project-Y=0 underpass cells outside the registered objective intersections before promoting any remainder of either underpass solid.'
   ] as const,
   notes:
-    'Resolution Pass 7 closes the source-discovery question: the exact current objective drawing exists and has been directly verified, but canonical metric registration is still blocked by vector-coordinate access. No approximate zone polygon is introduced.'
+    'Resolution Pass 8 closes the exact current Zones vector-registration gap and authorizes only two inert objective-intersection PaintSurfaces. Production Undertow activation, Turf Scoreable authority, and whole-underpass paint authority remain blocked.'
 });
 
 export function undertowZonesVectorRegistrationAuditErrors(): readonly string[] {
@@ -81,45 +107,44 @@ export function undertowZonesVectorRegistrationAuditErrors(): readonly string[] 
     !audit.source.sourcePdfDirectlyVerified ||
     !audit.source.sourcePdfIsSinglePageVectorDocument ||
     !audit.source.legendDefinesDashDotEnclosureAsZone ||
-    !audit.source.sourceProvidesExactDrawnZoneBoundary
+    !audit.source.sourceProvidesExactDrawnZoneBoundary ||
+    !audit.source.rawPdfBytesRecovered ||
+    !audit.source.exactDashDotVectorSupportRecovered
   ) {
-    errors.push('current Sunfish Zones source verification drifted');
+    errors.push('current Sunfish Zones source/vector recovery drifted');
   }
 
   if (
     !audit.crossModeRegistration.currentZonesSharesAuthorAndUpdateDateWithTurf ||
     !audit.crossModeRegistration.currentZonesUsesSameOverallA4DrawingConvention ||
     !audit.crossModeRegistration.currentZonesModeGeometryIsNotIdenticalToTurf ||
-    audit.crossModeRegistration.safeToReuseTurfCoordinateTransformWithoutAnchorVerification
+    !audit.crossModeRegistration.commonAnchorVerificationPerformed ||
+    audit.crossModeRegistration.sharedOuterAnchorCount !== 40 ||
+    audit.crossModeRegistration.modeSpecificChangedOuterAnchorCount !== 2 ||
+    audit.crossModeRegistration.maxSharedOuterAnchorResidualMeters > 0.00002 ||
+    !audit.crossModeRegistration.safeToReuseTurfCoordinateTransformAfterAnchorVerification
   ) {
-    errors.push('cross-mode PDF registration scope drifted');
+    errors.push('cross-mode PDF registration verification drifted');
   }
 
   if (
     audit.objectiveConstraints.objectiveCount !== 2 ||
     !audit.objectiveConstraints.gameWatchReportsZoneSizeUnchangedByVer720Rework ||
     !audit.objectiveConstraints.objectiveSubregionKnownToBePaintable ||
-    audit.objectiveConstraints.exactObjectivePdfVerticesRecovered ||
-    audit.objectiveConstraints.exactObjectiveMetricVerticesRecovered ||
-    audit.objectiveConstraints.exactObjectiveAreaSquareMetersRecovered
+    !audit.objectiveConstraints.exactObjectivePdfVerticesRecovered ||
+    !audit.objectiveConstraints.exactObjectiveMetricVerticesRecovered ||
+    !audit.objectiveConstraints.exactObjectiveAreaSquareMetersRecovered ||
+    audit.objectiveConstraints.verticesPerObjective !== 6 ||
+    Math.abs(audit.objectiveConstraints.areaSquareMetersPerObjective - 117.29875) > 1e-6 ||
+    !audit.objectiveConstraints.registeredAgainstProjectY0Underpass
   ) {
-    errors.push('objective constraints must remain useful but non-metric');
-  }
-
-  if (
-    audit.publicDataFallback.temple01SplatZoneInstancePlacementFound ||
-    audit.publicDataFallback.temple01ObjectiveActorTransformFound ||
-    audit.publicDataFallback.temple01VAreaInstanceValuesFound ||
-    !audit.publicDataFallback.publicSchemaOnlyHasGenericIsIncludeVArea ||
-    audit.publicDataFallback.oldTemple00ExactZonePlacementFound
-  ) {
-    errors.push('public objective-placement fallback search scope drifted');
+    errors.push('exact objective-vector registration drifted');
   }
 
   if (
     !audit.toolingBoundary.webCanRenderPdfPage ||
     !audit.toolingBoundary.webCanExposePdfText ||
-    audit.toolingBoundary.rawPdfVectorPathAccessibleToRepositoryAutomation ||
+    !audit.toolingBoundary.rawPdfVectorPathAccessibleToRepositoryAutomation ||
     audit.toolingBoundary.rasterManualTracingAllowedForAuthorityPromotion ||
     audit.toolingBoundary.approximateScreenshotMeasurementAllowedForAuthorityPromotion
   ) {
@@ -128,14 +153,14 @@ export function undertowZonesVectorRegistrationAuditErrors(): readonly string[] 
 
   if (
     audit.runtimePromotionAuthorized ||
-    audit.paintSurfacePromotionAuthorized ||
+    !audit.paintSurfacePromotionAuthorized ||
     audit.activationBlockerCleared
   ) {
-    errors.push('Resolution Pass 7 must not promote approximate objective geometry');
+    errors.push('Pass 8 may promote only inert objective paint subregions');
   }
 
-  if (audit.nextAcceptableInputs.length !== 3) {
-    errors.push('Zones registration evidence gap is not sufficiently localized');
+  if (audit.nextEvidenceNeeded.length !== 1) {
+    errors.push('remaining underpass paint evidence gap is not localized');
   }
 
   return errors;
