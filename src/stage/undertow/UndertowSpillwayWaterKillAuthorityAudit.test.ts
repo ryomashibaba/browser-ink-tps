@@ -8,6 +8,7 @@ describe('T21-D water kill authority audit', () => {
   it('keeps the completed XZ hazard classification separate from vertical kill authority', () => {
     expect(undertowWaterKillAuthorityAuditErrors()).toEqual([]);
     expect(UNDERTOW_WATER_KILL_AUTHORITY_AUDIT).toMatchObject({
+      resolutionPass: '9B',
       mappedWaterHazardXzResolved: true,
       internalVoidClassificationResolved: true,
       exteriorPlayableHardSilhouetteResolved: true,
@@ -26,6 +27,8 @@ describe('T21-D water kill authority audit', () => {
         shapeType: 'Cube',
         targetMaskType: 'ControlledPlayer',
         locatorScale: 1,
+        verifiedDataSnapshots: ['720', '800', '920', '1130'],
+        definitionStableAcrossVerifiedSnapshots: true,
         stagePlacementResolved: false,
         temple01UsageResolved: false
       });
@@ -45,11 +48,27 @@ describe('T21-D water kill authority audit', () => {
     ).toBe(true);
     expect(
       UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.publicActorSchemaEvidence
+        .placementTransformFields
+    ).toEqual(['Translate', 'Rotate', 'Scale']);
+    expect(
+      UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.publicActorSchemaEvidence
         .exposesTemple01Placement
     ).toBe(false);
     expect(
       UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.publicActorSchemaEvidence
         .exposesKillThresholdParameter
+    ).toBe(false);
+    expect(
+      UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.publicActorSchemaEvidence
+        .referencedTemple01RuleBinLayerScope
+    ).toBe('TOWER_CONTROL_MODIFIER_REFERENCE_ONLY');
+    expect(
+      UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.publicActorSchemaEvidence
+        .referencedTemple01RuleBinLayerContentsPublished
+    ).toBe(false);
+    expect(
+      UNDERTOW_WATER_KILL_AUTHORITY_AUDIT
+        .publicTemple01DeathPlacementRecoverySucceeded
     ).toBe(false);
     expect(
       UNDERTOW_WATER_KILL_AUTHORITY_AUDIT
