@@ -191,6 +191,45 @@ def canonical_dash_count(signature_counts):
     )
 
 
+def is_canonical_dash_row(row):
+    return (
+        row["width"] == 0.24
+        and row["color"] == [0.0, 0.0, 0.0]
+        and row["orientation"] in ("HORIZONTAL", "VERTICAL")
+        and row["length"] == 0.96
+    )
+
+
+def canonical_dash_polygon_stats(line_rows, polygon):
+    canonical = [row for row in line_rows if is_canonical_dash_row(row)]
+    midpoint_inside = []
+    fully_inside = []
+    for row in canonical:
+        ax, ay = row["a"]
+        bx, by = row["b"]
+        mx = (ax + bx) * 0.5
+        my = (ay + by) * 0.5
+        if point_in_polygon(mx, my, polygon):
+            midpoint_inside.append(row)
+        if (
+            point_in_polygon(ax, ay, polygon)
+            and point_in_polygon(bx, by, polygon)
+        ):
+            fully_inside.append(row)
+    total = len(canonical)
+    return {
+        "totalCanonicalInQuery": total,
+        "midpointInside": len(midpoint_inside),
+        "fullyInside": len(fully_inside),
+        "midpointInsideFraction": round(
+            len(midpoint_inside) / total if total else 0.0, 6
+        ),
+        "fullyInsideFraction": round(
+            len(fully_inside) / total if total else 0.0, 6
+        ),
+    }
+
+
 def point_in_polygon(x, y, polygon):
     inside = False
     j = len(polygon) - 1
@@ -413,6 +452,9 @@ def main():
         )
         ramp_polygon = [pdf_points[0], pdf_points[1], pdf_points[3], pdf_points[2]]
         region["brightness"] = raster_brightness_stats(page, ramp_polygon)
+        region["canonicalDashPolygonStats"] = canonical_dash_polygon_stats(
+            line_rows, ramp_polygon
+        )
         paintable_p50 = [
             rec["brightness"]["p50"] for rec in known_marker_signatures.values()
         ]
@@ -449,7 +491,8 @@ def main():
             f"matches_white={region['matchesKnownPaintableWhiteBackgroundClass']} "
             f"brightness={json.dumps(region['brightness'], separators=(',', ':'))} "
             f"d_paint={region['brightnessDistanceToPaintableP50']} "
-            f"d_unink={region['brightnessDistanceToUninkableP50']}"
+            f"d_unink={region['brightnessDistanceToUninkableP50']} "
+            f"dash_poly={json.dumps(region['canonicalDashPolygonStats'], separators=(',', ':'))}"
         )
         print(
             "T21TURFRAMP_SIGNATURES "
