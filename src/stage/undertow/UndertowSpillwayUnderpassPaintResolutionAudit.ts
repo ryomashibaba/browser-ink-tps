@@ -81,7 +81,7 @@ export const UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT = Object.freeze({
       darkOrGrayFraction: 0.99032,
       overlappingExplicitFillCount: 12,
       overlappingExplicitFillColors: [[0.752941, 0.752941, 0.752941]] as const,
-      knownGlassOverhangOverlapFraction: 0.772974211,
+      knownGlassOverhangOverlapFraction: 0.772975275,
       distinctWhiteFloorVectorFillRecovered: false,
       topViewOccludedByGlassClass: true
     }),
@@ -92,7 +92,7 @@ export const UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT = Object.freeze({
       darkOrGrayFraction: 0.994978,
       overlappingExplicitFillCount: 32,
       overlappingExplicitFillColors: [[0.752941, 0.752941, 0.752941]] as const,
-      knownGlassOverhangOverlapFraction: 0.735104783,
+      knownGlassOverhangOverlapFraction: 0.735104264,
       distinctWhiteFloorVectorFillRecovered: false,
       topViewOccludedByGlassClass: true
     }),
