@@ -3394,3 +3394,256 @@ for region_name,nodes in route_graph.items():
                 f"a={a['object']}::{a['material']}::ci{a['component']} "
                 f"b={b['object']}::{b['material']}::ci{b['component']}"
             )
+
+
+# T21-D excluded-material strict bridge audit.
+#
+# The surface graph above proves the current walk-material allow-list needs
+# 2.00m relaxation before right-low reaches the underpass. Before treating
+# those gaps as jumps/off-mesh transitions, inspect only the exact problematic
+# edge neighborhoods for source components whose materials were excluded from
+# ROUTE_GRAPH_WALK_TOKENS. This remains discovery-only: even a strict geometric
+# bridge is not gameplay authority until its material semantics are reviewed.
+
+ROUTE_GAP_STRICT_THRESHOLD=0.30
+ROUTE_GAP_LOCAL_MARGIN=2.50
+ROUTE_GAP_CANDIDATE_DISTANCE=4.00
+
+def tri_bbox3(tri):
+    xs=[p[0] for p in tri]; ys=[p[1] for p in tri]; zs=[p[2] for p in tri]
+    return (min(xs),min(ys),min(zs),max(xs),max(ys),max(zs))
+
+def bbox3_expand(box,margin):
+    return (
+        box[0]-margin,box[1]-margin,box[2]-margin,
+        box[3]+margin,box[4]+margin,box[5]+margin
+    )
+
+def bbox3_union(a,b):
+    return (
+        min(a[0],b[0]),min(a[1],b[1]),min(a[2],b[2]),
+        max(a[3],b[3]),max(a[4],b[4]),max(a[5],b[5])
+    )
+
+def bbox3_intersects(a,b):
+    return not (
+        a[3]<b[0] or b[3]<a[0] or
+        a[4]<b[1] or b[4]<a[1] or
+        a[5]<b[2] or b[5]<a[2]
+    )
+
+def component_closest_triangle_pair(a,b):
+    best=1e30; best_pair=None
+    for ta in a["model_triangles"]:
+        for tb in b["model_triangles"]:
+            d=triangle_triangle_distance_3d(ta,tb,None)
+            if d<best:
+                best=d; best_pair=(ta,tb)
+    return best,best_pair
+
+def route_excluded_semantic(material):
+    if "FloorLine" in material:
+        return "KNOWN_FLOOR_MARKING_OVERLAY"
+    if "FloorFence" in material or "Fence" in material:
+        return "KNOWN_FENCE_OR_EDGE"
+    if "Glass" in material:
+        return "GLASS_OR_GLASS_EDGE"
+    if "Pillar" in material:
+        return "PILLAR_OR_SUPPORT"
+    if "Object" in material or "Megalith" in material or "MetalBox" in material:
+        return "OBJECT_OR_PROP"
+    if "Floor" in material or "Bridge" in material or "Grass" in material:
+        return "FLOOR_NAMED_BUT_NOT_ALLOWLISTED"
+    return "NON_FLOOR_MATERIAL"
+
+def local_excluded_nodes(search_box):
+    grouped=defaultdict(list)
+    for ff in faces:
+        ia,ib,ic,o,m=ff
+        if any(t in m for t in ROUTE_GRAPH_WALK_TOKENS):
+            continue
+        tri=[vertices[i] for i in ff[:3]]
+        n=tri_normal(tri)
+        if abs(n[1])<0.35:
+            continue
+        if not bbox3_intersects(tri_bbox3(tri),search_box):
+            continue
+        grouped[(o,m)].append(ff)
+
+    nodes=[]
+    for (o,m),source_faces in sorted(grouped.items()):
+        for local_ci,component in enumerate(face_components_by_shared_vertex(source_faces)):
+            comp_faces=[source_faces[i] for i in component]
+            unique_indices=sorted({vi for ff in comp_faces for vi in ff[:3]})
+            model_vertices=[vertices[i] for i in unique_indices]
+            model_triangles=[
+                [vertices[i] for i in ff[:3]] for ff in comp_faces
+            ]
+            if not model_vertices or not any(
+                bbox3_intersects(tri_bbox3(tri),search_box)
+                for tri in model_triangles
+            ):
+                continue
+            xs=[v[0] for v in model_vertices]
+            ys=[v[1] for v in model_vertices]
+            zs=[v[2] for v in model_vertices]
+            nodes.append({
+                "object":o,
+                "material":m,
+                "component":local_ci,
+                "faces":len(comp_faces),
+                "vertices":len(model_vertices),
+                "model_vertices":model_vertices,
+                "model_triangles":model_triangles,
+                "model_y":[min(ys),max(ys)],
+                "bbox":[min(xs),min(zs),max(xs),max(zs)],
+                "semantic":route_excluded_semantic(m),
+            })
+    return nodes
+
+def strict_bridge_through_excluded(a,b,candidates,threshold):
+    graph_nodes=[a,b]+candidates
+    adjacency=defaultdict(list)
+    edge_distance={}
+    for i in range(len(graph_nodes)):
+        for j in range(i+1,len(graph_nodes)):
+            # Prevent a direct A-B edge from masking whether excluded source
+            # geometry itself provides a strict bridge.
+            if i==0 and j==1:
+                continue
+            d=component_min_surface_distance(
+                graph_nodes[i],graph_nodes[j],threshold
+            )
+            if d is not None and d<=threshold:
+                adjacency[i].append(j); adjacency[j].append(i)
+                edge_distance[(i,j)]=d
+    q=deque([0]); parent={0:None}
+    while q:
+        cur=q.popleft()
+        if cur==1:
+            path=[]; x=cur
+            while x is not None:
+                path.append(x); x=parent[x]
+            path.reverse()
+            return path,edge_distance,graph_nodes
+        for nxt in adjacency[cur]:
+            if nxt in parent:
+                continue
+            parent[nxt]=cur; q.append(nxt)
+    return None,edge_distance,graph_nodes
+
+route_gap_excluded_summaries=[]
+for region_name,nodes in route_graph.items():
+    relaxed_path,_,_,_=route_graph_surface_path(nodes,region_name,2.00)
+    if relaxed_path is None:
+        print(
+            f"T21ROUTEGAPEXCLUDED SUMMARY {region_name} "
+            f"relaxed_path_missing=True"
+        )
+        continue
+
+    for edge_i in range(1,len(relaxed_path)):
+        ai=relaxed_path[edge_i-1]; bi=relaxed_path[edge_i]
+        a=nodes[ai]; b=nodes[bi]
+        gap,best_pair=component_closest_triangle_pair(a,b)
+        if gap<=ROUTE_GAP_STRICT_THRESHOLD+1e-9:
+            continue
+        ta,tb=best_pair
+        local_box=bbox3_expand(
+            bbox3_union(tri_bbox3(ta),tri_bbox3(tb)),
+            ROUTE_GAP_LOCAL_MARGIN
+        )
+        candidates=local_excluded_nodes(local_box)
+        ranked=[]
+        for ci,candidate in enumerate(candidates):
+            da=component_min_surface_distance_exact(
+                a,candidate,ROUTE_GAP_CANDIDATE_DISTANCE
+            )
+            db=component_min_surface_distance_exact(
+                candidate,b,ROUTE_GAP_CANDIDATE_DISTANCE
+            )
+            if da is None and db is None:
+                continue
+            ranked.append((
+                max(
+                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if da is None else da,
+                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if db is None else db
+                ),
+                (
+                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if da is None else da
+                ) + (
+                    ROUTE_GAP_CANDIDATE_DISTANCE+1 if db is None else db
+                ),
+                ci,da,db
+            ))
+        ranked.sort()
+
+        bridge_path,bridge_edges,bridge_nodes=strict_bridge_through_excluded(
+            a,b,candidates,ROUTE_GAP_STRICT_THRESHOLD
+        )
+        bridge_excluded=(
+            [] if bridge_path is None else bridge_path[1:-1]
+        )
+        summary={
+            "region":region_name,
+            "edge":edge_i-1,
+            "gap":gap,
+            "a":a,
+            "b":b,
+            "candidate_count":len(candidates),
+            "bridge_path":bridge_path,
+            "bridge_excluded":bridge_excluded,
+        }
+        route_gap_excluded_summaries.append(summary)
+        print(
+            f"T21ROUTEGAPEXCLUDED GAP {region_name} edge={edge_i-1} "
+            f"gap={gap:.6f} "
+            f"a={a['object']}::{a['material']}::ci{a['component']} "
+            f"b={b['object']}::{b['material']}::ci{b['component']} "
+            f"local_box={[round(v,6) for v in local_box]} "
+            f"excluded_candidates={len(candidates)} "
+            f"strict_bridge={bridge_path is not None} "
+            f"bridge_nodes={0 if bridge_path is None else len(bridge_path)}"
+        )
+        for rank_i,(_,_,ci,da,db) in enumerate(ranked[:24]):
+            n=candidates[ci]
+            print(
+                f"T21ROUTEGAPEXCLUDED CANDIDATE {region_name} "
+                f"edge={edge_i-1} rank={rank_i} "
+                f"da={None if da is None else round(da,6)} "
+                f"db={None if db is None else round(db,6)} "
+                f"obj={n['object']} mat={n['material']} ci={n['component']} "
+                f"faces={n['faces']} verts={n['vertices']} "
+                f"y=({n['model_y'][0]:.6f},{n['model_y'][1]:.6f}) "
+                f"bbox={[round(v,6) for v in n['bbox']]} "
+                f"semantic={n['semantic']}"
+            )
+        if bridge_path is not None:
+            for pi,node_i in enumerate(bridge_path):
+                n=bridge_nodes[node_i]
+                if node_i==0:
+                    role="ALLOWLIST_A"
+                elif node_i==1:
+                    role="ALLOWLIST_B"
+                else:
+                    role="EXCLUDED_SOURCE"
+                prev_d=None
+                if pi>0:
+                    x=min(bridge_path[pi-1],node_i)
+                    y=max(bridge_path[pi-1],node_i)
+                    prev_d=bridge_edges.get((x,y))
+                print(
+                    f"T21ROUTEGAPEXCLUDED BRIDGE {region_name} "
+                    f"edge={edge_i-1} step={pi} role={role} "
+                    f"prev_d={None if prev_d is None else round(prev_d,6)} "
+                    f"obj={n['object']} mat={n['material']} "
+                    f"ci={n['component']} "
+                    f"semantic={n.get('semantic','ALLOWLISTED_WALK')}"
+                )
+
+print(
+    f"T21ROUTEGAPEXCLUDED SUMMARY gaps={len(route_gap_excluded_summaries)} "
+    f"strict_bridges="
+    f"{sum(1 for s in route_gap_excluded_summaries if s['bridge_path'] is not None)} "
+    f"threshold={ROUTE_GAP_STRICT_THRESHOLD:.2f}"
+)
