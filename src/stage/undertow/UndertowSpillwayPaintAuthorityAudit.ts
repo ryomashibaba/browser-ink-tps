@@ -32,6 +32,11 @@ const AUTHOR_RESOLVED_SLOPE_PAINTABLE_RUNTIME_SOLID_IDS =
     (record) => `UndertowT21D:${record.id}`
   );
 
+const AUTHOR_RESOLVED_ROUTE_RAMP_PAINTABLE_RUNTIME_SOLID_IDS =
+  UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.map(
+    (record) => `UndertowT21D:${record.id}`
+  );
+
 const PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS = [
   'UndertowT21D:spawn-high-positive-z',
   'UndertowT21D:spawn-high-negative-z'
@@ -40,6 +45,7 @@ const PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS = [
 const PAINTABLE_RUNTIME_SOLID_IDS = [
   ...CANONICAL_LEDGER_PAINTABLE_RUNTIME_SOLID_IDS,
   ...AUTHOR_RESOLVED_SLOPE_PAINTABLE_RUNTIME_SOLID_IDS,
+  ...AUTHOR_RESOLVED_ROUTE_RAMP_PAINTABLE_RUNTIME_SOLID_IDS,
   ...PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS
 ] as const;
 
@@ -57,9 +63,6 @@ const UNKNOWN_FLAT_RUNTIME_SOLID_IDS = [
   'UndertowT21D:first-drop-landing-negative-z'
 ] as const;
 
-const UNKNOWN_ROUTE_RAMP_RUNTIME_SOLID_IDS = UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.map(
-  (record) => `UndertowT21D:${record.id}`
-);
 
 export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
   sourceVersion: '7.2.0',
@@ -67,14 +70,11 @@ export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
   paintableRuntimeSolidIds: PAINTABLE_RUNTIME_SOLID_IDS,
   uninkableRuntimeSolidIds: UNINKABLE_RUNTIME_SOLID_IDS,
   unresolvedRuntimeSurfaceIds: [
-    ...UNKNOWN_FLAT_RUNTIME_SOLID_IDS,
-    ...UNKNOWN_ROUTE_RAMP_RUNTIME_SOLID_IDS
+    ...UNKNOWN_FLAT_RUNTIME_SOLID_IDS
   ] as readonly string[],
   confirmedPaintableCount: PAINTABLE_RUNTIME_SOLID_IDS.length,
   confirmedUninkableCount: UNINKABLE_RUNTIME_SOLID_IDS.length,
-  unresolvedCount:
-    UNKNOWN_FLAT_RUNTIME_SOLID_IDS.length +
-    UNKNOWN_ROUTE_RAMP_RUNTIME_SOLID_IDS.length,
+  unresolvedCount: UNKNOWN_FLAT_RUNTIME_SOLID_IDS.length,
   paintAuthorityComplete: false,
   turfScoreabilityEvaluated: false,
   publicStageSchemaFollowup: Object.freeze({
@@ -90,22 +90,22 @@ export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
   }),
   evidenceBoundary: Object.freeze({
     confirmedPaintable:
-      'Existing canonical ledger semantics authorize the center-low pair, right-low pair, and center-origin step-top. Resolution Pass 4 binds the four exact FloorSlope00 central quads. Resolution Pass 5 additionally binds the two exact spawn-high components to current Turf references that explicitly describe the spawn/base high ground as territory that must be inked.',
+      'Existing canonical ledger semantics authorize the center-low pair, right-low pair, and center-origin step-top. Resolution Pass 4 binds the four exact FloorSlope00 central quads. Resolution Pass 5 binds the two exact spawn-high components to current Turf evidence. Resolution Pass 10A binds the two exact FloorConcrete03 route-ramp quads to the author Turf PDF white slope-marker class (same dash family as known paintable slopes, distinctly not the gray uninkable glass class).',
     confirmedUninkable:
       'Author/vector semantics explicitly identify the grate pair and upper-glass family as uninkable; water is also uninkable but is not a current runtime solid because its Y remains unresolved.',
     unresolved:
-      'Underpass floors, first-drop landings, and exact right-low route ramps still have geometry/traversal authority but no equally strong face-specific paint authority in the audited evidence.',
+      'The whole underpass floors outside the already-registered Splat-Zone intersections and the two exact first-drop landing components still lack equally strong face-specific paint authority.'
     materialNameRule:
       'Floor/Concrete/Slope/Grass/Line or other source object/material names are never paint authority by themselves.'
   }),
   missingAuthoritativeEvidence: [
     'Current Temple01 per-face/per-collider paint metadata or a registered paint mask that can be bound to the exact runtime source components.',
     'Or controlled gameplay paint tests/captures for each unresolved component family, registered to fixed Temple01 geometry strongly enough to prove ink acceptance versus rejection.',
-    'For spawn-high surfaces, evidence must also distinguish normal paintability from any spawn/protection behavior instead of assuming ordinary floor semantics.'
+    'For first-drop landing surfaces, current evidence must bind ink acceptance to the exact model-Y=6.0 component rather than merely showing nearby painted ground.'
   ] as const,
   confidence: 'HIGH' as const,
   notes:
-    'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING remains activation-blocking. This audit intentionally does not decide Turf scoreability; TURF_SCOREABLE_MASK_PENDING remains a separate blocker.'
+    'Resolution Pass 10A reduces UNKNOWN runtime paint authority from six solids to four by promoting only the exact mirrored right-low route-ramp pair from author-vector semantics. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING remains activation-blocking for the two whole underpass solids and two first-drop landing solids. Turf scoreability remains separate.'
 });
 
 export const UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS:
@@ -122,6 +122,13 @@ export const UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS:
     evidenceClass: 'AUTHOR_VECTOR_SEMANTIC' as const,
     notes:
       'Resolution Pass 4 binds this exact FloorSlope00 quad to the white dashed central slope field; the author legend marks gray as uninkable and dashes as slope/ramp.'
+  })),
+  ...AUTHOR_RESOLVED_ROUTE_RAMP_PAINTABLE_RUNTIME_SOLID_IDS.map((runtimeSolidId) => ({
+    runtimeSolidId,
+    authority: 'PAINTABLE' as const,
+    evidenceClass: 'AUTHOR_VECTOR_SEMANTIC' as const,
+    notes:
+      'Resolution Pass 10A registers this exact FloorConcrete03 quad to the pinned Turf PDF white slope-marker class: 0.24pt black / 0.96pt dash family, median brightness 255, and 64 brightness levels of separation from the gray uninkable glass class.'
   })),
   ...PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS.map((runtimeSolidId) => ({
     runtimeSolidId,
@@ -164,8 +171,8 @@ export function undertowPaintAuthorityAuditErrors(): readonly string[] {
   ) {
     errors.push('runtime paint-authority counts no longer balance');
   }
-  if (audit.unresolvedCount !== 6 || audit.paintAuthorityComplete) {
-    errors.push('the six remaining unknown runtime paint surfaces must remain localized and activation-blocking');
+  if (audit.unresolvedCount !== 4 || audit.paintAuthorityComplete) {
+    errors.push('the four remaining unknown runtime paint surfaces must remain localized and activation-blocking');
   }
   if (audit.turfScoreabilityEvaluated) {
     errors.push('paint authority audit must not resolve Turf scoreability');
@@ -218,8 +225,23 @@ export function undertowPaintAuthorityAuditErrors(): readonly string[] {
   ) {
     errors.push('four exact central slope quads must remain author-resolved PAINTABLE');
   }
-  if (UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.length !== 2) {
-    errors.push('right-low route ramp unresolved paint family no longer contains two exact source quads');
+  if (
+    UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.length !== 2 ||
+    UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.some(
+      (record) => record.paintAuthority !== 'PAINTABLE'
+    )
+  ) {
+    errors.push('right-low route ramp pair must remain author-resolved PAINTABLE');
+  }
+  for (const id of AUTHOR_RESOLVED_ROUTE_RAMP_PAINTABLE_RUNTIME_SOLID_IDS) {
+    if (!records.some(
+      (record) =>
+        record.runtimeSolidId === id &&
+        record.authority === 'PAINTABLE' &&
+        record.evidenceClass === 'AUTHOR_VECTOR_SEMANTIC'
+    )) {
+      errors.push(`${id}: Resolution Pass 10A route-ramp paint authority record missing`);
+    }
   }
   if (
     UNDERTOW_UPPER_GLASS_SOURCE_MESHES.some(
