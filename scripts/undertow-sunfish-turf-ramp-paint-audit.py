@@ -94,6 +94,43 @@ FIRST_DROP_ADJACENT_GRAY_RECTS = {
 }
 
 
+UNDERPASS_POSITIVE_MODEL = [
+    (-14.562, -3.062),
+    (-13.438, -3.062),
+    (-13.438, -1.938),
+    (-12.938, -1.938),
+    (-12.938, -1.688),
+    (-9.812, -1.688),
+    (-9.812, -1.938),
+    (-9.312, -1.938),
+    (-9.312, -1.438),
+    (-7.188, -1.438),
+    (-7.188, -1.938),
+    (-5.938, -1.688),
+    (-6.062, 6.062),
+    (-8.312, 6.188),
+    (-8.688, 5.938),
+    (-10.812, 5.938),
+    (-11.188, 6.188),
+    (-13.688, 6.188),
+    (-13.688, -2.812),
+    (-14.312, -2.812),
+    (-14.438, -0.438),
+]
+UNDERPASS_POSITIVE_HOLE_MODEL = [
+    (-12.562, -0.188),
+    (-12.188, 0.688),
+    (-11.438, 0.312),
+    (-12.062, -0.312),
+]
+
+UNDERPASS_GLASS_OVERHANG_RECTS = {
+    "positive-z": [420.96, 327.36, 459.48, 364.92],
+    "negative-z": [382.44, 230.28, 420.96, 267.84],
+}
+AUTHOR_GRAY_FILL = [0.752941, 0.752941, 0.752941]
+
+
 def normalized(a, b):
     dx, dy = b[0] - a[0], b[1] - a[1]
     length = math.hypot(dx, dy)
@@ -196,6 +233,17 @@ def polygon_rect_intersection_area(points, rect):
     clipped = clip_polygon_axis(clipped, 1, y0, False)
     clipped = clip_polygon_axis(clipped, 1, y1, True)
     return polygon_area(clipped) if len(clipped) >= 3 else 0.0
+
+
+def polygon_with_holes_rect_intersection_area(outer, holes, rect):
+    area = polygon_rect_intersection_area(outer, rect)
+    for hole in holes:
+        area -= polygon_rect_intersection_area(hole, rect)
+    return max(0.0, area)
+
+
+def mirror_model_points(points):
+    return [(-x, -z) for x, z in points]
 
 
 def point_segment_distance(point, a, b):
@@ -397,7 +445,7 @@ def percentile(sorted_values, fraction):
     return sorted_values[lo] * (1 - t) + sorted_values[hi] * t
 
 
-def raster_brightness_stats(page, polygon, scale=3.0):
+def raster_brightness_stats(page, polygon, scale=3.0, holes=()):
     bbox = rect_of_points(polygon)
     clip = fitz.Rect(*bbox)
     pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), clip=clip, alpha=False)
@@ -410,6 +458,8 @@ def raster_brightness_stats(page, polygon, scale=3.0):
         for ix in range(0, pix.width, step):
             px = bbox[0] + (ix + 0.5) * width_pdf / max(1, pix.width)
             if not point_in_polygon(px, py, polygon):
+                continue
+            if any(point_in_polygon(px, py, hole) for hole in holes):
                 continue
             off = iy * pix.stride + ix * pix.n
             rgb = pix.samples[off:off + 3]
@@ -749,6 +799,140 @@ def main():
             f"lip_residual_m={json.dumps(landing['firstDropLipBoundaryResidualMeters'], separators=(',', ':'))} "
             f"max_lip_residual_m={landing['maxFirstDropLipBoundaryResidualMeters']} "
             f"matches_white={landing['matchesWhiteFlatPaintClass']}"
+        )
+
+    result["underpassPublicSourceClosure"] = {}
+    underpass_model = {
+        "positive-z": (
+            UNDERPASS_POSITIVE_MODEL,
+            [UNDERPASS_POSITIVE_HOLE_MODEL],
+        ),
+        "negative-z": (
+            mirror_model_points(UNDERPASS_POSITIVE_MODEL),
+            [mirror_model_points(UNDERPASS_POSITIVE_HOLE_MODEL)],
+        ),
+    }
+    for side, (model_outer, model_holes) in underpass_model.items():
+        project_outer = [model_to_project(point) for point in model_outer]
+        project_holes = [
+            [model_to_project(point) for point in hole]
+            for hole in model_holes
+        ]
+        pdf_outer = [project_to_pdf(point) for point in project_outer]
+        pdf_holes = [
+            [project_to_pdf(point) for point in hole]
+            for hole in project_holes
+        ]
+        bbox = rect_of_points(pdf_outer)
+        brightness = raster_brightness_stats(
+            page, pdf_outer, holes=pdf_holes
+        )
+        _, _, fill_rows, _ = analyze_region(drawings, bbox, pad=0.0)
+        overlapping_fills = []
+        for row in fill_rows:
+            overlap_area = polygon_with_holes_rect_intersection_area(
+                pdf_outer, pdf_holes, row["bbox"]
+            )
+            if overlap_area <= 1e-9:
+                continue
+            overlapping_fills.append({
+                **row,
+                "underpassOverlapAreaPoints2": round(overlap_area, 9),
+            })
+
+        explicit_fill_colors = sorted({
+            tuple(row["fill"])
+            for row in overlapping_fills
+            if row["fill"] is not None
+        })
+        glass_rect = UNDERPASS_GLASS_OVERHANG_RECTS[side]
+        underpass_area = (
+            polygon_area(pdf_outer)
+            - sum(polygon_area(hole) for hole in pdf_holes)
+        )
+        glass_overlap_area = polygon_with_holes_rect_intersection_area(
+            pdf_outer, pdf_holes, glass_rect
+        )
+        glass_overlap_fraction = (
+            glass_overlap_area / underpass_area
+            if underpass_area > 0
+            else 0.0
+        )
+        distinct_white_floor_fill_recovered = any(
+            color == (1.0, 1.0, 1.0)
+            for color in explicit_fill_colors
+        )
+        only_author_gray_explicit_fills_overlap = (
+            len(explicit_fill_colors) > 0
+            and all(
+                list(color) == AUTHOR_GRAY_FILL
+                for color in explicit_fill_colors
+            )
+        )
+        top_view_occluded_by_glass_class = (
+            brightness["p50"] == 191.0
+            and brightness["darkOrGrayFraction"] >= 0.98
+            and glass_overlap_fraction >= 0.70
+            and only_author_gray_explicit_fills_overlap
+            and not distinct_white_floor_fill_recovered
+        )
+        closure = {
+            "modelOuter": [list(point) for point in model_outer],
+            "modelHoles": [
+                [list(point) for point in hole]
+                for hole in model_holes
+            ],
+            "projectOuter": [
+                [round(x, 9), round(z, 9)]
+                for x, z in project_outer
+            ],
+            "pdfBounds": [
+                round(value, 9)
+                for value in bbox
+            ],
+            "brightness": brightness,
+            "overlappingExplicitFillCount": len(overlapping_fills),
+            "overlappingExplicitFillColors": [
+                list(color) for color in explicit_fill_colors
+            ],
+            "knownGlassOverhangOverlapFraction": round(
+                glass_overlap_fraction, 9
+            ),
+            "distinctWhiteFloorVectorFillRecovered":
+                distinct_white_floor_fill_recovered,
+            "onlyAuthorGrayExplicitFillsOverlap":
+                only_author_gray_explicit_fills_overlap,
+            "topViewOccludedByGlassClass":
+                top_view_occluded_by_glass_class,
+            "wholeUnderpassPaintAuthorityResolved": False,
+            "runtimePromotionAuthorized": False,
+        }
+        result["underpassPublicSourceClosure"][side] = closure
+
+        if not top_view_occluded_by_glass_class:
+            raise RuntimeError(
+                f"{side} underpass no longer demonstrates author-plan glass occlusion: "
+                f"{json.dumps(closure, separators=(',', ':'))}"
+            )
+        if (
+            closure["wholeUnderpassPaintAuthorityResolved"]
+            or closure["runtimePromotionAuthorized"]
+        ):
+            raise RuntimeError(
+                f"{side} underpass public-source closure overpromoted paint authority"
+            )
+
+        print(
+            "T21UNDERPASS_PUBLIC_CLOSURE "
+            f"side={side} "
+            f"bbox={json.dumps(closure['pdfBounds'])} "
+            f"brightness={json.dumps(brightness, separators=(',', ':'))} "
+            f"explicit_fill_count={closure['overlappingExplicitFillCount']} "
+            f"fill_colors={json.dumps(closure['overlappingExplicitFillColors'])} "
+            f"glass_overlap_fraction={closure['knownGlassOverhangOverlapFraction']} "
+            f"white_floor_fill_recovered={closure['distinctWhiteFloorVectorFillRecovered']} "
+            f"occluded={closure['topViewOccludedByGlassClass']} "
+            f"promotion={closure['runtimePromotionAuthorized']}"
         )
 
     pathlib.Path(args.output).write_text(
