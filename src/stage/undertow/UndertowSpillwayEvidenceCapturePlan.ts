@@ -26,6 +26,9 @@ export interface UndertowEvidenceCapture {
 
 export const UNDERTOW_CAPTURE_REQUEST_POLICY = Object.freeze({
   mapAnnotationRequired: true,
+  fullTerrainContextRequired: true,
+  outlineOnlyMapForbidden: true,
+  detailInsetRequiredWhenTargetIsSmall: true,
   requiredMapAnnotations: [
     'CAPTURE_AREA',
     'START_POSITION',
@@ -33,8 +36,17 @@ export const UNDERTOW_CAPTURE_REQUEST_POLICY = Object.freeze({
     'LOOK_AT_BOUNDARY',
     'SYMMETRIC_COUNTERPART_IF_ALLOWED'
   ] as const,
+  requiredContextLayers: [
+    'PLAYABLE_OUTER_BOUNDARY',
+    'MAJOR_FLOOR_REGIONS',
+    'SPAWN_REGIONS',
+    'DROPS_AND_RAMPS',
+    'UPPER_GLASS_AND_UNDERPASS',
+    'GRATES_AND_WATER',
+    'CENTER_REFERENCE'
+  ] as const,
   notes:
-    'Future user capture requests must include a marked stage map; prose-only location instructions are not sufficient.'
+    'Future user capture requests must use a context-rich canonical stage map: the instruction overlay is drawn on top of the known full terrain/major-geometry context, not on an empty outer silhouette. A zoomed inset is additionally required when the target is too small to identify reliably at full-stage scale.'
 });
 
 /**

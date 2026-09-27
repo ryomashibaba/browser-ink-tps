@@ -41,12 +41,24 @@ describe('T21 Undertow targeted evidence capture plan', () => {
 
   it('requires a marked-map guide for every future capture request', () => {
     expect(UNDERTOW_CAPTURE_REQUEST_POLICY.mapAnnotationRequired).toBe(true);
+    expect(UNDERTOW_CAPTURE_REQUEST_POLICY.fullTerrainContextRequired).toBe(true);
+    expect(UNDERTOW_CAPTURE_REQUEST_POLICY.outlineOnlyMapForbidden).toBe(true);
+    expect(UNDERTOW_CAPTURE_REQUEST_POLICY.detailInsetRequiredWhenTargetIsSmall).toBe(true);
     expect(UNDERTOW_CAPTURE_REQUEST_POLICY.requiredMapAnnotations).toEqual([
       'CAPTURE_AREA',
       'START_POSITION',
       'ROUTE_OR_CAMERA_DIRECTION',
       'LOOK_AT_BOUNDARY',
       'SYMMETRIC_COUNTERPART_IF_ALLOWED'
+    ]);
+    expect(UNDERTOW_CAPTURE_REQUEST_POLICY.requiredContextLayers).toEqual([
+      'PLAYABLE_OUTER_BOUNDARY',
+      'MAJOR_FLOOR_REGIONS',
+      'SPAWN_REGIONS',
+      'DROPS_AND_RAMPS',
+      'UPPER_GLASS_AND_UNDERPASS',
+      'GRATES_AND_WATER',
+      'CENTER_REFERENCE'
     ]);
   });
 
