@@ -1970,3 +1970,63 @@ if vertex_xor:
     raise SystemExit(
         f"T21 upper glass audit failed: 3D vertex mirror XOR {len(vertex_xor)}"
     )
+
+
+# T21-D water visual-plane audit.
+#
+# XZ hazard polygons are already CONFIRMED from the vector source. This pass
+# asks only whether the locally registered Temple01 mesh supplies an actual
+# Water/Sea/River horizontal visual surface and its project-space Y. It does
+# not infer a death threshold from that visual plane.
+WATER_SOURCE_PDF={
+    "TEAM_A":[
+        (556.8,444.72),(598.8,444.72),(598.8,426.12),
+        (561.36,426.12),(561.36,430.68),(556.8,430.68)
+    ],
+    "TEAM_B":[
+        (243.12,150.48),(243.12,169.08),(280.56,169.08),
+        (280.56,164.52),(285.12,164.52),(285.12,150.48)
+    ],
+}
+for water_name,pdf_poly in WATER_SOURCE_PDF.items():
+    poly=[pdf_to_model(p) for p in pdf_poly]
+    xmin=min(p[0] for p in poly); xmax=max(p[0] for p in poly)
+    zmin=min(p[1] for p in poly); zmax=max(p[1] for p in poly)
+    total=0
+    covered=0
+    y_hist=defaultdict(int)
+    source_hist=defaultdict(int)
+    for ix in range(math.floor(xmin/STEP),math.ceil(xmax/STEP)+1):
+        x=ix*STEP
+        for iz in range(math.floor(zmin/STEP),math.ceil(zmax/STEP)+1):
+            z=iz*STEP
+            if not inside_poly(x,z,poly):
+                continue
+            total+=1
+            hits=[]
+            for fi in face_candidates(x,z):
+                ia,ib,ic,o,m=faces[fi]
+                if not any(t in o or t in m for t in WATER_TOKENS):
+                    continue
+                tri=[vertices[ia],vertices[ib],vertices[ic]]
+                n=tri_normal(tri)
+                if abs(n[1])<0.75 or not contains_xz(x,z,tri):
+                    continue
+                y=interp_y(x,z,tri)
+                hits.append((y,o,m))
+            if not hits:
+                continue
+            covered+=1
+            y,o,m=max(hits,key=lambda h:h[0])
+            py=y-3.0
+            y_hist[round(py,4)]+=1
+            source_hist[(o,m,round(py,4))]+=1
+    print(
+        f"T21WATER VISUAL {water_name} cells={total} covered={covered} "
+        f"coverage={(covered/total if total else 0):.6f} "
+        f"y_hist={sorted(y_hist.items())}"
+    )
+    print(
+        f"T21WATER SOURCE {water_name} "
+        f"{sorted(source_hist.items(),key=lambda kv:-kv[1])[:20]}"
+    )
