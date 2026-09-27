@@ -28,6 +28,7 @@ import {
 import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
 import { UNDERTOW_WATER_KILL_AUTHORITY_AUDIT } from './UndertowSpillwayWaterKillAuthorityAudit';
 import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
+import { UNDERTOW_TURF_SCOREABLE_MASK_AUDIT } from './UndertowSpillwayTurfScoreableMaskAudit';
 import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
@@ -368,6 +369,14 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
     )
   ) {
     errors.push('unresolved runtime paint authority must remain activation-blocking');
+  }
+  if (
+    !UNDERTOW_TURF_SCOREABLE_MASK_AUDIT.scoreMaskResolved &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'TURF_SCOREABLE_MASK_PENDING'
+    )
+  ) {
+    errors.push('unresolved Turf scoreable mask must remain activation-blocking');
   }
   return errors;
 }
