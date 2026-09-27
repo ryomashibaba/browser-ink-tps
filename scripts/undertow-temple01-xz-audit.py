@@ -1923,17 +1923,22 @@ def build_compact_mesh(selected_faces):
     return out_vertices,out_indices
 
 upper_glass_meshes={}
+upper_glass_model_vertices={}
 for side_name,pred in (
     ("POS_GLASS_SOURCE",lambda cx,cz: (-14.0<=cx<=-5.5 and -2.5<=cz<=7.8)),
     ("NEG_GLASS_SOURCE",lambda cx,cz: (5.5<=cx<=14.0 and -7.8<=cz<=2.5)),
 ):
     selected=[]
+    model_vertex_set=set()
     for ff in glass_faces:
         tri=[vertices[i] for i in ff[:3]]
         cx=sum(v[0] for v in tri)/3
         cz=sum(v[2] for v in tri)/3
         if pred(cx,cz):
             selected.append(ff)
+            for vi in ff[:3]:
+                v=vertices[vi]
+                model_vertex_set.add((round(v[0],6),round(v[1],6),round(v[2],6)))
     verts,inds=build_compact_mesh(selected)
     if not selected or len(inds)!=len(selected)*3:
         raise SystemExit(f"T21 upper glass audit failed: invalid mesh for {side_name}")
@@ -1953,22 +1958,29 @@ for side_name,pred in (
         + json.dumps({"vertices":verts,"indices":inds},separators=(",",":"))
     )
     upper_glass_meshes[side_name]=(verts,inds)
+    upper_glass_model_vertices[side_name]=model_vertex_set
 
 if set(upper_glass_meshes)!={"POS_GLASS_SOURCE","NEG_GLASS_SOURCE"}:
     raise SystemExit("T21 upper glass audit failed: both central structures required")
 
-pos_vertices=set(upper_glass_meshes["POS_GLASS_SOURCE"][0])
-neg_vertices=set(upper_glass_meshes["NEG_GLASS_SOURCE"][0])
-mirrored_pos={(round(-x,6),round(y,6),round(-z,6)) for x,y,z in pos_vertices}
-vertex_xor=mirrored_pos ^ neg_vertices
+# Symmetry is a Temple01 model-space property. Do not test project-origin
+# symmetry after registration, because REG_TX/REG_TZ intentionally introduce a
+# small translation and would create a false residual.
+pos_model=upper_glass_model_vertices["POS_GLASS_SOURCE"]
+neg_model=upper_glass_model_vertices["NEG_GLASS_SOURCE"]
+mirrored_pos_model={
+    (round(-x,6),round(y,6),round(-z,6))
+    for x,y,z in pos_model
+}
+vertex_xor=mirrored_pos_model ^ neg_model
 print(
-    f"T21UPPERGLASS SYMMETRY pos_verts={len(pos_vertices)} neg_verts={len(neg_vertices)} "
-    f"xor={len(vertex_xor)} missing={len(mirrored_pos-neg_vertices)} "
-    f"extra={len(neg_vertices-mirrored_pos)}"
+    f"T21UPPERGLASS SYMMETRY model_space=1 pos_verts={len(pos_model)} neg_verts={len(neg_model)} "
+    f"xor={len(vertex_xor)} missing={len(mirrored_pos_model-neg_model)} "
+    f"extra={len(neg_model-mirrored_pos_model)}"
 )
 if vertex_xor:
     raise SystemExit(
-        f"T21 upper glass audit failed: 3D vertex mirror XOR {len(vertex_xor)}"
+        f"T21 upper glass audit failed: model-space 3D vertex mirror XOR {len(vertex_xor)}"
     )
 
 
