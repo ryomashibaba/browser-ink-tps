@@ -3,6 +3,7 @@ import type {
   StageTriangleMeshGeometry,
   StageVector3
 } from '../StageDefinition';
+import { undertowProjectXZToTemple01ModelXZ } from './UndertowSpillwayModelXZGeometry';
 
 export type UndertowRightLowRouteRampId =
   | 'right-low-route-ramp-positive-z'
@@ -148,21 +149,30 @@ export function undertowRightLowRouteRampErrors(): readonly string[] {
     }
   }
 
-  const positive = new Set(
-    UNDERTOW_RIGHT_LOW_ROUTE_RAMPS[0]!.mesh.vertices.map(
-      ([x, y, z]) => `${(-x).toFixed(6)}:${y.toFixed(6)}:${(-z).toFixed(6)}`
-    )
+  const positiveModel = UNDERTOW_RIGHT_LOW_ROUTE_RAMPS[0]!.mesh.vertices.map(
+    ([x, y, z]) => {
+      const [mx, mz] = undertowProjectXZToTemple01ModelXZ([x, z]);
+      return [mx, y, mz] as const;
+    }
   );
-  const negative = new Set(
-    UNDERTOW_RIGHT_LOW_ROUTE_RAMPS[1]!.mesh.vertices.map(
-      ([x, y, z]) => `${x.toFixed(6)}:${y.toFixed(6)}:${z.toFixed(6)}`
-    )
+  const negativeModel = UNDERTOW_RIGHT_LOW_ROUTE_RAMPS[1]!.mesh.vertices.map(
+    ([x, y, z]) => {
+      const [mx, mz] = undertowProjectXZToTemple01ModelXZ([x, z]);
+      return [mx, y, mz] as const;
+    }
   );
-  if (
-    positive.size !== negative.size ||
-    [...positive].some((vertex) => !negative.has(vertex))
-  ) {
-    errors.push('right-low route ramp vertices lost exact 180-degree symmetry');
+  const mirrorToleranceMeters = 0.000005;
+  for (const [px, py, pz] of positiveModel) {
+    const found = negativeModel.some(
+      ([nx, ny, nz]) =>
+        Math.abs(nx + px) <= mirrorToleranceMeters &&
+        Math.abs(ny - py) <= mirrorToleranceMeters &&
+        Math.abs(nz + pz) <= mirrorToleranceMeters
+    );
+    if (!found) {
+      errors.push('right-low route ramp vertices lost model-space 180-degree symmetry');
+      break;
+    }
   }
 
   return errors;

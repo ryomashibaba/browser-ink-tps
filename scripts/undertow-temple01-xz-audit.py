@@ -2654,3 +2654,153 @@ for side,links in (
             separators=(",",":")
         )
     )
+
+
+# T21-D right-small-drop one-way off-mesh-link candidate audit.
+#
+# Uses the separate HIGH hard edge and independently verified spawn-high /
+# right-low masks. POS is canonicalized from the registered source lip; NEG is
+# the exact 180-degree model-space mirror and must exist in the NEG masks.
+RIGHT_SMALL_DROP_LIPS_PDF={
+    "POS":[(664.68,394.2),(702.36,394.2),(702.36,350.76)],
+    "NEG":[(177.24,201.0),(139.56,201.0),(139.56,244.44)],
+}
+
+right_small_drop_sampled={}
+for side in ("POS","NEG"):
+    upper_name=f"{side}_SPAWN_HIGH"
+    lower_name=f"{side}_RIGHT_LOW"
+    upper_mask,upper_y=spawn_route_floor_masks[upper_name]
+    lower_mask,lower_y=spawn_route_floor_masks[lower_name]
+    samples=sample_polyline_model(
+        RIGHT_SMALL_DROP_LIPS_PDF[side],
+        FIRST_DROP_LINK_SAMPLE_SPACING_METERS
+    )
+    links=[]
+    seen=set()
+    for si,sample in enumerate(samples):
+        upper=nearest_mask_cell(
+            upper_mask,sample,FIRST_DROP_LINK_SEARCH_RADIUS_METERS
+        )
+        lower=nearest_mask_cell(
+            lower_mask,sample,FIRST_DROP_LINK_SEARCH_RADIUS_METERS
+        )
+        if upper is None or lower is None:
+            print(
+                f"T21RIGHTDROP LINK_REJECT {side} sample={si} "
+                f"point=({sample[0]:.6f},{sample[1]:.6f}) "
+                f"upper={upper is not None} lower={lower is not None}"
+            )
+            continue
+        key=(upper[1],lower[1])
+        if key in seen:
+            continue
+        seen.add(key)
+        ux,uz=upper[2]; lx,lz=lower[2]
+        upx,upz=model_to_project((ux,uz))
+        lpx,lpz=model_to_project((lx,lz))
+        record={
+            "sample":si,
+            "upper_cell":upper[1],
+            "lower_cell":lower[1],
+            "upper_distance":upper[0],
+            "lower_distance":lower[0],
+            "start_project":[round(upx,6),round(upper_y-3.0,6),round(upz,6)],
+            "end_project":[round(lpx,6),round(lower_y-3.0,6),round(lpz,6)],
+        }
+        links.append(record)
+        print(
+            f"T21RIGHTDROP LINK {side} sample={si} "
+            f"upper_cell={upper[1]} lower_cell={lower[1]} "
+            f"upper_d={upper[0]:.6f} lower_d={lower[0]:.6f} "
+            f"start={record['start_project']} end={record['end_project']}"
+        )
+    right_small_drop_sampled[side]=links
+    print(
+        f"T21RIGHTDROP SUMMARY {side} samples={len(samples)} "
+        f"accepted={len(links)} rejected={len(samples)-len(links)}"
+    )
+
+pos_right_links=right_small_drop_sampled["POS"]
+neg_right_sampled=right_small_drop_sampled["NEG"]
+if not pos_right_links or not neg_right_sampled:
+    raise SystemExit("T21 right-small-drop audit failed: no sampled links")
+
+neg_right_upper_mask,neg_right_upper_y=spawn_route_floor_masks["NEG_SPAWN_HIGH"]
+neg_right_lower_mask,neg_right_lower_y=spawn_route_floor_masks["NEG_RIGHT_LOW"]
+neg_right_links=[]
+missing_right_mirror=[]
+for rec in pos_right_links:
+    upper_cell=(-rec["upper_cell"][0],-rec["upper_cell"][1])
+    lower_cell=(-rec["lower_cell"][0],-rec["lower_cell"][1])
+    if (
+        upper_cell not in neg_right_upper_mask or
+        lower_cell not in neg_right_lower_mask
+    ):
+        missing_right_mirror.append((upper_cell,lower_cell))
+        continue
+    ux,uz=cell_xy(upper_cell)
+    lx,lz=cell_xy(lower_cell)
+    upx,upz=model_to_project((ux,uz))
+    lpx,lpz=model_to_project((lx,lz))
+    neg_right_links.append({
+        "sample":rec["sample"],
+        "upper_cell":upper_cell,
+        "lower_cell":lower_cell,
+        "start_project":[
+            round(upx,6),round(neg_right_upper_y-3.0,6),round(upz,6)
+        ],
+        "end_project":[
+            round(lpx,6),round(neg_right_lower_y-3.0,6),round(lpz,6)
+        ],
+    })
+
+if missing_right_mirror:
+    raise SystemExit(
+        "T21 right-small-drop audit failed: mirrored cells absent from NEG "
+        f"masks: {missing_right_mirror}"
+    )
+
+pos_right_pairs={
+    (tuple(rec["upper_cell"]),tuple(rec["lower_cell"]))
+    for rec in pos_right_links
+}
+neg_right_pairs={
+    (tuple(rec["upper_cell"]),tuple(rec["lower_cell"]))
+    for rec in neg_right_links
+}
+mirrored_pos_right_pairs={
+    ((-u[0],-u[1]),(-l[0],-l[1]))
+    for u,l in pos_right_pairs
+}
+right_link_pair_xor=mirrored_pos_right_pairs ^ neg_right_pairs
+print(
+    f"T21RIGHTDROP MIRROR pos={len(pos_right_pairs)} "
+    f"neg_canonical={len(neg_right_pairs)} "
+    f"neg_sampled={len(neg_right_sampled)} "
+    f"xor={len(right_link_pair_xor)}"
+)
+if right_link_pair_xor:
+    raise SystemExit(
+        "T21 right-small-drop audit failed: canonical mirrored pair XOR "
+        f"{len(right_link_pair_xor)}"
+    )
+
+for side,links in (("POS",pos_right_links),("NEG",neg_right_links)):
+    print(
+        "T21RIGHTDROP CANDIDATE_JSON "
+        + side
+        + " "
+        + json.dumps(
+            [
+                {
+                    "start":rec["start_project"],
+                    "end":rec["end_project"],
+                    "upper_cell":rec["upper_cell"],
+                    "lower_cell":rec["lower_cell"],
+                }
+                for rec in links
+            ],
+            separators=(",",":")
+        )
+    )

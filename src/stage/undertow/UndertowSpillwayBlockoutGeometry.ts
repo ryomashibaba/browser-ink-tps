@@ -1,5 +1,6 @@
 import { SurfaceFlags } from '../../ink/types';
 import type {
+  StageNavigationLinkDefinition,
   StagePaintSurfaceDefinition,
   StageSolidDefinition,
   StageWorldBounds
@@ -25,6 +26,7 @@ import {
   undertowUpperGlassVisualStageSolids
 } from './UndertowSpillwayUpperGlassMeshGeometry';
 import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
+import { undertowFirstDropNavigationLinks } from './UndertowSpillwayDropNavigation';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
 export const UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS = 0.125;
@@ -38,6 +40,7 @@ export interface UndertowBlockoutGeometryPackage {
   activationReady: false;
   solids: readonly StageSolidDefinition[];
   paintSurfaces: readonly StagePaintSurfaceDefinition[];
+  navigationLinks: readonly StageNavigationLinkDefinition[];
   worldBounds: StageWorldBounds;
   teamASpawnFloorPoint: readonly [number, number, number];
   teamBSpawnFloorPoint: readonly [number, number, number];
@@ -188,6 +191,7 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     activationReady: false as const,
     solids,
     paintSurfaces,
+    navigationLinks: undertowFirstDropNavigationLinks(),
     worldBounds,
     teamASpawnFloorPoint: [spawnA[0], 7.5, spawnA[1]] as const,
     teamBSpawnFloorPoint: [spawnB[0], 7.5, spawnB[1]] as const,
