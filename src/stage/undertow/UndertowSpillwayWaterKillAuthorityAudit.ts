@@ -70,6 +70,11 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
   exactVisualToKillMetricOffsetResolved: false,
   exactVisualToKillMetricOffsetMeters: null,
   waterContactRelationUserDirectGameplayKnowledgeAccepted: true,
+  mappedWaterPairQualitativeDeathBehaviorRelationResolved: true,
+  mappedWaterPairSameEssentiallyImmediateDeathBehavior: true,
+  exactMappedWaterPairKillThresholdEqualityResolved: false,
+  exactMappedWaterPairKillThresholdDeltaMeters: null,
+  mappedWaterPairDeathRelationUserDirectGameplayKnowledgeAccepted: true,
   visualWaterYCanDefineKillThreshold: false,
   killThresholdResolved: false,
   killThresholdMeters: null,
@@ -82,7 +87,7 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
     'Alternatively, controlled current normal-PvP vertical-crossing evidence registered to fixed Temple01 geometry tightly enough to bound the death trigger Y without reusing the unresolved visual-water plane.'
   ] as const,
   notes:
-    'Pass 14A adds direct gameplay knowledge that visible-water contact causes essentially immediate death, ruling out a large perceptible vertical separation between the visual surface and water-death trigger. This does not recover either world-Y value or a metric offset. The Pass 11B public-source gap therefore remains: no Temple01 death-locator instance body was recovered, no exact kill Y is promoted, and WATER_KILL_THRESHOLD_PENDING remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
+    'Pass 14A establishes essentially-immediate death at visible-water contact. Pass 14B adds that both mapped internal water hazards show the same qualitative contact-death behavior and appear to share the same visible surface height. Neither pass establishes numerically identical thresholds, a shared exact world Y, or the relationship to exterior fall-out. WATER_KILL_THRESHOLD_PENDING therefore remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
 });
 
 export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
@@ -157,6 +162,15 @@ export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
     !audit.waterContactRelationUserDirectGameplayKnowledgeAccepted
   ) {
     errors.push('Pass 14A qualitative visual-water/death relationship drifted or overclaimed metric authority');
+  }
+  if (
+    !audit.mappedWaterPairQualitativeDeathBehaviorRelationResolved ||
+    !audit.mappedWaterPairSameEssentiallyImmediateDeathBehavior ||
+    audit.exactMappedWaterPairKillThresholdEqualityResolved ||
+    audit.exactMappedWaterPairKillThresholdDeltaMeters !== null ||
+    !audit.mappedWaterPairDeathRelationUserDirectGameplayKnowledgeAccepted
+  ) {
+    errors.push('Pass 14B mapped-water death relation drifted or overclaimed exact threshold equality');
   }
   if (audit.visualWaterYCanDefineKillThreshold) {
     errors.push('visual water Y must not be reused as kill-threshold authority');

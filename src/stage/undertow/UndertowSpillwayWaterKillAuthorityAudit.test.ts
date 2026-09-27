@@ -22,6 +22,11 @@ describe('T21-D water kill authority audit', () => {
       exactVisualToKillMetricOffsetResolved: false,
       exactVisualToKillMetricOffsetMeters: null,
       waterContactRelationUserDirectGameplayKnowledgeAccepted: true,
+      mappedWaterPairQualitativeDeathBehaviorRelationResolved: true,
+      mappedWaterPairSameEssentiallyImmediateDeathBehavior: true,
+      exactMappedWaterPairKillThresholdEqualityResolved: false,
+      exactMappedWaterPairKillThresholdDeltaMeters: null,
+      mappedWaterPairDeathRelationUserDirectGameplayKnowledgeAccepted: true,
       confidence: 'HIGH'
     });
   });
@@ -35,6 +40,15 @@ describe('T21-D water kill authority audit', () => {
     expect(audit.exactVisualToKillMetricOffsetMeters).toBeNull();
     expect(audit.killThresholdResolved).toBe(false);
     expect(audit.killThresholdMeters).toBeNull();
+  });
+
+  it('records the two mapped water hazards as qualitatively equivalent without exact threshold promotion', () => {
+    const audit = UNDERTOW_WATER_KILL_AUTHORITY_AUDIT;
+    expect(audit.mappedWaterPairQualitativeDeathBehaviorRelationResolved).toBe(true);
+    expect(audit.mappedWaterPairSameEssentiallyImmediateDeathBehavior).toBe(true);
+    expect(audit.exactMappedWaterPairKillThresholdEqualityResolved).toBe(false);
+    expect(audit.exactMappedWaterPairKillThresholdDeltaMeters).toBeNull();
+    expect(audit.waterAndExteriorFallOutShareThresholdResolved).toBe(false);
   });
 
   it('records Mpt_PlayerDead only as a generic death-locator mechanism candidate', () => {

@@ -6,7 +6,7 @@ import {
 
 describe('T21 user capture evidence', () => {
   it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(11);
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(12);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -53,6 +53,11 @@ describe('T21 user capture evidence', () => {
         'user-water-surface-contact-death-knowledge-2026-09-28'
       ).region
     ).toBe('WATER_SURFACE_CONTACT_DEATH_RELATION');
+    expect(
+      undertowCaptureEvidence(
+        'user-water-pair-equivalence-knowledge-2026-09-28'
+      ).region
+    ).toBe('WATER_PAIR_QUALITATIVE_EQUIVALENCE');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -156,6 +161,17 @@ describe('T21 user capture evidence', () => {
     expect(facts).toContain('not separated by a large perceptible vertical gap');
     expect(facts).toContain('does not establish an exact visual-water world Y');
     expect(facts).toContain('does not establish whether exterior fall-out uses the same vertical death trigger');
+  });
+
+  it('records the two mapped water hazards as qualitatively equivalent without inventing exact shared Y', () => {
+    const waterPair = undertowCaptureEvidence(
+      'user-water-pair-equivalence-knowledge-2026-09-28'
+    );
+    const facts = waterPair.facts.join(' ');
+    expect(facts).toContain('share the same visible surface height');
+    expect(facts).toContain('same essentially-immediate death behavior');
+    expect(facts).toContain('does not establish an exact shared world Y');
+    expect(facts).toContain('does not establish the relationship to exterior fall-out');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {

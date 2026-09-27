@@ -20,6 +20,20 @@ describe('T21-D water geometry audit', () => {
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.resolutionPass).toBe('11B');
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.sourceTarget)
       .toBe('CURRENT_POST_VER_7_2_NORMAL_PVP');
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT
+        .mappedWaterPairQualitativeVisibleHeightRelationResolved
+    ).toBe(true);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT
+        .mappedWaterPairAppearsSameVisibleSurfaceHeight
+    ).toBe(true);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.exactMappedWaterPairHeightDeltaResolved
+    ).toBe(false);
+    expect(
+      UNDERTOW_WATER_VISUAL_PLANE_AUDIT.exactMappedWaterPairHeightDeltaMeters
+    ).toBeNull();
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneResolved).toBe(false);
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneMeters).toBeNull();
     expect(UNDERTOW_WATER_VISUAL_PLANE_AUDIT.killThresholdResolved).toBe(false);

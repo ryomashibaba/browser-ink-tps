@@ -9,7 +9,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28'
   | 'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28'
   | 'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28'
-  | 'user-water-surface-contact-death-knowledge-2026-09-28';
+  | 'user-water-surface-contact-death-knowledge-2026-09-28'
+  | 'user-water-pair-equivalence-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -28,7 +29,8 @@ export interface UndertowUserCaptureEvidence {
     | 'UPPER_GLASS_THROWN_SUB_SOLID_COLLISION'
     | 'UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT'
     | 'UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION'
-    | 'WATER_SURFACE_CONTACT_DEATH_RELATION';
+    | 'WATER_SURFACE_CONTACT_DEATH_RELATION'
+    | 'WATER_PAIR_QUALITATIVE_EQUIVALENCE';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -169,6 +171,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'This resolves the qualitative gameplay relationship that the visible surface and water-death trigger are not separated by a large perceptible vertical gap.',
         'The answer does not establish an exact visual-water world Y, an exact kill-threshold world Y, or a metric offset between them.',
         'The answer also does not establish whether exterior fall-out uses the same vertical death trigger as the two mapped internal water hazards.'
+      ]
+    },
+    {
+      id: 'user-water-pair-equivalence-knowledge-2026-09-28',
+      region: 'WATER_PAIR_QUALITATIVE_EQUIVALENCE',
+      confidence: 'CONFIRMED',
+      facts: [
+        'For Pass 14B the user selects behavior A: the two mapped Undertow water hazards appear to share the same visible surface height.',
+        'The user also states that contacting either mapped water hazard produces the same essentially-immediate death behavior.',
+        'This resolves qualitative pair equivalence for visible height and contact-death behavior, but does not establish an exact shared world Y, an exact zero-meter height delta, or numerically identical kill thresholds.',
+        'The answer remains scoped to the two mapped internal water hazards and does not establish the relationship to exterior fall-out.'
       ]
     }
   ];

@@ -84,6 +84,11 @@ export const UNDERTOW_WATER_VISUAL_PLANE_AUDIT = Object.freeze({
     notes:
       'Resolution Pass 11B compares the published Vss_Temple01 SceneInfo/VersusSceneInfo metadata across snapshots 720, 800, 920, and 1130. SceneInfo is stable and preloads only Model/Fld_Temple01.bfres. VersusSceneInfo remains stage identity/display metadata; 920/1130 add TclSceneName=Vss_Temple00, but no placement transform or Banc body. LeagueTypeInfo only exposes a Tower-Control modifier path. Public metadata therefore does not contain the normal/Turf Temple01 placement-environment body needed to recover visual-water Y.'
   }),
+  mappedWaterPairQualitativeVisibleHeightRelationResolved: true,
+  mappedWaterPairAppearsSameVisibleSurfaceHeight: true,
+  exactMappedWaterPairHeightDeltaResolved: false,
+  exactMappedWaterPairHeightDeltaMeters: null,
+  mappedWaterPairRelationUserDirectGameplayKnowledgeAccepted: true,
   visualPlaneResolved: false,
   visualPlaneMeters: null,
   killThresholdResolved: false,
@@ -94,7 +99,7 @@ export const UNDERTOW_WATER_VISUAL_PLANE_AUDIT = Object.freeze({
     'Or independently registered current normal-PvP in-game visual-plane evidence with enough fixed Temple01 geometry references to recover the plane Y without perspective guessing.'
   ] as const,
   notes:
-    'Resolution Pass 11B closes the public-metadata discovery branch without inventing a value. CI #663 found zero obvious named horizontal water-mesh coverage inside the exact mapped cyan hazard polygons. The audited current SceneInfo exposes only Fld_Temple01.bfres as the remodeled-stage preload, the public Temple01 actor-class family contains no explicit Water class, and the public schema shows that the missing BCETT instance body would carry Translate/Rotate/Scale if available. WATER_VISUAL_Y_PENDING therefore remains unresolved with visualPlaneMeters=null; WATER_KILL_THRESHOLD_PENDING remains a separate blocker.'
+    'Pass 14B adds direct gameplay knowledge that the two mapped water hazards appear to share the same visible surface height. This is qualitative pair equivalence only: no exact shared world Y or zero-meter delta is promoted. The Pass 11B public-metadata gap remains, so WATER_VISUAL_Y_PENDING stays unresolved with visualPlaneMeters=null; WATER_KILL_THRESHOLD_PENDING remains separate.'
 });
 
 export function undertowWaterVisualPlaneAuditErrors(): readonly string[] {
@@ -156,6 +161,15 @@ export function undertowWaterVisualPlaneAuditErrors(): readonly string[] {
   }
   if (audit.publicPlacementRecoverySucceeded) {
     errors.push('Pass 11B must not claim recovery of unpublished Temple01 water placement');
+  }
+  if (
+    !audit.mappedWaterPairQualitativeVisibleHeightRelationResolved ||
+    !audit.mappedWaterPairAppearsSameVisibleSurfaceHeight ||
+    audit.exactMappedWaterPairHeightDeltaResolved ||
+    audit.exactMappedWaterPairHeightDeltaMeters !== null ||
+    !audit.mappedWaterPairRelationUserDirectGameplayKnowledgeAccepted
+  ) {
+    errors.push('Pass 14B mapped-water pair relation drifted or overclaimed an exact height delta');
   }
   if (audit.visualPlaneResolved || audit.visualPlaneMeters !== null) {
     errors.push('water visual plane must remain unresolved after the source-gap audit');
