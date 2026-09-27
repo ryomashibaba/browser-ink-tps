@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from pathlib import Path
 import math
+import json
 import sys
 
 OBJ = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/kitrix-lfs/Vss_Temple01.obj")
