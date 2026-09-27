@@ -149,7 +149,7 @@ export const UNDERTOW_UNDERPASS_ROUTE_COMPONENTS:
   readonly UndertowUnderpassRouteRecord[] = SOURCE_ROUTE_COMPONENTS.flatMap(
   (source) =>
     (['POSITIVE_Z', 'NEGATIVE_Z'] as const).map((side) => ({
-      id: `${source.id}-${side === 'POSITIVE_Z' ? 'positive-z' : 'negative-z'}`
+      id: (`${source.id}-${side === 'POSITIVE_Z' ? 'positive-z' : 'negative-z'}`)
         as UndertowUnderpassRouteId,
       side,
       sourceObject: source.sourceObject,
