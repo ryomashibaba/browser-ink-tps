@@ -1025,4 +1025,18 @@ Result:
 - player collision, navigation face binding, full projectile-class behavior, and camera query remain unresolved
 
 No runtime geometry/query flags change in Pass 11A.
+## T21-D Resolution Pass 11B — water/death public metadata closure
 
+Public Temple01 metadata was compared across snapshots 720, 800, 920, and 1130.
+
+Stable findings:
+- SceneInfo `Vss_Temple01` preload = `Model/Fld_Temple01.bfres` only
+- no explicit water resource/transform
+- no normal-mode BCETT body
+- VersusSceneInfo contains identity/display metadata only
+- later `TclSceneName=Vss_Temple00` does not expose placement semantics
+- LeagueTypeInfo only references the already-known Tower-Control modifier BCETT path
+
+Together with the existing zero named-water-mesh coverage and stable generic `Mpt_PlayerDead = Cube / ControlledPlayer` definition, this leaves the missing vertical authority localized to the unpublished/current placement-environment instance data.
+
+No visual-water plane, kill threshold, or death volume is promoted.
