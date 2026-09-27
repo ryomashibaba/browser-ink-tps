@@ -134,7 +134,7 @@ export function undertowUnderpassPaintResolutionAuditErrors(): readonly string[]
 
   if (
     audit.runtimeState.underpassPaintSurfaceCount !== 2 ||
-    audit.runtimeState.unresolvedPaintSolidCount !== 6 ||
+    audit.runtimeState.unresolvedPaintSolidCount !== 4 ||
     !audit.runtimeState.underpassRecordsRemainUnknown ||
     !audit.runtimeState.wholeUnderpassStillNotPaintable
   ) {
