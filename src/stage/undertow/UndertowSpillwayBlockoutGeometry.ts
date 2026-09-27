@@ -150,7 +150,7 @@ for (const item of UNDERTOW_MODEL_XZ_GEOMETRY) {
   } else if (item.id.startsWith('spawn-high-')) {
     modelComponents.push(modelComponent(item, 'light', true));
   } else if (item.id.startsWith('first-drop-landing-')) {
-    modelComponents.push(modelComponent(item, 'light', false));
+    modelComponents.push(modelComponent(item, 'light', true));
   }
 }
 
