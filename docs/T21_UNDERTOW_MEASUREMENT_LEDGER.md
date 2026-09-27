@@ -1040,3 +1040,23 @@ Stable findings:
 Together with the existing zero named-water-mesh coverage and stable generic `Mpt_PlayerDead = Cube / ControlledPlayer` definition, this leaves the missing vertical authority localized to the unpublished/current placement-environment instance data.
 
 No visual-water plane, kill threshold, or death volume is promoted.
+
+## T21-D Resolution Pass 11C — whole-underpass public-source closure
+
+The remaining whole-underpass paint question was projected back into the pinned current Turf author PDF.
+
+Measured top-view values:
+- positive-Z: p50 191, near-white 0.009680, dark/gray 0.990320, Glass overlap 0.772974211
+- negative-Z: p50 191, near-white 0.005022, dark/gray 0.994978, Glass overlap 0.735104783
+- explicit overlapping fill colors on both sides: gray `[0.752941,0.752941,0.752941]`
+- distinct white floor fill recovered: false
+
+This does **not** classify the hidden floor as UNINKABLE. The explicit gray Glass overhang sits above and visually covers most of the same XZ projection, so a top-view author plan cannot expose the floor semantics beneath it.
+
+Result:
+- exact Zones intersections remain PAINTABLE
+- whole underpass remainder remains UNKNOWN
+- no new runtime PaintSurface
+- remaining paint evidence now requires direct under-glass gameplay testing outside the Zones or original hidden-floor paint metadata/mask
+
+This closes the useful public-PDF path for the remaining paint blocker without fabricating authority.
