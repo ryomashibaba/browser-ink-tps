@@ -2312,3 +2312,40 @@ Still intentionally activation-blocking:
 7. `FULL_STAGE_CONNECTIVITY_QA_PENDING`
 
 Do not promote any of those from geometry naming, material naming, visual similarity, or convenience assumptions.
+
+## T21-D exact current Splat Zones vector registration — Resolution Pass 8 (2026-09-27)
+
+The current Sunfish post-Ver.7.2 Splat Zones PDF is now available to repository automation as exact vector evidence.
+
+Pinned public source:
+- file: `(エリア)マテガイ放水路.pdf`
+- bytes: **112,898**
+- SHA-256: `ae2c24c3cc0ed09d5711e229deb7fb6535c3ef6505ea7dead1aca5e69c4d1596`
+- page: **841.92 × 595.32 pt**
+- zone legend: dash-dot enclosure = Splat Zone
+- the dash-dot boundary is emitted as discrete **0.72pt** vector fragments rather than a PDF dash property
+
+Cross-mode registration is now numerical rather than assumed:
+- 42 Turf exterior hard-edge anchors compared
+- **40/42** are shared exactly within **0.000052pt** (≈0.000011m)
+- the two non-matching anchors are the mirrored mode-specific layout changes
+- the existing Turf PDF -> project transform is therefore authorized for the exact Zones vector coordinates
+
+Recovered objective geometry:
+- 2 exact six-vertex L-shaped objective rings
+- source plan area = **117.29875m² per zone**
+- only `zone polygon ∩ audited project-Y=0 underpass floor` is promoted as paint authority
+- registered negative-Z underpass paint area ≈ **58.716712m²**
+- registered positive-Z underpass paint area ≈ **58.525560m²**
+- each promoted surface carries its own footprint and preserves the existing support hole
+- no `Scoreable` flag is added
+
+Authority boundary:
+- the two whole `glass-underpass-*` solids remain solid-level **UNKNOWN**
+- cells outside the registered objective intersections are not promoted
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` therefore remains active
+- `TURF_SCOREABLE_MASK_PENDING` remains separate
+- Undertow remains `activationReady: false`
+- production `inkworks-junction` remains unchanged
+- PR #5 remains Draft / open / unmerged
+
