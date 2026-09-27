@@ -4,21 +4,19 @@ import {
   undertowUnderpassPaintResolutionAuditErrors
 } from './UndertowSpillwayUnderpassPaintResolutionAudit';
 
-describe('T21 Undertow underpass paint Resolution Pass 6', () => {
-  it('confirms a bounded paintable Splat-Zone subregion beneath each glass platform', () => {
+describe('T21 Undertow underpass paint Resolution Pass 8', () => {
+  it('keeps the bounded current Splat-Zone paint evidence', () => {
     expect(undertowUnderpassPaintResolutionAuditErrors()).toEqual([]);
     expect(UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.currentModeEvidence)
       .toMatchObject({
         postVer720Layout: true,
         legendDefinesZoneBoundary: true,
         blueprintShowsTwoBoundedZonesUnderCentralGlass: true,
-        inikipediaSaysBothZonesUnderGlassAreas: true,
-        currentStrategyGuideSaysZonesAreUnderHighPlatformsAndMustBePainted: true,
         objectiveSubregionPaintabilityConfirmed: true
       });
   });
 
-  it('binds that semantic family to the exact mirrored underpass geometry without overpromoting it', () => {
+  it('registers exact zone intersections without promoting the whole underpass', () => {
     expect(UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.exactUnderpassGeometry)
       .toMatchObject({
         componentCount: 2,
@@ -31,20 +29,33 @@ describe('T21 Undertow underpass paint Resolution Pass 6', () => {
       .toMatchObject({
         underGlassFamilyIdentityResolved: true,
         somePaintableSubregionResolved: true,
-        exactZoneFootprintRegisteredToMeters: false,
+        exactZoneFootprintRegisteredToMeters: true,
+        exactZoneUnderpassIntersectionRegistered: true,
+        objectiveSubregionPaintSurfaceAuthorized: true,
         zoneEqualsWholeUnderpassFloor: false,
         wholeUnderpassPaintAuthorityResolved: false,
-        runtimePromotionAuthorized: false
+        wholeUnderpassRuntimePromotionAuthorized: false
       });
+    expect(
+      UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.registrationBoundary
+        .negativeZRegisteredPaintAreaSquareMeters
+    ).toBeGreaterThan(0);
+    expect(
+      UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.registrationBoundary
+        .positiveZRegisteredPaintAreaSquareMeters
+    ).toBeGreaterThan(0);
   });
 
-  it('keeps both runtime underpass solids UNKNOWN until the exact objective polygons are registered', () => {
+  it('adds only two masked paint surfaces while retaining solid-level UNKNOWN authority', () => {
     expect(UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.runtimeState)
       .toMatchObject({
-        underpassPaintSurfaceCount: 0,
+        underpassPaintSurfaceCount: 2,
         unresolvedPaintSolidCount: 6,
-        underpassRecordsRemainUnknown: true
+        underpassRecordsRemainUnknown: true,
+        wholeUnderpassStillNotPaintable: true
       });
+    expect(UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.nextEvidenceNeeded)
+      .toHaveLength(1);
     expect(UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT.activationBlockerCleared)
       .toBe(false);
   });
