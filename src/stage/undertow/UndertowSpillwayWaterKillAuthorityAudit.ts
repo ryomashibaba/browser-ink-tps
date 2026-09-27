@@ -1,5 +1,6 @@
 export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
   sourceVersion: '7.2.0',
+  resolutionPass: '9B' as const,
   mappedWaterHazardXzResolved: true,
   internalVoidClassificationResolved: true,
   exteriorPlayableHardSilhouetteResolved: true,
@@ -10,10 +11,12 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
     shapeType: 'Cube',
     targetMaskType: 'ControlledPlayer',
     locatorScale: 1,
+    verifiedDataSnapshots: ['720', '800', '920', '1130'] as const,
+    definitionStableAcrossVerifiedSnapshots: true,
     stagePlacementResolved: false,
     temple01UsageResolved: false,
     notes:
-      'LocatorInfo exposes Mpt_PlayerDead as a generic cube locator targeting the controlled player. This establishes that an explicit player-death locator type exists in the published game metadata, but it does not expose any Temple01 instance transform, size, rule-layer membership, or water/fall-out binding.'
+      'Direct row reads from Leanny LocatorInfo snapshots 720, 800, 920, and 1130 all give Mpt_PlayerDead = Cube / Scale 1 / ControlledPlayer. This verifies the generic locator definition is stable across the audited range, but it still does not expose any Temple01 instance Translate/Rotate/Scale, size after instance scaling, rule-layer membership, or water/fall-out binding.'
   }),
   comparisonLocatorEvidence: Object.freeze({
     locatorRowId: 'Lft_KeepOutPlayer',
@@ -27,10 +30,17 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
     repository: 'OctoSquiddy/Splatoon-3-Map-Editor',
     sourceCommit: '0e3c66d28b58f7b43df7cdfb6c34514e0ebc1fd4',
     mptPlayerDeadClassPresent: true,
+    placementTransformFields: ['Translate', 'Rotate', 'Scale'] as const,
+    placementTransformSchemaPresent: true,
     exposesTemple01Placement: false,
     exposesKillThresholdParameter: false,
+    referencedTemple01RuleBinLayer:
+      'Work/Banc/BinLayer/Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json',
+    referencedTemple01RuleBinLayerScope:
+      'TOWER_CONTROL_MODIFIER_REFERENCE_ONLY' as const,
+    referencedTemple01RuleBinLayerContentsPublished: false,
     notes:
-      'The public actor schema includes Mpt_PlayerDead, but the class exposes no stage-specific placement or kill-threshold parameter. The missing Temple01 BCETT/BYML placement remains the authority gap.'
+      'The public actor schema includes Mpt_PlayerDead and the shared Mu/SpatialObject schema stores actor Translate/Rotate/Scale. Therefore an actual Temple01 BCETT/BYML instance would be sufficient to bind a death locator geometrically. The audited public repositories expose no Temple01 Mpt_PlayerDead instance body. A metadata reference to a Temple01 Vlf Tower-Control modifier layer exists, but its body is not published there and it is not authority for normal-Turf/water placement.'
   }),
   xzEvidence: Object.freeze({
     exactMappedWaterHazardPair: true,
@@ -39,6 +49,7 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
     notes:
       'The completed XZ audit resolves the two mapped cyan WATER+KILL polygons and excludes additional internal abyss holes. It does not determine the vertical trigger extent or whether water and exterior fall-out share one death volume.'
   }),
+  publicTemple01DeathPlacementRecoverySucceeded: false,
   visualWaterYCanDefineKillThreshold: false,
   killThresholdResolved: false,
   killThresholdMeters: null,
@@ -46,12 +57,12 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
   waterAndExteriorFallOutShareThresholdResolved: false,
   confidence: 'HIGH' as const,
   missingAuthoritativeEvidence: [
-    'Current 7.2+ Temple01 common/rule-layer BCETT or equivalent stage-layout placement for Mpt_PlayerDead or any equivalent player-death locator, including translation, scale, rotation, and layer applicability.',
-    'Evidence that identifies whether the mapped cyan water pair and exterior fall-out use the same vertical death trigger or separate hazard volumes.',
-    'Alternatively, controlled in-game vertical-crossing evidence registered to fixed Temple01 geometry tightly enough to bound the death trigger Y without using the unresolved visual water plane.'
+    'Current post-Ver.7.2 Temple01 common/normal-rule BCETT or equivalent stage-layout instance for Mpt_PlayerDead or an equivalent player-death locator, including Translate/Rotate/Scale and layer applicability.',
+    'Evidence that identifies whether the exact mapped cyan water pair and exterior fall-out use the same vertical death trigger or separate hazard volumes.',
+    'Alternatively, controlled current normal-PvP vertical-crossing evidence registered to fixed Temple01 geometry tightly enough to bound the death trigger Y without reusing the unresolved visual-water plane.'
   ] as const,
   notes:
-    'The horizontal hazard topology is resolved, and public metadata confirms a generic cube-shaped player-death locator type exists. However no current Temple01 placement/transform for that locator is publicly available in the audited sources. Therefore no global kill Y, water kill plane, or death volume is promoted. WATER_KILL_THRESHOLD_PENDING remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
+    'Resolution Pass 9B verifies that the generic Mpt_PlayerDead definition is stable as Cube / Scale 1 / ControlledPlayer across snapshots 720, 800, 920, and 1130, while also proving that the public placement schema requires instance Translate/Rotate/Scale to recover an actual volume. No Temple01 death-locator instance body was recovered from the audited public sources. Therefore no global kill Y, water kill plane, or death volume is promoted; WATER_KILL_THRESHOLD_PENDING remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
 });
 
 export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
@@ -75,6 +86,13 @@ export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
     errors.push('generic locator metadata must not claim Temple01 placement authority');
   }
   if (
+    !audit.genericDeathLocatorEvidence.definitionStableAcrossVerifiedSnapshots ||
+    audit.genericDeathLocatorEvidence.verifiedDataSnapshots.join(',') !==
+      '720,800,920,1130'
+  ) {
+    errors.push('Mpt_PlayerDead cross-snapshot verification drifted');
+  }
+  if (
     audit.comparisonLocatorEvidence.shapeType !== audit.genericDeathLocatorEvidence.shapeType ||
     audit.comparisonLocatorEvidence.targetMaskType !==
       audit.genericDeathLocatorEvidence.targetMaskType
@@ -83,9 +101,18 @@ export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
   }
   if (
     audit.publicActorSchemaEvidence.exposesTemple01Placement ||
-    audit.publicActorSchemaEvidence.exposesKillThresholdParameter
+    audit.publicActorSchemaEvidence.exposesKillThresholdParameter ||
+    !audit.publicActorSchemaEvidence.placementTransformSchemaPresent ||
+    audit.publicActorSchemaEvidence.placementTransformFields.join(',') !==
+      'Translate,Rotate,Scale' ||
+    audit.publicActorSchemaEvidence.referencedTemple01RuleBinLayerScope !==
+      'TOWER_CONTROL_MODIFIER_REFERENCE_ONLY' ||
+    audit.publicActorSchemaEvidence.referencedTemple01RuleBinLayerContentsPublished
   ) {
-    errors.push('public actor schema unexpectedly claims Temple01 kill placement/threshold authority');
+    errors.push('public actor placement-schema boundary drifted');
+  }
+  if (audit.publicTemple01DeathPlacementRecoverySucceeded) {
+    errors.push('Pass 9B must not claim recovery of an unpublished Temple01 death volume');
   }
   if (audit.visualWaterYCanDefineKillThreshold) {
     errors.push('visual water Y must not be reused as kill-threshold authority');
