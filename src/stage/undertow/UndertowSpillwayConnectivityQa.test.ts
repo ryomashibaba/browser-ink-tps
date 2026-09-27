@@ -70,6 +70,22 @@ describe('T21-D partial Recast connectivity QA', () => {
       allTraversableRuntimeGeometryBound: false,
       fullStageConnectivityReady: false
     });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sourceNativeRouteGapAudit)
+      .toMatchObject({
+        sourceWalkableNodeCountPerSide: 276,
+        rightLowContactNodeCountPerSide: 17,
+        underpassContactNodeCountPerSide: 8,
+        directConnectivityThresholdsMeters: [0.03, 0.08, 0.18, 0.30],
+        reachableAtOrBelowMaxDirectThreshold: false,
+        localGapCountTotal: 8,
+        localGapCountPerSide: 4,
+        strictBridgeThresholdMeters: 0.30,
+        strictBridgesWhenAllExcludedSourceIsAllowed: 6,
+        strictBridgesAfterFloorLineAndFenceOverlayRemoval: 0,
+        ordinaryWalkSurfaceRecovered: false,
+        runtimePromotionAuthorized: false,
+        offMeshLinkAuthorized: false
+      });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).toContain('FULL_STAGE_CONNECTIVITY_QA_PENDING');
