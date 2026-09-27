@@ -118,7 +118,18 @@ describe('T21-D upper glass collision authority audit', () => {
       thrownSubBodyPassesThroughGlass: false,
       thrownSubTreatsGlassAsOrdinarySolidSurface: true,
       thrownSubUserDirectGameplayKnowledgeAccepted: true,
-      explosionPropagationResolved: false,
+      subWeaponCrossGlassEffectPropagationResolved: true,
+      crossGlassEffectPassThroughExceptions: ['POISON_MIST', 'POINT_SENSOR'],
+      allOtherSubWeaponCrossGlassEffectsBlocked: true,
+      explosionPropagationResolved: true,
+      explosionPropagationScope: 'SUB_WEAPONS_ONLY',
+      specialWeaponPropagationResolved: false,
+      deployableSubPlacementOnGlassGenerallyAllowed: true,
+      deployablePlacementExamples: ['JUMP_BEACON', 'SPRINKLER', 'SPLASH_SHIELD'],
+      trapPlacementRequiresPaintableFloor: true,
+      trapPlacementOnTransparentGlassAllowed: false,
+      subWeaponPlacementSemanticsResolved: true,
+      subEffectPlacementUserDirectGameplayKnowledgeAccepted: true,
       allProjectileClassesResolved: false,
       runtimeProjectilePromotionAuthorized: false
     });
@@ -146,7 +157,23 @@ describe('T21-D upper glass collision authority audit', () => {
     expect(projectile.thrownSubBodyPassesThroughGlass).toBe(false);
     expect(projectile.thrownSubTreatsGlassAsOrdinarySolidSurface).toBe(true);
     expect(projectile.thrownSubUserDirectGameplayKnowledgeAccepted).toBe(true);
-    expect(projectile.explosionPropagationResolved).toBe(false);
+    expect(projectile.subWeaponCrossGlassEffectPropagationResolved).toBe(true);
+    expect(projectile.crossGlassEffectPassThroughExceptions).toEqual([
+      'POISON_MIST',
+      'POINT_SENSOR'
+    ]);
+    expect(projectile.allOtherSubWeaponCrossGlassEffectsBlocked).toBe(true);
+    expect(projectile.explosionPropagationResolved).toBe(true);
+    expect(projectile.explosionPropagationScope).toBe('SUB_WEAPONS_ONLY');
+    expect(projectile.specialWeaponPropagationResolved).toBe(false);
+    expect(projectile.deployableSubPlacementOnGlassGenerallyAllowed).toBe(true);
+    expect(projectile.deployablePlacementExamples).toEqual([
+      'JUMP_BEACON',
+      'SPRINKLER',
+      'SPLASH_SHIELD'
+    ]);
+    expect(projectile.trapPlacementRequiresPaintableFloor).toBe(true);
+    expect(projectile.trapPlacementOnTransparentGlassAllowed).toBe(false);
   });
 
   it('accepts direct camera-blocking knowledge without inventing exact camera geometry', () => {

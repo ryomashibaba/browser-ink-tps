@@ -65,8 +65,7 @@ export function undertowUpperGlassThrownSubKnowledgeResolutionAuditErrors():
     !projectile.thrownSubBodyCollisionResolved ||
     projectile.thrownSubBodyPassesThroughGlass ||
     !projectile.thrownSubTreatsGlassAsOrdinarySolidSurface ||
-    !projectile.thrownSubUserDirectGameplayKnowledgeAccepted ||
-    projectile.explosionPropagationResolved
+    !projectile.thrownSubUserDirectGameplayKnowledgeAccepted
   ) {
     errors.push('Pass 13D thrown-sub knowledge did not bind cleanly into projectile authority');
   }

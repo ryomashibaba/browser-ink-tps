@@ -68,7 +68,18 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
     thrownSubBodyPassesThroughGlass: false,
     thrownSubTreatsGlassAsOrdinarySolidSurface: true,
     thrownSubUserDirectGameplayKnowledgeAccepted: true,
-    explosionPropagationResolved: false,
+    subWeaponCrossGlassEffectPropagationResolved: true,
+    crossGlassEffectPassThroughExceptions: ['POISON_MIST', 'POINT_SENSOR'] as const,
+    allOtherSubWeaponCrossGlassEffectsBlocked: true,
+    explosionPropagationResolved: true,
+    explosionPropagationScope: 'SUB_WEAPONS_ONLY' as const,
+    specialWeaponPropagationResolved: false,
+    deployableSubPlacementOnGlassGenerallyAllowed: true,
+    deployablePlacementExamples: ['JUMP_BEACON', 'SPRINKLER', 'SPLASH_SHIELD'] as const,
+    trapPlacementRequiresPaintableFloor: true,
+    trapPlacementOnTransparentGlassAllowed: false,
+    subWeaponPlacementSemanticsResolved: true,
+    subEffectPlacementUserDirectGameplayKnowledgeAccepted: true,
     allProjectileClassesResolved: false,
     runtimeProjectilePromotionAuthorized: false,
     evidenceDates: ['2022-11-30', '2024-08-29', '2026-04-27', '2026-09-28'] as const,
@@ -142,17 +153,19 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
       'A Ver.11 current-stage guide explicitly uses the high-ground grate edge to pass explosion coverage, separating an attack-permissive edge route from the glass body.',
       'KiTrix StageCollider performs SceneKit segment hit tests against the whole loaded stage visual tree, and BulletSimulator consumes that downstream query.',
       'On 2026-09-28 the user states from direct current-gameplay knowledge that ordinary shots do not pass through Undertow glass at all.',
-      'For Pass 13D the user states that Splash Bomb and similar thrown subs do not pass through the glass and treat it like an ordinary wall, floor, or ceiling for body collision.'
+      'For Pass 13D the user states that Splash Bomb and similar thrown subs do not pass through the glass and treat it like an ordinary wall, floor, or ceiling for body collision.',
+      'For Pass 13E the user states that Poison Mist and Point Sensor are the only sub-weapon effect exceptions that pass through the glass; other sub-weapon explosion/damage/ink effects are blocked.',
+      'The user also states that deployable subs such as Jump Beacon, Sprinkler and Splash Shield can be placed on transparent glass like an ordinary solid floor, while Trap cannot because it requires a paintable floor.'
     ],
     insufficientBecause: [
       'The official historical fix resolves intended glass-vs-opposite-side damage semantics but predates the Ver.7.2 terrain remodel and does not publish the collision primitive.',
       'Current grate-edge attack evidence distinguishes an edge route from the glass body but does not identify which exact Glass01/GlassEdge/BridgeMetal faces block each projectile or explosion class.',
       'KiTrix projectile raycasts are downstream simulator behavior and are not original-game collision authority.',
-      'The user knowledge resolves ordinary-main pass-through and thrown-sub body collision behavior. Explosion/damage/ink propagation through or around the glass and the exact original collision primitive remain separate unresolved questions.'
+      'The user knowledge resolves ordinary-main pass-through, thrown-sub body collision, sub-weapon cross-glass effect exceptions, and common deployable-sub placement semantics. Exact original collision/query primitive binding and unrelated special-weapon propagation remain separate unresolved questions.'
     ],
     minimumAuthoritativeEvidence: [
       'Current original-game projectile collision/query data that binds the upper-glass blocker to exact current faces/primitives.',
-      'Ordinary-main and thrown-sub body collision behaviors are resolved by direct user gameplay knowledge. Remaining closure requires explosion/damage propagation semantics actually simulated by browser-ink-tps plus exact runtime-geometry binding; no redundant ordinary-shot or thrown-sub body capture is needed.'
+      'Ordinary-main, thrown-sub body, sub-weapon cross-glass effect, and deployable-sub placement behaviors are resolved by direct user gameplay knowledge. Remaining closure is exact runtime-geometry/query binding plus any unrelated special-weapon semantics actually simulated later; no redundant sub-weapon capture is needed.'
     ]
   },
   {
@@ -251,7 +264,20 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
     audit.projectileSemanticEvidence.thrownSubBodyPassesThroughGlass ||
     !audit.projectileSemanticEvidence.thrownSubTreatsGlassAsOrdinarySolidSurface ||
     !audit.projectileSemanticEvidence.thrownSubUserDirectGameplayKnowledgeAccepted ||
-    audit.projectileSemanticEvidence.explosionPropagationResolved ||
+    !audit.projectileSemanticEvidence.subWeaponCrossGlassEffectPropagationResolved ||
+    audit.projectileSemanticEvidence.crossGlassEffectPassThroughExceptions.join(',') !==
+      'POISON_MIST,POINT_SENSOR' ||
+    !audit.projectileSemanticEvidence.allOtherSubWeaponCrossGlassEffectsBlocked ||
+    !audit.projectileSemanticEvidence.explosionPropagationResolved ||
+    audit.projectileSemanticEvidence.explosionPropagationScope !== 'SUB_WEAPONS_ONLY' ||
+    audit.projectileSemanticEvidence.specialWeaponPropagationResolved ||
+    !audit.projectileSemanticEvidence.deployableSubPlacementOnGlassGenerallyAllowed ||
+    audit.projectileSemanticEvidence.deployablePlacementExamples.join(',') !==
+      'JUMP_BEACON,SPRINKLER,SPLASH_SHIELD' ||
+    !audit.projectileSemanticEvidence.trapPlacementRequiresPaintableFloor ||
+    audit.projectileSemanticEvidence.trapPlacementOnTransparentGlassAllowed ||
+    !audit.projectileSemanticEvidence.subWeaponPlacementSemanticsResolved ||
+    !audit.projectileSemanticEvidence.subEffectPlacementUserDirectGameplayKnowledgeAccepted ||
     audit.projectileSemanticEvidence.allProjectileClassesResolved ||
     audit.projectileSemanticEvidence.runtimeProjectilePromotionAuthorized ||
     audit.projectileBehaviorResolved ||

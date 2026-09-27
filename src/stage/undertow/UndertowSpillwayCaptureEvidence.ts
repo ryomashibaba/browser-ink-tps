@@ -6,7 +6,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-upper-glass-support-route-videos-2026-09-27'
   | 'user-upper-glass-ordinary-projectile-knowledge-2026-09-28'
   | 'user-upper-glass-camera-blocking-knowledge-2026-09-28'
-  | 'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28';
+  | 'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28'
+  | 'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -22,7 +23,8 @@ export interface UndertowUserCaptureEvidence {
     | 'UPPER_GLASS_PLAYER_SUPPORT_ROUTE'
     | 'UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING'
     | 'UPPER_GLASS_CAMERA_BLOCKING'
-    | 'UPPER_GLASS_THROWN_SUB_SOLID_COLLISION';
+    | 'UPPER_GLASS_THROWN_SUB_SOLID_COLLISION'
+    | 'UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -128,6 +130,19 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'The thrown sub body therefore does not pass through the transparent glass and uses ordinary solid-surface contact behavior rather than a glass-specific pass-through rule.',
         'This direct gameplay knowledge resolves thrown-sub body collision behavior without requiring a redundant controlled capture.',
         'The answer does not by itself resolve explosion/damage/ink propagation through or around the glass, exact bounce coefficients, or the identity of the original collision primitive.'
+      ]
+    },
+    {
+      id: 'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28',
+      region: 'UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT',
+      confidence: 'CONFIRMED',
+      facts: [
+        'For Pass 13E the user states that Poison Mist and Point Sensor are the only sub-weapon exceptions whose area/query effects pass through Undertow transparent glass.',
+        'Other sub-weapon cross-glass effects are blocked by the transparent glass; this includes the ordinary explosion/damage/ink side of the sub-weapon family rather than treating the glass as a generic effect-through surface.',
+        'Poison Mist and Point Sensor are special non-solid area/query effects and must not be used to infer physical projectile, explosion, paint, player, or camera pass-through.',
+        'Deployable subs such as Jump Beacon, Sprinkler, and Splash Shield can be placed on top of transparent glass like other ordinary solid floors.',
+        'Trap is the explicit placement exception: it requires a paintable floor, so it cannot be placed on the unpaintable transparent glass surface.',
+        'This knowledge resolves sub-weapon effect/placement semantics but still does not identify the original collision/query primitive or authorize unrelated special-weapon behavior.'
       ]
     }
   ];

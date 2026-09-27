@@ -6,7 +6,7 @@ import {
 
 describe('T21 user capture evidence', () => {
   it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(8);
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(9);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -38,6 +38,11 @@ describe('T21 user capture evidence', () => {
         'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28'
       ).region
     ).toBe('UPPER_GLASS_THROWN_SUB_SOLID_COLLISION');
+    expect(
+      undertowCaptureEvidence(
+        'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28'
+      ).region
+    ).toBe('UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -107,6 +112,18 @@ describe('T21 user capture evidence', () => {
     expect(thrownSub.facts.join(' ')).toContain('ordinary wall, floor, or ceiling');
     expect(thrownSub.facts.join(' ')).toContain('does not pass through');
     expect(thrownSub.facts.join(' ')).toContain('does not by itself resolve explosion');
+  });
+
+  it('records the two pass-through sub-effect exceptions and the Trap placement exception separately', () => {
+    const sub = undertowCaptureEvidence(
+      'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28'
+    );
+    const facts = sub.facts.join(' ');
+    expect(facts).toContain('Poison Mist and Point Sensor are the only sub-weapon exceptions');
+    expect(facts).toContain('Jump Beacon, Sprinkler, and Splash Shield');
+    expect(facts).toContain('Trap is the explicit placement exception');
+    expect(facts).toContain('requires a paintable floor');
+    expect(facts).toContain('must not be used to infer physical projectile');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {
