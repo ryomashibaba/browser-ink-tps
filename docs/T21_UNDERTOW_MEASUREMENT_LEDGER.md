@@ -847,3 +847,32 @@ The separate HIGH L-shaped right hard edge is independently bound to spawn-high 
 Combined T21-D partial one-way drop navigation: **26 links**.
 
 The 2.0m spacing used by the audit is evidence sampling only, not a source dimension. Runtime endpoint radius is derived from the existing 0.30m CPU agent radius. Full-stage connectivity QA remains required before activation.
+
+## T21-D — exact current Splat Zones vector registration (Resolution Pass 8)
+
+The post-Ver.7.2 Sunfish Splat Zones PDF is now ingested as native vector evidence instead of screenshot geometry.
+
+Source identity:
+- 112,898 bytes
+- SHA-256 `ae2c24c3cc0ed09d5711e229deb7fb6535c3ef6505ea7dead1aca5e69c4d1596`
+- 841.92 × 595.32pt, one page
+- dash-dot objective border represented by discrete 0.72pt vector fragments
+
+Coordinate registration:
+- 42 Turf exterior hard-edge anchors were compared directly against Zones vector endpoints
+- 40 common anchors match to <=0.000052pt
+- 2 mirrored anchors differ because the Splat Zones mode geometry itself differs there
+- this clears the previous prohibition on silently reusing the Turf transform
+
+Exact source objective rings:
+- negative-Z PDF: `(368.52,230.28) -> (426.24,230.28) -> (426.24,282.84) -> (390.60,282.84) -> (390.60,267.84) -> (368.52,267.84)`
+- positive-Z PDF: `(415.68,312.36) -> (451.32,312.36) -> (451.32,327.36) -> (473.40,327.36) -> (473.40,364.92) -> (415.68,364.92)`
+- exact source plan area: **117.29875m² per objective**
+
+Paint registration is deliberately narrower than the objective ring. Each ring is intersected with the already-audited Temple01 project-Y=0 roofed underpass footprint:
+- negative-Z registered intersection ≈ **58.716712m²**
+- positive-Z registered intersection ≈ **58.525560m²**
+- both retain the underpass support-hole exclusion
+
+Only those two intersections gain `PaintSurface` authority. The rest of each underpass floor is still UNKNOWN, no Turf `Scoreable` authority is inferred, and the partial T21-D package remains activation-ineligible.
+
