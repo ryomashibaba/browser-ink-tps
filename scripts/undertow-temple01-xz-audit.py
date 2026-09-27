@@ -2190,12 +2190,6 @@ for side_name,pred in (
             "glass_bbox_overlap_area":bbox_overlap_area,
         }
         rows.append(rec)
-        print(
-            "T21BRIDGECOMP "
-            + side_name
-            + " "
-            + json.dumps(rec,separators=(",",":"))
-        )
 
     rows.sort(key=lambda r:(-r["glass_bbox_overlap_area"],-r["up_area"],-r["faces"]))
     bridge_component_audit[side_name]=rows
