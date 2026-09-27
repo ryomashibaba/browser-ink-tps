@@ -27,6 +27,11 @@ describe('T21-D water kill authority audit', () => {
       exactMappedWaterPairKillThresholdEqualityResolved: false,
       exactMappedWaterPairKillThresholdDeltaMeters: null,
       mappedWaterPairDeathRelationUserDirectGameplayKnowledgeAccepted: true,
+      waterAndExteriorFallOutQualitativeDeathHeightRelationResolved: true,
+      waterAndExteriorFallOutAppearSameApproxDeathHeightBand: true,
+      exactWaterVsExteriorFallOutThresholdDeltaResolved: false,
+      exactWaterVsExteriorFallOutThresholdDeltaMeters: null,
+      waterAndExteriorFallOutRelationUserDirectGameplayKnowledgeAccepted: true,
       confidence: 'HIGH'
     });
   });
@@ -48,6 +53,15 @@ describe('T21-D water kill authority audit', () => {
     expect(audit.mappedWaterPairSameEssentiallyImmediateDeathBehavior).toBe(true);
     expect(audit.exactMappedWaterPairKillThresholdEqualityResolved).toBe(false);
     expect(audit.exactMappedWaterPairKillThresholdDeltaMeters).toBeNull();
+    expect(audit.waterAndExteriorFallOutShareThresholdResolved).toBe(false);
+  });
+
+  it('records exterior fall-out as the same approximate death-height band without exact threshold equality', () => {
+    const audit = UNDERTOW_WATER_KILL_AUTHORITY_AUDIT;
+    expect(audit.waterAndExteriorFallOutQualitativeDeathHeightRelationResolved).toBe(true);
+    expect(audit.waterAndExteriorFallOutAppearSameApproxDeathHeightBand).toBe(true);
+    expect(audit.exactWaterVsExteriorFallOutThresholdDeltaResolved).toBe(false);
+    expect(audit.exactWaterVsExteriorFallOutThresholdDeltaMeters).toBeNull();
     expect(audit.waterAndExteriorFallOutShareThresholdResolved).toBe(false);
   });
 

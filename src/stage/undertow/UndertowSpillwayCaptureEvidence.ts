@@ -10,7 +10,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28'
   | 'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28'
   | 'user-water-surface-contact-death-knowledge-2026-09-28'
-  | 'user-water-pair-equivalence-knowledge-2026-09-28';
+  | 'user-water-pair-equivalence-knowledge-2026-09-28'
+  | 'user-water-exterior-fallout-qualitative-relation-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -30,7 +31,8 @@ export interface UndertowUserCaptureEvidence {
     | 'UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT'
     | 'UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION'
     | 'WATER_SURFACE_CONTACT_DEATH_RELATION'
-    | 'WATER_PAIR_QUALITATIVE_EQUIVALENCE';
+    | 'WATER_PAIR_QUALITATIVE_EQUIVALENCE'
+    | 'WATER_EXTERIOR_FALLOUT_QUALITATIVE_RELATION';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -182,6 +184,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'The user also states that contacting either mapped water hazard produces the same essentially-immediate death behavior.',
         'This resolves qualitative pair equivalence for visible height and contact-death behavior, but does not establish an exact shared world Y, an exact zero-meter height delta, or numerically identical kill thresholds.',
         'The answer remains scoped to the two mapped internal water hazards and does not establish the relationship to exterior fall-out.'
+      ]
+    },
+    {
+      id: 'user-water-exterior-fallout-qualitative-relation-knowledge-2026-09-28',
+      region: 'WATER_EXTERIOR_FALLOUT_QUALITATIVE_RELATION',
+      confidence: 'CONFIRMED',
+      facts: [
+        'For Pass 14C the user selects behavior A: exterior stage fall-out appears to kill the player at roughly the same vertical band as the two mapped internal water hazards.',
+        'This resolves a qualitative similarity between internal-water death height and exterior fall-out death height.',
+        'The answer does not establish that both hazards literally share one death volume or an exactly identical numeric kill threshold.',
+        'No exact world Y, exact threshold delta, or locator-instance binding is inferred from this gameplay recollection.'
       ]
     }
   ];

@@ -75,6 +75,11 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
   exactMappedWaterPairKillThresholdEqualityResolved: false,
   exactMappedWaterPairKillThresholdDeltaMeters: null,
   mappedWaterPairDeathRelationUserDirectGameplayKnowledgeAccepted: true,
+  waterAndExteriorFallOutQualitativeDeathHeightRelationResolved: true,
+  waterAndExteriorFallOutAppearSameApproxDeathHeightBand: true,
+  exactWaterVsExteriorFallOutThresholdDeltaResolved: false,
+  exactWaterVsExteriorFallOutThresholdDeltaMeters: null,
+  waterAndExteriorFallOutRelationUserDirectGameplayKnowledgeAccepted: true,
   visualWaterYCanDefineKillThreshold: false,
   killThresholdResolved: false,
   killThresholdMeters: null,
@@ -83,11 +88,11 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
   confidence: 'HIGH' as const,
   missingAuthoritativeEvidence: [
     'Current post-Ver.7.2 Temple01 common/normal-rule BCETT or equivalent stage-layout instance for Mpt_PlayerDead or an equivalent player-death locator, including Translate/Rotate/Scale and layer applicability.',
-    'Evidence that identifies whether the exact mapped cyan water pair and exterior fall-out use the same vertical death trigger or separate hazard volumes.',
+    'Exact Temple01 placement evidence that identifies whether the mapped internal water hazards and exterior fall-out literally share one death volume/threshold or merely produce similar gameplay timing.',
     'Alternatively, controlled current normal-PvP vertical-crossing evidence registered to fixed Temple01 geometry tightly enough to bound the death trigger Y without reusing the unresolved visual-water plane.'
   ] as const,
   notes:
-    'Pass 14A establishes essentially-immediate death at visible-water contact. Pass 14B adds that both mapped internal water hazards show the same qualitative contact-death behavior and appear to share the same visible surface height. Neither pass establishes numerically identical thresholds, a shared exact world Y, or the relationship to exterior fall-out. WATER_KILL_THRESHOLD_PENDING therefore remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
+    'Pass 14A establishes essentially-immediate death at visible-water contact. Pass 14B adds that both mapped internal water hazards show the same qualitative contact-death behavior and apparent surface height. Pass 14C adds that exterior fall-out appears to kill in roughly the same vertical band. These are qualitative constraints only: they do not prove one shared death volume, an exactly identical threshold, or any exact world Y. WATER_KILL_THRESHOLD_PENDING therefore remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
 });
 
 export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
@@ -171,6 +176,15 @@ export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
     !audit.mappedWaterPairDeathRelationUserDirectGameplayKnowledgeAccepted
   ) {
     errors.push('Pass 14B mapped-water death relation drifted or overclaimed exact threshold equality');
+  }
+  if (
+    !audit.waterAndExteriorFallOutQualitativeDeathHeightRelationResolved ||
+    !audit.waterAndExteriorFallOutAppearSameApproxDeathHeightBand ||
+    audit.exactWaterVsExteriorFallOutThresholdDeltaResolved ||
+    audit.exactWaterVsExteriorFallOutThresholdDeltaMeters !== null ||
+    !audit.waterAndExteriorFallOutRelationUserDirectGameplayKnowledgeAccepted
+  ) {
+    errors.push('Pass 14C water/exterior fall-out relation drifted or overclaimed exact threshold equality');
   }
   if (audit.visualWaterYCanDefineKillThreshold) {
     errors.push('visual water Y must not be reused as kill-threshold authority');
