@@ -2290,3 +2290,180 @@ for side,records in route_slopes.items():
                 separators=(",",":")
             )
         )
+
+
+# T21-D material-agnostic route-connector audit.
+#
+# FloorSlope material naming did not produce any component that touches two
+# known route floors in 3D. Re-audit all common+Turf source triangles in the
+# locally verified spawn-side bounds, selecting only non-horizontal,
+# non-wall-like components that physically touch at least two known floor masks
+# at their measured model-space Y values.
+spawn_route_floor_masks["POS_UNDERPASS"]=(underpass_nav["POS_GLASS"][0],3.0)
+spawn_route_floor_masks["NEG_UNDERPASS"]=(underpass_nav["NEG_GLASS"][0],3.0)
+
+def component_floor_contacts(model_vertices,region_prefix):
+    contacts={}
+    for mask_name,(mask,mask_y) in spawn_route_floor_masks.items():
+        if not mask_name.startswith(region_prefix):
+            continue
+        hits=sum(
+            1 for v in model_vertices
+            if near_mask_vertex(v,mask,mask_y,radius_cells=3,y_tolerance=0.30)
+        )
+        if hits:
+            contacts[mask_name]=hits
+    return contacts
+
+def candidate_route_faces(bounds):
+    x0,x1,z0,z1=bounds
+    grouped=defaultdict(list)
+    for ff in faces:
+        ia,ib,ic,o,m=ff
+        tri=[vertices[i] for i in ff[:3]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if not (x0<=cx<=x1 and z0<=cz<=z1):
+            continue
+        ymin=min(v[1] for v in tri); ymax=max(v[1] for v in tri)
+        if ymax<2.5 or ymin>12.5:
+            continue
+        n=tri_normal(tri)
+        ny=abs(n[1])
+        # Exclude near-horizontal floors and near-vertical walls. Keep a wide
+        # band so steep but traversable source ramps are not lost.
+        if ny<0.35 or ny>0.985:
+            continue
+        grouped[(o,m)].append(ff)
+    return grouped
+
+agnostic_route_records={}
+for region_name,bounds in (
+    ("POS_ROUTE",(-48,18,22,78)),
+    ("NEG_ROUTE",(-18,48,-78,-22)),
+):
+    region_prefix=region_name[:3]
+    records=[]
+    grouped=candidate_route_faces(bounds)
+    for (o,m),source_faces in sorted(grouped.items()):
+        for local_ci,component in enumerate(face_components_by_shared_vertex(source_faces)):
+            comp_faces=[source_faces[i] for i in component]
+            unique_indices=sorted({vi for ff in comp_faces for vi in ff[:3]})
+            model_vertices=[vertices[i] for i in unique_indices]
+            contacts=component_floor_contacts(model_vertices,region_prefix)
+            contact_ys={
+                spawn_route_floor_masks[name][1]
+                for name in contacts
+            }
+            ys=[v[1] for v in model_vertices]
+            if len(contact_ys)<2 or max(ys)-min(ys)<0.50:
+                continue
+            project_vertices=[slope_project_point(v) for v in model_vertices]
+            local_index={vi:i for i,vi in enumerate(unique_indices)}
+            indices=[local_index[vi] for ff in comp_faces for vi in ff[:3]]
+            normal_ys=[abs(tri_normal([vertices[i] for i in ff[:3]])[1]) for ff in comp_faces]
+            xs=[v[0] for v in project_vertices]
+            zs=[v[2] for v in project_vertices]
+            rec={
+                "object":o,
+                "material":m,
+                "component":local_ci,
+                "faces":len(comp_faces),
+                "vertices":len(model_vertices),
+                "model_y":[round(min(ys),6),round(max(ys),6)],
+                "project_bbox":[
+                    round(min(xs),6),round(min(zs),6),
+                    round(max(xs),6),round(max(zs),6)
+                ],
+                "normal_y":[
+                    round(min(normal_ys),6),
+                    round(max(normal_ys),6)
+                ],
+                "contacts":contacts,
+                "model_vertex_set":{
+                    (round(v[0],6),round(v[1],6),round(v[2],6))
+                    for v in model_vertices
+                },
+                "project_vertices":[
+                    [round(x,6),round(y,6),round(z,6)]
+                    for x,y,z in project_vertices
+                ],
+                "indices":indices,
+            }
+            records.append(rec)
+            print(
+                f"T21ROUTECONNECT CANDIDATE {region_name} obj={o} mat={m} "
+                f"ci={local_ci} faces={rec['faces']} verts={rec['vertices']} "
+                f"model_y={rec['model_y']} normal_y={rec['normal_y']} "
+                f"bbox={rec['project_bbox']} contacts={contacts}"
+            )
+    agnostic_route_records[region_name]=records
+    print(
+        f"T21ROUTECONNECT SUMMARY {region_name} "
+        f"groups={len(grouped)} candidates={len(records)} "
+        f"faces={sum(r['faces'] for r in records)}"
+    )
+
+pos_connect=agnostic_route_records["POS_ROUTE"]
+neg_connect=agnostic_route_records["NEG_ROUTE"]
+used_neg=set()
+paired=[]
+for pi,p in enumerate(pos_connect):
+    mirrored={
+        (round(-x,6),round(y,6),round(-z,6))
+        for x,y,z in p["model_vertex_set"]
+    }
+    matches=[
+        ni for ni,n in enumerate(neg_connect)
+        if ni not in used_neg and n["model_vertex_set"]==mirrored
+    ]
+    if len(matches)==1:
+        ni=matches[0]
+        used_neg.add(ni)
+        paired.append((pi,ni))
+        print(
+            f"T21ROUTECONNECT MIRROR pos={pi} neg={ni} "
+            f"faces={p['faces']} verts={p['vertices']} xor=0 "
+            f"pos_obj={p['object']} neg_obj={neg_connect[ni]['object']}"
+        )
+    elif len(matches)>1:
+        raise SystemExit(
+            f"T21 route connector audit failed: ambiguous mirror pair for {pi}: {matches}"
+        )
+    else:
+        print(
+            f"T21ROUTECONNECT UNMATCHED_POS pos={pi} "
+            f"obj={p['object']} faces={p['faces']}"
+        )
+
+print(
+    f"T21ROUTECONNECT MIRROR_SUMMARY pos={len(pos_connect)} "
+    f"neg={len(neg_connect)} paired={len(paired)} "
+    f"unmatched_pos={len(pos_connect)-len(paired)} "
+    f"unmatched_neg={len(neg_connect)-len(used_neg)}"
+)
+
+# Machine-readable payload only for exact mirrored candidates. Promotion still
+# requires semantic inspection of object/material and route topology.
+for pi,ni in paired:
+    for side,idx,rec in (
+        ("POS_ROUTE",pi,pos_connect[pi]),
+        ("NEG_ROUTE",ni,neg_connect[ni]),
+    ):
+        print(
+            "T21ROUTECONNECT PAIRED_JSON "
+            + side
+            + f" {idx} "
+            + json.dumps(
+                {
+                    "object":rec["object"],
+                    "material":rec["material"],
+                    "vertices":rec["project_vertices"],
+                    "indices":rec["indices"],
+                    "contacts":rec["contacts"],
+                    "model_y":rec["model_y"],
+                    "normal_y":rec["normal_y"],
+                },
+                separators=(",",":")
+            )
+        )
