@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Diagnostic exact-vector audit for Undertow Turf route-ramp paint semantics.
+"""Exact-vector/raster audit for Undertow Turf paint semantics.
 
-Downloads Sunfish's current post-remodel Turf PDF and inspects native vector
-fragments around the already-audited FloorConcrete03 route-ramp quads.
-Research-only: this script does not promote paint authority by itself.
+Downloads Sunfish's current post-remodel Turf PDF and audits the already-bound
+right-low route-ramp quads plus the exact model-Y=6.0 first-drop landing
+polygons. Research-only: this script never promotes runtime authority itself.
 """
 
 from __future__ import annotations
@@ -55,6 +55,45 @@ RAMPS = {
 }
 
 
+MODEL_REGISTRATION_SCALE = 0.964211
+MODEL_REGISTRATION_ROTATION_DEGREES = 26.1160
+MODEL_REGISTRATION_TRANSLATE_X = -0.0580
+MODEL_REGISTRATION_TRANSLATE_Z = -0.1329
+LOCAL_REGISTRATION_GATE_METERS = 0.5
+
+FIRST_DROP_POSITIVE_MODEL = [
+    (-25.562, 40.188),
+    (-25.312, 39.938),
+    (-25.188, 40.188),
+    (-19.812, 40.188),
+    (-19.812, 39.938),
+    (-19.438, 40.188),
+    (-19.438, 49.562),
+    (-25.562, 49.562),
+]
+FIRST_DROP_NEGATIVE_MODEL = [
+    (-x, -z) for x, z in FIRST_DROP_POSITIVE_MODEL
+]
+
+FIRST_DROP_LIPS_PDF = {
+    "positive-z": [
+        (620.4, 423.12),
+        (664.68, 423.12),
+        (664.68, 394.2),
+    ],
+    "negative-z": [
+        (221.52, 172.08),
+        (177.24, 172.08),
+        (177.24, 201.0),
+    ],
+}
+
+FIRST_DROP_ADJACENT_GRAY_RECTS = {
+    "positive-z": [582.96, 394.2, 620.4, 423.12],
+    "negative-z": [221.52, 172.08, 258.96, 201.0],
+}
+
+
 def normalized(a, b):
     dx, dy = b[0] - a[0], b[1] - a[1]
     length = math.hypot(dx, dy)
@@ -63,6 +102,19 @@ def normalized(a, b):
 
 Z_DIR = normalized(NEG_SPAWN, POS_SPAWN)
 X_DIR = (Z_DIR[1], -Z_DIR[0])
+MODEL_THETA = math.radians(MODEL_REGISTRATION_ROTATION_DEGREES)
+MODEL_COS = math.cos(MODEL_THETA)
+MODEL_SIN = math.sin(MODEL_THETA)
+
+
+def model_to_project(point):
+    x, z = point
+    mx = x - MODEL_REGISTRATION_TRANSLATE_X
+    mz = z - MODEL_REGISTRATION_TRANSLATE_Z
+    return (
+        (MODEL_COS * mx + MODEL_SIN * mz) / MODEL_REGISTRATION_SCALE,
+        (-MODEL_SIN * mx + MODEL_COS * mz) / MODEL_REGISTRATION_SCALE,
+    )
 
 
 def project_to_pdf(point):
@@ -81,6 +133,95 @@ def rect_of_points(points):
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
     return [min(xs), min(ys), max(xs), max(ys)]
+
+
+def rect_polygon(rect):
+    x0, y0, x1, y1 = rect
+    return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+
+
+def polygon_area(points):
+    return abs(sum(
+        points[i][0] * points[(i + 1) % len(points)][1]
+        - points[(i + 1) % len(points)][0] * points[i][1]
+        for i in range(len(points))
+    )) * 0.5
+
+
+def clip_polygon_axis(points, axis, boundary, keep_less_equal):
+    output = []
+    if not points:
+        return output
+
+    def inside(point):
+        value = point[axis]
+        return (
+            value <= boundary + 1e-12
+            if keep_less_equal
+            else value >= boundary - 1e-12
+        )
+
+    def intersect(a, b):
+        av = a[axis]
+        bv = b[axis]
+        if abs(bv - av) <= 1e-30:
+            return a
+        t = (boundary - av) / (bv - av)
+        t = min(1.0, max(0.0, t))
+        return (
+            a[0] + (b[0] - a[0]) * t,
+            a[1] + (b[1] - a[1]) * t,
+        )
+
+    previous = points[-1]
+    previous_inside = inside(previous)
+    for current in points:
+        current_inside = inside(current)
+        if current_inside:
+            if not previous_inside:
+                output.append(intersect(previous, current))
+            output.append(current)
+        elif previous_inside:
+            output.append(intersect(previous, current))
+        previous = current
+        previous_inside = current_inside
+    return output
+
+
+def polygon_rect_intersection_area(points, rect):
+    x0, y0, x1, y1 = rect
+    clipped = list(points)
+    clipped = clip_polygon_axis(clipped, 0, x0, False)
+    clipped = clip_polygon_axis(clipped, 0, x1, True)
+    clipped = clip_polygon_axis(clipped, 1, y0, False)
+    clipped = clip_polygon_axis(clipped, 1, y1, True)
+    return polygon_area(clipped) if len(clipped) >= 3 else 0.0
+
+
+def point_segment_distance(point, a, b):
+    px, py = point
+    ax, ay = a
+    bx, by = b
+    vx, vy = bx - ax, by - ay
+    denom = vx * vx + vy * vy
+    if denom <= 1e-30:
+        return math.hypot(px - ax, py - ay)
+    t = ((px - ax) * vx + (py - ay) * vy) / denom
+    t = min(1.0, max(0.0, t))
+    qx = ax + t * vx
+    qy = ay + t * vy
+    return math.hypot(px - qx, py - qy)
+
+
+def polygon_boundary_distance(point, polygon):
+    return min(
+        point_segment_distance(
+            point,
+            polygon[i],
+            polygon[(i + 1) % len(polygon)],
+        )
+        for i in range(len(polygon))
+    )
 
 
 def color_json(value):
@@ -315,6 +456,13 @@ def main():
         )
 
     digest = hashlib.sha256(data).hexdigest()
+    if (
+        len(data) != 100311
+        or digest != "2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f"
+    ):
+        raise RuntimeError(
+            f"Pinned Turf PDF drifted: bytes={len(data)} sha256={digest}"
+        )
     pathlib.Path(args.pdf_output).write_bytes(data)
     doc = fitz.open(stream=data, filetype="pdf")
     if doc.page_count != 1:
@@ -511,6 +659,96 @@ def main():
             "T21TURFRAMP_FILLS "
             f"side={side} "
             + json.dumps(fill_rows[:30], separators=(",", ":"))
+        )
+
+    result["firstDropLandings"] = {}
+    first_drop_model = {
+        "positive-z": FIRST_DROP_POSITIVE_MODEL,
+        "negative-z": FIRST_DROP_NEGATIVE_MODEL,
+    }
+    for side, model_points in first_drop_model.items():
+        project_points = [model_to_project(point) for point in model_points]
+        pdf_points = [project_to_pdf(point) for point in project_points]
+        brightness = raster_brightness_stats(page, pdf_points)
+
+        gray_rect = FIRST_DROP_ADJACENT_GRAY_RECTS[side]
+        gray_brightness = raster_brightness_stats(
+            page, rect_polygon(gray_rect)
+        )
+        landing_area = polygon_area(pdf_points)
+        gray_overlap_area = polygon_rect_intersection_area(
+            pdf_points, gray_rect
+        )
+        gray_overlap_fraction = (
+            gray_overlap_area / landing_area
+            if landing_area > 0
+            else 1.0
+        )
+        lip_residual_points = [
+            polygon_boundary_distance(anchor, pdf_points)
+            for anchor in FIRST_DROP_LIPS_PDF[side]
+        ]
+        lip_residual_meters = [
+            residual / POINTS_PER_METER
+            for residual in lip_residual_points
+        ]
+        max_lip_residual_meters = max(lip_residual_meters)
+
+        landing = {
+            "modelPoints": [list(point) for point in model_points],
+            "projectPoints": [
+                [round(x, 9), round(z, 9)]
+                for x, z in project_points
+            ],
+            "pdfPoints": [
+                [round(x, 9), round(y, 9)]
+                for x, y in pdf_points
+            ],
+            "pdfBounds": [
+                round(value, 9)
+                for value in rect_of_points(pdf_points)
+            ],
+            "brightness": brightness,
+            "adjacentUninkableGrayRect": gray_rect,
+            "adjacentUninkableBrightness": gray_brightness,
+            "grayOverlapFraction": round(
+                gray_overlap_fraction, 9
+            ),
+            "firstDropLipBoundaryResidualMeters": [
+                round(value, 9)
+                for value in lip_residual_meters
+            ],
+            "maxFirstDropLipBoundaryResidualMeters": round(
+                max_lip_residual_meters, 9
+            ),
+        }
+        landing["matchesWhiteFlatPaintClass"] = (
+            brightness["p50"] == 255.0
+            and brightness["nearWhiteFraction"] >= 0.90
+            and gray_brightness["p50"] == 191.0
+            and gray_brightness["darkOrGrayFraction"] == 1.0
+            and gray_overlap_fraction < 0.01
+            and max_lip_residual_meters
+            <= LOCAL_REGISTRATION_GATE_METERS
+        )
+        result["firstDropLandings"][side] = landing
+
+        if not landing["matchesWhiteFlatPaintClass"]:
+            raise RuntimeError(
+                f"{side} first-drop landing failed exact white-flat registration: "
+                f"{json.dumps(landing, separators=(',', ':'))}"
+            )
+
+        print(
+            "T21FIRSTDROP_REGION "
+            f"side={side} "
+            f"bbox={json.dumps(landing['pdfBounds'])} "
+            f"brightness={json.dumps(brightness, separators=(',', ':'))} "
+            f"gray_brightness={json.dumps(gray_brightness, separators=(',', ':'))} "
+            f"gray_overlap_fraction={landing['grayOverlapFraction']} "
+            f"lip_residual_m={json.dumps(landing['firstDropLipBoundaryResidualMeters'], separators=(',', ':'))} "
+            f"max_lip_residual_m={landing['maxFirstDropLipBoundaryResidualMeters']} "
+            f"matches_white={landing['matchesWhiteFlatPaintClass']}"
         )
 
     pathlib.Path(args.output).write_text(
