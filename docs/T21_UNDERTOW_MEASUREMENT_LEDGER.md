@@ -1046,8 +1046,8 @@ No visual-water plane, kill threshold, or death volume is promoted.
 The remaining whole-underpass paint question was projected back into the pinned current Turf author PDF.
 
 Measured top-view values:
-- positive-Z: p50 191, near-white 0.009680, dark/gray 0.990320, Glass overlap 0.772974211
-- negative-Z: p50 191, near-white 0.005022, dark/gray 0.994978, Glass overlap 0.735104783
+- positive-Z: p50 191, near-white 0.009680, dark/gray 0.990320, Glass overlap 0.772975275
+- negative-Z: p50 191, near-white 0.005022, dark/gray 0.994978, Glass overlap 0.735104264
 - explicit overlapping fill colors on both sides: gray `[0.752941,0.752941,0.752941]`
 - distinct white floor fill recovered: false
 
