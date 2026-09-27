@@ -1,20 +1,9 @@
 import { undertowCaptureEvidence } from './UndertowSpillwayCaptureEvidence';
-import {
-  UNDERTOW_UPPER_GLASS_COMPONENT_PROBES,
-  UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN,
-  undertowRequestReadyUpperGlassCaptureIds
-} from './UndertowSpillwayUpperGlassControlledCapturePlan';
+import { UNDERTOW_UPPER_GLASS_COMPONENT_PROBES } from './UndertowSpillwayUpperGlassControlledCapturePlan';
 import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
 
 const capture = undertowCaptureEvidence(
   'user-upper-glass-support-route-videos-2026-09-27'
-);
-
-const supportRequest = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-  (entry) => entry.id === 'PLAYER_SUPPORT_COMPONENT_ROUTE'
-);
-const projectileRequest = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-  (entry) => entry.id === 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
 );
 
 export const UNDERTOW_UPPER_GLASS_PLAYER_SUPPORT_RESOLUTION_AUDIT =
@@ -89,13 +78,8 @@ export function undertowUpperGlassPlayerSupportResolutionAuditErrors():
     errors.push('Pass 13A support-route scope drifted from the three broad components per side');
   }
 
-  if (
-    supportRequest?.status !== 'RESOLVED' ||
-    projectileRequest?.status !== 'REQUEST_READY' ||
-    undertowRequestReadyUpperGlassCaptureIds().join(',') !==
-      'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
-  ) {
-    errors.push('Pass 13A must retire support capture and expose only the projectile test next');
+  if (audit.nextRequestReady !== 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL') {
+    errors.push('Pass 13A historical next-step snapshot drifted');
   }
 
   if (

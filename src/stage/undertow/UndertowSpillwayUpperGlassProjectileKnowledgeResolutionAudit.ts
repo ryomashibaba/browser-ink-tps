@@ -1,8 +1,4 @@
 import { undertowCaptureEvidence } from './UndertowSpillwayCaptureEvidence';
-import {
-  UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN,
-  undertowRequestReadyUpperGlassCaptureIds
-} from './UndertowSpillwayUpperGlassControlledCapturePlan';
 import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
 
 const evidence = undertowCaptureEvidence(
@@ -42,23 +38,6 @@ export function undertowUpperGlassProjectileKnowledgeResolutionAuditErrors():
   readonly string[] {
   const errors: string[] = [];
   const audit = UNDERTOW_UPPER_GLASS_PROJECTILE_KNOWLEDGE_RESOLUTION_AUDIT;
-  const projectile = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-    (entry) => entry.id === 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
-  );
-  const camera = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-    (entry) => entry.id === 'CAMERA_GLASS_EDGE_DIFFERENTIAL'
-  );
-
-  if (
-    projectile?.status !== 'RESOLVED' ||
-    projectile.userActionCount !== 0 ||
-    camera?.status !== 'REQUEST_READY' ||
-    undertowRequestReadyUpperGlassCaptureIds().join(',') !==
-      'CAMERA_GLASS_EDGE_DIFFERENTIAL'
-  ) {
-    errors.push('Pass 13B must retire the redundant projectile capture and expose only camera query next');
-  }
-
   if (
     !UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileSemanticEvidence
       .currentOrdinaryMainProjectileBehaviorResolved ||
@@ -71,6 +50,7 @@ export function undertowUpperGlassProjectileKnowledgeResolutionAuditErrors():
   }
 
   if (
+    audit.nextRequestReady !== 'CAMERA_GLASS_EDGE_DIFFERENTIAL' ||
     audit.activationBlockersCleared.length !== 0 ||
     audit.runtimePromotion.authorized ||
     !audit.unresolved.cameraQueryBehavior
