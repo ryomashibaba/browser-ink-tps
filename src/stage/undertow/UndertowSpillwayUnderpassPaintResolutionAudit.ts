@@ -91,7 +91,7 @@ export const UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT = Object.freeze({
   ] as const,
   activationBlockerCleared: false,
   notes:
-    'Resolution Pass 8 promotes two exact objective-intersection paint subregions while preserving six solid-level UNKNOWN paint records. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING therefore remains active.'
+    'Resolution Pass 8 itself promotes only two exact objective-intersection paint subregions. Resolution Pass 10A later resolves the separate right-low route-ramp pair, so the current inventory has four solid-level UNKNOWN records. The two whole underpass solids remain UNKNOWN outside their registered zone intersections, and UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING remains active.'
 });
 
 export function undertowUnderpassPaintResolutionAuditErrors(): readonly string[] {
