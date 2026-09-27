@@ -88,6 +88,26 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(paintIds.some((id) => id.includes('first-drop-landing-'))).toBe(false);
   });
 
+  it('names source-authority blockers precisely after geometry audits', () => {
+    expect(
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
+    ).toEqual(expect.arrayContaining([
+      'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
+      'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
+      'WATER_VISUAL_Y_PENDING',
+      'WATER_KILL_THRESHOLD_PENDING',
+      'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING',
+      'TURF_SCOREABLE_MASK_PENDING',
+      'FULL_STAGE_CONNECTIVITY_QA_PENDING'
+    ]));
+    expect(
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
+    ).not.toContain('UPPER_GLASS_SLOPE_RUNTIME_PENDING');
+    expect(
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
+    ).not.toContain('WATER_KILL_RUNTIME_PENDING');
+  });
+
   it('keeps unresolved or special geometry explicitly deferred', () => {
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds

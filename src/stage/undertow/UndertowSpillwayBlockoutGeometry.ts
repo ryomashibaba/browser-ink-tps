@@ -18,6 +18,8 @@ import {
 } from './UndertowSpillwayModelXZGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import { undertowCenterSlopeStageSolids } from './UndertowSpillwaySlopeMeshGeometry';
+import { UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT } from './UndertowSpillwayUpperGlassMeshGeometry';
+import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
 export const UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS = 0.125;
@@ -190,8 +192,10 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
       'team-b-water-region'
     ],
     activationBlockers: [
-      'UPPER_GLASS_SLOPE_RUNTIME_PENDING',
-      'WATER_KILL_RUNTIME_PENDING',
+      'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
+      'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
+      'WATER_VISUAL_Y_PENDING',
+      'WATER_KILL_THRESHOLD_PENDING',
       'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING',
       'TURF_SCOREABLE_MASK_PENDING',
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
@@ -303,6 +307,30 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
 
   if (UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady) {
     errors.push('partial blockout package must remain activation-ineligible');
+  }
+  if (
+    !UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT.collisionAuthorityReady &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UPPER_GLASS_COLLISION_AUTHORITY_PENDING'
+    )
+  ) {
+    errors.push('upper-glass collision authority gap is no longer represented by an activation blocker');
+  }
+  if (
+    !UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneResolved &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'WATER_VISUAL_Y_PENDING'
+    )
+  ) {
+    errors.push('unresolved water visual Y must remain activation-blocking');
+  }
+  if (
+    !UNDERTOW_WATER_VISUAL_PLANE_AUDIT.killThresholdResolved &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'WATER_KILL_THRESHOLD_PENDING'
+    )
+  ) {
+    errors.push('unresolved water kill threshold must remain activation-blocking');
   }
   return errors;
 }
