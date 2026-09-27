@@ -34,6 +34,25 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   bridgeMetalHorizontalLikeFacesPerSide: 335,
   bridgeMetalWallLikeFacesPerSide: 748,
   bridgeMetalModelSpaceMirrorXorVertices: 0,
+  resolutionPass: 9,
+  bridgeMetalConnectedComponentsPerSide: 392,
+  bridgeMetalComponentSignatureMirrorXor: 0,
+  bridgeMetalUniqueStandableComponentResolved: false,
+  currentGameplayEvidence: Object.freeze({
+    targetIsPostVer720: true,
+    glassHighGroundStandabilityConfirmed: true,
+    glassHighGroundUsedForPositioningConfirmed: true,
+    exactGlass01VsBridgeMetalFaceBindingResolved: false,
+    evidenceDates: ['2024-08-29', '2025-09-11', '2026-06-02'] as const,
+    notes:
+      'Post-Ver.7.2/current strategy sources consistently describe players taking, holding, and dropping from the glass high ground. This establishes a standable/traversable upper structure semantically, but those sources do not identify whether the original-game collision comes from Glass01, BridgeMetal, another collision asset, or a hidden primitive.'
+  }),
+  playerStandabilitySemanticResolved: true,
+  navigationStandabilitySemanticResolved: true,
+  exactPlayerCollisionFaceBindingResolved: false,
+  exactNavigationFaceBindingResolved: false,
+  projectileBehaviorResolved: false,
+  cameraQueryBehaviorResolved: false,
   kitrixStageColliderPath: 'KiTrix/SceneKit/StageCollider.swift',
   kitrixBulletSimulatorPath: 'KiTrix/SceneKit/BulletSimulator.swift',
   kitrixStageColliderQueriesWholeStageVisualTree: true,
@@ -47,7 +66,7 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   cameraQueryAuthorityReady: false,
   confidence: 'HIGH' as const,
   notes:
-    'CI #667 shows the central BridgeMetal source is a large mixed floor/wall/support visual mesh, not a uniquely identified gameplay collision shell. The published KiTrix Temple01 directory exposes OBJ/MTL/parts/textures but no separate collision asset. At the audited KiTrix commit, StageCollider raycasts the whole loaded stage visual tree and BulletSimulator uses that helper for its own projectile hits. That is downstream KiTrix simulator behavior, not original Undertow player/projectile/camera collision authority. Therefore neither Glass01 nor BridgeMetal may be promoted from naming, visual geometry, or KiTrix query behavior alone.'
+    'Resolution Pass 9A adds two independent facts without overpromoting them. Current post-Ver.7.2 gameplay evidence confirms that the glass high ground is a standable/traversable position, while CI #728 decomposes the symmetric BridgeMetal visual source into 392 connected components per side with exact mirrored component signatures. Because that decomposition still does not uniquely bind the standable gameplay surface to Glass01 or a BridgeMetal face subset, no player/projectile/camera/nav runtime authority is promoted. The published KiTrix Temple01 directory still exposes no separate collision asset, and downstream KiTrix StageCollider behavior remains non-authoritative for original-game semantics.'
 });
 
 export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
@@ -58,16 +77,18 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
     activationBlocker: 'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
     observedEvidence: [
       'The exact current Temple01 Glass01 visual shell is available and registered.',
-      'BridgeMetal is symmetric but mixes horizontal floor-like faces with wall/support faces.',
+      'Post-Ver.7.2 gameplay/strategy evidence confirms that players can occupy, hold, and drop from the glass high ground.',
+      'BridgeMetal is exactly symmetric but decomposes into 392 connected visual components per side rather than one collision shell.',
       'No separate collision asset exists in the published Temple01 directory at the audited KiTrix commit.'
     ],
     insufficientBecause: [
+      'Standability resolves the gameplay semantic but not the exact source face or hidden collision primitive responsible for it.',
       'Visual shell membership and material/object names do not identify which faces block player capsules.',
-      'BridgeMetal cannot be promoted wholesale without inventing collision on decorative/support faces.'
+      'BridgeMetal cannot be promoted wholesale or by an arbitrary visual subset without inventing collision.'
     ],
     minimumAuthoritativeEvidence: [
       'Original-game collision/query data that identifies the player-blocking faces or collision primitives.',
-      'Or controlled in-game collision-boundary evidence registered to the source mesh strongly enough to separate Glass01/BridgeMetal subcomponents.'
+      'Or controlled in-game collision-boundary evidence registered tightly enough to distinguish Glass01 from the many BridgeMetal subcomponents.'
     ]
   },
   {
@@ -110,15 +131,16 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
     activationBlocker: 'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
     observedEvidence: [
       'The exact Glass01 mesh is currently exposed as render-only runtime geometry.',
-      'No source record identifies the visual shell as a walkable surface or as navigation collision.'
+      'Current post-Ver.7.2 gameplay evidence confirms traversal/occupancy of the glass high ground.',
+      'The exact source face or primitive carrying that standability is still unresolved.'
     ],
     insufficientBecause: [
-      'Navigation must follow proven walkability/player collision rather than visual mesh presence.',
-      'Promoting the shell into Recast from geometry alone could create fictional walkable ledges or blockers.'
+      'Navigation may follow proven standability only after the supporting collision surface is bound to exact geometry.',
+      'Promoting Glass01 or one of 392 BridgeMetal components from visual proximity alone could create fictional walkable ledges or blockers.'
     ],
     minimumAuthoritativeEvidence: [
-      'Authoritative walkability/player-collision data for the upper structure.',
-      'Or controlled traversal/standability evidence registered to the exact source components.'
+      'Authoritative walkability/player-collision data that binds the upper structure to exact source geometry.',
+      'Or controlled traversal/contact evidence registered tightly enough to identify the standable source face subset.'
     ]
   }
 ] as const;
@@ -136,6 +158,27 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
   }
   if (audit.bridgeMetalModelSpaceMirrorXorVertices !== 0) {
     errors.push('BridgeMetal counterpart source mesh lost exact model-space symmetry');
+  }
+  if (
+    audit.bridgeMetalConnectedComponentsPerSide !== 392 ||
+    audit.bridgeMetalComponentSignatureMirrorXor !== 0 ||
+    audit.bridgeMetalUniqueStandableComponentResolved
+  ) {
+    errors.push('Pass 9A BridgeMetal component decomposition drifted or overclaimed a unique standable source component');
+  }
+  if (
+    !audit.currentGameplayEvidence.targetIsPostVer720 ||
+    !audit.currentGameplayEvidence.glassHighGroundStandabilityConfirmed ||
+    !audit.currentGameplayEvidence.glassHighGroundUsedForPositioningConfirmed ||
+    audit.currentGameplayEvidence.exactGlass01VsBridgeMetalFaceBindingResolved ||
+    !audit.playerStandabilitySemanticResolved ||
+    !audit.navigationStandabilitySemanticResolved ||
+    audit.exactPlayerCollisionFaceBindingResolved ||
+    audit.exactNavigationFaceBindingResolved ||
+    audit.projectileBehaviorResolved ||
+    audit.cameraQueryBehaviorResolved
+  ) {
+    errors.push('Pass 9A gameplay semantics/source-face authority boundary drifted');
   }
   if (audit.separateCollisionAssetPresentInPublishedTemple01Directory) {
     errors.push('published Temple01 source inventory unexpectedly claims a collision asset');
