@@ -876,3 +876,26 @@ Paint registration is deliberately narrower than the objective ring. Each ring i
 
 Only those two intersections gain `PaintSurface` authority. The rest of each underpass floor is still UNKNOWN, no Turf `Scoreable` authority is inferred, and the partial T21-D package remains activation-ineligible.
 
+## T21-D — upper-glass authority localization (Resolution Pass 9A)
+
+The current-layout evidence question has been split into **behavioral semantics** and **exact source binding**.
+
+Behavioral evidence:
+- post-Ver.7.2 strategy/gameplay material consistently treats the central glass high ground as a position players can occupy, hold, and drop from
+- this resolves standability/traversal as a gameplay fact
+- it does not establish projectile or camera behavior
+
+Temple01 source decomposition:
+- `FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00`
+- 1083 selected central faces / 709 vertices per side
+- 392 shared-vertex connected components per side
+- exact POS/NEG component-signature symmetry
+- numerous separate rails/plates/support pieces overlap the Glass01 region
+
+Result:
+- no source-native one-to-one mapping from “glass high ground is standable” to one Glass01/BridgeMetal face subset was found
+- player/nav semantic evidence is stronger than before, but exact collision/nav geometry is still not promotable
+- projectile and camera-query authority remain fully independent unresolved roles
+
+No runtime geometry is changed by Pass 9A.
+
