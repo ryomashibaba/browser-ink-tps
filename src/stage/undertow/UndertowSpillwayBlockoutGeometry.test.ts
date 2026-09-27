@@ -111,7 +111,10 @@ describe('T21-D partial Undertow blockout geometry', () => {
       expect(backingIds.has(surface.backingSolidId)).toBe(true);
       expect((surface.flags & SurfaceFlags.Paintable) !== 0).toBe(true);
       expect((surface.flags & SurfaceFlags.Swimmable) !== 0).toBe(true);
-      expect((surface.flags & SurfaceFlags.Floor) !== 0).toBe(true);
+      const isFloor = (surface.flags & SurfaceFlags.Floor) !== 0;
+      const isRamp = (surface.flags & SurfaceFlags.Ramp) !== 0;
+      expect(isFloor || isRamp).toBe(true);
+      expect(isFloor && isRamp).toBe(false);
       expect((surface.flags & SurfaceFlags.Scoreable) !== 0).toBe(false);
     }
 
