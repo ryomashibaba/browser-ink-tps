@@ -29,9 +29,14 @@ NEG_SPAWN = (131.82, 155.58)
 POS_SPAWN = (709.98, 439.5)
 POINTS_PER_METER = 4.8
 
-KNOWN_SLOPE_MARKERS = {
+KNOWN_PAINTABLE_SLOPE_MARKERS = {
     "center-left": [393.6, 312.36, 409.44, 369.84],
     "center-right": [432.48, 225.36, 448.32, 282.84],
+}
+
+KNOWN_UNINKABLE_SLOPE_MARKERS = {
+    "glass-negative-z": [382.44, 244.92, 420.96, 261.24],
+    "glass-positive-z": [420.96, 333.96, 459.48, 350.28],
 }
 
 RAMPS = {
@@ -234,7 +239,8 @@ def main():
 
     known_marker_dash_counts = {}
     known_marker_signatures = {}
-    for marker_name, marker_bbox in KNOWN_SLOPE_MARKERS.items():
+    known_marker_fill_counts = {}
+    for marker_name, marker_bbox in KNOWN_PAINTABLE_SLOPE_MARKERS.items():
         _, marker_lines, marker_fills, marker_counts = analyze_region(
             drawings, marker_bbox, pad=0.5
         )
@@ -242,8 +248,9 @@ def main():
         dash_count = canonical_dash_count(marker_counts)
         known_marker_dash_counts[marker_name] = dash_count
         known_marker_signatures[marker_name] = rows
+        known_marker_fill_counts[marker_name] = len(marker_fills)
         print(
-            "T21TURF_KNOWN_SLOPE "
+            "T21TURF_KNOWN_PAINTABLE_SLOPE "
             f"name={marker_name} bbox={json.dumps(marker_bbox)} "
             f"lines={len(marker_lines)} fills={len(marker_fills)} "
             f"canonical_dash_count={dash_count} "
@@ -252,17 +259,52 @@ def main():
 
     if any(count <= 0 for count in known_marker_dash_counts.values()):
         raise RuntimeError(
-            "Known central slope marker failed to expose canonical 0.24pt/0.96pt dash signature"
+            "Known central paintable slope marker failed to expose canonical 0.24pt/0.96pt dash signature"
+        )
+    if any(count != 0 for count in known_marker_fill_counts.values()):
+        raise RuntimeError(
+            "Known central white slope marker unexpectedly contains explicit fill geometry"
         )
 
-    result["knownSlopeMarkers"] = {
+    known_uninkable = {}
+    for marker_name, marker_bbox in KNOWN_UNINKABLE_SLOPE_MARKERS.items():
+        _, marker_lines, marker_fills, marker_counts = analyze_region(
+            drawings, marker_bbox, pad=0.5
+        )
+        fill_colors = sorted({
+            tuple(row["fill"]) for row in marker_fills
+            if row["fill"] is not None
+        })
+        known_uninkable[marker_name] = {
+            "bbox": marker_bbox,
+            "canonicalDashCount": canonical_dash_count(marker_counts),
+            "fillCount": len(marker_fills),
+            "fillColors": [list(color) for color in fill_colors],
+            "lineSignatureCounts": signature_rows(marker_counts),
+        }
+        print(
+            "T21TURF_KNOWN_UNINKABLE_SLOPE "
+            f"name={marker_name} bbox={json.dumps(marker_bbox)} "
+            f"lines={len(marker_lines)} fills={len(marker_fills)} "
+            f"canonical_dash_count={canonical_dash_count(marker_counts)} "
+            f"fill_colors={json.dumps([list(color) for color in fill_colors])}"
+        )
+
+    if any(rec["canonicalDashCount"] <= 0 for rec in known_uninkable.values()):
+        raise RuntimeError("Known gray glass slope marker lost the canonical dash signature")
+    if any(rec["fillCount"] <= 0 for rec in known_uninkable.values()):
+        raise RuntimeError("Known gray glass slope marker no longer exposes explicit fill geometry")
+
+    result["knownPaintableSlopeMarkers"] = {
         name: {
-            "bbox": KNOWN_SLOPE_MARKERS[name],
+            "bbox": KNOWN_PAINTABLE_SLOPE_MARKERS[name],
             "canonicalDashCount": known_marker_dash_counts[name],
+            "fillCount": known_marker_fill_counts[name],
             "lineSignatureCounts": known_marker_signatures[name],
         }
-        for name in KNOWN_SLOPE_MARKERS
+        for name in KNOWN_PAINTABLE_SLOPE_MARKERS
     }
+    result["knownUninkableSlopeMarkers"] = known_uninkable
 
     for side, project_points in RAMPS.items():
         pdf_points = [project_to_pdf(point) for point in project_points]
@@ -289,11 +331,20 @@ def main():
             region["canonicalDashCount"] > 0 and
             all(count > 0 for count in known_marker_dash_counts.values())
         )
+        region["matchesKnownPaintableWhiteBackgroundClass"] = (
+            region["fillCount"] == 0 and
+            all(count == 0 for count in known_marker_fill_counts.values()) and
+            all(rec["fillCount"] > 0 for rec in known_uninkable.values())
+        )
         result["regions"][side] = region
 
         if not region["matchesKnownSlopeDashSignature"]:
             raise RuntimeError(
                 f"{side} route-ramp region does not contain the known slope dash signature"
+            )
+        if not region["matchesKnownPaintableWhiteBackgroundClass"]:
+            raise RuntimeError(
+                f"{side} route-ramp region does not match the known white paintable slope background class"
             )
 
         print(
@@ -301,7 +352,8 @@ def main():
             f"side={side} ramp_bbox={json.dumps(region['rampPdfBounds'])} "
             f"lines={len(line_rows)} fills={len(fill_rows)} "
             f"canonical_dash_count={region['canonicalDashCount']} "
-            f"matches_known={region['matchesKnownSlopeDashSignature']}"
+            f"matches_known={region['matchesKnownSlopeDashSignature']} "
+            f"matches_white={region['matchesKnownPaintableWhiteBackgroundClass']}"
         )
         print(
             "T21TURFRAMP_SIGNATURES "
