@@ -27,6 +27,7 @@ import {
 } from './UndertowSpillwayUpperGlassMeshGeometry';
 import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
 import { UNDERTOW_WATER_KILL_AUTHORITY_AUDIT } from './UndertowSpillwayWaterKillAuthorityAudit';
+import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
 import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
@@ -359,6 +360,14 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
     )
   ) {
     errors.push('unresolved water kill threshold must remain activation-blocking');
+  }
+  if (
+    UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount > 0 &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING'
+    )
+  ) {
+    errors.push('unresolved runtime paint authority must remain activation-blocking');
   }
   return errors;
 }
