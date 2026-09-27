@@ -41,6 +41,18 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS10_AUDIT = Object.freeze({
     routeRampCanonicalDashCountPerSide:
       UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT.turfVectorSource
         .routeRampCanonicalDashCountPerSide,
+    positiveZDashMidpointInside:
+      UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT.turfVectorSource
+        .positiveZDashMidpointInside,
+    positiveZDashFullyInside:
+      UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT.turfVectorSource
+        .positiveZDashFullyInside,
+    negativeZDashMidpointInside:
+      UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT.turfVectorSource
+        .negativeZDashMidpointInside,
+    negativeZDashFullyInside:
+      UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT.turfVectorSource
+        .negativeZDashFullyInside,
     canonicalDashWidthPoints:
       UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT.turfVectorSource
         .canonicalDashWidthPoints,
@@ -114,6 +126,10 @@ export function undertowPaintResolutionPass10AuditErrors(): readonly string[] {
 
   if (
     audit.semanticDiscrimination.routeRampCanonicalDashCountPerSide !== 168 ||
+    audit.semanticDiscrimination.positiveZDashMidpointInside !== 133 ||
+    audit.semanticDiscrimination.positiveZDashFullyInside !== 126 ||
+    audit.semanticDiscrimination.negativeZDashMidpointInside !== 126 ||
+    audit.semanticDiscrimination.negativeZDashFullyInside !== 126 ||
     audit.semanticDiscrimination.canonicalDashWidthPoints !== 0.24 ||
     audit.semanticDiscrimination.canonicalDashLengthPoints !== 0.96 ||
     audit.semanticDiscrimination.knownPaintableCentralSlopeMedianBrightness !==
