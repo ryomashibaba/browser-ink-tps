@@ -5,8 +5,8 @@ import {
 } from './UndertowSpillwayCaptureEvidence';
 
 describe('T21 user capture evidence', () => {
-  it('binds the traversal, corrective-height and controlled-paint captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(4);
+  it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(5);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -18,6 +18,11 @@ describe('T21 user capture evidence', () => {
         'user-underpass-outside-zone-paint-stills-2026-09-27'
       ).region
     ).toBe('GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES');
+    expect(
+      undertowCaptureEvidence(
+        'user-upper-glass-support-route-videos-2026-09-27'
+      ).region
+    ).toBe('UPPER_GLASS_PLAYER_SUPPORT_ROUTE');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -48,6 +53,18 @@ describe('T21 user capture evidence', () => {
     expect(paint.facts.join(' ')).toContain('both independently registered outside-Zone probes');
     expect(paint.facts.join(' ')).toContain('authorized PAINTABLE');
     expect(paint.facts.join(' ')).toContain('does not authorize Turf Scoreable');
+  });
+
+  it('records both mirrored Pass 13A support routes without inferring projectile/camera authority', () => {
+    const support = undertowCaptureEvidence(
+      'user-upper-glass-support-route-videos-2026-09-27'
+    );
+    expect(support.filenames).toHaveLength(2);
+    expect(support.durationsSeconds).toEqual([29.4, 17.233333]);
+    expect(support.facts.join(' ')).toContain('three broad Glass01 upward-component probe regions');
+    expect(support.facts.join(' ')).toContain('THIN_EDGE_STRIP');
+    expect(support.facts.join(' ')).toContain('does not establish projectile blocking');
+    expect(support.facts.join(' ')).toContain('coincident hidden primitive');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {

@@ -20,6 +20,12 @@ describe('T21-D upper glass collision authority audit', () => {
       bridgeMetalUniqueStandableComponentResolved: false,
       playerStandabilitySemanticResolved: true,
       navigationStandabilitySemanticResolved: true,
+      controlledBroadPlayerSupportGeometryResolved: true,
+      controlledBroadNavigationWalkabilityEvidenceResolved: true,
+      controlledBroadComponentCountPerSide: 3,
+      controlledThinEdgeStripPlayerSupportResolved: false,
+      runtimePlayerSupportPromotionAuthorized: false,
+      runtimeNavigationPromotionAuthorized: false,
       exactPlayerCollisionFaceBindingResolved: false,
       exactNavigationFaceBindingResolved: false,
       projectileOcclusionSemanticResolved: true,
@@ -40,12 +46,17 @@ describe('T21-D upper glass collision authority audit', () => {
       targetIsPostVer720: true,
       glassHighGroundStandabilityConfirmed: true,
       glassHighGroundUsedForPositioningConfirmed: true,
-      exactGlass01VsBridgeMetalFaceBindingResolved: false
+      exactGlass01VsBridgeMetalFaceBindingResolved: false,
+      controlledSupportBroadComponentsPerSide: 3,
+      controlledSupportSeamCrossingsPerSide: 2,
+      controlledSupportMirroredSidesIndependentlyCaptured: true,
+      controlledSupportNoJumpAssistedCrossingObserved: true,
+      controlledSupportThinEdgeStripResolved: false
     });
     expect(
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.currentGameplayEvidence
         .evidenceDates
-    ).toEqual(['2024-08-29', '2025-09-11', '2026-06-02']);
+    ).toEqual(['2024-08-29', '2025-09-11', '2026-06-02', '2026-09-27']);
     expect(
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
         .bridgeMetalConnectedComponentsPerSide
@@ -58,6 +69,18 @@ describe('T21-D upper glass collision authority audit', () => {
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
         .bridgeMetalUniqueStandableComponentResolved
     ).toBe(false);
+  });
+
+  it('binds the three broad support components on both sides without promoting the whole shell', () => {
+    const audit = UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT;
+    expect(audit.controlledBroadPlayerSupportGeometryResolved).toBe(true);
+    expect(audit.controlledBroadNavigationWalkabilityEvidenceResolved).toBe(true);
+    expect(audit.controlledBroadComponentCountPerSide).toBe(3);
+    expect(audit.controlledThinEdgeStripPlayerSupportResolved).toBe(false);
+    expect(audit.runtimePlayerSupportPromotionAuthorized).toBe(false);
+    expect(audit.runtimeNavigationPromotionAuthorized).toBe(false);
+    expect(audit.exactPlayerCollisionFaceBindingResolved).toBe(false);
+    expect(audit.exactNavigationFaceBindingResolved).toBe(false);
   });
 
   it('records that the published Temple01 directory has no separate collision asset', () => {

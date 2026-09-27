@@ -43,7 +43,12 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
     glassHighGroundStandabilityConfirmed: true,
     glassHighGroundUsedForPositioningConfirmed: true,
     exactGlass01VsBridgeMetalFaceBindingResolved: false,
-    evidenceDates: ['2024-08-29', '2025-09-11', '2026-06-02'] as const,
+    evidenceDates: ['2024-08-29', '2025-09-11', '2026-06-02', '2026-09-27'] as const,
+    controlledSupportBroadComponentsPerSide: 3,
+    controlledSupportSeamCrossingsPerSide: 2,
+    controlledSupportMirroredSidesIndependentlyCaptured: true,
+    controlledSupportNoJumpAssistedCrossingObserved: true,
+    controlledSupportThinEdgeStripResolved: false,
     notes:
       'Post-Ver.7.2/current strategy sources consistently describe players taking, holding, and dropping from the glass high ground. This establishes a standable/traversable upper structure semantically, but those sources do not identify whether the original-game collision comes from Glass01, BridgeMetal, another collision asset, or a hidden primitive.'
   }),
@@ -64,6 +69,12 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   }),
   playerStandabilitySemanticResolved: true,
   navigationStandabilitySemanticResolved: true,
+  controlledBroadPlayerSupportGeometryResolved: true,
+  controlledBroadNavigationWalkabilityEvidenceResolved: true,
+  controlledBroadComponentCountPerSide: 3,
+  controlledThinEdgeStripPlayerSupportResolved: false,
+  runtimePlayerSupportPromotionAuthorized: false,
+  runtimeNavigationPromotionAuthorized: false,
   exactPlayerCollisionFaceBindingResolved: false,
   exactNavigationFaceBindingResolved: false,
   projectileOcclusionSemanticResolved: true,
@@ -83,7 +94,7 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   cameraQueryAuthorityReady: false,
   confidence: 'HIGH' as const,
   notes:
-    'Resolution Pass 11A keeps the Pass 9A standability/source-binding boundary and adds projectile-semantics evidence. Nintendo historical bug-fix authority establishes that opposite-side damage through Undertow glass was unintended, while post-Ver.7.2/current sources retain the glass high ground and identify the grate edge as an attack-permissive path. This resolves ordinary glass-vs-grate occlusion semantics at behavior level only. Exact Glass01/BridgeMetal/hidden-primitive projectile binding, camera-query authority, player collision binding, and navigation binding remain unresolved; no runtime blocker is promoted from semantics alone.'
+    'Resolution Pass 13A adds two user-controlled mirrored-side support routes. The three broad registered upward Glass01 probe components per side are now gameplay-confirmed as player-supporting across both visual seams, but the narrow edge strip and the identity of the original collision primitive remain unresolved. This controlled support evidence is not reused as projectile or camera authority, and no runtime collision/navigation promotion occurs yet.'
 });
 
 export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
@@ -96,16 +107,18 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
       'The exact current Temple01 Glass01 visual shell is available and registered.',
       'Post-Ver.7.2 gameplay/strategy evidence confirms that players can occupy, hold, and drop from the glass high ground.',
       'BridgeMetal is exactly symmetric but decomposes into 392 connected visual components per side rather than one collision shell.',
-      'No separate collision asset exists in the published Temple01 directory at the audited KiTrix commit.'
+      'No separate collision asset exists in the published Temple01 directory at the audited KiTrix commit.',
+      'Pass 13A supplies two independent mirrored-side continuous routes across the three broad registered Glass01 upward components without a visible support loss at either seam.'
     ],
     insufficientBecause: [
       'Standability resolves the gameplay semantic but not the exact source face or hidden collision primitive responsible for it.',
       'Visual shell membership and material/object names do not identify which faces block player capsules.',
-      'BridgeMetal cannot be promoted wholesale or by an arbitrary visual subset without inventing collision.'
+      'BridgeMetal cannot be promoted wholesale or by an arbitrary visual subset without inventing collision.',
+      'The narrow upward edge strip was not independently probed, and the controlled route cannot prove whether the original game uses the visible Glass01 triangles or a coincident hidden collision primitive.'
     ],
     minimumAuthoritativeEvidence: [
       'Original-game collision/query data that identifies the player-blocking faces or collision primitives.',
-      'Or controlled in-game collision-boundary evidence registered tightly enough to distinguish Glass01 from the many BridgeMetal subcomponents.'
+      'Pass 13A resolves the broad support geometry needed for continued testing; full-role closure still requires the remaining edge/primitive ambiguity to be bounded before runtime collision promotion.'
     ]
   },
   {
@@ -152,15 +165,15 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
     observedEvidence: [
       'The exact Glass01 mesh is currently exposed as render-only runtime geometry.',
       'Current post-Ver.7.2 gameplay evidence confirms traversal/occupancy of the glass high ground.',
-      'The exact source face or primitive carrying that standability is still unresolved.'
+      'Pass 13A confirms the three broad registered Glass01 upward regions are walkable on both mirrored sides, but the narrow edge strip and exact original collision primitive remain unresolved.'
     ],
     insufficientBecause: [
       'Navigation may follow proven standability only after the supporting collision surface is bound to exact geometry.',
-      'Promoting Glass01 or one of 392 BridgeMetal components from visual proximity alone could create fictional walkable ledges or blockers.'
+      'Promoting the untested thin strip, side faces, or whole Glass01 shell would still create unverified walkable/collision geometry.'
     ],
     minimumAuthoritativeEvidence: [
       'Authoritative walkability/player-collision data that binds the upper structure to exact source geometry.',
-      'Or controlled traversal/contact evidence registered tightly enough to identify the standable source face subset.'
+      'Pass 13A identifies the broad standable subset; remaining edge/primitive ambiguity must be closed before a final runtime navigation promotion.'
     ]
   }
 ] as const;
@@ -192,8 +205,19 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
     !audit.currentGameplayEvidence.glassHighGroundStandabilityConfirmed ||
     !audit.currentGameplayEvidence.glassHighGroundUsedForPositioningConfirmed ||
     audit.currentGameplayEvidence.exactGlass01VsBridgeMetalFaceBindingResolved ||
+    audit.currentGameplayEvidence.controlledSupportBroadComponentsPerSide !== 3 ||
+    audit.currentGameplayEvidence.controlledSupportSeamCrossingsPerSide !== 2 ||
+    !audit.currentGameplayEvidence.controlledSupportMirroredSidesIndependentlyCaptured ||
+    !audit.currentGameplayEvidence.controlledSupportNoJumpAssistedCrossingObserved ||
+    audit.currentGameplayEvidence.controlledSupportThinEdgeStripResolved ||
     !audit.playerStandabilitySemanticResolved ||
     !audit.navigationStandabilitySemanticResolved ||
+    !audit.controlledBroadPlayerSupportGeometryResolved ||
+    !audit.controlledBroadNavigationWalkabilityEvidenceResolved ||
+    audit.controlledBroadComponentCountPerSide !== 3 ||
+    audit.controlledThinEdgeStripPlayerSupportResolved ||
+    audit.runtimePlayerSupportPromotionAuthorized ||
+    audit.runtimeNavigationPromotionAuthorized ||
     audit.exactPlayerCollisionFaceBindingResolved ||
     audit.exactNavigationFaceBindingResolved ||
     !audit.projectileOcclusionSemanticResolved ||

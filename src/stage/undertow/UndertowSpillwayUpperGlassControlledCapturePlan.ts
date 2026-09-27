@@ -8,7 +8,9 @@ export type UndertowUpperGlassControlledCaptureId =
 
 export type UndertowUpperGlassControlledCaptureStatus =
   | 'REQUEST_READY'
-  | 'DEFERRED_UNTIL_PLAYER_SUPPORT_BINDING';
+  | 'RESOLVED'
+  | 'DEFERRED_UNTIL_PLAYER_SUPPORT_BINDING'
+  | 'DEFERRED_UNTIL_PROJECTILE_BINDING';
 
 export type UndertowUpperGlassComponentId =
   | 'CONNECTOR_SURFACE'
@@ -155,7 +157,7 @@ export const UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN:
   {
     id: 'PLAYER_SUPPORT_COMPONENT_ROUTE',
     priority: 1,
-    status: 'REQUEST_READY',
+    status: 'RESOLVED',
     blocks: ['UPPER_GLASS_COLLISION_AUTHORITY_PENDING'],
     userActionCount: 2,
     guidePath: 'docs/T21_UNDERTOW_PASS13A_UPPER_GLASS_SUPPORT_CAPTURE_GUIDE.svg',
@@ -183,22 +185,36 @@ export const UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN:
   {
     id: 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL',
     priority: 2,
-    status: 'DEFERRED_UNTIL_PLAYER_SUPPORT_BINDING',
+    status: 'REQUEST_READY',
     blocks: ['UPPER_GLASS_COLLISION_AUTHORITY_PENDING'],
-    userActionCount: 0,
-    guidePath: 'docs/T21_UNDERTOW_PASS13A_UPPER_GLASS_SUPPORT_CAPTURE_GUIDE.svg',
+    userActionCount: 2,
+    guidePath: 'docs/T21_UNDERTOW_PASS13B_UPPER_GLASS_PROJECTILE_CAPTURE_GUIDE.svg',
     purpose:
-      'Later isolate ordinary projectile blocking through proven glass interior versus an adjacent edge/grate control without reusing player-collision assumptions.',
-    minimumCapture: [],
-    acceptance: [],
+      'Resolve ordinary-main projectile blocking at the proven broad Glass01 connector interior on both mirrored sides without borrowing player-collision or camera-query semantics.',
+    minimumCapture: [
+      'Use a fresh Recon state, or otherwise keep the lower-floor target directly below marked point 2 completely unpainted before the shot test.',
+      'Use an ordinary shooter main weapon, not a roller, bomb, special or thrown sub.',
+      'On each side, stand at marked point 2, aim steeply downward through the transparent glass interior and fire a short five-shot burst while keeping the reticle away from the black frame.',
+      'Immediately move to the lower underpass and show the same target floor patch for at least three seconds; keep surrounding pillar/frame landmarks visible so the target can be registered.',
+      'Repeat independently on the mirrored glass structure.'
+    ],
+    acceptance: [
+      'If the registered lower-floor target stays clean after the five ordinary shots, the tested glass interior blocks that projectile class.',
+      'If the registered lower-floor target receives fresh ink, the tested projectile class passes through the glass interior.',
+      'Both mirrored sides must produce an independently visible result; do not fill a missing side from symmetry.',
+      'The capture establishes ordinary-main projectile behavior only; thrown-sub and camera behavior remain separate.'
+    ],
     avoid: [
-      'Do not request this until Pass 13A identifies a proven player-supporting Glass01 interior and a geometrically distinct edge/grate control.'
+      'Do not sweep the reticle across the black frame; a frame hit cannot resolve transparent-glass projectile behavior.',
+      'Do not pre-paint the lower-floor target patch.',
+      'Do not use the thin edge strip as the projectile test point.',
+      'Do not infer camera collision from the projectile result.'
     ]
   },
   {
     id: 'CAMERA_GLASS_EDGE_DIFFERENTIAL',
     priority: 3,
-    status: 'DEFERRED_UNTIL_PLAYER_SUPPORT_BINDING',
+    status: 'DEFERRED_UNTIL_PROJECTILE_BINDING',
     blocks: ['UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING'],
     userActionCount: 0,
     guidePath: 'docs/T21_UNDERTOW_PASS13A_UPPER_GLASS_SUPPORT_CAPTURE_GUIDE.svg',
@@ -207,7 +223,7 @@ export const UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN:
     minimumCapture: [],
     acceptance: [],
     avoid: [
-      'Do not request this until the player-support route establishes which broad glass component and boundary can be registered reliably in current gameplay.'
+      'Do not request this until ordinary-main projectile behavior is resolved; camera queries remain an independent authority even if projectile blocking is confirmed.'
     ]
   }
 ] as const;
@@ -244,9 +260,9 @@ export function undertowUpperGlassControlledCapturePlanErrors():
   const requestReady = undertowRequestReadyUpperGlassCaptureIds();
   if (
     requestReady.length !== 1 ||
-    requestReady[0] !== 'PLAYER_SUPPORT_COMPONENT_ROUTE'
+    requestReady[0] !== 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
   ) {
-    errors.push('Pass 13A must request only the player-support route first');
+    errors.push('after Pass 13A, only the ordinary-projectile glass test may be request-ready');
   }
 
   const direct = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(

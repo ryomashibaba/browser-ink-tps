@@ -8,17 +8,21 @@ import {
 } from './UndertowSpillwayUpperGlassControlledCapturePlan';
 
 describe('T21 Resolution Pass 13A upper-glass controlled capture plan', () => {
-  it('requests only the two-sided player-support route first', () => {
+  it('retires the support route and requests only the two-sided ordinary-projectile test next', () => {
     expect(undertowUpperGlassControlledCapturePlanErrors()).toEqual([]);
     expect(undertowRequestReadyUpperGlassCaptureIds()).toEqual([
-      'PLAYER_SUPPORT_COMPONENT_ROUTE'
+      'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
     ]);
-    const request = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
+    const support = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
       (capture) => capture.id === 'PLAYER_SUPPORT_COMPONENT_ROUTE'
     );
-    expect(request?.status).toBe('REQUEST_READY');
-    expect(request?.userActionCount).toBe(2);
-    expect(request?.guidePath).toContain('PASS13A_UPPER_GLASS_SUPPORT_CAPTURE_GUIDE.svg');
+    const projectile = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
+      (capture) => capture.id === 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
+    );
+    expect(support?.status).toBe('RESOLVED');
+    expect(projectile?.status).toBe('REQUEST_READY');
+    expect(projectile?.userActionCount).toBe(2);
+    expect(projectile?.guidePath).toContain('PASS13B_UPPER_GLASS_PROJECTILE_CAPTURE_GUIDE.svg');
   });
 
   it('tests the three broad components independently on both sides', () => {
@@ -42,17 +46,12 @@ describe('T21 Resolution Pass 13A upper-glass controlled capture plan', () => {
       .toBeLessThan(0.1);
   });
 
-  it('keeps projectile and camera isolation deferred until player support is registered', () => {
-    for (const id of [
-      'PROJECTILE_GLASS_EDGE_DIFFERENTIAL',
-      'CAMERA_GLASS_EDGE_DIFFERENTIAL'
-    ] as const) {
-      expect(
-        UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-          (capture) => capture.id === id
-        )?.status
-      ).toBe('DEFERRED_UNTIL_PLAYER_SUPPORT_BINDING');
-    }
+  it('keeps camera isolation deferred until the separate projectile test is resolved', () => {
+    expect(
+      UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
+        (capture) => capture.id === 'CAMERA_GLASS_EDGE_DIFFERENTIAL'
+      )?.status
+    ).toBe('DEFERRED_UNTIL_PROJECTILE_BINDING');
     expect(UNDERTOW_UPPER_GLASS_SUPPORT_ROUTES.positiveZ).toHaveLength(3);
     expect(UNDERTOW_UPPER_GLASS_SUPPORT_ROUTES.negativeZ).toHaveLength(3);
   });

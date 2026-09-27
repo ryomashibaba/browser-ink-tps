@@ -2,18 +2,21 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-underpass-capture-2026-09-25'
   | 'user-right-low-capture-2026-09-25'
   | 'user-first-drop-height-stills-2026-09-26'
-  | 'user-underpass-outside-zone-paint-stills-2026-09-27';
+  | 'user-underpass-outside-zone-paint-stills-2026-09-27'
+  | 'user-upper-glass-support-route-videos-2026-09-27';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
   filename?: string;
   filenames?: readonly string[];
   durationSeconds?: number;
+  durationsSeconds?: readonly number[];
   region:
     | 'GLASS_UNDERPASS'
     | 'RIGHT_LOW'
     | 'GUIDE_LINE_SIDE_HEIGHT_ORDER'
-    | 'GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES';
+    | 'GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES'
+    | 'UPPER_GLASS_PLAYER_SUPPORT_ROUTE';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -68,6 +71,24 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'Each before/after pair keeps the local underpass floor and surrounding geometry visible; the after frame shows persistent yellow ordinary-main-weapon ink on the previously bare floor patch.',
         'The submission fulfills both independently registered outside-Zone probes from the Pass 12B capture guide, so both whole-underpass floor solids are authorized PAINTABLE without inferring the second side from symmetry.',
         'This evidence establishes paint acceptance only. It does not authorize Turf Scoreable semantics or any player/projectile/camera/navigation inference.'
+      ]
+    },
+    {
+      id: 'user-upper-glass-support-route-videos-2026-09-27',
+      filenames: [
+        '20260927-01M3HN7Q98CMTAKY4Q8C6065T0-8E9A036A-CC2D-4830-9440-2E47C5CC4217.mp4',
+        '20260927-01M3HN7FFKQCWBEGX9Q4RQAR1S-9F48EC89-18C2-4CA7-8D17-73A5B958D977.mp4'
+      ],
+      durationsSeconds: [29.4, 17.233333],
+      region: 'UPPER_GLASS_PLAYER_SUPPORT_ROUTE',
+      confidence: 'CONFIRMED',
+      facts: [
+        'The user supplied two distinct mirrored-side continuous clips for the Pass 13A 1 -> 2 -> 3 support route.',
+        'In both clips the player enters the transparent upper-glass platform, remains visibly supported while traversing across the broad glass interior, and reaches the far broad panel without a visible fall at either registered seam.',
+        'The recorded support segments are approximately 21.5-29.2s in the 29.4s clip and 10.5-17.2s in the 17.233333s clip; surrounding pillar/frame/floor geometry remains visible for side/structure registration.',
+        'No jump-assisted seam crossing is visible in the support segments; the result therefore supports the three broad Glass01 upward-component probe regions on each mirrored side independently.',
+        'The narrow THIN_EDGE_STRIP was not independently probed and remains unresolved.',
+        'This evidence resolves player-support geometry only. It does not establish projectile blocking, camera-query behavior, Turf Scoreable semantics, or prove that the original game collision primitive is literally the visual Glass01 mesh rather than a coincident hidden primitive.'
       ]
     }
   ];
