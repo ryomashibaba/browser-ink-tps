@@ -10,9 +10,13 @@ import { undertowTemple01ModelXZToProjectXZ } from './UndertowSpillwayModelXZGeo
 
 export type UndertowConnectivityProbeId =
   | 'first-drop-positive-z'
+  | 'first-drop-negative-z'
   | 'right-small-drop-positive-z'
+  | 'right-small-drop-negative-z'
   | 'right-low-ramp-positive-z'
-  | 'right-low-to-underpass-positive-z';
+  | 'right-low-ramp-negative-z'
+  | 'right-low-to-underpass-positive-z'
+  | 'right-low-to-underpass-negative-z';
 
 export interface UndertowConnectivityProbe {
   id: UndertowConnectivityProbeId;
@@ -35,57 +39,115 @@ function modelPoint(x: number, y: number, z: number): StageVector3 {
   return [px, y, pz];
 }
 
-const firstDrop = undertowFirstDropNavigationLinks()[2]!;
-const rightDrop = undertowRightSmallDropNavigationLinks()[2]!;
+function navigationLinkById(
+  links: readonly ReturnType<typeof undertowFirstDropNavigationLinks>[number][],
+  id: string
+) {
+  const link = links.find((candidate) => candidate.id === id);
+  if (!link) throw new Error(`Missing Undertow navigation link '${id}'.`);
+  return link;
+}
+
+const firstDropLinks = undertowFirstDropNavigationLinks();
+const rightDropLinks = undertowRightSmallDropNavigationLinks();
+const firstDropPositive = navigationLinkById(firstDropLinks, 'first-drop-positive-z-3');
+const firstDropNegative = navigationLinkById(firstDropLinks, 'first-drop-negative-z-3');
+const rightDropPositive = navigationLinkById(rightDropLinks, 'right-small-drop-positive-z-3');
+const rightDropNegative = navigationLinkById(rightDropLinks, 'right-small-drop-negative-z-3');
+
 const positiveRamp = UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.find(
   (record) => record.side === 'POSITIVE_Z'
 )!;
-const rampUpper = midpoint(
+const negativeRamp = UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.find(
+  (record) => record.side === 'NEGATIVE_Z'
+)!;
+const positiveRampUpper = midpoint(
   positiveRamp.mesh.vertices[0]!,
   positiveRamp.mesh.vertices[1]!
 );
-const rampLower = midpoint(
+const positiveRampLower = midpoint(
   positiveRamp.mesh.vertices[2]!,
   positiveRamp.mesh.vertices[3]!
 );
+const negativeRampUpper = midpoint(
+  negativeRamp.mesh.vertices[0]!,
+  negativeRamp.mesh.vertices[1]!
+);
+const negativeRampLower = midpoint(
+  negativeRamp.mesh.vertices[2]!,
+  negativeRamp.mesh.vertices[3]!
+);
 
-// Interior point of the independently audited positive-Z underpass polygon.
+// Interior points of the independently audited mirrored underpass polygons.
 // Model XZ comes from the Temple01 source frame; project Y=0 is canonical.
-const underpassInterior = modelPoint(-10, 0, 3);
+const positiveUnderpassInterior = modelPoint(-10, 0, 3);
+const negativeUnderpassInterior = modelPoint(10, 0, -3);
 
 export const UNDERTOW_T21D_CONNECTIVITY_PROBES:
   readonly UndertowConnectivityProbe[] = [
   {
     id: 'first-drop-positive-z',
-    from: firstDrop.start,
-    to: firstDrop.end,
+    from: firstDropPositive.start,
+    to: firstDropPositive.end,
     expectation: 'MUST_REACH',
     notes:
-      'Audits the explicit one-way first-drop Detour link from spawn-high to the first-drop landing.'
+      'Audits the explicit one-way positive-Z first-drop Detour link from spawn-high to the first-drop landing.'
+  },
+  {
+    id: 'first-drop-negative-z',
+    from: firstDropNegative.start,
+    to: firstDropNegative.end,
+    expectation: 'MUST_REACH',
+    notes:
+      'Audits the independently built negative-Z first-drop counterpart in the actual Recast QA navmesh.'
   },
   {
     id: 'right-small-drop-positive-z',
-    from: rightDrop.start,
-    to: rightDrop.end,
+    from: rightDropPositive.start,
+    to: rightDropPositive.end,
     expectation: 'MUST_REACH',
     notes:
-      'Audits the separate one-way right-small-drop link from spawn-high to right-low.'
+      'Audits the separate positive-Z one-way right-small-drop link from spawn-high to right-low.'
+  },
+  {
+    id: 'right-small-drop-negative-z',
+    from: rightDropNegative.start,
+    to: rightDropNegative.end,
+    expectation: 'MUST_REACH',
+    notes:
+      'Audits the negative-Z right-small-drop counterpart in the actual Recast QA navmesh.'
   },
   {
     id: 'right-low-ramp-positive-z',
-    from: rampLower,
-    to: rampUpper,
+    from: positiveRampLower,
+    to: positiveRampUpper,
     expectation: 'MUST_REACH',
     notes:
-      'Audits the exact FloorConcrete03 physical ramp between first-drop landing and right-low.'
+      'Audits the exact positive-Z FloorConcrete03 physical ramp between first-drop landing and right-low.'
+  },
+  {
+    id: 'right-low-ramp-negative-z',
+    from: negativeRampLower,
+    to: negativeRampUpper,
+    expectation: 'MUST_REACH',
+    notes:
+      'Audits the exact negative-Z FloorConcrete03 counterpart in the actual Recast QA navmesh.'
   },
   {
     id: 'right-low-to-underpass-positive-z',
-    from: rampUpper,
-    to: underpassInterior,
+    from: positiveRampUpper,
+    to: positiveUnderpassInterior,
     expectation: 'DIAGNOSTIC_GAP',
     notes:
-      'Diagnostic only: capture evidence says right-low connects into the underpass, but the intermediate source route has not yet been fully bound. This probe identifies whether the current partial geometry already reaches it.'
+      'Diagnostic only: capture evidence says positive-Z right-low connects into the underpass, but the intermediate source route has not yet been fully bound.'
+  },
+  {
+    id: 'right-low-to-underpass-negative-z',
+    from: negativeRampUpper,
+    to: negativeUnderpassInterior,
+    expectation: 'DIAGNOSTIC_GAP',
+    notes:
+      'Mirrored diagnostic only: the negative-Z source route is likewise not authorized for runtime promotion.'
   }
 ] as const;
 
@@ -111,4 +173,72 @@ export function undertowT21dConnectivityQaStage(): StageDefinition {
 
 export function vec3([x, y, z]: StageVector3): Vec3 {
   return new Vec3(x, y, z);
+}
+
+
+export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
+  qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
+  probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
+  mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
+    (probe) => probe.expectation === 'MUST_REACH'
+  ).length,
+  diagnosticGapProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
+    (probe) => probe.expectation === 'DIAGNOSTIC_GAP'
+  ).length,
+  bothSidesDirectlyProbed: true,
+  rightLowToUnderpassResolved: false,
+  upperGlassNavigationAuthorityResolved: false,
+  allTraversableRuntimeGeometryBound: false,
+  fullStageConnectivityReady: false,
+  knownBlockingTransitions: [
+    'right-low-to-underpass-positive-z',
+    'right-low-to-underpass-negative-z'
+  ] as const,
+  missingRequirements: [
+    'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
+    'Resolved upper-glass player-collision/navigation authority before any potentially walkable upper-glass/BridgeMetal region can participate in the final navmesh.',
+    'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region and mirrored cross-route probes run against that exact candidate.'
+  ] as const,
+  notes:
+    'The current QA package can verify known partial routes but is not a full-stage navigation candidate. Exact underpass-route source faces failed the prior experimental Recast inclusion and remain audit-only; upper-glass navigation authority is also unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING therefore remains activation-blocking.'
+});
+
+export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
+  const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
+  const errors: string[] = [];
+  const ids = new Set(UNDERTOW_T21D_CONNECTIVITY_PROBES.map((probe) => probe.id));
+
+  if (audit.probeCount !== 8 || ids.size !== 8) {
+    errors.push('connectivity QA must contain eight unique mirrored probes');
+  }
+  if (audit.mustReachProbeCount !== 6 || audit.diagnosticGapProbeCount !== 2) {
+    errors.push('connectivity QA probe expectation counts drifted');
+  }
+  for (const id of [
+    'first-drop-positive-z',
+    'first-drop-negative-z',
+    'right-small-drop-positive-z',
+    'right-small-drop-negative-z',
+    'right-low-ramp-positive-z',
+    'right-low-ramp-negative-z',
+    'right-low-to-underpass-positive-z',
+    'right-low-to-underpass-negative-z'
+  ] as const) {
+    if (!ids.has(id)) errors.push(`${id}: mirrored connectivity probe missing`);
+  }
+  if (
+    audit.rightLowToUnderpassResolved ||
+    audit.upperGlassNavigationAuthorityResolved ||
+    audit.allTraversableRuntimeGeometryBound ||
+    audit.fullStageConnectivityReady
+  ) {
+    errors.push('partial QA must not claim full-stage connectivity readiness');
+  }
+  if (audit.knownBlockingTransitions.length !== 2) {
+    errors.push('both mirrored right-low-to-underpass gaps must remain explicit');
+  }
+  if (audit.missingRequirements.length < 3) {
+    errors.push('full-stage connectivity evidence gap is not sufficiently localized');
+  }
+  return errors;
 }

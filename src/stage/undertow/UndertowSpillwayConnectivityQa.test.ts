@@ -5,8 +5,11 @@ import {
   initializeRecastNavigation
 } from '../../navigation/RecastStageNavigation';
 import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
+import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
+  UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT,
   UNDERTOW_T21D_CONNECTIVITY_PROBES,
+  undertowFullStageConnectivityAuditErrors,
   undertowT21dConnectivityQaStage,
   vec3
 } from './UndertowSpillwayConnectivityQa';
@@ -43,10 +46,32 @@ describe('T21-D partial Recast connectivity QA', () => {
         expect(result.reachedTarget).toBe(true);
         expect(result.endpointErrorMeters).toBeLessThan(0.001);
       } else {
-        expect(probe.id).toBe('right-low-to-underpass-positive-z');
+        expect([
+          'right-low-to-underpass-positive-z',
+          'right-low-to-underpass-negative-z'
+        ]).toContain(probe.id);
         expect(result.reachedTarget).toBe(false);
         expect(result.endpointErrorMeters).toBeGreaterThan(1);
       }
     }
+  });
+
+  it('localizes why the partial Recast pass is not full-stage connectivity QA', () => {
+    expect(undertowFullStageConnectivityAuditErrors()).toEqual([]);
+    expect(UNDERTOW_T21D_CONNECTIVITY_PROBES).toHaveLength(8);
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT).toMatchObject({
+      qaStageScope: 'PARTIAL_GEOMETRY_ONLY',
+      probeCount: 8,
+      mustReachProbeCount: 6,
+      diagnosticGapProbeCount: 2,
+      bothSidesDirectlyProbed: true,
+      rightLowToUnderpassResolved: false,
+      upperGlassNavigationAuthorityResolved: false,
+      allTraversableRuntimeGeometryBound: false,
+      fullStageConnectivityReady: false
+    });
+    expect(
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
+    ).toContain('FULL_STAGE_CONNECTIVITY_QA_PENDING');
   });
 });
