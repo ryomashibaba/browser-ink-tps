@@ -1897,3 +1897,75 @@ if any(len(rec[3])!=6 or len(rec[2])!=4 or rec[7]>1e-9 for rec in central):
     raise SystemExit(
         "T21 central slope component audit failed: selected central components must remain exact planar quads"
     )
+
+
+# T21-D upper-glass exact source-mesh audit.
+#
+# Reuse the locally isolated central Glass01 structures instead of flattening
+# the slope-marked vector face. The whole selected 3D shell is preserved.
+def project_glass_vertex(v):
+    x,z=model_to_project((v[0],v[2]))
+    return (x,v[1]-3.0,z)
+
+def build_compact_mesh(selected_faces):
+    vertex_index={}
+    out_vertices=[]
+    out_indices=[]
+    for ff in selected_faces:
+        for vi in ff[:3]:
+            pv=project_glass_vertex(vertices[vi])
+            key=tuple(round(q,6) for q in pv)
+            if key not in vertex_index:
+                vertex_index[key]=len(out_vertices)
+                out_vertices.append(key)
+            out_indices.append(vertex_index[key])
+    return out_vertices,out_indices
+
+upper_glass_meshes={}
+for side_name,pred in (
+    ("POS_GLASS_SOURCE",lambda cx,cz: (-14.0<=cx<=-5.5 and -2.5<=cz<=7.8)),
+    ("NEG_GLASS_SOURCE",lambda cx,cz: (5.5<=cx<=14.0 and -7.8<=cz<=2.5)),
+):
+    selected=[]
+    for ff in glass_faces:
+        tri=[vertices[i] for i in ff[:3]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if pred(cx,cz):
+            selected.append(ff)
+    verts,inds=build_compact_mesh(selected)
+    if not selected or len(inds)!=len(selected)*3:
+        raise SystemExit(f"T21 upper glass audit failed: invalid mesh for {side_name}")
+    ys=[v[1] for v in verts]
+    xs=[v[0] for v in verts]
+    zs=[v[2] for v in verts]
+    print(
+        f"T21UPPERGLASS MESH {side_name} faces={len(selected)} verts={len(verts)} "
+        f"indices={len(inds)} y=({min(ys):.6f},{max(ys):.6f}) "
+        f"x=({min(xs):.6f},{max(xs):.6f}) z=({min(zs):.6f},{max(zs):.6f})"
+    )
+    # Compact machine-readable payload for deterministic TypeScript promotion.
+    print(
+        "T21UPPERGLASS JSON "
+        + side_name
+        + " "
+        + json.dumps({"vertices":verts,"indices":inds},separators=(",",":"))
+    )
+    upper_glass_meshes[side_name]=(verts,inds)
+
+if set(upper_glass_meshes)!={"POS_GLASS_SOURCE","NEG_GLASS_SOURCE"}:
+    raise SystemExit("T21 upper glass audit failed: both central structures required")
+
+pos_vertices=set(upper_glass_meshes["POS_GLASS_SOURCE"][0])
+neg_vertices=set(upper_glass_meshes["NEG_GLASS_SOURCE"][0])
+mirrored_pos={(round(-x,6),round(y,6),round(-z,6)) for x,y,z in pos_vertices}
+vertex_xor=mirrored_pos ^ neg_vertices
+print(
+    f"T21UPPERGLASS SYMMETRY pos_verts={len(pos_vertices)} neg_verts={len(neg_vertices)} "
+    f"xor={len(vertex_xor)} missing={len(mirrored_pos-neg_vertices)} "
+    f"extra={len(neg_vertices-mirrored_pos)}"
+)
+if vertex_xor:
+    raise SystemExit(
+        f"T21 upper glass audit failed: 3D vertex mirror XOR {len(vertex_xor)}"
+    )
