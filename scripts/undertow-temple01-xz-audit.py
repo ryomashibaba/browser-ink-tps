@@ -2873,6 +2873,9 @@ def route_graph_nodes(region_name,bounds):
                 "faces":len(comp_faces),
                 "vertices":len(model_vertices),
                 "model_vertices":model_vertices,
+                "model_triangles":[
+                    [vertices[i] for i in ff[:3]] for ff in comp_faces
+                ],
                 "model_vertex_set":{
                     (round(v[0],6),round(v[1],6),round(v[2],6))
                     for v in model_vertices
@@ -3125,3 +3128,227 @@ for (o,m),row in sorted(
         f"z=({row[5]:.6f},{row[6]:.6f}) "
         f"allowlisted={any(t in m for t in ROUTE_GRAPH_WALK_TOKENS)}"
     )
+
+
+# Surface-distance cross-check for the right-low -> underpass route graph.
+#
+# The historical graph above intentionally uses vertex-to-vertex distance. That
+# can overstate a gap when a low-poly source component ends on the interior of
+# another component's edge/triangle (a T-junction or independently split mesh).
+# Keep the old graph for continuity, but independently measure component
+# distance against the actual source triangles before deciding that a physical
+# gap or off-mesh transition exists.
+
+def route_vsub(a,b):
+    return (a[0]-b[0],a[1]-b[1],a[2]-b[2])
+
+def route_vadd(a,b):
+    return (a[0]+b[0],a[1]+b[1],a[2]+b[2])
+
+def route_vscale(a,s):
+    return (a[0]*s,a[1]*s,a[2]*s)
+
+def route_dot(a,b):
+    return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
+
+def route_len(a):
+    return math.sqrt(route_dot(a,a))
+
+def point_segment_distance_3d(p,a,b):
+    ab=route_vsub(b,a)
+    den=route_dot(ab,ab)
+    if den<=1e-18:
+        return route_len(route_vsub(p,a))
+    t=max(0.0,min(1.0,route_dot(route_vsub(p,a),ab)/den))
+    q=route_vadd(a,route_vscale(ab,t))
+    return route_len(route_vsub(p,q))
+
+def point_triangle_distance_3d(p,a,b,c):
+    # Closest-point regions from Real-Time Collision Detection.
+    ab=route_vsub(b,a); ac=route_vsub(c,a); ap=route_vsub(p,a)
+    d1=route_dot(ab,ap); d2=route_dot(ac,ap)
+    if d1<=0.0 and d2<=0.0:
+        return route_len(ap)
+
+    bp=route_vsub(p,b)
+    d3=route_dot(ab,bp); d4=route_dot(ac,bp)
+    if d3>=0.0 and d4<=d3:
+        return route_len(bp)
+
+    vc=d1*d4-d3*d2
+    if vc<=0.0 and d1>=0.0 and d3<=0.0:
+        v=d1/(d1-d3)
+        q=route_vadd(a,route_vscale(ab,v))
+        return route_len(route_vsub(p,q))
+
+    cp=route_vsub(p,c)
+    d5=route_dot(ab,cp); d6=route_dot(ac,cp)
+    if d6>=0.0 and d5<=d6:
+        return route_len(cp)
+
+    vb=d5*d2-d1*d6
+    if vb<=0.0 and d2>=0.0 and d6<=0.0:
+        w=d2/(d2-d6)
+        q=route_vadd(a,route_vscale(ac,w))
+        return route_len(route_vsub(p,q))
+
+    va=d3*d6-d5*d4
+    if va<=0.0 and (d4-d3)>=0.0 and (d5-d6)>=0.0:
+        bc=route_vsub(c,b)
+        w=(d4-d3)/((d4-d3)+(d5-d6))
+        q=route_vadd(b,route_vscale(bc,w))
+        return route_len(route_vsub(p,q))
+
+    denom=va+vb+vc
+    if abs(denom)<=1e-18:
+        return min(
+            point_segment_distance_3d(p,a,b),
+            point_segment_distance_3d(p,b,c),
+            point_segment_distance_3d(p,c,a),
+        )
+    v=vb/denom; w=vc/denom
+    q=route_vadd(a,route_vadd(route_vscale(ab,v),route_vscale(ac,w)))
+    return route_len(route_vsub(p,q))
+
+def segment_segment_distance_3d(p1,q1,p2,q2):
+    # Robust closest points on two finite segments.
+    eps=1e-15
+    d1=route_vsub(q1,p1); d2=route_vsub(q2,p2); r=route_vsub(p1,p2)
+    a=route_dot(d1,d1); e=route_dot(d2,d2); f=route_dot(d2,r)
+    if a<=eps and e<=eps:
+        return route_len(r)
+    if a<=eps:
+        s=0.0
+        t=max(0.0,min(1.0,f/e))
+    else:
+        c0=route_dot(d1,r)
+        if e<=eps:
+            t=0.0
+            s=max(0.0,min(1.0,-c0/a))
+        else:
+            b0=route_dot(d1,d2)
+            denom=a*e-b0*b0
+            s=0.0 if abs(denom)<=eps else max(0.0,min(1.0,(b0*f-c0*e)/denom))
+            t=(b0*s+f)/e
+            if t<0.0:
+                t=0.0
+                s=max(0.0,min(1.0,-c0/a))
+            elif t>1.0:
+                t=1.0
+                s=max(0.0,min(1.0,(b0-c0)/a))
+    c1=route_vadd(p1,route_vscale(d1,s))
+    c2=route_vadd(p2,route_vscale(d2,t))
+    return route_len(route_vsub(c1,c2))
+
+def triangle_triangle_distance_3d(ta,tb,cutoff=None):
+    best=1e30
+    for p in ta:
+        best=min(best,point_triangle_distance_3d(p,*tb))
+        if cutoff is not None and best<=cutoff:
+            return best
+    for p in tb:
+        best=min(best,point_triangle_distance_3d(p,*ta))
+        if cutoff is not None and best<=cutoff:
+            return best
+    ea=((ta[0],ta[1]),(ta[1],ta[2]),(ta[2],ta[0]))
+    eb=((tb[0],tb[1]),(tb[1],tb[2]),(tb[2],tb[0]))
+    for a0,a1 in ea:
+        for b0,b1 in eb:
+            best=min(best,segment_segment_distance_3d(a0,a1,b0,b1))
+            if cutoff is not None and best<=cutoff:
+                return best
+    return best
+
+def component_min_surface_distance(a,b,cutoff):
+    if bbox3_distance(a,b)>cutoff:
+        return None
+    best=1e30
+    for ta in a["model_triangles"]:
+        for tb in b["model_triangles"]:
+            d=triangle_triangle_distance_3d(ta,tb,cutoff)
+            if d<best:
+                best=d
+            if best<=cutoff:
+                return best
+    return None if best==1e30 else best
+
+def route_graph_surface_path(nodes,region_name,threshold):
+    prefix=region_name[:3]
+    starts=[i for i,n in enumerate(nodes) if f"{prefix}_RIGHT_LOW" in n["contacts"]]
+    goals={i for i,n in enumerate(nodes) if f"{prefix}_UNDERPASS" in n["contacts"]}
+    if not starts or not goals:
+        return None,{},starts,goals
+    adjacency=defaultdict(list)
+    edge_distance={}
+    for i in range(len(nodes)):
+        for j in range(i+1,len(nodes)):
+            if bbox3_distance(nodes[i],nodes[j])>threshold:
+                continue
+            d=component_min_surface_distance(nodes[i],nodes[j],threshold)
+            if d is not None and d<=threshold:
+                adjacency[i].append(j); adjacency[j].append(i)
+                edge_distance[(i,j)]=d
+    q=deque(starts); parent={i:None for i in starts}
+    while q:
+        cur=q.popleft()
+        if cur in goals:
+            path=[]; x=cur
+            while x is not None:
+                path.append(x); x=parent[x]
+            path.reverse()
+            return path,edge_distance,starts,goals
+        for nxt in adjacency[cur]:
+            if nxt in parent:
+                continue
+            parent[nxt]=cur; q.append(nxt)
+    return None,edge_distance,starts,goals
+
+for region_name,nodes in route_graph.items():
+    for threshold in ROUTE_GRAPH_CONNECT_THRESHOLDS:
+        path,edge_distance,starts,goals=route_graph_surface_path(
+            nodes,region_name,threshold
+        )
+        print(
+            f"T21ROUTESURFACE RESULT {region_name} threshold={threshold:.2f} "
+            f"starts={len(starts)} goals={len(goals)} "
+            f"reachable={path is not None} "
+            f"path_nodes={0 if path is None else len(path)}"
+        )
+        if path is None:
+            continue
+        for step_i,node_i in enumerate(path):
+            n=nodes[node_i]
+            prev_d=None
+            if step_i>0:
+                a=min(path[step_i-1],node_i); b=max(path[step_i-1],node_i)
+                prev_d=edge_distance.get((a,b))
+            print(
+                f"T21ROUTESURFACE PATH {region_name} threshold={threshold:.2f} "
+                f"step={step_i} node={node_i} prev_d="
+                f"{None if prev_d is None else round(prev_d,6)} "
+                f"obj={n['object']} mat={n['material']} ci={n['component']} "
+                f"faces={n['faces']} verts={n['vertices']} "
+                f"y=({n['model_y'][0]:.6f},{n['model_y'][1]:.6f}) "
+                f"bbox={[round(v,6) for v in n['bbox']]} "
+                f"contacts={n['contacts']}"
+            )
+        break
+
+    # Cross-check the known relaxed vertex-chain edge-by-edge against source
+    # triangle distance. This tells us whether each ~2m vertex gap is a genuine
+    # physical separation or only an independently split/T-junction mesh.
+    vertex_path,vertex_edges,_,_=route_graph_path(nodes,region_name,2.00)
+    if vertex_path is not None:
+        for step_i in range(1,len(vertex_path)):
+            ai=vertex_path[step_i-1]; bi=vertex_path[step_i]
+            a=nodes[ai]; b=nodes[bi]
+            vd=vertex_edges.get((min(ai,bi),max(ai,bi)))
+            sd=component_min_surface_distance(a,b,3.00)
+            print(
+                f"T21ROUTESURFACE VERTEX_CHAIN_EDGE {region_name} "
+                f"step={step_i-1}->{step_i} "
+                f"vertex_d={None if vd is None else round(vd,6)} "
+                f"surface_d={None if sd is None else round(sd,6)} "
+                f"a={a['object']}::{a['material']}::ci{a['component']} "
+                f"b={b['object']}::{b['material']}::ci{b['component']}"
+            )
