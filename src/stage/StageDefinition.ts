@@ -68,6 +68,13 @@ export interface StagePaintSurfaceDefinition {
   widthMeters: number;
   heightMeters: number;
   flags: SurfaceFlags;
+  /**
+   * Optional surface-local mask. When omitted, runtime keeps the frozen
+   * behavior of inheriting the backing solid footprint (or using a rectangle
+   * when the backing solid has none). This allows an evidence-backed paint
+   * subregion without promoting the entire backing solid.
+   */
+  footprint?: StageFootprint;
 }
 
 export interface StageWorldBounds {
