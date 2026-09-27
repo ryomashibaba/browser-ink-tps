@@ -14,7 +14,7 @@ describe('T21-D upper glass collision authority audit', () => {
       bridgeMetalHorizontalLikeFacesPerSide: 335,
       bridgeMetalWallLikeFacesPerSide: 748,
       bridgeMetalModelSpaceMirrorXorVertices: 0,
-      resolutionPass: 9,
+      resolutionPass: '11A',
       bridgeMetalConnectedComponentsPerSide: 392,
       bridgeMetalComponentSignatureMirrorXor: 0,
       bridgeMetalUniqueStandableComponentResolved: false,
@@ -22,6 +22,8 @@ describe('T21-D upper glass collision authority audit', () => {
       navigationStandabilitySemanticResolved: true,
       exactPlayerCollisionFaceBindingResolved: false,
       exactNavigationFaceBindingResolved: false,
+      projectileOcclusionSemanticResolved: true,
+      exactProjectileCollisionFaceBindingResolved: false,
       projectileBehaviorResolved: false,
       cameraQueryBehaviorResolved: false,
       glassVisualShellCollisionAuthorityReady: false,
@@ -70,6 +72,32 @@ describe('T21-D upper glass collision authority audit', () => {
     expect(
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
         .separateCollisionAssetPresentInPublishedTemple01Directory
+    ).toBe(false);
+  });
+
+  it('resolves glass-vs-grate projectile semantics without inventing current face binding', () => {
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileSemanticEvidence
+    ).toMatchObject({
+      officialHistoricalGlassFloorOppositeSideDamageWasBug: true,
+      currentPostVer720GlassHighGroundStillPresent: true,
+      currentVer11GrateEdgeAttackPathCorroborated: true,
+      ordinaryCrossGlassDamageShouldBeBlocked: true,
+      edgeGrateOrAroundGeometryCanStillPermitAttacks: true,
+      currentExactProjectileFaceBindingResolved: false,
+      allProjectileClassesResolved: false,
+      runtimeProjectilePromotionAuthorized: false
+    });
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
+        .projectileOcclusionSemanticResolved
+    ).toBe(true);
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT
+        .exactProjectileCollisionFaceBindingResolved
+    ).toBe(false);
+    expect(
+      UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileBehaviorResolved
     ).toBe(false);
   });
 
