@@ -3711,3 +3711,42 @@ print(
     f"strict_bridges={sum(1 for _,_,_,p in route_gap_nonoverlay if p is not None)} "
     f"threshold={ROUTE_GAP_STRICT_THRESHOLD:.2f}"
 )
+
+
+# Exact source geometry export for the first successful relaxed surface route.
+# Evidence output only: no geometry is promoted and the strict threshold remains
+# unchanged. The project-space Y conversion uses the established Temple01 datum
+# (project Y = model Y - 3.0m).
+for region_name,nodes in route_graph.items():
+    path,_,_,_=route_graph_surface_path(nodes,region_name,2.00)
+    if path is None:
+        print(f"T21ROUTEPROMOTE SUMMARY {region_name} path_missing=True")
+        continue
+    print(
+        f"T21ROUTEPROMOTE SUMMARY {region_name} "
+        f"path_nodes={len(path)} threshold=2.00 evidence_only=True"
+    )
+    for step_i,node_i in enumerate(path):
+        node=nodes[node_i]
+        print(
+            f"T21ROUTEPROMOTE NODE {region_name} step={step_i} node={node_i} "
+            f"obj={node['object']} mat={node['material']} "
+            f"ci={node['component']} faces={node['faces']}"
+        )
+        for tri_i,tri in enumerate(node["model_triangles"]):
+            model=[
+                [round(p[0],6),round(p[1],6),round(p[2],6)]
+                for p in tri
+            ]
+            project=[]
+            for mx,my,mz in tri:
+                px,pz=model_to_project((mx,mz))
+                project.append([
+                    round(px,6),
+                    round(my-3.0,6),
+                    round(pz,6)
+                ])
+            print(
+                f"T21ROUTEPROMOTE TRIANGLE {region_name} step={step_i} "
+                f"tri={tri_i} model={model} project={project}"
+            )
