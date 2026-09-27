@@ -173,7 +173,7 @@ export function undertowPaintResolutionPass10CAuditErrors(): readonly string[] {
       record.authority !== 'PAINTABLE' ||
       record.evidenceClass !== 'AUTHOR_VECTOR_SEMANTIC'
     ) {
-      errors.push(\`\${id}: Pass 10C paint-authority inventory record missing\`);
+      errors.push(`${id}: Pass 10C paint-authority inventory record missing`);
     }
   }
 
