@@ -8,7 +8,7 @@ describe('T21-D water kill authority audit', () => {
   it('keeps the completed XZ hazard classification separate from vertical kill authority', () => {
     expect(undertowWaterKillAuthorityAuditErrors()).toEqual([]);
     expect(UNDERTOW_WATER_KILL_AUTHORITY_AUDIT).toMatchObject({
-      resolutionPass: '9B',
+      resolutionPass: '11B',
       mappedWaterHazardXzResolved: true,
       internalVoidClassificationResolved: true,
       exteriorPlayableHardSilhouetteResolved: true,
@@ -46,6 +46,17 @@ describe('T21-D water kill authority audit', () => {
       UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.publicActorSchemaEvidence
         .mptPlayerDeadClassPresent
     ).toBe(true);
+    expect(
+      UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.sceneMetadataPlacementEvidence
+    ).toMatchObject({
+      verifiedSnapshots: ['720', '800', '920', '1130'],
+      sceneInfoPreloadResourcesStable: true,
+      sceneInfoPreloadResources: ['Model/Fld_Temple01.bfres'],
+      versusSceneInfoContainsDeathLocatorPlacement: false,
+      versusSceneInfoContainsNormalModeBcettBody: false,
+      leagueTypeInfoOnlyReferencesTowerControlModifier: true,
+      normalModeMptPlayerDeadPlacementRecovered: false
+    });
     expect(
       UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.publicActorSchemaEvidence
         .placementTransformFields
