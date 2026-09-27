@@ -1941,4 +1941,17 @@ Validation must additionally require:
 - `Glass01` stays visual-only for collision authority
 - `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` remains active
 - `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remains independently active
+## T21-D water/death Resolution Pass 11B validation — 2026-09-27
 
+Validation must additionally require:
+- SceneInfo snapshots `720,800,920,1130` remain verified
+- all audited `Vss_Temple01` SceneInfo rows preload only `Model/Fld_Temple01.bfres`
+- SceneInfo exposes no water visual Y or Temple01 placement transforms
+- VersusSceneInfo exposes no placement reference or BCETT body
+- later `TclSceneName = Vss_Temple00` must not be treated as water/death placement authority
+- LeagueTypeInfo contributes only the Tower-Control modifier reference already classified as non-authoritative for normal/Turf placement
+- no normal-mode Temple01 placement body is claimed recovered
+- `visualPlaneResolved === false` / `visualPlaneMeters === null`
+- `killThresholdResolved === false` / `killThresholdMeters === null`
+- no water plane or death volume is emitted
+- both water activation blockers remain active
