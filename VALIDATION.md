@@ -1836,3 +1836,18 @@ Current validation must additionally require:
 - production stage selection remains frozen at `inkworks-junction`
 - PR #5 remains Draft / unmerged
 
+## T21-D upper-glass authority Resolution Pass 9A validation — 2026-09-27
+
+Validation must additionally require:
+- post-Ver.7.2/current gameplay evidence records the glass high ground as standable/traversable
+- gameplay standability does not silently become exact Glass01 or BridgeMetal collision authority
+- BridgeMetal remains 1083 faces / 709 vertices per side
+- the Pass 9A connected-component audit reports exactly **392 components per side**
+- POS/NEG component signatures remain exact mirrors (signature XOR = 0)
+- no unique standable BridgeMetal component is claimed
+- exact player-collision and navigation face binding remain unresolved
+- projectile behavior remains unresolved independently
+- camera-query behavior remains unresolved independently
+- Glass01 remains render-only and BridgeMetal remains unpromoted
+- production stage remains frozen T20 `inkworks-junction`
+
