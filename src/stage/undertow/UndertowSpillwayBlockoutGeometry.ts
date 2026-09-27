@@ -36,10 +36,6 @@ import { UNDERTOW_WATER_KILL_AUTHORITY_AUDIT } from './UndertowSpillwayWaterKill
 import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
 import { UNDERTOW_TURF_SCOREABLE_MASK_AUDIT } from './UndertowSpillwayTurfScoreableMaskAudit';
 import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
-import {
-  UNDERTOW_SPLAT_ZONES_UNDERPASS_PAINT_REGISTRATION,
-  type UndertowZoneUnderpassPaintRegistration
-} from './UndertowSpillwayZonesVectorGeometry';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
 export const UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS = 0.125;
@@ -182,14 +178,9 @@ const solids = [
   ...undertowRightLowRouteRampStageSolids(),
   ...undertowUpperGlassVisualStageSolids()
 ];
-const registeredUnderpassZonePaintSurfaces = [
-  buildRegisteredUnderpassZonePaintSurface(
-    UNDERTOW_SPLAT_ZONES_UNDERPASS_PAINT_REGISTRATION.negativeZ
-  ),
-  buildRegisteredUnderpassZonePaintSurface(
-    UNDERTOW_SPLAT_ZONES_UNDERPASS_PAINT_REGISTRATION.positiveZ
-  )
-];
+const resolvedUnderpassPaintSurfaces = UNDERTOW_MODEL_XZ_GEOMETRY
+  .filter((item) => item.id.startsWith('glass-underpass-'))
+  .map(buildResolvedUnderpassPaintSurface);
 
 const paintSurfaces = [
   ...built.flatMap((item) =>
@@ -197,7 +188,7 @@ const paintSurfaces = [
   ),
   ...undertowCenterSlopePaintSurfaces(),
   ...undertowRightLowRouteRampPaintSurfaces(),
-  ...registeredUnderpassZonePaintSurfaces
+  ...resolvedUnderpassPaintSurfaces
 ];
 
 const outer = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints;
@@ -234,36 +225,34 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
       'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
       'WATER_VISUAL_Y_PENDING',
       'WATER_KILL_THRESHOLD_PENDING',
-      'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING',
       'TURF_SCOREABLE_MASK_PENDING',
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
     ],
     notes:
-      'Inert T21-D construction package only. It contains BLOCKOUT-safe flat/source-mesh geometry plus audited one-way first-drop and right-small-drop CPU navigation links, and does not replace PRODUCTION_STAGE_DEFINITION. Technical slab thickness and off-mesh endpoint radius are runtime implementation values, not claimed source measurements.'
+      'Inert T21-D construction package only. Resolution Pass 12C promotes the two audited whole-underpass footprints to PaintSurfaces from controlled current gameplay evidence while keeping Turf Scoreable unresolved. It contains BLOCKOUT-safe flat/source-mesh geometry plus audited one-way first-drop and right-small-drop CPU navigation links, and does not replace PRODUCTION_STAGE_DEFINITION. Technical slab thickness and off-mesh endpoint radius are runtime implementation values, not claimed source measurements.'
   });
 
-function buildRegisteredUnderpassZonePaintSurface(
-  registration: UndertowZoneUnderpassPaintRegistration
+function buildResolvedUnderpassPaintSurface(
+  item: UndertowModelXZPolygon
 ): StagePaintSurfaceDefinition {
-  const bounds = polygonBounds(registration.projectOuter);
-  const width = bounds.maxX - bounds.minX;
-  const depth = bounds.maxZ - bounds.minZ;
+  const bounds = polygonBounds(item.projectOuter);
+  const solidId = `UndertowT21D:${item.id}`;
   return {
-    id: `UndertowT21D:${registration.id}`,
-    backingSolidId: registration.backingSolidId,
+    id: `${solidId}:paint`,
+    backingSolidId: solidId,
     center: [
       (bounds.minX + bounds.maxX) * 0.5,
-      0.002,
+      item.sourceYProjectMeters + 0.002,
       (bounds.minZ + bounds.maxZ) * 0.5
     ],
     uAxis: [1, 0, 0],
     vAxis: [0, 0, 1],
-    widthMeters: width,
-    heightMeters: depth,
+    widthMeters: bounds.maxX - bounds.minX,
+    heightMeters: bounds.maxZ - bounds.minZ,
     flags: paintableFloor,
     footprint: localFootprint(
-      registration.projectOuter,
-      registration.projectHoles,
+      item.projectOuter,
+      item.projectHoles,
       bounds.minX,
       bounds.minZ
     )
@@ -421,6 +410,14 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
     )
   ) {
     errors.push('unresolved runtime paint authority must remain activation-blocking');
+  }
+  if (
+    UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount === 0 &&
+    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING'
+    )
+  ) {
+    errors.push('resolved runtime paint authority must remove the stale activation blocker');
   }
   if (
     !UNDERTOW_TURF_SCOREABLE_MASK_AUDIT.scoreMaskResolved &&

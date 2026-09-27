@@ -15,6 +15,7 @@ export interface UndertowRuntimePaintAuthorityRecord {
     | 'CANONICAL_LEDGER'
     | 'AUTHOR_VECTOR_SEMANTIC'
     | 'PUBLIC_CURRENT_GAMEPLAY'
+    | 'CONTROLLED_CURRENT_GAMEPLAY'
     | 'GEOMETRY_ONLY';
   notes: string;
 }
@@ -47,12 +48,18 @@ const PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS = [
   'UndertowT21D:spawn-high-negative-z'
 ] as const;
 
+const CONTROLLED_RESOLVED_UNDERPASS_PAINTABLE_RUNTIME_SOLID_IDS = [
+  'UndertowT21D:glass-underpass-positive-z',
+  'UndertowT21D:glass-underpass-negative-z'
+] as const;
+
 const PAINTABLE_RUNTIME_SOLID_IDS = [
   ...CANONICAL_LEDGER_PAINTABLE_RUNTIME_SOLID_IDS,
   ...AUTHOR_RESOLVED_SLOPE_PAINTABLE_RUNTIME_SOLID_IDS,
   ...AUTHOR_RESOLVED_ROUTE_RAMP_PAINTABLE_RUNTIME_SOLID_IDS,
   ...AUTHOR_RESOLVED_FIRST_DROP_PAINTABLE_RUNTIME_SOLID_IDS,
-  ...PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS
+  ...PUBLIC_RESOLVED_SPAWN_PAINTABLE_RUNTIME_SOLID_IDS,
+  ...CONTROLLED_RESOLVED_UNDERPASS_PAINTABLE_RUNTIME_SOLID_IDS
 ] as const;
 
 const UNINKABLE_RUNTIME_SOLID_IDS = [
@@ -62,10 +69,7 @@ const UNINKABLE_RUNTIME_SOLID_IDS = [
   'UndertowT21D:upper-glass-negative-z:visual'
 ] as const;
 
-const UNKNOWN_FLAT_RUNTIME_SOLID_IDS = [
-  'UndertowT21D:glass-underpass-positive-z',
-  'UndertowT21D:glass-underpass-negative-z'
-] as const;
+const UNKNOWN_FLAT_RUNTIME_SOLID_IDS = [] as const;
 
 
 export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
@@ -79,7 +83,7 @@ export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
   confirmedPaintableCount: PAINTABLE_RUNTIME_SOLID_IDS.length,
   confirmedUninkableCount: UNINKABLE_RUNTIME_SOLID_IDS.length,
   unresolvedCount: UNKNOWN_FLAT_RUNTIME_SOLID_IDS.length,
-  paintAuthorityComplete: false,
+  paintAuthorityComplete: true,
   turfScoreabilityEvaluated: false,
   publicStageSchemaFollowup: Object.freeze({
     repository: 'OctoSquiddy/Splatoon-3-Map-Editor',
@@ -98,17 +102,14 @@ export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
     confirmedUninkable:
       'Author/vector semantics explicitly identify the grate pair and upper-glass family as uninkable; water is also uninkable but is not a current runtime solid because its Y remains unresolved.',
     unresolved:
-      'Only the two whole underpass floors outside the already-registered Splat-Zone intersections still lack equally strong face-specific paint authority.',
+      'No runtime paint-authority surface remains unresolved. The former whole-underpass UNKNOWN pair was resolved by the two-sided Pass 12B controlled gameplay capture.',
     materialNameRule:
       'Floor/Concrete/Slope/Grass/Line or other source object/material names are never paint authority by themselves.'
   }),
-  missingAuthoritativeEvidence: [
-    'Current Temple01 per-face/per-collider paint metadata or a registered paint mask that can resolve the underpass remainder outside the exact Splat-Zone intersections.',
-    'Or controlled gameplay paint tests/captures for the remaining underpass floor cells, registered strongly enough to prove ink acceptance versus rejection outside the objective subregions.'
-  ] as const,
+  missingAuthoritativeEvidence: [] as const,
   confidence: 'HIGH' as const,
   notes:
-    'Resolution Pass 10C reduces UNKNOWN runtime paint authority from four solids to two by promoting only the exact mirrored first-drop landing pair from author-vector semantics. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING remains activation-blocking only for the two whole underpass solids. TURF_SCOREABLE_MASK_PENDING remains a separate activation blocker.'
+    'Resolution Pass 12C resolves the last two UNKNOWN runtime paint solids from controlled current gameplay captures at the two registered outside-Zone probes. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING is cleared. TURF_SCOREABLE_MASK_PENDING remains a separate activation blocker; PAINTABLE never implies Scoreable.'
 });
 
 export const UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS:
@@ -147,6 +148,15 @@ export const UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS:
     notes:
       'Resolution Pass 5 registers the exact spawn-center-seeded Y=7.5m component to current Turf references that describe the broad spawn/base high ground as territory players must ink.'
   })),
+  ...CONTROLLED_RESOLVED_UNDERPASS_PAINTABLE_RUNTIME_SOLID_IDS.map(
+    (runtimeSolidId) => ({
+      runtimeSolidId,
+      authority: 'PAINTABLE' as const,
+      evidenceClass: 'CONTROLLED_CURRENT_GAMEPLAY' as const,
+      notes:
+        'Resolution Pass 12C uses the 2026-09-27 Pass 12B two-sided outside-Zone before/after capture. Ordinary main-weapon ink persists on both registered underpass floor probes; this authorizes whole-floor paintability only and does not authorize Turf Scoreable semantics.'
+    })
+  ),
   ...UNINKABLE_RUNTIME_SOLID_IDS.map((runtimeSolidId) => ({
     runtimeSolidId,
     authority: 'UNINKABLE' as const,
@@ -181,8 +191,8 @@ export function undertowPaintAuthorityAuditErrors(): readonly string[] {
   ) {
     errors.push('runtime paint-authority counts no longer balance');
   }
-  if (audit.unresolvedCount !== 2 || audit.paintAuthorityComplete) {
-    errors.push('the two remaining unknown runtime paint surfaces must remain localized and activation-blocking');
+  if (audit.unresolvedCount !== 0 || !audit.paintAuthorityComplete) {
+    errors.push('controlled Pass 12C evidence must resolve all runtime paint-authority surfaces');
   }
   if (audit.turfScoreabilityEvaluated) {
     errors.push('paint authority audit must not resolve Turf scoreability');
@@ -263,6 +273,17 @@ export function undertowPaintAuthorityAuditErrors(): readonly string[] {
       errors.push(`${id}: Resolution Pass 10C first-drop paint authority record missing`);
     }
   }
+  for (const id of CONTROLLED_RESOLVED_UNDERPASS_PAINTABLE_RUNTIME_SOLID_IDS) {
+    if (!records.some(
+      (record) =>
+        record.runtimeSolidId === id &&
+        record.authority === 'PAINTABLE' &&
+        record.evidenceClass === 'CONTROLLED_CURRENT_GAMEPLAY'
+    )) {
+      errors.push(`${id}: Resolution Pass 12C controlled underpass paint authority record missing`);
+    }
+  }
+
   if (
     UNDERTOW_UPPER_GLASS_SOURCE_MESHES.some(
       (record) => record.paintAuthority !== 'UNINKABLE'

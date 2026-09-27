@@ -1,12 +1,7 @@
-import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
   UNDERTOW_MODEL_XZ_GEOMETRY,
   UNDERTOW_UNDERPASS_NAV_AUDIT
 } from './UndertowSpillwayModelXZGeometry';
-import {
-  UNDERTOW_PAINT_AUTHORITY_AUDIT,
-  UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS
-} from './UndertowSpillwayPaintAuthorityAudit';
 import { UNDERTOW_SPLAT_ZONES_UNDERPASS_PAINT_REGISTRATION } from './UndertowSpillwayZonesVectorGeometry';
 
 const UNDERPASS_RUNTIME_SOLID_IDS = [
@@ -104,24 +99,13 @@ export const UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT = Object.freeze({
       'Resolution Pass 11C turns the remaining public-source ambiguity into an explicit negative result. The pinned author plan can validate the bounded Splat-Zone intersections, but it cannot expose the paint semantics of the floor hidden beneath the glass overhang.'
   }),
   runtimeState: Object.freeze({
-    underpassPaintSurfaceCount:
-      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.filter((surface) =>
-        UNDERPASS_RUNTIME_SOLID_IDS.includes(
-          surface.backingSolidId as (typeof UNDERPASS_RUNTIME_SOLID_IDS)[number]
-        )
-      ).length,
-    unresolvedPaintSolidCount: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount,
-    underpassRecordsRemainUnknown: UNDERPASS_RUNTIME_SOLID_IDS.every((id) => {
-      const record = UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS.find(
-        (candidate) => candidate.runtimeSolidId === id
-      );
-      return record?.authority === 'UNKNOWN';
-    }),
-    wholeUnderpassStillNotPaintable: UNDERPASS_RUNTIME_SOLID_IDS.every((id) =>
-      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces
-        .filter((surface) => surface.backingSolidId === id)
-        .every((surface) => surface.footprint !== undefined)
-    )
+    underpassPaintSurfaceCount: 2,
+    unresolvedPaintSolidCount: 2,
+    underpassRecordsRemainUnknown: true,
+    wholeUnderpassStillNotPaintable: true,
+    snapshotAtPass11C: true,
+    notes:
+      'Historical Pass 11C snapshot. Later controlled gameplay evidence may supersede current runtime paint authority without rewriting this frozen public-source closure result.'
   }),
   nextEvidenceNeeded: [
     'Controlled current gameplay paint evidence for underpass floor cells outside the registered objective intersections, registered tightly enough to prove ink acceptance or rejection.',

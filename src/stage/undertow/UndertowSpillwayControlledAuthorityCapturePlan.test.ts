@@ -7,16 +7,14 @@ import {
 } from './UndertowSpillwayControlledAuthorityCapturePlan';
 
 describe('T21 Resolution Pass 12B controlled authority capture plan', () => {
-  it('requests only the lowest-cost blocker-resolving capture', () => {
-    expect(undertowRequestReadyControlledAuthorityCaptureIds()).toEqual([
-      'WHOLE_UNDERPASS_PAINT_OUTSIDE_ZONES'
-    ]);
+  it('marks the completed two-sided underpass capture resolved', () => {
+    expect(undertowRequestReadyControlledAuthorityCaptureIds()).toEqual([]);
 
-    const ready = UNDERTOW_CONTROLLED_AUTHORITY_CAPTURE_PLAN.find(
+    const resolved = UNDERTOW_CONTROLLED_AUTHORITY_CAPTURE_PLAN.find(
       (capture) => capture.id === 'WHOLE_UNDERPASS_PAINT_OUTSIDE_ZONES'
     );
-    expect(ready?.status).toBe('REQUEST_READY');
-    expect(ready?.userActionCount).toBe(2);
+    expect(resolved?.status).toBe('RESOLVED');
+    expect(resolved?.userActionCount).toBe(2);
   });
 
   it('uses one independently registered outside-Zone probe per underpass side', () => {

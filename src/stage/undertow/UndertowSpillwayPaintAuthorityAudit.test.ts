@@ -6,28 +6,35 @@ import {
 } from './UndertowSpillwayPaintAuthorityAudit';
 
 describe('T21-D Undertow paint authority audit', () => {
-  it('accounts for every current runtime solid without guessing unknown paintability', () => {
+  it('accounts for every current runtime solid after controlled underpass resolution', () => {
     expect(undertowPaintAuthorityAuditErrors()).toEqual([]);
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT).toMatchObject({
       runtimeSolidCount: 21,
-      confirmedPaintableCount: 15,
+      confirmedPaintableCount: 17,
       confirmedUninkableCount: 4,
-      unresolvedCount: 2,
-      paintAuthorityComplete: false,
+      unresolvedCount: 0,
+      paintAuthorityComplete: true,
       turfScoreabilityEvaluated: false,
       confidence: 'HIGH'
     });
     expect(UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS).toHaveLength(21);
   });
 
-  it('keeps only the two whole-underpass solids unresolved', () => {
-    expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds)
-      .toEqual([
-        'UndertowT21D:glass-underpass-positive-z',
-        'UndertowT21D:glass-underpass-negative-z'
-      ]);
-    expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds)
-      .toHaveLength(2);
+  it('resolves both whole-underpass solids from controlled current gameplay', () => {
+    expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds).toEqual([]);
+    for (const id of [
+      'UndertowT21D:glass-underpass-positive-z',
+      'UndertowT21D:glass-underpass-negative-z'
+    ]) {
+      expect(
+        UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS.find(
+          (record) => record.runtimeSolidId === id
+        )
+      ).toMatchObject({
+        authority: 'PAINTABLE',
+        evidenceClass: 'CONTROLLED_CURRENT_GAMEPLAY'
+      });
+    }
   });
 
   it('does not treat generic PaintBancParam or material names as per-face authority', () => {

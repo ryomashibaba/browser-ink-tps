@@ -14,7 +14,8 @@ export type UndertowControlledAuthorityCaptureStatus =
   | 'DEFERRED_REQUIRES_QUERY_ISOLATION'
   | 'DEFERRED_REQUIRES_VERTICAL_REGISTRATION'
   | 'DEFERRED_REQUIRES_SCORING_ISOLATION'
-  | 'DEFERRED_UNTIL_COLLISION_AUTHORITY';
+  | 'DEFERRED_UNTIL_COLLISION_AUTHORITY'
+  | 'RESOLVED';
 
 export interface UndertowControlledAuthorityCapture {
   id: UndertowControlledAuthorityCaptureId;
@@ -127,7 +128,7 @@ export const UNDERTOW_CONTROLLED_AUTHORITY_CAPTURE_PLAN:
   {
     id: 'WHOLE_UNDERPASS_PAINT_OUTSIDE_ZONES',
     priority: 1,
-    status: 'REQUEST_READY',
+    status: 'RESOLVED',
     blocks: ['UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING'],
     userActionCount: 2,
     purpose:
@@ -302,11 +303,8 @@ export function undertowControlledAuthorityCapturePlanErrors():
   }
 
   const requestReady = undertowRequestReadyControlledAuthorityCaptureIds();
-  if (
-    requestReady.length !== 1 ||
-    requestReady[0] !== 'WHOLE_UNDERPASS_PAINT_OUTSIDE_ZONES'
-  ) {
-    errors.push('Pass 12B must request only the two-sided underpass paint evidence');
+  if (requestReady.length !== 0) {
+    errors.push('resolved Pass 12B underpass paint capture must no longer be request-ready');
   }
 
   const underpassRequest = UNDERTOW_CONTROLLED_AUTHORITY_CAPTURE_PLAN.find(
@@ -314,10 +312,11 @@ export function undertowControlledAuthorityCapturePlanErrors():
   );
   if (
     !underpassRequest ||
+    underpassRequest.status !== 'RESOLVED' ||
     underpassRequest.userActionCount !== 2 ||
     !underpassRequest.blocks.includes('UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING')
   ) {
-    errors.push('underpass controlled capture request drifted from its single blocker scope');
+    errors.push('underpass controlled capture resolution drifted from the completed Pass 12B scope');
   }
 
   if (

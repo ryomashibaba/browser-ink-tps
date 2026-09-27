@@ -1,14 +1,19 @@
 export type UndertowUserCaptureEvidenceId =
   | 'user-underpass-capture-2026-09-25'
   | 'user-right-low-capture-2026-09-25'
-  | 'user-first-drop-height-stills-2026-09-26';
+  | 'user-first-drop-height-stills-2026-09-26'
+  | 'user-underpass-outside-zone-paint-stills-2026-09-27';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
   filename?: string;
   filenames?: readonly string[];
   durationSeconds?: number;
-  region: 'GLASS_UNDERPASS' | 'RIGHT_LOW' | 'GUIDE_LINE_SIDE_HEIGHT_ORDER';
+  region:
+    | 'GLASS_UNDERPASS'
+    | 'RIGHT_LOW'
+    | 'GUIDE_LINE_SIDE_HEIGHT_ORDER'
+    | 'GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -51,6 +56,18 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'The user identifies the floor referred to as below the red guide line as lower than the floor referred to as below the blue guide line.',
         'The guide-line-side comparison does not independently identify either observed floor as a canonical first-drop-landing, right-small-drop-upper, or right-low node.',
         'The still pair establishes only a qualitative guide-line-side ordering; it does not establish canonical floor identities or an exact metric delta.'
+      ]
+    },
+    {
+      id: 'user-underpass-outside-zone-paint-stills-2026-09-27',
+      filenames: ['IMG_6137.jpeg', 'IMG_6136.jpeg', 'IMG_6135.jpeg', 'IMG_6134.jpeg'],
+      region: 'GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES',
+      confidence: 'CONFIRMED',
+      facts: [
+        'The four stills were supplied as the two Pass 12B mirrored-side probe pairs, in before/after order: IMG_6137 to IMG_6136 and IMG_6135 to IMG_6134.',
+        'Each before/after pair keeps the local underpass floor and surrounding geometry visible; the after frame shows persistent yellow ordinary-main-weapon ink on the previously bare floor patch.',
+        'The submission fulfills both independently registered outside-Zone probes from the Pass 12B capture guide, so both whole-underpass floor solids are authorized PAINTABLE without inferring the second side from symmetry.',
+        'This evidence establishes paint acceptance only. It does not authorize Turf Scoreable semantics or any player/projectile/camera/navigation inference.'
       ]
     }
   ];

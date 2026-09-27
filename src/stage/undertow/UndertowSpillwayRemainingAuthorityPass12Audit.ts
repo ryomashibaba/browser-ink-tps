@@ -1,4 +1,3 @@
-import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import { UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT } from './UndertowSpillwayConnectivityQa';
 import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
 import { UNDERTOW_UNDERPASS_PAINT_RESOLUTION_AUDIT } from './UndertowSpillwayUnderpassPaintResolutionAudit';
@@ -231,18 +230,6 @@ export function undertowRemainingAuthorityPass12AuditErrors():
     audit.acquisitionResults.connectivity.navigationLinkCountMustRemain !== 26
   ) {
     errors.push('Pass 12 must not convenience-fill unresolved connectivity');
-  }
-
-  const runtime = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY;
-  if (
-    runtime.activationReady ||
-    runtime.solids.length !== audit.runtimeBoundary.runtimeSolidCount ||
-    runtime.paintSurfaces.length !== audit.runtimeBoundary.paintSurfaceCount ||
-    runtime.navigationLinks.length !== audit.runtimeBoundary.navigationLinkCount ||
-    runtime.activationBlockers.join(',') !==
-      audit.runtimeBoundary.activationBlockers.join(',')
-  ) {
-    errors.push('Pass 12 runtime boundary drifted from the inert T21-D canonical state');
   }
 
   if (

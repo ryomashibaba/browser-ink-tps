@@ -130,20 +130,20 @@ describe('T21-D partial Undertow blockout geometry', () => {
     );
     expect(slopePaint.every((surface) => (surface.flags & SurfaceFlags.Ramp) !== 0)).toBe(true);
     expect(slopePaint.every((surface) => (surface.flags & SurfaceFlags.Floor) === 0)).toBe(true);
-    const zoneUnderpassPaint =
+    const underpassPaint =
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.filter((surface) =>
-        surface.id.includes('zone-underpass-paint')
+        surface.backingSolidId.includes('glass-underpass-')
       );
-    expect(zoneUnderpassPaint).toHaveLength(2);
-    expect(zoneUnderpassPaint.every((surface) =>
-      surface.backingSolidId.includes('glass-underpass-')
+    expect(underpassPaint).toHaveLength(2);
+    expect(underpassPaint.every((surface) =>
+      surface.id.endsWith(':paint') && !surface.id.includes('zone-underpass-paint')
     )).toBe(true);
-    expect(zoneUnderpassPaint.every((surface) => surface.footprint !== undefined)).toBe(true);
-    expect(zoneUnderpassPaint.every((surface) => surface.footprint?.holes?.length === 1)).toBe(true);
-    expect(zoneUnderpassPaint.every((surface) =>
+    expect(underpassPaint.every((surface) => surface.footprint !== undefined)).toBe(true);
+    expect(underpassPaint.every((surface) => surface.footprint?.holes?.length === 1)).toBe(true);
+    expect(underpassPaint.every((surface) =>
       surface.footprint?.cellSizeMeters === UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS
     )).toBe(true);
-    expect(zoneUnderpassPaint.every((surface) =>
+    expect(underpassPaint.every((surface) =>
       (surface.flags & SurfaceFlags.Scoreable) === 0
     )).toBe(true);
     expect(paintIds.filter((id) => id.includes('spawn-high-'))).toHaveLength(2);
@@ -195,10 +195,12 @@ describe('T21-D partial Undertow blockout geometry', () => {
       'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
       'WATER_VISUAL_Y_PENDING',
       'WATER_KILL_THRESHOLD_PENDING',
-      'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING',
       'TURF_SCOREABLE_MASK_PENDING',
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
     ]));
+    expect(
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
+    ).not.toContain('UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING');
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).not.toContain('UPPER_GLASS_SLOPE_RUNTIME_PENDING');
