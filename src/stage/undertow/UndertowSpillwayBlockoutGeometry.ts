@@ -18,6 +18,7 @@ import {
 } from './UndertowSpillwayModelXZGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import { undertowCenterSlopeStageSolids } from './UndertowSpillwaySlopeMeshGeometry';
+import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
 import {
   UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
   undertowUpperGlassVisualStageSolids
@@ -319,6 +320,22 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
     )
   ) {
     errors.push('upper-glass collision authority gap is no longer represented by an activation blocker');
+  }
+  if (
+    !UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.bridgeMetalCollisionAuthorityReady &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UPPER_GLASS_COLLISION_AUTHORITY_PENDING'
+    )
+  ) {
+    errors.push('BridgeMetal visual-source collision ambiguity must remain activation-blocking');
+  }
+  if (
+    !UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.cameraQueryAuthorityReady &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING'
+    )
+  ) {
+    errors.push('upper-glass camera-query authority gap must remain activation-blocking');
   }
   if (
     !UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneResolved &&
