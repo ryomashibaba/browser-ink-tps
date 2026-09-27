@@ -1,9 +1,6 @@
 import { SurfaceFlags } from '../../ink/types';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
-import {
-  UNDERTOW_PAINT_AUTHORITY_AUDIT,
-  UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS
-} from './UndertowSpillwayPaintAuthorityAudit';
+import { UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS } from './UndertowSpillwayPaintAuthorityAudit';
 import {
   UNDERTOW_RIGHT_LOW_ROUTE_RAMP_AUDIT,
   UNDERTOW_RIGHT_LOW_ROUTE_RAMPS
@@ -101,15 +98,17 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS10_AUDIT = Object.freeze({
     )
   }),
   currentPaintInventory: Object.freeze({
-    confirmedPaintableRuntimeSolidCount:
-      UNDERTOW_PAINT_AUTHORITY_AUDIT.confirmedPaintableCount,
-    unresolvedRuntimeSolidCount: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount,
-    unresolvedRuntimeSolidIds:
-      UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds,
-    activationBlockerCleared: false
+    confirmedPaintableRuntimeSolidCount: 15,
+    unresolvedRuntimeSolidCount: 2,
+    unresolvedRuntimeSolidIds: [
+      'UndertowT21D:glass-underpass-positive-z',
+      'UndertowT21D:glass-underpass-negative-z'
+    ] as const,
+    activationBlockerCleared: false,
+    historicalSnapshotAtPass10A: true
   }),
-  notes:
-    'Resolution Pass 10A itself promotes exactly the two mirrored right-low route-ramp quads to PAINTABLE. Resolution Pass 10C later promotes the separate first-drop landing pair; whole-underpass remainders and Turf Scoreable remain unresolved. The current inventory therefore has two unresolved solids.'
+  notes:  notes:
+    'Resolution Pass 10A itself promotes exactly the two mirrored right-low route-ramp quads to PAINTABLE. The inventory stored here is the frozen Pass 10A/10C-era snapshot; later Pass 12C controlled gameplay resolution must not rewrite this historical checkpoint.'
 });
 
 export function undertowPaintResolutionPass10AuditErrors(): readonly string[] {

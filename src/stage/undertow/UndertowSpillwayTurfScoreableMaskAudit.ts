@@ -66,7 +66,7 @@ export const UNDERTOW_TURF_SCOREABLE_MASK_AUDIT = Object.freeze({
   ] as const,
   confidence: 'HIGH' as const,
   notes:
-    'TURF_SCOREABLE_MASK_PENDING remains activation-blocking. No current Undertow paint surface receives SurfaceFlags.Scoreable from this audit. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING is an upstream completeness dependency, but paintability and Turf victory scoring remain separate authorities.'
+    'TURF_SCOREABLE_MASK_PENDING remains activation-blocking. Pass 12C has completed upstream paint authority (17 PAINTABLE, 0 UNKNOWN), but no Undertow paint surface receives SurfaceFlags.Scoreable from that fact. Paintability and Turf victory scoring remain separate authorities.'
 });
 
 export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
@@ -76,14 +76,14 @@ export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
   if (audit.scoreMaskResolved || audit.currentScoreablePromotionsAuthorized !== 0) {
     errors.push('Turf scoreability must remain unresolved with zero authorized promotions');
   }
-  if (audit.paintAuthorityUpstreamComplete) {
-    errors.push('score-mask audit unexpectedly claims complete upstream paint authority');
+  if (!audit.paintAuthorityUpstreamComplete) {
+    errors.push('score-mask audit must recognize that Pass 12C completed upstream paint authority');
   }
-  if (audit.currentConfirmedPaintableRuntimeSolidCount !== 15) {
-    errors.push('current confirmed paintable runtime-solid count drifted from fifteen');
+  if (audit.currentConfirmedPaintableRuntimeSolidCount !== 17) {
+    errors.push('current confirmed paintable runtime-solid count drifted from seventeen');
   }
-  if (audit.currentUnknownPaintRuntimeSolidCount !== 2) {
-    errors.push('current unknown paint runtime-solid count drifted from two');
+  if (audit.currentUnknownPaintRuntimeSolidCount !== 0) {
+    errors.push('current unknown paint runtime-solid count must remain zero after Pass 12C');
   }
   if (
     !audit.engineRepresentation.stagePaintSurfaceHasWholeSurfaceFlags ||
@@ -114,8 +114,8 @@ export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
   ) {
     errors.push('public schema unexpectedly claims Temple01 Turf score authority');
   }
-  if (audit.candidateRuntimeSolidIds.length !== 15) {
-    errors.push('scoreability candidate inventory must track exactly fifteen currently confirmed paintable solids');
+  if (audit.candidateRuntimeSolidIds.length !== 17) {
+    errors.push('scoreability candidate inventory must track exactly seventeen currently confirmed paintable solids');
   }
   if (audit.missingAuthoritativeEvidence.length < 3) {
     errors.push('Turf score-mask evidence gap is not sufficiently localized');

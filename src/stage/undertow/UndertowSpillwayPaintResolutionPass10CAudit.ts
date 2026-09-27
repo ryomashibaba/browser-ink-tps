@@ -4,10 +4,7 @@ import {
   UNDERTOW_MODEL_XZ_GEOMETRY,
   UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT
 } from './UndertowSpillwayModelXZGeometry';
-import {
-  UNDERTOW_PAINT_AUTHORITY_AUDIT,
-  UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS
-} from './UndertowSpillwayPaintAuthorityAudit';
+import { UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS } from './UndertowSpillwayPaintAuthorityAudit';
 
 const FIRST_DROP_RUNTIME_SOLID_IDS = [
   'UndertowT21D:first-drop-landing-positive-z',
@@ -91,19 +88,20 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS10C_AUDIT = Object.freeze({
     )
   }),
   currentPaintInventory: Object.freeze({
-    confirmedPaintableRuntimeSolidCount:
-      UNDERTOW_PAINT_AUTHORITY_AUDIT.confirmedPaintableCount,
-    confirmedUninkableRuntimeSolidCount:
-      UNDERTOW_PAINT_AUTHORITY_AUDIT.confirmedUninkableCount,
-    unresolvedRuntimeSolidCount: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount,
-    unresolvedRuntimeSolidIds:
-      UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds,
-    activationBlockerCleared: false
+    confirmedPaintableRuntimeSolidCount: 15,
+    confirmedUninkableRuntimeSolidCount: 4,
+    unresolvedRuntimeSolidCount: 2,
+    unresolvedRuntimeSolidIds: [
+      'UndertowT21D:glass-underpass-positive-z',
+      'UndertowT21D:glass-underpass-negative-z'
+    ] as const,
+    activationBlockerCleared: false,
+    historicalSnapshotAtPass10C: true
   }),
-  scoreableAuthorityPromoted: false,
+  scoreableAuthorityPromoted:  scoreableAuthorityPromoted: false,
   confidence: 'HIGH' as const,
   notes:
-    'Resolution Pass 10C promotes exactly the mirrored first-drop landing pair to PAINTABLE. It does not promote the whole underpass remainder and does not infer Turf Scoreable from white/paintable semantics.'
+    'Resolution Pass 10C promotes exactly the mirrored first-drop landing pair to PAINTABLE. The inventory stored here is its frozen historical checkpoint; later Pass 12C controlled gameplay resolution of the underpass does not retroactively alter this pass, and Turf Scoreable is still never inferred from paintability.'
 });
 
 export function undertowPaintResolutionPass10CAuditErrors(): readonly string[] {
