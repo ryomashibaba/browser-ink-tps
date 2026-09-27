@@ -143,44 +143,6 @@ export function undertowRightLowRouteRampPaintSurfaces():
   });
 }
 
-const RIGHT_LOW_ROUTE_RAMP_PAINT_FLAGS =
-  SurfaceFlags.Paintable |
-  SurfaceFlags.Swimmable |
-  SurfaceFlags.Ramp;
-
-export function undertowRightLowRouteRampPaintSurfaces():
-  readonly StagePaintSurfaceDefinition[] {
-  return UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.map((record) => {
-    const [p0, p1, p2, p3] = record.mesh.vertices;
-    const u = subtract3(p1!, p0!);
-    const v = subtract3(p2!, p0!);
-    const width = length3(u);
-    const height = length3(v);
-    const uAxis = normalize3(u);
-    const vAxis = normalize3(v);
-    const normal = normalize3(cross3(uAxis, vAxis));
-    const centerBase: StageVector3 = [
-      (p0![0] + p1![0] + p2![0] + p3![0]) * 0.25,
-      (p0![1] + p1![1] + p2![1] + p3![1]) * 0.25,
-      (p0![2] + p1![2] + p2![2] + p3![2]) * 0.25
-    ];
-    return {
-      id: `UndertowT21D:${record.id}:paint`,
-      backingSolidId: `UndertowT21D:${record.id}`,
-      center: [
-        centerBase[0] + normal[0] * 0.002,
-        centerBase[1] + normal[1] * 0.002,
-        centerBase[2] + normal[2] * 0.002
-      ],
-      uAxis,
-      vAxis,
-      widthMeters: width,
-      heightMeters: height,
-      flags: RIGHT_LOW_ROUTE_RAMP_PAINT_FLAGS
-    };
-  });
-}
-
 export function undertowRightLowRouteRampStageSolids():
   readonly StageSolidDefinition[] {
   return UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.map((record) => {
