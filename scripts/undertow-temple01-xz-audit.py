@@ -2112,6 +2112,121 @@ print(
 )
 
 
+# T21-D Resolution Pass 9A: decompose the central BridgeMetal source into
+# connected components before granting any player/navigation authority.
+# This is diagnostic-only. A component may become a collision candidate only
+# if it is source-local, symmetric, geometrically compatible with the known
+# upper-glass structure, and independently backed by current gameplay evidence.
+bridge_component_audit={}
+for side_name,pred in (
+    ("POS_BRIDGE_SOURCE",lambda cx,cz: (-14.0<=cx<=-5.5 and -2.5<=cz<=7.8)),
+    ("NEG_BRIDGE_SOURCE",lambda cx,cz: (5.5<=cx<=14.0 and -7.8<=cz<=2.5)),
+):
+    selected=[]
+    for ff in bridge_faces:
+        tri=[vertices[i] for i in ff[:3]]
+        cx=sum(v[0] for v in tri)/3
+        cz=sum(v[2] for v in tri)/3
+        if pred(cx,cz):
+            selected.append(ff)
+
+    comps=face_components_by_shared_vertex(selected)
+    rows=[]
+    for ci,component in enumerate(comps):
+        comp_faces=[selected[i] for i in component]
+        vis=sorted({vi for ff in comp_faces for vi in ff[:3]})
+        vv=[vertices[i] for i in vis]
+        xs=[v[0] for v in vv]; ys=[v[1] for v in vv]; zs=[v[2] for v in vv]
+        upward=[]
+        downward=[]
+        wall=[]
+        up_area=0.0
+        for ff in comp_faces:
+            tri=[vertices[i] for i in ff[:3]]
+            n=tri_normal(tri)
+            a,b,c0=tri
+            ux,uy,uz=b[0]-a[0],b[1]-a[1],b[2]-a[2]
+            vx,vy,vz=c0[0]-a[0],c0[1]-a[1],c0[2]-a[2]
+            cxn=uy*vz-uz*vy
+            cyn=uz*vx-ux*vz
+            czn=ux*vy-uy*vx
+            area=0.5*math.sqrt(cxn*cxn+cyn*cyn+czn*czn)
+            if n[1]>=0.75:
+                upward.append(ff)
+                up_area+=area
+            elif n[1]<=-0.75:
+                downward.append(ff)
+            else:
+                wall.append(ff)
+
+        # Compare the component's model-XZ bounds with the exact Glass01 source
+        # shell on the same side. This is only a locality diagnostic, not a
+        # collision-semantic proof.
+        glass_side=[
+            ff for ff in glass_faces
+            if pred(
+                sum(vertices[i][0] for i in ff[:3])/3,
+                sum(vertices[i][2] for i in ff[:3])/3
+            )
+        ]
+        glass_vis={vi for ff in glass_side for vi in ff[:3]}
+        gv=[vertices[i] for i in glass_vis]
+        gx0=min(v[0] for v in gv); gx1=max(v[0] for v in gv)
+        gz0=min(v[2] for v in gv); gz1=max(v[2] for v in gv)
+        ix=max(0.0,min(max(xs),gx1)-max(min(xs),gx0))
+        iz=max(0.0,min(max(zs),gz1)-max(min(zs),gz0))
+        bbox_overlap_area=ix*iz
+        rec={
+            "component":ci,
+            "faces":len(comp_faces),
+            "verts":len(vis),
+            "x":[min(xs),max(xs)],
+            "z":[min(zs),max(zs)],
+            "project_y":[min(ys)-3.0,max(ys)-3.0],
+            "up_faces":len(upward),
+            "down_faces":len(downward),
+            "wall_faces":len(wall),
+            "up_area":up_area,
+            "glass_bbox_overlap_area":bbox_overlap_area,
+        }
+        rows.append(rec)
+        print(
+            "T21BRIDGECOMP "
+            + side_name
+            + " "
+            + json.dumps(rec,separators=(",",":"))
+        )
+
+    rows.sort(key=lambda r:(-r["glass_bbox_overlap_area"],-r["up_area"],-r["faces"]))
+    bridge_component_audit[side_name]=rows
+    print(
+        f"T21BRIDGECOMP SUMMARY {side_name} components={len(rows)} "
+        f"top={json.dumps(rows[:12],separators=(',',':'))}"
+    )
+
+# Compare candidate component signatures across the exact model-space mirror.
+def bridge_component_signature(rec):
+    return (
+        rec["faces"],
+        rec["verts"],
+        round(rec["project_y"][0],6),
+        round(rec["project_y"][1],6),
+        rec["up_faces"],
+        rec["down_faces"],
+        rec["wall_faces"],
+        round(rec["up_area"],6),
+    )
+
+pos_sig=sorted(bridge_component_signature(r) for r in bridge_component_audit["POS_BRIDGE_SOURCE"])
+neg_sig=sorted(bridge_component_signature(r) for r in bridge_component_audit["NEG_BRIDGE_SOURCE"])
+print(
+    f"T21BRIDGECOMP SYMMETRY pos_components={len(pos_sig)} "
+    f"neg_components={len(neg_sig)} signature_xor={len(set(pos_sig)^set(neg_sig))}"
+)
+if pos_sig!=neg_sig:
+    raise SystemExit("T21 bridge component audit failed: POS/NEG component signatures differ")
+
+
 # T21-D spawn/right-low exact slope-component audit.
 #
 # Stay inside the already locally verified spawn-side Temple01 bounds and bind
