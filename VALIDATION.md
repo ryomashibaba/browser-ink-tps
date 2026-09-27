@@ -1816,3 +1816,23 @@ The current partial Undertow package must additionally satisfy:
 - production runtime remains unchanged because the partial package is still `activationReady: false`
 
 CI source acquisition may be optimized by removing the historical inline Temple01 probe only after its derived facts are sealed in code/docs. The LFS object byte size and SHA-256 check plus the authoritative current XZ audit must remain.
+
+## T21-D exact Splat Zones vector registration validation — 2026-09-27
+
+Current validation must additionally require:
+- the public current Sunfish Zones PDF identity remains 112,898 bytes with SHA-256 `ae2c24c3cc0ed09d5711e229deb7fb6535c3ef6505ea7dead1aca5e69c4d1596`
+- the PDF remains one page at 841.92 × 595.32pt
+- repository automation extracts native vector geometry; screenshot/manual tracing remains non-authoritative
+- 40 of 42 compared Turf exterior anchors remain shared within 0.001pt, with exactly two mode-specific changed anchors
+- each Splat Zone remains an exact six-vertex L-shaped ring
+- each source objective plan area remains 117.29875m²
+- only the intersection of each exact objective ring with its audited project-Y=0 underpass footprint is exposed as a paint surface
+- exactly 2 such underpass-backed paint surfaces exist
+- both use explicit surface-local footprints and retain one support hole
+- neither surface has `SurfaceFlags.Scoreable`
+- both whole underpass solid authority records remain `UNKNOWN`
+- unresolved solid-level paint count remains 6
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` and `TURF_SCOREABLE_MASK_PENDING` remain activation blockers
+- production stage selection remains frozen at `inkworks-junction`
+- PR #5 remains Draft / unmerged
+
