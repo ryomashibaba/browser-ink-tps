@@ -25,7 +25,7 @@ import {
   UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
   undertowUpperGlassVisualStageSolids
 } from './UndertowSpillwayUpperGlassMeshGeometry';
-import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
+import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';\nimport { UNDERTOW_WATER_KILL_AUTHORITY_AUDIT } from './UndertowSpillwayWaterKillAuthorityAudit';
 import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
@@ -352,7 +352,7 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
     errors.push('unresolved water visual Y must remain activation-blocking');
   }
   if (
-    !UNDERTOW_WATER_VISUAL_PLANE_AUDIT.killThresholdResolved &&
+    !UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.killThresholdResolved &&
     !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
       'WATER_KILL_THRESHOLD_PENDING'
     )
