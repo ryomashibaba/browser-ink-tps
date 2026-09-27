@@ -113,8 +113,12 @@ def main() -> int:
             "closePath": bool(drawing.get("closePath")),
             "color": color_value(drawing.get("color")),
             "fill": color_value(drawing.get("fill")),
-            "stroke_opacity": round(float(drawing.get("stroke_opacity", 1.0)), 6),
-            "fill_opacity": round(float(drawing.get("fill_opacity", 1.0)), 6),
+            "stroke_opacity": round(float(
+                1.0 if drawing.get("stroke_opacity") is None else drawing.get("stroke_opacity")
+            ), 6),
+            "fill_opacity": round(float(
+                1.0 if drawing.get("fill_opacity") is None else drawing.get("fill_opacity")
+            ), 6),
             "itemCount": len(drawing.get("items", ())),
             "items": [json_item(item) for item in drawing.get("items", ())],
         }
