@@ -2376,3 +2376,33 @@ Canonical authority split:
 
 Therefore both `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` and `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remain active. The remaining gap is no longer “is the high ground walkable?”; it is **which exact original-game face/primitive supplies each runtime role**.
 
+## T21-D water / death-volume source-placement localization — Resolution Pass 9B (2026-09-27)
+
+Pass 9B narrows the remaining vertical hazard blockers without assigning a guessed Y.
+
+Current remodeled-stage metadata:
+- Leanny `data/mush/920/SceneInfo.json` row `Vss_Temple01` identifies the remodeled Undertow resource as `Model/Fld_Temple01.bfres`
+- that SceneInfo preload list contains no explicit water resource or placement transform
+- the published metadata also references a Temple01 rule-specific layer path, `Work/Banc/BinLayer/Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json`
+- that path is a Tower-Control modifier reference only; its file body is not published there and it is **not** promoted as normal-Turf water/death authority
+
+Public stage-layout schema:
+- Temple01-specific lift variants exposed by the audited Map Editor schema are Pnt / Var / Vcl / Vgl / Vlf
+- no explicit Temple01-specific Water actor class is present in that class family
+- generic water actors do exist for other stages, so class-schema absence is not treated as proof that Undertow has no separate visual-water actor/effect
+- shared actor placement carries `Translate / Rotate / Scale`; therefore an actual current Temple01 BCETT/BYML instance body would be sufficient to geometrically bind a water/effect actor or death locator if one is present
+
+Generic player-death locator:
+- `Mpt_PlayerDead` was directly checked in Leanny snapshots **720 / 800 / 920 / 1130**
+- all four audited rows remain **Cube / Scale=1 / ControlledPlayer**
+- this confirms the generic actor definition but supplies no Temple01 instance transform or layer binding
+
+Canonical consequences:
+- `WATER_VISUAL_Y_PENDING` remains unresolved; `visualPlaneMeters === null`
+- `WATER_KILL_THRESHOLD_PENDING` remains unresolved; `killThresholdMeters === null`
+- no runtime water visual plane or death volume is introduced
+- no assumption is made that water and exterior fall-out share one vertical death trigger
+- the remaining minimum source evidence is now localized to the current Temple01 common/normal-rule placement body (or tightly registered current in-game vertical evidence)
+- production remains frozen T20 `inkworks-junction`
+- PR #5 remains Draft / open / unmerged
+
