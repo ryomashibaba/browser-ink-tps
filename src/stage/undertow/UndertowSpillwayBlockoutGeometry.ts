@@ -22,7 +22,10 @@ import {
   undertowCenterSlopePaintSurfaces,
   undertowCenterSlopeStageSolids
 } from './UndertowSpillwaySlopeMeshGeometry';
-import { undertowRightLowRouteRampStageSolids } from './UndertowSpillwayRouteRampGeometry';
+import {
+  undertowRightLowRouteRampPaintSurfaces,
+  undertowRightLowRouteRampStageSolids
+} from './UndertowSpillwayRouteRampGeometry';
 import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
 import {
   UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
@@ -193,6 +196,7 @@ const paintSurfaces = [
     item.paintSurface ? [item.paintSurface] : []
   ),
   ...undertowCenterSlopePaintSurfaces(),
+  ...undertowRightLowRouteRampPaintSurfaces(),
   ...registeredUnderpassZonePaintSurfaces
 ];
 
