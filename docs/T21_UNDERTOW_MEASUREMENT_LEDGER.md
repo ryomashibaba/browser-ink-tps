@@ -942,7 +942,11 @@ Pinned Turf PDF:
 Author-class comparison from CI #746:
 - central known-PAINTABLE slope marker: 0.24pt black / 0.96pt dash family, median brightness 255
 - gray known-UNINKABLE glass slope: same slope-marker concept but median brightness 191
-- each exact route-ramp projection: 168 canonical dashes, median brightness 255
+- each exact route-ramp 3pt query: 168 canonical dashes, median brightness 255
+- exact-polygon dash containment:
+  - positive-Z: 133 midpoint-inside / 126 fully-inside (0.791667 / 0.75)
+  - negative-Z: 126 / 126 (0.75 / 0.75)
+- audit promotion gate: midpoint-inside >= 0.70 and fully-inside >= 0.70 on both sides
 - positive-Z near-white fraction 0.883422
 - negative-Z near-white fraction 0.878540
 - route-ramp median distance to paintable class = 0; to gray uninkable class = 64
