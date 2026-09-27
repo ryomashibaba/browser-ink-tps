@@ -1889,4 +1889,16 @@ Validation must additionally require:
 - `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
 - `TURF_SCOREABLE_MASK_PENDING` remains separate with zero authorized Scoreable promotions
 - production stage remains frozen T20 `inkworks-junction`
+## T21-D source-gap Resolution Pass 10B validation — 2026-09-27
 
+Validation must additionally require:
+- source-native walk graph remains **276 nodes per side**
+- right-low contacts remain **17 per side**
+- underpass contacts remain **8 per side**
+- no source path exists at **0.03 / 0.08 / 0.18 / 0.30m**
+- relaxed discovery exposes **8 local gaps total / 4 per side**
+- strict bridge threshold remains **0.30m**
+- all-excluded-source search may report 6 apparent strict bridges, but after removing known FloorLine/FloorFence overlays the strict bridge count must remain **0**
+- no ordinary walk surface, runtime connector, or off-mesh link is promoted from this audit
+- both `right-low-to-underpass-*` probes remain diagnostic and unreached
+- `FULL_STAGE_CONNECTIVITY_QA_PENDING` remains active
