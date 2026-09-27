@@ -34,7 +34,7 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   bridgeMetalHorizontalLikeFacesPerSide: 335,
   bridgeMetalWallLikeFacesPerSide: 748,
   bridgeMetalModelSpaceMirrorXorVertices: 0,
-  resolutionPass: 9,
+  resolutionPass: '11A' as const,
   bridgeMetalConnectedComponentsPerSide: 392,
   bridgeMetalComponentSignatureMirrorXor: 0,
   bridgeMetalUniqueStandableComponentResolved: false,
@@ -47,10 +47,27 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
     notes:
       'Post-Ver.7.2/current strategy sources consistently describe players taking, holding, and dropping from the glass high ground. This establishes a standable/traversable upper structure semantically, but those sources do not identify whether the original-game collision comes from Glass01, BridgeMetal, another collision asset, or a hidden primitive.'
   }),
+  projectileSemanticEvidence: Object.freeze({
+    officialHistoricalIntentSource:
+      'Nintendo Splatoon 3 Update History / Ver.2.0.0 bug fix',
+    officialHistoricalGlassFloorOppositeSideDamageWasBug: true,
+    currentPostVer720GlassHighGroundStillPresent: true,
+    currentVer11GrateEdgeAttackPathCorroborated: true,
+    ordinaryCrossGlassDamageShouldBeBlocked: true,
+    edgeGrateOrAroundGeometryCanStillPermitAttacks: true,
+    currentExactProjectileFaceBindingResolved: false,
+    allProjectileClassesResolved: false,
+    runtimeProjectilePromotionAuthorized: false,
+    evidenceDates: ['2022-11-30', '2024-08-29', '2026-04-27'] as const,
+    notes:
+      'Nintendo explicitly fixed opposite-side damage through Undertow glass as unintended behavior. Post-Ver.7.2/current sources continue to identify the central position as glass high ground, and a Ver.11 current-stage guide specifically uses the grate edge to pass explosion coverage. Together these resolve the high-level semantic that the glass body is not a generic through-shot surface while grate/edge geometry can remain attack-permissive. They do not identify the exact current collision primitive or resolve every projectile/explosion class.'
+  }),
   playerStandabilitySemanticResolved: true,
   navigationStandabilitySemanticResolved: true,
   exactPlayerCollisionFaceBindingResolved: false,
   exactNavigationFaceBindingResolved: false,
+  projectileOcclusionSemanticResolved: true,
+  exactProjectileCollisionFaceBindingResolved: false,
   projectileBehaviorResolved: false,
   cameraQueryBehaviorResolved: false,
   kitrixStageColliderPath: 'KiTrix/SceneKit/StageCollider.swift',
@@ -66,7 +83,7 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   cameraQueryAuthorityReady: false,
   confidence: 'HIGH' as const,
   notes:
-    'Resolution Pass 9A adds two independent facts without overpromoting them. Current post-Ver.7.2 gameplay evidence confirms that the glass high ground is a standable/traversable position, while CI #728 decomposes the symmetric BridgeMetal visual source into 392 connected components per side with exact mirrored component signatures. Because that decomposition still does not uniquely bind the standable gameplay surface to Glass01 or a BridgeMetal face subset, no player/projectile/camera/nav runtime authority is promoted. The published KiTrix Temple01 directory still exposes no separate collision asset, and downstream KiTrix StageCollider behavior remains non-authoritative for original-game semantics.'
+    'Resolution Pass 11A keeps the Pass 9A standability/source-binding boundary and adds projectile-semantics evidence. Nintendo historical bug-fix authority establishes that opposite-side damage through Undertow glass was unintended, while post-Ver.7.2/current sources retain the glass high ground and identify the grate edge as an attack-permissive path. This resolves ordinary glass-vs-grate occlusion semantics at behavior level only. Exact Glass01/BridgeMetal/hidden-primitive projectile binding, camera-query authority, player collision binding, and navigation binding remain unresolved; no runtime blocker is promoted from semantics alone.'
 });
 
 export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
@@ -96,16 +113,19 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
     authorityReady: false,
     activationBlocker: 'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
     observedEvidence: [
-      'KiTrix StageCollider performs SceneKit segment hit tests against the whole loaded stage visual tree.',
-      'KiTrix BulletSimulator uses StageCollider for its own projectile hit/splat simulation.'
+      'Nintendo Ver.2.0.0 update history states that damaging a player from the opposite side of Undertow glass was a bug, establishing intended glass-side damage occlusion.',
+      'Post-Ver.7.2/current strategy evidence continues to identify the central high ground as glass.',
+      'A Ver.11 current-stage guide explicitly uses the high-ground grate edge to pass explosion coverage, separating an attack-permissive edge route from the glass body.',
+      'KiTrix StageCollider performs SceneKit segment hit tests against the whole loaded stage visual tree, and BulletSimulator consumes that downstream query.'
     ],
     insufficientBecause: [
-      'KiTrix projectile raycasts are downstream simulator behavior and are not evidence of original Undertow projectile collision rules.',
-      'The stage-wide query does not isolate whether Glass01, GlassEdge, WallFence, or BridgeMetal should block each projectile class in browser-ink-tps.'
+      'The official historical fix resolves intended glass-vs-opposite-side damage semantics but predates the Ver.7.2 terrain remodel and does not publish the collision primitive.',
+      'Current grate-edge attack evidence distinguishes an edge route from the glass body but does not identify which exact Glass01/GlassEdge/BridgeMetal faces block each projectile or explosion class.',
+      'KiTrix projectile raycasts are downstream simulator behavior and are not original-game collision authority.'
     ],
     minimumAuthoritativeEvidence: [
-      'Original-game projectile collision metadata/query data for the upper-glass structure.',
-      'Or controlled in-game shot/pass-through evidence that resolves projectile behavior per registered subcomponent.'
+      'Current original-game projectile collision/query data that binds the upper-glass blocker to exact current faces/primitives.',
+      'Or controlled post-Ver.7.2 shot/pass-through tests registered tightly enough to distinguish Glass01, GlassEdge, grate/fence, and BridgeMetal for the projectile classes browser-ink-tps simulates.'
     ]
   },
   {
@@ -160,6 +180,7 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
     errors.push('BridgeMetal counterpart source mesh lost exact model-space symmetry');
   }
   if (
+    audit.resolutionPass !== '11A' ||
     audit.bridgeMetalConnectedComponentsPerSide !== 392 ||
     audit.bridgeMetalComponentSignatureMirrorXor !== 0 ||
     audit.bridgeMetalUniqueStandableComponentResolved
@@ -175,6 +196,16 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
     !audit.navigationStandabilitySemanticResolved ||
     audit.exactPlayerCollisionFaceBindingResolved ||
     audit.exactNavigationFaceBindingResolved ||
+    !audit.projectileOcclusionSemanticResolved ||
+    audit.exactProjectileCollisionFaceBindingResolved ||
+    !audit.projectileSemanticEvidence.officialHistoricalGlassFloorOppositeSideDamageWasBug ||
+    !audit.projectileSemanticEvidence.currentPostVer720GlassHighGroundStillPresent ||
+    !audit.projectileSemanticEvidence.currentVer11GrateEdgeAttackPathCorroborated ||
+    !audit.projectileSemanticEvidence.ordinaryCrossGlassDamageShouldBeBlocked ||
+    !audit.projectileSemanticEvidence.edgeGrateOrAroundGeometryCanStillPermitAttacks ||
+    audit.projectileSemanticEvidence.currentExactProjectileFaceBindingResolved ||
+    audit.projectileSemanticEvidence.allProjectileClassesResolved ||
+    audit.projectileSemanticEvidence.runtimeProjectilePromotionAuthorized ||
     audit.projectileBehaviorResolved ||
     audit.cameraQueryBehaviorResolved
   ) {
