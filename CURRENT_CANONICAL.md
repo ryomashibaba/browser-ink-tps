@@ -2571,13 +2571,13 @@ Exact top-view result:
   - near-white fraction **0.009680**
   - dark/gray fraction **0.990320**
   - explicit overlapping fill colors = gray `[0.752941,0.752941,0.752941]` only
-  - known Glass overhang directly covers **0.772974211** of the exact floor projection
+  - known Glass overhang directly covers **0.772975275** of the exact floor projection
 - negative-Z underpass projection:
   - median brightness **191**
   - near-white fraction **0.005022**
   - dark/gray fraction **0.994978**
   - explicit overlapping fill colors = the same gray class only
-  - known Glass overhang directly covers **0.735104783** of the exact floor projection
+  - known Glass overhang directly covers **0.735104264** of the exact floor projection
 - no distinct white underpass-floor vector fill is recovered on either side
 
 Canonical interpretation:
