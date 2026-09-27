@@ -2431,6 +2431,10 @@ Exact semantic discrimination from CI #746:
   - median brightness = **255**
   - near-white fraction = **0.878540**
 - each route ramp is distance **0** from the paintable median and **64** from the uninkable median
+- exact-ramp dash containment (3pt query, canonical 0.24pt/0.96pt dashes):
+  - positive-Z: **133/168 midpoint-inside**, **126/168 fully-inside** = 0.791667 / 0.75
+  - negative-Z: **126/168 midpoint-inside**, **126/168 fully-inside** = 0.75 / 0.75
+- the audit rejects either side if midpoint-inside or fully-inside fraction drops below **0.70**
 
 Runtime consequence:
 - exactly 2 route-ramp PaintSurfaces are added
