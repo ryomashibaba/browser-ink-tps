@@ -81,7 +81,7 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS5_AUDIT = Object.freeze({
     count: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount,
     runtimeSolidIds: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds,
     underpass:
-      'Current Splat Zones references strongly suggest paintable floor beneath glass, but the project does not yet have a registered current Zones objective footprint bound to the exact common underpass polygons.',
+      'Resolution Pass 6 confirms a paintable Splat-Zone subregion beneath each glass platform, but the exact current zone boundary is not yet registered to the Temple01 underpass polygons, so whole-floor paint authority remains unresolved.',
     firstDropLanding:
       'Current guides/captures establish traversable/open turf around the drop sequence but do not isolate the exact model-Y=6.0 landing component strongly enough for a face-level paint promotion.',
     rightLowRouteRamp:

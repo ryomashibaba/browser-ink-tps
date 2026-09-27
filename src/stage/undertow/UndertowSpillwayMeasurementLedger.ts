@@ -407,8 +407,9 @@ const entries: readonly StageMeasurementEntry[] = [
     surface: {
       semantics: [],
       confidence: 'UNKNOWN',
-      evidenceIds: [],
-      notes: 'Do not infer paintability until the source footprint is bound.'
+      evidenceIds: ['sunfish-current-zones-blueprint', 'web-current-zones-under-glass'],
+      notes:
+        'Current post-Ver.7.2 Splat Zones evidence proves that a bounded paintable objective subregion exists beneath each glass platform. It does not prove that the entire audited roofed underpass polygon is paintable, so whole-floor authority remains UNKNOWN until the exact zone boundary is registered.'
     }
   }),
   commonSurfaceEntry({
@@ -888,7 +889,12 @@ const ruleFacts: readonly StageRuleFact[] = [
     statement: 'Undertow Spillway uses two Splat Zones.',
     values: { objectiveCount: 2 },
     confidence: 'CONFIRMED',
-    evidenceIds: ['user-five-rule-maps', 'handoff-t21-masterplan']
+    evidenceIds: [
+      'user-five-rule-maps',
+      'handoff-t21-masterplan',
+      'sunfish-current-zones-blueprint',
+      'web-current-zones-under-glass'
+    ]
   },
   {
     id: 'tower-route-shape',
@@ -1026,6 +1032,22 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       sourceVersion: 'Ver.7.2.0+ normal Turf',
       notes:
         'Current references describe the spawn/base side as a broad turf/own-territory area and explicitly advise painting leftover uninked ground. Used only after registration to the exact spawn-center-seeded Temple01 component; not used as Turf Scoreable or protection-mask authority.'
+    },
+    {
+      id: 'sunfish-current-zones-blueprint',
+      kind: 'USER_RULE_MAP',
+      label: 'Sunfish post-Ver.7.2 Undertow Spillway Splat Zones blueprint',
+      sourceVersion: 'updated 2024-05-06 / post-Ver.7.2.0 layout',
+      notes:
+        'The author legend defines the range enclosed by the dash-dot line as the Splat Zone. The current Undertow drawing shows two bounded zone subregions beneath the central glass structures. The PDF is planimetric and the project has not yet extracted/registered those zone boundaries into meter coordinates.'
+    },
+    {
+      id: 'web-current-zones-under-glass',
+      kind: 'WEB_GAMEPLAY_REFERENCE',
+      label: 'Current Undertow Splat Zones references placing both objectives beneath the glass areas',
+      sourceVersion: 'Ver.7.2.0+',
+      notes:
+        'Current Inkipedia and post-rework strategy references independently describe both Splat Zones as located beneath the glass/high-platform areas and paintable for objective control.'
     },
     {
       id: 'user-center-stills',
