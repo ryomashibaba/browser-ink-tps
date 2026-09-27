@@ -960,4 +960,19 @@ Runtime:
 - current paint inventory = 13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN
 
 The unresolved 4 are the two whole underpass solids (outside their already-authorized Splat-Zone intersections) and two first-drop landing solids. No evidence currently authorizes those remainders.
+## T21-D Resolution Pass 10B — right-low / underpass source-gap localization
 
+The source-native connectivity graph was audited specifically to determine whether the current Recast gap comes from a missed ordinary floor component.
+
+Results:
+- 276 walkable source components per mirrored side
+- 17 right-low contacts / 8 underpass contacts per side
+- unreachable at 0.03, 0.08, 0.18, and 0.30m adjacency
+- relaxed 2.0m discovery path exposes 4 gaps per side
+- 8 gaps total
+- 6 apparent <=0.30m bridges appear only when excluded source classes are allowed
+- after known FloorLine/FloorFence marking overlays are removed, strict bridges = **0/8**
+
+This is negative evidence, not connector authority. It rules out the simplest explanation (“one normal source floor was accidentally omitted”) at the audited threshold, but does not determine whether the original game uses hidden collision, another actor/resource, a jump/drop rule, or another traversal primitive.
+
+No runtime connector/off-mesh link is added. `FULL_STAGE_CONNECTIVITY_QA_PENDING` remains active.
