@@ -1,4 +1,5 @@
 import type {
+  StageSolidDefinition,
   StageTriangleMeshGeometry,
   StageVector3
 } from '../StageDefinition';
@@ -147,4 +148,46 @@ export function undertowUpperGlassSourceMeshErrors(): readonly string[] {
 
 function distance3(a: StageVector3, b: StageVector3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+
+export function undertowUpperGlassVisualStageSolids():
+  readonly StageSolidDefinition[] {
+  return UNDERTOW_UPPER_GLASS_SOURCE_MESHES.map((record) => {
+    const bounds = meshBounds(record.mesh.vertices);
+    return {
+      id: `UndertowT21D:${record.id}:visual`,
+      center: [0, 0, 0],
+      size: [
+        bounds.maxX - bounds.minX,
+        bounds.maxY - bounds.minY,
+        bounds.maxZ - bounds.minZ
+      ],
+      material: 'light',
+      render: true,
+      projectileBlocker: false,
+      cameraBlocker: false,
+      collisionEnabled: false,
+      navigationEnabled: false,
+      triangleMesh: record.mesh
+    };
+  });
+}
+
+function meshBounds(vertices: readonly StageVector3[]): {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  minZ: number;
+  maxZ: number;
+} {
+  return {
+    minX: Math.min(...vertices.map((vertex) => vertex[0])),
+    maxX: Math.max(...vertices.map((vertex) => vertex[0])),
+    minY: Math.min(...vertices.map((vertex) => vertex[1])),
+    maxY: Math.max(...vertices.map((vertex) => vertex[1])),
+    minZ: Math.min(...vertices.map((vertex) => vertex[2])),
+    maxZ: Math.max(...vertices.map((vertex) => vertex[2]))
+  };
 }

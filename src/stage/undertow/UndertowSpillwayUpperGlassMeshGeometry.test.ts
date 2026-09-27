@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
   UNDERTOW_UPPER_GLASS_SOURCE_MESHES,
-  undertowUpperGlassSourceMeshErrors
+  undertowUpperGlassSourceMeshErrors,
+  undertowUpperGlassVisualStageSolids
 } from './UndertowSpillwayUpperGlassMeshGeometry';
 
 describe('T21-D upper glass exact source meshes', () => {
@@ -18,6 +19,19 @@ describe('T21-D upper glass exact source meshes', () => {
       expect(record.renderGeometryReady).toBe(true);
       expect(record.collisionAuthorityReady).toBe(false);
       expect(record.paintAuthority).toBe('UNINKABLE');
+    }
+  });
+
+  it('exposes the exact glass shells as visual-only runtime solids', () => {
+    const solids = undertowUpperGlassVisualStageSolids();
+    expect(solids).toHaveLength(2);
+    for (const solid of solids) {
+      expect(solid.render).toBe(true);
+      expect(solid.triangleMesh?.indices).toHaveLength(306);
+      expect(solid.collisionEnabled).toBe(false);
+      expect(solid.navigationEnabled).toBe(false);
+      expect(solid.projectileBlocker).toBe(false);
+      expect(solid.cameraBlocker).toBe(false);
     }
   });
 

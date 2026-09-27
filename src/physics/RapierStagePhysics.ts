@@ -1,6 +1,10 @@
 import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
 import { Quat, Vec3 } from 'playcanvas';
-import type { StageDefinition, StageSolidDefinition } from '../stage/StageDefinition';
+import {
+  stageSolidCollisionEnabled,
+  type StageDefinition,
+  type StageSolidDefinition
+} from '../stage/StageDefinition';
 import { rasterizeStageFootprint } from '../stage/StageFootprint';
 import { stageSolidTriangleMeshErrors } from '../stage/StageTriangleMesh';
 
@@ -89,6 +93,7 @@ export class RapierStagePhysics {
 
   private buildStaticStage(solids: readonly StageSolidDefinition[]): void {
     for (const solid of solids) {
+      if (!stageSolidCollisionEnabled(solid)) continue;
       const meshErrors = stageSolidTriangleMeshErrors(solid);
       if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
 

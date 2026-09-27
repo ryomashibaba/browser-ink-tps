@@ -18,7 +18,10 @@ import {
 } from './UndertowSpillwayModelXZGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import { undertowCenterSlopeStageSolids } from './UndertowSpillwaySlopeMeshGeometry';
-import { UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT } from './UndertowSpillwayUpperGlassMeshGeometry';
+import {
+  UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
+  undertowUpperGlassVisualStageSolids
+} from './UndertowSpillwayUpperGlassMeshGeometry';
 import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
@@ -157,7 +160,8 @@ const components: readonly PolygonComponent[] = [
 const built = components.map(buildFlatComponent);
 const solids = [
   ...built.map((item) => item.solid),
-  ...undertowCenterSlopeStageSolids()
+  ...undertowCenterSlopeStageSolids(),
+  ...undertowUpperGlassVisualStageSolids()
 ];
 const paintSurfaces = built.flatMap((item) =>
   item.paintSurface ? [item.paintSurface] : []

@@ -22,6 +22,14 @@ export interface StageSolidDefinition {
   projectileBlocker: boolean;
   cameraBlocker: boolean;
   /**
+   * Runtime participation defaults stay backward-compatible:
+   * collisionEnabled defaults to true; navigationEnabled defaults to the
+   * effective collision setting. This allows exact visual-only source meshes
+   * without silently granting gameplay collision/nav authority.
+   */
+  collisionEnabled?: boolean;
+  navigationEnabled?: boolean;
+  /**
    * SOLID is the frozen default. GRATE is semi-solid: Human form and thrown
    * subs collide, while Squid form and ordinary ink projectiles pass through.
    */
@@ -37,6 +45,18 @@ export interface StageSolidDefinition {
    * Used only when source geometry itself supplies a non-box planar/mesh shape.
    */
   triangleMesh?: StageTriangleMeshGeometry;
+}
+
+export function stageSolidCollisionEnabled(
+  solid: StageSolidDefinition
+): boolean {
+  return solid.collisionEnabled !== false;
+}
+
+export function stageSolidNavigationEnabled(
+  solid: StageSolidDefinition
+): boolean {
+  return solid.navigationEnabled ?? stageSolidCollisionEnabled(solid);
 }
 
 export interface StagePaintSurfaceDefinition {

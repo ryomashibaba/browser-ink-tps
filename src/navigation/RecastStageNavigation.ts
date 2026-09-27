@@ -3,7 +3,11 @@ import { generateSoloNavMesh } from 'recast-navigation/generators';
 import { Quat, Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
-import type { StageDefinition, StageSolidDefinition } from '../stage/StageDefinition';
+import {
+  stageSolidNavigationEnabled,
+  type StageDefinition,
+  type StageSolidDefinition
+} from '../stage/StageDefinition';
 import { rasterizeStageFootprint } from '../stage/StageFootprint';
 import {
   stageSolidTriangleMeshErrors,
@@ -95,6 +99,7 @@ function buildStageTriangleSoup(
   const indices: number[] = [];
 
   for (const solid of definition.solids) {
+    if (!stageSolidNavigationEnabled(solid)) continue;
     const meshErrors = stageSolidTriangleMeshErrors(solid);
     if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
     if (solid.triangleMesh) {

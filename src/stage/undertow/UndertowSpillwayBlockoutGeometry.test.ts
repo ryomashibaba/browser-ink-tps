@@ -19,7 +19,7 @@ describe('T21-D partial Undertow blockout geometry', () => {
 
   it('contains only the currently safe flat components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(17);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(19);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(5);
     const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.collisionBehavior === 'GRATE'
@@ -33,6 +33,16 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(slopes).toHaveLength(4);
     expect(slopes.every((solid) => solid.triangleMesh)).toBe(true);
     expect(slopes.every((solid) => !solid.footprint)).toBe(true);
+
+    const glassVisuals = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
+      (solid) => solid.id.includes('upper-glass-') && solid.id.endsWith(':visual')
+    );
+    expect(glassVisuals).toHaveLength(2);
+    expect(glassVisuals.every((solid) => solid.render)).toBe(true);
+    expect(glassVisuals.every((solid) => solid.collisionEnabled === false)).toBe(true);
+    expect(glassVisuals.every((solid) => solid.navigationEnabled === false)).toBe(true);
+    expect(glassVisuals.every((solid) => solid.projectileBlocker === false)).toBe(true);
+    expect(glassVisuals.every((solid) => solid.cameraBlocker === false)).toBe(true);
   });
 
   it('keeps the audited top elevations while extruding only downward', () => {
