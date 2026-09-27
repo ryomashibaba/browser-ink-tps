@@ -105,7 +105,7 @@ export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
   ] as const,
   confidence: 'HIGH' as const,
   notes:
-    'Resolution Pass 10A reduces UNKNOWN runtime paint authority from six solids to four by promoting only the exact mirrored right-low route-ramp pair from author-vector semantics. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING remains activation-blocking for the two whole underpass solids and two first-drop landing solids. Turf scoreability remains separate.'
+    'Resolution Pass 10A reduces UNKNOWN runtime paint authority from six solids to four by promoting only the exact mirrored right-low route-ramp pair from author-vector semantics. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING remains activation-blocking for the two whole underpass solids and two first-drop landing solids. TURF_SCOREABLE_MASK_PENDING remains a separate activation blocker.'
 });
 
 export const UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS:
