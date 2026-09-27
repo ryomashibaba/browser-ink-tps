@@ -3562,16 +3562,24 @@ for region_name,nodes in route_graph.items():
                 bbox3_distance(n,b)<=ROUTE_GAP_CANDIDATE_DISTANCE
             )
         ]
-        ranked=[]
+        # Candidate ranking is diagnostic only. Rank cheaply by bbox first,
+        # then compute exact source-surface distance only for the nearest local
+        # records. Strict bridge detection below still sees every candidate.
+        coarse_ranked=[]
         for ci,candidate in enumerate(candidates):
+            dba=bbox3_distance(a,candidate)
+            dbb=bbox3_distance(candidate,b)
+            coarse_ranked.append((max(dba,dbb),dba+dbb,ci,dba,dbb))
+        coarse_ranked.sort()
+        ranked=[]
+        for _,_,ci,_,_ in coarse_ranked[:32]:
+            candidate=candidates[ci]
             da=component_min_surface_distance_exact(
                 a,candidate,ROUTE_GAP_CANDIDATE_DISTANCE
             )
             db=component_min_surface_distance_exact(
                 candidate,b,ROUTE_GAP_CANDIDATE_DISTANCE
             )
-            if da is None and db is None:
-                continue
             ranked.append((
                 max(
                     ROUTE_GAP_CANDIDATE_DISTANCE+1 if da is None else da,
