@@ -29,6 +29,11 @@ NEG_SPAWN = (131.82, 155.58)
 POS_SPAWN = (709.98, 439.5)
 POINTS_PER_METER = 4.8
 
+KNOWN_SLOPE_MARKERS = {
+    "center-left": [393.6, 312.36, 409.44, 369.84],
+    "center-right": [432.48, 225.36, 448.32, 282.84],
+}
+
 RAMPS = {
     "positive-z": [
         (8.333487, 52.203114),
@@ -92,6 +97,86 @@ def item_points(item):
     return points
 
 
+
+def analyze_region(drawings, bbox, pad=0.0):
+    query = [bbox[0] - pad, bbox[1] - pad, bbox[2] + pad, bbox[3] + pad]
+    line_rows = []
+    fill_rows = []
+    signature_counts = collections.Counter()
+
+    for di, drawing in enumerate(drawings):
+        width = float(drawing.get("width") or 0.0)
+        color = color_json(drawing.get("color"))
+        fill = color_json(drawing.get("fill"))
+        for item in drawing.get("items", ()):
+            pts = item_points(item)
+            if not pts:
+                continue
+            ibox = rect_of_points(pts)
+            if not intersects(ibox, query):
+                continue
+
+            if item[0] == "l" and len(pts) >= 2:
+                a, b = pts[0], pts[1]
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                length = math.hypot(dx, dy)
+                if abs(dx) < 0.001:
+                    orientation = "VERTICAL"
+                elif abs(dy) < 0.001:
+                    orientation = "HORIZONTAL"
+                else:
+                    orientation = "DIAGONAL"
+                row = {
+                    "drawing": di,
+                    "a": [round(a[0], 6), round(a[1], 6)],
+                    "b": [round(b[0], 6), round(b[1], 6)],
+                    "width": round(width, 6),
+                    "color": color,
+                    "length": round(length, 6),
+                    "orientation": orientation,
+                }
+                line_rows.append(row)
+                signature_counts[
+                    (
+                        round(width, 3),
+                        tuple(color) if color is not None else None,
+                        orientation,
+                        round(length, 3),
+                    )
+                ] += 1
+
+            if fill is not None:
+                fill_rows.append({
+                    "drawing": di,
+                    "itemType": item[0],
+                    "bbox": [round(v, 6) for v in ibox],
+                    "fill": fill,
+                    "stroke": color,
+                    "width": round(width, 6),
+                })
+
+    line_rows.sort(key=lambda row: (row["a"][0], row["a"][1], row["b"][0], row["b"][1]))
+    fill_rows.sort(key=lambda row: (row["bbox"][0], row["bbox"][1], row["drawing"]))
+    return query, line_rows, fill_rows, signature_counts
+
+
+def signature_rows(signature_counts):
+    return [
+        {
+            "width": sig[0],
+            "color": list(sig[1]) if sig[1] is not None else None,
+            "orientation": sig[2],
+            "length": sig[3],
+            "count": count,
+        }
+        for sig, count in signature_counts.most_common()
+    ]
+
+
+def canonical_dash_count(signature_counts):
+    return signature_counts.get((0.24, (0.0, 0.0, 0.0), "HORIZONTAL", 0.96), 0)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default=DEFAULT_URL)
@@ -147,68 +232,46 @@ def main():
         f"page={page.rect.width:.6f}x{page.rect.height:.6f}"
     )
 
+    known_marker_dash_counts = {}
+    known_marker_signatures = {}
+    for marker_name, marker_bbox in KNOWN_SLOPE_MARKERS.items():
+        _, marker_lines, marker_fills, marker_counts = analyze_region(
+            drawings, marker_bbox, pad=0.5
+        )
+        rows = signature_rows(marker_counts)
+        dash_count = canonical_dash_count(marker_counts)
+        known_marker_dash_counts[marker_name] = dash_count
+        known_marker_signatures[marker_name] = rows
+        print(
+            "T21TURF_KNOWN_SLOPE "
+            f"name={marker_name} bbox={json.dumps(marker_bbox)} "
+            f"lines={len(marker_lines)} fills={len(marker_fills)} "
+            f"canonical_dash_count={dash_count} "
+            f"signatures={json.dumps(rows[:12], separators=(',', ':'))}"
+        )
+
+    if any(count <= 0 for count in known_marker_dash_counts.values()):
+        raise RuntimeError(
+            "Known central slope marker failed to expose canonical 0.24pt/0.96pt dash signature"
+        )
+
+    result["knownSlopeMarkers"] = {
+        name: {
+            "bbox": KNOWN_SLOPE_MARKERS[name],
+            "canonicalDashCount": known_marker_dash_counts[name],
+            "lineSignatureCounts": known_marker_signatures[name],
+        }
+        for name in KNOWN_SLOPE_MARKERS
+    }
+
     for side, project_points in RAMPS.items():
         pdf_points = [project_to_pdf(point) for point in project_points]
         bbox = rect_of_points(pdf_points)
         query = [bbox[0] - 3, bbox[1] - 3, bbox[2] + 3, bbox[3] + 3]
 
-        line_rows = []
-        fill_rows = []
-        signature_counts = collections.Counter()
-
-        for di, drawing in enumerate(drawings):
-            width = float(drawing.get("width") or 0.0)
-            color = color_json(drawing.get("color"))
-            fill = color_json(drawing.get("fill"))
-            for item in drawing.get("items", ()):
-                pts = item_points(item)
-                if not pts:
-                    continue
-                ibox = rect_of_points(pts)
-                if not intersects(ibox, query):
-                    continue
-
-                if item[0] == "l" and len(pts) >= 2:
-                    a, b = pts[0], pts[1]
-                    dx, dy = b[0] - a[0], b[1] - a[1]
-                    length = math.hypot(dx, dy)
-                    if abs(dx) < 0.001:
-                        orientation = "VERTICAL"
-                    elif abs(dy) < 0.001:
-                        orientation = "HORIZONTAL"
-                    else:
-                        orientation = "DIAGONAL"
-                    row = {
-                        "drawing": di,
-                        "a": [round(a[0], 6), round(a[1], 6)],
-                        "b": [round(b[0], 6), round(b[1], 6)],
-                        "width": round(width, 6),
-                        "color": color,
-                        "length": round(length, 6),
-                        "orientation": orientation,
-                    }
-                    line_rows.append(row)
-                    signature_counts[
-                        (
-                            round(width, 3),
-                            tuple(color) if color is not None else None,
-                            orientation,
-                            round(length, 3),
-                        )
-                    ] += 1
-
-                if fill is not None:
-                    fill_rows.append({
-                        "drawing": di,
-                        "itemType": item[0],
-                        "bbox": [round(v, 6) for v in ibox],
-                        "fill": fill,
-                        "stroke": color,
-                        "width": round(width, 6),
-                    })
-
-        line_rows.sort(key=lambda row: (row["a"][0], row["a"][1], row["b"][0], row["b"][1]))
-        fill_rows.sort(key=lambda row: (row["bbox"][0], row["bbox"][1], row["drawing"]))
+        query, line_rows, fill_rows, signature_counts = analyze_region(
+            drawings, bbox, pad=3.0
+        )
 
         region = {
             "projectPoints": [list(p) for p in project_points],
@@ -217,25 +280,28 @@ def main():
             "queryBounds": [round(v, 9) for v in query],
             "lineCount": len(line_rows),
             "fillCount": len(fill_rows),
-            "lineSignatureCounts": [
-                {
-                    "width": sig[0],
-                    "color": list(sig[1]) if sig[1] is not None else None,
-                    "orientation": sig[2],
-                    "length": sig[3],
-                    "count": count,
-                }
-                for sig, count in signature_counts.most_common()
-            ],
+            "lineSignatureCounts": signature_rows(signature_counts),
+            "canonicalDashCount": canonical_dash_count(signature_counts),
             "lines": line_rows,
             "fills": fill_rows,
         }
+        region["matchesKnownSlopeDashSignature"] = (
+            region["canonicalDashCount"] > 0 and
+            all(count > 0 for count in known_marker_dash_counts.values())
+        )
         result["regions"][side] = region
+
+        if not region["matchesKnownSlopeDashSignature"]:
+            raise RuntimeError(
+                f"{side} route-ramp region does not contain the known slope dash signature"
+            )
 
         print(
             "T21TURFRAMP_REGION "
             f"side={side} ramp_bbox={json.dumps(region['rampPdfBounds'])} "
-            f"lines={len(line_rows)} fills={len(fill_rows)}"
+            f"lines={len(line_rows)} fills={len(fill_rows)} "
+            f"canonical_dash_count={region['canonicalDashCount']} "
+            f"matches_known={region['matchesKnownSlopeDashSignature']}"
         )
         print(
             "T21TURFRAMP_SIGNATURES "
