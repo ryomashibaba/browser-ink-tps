@@ -98,7 +98,7 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS10C_AUDIT = Object.freeze({
     activationBlockerCleared: false,
     historicalSnapshotAtPass10C: true
   }),
-  scoreableAuthorityPromoted:  scoreableAuthorityPromoted: false,
+  scoreableAuthorityPromoted: false,
   confidence: 'HIGH' as const,
   notes:
     'Resolution Pass 10C promotes exactly the mirrored first-drop landing pair to PAINTABLE. The inventory stored here is its frozen historical checkpoint; later Pass 12C controlled gameplay resolution of the underpass does not retroactively alter this pass, and Turf Scoreable is still never inferred from paintability.'

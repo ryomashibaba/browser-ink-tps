@@ -107,7 +107,7 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS10_AUDIT = Object.freeze({
     activationBlockerCleared: false,
     historicalSnapshotAtPass10A: true
   }),
-  notes:  notes:
+  notes:
     'Resolution Pass 10A itself promotes exactly the two mirrored right-low route-ramp quads to PAINTABLE. The inventory stored here is the frozen Pass 10A/10C-era snapshot; later Pass 12C controlled gameplay resolution must not rewrite this historical checkpoint.'
 });
 
