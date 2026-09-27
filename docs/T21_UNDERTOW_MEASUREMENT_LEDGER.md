@@ -899,3 +899,34 @@ Result:
 
 No runtime geometry is changed by Pass 9A.
 
+## T21-D — water / death-volume source-placement localization (Resolution Pass 9B)
+
+The horizontal water hazard pair is already exact. Pass 9B focuses only on whether public placement data can supply a trustworthy **vertical** value.
+
+Audited current metadata:
+- remodeled stage row: `Vss_Temple01`
+- preload resource: `Model/Fld_Temple01.bfres`
+- no published visual-water Y or normal-mode placement body in the inspected SceneInfo/VersusSceneInfo metadata
+
+Audited public placement schema:
+- Temple01 lift variants: `PntSet / VarSet / VclSet / VglSet / VlfSet`
+- no explicit Temple01-specific Water class in that family
+- generic water classes for other stages exist, so this absence is only a source-discovery result, not proof of no water actor
+- every placed Mu actor inherits `Translate / Rotate / Scale`, which identifies the exact missing data needed from a current Temple01 BCETT/BYML instance body
+
+Death-locator follow-up:
+- `Mpt_PlayerDead` definition is stable across audited snapshots 720, 800, 920, 1130:
+  - ShapeType = `Cube`
+  - Scale = `1`
+  - TargetMaskType = `ControlledPlayer`
+- no current Temple01 instance placement/transform was recovered
+- generic actor shape therefore cannot determine a Temple01 kill Y
+
+The public metadata reference `Work/Banc/BinLayer/Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json` proves stage-specific rule layers exist, but it is a Tower-Control modifier reference and the file body is not exposed in the audited repository. It is not reused as normal-Turf/water authority.
+
+Result:
+- water visual Y: UNKNOWN
+- death threshold / death volume placement: UNKNOWN
+- exact water XZ polygons remain valid
+- no vertical value is promoted
+
