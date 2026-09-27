@@ -37,6 +37,16 @@ describe('T21-D partial Recast connectivity QA', () => {
       );
       expect(Number.isFinite(result.startSnapDistanceMeters)).toBe(true);
       expect(Number.isFinite(result.endSnapDistanceMeters)).toBe(true);
+
+      if (probe.expectation === 'MUST_REACH') {
+        expect(result.querySuccess).toBe(true);
+        expect(result.reachedTarget).toBe(true);
+        expect(result.endpointErrorMeters).toBeLessThan(0.001);
+      } else {
+        expect(probe.id).toBe('right-low-to-underpass-positive-z');
+        expect(result.reachedTarget).toBe(false);
+        expect(result.endpointErrorMeters).toBeGreaterThan(1);
+      }
     }
   });
 });
