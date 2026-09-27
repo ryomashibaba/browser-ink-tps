@@ -19,6 +19,12 @@ describe('T21-D upper glass collision authority audit', () => {
       bridgeMetalComponentSignatureMirrorXor: 0,
       bridgeMetalUniqueStandableComponentResolved: false,
       playerStandabilitySemanticResolved: true,
+      playerUndersideCollisionBehaviorResolved: true,
+      playerUndersideBlocksUpwardPassage: true,
+      playerSideEdgeCollisionBehaviorResolved: true,
+      playerSideEdgeBlocksLateralPassage: true,
+      playerBroadSolidBehaviorResolved: true,
+      playerCollisionUserDirectGameplayKnowledgeAccepted: true,
       navigationStandabilitySemanticResolved: true,
       controlledBroadPlayerSupportGeometryResolved: true,
       controlledBroadNavigationWalkabilityEvidenceResolved: true,
@@ -84,6 +90,19 @@ describe('T21-D upper glass collision authority audit', () => {
     expect(audit.runtimeNavigationPromotionAuthorized).toBe(false);
     expect(audit.exactPlayerCollisionFaceBindingResolved).toBe(false);
     expect(audit.exactNavigationFaceBindingResolved).toBe(false);
+  });
+
+  it('resolves broad player collision behavior above, below and from the side without exact primitive promotion', () => {
+    const audit = UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT;
+    expect(audit.playerStandabilitySemanticResolved).toBe(true);
+    expect(audit.playerUndersideCollisionBehaviorResolved).toBe(true);
+    expect(audit.playerUndersideBlocksUpwardPassage).toBe(true);
+    expect(audit.playerSideEdgeCollisionBehaviorResolved).toBe(true);
+    expect(audit.playerSideEdgeBlocksLateralPassage).toBe(true);
+    expect(audit.playerBroadSolidBehaviorResolved).toBe(true);
+    expect(audit.playerCollisionUserDirectGameplayKnowledgeAccepted).toBe(true);
+    expect(audit.exactPlayerCollisionFaceBindingResolved).toBe(false);
+    expect(audit.runtimePlayerSupportPromotionAuthorized).toBe(false);
   });
 
   it('records that the published Temple01 directory has no separate collision asset', () => {

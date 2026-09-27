@@ -7,7 +7,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-upper-glass-ordinary-projectile-knowledge-2026-09-28'
   | 'user-upper-glass-camera-blocking-knowledge-2026-09-28'
   | 'user-upper-glass-thrown-sub-solid-collision-knowledge-2026-09-28'
-  | 'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28';
+  | 'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28'
+  | 'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -24,7 +25,8 @@ export interface UndertowUserCaptureEvidence {
     | 'UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING'
     | 'UPPER_GLASS_CAMERA_BLOCKING'
     | 'UPPER_GLASS_THROWN_SUB_SOLID_COLLISION'
-    | 'UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT';
+    | 'UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT'
+    | 'UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -143,6 +145,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'Deployable subs such as Jump Beacon, Sprinkler, and Splash Shield can be placed on top of transparent glass like other ordinary solid floors.',
         'Trap is the explicit placement exception: it requires a paintable floor, so it cannot be placed on the unpaintable transparent glass surface.',
         'This knowledge resolves sub-weapon effect/placement semantics but still does not identify the original collision/query primitive or authorize unrelated special-weapon behavior.'
+      ]
+    },
+    {
+      id: 'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28',
+      region: 'UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION',
+      confidence: 'CONFIRMED',
+      facts: [
+        'For Pass 13F the user states that jumping upward from directly below the transparent glass causes the player head/body to collide with the glass underside and stop; the player does not pass through from below.',
+        'The user also states that lateral contact with the thin side/edge of the transparent glass stops the player like an ordinary wall rather than allowing passage through the transparent side.',
+        'Together with Pass 13A top-surface support, direct gameplay knowledge now resolves the broad player-facing collision behavior of the transparent glass as solid from above, below, and from the side.',
+        'This does not identify whether the original game uses visible Glass01 faces or a coincident hidden collision primitive, and it does not prove every tiny decorative/thin-strip face is represented one-for-one in collision.'
       ]
     }
   ];

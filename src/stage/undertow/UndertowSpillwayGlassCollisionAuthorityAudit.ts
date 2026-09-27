@@ -87,6 +87,12 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
       'Nintendo explicitly fixed opposite-side damage through Undertow glass as unintended behavior. Post-Ver.7.2/current sources continue to identify the central position as glass high ground, and a Ver.11 current-stage guide specifically uses the grate edge to pass explosion coverage. Together these resolve the high-level semantic that the glass body is not a generic through-shot surface while grate/edge geometry can remain attack-permissive. They do not identify the exact current collision primitive or resolve every projectile/explosion class.'
   }),
   playerStandabilitySemanticResolved: true,
+  playerUndersideCollisionBehaviorResolved: true,
+  playerUndersideBlocksUpwardPassage: true,
+  playerSideEdgeCollisionBehaviorResolved: true,
+  playerSideEdgeBlocksLateralPassage: true,
+  playerBroadSolidBehaviorResolved: true,
+  playerCollisionUserDirectGameplayKnowledgeAccepted: true,
   navigationStandabilitySemanticResolved: true,
   controlledBroadPlayerSupportGeometryResolved: true,
   controlledBroadNavigationWalkabilityEvidenceResolved: true,
@@ -116,7 +122,7 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   cameraQueryAuthorityReady: false,
   confidence: 'HIGH' as const,
   notes:
-    'Resolution Pass 13A adds two user-controlled mirrored-side support routes. The three broad registered upward Glass01 probe components per side are now gameplay-confirmed as player-supporting across both visual seams, but the narrow edge strip and the identity of the original collision primitive remain unresolved. This controlled support evidence is not reused as projectile or camera authority, and no runtime collision/navigation promotion occurs yet.'
+    'Passes 13A-13F resolve broad gameplay semantics for player support/blocking, ordinary projectiles, camera blocking, thrown-sub body collision, sub-effect exceptions, and common deployable-sub placement. Exact original collision/query primitive binding remains unresolved, so no whole-shell runtime promotion is made from behavioral agreement alone.'
 });
 
 export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
@@ -130,17 +136,18 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
       'Post-Ver.7.2 gameplay/strategy evidence confirms that players can occupy, hold, and drop from the glass high ground.',
       'BridgeMetal is exactly symmetric but decomposes into 392 connected visual components per side rather than one collision shell.',
       'No separate collision asset exists in the published Temple01 directory at the audited KiTrix commit.',
-      'Pass 13A supplies two independent mirrored-side continuous routes across the three broad registered Glass01 upward components without a visible support loss at either seam.'
+      'Pass 13A supplies two independent mirrored-side continuous routes across the three broad registered Glass01 upward components without a visible support loss at either seam.',
+      'For Pass 13F the user states that upward movement from directly below is stopped by the glass underside and that lateral contact with the glass side/edge stops the player like an ordinary wall.'
     ],
     insufficientBecause: [
       'Standability resolves the gameplay semantic but not the exact source face or hidden collision primitive responsible for it.',
       'Visual shell membership and material/object names do not identify which faces block player capsules.',
       'BridgeMetal cannot be promoted wholesale or by an arbitrary visual subset without inventing collision.',
-      'The narrow upward edge strip was not independently probed, and the controlled route cannot prove whether the original game uses the visible Glass01 triangles or a coincident hidden collision primitive.'
+      'Broad above/below/side collision behavior is now resolved, but the evidence still cannot prove whether the original game uses the visible Glass01 triangles, a coincident hidden collider, or a slightly simplified primitive; the narrow upward decorative strip also remains unbound one-for-one.'
     ],
     minimumAuthoritativeEvidence: [
       'Original-game collision/query data that identifies the player-blocking faces or collision primitives.',
-      'Pass 13A resolves the broad support geometry needed for continued testing; full-role closure still requires the remaining edge/primitive ambiguity to be bounded before runtime collision promotion.'
+      'Pass 13A plus Pass 13F resolve broad player collision behavior. Full-role closure now requires exact source/hidden primitive binding rather than more redundant broad-behavior capture.'
     ]
   },
   {
@@ -240,6 +247,12 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
     !audit.currentGameplayEvidence.controlledSupportNoJumpAssistedCrossingObserved ||
     audit.currentGameplayEvidence.controlledSupportThinEdgeStripResolved ||
     !audit.playerStandabilitySemanticResolved ||
+    !audit.playerUndersideCollisionBehaviorResolved ||
+    !audit.playerUndersideBlocksUpwardPassage ||
+    !audit.playerSideEdgeCollisionBehaviorResolved ||
+    !audit.playerSideEdgeBlocksLateralPassage ||
+    !audit.playerBroadSolidBehaviorResolved ||
+    !audit.playerCollisionUserDirectGameplayKnowledgeAccepted ||
     !audit.navigationStandabilitySemanticResolved ||
     !audit.controlledBroadPlayerSupportGeometryResolved ||
     !audit.controlledBroadNavigationWalkabilityEvidenceResolved ||

@@ -6,7 +6,7 @@ import {
 
 describe('T21 user capture evidence', () => {
   it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(9);
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(10);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -43,6 +43,11 @@ describe('T21 user capture evidence', () => {
         'user-upper-glass-sub-effect-and-placement-knowledge-2026-09-28'
       ).region
     ).toBe('UPPER_GLASS_SUB_EFFECT_AND_PLACEMENT');
+    expect(
+      undertowCaptureEvidence(
+        'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28'
+      ).region
+    ).toBe('UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -124,6 +129,17 @@ describe('T21 user capture evidence', () => {
     expect(facts).toContain('Trap is the explicit placement exception');
     expect(facts).toContain('requires a paintable floor');
     expect(facts).toContain('must not be used to infer physical projectile');
+  });
+
+  it('records underside and lateral player blocking without claiming exact primitive identity', () => {
+    const player = undertowCaptureEvidence(
+      'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28'
+    );
+    const facts = player.facts.join(' ');
+    expect(facts).toContain('collide with the glass underside and stop');
+    expect(facts).toContain('stops the player like an ordinary wall');
+    expect(facts).toContain('solid from above, below, and from the side');
+    expect(facts).toContain('does not identify whether the original game uses visible Glass01 faces');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {
