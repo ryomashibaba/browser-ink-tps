@@ -23,6 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Restore T21 Temple01 LFS cache
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/cache@v4
+        with:
+          path: /tmp/kitrix-lfs-cache/Vss_Temple01.obj
+          key: t21-temple01-lfs-a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046
+
       - name: T21 temporary Temple01 geometry probe
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         shell: bash
@@ -30,16 +37,27 @@ jobs:
           set -euo pipefail
           rm -rf /tmp/kitrix-lfs
           mkdir -p /tmp/kitrix-lfs
-          cd /tmp/kitrix-lfs
-          git init -q
-          git remote add origin https://github.com/kirakira-dev/KiTrix.git
-          git lfs install --local
-          cat > temple01.pointer <<'PTR'
+          if [ -f /tmp/kitrix-lfs-cache/Vss_Temple01.obj ]; then
+            cp /tmp/kitrix-lfs-cache/Vss_Temple01.obj /tmp/kitrix-lfs/Vss_Temple01.obj
+            echo "T21RAY cache=HIT"
+          else
+            mkdir -p /tmp/kitrix-lfs-cache
+            cd /tmp/kitrix-lfs
+            git init -q
+            git remote add origin https://github.com/kirakira-dev/KiTrix.git
+            git lfs install --local
+            cat > temple01.pointer <<'PTR'
           version https://git-lfs.github.com/spec/v1
           oid sha256:a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046
           size 43263289
           PTR
-          timeout 180s git lfs smudge < temple01.pointer > Vss_Temple01.obj
+            timeout 180s git lfs smudge < temple01.pointer > Vss_Temple01.obj
+            cp Vss_Temple01.obj /tmp/kitrix-lfs-cache/Vss_Temple01.obj
+            echo "T21RAY cache=MISS"
+          fi
+          test "$(stat -c%s /tmp/kitrix-lfs/Vss_Temple01.obj)" = "43263289"
+          echo "a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  /tmp/kitrix-lfs/Vss_Temple01.obj" | sha256sum -c -
+          cd /tmp/kitrix-lfs
           python - <<'PY'
           from collections import Counter
           from pathlib import Path

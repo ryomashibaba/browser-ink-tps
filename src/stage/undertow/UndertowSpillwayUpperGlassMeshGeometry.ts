@@ -85,6 +85,8 @@ export const UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT = Object.freeze({
   modelSpaceMirrorExtraVertices: 0,
   registeredSymmetryCenterProjectXZ: [0.11468414426408223, 0.09728214772841207] as const,
   collisionAuthorityReady: false,
+  projectRegisteredCenterMirrorToleranceMeters: 0.000002,
+  observedRoundedProjectMirrorMaxResidualMeters: 0.0000010013,
   confidence: 'HIGH' as const,
   notes:
     'The source visual shells are exact and symmetric in Temple01 model space. Registration translation means project-origin negation is not the symmetry operator. Collision/projectile/camera behavior is intentionally not inferred from Glass01 visual geometry.'
@@ -120,23 +122,29 @@ export function undertowUpperGlassSourceMeshErrors(): readonly string[] {
 
   const [cx, cz] =
     UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT.registeredSymmetryCenterProjectXZ;
-  const negativeSet = new Set(
-    negative.mesh.vertices.map((vertex) => vertexKey(vertex))
-  );
+  const tolerance =
+    UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT.projectRegisteredCenterMirrorToleranceMeters;
+  let maxResidual = 0;
   for (const [x, y, z] of positive.mesh.vertices) {
     const mirrored: StageVector3 = [
       2 * cx - x,
       y,
       2 * cz - z
     ];
-    if (!negativeSet.has(vertexKey(mirrored))) {
-      errors.push('upper-glass project-space registered-center symmetry drifted');
-      break;
+    let nearest = Number.POSITIVE_INFINITY;
+    for (const candidate of negative.mesh.vertices) {
+      nearest = Math.min(nearest, distance3(mirrored, candidate));
     }
+    maxResidual = Math.max(maxResidual, nearest);
+  }
+  if (maxResidual > tolerance) {
+    errors.push(
+      `upper-glass project-space registered-center symmetry residual ${maxResidual} exceeds ${tolerance}`
+    );
   }
   return errors;
 }
 
-function vertexKey(vertex: StageVector3): string {
-  return vertex.map((value) => value.toFixed(5)).join(',');
+function distance3(a: StageVector3, b: StageVector3): number {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
