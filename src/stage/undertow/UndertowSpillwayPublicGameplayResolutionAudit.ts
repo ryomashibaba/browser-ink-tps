@@ -98,8 +98,9 @@ export const UNDERTOW_PUBLIC_GAMEPLAY_RESOLUTION_AUDIT = Object.freeze({
       undertowListsWaterHazard: false,
       undertowListsAbyssHazard: true,
       canOverrideAuthorVectorSemantic: false,
+      taxonomyIsNotVisualWaterAuthority: true,
       notes:
-        'The public wiki taxonomy distinguishes Water from Abyss. Undertow being listed as Abyss-only conflicts with the existing author-vector WATER_CYAN interpretation, so the conflict must be preserved rather than silently reclassified.'
+        'The public wiki uses Abyss as a stage-hazard category. Resolution Pass 3 separately confirms that the Sunfish blueprint author explicitly defines light blue as a submerge area. These statements are different classification scopes and are not treated as a contradiction.'
     }),
     remodelDayCommunityReport: Object.freeze({
       authority: 'COMMUNITY_CURRENT_LAYOUT' as const,
@@ -125,13 +126,15 @@ export const UNDERTOW_PUBLIC_GAMEPLAY_RESOLUTION_AUDIT = Object.freeze({
     authorVectorSourceClassA: UNDERTOW_VECTOR_TRACES.teamAWaterRegion.sourceClass,
     authorVectorSourceClassB: UNDERTOW_VECTOR_TRACES.teamBWaterRegion.sourceClass,
     authorVectorSemanticSaysWaterCyan: true,
+    authorLegendExplicitlyDefinesLightBlueAsSubmergeArea: true,
     publicCurrentStageTaxonomySaysAbyssOnly: true,
-    semanticConflictResolved: false,
-    visualHazardKindResolved: false,
+    taxonomyScopeMismatchResolved: true,
+    gameplaySubmergeSemanticResolved: true,
+    renderedHazardAppearanceResolved: false,
     visualPlanePromotionAuthorized: false,
     killThresholdPromotionAuthorized: false,
     notes:
-      'The direct project vector source remains WATER_CYAN, while public current-stage taxonomy calls the hazard Abyss. Neither source alone supplies a registered visual plane or death-volume transform, so no water plane, abyss plane, or kill Y is promoted.'
+      'The post-Ver.7.2 Sunfish source explicitly defines light blue as an area where the player submerges and publishes Undertow variants with and without that water notation. Inkipedia\'s Abyss label is therefore retained only as its gameplay hazard taxonomy, not as a contradiction or visual-plane override. No numeric visual Y or kill Y is promoted.'
   }),
   connectivityCorroboration: Object.freeze({
     publicCurrentLayoutReportsTunnelBelowSnipeArea: true,
@@ -144,14 +147,14 @@ export const UNDERTOW_PUBLIC_GAMEPLAY_RESOLUTION_AUDIT = Object.freeze({
     upperGlass:
       'Need current-layout evidence registered to the exact Glass01/BridgeMetal source that identifies the player/projectile/camera collision subset. Generic glass-floor semantics are now corroborated but not face-resolved.',
     hazardVisual:
-      'Need registered current-layout visual evidence or stage-layout/environment placement that decides WATER_CYAN versus abyss-style rendering and yields any visual Y.',
+      'The WATER_CYAN gameplay/submerge semantic is now author-confirmed. Still need registered current-layout visual evidence or stage-layout/environment placement to determine the rendered hazard surface/effect and any numeric visual Y.',
     killThreshold:
       'Need current-layout death-volume placement or a controlled vertical crossing/death observation registered to fixed geometry.',
     connectivity:
       'Need authoritative connector geometry/traversal semantics for both right-low-to-underpass sides before final production-candidate Recast QA.'
   }),
   notes:
-    'Resolution Pass 2 strengthens semantic corroboration without clearing any activation blocker. Public gameplay/documentation is now insufficient to safely promote current Glass01 collision, projectile/camera queries, a water/abyss visual plane, kill Y, or a right-low-to-underpass link.'
+    'Resolution Pass 2 strengthens semantic corroboration without clearing any activation blocker. Resolution Pass 3 supersedes the earlier water-versus-Abyss conflict wording: WATER_CYAN remains author-confirmed submerge semantics, while rendered visual Y remains unresolved. Public gameplay/documentation is still insufficient to safely promote current Glass01 collision, projectile/camera queries, visual hazard Y, kill Y, or a right-low-to-underpass link.'
 });
 
 export function undertowPublicGameplayResolutionAuditErrors(): readonly string[] {
@@ -202,13 +205,15 @@ export function undertowPublicGameplayResolutionAuditErrors(): readonly string[]
 
   if (
     !audit.hazardSemanticFollowup.authorVectorSemanticSaysWaterCyan ||
+    !audit.hazardSemanticFollowup.authorLegendExplicitlyDefinesLightBlueAsSubmergeArea ||
     !audit.hazardSemanticFollowup.publicCurrentStageTaxonomySaysAbyssOnly ||
-    audit.hazardSemanticFollowup.semanticConflictResolved ||
-    audit.hazardSemanticFollowup.visualHazardKindResolved ||
+    !audit.hazardSemanticFollowup.taxonomyScopeMismatchResolved ||
+    !audit.hazardSemanticFollowup.gameplaySubmergeSemanticResolved ||
+    audit.hazardSemanticFollowup.renderedHazardAppearanceResolved ||
     audit.hazardSemanticFollowup.visualPlanePromotionAuthorized ||
     audit.hazardSemanticFollowup.killThresholdPromotionAuthorized
   ) {
-    errors.push('water-versus-abyss public/source semantic conflict must remain explicit and unresolved');
+    errors.push('author-confirmed submerge semantics must remain separate from unresolved rendered hazard Y/kill authority');
   }
 
   if (audit.connectivityCorroboration.newOffMeshLinkAuthorized) {

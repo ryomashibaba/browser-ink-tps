@@ -54,15 +54,17 @@ describe('T21 Undertow public gameplay resolution pass', () => {
     ).toBe(false);
   });
 
-  it('preserves the WATER_CYAN versus public Abyss taxonomy conflict', () => {
+  it('separates author-confirmed submerge semantics from the public Abyss taxonomy', () => {
     expect(UNDERTOW_PUBLIC_GAMEPLAY_RESOLUTION_AUDIT.hazardSemanticFollowup)
       .toMatchObject({
         authorVectorSourceClassA: 'WATER_CYAN',
         authorVectorSourceClassB: 'WATER_CYAN',
         authorVectorSemanticSaysWaterCyan: true,
+        authorLegendExplicitlyDefinesLightBlueAsSubmergeArea: true,
         publicCurrentStageTaxonomySaysAbyssOnly: true,
-        semanticConflictResolved: false,
-        visualHazardKindResolved: false,
+        taxonomyScopeMismatchResolved: true,
+        gameplaySubmergeSemanticResolved: true,
+        renderedHazardAppearanceResolved: false,
         visualPlanePromotionAuthorized: false,
         killThresholdPromotionAuthorized: false
       });
