@@ -930,3 +930,30 @@ Result:
 - exact water XZ polygons remain valid
 - no vertical value is promoted
 
+## T21-D Resolution Pass 10A — right-low route-ramp paint authority
+
+The exact mirrored `FloorConcrete03` route ramps were previously promoted only for collision/navigation. Paint semantics are now separately bound to the current author Turf vector source.
+
+Pinned Turf PDF:
+- 100,311 bytes
+- SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- 841.920044 × 595.320007pt
+
+Author-class comparison from CI #746:
+- central known-PAINTABLE slope marker: 0.24pt black / 0.96pt dash family, median brightness 255
+- gray known-UNINKABLE glass slope: same slope-marker concept but median brightness 191
+- each exact route-ramp projection: 168 canonical dashes, median brightness 255
+- positive-Z near-white fraction 0.883422
+- negative-Z near-white fraction 0.878540
+- route-ramp median distance to paintable class = 0; to gray uninkable class = 64
+
+This is enough to classify the exact ramp quads as **PAINTABLE** without generalizing from `FloorConcrete03`, “ramp,” or white geometry alone. The author source itself provides the negative control: gray dashed glass slopes remain UNINKABLE.
+
+Runtime:
+- +2 ramp PaintSurfaces
+- `Paintable | Swimmable | Ramp`
+- no Scoreable
+- current paint inventory = 13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN
+
+The unresolved 4 are the two whole underpass solids (outside their already-authorized Splat-Zone intersections) and two first-drop landing solids. No evidence currently authorizes those remainders.
+
