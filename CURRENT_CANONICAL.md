@@ -2531,4 +2531,26 @@ Canonical consequence:
 - player/nav exact collision-face binding remains unresolved
 
 Therefore `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` remains active. Pass 11A narrows the missing evidence to exact current projectile/player/nav collision geometry rather than whether glass should behave as a generic through-shot surface.
+## T21-D water/death public-metadata closure — Resolution Pass 11B (2026-09-27)
 
+The remaining public metadata path for water/death placement was compared across Leanny snapshots **720 / 800 / 920 / 1130**.
+
+`SceneInfo`:
+- `Vss_Temple01` remains the remodeled Undertow row in all audited snapshots
+- preload resources remain exactly `Model/Fld_Temple01.bfres`
+- no explicit water resource, water-plane Y, actor transform, or normal-mode BCETT body is exposed
+
+`VersusSceneInfo`:
+- remains stage identity/display metadata
+- 920/1130 add `TclSceneName = Vss_Temple00`
+- this does not provide Temple01 placement transforms, water placement, or `Mpt_PlayerDead` placement authority
+
+`LeagueTypeInfo`:
+- exposes the known `Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json` reference only as a Tower-Control modifier path
+- its body is not published and it is not normal/Turf placement authority
+
+Canonical consequence:
+- public metadata discovery for `WATER_VISUAL_Y_PENDING` is exhausted at the audited sources
+- public metadata discovery for `WATER_KILL_THRESHOLD_PENDING` is likewise exhausted
+- no visual-water Y, kill Y, or death volume is promoted
+- the remaining minimum evidence is the actual current Temple01 normal/Turf placement/environment body or tightly registered current in-game vertical evidence
