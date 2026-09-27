@@ -50,7 +50,7 @@ export function defineTestSurfaces(
       cell,
       surface.flags,
       tile,
-      backing?.footprint
+      surface.footprint ?? backing?.footprint
     );
   });
 
