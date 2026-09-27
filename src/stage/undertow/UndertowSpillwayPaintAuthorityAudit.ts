@@ -94,7 +94,7 @@ export const UNDERTOW_PAINT_AUTHORITY_AUDIT = Object.freeze({
     confirmedUninkable:
       'Author/vector semantics explicitly identify the grate pair and upper-glass family as uninkable; water is also uninkable but is not a current runtime solid because its Y remains unresolved.',
     unresolved:
-      'The whole underpass floors outside the already-registered Splat-Zone intersections and the two exact first-drop landing components still lack equally strong face-specific paint authority.'
+      'The whole underpass floors outside the already-registered Splat-Zone intersections and the two exact first-drop landing components still lack equally strong face-specific paint authority.',
     materialNameRule:
       'Floor/Concrete/Slope/Grass/Line or other source object/material names are never paint authority by themselves.'
   }),
