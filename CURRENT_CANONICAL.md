@@ -2448,4 +2448,24 @@ Runtime consequence:
   - 2 first-drop landing solids
 
 `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` therefore remains active. `TURF_SCOREABLE_MASK_PENDING` remains fully separate, production remains frozen T20 `inkworks-junction`, and PR #5 remains Draft / unmerged.
+## T21-D right-low → underpass source-gap localization — Resolution Pass 10B (2026-09-27)
 
+The remaining mirrored right-low → underpass connectivity gap was re-audited against source-native Temple01 walkable components without adding convenience geometry.
+
+Source graph result (CI #746 baseline):
+- **276** walkable candidate components per side
+- **17** right-low contact nodes per side
+- **8** underpass contact nodes per side
+- no path at adjacency thresholds **0.03 / 0.08 / 0.18 / 0.30m**
+- a relaxed 2.0m discovery path exposes **4 local gaps per side / 8 total**
+- allowing every excluded source class creates 6 apparent <=0.30m bridges, but those routes depend on excluded source such as floor-marking overlays
+- after removing known FloorLine/FloorFence overlays, **0/8** gaps have a <=0.30m strict bridge
+
+Canonical consequence:
+- no omitted ordinary walk surface has been recovered
+- no new runtime solid is promoted
+- no off-mesh link is authorized
+- the two Recast probes remain `DIAGNOSTIC_GAP`
+- `FULL_STAGE_CONNECTIVITY_QA_PENDING` remains active
+
+The remaining evidence need is now narrower: authoritative original-game connector/collision geometry or traversal semantics for this transition, not a larger Recast tolerance or a guessed bridge.
