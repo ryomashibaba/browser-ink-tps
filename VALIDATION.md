@@ -1831,7 +1831,7 @@ Current validation must additionally require:
 - both use explicit surface-local footprints and retain one support hole
 - neither surface has `SurfaceFlags.Scoreable`
 - both whole underpass solid authority records remain `UNKNOWN`
-- unresolved solid-level paint count remains 6
+- at the Pass 8 checkpoint, unresolved solid-level paint count was 6; subsequent Pass 10A may resolve only the separate route-ramp pair without changing either whole-underpass record
 - `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` and `TURF_SCOREABLE_MASK_PENDING` remain activation blockers
 - production stage selection remains frozen at `inkworks-junction`
 - PR #5 remains Draft / unmerged
@@ -1867,4 +1867,22 @@ Validation must additionally require:
 - `killThresholdResolved === false` and `killThresholdMeters === null`
 - no water visual plane, global kill plane, or convenience death volume is emitted
 - production stage remains `inkworks-junction`
+
+## T21-D route-ramp paint Resolution Pass 10A validation — 2026-09-27
+
+Validation must additionally require:
+- pinned Turf PDF = **100,311 bytes**, SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- both exact `FloorConcrete03` route-ramp source quads remain model-space mirrors
+- each exact ramp projection contains **168** instances of the 0.24pt black / 0.96pt author slope-dash family
+- known central PAINTABLE slope median brightness remains **255**
+- known gray UNINKABLE glass-slope median brightness remains **191**
+- both route-ramp median brightness values remain **255**
+- brightness distance remains **0** to the PAINTABLE median and **64** to the UNINKABLE median
+- exactly 2 route-ramp PaintSurfaces exist
+- both are `Paintable | Swimmable | Ramp`, neither is `Floor` or `Scoreable`
+- runtime paint inventory remains **13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN**
+- the remaining 4 UNKNOWN solids are exactly the two whole underpass solids and two first-drop landing solids
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
+- `TURF_SCOREABLE_MASK_PENDING` remains separate with zero authorized Scoreable promotions
+- production stage remains frozen T20 `inkworks-junction`
 
