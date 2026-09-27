@@ -3502,21 +3502,11 @@ def local_excluded_nodes(search_box):
     return nodes
 
 def strict_bridge_through_excluded(a,b,candidates,threshold):
+    # Search lazily from A rather than precomputing every candidate pair. Most
+    # excluded components are nowhere near the 0.30m frontier, so bbox pruning
+    # removes them without an expensive triangle-to-triangle comparison.
     graph_nodes=[a,b]+candidates
-    adjacency=defaultdict(list)
     edge_distance={}
-    for i in range(len(graph_nodes)):
-        for j in range(i+1,len(graph_nodes)):
-            # Prevent a direct A-B edge from masking whether excluded source
-            # geometry itself provides a strict bridge.
-            if i==0 and j==1:
-                continue
-            d=component_min_surface_distance(
-                graph_nodes[i],graph_nodes[j],threshold
-            )
-            if d is not None and d<=threshold:
-                adjacency[i].append(j); adjacency[j].append(i)
-                edge_distance[(i,j)]=d
     q=deque([0]); parent={0:None}
     while q:
         cur=q.popleft()
@@ -3526,10 +3516,21 @@ def strict_bridge_through_excluded(a,b,candidates,threshold):
                 path.append(x); x=parent[x]
             path.reverse()
             return path,edge_distance,graph_nodes
-        for nxt in adjacency[cur]:
-            if nxt in parent:
+        for nxt in range(len(graph_nodes)):
+            if nxt==cur or nxt in parent:
                 continue
-            parent[nxt]=cur; q.append(nxt)
+            if {cur,nxt}=={0,1}:
+                continue
+            if bbox3_distance(graph_nodes[cur],graph_nodes[nxt])>threshold:
+                continue
+            d=component_min_surface_distance(
+                graph_nodes[cur],graph_nodes[nxt],threshold
+            )
+            if d is None or d>threshold:
+                continue
+            edge_distance[(min(cur,nxt),max(cur,nxt))]=d
+            parent[nxt]=cur
+            q.append(nxt)
     return None,edge_distance,graph_nodes
 
 route_gap_excluded_summaries=[]
@@ -3554,6 +3555,13 @@ for region_name,nodes in route_graph.items():
             ROUTE_GAP_LOCAL_MARGIN
         )
         candidates=local_excluded_nodes(local_box)
+        candidates=[
+            n for n in candidates
+            if (
+                bbox3_distance(a,n)<=ROUTE_GAP_CANDIDATE_DISTANCE or
+                bbox3_distance(n,b)<=ROUTE_GAP_CANDIDATE_DISTANCE
+            )
+        ]
         ranked=[]
         for ci,candidate in enumerate(candidates):
             da=component_min_surface_distance_exact(
