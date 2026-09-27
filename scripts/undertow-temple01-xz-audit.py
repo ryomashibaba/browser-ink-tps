@@ -2568,8 +2568,47 @@ for side in ("POS","NEG"):
         f"accepted={len(links)} rejected={len(samples)-len(links)}"
     )
 
+# The local PDF->model registration is approximate, so independently snapping
+# both mirrored lips to nearest 0.125m cells can differ by a few cells even
+# though the Temple01 floor masks themselves are exact model-space mirrors.
+# Canonicalize the POS links, mirror their cell pairs exactly, and require those
+# mirrored cells to exist in the independently extracted NEG masks. Keep the
+# independently sampled NEG links as a diagnostic only.
 pos_links=first_drop_link_candidates["POS"]
-neg_links=first_drop_link_candidates["NEG"]
+neg_sampled_links=first_drop_link_candidates["NEG"]
+if not pos_links or not neg_sampled_links:
+    raise SystemExit("T21 first-drop link audit failed: no sampled links")
+
+neg_upper_mask,neg_upper_y=spawn_route_floor_masks["NEG_SPAWN_HIGH"]
+neg_lower_mask,neg_lower_y=spawn_route_floor_masks["NEG_FIRST_DROP_LANDING"]
+neg_links=[]
+missing_mirror=[]
+for rec in pos_links:
+    upper_cell=(-rec["upper_cell"][0],-rec["upper_cell"][1])
+    lower_cell=(-rec["lower_cell"][0],-rec["lower_cell"][1])
+    if upper_cell not in neg_upper_mask or lower_cell not in neg_lower_mask:
+        missing_mirror.append((upper_cell,lower_cell))
+        continue
+    ux,uz=cell_xy(upper_cell)
+    lx,lz=cell_xy(lower_cell)
+    upx,upz=model_to_project((ux,uz))
+    lpx,lpz=model_to_project((lx,lz))
+    neg_links.append({
+        "sample":rec["sample"],
+        "upper_cell":upper_cell,
+        "lower_cell":lower_cell,
+        "upper_distance":None,
+        "lower_distance":None,
+        "start_project":[round(upx,6),round(neg_upper_y-3.0,6),round(upz,6)],
+        "end_project":[round(lpx,6),round(neg_lower_y-3.0,6),round(lpz,6)],
+    })
+
+if missing_mirror:
+    raise SystemExit(
+        f"T21 first-drop link audit failed: mirrored cells absent from NEG masks: {missing_mirror}"
+    )
+
+first_drop_link_candidates["NEG_CANONICAL"]=neg_links
 pos_pairs={
     (tuple(rec["upper_cell"]),tuple(rec["lower_cell"]))
     for rec in pos_links
@@ -2584,18 +2623,20 @@ mirrored_pos_pairs={
 }
 link_pair_xor=mirrored_pos_pairs ^ neg_pairs
 print(
-    f"T21FIRSTDROP MIRROR pos={len(pos_pairs)} neg={len(neg_pairs)} "
-    f"xor={len(link_pair_xor)} missing={len(mirrored_pos_pairs-neg_pairs)} "
+    f"T21FIRSTDROP MIRROR pos={len(pos_pairs)} neg_canonical={len(neg_pairs)} "
+    f"neg_sampled={len(neg_sampled_links)} xor={len(link_pair_xor)} "
+    f"missing={len(mirrored_pos_pairs-neg_pairs)} "
     f"extra={len(neg_pairs-mirrored_pos_pairs)}"
 )
 if link_pair_xor:
     raise SystemExit(
-        f"T21 first-drop link audit failed: mirrored pair XOR {len(link_pair_xor)}"
+        f"T21 first-drop link audit failed: canonical mirrored pair XOR {len(link_pair_xor)}"
     )
-if not pos_links or not neg_links:
-    raise SystemExit("T21 first-drop link audit failed: no accepted links")
 
-for side,links in first_drop_link_candidates.items():
+for side,links in (
+    ("POS",pos_links),
+    ("NEG",neg_links),
+):
     print(
         "T21FIRSTDROP CANDIDATE_JSON "
         + side
