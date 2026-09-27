@@ -1873,7 +1873,11 @@ Validation must additionally require:
 Validation must additionally require:
 - pinned Turf PDF = **100,311 bytes**, SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
 - both exact `FloorConcrete03` route-ramp source quads remain model-space mirrors
-- each exact ramp projection contains **168** instances of the 0.24pt black / 0.96pt author slope-dash family
+- each exact ramp 3pt query contains **168** instances of the 0.24pt black / 0.96pt author slope-dash family
+- exact-polygon containment remains pinned:
+  - positive-Z = **133 midpoint-inside / 126 fully-inside** (0.791667 / 0.75)
+  - negative-Z = **126 / 126** (0.75 / 0.75)
+- both midpoint-inside and fully-inside fractions must remain >= **0.70**
 - known central PAINTABLE slope median brightness remains **255**
 - known gray UNINKABLE glass-slope median brightness remains **191**
 - both route-ramp median brightness values remain **255**
