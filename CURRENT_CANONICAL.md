@@ -2512,3 +2512,23 @@ Runtime consequence:
 
 `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` therefore remains active, but is now localized only to the underpass remainder. `TURF_SCOREABLE_MASK_PENDING` remains fully separate, production remains frozen T20 `inkworks-junction`, and PR #5 remains Draft / unmerged.
 
+## T21-D upper-glass projectile semantic localization — Resolution Pass 11A (2026-09-27)
+
+Projectile authority is now split into **behavioral occlusion semantics** and **exact current collision-face binding**.
+
+Evidence:
+- Nintendo Ver.2.0.0 update history explicitly fixed Undertow behavior where a player standing on the glass floor could be damaged from the opposite side; opposite-side damage through the glass was therefore unintended
+- post-Ver.7.2/current strategy material still identifies the central position as glass high ground
+- a Ver.11 current-stage guide dated 2026-04-27 specifically uses the **grate edge** of the glass high ground to pass explosion coverage, distinguishing an attack-permissive edge route from the glass body
+
+Canonical consequence:
+- ordinary cross-glass damage-blocking semantic = **resolved**
+- grate/edge or around-geometry attack routes may still be permissive
+- exact current `Glass01` / `GlassEdge` / grate/fence / `BridgeMetal` projectile face binding = unresolved
+- projectile/explosion behavior for every weapon class = unresolved
+- current Glass01 visual mesh is **not** promoted to projectile collision from semantics alone
+- camera-query authority remains independently unresolved
+- player/nav exact collision-face binding remains unresolved
+
+Therefore `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` remains active. Pass 11A narrows the missing evidence to exact current projectile/player/nav collision geometry rather than whether glass should behave as a generic through-shot surface.
+
