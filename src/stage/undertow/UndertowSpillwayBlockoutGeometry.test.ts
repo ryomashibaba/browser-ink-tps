@@ -20,7 +20,7 @@ describe('T21-D partial Undertow blockout geometry', () => {
   it('contains only the currently safe flat components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(21);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(13);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(15);
     const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.collisionBehavior === 'GRATE'
     );
@@ -157,6 +157,20 @@ describe('T21-D partial Undertow blockout geometry', () => {
       expect((surface.flags & SurfaceFlags.Floor) !== 0).toBe(true);
       expect((surface.flags & SurfaceFlags.Scoreable) !== 0).toBe(false);
     }
+    const routeRampPaint =
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.filter((surface) =>
+        surface.id.includes('right-low-route-ramp-')
+      );
+    expect(routeRampPaint).toHaveLength(2);
+    expect(routeRampPaint.every((surface) =>
+      (surface.flags & SurfaceFlags.Ramp) !== 0
+    )).toBe(true);
+    expect(routeRampPaint.every((surface) =>
+      (surface.flags & SurfaceFlags.Floor) === 0
+    )).toBe(true);
+    expect(routeRampPaint.every((surface) =>
+      (surface.flags & SurfaceFlags.Scoreable) === 0
+    )).toBe(true);
     expect(paintIds.some((id) => id.includes('first-drop-landing-'))).toBe(false);
   });
 
