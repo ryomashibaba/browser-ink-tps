@@ -245,6 +245,12 @@ export function undertowRightLowRouteRampErrors(): readonly string[] {
   if (
     !vector.exactRampAuthorPaintClassResolved ||
     vector.routeRampCanonicalDashCountPerSide !== 168 ||
+    vector.positiveZDashMidpointInside !== 133 ||
+    vector.positiveZDashFullyInside !== 126 ||
+    vector.negativeZDashMidpointInside !== 126 ||
+    vector.negativeZDashFullyInside !== 126 ||
+    vector.positiveZDashFullyInsideFraction !== 0.75 ||
+    vector.negativeZDashFullyInsideFraction !== 0.75 ||
     vector.knownPaintableSlopeMedianBrightness !== 255 ||
     vector.knownUninkableGlassSlopeMedianBrightness !== 191 ||
     vector.positiveZMedianBrightness !== 255 ||
