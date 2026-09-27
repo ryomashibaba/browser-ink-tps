@@ -1,6 +1,6 @@
 export const UNDERTOW_WATER_VISUAL_PLANE_AUDIT = Object.freeze({
   runNumber: 663,
-  resolutionPass: '9B' as const,
+  resolutionPass: '11B' as const,
   sourceTarget: 'CURRENT_POST_VER_7_2_NORMAL_PVP' as const,
   teamA: Object.freeze({
     vectorPolygonRasterCells: 1954,
@@ -64,14 +64,25 @@ export const UNDERTOW_WATER_VISUAL_PLANE_AUDIT = Object.freeze({
     sourceCommit: '7280ff9cde8bb1c5dcef46c700c326471584d2e6',
     sceneRowId: 'Vss_Temple01',
     modelResource: 'Model/Fld_Temple01.bfres',
-    dataSnapshot: '920',
+    verifiedSnapshots: ['720', '800', '920', '1130'] as const,
+    scenePreloadStableAcrossVerifiedSnapshots: true,
     preloadResources: ['Model/Fld_Temple01.bfres'] as const,
     preloadContainsExplicitWaterResource: false,
+    versusSceneInfoContainsPlacementReference: false,
+    versusSceneInfoContainsBcettBody: false,
+    laterVersusSceneTclSceneName: 'Vss_Temple00',
+    tclSceneNameProvidesWaterPlacementAuthority: false,
     exposesWaterVisualY: false,
     exposesTemple01PlacementTransforms: false,
     exposesNormalModeBcettBody: false,
+    temple01PublicReferenceFileFamilies: [
+      'SceneInfo.json',
+      'VersusSceneInfo.json',
+      'LeagueTypeInfo.json'
+    ] as const,
+    normalModePlacementBodyRecovered: false,
     notes:
-      'The published 920 SceneInfo row for Vss_Temple01 (remodeled Undertow) preloads Model/Fld_Temple01.bfres and does not expose a water-plane transform or a normal-mode stage-layout body. VersusSceneInfo supplies stage identity metadata, not placement transforms. This narrows the missing authority to the unpublished/current placement-environment data rather than the already-audited visual OBJ.'
+      'Resolution Pass 11B compares the published Vss_Temple01 SceneInfo/VersusSceneInfo metadata across snapshots 720, 800, 920, and 1130. SceneInfo is stable and preloads only Model/Fld_Temple01.bfres. VersusSceneInfo remains stage identity/display metadata; 920/1130 add TclSceneName=Vss_Temple00, but no placement transform or Banc body. LeagueTypeInfo only exposes a Tower-Control modifier path. Public metadata therefore does not contain the normal/Turf Temple01 placement-environment body needed to recover visual-water Y.'
   }),
   visualPlaneResolved: false,
   visualPlaneMeters: null,
@@ -83,7 +94,7 @@ export const UNDERTOW_WATER_VISUAL_PLANE_AUDIT = Object.freeze({
     'Or independently registered current normal-PvP in-game visual-plane evidence with enough fixed Temple01 geometry references to recover the plane Y without perspective guessing.'
   ] as const,
   notes:
-    'Resolution Pass 9B closes the public-source discovery branch without inventing a value. CI #663 found zero obvious named horizontal water-mesh coverage inside the exact mapped cyan hazard polygons. The audited current SceneInfo exposes only Fld_Temple01.bfres as the remodeled-stage preload, the public Temple01 actor-class family contains no explicit Water class, and the public schema shows that the missing BCETT instance body would carry Translate/Rotate/Scale if available. WATER_VISUAL_Y_PENDING therefore remains unresolved with visualPlaneMeters=null; WATER_KILL_THRESHOLD_PENDING remains a separate blocker.'
+    'Resolution Pass 11B closes the public-metadata discovery branch without inventing a value. CI #663 found zero obvious named horizontal water-mesh coverage inside the exact mapped cyan hazard polygons. The audited current SceneInfo exposes only Fld_Temple01.bfres as the remodeled-stage preload, the public Temple01 actor-class family contains no explicit Water class, and the public schema shows that the missing BCETT instance body would carry Translate/Rotate/Scale if available. WATER_VISUAL_Y_PENDING therefore remains unresolved with visualPlaneMeters=null; WATER_KILL_THRESHOLD_PENDING remains a separate blocker.'
 });
 
 export function undertowWaterVisualPlaneAuditErrors(): readonly string[] {
@@ -131,8 +142,20 @@ export function undertowWaterVisualPlaneAuditErrors(): readonly string[] {
   ) {
     errors.push('Leanny current SceneInfo unexpectedly claims Temple01 water/placement authority');
   }
+  if (
+    audit.resolutionPass !== '11B' ||
+    audit.leannySceneMetadataFollowup.verifiedSnapshots.join(',') !== '720,800,920,1130' ||
+    !audit.leannySceneMetadataFollowup.scenePreloadStableAcrossVerifiedSnapshots ||
+    audit.leannySceneMetadataFollowup.preloadResources.join(',') !== 'Model/Fld_Temple01.bfres' ||
+    audit.leannySceneMetadataFollowup.versusSceneInfoContainsPlacementReference ||
+    audit.leannySceneMetadataFollowup.versusSceneInfoContainsBcettBody ||
+    audit.leannySceneMetadataFollowup.tclSceneNameProvidesWaterPlacementAuthority ||
+    audit.leannySceneMetadataFollowup.normalModePlacementBodyRecovered
+  ) {
+    errors.push('Pass 11B cross-snapshot Temple01 scene-metadata boundary drifted');
+  }
   if (audit.publicPlacementRecoverySucceeded) {
-    errors.push('Pass 9B must not claim recovery of unpublished Temple01 water placement');
+    errors.push('Pass 11B must not claim recovery of unpublished Temple01 water placement');
   }
   if (audit.visualPlaneResolved || audit.visualPlaneMeters !== null) {
     errors.push('water visual plane must remain unresolved after the source-gap audit');
