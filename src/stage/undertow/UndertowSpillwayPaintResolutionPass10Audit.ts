@@ -109,7 +109,7 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS10_AUDIT = Object.freeze({
     activationBlockerCleared: false
   }),
   notes:
-    'Resolution Pass 10A promotes exactly the two mirrored right-low route-ramp quads to PAINTABLE. It does not promote first-drop landings, whole-underpass remainders, or Turf Scoreable. UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING remains active with four unresolved solids.'
+    'Resolution Pass 10A itself promotes exactly the two mirrored right-low route-ramp quads to PAINTABLE. Resolution Pass 10C later promotes the separate first-drop landing pair; whole-underpass remainders and Turf Scoreable remain unresolved. The current inventory therefore has two unresolved solids.'
 });
 
 export function undertowPaintResolutionPass10AuditErrors(): readonly string[] {
@@ -179,9 +179,9 @@ export function undertowPaintResolutionPass10AuditErrors(): readonly string[] {
   }
 
   if (
-    audit.currentPaintInventory.confirmedPaintableRuntimeSolidCount !== 13 ||
-    audit.currentPaintInventory.unresolvedRuntimeSolidCount !== 4 ||
-    audit.currentPaintInventory.unresolvedRuntimeSolidIds.length !== 4 ||
+    audit.currentPaintInventory.confirmedPaintableRuntimeSolidCount !== 15 ||
+    audit.currentPaintInventory.unresolvedRuntimeSolidCount !== 2 ||
+    audit.currentPaintInventory.unresolvedRuntimeSolidIds.length !== 2 ||
     audit.currentPaintInventory.activationBlockerCleared
   ) {
     errors.push('Pass 10A current paint inventory/blocker state drifted');
