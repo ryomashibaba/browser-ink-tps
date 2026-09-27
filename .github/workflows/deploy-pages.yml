@@ -85,6 +85,26 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: T21 Sunfish Turf route-ramp vector audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/undertow-sunfish-turf-ramp-paint-audit.py \
+            --output /tmp/undertow-turf-ramp-paint-audit.json \
+            --pdf-output /tmp/undertow-turf-sunfish.pdf
+
+      - name: Upload T21 Sunfish Turf ramp audit
+        if: always() && github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-turf-ramp-paint-audit
+          path: |
+            /tmp/undertow-turf-ramp-paint-audit.json
+            /tmp/undertow-turf-sunfish.pdf
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
