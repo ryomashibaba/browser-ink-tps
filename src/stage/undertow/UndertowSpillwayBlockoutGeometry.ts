@@ -33,6 +33,10 @@ import { UNDERTOW_WATER_KILL_AUTHORITY_AUDIT } from './UndertowSpillwayWaterKill
 import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
 import { UNDERTOW_TURF_SCOREABLE_MASK_AUDIT } from './UndertowSpillwayTurfScoreableMaskAudit';
 import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
+import {
+  UNDERTOW_SPLAT_ZONES_UNDERPASS_PAINT_REGISTRATION,
+  type UndertowZoneUnderpassPaintRegistration
+} from './UndertowSpillwayZonesVectorGeometry';
 
 export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
 export const UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS = 0.125;
@@ -175,11 +179,21 @@ const solids = [
   ...undertowRightLowRouteRampStageSolids(),
   ...undertowUpperGlassVisualStageSolids()
 ];
+const registeredUnderpassZonePaintSurfaces = [
+  buildRegisteredUnderpassZonePaintSurface(
+    UNDERTOW_SPLAT_ZONES_UNDERPASS_PAINT_REGISTRATION.negativeZ
+  ),
+  buildRegisteredUnderpassZonePaintSurface(
+    UNDERTOW_SPLAT_ZONES_UNDERPASS_PAINT_REGISTRATION.positiveZ
+  )
+];
+
 const paintSurfaces = [
   ...built.flatMap((item) =>
     item.paintSurface ? [item.paintSurface] : []
   ),
-  ...undertowCenterSlopePaintSurfaces()
+  ...undertowCenterSlopePaintSurfaces(),
+  ...registeredUnderpassZonePaintSurfaces
 ];
 
 const outer = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints;
@@ -223,6 +237,34 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     notes:
       'Inert T21-D construction package only. It contains BLOCKOUT-safe flat/source-mesh geometry plus audited one-way first-drop and right-small-drop CPU navigation links, and does not replace PRODUCTION_STAGE_DEFINITION. Technical slab thickness and off-mesh endpoint radius are runtime implementation values, not claimed source measurements.'
   });
+
+function buildRegisteredUnderpassZonePaintSurface(
+  registration: UndertowZoneUnderpassPaintRegistration
+): StagePaintSurfaceDefinition {
+  const bounds = polygonBounds(registration.projectOuter);
+  const width = bounds.maxX - bounds.minX;
+  const depth = bounds.maxZ - bounds.minZ;
+  return {
+    id: `UndertowT21D:${registration.id}`,
+    backingSolidId: registration.backingSolidId,
+    center: [
+      (bounds.minX + bounds.maxX) * 0.5,
+      0.002,
+      (bounds.minZ + bounds.maxZ) * 0.5
+    ],
+    uAxis: [1, 0, 0],
+    vAxis: [0, 0, 1],
+    widthMeters: width,
+    heightMeters: depth,
+    flags: paintableFloor,
+    footprint: localFootprint(
+      registration.projectOuter,
+      registration.projectHoles,
+      bounds.minX,
+      bounds.minZ
+    )
+  };
+}
 
 function buildFlatComponent(component: PolygonComponent): {
   solid: StageSolidDefinition;
