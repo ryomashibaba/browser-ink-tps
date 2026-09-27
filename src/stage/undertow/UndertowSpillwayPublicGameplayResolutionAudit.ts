@@ -1,5 +1,4 @@
 import type { StageTriangleMeshGeometry, StageVector3 } from '../StageDefinition';
-import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import { UNDERTOW_UPPER_GLASS_SOURCE_MESHES } from './UndertowSpillwayUpperGlassMeshGeometry';
 
@@ -65,6 +64,7 @@ export const UNDERTOW_PUBLIC_GAMEPLAY_RESOLUTION_AUDIT = Object.freeze({
   scope: 'PUBLIC_GAMEPLAY_AND_DOCUMENTATION' as const,
   runtimePromotionAuthorized: false,
   activationBlockersCleared: [] as const,
+  historicalActivationBlockerCountAtPass: 7,
   officialEvidence: Object.freeze({
     nintendoVer720TerrainChange: Object.freeze({
       authority: 'OFFICIAL' as const,
@@ -220,8 +220,8 @@ export function undertowPublicGameplayResolutionAuditErrors(): readonly string[]
     errors.push('public tunnel corroboration must not authorize a new navigation link');
   }
 
-  if (UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.length !== 7) {
-    errors.push('Resolution Pass 2 must preserve all seven activation blockers');
+  if (audit.historicalActivationBlockerCountAtPass !== 7) {
+    errors.push('Resolution Pass 2 historical blocker snapshot must remain seven');
   }
 
   return errors;

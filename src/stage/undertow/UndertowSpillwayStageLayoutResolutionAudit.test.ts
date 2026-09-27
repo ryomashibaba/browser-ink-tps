@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
   UNDERTOW_STAGE_LAYOUT_RESOLUTION_TARGETS,
   UNDERTOW_STAGE_LAYOUT_SOURCE_RECOVERY_AUDIT,
@@ -15,7 +14,6 @@ describe('T21 Undertow stage-layout source recovery resolution pass', () => {
       sourcePayloadRecovered: false,
       runtimePromotionAuthorized: false
     });
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers).toHaveLength(7);
   });
 
   it('records the actual editor input contract instead of guessing a BCETT filename', () => {

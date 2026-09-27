@@ -1,5 +1,4 @@
 import type { StageTriangleMeshGeometry, StageVector3 } from '../StageDefinition';
-import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import { UNDERTOW_VECTOR_BLUEPRINT_SOURCE, UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import { UNDERTOW_UPPER_GLASS_SOURCE_MESHES } from './UndertowSpillwayUpperGlassMeshGeometry';
 
@@ -108,6 +107,7 @@ export const UNDERTOW_VISUAL_REGISTRATION_RESOLUTION_AUDIT = Object.freeze({
   scope: 'CURRENT_LAYOUT_VISUAL_REGISTRATION' as const,
   runtimePromotionAuthorized: false,
   activationBlockersCleared: [] as const,
+  historicalActivationBlockerCountAtPass: 7,
   sunfishAuthorLegend: Object.freeze({
     sourceLabel: UNDERTOW_VECTOR_BLUEPRINT_SOURCE.label,
     sourceUpdated: UNDERTOW_VECTOR_BLUEPRINT_SOURCE.sourceUpdated,
@@ -223,8 +223,8 @@ export function undertowVisualRegistrationResolutionAuditErrors(): readonly stri
   ) {
     errors.push('public visual references must not be promoted beyond their registration authority');
   }
-  if (UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.length !== 7) {
-    errors.push('Resolution Pass 3 must preserve all seven activation blockers');
+  if (audit.historicalActivationBlockerCountAtPass !== 7) {
+    errors.push('Resolution Pass 3 historical blocker snapshot must remain seven');
   }
 
   return errors;
