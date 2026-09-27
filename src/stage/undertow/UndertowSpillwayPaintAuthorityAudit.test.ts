@@ -10,9 +10,9 @@ describe('T21-D Undertow paint authority audit', () => {
     expect(undertowPaintAuthorityAuditErrors()).toEqual([]);
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT).toMatchObject({
       runtimeSolidCount: 21,
-      confirmedPaintableCount: 11,
+      confirmedPaintableCount: 13,
       confirmedUninkableCount: 4,
-      unresolvedCount: 6,
+      unresolvedCount: 4,
       paintAuthorityComplete: false,
       turfScoreabilityEvaluated: false,
       confidence: 'HIGH'
@@ -20,15 +20,18 @@ describe('T21-D Undertow paint authority audit', () => {
     expect(UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS).toHaveLength(21);
   });
 
-  it('keeps only the six still-unresolved component families localized', () => {
+  it('keeps only the four still-unresolved flat component families localized', () => {
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds)
-      .toHaveLength(6);
+      .toHaveLength(4);
     expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds)
       .toEqual(expect.arrayContaining([
         'UndertowT21D:glass-underpass-positive-z',
         'UndertowT21D:glass-underpass-negative-z',
         'UndertowT21D:first-drop-landing-positive-z',
-        'UndertowT21D:first-drop-landing-negative-z',
+        'UndertowT21D:first-drop-landing-negative-z'
+      ]));
+    expect(UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds)
+      .not.toEqual(expect.arrayContaining([
         'UndertowT21D:right-low-route-ramp-positive-z',
         'UndertowT21D:right-low-route-ramp-negative-z'
       ]));
@@ -88,6 +91,25 @@ describe('T21-D resolved spawn-high paint authority', () => {
       ).toMatchObject({
         authority: 'PAINTABLE',
         evidenceClass: 'PUBLIC_CURRENT_GAMEPLAY'
+      });
+    }
+  });
+});
+
+
+describe('T21-D resolved right-low route-ramp paint authority', () => {
+  it('promotes only the exact mirrored route-ramp pair from author-vector semantics', () => {
+    for (const id of [
+      'UndertowT21D:right-low-route-ramp-positive-z',
+      'UndertowT21D:right-low-route-ramp-negative-z'
+    ]) {
+      expect(
+        UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS.find(
+          (record) => record.runtimeSolidId === id
+        )
+      ).toMatchObject({
+        authority: 'PAINTABLE',
+        evidenceClass: 'AUTHOR_VECTOR_SEMANTIC'
       });
     }
   });
