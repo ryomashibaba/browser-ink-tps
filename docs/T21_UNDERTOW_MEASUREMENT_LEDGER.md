@@ -1008,3 +1008,21 @@ Runtime:
 
 Only the two whole underpass solids remain UNKNOWN outside their already-authorized Splat-Zone intersection subregions. The remaining paint blocker is not cleared.
 
+## T21-D Resolution Pass 11A — upper-glass projectile semantic boundary
+
+New semantic evidence is now separated from geometry authority.
+
+Observed behavior evidence:
+- Nintendo Ver.2.0.0: opposite-side damage through Undertow glass was fixed as unintended behavior
+- current/post-Ver.7.2 stage references still identify the central upper position as glass high ground
+- Ver.11 current-stage usage specifically exploits the grate edge to pass explosion coverage
+
+Result:
+- glass-body cross-side damage blocking is now a HIGH-confidence gameplay semantic
+- grate/edge attack paths are separately allowed by evidence
+- this does **not** identify the exact current collision primitive
+- no `Glass01`, `GlassEdge`, `BridgeMetal`, or fence subset is promoted to projectile collision
+- player collision, navigation face binding, full projectile-class behavior, and camera query remain unresolved
+
+No runtime geometry/query flags change in Pass 11A.
+
