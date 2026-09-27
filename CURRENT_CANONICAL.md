@@ -2406,3 +2406,42 @@ Canonical consequences:
 - production remains frozen T20 `inkworks-junction`
 - PR #5 remains Draft / open / unmerged
 
+## T21-D right-low route-ramp paint registration — Resolution Pass 10A (2026-09-27)
+
+The two already-audited `FloorConcrete03` route-ramp quads are now promoted to **PAINTABLE** from author-vector semantics. This does **not** rely on the material name.
+
+Pinned current Turf vector source:
+- bytes: **100,311**
+- SHA-256: `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- page: 841.920044 × 595.320007pt
+
+Exact semantic discrimination from CI #746:
+- known central PAINTABLE slopes:
+  - median raster brightness = **255**
+  - canonical author dash family = 0.24pt black / 0.96pt
+- known gray UNINKABLE glass slopes:
+  - median raster brightness = **191**
+  - gray samples occupy the entire audited interior class
+- positive-Z exact route ramp:
+  - canonical dash count = **168**
+  - median brightness = **255**
+  - near-white fraction = **0.883422**
+- negative-Z exact route ramp:
+  - canonical dash count = **168**
+  - median brightness = **255**
+  - near-white fraction = **0.878540**
+- each route ramp is distance **0** from the paintable median and **64** from the uninkable median
+
+Runtime consequence:
+- exactly 2 route-ramp PaintSurfaces are added
+- flags = `Paintable | Swimmable | Ramp`
+- no `Floor` flag
+- no `Scoreable` flag
+- current runtime-solid paint inventory = **13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN**
+- current PaintSurface count = **15**
+- remaining UNKNOWN solids are only:
+  - 2 whole glass-underpass solids outside the already registered Zones paint intersections
+  - 2 first-drop landing solids
+
+`UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` therefore remains active. `TURF_SCOREABLE_MASK_PENDING` remains fully separate, production remains frozen T20 `inkworks-junction`, and PR #5 remains Draft / unmerged.
+
