@@ -83,7 +83,10 @@ export const UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT = Object.freeze({
   projectileOcclusionSemanticResolved: true,
   exactProjectileCollisionFaceBindingResolved: false,
   projectileBehaviorResolved: false,
-  cameraQueryBehaviorResolved: false,
+  cameraQueryBehaviorResolved: true,
+  cameraTransparentGlassBlocksThirdPersonCamera: true,
+  cameraUserDirectGameplayKnowledgeAccepted: true,
+  exactCameraCollisionPrimitiveResolved: false,
   kitrixStageColliderPath: 'KiTrix/SceneKit/StageCollider.swift',
   kitrixBulletSimulatorPath: 'KiTrix/SceneKit/BulletSimulator.swift',
   kitrixStageColliderQueriesWholeStageVisualTree: true,
@@ -152,15 +155,17 @@ export const UNDERTOW_UPPER_GLASS_ROLE_AUTHORITY_AUDIT:
     activationBlocker: 'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
     observedEvidence: [
       'The exact Glass01 visual shell is known.',
-      'The audited public KiTrix StageCollider use site is BulletSimulator; no camera-query authority is exposed by the Temple01 asset inventory.'
+      'The audited public KiTrix StageCollider use site is BulletSimulator; no camera-query authority is exposed by the Temple01 asset inventory.',
+      'On 2026-09-28 the user states from direct gameplay knowledge that the third-person camera is pushed to the near side of transparent Undertow glass and does not pass through it.'
     ],
     insufficientBecause: [
       'Render geometry does not establish camera push-in, occlusion, shoulder-camera, or line-of-sight query semantics.',
-      'Projectile raycast behavior cannot be reused as camera-query authority.'
+      'Projectile raycast behavior cannot be reused as camera-query authority.',
+      'The user knowledge resolves transparent-glass camera blocking behavior but not the exact original Glass01/hidden camera-query primitive or every thin-edge/frame boundary.'
     ],
     minimumAuthoritativeEvidence: [
       'Original-game camera collision/query metadata for the structure.',
-      'Or controlled camera-boundary capture around the registered glass/metal structure that resolves which faces affect camera queries.'
+      'Transparent-glass camera behavior is now resolved by direct user knowledge. Remaining closure is exact geometry/primitive binding at the thin-edge/frame boundary; no redundant broad-glass camera capture is needed.'
     ]
   },
   {
@@ -239,7 +244,10 @@ export function undertowUpperGlassCollisionAuthorityAuditErrors():
     audit.projectileSemanticEvidence.allProjectileClassesResolved ||
     audit.projectileSemanticEvidence.runtimeProjectilePromotionAuthorized ||
     audit.projectileBehaviorResolved ||
-    audit.cameraQueryBehaviorResolved
+    !audit.cameraQueryBehaviorResolved ||
+    !audit.cameraTransparentGlassBlocksThirdPersonCamera ||
+    !audit.cameraUserDirectGameplayKnowledgeAccepted ||
+    audit.exactCameraCollisionPrimitiveResolved
   ) {
     errors.push('Pass 9A gameplay semantics/source-face authority boundary drifted');
   }

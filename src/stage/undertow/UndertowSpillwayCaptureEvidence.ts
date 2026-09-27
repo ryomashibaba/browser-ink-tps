@@ -4,7 +4,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-first-drop-height-stills-2026-09-26'
   | 'user-underpass-outside-zone-paint-stills-2026-09-27'
   | 'user-upper-glass-support-route-videos-2026-09-27'
-  | 'user-upper-glass-ordinary-projectile-knowledge-2026-09-28';
+  | 'user-upper-glass-ordinary-projectile-knowledge-2026-09-28'
+  | 'user-upper-glass-camera-blocking-knowledge-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -18,7 +19,8 @@ export interface UndertowUserCaptureEvidence {
     | 'GUIDE_LINE_SIDE_HEIGHT_ORDER'
     | 'GLASS_UNDERPASS_PAINT_OUTSIDE_ZONES'
     | 'UPPER_GLASS_PLAYER_SUPPORT_ROUTE'
-    | 'UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING';
+    | 'UPPER_GLASS_ORDINARY_PROJECTILE_BLOCKING'
+    | 'UPPER_GLASS_CAMERA_BLOCKING';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -102,6 +104,17 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'This resolves the current ordinary-main projectile behavior requested by Pass 13B without requiring a redundant controlled capture.',
         'The statement is scoped to ordinary shots through the glass body; it does not by itself resolve thrown subs, explosions around grate/edge geometry, camera-query behavior, or the identity of the original collision primitive.',
         'Future evidence requests should state their purpose first and should accept direct user gameplay knowledge when the user already knows the requested behavior reliably.'
+      ]
+    },
+    {
+      id: 'user-upper-glass-camera-blocking-knowledge-2026-09-28',
+      region: 'UPPER_GLASS_CAMERA_BLOCKING',
+      confidence: 'CONFIRMED',
+      facts: [
+        'For Pass 13C the user selects behavior A: when transparent Undertow glass lies between the character and third-person camera, the camera is pushed to the near side and does not pass through the glass.',
+        'This direct gameplay knowledge resolves transparent-glass camera blocking behavior without requiring a redundant controlled capture.',
+        'The answer does not identify whether the original game uses visible Glass01 triangles or a coincident hidden camera-query primitive, and it does not authorize untested thin-edge/frame geometry by itself.',
+        'Player, projectile, camera and navigation authorities remain separate even where their observed blocking behavior agrees.'
       ]
     }
   ];

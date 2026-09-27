@@ -31,7 +31,10 @@ describe('T21-D upper glass collision authority audit', () => {
       projectileOcclusionSemanticResolved: true,
       exactProjectileCollisionFaceBindingResolved: false,
       projectileBehaviorResolved: false,
-      cameraQueryBehaviorResolved: false,
+      cameraQueryBehaviorResolved: true,
+      cameraTransparentGlassBlocksThirdPersonCamera: true,
+      cameraUserDirectGameplayKnowledgeAccepted: true,
+      exactCameraCollisionPrimitiveResolved: false,
       glassVisualShellCollisionAuthorityReady: false,
       bridgeMetalCollisionAuthorityReady: false,
       cameraQueryAuthorityReady: false,
@@ -129,6 +132,15 @@ describe('T21-D upper glass collision authority audit', () => {
     expect(
       UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.projectileBehaviorResolved
     ).toBe(false);
+  });
+
+  it('accepts direct camera-blocking knowledge without inventing exact camera geometry', () => {
+    const audit = UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT;
+    expect(audit.cameraQueryBehaviorResolved).toBe(true);
+    expect(audit.cameraTransparentGlassBlocksThirdPersonCamera).toBe(true);
+    expect(audit.cameraUserDirectGameplayKnowledgeAccepted).toBe(true);
+    expect(audit.exactCameraCollisionPrimitiveResolved).toBe(false);
+    expect(audit.cameraQueryAuthorityReady).toBe(false);
   });
 
   it('keeps KiTrix whole-stage projectile raycasts as downstream evidence only', () => {

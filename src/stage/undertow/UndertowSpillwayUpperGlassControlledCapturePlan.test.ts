@@ -8,24 +8,20 @@ import {
 } from './UndertowSpillwayUpperGlassControlledCapturePlan';
 
 describe('T21 Resolution Pass 13A upper-glass controlled capture plan', () => {
-  it('retires support/projectile work and requests only the independent camera-query question next', () => {
+  it('retires support, projectile and camera behavior questions after Pass 13C', () => {
     expect(undertowUpperGlassControlledCapturePlanErrors()).toEqual([]);
-    expect(undertowRequestReadyUpperGlassCaptureIds()).toEqual([
+    expect(undertowRequestReadyUpperGlassCaptureIds()).toEqual([]);
+    for (const id of [
+      'PLAYER_SUPPORT_COMPONENT_ROUTE',
+      'PROJECTILE_GLASS_EDGE_DIFFERENTIAL',
       'CAMERA_GLASS_EDGE_DIFFERENTIAL'
-    ]);
-    const support = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-      (capture) => capture.id === 'PLAYER_SUPPORT_COMPONENT_ROUTE'
-    );
-    const projectile = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-      (capture) => capture.id === 'PROJECTILE_GLASS_EDGE_DIFFERENTIAL'
-    );
-    const camera = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
-      (capture) => capture.id === 'CAMERA_GLASS_EDGE_DIFFERENTIAL'
-    );
-    expect(support?.status).toBe('RESOLVED');
-    expect(projectile?.status).toBe('RESOLVED');
-    expect(projectile?.userActionCount).toBe(0);
-    expect(camera?.status).toBe('REQUEST_READY');
+    ] as const) {
+      expect(
+        UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
+          (capture) => capture.id === id
+        )?.status
+      ).toBe('RESOLVED');
+    }
   });
 
   it('tests the three broad components independently on both sides', () => {
@@ -49,11 +45,11 @@ describe('T21 Resolution Pass 13A upper-glass controlled capture plan', () => {
       .toBeLessThan(0.1);
   });
 
-  it('keeps camera authority independent even after ordinary projectile behavior is resolved', () => {
+  it('keeps the resolved camera behavior independent from projectile/player semantics', () => {
     const camera = UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN.find(
       (capture) => capture.id === 'CAMERA_GLASS_EDGE_DIFFERENTIAL'
     );
-    expect(camera?.status).toBe('REQUEST_READY');
+    expect(camera?.status).toBe('RESOLVED');
     expect(camera?.purpose).toContain('independently from player and projectile collision');
     expect(camera?.avoid.join(' ')).toContain('Do not infer camera behavior from ordinary projectile blocking');
     expect(UNDERTOW_UPPER_GLASS_SUPPORT_ROUTES.positiveZ).toHaveLength(3);

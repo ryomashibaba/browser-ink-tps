@@ -214,7 +214,7 @@ export const UNDERTOW_UPPER_GLASS_CONTROLLED_CAPTURE_PLAN:
   {
     id: 'CAMERA_GLASS_EDGE_DIFFERENTIAL',
     priority: 3,
-    status: 'REQUEST_READY',
+    status: 'RESOLVED',
     blocks: ['UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING'],
     userActionCount: 0,
     guidePath: 'docs/T21_UNDERTOW_PASS13A_UPPER_GLASS_SUPPORT_CAPTURE_GUIDE.svg',
@@ -265,11 +265,8 @@ export function undertowUpperGlassControlledCapturePlanErrors():
   }
 
   const requestReady = undertowRequestReadyUpperGlassCaptureIds();
-  if (
-    requestReady.length !== 1 ||
-    requestReady[0] !== 'CAMERA_GLASS_EDGE_DIFFERENTIAL'
-  ) {
-    errors.push('after Pass 13B, only the independent camera-query question may be request-ready');
+  if (requestReady.length !== 0) {
+    errors.push('after Pass 13C, no completed upper-glass behavior question may remain request-ready');
   }
 
   const direct = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
