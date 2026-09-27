@@ -5,13 +5,21 @@ import {
   UNDERTOW_SPAWN_FLAT_COMPONENT_AUDIT
 } from './UndertowSpillwayModelXZGeometry';
 import {
-  UNDERTOW_PAINT_AUTHORITY_AUDIT,
   UNDERTOW_RUNTIME_PAINT_AUTHORITY_RECORDS
 } from './UndertowSpillwayPaintAuthorityAudit';
 
 const SPAWN_RUNTIME_SOLID_IDS = [
   'UndertowT21D:spawn-high-positive-z',
   'UndertowT21D:spawn-high-negative-z'
+] as const;
+
+const PASS5_UNRESOLVED_RUNTIME_SOLID_IDS = [
+  'UndertowT21D:glass-underpass-positive-z',
+  'UndertowT21D:glass-underpass-negative-z',
+  'UndertowT21D:first-drop-landing-positive-z',
+  'UndertowT21D:first-drop-landing-negative-z',
+  'UndertowT21D:right-low-route-ramp-positive-z',
+  'UndertowT21D:right-low-route-ramp-negative-z'
 ] as const;
 
 const spawnGeometry = UNDERTOW_MODEL_XZ_GEOMETRY.filter((item) =>
@@ -78,8 +86,8 @@ export const UNDERTOW_PAINT_RESOLUTION_PASS5_AUDIT = Object.freeze({
     )
   }),
   unresolvedAfterPass: Object.freeze({
-    count: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount,
-    runtimeSolidIds: UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedRuntimeSurfaceIds,
+    count: PASS5_UNRESOLVED_RUNTIME_SOLID_IDS.length,
+    runtimeSolidIds: PASS5_UNRESOLVED_RUNTIME_SOLID_IDS,
     underpass:
       'Resolution Pass 6 confirms a paintable Splat-Zone subregion beneath each glass platform, but the exact current zone boundary is not yet registered to the Temple01 underpass polygons, so whole-floor paint authority remains unresolved.',
     firstDropLanding:
