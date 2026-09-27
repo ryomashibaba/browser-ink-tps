@@ -1955,3 +1955,21 @@ Validation must additionally require:
 - `killThresholdResolved === false` / `killThresholdMeters === null`
 - no water plane or death volume is emitted
 - both water activation blockers remain active
+
+## T21-D whole-underpass Resolution Pass 11C validation — 2026-09-27
+
+Validation must additionally require:
+- pinned Turf PDF remains 100,311 bytes with SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- positive-Z exact underpass projection remains median brightness **191**, dark/gray fraction >= **0.98**
+- negative-Z exact underpass projection remains median brightness **191**, dark/gray fraction >= **0.98**
+- explicit overlapping fill colors remain the author gray class only
+- known Glass overhang overlap remains >= **0.70** on both sides
+- no distinct white underpass-floor vector fill is claimed recovered
+- gray top-view appearance must be interpreted as overlying Glass occlusion, not hidden-floor UNINKABLE authority
+- whole-underpass paint authority remains unresolved
+- runtime promotion remains unauthorized
+- exactly the two whole underpass solids remain solid-level UNKNOWN
+- only the two exact Splat-Zone intersection subregions remain underpass-backed PaintSurfaces
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
+- no `Scoreable` promotion occurs
+- production stage remains T20 `inkworks-junction`
