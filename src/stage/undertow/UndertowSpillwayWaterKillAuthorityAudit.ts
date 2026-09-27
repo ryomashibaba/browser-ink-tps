@@ -1,6 +1,6 @@
 export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
   sourceVersion: '7.2.0',
-  resolutionPass: '9B' as const,
+  resolutionPass: '11B' as const,
   mappedWaterHazardXzResolved: true,
   internalVoidClassificationResolved: true,
   exteriorPlayableHardSilhouetteResolved: true,
@@ -25,6 +25,20 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
     locatorScale: 1,
     notes:
       'Lft_KeepOutPlayer has the same generic LocatorInfo cube/ControlledPlayer shape metadata. Therefore LocatorInfo shape/target fields alone cannot be promoted into death-volume semantics or a kill Y.'
+  }),
+  sceneMetadataPlacementEvidence: Object.freeze({
+    repository: 'Leanny/splat3',
+    sourceCommit: '7280ff9cde8bb1c5dcef46c700c326471584d2e6',
+    sceneRowId: 'Vss_Temple01',
+    verifiedSnapshots: ['720', '800', '920', '1130'] as const,
+    sceneInfoPreloadResourcesStable: true,
+    sceneInfoPreloadResources: ['Model/Fld_Temple01.bfres'] as const,
+    versusSceneInfoContainsDeathLocatorPlacement: false,
+    versusSceneInfoContainsNormalModeBcettBody: false,
+    leagueTypeInfoOnlyReferencesTowerControlModifier: true,
+    normalModeMptPlayerDeadPlacementRecovered: false,
+    notes:
+      'Pass 11B verifies that public Temple01 scene metadata across 720/800/920/1130 contains no normal-mode death-locator placement body. SceneInfo only preloads Fld_Temple01.bfres; VersusSceneInfo is identity/display metadata; LeagueTypeInfo contributes only a Tower-Control modifier reference. None supplies Mpt_PlayerDead Translate/Rotate/Scale.'
   }),
   publicActorSchemaEvidence: Object.freeze({
     repository: 'OctoSquiddy/Splatoon-3-Map-Editor',
@@ -62,7 +76,7 @@ export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
     'Alternatively, controlled current normal-PvP vertical-crossing evidence registered to fixed Temple01 geometry tightly enough to bound the death trigger Y without reusing the unresolved visual-water plane.'
   ] as const,
   notes:
-    'Resolution Pass 9B verifies that the generic Mpt_PlayerDead definition is stable as Cube / Scale 1 / ControlledPlayer across snapshots 720, 800, 920, and 1130, while also proving that the public placement schema requires instance Translate/Rotate/Scale to recover an actual volume. No Temple01 death-locator instance body was recovered from the audited public sources. Therefore no global kill Y, water kill plane, or death volume is promoted; WATER_KILL_THRESHOLD_PENDING remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
+    'Resolution Pass 11B keeps the Pass 9B generic-locator result and additionally verifies that public Temple01 scene metadata across 720/800/920/1130 still exposes no normal-mode placement body. The generic Mpt_PlayerDead definition is stable as Cube / Scale 1 / ControlledPlayer across snapshots 720, 800, 920, and 1130, while also proving that the public placement schema requires instance Translate/Rotate/Scale to recover an actual volume. No Temple01 death-locator instance body was recovered from the audited public sources. Therefore no global kill Y, water kill plane, or death volume is promoted; WATER_KILL_THRESHOLD_PENDING remains activation-blocking independently of WATER_VISUAL_Y_PENDING.'
 });
 
 export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
@@ -100,6 +114,20 @@ export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
     errors.push('comparison locator no longer demonstrates generic locator-shape ambiguity');
   }
   if (
+    audit.resolutionPass !== '11B' ||
+    audit.sceneMetadataPlacementEvidence.verifiedSnapshots.join(',') !==
+      '720,800,920,1130' ||
+    !audit.sceneMetadataPlacementEvidence.sceneInfoPreloadResourcesStable ||
+    audit.sceneMetadataPlacementEvidence.sceneInfoPreloadResources.join(',') !==
+      'Model/Fld_Temple01.bfres' ||
+    audit.sceneMetadataPlacementEvidence.versusSceneInfoContainsDeathLocatorPlacement ||
+    audit.sceneMetadataPlacementEvidence.versusSceneInfoContainsNormalModeBcettBody ||
+    !audit.sceneMetadataPlacementEvidence.leagueTypeInfoOnlyReferencesTowerControlModifier ||
+    audit.sceneMetadataPlacementEvidence.normalModeMptPlayerDeadPlacementRecovered
+  ) {
+    errors.push('Pass 11B Temple01 death-placement metadata boundary drifted');
+  }
+  if (
     audit.publicActorSchemaEvidence.exposesTemple01Placement ||
     audit.publicActorSchemaEvidence.exposesKillThresholdParameter ||
     !audit.publicActorSchemaEvidence.placementTransformSchemaPresent ||
@@ -112,7 +140,7 @@ export function undertowWaterKillAuthorityAuditErrors(): readonly string[] {
     errors.push('public actor placement-schema boundary drifted');
   }
   if (audit.publicTemple01DeathPlacementRecoverySucceeded) {
-    errors.push('Pass 9B must not claim recovery of an unpublished Temple01 death volume');
+    errors.push('Pass 11B must not claim recovery of an unpublished Temple01 death volume');
   }
   if (audit.visualWaterYCanDefineKillThreshold) {
     errors.push('visual water Y must not be reused as kill-threshold authority');
