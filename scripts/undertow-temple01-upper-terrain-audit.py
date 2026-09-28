@@ -684,6 +684,7 @@ for side,route_points in GLASS_ROUTE_PROJECT_XZ.items():
         "routeComponentIds":unique_ids,
         "broadSourceTriangleCount":len(broad_faces),
         "broadSourceAreaSquareMeters":sum(tri_area(faces[fi]) for fi in broad_faces),
+        "broadMesh":mesh_payload(broad_faces),
         "bridgeReachableComponentCount":len(seen),
         "bridgeReachableTriangleCount":len(reachable_faces),
         "bridgeMesh":mesh_payload(reachable_faces),
