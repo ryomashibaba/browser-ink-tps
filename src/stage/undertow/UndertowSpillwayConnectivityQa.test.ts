@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18C',
+      resolutionPass: '18D',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -258,6 +258,36 @@ describe('T21-D partial Recast connectivity QA', () => {
         bridgePlusNearestFloorMatrixReachedPairs: 79,
         bridgeOnlyExternalGlassReachCount: 0,
         bridgePlusNearestFloorExternalGlassReachCount: 0
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.productionKccTraversalPass18D)
+      .toMatchObject({
+        qaRunNumber: 891,
+        characterMode: 'HUMAN',
+        directedProbeCount: 12,
+        successfulDirectedProbeCount: 12,
+        initiallySettledProbeCount: 12,
+        totalAirborneTicks: 0,
+        grateFloorDirectedProbeCount: 4,
+        glassBridgeDirectedProbeCount: 4,
+        bridgeFloorDirectedProbeCount: 4,
+        usesSharedProductionCharacterControllerConfiguration: true,
+        humanRadiusMeters: 0.32,
+        controllerOffsetMeters: 0.025,
+        effectiveHumanContactRadiusMeters: 0.345,
+        autostepMaxHeightMeters: 0.34,
+        snapToGroundMeters: 0.24,
+        recastNominalErosionRadiusMeters: 0.36,
+        pass18cSourceNativeRecastMatrixStillReachedPairs: 79,
+        currentReconstructionPhysicalTraversalFeasible: true,
+        currentRecastRepresentationMatchesPhysicalTraversal: false,
+        navigationDiscretizationMismatchLocalized: true,
+        originalGrateWalkOnOffSemanticsResolved: false,
+        exactOriginalGlassIngressSourceBindingResolved: false,
+        kccResultAloneAuthorizesOriginalGameplaySemantics: false,
+        offMeshLinkAuthorized: false,
+        runtimePromotionAuthorized: false,
+        activationBlockerCleared: false,
+        userCaptureRequiredNow: false
       });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
