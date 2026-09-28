@@ -31,8 +31,7 @@ import {
   UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
   undertowUpperGlassVisualStageSolids
 } from './UndertowSpillwayUpperGlassMeshGeometry';
-import { UNDERTOW_WATER_VISUAL_PLANE_AUDIT } from './UndertowSpillwayWaterGeometryAudit';
-import { UNDERTOW_WATER_KILL_AUTHORITY_AUDIT } from './UndertowSpillwayWaterKillAuthorityAudit';
+import { UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT } from './UndertowSpillwayInternalWaterSemanticCorrectionAudit';
 import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
 import { UNDERTOW_TURF_SCOREABLE_MASK_AUDIT } from './UndertowSpillwayTurfScoreableMaskAudit';
 import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
@@ -223,13 +222,13 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     activationBlockers: [
       'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
       'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
-      'WATER_VISUAL_Y_PENDING',
-      'WATER_KILL_THRESHOLD_PENDING',
+      'CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING',
+      'EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING',
       'TURF_SCOREABLE_MASK_PENDING',
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
     ],
     notes:
-      'Inert T21-D construction package only. Resolution Pass 12C promotes the two audited whole-underpass footprints to PaintSurfaces from controlled current gameplay evidence while keeping Turf Scoreable unresolved. It contains BLOCKOUT-safe flat/source-mesh geometry plus audited one-way first-drop and right-small-drop CPU navigation links, and does not replace PRODUCTION_STAGE_DEFINITION. Technical slab thickness and off-mesh endpoint radius are runtime implementation values, not claimed source measurements.'
+      'Inert T21-D construction package only. Pass 14E revokes the false internal-water semantics from the two legacy cyan-region ids: their source polygons remain deferred, with gameplay semantics pending, while exterior fall-out keeps a separate unresolved vertical death threshold. T21 still does not replace PRODUCTION_STAGE_DEFINITION.'
   });
 
 function buildResolvedUnderpassPaintSurface(
@@ -388,20 +387,22 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
     errors.push('upper-glass camera-query authority gap must remain activation-blocking');
   }
   if (
-    !UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneResolved &&
+    !UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT
+      .supersession.priorInternalWaterPremiseInvalidated ||
+    UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT
+      .sourceProvenanceBoundary.cyanAnnotationGameplayWaterAuthorityAuthorized ||
     !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
-      'WATER_VISUAL_Y_PENDING'
+      'CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING'
     )
   ) {
-    errors.push('unresolved water visual Y must remain activation-blocking');
+    errors.push('cyan source regions must remain semantically blocked after Pass 14E');
   }
   if (
-    !UNDERTOW_WATER_KILL_AUTHORITY_AUDIT.killThresholdResolved &&
     !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
-      'WATER_KILL_THRESHOLD_PENDING'
+      'EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING'
     )
   ) {
-    errors.push('unresolved water kill threshold must remain activation-blocking');
+    errors.push('exterior fall-out vertical kill placement must remain activation-blocking');
   }
   if (
     UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount > 0 &&

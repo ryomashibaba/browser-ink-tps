@@ -1,6 +1,7 @@
 export const UNDERTOW_WATER_KILL_AUTHORITY_AUDIT = Object.freeze({
   sourceVersion: '7.2.0',
   resolutionPass: '11B' as const,
+  canonicalStatus: 'HISTORICAL_INTERNAL_WATER_PREMISE_SUPERSEDED_BY_PASS14E' as const,
   mappedWaterHazardXzResolved: true,
   internalVoidClassificationResolved: true,
   exteriorPlayableHardSilhouetteResolved: true,

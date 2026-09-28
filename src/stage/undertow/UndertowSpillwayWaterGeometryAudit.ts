@@ -2,6 +2,7 @@ export const UNDERTOW_WATER_VISUAL_PLANE_AUDIT = Object.freeze({
   runNumber: 663,
   resolutionPass: '11B' as const,
   sourceTarget: 'CURRENT_POST_VER_7_2_NORMAL_PVP' as const,
+  canonicalStatus: 'HISTORICAL_INTERNAL_WATER_PREMISE_SUPERSEDED_BY_PASS14E' as const,
   teamA: Object.freeze({
     vectorPolygonRasterCells: 1954,
     temple01WaterSurfaceCells: 0,

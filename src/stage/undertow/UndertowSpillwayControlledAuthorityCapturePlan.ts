@@ -176,12 +176,12 @@ export const UNDERTOW_CONTROLLED_AUTHORITY_CAPTURE_PLAN:
     id: 'WATER_DEATH_VERTICAL_PLACEMENT',
     priority: 3,
     status: 'DEFERRED_REQUIRES_VERTICAL_REGISTRATION',
-    blocks: ['WATER_VISUAL_Y_PENDING', 'WATER_KILL_THRESHOLD_PENDING'],
+    blocks: ['CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING', 'EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING'],
     userActionCount: 0,
     purpose:
-      'Resolve rendered hazard Y and death placement independently.',
+      'Legacy capture id retained: resolve cyan source-region gameplay semantics separately from exterior fall-out death placement, without assuming internal water.',
     minimumEvidence: [
-      'A capture method with fixed Temple01 vertical references or actual normal/Turf placement data.'
+      'Independent current-gameplay or placement evidence for the cyan source regions, plus fixed-reference or placement evidence for exterior fall-out death Y if a numeric threshold is required.'
     ],
     acceptance: [
       'Visual Y and death trigger are each recovered without deriving one from the other.'

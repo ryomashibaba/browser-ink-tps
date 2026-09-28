@@ -822,63 +822,75 @@ const entries: readonly StageMeasurementEntry[] = [
   }),
   commonSurfaceEntry({
     id: 'team-a-water-region',
-    feature: 'Team A-side mapped water hazard',
+    feature: 'Team A-side cyan source-annotation region (gameplay semantics pending)',
     region: 'Team A Spawn / Outer Environment',
     featureKind: 'SURFACE',
-    confidence: 'CONFIRMED',
-    evidenceIds: ['user-turf-vector-blueprint'],
+    confidence: 'HIGH',
+    evidenceIds: [
+      'user-turf-vector-blueprint',
+      'user-internal-water-absence-still-2026-09-28'
+    ],
     xz: {
       kind: 'POLYGON',
       polygonMeters: UNDERTOW_VECTOR_TRACES.teamAWaterRegion.metricPoints,
       confidence: 'CONFIRMED',
       evidenceIds: ['user-turf-vector-blueprint'],
-      notes: 'Exact cyan-fill polygon extracted from the vector PDF.'
+      notes: 'Exact cyan-fill source polygon extracted from the vector PDF; geometry is retained independently of gameplay semantics.'
     },
-    y: unknownY('Water visual plane and kill threshold remain for T21-C/D.'),
+    y: unknownY('No internal visual-water Y is authorized. Current-gameplay semantics must be reclassified before runtime use.'),
     transition: noTransition,
     surface: {
-      semantics: ['WATER', 'KILL', 'UNINKABLE'],
-      confidence: 'CONFIRMED',
-      evidenceIds: ['user-turf-vector-blueprint']
-    }
+      semantics: [],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Former WATER/KILL/UNINKABLE promotion was invalidated by IMG_6141 at the Pass 14D target.'
+    },
+    notes: 'Legacy id retained for compatibility. The cyan source annotation is not current-gameplay water authority.'
   }),
   commonSurfaceEntry({
     id: 'team-b-water-region',
-    feature: 'Team B-side mapped water hazard',
+    feature: 'Team B-side cyan source-annotation region (gameplay semantics pending)',
     region: 'Team B Spawn / Outer Environment',
     featureKind: 'SURFACE',
-    confidence: 'CONFIRMED',
-    evidenceIds: ['user-turf-vector-blueprint'],
+    confidence: 'HIGH',
+    evidenceIds: [
+      'user-turf-vector-blueprint',
+      'user-internal-water-absence-still-2026-09-28'
+    ],
     xz: {
       kind: 'POLYGON',
       polygonMeters: UNDERTOW_VECTOR_TRACES.teamBWaterRegion.metricPoints,
       confidence: 'CONFIRMED',
       evidenceIds: ['user-turf-vector-blueprint'],
-      notes: 'Exact 180-degree counterpart cyan-fill polygon extracted from the vector PDF.'
+      notes: 'Exact 180-degree counterpart cyan-fill source polygon; geometry is retained independently of gameplay semantics.'
     },
-    y: unknownY('Water visual plane and kill threshold remain for T21-C/D.'),
+    y: unknownY('No internal visual-water Y is authorized. Counterpart gameplay semantics remain pending rather than inferred from symmetry.'),
     transition: noTransition,
     surface: {
-      semantics: ['WATER', 'KILL', 'UNINKABLE'],
-      confidence: 'CONFIRMED',
-      evidenceIds: ['user-turf-vector-blueprint']
-    }
+      semantics: [],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Do not infer WATER/KILL from the third-party cyan annotation or from symmetry.'
+    },
+    notes: 'Legacy id retained for compatibility. The counterpart remains semantically unresolved until independently reclassified.'
   }),
   commonSurfaceEntry({
     id: 'water-kill-regions',
-    feature: 'water / fall-out regions',
+    feature: 'legacy water / fall-out summary (internal-water premise superseded)',
     region: 'Outer Environment',
     featureKind: 'SURFACE',
-    confidence: 'CONFIRMED',
-    evidenceIds: centerEvidence,
-    xz: unresolvedXz('Mapped cyan water polygons are now exact; the broader fall-out/void kill boundary remains unresolved.'),
-    y: unknownY('Water visual level and kill threshold remain for T21-C/D.'),
+    confidence: 'UNKNOWN',
+    evidenceIds: [],
+    xz: unresolvedXz('Exterior fall-out uses the separately audited hard playable silhouette. Cyan source-region gameplay semantics are pending after Pass 14E.'),
+    y: unknownY('Exterior fall-out death threshold remains unresolved; no internal visual-water Y is requested.'),
     transition: noTransition,
     surface: {
-      semantics: ['WATER', 'KILL', 'UNINKABLE'],
-      confidence: 'CONFIRMED',
-      evidenceIds: handoff
-    }
+      semantics: ['KILL'],
+      confidence: 'UNKNOWN',
+      evidenceIds: [],
+      notes: 'Summary-only placeholder; no runtime paint or collision authority.'
+    },
+    notes: 'Historical id retained. Internal WATER semantics from the cyan diagram annotations are no longer canonical.'
   })
 ];
 
@@ -1088,6 +1100,13 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       label: 'User corrective first-drop / right-small-drop height still pair, 2026-09-26',
       sourceVersion: 'current normal PvP',
       notes: 'IMG_6112.jpeg + IMG_6111.jpeg. Direct user observation establishes that the floor referred to as below the red guide line is lower than the floor referred to as below the blue guide line. The guide did not independently register those visible floors to canonical floor nodes, so this evidence is line-side ordering only and promotes no floor identity or exact delta.'
+    },
+    {
+      id: 'user-internal-water-absence-still-2026-09-28',
+      kind: 'USER_CAPTURE',
+      label: 'User Pass 14E dry-location correction still, IMG_6141.jpeg',
+      sourceVersion: 'current normal PvP',
+      notes: 'The former Pass 14D marked internal-water target is visibly dry. This revokes gameplay WATER/KILL authority from the corresponding Sunfish cyan annotation while retaining its exact source polygon geometry.'
     }
   ],
   assumptions: [

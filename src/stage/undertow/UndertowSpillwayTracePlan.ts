@@ -146,7 +146,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Spawn Sides / Outer Environment',
     status: 'MEASURED',
     minimumConfidenceForBlockout: 'CONFIRMED',
-    notes: 'Both cyan water polygons are exact vector-PDF source faces.'
+    notes: 'Legacy id retained: both cyan vector-PDF source faces are exact XZ geometry, but Pass 14E revokes confirmed internal WATER/KILL gameplay semantics; their current gameplay meaning is pending.'
   },
   {
     id: 'fall-out-void-kill-boundary',
@@ -154,7 +154,7 @@ export const UNDERTOW_COMMON_TRACE_PLAN: readonly UndertowTraceRequirement[] = [
     region: 'Outer Environment',
     status: 'MEASURED',
     minimumConfidenceForBlockout: 'HIGH',
-    notes: 'XZ fall-out uses the exact 42-vertex common playable hard silhouette, with the exact cyan WATER+KILL polygons kept as separate internal hazards. The exhaustive common+Turf Temple01 audit classifies all six enclosed empty candidates and finds no additional internal abyss hole. This closes XZ only; the vertical kill threshold is not inferred.'
+    notes: 'XZ exterior fall-out uses the exact 42-vertex common playable hard silhouette. The two exact cyan source polygons are no longer classified as internal WATER+KILL hazards after Pass 14E and remain semantically pending. Exterior fall-out vertical kill placement is still unresolved.'
   }
 ];
 

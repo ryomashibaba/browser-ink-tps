@@ -5,7 +5,8 @@ import { UNDERTOW_WATER_CONTROLLED_CAPTURE_PLAN } from './UndertowSpillwayWaterC
 export const UNDERTOW_WATER_VISUAL_Y_PASS14D_AUDIT = Object.freeze({
   resolutionPass: '14D' as const,
   auditedAt: '2026-09-28' as const,
-  purpose:
+  status: 'SUPERSEDED_BY_14E' as const,
+  originalPurpose:
     'Recover exact visible-water world Y from current remodeled Undertow without guessing from global plan registration.' as const,
   sourceIdentity: Object.freeze({
     currentStageRowId: UNDERTOW_STAGE_SOURCE_IDENTITY_AUDIT.canonicalCurrentStageRowId,
@@ -34,18 +35,24 @@ export const UNDERTOW_WATER_VISUAL_Y_PASS14D_AUDIT = Object.freeze({
   existingReceivedCaptures: Object.freeze({
     reviewedUnderpassPaintStills: 4,
     reviewedUpperGlassSupportVideos: 2,
+    premiseCorrectionStill: 'IMG_6141.jpeg' as const,
+    formerMarkedTargetObservedDry: true,
     containsUsableRegisteredWaterlineSideProfile: false
   }),
   exactVisualWaterYResolved: false,
   exactVisualWaterYMeters: null,
   sourceOnlyResolutionExhausted: true,
-  nextEvidence: UNDERTOW_WATER_CONTROLLED_CAPTURE_PLAN.id,
-  requestReady: true,
+  premiseInvalidatedByCurrentGameplay: true,
+  formerNextEvidence: 'WATER_VISUAL_Y_SIDE_PROFILE' as const,
+  nextEvidence: null,
+  requestReady: false,
+  retiredBlocker: 'WATER_VISUAL_Y_PENDING' as const,
+  supersededBy: '14E' as const,
   runtimePromotionAuthorized: false,
   activationBlockersCleared: [] as const,
   confidence: 'HIGH' as const,
   notes:
-    'Pass 14D exhausts the currently available Temple01 OBJ/public-metadata path. Geometry supplies many nearby source-Y ledges but no water-render semantic that selects one. One side-profile gameplay clip is therefore the minimum remaining evidence needed to bind the visible waterline to an exact source Y.'
+    'Pass 14D is retained only as history of the source-only investigation. IMG_6141 shows the marked current-gameplay target is dry, so requesting an internal-water side profile would be premise-invalid. Pass 14E retires this request and reclassifies the cyan source regions separately from exterior fall-out.'
 });
 
 export function undertowWaterVisualYPass14DAuditErrors(): readonly string[] {
@@ -70,17 +77,24 @@ export function undertowWaterVisualYPass14DAuditErrors(): readonly string[] {
     a.ciBoundaryLedgeScan.exactVisualWaterYSelected ||
     a.ciBoundaryLedgeScan.globalPdfToObjTransformTrustedForWaterMetricPlacement
   ) {
-    errors.push('Pass 14D must not select a water Y from ambiguous source ledges');
+    errors.push('Pass 14D historical source scan must not select an exact water Y');
   }
   if (
-    a.existingReceivedCaptures.containsUsableRegisteredWaterlineSideProfile ||
-    a.exactVisualWaterYResolved ||
-    a.exactVisualWaterYMeters !== null ||
-    !a.sourceOnlyResolutionExhausted ||
-    !a.requestReady ||
-    a.nextEvidence !== 'WATER_VISUAL_Y_SIDE_PROFILE'
+    a.status !== 'SUPERSEDED_BY_14E' ||
+    !a.existingReceivedCaptures.formerMarkedTargetObservedDry ||
+    !a.premiseInvalidatedByCurrentGameplay ||
+    a.nextEvidence !== null ||
+    a.requestReady ||
+    a.supersededBy !== '14E'
   ) {
-    errors.push('Pass 14D request-ready state drifted');
+    errors.push('Pass 14D must remain superseded and request no capture');
+  }
+  if (
+    UNDERTOW_WATER_CONTROLLED_CAPTURE_PLAN.status !==
+      'CANCELLED_PREMISE_INVALIDATED' ||
+    UNDERTOW_WATER_CONTROLLED_CAPTURE_PLAN.userActionCount !== 0
+  ) {
+    errors.push('Pass 14D audit disagrees with the cancelled capture plan');
   }
   if (
     UNDERTOW_WATER_VISUAL_PLANE_AUDIT.visualPlaneResolved ||
@@ -88,7 +102,7 @@ export function undertowWaterVisualYPass14DAuditErrors(): readonly string[] {
     a.runtimePromotionAuthorized ||
     a.activationBlockersCleared.length !== 0
   ) {
-    errors.push('Pass 14D must not promote visual-water Y before registered gameplay evidence');
+    errors.push('superseded Pass 14D must not promote a visual-water Y');
   }
   return errors;
 }

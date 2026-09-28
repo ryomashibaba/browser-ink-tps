@@ -6,7 +6,7 @@ import {
 
 describe('T21 user capture evidence', () => {
   it('binds the traversal, corrective-height, paint and upper-glass support captures', () => {
-    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(13);
+    expect(UNDERTOW_USER_CAPTURE_EVIDENCE).toHaveLength(14);
     expect(undertowCaptureEvidence('user-underpass-capture-2026-09-25').region)
       .toBe('GLASS_UNDERPASS');
     expect(undertowCaptureEvidence('user-right-low-capture-2026-09-25').region)
@@ -63,6 +63,11 @@ describe('T21 user capture evidence', () => {
         'user-water-exterior-fallout-qualitative-relation-knowledge-2026-09-28'
       ).region
     ).toBe('WATER_EXTERIOR_FALLOUT_QUALITATIVE_RELATION');
+    expect(
+      undertowCaptureEvidence(
+        'user-internal-water-premise-correction-still-2026-09-28'
+      ).region
+    ).toBe('INTERNAL_WATER_PREMISE_CORRECTION');
   });
 
   it('confirms traversal continuity without promoting a metric Y equality', () => {
@@ -187,6 +192,18 @@ describe('T21 user capture evidence', () => {
     expect(facts).toContain('roughly the same vertical band');
     expect(facts).toContain('does not establish that both hazards literally share one death volume');
     expect(facts).toContain('No exact world Y');
+  });
+
+  it('supersedes the internal-water premise without promoting the outside-water hypothesis', () => {
+    const correction = undertowCaptureEvidence(
+      'user-internal-water-premise-correction-still-2026-09-28'
+    );
+    const facts = correction.facts.join(' ');
+    expect(correction.filename).toBe('IMG_6141.jpeg');
+    expect(facts).toContain('dry playable-stage terrain');
+    expect(facts).toContain('invalidates promotion');
+    expect(facts).toContain('remains a hypothesis');
+    expect(facts).toContain('superseded for current canonical use');
   });
 
   it('does not claim an exact underpass polygon from perspective video alone', () => {

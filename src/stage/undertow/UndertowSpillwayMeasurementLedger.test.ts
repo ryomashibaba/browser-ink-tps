@@ -157,13 +157,15 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     });
   });
 
-  it('binds the two mapped cyan water hazards as confirmed polygons', () => {
+  it('retains the two cyan source polygons but revokes internal-water gameplay semantics', () => {
     for (const id of ['team-a-water-region', 'team-b-water-region']) {
-      const water = entry(id);
-      expect(water.xz.kind).toBe('POLYGON');
-      expect(water.xz.confidence).toBe('CONFIRMED');
-      expect(water.xz.polygonMeters?.length).toBe(6);
-      expect(water.surface.semantics).toEqual(['WATER', 'KILL', 'UNINKABLE']);
+      const region = entry(id);
+      expect(region.xz.kind).toBe('POLYGON');
+      expect(region.xz.confidence).toBe('CONFIRMED');
+      expect(region.xz.polygonMeters?.length).toBe(6);
+      expect(region.surface.semantics).toEqual([]);
+      expect(region.surface.confidence).toBe('UNKNOWN');
+      expect(region.notes).toContain('Legacy id retained');
     }
   });
 

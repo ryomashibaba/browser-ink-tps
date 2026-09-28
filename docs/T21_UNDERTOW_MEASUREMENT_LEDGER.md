@@ -2,6 +2,8 @@
 
 Target: **Splatoon 3 normal PvP Undertow Spillway / マテガイ放水路, Ver.7.2.0+**.
 
+> **Pass 14E correction (2026-09-28):** the former Pass 14D guide incorrectly promoted two cyan regions from the third-party Sunfish plan into confirmed internal WATER/KILL hazards. User still `IMG_6141.jpeg` shows the marked current-gameplay target is dry. Keep the exact cyan polygon geometry as source annotation only; its gameplay semantics are pending. All later references in this historical ledger that call those polygons confirmed internal water hazards are superseded by Pass 14E. `WATER_VISUAL_Y_PENDING` and `WATER_KILL_THRESHOLD_PENDING` are retired and replaced by `CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING` and `EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING`. The hypothesis that visible water exists only outside the stage is not yet promoted as exact authority.
+
 This phase intentionally does **not** rebuild the stage mesh yet. It freezes what is known, what is only a strong estimate, and what must remain unresolved so T21-B/C cannot silently turn guesses into geometry.
 
 ## Existing architecture audit

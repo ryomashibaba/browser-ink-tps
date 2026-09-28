@@ -3,31 +3,23 @@ import { UNDERTOW_CAPTURE_REQUEST_POLICY } from './UndertowSpillwayEvidenceCaptu
 export const UNDERTOW_WATER_CONTROLLED_CAPTURE_PLAN = Object.freeze({
   resolutionPass: '14D' as const,
   id: 'WATER_VISUAL_Y_SIDE_PROFILE' as const,
-  status: 'REQUEST_READY' as const,
+  status: 'CANCELLED_PREMISE_INVALIDATED' as const,
+  supersededBy: '14E' as const,
   priority: 1 as const,
   purpose:
-    'Determine the exact visible-water world Y by registering the in-game waterline against fixed Temple01 geometry with exact source Y.' as const,
-  userActionCount: 1 as const,
-  symmetricCounterpartAllowed: true,
-  eitherMappedWaterHazardSufficient: true,
+    'Do not request the former internal-water side-profile clip: current gameplay evidence shows the marked target is dry, invalidating the internal-water premise.' as const,
+  userActionCount: 0 as const,
+  symmetricCounterpartAllowed: false,
+  eitherMappedWaterHazardSufficient: false,
   guidePath: 'docs/T21_UNDERTOW_PASS14D_WATER_VISUAL_Y_CAPTURE_GUIDE.svg' as const,
-  blocks: ['WATER_VISUAL_Y_PENDING'] as const,
-  minimumCapture: [
-    'One 5–8 second clip at either mapped internal water hazard.',
-    'Stand on a safe solid ledge immediately beside the water boundary.',
-    'Keep the visible waterline and a fixed vertical Temple01 wall/ledge in the same frame.',
-    'Lower the camera toward a side profile and slowly pan while retaining nearby horizontal seams.'
-  ] as const,
-  acceptance: [
-    'At least one frame shows the waterline crossing a fixed wall/ledge that can be source-registered.',
-    'The waterline is not hidden entirely by a grate, character, UI element, or foreground frame.',
-    'Enough nearby fixed geometry remains visible to distinguish among the candidate source-Y ledges.'
-  ] as const,
+  guideStatus: 'DEPRECATED_DO_NOT_USE' as const,
+  blocks: [] as const,
+  minimumCapture: [] as const,
+  acceptance: [] as const,
   avoid: [
-    'Do not infer water Y from the global PDF-to-OBJ transform alone.',
-    'Do not record a steep top-down view with no visible side waterline.',
-    'Do not jump into the hazard; death timing is not the purpose of this pass.',
-    'Do not require both mirrored sides when one registered side resolves the shared visual Y.'
+    'Do not ask the user to capture an internal waterline at the former Pass 14D target.',
+    'Do not infer that the Sunfish cyan source annotation is a rendered current-gameplay water surface.',
+    'Do not infer the broader exterior water layout from the single dry-location still.'
   ] as const
 });
 
@@ -41,22 +33,27 @@ export function undertowWaterControlledCapturePlanErrors(): readonly string[] {
     !UNDERTOW_CAPTURE_REQUEST_POLICY.fullTerrainContextRequired ||
     !UNDERTOW_CAPTURE_REQUEST_POLICY.detailInsetRequiredWhenTargetIsSmall
   ) {
-    errors.push('Pass 14D capture request policy drifted');
+    errors.push('capture-request evidence policy drifted');
   }
   if (
-    p.status !== 'REQUEST_READY' ||
-    p.userActionCount !== 1 ||
-    !p.symmetricCounterpartAllowed ||
-    !p.eitherMappedWaterHazardSufficient
+    p.status !== 'CANCELLED_PREMISE_INVALIDATED' ||
+    p.supersededBy !== '14E' ||
+    p.userActionCount !== 0 ||
+    p.symmetricCounterpartAllowed ||
+    p.eitherMappedWaterHazardSufficient
   ) {
-    errors.push('Pass 14D must request one clip from either mirrored water hazard');
+    errors.push('Pass 14D must remain cancelled after the internal-water premise correction');
   }
   if (
-    !p.purpose.includes('exact visible-water world Y') ||
-    !p.blocks.includes('WATER_VISUAL_Y_PENDING') ||
-    !p.guidePath.includes('PASS14D_WATER_VISUAL_Y_CAPTURE_GUIDE.svg')
+    p.blocks.length !== 0 ||
+    p.minimumCapture.length !== 0 ||
+    p.acceptance.length !== 0 ||
+    p.guideStatus !== 'DEPRECATED_DO_NOT_USE'
   ) {
-    errors.push('Pass 14D purpose/blocker/guide binding drifted');
+    errors.push('cancelled Pass 14D must request no evidence and block no current authority');
+  }
+  if (!p.purpose.includes('marked target is dry')) {
+    errors.push('Pass 14D cancellation must preserve the reason for supersession');
   }
   return errors;
 }

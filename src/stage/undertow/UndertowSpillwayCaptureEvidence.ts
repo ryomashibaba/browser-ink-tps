@@ -11,7 +11,8 @@ export type UndertowUserCaptureEvidenceId =
   | 'user-upper-glass-player-underside-side-collision-knowledge-2026-09-28'
   | 'user-water-surface-contact-death-knowledge-2026-09-28'
   | 'user-water-pair-equivalence-knowledge-2026-09-28'
-  | 'user-water-exterior-fallout-qualitative-relation-knowledge-2026-09-28';
+  | 'user-water-exterior-fallout-qualitative-relation-knowledge-2026-09-28'
+  | 'user-internal-water-premise-correction-still-2026-09-28';
 
 export interface UndertowUserCaptureEvidence {
   id: UndertowUserCaptureEvidenceId;
@@ -32,7 +33,8 @@ export interface UndertowUserCaptureEvidence {
     | 'UPPER_GLASS_PLAYER_UNDERSIDE_SIDE_COLLISION'
     | 'WATER_SURFACE_CONTACT_DEATH_RELATION'
     | 'WATER_PAIR_QUALITATIVE_EQUIVALENCE'
-    | 'WATER_EXTERIOR_FALLOUT_QUALITATIVE_RELATION';
+    | 'WATER_EXTERIOR_FALLOUT_QUALITATIVE_RELATION'
+    | 'INTERNAL_WATER_PREMISE_CORRECTION';
   confidence: 'CONFIRMED';
   facts: readonly string[];
 }
@@ -195,6 +197,19 @@ export const UNDERTOW_USER_CAPTURE_EVIDENCE:
         'This resolves a qualitative similarity between internal-water death height and exterior fall-out death height.',
         'The answer does not establish that both hazards literally share one death volume or an exactly identical numeric kill threshold.',
         'No exact world Y, exact threshold delta, or locator-instance binding is inferred from this gameplay recollection.'
+      ]
+    },
+    {
+      id: 'user-internal-water-premise-correction-still-2026-09-28',
+      filename: 'IMG_6141.jpeg',
+      region: 'INTERNAL_WATER_PREMISE_CORRECTION',
+      confidence: 'CONFIRMED',
+      facts: [
+        'The Pass 14D guide marked this current normal-PvP location as an internal water target, but IMG_6141.jpeg shows the requested location as dry playable-stage terrain with grass/solid surfaces and no visible internal waterline.',
+        'The user explicitly reports that there is no water at the requested location.',
+        'This directly invalidates promotion of the Sunfish cyan source annotation at the observed target into confirmed current-gameplay WATER/KILL semantics.',
+        'The user suggests that visible water may exist only outside the stage; that broader stage-wide statement remains a hypothesis and is not promoted from this single still.',
+        'Pass 14A through 14D conclusions that depended on the existence of the two assumed internal water targets are superseded for current canonical use.'
       ]
     }
   ];
