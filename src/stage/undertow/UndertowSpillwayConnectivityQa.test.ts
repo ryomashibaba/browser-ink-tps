@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18B',
+      resolutionPass: '18C',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -209,6 +209,56 @@ describe('T21-D partial Recast connectivity QA', () => {
         'positive-z-upper-glass-broad',
         'negative-z-upper-glass-broad'
       ]);
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sourceNativeUpperTerrainPass18C)
+      .toMatchObject({
+        sourceAuditScope: 'QA_ONLY_SOURCE_NATIVE_ADJACENCY',
+        sourceAuditRunNumber: 886,
+        sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+        exactTriangleDistanceIncludesEdgeEdge: true,
+        baselineMatrixReachedPairs: 79,
+        geometryOnlyAdjacentBindingChangedConnectivity: false,
+        missingAdjacentTriangleHypothesisSufficient: false,
+        traversalOrCollisionSemanticsStillRequired: true,
+        convenienceGeometryAuthorized: false,
+        offMeshLinkAuthorized: false,
+        runtimePromotionAuthorized: false,
+        activationBlockerCleared: false,
+        userCaptureRequiredNow: false
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sourceNativeUpperTerrainPass18C.grate)
+      .toMatchObject({
+        qualifiedSourceComponentsPerSide: 8,
+        sourceTrianglesPerSide: 16,
+        sourceAreaSquareMetersPerSide: 19.054820,
+        exactMirrorVertexXor: 0,
+        nearestWalkDistanceMeters: 0.335410,
+        nearestWalkSourceObject:
+          'Fld_Temple01_pCube21525_1__FloorConcrete00',
+        sourceGraphReachableAt030Meters: false,
+        sourceGraphReachableAt040Meters: true,
+        sourceNativeReplacementMatrixReachedPairs: 79,
+        sourceNativePlusNearestFloorMatrixReachedPairs: 79,
+        remainsSingletonAfterSourceNativeReplacement: true,
+        remainsSingletonAfterNearestFloorBinding: true
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sourceNativeUpperTerrainPass18C.upperGlass)
+      .toMatchObject({
+        pass13aRouteSeedCountPerSide: 3,
+        sourceRouteComponentsPerSide: 3,
+        sourceBroadTrianglesPerSide: 6,
+        sourceBroadAreaSquareMetersPerSide: 58.171653,
+        nearestBridgeMetalDistanceMeters: 0.055902,
+        bridgeReachableComponentsAt030MetersPerSide: 24,
+        bridgeReachableTrianglesAt030MetersPerSide: 48,
+        bridgeReachableAreaSquareMetersPerSide: 9.332461,
+        nearestNonBridgeWalkDistanceMeters: 0.7,
+        nearestNonBridgeWalkSourceObject:
+          'Fld_Temple01_pCube20989_1__FloorConcrete02',
+        bridgeOnlyMatrixReachedPairs: 79,
+        bridgePlusNearestFloorMatrixReachedPairs: 79,
+        bridgeOnlyExternalGlassReachCount: 0,
+        bridgePlusNearestFloorExternalGlassReachCount: 0
+      });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).toContain('FULL_STAGE_CONNECTIVITY_QA_PENDING');
