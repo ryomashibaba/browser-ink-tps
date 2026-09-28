@@ -92,4 +92,35 @@ describe('T21-D partial Recast connectivity QA', () => {
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).toContain('FULL_STAGE_CONNECTIVITY_QA_PENDING');
   });
+  it('Pass 18A diagnostics every current paint-surface anchor against every other anchor', () => {
+    const stage = undertowT21dConnectivityQaStage();
+    const navigation = new RecastStageNavigation(stage, new PerformanceStats());
+    const anchors = stage.paintSurfaces.map((surface) => ({
+      id: surface.backingSolidId,
+      point: surface.center
+    }));
+
+    expect(anchors).toHaveLength(17);
+    expect(new Set(anchors.map((anchor) => anchor.id)).size).toBe(17);
+
+    const rows = anchors.map((from) => {
+      const reached: string[] = [];
+      const missed: string[] = [];
+      for (const to of anchors) {
+        const result = navigation.auditPath(vec3(from.point), vec3(to.point));
+        if (result.reachedTarget) reached.push(to.id);
+        else missed.push(to.id);
+      }
+      return {
+        from: from.id,
+        reached,
+        missed
+      };
+    });
+
+    console.log('T21NAVMATRIX18A', JSON.stringify(rows));
+    expect(rows).toHaveLength(17);
+    expect(rows.every((row) => row.reached.includes(row.from))).toBe(true);
+  });
+
 });
