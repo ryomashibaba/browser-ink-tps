@@ -1,5 +1,6 @@
 import { Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../../config/game/gameConfig';
+import { PLAYER_CHARACTER_PHYSICS } from '../../player/PlayerCharacterPhysics';
 import type { StageDefinition, StageVector3 } from '../StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
