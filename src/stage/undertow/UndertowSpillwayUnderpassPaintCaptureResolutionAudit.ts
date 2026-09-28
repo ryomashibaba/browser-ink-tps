@@ -136,24 +136,27 @@ export function undertowUnderpassPaintCaptureResolutionAuditErrors():
     errors.push('obsolete objective-only underpass PaintSurfaces must be replaced by the whole-footprint pair');
   }
 
+  /*
+   * runtimeBoundary counts and activationBlockers are the historical Pass 12C
+   * snapshot. Later construction passes may legitimately add inert solids,
+   * paint surfaces or navigation links. Pass 12C owns the underpass paint
+   * promotion, not the future total package size.
+   */
   if (
-    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady ||
-    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.length !==
-      audit.runtimeBoundary.runtimeSolidCount ||
-    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.length !==
-      audit.runtimeBoundary.paintSurfaceCount ||
-    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.navigationLinks.length !==
-      audit.runtimeBoundary.navigationLinkCount
+    audit.runtimeBoundary.activationReady ||
+    audit.runtimeBoundary.runtimeSolidCount !== 21 ||
+    audit.runtimeBoundary.paintSurfaceCount !== 17 ||
+    audit.runtimeBoundary.navigationLinkCount !== 26
   ) {
-    errors.push('Pass 12C runtime boundary drifted');
+    errors.push('Pass 12C historical runtime boundary snapshot drifted');
   }
 
   /*
-   * runtimeBoundary.activationBlockers is a historical Pass 12C snapshot.
-   * Later evidence-resolution passes may legitimately retire or replace other
-   * blocker names. Pass 12C owns only the paint-authority clearance, so it must
-   * not require the current blocker list to remain byte-for-byte identical to
-   * its 2026-09-27 snapshot.
+   * runtimeBoundary.activationBlockers is likewise a historical Pass 12C
+   * snapshot. Later evidence-resolution passes may legitimately retire or
+   * replace other blocker names. Pass 12C owns only the paint-authority
+   * clearance, so it must not require the current blocker list to remain
+   * byte-for-byte identical to its 2026-09-27 snapshot.
    */
   if (
     audit.runtimeBoundary.activationBlockers.join(',') !==
@@ -165,12 +168,13 @@ export function undertowUnderpassPaintCaptureResolutionAuditErrors():
   }
 
   if (
+    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady ||
     UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
       'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING'
     ) ||
     PRODUCTION_STAGE_DEFINITION.metadata.id !== 'inkworks-junction'
   ) {
-    errors.push('Pass 12C must clear only the paint-authority blocker while keeping T20 production active');
+    errors.push('Pass 12C must keep its paint promotion while current T21 remains inert and T20 production stays active');
   }
 
   return errors;
