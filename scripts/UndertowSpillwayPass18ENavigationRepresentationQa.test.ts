@@ -10,6 +10,7 @@ import {
   type StageVector3
 } from '../src/stage/StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
+import { UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS } from '../src/stage/undertow/UndertowSpillwayUpperGlassRuntimeGeometry';
 
 interface FixtureMesh {
   vertices: StageVector3[];
@@ -53,6 +54,8 @@ interface PairResult {
   generated: boolean;
   forwardReached: boolean;
   reverseReached: boolean;
+  forwardTrustedReached: boolean;
+  reverseTrustedReached: boolean;
   forwardEndpointErrorMeters: number;
   reverseEndpointErrorMeters: number;
   forwardStartSnapMeters: number;
@@ -62,6 +65,7 @@ interface PairResult {
 }
 
 const fixturePath = process.env.T21_PASS18C_SOURCE_JSON ?? '';
+const TRUSTED_SNAP_METERS = GAME_CONFIG.cpu.agentRadiusMeters;
 
 const VARIANTS: readonly RecastVariant[] = Object.freeze([
   {
@@ -204,6 +208,7 @@ function queryDirection(
   to: StageVector3
 ): {
   reached: boolean;
+  trustedReached: boolean;
   endpointErrorMeters: number;
   startSnapMeters: number;
   endSnapMeters: number;
@@ -213,6 +218,7 @@ function queryDirection(
   if (!start.success || !end.success) {
     return {
       reached: false,
+      trustedReached: false,
       endpointErrorMeters: Number.POSITIVE_INFINITY,
       startSnapMeters: Number.POSITIVE_INFINITY,
       endSnapMeters: Number.POSITIVE_INFINITY
@@ -222,20 +228,27 @@ function queryDirection(
   const path = pathResult.success ? pathResult.path : [];
   const last = path.length > 0 ? path[path.length - 1]! : null;
   const endpointErrorMeters = last ? dist(last, end.point) : Number.POSITIVE_INFINITY;
+  const startSnapMeters = dist(
+    { x: from[0], y: from[1], z: from[2] },
+    start.point
+  );
+  const endSnapMeters = dist(
+    { x: to[0], y: to[1], z: to[2] },
+    end.point
+  );
+  const reached =
+    pathResult.success &&
+    path.length > 0 &&
+    endpointErrorMeters <= 0.25;
   return {
-    reached:
-      pathResult.success &&
-      path.length > 0 &&
-      endpointErrorMeters <= 0.25,
+    reached,
+    trustedReached:
+      reached &&
+      startSnapMeters <= TRUSTED_SNAP_METERS &&
+      endSnapMeters <= TRUSTED_SNAP_METERS,
     endpointErrorMeters,
-    startSnapMeters: dist(
-      { x: from[0], y: from[1], z: from[2] },
-      start.point
-    ),
-    endSnapMeters: dist(
-      { x: to[0], y: to[1], z: to[2] },
-      end.point
-    )
+    startSnapMeters,
+    endSnapMeters
   };
 }
 
@@ -268,6 +281,8 @@ function testPair(
       generated: false,
       forwardReached: false,
       reverseReached: false,
+      forwardTrustedReached: false,
+      reverseTrustedReached: false,
       forwardEndpointErrorMeters: Number.POSITIVE_INFINITY,
       reverseEndpointErrorMeters: Number.POSITIVE_INFINITY,
       forwardStartSnapMeters: Number.POSITIVE_INFINITY,
@@ -284,6 +299,8 @@ function testPair(
     generated: true,
     forwardReached: forward.reached,
     reverseReached: reverse.reached,
+    forwardTrustedReached: forward.trustedReached,
+    reverseTrustedReached: reverse.trustedReached,
     forwardEndpointErrorMeters: forward.endpointErrorMeters,
     reverseEndpointErrorMeters: reverse.endpointErrorMeters,
     forwardStartSnapMeters: forward.startSnapMeters,
@@ -358,16 +375,49 @@ describe('T21 Pass 18E Recast representation sweep', () => {
             Number(result.forwardReached) +
             Number(result.reverseReached),
           0
+        ),
+        trustedBidirectionallyReachedPairs: pairResults.filter(
+          (result) =>
+            result.forwardTrustedReached && result.reverseTrustedReached
+        ).length,
+        trustedDirectionReachCount: pairResults.reduce(
+          (sum, result) =>
+            sum +
+            Number(result.forwardTrustedReached) +
+            Number(result.reverseTrustedReached),
+          0
         )
       };
     });
 
+    const productionVariant = VARIANTS.find(
+      (variant) => variant.id === 'production'
+    )!;
+    const runtimeBroadVsBridge: Record<string, PairResult> = {};
+    for (const side of ['POSITIVE_Z', 'NEGATIVE_Z'] as const) {
+      const runtimeSolid = UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS.find(
+        (solid) => solid.id.includes(side === 'POSITIVE_Z' ? 'positive-z' : 'negative-z')
+      ) ?? UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS[
+        side === 'POSITIVE_Z' ? 0 : 1
+      ];
+      if (!runtimeSolid?.triangleMesh) {
+        throw new Error(`Pass 18E missing runtime broad glass nav mesh for ${side}`);
+      }
+      runtimeBroadVsBridge[side] = testPair(
+        runtimeSolid.triangleMesh,
+        fixture.glass[side].bridgeMesh,
+        productionVariant
+      );
+    }
+
     console.log(
       'T21PASS18E_RECAST_SWEEP',
       JSON.stringify({
+        trustedSnapMeters: TRUSTED_SNAP_METERS,
         productionKccDirectedCrossingsPass18D: 12,
         productionKccAirborneTicksPass18D: 0,
         variants: summary,
+        runtimeBroadVsBridge,
         results
       })
     );
@@ -379,5 +429,7 @@ describe('T21 Pass 18E Recast representation sweep', () => {
     expect(
       Object.values(results.production!).every((result) => result.generated)
     ).toBe(true);
+    expect(TRUSTED_SNAP_METERS).toBe(0.30);
+    expect(Object.values(runtimeBroadVsBridge)).toHaveLength(2);
   });
 });
