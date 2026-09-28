@@ -116,6 +116,10 @@ export const UNDERTOW_TURF_SCOREABLE_MASK_AUDIT = Object.freeze({
       TEMPLE01_PAINT_BANC_ACTOR_CLASSES.length,
     temple01SpecificActorClasses: TEMPLE01_PAINT_BANC_ACTOR_CLASSES,
     temple01SpecificClassesExposeField: true,
+    baseTemple01ActorClass: 'Fld_Temple01' as const,
+    baseTemple01ActorClassExposesPaintBanc: false,
+    baseTemple01ActorClassExposesIsIncludeVArea: false,
+    fieldCanClassifyStaticTemple01BaseGeometryByItself: false,
     fieldSemanticMeaningAsTurfScoreAuthorityResolved: false,
     fieldNameAloneAcceptedAsScoreAuthority: false,
     currentTemple01NormalPvpInstanceValuesRecovered: false,
@@ -125,7 +129,7 @@ export const UNDERTOW_TURF_SCOREABLE_MASK_AUDIT = Object.freeze({
     exposesTemple01PerFaceScoreability: false,
     exposesTemple01ScoreMaskPlacement: false,
     notes:
-      'Pass 17A localizes the strongest public schema lead: spl__PaintBancParam contains one boolean, IsIncludeVArea, and all five Temple01 lift-variant actor classes expose it. The schema also shows a false default and serializes the member when true. However, no current normal-PvP Temple01 BCETT/placement body with instance values was recovered, the abbreviation VArea is not assigned a score meaning from its name, and no per-face or raster binding is published. The field therefore remains a candidate source path, not Turf score authority.'
+      'Pass 17A localizes a public schema lead: spl__PaintBancParam contains one boolean, IsIncludeVArea, and all five Temple01 lift-variant actor classes expose it. The schema also shows a false default and serializes the member when true. Crucially, the base Fld_Temple01 actor class exposes neither PaintBanc nor IsIncludeVArea, so this field cannot by itself classify the static Temple01 base geometry represented by the current floor/ramp reconstruction. No current normal-PvP Temple01 BCETT/placement body with instance values was recovered, the abbreviation VArea is not assigned a score meaning from its name, and no per-face or raster binding is published. The field therefore remains a limited candidate source path, not Turf score authority.'
   }),
 
   candidateRuntimeSolidIds: SCOREABILITY_CANDIDATE_IDS,
@@ -238,6 +242,10 @@ export function undertowTurfScoreableMaskAuditErrors(): readonly string[] {
     !schema.paintBancFieldSerializedWhenTrue ||
     schema.temple01SpecificActorClassCount !== 5 ||
     !schema.temple01SpecificClassesExposeField ||
+    schema.baseTemple01ActorClass !== 'Fld_Temple01' ||
+    schema.baseTemple01ActorClassExposesPaintBanc ||
+    schema.baseTemple01ActorClassExposesIsIncludeVArea ||
+    schema.fieldCanClassifyStaticTemple01BaseGeometryByItself ||
     schema.fieldSemanticMeaningAsTurfScoreAuthorityResolved ||
     schema.fieldNameAloneAcceptedAsScoreAuthority ||
     schema.currentTemple01NormalPvpInstanceValuesRecovered ||
