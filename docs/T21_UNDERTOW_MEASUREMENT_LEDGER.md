@@ -1062,3 +1062,24 @@ Result:
 - remaining paint evidence now requires direct under-glass gameplay testing outside the Zones or original hidden-floor paint metadata/mask
 
 This closes the useful public-PDF path for the remaining paint blocker without fabricating authority.
+
+
+## T21-D Resolution Pass 15A — upper-glass role-separated reconstruction candidate
+
+Pass 15A does **not** claim the original game collision primitive has been identified and does not clear any production blocker. It converts the already-resolved Pass 13A-13F behavior evidence into an inert QA candidate so implementation can be tested without over-promoting source geometry.
+
+Candidate roles:
+- player / ordinary projectile / thrown-sub body / camera query candidate: exact 102-triangle current Temple01 `Glass01` shell per side, QA-only
+- navigation candidate: only the three broad upward components independently traversed in Pass 13A
+- broad navigation triangles: 46 per side
+- narrow `THIN_EDGE_STRIP`: 2 upward triangles per side, explicitly excluded from navigation
+- source visual shell remains 102 triangles / 88 vertices per side
+
+The three support-route points are re-bound to exact source-mesh Y values (project Y 6.0 -> ~6.7354 -> 7.5) and a dedicated Recast QA stage checks the two seam crossings on both mirrored sides.
+
+This pass is intentionally conservative:
+- production `inkworks-junction` remains selected
+- T21 remains inert
+- `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` and `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remain
+- no new user capture is requested
+- exact hidden/original collision and camera primitive identity remains unresolved
