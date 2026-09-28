@@ -451,12 +451,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18A partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18B partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18A' ||
+    audit.resolutionPass !== '18B' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -504,7 +504,93 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.knownBlockingTransitions.length !== 4) {
-    errors.push('Pass 18A must retain both mirrored underpass and center-step gaps');
+    errors.push('Pass 18B must retain both mirrored underpass and center-step gaps');
+  }
+
+  const anchors18b = undertowPass18bTraversableQaAnchors();
+  const matrix18b = audit.traversableAnchorMatrixPass18B;
+  if (
+    anchors18b.length !== 25 ||
+    anchors18b.filter((anchor) => anchor.kind === 'PAINT_SURFACE').length !== 17 ||
+    anchors18b.filter((anchor) => anchor.kind === 'GRATE').length !== 2 ||
+    anchors18b.filter((anchor) => anchor.kind === 'UPPER_GLASS_BROAD').length !== 6 ||
+    new Set(anchors18b.map((anchor) => anchor.id)).size !== 25 ||
+    matrix18b.anchorCount !== 25 ||
+    matrix18b.paintAnchorCount !== 17 ||
+    matrix18b.grateAnchorCount !== 2 ||
+    matrix18b.upperGlassBroadAnchorCount !== 6 ||
+    matrix18b.directedPairCount !== 625 ||
+    matrix18b.reachedDirectedPairCountIncludingSelf !== 79 ||
+    matrix18b.missedDirectedPairCount !== 546 ||
+    matrix18b.reachedNonSelfDirectedPairCount !== 54 ||
+    matrix18b.weakComponentCount !== 9 ||
+    matrix18b.stronglyConnectedComponentCount !== 11 ||
+    matrix18b.isolatedAnchorIds.join(',') !==
+      'paint:UndertowT21D:center-origin-step-top-face:0,grate:UndertowT21D:negative-z-grate-mesh:0,grate:UndertowT21D:positive-z-grate-mesh:0' ||
+    matrix18b.upperGlassPositiveBroadInternalAnchorCount !== 3 ||
+    matrix18b.upperGlassNegativeBroadInternalAnchorCount !== 3 ||
+    matrix18b.upperGlassBroadExternallyConnected ||
+    Math.abs(matrix18b.maximumObservedAnchorSnapMeters - 0.24704275013919783) > 1e-9 ||
+    matrix18b.qaRunNumber !== 873
+  ) {
+    errors.push('Pass 18B 25x25 traversable-anchor connectivity matrix drifted');
+  }
+
+  const grate = audit.grateIngressPass18B;
+  const grateEntries = [
+    'negative-z-grate-mesh',
+    'positive-z-grate-mesh'
+  ].map((id) =>
+    UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER.entries.find((entry) => entry.id === id)
+  );
+  if (
+    grate.confirmedTraversableGrateCount !== 2 ||
+    grate.isolatedGrateAnchorCount !== 2 ||
+    Math.abs(grate.negativePlanSharedBoundaryMeters - 6.375) > 1e-9 ||
+    Math.abs(grate.positivePlanSharedBoundaryMeters - 6.375) > 1e-9 ||
+    !grate.sharesExactPlanBoundaryWithSpawnSideWhiteFace ||
+    !grate.adjacentSpawnSideWhiteFaceIsMultiElevation ||
+    grate.adjacentContinuousUpperTerrainRuntimeBindingResolved ||
+    grate.offMeshLinkAuthorized ||
+    grate.userCaptureRequiredNow ||
+    grateEntries.some(
+      (entry) =>
+        !entry ||
+        entry.featureKind !== 'SURFACE' ||
+        entry.confidence !== 'CONFIRMED' ||
+        !entry.surface.semantics.includes('GRATE') ||
+        !entry.surface.semantics.includes('UNINKABLE')
+    )
+  ) {
+    errors.push('Pass 18B grate-ingress authority boundary drifted');
+  }
+
+  const thin = audit.upperGlassThinEdgeNavigationPass18B;
+  if (
+    thin.broadNavigationTrianglesPerSide !== 46 ||
+    thin.diagnosticCandidateTrianglesPerSide !== 48 ||
+    thin.addedThinEdgeTriangleIds.join(',') !== '98,99' ||
+    thin.thinEdgeProbeCount !== 2 ||
+    Math.abs(thin.thinEdgeMinimumInteriorClearanceMeters - 0.046493) > 1e-6 ||
+    Math.abs(thin.recastCellSizeMeters - 0.18) > 1e-9 ||
+    thin.recastWalkableRadiusVoxels !== 2 ||
+    Math.abs(thin.recastNominalErosionRadiusMeters - 0.36) > 1e-9 ||
+    !thin.baselineAndThinEdgeCandidateMatricesIdentical ||
+    thin.currentPartialCandidateExternalBridgeAdded ||
+    thin.currentGlassIsolationCausedByThinEdgeExclusion ||
+    thin.finalThinEdgeNavigationDispositionResolved ||
+    !thin.requiresRetestAfterAdjacentUpperTerrainBinding ||
+    thin.runtimePromotionAuthorized ||
+    thin.qaRunNumber !== 874
+  ) {
+    errors.push('Pass 18B upper-glass thin-edge navigation audit drifted');
+  }
+
+  if (
+    audit.additionalDisconnectedTraversableRegions.join(',') !==
+      'negative-z-grate,positive-z-grate,positive-z-upper-glass-broad,negative-z-upper-glass-broad'
+  ) {
+    errors.push('Pass 18B disconnected traversable-region inventory drifted');
   }
 
   if (
@@ -526,8 +612,8 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 10B source-native route-gap localization drifted or overpromoted connectivity');
   }
 
-  if (audit.missingRequirements.length !== 4) {
-    errors.push('Pass 18A full-stage connectivity evidence gap is not fully localized');
+  if (audit.missingRequirements.length !== 5) {
+    errors.push('Pass 18B full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
