@@ -43,6 +43,7 @@ describe('T21 Pass 15B upper-glass Rapier/query QA', () => {
       1 / 60,
       undertowUpperGlassPass15bPhysicsQaStage()
     );
+    physics.step();
 
     expect(UNDERTOW_UPPER_GLASS_PASS15B_PHYSICS_PROBES).toHaveLength(6);
     for (const probe of UNDERTOW_UPPER_GLASS_PASS15B_PHYSICS_PROBES) {
@@ -65,6 +66,7 @@ describe('T21 Pass 15B upper-glass Rapier/query QA', () => {
       1 / 60,
       undertowUpperGlassPass15bPhysicsQaStage()
     );
+    physics.step();
 
     for (const probe of UNDERTOW_UPPER_GLASS_PASS15B_PHYSICS_PROBES) {
       const hit = physics.castStageSegment(
