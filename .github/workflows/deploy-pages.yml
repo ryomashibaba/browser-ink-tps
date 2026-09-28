@@ -59,6 +59,46 @@ jobs:
           echo "a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  /tmp/kitrix-lfs/Vss_Temple01.obj" | sha256sum -c -
           echo "T21SOURCE verified_bytes=43263289 sha256=a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046"
 
+      - name: Restore T21 Nagasaki03 LFS cache
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/cache@v4
+        with:
+          path: /tmp/kitrix-nagasaki-cache/Vss_Nagasaki03.obj
+          key: t21-nagasaki03-lfs-7db028642562633eec19030d4b77219f9e5d5f2b189ce0d2a396911b7ddafb30
+
+      - name: Prepare verified T21 Nagasaki03 comparison source
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/kitrix-nagasaki
+          mkdir -p /tmp/kitrix-nagasaki
+          if [ -f /tmp/kitrix-nagasaki-cache/Vss_Nagasaki03.obj ]; then
+            cp /tmp/kitrix-nagasaki-cache/Vss_Nagasaki03.obj /tmp/kitrix-nagasaki/Vss_Nagasaki03.obj
+            echo "T21NAGASAKI cache=HIT"
+          else
+            mkdir -p /tmp/kitrix-nagasaki-cache
+            cd /tmp/kitrix-nagasaki
+            git init -q
+            git remote add origin https://github.com/kirakira-dev/KiTrix.git
+            git lfs install --local
+            cat > nagasaki03.pointer <<'PTR'
+          version https://git-lfs.github.com/spec/v1
+          oid sha256:7db028642562633eec19030d4b77219f9e5d5f2b189ce0d2a396911b7ddafb30
+          size 31263599
+          PTR
+            timeout 180s git lfs smudge < nagasaki03.pointer > Vss_Nagasaki03.obj
+            cp Vss_Nagasaki03.obj /tmp/kitrix-nagasaki-cache/Vss_Nagasaki03.obj
+            echo "T21NAGASAKI cache=MISS"
+          fi
+          test "$(stat -c%s /tmp/kitrix-nagasaki/Vss_Nagasaki03.obj)" = "31263599"
+          echo "7db028642562633eec19030d4b77219f9e5d5f2b189ce0d2a396911b7ddafb30  /tmp/kitrix-nagasaki/Vss_Nagasaki03.obj" | sha256sum -c -
+
+      - name: T21 stage source identity comparison audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-stage-source-identity-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/kitrix-nagasaki/Vss_Nagasaki03.obj
+
       - name: T21 Temple01 local XZ contour audit
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         shell: bash
