@@ -432,5 +432,48 @@ describe('T21 Pass 18E Recast representation sweep', () => {
     ).toBe(true);
     expect(TRUSTED_SNAP_METERS).toBe(0.30);
     expect(Object.values(runtimeBroadVsBridge)).toHaveLength(2);
+    expect(
+      Object.values(runtimeBroadVsBridge).every(
+        (result) =>
+          result.forwardTrustedReached &&
+          result.reverseTrustedReached
+      )
+    ).toBe(true);
+
+    const summaryById = new Map(summary.map((row) => [row.id, row] as const));
+    expect(summaryById.get('production')?.trustedBidirectionallyReachedPairs).toBe(1);
+    expect(summaryById.get('production-zero-erosion')?.trustedBidirectionallyReachedPairs).toBe(3);
+    expect(summaryById.get('production-one-voxel-erosion')?.trustedBidirectionallyReachedPairs).toBe(2);
+    expect(summaryById.get('finer-same-erosion')?.trustedBidirectionallyReachedPairs).toBe(2);
+    expect(summaryById.get('finer-agent-radius')?.trustedBidirectionallyReachedPairs).toBe(2);
+    expect(summaryById.get('finer-zero-erosion')?.trustedBidirectionallyReachedPairs).toBe(2);
+    expect(summaryById.get('production-extra-climb-zero-erosion')?.trustedBidirectionallyReachedPairs).toBe(3);
+    expect(
+      Math.max(...summary.map((row) => row.trustedBidirectionallyReachedPairs))
+    ).toBe(3);
+
+    for (const variant of VARIANTS) {
+      const bucket = results[variant.id]!;
+      for (const side of ['POSITIVE_Z', 'NEGATIVE_Z'] as const) {
+        const bridgeFloor = bucket[`bridge-floor:${side}`]!;
+        expect(bridgeFloor.forwardTrustedReached).toBe(false);
+        expect(bridgeFloor.reverseTrustedReached).toBe(false);
+      }
+      const gratePositive = bucket['grate-floor:POSITIVE_Z']!;
+      const grateNegative = bucket['grate-floor:NEGATIVE_Z']!;
+      expect(
+        gratePositive.forwardTrustedReached &&
+        gratePositive.reverseTrustedReached &&
+        grateNegative.forwardTrustedReached &&
+        grateNegative.reverseTrustedReached
+      ).toBe(false);
+    }
+
+    expect(
+      summaryById.get('production-zero-erosion')?.trustedDirectionReachCount
+    ).toBe(
+      summaryById.get('production-extra-climb-zero-erosion')
+        ?.trustedDirectionReachCount
+    );
   });
 });
