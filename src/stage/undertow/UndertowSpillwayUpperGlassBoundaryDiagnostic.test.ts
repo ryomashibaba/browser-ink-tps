@@ -20,6 +20,10 @@ import {
   UNDERTOW_UPPER_GLASS_PASS15D_BROAD_COLLISION_SOLIDS,
   UNDERTOW_UPPER_GLASS_PASS15D_EXCLUDED_THIN_EDGE_FRAME_TRIANGLE_IDS
 } from './UndertowSpillwayUpperGlassRuntimeGeometry';
+import {
+  UNDERTOW_UPPER_GLASS_PASS15E_BOUNDARY_DISPOSITION_AUDIT,
+  undertowUpperGlassPass15eBoundaryDispositionErrors
+} from './UndertowSpillwayUpperGlassBoundaryDispositionAudit';
 
 beforeAll(async () => {
   await initializeRapier();
@@ -175,6 +179,8 @@ describe('T21 Pass 15E upper-glass excluded-boundary diagnostic', () => {
     expect(probes).toHaveLength(16);
 
     const purposes = ['ink-projectile', 'thrown-sub', 'camera'] as const;
+    let fullHitCount = 0;
+    let broadHitCount = 0;
     for (const probe of probes) {
       const full = Object.fromEntries(
         purposes.map((purpose) => [
@@ -188,6 +194,12 @@ describe('T21 Pass 15E upper-glass excluded-boundary diagnostic', () => {
           hitMatrix(broadPhysics, probe, purpose)
         ])
       );
+      for (const purpose of purposes) {
+        for (const direction of ['forward', 'reverse'] as const) {
+          if (full[purpose][direction]) fullHitCount += 1;
+          if (broad[purpose][direction]) broadHitCount += 1;
+        }
+      }
       console.log(
         'T21GLASS15E',
         JSON.stringify({
@@ -201,5 +213,23 @@ describe('T21 Pass 15E upper-glass excluded-boundary diagnostic', () => {
         })
       );
     }
+
+    expect(fullHitCount).toBe(
+      UNDERTOW_UPPER_GLASS_PASS15E_BOUNDARY_DISPOSITION_AUDIT
+        .full102ShellQueryHits
+    );
+    expect(broadHitCount).toBe(
+      UNDERTOW_UPPER_GLASS_PASS15E_BOUNDARY_DISPOSITION_AUDIT
+        .current94TriangleBroadQueryHits
+    );
+    expect(
+      UNDERTOW_UPPER_GLASS_PASS15E_BOUNDARY_DISPOSITION_AUDIT
+        .broadFinalExclusionDispositionAuthorized
+    ).toBe(false);
+    expect(
+      UNDERTOW_UPPER_GLASS_PASS15E_BOUNDARY_DISPOSITION_AUDIT
+        .full102ShellRuntimePromotionAuthorizedByPass15EAlone
+    ).toBe(false);
+    expect(undertowUpperGlassPass15eBoundaryDispositionErrors()).toEqual([]);
   });
 });
