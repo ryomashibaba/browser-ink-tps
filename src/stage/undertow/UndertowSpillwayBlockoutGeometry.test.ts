@@ -17,9 +17,9 @@ describe('T21-D partial Undertow blockout geometry', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('contains only the currently safe flat components', () => {
+  it('contains only the currently evidence-backed partial runtime components', () => {
     expect(undertowPartialBlockoutGeometryErrors()).toEqual([]);
-    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(21);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids).toHaveLength(25);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces).toHaveLength(17);
     const grates = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
       (solid) => solid.collisionBehavior === 'GRATE'
@@ -52,6 +52,34 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(glassVisuals.every((solid) => solid.navigationEnabled === false)).toBe(true);
     expect(glassVisuals.every((solid) => solid.projectileBlocker === false)).toBe(true);
     expect(glassVisuals.every((solid) => solid.cameraBlocker === false)).toBe(true);
+
+    const glassBroadCollision =
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
+        (solid) => solid.id.endsWith(':pass15d-broad-collision-query-runtime')
+      );
+    expect(glassBroadCollision).toHaveLength(2);
+    expect(glassBroadCollision.every((solid) => solid.render === false)).toBe(true);
+    expect(glassBroadCollision.every((solid) => solid.collisionEnabled === true)).toBe(true);
+    expect(glassBroadCollision.every((solid) => solid.navigationEnabled === false)).toBe(true);
+    expect(glassBroadCollision.every((solid) => solid.projectileBlocker)).toBe(true);
+    expect(glassBroadCollision.every((solid) => solid.cameraBlocker)).toBe(true);
+    expect(glassBroadCollision.every(
+      (solid) => solid.triangleMesh?.indices.length === 94 * 3
+    )).toBe(true);
+
+    const glassBroadNavigation =
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.filter(
+        (solid) => solid.id.endsWith(':pass15d-broad-navigation-runtime')
+      );
+    expect(glassBroadNavigation).toHaveLength(2);
+    expect(glassBroadNavigation.every((solid) => solid.render === false)).toBe(true);
+    expect(glassBroadNavigation.every((solid) => solid.collisionEnabled === false)).toBe(true);
+    expect(glassBroadNavigation.every((solid) => solid.navigationEnabled === true)).toBe(true);
+    expect(glassBroadNavigation.every((solid) => solid.projectileBlocker === false)).toBe(true);
+    expect(glassBroadNavigation.every((solid) => solid.cameraBlocker === false)).toBe(true);
+    expect(glassBroadNavigation.every(
+      (solid) => solid.triangleMesh?.indices.length === 46 * 3
+    )).toBe(true);
   });
 
   it('includes only audited one-way drop navigation links', () => {
@@ -221,9 +249,12 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds
     ).toEqual(expect.arrayContaining([
-      'upper-glass-platform',
+      'upper-glass-thin-edge-frame-boundary',
       'team-a-water-region',
       'team-b-water-region'
     ]));
+    expect(
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds
+    ).not.toContain('upper-glass-platform');
   });
 });
