@@ -182,18 +182,22 @@ describe('T21 Pass 15E upper-glass excluded-boundary diagnostic', () => {
     let fullHitCount = 0;
     let broadHitCount = 0;
     for (const probe of probes) {
-      const full = Object.fromEntries(
-        purposes.map((purpose) => [
-          purpose,
-          hitMatrix(fullPhysics, probe, purpose)
-        ])
-      );
-      const broad = Object.fromEntries(
-        purposes.map((purpose) => [
-          purpose,
-          hitMatrix(broadPhysics, probe, purpose)
-        ])
-      );
+      const full: Record<
+        StageQueryPurpose,
+        { forward: boolean; reverse: boolean }
+      > = {
+        'ink-projectile': hitMatrix(fullPhysics, probe, 'ink-projectile'),
+        'thrown-sub': hitMatrix(fullPhysics, probe, 'thrown-sub'),
+        camera: hitMatrix(fullPhysics, probe, 'camera')
+      };
+      const broad: Record<
+        StageQueryPurpose,
+        { forward: boolean; reverse: boolean }
+      > = {
+        'ink-projectile': hitMatrix(broadPhysics, probe, 'ink-projectile'),
+        'thrown-sub': hitMatrix(broadPhysics, probe, 'thrown-sub'),
+        camera: hitMatrix(broadPhysics, probe, 'camera')
+      };
       for (const purpose of purposes) {
         for (const direction of ['forward', 'reverse'] as const) {
           if (full[purpose][direction]) fullHitCount += 1;
