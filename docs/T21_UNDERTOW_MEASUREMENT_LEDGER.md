@@ -1083,3 +1083,26 @@ This pass is intentionally conservative:
 - `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` and `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remain
 - no new user capture is requested
 - exact hidden/original collision and camera primitive identity remains unresolved
+
+
+## T21-D Resolution Pass 15B — upper-glass Rapier / query-path QA
+
+Pass 15B mechanically validates the role-separated Pass 15A candidate through the same Rapier stage-query path used by gameplay. It still does not claim that the original game literally uses the visible Glass01 shell as its hidden collision primitive.
+
+QA scope:
+- 3 deterministic broad probes per mirrored side: top-to-underside, underside-to-top, broad side crossing
+- 6 geometry probes total
+- each probe is checked for `ink-projectile`, `thrown-sub`, and `camera` query blocking: 18 expected Rapier query hits
+- each hit collider is checked against both `HUMAN` and `SQUID` solid-character filtering: 12 expected filter-allow results
+- the vertical probes use the Pass 13A directly traversed connector component
+- the lateral probe crosses exact Glass01 source triangle 92, a broad vertical side face
+- the QA stage contains only the two exact Glass01 collision/query candidates
+
+Result boundary:
+- broad top/underside/side geometry is mechanically compatible with the confirmed player-solid semantics
+- ordinary ink projectile, thrown-sub body, and camera blocking are mechanically compatible with the confirmed Pass 13 semantics
+- this is collider/query validation, not a dynamic character-controller/capsule-resolution proof
+- the thin upward edge strip and one-for-one frame boundary remain unpromoted
+- exact original player/projectile/camera primitive identity remains unresolved
+- `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` and `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remain active
+- no user capture is required by Pass 15B
