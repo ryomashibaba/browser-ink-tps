@@ -261,7 +261,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18B' as const,
+  resolutionPass: '18C' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -381,6 +381,55 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     notes:
       'Pass 18B temporarily adds exact upward source triangles 98/99 to the QA-only Glass01 navigation candidate, increasing 46 -> 48 triangles per side. The full 25-anchor reachability matrix is byte-for-byte equivalent at the semantic row/reach level: no bridge appears. The strip has only ~0.046m interior clearance while current Recast nominal erosion is 0.36m. This proves the current broad-glass island is not caused by omitting 98/99, but the final thin-edge disposition remains open until adjacent upper terrain is bound and the final candidate is rebuilt.'
   }),
+  sourceNativeUpperTerrainPass18C: Object.freeze({
+    sourceAuditScope: 'QA_ONLY_SOURCE_NATIVE_ADJACENCY' as const,
+    sourceAuditRunNumber: 886,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    exactTriangleDistanceIncludesEdgeEdge: true,
+    grate: Object.freeze({
+      qualifiedSourceComponentsPerSide: 8,
+      sourceTrianglesPerSide: 16,
+      sourceAreaSquareMetersPerSide: 19.054820,
+      exactMirrorVertexXor: 0,
+      nearestWalkDistanceMeters: 0.335410,
+      nearestWalkSourceObject:
+        'Fld_Temple01_pCube21525_1__FloorConcrete00' as const,
+      sourceGraphReachableAt030Meters: false,
+      sourceGraphReachableAt040Meters: true,
+      sourceNativeReplacementMatrixReachedPairs: 79,
+      sourceNativePlusNearestFloorMatrixReachedPairs: 79,
+      remainsSingletonAfterSourceNativeReplacement: true,
+      remainsSingletonAfterNearestFloorBinding: true
+    }),
+    upperGlass: Object.freeze({
+      pass13aRouteSeedCountPerSide: 3,
+      sourceRouteComponentsPerSide: 3,
+      sourceBroadTrianglesPerSide: 6,
+      sourceBroadAreaSquareMetersPerSide: 58.171653,
+      nearestBridgeMetalDistanceMeters: 0.055902,
+      bridgeReachableComponentsAt030MetersPerSide: 24,
+      bridgeReachableTrianglesAt030MetersPerSide: 48,
+      bridgeReachableAreaSquareMetersPerSide: 9.332461,
+      nearestNonBridgeWalkDistanceMeters: 0.700000,
+      nearestNonBridgeWalkSourceObject:
+        'Fld_Temple01_pCube20989_1__FloorConcrete02' as const,
+      bridgeOnlyMatrixReachedPairs: 79,
+      bridgePlusNearestFloorMatrixReachedPairs: 79,
+      bridgeOnlyExternalGlassReachCount: 0,
+      bridgePlusNearestFloorExternalGlassReachCount: 0
+    }),
+    baselineMatrixReachedPairs: 79,
+    geometryOnlyAdjacentBindingChangedConnectivity: false,
+    missingAdjacentTriangleHypothesisSufficient: false,
+    traversalOrCollisionSemanticsStillRequired: true,
+    convenienceGeometryAuthorized: false,
+    offMeshLinkAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    userCaptureRequiredNow: false,
+    notes:
+      'Pass 18C re-audits the verified Temple01 OBJ with exact triangle distance including edge-edge pairs, exports QA-only source-native meshes, and feeds them back through the real Recast path. The mirrored grate source union is 16 triangles / 19.054820m² per side with exact source symmetry; it remains a singleton after replacing the vector grate and even after adding its nearest exact FloorConcrete00 component. The three Pass 13A upper-glass route points bind to three exact Glass01 source components per side. Their <=0.30m BridgeMetal neighborhood contains 24 components / 48 triangles per side, but adding that source geometry and the nearest non-Bridge FloorConcrete02 component leaves all six broad-glass anchors externally isolated. All five 25-anchor candidates remain 79/625. Therefore missing adjacent source triangles alone are not the current connectivity cause; traversal/collision semantics must be resolved before any navigation link or runtime promotion.'
+  }),
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -411,12 +460,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Bind the source-authoritative adjacent upper terrain that connects each exact grate footprint to the rest of its mirrored spawn-side route. The grates share exact plan boundaries with the multi-elevation spawn-side white faces, so a convenience slab or off-mesh link is not authorized.',
-    'Bind authoritative ingress/egress between each internally connected broad upper-glass route and adjacent upper terrain. Pass 18B proves adding thin-edge triangles 98/99 alone does not change current Recast connectivity; final thin-edge disposition must be rechecked after adjacent terrain is present.',
+    'Resolve player traversal/collision semantics across the mirrored grate-to-FloorConcrete00 source gap. Pass 18C replaces the vector grate with the exact symmetric source union and also adds the nearest exact floor component; both Recast candidates remain singleton, so more convenience geometry is not authorized.',
+    'Resolve authoritative ingress/egress semantics for each broad upper-glass route. Pass 18C binds the three Pass 13A points back to exact Glass01 source components and tests the <=0.30m BridgeMetal neighborhood plus the nearest non-Bridge FloorConcrete02 component; neither changes external Recast reach. Thin-edge 98/99 and missing adjacent source triangles are therefore insufficient explanations.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18B preserves Pass 18A and expands coverage from 17 paint anchors to 25 currently bound traversable anchors. It confirms two new singleton grate islands and two internally connected but externally isolated broad upper-glass islands. A QA-only 46->48 triangle thin-edge experiment leaves the complete 25-anchor reachability matrix unchanged, so thin-edge omission is not the cause of current glass isolation. No runtime geometry/link is promoted by Pass 18B. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18C preserves the Pass 18A/18B matrices and source-audits the disconnected grate/glass regions against the verified Temple01 OBJ. Exact source grate replacement, its nearest exact FloorConcrete00, the Pass13A-seeded Glass01 source components, their <=0.30m BridgeMetal neighborhood, and the nearest non-Bridge FloorConcrete02 all fail to change the 79/625 Recast matrix. The remaining gap is therefore traversal/collision semantics rather than an untested nearby source triangle. No runtime geometry/link is promoted. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -451,12 +500,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18B partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18C partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18B' ||
+    audit.resolutionPass !== '18C' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -504,7 +553,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.knownBlockingTransitions.length !== 4) {
-    errors.push('Pass 18B must retain both mirrored underpass and center-step gaps');
+    errors.push('Pass 18C must retain both mirrored underpass and center-step gaps');
   }
 
   const anchors18b = undertowPass18bTraversableQaAnchors();
@@ -593,6 +642,65 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18B disconnected traversable-region inventory drifted');
   }
 
+  const source18c = audit.sourceNativeUpperTerrainPass18C;
+  if (
+    source18c.sourceAuditScope !== 'QA_ONLY_SOURCE_NATIVE_ADJACENCY' ||
+    source18c.sourceAuditRunNumber !== 886 ||
+    source18c.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    !source18c.exactTriangleDistanceIncludesEdgeEdge ||
+    source18c.baselineMatrixReachedPairs !== 79 ||
+    source18c.geometryOnlyAdjacentBindingChangedConnectivity ||
+    source18c.missingAdjacentTriangleHypothesisSufficient ||
+    !source18c.traversalOrCollisionSemanticsStillRequired ||
+    source18c.convenienceGeometryAuthorized ||
+    source18c.offMeshLinkAuthorized ||
+    source18c.runtimePromotionAuthorized ||
+    source18c.activationBlockerCleared ||
+    source18c.userCaptureRequiredNow
+  ) {
+    errors.push('Pass 18C source-native authority boundary drifted');
+  }
+
+  const sourceGrate = source18c.grate;
+  if (
+    sourceGrate.qualifiedSourceComponentsPerSide !== 8 ||
+    sourceGrate.sourceTrianglesPerSide !== 16 ||
+    Math.abs(sourceGrate.sourceAreaSquareMetersPerSide - 19.054820) > 1e-6 ||
+    sourceGrate.exactMirrorVertexXor !== 0 ||
+    Math.abs(sourceGrate.nearestWalkDistanceMeters - 0.335410) > 1e-6 ||
+    sourceGrate.nearestWalkSourceObject !==
+      'Fld_Temple01_pCube21525_1__FloorConcrete00' ||
+    sourceGrate.sourceGraphReachableAt030Meters ||
+    !sourceGrate.sourceGraphReachableAt040Meters ||
+    sourceGrate.sourceNativeReplacementMatrixReachedPairs !== 79 ||
+    sourceGrate.sourceNativePlusNearestFloorMatrixReachedPairs !== 79 ||
+    !sourceGrate.remainsSingletonAfterSourceNativeReplacement ||
+    !sourceGrate.remainsSingletonAfterNearestFloorBinding
+  ) {
+    errors.push('Pass 18C source-native grate experiment drifted');
+  }
+
+  const sourceGlass = source18c.upperGlass;
+  if (
+    sourceGlass.pass13aRouteSeedCountPerSide !== 3 ||
+    sourceGlass.sourceRouteComponentsPerSide !== 3 ||
+    sourceGlass.sourceBroadTrianglesPerSide !== 6 ||
+    Math.abs(sourceGlass.sourceBroadAreaSquareMetersPerSide - 58.171653) > 1e-6 ||
+    Math.abs(sourceGlass.nearestBridgeMetalDistanceMeters - 0.055902) > 1e-6 ||
+    sourceGlass.bridgeReachableComponentsAt030MetersPerSide !== 24 ||
+    sourceGlass.bridgeReachableTrianglesAt030MetersPerSide !== 48 ||
+    Math.abs(sourceGlass.bridgeReachableAreaSquareMetersPerSide - 9.332461) > 1e-6 ||
+    Math.abs(sourceGlass.nearestNonBridgeWalkDistanceMeters - 0.7) > 1e-9 ||
+    sourceGlass.nearestNonBridgeWalkSourceObject !==
+      'Fld_Temple01_pCube20989_1__FloorConcrete02' ||
+    sourceGlass.bridgeOnlyMatrixReachedPairs !== 79 ||
+    sourceGlass.bridgePlusNearestFloorMatrixReachedPairs !== 79 ||
+    sourceGlass.bridgeOnlyExternalGlassReachCount !== 0 ||
+    sourceGlass.bridgePlusNearestFloorExternalGlassReachCount !== 0
+  ) {
+    errors.push('Pass 18C source-native upper-glass experiment drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -613,7 +721,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18B full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18C full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
