@@ -206,6 +206,8 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   ).length,
   bothSidesDirectlyProbed: true,
   rightLowToUnderpassResolved: false,
+  upperGlassBroadNavigationReconstructionBound: true,
+  upperGlassThinEdgeFrameNavigationAuthorityResolved: false,
   upperGlassNavigationAuthorityResolved: false,
   allTraversableRuntimeGeometryBound: false,
   fullStageConnectivityReady: false,
@@ -215,11 +217,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   ] as const,
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
-    'Resolved upper-glass player-collision/navigation authority before any potentially walkable upper-glass/BridgeMetal region can participate in the final navmesh.',
+    'Pass 15D binds the three directly verified broad upper-glass components into the inert navmesh. Final closure still requires an explicit thin-edge/frame disposition plus the final production-candidate Recast pass; no unverified edge region may be convenience-filled.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'The current QA package can verify known partial routes but is not a full-stage navigation candidate. Pass 10B shows the right-low-to-underpass gap is not closed by an obvious omitted ordinary Temple01 walk surface at the audited 0.30m strict threshold; apparent excluded-source bridges depend on known floor-marking overlays. Exact connector semantics therefore remain unresolved rather than being convenience-filled. Upper-glass navigation authority is also unresolved, so FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'The current QA package can verify known partial routes but is not a full-stage navigation candidate. Pass 10B shows the right-low-to-underpass gap is not closed by an obvious omitted ordinary Temple01 walk surface at the audited 0.30m strict threshold; apparent excluded-source bridges depend on known floor-marking overlays. Exact connector semantics therefore remain unresolved rather than being convenience-filled. Pass 15D now binds the directly verified broad upper-glass navigation subset, while the thin-edge/frame boundary and final production-candidate connectivity pass remain unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING therefore stays activation-blocking.'
 });
 
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
@@ -247,6 +249,8 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
   if (
     audit.rightLowToUnderpassResolved ||
+    !audit.upperGlassBroadNavigationReconstructionBound ||
+    audit.upperGlassThinEdgeFrameNavigationAuthorityResolved ||
     audit.upperGlassNavigationAuthorityResolved ||
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
