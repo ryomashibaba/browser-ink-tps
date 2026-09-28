@@ -59,6 +59,11 @@ jobs:
           echo "a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  /tmp/kitrix-lfs/Vss_Temple01.obj" | sha256sum -c -
           echo "T21SOURCE verified_bytes=43263289 sha256=a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046"
 
+      - name: T21 Temple01 Pass 18C upper-terrain source audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-temple01-upper-terrain-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
+
       - name: T21 Temple01 local XZ contour audit
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         shell: bash
@@ -68,11 +73,6 @@ jobs:
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         shell: bash
         run: python scripts/undertow-temple01-water-y-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
-
-      - name: T21 Temple01 Pass 18C upper-terrain source audit
-        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
-        shell: bash
-        run: python scripts/undertow-temple01-upper-terrain-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
 
 
       - name: T21 Sunfish Zones vector recovery audit
