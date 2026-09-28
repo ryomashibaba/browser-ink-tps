@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18D' as const,
+  resolutionPass: '18E' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -467,6 +467,82 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     notes:
       'Pass 18D feeds the same verified Pass 18C source-native grate/floor and Glass01/BridgeMetal/floor QA meshes into Rapier using the shared production Human capsule and KCC profile. All 12 mirrored/directed crossings settle successfully and complete with zero airborne ticks, while Pass 18C Recast remains 79/625 with the same islands. This localizes a reconstruction-level Recast/KCC representation mismatch rather than a lack of physically traversable candidate geometry. It does not by itself establish original-game grate walk-on/off directionality or bind the observed upper-glass ingress to one exact source transition, so no off-mesh link or runtime geometry is authorized.'
   }),
+  recastRepresentationSweepPass18E: Object.freeze({
+    qaRunNumber: 900,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedSnapMeters: GAME_CONFIG.cpu.agentRadiusMeters,
+    testedVariantCount: 7,
+    production: Object.freeze({
+      cellSizeMeters: 0.18,
+      walkableRadiusVoxels: 2,
+      nominalErosionMeters: 0.36,
+      trustedBidirectionallyReachedPairs: 1,
+      trustedDirectionReachCount: 2
+    }),
+    productionZeroErosion: Object.freeze({
+      cellSizeMeters: 0.18,
+      walkableRadiusVoxels: 0,
+      nominalErosionMeters: 0,
+      trustedBidirectionallyReachedPairs: 3,
+      trustedDirectionReachCount: 6
+    }),
+    productionOneVoxelErosion: Object.freeze({
+      cellSizeMeters: 0.18,
+      walkableRadiusVoxels: 1,
+      nominalErosionMeters: 0.18,
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    }),
+    finerSameErosion: Object.freeze({
+      cellSizeMeters: 0.12,
+      walkableRadiusVoxels: 3,
+      nominalErosionMeters: 0.36,
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    }),
+    finerAgentRadius: Object.freeze({
+      cellSizeMeters: 0.15,
+      walkableRadiusVoxels: 2,
+      nominalErosionMeters: 0.30,
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    }),
+    finerZeroErosion: Object.freeze({
+      cellSizeMeters: 0.09,
+      walkableRadiusVoxels: 0,
+      nominalErosionMeters: 0,
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    }),
+    productionExtraClimbZeroErosion: Object.freeze({
+      cellSizeMeters: 0.18,
+      walkableRadiusVoxels: 0,
+      walkableClimbVoxels: 8,
+      nominalErosionMeters: 0,
+      trustedBidirectionallyReachedPairs: 3,
+      trustedDirectionReachCount: 6
+    }),
+    maximumTrustedBidirectionallyReachedPairs: 3,
+    allSixSourcePairsTrustedConnectedAnyVariant: false,
+    bridgeMetalToNearestFloorTrustedConnectedAnyVariant: false,
+    bothMirroredGrateFloorPairsTrustedConnectedAnyVariant: false,
+    zeroErosionProducesMirroredGrateAsymmetry: true,
+    finerZeroErosionRemovesPositiveGrateRasterBridge: true,
+    extraClimbChangesZeroErosionTrustedResult: false,
+    runtimeBroadGlassToBridgeTrustedConnectedBothSides: true,
+    runtimeBroadGlassToBridgeUsesProductionRecastSettings: true,
+    testedGlassChainBreakLocalizedToBridgeMetalFloorGap: true,
+    currentRuntimeBroadGlassNavigationNeedsReplacement: false,
+    globalRecastParameterChangeAuthorized: false,
+    exactOriginalGlassIngressTransitionResolved: false,
+    originalGrateWalkOnOffSemanticsResolved: false,
+    offMeshLinkAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    userCaptureRequiredNow: false,
+    notes:
+      'Pass 18E sweeps seven QA-only Recast representations over the six exact source-native KCC-feasible pairs and rejects raw path hits whose start/end snaps exceed the live CPU agent radius (0.30m). No variant trusted-connects all six pairs; the maximum is 3/6. BridgeMetal<->nearest FloorConcrete02 never trusted-connects in any variant, despite Pass 18D Human KCC traversal in both directions on both mirrored sides. The mirrored grate result is unstable and asymmetric under erosion/resolution changes, including a positive-only zero-erosion bridge that disappears again at 0.09m cells, so global Recast tuning is not authorized. By contrast the current 46-triangle runtime broad-glass nav mesh trusted-connects to the exact BridgeMetal neighborhood on both sides under production settings, localizing the tested upper-glass source chain break downstream at BridgeMetal<->FloorConcrete02 rather than at Glass01 itself. No link or runtime change is promoted.'
+  }),
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -498,11 +574,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
     'Resolve original-game traversal semantics across the mirrored grate-to-FloorConcrete00 boundary. Pass 18D shows the current production Human KCC can traverse the exact source-native QA pair in both directions without becoming airborne, but prior evidence still does not establish original walk-on/off directionality; KCC feasibility alone cannot authorize a CPU link.',
-    'Resolve exact ingress/egress source binding for each broad upper-glass route. Pass 18D shows the current Human KCC can cross Glass01<->BridgeMetal and BridgeMetal<->nearest-floor QA pairs in both directions with zero airborne ticks, while Pass 13A already proves actual broad-platform entry/support. The remaining gap is which exact source transition represents that observed ingress, not basic physical feasibility.',
+    'Bind the observed Pass 13A broad-glass ingress/egress to an exact source transition. Pass 18E proves the current runtime broad-glass nav already trusted-connects to BridgeMetal on both sides, while BridgeMetal<->nearest FloorConcrete02 never trusted-connects in any of seven Recast variants despite Pass 18D continuous KCC traversal. The source-chain break is localized, but a CPU connector still requires authoritative binding to the observed gameplay transition rather than a guessed convenience link.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18D preserves Passes 18A-18C and adds live production-KCC traversal diagnostics over the source-native disconnected regions. All twelve mirrored/directed Human crossings complete while continuously grounded, even though the corresponding Recast candidates remain disconnected at 79/625. This isolates a Recast/KCC navigation-representation mismatch in the current reconstruction. Original grate walk-on/off semantics and exact upper-glass ingress source binding are still not authoritative, so no convenience link or runtime promotion is made. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18E preserves Passes 18A-18D and decomposes the KCC/Recast mismatch with a seven-variant QA-only sweep. No global erosion/resolution/climb setting trusted-connects all six source-native KCC-feasible pairs. Current runtime broad Glass01 navigation already connects to BridgeMetal on both mirrored sides under production Recast, so that layer does not need replacement; the tested upper-glass chain breaks at BridgeMetal<->FloorConcrete02, while the grate boundary remains voxel-phase-sensitive and asymmetric under tuning. Original transition semantics/source binding remain authority gates, so no global navigation tuning, convenience link, or runtime promotion is made. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -537,12 +613,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18D partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18E partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18D' ||
+    audit.resolutionPass !== '18E' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -769,6 +845,48 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     kcc18d.userCaptureRequiredNow
   ) {
     errors.push('Pass 18D production-KCC traversal boundary drifted');
+  }
+
+  const sweep18e = audit.recastRepresentationSweepPass18E;
+  if (
+    sweep18e.qaRunNumber !== 900 ||
+    sweep18e.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(sweep18e.trustedSnapMeters - 0.30) > 1e-9 ||
+    sweep18e.testedVariantCount !== 7 ||
+    sweep18e.production.trustedBidirectionallyReachedPairs !== 1 ||
+    sweep18e.production.trustedDirectionReachCount !== 2 ||
+    sweep18e.productionZeroErosion.trustedBidirectionallyReachedPairs !== 3 ||
+    sweep18e.productionZeroErosion.trustedDirectionReachCount !== 6 ||
+    sweep18e.productionOneVoxelErosion.trustedBidirectionallyReachedPairs !== 2 ||
+    sweep18e.productionOneVoxelErosion.trustedDirectionReachCount !== 4 ||
+    sweep18e.finerSameErosion.trustedBidirectionallyReachedPairs !== 2 ||
+    sweep18e.finerSameErosion.trustedDirectionReachCount !== 4 ||
+    sweep18e.finerAgentRadius.trustedBidirectionallyReachedPairs !== 2 ||
+    sweep18e.finerAgentRadius.trustedDirectionReachCount !== 4 ||
+    sweep18e.finerZeroErosion.trustedBidirectionallyReachedPairs !== 2 ||
+    sweep18e.finerZeroErosion.trustedDirectionReachCount !== 4 ||
+    sweep18e.productionExtraClimbZeroErosion.trustedBidirectionallyReachedPairs !== 3 ||
+    sweep18e.productionExtraClimbZeroErosion.trustedDirectionReachCount !== 6 ||
+    sweep18e.maximumTrustedBidirectionallyReachedPairs !== 3 ||
+    sweep18e.allSixSourcePairsTrustedConnectedAnyVariant ||
+    sweep18e.bridgeMetalToNearestFloorTrustedConnectedAnyVariant ||
+    sweep18e.bothMirroredGrateFloorPairsTrustedConnectedAnyVariant ||
+    !sweep18e.zeroErosionProducesMirroredGrateAsymmetry ||
+    !sweep18e.finerZeroErosionRemovesPositiveGrateRasterBridge ||
+    sweep18e.extraClimbChangesZeroErosionTrustedResult ||
+    !sweep18e.runtimeBroadGlassToBridgeTrustedConnectedBothSides ||
+    !sweep18e.runtimeBroadGlassToBridgeUsesProductionRecastSettings ||
+    !sweep18e.testedGlassChainBreakLocalizedToBridgeMetalFloorGap ||
+    sweep18e.currentRuntimeBroadGlassNavigationNeedsReplacement ||
+    sweep18e.globalRecastParameterChangeAuthorized ||
+    sweep18e.exactOriginalGlassIngressTransitionResolved ||
+    sweep18e.originalGrateWalkOnOffSemanticsResolved ||
+    sweep18e.offMeshLinkAuthorized ||
+    sweep18e.runtimePromotionAuthorized ||
+    sweep18e.activationBlockerCleared ||
+    sweep18e.userCaptureRequiredNow
+  ) {
+    errors.push('Pass 18E Recast representation sweep boundary drifted');
   }
 
   if (
