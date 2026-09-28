@@ -32,6 +32,7 @@ import {
   undertowUpperGlassVisualStageSolids
 } from './UndertowSpillwayUpperGlassMeshGeometry';
 import { UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT } from './UndertowSpillwayInternalWaterSemanticCorrectionAudit';
+import { UNDERTOW_CYAN_SOURCE_DISPOSITION_AUDIT } from './UndertowSpillwayCyanSourceDispositionAudit';
 import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
 import { UNDERTOW_TURF_SCOREABLE_MASK_AUDIT } from './UndertowSpillwayTurfScoreableMaskAudit';
 import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
@@ -222,13 +223,12 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     activationBlockers: [
       'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
       'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
-      'CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING',
       'EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING',
       'TURF_SCOREABLE_MASK_PENDING',
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
     ],
     notes:
-      'Inert T21-D construction package only. Pass 14E revokes the false internal-water semantics from the two legacy cyan-region ids: their source polygons remain deferred, with gameplay semantics pending, while exterior fall-out keeps a separate unresolved vertical death threshold. T21 still does not replace PRODUCTION_STAGE_DEFINITION.'
+      'Inert T21-D construction package only. Pass 14F resolves the two legacy cyan-region polygons as source-only annotations: they remain deferred from runtime geometry but no longer block activation as unresolved gameplay surfaces. Exterior abyss/fall-out keeps a separate unresolved vertical death threshold. T21 still does not replace PRODUCTION_STAGE_DEFINITION.'
   });
 
 function buildResolvedUnderpassPaintSurface(
@@ -391,11 +391,13 @@ export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
       .supersession.priorInternalWaterPremiseInvalidated ||
     UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT
       .sourceProvenanceBoundary.cyanAnnotationGameplayWaterAuthorityAuthorized ||
-    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+    !UNDERTOW_CYAN_SOURCE_DISPOSITION_AUDIT.resolution
+      .sourceAnnotationOnlyNoRuntimeSurface ||
+    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
       'CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING'
     )
   ) {
-    errors.push('cyan source regions must remain semantically blocked after Pass 14E');
+    errors.push('Pass 14F cyan source-only disposition drifted or stale blocker returned');
   }
   if (
     !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(

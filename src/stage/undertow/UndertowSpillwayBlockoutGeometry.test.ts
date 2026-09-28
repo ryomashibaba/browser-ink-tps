@@ -193,7 +193,6 @@ describe('T21-D partial Undertow blockout geometry', () => {
     ).toEqual(expect.arrayContaining([
       'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
       'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
-      'CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING',
       'EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING',
       'TURF_SCOREABLE_MASK_PENDING',
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
@@ -207,6 +206,9 @@ describe('T21-D partial Undertow blockout geometry', () => {
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).not.toContain('WATER_KILL_RUNTIME_PENDING');
+    expect(
+      UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
+    ).not.toContain('CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING');
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).not.toContain('WATER_VISUAL_Y_PENDING');

@@ -28,7 +28,8 @@ describe('T21-B Undertow internal-void ambiguity audit', () => {
     expect(UNDERTOW_VOID_AMBIGUITY_AUDIT.requestReady).toBe(false);
     expect(UNDERTOW_TEMPLE01_VOID_XZ_AUDIT).toMatchObject({
       enclosedCandidateCount: 6,
-      exactWaterCandidateCount: 2,
+      cyanSourceAnnotationOverlapCandidateCount: 2,
+      runtimeInternalWaterCandidateCount: 0,
       largeStageSideExteriorCandidateCount: 2,
       overheadProjectionNonHoleCandidateCount: 2,
       unexplainedInternalCandidateCount: 0,
@@ -43,7 +44,7 @@ describe('T21-B Undertow internal-void ambiguity audit', () => {
   it('keeps the completed void audit internally consistent without requesting another capture', () => {
     expect(undertowVoidAuditErrors()).toEqual([]);
     expect(UNDERTOW_VOID_AMBIGUITY_AUDIT.notes).toContain(
-      'no additional internal abyss polygon remains'
+      'no additional internal abyss polygon is introduced'
     );
   });
 });

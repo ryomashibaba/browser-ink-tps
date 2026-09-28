@@ -157,7 +157,7 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
     });
   });
 
-  it('retains the two cyan source polygons but revokes internal-water gameplay semantics', () => {
+  it('resolves the two cyan source polygons as source-only annotations with no runtime surface semantics', () => {
     for (const id of ['team-a-water-region', 'team-b-water-region']) {
       const region = entry(id);
       expect(region.xz.kind).toBe('POLYGON');
@@ -165,6 +165,8 @@ describe('T21-A Undertow Spillway measurement ledger', () => {
       expect(region.xz.polygonMeters?.length).toBe(6);
       expect(region.surface.semantics).toEqual([]);
       expect(region.surface.confidence).toBe('UNKNOWN');
+      expect(region.feature).toContain('runtime disposition: source-only');
+      expect(region.evidenceIds).toContain('web-current-undertow-hazard-summary-2026-09-28');
       expect(region.notes).toContain('Legacy id retained');
     }
   });

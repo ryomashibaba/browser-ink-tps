@@ -822,13 +822,14 @@ const entries: readonly StageMeasurementEntry[] = [
   }),
   commonSurfaceEntry({
     id: 'team-a-water-region',
-    feature: 'Team A-side cyan source-annotation region (gameplay semantics pending)',
+    feature: 'Team A-side cyan source annotation (runtime disposition: source-only)',
     region: 'Team A Spawn / Outer Environment',
     featureKind: 'SURFACE',
     confidence: 'HIGH',
     evidenceIds: [
       'user-turf-vector-blueprint',
-      'user-internal-water-absence-still-2026-09-28'
+      'user-internal-water-absence-still-2026-09-28',
+      'web-current-undertow-hazard-summary-2026-09-28'
     ],
     xz: {
       kind: 'POLYGON',
@@ -837,25 +838,26 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint'],
       notes: 'Exact cyan-fill source polygon extracted from the vector PDF; geometry is retained independently of gameplay semantics.'
     },
-    y: unknownY('No internal visual-water Y is authorized. Current-gameplay semantics must be reclassified before runtime use.'),
+    y: unknownY('Pass 14F resolves this cyan polygon as source annotation only; it has no runtime surface Y to place.'),
     transition: noTransition,
     surface: {
       semantics: [],
       confidence: 'UNKNOWN',
       evidenceIds: [],
-      notes: 'Former WATER/KILL/UNINKABLE promotion was invalidated by IMG_6141 at the Pass 14D target.'
+      notes: 'Pass 14F resolves the cyan polygon as source annotation only. No StageSurface WATER/KILL/UNINKABLE semantics are created from this annotation.'
     },
-    notes: 'Legacy id retained for compatibility. The cyan source annotation is not current-gameplay water authority.'
+    notes: 'Legacy id retained for compatibility. Pass 14F excludes this source annotation from runtime gameplay surfaces; exterior environment visuals remain separate.'
   }),
   commonSurfaceEntry({
     id: 'team-b-water-region',
-    feature: 'Team B-side cyan source-annotation region (gameplay semantics pending)',
+    feature: 'Team B-side cyan source annotation (runtime disposition: source-only)',
     region: 'Team B Spawn / Outer Environment',
     featureKind: 'SURFACE',
     confidence: 'HIGH',
     evidenceIds: [
       'user-turf-vector-blueprint',
-      'user-internal-water-absence-still-2026-09-28'
+      'user-internal-water-absence-still-2026-09-28',
+      'web-current-undertow-hazard-summary-2026-09-28'
     ],
     xz: {
       kind: 'POLYGON',
@@ -864,15 +866,15 @@ const entries: readonly StageMeasurementEntry[] = [
       evidenceIds: ['user-turf-vector-blueprint'],
       notes: 'Exact 180-degree counterpart cyan-fill source polygon; geometry is retained independently of gameplay semantics.'
     },
-    y: unknownY('No internal visual-water Y is authorized. Counterpart gameplay semantics remain pending rather than inferred from symmetry.'),
+    y: unknownY('Pass 14F resolves this cyan polygon as source annotation only; it has no runtime surface Y to place.'),
     transition: noTransition,
     surface: {
       semantics: [],
       confidence: 'UNKNOWN',
       evidenceIds: [],
-      notes: 'Do not infer WATER/KILL from the third-party cyan annotation or from symmetry.'
+      notes: 'Pass 14F does not infer WATER/KILL from the third-party cyan annotation or from symmetry; the polygon is retained only as source-plan annotation geometry.'
     },
-    notes: 'Legacy id retained for compatibility. The counterpart remains semantically unresolved until independently reclassified.'
+    notes: 'Legacy id retained for compatibility. Current stagewide hazard evidence plus the dry-target correction resolve the pair as non-runtime source annotations at HIGH confidence.'
   }),
   commonSurfaceEntry({
     id: 'water-kill-regions',
@@ -881,7 +883,7 @@ const entries: readonly StageMeasurementEntry[] = [
     featureKind: 'SURFACE',
     confidence: 'UNKNOWN',
     evidenceIds: [],
-    xz: unresolvedXz('Exterior fall-out uses the separately audited hard playable silhouette. Cyan source-region gameplay semantics are pending after Pass 14E.'),
+    xz: unresolvedXz('Exterior fall-out uses the separately audited hard playable silhouette. Pass 14F removes the cyan source annotations from runtime-surface consideration.'),
     y: unknownY('Exterior fall-out death threshold remains unresolved; no internal visual-water Y is requested.'),
     transition: noTransition,
     surface: {
@@ -1107,6 +1109,13 @@ export const UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER: StageMeasurementLedger = {
       label: 'User Pass 14E dry-location correction still, IMG_6141.jpeg',
       sourceVersion: 'current normal PvP',
       notes: 'The former Pass 14D marked internal-water target is visibly dry. This revokes gameplay WATER/KILL authority from the corresponding Sunfish cyan annotation while retaining its exact source polygon geometry.'
+    },
+    {
+      id: 'web-current-undertow-hazard-summary-2026-09-28',
+      kind: 'WEB_GAMEPLAY_REFERENCE',
+      label: 'Current Inkipedia Undertow Spillway hazard summary and Ver.7.2+ tactical-map cross-check',
+      sourceVersion: 'current normal PvP checked 2026-09-28',
+      notes: 'Current Undertow stage summary lists the multiplayer hazard as Abyss, not Water. Combined with IMG_6141 and the current symmetric tactical-map layout, Pass 14F uses this only to dispose the two cyan plan polygons as source annotations rather than runtime WATER/KILL surfaces. It does not resolve exterior visual-water placement or the exterior fall-out kill Y.'
     }
   ],
   assumptions: [
