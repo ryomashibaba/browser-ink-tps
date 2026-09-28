@@ -273,7 +273,6 @@ describe('T21-D partial Recast connectivity QA', () => {
         usesSharedProductionCharacterControllerConfiguration: true,
         humanRadiusMeters: 0.32,
         controllerOffsetMeters: 0.025,
-        effectiveHumanContactRadiusMeters: 0.345,
         autostepMaxHeightMeters: 0.34,
         snapToGroundMeters: 0.24,
         recastNominalErosionRadiusMeters: 0.36,
@@ -289,6 +288,10 @@ describe('T21-D partial Recast connectivity QA', () => {
         activationBlockerCleared: false,
         userCaptureRequiredNow: false
       });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.productionKccTraversalPass18D
+        .effectiveHumanContactRadiusMeters
+    ).toBeCloseTo(0.345, 12);
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).toContain('FULL_STAGE_CONNECTIVITY_QA_PENDING');
