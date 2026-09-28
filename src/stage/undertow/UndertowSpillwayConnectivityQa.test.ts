@@ -12,7 +12,6 @@ import {
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
   UNDERTOW_UPPER_GLASS_BROAD_NAV_TRIANGLE_IDS,
-  UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D,
   UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS
 } from './UndertowSpillwayUpperGlassReconstructionCandidate';
 import {
