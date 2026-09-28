@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from pathlib import Path
+import json
 import math
 import sys
 
 OBJ = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/kitrix-lfs/Vss_Temple01.obj")
+OUTPUT = Path(sys.argv[2] if len(sys.argv) > 2 else "/tmp/t21-pass18c-upper-terrain.json")
 MAX_SLOPE_DEG = 50.0
 MIN_UP_Y = math.cos(math.radians(MAX_SLOPE_DEG))
 LOCAL_MARGIN = 3.0
@@ -340,6 +342,26 @@ def component_distance(a,b,limit=5.0):
                     return 0.0
     return best
 
+def mesh_payload(face_indices):
+    verts=[]
+    inds=[]
+    for fi in face_indices:
+        for p in tri_points(faces[fi]):
+            x,z=model_to_project((p[0],p[2]))
+            inds.append(len(verts))
+            verts.append([x,p[1]-3.0,z])
+    return {"vertices":verts,"indices":inds}
+
+def component_anchor(comp):
+    # Largest upward source component interior centroid, suitable only for QA
+    # nearest-poly probing; it is not promoted as an authored gameplay point.
+    unique=sorted({vi for fi in comp for vi in faces[fi][:3]})
+    return [
+        sum(model_to_project((vertices[vi][0],vertices[vi][2]))[0] for vi in unique)/len(unique),
+        sum(vertices[vi][1]-3.0 for vi in unique)/len(unique),
+        sum(model_to_project((vertices[vi][0],vertices[vi][2]))[1] for vi in unique)/len(unique),
+    ]
+
 def is_walk_face(fi, exclude_overlay=False):
     f=faces[fi]
     m=f[4]
@@ -433,6 +455,13 @@ print(
     f"T21UPPER CONFIG max_slope_deg={MAX_SLOPE_DEG:.1f} "
     f"min_up_y={MIN_UP_Y:.9f} local_margin={LOCAL_MARGIN:.1f}"
 )
+audit_output={
+    "version":"PASS18C_SOURCE_NATIVE_V1",
+    "diagnosticOnly":True,
+    "runtimePromotionAuthorized":False,
+    "grates":{},
+    "glass":{},
+}
 
 # Grate: use the union of every local upward FloorFence00 component whose
 # centroid is actually inside the transformed grate search footprint. The
@@ -506,14 +535,39 @@ for side,pdfpoly in GRATE_PDF.items():
         exclude_overlay=True
     )
     nrows=print_neighbor_rows(f"T21UPPER GRATE_{side}",union,neighbors,30)
+    nearest_comp=None
+    nearest_distance=None
+    nearest_object=None
+    nearest_material=None
     if nrows:
+        nearest_distance=nrows[0][0]
+        nearest_comp=nrows[0][1]
+        nearest_object=nrows[0][2]['top'][0][0][0]
+        nearest_material=nrows[0][2]['top'][0][0][1]
         print(
             f"T21UPPER GRATE_NEAREST side={side} "
-            f"dist={nrows[0][0]:.6f} "
-            f"obj={nrows[0][2]['top'][0][0][0]} "
-            f"mat={nrows[0][2]['top'][0][0][1]}"
+            f"dist={nearest_distance:.6f} "
+            f"obj={nearest_object} "
+            f"mat={nearest_material}"
         )
-    print_reachable_summary(f"T21UPPER GRATE_{side}",union,neighbors)
+    for threshold in (0.30,0.40,0.50,0.75):
+        initial,seen,groups=print_reachable_summary(
+            f"T21UPPER GRATE_{side}_T{threshold:.2f}",union,neighbors,threshold
+        )
+    largest_comp=max(qualified,key=lambda comp:component_summary(comp)["area"])
+    audit_output["grates"][side]={
+        "sourceObject":GRATE_OBJECT,
+        "sourceMaterial":GRATE_MATERIAL,
+        "qualifiedComponentCount":len(qualified),
+        "triangleCount":len(union),
+        "areaSquareMeters":us["area"],
+        "anchor":component_anchor(largest_comp),
+        "mesh":mesh_payload(union),
+        "nearestWalkDistanceMeters":nearest_distance,
+        "nearestWalkObject":nearest_object,
+        "nearestWalkMaterial":nearest_material,
+        "nearestWalkMesh":None if nearest_comp is None else mesh_payload(nearest_comp),
+    }
 
 if set(grate_unions)=={"POSITIVE_Z","NEGATIVE_Z"}:
     def mirrored_vertex_set(comp):
@@ -607,7 +661,43 @@ for side,route_points in GLASS_ROUTE_PROJECT_XZ.items():
         f"within_0_30={len(touching)} nearest="
         f"{None if not nrows else round(nrows[0][0],6)}"
     )
-    print_reachable_summary(f"T21UPPER GLASS_{side}",broad_faces,neighbors)
+    initial,seen,groups=print_reachable_summary(
+        f"T21UPPER GLASS_{side}",broad_faces,neighbors,0.30
+    )
+    for threshold in (0.40,0.50,0.75,1.00):
+        print_reachable_summary(
+            f"T21UPPER GLASS_{side}_T{threshold:.2f}",
+            broad_faces,
+            neighbors,
+            threshold
+        )
+    reachable_faces=sorted({
+        fi for i in seen for fi in neighbors[i]
+    })
+    non_bridge_rows=[
+        row for row in nrows
+        if row[2]["top"][0][0][1] != "FldObj_Temple01_PntSet_BridgeMetal00"
+    ]
+    nearest_non_bridge=non_bridge_rows[0] if non_bridge_rows else None
+    audit_output["glass"][side]={
+        "sourceObject":GLASS_OBJECT,
+        "routeComponentIds":unique_ids,
+        "broadSourceTriangleCount":len(broad_faces),
+        "broadSourceAreaSquareMeters":sum(tri_area(faces[fi]) for fi in broad_faces),
+        "bridgeReachableComponentCount":len(seen),
+        "bridgeReachableTriangleCount":len(reachable_faces),
+        "bridgeMesh":mesh_payload(reachable_faces),
+        "nearestBridgeDistanceMeters":None if not nrows else nrows[0][0],
+        "nearestNonBridgeDistanceMeters":None if nearest_non_bridge is None else nearest_non_bridge[0],
+        "nearestNonBridgeObject":None if nearest_non_bridge is None else nearest_non_bridge[2]["top"][0][0][0],
+        "nearestNonBridgeMaterial":None if nearest_non_bridge is None else nearest_non_bridge[2]["top"][0][0][1],
+        "nearestNonBridgeMesh":None if nearest_non_bridge is None else mesh_payload(nearest_non_bridge[1]),
+    }
 
+OUTPUT.write_text(json.dumps(audit_output,separators=(",",":")),encoding="utf-8")
+print(
+    f"T21UPPER OUTPUT path={OUTPUT} bytes={OUTPUT.stat().st_size} "
+    f"version={audit_output['version']}"
+)
 print("T21UPPER AUTHORITY diagnostic_only=true runtime_promotion_authorized=false")
 
