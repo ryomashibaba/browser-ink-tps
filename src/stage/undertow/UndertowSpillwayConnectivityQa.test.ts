@@ -22,6 +22,7 @@ import {
   UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT,
   UNDERTOW_T21D_CONNECTIVITY_PROBES,
   undertowFullStageConnectivityAuditErrors,
+  undertowPass18bTraversableQaAnchors,
   undertowT21dConnectivityQaStage,
   vec3
 } from './UndertowSpillwayConnectivityQa';
@@ -77,7 +78,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18A',
+      resolutionPass: '18B',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -142,6 +143,66 @@ describe('T21-D partial Recast connectivity QA', () => {
         'right-low-to-underpass-negative-z',
         'center-small-step-positive-z',
         'center-small-step-negative-z'
+      ]);
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.traversableAnchorMatrixPass18B)
+      .toMatchObject({
+        anchorCount: 25,
+        paintAnchorCount: 17,
+        grateAnchorCount: 2,
+        upperGlassBroadAnchorCount: 6,
+        directedPairCount: 625,
+        reachedDirectedPairCountIncludingSelf: 79,
+        missedDirectedPairCount: 546,
+        reachedNonSelfDirectedPairCount: 54,
+        weakComponentCount: 9,
+        stronglyConnectedComponentCount: 11,
+        isolatedAnchorIds: [
+          'paint:UndertowT21D:center-origin-step-top-face:0',
+          'grate:UndertowT21D:negative-z-grate-mesh:0',
+          'grate:UndertowT21D:positive-z-grate-mesh:0'
+        ],
+        upperGlassPositiveBroadInternalAnchorCount: 3,
+        upperGlassNegativeBroadInternalAnchorCount: 3,
+        upperGlassBroadExternallyConnected: false,
+        maximumObservedAnchorSnapMeters: 0.24704275013919783,
+        qaRunNumber: 873
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.grateIngressPass18B)
+      .toMatchObject({
+        confirmedTraversableGrateCount: 2,
+        isolatedGrateAnchorCount: 2,
+        negativePlanSharedBoundaryMeters: 6.375,
+        positivePlanSharedBoundaryMeters: 6.375,
+        sharesExactPlanBoundaryWithSpawnSideWhiteFace: true,
+        adjacentSpawnSideWhiteFaceIsMultiElevation: true,
+        adjacentContinuousUpperTerrainRuntimeBindingResolved: false,
+        offMeshLinkAuthorized: false,
+        userCaptureRequiredNow: false
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.upperGlassThinEdgeNavigationPass18B)
+      .toMatchObject({
+        broadNavigationTrianglesPerSide: 46,
+        diagnosticCandidateTrianglesPerSide: 48,
+        addedThinEdgeTriangleIds: [98, 99],
+        thinEdgeProbeCount: 2,
+        thinEdgeMinimumInteriorClearanceMeters: 0.046493,
+        recastCellSizeMeters: 0.18,
+        recastWalkableRadiusVoxels: 2,
+        recastNominalErosionRadiusMeters: 0.36,
+        baselineAndThinEdgeCandidateMatricesIdentical: true,
+        currentPartialCandidateExternalBridgeAdded: false,
+        currentGlassIsolationCausedByThinEdgeExclusion: false,
+        finalThinEdgeNavigationDispositionResolved: false,
+        requiresRetestAfterAdjacentUpperTerrainBinding: true,
+        runtimePromotionAuthorized: false,
+        qaRunNumber: 874
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.additionalDisconnectedTraversableRegions)
+      .toEqual([
+        'negative-z-grate',
+        'positive-z-grate',
+        'positive-z-upper-glass-broad',
+        'negative-z-upper-glass-broad'
       ]);
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
@@ -238,40 +299,11 @@ describe('T21-D partial Recast connectivity QA', () => {
     const stage = undertowT21dConnectivityQaStage();
     const navigation = new RecastStageNavigation(stage, new PerformanceStats());
 
-    const paintAnchors = stage.paintSurfaces.map((surface) => ({
-      id: `paint:${surface.backingSolidId}`,
-      point: surface.center
-    }));
-
-    const grateAnchors = stage.solids
-      .filter((solid) => solid.id.includes('grate-mesh:'))
-      .map((solid) => ({
-        id: `grate:${solid.id}`,
-        point: [
-          solid.center[0],
-          solid.center[1] + solid.size[1] * 0.5,
-          solid.center[2]
-        ] as const
-      }));
-
-    const glassAnchors = [
-      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.positiveZ
-        .map((point, index) => ({
-          id: `glass:positive-z:${index}`,
-          point
-        })),
-      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.negativeZ
-        .map((point, index) => ({
-          id: `glass:negative-z:${index}`,
-          point
-        }))
-    ];
-
-    const anchors = [...paintAnchors, ...grateAnchors, ...glassAnchors];
-    expect(paintAnchors).toHaveLength(17);
-    expect(grateAnchors).toHaveLength(2);
-    expect(glassAnchors).toHaveLength(6);
+    const anchors = undertowPass18bTraversableQaAnchors();
     expect(anchors).toHaveLength(25);
+    expect(anchors.filter((anchor) => anchor.kind === 'PAINT_SURFACE')).toHaveLength(17);
+    expect(anchors.filter((anchor) => anchor.kind === 'GRATE')).toHaveLength(2);
+    expect(anchors.filter((anchor) => anchor.kind === 'UPPER_GLASS_BROAD')).toHaveLength(6);
     expect(new Set(anchors.map((anchor) => anchor.id)).size).toBe(25);
 
     const rows = anchors.map((from) => {
@@ -296,8 +328,79 @@ describe('T21-D partial Recast connectivity QA', () => {
     });
 
     console.log('T21NAVMATRIX18B', JSON.stringify(rows));
+    const reachedCount = rows.reduce((sum, row) => sum + row.reached.length, 0);
+    expect(reachedCount).toBe(79);
+    expect(625 - reachedCount).toBe(546);
+    expect(reachedCount - 25).toBe(54);
     expect(rows.every((row) => row.reached.includes(row.from))).toBe(true);
     expect(rows).toHaveLength(25);
+
+    const reach = new Map(
+      rows.map((row) => [row.from, new Set(row.reached)] as const)
+    );
+    const ids = anchors.map((anchor) => anchor.id);
+    const seenWeak = new Set<string>();
+    let weakComponents = 0;
+    for (const seed of ids) {
+      if (seenWeak.has(seed)) continue;
+      weakComponents += 1;
+      const stack = [seed];
+      seenWeak.add(seed);
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        for (const candidate of ids) {
+          if (seenWeak.has(candidate)) continue;
+          if (
+            reach.get(current)!.has(candidate) ||
+            reach.get(candidate)!.has(current)
+          ) {
+            seenWeak.add(candidate);
+            stack.push(candidate);
+          }
+        }
+      }
+    }
+    expect(weakComponents).toBe(9);
+
+    const seenStrong = new Set<string>();
+    let strongComponents = 0;
+    for (const seed of ids) {
+      if (seenStrong.has(seed)) continue;
+      strongComponents += 1;
+      for (const candidate of ids) {
+        if (
+          reach.get(seed)!.has(candidate) &&
+          reach.get(candidate)!.has(seed)
+        ) {
+          seenStrong.add(candidate);
+        }
+      }
+    }
+    expect(strongComponents).toBe(11);
+
+    const isolated = rows
+      .filter((row) => row.reached.length === 1 && row.reached[0] === row.from)
+      .map((row) => row.from);
+    expect(isolated).toEqual([
+      'paint:UndertowT21D:center-origin-step-top-face:0',
+      'grate:UndertowT21D:negative-z-grate-mesh:0',
+      'grate:UndertowT21D:positive-z-grate-mesh:0'
+    ]);
+
+    expect(Math.max(
+      ...rows.flatMap((row) => [row.maxStartSnap, row.maxEndSnap])
+    )).toBeCloseTo(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .traversableAnchorMatrixPass18B.maximumObservedAnchorSnapMeters,
+      9
+    );
+
+    for (const side of ['positive-z', 'negative-z'] as const) {
+      const sideIds = [0, 1, 2].map((index) => `glass:${side}:${index}`);
+      for (const id of sideIds) {
+        expect(reach.get(id)).toEqual(new Set(sideIds));
+      }
+    }
   });
 
 
@@ -329,10 +432,17 @@ describe('T21-D partial Recast connectivity QA', () => {
           record.side === 'POSITIVE_Z'
             ? 'UndertowT21D:upper-glass-positive-z:pass15d-broad-navigation-runtime'
             : 'UndertowT21D:upper-glass-negative-z:pass15d-broad-navigation-runtime';
+        const xs = record.mesh.vertices.map((vertex) => vertex[0]);
+        const ys = record.mesh.vertices.map((vertex) => vertex[1]);
+        const zs = record.mesh.vertices.map((vertex) => vertex[2]);
         return {
           id: `${sourceId}:pass18b-thin-edge-qa`,
           center: [0, 0, 0],
-          size: [20, 10, 20],
+          size: [
+            Math.max(...xs) - Math.min(...xs),
+            Math.max(...ys) - Math.min(...ys),
+            Math.max(...zs) - Math.min(...zs)
+          ],
           material: 'light',
           render: false,
           projectileBlocker: false,
@@ -359,32 +469,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       ]
     };
 
-    const anchors = [
-      ...baseline.paintSurfaces.map((surface) => ({
-        id: `paint:${surface.backingSolidId}`,
-        point: surface.center
-      })),
-      ...baseline.solids
-        .filter((solid) => solid.id.includes('grate-mesh:'))
-        .map((solid) => ({
-          id: `grate:${solid.id}`,
-          point: [
-            solid.center[0],
-            solid.center[1] + solid.size[1] * 0.5,
-            solid.center[2]
-          ] as const
-        })),
-      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.positiveZ
-        .map((point, index) => ({
-          id: `glass:positive-z:${index}`,
-          point
-        })),
-      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.negativeZ
-        .map((point, index) => ({
-          id: `glass:negative-z:${index}`,
-          point
-        }))
-    ];
+    const anchors = undertowPass18bTraversableQaAnchors();
     expect(anchors).toHaveLength(25);
 
     const matrix = (stage: StageDefinition) => {
@@ -415,6 +500,21 @@ describe('T21-D partial Recast connectivity QA', () => {
 
     expect(UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS).toEqual([98, 99]);
     expect(candidateRows).toEqual(baselineRows);
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassThinEdgeNavigationPass18B
+        .baselineAndThinEdgeCandidateMatricesIdentical
+    ).toBe(true);
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassThinEdgeNavigationPass18B
+        .currentGlassIsolationCausedByThinEdgeExclusion
+    ).toBe(false);
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassThinEdgeNavigationPass18B
+        .finalThinEdgeNavigationDispositionResolved
+    ).toBe(false);
   });
 
 });
