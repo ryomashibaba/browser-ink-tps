@@ -64,6 +64,11 @@ jobs:
         shell: bash
         run: python scripts/undertow-temple01-xz-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
 
+      - name: T21 Temple01 water Y candidate audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-temple01-water-y-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
+
       - name: T21 Sunfish Zones vector recovery audit
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         shell: bash
