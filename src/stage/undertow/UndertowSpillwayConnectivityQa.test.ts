@@ -65,7 +65,9 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
+      resolutionPass: '18A',
       rightLowToUnderpassResolved: false,
+      centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
       upperGlassThinEdgeFrameNavigationAuthorityResolved: false,
       upperGlassNavigationAuthorityResolved: false,
@@ -88,6 +90,47 @@ describe('T21-D partial Recast connectivity QA', () => {
         runtimePromotionAuthorized: false,
         offMeshLinkAuthorized: false
       });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.paintAnchorMatrixPass18A)
+      .toMatchObject({
+        anchorCount: 17,
+        directedPairCount: 289,
+        reachedDirectedPairCountIncludingSelf: 59,
+        missedDirectedPairCount: 230,
+        reachedNonSelfDirectedPairCount: 42,
+        weakComponentCount: 5,
+        stronglyConnectedComponentCount: 7,
+        centerOriginStepTopIsSingleton: true,
+        previousTwoGapInventoryWasComplete: false,
+        qaRunNumber: 870
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.centerSmallStepGapAudit)
+      .toMatchObject({
+        transitionEntryIds: [
+          'negative-z-center-small-step',
+          'positive-z-center-small-step'
+        ],
+        transitionCount: 2,
+        canonicalTransitionKind: 'STEP',
+        canonicalDeltaYMeters: 1.5,
+        exactTransitionStripsMeasured: true,
+        transitionStripsDepthMeters: 0.75,
+        stepTopRuntimeSurfaceBound: true,
+        runtimeNavigationTransitionBound: false,
+        traversalDirectionResolved: false,
+        jumpRequirementResolved: false,
+        automaticRecastClimbMeters: 0.4,
+        automaticRecastCanBridgeCanonicalDelta: false,
+        offMeshLinkAuthorized: false,
+        runtimePromotionAuthorized: false,
+        userCaptureRequiredNow: false
+      });
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.knownBlockingTransitions)
+      .toEqual([
+        'right-low-to-underpass-positive-z',
+        'right-low-to-underpass-negative-z',
+        'center-small-step-positive-z',
+        'center-small-step-negative-z'
+      ]);
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).toContain('FULL_STAGE_CONNECTIVITY_QA_PENDING');
@@ -111,16 +154,71 @@ describe('T21-D partial Recast connectivity QA', () => {
         if (result.reachedTarget) reached.push(to.id);
         else missed.push(to.id);
       }
-      return {
-        from: from.id,
-        reached,
-        missed
-      };
+      return { from: from.id, reached, missed };
     });
 
     console.log('T21NAVMATRIX18A', JSON.stringify(rows));
-    expect(rows).toHaveLength(17);
+
+    const reachedCount = rows.reduce(
+      (sum, row) => sum + row.reached.length,
+      0
+    );
+    expect(reachedCount).toBe(59);
+    expect(17 * 17 - reachedCount).toBe(230);
+    expect(reachedCount - 17).toBe(42);
     expect(rows.every((row) => row.reached.includes(row.from))).toBe(true);
+
+    const reach = new Map(
+      rows.map((row) => [row.from, new Set(row.reached)] as const)
+    );
+    const ids = anchors.map((anchor) => anchor.id);
+
+    const seenWeak = new Set<string>();
+    let weakComponents = 0;
+    for (const seed of ids) {
+      if (seenWeak.has(seed)) continue;
+      weakComponents += 1;
+      const stack = [seed];
+      seenWeak.add(seed);
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        for (const candidate of ids) {
+          if (seenWeak.has(candidate)) continue;
+          if (
+            reach.get(current)!.has(candidate) ||
+            reach.get(candidate)!.has(current)
+          ) {
+            seenWeak.add(candidate);
+            stack.push(candidate);
+          }
+        }
+      }
+    }
+    expect(weakComponents).toBe(5);
+
+    const seenStrong = new Set<string>();
+    let strongComponents = 0;
+    for (const seed of ids) {
+      if (seenStrong.has(seed)) continue;
+      strongComponents += 1;
+      for (const candidate of ids) {
+        if (
+          reach.get(seed)!.has(candidate) &&
+          reach.get(candidate)!.has(seed)
+        ) {
+          seenStrong.add(candidate);
+        }
+      }
+    }
+    expect(strongComponents).toBe(7);
+
+    const centerStep = rows.find(
+      (row) => row.from === 'UndertowT21D:center-origin-step-top-face:0'
+    );
+    expect(centerStep?.reached).toEqual([
+      'UndertowT21D:center-origin-step-top-face:0'
+    ]);
+    expect(centerStep?.missed).toHaveLength(16);
   });
 
 });
