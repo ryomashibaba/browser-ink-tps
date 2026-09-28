@@ -66,6 +66,8 @@ describe('T21-D partial Recast connectivity QA', () => {
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
       rightLowToUnderpassResolved: false,
+      upperGlassBroadNavigationReconstructionBound: true,
+      upperGlassThinEdgeFrameNavigationAuthorityResolved: false,
       upperGlassNavigationAuthorityResolved: false,
       allTraversableRuntimeGeometryBound: false,
       fullStageConnectivityReady: false
