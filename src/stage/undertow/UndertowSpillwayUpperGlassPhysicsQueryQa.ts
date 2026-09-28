@@ -180,8 +180,6 @@ export function undertowUpperGlassPass15bPhysicsQaStage(): StageDefinition {
       worldBounds: {
         minX: -20,
         maxX: 20,
-        minY: -2,
-        maxY: 14,
         minZ: -20,
         maxZ: 20
       },
