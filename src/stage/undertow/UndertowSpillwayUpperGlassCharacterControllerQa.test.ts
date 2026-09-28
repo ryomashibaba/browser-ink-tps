@@ -24,6 +24,10 @@ import {
   undertowUpperGlassPass15cQaStage,
   undertowUpperGlassPass15cSolidId
 } from './UndertowSpillwayUpperGlassCharacterControllerQa';
+import {
+  UNDERTOW_UPPER_GLASS_SOURCE_MESHES,
+  type UndertowUpperGlassMeshRecord
+} from './UndertowSpillwayUpperGlassMeshGeometry';
 
 beforeAll(async () => {
   await initializeRapier();
@@ -42,6 +46,36 @@ function midpoint(
     (a[1] + b[1]) * 0.5,
     (a[2] + b[2]) * 0.5
   );
+}
+
+function triangleNormalYAndArea(
+  record: UndertowUpperGlassMeshRecord,
+  triangleId: number
+): { normalY: number; areaSquareMeters: number } {
+  const base = triangleId * 3;
+  const ai = record.mesh.indices[base];
+  const bi = record.mesh.indices[base + 1];
+  const ci = record.mesh.indices[base + 2];
+  if (ai === undefined || bi === undefined || ci === undefined) {
+    throw new Error(`triangle ${triangleId} is outside ${record.id}`);
+  }
+  const a = record.mesh.vertices[ai]!;
+  const b = record.mesh.vertices[bi]!;
+  const c = record.mesh.vertices[ci]!;
+  const ux = b[0] - a[0];
+  const uy = b[1] - a[1];
+  const uz = b[2] - a[2];
+  const vx = c[0] - a[0];
+  const vy = c[1] - a[1];
+  const vz = c[2] - a[2];
+  const nx = uy * vz - uz * vy;
+  const ny = uz * vx - ux * vz;
+  const nz = ux * vy - uy * vx;
+  const twiceArea = Math.hypot(nx, ny, nz);
+  return {
+    normalY: ny / twiceArea,
+    areaSquareMeters: twiceArea * 0.5
+  };
 }
 
 function makeQaCharacter(
@@ -254,6 +288,31 @@ describe('T21 Pass 15C upper-glass dynamic character-controller QA', () => {
       expect(solid.projectileBlocker).toBe(true);
       expect(solid.cameraBlocker).toBe(true);
       expect(solid.render).toBe(false);
+    }
+  });
+
+  it('re-audits the thin-edge/frame neighborhood from exact source geometry rather than material naming', () => {
+    for (const record of UNDERTOW_UPPER_GLASS_SOURCE_MESHES) {
+      for (const triangleId of [94, 95] as const) {
+        const metric = triangleNormalYAndArea(record, triangleId);
+        expect(metric.normalY, `${record.id} / ${triangleId}`).toBeLessThan(-0.68);
+        expect(metric.areaSquareMeters, `${record.id} / ${triangleId}`).toBeGreaterThan(0.60);
+      }
+      for (const triangleId of [98, 99] as const) {
+        const metric = triangleNormalYAndArea(record, triangleId);
+        expect(metric.normalY, `${record.id} / ${triangleId}`).toBeGreaterThan(0.68);
+        expect(metric.areaSquareMeters, `${record.id} / ${triangleId}`).toBeGreaterThan(0.60);
+      }
+      for (const triangleId of [96, 97, 100, 101] as const) {
+        const metric = triangleNormalYAndArea(record, triangleId);
+        expect(Math.abs(metric.normalY), `${record.id} / ${triangleId}`).toBeLessThan(1e-8);
+        expect(metric.areaSquareMeters, `${record.id} / ${triangleId}`).toBeLessThan(0.04);
+      }
+      for (const triangleId of [92, 93] as const) {
+        const metric = triangleNormalYAndArea(record, triangleId);
+        expect(Math.abs(metric.normalY), `${record.id} / ${triangleId}`).toBeLessThan(1e-8);
+        expect(metric.areaSquareMeters, `${record.id} / ${triangleId}`).toBeGreaterThan(1.3);
+      }
     }
   });
 
