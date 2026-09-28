@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18D',
+      resolutionPass: '18E',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -292,6 +292,84 @@ describe('T21-D partial Recast connectivity QA', () => {
       UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.productionKccTraversalPass18D
         .effectiveHumanContactRadiusMeters
     ).toBeCloseTo(0.345, 12);
+    expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E)
+      .toMatchObject({
+        qaRunNumber: 900,
+        sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+        trustedSnapMeters: 0.30,
+        testedVariantCount: 7,
+        maximumTrustedBidirectionallyReachedPairs: 3,
+        allSixSourcePairsTrustedConnectedAnyVariant: false,
+        bridgeMetalToNearestFloorTrustedConnectedAnyVariant: false,
+        bothMirroredGrateFloorPairsTrustedConnectedAnyVariant: false,
+        zeroErosionProducesMirroredGrateAsymmetry: true,
+        finerZeroErosionRemovesPositiveGrateRasterBridge: true,
+        extraClimbChangesZeroErosionTrustedResult: false,
+        runtimeBroadGlassToBridgeTrustedConnectedBothSides: true,
+        runtimeBroadGlassToBridgeUsesProductionRecastSettings: true,
+        testedGlassChainBreakLocalizedToBridgeMetalFloorGap: true,
+        currentRuntimeBroadGlassNavigationNeedsReplacement: false,
+        globalRecastParameterChangeAuthorized: false,
+        exactOriginalGlassIngressTransitionResolved: false,
+        originalGrateWalkOnOffSemanticsResolved: false,
+        offMeshLinkAuthorized: false,
+        runtimePromotionAuthorized: false,
+        activationBlockerCleared: false,
+        userCaptureRequiredNow: false
+      });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E
+        .production
+    ).toMatchObject({
+      cellSizeMeters: 0.18,
+      walkableRadiusVoxels: 2,
+      nominalErosionMeters: 0.36,
+      trustedBidirectionallyReachedPairs: 1,
+      trustedDirectionReachCount: 2
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E
+        .productionZeroErosion
+    ).toMatchObject({
+      trustedBidirectionallyReachedPairs: 3,
+      trustedDirectionReachCount: 6
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E
+        .productionOneVoxelErosion
+    ).toMatchObject({
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E
+        .finerSameErosion
+    ).toMatchObject({
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E
+        .finerAgentRadius
+    ).toMatchObject({
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E
+        .finerZeroErosion
+    ).toMatchObject({
+      trustedBidirectionallyReachedPairs: 2,
+      trustedDirectionReachCount: 4
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.recastRepresentationSweepPass18E
+        .productionExtraClimbZeroErosion
+    ).toMatchObject({
+      walkableClimbVoxels: 8,
+      trustedBidirectionallyReachedPairs: 3,
+      trustedDirectionReachCount: 6
+    });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
     ).toContain('FULL_STAGE_CONNECTIVITY_QA_PENDING');
