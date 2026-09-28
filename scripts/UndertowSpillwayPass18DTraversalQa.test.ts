@@ -449,5 +449,18 @@ describe('T21 Pass 18D production-KCC traversal diagnostic', () => {
         results
       })
     );
+
+    const directedResults = Object.values(results);
+    expect(directedResults).toHaveLength(12);
+    expect(directedResults.every((result) => result.success)).toBe(true);
+    expect(
+      directedResults.every((result) => result.settledInitially)
+    ).toBe(true);
+    expect(
+      directedResults.reduce((sum, result) => sum + result.airborneTicks, 0)
+    ).toBe(0);
+    expect(
+      directedResults.every((result) => result.groundedTicks > 0)
+    ).toBe(true);
   });
 });
