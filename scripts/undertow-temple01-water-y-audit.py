@@ -246,3 +246,130 @@ print(
     "T21WATERY AUTHORITY candidate_discovery_only=true "
     "exact_visual_water_y_promoted=false reason=geometry_without_water_render_semantics_is_insufficient"
 )
+
+
+# Pass 14D local boundary-level audit.
+#
+# The global PDF->OBJ transform is only HIGH in independently verified local
+# regions. Around the water hazard we therefore do NOT promote the transformed
+# polygon as exact OBJ placement. Instead, use it only as a search window and
+# enumerate horizontal ledges/edges on nearby vertical geometry. A later visual
+# registration can select among these exact source-Y candidates.
+def point_seg_dist(px,pz,ax,az,bx,bz):
+    dx=bx-ax
+    dz=bz-az
+    den=dx*dx+dz*dz
+    if den<=1e-15:
+        return math.hypot(px-ax,pz-az)
+    t=max(0.0,min(1.0,((px-ax)*dx+(pz-az)*dz)/den))
+    qx=ax+t*dx
+    qz=az+t*dz
+    return math.hypot(px-qx,pz-qz)
+
+def point_poly_boundary_dist(x,z,poly):
+    return min(
+        point_seg_dist(
+            x,z,
+            poly[i][0],poly[i][1],
+            poly[(i+1)%len(poly)][0],poly[(i+1)%len(poly)][1]
+        )
+        for i in range(len(poly))
+    )
+
+def edge_midpoint(a,b):
+    return ((a[0]+b[0])*0.5,(a[1]+b[1])*0.5,(a[2]+b[2])*0.5)
+
+for side,pdfpoly in WATER_PDF.items():
+    poly=[project_to_model(pdf_to_project(p)) for p in pdfpoly]
+    x0=min(p[0] for p in poly)-2.0
+    x1=max(p[0] for p in poly)+2.0
+    z0=min(p[1] for p in poly)-2.0
+    z1=max(p[1] for p in poly)+2.0
+
+    # Count exact horizontal mesh edges lying close to the transformed water
+    # boundary. We keep every material/object class so names do not gate
+    # candidate discovery.
+    levels=defaultdict(int)
+    level_objects=defaultdict(lambda: defaultdict(int))
+    level_edge_spans=defaultdict(list)
+    vertical_faces=0
+    scanned_faces=0
+
+    for ia,ib,ic,o,m in faces:
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        xs=[v[0] for v in tri]
+        zs=[v[2] for v in tri]
+        if max(xs)<x0 or min(xs)>x1 or max(zs)<z0 or min(zs)>z1:
+            continue
+        scanned_faces+=1
+        n=tri_normal(tri)
+        if abs(n[1])<=0.35:
+            vertical_faces+=1
+        for a,b in ((tri[0],tri[1]),(tri[1],tri[2]),(tri[2],tri[0])):
+            if abs(a[1]-b[1])>0.03:
+                continue
+            mx,my,mz=edge_midpoint(a,b)
+            d=point_poly_boundary_dist(mx,mz,poly)
+            if d>1.25:
+                continue
+            length_xz=math.hypot(b[0]-a[0],b[2]-a[2])
+            if length_xz<0.10:
+                continue
+            y=round(((a[1]+b[1])*0.5)/0.05)*0.05
+            levels[y]+=1
+            level_objects[y][(o,m)]+=1
+            level_edge_spans[y].append((mx,mz,length_xz,d))
+
+    ranked=sorted(
+        levels,
+        key=lambda y:(-levels[y],y)
+    )
+    print(
+        f"T21WATEREDGE REGION {side} scanned_faces={scanned_faces} "
+        f"vertical_faces={vertical_faces} candidate_levels={len(ranked)}"
+    )
+    for y in ranked[:30]:
+        spans=level_edge_spans[y]
+        top=sorted(level_objects[y].items(),key=lambda kv:-kv[1])[:8]
+        total_len=sum(row[2] for row in spans)
+        nearest=min(row[3] for row in spans) if spans else math.inf
+        print(
+            f"T21WATEREDGE Y {side} model_y={y:.3f} project_y={y+PROJECT_Y_OFFSET:.3f} "
+            f"edges={levels[y]} total_xz_len={total_len:.3f} nearest={nearest:.3f} "
+            f"top={[(o,m,n) for (o,m),n in top]}"
+        )
+
+# Cross-side exact-Y intersection. Symmetric source geometry should expose the
+# same authored ledge levels on both sides even if local XZ registration has a
+# residual. This intersection is still only a candidate set until a visual
+# waterline is registered to one of the ledges.
+edge_sets={}
+for side,pdfpoly in WATER_PDF.items():
+    poly=[project_to_model(pdf_to_project(p)) for p in pdfpoly]
+    vals=set()
+    for ia,ib,ic,o,m in faces:
+        tri=[vertices[ia],vertices[ib],vertices[ic]]
+        for a,b in ((tri[0],tri[1]),(tri[1],tri[2]),(tri[2],tri[0])):
+            if abs(a[1]-b[1])>0.03:
+                continue
+            mx,my,mz=edge_midpoint(a,b)
+            if point_poly_boundary_dist(mx,mz,poly)>1.25:
+                continue
+            if math.hypot(b[0]-a[0],b[2]-a[2])<0.10:
+                continue
+            vals.add(round(((a[1]+b[1])*0.5)/0.05)*0.05)
+    edge_sets[side]=vals
+
+shared_edges=sorted(edge_sets["TEAM_A"] & edge_sets["TEAM_B"])
+print(
+    "T21WATEREDGE SHARED_LEVELS "
+    + str([
+        {"model_y":round(y,3),"project_y":round(y+PROJECT_Y_OFFSET,3)}
+        for y in shared_edges
+        if -10.0<=y<=20.0
+    ])
+)
+print(
+    "T21WATEREDGE AUTHORITY candidate_levels_only=true "
+    "visual_waterline_selection_required=true exact_visual_water_y_promoted=false"
+)
