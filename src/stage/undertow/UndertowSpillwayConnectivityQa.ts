@@ -1,4 +1,5 @@
 import { Vec3 } from 'playcanvas';
+import { GAME_CONFIG } from '../../config/game/gameConfig';
 import type { StageDefinition, StageVector3 } from '../StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
@@ -8,6 +9,12 @@ import {
 import { UNDERTOW_RIGHT_LOW_ROUTE_RAMPS } from './UndertowSpillwayRouteRampGeometry';
 import { undertowTemple01ModelXZToProjectXZ } from './UndertowSpillwayModelXZGeometry';
 import { UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER } from './UndertowSpillwayMeasurementLedger';
+import {
+  UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D,
+  UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS
+} from './UndertowSpillwayUpperGlassReconstructionCandidate';
+import { UNDERTOW_UPPER_GLASS_COMPONENT_PROBES } from './UndertowSpillwayUpperGlassControlledCapturePlan';
+import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 
 export type UndertowConnectivityProbeId =
   | 'first-drop-positive-z'
@@ -177,9 +184,84 @@ export function vec3([x, y, z]: StageVector3): Vec3 {
 }
 
 
+
+export type UndertowPass18bTraversableAnchorKind =
+  | 'PAINT_SURFACE'
+  | 'GRATE'
+  | 'UPPER_GLASS_BROAD';
+
+export interface UndertowPass18bTraversableAnchor {
+  id: string;
+  kind: UndertowPass18bTraversableAnchorKind;
+  point: StageVector3;
+}
+
+export function undertowPass18bTraversableQaAnchors():
+  readonly UndertowPass18bTraversableAnchor[] {
+  const package_ = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY;
+  const paint = package_.paintSurfaces.map((surface) => ({
+    id: `paint:${surface.backingSolidId}`,
+    kind: 'PAINT_SURFACE' as const,
+    point: surface.center
+  }));
+  const grates = package_.solids
+    .filter((solid) => solid.id.includes('grate-mesh:'))
+    .map((solid) => ({
+      id: `grate:${solid.id}`,
+      kind: 'GRATE' as const,
+      point: [
+        solid.center[0],
+        solid.center[1] + solid.size[1] * 0.5,
+        solid.center[2]
+      ] as const
+    }));
+  const glass = [
+    ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.positiveZ
+      .map((point, index) => ({
+        id: `glass:positive-z:${index}`,
+        kind: 'UPPER_GLASS_BROAD' as const,
+        point
+      })),
+    ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.negativeZ
+      .map((point, index) => ({
+        id: `glass:negative-z:${index}`,
+        kind: 'UPPER_GLASS_BROAD' as const,
+        point
+      }))
+  ];
+  return [...paint, ...grates, ...glass];
+}
+
+function sharedBoundaryLengthMeters(
+  a: readonly (readonly [number, number])[],
+  b: readonly (readonly [number, number])[]
+): number {
+  const key = (point: readonly [number, number]) =>
+    `${point[0].toFixed(9)},${point[1].toFixed(9)}`;
+  const bKeys = new Set(b.map(key));
+  const shared = a.filter((point) => bKeys.has(key(point)));
+  if (shared.length !== 2) return 0;
+  return Math.hypot(
+    shared[0]![0] - shared[1]![0],
+    shared[0]![1] - shared[1]![1]
+  );
+}
+
+const negativeGrateSpawnSharedBoundaryMeters = sharedBoundaryLengthMeters(
+  UNDERTOW_VECTOR_TRACES.negativeZGrateMesh.metricPoints,
+  UNDERTOW_VECTOR_TRACES.negativeZSpawnSideWhiteFace.metricPoints
+);
+const positiveGrateSpawnSharedBoundaryMeters = sharedBoundaryLengthMeters(
+  UNDERTOW_VECTOR_TRACES.positiveZGrateMesh.metricPoints,
+  UNDERTOW_VECTOR_TRACES.positiveZSpawnSideWhiteFace.metricPoints
+);
+const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
+  (probe) => probe.id === 'THIN_EDGE_STRIP'
+);
+
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18A' as const,
+  resolutionPass: '18B' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -237,6 +319,68 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     notes:
       'The measurement ledger already contains two mirrored CONFIRMED STEP transitions at +1.5m and the exact 0.75m-deep strips, while the +1.5m center-origin top face exists in runtime. Current Recast automatic climb is 0.40m, so the 1.5m transition cannot appear automatically. Existing archived evidence does not record lower->upper versus upper->lower traversal direction or whether a jump is required. Pass 18A therefore identifies a missing runtime transition but does not invent a bidirectional/jump/drop off-mesh link.'
   }),
+
+  traversableAnchorMatrixPass18B: Object.freeze({
+    anchorCount: 25,
+    paintAnchorCount: 17,
+    grateAnchorCount: 2,
+    upperGlassBroadAnchorCount: 6,
+    directedPairCount: 625,
+    reachedDirectedPairCountIncludingSelf: 79,
+    missedDirectedPairCount: 546,
+    reachedNonSelfDirectedPairCount: 54,
+    weakComponentCount: 9,
+    stronglyConnectedComponentCount: 11,
+    isolatedAnchorIds: [
+      'paint:UndertowT21D:center-origin-step-top-face:0',
+      'grate:UndertowT21D:negative-z-grate-mesh:0',
+      'grate:UndertowT21D:positive-z-grate-mesh:0'
+    ] as const,
+    upperGlassPositiveBroadInternalAnchorCount: 3,
+    upperGlassNegativeBroadInternalAnchorCount: 3,
+    upperGlassBroadExternallyConnected: false,
+    maximumObservedAnchorSnapMeters: 0.24704275013919783,
+    qaRunNumber: 873,
+    notes:
+      'Pass 18B expands the Pass 18A paint-only matrix to all currently bound traversable authority: 17 paint anchors, two confirmed traversable/uninkable grates, and the six directly verified broad upper-glass route points. The exact current inert package yields 79/625 directed reaches, nine weak components and eleven SCCs. Both grates are singleton nav islands. Each upper-glass side is internally connected across its three broad points but has no path to any non-glass anchor.'
+  }),
+  grateIngressPass18B: Object.freeze({
+    confirmedTraversableGrateCount: 2,
+    isolatedGrateAnchorCount: 2,
+    negativePlanSharedBoundaryMeters: negativeGrateSpawnSharedBoundaryMeters,
+    positivePlanSharedBoundaryMeters: positiveGrateSpawnSharedBoundaryMeters,
+    sharesExactPlanBoundaryWithSpawnSideWhiteFace: true,
+    adjacentSpawnSideWhiteFaceIsMultiElevation: true,
+    adjacentContinuousUpperTerrainRuntimeBindingResolved: false,
+    offMeshLinkAuthorized: false,
+    userCaptureRequiredNow: false,
+    notes:
+      'The vector source gives each grate an exact 6.375m plan boundary shared with its mirrored spawn-side white face. That white face is explicitly multi-elevation and is not represented by one convenience slab in T21-D. The grate islands therefore localize a missing adjacent upper-terrain runtime binding; plan adjacency alone does not authorize a flat bridge or off-mesh link.'
+  }),
+  upperGlassThinEdgeNavigationPass18B: Object.freeze({
+    broadNavigationTrianglesPerSide: 46,
+    diagnosticCandidateTrianglesPerSide: 48,
+    addedThinEdgeTriangleIds: UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS,
+    thinEdgeProbeCount: thinEdgeProbes.length,
+    thinEdgeMinimumInteriorClearanceMeters:
+      Math.min(...thinEdgeProbes.map(
+        (probe) => probe.minRoutePointBoundaryClearanceMeters
+      )),
+    recastCellSizeMeters: GAME_CONFIG.cpu.navigationCellSizeMeters,
+    recastWalkableRadiusVoxels: GAME_CONFIG.cpu.navigationWalkableRadiusVoxels,
+    recastNominalErosionRadiusMeters:
+      GAME_CONFIG.cpu.navigationCellSizeMeters *
+      GAME_CONFIG.cpu.navigationWalkableRadiusVoxels,
+    baselineAndThinEdgeCandidateMatricesIdentical: true,
+    currentPartialCandidateExternalBridgeAdded: false,
+    currentGlassIsolationCausedByThinEdgeExclusion: false,
+    finalThinEdgeNavigationDispositionResolved: false,
+    requiresRetestAfterAdjacentUpperTerrainBinding: true,
+    runtimePromotionAuthorized: false,
+    qaRunNumber: 874,
+    notes:
+      'Pass 18B temporarily adds exact upward source triangles 98/99 to the QA-only Glass01 navigation candidate, increasing 46 -> 48 triangles per side. The full 25-anchor reachability matrix is byte-for-byte equivalent at the semantic row/reach level: no bridge appears. The strip has only ~0.046m interior clearance while current Recast nominal erosion is 0.36m. This proves the current broad-glass island is not caused by omitting 98/99, but the final thin-edge disposition remains open until adjacent upper terrain is bound and the final candidate is rebuilt.'
+  }),
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -258,14 +402,21 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'center-small-step-positive-z',
     'center-small-step-negative-z'
   ] as const,
+  additionalDisconnectedTraversableRegions: [
+    'negative-z-grate',
+    'positive-z-grate',
+    'positive-z-upper-glass-broad',
+    'negative-z-upper-glass-broad'
+  ] as const,
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Pass 15D binds the three directly verified broad upper-glass components into the inert navmesh. Final closure still requires an explicit thin-edge/frame navigation disposition plus the final production-candidate Recast pass; no unverified edge region may be convenience-filled.',
-    'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
+    'Bind the source-authoritative adjacent upper terrain that connects each exact grate footprint to the rest of its mirrored spawn-side route. The grates share exact plan boundaries with the multi-elevation spawn-side white faces, so a convenience slab or off-mesh link is not authorized.',
+    'Bind authoritative ingress/egress between each internally connected broad upper-glass route and adjacent upper terrain. Pass 18B proves adding thin-edge triangles 98/99 alone does not change current Recast connectivity; final thin-edge disposition must be rechecked after adjacent terrain is present.',
+    'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18A expands the previous focused eight-probe QA with a 17x17 directed paint-anchor matrix. The six previously required transitions still pass, and the mirrored right-low-to-underpass route remains unresolved. The matrix also reveals that the +1.5m center-origin step-top is completely isolated in the current navmesh even though its two canonical STEP strips are already measured. Because archived evidence does not resolve the movement semantics needed to encode those steps for CPU navigation, no convenience link is added. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18B preserves Pass 18A and expands coverage from 17 paint anchors to 25 currently bound traversable anchors. It confirms two new singleton grate islands and two internally connected but externally isolated broad upper-glass islands. A QA-only 46->48 triangle thin-edge experiment leaves the complete 25-anchor reachability matrix unchanged, so thin-edge omission is not the cause of current glass isolation. No runtime geometry/link is promoted by Pass 18B. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
