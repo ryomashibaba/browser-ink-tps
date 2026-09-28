@@ -4,9 +4,20 @@ import {
   RecastStageNavigation,
   initializeRecastNavigation
 } from '../../navigation/RecastStageNavigation';
-import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
+import {
+  PRODUCTION_STAGE_DEFINITION,
+  type StageDefinition,
+  type StageSolidDefinition
+} from '../StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
-import { UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D } from './UndertowSpillwayUpperGlassReconstructionCandidate';
+import {
+  UNDERTOW_UPPER_GLASS_BROAD_NAV_TRIANGLE_IDS,
+  UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D,
+  UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS
+} from './UndertowSpillwayUpperGlassReconstructionCandidate';
+import {
+  UNDERTOW_UPPER_GLASS_SOURCE_MESHES
+} from './UndertowSpillwayUpperGlassMeshGeometry';
 import {
   UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT,
   UNDERTOW_T21D_CONNECTIVITY_PROBES,
@@ -287,6 +298,123 @@ describe('T21-D partial Recast connectivity QA', () => {
     console.log('T21NAVMATRIX18B', JSON.stringify(rows));
     expect(rows.every((row) => row.reached.includes(row.from))).toBe(true);
     expect(rows).toHaveLength(25);
+  });
+
+
+  it('Pass 18B proves the unverified thin-edge strip does not bridge current CPU Recast connectivity', () => {
+    const baseline = undertowT21dConnectivityQaStage();
+    const broadIds = new Set(
+      baseline.solids
+        .filter((solid) => solid.id.endsWith(':pass15d-broad-navigation-runtime'))
+        .map((solid) => solid.id)
+    );
+
+    const thinEdgeCandidateSolids: StageSolidDefinition[] =
+      UNDERTOW_UPPER_GLASS_SOURCE_MESHES.map((record) => {
+        const triangleIds = [
+          ...UNDERTOW_UPPER_GLASS_BROAD_NAV_TRIANGLE_IDS,
+          ...UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS
+        ];
+        const indices = triangleIds.flatMap((triangleId) => {
+          const base = triangleId * 3;
+          const a = record.mesh.indices[base];
+          const b = record.mesh.indices[base + 1];
+          const c = record.mesh.indices[base + 2];
+          if (a === undefined || b === undefined || c === undefined) {
+            throw new Error(`Pass18B thin-edge triangle ${triangleId} is missing`);
+          }
+          return [a, b, c];
+        });
+        const sourceId =
+          record.side === 'POSITIVE_Z'
+            ? 'UndertowT21D:upper-glass-positive-z:pass15d-broad-navigation-runtime'
+            : 'UndertowT21D:upper-glass-negative-z:pass15d-broad-navigation-runtime';
+        return {
+          id: `${sourceId}:pass18b-thin-edge-qa`,
+          center: [0, 0, 0],
+          size: [20, 10, 20],
+          material: 'light',
+          render: false,
+          projectileBlocker: false,
+          cameraBlocker: false,
+          collisionEnabled: false,
+          navigationEnabled: true,
+          triangleMesh: {
+            vertices: record.mesh.vertices,
+            indices
+          }
+        };
+      });
+
+    const candidate: StageDefinition = {
+      ...baseline,
+      metadata: {
+        ...baseline.metadata,
+        id: 'undertow-t21d-pass18b-thin-edge-navigation-qa',
+        displayName: 'Undertow T21-D Pass 18B Thin Edge Navigation QA'
+      },
+      solids: [
+        ...baseline.solids.filter((solid) => !broadIds.has(solid.id)),
+        ...thinEdgeCandidateSolids
+      ]
+    };
+
+    const anchors = [
+      ...baseline.paintSurfaces.map((surface) => ({
+        id: `paint:${surface.backingSolidId}`,
+        point: surface.center
+      })),
+      ...baseline.solids
+        .filter((solid) => solid.id.includes('grate-mesh:'))
+        .map((solid) => ({
+          id: `grate:${solid.id}`,
+          point: [
+            solid.center[0],
+            solid.center[1] + solid.size[1] * 0.5,
+            solid.center[2]
+          ] as const
+        })),
+      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.positiveZ
+        .map((point, index) => ({
+          id: `glass:positive-z:${index}`,
+          point
+        })),
+      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.negativeZ
+        .map((point, index) => ({
+          id: `glass:negative-z:${index}`,
+          point
+        }))
+    ];
+    expect(anchors).toHaveLength(25);
+
+    const matrix = (stage: StageDefinition) => {
+      const navigation = new RecastStageNavigation(stage, new PerformanceStats());
+      return anchors.map((from) => ({
+        from: from.id,
+        reached: anchors
+          .filter((to) =>
+            navigation.auditPath(vec3(from.point), vec3(to.point)).reachedTarget
+          )
+          .map((to) => to.id)
+      }));
+    };
+
+    const baselineRows = matrix(baseline);
+    const candidateRows = matrix(candidate);
+    console.log(
+      'T21NAVTHINEDGE18B',
+      JSON.stringify({
+        broadTrianglesPerSide: UNDERTOW_UPPER_GLASS_BROAD_NAV_TRIANGLE_IDS.length,
+        candidateTrianglesPerSide:
+          UNDERTOW_UPPER_GLASS_BROAD_NAV_TRIANGLE_IDS.length +
+          UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS.length,
+        baselineRows,
+        candidateRows
+      })
+    );
+
+    expect(UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS).toEqual([98, 99]);
+    expect(candidateRows).toEqual(baselineRows);
   });
 
 });
