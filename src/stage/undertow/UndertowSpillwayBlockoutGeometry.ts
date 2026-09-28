@@ -31,6 +31,11 @@ import {
   UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
   undertowUpperGlassVisualStageSolids
 } from './UndertowSpillwayUpperGlassMeshGeometry';
+import {
+  UNDERTOW_UPPER_GLASS_PASS15D_BROAD_COLLISION_SOLIDS,
+  UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS,
+  undertowUpperGlassPass15dRuntimeGeometryErrors
+} from './UndertowSpillwayUpperGlassRuntimeGeometry';
 import { UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT } from './UndertowSpillwayInternalWaterSemanticCorrectionAudit';
 import { UNDERTOW_CYAN_SOURCE_DISPOSITION_AUDIT } from './UndertowSpillwayCyanSourceDispositionAudit';
 import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
@@ -176,7 +181,9 @@ const solids = [
   ...built.map((item) => item.solid),
   ...undertowCenterSlopeStageSolids(),
   ...undertowRightLowRouteRampStageSolids(),
-  ...undertowUpperGlassVisualStageSolids()
+  ...undertowUpperGlassVisualStageSolids(),
+  ...UNDERTOW_UPPER_GLASS_PASS15D_BROAD_COLLISION_SOLIDS,
+  ...UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS
 ];
 const resolvedUnderpassPaintSurfaces = UNDERTOW_MODEL_XZ_GEOMETRY
   .filter((item) => item.id.startsWith('glass-underpass-'))
@@ -214,7 +221,7 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
     teamASpawnFloorPoint: [spawnA[0], 7.5, spawnA[1]] as const,
     teamBSpawnFloorPoint: [spawnB[0], 7.5, spawnB[1]] as const,
     deferredFeatureIds: [
-      'upper-glass-platform',
+      'upper-glass-thin-edge-frame-boundary',
       'team-a-upper-glass-overhang',
       'team-b-upper-glass-overhang',
       'team-a-water-region',
@@ -228,7 +235,7 @@ export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
       'FULL_STAGE_CONNECTIVITY_QA_PENDING'
     ],
     notes:
-      'Inert T21-D construction package only. Pass 14F resolves the two legacy cyan-region polygons as source-only annotations: they remain deferred from runtime geometry but no longer block activation as unresolved gameplay surfaces. Exterior abyss/fall-out keeps a separate unresolved vertical death threshold. T21 still does not replace PRODUCTION_STAGE_DEFINITION.'
+      'Inert T21-D construction package only. Pass 15D promotes the evidence-backed broad upper-glass reconstruction subset into role-separated collision/query and navigation runtime solids while keeping the full Glass01 shell render-only and triangles 94-101 excluded from collision/navigation authority. The upper-glass blockers remain active for the unresolved thin-edge/frame boundary and final authority boundary. Pass 14F keeps the two legacy cyan polygons source-annotation-only; exterior abyss/fall-out retains a separate unresolved vertical death threshold. T21 still does not replace PRODUCTION_STAGE_DEFINITION.'
   });
 
 function buildResolvedUnderpassPaintSurface(
@@ -336,7 +343,9 @@ function polygonBounds(points: readonly MetricXZ[]): {
 }
 
 export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
-  const errors: string[] = [];
+  const errors: string[] = [
+    ...undertowUpperGlassPass15dRuntimeGeometryErrors()
+  ];
   const ids = new Set<string>();
   for (const solid of UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids) {
     if (ids.has(solid.id)) errors.push(`duplicate solid id: ${solid.id}`);
