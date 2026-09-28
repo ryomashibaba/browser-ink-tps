@@ -170,14 +170,20 @@ describe('T21-D partial Recast connectivity QA', () => {
       .toMatchObject({
         confirmedTraversableGrateCount: 2,
         isolatedGrateAnchorCount: 2,
-        negativePlanSharedBoundaryMeters: 6.375,
-        positivePlanSharedBoundaryMeters: 6.375,
         sharesExactPlanBoundaryWithSpawnSideWhiteFace: true,
         adjacentSpawnSideWhiteFaceIsMultiElevation: true,
         adjacentContinuousUpperTerrainRuntimeBindingResolved: false,
         offMeshLinkAuthorized: false,
         userCaptureRequiredNow: false
       });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.grateIngressPass18B
+        .negativePlanSharedBoundaryMeters
+    ).toBeCloseTo(6.375, 9);
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.grateIngressPass18B
+        .positivePlanSharedBoundaryMeters
+    ).toBeCloseTo(6.375, 9);
     expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.upperGlassThinEdgeNavigationPass18B)
       .toMatchObject({
         broadNavigationTrianglesPerSide: 46,
