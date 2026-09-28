@@ -15,7 +15,7 @@ WALK_TOKENS = (
     "FloorConcrete", "FloorSlope", "FloorGrass", "GrassFloor",
     "FloorMetal", "FloorRubber", "BridgeMetal", "FloorFence"
 )
-OVERLAY_TOKENS = ("FloorLine", "FloorFence")
+OVERLAY_TOKENS = ("FloorLine",)
 GLASS_OBJECT = "FldObj_Temple01_PntSet_pCube21560_1__Glass01"
 GLASS_MATERIAL = "FldObj_Temple01_PntSet_Glass01"
 GRATE_OBJECT = "Fld_Temple01_pPlane157_1__FloorFence00"
@@ -44,6 +44,10 @@ GRATE_PDF = {
 GLASS_PDF = {
     "NEGATIVE_Z": [(382.44,230.28),(420.96,230.28),(420.96,267.84),(382.44,267.84)],
     "POSITIVE_Z": [(420.96,327.36),(459.48,327.36),(459.48,364.92),(420.96,364.92)],
+}
+GLASS_ROUTE_PROJECT_XZ = {
+    "POSITIVE_Z": [(-9.831115,8.149488),(-7.038142,6.780257),(-4.888742,5.726533)],
+    "NEGATIVE_Z": [(10.060483,-7.954924),(7.26751,-6.585693),(5.11811,-5.531968)],
 }
 
 def active(name: str) -> bool:
@@ -248,6 +252,52 @@ def point_triangle_distance(p,a,b,c):
     q=tuple(a[i]+ab[i]*v+ac[i]*w for i in range(3))
     return math.dist(p,q)
 
+def vsub(a,b):
+    return tuple(a[i]-b[i] for i in range(3))
+
+def vadd(a,b):
+    return tuple(a[i]+b[i] for i in range(3))
+
+def vmul(a,s):
+    return tuple(a[i]*s for i in range(3))
+
+def vdot(a,b):
+    return sum(a[i]*b[i] for i in range(3))
+
+def segment_segment_distance(p1,q1,p2,q2):
+    # Exact closest distance between two finite 3D segments.
+    d1=vsub(q1,p1)
+    d2=vsub(q2,p2)
+    r=vsub(p1,p2)
+    a=vdot(d1,d1)
+    e=vdot(d2,d2)
+    f=vdot(d2,r)
+    eps=1e-15
+    if a<=eps and e<=eps:
+        return math.dist(p1,p2)
+    if a<=eps:
+        ss=0.0
+        tt=max(0.0,min(1.0,f/e))
+    else:
+        c=vdot(d1,r)
+        if e<=eps:
+            tt=0.0
+            ss=max(0.0,min(1.0,-c/a))
+        else:
+            b=vdot(d1,d2)
+            denom=a*e-b*b
+            ss=0.0 if abs(denom)<=eps else max(0.0,min(1.0,(b*f-c*e)/denom))
+            tt=(b*ss+f)/e
+            if tt<0.0:
+                tt=0.0
+                ss=max(0.0,min(1.0,-c/a))
+            elif tt>1.0:
+                tt=1.0
+                ss=max(0.0,min(1.0,(b-c)/a))
+    c1=vadd(p1,vmul(d1,ss))
+    c2=vadd(p2,vmul(d2,tt))
+    return math.dist(c1,c2)
+
 def triangle_distance(fa,fb):
     ta=tri_points(fa)
     tb=tri_points(fb)
@@ -255,7 +305,22 @@ def triangle_distance(fa,fb):
         [point_triangle_distance(p,*tb) for p in ta] +
         [point_triangle_distance(p,*ta) for p in tb]
     )
+    ea=((ta[0],ta[1]),(ta[1],ta[2]),(ta[2],ta[0]))
+    eb=((tb[0],tb[1]),(tb[1],tb[2]),(tb[2],tb[0]))
+    for a0,a1 in ea:
+        for b0,b1 in eb:
+            best=min(best,segment_segment_distance(a0,a1,b0,b1))
     return best
+
+def contains_xz_triangle(x,z,face,epsilon=1e-7):
+    a,b,c=tri_points(face)
+    den=(b[2]-c[2])*(a[0]-c[0])+(c[0]-b[0])*(a[2]-c[2])
+    if abs(den)<=1e-15:
+        return False
+    l1=((b[2]-c[2])*(x-c[0])+(c[0]-b[0])*(z-c[2]))/den
+    l2=((c[2]-a[2])*(x-c[0])+(a[0]-c[0])*(z-c[2]))/den
+    l3=1.0-l1-l2
+    return min(l1,l2,l3)>=-epsilon
 
 def component_distance(a,b,limit=5.0):
     ba=bbox_expand(bbox3(a),limit)
@@ -293,6 +358,58 @@ def local_walk_components(target_bbox, exclude_objects=(), exclude_overlay=False
     ]
     return componentize(local)
 
+def component_graph_reachable(seed_faces,candidates,threshold=0.30):
+    initial=[]
+    for i,comp in enumerate(candidates):
+        d=component_distance(seed_faces,comp,limit=threshold)
+        if d<=threshold+1e-9:
+            initial.append((i,d))
+    seen={i for i,_ in initial}
+    q=deque(i for i,_ in initial)
+    edge_count=0
+    while q:
+        i=q.popleft()
+        for j,other in enumerate(candidates):
+            if j in seen:
+                continue
+            if not bbox_intersects(
+                bbox_expand(bbox3(candidates[i]),threshold),
+                bbox_expand(bbox3(other),0.0)
+            ):
+                continue
+            d=component_distance(candidates[i],other,limit=threshold)
+            if d<=threshold+1e-9:
+                seen.add(j)
+                q.append(j)
+                edge_count+=1
+    return initial,seen,edge_count
+
+def print_reachable_summary(prefix,seed_faces,candidates,threshold=0.30):
+    initial,seen,edge_count=component_graph_reachable(seed_faces,candidates,threshold)
+    groups=defaultdict(lambda: {"components":0,"faces":0,"area":0.0,"nearest":math.inf})
+    for i in sorted(seen):
+        comp=candidates[i]
+        sm=component_summary(comp)
+        key=sm["top"][0][0]
+        g=groups[key]
+        g["components"]+=1
+        g["faces"]+=sm["faces"]
+        g["area"]+=sm["area"]
+        g["nearest"]=min(g["nearest"],component_distance(seed_faces,comp,limit=LOCAL_MARGIN))
+    print(
+        f"{prefix} GRAPH threshold={threshold:.2f} initial={len(initial)} "
+        f"reachable_components={len(seen)} discovered_edges={edge_count}"
+    )
+    for rank,(key,g) in enumerate(sorted(
+        groups.items(), key=lambda kv:(-kv[1]["area"],kv[0])
+    )[:20]):
+        print(
+            f"{prefix} REACHABLE rank={rank} obj={key[0]} mat={key[1]} "
+            f"components={g['components']} faces={g['faces']} "
+            f"area={g['area']:.6f} nearest_seed={g['nearest']:.6f}"
+        )
+    return initial,seen,groups
+
 def print_neighbor_rows(prefix,target_comp,candidates,max_rows=18):
     rows=[]
     for comp in candidates:
@@ -317,9 +434,11 @@ print(
     f"min_up_y={MIN_UP_Y:.9f} local_margin={LOCAL_MARGIN:.1f}"
 )
 
-# Grate: identify the exact local FloorFence00 source component at the accepted
-# model-Y neighborhood, then measure source-native neighbors. The transformed
-# vector footprint is a local search/ranking aid only, not promoted as blanket OBJ registration.
+# Grate: use the union of every local upward FloorFence00 component whose
+# centroid is actually inside the transformed grate search footprint. The
+# transform is only a local selector; the emitted candidate geometry is the
+# exact Temple01 source mesh.
+grate_unions={}
 for side,pdfpoly in GRATE_PDF.items():
     poly=[pdf_to_model(p) for p in pdfpoly]
     x0=min(p[0] for p in poly)-1.5
@@ -342,7 +461,8 @@ for side,pdfpoly in GRATE_PDF.items():
             continue
         candidate_faces.append(fi)
     comps=componentize(candidate_faces)
-    ranked=[]
+    rows=[]
+    qualified=[]
     for comp in comps:
         inside=sum(
             1 for fi in comp
@@ -352,91 +472,142 @@ for side,pdfpoly in GRATE_PDF.items():
             poly_boundary_dist(centroid(faces[fi])[0],centroid(faces[fi])[2],poly)
             for fi in comp
         )
-        s=component_summary(comp)
-        ranked.append((-inside,mind,-s["area"],comp,s))
-    ranked.sort()
+        sm=component_summary(comp)
+        rows.append((-inside,mind,-sm["area"],comp,sm))
+        if inside>0:
+            qualified.append(comp)
+    rows.sort()
+    union=sorted({fi for comp in qualified for fi in comp})
+    grate_unions[side]=union
+    us=component_summary(union)
     print(
         f"T21UPPER GRATE_REGION side={side} "
         f"model_poly={[tuple(round(v,6) for v in p) for p in poly]} "
-        f"faces={len(candidate_faces)} components={len(comps)}"
+        f"faces={len(candidate_faces)} components={len(comps)} "
+        f"qualified_components={len(qualified)}"
     )
-    for rank,row in enumerate(ranked[:12]):
-        neg_inside,mind,neg_area,comp,s=row
+    for rank,row in enumerate(rows[:12]):
+        neg_inside,mind,neg_area,comp,sm=row
         print(
             f"T21UPPER GRATE_CANDIDATE side={side} rank={rank} "
             f"inside_centroids={-neg_inside} boundary_d={mind:.6f} "
-            f"faces={s['faces']} verts={s['verts']} area={s['area']:.6f} "
-            f"ny=({s['ny_min']:.6f},{s['ny_max']:.6f}) "
-            f"bbox={[round(v,6) for v in s['bbox']]}"
+            f"faces={sm['faces']} verts={sm['verts']} area={sm['area']:.6f} "
+            f"ny=({sm['ny_min']:.6f},{sm['ny_max']:.6f}) "
+            f"bbox={[round(v,6) for v in sm['bbox']]}"
         )
-    if ranked:
-        target=ranked[0][3]
-        neighbors=local_walk_components(
-            bbox3(target),
-            exclude_objects=(GRATE_OBJECT,),
-            exclude_overlay=True
+    print(
+        f"T21UPPER GRATE_UNION side={side} faces={us['faces']} verts={us['verts']} "
+        f"area={us['area']:.6f} ny=({us['ny_min']:.6f},{us['ny_max']:.6f}) "
+        f"bbox={[round(v,6) for v in us['bbox']]}"
+    )
+    neighbors=local_walk_components(
+        bbox3(union),
+        exclude_objects=(GRATE_OBJECT,),
+        exclude_overlay=True
+    )
+    nrows=print_neighbor_rows(f"T21UPPER GRATE_{side}",union,neighbors,30)
+    if nrows:
+        print(
+            f"T21UPPER GRATE_NEAREST side={side} "
+            f"dist={nrows[0][0]:.6f} "
+            f"obj={nrows[0][2]['top'][0][0][0]} "
+            f"mat={nrows[0][2]['top'][0][0][1]}"
         )
-        rows=print_neighbor_rows(f"T21UPPER GRATE_{side}",target,neighbors)
-        if rows:
-            print(
-                f"T21UPPER GRATE_NEAREST side={side} "
-                f"dist={rows[0][0]:.6f} "
-                f"obj={rows[0][2]['top'][0][0][0]} "
-                f"mat={rows[0][2]['top'][0][0][1]}"
-            )
+    print_reachable_summary(f"T21UPPER GRATE_{side}",union,neighbors)
 
-# Glass: reconstruct the broad navigation source set from the three largest
-# connected upward Glass01 components on each mirrored side. This matches the
-# previously accepted Pass 13A broad-support evidence without using object names
-# as gameplay authority for any neighboring surface.
+if set(grate_unions)=={"POSITIVE_Z","NEGATIVE_Z"}:
+    def mirrored_vertex_set(comp):
+        return {
+            (round(-vertices[vi][0],3),round(vertices[vi][1],3),round(-vertices[vi][2],3))
+            for fi in comp for vi in faces[fi][:3]
+        }
+    pos={
+        (round(vertices[vi][0],3),round(vertices[vi][1],3),round(vertices[vi][2],3))
+        for fi in grate_unions["POSITIVE_Z"] for vi in faces[fi][:3]
+    }
+    neg_mirror=mirrored_vertex_set(grate_unions["NEGATIVE_Z"])
+    print(
+        f"T21UPPER GRATE_SYMMETRY pos_vertices={len(pos)} "
+        f"mirrored_neg_vertices={len(neg_mirror)} xor={len(pos ^ neg_mirror)}"
+    )
+
+
+# Glass: seed exact source components from the three previously verified Pass
+# 13A project-XZ route points. This avoids selecting components by material name
+# or area rank. Neighbor candidates are still geometry-only diagnostics.
 glass_faces=[
     fi for fi,f in enumerate(faces)
     if f[3]==GLASS_OBJECT and f[4]==GLASS_MATERIAL and tri_normal(f)[1]>=MIN_UP_Y
 ]
-for side,pdfpoly in GLASS_PDF.items():
-    poly=[pdf_to_model(p) for p in pdfpoly]
-    local=[]
-    for fi in glass_faces:
-        cx,cy,cz=centroid(faces[fi])
-        if inside_poly(cx,cz,poly) or poly_boundary_dist(cx,cz,poly)<=1.0:
-            local.append(fi)
-    comps=componentize(local)
-    rows=[]
-    for comp in comps:
-        s=component_summary(comp)
-        rows.append((-s["area"],comp,s))
-    rows.sort()
-    print(
-        f"T21UPPER GLASS_REGION side={side} "
-        f"model_poly={[tuple(round(v,6) for v in p) for p in poly]} "
-        f"up_faces={len(local)} components={len(comps)}"
-    )
-    for rank,(_,comp,s) in enumerate(rows[:12]):
-        print(
-            f"T21UPPER GLASS_COMPONENT side={side} rank={rank} "
-            f"faces={s['faces']} verts={s['verts']} area={s['area']:.6f} "
-            f"ny=({s['ny_min']:.6f},{s['ny_max']:.6f}) "
-            f"bbox={[round(v,6) for v in s['bbox']]}"
+glass_components=componentize(glass_faces)
+face_to_glass_component={}
+for ci,comp in enumerate(glass_components):
+    for fi in comp:
+        face_to_glass_component[fi]=ci
+
+for side,route_points in GLASS_ROUTE_PROJECT_XZ.items():
+    selected_ids=[]
+    route_rows=[]
+    for project_xz in route_points:
+        mx,mz=project_to_model(project_xz)
+        hits=[
+            fi for fi in glass_faces
+            if contains_xz_triangle(mx,mz,faces[fi])
+        ]
+        if not hits:
+            raise SystemExit(
+                f"T21UPPER glass route seed missing side={side} project={project_xz} model={(mx,mz)}"
+            )
+        # Prefer the face whose vertical surface point is closest to the accepted
+        # broad route's authored upper-shell range; duplicate projected shell
+        # faces are resolved deterministically by component area then index.
+        candidate_ids=sorted({
+            face_to_glass_component[fi] for fi in hits
+        })
+        ranked_ids=sorted(
+            candidate_ids,
+            key=lambda ci:(-component_summary(glass_components[ci])["area"],ci)
         )
-    broad=[comp for _,comp,_ in rows[:3]]
-    broad_faces=sorted({fi for comp in broad for fi in comp})
-    if not broad_faces:
-        continue
+        ci=ranked_ids[0]
+        selected_ids.append(ci)
+        route_rows.append((project_xz,(mx,mz),hits,ci))
+    unique_ids=[]
+    for ci in selected_ids:
+        if ci not in unique_ids:
+            unique_ids.append(ci)
+    broad_faces=sorted({
+        fi for ci in unique_ids for fi in glass_components[ci]
+    })
     print(
-        f"T21UPPER GLASS_BROAD side={side} components={len(broad)} "
-        f"faces={len(broad_faces)} area={sum(tri_area(faces[fi]) for fi in broad_faces):.6f}"
+        f"T21UPPER GLASS_ROUTE_BIND side={side} route_components={unique_ids} "
+        f"unique_components={len(unique_ids)} faces={len(broad_faces)} "
+        f"area={sum(tri_area(faces[fi]) for fi in broad_faces):.6f}"
     )
+    for ri,(project_xz,model_xz,hits,ci) in enumerate(route_rows):
+        sm=component_summary(glass_components[ci])
+        print(
+            f"T21UPPER GLASS_ROUTE side={side} index={ri} "
+            f"project={project_xz} model=({model_xz[0]:.6f},{model_xz[1]:.6f}) "
+            f"hit_faces={len(hits)} component={ci} area={sm['area']:.6f} "
+            f"bbox={[round(v,6) for v in sm['bbox']]}"
+        )
+    if len(unique_ids)!=3:
+        raise SystemExit(
+            f"T21UPPER expected three Pass13A source components for {side}, got {unique_ids}"
+        )
     neighbors=local_walk_components(
         bbox3(broad_faces),
         exclude_objects=(GLASS_OBJECT,),
         exclude_overlay=True
     )
-    nrows=print_neighbor_rows(f"T21UPPER GLASS_{side}",broad_faces,neighbors,24)
+    nrows=print_neighbor_rows(f"T21UPPER GLASS_{side}",broad_faces,neighbors,40)
     touching=[row for row in nrows if row[0]<=0.30+1e-9]
     print(
         f"T21UPPER GLASS_NEAR side={side} "
         f"within_0_30={len(touching)} nearest="
         f"{None if not nrows else round(nrows[0][0],6)}"
     )
+    print_reachable_summary(f"T21UPPER GLASS_{side}",broad_faces,neighbors)
 
 print("T21UPPER AUTHORITY diagnostic_only=true runtime_promotion_authorized=false")
+
