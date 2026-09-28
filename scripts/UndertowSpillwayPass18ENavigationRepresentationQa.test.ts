@@ -10,7 +10,10 @@ import {
   type StageVector3
 } from '../src/stage/StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
-import { UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS } from '../src/stage/undertow/UndertowSpillwayUpperGlassRuntimeGeometry';
+import {
+  UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS,
+  undertowUpperGlassPass15dNavigationSolidId
+} from '../src/stage/undertow/UndertowSpillwayUpperGlassRuntimeGeometry';
 
 interface FixtureMesh {
   vertices: StageVector3[];
@@ -396,10 +399,8 @@ describe('T21 Pass 18E Recast representation sweep', () => {
     const runtimeBroadVsBridge: Record<string, PairResult> = {};
     for (const side of ['POSITIVE_Z', 'NEGATIVE_Z'] as const) {
       const runtimeSolid = UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS.find(
-        (solid) => solid.id.includes(side === 'POSITIVE_Z' ? 'positive-z' : 'negative-z')
-      ) ?? UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS[
-        side === 'POSITIVE_Z' ? 0 : 1
-      ];
+        (solid) => solid.id === undertowUpperGlassPass15dNavigationSolidId(side)
+      );
       if (!runtimeSolid?.triangleMesh) {
         throw new Error(`Pass 18E missing runtime broad glass nav mesh for ${side}`);
       }
