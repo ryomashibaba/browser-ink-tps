@@ -6,6 +6,7 @@ import {
 } from '../../navigation/RecastStageNavigation';
 import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
+import { UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D } from './UndertowSpillwayUpperGlassReconstructionCandidate';
 import {
   UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT,
   UNDERTOW_T21D_CONNECTIVITY_PROBES,
@@ -219,6 +220,73 @@ describe('T21-D partial Recast connectivity QA', () => {
       'UndertowT21D:center-origin-step-top-face:0'
     ]);
     expect(centerStep?.missed).toHaveLength(16);
+  });
+
+
+  it('Pass 18B diagnostics paintable plus grate plus verified broad-glass traversable anchors', () => {
+    const stage = undertowT21dConnectivityQaStage();
+    const navigation = new RecastStageNavigation(stage, new PerformanceStats());
+
+    const paintAnchors = stage.paintSurfaces.map((surface) => ({
+      id: `paint:${surface.backingSolidId}`,
+      point: surface.center
+    }));
+
+    const grateAnchors = stage.solids
+      .filter((solid) => solid.id.includes('grate-mesh:'))
+      .map((solid) => ({
+        id: `grate:${solid.id}`,
+        point: [
+          solid.center[0],
+          solid.center[1] + solid.size[1] * 0.5,
+          solid.center[2]
+        ] as const
+      }));
+
+    const glassAnchors = [
+      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.positiveZ
+        .map((point, index) => ({
+          id: `glass:positive-z:${index}`,
+          point
+        })),
+      ...UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D.negativeZ
+        .map((point, index) => ({
+          id: `glass:negative-z:${index}`,
+          point
+        }))
+    ];
+
+    const anchors = [...paintAnchors, ...grateAnchors, ...glassAnchors];
+    expect(paintAnchors).toHaveLength(17);
+    expect(grateAnchors).toHaveLength(2);
+    expect(glassAnchors).toHaveLength(6);
+    expect(anchors).toHaveLength(25);
+    expect(new Set(anchors.map((anchor) => anchor.id)).size).toBe(25);
+
+    const rows = anchors.map((from) => {
+      const reached: string[] = [];
+      const missed: string[] = [];
+      let maxStartSnap = 0;
+      let maxEndSnap = 0;
+      for (const to of anchors) {
+        const result = navigation.auditPath(vec3(from.point), vec3(to.point));
+        maxStartSnap = Math.max(maxStartSnap, result.startSnapDistanceMeters);
+        maxEndSnap = Math.max(maxEndSnap, result.endSnapDistanceMeters);
+        if (result.reachedTarget) reached.push(to.id);
+        else missed.push(to.id);
+      }
+      return {
+        from: from.id,
+        reached,
+        missed,
+        maxStartSnap,
+        maxEndSnap
+      };
+    });
+
+    console.log('T21NAVMATRIX18B', JSON.stringify(rows));
+    expect(rows.every((row) => row.reached.includes(row.from))).toBe(true);
+    expect(rows).toHaveLength(25);
   });
 
 });
