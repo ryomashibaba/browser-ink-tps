@@ -50,14 +50,20 @@ interface ClosestSurfacePair {
   distanceMeters: number;
 }
 
+interface ClosestMeshPair extends ClosestSurfacePair {
+  aTriangleCentroid: StageVector3;
+  bTriangleCentroid: StageVector3;
+}
+
 interface TransitionEndpointPair {
   sourceStart: StageVector3;
   sourceEnd: StageVector3;
   start: StageVector3;
   end: StageVector3;
   sourceBoundaryDistanceMeters: number;
-  startProjectionSnapMeters: number;
-  endProjectionSnapMeters: number;
+  endpointInsetMeters: number;
+  startInsetActualMeters: number;
+  endInsetActualMeters: number;
   endpointDistanceMeters: number;
 }
 
@@ -76,6 +82,7 @@ interface MatrixSummary {
 
 const fixturePath = process.env.T21_PASS18C_SOURCE_JSON ?? '';
 const LINK_RADII = [0.10, 0.18, 0.30] as const;
+const NAV_ENDPOINT_INSET_METERS = 0.42;
 const EPS = 1e-12;
 
 function meshBounds(mesh: StageTriangleMeshGeometry): StageVector3 {
@@ -261,22 +268,39 @@ function triangleClosestPair(
   return best;
 }
 
+function triangleCentroid(
+  a: StageVector3,
+  b: StageVector3,
+  c: StageVector3
+): StageVector3 {
+  return [
+    (a[0] + b[0] + c[0]) / 3,
+    (a[1] + b[1] + c[1]) / 3,
+    (a[2] + b[2] + c[2]) / 3
+  ];
+}
+
 function meshClosestPair(
   aMesh: StageTriangleMeshGeometry,
   bMesh: StageTriangleMeshGeometry
-): ClosestSurfacePair {
-  let best: ClosestSurfacePair | null = null;
+): ClosestMeshPair {
+  let best: ClosestMeshPair | null = null;
   for (let ai = 0; ai < aMesh.indices.length; ai += 3) {
     const a0 = aMesh.vertices[aMesh.indices[ai]!]!;
     const a1 = aMesh.vertices[aMesh.indices[ai + 1]!]!;
     const a2 = aMesh.vertices[aMesh.indices[ai + 2]!]!;
+    const aTriangleCentroid = triangleCentroid(a0, a1, a2);
     for (let bi = 0; bi < bMesh.indices.length; bi += 3) {
       const b0 = bMesh.vertices[bMesh.indices[bi]!]!;
       const b1 = bMesh.vertices[bMesh.indices[bi + 1]!]!;
       const b2 = bMesh.vertices[bMesh.indices[bi + 2]!]!;
       const candidate = triangleClosestPair(a0, a1, a2, b0, b1, b2);
       if (!best || candidate.distanceMeters < best.distanceMeters) {
-        best = candidate;
+        best = {
+          ...candidate,
+          aTriangleCentroid,
+          bTriangleCentroid: triangleCentroid(b0, b1, b2)
+        };
       }
     }
   }
@@ -284,49 +308,43 @@ function meshClosestPair(
   return best;
 }
 
-function projectBoundaryPointToComponentNav(
-  id: string,
-  mesh: StageTriangleMeshGeometry,
-  sourcePoint: StageVector3
-): { point: StageVector3; snapMeters: number } {
-  const nav = new RecastStageNavigation(
-    qaStage(
-      `undertow-pass18f-project-${id}`,
-      [navOnlySolid(`pass18f-project-solid:${id}`, mesh)],
-      []
-    ),
-    new PerformanceStats()
-  );
-  const projected = nav.closestPoint(vec3(sourcePoint));
-  const point = [projected.x, projected.y, projected.z] as StageVector3;
-  return { point, snapMeters: distance(sourcePoint, point) };
+function insetTowardTriangleCentroid(
+  boundary: StageVector3,
+  centroid: StageVector3,
+  insetMeters: number
+): StageVector3 {
+  const delta = sub(centroid, boundary);
+  const length = Math.hypot(delta[0], delta[1], delta[2]);
+  if (length <= EPS) return boundary;
+  const move = Math.min(insetMeters, length * 0.80);
+  return add(boundary, mul(delta, move / length));
 }
 
 function transitionEndpoints(
-  id: string,
   aMesh: StageTriangleMeshGeometry,
   bMesh: StageTriangleMeshGeometry
 ): TransitionEndpointPair {
   const pair = meshClosestPair(aMesh, bMesh);
-  const startProjection = projectBoundaryPointToComponentNav(
-    `${id}:a`,
-    aMesh,
-    pair.a
+  const start = insetTowardTriangleCentroid(
+    pair.a,
+    pair.aTriangleCentroid,
+    NAV_ENDPOINT_INSET_METERS
   );
-  const endProjection = projectBoundaryPointToComponentNav(
-    `${id}:b`,
-    bMesh,
-    pair.b
+  const end = insetTowardTriangleCentroid(
+    pair.b,
+    pair.bTriangleCentroid,
+    NAV_ENDPOINT_INSET_METERS
   );
   return {
     sourceStart: pair.a,
     sourceEnd: pair.b,
-    start: startProjection.point,
-    end: endProjection.point,
+    start,
+    end,
     sourceBoundaryDistanceMeters: pair.distanceMeters,
-    startProjectionSnapMeters: startProjection.snapMeters,
-    endProjectionSnapMeters: endProjection.snapMeters,
-    endpointDistanceMeters: distance(startProjection.point, endProjection.point)
+    endpointInsetMeters: NAV_ENDPOINT_INSET_METERS,
+    startInsetActualMeters: distance(pair.a, start),
+    endInsetActualMeters: distance(pair.b, end),
+    endpointDistanceMeters: distance(start, end)
   };
 }
 
@@ -526,22 +544,18 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
 
     const endpointPairs = {
       gratePositive: transitionEndpoints(
-        'grate-positive',
         fixture.grates.POSITIVE_Z.mesh,
         fixture.grates.POSITIVE_Z.nearestWalkMesh!
       ),
       grateNegative: transitionEndpoints(
-        'grate-negative',
         fixture.grates.NEGATIVE_Z.mesh,
         fixture.grates.NEGATIVE_Z.nearestWalkMesh!
       ),
       glassPositive: transitionEndpoints(
-        'glass-positive',
         fixture.glass.POSITIVE_Z.bridgeMesh,
         fixture.glass.POSITIVE_Z.nearestNonBridgeMesh!
       ),
       glassNegative: transitionEndpoints(
-        'glass-negative',
         fixture.glass.NEGATIVE_Z.bridgeMesh,
         fixture.glass.NEGATIVE_Z.nearestNonBridgeMesh!
       )
@@ -680,7 +694,7 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
       'T21PASS18F_LOCAL_CONNECTOR',
       JSON.stringify({
         diagnosticOnly: true,
-        endpointMethod: 'EXACT_TRIANGLE_CLOSEST_PAIR_PROJECTED_TO_PRODUCTION_RECAST_COMPONENT',
+        endpointMethod: 'EXACT_TRIANGLE_CLOSEST_PAIR_INSET_TOWARD_SOURCE_TRIANGLE_INTERIOR',
         connectorPromotionAuthorized: false,
         connectorDirectionalityAuthorityResolved: false,
         endpointPairs,
