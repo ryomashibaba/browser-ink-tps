@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18O',
+      resolutionPass: '18P',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -740,6 +740,63 @@ describe('T21-D partial Recast connectivity QA', () => {
       at600AllRawConnected: true,
       rawIngressAttachmentResolvedAt100: true,
       rawFinalAttachmentResolvedAt100: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.ingressEndpointIsolationPass18P
+    ).toMatchObject({
+      qaRunNumber: 954,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      trustedSnapMeters: 0.30,
+      trustedFinalLinkRadiusMeters: 0.30,
+      rawIngressRadiiMeters: [0.30, 1.00, 6.00],
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      persistentPositiveAttachmentBlocker:
+        'POSITIVE_Z_GRATE_SIDE_RAW_INGRESS_START',
+      positiveFloorConcrete00RawIngressEndWorksAt100: true,
+      negativeGrateSideRawStartWorksDespiteLargerClosestPointSnap: true,
+      closestPointSnapMagnitudeExplainsAsymmetry: false,
+      mirroredAsymmetryLocalizedToPositiveGrateSideStart: true,
+      radiusIncreaseStillNotPromotionAuthority: true,
+      localConnectorSemanticsValidated: false,
+      originalGrateDirectionalityResolved: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.ingressEndpointIsolationPass18P.positive
+    ).toMatchObject({
+      rawGrateSideStartClosestPointSnapMeters: 0.6472549947142026,
+      rawFloorConcrete00SideEndClosestPointSnapMeters: 0.3420302065480327,
+      at030RawStartRawEndConnected: false,
+      at030RawStartTrustedEndConnected: false,
+      at030TrustedStartRawEndConnected: false,
+      at030TrustedStartTrustedEndConnected: true,
+      at100RawStartRawEndConnected: false,
+      at100RawStartTrustedEndConnected: false,
+      at100TrustedStartRawEndConnected: true,
+      at100TrustedStartTrustedEndConnected: true,
+      at600RawStartRawEndConnected: false,
+      at600RawStartTrustedEndConnected: false,
+      at600TrustedStartRawEndConnected: true,
+      rawGrateSideStartAttachmentResolvedAtOrBelow600: false,
+      rawFloorConcrete00SideEndAttachmentResolvedAt100: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.ingressEndpointIsolationPass18P.negative
+    ).toMatchObject({
+      rawGrateSideStartClosestPointSnapMeters: 0.7401798316876944,
+      rawFloorConcrete00SideEndClosestPointSnapMeters: 0.5103195238057004,
+      at030RawStartRawEndConnected: false,
+      at030TrustedStartTrustedEndConnected: true,
+      at100RawStartRawEndConnected: true,
+      at100RawStartTrustedEndConnected: true,
+      at100TrustedStartRawEndConnected: true,
+      at100TrustedStartTrustedEndConnected: true,
+      rawGrateSideStartAttachmentResolvedAt100: true,
+      rawFloorConcrete00SideEndAttachmentResolvedAt100: true
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
