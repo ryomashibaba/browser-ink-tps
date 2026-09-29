@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18H',
+      resolutionPass: '18I',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -481,6 +481,56 @@ describe('T21-D partial Recast connectivity QA', () => {
       negativeUnbridgedTarget:
         'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c13',
       mirroredFrontierDisposition: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.exactGapVectorAuditPass18I
+    ).toMatchObject({
+      sourceAuditRunNumber: 923,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      temple01RegistrationScale: 0.964211,
+      localizedClosestSeparationIsVerticalStep: false,
+      exactGapWidthAndAxisResolved: true,
+      exactKccFeasibilityAcrossLocalizedGapsResolved: false,
+      originalTraversalDirectionalityResolved: false,
+      originalJumpRequirementResolved: false,
+      globalRecastParameterChangeAuthorized: false,
+      convenienceGeometryAuthorized: false,
+      offMeshLinkAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false,
+      userCaptureRequiredNow: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.exactGapVectorAuditPass18I.grate
+    ).toMatchObject({
+      positiveProjectGapMeters: 0.5185586972146141,
+      negativeProjectGapMeters: 0.5185586972146198,
+      modelGapMeters: 0.5,
+      modelHorizontalGapMeters: 0.5,
+      modelVerticalDeltaMeters: 0,
+      closestSeparationAxis: 'MODEL_Z',
+      positiveModelDelta: [0, 0, 0.5],
+      negativeModelDelta: [0, 0, -0.5],
+      exactHalfMeterModelGap: true,
+      purelyHorizontalClosestSeparation: true,
+      structurallyMirrored: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.exactGapVectorAuditPass18I.upperGlass
+    ).toMatchObject({
+      projectGapMeters: 2.07423478885845,
+      modelGapMeters: 2.0,
+      modelHorizontalGapMeters: 2.0,
+      modelVerticalDeltaMeters: 0,
+      closestSeparationAxis: 'MODEL_Z',
+      modelY: 3.0,
+      positiveModelZ: [21.5, 19.5],
+      negativeModelZ: [-21.5, -19.5],
+      absoluteModelXFrontierLines: [4.25, 16.0],
+      exactTwoMeterModelGap: true,
+      purelyHorizontalClosestSeparation: true,
+      tiedFrontiersStructurallyMirrored: true
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
