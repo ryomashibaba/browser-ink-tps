@@ -456,6 +456,43 @@ describe('T21 Pass 18O raw/trusted grate endpoint hybrid diagnostic',()=>{
       sweep
     }));
 
+    const at030=sweep.find((row)=>row.rawRadiusMeters===0.30)!;
+    const at100=sweep.find((row)=>row.rawRadiusMeters===1.00)!;
+    const at600=sweep.find((row)=>row.rawRadiusMeters===6.00)!;
+    const positiveAt100=at100.sides.POSITIVE_Z;
+    const negativeAt100=at100.sides.NEGATIVE_Z;
+    const positiveAt600=at600.sides.POSITIVE_Z;
+    const negativeAt600=at600.sides.NEGATIVE_Z;
+
+    expect(at030.sides.POSITIVE_Z.rawIngressTrustedFinal.bidirectionallyReached).toBe(false);
+    expect(at030.sides.POSITIVE_Z.trustedIngressRawFinal.bidirectionallyReached).toBe(false);
+    expect(at030.sides.NEGATIVE_Z.rawIngressTrustedFinal.bidirectionallyReached).toBe(false);
+    expect(at030.sides.NEGATIVE_Z.trustedIngressRawFinal.bidirectionallyReached).toBe(false);
+    expect(at030.sides.POSITIVE_Z.allTrusted.bidirectionallyReached).toBe(true);
+    expect(at030.sides.NEGATIVE_Z.allTrusted.bidirectionallyReached).toBe(true);
+
+    expect(positiveAt100.rawIngressTrustedFinal.bidirectionallyReached).toBe(false);
+    expect(positiveAt100.trustedIngressRawFinal.bidirectionallyReached).toBe(true);
+    expect(positiveAt100.allRaw.bidirectionallyReached).toBe(false);
+    expect(positiveAt100.allTrusted.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.rawIngressTrustedFinal.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.trustedIngressRawFinal.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.allRaw.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.allTrusted.bidirectionallyReached).toBe(true);
+
+    expect(positiveAt600.rawIngressTrustedFinal.bidirectionallyReached).toBe(false);
+    expect(positiveAt600.trustedIngressRawFinal.bidirectionallyReached).toBe(true);
+    expect(positiveAt600.allRaw.bidirectionallyReached).toBe(false);
+    expect(negativeAt600.rawIngressTrustedFinal.bidirectionallyReached).toBe(true);
+    expect(negativeAt600.trustedIngressRawFinal.bidirectionallyReached).toBe(true);
+    expect(negativeAt600.allRaw.bidirectionallyReached).toBe(true);
+
+    expect(
+      positiveAt100.rawIngressTrustedFinal.forward.endpointErrorMeters
+    ).toBeCloseTo(46.86031243966464,12);
+    expect(
+      positiveAt100.rawIngressTrustedFinal.reverse.endpointErrorMeters
+    ).toBeCloseTo(2.9400917651756426,12);
     expect(baseline.reached).toBe(79);
     expect(baseline.weak).toBe(9);
     expect(baseline.strong).toBe(11);
