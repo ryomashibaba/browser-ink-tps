@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18O' as const,
+  resolutionPass: '18P' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1005,6 +1005,60 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18O mixes raw physical-boundary and trusted nonlocal endpoints per break. At 0.30m both hybrid variants fail on both sides while all-trusted succeeds. At 1.00m and 6.00m, POSITIVE_Z succeeds when ingress is trusted and the final 0.5m gap stays raw, but still fails when ingress stays raw and final is trusted; NEGATIVE_Z succeeds in both hybrids and all-raw from 1.00m upward. Therefore the persistent mirrored asymmetry from Pass 18N is isolated specifically to the POSITIVE_Z grate->FloorConcrete00 raw ingress attachment. The later 0.5m raw final-gap attachment is viable on both sides at 1.00m when ingress is already attached. This does not authorize a 1.00m production radius or any runtime link; the positive ingress nav-poly/erosion binding must be localized directly.'
   }),
 
+  ingressEndpointIsolationPass18P: Object.freeze({
+    qaRunNumber: 954,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedSnapMeters: 0.30,
+    trustedFinalLinkRadiusMeters: 0.30,
+    rawIngressRadiiMeters: [0.30, 1.00, 6.00] as const,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    positive: Object.freeze({
+      rawGrateSideStartClosestPointSnapMeters: 0.6472549947142026,
+      rawFloorConcrete00SideEndClosestPointSnapMeters: 0.3420302065480327,
+      at030RawStartRawEndConnected: false,
+      at030RawStartTrustedEndConnected: false,
+      at030TrustedStartRawEndConnected: false,
+      at030TrustedStartTrustedEndConnected: true,
+      at100RawStartRawEndConnected: false,
+      at100RawStartTrustedEndConnected: false,
+      at100TrustedStartRawEndConnected: true,
+      at100TrustedStartTrustedEndConnected: true,
+      at600RawStartRawEndConnected: false,
+      at600RawStartTrustedEndConnected: false,
+      at600TrustedStartRawEndConnected: true,
+      rawGrateSideStartAttachmentResolvedAtOrBelow600: false,
+      rawFloorConcrete00SideEndAttachmentResolvedAt100: true
+    }),
+    negative: Object.freeze({
+      rawGrateSideStartClosestPointSnapMeters: 0.7401798316876944,
+      rawFloorConcrete00SideEndClosestPointSnapMeters: 0.5103195238057004,
+      at030RawStartRawEndConnected: false,
+      at030TrustedStartTrustedEndConnected: true,
+      at100RawStartRawEndConnected: true,
+      at100RawStartTrustedEndConnected: true,
+      at100TrustedStartRawEndConnected: true,
+      at100TrustedStartTrustedEndConnected: true,
+      rawGrateSideStartAttachmentResolvedAt100: true,
+      rawFloorConcrete00SideEndAttachmentResolvedAt100: true
+    }),
+    persistentPositiveAttachmentBlocker:
+      'POSITIVE_Z_GRATE_SIDE_RAW_INGRESS_START' as const,
+    positiveFloorConcrete00RawIngressEndWorksAt100: true,
+    negativeGrateSideRawStartWorksDespiteLargerClosestPointSnap: true,
+    closestPointSnapMagnitudeExplainsAsymmetry: false,
+    mirroredAsymmetryLocalizedToPositiveGrateSideStart: true,
+    radiusIncreaseStillNotPromotionAuthority: true,
+    localConnectorSemanticsValidated: false,
+    originalGrateDirectionalityResolved: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18P splits the Pass 18O ingress itself into grate-side start and FloorConcrete00-side end endpoints while keeping the later final-gap link trusted. At radius 1.00m and 6.00m, POSITIVE_Z still fails whenever the grate-side start remains raw, even if the FloorConcrete00 end is trusted; replacing only the grate-side start with its trusted interior point makes the raw FloorConcrete00 end succeed. NEGATIVE_Z succeeds with all raw/trusted start/end combinations from 1.00m. The raw-start closest-point snap magnitude is 0.647255m positive versus an even larger 0.740180m negative, so scalar closest-point distance does not explain the asymmetry. The remaining defect boundary is the POSITIVE_Z grate-side raw ingress start attachment/nav-poly identity.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1035,12 +1089,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Localize the POSITIVE_Z grate->FloorConcrete00 ingress attachment failure at nav-poly level. Pass 18O proves the later raw 0.5m final-gap attachment works on both sides at radius 1.00m once ingress is trusted, while POSITIVE_Z raw ingress still fails even at 6.00m and NEGATIVE_Z raw ingress works from 1.00m. Inspect raw ingress endpoint snaps/nearest-polygons/erosion retreat or a minimal local source representation; do not infer different gameplay semantics from this Recast asymmetry. Original grate walk-on/off directionality remains an independent promotion gate.',
+    'Localize the POSITIVE_Z grate-side raw ingress start to the wrong/no Recast polygon and find the minimum faithful local correction. Pass 18P proves the FloorConcrete00-side raw ingress end works at radius 1.00m once only the grate-side start is trusted, while any variant retaining the POSITIVE_Z raw grate-side start fails through 6.00m. The negative raw grate-side start succeeds despite a larger closest-point snap distance, so inspect polygon/island membership or sweep small in-surface start offsets rather than using scalar snap distance or global radius as a fix. Original grate walk-on/off directionality remains an independent promotion gate.',
     'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18O preserves Passes 18A-18N and localizes the grate asymmetry to one attachment: POSITIVE_Z grate->FloorConcrete00 raw ingress. The raw final 0.5m FloorConcrete02->FloorSlope00 attachment works on both sides at radius 1.00m when ingress is trusted; NEGATIVE_Z raw ingress also works at 1.00m, but POSITIVE_Z raw ingress remains broken through 6.00m. This is a Recast/nav-poly attachment defect boundary, not evidence for asymmetric original gameplay. The next safe diagnostic is direct positive-ingress endpoint/nav-poly localization; production geometry, Recast globals, and runtime links remain unchanged. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18P preserves Passes 18A-18O and isolates the persistent grate asymmetry to the POSITIVE_Z grate-side raw ingress start endpoint. The FloorConcrete00-side raw end is viable at radius 1.00m once the start is trusted, while retaining the positive raw start fails through 6.00m. NEGATIVE_Z succeeds from 1.00m even though its raw-start closest-point snap is larger, excluding snap magnitude as the explanation. The next safe diagnostic is polygon/island identity or minimal in-surface retreat for that single positive start endpoint; production geometry, Recast globals, and runtime links remain unchanged. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1075,12 +1129,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18O partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18P partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18O' ||
+    audit.resolutionPass !== '18P' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -1756,6 +1810,57 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     hybrid18o.activationBlockerCleared
   ) {
     errors.push('Pass 18O hybrid grate endpoint boundary drifted');
+  }
+
+  const ingress18p = audit.ingressEndpointIsolationPass18P;
+  if (
+    ingress18p.qaRunNumber !== 954 ||
+    !ingress18p.diagnosticOnly ||
+    ingress18p.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(ingress18p.trustedSnapMeters - 0.30) > 1e-12 ||
+    Math.abs(ingress18p.trustedFinalLinkRadiusMeters - 0.30) > 1e-12 ||
+    ingress18p.rawIngressRadiiMeters.join(',') !== '0.3,1,6' ||
+    ingress18p.baselineReachedDirectedPairs !== 79 ||
+    ingress18p.baselineWeakComponentCount !== 9 ||
+    ingress18p.baselineStronglyConnectedComponentCount !== 11 ||
+    Math.abs(ingress18p.positive.rawGrateSideStartClosestPointSnapMeters - 0.6472549947142026) > 1e-12 ||
+    Math.abs(ingress18p.positive.rawFloorConcrete00SideEndClosestPointSnapMeters - 0.3420302065480327) > 1e-12 ||
+    ingress18p.positive.at030RawStartRawEndConnected ||
+    ingress18p.positive.at030RawStartTrustedEndConnected ||
+    ingress18p.positive.at030TrustedStartRawEndConnected ||
+    !ingress18p.positive.at030TrustedStartTrustedEndConnected ||
+    ingress18p.positive.at100RawStartRawEndConnected ||
+    ingress18p.positive.at100RawStartTrustedEndConnected ||
+    !ingress18p.positive.at100TrustedStartRawEndConnected ||
+    !ingress18p.positive.at100TrustedStartTrustedEndConnected ||
+    ingress18p.positive.at600RawStartRawEndConnected ||
+    ingress18p.positive.at600RawStartTrustedEndConnected ||
+    !ingress18p.positive.at600TrustedStartRawEndConnected ||
+    ingress18p.positive.rawGrateSideStartAttachmentResolvedAtOrBelow600 ||
+    !ingress18p.positive.rawFloorConcrete00SideEndAttachmentResolvedAt100 ||
+    Math.abs(ingress18p.negative.rawGrateSideStartClosestPointSnapMeters - 0.7401798316876944) > 1e-12 ||
+    Math.abs(ingress18p.negative.rawFloorConcrete00SideEndClosestPointSnapMeters - 0.5103195238057004) > 1e-12 ||
+    ingress18p.negative.at030RawStartRawEndConnected ||
+    !ingress18p.negative.at030TrustedStartTrustedEndConnected ||
+    !ingress18p.negative.at100RawStartRawEndConnected ||
+    !ingress18p.negative.at100RawStartTrustedEndConnected ||
+    !ingress18p.negative.at100TrustedStartRawEndConnected ||
+    !ingress18p.negative.at100TrustedStartTrustedEndConnected ||
+    !ingress18p.negative.rawGrateSideStartAttachmentResolvedAt100 ||
+    !ingress18p.negative.rawFloorConcrete00SideEndAttachmentResolvedAt100 ||
+    ingress18p.persistentPositiveAttachmentBlocker !==
+      'POSITIVE_Z_GRATE_SIDE_RAW_INGRESS_START' ||
+    !ingress18p.positiveFloorConcrete00RawIngressEndWorksAt100 ||
+    !ingress18p.negativeGrateSideRawStartWorksDespiteLargerClosestPointSnap ||
+    ingress18p.closestPointSnapMagnitudeExplainsAsymmetry ||
+    !ingress18p.mirroredAsymmetryLocalizedToPositiveGrateSideStart ||
+    !ingress18p.radiusIncreaseStillNotPromotionAuthority ||
+    ingress18p.localConnectorSemanticsValidated ||
+    ingress18p.originalGrateDirectionalityResolved ||
+    ingress18p.runtimePromotionAuthorized ||
+    ingress18p.activationBlockerCleared
+  ) {
+    errors.push('Pass 18P ingress endpoint isolation boundary drifted');
   }
 
   if (
