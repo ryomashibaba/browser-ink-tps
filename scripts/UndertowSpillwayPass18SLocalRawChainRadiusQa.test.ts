@@ -540,6 +540,25 @@ describe('T21 Pass 18S local raw-chain radius diagnostic',()=>{
     expect(baseline.weak).toBe(9);
     expect(baseline.strong).toBe(11);
     expect(RADII).toHaveLength(7);
+    for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const){
+      const record=sideSweeps[side];
+      expect(record.firstIngress).not.toBeNull();
+      expect(record.firstFinal).not.toBeNull();
+      expect(record.firstIngress!.radiusMeters).toBe(0.75);
+      expect(record.firstIngress!.result.bidirectionallyReached).toBe(true);
+      expect(record.firstFinal!.radiusMeters).toBe(0.90);
+      expect(record.firstFinal!.result.bidirectionallyReached).toBe(true);
+      expect(record.combined).not.toBeNull();
+      expect(record.combined!.ingressRadiusMeters).toBe(0.75);
+      expect(record.combined!.finalRadiusMeters).toBe(0.90);
+      expect(record.combined!.result.bidirectionallyReached).toBe(true);
+      expect(
+        record.ingressSweep.map((row)=>row.result.bidirectionallyReached)
+      ).toEqual([false,false,false,false,true,true,true]);
+      expect(
+        record.finalSweep.map((row)=>row.result.bidirectionallyReached)
+      ).toEqual([false,false,false,false,false,true,true]);
+    }
     expect(POSITIVE_RETREAT_METERS).toBe(0.040);
     expect(LINK_RADIUS_METERS).toBe(0.30);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
