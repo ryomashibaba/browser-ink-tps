@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18L' as const,
+  resolutionPass: '18M' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -895,6 +895,39 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18L repeats the same four Pass 18K transitions but moves each endpoint to a <=0.30m-trusted Recast interior point sampled from its own source component. Connectivity rises from 79/9/11 to 89/7/9 and both grate singleton islands join their mirrored spawn-side route clusters. However the trusted nav points are not local to the physical source gaps: source-boundary offsets span 1.734046934-5.499147868m, ingress link endpoint separations are 3.338013739m / 4.996651842m, and the final 0.5m physical gaps become 6.370536112m / 6.360070728m nav-space links. This proves endpoint attachment/erosion is the blocker, but also proves this candidate is a nonlocal shortcut rather than a faithful local connector. No runtime promotion is authorized.'
   }),
 
+  trustedEndpointMinimalityPass18M: Object.freeze({
+    qaRunNumber: 941,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedSnapMeters: 0.30,
+    linkRadiusMeters: 0.30,
+    candidateLinkCount: 4,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    ingressOnlyReachedDirectedPairs: 79,
+    finalOnlyReachedDirectedPairs: 79,
+    everySingleLinkReachedDirectedPairs: 79,
+    positivePairReachedDirectedPairs: 84,
+    positivePairWeakComponentCount: 8,
+    positivePairStronglyConnectedComponentCount: 10,
+    negativePairReachedDirectedPairs: 84,
+    negativePairWeakComponentCount: 8,
+    negativePairStronglyConnectedComponentCount: 10,
+    allFourReachedDirectedPairs: 89,
+    allFourWeakComponentCount: 7,
+    allFourStronglyConnectedComponentCount: 9,
+    linksRequiredPerSideForConnectivityChange: 2,
+    ingressAndFinalBreakAreIndependentlyNecessaryPerSide: true,
+    eachSidePairResolvesOnlyItsOwnGrateSingleton: true,
+    twoDistinctRecastAttachmentBreaksPerSide: true,
+    localConnectorSemanticsValidated: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18M decomposes the four nonlocal trusted-endpoint links from Pass 18L. Neither ingress-only nor final-gap-only links change the 79/9/11 baseline, and every individual link is likewise inert. The two-link POSITIVE_Z pair alone yields 84/8/10 and resolves only the positive grate singleton; the mirrored NEGATIVE_Z pair produces the same 84/8/10 and resolves only the negative grate singleton. All four links reproduce 89/7/9. Therefore each mirrored grate route contains two independently necessary Recast attachment breaks: grate->source-chain ingress and the later 0.5m FloorConcrete02->FloorSlope00 break. Because the only working endpoints remain the nonlocal Pass 18L projections, this is diagnostic minimality evidence and not promotion authority.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -925,12 +958,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Determine a faithful local CPU representation for the mirrored grate route without nonlocal endpoint projection. Pass 18K shows exact source-boundary links do nothing under production erosion; Pass 18L can connect both grate islands only by snapping endpoints 1.73-5.50m away from the physical gaps, creating 3.34-6.37m nav-space shortcuts. Isolate which endpoint/erosion stage causes this retreat and test the minimum representation that preserves the physically verified 0.5m grounded crossing without inventing long links. Original grate walk-on/off directionality remains an independent promotion gate.',
+    'Determine a faithful local CPU representation for the mirrored grate route without nonlocal endpoint projection. Pass 18M proves each side has two independently necessary Recast attachment breaks: the grate->source-chain ingress and the later exact 0.5m gap. Sweep raw physical-boundary off-mesh attachment radius to determine how far Detour must search before each break attaches, and reject any radius that binds unrelated nav islands. Original grate walk-on/off directionality remains an independent promotion gate.',
     'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18L preserves Passes 18A-18K and localizes the grate failure to Recast endpoint attachment after erosion. Raw physical-boundary links remain inert even with the full source chain (Pass 18K), while trusted interior endpoints restore connectivity only after retreating 1.73-5.50m from the source boundary and producing 3.34-6.37m nav-space links (Pass 18L). Those nonlocal shortcuts are diagnostic evidence, not a promotable solution. The safe next step is to isolate the minimum local representation/erosion boundary for the grate route while separately recovering the actual upper-glass transition. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18M preserves Passes 18A-18L and proves the grate chain has two distinct Recast attachment breaks per mirrored side. Either trusted ingress pair alone or trusted final-gap pair alone is insufficient; both links on one side are required to resolve that side only, and both mirrored pairs reproduce the Pass 18L 89/7/9 matrix. Because the working endpoints are still nonlocal, the next safe diagnostic is a raw-boundary attachment-radius sweep, not runtime promotion. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -965,12 +998,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18L partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18M partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18L' ||
+    audit.resolutionPass !== '18M' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -1538,6 +1571,40 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18L trusted-endpoint grate-chain boundary drifted');
   }
 
+  const min18m = audit.trustedEndpointMinimalityPass18M;
+  if (
+    min18m.qaRunNumber !== 941 ||
+    !min18m.diagnosticOnly ||
+    min18m.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(min18m.trustedSnapMeters - 0.30) > 1e-12 ||
+    Math.abs(min18m.linkRadiusMeters - 0.30) > 1e-12 ||
+    min18m.candidateLinkCount !== 4 ||
+    min18m.baselineReachedDirectedPairs !== 79 ||
+    min18m.baselineWeakComponentCount !== 9 ||
+    min18m.baselineStronglyConnectedComponentCount !== 11 ||
+    min18m.ingressOnlyReachedDirectedPairs !== 79 ||
+    min18m.finalOnlyReachedDirectedPairs !== 79 ||
+    min18m.everySingleLinkReachedDirectedPairs !== 79 ||
+    min18m.positivePairReachedDirectedPairs !== 84 ||
+    min18m.positivePairWeakComponentCount !== 8 ||
+    min18m.positivePairStronglyConnectedComponentCount !== 10 ||
+    min18m.negativePairReachedDirectedPairs !== 84 ||
+    min18m.negativePairWeakComponentCount !== 8 ||
+    min18m.negativePairStronglyConnectedComponentCount !== 10 ||
+    min18m.allFourReachedDirectedPairs !== 89 ||
+    min18m.allFourWeakComponentCount !== 7 ||
+    min18m.allFourStronglyConnectedComponentCount !== 9 ||
+    min18m.linksRequiredPerSideForConnectivityChange !== 2 ||
+    !min18m.ingressAndFinalBreakAreIndependentlyNecessaryPerSide ||
+    !min18m.eachSidePairResolvesOnlyItsOwnGrateSingleton ||
+    !min18m.twoDistinctRecastAttachmentBreaksPerSide ||
+    min18m.localConnectorSemanticsValidated ||
+    min18m.runtimePromotionAuthorized ||
+    min18m.activationBlockerCleared
+  ) {
+    errors.push('Pass 18M trusted-endpoint minimality boundary drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -1558,7 +1625,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18L full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18M full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
