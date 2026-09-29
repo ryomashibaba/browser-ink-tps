@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18T',
+      resolutionPass: '18U',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -955,6 +955,45 @@ describe('T21-D partial Recast connectivity QA', () => {
       combinedIngressRadiusMeters: 0.725,
       combinedFinalRadiusMeters: 0.85,
       combinedBidirectionallyReached: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localCandidateCollateralPass18U
+    ).toMatchObject({
+      qaRunNumber: 977,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      positiveRetreatMeters: 0.040,
+      ingressRadiusMeters: 0.725,
+      finalRadiusMeters: 0.85,
+      candidateLinkCount: 4,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      candidateReachedDirectedPairs: 89,
+      candidateWeakComponentCount: 7,
+      candidateStronglyConnectedComponentCount: 9,
+      baselineIsolatedAnchorCount: 3,
+      candidateIsolatedAnchorCount: 1,
+      newlyReachedDirectedPairCount: 10,
+      removedDirectedPairCount: 0,
+      nonGrateConnectivityStableIgnoringAddedGrates: true,
+      eachGrateReachesExactlyOwnFourAnchorRouteClusterPlusSelf: true,
+      crossSideGrateAttachmentObserved: false,
+      upperGlassCollateralAttachmentObserved: false,
+      centerStepCollateralAttachmentObserved: false,
+      positiveFocusedForwardPointCount: 9,
+      positiveFocusedReversePointCount: 14,
+      negativeFocusedForwardPointCount: 10,
+      negativeFocusedReversePointCount: 10,
+      focusedEndpointErrorMeters: 0,
+      fullMatrixCollateralValidated: true,
+      focusedPathEndpointValidated: true,
+      candidateTopologyMatchesIntendedGrateRouteClusters: true,
+      exactMinimumAttachmentRadiiResolved: false,
+      originalGrateDirectionalityResolved: false,
+      localConnectorSemanticsValidated: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
