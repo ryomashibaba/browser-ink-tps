@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18J' as const,
+  resolutionPass: '18L' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -834,6 +834,67 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18J drives the shared production Human Rapier KCC directly across the exact Pass 18I same-height source gaps using only the two endpoint walk meshes. All four mirrored/directed 0.5m grate-side probes succeed while remaining grounded for the entire crossing, with zero airborne ticks and <0.085m observed foot drop. All eight mirrored/directed 2.0m upper-glass frontier probes fail the grounded-traversal criterion, become airborne for 20-23 ticks, and drop about 1.99-2.52m even though horizontal motion continues toward the target. Therefore the grate disconnect is further localized as a Recast representation mismatch for a physically ground-traversable narrow gap, while the tested upper-glass frontier cannot be represented as an ordinary grounded walk. This still does not by itself authorize an original-game navigation link or resolve gameplay directionality/jump semantics.'
   }),
 
+  rawBoundaryGrateChainPass18K: Object.freeze({
+    qaRunNumber: 935,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    linkRadiusMeters: 0.30,
+    candidateLinkCount: 4,
+    candidateDirectionality:
+      'BIDIRECTIONAL_QA_ONLY_FROM_PASS18D_AND_PASS18J_KCC' as const,
+    positiveIngressBoundaryDistanceMeters: 0.3454057383491051,
+    negativeIngressBoundaryDistanceMeters: 0.3454057383491022,
+    finalGapModelMeters: 0.5,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    ingressOnlyReachedDirectedPairs: 79,
+    finalOnlyReachedDirectedPairs: 79,
+    combinedReachedDirectedPairs: 79,
+    combinedWeakComponentCount: 9,
+    combinedStronglyConnectedComponentCount: 11,
+    candidateLinksChangedConnectivity: false,
+    bothGratesRemainIsolated: true,
+    rawSourceBoundaryEndpointsSufficientForDetourBinding: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18K binds the complete eight-component source-native grate continuation per side and tests exactly four QA-only bidirectional links: grate->FloorConcrete00 ingress plus the Pass 18I exact 0.5m FloorConcrete02->FloorSlope00 gap on each side. Using the exact source-boundary endpoints, ingress-only, final-gap-only, and all-four variants remain exactly 79 reached directed pairs / 9 weak components / 11 SCCs; both grate anchors remain singleton islands. Therefore simply adding the complete source chain plus raw-boundary Detour links is insufficient under production Recast erosion.'
+  }),
+  trustedEndpointGrateChainPass18L: Object.freeze({
+    qaRunNumber: 937,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedSnapMeters: 0.30,
+    linkRadiusMeters: 0.30,
+    candidateLinkCount: 4,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    candidateReachedDirectedPairs: 89,
+    candidateWeakComponentCount: 7,
+    candidateStronglyConnectedComponentCount: 9,
+    baselineIsolatedAnchorCount: 3,
+    candidateIsolatedAnchorCount: 1,
+    bothGratesGainExternalReach: true,
+    positiveGrateReachedAnchorCountIncludingSelf: 5,
+    negativeGrateReachedAnchorCountIncludingSelf: 5,
+    positiveIngressTrustedEndpointDistanceMeters: 3.338013739086229,
+    negativeIngressTrustedEndpointDistanceMeters: 4.996651842296954,
+    positiveFinalTrustedEndpointDistanceMeters: 6.370536111620433,
+    negativeFinalTrustedEndpointDistanceMeters: 6.360070727543967,
+    minimumSourceBoundaryOffsetMeters: 1.7340469343833274,
+    maximumSourceBoundaryOffsetMeters: 5.499147868379137,
+    connectivityImprovedWithTrustedInteriorEndpoints: true,
+    trustedProjectionRemainsLocalToSourceBoundary: false,
+    localConnectorSemanticsValidated: false,
+    nonlocalProjectionMakesCandidateUnfitForPromotion: true,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18L repeats the same four Pass 18K transitions but moves each endpoint to a <=0.30m-trusted Recast interior point sampled from its own source component. Connectivity rises from 79/9/11 to 89/7/9 and both grate singleton islands join their mirrored spawn-side route clusters. However the trusted nav points are not local to the physical source gaps: source-boundary offsets span 1.734046934-5.499147868m, ingress link endpoint separations are 3.338013739m / 4.996651842m, and the final 0.5m physical gaps become 6.370536112m / 6.360070728m nav-space links. This proves endpoint attachment/erosion is the blocker, but also proves this candidate is a nonlocal shortcut rather than a faithful local connector. No runtime promotion is authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -864,12 +925,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Resolve original traversal/directionality authority for the mirrored grate-side gap and determine the narrowest faithful CPU navigation representation. Pass 18J proves the exact 0.5m same-height source gap is physically traversable by the production Human KCC in both directions with zero airborne ticks, while Recast remains disconnected. A QA-only local navigation representation may now be tested, but runtime promotion still requires preserving original grate walk-on/off semantics rather than inventing directionality.',
+    'Determine a faithful local CPU representation for the mirrored grate route without nonlocal endpoint projection. Pass 18K shows exact source-boundary links do nothing under production erosion; Pass 18L can connect both grate islands only by snapping endpoints 1.73-5.50m away from the physical gaps, creating 3.34-6.37m nav-space shortcuts. Isolate which endpoint/erosion stage causes this retreat and test the minimum representation that preserves the physically verified 0.5m grounded crossing without inventing long links. Original grate walk-on/off directionality remains an independent promotion gate.',
     'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18J preserves Passes 18A-18I and resolves production-KCC feasibility at the exact localized horizontal gaps. The mirrored 0.5m grate-side gap is traversed in both directions with zero airborne ticks, confirming a local Recast/KCC representation mismatch. The mirrored 2.0m upper-glass frontier fails every grounded-walk probe and produces substantial falling, so it is not an ordinary walk transition. The next safe work is a QA-only minimal grate navigation representation plus evidence recovery for the actual upper-glass transition; no runtime connector, convenience slab, or global Recast change is yet authorized. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18L preserves Passes 18A-18K and localizes the grate failure to Recast endpoint attachment after erosion. Raw physical-boundary links remain inert even with the full source chain (Pass 18K), while trusted interior endpoints restore connectivity only after retreating 1.73-5.50m from the source boundary and producing 3.34-6.37m nav-space links (Pass 18L). Those nonlocal shortcuts are diagnostic evidence, not a promotable solution. The safe next step is to isolate the minimum local representation/erosion boundary for the grate route while separately recovering the actual upper-glass transition. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -904,12 +965,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18J partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18L partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18J' ||
+    audit.resolutionPass !== '18L' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -1415,6 +1476,68 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18J production-KCC exact-gap boundary drifted');
   }
 
+  const chain18k = audit.rawBoundaryGrateChainPass18K;
+  if (
+    chain18k.qaRunNumber !== 935 ||
+    !chain18k.diagnosticOnly ||
+    chain18k.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(chain18k.linkRadiusMeters - 0.30) > 1e-12 ||
+    chain18k.candidateLinkCount !== 4 ||
+    Math.abs(chain18k.positiveIngressBoundaryDistanceMeters - 0.3454057383491051) > 1e-12 ||
+    Math.abs(chain18k.negativeIngressBoundaryDistanceMeters - 0.3454057383491022) > 1e-12 ||
+    Math.abs(chain18k.finalGapModelMeters - 0.5) > 1e-12 ||
+    chain18k.baselineReachedDirectedPairs !== 79 ||
+    chain18k.baselineWeakComponentCount !== 9 ||
+    chain18k.baselineStronglyConnectedComponentCount !== 11 ||
+    chain18k.ingressOnlyReachedDirectedPairs !== 79 ||
+    chain18k.finalOnlyReachedDirectedPairs !== 79 ||
+    chain18k.combinedReachedDirectedPairs !== 79 ||
+    chain18k.combinedWeakComponentCount !== 9 ||
+    chain18k.combinedStronglyConnectedComponentCount !== 11 ||
+    chain18k.candidateLinksChangedConnectivity ||
+    !chain18k.bothGratesRemainIsolated ||
+    chain18k.rawSourceBoundaryEndpointsSufficientForDetourBinding ||
+    chain18k.runtimePromotionAuthorized ||
+    chain18k.activationBlockerCleared
+  ) {
+    errors.push('Pass 18K raw-boundary grate-chain boundary drifted');
+  }
+
+  const chain18l = audit.trustedEndpointGrateChainPass18L;
+  if (
+    chain18l.qaRunNumber !== 937 ||
+    !chain18l.diagnosticOnly ||
+    chain18l.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(chain18l.trustedSnapMeters - 0.30) > 1e-12 ||
+    Math.abs(chain18l.linkRadiusMeters - 0.30) > 1e-12 ||
+    chain18l.candidateLinkCount !== 4 ||
+    chain18l.baselineReachedDirectedPairs !== 79 ||
+    chain18l.baselineWeakComponentCount !== 9 ||
+    chain18l.baselineStronglyConnectedComponentCount !== 11 ||
+    chain18l.candidateReachedDirectedPairs !== 89 ||
+    chain18l.candidateWeakComponentCount !== 7 ||
+    chain18l.candidateStronglyConnectedComponentCount !== 9 ||
+    chain18l.baselineIsolatedAnchorCount !== 3 ||
+    chain18l.candidateIsolatedAnchorCount !== 1 ||
+    !chain18l.bothGratesGainExternalReach ||
+    chain18l.positiveGrateReachedAnchorCountIncludingSelf !== 5 ||
+    chain18l.negativeGrateReachedAnchorCountIncludingSelf !== 5 ||
+    Math.abs(chain18l.positiveIngressTrustedEndpointDistanceMeters - 3.338013739086229) > 1e-12 ||
+    Math.abs(chain18l.negativeIngressTrustedEndpointDistanceMeters - 4.996651842296954) > 1e-12 ||
+    Math.abs(chain18l.positiveFinalTrustedEndpointDistanceMeters - 6.370536111620433) > 1e-12 ||
+    Math.abs(chain18l.negativeFinalTrustedEndpointDistanceMeters - 6.360070727543967) > 1e-12 ||
+    Math.abs(chain18l.minimumSourceBoundaryOffsetMeters - 1.7340469343833274) > 1e-12 ||
+    Math.abs(chain18l.maximumSourceBoundaryOffsetMeters - 5.499147868379137) > 1e-12 ||
+    !chain18l.connectivityImprovedWithTrustedInteriorEndpoints ||
+    chain18l.trustedProjectionRemainsLocalToSourceBoundary ||
+    chain18l.localConnectorSemanticsValidated ||
+    !chain18l.nonlocalProjectionMakesCandidateUnfitForPromotion ||
+    chain18l.runtimePromotionAuthorized ||
+    chain18l.activationBlockerCleared
+  ) {
+    errors.push('Pass 18L trusted-endpoint grate-chain boundary drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -1435,7 +1558,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18J full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18L full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
