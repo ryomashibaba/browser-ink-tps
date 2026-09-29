@@ -534,11 +534,43 @@ describe('T21 Pass 18U fully-local mirrored grate candidate collateral diagnosti
     expect(INGRESS_RADIUS_METERS).toBe(0.725);
     expect(FINAL_RADIUS_METERS).toBe(0.85);
     expect(POSITIVE_RETREAT_METERS).toBe(0.040);
+    expect(candidate.reached).toBe(89);
+    expect(candidate.weak).toBe(7);
+    expect(candidate.strong).toBe(9);
+    expect(candidate.isolated).toEqual([
+      'paint:UndertowT21D:center-origin-step-top-face:0'
+    ]);
+    expect(nonGrateConnectivityStableIgnoringAddedGrates).toBe(true);
+    expect(newlyReachedPairs).toHaveLength(10);
     expect(removedPairs).toEqual([]);
+    expect(grateRows).toEqual([
+      {
+        from:'grate:UndertowT21D:negative-z-grate-mesh:0',
+        reached:[
+          'paint:UndertowT21D:spawn-high-negative-z',
+          'paint:UndertowT21D:first-drop-landing-negative-z',
+          'paint:UndertowT21D:right-low-team-b',
+          'paint:UndertowT21D:right-low-route-ramp-negative-z',
+          'grate:UndertowT21D:negative-z-grate-mesh:0'
+        ]
+      },
+      {
+        from:'grate:UndertowT21D:positive-z-grate-mesh:0',
+        reached:[
+          'paint:UndertowT21D:spawn-high-positive-z',
+          'paint:UndertowT21D:first-drop-landing-positive-z',
+          'paint:UndertowT21D:right-low-team-a',
+          'paint:UndertowT21D:right-low-route-ramp-positive-z',
+          'grate:UndertowT21D:positive-z-grate-mesh:0'
+        ]
+      }
+    ]);
     expect(
       Object.values(focused).every(
-        (record)=>Number.isFinite(record.forward.endpointErrorMeters)&&
-          Number.isFinite(record.reverse.endpointErrorMeters)
+        (record)=>record.forward.reachedTarget&&
+          record.reverse.reachedTarget&&
+          record.forward.endpointErrorMeters===0&&
+          record.reverse.endpointErrorMeters===0
       )
     ).toBe(true);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
