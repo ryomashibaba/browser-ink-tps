@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18G',
+      resolutionPass: '18H',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -425,6 +425,62 @@ describe('T21-D partial Recast connectivity QA', () => {
         'glass:negative-z:1',
         'glass:negative-z:2'
       ]
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localGapSourceClassAuditPass18H
+    ).toMatchObject({
+      sourceAuditRunNumber: 918,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      localMarginMeters: 3.0,
+      trustedBridgeMeters: 0.30,
+      humanContactMeters: 0.345,
+      ordinaryWalkStrictBridgeCandidateCountTotal: 0,
+      hiddenOrdinaryWalkSourceRecovered: false,
+      overlayOrSteepGeometryAuthorizesTraversal: false,
+      exactGapVectorOrTraversalSemanticsStillRequired: true,
+      globalRecastParameterChangeAuthorized: false,
+      convenienceGeometryAuthorized: false,
+      offMeshLinkAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false,
+      userCaptureRequiredNow: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localGapSourceClassAuditPass18H.grate
+    ).toMatchObject({
+      positiveGapMeters: 0.5185586972146141,
+      negativeGapMeters: 0.5185586972146133,
+      nearbySourceComponentCountPerSide: 142,
+      strictBridgeCandidateCountPerSide: 4,
+      humanContactBridgeCandidateCountPerSide: 4,
+      floorLineOverlayCandidateCountPerSide: 3,
+      nonOverlayCandidateCountPerSide: 1,
+      nonOverlaySourceMaterial: 'Fld_Temple01_Object00',
+      nonOverlayWalkQualified: false,
+      nonOverlaySteepOrNonUpward: true,
+      ordinaryWalkBridgeRecovered: false,
+      sourceClassPatternMirrored: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localGapSourceClassAuditPass18H.upperGlass
+    ).toMatchObject({
+      nearestFrontierGapMeters: 2.07423478885845,
+      tiedFrontierCountPerSide: 2,
+      strictBridgeCandidateCountsAcrossTiedFrontiers: [0, 2],
+      humanContactBridgeCandidateCountsAcrossTiedFrontiers: [0, 2],
+      strictBridgeMaterial: 'Fld_Temple01_FloorLine00',
+      strictBridgeCandidatesAreOverlayOnly: true,
+      ordinaryWalkBridgeRecovered: false,
+      positiveOverlayBridgedTarget:
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c12',
+      positiveUnbridgedTarget:
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c15',
+      negativeOverlayBridgedTarget:
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c17',
+      negativeUnbridgedTarget:
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c13',
+      mirroredFrontierDisposition: true
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
