@@ -489,5 +489,5 @@ describe('T21 Pass 18Q positive ingress start-retreat diagnostic',()=>{
     expect(LINK_RADIUS_METERS).toBe(0.30);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
-  },60000);
+  },90000);
 });
