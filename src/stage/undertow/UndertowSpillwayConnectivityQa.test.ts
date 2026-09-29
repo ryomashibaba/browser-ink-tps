@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18J',
+      resolutionPass: '18L',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -585,6 +585,55 @@ describe('T21-D partial Recast connectivity QA', () => {
       maximumFinalHorizontalErrorMeters: 0.13355062839631762,
       exactTwoMeterGapGroundedTraversalFeasible: false,
       ordinaryGroundedWalkInsufficient: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.rawBoundaryGrateChainPass18K
+    ).toMatchObject({
+      qaRunNumber: 935,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      linkRadiusMeters: 0.30,
+      candidateLinkCount: 4,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      ingressOnlyReachedDirectedPairs: 79,
+      finalOnlyReachedDirectedPairs: 79,
+      combinedReachedDirectedPairs: 79,
+      combinedWeakComponentCount: 9,
+      combinedStronglyConnectedComponentCount: 11,
+      candidateLinksChangedConnectivity: false,
+      bothGratesRemainIsolated: true,
+      rawSourceBoundaryEndpointsSufficientForDetourBinding: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.trustedEndpointGrateChainPass18L
+    ).toMatchObject({
+      qaRunNumber: 937,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      trustedSnapMeters: 0.30,
+      linkRadiusMeters: 0.30,
+      candidateLinkCount: 4,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      candidateReachedDirectedPairs: 89,
+      candidateWeakComponentCount: 7,
+      candidateStronglyConnectedComponentCount: 9,
+      baselineIsolatedAnchorCount: 3,
+      candidateIsolatedAnchorCount: 1,
+      bothGratesGainExternalReach: true,
+      positiveGrateReachedAnchorCountIncludingSelf: 5,
+      negativeGrateReachedAnchorCountIncludingSelf: 5,
+      connectivityImprovedWithTrustedInteriorEndpoints: true,
+      trustedProjectionRemainsLocalToSourceBoundary: false,
+      localConnectorSemanticsValidated: false,
+      nonlocalProjectionMakesCandidateUnfitForPromotion: true,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
