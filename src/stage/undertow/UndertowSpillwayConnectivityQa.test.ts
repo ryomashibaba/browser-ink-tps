@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18L',
+      resolutionPass: '18M',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -632,6 +632,38 @@ describe('T21-D partial Recast connectivity QA', () => {
       trustedProjectionRemainsLocalToSourceBoundary: false,
       localConnectorSemanticsValidated: false,
       nonlocalProjectionMakesCandidateUnfitForPromotion: true,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.trustedEndpointMinimalityPass18M
+    ).toMatchObject({
+      qaRunNumber: 941,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      trustedSnapMeters: 0.30,
+      linkRadiusMeters: 0.30,
+      candidateLinkCount: 4,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      ingressOnlyReachedDirectedPairs: 79,
+      finalOnlyReachedDirectedPairs: 79,
+      everySingleLinkReachedDirectedPairs: 79,
+      positivePairReachedDirectedPairs: 84,
+      positivePairWeakComponentCount: 8,
+      positivePairStronglyConnectedComponentCount: 10,
+      negativePairReachedDirectedPairs: 84,
+      negativePairWeakComponentCount: 8,
+      negativePairStronglyConnectedComponentCount: 10,
+      allFourReachedDirectedPairs: 89,
+      allFourWeakComponentCount: 7,
+      allFourStronglyConnectedComponentCount: 9,
+      linksRequiredPerSideForConnectivityChange: 2,
+      ingressAndFinalBreakAreIndependentlyNecessaryPerSide: true,
+      eachSidePairResolvesOnlyItsOwnGrateSingleton: true,
+      twoDistinctRecastAttachmentBreaksPerSide: true,
+      localConnectorSemanticsValidated: false,
       runtimePromotionAuthorized: false,
       activationBlockerCleared: false
     });
