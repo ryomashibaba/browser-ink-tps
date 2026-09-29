@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES,
   UNDERTOW_POST_7_2_REFERENCE_MAPS,
   validateUndertowReferenceCatalog
 } from './UndertowSpillwayReferenceCatalog';
@@ -17,6 +18,30 @@ describe('T21 Undertow source-version guard', () => {
       expect(reference.heightPixels).toBe(720);
       expect(reference.sourceVersion).toBe('7.2.0');
     }
+  });
+
+  it('keeps current grate directionality, rule variants, and legacy corroboration scoped separately', () => {
+    expect(UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES).toHaveLength(4);
+    expect(
+      UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
+        .filter((reference) => reference.role === 'CURRENT_DIRECTIONALITY')
+        .map((reference) => reference.id)
+    ).toEqual(['CURRENT_TURF_RETURN', 'CURRENT_SPAWN_TO_CENTER']);
+    expect(
+      UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
+        .find((reference) => reference.id === 'CURRENT_RULE_VARIANTS')
+        ?.supports
+    ).toEqual([
+      'Splat Zones terrain matches Turf',
+      'Tower Control removes the central grate route',
+      'Rainmaker retains a grate-side attack route',
+      'Clam Blitz retains a grate-side attack route'
+    ]);
+    expect(
+      UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
+        .find((reference) => reference.id === 'LEGACY_TURF_SAME_ROUTE_RETURN')
+        ?.role
+    ).toBe('LEGACY_CORROBORATION');
   });
 
   it('contains no Big Run, Tricolor or pre-7.2 reference in the canonical set', () => {
