@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18F' as const,
+  resolutionPass: '18G' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -611,6 +611,70 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     notes:
       'Pass 18F tests four QA-only bidirectional local connector candidates at 0.10/0.18/0.30m radius. All candidate matrices remain exactly 79 directed reaches / 9 weak components / 11 SCCs. A synthetic control link between two known nav islands changes the matrix to 87/8/10 and removes the center-step singleton, proving the Detour link mechanism itself is operational. Candidate starts mutually belong to the intended grate/glass source islands, but all four candidate destination endpoints have zero mutual membership in the tracked 25-anchor graph. The nearest trusted sampled production-nav endpoints are also 1.734-3.751m away from the exact physical source boundaries. Therefore a one-hop boundary connector does not bind the isolated source islands into the current runtime anchor graph; the next task is to recover the remaining source-native destination chain before any connector semantics can be considered. No runtime link is authorized.'
   }),
+  destinationSourceChainRecoveryPass18G: Object.freeze({
+    qaRunNumber: 915,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedRuntimeSnapMeters: 0.30,
+    sourceAdjacencyThresholdsMeters: [0.03, 0.08, 0.18, 0.30] as const,
+    relaxedDiscoveryThresholdMeters: 2.0,
+    localInventoryMarginMeters: 12.0,
+    runtimeSccCount: 11,
+    grate: Object.freeze({
+      candidateComponentCountPerSide: 42,
+      relaxedEdgeCountPerSide: 116,
+      relaxedReachableComponentCountPerSide: 8,
+      downstreamRuntimeBoundComponentCountPerSide: 2,
+      pathExistsAtOrBelow030Meters: false,
+      relaxedPathComponentCountPerSide: 4,
+      positivePathSourceKinds: [
+        'FloorConcrete00',
+        'FloorSlope00',
+        'FloorConcrete02',
+        'FloorSlope00'
+      ] as const,
+      negativePathSourceKinds: [
+        'FloorConcrete00',
+        'FloorSlope00',
+        'FloorConcrete02',
+        'FloorSlope00'
+      ] as const,
+      positivePathGapsMeters: [0, 0, 0.5185586972146141] as const,
+      negativePathGapsMeters: [0, 0, 0.5185586972146133] as const,
+      positiveTerminalAnchor:
+        'paint:UndertowT21D:spawn-high-positive-z' as const,
+      negativeTerminalAnchor:
+        'paint:UndertowT21D:spawn-high-negative-z' as const,
+      sourceChainStructurallyMirrored: true,
+      trustedContinuousRuntimeBindingRecovered: false
+    }),
+    upperGlass: Object.freeze({
+      candidateComponentCountPerSide: 101,
+      relaxedEdgeCountPerSide: 353,
+      excludedPredecessorBridgeComponentsPerSide: 24,
+      relaxedReachableComponentCountPerSide: 58,
+      pathToDownstreamRuntimeSccAtOrBelow030Meters: false,
+      pathToDownstreamRuntimeSccAtOrBelow200Meters: false,
+      positiveDownstreamRuntimeBoundCandidateCount: 10,
+      negativeDownstreamRuntimeBoundCandidateCount: 8,
+      frontierPairCountPerSide: 1401,
+      nearestFrontierGapMeters: 2.074234789,
+      nearestFrontierFromSourceKind: 'FloorConcrete01' as const,
+      nearestFrontierToSourceKind: 'FloorSlope00' as const,
+      nearestFrontierTiedTargetsPerSide: 2,
+      sourceFrontierStructurallyMirrored: true,
+      exactTransitionSemanticsResolved: false
+    }),
+    predecessorRuntimeSccExcludedAsTerminal: true,
+    globalRecastParameterChangeAuthorized: false,
+    convenienceGeometryAuthorized: false,
+    offMeshLinkAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    userCaptureRequiredNow: false,
+    notes:
+      'Pass 18G follows the exact Temple01 source-native destination components rather than adding a guessed bridge. On both grate sides, the relaxed source graph yields the same four-component sequence FloorConcrete00 -> FloorSlope00 -> FloorConcrete02 -> FloorSlope00; the first two transitions are exact contact and the final source-surface gap is 0.518558697m before the mirrored spawn-high runtime SCC. No path exists at the trusted <=0.30m adjacency threshold, so this is a localized route candidate, not an authorized navigation connection. On both upper-glass sides, excluding the already-known predecessor Glass/BridgeMetal source neighborhood leaves 101 local candidates / 353 <=2m edges; exactly 58 components are reachable, but none reaches a downstream runtime SCC even at 2.0m. The nearest ordinary-walk frontier is a mirrored 2.074234789m FloorConcrete01 -> FloorSlope00 gap (two tied targets per side). Runtime-bound candidate counts differ 10 vs 8 only because current Recast projection is asymmetric; the source inventory/frontier is mirrored. No connector, slab, global Recast tuning, or runtime geometry is authorized. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+  }),
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -641,12 +705,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Recover the source-native continuation from each nearest grate-side FloorConcrete00 destination component into the already-tracked runtime anchor graph. Pass 18F proves a one-hop grate boundary connector does not change the 25-anchor matrix because its destination endpoint belongs to no tracked anchor SCC. Original-game grate walk-on/off directionality remains a separate promotion gate.',
-    'Recover the source-native continuation from the tested BridgeMetal/FloorConcrete02 destination side into the already-tracked runtime anchor graph and bind it to the Pass 13A observed ingress/egress. Pass 18F proves a one-hop boundary connector does not change the matrix because the destination endpoint has no mutual tracked-anchor membership. Exact gameplay transition identity/directionality remains a separate promotion gate.',
+    'Resolve the exact traversal semantics and runtime representation for the mirrored grate-side source-chain candidate localized by Pass 18G: FloorConcrete00 -> FloorSlope00 -> FloorConcrete02 -> FloorSlope00 reaches each spawn-high source region only through a final 0.518558697m source-surface gap, while trusted <=0.30m source adjacency remains disconnected. Original-game grate walk-on/off directionality remains a separate promotion gate.',
+    'Resolve the mirrored upper-glass destination frontier localized by Pass 18G. After excluding the predecessor Glass/BridgeMetal neighborhood, 58 ordinary source components per side remain connected within the relaxed <=2m discovery graph, but no downstream runtime SCC is reached; the next exact ordinary-walk frontier is a 2.074234789m FloorConcrete01 -> FloorSlope00 gap. Determine the original transition identity/directionality or any missing semantic source class before authoring navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18F preserves Passes 18A-18E and tests whether the KCC-feasible grate/glass boundary gaps can be represented by one narrowly scoped Detour connector per mirrored side. The four candidates are no-ops at all tested radii, while a synthetic control link demonstrably changes graph connectivity, proving the Detour mechanism itself works. Candidate start endpoints belong to the intended isolated source islands, but the destination endpoints belong to no tracked 25-anchor SCC; sampled production-nav endpoints near those destination meshes are also meters inside the source surfaces rather than local to the physical boundary. Therefore the unresolved problem is a longer unbound source-native destination chain, not a missing single off-mesh edge. No connector or runtime promotion is authorized. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18G preserves Passes 18A-18F and recovers the source-native destination chain without changing runtime geometry. The grate continuation is structurally mirrored and localizes one final 0.518558697m source gap before the spawn-high regions; the upper-glass continuation expands to a mirrored 58-component relaxed cluster but stops at a 2.074234789m FloorConcrete01/FloorSlope00 ordinary-walk frontier before any downstream runtime SCC. These are evidence boundaries, not authorization to invent links or slabs. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -681,12 +745,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18F partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18G partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18F' ||
+    audit.resolutionPass !== '18G' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -996,6 +1060,60 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18F local connector boundary drifted');
   }
 
+  const chain18g = audit.destinationSourceChainRecoveryPass18G;
+  if (
+    chain18g.qaRunNumber !== 915 ||
+    !chain18g.diagnosticOnly ||
+    chain18g.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(chain18g.trustedRuntimeSnapMeters - 0.30) > 1e-9 ||
+    chain18g.sourceAdjacencyThresholdsMeters.join(',') !== '0.03,0.08,0.18,0.3' ||
+    chain18g.relaxedDiscoveryThresholdMeters !== 2.0 ||
+    chain18g.localInventoryMarginMeters !== 12.0 ||
+    chain18g.runtimeSccCount !== 11 ||
+    chain18g.grate.candidateComponentCountPerSide !== 42 ||
+    chain18g.grate.relaxedEdgeCountPerSide !== 116 ||
+    chain18g.grate.relaxedReachableComponentCountPerSide !== 8 ||
+    chain18g.grate.downstreamRuntimeBoundComponentCountPerSide !== 2 ||
+    chain18g.grate.pathExistsAtOrBelow030Meters ||
+    chain18g.grate.relaxedPathComponentCountPerSide !== 4 ||
+    chain18g.grate.positivePathSourceKinds.join(',') !==
+      'FloorConcrete00,FloorSlope00,FloorConcrete02,FloorSlope00' ||
+    chain18g.grate.negativePathSourceKinds.join(',') !==
+      'FloorConcrete00,FloorSlope00,FloorConcrete02,FloorSlope00' ||
+    Math.abs(chain18g.grate.positivePathGapsMeters[2] - 0.5185586972146141) > 1e-9 ||
+    Math.abs(chain18g.grate.negativePathGapsMeters[2] - 0.5185586972146133) > 1e-9 ||
+    chain18g.grate.positiveTerminalAnchor !==
+      'paint:UndertowT21D:spawn-high-positive-z' ||
+    chain18g.grate.negativeTerminalAnchor !==
+      'paint:UndertowT21D:spawn-high-negative-z' ||
+    !chain18g.grate.sourceChainStructurallyMirrored ||
+    chain18g.grate.trustedContinuousRuntimeBindingRecovered ||
+    chain18g.upperGlass.candidateComponentCountPerSide !== 101 ||
+    chain18g.upperGlass.relaxedEdgeCountPerSide !== 353 ||
+    chain18g.upperGlass.excludedPredecessorBridgeComponentsPerSide !== 24 ||
+    chain18g.upperGlass.relaxedReachableComponentCountPerSide !== 58 ||
+    chain18g.upperGlass.pathToDownstreamRuntimeSccAtOrBelow030Meters ||
+    chain18g.upperGlass.pathToDownstreamRuntimeSccAtOrBelow200Meters ||
+    chain18g.upperGlass.positiveDownstreamRuntimeBoundCandidateCount !== 10 ||
+    chain18g.upperGlass.negativeDownstreamRuntimeBoundCandidateCount !== 8 ||
+    chain18g.upperGlass.frontierPairCountPerSide !== 1401 ||
+    Math.abs(chain18g.upperGlass.nearestFrontierGapMeters - 2.074234789) > 1e-9 ||
+    chain18g.upperGlass.nearestFrontierFromSourceKind !== 'FloorConcrete01' ||
+    chain18g.upperGlass.nearestFrontierToSourceKind !== 'FloorSlope00' ||
+    chain18g.upperGlass.nearestFrontierTiedTargetsPerSide !== 2 ||
+    !chain18g.upperGlass.sourceFrontierStructurallyMirrored ||
+    chain18g.upperGlass.exactTransitionSemanticsResolved ||
+    !chain18g.predecessorRuntimeSccExcludedAsTerminal ||
+    chain18g.globalRecastParameterChangeAuthorized ||
+    chain18g.convenienceGeometryAuthorized ||
+    chain18g.offMeshLinkAuthorized ||
+    chain18g.runtimePromotionAuthorized ||
+    chain18g.activationBlockerCleared ||
+    chain18g.userCaptureRequiredNow
+  ) {
+    errors.push('Pass 18G destination source-chain recovery boundary drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -1016,7 +1134,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18F full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18G full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
