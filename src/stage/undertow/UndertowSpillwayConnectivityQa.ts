@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18H' as const,
+  resolutionPass: '18I' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -728,6 +728,61 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18H expands the localized Pass 18G gaps across every nearby Temple01 source material instead of treating material names as walk authority. At each mirrored grate-side 0.518558697m gap, four <=0.30m third-component candidates exist, but three are FloorLine00 marking overlays and the only non-overlay candidate is Object00 with no walk-qualified face and steep/non-upward geometry. At the mirrored 2.074234789m upper-glass frontier, one of the two tied targets per side has two <=0.30m bridge candidates and both are FloorLine00 overlays; the other tied target has none. Across all strict candidates, zero walk-qualified bridge faces are recovered. Therefore neither overlays nor steep Object00 geometry authorizes a navigation connector or slab. Exact gap-vector / original traversal semantics remain required and FULL_STAGE_CONNECTIVITY_QA_PENDING stays active.'
   }),
 
+  exactGapVectorAuditPass18I: Object.freeze({
+    sourceAuditRunNumber: 923,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    temple01RegistrationScale: 0.964211,
+    grate: Object.freeze({
+      positiveProjectGapMeters: 0.5185586972146141,
+      negativeProjectGapMeters: 0.5185586972146198,
+      modelGapMeters: 0.5,
+      modelHorizontalGapMeters: 0.5,
+      modelVerticalDeltaMeters: 0,
+      closestSeparationAxis: 'MODEL_Z' as const,
+      positiveModelDelta: [0, 0, 0.5] as const,
+      negativeModelDelta: [0, 0, -0.5] as const,
+      positiveEndpointsModel: [
+        [-30.5, 9.0, 35.5],
+        [-30.5, 9.0, 36.0]
+      ] as const,
+      negativeEndpointsModel: [
+        [30.5, 9.0, -35.5],
+        [30.5, 9.0, -36.0]
+      ] as const,
+      exactHalfMeterModelGap: true,
+      purelyHorizontalClosestSeparation: true,
+      structurallyMirrored: true
+    }),
+    upperGlass: Object.freeze({
+      projectGapMeters: 2.07423478885845,
+      modelGapMeters: 2.0,
+      modelHorizontalGapMeters: 2.0,
+      modelVerticalDeltaMeters: 0,
+      closestSeparationAxis: 'MODEL_Z' as const,
+      modelY: 3.0,
+      positiveModelZ: [21.5, 19.5] as const,
+      negativeModelZ: [-21.5, -19.5] as const,
+      absoluteModelXFrontierLines: [4.25, 16.0] as const,
+      exactTwoMeterModelGap: true,
+      purelyHorizontalClosestSeparation: true,
+      tiedFrontiersStructurallyMirrored: true
+    }),
+    localizedClosestSeparationIsVerticalStep: false,
+    exactGapWidthAndAxisResolved: true,
+    exactKccFeasibilityAcrossLocalizedGapsResolved: false,
+    originalTraversalDirectionalityResolved: false,
+    originalJumpRequirementResolved: false,
+    globalRecastParameterChangeAuthorized: false,
+    convenienceGeometryAuthorized: false,
+    offMeshLinkAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    userCaptureRequiredNow: false,
+    notes:
+      'Pass 18I decomposes the Pass 18H endpoint pairs with exact triangle closest-point geometry in both project and Temple01 model coordinates. The mirrored grate-side source separation is exactly 0.5m in model Z at model Y=9.0, with zero vertical delta; the project-space 0.518558697m value is solely the registered XZ scale. The two mirrored upper-glass frontier alternatives are exactly 2.0m in model Z at model Y=3.0, again with zero vertical delta, on |model X|=4.25 and 16.0 lines. Therefore the localized closest separations are horizontal gaps, not height steps. This does not determine original jump/directionality semantics or whether the production KCC can physically cross each exact gap; those remain the next QA boundary.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -758,12 +813,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Resolve the exact vector/structural meaning and original traversal semantics of the mirrored grate-side 0.518558697m FloorConcrete02 -> FloorSlope00 gap. Pass 18H finds only three FloorLine00 overlays plus one steep/non-walk Object00 third component within the strict 0.30m bridge threshold, so no ordinary walk bridge or connector is authorized. Original-game grate walk-on/off directionality remains a separate promotion gate.',
-    'Resolve the exact vector/structural meaning and original traversal semantics of the mirrored 2.074234789m upper-glass FloorConcrete01 -> FloorSlope00 frontier. Pass 18H shows that one tied target per side has only two FloorLine00 overlay bridges and the other tied target has no <=0.30m third-component bridge; no ordinary walk source is hidden there. Determine the original transition identity/directionality before authoring navigation.',
+    'Resolve physical KCC feasibility and original traversal semantics for the mirrored grate-side gap. Pass 18I proves the localized FloorConcrete02 -> FloorSlope00 closest separation is an exact 0.5m horizontal model-Z gap at equal model Y=9.0, while Pass 18H found no ordinary walk third-component bridge. Test the exact gap with production KCC parameters before considering any connector; original-game grate walk-on/off directionality remains a separate promotion gate.',
+    'Resolve physical KCC feasibility and original traversal semantics for the mirrored upper-glass frontier. Pass 18I proves both tied FloorConcrete01 -> FloorSlope00 alternatives are exact 2.0m horizontal model-Z gaps at equal model Y=3.0, while Pass 18H recovered only FloorLine overlays on one alternative and no ordinary walk bridge. Test exact production-KCC feasibility and retain jump/directionality as an independent authority gate before authoring navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18H preserves Passes 18A-18G and audits every nearby source class around the localized grate and upper-glass gaps. All <=0.30m third-component bridges are non-walk geometry: FloorLine00 marking overlays, plus one steep/non-upward Object00 component on each grate side. No hidden ordinary walk surface is recovered. The next safe task is exact gap-vector / structural-transition classification, not a guessed connector, convenience slab, or global Recast change. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18I preserves Passes 18A-18H and resolves the exact geometry of the remaining localized source separations: the grate-side gap is exactly 0.5m horizontally in Temple01 model Z at equal height, and both upper-glass frontier alternatives are exactly 2.0m horizontally in model Z at equal height. Pass 18H already excludes hidden ordinary walk bridge geometry. The next safe task is production-KCC feasibility across these exact same-height gaps plus independent original traversal semantics; no connector, convenience slab, or global Recast change is authorized. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -798,12 +853,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18H partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18I partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18H' ||
+    audit.resolutionPass !== '18I' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -1217,6 +1272,50 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18H local gap source-class boundary drifted');
   }
 
+  const vector18i = audit.exactGapVectorAuditPass18I;
+  if (
+    vector18i.sourceAuditRunNumber !== 923 ||
+    !vector18i.diagnosticOnly ||
+    vector18i.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(vector18i.temple01RegistrationScale - 0.964211) > 1e-12 ||
+    Math.abs(vector18i.grate.positiveProjectGapMeters - 0.5185586972146141) > 1e-12 ||
+    Math.abs(vector18i.grate.negativeProjectGapMeters - 0.5185586972146198) > 1e-12 ||
+    Math.abs(vector18i.grate.modelGapMeters - 0.5) > 1e-12 ||
+    Math.abs(vector18i.grate.modelHorizontalGapMeters - 0.5) > 1e-12 ||
+    Math.abs(vector18i.grate.modelVerticalDeltaMeters) > 1e-12 ||
+    vector18i.grate.closestSeparationAxis !== 'MODEL_Z' ||
+    vector18i.grate.positiveModelDelta.join(',') !== '0,0,0.5' ||
+    vector18i.grate.negativeModelDelta.join(',') !== '0,0,-0.5' ||
+    !vector18i.grate.exactHalfMeterModelGap ||
+    !vector18i.grate.purelyHorizontalClosestSeparation ||
+    !vector18i.grate.structurallyMirrored ||
+    Math.abs(vector18i.upperGlass.projectGapMeters - 2.07423478885845) > 1e-12 ||
+    Math.abs(vector18i.upperGlass.modelGapMeters - 2.0) > 1e-12 ||
+    Math.abs(vector18i.upperGlass.modelHorizontalGapMeters - 2.0) > 1e-12 ||
+    Math.abs(vector18i.upperGlass.modelVerticalDeltaMeters) > 1e-12 ||
+    vector18i.upperGlass.closestSeparationAxis !== 'MODEL_Z' ||
+    Math.abs(vector18i.upperGlass.modelY - 3.0) > 1e-12 ||
+    vector18i.upperGlass.positiveModelZ.join(',') !== '21.5,19.5' ||
+    vector18i.upperGlass.negativeModelZ.join(',') !== '-21.5,-19.5' ||
+    vector18i.upperGlass.absoluteModelXFrontierLines.join(',') !== '4.25,16' ||
+    !vector18i.upperGlass.exactTwoMeterModelGap ||
+    !vector18i.upperGlass.purelyHorizontalClosestSeparation ||
+    !vector18i.upperGlass.tiedFrontiersStructurallyMirrored ||
+    vector18i.localizedClosestSeparationIsVerticalStep ||
+    !vector18i.exactGapWidthAndAxisResolved ||
+    vector18i.exactKccFeasibilityAcrossLocalizedGapsResolved ||
+    vector18i.originalTraversalDirectionalityResolved ||
+    vector18i.originalJumpRequirementResolved ||
+    vector18i.globalRecastParameterChangeAuthorized ||
+    vector18i.convenienceGeometryAuthorized ||
+    vector18i.offMeshLinkAuthorized ||
+    vector18i.runtimePromotionAuthorized ||
+    vector18i.activationBlockerCleared ||
+    vector18i.userCaptureRequiredNow
+  ) {
+    errors.push('Pass 18I exact gap-vector boundary drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -1237,7 +1336,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18H full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18I full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
