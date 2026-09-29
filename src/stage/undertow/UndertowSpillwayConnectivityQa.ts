@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18S' as const,
+  resolutionPass: '18T' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1167,6 +1167,44 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18S keeps the POSITIVE_Z grate-side ingress start at the Pass 18R 40mm-local point, keeps NEGATIVE_Z at its raw grate-side start, and returns both ingress ends plus both final 0.5m-gap endpoints to raw physical source positions. Sweeping only Detour attachment radius produces the same mirrored thresholds on both sides: ingress first succeeds at 0.75m after failing through 0.60m, final first succeeds at 0.90m after failing through 0.75m, and the combined 0.75m ingress + 0.90m final pair reaches bidirectionally on both sides. This is the first symmetric fully-local raw-chain candidate, but the radius thresholds remain coarse and exceed the normal 0.30m link radius, so they are diagnostic attachment bounds rather than runtime authority.'
   }),
 
+  localRawChainFineRadiusPass18T: Object.freeze({
+    qaRunNumber: 972,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    positiveRetreatMeters: 0.040,
+    testedIngressRadiiMeters: [0.60, 0.625, 0.65, 0.675, 0.70, 0.725, 0.75] as const,
+    testedFinalRadiiMeters: [0.75, 0.775, 0.80, 0.825, 0.85, 0.875, 0.90] as const,
+    positive: Object.freeze({
+      firstSuccessfulIngressRadiusMeters: 0.65,
+      firstSuccessfulFinalRadiusMeters: 0.85,
+      combinedIngressRadiusMeters: 0.65,
+      combinedFinalRadiusMeters: 0.85,
+      combinedBidirectionallyReached: true
+    }),
+    negative: Object.freeze({
+      firstSuccessfulIngressRadiusMeters: 0.725,
+      firstSuccessfulFinalRadiusMeters: 0.85,
+      combinedIngressRadiusMeters: 0.725,
+      combinedFinalRadiusMeters: 0.85,
+      combinedBidirectionallyReached: true
+    }),
+    finalThresholdMatchesBothSides: true,
+    ingressThresholdStillAsymmetricAt25MillimeterResolution: true,
+    commonMirroredCandidateIngressRadiusMeters: 0.725,
+    commonMirroredCandidateFinalRadiusMeters: 0.85,
+    commonMirroredCandidateUsesOnlyLocalRawEndpointsExceptPositiveFortyMillimeterStart: true,
+    commonMirroredCandidateBidirectionallyFeasibleBothSides: true,
+    exactMinimumAttachmentRadiiResolved: false,
+    fullMatrixCollateralValidated: false,
+    pathShapeValidated: false,
+    originalGrateDirectionalityResolved: false,
+    localConnectorSemanticsValidated: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18T refines the Pass 18S coarse radius brackets at 25mm resolution. With the POSITIVE_Z grate-side ingress start retained at the measured 40mm-local point and all other endpoints raw, POSITIVE_Z ingress first succeeds at 0.65m while NEGATIVE_Z ingress first succeeds at 0.725m; the final physical 0.5m gap first succeeds at 0.85m on both sides. Therefore a single mirrored QA candidate exists at ingress radius 0.725m plus final radius 0.85m, with no nonlocal trusted endpoints. The residual ingress threshold asymmetry means these are conservative common attachment radii rather than exact minima. Full-matrix collateral/path-shape QA and original grate directionality remain unresolved.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1197,12 +1235,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Refine and validate the symmetric local grate candidate from Pass 18S before any runtime promotion. With only a 40mm POSITIVE_Z grate-side start retreat, both mirrored sides now share the same coarse raw-endpoint thresholds: ingress succeeds first at 0.75m after failing at 0.60m, and the final 0.5m physical gap succeeds first at 0.90m after failing at 0.75m. Narrow both attachment-radius thresholds, then run the resulting fully-local candidate against the full 25-anchor matrix/path shape to rule out collateral Detour attachment. Do not promote these coarse radii; original grate walk-on/off directionality remains an independent promotion gate.',
+    'Validate the fully-local mirrored grate candidate selected from Pass 18T: POSITIVE_Z uses only the 40mm grate-side ingress start retreat, NEGATIVE_Z keeps its raw start, both sides use raw ingress ends and raw final-gap endpoints, with common QA-only radii 0.725m ingress and 0.85m final. Run the full 25-anchor matrix plus focused path-shape/link-use checks to prove each side resolves only its own grate route without unintended cross-island attachment or shortcutting. The 25mm threshold sweep does not establish exact minimum radii, and original grate walk-on/off directionality remains an independent promotion gate.',
     'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18S preserves Passes 18A-18R and converts the grate diagnosis into a symmetric fully-local raw-chain candidate. POSITIVE_Z uses only the measured 40mm grate-side ingress retreat; all other ingress/final endpoints remain raw physical source points. Both sides then show identical coarse attachment thresholds: 0.75m for ingress and 0.90m for the final 0.5m physical gap, and the combined pair connects bidirectionally. This symmetry is strong evidence that Pass 18R corrected a Recast polygon-selection artifact, but the enlarged attachment radii are not yet minimal or proven collateral-free. The next safe diagnostic is a fine radius sweep followed by full-matrix/path-shape validation. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18T preserves Passes 18A-18S and refines the fully-local grate candidate. Final-gap attachment is mirrored at 0.85m on both sides; ingress first succeeds at 0.65m positive and 0.725m negative, so the smallest single mirrored candidate tested is 0.725m ingress + 0.85m final with the positive-only 40mm local start correction. No trusted/nonlocal endpoint is required. The next safe diagnostic is full 25-anchor collateral/path-shape validation of exactly that common candidate. No production link, directionality, convenience geometry, or global Recast change is yet authorized. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1237,12 +1275,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18S partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18T partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18S' ||
+    audit.resolutionPass !== '18T' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -2080,6 +2118,41 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18S local raw-chain radius boundary drifted');
   }
 
+  const fine18t = audit.localRawChainFineRadiusPass18T;
+  if (
+    fine18t.qaRunNumber !== 972 ||
+    !fine18t.diagnosticOnly ||
+    fine18t.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(fine18t.positiveRetreatMeters - 0.040) > 1e-12 ||
+    fine18t.testedIngressRadiiMeters.join(',') !== '0.6,0.625,0.65,0.675,0.7,0.725,0.75' ||
+    fine18t.testedFinalRadiiMeters.join(',') !== '0.75,0.775,0.8,0.825,0.85,0.875,0.9' ||
+    Math.abs(fine18t.positive.firstSuccessfulIngressRadiusMeters - 0.65) > 1e-12 ||
+    Math.abs(fine18t.positive.firstSuccessfulFinalRadiusMeters - 0.85) > 1e-12 ||
+    Math.abs(fine18t.positive.combinedIngressRadiusMeters - 0.65) > 1e-12 ||
+    Math.abs(fine18t.positive.combinedFinalRadiusMeters - 0.85) > 1e-12 ||
+    !fine18t.positive.combinedBidirectionallyReached ||
+    Math.abs(fine18t.negative.firstSuccessfulIngressRadiusMeters - 0.725) > 1e-12 ||
+    Math.abs(fine18t.negative.firstSuccessfulFinalRadiusMeters - 0.85) > 1e-12 ||
+    Math.abs(fine18t.negative.combinedIngressRadiusMeters - 0.725) > 1e-12 ||
+    Math.abs(fine18t.negative.combinedFinalRadiusMeters - 0.85) > 1e-12 ||
+    !fine18t.negative.combinedBidirectionallyReached ||
+    !fine18t.finalThresholdMatchesBothSides ||
+    !fine18t.ingressThresholdStillAsymmetricAt25MillimeterResolution ||
+    Math.abs(fine18t.commonMirroredCandidateIngressRadiusMeters - 0.725) > 1e-12 ||
+    Math.abs(fine18t.commonMirroredCandidateFinalRadiusMeters - 0.85) > 1e-12 ||
+    !fine18t.commonMirroredCandidateUsesOnlyLocalRawEndpointsExceptPositiveFortyMillimeterStart ||
+    !fine18t.commonMirroredCandidateBidirectionallyFeasibleBothSides ||
+    fine18t.exactMinimumAttachmentRadiiResolved ||
+    fine18t.fullMatrixCollateralValidated ||
+    fine18t.pathShapeValidated ||
+    fine18t.originalGrateDirectionalityResolved ||
+    fine18t.localConnectorSemanticsValidated ||
+    fine18t.runtimePromotionAuthorized ||
+    fine18t.activationBlockerCleared
+  ) {
+    errors.push('Pass 18T local fine-radius boundary drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -2100,7 +2173,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18S full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18T full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
