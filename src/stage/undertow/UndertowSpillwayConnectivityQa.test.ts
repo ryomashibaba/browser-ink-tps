@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18P',
+      resolutionPass: '18R',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -797,6 +797,74 @@ describe('T21-D partial Recast connectivity QA', () => {
       at100TrustedStartTrustedEndConnected: true,
       rawGrateSideStartAttachmentResolvedAt100: true,
       rawFloorConcrete00SideEndAttachmentResolvedAt100: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.positiveIngressStartRetreatPass18Q
+    ).toMatchObject({
+      qaRunNumber: 962,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      rawIngressRadiusMeters: 1.00,
+      trustedFinalLinkRadiusMeters: 0.30,
+      positiveStartTravelMeters: 1.9872737049434641,
+      testedFractionCount: 13,
+      rawStartConnected: false,
+      firstSuccessfulFraction: 0.05,
+      firstSuccessfulMovedMeters: 0.0993636852471732,
+      firstSuccessfulStartSnapMeters: 0.5839682784207668,
+      allTestedFractionsAfterZeroConnected: true,
+      positiveRawStartSnapMeters: 0.6472549947142026,
+      positiveTrustedStartSnapMeters: 0,
+      positiveRawEndSnapMeters: 0.3420302065480327,
+      negativeRawControlConnected: true,
+      coarseRetreatThresholdLocalizedBelow100Millimeters: true,
+      closestPointSnapMagnitudeAloneStillNotExplanatory: true,
+      localConnectorSemanticsValidated: false,
+      originalGrateDirectionalityResolved: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.positiveIngressStartFineSweepPass18R
+    ).toMatchObject({
+      qaRunNumber: 962,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      rawIngressRadiusMeters: 1.00,
+      trustedFinalLinkRadiusMeters: 0.30,
+      sweepStartMeters: 0,
+      sweepEndMeters: 0.100,
+      sweepStepMeters: 0.005,
+      testedOffsetCount: 21,
+      positiveStartTravelMeters: 1.9872737049434641,
+      lastFailedOffsetMeters: 0.035,
+      firstSuccessfulOffsetMeters: 0.040,
+      lastFailedFraction: 0.017612068188159174,
+      firstSuccessfulFraction: 0.020128077929324768,
+      lastFailedStartSnapMeters: 0.6459551748278465,
+      firstSuccessfulStartSnapMeters: 0.6424489783331878,
+      lastFailedProjectedPoint: [
+        -25.715261459350586,
+        7.600000381469727,
+        31.51282501220703
+      ],
+      firstSuccessfulProjectedPoint: [
+        -25.715261459350586,
+        7.5,
+        30.612831115722656
+      ],
+      thresholdBracketWidthMeters: 0.005,
+      attachmentTransitionBetween35And40Millimeters: true,
+      allOffsetsAtOrAbove40MillimetersConnectedThrough100Millimeters: true,
+      closestPointProjectionChangesDiscontinuouslyAtThreshold: true,
+      scalarSnapDistanceThresholdExplainsTransition: false,
+      navPolyIdentityBoundaryStronglyIndicated: true,
+      negativeRawControlConnected: true,
+      minimumFaithfulRuntimeCorrectionResolved: false,
+      localConnectorSemanticsValidated: false,
+      originalGrateDirectionalityResolved: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
