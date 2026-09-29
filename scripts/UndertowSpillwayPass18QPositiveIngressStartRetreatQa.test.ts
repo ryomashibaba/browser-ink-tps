@@ -485,6 +485,12 @@ describe('T21 Pass 18Q positive ingress start-retreat diagnostic',()=>{
     expect(baseline.reached).toBe(79);
     expect(baseline.weak).toBe(9);
     expect(baseline.strong).toBe(11);
+    expect(FRACTIONS).toHaveLength(13);
+    expect(FRACTIONS[0]).toBe(0);
+    expect(FRACTIONS.at(-1)).toBe(1);
+    expect(negativeRawControl.bidirectionallyReached).toBe(true);
+    expect(negativeRawControl.forward.endpointErrorMeters).toBeCloseTo(0,12);
+    expect(negativeRawControl.reverse.endpointErrorMeters).toBeCloseTo(0,12);
     expect(RAW_RADIUS_METERS).toBe(1.00);
     expect(LINK_RADIUS_METERS).toBe(0.30);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
