@@ -1250,6 +1250,175 @@ print(
     },separators=(",",":"))
 )
 
+
+# Pass 18I: exact closest-point vector decomposition for the Pass 18H localized
+# gaps. This is geometry-only and diagnostic-only. It does not infer traversal
+# semantics or authorize runtime collision/navigation.
+def pass18i_closest_point_on_triangle(p,a,b,c):
+    ab=vsub(b,a)
+    ac=vsub(c,a)
+    ap=vsub(p,a)
+    d1=vdot(ab,ap)
+    d2=vdot(ac,ap)
+    if d1<=0 and d2<=0:
+        return a
+    bp=vsub(p,b)
+    d3=vdot(ab,bp)
+    d4=vdot(ac,bp)
+    if d3>=0 and d4<=d3:
+        return b
+    vc=d1*d4-d3*d2
+    if vc<=0 and d1>=0 and d3<=0:
+        v=d1/(d1-d3)
+        return vadd(a,vmul(ab,v))
+    cp=vsub(p,c)
+    d5=vdot(ab,cp)
+    d6=vdot(ac,cp)
+    if d6>=0 and d5<=d6:
+        return c
+    vb=d5*d2-d1*d6
+    if vb<=0 and d2>=0 and d6<=0:
+        w=d2/(d2-d6)
+        return vadd(a,vmul(ac,w))
+    va=d3*d6-d5*d4
+    if va<=0 and (d4-d3)>=0 and (d5-d6)>=0:
+        w=(d4-d3)/((d4-d3)+(d5-d6))
+        return vadd(b,vmul(vsub(c,b),w))
+    denom=1.0/(va+vb+vc)
+    v=vb*denom
+    w=vc*denom
+    return vadd(a,vadd(vmul(ab,v),vmul(ac,w)))
+
+def pass18i_closest_points_on_segments(p1,q1,p2,q2):
+    d1=vsub(q1,p1)
+    d2=vsub(q2,p2)
+    r=vsub(p1,p2)
+    a=vdot(d1,d1)
+    e=vdot(d2,d2)
+    f=vdot(d2,r)
+    eps=1e-15
+    s=0.0
+    t=0.0
+    if a<=eps and e<=eps:
+        return p1,p2
+    if a<=eps:
+        t=max(0.0,min(1.0,f/e))
+    else:
+        cc=vdot(d1,r)
+        if e<=eps:
+            s=max(0.0,min(1.0,-cc/a))
+        else:
+            bb=vdot(d1,d2)
+            denom=a*e-bb*bb
+            if abs(denom)>eps:
+                s=max(0.0,min(1.0,(bb*f-cc*e)/denom))
+            tnom=bb*s+f
+            if tnom<0:
+                t=0.0
+                s=max(0.0,min(1.0,-cc/a))
+            elif tnom>e:
+                t=1.0
+                s=max(0.0,min(1.0,(bb-cc)/a))
+            else:
+                t=tnom/e
+    return vadd(p1,vmul(d1,s)),vadd(p2,vmul(d2,t))
+
+def pass18i_triangle_closest_pair(ta,tb):
+    best=None
+    def consider(pa,pb,kind):
+        nonlocal best
+        d=math.dist(pa,pb)
+        if best is None or d<best[0]-1e-12:
+            best=(d,pa,pb,kind)
+    for idx,p in enumerate(ta):
+        q=pass18i_closest_point_on_triangle(p,*tb)
+        consider(p,q,f"A_VERTEX_{idx}_TO_B_TRI")
+    for idx,p in enumerate(tb):
+        q=pass18i_closest_point_on_triangle(p,*ta)
+        consider(q,p,f"B_VERTEX_{idx}_TO_A_TRI")
+    ea=((ta[0],ta[1]),(ta[1],ta[2]),(ta[2],ta[0]))
+    eb=((tb[0],tb[1]),(tb[1],tb[2]),(tb[2],tb[0]))
+    for ai,(a0,a1) in enumerate(ea):
+        for bi,(b0,b1) in enumerate(eb):
+            pa,pb=pass18i_closest_points_on_segments(a0,a1,b0,b1)
+            consider(pa,pb,f"EDGE_{ai}_EDGE_{bi}")
+    return best
+
+def pass18i_component_closest_pair_project(a_faces,b_faces):
+    best=None
+    for fa in a_faces:
+        ta=tuple(project_point3(p) for p in tri_points(faces[fa]))
+        for fb in b_faces:
+            tb=tuple(project_point3(p) for p in tri_points(faces[fb]))
+            result=pass18i_triangle_closest_pair(ta,tb)
+            if best is None or result[0]<best["distanceMeters"]-1e-12:
+                best={
+                    "distanceMeters":result[0],
+                    "aPointProject":list(result[1]),
+                    "bPointProject":list(result[2]),
+                    "pairKind":result[3],
+                    "aFaceIndex":fa,
+                    "bFaceIndex":fb,
+                }
+    if best is None:
+        raise SystemExit("T21PASS18I empty component pair")
+    return best
+
+def pass18i_project3_to_model3(p):
+    mx,mz=project_to_model((p[0],p[2]))
+    return [mx,p[1]+3.0,mz]
+
+def pass18i_vector_payload(a_id,b_id):
+    if a_id not in continuation_by_id or b_id not in continuation_by_id:
+        raise SystemExit(f"T21PASS18I missing endpoint a={a_id} b={b_id}")
+    a=continuation_by_id[a_id]
+    b=continuation_by_id[b_id]
+    pair=pass18i_component_closest_pair_project(a["faces"],b["faces"])
+    ap=pair["aPointProject"]
+    bp=pair["bPointProject"]
+    am=pass18i_project3_to_model3(ap)
+    bm=pass18i_project3_to_model3(bp)
+    pd=[bp[i]-ap[i] for i in range(3)]
+    md=[bm[i]-am[i] for i in range(3)]
+    pair.update({
+        "aComponentId":a_id,
+        "bComponentId":b_id,
+        "aPointModel":am,
+        "bPointModel":bm,
+        "projectDelta":pd,
+        "modelDelta":md,
+        "projectHorizontalDistanceMeters":math.hypot(pd[0],pd[2]),
+        "modelHorizontalDistanceMeters":math.hypot(md[0],md[2]),
+        "projectVerticalDeltaMeters":pd[1],
+        "modelVerticalDeltaMeters":md[1],
+        "modelDistanceMeters":math.dist(am,bm),
+    })
+    return pair
+
+pass18i_grate={
+    side:pass18i_vector_payload(a_id,b_id)
+    for side,(a_id,b_id) in PASS18H_GRATE_GAP_COMPONENT_IDS.items()
+}
+pass18i_glass={}
+for side in ("POSITIVE_Z","NEGATIVE_Z"):
+    gaps=audit_output["pass18h"]["glass"][side]["gaps"]
+    pass18i_glass[side]=[
+        pass18i_vector_payload(gap["a"]["id"],gap["b"]["id"])
+        for gap in gaps
+    ]
+
+audit_output["pass18i"]={
+    "diagnosticOnly":True,
+    "runtimePromotionAuthorized":False,
+    "grate":pass18i_grate,
+    "glass":pass18i_glass,
+}
+
+print(
+    "T21PASS18I_EXACT_GAP_VECTOR",
+    json.dumps(audit_output["pass18i"],separators=(",",":"))
+)
+
 OUTPUT.write_text(json.dumps(audit_output,separators=(",",":")),encoding="utf-8")
 print(
     f"T21UPPER OUTPUT path={OUTPUT} bytes={OUTPUT.stat().st_size} "
