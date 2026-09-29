@@ -12,6 +12,65 @@ export interface UndertowReferenceMap {
 export const UNDERTOW_NINTENDO_7_2_CHANGELOG =
   'https://en-americas-support.nintendo.com/app/answers/detail/a_id/61257/';
 
+
+export interface UndertowGameplaySemanticReference {
+  id:
+    | 'CURRENT_TURF_RETURN'
+    | 'CURRENT_SPAWN_TO_CENTER'
+    | 'CURRENT_RULE_VARIANTS'
+    | 'LEGACY_TURF_SAME_ROUTE_RETURN';
+  sourcePage: string;
+  sourceVersion: string;
+  role:
+    | 'CURRENT_DIRECTIONALITY'
+    | 'CURRENT_RULE_VARIANT'
+    | 'LEGACY_CORROBORATION';
+  supports: readonly string[];
+}
+
+export const UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES:
+  readonly UndertowGameplaySemanticReference[] = [
+  {
+    id: 'CURRENT_TURF_RETURN',
+    sourcePage: 'https://gamerch.com/splatoonwiki-sogo/984847',
+    sourceVersion: 'current page updated 2026-05-07 / post-Ver.7.2.0',
+    role: 'CURRENT_DIRECTIONALITY',
+    supports: [
+      'Turf/Zones center-to-own-side return via grate exists'
+    ]
+  },
+  {
+    id: 'CURRENT_SPAWN_TO_CENTER',
+    sourcePage: 'https://strategywiki.org/wiki/Splatoon_3/Undertow_Spillway',
+    sourceVersion: 'current post-Ver.7.2.0 stage guide checked 2026-09-30',
+    role: 'CURRENT_DIRECTIONALITY',
+    supports: [
+      'spawn-side route uses grate access toward the middle overhangs'
+    ]
+  },
+  {
+    id: 'CURRENT_RULE_VARIANTS',
+    sourcePage: 'https://kamigame.jp/splatoon3/page/230199164238079467.html',
+    sourceVersion: 'page updated 2025-03-06 / post-Ver.7.2.0',
+    role: 'CURRENT_RULE_VARIANT',
+    supports: [
+      'Splat Zones terrain matches Turf',
+      'Tower Control removes the central grate route',
+      'Rainmaker retains a grate-side attack route',
+      'Clam Blitz retains a grate-side attack route'
+    ]
+  },
+  {
+    id: 'LEGACY_TURF_SAME_ROUTE_RETURN',
+    sourcePage: 'https://appmedia.jp/splatoon3/76009214',
+    sourceVersion: 'pre-Ver.7.2.0 corroboration only',
+    role: 'LEGACY_CORROBORATION',
+    supports: [
+      'historical Turf explicitly described the grate route for both invasion and return'
+    ]
+  }
+] as const;
+
 export const UNDERTOW_POST_7_2_REFERENCE_MAPS: readonly UndertowReferenceMap[] = [
   {
     rule: 'TURF',
@@ -82,6 +141,32 @@ export function validateUndertowReferenceCatalog(): string[] {
 
   for (const rule of expected) {
     if (!seen.has(rule)) errors.push(`missing Undertow 7.2.0 reference for ${rule}`);
+  }
+
+  const gameplayIds = new Set<string>();
+  for (const reference of UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES) {
+    if (gameplayIds.has(reference.id)) {
+      errors.push(`duplicate Undertow grate gameplay reference '${reference.id}'`);
+    }
+    gameplayIds.add(reference.id);
+    if (reference.supports.length === 0) {
+      errors.push(`${reference.id}: gameplay semantic reference must declare support scope`);
+    }
+    if (
+      reference.id === 'LEGACY_TURF_SAME_ROUTE_RETURN' &&
+      reference.role !== 'LEGACY_CORROBORATION'
+    ) {
+      errors.push('legacy Turf grate reference must remain corroboration-only');
+    }
+    if (
+      reference.id !== 'LEGACY_TURF_SAME_ROUTE_RETURN' &&
+      reference.role === 'LEGACY_CORROBORATION'
+    ) {
+      errors.push(`${reference.id}: current grate reference cannot be legacy-only`);
+    }
+  }
+  if (gameplayIds.size !== 4) {
+    errors.push('Undertow grate gameplay semantic catalog must contain four scoped references');
   }
 
   return errors;
