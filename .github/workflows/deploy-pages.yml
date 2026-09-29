@@ -162,6 +162,12 @@ jobs:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18GSourceChainQa.test.ts
 
+      - name: T21 Pass 18H local gap source-class audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18HGapSourceAudit.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
