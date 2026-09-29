@@ -540,6 +540,20 @@ function pairConnected(
   return Boolean(aRow?.reached.includes(b) && bRow?.reached.includes(a));
 }
 
+function mutualAnchorMembership(
+  navigation: RecastStageNavigation,
+  point: StageVector3,
+  anchors: ReturnType<typeof sourceAnchors>
+): string[] {
+  return anchors
+    .filter((anchor) => {
+      const forward = navigation.auditPath(vec3(point), vec3(anchor.point));
+      const reverse = navigation.auditPath(vec3(anchor.point), vec3(point));
+      return forward.reachedTarget && reverse.reachedTarget;
+    })
+    .map((anchor) => anchor.id);
+}
+
 beforeAll(async () => {
   await initializeRecastNavigation();
 });
@@ -630,6 +644,63 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
         fixture.glass.NEGATIVE_Z.nearestNonBridgeMesh!
       )
     };
+
+    const endpointMembership = Object.fromEntries(
+      Object.entries(endpointPairs).map(([id, pair]) => [
+        id,
+        {
+          start: pair.start
+            ? mutualAnchorMembership(baselineNavigation, pair.start, anchors)
+            : [],
+          end: pair.end
+            ? mutualAnchorMembership(baselineNavigation, pair.end, anchors)
+            : []
+        }
+      ])
+    );
+
+    const controlFromAnchor = anchors.find(
+      (anchor) =>
+        anchor.id === 'paint:UndertowT21D:center-origin-step-top-face:0'
+    )!;
+    const controlToAnchor = anchors.find(
+      (anchor) => anchor.id === 'paint:UndertowT21D:center-low-team-a'
+    )!;
+    const controlFromProjectedRaw = baselineNavigation.closestPoint(
+      vec3(controlFromAnchor.point)
+    );
+    const controlToProjectedRaw = baselineNavigation.closestPoint(
+      vec3(controlToAnchor.point)
+    );
+    const controlFromProjected: StageVector3 = [
+      controlFromProjectedRaw.x,
+      controlFromProjectedRaw.y,
+      controlFromProjectedRaw.z
+    ];
+    const controlToProjected: StageVector3 = [
+      controlToProjectedRaw.x,
+      controlToProjectedRaw.y,
+      controlToProjectedRaw.z
+    ];
+    const syntheticControlLink: StageNavigationLinkDefinition = {
+      id: 'pass18f-synthetic-control',
+      start: controlFromProjected,
+      end: controlToProjected,
+      radiusMeters: 0.30,
+      bidirectional: true,
+      userId: 18999
+    };
+    const syntheticControl = matrixSummary(
+      qaStage(
+        'undertow-pass18f-synthetic-control',
+        solids,
+        [
+          ...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.navigationLinks,
+          syntheticControlLink
+        ]
+      ),
+      anchors
+    );
 
     const radiusResults: Record<string, {
       allFour: MatrixSummary;
@@ -765,6 +836,17 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
         connectorPromotionAuthorized: false,
         connectorDirectionalityAuthorityResolved: false,
         endpointPairs,
+        endpointMembership,
+        syntheticControl: {
+          from: controlFromAnchor.id,
+          to: controlToAnchor.id,
+          start: controlFromProjected,
+          end: controlToProjected,
+          reached: syntheticControl.reachedDirectedPairsIncludingSelf,
+          weak: syntheticControl.weakComponentCount,
+          strong: syntheticControl.stronglyConnectedComponentCount,
+          isolated: syntheticControl.isolatedAnchorIds
+        },
         baseline: {
           reached: baseline.reachedDirectedPairsIncludingSelf,
           weak: baseline.weakComponentCount,
@@ -807,6 +889,11 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
     expect(baseline.reachedDirectedPairsIncludingSelf).toBe(79);
     expect(baseline.weakComponentCount).toBe(9);
     expect(baseline.stronglyConnectedComponentCount).toBe(11);
+    expect(syntheticControl.reachedDirectedPairsIncludingSelf).toBeGreaterThan(79);
+    expect(syntheticControl.weakComponentCount).toBeLessThan(9);
+    expect(
+      syntheticControl.isolatedAnchorIds
+    ).not.toContain('paint:UndertowT21D:center-origin-step-top-face:0');
     expect(LINK_RADII).toEqual([0.10, 0.18, 0.30]);
     expect(TRUSTED_COMPONENT_SNAP_METERS).toBe(0.30);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
