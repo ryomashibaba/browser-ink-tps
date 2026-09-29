@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18E',
+      resolutionPass: '18F',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -369,6 +369,62 @@ describe('T21-D partial Recast connectivity QA', () => {
       walkableClimbVoxels: 8,
       trustedBidirectionallyReachedPairs: 3,
       trustedDirectionReachCount: 6
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localConnectorExperimentPass18F
+    ).toMatchObject({
+      qaRunNumber: 908,
+      diagnosticOnly: true,
+      endpointMethod:
+        'EXACT_TRIANGLE_CLOSEST_PAIR_PLUS_TRUSTED_COMBINED_RECAST_COMPONENT_SAMPLE',
+      trustedComponentSnapMeters: 0.30,
+      candidateConnectorCount: 4,
+      testedRadiiMeters: [0.10, 0.18, 0.30],
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      allTestedCandidateMatricesReachedDirectedPairs: 79,
+      allTestedCandidateMatricesWeakComponentCount: 9,
+      allTestedCandidateMatricesStronglyConnectedComponentCount: 11,
+      candidateLinksChangedConnectivity: false,
+      minimumSampledEndpointBoundaryOffsetMeters: 1.7340469343833274,
+      allSampledBoundaryOffsetsExceedTrustedSnapMeters: true,
+      endEndpointMutualTrackedAnchorMembershipCount: 0,
+      allFourDestinationEndpointsOutsideTrackedAnchorSccs: true,
+      detourMechanismOperational: true,
+      oneHopBoundaryConnectorSufficient: false,
+      destinationSourceChainBindingStillRequired: true,
+      originalTraversalDirectionalityResolved: false,
+      connectorPromotionAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false,
+      userCaptureRequiredNow: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localConnectorExperimentPass18F
+        .syntheticDetourControl
+    ).toMatchObject({
+      reachedDirectedPairs: 87,
+      weakComponentCount: 8,
+      stronglyConnectedComponentCount: 10,
+      centerStepRemainsIsolated: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localConnectorExperimentPass18F
+        .startEndpointMembership
+    ).toEqual({
+      gratePositive: ['grate:UndertowT21D:positive-z-grate-mesh:0'],
+      grateNegative: ['grate:UndertowT21D:negative-z-grate-mesh:0'],
+      glassPositive: [
+        'glass:positive-z:0',
+        'glass:positive-z:1',
+        'glass:positive-z:2'
+      ],
+      glassNegative: [
+        'glass:negative-z:0',
+        'glass:negative-z:1',
+        'glass:negative-z:2'
+      ]
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
