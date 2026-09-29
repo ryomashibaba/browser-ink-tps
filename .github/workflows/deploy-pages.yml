@@ -240,6 +240,12 @@ jobs:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18TLocalRawChainFineRadiusQa.test.ts
 
+      - name: T21 Pass 18U full-matrix local candidate collateral QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18UCandidateCollateralQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
