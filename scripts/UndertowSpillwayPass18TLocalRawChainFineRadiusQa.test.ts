@@ -556,6 +556,28 @@ describe('T21 Pass 18T local raw-chain fine-radius diagnostic',()=>{
       expect(record.firstFinal!.radiusMeters).toBeGreaterThan(0.75);
       expect(record.firstFinal!.radiusMeters).toBeLessThanOrEqual(0.90);
     }
+    expect(sideSweeps.POSITIVE_Z.firstIngress!.radiusMeters).toBe(0.65);
+    expect(sideSweeps.NEGATIVE_Z.firstIngress!.radiusMeters).toBe(0.725);
+    expect(sideSweeps.POSITIVE_Z.firstFinal!.radiusMeters).toBe(0.85);
+    expect(sideSweeps.NEGATIVE_Z.firstFinal!.radiusMeters).toBe(0.85);
+    expect(sideSweeps.POSITIVE_Z.combined!.ingressRadiusMeters).toBe(0.65);
+    expect(sideSweeps.POSITIVE_Z.combined!.finalRadiusMeters).toBe(0.85);
+    expect(sideSweeps.POSITIVE_Z.combined!.result.bidirectionallyReached).toBe(true);
+    expect(sideSweeps.NEGATIVE_Z.combined!.ingressRadiusMeters).toBe(0.725);
+    expect(sideSweeps.NEGATIVE_Z.combined!.finalRadiusMeters).toBe(0.85);
+    expect(sideSweeps.NEGATIVE_Z.combined!.result.bidirectionallyReached).toBe(true);
+    expect(
+      sideSweeps.POSITIVE_Z.ingressSweep.map((row)=>row.result.bidirectionallyReached)
+    ).toEqual([false,false,true,true,true,true,true]);
+    expect(
+      sideSweeps.NEGATIVE_Z.ingressSweep.map((row)=>row.result.bidirectionallyReached)
+    ).toEqual([false,false,false,false,false,true,true]);
+    expect(
+      sideSweeps.POSITIVE_Z.finalSweep.map((row)=>row.result.bidirectionallyReached)
+    ).toEqual([false,false,false,false,true,true,true]);
+    expect(
+      sideSweeps.NEGATIVE_Z.finalSweep.map((row)=>row.result.bidirectionallyReached)
+    ).toEqual([false,false,false,false,true,true,true]);
     expect(POSITIVE_RETREAT_METERS).toBe(0.040);
     expect(LINK_RADIUS_METERS).toBe(0.30);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
