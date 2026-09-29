@@ -63,13 +63,9 @@ describe('T21 Pass 18I exact source-gap vector decomposition', () => {
     expect(grateNeg.distanceMeters).toBeCloseTo(0.5185586972146198, 12);
     expect(gratePos.modelDelta[2]).toBeCloseTo(0.5, 12);
     expect(grateNeg.modelDelta[2]).toBeCloseTo(-0.5, 12);
-    expect(gratePos.aPointModel).toEqual(
-      expect.arrayContaining([
-        expect.closeTo(-30.5, 12),
-        expect.closeTo(9.0, 12),
-        expect.closeTo(35.5, 12)
-      ])
-    );
+    expect(gratePos.aPointModel[0]).toBeCloseTo(-30.5, 12);
+    expect(gratePos.aPointModel[1]).toBeCloseTo(9.0, 12);
+    expect(gratePos.aPointModel[2]).toBeCloseTo(35.5, 12);
     expect(gratePos.bPointModel[0]).toBeCloseTo(-30.5, 12);
     expect(gratePos.bPointModel[1]).toBeCloseTo(9.0, 12);
     expect(gratePos.bPointModel[2]).toBeCloseTo(36.0, 12);
