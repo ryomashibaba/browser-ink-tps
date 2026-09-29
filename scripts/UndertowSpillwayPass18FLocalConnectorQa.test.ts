@@ -44,16 +44,20 @@ interface Pass18fFixture {
   glass: Record<'POSITIVE_Z' | 'NEGATIVE_Z', GlassFixture>;
 }
 
-interface ClosestVertexPair {
-  aIndex: number;
-  bIndex: number;
+interface ClosestSurfacePair {
+  a: StageVector3;
+  b: StageVector3;
   distanceMeters: number;
 }
 
 interface TransitionEndpointPair {
+  sourceStart: StageVector3;
+  sourceEnd: StageVector3;
   start: StageVector3;
   end: StageVector3;
-  closestVertexDistanceMeters: number;
+  sourceBoundaryDistanceMeters: number;
+  startProjectionSnapMeters: number;
+  endProjectionSnapMeters: number;
   endpointDistanceMeters: number;
 }
 
@@ -72,6 +76,7 @@ interface MatrixSummary {
 
 const fixturePath = process.env.T21_PASS18C_SOURCE_JSON ?? '';
 const LINK_RADII = [0.10, 0.18, 0.30] as const;
+const EPS = 1e-12;
 
 function meshBounds(mesh: StageTriangleMeshGeometry): StageVector3 {
   const xs = mesh.vertices.map((vertex) => vertex[0]);
@@ -102,83 +107,226 @@ function navOnlySolid(
   };
 }
 
-function closestVertexPair(
-  aMesh: StageTriangleMeshGeometry,
-  bMesh: StageTriangleMeshGeometry
-): ClosestVertexPair {
-  let best: ClosestVertexPair | null = null;
-  for (let ai = 0; ai < aMesh.vertices.length; ai += 1) {
-    const a = aMesh.vertices[ai]!;
-    for (let bi = 0; bi < bMesh.vertices.length; bi += 1) {
-      const b = bMesh.vertices[bi]!;
-      const distanceMeters = Math.hypot(
-        a[0] - b[0],
-        a[1] - b[1],
-        a[2] - b[2]
-      );
-      if (!best || distanceMeters < best.distanceMeters) {
-        best = { aIndex: ai, bIndex: bi, distanceMeters };
+function add(a: StageVector3, b: StageVector3): StageVector3 {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+}
+
+function sub(a: StageVector3, b: StageVector3): StageVector3 {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function mul(a: StageVector3, scalar: number): StageVector3 {
+  return [a[0] * scalar, a[1] * scalar, a[2] * scalar];
+}
+
+function dot(a: StageVector3, b: StageVector3): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+function distance(a: StageVector3, b: StageVector3): number {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+function closestPointOnTriangle(
+  p: StageVector3,
+  a: StageVector3,
+  b: StageVector3,
+  c: StageVector3
+): StageVector3 {
+  const ab = sub(b, a);
+  const ac = sub(c, a);
+  const ap = sub(p, a);
+  const d1 = dot(ab, ap);
+  const d2 = dot(ac, ap);
+  if (d1 <= 0 && d2 <= 0) return a;
+
+  const bp = sub(p, b);
+  const d3 = dot(ab, bp);
+  const d4 = dot(ac, bp);
+  if (d3 >= 0 && d4 <= d3) return b;
+
+  const vc = d1 * d4 - d3 * d2;
+  if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+    const v = d1 / (d1 - d3);
+    return add(a, mul(ab, v));
+  }
+
+  const cp = sub(p, c);
+  const d5 = dot(ab, cp);
+  const d6 = dot(ac, cp);
+  if (d6 >= 0 && d5 <= d6) return c;
+
+  const vb = d5 * d2 - d1 * d6;
+  if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+    const w = d2 / (d2 - d6);
+    return add(a, mul(ac, w));
+  }
+
+  const va = d3 * d6 - d5 * d4;
+  if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
+    const bc = sub(c, b);
+    const w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+    return add(b, mul(bc, w));
+  }
+
+  const denom = 1 / (va + vb + vc);
+  const v = vb * denom;
+  const w = vc * denom;
+  return add(a, add(mul(ab, v), mul(ac, w)));
+}
+
+function closestPointsOnSegments(
+  p1: StageVector3,
+  q1: StageVector3,
+  p2: StageVector3,
+  q2: StageVector3
+): ClosestSurfacePair {
+  const d1 = sub(q1, p1);
+  const d2 = sub(q2, p2);
+  const r = sub(p1, p2);
+  const a = dot(d1, d1);
+  const e = dot(d2, d2);
+  const f = dot(d2, r);
+  let sParam = 0;
+  let tParam = 0;
+
+  if (a <= EPS && e <= EPS) {
+    return { a: p1, b: p2, distanceMeters: distance(p1, p2) };
+  }
+  if (a <= EPS) {
+    tParam = Math.max(0, Math.min(1, f / e));
+  } else {
+    const c = dot(d1, r);
+    if (e <= EPS) {
+      sParam = Math.max(0, Math.min(1, -c / a));
+    } else {
+      const b = dot(d1, d2);
+      const denom = a * e - b * b;
+      if (Math.abs(denom) > EPS) {
+        sParam = Math.max(0, Math.min(1, (b * f - c * e) / denom));
+      }
+      const tNominal = b * sParam + f;
+      if (tNominal < 0) {
+        tParam = 0;
+        sParam = Math.max(0, Math.min(1, -c / a));
+      } else if (tNominal > e) {
+        tParam = 1;
+        sParam = Math.max(0, Math.min(1, (b - c) / a));
+      } else {
+        tParam = tNominal / e;
       }
     }
   }
-  if (!best) throw new Error('Pass 18F closest pair requires non-empty meshes');
+
+  const aPoint = add(p1, mul(d1, sParam));
+  const bPoint = add(p2, mul(d2, tParam));
+  return {
+    a: aPoint,
+    b: bPoint,
+    distanceMeters: distance(aPoint, bPoint)
+  };
+}
+
+function triangleClosestPair(
+  a0: StageVector3,
+  a1: StageVector3,
+  a2: StageVector3,
+  b0: StageVector3,
+  b1: StageVector3,
+  b2: StageVector3
+): ClosestSurfacePair {
+  let best: ClosestSurfacePair | null = null;
+  const consider = (candidate: ClosestSurfacePair) => {
+    if (!best || candidate.distanceMeters < best.distanceMeters) best = candidate;
+  };
+
+  for (const p of [a0, a1, a2]) {
+    const q = closestPointOnTriangle(p, b0, b1, b2);
+    consider({ a: p, b: q, distanceMeters: distance(p, q) });
+  }
+  for (const p of [b0, b1, b2]) {
+    const q = closestPointOnTriangle(p, a0, a1, a2);
+    consider({ a: q, b: p, distanceMeters: distance(q, p) });
+  }
+
+  const aEdges = [[a0, a1], [a1, a2], [a2, a0]] as const;
+  const bEdges = [[b0, b1], [b1, b2], [b2, b0]] as const;
+  for (const [ap, aq] of aEdges) {
+    for (const [bp, bq] of bEdges) {
+      consider(closestPointsOnSegments(ap, aq, bp, bq));
+    }
+  }
+
+  if (!best) throw new Error('Pass 18F triangle closest pair failed');
   return best;
 }
 
-function triangleCentroidForVertex(
-  mesh: StageTriangleMeshGeometry,
-  vertexIndex: number
-): StageVector3 {
-  for (let i = 0; i < mesh.indices.length; i += 3) {
-    const tri = [mesh.indices[i]!, mesh.indices[i + 1]!, mesh.indices[i + 2]!];
-    if (!tri.includes(vertexIndex)) continue;
-    const a = mesh.vertices[tri[0]]!;
-    const b = mesh.vertices[tri[1]]!;
-    const c = mesh.vertices[tri[2]]!;
-    return [
-      (a[0] + b[0] + c[0]) / 3,
-      (a[1] + b[1] + c[1]) / 3,
-      (a[2] + b[2] + c[2]) / 3
-    ];
+function meshClosestPair(
+  aMesh: StageTriangleMeshGeometry,
+  bMesh: StageTriangleMeshGeometry
+): ClosestSurfacePair {
+  let best: ClosestSurfacePair | null = null;
+  for (let ai = 0; ai < aMesh.indices.length; ai += 3) {
+    const a0 = aMesh.vertices[aMesh.indices[ai]!]!;
+    const a1 = aMesh.vertices[aMesh.indices[ai + 1]!]!;
+    const a2 = aMesh.vertices[aMesh.indices[ai + 2]!]!;
+    for (let bi = 0; bi < bMesh.indices.length; bi += 3) {
+      const b0 = bMesh.vertices[bMesh.indices[bi]!]!;
+      const b1 = bMesh.vertices[bMesh.indices[bi + 1]!]!;
+      const b2 = bMesh.vertices[bMesh.indices[bi + 2]!]!;
+      const candidate = triangleClosestPair(a0, a1, a2, b0, b1, b2);
+      if (!best || candidate.distanceMeters < best.distanceMeters) {
+        best = candidate;
+      }
+    }
   }
-  throw new Error(`Pass 18F vertex ${vertexIndex} is not referenced`);
+  if (!best) throw new Error('Pass 18F mesh closest pair requires non-empty meshes');
+  return best;
 }
 
-function insetSurfacePoint(
+function projectBoundaryPointToComponentNav(
+  id: string,
   mesh: StageTriangleMeshGeometry,
-  vertexIndex: number,
-  insetMeters = 0.06
-): StageVector3 {
-  const vertex = mesh.vertices[vertexIndex]!;
-  const centroid = triangleCentroidForVertex(mesh, vertexIndex);
-  const dx = centroid[0] - vertex[0];
-  const dz = centroid[2] - vertex[2];
-  const horizontal = Math.hypot(dx, dz);
-  if (horizontal <= 1e-8) return vertex;
-  const t = Math.min(0.45, insetMeters / horizontal);
-  return [
-    vertex[0] + dx * t,
-    vertex[1] + (centroid[1] - vertex[1]) * t,
-    vertex[2] + dz * t
-  ];
+  sourcePoint: StageVector3
+): { point: StageVector3; snapMeters: number } {
+  const nav = new RecastStageNavigation(
+    qaStage(
+      `undertow-pass18f-project-${id}`,
+      [navOnlySolid(`pass18f-project-solid:${id}`, mesh)],
+      []
+    ),
+    new PerformanceStats()
+  );
+  const projected = nav.closestPoint(vec3(sourcePoint));
+  const point = [projected.x, projected.y, projected.z] as StageVector3;
+  return { point, snapMeters: distance(sourcePoint, point) };
 }
 
 function transitionEndpoints(
+  id: string,
   aMesh: StageTriangleMeshGeometry,
   bMesh: StageTriangleMeshGeometry
 ): TransitionEndpointPair {
-  const pair = closestVertexPair(aMesh, bMesh);
-  const start = insetSurfacePoint(aMesh, pair.aIndex);
-  const end = insetSurfacePoint(bMesh, pair.bIndex);
+  const pair = meshClosestPair(aMesh, bMesh);
+  const startProjection = projectBoundaryPointToComponentNav(
+    `${id}:a`,
+    aMesh,
+    pair.a
+  );
+  const endProjection = projectBoundaryPointToComponentNav(
+    `${id}:b`,
+    bMesh,
+    pair.b
+  );
   return {
-    start,
-    end,
-    closestVertexDistanceMeters: pair.distanceMeters,
-    endpointDistanceMeters: Math.hypot(
-      start[0] - end[0],
-      start[1] - end[1],
-      start[2] - end[2]
-    )
+    sourceStart: pair.a,
+    sourceEnd: pair.b,
+    start: startProjection.point,
+    end: endProjection.point,
+    sourceBoundaryDistanceMeters: pair.distanceMeters,
+    startProjectionSnapMeters: startProjection.snapMeters,
+    endProjectionSnapMeters: endProjection.snapMeters,
+    endpointDistanceMeters: distance(startProjection.point, endProjection.point)
   };
 }
 
@@ -324,7 +472,7 @@ beforeAll(async () => {
 });
 
 describe('T21 Pass 18F QA-only local connector candidate', () => {
-  it('tests exact KCC-derived local endpoints without promoting original traversal semantics', () => {
+  it('tests exact source-boundary Recast-projected local endpoints without promoting original traversal semantics', () => {
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
 
@@ -378,18 +526,22 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
 
     const endpointPairs = {
       gratePositive: transitionEndpoints(
+        'grate-positive',
         fixture.grates.POSITIVE_Z.mesh,
         fixture.grates.POSITIVE_Z.nearestWalkMesh!
       ),
       grateNegative: transitionEndpoints(
+        'grate-negative',
         fixture.grates.NEGATIVE_Z.mesh,
         fixture.grates.NEGATIVE_Z.nearestWalkMesh!
       ),
       glassPositive: transitionEndpoints(
+        'glass-positive',
         fixture.glass.POSITIVE_Z.bridgeMesh,
         fixture.glass.POSITIVE_Z.nearestNonBridgeMesh!
       ),
       glassNegative: transitionEndpoints(
+        'glass-negative',
         fixture.glass.NEGATIVE_Z.bridgeMesh,
         fixture.glass.NEGATIVE_Z.nearestNonBridgeMesh!
       )
@@ -528,6 +680,7 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
       'T21PASS18F_LOCAL_CONNECTOR',
       JSON.stringify({
         diagnosticOnly: true,
+        endpointMethod: 'EXACT_TRIANGLE_CLOSEST_PAIR_PROJECTED_TO_PRODUCTION_RECAST_COMPONENT',
         connectorPromotionAuthorized: false,
         connectorDirectionalityAuthorityResolved: false,
         endpointPairs,
