@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18I' as const,
+  resolutionPass: '18J' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -783,6 +783,57 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18I decomposes the Pass 18H endpoint pairs with exact triangle closest-point geometry in both project and Temple01 model coordinates. The mirrored grate-side source separation is exactly 0.5m in model Z at model Y=9.0, with zero vertical delta; the project-space 0.518558697m value is solely the registered XZ scale. The two mirrored upper-glass frontier alternatives are exactly 2.0m in model Z at model Y=3.0, again with zero vertical delta, on |model X|=4.25 and 16.0 lines. Therefore the localized closest separations are horizontal gaps, not height steps. This does not determine original jump/directionality semantics or whether the production KCC can physically cross each exact gap; those remain the next QA boundary.'
   }),
 
+  productionKccExactGapPass18J: Object.freeze({
+    qaRunNumber: 930,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    directedProbeCount: 12,
+    insetMeters: 0.40,
+    humanRadiusMeters: 0.32,
+    controllerOffsetMeters: 0.025,
+    effectiveHumanContactRadiusMeters: 0.345,
+    autostepMaxHeightMeters: 0.34,
+    snapToGroundMeters: 0.24,
+    grate: Object.freeze({
+      directedProbeCount: 4,
+      successfulDirectedProbeCount: 4,
+      failedDirectedProbeCount: 0,
+      allSettledInitially: true,
+      totalAirborneTicks: 0,
+      allDirectionsRemainGrounded: true,
+      maximumDropBelowSurfaceMeters: 0.08481084823608409,
+      exactHalfMeterGapGroundedTraversalFeasible: true,
+      mirroredBidirectionalPhysicalFeasibility: true
+    }),
+    upperGlass: Object.freeze({
+      directedProbeCount: 8,
+      successfulDirectedProbeCount: 0,
+      failedDirectedProbeCount: 8,
+      allSettledInitially: true,
+      totalAirborneTicks: 170,
+      minimumAirborneTicksPerProbe: 20,
+      maximumAirborneTicksPerProbe: 23,
+      minimumDropBelowSurfaceMeters: 1.988972659111023,
+      maximumDropBelowSurfaceMeters: 2.5186204862594606,
+      maximumFinalHorizontalErrorMeters: 0.13355062839631762,
+      exactTwoMeterGapGroundedTraversalFeasible: false,
+      ordinaryGroundedWalkInsufficient: true
+    }),
+    grateRecastVsKccMismatchFurtherLocalized: true,
+    upperGlassSimpleGroundedConnectorPhysicallyUnsupported: true,
+    originalGameplayTraversalSemanticsResolved: false,
+    originalGrateDirectionalityResolved: false,
+    originalUpperGlassJumpOrAlternateRouteResolved: false,
+    globalRecastParameterChangeAuthorized: false,
+    convenienceGeometryAuthorized: false,
+    offMeshLinkAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    userCaptureRequiredNow: false,
+    notes:
+      'Pass 18J drives the shared production Human Rapier KCC directly across the exact Pass 18I same-height source gaps using only the two endpoint walk meshes. All four mirrored/directed 0.5m grate-side probes succeed while remaining grounded for the entire crossing, with zero airborne ticks and <0.085m observed foot drop. All eight mirrored/directed 2.0m upper-glass frontier probes fail the grounded-traversal criterion, become airborne for 20-23 ticks, and drop about 1.99-2.52m even though horizontal motion continues toward the target. Therefore the grate disconnect is further localized as a Recast representation mismatch for a physically ground-traversable narrow gap, while the tested upper-glass frontier cannot be represented as an ordinary grounded walk. This still does not by itself authorize an original-game navigation link or resolve gameplay directionality/jump semantics.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -813,12 +864,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Resolve physical KCC feasibility and original traversal semantics for the mirrored grate-side gap. Pass 18I proves the localized FloorConcrete02 -> FloorSlope00 closest separation is an exact 0.5m horizontal model-Z gap at equal model Y=9.0, while Pass 18H found no ordinary walk third-component bridge. Test the exact gap with production KCC parameters before considering any connector; original-game grate walk-on/off directionality remains a separate promotion gate.',
-    'Resolve physical KCC feasibility and original traversal semantics for the mirrored upper-glass frontier. Pass 18I proves both tied FloorConcrete01 -> FloorSlope00 alternatives are exact 2.0m horizontal model-Z gaps at equal model Y=3.0, while Pass 18H recovered only FloorLine overlays on one alternative and no ordinary walk bridge. Test exact production-KCC feasibility and retain jump/directionality as an independent authority gate before authoring navigation.',
+    'Resolve original traversal/directionality authority for the mirrored grate-side gap and determine the narrowest faithful CPU navigation representation. Pass 18J proves the exact 0.5m same-height source gap is physically traversable by the production Human KCC in both directions with zero airborne ticks, while Recast remains disconnected. A QA-only local navigation representation may now be tested, but runtime promotion still requires preserving original grate walk-on/off semantics rather than inventing directionality.',
+    'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18I preserves Passes 18A-18H and resolves the exact geometry of the remaining localized source separations: the grate-side gap is exactly 0.5m horizontally in Temple01 model Z at equal height, and both upper-glass frontier alternatives are exactly 2.0m horizontally in model Z at equal height. Pass 18H already excludes hidden ordinary walk bridge geometry. The next safe task is production-KCC feasibility across these exact same-height gaps plus independent original traversal semantics; no connector, convenience slab, or global Recast change is authorized. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18J preserves Passes 18A-18I and resolves production-KCC feasibility at the exact localized horizontal gaps. The mirrored 0.5m grate-side gap is traversed in both directions with zero airborne ticks, confirming a local Recast/KCC representation mismatch. The mirrored 2.0m upper-glass frontier fails every grounded-walk probe and produces substantial falling, so it is not an ordinary walk transition. The next safe work is a QA-only minimal grate navigation representation plus evidence recovery for the actual upper-glass transition; no runtime connector, convenience slab, or global Recast change is yet authorized. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -853,12 +904,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18I partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18J partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18I' ||
+    audit.resolutionPass !== '18J' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -1316,6 +1367,54 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18I exact gap-vector boundary drifted');
   }
 
+  const kcc18j = audit.productionKccExactGapPass18J;
+  if (
+    kcc18j.qaRunNumber !== 930 ||
+    !kcc18j.diagnosticOnly ||
+    kcc18j.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    kcc18j.directedProbeCount !== 12 ||
+    Math.abs(kcc18j.insetMeters - 0.40) > 1e-12 ||
+    Math.abs(kcc18j.humanRadiusMeters - 0.32) > 1e-12 ||
+    Math.abs(kcc18j.controllerOffsetMeters - 0.025) > 1e-12 ||
+    Math.abs(kcc18j.effectiveHumanContactRadiusMeters - 0.345) > 1e-12 ||
+    Math.abs(kcc18j.autostepMaxHeightMeters - 0.34) > 1e-12 ||
+    Math.abs(kcc18j.snapToGroundMeters - 0.24) > 1e-12 ||
+    kcc18j.grate.directedProbeCount !== 4 ||
+    kcc18j.grate.successfulDirectedProbeCount !== 4 ||
+    kcc18j.grate.failedDirectedProbeCount !== 0 ||
+    !kcc18j.grate.allSettledInitially ||
+    kcc18j.grate.totalAirborneTicks !== 0 ||
+    !kcc18j.grate.allDirectionsRemainGrounded ||
+    Math.abs(kcc18j.grate.maximumDropBelowSurfaceMeters - 0.08481084823608409) > 1e-12 ||
+    !kcc18j.grate.exactHalfMeterGapGroundedTraversalFeasible ||
+    !kcc18j.grate.mirroredBidirectionalPhysicalFeasibility ||
+    kcc18j.upperGlass.directedProbeCount !== 8 ||
+    kcc18j.upperGlass.successfulDirectedProbeCount !== 0 ||
+    kcc18j.upperGlass.failedDirectedProbeCount !== 8 ||
+    !kcc18j.upperGlass.allSettledInitially ||
+    kcc18j.upperGlass.totalAirborneTicks !== 170 ||
+    kcc18j.upperGlass.minimumAirborneTicksPerProbe !== 20 ||
+    kcc18j.upperGlass.maximumAirborneTicksPerProbe !== 23 ||
+    Math.abs(kcc18j.upperGlass.minimumDropBelowSurfaceMeters - 1.988972659111023) > 1e-12 ||
+    Math.abs(kcc18j.upperGlass.maximumDropBelowSurfaceMeters - 2.5186204862594606) > 1e-12 ||
+    Math.abs(kcc18j.upperGlass.maximumFinalHorizontalErrorMeters - 0.13355062839631762) > 1e-12 ||
+    kcc18j.upperGlass.exactTwoMeterGapGroundedTraversalFeasible ||
+    !kcc18j.upperGlass.ordinaryGroundedWalkInsufficient ||
+    !kcc18j.grateRecastVsKccMismatchFurtherLocalized ||
+    !kcc18j.upperGlassSimpleGroundedConnectorPhysicallyUnsupported ||
+    kcc18j.originalGameplayTraversalSemanticsResolved ||
+    kcc18j.originalGrateDirectionalityResolved ||
+    kcc18j.originalUpperGlassJumpOrAlternateRouteResolved ||
+    kcc18j.globalRecastParameterChangeAuthorized ||
+    kcc18j.convenienceGeometryAuthorized ||
+    kcc18j.offMeshLinkAuthorized ||
+    kcc18j.runtimePromotionAuthorized ||
+    kcc18j.activationBlockerCleared ||
+    kcc18j.userCaptureRequiredNow
+  ) {
+    errors.push('Pass 18J production-KCC exact-gap boundary drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -1336,7 +1435,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18I full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18J full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
