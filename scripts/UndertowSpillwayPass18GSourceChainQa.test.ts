@@ -219,6 +219,30 @@ function componentBinding(
   };
 }
 
+function reachableComponentIds(
+  side: ChainSideFixture,
+  maxEdgeMeters: number
+): string[] {
+  const adjacency = new Map<string, string[]>();
+  for (const component of side.components) adjacency.set(component.id, []);
+  for (const edge of side.edges) {
+    if (edge.distanceMeters > maxEdgeMeters + EPS) continue;
+    adjacency.get(edge.a)?.push(edge.b);
+    adjacency.get(edge.b)?.push(edge.a);
+  }
+  const seen = new Set<string>([side.startComponentId]);
+  const queue = [side.startComponentId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const next of adjacency.get(current) ?? []) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return [...seen].sort();
+}
+
 function shortestPathToBound(
   side: ChainSideFixture,
   boundIds: ReadonlySet<string>,
@@ -306,9 +330,21 @@ describe('T21 Pass 18G source-native destination chain recovery', () => {
           componentBinding(navigation, component, sccs, anchorsById)
         );
         const bindingById = new Map(bindings.map((binding) => [binding.componentId, binding]));
+        const predecessorAnchorId =
+          routeName === 'grate'
+            ? `grate:UndertowT21D:${sideName === 'POSITIVE_Z' ? 'positive-z' : 'negative-z'}-grate-mesh:0`
+            : `glass:${sideName === 'POSITIVE_Z' ? 'positive-z' : 'negative-z'}:0`;
+        const predecessorScc = sccs.find((scc) =>
+          scc.anchorIds.includes(predecessorAnchorId)
+        );
+        if (!predecessorScc) {
+          throw new Error(`Pass 18G predecessor SCC missing for ${routeName}:${sideName}`);
+        }
         const boundIds = new Set(
           bindings
-            .filter((binding) => binding.runtimeSccIds.length > 0)
+            .filter((binding) =>
+              binding.runtimeSccIds.some((id) => id !== predecessorScc.id)
+            )
             .map((binding) => binding.componentId)
         );
         const paths = Object.fromEntries(
@@ -341,14 +377,53 @@ describe('T21 Pass 18G source-native destination chain recovery', () => {
             })
           : [];
 
+        const relaxedReachableIds = reachableComponentIds(
+          side,
+          fixture.pass18g.relaxedDiscoveryMeters
+        );
+        const relaxedReachable = relaxedReachableIds.map((id) => {
+          const component = side.components.find((entry) => entry.id === id)!;
+          const binding = bindingById.get(id)!;
+          return {
+            id,
+            object: component.sourceObject,
+            material: component.sourceMaterial,
+            componentIndex: component.componentIndex,
+            triangles: component.triangleCount,
+            area: component.areaSquareMeters,
+            yRange: component.yRange,
+            bbox: component.bbox,
+            runtimeSccIds: binding.runtimeSccIds,
+            anchorIds: binding.anchorIds
+          };
+        });
+        const downstreamBoundCandidates = [...boundIds].map((id) => {
+          const component = side.components.find((entry) => entry.id === id)!;
+          const binding = bindingById.get(id)!;
+          return {
+            id,
+            object: component.sourceObject,
+            material: component.sourceMaterial,
+            componentIndex: component.componentIndex,
+            bbox: component.bbox,
+            runtimeSccIds: binding.runtimeSccIds,
+            anchorIds: binding.anchorIds
+          };
+        });
+
         result[`${routeName}:${sideName}`] = {
           startComponentId: side.startComponentId,
+          predecessorAnchorId,
+          predecessorRuntimeSccId: predecessorScc.id,
           excludedBacktrackComponentIds: side.excludedBacktrackComponentIds,
           candidateComponentCount: side.components.length,
           edgeCount: side.edges.length,
-          runtimeBoundComponentCount: boundIds.size,
+          downstreamRuntimeBoundComponentCount: boundIds.size,
           paths,
-          chain
+          chain,
+          relaxedReachableComponentCount: relaxedReachableIds.length,
+          relaxedReachable,
+          downstreamBoundCandidates
         };
       }
     }
