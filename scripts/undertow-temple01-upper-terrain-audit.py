@@ -899,9 +899,53 @@ def build_pass18g_side(route_name,side):
                     "distanceMeters":d,
                 })
 
+    adjacency=defaultdict(list)
+    for edge in edges:
+        adjacency[edge["a"]].append(edge["b"])
+        adjacency[edge["b"]].append(edge["a"])
+    relaxed_seen={start_id}
+    relaxed_queue=deque([start_id])
+    while relaxed_queue:
+        current=relaxed_queue.popleft()
+        for nxt in adjacency[current]:
+            if nxt in relaxed_seen:
+                continue
+            relaxed_seen.add(nxt)
+            relaxed_queue.append(nxt)
+
+    frontier_rows=[]
+    reachable_records=[
+        continuation_by_id[component_id]
+        for component_id in sorted(relaxed_seen)
+    ]
+    unreached_records=[
+        record for record in candidates
+        if record["id"] not in relaxed_seen
+    ]
+    for a in reachable_records:
+        expanded=bbox_expand(a["bbox"],PASS18G_LOCAL_MARGIN_METERS)
+        for b in unreached_records:
+            if not bbox_intersects(expanded,b["bbox"]):
+                continue
+            d=component_distance_project(
+                a["faces"],b["faces"],PASS18G_LOCAL_MARGIN_METERS
+            )
+            if d<=PASS18G_LOCAL_MARGIN_METERS+1e-9:
+                frontier_rows.append((d,a,b))
+    frontier_rows.sort(key=lambda row:(row[0],row[1]["id"],row[2]["id"]))
+    frontier=[
+        {
+            "distanceMeters":d,
+            "fromComponentId":a["id"],
+            "toComponentId":b["id"],
+        }
+        for d,a,b in frontier_rows[:12]
+    ]
+
     print(
         f"T21PASS18G INVENTORY route={route_name} side={side} "
         f"start={start_id} candidates={len(candidates)} edges={len(edges)} "
+        f"relaxed_reachable={len(relaxed_seen)} frontier_pairs={len(frontier_rows)} "
         f"backtrack_excluded={len(backtrack_ids)} "
         f"margin={PASS18G_LOCAL_MARGIN_METERS:.2f} relaxed={PASS18G_RELAXED_DISCOVERY_METERS:.2f}"
     )
@@ -911,12 +955,20 @@ def build_pass18g_side(route_name,side):
             f"T21PASS18G EDGE route={route_name} side={side} rank={rank} "
             f"dist={edge['distanceMeters']:.9f} a={edge['a']} b={edge['b']}"
         )
+    for rank,row in enumerate(frontier):
+        print(
+            f"T21PASS18G FRONTIER route={route_name} side={side} rank={rank} "
+            f"dist={row['distanceMeters']:.9f} "
+            f"from={row['fromComponentId']} to={row['toComponentId']}"
+        )
 
     return {
         "startComponentId":start_id,
         "excludedBacktrackComponentIds":sorted(backtrack_ids),
         "components":[chain_component_payload(record) for record in candidates],
         "edges":edges,
+        "relaxedReachableComponentIds":sorted(relaxed_seen),
+        "frontier":frontier,
     }
 
 audit_output["pass18g"]={
