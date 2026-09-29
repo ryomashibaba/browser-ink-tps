@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18S',
+      resolutionPass: '18T',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -913,6 +913,47 @@ describe('T21-D partial Recast connectivity QA', () => {
       firstSuccessfulFinalRadiusMeters: 0.90,
       combinedIngressRadiusMeters: 0.75,
       combinedFinalRadiusMeters: 0.90,
+      combinedBidirectionallyReached: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localRawChainFineRadiusPass18T
+    ).toMatchObject({
+      qaRunNumber: 972,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      positiveRetreatMeters: 0.040,
+      testedIngressRadiiMeters: [0.60, 0.625, 0.65, 0.675, 0.70, 0.725, 0.75],
+      testedFinalRadiiMeters: [0.75, 0.775, 0.80, 0.825, 0.85, 0.875, 0.90],
+      finalThresholdMatchesBothSides: true,
+      ingressThresholdStillAsymmetricAt25MillimeterResolution: true,
+      commonMirroredCandidateIngressRadiusMeters: 0.725,
+      commonMirroredCandidateFinalRadiusMeters: 0.85,
+      commonMirroredCandidateUsesOnlyLocalRawEndpointsExceptPositiveFortyMillimeterStart: true,
+      commonMirroredCandidateBidirectionallyFeasibleBothSides: true,
+      exactMinimumAttachmentRadiiResolved: false,
+      fullMatrixCollateralValidated: false,
+      pathShapeValidated: false,
+      originalGrateDirectionalityResolved: false,
+      localConnectorSemanticsValidated: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localRawChainFineRadiusPass18T.positive
+    ).toMatchObject({
+      firstSuccessfulIngressRadiusMeters: 0.65,
+      firstSuccessfulFinalRadiusMeters: 0.85,
+      combinedIngressRadiusMeters: 0.65,
+      combinedFinalRadiusMeters: 0.85,
+      combinedBidirectionallyReached: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.localRawChainFineRadiusPass18T.negative
+    ).toMatchObject({
+      firstSuccessfulIngressRadiusMeters: 0.725,
+      firstSuccessfulFinalRadiusMeters: 0.85,
+      combinedIngressRadiusMeters: 0.725,
+      combinedFinalRadiusMeters: 0.85,
       combinedBidirectionallyReached: true
     });
     expect(
