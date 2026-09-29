@@ -475,6 +475,44 @@ describe('T21 Pass 18P ingress endpoint isolation diagnostic',()=>{
       sweep
     }));
 
+    const at030=sweep.find((row)=>row.rawRadiusMeters===0.30)!;
+    const at100=sweep.find((row)=>row.rawRadiusMeters===1.00)!;
+    const at600=sweep.find((row)=>row.rawRadiusMeters===6.00)!;
+    const positiveAt100=at100.sides.POSITIVE_Z;
+    const negativeAt100=at100.sides.NEGATIVE_Z;
+    const positiveAt600=at600.sides.POSITIVE_Z;
+
+    expect(at030.sides.POSITIVE_Z.rawStartRawEnd.bidirectionallyReached).toBe(false);
+    expect(at030.sides.POSITIVE_Z.rawStartTrustedEnd.bidirectionallyReached).toBe(false);
+    expect(at030.sides.POSITIVE_Z.trustedStartRawEnd.bidirectionallyReached).toBe(false);
+    expect(at030.sides.POSITIVE_Z.trustedStartTrustedEnd.bidirectionallyReached).toBe(true);
+    expect(at030.sides.NEGATIVE_Z.rawStartRawEnd.bidirectionallyReached).toBe(false);
+    expect(at030.sides.NEGATIVE_Z.trustedStartTrustedEnd.bidirectionallyReached).toBe(true);
+
+    expect(positiveAt100.rawStartRawEnd.bidirectionallyReached).toBe(false);
+    expect(positiveAt100.rawStartTrustedEnd.bidirectionallyReached).toBe(false);
+    expect(positiveAt100.trustedStartRawEnd.bidirectionallyReached).toBe(true);
+    expect(positiveAt100.trustedStartTrustedEnd.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.rawStartRawEnd.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.rawStartTrustedEnd.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.trustedStartRawEnd.bidirectionallyReached).toBe(true);
+    expect(negativeAt100.trustedStartTrustedEnd.bidirectionallyReached).toBe(true);
+
+    expect(positiveAt600.rawStartRawEnd.bidirectionallyReached).toBe(false);
+    expect(positiveAt600.rawStartTrustedEnd.bidirectionallyReached).toBe(false);
+    expect(positiveAt600.trustedStartRawEnd.bidirectionallyReached).toBe(true);
+    expect(
+      endpointSnaps.POSITIVE_Z.rawIngressStart.snapMeters
+    ).toBeCloseTo(0.6472549947142026,12);
+    expect(
+      endpointSnaps.NEGATIVE_Z.rawIngressStart.snapMeters
+    ).toBeCloseTo(0.7401798316876944,12);
+    expect(
+      endpointSnaps.POSITIVE_Z.rawIngressEnd.snapMeters
+    ).toBeCloseTo(0.3420302065480327,12);
+    expect(
+      endpointSnaps.NEGATIVE_Z.rawIngressEnd.snapMeters
+    ).toBeCloseTo(0.5103195238057004,12);
     expect(baseline.reached).toBe(79);
     expect(baseline.weak).toBe(9);
     expect(baseline.strong).toBe(11);
