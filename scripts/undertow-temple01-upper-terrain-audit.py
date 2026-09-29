@@ -18,6 +18,10 @@ WALK_TOKENS = (
     "FloorMetal", "FloorRubber", "BridgeMetal", "FloorFence"
 )
 OVERLAY_TOKENS = ("FloorLine",)
+PASS18G_THRESHOLDS = (0.03, 0.08, 0.18, 0.30)
+PASS18G_RELAXED_DISCOVERY_METERS = 2.0
+PASS18G_LOCAL_MARGIN_METERS = 12.0
+PASS18G_CONTINUATION_EXCLUDED_TOKENS = ("FloorLine", "FloorFence")
 GLASS_OBJECT = "FldObj_Temple01_PntSet_pCube21560_1__Glass01"
 GLASS_MATERIAL = "FldObj_Temple01_PntSet_Glass01"
 GRATE_OBJECT = "Fld_Temple01_pPlane157_1__FloorFence00"
@@ -342,15 +346,93 @@ def component_distance(a,b,limit=5.0):
                     return 0.0
     return best
 
+def project_point3(p):
+    x,z=model_to_project((p[0],p[2]))
+    return (x,p[1]-3.0,z)
+
 def mesh_payload(face_indices):
     verts=[]
     inds=[]
     for fi in face_indices:
         for p in tri_points(faces[fi]):
-            x,z=model_to_project((p[0],p[2]))
             inds.append(len(verts))
-            verts.append([x,p[1]-3.0,z])
+            verts.append(list(project_point3(p)))
     return {"vertices":verts,"indices":inds}
+
+def project_bbox3(face_indices):
+    pts=[project_point3(vertices[vi]) for fi in face_indices for vi in faces[fi][:3]]
+    return (
+        min(p[0] for p in pts), min(p[1] for p in pts), min(p[2] for p in pts),
+        max(p[0] for p in pts), max(p[1] for p in pts), max(p[2] for p in pts),
+    )
+
+def triangle_area_points(points):
+    a,b,c=points
+    ux,uy,uz=b[0]-a[0],b[1]-a[1],b[2]-a[2]
+    vx,vy,vz=c[0]-a[0],c[1]-a[1],c[2]-a[2]
+    nx=uy*vz-uz*vy
+    ny=uz*vx-ux*vz
+    nz=ux*vy-uy*vx
+    return 0.5*math.sqrt(nx*nx+ny*ny+nz*nz)
+
+def component_project_area(face_indices):
+    return sum(
+        triangle_area_points(tuple(project_point3(p) for p in tri_points(faces[fi])))
+        for fi in face_indices
+    )
+
+def triangle_distance_points(ta,tb):
+    best=min(
+        [point_triangle_distance(p,*tb) for p in ta] +
+        [point_triangle_distance(p,*ta) for p in tb]
+    )
+    ea=((ta[0],ta[1]),(ta[1],ta[2]),(ta[2],ta[0]))
+    eb=((tb[0],tb[1]),(tb[1],tb[2]),(tb[2],tb[0]))
+    for a0,a1 in ea:
+        for b0,b1 in eb:
+            best=min(best,segment_segment_distance(a0,a1,b0,b1))
+    return best
+
+def component_distance_project(a,b,limit=5.0):
+    ba=bbox_expand(project_bbox3(a),limit)
+    candidate_b=[
+        fi for fi in b
+        if bbox_intersects(
+            (
+                min(project_point3(p)[0] for p in tri_points(faces[fi])),
+                min(project_point3(p)[1] for p in tri_points(faces[fi])),
+                min(project_point3(p)[2] for p in tri_points(faces[fi])),
+                max(project_point3(p)[0] for p in tri_points(faces[fi])),
+                max(project_point3(p)[1] for p in tri_points(faces[fi])),
+                max(project_point3(p)[2] for p in tri_points(faces[fi])),
+            ),
+            ba
+        )
+    ]
+    if not candidate_b:
+        return math.inf
+    best=math.inf
+    for fa in a:
+        ta=tuple(project_point3(p) for p in tri_points(faces[fa]))
+        fba=(
+            min(p[0] for p in ta),min(p[1] for p in ta),min(p[2] for p in ta),
+            max(p[0] for p in ta),max(p[1] for p in ta),max(p[2] for p in ta),
+        )
+        ea=bbox_expand(fba,min(limit,best if math.isfinite(best) else limit))
+        for fb in candidate_b:
+            tb=tuple(project_point3(p) for p in tri_points(faces[fb]))
+            fbb=(
+                min(p[0] for p in tb),min(p[1] for p in tb),min(p[2] for p in tb),
+                max(p[0] for p in tb),max(p[1] for p in tb),max(p[2] for p in tb),
+            )
+            if not bbox_intersects(fbb,ea):
+                continue
+            d=triangle_distance_points(ta,tb)
+            if d<best:
+                best=d
+                if best<1e-7:
+                    return 0.0
+    return best
 
 def component_anchor(comp):
     # Largest upward source component interior centroid, suitable only for QA
@@ -462,6 +544,8 @@ audit_output={
     "grates":{},
     "glass":{},
 }
+pass18g_starts={"grate":{},"glass":{}}
+pass18g_backtrack_faces={"grate":{},"glass":{}}
 
 # Grate: use the union of every local upward FloorFence00 component whose
 # centroid is actually inside the transformed grate search footprint. The
@@ -544,6 +628,8 @@ for side,pdfpoly in GRATE_PDF.items():
         nearest_comp=nrows[0][1]
         nearest_object=nrows[0][2]['top'][0][0][0]
         nearest_material=nrows[0][2]['top'][0][0][1]
+        pass18g_starts["grate"][side]=nearest_comp
+        pass18g_backtrack_faces["grate"][side]=union
         print(
             f"T21UPPER GRATE_NEAREST side={side} "
             f"dist={nearest_distance:.6f} "
@@ -679,6 +765,9 @@ for side,route_points in GLASS_ROUTE_PROJECT_XZ.items():
         if row[2]["top"][0][0][1] != "FldObj_Temple01_PntSet_BridgeMetal00"
     ]
     nearest_non_bridge=non_bridge_rows[0] if non_bridge_rows else None
+    if nearest_non_bridge is not None:
+        pass18g_starts["glass"][side]=nearest_non_bridge[1]
+        pass18g_backtrack_faces["glass"][side]=reachable_faces
     audit_output["glass"][side]={
         "sourceObject":GLASS_OBJECT,
         "routeComponentIds":unique_ids,
@@ -694,6 +783,157 @@ for side,route_points in GLASS_ROUTE_PROJECT_XZ.items():
         "nearestNonBridgeMaterial":None if nearest_non_bridge is None else nearest_non_bridge[2]["top"][0][0][1],
         "nearestNonBridgeMesh":None if nearest_non_bridge is None else mesh_payload(nearest_non_bridge[1]),
     }
+
+
+# Pass 18G: recover the source-native continuation from each Pass 18F
+# destination component toward an already-bound runtime anchor. This remains
+# diagnostic-only: it emits exact source components and exact project-space
+# surface gaps, while the Vitest side determines which components already have
+# trusted membership in the current 25-anchor runtime graph.
+continuation_groups=defaultdict(list)
+for fi,f in enumerate(faces):
+    if not active(f[3]) or not is_walk_face(fi,exclude_overlay=True):
+        continue
+    if any(tok in f[4] for tok in PASS18G_CONTINUATION_EXCLUDED_TOKENS):
+        continue
+    continuation_groups[(f[3],f[4])].append(fi)
+
+continuation_components=[]
+face_to_continuation={}
+for (source_object,source_material),group_faces in sorted(continuation_groups.items()):
+    comps=componentize(group_faces)
+    comps=sorted(
+        comps,
+        key=lambda comp:(
+            tuple(round(v,9) for v in project_bbox3(comp)),
+            len(comp),
+            min(comp),
+        )
+    )
+    for component_index,comp in enumerate(comps):
+        component_id=f"{source_object}|{source_material}|c{component_index}"
+        record={
+            "id":component_id,
+            "sourceObject":source_object,
+            "sourceMaterial":source_material,
+            "componentIndex":component_index,
+            "faces":comp,
+            "triangleCount":len(comp),
+            "areaSquareMeters":component_project_area(comp),
+            "bbox":project_bbox3(comp),
+        }
+        continuation_components.append(record)
+        for fi in comp:
+            face_to_continuation[fi]=component_id
+
+continuation_by_id={record["id"]:record for record in continuation_components}
+
+def continuation_ids_for_faces(face_indices):
+    counts=defaultdict(int)
+    for fi in face_indices:
+        component_id=face_to_continuation.get(fi)
+        if component_id is not None:
+            counts[component_id]+=1
+    return [
+        component_id for component_id,_ in sorted(
+            counts.items(),key=lambda kv:(-kv[1],kv[0])
+        )
+    ]
+
+def chain_component_payload(record):
+    bbox=record["bbox"]
+    return {
+        "id":record["id"],
+        "sourceObject":record["sourceObject"],
+        "sourceMaterial":record["sourceMaterial"],
+        "componentIndex":record["componentIndex"],
+        "triangleCount":record["triangleCount"],
+        "areaSquareMeters":record["areaSquareMeters"],
+        "yRange":[bbox[1],bbox[4]],
+        "bbox":list(bbox),
+        "mesh":mesh_payload(record["faces"]),
+    }
+
+def build_pass18g_side(route_name,side):
+    start_faces=pass18g_starts[route_name].get(side)
+    if not start_faces:
+        raise SystemExit(f"T21PASS18G missing start route={route_name} side={side}")
+    start_ids=continuation_ids_for_faces(start_faces)
+    if len(start_ids)!=1:
+        raise SystemExit(
+            f"T21PASS18G start identity ambiguous route={route_name} side={side} ids={start_ids}"
+        )
+    start_id=start_ids[0]
+    start_record=continuation_by_id[start_id]
+    local_bbox=bbox_expand(start_record["bbox"],PASS18G_LOCAL_MARGIN_METERS)
+
+    backtrack_ids=set(
+        continuation_ids_for_faces(pass18g_backtrack_faces[route_name].get(side,[]))
+    )
+    backtrack_ids.discard(start_id)
+
+    candidates=[
+        record for record in continuation_components
+        if record["id"] not in backtrack_ids
+        and bbox_intersects(record["bbox"],local_bbox)
+    ]
+    candidate_ids={record["id"] for record in candidates}
+    if start_id not in candidate_ids:
+        candidates.append(start_record)
+        candidate_ids.add(start_id)
+    candidates=sorted(candidates,key=lambda record:record["id"])
+
+    edges=[]
+    for i,a in enumerate(candidates):
+        expanded=bbox_expand(a["bbox"],PASS18G_RELAXED_DISCOVERY_METERS)
+        for b in candidates[i+1:]:
+            if not bbox_intersects(expanded,b["bbox"]):
+                continue
+            d=component_distance_project(
+                a["faces"],b["faces"],PASS18G_RELAXED_DISCOVERY_METERS
+            )
+            if d<=PASS18G_RELAXED_DISCOVERY_METERS+1e-9:
+                edges.append({
+                    "a":a["id"],
+                    "b":b["id"],
+                    "distanceMeters":d,
+                })
+
+    print(
+        f"T21PASS18G INVENTORY route={route_name} side={side} "
+        f"start={start_id} candidates={len(candidates)} edges={len(edges)} "
+        f"backtrack_excluded={len(backtrack_ids)} "
+        f"margin={PASS18G_LOCAL_MARGIN_METERS:.2f} relaxed={PASS18G_RELAXED_DISCOVERY_METERS:.2f}"
+    )
+    nearest=sorted(edges,key=lambda edge:edge["distanceMeters"])[:12]
+    for rank,edge in enumerate(nearest):
+        print(
+            f"T21PASS18G EDGE route={route_name} side={side} rank={rank} "
+            f"dist={edge['distanceMeters']:.9f} a={edge['a']} b={edge['b']}"
+        )
+
+    return {
+        "startComponentId":start_id,
+        "excludedBacktrackComponentIds":sorted(backtrack_ids),
+        "components":[chain_component_payload(record) for record in candidates],
+        "edges":edges,
+    }
+
+audit_output["pass18g"]={
+    "thresholdsMeters":list(PASS18G_THRESHOLDS),
+    "relaxedDiscoveryMeters":PASS18G_RELAXED_DISCOVERY_METERS,
+    "localMarginMeters":PASS18G_LOCAL_MARGIN_METERS,
+    "routes":{
+        "grate":{
+            side:build_pass18g_side("grate",side)
+            for side in ("POSITIVE_Z","NEGATIVE_Z")
+        },
+        "glass":{
+            side:build_pass18g_side("glass",side)
+            for side in ("POSITIVE_Z","NEGATIVE_Z")
+        },
+    },
+}
 
 OUTPUT.write_text(json.dumps(audit_output,separators=(",",":")),encoding="utf-8")
 print(
