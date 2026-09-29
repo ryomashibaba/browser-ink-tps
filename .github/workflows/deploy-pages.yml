@@ -186,6 +186,12 @@ jobs:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18KGrateChainConnectorQa.test.ts
 
+      - name: T21 Pass 18L trusted-endpoint grate-chain diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18LTrustedGrateChainConnectorQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
