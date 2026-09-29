@@ -488,6 +488,14 @@ describe('T21 Pass 18Q positive ingress start-retreat diagnostic',()=>{
     expect(FRACTIONS).toHaveLength(13);
     expect(FRACTIONS[0]).toBe(0);
     expect(FRACTIONS.at(-1)).toBe(1);
+    expect(firstSuccess).not.toBeNull();
+    expect(firstSuccess!.fraction).toBe(0.05);
+    expect(firstSuccess!.movedMeters).toBeCloseTo(0.0993636852471732,12);
+    expect(firstSuccess!.startSnap.snapMeters).toBeCloseTo(0.5839682784207668,12);
+    expect(sweep[0]!.result.bidirectionallyReached).toBe(false);
+    expect(
+      sweep.slice(1).every((row)=>row.result.bidirectionallyReached)
+    ).toBe(true);
     expect(negativeControl.bidirectionallyReached).toBe(true);
     expect(negativeControl.forward.endpointErrorMeters).toBeCloseTo(0,12);
     expect(negativeControl.reverse.endpointErrorMeters).toBeCloseTo(0,12);
