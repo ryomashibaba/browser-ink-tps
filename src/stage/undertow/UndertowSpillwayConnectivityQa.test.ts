@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18I',
+      resolutionPass: '18J',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -531,6 +531,60 @@ describe('T21-D partial Recast connectivity QA', () => {
       exactTwoMeterModelGap: true,
       purelyHorizontalClosestSeparation: true,
       tiedFrontiersStructurallyMirrored: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.productionKccExactGapPass18J
+    ).toMatchObject({
+      qaRunNumber: 930,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      directedProbeCount: 12,
+      insetMeters: 0.40,
+      humanRadiusMeters: 0.32,
+      controllerOffsetMeters: 0.025,
+      effectiveHumanContactRadiusMeters: 0.345,
+      autostepMaxHeightMeters: 0.34,
+      snapToGroundMeters: 0.24,
+      grateRecastVsKccMismatchFurtherLocalized: true,
+      upperGlassSimpleGroundedConnectorPhysicallyUnsupported: true,
+      originalGameplayTraversalSemanticsResolved: false,
+      originalGrateDirectionalityResolved: false,
+      originalUpperGlassJumpOrAlternateRouteResolved: false,
+      globalRecastParameterChangeAuthorized: false,
+      convenienceGeometryAuthorized: false,
+      offMeshLinkAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false,
+      userCaptureRequiredNow: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.productionKccExactGapPass18J.grate
+    ).toMatchObject({
+      directedProbeCount: 4,
+      successfulDirectedProbeCount: 4,
+      failedDirectedProbeCount: 0,
+      allSettledInitially: true,
+      totalAirborneTicks: 0,
+      allDirectionsRemainGrounded: true,
+      maximumDropBelowSurfaceMeters: 0.08481084823608409,
+      exactHalfMeterGapGroundedTraversalFeasible: true,
+      mirroredBidirectionalPhysicalFeasibility: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.productionKccExactGapPass18J.upperGlass
+    ).toMatchObject({
+      directedProbeCount: 8,
+      successfulDirectedProbeCount: 0,
+      failedDirectedProbeCount: 8,
+      allSettledInitially: true,
+      totalAirborneTicks: 170,
+      minimumAirborneTicksPerProbe: 20,
+      maximumAirborneTicksPerProbe: 23,
+      minimumDropBelowSurfaceMeters: 1.988972659111023,
+      maximumDropBelowSurfaceMeters: 2.5186204862594606,
+      maximumFinalHorizontalErrorMeters: 0.13355062839631762,
+      exactTwoMeterGapGroundedTraversalFeasible: false,
+      ordinaryGroundedWalkInsufficient: true
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
