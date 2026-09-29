@@ -987,6 +987,269 @@ audit_output["pass18g"]={
     },
 }
 
+
+# Pass 18H: inspect the exact Pass 18G gap/frontier pairs against every nearby
+# Temple01 source material, including non-walk/overlay/steep geometry. This is
+# diagnostic-only. It must not promote a connector, convenience slab, or any
+# runtime geometry from proximity alone.
+PASS18H_LOCAL_MARGIN_METERS=3.0
+PASS18H_TRUSTED_BRIDGE_METERS=0.30
+PASS18H_HUMAN_CONTACT_METERS=0.345
+PASS18H_GRATE_GAP_COMPONENT_IDS={
+    "POSITIVE_Z":(
+        "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c0",
+        "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c6",
+    ),
+    "NEGATIVE_Z":(
+        "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c15",
+        "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c22",
+    ),
+}
+
+def pass18h_bbox_union(a,b):
+    return (
+        min(a[0],b[0]),min(a[1],b[1]),min(a[2],b[2]),
+        max(a[3],b[3]),max(a[4],b[4]),max(a[5],b[5]),
+    )
+
+def pass18h_axis_gap(amin,amax,bmin,bmax):
+    if amax < bmin:
+        return bmin-amax
+    if bmax < amin:
+        return amin-bmax
+    return 0.0
+
+def pass18h_face_project_bbox(fi):
+    pts=[project_point3(p) for p in tri_points(faces[fi])]
+    return (
+        min(p[0] for p in pts),min(p[1] for p in pts),min(p[2] for p in pts),
+        max(p[0] for p in pts),max(p[1] for p in pts),max(p[2] for p in pts),
+    )
+
+pass18h_group_face_cache=defaultdict(list)
+for pass18h_fi,pass18h_face in enumerate(faces):
+    pass18h_group_face_cache[(pass18h_face[3],pass18h_face[4])].append(pass18h_fi)
+pass18h_component_cache={}
+
+def pass18h_components_for_key(key):
+    cached=pass18h_component_cache.get(key)
+    if cached is not None:
+        return cached
+    comps=componentize(pass18h_group_face_cache[key])
+    comps=sorted(
+        comps,
+        key=lambda comp:(
+            tuple(round(v,9) for v in project_bbox3(comp)),
+            len(comp),
+            min(comp),
+        )
+    )
+    pass18h_component_cache[key]=comps
+    return comps
+
+def pass18h_component_summary(comp,source_object,source_material,component_index):
+    bbox=project_bbox3(comp)
+    nys=[tri_normal(faces[fi])[1] for fi in comp]
+    walk_count=sum(1 for fi in comp if is_walk_face(fi,exclude_overlay=True))
+    overlay_count=sum(
+        1 for fi in comp
+        if any(tok in faces[fi][4] for tok in OVERLAY_TOKENS)
+    )
+    return {
+        "id":f"{source_object}|{source_material}|allc{component_index}",
+        "sourceObject":source_object,
+        "sourceMaterial":source_material,
+        "componentIndex":component_index,
+        "triangleCount":len(comp),
+        "areaSquareMeters":component_project_area(comp),
+        "bbox":list(bbox),
+        "yRange":[bbox[1],bbox[4]],
+        "normalYRange":[min(nys),max(nys)],
+        "walkQualifiedFaceCount":walk_count,
+        "overlayFaceCount":overlay_count,
+        "steepOrNonUpwardFaceCount":len(comp)-sum(1 for ny in nys if ny>=MIN_UP_Y),
+    }
+
+def pass18h_nearby_source_components(a_record,b_record):
+    region=bbox_expand(
+        pass18h_bbox_union(a_record["bbox"],b_record["bbox"]),
+        PASS18H_LOCAL_MARGIN_METERS
+    )
+    local_keys=set()
+    for fi,f in enumerate(faces):
+        if bbox_intersects(pass18h_face_project_bbox(fi),region):
+            local_keys.add((f[3],f[4]))
+
+    rows=[]
+    a_faces=a_record["faces"]
+    b_faces=b_record["faces"]
+    for source_object,source_material in sorted(local_keys):
+        comps=pass18h_components_for_key((source_object,source_material))
+        for component_index,comp in enumerate(comps):
+            pb=project_bbox3(comp)
+            if not bbox_intersects(pb,region):
+                continue
+            if comp==a_faces or comp==b_faces:
+                continue
+            da=component_distance_project(
+                a_faces,comp,PASS18H_LOCAL_MARGIN_METERS
+            )
+            db=component_distance_project(
+                b_faces,comp,PASS18H_LOCAL_MARGIN_METERS
+            )
+            if not math.isfinite(da) or not math.isfinite(db):
+                continue
+            if min(da,db)>PASS18H_LOCAL_MARGIN_METERS+1e-9:
+                continue
+            summary=pass18h_component_summary(
+                comp,source_object,source_material,component_index
+            )
+            summary.update({
+                "distanceToA":da,
+                "distanceToB":db,
+                "bridgeScoreMeters":max(da,db),
+                "bridgesAtTrusted030":
+                    da<=PASS18H_TRUSTED_BRIDGE_METERS+1e-9
+                    and db<=PASS18H_TRUSTED_BRIDGE_METERS+1e-9,
+                "bridgesAtHumanContact0345":
+                    da<=PASS18H_HUMAN_CONTACT_METERS+1e-9
+                    and db<=PASS18H_HUMAN_CONTACT_METERS+1e-9,
+            })
+            rows.append(summary)
+    rows.sort(
+        key=lambda row:(
+            row["bridgeScoreMeters"],
+            row["distanceToA"]+row["distanceToB"],
+            row["sourceObject"],
+            row["sourceMaterial"],
+            row["componentIndex"],
+        )
+    )
+    return rows
+
+def pass18h_endpoint_summary(record):
+    bbox=record["bbox"]
+    nys=[tri_normal(faces[fi])[1] for fi in record["faces"]]
+    return {
+        "id":record["id"],
+        "sourceObject":record["sourceObject"],
+        "sourceMaterial":record["sourceMaterial"],
+        "componentIndex":record["componentIndex"],
+        "triangleCount":record["triangleCount"],
+        "areaSquareMeters":record["areaSquareMeters"],
+        "bbox":list(bbox),
+        "yRange":[bbox[1],bbox[4]],
+        "normalYRange":[min(nys),max(nys)],
+    }
+
+def pass18h_gap_payload(a_id,b_id):
+    if a_id not in continuation_by_id or b_id not in continuation_by_id:
+        raise SystemExit(f"T21PASS18H missing endpoint a={a_id} b={b_id}")
+    a=continuation_by_id[a_id]
+    b=continuation_by_id[b_id]
+    distance_m=component_distance_project(
+        a["faces"],b["faces"],PASS18H_LOCAL_MARGIN_METERS
+    )
+    rows=pass18h_nearby_source_components(a,b)
+    bbox_a=a["bbox"]
+    bbox_b=b["bbox"]
+    trusted=[row for row in rows if row["bridgesAtTrusted030"]]
+    human=[row for row in rows if row["bridgesAtHumanContact0345"]]
+    return {
+        "a":pass18h_endpoint_summary(a),
+        "b":pass18h_endpoint_summary(b),
+        "distanceMeters":distance_m,
+        "bboxAxisGapsMeters":[
+            pass18h_axis_gap(bbox_a[0],bbox_a[3],bbox_b[0],bbox_b[3]),
+            pass18h_axis_gap(bbox_a[1],bbox_a[4],bbox_b[1],bbox_b[4]),
+            pass18h_axis_gap(bbox_a[2],bbox_a[5],bbox_b[2],bbox_b[5]),
+        ],
+        "verticalRangesOverlap":
+            not (bbox_a[4]<bbox_b[1] or bbox_b[4]<bbox_a[1]),
+        "nearbySourceComponentCount":len(rows),
+        "trusted030BridgeCandidateCount":len(trusted),
+        "humanContact0345BridgeCandidateCount":len(human),
+        "trusted030BridgeCandidates":trusted[:12],
+        "humanContact0345BridgeCandidates":human[:12],
+        "nearestNearbySourceComponents":rows[:24],
+    }
+
+pass18h_grate={}
+for side,(a_id,b_id) in PASS18H_GRATE_GAP_COMPONENT_IDS.items():
+    pass18h_grate[side]=pass18h_gap_payload(a_id,b_id)
+
+pass18h_glass={}
+for side in ("POSITIVE_Z","NEGATIVE_Z"):
+    route=audit_output["pass18g"]["routes"]["glass"][side]
+    frontier=route["frontier"]
+    if not frontier:
+        raise SystemExit(f"T21PASS18H missing glass frontier side={side}")
+    min_distance=frontier[0]["distanceMeters"]
+    tied=[
+        row for row in frontier
+        if abs(row["distanceMeters"]-min_distance)<=1e-9
+    ]
+    pass18h_glass[side]={
+        "frontierDistanceMeters":min_distance,
+        "tiedFrontierCount":len(tied),
+        "gaps":[
+            pass18h_gap_payload(
+                row["fromComponentId"],row["toComponentId"]
+            )
+            for row in tied
+        ],
+    }
+
+audit_output["pass18h"]={
+    "diagnosticOnly":True,
+    "runtimePromotionAuthorized":False,
+    "localMarginMeters":PASS18H_LOCAL_MARGIN_METERS,
+    "trustedBridgeMeters":PASS18H_TRUSTED_BRIDGE_METERS,
+    "humanContactMeters":PASS18H_HUMAN_CONTACT_METERS,
+    "grate":pass18h_grate,
+    "glass":pass18h_glass,
+}
+
+def pass18h_compact_gap(gap):
+    return {
+        "a":gap["a"],
+        "b":gap["b"],
+        "distanceMeters":gap["distanceMeters"],
+        "bboxAxisGapsMeters":gap["bboxAxisGapsMeters"],
+        "verticalRangesOverlap":gap["verticalRangesOverlap"],
+        "nearbySourceComponentCount":gap["nearbySourceComponentCount"],
+        "trusted030BridgeCandidateCount":gap["trusted030BridgeCandidateCount"],
+        "humanContact0345BridgeCandidateCount":
+            gap["humanContact0345BridgeCandidateCount"],
+        "trusted030BridgeCandidates":gap["trusted030BridgeCandidates"],
+        "humanContact0345BridgeCandidates":
+            gap["humanContact0345BridgeCandidates"],
+        "nearestNearbySourceComponents":gap["nearestNearbySourceComponents"],
+    }
+
+print(
+    "T21PASS18H_GAP_SOURCE_AUDIT",
+    json.dumps({
+        "diagnosticOnly":True,
+        "runtimePromotionAuthorized":False,
+        "localMarginMeters":PASS18H_LOCAL_MARGIN_METERS,
+        "trustedBridgeMeters":PASS18H_TRUSTED_BRIDGE_METERS,
+        "humanContactMeters":PASS18H_HUMAN_CONTACT_METERS,
+        "grate":{
+            side:pass18h_compact_gap(gap)
+            for side,gap in pass18h_grate.items()
+        },
+        "glass":{
+            side:{
+                "frontierDistanceMeters":record["frontierDistanceMeters"],
+                "tiedFrontierCount":record["tiedFrontierCount"],
+                "gaps":[pass18h_compact_gap(gap) for gap in record["gaps"]],
+            }
+            for side,record in pass18h_glass.items()
+        },
+    },separators=(",",":"))
+)
+
 OUTPUT.write_text(json.dumps(audit_output,separators=(",",":")),encoding="utf-8")
 print(
     f"T21UPPER OUTPUT path={OUTPUT} bytes={OUTPUT.stat().st_size} "
