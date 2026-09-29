@@ -262,7 +262,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18M' as const,
+  resolutionPass: '18N' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -928,6 +928,33 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18M decomposes the four nonlocal trusted-endpoint links from Pass 18L. Neither ingress-only nor final-gap-only links change the 79/9/11 baseline, and every individual link is likewise inert. The two-link POSITIVE_Z pair alone yields 84/8/10 and resolves only the positive grate singleton; the mirrored NEGATIVE_Z pair produces the same 84/8/10 and resolves only the negative grate singleton. All four links reproduce 89/7/9. Therefore each mirrored grate route contains two independently necessary Recast attachment breaks: grate->source-chain ingress and the later 0.5m FloorConcrete02->FloorSlope00 break. Because the only working endpoints remain the nonlocal Pass 18L projections, this is diagnostic minimality evidence and not promotion authority.'
   }),
 
+  rawBoundaryRadiusSweepPass18N: Object.freeze({
+    qaRunNumber: 945,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    testedRadiiMeters: [0.30, 0.36, 0.45, 0.60, 1.00, 1.50, 2.00, 3.00, 4.00, 6.00] as const,
+    physicalEndpointCount: 4,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    bothSidesFailThrough060Meters: true,
+    negativeFirstSuccessfulRadiusMeters: 1.0,
+    negativeRemainsBidirectionallyConnectedThrough600Meters: true,
+    positiveSuccessfulRadiusMetersAtOrBelow600: null,
+    positiveForwardEndpointErrorMetersAt600: 46.86031243966464,
+    positiveReverseEndpointErrorMetersAt600: 2.9400917651756426,
+    negativeForwardEndpointErrorMetersAt100: 0,
+    negativeReverseEndpointErrorMetersAt100: 0,
+    mirroredSourceProducesAsymmetricRawBoundaryAttachment: true,
+    globalRawBoundaryRadiusSolutionFound: false,
+    radiusIncreaseIsSafePromotionStrategy: false,
+    localConnectorSemanticsValidated: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18N keeps the four Pass 18K physical source-boundary endpoints fixed and sweeps only Detour off-mesh attachment radius from 0.30m to 6.00m. Both mirrored sides remain disconnected through 0.60m. At 1.00m the NEGATIVE_Z pair becomes bidirectionally connected with zero endpoint error and stays connected through 6.00m, but POSITIVE_Z never reaches its spawn-side route even at 6.00m; its forward endpoint error remains 46.860312440m and reverse remains 2.940091765m. Because the source geometry is structurally mirrored, this one-sided threshold is a Recast attachment asymmetry, not authority for a larger production link radius. No global or local radius-only promotion is authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -958,12 +985,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Determine a faithful local CPU representation for the mirrored grate route without nonlocal endpoint projection. Pass 18M proves each side has two independently necessary Recast attachment breaks: the grate->source-chain ingress and the later exact 0.5m gap. Sweep raw physical-boundary off-mesh attachment radius to determine how far Detour must search before each break attaches, and reject any radius that binds unrelated nav islands. Original grate walk-on/off directionality remains an independent promotion gate.',
+    'Determine why mirrored raw-boundary attachment diverges after Recast generation. Pass 18N finds no symmetric radius solution: both sides fail through 0.60m, NEGATIVE_Z begins working at 1.00m, while POSITIVE_Z remains disconnected even at 6.00m. Decompose ingress vs final-gap attachment with hybrid raw/trusted endpoint controls to identify which positive-side endpoint is binding the wrong or no nav polygon. Do not raise production link radius from this asymmetric sweep. Original grate walk-on/off directionality remains an independent promotion gate.',
     'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18M preserves Passes 18A-18L and proves the grate chain has two distinct Recast attachment breaks per mirrored side. Either trusted ingress pair alone or trusted final-gap pair alone is insufficient; both links on one side are required to resolve that side only, and both mirrored pairs reproduce the Pass 18L 89/7/9 matrix. Because the working endpoints are still nonlocal, the next safe diagnostic is a raw-boundary attachment-radius sweep, not runtime promotion. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18N preserves Passes 18A-18M and rules out raw-boundary link-radius inflation as a faithful grate fix. A 1.00m attachment radius connects only NEGATIVE_Z, while POSITIVE_Z remains disconnected through 6.00m despite mirrored source geometry. This is Recast/nav-poly attachment asymmetry rather than source evidence for different gameplay semantics. The next safe diagnostic is per-break hybrid endpoint isolation; production geometry, Recast globals, and runtime links remain unchanged. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -998,12 +1025,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18M partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18N partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18M' ||
+    audit.resolutionPass !== '18N' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -1605,6 +1632,34 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18M trusted-endpoint minimality boundary drifted');
   }
 
+  const radius18n = audit.rawBoundaryRadiusSweepPass18N;
+  if (
+    radius18n.qaRunNumber !== 945 ||
+    !radius18n.diagnosticOnly ||
+    radius18n.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    radius18n.testedRadiiMeters.join(',') !== '0.3,0.36,0.45,0.6,1,1.5,2,3,4,6' ||
+    radius18n.physicalEndpointCount !== 4 ||
+    radius18n.baselineReachedDirectedPairs !== 79 ||
+    radius18n.baselineWeakComponentCount !== 9 ||
+    radius18n.baselineStronglyConnectedComponentCount !== 11 ||
+    !radius18n.bothSidesFailThrough060Meters ||
+    Math.abs(radius18n.negativeFirstSuccessfulRadiusMeters - 1.0) > 1e-12 ||
+    !radius18n.negativeRemainsBidirectionallyConnectedThrough600Meters ||
+    radius18n.positiveSuccessfulRadiusMetersAtOrBelow600 !== null ||
+    Math.abs(radius18n.positiveForwardEndpointErrorMetersAt600 - 46.86031243966464) > 1e-12 ||
+    Math.abs(radius18n.positiveReverseEndpointErrorMetersAt600 - 2.9400917651756426) > 1e-12 ||
+    Math.abs(radius18n.negativeForwardEndpointErrorMetersAt100) > 1e-12 ||
+    Math.abs(radius18n.negativeReverseEndpointErrorMetersAt100) > 1e-12 ||
+    !radius18n.mirroredSourceProducesAsymmetricRawBoundaryAttachment ||
+    radius18n.globalRawBoundaryRadiusSolutionFound ||
+    radius18n.radiusIncreaseIsSafePromotionStrategy ||
+    radius18n.localConnectorSemanticsValidated ||
+    radius18n.runtimePromotionAuthorized ||
+    radius18n.activationBlockerCleared
+  ) {
+    errors.push('Pass 18N raw-boundary radius sweep drifted');
+  }
+
   if (
     audit.sourceNativeRouteGapAudit.sourceWalkableNodeCountPerSide !== 276 ||
     audit.sourceNativeRouteGapAudit.rightLowContactNodeCountPerSide !== 17 ||
@@ -1625,7 +1680,7 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   }
 
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18M full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18N full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
