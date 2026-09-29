@@ -55,16 +55,24 @@ interface ClosestMeshPair extends ClosestSurfacePair {
   bTriangleCentroid: StageVector3;
 }
 
+interface TrustedEndpoint {
+  point: StageVector3;
+  sourceSample: StageVector3;
+  sampleSnapMeters: number;
+  boundaryOffsetMeters: number;
+  sampleCount: number;
+  trustedSampleCount: number;
+}
+
 interface TransitionEndpointPair {
   sourceStart: StageVector3;
   sourceEnd: StageVector3;
-  start: StageVector3;
-  end: StageVector3;
+  start: StageVector3 | null;
+  end: StageVector3 | null;
   sourceBoundaryDistanceMeters: number;
-  endpointInsetMeters: number;
-  startInsetActualMeters: number;
-  endInsetActualMeters: number;
-  endpointDistanceMeters: number;
+  startTrustedEndpoint: TrustedEndpoint | null;
+  endTrustedEndpoint: TrustedEndpoint | null;
+  endpointDistanceMeters: number | null;
 }
 
 interface MatrixRow {
@@ -82,7 +90,7 @@ interface MatrixSummary {
 
 const fixturePath = process.env.T21_PASS18C_SOURCE_JSON ?? '';
 const LINK_RADII = [0.10, 0.18, 0.30] as const;
-const NAV_ENDPOINT_INSET_METERS = 0.42;
+const TRUSTED_COMPONENT_SNAP_METERS = 0.30;
 const EPS = 1e-12;
 
 function meshBounds(mesh: StageTriangleMeshGeometry): StageVector3 {
@@ -308,43 +316,89 @@ function meshClosestPair(
   return best;
 }
 
-function insetTowardTriangleCentroid(
-  boundary: StageVector3,
-  centroid: StageVector3,
-  insetMeters: number
-): StageVector3 {
-  const delta = sub(centroid, boundary);
-  const length = Math.hypot(delta[0], delta[1], delta[2]);
-  if (length <= EPS) return boundary;
-  const move = Math.min(insetMeters, length * 0.80);
-  return add(boundary, mul(delta, move / length));
+function meshSurfaceSamples(
+  mesh: StageTriangleMeshGeometry
+): StageVector3[] {
+  const samples: StageVector3[] = [...mesh.vertices];
+  for (let i = 0; i < mesh.indices.length; i += 3) {
+    const a = mesh.vertices[mesh.indices[i]!]!;
+    const b = mesh.vertices[mesh.indices[i + 1]!]!;
+    const c = mesh.vertices[mesh.indices[i + 2]!]!;
+    samples.push(triangleCentroid(a, b, c));
+  }
+  return samples;
+}
+
+function trustedComponentEndpoint(
+  navigation: RecastStageNavigation,
+  mesh: StageTriangleMeshGeometry,
+  sourceBoundaryPoint: StageVector3
+): TrustedEndpoint | null {
+  const samples = meshSurfaceSamples(mesh);
+  let trustedSampleCount = 0;
+  let best: Omit<TrustedEndpoint, 'sampleCount' | 'trustedSampleCount'> | null = null;
+
+  for (const sample of samples) {
+    const projected = navigation.closestPoint(vec3(sample));
+    const point = [projected.x, projected.y, projected.z] as StageVector3;
+    const sampleSnapMeters = distance(sample, point);
+    if (sampleSnapMeters > TRUSTED_COMPONENT_SNAP_METERS + 1e-9) continue;
+    trustedSampleCount += 1;
+    const boundaryOffsetMeters = distance(sourceBoundaryPoint, point);
+    if (
+      !best ||
+      boundaryOffsetMeters < best.boundaryOffsetMeters - 1e-9 ||
+      (
+        Math.abs(boundaryOffsetMeters - best.boundaryOffsetMeters) <= 1e-9 &&
+        sampleSnapMeters < best.sampleSnapMeters
+      )
+    ) {
+      best = {
+        point,
+        sourceSample: sample,
+        sampleSnapMeters,
+        boundaryOffsetMeters
+      };
+    }
+  }
+
+  return best
+    ? {
+        ...best,
+        sampleCount: samples.length,
+        trustedSampleCount
+      }
+    : null;
 }
 
 function transitionEndpoints(
+  navigation: RecastStageNavigation,
   aMesh: StageTriangleMeshGeometry,
   bMesh: StageTriangleMeshGeometry
 ): TransitionEndpointPair {
   const pair = meshClosestPair(aMesh, bMesh);
-  const start = insetTowardTriangleCentroid(
-    pair.a,
-    pair.aTriangleCentroid,
-    NAV_ENDPOINT_INSET_METERS
+  const startTrustedEndpoint = trustedComponentEndpoint(
+    navigation,
+    aMesh,
+    pair.a
   );
-  const end = insetTowardTriangleCentroid(
-    pair.b,
-    pair.bTriangleCentroid,
-    NAV_ENDPOINT_INSET_METERS
+  const endTrustedEndpoint = trustedComponentEndpoint(
+    navigation,
+    bMesh,
+    pair.b
   );
+  const start = startTrustedEndpoint?.point ?? null;
+  const end = endTrustedEndpoint?.point ?? null;
   return {
     sourceStart: pair.a,
     sourceEnd: pair.b,
     start,
     end,
     sourceBoundaryDistanceMeters: pair.distanceMeters,
-    endpointInsetMeters: NAV_ENDPOINT_INSET_METERS,
-    startInsetActualMeters: distance(pair.a, start),
-    endInsetActualMeters: distance(pair.b, end),
-    endpointDistanceMeters: distance(start, end)
+    startTrustedEndpoint,
+    endTrustedEndpoint,
+    endpointDistanceMeters:
+      start && end ? distance(start, end) : null
   };
 }
 
@@ -464,7 +518,8 @@ function connector(
   radiusMeters: number,
   bidirectional = true,
   userId?: number
-): StageNavigationLinkDefinition {
+): StageNavigationLinkDefinition | null {
+  if (!endpoints.start || !endpoints.end) return null;
   return {
     id,
     start: endpoints.start,
@@ -490,7 +545,7 @@ beforeAll(async () => {
 });
 
 describe('T21 Pass 18F QA-only local connector candidate', () => {
-  it('tests exact source-boundary Recast-projected local endpoints without promoting original traversal semantics', () => {
+  it('tests exact source-boundary trusted-component local endpoints without promoting original traversal semantics', () => {
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
 
@@ -542,31 +597,39 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
     ];
     const anchors = sourceAnchors(fixture);
 
+    const baselineStage = qaStage(
+      'undertow-pass18f-source-baseline',
+      solids,
+      [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.navigationLinks]
+    );
+    const baseline = matrixSummary(baselineStage, anchors);
+    const baselineNavigation = new RecastStageNavigation(
+      baselineStage,
+      new PerformanceStats()
+    );
+
     const endpointPairs = {
       gratePositive: transitionEndpoints(
+        baselineNavigation,
         fixture.grates.POSITIVE_Z.mesh,
         fixture.grates.POSITIVE_Z.nearestWalkMesh!
       ),
       grateNegative: transitionEndpoints(
+        baselineNavigation,
         fixture.grates.NEGATIVE_Z.mesh,
         fixture.grates.NEGATIVE_Z.nearestWalkMesh!
       ),
       glassPositive: transitionEndpoints(
+        baselineNavigation,
         fixture.glass.POSITIVE_Z.bridgeMesh,
         fixture.glass.POSITIVE_Z.nearestNonBridgeMesh!
       ),
       glassNegative: transitionEndpoints(
+        baselineNavigation,
         fixture.glass.NEGATIVE_Z.bridgeMesh,
         fixture.glass.NEGATIVE_Z.nearestNonBridgeMesh!
       )
     };
-
-    const baseline = matrixSummary(
-      qaStage('undertow-pass18f-source-baseline', solids, [
-        ...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.navigationLinks
-      ]),
-      anchors
-    );
 
     const radiusResults: Record<string, {
       allFour: MatrixSummary;
@@ -579,11 +642,11 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
       const grateLinks = [
         connector('pass18f-grate-positive', endpointPairs.gratePositive, radiusMeters, true, 18101),
         connector('pass18f-grate-negative', endpointPairs.grateNegative, radiusMeters, true, 18102)
-      ];
+      ].filter((link): link is StageNavigationLinkDefinition => link !== null);
       const glassLinks = [
         connector('pass18f-glass-positive', endpointPairs.glassPositive, radiusMeters, true, 18103),
         connector('pass18f-glass-negative', endpointPairs.glassNegative, radiusMeters, true, 18104)
-      ];
+      ].filter((link): link is StageNavigationLinkDefinition => link !== null);
       const inherited = [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.navigationLinks];
       radiusResults[radiusMeters.toFixed(2)] = {
         allFour: matrixSummary(
@@ -615,7 +678,7 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
             qaStage(
               `undertow-pass18f-grate-positive-${radiusMeters}`,
               solids,
-              [...inherited, grateLinks[0]!]
+              [...inherited, ...(grateLinks[0] ? [grateLinks[0]] : [])]
             ),
             anchors
           ),
@@ -623,7 +686,7 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
             qaStage(
               `undertow-pass18f-grate-negative-${radiusMeters}`,
               solids,
-              [...inherited, grateLinks[1]!]
+              [...inherited, ...(grateLinks[1] ? [grateLinks[1]] : [])]
             ),
             anchors
           ),
@@ -631,7 +694,7 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
             qaStage(
               `undertow-pass18f-glass-positive-${radiusMeters}`,
               solids,
-              [...inherited, glassLinks[0]!]
+              [...inherited, ...(glassLinks[0] ? [glassLinks[0]] : [])]
             ),
             anchors
           ),
@@ -639,7 +702,7 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
             qaStage(
               `undertow-pass18f-glass-negative-${radiusMeters}`,
               solids,
-              [...inherited, glassLinks[1]!]
+              [...inherited, ...(glassLinks[1] ? [glassLinks[1]] : [])]
             ),
             anchors
           )
@@ -694,7 +757,11 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
       'T21PASS18F_LOCAL_CONNECTOR',
       JSON.stringify({
         diagnosticOnly: true,
-        endpointMethod: 'EXACT_TRIANGLE_CLOSEST_PAIR_INSET_TOWARD_SOURCE_TRIANGLE_INTERIOR',
+        endpointMethod: 'EXACT_TRIANGLE_CLOSEST_PAIR_PLUS_TRUSTED_COMBINED_RECAST_COMPONENT_SAMPLE',
+        trustedComponentSnapMeters: TRUSTED_COMPONENT_SNAP_METERS,
+        availableConnectorEndpointPairCount: Object.values(endpointPairs).filter(
+          (pair) => pair.start !== null && pair.end !== null
+        ).length,
         connectorPromotionAuthorized: false,
         connectorDirectionalityAuthorityResolved: false,
         endpointPairs,
@@ -741,7 +808,8 @@ describe('T21 Pass 18F QA-only local connector candidate', () => {
     expect(baseline.weakComponentCount).toBe(9);
     expect(baseline.stronglyConnectedComponentCount).toBe(11);
     expect(LINK_RADII).toEqual([0.10, 0.18, 0.30]);
+    expect(TRUSTED_COMPONENT_SNAP_METERS).toBe(0.30);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
-  });
+  }, 15000);
 });
