@@ -419,6 +419,29 @@ describe('T21 Pass 18J production-KCC exact horizontal-gap diagnostic', () => {
     expect(
       entries.every(([, result]) => Number.isFinite(result.finalHorizontalErrorMeters))
     ).toBe(true);
+
+    const grateResults = entries
+      .filter(([id]) => id.startsWith('grate:'))
+      .map(([, result]) => result);
+    const glassResults = entries
+      .filter(([id]) => id.startsWith('glass:'))
+      .map(([, result]) => result);
+    expect(grateResults).toHaveLength(4);
+    expect(glassResults).toHaveLength(8);
+    expect(grateResults.every((result) => result.success)).toBe(true);
+    expect(grateResults.every((result) => result.airborneTicks === 0)).toBe(true);
+    expect(grateResults.every((result) => result.groundedTicks > 0)).toBe(true);
+    expect(
+      Math.max(...grateResults.map((result) => result.maximumDropBelowSurfaceMeters))
+    ).toBeLessThan(0.10);
+    expect(glassResults.every((result) => !result.success)).toBe(true);
+    expect(glassResults.every((result) => result.airborneTicks >= 20)).toBe(true);
+    expect(
+      Math.min(...glassResults.map((result) => result.maximumDropBelowSurfaceMeters))
+    ).toBeGreaterThan(1.90);
+    expect(
+      Math.max(...glassResults.map((result) => result.finalHorizontalErrorMeters))
+    ).toBeLessThan(0.15);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
   }, 20000);
