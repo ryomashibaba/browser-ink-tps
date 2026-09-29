@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18M',
+      resolutionPass: '18N',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -663,6 +663,28 @@ describe('T21-D partial Recast connectivity QA', () => {
       ingressAndFinalBreakAreIndependentlyNecessaryPerSide: true,
       eachSidePairResolvesOnlyItsOwnGrateSingleton: true,
       twoDistinctRecastAttachmentBreaksPerSide: true,
+      localConnectorSemanticsValidated: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.rawBoundaryRadiusSweepPass18N
+    ).toMatchObject({
+      qaRunNumber: 945,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      testedRadiiMeters: [0.30, 0.36, 0.45, 0.60, 1.00, 1.50, 2.00, 3.00, 4.00, 6.00],
+      physicalEndpointCount: 4,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      bothSidesFailThrough060Meters: true,
+      negativeFirstSuccessfulRadiusMeters: 1.0,
+      negativeRemainsBidirectionallyConnectedThrough600Meters: true,
+      positiveSuccessfulRadiusMetersAtOrBelow600: null,
+      mirroredSourceProducesAsymmetricRawBoundaryAttachment: true,
+      globalRawBoundaryRadiusSolutionFound: false,
+      radiusIncreaseIsSafePromotionStrategy: false,
       localConnectorSemanticsValidated: false,
       runtimePromotionAuthorized: false,
       activationBlockerCleared: false
