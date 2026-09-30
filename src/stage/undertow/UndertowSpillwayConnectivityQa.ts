@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AI' as const,
+  resolutionPass: '18AJ' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1877,6 +1877,41 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AI interpolates only along the exact FloorConcrete02 source-surface segment between the raw boundary and the Pass 18AH first-success source sample. Every tested point lies on the source floor surface. POSITIVE_Z already attaches at 0.05m retreat after failing at 0m. NEGATIVE_Z fails through 0.10m and first attaches at 0.15m, so the first sampled common retreat is 0.15m and the unresolved common threshold lies in (0.10, 0.15]. A two-sided 0.15m candidate keeps the 25-anchor matrix at 79/9/11 and reaches no non-glass runtime anchor. The 1.50m link radius is still diagnostic-large; first refine the common retreat threshold, then minimize radius for that fixed local endpoint.'
   }),
 
+  upperGlassFloorEndpointFineRetreatPass18AJ: Object.freeze({
+    qaRunNumber: 1044,
+    diagnosticOnly: true,
+    rawRadiusMeters: 1.50,
+    sampledRetreatsMeters: [
+      0.100, 0.105, 0.110, 0.115, 0.120, 0.125,
+      0.130, 0.135, 0.140, 0.145, 0.150
+    ] as const,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    positiveAllFineSamplesConnected: true,
+    negativeLastFailureRetreatMeters: 0.125,
+    negativeFirstSuccessRetreatMeters: 0.130,
+    firstSampledCommonSuccessRetreatMeters: 0.130,
+    commonThresholdLowerExclusiveMeters: 0.125,
+    commonThresholdUpperInclusiveMeters: 0.130,
+    positiveProjectedSnapAtCommonMeters: 0.9997309981886592,
+    negativeProjectedSnapAtCommonMeters: 0.9887536400664477,
+    allFinePointsSourceSurfaceValid: true,
+    commonCandidateReachedDirectedPairs: 79,
+    commonCandidateWeakComponentCount: 9,
+    commonCandidateStronglyConnectedComponentCount: 11,
+    commonCandidateReachesNonGlassRuntimeAnchor: false,
+    sampledCommonRetreatResolvedAt5mmGranularity: true,
+    exactSub5mmThresholdResolved: false,
+    qaCandidateRetreatMeters: 0.130,
+    rawRadiusStillDiagnosticLarge: true,
+    radiusMinimizationRequiredNext: true,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AJ fine-sweeps the source-surface-valid FloorConcrete02 endpoint retreat from 0.100m through 0.150m in 0.005m increments with the exact raw BridgeMetal endpoint preserved. POSITIVE_Z succeeds at every fine sample. NEGATIVE_Z fails through 0.125m and first succeeds at 0.130m, making 0.130m the first sampled common retreat at 5mm resolution. The two-sided 0.130m candidate leaves the tracked 25-anchor matrix at 79/9/11 and reaches no non-glass runtime anchor. This is sufficient as the next QA endpoint candidate; the current 1.50m link radius remains diagnostic-large and must now be minimized independently before any combined upper-glass candidate is considered.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1908,11 +1943,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Fine-sweep the mirrored FloorConcrete02 endpoint retreat from 0.10m through 0.15m at 0.005m spacing, preserving the exact raw BridgeMetal endpoint and validating every point against the source floor surface. Pass 18AI shows POSITIVE_Z already succeeds at 0.05m, while NEGATIVE_Z fails at 0.10m and succeeds at 0.15m; therefore NEGATIVE_Z controls the common threshold window. After the common retreat is localized, separately minimize the currently diagnostic-large 1.50m link radius before combining the upstream boundary with the Pass 18AF downstream floor->slope candidate.',
+    'Minimize the BridgeMetal->FloorConcrete02 link radius at the fixed mirrored 0.130m FloorConcrete02 retreat candidate from Pass 18AJ. Preserve the exact raw BridgeMetal endpoint and source-surface-valid 0.130m floor endpoint, sweep only link radius, and find the smallest common mirrored sampled radius without tracked-anchor collateral. Do not alter the 0.130m retreat during this radius sweep. After that, combine the upstream candidate with the independently measured Pass 18AF FloorConcrete02->FloorSlope00 0.80m QA candidate and re-audit the full source-chain connectivity.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AI preserves Passes 18A-18AH and narrows the upstream FloorConcrete02 retreat to a small mirrored window. POSITIVE_Z succeeds from the first 0.05m sample; NEGATIVE_Z is still detached at 0.10m and succeeds at 0.15m. All interpolated points are source-surface valid, and the common 0.15m candidate leaves the tracked matrix at 79/9/11 with no non-glass collateral. The next safe step is a 5mm fine sweep over 0.10..0.15m, followed by radius minimization at the resolved retreat. No runtime promotion occurs yet. The downstream floor->slope boundary remains QA-representable from Pass 18AF. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AJ preserves Passes 18A-18AI and resolves a practical mirrored upstream floor-endpoint candidate at 5mm granularity. POSITIVE_Z is already connected throughout 0.100..0.150m; NEGATIVE_Z switches between 0.125m failure and 0.130m success. The common 0.130m candidate is source-surface valid and collateral-free in the tracked matrix. The next safe step is radius minimization with retreat frozen at 0.130m; no runtime promotion occurs yet. The downstream floor->slope boundary remains QA-representable from Pass 18AF. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1947,12 +1982,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AI partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AJ partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AI' ||
+    audit.resolutionPass !== '18AJ' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -3518,8 +3553,42 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AI floor endpoint interpolation boundary drifted');
   }
 
+  const retreat18aj = audit.upperGlassFloorEndpointFineRetreatPass18AJ;
+  if (
+    retreat18aj.qaRunNumber !== 1044 ||
+    !retreat18aj.diagnosticOnly ||
+    Math.abs(retreat18aj.rawRadiusMeters - 1.50) > 1e-12 ||
+    retreat18aj.sampledRetreatsMeters.join(',') !==
+      '0.1,0.105,0.11,0.115,0.12,0.125,0.13,0.135,0.14,0.145,0.15' ||
+    retreat18aj.baselineReachedDirectedPairs !== 79 ||
+    retreat18aj.baselineWeakComponentCount !== 9 ||
+    retreat18aj.baselineStronglyConnectedComponentCount !== 11 ||
+    !retreat18aj.positiveAllFineSamplesConnected ||
+    Math.abs(retreat18aj.negativeLastFailureRetreatMeters - 0.125) > 1e-12 ||
+    Math.abs(retreat18aj.negativeFirstSuccessRetreatMeters - 0.130) > 1e-12 ||
+    Math.abs(retreat18aj.firstSampledCommonSuccessRetreatMeters - 0.130) > 1e-12 ||
+    Math.abs(retreat18aj.commonThresholdLowerExclusiveMeters - 0.125) > 1e-12 ||
+    Math.abs(retreat18aj.commonThresholdUpperInclusiveMeters - 0.130) > 1e-12 ||
+    Math.abs(retreat18aj.positiveProjectedSnapAtCommonMeters - 0.9997309981886592) > 1e-9 ||
+    Math.abs(retreat18aj.negativeProjectedSnapAtCommonMeters - 0.9887536400664477) > 1e-9 ||
+    !retreat18aj.allFinePointsSourceSurfaceValid ||
+    retreat18aj.commonCandidateReachedDirectedPairs !== 79 ||
+    retreat18aj.commonCandidateWeakComponentCount !== 9 ||
+    retreat18aj.commonCandidateStronglyConnectedComponentCount !== 11 ||
+    retreat18aj.commonCandidateReachesNonGlassRuntimeAnchor ||
+    !retreat18aj.sampledCommonRetreatResolvedAt5mmGranularity ||
+    retreat18aj.exactSub5mmThresholdResolved ||
+    Math.abs(retreat18aj.qaCandidateRetreatMeters - 0.130) > 1e-12 ||
+    !retreat18aj.rawRadiusStillDiagnosticLarge ||
+    !retreat18aj.radiusMinimizationRequiredNext ||
+    retreat18aj.runtimePromotionAuthorized ||
+    retreat18aj.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AJ floor endpoint fine-retreat boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AI full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AJ full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
