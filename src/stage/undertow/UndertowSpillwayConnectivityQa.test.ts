@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AG',
+      resolutionPass: '18AH',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1529,6 +1529,47 @@ describe('T21-D partial Recast connectivity QA', () => {
       anyVariantReachesNonGlassRuntimeAnchor: false,
       floorEndpointLocalRetreatRequiredNext: true,
       trustedFloorEndpointTooNonlocalForPromotion: true,
+      rawRadiusInflationAuthorized: false,
+      trustedShortcutPromotionAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassFloorEndpointLocalSearchPass18AH
+    ).toMatchObject({
+      qaRunNumber: 1035,
+      diagnosticOnly: true,
+      rawRadiusMeters: 1.50,
+      trustedSnapMeters: 0.30,
+      sourceSampleCountPerSide: 10,
+      selectedSampleCountPerSide: 6,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      positiveTrustedFloorBoundaryOffsetMeters: 1.8492402471551055,
+      negativeTrustedFloorBoundaryOffsetMeters: 2.3003785443214677,
+      positiveRawBoundaryProjectedSnapMeters: 1.073626967562852,
+      negativeRawBoundaryProjectedSnapMeters: 0.9065172851425543,
+      positiveFirstSuccessRetreatMeters: 0.6547373284927769,
+      negativeFirstSuccessRetreatMeters: 0.654737328492778,
+      commonFirstSampledSuccessRetreatMeters: 0.654737328492778,
+      positiveFirstSuccessProjectedSnapMeters: 0.511221159040814,
+      negativeFirstSuccessProjectedSnapMeters: 0.5004886229274855,
+      positiveFirstSuccessSourcePoint: [
+        -10.67826430970341, 6, 12.118397071136153
+      ],
+      negativeFirstSuccessSourcePoint: [
+        10.907632598231574, 6, -11.92383277567933
+      ],
+      positiveLastFailureRetreatMeters: 0,
+      negativeLastFailureRetreatMeters: 0,
+      allSelectedCandidatesTrackedAnchorMatrixUnchanged: true,
+      allSuccessfulCandidatesReachNoNonGlassRuntimeAnchor: true,
+      firstSampledLocalRetreatMirrored: true,
+      sourceMeshSampleSearchFindsLocalAlternativeToTrustedShortcut: true,
+      exactContinuousRetreatThresholdResolved: false,
+      continuousSurfaceSweepRequiredBetweenBoundaryAndFirstSuccess: true,
       rawRadiusInflationAuthorized: false,
       trustedShortcutPromotionAuthorized: false,
       runtimePromotionAuthorized: false,
