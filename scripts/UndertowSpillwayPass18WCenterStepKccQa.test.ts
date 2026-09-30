@@ -453,7 +453,48 @@ describe('T21 Pass 18W center +1.5m step production-KCC diagnostic', () => {
 
     expect(Object.keys(probes)).toHaveLength(6);
     expect(Object.values(probes).every((probe) => probe.settledInitially)).toBe(true);
+
+    const positiveWalk = probes['POSITIVE_Z:lower-to-upper:walk']!;
+    const negativeWalk = probes['NEGATIVE_Z:lower-to-upper:walk']!;
+    const positiveJump = probes['POSITIVE_Z:lower-to-upper:jump']!;
+    const negativeJump = probes['NEGATIVE_Z:lower-to-upper:jump']!;
+    const positiveDrop = probes['POSITIVE_Z:upper-to-lower:drop']!;
+    const negativeDrop = probes['NEGATIVE_Z:upper-to-lower:drop']!;
+
+    expect(positiveWalk.reachedTargetSurface).toBe(false);
+    expect(negativeWalk.reachedTargetSurface).toBe(false);
+    expect(positiveJump.reachedTargetSurface).toBe(true);
+    expect(negativeJump.reachedTargetSurface).toBe(true);
+    expect(positiveDrop.reachedTargetSurface).toBe(true);
+    expect(negativeDrop.reachedTargetSurface).toBe(true);
+
+    expect(positiveWalk.airborneTicks).toBe(0);
+    expect(positiveJump.airborneTicks).toBe(14);
+    expect(negativeJump.airborneTicks).toBe(15);
+    expect(positiveDrop.airborneTicks).toBe(16);
+    expect(negativeDrop.airborneTicks).toBe(16);
+    expect(positiveJump.maximumRiseAboveStartMeters).toBeCloseTo(
+      1.5292533683776854,
+      9
+    );
+    expect(negativeJump.maximumRiseAboveStartMeters).toBeCloseTo(
+      1.5295673656463622,
+      9
+    );
+    expect(positiveDrop.maximumDropBelowStartMeters).toBeCloseTo(
+      1.4395598721504212,
+      9
+    );
+    expect(negativeDrop.maximumDropBelowStartMeters).toBeCloseTo(
+      1.4753304076194764,
+      9
+    );
+
     expect(Number.isFinite(theoreticalBallisticMaxRiseMeters)).toBe(true);
+    expect(theoreticalBallisticMaxRiseMeters).toBeCloseTo(
+      1.2007142857142856,
+      12
+    );
     expect(theoreticalBallisticMaxRiseMeters).toBeLessThan(TOP_Y_METERS);
     expect(geometry.POSITIVE_Z.lowerInsetFromSharedEdgeMeters).toBeGreaterThanOrEqual(
       LOWER_SEARCH_START_METERS
