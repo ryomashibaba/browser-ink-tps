@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AN' as const,
+  resolutionPass: '18AO' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2056,6 +2056,52 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AN keeps the frozen Pass 18AK and 18AF links fixed, adds only the exact raw FloorSlope00->FloorConcrete00 boundary pair, and varies only its bidirectional link radius. Common mirrored attachment fails at 0.668m and first succeeds at the sampled 0.669m radius. The 0.669m QA candidate keeps the tracked matrix at 79/9/11, reaches only each side\'s own three upper-glass anchors, and reaches no non-glass runtime anchor. The exact sub-1mm threshold remains unresolved and no runtime promotion is authorized. The next safe step is to extend this complete source-local chain and re-localize only the first remaining route-continuing source-adjacent break.'
   }),
 
+
+  postFloor00BreakPass18AO: Object.freeze({
+    qaRunNumber: 1072,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    trustedSnapMeters: 0.30,
+    upstreamSourcePass: '18AK' as const,
+    upstreamRetreatMeters: 0.130,
+    upstreamRadiusMeters: 0.995,
+    floorSlopeSourcePass: '18AF' as const,
+    floorSlopeRadiusMeters: 0.80,
+    slopeFloor00SourcePass: '18AN' as const,
+    slopeFloor00RadiusMeters: 0.669,
+    positiveSeedId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c2',
+    negativeSeedId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c9',
+    seedMaterial: 'FloorConcrete00' as const,
+    seedYProjectMeters: 3.0,
+    bothSeedComponentsOwnGlassConnected: true,
+    positiveNextId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c2',
+    negativeNextId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c17',
+    nextMaterial: 'FloorConcrete02' as const,
+    nextYProjectMeters: 1.5,
+    positivePhysicalDistanceMeters: 1.8236261924604125,
+    negativePhysicalDistanceMeters: 1.8236261924604125,
+    verticalDeltaMeters: 1.5,
+    positiveSeedBoundaryPoint: [-18.10796451418891, 3, 17.11606867882324] as const,
+    positiveNextBoundaryPoint: [-17.651435881652564, 1.5, 18.047301247788777] as const,
+    negativeSeedBoundaryPoint: [18.337332802717068, 3, -16.92150438336642] as const,
+    negativeNextBoundaryPoint: [17.88080417018072, 1.5, -17.852736952331956] as const,
+    positiveNextTrustedBoundaryOffsetMeters: 3.564856542980601,
+    negativeNextTrustedBoundaryOffsetMeters: 3.5648560150192066,
+    exactRawBoundaryKccValidationRequiredNext: true,
+    ordinaryWalkSemanticsResolved: false,
+    jumpOrDropSemanticsResolved: false,
+    offMeshLinkAuthorized: false,
+    broadFrontierLinkAuthorized: false,
+    globalRecastTuningAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AO fixes the complete source-local chain through Pass 18AN and uses FloorConcrete00 as the seed on both mirrored sides. After excluding components already mutually connected to each side\'s upper-glass SCC, the nearest remaining source component is FloorConcrete02 at project Y 1.5, exactly 1.823626192m from the project-Y 3.0 FloorConcrete00 seed on both sides. The 1.5m vertical delta means ordinary walking, jump-up, or drop-down semantics cannot be inferred from geometry alone. Trusted Recast representatives for the destination sit about 3.565m away from the raw boundary, so no non-local trusted shortcut is authorized. The next required step is production Human KCC validation on the exact raw source pair before any new Detour link is considered.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2087,11 +2133,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Continue from the Pass 18AN source-local upper-glass chain. The exact raw FloorSlope00->FloorConcrete00 boundary is ordinary bidirectional Human walking in Pass 18AM and first attaches on both mirrored sides at sampled 0.669m radius in Pass 18AN, but the tracked matrix remains 79/9/11 with no non-glass runtime anchor. Localize only the first source-adjacent break beyond FloorConcrete00; do not replace the chain with a broad frontier shortcut or global Recast tuning.',
+    'Continue from Pass 18AO: after the source-local chain reaches FloorConcrete00, the first remaining mirrored source-adjacent break is FloorConcrete00 at project Y 3.0 to FloorConcrete02 at project Y 1.5, physical distance 1.823626192m on both sides. Because this includes a 1.5m vertical delta and the destination trusted Recast representative is non-local, validate the exact raw pair with the production Human KCC before deciding whether the transition is ordinary walking, jump-up, drop-down, or not authorizable. Do not add a broad frontier shortcut or global Recast tuning.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AN preserves Passes 18A-18AM and advances only the upper-glass source-local continuation. Pass 18AL proves the frozen 18AK + 18AF chain reaches FloorSlope00 on both mirrored sides without changing the tracked 79/9/11 matrix. Pass 18AM proves the next FloorSlope00<->FloorConcrete00 boundary is ordinary bidirectional Human KCC traversal with zero airborne ticks. Pass 18AN then minimizes only that raw boundary link and finds 0.668m failure / 0.669m first sampled common success, still with no non-glass runtime-anchor connection. The next safe step is to localize the first source-adjacent break beyond FloorConcrete00. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AO preserves Passes 18A-18AN and localizes the next upper-glass source-chain break without adding any connector. The chain reaches FloorConcrete00 through the 18AK/18AF/18AN QA candidates, while the tracked matrix remains 79/9/11. From FloorConcrete00 the nearest still-disconnected mirrored source component is FloorConcrete02 at project Y 1.5, 1.823626192m away from the project-Y 3.0 seed. Its 1.5m vertical delta and non-local trusted Recast representative require exact production Human KCC validation before any traversal semantics or Detour representation is authorized. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2126,12 +2172,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AN partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AO partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AN' ||
+    audit.resolutionPass !== '18AO' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -3866,8 +3912,39 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AN slope-floor00 radius boundary drifted');
   }
 
+  const break18ao = audit.postFloor00BreakPass18AO;
+  if (
+    break18ao.qaRunNumber !== 1072 ||
+    !break18ao.diagnosticOnly ||
+    break18ao.runtimePromotionAuthorized ||
+    break18ao.upstreamSourcePass !== '18AK' ||
+    Math.abs(break18ao.upstreamRetreatMeters - 0.130) > 1e-12 ||
+    Math.abs(break18ao.upstreamRadiusMeters - 0.995) > 1e-12 ||
+    break18ao.floorSlopeSourcePass !== '18AF' ||
+    Math.abs(break18ao.floorSlopeRadiusMeters - 0.80) > 1e-12 ||
+    break18ao.slopeFloor00SourcePass !== '18AN' ||
+    Math.abs(break18ao.slopeFloor00RadiusMeters - 0.669) > 1e-12 ||
+    break18ao.seedMaterial !== 'FloorConcrete00' ||
+    Math.abs(break18ao.seedYProjectMeters - 3.0) > 1e-12 ||
+    !break18ao.bothSeedComponentsOwnGlassConnected ||
+    break18ao.nextMaterial !== 'FloorConcrete02' ||
+    Math.abs(break18ao.nextYProjectMeters - 1.5) > 1e-12 ||
+    Math.abs(break18ao.positivePhysicalDistanceMeters - 1.8236261924604125) > 1e-12 ||
+    Math.abs(break18ao.negativePhysicalDistanceMeters - 1.8236261924604125) > 1e-12 ||
+    Math.abs(break18ao.verticalDeltaMeters - 1.5) > 1e-12 ||
+    !break18ao.exactRawBoundaryKccValidationRequiredNext ||
+    break18ao.ordinaryWalkSemanticsResolved ||
+    break18ao.jumpOrDropSemanticsResolved ||
+    break18ao.offMeshLinkAuthorized ||
+    break18ao.broadFrontierLinkAuthorized ||
+    break18ao.globalRecastTuningAuthorized ||
+    break18ao.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AO post-FloorConcrete00 source-break boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AN full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AO full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
