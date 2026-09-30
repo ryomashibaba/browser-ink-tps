@@ -462,6 +462,80 @@ describe('T21 Pass 18Z upper-glass localized predecessor/downstream connector di
     expect(baseline.strong).toBe(11);
     expect(sideData.POSITIVE_Z.pair.distanceMeters).toBeCloseTo(0.5185586972146101,12);
     expect(sideData.NEGATIVE_Z.pair.distanceMeters).toBeCloseTo(0.5185586972146126,12);
+    expect(sideData.POSITIVE_Z.bridgeTrusted?.boundaryOffsetMeters).toBeCloseTo(
+      3.216527889612188,
+      9
+    );
+    expect(sideData.POSITIVE_Z.floorTrusted?.boundaryOffsetMeters).toBeCloseTo(
+      1.8492402471551055,
+      9
+    );
+    expect(sideData.NEGATIVE_Z.bridgeTrusted?.boundaryOffsetMeters).toBeCloseTo(
+      3.2163496542765126,
+      9
+    );
+    expect(sideData.NEGATIVE_Z.floorTrusted?.boundaryOffsetMeters).toBeCloseTo(
+      2.3003785443214677,
+      9
+    );
+    expect(
+      distance(
+        sideData.POSITIVE_Z.bridgeTrusted!.point,
+        sideData.POSITIVE_Z.floorTrusted!.point
+      )
+    ).toBeCloseTo(4.818701016746154, 9);
+    expect(
+      distance(
+        sideData.NEGATIVE_Z.bridgeTrusted!.point,
+        sideData.NEGATIVE_Z.floorTrusted!.point
+      )
+    ).toBeCloseTo(3.879513844745101, 9);
+
+    const rawVariantEntries = Object.entries(variants).filter(([id]) =>
+      id.startsWith('raw-')
+    );
+    expect(rawVariantEntries).toHaveLength(18);
+    for (const [, variant] of rawVariantEntries) {
+      expect(variant.matrix.reached).toBe(79);
+      expect(variant.matrix.weak).toBe(9);
+      expect(variant.matrix.strong).toBe(11);
+      expect(variant.added).toEqual([]);
+      expect(variant.removed).toEqual([]);
+      const probes = variant.sideProbes as Record<
+        Side,
+        {
+          floor: {
+            ownGlassBidirectional: boolean;
+            nonGlassBidirectional: string[];
+          };
+        }
+      >;
+      expect(probes.POSITIVE_Z.floor.ownGlassBidirectional).toBe(false);
+      expect(probes.NEGATIVE_Z.floor.ownGlassBidirectional).toBe(false);
+      expect(probes.POSITIVE_Z.floor.nonGlassBidirectional).toEqual([]);
+      expect(probes.NEGATIVE_Z.floor.nonGlassBidirectional).toEqual([]);
+    }
+
+    const trustedControl = variants['trusted-both-0.30']!;
+    expect(trustedControl.matrix.reached).toBe(79);
+    expect(trustedControl.matrix.weak).toBe(9);
+    expect(trustedControl.matrix.strong).toBe(11);
+    expect(trustedControl.added).toEqual([]);
+    expect(trustedControl.removed).toEqual([]);
+    const trustedProbes = trustedControl.sideProbes as Record<
+      Side,
+      {
+        floor: {
+          ownGlassBidirectional: boolean;
+          nonGlassBidirectional: string[];
+        };
+      }
+    >;
+    expect(trustedProbes.POSITIVE_Z.floor.ownGlassBidirectional).toBe(true);
+    expect(trustedProbes.NEGATIVE_Z.floor.ownGlassBidirectional).toBe(true);
+    expect(trustedProbes.POSITIVE_Z.floor.nonGlassBidirectional).toEqual([]);
+    expect(trustedProbes.NEGATIVE_Z.floor.nonGlassBidirectional).toEqual([]);
+
     expect(RAW_RADII).toEqual([0.30,0.45,0.60,0.85,1.00,1.50]);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
