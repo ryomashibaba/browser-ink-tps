@@ -482,6 +482,29 @@ describe('T21 Pass 18AK BridgeMetal to FloorConcrete02 fixed-retreat radius mini
     const lastFineFailure=
       firstFineSuccessIndex>0?fine[firstFineSuccessIndex-1]!:null;
 
+    const terminalFineRadii:number[]=[];
+    if(firstFineSuccess&&lastFineFailure){
+      const lo=lastFineFailure.radiusMeters;
+      const hi=firstFineSuccess.radiusMeters;
+      for(let i=0;i<=20;i++){
+        terminalFineRadii.push(Number((lo+(hi-lo)*(i/20)).toFixed(6)));
+      }
+    }else if(firstFineSuccess){
+      terminalFineRadii.push(firstFineSuccess.radiusMeters);
+    }
+    const terminalFine=terminalFineRadii.map(radius=>evaluateRadius(radius));
+    const firstTerminalFineSuccessIndex=
+      terminalFine.findIndex(sample=>sample.commonSuccess);
+    const firstTerminalFineSuccess=
+      firstTerminalFineSuccessIndex>=0
+        ?terminalFine[firstTerminalFineSuccessIndex]!
+        :null;
+    const lastTerminalFineFailure=
+      firstTerminalFineSuccessIndex>0
+        ?terminalFine[firstTerminalFineSuccessIndex-1]!
+        :null;
+    const qaCandidate=firstTerminalFineSuccess??firstFineSuccess;
+
     console.log('T21PASS18AK_BRIDGE_FLOOR_RADIUS_MINIMIZATION',JSON.stringify({
       diagnosticOnly:true,
       runtimePromotionAuthorized:false,
@@ -507,9 +530,13 @@ describe('T21 Pass 18AK BridgeMetal to FloorConcrete02 fixed-retreat radius mini
       fineRadiiMeters:fineRadii,
       firstFineSuccess,
       lastFineFailure,
-      qaCandidate:firstFineSuccess,
+      terminalFineRadiiMeters:terminalFineRadii,
+      firstTerminalFineSuccess,
+      lastTerminalFineFailure,
+      qaCandidate,
       coarse,
-      fine
+      fine,
+      terminalFine
     }));
 
     expect(baseline.reached).toBe(79);
@@ -523,11 +550,12 @@ describe('T21 Pass 18AK BridgeMetal to FloorConcrete02 fixed-retreat radius mini
     expect(coarse.at(-1)?.commonSuccess).toBe(true);
     expect(firstCoarseSuccess).not.toBeNull();
     expect(firstFineSuccess).not.toBeNull();
-    if(firstFineSuccess){
-      expect(firstFineSuccess.reached).toBe(79);
-      expect(firstFineSuccess.weak).toBe(9);
-      expect(firstFineSuccess.strong).toBe(11);
-      expect(firstFineSuccess.noNonGlassCollateral).toBe(true);
+    expect(qaCandidate).not.toBeNull();
+    if(qaCandidate){
+      expect(qaCandidate.reached).toBe(79);
+      expect(qaCandidate.weak).toBe(9);
+      expect(qaCandidate.strong).toBe(11);
+      expect(qaCandidate.noNonGlassCollateral).toBe(true);
     }
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
