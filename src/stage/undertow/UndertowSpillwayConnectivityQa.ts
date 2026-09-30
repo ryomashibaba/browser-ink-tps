@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18W' as const,
+  resolutionPass: '18X' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1334,6 +1334,49 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18W drives the shared production Human KCC across both mirrored +1.5m center-step strips. Ordinary no-jump traversal fails on both sides. A normal Human jump reaches the +1.5m top on both sides, while an unassisted upper->lower traversal drops and lands successfully on both sides. This resolves production-physics feasibility as a mirrored jump-up/drop-down QA class, but does not prove that the original game exposes both directions or requires the same jump behavior at this exact strip. No CPU off-mesh link is authorized until current-version gameplay evidence closes that semantic gate.'
   }),
 
+  upperGlassFullSourceClusterPass18X: Object.freeze({
+    qaRunNumber: 993,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedSnapMeters: 0.30,
+    downstreamSourceComponentCountPerSide: 58,
+    uniqueDownstreamSourceComponentCount: 116,
+    excludedImmediatePredecessorBridgeMetalCountPerSide: 24,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    candidateReachedDirectedPairs: 79,
+    candidateWeakComponentCount: 9,
+    candidateStronglyConnectedComponentCount: 11,
+    addedDirectedPairCount: 0,
+    removedDirectedPairCount: 0,
+    changedNonGlassRowCount: 0,
+    trustedRepresentativeCountPerSide: 15,
+    connectedToOwnGlassComponentCountPerSide: 0,
+    connectedToOppositeGlassComponentCountPerSide: 0,
+    connectedToNonGlassComponentCountPerSide: 0,
+    materialInventoryPerSide: Object.freeze({
+      BridgeMetal00: 46,
+      FloorConcrete00: 1,
+      FloorConcrete01: 1,
+      FloorConcrete02: 4,
+      FloorSlope00: 3,
+      GrassFloor00: 3
+    }),
+    floorSlopeProjectYRangeMeters: [0, 6] as const,
+    downstreamOnlyExactSourceGeometryChangedConnectivity: false,
+    downstreamOnlyClusterConnectsCurrentGlassScc: false,
+    downstreamOnlyClusterConnectsAnyRuntimeNonGlassScc: false,
+    immediatePredecessorBridgeMetalWasIntentionallyExcludedByPass18G: true,
+    fullPredecessorPlusDownstreamSourceRetestRequired: true,
+    twoMeterFrontierLinkAuthorized: false,
+    globalRecastParameterChangeAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18X adds all 58 Pass 18G relaxed downstream source components per side (116 unique exact meshes total) to the real Recast QA stage without any connector. The full 25-anchor matrix remains exactly 79/9/11 with zero added or removed directed pairs. Only 15/58 components per side retain a <=0.30m trusted Recast representative, and none of those representatives is bidirectionally attached to the current broad-glass SCC, the opposite glass SCC, or any non-glass runtime SCC. The downstream inventory does contain exact FloorSlope00 geometry spanning project Y=0..6, but Pass 18G intentionally excluded the already-known immediate 24-component BridgeMetal predecessor neighborhood per side. Therefore this result rejects a downstream-only geometry promotion and requires one controlled retest with that predecessor neighborhood restored before any conclusion about the source-native ramp chain or the 2m frontier.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1365,11 +1408,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
+    'Complete the upper-glass source-native ramp-chain Recast audit before considering any transition link. Pass 18X adds all 58 downstream components per side, including exact FloorSlope00 geometry spanning project Y=0..6, but connectivity remains exactly 79/9/11 because the Pass 18G downstream set intentionally excludes the immediate 24-component BridgeMetal predecessor neighborhood. Retest the full predecessor+downstream chain (82 components per side) with no invented links. The Pass 18J 2.0m frontier remains physically unsupported as ordinary grounded walking and must not be promoted from proximity alone.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18W preserves Passes 18A-18V and resolves the production-KCC physical class of the mirrored +1.5m center step: no-jump walking fails, normal Human jump-up succeeds, and natural drop-down succeeds on both sides. That result narrows the missing center transition to semantic authority rather than physics, but does not promote a CPU link without current-version proof of original directionality/jump requirement. Pass 18V still leaves the technically clean grate candidate capture-gated, and the upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18X preserves Passes 18A-18W and tests the exact downstream upper-glass source inventory rather than inventing a 2m connector. Adding all 116 downstream source meshes produces no 25-anchor connectivity change and no trusted attachment from the surviving source representatives to glass or non-glass runtime SCCs. Because this downstream inventory intentionally omits the 24 immediate BridgeMetal predecessor components per side that Pass 18E already implicated at the glass ingress, the safe next upper-glass step is a full 82-component-per-side predecessor+downstream retest. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1404,12 +1447,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18W partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18X partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18W' ||
+    audit.resolutionPass !== '18X' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -2425,8 +2468,50 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18W center-step production-KCC boundary drifted');
   }
 
+  const glass18x = audit.upperGlassFullSourceClusterPass18X;
+  if (
+    glass18x.qaRunNumber !== 993 ||
+    !glass18x.diagnosticOnly ||
+    glass18x.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(glass18x.trustedSnapMeters - 0.30) > 1e-12 ||
+    glass18x.downstreamSourceComponentCountPerSide !== 58 ||
+    glass18x.uniqueDownstreamSourceComponentCount !== 116 ||
+    glass18x.excludedImmediatePredecessorBridgeMetalCountPerSide !== 24 ||
+    glass18x.baselineReachedDirectedPairs !== 79 ||
+    glass18x.baselineWeakComponentCount !== 9 ||
+    glass18x.baselineStronglyConnectedComponentCount !== 11 ||
+    glass18x.candidateReachedDirectedPairs !== 79 ||
+    glass18x.candidateWeakComponentCount !== 9 ||
+    glass18x.candidateStronglyConnectedComponentCount !== 11 ||
+    glass18x.addedDirectedPairCount !== 0 ||
+    glass18x.removedDirectedPairCount !== 0 ||
+    glass18x.changedNonGlassRowCount !== 0 ||
+    glass18x.trustedRepresentativeCountPerSide !== 15 ||
+    glass18x.connectedToOwnGlassComponentCountPerSide !== 0 ||
+    glass18x.connectedToOppositeGlassComponentCountPerSide !== 0 ||
+    glass18x.connectedToNonGlassComponentCountPerSide !== 0 ||
+    glass18x.materialInventoryPerSide.BridgeMetal00 !== 46 ||
+    glass18x.materialInventoryPerSide.FloorConcrete00 !== 1 ||
+    glass18x.materialInventoryPerSide.FloorConcrete01 !== 1 ||
+    glass18x.materialInventoryPerSide.FloorConcrete02 !== 4 ||
+    glass18x.materialInventoryPerSide.FloorSlope00 !== 3 ||
+    glass18x.materialInventoryPerSide.GrassFloor00 !== 3 ||
+    glass18x.floorSlopeProjectYRangeMeters.join(',') !== '0,6' ||
+    glass18x.downstreamOnlyExactSourceGeometryChangedConnectivity ||
+    glass18x.downstreamOnlyClusterConnectsCurrentGlassScc ||
+    glass18x.downstreamOnlyClusterConnectsAnyRuntimeNonGlassScc ||
+    !glass18x.immediatePredecessorBridgeMetalWasIntentionallyExcludedByPass18G ||
+    !glass18x.fullPredecessorPlusDownstreamSourceRetestRequired ||
+    glass18x.twoMeterFrontierLinkAuthorized ||
+    glass18x.globalRecastParameterChangeAuthorized ||
+    glass18x.runtimePromotionAuthorized ||
+    glass18x.activationBlockerCleared
+  ) {
+    errors.push('Pass 18X upper-glass downstream source-cluster boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18W full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18X full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
