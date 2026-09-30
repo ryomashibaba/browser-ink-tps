@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18Y' as const,
+  resolutionPass: '18Z' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1421,6 +1421,46 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18Y restores the exact 24-component BridgeMetal predecessor neighborhood per side (using the Pass 18C combined bridge mesh) together with all 58 Pass 18X downstream source components, for 82 logical components per side. The 25-anchor topology remains exactly 79/9/11 with zero pair changes. Crucially, each predecessor mesh has a trusted Recast representative bidirectionally connected to exactly its own three broad-glass anchors, while none of the 15 trusted downstream representatives per side connects to glass or any non-glass runtime anchor. Combined with Pass 18D, which already proved grounded bidirectional Human KCC traversal between BridgeMetal and the nearest FloorConcrete02 source surface, this localizes the remaining Recast representation break to the predecessor->downstream boundary rather than a missing broad ramp chain. A QA-only local connector may now be investigated at that exact boundary, but no connector or runtime promotion is authorized by this diagnostic alone.'
   }),
 
+  upperGlassLocalConnectorPass18Z: Object.freeze({
+    qaRunNumber: 1004,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedSnapMeters: 0.30,
+    rawRadiiMeters: [0.30, 0.45, 0.60, 0.85, 1.00, 1.50] as const,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    positiveSourceBoundaryDistanceMeters: 0.5185586972146101,
+    negativeSourceBoundaryDistanceMeters: 0.5185586972146126,
+    positiveBridgeTrustedBoundaryOffsetMeters: 3.216527889612188,
+    positiveFloorTrustedBoundaryOffsetMeters: 1.8492402471551055,
+    negativeBridgeTrustedBoundaryOffsetMeters: 3.2163496542765126,
+    negativeFloorTrustedBoundaryOffsetMeters: 2.3003785443214677,
+    positiveTrustedEndpointDistanceMeters: 4.818701016746154,
+    negativeTrustedEndpointDistanceMeters: 3.879513844745101,
+    rawVariantCount: 18,
+    allRawVariantsReachedDirectedPairs: 79,
+    allRawVariantsWeakComponentCount: 9,
+    allRawVariantsStronglyConnectedComponentCount: 11,
+    rawPhysicalBoundaryAttachmentSucceededAtOrBelow150BothSides: false,
+    rawPhysicalBoundaryCandidateChangedAnchorConnectivity: false,
+    trustedControlFloorJoinsOwnGlassBothSides: true,
+    trustedControlFloorJoinsAnyNonGlassEitherSide: false,
+    trustedControlChangedAnchorConnectivity: false,
+    trustedControlIsNonlocal: true,
+    oneLocalPhysicalBoundaryConnectorSufficient: false,
+    downstreamInternalRecastBreaksStillNeedClassification: true,
+    exactRawBoundaryRadiusSolutionFoundAtOrBelow150: false,
+    radiusInflationAuthorized: false,
+    localConnectorPromotionAuthorized: false,
+    twoMeterFrontierLinkAuthorized: false,
+    globalRecastParameterChangeAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18Z keeps the full source-side upper-glass chain from Pass 18Y and tests only the exact KCC-feasible BridgeMetal->nearest FloorConcrete02 boundary. The physical closest-surface gap is 0.518558697m on both mirrored sides. Raw exact-boundary Detour links at 0.30/0.45/0.60/0.85/1.00/1.50m attachment radius never attach the floor representative to its own glass SCC and never change the 79/9/11 25-anchor matrix. A 0.30m trusted-endpoint control does attach the nearest floor representative to its own glass SCC on both sides, but the trusted endpoints are nonlocal (about 3.88-4.82m apart, with 1.85-3.22m physical-boundary retreat) and still reach no non-glass runtime anchor; the 25-anchor matrix remains unchanged. Therefore one local physical-boundary connector is insufficient and raw-radius inflation through 1.50m is rejected. The next safe diagnostic is to classify all downstream trusted source representatives under the trusted control to locate the remaining internal Recast breaks; no runtime connector or 2m frontier link is authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1452,11 +1492,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Resolve the localized upper-glass Recast representation break at the exact BridgeMetal predecessor -> downstream FloorConcrete02 boundary. Pass 18Y restores all 82 logical source components per side: the predecessor is trusted-connected to its own glass SCC, but no downstream component attaches, while Pass 18D already proves grounded bidirectional Human KCC traversal across the tested BridgeMetal/FloorConcrete02 pair. Investigate only a QA-local connector at that exact boundary and validate full 25-anchor collateral before any promotion. The separate Pass 18J 2.0m frontier remains physically unsupported as ordinary grounded walking and is not an authorized connector.',
+    'Classify the remaining internal upper-glass downstream Recast breaks after the BridgeMetal->nearest FloorConcrete02 boundary. Pass 18Z proves the exact 0.518558697m raw physical boundary does not attach on either side even with Detour radius swept through 1.50m; a nonlocal trusted-endpoint control attaches the nearest floor source representative to its own glass SCC, but reaches no non-glass runtime anchor and leaves the 25-anchor matrix at 79/9/11. Determine which of the 58 downstream source components join the glass SCC under that control and localize the next break. Do not promote radius inflation, trusted shortcuts, or the physically unsupported Pass 18J 2.0m frontier.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18Y preserves Passes 18A-18X and restores the complete source-side upper-glass predecessor+downstream chain without invented links. The immediate BridgeMetal predecessor now proves trusted attachment to its own current glass SCC on both sides, while all 58 downstream components remain detached and the 25-anchor matrix stays 79/9/11. Together with Pass 18D grounded KCC feasibility, the navigation mismatch is localized to the BridgeMetal->downstream FloorConcrete02 boundary, so the next safe upper-glass step is a QA-only local connector/collateral experiment at that exact boundary rather than a broad ramp reconstruction or the unsupported 2m frontier. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18Z preserves Passes 18A-18Y and rejects a single raw physical-boundary connector as a sufficient upper-glass fix. The exact mirrored BridgeMetal->FloorConcrete02 gap is 0.518558697m and is Human-KCC feasible from Pass 18D, yet raw Detour endpoints fail through 1.50m attachment radius. A nonlocal trusted control can join the nearest floor source representative to the own-side glass SCC, proving attachment is possible, but it still reaches no non-glass runtime anchor and changes no tracked connectivity. The next safe upper-glass step is downstream-component SCC classification under that control, not radius inflation or a 2m frontier link. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1491,12 +1531,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18Y partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18Z partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18Y' ||
+    audit.resolutionPass !== '18Z' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -2599,8 +2639,49 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18Y upper-glass full-chain boundary drifted');
   }
 
+  const connector18z = audit.upperGlassLocalConnectorPass18Z;
+  if (
+    connector18z.qaRunNumber !== 1004 ||
+    !connector18z.diagnosticOnly ||
+    connector18z.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(connector18z.trustedSnapMeters - 0.30) > 1e-12 ||
+    connector18z.rawRadiiMeters.join(',') !== '0.3,0.45,0.6,0.85,1,1.5' ||
+    connector18z.baselineReachedDirectedPairs !== 79 ||
+    connector18z.baselineWeakComponentCount !== 9 ||
+    connector18z.baselineStronglyConnectedComponentCount !== 11 ||
+    Math.abs(connector18z.positiveSourceBoundaryDistanceMeters - 0.5185586972146101) > 1e-12 ||
+    Math.abs(connector18z.negativeSourceBoundaryDistanceMeters - 0.5185586972146126) > 1e-12 ||
+    Math.abs(connector18z.positiveBridgeTrustedBoundaryOffsetMeters - 3.216527889612188) > 1e-9 ||
+    Math.abs(connector18z.positiveFloorTrustedBoundaryOffsetMeters - 1.8492402471551055) > 1e-9 ||
+    Math.abs(connector18z.negativeBridgeTrustedBoundaryOffsetMeters - 3.2163496542765126) > 1e-9 ||
+    Math.abs(connector18z.negativeFloorTrustedBoundaryOffsetMeters - 2.3003785443214677) > 1e-9 ||
+    Math.abs(connector18z.positiveTrustedEndpointDistanceMeters - 4.818701016746154) > 1e-9 ||
+    Math.abs(connector18z.negativeTrustedEndpointDistanceMeters - 3.879513844745101) > 1e-9 ||
+    connector18z.rawVariantCount !== 18 ||
+    connector18z.allRawVariantsReachedDirectedPairs !== 79 ||
+    connector18z.allRawVariantsWeakComponentCount !== 9 ||
+    connector18z.allRawVariantsStronglyConnectedComponentCount !== 11 ||
+    connector18z.rawPhysicalBoundaryAttachmentSucceededAtOrBelow150BothSides ||
+    connector18z.rawPhysicalBoundaryCandidateChangedAnchorConnectivity ||
+    !connector18z.trustedControlFloorJoinsOwnGlassBothSides ||
+    connector18z.trustedControlFloorJoinsAnyNonGlassEitherSide ||
+    connector18z.trustedControlChangedAnchorConnectivity ||
+    !connector18z.trustedControlIsNonlocal ||
+    connector18z.oneLocalPhysicalBoundaryConnectorSufficient ||
+    !connector18z.downstreamInternalRecastBreaksStillNeedClassification ||
+    connector18z.exactRawBoundaryRadiusSolutionFoundAtOrBelow150 ||
+    connector18z.radiusInflationAuthorized ||
+    connector18z.localConnectorPromotionAuthorized ||
+    connector18z.twoMeterFrontierLinkAuthorized ||
+    connector18z.globalRecastParameterChangeAuthorized ||
+    connector18z.runtimePromotionAuthorized ||
+    connector18z.activationBlockerCleared
+  ) {
+    errors.push('Pass 18Z upper-glass local connector boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18Y full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18Z full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
