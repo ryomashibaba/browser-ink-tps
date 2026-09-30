@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18V',
+      resolutionPass: '18W',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1025,6 +1025,63 @@ describe('T21-D partial Recast connectivity QA', () => {
       localConnectorSemanticsValidated: false,
       runtimePromotionAuthorized: false,
       activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.centerSmallStepKccPass18W
+    ).toMatchObject({
+      qaRunNumber: 988,
+      diagnosticOnly: true,
+      canonicalStepDeltaMeters: 1.5,
+      mirroredProbeCount: 6,
+      topInsetMeters: 0.60,
+      lowerInsetFromSharedEdgeMetersPerSide: 0.80,
+      humanRadiusMeters: 0.32,
+      controllerOffsetMeters: 0.025,
+      autostepMaxHeightMeters: 0.34,
+      jumpSpeedMetersPerSecond: 8.2,
+      gravityMetersPerSecond2: 28,
+      theoreticalBallisticMaxRiseMeters: 1.2007142857142856,
+      productionKccTransitionClass: 'JUMP_UP_DROP_DOWN_QA_ONLY',
+      productionKccPhysicalFeasibilityResolved: true,
+      productionKccRequiresJumpForTestedUpwardCrossing: true,
+      productionKccAllowsNaturalDownwardDrop: true,
+      mirroredOutcomeClassMatches: true,
+      originalGameTraversalDirectionalityResolved: false,
+      originalGameJumpRequirementResolved: false,
+      controlledCurrentVersionCaptureRequired: true,
+      offMeshLinkAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.centerSmallStepKccPass18W.walkUp
+    ).toMatchObject({
+      directedProbeCount: 2,
+      successfulProbeCount: 0,
+      bothSidesReachTarget: false,
+      positiveAirborneTicks: 0,
+      negativeAirborneTicks: 230,
+      productionKccOrdinaryWalkUpFeasible: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.centerSmallStepKccPass18W.jumpUp
+    ).toMatchObject({
+      directedProbeCount: 2,
+      successfulProbeCount: 2,
+      bothSidesReachTarget: true,
+      positiveAirborneTicks: 14,
+      negativeAirborneTicks: 15,
+      productionKccNormalJumpUpFeasible: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.centerSmallStepKccPass18W.dropDown
+    ).toMatchObject({
+      directedProbeCount: 2,
+      successfulProbeCount: 2,
+      bothSidesReachTarget: true,
+      positiveAirborneTicks: 16,
+      negativeAirborneTicks: 16,
+      productionKccNaturalDropDownFeasible: true
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
