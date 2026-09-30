@@ -263,8 +263,8 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18V' as const,
-  auditedAt: '2026-09-29' as const,
+  resolutionPass: '18W' as const,
+  auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
     rightLowContactNodeCountPerSide: 17,
@@ -1275,6 +1275,65 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18V corrects the gameplay evidence catalog before making a directionality decision. Three previously cataloged pages were for Scorch Gorge / Yunoha and are removed from Undertow authority. Correct current Undertow/Matagai sources now independently document spawn-side grate access toward the middle, a post-Ver.7.2.0 Rainmaker grate route advancing from the middle/checkpoint side toward enemy territory (with a second current guide corroborating that route), and the series grate mechanic that humanoid players can walk on horizontal grates. These sources support opposite route-level travel directions and ordinary grate walkability, but they do not directly observe the exact two Pass 18U local breaks in both directions. Therefore bidirectional runtime links remain unpromoted until a controlled current-version capture closes that exact semantic gap.'
   }),
 
+  centerSmallStepKccPass18W: Object.freeze({
+    qaRunNumber: 988,
+    diagnosticOnly: true,
+    canonicalStepDeltaMeters: 1.5,
+    mirroredProbeCount: 6,
+    topInsetMeters: 0.60,
+    lowerInsetFromSharedEdgeMetersPerSide: 0.80,
+    humanRadiusMeters: 0.32,
+    controllerOffsetMeters: 0.025,
+    autostepMaxHeightMeters: 0.34,
+    jumpSpeedMetersPerSecond: 8.2,
+    gravityMetersPerSecond2: 28,
+    theoreticalBallisticMaxRiseMeters: 1.2007142857142856,
+    walkUp: Object.freeze({
+      directedProbeCount: 2,
+      successfulProbeCount: 0,
+      bothSidesReachTarget: false,
+      positiveAirborneTicks: 0,
+      negativeAirborneTicks: 230,
+      productionKccOrdinaryWalkUpFeasible: false
+    }),
+    jumpUp: Object.freeze({
+      directedProbeCount: 2,
+      successfulProbeCount: 2,
+      bothSidesReachTarget: true,
+      positiveAirborneTicks: 14,
+      negativeAirborneTicks: 15,
+      positiveMaximumRiseAboveStartMeters: 1.5292533683776854,
+      negativeMaximumRiseAboveStartMeters: 1.5295673656463622,
+      productionKccNormalJumpUpFeasible: true
+    }),
+    dropDown: Object.freeze({
+      directedProbeCount: 2,
+      successfulProbeCount: 2,
+      bothSidesReachTarget: true,
+      positiveAirborneTicks: 16,
+      negativeAirborneTicks: 16,
+      positiveMaximumDropBelowStartMeters: 1.4395598721504212,
+      negativeMaximumDropBelowStartMeters: 1.4753304076194764,
+      productionKccNaturalDropDownFeasible: true
+    }),
+    productionKccTransitionClass:
+      'JUMP_UP_DROP_DOWN_QA_ONLY' as const,
+    productionKccPhysicalFeasibilityResolved: true,
+    productionKccRequiresJumpForTestedUpwardCrossing: true,
+    productionKccAllowsNaturalDownwardDrop: true,
+    mirroredOutcomeClassMatches: true,
+    originalGameTraversalDirectionalityResolved: false,
+    originalGameJumpRequirementResolved: false,
+    controlledCurrentVersionCaptureRequired: true,
+    requiredCaptureScope:
+      'One current post-Ver.7.2.0 Undertow/Matagai center-step capture showing the exact +1.5m strip from lower->upper and upper->lower, including whether ordinary jump input is required upward.' as const,
+    offMeshLinkAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18W drives the shared production Human KCC across both mirrored +1.5m center-step strips. Ordinary no-jump traversal fails on both sides. A normal Human jump reaches the +1.5m top on both sides, while an unassisted upper->lower traversal drops and lands successfully on both sides. This resolves production-physics feasibility as a mirrored jump-up/drop-down QA class, but does not prove that the original game exposes both directions or requires the same jump behavior at this exact strip. No CPU off-mesh link is authorized until current-version gameplay evidence closes that semantic gate.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1304,13 +1363,13 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   ] as const,
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
-    'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
+    'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
     'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18V preserves Passes 18A-18U and repairs the external gameplay-evidence boundary: three Scorch Gorge/Yunoha pages had been misclassified as Undertow directionality sources and are now explicitly rejected. Correct current Undertow/Matagai references support route-level travel in both mirrored directions plus generic humanoid grate walkability, but they do not directly observe both exact local Pass 18U breaks in both directions. The fully-local QA topology candidate remains technically clean but semantically unpromoted pending one controlled current-version round-trip capture. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18W preserves Passes 18A-18V and resolves the production-KCC physical class of the mirrored +1.5m center step: no-jump walking fails, normal Human jump-up succeeds, and natural drop-down succeeds on both sides. That result narrows the missing center transition to semantic authority rather than physics, but does not promote a CPU link without current-version proof of original directionality/jump requirement. Pass 18V still leaves the technically clean grate candidate capture-gated, and the upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1345,12 +1404,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18V partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18W partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18V' ||
+    audit.resolutionPass !== '18W' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -2315,8 +2374,59 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18V corrected grate directionality evidence boundary drifted');
   }
 
+  const step18w = audit.centerSmallStepKccPass18W;
+  if (
+    step18w.qaRunNumber !== 988 ||
+    !step18w.diagnosticOnly ||
+    Math.abs(step18w.canonicalStepDeltaMeters - 1.5) > 1e-12 ||
+    step18w.mirroredProbeCount !== 6 ||
+    Math.abs(step18w.topInsetMeters - 0.60) > 1e-12 ||
+    Math.abs(step18w.lowerInsetFromSharedEdgeMetersPerSide - 0.80) > 1e-12 ||
+    Math.abs(step18w.humanRadiusMeters - 0.32) > 1e-12 ||
+    Math.abs(step18w.controllerOffsetMeters - 0.025) > 1e-12 ||
+    Math.abs(step18w.autostepMaxHeightMeters - 0.34) > 1e-12 ||
+    Math.abs(step18w.jumpSpeedMetersPerSecond - 8.2) > 1e-12 ||
+    Math.abs(step18w.gravityMetersPerSecond2 - 28) > 1e-12 ||
+    Math.abs(step18w.theoreticalBallisticMaxRiseMeters - 1.2007142857142856) > 1e-12 ||
+    step18w.walkUp.directedProbeCount !== 2 ||
+    step18w.walkUp.successfulProbeCount !== 0 ||
+    step18w.walkUp.bothSidesReachTarget ||
+    step18w.walkUp.positiveAirborneTicks !== 0 ||
+    step18w.walkUp.negativeAirborneTicks !== 230 ||
+    step18w.walkUp.productionKccOrdinaryWalkUpFeasible ||
+    step18w.jumpUp.directedProbeCount !== 2 ||
+    step18w.jumpUp.successfulProbeCount !== 2 ||
+    !step18w.jumpUp.bothSidesReachTarget ||
+    step18w.jumpUp.positiveAirborneTicks !== 14 ||
+    step18w.jumpUp.negativeAirborneTicks !== 15 ||
+    Math.abs(step18w.jumpUp.positiveMaximumRiseAboveStartMeters - 1.5292533683776854) > 1e-9 ||
+    Math.abs(step18w.jumpUp.negativeMaximumRiseAboveStartMeters - 1.5295673656463622) > 1e-9 ||
+    !step18w.jumpUp.productionKccNormalJumpUpFeasible ||
+    step18w.dropDown.directedProbeCount !== 2 ||
+    step18w.dropDown.successfulProbeCount !== 2 ||
+    !step18w.dropDown.bothSidesReachTarget ||
+    step18w.dropDown.positiveAirborneTicks !== 16 ||
+    step18w.dropDown.negativeAirborneTicks !== 16 ||
+    Math.abs(step18w.dropDown.positiveMaximumDropBelowStartMeters - 1.4395598721504212) > 1e-9 ||
+    Math.abs(step18w.dropDown.negativeMaximumDropBelowStartMeters - 1.4753304076194764) > 1e-9 ||
+    !step18w.dropDown.productionKccNaturalDropDownFeasible ||
+    step18w.productionKccTransitionClass !== 'JUMP_UP_DROP_DOWN_QA_ONLY' ||
+    !step18w.productionKccPhysicalFeasibilityResolved ||
+    !step18w.productionKccRequiresJumpForTestedUpwardCrossing ||
+    !step18w.productionKccAllowsNaturalDownwardDrop ||
+    !step18w.mirroredOutcomeClassMatches ||
+    step18w.originalGameTraversalDirectionalityResolved ||
+    step18w.originalGameJumpRequirementResolved ||
+    !step18w.controlledCurrentVersionCaptureRequired ||
+    step18w.offMeshLinkAuthorized ||
+    step18w.runtimePromotionAuthorized ||
+    step18w.activationBlockerCleared
+  ) {
+    errors.push('Pass 18W center-step production-KCC boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18V full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18W full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
