@@ -20,28 +20,45 @@ describe('T21 Undertow source-version guard', () => {
     }
   });
 
-  it('keeps current grate directionality, rule variants, and legacy corroboration scoped separately', () => {
-    expect(UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES).toHaveLength(4);
+  it('keeps corrected Undertow directionality, rule-variant, and grate-mechanic evidence scoped separately', () => {
+    expect(UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES).toHaveLength(5);
     expect(
       UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
         .filter((reference) => reference.role === 'CURRENT_DIRECTIONALITY')
         .map((reference) => reference.id)
-    ).toEqual(['CURRENT_TURF_RETURN', 'CURRENT_SPAWN_TO_CENTER']);
-    expect(
-      UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
-        .find((reference) => reference.id === 'CURRENT_RULE_VARIANTS')
-        ?.supports
     ).toEqual([
-      'Splat Zones terrain matches Turf',
-      'Tower Control removes the central grate route',
-      'Rainmaker retains a grate-side attack route',
-      'Clam Blitz retains a grate-side attack route'
+      'CURRENT_SPAWN_TO_CENTER',
+      'CURRENT_RAINMAKER_GRATE_ADVANCE',
+      'CURRENT_RAINMAKER_GRATE_ADVANCE_CORROBORATION'
     ]);
     expect(
       UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
-        .find((reference) => reference.id === 'LEGACY_TURF_SAME_ROUTE_RETURN')
-        ?.role
-    ).toBe('LEGACY_CORROBORATION');
+        .find((reference) => reference.id === 'CURRENT_RULE_VARIANTS')
+        ?.sourcePage
+    ).toBe('https://kamigame.jp/splatoon3/page/230661367210732889.html');
+    expect(
+      UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
+        .find((reference) => reference.id === 'GENERAL_GRATE_WALKABILITY')
+    ).toMatchObject({
+      role: 'TERRAIN_MECHANIC',
+      stageIdentity: 'SPLATOON_SERIES_GRATE'
+    });
+    expect(
+      UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES
+        .filter((reference) => reference.role !== 'TERRAIN_MECHANIC')
+        .every((reference) => reference.stageIdentity === 'UNDERTOW_SPILLWAY_MATEGAI')
+    ).toBe(true);
+  });
+
+  it('rejects the previously misclassified Scorch Gorge evidence pages', () => {
+    const pages = UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES.map(
+      (reference) => reference.sourcePage
+    );
+    expect(pages).not.toContain('https://gamerch.com/splatoonwiki-sogo/984847');
+    expect(pages).not.toContain(
+      'https://kamigame.jp/splatoon3/page/230199164238079467.html'
+    );
+    expect(pages).not.toContain('https://appmedia.jp/splatoon3/76009214');
   });
 
   it('contains no Big Run, Tricolor or pre-7.2 reference in the canonical set', () => {
