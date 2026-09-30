@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AB' as const,
+  resolutionPass: '18AC' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1559,6 +1559,58 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AB ranks exact triangle-to-triangle distances from the only downstream component attached to the own-side glass SCC under Pass 18AA (FloorConcrete02 c7 / c13). No remaining source component touches it at <=0.30m. Exactly three mirrored candidates appear by 0.60m, all at ~0.518558697m: two BridgeMetal00 components and one FloorSlope00 component per side. All 14 trusted remaining downstream representatives are still disconnected from the own-side glass SCC and from non-glass runtime anchors. Therefore the first downstream mismatch is localized to a three-way mirrored source neighborhood, not yet to one justified connector. The next safe diagnostic is to classify source-side reachability from each of those three branches before testing any link. No radius inflation, trusted shortcut, 2m frontier link, or runtime promotion is authorized.'
   }),
 
+  upperGlassBranchReachabilityPass18AC: Object.freeze({
+    qaRunNumber: 1015,
+    diagnosticOnly: true,
+    thresholdMeters: [0.60, 0.85, 1.00, 1.50, 2.00] as const,
+    seedExcludedFromTraversal: true,
+    candidateCountPerSide: 3,
+    mirroredBranchPattern: true,
+    bridgeBranchCountPerSide: 2,
+    slopeBranchCountPerSide: 1,
+    bridgeBranchComponentCountAt060: 3,
+    bridgeBranchComponentCountAt200: 3,
+    bridgeBranchYMinAt200: 6,
+    bridgeBranchYMaxAt200: 6.025,
+    bridgeBranchReachesYAtOrBelow3: false,
+    bridgeBranchReachesYAtOrBelow15: false,
+    slopeBranchComponentCountAt060: 2,
+    slopeBranchComponentCountAt085: 2,
+    slopeBranchComponentCountAt100: 2,
+    slopeBranchComponentCountAt150: 6,
+    slopeBranchComponentCountAt200: 14,
+    slopeBranchYMinAt060: 3,
+    slopeBranchYMaxAt060: 6,
+    slopeBranchYMinAt200: 0,
+    slopeBranchYMaxAt200: 6,
+    slopeBranchReachesYAtOrBelow3At060: true,
+    slopeBranchReachesYAtOrBelow15At200: true,
+    slopeBranchFloorSlopeCountAt200: 3,
+    slopeBranchFloorConcreteCountAt200: 5,
+    slopeBranchBridgeMetalCountAt200: 3,
+    positiveSlopeComponentId:
+      'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c3' as const,
+    positiveImmediateFloorConcreteComponentId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c2' as const,
+    negativeSlopeComponentId:
+      'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c23' as const,
+    negativeImmediateFloorConcreteComponentId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c9' as const,
+    floorSlopeBranchIsOnlyDescendingRouteCandidate: true,
+    bridgeBranchesRemainHighLocalMetalCluster: true,
+    sourceRouteBranchResolved: true,
+    exactFloorToSlopeTraversalSemanticsResolved: false,
+    floorToSlopeKccFeasibilityMeasured: false,
+    floorToSlopeNavigationConnectorAuthorized: false,
+    rawRadiusInflationAuthorized: false,
+    trustedShortcutPromotionAuthorized: false,
+    twoMeterFrontierLinkAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AC removes the Pass 18AA FloorConcrete02 seed from traversal and classifies the three mirrored ~0.518558697m branches independently. Both BridgeMetal00 candidates collapse into the same three-component high bridge cluster and remain at Y~6 even with a 2.0m source-edge threshold. The FloorSlope00 candidate is qualitatively different and mirrored: at 0.60m it already reaches the slope plus FloorConcrete00 at Y=3, at 1.50m it reaches six components, and at 2.0m it reaches 14 components spanning Y=0..6 with FloorSlope, FloorConcrete, BridgeMetal, GrassFloor, and FloorConcrete01. Therefore the intended descending source branch is FloorSlope00, not either BridgeMetal branch. The next safe diagnostic is production-Human KCC feasibility across the exact FloorConcrete02 c7/c13 -> FloorSlope00 c3/c23 boundary before any navigation connector is tested.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1590,11 +1642,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Resolve the three-way mirrored source neighborhood immediately downstream of FloorConcrete02 c7/c13. Pass 18AB finds no <=0.30m source contact and exactly three candidates within 0.60m on each side, all at ~0.518558697m: two BridgeMetal00 components plus one FloorSlope00 component. Classify source-side downstream reachability from each candidate and identify which branch reproduces the intended ramp/route chain before testing any local connector. Do not choose the numerically first BridgeMetal candidate by ordering alone, inflate Detour radius, use a nonlocal trusted shortcut, or promote the unsupported Pass 18J 2.0m frontier.',
+    'Measure production-Human KCC feasibility across the exact mirrored FloorConcrete02 c7/c13 -> FloorSlope00 c3/c23 boundary. Pass 18AC resolves FloorSlope00 as the only descending source branch: it reaches Y=3 by the 0.60m source graph and expands to 14 components spanning Y=0..6 by 2.0m, while both BridgeMetal alternatives remain trapped in a three-component Y~6 cluster. Test grounded forward/reverse traversal across only this floor-to-slope boundary before authoring any CPU navigation representation. Do not use the rejected BridgeMetal branches, radius inflation, nonlocal trusted shortcuts, or the unsupported Pass 18J 2.0m frontier.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AB preserves Passes 18A-18AA and localizes the first upper-glass downstream source mismatch to a mirrored three-way neighborhood. From FloorConcrete02 c7/c13 there is no <=0.30m contact; at ~0.518558697m each side has two BridgeMetal00 candidates and one FloorSlope00 candidate. Because all 14 trusted remaining downstream representatives are still outside the own-side glass SCC, numeric nearest ordering alone cannot justify one connector. The next safe step is branch-level source reachability classification from those three candidates. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AC preserves Passes 18A-18AB and resolves the three-way upper-glass source neighborhood by topology rather than numeric ordering. The mirrored FloorSlope00 branch is the only branch that descends from Y=6 toward the lower route, reaching Y=3 immediately and Y=0 by the relaxed 2.0m graph; both BridgeMetal alternatives remain a small high local metal cluster. The next safe step is exact production-KCC testing of FloorConcrete02 c7/c13 -> FloorSlope00 c3/c23 before any navigation connector is considered. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1629,12 +1681,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AB partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AC partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AB' ||
+    audit.resolutionPass !== '18AC' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -2878,8 +2930,61 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AB nearest downstream break boundary drifted');
   }
 
+  const branch18ac = audit.upperGlassBranchReachabilityPass18AC;
+  if (
+    branch18ac.qaRunNumber !== 1015 ||
+    !branch18ac.diagnosticOnly ||
+    branch18ac.thresholdMeters.join(',') !== '0.6,0.85,1,1.5,2' ||
+    !branch18ac.seedExcludedFromTraversal ||
+    branch18ac.candidateCountPerSide !== 3 ||
+    !branch18ac.mirroredBranchPattern ||
+    branch18ac.bridgeBranchCountPerSide !== 2 ||
+    branch18ac.slopeBranchCountPerSide !== 1 ||
+    branch18ac.bridgeBranchComponentCountAt060 !== 3 ||
+    branch18ac.bridgeBranchComponentCountAt200 !== 3 ||
+    Math.abs(branch18ac.bridgeBranchYMinAt200 - 6) > 1e-12 ||
+    Math.abs(branch18ac.bridgeBranchYMaxAt200 - 6.025) > 1e-12 ||
+    branch18ac.bridgeBranchReachesYAtOrBelow3 ||
+    branch18ac.bridgeBranchReachesYAtOrBelow15 ||
+    branch18ac.slopeBranchComponentCountAt060 !== 2 ||
+    branch18ac.slopeBranchComponentCountAt085 !== 2 ||
+    branch18ac.slopeBranchComponentCountAt100 !== 2 ||
+    branch18ac.slopeBranchComponentCountAt150 !== 6 ||
+    branch18ac.slopeBranchComponentCountAt200 !== 14 ||
+    Math.abs(branch18ac.slopeBranchYMinAt060 - 3) > 1e-12 ||
+    Math.abs(branch18ac.slopeBranchYMaxAt060 - 6) > 1e-12 ||
+    Math.abs(branch18ac.slopeBranchYMinAt200 - 0) > 1e-12 ||
+    Math.abs(branch18ac.slopeBranchYMaxAt200 - 6) > 1e-12 ||
+    !branch18ac.slopeBranchReachesYAtOrBelow3At060 ||
+    !branch18ac.slopeBranchReachesYAtOrBelow15At200 ||
+    branch18ac.slopeBranchFloorSlopeCountAt200 !== 3 ||
+    branch18ac.slopeBranchFloorConcreteCountAt200 !== 5 ||
+    branch18ac.slopeBranchBridgeMetalCountAt200 !== 3 ||
+    branch18ac.positiveSlopeComponentId !==
+      'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c3' ||
+    branch18ac.positiveImmediateFloorConcreteComponentId !==
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c2' ||
+    branch18ac.negativeSlopeComponentId !==
+      'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c23' ||
+    branch18ac.negativeImmediateFloorConcreteComponentId !==
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c9' ||
+    !branch18ac.floorSlopeBranchIsOnlyDescendingRouteCandidate ||
+    !branch18ac.bridgeBranchesRemainHighLocalMetalCluster ||
+    !branch18ac.sourceRouteBranchResolved ||
+    branch18ac.exactFloorToSlopeTraversalSemanticsResolved ||
+    branch18ac.floorToSlopeKccFeasibilityMeasured ||
+    branch18ac.floorToSlopeNavigationConnectorAuthorized ||
+    branch18ac.rawRadiusInflationAuthorized ||
+    branch18ac.trustedShortcutPromotionAuthorized ||
+    branch18ac.twoMeterFrontierLinkAuthorized ||
+    branch18ac.runtimePromotionAuthorized ||
+    branch18ac.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AC branch reachability boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AB full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AC full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
