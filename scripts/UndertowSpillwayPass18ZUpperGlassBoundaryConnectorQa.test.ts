@@ -121,12 +121,97 @@ function qaStage(
 function distance(a: StageVector3, b: StageVector3): number {
   return Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
 }
-function closestVertexPair(a: StageTriangleMeshGeometry,b: StageTriangleMeshGeometry): Pair {
-  let best: Pair|null=null;
-  for(const av of a.vertices){
-    for(const bv of b.vertices){
-      const d=distance(av,bv);
-      if(!best||d<best.distanceMeters) best={a:av,b:bv,distanceMeters:d};
+function add(a:StageVector3,b:StageVector3):StageVector3{
+  return [a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+}
+function sub(a:StageVector3,b:StageVector3):StageVector3{
+  return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+}
+function mul(a:StageVector3,s:number):StageVector3{
+  return [a[0]*s,a[1]*s,a[2]*s];
+}
+function dot(a:StageVector3,b:StageVector3):number{
+  return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+}
+function closestPointOnTriangle(
+  p:StageVector3,a:StageVector3,b:StageVector3,c:StageVector3
+):StageVector3{
+  const ab=sub(b,a),ac=sub(c,a),ap=sub(p,a);
+  const d1=dot(ab,ap),d2=dot(ac,ap);
+  if(d1<=0&&d2<=0) return a;
+  const bp=sub(p,b),d3=dot(ab,bp),d4=dot(ac,bp);
+  if(d3>=0&&d4<=d3) return b;
+  const vc=d1*d4-d3*d2;
+  if(vc<=0&&d1>=0&&d3<=0) return add(a,mul(ab,d1/(d1-d3)));
+  const cp=sub(p,c),d5=dot(ab,cp),d6=dot(ac,cp);
+  if(d6>=0&&d5<=d6) return c;
+  const vb=d5*d2-d1*d6;
+  if(vb<=0&&d2>=0&&d6<=0) return add(a,mul(ac,d2/(d2-d6)));
+  const va=d3*d6-d5*d4;
+  if(va<=0&&(d4-d3)>=0&&(d5-d6)>=0){
+    return add(b,mul(sub(c,b),(d4-d3)/((d4-d3)+(d5-d6))));
+  }
+  const denom=1/(va+vb+vc),v=vb*denom,w=vc*denom;
+  return add(a,add(mul(ab,v),mul(ac,w)));
+}
+function closestSegments(
+  p1:StageVector3,q1:StageVector3,p2:StageVector3,q2:StageVector3
+):Pair{
+  const d1=sub(q1,p1),d2=sub(q2,p2),r=sub(p1,p2);
+  const aa=dot(d1,d1),ee=dot(d2,d2),ff=dot(d2,r);
+  let s=0,t=0;
+  const eps=1e-15;
+  if(aa<=eps&&ee<=eps) return {a:p1,b:p2,distanceMeters:distance(p1,p2)};
+  if(aa<=eps){
+    t=Math.max(0,Math.min(1,ff/ee));
+  }else{
+    const cc=dot(d1,r);
+    if(ee<=eps){
+      s=Math.max(0,Math.min(1,-cc/aa));
+    }else{
+      const bb=dot(d1,d2),den=aa*ee-bb*bb;
+      if(Math.abs(den)>eps) s=Math.max(0,Math.min(1,(bb*ff-cc*ee)/den));
+      const tn=bb*s+ff;
+      if(tn<0){t=0;s=Math.max(0,Math.min(1,-cc/aa));}
+      else if(tn>ee){t=1;s=Math.max(0,Math.min(1,(bb-cc)/aa));}
+      else t=tn/ee;
+    }
+  }
+  const pa=add(p1,mul(d1,s)),pb=add(p2,mul(d2,t));
+  return {a:pa,b:pb,distanceMeters:distance(pa,pb)};
+}
+function trianglePair(
+  a0:StageVector3,a1:StageVector3,a2:StageVector3,
+  b0:StageVector3,b1:StageVector3,b2:StageVector3
+):Pair{
+  let best:Pair|null=null;
+  const consider=(candidate:Pair)=>{
+    if(!best||candidate.distanceMeters<best.distanceMeters) best=candidate;
+  };
+  for(const p of [a0,a1,a2]){
+    const q=closestPointOnTriangle(p,b0,b1,b2);
+    consider({a:p,b:q,distanceMeters:distance(p,q)});
+  }
+  for(const p of [b0,b1,b2]){
+    const q=closestPointOnTriangle(p,a0,a1,a2);
+    consider({a:q,b:p,distanceMeters:distance(q,p)});
+  }
+  for(const [ap,aq] of [[a0,a1],[a1,a2],[a2,a0]] as const){
+    for(const [bp,bq] of [[b0,b1],[b1,b2],[b2,b0]] as const){
+      consider(closestSegments(ap,aq,bp,bq));
+    }
+  }
+  if(!best) throw new Error('Pass 18Z triangle pair missing');
+  return best;
+}
+function closestMeshPair(a:StageTriangleMeshGeometry,b:StageTriangleMeshGeometry):Pair{
+  let best:Pair|null=null;
+  for(let ai=0;ai<a.indices.length;ai+=3){
+    const a0=a.vertices[a.indices[ai]!]!,a1=a.vertices[a.indices[ai+1]!]!,a2=a.vertices[a.indices[ai+2]!]!;
+    for(let bi=0;bi<b.indices.length;bi+=3){
+      const b0=b.vertices[b.indices[bi]!]!,b1=b.vertices[b.indices[bi+1]!]!,b2=b.vertices[b.indices[bi+2]!]!;
+      const candidate=trianglePair(a0,a1,a2,b0,b1,b2);
+      if(!best||candidate.distanceMeters<best.distanceMeters) best=candidate;
     }
   }
   if(!best) throw new Error('Pass 18Z empty mesh pair');
@@ -275,7 +360,7 @@ describe('T21 Pass 18Z upper-glass localized predecessor/downstream connector di
     for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const){
       const glass=fixture.glass[side];
       const floor=glass.nearestNonBridgeMesh!;
-      const pair=closestVertexPair(glass.bridgeMesh,floor);
+      const pair=closestMeshPair(glass.bridgeMesh,floor);
       sideData[side]={
         pair,
         bridgeTrusted:trustedEndpoint(baselineNav,glass.bridgeMesh,pair.a),
