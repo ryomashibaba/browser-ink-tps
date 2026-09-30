@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AJ' as const,
+  resolutionPass: '18AK' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1912,6 +1912,47 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AJ fine-sweeps the source-surface-valid FloorConcrete02 endpoint retreat from 0.100m through 0.150m in 0.005m increments with the exact raw BridgeMetal endpoint preserved. POSITIVE_Z succeeds at every fine sample. NEGATIVE_Z fails through 0.125m and first succeeds at 0.130m, making 0.130m the first sampled common retreat at 5mm resolution. The two-sided 0.130m candidate leaves the tracked 25-anchor matrix at 79/9/11 and reaches no non-glass runtime anchor. This is sufficient as the next QA endpoint candidate; the current 1.50m link radius remains diagnostic-large and must now be minimized independently before any combined upper-glass candidate is considered.'
   }),
 
+  upperGlassBridgeFloorRadiusMinimizationPass18AK: Object.freeze({
+    qaRunNumber: 1049,
+    diagnosticOnly: true,
+    fixedRetreatMeters: 0.130,
+    bridgeEndpointMode: 'EXACT_RAW_PHYSICAL_ENDPOINT' as const,
+    floorEndpointMode: 'PASS18AJ_SOURCE_SURFACE_RETREAT_FIXED' as const,
+    bidirectional: true,
+    globalRecastSettingsChanged: false,
+    coarseRadiiMeters: [
+      0.01, 0.025, 0.05, 0.10, 0.20, 0.30,
+      0.45, 0.60, 0.80, 1.00, 1.25, 1.50
+    ] as const,
+    coarseLastCommonFailureRadiusMeters: 0.80,
+    coarseFirstCommonSuccessRadiusMeters: 1.00,
+    fineLastCommonFailureRadiusMeters: 0.98,
+    fineFirstCommonSuccessRadiusMeters: 1.00,
+    terminalFineStepMeters: 0.001,
+    terminalLastCommonFailureRadiusMeters: 0.994,
+    firstSampledCommonSuccessRadiusMeters: 0.995,
+    commonThresholdLowerExclusiveMeters: 0.994,
+    commonThresholdUpperInclusiveMeters: 0.995,
+    positiveFixedEndpointSurfaceDistanceMeters: 0,
+    negativeFixedEndpointSurfaceDistanceMeters: 0,
+    positiveFixedEndpointProjectedSnapMeters: 0.9997309981886592,
+    negativeFixedEndpointProjectedSnapMeters: 0.9887536400664477,
+    candidateReachedDirectedPairs: 79,
+    candidateWeakComponentCount: 9,
+    candidateStronglyConnectedComponentCount: 11,
+    bothSidesOwnGlassBidirectional: true,
+    candidateReachesNonGlassRuntimeAnchor: false,
+    sampledCommonRadiusResolvedAt1mmGranularity: true,
+    exactSub1mmThresholdResolved: false,
+    qaCandidateRadiusMeters: 0.995,
+    endpointRetreatChangedDuringSweep: false,
+    combinedUpstreamDownstreamAuditRequiredNext: true,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AK freezes the Pass 18AJ FloorConcrete02 endpoint at the source-surface-valid 0.130m retreat and preserves the exact raw BridgeMetal endpoint while varying only the bidirectional link radius. The coarse sweep brackets common mirrored attachment between 0.80m failure and 1.00m success; a 0.02m fine sweep narrows that to (0.98, 1.00], then a 0.001m terminal sweep finds 0.994m failure and 0.995m first sampled common success. The 0.995m two-sided candidate keeps the tracked 25-anchor matrix at 79/9/11, reaches only each side\'s three own-glass anchors, and reaches no non-glass runtime anchor. This is a QA radius candidate, not an exact threshold or runtime promotion. The next step is to combine it with the independent Pass 18AF FloorConcrete02->FloorSlope00 0.80m QA candidate and audit the full source-native chain.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1943,11 +1984,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Minimize the BridgeMetal->FloorConcrete02 link radius at the fixed mirrored 0.130m FloorConcrete02 retreat candidate from Pass 18AJ. Preserve the exact raw BridgeMetal endpoint and source-surface-valid 0.130m floor endpoint, sweep only link radius, and find the smallest common mirrored sampled radius without tracked-anchor collateral. Do not alter the 0.130m retreat during this radius sweep. After that, combine the upstream candidate with the independently measured Pass 18AF FloorConcrete02->FloorSlope00 0.80m QA candidate and re-audit the full source-chain connectivity.',
+    'Combine the Pass 18AK upstream BridgeMetal->FloorConcrete02 QA candidate (exact raw BridgeMetal endpoint, source-surface-valid 0.130m FloorConcrete02 retreat, 0.995m first sampled common radius) with the independent Pass 18AF FloorConcrete02->FloorSlope00 0.80m QA candidate and re-audit the full source-native chain. Keep trusted non-local shortcuts disabled and global Recast settings unchanged. If the chain still does not reach the runtime route, localize only the first remaining source-adjacent break and do not replace the chain with a broad frontier link.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AJ preserves Passes 18A-18AI and resolves a practical mirrored upstream floor-endpoint candidate at 5mm granularity. POSITIVE_Z is already connected throughout 0.100..0.150m; NEGATIVE_Z switches between 0.125m failure and 0.130m success. The common 0.130m candidate is source-surface valid and collateral-free in the tracked matrix. The next safe step is radius minimization with retreat frozen at 0.130m; no runtime promotion occurs yet. The downstream floor->slope boundary remains QA-representable from Pass 18AF. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AK preserves Passes 18A-18AJ and independently minimizes only the upstream BridgeMetal->FloorConcrete02 Detour radius with the 0.130m FloorConcrete02 retreat frozen. Both mirrored sides fail at 0.994m and first succeed at the sampled 0.995m radius; the exact sub-1mm threshold remains unresolved. The 0.995m QA candidate is source-local and collateral-free in the tracked 25-anchor matrix, but it is not runtime-promoted. The next safe step is a combined upstream 18AK + downstream 18AF full source-chain Recast audit with trusted shortcuts and global tuning still prohibited. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1982,12 +2023,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AJ partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AK partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AJ' ||
+    audit.resolutionPass !== '18AK' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -3587,8 +3628,48 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AJ floor endpoint fine-retreat boundary drifted');
   }
 
+  const radius18ak = audit.upperGlassBridgeFloorRadiusMinimizationPass18AK;
+  if (
+    radius18ak.qaRunNumber !== 1049 ||
+    !radius18ak.diagnosticOnly ||
+    Math.abs(radius18ak.fixedRetreatMeters - 0.130) > 1e-12 ||
+    radius18ak.bridgeEndpointMode !== 'EXACT_RAW_PHYSICAL_ENDPOINT' ||
+    radius18ak.floorEndpointMode !== 'PASS18AJ_SOURCE_SURFACE_RETREAT_FIXED' ||
+    !radius18ak.bidirectional ||
+    radius18ak.globalRecastSettingsChanged ||
+    radius18ak.coarseRadiiMeters.join(',') !==
+      '0.01,0.025,0.05,0.1,0.2,0.3,0.45,0.6,0.8,1,1.25,1.5' ||
+    Math.abs(radius18ak.coarseLastCommonFailureRadiusMeters - 0.80) > 1e-12 ||
+    Math.abs(radius18ak.coarseFirstCommonSuccessRadiusMeters - 1.00) > 1e-12 ||
+    Math.abs(radius18ak.fineLastCommonFailureRadiusMeters - 0.98) > 1e-12 ||
+    Math.abs(radius18ak.fineFirstCommonSuccessRadiusMeters - 1.00) > 1e-12 ||
+    Math.abs(radius18ak.terminalFineStepMeters - 0.001) > 1e-12 ||
+    Math.abs(radius18ak.terminalLastCommonFailureRadiusMeters - 0.994) > 1e-12 ||
+    Math.abs(radius18ak.firstSampledCommonSuccessRadiusMeters - 0.995) > 1e-12 ||
+    Math.abs(radius18ak.commonThresholdLowerExclusiveMeters - 0.994) > 1e-12 ||
+    Math.abs(radius18ak.commonThresholdUpperInclusiveMeters - 0.995) > 1e-12 ||
+    Math.abs(radius18ak.positiveFixedEndpointSurfaceDistanceMeters) > 1e-12 ||
+    Math.abs(radius18ak.negativeFixedEndpointSurfaceDistanceMeters) > 1e-12 ||
+    Math.abs(radius18ak.positiveFixedEndpointProjectedSnapMeters - 0.9997309981886592) > 1e-9 ||
+    Math.abs(radius18ak.negativeFixedEndpointProjectedSnapMeters - 0.9887536400664477) > 1e-9 ||
+    radius18ak.candidateReachedDirectedPairs !== 79 ||
+    radius18ak.candidateWeakComponentCount !== 9 ||
+    radius18ak.candidateStronglyConnectedComponentCount !== 11 ||
+    !radius18ak.bothSidesOwnGlassBidirectional ||
+    radius18ak.candidateReachesNonGlassRuntimeAnchor ||
+    !radius18ak.sampledCommonRadiusResolvedAt1mmGranularity ||
+    radius18ak.exactSub1mmThresholdResolved ||
+    Math.abs(radius18ak.qaCandidateRadiusMeters - 0.995) > 1e-12 ||
+    radius18ak.endpointRetreatChangedDuringSweep ||
+    !radius18ak.combinedUpstreamDownstreamAuditRequiredNext ||
+    radius18ak.runtimePromotionAuthorized ||
+    radius18ak.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AK bridge-floor fixed-retreat radius boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AJ full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AK full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
