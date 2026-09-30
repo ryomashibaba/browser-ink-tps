@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18W',
+      resolutionPass: '18X',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1082,6 +1082,48 @@ describe('T21-D partial Recast connectivity QA', () => {
       positiveAirborneTicks: 16,
       negativeAirborneTicks: 16,
       productionKccNaturalDropDownFeasible: true
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.upperGlassFullSourceClusterPass18X
+    ).toMatchObject({
+      qaRunNumber: 993,
+      diagnosticOnly: true,
+      sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      trustedSnapMeters: 0.30,
+      downstreamSourceComponentCountPerSide: 58,
+      uniqueDownstreamSourceComponentCount: 116,
+      excludedImmediatePredecessorBridgeMetalCountPerSide: 24,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      candidateReachedDirectedPairs: 79,
+      candidateWeakComponentCount: 9,
+      candidateStronglyConnectedComponentCount: 11,
+      addedDirectedPairCount: 0,
+      removedDirectedPairCount: 0,
+      changedNonGlassRowCount: 0,
+      trustedRepresentativeCountPerSide: 15,
+      connectedToOwnGlassComponentCountPerSide: 0,
+      connectedToOppositeGlassComponentCountPerSide: 0,
+      connectedToNonGlassComponentCountPerSide: 0,
+      materialInventoryPerSide: {
+        BridgeMetal00: 46,
+        FloorConcrete00: 1,
+        FloorConcrete01: 1,
+        FloorConcrete02: 4,
+        FloorSlope00: 3,
+        GrassFloor00: 3
+      },
+      floorSlopeProjectYRangeMeters: [0, 6],
+      downstreamOnlyExactSourceGeometryChangedConnectivity: false,
+      downstreamOnlyClusterConnectsCurrentGlassScc: false,
+      downstreamOnlyClusterConnectsAnyRuntimeNonGlassScc: false,
+      immediatePredecessorBridgeMetalWasIntentionallyExcludedByPass18G: true,
+      fullPredecessorPlusDownstreamSourceRetestRequired: true,
+      twoMeterFrontierLinkAuthorized: false,
+      globalRecastParameterChangeAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
     });
     expect(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers
