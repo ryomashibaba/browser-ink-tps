@@ -2057,51 +2057,6 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   }),
 
 
-  postFloor00BreakPass18AO: Object.freeze({
-    qaRunNumber: 1072,
-    diagnosticOnly: true,
-    runtimePromotionAuthorized: false,
-    trustedSnapMeters: 0.30,
-    upstreamSourcePass: '18AK' as const,
-    upstreamRetreatMeters: 0.130,
-    upstreamRadiusMeters: 0.995,
-    floorSlopeSourcePass: '18AF' as const,
-    floorSlopeRadiusMeters: 0.80,
-    slopeFloor00SourcePass: '18AN' as const,
-    slopeFloor00RadiusMeters: 0.669,
-    positiveSeedId:
-      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c2',
-    negativeSeedId:
-      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c9',
-    seedMaterial: 'FloorConcrete00' as const,
-    seedYProjectMeters: 3.0,
-    bothSeedComponentsOwnGlassConnected: true,
-    positiveNextId:
-      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c2',
-    negativeNextId:
-      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c17',
-    nextMaterial: 'FloorConcrete02' as const,
-    nextYProjectMeters: 1.5,
-    positivePhysicalDistanceMeters: 1.8236261924604125,
-    negativePhysicalDistanceMeters: 1.8236261924604125,
-    verticalDeltaMeters: 1.5,
-    positiveSeedBoundaryPoint: [-18.10796451418891, 3, 17.11606867882324] as const,
-    positiveNextBoundaryPoint: [-17.651435881652564, 1.5, 18.047301247788777] as const,
-    negativeSeedBoundaryPoint: [18.337332802717068, 3, -16.92150438336642] as const,
-    negativeNextBoundaryPoint: [17.88080417018072, 1.5, -17.852736952331956] as const,
-    positiveNextTrustedBoundaryOffsetMeters: 3.564856542980601,
-    negativeNextTrustedBoundaryOffsetMeters: 3.5648560150192066,
-    exactRawBoundaryKccValidationRequiredNext: true,
-    ordinaryWalkSemanticsResolved: false,
-    jumpOrDropSemanticsResolved: false,
-    offMeshLinkAuthorized: false,
-    broadFrontierLinkAuthorized: false,
-    globalRecastTuningAuthorized: false,
-    activationBlockerCleared: false,
-    notes:
-      'Pass 18AO fixes the complete source-local chain through Pass 18AN and uses FloorConcrete00 as the seed on both mirrored sides. After excluding components already mutually connected to each side\'s upper-glass SCC, the nearest remaining source component is FloorConcrete02 at project Y 1.5, exactly 1.823626192m from the project-Y 3.0 FloorConcrete00 seed on both sides. The 1.5m vertical delta means ordinary walking, jump-up, or drop-down semantics cannot be inferred from geometry alone. Trusted Recast representatives for the destination sit about 3.565m away from the raw boundary, so no non-local trusted shortcut is authorized. The next required step is production Human KCC validation on the exact raw source pair before any new Detour link is considered.'
-  }),
-
   postFloor00SourceBreakPass18AO: Object.freeze({
     qaRunNumber: 1072,
     diagnosticOnly: true,
@@ -3952,37 +3907,6 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     radius18an.activationBlockerCleared
   ) {
     errors.push('Pass 18AN slope-floor00 radius boundary drifted');
-  }
-
-  const break18ao = audit.postFloor00BreakPass18AO;
-  if (
-    break18ao.qaRunNumber !== 1072 ||
-    !break18ao.diagnosticOnly ||
-    break18ao.runtimePromotionAuthorized ||
-    break18ao.upstreamSourcePass !== '18AK' ||
-    Math.abs(break18ao.upstreamRetreatMeters - 0.130) > 1e-12 ||
-    Math.abs(break18ao.upstreamRadiusMeters - 0.995) > 1e-12 ||
-    break18ao.floorSlopeSourcePass !== '18AF' ||
-    Math.abs(break18ao.floorSlopeRadiusMeters - 0.80) > 1e-12 ||
-    break18ao.slopeFloor00SourcePass !== '18AN' ||
-    Math.abs(break18ao.slopeFloor00RadiusMeters - 0.669) > 1e-12 ||
-    break18ao.seedMaterial !== 'FloorConcrete00' ||
-    Math.abs(break18ao.seedYProjectMeters - 3.0) > 1e-12 ||
-    !break18ao.bothSeedComponentsOwnGlassConnected ||
-    break18ao.nextMaterial !== 'FloorConcrete02' ||
-    Math.abs(break18ao.nextYProjectMeters - 1.5) > 1e-12 ||
-    Math.abs(break18ao.positivePhysicalDistanceMeters - 1.8236261924604125) > 1e-12 ||
-    Math.abs(break18ao.negativePhysicalDistanceMeters - 1.8236261924604125) > 1e-12 ||
-    Math.abs(break18ao.verticalDeltaMeters - 1.5) > 1e-12 ||
-    !break18ao.exactRawBoundaryKccValidationRequiredNext ||
-    break18ao.ordinaryWalkSemanticsResolved ||
-    break18ao.jumpOrDropSemanticsResolved ||
-    break18ao.offMeshLinkAuthorized ||
-    break18ao.broadFrontierLinkAuthorized ||
-    break18ao.globalRecastTuningAuthorized ||
-    break18ao.activationBlockerCleared
-  ) {
-    errors.push('Pass 18AO post-FloorConcrete00 source-break boundary drifted');
   }
 
   const break18ao = audit.postFloor00SourceBreakPass18AO;
