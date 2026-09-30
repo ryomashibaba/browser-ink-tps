@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18Z' as const,
+  resolutionPass: '18AA' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1461,6 +1461,48 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18Z keeps the full source-side upper-glass chain from Pass 18Y and tests only the exact KCC-feasible BridgeMetal->nearest FloorConcrete02 boundary. The physical closest-surface gap is 0.518558697m on both mirrored sides. Raw exact-boundary Detour links at 0.30/0.45/0.60/0.85/1.00/1.50m attachment radius never attach the floor representative to its own glass SCC and never change the 79/9/11 25-anchor matrix. A 0.30m trusted-endpoint control does attach the nearest floor representative to its own glass SCC on both sides, but the trusted endpoints are nonlocal (about 3.88-4.82m apart, with 1.85-3.22m physical-boundary retreat) and still reach no non-glass runtime anchor; the 25-anchor matrix remains unchanged. Therefore one local physical-boundary connector is insufficient and raw-radius inflation through 1.50m is rejected. The next safe diagnostic is to classify all downstream trusted source representatives under the trusted control to locate the remaining internal Recast breaks; no runtime connector or 2m frontier link is authorized.'
   }),
 
+  upperGlassDownstreamSccClassificationPass18AA: Object.freeze({
+    qaRunNumber: 1008,
+    diagnosticOnly: true,
+    sourceFixtureVersion: 'PASS18C_SOURCE_NATIVE_V1' as const,
+    trustedSnapMeters: 0.30,
+    trustedControlLinkRadiusMeters: 0.30,
+    downstreamSourceComponentCountPerSide: 58,
+    trustedRepresentativeCountPerSide: 15,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    candidateReachedDirectedPairs: 79,
+    candidateWeakComponentCount: 9,
+    candidateStronglyConnectedComponentCount: 11,
+    positiveSourceBoundaryDistanceMeters: 0.5185586972146101,
+    negativeSourceBoundaryDistanceMeters: 0.5185586972146126,
+    positiveTrustedEndpointDistanceMeters: 4.818701016746154,
+    negativeTrustedEndpointDistanceMeters: 3.879513844745101,
+    ownGlassConnectedComponentCountPerSide: 1,
+    positiveOwnGlassConnectedComponentId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c7' as const,
+    negativeOwnGlassConnectedComponentId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c13' as const,
+    ownGlassConnectedMaterial: 'FloorConcrete02' as const,
+    oppositeGlassConnectedComponentCountPerSide: 0,
+    nonGlassConnectedComponentCountPerSide: 0,
+    remainingTrustedDisconnectedComponentCountPerSide: 14,
+    onlyNearestFloorComponentJoinsOwnGlassUnderTrustedControl: true,
+    downstreamSourceClusterBecomesTransitivelyAttached: false,
+    downstreamRuntimeSccReached: false,
+    candidateChangedTrackedAnchorConnectivity: false,
+    nextBreakLocalizedImmediatelyDownstreamOfNearestFloor: true,
+    rawRadiusInflationAuthorized: false,
+    trustedShortcutPromotionAuthorized: false,
+    twoMeterFrontierLinkAuthorized: false,
+    globalRecastParameterChangeAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AA classifies every <=0.30m-trusted downstream source representative after applying only the same nonlocal diagnostic BridgeMetal->nearest-FloorConcrete02 trusted control from Pass 18Z. Exactly 15/58 downstream components per side have trusted Recast representatives, but only one component per side joins its own glass SCC: FloorConcrete02 c7 on POSITIVE_Z and the mirrored c13 on NEGATIVE_Z. No component joins the opposite glass SCC or any non-glass runtime anchor, and the tracked 25-anchor matrix remains 79/9/11. Therefore the trusted control attaches only the immediate nearest-floor component; it does not make the downstream cluster transitively navigable. The next safe diagnostic is to inspect exact source adjacency from those c7/c13 components to the remaining downstream components and identify the first Recast break. No raw-radius inflation, nonlocal trusted shortcut, 2m frontier link, or runtime promotion is authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1492,11 +1534,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Classify the remaining internal upper-glass downstream Recast breaks after the BridgeMetal->nearest FloorConcrete02 boundary. Pass 18Z proves the exact 0.518558697m raw physical boundary does not attach on either side even with Detour radius swept through 1.50m; a nonlocal trusted-endpoint control attaches the nearest floor source representative to its own glass SCC, but reaches no non-glass runtime anchor and leaves the 25-anchor matrix at 79/9/11. Determine which of the 58 downstream source components join the glass SCC under that control and localize the next break. Do not promote radius inflation, trusted shortcuts, or the physically unsupported Pass 18J 2.0m frontier.',
+    'Localize the first exact source-adjacent upper-glass break immediately downstream of the nearest FloorConcrete02 component. Pass 18AA shows the Pass 18Z trusted control joins exactly one of 15 trusted downstream representatives per side to its own glass SCC (FloorConcrete02 c7 / mirrored c13); the other 14 remain detached and no non-glass runtime SCC is reached. Measure exact triangle-to-triangle adjacency from c7/c13 to the remaining downstream source components, identify the first structurally mirrored source neighbor(s), and test only that boundary. Do not promote raw-radius inflation, nonlocal trusted shortcuts, or the physically unsupported Pass 18J 2.0m frontier.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18Z preserves Passes 18A-18Y and rejects a single raw physical-boundary connector as a sufficient upper-glass fix. The exact mirrored BridgeMetal->FloorConcrete02 gap is 0.518558697m and is Human-KCC feasible from Pass 18D, yet raw Detour endpoints fail through 1.50m attachment radius. A nonlocal trusted control can join the nearest floor source representative to the own-side glass SCC, proving attachment is possible, but it still reaches no non-glass runtime anchor and changes no tracked connectivity. The next safe upper-glass step is downstream-component SCC classification under that control, not radius inflation or a 2m frontier link. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AA preserves Passes 18A-18Z and classifies the upper-glass downstream source SCC under the Pass 18Z trusted control. Only the immediate mirrored FloorConcrete02 component (c7 / c13) joins the own-side glass SCC; the other 14 trusted downstream representatives remain detached, no opposite-side or non-glass runtime anchor is reached, and the 25-anchor matrix remains 79/9/11. The remaining mismatch is therefore localized immediately downstream of that nearest-floor component. The next safe step is exact source-adjacency classification from c7/c13, not radius inflation, a trusted shortcut, or the unsupported 2m frontier. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1531,12 +1573,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18Z partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AA partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18Z' ||
+    audit.resolutionPass !== '18AA' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -2680,8 +2722,51 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18Z upper-glass local connector boundary drifted');
   }
 
+  const classification18aa = audit.upperGlassDownstreamSccClassificationPass18AA;
+  if (
+    classification18aa.qaRunNumber !== 1008 ||
+    !classification18aa.diagnosticOnly ||
+    classification18aa.sourceFixtureVersion !== 'PASS18C_SOURCE_NATIVE_V1' ||
+    Math.abs(classification18aa.trustedSnapMeters - 0.30) > 1e-12 ||
+    Math.abs(classification18aa.trustedControlLinkRadiusMeters - 0.30) > 1e-12 ||
+    classification18aa.downstreamSourceComponentCountPerSide !== 58 ||
+    classification18aa.trustedRepresentativeCountPerSide !== 15 ||
+    classification18aa.baselineReachedDirectedPairs !== 79 ||
+    classification18aa.baselineWeakComponentCount !== 9 ||
+    classification18aa.baselineStronglyConnectedComponentCount !== 11 ||
+    classification18aa.candidateReachedDirectedPairs !== 79 ||
+    classification18aa.candidateWeakComponentCount !== 9 ||
+    classification18aa.candidateStronglyConnectedComponentCount !== 11 ||
+    Math.abs(classification18aa.positiveSourceBoundaryDistanceMeters - 0.5185586972146101) > 1e-12 ||
+    Math.abs(classification18aa.negativeSourceBoundaryDistanceMeters - 0.5185586972146126) > 1e-12 ||
+    Math.abs(classification18aa.positiveTrustedEndpointDistanceMeters - 4.818701016746154) > 1e-9 ||
+    Math.abs(classification18aa.negativeTrustedEndpointDistanceMeters - 3.879513844745101) > 1e-9 ||
+    classification18aa.ownGlassConnectedComponentCountPerSide !== 1 ||
+    classification18aa.positiveOwnGlassConnectedComponentId !==
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c7' ||
+    classification18aa.negativeOwnGlassConnectedComponentId !==
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c13' ||
+    classification18aa.ownGlassConnectedMaterial !== 'FloorConcrete02' ||
+    classification18aa.oppositeGlassConnectedComponentCountPerSide !== 0 ||
+    classification18aa.nonGlassConnectedComponentCountPerSide !== 0 ||
+    classification18aa.remainingTrustedDisconnectedComponentCountPerSide !== 14 ||
+    !classification18aa.onlyNearestFloorComponentJoinsOwnGlassUnderTrustedControl ||
+    classification18aa.downstreamSourceClusterBecomesTransitivelyAttached ||
+    classification18aa.downstreamRuntimeSccReached ||
+    classification18aa.candidateChangedTrackedAnchorConnectivity ||
+    !classification18aa.nextBreakLocalizedImmediatelyDownstreamOfNearestFloor ||
+    classification18aa.rawRadiusInflationAuthorized ||
+    classification18aa.trustedShortcutPromotionAuthorized ||
+    classification18aa.twoMeterFrontierLinkAuthorized ||
+    classification18aa.globalRecastParameterChangeAuthorized ||
+    classification18aa.runtimePromotionAuthorized ||
+    classification18aa.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AA downstream SCC classification boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18Z full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AA full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
