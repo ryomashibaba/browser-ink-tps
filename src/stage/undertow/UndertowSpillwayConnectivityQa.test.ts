@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AH',
+      resolutionPass: '18AI',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1572,6 +1572,44 @@ describe('T21-D partial Recast connectivity QA', () => {
       continuousSurfaceSweepRequiredBetweenBoundaryAndFirstSuccess: true,
       rawRadiusInflationAuthorized: false,
       trustedShortcutPromotionAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassFloorEndpointInterpolationPass18AI
+    ).toMatchObject({
+      qaRunNumber: 1039,
+      diagnosticOnly: true,
+      rawRadiusMeters: 1.50,
+      interpolationRetreatsMeters: [
+        0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
+        0.50, 0.55, 0.60, 0.65, 0.654737328492778
+      ],
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      positiveLastFailureRetreatMeters: 0,
+      positiveFirstSuccessRetreatMeters: 0.05,
+      negativeLastFailureRetreatMeters: 0.10,
+      negativeFirstSuccessRetreatMeters: 0.15,
+      firstSampledCommonSuccessRetreatMeters: 0.15,
+      commonThresholdLowerExclusiveMeters: 0.10,
+      commonThresholdUpperInclusiveMeters: 0.15,
+      positiveProjectedSnapAtCommonMeters: 0.9804257137187009,
+      negativeProjectedSnapAtCommonMeters: 0.9694454031811923,
+      allInterpolatedPointsSourceSurfaceValid: true,
+      commonCandidateReachedDirectedPairs: 79,
+      commonCandidateWeakComponentCount: 9,
+      commonCandidateStronglyConnectedComponentCount: 11,
+      commonCandidateReachesNonGlassRuntimeAnchor: false,
+      positiveThresholdAlreadyBelowCommonWindow: true,
+      negativeThresholdControlsCommonWindow: true,
+      mirroredAttachmentThresholdAsymmetryPersists: true,
+      exactCommonRetreatThresholdResolved: false,
+      fineSweepRequiredBetween010And015: true,
+      rawRadiusStillDiagnosticLarge: true,
+      radiusMinimizationDeferredUntilRetreatThresholdResolved: true,
       runtimePromotionAuthorized: false,
       activationBlockerCleared: false
     });
