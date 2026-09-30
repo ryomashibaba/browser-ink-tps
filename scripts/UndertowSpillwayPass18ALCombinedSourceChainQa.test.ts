@@ -20,7 +20,12 @@ import {
 } from '../src/stage/undertow/UndertowSpillwayConnectivityQa';
 
 type Side='POSITIVE_Z'|'NEGATIVE_Z';
-interface ChainComponent{id:string;mesh:StageTriangleMeshGeometry;}
+interface ChainComponent{
+  id:string;
+  sourceMaterial?:string;
+  yRange?:[number,number];
+  mesh:StageTriangleMeshGeometry;
+}
 interface Fixture{
   version:'PASS18C_SOURCE_NATIVE_V1';
   diagnosticOnly:true;
@@ -177,6 +182,26 @@ function mutualAnchorIds(stage:StageDefinition,point:StageVector3):string[]{
     nav.auditPath(vec3(anchor.point),vec3(point)).reachedTarget
   ).map(anchor=>anchor.id);
 }
+function trustedRepresentative(nav:RecastStageNavigation,mesh:StageTriangleMeshGeometry):TrustedEndpoint|null{
+  let best:TrustedEndpoint|null=null;
+  for(const sample of meshSamples(mesh)){
+    const p=nav.closestPoint(vec3(sample));
+    const point=[p.x,p.y,p.z] as StageVector3;
+    const snap=distance(sample,point);
+    if(snap>TRUSTED_SNAP_METERS+1e-9)continue;
+    if(!best||snap<best.sampleSnapMeters){
+      best={point,sourceSample:sample,sampleSnapMeters:snap,boundaryOffsetMeters:0};
+    }
+  }
+  return best;
+}
+function mutualAnchorIdsWithNav(nav:RecastStageNavigation,point:StageVector3):string[]{
+  const anchors=undertowPass18bTraversableQaAnchors();
+  return anchors.filter(anchor=>
+    nav.auditPath(vec3(point),vec3(anchor.point)).reachedTarget &&
+    nav.auditPath(vec3(anchor.point),vec3(point)).reachedTarget
+  ).map(anchor=>anchor.id);
+}
 function componentById(components:ChainComponent[],id:string):ChainComponent{
   const found=components.find(component=>component.id===id);
   if(!found)throw new Error(`Pass 18AL missing component ${id}`);
@@ -199,6 +224,7 @@ describe('T21 Pass 18AL combined upper-glass source-chain Recast diagnostic',()=
 
     const base=UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY;
     const sourceSolids:StageSolidDefinition[]=[];
+    const sideComponents={} as Record<Side,ChainComponent[]>;
     const sideData={} as Record<Side,{
       floor:ChainComponent;
       slope:ChainComponent;
@@ -229,11 +255,13 @@ describe('T21 Pass 18AL combined upper-glass source-chain Recast diagnostic',()=
       const slope=componentById(route.components,IDS[side].slope);
       sourceSolids.push(navOnlySolid(`pass18al-predecessor:${side}`,glass.bridgeMesh));
       const byId=new Map(route.components.map(component=>[component.id,component] as const));
-      for(const id of route.relaxedReachableComponentIds){
+      const components=route.relaxedReachableComponentIds.map(id=>{
         const component=byId.get(id);
         if(!component)throw new Error(`Pass 18AL missing downstream component ${side} ${id}`);
         sourceSolids.push(navOnlySolid(`pass18al-downstream:${side}:${id}`,component.mesh));
-      }
+        return component;
+      });
+      sideComponents[side]=components;
 
       const bridgeFloorPair=closestMeshPair(glass.bridgeMesh,floor.mesh);
       const target=UPSTREAM_SUCCESS_POINTS[side];
@@ -339,6 +367,70 @@ describe('T21 Pass 18AL combined upper-glass source-chain Recast diagnostic',()=
     ) as Record<keyof typeof stages,Record<Side,ReturnType<typeof probe>>>;
 
     const combined=matrices.combined;
+    const combinedNav=new RecastStageNavigation(stages.combined,new PerformanceStats());
+    const frontier=Object.fromEntries((['POSITIVE_Z','NEGATIVE_Z'] as const).map(side=>{
+      const ownPrefix=side==='POSITIVE_Z'?'glass:positive-z:':'glass:negative-z:';
+      const rows=sideComponents[side].map(component=>{
+        const representative=trustedRepresentative(combinedNav,component.mesh);
+        if(!representative)return null;
+        const mutualAnchorIds=mutualAnchorIdsWithNav(combinedNav,representative.point);
+        return {
+          component,
+          representative,
+          mutualAnchorIds,
+          ownGlass:mutualAnchorIds.some(id=>id.startsWith(ownPrefix)),
+          nonGlass:mutualAnchorIds.filter(id=>!id.startsWith('glass:'))
+        };
+      }).filter((row):row is NonNullable<typeof row>=>row!==null);
+      const connected=rows.filter(row=>row.ownGlass);
+      const disconnected=rows.filter(row=>!row.ownGlass);
+      const pairs:Array<{
+        connectedId:string;
+        connectedMaterial:string|null;
+        connectedYRange:[number,number]|null;
+        disconnectedId:string;
+        disconnectedMaterial:string|null;
+        disconnectedYRange:[number,number]|null;
+        distanceMeters:number;
+        connectedBoundary:StageVector3;
+        disconnectedBoundary:StageVector3;
+        disconnectedRepresentativeSnapMeters:number;
+        disconnectedMutualAnchorIds:string[];
+      }>=[];
+      for(const a of connected){
+        for(const b of disconnected){
+          const pair=closestMeshPair(a.component.mesh,b.component.mesh);
+          pairs.push({
+            connectedId:a.component.id,
+            connectedMaterial:a.component.sourceMaterial??null,
+            connectedYRange:a.component.yRange??null,
+            disconnectedId:b.component.id,
+            disconnectedMaterial:b.component.sourceMaterial??null,
+            disconnectedYRange:b.component.yRange??null,
+            distanceMeters:pair.distanceMeters,
+            connectedBoundary:pair.a,
+            disconnectedBoundary:pair.b,
+            disconnectedRepresentativeSnapMeters:b.representative.sampleSnapMeters,
+            disconnectedMutualAnchorIds:b.mutualAnchorIds
+          });
+        }
+      }
+      pairs.sort((a,b)=>a.distanceMeters-b.distanceMeters);
+      return [side,{
+        trustedComponentCount:rows.length,
+        connectedCount:connected.length,
+        connectedIds:connected.map(row=>row.component.id),
+        connectedByMaterial:Object.fromEntries(
+          [...new Set(connected.map(row=>row.component.sourceMaterial??'UNKNOWN'))].sort().map(material=>[
+            material,connected.filter(row=>(row.component.sourceMaterial??'UNKNOWN')===material).length
+          ])
+        ),
+        disconnectedCount:disconnected.length,
+        nearestBreak:pairs[0]??null,
+        topBreaks:pairs.slice(0,12)
+      }];
+    }));
+
     const combinedBasePairs=new Set(matrices.baseline.rows.flatMap(row=>
       row.reached.map(to=>`${row.from}->${to}`)
     ));
@@ -391,7 +483,8 @@ describe('T21 Pass 18AL combined upper-glass source-chain Recast diagnostic',()=
         name,{reached:matrix.reached,weak:matrix.weak,strong:matrix.strong,isolated:matrix.isolated}
       ])),
       combinedDelta:{addedPairs,removedPairs},
-      sides:sideSummary
+      sides:sideSummary,
+      frontier
     }));
 
     expect(matrices.baseline.reached).toBe(79);
@@ -405,6 +498,16 @@ describe('T21 Pass 18AL combined upper-glass source-chain Recast diagnostic',()=
       expect(sideData[side].floorSlopePair.distanceMeters).toBeCloseTo(0.51855869721461,11);
       expect(probes.upstreamOnly[side].fixedFloorEndpoint.ownGlassAnchorIds.length).toBeGreaterThan(0);
       expect(probes.combined[side].floorSlopeSlopeBoundary.ownGlassAnchorIds.length).toBeGreaterThan(0);
+      const sideFrontier=frontier[side] as {
+        trustedComponentCount:number;
+        connectedCount:number;
+        disconnectedCount:number;
+        nearestBreak:{distanceMeters:number}|null;
+      };
+      expect(sideFrontier.trustedComponentCount).toBeGreaterThan(0);
+      expect(sideFrontier.connectedCount).toBeGreaterThanOrEqual(2);
+      expect(sideFrontier.disconnectedCount).toBeGreaterThan(0);
+      expect(sideFrontier.nearestBreak).not.toBeNull();
     }
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
