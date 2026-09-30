@@ -197,6 +197,95 @@ describe('T21-D partial Recast connectivity QA', () => {
       activationBlockerCleared: false,
       nextSourceAdjacentBreakLocalizationRequired: true
     });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.upperGlassCombinedSourceChainPass18AL
+    ).toMatchObject({
+      qaRunNumber: 1054,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      globalRecastSettingsChanged: false,
+      trustedEndpointsUsedAsLinks: false,
+      upstreamSourcePass: '18AK',
+      upstreamRetreatMeters: 0.130,
+      upstreamRadiusMeters: 0.995,
+      floorSlopeSourcePass: '18AF',
+      floorSlopeRadiusMeters: 0.80,
+      baselineReachedDirectedPairs: 79,
+      combinedReachedDirectedPairs: 79,
+      combinedWeakComponentCount: 9,
+      combinedStronglyConnectedComponentCount: 11,
+      combinedAddedTrackedAnchorPairs: 0,
+      combinedRemovedTrackedAnchorPairs: 0,
+      trustedDownstreamComponentCountPerSide: 15,
+      connectedDownstreamComponentCountPerSide: 2,
+      connectedMaterialsPerSide: ['FloorConcrete02', 'FloorSlope00'],
+      floorSlopeBoundaryOwnGlassConnectedBothSides: true,
+      floorSlopeBoundaryReachesNonGlassRuntimeAnchor: false,
+      nearestOverallDisconnectedBranchIsRouteDeadEndBridgeMetal: true,
+      routeContinuingBoundaryKind: 'FloorSlope00->FloorConcrete00',
+      positiveRouteContinuingBoundaryDistanceMeters: 0.5185586972146173,
+      negativeRouteContinuingBoundaryDistanceMeters: 0.5185586972146101,
+      routeContinuingBoundaryKccValidationRequiredNext: true,
+      broadFrontierLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.slopeFloor00KccPass18AM
+    ).toMatchObject({
+      qaRunNumber: 1056,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      sourceBoundary: 'FloorSlope00->FloorConcrete00',
+      characterMode: 'HUMAN',
+      directedProbeCount: 4,
+      successfulDirectedProbeCount: 4,
+      initiallySettledProbeCount: 4,
+      totalAirborneTicks: 0,
+      positiveBoundaryDistanceMeters: 0.5185586972146173,
+      negativeBoundaryDistanceMeters: 0.5185586972146101,
+      effectiveHumanContactRadiusMeters: 0.34500000000000003,
+      ordinaryWalkingBidirectionalBothSides: true,
+      jumpOrAirborneTraversalRequired: false,
+      cpuRecastRepresentationStillMissing: true,
+      exactRawBoundaryRadiusSweepAuthorizedNext: true,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.slopeFloor00RadiusPass18AN
+    ).toMatchObject({
+      qaRunNumber: 1060,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      humanKccSourcePass: '18AM',
+      humanKccBidirectionalSuccess: true,
+      endpointMode: 'EXACT_RAW_PHYSICAL_PAIR',
+      bidirectional: true,
+      upstreamRetreatMeters: 0.130,
+      upstreamRadiusMeters: 0.995,
+      floorSlopeRadiusMeters: 0.80,
+      positivePhysicalDistanceMeters: 0.5185586972146173,
+      negativePhysicalDistanceMeters: 0.5185586972146101,
+      coarseLastCommonFailureRadiusMeters: 0.60,
+      coarseFirstCommonSuccessRadiusMeters: 0.70,
+      fineLastCommonFailureRadiusMeters: 0.66,
+      fineFirstCommonSuccessRadiusMeters: 0.67,
+      terminalFineStepMeters: 0.001,
+      terminalLastCommonFailureRadiusMeters: 0.668,
+      firstSampledCommonSuccessRadiusMeters: 0.669,
+      commonThresholdLowerExclusiveMeters: 0.668,
+      commonThresholdUpperInclusiveMeters: 0.669,
+      qaCandidateRadiusMeters: 0.669,
+      candidateReachedDirectedPairs: 79,
+      candidateWeakComponentCount: 9,
+      candidateStronglyConnectedComponentCount: 11,
+      bothSidesFloor00OwnGlassBidirectional: true,
+      candidateReachesNonGlassRuntimeAnchor: false,
+      sampledCommonRadiusResolvedAt1mmGranularity: true,
+      exactSub1mmThresholdResolved: false,
+      nextCombinedChainContinuationAuditRequired: true,
+      activationBlockerCleared: false
+    });
+
     expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sourceNativeRouteGapAudit)
       .toMatchObject({
         sourceWalkableNodeCountPerSide: 276,
