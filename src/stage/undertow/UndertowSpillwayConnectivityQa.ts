@@ -2102,6 +2102,48 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AO fixes the complete source-local chain through Pass 18AN and uses FloorConcrete00 as the seed on both mirrored sides. After excluding components already mutually connected to each side\'s upper-glass SCC, the nearest remaining source component is FloorConcrete02 at project Y 1.5, exactly 1.823626192m from the project-Y 3.0 FloorConcrete00 seed on both sides. The 1.5m vertical delta means ordinary walking, jump-up, or drop-down semantics cannot be inferred from geometry alone. Trusted Recast representatives for the destination sit about 3.565m away from the raw boundary, so no non-local trusted shortcut is authorized. The next required step is production Human KCC validation on the exact raw source pair before any new Detour link is considered.'
   }),
 
+  postFloor00SourceBreakPass18AO: Object.freeze({
+    qaRunNumber: 1072,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    trustedSnapMeters: 0.30,
+    upstreamSourcePass: '18AK' as const,
+    upstreamRetreatMeters: 0.130,
+    upstreamRadiusMeters: 0.995,
+    floorSlopeSourcePass: '18AF' as const,
+    floorSlopeRadiusMeters: 0.80,
+    slopeFloor00SourcePass: '18AN' as const,
+    slopeFloor00RadiusMeters: 0.669,
+    positiveSeedId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c2',
+    negativeSeedId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c9',
+    seedMaterial: 'FloorConcrete00' as const,
+    seedYRangeMeters: [3, 3] as const,
+    bothSeedsOwnGlassConnected: true,
+    disconnectedComparedCountPerSide: 55,
+    positiveNearestDisconnectedId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c2',
+    negativeNearestDisconnectedId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c17',
+    nearestDisconnectedMaterial: 'FloorConcrete02' as const,
+    nearestDisconnectedYRangeMeters: [1.5, 1.5] as const,
+    positiveNearestDistanceMeters: 1.8236261924604125,
+    negativeNearestDistanceMeters: 1.8236261924604125,
+    positiveTrustedRepresentativeSnapMeters: 0.10000014305182192,
+    negativeTrustedRepresentativeSnapMeters: 0.1000001430537215,
+    positiveTrustedRepresentativeBoundaryOffsetMeters: 3.564856542980601,
+    negativeTrustedRepresentativeBoundaryOffsetMeters: 3.5648560150192066,
+    nearestDisconnectedReachesOwnGlassAnchor: false,
+    nearestDisconnectedReachesNonGlassRuntimeAnchor: false,
+    trustedNonLocalShortcutAuthorized: false,
+    exactSourceBoundaryKccValidationRequiredNext: true,
+    broadFrontierLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AO freezes the 18AK+18AF+18AN source-local chain and ranks only still-disconnected source components from each mirrored FloorConcrete00 seed. The nearest disconnected source component on both sides is FloorConcrete02 at Y=1.5, with an exact mesh-to-mesh distance of 1.823626192m from the Y=3 FloorConcrete00 seed. Its trusted Recast representative exists but lies about 3.565m away from the exact boundary, so it cannot justify a trusted non-local shortcut. The next safe step is a production Human KCC diagnostic across the exact source boundary in both directions before any Detour link type or radius is considered.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3941,6 +3983,39 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     break18ao.activationBlockerCleared
   ) {
     errors.push('Pass 18AO post-FloorConcrete00 source-break boundary drifted');
+  }
+
+  const break18ao = audit.postFloor00SourceBreakPass18AO;
+  if (
+    break18ao.qaRunNumber !== 1072 ||
+    !break18ao.diagnosticOnly ||
+    break18ao.runtimePromotionAuthorized ||
+    Math.abs(break18ao.trustedSnapMeters - 0.30) > 1e-12 ||
+    break18ao.upstreamSourcePass !== '18AK' ||
+    Math.abs(break18ao.upstreamRetreatMeters - 0.130) > 1e-12 ||
+    Math.abs(break18ao.upstreamRadiusMeters - 0.995) > 1e-12 ||
+    break18ao.floorSlopeSourcePass !== '18AF' ||
+    Math.abs(break18ao.floorSlopeRadiusMeters - 0.80) > 1e-12 ||
+    break18ao.slopeFloor00SourcePass !== '18AN' ||
+    Math.abs(break18ao.slopeFloor00RadiusMeters - 0.669) > 1e-12 ||
+    break18ao.seedMaterial !== 'FloorConcrete00' ||
+    break18ao.seedYRangeMeters.join(',') !== '3,3' ||
+    !break18ao.bothSeedsOwnGlassConnected ||
+    break18ao.disconnectedComparedCountPerSide !== 55 ||
+    break18ao.nearestDisconnectedMaterial !== 'FloorConcrete02' ||
+    break18ao.nearestDisconnectedYRangeMeters.join(',') !== '1.5,1.5' ||
+    Math.abs(break18ao.positiveNearestDistanceMeters - 1.8236261924604125) > 1e-12 ||
+    Math.abs(break18ao.negativeNearestDistanceMeters - 1.8236261924604125) > 1e-12 ||
+    break18ao.positiveTrustedRepresentativeBoundaryOffsetMeters <= 3.5 ||
+    break18ao.negativeTrustedRepresentativeBoundaryOffsetMeters <= 3.5 ||
+    break18ao.nearestDisconnectedReachesOwnGlassAnchor ||
+    break18ao.nearestDisconnectedReachesNonGlassRuntimeAnchor ||
+    break18ao.trustedNonLocalShortcutAuthorized ||
+    !break18ao.exactSourceBoundaryKccValidationRequiredNext ||
+    break18ao.broadFrontierLinkAuthorized ||
+    break18ao.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AO post-floor00 source-break boundary drifted');
   }
 
   if (audit.missingRequirements.length !== 5) {
