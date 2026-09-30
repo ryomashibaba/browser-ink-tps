@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AA',
+      resolutionPass: '18AB',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1246,6 +1246,56 @@ describe('T21-D partial Recast connectivity QA', () => {
       trustedShortcutPromotionAuthorized: false,
       twoMeterFrontierLinkAuthorized: false,
       globalRecastParameterChangeAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassNearestDownstreamBreakPass18AB
+    ).toMatchObject({
+      qaRunNumber: 1012,
+      diagnosticOnly: true,
+      trustedSnapMeters: 0.30,
+      seedMaterial: 'FloorConcrete02',
+      positiveSeedComponentId:
+        'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c7',
+      negativeSeedComponentId:
+        'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c13',
+      comparedComponentCountPerSide: 57,
+      zeroContactCountPerSide: 0,
+      componentsWithin003PerSide: 0,
+      componentsWithin008PerSide: 0,
+      componentsWithin018PerSide: 0,
+      componentsWithin030PerSide: 0,
+      componentsWithin060PerSide: 3,
+      componentsWithin200PerSide: 8,
+      positiveNearestBridgeComponentId:
+        'Fld_Temple01_mesh69_low_10__BridgeMetal00|Fld_Temple01_BridgeMetal00|c61',
+      positiveNearestSlopeComponentId:
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c3',
+      positiveSecondBridgeComponentId:
+        'Fld_Temple01_mesh69_low_10__BridgeMetal00|Fld_Temple01_BridgeMetal00|c59',
+      negativeNearestBridgeComponentId:
+        'Fld_Temple01_mesh69_low_10__BridgeMetal00|Fld_Temple01_BridgeMetal00|c86',
+      negativeNearestSlopeComponentId:
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c23',
+      negativeSecondBridgeComponentId:
+        'Fld_Temple01_mesh69_low_10__BridgeMetal00|Fld_Temple01_BridgeMetal00|c87',
+      nearestCandidateMaterialSet: ['BridgeMetal00', 'FloorSlope00'],
+      mirroredThreeWayCandidatePattern: true,
+      nearestBridgeTrustedRepresentativeSnapMeters: 0,
+      positiveNearestBridgeTrustedBoundaryOffsetMeters: 0.3990619059042479,
+      negativeNearestBridgeTrustedBoundaryOffsetMeters: 0.5704145669360774,
+      nearestBridgeOwnGlassMutualEitherSide: false,
+      nearestBridgeNonGlassMutualEitherSide: false,
+      trustedCandidateCountPerSide: 14,
+      trustedDisconnectedCountPerSide: 14,
+      singleNextBoundaryResolved: false,
+      firstBreakLocalizedToThreeWaySourceNeighborhood: true,
+      nextDiagnosticRequiresBranchClassification: true,
+      rawRadiusInflationAuthorized: false,
+      trustedShortcutPromotionAuthorized: false,
+      twoMeterFrontierLinkAuthorized: false,
       runtimePromotionAuthorized: false,
       activationBlockerCleared: false
     });
