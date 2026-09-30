@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AD' as const,
+  resolutionPass: '18AE' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1649,6 +1649,58 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AD tests only the mirrored FloorConcrete02 c7/c13 -> FloorSlope00 c3/c23 boundary selected by Pass 18AC. The exact closest-surface gap is 0.518558697m with zero boundary vertical delta on both sides. Production Human KCC crosses floor->slope and slope->floor on both sides with zero airborne ticks; all four probes start settled and finish grounded. This resolves physical traversal as an ordinary grounded bidirectional transition for the tested boundary. It does not yet authorize a CPU connector: the next safe diagnostic is a QA-only Recast representation test for this exact boundary while keeping the earlier BridgeMetal->FloorConcrete02 attachment isolated as a diagnostic control.'
   }),
 
+  upperGlassFloorSlopeRecastPass18AE: Object.freeze({
+    qaRunNumber: 1023,
+    diagnosticOnly: true,
+    trustedSnapMeters: 0.30,
+    rawRadiiMeters: [0.30, 0.45, 0.60, 0.85, 1.00, 1.50] as const,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    bridgeFloorControlReachedDirectedPairs: 79,
+    bridgeFloorControlWeakComponentCount: 9,
+    bridgeFloorControlStronglyConnectedComponentCount: 11,
+    positiveFloorSlopeBoundaryDistanceMeters: 0.5185586972146133,
+    negativeFloorSlopeBoundaryDistanceMeters: 0.5185586972146118,
+    positiveFloorTrustedBoundaryOffsetMeters: 1.8894579836149745,
+    positiveSlopeTrustedBoundaryOffsetMeters: 3.570277448680558,
+    negativeFloorTrustedBoundaryOffsetMeters: 1.915335904945901,
+    negativeSlopeTrustedBoundaryOffsetMeters: 1.2887098420520973,
+    positiveTrustedEndpointDistanceMeters: 2.398063193642438,
+    negativeTrustedEndpointDistanceMeters: 3.139786329805321,
+    at030PositiveSlopeOwnGlass: false,
+    at030NegativeSlopeOwnGlass: false,
+    at045PositiveSlopeOwnGlass: false,
+    at045NegativeSlopeOwnGlass: false,
+    at060PositiveSlopeOwnGlass: false,
+    at060NegativeSlopeOwnGlass: true,
+    at085PositiveSlopeOwnGlass: true,
+    at085NegativeSlopeOwnGlass: true,
+    at100PositiveSlopeOwnGlass: true,
+    at100NegativeSlopeOwnGlass: true,
+    at150PositiveSlopeOwnGlass: true,
+    at150NegativeSlopeOwnGlass: true,
+    trustedControlPositiveSlopeOwnGlass: true,
+    trustedControlNegativeSlopeOwnGlass: true,
+    anyVariantSlopeReachesNonGlassRuntimeAnchor: false,
+    allVariantsTrackedAnchorMatrixUnchanged: true,
+    firstCoarseCommonRawRadiusMeters: 0.85,
+    negativeRawAttachmentResolvedAt060: true,
+    positiveRawAttachmentResolvedAt060: false,
+    positiveRawAttachmentResolvedAt085: true,
+    mirroredCoarseThresholdAsymmetry: true,
+    commonMinimumRawRadiusResolved: false,
+    fineSweepRequiredBetween060And085: true,
+    rawPhysicalBoundaryCandidateRemainsLocal: true,
+    bridgeFloorTrustedControlRemainsNonlocalDiagnosticOnly: true,
+    trustedFloorSlopeControlIsNonlocal: true,
+    rawRadiusInflationAuthorized: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AE keeps the Pass 18Z nonlocal BridgeMetal->FloorConcrete02 trusted link only as a diagnostic control, then sweeps a raw exact FloorConcrete02->FloorSlope00 link across the Pass 18AD KCC-feasible 0.518558697m boundary. At 0.30m and 0.45m neither side attaches. At 0.60m NEGATIVE_Z attaches while POSITIVE_Z does not. At 0.85m, 1.00m, and 1.50m both sides attach the slope representative to their own glass SCC. No variant reaches a non-glass runtime anchor and the tracked 25-anchor matrix remains 79/9/11. The trusted floor-slope control also attaches both sides but is nonlocal (2.398m / 3.140m endpoint separation) and is not promotable. The raw physical endpoint candidate is the relevant representation; the next safe step is a fine 0.60-0.85m radius sweep to locate the mirrored common threshold before collateral or promotion is considered.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1680,11 +1732,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Determine the narrowest faithful Recast representation for the exact FloorConcrete02 c7/c13 -> FloorSlope00 c3/c23 boundary. Pass 18AD proves the 0.518558697m mirrored boundary is production-Human KCC traversable in both directions with zero airborne ticks, so the transition is physically ordinary grounded travel. Under the existing Pass 18Z trusted BridgeMetal->FloorConcrete02 diagnostic control, sweep only the exact raw floor-to-slope boundary attachment and compare against a trusted endpoint control. Do not promote the earlier nonlocal BridgeMetal control, inflate radius globally, or use the unsupported Pass 18J 2.0m frontier.',
+    'Fine-sweep the exact raw FloorConcrete02->FloorSlope00 link radius between 0.60m and 0.85m to identify the smallest common mirrored attachment threshold. Pass 18AE shows NEGATIVE_Z attaches at 0.60m while POSITIVE_Z first succeeds by the coarse 0.85m sample; both remain physically grounded/bidirectional from Pass 18AD and no tested variant reaches a non-glass runtime anchor. Preserve the exact physical endpoints and the BridgeMetal->floor link only as a nonlocal diagnostic control; do not promote trusted shortcuts or a global radius change.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AD preserves Passes 18A-18AC and confirms that the source-selected FloorConcrete02->FloorSlope00 boundary is physically ordinary traversal: all four mirrored forward/reverse production-Human KCC probes succeed grounded with zero airborne ticks across the exact 0.518558697m gap. The remaining upper-glass blocker at this stage is therefore Recast representation rather than physical feasibility. The next safe step is a QA-only exact-boundary attachment sweep under the already-diagnostic BridgeMetal->floor control; no runtime link is promoted. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AE preserves Passes 18A-18AD and localizes the FloorConcrete02->FloorSlope00 Recast attachment threshold. The exact raw physical boundary attaches NEGATIVE_Z at 0.60m but requires more than 0.60m on POSITIVE_Z; both sides work by 0.85m. All tested variants remain isolated from non-glass runtime anchors and leave the 25-anchor matrix at 79/9/11. The next safe upper-glass step is a fine 0.60-0.85m common-radius sweep, not promotion of either trusted diagnostic shortcut. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1719,12 +1771,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AD partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AE partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AD' ||
+    audit.resolutionPass !== '18AE' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -3060,8 +3112,61 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AD floor-slope KCC boundary drifted');
   }
 
+  const recast18ae = audit.upperGlassFloorSlopeRecastPass18AE;
+  if (
+    recast18ae.qaRunNumber !== 1023 ||
+    !recast18ae.diagnosticOnly ||
+    Math.abs(recast18ae.trustedSnapMeters - 0.30) > 1e-12 ||
+    recast18ae.rawRadiiMeters.join(',') !== '0.3,0.45,0.6,0.85,1,1.5' ||
+    recast18ae.baselineReachedDirectedPairs !== 79 ||
+    recast18ae.baselineWeakComponentCount !== 9 ||
+    recast18ae.baselineStronglyConnectedComponentCount !== 11 ||
+    recast18ae.bridgeFloorControlReachedDirectedPairs !== 79 ||
+    recast18ae.bridgeFloorControlWeakComponentCount !== 9 ||
+    recast18ae.bridgeFloorControlStronglyConnectedComponentCount !== 11 ||
+    Math.abs(recast18ae.positiveFloorSlopeBoundaryDistanceMeters - 0.5185586972146133) > 1e-12 ||
+    Math.abs(recast18ae.negativeFloorSlopeBoundaryDistanceMeters - 0.5185586972146118) > 1e-12 ||
+    Math.abs(recast18ae.positiveFloorTrustedBoundaryOffsetMeters - 1.8894579836149745) > 1e-9 ||
+    Math.abs(recast18ae.positiveSlopeTrustedBoundaryOffsetMeters - 3.570277448680558) > 1e-9 ||
+    Math.abs(recast18ae.negativeFloorTrustedBoundaryOffsetMeters - 1.915335904945901) > 1e-9 ||
+    Math.abs(recast18ae.negativeSlopeTrustedBoundaryOffsetMeters - 1.2887098420520973) > 1e-9 ||
+    Math.abs(recast18ae.positiveTrustedEndpointDistanceMeters - 2.398063193642438) > 1e-9 ||
+    Math.abs(recast18ae.negativeTrustedEndpointDistanceMeters - 3.139786329805321) > 1e-9 ||
+    recast18ae.at030PositiveSlopeOwnGlass ||
+    recast18ae.at030NegativeSlopeOwnGlass ||
+    recast18ae.at045PositiveSlopeOwnGlass ||
+    recast18ae.at045NegativeSlopeOwnGlass ||
+    recast18ae.at060PositiveSlopeOwnGlass ||
+    !recast18ae.at060NegativeSlopeOwnGlass ||
+    !recast18ae.at085PositiveSlopeOwnGlass ||
+    !recast18ae.at085NegativeSlopeOwnGlass ||
+    !recast18ae.at100PositiveSlopeOwnGlass ||
+    !recast18ae.at100NegativeSlopeOwnGlass ||
+    !recast18ae.at150PositiveSlopeOwnGlass ||
+    !recast18ae.at150NegativeSlopeOwnGlass ||
+    !recast18ae.trustedControlPositiveSlopeOwnGlass ||
+    !recast18ae.trustedControlNegativeSlopeOwnGlass ||
+    recast18ae.anyVariantSlopeReachesNonGlassRuntimeAnchor ||
+    !recast18ae.allVariantsTrackedAnchorMatrixUnchanged ||
+    Math.abs(recast18ae.firstCoarseCommonRawRadiusMeters - 0.85) > 1e-12 ||
+    !recast18ae.negativeRawAttachmentResolvedAt060 ||
+    recast18ae.positiveRawAttachmentResolvedAt060 ||
+    !recast18ae.positiveRawAttachmentResolvedAt085 ||
+    !recast18ae.mirroredCoarseThresholdAsymmetry ||
+    recast18ae.commonMinimumRawRadiusResolved ||
+    !recast18ae.fineSweepRequiredBetween060And085 ||
+    !recast18ae.rawPhysicalBoundaryCandidateRemainsLocal ||
+    !recast18ae.bridgeFloorTrustedControlRemainsNonlocalDiagnosticOnly ||
+    !recast18ae.trustedFloorSlopeControlIsNonlocal ||
+    recast18ae.rawRadiusInflationAuthorized ||
+    recast18ae.runtimePromotionAuthorized ||
+    recast18ae.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AE floor-slope Recast boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AD full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AE full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
