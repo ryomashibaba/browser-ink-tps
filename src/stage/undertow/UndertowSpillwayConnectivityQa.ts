@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AO' as const,
+  resolutionPass: '18AP' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2099,6 +2099,60 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AO freezes the 18AK+18AF+18AN source-local chain and ranks only still-disconnected source components from each mirrored FloorConcrete00 seed. The nearest disconnected source component on both sides is FloorConcrete02 at Y=1.5, with an exact mesh-to-mesh distance of 1.823626192m from the Y=3 FloorConcrete00 seed. Its trusted Recast representative exists but lies about 3.565m away from the exact boundary, so it cannot justify a trusted non-local shortcut. The next safe step is a production Human KCC diagnostic across the exact source boundary in both directions before any Detour link type or radius is considered.'
   }),
 
+  floor00LowerFloor02KccPass18AP: Object.freeze({
+    qaRunNumber: 1079,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    sourcePass: '18AO' as const,
+    boundaryClass: 'FloorConcrete00@Y3.0->FloorConcrete02@Y1.5' as const,
+    positiveUpperId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c2',
+    positiveLowerId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c2',
+    negativeUpperId:
+      'Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c9',
+    negativeLowerId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c17',
+    physicalBoundaryDistanceMeters: 1.8236261924604125,
+    horizontalGapMeters: 1.0371173944292236,
+    verticalDeltaMeters: 1.5,
+    humanRadiusMeters: 0.32,
+    controllerOffsetMeters: 0.025,
+    autostepMaxHeightMeters: 0.34,
+    jumpSpeedMetersPerSecond: 8.2,
+    gravityMetersPerSecond2: 28,
+    theoreticalBallisticMaxRiseMeters: 1.2007142857142856,
+    directedProbeCount: 6,
+    bothLowerToUpperWalkFail: true,
+    bothLowerToUpperJumpSucceed: true,
+    bothUpperToLowerDropSucceed: true,
+    positiveLowerToUpperWalkAirborneTicks: 231,
+    negativeLowerToUpperWalkAirborneTicks: 231,
+    positiveLowerToUpperJumpAirborneTicks: 14,
+    negativeLowerToUpperJumpAirborneTicks: 15,
+    positiveUpperToLowerDropAirborneTicks: 16,
+    negativeUpperToLowerDropAirborneTicks: 15,
+    positiveLowerToUpperJumpFinalHorizontalErrorMeters: 0.1327448505842723,
+    negativeLowerToUpperJumpFinalHorizontalErrorMeters: 0.15236247758171456,
+    positiveUpperToLowerDropFinalHorizontalErrorMeters: 0.000004560126443538534,
+    negativeUpperToLowerDropFinalHorizontalErrorMeters: 0.0000006761305865557399,
+    positiveObservedJumpRiseMeters: 1.522838954925537,
+    negativeObservedJumpRiseMeters: 1.517103796005249,
+    positiveObservedDropMeters: 1.4749001216888429,
+    negativeObservedDropMeters: 1.4749001216888429,
+    qaTraversalClass: 'JUMP_UP_DROP_DOWN' as const,
+    ordinaryWalkingAuthorized: false,
+    qaJumpUpFeasible: true,
+    qaDropDownFeasible: true,
+    originalGameplayDirectionalityResolved: false,
+    originalGameplayJumpRequirementResolved: false,
+    productionOffMeshLinkAuthorized: false,
+    qaOnlyDirectionalLinkDiagnosticAllowed: true,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AP runs the live production Human KCC on only the exact mirrored Pass 18AO FloorConcrete00/FloorConcrete02 source pair. Ordinary lower->upper walking fails on both sides; a normal jump reaches the upper Y=3 surface on both sides (14/15 airborne ticks), and natural upper->lower traversal reaches the Y=1.5 surface on both sides (16/15 airborne ticks). This supports a QA traversal class of JUMP_UP_DROP_DOWN for representation experiments, but KCC feasibility alone does not prove that current Undertow gameplay exposes both directions at this exact location or that jump input is canonically required. No production CPU off-mesh link is authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2130,11 +2184,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Continue from Pass 18AO: after the source-local chain reaches FloorConcrete00, the first remaining mirrored source-adjacent break is FloorConcrete00 at project Y 3.0 to FloorConcrete02 at project Y 1.5, physical distance 1.823626192m on both sides. Because this includes a 1.5m vertical delta and the destination trusted Recast representative is non-local, validate the exact raw pair with the production Human KCC before deciding whether the transition is ordinary walking, jump-up, drop-down, or not authorizable. Do not add a broad frontier shortcut or global Recast tuning.',
+    'Close the Pass 18AP FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5 gameplay-semantic authority gap. Production Human KCC proves ordinary lower->upper walking fails while normal jump-up and natural drop-down both succeed on both mirrored source pairs, supporting a QA-only JUMP_UP_DROP_DOWN class. This does not by itself prove that current Undertow gameplay exposes both directions or canonically requires jump input at this exact location. Keep production off-mesh promotion blocked until exact-location current gameplay evidence resolves directionality/action semantics; QA-only directional link attachment diagnostics may continue without promotion.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AO preserves Passes 18A-18AN and localizes the next upper-glass source-chain break without adding any connector. The chain reaches FloorConcrete00 through the 18AK/18AF/18AN QA candidates, while the tracked matrix remains 79/9/11. From FloorConcrete00 the nearest still-disconnected mirrored source component is FloorConcrete02 at project Y 1.5, 1.823626192m away from the project-Y 3.0 seed. Its 1.5m vertical delta and non-local trusted Recast representative require exact production Human KCC validation before any traversal semantics or Detour representation is authorized. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AP preserves Passes 18A-18AO and classifies the exact post-FloorConcrete00 source break with the production Human KCC. The 1.823626192m boundary contains a 1.037117394m horizontal gap and 1.5m vertical delta. Ordinary lower->upper walking fails on both mirrored sides; normal jump-up and natural drop-down succeed on both, so JUMP_UP_DROP_DOWN is valid as a QA representation class only. Original current-game directionality/action semantics remain unproven, so no runtime link is promoted. The next safe engineering diagnostic may test exact raw directional link attachment without interpreting that test as gameplay authority. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2169,12 +2223,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AO partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AP partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AO' ||
+    audit.resolutionPass !== '18AP' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -3942,8 +3996,44 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AO post-floor00 source-break boundary drifted');
   }
 
+  const kcc18ap = audit.floor00LowerFloor02KccPass18AP;
+  if (
+    kcc18ap.qaRunNumber !== 1079 ||
+    !kcc18ap.diagnosticOnly ||
+    kcc18ap.runtimePromotionAuthorized ||
+    kcc18ap.sourcePass !== '18AO' ||
+    kcc18ap.boundaryClass !== 'FloorConcrete00@Y3.0->FloorConcrete02@Y1.5' ||
+    Math.abs(kcc18ap.physicalBoundaryDistanceMeters - 1.8236261924604125) > 1e-12 ||
+    Math.abs(kcc18ap.horizontalGapMeters - 1.0371173944292236) > 1e-12 ||
+    Math.abs(kcc18ap.verticalDeltaMeters - 1.5) > 1e-12 ||
+    Math.abs(kcc18ap.humanRadiusMeters - 0.32) > 1e-12 ||
+    Math.abs(kcc18ap.controllerOffsetMeters - 0.025) > 1e-12 ||
+    Math.abs(kcc18ap.autostepMaxHeightMeters - 0.34) > 1e-12 ||
+    Math.abs(kcc18ap.jumpSpeedMetersPerSecond - 8.2) > 1e-12 ||
+    Math.abs(kcc18ap.gravityMetersPerSecond2 - 28) > 1e-12 ||
+    kcc18ap.directedProbeCount !== 6 ||
+    !kcc18ap.bothLowerToUpperWalkFail ||
+    !kcc18ap.bothLowerToUpperJumpSucceed ||
+    !kcc18ap.bothUpperToLowerDropSucceed ||
+    kcc18ap.positiveLowerToUpperJumpAirborneTicks !== 14 ||
+    kcc18ap.negativeLowerToUpperJumpAirborneTicks !== 15 ||
+    kcc18ap.positiveUpperToLowerDropAirborneTicks !== 16 ||
+    kcc18ap.negativeUpperToLowerDropAirborneTicks !== 15 ||
+    kcc18ap.qaTraversalClass !== 'JUMP_UP_DROP_DOWN' ||
+    kcc18ap.ordinaryWalkingAuthorized ||
+    !kcc18ap.qaJumpUpFeasible ||
+    !kcc18ap.qaDropDownFeasible ||
+    kcc18ap.originalGameplayDirectionalityResolved ||
+    kcc18ap.originalGameplayJumpRequirementResolved ||
+    kcc18ap.productionOffMeshLinkAuthorized ||
+    !kcc18ap.qaOnlyDirectionalLinkDiagnosticAllowed ||
+    kcc18ap.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AP floor00/lower-floor02 KCC boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AO full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AP full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
