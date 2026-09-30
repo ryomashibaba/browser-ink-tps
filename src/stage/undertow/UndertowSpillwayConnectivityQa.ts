@@ -10,6 +10,7 @@ import {
 import { UNDERTOW_RIGHT_LOW_ROUTE_RAMPS } from './UndertowSpillwayRouteRampGeometry';
 import { undertowTemple01ModelXZToProjectXZ } from './UndertowSpillwayModelXZGeometry';
 import { UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER } from './UndertowSpillwayMeasurementLedger';
+import { UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES } from './UndertowSpillwayReferenceCatalog';
 import {
   UNDERTOW_UPPER_GLASS_RECONSTRUCTION_SUPPORT_ROUTES_3D,
   UNDERTOW_UPPER_GLASS_THIN_EDGE_TRIANGLE_IDS
@@ -262,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18U' as const,
+  resolutionPass: '18V' as const,
   auditedAt: '2026-09-29' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -1245,6 +1246,35 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18U applies the Pass 18T common fully-local QA candidate on both sides simultaneously: POSITIVE_Z uses the measured 40mm grate-side start retreat, NEGATIVE_Z remains raw, both ingress links use 0.725m attachment radius, and both final raw 0.5m-gap links use 0.85m. The 25-anchor matrix changes only from 79/9/11 to 89/7/9. Exactly ten directed pairs are added and none removed: each grate joins only its own existing spawn-high/first-drop/right-low/ramp cluster, while all non-grate reachability remains unchanged when grate anchors are ignored. Focused grate<->spawn queries reach with zero endpoint error. This clears the collateral/topology gate for the QA candidate, but original grate traversal directionality and exact minimum radii remain unresolved, so runtime promotion is still forbidden.'
   }),
 
+  correctedGrateDirectionalityEvidencePass18V: Object.freeze({
+    evidenceAuditDate: '2026-09-30' as const,
+    correctedReferenceCount: 5,
+    currentDirectionalityReferenceCount: 3,
+    currentRuleVariantReferenceCount: 1,
+    terrainMechanicReferenceCount: 1,
+    removedMisclassifiedScorchGorgeReferenceCount: 3,
+    correctedReferenceIds:
+      UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES.map((reference) => reference.id),
+    allStageSpecificReferencesIdentifyUndertow: true,
+    currentSpawnToCenterViaGrateDocumented: true,
+    currentCenterToEnemyViaGrateDocumented: true,
+    currentCenterToEnemyViaGrateCorroborated: true,
+    humanoidGrateWalkabilityDocumented: true,
+    undertowAnarchyGratePresenceDocumented: true,
+    oppositeRouteDirectionsDocumentedAtCurrentStageLevel: true,
+    exactPass18ULocalBreaksObservedBidirectionally: false,
+    routeLevelEvidenceAloneAuthorizesExactBidirectionalLinks: false,
+    originalGrateDirectionalityResolved: false,
+    controlledCurrentVersionCaptureRequired: true,
+    requiredCaptureScope:
+      'One current post-Ver.7.2.0 Undertow/Matagai Anarchy walk-through that crosses the exact Pass 18U grate chain in both directions, visibly covering both the grate->FloorConcrete00 ingress and the later 0.5m FloorConcrete02->FloorSlope00 break.' as const,
+    localConnectorSemanticsValidated: false,
+    runtimePromotionAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18V corrects the gameplay evidence catalog before making a directionality decision. Three previously cataloged pages were for Scorch Gorge / Yunoha and are removed from Undertow authority. Correct current Undertow/Matagai sources now independently document spawn-side grate access toward the middle, a post-Ver.7.2.0 Rainmaker grate route advancing from the middle/checkpoint side toward enemy territory (with a second current guide corroborating that route), and the series grate mechanic that humanoid players can walk on horizontal grates. These sources support opposite route-level travel directions and ordinary grate walkability, but they do not directly observe the exact two Pass 18U local breaks in both directions. Therefore bidirectional runtime links remain unpromoted until a controlled current-version capture closes that exact semantic gap.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -1275,12 +1305,12 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   missingRequirements: [
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Authoritative traversal semantics for the two already-measured +1.5m center-small-step strips. The STEP geometry/delta is known, but directionality and jump requirement are not recorded, so no CPU off-mesh link may be guessed.',
-    'Resolve authoritative original grate traversal directionality before promoting the Pass 18U local candidate. Pass 18U proves the common 0.725m ingress / 0.85m final QA links (with only the measured 40mm POSITIVE_Z start correction) add exactly the intended own-side grate route connectivity, remove no paths, and leave all non-grate reachability unchanged. Search existing source/capture/evidence records for walk-on versus walk-off behavior and whether both local breaks are truly bidirectional; do not infer gameplay directionality from Recast/KCC feasibility alone. Exact minimum attachment radii may be refined later but are no longer the primary authority blocker.',
+    'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
     'Resolve the actual upper-glass transition identity. Pass 18J proves all eight no-jump Human KCC probes across the two mirrored 2.0m same-height frontier alternatives become airborne and fail grounded traversal, so a simple walk connector is physically unsupported. Recover authoritative jump/drop/alternate-route semantics or another source-native transition before authoring any upper-glass navigation.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18U preserves Passes 18A-18T and validates the common fully-local grate candidate against the complete 25-anchor QA topology. It adds exactly ten own-side grate-route pairs, removes none, leaves all non-grate connectivity unchanged, and resolves both grate singleton islands without cross-side, upper-glass, or center-step collateral. The remaining grate blocker is now evidence authority rather than Recast topology: original walk-on/walk-off directionality has not been proven. No production link is promoted until that semantic gate is resolved. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18V preserves Passes 18A-18U and repairs the external gameplay-evidence boundary: three Scorch Gorge/Yunoha pages had been misclassified as Undertow directionality sources and are now explicitly rejected. Correct current Undertow/Matagai references support route-level travel in both mirrored directions plus generic humanoid grate walkability, but they do not directly observe both exact local Pass 18U breaks in both directions. The fully-local QA topology candidate remains technically clean but semantically unpromoted pending one controlled current-version round-trip capture. The upper-glass transition remains independently unresolved. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -1315,12 +1345,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18U partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18V partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18U' ||
+    audit.resolutionPass !== '18V' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -2253,8 +2283,40 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 10B source-native route-gap localization drifted or overpromoted connectivity');
   }
 
+  const evidence18v = audit.correctedGrateDirectionalityEvidencePass18V;
+  const evidenceIds18v = new Set(
+    UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES.map((reference) => reference.id)
+  );
+  if (
+    evidence18v.evidenceAuditDate !== '2026-09-30' ||
+    evidence18v.correctedReferenceCount !== 5 ||
+    evidence18v.currentDirectionalityReferenceCount !== 3 ||
+    evidence18v.currentRuleVariantReferenceCount !== 1 ||
+    evidence18v.terrainMechanicReferenceCount !== 1 ||
+    evidence18v.removedMisclassifiedScorchGorgeReferenceCount !== 3 ||
+    evidence18v.correctedReferenceIds.join(',') !==
+      'CURRENT_SPAWN_TO_CENTER,CURRENT_RAINMAKER_GRATE_ADVANCE,CURRENT_RAINMAKER_GRATE_ADVANCE_CORROBORATION,CURRENT_RULE_VARIANTS,GENERAL_GRATE_WALKABILITY' ||
+    evidenceIds18v.size !== 5 ||
+    !evidence18v.allStageSpecificReferencesIdentifyUndertow ||
+    !evidence18v.currentSpawnToCenterViaGrateDocumented ||
+    !evidence18v.currentCenterToEnemyViaGrateDocumented ||
+    !evidence18v.currentCenterToEnemyViaGrateCorroborated ||
+    !evidence18v.humanoidGrateWalkabilityDocumented ||
+    !evidence18v.undertowAnarchyGratePresenceDocumented ||
+    !evidence18v.oppositeRouteDirectionsDocumentedAtCurrentStageLevel ||
+    evidence18v.exactPass18ULocalBreaksObservedBidirectionally ||
+    evidence18v.routeLevelEvidenceAloneAuthorizesExactBidirectionalLinks ||
+    evidence18v.originalGrateDirectionalityResolved ||
+    !evidence18v.controlledCurrentVersionCaptureRequired ||
+    evidence18v.localConnectorSemanticsValidated ||
+    evidence18v.runtimePromotionAuthorized ||
+    evidence18v.activationBlockerCleared
+  ) {
+    errors.push('Pass 18V corrected grate directionality evidence boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18U full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18V full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
