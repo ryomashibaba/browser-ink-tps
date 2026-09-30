@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AN',
+      resolutionPass: '18AO',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -205,6 +205,36 @@ describe('T21-D partial Recast connectivity QA', () => {
       sampledCommonRadiusResolvedAt1mmGranularity: true,
       exactSub1mmThresholdResolved: false,
       nextCombinedChainContinuationAuditRequired: true,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.postFloor00SourceBreakPass18AO
+    ).toMatchObject({
+      qaRunNumber: 1072,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      trustedSnapMeters: 0.30,
+      upstreamSourcePass: '18AK',
+      upstreamRetreatMeters: 0.130,
+      upstreamRadiusMeters: 0.995,
+      floorSlopeSourcePass: '18AF',
+      floorSlopeRadiusMeters: 0.80,
+      slopeFloor00SourcePass: '18AN',
+      slopeFloor00RadiusMeters: 0.669,
+      seedMaterial: 'FloorConcrete00',
+      seedYRangeMeters: [3, 3],
+      bothSeedsOwnGlassConnected: true,
+      disconnectedComparedCountPerSide: 55,
+      nearestDisconnectedMaterial: 'FloorConcrete02',
+      nearestDisconnectedYRangeMeters: [1.5, 1.5],
+      positiveNearestDistanceMeters: 1.8236261924604125,
+      negativeNearestDistanceMeters: 1.8236261924604125,
+      nearestDisconnectedReachesOwnGlassAnchor: false,
+      nearestDisconnectedReachesNonGlassRuntimeAnchor: false,
+      trustedNonLocalShortcutAuthorized: false,
+      exactSourceBoundaryKccValidationRequiredNext: true,
+      broadFrontierLinkAuthorized: false,
       activationBlockerCleared: false
     });
 
