@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AC',
+      resolutionPass: '18AD',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1348,6 +1348,44 @@ describe('T21-D partial Recast connectivity QA', () => {
       rawRadiusInflationAuthorized: false,
       trustedShortcutPromotionAuthorized: false,
       twoMeterFrontierLinkAuthorized: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassFloorSlopeKccPass18AD
+    ).toMatchObject({
+      qaRunNumber: 1019,
+      diagnosticOnly: true,
+      characterMode: 'HUMAN',
+      insetMeters: 0.40,
+      humanRadiusMeters: 0.32,
+      controllerOffsetMeters: 0.025,
+      autostepMaxHeightMeters: 0.34,
+      snapToGroundMeters: 0.24,
+      positiveBoundaryDistanceMeters: 0.5185586972146133,
+      negativeBoundaryDistanceMeters: 0.5185586972146118,
+      positiveBoundaryVerticalDeltaMeters: 0,
+      negativeBoundaryVerticalDeltaMeters: 0,
+      directedProbeCount: 4,
+      successfulDirectedProbeCount: 4,
+      airborneTickCountTotal: 0,
+      allInitiallySettled: true,
+      allFinallyGrounded: true,
+      positiveFloorToSlopeGroundedTicks: 8,
+      positiveSlopeToFloorGroundedTicks: 8,
+      negativeFloorToSlopeGroundedTicks: 9,
+      negativeSlopeToFloorGroundedTicks: 9,
+      maximumFinalHorizontalErrorMeters: 0.15477108986760482,
+      maximumFinalVerticalErrorMeters: 0.06845153690349992,
+      maximumDropBelowStartMeters: 0.0782347869873048,
+      maximumRiseAboveStartMeters: 0.07553304553997453,
+      mirroredBidirectionalGroundedTraversalFeasible: true,
+      productionKccPhysicalFeasibilityResolved: true,
+      noJumpRequiredForTestedBoundary: true,
+      sourceRouteBranchPhysicallyTraversable: true,
+      recastRepresentationStillUnresolved: true,
+      navigationConnectorAuthorized: false,
       runtimePromotionAuthorized: false,
       activationBlockerCleared: false
     });
