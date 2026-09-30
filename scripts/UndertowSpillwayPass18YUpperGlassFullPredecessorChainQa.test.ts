@@ -39,10 +39,17 @@ interface GlassChainSide {
   components: ChainComponent[];
 }
 
+interface GlassFixture {
+  bridgeReachableComponentCount: number;
+  bridgeReachableTriangleCount: number;
+  bridgeMesh: StageTriangleMeshGeometry;
+}
+
 interface Fixture {
   version: 'PASS18C_SOURCE_NATIVE_V1';
   diagnosticOnly: true;
   runtimePromotionAuthorized: false;
+  glass: Record<Side, GlassFixture>;
   pass18g: {
     routes: {
       glass: Record<Side, GlassChainSide>;
@@ -267,37 +274,43 @@ describe('T21 Pass 18Y upper-glass full predecessor + downstream source-chain Re
     expect(fixture.runtimePromotionAuthorized).toBe(false);
 
     const sideComponents = {} as Record<Side, ChainComponent[]>;
+    const predecessorMeshes = {} as Record<Side, StageTriangleMeshGeometry>;
     const sourceSolids: StageSolidDefinition[] = [];
-    const sourceIds = new Set<string>();
+    const downstreamSourceIds = new Set<string>();
 
     for (const side of ['POSITIVE_Z', 'NEGATIVE_Z'] as const) {
       const route = fixture.pass18g.routes.glass[side];
+      const glass = fixture.glass[side];
       expect(route.excludedBacktrackComponentIds).toHaveLength(24);
       expect(route.relaxedReachableComponentIds).toHaveLength(58);
-      const ids = [
-        ...route.excludedBacktrackComponentIds,
-        ...route.relaxedReachableComponentIds
-      ];
-      expect(new Set(ids).size).toBe(82);
+      expect(glass.bridgeReachableComponentCount).toBe(24);
+      expect(glass.bridgeReachableTriangleCount).toBe(48);
+      predecessorMeshes[side] = glass.bridgeMesh;
+      sourceSolids.push(
+        navOnlySolid(
+          `pass18y-upper-glass-predecessor:${side}`,
+          glass.bridgeMesh
+        )
+      );
 
       const byId = new Map(route.components.map((component) => [
         component.id,
         component
       ] as const));
-      const components = ids.map((id) => {
+      const components = route.relaxedReachableComponentIds.map((id) => {
         const component = byId.get(id);
         if (!component) {
-          throw new Error(`Pass 18Y missing source component ${side} ${id}`);
+          throw new Error(`Pass 18Y missing downstream source component ${side} ${id}`);
         }
         return component;
       });
       sideComponents[side] = components;
 
       for (const component of components) {
-        if (sourceIds.has(component.id)) {
-          throw new Error(`Pass 18Y duplicate mirrored component ${component.id}`);
+        if (downstreamSourceIds.has(component.id)) {
+          throw new Error(`Pass 18Y duplicate mirrored downstream component ${component.id}`);
         }
-        sourceIds.add(component.id);
+        downstreamSourceIds.add(component.id);
         sourceSolids.push(
           navOnlySolid(
             `pass18y-upper-glass-source:${side}:${component.id}`,
@@ -337,6 +350,26 @@ describe('T21 Pass 18Y upper-glass full predecessor + downstream source-chain Re
           side === 'POSITIVE_Z' ? 'glass:positive-z:' : 'glass:negative-z:';
         const oppositePrefix =
           side === 'POSITIVE_Z' ? 'glass:negative-z:' : 'glass:positive-z:';
+        const predecessorRepresentative = trustedRepresentative(
+          navigation,
+          predecessorMeshes[side]
+        );
+        const predecessorBidirectionalAnchorIds = predecessorRepresentative
+          ? anchors
+              .filter((anchor) => {
+                const forward = navigation.auditPath(
+                  vec3(predecessorRepresentative.point),
+                  vec3(anchor.point)
+                );
+                if (!forward.reachedTarget) return false;
+                return navigation.auditPath(
+                  vec3(anchor.point),
+                  vec3(predecessorRepresentative.point)
+                ).reachedTarget;
+              })
+              .map((anchor) => anchor.id)
+          : [];
+
         let trustedRepresentativeCount = 0;
         let ownGlassCount = 0;
         let oppositeGlassCount = 0;
@@ -391,11 +424,28 @@ describe('T21 Pass 18Y upper-glass full predecessor + downstream source-chain Re
         return [
           side,
           {
-            sourceComponentCount: sideComponents[side].length,
-            trustedRepresentativeCount,
-            connectedToOwnGlassComponentCount: ownGlassCount,
-            connectedToOppositeGlassComponentCount: oppositeGlassCount,
-            connectedToNonGlassComponentCount: nonGlassCount,
+            immediatePredecessorLogicalComponentCount: 24,
+            downstreamSourceComponentCount: sideComponents[side].length,
+            fullLogicalComponentCount: 82,
+            predecessorTrustedRepresentative:
+              predecessorRepresentative !== null,
+            predecessorConnectedToOwnGlass:
+              predecessorBidirectionalAnchorIds.some((id) =>
+                id.startsWith(ownPrefix)
+              ),
+            predecessorConnectedToOppositeGlass:
+              predecessorBidirectionalAnchorIds.some((id) =>
+                id.startsWith(oppositePrefix)
+              ),
+            predecessorConnectedToNonGlass:
+              predecessorBidirectionalAnchorIds.some(
+                (id) => !id.startsWith('glass:')
+              ),
+            predecessorBidirectionalAnchorIds,
+            trustedDownstreamRepresentativeCount: trustedRepresentativeCount,
+            connectedToOwnGlassDownstreamComponentCount: ownGlassCount,
+            connectedToOppositeGlassDownstreamComponentCount: oppositeGlassCount,
+            connectedToNonGlassDownstreamComponentCount: nonGlassCount,
             ownGlassComponentIds,
             nonGlassBindings
           }
@@ -425,7 +475,8 @@ describe('T21 Pass 18Y upper-glass full predecessor + downstream source-chain Re
         immediatePredecessorComponentCountPerSide: 24,
         downstreamComponentCountPerSide: 58,
         fullComponentCountPerSide: 82,
-        uniqueSourceComponentCount: sourceIds.size,
+        uniqueDownstreamSourceComponentCount: downstreamSourceIds.size,
+        sourceSolidCount: sourceSolids.length,
         baseline: {
           reached: baseline.reached,
           weak: baseline.weak,
@@ -448,8 +499,8 @@ describe('T21 Pass 18Y upper-glass full predecessor + downstream source-chain Re
       })
     );
 
-    expect(sourceIds.size).toBe(164);
-    expect(sourceSolids).toHaveLength(164);
+    expect(downstreamSourceIds.size).toBe(116);
+    expect(sourceSolids).toHaveLength(118);
     expect(baseline.reached).toBe(79);
     expect(baseline.weak).toBe(9);
     expect(baseline.strong).toBe(11);
