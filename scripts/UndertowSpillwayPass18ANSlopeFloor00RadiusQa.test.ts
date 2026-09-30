@@ -369,9 +369,9 @@ describe('T21 Pass 18AN FloorSlope00 to FloorConcrete00 radius diagnostic',()=>{
     );
     const baseline=matrixSummary(baselineStage);
 
-    const samples=ROUTE_RADII_METERS.map(radiusMeters=>{
+    const evaluateRadius=(radiusMeters:number)=>{
       const routeLinks=(['POSITIVE_Z','NEGATIVE_Z'] as const).map(side=>({
-        id:`pass18an-slope-floor00-${side.toLowerCase()}-${radiusMeters.toFixed(3)}`,
+        id:`pass18an-slope-floor00-${side.toLowerCase()}-${radiusMeters.toFixed(6)}`,
         start:sideData[side].slopeFloor00.a,
         end:sideData[side].slopeFloor00.b,
         radiusMeters,
@@ -379,7 +379,7 @@ describe('T21 Pass 18AN FloorSlope00 to FloorConcrete00 radius diagnostic',()=>{
         userId:userId++
       } satisfies StageNavigationLinkDefinition));
       const stage=qaStage(
-        `pass18an-radius-${radiusMeters.toFixed(3)}`,
+        `pass18an-radius-${radiusMeters.toFixed(6)}`,
         solids,
         [...inherited,...frozenLinks,...routeLinks]
       );
@@ -407,11 +407,46 @@ describe('T21 Pass 18AN FloorSlope00 to FloorConcrete00 radius diagnostic',()=>{
         },
         sides
       };
-    });
+    };
 
-    const firstSuccessIndex=samples.findIndex(sample=>sample.commonFloor00Success);
-    const firstSuccess=firstSuccessIndex>=0?samples[firstSuccessIndex]!:null;
-    const lastFailure=firstSuccessIndex>0?samples[firstSuccessIndex-1]!:null;
+    const coarse=ROUTE_RADII_METERS.map(radiusMeters=>evaluateRadius(radiusMeters));
+    const firstCoarseSuccessIndex=coarse.findIndex(sample=>sample.commonFloor00Success);
+    const firstCoarseSuccess=
+      firstCoarseSuccessIndex>=0?coarse[firstCoarseSuccessIndex]!:null;
+    const lastCoarseFailure=
+      firstCoarseSuccessIndex>0?coarse[firstCoarseSuccessIndex-1]!:null;
+
+    const fineRadii:number[]=[];
+    if(firstCoarseSuccess&&lastCoarseFailure){
+      const lo=lastCoarseFailure.radiusMeters;
+      const hi=firstCoarseSuccess.radiusMeters;
+      for(let i=0;i<=10;i++){
+        fineRadii.push(Number((lo+(hi-lo)*(i/10)).toFixed(6)));
+      }
+    }
+    const fine=fineRadii.map(radiusMeters=>evaluateRadius(radiusMeters));
+    const firstFineSuccessIndex=fine.findIndex(sample=>sample.commonFloor00Success);
+    const firstFineSuccess=
+      firstFineSuccessIndex>=0?fine[firstFineSuccessIndex]!:null;
+    const lastFineFailure=
+      firstFineSuccessIndex>0?fine[firstFineSuccessIndex-1]!:null;
+
+    const terminalRadii:number[]=[];
+    if(firstFineSuccess&&lastFineFailure){
+      const lo=lastFineFailure.radiusMeters;
+      const hi=firstFineSuccess.radiusMeters;
+      for(let i=0;i<=10;i++){
+        terminalRadii.push(Number((lo+(hi-lo)*(i/10)).toFixed(6)));
+      }
+    }
+    const terminal=terminalRadii.map(radiusMeters=>evaluateRadius(radiusMeters));
+    const firstTerminalSuccessIndex=
+      terminal.findIndex(sample=>sample.commonFloor00Success);
+    const firstTerminalSuccess=
+      firstTerminalSuccessIndex>=0?terminal[firstTerminalSuccessIndex]!:null;
+    const lastTerminalFailure=
+      firstTerminalSuccessIndex>0?terminal[firstTerminalSuccessIndex-1]!:null;
+    const qaCandidate=firstTerminalSuccess??firstFineSuccess??firstCoarseSuccess;
 
     console.log('T21PASS18AN_SLOPE_FLOOR00_RADIUS',JSON.stringify({
       diagnosticOnly:true,
@@ -441,7 +476,13 @@ describe('T21 Pass 18AN FloorSlope00 to FloorConcrete00 radius diagnostic',()=>{
         reached:baseline.reached,weak:baseline.weak,strong:baseline.strong,
         isolated:baseline.isolated
       },
-      firstSuccess,lastFailure,samples
+      firstCoarseSuccess,lastCoarseFailure,
+      fineRadiiMeters:fineRadii,
+      firstFineSuccess,lastFineFailure,
+      terminalRadiiMeters:terminalRadii,
+      firstTerminalSuccess,lastTerminalFailure,
+      qaCandidate,
+      coarse,fine,terminal
     }));
 
     expect(baseline.reached).toBe(79);
@@ -453,11 +494,15 @@ describe('T21 Pass 18AN FloorSlope00 to FloorConcrete00 radius diagnostic',()=>{
     expect(sideData.NEGATIVE_Z.slopeFloor00.distanceMeters).toBeCloseTo(
       0.5185586972146101,11
     );
-    expect(firstSuccess).not.toBeNull();
-    if(firstSuccess){
-      expect(firstSuccess.matrix.reached).toBeGreaterThanOrEqual(79);
-      expect(firstSuccess.matrix.weak).toBeLessThanOrEqual(9);
-      expect(firstSuccess.matrix.strong).toBeLessThanOrEqual(11);
+    expect(firstCoarseSuccess).not.toBeNull();
+    expect(firstFineSuccess).not.toBeNull();
+    expect(firstTerminalSuccess).not.toBeNull();
+    expect(qaCandidate).not.toBeNull();
+    if(qaCandidate){
+      expect(qaCandidate.matrix.reached).toBeGreaterThanOrEqual(79);
+      expect(qaCandidate.matrix.weak).toBeLessThanOrEqual(9);
+      expect(qaCandidate.matrix.strong).toBeLessThanOrEqual(11);
+      expect(qaCandidate.reachesAnyNonGlassAnchor).toBe(false);
     }
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
