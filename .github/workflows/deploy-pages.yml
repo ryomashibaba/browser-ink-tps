@@ -132,6 +132,12 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: T21 Pass 18AN slope-floor00 radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ANSlopeFloor00RadiusQa.test.ts
+
       - name: T21 Pass 18C source-native Recast QA
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         env:
@@ -345,12 +351,6 @@ jobs:
         env:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18AMSlopeFloor00KccQa.test.ts
-
-      - name: T21 Pass 18AN slope-floor00 radius diagnostic
-        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
-        env:
-          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
-        run: npx vitest run scripts/UndertowSpillwayPass18ANSlopeFloor00RadiusQa.test.ts
 
       - name: TypeScript check
         run: npm run typecheck
