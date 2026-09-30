@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18U',
+      resolutionPass: '18V',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -991,6 +991,37 @@ describe('T21-D partial Recast connectivity QA', () => {
       candidateTopologyMatchesIntendedGrateRouteClusters: true,
       exactMinimumAttachmentRadiiResolved: false,
       originalGrateDirectionalityResolved: false,
+      localConnectorSemanticsValidated: false,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.correctedGrateDirectionalityEvidencePass18V
+    ).toMatchObject({
+      evidenceAuditDate: '2026-09-30',
+      correctedReferenceCount: 5,
+      currentDirectionalityReferenceCount: 3,
+      currentRuleVariantReferenceCount: 1,
+      terrainMechanicReferenceCount: 1,
+      removedMisclassifiedScorchGorgeReferenceCount: 3,
+      correctedReferenceIds: [
+        'CURRENT_SPAWN_TO_CENTER',
+        'CURRENT_RAINMAKER_GRATE_ADVANCE',
+        'CURRENT_RAINMAKER_GRATE_ADVANCE_CORROBORATION',
+        'CURRENT_RULE_VARIANTS',
+        'GENERAL_GRATE_WALKABILITY'
+      ],
+      allStageSpecificReferencesIdentifyUndertow: true,
+      currentSpawnToCenterViaGrateDocumented: true,
+      currentCenterToEnemyViaGrateDocumented: true,
+      currentCenterToEnemyViaGrateCorroborated: true,
+      humanoidGrateWalkabilityDocumented: true,
+      undertowAnarchyGratePresenceDocumented: true,
+      oppositeRouteDirectionsDocumentedAtCurrentStageLevel: true,
+      exactPass18ULocalBreaksObservedBidirectionally: false,
+      routeLevelEvidenceAloneAuthorizesExactBidirectionalLinks: false,
+      originalGrateDirectionalityResolved: false,
+      controlledCurrentVersionCaptureRequired: true,
       localConnectorSemanticsValidated: false,
       runtimePromotionAuthorized: false,
       activationBlockerCleared: false
