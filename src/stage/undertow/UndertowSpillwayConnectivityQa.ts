@@ -2053,6 +2053,108 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AN keeps the frozen 18AK and 18AF links unchanged and varies only the exact raw FloorSlope00->FloorConcrete00 bidirectional link radius. Common mirrored attachment is bracketed from 0.60m failure to 0.70m success, refined to 0.66m failure / 0.67m success, then to 0.668m failure / 0.669m first sampled success. The 0.669m candidate reaches each side\'s own upper-glass SCC through FloorConcrete00 but leaves the tracked matrix at 79/9/11 and reaches no non-glass runtime anchor. The next safe task is to localize only the first source-adjacent break beyond FloorConcrete00.'
   }),
 
+  upperGlassCombinedSourceChainPass18AL: Object.freeze({
+    qaRunNumber: 1054,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    globalRecastSettingsChanged: false,
+    trustedEndpointsUsedAsLinks: false,
+    upstreamSourcePass: '18AK' as const,
+    upstreamRetreatMeters: 0.130,
+    upstreamRadiusMeters: 0.995,
+    floorSlopeSourcePass: '18AF' as const,
+    floorSlopeRadiusMeters: 0.80,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    combinedReachedDirectedPairs: 79,
+    combinedWeakComponentCount: 9,
+    combinedStronglyConnectedComponentCount: 11,
+    combinedAddedTrackedAnchorPairs: 0,
+    combinedRemovedTrackedAnchorPairs: 0,
+    trustedDownstreamComponentCountPerSide: 15,
+    connectedDownstreamComponentCountPerSide: 2,
+    connectedMaterialsPerSide: ['FloorConcrete02', 'FloorSlope00'] as const,
+    floorSlopeBoundaryOwnGlassConnectedBothSides: true,
+    floorSlopeBoundaryReachesNonGlassRuntimeAnchor: false,
+    nearestOverallDisconnectedBranchDistanceMeters: 0.5185586972146101,
+    nearestOverallDisconnectedBranchIsRouteDeadEndBridgeMetal: true,
+    routeContinuingBoundaryKind: 'FloorSlope00->FloorConcrete00' as const,
+    positiveRouteContinuingBoundaryDistanceMeters: 0.5185586972146173,
+    negativeRouteContinuingBoundaryDistanceMeters: 0.5185586972146101,
+    routeContinuingBoundaryKccValidationRequiredNext: true,
+    broadFrontierLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AL combines only the frozen Pass 18AK BridgeMetal->FloorConcrete02 candidate and Pass 18AF FloorConcrete02->FloorSlope00 candidate. The chain reaches FloorSlope00 on both mirrored sides without changing the tracked 25-anchor matrix (79/9/11) or reaching non-glass runtime anchors. Reclassification of the 58-component downstream source set finds only FloorConcrete02 and FloorSlope00 connected among the 15 trusted representatives per side. The absolute nearest disconnected branch is a 0.518559m FloorConcrete02->BridgeMetal branch already classified by Pass 18AC as a high-level dead end; the route-continuing next boundary is instead FloorSlope00->FloorConcrete00, also 0.518559m on both sides. No broad frontier link is authorized.'
+  }),
+
+  slopeFloor00KccPass18AM: Object.freeze({
+    qaRunNumber: 1056,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    sourceBoundary: 'FloorSlope00->FloorConcrete00' as const,
+    characterMode: 'HUMAN' as const,
+    directedProbeCount: 4,
+    successfulDirectedProbeCount: 4,
+    initiallySettledProbeCount: 4,
+    totalAirborneTicks: 0,
+    positiveBoundaryDistanceMeters: 0.5185586972146173,
+    negativeBoundaryDistanceMeters: 0.5185586972146101,
+    positiveSlopeToFloorFinalHorizontalErrorMeters: 0.10888470794199546,
+    positiveFloorToSlopeFinalHorizontalErrorMeters: 0.14822835630626588,
+    negativeSlopeToFloorFinalHorizontalErrorMeters: 0.12670558709458002,
+    negativeFloorToSlopeFinalHorizontalErrorMeters: 0.14853104770368533,
+    effectiveHumanContactRadiusMeters: 0.34500000000000003,
+    ordinaryWalkingBidirectionalBothSides: true,
+    jumpOrAirborneTraversalRequired: false,
+    cpuRecastRepresentationStillMissing: true,
+    exactRawBoundaryRadiusSweepAuthorizedNext: true,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AM tests the Pass 18AL route-continuing FloorSlope00->FloorConcrete00 boundary with the live production Human KCC before authoring another Detour link. All four mirrored/directed ordinary-walk probes succeed from a settled state with zero airborne ticks. This localizes the remaining mismatch to CPU/Recast representation rather than a jump/drop semantic transition and authorizes a QA-only exact raw-boundary radius sweep, not runtime promotion.'
+  }),
+
+  slopeFloor00RadiusPass18AN: Object.freeze({
+    qaRunNumber: 1060,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    humanKccSourcePass: '18AM' as const,
+    humanKccBidirectionalSuccess: true,
+    endpointMode: 'EXACT_RAW_PHYSICAL_PAIR' as const,
+    bidirectional: true,
+    upstreamRetreatMeters: 0.130,
+    upstreamRadiusMeters: 0.995,
+    floorSlopeRadiusMeters: 0.80,
+    positivePhysicalDistanceMeters: 0.5185586972146173,
+    negativePhysicalDistanceMeters: 0.5185586972146101,
+    coarseRadiiMeters: [
+      0.10, 0.20, 0.30, 0.40, 0.50, 0.60,
+      0.70, 0.80, 0.90, 1.00, 1.20
+    ] as const,
+    coarseLastCommonFailureRadiusMeters: 0.60,
+    coarseFirstCommonSuccessRadiusMeters: 0.70,
+    fineLastCommonFailureRadiusMeters: 0.66,
+    fineFirstCommonSuccessRadiusMeters: 0.67,
+    terminalFineStepMeters: 0.001,
+    terminalLastCommonFailureRadiusMeters: 0.668,
+    firstSampledCommonSuccessRadiusMeters: 0.669,
+    commonThresholdLowerExclusiveMeters: 0.668,
+    commonThresholdUpperInclusiveMeters: 0.669,
+    qaCandidateRadiusMeters: 0.669,
+    candidateReachedDirectedPairs: 79,
+    candidateWeakComponentCount: 9,
+    candidateStronglyConnectedComponentCount: 11,
+    bothSidesFloor00OwnGlassBidirectional: true,
+    candidateReachesNonGlassRuntimeAnchor: false,
+    sampledCommonRadiusResolvedAt1mmGranularity: true,
+    exactSub1mmThresholdResolved: false,
+    nextCombinedChainContinuationAuditRequired: true,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AN keeps the frozen Pass 18AK and 18AF links fixed, adds only the exact raw FloorSlope00->FloorConcrete00 boundary pair, and varies only its bidirectional link radius. Common mirrored attachment fails at 0.668m and first succeeds at the sampled 0.669m radius. The 0.669m QA candidate keeps the tracked matrix at 79/9/11, reaches only each side\'s own three upper-glass anchors, and reaches no non-glass runtime anchor. The exact sub-1mm threshold remains unresolved and no runtime promotion is authorized. The next safe step is to extend this complete source-local chain and re-localize only the first remaining route-continuing source-adjacent break.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3843,6 +3945,101 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     radius18an.runtimePromotionAuthorized ||
     radius18an.activationBlockerCleared ||
     !radius18an.nextSourceAdjacentBreakLocalizationRequired
+  ) {
+    errors.push('Pass 18AN slope-floor00 radius boundary drifted');
+  }
+
+  const chain18al = audit.upperGlassCombinedSourceChainPass18AL;
+  if (
+    chain18al.qaRunNumber !== 1054 ||
+    !chain18al.diagnosticOnly ||
+    chain18al.runtimePromotionAuthorized ||
+    chain18al.globalRecastSettingsChanged ||
+    chain18al.trustedEndpointsUsedAsLinks ||
+    chain18al.upstreamSourcePass !== '18AK' ||
+    Math.abs(chain18al.upstreamRetreatMeters - 0.130) > 1e-12 ||
+    Math.abs(chain18al.upstreamRadiusMeters - 0.995) > 1e-12 ||
+    chain18al.floorSlopeSourcePass !== '18AF' ||
+    Math.abs(chain18al.floorSlopeRadiusMeters - 0.80) > 1e-12 ||
+    chain18al.baselineReachedDirectedPairs !== 79 ||
+    chain18al.combinedReachedDirectedPairs !== 79 ||
+    chain18al.combinedWeakComponentCount !== 9 ||
+    chain18al.combinedStronglyConnectedComponentCount !== 11 ||
+    chain18al.combinedAddedTrackedAnchorPairs !== 0 ||
+    chain18al.combinedRemovedTrackedAnchorPairs !== 0 ||
+    chain18al.trustedDownstreamComponentCountPerSide !== 15 ||
+    chain18al.connectedDownstreamComponentCountPerSide !== 2 ||
+    chain18al.connectedMaterialsPerSide.join(',') !== 'FloorConcrete02,FloorSlope00' ||
+    !chain18al.floorSlopeBoundaryOwnGlassConnectedBothSides ||
+    chain18al.floorSlopeBoundaryReachesNonGlassRuntimeAnchor ||
+    !chain18al.nearestOverallDisconnectedBranchIsRouteDeadEndBridgeMetal ||
+    chain18al.routeContinuingBoundaryKind !== 'FloorSlope00->FloorConcrete00' ||
+    Math.abs(chain18al.positiveRouteContinuingBoundaryDistanceMeters - 0.5185586972146173) > 1e-12 ||
+    Math.abs(chain18al.negativeRouteContinuingBoundaryDistanceMeters - 0.5185586972146101) > 1e-12 ||
+    !chain18al.routeContinuingBoundaryKccValidationRequiredNext ||
+    chain18al.broadFrontierLinkAuthorized ||
+    chain18al.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AL combined source-chain boundary drifted');
+  }
+
+  const kcc18am = audit.slopeFloor00KccPass18AM;
+  if (
+    kcc18am.qaRunNumber !== 1056 ||
+    !kcc18am.diagnosticOnly ||
+    kcc18am.runtimePromotionAuthorized ||
+    kcc18am.sourceBoundary !== 'FloorSlope00->FloorConcrete00' ||
+    kcc18am.characterMode !== 'HUMAN' ||
+    kcc18am.directedProbeCount !== 4 ||
+    kcc18am.successfulDirectedProbeCount !== 4 ||
+    kcc18am.initiallySettledProbeCount !== 4 ||
+    kcc18am.totalAirborneTicks !== 0 ||
+    Math.abs(kcc18am.positiveBoundaryDistanceMeters - 0.5185586972146173) > 1e-12 ||
+    Math.abs(kcc18am.negativeBoundaryDistanceMeters - 0.5185586972146101) > 1e-12 ||
+    Math.abs(kcc18am.effectiveHumanContactRadiusMeters - 0.345) > 1e-12 ||
+    !kcc18am.ordinaryWalkingBidirectionalBothSides ||
+    kcc18am.jumpOrAirborneTraversalRequired ||
+    !kcc18am.cpuRecastRepresentationStillMissing ||
+    !kcc18am.exactRawBoundaryRadiusSweepAuthorizedNext ||
+    kcc18am.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AM slope-floor00 KCC boundary drifted');
+  }
+
+  const radius18an = audit.slopeFloor00RadiusPass18AN;
+  if (
+    radius18an.qaRunNumber !== 1060 ||
+    !radius18an.diagnosticOnly ||
+    radius18an.runtimePromotionAuthorized ||
+    radius18an.humanKccSourcePass !== '18AM' ||
+    !radius18an.humanKccBidirectionalSuccess ||
+    radius18an.endpointMode !== 'EXACT_RAW_PHYSICAL_PAIR' ||
+    !radius18an.bidirectional ||
+    Math.abs(radius18an.upstreamRetreatMeters - 0.130) > 1e-12 ||
+    Math.abs(radius18an.upstreamRadiusMeters - 0.995) > 1e-12 ||
+    Math.abs(radius18an.floorSlopeRadiusMeters - 0.80) > 1e-12 ||
+    Math.abs(radius18an.positivePhysicalDistanceMeters - 0.5185586972146173) > 1e-12 ||
+    Math.abs(radius18an.negativePhysicalDistanceMeters - 0.5185586972146101) > 1e-12 ||
+    radius18an.coarseRadiiMeters.join(',') !== '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.2' ||
+    Math.abs(radius18an.coarseLastCommonFailureRadiusMeters - 0.60) > 1e-12 ||
+    Math.abs(radius18an.coarseFirstCommonSuccessRadiusMeters - 0.70) > 1e-12 ||
+    Math.abs(radius18an.fineLastCommonFailureRadiusMeters - 0.66) > 1e-12 ||
+    Math.abs(radius18an.fineFirstCommonSuccessRadiusMeters - 0.67) > 1e-12 ||
+    Math.abs(radius18an.terminalFineStepMeters - 0.001) > 1e-12 ||
+    Math.abs(radius18an.terminalLastCommonFailureRadiusMeters - 0.668) > 1e-12 ||
+    Math.abs(radius18an.firstSampledCommonSuccessRadiusMeters - 0.669) > 1e-12 ||
+    Math.abs(radius18an.commonThresholdLowerExclusiveMeters - 0.668) > 1e-12 ||
+    Math.abs(radius18an.commonThresholdUpperInclusiveMeters - 0.669) > 1e-12 ||
+    Math.abs(radius18an.qaCandidateRadiusMeters - 0.669) > 1e-12 ||
+    radius18an.candidateReachedDirectedPairs !== 79 ||
+    radius18an.candidateWeakComponentCount !== 9 ||
+    radius18an.candidateStronglyConnectedComponentCount !== 11 ||
+    !radius18an.bothSidesFloor00OwnGlassBidirectional ||
+    radius18an.candidateReachesNonGlassRuntimeAnchor ||
+    !radius18an.sampledCommonRadiusResolvedAt1mmGranularity ||
+    radius18an.exactSub1mmThresholdResolved ||
+    !radius18an.nextCombinedChainContinuationAuditRequired ||
+    radius18an.activationBlockerCleared
   ) {
     errors.push('Pass 18AN slope-floor00 radius boundary drifted');
   }
