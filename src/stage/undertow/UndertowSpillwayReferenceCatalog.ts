@@ -15,58 +15,74 @@ export const UNDERTOW_NINTENDO_7_2_CHANGELOG =
 
 export interface UndertowGameplaySemanticReference {
   id:
-    | 'CURRENT_TURF_RETURN'
     | 'CURRENT_SPAWN_TO_CENTER'
+    | 'CURRENT_RAINMAKER_GRATE_ADVANCE'
+    | 'CURRENT_RAINMAKER_GRATE_ADVANCE_CORROBORATION'
     | 'CURRENT_RULE_VARIANTS'
-    | 'LEGACY_TURF_SAME_ROUTE_RETURN';
+    | 'GENERAL_GRATE_WALKABILITY';
   sourcePage: string;
   sourceVersion: string;
+  stageIdentity: 'UNDERTOW_SPILLWAY_MATEGAI' | 'SPLATOON_SERIES_GRATE';
   role:
     | 'CURRENT_DIRECTIONALITY'
     | 'CURRENT_RULE_VARIANT'
-    | 'LEGACY_CORROBORATION';
+    | 'TERRAIN_MECHANIC';
   supports: readonly string[];
 }
 
 export const UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES:
   readonly UndertowGameplaySemanticReference[] = [
   {
-    id: 'CURRENT_TURF_RETURN',
-    sourcePage: 'https://gamerch.com/splatoonwiki-sogo/984847',
-    sourceVersion: 'current page updated 2026-05-07 / post-Ver.7.2.0',
-    role: 'CURRENT_DIRECTIONALITY',
-    supports: [
-      'Turf/Zones center-to-own-side return via grate exists'
-    ]
-  },
-  {
     id: 'CURRENT_SPAWN_TO_CENTER',
     sourcePage: 'https://strategywiki.org/wiki/Splatoon_3/Undertow_Spillway',
     sourceVersion: 'current post-Ver.7.2.0 stage guide checked 2026-09-30',
+    stageIdentity: 'UNDERTOW_SPILLWAY_MATEGAI',
     role: 'CURRENT_DIRECTIONALITY',
     supports: [
-      'spawn-side route uses grate access toward the middle overhangs'
+      'spawn-side route reaches the middle overhangs through a grate'
+    ]
+  },
+  {
+    id: 'CURRENT_RAINMAKER_GRATE_ADVANCE',
+    sourcePage:
+      'https://wikiwiki.jp/splatoon3mix/%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8/%E3%83%9E%E3%83%86%E3%82%AC%E3%82%A4%E6%94%BE%E6%B0%B4%E8%B7%AF',
+    sourceVersion: 'current Ver.7.2.0 map/guide checked 2026-09-30',
+    stageIdentity: 'UNDERTOW_SPILLWAY_MATEGAI',
+    role: 'CURRENT_DIRECTIONALITY',
+    supports: [
+      'post-Ver.7.2.0 Rainmaker route crosses the right-front grate toward the enemy side'
+    ]
+  },
+  {
+    id: 'CURRENT_RAINMAKER_GRATE_ADVANCE_CORROBORATION',
+    sourcePage: 'https://gamewith.jp/splatoon3/367749',
+    sourceVersion: 'page updated 2024-08-29 / post-Ver.7.2.0',
+    stageIdentity: 'UNDERTOW_SPILLWAY_MATEGAI',
+    role: 'CURRENT_DIRECTIONALITY',
+    supports: [
+      'post-Ver.7.2.0 Rainmaker checkpoint-to-goal route can proceed over the grate'
     ]
   },
   {
     id: 'CURRENT_RULE_VARIANTS',
-    sourcePage: 'https://kamigame.jp/splatoon3/page/230199164238079467.html',
+    sourcePage: 'https://kamigame.jp/splatoon3/page/230661367210732889.html',
     sourceVersion: 'page updated 2025-03-06 / post-Ver.7.2.0',
+    stageIdentity: 'UNDERTOW_SPILLWAY_MATEGAI',
     role: 'CURRENT_RULE_VARIANT',
     supports: [
-      'Splat Zones terrain matches Turf',
-      'Tower Control removes the central grate route',
-      'Rainmaker retains a grate-side attack route',
-      'Clam Blitz retains a grate-side attack route'
+      'current Undertow/Matagai rule layouts differ by mode',
+      'Tower Control retains an own-side high grate position while other roof geometry differs'
     ]
   },
   {
-    id: 'LEGACY_TURF_SAME_ROUTE_RETURN',
-    sourcePage: 'https://appmedia.jp/splatoon3/76009214',
-    sourceVersion: 'pre-Ver.7.2.0 corroboration only',
-    role: 'LEGACY_CORROBORATION',
+    id: 'GENERAL_GRATE_WALKABILITY',
+    sourcePage: 'https://splatoonwiki.org/wiki/Grate',
+    sourceVersion: 'current series terrain reference checked 2026-09-30',
+    stageIdentity: 'SPLATOON_SERIES_GRATE',
+    role: 'TERRAIN_MECHANIC',
     supports: [
-      'historical Turf explicitly described the grate route for both invasion and return'
+      'humanoid-form players can walk on horizontal grates',
+      'Undertow Spillway has grated platforms in its Anarchy Battle variants'
     ]
   }
 ] as const;
@@ -144,6 +160,11 @@ export function validateUndertowReferenceCatalog(): string[] {
   }
 
   const gameplayIds = new Set<string>();
+  const forbiddenWrongStagePages = new Set([
+    'https://gamerch.com/splatoonwiki-sogo/984847',
+    'https://kamigame.jp/splatoon3/page/230199164238079467.html',
+    'https://appmedia.jp/splatoon3/76009214'
+  ]);
   for (const reference of UNDERTOW_CURRENT_GRATE_GAMEPLAY_REFERENCES) {
     if (gameplayIds.has(reference.id)) {
       errors.push(`duplicate Undertow grate gameplay reference '${reference.id}'`);
@@ -152,21 +173,33 @@ export function validateUndertowReferenceCatalog(): string[] {
     if (reference.supports.length === 0) {
       errors.push(`${reference.id}: gameplay semantic reference must declare support scope`);
     }
-    if (
-      reference.id === 'LEGACY_TURF_SAME_ROUTE_RETURN' &&
-      reference.role !== 'LEGACY_CORROBORATION'
-    ) {
-      errors.push('legacy Turf grate reference must remain corroboration-only');
+    if (forbiddenWrongStagePages.has(reference.sourcePage)) {
+      errors.push(`${reference.id}: Scorch Gorge/other-stage source cannot support Undertow semantics`);
     }
     if (
-      reference.id !== 'LEGACY_TURF_SAME_ROUTE_RETURN' &&
-      reference.role === 'LEGACY_CORROBORATION'
+      reference.role !== 'TERRAIN_MECHANIC' &&
+      reference.stageIdentity !== 'UNDERTOW_SPILLWAY_MATEGAI'
     ) {
-      errors.push(`${reference.id}: current grate reference cannot be legacy-only`);
+      errors.push(`${reference.id}: stage-specific semantic source must identify Undertow/Matagai`);
+    }
+    if (
+      reference.role === 'TERRAIN_MECHANIC' &&
+      reference.stageIdentity !== 'SPLATOON_SERIES_GRATE'
+    ) {
+      errors.push(`${reference.id}: terrain mechanic source must remain series-scoped`);
     }
   }
-  if (gameplayIds.size !== 4) {
-    errors.push('Undertow grate gameplay semantic catalog must contain four scoped references');
+  if (gameplayIds.size !== 5) {
+    errors.push('Undertow grate gameplay semantic catalog must contain five corrected references');
+  }
+  for (const id of [
+    'CURRENT_SPAWN_TO_CENTER',
+    'CURRENT_RAINMAKER_GRATE_ADVANCE',
+    'CURRENT_RAINMAKER_GRATE_ADVANCE_CORROBORATION',
+    'CURRENT_RULE_VARIANTS',
+    'GENERAL_GRATE_WALKABILITY'
+  ] as const) {
+    if (!gameplayIds.has(id)) errors.push(`missing corrected Undertow grate semantic reference '${id}'`);
   }
 
   return errors;
