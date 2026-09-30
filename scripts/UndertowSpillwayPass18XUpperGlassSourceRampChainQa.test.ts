@@ -499,9 +499,33 @@ describe('T21 Pass 18X full upper-glass source-ramp-chain Recast audit', () => {
     expect(baseline.weak).toBe(9);
     expect(baseline.strong).toBe(11);
     expect(candidate.rows).toHaveLength(25);
-    expect(Number.isFinite(candidate.reached)).toBe(true);
-    expect(Number.isFinite(candidate.weak)).toBe(true);
-    expect(Number.isFinite(candidate.strong)).toBe(true);
+    expect(candidate.reached).toBe(79);
+    expect(candidate.weak).toBe(9);
+    expect(candidate.strong).toBe(11);
+    expect(candidate.isolated).toEqual(baseline.isolated);
+    expect(addedPairs).toEqual([]);
+    expect(removedPairs).toEqual([]);
+    expect(changedNonGlassRows).toEqual([]);
+
+    for (const side of ['POSITIVE_Z', 'NEGATIVE_Z'] as const) {
+      const binding = sourceBindings[side] as {
+        sourceComponentCount: number;
+        trustedRepresentativeCount: number;
+        connectedToOwnGlassCount: number;
+        connectedToOppositeGlassCount: number;
+        connectedToNonGlassCount: number;
+        materialGroups: Record<string, { count: number; yMin: number; yMax: number }>;
+      };
+      expect(binding.sourceComponentCount).toBe(58);
+      expect(binding.trustedRepresentativeCount).toBe(15);
+      expect(binding.connectedToOwnGlassCount).toBe(0);
+      expect(binding.connectedToOppositeGlassCount).toBe(0);
+      expect(binding.connectedToNonGlassCount).toBe(0);
+      expect(binding.materialGroups.BridgeMetal00?.count).toBe(46);
+      expect(binding.materialGroups.FloorSlope00?.count).toBe(3);
+      expect(binding.materialGroups.FloorSlope00?.yMin).toBeCloseTo(0, 12);
+      expect(binding.materialGroups.FloorSlope00?.yMax).toBeCloseTo(6, 12);
+    }
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
   }, 60000);
