@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AO',
+      resolutionPass: '18AP',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -235,6 +235,41 @@ describe('T21-D partial Recast connectivity QA', () => {
       trustedNonLocalShortcutAuthorized: false,
       exactSourceBoundaryKccValidationRequiredNext: true,
       broadFrontierLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.floor00LowerFloor02KccPass18AP
+    ).toMatchObject({
+      qaRunNumber: 1079,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      sourcePass: '18AO',
+      boundaryClass: 'FloorConcrete00@Y3.0->FloorConcrete02@Y1.5',
+      physicalBoundaryDistanceMeters: 1.8236261924604125,
+      horizontalGapMeters: 1.0371173944292236,
+      verticalDeltaMeters: 1.5,
+      humanRadiusMeters: 0.32,
+      controllerOffsetMeters: 0.025,
+      autostepMaxHeightMeters: 0.34,
+      jumpSpeedMetersPerSecond: 8.2,
+      gravityMetersPerSecond2: 28,
+      directedProbeCount: 6,
+      bothLowerToUpperWalkFail: true,
+      bothLowerToUpperJumpSucceed: true,
+      bothUpperToLowerDropSucceed: true,
+      positiveLowerToUpperJumpAirborneTicks: 14,
+      negativeLowerToUpperJumpAirborneTicks: 15,
+      positiveUpperToLowerDropAirborneTicks: 16,
+      negativeUpperToLowerDropAirborneTicks: 15,
+      qaTraversalClass: 'JUMP_UP_DROP_DOWN',
+      ordinaryWalkingAuthorized: false,
+      qaJumpUpFeasible: true,
+      qaDropDownFeasible: true,
+      originalGameplayDirectionalityResolved: false,
+      originalGameplayJumpRequirementResolved: false,
+      productionOffMeshLinkAuthorized: false,
+      qaOnlyDirectionalLinkDiagnosticAllowed: true,
       activationBlockerCleared: false
     });
 
