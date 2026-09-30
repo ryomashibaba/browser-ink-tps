@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AJ',
+      resolutionPass: '18AK',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -85,6 +85,39 @@ describe('T21-D partial Recast connectivity QA', () => {
       upperGlassNavigationAuthorityResolved: false,
       allTraversableRuntimeGeometryBound: false,
       fullStageConnectivityReady: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .upperGlassBridgeFloorRadiusMinimizationPass18AK
+    ).toMatchObject({
+      qaRunNumber: 1049,
+      diagnosticOnly: true,
+      fixedRetreatMeters: 0.130,
+      bridgeEndpointMode: 'EXACT_RAW_PHYSICAL_ENDPOINT',
+      floorEndpointMode: 'PASS18AJ_SOURCE_SURFACE_RETREAT_FIXED',
+      bidirectional: true,
+      globalRecastSettingsChanged: false,
+      coarseLastCommonFailureRadiusMeters: 0.80,
+      coarseFirstCommonSuccessRadiusMeters: 1.00,
+      fineLastCommonFailureRadiusMeters: 0.98,
+      fineFirstCommonSuccessRadiusMeters: 1.00,
+      terminalFineStepMeters: 0.001,
+      terminalLastCommonFailureRadiusMeters: 0.994,
+      firstSampledCommonSuccessRadiusMeters: 0.995,
+      commonThresholdLowerExclusiveMeters: 0.994,
+      commonThresholdUpperInclusiveMeters: 0.995,
+      candidateReachedDirectedPairs: 79,
+      candidateWeakComponentCount: 9,
+      candidateStronglyConnectedComponentCount: 11,
+      bothSidesOwnGlassBidirectional: true,
+      candidateReachesNonGlassRuntimeAnchor: false,
+      sampledCommonRadiusResolvedAt1mmGranularity: true,
+      exactSub1mmThresholdResolved: false,
+      qaCandidateRadiusMeters: 0.995,
+      endpointRetreatChangedDuringSweep: false,
+      combinedUpstreamDownstreamAuditRequiredNext: true,
+      runtimePromotionAuthorized: false,
+      activationBlockerCleared: false
     });
     expect(UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sourceNativeRouteGapAudit)
       .toMatchObject({
