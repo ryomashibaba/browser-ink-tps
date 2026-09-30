@@ -537,6 +537,9 @@ describe('T21 Pass 18AJ FloorConcrete02 5mm fine-retreat sweep',()=>{
     expect(baseline.reached).toBe(79);
     expect(baseline.weak).toBe(9);
     expect(baseline.strong).toBe(11);
+    expect(coarseRetreats).toEqual([
+      0.100,0.105,0.110,0.115,0.120,0.125,0.130,0.135,0.140,0.145,0.150
+    ]);
     for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const){
       const result=sides[side] as {
         rows:Array<{surfaceDistanceMeters:number}>
