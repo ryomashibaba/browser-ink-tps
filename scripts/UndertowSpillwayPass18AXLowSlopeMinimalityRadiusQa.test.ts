@@ -480,6 +480,12 @@ describe('T21 Pass 18AX low-slope exact-raw minimality/radius diagnostic',()=>{
         const ownPrefix=side==='POSITIVE_Z'?'glass:positive-z:':'glass:negative-z:';
         const ownGlassAnchors=anchors.filter(anchor=>anchor.id.startsWith(ownPrefix));
         const nonGlassAnchors=anchors.filter(anchor=>!anchor.id.startsWith('glass:'));
+        const routeFloorRepresentative=trustedRepresentative(
+          nav,sideData[side].routeFloor02.mesh
+        );
+        if(!routeFloorRepresentative){
+          throw new Error(`Pass 18AX route FloorConcrete02 representative missing ${side}`);
+        }
         const slopeRows=sideData[side].lowSlopes.map((component,index)=>{
           const representative=trustedRepresentative(nav,component.mesh);
           if(!representative)throw new Error(`Pass 18AX low slope representative missing ${side} ${index+1}`);
@@ -489,26 +495,39 @@ describe('T21 Pass 18AX low-slope exact-raw minimality/radius diagnostic',()=>{
           const toOwnGlass=ownGlassAnchors.some(anchor=>
             nav.auditPath(vec3(representative.point),vec3(anchor.point)).reachedTarget
           );
+          const routeFloorToSlope=nav.auditPath(
+            vec3(routeFloorRepresentative.point),vec3(representative.point)
+          ).reachedTarget;
+          const slopeToRouteFloor=nav.auditPath(
+            vec3(representative.point),vec3(routeFloorRepresentative.point)
+          ).reachedTarget;
           const outboundNonGlassIds=nonGlassAnchors.filter(anchor=>
             nav.auditPath(vec3(representative.point),vec3(anchor.point)).reachedTarget
           ).map(anchor=>anchor.id);
           return {
             id:component.id,index:index+1,fromOwnGlass,toOwnGlass,
+            routeFloorToSlope,slopeToRouteFloor,
+            localBidirectional:routeFloorToSlope&&slopeToRouteFloor,
             outboundNonGlassIds,representativeSnapMeters:representative.snapMeters
           };
         });
+        const selectedIndices=mode==='CANDIDATE_1_ONLY'?[1]:mode==='CANDIDATE_2_ONLY'?[2]:[1,2];
         return [side,{
+          routeFloorRepresentative,
           slopeRows,
-          bothLowSlopesBidirectional:slopeRows.every(row=>row.fromOwnGlass&&row.toOwnGlass),
+          selectedCandidatesBidirectional:selectedIndices.every(index=>
+            slopeRows[index-1]!.localBidirectional
+          ),
+          allLowSlopesBidirectional:slopeRows.every(row=>row.localBidirectional),
           anyNonGlassCollateral:slopeRows.some(row=>row.outboundNonGlassIds.length>0)
         }];
       }));
       return {
         radiusMeters,mode,
         matrix:{reached:matrix.reached,weak:matrix.weak,strong:matrix.strong,isolated:matrix.isolated},
-        commonBothLowSlopesBidirectional:
-          (sides.POSITIVE_Z as {bothLowSlopesBidirectional:boolean}).bothLowSlopesBidirectional &&
-          (sides.NEGATIVE_Z as {bothLowSlopesBidirectional:boolean}).bothLowSlopesBidirectional,
+        commonSelectedCandidatesBidirectional:
+          (sides.POSITIVE_Z as {selectedCandidatesBidirectional:boolean}).selectedCandidatesBidirectional &&
+          (sides.NEGATIVE_Z as {selectedCandidatesBidirectional:boolean}).selectedCandidatesBidirectional,
         anyNonGlassCollateral:
           (sides.POSITIVE_Z as {anyNonGlassCollateral:boolean}).anyNonGlassCollateral ||
           (sides.NEGATIVE_Z as {anyNonGlassCollateral:boolean}).anyNonGlassCollateral,
@@ -523,7 +542,7 @@ describe('T21 Pass 18AX low-slope exact-raw minimality/radius diagnostic',()=>{
     const firstSuccessByMode=Object.fromEntries(modes.map(mode=>[
       mode,
       samples.map(row=>row[mode] as ReturnType<typeof evaluate>)
-        .find(sample=>sample.commonBothLowSlopesBidirectional)??null
+        .find(sample=>sample.commonSelectedCandidatesBidirectional)??null
     ]));
 
     console.log('T21PASS18AX_LOW_SLOPE_MINIMALITY_RADIUS',JSON.stringify({
@@ -563,7 +582,7 @@ describe('T21 Pass 18AX low-slope exact-raw minimality/radius diagnostic',()=>{
     const bothFirst=firstSuccessByMode.BOTH as ReturnType<typeof evaluate>|null;
     expect(bothFirst).not.toBeNull();
     const bothTerminal=last.BOTH as ReturnType<typeof evaluate>;
-    expect(bothTerminal.commonBothLowSlopesBidirectional).toBe(true);
+    expect(bothTerminal.commonSelectedCandidatesBidirectional).toBe(true);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
   },180000);
