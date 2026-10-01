@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AR',
+      resolutionPass: '18AS',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -350,6 +350,52 @@ describe('T21-D partial Recast connectivity QA', () => {
       sampledCommonRadiusResolvedAt50mmGranularity: true,
       exactThresholdResolved: false,
       terminalRadiusSweepRequiredNext: true,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.directionalTerminalRadiusPass18AS
+    ).toMatchObject({
+      qaRunNumber: 1091,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18AR',
+      qaTraversalClass: 'JUMP_UP_DROP_DOWN',
+      trustedEndpointsUsedAsLinks: false,
+      globalRecastSettingsChanged: false,
+      fineBracketMeters: [0.700, 0.750],
+      sampledRadiiMeters: [
+        0.700, 0.705, 0.710, 0.715, 0.720, 0.725,
+        0.730, 0.735, 0.740, 0.745, 0.750
+      ],
+      physicalBoundaryDistanceMeters: 1.8236261924604125,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      lastCommonFailureRadiusMeters: 0.700,
+      firstCommonSuccessRadiusMeters: 0.705,
+      commonThresholdLowerExclusiveMeters: 0.700,
+      commonThresholdUpperInclusiveMeters: 0.705,
+      negativeSideAttachesAt0700Meters: true,
+      positiveSideAttachesAt0700Meters: false,
+      firstJumpOnlyCommonAttachmentRadiusMeters: 0.705,
+      firstDropOnlyCommonAttachmentRadiusMeters: 0.705,
+      firstBothCommonAttachmentRadiusMeters: 0.705,
+      jumpOnlyDirectionalityPreserved: true,
+      dropOnlyDirectionalityPreserved: true,
+      bothDirectionsAttachAtSameCommonSampledRadius: true,
+      candidateReachedDirectedPairs: 79,
+      candidateWeakComponentCount: 9,
+      candidateStronglyConnectedComponentCount: 11,
+      candidateReachesNonGlassRuntimeAnchor: false,
+      exactRawEndpointsUsed: true,
+      qaOnlyDirectionalLinkPlumbingValidated: true,
+      sampledCommonRadiusResolvedAt5mmGranularity: true,
+      exactThresholdResolved: false,
+      oneMillimeterRadiusSweepRequiredNext: true,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
