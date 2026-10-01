@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AW',
+      resolutionPass: '18AX',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -580,6 +580,44 @@ describe('T21-D partial Recast connectivity QA', () => {
       cpuRecastRepresentationStillMissing: true,
       exactRawBidirectionalAttachmentDiagnosticAllowedNext: true,
       broadFrontierLinkAuthorized: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.lowSlopeMinimalityRadiusPass18AX
+    ).toMatchObject({
+      qaRunNumber: 1114,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      sourcePass: '18AW',
+      qaTraversalClass: 'ORDINARY_WALK_BIDIRECTIONAL',
+      upstreamDirectionalAssumption: 'DROP_ONLY_QA_CONTINUATION',
+      upstreamDirectionalRadiusMeters: 0.7005,
+      trustedEndpointsUsedAsLinks: false,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      sampledRadiiMeters: [0.30,0.50,0.60,0.70,0.80,1.00,1.20,1.50],
+      candidate1FirstCommonSuccessRadiusMeters: 0.80,
+      candidate2FirstCommonSuccessRadiusMeters: 0.70,
+      bothFirstCommonSuccessRadiusMeters: 0.80,
+      candidate1At070CommonSuccess: false,
+      candidate2At070CommonSuccess: true,
+      bothAt070CommonSuccess: false,
+      candidate1At080CommonSuccess: true,
+      candidate2At080CommonSuccess: true,
+      bothAt080CommonSuccess: true,
+      bothAt080AllLowSlopesBidirectionalBothSides: true,
+      singleCandidateLeavesSiblingLowSlopeUnrepresented: true,
+      bothLinksRequiredToRepresentAllFourKccValidatedLowSlopes: true,
+      qaCandidateRadiusMeters: 0.80,
+      candidateReachedDirectedPairs: 79,
+      candidateWeakComponentCount: 9,
+      candidateStronglyConnectedComponentCount: 11,
+      candidateReachesNonGlassRuntimeAnchor: false,
+      exactRawEndpointsUsed: true,
+      radiusRefinementRequiredBeforeContinuation: false,
+      nextCombinedFrontierLocalizationRequired: true,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
