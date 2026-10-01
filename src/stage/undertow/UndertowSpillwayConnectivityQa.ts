@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AY' as const,
+  resolutionPass: '18AZ' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2575,6 +2575,49 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AY freezes the Pass 18AX BOTH/0.80m low-slope QA links and reclassifies the trusted downstream source set. Seven of fifteen trusted components per side are now forward-connected from the upper-glass chain, with no non-glass runtime-anchor reach and the tracked matrix unchanged at 79/9/11. The absolute nearest disconnected break remains a known Y=6 BridgeMetal dead-end branch at about 0.518559m. Two mirrored route-continuing branches are instead localized: the connected high FloorSlope00 branch to FloorConcrete02@Y3 at 1.061285m, and the connected low FloorSlope00 branch to FloorConcrete01@Y0 at 1.159532m. Both exact source pairs require production Human KCC classification before any further local link representation is considered.'
   }),
 
+  postLowSlopeBranchKccPass18AZ: Object.freeze({
+    qaRunNumber: 1122,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    sourcePass: '18AY' as const,
+    branchCount: 4,
+    directedWalkProbeCount: 8,
+    directedJumpProbeCount: 8,
+    humanRadiusMeters: 0.32,
+    controllerOffsetMeters: 0.025,
+    autostepMaxHeightMeters: 0.34,
+    jumpSpeedMetersPerSecond: 8.2,
+    gravityMetersPerSecond2: 28,
+    highBranchPhysicalDistanceMeters: 1.061284827751945,
+    highBranchHorizontalGapMeters: 1.0417180801668253,
+    highBranchSignedTargetMinusSourceBoundaryYMeters: -0.202851983155254,
+    lowBranchPositivePhysicalDistanceMeters: 1.1595324972956065,
+    lowBranchNegativePhysicalDistanceMeters: 1.1595324972956047,
+    lowBranchHorizontalGapMeters: 1.1595324972956065,
+    lowBranchSignedTargetMinusSourceBoundaryYMeters: 0,
+    highForwardNoJumpSucceedsBothSides: true,
+    highReverseNoJumpSucceedsBothSides: false,
+    highForwardJumpSucceedsBothSides: true,
+    highReverseJumpSucceedsBothSides: true,
+    highQaDirectionalClass:
+      'FORWARD_NO_JUMP_REVERSE_JUMP_REQUIRED' as const,
+    lowForwardNoJumpSucceedsBothSides: false,
+    lowReverseNoJumpSucceedsBothSides: true,
+    lowForwardJumpSucceedsBothSides: true,
+    lowReverseJumpSucceedsBothSides: true,
+    lowQaDirectionalClass:
+      'FORWARD_JUMP_REQUIRED_REVERSE_NO_JUMP' as const,
+    mirroredClassificationMatches: true,
+    allNormalJumpProbesSucceed: true,
+    exactRawDirectionalAttachmentDiagnosticAllowedNext: true,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AZ tests the two mirrored Pass 18AY route branches with the live production Human KCC using no-jump and normal-jump probes in both directions. The HIGH branch (FloorSlope00@Y3..6 -> FloorConcrete02@Y3) succeeds without jump in the forward direction but fails without jump in reverse; normal jump succeeds both ways. The LOW branch (FloorSlope00@Y0..1.5 -> FloorConcrete01@Y0) shows the opposite asymmetry: forward no-jump fails, reverse no-jump succeeds, and normal jump succeeds both ways. Both mirrored sides agree exactly. This supports QA-only directional attachment experiments, but KCC feasibility does not by itself prove current-game traversal authority or authorize production off-mesh links.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2606,11 +2649,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV/18AW/18AX extend the QA-only downstream chain through all four ordinary-walk low-slope components, and Pass 18AY localizes the next mirrored route branches to high FloorSlope00->FloorConcrete02@Y3 (1.061285m) and low FloorSlope00->FloorConcrete01@Y0 (1.159532m). These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep that production off-mesh promotion blocked until exact-location current Undertow gameplay resolves jump-up/drop-down authority.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ classifies the next two mirrored route branches: HIGH is forward-no-jump/reverse-jump-required, while LOW is forward-jump-required/reverse-no-jump. These downstream KCC results permit only QA directional attachment experiments and do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked until exact-location current Undertow gameplay resolves jump-up/drop-down authority.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AY preserves Passes 18A-18AX, freezes both exact 0.80m low-slope ordinary-walk QA links, and localizes the next source-adjacent forward frontier without adding a connector. Seven trusted source components per side are forward-connected; the tracked matrix remains 79/9/11 and no non-glass runtime anchor is reached. Known Y=6 BridgeMetal dead-end ties are excluded from route continuation. The next mirrored route branches are high FloorSlope00->FloorConcrete02@Y3 at 1.061285m and low FloorSlope00->FloorConcrete01@Y0 at 1.159532m. The next safe step is production Human KCC classification of those exact source pairs before any local Recast representation. The separate Pass 18AU gameplay-semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18AZ preserves Passes 18A-18AY and classifies both mirrored post-low-slope route branches with production Human KCC. HIGH traverses forward without jump but requires normal jump in reverse; LOW requires normal jump forward but traverses reverse without jump. Normal jump succeeds in both directions for both branch classes, and the mirrored classifications match exactly. The next safe engineering step is exact-raw one-way Recast attachment QA that preserves these directional classes; it must remain diagnostic-only because KCC feasibility is not current-game semantic authority. The separate Pass 18AU gameplay-semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2645,12 +2688,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AY partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AZ partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AY' ||
+    audit.resolutionPass !== '18AZ' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -4822,8 +4865,45 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AY low-slope continuation boundary drifted');
   }
 
+  const branch18az = audit.postLowSlopeBranchKccPass18AZ;
+  if (
+    branch18az.qaRunNumber !== 1122 ||
+    !branch18az.diagnosticOnly ||
+    branch18az.runtimePromotionAuthorized ||
+    branch18az.sourcePass !== '18AY' ||
+    branch18az.branchCount !== 4 ||
+    branch18az.directedWalkProbeCount !== 8 ||
+    branch18az.directedJumpProbeCount !== 8 ||
+    Math.abs(branch18az.humanRadiusMeters - 0.32) > 1e-12 ||
+    Math.abs(branch18az.controllerOffsetMeters - 0.025) > 1e-12 ||
+    Math.abs(branch18az.autostepMaxHeightMeters - 0.34) > 1e-12 ||
+    Math.abs(branch18az.jumpSpeedMetersPerSecond - 8.2) > 1e-12 ||
+    Math.abs(branch18az.gravityMetersPerSecond2 - 28) > 1e-12 ||
+    Math.abs(branch18az.highBranchPhysicalDistanceMeters - 1.061284827751945) > 1e-12 ||
+    Math.abs(branch18az.highBranchHorizontalGapMeters - 1.0417180801668253) > 1e-12 ||
+    !branch18az.highForwardNoJumpSucceedsBothSides ||
+    branch18az.highReverseNoJumpSucceedsBothSides ||
+    !branch18az.highForwardJumpSucceedsBothSides ||
+    !branch18az.highReverseJumpSucceedsBothSides ||
+    branch18az.highQaDirectionalClass !== 'FORWARD_NO_JUMP_REVERSE_JUMP_REQUIRED' ||
+    branch18az.lowForwardNoJumpSucceedsBothSides ||
+    !branch18az.lowReverseNoJumpSucceedsBothSides ||
+    !branch18az.lowForwardJumpSucceedsBothSides ||
+    !branch18az.lowReverseJumpSucceedsBothSides ||
+    branch18az.lowQaDirectionalClass !== 'FORWARD_JUMP_REQUIRED_REVERSE_NO_JUMP' ||
+    !branch18az.mirroredClassificationMatches ||
+    !branch18az.allNormalJumpProbesSucceed ||
+    !branch18az.exactRawDirectionalAttachmentDiagnosticAllowedNext ||
+    branch18az.gameplayDirectionalityResolved ||
+    branch18az.gameplayJumpRequirementResolved ||
+    branch18az.productionOffMeshLinkAuthorized ||
+    branch18az.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AZ post-low-slope branch KCC boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AY full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AZ full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
