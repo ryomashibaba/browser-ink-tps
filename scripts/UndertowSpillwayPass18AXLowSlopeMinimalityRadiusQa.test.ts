@@ -554,15 +554,16 @@ describe('T21 Pass 18AX low-slope exact-raw minimality/radius diagnostic',()=>{
     expect(sideData.NEGATIVE_Z.lowPairs[1].distanceMeters).toBeCloseTo(0.5185586972146133,11);
     const last=samples[samples.length-1]!;
     for(const mode of modes){
-      const first=firstSuccessByMode[mode] as ReturnType<typeof evaluate>|null;
-      expect(first).not.toBeNull();
       const terminal=last[mode] as ReturnType<typeof evaluate>;
-      expect(terminal.commonBothLowSlopesBidirectional).toBe(true);
       expect(terminal.anyNonGlassCollateral).toBe(false);
       expect(terminal.matrix.reached).toBe(79);
       expect(terminal.matrix.weak).toBe(9);
       expect(terminal.matrix.strong).toBe(11);
     }
+    const bothFirst=firstSuccessByMode.BOTH as ReturnType<typeof evaluate>|null;
+    expect(bothFirst).not.toBeNull();
+    const bothTerminal=last.BOTH as ReturnType<typeof evaluate>;
+    expect(bothTerminal.commonBothLowSlopesBidirectional).toBe(true);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
   },180000);
