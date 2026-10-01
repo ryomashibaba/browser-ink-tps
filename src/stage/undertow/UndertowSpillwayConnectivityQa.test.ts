@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AV',
+      resolutionPass: '18AW',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -546,6 +546,40 @@ describe('T21-D partial Recast connectivity QA', () => {
       routeContinuingLowSlopeCandidateCountPerSide: 2,
       knownHighBridgeDeadEndTieStillPresent: true,
       lowSlopeProductionKccClassificationRequiredNext: true,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.lowSlopeKccPass18AW
+    ).toMatchObject({
+      qaRunNumber: 1108,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      sourcePass: '18AV',
+      sourceBoundaryClass: 'FloorConcrete02@Y1.5->FloorSlope00@Y0..1.5',
+      candidateCount: 4,
+      directedProbeCount: 8,
+      effectiveHumanContactRadiusMeters: 0.34500000000000003,
+      positiveCandidateDistancesMeters: [
+        0.5185586972146101,
+        0.5185586972146101
+      ],
+      negativeCandidateDistancesMeters: [
+        0.5185586972146101,
+        0.5185586972146133
+      ],
+      allBoundaryVerticalDeltasMeters: [0, 0, 0, 0],
+      successfulDirectedProbeCount: 8,
+      settledInitiallyProbeCount: 8,
+      totalAirborneTicks: 0,
+      maximumFinalHorizontalErrorMeters: 0.15422836803712894,
+      ordinaryWalkingBidirectionalAllCandidates: true,
+      qaTraversalClass: 'ORDINARY_WALK_BIDIRECTIONAL',
+      jumpOrDropSemanticRequired: false,
+      cpuRecastRepresentationStillMissing: true,
+      exactRawBidirectionalAttachmentDiagnosticAllowedNext: true,
+      broadFrontierLinkAuthorized: false,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
