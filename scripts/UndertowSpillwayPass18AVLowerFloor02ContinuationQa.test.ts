@@ -544,8 +544,8 @@ describe('T21 Pass 18AV semantic-neutral lower-FloorConcrete02 continuation loca
           lowerSeedSnapMeters:seedRow.representative.snapMeters,
           lowerSeedOutboundFromOwnGlass:seedRow.outboundFromOwnGlass,
           lowerSeedInboundToOwnGlass:seedRow.inboundToOwnGlass,
-          lowerSeedOutboundNonGlassIds,
-          lowerSeedInboundNonGlassIds,
+          lowerSeedOutboundNonGlassIds:seedOutboundNonGlassIds,
+          lowerSeedInboundNonGlassIds:seedInboundNonGlassIds,
           nearestOutboundBreak:breaks[0]??null,
           top12OutboundBreaks:breaks.slice(0,12)
         }];
