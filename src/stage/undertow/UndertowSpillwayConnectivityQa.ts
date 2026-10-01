@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AW' as const,
+  resolutionPass: '18AX' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2478,6 +2478,44 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AW tests all four exact Pass 18AV low-route FloorConcrete02@Y1.5 -> FloorSlope00@Y0..1.5 candidate boundaries with the live production Human KCC in both directions. All eight ordinary-walk probes succeed from a settled state with zero airborne ticks, and all four closest source boundaries have zero vertical delta. The boundary class is therefore ORDINARY_WALK_BIDIRECTIONAL for QA representation work. This authorizes only exact-raw local bidirectional attachment diagnostics; it does not authorize a broad frontier shortcut or production promotion, and it does not resolve the separate Pass 18AU gameplay-semantic blocker.'
   }),
 
+  lowSlopeMinimalityRadiusPass18AX: Object.freeze({
+    qaRunNumber: 1114,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    sourcePass: '18AW' as const,
+    qaTraversalClass: 'ORDINARY_WALK_BIDIRECTIONAL' as const,
+    upstreamDirectionalAssumption: 'DROP_ONLY_QA_CONTINUATION' as const,
+    upstreamDirectionalRadiusMeters: 0.7005,
+    trustedEndpointsUsedAsLinks: false,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    sampledRadiiMeters: [0.30,0.50,0.60,0.70,0.80,1.00,1.20,1.50] as const,
+    candidate1FirstCommonSuccessRadiusMeters: 0.80,
+    candidate2FirstCommonSuccessRadiusMeters: 0.70,
+    bothFirstCommonSuccessRadiusMeters: 0.80,
+    candidate1At070CommonSuccess: false,
+    candidate2At070CommonSuccess: true,
+    bothAt070CommonSuccess: false,
+    candidate1At080CommonSuccess: true,
+    candidate2At080CommonSuccess: true,
+    bothAt080CommonSuccess: true,
+    bothAt080AllLowSlopesBidirectionalBothSides: true,
+    singleCandidateLeavesSiblingLowSlopeUnrepresented: true,
+    bothLinksRequiredToRepresentAllFourKccValidatedLowSlopes: true,
+    qaCandidateRadiusMeters: 0.80,
+    candidateReachedDirectedPairs: 79,
+    candidateWeakComponentCount: 9,
+    candidateStronglyConnectedComponentCount: 11,
+    candidateReachesNonGlassRuntimeAnchor: false,
+    exactRawEndpointsUsed: true,
+    radiusRefinementRequiredBeforeContinuation: false,
+    nextCombinedFrontierLocalizationRequired: true,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AX compares the two exact Pass 18AW ordinary-walk low-slope candidates separately and together while keeping the frozen upstream QA chain unchanged. Candidate 2 first attaches on both mirrored sides at the sampled 0.70m radius; candidate 1 first attaches on both sides at 0.80m. Each single-candidate mode leaves the sibling KCC-validated low-slope component disconnected. BOTH at 0.80m makes all four mirrored low-slope source components locally bidirectional, keeps the tracked 25-anchor matrix at 79/9/11, and reaches no non-glass runtime anchor. 0.80m is therefore the safe QA continuation radius for both exact-raw low-slope links. Further radius minimization is not required before downstream frontier localization. This remains QA-only and does not clear the separate Pass 18AU gameplay-semantic blocker.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2509,11 +2547,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV proves DROP_ONLY versus BOTH assumptions produce the same forward downstream frontier, and Pass 18AW separately proves all four following low-slope FloorConcrete02@Y1.5 <-> FloorSlope00@Y0..1.5 boundaries are ordinary bidirectional Human walking with zero airborne ticks. The 18AW result may drive exact-raw low-slope QA attachment work, but it does not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep that production off-mesh promotion blocked until exact-location current Undertow gameplay resolves jump-up/drop-down authority.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV proves DROP_ONLY versus BOTH assumptions produce the same forward downstream frontier, Pass 18AW proves all four following low-slope FloorConcrete02@Y1.5 <-> FloorSlope00@Y0..1.5 boundaries are ordinary bidirectional Human walking, and Pass 18AX shows both exact low-slope candidate links are required to represent all four KCC-validated source components, with 0.80m the first sampled common radius for BOTH. These downstream ordinary-walk QA results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep that production off-mesh promotion blocked until exact-location current Undertow gameplay resolves jump-up/drop-down authority.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AW preserves Passes 18A-18AV and classifies the four exact low-route FloorConcrete02@Y1.5 -> FloorSlope00@Y0..1.5 candidate boundaries with the production Human KCC. All eight directed ordinary-walk probes succeed with zero airborne ticks, so the low-slope boundary class is ORDINARY_WALK_BIDIRECTIONAL. Equal-distance high-Y BridgeMetal branches remain known dead ends and are not selected. The next safe engineering step is exact-raw local bidirectional Recast attachment/minimality QA for the four low-slope boundaries, with no broad frontier shortcut. Production promotion remains blocked by the separate current-game semantic authority gap at the 18AU boundary. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AX preserves Passes 18A-18AW and compares the two mirrored low-slope ordinary-walk candidates separately and together. Candidate 2 first attaches commonly at 0.70m, candidate 1 at 0.80m, and BOTH first succeeds commonly at 0.80m. Each single-candidate mode leaves the sibling KCC-validated low-slope component disconnected, while BOTH at 0.80m makes all four low-slope components locally bidirectional with no non-glass collateral and keeps the tracked matrix at 79/9/11. The next safe engineering step is to freeze both 0.80m exact-raw low-slope QA links and localize only the next source-adjacent downstream frontier. The separate Pass 18AU gameplay-semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2548,12 +2586,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AW partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AX partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AW' ||
+    audit.resolutionPass !== '18AX' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -4650,8 +4688,47 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AW low-slope KCC boundary drifted');
   }
 
+  const lowSlope18ax = audit.lowSlopeMinimalityRadiusPass18AX;
+  if (
+    lowSlope18ax.qaRunNumber !== 1114 ||
+    !lowSlope18ax.diagnosticOnly ||
+    lowSlope18ax.runtimePromotionAuthorized ||
+    lowSlope18ax.sourcePass !== '18AW' ||
+    lowSlope18ax.qaTraversalClass !== 'ORDINARY_WALK_BIDIRECTIONAL' ||
+    lowSlope18ax.upstreamDirectionalAssumption !== 'DROP_ONLY_QA_CONTINUATION' ||
+    Math.abs(lowSlope18ax.upstreamDirectionalRadiusMeters - 0.7005) > 1e-12 ||
+    lowSlope18ax.trustedEndpointsUsedAsLinks ||
+    lowSlope18ax.globalRecastSettingsChanged ||
+    lowSlope18ax.broadFrontierLinkAuthorized ||
+    lowSlope18ax.sampledRadiiMeters.join(',') !== '0.3,0.5,0.6,0.7,0.8,1,1.2,1.5' ||
+    Math.abs(lowSlope18ax.candidate1FirstCommonSuccessRadiusMeters - 0.80) > 1e-12 ||
+    Math.abs(lowSlope18ax.candidate2FirstCommonSuccessRadiusMeters - 0.70) > 1e-12 ||
+    Math.abs(lowSlope18ax.bothFirstCommonSuccessRadiusMeters - 0.80) > 1e-12 ||
+    lowSlope18ax.candidate1At070CommonSuccess ||
+    !lowSlope18ax.candidate2At070CommonSuccess ||
+    lowSlope18ax.bothAt070CommonSuccess ||
+    !lowSlope18ax.candidate1At080CommonSuccess ||
+    !lowSlope18ax.candidate2At080CommonSuccess ||
+    !lowSlope18ax.bothAt080CommonSuccess ||
+    !lowSlope18ax.bothAt080AllLowSlopesBidirectionalBothSides ||
+    !lowSlope18ax.singleCandidateLeavesSiblingLowSlopeUnrepresented ||
+    !lowSlope18ax.bothLinksRequiredToRepresentAllFourKccValidatedLowSlopes ||
+    Math.abs(lowSlope18ax.qaCandidateRadiusMeters - 0.80) > 1e-12 ||
+    lowSlope18ax.candidateReachedDirectedPairs !== 79 ||
+    lowSlope18ax.candidateWeakComponentCount !== 9 ||
+    lowSlope18ax.candidateStronglyConnectedComponentCount !== 11 ||
+    lowSlope18ax.candidateReachesNonGlassRuntimeAnchor ||
+    !lowSlope18ax.exactRawEndpointsUsed ||
+    lowSlope18ax.radiusRefinementRequiredBeforeContinuation ||
+    !lowSlope18ax.nextCombinedFrontierLocalizationRequired ||
+    lowSlope18ax.productionOffMeshLinkAuthorized ||
+    lowSlope18ax.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AX low-slope minimality/radius boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AW full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AX full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
