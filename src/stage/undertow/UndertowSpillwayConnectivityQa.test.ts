@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AP',
+      resolutionPass: '18AQ',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -270,6 +270,43 @@ describe('T21-D partial Recast connectivity QA', () => {
       originalGameplayJumpRequirementResolved: false,
       productionOffMeshLinkAuthorized: false,
       qaOnlyDirectionalLinkDiagnosticAllowed: true,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.directionalAttachmentPass18AQ
+    ).toMatchObject({
+      qaRunNumber: 1083,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18AP',
+      qaTraversalClass: 'JUMP_UP_DROP_DOWN',
+      trustedEndpointsUsedAsLinks: false,
+      globalRecastSettingsChanged: false,
+      sampledRadiiMeters: [0.30, 0.60, 1.00, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00],
+      physicalBoundaryDistanceMeters: 1.8236261924604125,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      coarseLastCommonFailureRadiusMeters: 0.60,
+      coarseFirstCommonSuccessRadiusMeters: 1.00,
+      firstJumpOnlyCommonAttachmentRadiusMeters: 1.00,
+      firstDropOnlyCommonAttachmentRadiusMeters: 1.00,
+      firstBothCommonAttachmentRadiusMeters: 1.00,
+      jumpOnlyDirectionalityPreserved: true,
+      dropOnlyDirectionalityPreserved: true,
+      bothDirectionsAttachAtSameSampledRadius: true,
+      candidateReachedDirectedPairs: 79,
+      candidateWeakComponentCount: 9,
+      candidateStronglyConnectedComponentCount: 11,
+      candidateReachesNonGlassRuntimeAnchor: false,
+      exactRawEndpointsUsed: true,
+      qaOnlyDirectionalLinkPlumbingValidated: true,
+      exactThresholdResolved: false,
+      fineRadiusMinimizationRequiredNext: true,
+      productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
 
