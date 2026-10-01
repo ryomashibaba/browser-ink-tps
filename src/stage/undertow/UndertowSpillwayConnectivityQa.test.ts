@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AU',
+      resolutionPass: '18AV',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -488,6 +488,64 @@ describe('T21-D partial Recast connectivity QA', () => {
       engineeringRadiusRefinementComplete: true,
       furtherRadiusRefinementRequired: false,
       semanticAuthorityIsNowPrimaryBlocker: true,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.lowerFloor02ContinuationPass18AV
+    ).toMatchObject({
+      qaRunNumber: 1104,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18AU',
+      qaDirectionalRadiusMeters: 0.7005,
+      qaDirectionalRadiusBracketMeters: [0.7004, 0.7005],
+      trustedEndpointsUsedAsLinks: false,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      jumpOnlyMatrix: [79, 9, 11],
+      dropOnlyMatrix: [79, 9, 11],
+      bothMatrix: [79, 9, 11],
+      dropOnlyConnectedComponentCountPerSide: 5,
+      bothConnectedComponentCountPerSide: 5,
+      dropOnlyConnectedMaterialsPerSide: {
+        FloorConcrete00: 1,
+        FloorConcrete02: 3,
+        FloorSlope00: 1
+      },
+      dropOnlyLowerSeedOutboundFromOwnGlassBothSides: true,
+      dropOnlyLowerSeedInboundToOwnGlassBothSides: false,
+      bothLowerSeedOutboundFromOwnGlassBothSides: true,
+      bothLowerSeedInboundToOwnGlassBothSides: true,
+      lowerSeedReachesNonGlassRuntimeAnchor: false,
+      dropOnlyBothConnectedSetsEqual: true,
+      dropOnlyBothNearestFrontierEqual: true,
+      lowRouteFromMaterial: 'FloorConcrete02',
+      lowRouteFromYRangeMeters: [1.5, 1.5],
+      positiveLowSlopeCandidateIds: [
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c5',
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c7'
+      ],
+      negativeLowSlopeCandidateIds: [
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c26',
+        'Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c24'
+      ],
+      lowSlopeCandidateMaterial: 'FloorSlope00',
+      lowSlopeCandidateYRangeMeters: [0, 1.5],
+      positiveLowSlopeCandidateDistancesMeters: [
+        0.5185586972146101,
+        0.5185586972146101
+      ],
+      negativeLowSlopeCandidateDistancesMeters: [
+        0.5185586972146101,
+        0.5185586972146133
+      ],
+      routeContinuingLowSlopeCandidateCountPerSide: 2,
+      knownHighBridgeDeadEndTieStillPresent: true,
+      lowSlopeProductionKccClassificationRequiredNext: true,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
