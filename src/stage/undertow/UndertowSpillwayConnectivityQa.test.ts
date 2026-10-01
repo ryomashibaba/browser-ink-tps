@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18AX',
+      resolutionPass: '18AY',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -618,6 +618,43 @@ describe('T21-D partial Recast connectivity QA', () => {
       exactRawEndpointsUsed: true,
       radiusRefinementRequiredBeforeContinuation: false,
       nextCombinedFrontierLocalizationRequired: true,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.lowSlopeContinuationPass18AY
+    ).toMatchObject({
+      qaRunNumber: 1118,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18AX',
+      upstreamDirectionalAssumption: 'DROP_ONLY_QA_CONTINUATION',
+      upstreamDirectionalRadiusMeters: 0.7005,
+      lowSlopeRadiusMeters: 0.80,
+      lowSlopeCandidateMode: 'BOTH',
+      trustedEndpointsUsedAsLinks: false,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      trackedMatrix: [79,9,11],
+      trustedComponentCountPerSide: 15,
+      connectedComponentCountPerSide: 7,
+      disconnectedComponentCountPerSide: 8,
+      connectedMaterialsPerSide: {
+        FloorConcrete00: 1,
+        FloorConcrete02: 3,
+        FloorSlope00: 3
+      },
+      connectedReachesNonGlassRuntimeAnchor: false,
+      absoluteNearestBreakIsKnownHighBridgeDeadEnd: true,
+      positiveHighRouteDistanceMeters: 1.061284827751945,
+      negativeHighRouteDistanceMeters: 1.061284827751945,
+      positiveLowRouteDistanceMeters: 1.1595324972956065,
+      negativeLowRouteDistanceMeters: 1.1595324972956047,
+      mirroredHighAndLowRouteBranchesLocalized: true,
+      productionKccClassificationRequiredNext: true,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
