@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18AR' as const,
+  resolutionPass: '18AS' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2236,6 +2236,52 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18AR keeps the exact raw one-way link endpoints and the frozen 18AK+18AF+18AN chain unchanged while sweeping 0.60m through 1.00m in 0.05m steps. At 0.70m the NEGATIVE_Z side attaches but POSITIVE_Z does not, for JUMP_ONLY, DROP_ONLY, and BOTH modes. At 0.75m both mirrored sides attach in all three modes, with one-way directionality preserved, tracked matrix unchanged at 79/9/11, and no non-glass collateral. The common attachment threshold is therefore bracketed to (0.70m, 0.75m]. This is engineering QA only; current-game traversal semantics remain unresolved and runtime promotion remains blocked.'
   }),
 
+  directionalTerminalRadiusPass18AS: Object.freeze({
+    qaRunNumber: 1091,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18AR' as const,
+    qaTraversalClass: 'JUMP_UP_DROP_DOWN' as const,
+    trustedEndpointsUsedAsLinks: false,
+    globalRecastSettingsChanged: false,
+    fineBracketMeters: [0.700, 0.750] as const,
+    sampledRadiiMeters: [
+      0.700, 0.705, 0.710, 0.715, 0.720, 0.725,
+      0.730, 0.735, 0.740, 0.745, 0.750
+    ] as const,
+    physicalBoundaryDistanceMeters: 1.8236261924604125,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    lastCommonFailureRadiusMeters: 0.700,
+    firstCommonSuccessRadiusMeters: 0.705,
+    commonThresholdLowerExclusiveMeters: 0.700,
+    commonThresholdUpperInclusiveMeters: 0.705,
+    negativeSideAttachesAt0700Meters: true,
+    positiveSideAttachesAt0700Meters: false,
+    firstJumpOnlyCommonAttachmentRadiusMeters: 0.705,
+    firstDropOnlyCommonAttachmentRadiusMeters: 0.705,
+    firstBothCommonAttachmentRadiusMeters: 0.705,
+    jumpOnlyDirectionalityPreserved: true,
+    dropOnlyDirectionalityPreserved: true,
+    bothDirectionsAttachAtSameCommonSampledRadius: true,
+    candidateReachedDirectedPairs: 79,
+    candidateWeakComponentCount: 9,
+    candidateStronglyConnectedComponentCount: 11,
+    candidateReachesNonGlassRuntimeAnchor: false,
+    exactRawEndpointsUsed: true,
+    qaOnlyDirectionalLinkPlumbingValidated: true,
+    sampledCommonRadiusResolvedAt5mmGranularity: true,
+    exactThresholdResolved: false,
+    oneMillimeterRadiusSweepRequiredNext: true,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18AS keeps the exact raw one-way endpoints and all frozen upstream chain parameters unchanged while sweeping 0.700m through 0.750m in 0.005m steps. At 0.700m NEGATIVE_Z already attaches while POSITIVE_Z does not. At 0.705m both mirrored sides attach for JUMP_ONLY, DROP_ONLY, and BOTH modes. Directionality remains correct, the tracked matrix stays 79/9/11, and no non-glass collateral appears. The common attachment threshold is therefore bracketed to (0.700m, 0.705m]. This remains engineering QA only and does not resolve current-game semantics or authorize runtime promotion.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2267,11 +2313,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AR FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5 gameplay-semantic authority gap. Pass 18AP proves Human-KCC jump-up/drop-down feasibility, Pass 18AQ validates exact-raw one-way Recast directionality, and Pass 18AR narrows the common mirrored attachment radius to (0.70m, 0.75m], with NEGATIVE_Z already attaching at 0.70m while POSITIVE_Z first joins at 0.75m. These QA facts still do not prove current Undertow exposes both directions or canonically requires jump input at this exact location. Keep production off-mesh promotion blocked; terminal radius refinement inside (0.70m, 0.75m] may continue strictly as engineering QA.',
+    'Close the Pass 18AS FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5 gameplay-semantic authority gap. Pass 18AP proves Human-KCC jump-up/drop-down feasibility, Pass 18AQ validates exact-raw one-way Recast directionality, Pass 18AR brackets common mirrored attachment to (0.70m, 0.75m], and Pass 18AS narrows it to (0.700m, 0.705m]. These QA facts still do not prove current Undertow exposes both directions or canonically requires jump input at this exact location. Keep production off-mesh promotion blocked; a 1mm engineering sweep inside (0.700m, 0.705m] may continue without changing gameplay authority.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18AR preserves Passes 18A-18AQ and refines exact-raw directional Recast attachment over the post-FloorConcrete00 boundary without runtime promotion. At 0.70m only NEGATIVE_Z attaches; at 0.75m both mirrored sides attach for jump-only, drop-only, and both-direction QA modes, while directionality stays correct, the tracked matrix remains 79/9/11, and no non-glass collateral appears. The common threshold is now bracketed to (0.70m, 0.75m]. Current-game semantic authority remains unresolved, so production promotion stays blocked. The next safe engineering diagnostic is a terminal radius sweep inside that bracket. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
+    'Pass 18AS preserves Passes 18A-18AR and refines exact-raw directional Recast attachment over the post-FloorConcrete00 boundary without runtime promotion. At 0.700m only NEGATIVE_Z attaches; at 0.705m both mirrored sides attach for jump-only, drop-only, and both-direction QA modes, with directionality preserved, tracked matrix unchanged at 79/9/11, and no non-glass collateral. The common threshold is now bracketed to (0.700m, 0.705m]. Current-game semantic authority remains unresolved, so production promotion stays blocked. The next safe engineering diagnostic is a 1mm radius sweep inside that bracket. Grate and center-step candidates remain semantic-evidence gated. FULL_STAGE_CONNECTIVITY_QA_PENDING remains activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2306,12 +2352,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18AR partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18AS partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18AR' ||
+    audit.resolutionPass !== '18AS' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -4198,8 +4244,51 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18AR directional fine-radius boundary drifted');
   }
 
+  const radius18as = audit.directionalTerminalRadiusPass18AS;
+  if (
+    radius18as.qaRunNumber !== 1091 ||
+    !radius18as.diagnosticOnly ||
+    radius18as.runtimePromotionAuthorized ||
+    radius18as.gameplayDirectionalityResolved ||
+    radius18as.gameplayJumpRequirementResolved ||
+    radius18as.sourcePass !== '18AR' ||
+    radius18as.qaTraversalClass !== 'JUMP_UP_DROP_DOWN' ||
+    radius18as.trustedEndpointsUsedAsLinks ||
+    radius18as.globalRecastSettingsChanged ||
+    radius18as.sampledRadiiMeters.join(',') !== '0.7,0.705,0.71,0.715,0.72,0.725,0.73,0.735,0.74,0.745,0.75' ||
+    Math.abs(radius18as.physicalBoundaryDistanceMeters - 1.8236261924604125) > 1e-12 ||
+    radius18as.baselineReachedDirectedPairs !== 79 ||
+    radius18as.baselineWeakComponentCount !== 9 ||
+    radius18as.baselineStronglyConnectedComponentCount !== 11 ||
+    Math.abs(radius18as.lastCommonFailureRadiusMeters - 0.700) > 1e-12 ||
+    Math.abs(radius18as.firstCommonSuccessRadiusMeters - 0.705) > 1e-12 ||
+    Math.abs(radius18as.commonThresholdLowerExclusiveMeters - 0.700) > 1e-12 ||
+    Math.abs(radius18as.commonThresholdUpperInclusiveMeters - 0.705) > 1e-12 ||
+    !radius18as.negativeSideAttachesAt0700Meters ||
+    radius18as.positiveSideAttachesAt0700Meters ||
+    Math.abs(radius18as.firstJumpOnlyCommonAttachmentRadiusMeters - 0.705) > 1e-12 ||
+    Math.abs(radius18as.firstDropOnlyCommonAttachmentRadiusMeters - 0.705) > 1e-12 ||
+    Math.abs(radius18as.firstBothCommonAttachmentRadiusMeters - 0.705) > 1e-12 ||
+    !radius18as.jumpOnlyDirectionalityPreserved ||
+    !radius18as.dropOnlyDirectionalityPreserved ||
+    !radius18as.bothDirectionsAttachAtSameCommonSampledRadius ||
+    radius18as.candidateReachedDirectedPairs !== 79 ||
+    radius18as.candidateWeakComponentCount !== 9 ||
+    radius18as.candidateStronglyConnectedComponentCount !== 11 ||
+    radius18as.candidateReachesNonGlassRuntimeAnchor ||
+    !radius18as.exactRawEndpointsUsed ||
+    !radius18as.qaOnlyDirectionalLinkPlumbingValidated ||
+    !radius18as.sampledCommonRadiusResolvedAt5mmGranularity ||
+    radius18as.exactThresholdResolved ||
+    !radius18as.oneMillimeterRadiusSweepRequiredNext ||
+    radius18as.productionOffMeshLinkAuthorized ||
+    radius18as.activationBlockerCleared
+  ) {
+    errors.push('Pass 18AS directional terminal-radius boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18AR full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18AS full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
