@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18BE',
+      resolutionPass: '18BG',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -893,6 +893,67 @@ describe('T21-D partial Recast connectivity QA', () => {
       diagnosticTrustedRepresentativeCanFalsePositiveOnClosestPointFallback: true,
       directLowLevelRepresentativeValidityAuditRequiredNext: true,
       furtherRadiusExpansionAuthorized: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.directRepresentativeValidityPass18BF
+    ).toMatchObject({
+      qaRunNumber: 1154,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      sourcePass: '18BE',
+      trustedSnapMeters: 0.30,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      componentCountPerSide: 58,
+      legacyTrustedCountPerSide: 15,
+      directTrustedCountPerSide: 8,
+      legacySelectionQueryFailureCountPerSide: 7,
+      legacyComponentFalsePositiveCountPerSide: 7,
+      falsePositiveBridgeMetalCountPerSide: 6,
+      falsePositiveFloorConcrete02CountPerSide: 1,
+      directTrustedFloorConcrete02CountPerSide: 3,
+      directTrustedFloorSlope00CountPerSide: 3,
+      directTrustedFloorConcrete00CountPerSide: 1,
+      directTrustedFloorConcrete01CountPerSide: 1,
+      highTargetLegacyTrustedButDirectInvalidBothSides: true,
+      diagnosticClosestPointFalsePositiveConfirmed: true,
+      directLowLevelValidityPolicyRequiredForFurtherFrontierQa: true,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.directValidFrontierPass18BG
+    ).toMatchObject({
+      qaRunNumber: 1154,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      sourcePass: '18BF',
+      directRepresentativePolicy:
+        'NavMeshQuery.findClosestPoint_SUCCESS_REQUIRED_AND_SNAP_LE_0.30',
+      upstreamDirectionalAssumption: 'DROP_ONLY_QA_CONTINUATION',
+      lowBranchRadiusMeters: 0.70,
+      trustedEndpointsUsedAsLinks: false,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      directValidCountPerSide: 8,
+      baselineConnectedFromOwnGlassCountPerSide: 7,
+      lowLinkedReachedDirectedPairs: 79,
+      lowLinkedWeakComponentCount: 9,
+      lowLinkedStronglyConnectedComponentCount: 11,
+      lowLinkedConnectedFromOwnGlassCountPerSide: 8,
+      lowLinkedDisconnectedDirectValidCountPerSide: 0,
+      lowLinkedReachesNonGlassRuntimeAnchor: false,
+      highTargetDirectValidBothSides: false,
+      allDirectValidDownstreamComponentsForwardConnectedAfterLowLink: true,
+      noDirectValidHighTargetNavIslandExists: true,
+      highTargetNavmeshRasterizationEligibilityDiagnosticRequiredNext: true,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
