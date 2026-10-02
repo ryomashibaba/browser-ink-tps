@@ -591,7 +591,7 @@ describe('T21 Pass 18BC HIGH exact-raw narrow-radius diagnostic',()=>{
       side,classify(baselineStage,side)
     ]));
 
-    console.log('T21PASS18BA_POST_LOW_SLOPE_DIRECTIONAL_ATTACHMENT',JSON.stringify({
+    console.log('T21PASS18BC_HIGH_EXACT_RAW_NARROW_RADIUS',JSON.stringify({
       diagnosticOnly:true,
       runtimePromotionAuthorized:false,
       gameplayDirectionalityResolved:false,
