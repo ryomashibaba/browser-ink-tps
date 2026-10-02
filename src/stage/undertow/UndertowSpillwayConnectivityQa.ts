@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BM' as const,
+  resolutionPass: '18BN' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3160,6 +3160,47 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BM refines the Pass 18BL QA-only local HIGH target proxy with 0.005x scale steps from 1.20x through 1.25x while production Recast settings and authoritative source geometry remain unchanged. NEGATIVE_Z first becomes source-direct-valid at 1.235x, while POSITIVE_Z first becomes source-direct-valid at 1.240x. Therefore 1.235x is the last common failure and 1.240x the first common success. At 1.240x the predicted clearance is 0.530486m, leaving 0.170486m after nominal 0.36m erosion; source snap is about 0.100913m positive and 0.100036m negative. This remains a diagnostic navigation proxy only. The next safe refinement is a terminal 0.001x sweep inside (1.235x, 1.240x] before any full-chain proxy integration experiment.'
   }),
 
+  highTargetTerminalFootprintScalePass18BN: Object.freeze({
+    qaRunNumber: 1184,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BM' as const,
+    fineScaleBracket: [1.235,1.240] as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' as const,
+    productionCellSizeMeters: 0.18,
+    productionWalkableRadiusVoxels: 2,
+    nominalPhysicalErosionRadiusMeters: 0.36,
+    baseClearanceMeters: 0.42781092520205705,
+    sampledScaleFactors: [1.235,1.236,1.237,1.238,1.239,1.240] as const,
+    positiveFirstSourceDirectTrustedScale: 1.237,
+    negativeFirstSourceDirectTrustedScale: 1.235,
+    lastCommonFailureScale: 1.236,
+    firstCommonSourceDirectTrustedScale: 1.237,
+    commonThresholdLowerExclusiveScale: 1.236,
+    commonThresholdUpperInclusiveScale: 1.237,
+    firstCommonPredictedClearanceMeters: 0.5292021144749446,
+    firstCommonPredictedResidualAfterErosionMeters: 0.1692021144749446,
+    firstCommonEquivalentRadialExpansionMeters: 0.10139118927288757,
+    positiveScale1237SourceSnapMeters: 0.1695613439929668,
+    negativeScale1237SourceSnapMeters: 0.11637334113146416,
+    mirroredFirstSuccessScaleMatches: false,
+    commonSourceDirectValidityResolvedAt001ScaleStep: true,
+    furtherScaleRefinementRequiredBeforeIntegration: false,
+    fullChainProxyIntegrationDiagnosticRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BN performs the terminal 0.001x QA-only scale sweep inside the Pass 18BM bracket while keeping production Recast settings and authoritative source geometry unchanged. NEGATIVE_Z is already source-direct-valid at 1.235x. POSITIVE_Z remains invalid at 1.235x and 1.236x, then becomes valid at 1.237x; both sides remain valid through 1.240x. The common mirrored threshold is therefore bracketed to (1.236x, 1.237x]. At 1.237x the predicted clearance is 0.529202m, leaving 0.169202m after nominal 0.36m erosion; source snap is about 0.169561m positive and 0.116373m negative. The scale step corresponds to roughly 0.428mm at the BK clearance radius, so further scalar minimization is not required before a QA-only full-chain proxy integration diagnostic. No proxy or source-geometry modification is runtime-authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3191,11 +3232,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch, Pass 18BH-18BK localize the HIGH target failure to coarse production rasterization of a narrowly surviving footprint, Pass 18BL proves a QA-only local nav proxy can recover source-direct validity, and Pass 18BM narrows the mirrored common proxy-scale threshold to (1.235x, 1.240x]. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked; terminal local-proxy scale refinement may continue only as QA.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch, Pass 18BH-18BK localize the HIGH target failure to coarse production rasterization of a narrowly surviving footprint, Pass 18BL proves a QA-only local nav proxy can recover source-direct validity, and Passes 18BM-18BN narrow the mirrored common proxy-scale threshold to (1.236x, 1.237x]. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked; the next allowed step is a QA-only full-chain integration experiment using the 1.237x local proxy with production settings and source geometry otherwise unchanged.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BM preserves Passes 18A-18BL and refines only the QA-local HIGH target proxy scale under unchanged production Recast settings and authoritative source geometry. NEGATIVE_Z first becomes source-direct-valid at 1.235x, POSITIVE_Z at 1.240x, so the common mirrored threshold is now bracketed to (1.235x, 1.240x]. At 1.240x source snap is about 0.100913m/0.100036m and no global configuration change is involved. No proxy or source-geometry modification is runtime-authorized. The next safe engineering diagnostic is a terminal 0.001x proxy-scale sweep inside that bracket before any full-chain integration experiment. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BN preserves Passes 18A-18BM and completes terminal scalar refinement of the QA-local HIGH target proxy under unchanged production Recast settings and authoritative source geometry. POSITIVE_Z remains invalid at 1.236x and first becomes source-direct-valid at 1.237x, while NEGATIVE_Z is already valid at 1.235x; the common mirrored threshold is therefore (1.236x, 1.237x]. This is roughly 0.428mm scale-resolution at the measured BK clearance radius, so further scalar minimization is not useful before integration. No proxy or source-geometry modification is runtime-authorized. The next safe engineering diagnostic is a full-chain QA integration using the 1.237x local proxy only. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3230,12 +3271,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BM partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BN partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BM' ||
+    audit.resolutionPass !== '18BN' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -5945,8 +5986,50 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BM HIGH target fine-footprint scale boundary drifted');
   }
 
+  const proxy18bn = audit.highTargetTerminalFootprintScalePass18BN;
+  if (
+    proxy18bn.qaRunNumber !== 1184 ||
+    !proxy18bn.diagnosticOnly ||
+    proxy18bn.runtimePromotionAuthorized ||
+    proxy18bn.gameplayDirectionalityResolved ||
+    proxy18bn.gameplayJumpRequirementResolved ||
+    proxy18bn.sourcePass !== '18BM' ||
+    proxy18bn.fineScaleBracket.join(',') !== '1.235,1.24' ||
+    !proxy18bn.productionConfigUnchanged ||
+    !proxy18bn.sourceGeometryUnchanged ||
+    !proxy18bn.diagnosticProxyOnly ||
+    proxy18bn.proxyScalingMode !== 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' ||
+    Math.abs(proxy18bn.productionCellSizeMeters - 0.18) > 1e-12 ||
+    proxy18bn.productionWalkableRadiusVoxels !== 2 ||
+    Math.abs(proxy18bn.nominalPhysicalErosionRadiusMeters - 0.36) > 1e-12 ||
+    Math.abs(proxy18bn.baseClearanceMeters - 0.42781092520205705) > 1e-12 ||
+    proxy18bn.sampledScaleFactors.join(',') !== '1.235,1.236,1.237,1.238,1.239,1.24' ||
+    Math.abs(proxy18bn.positiveFirstSourceDirectTrustedScale - 1.237) > 1e-12 ||
+    Math.abs(proxy18bn.negativeFirstSourceDirectTrustedScale - 1.235) > 1e-12 ||
+    Math.abs(proxy18bn.lastCommonFailureScale - 1.236) > 1e-12 ||
+    Math.abs(proxy18bn.firstCommonSourceDirectTrustedScale - 1.237) > 1e-12 ||
+    Math.abs(proxy18bn.commonThresholdLowerExclusiveScale - 1.236) > 1e-12 ||
+    Math.abs(proxy18bn.commonThresholdUpperInclusiveScale - 1.237) > 1e-12 ||
+    Math.abs(proxy18bn.firstCommonPredictedClearanceMeters - 0.5292021144749446) > 1e-12 ||
+    Math.abs(proxy18bn.firstCommonPredictedResidualAfterErosionMeters - 0.1692021144749446) > 1e-12 ||
+    Math.abs(proxy18bn.firstCommonEquivalentRadialExpansionMeters - 0.10139118927288757) > 1e-12 ||
+    Math.abs(proxy18bn.positiveScale1237SourceSnapMeters - 0.1695613439929668) > 1e-12 ||
+    Math.abs(proxy18bn.negativeScale1237SourceSnapMeters - 0.11637334113146416) > 1e-12 ||
+    proxy18bn.mirroredFirstSuccessScaleMatches ||
+    !proxy18bn.commonSourceDirectValidityResolvedAt001ScaleStep ||
+    proxy18bn.furtherScaleRefinementRequiredBeforeIntegration ||
+    !proxy18bn.fullChainProxyIntegrationDiagnosticRequiredNext ||
+    proxy18bn.globalRecastSettingsChanged ||
+    proxy18bn.broadFrontierLinkAuthorized ||
+    proxy18bn.trustedNonLocalEndpointUsed ||
+    proxy18bn.productionOffMeshLinkAuthorized ||
+    proxy18bn.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BN HIGH target terminal-footprint scale boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BM full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BN full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
