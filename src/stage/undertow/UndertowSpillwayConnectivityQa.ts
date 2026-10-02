@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BJ' as const,
+  resolutionPass: '18BK' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3028,6 +3028,53 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BJ holds nominal physical erosion exactly at 0.36m and varies only the raster cell size / integer walkable-radius pair on the isolated mirrored HIGH target. 0.18m/radius-2 and 0.12m/radius-3 both fail on both sides, while 0.09m/radius-4 is the first sampled pair that generates a direct-valid target on both sides; 0.072m/radius-5 and 0.06m/radius-6 also succeed. This confirms a resolution-dependent erosion/rasterization failure rather than an erosion-magnitude or region-filter issue. Because exact 0.36m erosion with integer voxel radius has no intermediate sample between 0.12m/radius-3 and 0.09m/radius-4, the next safe diagnostic is to measure the continuous source-footprint interior clearance and quantify how narrowly it exceeds the 0.36m erosion requirement before designing any local navigation representation.'
   }),
 
+  highTargetFootprintClearancePass18BK: Object.freeze({
+    qaRunNumber: 1171,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BJ' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    nominalPhysicalErosionRadiusMeters: 0.36,
+    subdivisions: 160,
+    positiveTargetId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c5',
+    negativeTargetId:
+      'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c11',
+    targetMaterial: 'FloorConcrete02' as const,
+    targetYRangeMeters: [3,3] as const,
+    uniqueEdgeCountPerSide: 16,
+    boundarySegmentCountPerSide: 8,
+    internalSharedEdgeCountPerSide: 8,
+    nonManifoldEdgeCountPerSide: 0,
+    boundaryLengthMeters: 42.93666012937003,
+    sampleCountPerSide: 104328,
+    positiveSampledMaximumInteriorClearanceMeters: 0.42781092520205705,
+    negativeSampledMaximumInteriorClearanceMeters: 0.42781092520205705,
+    sampledMaximumInteriorClearanceSymmetric: true,
+    clearanceMarginOverErosionMeters: 0.06781092520205706,
+    productionCellSizeMeters: 0.18,
+    productionHalfCellMeters: 0.09,
+    failedConstantErosionCellSizeMeters: 0.12,
+    failedConstantErosionHalfCellMeters: 0.06,
+    successfulConstantErosionCellSizeMeters: 0.09,
+    successfulConstantErosionHalfCellMeters: 0.045,
+    marginBelowProductionHalfCell: true,
+    marginBelowFailed012HalfCell: false,
+    marginAboveSuccessful009HalfCell: true,
+    continuousFootprintSurvivesNominalErosion: true,
+    coarseRasterCanEraseNarrowResidualFootprint: true,
+    localNavigationFootprintSensitivityDiagnosticRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BK measures the continuous XZ footprint clearance of the mirrored HIGH FloorConcrete02 targets without changing source geometry or Recast settings. Both targets have identical sampled maximum interior clearance of 0.427810925m. After the fixed 0.36m physical erosion, only about 0.067810925m of interior margin remains. That residual margin is smaller than the production 0.18m cell half-width (0.09m), larger than the failed 0.12m cell half-width (0.06m), and larger than the successful 0.09m cell half-width (0.045m). The continuous footprint therefore survives nominal erosion, while coarse rasterization can still erase the narrow residual region. The next safe diagnostic is a QA-only local navigation-footprint sensitivity test under unchanged production Recast settings; no source-geometry edit, global Recast change, or runtime promotion is authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3059,11 +3106,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch and replace false-positive legacy representatives with direct low-level validity, Pass 18BH proves the HIGH target meshes intrinsically fail production target-only Recast generation, Pass 18BI rules out region filtering and physical erosion magnitude alone, and Pass 18BJ proves the failure is resolution-dependent even with nominal erosion fixed at 0.36m: 0.12m/radius-3 still fails while 0.09m/radius-4 succeeds on both mirrored targets. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked; quantify the exact source-footprint interior clearance before considering a local navigation representation change.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch and replace false-positive legacy representatives with direct low-level validity, Pass 18BH proves the HIGH target meshes intrinsically fail production target-only Recast generation, Pass 18BI/18BJ isolate a resolution-dependent constant-erosion raster failure, and Pass 18BK shows the continuous target footprint still has about 0.06781m interior margin after 0.36m erosion even though production rasterization removes it. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked; only QA-local navigation-footprint sensitivity may be explored next, with source geometry and global Recast settings unchanged.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BJ preserves Passes 18A-18BI and confirms the HIGH target failure is resolution-dependent under constant nominal 0.36m erosion. Both mirrored targets fail at 0.18m/radius-2 and 0.12m/radius-3, but become direct-valid at 0.09m/radius-4 and remain valid at 0.072m/radius-5 and 0.06m/radius-6. Production settings remain unchanged. The next safe engineering step is a continuous source-footprint clearance audit to determine how much physical interior margin survives the 0.36m erosion and to inform a strictly local navigation representation, if one is later justified. No global Recast change, broad shortcut, trusted non-local endpoint, or runtime promotion is authorized. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BK preserves Passes 18A-18BJ and measures the mirrored HIGH target continuous footprint under the fixed 0.36m erosion requirement. Both targets retain about 0.06781m of continuous interior margin after erosion, yet production 0.18m rasterization and the 0.12m constant-erosion variant still fail while 0.09m succeeds. This confirms the source footprint is physically wide enough in continuous space but sits near a discretization threshold where coarse voxelization can erase the surviving region. The next safe engineering step is a QA-only local navigation-footprint sensitivity diagnostic under unchanged production Recast settings; source geometry remains authoritative and unmodified. No global Recast change, broad shortcut, trusted non-local endpoint, or runtime promotion is authorized. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3098,12 +3145,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BJ partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BK partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BJ' ||
+    audit.resolutionPass !== '18BK' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -5695,8 +5742,48 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BJ HIGH target constant-erosion resolution boundary drifted');
   }
 
+  const clearance18bk = audit.highTargetFootprintClearancePass18BK;
+  if (
+    clearance18bk.qaRunNumber !== 1171 ||
+    !clearance18bk.diagnosticOnly ||
+    clearance18bk.runtimePromotionAuthorized ||
+    clearance18bk.gameplayDirectionalityResolved ||
+    clearance18bk.gameplayJumpRequirementResolved ||
+    clearance18bk.sourcePass !== '18BJ' ||
+    !clearance18bk.productionConfigUnchanged ||
+    !clearance18bk.sourceGeometryUnchanged ||
+    Math.abs(clearance18bk.nominalPhysicalErosionRadiusMeters - 0.36) > 1e-12 ||
+    clearance18bk.subdivisions !== 160 ||
+    clearance18bk.targetMaterial !== 'FloorConcrete02' ||
+    clearance18bk.targetYRangeMeters.join(',') !== '3,3' ||
+    clearance18bk.uniqueEdgeCountPerSide !== 16 ||
+    clearance18bk.boundarySegmentCountPerSide !== 8 ||
+    clearance18bk.internalSharedEdgeCountPerSide !== 8 ||
+    clearance18bk.nonManifoldEdgeCountPerSide !== 0 ||
+    clearance18bk.sampleCountPerSide !== 104328 ||
+    Math.abs(clearance18bk.positiveSampledMaximumInteriorClearanceMeters - 0.42781092520205705) > 1e-12 ||
+    Math.abs(clearance18bk.negativeSampledMaximumInteriorClearanceMeters - 0.42781092520205705) > 1e-12 ||
+    !clearance18bk.sampledMaximumInteriorClearanceSymmetric ||
+    Math.abs(clearance18bk.clearanceMarginOverErosionMeters - 0.06781092520205706) > 1e-12 ||
+    Math.abs(clearance18bk.productionHalfCellMeters - 0.09) > 1e-12 ||
+    Math.abs(clearance18bk.failedConstantErosionHalfCellMeters - 0.06) > 1e-12 ||
+    Math.abs(clearance18bk.successfulConstantErosionHalfCellMeters - 0.045) > 1e-12 ||
+    !clearance18bk.marginBelowProductionHalfCell ||
+    clearance18bk.marginBelowFailed012HalfCell ||
+    !clearance18bk.marginAboveSuccessful009HalfCell ||
+    !clearance18bk.continuousFootprintSurvivesNominalErosion ||
+    !clearance18bk.coarseRasterCanEraseNarrowResidualFootprint ||
+    !clearance18bk.localNavigationFootprintSensitivityDiagnosticRequiredNext ||
+    clearance18bk.globalRecastSettingsChanged ||
+    clearance18bk.broadFrontierLinkAuthorized ||
+    clearance18bk.productionOffMeshLinkAuthorized ||
+    clearance18bk.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BK HIGH target footprint-clearance boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BJ full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BK full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
