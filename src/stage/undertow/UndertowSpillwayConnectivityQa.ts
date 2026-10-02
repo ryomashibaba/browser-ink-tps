@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BC' as const,
+  resolutionPass: '18BD' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2741,6 +2741,49 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BC keeps the exact raw HIGH endpoints selected by Pass 18BB and sweeps only 1.500m through 1.550m. Forward, reverse, and paired HIGH one-way links remain unattached on both mirrored sides at every sample, while the tracked matrix stays 79/9/11 and no non-glass collateral appears. This rules out the small horizontal-radius deficit suggested by the scalar raw-target snap values. Further radius expansion is paused. The next safe diagnostic must decompose each raw endpoint-to-navmesh projection into horizontal and vertical components and compare the vertical component against the Detour off-mesh endpoint search extent implied by the frozen walkable-climb configuration.'
   }),
 
+  highOffMeshSearchExtentPass18BD: Object.freeze({
+    qaRunNumber: 1140,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BC' as const,
+    recastEndpointSearchModel:
+      'HORIZONTAL_RADIUS_XZ_VERTICAL_WALKABLE_CLIMB_Y' as const,
+    navigationCellHeightMeters: 0.10,
+    navigationWalkableClimbVoxels: 4,
+    walkableClimbWorldMeters: 0.40,
+    fixedHorizontalRadiusMeters: 1.55,
+    horizontalRadiiAtWalkableClimbMeters: [1.55,2.00,3.00,4.00] as const,
+    verticalHalfExtentsMeters: [0.40,0.50,0.60,0.75,1.00,1.25,1.50,1.60,2.00] as const,
+    trustedEndpointsUsedAsLinks: false,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    positiveSourceHorizontalDeltaMeters: 0.43343928477235505,
+    positiveSourceVerticalDeltaMeters: 0.11914971247768058,
+    positiveTargetHorizontalDeltaMeters: 1.4735320665755938,
+    positiveTargetVerticalDeltaMeters: 0.3504641056060791,
+    negativeSourceHorizontalDeltaMeters: 0.4432570201896018,
+    negativeSourceVerticalDeltaMeters: 0.1166265286550483,
+    negativeTargetHorizontalDeltaMeters: 1.4833485747661919,
+    negativeTargetVerticalDeltaMeters: 0.34794044494628906,
+    sourceFoundWithin155x040BothSides: true,
+    targetFoundWithin155x040BothSides: true,
+    allEndpointsFoundAtFrozenWalkableClimb: true,
+    horizontalExpansionChangesProjection: false,
+    verticalExpansionRequiredForProjection: false,
+    simpleEndpointSearchExtentExplainsAttachmentFailure: false,
+    intendedNavIslandIdentityDiagnosticRequiredNext: true,
+    furtherRadiusExpansionAuthorized: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BD decomposes the exact HIGH raw endpoint projections using the frozen navmesh query. At horizontal radius 1.55m and the production walkable-climb vertical half-extent of 0.40m, both source and target endpoints already resolve on both mirrored sides. The source deltas are about 0.433/0.443m horizontal and 0.119/0.117m vertical; the target deltas are about 1.474/1.483m horizontal and 0.350/0.348m vertical. Increasing horizontal radius to 4.0m or vertical half-extent to 2.0m does not change the selected projections. Therefore the HIGH failure from Pass 18BC is not explained by a simple endpoint-search extent deficit. The next safe diagnostic is to compare the raw endpoint projection poly/island identity against the intended HIGH source/target trusted representatives before changing endpoints, radii, or global Recast settings.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2772,11 +2815,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB rejects sampled local retreat for HIGH, and Pass 18BC confirms the exact raw HIGH endpoints still do not attach through 1.55m. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked until exact-location current Undertow gameplay resolves jump-up/drop-down authority.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB rejects sampled local retreat for HIGH, Pass 18BC confirms the exact raw HIGH endpoints still do not attach through 1.55m, and Pass 18BD proves both HIGH raw endpoints are already found inside the production 1.55m-XZ / 0.40m-Y search box. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked; diagnose raw projection poly/island identity before any endpoint, radius, or global Recast change.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BC preserves Passes 18A-18BB and confirms that increasing the exact-raw HIGH off-mesh radius from 1.500m through 1.550m does not attach either direction on either mirrored side. The tracked matrix remains 79/9/11 with no non-glass collateral, so broad radius expansion is stopped. The next safe engineering step is to diagnose the vertical endpoint-search constraint directly against the frozen navigation cell height and walkable-climb settings before changing any endpoint or Recast global tuning. All results remain diagnostic-only; the separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BD preserves Passes 18A-18BC and directly probes the HIGH raw endpoints with the frozen navigation query. Both endpoints are already discoverable on both mirrored sides inside the production-style 1.55m horizontal / 0.40m vertical search extents, and larger horizontal/vertical extents do not alter the chosen projections. This rejects simple search-extent insufficiency as the cause of the HIGH off-mesh failure. The next safe engineering step is poly/island identity diagnosis: determine whether the raw endpoint projections land on the intended HIGH source/target navigation islands before changing endpoints, radii, or global Recast settings. All results remain diagnostic-only; the separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2811,12 +2854,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BC partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BD partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BC' ||
+    audit.resolutionPass !== '18BD' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -5141,8 +5184,51 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BC HIGH exact-raw narrow-radius boundary drifted');
   }
 
+  const extent18bd = audit.highOffMeshSearchExtentPass18BD;
+  if (
+    extent18bd.qaRunNumber !== 1140 ||
+    !extent18bd.diagnosticOnly ||
+    extent18bd.runtimePromotionAuthorized ||
+    extent18bd.gameplayDirectionalityResolved ||
+    extent18bd.gameplayJumpRequirementResolved ||
+    extent18bd.sourcePass !== '18BC' ||
+    extent18bd.recastEndpointSearchModel !== 'HORIZONTAL_RADIUS_XZ_VERTICAL_WALKABLE_CLIMB_Y' ||
+    Math.abs(extent18bd.navigationCellHeightMeters - 0.10) > 1e-12 ||
+    extent18bd.navigationWalkableClimbVoxels !== 4 ||
+    Math.abs(extent18bd.walkableClimbWorldMeters - 0.40) > 1e-12 ||
+    Math.abs(extent18bd.fixedHorizontalRadiusMeters - 1.55) > 1e-12 ||
+    extent18bd.horizontalRadiiAtWalkableClimbMeters.join(',') !== '1.55,2,3,4' ||
+    extent18bd.verticalHalfExtentsMeters.join(',') !== '0.4,0.5,0.6,0.75,1,1.25,1.5,1.6,2' ||
+    extent18bd.trustedEndpointsUsedAsLinks ||
+    extent18bd.globalRecastSettingsChanged ||
+    extent18bd.broadFrontierLinkAuthorized ||
+    extent18bd.baselineReachedDirectedPairs !== 79 ||
+    extent18bd.baselineWeakComponentCount !== 9 ||
+    extent18bd.baselineStronglyConnectedComponentCount !== 11 ||
+    Math.abs(extent18bd.positiveSourceHorizontalDeltaMeters - 0.43343928477235505) > 1e-12 ||
+    Math.abs(extent18bd.positiveSourceVerticalDeltaMeters - 0.11914971247768058) > 1e-12 ||
+    Math.abs(extent18bd.positiveTargetHorizontalDeltaMeters - 1.4735320665755938) > 1e-12 ||
+    Math.abs(extent18bd.positiveTargetVerticalDeltaMeters - 0.3504641056060791) > 1e-12 ||
+    Math.abs(extent18bd.negativeSourceHorizontalDeltaMeters - 0.4432570201896018) > 1e-12 ||
+    Math.abs(extent18bd.negativeSourceVerticalDeltaMeters - 0.1166265286550483) > 1e-12 ||
+    Math.abs(extent18bd.negativeTargetHorizontalDeltaMeters - 1.4833485747661919) > 1e-12 ||
+    Math.abs(extent18bd.negativeTargetVerticalDeltaMeters - 0.34794044494628906) > 1e-12 ||
+    !extent18bd.sourceFoundWithin155x040BothSides ||
+    !extent18bd.targetFoundWithin155x040BothSides ||
+    !extent18bd.allEndpointsFoundAtFrozenWalkableClimb ||
+    extent18bd.horizontalExpansionChangesProjection ||
+    extent18bd.verticalExpansionRequiredForProjection ||
+    extent18bd.simpleEndpointSearchExtentExplainsAttachmentFailure ||
+    !extent18bd.intendedNavIslandIdentityDiagnosticRequiredNext ||
+    extent18bd.furtherRadiusExpansionAuthorized ||
+    extent18bd.productionOffMeshLinkAuthorized ||
+    extent18bd.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BD HIGH off-mesh search-extent boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BC full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BD full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
