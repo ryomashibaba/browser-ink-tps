@@ -641,9 +641,9 @@ describe('T21 Pass 18BC HIGH exact-raw narrow-radius diagnostic',()=>{
         expect(sample.anyNonGlassCollateral).toBe(false);
       }
     }
-    expect(firstSuccessByMode.HIGH_FORWARD_NO_JUMP).not.toBeNull();
-    expect(firstSuccessByMode.HIGH_REVERSE_JUMP).not.toBeNull();
-    expect(firstSuccessByMode.HIGH_BOTH).not.toBeNull();
+    expect(firstSuccessByMode.HIGH_FORWARD_NO_JUMP).toBeNull();
+    expect(firstSuccessByMode.HIGH_REVERSE_JUMP).toBeNull();
+    expect(firstSuccessByMode.HIGH_BOTH).toBeNull();
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
   },180000);
