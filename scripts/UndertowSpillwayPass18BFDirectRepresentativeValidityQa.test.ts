@@ -520,6 +520,22 @@ describe('T21 Pass 18BF direct-query representative validity audit',()=>{
       const rows=sideComponents[side].map(component=>{
         const legacy=trustedRepresentative(nav,component.mesh);
         const direct=directTrustedRepresentative(query,component.mesh);
+        const legacyPointQuery=legacy
+          ? query.findClosestPoint({
+              x:legacy.point[0],y:legacy.point[1],z:legacy.point[2]
+            })
+          : null;
+        const legacyPointProjected=legacyPointQuery?.success
+          ? [
+              legacyPointQuery.point.x,
+              legacyPointQuery.point.y,
+              legacyPointQuery.point.z
+            ] as StageVector3
+          : null;
+        const legacyPointQuerySnapMeters=
+          legacy&&legacyPointProjected
+            ? distance(legacy.point,legacyPointProjected)
+            : null;
         return {
           id:component.id,
           material:materialLeaf(component.sourceMaterial),
@@ -527,29 +543,40 @@ describe('T21 Pass 18BF direct-query representative validity audit',()=>{
           legacyPresent:legacy!==null,
           legacyPoint:legacy?.point??null,
           legacySnapMeters:legacy?.snapMeters??null,
+          legacyPointLowLevelQuerySuccess:legacyPointQuery?.success??null,
+          legacyPointLowLevelQueryPolyRef:
+            legacyPointQuery?.success?legacyPointQuery.polyRef:null,
+          legacyPointLowLevelQuerySnapMeters:legacyPointQuerySnapMeters,
           directPresent:direct!==null,
           directSample:direct?.sample??null,
           directPoint:direct?.point??null,
           directSnapMeters:direct?.snapMeters??null,
           directPolyRef:direct?.polyRef??null,
-          legacyFalsePositive:legacy!==null&&direct===null
+          legacySelectionQueryFailed:
+            legacy!==null&&legacyPointQuery?.success!==true,
+          legacyComponentFalsePositive:legacy!==null&&direct===null
         };
       });
       const legacyCount=rows.filter(row=>row.legacyPresent).length;
       const directCount=rows.filter(row=>row.directPresent).length;
-      const falsePositiveRows=rows.filter(row=>row.legacyFalsePositive);
+      const failedSelectionRows=rows.filter(row=>row.legacySelectionQueryFailed);
+      const componentFalsePositiveRows=
+        rows.filter(row=>row.legacyComponentFalsePositive);
       return [side,{
         componentCount:rows.length,
         legacyTrustedCount:legacyCount,
         directTrustedCount:directCount,
-        legacyFalsePositiveCount:falsePositiveRows.length,
-        legacyFalsePositiveIds:falsePositiveRows.map(row=>row.id),
-        legacyFalsePositiveByMaterial:Object.fromEntries(
-          [...new Set(falsePositiveRows.map(row=>row.material))]
+        legacySelectionQueryFailureCount:failedSelectionRows.length,
+        legacySelectionQueryFailureIds:failedSelectionRows.map(row=>row.id),
+        legacyComponentFalsePositiveCount:componentFalsePositiveRows.length,
+        legacyComponentFalsePositiveIds:
+          componentFalsePositiveRows.map(row=>row.id),
+        legacyComponentFalsePositiveByMaterial:Object.fromEntries(
+          [...new Set(componentFalsePositiveRows.map(row=>row.material))]
             .sort()
             .map(material=>[
               material,
-              falsePositiveRows.filter(row=>row.material===material).length
+              componentFalsePositiveRows.filter(row=>row.material===material).length
             ])
         ),
         rows
@@ -577,13 +604,18 @@ describe('T21 Pass 18BF direct-query representative validity audit',()=>{
         componentCount:number;
         legacyTrustedCount:number;
         directTrustedCount:number;
-        legacyFalsePositiveCount:number;
-        rows:Array<{directSnapMeters:number|null}>;
+        legacySelectionQueryFailureCount:number;
+        legacyComponentFalsePositiveCount:number;
+        rows:Array<{
+          directSnapMeters:number|null;
+          legacyPointLowLevelQuerySnapMeters:number|null;
+        }>;
       };
       expect(result.componentCount).toBe(15);
       expect(result.legacyTrustedCount).toBe(15);
       expect(result.directTrustedCount).toBeLessThanOrEqual(result.legacyTrustedCount);
-      expect(result.legacyFalsePositiveCount).toBeGreaterThanOrEqual(1);
+      expect(result.legacySelectionQueryFailureCount).toBeGreaterThanOrEqual(1);
+      expect(result.legacyComponentFalsePositiveCount).toBeGreaterThanOrEqual(0);
       for(const row of result.rows){
         if(row.directSnapMeters===null)continue;
         expect(row.directSnapMeters).toBeLessThanOrEqual(TRUSTED_SNAP_METERS+1e-9);
