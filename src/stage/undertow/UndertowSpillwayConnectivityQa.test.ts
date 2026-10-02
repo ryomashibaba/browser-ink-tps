@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18BK',
+      resolutionPass: '18BL',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1119,6 +1119,48 @@ describe('T21-D partial Recast connectivity QA', () => {
       localNavigationFootprintSensitivityDiagnosticRequiredNext: true,
       globalRecastSettingsChanged: false,
       broadFrontierLinkAuthorized: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT
+        .highTargetLocalFootprintSensitivityPass18BL
+    ).toMatchObject({
+      qaRunNumber: 1175,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18BK',
+      productionConfigUnchanged: true,
+      sourceGeometryUnchanged: true,
+      diagnosticProxyOnly: true,
+      proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER',
+      productionCellSizeMeters: 0.18,
+      productionWalkableRadiusVoxels: 2,
+      nominalPhysicalErosionRadiusMeters: 0.36,
+      baseClearanceMeters: 0.42781092520205705,
+      sampledScaleFactors: [
+        1.00,1.02,1.04,1.05,1.06,1.08,1.10,1.12,1.15,1.20,1.25,1.30
+      ],
+      scale120FailsBothSides: true,
+      scale125SourceDirectTrustedBothSides: true,
+      scale130SourceDirectTrustedBothSides: true,
+      firstCommonSourceDirectTrustedScale: 1.25,
+      firstCommonPredictedClearanceMeters: 0.5347636565025713,
+      firstCommonPredictedResidualAfterErosionMeters: 0.1747636565025713,
+      firstCommonEquivalentRadialExpansionMeters: 0.10695273130051426,
+      positiveScale125SourceSnapMeters: 0.27660899918483217,
+      negativeScale125SourceSnapMeters: 0.24186590277719566,
+      positiveScale130SourceSnapMeters: 0.11120592163976542,
+      negativeScale130SourceSnapMeters: 0.10118254185490315,
+      mirroredFirstSuccessScaleMatches: true,
+      localProxyCanRecoverProductionRasterization: true,
+      fineScaleSweepRequiredNext: true,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      trustedNonLocalEndpointUsed: false,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
