@@ -69,7 +69,7 @@ const DIRECTIONAL_RADIUS_METERS=0.7005;
 const LOW_SLOPE_RADIUS_METERS=0.80;
 const RAW_ENDPOINT_HORIZONTAL_RADIUS_METERS=1.55;
 const RAW_ENDPOINT_VERTICAL_HALF_EXTENT_METERS=0.40;
-const TRUSTED_IDENTITY_HALF_EXTENT_METERS=0.05;
+const TRUSTED_IDENTITY_HALF_EXTENTS_METERS=[0.05,0.10,0.20,0.30] as const;
 const MAX_RETREAT_METERS=0.654737328492778;
 const UPSTREAM_SUCCESS_POINTS:Record<Side,StageVector3>={
   POSITIVE_Z:[-10.67826430970341,6,12.118397071136153],
@@ -517,6 +517,34 @@ describe('T21 Pass 18BE HIGH nav-island identity diagnostic',()=>{
       };
     };
 
+    const projectTrusted=(point:StageVector3)=>{
+      for(const halfExtentMeters of TRUSTED_IDENTITY_HALF_EXTENTS_METERS){
+        const bounded=project(point,halfExtentMeters,halfExtentMeters);
+        if(bounded.success){
+          return {
+            ...bounded,
+            identityQueryMode:'BOUNDED' as const,
+            identityHalfExtentMeters:halfExtentMeters
+          };
+        }
+      }
+      const result=query.findClosestPoint({
+        x:point[0],y:point[1],z:point[2]
+      });
+      const projected=result.success
+        ? [result.point.x,result.point.y,result.point.z] as StageVector3
+        : null;
+      return {
+        success:result.success,
+        polyRef:result.polyRef,
+        requestedPoint:point,
+        projectedPoint:projected,
+        snapMeters:projected?distance(point,projected):Number.POSITIVE_INFINITY,
+        identityQueryMode:'DEFAULT_FALLBACK' as const,
+        identityHalfExtentMeters:null
+      };
+    };
+
     const pathReach=(from:StageVector3,to:StageVector3)=>{
       const audit=baselineNav.auditPath(vec3(from),vec3(to),0.05);
       return {
@@ -551,15 +579,11 @@ describe('T21 Pass 18BE HIGH nav-island identity diagnostic',()=>{
         RAW_ENDPOINT_HORIZONTAL_RADIUS_METERS,
         RAW_ENDPOINT_VERTICAL_HALF_EXTENT_METERS
       );
-      const trustedSourceProjection=project(
-        sourceRepresentative.point,
-        TRUSTED_IDENTITY_HALF_EXTENT_METERS,
-        TRUSTED_IDENTITY_HALF_EXTENT_METERS
+      const trustedSourceProjection=projectTrusted(
+        sourceRepresentative.point
       );
-      const trustedTargetProjection=project(
-        targetRepresentative.point,
-        TRUSTED_IDENTITY_HALF_EXTENT_METERS,
-        TRUSTED_IDENTITY_HALF_EXTENT_METERS
+      const trustedTargetProjection=projectTrusted(
+        targetRepresentative.point
       );
       if(
         !rawSourceProjection.projectedPoint||
@@ -630,7 +654,8 @@ describe('T21 Pass 18BE HIGH nav-island identity diagnostic',()=>{
       sourcePass:'18BD',
       rawEndpointHorizontalRadiusMeters:RAW_ENDPOINT_HORIZONTAL_RADIUS_METERS,
       rawEndpointVerticalHalfExtentMeters:RAW_ENDPOINT_VERTICAL_HALF_EXTENT_METERS,
-      trustedIdentityHalfExtentMeters:TRUSTED_IDENTITY_HALF_EXTENT_METERS,
+      trustedIdentityHalfExtentsMeters:TRUSTED_IDENTITY_HALF_EXTENTS_METERS,
+      trustedIdentityDefaultFallbackEnabled:true,
       trustedEndpointsUsedAsLinks:false,
       globalRecastSettingsChanged:false,
       broadFrontierLinkAuthorized:false,
@@ -646,8 +671,16 @@ describe('T21 Pass 18BE HIGH nav-island identity diagnostic',()=>{
         physicalDistanceMeters:number;
         rawSourceProjection:{success:boolean;polyRef:number;snapMeters:number};
         rawTargetProjection:{success:boolean;polyRef:number;snapMeters:number};
-        trustedSourceProjection:{success:boolean;polyRef:number;snapMeters:number};
-        trustedTargetProjection:{success:boolean;polyRef:number;snapMeters:number};
+        trustedSourceProjection:{
+          success:boolean;polyRef:number;snapMeters:number;
+          identityQueryMode:'BOUNDED'|'DEFAULT_FALLBACK';
+          identityHalfExtentMeters:number|null;
+        };
+        trustedTargetProjection:{
+          success:boolean;polyRef:number;snapMeters:number;
+          identityQueryMode:'BOUNDED'|'DEFAULT_FALLBACK';
+          identityHalfExtentMeters:number|null;
+        };
         rawSourceAndTargetProjectToSamePoly:boolean;
       };
       expect(result.physicalDistanceMeters).toBeCloseTo(1.061284827751945,11);
