@@ -611,11 +611,11 @@ describe('T21 Pass 18BF direct-query representative validity audit',()=>{
           legacyPointLowLevelQuerySnapMeters:number|null;
         }>;
       };
-      expect(result.componentCount).toBe(15);
+      expect(result.componentCount).toBe(58);
       expect(result.legacyTrustedCount).toBe(15);
-      expect(result.directTrustedCount).toBeLessThanOrEqual(result.legacyTrustedCount);
-      expect(result.legacySelectionQueryFailureCount).toBeGreaterThanOrEqual(1);
-      expect(result.legacyComponentFalsePositiveCount).toBeGreaterThanOrEqual(0);
+      expect(result.directTrustedCount).toBe(8);
+      expect(result.legacySelectionQueryFailureCount).toBe(7);
+      expect(result.legacyComponentFalsePositiveCount).toBe(7);
       for(const row of result.rows){
         if(row.directSnapMeters===null)continue;
         expect(row.directSnapMeters).toBeLessThanOrEqual(TRUSTED_SNAP_METERS+1e-9);
