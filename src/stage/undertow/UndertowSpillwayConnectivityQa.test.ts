@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18BA',
+      resolutionPass: '18BB',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -739,6 +739,44 @@ describe('T21-D partial Recast connectivity QA', () => {
       sampledMatrixStableAt79_9_11: true,
       sampledNonGlassCollateralObserved: false,
       lowRadiusRefinementRequiredBeforeContinuation: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.highLocalEndpointIsolationPass18BB
+    ).toMatchObject({
+      qaRunNumber: 1130,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18BA',
+      highLocalSearchRadiusMeters: 1.50,
+      localRetreatTargetsMeters: [0,0.05,0.10,0.15,0.20,0.30,0.40,0.50,0.75,1.00,1.25,1.50],
+      trustedEndpointsUsedAsLinks: false,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      positiveRawSourceSnapMeters: 0.4495178167408769,
+      positiveRawTargetSnapMeters: 1.5146358772143251,
+      negativeRawSourceSnapMeters: 0.4583432481595991,
+      negativeRawTargetSnapMeters: 1.5236093815313405,
+      selectedSourceCandidateCountPerSide: 1,
+      selectedTargetCandidateCountPerSide: 3,
+      positiveSourceFirstSuccessFound: false,
+      positiveTargetFirstSuccessFound: false,
+      negativeSourceFirstSuccessFound: false,
+      negativeTargetFirstSuccessFound: false,
+      rawSourceEndpointBestAmongSampledLocalCandidatesBothSides: true,
+      rawTargetEndpointBestAmongSampledLocalCandidatesBothSides: true,
+      localRetreatImprovesAttachment: false,
+      sampledMatrixStableAt79_9_11: true,
+      sampledNonGlassCollateralObserved: false,
+      narrowExactRawRadiusSweepRequiredNext: true,
+      broadRadiusExpansionAuthorized: false,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
