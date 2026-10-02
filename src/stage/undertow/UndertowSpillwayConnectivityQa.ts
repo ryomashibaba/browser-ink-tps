@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BA' as const,
+  resolutionPass: '18BB' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2661,6 +2661,54 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BA keeps the frozen Pass 18AY QA chain and tests the exact raw Pass 18AZ HIGH/LOW branch endpoints with one-way Recast links across 0.30m through 1.50m radii. The LOW branch attaches cleanly in both KCC-derived directions on both mirrored sides at 0.70m after failing at 0.60m, with directionality preserved, the tracked matrix unchanged at 79/9/11, and no non-glass collateral. The HIGH branch attaches in neither direction on either side even at 1.50m, so ALL_KCC_DIRECTIONS also remains unresolved. Because the HIGH trusted source/target representatives are present with small snaps, the next safe diagnostic is a local on-surface endpoint search around the exact HIGH boundary; broad radius expansion is not authorized before that localization.'
   }),
 
+  highLocalEndpointIsolationPass18BB: Object.freeze({
+    qaRunNumber: 1130,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BA' as const,
+    highLocalSearchRadiusMeters: 1.50,
+    localRetreatTargetsMeters: [0,0.05,0.10,0.15,0.20,0.30,0.40,0.50,0.75,1.00,1.25,1.50] as const,
+    trustedEndpointsUsedAsLinks: false,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    positiveRawSourceSnapMeters: 0.4495178167408769,
+    positiveRawTargetSnapMeters: 1.5146358772143251,
+    negativeRawSourceSnapMeters: 0.4583432481595991,
+    negativeRawTargetSnapMeters: 1.5236093815313405,
+    positiveTrustedSourceRepresentativeSnapMeters: 0.1336892038998704,
+    positiveTrustedTargetRepresentativeSnapMeters: 0,
+    negativeTrustedSourceRepresentativeSnapMeters: 0.1379772822088274,
+    negativeTrustedTargetRepresentativeSnapMeters: 0,
+    selectedSourceCandidateCountPerSide: 1,
+    selectedTargetCandidateCountPerSide: 3,
+    positiveSourceFirstSuccessFound: false,
+    positiveTargetFirstSuccessFound: false,
+    negativeSourceFirstSuccessFound: false,
+    negativeTargetFirstSuccessFound: false,
+    positiveNearestSampledSourceRetreatMeters: 0.4671082601154706,
+    negativeNearestSampledSourceRetreatMeters: 0.4671082601154723,
+    positiveNearestSampledSourceSnapMeters: 0.6365574805516138,
+    negativeNearestSampledSourceSnapMeters: 0.6460635271270726,
+    positiveBestRetreatedTargetSnapMeters: 1.9944397145350359,
+    negativeBestRetreatedTargetSnapMeters: 2.0025564561429836,
+    rawSourceEndpointBestAmongSampledLocalCandidatesBothSides: true,
+    rawTargetEndpointBestAmongSampledLocalCandidatesBothSides: true,
+    localRetreatImprovesAttachment: false,
+    sampledMatrixStableAt79_9_11: true,
+    sampledNonGlassCollateralObserved: false,
+    narrowExactRawRadiusSweepRequiredNext: true,
+    broadRadiusExpansionAuthorized: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BB isolates the Pass 18BA HIGH endpoint problem with the frozen upstream QA chain. The exact raw source endpoints are about 0.450/0.458m from the baseline navmesh, while the exact raw target endpoints are about 1.515/1.524m away, just beyond the prior 1.50m ceiling. Sampled local on-surface retreats do not improve either endpoint: the only selected source samples snap worse at about 0.637/0.646m, and the best non-raw target samples snap much worse at about 1.994/2.003m. No sampled local candidate attaches at the fixed 1.50m search radius, the tracked matrix remains 79/9/11, and no non-glass collateral appears. The exact raw boundary remains the best sampled endpoint pair, so the next safe engineering diagnostic is a narrow exact-raw radius sweep immediately above 1.50m rather than further local retreat or broad radius expansion.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2692,11 +2740,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, and Pass 18BA proves the LOW exact-raw directional representation attaches by 0.70m while the HIGH exact-raw endpoints remain unattached through 1.50m and require local endpoint search. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked until exact-location current Undertow gameplay resolves jump-up/drop-down authority.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, and Pass 18BB shows the HIGH raw target endpoints sit just beyond the prior 1.50m ceiling while sampled on-surface retreats only worsen nav snap. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked until exact-location current Undertow gameplay resolves jump-up/drop-down authority.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BA preserves Passes 18A-18AZ and runs exact-raw one-way Recast attachment QA for the KCC-derived HIGH/LOW directions. LOW succeeds commonly at 0.70m after failing at 0.60m in both directions, with no non-glass collateral and no 25-anchor matrix drift. HIGH fails in both directions on both mirrored sides through 1.50m despite trusted representatives being available, so radius expansion is paused. The next safe engineering step is a local on-surface endpoint search around the exact HIGH boundary only. All results remain diagnostic-only; the separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BB preserves Passes 18A-18BA and isolates the HIGH exact-raw attachment failure. Raw HIGH target endpoints sit about 1.515/1.524m from the baseline navmesh, while sampled local retreats on both source and target meshes worsen snap and never attach at 1.50m. The tracked matrix remains 79/9/11 with no non-glass collateral. The exact raw pair is therefore retained as the best sampled endpoint pair, and the next safe engineering step is a narrow radius sweep immediately above 1.50m only. All results remain diagnostic-only; the separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2731,12 +2779,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BA partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BB partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BA' ||
+    audit.resolutionPass !== '18BB' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -4989,8 +5037,47 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BA post-low-slope directional attachment boundary drifted');
   }
 
+  const endpoint18bb = audit.highLocalEndpointIsolationPass18BB;
+  if (
+    endpoint18bb.qaRunNumber !== 1130 ||
+    !endpoint18bb.diagnosticOnly ||
+    endpoint18bb.runtimePromotionAuthorized ||
+    endpoint18bb.gameplayDirectionalityResolved ||
+    endpoint18bb.gameplayJumpRequirementResolved ||
+    endpoint18bb.sourcePass !== '18BA' ||
+    Math.abs(endpoint18bb.highLocalSearchRadiusMeters - 1.50) > 1e-12 ||
+    endpoint18bb.localRetreatTargetsMeters.join(',') !== '0,0.05,0.1,0.15,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5' ||
+    endpoint18bb.trustedEndpointsUsedAsLinks ||
+    endpoint18bb.globalRecastSettingsChanged ||
+    endpoint18bb.broadFrontierLinkAuthorized ||
+    endpoint18bb.baselineReachedDirectedPairs !== 79 ||
+    endpoint18bb.baselineWeakComponentCount !== 9 ||
+    endpoint18bb.baselineStronglyConnectedComponentCount !== 11 ||
+    Math.abs(endpoint18bb.positiveRawSourceSnapMeters - 0.4495178167408769) > 1e-12 ||
+    Math.abs(endpoint18bb.positiveRawTargetSnapMeters - 1.5146358772143251) > 1e-12 ||
+    Math.abs(endpoint18bb.negativeRawSourceSnapMeters - 0.4583432481595991) > 1e-12 ||
+    Math.abs(endpoint18bb.negativeRawTargetSnapMeters - 1.5236093815313405) > 1e-12 ||
+    endpoint18bb.selectedSourceCandidateCountPerSide !== 1 ||
+    endpoint18bb.selectedTargetCandidateCountPerSide !== 3 ||
+    endpoint18bb.positiveSourceFirstSuccessFound ||
+    endpoint18bb.positiveTargetFirstSuccessFound ||
+    endpoint18bb.negativeSourceFirstSuccessFound ||
+    endpoint18bb.negativeTargetFirstSuccessFound ||
+    !endpoint18bb.rawSourceEndpointBestAmongSampledLocalCandidatesBothSides ||
+    !endpoint18bb.rawTargetEndpointBestAmongSampledLocalCandidatesBothSides ||
+    endpoint18bb.localRetreatImprovesAttachment ||
+    !endpoint18bb.sampledMatrixStableAt79_9_11 ||
+    endpoint18bb.sampledNonGlassCollateralObserved ||
+    !endpoint18bb.narrowExactRawRadiusSweepRequiredNext ||
+    endpoint18bb.broadRadiusExpansionAuthorized ||
+    endpoint18bb.productionOffMeshLinkAuthorized ||
+    endpoint18bb.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BB HIGH local endpoint isolation boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BA full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BB full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
