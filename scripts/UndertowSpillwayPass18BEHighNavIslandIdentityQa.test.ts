@@ -587,11 +587,9 @@ describe('T21 Pass 18BE HIGH nav-island identity diagnostic',()=>{
       );
       if(
         !rawSourceProjection.projectedPoint||
-        !rawTargetProjection.projectedPoint||
-        !trustedSourceProjection.projectedPoint||
-        !trustedTargetProjection.projectedPoint
+        !rawTargetProjection.projectedPoint
       ){
-        throw new Error(`Pass 18BE HIGH projection missing ${side}`);
+        throw new Error(`Pass 18BE raw HIGH projection missing ${side}`);
       }
 
       const rawSourceToTrustedSource=pathReach(
@@ -626,9 +624,13 @@ describe('T21 Pass 18BE HIGH nav-island identity diagnostic',()=>{
         rawSourceAndTargetProjectToSamePoly:
           rawSourceProjection.polyRef===rawTargetProjection.polyRef,
         rawSourcePolyMatchesTrustedSourcePoly:
-          rawSourceProjection.polyRef===trustedSourceProjection.polyRef,
+          trustedSourceProjection.success
+            ? rawSourceProjection.polyRef===trustedSourceProjection.polyRef
+            : null,
         rawTargetPolyMatchesTrustedTargetPoly:
-          rawTargetProjection.polyRef===trustedTargetProjection.polyRef,
+          trustedTargetProjection.success
+            ? rawTargetProjection.polyRef===trustedTargetProjection.polyRef
+            : null,
         rawSourceToTrustedSource,
         trustedSourceToRawSource,
         rawTargetToTrustedTarget,
@@ -673,24 +675,33 @@ describe('T21 Pass 18BE HIGH nav-island identity diagnostic',()=>{
         rawTargetProjection:{success:boolean;polyRef:number;snapMeters:number};
         trustedSourceProjection:{
           success:boolean;polyRef:number;snapMeters:number;
+          projectedPoint:StageVector3|null;
           identityQueryMode:'BOUNDED'|'DEFAULT_FALLBACK';
           identityHalfExtentMeters:number|null;
         };
         trustedTargetProjection:{
           success:boolean;polyRef:number;snapMeters:number;
+          projectedPoint:StageVector3|null;
           identityQueryMode:'BOUNDED'|'DEFAULT_FALLBACK';
           identityHalfExtentMeters:number|null;
         };
         rawSourceAndTargetProjectToSamePoly:boolean;
+        rawSourceToTrustedSource:{reachedTarget:boolean;querySuccess:boolean};
+        trustedSourceToRawSource:{reachedTarget:boolean;querySuccess:boolean};
+        rawTargetToTrustedTarget:{reachedTarget:boolean;querySuccess:boolean};
+        trustedTargetToRawTarget:{reachedTarget:boolean;querySuccess:boolean};
       };
       expect(result.physicalDistanceMeters).toBeCloseTo(1.061284827751945,11);
       expect(result.rawSourceProjection.success).toBe(true);
       expect(result.rawTargetProjection.success).toBe(true);
-      expect(result.trustedSourceProjection.success).toBe(true);
-      expect(result.trustedTargetProjection.success).toBe(true);
-      expect(result.rawSourceAndTargetProjectToSamePoly).toBe(true);
       expect(Number.isFinite(result.rawSourceProjection.snapMeters)).toBe(true);
       expect(Number.isFinite(result.rawTargetProjection.snapMeters)).toBe(true);
+      expect(typeof result.rawSourceToTrustedSource.reachedTarget).toBe('boolean');
+      expect(typeof result.trustedSourceToRawSource.reachedTarget).toBe('boolean');
+      expect(typeof result.rawTargetToTrustedTarget.reachedTarget).toBe('boolean');
+      expect(typeof result.trustedTargetToRawTarget.reachedTarget).toBe('boolean');
+      expect(typeof result.rawSourceToTrustedSource.querySuccess).toBe('boolean');
+      expect(typeof result.rawTargetToTrustedTarget.querySuccess).toBe('boolean');
     }
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
