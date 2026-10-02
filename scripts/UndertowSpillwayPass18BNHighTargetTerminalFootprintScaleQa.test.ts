@@ -185,27 +185,6 @@ beforeAll(async()=>{await initializeRecastNavigation();});
 
 describe('T21 Pass 18BN HIGH target terminal local-footprint scale sweep',()=>{
   it('expands only a QA nav proxy around the Pass 18BK clearance center while keeping production Recast settings and source geometry unchanged',()=>{
-    const positive=sides.POSITIVE_Z as {
-      variants:Array<{scale:number;sourceDirectTrusted:boolean}>;
-    };
-    const negative=sides.NEGATIVE_Z as {
-      variants:Array<{scale:number;sourceDirectTrusted:boolean}>;
-    };
-    const common=SCALE_FACTORS.find(scale=>
-      positive.variants.find(v=>v.scale===scale)?.sourceDirectTrusted===true &&
-      negative.variants.find(v=>v.scale===scale)?.sourceDirectTrusted===true
-    )??null;
-    expect(
-      positive.variants.find(v=>v.scale===1.235)?.sourceDirectTrusted
-    ).toBe(false);
-    expect(
-      negative.variants.find(v=>v.scale===1.235)?.sourceDirectTrusted
-    ).toBe(true);
-    expect(common).not.toBeNull();
-    if(common!==null){
-      expect(common).toBeGreaterThan(1.235);
-      expect(common).toBeLessThanOrEqual(1.240);
-    }
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
     expect(GAME_CONFIG.cpu.navigationCellSizeMeters).toBe(0.18);
@@ -289,6 +268,27 @@ describe('T21 Pass 18BN HIGH target terminal local-footprint scale sweep',()=>{
           variant.equivalentRadialExpansionAtClearancePointMeters
         )).toBe(true);
       }
+    }
+    const positive=sides.POSITIVE_Z as {
+      variants:Array<{scale:number;sourceDirectTrusted:boolean}>;
+    };
+    const negative=sides.NEGATIVE_Z as {
+      variants:Array<{scale:number;sourceDirectTrusted:boolean}>;
+    };
+    const common=SCALE_FACTORS.find(scale=>
+      positive.variants.find(v=>v.scale===scale)?.sourceDirectTrusted===true &&
+      negative.variants.find(v=>v.scale===scale)?.sourceDirectTrusted===true
+    )??null;
+    expect(
+      positive.variants.find(v=>v.scale===1.235)?.sourceDirectTrusted
+    ).toBe(false);
+    expect(
+      negative.variants.find(v=>v.scale===1.235)?.sourceDirectTrusted
+    ).toBe(true);
+    expect(common).not.toBeNull();
+    if(common!==null){
+      expect(common).toBeGreaterThan(1.235);
+      expect(common).toBeLessThanOrEqual(1.240);
     }
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
