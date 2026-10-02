@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BD' as const,
+  resolutionPass: '18BE' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2784,6 +2784,48 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BD decomposes the exact HIGH raw endpoint projections using the frozen navmesh query. At horizontal radius 1.55m and the production walkable-climb vertical half-extent of 0.40m, both source and target endpoints already resolve on both mirrored sides. The source deltas are about 0.433/0.443m horizontal and 0.119/0.117m vertical; the target deltas are about 1.474/1.483m horizontal and 0.350/0.348m vertical. Increasing horizontal radius to 4.0m or vertical half-extent to 2.0m does not change the selected projections. Therefore the HIGH failure from Pass 18BC is not explained by a simple endpoint-search extent deficit. The next safe diagnostic is to compare the raw endpoint projection poly/island identity against the intended HIGH source/target trusted representatives before changing endpoints, radii, or global Recast settings.'
   }),
 
+  highNavIslandIdentityPass18BE: Object.freeze({
+    qaRunNumber: 1146,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BD' as const,
+    rawEndpointHorizontalRadiusMeters: 1.55,
+    rawEndpointVerticalHalfExtentMeters: 0.40,
+    trustedEndpointsUsedAsLinks: false,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    positiveRawSourcePolyRef: 1311,
+    positiveRawTargetPolyRef: 1311,
+    negativeRawSourcePolyRef: 1220,
+    negativeRawTargetPolyRef: 1220,
+    rawSourceAndTargetProjectToSamePolyBothSides: true,
+    positiveTrustedSourcePolyRef: 1314,
+    negativeTrustedSourcePolyRef: 1218,
+    rawSourcePolyDiffersFromTrustedSourcePolyBothSides: true,
+    rawSourceMutuallyReachableWithTrustedSourceBothSides: true,
+    rawTargetMutuallyReachableWithTrustedTargetBothSides: false,
+    positiveTrustedTargetLowLevelProjectionSuccess: false,
+    negativeTrustedTargetLowLevelProjectionSuccess: false,
+    rawSourceMutualOwnGlassAnchorCountPerSide: 3,
+    rawTargetMutualOwnGlassAnchorCountPerSide: 3,
+    trustedSourceMutualOwnGlassAnchorCountPerSide: 3,
+    legacyTrustedTargetMutualAnchorCountPerSide: 0,
+    rawTargetProjectsToSourceSideNavIslandBothSides: true,
+    highExactRawLinkFailureExplainedByWrongTargetIslandProjection: true,
+    diagnosticTrustedRepresentativeCanFalsePositiveOnClosestPointFallback: true,
+    directLowLevelRepresentativeValidityAuditRequiredNext: true,
+    furtherRadiusExpansionAuthorized: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BE compares the Pass 18BD HIGH raw endpoint projections against the intended source/target component representatives. On each mirrored side the raw source and raw target both project to the same source-side nav poly (POS 1311, NEG 1220) and both retain the three own-glass mutual anchors. The raw source remains mutually path-reachable with the intended source representative even though that representative lies on another poly in the same island. The raw target is not path-queryable to the legacy target representative, and a direct low-level query cannot reproject that legacy target point at all. This exposes a diagnostic helper hazard: RecastStageNavigation.closestPoint returns the input point on query failure, so a mesh sample can appear to have snap=0 and be falsely labeled trusted. The HIGH exact-raw off-mesh failure is therefore explained by the target endpoint being absorbed onto the source nav island, not by insufficient radius/search extent. The next safe step is a direct low-level-query validity audit of the affected downstream component representatives before choosing any replacement endpoint.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2815,11 +2857,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB rejects sampled local retreat for HIGH, Pass 18BC confirms the exact raw HIGH endpoints still do not attach through 1.55m, and Pass 18BD proves both HIGH raw endpoints are already found inside the production 1.55m-XZ / 0.40m-Y search box. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked; diagnose raw projection poly/island identity before any endpoint, radius, or global Recast change.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB/18BC/18BD exclude local retreat, narrow radius, and endpoint-search extent as explanations for the unresolved HIGH branch, and Pass 18BE proves both raw HIGH endpoints are projected onto the same source-side nav island. Pass 18BE also exposes that the diagnostic closestPoint wrapper can return an unprojectable input unchanged and therefore create a false snap=0 trusted representative. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked; re-audit affected component representatives with direct low-level query success required before selecting a replacement HIGH target endpoint.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BD preserves Passes 18A-18BC and directly probes the HIGH raw endpoints with the frozen navigation query. Both endpoints are already discoverable on both mirrored sides inside the production-style 1.55m horizontal / 0.40m vertical search extents, and larger horizontal/vertical extents do not alter the chosen projections. This rejects simple search-extent insufficiency as the cause of the HIGH off-mesh failure. The next safe engineering step is poly/island identity diagnosis: determine whether the raw endpoint projections land on the intended HIGH source/target navigation islands before changing endpoints, radii, or global Recast settings. All results remain diagnostic-only; the separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BE preserves Passes 18A-18BD and identifies the HIGH exact-raw attachment failure as a nav-island projection problem. On both mirrored sides raw HIGH source and target project to the same source-side poly/island and retain the own-glass anchors; the raw target cannot reach the legacy target representative. The legacy target representative itself cannot be reproduced by a direct low-level nav query, revealing that the diagnostic closestPoint wrapper can falsely report snap=0 when its internal query fails and it returns the input unchanged. The next safe engineering step is a direct-query-only representative validity audit across the affected downstream source components, followed by a source-local target endpoint search only if a valid target nav island exists. No radius expansion, global Recast tuning, trusted non-local shortcut, or production promotion is authorized. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -2854,12 +2896,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BD partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BE partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BD' ||
+    audit.resolutionPass !== '18BE' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -5227,8 +5269,51 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BD HIGH off-mesh search-extent boundary drifted');
   }
 
+  const identity18be = audit.highNavIslandIdentityPass18BE;
+  if (
+    identity18be.qaRunNumber !== 1146 ||
+    !identity18be.diagnosticOnly ||
+    identity18be.runtimePromotionAuthorized ||
+    identity18be.gameplayDirectionalityResolved ||
+    identity18be.gameplayJumpRequirementResolved ||
+    identity18be.sourcePass !== '18BD' ||
+    Math.abs(identity18be.rawEndpointHorizontalRadiusMeters - 1.55) > 1e-12 ||
+    Math.abs(identity18be.rawEndpointVerticalHalfExtentMeters - 0.40) > 1e-12 ||
+    identity18be.trustedEndpointsUsedAsLinks ||
+    identity18be.globalRecastSettingsChanged ||
+    identity18be.broadFrontierLinkAuthorized ||
+    identity18be.baselineReachedDirectedPairs !== 79 ||
+    identity18be.baselineWeakComponentCount !== 9 ||
+    identity18be.baselineStronglyConnectedComponentCount !== 11 ||
+    identity18be.positiveRawSourcePolyRef !== 1311 ||
+    identity18be.positiveRawTargetPolyRef !== 1311 ||
+    identity18be.negativeRawSourcePolyRef !== 1220 ||
+    identity18be.negativeRawTargetPolyRef !== 1220 ||
+    !identity18be.rawSourceAndTargetProjectToSamePolyBothSides ||
+    identity18be.positiveTrustedSourcePolyRef !== 1314 ||
+    identity18be.negativeTrustedSourcePolyRef !== 1218 ||
+    !identity18be.rawSourcePolyDiffersFromTrustedSourcePolyBothSides ||
+    !identity18be.rawSourceMutuallyReachableWithTrustedSourceBothSides ||
+    identity18be.rawTargetMutuallyReachableWithTrustedTargetBothSides ||
+    identity18be.positiveTrustedTargetLowLevelProjectionSuccess ||
+    identity18be.negativeTrustedTargetLowLevelProjectionSuccess ||
+    identity18be.rawSourceMutualOwnGlassAnchorCountPerSide !== 3 ||
+    identity18be.rawTargetMutualOwnGlassAnchorCountPerSide !== 3 ||
+    identity18be.trustedSourceMutualOwnGlassAnchorCountPerSide !== 3 ||
+    identity18be.legacyTrustedTargetMutualAnchorCountPerSide !== 0 ||
+    !identity18be.rawTargetProjectsToSourceSideNavIslandBothSides ||
+    !identity18be.highExactRawLinkFailureExplainedByWrongTargetIslandProjection ||
+    !identity18be.diagnosticTrustedRepresentativeCanFalsePositiveOnClosestPointFallback ||
+    !identity18be.directLowLevelRepresentativeValidityAuditRequiredNext ||
+    identity18be.furtherRadiusExpansionAuthorized ||
+    identity18be.productionOffMeshLinkAuthorized ||
+    identity18be.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BE HIGH nav-island identity boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BD full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BE full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
