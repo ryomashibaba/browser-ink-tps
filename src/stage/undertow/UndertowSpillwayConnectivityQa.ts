@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BH' as const,
+  resolutionPass: '18BI' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -2952,6 +2952,46 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BH isolates the mirrored HIGH FloorConcrete02 target meshes under the frozen production Recast configuration. Each target is a flat, upward-facing eight-triangle mesh: all eight triangles are walkable at 0 degrees, with no downward or degenerate triangles and about 14.685m2 total/projected surface area. Nevertheless, target-only navmesh generation fails on both sides with Failed to create Detour navmesh data, while the HIGH source mesh alone builds and yields a direct-valid representative. Source+target, side-source-soup, and full-source-soup builds succeed only because other geometry supplies nav polys; the target itself remains direct-invalid. This rules out winding, slope, and surrounding-geometry interaction as the primary cause. The next safe diagnostic is an isolated target-only Recast parameter decomposition for erosion radius, region filtering, and rasterization resolution, without changing production settings.'
   }),
 
+  highTargetRecastParameterIsolationPass18BI: Object.freeze({
+    qaRunNumber: 1162,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BH' as const,
+    productionConfigUnchanged: true,
+    diagnosticVariantsOnly: true,
+    productionCellSizeMeters: 0.18,
+    productionWalkableRadiusVoxels: 2,
+    productionPhysicalErosionRadiusMeters: 0.36,
+    productionMinRegionArea: 3,
+    productionMergeRegionArea: 8,
+    productionFailsBothSides: true,
+    productionNoRegionFilterSucceedsBothSides: false,
+    radius1SucceedsBothSides: true,
+    radius1NoRegionFilterSucceedsBothSides: true,
+    radius0SucceedsBothSides: true,
+    radius0NoRegionFilterSucceedsBothSides: true,
+    hiresCellSizeMeters: 0.09,
+    hiresSamePhysicalErosionWalkableRadiusVoxels: 4,
+    hiresSamePhysicalErosionRadiusMeters: 0.36,
+    hiresSamePhysicalErosionSucceedsBothSides: true,
+    hiresSamePhysicalErosionNoRegionSucceedsBothSides: true,
+    hiresRadius0SucceedsBothSides: true,
+    hiresRadius0NoRegionFilterSucceedsBothSides: true,
+    successfulVariantDirectTrustedBothSides: true,
+    regionFilteringExplainsProductionFailure: false,
+    physicalErosionMagnitudeAloneExplainsProductionFailure: false,
+    coarseRasterResolutionAndVoxelErosionCouplingImplicated: true,
+    constantPhysicalErosionResolutionSweepRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BI isolates the mirrored HIGH target under QA-only Recast variants without changing production settings. The production 0.18m cell / radius-2 / 0.36m nominal erosion build fails on both sides, and removing region filtering does not recover it. At the same 0.18m cell size, radius-1 and radius-0 both recover a direct-valid target. More importantly, a 0.09m cell with radius-4 preserves the same nominal 0.36m physical erosion yet succeeds and yields a direct-valid target on both sides, with or without region filtering. Region filtering and physical erosion magnitude alone therefore do not explain the production failure; the coarse raster resolution / integer-voxel erosion interaction is implicated. The next safe diagnostic is a target-only constant-physical-erosion resolution sweep. No production Recast setting change or runtime promotion is authorized.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -2983,11 +3023,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch and replace false-positive legacy representatives with direct low-level validity, and Pass 18BH proves the mirrored HIGH FloorConcrete02 target meshes themselves fail target-only production Recast generation despite all eight triangles being flat, upward-facing and slope-walkable. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked; isolate whether production erosion radius, region filtering, or rasterization resolution removes the HIGH target before considering any representation change.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch and replace false-positive legacy representatives with direct low-level validity, Pass 18BH proves the HIGH target meshes intrinsically fail production target-only Recast generation, and Pass 18BI rules out region filtering and nominal physical erosion magnitude alone: 0.09m cells with radius-4 preserve 0.36m erosion yet recover both mirrored targets. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep production off-mesh promotion blocked; quantify the raster-resolution threshold under constant nominal physical erosion before considering any local navigation representation change.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BH preserves Passes 18A-18BG and proves the missing HIGH target nav island is intrinsic to the target mesh under the production Recast build, not caused by triangle winding, excessive slope, or interference from surrounding source geometry. Both mirrored targets are flat upward-facing eight-triangle meshes, yet target-only generation produces no Detour navmesh data. The HIGH source alone generates normally. The next safe engineering step is a target-only diagnostic matrix that varies erosion radius, region filtering, and rasterization cell resolution only inside QA to identify which production constraint removes the target. No production config change, radius expansion, broad shortcut, trusted non-local endpoint, or production promotion is authorized. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BI preserves Passes 18A-18BH and isolates the missing HIGH target nav island to a coarse-raster / integer-voxel erosion interaction. Removing region filtering at the production 0.18m cell / radius-2 configuration still fails. Reducing erosion to radius-1 or radius-0 at 0.18m succeeds, while a 0.09m cell / radius-4 build also succeeds despite preserving the same nominal 0.36m physical erosion. Thus neither region filtering nor physical erosion magnitude alone explains the failure. The next safe engineering step is a target-only constant-physical-erosion resolution sweep; no production config change, broad shortcut, trusted non-local endpoint, or runtime promotion is authorized. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3022,12 +3062,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BH partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BI partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BH' ||
+    audit.resolutionPass !== '18BI' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -5543,8 +5583,49 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BH HIGH target rasterization boundary drifted');
   }
 
+  const params18bi = audit.highTargetRecastParameterIsolationPass18BI;
+  if (
+    params18bi.qaRunNumber !== 1162 ||
+    !params18bi.diagnosticOnly ||
+    params18bi.runtimePromotionAuthorized ||
+    params18bi.gameplayDirectionalityResolved ||
+    params18bi.gameplayJumpRequirementResolved ||
+    params18bi.sourcePass !== '18BH' ||
+    !params18bi.productionConfigUnchanged ||
+    !params18bi.diagnosticVariantsOnly ||
+    Math.abs(params18bi.productionCellSizeMeters - 0.18) > 1e-12 ||
+    params18bi.productionWalkableRadiusVoxels !== 2 ||
+    Math.abs(params18bi.productionPhysicalErosionRadiusMeters - 0.36) > 1e-12 ||
+    params18bi.productionMinRegionArea !== 3 ||
+    params18bi.productionMergeRegionArea !== 8 ||
+    !params18bi.productionFailsBothSides ||
+    params18bi.productionNoRegionFilterSucceedsBothSides ||
+    !params18bi.radius1SucceedsBothSides ||
+    !params18bi.radius1NoRegionFilterSucceedsBothSides ||
+    !params18bi.radius0SucceedsBothSides ||
+    !params18bi.radius0NoRegionFilterSucceedsBothSides ||
+    Math.abs(params18bi.hiresCellSizeMeters - 0.09) > 1e-12 ||
+    params18bi.hiresSamePhysicalErosionWalkableRadiusVoxels !== 4 ||
+    Math.abs(params18bi.hiresSamePhysicalErosionRadiusMeters - 0.36) > 1e-12 ||
+    !params18bi.hiresSamePhysicalErosionSucceedsBothSides ||
+    !params18bi.hiresSamePhysicalErosionNoRegionSucceedsBothSides ||
+    !params18bi.hiresRadius0SucceedsBothSides ||
+    !params18bi.hiresRadius0NoRegionFilterSucceedsBothSides ||
+    !params18bi.successfulVariantDirectTrustedBothSides ||
+    params18bi.regionFilteringExplainsProductionFailure ||
+    params18bi.physicalErosionMagnitudeAloneExplainsProductionFailure ||
+    !params18bi.coarseRasterResolutionAndVoxelErosionCouplingImplicated ||
+    !params18bi.constantPhysicalErosionResolutionSweepRequiredNext ||
+    params18bi.globalRecastSettingsChanged ||
+    params18bi.broadFrontierLinkAuthorized ||
+    params18bi.productionOffMeshLinkAuthorized ||
+    params18bi.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BI HIGH target Recast parameter isolation boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BH full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BI full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
