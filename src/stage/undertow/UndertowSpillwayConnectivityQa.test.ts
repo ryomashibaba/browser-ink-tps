@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18BB',
+      resolutionPass: '18BC',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -777,6 +777,38 @@ describe('T21-D partial Recast connectivity QA', () => {
       sampledNonGlassCollateralObserved: false,
       narrowExactRawRadiusSweepRequiredNext: true,
       broadRadiusExpansionAuthorized: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.highExactRawNarrowRadiusPass18BC
+    ).toMatchObject({
+      qaRunNumber: 1136,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18BB',
+      trustedEndpointsUsedAsLinks: false,
+      exactRawEndpointsUsed: true,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      sampledRadiiMeters: [1.500,1.510,1.515,1.520,1.522,1.524,1.525,1.530,1.540,1.550],
+      priorPositiveRawTargetSnapMeters: 1.5146358772143251,
+      priorNegativeRawTargetSnapMeters: 1.5236093815313405,
+      localRetreatImprovedAttachment: false,
+      baselineReachedDirectedPairs: 79,
+      baselineWeakComponentCount: 9,
+      baselineStronglyConnectedComponentCount: 11,
+      highForwardCommonAttachmentFoundThrough155: false,
+      highReverseCommonAttachmentFoundThrough155: false,
+      highBothCommonAttachmentFoundThrough155: false,
+      sampledMatrixStableAt79_9_11: true,
+      sampledNonGlassCollateralObserved: false,
+      largerHorizontalRadiusDidNotResolveHighAttachment: true,
+      offMeshVerticalExtentDiagnosticRequiredNext: true,
+      furtherRadiusExpansionAuthorized: false,
       productionOffMeshLinkAuthorized: false,
       activationBlockerCleared: false
     });
