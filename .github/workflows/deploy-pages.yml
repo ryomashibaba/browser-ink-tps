@@ -234,6 +234,12 @@ jobs:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18BDHighOffMeshSearchExtentQa.test.ts
 
+      - name: T21 Pass 18BE HIGH nav-island identity diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BEHighNavIslandIdentityQa.test.ts
+
       - name: T21 Pass 18C source-native Recast QA
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         env:
