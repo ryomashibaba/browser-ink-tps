@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BT' as const,
+  resolutionPass: '18BU' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3535,6 +3535,62 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BT splits the common predecessor bridge into connected triangle components and tests both add-one sufficiency and whole-bridge remove-one necessity under each side\'s fixed constructive baseline. Each mirrored bridge has 48 triangles split into 13 components: one 24-triangle component plus twelve 2-triangle components. POSITIVE_Z has four individually sufficient suppressors (indices 0,1,7,8); NEGATIVE_Z has three (0,2,12). Component 0 is the only shared sufficient component and spans Y=6..7.5 with 24 triangles, reproducing source-island absorption by itself on both sides. No single component is necessary when the whole bridge is present, so suppression is redundant. The next safe diagnostic is internal subdivision of shared component 0, not wider context or global Recast tuning.'
   }),
 
+  sharedBridgeInternalIsolationPass18BU: Object.freeze({
+    qaRunNumber: 1218,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BT' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' as const,
+    highTargetProxyScale: 1.237,
+    baselineContext:
+      'HIGH_SOURCE_PLUS_PROXY_TARGET_PLUS_BEST_CONSTRUCTIVE_CONTRIBUTOR' as const,
+    sharedBridgeComponentIndex: 0,
+    sharedBridgeComponentTriangleCount: 24,
+    sharedBridgeComponentYRange: [6,7.5] as const,
+    internalSubdivisionModes: [
+      'INDIVIDUAL_TRIANGLE',
+      'SHARED_EDGE_TRIANGLE_PAIR'
+    ] as const,
+    experimentModes: [
+      'ADD_SUBSET_SUFFICIENCY',
+      'FULL_COMPONENT_REMOVE_SUBSET_NECESSITY'
+    ] as const,
+    edgeAdjacentPairCountPerSide: 16,
+    positiveSufficientTriangleCount: 8,
+    positiveNecessaryTriangleCount: 0,
+    positiveSufficientPairCount: 6,
+    positiveNecessaryPairCount: 0,
+    negativeSufficientTriangleCount: 3,
+    negativeNecessaryTriangleCount: 0,
+    negativeSufficientPairCount: 2,
+    negativeNecessaryPairCount: 0,
+    sharedIndividuallySufficientTriangleIndices: [4,5] as const,
+    sharedIndividuallySufficientTriangleYRange: [7.5,7.5] as const,
+    sharedSufficientEdgePair: [4,5] as const,
+    sharedSufficientEdgePairYRange: [7.5,7.5] as const,
+    positiveSharedPairCentroid:
+      [-7.015713666445564,7.5,1.456070164762522] as const,
+    negativeSharedPairCentroid:
+      [3.045018535639312,7.5,-9.828845503788672] as const,
+    sharedTopCapTrianglesSufficientBothSides: true,
+    noIndividualTriangleNecessaryEitherSide: true,
+    noSharedEdgePairNecessaryEitherSide: true,
+    suppressionRemainsRedundantInsideSharedComponent: true,
+    sharedTopCapPhysicalRelationAuditRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BU subdivides the shared Pass 18BT component 0 into all 24 individual triangles and all 16 shared-edge triangle pairs under the same fixed constructive baseline. POSITIVE_Z has eight individually sufficient triangles and six sufficient edge pairs; NEGATIVE_Z has three individually sufficient triangles and two sufficient edge pairs. Triangles 4 and 5 are individually sufficient on both mirrored sides, and their shared-edge pair [4,5] is also sufficient on both sides. Both triangles and the pair lie entirely at Y=7.5, localizing a common sufficient suppressor to the shared bridge top cap. No individual triangle or edge pair is necessary when the full shared component is present, so suppression remains redundant. The next safe diagnostic is direct physical/topological relation auditing of the shared Y=7.5 top-cap pair against the HIGH source and raw target, not wider context or global Recast tuning.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3566,11 +3622,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT now decomposes the common predecessor bridge and proves one shared 24-triangle component (component 0, Y=6..7.5) is individually sufficient to recreate source-island absorption on both mirrored sides, while no single bridge component is necessary when the whole bridge is present. The remaining engineering task is internal isolation of that shared 24-triangle component rather than wider context, radius, proxy-scale, or global Recast tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT decomposes the common predecessor bridge to a shared 24-triangle component 0, and Pass 18BU further localizes common sufficiency inside that component to individual triangles 4 and 5 and their shared-edge pair [4,5], all on the Y=7.5 top cap. No individual triangle or shared-edge pair is necessary in the full component, so suppression remains redundant. The remaining engineering task is direct physical/topological relation auditing of this shared Y=7.5 top-cap pair against the HIGH source and raw target rather than wider context, radius, proxy-scale, or global Recast tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BT preserves Passes 18A-18BS and subdivides the mirrored predecessor bridge into connected triangle components under the fixed constructive baseline. Each 48-triangle bridge becomes 13 components. The shared 24-triangle component 0 (Y=6..7.5) is individually sufficient to recreate source-island absorption on both sides; POS also has small sufficient components 1/7/8 and NEG has 2/12. Removing any single bridge component from the whole bridge does not restore the constructive proxy state, proving redundant suppression. The next safe engineering step is internal patch/triangle isolation inside shared component 0 while keeping production settings, source geometry, proxy scale, and raw endpoints fixed. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BU preserves Passes 18A-18BT and internally subdivides shared predecessor-bridge component 0. Across all 24 triangles and 16 shared-edge pairs per side, triangles 4 and 5 are individually sufficient suppressors on both mirrored sides and pair [4,5] is a common sufficient patch; all lie on the Y=7.5 top cap. No individual triangle or pair is necessary within the full component, confirming redundant suppression. The next safe engineering step is a direct physical/topological relation audit of this common top-cap pair against the HIGH source/raw target while keeping production settings, source geometry, proxy scale, and endpoints fixed. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3605,12 +3661,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BT partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BU partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BT' ||
+    audit.resolutionPass !== '18BU' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -6676,8 +6732,57 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BT predecessor-bridge component isolation boundary drifted');
   }
 
+  const internal18bu = audit.sharedBridgeInternalIsolationPass18BU;
+  if (
+    internal18bu.qaRunNumber !== 1218 ||
+    !internal18bu.diagnosticOnly ||
+    internal18bu.runtimePromotionAuthorized ||
+    internal18bu.gameplayDirectionalityResolved ||
+    internal18bu.gameplayJumpRequirementResolved ||
+    internal18bu.sourcePass !== '18BT' ||
+    !internal18bu.productionConfigUnchanged ||
+    !internal18bu.sourceGeometryUnchanged ||
+    !internal18bu.diagnosticProxyOnly ||
+    internal18bu.proxyScalingMode !== 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' ||
+    Math.abs(internal18bu.highTargetProxyScale - 1.237) > 1e-12 ||
+    internal18bu.baselineContext !==
+      'HIGH_SOURCE_PLUS_PROXY_TARGET_PLUS_BEST_CONSTRUCTIVE_CONTRIBUTOR' ||
+    internal18bu.sharedBridgeComponentIndex !== 0 ||
+    internal18bu.sharedBridgeComponentTriangleCount !== 24 ||
+    internal18bu.sharedBridgeComponentYRange.join(',') !== '6,7.5' ||
+    internal18bu.internalSubdivisionModes.join(',') !==
+      'INDIVIDUAL_TRIANGLE,SHARED_EDGE_TRIANGLE_PAIR' ||
+    internal18bu.experimentModes.join(',') !==
+      'ADD_SUBSET_SUFFICIENCY,FULL_COMPONENT_REMOVE_SUBSET_NECESSITY' ||
+    internal18bu.edgeAdjacentPairCountPerSide !== 16 ||
+    internal18bu.positiveSufficientTriangleCount !== 8 ||
+    internal18bu.positiveNecessaryTriangleCount !== 0 ||
+    internal18bu.positiveSufficientPairCount !== 6 ||
+    internal18bu.positiveNecessaryPairCount !== 0 ||
+    internal18bu.negativeSufficientTriangleCount !== 3 ||
+    internal18bu.negativeNecessaryTriangleCount !== 0 ||
+    internal18bu.negativeSufficientPairCount !== 2 ||
+    internal18bu.negativeNecessaryPairCount !== 0 ||
+    internal18bu.sharedIndividuallySufficientTriangleIndices.join(',') !== '4,5' ||
+    internal18bu.sharedIndividuallySufficientTriangleYRange.join(',') !== '7.5,7.5' ||
+    internal18bu.sharedSufficientEdgePair.join(',') !== '4,5' ||
+    internal18bu.sharedSufficientEdgePairYRange.join(',') !== '7.5,7.5' ||
+    !internal18bu.sharedTopCapTrianglesSufficientBothSides ||
+    !internal18bu.noIndividualTriangleNecessaryEitherSide ||
+    !internal18bu.noSharedEdgePairNecessaryEitherSide ||
+    !internal18bu.suppressionRemainsRedundantInsideSharedComponent ||
+    !internal18bu.sharedTopCapPhysicalRelationAuditRequiredNext ||
+    internal18bu.globalRecastSettingsChanged ||
+    internal18bu.broadFrontierLinkAuthorized ||
+    internal18bu.trustedNonLocalEndpointUsed ||
+    internal18bu.productionOffMeshLinkAuthorized ||
+    internal18bu.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BU shared bridge internal-isolation boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BT full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BU full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
