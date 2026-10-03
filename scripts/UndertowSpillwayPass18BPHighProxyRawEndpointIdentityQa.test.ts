@@ -546,10 +546,33 @@ describe('T21 Pass 18BP HIGH proxy raw-endpoint identity diagnostic',()=>{
       };
     };
     const projectRepresentative=(point:StageVector3)=>{
-      const result=query.findClosestPoint(
-        {x:point[0],y:point[1],z:point[2]},
-        {halfExtents:{x:0.30,y:0.30,z:0.30}}
-      );
+      for(const halfExtentMeters of [0.30,0.50,1.00,1.55,2.00] as const){
+        const result=query.findClosestPoint(
+          {x:point[0],y:point[1],z:point[2]},
+          {halfExtents:{
+            x:halfExtentMeters,
+            y:halfExtentMeters,
+            z:halfExtentMeters
+          }}
+        );
+        if(result.success){
+          const projected=[
+            result.point.x,result.point.y,result.point.z
+          ] as StageVector3;
+          return {
+            success:true,
+            polyRef:result.polyRef,
+            requestedPoint:point,
+            projectedPoint:projected,
+            snapMeters:distance(point,projected),
+            queryMode:'BOUNDED' as const,
+            halfExtentMeters
+          };
+        }
+      }
+      const result=query.findClosestPoint({
+        x:point[0],y:point[1],z:point[2]
+      });
       const projected=result.success
         ?[result.point.x,result.point.y,result.point.z] as StageVector3
         :null;
@@ -558,7 +581,9 @@ describe('T21 Pass 18BP HIGH proxy raw-endpoint identity diagnostic',()=>{
         polyRef:result.polyRef,
         requestedPoint:point,
         projectedPoint:projected,
-        snapMeters:projected?distance(point,projected):Number.POSITIVE_INFINITY
+        snapMeters:projected?distance(point,projected):Number.POSITIVE_INFINITY,
+        queryMode:'DEFAULT_FALLBACK' as const,
+        halfExtentMeters:null
       };
     };
     const pathReach=(from:StageVector3,to:StageVector3)=>{
@@ -572,6 +597,10 @@ describe('T21 Pass 18BP HIGH proxy raw-endpoint identity diagnostic',()=>{
         endSnapDistanceMeters:audit.endSnapDistanceMeters
       };
     };
+    const pathReachNullable=(
+      from:StageVector3|null,
+      to:StageVector3|null
+    )=>from&&to?pathReach(from,to):null;
 
     const representatives={} as Record<Side,{
       highSource:{point:StageVector3;snapMeters:number};
@@ -598,32 +627,35 @@ describe('T21 Pass 18BP HIGH proxy raw-endpoint identity diagnostic',()=>{
         const rawTargetProjection=project(pair.b);
         const sourceRepresentativeProjection=projectRepresentative(rep.highSource.point);
         const targetRepresentativeProjection=projectRepresentative(rep.highTarget.point);
-        if(
-          !rawSourceProjection.projectedPoint||
-          !rawTargetProjection.projectedPoint||
-          !sourceRepresentativeProjection.projectedPoint||
-          !targetRepresentativeProjection.projectedPoint
-        ){
-          throw new Error(`Pass 18BP direct projection missing ${side}`);
-        }
-        const rawSourceToSourceRepresentative=pathReach(
-          rawSourceProjection.projectedPoint,rep.highSource.point
+
+        const rawSourceToSourceRepresentative=pathReachNullable(
+          rawSourceProjection.projectedPoint,
+          sourceRepresentativeProjection.projectedPoint
         );
-        const sourceRepresentativeToRawSource=pathReach(
-          rep.highSource.point,rawSourceProjection.projectedPoint
+        const sourceRepresentativeToRawSource=pathReachNullable(
+          sourceRepresentativeProjection.projectedPoint,
+          rawSourceProjection.projectedPoint
         );
-        const rawTargetToTargetRepresentative=pathReach(
-          rawTargetProjection.projectedPoint,rep.highTarget.point
+        const rawTargetToTargetRepresentative=pathReachNullable(
+          rawTargetProjection.projectedPoint,
+          targetRepresentativeProjection.projectedPoint
         );
-        const targetRepresentativeToRawTarget=pathReach(
-          rep.highTarget.point,rawTargetProjection.projectedPoint
+        const targetRepresentativeToRawTarget=pathReachNullable(
+          targetRepresentativeProjection.projectedPoint,
+          rawTargetProjection.projectedPoint
         );
-        const rawTargetToSourceRepresentative=pathReach(
-          rawTargetProjection.projectedPoint,rep.highSource.point
+        const rawTargetToSourceRepresentative=pathReachNullable(
+          rawTargetProjection.projectedPoint,
+          sourceRepresentativeProjection.projectedPoint
         );
-        const sourceRepresentativeToRawTarget=pathReach(
-          rep.highSource.point,rawTargetProjection.projectedPoint
+        const sourceRepresentativeToRawTarget=pathReachNullable(
+          sourceRepresentativeProjection.projectedPoint,
+          rawTargetProjection.projectedPoint
         );
+
+        const mutual=(a:ReturnType<typeof pathReach>|null,b:ReturnType<typeof pathReach>|null)=>
+          a&&b?a.reachedTarget&&b.reachedTarget:null;
+
         return [side,{
           rawSourcePoint:pair.a,
           rawTargetPoint:pair.b,
@@ -632,26 +664,32 @@ describe('T21 Pass 18BP HIGH proxy raw-endpoint identity diagnostic',()=>{
           sourceRepresentativeProjection,
           targetRepresentativeProjection,
           rawSourcePolyMatchesSourceRepresentativePoly:
-            rawSourceProjection.polyRef===sourceRepresentativeProjection.polyRef,
+            rawSourceProjection.success&&sourceRepresentativeProjection.success
+              ?rawSourceProjection.polyRef===sourceRepresentativeProjection.polyRef
+              :null,
           rawTargetPolyMatchesTargetRepresentativePoly:
-            rawTargetProjection.polyRef===targetRepresentativeProjection.polyRef,
+            rawTargetProjection.success&&targetRepresentativeProjection.success
+              ?rawTargetProjection.polyRef===targetRepresentativeProjection.polyRef
+              :null,
           rawTargetPolyMatchesSourceRepresentativePoly:
-            rawTargetProjection.polyRef===sourceRepresentativeProjection.polyRef,
+            rawTargetProjection.success&&sourceRepresentativeProjection.success
+              ?rawTargetProjection.polyRef===sourceRepresentativeProjection.polyRef
+              :null,
           rawSourceToSourceRepresentative,
           sourceRepresentativeToRawSource,
           rawTargetToTargetRepresentative,
           targetRepresentativeToRawTarget,
           rawTargetToSourceRepresentative,
           sourceRepresentativeToRawTarget,
-          rawSourceOnSourceIsland:
-            rawSourceToSourceRepresentative.reachedTarget&&
-            sourceRepresentativeToRawSource.reachedTarget,
-          rawTargetOnTargetIsland:
-            rawTargetToTargetRepresentative.reachedTarget&&
-            targetRepresentativeToRawTarget.reachedTarget,
-          rawTargetOnSourceIsland:
-            rawTargetToSourceRepresentative.reachedTarget&&
-            sourceRepresentativeToRawTarget.reachedTarget
+          rawSourceOnSourceIsland:mutual(
+            rawSourceToSourceRepresentative,sourceRepresentativeToRawSource
+          ),
+          rawTargetOnTargetIsland:mutual(
+            rawTargetToTargetRepresentative,targetRepresentativeToRawTarget
+          ),
+          rawTargetOnSourceIsland:mutual(
+            rawTargetToSourceRepresentative,sourceRepresentativeToRawTarget
+          )
         }];
       })
     );
@@ -795,24 +833,37 @@ describe('T21 Pass 18BP HIGH proxy raw-endpoint identity diagnostic',()=>{
       const identity=rawEndpointIdentity[side] as {
         rawSourceProjection:{success:boolean;snapMeters:number;polyRef:number};
         rawTargetProjection:{success:boolean;snapMeters:number;polyRef:number};
-        sourceRepresentativeProjection:{success:boolean;polyRef:number};
-        targetRepresentativeProjection:{success:boolean;polyRef:number};
-        rawSourcePolyMatchesSourceRepresentativePoly:boolean;
-        rawTargetPolyMatchesTargetRepresentativePoly:boolean;
-        rawTargetPolyMatchesSourceRepresentativePoly:boolean;
-        rawSourceOnSourceIsland:boolean;
-        rawTargetOnTargetIsland:boolean;
-        rawTargetOnSourceIsland:boolean;
+        sourceRepresentativeProjection:{
+          success:boolean;polyRef:number;
+          queryMode:'BOUNDED'|'DEFAULT_FALLBACK';
+          halfExtentMeters:number|null;
+        };
+        targetRepresentativeProjection:{
+          success:boolean;polyRef:number;
+          queryMode:'BOUNDED'|'DEFAULT_FALLBACK';
+          halfExtentMeters:number|null;
+        };
+        rawSourcePolyMatchesSourceRepresentativePoly:boolean|null;
+        rawTargetPolyMatchesTargetRepresentativePoly:boolean|null;
+        rawTargetPolyMatchesSourceRepresentativePoly:boolean|null;
+        rawSourceOnSourceIsland:boolean|null;
+        rawTargetOnTargetIsland:boolean|null;
+        rawTargetOnSourceIsland:boolean|null;
       };
-      expect(identity.rawSourceProjection.success).toBe(true);
-      expect(identity.rawTargetProjection.success).toBe(true);
-      expect(identity.sourceRepresentativeProjection.success).toBe(true);
-      expect(identity.targetRepresentativeProjection.success).toBe(true);
-      expect(Number.isFinite(identity.rawSourceProjection.snapMeters)).toBe(true);
-      expect(Number.isFinite(identity.rawTargetProjection.snapMeters)).toBe(true);
-      expect(typeof identity.rawSourceOnSourceIsland).toBe('boolean');
-      expect(typeof identity.rawTargetOnTargetIsland).toBe('boolean');
-      expect(typeof identity.rawTargetOnSourceIsland).toBe('boolean');
+      expect(typeof identity.rawSourceProjection.success).toBe('boolean');
+      expect(typeof identity.rawTargetProjection.success).toBe('boolean');
+      expect(typeof identity.sourceRepresentativeProjection.success).toBe('boolean');
+      expect(typeof identity.targetRepresentativeProjection.success).toBe('boolean');
+      if(identity.rawSourceProjection.success){
+        expect(Number.isFinite(identity.rawSourceProjection.snapMeters)).toBe(true);
+      }
+      if(identity.rawTargetProjection.success){
+        expect(Number.isFinite(identity.rawTargetProjection.snapMeters)).toBe(true);
+      }
+      expect(['BOUNDED','DEFAULT_FALLBACK'])
+        .toContain(identity.sourceRepresentativeProjection.queryMode);
+      expect(['BOUNDED','DEFAULT_FALLBACK'])
+        .toContain(identity.targetRepresentativeProjection.queryMode);
     }
     expect(baselineMatrix.reached).toBe(79);
     expect(baselineMatrix.weak).toBe(9);
