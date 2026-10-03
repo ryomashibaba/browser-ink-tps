@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18BT',
+      resolutionPass: '18BU',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1576,6 +1576,62 @@ describe('T21-D partial Recast connectivity QA', () => {
       noSingleBridgeComponentIsNecessaryEitherSide: true,
       bridgeSuppressionIsRedundantWithinWholeBridge: true,
       sharedLargeComponentInternalIsolationRequiredNext: true,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      trustedNonLocalEndpointUsed: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sharedBridgeInternalIsolationPass18BU
+    ).toMatchObject({
+      qaRunNumber: 1218,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18BT',
+      productionConfigUnchanged: true,
+      sourceGeometryUnchanged: true,
+      diagnosticProxyOnly: true,
+      proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER',
+      highTargetProxyScale: 1.237,
+      baselineContext:
+        'HIGH_SOURCE_PLUS_PROXY_TARGET_PLUS_BEST_CONSTRUCTIVE_CONTRIBUTOR',
+      sharedBridgeComponentIndex: 0,
+      sharedBridgeComponentTriangleCount: 24,
+      sharedBridgeComponentYRange: [6,7.5],
+      internalSubdivisionModes: [
+        'INDIVIDUAL_TRIANGLE',
+        'SHARED_EDGE_TRIANGLE_PAIR'
+      ],
+      experimentModes: [
+        'ADD_SUBSET_SUFFICIENCY',
+        'FULL_COMPONENT_REMOVE_SUBSET_NECESSITY'
+      ],
+      edgeAdjacentPairCountPerSide: 16,
+      positiveSufficientTriangleCount: 8,
+      positiveNecessaryTriangleCount: 0,
+      positiveSufficientPairCount: 6,
+      positiveNecessaryPairCount: 0,
+      negativeSufficientTriangleCount: 3,
+      negativeNecessaryTriangleCount: 0,
+      negativeSufficientPairCount: 2,
+      negativeNecessaryPairCount: 0,
+      sharedIndividuallySufficientTriangleIndices: [4,5],
+      sharedIndividuallySufficientTriangleYRange: [7.5,7.5],
+      sharedSufficientEdgePair: [4,5],
+      sharedSufficientEdgePairYRange: [7.5,7.5],
+      positiveSharedPairCentroid:
+        [-7.015713666445564,7.5,1.456070164762522],
+      negativeSharedPairCentroid:
+        [3.045018535639312,7.5,-9.828845503788672],
+      sharedTopCapTrianglesSufficientBothSides: true,
+      noIndividualTriangleNecessaryEitherSide: true,
+      noSharedEdgePairNecessaryEitherSide: true,
+      suppressionRemainsRedundantInsideSharedComponent: true,
+      sharedTopCapPhysicalRelationAuditRequiredNext: true,
       globalRecastSettingsChanged: false,
       broadFrontierLinkAuthorized: false,
       trustedNonLocalEndpointUsed: false,
