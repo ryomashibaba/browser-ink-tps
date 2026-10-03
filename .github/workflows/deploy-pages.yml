@@ -65,12 +65,6 @@ jobs:
         run: python scripts/undertow-temple01-upper-terrain-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
 
 
-      - name: T21 Pass 18BU shared bridge internal isolation diagnostic
-        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
-        env:
-          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
-        run: npx vitest run scripts/UndertowSpillwayPass18BUSharedBridgeInternalIsolationQa.test.ts
-
       - name: T21 Temple01 local XZ contour audit
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         shell: bash
@@ -138,6 +132,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: T21 Pass 18BU shared bridge internal isolation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BUSharedBridgeInternalIsolationQa.test.ts
 
       - name: T21 Pass 18AN slope-floor00 radius diagnostic
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
