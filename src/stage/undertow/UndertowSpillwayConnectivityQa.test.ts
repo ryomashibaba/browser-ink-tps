@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18BQ',
+      resolutionPass: '18BR',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1399,6 +1399,74 @@ describe('T21-D partial Recast connectivity QA', () => {
       contextDependentValidityRecoveryObserved: true,
       rawTargetStillAbsorbedBySourceIslandBothSides: true,
       individualGeometryContributorIsolationRequiredNext: true,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      trustedNonLocalEndpointUsed: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.highProxySingleComponentContributorsPass18BR
+    ).toMatchObject({
+      qaRunNumber: 1204,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18BQ',
+      productionConfigUnchanged: true,
+      sourceGeometryUnchanged: true,
+      diagnosticProxyOnly: true,
+      proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER',
+      highTargetProxyScale: 1.237,
+      baselineContext: 'HIGH_SOURCE_PLUS_TARGET',
+      additiveContextMode: 'ONE_ROUTE_COMPONENT_AT_A_TIME',
+      candidateCountPerSide: 57,
+      positiveBaselineTargetSourceDirectTrusted: false,
+      positiveBaselineTargetProxyDirectTrusted: false,
+      positiveSourceValidityFlipCount: 17,
+      positiveProxyValidityFlipCount: 24,
+      positiveAnyValidityFlipCount: 27,
+      positiveStateCounts: {
+        source0Proxy0: 30,
+        source1Proxy1: 14,
+        source0Proxy1: 10,
+        source1Proxy0: 3
+      },
+      positiveRawTargetMovesToProxyIslandCount: 2,
+      positiveBestConstructiveContributorId:
+        'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c63',
+      positiveBestConstructiveContributorMaterial:
+        'FldObj_Temple01_PntSet_BridgeMetal00',
+      positiveBestConstructiveContributorYRange: [5.1,5.1],
+      positiveBestConstructiveRawTargetSnapMeters: 0.3791953963411906,
+      positiveOtherConstructiveContributorId:
+        'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c47',
+      positiveOtherConstructiveRawTargetSnapMeters: 0.5157739997726296,
+      negativeBaselineTargetSourceDirectTrusted: true,
+      negativeBaselineTargetProxyDirectTrusted: true,
+      negativeSourceValidityFlipCount: 16,
+      negativeProxyValidityFlipCount: 5,
+      negativeAnyValidityFlipCount: 18,
+      negativeStateCounts: {
+        source0Proxy1: 13,
+        source1Proxy0: 2,
+        source0Proxy0: 3,
+        source1Proxy1: 39
+      },
+      negativeRawTargetMovesToProxyIslandCount: 7,
+      negativeBestConstructiveContributorId:
+        'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c148',
+      negativeBestConstructiveContributorMaterial:
+        'FldObj_Temple01_PntSet_BridgeMetal00',
+      negativeBestConstructiveContributorYRange: [5.1,5.1],
+      negativeBestConstructiveRawTargetSnapMeters: 0.3643649740994081,
+      negativeConstructiveContributorIncludesGrassFloor: true,
+      negativeConstructiveContributorIncludesLowSlope: true,
+      singleComponentCanMoveRawTargetToProxyIslandBothSides: true,
+      contributionEffectsAreMaterialAndContextDependent: true,
+      bestConstructiveContributorSuppressionScanRequiredNext: true,
       globalRecastSettingsChanged: false,
       broadFrontierLinkAuthorized: false,
       trustedNonLocalEndpointUsed: false,
