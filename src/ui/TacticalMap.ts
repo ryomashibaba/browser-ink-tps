@@ -1,4 +1,4 @@
-import { Vec3 } from 'playcanvas';
+import { Quat, Vec3 } from 'playcanvas';
 import type { CpuAgentSystem } from '../ai/CpuAgentSystem';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
@@ -6,6 +6,11 @@ import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import { SurfaceFlags, Team } from '../ink/types';
 import type { SuperJumpTarget } from '../mobility/SuperJumpSystem';
 import type { StageDefinition } from '../stage/StageDefinition';
+import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import {
+  stageSolidTriangleMeshErrors,
+  stageSolidTriangleWorldVertices
+} from '../stage/StageTriangleMesh';
 import { weaponProfile } from '../weapons/WeaponCatalog';
 
 interface MapJumpCandidate {
@@ -159,16 +164,75 @@ export class TacticalMap {
 
     for (const solid of this.stage.solids) {
       if (!solid.render) continue;
-      const [cx, , cz] = solid.center;
-      const [sx, , sz] = solid.size;
-      const a = this.worldToMap(cx - sx * 0.5, cz - sz * 0.5);
-      const b = this.worldToMap(cx + sx * 0.5, cz + sz * 0.5);
-      const x = Math.min(a.x, b.x);
-      const y = Math.min(a.y, b.y);
-      const w = Math.abs(b.x - a.x);
-      const h = Math.abs(b.y - a.y);
-      ctx.fillRect(x, y, w, h);
-      ctx.strokeRect(x, y, w, h);
+      const meshErrors = stageSolidTriangleMeshErrors(solid);
+      if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
+
+      if (solid.triangleMesh) {
+        const world = stageSolidTriangleWorldVertices(solid);
+        const mapped = world.map((point) => this.worldToMap(point[0], point[2]));
+        for (let i = 0; i < solid.triangleMesh.indices.length; i += 3) {
+          const a = mapped[solid.triangleMesh.indices[i]!]!;
+          const b = mapped[solid.triangleMesh.indices[i + 1]!]!;
+          const c = mapped[solid.triangleMesh.indices[i + 2]!]!;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.lineTo(c.x, c.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+        continue;
+      }
+
+      if (!solid.footprint) {
+        const [cx, , cz] = solid.center;
+        const [sx, , sz] = solid.size;
+        const a = this.worldToMap(cx - sx * 0.5, cz - sz * 0.5);
+        const b = this.worldToMap(cx + sx * 0.5, cz + sz * 0.5);
+        const x = Math.min(a.x, b.x);
+        const y = Math.min(a.y, b.y);
+        const w = Math.abs(b.x - a.x);
+        const h = Math.abs(b.y - a.y);
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeRect(x, y, w, h);
+        continue;
+      }
+
+      const raster = rasterizeStageFootprint(
+        solid.size[0],
+        solid.size[2],
+        solid.footprint
+      );
+      const euler = solid.rotationEulerDegrees ?? [0, 0, 0];
+      const rotation = new Quat().setFromEulerAngles(euler[0], euler[1], euler[2]);
+      const center = new Vec3(solid.center[0], solid.center[1], solid.center[2]);
+
+      for (const rect of raster.rectangles) {
+        const corners = [
+          [rect.minU, rect.minV],
+          [rect.maxU, rect.minV],
+          [rect.maxU, rect.maxV],
+          [rect.minU, rect.maxV]
+        ] as const;
+        const mapped = corners.map(([u, v]) => {
+          const local = new Vec3(
+            u - solid.size[0] * 0.5,
+            0,
+            v - solid.size[2] * 0.5
+          );
+          const world = rotateMapVector(local, rotation).add(center);
+          return this.worldToMap(world.x, world.z);
+        });
+        ctx.beginPath();
+        ctx.moveTo(mapped[0]!.x, mapped[0]!.y);
+        for (let i = 1; i < mapped.length; i += 1) {
+          ctx.lineTo(mapped[i]!.x, mapped[i]!.y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
     }
   }
 
@@ -381,4 +445,17 @@ export class TacticalMap {
 function formatClock(seconds: number): string {
   const value = Math.max(0, Math.ceil(seconds));
   return `${Math.floor(value / 60)}:${(value % 60).toString().padStart(2, '0')}`;
+}
+
+
+function rotateMapVector(v: Vec3, q: Quat): Vec3 {
+  const ix = q.w * v.x + q.y * v.z - q.z * v.y;
+  const iy = q.w * v.y + q.z * v.x - q.x * v.z;
+  const iz = q.w * v.z + q.x * v.y - q.y * v.x;
+  const iw = -q.x * v.x - q.y * v.y - q.z * v.z;
+  return new Vec3(
+    ix * q.w + iw * -q.x + iy * -q.z - iz * -q.y,
+    iy * q.w + iw * -q.y + iz * -q.x - ix * -q.z,
+    iz * q.w + iw * -q.z + ix * -q.y - iy * -q.x
+  );
 }

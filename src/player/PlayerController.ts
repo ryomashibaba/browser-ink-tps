@@ -11,6 +11,10 @@ import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSys
 import { SurfaceFlags, Team } from '../ink/types';
 import type { PlayerInput } from '../input/PlayerInput';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+import {
+  PLAYER_CHARACTER_PHYSICS,
+  createConfiguredPlayerCharacterController
+} from './PlayerCharacterPhysics';
 
 export type PlayerMode = 'HUMAN' | 'SQUID';
 export type InkRelation = 'OWN' | 'ENEMY' | 'NEUTRAL' | 'NONE';
@@ -36,6 +40,7 @@ export class PlayerController {
   private readonly squidCollider: Collider;
   private activeCollider: Collider;
   private readonly character: KinematicCharacterController;
+  private readonly characterCollisionFilter: (collider: Collider) => boolean;
   private readonly entity: Entity;
   private readonly material: StandardMaterial;
   private readonly velocity = new Vec3();
@@ -74,13 +79,11 @@ export class PlayerController {
   private weaponMoveMultiplier = 1;
   private snapToGroundEnabled = true;
 
-  private static readonly humanRadius = GAME_CONFIG.player.humanColliderRadiusMeters;
-  private static readonly humanHalfHeight = GAME_CONFIG.player.humanColliderHalfHeightMeters;
-  private static readonly humanFootOffset =
-    PlayerController.humanHalfHeight + PlayerController.humanRadius;
-  private static readonly squidRadius = GAME_CONFIG.player.squidColliderRadiusMeters;
-  private static readonly squidCenterOffsetY =
-    -(PlayerController.humanFootOffset - PlayerController.squidRadius);
+  private static readonly humanRadius = PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
+  private static readonly humanHalfHeight = PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters;
+  private static readonly humanFootOffset = PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  private static readonly squidRadius = PLAYER_CHARACTER_PHYSICS.squidRadiusMeters;
+  private static readonly squidCenterOffsetY = PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters;
 
   public constructor(
     app: AppBase,
@@ -109,11 +112,9 @@ export class PlayerController {
     );
     this.activeCollider = this.humanCollider;
 
-    this.character = physics.world.createCharacterController(0.025);
-    this.character.enableAutostep(0.34, 0.14, false);
-    this.character.enableSnapToGround(0.24);
-    this.character.setMaxSlopeClimbAngle(50 * Math.PI / 180);
-    this.character.setMinSlopeSlideAngle(55 * Math.PI / 180);
+    this.character = createConfiguredPlayerCharacterController(physics.world);
+    this.characterCollisionFilter = (collider: Collider) =>
+      this.physics.shouldCharacterCollide(collider, this.mode);
 
     this.material = new StandardMaterial();
     this.material.useMetalness = true;
@@ -461,11 +462,17 @@ export class PlayerController {
       this.applyGravity(dt);
     }
 
-    this.character.computeColliderMovement(this.activeCollider, {
-      x: this.velocity.x * dt,
-      y: this.verticalVelocity * dt,
-      z: this.velocity.z * dt
-    });
+    this.character.computeColliderMovement(
+      this.activeCollider,
+      {
+        x: this.velocity.x * dt,
+        y: this.verticalVelocity * dt,
+        z: this.velocity.z * dt
+      },
+      undefined,
+      undefined,
+      this.characterCollisionFilter
+    );
     const corrected = this.character.computedMovement();
     this.grounded = this.character.computedGrounded();
 

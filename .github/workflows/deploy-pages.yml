@@ -23,6 +23,48 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Restore T21 Temple01 LFS cache
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/cache@v4
+        with:
+          path: /tmp/kitrix-lfs-cache/Vss_Temple01.obj
+          key: t21-temple01-lfs-a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046
+
+      - name: Prepare verified T21 Temple01 geometry source
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/kitrix-lfs
+          mkdir -p /tmp/kitrix-lfs
+          if [ -f /tmp/kitrix-lfs-cache/Vss_Temple01.obj ]; then
+            cp /tmp/kitrix-lfs-cache/Vss_Temple01.obj /tmp/kitrix-lfs/Vss_Temple01.obj
+            echo "T21RAY cache=HIT"
+          else
+            mkdir -p /tmp/kitrix-lfs-cache
+            cd /tmp/kitrix-lfs
+            git init -q
+            git remote add origin https://github.com/kirakira-dev/KiTrix.git
+            git lfs install --local
+            cat > temple01.pointer <<'PTR'
+          version https://git-lfs.github.com/spec/v1
+          oid sha256:a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046
+          size 43263289
+          PTR
+            timeout 180s git lfs smudge < temple01.pointer > Vss_Temple01.obj
+            cp Vss_Temple01.obj /tmp/kitrix-lfs-cache/Vss_Temple01.obj
+            echo "T21RAY cache=MISS"
+          fi
+          test "$(stat -c%s /tmp/kitrix-lfs/Vss_Temple01.obj)" = "43263289"
+          echo "a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  /tmp/kitrix-lfs/Vss_Temple01.obj" | sha256sum -c -
+          echo "T21SOURCE verified_bytes=43263289 sha256=a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046"
+
+      - name: T21 Temple01 Pass 18C upper-terrain source audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-temple01-upper-terrain-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
+
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -38,6 +80,488 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: T21 Pass 18BW top-cap rasterization isolation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BWTopCapRasterizationIsolationQa.test.ts
+
+      - name: T21 Temple01 local XZ contour audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-temple01-xz-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
+
+      - name: T21 Temple01 water Y candidate audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-temple01-water-y-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
+
+
+      - name: T21 Sunfish Zones vector recovery audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet "PyMuPDF==1.26.4"
+          python scripts/undertow-sunfish-zones-pdf-audit.py \
+            --output /tmp/undertow-zones-vector-audit.json \
+            --pdf-output /tmp/undertow-zones-sunfish.pdf
+
+      - name: Upload T21 Sunfish Zones vector audit
+        if: always() && github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-zones-vector-audit
+          path: |
+            /tmp/undertow-zones-vector-audit.json
+            /tmp/undertow-zones-sunfish.pdf
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: T21 Sunfish Turf route-ramp vector audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/undertow-sunfish-turf-ramp-paint-audit.py \
+            --output /tmp/undertow-turf-ramp-paint-audit.json \
+            --pdf-output /tmp/undertow-turf-sunfish.pdf
+
+      - name: Upload T21 Sunfish Turf ramp audit
+        if: always() && github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-turf-ramp-paint-audit
+          path: |
+            /tmp/undertow-turf-ramp-paint-audit.json
+            /tmp/undertow-turf-sunfish.pdf
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: T21 Pass 18BU shared bridge internal isolation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BUSharedBridgeInternalIsolationQa.test.ts
+
+      - name: T21 Pass 18BV shared top-cap relation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BVSharedTopCapRelationQa.test.ts
+
+      - name: T21 Pass 18AN slope-floor00 radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ANSlopeFloor00RadiusQa.test.ts
+
+      - name: T21 Pass 18AO post-floor00 break diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AOPostFloor00BreakQa.test.ts
+
+      - name: T21 Pass 18AP floor00-lower-floor02 production KCC diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18APFloor00LowerFloor02KccQa.test.ts
+
+      - name: T21 Pass 18AQ QA-only directional attachment diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AQDirectionalAttachmentQa.test.ts
+
+      - name: T21 Pass 18AR directional fine-radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ARDirectionalFineRadiusQa.test.ts
+
+      - name: T21 Pass 18AS directional terminal-radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ASDirectionalTerminalRadiusQa.test.ts
+
+      - name: T21 Pass 18AT directional 1mm-radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ATDirectionalOneMmRadiusQa.test.ts
+
+      - name: T21 Pass 18AU directional 0.1mm-radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AUDirectionalPointOneMmRadiusQa.test.ts
+
+      - name: T21 Pass 18AV lower-floor02 continuation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AVLowerFloor02ContinuationQa.test.ts
+
+      - name: T21 Pass 18AW low-slope production KCC diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AWLowSlopeKccQa.test.ts
+
+      - name: T21 Pass 18AX low-slope minimality/radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AXLowSlopeMinimalityRadiusQa.test.ts
+
+      - name: T21 Pass 18AY low-slope continuation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AYLowSlopeContinuationQa.test.ts
+
+      - name: T21 Pass 18AZ post-low-slope branch KCC diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AZPostLowSlopeBranchKccQa.test.ts
+
+      - name: T21 Pass 18BA post-low-slope directional attachment diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BAPostLowSlopeDirectionalAttachmentQa.test.ts
+
+      - name: T21 Pass 18BB HIGH local endpoint isolation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BBHighLocalEndpointIsolationQa.test.ts
+
+      - name: T21 Pass 18BC HIGH exact-raw narrow-radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BCHighExactRawNarrowRadiusQa.test.ts
+
+      - name: T21 Pass 18BD HIGH off-mesh search-extent diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BDHighOffMeshSearchExtentQa.test.ts
+
+      - name: T21 Pass 18BE HIGH nav-island identity diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BEHighNavIslandIdentityQa.test.ts
+
+      - name: T21 Pass 18BF direct representative validity diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BFDirectRepresentativeValidityQa.test.ts
+
+      - name: T21 Pass 18BG direct-valid frontier diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BGDirectValidFrontierQa.test.ts
+
+      - name: T21 Pass 18BH HIGH target rasterization diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BHHighTargetRasterizationQa.test.ts
+
+      - name: T21 Pass 18BI HIGH target Recast parameter isolation
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BIHighTargetRecastParameterIsolationQa.test.ts
+
+      - name: T21 Pass 18BJ HIGH target constant-erosion resolution diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BJHighTargetConstantErosionResolutionQa.test.ts
+
+      - name: T21 Pass 18BK HIGH target footprint-clearance diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BKHighTargetFootprintClearanceQa.test.ts
+
+      - name: T21 Pass 18BL HIGH target local footprint sensitivity
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BLHighTargetLocalFootprintSensitivityQa.test.ts
+
+      - name: T21 Pass 18BM HIGH target fine footprint scale
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BMHighTargetFineFootprintScaleQa.test.ts
+
+      - name: T21 Pass 18BN HIGH target terminal footprint scale diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BNHighTargetTerminalFootprintScaleQa.test.ts
+
+      - name: T21 Pass 18BO HIGH proxy full-chain integration diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BOHighProxyFullChainIntegrationQa.test.ts
+
+      - name: T21 Pass 18BP HIGH proxy raw-endpoint identity diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BPHighProxyRawEndpointIdentityQa.test.ts
+
+      - name: T21 Pass 18BQ HIGH proxy context-isolation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BQHighProxyContextIsolationQa.test.ts
+
+      - name: T21 Pass 18BR HIGH proxy single-component contributor diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BRHighProxySingleComponentContributorsQa.test.ts
+
+      - name: T21 Pass 18BS HIGH proxy single-component suppressor diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BSHighProxySingleComponentSuppressorsQa.test.ts
+
+      - name: T21 Pass 18BT predecessor-bridge component isolation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BTPredecessorBridgeComponentIsolationQa.test.ts
+
+      - name: T21 Pass 18C source-native Recast QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18CSourceRecastQa.test.ts
+
+      - name: T21 Pass 18D production KCC traversal QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18DTraversalQa.test.ts
+
+      - name: T21 Pass 18E Recast representation sweep
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ENavigationRepresentationQa.test.ts
+
+      - name: T21 Pass 18F QA-only local connector diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18FLocalConnectorQa.test.ts
+
+      - name: T21 Pass 18G source-native destination chain diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18GSourceChainQa.test.ts
+
+      - name: T21 Pass 18H local gap source-class audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18HGapSourceAudit.test.ts
+
+      - name: T21 Pass 18I exact source-gap vector audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18IExactGapVectorQa.test.ts
+
+      - name: T21 Pass 18J production KCC exact-gap diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18JKccGapQa.test.ts
+
+      - name: T21 Pass 18K QA-only grate-chain connector diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18KGrateChainConnectorQa.test.ts
+
+      - name: T21 Pass 18L trusted-endpoint grate-chain diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18LTrustedGrateChainConnectorQa.test.ts
+
+      - name: T21 Pass 18M trusted grate-chain minimality diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18MGrateChainMinimalityQa.test.ts
+
+      - name: T21 Pass 18N raw-boundary radius sweep
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18NRawBoundaryRadiusSweepQa.test.ts
+
+      - name: T21 Pass 18O raw/trusted grate endpoint hybrid diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18OGrateEndpointHybridQa.test.ts
+
+      - name: T21 Pass 18P ingress endpoint isolation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18PIngressEndpointIsolationQa.test.ts
+
+      - name: T21 Pass 18Q positive ingress start-retreat diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18QPositiveIngressStartRetreatQa.test.ts
+
+      - name: T21 Pass 18R positive ingress start fine sweep
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18RPositiveIngressStartFineSweepQa.test.ts
+
+      - name: T21 Pass 18S local raw-chain radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18SLocalRawChainRadiusQa.test.ts
+
+      - name: T21 Pass 18T local raw-chain fine-radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18TLocalRawChainFineRadiusQa.test.ts
+
+      - name: T21 Pass 18U full-matrix local candidate collateral QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18UCandidateCollateralQa.test.ts
+
+      - name: T21 Pass 18W center-step production KCC diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        run: npx vitest run scripts/UndertowSpillwayPass18WCenterStepKccQa.test.ts
+
+      - name: T21 Pass 18X upper-glass full source-chain audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18XUpperGlassSourceRampChainQa.test.ts
+
+      - name: T21 Pass 18Y upper-glass full predecessor-chain audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18YUpperGlassFullPredecessorChainQa.test.ts
+
+      - name: T21 Pass 18Z upper-glass local connector diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ZUpperGlassBoundaryConnectorQa.test.ts
+
+      - name: T21 Pass 18AA downstream SCC classification
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AADownstreamSccClassificationQa.test.ts
+
+      - name: T21 Pass 18AB nearest downstream break diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ABNearestDownstreamBreakQa.test.ts
+
+      - name: T21 Pass 18AC branch reachability diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ACBranchReachabilityQa.test.ts
+
+      - name: T21 Pass 18AD floor-slope KCC diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ADFloorSlopeKccQa.test.ts
+
+      - name: T21 Pass 18AE floor-slope Recast diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AEFloorSlopeRecastQa.test.ts
+
+      - name: T21 Pass 18AF floor-slope fine-radius diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AFFloorSlopeFineRadiusQa.test.ts
+
+      - name: T21 Pass 18AG bridge-floor endpoint isolation
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AGBridgeFloorEndpointIsolationQa.test.ts
+
+      - name: T21 Pass 18AH floor endpoint local search
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AHFloorEndpointLocalSearchQa.test.ts
+
+      - name: T21 Pass 18AI floor endpoint interpolation
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AIFloorEndpointInterpolationQa.test.ts
+
+      - name: T21 Pass 18AJ floor endpoint fine-retreat
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AJFloorEndpointFineRetreatQa.test.ts
+
+      - name: T21 Pass 18AK bridge-floor fixed-retreat radius minimization
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AKBridgeFloorRadiusMinimizationQa.test.ts
+
+      - name: T21 Pass 18AL combined upper-glass source-chain diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18ALCombinedSourceChainQa.test.ts
+
+      - name: T21 Pass 18AM slope-floor00 production KCC diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18AMSlopeFloor00KccQa.test.ts
 
       - name: TypeScript check
         run: npm run typecheck

@@ -1,0 +1,443 @@
+import { SurfaceFlags } from '../../ink/types';
+import type {
+  StageNavigationLinkDefinition,
+  StagePaintSurfaceDefinition,
+  StageSolidDefinition,
+  StageWorldBounds
+} from '../StageDefinition';
+import type { StageFootprint, StageFootprintPoint } from '../StageFootprint';
+import { exactYForGeometry } from '../measurement/MeasurementGeometryGate';
+import type {
+  StageMeasurementEntry,
+  XzMeasurement
+} from '../measurement/StageMeasurementLedger';
+import type { MetricXZ } from '../measurement/StageMapCalibration';
+import { UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER } from './UndertowSpillwayMeasurementLedger';
+import {
+  UNDERTOW_MODEL_XZ_GEOMETRY,
+  type UndertowModelXZPolygon
+} from './UndertowSpillwayModelXZGeometry';
+import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
+import {
+  undertowCenterSlopePaintSurfaces,
+  undertowCenterSlopeStageSolids
+} from './UndertowSpillwaySlopeMeshGeometry';
+import {
+  undertowRightLowRouteRampPaintSurfaces,
+  undertowRightLowRouteRampStageSolids
+} from './UndertowSpillwayRouteRampGeometry';
+import { UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT } from './UndertowSpillwayGlassCollisionAuthorityAudit';
+import {
+  UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT,
+  undertowUpperGlassVisualStageSolids
+} from './UndertowSpillwayUpperGlassMeshGeometry';
+import {
+  UNDERTOW_UPPER_GLASS_PASS15D_BROAD_COLLISION_SOLIDS,
+  UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS,
+  undertowUpperGlassPass15dRuntimeGeometryErrors
+} from './UndertowSpillwayUpperGlassRuntimeGeometry';
+import { UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT } from './UndertowSpillwayInternalWaterSemanticCorrectionAudit';
+import { UNDERTOW_CYAN_SOURCE_DISPOSITION_AUDIT } from './UndertowSpillwayCyanSourceDispositionAudit';
+import { UNDERTOW_PAINT_AUTHORITY_AUDIT } from './UndertowSpillwayPaintAuthorityAudit';
+import { UNDERTOW_TURF_SCOREABLE_MASK_AUDIT } from './UndertowSpillwayTurfScoreableMaskAudit';
+import { undertowDropNavigationLinks } from './UndertowSpillwayDropNavigation';
+
+export const UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS = 0.125;
+export const UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS = 0.125;
+
+const paintableFloor =
+  SurfaceFlags.Paintable |
+  SurfaceFlags.Swimmable |
+  SurfaceFlags.Floor;
+
+export interface UndertowBlockoutGeometryPackage {
+  activationReady: false;
+  solids: readonly StageSolidDefinition[];
+  paintSurfaces: readonly StagePaintSurfaceDefinition[];
+  navigationLinks: readonly StageNavigationLinkDefinition[];
+  worldBounds: StageWorldBounds;
+  teamASpawnFloorPoint: readonly [number, number, number];
+  teamBSpawnFloorPoint: readonly [number, number, number];
+  deferredFeatureIds: readonly string[];
+  activationBlockers: readonly string[];
+  notes: string;
+}
+
+interface PolygonSetComponent {
+  outerMeters: readonly MetricXZ[];
+  holesMeters?: readonly (readonly MetricXZ[])[];
+}
+
+interface PolygonComponent {
+  id: string;
+  outer: readonly MetricXZ[];
+  holes: readonly (readonly MetricXZ[])[];
+  yMeters: number;
+  material: StageSolidDefinition['material'];
+  paintable: boolean;
+  collisionBehavior?: StageSolidDefinition['collisionBehavior'];
+}
+
+function ledgerEntry(id: string): StageMeasurementEntry {
+  const entry = UNDERTOW_SPILLWAY_MEASUREMENT_LEDGER.entries.find(
+    (candidate) => candidate.id === id
+  );
+  if (!entry) throw new Error(`Missing Undertow ledger entry '${id}'.`);
+  return entry;
+}
+
+function ledgerPolygonComponents(
+  id: string,
+  material: StageSolidDefinition['material'],
+  paintable: boolean,
+  collisionBehavior?: StageSolidDefinition['collisionBehavior']
+): readonly PolygonComponent[] {
+  const entry = ledgerEntry(id);
+  const yMeters = exactYForGeometry(entry.y, 'BLOCKOUT');
+  if (yMeters === null) {
+    throw new Error(`${id}: BLOCKOUT geometry package requires one absolute Y.`);
+  }
+
+  const components = xzPolygonComponents(entry.xz);
+  if (components.length === 0) {
+    throw new Error(`${id}: BLOCKOUT geometry package requires polygon XZ.`);
+  }
+  return components.map((component, index) => ({
+    id: `${id}:${index}`,
+    outer: component.outerMeters,
+    holes: component.holesMeters ?? [],
+    yMeters,
+    material,
+    paintable,
+    collisionBehavior
+  }));
+}
+
+function xzPolygonComponents(
+  xz: XzMeasurement
+): readonly PolygonSetComponent[] {
+  if (xz.kind === 'POLYGON' && xz.polygonMeters) {
+    return [{ outerMeters: xz.polygonMeters, holesMeters: [] }];
+  }
+  if (xz.kind === 'POLYGON_SET' && xz.polygonSetMeters) {
+    return xz.polygonSetMeters;
+  }
+  return [];
+}
+
+function modelComponent(
+  item: UndertowModelXZPolygon,
+  material: StageSolidDefinition['material'],
+  paintable: boolean
+): PolygonComponent {
+  return {
+    id: item.id,
+    outer: item.projectOuter,
+    holes: item.projectHoles,
+    yMeters: item.sourceYProjectMeters,
+    material,
+    paintable
+  };
+}
+
+const modelComponents: PolygonComponent[] = [];
+for (const item of UNDERTOW_MODEL_XZ_GEOMETRY) {
+  if (item.id.startsWith('center-low-')) {
+    modelComponents.push(modelComponent(item, 'medium', true));
+  } else if (item.id.startsWith('right-low-')) {
+    modelComponents.push(modelComponent(item, 'medium', true));
+  } else if (item.id.startsWith('glass-underpass-')) {
+    modelComponents.push(modelComponent(item, 'dark', false));
+  } else if (item.id.startsWith('spawn-high-')) {
+    modelComponents.push(modelComponent(item, 'light', true));
+  } else if (item.id.startsWith('first-drop-landing-')) {
+    modelComponents.push(modelComponent(item, 'light', true));
+  }
+}
+
+const components: readonly PolygonComponent[] = [
+  ...modelComponents,
+  ...ledgerPolygonComponents(
+    'center-origin-step-top-face',
+    'medium',
+    true
+  ),
+  ...ledgerPolygonComponents(
+    'negative-z-grate-mesh',
+    'accent',
+    false,
+    'GRATE'
+  ),
+  ...ledgerPolygonComponents(
+    'positive-z-grate-mesh',
+    'accent',
+    false,
+    'GRATE'
+  )
+];
+
+const built = components.map(buildFlatComponent);
+const solids = [
+  ...built.map((item) => item.solid),
+  ...undertowCenterSlopeStageSolids(),
+  ...undertowRightLowRouteRampStageSolids(),
+  ...undertowUpperGlassVisualStageSolids(),
+  ...UNDERTOW_UPPER_GLASS_PASS15D_BROAD_COLLISION_SOLIDS,
+  ...UNDERTOW_UPPER_GLASS_PASS15D_BROAD_NAVIGATION_SOLIDS
+];
+const resolvedUnderpassPaintSurfaces = UNDERTOW_MODEL_XZ_GEOMETRY
+  .filter((item) => item.id.startsWith('glass-underpass-'))
+  .map(buildResolvedUnderpassPaintSurface);
+
+const paintSurfaces = [
+  ...built.flatMap((item) =>
+    item.paintSurface ? [item.paintSurface] : []
+  ),
+  ...undertowCenterSlopePaintSurfaces(),
+  ...undertowRightLowRouteRampPaintSurfaces(),
+  ...resolvedUnderpassPaintSurfaces
+];
+
+const outer = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints;
+const xs = outer.map((point) => point[0]);
+const zs = outer.map((point) => point[1]);
+const worldBounds: StageWorldBounds = {
+  minX: Math.min(...xs),
+  maxX: Math.max(...xs),
+  minZ: Math.min(...zs),
+  maxZ: Math.max(...zs)
+};
+
+const spawnA = UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]!;
+const spawnB = UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]!;
+
+export const UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY:
+  UndertowBlockoutGeometryPackage = Object.freeze({
+    activationReady: false as const,
+    solids,
+    paintSurfaces,
+    navigationLinks: undertowDropNavigationLinks(),
+    worldBounds,
+    teamASpawnFloorPoint: [spawnA[0], 7.5, spawnA[1]] as const,
+    teamBSpawnFloorPoint: [spawnB[0], 7.5, spawnB[1]] as const,
+    deferredFeatureIds: [
+      'upper-glass-thin-edge-frame-boundary',
+      'team-a-upper-glass-overhang',
+      'team-b-upper-glass-overhang',
+      'team-a-water-region',
+      'team-b-water-region'
+    ],
+    activationBlockers: [
+      'UPPER_GLASS_COLLISION_AUTHORITY_PENDING',
+      'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING',
+      'EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING',
+      'TURF_SCOREABLE_MASK_PENDING',
+      'FULL_STAGE_CONNECTIVITY_QA_PENDING'
+    ],
+    notes:
+      'Inert T21-D construction package only. Pass 15D promotes the evidence-backed broad upper-glass reconstruction subset into role-separated collision/query and navigation runtime solids while keeping the full Glass01 shell render-only and triangles 94-101 excluded from collision/navigation authority. The upper-glass blockers remain active for the unresolved thin-edge/frame boundary and final authority boundary. Pass 14F keeps the two legacy cyan polygons source-annotation-only; exterior abyss/fall-out retains a separate unresolved vertical death threshold. T21 still does not replace PRODUCTION_STAGE_DEFINITION.'
+  });
+
+function buildResolvedUnderpassPaintSurface(
+  item: UndertowModelXZPolygon
+): StagePaintSurfaceDefinition {
+  const bounds = polygonBounds(item.projectOuter);
+  const solidId = `UndertowT21D:${item.id}`;
+  return {
+    id: `${solidId}:paint`,
+    backingSolidId: solidId,
+    center: [
+      (bounds.minX + bounds.maxX) * 0.5,
+      item.sourceYProjectMeters + 0.002,
+      (bounds.minZ + bounds.maxZ) * 0.5
+    ],
+    uAxis: [1, 0, 0],
+    vAxis: [0, 0, 1],
+    widthMeters: bounds.maxX - bounds.minX,
+    heightMeters: bounds.maxZ - bounds.minZ,
+    flags: paintableFloor,
+    footprint: localFootprint(
+      item.projectOuter,
+      item.projectHoles,
+      bounds.minX,
+      bounds.minZ
+    )
+  };
+}
+
+function buildFlatComponent(component: PolygonComponent): {
+  solid: StageSolidDefinition;
+  paintSurface: StagePaintSurfaceDefinition | null;
+} {
+  const bounds = polygonBounds(component.outer);
+  const footprint = localFootprint(
+    component.outer,
+    component.holes,
+    bounds.minX,
+    bounds.minZ
+  );
+  const solidId = `UndertowT21D:${component.id}`;
+  const width = bounds.maxX - bounds.minX;
+  const depth = bounds.maxZ - bounds.minZ;
+  const centerX = (bounds.minX + bounds.maxX) * 0.5;
+  const centerZ = (bounds.minZ + bounds.maxZ) * 0.5;
+  const thickness = UNDERTOW_BLOCKOUT_TECHNICAL_SLAB_THICKNESS_METERS;
+
+  const solid: StageSolidDefinition = {
+    id: solidId,
+    center: [centerX, component.yMeters - thickness * 0.5, centerZ],
+    size: [width, thickness, depth],
+    material: component.material,
+    render: true,
+    projectileBlocker: true,
+    cameraBlocker: true,
+    collisionBehavior: component.collisionBehavior,
+    footprint
+  };
+
+  if (!component.paintable) {
+    return { solid, paintSurface: null };
+  }
+
+  const paintSurface: StagePaintSurfaceDefinition = {
+    id: `${solidId}:paint`,
+    backingSolidId: solidId,
+    center: [centerX, component.yMeters + 0.002, centerZ],
+    uAxis: [1, 0, 0],
+    vAxis: [0, 0, 1],
+    widthMeters: width,
+    heightMeters: depth,
+    flags: paintableFloor
+  };
+
+  return { solid, paintSurface };
+}
+
+function localFootprint(
+  outer: readonly MetricXZ[],
+  holes: readonly (readonly MetricXZ[])[],
+  minX: number,
+  minZ: number
+): StageFootprint {
+  const toLocal = ([x, z]: MetricXZ): StageFootprintPoint =>
+    [x - minX, z - minZ];
+  return {
+    outer: outer.map(toLocal),
+    holes: holes.map((hole) => hole.map(toLocal)),
+    cellSizeMeters: UNDERTOW_BLOCKOUT_FOOTPRINT_CELL_METERS
+  };
+}
+
+function polygonBounds(points: readonly MetricXZ[]): {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+} {
+  return {
+    minX: Math.min(...points.map((point) => point[0])),
+    maxX: Math.max(...points.map((point) => point[0])),
+    minZ: Math.min(...points.map((point) => point[1])),
+    maxZ: Math.max(...points.map((point) => point[1]))
+  };
+}
+
+export function undertowPartialBlockoutGeometryErrors(): readonly string[] {
+  const errors: string[] = [
+    ...undertowUpperGlassPass15dRuntimeGeometryErrors()
+  ];
+  const ids = new Set<string>();
+  for (const solid of UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids) {
+    if (ids.has(solid.id)) errors.push(`duplicate solid id: ${solid.id}`);
+    ids.add(solid.id);
+    if (!solid.footprint && !solid.triangleMesh) {
+      errors.push(`${solid.id}: polygon footprint or source triangle mesh missing`);
+    }
+    if (!solid.triangleMesh) {
+      const topY = solid.center[1] + solid.size[1] * 0.5;
+      if (!Number.isFinite(topY)) errors.push(`${solid.id}: non-finite top Y`);
+    }
+  }
+
+  for (const surface of UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces) {
+    if (!ids.has(surface.backingSolidId)) {
+      errors.push(`${surface.id}: backing solid missing`);
+    }
+    if ((surface.flags & SurfaceFlags.Scoreable) !== 0) {
+      errors.push(`${surface.id}: T21-D partial paint must not invent Turf scoreability`);
+    }
+  }
+
+  if (UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady) {
+    errors.push('partial blockout package must remain activation-ineligible');
+  }
+  if (
+    !UNDERTOW_UPPER_GLASS_SOURCE_MESH_AUDIT.collisionAuthorityReady &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UPPER_GLASS_COLLISION_AUTHORITY_PENDING'
+    )
+  ) {
+    errors.push('upper-glass collision authority gap is no longer represented by an activation blocker');
+  }
+  if (
+    !UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.bridgeMetalCollisionAuthorityReady &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UPPER_GLASS_COLLISION_AUTHORITY_PENDING'
+    )
+  ) {
+    errors.push('BridgeMetal visual-source collision ambiguity must remain activation-blocking');
+  }
+  if (
+    !UNDERTOW_UPPER_GLASS_COLLISION_AUTHORITY_AUDIT.cameraQueryAuthorityReady &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING'
+    )
+  ) {
+    errors.push('upper-glass camera-query authority gap must remain activation-blocking');
+  }
+  if (
+    !UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT
+      .supersession.priorInternalWaterPremiseInvalidated ||
+    UNDERTOW_INTERNAL_WATER_SEMANTIC_CORRECTION_AUDIT
+      .sourceProvenanceBoundary.cyanAnnotationGameplayWaterAuthorityAuthorized ||
+    !UNDERTOW_CYAN_SOURCE_DISPOSITION_AUDIT.resolution
+      .sourceAnnotationOnlyNoRuntimeSurface ||
+    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'CYAN_SOURCE_REGION_GAMEPLAY_SEMANTICS_PENDING'
+    )
+  ) {
+    errors.push('Pass 14F cyan source-only disposition drifted or stale blocker returned');
+  }
+  if (
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'EXTERIOR_FALLOUT_KILL_THRESHOLD_PENDING'
+    )
+  ) {
+    errors.push('exterior fall-out vertical kill placement must remain activation-blocking');
+  }
+  if (
+    UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount > 0 &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING'
+    )
+  ) {
+    errors.push('unresolved runtime paint authority must remain activation-blocking');
+  }
+  if (
+    UNDERTOW_PAINT_AUTHORITY_AUDIT.unresolvedCount === 0 &&
+    UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING'
+    )
+  ) {
+    errors.push('resolved runtime paint authority must remove the stale activation blocker');
+  }
+  if (
+    !UNDERTOW_TURF_SCOREABLE_MASK_AUDIT.scoreMaskResolved &&
+    !UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers.includes(
+      'TURF_SCOREABLE_MASK_PENDING'
+    )
+  ) {
+    errors.push('unresolved Turf scoreable mask must remain activation-blocking');
+  }
+  return errors;
+}

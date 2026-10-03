@@ -130,7 +130,7 @@ export class ThirdPersonCamera {
     }
 
     const blockerEnd = from.clone().add(direction.clone().mulScalar(fallbackDistance));
-    const blocker = this.physics.castStageSegment(from, blockerEnd, 'projectile');
+    const blocker = this.physics.castStageSegment(from, blockerEnd, 'ink-projectile');
     if (
       best &&
       (!blocker ||
