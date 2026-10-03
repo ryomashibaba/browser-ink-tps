@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BP' as const,
+  resolutionPass: '18BQ' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3291,6 +3291,72 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BP directly queries navmesh identity on the Pass 18BO full-chain 1.237x HIGH target proxy stage. On POSITIVE_Z, both exact raw HIGH source and target project to poly 1310 on the source island; the nominal target representative only resolves with a 1.55m bounded query to distant poly 1343 at 3.253250m snap, so it is not direct-trusted. On NEGATIVE_Z, raw source/target both remain mutually connected to the source island, while the nominal target representative cannot be directly projected even after bounded searches through 2.0m and default fallback. Thus the zero-snap target representatives reported by the legacy helper are false positives in full-chain context, and the isolated 1.237x proxy validity from Pass 18BN does not survive full-chain integration. The next safe diagnostic is to isolate which added geometry context causes the proxy target island to disappear, without changing production settings, source geometry, or endpoints.'
   }),
 
+  highProxyContextIsolationPass18BQ: Object.freeze({
+    qaRunNumber: 1199,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BP' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' as const,
+    highTargetProxyScale: 1.237,
+    contextOrder: [
+      'TARGET_ONLY',
+      'HIGH_SOURCE_PLUS_TARGET',
+      'SIDE_ROUTE_SOUP',
+      'BOTH_ROUTE_SOUP',
+      'FULL_PARTIAL_STAGE_CONTEXT'
+    ] as const,
+    trustedSnapMeters: 0.30,
+    rawEndpointHorizontalRadiusMeters: 1.55,
+    rawEndpointVerticalHalfExtentMeters: 0.40,
+    positiveInvalidTargetSourceContexts: [
+      'HIGH_SOURCE_PLUS_TARGET',
+      'SIDE_ROUTE_SOUP',
+      'FULL_PARTIAL_STAGE_CONTEXT'
+    ] as const,
+    positiveInvalidTargetProxyContexts: [
+      'HIGH_SOURCE_PLUS_TARGET'
+    ] as const,
+    positiveFirstInvalidTargetSourceContext: 'HIGH_SOURCE_PLUS_TARGET' as const,
+    positiveFirstInvalidTargetProxyContext: 'HIGH_SOURCE_PLUS_TARGET' as const,
+    positiveTargetSourceValidityRecoversAfterInvalid: true,
+    positiveTargetProxyValidityRecoversAfterInvalid: true,
+    positiveFullTargetSourceDirectTrusted: false,
+    positiveFullTargetProxyDirectTrusted: true,
+    positiveFullRawTargetSnapMeters: 0.7091240505612121,
+    positiveFullRawTargetMutualWithSource: true,
+    positiveFullRawTargetMutualWithTargetProxy: false,
+    negativeInvalidTargetSourceContexts: [
+      'SIDE_ROUTE_SOUP',
+      'BOTH_ROUTE_SOUP'
+    ] as const,
+    negativeInvalidTargetProxyContexts: [] as const,
+    negativeFirstInvalidTargetSourceContext: 'SIDE_ROUTE_SOUP' as const,
+    negativeFirstInvalidTargetProxyContext: null,
+    negativeTargetSourceValidityRecoversAfterInvalid: true,
+    negativeTargetProxyValidityRecoversAfterInvalid: false,
+    negativeFullTargetSourceDirectTrusted: true,
+    negativeFullTargetProxyDirectTrusted: true,
+    negativeFullRawTargetSnapMeters: 1.5236093815313405,
+    negativeFullRawTargetMutualWithSource: true,
+    negativeFullRawTargetMutualWithTargetProxy: false,
+    monotonicContextInvalidationModelSupported: false,
+    contextDependentValidityRecoveryObserved: true,
+    rawTargetStillAbsorbedBySourceIslandBothSides: true,
+    individualGeometryContributorIsolationRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BQ keeps the fixed 1.237x HIGH target QA proxy and varies only surrounding geometry context. The target is direct-valid in TARGET_ONLY on both mirrored sides, but validity changes non-monotonically as context is added. POSITIVE_Z loses both source-target and proxy-target direct validity when the HIGH source is added, later recovers proxy validity, and ends in full context with source-target invalid but proxy-target valid. NEGATIVE_Z remains valid with source+target, loses only source-target validity in SIDE_ROUTE_SOUP/BOTH_ROUTE_SOUP, then recovers it in full context; proxy-target validity never fails. In full context, however, the exact raw target still projects onto and is mutually connected with the source island on both sides, not the proxy target island. Therefore a monotonic target-island-destruction model is false. The next safe diagnostic is component-level geometry contributor isolation, without changing production settings, source geometry, proxy scale, or endpoints.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3322,11 +3388,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch, Pass 18BH-18BK localize the HIGH target failure to coarse production rasterization, and Passes 18BL-18BN recover an isolated direct-valid HIGH target with a 1.237x QA-only local nav proxy. Pass 18BO shows the full-chain proxy still does not attach exact HIGH links, and Pass 18BP proves why: in full-chain context both raw HIGH targets still project onto the source island, while the nominal proxy target representatives are not direct-trusted. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked; isolate which added geometry context destroys the 1.237x proxy target island next.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, and Pass 18BB-18BP isolate the unresolved HIGH branch through endpoint, rasterization, local-proxy, full-chain, and raw-poly identity diagnostics. Pass 18BQ now proves the 1.237x HIGH proxy validity is geometry-context-dependent and non-monotonic: POSITIVE_Z first invalidates with source+target and later partially recovers, while NEGATIVE_Z first invalidates source-target validity only in side-route context and recovers it in full context. The full-context raw target still belongs to the source island on both sides. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked; isolate individual geometry contributors to the context-sensitive HIGH target validity next.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BP preserves Passes 18A-18BO and directly audits raw HIGH endpoint projection identity on the 1.237x proxy full-chain stage. Both mirrored raw targets remain on the source island rather than a direct-trusted proxy target island. POSITIVE_Z only finds a distant unrelated projection for the nominal target representative at 1.55m bounded extent and 3.253250m snap; NEGATIVE_Z cannot directly project that representative at all. This exposes another legacy closestPoint fallback false positive and proves the isolated proxy target validity does not survive full-chain geometry context. The next safe engineering diagnostic is context isolation of the fixed 1.237x proxy across target-only, source+target, side-soup, and full-soup builds. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BQ preserves Passes 18A-18BP and rejects a simple monotonic proxy-target-destruction model. The fixed 1.237x proxy is direct-valid in isolation on both sides, but surrounding geometry changes target validity non-monotonically and asymmetrically: POSITIVE_Z invalidates under source+target and later recovers proxy validity, while NEGATIVE_Z proxy validity remains present and source-target validity disappears only in intermediate route-soup contexts before recovering in the full partial stage. Despite those recoveries, each full-context exact raw HIGH target still projects to the source island rather than the proxy target island. The next safe engineering step is component-level context contributor isolation with production settings, authoritative source geometry, proxy scale, and raw endpoints frozen. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3361,12 +3427,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BP partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BQ partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BP' ||
+    audit.resolutionPass !== '18BQ' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -6210,8 +6276,64 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BP HIGH proxy raw-endpoint identity boundary drifted');
   }
 
+  const context18bq = audit.highProxyContextIsolationPass18BQ;
+  if (
+    context18bq.qaRunNumber !== 1199 ||
+    !context18bq.diagnosticOnly ||
+    context18bq.runtimePromotionAuthorized ||
+    context18bq.gameplayDirectionalityResolved ||
+    context18bq.gameplayJumpRequirementResolved ||
+    context18bq.sourcePass !== '18BP' ||
+    !context18bq.productionConfigUnchanged ||
+    !context18bq.sourceGeometryUnchanged ||
+    !context18bq.diagnosticProxyOnly ||
+    context18bq.proxyScalingMode !== 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' ||
+    Math.abs(context18bq.highTargetProxyScale - 1.237) > 1e-12 ||
+    context18bq.contextOrder.join(',') !==
+      'TARGET_ONLY,HIGH_SOURCE_PLUS_TARGET,SIDE_ROUTE_SOUP,BOTH_ROUTE_SOUP,FULL_PARTIAL_STAGE_CONTEXT' ||
+    Math.abs(context18bq.trustedSnapMeters - 0.30) > 1e-12 ||
+    Math.abs(context18bq.rawEndpointHorizontalRadiusMeters - 1.55) > 1e-12 ||
+    Math.abs(context18bq.rawEndpointVerticalHalfExtentMeters - 0.40) > 1e-12 ||
+    context18bq.positiveInvalidTargetSourceContexts.join(',') !==
+      'HIGH_SOURCE_PLUS_TARGET,SIDE_ROUTE_SOUP,FULL_PARTIAL_STAGE_CONTEXT' ||
+    context18bq.positiveInvalidTargetProxyContexts.join(',') !==
+      'HIGH_SOURCE_PLUS_TARGET' ||
+    context18bq.positiveFirstInvalidTargetSourceContext !== 'HIGH_SOURCE_PLUS_TARGET' ||
+    context18bq.positiveFirstInvalidTargetProxyContext !== 'HIGH_SOURCE_PLUS_TARGET' ||
+    !context18bq.positiveTargetSourceValidityRecoversAfterInvalid ||
+    !context18bq.positiveTargetProxyValidityRecoversAfterInvalid ||
+    context18bq.positiveFullTargetSourceDirectTrusted ||
+    !context18bq.positiveFullTargetProxyDirectTrusted ||
+    Math.abs(context18bq.positiveFullRawTargetSnapMeters - 0.7091240505612121) > 1e-12 ||
+    !context18bq.positiveFullRawTargetMutualWithSource ||
+    context18bq.positiveFullRawTargetMutualWithTargetProxy ||
+    context18bq.negativeInvalidTargetSourceContexts.join(',') !==
+      'SIDE_ROUTE_SOUP,BOTH_ROUTE_SOUP' ||
+    context18bq.negativeInvalidTargetProxyContexts.length !== 0 ||
+    context18bq.negativeFirstInvalidTargetSourceContext !== 'SIDE_ROUTE_SOUP' ||
+    context18bq.negativeFirstInvalidTargetProxyContext !== null ||
+    !context18bq.negativeTargetSourceValidityRecoversAfterInvalid ||
+    context18bq.negativeTargetProxyValidityRecoversAfterInvalid ||
+    !context18bq.negativeFullTargetSourceDirectTrusted ||
+    !context18bq.negativeFullTargetProxyDirectTrusted ||
+    Math.abs(context18bq.negativeFullRawTargetSnapMeters - 1.5236093815313405) > 1e-12 ||
+    !context18bq.negativeFullRawTargetMutualWithSource ||
+    context18bq.negativeFullRawTargetMutualWithTargetProxy ||
+    context18bq.monotonicContextInvalidationModelSupported ||
+    !context18bq.contextDependentValidityRecoveryObserved ||
+    !context18bq.rawTargetStillAbsorbedBySourceIslandBothSides ||
+    !context18bq.individualGeometryContributorIsolationRequiredNext ||
+    context18bq.globalRecastSettingsChanged ||
+    context18bq.broadFrontierLinkAuthorized ||
+    context18bq.trustedNonLocalEndpointUsed ||
+    context18bq.productionOffMeshLinkAuthorized ||
+    context18bq.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BQ HIGH proxy context-isolation boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BP full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BQ full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
