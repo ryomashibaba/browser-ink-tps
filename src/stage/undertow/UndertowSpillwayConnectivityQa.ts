@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BR' as const,
+  resolutionPass: '18BS' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3425,6 +3425,62 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BR adds each remaining route component individually to the fixed HIGH source + 1.237x proxy baseline. POSITIVE_Z starts source-invalid/proxy-invalid; 27 of 57 single additions flip at least one validity bit and two PntSet BridgeMetal components move the exact raw target off the source island and onto the proxy target island. The best sampled POS contributor is c63 at Y=5.1 with 0.379195m raw-target snap. NEGATIVE_Z starts source-valid/proxy-valid; 18 of 57 additions flip validity and seven single additions move the raw target onto the proxy target island. The best sampled NEG contributor is c148 at Y=5.1 with 0.364365m snap; constructive contributors also include one GrassFloor and one low FloorSlope component, proving the effect is not one material class. Single geometry can therefore switch raw endpoint island identity, but full-route context still suppresses that constructive state. The next safe diagnostic fixes the best constructive contributor per side and adds each other route component one at a time to identify single-component suppressors.'
   }),
 
+  highProxySingleComponentSuppressorsPass18BS: Object.freeze({
+    qaRunNumber: 1208,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BR' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' as const,
+    highTargetProxyScale: 1.237,
+    baselineContext:
+      'HIGH_SOURCE_PLUS_PROXY_TARGET_PLUS_BEST_CONSTRUCTIVE_CONTRIBUTOR' as const,
+    additiveContextMode: 'ONE_OTHER_ROUTE_COMPONENT_AT_A_TIME' as const,
+    candidateCountPerSide: 56,
+    positiveBestConstructiveContributorId:
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c63',
+    positiveBaselineRawTargetSnapMeters: 0.3791953963411906,
+    positiveBaselineRawTargetMutualWithSource: false,
+    positiveBaselineRawTargetMutualWithTargetProxy: true,
+    positiveSourceRestorerCount: 22,
+    positiveProxySuppressorCount: 19,
+    positiveFullSuppressorCount: 19,
+    positiveBestSuppressorId: '__PREDECESSOR_BRIDGE__' as const,
+    positiveBestSuppressorMaterial: 'BridgeMetal00' as const,
+    positiveBestSuppressorRawTargetSnapMeters: 0.39688600973510746,
+    positivePredecessorBridgeIsFullSuppressor: true,
+    negativeBestConstructiveContributorId:
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c148',
+    negativeBaselineRawTargetSnapMeters: 0.3643649740994081,
+    negativeBaselineRawTargetMutualWithSource: false,
+    negativeBaselineRawTargetMutualWithTargetProxy: true,
+    negativeSourceRestorerCount: 16,
+    negativeProxySuppressorCount: 13,
+    negativeFullSuppressorCount: 13,
+    negativeBestSuppressorId:
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c133',
+    negativeBestSuppressorMaterial:
+      'FldObj_Temple01_PntSet_BridgeMetal00' as const,
+    negativeBestSuppressorYRange: [5.1,6.6] as const,
+    negativeBestSuppressorRawTargetSnapMeters: 1.4736505319163717,
+    negativePredecessorBridgeIsFullSuppressor: true,
+    predecessorBridgeIsCommonFullSuppressorBothSides: true,
+    singleAddedGeometryCanRecreateFullContextAbsorptionBothSides: true,
+    suppressorSetIsMaterialAndSideDependent: true,
+    predecessorBridgeSubdivisionIsolationRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BS fixes each side\'s best Pass 18BR constructive contributor and adds every other route component singly. Both baselines place the exact raw HIGH target on the proxy island and off the source island. POSITIVE_Z has 22 source restorers, 19 proxy suppressors, and 19 full suppressors; the predecessor bridge is the lowest-snap full suppressor at 0.396886m. NEGATIVE_Z has 16 source restorers, 13 proxy suppressors, and 13 full suppressors; the lowest-snap full suppressor is PntSet BridgeMetal c133 at 1.473651m, while the predecessor bridge is also a full suppressor. Thus one added geometry can recreate full-context source-island absorption on both sides, and the predecessor bridge is the only explicitly common suppressor class isolated on both mirrored sides. The next safe diagnostic is to subdivide or otherwise isolate the predecessor bridge contribution while keeping production settings, source geometry, proxy scale, and endpoints fixed.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3456,11 +3512,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BQ isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, and context-isolation diagnostics. Pass 18BR now proves individual added geometry can switch the exact raw HIGH target from the source island to the proxy target island on both mirrored sides: two single contributors do so on POSITIVE_Z and seven on NEGATIVE_Z. Full route context still suppresses that constructive state, so the remaining engineering task is contributor-interaction isolation rather than more global radius, proxy-scale, or Recast tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BR isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and single-component contribution analysis. Pass 18BS now proves that with each side\'s best constructive contributor fixed, one additional geometry can recreate full-context source-island absorption on both sides: 19/56 candidates do so on POSITIVE_Z and 13/56 on NEGATIVE_Z, and the predecessor bridge is a full suppressor on both mirrored sides. The remaining engineering task is predecessor-bridge contribution isolation rather than more global radius, proxy-scale, or Recast tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BR preserves Passes 18A-18BQ and decomposes the geometry-context sensitivity one component at a time. POSITIVE_Z has 27/57 single-component validity flips and two additions that move the exact raw target onto the proxy target island; NEGATIVE_Z has 18/57 validity flips and seven additions that do so. The best constructive samples are mirrored-height PntSet BridgeMetal components at Y=5.1, with raw-target snap about 0.379195m POS and 0.364365m NEG, while NEG also admits constructive GrassFloor and low-slope additions. This proves raw endpoint island identity can be switched by individual geometry and is not governed by one material class. The next safe engineering step is to hold the best constructive contributor fixed per side and add each other route component singly to identify suppressors that recreate the full-context source-island absorption. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BS preserves Passes 18A-18BR and performs the reciprocal suppressor scan: each side\'s best constructive contributor is fixed, then every other route component is added singly. The exact raw target starts on the proxy island for both sides. POSITIVE_Z has 19 full single-component suppressors and NEGATIVE_Z has 13. The predecessor bridge alone recreates source-island absorption on both mirrored sides, while the best NEG suppressor is PntSet BridgeMetal c133. This collapses the remaining HIGH engineering problem from broad context interaction to a smaller set of suppressor geometries, with the predecessor bridge as the shared mirrored suspect. The next safe step is predecessor-bridge contribution subdivision/isolation without changing production Recast settings, source geometry, proxy scale, or endpoints. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3495,12 +3551,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BR partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BS partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BR' ||
+    audit.resolutionPass !== '18BS' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -6456,8 +6512,65 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BR HIGH single-component contributor boundary drifted');
   }
 
+  const suppressor18bs = audit.highProxySingleComponentSuppressorsPass18BS;
+  if (
+    suppressor18bs.qaRunNumber !== 1208 ||
+    !suppressor18bs.diagnosticOnly ||
+    suppressor18bs.runtimePromotionAuthorized ||
+    suppressor18bs.gameplayDirectionalityResolved ||
+    suppressor18bs.gameplayJumpRequirementResolved ||
+    suppressor18bs.sourcePass !== '18BR' ||
+    !suppressor18bs.productionConfigUnchanged ||
+    !suppressor18bs.sourceGeometryUnchanged ||
+    !suppressor18bs.diagnosticProxyOnly ||
+    suppressor18bs.proxyScalingMode !== 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' ||
+    Math.abs(suppressor18bs.highTargetProxyScale - 1.237) > 1e-12 ||
+    suppressor18bs.baselineContext !==
+      'HIGH_SOURCE_PLUS_PROXY_TARGET_PLUS_BEST_CONSTRUCTIVE_CONTRIBUTOR' ||
+    suppressor18bs.additiveContextMode !== 'ONE_OTHER_ROUTE_COMPONENT_AT_A_TIME' ||
+    suppressor18bs.candidateCountPerSide !== 56 ||
+    suppressor18bs.positiveBestConstructiveContributorId !==
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c63' ||
+    Math.abs(suppressor18bs.positiveBaselineRawTargetSnapMeters - 0.3791953963411906) > 1e-12 ||
+    suppressor18bs.positiveBaselineRawTargetMutualWithSource ||
+    !suppressor18bs.positiveBaselineRawTargetMutualWithTargetProxy ||
+    suppressor18bs.positiveSourceRestorerCount !== 22 ||
+    suppressor18bs.positiveProxySuppressorCount !== 19 ||
+    suppressor18bs.positiveFullSuppressorCount !== 19 ||
+    suppressor18bs.positiveBestSuppressorId !== '__PREDECESSOR_BRIDGE__' ||
+    suppressor18bs.positiveBestSuppressorMaterial !== 'BridgeMetal00' ||
+    Math.abs(suppressor18bs.positiveBestSuppressorRawTargetSnapMeters - 0.39688600973510746) > 1e-12 ||
+    !suppressor18bs.positivePredecessorBridgeIsFullSuppressor ||
+    suppressor18bs.negativeBestConstructiveContributorId !==
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c148' ||
+    Math.abs(suppressor18bs.negativeBaselineRawTargetSnapMeters - 0.3643649740994081) > 1e-12 ||
+    suppressor18bs.negativeBaselineRawTargetMutualWithSource ||
+    !suppressor18bs.negativeBaselineRawTargetMutualWithTargetProxy ||
+    suppressor18bs.negativeSourceRestorerCount !== 16 ||
+    suppressor18bs.negativeProxySuppressorCount !== 13 ||
+    suppressor18bs.negativeFullSuppressorCount !== 13 ||
+    suppressor18bs.negativeBestSuppressorId !==
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c133' ||
+    suppressor18bs.negativeBestSuppressorMaterial !==
+      'FldObj_Temple01_PntSet_BridgeMetal00' ||
+    suppressor18bs.negativeBestSuppressorYRange.join(',') !== '5.1,6.6' ||
+    Math.abs(suppressor18bs.negativeBestSuppressorRawTargetSnapMeters - 1.4736505319163717) > 1e-12 ||
+    !suppressor18bs.negativePredecessorBridgeIsFullSuppressor ||
+    !suppressor18bs.predecessorBridgeIsCommonFullSuppressorBothSides ||
+    !suppressor18bs.singleAddedGeometryCanRecreateFullContextAbsorptionBothSides ||
+    !suppressor18bs.suppressorSetIsMaterialAndSideDependent ||
+    !suppressor18bs.predecessorBridgeSubdivisionIsolationRequiredNext ||
+    suppressor18bs.globalRecastSettingsChanged ||
+    suppressor18bs.broadFrontierLinkAuthorized ||
+    suppressor18bs.trustedNonLocalEndpointUsed ||
+    suppressor18bs.productionOffMeshLinkAuthorized ||
+    suppressor18bs.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BS HIGH single-component suppressor boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BR full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BS full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
