@@ -139,6 +139,12 @@ jobs:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18BUSharedBridgeInternalIsolationQa.test.ts
 
+      - name: T21 Pass 18BV shared top-cap relation diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BVSharedTopCapRelationQa.test.ts
+
       - name: T21 Pass 18AN slope-floor00 radius diagnostic
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         env:
