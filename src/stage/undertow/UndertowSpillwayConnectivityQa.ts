@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BQ' as const,
+  resolutionPass: '18BR' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3357,6 +3357,74 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BQ keeps the fixed 1.237x HIGH target QA proxy and varies only surrounding geometry context. The target is direct-valid in TARGET_ONLY on both mirrored sides, but validity changes non-monotonically as context is added. POSITIVE_Z loses both source-target and proxy-target direct validity when the HIGH source is added, later recovers proxy validity, and ends in full context with source-target invalid but proxy-target valid. NEGATIVE_Z remains valid with source+target, loses only source-target validity in SIDE_ROUTE_SOUP/BOTH_ROUTE_SOUP, then recovers it in full context; proxy-target validity never fails. In full context, however, the exact raw target still projects onto and is mutually connected with the source island on both sides, not the proxy target island. Therefore a monotonic target-island-destruction model is false. The next safe diagnostic is component-level geometry contributor isolation, without changing production settings, source geometry, proxy scale, or endpoints.'
   }),
 
+  highProxySingleComponentContributorsPass18BR: Object.freeze({
+    qaRunNumber: 1204,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BQ' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    proxyScalingMode: 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' as const,
+    highTargetProxyScale: 1.237,
+    baselineContext: 'HIGH_SOURCE_PLUS_TARGET' as const,
+    additiveContextMode: 'ONE_ROUTE_COMPONENT_AT_A_TIME' as const,
+    candidateCountPerSide: 57,
+    positiveBaselineTargetSourceDirectTrusted: false,
+    positiveBaselineTargetProxyDirectTrusted: false,
+    positiveSourceValidityFlipCount: 17,
+    positiveProxyValidityFlipCount: 24,
+    positiveAnyValidityFlipCount: 27,
+    positiveStateCounts: Object.freeze({
+      source0Proxy0: 30,
+      source1Proxy1: 14,
+      source0Proxy1: 10,
+      source1Proxy0: 3
+    }),
+    positiveRawTargetMovesToProxyIslandCount: 2,
+    positiveBestConstructiveContributorId:
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c63',
+    positiveBestConstructiveContributorMaterial:
+      'FldObj_Temple01_PntSet_BridgeMetal00' as const,
+    positiveBestConstructiveContributorYRange: [5.1,5.1] as const,
+    positiveBestConstructiveRawTargetSnapMeters: 0.3791953963411906,
+    positiveOtherConstructiveContributorId:
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c47',
+    positiveOtherConstructiveRawTargetSnapMeters: 0.5157739997726296,
+    negativeBaselineTargetSourceDirectTrusted: true,
+    negativeBaselineTargetProxyDirectTrusted: true,
+    negativeSourceValidityFlipCount: 16,
+    negativeProxyValidityFlipCount: 5,
+    negativeAnyValidityFlipCount: 18,
+    negativeStateCounts: Object.freeze({
+      source0Proxy1: 13,
+      source1Proxy0: 2,
+      source0Proxy0: 3,
+      source1Proxy1: 39
+    }),
+    negativeRawTargetMovesToProxyIslandCount: 7,
+    negativeBestConstructiveContributorId:
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c148',
+    negativeBestConstructiveContributorMaterial:
+      'FldObj_Temple01_PntSet_BridgeMetal00' as const,
+    negativeBestConstructiveContributorYRange: [5.1,5.1] as const,
+    negativeBestConstructiveRawTargetSnapMeters: 0.3643649740994081,
+    negativeConstructiveContributorIncludesGrassFloor: true,
+    negativeConstructiveContributorIncludesLowSlope: true,
+    singleComponentCanMoveRawTargetToProxyIslandBothSides: true,
+    contributionEffectsAreMaterialAndContextDependent: true,
+    bestConstructiveContributorSuppressionScanRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BR adds each remaining route component individually to the fixed HIGH source + 1.237x proxy baseline. POSITIVE_Z starts source-invalid/proxy-invalid; 27 of 57 single additions flip at least one validity bit and two PntSet BridgeMetal components move the exact raw target off the source island and onto the proxy target island. The best sampled POS contributor is c63 at Y=5.1 with 0.379195m raw-target snap. NEGATIVE_Z starts source-valid/proxy-valid; 18 of 57 additions flip validity and seven single additions move the raw target onto the proxy target island. The best sampled NEG contributor is c148 at Y=5.1 with 0.364365m snap; constructive contributors also include one GrassFloor and one low FloorSlope component, proving the effect is not one material class. Single geometry can therefore switch raw endpoint island identity, but full-route context still suppresses that constructive state. The next safe diagnostic fixes the best constructive contributor per side and adds each other route component one at a time to identify single-component suppressors.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3388,11 +3456,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, and Pass 18BB-18BP isolate the unresolved HIGH branch through endpoint, rasterization, local-proxy, full-chain, and raw-poly identity diagnostics. Pass 18BQ now proves the 1.237x HIGH proxy validity is geometry-context-dependent and non-monotonic: POSITIVE_Z first invalidates with source+target and later partially recovers, while NEGATIVE_Z first invalidates source-target validity only in side-route context and recovers it in full context. The full-context raw target still belongs to the source island on both sides. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked; isolate individual geometry contributors to the context-sensitive HIGH target validity next.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BQ isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, and context-isolation diagnostics. Pass 18BR now proves individual added geometry can switch the exact raw HIGH target from the source island to the proxy target island on both mirrored sides: two single contributors do so on POSITIVE_Z and seven on NEGATIVE_Z. Full route context still suppresses that constructive state, so the remaining engineering task is contributor-interaction isolation rather than more global radius, proxy-scale, or Recast tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BQ preserves Passes 18A-18BP and rejects a simple monotonic proxy-target-destruction model. The fixed 1.237x proxy is direct-valid in isolation on both sides, but surrounding geometry changes target validity non-monotonically and asymmetrically: POSITIVE_Z invalidates under source+target and later recovers proxy validity, while NEGATIVE_Z proxy validity remains present and source-target validity disappears only in intermediate route-soup contexts before recovering in the full partial stage. Despite those recoveries, each full-context exact raw HIGH target still projects to the source island rather than the proxy target island. The next safe engineering step is component-level context contributor isolation with production settings, authoritative source geometry, proxy scale, and raw endpoints frozen. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BR preserves Passes 18A-18BQ and decomposes the geometry-context sensitivity one component at a time. POSITIVE_Z has 27/57 single-component validity flips and two additions that move the exact raw target onto the proxy target island; NEGATIVE_Z has 18/57 validity flips and seven additions that do so. The best constructive samples are mirrored-height PntSet BridgeMetal components at Y=5.1, with raw-target snap about 0.379195m POS and 0.364365m NEG, while NEG also admits constructive GrassFloor and low-slope additions. This proves raw endpoint island identity can be switched by individual geometry and is not governed by one material class. The next safe engineering step is to hold the best constructive contributor fixed per side and add each other route component singly to identify suppressors that recreate the full-context source-island absorption. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3427,12 +3495,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BQ partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BR partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BQ' ||
+    audit.resolutionPass !== '18BR' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -6332,8 +6400,64 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BQ HIGH proxy context-isolation boundary drifted');
   }
 
+  const contributor18br = audit.highProxySingleComponentContributorsPass18BR;
+  if (
+    contributor18br.qaRunNumber !== 1204 ||
+    !contributor18br.diagnosticOnly ||
+    contributor18br.runtimePromotionAuthorized ||
+    contributor18br.gameplayDirectionalityResolved ||
+    contributor18br.gameplayJumpRequirementResolved ||
+    contributor18br.sourcePass !== '18BQ' ||
+    !contributor18br.productionConfigUnchanged ||
+    !contributor18br.sourceGeometryUnchanged ||
+    !contributor18br.diagnosticProxyOnly ||
+    contributor18br.proxyScalingMode !== 'XZ_UNIFORM_ABOUT_BK_CLEARANCE_CENTER' ||
+    Math.abs(contributor18br.highTargetProxyScale - 1.237) > 1e-12 ||
+    contributor18br.baselineContext !== 'HIGH_SOURCE_PLUS_TARGET' ||
+    contributor18br.additiveContextMode !== 'ONE_ROUTE_COMPONENT_AT_A_TIME' ||
+    contributor18br.candidateCountPerSide !== 57 ||
+    contributor18br.positiveBaselineTargetSourceDirectTrusted ||
+    contributor18br.positiveBaselineTargetProxyDirectTrusted ||
+    contributor18br.positiveSourceValidityFlipCount !== 17 ||
+    contributor18br.positiveProxyValidityFlipCount !== 24 ||
+    contributor18br.positiveAnyValidityFlipCount !== 27 ||
+    contributor18br.positiveStateCounts.source0Proxy0 !== 30 ||
+    contributor18br.positiveStateCounts.source1Proxy1 !== 14 ||
+    contributor18br.positiveStateCounts.source0Proxy1 !== 10 ||
+    contributor18br.positiveStateCounts.source1Proxy0 !== 3 ||
+    contributor18br.positiveRawTargetMovesToProxyIslandCount !== 2 ||
+    contributor18br.positiveBestConstructiveContributorId !==
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c63' ||
+    Math.abs(contributor18br.positiveBestConstructiveRawTargetSnapMeters - 0.3791953963411906) > 1e-12 ||
+    contributor18br.negativeBaselineTargetSourceDirectTrusted !== true ||
+    contributor18br.negativeBaselineTargetProxyDirectTrusted !== true ||
+    contributor18br.negativeSourceValidityFlipCount !== 16 ||
+    contributor18br.negativeProxyValidityFlipCount !== 5 ||
+    contributor18br.negativeAnyValidityFlipCount !== 18 ||
+    contributor18br.negativeStateCounts.source0Proxy1 !== 13 ||
+    contributor18br.negativeStateCounts.source1Proxy0 !== 2 ||
+    contributor18br.negativeStateCounts.source0Proxy0 !== 3 ||
+    contributor18br.negativeStateCounts.source1Proxy1 !== 39 ||
+    contributor18br.negativeRawTargetMovesToProxyIslandCount !== 7 ||
+    contributor18br.negativeBestConstructiveContributorId !==
+      'FldObj_Temple01_PntSet_mesh61_low_1__BridgeMetal00|FldObj_Temple01_PntSet_BridgeMetal00|c148' ||
+    Math.abs(contributor18br.negativeBestConstructiveRawTargetSnapMeters - 0.3643649740994081) > 1e-12 ||
+    !contributor18br.negativeConstructiveContributorIncludesGrassFloor ||
+    !contributor18br.negativeConstructiveContributorIncludesLowSlope ||
+    !contributor18br.singleComponentCanMoveRawTargetToProxyIslandBothSides ||
+    !contributor18br.contributionEffectsAreMaterialAndContextDependent ||
+    !contributor18br.bestConstructiveContributorSuppressionScanRequiredNext ||
+    contributor18br.globalRecastSettingsChanged ||
+    contributor18br.broadFrontierLinkAuthorized ||
+    contributor18br.trustedNonLocalEndpointUsed ||
+    contributor18br.productionOffMeshLinkAuthorized ||
+    contributor18br.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BR HIGH single-component contributor boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BQ full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BR full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
