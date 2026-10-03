@@ -368,7 +368,7 @@ function inspectContext(
 beforeAll(async()=>{await initializeRecastNavigation();});
 
 describe('T21 Pass 18BQ HIGH proxy context-isolation diagnostic',()=>{
-  it('adds geometry contexts monotonically around the fixed 1.237x HIGH proxy to find the first context that destroys direct target validity',()=>{
+  it('adds controlled geometry contexts around the fixed 1.237x HIGH proxy and records non-monotonic direct-target validity without assuming irreversible destruction',()=>{
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
     if(!fixturePath)return;
@@ -466,18 +466,37 @@ describe('T21 Pass 18BQ HIGH proxy context-isolation diagnostic',()=>{
           d.source.mesh,d.target.mesh,d.proxy,d.rawTargetPoint
         )
       };
-      const firstInvalidTargetSourceContext=
-        CONTEXT_ORDER.find(name=>!contexts[name].targetSourceDirectTrusted)??null;
-      const firstInvalidTargetProxyContext=
-        CONTEXT_ORDER.find(name=>!contexts[name].targetProxyDirectTrusted)??null;
+      const invalidTargetSourceContexts=CONTEXT_ORDER.filter(
+        name=>!contexts[name].targetSourceDirectTrusted
+      );
+      const invalidTargetProxyContexts=CONTEXT_ORDER.filter(
+        name=>!contexts[name].targetProxyDirectTrusted
+      );
+      const firstInvalidTargetSourceContext=invalidTargetSourceContexts[0]??null;
+      const firstInvalidTargetProxyContext=invalidTargetProxyContexts[0]??null;
+      const recoversAfterInvalid=(invalid:readonly ContextName[],pick:(name:ContextName)=>boolean)=>{
+        if(invalid.length===0)return false;
+        const firstIndex=CONTEXT_ORDER.indexOf(invalid[0]!);
+        return CONTEXT_ORDER.slice(firstIndex+1).some(pick);
+      };
       return [side,{
         highTargetId:d.target.id,
         highSourceId:d.source.id,
         highProxyScale:HIGH_PROXY_SCALE,
         rawTargetPoint:d.rawTargetPoint,
         contexts,
+        invalidTargetSourceContexts,
+        invalidTargetProxyContexts,
         firstInvalidTargetSourceContext,
-        firstInvalidTargetProxyContext
+        firstInvalidTargetProxyContext,
+        targetSourceValidityRecoversAfterInvalid:recoversAfterInvalid(
+          invalidTargetSourceContexts,
+          name=>contexts[name].targetSourceDirectTrusted
+        ),
+        targetProxyValidityRecoversAfterInvalid:recoversAfterInvalid(
+          invalidTargetProxyContexts,
+          name=>contexts[name].targetProxyDirectTrusted
+        )
       }];
     }));
 
@@ -503,20 +522,54 @@ describe('T21 Pass 18BQ HIGH proxy context-isolation diagnostic',()=>{
       sides
     }));
 
-    for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const){
-      const result=sides[side] as {
-        contexts:Record<ContextName,ReturnType<typeof inspectContext>>;
-        firstInvalidTargetSourceContext:ContextName|null;
-        firstInvalidTargetProxyContext:ContextName|null;
-      };
+    const positive=sides.POSITIVE_Z as {
+      contexts:Record<ContextName,ReturnType<typeof inspectContext>>;
+      invalidTargetSourceContexts:ContextName[];
+      invalidTargetProxyContexts:ContextName[];
+      firstInvalidTargetSourceContext:ContextName|null;
+      firstInvalidTargetProxyContext:ContextName|null;
+      targetSourceValidityRecoversAfterInvalid:boolean;
+      targetProxyValidityRecoversAfterInvalid:boolean;
+    };
+    const negative=sides.NEGATIVE_Z as typeof positive;
+
+    for(const result of [positive,negative]){
       expect(result.contexts.TARGET_ONLY.targetSourceDirectTrusted).toBe(true);
       expect(result.contexts.TARGET_ONLY.targetProxyDirectTrusted).toBe(true);
-      expect(
-        result.contexts.FULL_PARTIAL_STAGE_CONTEXT.targetSourceDirectTrusted
-      ).toBe(false);
       expect(result.firstInvalidTargetSourceContext).not.toBeNull();
-      expect(result.firstInvalidTargetProxyContext).not.toBeNull();
     }
+
+    expect(positive.invalidTargetSourceContexts).toEqual([
+      'HIGH_SOURCE_PLUS_TARGET',
+      'SIDE_ROUTE_SOUP',
+      'FULL_PARTIAL_STAGE_CONTEXT'
+    ]);
+    expect(positive.invalidTargetProxyContexts).toEqual([
+      'HIGH_SOURCE_PLUS_TARGET'
+    ]);
+    expect(positive.firstInvalidTargetSourceContext)
+      .toBe('HIGH_SOURCE_PLUS_TARGET');
+    expect(positive.firstInvalidTargetProxyContext)
+      .toBe('HIGH_SOURCE_PLUS_TARGET');
+    expect(positive.targetSourceValidityRecoversAfterInvalid).toBe(true);
+    expect(positive.targetProxyValidityRecoversAfterInvalid).toBe(true);
+
+    expect(negative.invalidTargetSourceContexts).toEqual([
+      'SIDE_ROUTE_SOUP',
+      'BOTH_ROUTE_SOUP'
+    ]);
+    expect(negative.invalidTargetProxyContexts).toEqual([]);
+    expect(negative.firstInvalidTargetSourceContext).toBe('SIDE_ROUTE_SOUP');
+    expect(negative.firstInvalidTargetProxyContext).toBeNull();
+    expect(negative.targetSourceValidityRecoversAfterInvalid).toBe(true);
+    expect(negative.targetProxyValidityRecoversAfterInvalid).toBe(false);
+
+    expect(
+      positive.contexts.FULL_PARTIAL_STAGE_CONTEXT.targetSourceDirectTrusted
+    ).toBe(false);
+    expect(
+      negative.contexts.FULL_PARTIAL_STAGE_CONTEXT.targetSourceDirectTrusted
+    ).toBe(true);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
   },180000);
