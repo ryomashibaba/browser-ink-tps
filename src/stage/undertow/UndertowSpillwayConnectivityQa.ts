@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BN' as const,
+  resolutionPass: '18BO' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3201,6 +3201,47 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BN performs the terminal 0.001x QA-only scale sweep inside the Pass 18BM bracket while keeping production Recast settings and authoritative source geometry unchanged. NEGATIVE_Z is already source-direct-valid at 1.235x. POSITIVE_Z remains invalid at 1.235x and 1.236x, then becomes valid at 1.237x; both sides remain valid through 1.240x. The common mirrored threshold is therefore bracketed to (1.236x, 1.237x]. At 1.237x the predicted clearance is 0.529202m, leaving 0.169202m after nominal 0.36m erosion; source snap is about 0.169561m positive and 0.116373m negative. The scale step corresponds to roughly 0.428mm at the BK clearance radius, so further scalar minimization is not required before a QA-only full-chain proxy integration diagnostic. No proxy or source-geometry modification is runtime-authorized.'
   }),
 
+  highProxyFullChainIntegrationPass18BO: Object.freeze({
+    qaRunNumber: 1188,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BN' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    highTargetProxyScale: 1.237,
+    highTargetProxyMode: 'QA_NAV_MESH_REPLACEMENT_ONLY' as const,
+    trustedEndpointsUsedAsLinks: false,
+    exactRawEndpointsUsed: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    upstreamDirectionalAssumption: 'DROP_ONLY_QA_CONTINUATION' as const,
+    upstreamDirectionalRadiusMeters: 0.7005,
+    lowSlopeRadiusMeters: 0.80,
+    sampledBranchRadiiMeters: [0.30,0.50,0.60,0.70,0.80,1.00,1.20,1.50] as const,
+    baselineReachedDirectedPairs: 79,
+    baselineWeakComponentCount: 9,
+    baselineStronglyConnectedComponentCount: 11,
+    positiveHighTargetRepresentativeSnapMeters: 0,
+    negativeHighTargetRepresentativeSnapMeters: 0,
+    lowForwardFirstCommonSuccessRadiusMeters: 0.70,
+    lowReverseFirstCommonSuccessRadiusMeters: 0.70,
+    highForwardCommonSuccessThrough150Meters: false,
+    highReverseCommonSuccessThrough150Meters: false,
+    allKccDirectionsCommonSuccessThrough150Meters: false,
+    trackedMatrixUnchangedAcrossSweep: true,
+    candidateReachesNonGlassRuntimeAnchor: false,
+    proxyRestoresHighTargetRepresentativeAvailability: true,
+    proxyRestoresExactRawHighLinkAttachment: false,
+    rawHighEndpointProjectionIdentityDiagnosticRequiredNext: true,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BO integrates only the Pass 18BN 1.237x HIGH target QA navigation proxy into the frozen source-local chain while leaving production Recast settings and authoritative source geometry unchanged. The proxy supplies a zero-snap HIGH target representative on both mirrored sides, and the LOW forward/reverse exact-raw links still attach commonly at 0.70m. However, HIGH forward and reverse exact-raw links remain unattached through the 1.50m sweep, so ALL_KCC_DIRECTIONS never succeeds. The tracked matrix remains 79/9/11 with no non-glass collateral. Therefore target-island existence alone is insufficient: the next safe diagnostic is to inspect the raw HIGH source/target endpoint projection poly/island identity on the proxy stage before changing endpoints, radii, or production settings.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3232,11 +3273,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch, Pass 18BH-18BK localize the HIGH target failure to coarse production rasterization of a narrowly surviving footprint, Pass 18BL proves a QA-only local nav proxy can recover source-direct validity, and Passes 18BM-18BN narrow the mirrored common proxy-scale threshold to (1.236x, 1.237x]. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked; the next allowed step is a QA-only full-chain integration experiment using the 1.237x local proxy with production settings and source geometry otherwise unchanged.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, Pass 18AZ classifies the next HIGH/LOW route branches, Pass 18BA proves the LOW exact-raw representation attaches by 0.70m, Pass 18BB-18BG isolate the unresolved HIGH branch, Pass 18BH-18BK localize the HIGH target failure to coarse production rasterization, and Passes 18BL-18BN recover a direct-valid HIGH target using a 1.237x QA-only local nav proxy. Pass 18BO then shows that this target-island recovery still does not make the exact raw HIGH links attach through 1.50m, while LOW remains healthy and the tracked matrix stays 79/9/11. These downstream engineering results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked; inspect proxy-stage raw HIGH endpoint poly/island identity next.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BN preserves Passes 18A-18BM and completes terminal scalar refinement of the QA-local HIGH target proxy under unchanged production Recast settings and authoritative source geometry. POSITIVE_Z remains invalid at 1.236x and first becomes source-direct-valid at 1.237x, while NEGATIVE_Z is already valid at 1.235x; the common mirrored threshold is therefore (1.236x, 1.237x]. This is roughly 0.428mm scale-resolution at the measured BK clearance radius, so further scalar minimization is not useful before integration. No proxy or source-geometry modification is runtime-authorized. The next safe engineering diagnostic is a full-chain QA integration using the 1.237x local proxy only. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BO preserves Passes 18A-18BN and integrates the 1.237x QA-local HIGH target proxy into the frozen full source-local chain. LOW forward/reverse exact-raw links remain healthy at 0.70m, but HIGH forward/reverse exact-raw links still fail through 1.50m even though the proxy supplies target representatives on both mirrored sides. The tracked matrix remains 79/9/11 and no non-glass collateral appears. This proves that target-island rasterization recovery alone is insufficient for the exact HIGH off-mesh endpoints. The next safe engineering diagnostic is low-level raw endpoint projection poly/island identity on the proxy stage, with no endpoint substitution, radius expansion, source edit, or production Recast change. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3271,12 +3312,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BN partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BO partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BN' ||
+    audit.resolutionPass !== '18BO' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -6028,8 +6069,50 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BN HIGH target terminal-footprint scale boundary drifted');
   }
 
+  const integration18bo = audit.highProxyFullChainIntegrationPass18BO;
+  if (
+    integration18bo.qaRunNumber !== 1188 ||
+    !integration18bo.diagnosticOnly ||
+    integration18bo.runtimePromotionAuthorized ||
+    integration18bo.gameplayDirectionalityResolved ||
+    integration18bo.gameplayJumpRequirementResolved ||
+    integration18bo.sourcePass !== '18BN' ||
+    !integration18bo.productionConfigUnchanged ||
+    !integration18bo.sourceGeometryUnchanged ||
+    !integration18bo.diagnosticProxyOnly ||
+    Math.abs(integration18bo.highTargetProxyScale - 1.237) > 1e-12 ||
+    integration18bo.highTargetProxyMode !== 'QA_NAV_MESH_REPLACEMENT_ONLY' ||
+    integration18bo.trustedEndpointsUsedAsLinks ||
+    !integration18bo.exactRawEndpointsUsed ||
+    integration18bo.globalRecastSettingsChanged ||
+    integration18bo.broadFrontierLinkAuthorized ||
+    integration18bo.upstreamDirectionalAssumption !== 'DROP_ONLY_QA_CONTINUATION' ||
+    Math.abs(integration18bo.upstreamDirectionalRadiusMeters - 0.7005) > 1e-12 ||
+    Math.abs(integration18bo.lowSlopeRadiusMeters - 0.80) > 1e-12 ||
+    integration18bo.sampledBranchRadiiMeters.join(',') !== '0.3,0.5,0.6,0.7,0.8,1,1.2,1.5' ||
+    integration18bo.baselineReachedDirectedPairs !== 79 ||
+    integration18bo.baselineWeakComponentCount !== 9 ||
+    integration18bo.baselineStronglyConnectedComponentCount !== 11 ||
+    Math.abs(integration18bo.positiveHighTargetRepresentativeSnapMeters) > 1e-12 ||
+    Math.abs(integration18bo.negativeHighTargetRepresentativeSnapMeters) > 1e-12 ||
+    Math.abs(integration18bo.lowForwardFirstCommonSuccessRadiusMeters - 0.70) > 1e-12 ||
+    Math.abs(integration18bo.lowReverseFirstCommonSuccessRadiusMeters - 0.70) > 1e-12 ||
+    integration18bo.highForwardCommonSuccessThrough150Meters ||
+    integration18bo.highReverseCommonSuccessThrough150Meters ||
+    integration18bo.allKccDirectionsCommonSuccessThrough150Meters ||
+    !integration18bo.trackedMatrixUnchangedAcrossSweep ||
+    integration18bo.candidateReachesNonGlassRuntimeAnchor ||
+    !integration18bo.proxyRestoresHighTargetRepresentativeAvailability ||
+    integration18bo.proxyRestoresExactRawHighLinkAttachment ||
+    !integration18bo.rawHighEndpointProjectionIdentityDiagnosticRequiredNext ||
+    integration18bo.productionOffMeshLinkAuthorized ||
+    integration18bo.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BO HIGH proxy full-chain integration boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BN full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BO full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
