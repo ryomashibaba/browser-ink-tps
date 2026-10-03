@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BU' as const,
+  resolutionPass: '18BV' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3591,6 +3591,56 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BU subdivides the shared Pass 18BT component 0 into all 24 individual triangles and all 16 shared-edge triangle pairs under the same fixed constructive baseline. POSITIVE_Z has eight individually sufficient triangles and six sufficient edge pairs; NEGATIVE_Z has three individually sufficient triangles and two sufficient edge pairs. Triangles 4 and 5 are individually sufficient on both mirrored sides, and their shared-edge pair [4,5] is also sufficient on both sides. Both triangles and the pair lie entirely at Y=7.5, localizing a common sufficient suppressor to the shared bridge top cap. No individual triangle or edge pair is necessary when the full shared component is present, so suppression remains redundant. The next safe diagnostic is direct physical/topological relation auditing of the shared Y=7.5 top-cap pair against the HIGH source and raw target, not wider context or global Recast tuning.'
   }),
 
+  sharedTopCapRelationPass18BV: Object.freeze({
+    qaRunNumber: 1222,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BU' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    sharedBridgeComponentIndex: 0,
+    sharedTopCapTriangleIndices: [4,5] as const,
+    sharedTopCapYRange: [7.5,7.5] as const,
+    relationAuditModes: [
+      'EXACT_3D_MESH_DISTANCE',
+      'XZ_FOOTPRINT_OVERLAP',
+      'RAW_ENDPOINT_XZ_CONTAINMENT',
+      'TRIANGLE_NORMAL_AND_AREA',
+      'FIXED_CONTEXT_RECAST_IDENTITY'
+    ] as const,
+    positiveTopCapToSourceDistanceMeters: 12.681462150778184,
+    positiveTopCapToTargetDistanceMeters: 18.712109439113778,
+    negativeTopCapToSourceDistanceMeters: 9.453814662666138,
+    negativeTopCapToTargetDistanceMeters: 12.654914043888693,
+    positiveSourceRawVerticalSeparationMeters: 4.297148016844746,
+    positiveTargetRawVerticalSeparationMeters: 4.5,
+    negativeSourceRawVerticalSeparationMeters: 4.297148016844746,
+    negativeTargetRawVerticalSeparationMeters: 4.5,
+    positiveSourceXZBboxOverlapsTopCap: false,
+    positiveTargetXZBboxOverlapsTopCap: false,
+    negativeSourceXZBboxOverlapsTopCap: false,
+    negativeTargetXZBboxOverlapsTopCap: false,
+    rawSourceInsideTopCapXZBothSides: false,
+    rawTargetInsideTopCapXZBothSides: false,
+    topCapTrianglesUpwardHorizontalBothSides: true,
+    baselineRawTargetOnProxyIslandBothSides: true,
+    topCapMovesRawTargetToSourceIslandBothSides: true,
+    directPhysicalContactHypothesisRejected: true,
+    localXZOverlapHypothesisRejected: true,
+    remoteGeometryChangesRawTargetIdentityBothSides: true,
+    boundsRasterizationIsolationRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BV directly measures the shared Pass 18BU Y=7.5 top-cap pair [4,5] against the exact HIGH source/target boundary. The pair is physically remote: 12.681m/18.712m from POSITIVE_Z source/target and 9.454m/12.655m from NEGATIVE_Z source/target, with 4.297m source-endpoint and 4.5m target-endpoint vertical separation. Neither mirrored source nor target has a positive-area XZ bbox overlap with the top cap, and neither raw endpoint lies inside its XZ footprint. Despite that, adding only the top-cap pair flips the raw target from proxy-island mutual connectivity to source-island mutual connectivity on both sides. Direct contact and local-plan-overlap explanations are therefore rejected. The next safe diagnostic must isolate whether adding this distant geometry changes Recast build bounds/grid/rasterization state rather than widening context or changing global settings.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3622,11 +3672,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT decomposes the common predecessor bridge to a shared 24-triangle component 0, and Pass 18BU further localizes common sufficiency inside that component to individual triangles 4 and 5 and their shared-edge pair [4,5], all on the Y=7.5 top cap. No individual triangle or shared-edge pair is necessary in the full component, so suppression remains redundant. The remaining engineering task is direct physical/topological relation auditing of this shared Y=7.5 top-cap pair against the HIGH source and raw target rather than wider context, radius, proxy-scale, or global Recast tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT decomposes the common predecessor bridge to a shared 24-triangle component 0, Pass 18BU localizes common sufficiency to top-cap pair [4,5] at Y=7.5, and Pass 18BV proves that pair is physically remote from the HIGH source/target, has no positive-area XZ overlap with either, and contains neither raw endpoint in XZ, yet still flips raw-target nav-island identity on both sides. Direct physical contact and local footprint overlap are therefore rejected. The remaining engineering task is to isolate Recast build-bounds/grid/rasterization effects of adding this distant pair rather than widening geometry context, radius, proxy scale, or global tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BU preserves Passes 18A-18BT and internally subdivides shared predecessor-bridge component 0. Across all 24 triangles and 16 shared-edge pairs per side, triangles 4 and 5 are individually sufficient suppressors on both mirrored sides and pair [4,5] is a common sufficient patch; all lie on the Y=7.5 top cap. No individual triangle or pair is necessary within the full component, confirming redundant suppression. The next safe engineering step is a direct physical/topological relation audit of this common top-cap pair against the HIGH source/raw target while keeping production settings, source geometry, proxy scale, and endpoints fixed. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BV preserves Passes 18A-18BU and directly audits the shared Y=7.5 top-cap pair against the exact HIGH source/target. The common suppressor is 9.45-18.71m away in 3D, has no positive-area XZ bbox overlap with either HIGH mesh, and contains neither raw boundary endpoint in XZ, but still flips raw-target identity from the proxy island to the source island on both mirrored sides. This rejects local physical-contact and footprint-overlap explanations. The next safe engineering step is bounds/rasterization isolation using the same fixed source/proxy/constructive baseline and unchanged production settings. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3661,12 +3711,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BU partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BV partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BU' ||
+    audit.resolutionPass !== '18BV' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -6781,8 +6831,48 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BU shared bridge internal-isolation boundary drifted');
   }
 
+  const relation18bv = audit.sharedTopCapRelationPass18BV;
+  if (
+    relation18bv.qaRunNumber !== 1222 ||
+    !relation18bv.diagnosticOnly ||
+    relation18bv.runtimePromotionAuthorized ||
+    relation18bv.gameplayDirectionalityResolved ||
+    relation18bv.gameplayJumpRequirementResolved ||
+    relation18bv.sourcePass !== '18BU' ||
+    !relation18bv.productionConfigUnchanged ||
+    !relation18bv.sourceGeometryUnchanged ||
+    !relation18bv.diagnosticProxyOnly ||
+    relation18bv.sharedBridgeComponentIndex !== 0 ||
+    relation18bv.sharedTopCapTriangleIndices.join(',') !== '4,5' ||
+    relation18bv.sharedTopCapYRange.join(',') !== '7.5,7.5' ||
+    Math.abs(relation18bv.positiveTopCapToSourceDistanceMeters - 12.681462150778184) > 1e-12 ||
+    Math.abs(relation18bv.positiveTopCapToTargetDistanceMeters - 18.712109439113778) > 1e-12 ||
+    Math.abs(relation18bv.negativeTopCapToSourceDistanceMeters - 9.453814662666138) > 1e-12 ||
+    Math.abs(relation18bv.negativeTopCapToTargetDistanceMeters - 12.654914043888693) > 1e-12 ||
+    relation18bv.positiveSourceXZBboxOverlapsTopCap ||
+    relation18bv.positiveTargetXZBboxOverlapsTopCap ||
+    relation18bv.negativeSourceXZBboxOverlapsTopCap ||
+    relation18bv.negativeTargetXZBboxOverlapsTopCap ||
+    relation18bv.rawSourceInsideTopCapXZBothSides ||
+    relation18bv.rawTargetInsideTopCapXZBothSides ||
+    !relation18bv.topCapTrianglesUpwardHorizontalBothSides ||
+    !relation18bv.baselineRawTargetOnProxyIslandBothSides ||
+    !relation18bv.topCapMovesRawTargetToSourceIslandBothSides ||
+    !relation18bv.directPhysicalContactHypothesisRejected ||
+    !relation18bv.localXZOverlapHypothesisRejected ||
+    !relation18bv.remoteGeometryChangesRawTargetIdentityBothSides ||
+    !relation18bv.boundsRasterizationIsolationRequiredNext ||
+    relation18bv.globalRecastSettingsChanged ||
+    relation18bv.broadFrontierLinkAuthorized ||
+    relation18bv.trustedNonLocalEndpointUsed ||
+    relation18bv.productionOffMeshLinkAuthorized ||
+    relation18bv.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BV shared top-cap relation boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BU full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BV full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
