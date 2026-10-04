@@ -77,7 +77,7 @@ describe('T21-D partial Recast connectivity QA', () => {
       mustReachProbeCount: 6,
       diagnosticGapProbeCount: 2,
       bothSidesDirectlyProbed: true,
-      resolutionPass: '18BY',
+      resolutionPass: '18BZ',
       rightLowToUnderpassResolved: false,
       centerSmallStepNavigationResolved: false,
       upperGlassBroadNavigationReconstructionBound: true,
@@ -1857,6 +1857,74 @@ describe('T21-D partial Recast connectivity QA', () => {
       cellCountExtentRequiredEitherSide: false,
       baselinePhaseWithActualCellCountRemainsNonAbsorbingBothSides: true,
       activeMinPhaseSweepRequiredNext: true,
+      globalRecastSettingsChanged: false,
+      broadFrontierLinkAuthorized: false,
+      trustedNonLocalEndpointUsed: false,
+      productionOffMeshLinkAuthorized: false,
+      activationBlockerCleared: false
+    });
+
+    expect(
+      UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.activeMinPhaseSweepPass18BZ
+    ).toMatchObject({
+      qaRunNumber: 1241,
+      diagnosticOnly: true,
+      runtimePromotionAuthorized: false,
+      gameplayDirectionalityResolved: false,
+      gameplayJumpRequirementResolved: false,
+      sourcePass: '18BY',
+      productionConfigUnchanged: true,
+      sourceGeometryUnchanged: true,
+      diagnosticProxyOnly: true,
+      highTargetProxyScale: 1.237,
+      sharedBridgeComponentIndex: 0,
+      sharedTopCapTriangleIndices: [4,5],
+      sweepStepMeters: 0.005,
+      sweepMaxMeters: 0.080,
+      positiveActiveAxis: 'Z',
+      negativeActiveAxis: 'X',
+      positiveActualPhaseRemainderMeters: 0.02120719969578344,
+      negativeActualPhaseRemainderMeters: 0.026703752819813076,
+      positiveBaselineCellCount: 141,
+      positiveFixedCellCount: 156,
+      negativeBaselineCellCount: 85,
+      negativeFixedCellCount: 108,
+      baselineAbsorbsBothSides: false,
+      extentOnlyAbsorbsBothSides: false,
+      actualPhaseAbsorbsBothSides: true,
+      positiveActualPhaseRawTargetPolyRef: 17,
+      negativeActualPhaseRawTargetPolyRef: 13,
+      positiveAbsorbingSweepDeltasMeters: [
+        0.02,0.025,0.03,0.035,0.04,0.045,0.05,0.055,0.075,0.08
+      ],
+      negativeAbsorbingSweepDeltasMeters: [
+        0.015,0.02,0.025,0.04,0.045,0.05,0.055,0.06,0.065,0.075
+      ],
+      commonAbsorbingSweepDeltasMeters: [
+        0.02,0.025,0.04,0.045,0.05,0.055,0.075
+      ],
+      positiveTransitionCount: 3,
+      negativeTransitionCount: 6,
+      positiveTransitionBrackets: [
+        {fromDeltaMeters:0.015,toDeltaMeters:0.02,fromAbsorbs:false,toAbsorbs:true},
+        {fromDeltaMeters:0.055,toDeltaMeters:0.06,fromAbsorbs:true,toAbsorbs:false},
+        {fromDeltaMeters:0.07,toDeltaMeters:0.075,fromAbsorbs:false,toAbsorbs:true}
+      ],
+      negativeTransitionBrackets: [
+        {fromDeltaMeters:0.01,toDeltaMeters:0.015,fromAbsorbs:false,toAbsorbs:true},
+        {fromDeltaMeters:0.025,toDeltaMeters:0.03,fromAbsorbs:true,toAbsorbs:false},
+        {fromDeltaMeters:0.035,toDeltaMeters:0.04,fromAbsorbs:false,toAbsorbs:true},
+        {fromDeltaMeters:0.065,toDeltaMeters:0.07,fromAbsorbs:true,toAbsorbs:false},
+        {fromDeltaMeters:0.07,toDeltaMeters:0.075,fromAbsorbs:false,toAbsorbs:true},
+        {fromDeltaMeters:0.075,toDeltaMeters:0.08,fromAbsorbs:true,toAbsorbs:false}
+      ],
+      allSweepSamplesKeepFixedCellCountBothSides: true,
+      multipleAbsorptionWindowsPositiveSide: true,
+      multipleAbsorptionWindowsNegativeSide: true,
+      phaseResponseMonotonicPositiveSide: false,
+      phaseResponseMonotonicNegativeSide: false,
+      simpleSingleThresholdHypothesisRejected: true,
+      activeMinPhaseTransitionRefinementRequiredNext: true,
       globalRecastSettingsChanged: false,
       broadFrontierLinkAuthorized: false,
       trustedNonLocalEndpointUsed: false,
