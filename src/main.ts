@@ -6,7 +6,17 @@ const uiRoot = document.querySelector<HTMLElement>('#ui-root');
 
 if (!canvas || !uiRoot) throw new Error('Required DOM roots are missing.');
 
-InkLabApp.boot(canvas, uiRoot).catch((error: unknown) => {
+async function boot(): Promise<void> {
+  const review = new URL(window.location.href).searchParams.get('stageReview');
+  if (review === 'undertow') {
+    const { UndertowVisualReviewApp } = await import('./app/UndertowVisualReviewApp');
+    await UndertowVisualReviewApp.boot(canvas, uiRoot);
+    return;
+  }
+  await InkLabApp.boot(canvas, uiRoot);
+}
+
+void boot().catch((error: unknown) => {
   console.error(error);
   const panel = document.createElement('pre');
   panel.id = 'boot-error';
