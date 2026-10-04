@@ -87,6 +87,12 @@ jobs:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18BWTopCapRasterizationIsolationQa.test.ts
 
+      - name: T21 Pass 18BX axis-isolated bounds/grid diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayPass18BXAxisIsolatedBoundsGridQa.test.ts
+
       - name: T21 Temple01 local XZ contour audit
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         shell: bash
