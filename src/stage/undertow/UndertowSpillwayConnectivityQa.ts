@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BV' as const,
+  resolutionPass: '18BW' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3641,6 +3641,61 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BV directly measures the shared Pass 18BU Y=7.5 top-cap pair [4,5] against the exact HIGH source/target boundary. The pair is physically remote: 12.681m/18.712m from POSITIVE_Z source/target and 9.454m/12.655m from NEGATIVE_Z source/target, with 4.297m source-endpoint and 4.5m target-endpoint vertical separation. Neither mirrored source nor target has a positive-area XZ bbox overlap with the top cap, and neither raw endpoint lies inside its XZ footprint. Despite that, adding only the top-cap pair flips the raw target from proxy-island mutual connectivity to source-island mutual connectivity on both sides. Direct contact and local-plan-overlap explanations are therefore rejected. The next safe diagnostic must isolate whether adding this distant geometry changes Recast build bounds/grid/rasterization state rather than widening context or changing global settings.'
   }),
 
+  topCapRasterizationIsolationPass18BW: Object.freeze({
+    qaRunNumber: 1229,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BV' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    highTargetProxyScale: 1.237,
+    sharedBridgeComponentIndex: 0,
+    sharedTopCapTriangleIndices: [4,5] as const,
+    experimentModes: [
+      'BASELINE',
+      'DEGENERATE_BOUNDS_ONLY',
+      'REVERSED_WINDING_SAME_GEOMETRY',
+      'ACTUAL_TOP_CAP'
+    ] as const,
+    recastCellSizeMeters: 0.18,
+    recastCellHeightMeters: 0.1,
+    positiveBaselineGridCells: [84,141,30] as const,
+    positiveBoundsExpandedGridCells: [85,156,45] as const,
+    negativeBaselineGridCells: [85,115,30] as const,
+    negativeBoundsExpandedGridCells: [108,115,45] as const,
+    positiveBaselineBboxMaxY: 6,
+    positiveBoundsExpandedBboxMaxY: 7.5,
+    negativeBaselineBboxMaxY: 6,
+    negativeBoundsExpandedBboxMaxY: 7.5,
+    baselineRawTargetOnProxyIslandBothSides: true,
+    baselineRawTargetOnSourceIslandBothSides: false,
+    boundsOnlyRawTargetOnSourceIslandBothSides: true,
+    boundsOnlyRawTargetOnProxyIslandBothSides: false,
+    reversedWindingRawTargetOnSourceIslandBothSides: true,
+    reversedWindingRawTargetOnProxyIslandBothSides: false,
+    actualTopCapRawTargetOnSourceIslandBothSides: true,
+    actualTopCapRawTargetOnProxyIslandBothSides: false,
+    boundsOnlyMatchesActualGridBothSides: true,
+    reversedWindingMatchesActualGridBothSides: true,
+    boundsOnlyRecreatesAbsorptionBothSides: true,
+    reversedWindingRecreatesAbsorptionBothSides: true,
+    actualTopCapRecreatesAbsorptionBothSides: true,
+    triangleRasterizationRequiredForAbsorption: false,
+    windingRequiredForAbsorption: false,
+    buildBoundsGridChangeSufficientForAbsorption: true,
+    boundsGridAlignmentExtentIsolationRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BW keeps the Pass 18BV source/proxy/constructive baseline fixed and compares BASELINE, a degenerate bounds-only proxy at the distant Y=7.5 top-cap extents, reversed-winding top-cap geometry, and the actual top-cap pair [4,5]. On POSITIVE_Z the production-grid envelope changes from 84x141x30 with maxY=6 to 85x156x45 with maxY=7.5; on NEGATIVE_Z it changes from 85x115x30 to 108x115x45. The degenerate bounds-only proxy exactly matches the actual-top-cap grid outcome and alone moves the raw target from the proxy island onto the source island on both mirrored sides; reversed winding does the same. Actual triangle surface rasterization and winding are therefore not required for the absorption. The operative variable is the Recast build-bounds/grid change itself. The next safe diagnostic is controlled bounds/grid alignment and extent isolation under unchanged production parameters, source geometry, proxy scale, endpoints, and constructive baseline.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3672,11 +3727,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT decomposes the common predecessor bridge to a shared 24-triangle component 0, Pass 18BU localizes common sufficiency to top-cap pair [4,5] at Y=7.5, and Pass 18BV proves that pair is physically remote from the HIGH source/target, has no positive-area XZ overlap with either, and contains neither raw endpoint in XZ, yet still flips raw-target nav-island identity on both sides. Direct physical contact and local footprint overlap are therefore rejected. The remaining engineering task is to isolate Recast build-bounds/grid/rasterization effects of adding this distant pair rather than widening geometry context, radius, proxy scale, or global tuning. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT decomposes the common predecessor bridge to a shared 24-triangle component 0, Pass 18BU localizes common sufficiency to top-cap pair [4,5] at Y=7.5, and Pass 18BV proves that pair is physically remote from the HIGH source/target with no local XZ overlap. Pass 18BW then proves that a degenerate bounds-only proxy matching the top-cap extents reproduces the same grid/bounds and raw-target absorption on both mirrored sides, while reversed winding does the same. Actual top-cap surface rasterization and winding are therefore not required; changing the Recast build bounds/grid is sufficient. The remaining engineering task is controlled bounds/grid alignment and extent isolation under unchanged production parameters, source geometry, proxy scale, endpoints, and constructive baseline. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BV preserves Passes 18A-18BU and directly audits the shared Y=7.5 top-cap pair against the exact HIGH source/target. The common suppressor is 9.45-18.71m away in 3D, has no positive-area XZ bbox overlap with either HIGH mesh, and contains neither raw boundary endpoint in XZ, but still flips raw-target identity from the proxy island to the source island on both mirrored sides. This rejects local physical-contact and footprint-overlap explanations. The next safe engineering step is bounds/rasterization isolation using the same fixed source/proxy/constructive baseline and unchanged production settings. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BW preserves Passes 18A-18BV and isolates the distant shared top-cap effect to Recast build-bounds/grid state. A degenerate bounds-only proxy that expands the grid to the same extents as the actual Y=7.5 top-cap pair reproduces the raw-target identity flip on both mirrored sides, and reversed winding produces the same result. The actual top-cap surface rasterization and winding are therefore not required. The next safe engineering step is controlled bounds/grid alignment and extent isolation with production Recast parameters, source geometry, proxy scale, exact endpoints, and constructive baseline held fixed. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3711,12 +3766,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BV partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BW partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BV' ||
+    audit.resolutionPass !== '18BW' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -6871,8 +6926,60 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BV shared top-cap relation boundary drifted');
   }
 
+  const raster18bw = audit.topCapRasterizationIsolationPass18BW;
+  if (
+    raster18bw.qaRunNumber !== 1229 ||
+    !raster18bw.diagnosticOnly ||
+    raster18bw.runtimePromotionAuthorized ||
+    raster18bw.gameplayDirectionalityResolved ||
+    raster18bw.gameplayJumpRequirementResolved ||
+    raster18bw.sourcePass !== '18BV' ||
+    !raster18bw.productionConfigUnchanged ||
+    !raster18bw.sourceGeometryUnchanged ||
+    !raster18bw.diagnosticProxyOnly ||
+    raster18bw.highTargetProxyScale !== 1.237 ||
+    raster18bw.sharedBridgeComponentIndex !== 0 ||
+    raster18bw.sharedTopCapTriangleIndices.join(',') !== '4,5' ||
+    raster18bw.experimentModes.join(',') !==
+      'BASELINE,DEGENERATE_BOUNDS_ONLY,REVERSED_WINDING_SAME_GEOMETRY,ACTUAL_TOP_CAP' ||
+    raster18bw.recastCellSizeMeters !== 0.18 ||
+    raster18bw.recastCellHeightMeters !== 0.1 ||
+    raster18bw.positiveBaselineGridCells.join(',') !== '84,141,30' ||
+    raster18bw.positiveBoundsExpandedGridCells.join(',') !== '85,156,45' ||
+    raster18bw.negativeBaselineGridCells.join(',') !== '85,115,30' ||
+    raster18bw.negativeBoundsExpandedGridCells.join(',') !== '108,115,45' ||
+    raster18bw.positiveBaselineBboxMaxY !== 6 ||
+    raster18bw.positiveBoundsExpandedBboxMaxY !== 7.5 ||
+    raster18bw.negativeBaselineBboxMaxY !== 6 ||
+    raster18bw.negativeBoundsExpandedBboxMaxY !== 7.5 ||
+    !raster18bw.baselineRawTargetOnProxyIslandBothSides ||
+    raster18bw.baselineRawTargetOnSourceIslandBothSides ||
+    !raster18bw.boundsOnlyRawTargetOnSourceIslandBothSides ||
+    raster18bw.boundsOnlyRawTargetOnProxyIslandBothSides ||
+    !raster18bw.reversedWindingRawTargetOnSourceIslandBothSides ||
+    raster18bw.reversedWindingRawTargetOnProxyIslandBothSides ||
+    !raster18bw.actualTopCapRawTargetOnSourceIslandBothSides ||
+    raster18bw.actualTopCapRawTargetOnProxyIslandBothSides ||
+    !raster18bw.boundsOnlyMatchesActualGridBothSides ||
+    !raster18bw.reversedWindingMatchesActualGridBothSides ||
+    !raster18bw.boundsOnlyRecreatesAbsorptionBothSides ||
+    !raster18bw.reversedWindingRecreatesAbsorptionBothSides ||
+    !raster18bw.actualTopCapRecreatesAbsorptionBothSides ||
+    raster18bw.triangleRasterizationRequiredForAbsorption ||
+    raster18bw.windingRequiredForAbsorption ||
+    !raster18bw.buildBoundsGridChangeSufficientForAbsorption ||
+    !raster18bw.boundsGridAlignmentExtentIsolationRequiredNext ||
+    raster18bw.globalRecastSettingsChanged ||
+    raster18bw.broadFrontierLinkAuthorized ||
+    raster18bw.trustedNonLocalEndpointUsed ||
+    raster18bw.productionOffMeshLinkAuthorized ||
+    raster18bw.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BW top-cap rasterization-isolation boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BV full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BW full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
