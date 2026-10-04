@@ -73,6 +73,11 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: T21 source-native macro review export
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: python scripts/undertow-source-native-review-export.py /tmp/t21-pass18c-upper-terrain.json
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
