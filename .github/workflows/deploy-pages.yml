@@ -64,6 +64,14 @@ jobs:
         shell: bash
         run: python scripts/undertow-temple01-upper-terrain-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
 
+      - name: Upload T21 Temple01 upper-terrain source audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-upper-terrain-source-audit
+          path: /tmp/t21-pass18c-upper-terrain.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
