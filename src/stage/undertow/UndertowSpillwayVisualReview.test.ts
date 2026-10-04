@@ -8,6 +8,11 @@ import {
   UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES,
   undertowT21MacroCoverageErrors
 } from './UndertowSpillwayMacroCoverage';
+import {
+  UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES,
+  UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY,
+  undertowT21SourceNativeReviewErrors
+} from './UndertowSpillwaySourceNativeReviewGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import {
   UNDERTOW_T21_VISUAL_REVIEW,
@@ -18,6 +23,7 @@ describe('T21 Undertow visual review contract', () => {
   it('exposes reviewed geometry plus review-only macro coverage without promoting T21', () => {
     expect(undertowT21VisualReviewErrors()).toEqual([]);
     expect(undertowT21MacroCoverageErrors()).toEqual([]);
+    expect(undertowT21SourceNativeReviewErrors()).toEqual([]);
     expect(UNDERTOW_T21_VISUAL_REVIEW).toMatchObject({
       id: 'undertow-t21-visual-review-v2',
       routeQuery: 'stageReview=undertow',
@@ -47,6 +53,18 @@ describe('T21 Undertow visual review contract', () => {
     expect(UNDERTOW_T21_MACRO_COVERAGE.regions).toHaveLength(18);
     expect(UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES).toHaveLength(2);
     expect(UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.outer).toHaveLength(42);
+    expect(UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES).toHaveLength(16);
+    expect(UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY).toMatchObject({
+      sourceAuditVersion: 'PASS18C_SOURCE_NATIVE_V1',
+      discoveryPass: '18G',
+      reviewOnly: true,
+      runtimePromotionAuthorized: false,
+      meshCount: 16,
+      minimumSourceAreaSquareMeters: 8,
+      requiresInsideHardSilhouette: true
+    });
+    expect(UNDERTOW_T21_VISUAL_REVIEW.sourceNativeReviewMeshCount).toBe(16);
+    expect(UNDERTOW_T21_VISUAL_REVIEW.sourceNativeReviewAreaSquareMeters).toBeCloseTo(1017.251633, 5);
     expect(UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE).toMatchObject({
       id: 'whole-stage-xz-occupancy-envelope',
       authority: 'XZ_OCCUPANCY_ONLY_NOT_FLOOR',

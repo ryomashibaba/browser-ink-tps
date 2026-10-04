@@ -770,7 +770,7 @@ button.active-weapon {
   grid-column: auto;
 }
 #t21-review-panel.v2 .review-actions.layers button:last-child {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 #t21-review-panel.v2 .review-actions.layers {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -780,7 +780,8 @@ button.active-weapon {
   outline-width: 1px;
 }
 #t21-review-panel.v2 .review-legend .confirmed { background: #28a8c2; }
-#t21-review-panel.v2 .review-legend .occupancy { background: #765814; }
+#t21-review-panel.v2 .review-legend .occupancy { background: #5b4310; }
+#t21-review-panel.v2 .review-legend .source-native { background: #ef7614; }
 #t21-review-panel.v2 .review-legend .provisional { background: #f5b72a; }
 #t21-review-panel.v2 .review-legend .unresolved { background: #ff3a32; }
 #t21-review-panel.v2 .review-legend .void {

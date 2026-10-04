@@ -9,8 +9,6 @@ from pathlib import Path
 SOURCE = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/t21-pass18c-upper-terrain.json")
 
 SELECTED_IDS = [
-    "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c2",
-    "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c3",
     "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c5",
     "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c7",
     "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c3",
@@ -74,7 +72,7 @@ out = {
     "discoveryPass": "18G",
     "reviewOnly": True,
     "runtimePromotionAuthorized": False,
-    "selectionRule": "CURATED_PASS18G_RELAXED_REACHABLE_AREA_GTE_8_INSIDE_HARD_SILHOUETTE_NONSPAWN",
+    "selectionRule": "BALANCED_8_PLUS_8_PASS18G_RELAXED_REACHABLE_AREA_GTE_8_INSIDE_HARD_SILHOUETTE_NONSPAWN",
     "meshCount": len(records),
     "records": records,
 }

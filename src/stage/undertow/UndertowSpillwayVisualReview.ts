@@ -4,6 +4,11 @@ import {
   UNDERTOW_T21_MACRO_COVERAGE,
   undertowT21MacroCoverageErrors
 } from './UndertowSpillwayMacroCoverage';
+import {
+  UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES,
+  UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY,
+  undertowT21SourceNativeReviewErrors
+} from './UndertowSpillwaySourceNativeReviewGeometry';
 
 export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   id: 'undertow-t21-visual-review-v2',
@@ -19,14 +24,19 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   macroCoverageCounts: UNDERTOW_T21_MACRO_COVERAGE.statusCounts,
   macroProvisionalSurfaceCount: UNDERTOW_T21_MACRO_COVERAGE.provisionalSurfaces.length,
   macroUnresolvedOutlineCount: UNDERTOW_T21_MACRO_COVERAGE.unresolvedOutlines.length,
+  sourceNativeReviewMeshCount: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES.length,
+  sourceNativeReviewAreaSquareMeters: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.totalSourceAreaSquareMeters,
   deferredFeatureIds: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds] as const,
   activationBlockers: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers] as const,
   notes:
-    'Visual Review v2 combines the current reviewed T21-D geometry with a strictly review-only macro coverage layer. Yellow macro surfaces are XZ-only provisional envelopes with unresolved multi-level Y and must never be promoted to runtime authority by implication.'
+    'Visual Review v2 combines reviewed T21-D geometry, the whole-stage occupancy underlay, provisional macro envelopes, and exact Temple01 source-native review meshes. Source-native mesh shape/Y is exact source data, but Pass18G route membership remains diagnostic and no runtime authority is implied.'
 });
 
 export function undertowT21VisualReviewErrors(): readonly string[] {
-  const errors: string[] = [...undertowT21MacroCoverageErrors()];
+  const errors: string[] = [
+    ...undertowT21MacroCoverageErrors(),
+    ...undertowT21SourceNativeReviewErrors()
+  ];
   if (!UNDERTOW_T21_VISUAL_REVIEW.reviewOnly) {
     errors.push('T21 visual review must remain review-only');
   }
@@ -41,6 +51,9 @@ export function undertowT21VisualReviewErrors(): readonly string[] {
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.paintSurfaceCount < 1) {
     errors.push('T21 visual review requires the reviewed paint-surface subset');
+  }
+  if (UNDERTOW_T21_VISUAL_REVIEW.sourceNativeReviewMeshCount !== 16) {
+    errors.push('T21 visual review v2 source-native review mesh inventory drifted');
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount < 1) {
     errors.push('T21 visual review v2 requires a whole-stage macro coverage ledger');
