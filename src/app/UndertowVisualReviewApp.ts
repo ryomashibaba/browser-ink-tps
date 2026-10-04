@@ -19,21 +19,35 @@ import {
   Vec3
 } from 'playcanvas';
 import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import type { StageFootprint, StageFootprintPoint } from '../stage/StageFootprint';
 import type {
   StageNavigationLinkDefinition,
   StageSolidDefinition,
   StageVector3
 } from '../stage/StageDefinition';
+import type { MetricXZ } from '../stage/measurement/StageMapCalibration';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
+import {
+  UNDERTOW_T21_MACRO_COVERAGE,
+  UNDERTOW_T21_MACRO_OUTER_BOUNDARY,
+  UNDERTOW_T21_MACRO_REVIEW_SURFACES,
+  UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES,
+  type UndertowMacroCoverageStatus,
+  type UndertowMacroReviewOutline,
+  type UndertowMacroReviewSurface
+} from '../stage/undertow/UndertowSpillwayMacroCoverage';
 import { UNDERTOW_T21_VISUAL_REVIEW } from '../stage/undertow/UndertowSpillwayVisualReview';
 
-type ReviewView = 'OVERVIEW' | 'TOP' | 'SPAWN_A' | 'SPAWN_B';
+type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 
 interface ReviewMaterials {
   paintBacked: StandardMaterial;
   structure: StandardMaterial;
   visualOnly: StandardMaterial;
   supportOnly: StandardMaterial;
+  confirmedBoundary: StandardMaterial;
+  provisional: StandardMaterial;
+  unresolved: StandardMaterial;
   spawnA: StandardMaterial;
   spawnB: StandardMaterial;
   nav: StandardMaterial;
@@ -73,6 +87,9 @@ export class UndertowVisualReviewApp {
   private readonly materials: ReviewMaterials;
   private readonly camera: Entity;
   private readonly target = new Vec3();
+  private readonly confirmedRoot = new Entity('T21Review:Confirmed');
+  private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
+  private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
   private readonly keys = new Set<string>();
   private yawDegrees = 35;
@@ -87,11 +104,12 @@ export class UndertowVisualReviewApp {
     private readonly canvas: HTMLCanvasElement,
     private readonly uiRoot: HTMLElement
   ) {
-    document.title = 'Ink TPS — T21 Undertow Visual Review';
+    document.title = 'Ink TPS — T21 Undertow Visual Review v2';
     this.materials = createReviewMaterials();
     this.camera = this.createCamera();
     this.createLighting();
     this.buildReviewedGeometry();
+    this.buildMacroCoverageReviewGeometry();
     this.buildSpawnMarkers();
     this.buildNavigationMarkers();
     this.createReviewPanel();
@@ -115,7 +133,7 @@ export class UndertowVisualReviewApp {
 
     const camera = new Entity('T21Review:Camera');
     camera.addComponent('camera', {
-      clearColor: new Color(0.035, 0.05, 0.065, 1),
+      clearColor: new Color(0.025, 0.035, 0.045, 1),
       nearClip: 0.1,
       farClip: 500,
       fov: 55,
@@ -126,12 +144,12 @@ export class UndertowVisualReviewApp {
   }
 
   private createLighting(): void {
-    this.app.scene.ambientLight = new Color(0.52, 0.56, 0.62);
+    this.app.scene.ambientLight = new Color(0.54, 0.58, 0.64);
 
     const key = new Entity('T21Review:KeyLight');
     key.addComponent('light', {
       type: 'directional',
-      color: new Color(1, 0.96, 0.90),
+      color: new Color(1, 0.97, 0.92),
       intensity: 1.55,
       castShadows: true,
       shadowResolution: 2048
@@ -142,7 +160,7 @@ export class UndertowVisualReviewApp {
     const fill = new Entity('T21Review:FillLight');
     fill.addComponent('light', {
       type: 'omni',
-      color: new Color(0.32, 0.70, 0.95),
+      color: new Color(0.30, 0.72, 0.96),
       intensity: 1.2,
       range: 90,
       castShadows: false
@@ -152,8 +170,7 @@ export class UndertowVisualReviewApp {
   }
 
   private buildReviewedGeometry(): void {
-    const root = new Entity('T21Review:Geometry');
-    this.app.root.addChild(root);
+    this.app.root.addChild(this.confirmedRoot);
     const paintBackings = new Set(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.paintSurfaces.map(
         surface => surface.backingSolidId
@@ -168,8 +185,36 @@ export class UndertowVisualReviewApp {
           : solid.collisionEnabled === false && solid.navigationEnabled === false
             ? this.materials.visualOnly
             : this.materials.structure;
-      createReviewSolid(this.app, root, solid, material);
+      createReviewSolid(this.app, this.confirmedRoot, solid, material);
     }
+  }
+
+  private buildMacroCoverageReviewGeometry(): void {
+    this.app.root.addChild(this.provisionalRoot);
+    this.app.root.addChild(this.unresolvedRoot);
+
+    for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
+      createMacroReviewSurface(
+        this.provisionalRoot,
+        surface,
+        this.materials.provisional
+      );
+    }
+    for (const outline of UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES) {
+      createMacroReviewOutline(
+        this.unresolvedRoot,
+        outline,
+        this.materials.unresolved
+      );
+    }
+    createPlanLineLoop(
+      this.confirmedRoot,
+      'T21Review:HardPlayableSilhouette',
+      UNDERTOW_T21_MACRO_OUTER_BOUNDARY,
+      -1.64,
+      this.materials.confirmedBoundary,
+      0.09
+    );
   }
 
   private buildSpawnMarkers(): void {
@@ -200,40 +245,66 @@ export class UndertowVisualReviewApp {
     const bounds = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.worldBounds;
     const width = bounds.maxX - bounds.minX;
     const depth = bounds.maxZ - bounds.minZ;
+    const counts = UNDERTOW_T21_MACRO_COVERAGE.statusCounts;
     const panel = document.createElement('section');
     panel.id = 't21-review-panel';
-    panel.className = 'panel';
+    panel.className = 'panel v2';
     panel.innerHTML = `
       <div class="review-title">
-        <strong>T21 UNDERTOW VISUAL REVIEW</strong>
+        <strong>T21 UNDERTOW VISUAL REVIEW v2</strong>
         <span>REVIEW ONLY</span>
       </div>
       <p class="review-warning">
-        Production remains T20. Only geometry already admitted into the current
-        T21-D partial blockout is rendered; deferred geometry is intentionally omitted.
+        Production remains T20. Cyan is reviewed/confirmed broad geometry. Yellow is
+        <b>XZ-only provisional macro coverage</b> with unresolved multi-level height.
+        Red marks unresolved detail boundaries. Black outside the hard silhouette stays omitted.
       </p>
-      <div class="review-stats">
-        <span>Reviewed solids</span><b>${UNDERTOW_T21_VISUAL_REVIEW.solidCount}</b>
-        <span>Paint-backed surfaces</span><b>${UNDERTOW_T21_VISUAL_REVIEW.paintSurfaceCount}</b>
+      <div class="review-stats macro">
+        <span>Macro regions</span><b>${UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount}</b>
+        <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
+        <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
+        <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
+        <span>Reviewed solids / paint surfaces</span><b>${UNDERTOW_T21_VISUAL_REVIEW.solidCount} / ${UNDERTOW_T21_VISUAL_REVIEW.paintSurfaceCount}</b>
         <span>Navigation links</span><b>${UNDERTOW_T21_VISUAL_REVIEW.navigationLinkCount}</b>
         <span>World X/Z span</span><b>${width.toFixed(1)} × ${depth.toFixed(1)} m</b>
       </div>
-      <div class="review-actions">
+      <div class="review-actions views">
         <button data-review-view="OVERVIEW">Overview</button>
         <button data-review-view="TOP">Top</button>
-        <button data-review-view="SPAWN_A">Spawn A</button>
-        <button data-review-view="SPAWN_B">Spawn B</button>
+        <button data-review-view="POS_TO_NEG">POS → Center → NEG</button>
+        <button data-review-view="SPAWN_A">Spawn A / POS</button>
+        <button data-review-view="SPAWN_B">Spawn B / NEG</button>
+      </div>
+      <div class="review-actions layers">
+        <button id="t21-review-confirmed-toggle">Confirmed ON</button>
+        <button id="t21-review-provisional-toggle">Provisional ON</button>
+        <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
       </div>
       <div class="review-legend">
-        <span><i class="paint"></i> paint-backed reviewed geometry</span>
-        <span><i class="structure"></i> reviewed structure</span>
-        <span><i class="visual"></i> visual-only reviewed source</span>
-        <span><i class="support"></i> collision/support-only geometry</span>
-        <span><i class="nav"></i> currently authored nav links</span>
+        <span><i class="confirmed"></i> confirmed/reviewed macro geometry</span>
+        <span><i class="provisional"></i> provisional XZ-only macro envelope; Y unresolved</span>
+        <span><i class="unresolved"></i> unresolved detail boundary / ledger item</span>
+        <span><i class="void"></i> intentional void / outside hard silhouette</span>
+        <span><i class="nav"></i> currently authored navigation links</span>
       </div>
       <details open>
-        <summary>Deferred / not rendered (${UNDERTOW_T21_VISUAL_REVIEW.deferredFeatureIds.length})</summary>
+        <summary>Macro coverage regions (${UNDERTOW_T21_MACRO_COVERAGE.regionCount})</summary>
+        <ul class="review-region-list">
+          ${UNDERTOW_T21_MACRO_COVERAGE.regions
+            .map(region => `
+              <li class="${macroStatusClass(region.status)}">
+                <span class="status-dot"></span>
+                <div><b>${escapeHtml(region.label)}</b><small>${macroStatusLabel(region.status)}</small></div>
+              </li>`)
+            .join('')}
+        </ul>
+      </details>
+      <details>
+        <summary>Special deferred features (${UNDERTOW_T21_VISUAL_REVIEW.deferredFeatureIds.length}; NOT macro missing total)</summary>
+        <p class="review-detail-note">
+          These are the older special deferred items only. Macro coverage status above is the whole-stage review inventory.
+        </p>
         <ul>
           ${UNDERTOW_T21_VISUAL_REVIEW.deferredFeatureIds
             .map(id => `<li>${escapeHtml(id)}</li>`)
@@ -248,6 +319,9 @@ export class UndertowVisualReviewApp {
             .join('')}
         </ul>
       </details>
+      <p class="review-source-note">
+        Legacy cyan diagram polygons remain source annotations only; Visual Review v2 does not reinterpret them as internal water or void.
+      </p>
       <p class="review-help">
         Drag: orbit · Wheel: zoom · WASD: pan · Arrow keys: orbit · Shift: faster
       </p>
@@ -262,14 +336,42 @@ export class UndertowVisualReviewApp {
         });
       });
 
-    const navToggle = panel.querySelector<HTMLButtonElement>('#t21-review-nav-toggle');
-    navToggle?.addEventListener('click', () => {
-      this.navRoot.enabled = !this.navRoot.enabled;
-      if (navToggle) {
-        navToggle.textContent = this.navRoot.enabled
-          ? 'Nav markers ON'
-          : 'Nav markers OFF';
-      }
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-confirmed-toggle'),
+      this.confirmedRoot,
+      'Confirmed'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
+      this.provisionalRoot,
+      'Provisional'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-unresolved-toggle'),
+      this.unresolvedRoot,
+      'Unresolved'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-nav-toggle'),
+      this.navRoot,
+      'Nav markers'
+    );
+  }
+
+  private bindRootToggle(
+    button: HTMLButtonElement | null,
+    root: Entity,
+    label: string
+  ): void {
+    if (!button) return;
+    const refresh = () => {
+      button.textContent = `${label} ${root.enabled ? 'ON' : 'OFF'}`;
+      button.classList.toggle('active-mode', root.enabled);
+    };
+    refresh();
+    button.addEventListener('click', () => {
+      root.enabled = !root.enabled;
+      refresh();
     });
   }
 
@@ -373,6 +475,14 @@ export class UndertowVisualReviewApp {
       return;
     }
 
+    if (view === 'POS_TO_NEG') {
+      this.target.set(centerX, 2.8, centerZ);
+      this.yawDegrees = 0;
+      this.pitchDegrees = 34;
+      this.distanceMeters = Math.max(55, span * 0.86);
+      return;
+    }
+
     if (view === 'SPAWN_A' || view === 'SPAWN_B') {
       const source = view === 'SPAWN_A'
         ? UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.teamASpawnFloorPoint
@@ -406,10 +516,13 @@ export class UndertowVisualReviewApp {
 
 function createReviewMaterials(): ReviewMaterials {
   return {
-    paintBacked: makeMaterial(new Color(0.14, 0.62, 0.70), 0.08),
-    structure: makeMaterial(new Color(0.38, 0.43, 0.48), 0.02),
-    visualOnly: makeMaterial(new Color(0.63, 0.45, 0.18), 0.08),
-    supportOnly: makeMaterial(new Color(0.78, 0.31, 0.16), 0.10),
+    paintBacked: makeMaterial(new Color(0.12, 0.66, 0.76), 0.10),
+    structure: makeMaterial(new Color(0.19, 0.50, 0.60), 0.06),
+    visualOnly: makeMaterial(new Color(0.24, 0.58, 0.66), 0.08),
+    supportOnly: makeMaterial(new Color(0.10, 0.40, 0.52), 0.08),
+    confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
+    provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
+    unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),
     spawnA: makeMaterial(new Color(0.05, 0.90, 1.00), 0.55),
     spawnB: makeMaterial(new Color(1.00, 0.10, 0.58), 0.55),
     nav: makeMaterial(new Color(0.50, 1.00, 0.32), 0.48)
@@ -501,6 +614,115 @@ function createReviewSolid(
   parent.addChild(entity);
 }
 
+function createMacroReviewSurface(
+  parent: Entity,
+  surface: UndertowMacroReviewSurface,
+  material: StandardMaterial
+): void {
+  const bounds = polygonBounds(surface.outer);
+  const width = bounds.maxX - bounds.minX;
+  const depth = bounds.maxZ - bounds.minZ;
+  const footprint = localReviewFootprint(
+    surface.outer,
+    surface.holes,
+    bounds.minX,
+    bounds.minZ,
+    surface.cellSizeMeters
+  );
+  const raster = rasterizeStageFootprint(width, depth, footprint);
+  const thickness = 0.06;
+
+  raster.rectangles.forEach((rect, index) => {
+    const piece = new Entity(`T21Review:${surface.id}:${index}`);
+    piece.addComponent('render', {
+      type: 'box',
+      material,
+      castShadows: false,
+      receiveShadows: false
+    });
+    piece.setPosition(
+      bounds.minX + rect.centerU,
+      surface.reviewPlaneY - thickness * 0.5,
+      bounds.minZ + rect.centerV
+    );
+    piece.setLocalScale(rect.widthMeters, thickness, rect.depthMeters);
+    parent.addChild(piece);
+  });
+}
+
+function createMacroReviewOutline(
+  parent: Entity,
+  outline: UndertowMacroReviewOutline,
+  material: StandardMaterial
+): void {
+  createPlanLineLoop(
+    parent,
+    `T21Review:${outline.id}`,
+    outline.points,
+    outline.reviewY,
+    material,
+    0.11
+  );
+}
+
+function createPlanLineLoop(
+  parent: Entity,
+  name: string,
+  points: readonly MetricXZ[],
+  y: number,
+  material: StandardMaterial,
+  thickness: number
+): void {
+  for (let index = 0; index < points.length; index += 1) {
+    const startPoint = points[index]!;
+    const endPoint = points[(index + 1) % points.length]!;
+    const start = new Vec3(startPoint[0], y, startPoint[1]);
+    const end = new Vec3(endPoint[0], y, endPoint[1]);
+    const midpoint = start.clone().add(end).mulScalar(0.5);
+    const length = start.distance(end);
+    const bar = new Entity(`${name}:${index}`);
+    bar.addComponent('render', {
+      type: 'box',
+      material,
+      castShadows: false,
+      receiveShadows: false
+    });
+    bar.setPosition(midpoint);
+    bar.lookAt(end);
+    bar.setLocalScale(thickness, thickness, Math.max(thickness, length));
+    parent.addChild(bar);
+  }
+}
+
+function localReviewFootprint(
+  outer: readonly MetricXZ[],
+  holes: readonly (readonly MetricXZ[])[],
+  minX: number,
+  minZ: number,
+  cellSizeMeters: number
+): StageFootprint {
+  const toLocal = ([x, z]: MetricXZ): StageFootprintPoint => [x - minX, z - minZ];
+  return {
+    outer: outer.map(toLocal),
+    holes: holes.map(hole => hole.map(toLocal)),
+    cellSizeMeters
+  };
+}
+
+function polygonBounds(points: readonly MetricXZ[]): {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+} {
+  return {
+    minX: Math.min(...points.map(point => point[0])),
+    maxX: Math.max(...points.map(point => point[0])),
+    minZ: Math.min(...points.map(point => point[1])),
+    maxZ: Math.max(...points.map(point => point[1]))
+  };
+}
+
 function createMarker(
   app: AppBase,
   name: string,
@@ -553,6 +775,25 @@ function createNavigationMarker(
     endpoint.setPosition(point);
     endpoint.setLocalScale(0.28, 0.28, 0.28);
     root.addChild(endpoint);
+  }
+}
+
+function macroStatusClass(status: UndertowMacroCoverageStatus): string {
+  return `status-${status.toLowerCase().replaceAll('_', '-')}`;
+}
+
+function macroStatusLabel(status: UndertowMacroCoverageStatus): string {
+  switch (status) {
+    case 'CONFIRMED_GEOMETRY':
+      return 'CONFIRMED';
+    case 'PROVISIONAL_MACRO_GEOMETRY':
+      return 'PROVISIONAL XZ';
+    case 'EXISTS_BUT_NOT_IMPLEMENTED':
+      return 'EXISTS / NOT IMPLEMENTED';
+    case 'INTENTIONAL_VOID_OR_WATER':
+      return 'INTENTIONAL VOID / OUTSIDE';
+    case 'UNRESOLVED':
+      return 'UNRESOLVED';
   }
 }
 

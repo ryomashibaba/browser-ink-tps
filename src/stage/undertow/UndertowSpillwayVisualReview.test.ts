@@ -2,15 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
+  UNDERTOW_T21_MACRO_COVERAGE,
+  UNDERTOW_T21_MACRO_REVIEW_SURFACES,
+  undertowT21MacroCoverageErrors
+} from './UndertowSpillwayMacroCoverage';
+import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
+import {
   UNDERTOW_T21_VISUAL_REVIEW,
   undertowT21VisualReviewErrors
 } from './UndertowSpillwayVisualReview';
 
 describe('T21 Undertow visual review contract', () => {
-  it('exposes reviewed partial geometry without promoting T21', () => {
+  it('exposes reviewed geometry plus review-only macro coverage without promoting T21', () => {
     expect(undertowT21VisualReviewErrors()).toEqual([]);
+    expect(undertowT21MacroCoverageErrors()).toEqual([]);
     expect(UNDERTOW_T21_VISUAL_REVIEW).toMatchObject({
-      id: 'undertow-t21-visual-review-v1',
+      id: 'undertow-t21-visual-review-v2',
       routeQuery: 'stageReview=undertow',
       reviewOnly: true,
       activationReady: false,
@@ -25,6 +32,9 @@ describe('T21 Undertow visual review contract', () => {
     expect(UNDERTOW_T21_VISUAL_REVIEW.navigationLinkCount).toBe(
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.navigationLinks.length
     );
+    expect(UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount).toBe(
+      UNDERTOW_T21_MACRO_COVERAGE.regions.length
+    );
     expect(UNDERTOW_T21_VISUAL_REVIEW.deferredFeatureIds).toEqual([
       'upper-glass-thin-edge-frame-boundary',
       'team-a-upper-glass-overhang',
@@ -33,5 +43,42 @@ describe('T21 Undertow visual review contract', () => {
       'team-b-water-region'
     ]);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
+  });
+
+  it('keeps the two spawn-side macro envelopes XZ-only and separate from runtime geometry', () => {
+    expect(UNDERTOW_T21_MACRO_REVIEW_SURFACES).toHaveLength(2);
+    const positive = UNDERTOW_T21_MACRO_REVIEW_SURFACES.find(
+      surface => surface.regionId === 'team-a-spawn-multilevel-envelope'
+    );
+    const negative = UNDERTOW_T21_MACRO_REVIEW_SURFACES.find(
+      surface => surface.regionId === 'team-b-spawn-multilevel-envelope'
+    );
+    expect(positive?.outer).toEqual(
+      UNDERTOW_VECTOR_TRACES.positiveZSpawnSideWhiteFace.metricPoints
+    );
+    expect(negative?.outer).toEqual(
+      UNDERTOW_VECTOR_TRACES.negativeZSpawnSideWhiteFace.metricPoints
+    );
+    expect(
+      UNDERTOW_T21_MACRO_REVIEW_SURFACES.every(
+        surface =>
+          surface.status === 'PROVISIONAL_MACRO_GEOMETRY' &&
+          surface.yAuthority === 'MULTI_LEVEL_UNRESOLVED' &&
+          surface.reviewPlaneY < -1.6
+      )
+    ).toBe(true);
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
+  });
+
+  it('does not reinterpret the legacy cyan source annotations as internal water/void', () => {
+    expect(UNDERTOW_T21_MACRO_COVERAGE.sourceOnlyAnnotationIds).toEqual([
+      'team-a-water-region',
+      'team-b-water-region'
+    ]);
+    const intentional = UNDERTOW_T21_MACRO_COVERAGE.regions.filter(
+      region => region.status === 'INTENTIONAL_VOID_OR_WATER'
+    );
+    expect(intentional).toHaveLength(1);
+    expect(intentional[0]?.id).toBe('exterior-beyond-hard-silhouette');
   });
 });
