@@ -263,7 +263,7 @@ const thinEdgeProbes = UNDERTOW_UPPER_GLASS_COMPONENT_PROBES.filter(
 
 export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
   qaStageScope: 'PARTIAL_GEOMETRY_ONLY' as const,
-  resolutionPass: '18BY' as const,
+  resolutionPass: '18BZ' as const,
   auditedAt: '2026-09-30' as const,
   sourceNativeRouteGapAudit: Object.freeze({
     sourceWalkableNodeCountPerSide: 276,
@@ -3829,6 +3829,71 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
       'Pass 18BY decomposes each Pass 18BX active horizontal minimum shift into an integer-cell extent component and a sub-cell grid-origin phase remainder while holding source geometry, the 1.237 target proxy, best constructive contributor, exact raw target, production Recast parameters, and all non-active bounds fixed. POSITIVE_Z shifts Z-min by 2.721207m = 15 cells + 0.021207m; NEGATIVE_Z shifts X-min by 4.166704m = 23 cells + 0.026704m. On both sides, PHASE_ONLY changes only the sub-cell origin while preserving the baseline active-axis cell count and reproduces absorption; EXTENT_ONLY reproduces the actual enlarged cell count while preserving baseline phase and does not absorb. ACTUAL_ACTIVE_MIN absorbs as the Pass 18BX control. The distant top-cap effect is therefore localized to grid-origin phase rather than added horizontal extent/cell count. The next safe diagnostic is a one-cell active-min phase sweep with cell count held fixed to map the transition interval; no geometry promotion or global Recast tuning is authorized.'
   }),
 
+  activeMinPhaseSweepPass18BZ: Object.freeze({
+    qaRunNumber: 1241,
+    diagnosticOnly: true,
+    runtimePromotionAuthorized: false,
+    gameplayDirectionalityResolved: false,
+    gameplayJumpRequirementResolved: false,
+    sourcePass: '18BY' as const,
+    productionConfigUnchanged: true,
+    sourceGeometryUnchanged: true,
+    diagnosticProxyOnly: true,
+    highTargetProxyScale: 1.237,
+    sharedBridgeComponentIndex: 0,
+    sharedTopCapTriangleIndices: [4,5] as const,
+    sweepStepMeters: 0.005,
+    sweepMaxMeters: 0.080,
+    positiveActiveAxis: 'Z' as const,
+    negativeActiveAxis: 'X' as const,
+    positiveActualPhaseRemainderMeters: 0.02120719969578344,
+    negativeActualPhaseRemainderMeters: 0.026703752819813076,
+    positiveBaselineCellCount: 141,
+    positiveFixedCellCount: 156,
+    negativeBaselineCellCount: 85,
+    negativeFixedCellCount: 108,
+    baselineAbsorbsBothSides: false,
+    extentOnlyAbsorbsBothSides: false,
+    actualPhaseAbsorbsBothSides: true,
+    positiveActualPhaseRawTargetPolyRef: 17,
+    negativeActualPhaseRawTargetPolyRef: 13,
+    positiveAbsorbingSweepDeltasMeters:
+      [0.02,0.025,0.03,0.035,0.04,0.045,0.05,0.055,0.075,0.08] as const,
+    negativeAbsorbingSweepDeltasMeters:
+      [0.015,0.02,0.025,0.04,0.045,0.05,0.055,0.06,0.065,0.075] as const,
+    commonAbsorbingSweepDeltasMeters:
+      [0.02,0.025,0.04,0.045,0.05,0.055,0.075] as const,
+    positiveTransitionBrackets: [
+      Object.freeze({fromDeltaMeters:0.015,toDeltaMeters:0.02,fromAbsorbs:false,toAbsorbs:true}),
+      Object.freeze({fromDeltaMeters:0.055,toDeltaMeters:0.06,fromAbsorbs:true,toAbsorbs:false}),
+      Object.freeze({fromDeltaMeters:0.07,toDeltaMeters:0.075,fromAbsorbs:false,toAbsorbs:true})
+    ] as const,
+    negativeTransitionBrackets: [
+      Object.freeze({fromDeltaMeters:0.01,toDeltaMeters:0.015,fromAbsorbs:false,toAbsorbs:true}),
+      Object.freeze({fromDeltaMeters:0.025,toDeltaMeters:0.03,fromAbsorbs:true,toAbsorbs:false}),
+      Object.freeze({fromDeltaMeters:0.035,toDeltaMeters:0.04,fromAbsorbs:false,toAbsorbs:true}),
+      Object.freeze({fromDeltaMeters:0.065,toDeltaMeters:0.07,fromAbsorbs:true,toAbsorbs:false}),
+      Object.freeze({fromDeltaMeters:0.07,toDeltaMeters:0.075,fromAbsorbs:false,toAbsorbs:true}),
+      Object.freeze({fromDeltaMeters:0.075,toDeltaMeters:0.08,fromAbsorbs:true,toAbsorbs:false})
+    ] as const,
+    positiveTransitionCount: 3,
+    negativeTransitionCount: 6,
+    allSweepSamplesKeepFixedCellCountBothSides: true,
+    multipleAbsorptionWindowsPositiveSide: true,
+    multipleAbsorptionWindowsNegativeSide: true,
+    phaseResponseMonotonicPositiveSide: false,
+    phaseResponseMonotonicNegativeSide: false,
+    simpleSingleThresholdHypothesisRejected: true,
+    activeMinPhaseTransitionRefinementRequiredNext: true,
+    globalRecastSettingsChanged: false,
+    broadFrontierLinkAuthorized: false,
+    trustedNonLocalEndpointUsed: false,
+    productionOffMeshLinkAuthorized: false,
+    activationBlockerCleared: false,
+    notes:
+      'Pass 18BZ sweeps the active-min grid phase from 0.000m to 0.080m in 0.005m increments while keeping the enlarged active-axis cell count fixed (POSITIVE_Z Z: 156 cells; NEGATIVE_Z X: 108 cells), with source geometry, target proxy scale 1.237, best constructive contributor, exact raw target, and production Recast parameters unchanged. The response is non-monotonic on both sides. POSITIVE_Z absorbs at 0.020-0.055m and again at 0.075-0.080m in the sampled grid, with three observed transition brackets: 0.015-0.020, 0.055-0.060, and 0.070-0.075m. NEGATIVE_Z absorbs at 0.015-0.025m, 0.040-0.065m, and 0.075m, with six observed transition brackets: 0.010-0.015, 0.025-0.030, 0.035-0.040, 0.065-0.070, 0.070-0.075, and 0.075-0.080m. The exact Pass 18BY phase remainders 0.021207m / 0.026704m both still absorb. Therefore a simple one-sided phase threshold is rejected; the next safe engineering step is fine refinement of the observed transition brackets while keeping cell count and all production parameters fixed.'
+  }),
+
   probeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.length,
   mustReachProbeCount: UNDERTOW_T21D_CONNECTIVITY_PROBES.filter(
     (probe) => probe.expectation === 'MUST_REACH'
@@ -3860,11 +3925,11 @@ export const UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT = Object.freeze({
     'Authoritative runtime binding for the right-low-to-underpass transition on both mirrored sides, or authoritative traversal semantics that justify a specific link type.',
     'Close the exact center +1.5m step semantic authority gap with current gameplay evidence. Pass 18W proves production Human KCC ordinary walking cannot climb either mirrored strip, while normal jump-up and natural drop-down both succeed on both sides. This supports a QA-only JUMP_UP_DROP_DOWN transition class, but archived/current public evidence still does not directly prove the original game exposes both directions or requires jump input at this exact strip. Capture the exact lower->upper and upper->lower behavior before authoring CPU off-mesh links.',
     'Close the final grate semantic authority gap with a controlled current post-Ver.7.2.0 Undertow/Matagai capture. Pass 18V removes three misclassified Scorch Gorge references and replaces them with correct current Undertow evidence that documents spawn->middle grate use, middle/checkpoint->enemy grate use, and normal humanoid grate walkability. That is strong route-level bidirectional evidence, but no retained source directly observes both exact Pass 18U local breaks in both directions. Capture one exact grate-chain round trip before promoting the 0.725m ingress / 0.85m final QA candidate.',
-    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT-18BV localize the common remote Y=7.5 top-cap suppressor, Pass 18BW reduces it to a bounds/grid effect, and Pass 18BX localizes that effect to POSITIVE_Z Z-min and NEGATIVE_Z X-min. Pass 18BY then splits those active-min shifts into integer-cell extent and sub-cell phase: phase-only shifts of 0.021207m / 0.026704m reproduce absorption while keeping the baseline cell counts, whereas 15-cell / 23-cell extent-only shifts preserve baseline phase and remain non-absorbing despite matching the actual enlarged cell counts. The remaining engineering task is a controlled one-cell phase sweep to map the grid-origin transition interval under unchanged production parameters, source geometry, proxy scale, endpoints, and constructive baseline. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
+    'Close the Pass 18AU gameplay-semantic authority gap for FloorConcrete00@Y3.0 <-> lower FloorConcrete02@Y1.5. Pass 18AU completes engineering radius refinement at (0.7004m, 0.7005m], Pass 18AV-18AY extend the QA-only downstream chain, and Pass 18AZ-18BS isolate the unresolved HIGH representation through KCC, exact-raw attachment, rasterization, proxy, raw-poly identity, context isolation, and reciprocal contributor/suppressor scans. Pass 18BT-18BV localize the common remote Y=7.5 top-cap suppressor, Pass 18BW reduces it to a bounds/grid effect, Pass 18BX localizes that effect to POSITIVE_Z Z-min and NEGATIVE_Z X-min, and Pass 18BY proves sub-cell grid-origin phase rather than cell-count extent is sufficient. Pass 18BZ then sweeps the fixed-cell active-min phase at 5mm granularity and finds multiple non-monotonic absorption windows on both sides rather than a single threshold: POSITIVE_Z transitions in 0.015-0.020 / 0.055-0.060 / 0.070-0.075m, while NEGATIVE_Z transitions in 0.010-0.015 / 0.025-0.030 / 0.035-0.040 / 0.065-0.070 / 0.070-0.075 / 0.075-0.080m. The remaining engineering task is fine refinement of those phase-transition brackets under unchanged production parameters, source geometry, proxy scale, endpoints, constructive baseline, and fixed cell count. These results do not establish current-game directionality or jump semantics at the earlier 18AU boundary. Keep runtime promotion blocked.',
     'A final production-candidate Recast pass after all traversable Undertow geometry is bound, with spawn-to-major-region, grate, upper-glass, unpaintable traversable-region, and mirrored cross-route probes run against that exact candidate.'
   ] as const,
   notes:
-    'Pass 18BY preserves Passes 18A-18BX and localizes the active horizontal minimum-bound effect to Recast grid-origin phase rather than added extent/cell count. On both mirrored sides the phase-only control keeps the baseline cell count yet reproduces raw-target absorption, while the integer-cell extent-only control matches the actual enlarged cell count but preserves baseline phase and stays non-absorbing. The next safe engineering step is a one-cell active-min phase sweep with the baseline cell count held fixed. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.'
+    'Pass 18BZ preserves Passes 18A-18BY and shows that the active-min Recast grid-origin phase response is non-monotonic on both mirrored sides even while active-axis cell count is fixed. The 5mm sweep yields two sampled absorption windows on POSITIVE_Z and three on NEGATIVE_Z, so a simple threshold model is rejected. The exact Pass 18BY phase controls continue to absorb. The next safe engineering step is fine refinement of the observed transition brackets only; no geometry promotion, broad link, proxy-scale change, or global Recast tuning is authorized. The separate Pass 18AU semantic blocker, grate evidence gap, center-step evidence gap, and FULL_STAGE_CONNECTIVITY_QA_PENDING remain activation-blocking.''
 });
 export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
   const audit = UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT;
@@ -3899,12 +3964,12 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     audit.allTraversableRuntimeGeometryBound ||
     audit.fullStageConnectivityReady
   ) {
-    errors.push('Pass 18BY partial QA must not claim full-stage connectivity readiness');
+    errors.push('Pass 18BZ partial QA must not claim full-stage connectivity readiness');
   }
 
   const matrix = audit.paintAnchorMatrixPass18A;
   if (
-    audit.resolutionPass !== '18BY' ||
+    audit.resolutionPass !== '18BZ' ||
     matrix.anchorCount !== 17 ||
     matrix.directedPairCount !== 289 ||
     matrix.reachedDirectedPairCountIncludingSelf !== 59 ||
@@ -7234,8 +7299,69 @@ export function undertowFullStageConnectivityAuditErrors(): readonly string[] {
     errors.push('Pass 18BY active-min grid phase/extent boundary drifted');
   }
 
+  const sweep18bz = audit.activeMinPhaseSweepPass18BZ;
+  if (
+    sweep18bz.qaRunNumber !== 1241 ||
+    !sweep18bz.diagnosticOnly ||
+    sweep18bz.runtimePromotionAuthorized ||
+    sweep18bz.gameplayDirectionalityResolved ||
+    sweep18bz.gameplayJumpRequirementResolved ||
+    sweep18bz.sourcePass !== '18BY' ||
+    !sweep18bz.productionConfigUnchanged ||
+    !sweep18bz.sourceGeometryUnchanged ||
+    !sweep18bz.diagnosticProxyOnly ||
+    sweep18bz.highTargetProxyScale !== 1.237 ||
+    sweep18bz.sharedBridgeComponentIndex !== 0 ||
+    sweep18bz.sharedTopCapTriangleIndices.join(',') !== '4,5' ||
+    sweep18bz.sweepStepMeters !== 0.005 ||
+    sweep18bz.sweepMaxMeters !== 0.080 ||
+    sweep18bz.positiveActiveAxis !== 'Z' ||
+    sweep18bz.negativeActiveAxis !== 'X' ||
+    Math.abs(sweep18bz.positiveActualPhaseRemainderMeters - 0.02120719969578344) > 1e-12 ||
+    Math.abs(sweep18bz.negativeActualPhaseRemainderMeters - 0.026703752819813076) > 1e-12 ||
+    sweep18bz.positiveBaselineCellCount !== 141 ||
+    sweep18bz.positiveFixedCellCount !== 156 ||
+    sweep18bz.negativeBaselineCellCount !== 85 ||
+    sweep18bz.negativeFixedCellCount !== 108 ||
+    sweep18bz.baselineAbsorbsBothSides ||
+    sweep18bz.extentOnlyAbsorbsBothSides ||
+    !sweep18bz.actualPhaseAbsorbsBothSides ||
+    sweep18bz.positiveActualPhaseRawTargetPolyRef !== 17 ||
+    sweep18bz.negativeActualPhaseRawTargetPolyRef !== 13 ||
+    sweep18bz.positiveAbsorbingSweepDeltasMeters.join(',') !==
+      '0.02,0.025,0.03,0.035,0.04,0.045,0.05,0.055,0.075,0.08' ||
+    sweep18bz.negativeAbsorbingSweepDeltasMeters.join(',') !==
+      '0.015,0.02,0.025,0.04,0.045,0.05,0.055,0.06,0.065,0.075' ||
+    sweep18bz.commonAbsorbingSweepDeltasMeters.join(',') !==
+      '0.02,0.025,0.04,0.045,0.05,0.055,0.075' ||
+    sweep18bz.positiveTransitionCount !== 3 ||
+    sweep18bz.negativeTransitionCount !== 6 ||
+    sweep18bz.positiveTransitionBrackets.map(
+      bracket=>`${bracket.fromDeltaMeters}:${bracket.toDeltaMeters}:${bracket.fromAbsorbs}:${bracket.toAbsorbs}`
+    ).join(',') !==
+      '0.015:0.02:false:true,0.055:0.06:true:false,0.07:0.075:false:true' ||
+    sweep18bz.negativeTransitionBrackets.map(
+      bracket=>`${bracket.fromDeltaMeters}:${bracket.toDeltaMeters}:${bracket.fromAbsorbs}:${bracket.toAbsorbs}`
+    ).join(',') !==
+      '0.01:0.015:false:true,0.025:0.03:true:false,0.035:0.04:false:true,0.065:0.07:true:false,0.07:0.075:false:true,0.075:0.08:true:false' ||
+    !sweep18bz.allSweepSamplesKeepFixedCellCountBothSides ||
+    !sweep18bz.multipleAbsorptionWindowsPositiveSide ||
+    !sweep18bz.multipleAbsorptionWindowsNegativeSide ||
+    sweep18bz.phaseResponseMonotonicPositiveSide ||
+    sweep18bz.phaseResponseMonotonicNegativeSide ||
+    !sweep18bz.simpleSingleThresholdHypothesisRejected ||
+    !sweep18bz.activeMinPhaseTransitionRefinementRequiredNext ||
+    sweep18bz.globalRecastSettingsChanged ||
+    sweep18bz.broadFrontierLinkAuthorized ||
+    sweep18bz.trustedNonLocalEndpointUsed ||
+    sweep18bz.productionOffMeshLinkAuthorized ||
+    sweep18bz.activationBlockerCleared
+  ) {
+    errors.push('Pass 18BZ active-min phase-sweep boundary drifted');
+  }
+
   if (audit.missingRequirements.length !== 5) {
-    errors.push('Pass 18BY full-stage connectivity evidence gap is not fully localized');
+    errors.push('Pass 18BZ full-stage connectivity evidence gap is not fully localized');
   }
   return errors;
 }
