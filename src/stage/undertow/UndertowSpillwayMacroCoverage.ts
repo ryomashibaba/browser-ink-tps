@@ -125,7 +125,7 @@ export const UNDERTOW_T21_MACRO_COVERAGE_REGIONS:
       status: 'CONFIRMED_GEOMETRY',
       evidenceIds: [...center, 'user-turf-vector-blueprint'],
       geometryRefs: [UNDERTOW_VECTOR_TRACES.negativeZGrateMesh.id],
-      notes: 'Exact 180-degree counterpart plan footprint is already rendered.'
+      notes: 'Audited NEG counterpart plan footprint is already rendered. The vector-source pair carries a 0.025m mirror residual, so it is not described as mathematically exact.'
     },
     {
       id: 'team-b-upper-glass',
@@ -279,6 +279,8 @@ export const UNDERTOW_T21_MACRO_COVERAGE = Object.freeze({
     'Macro Coverage v2 is a visual-review ledger only. Yellow surfaces are broad XZ envelopes with unresolved multi-level Y and must never feed StageDefinition, Rapier, Recast, paint, scoring, or CPU paths. The two legacy cyan source polygons are source annotations, not gameplay water/void.'
 });
 
+export const UNDERTOW_T21_MACRO_SOURCE_MIRROR_TOLERANCE_METERS = 0.03;
+
 const EXPECTED_MACRO_STATUS_COUNTS: Readonly<Record<UndertowMacroCoverageStatus, number>> =
   Object.freeze({
     CONFIRMED_GEOMETRY: 12,
@@ -345,19 +347,37 @@ function polygonSamplesStayInside(
   return true;
 }
 
-function mirroredPointSetEquals(
+function directedPointSetDistance(
+  from: readonly MacroXZ[],
+  to: readonly MacroXZ[]
+): number {
+  let maximum = 0;
+  for (const point of from) {
+    let nearest = Number.POSITIVE_INFINITY;
+    for (const candidate of to) {
+      nearest = Math.min(
+        nearest,
+        Math.hypot(point[0] - candidate[0], point[1] - candidate[1])
+      );
+    }
+    maximum = Math.max(maximum, nearest);
+  }
+  return maximum;
+}
+
+function mirroredPointSetsWithinTolerance(
   positive: readonly MacroXZ[],
   negative: readonly MacroXZ[],
-  precisionDigits = 6
+  toleranceMeters = UNDERTOW_T21_MACRO_SOURCE_MIRROR_TOLERANCE_METERS
 ): boolean {
   if (positive.length !== negative.length) return false;
-  const encode = ([x, z]: MacroXZ): string =>
-    `${x.toFixed(precisionDigits)},${z.toFixed(precisionDigits)}`;
-  const mirroredPositive = positive
-    .map(([x, z]) => encode([-x, -z]))
-    .sort();
-  const encodedNegative = negative.map(encode).sort();
-  return mirroredPositive.every((value, index) => value === encodedNegative[index]);
+  const mirroredPositive: readonly MacroXZ[] = positive.map(
+    ([x, z]) => [-x, -z] as const
+  );
+  return (
+    directedPointSetDistance(mirroredPositive, negative) <= toleranceMeters &&
+    directedPointSetDistance(negative, mirroredPositive) <= toleranceMeters
+  );
 }
 
 export function undertowT21MacroCoverageErrors(): readonly string[] {
@@ -405,9 +425,9 @@ export function undertowT21MacroCoverageErrors(): readonly string[] {
     !positiveSpawnEnvelope ||
     !negativeSpawnEnvelope ||
     positiveSpawnEnvelope.reviewPlaneY !== negativeSpawnEnvelope.reviewPlaneY ||
-    !mirroredPointSetEquals(positiveSpawnEnvelope.outer, negativeSpawnEnvelope.outer)
+    !mirroredPointSetsWithinTolerance(positiveSpawnEnvelope.outer, negativeSpawnEnvelope.outer)
   ) {
-    errors.push('provisional spawn-side macro envelopes must remain exact 180-degree review counterparts');
+    errors.push('provisional spawn-side macro envelopes exceed the audited 0.03m vector-source mirror tolerance');
   }
   for (const status of [
     'CONFIRMED_GEOMETRY',
@@ -444,9 +464,9 @@ export function undertowT21MacroCoverageErrors(): readonly string[] {
       first!.regionId !== 'upper-glass-thin-edge-frame-boundary' ||
       second!.regionId !== 'upper-glass-thin-edge-frame-boundary' ||
       first!.reviewY !== second!.reviewY ||
-      !mirroredPointSetEquals(first!.points, second!.points)
+      !mirroredPointSetsWithinTolerance(first!.points, second!.points)
     ) {
-      errors.push('upper-glass unresolved review outlines must remain mirrored and bound to the same unresolved region');
+      errors.push('upper-glass unresolved review outlines must remain within the audited 0.03m mirror tolerance and bound to the same unresolved region');
     }
   }
 
