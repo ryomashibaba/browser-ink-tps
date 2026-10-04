@@ -185,7 +185,7 @@ export const UNDERTOW_T21_MACRO_COVERAGE_REGIONS:
     },
     {
       id: 'upper-glass-thin-edge-frame-boundary',
-      label: 'Upper-glass thin-eedge / frame boundary detail',
+      label: 'Upper-glass thin-edge / frame boundary detail',
       status: 'UNRESOLVED',
       evidenceIds: ['extracted-temple01-geometry', 'user-center-videos'],
       geometryRefs: [UNDERTOW_VECTOR_TRACES.positiveZGlassOverhang.id, UNDERTOW_VECTOR_TRACES.negativeZGlassOverhang.id],
@@ -279,6 +279,87 @@ export const UNDERTOW_T21_MACRO_COVERAGE = Object.freeze({
     'Macro Coverage v2 is a visual-review ledger only. Yellow surfaces are broad XZ envelopes with unresolved multi-level Y and must never feed StageDefinition, Rapier, Recast, paint, scoring, or CPU paths. The two legacy cyan source polygons are source annotations, not gameplay water/void.'
 });
 
+const EXPECTED_MACRO_STATUS_COUNTS: Readonly<Record<UndertowMacroCoverageStatus, number>> =
+  Object.freeze({
+    CONFIRMED_GEOMETRY: 12,
+    PROVISIONAL_MACRO_GEOMETRY: 2,
+    EXISTS_BUT_NOT_IMPLEMENTED: 1,
+    INTENTIONAL_VOID_OR_WATER: 1,
+    UNRESOLVED: 2
+  });
+
+type MacroXZ = readonly [number, number];
+
+function pointOnSegment(
+  point: MacroXZ,
+  a: MacroXZ,
+  b: MacroXZ,
+  tolerance = 1e-6
+): boolean {
+  const abX = b[0] - a[0];
+  const abZ = b[1] - a[1];
+  const apX = point[0] - a[0];
+  const apZ = point[1] - a[1];
+  const cross = abX * apZ - abZ * apX;
+  if (Math.abs(cross) > tolerance) return false;
+  const dot = apX * abX + apZ * abZ;
+  if (dot < -tolerance) return false;
+  const lengthSq = abX * abX + abZ * abZ;
+  return dot <= lengthSq + tolerance;
+}
+
+function pointInPolygonInclusive(point: MacroXZ, polygon: readonly MacroXZ[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[j]!;
+    const b = polygon[i]!;
+    if (pointOnSegment(point, a, b)) return true;
+    const crosses =
+      (a[1] > point[1]) !== (b[1] > point[1]) &&
+      point[0] <
+        ((b[0] - a[0]) * (point[1] - a[1])) / (b[1] - a[1]) + a[0];
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+function polygonSamplesStayInside(
+  inner: readonly MacroXZ[],
+  outer: readonly MacroXZ[],
+  sampleStepMeters = 0.25
+): boolean {
+  for (let index = 0; index < inner.length; index += 1) {
+    const a = inner[index]!;
+    const b = inner[(index + 1) % inner.length]!;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const steps = Math.max(1, Math.ceil(length / sampleStepMeters));
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps;
+      const sample: MacroXZ = [
+        a[0] + (b[0] - a[0]) * t,
+        a[1] + (b[1] - a[1]) * t
+      ];
+      if (!pointInPolygonInclusive(sample, outer)) return false;
+    }
+  }
+  return true;
+}
+
+function mirroredPointSetEquals(
+  positive: readonly MacroXZ[],
+  negative: readonly MacroXZ[],
+  precisionDigits = 6
+): boolean {
+  if (positive.length !== negative.length) return false;
+  const encode = ([x, z]: MacroXZ): string =>
+    `${x.toFixed(precisionDigits)},${z.toFixed(precisionDigits)}`;
+  const mirroredPositive = positive
+    .map(([x, z]) => encode([-x, -z]))
+    .sort();
+  const encodedNegative = negative.map(encode).sort();
+  return mirroredPositive.every((value, index) => value === encodedNegative[index]);
+}
+
 export function undertowT21MacroCoverageErrors(): readonly string[] {
   const errors: string[] = [];
   if (!UNDERTOW_T21_MACRO_COVERAGE.reviewOnly || UNDERTOW_T21_MACRO_COVERAGE.activationReady) {
@@ -298,12 +379,35 @@ export function undertowT21MacroCoverageErrors(): readonly string[] {
     if (!region || region.status !== 'PROVISIONAL_MACRO_GEOMETRY') {
       errors.push(`${surface.id}: provisional surface is not backed by a provisional macro region`);
     }
-    if (surface.outer.length < 4 || surface.reviewPlaneY > -1.6) {
+    if (
+      surface.outer.length < 4 ||
+      surface.reviewPlaneY > -1.6 ||
+      surface.cellSizeMeters !== 0.5 ||
+      surface.holes.length !== 0
+    ) {
       errors.push(`${surface.id}: invalid review-only plan envelope`);
     }
     if (surface.yAuthority !== 'MULTI_LEVEL_UNRESOLVED') {
       errors.push(`${surface.id}: provisional spawn envelope must keep multi-level Y unresolved`);
     }
+    if (!polygonSamplesStayInside(surface.outer, UNDERTOW_T21_MACRO_OUTER_BOUNDARY)) {
+      errors.push(`${surface.id}: provisional macro envelope escapes the audited hard silhouette`);
+    }
+  }
+
+  const positiveSpawnEnvelope = UNDERTOW_T21_MACRO_REVIEW_SURFACES.find(
+    surface => surface.regionId === 'team-a-spawn-multilevel-envelope'
+  );
+  const negativeSpawnEnvelope = UNDERTOW_T21_MACRO_REVIEW_SURFACES.find(
+    surface => surface.regionId === 'team-b-spawn-multilevel-envelope'
+  );
+  if (
+    !positiveSpawnEnvelope ||
+    !negativeSpawnEnvelope ||
+    positiveSpawnEnvelope.reviewPlaneY !== negativeSpawnEnvelope.reviewPlaneY ||
+    !mirroredPointSetEquals(positiveSpawnEnvelope.outer, negativeSpawnEnvelope.outer)
+  ) {
+    errors.push('provisional spawn-side macro envelopes must remain exact 180-degree review counterparts');
   }
   for (const status of [
     'CONFIRMED_GEOMETRY',
@@ -315,7 +419,37 @@ export function undertowT21MacroCoverageErrors(): readonly string[] {
     if (UNDERTOW_T21_MACRO_COVERAGE.statusCounts[status] < 1) {
       errors.push(`macro coverage has no ${status} region`);
     }
+    if (
+      UNDERTOW_T21_MACRO_COVERAGE.statusCounts[status] !==
+      EXPECTED_MACRO_STATUS_COUNTS[status]
+    ) {
+      errors.push(
+        `macro coverage status count drift for ${status}: expected ${EXPECTED_MACRO_STATUS_COUNTS[status]}, got ${UNDERTOW_T21_MACRO_COVERAGE.statusCounts[status]}`
+      );
+    }
   }
+  if (
+    Object.values(UNDERTOW_T21_MACRO_COVERAGE.statusCounts).reduce(
+      (sum, count) => sum + count,
+      0
+    ) !== UNDERTOW_T21_MACRO_COVERAGE.regionCount
+  ) {
+    errors.push('macro coverage status counts must sum to the whole-stage region count');
+  }
+  if (UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES.length !== 2) {
+    errors.push('macro review must keep exactly the two mirrored unresolved upper-glass outlines');
+  } else {
+    const [first, second] = UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES;
+    if (
+      first!.regionId !== 'upper-glass-thin-edge-frame-boundary' ||
+      second!.regionId !== 'upper-glass-thin-edge-frame-boundary' ||
+      first!.reviewY !== second!.reviewY ||
+      !mirroredPointSetEquals(first!.points, second!.points)
+    ) {
+      errors.push('upper-glass unresolved review outlines must remain mirrored and bound to the same unresolved region');
+    }
+  }
+
   const accidentalInternalWater = UNDERTOW_T21_MACRO_COVERAGE_REGIONS.some(
     region =>
       region.status === 'INTENTIONAL_VOID_OR_WATER' &&

@@ -4,6 +4,7 @@ import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlock
 import {
   UNDERTOW_T21_MACRO_COVERAGE,
   UNDERTOW_T21_MACRO_REVIEW_SURFACES,
+  UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES,
   undertowT21MacroCoverageErrors
 } from './UndertowSpillwayMacroCoverage';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
@@ -35,6 +36,15 @@ describe('T21 Undertow visual review contract', () => {
     expect(UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount).toBe(
       UNDERTOW_T21_MACRO_COVERAGE.regions.length
     );
+    expect(UNDERTOW_T21_MACRO_COVERAGE.statusCounts).toEqual({
+      CONFIRMED_GEOMETRY: 12,
+      PROVISIONAL_MACRO_GEOMETRY: 2,
+      EXISTS_BUT_NOT_IMPLEMENTED: 1,
+      INTENTIONAL_VOID_OR_WATER: 1,
+      UNRESOLVED: 2
+    });
+    expect(UNDERTOW_T21_MACRO_COVERAGE.regions).toHaveLength(18);
+    expect(UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES).toHaveLength(2);
     expect(UNDERTOW_T21_VISUAL_REVIEW.deferredFeatureIds).toEqual([
       'upper-glass-thin-edge-frame-boundary',
       'team-a-upper-glass-overhang',
