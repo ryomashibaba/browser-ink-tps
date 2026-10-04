@@ -1,5 +1,6 @@
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
+import { UNDERTOW_SOURCE_TOPOLOGY_LIMITS } from './UndertowSpillwaySourceTopologyAudit';
 
 export type UndertowMacroCoverageStatus =
   | 'CONFIRMED_GEOMETRY'
@@ -35,6 +36,17 @@ export interface UndertowMacroReviewOutline {
   status: 'UNRESOLVED';
   points: readonly (readonly [number, number])[];
   reviewY: number;
+  notes: string;
+}
+
+export interface UndertowMacroOccupancyEnvelope {
+  id: string;
+  outer: readonly (readonly [number, number])[];
+  holes: readonly (readonly (readonly [number, number])[])[];
+  reviewPlaneY: number;
+  cellSizeMeters: number;
+  authority: 'XZ_OCCUPANCY_ONLY_NOT_FLOOR';
+  sourceTopologyLimitId: 'internal-void-kill-boundaries';
   notes: string;
 }
 
@@ -250,6 +262,19 @@ export const UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES:
 export const UNDERTOW_T21_MACRO_OUTER_BOUNDARY =
   UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints;
 
+export const UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE:
+  UndertowMacroOccupancyEnvelope = Object.freeze({
+    id: 'whole-stage-xz-occupancy-envelope',
+    outer: UNDERTOW_T21_MACRO_OUTER_BOUNDARY,
+    holes: [],
+    reviewPlaneY: -1.92,
+    cellSizeMeters: 0.5,
+    authority: 'XZ_OCCUPANCY_ONLY_NOT_FLOOR',
+    sourceTopologyLimitId: 'internal-void-kill-boundaries',
+    notes:
+      'Review-only whole-stage XZ occupancy underlay. The audited 42-vertex hard silhouette is blockout-safe and the Temple01 topology audit finds no unexplained internal abyss candidate, but this underlay is NOT a claim that every XZ point is one flat walkable floor. Vertical layering, overhang/open-air separation, paint, collision, navigation and scoring authority remain independent.'
+  });
+
 const statusCounts: Record<UndertowMacroCoverageStatus, number> = {
   CONFIRMED_GEOMETRY: 0,
   PROVISIONAL_MACRO_GEOMETRY: 0,
@@ -270,6 +295,7 @@ export const UNDERTOW_T21_MACRO_COVERAGE = Object.freeze({
   regions: UNDERTOW_T21_MACRO_COVERAGE_REGIONS,
   provisionalSurfaces: UNDERTOW_T21_MACRO_REVIEW_SURFACES,
   unresolvedOutlines: UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES,
+  occupancyEnvelope: UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE,
   outerBoundary: UNDERTOW_T21_MACRO_OUTER_BOUNDARY,
   sourceOnlyAnnotationIds: [
     UNDERTOW_VECTOR_TRACES.teamAWaterRegion.id,
@@ -390,6 +416,33 @@ export function undertowT21MacroCoverageErrors(): readonly string[] {
   }
   if (UNDERTOW_T21_MACRO_OUTER_BOUNDARY.length !== 42) {
     errors.push('macro review outer boundary must remain the audited 42-vertex hard silhouette');
+  }
+
+  const occupancyTopology = UNDERTOW_SOURCE_TOPOLOGY_LIMITS.find(
+    item => item.id === UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.sourceTopologyLimitId
+  );
+  if (
+    !occupancyTopology ||
+    !occupancyTopology.safeToUseForBlockout ||
+    occupancyTopology.status !== 'RESOLVED_FROM_TEMPLE01_MODEL'
+  ) {
+    errors.push('whole-stage occupancy envelope must remain backed by the blockout-safe Temple01 internal-void topology audit');
+  }
+  if (
+    UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.outer !== UNDERTOW_T21_MACRO_OUTER_BOUNDARY ||
+    UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.outer.length !== 42 ||
+    UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.holes.length !== 0 ||
+    UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.cellSizeMeters !== 0.5 ||
+    UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.authority !== 'XZ_OCCUPANCY_ONLY_NOT_FLOOR'
+  ) {
+    errors.push('whole-stage occupancy envelope drifted from the audited review-only hard-silhouette contract');
+  }
+  if (
+    UNDERTOW_T21_MACRO_REVIEW_SURFACES.some(
+      surface => UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.reviewPlaneY >= surface.reviewPlaneY
+    )
+  ) {
+    errors.push('whole-stage occupancy envelope must render below all provisional macro surfaces');
   }
   if (UNDERTOW_T21_MACRO_REVIEW_SURFACES.length !== 2) {
     errors.push('macro review must expose exactly the two mirrored spawn-side provisional envelopes');

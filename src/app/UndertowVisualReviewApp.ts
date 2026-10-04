@@ -29,6 +29,7 @@ import type { MetricXZ } from '../stage/measurement/StageMapCalibration';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {
   UNDERTOW_T21_MACRO_COVERAGE,
+  UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE,
   UNDERTOW_T21_MACRO_OUTER_BOUNDARY,
   UNDERTOW_T21_MACRO_REVIEW_SURFACES,
   UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES,
@@ -45,6 +46,7 @@ interface ReviewMaterials {
   structure: StandardMaterial;
   visualOnly: StandardMaterial;
   supportOnly: StandardMaterial;
+  occupancy: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -88,6 +90,7 @@ export class UndertowVisualReviewApp {
   private readonly camera: Entity;
   private readonly target = new Vec3();
   private readonly confirmedRoot = new Entity('T21Review:Confirmed');
+  private readonly occupancyRoot = new Entity('T21Review:MacroOccupancyEnvelope');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -190,8 +193,14 @@ export class UndertowVisualReviewApp {
   }
 
   private buildMacroCoverageReviewGeometry(): void {
+    this.app.root.addChild(this.occupancyRoot);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
+
+    createMacroOccupancyEnvelope(
+      this.occupancyRoot,
+      this.materials.occupancy
+    );
 
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
@@ -255,12 +264,14 @@ export class UndertowVisualReviewApp {
         <span>REVIEW ONLY</span>
       </div>
       <p class="review-warning">
-        Production remains T20. Cyan is reviewed/confirmed broad geometry. Yellow is
-        <b>XZ-only provisional macro coverage</b> with unresolved multi-level height.
-        Red marks unresolved detail boundaries. Black outside the hard silhouette stays omitted.
+        Production remains T20. Cyan is reviewed/confirmed broad geometry. Dark amber is the
+        <b>whole-stage XZ occupancy envelope (not a floor)</b>. Yellow is XZ-only provisional
+        macro coverage with unresolved multi-level height. Red marks unresolved detail boundaries.
+        Black outside the hard silhouette stays omitted.
       </p>
       <div class="review-stats macro">
         <span>Macro regions</span><b>${UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount}</b>
+        <span>Stage occupancy envelope</span><b>42-vertex XZ / NOT FLOOR</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -277,12 +288,14 @@ export class UndertowVisualReviewApp {
       </div>
       <div class="review-actions layers">
         <button id="t21-review-confirmed-toggle">Confirmed ON</button>
+        <button id="t21-review-occupancy-toggle">Stage envelope ON</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
       </div>
       <div class="review-legend">
         <span><i class="confirmed"></i> confirmed/reviewed macro geometry</span>
+        <span><i class="occupancy"></i> whole-stage XZ occupancy envelope; NOT a flat floor</span>
         <span><i class="provisional"></i> provisional XZ-only macro envelope; Y unresolved</span>
         <span><i class="unresolved"></i> unresolved detail boundary / ledger item</span>
         <span><i class="void"></i> intentional void / outside hard silhouette</span>
@@ -340,6 +353,11 @@ export class UndertowVisualReviewApp {
       panel.querySelector<HTMLButtonElement>('#t21-review-confirmed-toggle'),
       this.confirmedRoot,
       'Confirmed'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-occupancy-toggle'),
+      this.occupancyRoot,
+      'Stage envelope'
     );
     this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
@@ -520,6 +538,7 @@ function createReviewMaterials(): ReviewMaterials {
     structure: makeMaterial(new Color(0.19, 0.50, 0.60), 0.06),
     visualOnly: makeMaterial(new Color(0.24, 0.58, 0.66), 0.08),
     supportOnly: makeMaterial(new Color(0.10, 0.40, 0.52), 0.08),
+    occupancy: makeMaterial(new Color(0.38, 0.28, 0.08), 0.18),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),
@@ -612,6 +631,42 @@ function createReviewSolid(
     entity.addChild(piece);
   });
   parent.addChild(entity);
+}
+
+function createMacroOccupancyEnvelope(
+  parent: Entity,
+  material: StandardMaterial
+): void {
+  const surface = UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE;
+  const bounds = polygonBounds(surface.outer);
+  const width = bounds.maxX - bounds.minX;
+  const depth = bounds.maxZ - bounds.minZ;
+  const footprint = localReviewFootprint(
+    surface.outer,
+    surface.holes,
+    bounds.minX,
+    bounds.minZ,
+    surface.cellSizeMeters
+  );
+  const raster = rasterizeStageFootprint(width, depth, footprint);
+  const thickness = 0.035;
+
+  raster.rectangles.forEach((rect, index) => {
+    const piece = new Entity(`T21Review:${surface.id}:${index}`);
+    piece.addComponent('render', {
+      type: 'box',
+      material,
+      castShadows: false,
+      receiveShadows: false
+    });
+    piece.setPosition(
+      bounds.minX + rect.centerU,
+      surface.reviewPlaneY - thickness * 0.5,
+      bounds.minZ + rect.centerV
+    );
+    piece.setLocalScale(rect.widthMeters, thickness, rect.depthMeters);
+    parent.addChild(piece);
+  });
 }
 
 function createMacroReviewSurface(

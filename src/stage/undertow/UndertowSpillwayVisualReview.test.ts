@@ -3,6 +3,7 @@ import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
   UNDERTOW_T21_MACRO_COVERAGE,
+  UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE,
   UNDERTOW_T21_MACRO_REVIEW_SURFACES,
   UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES,
   undertowT21MacroCoverageErrors
@@ -45,6 +46,13 @@ describe('T21 Undertow visual review contract', () => {
     });
     expect(UNDERTOW_T21_MACRO_COVERAGE.regions).toHaveLength(18);
     expect(UNDERTOW_T21_MACRO_UNRESOLVED_OUTLINES).toHaveLength(2);
+    expect(UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.outer).toHaveLength(42);
+    expect(UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE).toMatchObject({
+      id: 'whole-stage-xz-occupancy-envelope',
+      authority: 'XZ_OCCUPANCY_ONLY_NOT_FLOOR',
+      sourceTopologyLimitId: 'internal-void-kill-boundaries',
+      cellSizeMeters: 0.5
+    });
     expect(UNDERTOW_T21_VISUAL_REVIEW.deferredFeatureIds).toEqual([
       'upper-glass-thin-edge-frame-boundary',
       'team-a-upper-glass-overhang',
@@ -75,6 +83,13 @@ describe('T21 Undertow visual review contract', () => {
           surface.status === 'PROVISIONAL_MACRO_GEOMETRY' &&
           surface.yAuthority === 'MULTI_LEVEL_UNRESOLVED' &&
           surface.reviewPlaneY < -1.6
+      )
+    ).toBe(true);
+    expect(
+      UNDERTOW_T21_MACRO_REVIEW_SURFACES.every(
+        surface =>
+          UNDERTOW_T21_MACRO_OCCUPANCY_ENVELOPE.reviewPlaneY <
+          surface.reviewPlaneY
       )
     ).toBe(true);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
