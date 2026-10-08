@@ -142,6 +142,8 @@ export function buildUndertowCoverageLedgerV3(): {
   zones: readonly CoverageZoneRecord[]; clusters: readonly CoverageGapCluster[];
   sourceInventory: readonly CoverageSourceRecord[];
   stageCells: number; undisplayedCells: number;
+  /** Review-only sample coordinates for downstream source-candidate matching. */
+  undisplayedSampleXZ: readonly CoverageXZ[];
   provisionalEnvelopesExcluded: number;
 } {
   const bounds=UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.worldBounds;
@@ -157,6 +159,7 @@ export function buildUndertowCoverageLedgerV3(): {
   const state=new Uint8Array(width*height); // 0 = exterior, 1 = displayed, 2 = missing
   const zoneGrid=new Array<CoverageZone>(width*height);
   let stageCells=0,undisplayedCells=0;
+  const undisplayedSampleXZ:CoverageXZ[]=[];
   for(let zi=0;zi<height;zi++) for(let xi=0;xi<width;xi++) {
     const p:CoverageXZ=[bounds.minX+(xi+0.5)*CELL_METERS,bounds.minZ+(zi+0.5)*CELL_METERS];
     if(!insideRing(p,UNDERTOW_T21_MACRO_OUTER_BOUNDARY))continue;
@@ -167,7 +170,7 @@ export function buildUndertowCoverageLedgerV3(): {
     if(reviewed&&source) rec.overlap++;
     else if(reviewed)rec.reviewedOnly++;
     else if(source)rec.sourceOnly++;
-    else {rec.undisplayed++;undisplayedCells++;state[idx]=2;}
+    else {rec.undisplayed++;undisplayedCells++;state[idx]=2;undisplayedSampleXZ.push(p);}
     if(reviewed||source)state[idx]=1;
   }
   for(const r of records)r.approximateUndisplayedXZSquareMeters=r.undisplayed*CELL_METERS**2;
@@ -205,7 +208,7 @@ export function buildUndertowCoverageLedgerV3(): {
   return {version:3,reviewOnly:true,runtimePromotionAuthorized:false,cellSizeMeters:CELL_METERS,
     gridSampleAuthority:'XZ_CELL_CENTER_APPROXIMATION',
     occupancyAuthority:'XZ_OCCUPANCY_ONLY_NOT_FLOOR',
-    zones:records,clusters,sourceInventory,stageCells,undisplayedCells,
+    zones:records,clusters,sourceInventory,stageCells,undisplayedCells,undisplayedSampleXZ,
     provisionalEnvelopesExcluded:UNDERTOW_T21_MACRO_REVIEW_SURFACES.length};
 }
 
