@@ -42,6 +42,10 @@ import {
   UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY,
   type UndertowSourceNativeReviewMesh
 } from '../stage/undertow/UndertowSpillwaySourceNativeReviewGeometry';
+import {
+  UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES,
+  UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY
+} from '../stage/undertow/UndertowSpillwaySourceNativeSupplementGeometry';
 import { UNDERTOW_T21_VISUAL_REVIEW } from '../stage/undertow/UndertowSpillwayVisualReview';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
@@ -53,6 +57,7 @@ interface ReviewMaterials {
   supportOnly: StandardMaterial;
   occupancy: StandardMaterial;
   sourceNative: StandardMaterial;
+  sourceLocal: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -98,6 +103,7 @@ export class UndertowVisualReviewApp {
   private readonly confirmedRoot = new Entity('T21Review:Confirmed');
   private readonly occupancyRoot = new Entity('T21Review:MacroOccupancyEnvelope');
   private readonly sourceNativeRoot = new Entity('T21Review:SourceNativeCandidates');
+  private readonly sourceLocalRoot = new Entity('T21Review:SourceLocalCandidates');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -202,6 +208,7 @@ export class UndertowVisualReviewApp {
   private buildMacroCoverageReviewGeometry(): void {
     this.app.root.addChild(this.occupancyRoot);
     this.app.root.addChild(this.sourceNativeRoot);
+    this.app.root.addChild(this.sourceLocalRoot);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -216,6 +223,15 @@ export class UndertowVisualReviewApp {
         this.sourceNativeRoot,
         sourceMesh,
         this.materials.sourceNative
+      );
+    }
+
+    for (const sourceMesh of UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES) {
+      createSourceNativeReviewMesh(
+        this.app,
+        this.sourceLocalRoot,
+        sourceMesh,
+        this.materials.sourceLocal
       );
     }
 
@@ -284,7 +300,8 @@ export class UndertowVisualReviewApp {
       <p class="review-warning">
         Production remains T20. Cyan is reviewed/confirmed broad geometry. Dark amber is the
         <b>whole-stage XZ occupancy envelope (not a floor)</b>. Orange is exact Temple01 source
-        mesh shape/Y with route/runtime authority still pending. Yellow is XZ-only provisional
+        mesh shape/Y with route/runtime authority still pending. Light orange is local source
+        geometry with even weaker connectivity evidence. Yellow is XZ-only provisional
         macro coverage with unresolved multi-level height. Red marks unresolved detail boundaries.
         Black outside the hard silhouette stays omitted.
       </p>
@@ -292,6 +309,7 @@ export class UndertowVisualReviewApp {
         <span>Macro regions</span><b>${UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount}</b>
         <span>Stage occupancy envelope</span><b>42-vertex XZ / NOT FLOOR</b>
         <span>Source-native review meshes</span><b>${UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m²</b>
+        <span>Additional local source meshes</span><b>${UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m²</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -310,6 +328,7 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-confirmed-toggle">Confirmed ON</button>
         <button id="t21-review-occupancy-toggle">Stage envelope ON</button>
         <button id="t21-review-source-native-toggle">Source mesh ON</button>
+        <button id="t21-review-source-local-toggle">Local source ON</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -318,6 +337,7 @@ export class UndertowVisualReviewApp {
         <span><i class="confirmed"></i> confirmed/reviewed macro geometry</span>
         <span><i class="occupancy"></i> whole-stage XZ occupancy envelope; NOT a flat floor</span>
         <span><i class="source-native"></i> exact Temple01 source mesh; connectivity/runtime pending</span>
+        <span><i class="source-local"></i> local source triangles; connectivity not verified</span>
         <span><i class="provisional"></i> provisional XZ-only macro envelope; Y unresolved</span>
         <span><i class="unresolved"></i> unresolved detail boundary / ledger item</span>
         <span><i class="void"></i> intentional void / outside hard silhouette</span>
@@ -385,6 +405,11 @@ export class UndertowVisualReviewApp {
       panel.querySelector<HTMLButtonElement>('#t21-review-source-native-toggle'),
       this.sourceNativeRoot,
       'Source mesh'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-source-local-toggle'),
+      this.sourceLocalRoot,
+      'Local source'
     );
     this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
@@ -567,6 +592,7 @@ function createReviewMaterials(): ReviewMaterials {
     supportOnly: makeMaterial(new Color(0.10, 0.40, 0.52), 0.08),
     occupancy: makeMaterial(new Color(0.30, 0.22, 0.065), 0.14),
     sourceNative: makeMaterial(new Color(0.94, 0.46, 0.08), 0.30),
+    sourceLocal: makeMaterial(new Color(0.96, 0.64, 0.27), 0.22),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),
@@ -664,7 +690,7 @@ function createReviewSolid(
 function createSourceNativeReviewMesh(
   app: AppBase,
   parent: Entity,
-  sourceMesh: UndertowSourceNativeReviewMesh,
+  sourceMesh: Pick<UndertowSourceNativeReviewMesh, 'id' | 'vertices'>,
   material: StandardMaterial
 ): void {
   const positions = sourceMesh.vertices.flatMap(([x, y, z]) => [

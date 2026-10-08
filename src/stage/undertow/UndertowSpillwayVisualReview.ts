@@ -1,4 +1,9 @@
 import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
+import {
+  UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES,
+  UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY,
+  undertowT21SourceNativeSupplementErrors
+} from './UndertowSpillwaySourceNativeSupplementGeometry';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from './UndertowSpillwayBlockoutGeometry';
 import {
   UNDERTOW_T21_MACRO_COVERAGE,
@@ -26,6 +31,8 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   macroUnresolvedOutlineCount: UNDERTOW_T21_MACRO_COVERAGE.unresolvedOutlines.length,
   sourceNativeReviewMeshCount: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES.length,
   sourceNativeReviewAreaSquareMeters: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.totalSourceAreaSquareMeters,
+  sourceNativeSupplementCount: UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES.length,
+  sourceNativeSupplementAreaSquareMeters: UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY.totalSourceAreaSquareMeters,
   deferredFeatureIds: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds] as const,
   activationBlockers: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers] as const,
   notes:
@@ -35,7 +42,8 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
 export function undertowT21VisualReviewErrors(): readonly string[] {
   const errors: string[] = [
     ...undertowT21MacroCoverageErrors(),
-    ...undertowT21SourceNativeReviewErrors()
+    ...undertowT21SourceNativeReviewErrors(),
+    ...undertowT21SourceNativeSupplementErrors()
   ];
   if (!UNDERTOW_T21_VISUAL_REVIEW.reviewOnly) {
     errors.push('T21 visual review must remain review-only');
@@ -51,6 +59,9 @@ export function undertowT21VisualReviewErrors(): readonly string[] {
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.paintSurfaceCount < 1) {
     errors.push('T21 visual review requires the reviewed paint-surface subset');
+  }
+  if (UNDERTOW_T21_VISUAL_REVIEW.sourceNativeSupplementCount !== 10) {
+    errors.push('T21 visual review supplement must retain five paired source components');
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.sourceNativeReviewMeshCount !== 16) {
     errors.push('T21 visual review v2 source-native review mesh inventory drifted');
