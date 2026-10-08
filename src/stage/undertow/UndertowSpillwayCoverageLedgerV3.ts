@@ -80,7 +80,8 @@ function shown(shape: ProjectedShape, p: CoverageXZ): boolean {
 }
 function transform(vertex: StageVector3, solid: StageSolidDefinition): CoverageXZ {
   let [x,y,z] = vertex;
-  const [rx,ry,rz] = (solid.rotationEulerDegrees ?? [0,0,0]).map(v=>v*Math.PI/180);
+  const degrees = solid.rotationEulerDegrees ?? [0,0,0];
+  const rx=(degrees[0]??0)*Math.PI/180,ry=(degrees[1]??0)*Math.PI/180,rz=(degrees[2]??0)*Math.PI/180;
   // XYZ local Euler; no arbitrary coordinate snapping or mesh reprojection.
   if (rx) { const ny=y*Math.cos(rx)-z*Math.sin(rx); z=y*Math.sin(rx)+z*Math.cos(rx); y=ny; }
   if (ry) { const nx=x*Math.cos(ry)+z*Math.sin(ry); z=-x*Math.sin(ry)+z*Math.cos(ry); x=nx; }
