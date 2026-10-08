@@ -6,6 +6,7 @@ import {
   type CoverageXZ
 } from '../src/stage/undertow/UndertowSpillwayCoverageLedgerV3';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
+import { UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES, undertowT21SourceNativePhase1Errors } from '../src/stage/undertow/UndertowSpillwaySourceNativePhase1Geometry';
 import { UNDERTOW_T21_MACRO_OUTER_BOUNDARY } from '../src/stage/undertow/UndertowSpillwayMacroCoverage';
 
 type P3 = readonly [number, number, number];
@@ -69,8 +70,10 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       gridSampleAuthority:'XZ_CELL_CENTER_APPROXIMATION',
       occupancyAuthority:'XZ_OCCUPANCY_ONLY_NOT_FLOOR',
       provisionalEnvelopesExcluded:2});
-    expect(audit.sourceInventory).toHaveLength(26);
-    expect(new Set(audit.sourceInventory.map(v=>v.sourceComponentId)).size).toBe(26);
+    expect(audit.sourceInventory).toHaveLength(34);
+    expect(undertowT21SourceNativePhase1Errors()).toEqual([]);
+    expect(UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES).toHaveLength(8);
+    expect(new Set(audit.sourceInventory.map(v=>v.sourceComponentId)).size).toBe(34);
     expect(audit.zones).toHaveLength(5);
     expect(audit.stageCells).toBeGreaterThan(0);
     expect(audit.zones.reduce((n,z)=>n+z.cells,0)).toBe(audit.stageCells);
@@ -158,7 +161,7 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       deferredOutside:deferred.length,top:accepted.slice(0,18),
       deferred:deferred.slice(0,8),output:dest
     }));
-    expect(shownIds.size).toBe(26);
+    expect(shownIds.size).toBe(34);
     expect(accepted.every(row=>(row as {runtimePromotionAuthorized:boolean}).runtimePromotionAuthorized===false)).toBe(true);
   },60_000);
 });
