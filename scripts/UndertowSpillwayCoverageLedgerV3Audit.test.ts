@@ -133,7 +133,13 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       expect(mesh.yRange).toEqual(original!.component.yRange);
       expect(mesh.vertices).toEqual(original!.component.mesh.vertices);
     }
-    const accepted:object[]=[], deferred:object[]=[];
+    // Phase 3 hold applies to BOTH sides of each paired FloorConcrete02
+    // inconsistency, even if an individual side happens to be fully inside
+    // the 42-vertex silhouette. Never silently ship half a mirrored pair.
+    const boundaryPairHold=new Set(
+      ['c2','c17','c3','c16'].map(id=>
+        'Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|'+id));
+    const accepted:object[]=[], deferred:object[]=[], deferredPairedBoundary:object[]=[];
     for(const {component,routes,discoveryScopes} of discovered.values()){
       const samples=componentSamples(component.mesh);
       const outside=samples.filter(p=>!polygonIncludes(p,UNDERTOW_T21_MACRO_OUTER_BOUNDARY)).length;
@@ -154,7 +160,12 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
         yAuthority:'PASS18C_EXACT_SOURCE',connectivityAuthority:'PENDING',
         runtimePromotionAuthorized:false
       };
-      if(outside>0) deferred.push({...record,reason:'SOURCE_TRIANGLE_EXTENDS_OUTSIDE_FROZEN_HARD_SILHOUETTE',outsideSamples:outside});
+      if(boundaryPairHold.has(component.id)){
+        deferredPairedBoundary.push({...record,
+          reason:'FROZEN_MIRROR_PAIR_BOUNDARY_DISAGREEMENT_PHASE_3_HOLD',
+          outsideSamples:outside});
+      }
+      else if(outside>0) deferred.push({...record,reason:'SOURCE_TRIANGLE_EXTENDS_OUTSIDE_FROZEN_HARD_SILHOUETTE',outsideSamples:outside});
       else if(!sameAsDisplayed&&newCells>0)accepted.push(record);
     }
     accepted.sort((a,b)=>{
@@ -171,18 +182,21 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       currentSourceMeshCount:shownIds.size,
       sourceLocalCandidateCount:discovered.size,
       candidateAdditionalCount:accepted.length,deferredOuterCount:deferred.length,
+      deferredPairedBoundaryCount:deferredPairedBoundary.length,
       rankedAdditionalSourceCandidates:accepted,
       deferredOutsideSilhouette:deferred,
+      deferredPairedBoundary,
       note:'Areas from XZ center samples are approximate, do not sum 3D surface area. Stage underlay/provisional XZ not counted. Candidates are not yet in Visual Review and are not approved for gameplay.'
     };
     const dest='/tmp/t21-coverage-ledger-v3.json';
     writeFileSync(dest,JSON.stringify(output,null,2));
     console.log('T21_COVERAGE_V3_LOCAL_SOURCE',JSON.stringify({
       candidates:discovered.size,additional:accepted.length,
-      deferredOutside:deferred.length,top:accepted.slice(0,18),
+      deferredOutside:deferred.length,deferredPairedBoundary:deferredPairedBoundary.length,top:accepted.slice(0,18),
       deferred:deferred.slice(0,8),output:dest
     }));
     expect(shownIds.size).toBe(34);
+    expect(deferredPairedBoundary.map(x=>(x as {id:string}).id).sort()).toEqual([...boundaryPairHold].sort());
     expect(accepted.every(row=>(row as {runtimePromotionAuthorized:boolean}).runtimePromotionAuthorized===false)).toBe(true);
   },60_000);
 });
