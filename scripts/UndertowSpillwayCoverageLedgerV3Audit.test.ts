@@ -1,0 +1,164 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { PRODUCTION_STAGE_DEFINITION } from '../src/stage/StageDefinition';
+import {
+  UNDERTOW_T21_COVERAGE_LEDGER_V3,
+  type CoverageXZ
+} from '../src/stage/undertow/UndertowSpillwayCoverageLedgerV3';
+import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
+import { UNDERTOW_T21_MACRO_OUTER_BOUNDARY } from '../src/stage/undertow/UndertowSpillwayMacroCoverage';
+
+type P3 = readonly [number, number, number];
+interface SourceComponent {
+  id: string; sourceMaterial: string; areaSquareMeters: number;
+  yRange: readonly [number,number]; mesh: { vertices: P3[] };
+}
+interface SourceRoute {components:SourceComponent[]}
+interface SourceFixture {
+  version:string;
+  pass18g:{routes:Record<'grate'|'glass',Record<'POSITIVE_Z'|'NEGATIVE_Z',SourceRoute>>};
+}
+function polygonIncludes([x,z]:CoverageXZ,points:readonly CoverageXZ[]):boolean {
+  let inside=false;
+  for(let i=0,j=points.length-1;i<points.length;j=i++){
+    const a=points[j]!,b=points[i]!;
+    const cross=(x-a[0])*(b[1]-a[1])-(z-a[1])*(b[0]-a[0]);
+    if(Math.abs(cross)<1e-8 && (x-a[0])*(x-b[0])+(z-a[1])*(z-b[1])<=1e-8)return true;
+    if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+  }
+  return inside;
+}
+function containsTri(p:CoverageXZ,a:P3,b:P3,c:P3):boolean {
+  const [x,z]=p, d=(b[0]-a[0])*(c[2]-a[2])-(b[2]-a[2])*(c[0]-a[0]);
+  if(Math.abs(d)<1e-8)return false;
+  const u=((x-a[0])*(c[2]-a[2])-(z-a[2])*(c[0]-a[0]))/d;
+  const v=((b[0]-a[0])*(z-a[2])-(b[2]-a[2])*(x-a[0]))/d;
+  return u>=-1e-9&&v>=-1e-9&&u+v<=1+1e-9;
+}
+function componentSamples(mesh:SourceComponent['mesh']):CoverageXZ[]{
+  const samples:CoverageXZ[]=[];
+  for(let i=0;i+2<mesh.vertices.length;i+=3){
+    const a=mesh.vertices[i]!,b=mesh.vertices[i+1]!,c=mesh.vertices[i+2]!;
+    samples.push([a[0],a[2]],[b[0],b[2]],[c[0],c[2]],
+      [(a[0]+b[0])/2,(a[2]+b[2])/2],
+      [(b[0]+c[0])/2,(b[2]+c[2])/2],
+      [(c[0]+a[0])/2,(c[2]+a[2])/2],
+      [(a[0]+b[0]+c[0])/3,(a[2]+b[2]+c[2])/3]);
+  }
+  return samples;
+}
+function candidateMissingCells(component:SourceComponent):number {
+  const vs=component.mesh.vertices;
+  if(vs.length%3!==0)return 0;
+  const xs=vs.map(v=>v[0]),zs=vs.map(v=>v[2]);
+  const xmin=Math.min(...xs),xmax=Math.max(...xs),zmin=Math.min(...zs),zmax=Math.max(...zs);
+  let count=0;
+  for(const [x,z] of UNDERTOW_T21_COVERAGE_LEDGER_V3.undisplayedSampleXZ){
+    if(x<xmin||x>xmax||z<zmin||z>zmax)continue;
+    for(let i=0;i+2<vs.length;i+=3){
+      if(containsTri([x,z],vs[i]!,vs[i+1]!,vs[i+2]!)){count++;break;}
+    }
+  }
+  return count;
+}
+
+describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
+  it('keeps incomplete XZ display distinct from floors, Y and connectivity',()=>{
+    const audit=UNDERTOW_T21_COVERAGE_LEDGER_V3;
+    expect(audit).toMatchObject({version:3,reviewOnly:true,runtimePromotionAuthorized:false,
+      gridSampleAuthority:'XZ_CELL_CENTER_APPROXIMATION',
+      occupancyAuthority:'XZ_OCCUPANCY_ONLY_NOT_FLOOR',
+      provisionalEnvelopesExcluded:2});
+    expect(audit.sourceInventory).toHaveLength(26);
+    expect(new Set(audit.sourceInventory.map(v=>v.sourceComponentId)).size).toBe(26);
+    expect(audit.zones).toHaveLength(5);
+    expect(audit.stageCells).toBeGreaterThan(0);
+    expect(audit.zones.reduce((n,z)=>n+z.cells,0)).toBe(audit.stageCells);
+    expect(audit.zones.reduce((n,z)=>n+z.undisplayed,0)).toBe(audit.undisplayedCells);
+    expect(audit.clusters.reduce((n,z)=>n+z.cells,0)).toBe(audit.undisplayedCells);
+    expect(audit.undisplayedSampleXZ).toHaveLength(audit.undisplayedCells);
+    expect(audit.undisplayedSampleXZ.every(p=>polygonIncludes(p,UNDERTOW_T21_MACRO_OUTER_BOUNDARY))).toBe(true);
+    expect(audit.sourceInventory.every(s=>s.yConfidence==='EXACT_TEMPLE01_SOURCE'
+      && s.shapeConfidence==='EXACT_TEMPLE01_SOURCE'
+      && s.connectivityConfidence==='UNRESOLVED'
+      && s.authority==='EXACT_SOURCE_MESH_REVIEW_ONLY')).toBe(true);
+    expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
+    expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
+    console.log('T21_COVERAGE_V3_BASE',JSON.stringify({
+      sampledStageXZSquareMeters:audit.stageCells*0.25,
+      sampledUndisplayedXZSquareMeters:audit.undisplayedCells*0.25,
+      byZone:audit.zones,
+      largestGaps:audit.clusters.slice(0,12),
+      geometrySourceMeshes:audit.sourceInventory.length,
+      disclaimer:'XZ SAMPLE ONLY; no missing cell is inferred to be an abyss or a flat floor'
+    }));
+  },60_000);
+
+  it('crosschecks Pass18G local candidate source IDs/Y/material and ranks unshown areas without promoting',()=>{
+    const file=process.env.T21_PASS18C_SOURCE_JSON;
+    if(!file||!existsSync(file)) {
+      console.log('T21_COVERAGE_V3_LOCAL_CANDIDATES: fixture unavailable outside PR audit job');
+      return;
+    }
+    const fixture=JSON.parse(readFileSync(file,'utf8')) as SourceFixture;
+    expect(fixture.version).toBe('PASS18C_SOURCE_NATIVE_V1');
+    const shownIds=new Set(UNDERTOW_T21_COVERAGE_LEDGER_V3.sourceInventory.map(s=>s.sourceComponentId));
+    const discovered=new Map<string,{component:SourceComponent;side:string;routes:string[]}>();
+    for(const route of ['glass','grate'] as const) for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const)
+      for(const component of fixture.pass18g.routes[route][side].components){
+        const previous=discovered.get(component.id);
+        if(previous){expect(previous.side).toBe(side);previous.routes.push(route);}
+        else discovered.set(component.id,{component,side,routes:[route]});
+      }
+    const accepted:object[]=[], deferred:object[]=[];
+    for(const {component,side,routes} of discovered.values()){
+      const samples=componentSamples(component.mesh);
+      const outside=samples.filter(p=>!polygonIncludes(p,UNDERTOW_T21_MACRO_OUTER_BOUNDARY)).length;
+      const sameAsDisplayed=shownIds.has(component.id);
+      const newCells=sameAsDisplayed||outside>0?0:candidateMissingCells(component);
+      const x=component.mesh.vertices.reduce((v,p)=>v+p[0],0)/component.mesh.vertices.length;
+      const z=component.mesh.vertices.reduce((v,p)=>v+p[2],0)/component.mesh.vertices.length;
+      const zone=Math.abs(z)<=15?'CENTER':x<=-14?'LEFT_SIDE':x>=14?'RIGHT_SIDE':z>0?'POS':'NEG';
+      const material=component.sourceMaterial;
+      const phase=material.includes('FloorConcrete')||material.includes('FloorSlope')?
+        (Math.abs(z)<35?'PHASE_1':'PHASE_2'):'PHASE_2_OR_4';
+      const record={
+        id:component.id,material,side,sourceAreaSquareMeters:component.areaSquareMeters,
+        yRange:component.yRange,centroidXZ:[x,z],zone,phase,
+        approxAdditionalXZSquareMeters:newCells*0.25,
+        routes:[...new Set(routes)],shapeAuthority:'PASS18C_EXACT_SOURCE',
+        yAuthority:'PASS18C_EXACT_SOURCE',connectivityAuthority:'PENDING',
+        runtimePromotionAuthorized:false
+      };
+      if(outside>0) deferred.push({...record,reason:'SOURCE_TRIANGLE_EXTENDS_OUTSIDE_FROZEN_HARD_SILHOUETTE',outsideSamples:outside});
+      else if(!sameAsDisplayed&&newCells>0)accepted.push(record);
+    }
+    accepted.sort((a,b)=>{
+      const aa=a as {approxAdditionalXZSquareMeters:number;phase:string},bb=b as typeof aa;
+      return (aa.phase==='PHASE_1'?0:1)-(bb.phase==='PHASE_1'?0:1)||
+        bb.approxAdditionalXZSquareMeters-aa.approxAdditionalXZSquareMeters;
+    });
+    const output={
+      version:3,sourceVersion:fixture.version,reviewOnly:true,runtimePromotionAuthorized:false,
+      sourceScope:'PASS18G_LOCAL_CANDIDATES_ONLY_NOT_FULL_STAGE_EXHAUSTIVE',
+      sampledCellSizeMeters:UNDERTOW_T21_COVERAGE_LEDGER_V3.cellSizeMeters,
+      stageXZ:UNDERTOW_T21_COVERAGE_LEDGER_V3.zones,
+      largestGapClusters:UNDERTOW_T21_COVERAGE_LEDGER_V3.clusters.slice(0,30),
+      currentSourceMeshCount:shownIds.size,
+      sourceLocalCandidateCount:discovered.size,
+      candidateAdditionalCount:accepted.length,deferredOuterCount:deferred.length,
+      rankedAdditionalSourceCandidates:accepted,
+      deferredOutsideSilhouette:deferred,
+      note:'Areas from XZ center samples are approximate, do not sum 3D surface area. Stage underlay/provisional XZ not counted. Candidates are not yet in Visual Review and are not approved for gameplay.'
+    };
+    const dest='/tmp/t21-coverage-ledger-v3.json';
+    writeFileSync(dest,JSON.stringify(output,null,2));
+    console.log('T21_COVERAGE_V3_LOCAL_SOURCE',JSON.stringify({
+      candidates:discovered.size,additional:accepted.length,
+      deferredOutside:deferred.length,top:accepted.slice(0,18),
+      deferred:deferred.slice(0,8),output:dest
+    }));
+    expect(shownIds.size).toBe(26);
+    expect(accepted.every(row=>(row as {runtimePromotionAuthorized:boolean}).runtimePromotionAuthorized===false)).toBe(true);
+  },60_000);
+});
