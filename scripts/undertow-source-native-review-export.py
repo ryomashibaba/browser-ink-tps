@@ -67,6 +67,100 @@ for index, cid in enumerate(SELECTED_IDS, start=1):
         "vertices": component["mesh"]["vertices"],
     })
 
+
+# A second, stricter visual-only batch selected from the Pass18G local
+# candidate inventory. Source triangle geometry/Y is retained exactly.
+# LOCAL candidate identity does NOT prove gameplay connectivity.
+SUPPLEMENT_PAIRS = [
+    ("Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c8",
+     "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c9"),
+    ("Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c2",
+     "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c17"),
+    ("Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c3",
+     "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c16"),
+    ("Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c15",
+     "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c13"),
+    ("Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c12",
+     "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c17"),
+    ("Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c14",
+     "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c16"),
+    ("Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c10",
+     "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c19"),
+]
+
+import math
+
+def supplement_centroid_xz(c):
+    vs = c["mesh"]["vertices"]
+    return (sum(v[0] for v in vs)/len(vs), sum(v[2] for v in vs)/len(vs))
+
+supplement_records = []
+seen_supplement = set()
+for pair_index, (pos_id, neg_id) in enumerate(SUPPLEMENT_PAIRS, start=1):
+    pair = []
+    for side, cid in (("POSITIVE_Z", pos_id), ("NEGATIVE_Z", neg_id)):
+        c = by_id.get(cid)
+        if c is None:
+            raise SystemExit(f"missing supplemental source candidate {cid}")
+        if cid in seen_supplement or cid in SELECTED_IDS:
+            raise SystemExit(f"duplicate supplemental source candidate {cid}")
+        seen_supplement.add(cid)
+        if c["areaSquareMeters"] < 8:
+            raise SystemExit(f"supplement candidate below area threshold: {cid}")
+        if len(c["mesh"]["vertices"]) % 3:
+            raise SystemExit(f"nontriangular supplement: {cid}")
+        if any((not math.isfinite(v) for point in c["mesh"]["vertices"] for v in point)):
+            raise SystemExit(f"nonfinite supplement: {cid}")
+        candidate_routes = sorted({
+            route for route in ("glass", "grate")
+            if any(
+                item["id"] == cid
+                for item in payload["pass18g"]["routes"][route][side]["components"]
+            )
+        })
+        if not candidate_routes:
+            raise SystemExit(f"supplement candidate missing side-specific Pass18G local inventory: {cid}")
+        pair.append(c)
+        supplement_records.append({
+            "id": f"source-native-supplement-{pair_index:02d}-{side.lower()}",
+            "pairId": pair_index,
+            "sourceComponentId": cid,
+            "sourceMaterial": c["sourceMaterial"],
+            "side": side,
+            "evidenceRoutes": candidate_routes,
+            "areaSquareMeters": c["areaSquareMeters"],
+            "yRange": c["yRange"],
+            "vertices": c["mesh"]["vertices"],
+            "routeMembershipAuthority": (
+                "PASS18G_RELAXED_DISCOVERY_ONLY" if cid in membership
+                else "PASS18G_LOCAL_CANDIDATE_ONLY"
+            )
+        })
+    p, n = pair
+    if abs(p["areaSquareMeters"] - n["areaSquareMeters"]) > 1e-6:
+        raise SystemExit(f"area asymmetry in supplement pair {pair_index}")
+    if max(abs(a-b) for a,b in zip(p["yRange"],n["yRange"])) > 1e-6:
+        raise SystemExit(f"Y asymmetry in supplement pair {pair_index}")
+    pcx, pcz = supplement_centroid_xz(p)
+    ncx, ncz = supplement_centroid_xz(n)
+    if math.hypot(pcx+ncx-0.229368288528164,
+                  pcz+ncz-0.194564295456822) > 0.005:
+        raise SystemExit(f"geometry centroids do not mirror in supplement pair {pair_index}")
+
+supplement = {
+    "sourceAuditVersion": payload["version"],
+    "discoveryPass": "18G",
+    "reviewOnly": True,
+    "runtimePromotionAuthorized": False,
+    "selectionRule": "PAIRED_7_LOCAL_SOURCE_CONTOURS_MIDFIELD_Y_NONRUNTIME",
+    "pairCount": len(SUPPLEMENT_PAIRS),
+    "meshCount": len(supplement_records),
+    "records": supplement_records,
+}
+supplement_raw = json.dumps(supplement, separators=(",", ":")).encode("utf-8")
+print("T21SOURCE_NATIVE_SUPPLEMENT_B64=" + base64.b64encode(supplement_raw).decode("ascii"))
+print(f"T21SOURCE_NATIVE_SUPPLEMENT count={len(supplement_records)} json_bytes={len(supplement_raw)}")
+
 out = {
     "sourceAuditVersion": payload["version"],
     "discoveryPass": "18G",
