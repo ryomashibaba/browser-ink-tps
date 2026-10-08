@@ -600,6 +600,22 @@ jobs:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18AMSlopeFloor00KccQa.test.ts
 
+      # Phase 0 Coverage Ledger v3 is a diagnostic, not a runtime stage promotion.
+      - name: T21 Phase 0 whole-stage XZ and Pass18G candidate coverage ledger v3
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
+        run: npx vitest run scripts/UndertowSpillwayCoverageLedgerV3Audit.test.ts
+
+      - name: Upload T21 coverage ledger v3
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-coverage-ledger-v3
+          path: /tmp/t21-coverage-ledger-v3.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
