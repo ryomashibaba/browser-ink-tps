@@ -17,6 +17,15 @@
 - Existing broad 18-region macro coverage classifications remain frozen. The five diagnostic bins do **not** redefine official route or terrain-region borders.
 - Summed 3D source triangle areas must **not** be added to 2D XZ cell areas, and areas that overlap are not unique coverage.
 
+### GitHub Actions #1278 sample findings (0.5m XZ center grid)
+- Audited hard-silhouette XZ sample area: **8,969.75 m²**.
+- Undrawn XZ plan sample area: **5,200.75 m²** (about **58.0%**). These are samples, not proven absent ground.
+- Undrawn by diagnostic bin: center **1,387.50 m²**, POS **447.50 m²**, NEG **453.50 m²**, left-side **1,471.50 m²**, right-side **1,440.75 m²**.
+- With connected-gap segmentation respecting the five bin borders, biggest individual clusters: center **1,343.25 m²**, left side **1,167.00 m²**, right side **1,144.25 m²**, NEG **304.00 m²**, POS **303.50 m²**. These are areas to **investigate**, not permission to fill with slabs.
+- Pass18G local candidate discovery yields **237 unique source component IDs** after cross-scope deduplication. The source-search volumes overlap the centerline and some IDs appear in both POS and NEG searches; scope names must not be substituted for actual source-mesh side authority.
+- The paired `FloorConcrete02 c2/c17` and `c3/c16` components remain grouped under **Phase 3 boundary-reconciliation hold**, including the sides that are individually inside the silhouette.
+- All coverage percentages may change with finer sampling. The v3 report uses cell-center sampling and never claims a complete volumetric terrain audit.
+
 ## Source-candidate audit and Phase 1 evidence
 The paired, exact-source terrain additions below all pass the known hard-silhouette triangle-sample check and reflect the **original project-space source vertices and Y**. The CI audit independently compares every reconstructed expanded triple with the full original Pass18C JSON fixture, in order to reject accidental rounding or regeneration.
 
