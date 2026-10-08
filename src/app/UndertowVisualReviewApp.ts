@@ -47,6 +47,7 @@ import {
   UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY
 } from '../stage/undertow/UndertowSpillwaySourceNativeSupplementGeometry';
 import { UNDERTOW_T21_VISUAL_REVIEW } from '../stage/undertow/UndertowSpillwayVisualReview';
+import { UNDERTOW_T21_COVERAGE_LEDGER_V3 } from '../stage/undertow/UndertowSpillwayCoverageLedgerV3';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 
@@ -343,6 +344,40 @@ export class UndertowVisualReviewApp {
         <span><i class="void"></i> intentional void / outside hard silhouette</span>
         <span><i class="nav"></i> currently authored navigation links</span>
       </div>
+      <details>
+        <summary>Coverage Ledger v3 — unshown XZ areas (0.5m samples)</summary>
+        <p class="review-detail-note">
+          This is a 2D display-coverage comparison, NOT a floor map, a fall-out map,
+          or evidence of missing connectivity. Stage envelope and yellow provisional
+          plan surfaces are deliberately excluded. Exact source Y and gameplay
+          connectivity are independent.
+        </p>
+        <p class="review-detail-note">
+          Sampled hard-envelope area:
+          ${(UNDERTOW_T21_COVERAGE_LEDGER_V3.stageCells * 0.25).toFixed(1)} m² XZ.
+          Not yet displayed:
+          ${(UNDERTOW_T21_COVERAGE_LEDGER_V3.undisplayedCells * 0.25).toFixed(1)} m² XZ
+          (${(100 * UNDERTOW_T21_COVERAGE_LEDGER_V3.undisplayedCells / UNDERTOW_T21_COVERAGE_LEDGER_V3.stageCells).toFixed(1)}% of samples).
+        </p>
+        <ul class="review-region-list">
+          ${UNDERTOW_T21_COVERAGE_LEDGER_V3.zones.map(zone=>`
+            <li><div><b>${escapeHtml(zone.zone)}</b>
+              <small>Undisplayed ${zone.approximateUndisplayedXZSquareMeters.toFixed(1)} m² XZ
+              / ${(zone.cells * 0.25).toFixed(1)} m² sampled region</small></div></li>`).join('')}
+        </ul>
+        <p class="review-detail-note">
+          Largest connected undisplayed XZ samples — diagnostic centers, NOT
+          authoritative source component locations:
+        </p>
+        <ul class="review-region-list">
+          ${UNDERTOW_T21_COVERAGE_LEDGER_V3.clusters.slice(0,10).map((gap,i)=>`
+            <li><div><b>#${i+1} ${escapeHtml(gap.zone)} /
+              ${gap.approximateAreaSquareMeters.toFixed(1)} m² XZ</b>
+              <small>center X=${gap.centroidXZ[0].toFixed(1)},
+              Z=${gap.centroidXZ[1].toFixed(1)};
+              shape/Y/connectivity unresolved</small></div></li>`).join('')}
+        </ul>
+      </details>
       <details open>
         <summary>Macro coverage regions (${UNDERTOW_T21_MACRO_COVERAGE.regionCount})</summary>
         <ul class="review-region-list">
