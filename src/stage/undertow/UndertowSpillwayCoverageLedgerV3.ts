@@ -180,6 +180,9 @@ export function buildUndertowCoverageLedgerV3(): {
   const queue:number[]=[];
   for(let origin=0;origin<state.length;origin++){
     if(state[origin]!==2)continue;
+    // Split connected unknown display areas at PLAN-bin borders. Otherwise a
+    // single large gap spanning both flanks is misleadingly named only LEFT.
+    const clusterZone=zoneGrid[origin]!;
     state[origin]=3;queue.push(origin);
     let head=0,count=0,sumX=0,sumZ=0,minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
     const votes=new Map<CoverageZone,number>();
@@ -190,7 +193,7 @@ export function buildUndertowCoverageLedgerV3(): {
       minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
       const zone=zoneGrid[idx]!;votes.set(zone,(votes.get(zone)??0)+1);
       for(const other of [xi>0?idx-1:-1,xi+1<width?idx+1:-1,zi>0?idx-width:-1,zi+1<height?idx+width:-1]){
-        if(other>=0&&state[other]===2){state[other]=3;queue.push(other);}
+        if(other>=0&&state[other]===2&&zoneGrid[other]===clusterZone){state[other]=3;queue.push(other);}
       }
     }
     queue.length=0;
