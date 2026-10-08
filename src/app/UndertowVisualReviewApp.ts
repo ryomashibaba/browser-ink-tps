@@ -48,6 +48,7 @@ import {
 } from '../stage/undertow/UndertowSpillwaySourceNativeSupplementGeometry';
 import { UNDERTOW_T21_VISUAL_REVIEW } from '../stage/undertow/UndertowSpillwayVisualReview';
 import { UNDERTOW_T21_COVERAGE_LEDGER_V3 } from '../stage/undertow/UndertowSpillwayCoverageLedgerV3';
+import { UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES, UNDERTOW_T21_SOURCE_NATIVE_PHASE1_SUMMARY } from '../stage/undertow/UndertowSpillwaySourceNativePhase1Geometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 
@@ -227,6 +228,17 @@ export class UndertowVisualReviewApp {
       );
     }
 
+    // Additional exact source terrain: distinct from both runtime and the older
+    // frozen 16+10 source batches; original source Y is retained by mesh builder.
+    for (const sourceMesh of UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES) {
+      createSourceNativeReviewMesh(
+        this.app,
+        this.sourceNativeRoot,
+        sourceMesh,
+        this.materials.sourceNative
+      );
+    }
+
     for (const sourceMesh of UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES) {
       createSourceNativeReviewMesh(
         this.app,
@@ -311,6 +323,7 @@ export class UndertowVisualReviewApp {
         <span>Stage occupancy envelope</span><b>42-vertex XZ / NOT FLOOR</b>
         <span>Source-native review meshes</span><b>${UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m²</b>
         <span>Additional local source meshes</span><b>${UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m²</b>
+        <span>Phase 1 exact terrain source meshes</span><b>${UNDERTOW_T21_SOURCE_NATIVE_PHASE1_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_NATIVE_PHASE1_SUMMARY.totalSourceTriangleAreaSquareMeters.toFixed(1)} m² (source triangles, not extra XZ)</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
