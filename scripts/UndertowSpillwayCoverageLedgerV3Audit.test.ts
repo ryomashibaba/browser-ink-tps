@@ -106,12 +106,19 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
     const fixture=JSON.parse(readFileSync(file,'utf8')) as SourceFixture;
     expect(fixture.version).toBe('PASS18C_SOURCE_NATIVE_V1');
     const shownIds=new Set(UNDERTOW_T21_COVERAGE_LEDGER_V3.sourceInventory.map(s=>s.sourceComponentId));
-    const discovered=new Map<string,{component:SourceComponent;side:string;routes:string[]}>();
-    for(const route of ['glass','grate'] as const) for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const)
-      for(const component of fixture.pass18g.routes[route][side].components){
+    // Pass18G local search volumes overlap across the centerline. One source
+    // component may be listed in both POS/NEG discovery scopes; those are
+    // observation scopes, NOT authoritative mesh ownership or symmetry pairs.
+    const discovered=new Map<string,{component:SourceComponent;routes:string[];discoveryScopes:string[]}>();
+    for(const route of ['glass','grate'] as const) for(const scopeSide of ['POSITIVE_Z','NEGATIVE_Z'] as const)
+      for(const component of fixture.pass18g.routes[route][scopeSide].components){
         const previous=discovered.get(component.id);
-        if(previous){expect(previous.side).toBe(side);previous.routes.push(route);}
-        else discovered.set(component.id,{component,side,routes:[route]});
+        if(previous){
+          expect(previous.component.sourceMaterial).toBe(component.sourceMaterial);
+          expect(previous.component.areaSquareMeters).toBe(component.areaSquareMeters);
+          previous.routes.push(route);
+          previous.discoveryScopes.push(route+':'+scopeSide);
+        } else discovered.set(component.id,{component,routes:[route],discoveryScopes:[route+':'+scopeSide]});
       }
     // Byte-for-byte numerical source equality: review geometry must not be
     // fabricated, mirrored approximately, simplified or silently clipped.
@@ -119,19 +126,22 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       const original=discovered.get(mesh.sourceComponentId);
       expect(original, 'missing frozen Pass18C source '+mesh.sourceComponentId).toBeDefined();
       expect(mesh.sourceMaterial).toBe(original!.component.sourceMaterial);
-      expect(mesh.side).toBe(original!.side);
+      const sourceCentroidZ=original!.component.mesh.vertices
+        .reduce((sum,p)=>sum+p[2],0)/original!.component.mesh.vertices.length;
+      expect(mesh.side).toBe(sourceCentroidZ>=0?'POSITIVE_Z':'NEGATIVE_Z');
       expect(mesh.areaSquareMeters).toBeCloseTo(original!.component.areaSquareMeters,9);
       expect(mesh.yRange).toEqual(original!.component.yRange);
       expect(mesh.vertices).toEqual(original!.component.mesh.vertices);
     }
     const accepted:object[]=[], deferred:object[]=[];
-    for(const {component,side,routes} of discovered.values()){
+    for(const {component,routes,discoveryScopes} of discovered.values()){
       const samples=componentSamples(component.mesh);
       const outside=samples.filter(p=>!polygonIncludes(p,UNDERTOW_T21_MACRO_OUTER_BOUNDARY)).length;
       const sameAsDisplayed=shownIds.has(component.id);
       const newCells=sameAsDisplayed||outside>0?0:candidateMissingCells(component);
       const x=component.mesh.vertices.reduce((v,p)=>v+p[0],0)/component.mesh.vertices.length;
       const z=component.mesh.vertices.reduce((v,p)=>v+p[2],0)/component.mesh.vertices.length;
+      const side=z>=0?'POSITIVE_Z':'NEGATIVE_Z';
       const zone=Math.abs(z)<=15?'CENTER':x<=-14?'LEFT_SIDE':x>=14?'RIGHT_SIDE':z>0?'POS':'NEG';
       const material=component.sourceMaterial;
       const phase=material.includes('FloorConcrete')||material.includes('FloorSlope')?
@@ -140,7 +150,7 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
         id:component.id,material,side,sourceAreaSquareMeters:component.areaSquareMeters,
         yRange:component.yRange,centroidXZ:[x,z],zone,phase,
         approxAdditionalXZSquareMeters:newCells*0.25,
-        routes:[...new Set(routes)],shapeAuthority:'PASS18C_EXACT_SOURCE',
+        routes:[...new Set(routes)],discoveryScopes:[...new Set(discoveryScopes)],shapeAuthority:'PASS18C_EXACT_SOURCE',
         yAuthority:'PASS18C_EXACT_SOURCE',connectivityAuthority:'PENDING',
         runtimePromotionAuthorized:false
       };
