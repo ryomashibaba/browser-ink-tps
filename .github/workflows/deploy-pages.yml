@@ -110,6 +110,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      # Complete fail-fast gate before the long frozen Pass18 diagnostic matrix.
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
       - name: T21 Pass 18BW top-cap rasterization isolation diagnostic
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         env:
@@ -615,12 +622,6 @@ jobs:
         env:
           T21_PASS18C_SOURCE_JSON: /tmp/t21-pass18c-upper-terrain.json
         run: npx vitest run scripts/UndertowSpillwayPass18AMSlopeFloor00KccQa.test.ts
-
-      - name: TypeScript check
-        run: npm run typecheck
-
-      - name: Unit tests
-        run: npm test
 
       - name: Build for GitHub Pages
         run: npm run build -- --base=/browser-ink-tps/
