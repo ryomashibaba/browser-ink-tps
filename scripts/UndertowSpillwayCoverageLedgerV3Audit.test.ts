@@ -113,6 +113,17 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
         if(previous){expect(previous.side).toBe(side);previous.routes.push(route);}
         else discovered.set(component.id,{component,side,routes:[route]});
       }
+    // Byte-for-byte numerical source equality: review geometry must not be
+    // fabricated, mirrored approximately, simplified or silently clipped.
+    for(const mesh of UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES){
+      const original=discovered.get(mesh.sourceComponentId);
+      expect(original, 'missing frozen Pass18C source '+mesh.sourceComponentId).toBeDefined();
+      expect(mesh.sourceMaterial).toBe(original!.component.sourceMaterial);
+      expect(mesh.side).toBe(original!.side);
+      expect(mesh.areaSquareMeters).toBeCloseTo(original!.component.areaSquareMeters,9);
+      expect(mesh.yRange).toEqual(original!.component.yRange);
+      expect(mesh.vertices).toEqual(original!.component.mesh.vertices);
+    }
     const accepted:object[]=[], deferred:object[]=[];
     for(const {component,side,routes} of discovered.values()){
       const samples=componentSamples(component.mesh);
