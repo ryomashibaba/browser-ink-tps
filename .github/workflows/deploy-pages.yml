@@ -64,6 +64,15 @@ jobs:
         shell: bash
         run: python scripts/undertow-temple01-upper-terrain-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
 
+      - name: Upload T21 whole-stage walk-source inventory
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-whole-stage-walk-source-inventory
+          path: /tmp/t21-whole-stage-source-inventory.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 Temple01 upper-terrain source audit
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -111,6 +120,12 @@ jobs:
           retention-days: 14
 
       # Complete fail-fast gate before the long frozen Pass18 diagnostic matrix.
+      - name: T21 whole-stage source inventory authority QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_FULL_STAGE_SOURCE_JSON: /tmp/t21-whole-stage-source-inventory.json
+        run: npx vitest run scripts/UndertowSpillwayWholeStageSourceInventoryQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
