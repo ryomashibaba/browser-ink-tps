@@ -236,6 +236,10 @@ export class UndertowVisualReviewApp {
     if(params.get('reviewRecoveredFocus')==='POSITIVE_Z'||params.get('reviewRecoveredFocus')==='NEGATIVE_Z'){
       this.focusRecoveredSource(params.get('reviewRecoveredFocus') as 'POSITIVE_Z'|'NEGATIVE_Z');
     }
+    const focusFace=Number(params.get('reviewRecoveredFace'));
+    if(params.has('reviewRecoveredFace')&&
+      UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES.some(m=>m.originalMinFace===focusFace))
+      this.focusRecoveredOriginalFace(focusFace);
     if(params.get('reviewTopologyEdges')==='1'){
       this.coordinateSeamPhase10Root.enabled=true;
       this.unmatchedEdgePhase10Root.enabled=true;
@@ -635,6 +639,10 @@ export class UndertowVisualReviewApp {
         <button data-review-view="CENTER_SOURCE">Center source close-up</button>
         <button data-review-recovered-focus="POSITIVE_Z">Original pair / POS close-up</button>
         <button data-review-recovered-focus="NEGATIVE_Z">Original pair / NEG close-up</button>
+        <button data-review-recovered-face="60006">Original piece #60006</button>
+        <button data-review-recovered-face="61516">Original piece #61516</button>
+        <button data-review-recovered-face="61728">Original piece #61728</button>
+        <button data-review-recovered-face="62086">Original piece #62086</button>
         <button id="t21-review-recovered-focus-exit">Exit source close-up</button>
       </div>
       <div class="review-actions layers">
@@ -771,6 +779,13 @@ export class UndertowVisualReviewApp {
       button.addEventListener('click',()=>{
         const side=button.dataset.reviewRecoveredFocus;
         if(side==='POSITIVE_Z'||side==='NEGATIVE_Z')this.focusRecoveredSource(side);
+      });
+    });
+    panel.querySelectorAll<HTMLButtonElement>('[data-review-recovered-face]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const face=Number(button.dataset.reviewRecoveredFace);
+        if(UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES.some(m=>m.originalMinFace===face))
+          this.focusRecoveredOriginalFace(face);
       });
     });
     panel.querySelector<HTMLButtonElement>('#t21-review-recovered-focus-exit')?.addEventListener('click',()=>{
@@ -952,6 +967,7 @@ export class UndertowVisualReviewApp {
     for(const piece of this.recoveredSourcePhase12DRoot.children)piece.enabled=true;
     this.canvas.dataset.t21ReviewRecoveredFocus='off';
     this.canvas.dataset.t21ReviewRecoveredFocusPieces='0';
+    this.canvas.dataset.t21ReviewRecoveredFocusFace='off';
     this.canvas.dataset.t21ReviewRecoveredOriginal='off';
     this.canvas.dataset.t21ReviewCompleteCentral='off';
     this.canvas.dataset.t21ReviewSourceFamilies='off';
@@ -1004,6 +1020,7 @@ export class UndertowVisualReviewApp {
     this.pitchDegrees=28;
     this.canvas.dataset.t21ReviewRecoveredFocus=side;
     this.canvas.dataset.t21ReviewRecoveredFocusPieces='2';
+    this.canvas.dataset.t21ReviewRecoveredFocusFace='off';
     this.canvas.dataset.t21ReviewRecoveredOriginal='on';
     this.canvas.dataset.t21ReviewSourceFamilies='off';
     this.canvas.dataset.t21ReviewCompleteCentral='off';
@@ -1015,6 +1032,41 @@ export class UndertowVisualReviewApp {
       btn.classList.remove('active-mode');
       btn.setAttribute('aria-pressed','false');
     });
+    this.updateCamera();
+  }
+
+  /** Optical source-only close-up, per EXACT original OBJ component. */
+  private focusRecoveredOriginalFace(minFace:number):void{
+    const c=UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES.find(m=>m.originalMinFace===minFace);
+    if(!c||c.vertices.length!==6)throw new Error('T21 Phase12E unknown original source component');
+    this.focusRecoveredSource(c.side);
+    // The pair of recovered FloorLine source pieces is far apart on one side.
+    // For a meaningful close-up, show only THIS original connected component.
+    for(let i=0;i<this.recoveredSourcePhase12DRoot.children.length;i++)
+      this.recoveredSourcePhase12DRoot.children[i]!.enabled=
+        UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES[i]!.originalMinFace===minFace;
+    const v=c.vertices;
+    const mn=([0,1,2] as const).map(k=>Math.min(...v.map(p=>p[k])));
+    const mx=([0,1,2] as const).map(k=>Math.max(...v.map(p=>p[k])));
+    this.target.set((mn[0]!+mx[0]!)*0.5,(mn[1]!+mx[1]!)*0.5,(mn[2]!+mx[2]!)*0.5);
+    const [a,b,d]=v;
+    const u=[b![0]-a![0],b![1]-a![1],b![2]-a![2]];
+    const w=[d![0]-a![0],d![1]-a![1],d![2]-a![2]];
+    const nx=u[1]!*w[2]!-u[2]!*w[1]!;
+    const ny=u[2]!*w[0]!-u[0]!*w[2]!;
+    const nz=u[0]!*w[1]!-u[1]!*w[0]!;
+    const normalLength=Math.hypot(nx,ny,nz);
+    if(normalLength<1e-9)throw new Error('T21 Phase12E degenerate original triangle');
+    // Aim nearly normal to the real source face to avoid edge-on views.
+    this.yawDegrees=(Math.atan2(nx,nz)*180/Math.PI+360)%360;
+    this.pitchDegrees=clamp(Math.atan2(Math.abs(ny),Math.hypot(nx,nz))*180/Math.PI,14,78);
+    const span=Math.max(mx[0]!-mn[0]!,mx[1]!-mn[1]!,mx[2]!-mn[2]!);
+    this.distanceMeters=clamp(span*1.55,2.8,9);
+    this.canvas.dataset.t21ReviewRecoveredFocusFace=String(minFace);
+    this.canvas.dataset.t21ReviewRecoveredFocusPieces='1';
+    this.canvas.dataset.t21ReviewPreset='FOCUS_ONE_EXACT_ORIGINAL_SOURCE';
+    const label=this.uiRoot.querySelector<HTMLElement>('#t21-review-active-view');
+    if(label)label.textContent='ORIGINAL FACE '+minFace+' / exact source only';
     this.updateCamera();
   }
 
@@ -1030,6 +1082,7 @@ export class UndertowVisualReviewApp {
       // availability without silently changing source coordinates.
       this.canvas.dataset.t21ReviewRecoveredFocus='off';
       this.canvas.dataset.t21ReviewRecoveredFocusPieces='0';
+      this.canvas.dataset.t21ReviewRecoveredFocusFace='off';
       for(const piece of this.recoveredSourcePhase12DRoot.children)piece.enabled=true;
       // Prevent duplicate Phase12 original single faces and Phase12C full faces.
       if((root===this.completeSourcePhase12CRoot||root===this.recoveredSourcePhase12DRoot)&&root.enabled)

@@ -33,5 +33,11 @@ describe('T21 Phase12E original-only two-mirror camera isolate QA',()=>{
     expect(capture).toContain("for(const side of ['POSITIVE_Z','NEGATIVE_Z'])");
     expect(capture).toContain("allDefault124OriginalSourceMeshesHiddenForIsolation:true");
     expect(capture).toContain("authorizesVisualFreeze:false");
+    expect(app).toContain('private focusRecoveredOriginalFace(minFace:number):void');
+    expect(app).toContain("this.canvas.dataset.t21ReviewPreset='FOCUS_ONE_EXACT_ORIGINAL_SOURCE'");
+    expect(app).toContain("this.distanceMeters=clamp(span*1.55,2.8,9)");
+    expect(capture).toContain('T21_PHASE12E_SINGLE_ORIGINAL_FACE_');
+    for(const face of [60006,61516,61728,62086])
+      expect(app).toContain('data-review-recovered-face="'+face+'"');
   });
 });

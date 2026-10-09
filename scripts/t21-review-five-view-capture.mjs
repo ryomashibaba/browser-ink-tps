@@ -414,6 +414,46 @@ try {
     }
   }
 
+  // Phase12E single-piece optical close-up: individual original components
+  // rather than two separated pieces at opposite ends of one view.
+  manifest.phase12ESingleOriginalDiagnostics=[];
+  for(const face of [60006,61516,61728,62086]){
+    try{
+      await navigate(urlForView('CENTER_SOURCE')+'&reviewRecoveredFace='+face);
+      const state=await poll(async()=>{
+        const value=await evaluation(`(() => ({
+          face:document.querySelector('#app-canvas')?.dataset.t21ReviewRecoveredFocusFace,
+          count:document.querySelector('#app-canvas')?.dataset.t21ReviewRecoveredFocusPieces,
+          preset:document.querySelector('#app-canvas')?.dataset.t21ReviewPreset,
+          backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+        }))()`);
+        if(value?.face===String(face)&&value.count==='1'&&
+           value.preset==='FOCUS_ONE_EXACT_ORIGINAL_SOURCE'&&value.backend==='webgl2')
+          return value;
+        throw Error('T21_PHASE12E_SINGLE_SOURCE_NOT_READY '+JSON.stringify(value));
+      },25000);
+      await evaluation(`(() => {const p=document.querySelector('#t21-review-panel');if(p)p.style.display='none';return true;})()`);
+      await sleep(700);
+      const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+      const bytes=Buffer.from(shot.data||'','base64');
+      const sig=Buffer.from([137,80,78,71,13,10,26,10]);
+      const png=bytes.length>=33&&bytes.subarray(0,8).equals(sig);
+      const width=png?bytes.readUInt32BE(16):0,height=png?bytes.readUInt32BE(20):0;
+      if(!png||width<640||height<360)
+        throw Error('T21_PHASE12E_SINGLE_SOURCE_PNG_INVALID_'+bytes.length);
+      const file='T21_PHASE12E_SINGLE_ORIGINAL_FACE_'+face+'.png';
+      await writeFile(resolve(destination,file),bytes);
+      manifest.phase12ESingleOriginalDiagnostics.push({
+        status:'CAPTURED_NOT_GAMEPLAY_PROOF',face,onlyOneExactOriginalConnectedComponent:true,
+        sourceTriangleCount:2,width,height,file,bytes:bytes.length,
+        sha256:createHash('sha256').update(bytes).digest('hex'),
+        renderer:state.backend,authorizesVisualFreeze:false
+      });
+    }catch(error){
+      manifest.phase12ESingleOriginalDiagnostics.push({status:'BLOCKED',face,reason:diagnostic(error)});
+    }
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{
