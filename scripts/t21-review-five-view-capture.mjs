@@ -152,6 +152,13 @@ try {
   });
   manifest.browserReadiness=ready;
   process.stdout.write('T21_CAPTURE_WEBGPU_READY '+JSON.stringify(ready)+'\\n');
+  const appliedPreset=await evaluation(`(() => {
+    const b=document.querySelector('[data-review-preset="THREE_DIMENSIONAL"]');
+    if(!b)return false;
+    b.click();return b.getAttribute('aria-pressed')==='true';
+  })()`);
+  if(!appliedPreset)throw Error('T21 3D geometry source review preset failed to activate');
+  manifest.layerPreset='THREE_DIMENSIONAL';
   await sleep(1200);
 
   for(const view of views){

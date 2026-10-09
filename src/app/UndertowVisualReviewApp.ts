@@ -58,6 +58,7 @@ import { UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES, UNDERTOW_T21_VERTICAL_SOUR
 import { UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES, UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY } from '../stage/undertow/UndertowSpillwayHighSourcePhase6Geometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
+type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
 
 interface ReviewMaterials {
   paintBacked: StandardMaterial;
@@ -126,6 +127,7 @@ export class UndertowVisualReviewApp {
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
   private readonly keys = new Set<string>();
+  private readonly layerToggleBindings: Array<{button:HTMLButtonElement;root:Entity;label:string}> = [];
   private yawDegrees = 35;
   private pitchDegrees = 42;
   private distanceMeters = 70;
@@ -414,6 +416,12 @@ export class UndertowVisualReviewApp {
         <span>Navigation links</span><b>${UNDERTOW_T21_VISUAL_REVIEW.navigationLinkCount}</b>
         <span>World X/Z span</span><b>${width.toFixed(1)} × ${depth.toFixed(1)} m</b>
       </div>
+      <div class="review-actions presets">
+        <button data-review-preset="WALK_SOURCE">Walk-source only</button>
+        <button data-review-preset="THREE_DIMENSIONAL">Floors + 3D structure</button>
+        <button data-review-preset="ALL_EVIDENCE">All evidence layers</button>
+      </div>
+      <p class="review-detail-note">Display presets only — no StageDefinition, game collision, paint, navigation or activation changes.</p>
       <div class="review-actions views">
         <button data-review-view="OVERVIEW">Overview</button>
         <button data-review-view="TOP">Top</button>
@@ -521,6 +529,15 @@ export class UndertowVisualReviewApp {
     this.uiRoot.appendChild(panel);
 
     panel
+      .querySelectorAll<HTMLButtonElement>('[data-review-preset]')
+      .forEach(button=>{
+        button.addEventListener('click',()=>{
+          const preset=button.dataset.reviewPreset as ReviewLayerPreset;
+          this.applyReviewLayerPreset(preset);
+        });
+      });
+
+    panel
       .querySelectorAll<HTMLButtonElement>('[data-review-view]')
       .forEach(button => {
         button.addEventListener('click', () => {
@@ -588,22 +605,54 @@ export class UndertowVisualReviewApp {
       this.navRoot,
       'Nav markers'
     );
+    // Keep prior fully-visible review defaults, with an explicit preset state.
+    this.applyReviewLayerPreset('ALL_EVIDENCE');
+  }
+
+  private refreshReviewLayerButtons():void {
+    for(const {button,root,label} of this.layerToggleBindings){
+      button.textContent=`${label} ${root.enabled ? 'ON' : 'OFF'}`;
+      button.classList.toggle('active-mode',root.enabled);
+    }
+  }
+
+  private applyReviewLayerPreset(preset:ReviewLayerPreset):void {
+    if(preset!=='WALK_SOURCE'&&preset!=='THREE_DIMENSIONAL'&&preset!=='ALL_EVIDENCE')
+      throw new Error('T21 unknown review-only layer preset');
+    const full=preset==='ALL_EVIDENCE';
+    const vertical=preset!=='WALK_SOURCE';
+    this.confirmedRoot.enabled=vertical;
+    this.occupancyRoot.enabled=full;
+    // All 64 original walk-oriented source components remain visible in every
+    // preset. Do not infer gameplay floor area or promote PntSet actor source.
+    for(const root of [this.sourceNativeRoot,this.sourceLocalRoot,this.sourceBatch2Root,
+      this.broadStaticRoot,this.flankElevationPhase4Root])root.enabled=true;
+    this.verticalSourcePhase5BRoot.enabled=vertical;
+    this.highSourcePhase6Root.enabled=vertical;
+    this.provisionalRoot.enabled=full;
+    this.unresolvedRoot.enabled=full;
+    this.navRoot.enabled=full;
+    this.refreshReviewLayerButtons();
+    this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-preset]').forEach(button=>{
+      const active=button.dataset.reviewPreset===preset;
+      button.classList.toggle('active-mode',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
   }
 
   private bindRootToggle(
-    button: HTMLButtonElement | null,
-    root: Entity,
-    label: string
-  ): void {
-    if (!button) return;
-    const refresh = () => {
-      button.textContent = `${label} ${root.enabled ? 'ON' : 'OFF'}`;
-      button.classList.toggle('active-mode', root.enabled);
-    };
-    refresh();
-    button.addEventListener('click', () => {
-      root.enabled = !root.enabled;
-      refresh();
+    button:HTMLButtonElement|null,root:Entity,label:string
+  ):void {
+    if(!button)return;
+    this.layerToggleBindings.push({button,root,label});
+    this.refreshReviewLayerButtons();
+    button.addEventListener('click',()=>{
+      root.enabled=!root.enabled;
+      this.refreshReviewLayerButtons();
+      this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-preset]').forEach(presetButton=>{
+        presetButton.classList.remove('active-mode');
+        presetButton.setAttribute('aria-pressed','false');
+      });
     });
   }
 
