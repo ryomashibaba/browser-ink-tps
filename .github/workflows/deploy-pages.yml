@@ -73,6 +73,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload T21 Phase11 central original nearest 3D source audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase11-central-nearest-original-source
+          path: /tmp/t21-phase11-central-nearest-source-geometry.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 Phase10 exact original triangle-edge topology evidence
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -269,6 +278,12 @@ jobs:
         env:
           T21_PHASE10_TOPOLOGY_JSON: /tmp/t21-phase10-exact-obj-edge-adjacency.json
         run: npx vitest run scripts/UndertowSpillwayPhase10OriginalEdgeTopologyQa.test.ts
+
+      - name: T21 Phase11 central closest original 3D source geometry QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE11_SOURCE_JSON: /tmp/t21-phase11-central-nearest-source-geometry.json
+        run: npx vitest run scripts/UndertowSpillwayPhase11CentralNearestSurfaceQa.test.ts
 
       - name: TypeScript check
         run: npm run typecheck

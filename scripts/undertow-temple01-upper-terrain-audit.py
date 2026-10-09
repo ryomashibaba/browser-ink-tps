@@ -2569,3 +2569,195 @@ print("T21_PHASE10_ORIGINAL_OBJ_EDGE_TOPOLOGY",
     "evidenceCounts="+str(dict(_t21_p10_summaries)),
     "sharedIDOrientations="+str(dict(_t21_p10_summary_class)),
     "out="+str(_t21_p10_file))
+
+
+# T21 Phase11: measure the true original 3D finite edge -> source triangle
+# separation around the previously unmatched 16 center FloorMetal downface
+# edges. Proximity alone is NEVER a connected/collidable game surface.
+#
+# Inspect every static original triangle in a spatially bounded local window.
+# Candidate source IDs and orientations come exclusively from source OBJ faces.
+# The Euclidean closest distance is min(endpoint->triangle,
+# segment->triangle-edge) including segment/triangle intersection. No manual
+# board, bridge, floor, roof or invented geometry is emitted.
+_t21_p11_center=[r for r in _t21_p10_records if r["kind"]=="CENTER_UNDER_METAL"]
+if len(_t21_p11_center)!=2:
+    raise SystemExit("T21_PHASE11 expected exactly 2 central FloorMetal underfaces")
+_t21_p11_targets=[]
+for _t21_p11_r in _t21_p11_center:
+    _t21_p11_id=_t21_p11_r["sourceComponentId"]
+    for _t21_p11_idx,_t21_p11_edge in enumerate(_t21_p11_r["boundaryEdges"]):
+        if _t21_p11_edge["strongestOriginalEdgeEvidence"]!="NO_EXACT_ORIGINAL_EDGE_NEIGHBOR":
+            raise SystemExit("T21_PHASE11 central source edge classification drift")
+        _t21_p11_targets.append({
+          "sourceComponentId":_t21_p11_id,
+          "boundaryEdgeIndex":_t21_p11_idx,
+          "originalSourceEdgeVertexIds":_t21_p11_edge["objVertexIds"],
+          "originalProjectEdgeXYZ":_t21_p11_edge["projectEndpointXYZ"],
+          "originalModelEdgeXYZ":_t21_p11_edge["originalEndpointXYZ"],
+          "candidateGroups":{},
+          "candidateTrianglesWithinRadius":0
+        })
+if len(_t21_p11_targets)!=16:
+    raise SystemExit("T21_PHASE11 expected 16 unmatched central underside source edges")
+_t21_p11_excluded=set()
+for _t21_p11_r in _t21_p11_center:
+    _t21_p11_excluded.update(_t21_p10_target_face_ids[_t21_p11_r["sourceComponentId"]])
+_t21_p11_radius=8.0
+_t21_p11_model_window=[]
+for _t21_p11_t in _t21_p11_targets:
+    _t21_p11_e=_t21_p11_t["originalModelEdgeXYZ"]
+    _t21_p11_model_window.append((
+        min(p[0] for p in _t21_p11_e)-_t21_p11_radius,
+        min(p[1] for p in _t21_p11_e)-_t21_p11_radius,
+        min(p[2] for p in _t21_p11_e)-_t21_p11_radius,
+        max(p[0] for p in _t21_p11_e)+_t21_p11_radius,
+        max(p[1] for p in _t21_p11_e)+_t21_p11_radius,
+        max(p[2] for p in _t21_p11_e)+_t21_p11_radius
+    ))
+def _t21_p11_seg_tri(a,b,tri):
+    # Exact segment/triangle intersection is zero; otherwise closest contact
+    # is endpoint-to-triangle or a triangle-edge-to-segment distance.
+    ab=vsub(b,a)
+    e1=vsub(tri[1],tri[0])
+    e2=vsub(tri[2],tri[0])
+    hh=(ab[1]*e2[2]-ab[2]*e2[1],
+        ab[2]*e2[0]-ab[0]*e2[2],
+        ab[0]*e2[1]-ab[1]*e2[0])
+    det=vdot(e1,hh)
+    if abs(det)>1e-12:
+        inv=1.0/det
+        ss=vsub(a,tri[0])
+        u=inv*vdot(ss,hh)
+        if -1e-10<=u<=1+1e-10:
+            q=(ss[1]*e1[2]-ss[2]*e1[1],
+               ss[2]*e1[0]-ss[0]*e1[2],
+               ss[0]*e1[1]-ss[1]*e1[0])
+            v=inv*vdot(ab,q)
+            t=inv*vdot(e2,q)
+            if -1e-10<=v and u+v<=1+1e-10 and -1e-10<=t<=1+1e-10:
+                return 0.0
+    return min(
+        point_triangle_distance(a,*tri),
+        point_triangle_distance(b,*tri),
+        segment_segment_distance(a,b,tri[0],tri[1]),
+        segment_segment_distance(a,b,tri[1],tri[2]),
+        segment_segment_distance(a,b,tri[2],tri[0])
+    )
+_t21_p11_scanned=0
+_t21_p11_inside=0
+_t21_p11_calculations=0
+for _t21_p11_fi,_t21_p11_f in enumerate(faces):
+    if _t21_p11_fi in _t21_p11_excluded:
+        continue
+    _t21_p11_object,_t21_p11_material=_t21_p11_f[3:5]
+    if not _t21_p11_object.startswith("Fld_Temple01_") or "PntSet" in _t21_p11_object or "StageSide" in _t21_p11_material:
+        continue
+    _t21_p11_tri_model=tri_points(_t21_p11_f)
+    _t21_p11_bbox=(
+      min(p[0] for p in _t21_p11_tri_model),
+      min(p[1] for p in _t21_p11_tri_model),
+      min(p[2] for p in _t21_p11_tri_model),
+      max(p[0] for p in _t21_p11_tri_model),
+      max(p[1] for p in _t21_p11_tri_model),
+      max(p[2] for p in _t21_p11_tri_model)
+    )
+    _t21_p11_local=[
+       t for t,box in zip(_t21_p11_targets,_t21_p11_model_window)
+       if bbox_intersects(_t21_p11_bbox,box)
+    ]
+    if not _t21_p11_local:
+        continue
+    _t21_p11_scanned+=1
+    _t21_p11_xyz=[project_point3(p) for p in _t21_p11_tri_model]
+    _t21_p11_center_xyz=tuple(sum(p[i] for p in _t21_p11_xyz)/3
+                              for i in range(3))
+    if not _t21_hard_inside((_t21_p11_center_xyz[0],_t21_p11_center_xyz[2])):
+        continue
+    _t21_p11_inside+=1
+    _t21_p11_ny=tri_normal(_t21_p11_f)[1]
+    _t21_p11_group_key=(_t21_p11_object,_t21_p11_material,
+                        _t21_p10_orientation(_t21_p11_ny))
+    for _t21_p11_t in _t21_p11_local:
+        _t21_p11_a,_t21_p11_b=_t21_p11_t["originalProjectEdgeXYZ"]
+        _t21_p11_dist=_t21_p11_seg_tri(_t21_p11_a,_t21_p11_b,
+                                      _t21_p11_xyz)
+        _t21_p11_calculations+=1
+        if _t21_p11_dist>_t21_p11_radius+1e-8:
+            continue
+        _t21_p11_t["candidateTrianglesWithinRadius"]+=1
+        _t21_p11_prev=_t21_p11_t["candidateGroups"].get(_t21_p11_group_key)
+        if _t21_p11_prev is None or _t21_p11_dist<_t21_p11_prev["closest3DDistanceMeters"]:
+            _t21_p11_t["candidateGroups"][_t21_p11_group_key]={
+              "sourceObject":_t21_p11_object,
+              "sourceMaterial":_t21_p11_material,
+              "originalOrientation":_t21_p10_orientation(_t21_p11_ny),
+              "originalNormalY":_t21_p11_ny,
+              "originalFaceIndex":_t21_p11_fi,
+              "originalFaceOBJVertexIds":list(_t21_p11_f[:3]),
+              "originalSourceTriangleXYZ":[list(p) for p in _t21_p11_xyz],
+              "originalSourceTriangleCenterXYZ":list(_t21_p11_center_xyz),
+              "originalYRange":[min(p[1] for p in _t21_p11_xyz),
+                                max(p[1] for p in _t21_p11_xyz)],
+              "closest3DDistanceMeters":_t21_p11_dist,
+              "candidateSourceWithinHardXZCenterOnly":True,
+              "gameplayConnectionAuthorized":False
+            }
+_t21_p11_distance_bands={"LE_0_01M":0,"LE_0_1M":0,"LE_0_5M":0,"LE_2M":0,"LE_8M":0,"NO_CANDIDATE":0}
+_t21_p11_orientation_bests=defaultdict(int)
+for _t21_p11_t in _t21_p11_targets:
+    _t21_p11_sorted=sorted(_t21_p11_t.pop("candidateGroups").values(),
+         key=lambda c:(c["closest3DDistanceMeters"],c["sourceObject"],
+                       c["sourceMaterial"],c["originalFaceIndex"]))
+    _t21_p11_t["distinctSourceGroupsWithin8Meters"]=len(_t21_p11_sorted)
+    _t21_p11_t["closestOriginalSourceCandidates"]=_t21_p11_sorted[:8]
+    _t21_p11_t["originalSourceDistanceRadiusMeters"]=_t21_p11_radius
+    _t21_p11_t["originalStaticOBJSharedEdge"]=False
+    _t21_p11_t["playableConnectionVerified"]=False
+    _t21_p11_d=(_t21_p11_sorted[0]["closest3DDistanceMeters"]
+                 if _t21_p11_sorted else math.inf)
+    _t21_p11_t["nearestOriginal3DDistanceMeters"]=(
+        _t21_p11_d if math.isfinite(_t21_p11_d) else None)
+    if not _t21_p11_sorted:
+        _t21_p11_band="NO_CANDIDATE"
+    elif _t21_p11_d<=.01:_t21_p11_band="LE_0_01M"
+    elif _t21_p11_d<=.1:_t21_p11_band="LE_0_1M"
+    elif _t21_p11_d<=.5:_t21_p11_band="LE_0_5M"
+    elif _t21_p11_d<=2:_t21_p11_band="LE_2M"
+    else:_t21_p11_band="LE_8M"
+    _t21_p11_distance_bands[_t21_p11_band]+=1
+    _t21_p11_t["distanceBand"]=_t21_p11_band
+    if _t21_p11_sorted:
+        _t21_p11_orientation_bests[_t21_p11_sorted[0]["originalOrientation"]]+=1
+_t21_p11_doc={
+  "version":"T21_PHASE11_CENTRAL_ORIGINAL_3D_GAP_V1",
+  "source":"PINNED_KITRIX_TEMPLE01_ORIGINAL_OBJ",
+  "originalSourceSHA256":"a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046",
+  "sourceEdgeAuthority":"16_UNMATCHED_CENTRAL_DOWNFACING_ORIGINAL_OBJ_BOUNDARY_EDGES",
+  "algorithm":"BOUNDED_8M_TRUE_FINITE_SEGMENT_TO_ORIGINAL_TRIANGLE_3D_DISTANCE",
+  "candidateRule":"DISTINCT_ORIGINAL_OBJECT_MATERIAL_ORIENTATION_GROUPS_TOP8_NEAREST",
+  "originalStaticTriangleSearchRadiusMeters":_t21_p11_radius,
+  "centerDownfaceComponentCount":len(_t21_p11_center),
+  "centerUnmatchedEdgeCount":len(_t21_p11_targets),
+  "sourceTrianglesAABBWindow":_t21_p11_scanned,
+  "sourceTrianglesInsideHardXZCenterSample":_t21_p11_inside,
+  "sourceExact3DDistanceCalculations":_t21_p11_calculations,
+  "distanceBands":_t21_p11_distance_bands,
+  "nearestNeighborOrientationCounts":dict(_t21_p11_orientation_bests),
+  "perEdge":_t21_p11_targets,
+  "originalVertexIDTopologyProof":False,
+  "gameplayFloorWallRoofCollisionAndNavigationAuthority":"NONE",
+  "runtimePromotionAuthorized":False,
+  "reviewOnly":True
+}
+_t21_p11_path=Path("/tmp/t21-phase11-central-nearest-source-geometry.json")
+_t21_p11_path.write_text(json.dumps(_t21_p11_doc,separators=(",",":")),
+   encoding="utf-8")
+print("T21_PHASE11_CENTRAL_GAP",
+      "edges="+str(len(_t21_p11_targets)),
+      "windowTriangles="+str(_t21_p11_scanned),
+      "inside="+str(_t21_p11_inside),
+      "distanceCalculations="+str(_t21_p11_calculations),
+      "bands="+str(_t21_p11_distance_bands),
+      "orientations="+str(dict(_t21_p11_orientation_bests)),
+      "out="+str(_t21_p11_path))
