@@ -71,12 +71,12 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       gridSampleAuthority:'XZ_CELL_CENTER_APPROXIMATION',
       occupancyAuthority:'XZ_OCCUPANCY_ONLY_NOT_FLOOR',
       provisionalEnvelopesExcluded:2});
-    expect(audit.sourceInventory).toHaveLength(54);
+    expect(audit.sourceInventory).toHaveLength(64);
     expect(undertowT21SourceNativePhase1Errors()).toEqual([]);
     expect(UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES).toHaveLength(8);
     expect(UNDERTOW_T21_SOURCE_BATCH2_MESHES).toHaveLength(14);
     expect(undertowT21SourceBatch2Errors()).toEqual([]);
-    expect(new Set(audit.sourceInventory.map(v=>v.sourceComponentId)).size).toBe(54);
+    expect(new Set(audit.sourceInventory.map(v=>v.sourceComponentId)).size).toBe(64);
     expect(audit.zones).toHaveLength(5);
     expect(audit.stageCells).toBeGreaterThan(0);
     expect(audit.zones.reduce((n,z)=>n+z.cells,0)).toBe(audit.stageCells);
@@ -211,7 +211,7 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       deferredOutside:deferred.length,deferredPairedBoundary:deferredPairedBoundary.length,top:accepted.slice(0,18),
       deferred:deferred.slice(0,8),output:dest
     }));
-    expect(shownIds.size).toBe(54);
+    expect(shownIds.size).toBe(64);
     expect(deferredPairedBoundary.map(x=>(x as {id:string}).id).sort()).toEqual([...boundaryPairHold].sort());
     expect(accepted.every(row=>(row as {runtimePromotionAuthorized:boolean}).runtimePromotionAuthorized===false)).toBe(true);
   },60_000);
