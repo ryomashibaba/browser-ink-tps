@@ -53,7 +53,7 @@ def build(objpath,priorpath,outpath):
         raise ValueError('T21_PHASE12D_UNMATCHED_SOURCE_IDS_DRIFT')
     vertices,grouped,targetfaces,facecount=B['parse_obj'](objpath,{SOURCE_GROUP})
     family=grouped.get(SOURCE_GROUP,[])
-    if not family or len(targetfaces)!=2:
+    if not family or not set(TARGETS).issubset(targetfaces):
         raise ValueError('T21_PHASE12D_ORIGINAL_SOURCE_FAMILY_MISSING')
     connected=B['componentize'](family)
     candidates=[]
