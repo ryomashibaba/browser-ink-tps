@@ -4,6 +4,7 @@ import { PRODUCTION_STAGE_DEFINITION } from '../src/stage/StageDefinition';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
 import { UNDERTOW_T21_COVERAGE_LEDGER_V3 } from '../src/stage/undertow/UndertowSpillwayCoverageLedgerV3';
 import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES } from '../src/stage/undertow/UndertowSpillwayPhase9DownfaceSourceGeometry';
+import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE, UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY, undertowT21Phase10EdgeErrors } from '../src/stage/undertow/UndertowSpillwayPhase10EdgeDiagnosticGeometry';
 type OriginalNeighbor = {
   originalFaceIndex:number;sourceObject:string;sourceMaterial:string;
   originalOBJVertexIds:number[];originalNormalY:number;
@@ -43,6 +44,12 @@ function edgeOrient(n:OriginalNeighbor):string{
 describe('T21 Phase10 pinned OBJ edge-connected model topology (no gameplay promotion)',()=>{
   it('protects unchanged source-only previous phases and active T20',()=>{
     expect(UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES).toHaveLength(10);
+    expect(undertowT21Phase10EdgeErrors()).toEqual([]);
+    expect(UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY).toMatchObject({
+      boundaryEdges:48,sharedOriginalOBJVertexIDs:0,
+      coordinateOnlySeams:30,unmatchedSourceEdges:18,
+      reviewOnly:true,runtimePromotionAuthorized:false
+    });
     expect(UNDERTOW_T21_COVERAGE_LEDGER_V3.sourceInventory).toHaveLength(64);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
@@ -70,6 +77,8 @@ describe('T21 Phase10 pinned OBJ edge-connected model topology (no gameplay prom
     });
     expect(f.sourceAuthority).toContain('a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046');
     expect(f.components).toHaveLength(10);
+    const encodedEdges=UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE;
+    let evidenceIndex=0;
     let totalEdges=0;
     const tiers:Record<string,number>={};
     const orientations:Record<string,number>={};
@@ -87,6 +96,12 @@ describe('T21 Phase10 pinned OBJ edge-connected model topology (no gameplay prom
       const perOrientation:Record<string,number>={};
       const unique=new Set<string>();
       for(const e of c.boundaryEdges){
+        const visual=encodedEdges[evidenceIndex++]!;
+        expect(visual.sourceIndex).toBe(i);
+        expect(visual.sourceComponentId).toBe(c.sourceComponentId);
+        expect(visual.tier).toBe(e.strongestOriginalEdgeEvidence);
+        expect(visual.endpoints).toEqual(e.projectEndpointXYZ);
+        expect(visual.gameplayColliderWalkableConnectivityAuthority).toBe('NONE');
         expect(e.objVertexIds).toHaveLength(2);
         expect(e.objVertexIds[0]).toBeLessThan(e.objVertexIds[1]!);
         expect(e.projectEndpointXYZ).toHaveLength(2);
@@ -126,6 +141,7 @@ describe('T21 Phase10 pinned OBJ edge-connected model topology (no gameplay prom
       expect(computed).toEqual(c.sharedOriginalIdNeighborOrientationEdgeCounts);
       totalEdges+=c.boundaryEdges.length;
     }
+    expect(evidenceIndex).toBe(48);
     expect(tiers).toEqual(f.summary.edgeEvidenceCounts);
     expect(Object.values(tiers).reduce((a,b)=>a+b,0)).toBe(totalEdges);
     const orientationCounts:Record<string,number>={};

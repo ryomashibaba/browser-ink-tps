@@ -239,6 +239,42 @@ try {
     process.stdout.write('T21_CAPTURE_VIEW '+view+' size='+bytes.byteLength+'\\n');
   }
   if(manifest.screenshots.length!==5)throw Error('T21 five-view screenshot count invalid');
+  // Additional optional diagnostic view, deliberately EXCLUDED from the
+  // mandatory five-view screenshot count, and never a visual-freeze PASS.
+  try{
+    await navigate(urlForView('OVERVIEW')+'&reviewTopologyEdges=1');
+    const diagnosticReady=await poll(async()=>{
+      const state=await evaluation(`(() => ({
+        view:document.querySelector('#app-canvas')?.dataset.t21ReviewView,
+        topology:document.querySelector('#app-canvas')?.dataset.t21ReviewTopology,
+        backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+      }))()`);
+      if(state?.view==='OVERVIEW'&&state.topology==='on'&&state.backend==='webgl2')
+        return state;
+      throw Error('T21_PHASE10_DIAGNOSTIC_NOT_READY '+JSON.stringify(state));
+    },25_000);
+    await sleep(800);
+    const diag=await command('Page.captureScreenshot',{
+      format:'png',captureBeyondViewport:false,fromSurface:true
+    },25_000);
+    const bytes=Buffer.from(diag.data||'','base64');
+    if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
+      throw Error('T21_PHASE10_DIAGNOSTIC_SCREENSHOT_INVALID');
+    const file='T21_PHASE10_EDGE_TOPOLOGY_DIAGNOSTIC.png';
+    await writeFile(resolve(destination,file),bytes);
+    manifest.topologyDiagnostic={
+      status:'CAPTURED_NOT_VISUAL_FREEZE',file,
+      bytes:bytes.byteLength,
+      sha256:createHash('sha256').update(bytes).digest('hex'),
+      source:'48 exact-original OBJ source boundary edges, non-welded vs unmatched',
+      gameCollisionConnectivityProof:false,renderer:diagnosticReady.backend
+    };
+  }catch(diagError){
+    manifest.topologyDiagnostic={status:'BLOCKED',reason:diagnostic(diagError)};
+    // A diagnostic cannot retroactively fail five already captured camera
+    // screenshots. It does not change the mandatory 5-view result.
+  }
+
   manifest.status='CAPTURED_PENDING_HUMAN_VISUAL_QA';
   manifest.reason='Screenshots exist, but cannot infer correct rendered topology or Visual Freeze automatically.';
  }catch(error){

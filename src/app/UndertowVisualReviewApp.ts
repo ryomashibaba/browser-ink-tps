@@ -60,6 +60,7 @@ import { UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES, UNDERTOW_T21_HIGH_SOURCE_PHASE6
 import { UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES, UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase7FramedSourceGeometry';
 import { UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES, UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase8StaticSourceGeometry';
 import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES, UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase9DownfaceSourceGeometry';
+import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE, UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY, type UndertowPhase10EdgeEvidence } from '../stage/undertow/UndertowSpillwayPhase10EdgeDiagnosticGeometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
@@ -84,6 +85,8 @@ interface ReviewMaterials {
   sourcePhase9CenterUnder: StandardMaterial;
   sourcePhase9FenceUnder: StandardMaterial;
   sourcePhase9MegalithUnder: StandardMaterial;
+  sourcePhase10CoordinateSeam: StandardMaterial;
+  sourcePhase10UnmatchedEdge: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -150,6 +153,8 @@ export class UndertowVisualReviewApp {
   private readonly centerDownfacePhase9Root = new Entity('T21Review:CenterDownfacePhase9');
   private readonly fenceDownfacePhase9Root = new Entity('T21Review:FlankFenceDownfacePhase9');
   private readonly megalithDownfacePhase9Root = new Entity('T21Review:MegalithDownfacePhase9');
+  private readonly coordinateSeamPhase10Root = new Entity('T21Review:Phase10NonWeldedCoordinateEdges');
+  private readonly unmatchedEdgePhase10Root = new Entity('T21Review:Phase10UnmatchedSourceEdges');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -189,6 +194,12 @@ export class UndertowVisualReviewApp {
       requestedView==='SPAWN_A'||requestedView==='SPAWN_B'
         ?requestedView:'OVERVIEW';
     this.setView(view);
+    if(params.get('reviewTopologyEdges')==='1'){
+      this.coordinateSeamPhase10Root.enabled=true;
+      this.unmatchedEdgePhase10Root.enabled=true;
+      this.canvas.dataset.t21ReviewTopology='on';
+      this.refreshReviewLayerButtons();
+    }
     this.updateCamera();
 
     this.app.on('update', (dt: number) => {
@@ -280,6 +291,8 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.centerDownfacePhase9Root);
     this.app.root.addChild(this.fenceDownfacePhase9Root);
     this.app.root.addChild(this.megalithDownfacePhase9Root);
+    this.app.root.addChild(this.coordinateSeamPhase10Root);
+    this.app.root.addChild(this.unmatchedEdgePhase10Root);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -418,6 +431,19 @@ export class UndertowVisualReviewApp {
       );
     }
 
+    // Pinpoint original unverified seam edges, never construct bridges/ramps.
+    // Diagnostic line segments are OFF by default even in All Evidence mode.
+    for(const edge of UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE){
+      if(edge.tier==='EXACT_ORIGINAL_OBJ_VERTEX_ID_EDGE')continue;
+      const coordOnly=edge.tier==='COINCIDENT_XYZ_ONLY_NOT_WELDED';
+      createPhase10SourceEdgeDiagnostic(
+        coordOnly?this.coordinateSeamPhase10Root:this.unmatchedEdgePhase10Root,
+        edge,
+        coordOnly?this.materials.sourcePhase10CoordinateSeam:
+          this.materials.sourcePhase10UnmatchedEdge
+      );
+    }
+
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
         this.provisionalRoot,
@@ -501,6 +527,7 @@ export class UndertowVisualReviewApp {
         <span>Phase 7 vertical source support + glass frames (NOT floor)</span><b>${UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY.sourceMeshCount} faces / ${UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² original 3D triangles</b>
         <span>Phase 8 towers / flank / edge source (NOT floor)</span><b>${UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY.originalComponentCount} original source meshes / ${UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY.originalSource3DAreaSquareMeters.toFixed(1)} m² 3D triangle area, 0 new verified floor</b>
         <span>Phase 9 down-facing source (NOT verified underside collider)</span><b>${UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY.sourceComponentCount} original face meshes / ${UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY.original3DTriangleAreaSquareMeters.toFixed(1)} m² 3D triangle area, no additional floor authority</b>
+        <span>Phase 10 original boundary-edge topology</span><b>${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.sharedOriginalOBJVertexIDs} original welded IDs / ${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.coordinateOnlySeams} coordinate-only / ${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.unmatchedSourceEdges} unmatched; ZERO proven gameplay connections</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -540,6 +567,8 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-center-downface-phase9-toggle">Center downfaces ON</button>
         <button id="t21-review-fence-downface-phase9-toggle">Flank fence downfaces ON</button>
         <button id="t21-review-megalith-downface-phase9-toggle">Megalith downfaces ON</button>
+        <button id="t21-review-coordinate-seams-phase10-toggle">Phase10 non-welded edges OFF</button>
+        <button id="t21-review-unmatched-edges-phase10-toggle">Phase10 unmatched edges OFF</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -732,6 +761,16 @@ export class UndertowVisualReviewApp {
       'Megalith downfaces'
     );
     this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-coordinate-seams-phase10-toggle'),
+      this.coordinateSeamPhase10Root,
+      'Non-welded edges'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-unmatched-edges-phase10-toggle'),
+      this.unmatchedEdgePhase10Root,
+      'Unmatched edges'
+    );
+    this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
       this.provisionalRoot,
       'Provisional'
@@ -780,6 +819,11 @@ export class UndertowVisualReviewApp {
     this.centerDownfacePhase9Root.enabled=vertical;
     this.fenceDownfacePhase9Root.enabled=vertical;
     this.megalithDownfacePhase9Root.enabled=vertical;
+    // Always opt-in to source seam diagnostics. Never conflate a line marker
+    // with authentic stage solids or collision/nav geometry.
+    this.coordinateSeamPhase10Root.enabled=false;
+    this.unmatchedEdgePhase10Root.enabled=false;
+    this.canvas.dataset.t21ReviewTopology='off';
     this.provisionalRoot.enabled=full;
     this.unresolvedRoot.enabled=full;
     this.navRoot.enabled=full;
@@ -799,6 +843,8 @@ export class UndertowVisualReviewApp {
     this.refreshReviewLayerButtons();
     button.addEventListener('click',()=>{
       root.enabled=!root.enabled;
+      this.canvas.dataset.t21ReviewTopology=
+        (this.coordinateSeamPhase10Root.enabled||this.unmatchedEdgePhase10Root.enabled)?'on':'off';
       this.refreshReviewLayerButtons();
       this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-preset]').forEach(presetButton=>{
         presetButton.classList.remove('active-mode');
@@ -980,6 +1026,8 @@ function createReviewMaterials(): ReviewMaterials {
     sourcePhase9CenterUnder: makeVerticalSourceMaterial(new Color(0.38, 0.83, 0.92), 0.19, true),
     sourcePhase9FenceUnder: makeVerticalSourceMaterial(new Color(0.85, 0.96, 0.46), 0.24, true),
     sourcePhase9MegalithUnder: makeVerticalSourceMaterial(new Color(0.87, 0.68, 0.47), 0.20, true),
+    sourcePhase10CoordinateSeam: makeMaterial(new Color(1, 0.68, 0.16), 0.85),
+    sourcePhase10UnmatchedEdge: makeMaterial(new Color(1, 0.24, 0.21), 0.95),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),
@@ -1190,6 +1238,28 @@ function createMacroReviewSurface(
     piece.setLocalScale(rect.widthMeters, thickness, rect.depthMeters);
     parent.addChild(piece);
   });
+}
+
+function createPhase10SourceEdgeDiagnostic(
+  parent:Entity,
+  edge:UndertowPhase10EdgeEvidence,
+  material:StandardMaterial
+):void{
+  // A thin render-only orange/red bar, offset slightly from the source
+  // surface so it stays legible, with NO collision/nav/floor semantics.
+  const [a,b]=edge.endpoints;
+  const start=new Vec3(a[0],a[1]+0.065,a[2]);
+  const end=new Vec3(b[0],b[1]+0.065,b[2]);
+  const length=start.distance(end);
+  if(length<1e-6)return;
+  const segment=new Entity('T21Review:Phase10:SOURCE_EDGE_NOT_GAME_GEOMETRY');
+  segment.addComponent('render',{
+    type:'box',material,castShadows:false,receiveShadows:false
+  });
+  segment.setPosition(start.clone().add(end).mulScalar(0.5));
+  segment.lookAt(end);
+  segment.setLocalScale(0.13,0.13,Math.max(0.13,length));
+  parent.addChild(segment);
 }
 
 function createMacroReviewOutline(
