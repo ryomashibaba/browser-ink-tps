@@ -8,6 +8,7 @@
  * manifest instead of a fake pass. No third-party npm/browser automation libs.
  */
 import { spawn, execFileSync } from 'node:child_process';
+import { openSync, closeSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { resolve } from 'node:path';
@@ -68,7 +69,7 @@ async function evaluation(expression){
 }
 try {
   await mkdir(destination,{recursive:true});
-  process.stdout.write('T21_CAPTURE_START '+new Date().toISOString()+'\\n');
+  process.stdout.write('T21_CAPTURE_START '+new Date().toISOString()+'\n');
   const chromeCommand=process.env.T21_CHROME_PATH||[
     'google-chrome-stable','google-chrome','chromium','chromium-browser'
   ].find(name=>{
@@ -86,24 +87,55 @@ try {
   manifest.url=url;
   await poll(async()=>{const r=await fetch(url);return r.ok;});
 
+  const chromeLog=resolve(destination,'chrome-startup.log');
+  const chromeFd=openSync(chromeLog,'w');
   const chrome=spawn(chromeCommand,[
     '--headless=new','--no-sandbox','--disable-dev-shm-usage',
+    '--no-first-run','--no-default-browser-check','--disable-extensions',
+    '--disable-background-networking',
     '--enable-unsafe-webgpu','--enable-features=WebGPU,UnsafeWebGPU',
     '--use-angle=swiftshader','--enable-dawn-features=allow_unsafe_apis',
     '--window-size=1600,900','--hide-scrollbars',
     '--remote-debugging-port=9229','--remote-allow-origins=*',
     '--user-data-dir=/tmp/t21-review-cdp-profile',
     'about:blank'
-  ],{stdio:'ignore',detached:false});
+  ],{stdio:['ignore',chromeFd,chromeFd],detached:false});
+  closeSync(chromeFd);
+  chrome.on('error',error=>{manifest.chromeSpawnError=diagnostic(error);});
+  chrome.on('exit',(code,signal)=>{manifest.chromeExit={code,signal};});
   children.push(chrome);
 
-  process.stdout.write('T21_CAPTURE_BROWSER_START chrome='+chromeCommand+'\\n');
+  process.stdout.write('T21_CAPTURE_BROWSER_START chrome='+chromeCommand+'\n');
   const tab=await poll(async()=>{
-    const response=await fetch('http://127.0.0.1:9229/json');
-    if(!response.ok)return null;
+    if(chrome.exitCode!==null||chrome.signalCode!==null)
+      throw Error('CHROME_EARLY_EXIT: '+JSON.stringify({
+        code:chrome.exitCode,signal:chrome.signalCode}));
+    let response;
+    try{
+      response=await fetch('http://127.0.0.1:9229/json',{
+        signal:AbortSignal.timeout(2500)
+      });
+    }catch(error){
+      throw Error('CDP_PORT_NOT_READY: '+diagnostic(error));
+    }
+    if(!response.ok)throw Error('CDP_HTTP_'+response.status);
     const pages=await response.json();
-    return pages.find(p=>p.type==='page'&&p.webSocketDebuggerUrl);
+    const found=pages.find(p=>p.type==='page'&&p.webSocketDebuggerUrl);
+    if(found)return found;
+    // Recent headless Chrome versions can start with zero page targets.
+    // Create exactly one about:blank tab using Chrome's documented endpoint.
+    if(pages.length===0){
+      try{
+        await fetch('http://127.0.0.1:9229/json/new?about:blank',{
+          method:'PUT',signal:AbortSignal.timeout(2500)
+        });
+      }catch(error){throw Error('CDP_CREATE_TAB: '+diagnostic(error));}
+    }
+    throw Error('CDP_TARGETS='+JSON.stringify(pages.map(p=>({
+      type:p.type,id:p.id,url:p.url,hasSocket:!!p.webSocketDebuggerUrl
+    }))).slice(0,1200));
   },35_000);
+  manifest.cdpPage={id:tab.id,url:tab.url,type:tab.type};
   socket=new WebSocket(tab.webSocketDebuggerUrl);
   await Promise.race([
     new Promise((done,fail)=>{
@@ -151,7 +183,7 @@ try {
     },35_000);
   });
   manifest.browserReadiness=ready;
-  process.stdout.write('T21_CAPTURE_WEBGPU_READY '+JSON.stringify(ready)+'\\n');
+  process.stdout.write('T21_CAPTURE_WEBGPU_READY '+JSON.stringify(ready)+'\n');
   const appliedPreset=await evaluation(`(() => {
     const b=document.querySelector('[data-review-preset="THREE_DIMENSIONAL"]');
     if(!b)return false;
@@ -174,16 +206,20 @@ try {
     const bytes=Buffer.from(shot.data||'','base64');
     if(bytes.byteLength<8000)throw Error('Suspiciously small screenshot '+view+': '+bytes.byteLength);
     const name='T21_'+view+'_WEBGPU_REVIEW.png';
-    process.stdout.write('T21_CAPTURE_VIEW '+view+' bytes='+bytes.byteLength+'\\n');
+    process.stdout.write('T21_CAPTURE_VIEW '+view+' bytes='+bytes.byteLength+'\n');
     await writeFile(resolve(destination,name),bytes);
     manifest.screenshots.push({view,file:name,sizeBytes:bytes.byteLength,renderer:'Chrome screenshot of PlayCanvas WebGPU canvas and review UI',humanVisualApproval:false});
   }
   if(manifest.screenshots.length!==5)throw Error('T21 five-view screenshot count invalid');
   manifest.status='CAPTURED_PENDING_HUMAN_VISUAL_QA';
   manifest.reason='Screenshots exist, but cannot infer correct rendered topology or Visual Freeze automatically.';
-}catch(error){
+ }catch(error){
   manifest.status='BLOCKED';
   manifest.reason=diagnostic(error);
+  try{
+    const log=readFileSync(resolve(destination,'chrome-startup.log'),'utf8');
+    manifest.chromeStartupTail=log.slice(-3500);
+  }catch{}
 }finally{
   try {await mkdir(destination,{recursive:true});await writeFile(resolve(destination,'manifest.json'),JSON.stringify(manifest,null,2));}catch(error){process.stderr.write('T21 manifest write: '+diagnostic(error)+'\n')}
   try {socket?.close();}catch{}
