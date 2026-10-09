@@ -55,6 +55,7 @@ import { UNDERTOW_T21_SOURCE_BATCH2_MESHES, UNDERTOW_T21_SOURCE_BATCH2_SUMMARY }
 import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES, UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY } from '../stage/undertow/UndertowSpillwayBroadStaticSourceGeometry';
 import { UNDERTOW_T21_FLANK_ELEVATION_PHASE4_MESHES, UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY } from '../stage/undertow/UndertowSpillwayFlankElevationPhase4Geometry';
 import { UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES, UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY } from '../stage/undertow/UndertowSpillwayVerticalSourcePhase5BGeometry';
+import { UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES, UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY } from '../stage/undertow/UndertowSpillwayHighSourcePhase6Geometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 
@@ -69,6 +70,7 @@ interface ReviewMaterials {
   sourceVerticalGlass: StandardMaterial;
   sourceVerticalMetal: StandardMaterial;
   sourceVerticalPillar: StandardMaterial;
+  sourceHighStructure: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -119,6 +121,7 @@ export class UndertowVisualReviewApp {
   private readonly broadStaticRoot = new Entity('T21Review:BroadStaticSourceTerrain');
   private readonly flankElevationPhase4Root = new Entity('T21Review:FlankElevationPhase4');
   private readonly verticalSourcePhase5BRoot = new Entity('T21Review:VerticalSourcePhase5B');
+  private readonly highSourcePhase6Root = new Entity('T21Review:HighStructurePhase6');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -228,6 +231,7 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.broadStaticRoot);
     this.app.root.addChild(this.flankElevationPhase4Root);
     this.app.root.addChild(this.verticalSourcePhase5BRoot);
+    this.app.root.addChild(this.highSourcePhase6Root);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -316,6 +320,12 @@ export class UndertowVisualReviewApp {
       );
     }
 
+    // Verified original source-facing panels only, NOT a continuous roof.
+    for (const sourceMesh of UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES) {
+      createSourceNativeReviewMesh(this.app, this.highSourcePhase6Root,
+        sourceMesh, this.materials.sourceHighStructure);
+    }
+
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
         this.provisionalRoot,
@@ -396,6 +406,7 @@ export class UndertowVisualReviewApp {
         <span>Broad static source floors</span><b>${UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.meshCount} / ${UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m² (source triangles, not newly displayed XZ)</b>
         <span>Phase 4 flank / high-ramp source</span><b>${UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY.meshCount} / ${UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² (unmodified 3D source triangles)</b>
         <span>Phase 5B vertical source (non-floor)</span><b>${UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY.meshCount} / ${UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² (exact original wall/glass/pillar facing triangle area)</b>
+        <span>Phase 6 high source panels (NOT game roof)</span><b>${UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY.registeredOriginalMeshes} displayed / ${UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY.originalSourceCandidatePairs} audited high pairs; ${UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² original 3D triangles</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -419,6 +430,7 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-broad-static-toggle">Broad static floors ON</button>
         <button id="t21-review-flank-phase4-toggle">Flanks / high ramps ON</button>
         <button id="t21-review-vertical-phase5b-toggle">Vertical source faces ON</button>
+        <button id="t21-review-high-phase6-toggle">High source panels ON</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -555,6 +567,11 @@ export class UndertowVisualReviewApp {
       panel.querySelector<HTMLButtonElement>('#t21-review-vertical-phase5b-toggle'),
       this.verticalSourcePhase5BRoot,
       'Vertical source faces'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-high-phase6-toggle'),
+      this.highSourcePhase6Root,
+      'High source panels'
     );
     this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
@@ -741,6 +758,7 @@ function createReviewMaterials(): ReviewMaterials {
     sourceVerticalGlass: makeVerticalSourceMaterial(new Color(0.35, 0.86, 0.93), 0.36, true),
     sourceVerticalMetal: makeVerticalSourceMaterial(new Color(0.55, 0.67, 0.79), 0.27, false),
     sourceVerticalPillar: makeVerticalSourceMaterial(new Color(0.79, 0.51, 0.91), 0.27, false),
+    sourceHighStructure: makeVerticalSourceMaterial(new Color(0.86, 0.76, 0.50), 0.24, true),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),
