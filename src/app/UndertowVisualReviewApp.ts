@@ -63,7 +63,7 @@ import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES, UNDERTOW_T21_PHASE9_DOWNFACE_SU
 import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE, UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY, type UndertowPhase10EdgeEvidence } from '../stage/undertow/UndertowSpillwayPhase10EdgeDiagnosticGeometry';
 import { UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES, UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase11NearestSourceDiagnostic';
 
-type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
+type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B' | 'CENTER_SOURCE';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
 
 interface ReviewMaterials {
@@ -194,7 +194,8 @@ export class UndertowVisualReviewApp {
     const requestedView=params.get('reviewView');
     const view:ReviewView=
       requestedView==='TOP'||requestedView==='POS_TO_NEG'||
-      requestedView==='SPAWN_A'||requestedView==='SPAWN_B'
+      requestedView==='SPAWN_A'||requestedView==='SPAWN_B'||
+      requestedView==='CENTER_SOURCE'
         ?requestedView:'OVERVIEW';
     this.setView(view);
     if(params.get('reviewNearestCentral')==='1'){
@@ -568,6 +569,7 @@ export class UndertowVisualReviewApp {
         <button data-review-view="POS_TO_NEG">POS → Center → NEG</button>
         <button data-review-view="SPAWN_A">Spawn A / POS</button>
         <button data-review-view="SPAWN_B">Spawn B / NEG</button>
+        <button data-review-view="CENTER_SOURCE">Center source close-up</button>
       </div>
       <div class="review-actions layers">
         <button id="t21-review-confirmed-toggle">Confirmed ON</button>
@@ -983,6 +985,16 @@ export class UndertowVisualReviewApp {
       bounds.maxX - bounds.minX,
       bounds.maxZ - bounds.minZ
     );
+
+    if (view === 'CENTER_SOURCE') {
+      // Camera only. Both original center FloorMetal downfaces occupy
+      // X≈−20.7..+20.9, Z≈−13.8..+14, Y=+4.5255. Never move mesh XYZ.
+      this.target.set(0.115, 4.5255, 0.097);
+      this.yawDegrees = 38;
+      this.pitchDegrees = 62;
+      this.distanceMeters = 48;
+      return;
+    }
 
     if (view === 'TOP') {
       this.target.set(centerX, 2.8, centerZ);

@@ -243,7 +243,7 @@ try {
   // Separate and optional: NEVER increase five-view PASS count or imply
   // source contacts are collision-authorized/connected game paths.
   try{
-    await navigate(urlForView('OVERVIEW')+'&reviewTopologyEdges=1&reviewNearestCentral=1');
+    await navigate(urlForView('CENTER_SOURCE')+'&reviewTopologyEdges=1&reviewNearestCentral=1');
     const nearestReady=await poll(async()=>{
       const state=await evaluation(`(() => ({
         view:document.querySelector('#app-canvas')?.dataset.t21ReviewView,
@@ -251,7 +251,7 @@ try {
         nearest:document.querySelector('#app-canvas')?.dataset.t21ReviewNearestCentral,
         backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
       }))()`);
-      if(state?.view==='OVERVIEW'&&state.topology==='on'&&
+      if(state?.view==='CENTER_SOURCE'&&state.topology==='on'&&
          state.nearest==='on'&&state.backend==='webgl2')return state;
       throw Error('T21_PHASE11_NEAREST_DIAGNOSTIC_NOT_READY '+JSON.stringify(state));
     },25000);
