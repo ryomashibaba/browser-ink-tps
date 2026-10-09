@@ -112,6 +112,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12D recover exact original four mirrored source components
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12d-recovered-source-pairs.py --self-test
+          python scripts/undertow-temple01-phase12d-recovered-source-pairs.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12d-full-family-mirror-results.json /tmp/t21-phase12c-original-source-triangles.json /tmp/t21-phase12d-four-full-original-source-pairs.json
+
+      - name: Upload T21 Phase12D recovered original source pairs
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12d-four-recovered-original-source-pairs
+          path: /tmp/t21-phase12d-four-full-original-source-pairs.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 whole-stage walk-source inventory
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -382,6 +398,22 @@ jobs:
         with:
           name: t21-undertow-phase12d-original-hard-xz-overrun
           path: /tmp/t21-phase12d-hard-xz-violation-results.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: T21 Phase12D recovered originals vs 124 plus 8 opt-in source meshes
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12D_RECOVERED_JSON: /tmp/t21-phase12d-four-full-original-source-pairs.json
+          T21_PHASE12D_RECOVERED_GATE_REPORT: /tmp/t21-phase12d-four-original-source-gate.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12DRecoveredSourceGateQa.test.ts
+
+      - name: Upload T21 Phase12D four-source review render safety gate
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12d-recovered-four-render-gate
+          path: /tmp/t21-phase12d-four-original-source-gate.json
           if-no-files-found: error
           retention-days: 14
 
