@@ -249,6 +249,12 @@ jobs:
           T21_PHASE8_SOURCE_JSON: /tmp/t21-phase8-original-support-source.json
         run: npx vitest run scripts/UndertowSpillwayPhase8StaticSourceQa.test.ts
 
+      - name: T21 Phase9 exact original downward-facing XYZ source QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE9_EXACT_SOURCE_JSON: /tmp/t21-phase9-exact-downface-review-source.json
+        run: npx vitest run scripts/UndertowSpillwayPhase9DownfaceQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 

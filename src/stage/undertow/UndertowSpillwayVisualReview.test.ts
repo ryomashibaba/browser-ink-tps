@@ -30,6 +30,7 @@ import { UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES, UNDERTOW_T21_VERTICAL_SOUR
 import { UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES, UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY, undertowT21HighSourcePhase6Errors } from './UndertowSpillwayHighSourcePhase6Geometry';
 import { UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES, UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY, undertowT21Phase7FramedSourceErrors } from './UndertowSpillwayPhase7FramedSourceGeometry';
 import { UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES, UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY, undertowT21Phase8OriginalSourceErrors } from './UndertowSpillwayPhase8StaticSourceGeometry';
+import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES, UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY, undertowT21Phase9DownfaceErrors } from './UndertowSpillwayPhase9DownfaceSourceGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import {
   UNDERTOW_T21_VISUAL_REVIEW,
@@ -50,6 +51,7 @@ describe('T21 Undertow visual review contract', () => {
     expect(undertowT21HighSourcePhase6Errors()).toEqual([]);
     expect(undertowT21Phase7FramedSourceErrors()).toEqual([]);
     expect(undertowT21Phase8OriginalSourceErrors()).toEqual([]);
+    expect(undertowT21Phase9DownfaceErrors()).toEqual([]);
     expect(UNDERTOW_T21_VISUAL_REVIEW).toMatchObject({
       id: 'undertow-t21-visual-review-v2',
       routeQuery: 'stageReview=undertow',
@@ -135,6 +137,12 @@ describe('T21 Undertow visual review contract', () => {
       edgeLinerCount:4,originalVertexCount:636,runtimePromotionAuthorized:false
     });
     expect(UNDERTOW_T21_VISUAL_REVIEW.phase8StaticSourceCount).toBe(16);
+    expect(UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES).toHaveLength(10);
+    expect(UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY).toMatchObject({
+      sourceComponentCount:10,sourceVertexCount:84,mirroredPairs:5,
+      runtimePromotionAuthorized:false
+    });
+    expect(UNDERTOW_T21_VISUAL_REVIEW.phase9DownfaceSourceCount).toBe(10);
     expect(UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY).toMatchObject({
       meshCount:6,pairCount:3,reviewOnly:true,runtimePromotionAuthorized:false
     });
