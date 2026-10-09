@@ -5,6 +5,8 @@ import {
   CameraComponentSystem,
   Color,
   ContainerHandler,
+  CULLFACE_NONE,
+  BLEND_NORMAL,
   createGraphicsDevice,
   DEVICETYPE_WEBGPU,
   Entity,
@@ -426,7 +428,7 @@ export class UndertowVisualReviewApp {
         <span><i class="occupancy"></i> whole-stage XZ occupancy envelope; NOT a flat floor</span>
         <span><i class="source-native"></i> exact Temple01 source floors, side-flanks and high ramps; connectivity/runtime pending</span>
         <span><i class="source-local"></i> local source triangles and batch 2; PntSet actor placement and connectivity pending</span>
-        <span>cyan = original vertical glass faces; blue-grey = wall metal faces; violet = pillar faces; review ONLY, optical transparency and collision unproven</span>
+        <span>cyan translucent = source glass faces; blue-grey = wall metal faces; violet = pillar faces; all double-sided REVIEW TINTS, not runtime optical/collision materials</span>
         <span><i class="provisional"></i> provisional XZ-only macro envelope; Y unresolved</span>
         <span><i class="unresolved"></i> unresolved detail boundary / ledger item</span>
         <span><i class="void"></i> intentional void / outside hard silhouette</span>
@@ -736,9 +738,9 @@ function createReviewMaterials(): ReviewMaterials {
     occupancy: makeMaterial(new Color(0.30, 0.22, 0.065), 0.14),
     sourceNative: makeMaterial(new Color(0.94, 0.46, 0.08), 0.30),
     sourceLocal: makeMaterial(new Color(0.96, 0.64, 0.27), 0.22),
-    sourceVerticalGlass: makeMaterial(new Color(0.35, 0.86, 0.93), 0.36),
-    sourceVerticalMetal: makeMaterial(new Color(0.55, 0.67, 0.79), 0.27),
-    sourceVerticalPillar: makeMaterial(new Color(0.79, 0.51, 0.91), 0.27),
+    sourceVerticalGlass: makeVerticalSourceMaterial(new Color(0.35, 0.86, 0.93), 0.36, true),
+    sourceVerticalMetal: makeVerticalSourceMaterial(new Color(0.55, 0.67, 0.79), 0.27, false),
+    sourceVerticalPillar: makeVerticalSourceMaterial(new Color(0.79, 0.51, 0.91), 0.27, false),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),
@@ -759,6 +761,21 @@ function makeMaterial(color: Color, emissiveStrength: number): StandardMaterial 
   material.useMetalness = true;
   material.metalness = 0.04;
   material.gloss = 0.52;
+  material.update();
+  return material;
+}
+
+function makeVerticalSourceMaterial(color: Color, emissiveStrength: number, glass: boolean): StandardMaterial {
+  // Original near-vertical source triangles are ONE-sided geometry. Review
+  // must see both sides when orbiting; this is material ONLY, not collider
+  // double-sided gameplay authorization. Cyan glass is a visual review tint.
+  const material = makeMaterial(color, emissiveStrength);
+  material.cull = CULLFACE_NONE;
+  if (glass) {
+    material.opacity = 0.48;
+    material.blendType = BLEND_NORMAL;
+    material.depthWrite = false;
+  }
   material.update();
   return material;
 }
