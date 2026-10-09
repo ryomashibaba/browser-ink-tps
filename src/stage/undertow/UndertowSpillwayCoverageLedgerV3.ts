@@ -5,6 +5,7 @@ import { UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES } from './UndertowSpillwaySour
 import { UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES } from './UndertowSpillwaySourceNativeSupplementGeometry';
 import { UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES } from './UndertowSpillwaySourceNativePhase1Geometry';
 import { UNDERTOW_T21_SOURCE_BATCH2_MESHES } from './UndertowSpillwaySourceBatch2Geometry';
+import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES } from './UndertowSpillwayBroadStaticSourceGeometry';
 
 /**
  * Coverage Ledger v3: a plan-projection DISPLAY inventory, not a terrain/floor
@@ -155,7 +156,8 @@ export function buildUndertowCoverageLedgerV3(): {
     ...UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES,
     ...UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES,
     ...UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES,
-    ...UNDERTOW_T21_SOURCE_BATCH2_MESHES
+    ...UNDERTOW_T21_SOURCE_BATCH2_MESHES,
+    ...UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES
   ];
   const shapes=UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.solids.map(solidShape);
   const sourceShapes=sourceMeshes.map(m=>({triangles:trisFromVertices(m.vertices)}));
