@@ -33,7 +33,7 @@ export interface UndertowPhase6HighSourceMesh {
 }
 function decode():readonly UndertowPhase6HighSourceMesh[]{
   return Object.freeze(RECORDS.map(([suffix,side,areaSquareMeters],i)=>{
-    const data=Uint8Array.from(atob(EXACT_FLOAT64_TRIANGLES[i]),c=>c.charCodeAt(0));
+    const data=Uint8Array.from(atob(EXACT_FLOAT64_TRIANGLES[i]!),c=>c.charCodeAt(0));
     if(data.byteLength!==146)throw Error('T21 Phase6 high source original byte count drift');
     const v=new DataView(data.buffer);
     const count=v.getUint16(0,true);
