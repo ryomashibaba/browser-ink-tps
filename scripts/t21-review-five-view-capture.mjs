@@ -239,6 +239,42 @@ try {
     process.stdout.write('T21_CAPTURE_VIEW '+view+' size='+bytes.byteLength+'\\n');
   }
   if(manifest.screenshots.length!==5)throw Error('T21 five-view screenshot count invalid');
+  // Phase11 seventh shot: actual original 3D proximity candidates overlay.
+  // Separate and optional: NEVER increase five-view PASS count or imply
+  // source contacts are collision-authorized/connected game paths.
+  try{
+    await navigate(urlForView('OVERVIEW')+'&reviewTopologyEdges=1&reviewNearestCentral=1');
+    const nearestReady=await poll(async()=>{
+      const state=await evaluation(`(() => ({
+        view:document.querySelector('#app-canvas')?.dataset.t21ReviewView,
+        topology:document.querySelector('#app-canvas')?.dataset.t21ReviewTopology,
+        nearest:document.querySelector('#app-canvas')?.dataset.t21ReviewNearestCentral,
+        backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+      }))()`);
+      if(state?.view==='OVERVIEW'&&state.topology==='on'&&
+         state.nearest==='on'&&state.backend==='webgl2')return state;
+      throw Error('T21_PHASE11_NEAREST_DIAGNOSTIC_NOT_READY '+JSON.stringify(state));
+    },25000);
+    await sleep(900);
+    const shot=await command('Page.captureScreenshot',{
+      format:'png',captureBeyondViewport:false,fromSurface:true
+    },25000);
+    const bytes=Buffer.from(shot.data||'','base64');
+    if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
+      throw Error('T21_PHASE11_NEAREST_DIAGNOSTIC_SCREENSHOT_INVALID');
+    const file='T21_PHASE11_CENTRAL_NEAREST_SOURCE_DIAGNOSTIC.png';
+    await writeFile(resolve(destination,file),bytes);
+    manifest.nearestCentralSourceDiagnostic={
+      status:'CAPTURED_NOT_GAMEPLAY_PROOF',file,
+      bytes:bytes.byteLength,sha256:createHash('sha256').update(bytes).digest('hex'),
+      source:'16 original-OBJ nearest candidate triangles; 8 contacts at 0m, 8 at 2.55cm',
+      sourceTriangleClipToFootprintGuaranteed:false,
+      gameConnectedWalkableCollisionProof:false,renderer:nearestReady.backend
+    };
+  }catch(error){
+    manifest.nearestCentralSourceDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{

@@ -32,6 +32,7 @@ import { UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES, UNDERTOW_T21_PHASE7_FRAMED_SO
 import { UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES, UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY, undertowT21Phase8OriginalSourceErrors } from './UndertowSpillwayPhase8StaticSourceGeometry';
 import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES, UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY, undertowT21Phase9DownfaceErrors } from './UndertowSpillwayPhase9DownfaceSourceGeometry';
 import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY, undertowT21Phase10EdgeErrors } from './UndertowSpillwayPhase10EdgeDiagnosticGeometry';
+import { UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY, undertowT21Phase11CandidateErrors } from './UndertowSpillwayPhase11NearestSourceDiagnostic';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import {
   UNDERTOW_T21_VISUAL_REVIEW,
@@ -54,6 +55,11 @@ describe('T21 Undertow visual review contract', () => {
     expect(undertowT21Phase8OriginalSourceErrors()).toEqual([]);
     expect(undertowT21Phase9DownfaceErrors()).toEqual([]);
     expect(undertowT21Phase10EdgeErrors()).toEqual([]);
+    expect(undertowT21Phase11CandidateErrors()).toEqual([]);
+    expect(UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY).toMatchObject({
+      centerUnmatchedOriginalEdges:16,sourceTouchingZeroMeterEdges:8,
+      source2Point55CentimeterGapEdges:8,runtimePromotionAuthorized:false
+    });
     expect(UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY).toMatchObject({
       boundaryEdges:48,sharedOriginalOBJVertexIDs:0,
       coordinateOnlySeams:30,unmatchedSourceEdges:18,

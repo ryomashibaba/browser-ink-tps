@@ -61,6 +61,7 @@ import { UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES, UNDERTOW_T21_PHASE7_FRAMED_SO
 import { UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES, UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase8StaticSourceGeometry';
 import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES, UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase9DownfaceSourceGeometry';
 import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE, UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY, type UndertowPhase10EdgeEvidence } from '../stage/undertow/UndertowSpillwayPhase10EdgeDiagnosticGeometry';
+import { UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES, UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase11NearestSourceDiagnostic';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
@@ -87,6 +88,7 @@ interface ReviewMaterials {
   sourcePhase9MegalithUnder: StandardMaterial;
   sourcePhase10CoordinateSeam: StandardMaterial;
   sourcePhase10UnmatchedEdge: StandardMaterial;
+  sourcePhase11OriginalNearby: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -155,6 +157,7 @@ export class UndertowVisualReviewApp {
   private readonly megalithDownfacePhase9Root = new Entity('T21Review:MegalithDownfacePhase9');
   private readonly coordinateSeamPhase10Root = new Entity('T21Review:Phase10NonWeldedCoordinateEdges');
   private readonly unmatchedEdgePhase10Root = new Entity('T21Review:Phase10UnmatchedSourceEdges');
+  private readonly nearestOriginalPhase11Root = new Entity('T21Review:Phase11ExactNearbyOriginalTriangles');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -194,6 +197,11 @@ export class UndertowVisualReviewApp {
       requestedView==='SPAWN_A'||requestedView==='SPAWN_B'
         ?requestedView:'OVERVIEW';
     this.setView(view);
+    if(params.get('reviewNearestCentral')==='1'){
+      this.nearestOriginalPhase11Root.enabled=true;
+      this.canvas.dataset.t21ReviewNearestCentral='on';
+      this.refreshReviewLayerButtons();
+    }
     if(params.get('reviewTopologyEdges')==='1'){
       this.coordinateSeamPhase10Root.enabled=true;
       this.unmatchedEdgePhase10Root.enabled=true;
@@ -293,6 +301,7 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.megalithDownfacePhase9Root);
     this.app.root.addChild(this.coordinateSeamPhase10Root);
     this.app.root.addChild(this.unmatchedEdgePhase10Root);
+    this.app.root.addChild(this.nearestOriginalPhase11Root);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -444,6 +453,16 @@ export class UndertowVisualReviewApp {
       );
     }
 
+    // Phase11 opt-in diagnostic: the 16 closest ACTUAL original source
+    // triangles around the center underfaces. These are individual source
+    // samples, NOT complete source components or playable connectors.
+    for(const triangle of UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES){
+      createSourceNativeReviewMesh(
+        this.app,this.nearestOriginalPhase11Root,triangle,
+        this.materials.sourcePhase11OriginalNearby
+      );
+    }
+
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
         this.provisionalRoot,
@@ -528,6 +547,7 @@ export class UndertowVisualReviewApp {
         <span>Phase 8 towers / flank / edge source (NOT floor)</span><b>${UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY.originalComponentCount} original source meshes / ${UNDERTOW_T21_PHASE8_STATIC_SOURCE_SUMMARY.originalSource3DAreaSquareMeters.toFixed(1)} m² 3D triangle area, 0 new verified floor</b>
         <span>Phase 9 down-facing source (NOT verified underside collider)</span><b>${UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY.sourceComponentCount} original face meshes / ${UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY.original3DTriangleAreaSquareMeters.toFixed(1)} m² 3D triangle area, no additional floor authority</b>
         <span>Phase 10 original boundary-edge topology</span><b>${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.sharedOriginalOBJVertexIDs} original welded IDs / ${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.coordinateOnlySeams} coordinate-only / ${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.unmatchedSourceEdges} unmatched; ZERO proven gameplay connections</b>
+        <span>Phase 11 closest center source, NOT connected geometry</span><b>${UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY.sourceTouchingZeroMeterEdges} edge-to-triangle contact at 0m / ${UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY.source2Point55CentimeterGapEdges} at 0.0255m; 16 source triangles, 0 new original display components</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -541,7 +561,7 @@ export class UndertowVisualReviewApp {
         <button data-review-preset="THREE_DIMENSIONAL">Floors + 3D structure</button>
         <button data-review-preset="ALL_EVIDENCE">All evidence layers</button>
       </div>
-      <p class="review-detail-note">Phase10 source-edge diagnostic: <b>orange = 30 same-XYZ / different OBJ IDs</b>, <b>red = 18 no exact edge match</b>, welded source edges = 0. Diagnostic lines are NOT walkable routes or game colliders.</p>
+      <p class="review-detail-note">Phase10 source-edge diagnostic: <b>orange = 30 same-XYZ / different OBJ IDs</b>, <b>red = 18 no exact edge match</b>, welded source edges = 0. Phase11 <b>yellow = 16 nearest original source triangle samples</b>: eight 0m source contacts, eight 2.55cm gaps. Neither represents a connected walkable path or game collider.</p>
       <div class="review-actions views">
         <button data-review-view="OVERVIEW">Overview</button>
         <button data-review-view="TOP">Top</button>
@@ -569,6 +589,7 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-megalith-downface-phase9-toggle">Megalith downfaces ON</button>
         <button id="t21-review-coordinate-seams-phase10-toggle">Phase10 non-welded edges OFF</button>
         <button id="t21-review-unmatched-edges-phase10-toggle">Phase10 unmatched edges OFF</button>
+        <button id="t21-review-nearest-phase11-toggle">Phase11 nearest source triangles OFF</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -771,6 +792,11 @@ export class UndertowVisualReviewApp {
       'Unmatched edges'
     );
     this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-nearest-phase11-toggle'),
+      this.nearestOriginalPhase11Root,
+      'Nearest original source'
+    );
+    this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
       this.provisionalRoot,
       'Provisional'
@@ -823,7 +849,9 @@ export class UndertowVisualReviewApp {
     // with authentic stage solids or collision/nav geometry.
     this.coordinateSeamPhase10Root.enabled=false;
     this.unmatchedEdgePhase10Root.enabled=false;
+    this.nearestOriginalPhase11Root.enabled=false;
     this.canvas.dataset.t21ReviewTopology='off';
+    this.canvas.dataset.t21ReviewNearestCentral='off';
     this.provisionalRoot.enabled=full;
     this.unresolvedRoot.enabled=full;
     this.navRoot.enabled=full;
@@ -845,6 +873,8 @@ export class UndertowVisualReviewApp {
       root.enabled=!root.enabled;
       this.canvas.dataset.t21ReviewTopology=
         (this.coordinateSeamPhase10Root.enabled||this.unmatchedEdgePhase10Root.enabled)?'on':'off';
+      this.canvas.dataset.t21ReviewNearestCentral=
+        this.nearestOriginalPhase11Root.enabled?'on':'off';
       this.refreshReviewLayerButtons();
       this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-preset]').forEach(presetButton=>{
         presetButton.classList.remove('active-mode');
@@ -1028,6 +1058,7 @@ function createReviewMaterials(): ReviewMaterials {
     sourcePhase9MegalithUnder: makeVerticalSourceMaterial(new Color(0.87, 0.68, 0.47), 0.20, true),
     sourcePhase10CoordinateSeam: makeMaterial(new Color(1, 0.68, 0.16), 0.85),
     sourcePhase10UnmatchedEdge: makeMaterial(new Color(1, 0.24, 0.21), 0.95),
+    sourcePhase11OriginalNearby: makeVerticalSourceMaterial(new Color(0.99, 0.99, 0.20), 0.55, true),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),

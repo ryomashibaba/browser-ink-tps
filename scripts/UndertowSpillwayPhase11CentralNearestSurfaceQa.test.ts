@@ -5,6 +5,7 @@ import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../src/stage/undertow/U
 import { UNDERTOW_T21_COVERAGE_LEDGER_V3 } from '../src/stage/undertow/UndertowSpillwayCoverageLedgerV3';
 import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES } from '../src/stage/undertow/UndertowSpillwayPhase9DownfaceSourceGeometry';
 import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE } from '../src/stage/undertow/UndertowSpillwayPhase10EdgeDiagnosticGeometry';
+import { UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES, UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY, undertowT21Phase11CandidateErrors } from '../src/stage/undertow/UndertowSpillwayPhase11NearestSourceDiagnostic';
 type Candidate={
   sourceObject:string;sourceMaterial:string;originalOrientation:string;
   originalNormalY:number;originalFaceIndex:number;
@@ -41,6 +42,13 @@ describe('T21 Phase11 true original 3D distance from 16 unmatched central unders
     expect(UNDERTOW_T21_COVERAGE_LEDGER_V3.sourceInventory).toHaveLength(64);
     expect(UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES).toHaveLength(10);
     expect(UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE).toHaveLength(48);
+    expect(undertowT21Phase11CandidateErrors()).toEqual([]);
+    expect(UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY).toMatchObject({
+      centerUnmatchedOriginalEdges:16,
+      sourceTouchingZeroMeterEdges:8,
+      source2Point55CentimeterGapEdges:8,
+      reviewOnly:true,runtimePromotionAuthorized:false
+    });
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
   });
@@ -75,7 +83,25 @@ describe('T21 Phase11 true original 3D distance from 16 unmatched central unders
     const histogram=Object.fromEntries(bands.map(x=>[x,0]));
     const originIds=new Set<string>();
     let total=0;
-    for(const e of f.perEdge){
+    for(const [index,e] of f.perEdge.entries()){
+      const visual=UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES[index]!;
+      const candidate=e.closestOriginalSourceCandidates[0]!;
+      expect(visual.sourceUnderfaceId).toBe(e.sourceComponentId);
+      expect(visual.sourceUnderfaceEdgeIndex).toBe(e.boundaryEdgeIndex);
+      expect(visual.originalCandidateMaterial).toBe(candidate.sourceMaterial);
+      expect(visual.originalCandidateFaceIndex).toBe(candidate.originalFaceIndex);
+      expect(visual.originalNormalClass).toBe(candidate.originalOrientation);
+      const serialized=Buffer.allocUnsafe(80);
+      serialized.writeDoubleLE(visual.exactOriginal3DGapMeters,0);
+      visual.vertices.forEach((vertex,i)=>vertex.forEach((n,j)=>{
+        serialized.writeDoubleLE(n,8+i*24+j*8);
+      }));
+      const original=Buffer.allocUnsafe(80);
+      original.writeDoubleLE(candidate.closest3DDistanceMeters,0);
+      candidate.originalSourceTriangleXYZ.forEach((vertex,i)=>vertex.forEach((n,j)=>{
+        original.writeDoubleLE(n,8+i*24+j*8);
+      }));
+      expect(serialized.equals(original),'Phase11 source triangle exact XYZ distance '+index).toBe(true);
       expect(sourceEdgeLookup.has(e.sourceComponentId)).toBe(true);
       expect(e.originalSourceDistanceRadiusMeters).toBe(8);
       expect(e.originalStaticOBJSharedEdge).toBe(false);
