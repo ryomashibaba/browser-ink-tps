@@ -169,6 +169,7 @@ export class UndertowVisualReviewApp {
   private readonly sourceFamiliesPhase12Root = new Entity('T21Review:Phase12OriginalSourceFamilyFaces');
   private readonly completeSourcePhase12CRoot = new Entity('T21Review:Phase12CCompleteOriginalSource');
   private readonly recoveredSourcePhase12DRoot = new Entity('T21Review:Phase12DRecoveredOriginalSource');
+  private readonly spawnMarkerRoot = new Entity('T21Review:SpawnMarkers');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -553,15 +554,16 @@ export class UndertowVisualReviewApp {
   }
 
   private buildSpawnMarkers(): void {
+    this.app.root.addChild(this.spawnMarkerRoot);
     createMarker(
-      this.app,
+      this.spawnMarkerRoot,
       'T21Review:SpawnA',
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.teamASpawnFloorPoint,
       this.materials.spawnA,
       0.75
     );
     createMarker(
-      this.app,
+      this.spawnMarkerRoot,
       'T21Review:SpawnB',
       UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.teamBSpawnFloorPoint,
       this.materials.spawnB,
@@ -941,6 +943,8 @@ export class UndertowVisualReviewApp {
     const vertical=preset!=='WALK_SOURCE';
     this.confirmedRoot.enabled=vertical;
     this.occupancyRoot.enabled=full;
+    // Markers remain visible in every original ordinary preset.
+    this.spawnMarkerRoot.enabled=true;
     // All 64 original walk-oriented source components remain visible in every
     // preset. Do not infer gameplay floor area or promote PntSet actor source.
     for(const root of [this.sourceNativeRoot,this.sourceLocalRoot,this.sourceBatch2Root,
@@ -1001,7 +1005,8 @@ export class UndertowVisualReviewApp {
       this.megalithDownfacePhase9Root,this.coordinateSeamPhase10Root,
       this.unmatchedEdgePhase10Root,this.nearestOriginalPhase11Root,
       this.sourceFamiliesPhase12Root,this.completeSourcePhase12CRoot,
-      this.provisionalRoot,this.unresolvedRoot,this.navRoot
+      this.provisionalRoot,this.unresolvedRoot,this.navRoot,
+      this.spawnMarkerRoot
     ])root.enabled=false;
     const selected=UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES.filter(m=>m.side===side);
     if(selected.length!==2||this.recoveredSourcePhase12DRoot.children.length!==4)
@@ -1608,7 +1613,7 @@ function polygonBounds(points: readonly MetricXZ[]): {
 }
 
 function createMarker(
-  app: AppBase,
+  parent: Entity,
   name: string,
   position: StageVector3,
   material: StandardMaterial,
@@ -1623,7 +1628,7 @@ function createMarker(
   });
   marker.setPosition(position[0], position[1] + diameterMeters * 0.65, position[2]);
   marker.setLocalScale(diameterMeters, diameterMeters, diameterMeters);
-  app.root.addChild(marker);
+  parent.addChild(marker);
 }
 
 function createNavigationMarker(

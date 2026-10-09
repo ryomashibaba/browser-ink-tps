@@ -29,6 +29,8 @@ describe('T21 Phase12E original-only two-mirror camera isolate QA',()=>{
     expect(app).toContain("this.canvas.dataset.t21ReviewPreset='FOCUS_ORIGINAL_SOURCE_ONLY'");
     expect(app).toContain("this.recoveredSourcePhase12DRoot.children.length!==4");
     expect(app).toContain("this.confirmedRoot,this.occupancyRoot,this.sourceNativeRoot");
+    expect(app).toContain("this.spawnMarkerRoot.enabled=true;");
+    expect(app).toContain("this.spawnMarkerRoot\n    ])root.enabled=false;");
     expect(app).toContain("this.recoveredSourcePhase12DRoot.enabled=false;");
     expect(capture).toContain("for(const side of ['POSITIVE_Z','NEGATIVE_Z'])");
     expect(capture).toContain("allDefault124OriginalSourceMeshesHiddenForIsolation:true");
