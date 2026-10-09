@@ -1,3 +1,16 @@
+# T21 Phase 6 — exact upper-source review and automatic five-view evidence
+
+- Baseline: Phase 5B 64 walk-facing source meshes + 12 near-vertical source faces, all review-only. T20 production remains `inkworks-junction` and T21 `activationReady=false`; no merge, source-geometry rewrite, or runtime promotion.
+- Source audit `t21-undertow-high-structure-phase6-source` records **seven original symmetric high-structure pairs / 14 source components** from pinned Temple01 original OBJ. Original 3D triangle area **2,291.6400892 m²**, not added walkable area or a confirmed ceiling surface.
+- Phase 6 review displays **only one original mirrored pair / two SealObject00 near-vertical source panels**, Y=25.0→45.4m. Original float64 XYZ is copied without rounding; independent pinned-OBJ source fixture CI compares exact 12 vertex triples. Other 12 audited high-source candidates are retained as evidence, not drawn as fake complete roofs.
+- All source review inventory: **64 original walk-facing + 12 vertical glass/metal/pillar + 2 high panels = 78 distinct original-source face meshes**. The 0.5m floor XZ coverage report is unchanged (previous ~4,386.50m² unshown at 64 walk meshes), since high/vertical faces are not playable floor.
+- A separate `High source panels` visual toggle uses translucent pale gold. No new collision/paint/nav/CPU/fall-out/route/score/weapon authority is granted; active game roof/underside semantics and complete solid continuity are unresolved.
+- Phase 6 source unit QA `UndertowSpillwayHighSourcePhase6Qa.test.ts` checks all 78 IDs unique, the 64/12 prior cohort counts, all 7 source audit pairs, exact 12 selected XYZ vertices and inactive T21.
+- New `scripts/t21-review-five-view-capture.mjs` attempts to capture real WebGPU/browser PNGs for OVERVIEW, TOP, POS_TO_NEG, SPAWN_A and SPAWN_B after the CI Pages build, producing `t21-undertow-real-five-view-capture` artifact with `manifest.json`. On incompatible headless browser/WebGPU it explicitly sets `BLOCKED` with reason. On success it sets `CAPTURED_PENDING_HUMAN_VISUAL_QA`; **neither status is an automatic Visual Freeze PASS**.
+- Next gates: inspect actual screenshot pixels/images; check topology relative to original reference, internal vs exterior wall distinction, glass and source-high occlusion, underside supports, gaps, spawn viewpoints. Only then consider visual freeze; full runtime 4v4 QA is separate.
+
+---
+
 # T21 Phase 5A/5B — source-grounded VERTICAL 3D structure review (2026-10-09)
 
 ## Current objective and boundaries

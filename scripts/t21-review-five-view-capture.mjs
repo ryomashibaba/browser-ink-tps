@@ -79,7 +79,7 @@ try {
     '--enable-unsafe-webgpu','--enable-features=WebGPU,UnsafeWebGPU',
     '--use-angle=swiftshader','--enable-dawn-features=allow_unsafe_apis',
     '--window-size=1600,900','--hide-scrollbars',
-    '--remote-debugging-port=9229',
+    '--remote-debugging-port=9229','--remote-allow-origins=*',
     '--user-data-dir=/tmp/t21-review-cdp-profile',
     'about:blank'
   ],{stdio:['ignore','pipe','pipe'],detached:false});
