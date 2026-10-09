@@ -304,6 +304,39 @@ try {
     manifest.phase12SourceFamilyDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
   }
 
+  // Optional Phase12C original complete components, 8 original meshes / 70 source
+  // triangles. This is never mandatory five-view proof and never a runtime stage.
+  try{
+    await navigate(urlForView('CENTER_SOURCE')+'&reviewCompleteCentral=1');
+    const ready=await poll(async()=>{
+      const state=await evaluation(`(() => ({
+        view:document.querySelector('#app-canvas')?.dataset.t21ReviewView,
+        complete:document.querySelector('#app-canvas')?.dataset.t21ReviewCompleteCentral,
+        sourceSamples:document.querySelector('#app-canvas')?.dataset.t21ReviewSourceFamilies,
+        backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+      }))()`);
+      if(state?.view==='CENTER_SOURCE'&&state.complete==='on'&&
+        state.sourceSamples==='off'&&state.backend==='webgl2')return state;
+      throw Error('T21_PHASE12C_COMPLETE_ORIGINAL_NOT_READY '+JSON.stringify(state));
+    },25000);
+    await sleep(850);
+    const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+    const bytes=Buffer.from(shot.data||'','base64');
+    if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
+      throw Error('T21_PHASE12C_COMPLETE_ORIGINAL_SCREENSHOT_INVALID');
+    const file='T21_PHASE12C_EIGHT_COMPLETE_SOURCE_COMPONENTS_DIAGNOSTIC.png';
+    await writeFile(resolve(destination,file),bytes);
+    manifest.phase12CCompleteOriginalDiagnostic={
+      status:'CAPTURED_NOT_GAMEPLAY_PROOF',file,bytes:bytes.byteLength,
+      sha256:createHash('sha256').update(bytes).digest('hex'),
+      sourceCompleteOriginalComponents:8,sourceOriginalTriangles:70,
+      defaultDisplayedOriginalFullMeshesStill:124,
+      originalGameplayCollisionNavProof:false,renderer:ready.backend
+    };
+  }catch(error){
+    manifest.phase12CCompleteOriginalDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{

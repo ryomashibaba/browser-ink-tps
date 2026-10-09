@@ -345,6 +345,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12C exact opt-in 70 original triangle byte audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12C_SOURCE_JSON: /tmp/t21-phase12c-original-source-triangles.json
+          T21_PHASE12C_GATE_REPORT: /tmp/t21-phase12c-registered124-overlap-report.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12COptInFullSourceQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
