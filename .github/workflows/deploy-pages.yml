@@ -472,6 +472,12 @@ jobs:
           T21_PHASE12G_CONTACT_JSON: /tmp/t21-phase12g-source-segment-contacts.json
         run: npx vitest run scripts/UndertowSpillwayPhase12GSourceContactsQa.test.ts
 
+      - name: T21 Phase12H original four metal glass source contact rendering QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12G_CONTACT_JSON: /tmp/t21-phase12g-source-segment-contacts.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12HSourceContactViewQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 

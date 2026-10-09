@@ -454,6 +454,44 @@ try {
     }
   }
 
+  // Phase12H: two optional original-only contact comparison photos.
+  // These DO NOT contribute to the five mandatory review directions.
+  manifest.phase12HOriginalContactDiagnostics=[];
+  for(const face of [60006,61728]){
+    try{
+      await navigate(urlForView('CENTER_SOURCE')+'&reviewSourceContacts='+face);
+      const state=await poll(async()=>{
+        const x=await evaluation(`(() => ({
+          face:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12HContacts,
+          count:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12HPointCount,
+          preset:document.querySelector('#app-canvas')?.dataset.t21ReviewPreset,
+          renderer:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+        }))()`);
+        if(x?.face===String(face)&&x.count==='2'&&
+           x.preset==='PHASE12H_SOURCE_CONTACTS_ONLY'&&x.renderer==='webgl2')return x;
+        throw Error('T21_PHASE12H_EXACT_SOURCE_NOT_READY '+JSON.stringify(x));
+      },25000);
+      await evaluation(`(() => {const p=document.querySelector('#t21-review-panel');if(p)p.style.display='none';return true;})()`);
+      await sleep(700);
+      const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+      const bytes=Buffer.from(shot.data||'','base64');
+      const valid=bytes.length>33&&bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+      const width=valid?bytes.readUInt32BE(16):0,height=valid?bytes.readUInt32BE(20):0;
+      if(!valid||width<640||height<360)throw Error('T21_PHASE12H_CONTACT_PNG_INVALID');
+      const file='T21_PHASE12H_ORIGINAL_METAL_GLASS_CONTACT_'+face+'.png';
+      await writeFile(resolve(destination,file),bytes);
+      manifest.phase12HOriginalContactDiagnostics.push({
+        status:'CAPTURED_NOT_GAMEPLAY_PROOF',sourceMinFace:face,exactOriginalMaterialContacts:2,
+        preservedOriginalSourceXYZ:true,originalOBJWeldedEdges:0,
+        materialLabels:['WallMetal00','Glass01'],file,width,height,bytes:bytes.length,
+        sha256:createHash('sha256').update(bytes).digest('hex'),
+        authorizesVisualFreeze:false,gameplayAuthority:'NONE'
+      });
+    }catch(error){
+      manifest.phase12HOriginalContactDiagnostics.push({status:'BLOCKED',sourceMinFace:face,reason:diagnostic(error)});
+    }
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{

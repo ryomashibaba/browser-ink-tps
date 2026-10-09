@@ -65,6 +65,7 @@ import { UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES, UNDERTOW_T21_PH
 import {UNDERTOW_T21_PHASE12_FAMILY_TRIANGLES,UNDERTOW_T21_PHASE12_FAMILY_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12SourceFamilyGeometry';
 import {UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_MESHES,UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12CEligibleFullSourceGeometry';
 import {UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES,UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12DRecoveredSourceGeometry';
+import {UNDERTOW_T21_PHASE12H_SOURCE_CONTACT_EVIDENCE,UNDERTOW_T21_PHASE12H_CONTACT_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12HSourceContactEvidence';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B' | 'CENTER_SOURCE';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
@@ -169,6 +170,7 @@ export class UndertowVisualReviewApp {
   private readonly sourceFamiliesPhase12Root = new Entity('T21Review:Phase12OriginalSourceFamilyFaces');
   private readonly completeSourcePhase12CRoot = new Entity('T21Review:Phase12CCompleteOriginalSource');
   private readonly recoveredSourcePhase12DRoot = new Entity('T21Review:Phase12DRecoveredOriginalSource');
+  private readonly phase12HContactRoot = new Entity('T21Review:Phase12HOriginalContactMarkers');
   private readonly spawnMarkerRoot = new Entity('T21Review:SpawnMarkers');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
@@ -241,6 +243,10 @@ export class UndertowVisualReviewApp {
     if(params.has('reviewRecoveredFace')&&
       UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES.some(m=>m.originalMinFace===focusFace))
       this.focusRecoveredOriginalFace(focusFace);
+    const originalContactFace=Number(params.get('reviewSourceContacts'));
+    if(params.has('reviewSourceContacts')&&
+      UNDERTOW_T21_PHASE12H_SOURCE_CONTACT_EVIDENCE.some(e=>e.originalSourceMinFace===originalContactFace))
+      this.focusPhase12HSourceContacts(originalContactFace);
     if(params.get('reviewTopologyEdges')==='1'){
       this.coordinateSeamPhase10Root.enabled=true;
       this.unmatchedEdgePhase10Root.enabled=true;
@@ -344,6 +350,7 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.sourceFamiliesPhase12Root);
     this.app.root.addChild(this.completeSourcePhase12CRoot);
     this.app.root.addChild(this.recoveredSourcePhase12DRoot);
+    this.app.root.addChild(this.phase12HContactRoot);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -529,6 +536,40 @@ export class UndertowVisualReviewApp {
     for(const c of UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES)
       createSourceNativeReviewMesh(this.app,this.recoveredSourcePhase12DRoot,
         c,this.materials.sourcePhase12FloorLine);
+    // Exactly four pinned ORIGINAL intersection coordinates: no new source
+    // triangles, no inferred glass wall/floor/collision connectivity.
+    const contactEdgeMaterial=makeMaterial(new Color(0.97,0.40,0.94),0.85);
+    const metalContactMaterial=makeMaterial(new Color(1.0,0.82,0.12),0.95);
+    const glassContactMaterial=makeMaterial(new Color(0.20,0.96,1.0),0.95);
+    for(const evidence of UNDERTOW_T21_PHASE12H_SOURCE_CONTACT_EVIDENCE){
+      const group=new Entity('T21Review:Phase12H:SourceContact:'+evidence.originalSourceMinFace);
+      this.phase12HContactRoot.addChild(group);
+      const [a,b]=evidence.sourceOriginalProjectEndpointXYZ;
+      const vA=new Vec3(a[0],a[1]-0.035,a[2]);
+      const vB=new Vec3(b[0],b[1]-0.035,b[2]);
+      const edge=new Entity('T21Review:Phase12H:OriginalEdge:'+evidence.originalSourceMinFace);
+      edge.addComponent('render',{type:'box',material:contactEdgeMaterial,
+        castShadows:false,receiveShadows:false});
+      edge.setPosition(vA.clone().add(vB).mulScalar(0.5));
+      edge.lookAt(vB);
+      edge.setLocalScale(0.030,0.030,evidence.originalSourceBoundaryLengthMeters);
+      group.addChild(edge);
+      for(const point of evidence.sourceContactEvidence){
+        const marker=new Entity('T21Review:Phase12H:'+
+           evidence.originalSourceMinFace+':'+point.kind+':source-face-'+point.originalFaceIndex);
+        marker.addComponent('render',{type:'sphere',
+          material:point.kind==='WALL_METAL'?metalContactMaterial:glassContactMaterial,
+          castShadows:false,receiveShadows:false});
+        // 35mm existing 3D review source Y render correction, plus 8cm
+        // optical separation to prevent z-fighting. Stored evidence XYZ
+        // above is NEVER shifted or misrepresented as gameplay.
+        marker.setPosition(point.originalContactProjectXYZ[0],
+          point.originalContactProjectXYZ[1]-0.035+0.08,
+          point.originalContactProjectXYZ[2]);
+        marker.setLocalScale(0.075,0.075,0.075);
+        group.addChild(marker);
+      }
+    }
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
         this.provisionalRoot,
@@ -618,6 +659,7 @@ export class UndertowVisualReviewApp {
         <span>Phase12 center original family samples</span><b>${UNDERTOW_T21_PHASE12_FAMILY_SUMMARY.sourceFaceSamples} source triangles / ${UNDERTOW_T21_PHASE12_FAMILY_SUMMARY.materialFamilies} materials / 0 new default full components / connectivity UNKNOWN</b>
         <span>Phase12C separately optional complete original components</span><b>${UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY.originalSourceComponentCount} full original pieces / ${UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY.originalTriangleCount} source triangles / ${UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY.source3DAreaSquareMeters.toFixed(2)} m² source area; OFF by default; not floor</b>
         <span>Phase12D recovered original mirror pieces (OFF)</span><b>${UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY.originalFullSourceComponentCount} pieces / ${UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY.originalTriangleCount} triangles / ${UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY.original3DTriangleAreaSquareMeters.toFixed(3)} m² original 3D area; original game connectivity UNKNOWN</b>
+        <span>Phase12H metal/glass source contacts (OFF)</span><b>${UNDERTOW_T21_PHASE12H_CONTACT_SUMMARY.totalOriginalSourceContactsRendered} exact 3D contact points on two original edges; yellow=metal, cyan=glass, purple=edge; NOT collision / floor</b>
          <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -645,6 +687,8 @@ export class UndertowVisualReviewApp {
         <button data-review-recovered-face="61516">Original piece #61516</button>
         <button data-review-recovered-face="61728">Original piece #61728</button>
         <button data-review-recovered-face="62086">Original piece #62086</button>
+        <button data-review-phase12h-contacts="60006">Metal / glass contact −Z</button>
+        <button data-review-phase12h-contacts="61728">Metal / glass contact +Z</button>
         <button id="t21-review-recovered-focus-exit">Exit source close-up</button>
       </div>
       <div class="review-actions layers">
@@ -788,6 +832,13 @@ export class UndertowVisualReviewApp {
         const face=Number(button.dataset.reviewRecoveredFace);
         if(UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES.some(m=>m.originalMinFace===face))
           this.focusRecoveredOriginalFace(face);
+      });
+    });
+    panel.querySelectorAll<HTMLButtonElement>('[data-review-phase12h-contacts]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const face=Number(button.dataset.reviewPhase12hContacts);
+        if(UNDERTOW_T21_PHASE12H_SOURCE_CONTACT_EVIDENCE.some(e=>e.originalSourceMinFace===face))
+          this.focusPhase12HSourceContacts(face);
       });
     });
     panel.querySelector<HTMLButtonElement>('#t21-review-recovered-focus-exit')?.addEventListener('click',()=>{
@@ -968,6 +1019,10 @@ export class UndertowVisualReviewApp {
     this.sourceFamiliesPhase12Root.enabled=false;
     this.completeSourcePhase12CRoot.enabled=false;
     this.recoveredSourcePhase12DRoot.enabled=false;
+    this.phase12HContactRoot.enabled=false;
+    for(const contactGroup of this.phase12HContactRoot.children)contactGroup.enabled=true;
+    this.canvas.dataset.t21ReviewPhase12HContacts='off';
+    this.canvas.dataset.t21ReviewPhase12HPointCount='0';
     for(const piece of this.recoveredSourcePhase12DRoot.children)piece.enabled=true;
     this.canvas.dataset.t21ReviewRecoveredFocus='off';
     this.canvas.dataset.t21ReviewRecoveredFocusPieces='0';
@@ -1025,6 +1080,9 @@ export class UndertowVisualReviewApp {
     this.pitchDegrees=28;
     this.canvas.dataset.t21ReviewRecoveredFocus=side;
     this.canvas.dataset.t21ReviewRecoveredFocusPieces='2';
+    this.phase12HContactRoot.enabled=false;
+    this.canvas.dataset.t21ReviewPhase12HContacts='off';
+    this.canvas.dataset.t21ReviewPhase12HPointCount='0';
     this.canvas.dataset.t21ReviewRecoveredFocusFace='off';
     this.canvas.dataset.t21ReviewRecoveredOriginal='on';
     this.canvas.dataset.t21ReviewSourceFamilies='off';
@@ -1075,6 +1133,26 @@ export class UndertowVisualReviewApp {
     this.updateCamera();
   }
 
+  /** Source optical contacts: two original face-verified material hits on an
+   *  unwelded short edge, never a physical bridge/glass hit or walk proof. */
+  private focusPhase12HSourceContacts(face:number):void{
+    const evidence=UNDERTOW_T21_PHASE12H_SOURCE_CONTACT_EVIDENCE.find(
+      e=>e.originalSourceMinFace===face);
+    if(!evidence||this.phase12HContactRoot.children.length!==2)
+      throw new Error('T21 Phase12H unexpected pinned original contact face');
+    this.focusRecoveredOriginalFace(face);
+    this.phase12HContactRoot.enabled=true;
+    for(let i=0;i<this.phase12HContactRoot.children.length;i++)
+      this.phase12HContactRoot.children[i]!.enabled=
+        UNDERTOW_T21_PHASE12H_SOURCE_CONTACT_EVIDENCE[i]!.originalSourceMinFace===face;
+    this.canvas.dataset.t21ReviewPhase12HContacts=String(face);
+    this.canvas.dataset.t21ReviewPhase12HPointCount='2';
+    this.canvas.dataset.t21ReviewPreset='PHASE12H_SOURCE_CONTACTS_ONLY';
+    const title=this.uiRoot.querySelector<HTMLElement>('#t21-review-active-view');
+    if(title)title.textContent='ORIGINAL CONTACT '+face+' / Metal + Glass';
+    this.updateCamera();
+  }
+
   private bindRootToggle(
     button:HTMLButtonElement|null,root:Entity,label:string
   ):void {
@@ -1083,6 +1161,9 @@ export class UndertowVisualReviewApp {
     this.refreshReviewLayerButtons();
     button.addEventListener('click',()=>{
       root.enabled=!root.enabled;
+      this.phase12HContactRoot.enabled=false;
+      this.canvas.dataset.t21ReviewPhase12HContacts='off';
+      this.canvas.dataset.t21ReviewPhase12HPointCount='0';
       // A manual layer change leaves isolated mode; preserve ordinary default
       // availability without silently changing source coordinates.
       this.canvas.dataset.t21ReviewRecoveredFocus='off';
