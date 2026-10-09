@@ -337,6 +337,36 @@ try {
     manifest.phase12CCompleteOriginalDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
   }
 
+  // Phase12D recovered full original FloorLine mirrors. This is an optional
+  // screenshot; neither the five required views nor gameplay are changed.
+  try{
+    await navigate(urlForView('CENTER_SOURCE')+'&reviewRecoveredOriginal=1');
+    const ready=await poll(async()=>{
+      const status=await evaluation(`(() => ({
+        view:document.querySelector('#app-canvas')?.dataset.t21ReviewView,
+        recovered:document.querySelector('#app-canvas')?.dataset.t21ReviewRecoveredOriginal,
+        sample:document.querySelector('#app-canvas')?.dataset.t21ReviewSourceFamilies,
+        backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+      }))()`);
+      if(status?.view==='CENTER_SOURCE'&&status.recovered==='on'&&
+        status.sample==='off'&&status.backend==='webgl2')return status;
+      throw Error('T21_PHASE12D_RECOVERED_SOURCE_NOT_READY '+JSON.stringify(status));
+    },25000);
+    await sleep(900);
+    const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+    const bytes=Buffer.from(shot.data||'','base64');
+    if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
+      throw Error('T21_PHASE12D_SOURCE_CAPTURE_INVALID');
+    const file='T21_PHASE12D_RECOVERED_ORIGINAL_FOUR_COMPONENTS_DIAGNOSTIC.png';
+    await writeFile(resolve(destination,file),bytes);
+    manifest.phase12DRecoveredSourceDiagnostic={status:'CAPTURED_NOT_GAMEPLAY_PROOF',
+      file,bytes:bytes.byteLength,sha256:createHash('sha256').update(bytes).digest('hex'),
+      recoveredOriginalFullComponents:4,originalSourceTriangles:8,
+      defaultSourceCount:124,newPlayableFloorCount:0,renderer:ready.backend};
+  }catch(error){
+    manifest.phase12DRecoveredSourceDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{

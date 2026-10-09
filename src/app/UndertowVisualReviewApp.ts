@@ -64,6 +64,7 @@ import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE, UNDERTOW_T21_PHASE10_ORIGI
 import { UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES, UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase11NearestSourceDiagnostic';
 import {UNDERTOW_T21_PHASE12_FAMILY_TRIANGLES,UNDERTOW_T21_PHASE12_FAMILY_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12SourceFamilyGeometry';
 import {UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_MESHES,UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12CEligibleFullSourceGeometry';
+import {UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES,UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12DRecoveredSourceGeometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B' | 'CENTER_SOURCE';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
@@ -167,6 +168,7 @@ export class UndertowVisualReviewApp {
   private readonly nearestOriginalPhase11Root = new Entity('T21Review:Phase11ExactNearbyOriginalTriangles');
   private readonly sourceFamiliesPhase12Root = new Entity('T21Review:Phase12OriginalSourceFamilyFaces');
   private readonly completeSourcePhase12CRoot = new Entity('T21Review:Phase12CCompleteOriginalSource');
+  private readonly recoveredSourcePhase12DRoot = new Entity('T21Review:Phase12DRecoveredOriginalSource');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -222,6 +224,13 @@ export class UndertowVisualReviewApp {
       this.sourceFamiliesPhase12Root.enabled=false;
       this.canvas.dataset.t21ReviewSourceFamilies='off';
       this.canvas.dataset.t21ReviewCompleteCentral='on';
+      this.refreshReviewLayerButtons();
+    }
+    if(params.get('reviewRecoveredOriginal')==='1'){
+      this.recoveredSourcePhase12DRoot.enabled=true;
+      this.sourceFamiliesPhase12Root.enabled=false;
+      this.canvas.dataset.t21ReviewSourceFamilies='off';
+      this.canvas.dataset.t21ReviewRecoveredOriginal='on';
       this.refreshReviewLayerButtons();
     }
     if(params.get('reviewTopologyEdges')==='1'){
@@ -326,6 +335,7 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.nearestOriginalPhase11Root);
     this.app.root.addChild(this.sourceFamiliesPhase12Root);
     this.app.root.addChild(this.completeSourcePhase12CRoot);
+    this.app.root.addChild(this.recoveredSourcePhase12DRoot);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -505,6 +515,12 @@ export class UndertowVisualReviewApp {
         this.materials.sourcePhase12GlassEdge;
       createSourceNativeReviewMesh(this.app,this.completeSourcePhase12CRoot,c,mat);
     }
+    // Phase12D: four genuinely mirrored full original source-only pieces.
+    // All 8 source triangles pass pinned OBJ, existing132-mesh and hard-XZ QA.
+    // This separate diagnostic root is OFF in every ordinary preset.
+    for(const c of UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES)
+      createSourceNativeReviewMesh(this.app,this.recoveredSourcePhase12DRoot,
+        c,this.materials.sourcePhase12FloorLine);
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
         this.provisionalRoot,
@@ -592,6 +608,7 @@ export class UndertowVisualReviewApp {
         <span>Phase 11 closest center source, NOT connected geometry</span><b>${UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY.sourceTouchingZeroMeterEdges} edge-to-triangle contact at 0m / ${UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY.source2Point55CentimeterGapEdges} at 0.0255m; 16 source triangles, 0 new original display components</b>
         <span>Phase12 center original family samples</span><b>${UNDERTOW_T21_PHASE12_FAMILY_SUMMARY.sourceFaceSamples} source triangles / ${UNDERTOW_T21_PHASE12_FAMILY_SUMMARY.materialFamilies} materials / 0 new default full components / connectivity UNKNOWN</b>
         <span>Phase12C separately optional complete original components</span><b>${UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY.originalSourceComponentCount} full original pieces / ${UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY.originalTriangleCount} source triangles / ${UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_SUMMARY.source3DAreaSquareMeters.toFixed(2)} m² source area; OFF by default; not floor</b>
+        <span>Phase12D recovered original mirror pieces (OFF)</span><b>${UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY.originalFullSourceComponentCount} pieces / ${UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY.originalTriangleCount} triangles / ${UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_SUMMARY.original3DTriangleAreaSquareMeters.toFixed(3)} m² original 3D area; original game connectivity UNKNOWN</b>
          <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -637,6 +654,7 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-nearest-phase11-toggle">Phase11 nearest source triangles OFF</button>
         <button id="t21-review-source-families-phase12-toggle">Phase12 source family faces OFF</button>
         <button id="t21-review-complete-phase12c-toggle">Phase12C complete original source OFF</button>
+        <button id="t21-review-recovered-phase12d-toggle">Phase12D recovered original pair OFF</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -854,6 +872,11 @@ export class UndertowVisualReviewApp {
       'Complete original source'
     );
     this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-recovered-phase12d-toggle'),
+      this.recoveredSourcePhase12DRoot,
+      'Recovered original pair'
+    );
+    this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
       this.provisionalRoot,
       'Provisional'
@@ -909,6 +932,8 @@ export class UndertowVisualReviewApp {
     this.nearestOriginalPhase11Root.enabled=false;
     this.sourceFamiliesPhase12Root.enabled=false;
     this.completeSourcePhase12CRoot.enabled=false;
+    this.recoveredSourcePhase12DRoot.enabled=false;
+    this.canvas.dataset.t21ReviewRecoveredOriginal='off';
     this.canvas.dataset.t21ReviewCompleteCentral='off';
     this.canvas.dataset.t21ReviewSourceFamilies='off';
     this.canvas.dataset.t21ReviewTopology='off';
@@ -933,10 +958,14 @@ export class UndertowVisualReviewApp {
     button.addEventListener('click',()=>{
       root.enabled=!root.enabled;
       // Prevent duplicate Phase12 original single faces and Phase12C full faces.
-      if(root===this.completeSourcePhase12CRoot&&root.enabled)
+      if((root===this.completeSourcePhase12CRoot||root===this.recoveredSourcePhase12DRoot)&&root.enabled)
         this.sourceFamiliesPhase12Root.enabled=false;
-      if(root===this.sourceFamiliesPhase12Root&&root.enabled)
+      if(root===this.sourceFamiliesPhase12Root&&root.enabled){
         this.completeSourcePhase12CRoot.enabled=false;
+        this.recoveredSourcePhase12DRoot.enabled=false;
+      }
+      this.canvas.dataset.t21ReviewRecoveredOriginal=
+        this.recoveredSourcePhase12DRoot.enabled?'on':'off';
       this.canvas.dataset.t21ReviewCompleteCentral=
         this.completeSourcePhase12CRoot.enabled?'on':'off';
       this.canvas.dataset.t21ReviewTopology=

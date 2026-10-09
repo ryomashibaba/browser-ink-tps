@@ -417,6 +417,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12D 8 original Float64 faces opt-in source QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12D_RECOVERED_JSON: /tmp/t21-phase12d-four-full-original-source-pairs.json
+          T21_PHASE12D_RECOVERED_GATE_REPORT: /tmp/t21-phase12d-four-original-source-gate.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12DRecoveredVisualQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
