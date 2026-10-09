@@ -524,6 +524,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12I 132 exact original pillar triangles source and render governance QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12I_SOURCE_JSON: /tmp/t21-phase12i-broad-structure-survey.json
+          T21_PHASE12I_GATE_REPORT: /tmp/t21-phase12i-broad-source-eligibility-gate.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12IOriginalPillarRenderQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 

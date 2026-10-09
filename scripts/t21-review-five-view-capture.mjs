@@ -492,6 +492,49 @@ try {
     }
   }
 
+  // Phase12I six pinned original PillarOld00 pieces: 6 together & 3 mirror
+  // pairs. All are optional optical evidence, NEVER standard five-view PASS.
+  manifest.phase12IOriginalPillarDiagnostics=[];
+  for(const choice of ['ALL','12934','12956','13176']){
+    try{
+      await navigate(urlForView('CENTER_SOURCE')+'&reviewBroadPillars='+choice);
+      const state=await poll(async()=>{
+        const x=await evaluation(`(() => ({
+          choice:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12IPillars,
+          count:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12ICount,
+          preset:document.querySelector('#app-canvas')?.dataset.t21ReviewPreset,
+          backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+        }))()`);
+        if(x?.choice===choice&&x.count===(choice==='ALL'?'6':'2')&&
+          x.preset==='PHASE12I_PINNED_ORIGINAL_PILLARS_ONLY'&&x.backend==='webgl2')return x;
+        throw Error('T21_PHASE12I_PINNED_SOURCE_CAPTURE_NOT_READY '+JSON.stringify(x));
+      },25000);
+      await evaluation(`(() => {const p=document.querySelector('#t21-review-panel');if(p)p.style.display='none';return true;})()`);
+      await sleep(850);
+      const shot=await command('Page.captureScreenshot',{format:'png',
+        captureBeyondViewport:false,fromSurface:true},25000);
+      const bytes=Buffer.from(shot.data||'','base64');
+      const png=bytes.length>33&&bytes.subarray(0,8).equals(
+        Buffer.from([137,80,78,71,13,10,26,10]));
+      const width=png?bytes.readUInt32BE(16):0,height=png?bytes.readUInt32BE(20):0;
+      if(!png||width!==1600||height!==900)throw Error('T21_PHASE12I_ORIGINAL_PILLAR_PNG_INVALID');
+      const file='T21_PHASE12I_ORIGINAL_PILLARS_'+choice+'.png';
+      await writeFile(resolve(destination,file),bytes);
+      manifest.phase12IOriginalPillarDiagnostics.push({
+        status:'CAPTURED_NOT_GAMEPLAY_PROOF',sourceOriginalSelection:choice,
+        sourceOriginalFullComponents:choice==='ALL'?6:2,
+        originalSourceTriangles:choice==='ALL'?132:44,
+        originalSHA256:'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046',
+        noAddedPlayableFloor:true,noRegisteredDefaultSourceMeshes:true,
+        file,sha256:createHash('sha256').update(bytes).digest('hex'),
+        width,height,bytes:bytes.byteLength,authorizesVisualFreeze:false
+      });
+    }catch(error){
+      manifest.phase12IOriginalPillarDiagnostics.push({
+        status:'BLOCKED',sourceOriginalSelection:choice,reason:diagnostic(error)});
+    }
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{
