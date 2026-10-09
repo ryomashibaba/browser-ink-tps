@@ -65,7 +65,7 @@ async function decode():Promise<readonly UndertowPhase11NearestSourceTriangle[]>
       id:'t21-phase11-original-nearest-source-triangle-'+String(i+1).padStart(2,'0'),
       sourceUnderfaceId:source.sourceComponentId,
       sourceUnderfaceEdgeIndex:i%8,
-      originalCandidateMaterial:MATERIALS[MATERIAL_ID[i]]!,
+      originalCandidateMaterial:MATERIALS[MATERIAL_ID[i] ?? 0]!,
       originalCandidateFaceIndex:ORIGINAL_FACE_INDEX[i]!,
       originalNormalClass:(i%8>=3&&i%8<=6?'ORIGINAL_DOWN_FACING':'ORIGINAL_NEAR_VERTICAL') as 'ORIGINAL_NEAR_VERTICAL'|'ORIGINAL_DOWN_FACING',
       exactOriginal3DGapMeters:gap,vertices,
