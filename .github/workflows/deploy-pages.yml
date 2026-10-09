@@ -210,6 +210,12 @@ jobs:
           T21_HIGH_PHASE6_SOURCE_JSON: /tmp/t21-high-structure-source-phase6.json
         run: npx vitest run scripts/UndertowSpillwayHighSourcePhase6Qa.test.ts
 
+      - name: T21 Phase7 exact original side-support and glass-frame XYZ QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE7_SOURCE_JSON: /tmp/t21-structural-frame-phase7-source.json
+        run: npx vitest run scripts/UndertowSpillwayPhase7FramedSourceQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 

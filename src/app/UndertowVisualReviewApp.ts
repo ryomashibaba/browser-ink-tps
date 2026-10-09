@@ -57,6 +57,7 @@ import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES, UNDERTOW_T21_BROAD_STATIC_SOUR
 import { UNDERTOW_T21_FLANK_ELEVATION_PHASE4_MESHES, UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY } from '../stage/undertow/UndertowSpillwayFlankElevationPhase4Geometry';
 import { UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES, UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY } from '../stage/undertow/UndertowSpillwayVerticalSourcePhase5BGeometry';
 import { UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES, UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY } from '../stage/undertow/UndertowSpillwayHighSourcePhase6Geometry';
+import { UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES, UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase7FramedSourceGeometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
@@ -73,6 +74,8 @@ interface ReviewMaterials {
   sourceVerticalMetal: StandardMaterial;
   sourceVerticalPillar: StandardMaterial;
   sourceHighStructure: StandardMaterial;
+  sourcePhase7SideSupports: StandardMaterial;
+  sourcePhase7GlassFrame: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -131,6 +134,8 @@ export class UndertowVisualReviewApp {
   private readonly flankElevationPhase4Root = new Entity('T21Review:FlankElevationPhase4');
   private readonly verticalSourcePhase5BRoot = new Entity('T21Review:VerticalSourcePhase5B');
   private readonly highSourcePhase6Root = new Entity('T21Review:HighStructurePhase6');
+  private readonly sideSupportsPhase7Root = new Entity('T21Review:SideSupportsPhase7');
+  private readonly glassFramesPhase7Root = new Entity('T21Review:MidGlassFramesPhase7');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -253,6 +258,8 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.flankElevationPhase4Root);
     this.app.root.addChild(this.verticalSourcePhase5BRoot);
     this.app.root.addChild(this.highSourcePhase6Root);
+    this.app.root.addChild(this.sideSupportsPhase7Root);
+    this.app.root.addChild(this.glassFramesPhase7Root);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -347,6 +354,17 @@ export class UndertowVisualReviewApp {
         sourceMesh, this.materials.sourceHighStructure);
     }
 
+    // Only ORIGINAL Temple01 source near-vertical triangle faces. The
+    // continuous three-tier side supports and four-layer glass frames are
+    // display evidence, NOT verified closed collision solids or glass rules.
+    for(const sourceMesh of UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES){
+      const side=sourceMesh.kind==='SIDE_SUPPORT';
+      createSourceNativeReviewMesh(this.app,
+        side?this.sideSupportsPhase7Root:this.glassFramesPhase7Root,
+        sourceMesh,
+        side?this.materials.sourcePhase7SideSupports:this.materials.sourcePhase7GlassFrame);
+    }
+
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
         this.provisionalRoot,
@@ -415,7 +433,7 @@ export class UndertowVisualReviewApp {
         <summary>Color legend & evidence limits</summary>
         <p>Cyan is reviewed/confirmed broad geometry; orange is Temple01 original source XYZ/Y with gameplay authority pending. Dark amber is the whole-stage XZ occupancy outline, not a floor. Light orange includes locally audited source and PntSet actor placement still unresolved. Yellow is provisional XZ-only macro coverage; red flags unresolved details. Black exterior remains omitted. Source face colors do not indicate in-game collision, painting, ceiling or traversal.</p>
       </details>
-      <details class="review-metrics"><summary>Metrics — 18 regions · 78 original-source display meshes</summary>
+      <details class="review-metrics"><summary>Metrics — 18 regions · 98 original-source display meshes</summary>
       <div class="review-stats macro">
         <span>Macro regions</span><b>${UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount}</b>
         <span>Stage occupancy envelope</span><b>42-vertex XZ / NOT FLOOR</b>
@@ -427,6 +445,7 @@ export class UndertowVisualReviewApp {
         <span>Phase 4 flank / high-ramp source</span><b>${UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY.meshCount} / ${UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² (unmodified 3D source triangles)</b>
         <span>Phase 5B vertical source (non-floor)</span><b>${UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY.meshCount} / ${UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² (exact original wall/glass/pillar facing triangle area)</b>
         <span>Phase 6 high source panels (NOT game roof)</span><b>${UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY.registeredOriginalMeshes} displayed / ${UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY.originalSourceCandidatePairs} audited high pairs; ${UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² original 3D triangles</b>
+        <span>Phase 7 vertical source support + glass frames (NOT floor)</span><b>${UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY.sourceMeshCount} faces / ${UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² original 3D triangles</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -458,6 +477,8 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-flank-phase4-toggle">Flanks / high ramps ON</button>
         <button id="t21-review-vertical-phase5b-toggle">Vertical source faces ON</button>
         <button id="t21-review-high-phase6-toggle">High source panels ON</button>
+        <button id="t21-review-side-supports-phase7-toggle">Source side supports ON</button>
+        <button id="t21-review-glass-frames-phase7-toggle">Source glass frames ON</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -610,6 +631,16 @@ export class UndertowVisualReviewApp {
       'High source panels'
     );
     this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-side-supports-phase7-toggle'),
+      this.sideSupportsPhase7Root,
+      'Source side supports'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-glass-frames-phase7-toggle'),
+      this.glassFramesPhase7Root,
+      'Source glass frames'
+    );
+    this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
       this.provisionalRoot,
       'Provisional'
@@ -649,6 +680,8 @@ export class UndertowVisualReviewApp {
       this.broadStaticRoot,this.flankElevationPhase4Root])root.enabled=true;
     this.verticalSourcePhase5BRoot.enabled=vertical;
     this.highSourcePhase6Root.enabled=vertical;
+    this.sideSupportsPhase7Root.enabled=vertical;
+    this.glassFramesPhase7Root.enabled=vertical;
     this.provisionalRoot.enabled=full;
     this.unresolvedRoot.enabled=full;
     this.navRoot.enabled=full;
@@ -841,6 +874,8 @@ function createReviewMaterials(): ReviewMaterials {
     sourceVerticalMetal: makeVerticalSourceMaterial(new Color(0.55, 0.67, 0.79), 0.27, false),
     sourceVerticalPillar: makeVerticalSourceMaterial(new Color(0.79, 0.51, 0.91), 0.27, false),
     sourceHighStructure: makeVerticalSourceMaterial(new Color(0.86, 0.76, 0.50), 0.24, true),
+    sourcePhase7SideSupports: makeVerticalSourceMaterial(new Color(0.48, 0.87, 0.68), 0.33, false),
+    sourcePhase7GlassFrame: makeVerticalSourceMaterial(new Color(0.52, 0.79, 0.99), 0.34, true),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),

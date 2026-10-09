@@ -1,5 +1,6 @@
 import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
 import { UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES, UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY, undertowT21HighSourcePhase6Errors } from './UndertowSpillwayHighSourcePhase6Geometry';
+import { UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES, UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY, undertowT21Phase7FramedSourceErrors } from './UndertowSpillwayPhase7FramedSourceGeometry';
 import { UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES, UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY, undertowT21VerticalSourcePhase5BErrors } from './UndertowSpillwayVerticalSourcePhase5BGeometry';
 import { UNDERTOW_T21_FLANK_ELEVATION_PHASE4_MESHES, UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY, undertowT21FlankElevationPhase4Errors } from './UndertowSpillwayFlankElevationPhase4Geometry';
 import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES, UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY, undertowT21BroadStaticSourceErrors } from './UndertowSpillwayBroadStaticSourceGeometry';
@@ -37,6 +38,8 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   macroUnresolvedOutlineCount: UNDERTOW_T21_MACRO_COVERAGE.unresolvedOutlines.length,
   sourceNativeReviewMeshCount: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES.length,
   sourceNativeReviewAreaSquareMeters: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.totalSourceAreaSquareMeters,
+  phase7FramedSourceCount: UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES.length,
+  phase7FramedOriginalVertices: UNDERTOW_T21_PHASE7_FRAMED_SOURCE_SUMMARY.sourceVertexCount,
   highSourcePhase6Count: UNDERTOW_T21_HIGH_SOURCE_PHASE6_MESHES.length,
   highSourcePhase6CandidatePairs: UNDERTOW_T21_HIGH_SOURCE_PHASE6_SUMMARY.originalSourceCandidatePairs,
   verticalSourcePhase5BCount: UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES.length,
@@ -54,7 +57,7 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   deferredFeatureIds: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds] as const,
   activationBlockers: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers] as const,
   notes:
-    'Visual Review v2 combines reviewed T21-D geometry, the whole-stage occupancy underlay, provisional macro envelopes, and 64 original walk-facing source meshes + 12 near-vertical glass/metal/pillar + 2 high original source panels (78 distinct review meshes). High faces do not authorize playable roofs, floor, or collision.. Source-native mesh shape/Y is exact source data, but Pass18G route membership remains diagnostic and no runtime authority is implied.'
+    'Visual Review v2 combines reviewed T21-D geometry, the whole-stage occupancy underlay, provisional macro envelopes, and 64 original walk-facing source meshes + 12 near-vertical glass/metal/pillar + 2 high original source panels (98 distinct review meshes). High faces do not authorize playable roofs, floor, or collision.. Source-native mesh shape/Y is exact source data, but Pass18G route membership remains diagnostic and no runtime authority is implied.'
 });
 
 export function undertowT21VisualReviewErrors(): readonly string[] {
@@ -67,7 +70,8 @@ export function undertowT21VisualReviewErrors(): readonly string[] {
     ...undertowT21BroadStaticSourceErrors(),
     ...undertowT21FlankElevationPhase4Errors(),
     ...undertowT21VerticalSourcePhase5BErrors(),
-    ...undertowT21HighSourcePhase6Errors()
+    ...undertowT21HighSourcePhase6Errors(),
+    ...undertowT21Phase7FramedSourceErrors()
   ];
   if (!UNDERTOW_T21_VISUAL_REVIEW.reviewOnly) {
     errors.push('T21 visual review must remain review-only');
@@ -86,6 +90,9 @@ export function undertowT21VisualReviewErrors(): readonly string[] {
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.sourceNativeSupplementCount !== 10) {
     errors.push('T21 visual review supplement must retain five paired source components');
+  }
+  if (UNDERTOW_T21_VISUAL_REVIEW.phase7FramedSourceCount !== 20) {
+    errors.push('T21 Phase7 must preserve 12 side supports and 8 glass-frame original source faces');
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.highSourcePhase6Count !== 2) {
     errors.push('T21 high Phase6 review must retain one original mirrored upper source pair');
