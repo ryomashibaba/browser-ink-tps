@@ -1426,3 +1426,107 @@ print(
 )
 print("T21UPPER AUTHORITY diagnostic_only=true runtime_promotion_authorized=false")
 
+
+
+# T21 Coverage v3.1 WHOLE-STAGE SOURCE DISCOVERY, not runtime / stage-authority.
+# Unlike Pass18G's locally cropped source routes, continuation_components already
+# enumerates ALL active Temple01 walk-token source components in this original OBJ.
+# Keep its exclusions (FloorLine/FloorFence overlays) and walk-orientation filter.
+# The full report supplies independent macro-topology evidence for zone work.
+import re as _t21_re
+_t21_vector_source=Path("src/stage/undertow/UndertowSpillwayVectorBlueprint.ts").read_text(encoding="utf-8")
+_t21_outer_part=_t21_vector_source.split("commonPlayableOuterBoundary: vectorTrace(",1)[1].split("'HARD_EDGE'",1)[0]
+_t21_outer_pdf=[
+    (float(ax),float(az)) for ax,az in _t21_re.findall(
+      r"\\[\\s*(-?\\d+(?:\\.\\d+)?)\\s*,\\s*(-?\\d+(?:\\.\\d+)?)\\s*\\]",_t21_outer_part)
+]
+if len(_t21_outer_pdf)!=42:
+    raise SystemExit(f"T21FULL_SOURCE expected 42 frozen boundary points; found {len(_t21_outer_pdf)}")
+_t21_outer_project=[pdf_to_project(x) for x in _t21_outer_pdf]
+def _t21_hard_inside(p):
+    x,z=p; inside=False
+    for i in range(len(_t21_outer_project)):
+        a=_t21_outer_project[i-1];b=_t21_outer_project[i]
+        cross=(x-a[0])*(b[1]-a[1])-(z-a[1])*(b[0]-a[0])
+        dot=(x-a[0])*(x-b[0])+(z-a[1])*(z-b[1])
+        if abs(cross)<=1e-8 and dot<=1e-8:return True
+        if (a[1]>z)!=(b[1]>z) and x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0]:
+            inside=not inside
+    return inside
+def _t21_source_zone(cx,cz):
+    if abs(cz)<=15:return "CENTER"
+    if cx<=-14:return "LEFT_SIDE"
+    if cx>=14:return "RIGHT_SIDE"
+    return "POS" if cz>0 else "NEG"
+_t21_global_rows=[]
+for _t21_component in continuation_components:
+    _t21_bbox=_t21_component["bbox"]
+    _t21_cx=(_t21_bbox[0]+_t21_bbox[3])/2
+    _t21_cz=(_t21_bbox[2]+_t21_bbox[5])/2
+    _t21_inside=0;_t21_outside=0
+    for _t21_fi in _t21_component["faces"]:
+        _t21_tri=[project_point3(v) for v in tri_points(faces[_t21_fi])]
+        _t21_a,_t21_b,_t21_c=_t21_tri
+        _t21_samples=[
+            (_t21_a[0],_t21_a[2]),(_t21_b[0],_t21_b[2]),(_t21_c[0],_t21_c[2]),
+            ((_t21_a[0]+_t21_b[0])/2,(_t21_a[2]+_t21_b[2])/2),
+            ((_t21_a[0]+_t21_c[0])/2,(_t21_a[2]+_t21_c[2])/2),
+            ((_t21_b[0]+_t21_c[0])/2,(_t21_b[2]+_t21_c[2])/2),
+            ((_t21_a[0]+_t21_b[0]+_t21_c[0])/3,(_t21_a[2]+_t21_b[2]+_t21_c[2])/3)
+        ]
+        for _t21_sample in _t21_samples:
+            if _t21_hard_inside(_t21_sample):_t21_inside+=1
+            else:_t21_outside+=1
+    _t21_global_rows.append({
+        "sourceComponentId":_t21_component["id"],
+        "sourceObject":_t21_component["sourceObject"],
+        "sourceMaterial":_t21_component["sourceMaterial"],
+        "sourceAreaSquareMeters":_t21_component["areaSquareMeters"],
+        "triangleCount":_t21_component["triangleCount"],
+        "bboxProjectXYZ":list(_t21_bbox),
+        "yRangeProjectMeters":[_t21_bbox[1],_t21_bbox[4]],
+        "bboxCentroidXZ":[_t21_cx,_t21_cz],
+        "planZoneDiagnostic":_t21_source_zone(_t21_cx,_t21_cz),
+        "withinFrozenBoundarySampleCount":_t21_inside,
+        "outsideFrozenBoundarySampleCount":_t21_outside,
+        "boundarySampleDisposition":"ALL_7_PER_TRIANGLE_INSIDE" if _t21_outside==0 else "REQUIRES_BOUNDARY_RECONCILIATION",
+        "placementAuthority":"SET_ACTOR_PLACEMENT_UNRESOLVED" if _t21_component["sourceObject"].startswith("FldObj_") else "STATIC_SOURCE_IDENTITY_ONLY",
+        "runtimePromotionAuthorized":False,
+    })
+_t21_global_rows.sort(key=lambda item:(-item["sourceAreaSquareMeters"],item["sourceComponentId"]))
+_t21_zone_stats={}
+for _t21_zone in ("CENTER","POS","NEG","LEFT_SIDE","RIGHT_SIDE"):
+    _t21_part=[row for row in _t21_global_rows if row["planZoneDiagnostic"]==_t21_zone]
+    _t21_zone_stats[_t21_zone]={
+        "componentCount":len(_t21_part),
+        "summedSourceTriangleAreaSquareMeters":sum(v["sourceAreaSquareMeters"] for v in _t21_part),
+        "allSamplesInsideCount":sum(v["outsideFrozenBoundarySampleCount"]==0 for v in _t21_part),
+        "boundaryConflictCount":sum(v["outsideFrozenBoundarySampleCount"]>0 for v in _t21_part),
+    }
+_t21_full={
+    "version":"T21_WHOLE_STAGE_WALK_SOURCE_INVENTORY_V1",
+    "sourceAuditVersion":audit_output["version"],
+    "sourceGeometry":"PINNED_KITRIX_VSS_TEMPLE01_OBJ",
+    "sourceScope":"ALL_ACTIVE_TEMPLE01_UPWARD_WALK_TOKEN_COMPONENTS_NOT_ALL_MATERIALS",
+    "sourceWalkTokens":list(WALK_TOKENS),
+    "sourceOverlayExcludedTokens":list(PASS18G_CONTINUATION_EXCLUDED_TOKENS),
+    "sourceOrientationMaxSlopeDegrees":MAX_SLOPE_DEG,
+    "frozenHardSilhouetteVertices":len(_t21_outer_project),
+    "boundaryAuthority":"7_XZ_SAMPLES_PER_SOURCE_TRIANGLE_NOT_EXACT_POLYGON_CLIPPING",
+    "planZoneAuthority":"DIAGNOSTIC_BINS_NOT_GAMEPLAY_ROUTE_BORDERS",
+    "stagePlacementAuthority":"UNVERIFIED_FOR_SET_ACTORS",
+    "reviewOnly":True,"runtimePromotionAuthorized":False,
+    "sourceComponentsTotal":len(_t21_global_rows),
+    "zoneStats":_t21_zone_stats,
+    "components":_t21_global_rows,
+}
+_t21_global_output=Path("/tmp/t21-whole-stage-source-inventory.json")
+_t21_global_output.write_text(json.dumps(_t21_full,separators=(",",":")),encoding="utf-8")
+print(
+    "T21_WHOLE_STAGE_SOURCE",
+    f"components={len(_t21_global_rows)}",
+    f"source_area_sum={sum(v['sourceAreaSquareMeters'] for v in _t21_global_rows):.2f}",
+    f"inside_sampled={sum(v['outsideFrozenBoundarySampleCount']==0 for v in _t21_global_rows)}",
+    f"boundary_pending={sum(v['outsideFrozenBoundarySampleCount']>0 for v in _t21_global_rows)}",
+    f"output={_t21_global_output}",
+)
