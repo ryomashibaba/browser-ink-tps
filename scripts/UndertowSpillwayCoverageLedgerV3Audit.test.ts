@@ -7,6 +7,7 @@ import {
 } from '../src/stage/undertow/UndertowSpillwayCoverageLedgerV3';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY } from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
 import { UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES, undertowT21SourceNativePhase1Errors } from '../src/stage/undertow/UndertowSpillwaySourceNativePhase1Geometry';
+import { UNDERTOW_T21_SOURCE_BATCH2_MESHES, undertowT21SourceBatch2Errors } from '../src/stage/undertow/UndertowSpillwaySourceBatch2Geometry';
 import { UNDERTOW_T21_MACRO_OUTER_BOUNDARY } from '../src/stage/undertow/UndertowSpillwayMacroCoverage';
 
 type P3 = readonly [number, number, number];
@@ -70,10 +71,12 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       gridSampleAuthority:'XZ_CELL_CENTER_APPROXIMATION',
       occupancyAuthority:'XZ_OCCUPANCY_ONLY_NOT_FLOOR',
       provisionalEnvelopesExcluded:2});
-    expect(audit.sourceInventory).toHaveLength(34);
+    expect(audit.sourceInventory).toHaveLength(48);
     expect(undertowT21SourceNativePhase1Errors()).toEqual([]);
     expect(UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES).toHaveLength(8);
-    expect(new Set(audit.sourceInventory.map(v=>v.sourceComponentId)).size).toBe(34);
+    expect(UNDERTOW_T21_SOURCE_BATCH2_MESHES).toHaveLength(14);
+    expect(undertowT21SourceBatch2Errors()).toEqual([]);
+    expect(new Set(audit.sourceInventory.map(v=>v.sourceComponentId)).size).toBe(48);
     expect(audit.zones).toHaveLength(5);
     expect(audit.stageCells).toBeGreaterThan(0);
     expect(audit.zones.reduce((n,z)=>n+z.cells,0)).toBe(audit.stageCells);
@@ -132,6 +135,19 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       expect(mesh.areaSquareMeters).toBeCloseTo(original!.component.areaSquareMeters,9);
       expect(mesh.yRange).toEqual(original!.component.yRange);
       expect(mesh.vertices).toEqual(original!.component.mesh.vertices);
+    }
+    // Every batch2 float64 vertex, material and Y range must match the
+    // independently generated original-source Pass18C payload exactly.
+    for(const mesh of UNDERTOW_T21_SOURCE_BATCH2_MESHES) {
+      const original=discovered.get(mesh.sourceComponentId);
+      expect(original, 'batch2 source missing '+mesh.sourceComponentId).toBeDefined();
+      expect(mesh.sourceMaterial).toBe(original!.component.sourceMaterial);
+      expect(mesh.areaSquareMeters).toBeCloseTo(original!.component.areaSquareMeters,9);
+      expect(mesh.yRange).toEqual(original!.component.yRange);
+      expect(mesh.vertices).toEqual(original!.component.mesh.vertices);
+      const sourceCentroidZ=original!.component.mesh.vertices
+        .reduce((n,p)=>n+p[2],0)/original!.component.mesh.vertices.length;
+      expect(mesh.side).toBe(sourceCentroidZ>=0?'POSITIVE_Z':'NEGATIVE_Z');
     }
     // Phase 3 hold applies to BOTH sides of each paired FloorConcrete02
     // inconsistency, even if an individual side happens to be fully inside
@@ -195,7 +211,7 @@ describe('T21 Phase 0 Coverage Ledger v3 / source-only audit',()=>{
       deferredOutside:deferred.length,deferredPairedBoundary:deferredPairedBoundary.length,top:accepted.slice(0,18),
       deferred:deferred.slice(0,8),output:dest
     }));
-    expect(shownIds.size).toBe(34);
+    expect(shownIds.size).toBe(48);
     expect(deferredPairedBoundary.map(x=>(x as {id:string}).id).sort()).toEqual([...boundaryPairHold].sort());
     expect(accepted.every(row=>(row as {runtimePromotionAuthorized:boolean}).runtimePromotionAuthorized===false)).toBe(true);
   },60_000);
