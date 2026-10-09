@@ -184,8 +184,9 @@ try {
   await command('Emulation.setDeviceMetricsOverride',{
     width:1600,height:900,deviceScaleFactor:1,mobile:false
   });
-  const urlForView=view=>url+'&reviewPreset=THREE_DIMENSIONAL&reviewView='+view;
+  const urlForView=view=>url+'&reviewPreset=THREE_DIMENSIONAL&reviewView='+view+'&reviewRenderer=webgl2';
   manifest.layerPreset='THREE_DIMENSIONAL';
+  manifest.requestedReviewBackend='webgl2';
   manifest.cameraSelection='URL_BOOTSTRAP_NO_BLOCKING_RUNTIME_CLICK';
   const hashSet=new Set();
   for(const view of views){
@@ -207,6 +208,7 @@ try {
       if(state?.error)throw Error('T21_REVIEW_BOOT_ERROR: '+state.error.slice(0,1200));
       if(state?.loaded&&state.panel&&state.reviewView===view&&
          state.reviewPreset==='THREE_DIMENSIONAL'&&
+         state.reviewBackend==='webgl2'&&
          state.canvasWidth>=800&&state.canvasHeight>=450)return state;
       throw Error('T21_REVIEW_NOT_READY: '+JSON.stringify(state).slice(0,1000));
     },35_000);

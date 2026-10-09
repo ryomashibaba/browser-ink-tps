@@ -86,10 +86,14 @@ export class UndertowVisualReviewApp {
     canvas: HTMLCanvasElement,
     uiRoot: HTMLElement
   ): Promise<UndertowVisualReviewApp> {
+    // Chrome headless WebGPU may boot successfully yet stall CDP screenshots on
+    // software drivers. Explicit reviewRenderer=webgl2 is isolated to this
+    // REVIEW app, with no production runtime/device changes.
+    const explicitWebGL2=new URL(window.location.href).searchParams.get('reviewRenderer')==='webgl2';
     const device = await createGraphicsDevice(canvas, {
-      // Review-only browser QA can use WebGL2 when headless WebGPU is not available.
-      // This does NOT change game runtime rendering or stage authority.
-      deviceTypes: [DEVICETYPE_WEBGPU, DEVICETYPE_WEBGL2],
+      deviceTypes: explicitWebGL2
+        ? [DEVICETYPE_WEBGL2]
+        : [DEVICETYPE_WEBGPU, DEVICETYPE_WEBGL2],
       antialias: true,
       depth: true,
       stencil: false,
