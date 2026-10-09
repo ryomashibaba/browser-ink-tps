@@ -541,7 +541,7 @@ export class UndertowVisualReviewApp {
         <button data-review-preset="THREE_DIMENSIONAL">Floors + 3D structure</button>
         <button data-review-preset="ALL_EVIDENCE">All evidence layers</button>
       </div>
-      <p class="review-detail-note">Display presets only — no StageDefinition, game collision, paint, navigation or activation changes.</p>
+      <p class="review-detail-note">Phase10 source-edge diagnostic: <b>orange = 30 same-XYZ / different OBJ IDs</b>, <b>red = 18 no exact edge match</b>, welded source edges = 0. Diagnostic lines are NOT walkable routes or game colliders.</p>
       <div class="review-actions views">
         <button data-review-view="OVERVIEW">Overview</button>
         <button data-review-view="TOP">Top</button>
