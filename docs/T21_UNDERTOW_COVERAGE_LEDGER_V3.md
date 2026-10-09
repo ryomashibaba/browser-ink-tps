@@ -1,3 +1,21 @@
+# T21 Phase 9 — down-facing original source evidence and exact underside review (2026-10-09)
+
+## Source-defined downward surfaces
+- Previous baseline: 114 exact original review-source components = 64 walk-facing + 12 Phase5B vertical + 2 Phase6 high + 20 Phase7 supports/glass + 16 Phase8 central/flank/edge. This baseline and the 42-point outer hard silhouette are unchanged. T20 production remains `inkworks-junction`; T21 `activationReady=false`, PR #5 Draft/open and unmerged.
+- Phase9 introduces a new independently audited original source class: **triangles with original OBJ normal Y ≤ −0.65**, grouped by original OBJ-vertex connected components within each original object/material. Conservative source selection: `Fld_Temple01_` static objects only, exclude StageSide and PntSet, original Y within [−4,30]m, source original 3D area ≥ 2m²; screen each triangle against the frozen hard XZ envelope using 7 samples, not full polygon proof. Source faces remain unchanged.
+- The inventory yields **166 total orientation components**, of which `outsideHardBoundarySamples===0` candidates are considered for source-only review, not runtime solids. Artifact `t21-undertow-phase9-original-downward-source` stores the full inventory, each XYZ bounds, materials, source face index, orientation class and 7-sample disposition.
+- Selected **5 original 180° mirrored pairs / 10 original static source-face components / 84 binary64 XYZ vertices**, with **218.175240766424m² summed original 3D triangle area**: (a) **2 central FloorMetal00 down-facing components** at exact Y 4.5255m (67.741m² each); (b) **4 flank FloorFence00 down-facing components** at source Y 5.8m (12.8213m² each); (c) **2 flank Megalith00 source faces** at Y 2.5m (8.17465m² each) plus **2 inner Megalith00 faces** at Y 1.0m (7.52929m² each).
+- All 10 selected source face components preserve original triangle winding and binary64 source XYZ exactly; original 180° reflected coordinates match to ~1e−14m without fabricated symmetry. Subsystem `UndertowSpillwayPhase9DownfaceSourceGeometry.ts` embeds lossless deterministic gzip of original 2,036 bytes (10 per-mesh little-endian vertex counts and original vertex XYZ triples) and labels everything as **SOURCE-ORIENTATION-ONLY**.
+- Independent CI fixture `t21-undertow-phase9-exact-source-underfaces` records all 84 original XYZ triples and material/area/Y. `scripts/UndertowSpillwayPhase9DownfaceQa.test.ts` requires byte-exact equality with independently audited pinned KiTrix OBJ, 124 unique original-source review identities, 64 unchanged floor-source meshes, immutable production T20 and disabled runtime T21.
+- Three **isolated review-only toggle layers**: `Center downfaces` (subtle cyan), `Flank fence downfaces` (pale lime), `Megalith downfaces` (sand gold). Included in `Floors + 3D structure` and `All evidence`; omitted from `Walk-source only`. All are optical inspection overlays with **no gameplay collision, ceiling, paint, route, ladder, scoring, navigation, kill-plane, actor placement or floor authority**.
+
+## Authority and what remains
+- Displayed original face cohorts become **124 total** = 64 + 12 + 2 + 20 + 16 + 10. The only original walk-source floor-XZ ledger is still the original 64 face-source cohort; original missing/undisplayed XZ surface metrics DO NOT change when downward faces are shown and DO NOT prove missing walkable platforms.
+- Original OBJ face normal downward is evidence of a geometric facing direction, **not** proof that that surface exists or collides as a playable in-game underside, nor proof of the vertical connection between upper and lower floors. No provisional closed solid, unsupported vertical ramps or filled XZ holes are generated.
+- Next review gates: test source exactness and all TypeScript/Vitest/Pass18 suites, capture original camera five views on actual WebGL2 renderer, compare against prior Phase8 five views, pay special attention to central metal panels potentially visually occluding original floors. Visual Freeze requires judged reference-aligned source geometry and original actor placement proof. Separate 4v4 gameplay QA will be required later if runtime activation is explicitly authorized.
+
+---
+
 # T21 Phase 8 — source-native central towers, upper flanks and side edge faces (2026-10-09)
 
 ## Original frozen baseline
