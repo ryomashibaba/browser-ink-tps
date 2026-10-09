@@ -997,8 +997,8 @@ export class UndertowVisualReviewApp {
     const pts=selected.flatMap(m=>m.vertices);
     const min=([0,1,2] as const).map(k=>Math.min(...pts.map(p=>p[k])));
     const max=([0,1,2] as const).map(k=>Math.max(...pts.map(p=>p[k])));
-    this.target.set((min[0]+max[0])*0.5,(min[1]+max[1])*0.5,(min[2]+max[2])*0.5);
-    const span=Math.max(max[0]-min[0],max[1]-min[1],max[2]-min[2]);
+    this.target.set((min[0]!+max[0]!)*0.5,(min[1]!+max[1]!)*0.5,(min[2]!+max[2]!)*0.5);
+    const span=Math.max(max[0]!-min[0]!,max[1]!-min[1]!,max[2]!-min[2]!);
     this.distanceMeters=Math.max(7,Math.min(30,span*2.2));
     this.yawDegrees=side==='POSITIVE_Z'?42:222;
     this.pitchDegrees=28;
