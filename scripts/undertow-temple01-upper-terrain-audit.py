@@ -1438,7 +1438,7 @@ _t21_vector_source=Path("src/stage/undertow/UndertowSpillwayVectorBlueprint.ts")
 _t21_outer_part=_t21_vector_source.split("commonPlayableOuterBoundary: vectorTrace(",1)[1].split("'HARD_EDGE'",1)[0]
 _t21_outer_pdf=[
     (float(ax),float(az)) for ax,az in _t21_re.findall(
-      r"\\[\\s*(-?\\d+(?:\\.\\d+)?)\\s*,\\s*(-?\\d+(?:\\.\\d+)?)\\s*\\]",_t21_outer_part)
+      r"\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]",_t21_outer_part)
 ]
 if len(_t21_outer_pdf)!=42:
     raise SystemExit(f"T21FULL_SOURCE expected 42 frozen boundary points; found {len(_t21_outer_pdf)}")
