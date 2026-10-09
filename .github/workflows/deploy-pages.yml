@@ -73,6 +73,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload T21 Phase10 exact original triangle-edge topology evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase10-exact-edge-topology
+          path: /tmp/t21-phase10-exact-obj-edge-adjacency.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 Phase9 five exact underface mirror pairs
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -254,6 +263,12 @@ jobs:
         env:
           T21_PHASE9_EXACT_SOURCE_JSON: /tmp/t21-phase9-exact-downface-review-source.json
         run: npx vitest run scripts/UndertowSpillwayPhase9DownfaceQa.test.ts
+
+      - name: T21 Phase10 independent pinned OBJ seam adjacency QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE10_TOPOLOGY_JSON: /tmp/t21-phase10-exact-obj-edge-adjacency.json
+        run: npx vitest run scripts/UndertowSpillwayPhase10OriginalEdgeTopologyQa.test.ts
 
       - name: TypeScript check
         run: npm run typecheck

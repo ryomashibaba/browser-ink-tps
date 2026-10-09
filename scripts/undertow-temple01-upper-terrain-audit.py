@@ -2420,3 +2420,152 @@ print("T21_PHASE9_SELECTED_SOURCE",f"pairs={len(_t21_p9_selected_pairs)}",
     f"vertices={sum(r['originalVertexCount'] for r in _t21_p9_selected)}",
     f"source3DArea={sum(r['originalSourceAreaSquareMeters'] for r in _t21_p9_selected):.6f}",
     f"bytes={len(_t21_p9_exact)}")
+
+
+# T21 Phase10: original OBJ TOPOLOGY, not a connectivity inferred from XZ or
+# proximity. Classify every boundary edge of the ten selected Phase9 downfaces
+# by 1) actual shared original OBJ vertex IDs, 2) exact coordinate equality
+# across SEPARATE vertex IDs (a visual seam, NOT topological attachment),
+# 3) no exact matching source edge. Never promote any result to game physics.
+#
+# Scan the full pinned original source once; classify neighbor triangles by
+# their actual original OBJ surface normal, not material names like Floor.
+_t21_p10_targets_by_id=defaultdict(list)
+_t21_p10_targets_by_xyz=defaultdict(list)
+_t21_p10_records=[]
+_t21_p10_target_face_ids={}
+def _t21_p10_edge_xyz(_e):
+    return tuple(sorted((vertices[_e[0]],vertices[_e[1]])))
+def _t21_p10_orientation(_normal_y):
+    if _normal_y >= MIN_UP_Y: return "ORIGINAL_UP_FACING"
+    if _normal_y <= -0.65: return "ORIGINAL_DOWN_FACING"
+    if abs(_normal_y) <= 0.32: return "ORIGINAL_NEAR_VERTICAL"
+    return "ORIGINAL_TRANSITION_SLOPE"
+for _t21_p10_s in _t21_p9_selected:
+    _t21_p10_sid=_t21_p10_s["sourceComponentId"]
+    _t21_p10_obj,_t21_p10_mat,_t21_p10_suffix=_t21_p10_sid.split("|")
+    _t21_p10_faces=_t21_p9_cached[(_t21_p10_obj,_t21_p10_mat)][int(_t21_p10_suffix[1:])]
+    _t21_p10_target_face_ids[_t21_p10_sid]=set(_t21_p10_faces)
+    _t21_p10_counts=defaultdict(int)
+    for _t21_p10_fi in _t21_p10_faces:
+        _t21_p10_f=faces[_t21_p10_fi]
+        for _t21_p10_e in (
+            (_t21_p10_f[0],_t21_p10_f[1]),
+            (_t21_p10_f[1],_t21_p10_f[2]),
+            (_t21_p10_f[2],_t21_p10_f[0])
+        ):
+            _t21_p10_counts[tuple(sorted(_t21_p10_e))]+=1
+    _t21_p10_record={
+        "sourceComponentId":_t21_p10_sid,
+        "kind":_t21_p10_s["kind"],
+        "originalTriangleCount":len(_t21_p10_faces),
+        "originalVertexCount":_t21_p10_s["originalVertexCount"],
+        "sourceMaterial":_t21_p10_mat,
+        "boundaryEdges":[]
+    }
+    for _t21_p10_edge,_t21_p10_count in sorted(_t21_p10_counts.items()):
+        if _t21_p10_count!=1:continue
+        _t21_p10_coords=_t21_p10_edge_xyz(_t21_p10_edge)
+        _t21_p10_detail={
+            "objVertexIds":list(_t21_p10_edge),
+            "originalEndpointXYZ":[list(p) for p in _t21_p10_coords],
+            "projectEndpointXYZ":[list(project_point3(p)) for p in _t21_p10_coords],
+            "neighborWithSharedOriginalOBJIds":[],
+            "neighborWithSameCoordinatesButDistinctIDs":[]
+        }
+        _t21_p10_record["boundaryEdges"].append(_t21_p10_detail)
+        _t21_p10_targets_by_id[_t21_p10_edge].append(
+            (_t21_p10_sid,_t21_p10_detail))
+        _t21_p10_targets_by_xyz[_t21_p10_coords].append(
+            (_t21_p10_sid,_t21_p10_detail))
+    _t21_p10_records.append(_t21_p10_record)
+# Use the REAL global indexed original-OBJ triangle graph, not a projected
+# raster. Neither materials nor names confer valid playable floor semantics.
+for _t21_p10_fi,_t21_p10_f in enumerate(faces):
+    _t21_p10_obj,_t21_p10_mat=_t21_p10_f[3],_t21_p10_f[4]
+    if not _t21_p10_obj.startswith("Fld_Temple01_"):
+        continue
+    for _t21_p10_edge in (
+        (_t21_p10_f[0],_t21_p10_f[1]),
+        (_t21_p10_f[1],_t21_p10_f[2]),
+        (_t21_p10_f[2],_t21_p10_f[0])
+    ):
+        _t21_p10_sorted_edge=tuple(sorted(_t21_p10_edge))
+        _t21_p10_id_targets=_t21_p10_targets_by_id.get(_t21_p10_sorted_edge,())
+        _t21_p10_xyz_targets=_t21_p10_targets_by_xyz.get(
+            _t21_p10_edge_xyz(_t21_p10_sorted_edge),())
+        if not _t21_p10_id_targets and not _t21_p10_xyz_targets:continue
+        _t21_p10_source_normal_y=tri_normal(_t21_p10_f)[1]
+        _t21_p10_neighbor={
+            "originalFaceIndex":_t21_p10_fi,
+            "sourceObject":_t21_p10_obj,
+            "sourceMaterial":_t21_p10_mat,
+            "originalOBJVertexIds":list(_t21_p10_f[:3]),
+            "originalNormalY":_t21_p10_source_normal_y,
+            "originalOrientation":_t21_p10_orientation(_t21_p10_source_normal_y)
+        }
+        _t21_p10_matched_details=set()
+        for _t21_p10_sid,_t21_p10_detail in _t21_p10_id_targets:
+            if _t21_p10_fi in _t21_p10_target_face_ids[_t21_p10_sid]:
+                continue
+            _t21_p10_detail["neighborWithSharedOriginalOBJIds"].append(_t21_p10_neighbor)
+            _t21_p10_matched_details.add((_t21_p10_sid,id(_t21_p10_detail)))
+        for _t21_p10_sid,_t21_p10_detail in _t21_p10_xyz_targets:
+            if (_t21_p10_sid,id(_t21_p10_detail)) in _t21_p10_matched_details:
+                continue
+            if _t21_p10_fi in _t21_p10_target_face_ids[_t21_p10_sid]:
+                continue
+            _t21_p10_detail["neighborWithSameCoordinatesButDistinctIDs"].append(
+                _t21_p10_neighbor)
+_t21_p10_summaries=defaultdict(int)
+_t21_p10_summary_class=defaultdict(int)
+for _t21_p10_rec in _t21_p10_records:
+    _t21_p10_stats=defaultdict(int)
+    _t21_p10_orientation_stats=defaultdict(int)
+    for _t21_p10_edge in _t21_p10_rec["boundaryEdges"]:
+        _t21_p10_id_neighbors=_t21_p10_edge["neighborWithSharedOriginalOBJIds"]
+        _t21_p10_geom_neighbors=_t21_p10_edge["neighborWithSameCoordinatesButDistinctIDs"]
+        if _t21_p10_id_neighbors:
+            _t21_p10_tier="EXACT_ORIGINAL_OBJ_VERTEX_ID_EDGE"
+        elif _t21_p10_geom_neighbors:
+            _t21_p10_tier="COINCIDENT_XYZ_ONLY_NOT_WELDED"
+        else:
+            _t21_p10_tier="NO_EXACT_ORIGINAL_EDGE_NEIGHBOR"
+        _t21_p10_edge["strongestOriginalEdgeEvidence"]=_t21_p10_tier
+        _t21_p10_stats[_t21_p10_tier]+=1
+        _t21_p10_summaries[_t21_p10_tier]+=1
+        _t21_p10_orient=set(
+            n["originalOrientation"] for n in _t21_p10_id_neighbors)
+        for _t21_p10_class in _t21_p10_orient:
+            _t21_p10_orientation_stats[_t21_p10_class]+=1
+            _t21_p10_summary_class[_t21_p10_class]+=1
+    _t21_p10_rec["boundaryEdgeEvidenceCounts"]=dict(_t21_p10_stats)
+    _t21_p10_rec["sharedOriginalIdNeighborOrientationEdgeCounts"]=dict(
+        _t21_p10_orientation_stats)
+    _t21_p10_rec["playableFloorOrCollisionConnectionProof"]=False
+_t21_p10_file=Path("/tmp/t21-phase10-exact-obj-edge-adjacency.json")
+_t21_p10_file.write_text(json.dumps({
+    "version":"T21_PHASE10_EXACT_SOURCE_EDGE_TOPOLOGY_V1",
+    "sourceAuthority":"PINNED_KITRIX_TEMPLE01_43263289B_SHA256_a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046",
+    "algorithm":"COMPARE_ALL_STATIC_OBJ_TRIANGLES_WITH_SELECTED_10_DOWNFACE_COMPONENT_BOUNDARY_EDGES",
+    "exactOriginalOBJVertexIDEdge":"STRONGEST_STATIC_MODEL_TOPOLOGY_ONLY",
+    "coincidentXYZDifferentOBJIndices":"NONWELDED_SEAM_NOT_PROOF_OF_PHYSICAL_CONNECTION",
+    "orientationFromOriginalFaceNormalNotMaterial":True,
+    "originalUndersideComponentCount":len(_t21_p10_records),
+    "originalSourceXYZVertexCount":sum(
+        r["originalVertexCount"] for r in _t21_p10_records),
+    "summary":{"edgeEvidenceCounts":dict(_t21_p10_summaries),
+               "sharedOriginalIdNeighborOrientationEdgeCounts":dict(
+                   _t21_p10_summary_class)},
+    "components":_t21_p10_records,
+    "includesUnverifiedActorPlacement":False,
+    "validGameplayFloorConnectivity":False,
+    "gameplayColliderNavPaintScoringAuthority":"NONE",
+    "runtimePromotionAuthorized":False,"reviewOnly":True
+},separators=(",",":")),encoding="utf-8")
+print("T21_PHASE10_ORIGINAL_OBJ_EDGE_TOPOLOGY",
+    "sourceComponents="+str(len(_t21_p10_records)),
+    "edges="+str(sum(len(c["boundaryEdges"]) for c in _t21_p10_records)),
+    "evidenceCounts="+str(dict(_t21_p10_summaries)),
+    "sharedIDOrientations="+str(dict(_t21_p10_summary_class)),
+    "out="+str(_t21_p10_file))
