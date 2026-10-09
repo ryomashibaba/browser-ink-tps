@@ -126,6 +126,22 @@ jobs:
           python scripts/undertow-temple01-phase12f-original-edge-contact.py --self-test
           python scripts/undertow-temple01-phase12f-original-edge-contact.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12d-four-full-original-source-pairs.json /tmp/t21-phase12f-original-source-edges.json
 
+      - name: T21 Phase12G pinned original four source edge 3D segment-triangle contacts
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12g-source-segment-triangle.py --self-test
+          python scripts/undertow-temple01-phase12g-source-segment-triangle.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12f-original-source-edges.json /tmp/t21-phase12g-source-segment-contacts.json
+
+      - name: Upload T21 Phase12G exact four source contacts
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12g-exact-source-contact-evidence
+          path: /tmp/t21-phase12g-source-segment-contacts.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 Phase12F source edge evidence
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -449,6 +465,12 @@ jobs:
         env:
           T21_PHASE12F_EDGES_JSON: /tmp/t21-phase12f-original-source-edges.json
         run: npx vitest run scripts/UndertowSpillwayPhase12FOriginalEdgeContactQa.test.ts
+
+      - name: T21 Phase12G exact 3D source segment-triangle contact evidence QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12G_CONTACT_JSON: /tmp/t21-phase12g-source-segment-contacts.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12GSourceContactsQa.test.ts
 
       - name: TypeScript check
         run: npm run typecheck
