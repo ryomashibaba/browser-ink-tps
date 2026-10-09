@@ -165,6 +165,12 @@ jobs:
           T21_PHASE4_EXACT_SOURCE_JSON: /tmp/t21-flank-elevation-phase4.json
         run: npx vitest run scripts/UndertowSpillwayFlankElevationPhase4Qa.test.ts
 
+      - name: T21 Phase5A whole-source vertical provenance QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_VERTICAL_SOURCE_JSON: /tmp/t21-vertical-source-inventory.json
+        run: npx vitest run scripts/UndertowSpillwayVerticalSourceInventoryQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
