@@ -721,6 +721,7 @@ jobs:
       - name: T21 five-view real WebGPU browser capture
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         continue-on-error: true
+        timeout-minutes: 3
         run: node scripts/t21-review-five-view-capture.mjs
 
       - name: Upload T21 five-view screenshots or BLOCKED manifest
