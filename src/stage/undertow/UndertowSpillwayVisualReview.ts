@@ -1,4 +1,5 @@
 import { PRODUCTION_STAGE_DEFINITION } from '../StageDefinition';
+import { UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES, UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY, undertowT21VerticalSourcePhase5BErrors } from './UndertowSpillwayVerticalSourcePhase5BGeometry';
 import { UNDERTOW_T21_FLANK_ELEVATION_PHASE4_MESHES, UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY, undertowT21FlankElevationPhase4Errors } from './UndertowSpillwayFlankElevationPhase4Geometry';
 import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES, UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY, undertowT21BroadStaticSourceErrors } from './UndertowSpillwayBroadStaticSourceGeometry';
 import { UNDERTOW_T21_SOURCE_BATCH2_MESHES, UNDERTOW_T21_SOURCE_BATCH2_SUMMARY, undertowT21SourceBatch2Errors } from './UndertowSpillwaySourceBatch2Geometry';
@@ -35,6 +36,8 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   macroUnresolvedOutlineCount: UNDERTOW_T21_MACRO_COVERAGE.unresolvedOutlines.length,
   sourceNativeReviewMeshCount: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES.length,
   sourceNativeReviewAreaSquareMeters: UNDERTOW_T21_SOURCE_NATIVE_REVIEW_SUMMARY.totalSourceAreaSquareMeters,
+  verticalSourcePhase5BCount: UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES.length,
+  verticalSourcePhase5BSourceAreaSquareMeters: UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY.sourceTriangleAreaSquareMeters,
   flankElevationPhase4Count: UNDERTOW_T21_FLANK_ELEVATION_PHASE4_MESHES.length,
   flankElevationPhase4SourceAreaSquareMeters: UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY.sourceTriangleAreaSquareMeters,
   broadStaticSourceCount: UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES.length,
@@ -48,7 +51,7 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   deferredFeatureIds: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds] as const,
   activationBlockers: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers] as const,
   notes:
-    'Visual Review v2 combines reviewed T21-D geometry, the whole-stage occupancy underlay, provisional macro envelopes, and 64 Temple01 source-native review meshes (16 base + 10 local + 8 Phase1 + 14 batch2 + 6 broad static + 10 Phase4 flank/elevation). Source-native mesh shape/Y is exact source data, but Pass18G route membership remains diagnostic and no runtime authority is implied.'
+    'Visual Review v2 combines reviewed T21-D geometry, the whole-stage occupancy underlay, provisional macro envelopes, and 64 walk-facing Temple01 source meshes plus 12 vertical glass/metal/pillar original source meshes (76 display meshes total). Vertical faces do not count as floor/XZ coverage.. Source-native mesh shape/Y is exact source data, but Pass18G route membership remains diagnostic and no runtime authority is implied.'
 });
 
 export function undertowT21VisualReviewErrors(): readonly string[] {
@@ -59,7 +62,8 @@ export function undertowT21VisualReviewErrors(): readonly string[] {
     ...undertowT21SourceNativePhase1Errors(),
     ...undertowT21SourceBatch2Errors(),
     ...undertowT21BroadStaticSourceErrors(),
-    ...undertowT21FlankElevationPhase4Errors()
+    ...undertowT21FlankElevationPhase4Errors(),
+    ...undertowT21VerticalSourcePhase5BErrors()
   ];
   if (!UNDERTOW_T21_VISUAL_REVIEW.reviewOnly) {
     errors.push('T21 visual review must remain review-only');
@@ -78,6 +82,9 @@ export function undertowT21VisualReviewErrors(): readonly string[] {
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.sourceNativeSupplementCount !== 10) {
     errors.push('T21 visual review supplement must retain five paired source components');
+  }
+  if (UNDERTOW_T21_VISUAL_REVIEW.verticalSourcePhase5BCount !== 12) {
+    errors.push('T21 vertical Phase5B review must retain six mirrored original static pairs');
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.flankElevationPhase4Count !== 10) {
     errors.push('T21 Phase4 review must retain five source-audited left/right mirror pairs');
