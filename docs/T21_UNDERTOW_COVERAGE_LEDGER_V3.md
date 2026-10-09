@@ -1,3 +1,47 @@
+# T21 Phase 5A/5B — source-grounded VERTICAL 3D structure review (2026-10-09)
+
+## Current objective and boundaries
+Continue from Phase4 64 original walk-oriented surface meshes, successful GitHub Actions #1316 and T21 Draft PR #5. **No stage activation, no production T20 change, no merge.** Preserve the exact frozen 42-vertex exterior and all earlier reviewed geometry.
+
+A 2D XZ missing-coverage cell does NOT mean a missing floor; vertical source components are evaluated **separately** from the 0.5m floor/XZ ledger. In particular, a near-vertical face may project to zero XZ area and must not be counted as walkable coverage.
+
+## Phase 5A original Temple01 whole-stage vertical audit
+- Original pinned `Vss_Temple01.obj` (sha256 `a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046`) is the only XYZ/Y input.
+- Source filters: original Temple01 active object-name prefixes, triangle `abs(normal.y) <= 0.32`, a shared-OBJ-vertex connected component within the same original object/material, 3D source area >=4m² and vertical span >=0.8m. These are *search criteria*, not a proof the component is a collision wall.
+- Output artifact: `t21-undertow-vertical-source-inventory` (`/tmp/t21-vertical-source-inventory.json`) with exact source object/material/connected component ID `vN`, 3D bbox/Y, source area and 7 sampled points per triangle against the existing hard silhouette.
+- **886 candidates**, of which **414** have every tested XZ point within the hard silhouette and **472** have at least one sample outside. Zone breakdown (candidate/inside): CENTER 293/104, POS 99/81, NEG 100/85, LEFT_SIDE 197/81, RIGHT_SIDE 197/63.
+- Huge `StageSide01` / `StageSide02` candidates with Y down to **-45m**, remote/high ceilings and all external geometry remain **evidence, not blanket geometry promotion**. Even a passing 7-sample criterion cannot prove 100% polygon containment. `FldObj/PntSet` actor placement is unresolved.
+
+## Phase 5B exact original 3D structural source faces — REVIEW ONLY
+Six independently source-extracted static `Fld_Temple01` mirrored pairs, **12 new source-face meshes**:
+1. `Fld_Temple01_Glass01 v41/v21` — POS/NEG near side route, original project Y **3.1–5.5m**, ~47.29m² source triangles per side.
+2. `Fld_Temple01_WallMetal00 v263/v264` — POS/NEG wall-metal parallel source, Y **3.1–5.5m**, ~47.29m² per side.
+3. `Fld_Temple01_Glass02 v1/v0` — lower side faces, Y **0.5–2.5m**, ~39.41m² per side.
+4. `Fld_Temple01_Glass01 v58/v59` — near-center vertical glass source, Y **3.0–5.5m**, ~21.40m² per side.
+5. `Fld_Temple01_WallMetal00 v276/v277` — near-center vertical wall metal source, Y **3.0–5.5m**, ~21.27m² per side.
+6. `Fld_Temple01_PillarBase04 v177/v176` — lateral support facing source, Y **3.5–10.2m**, ~19.13m² per side.
+
+**108 exact original project XYZ float64 vertices**, 391.5966251m² summed original 3D source triangle area. Each `vN` refers to a connected component of **strongly vertical original source TRIANGLES**, *not* an entire game wall object, a completed volume, a collision mesh, a complete pillar, or evidence of activeness in a game instance.
+
+Module `UndertowSpillwayVerticalSourcePhase5BGeometry.ts` stores original coordinates losslessly; CI `UndertowSpillwayVerticalPhase5BSourceQa.test.ts` compares **each XYZ word bytewise** with a second pinned-OBJ extraction, checks exact source component ID/material/Y, 180-degree original symmetry, no source-ID reuse with the 64 walk-surface cohort, and no production/runtime use. Phase5B original OBJ fixture is artifact `t21-undertow-exact-vertical-phase5b`.
+
+The review UI adds a separate `Vertical source faces` layer: cyan translucent glass, blue-grey metal, violet pillar. These are two-sided **display materials only** to allow orbiting/reading; actual optical opacity, collision/paintability, routing and source actor bindings remain unknown. The source mesh original data is never modified by this display tint or the existing render-only offset.
+
+### Counts, source evidence and honest completion status
+- Walk-oriented source triangles: **64 source meshes** (unchanged).
+- New near-vertical source triangles: **12 source meshes** (6 original mirror pairs).
+- Total source-triangle visual groups: **76** distinct original source IDs, but **NOT 76 physically verified game objects**.
+- XZ floor display coverage: unchanged by vertical-source additions; previous 64-mesh `UNDISPLAYED` figure **4,386.50m² sampled XZ** remains a reference, not a ground truth floor deficit.
+- The 18-region macro ledger status and T21-D reviewed solids have not been changed or invented.
+- Whole-stage original **3D** composition is still incomplete: remaining true walls, roofs/undersides, support holes, source actor placement and all five screenshot/viewpoint checks are unresolved. Visual Freeze and full 4v4 runtime QA are **not** authorized.
+
+## Remaining next gates
+1. Final CI source fixture + TypeScript, Vitest, all previous Pass18 and Pages build; do **not** claim full SUCCESS until final HEAD run completes.
+2. Actual 5-view browser renderer: OVERVIEW, TOP, POS_TO_NEG, SPAWN_A, SPAWN_B. Verify glass layering/opacity, sidedness, wall-face overdraw, existing gameplay solids, and distinguish genuine source faces from provisional XZ overlays. This is an explicit human-visible QA gate.
+3. Source-driven wall/roof/underside/StageSide **family selection** from 886 candidate inventory, with full source triangulation and mirrored pairing before each visual-only promotion, not from guessed flat/pit fill. Keep out-of-outline and `PntSet` candidates deferred.
+
+---
+
 # T21 — Phase 4 whole-stage side-flank & elevated ramp evidence (2026-10-09)
 
 ## Validated model source, changes and authority
