@@ -45,7 +45,7 @@ export const UNDERTOW_T21_VISUAL_REVIEW = Object.freeze({
   deferredFeatureIds: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.deferredFeatureIds] as const,
   activationBlockers: [...UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationBlockers] as const,
   notes:
-    'Visual Review v2 combines reviewed T21-D geometry, the whole-stage occupancy underlay, provisional macro envelopes, and 56 Temple01 source-native review meshes (16 base + 10 local + 8 Phase1 + 14 batch2 + 8 large static). Source-native mesh shape/Y is exact source data, but Pass18G route membership remains diagnostic and no runtime authority is implied.'
+    'Visual Review v2 combines reviewed T21-D geometry, the whole-stage occupancy underlay, provisional macro envelopes, and 54 Temple01 source-native review meshes (16 base + 10 local + 8 Phase1 + 14 batch2 + 6 new broad static). Source-native mesh shape/Y is exact source data, but Pass18G route membership remains diagnostic and no runtime authority is implied.'
 });
 
 export function undertowT21VisualReviewErrors(): readonly string[] {
@@ -75,8 +75,8 @@ export function undertowT21VisualReviewErrors(): readonly string[] {
   if (UNDERTOW_T21_VISUAL_REVIEW.sourceNativeSupplementCount !== 10) {
     errors.push('T21 visual review supplement must retain five paired source components');
   }
-  if (UNDERTOW_T21_VISUAL_REVIEW.broadStaticSourceCount !== 8) {
-    errors.push('T21 broad static source review must retain four symmetric source floor pairs');
+  if (UNDERTOW_T21_VISUAL_REVIEW.broadStaticSourceCount !== 6) {
+    errors.push('T21 broad static source review must retain three new symmetric source floor pairs');
   }
   if (UNDERTOW_T21_VISUAL_REVIEW.sourceBatch2Count !== 14) {
     errors.push('T21 source batch2 inventory must remain seven exact symmetric review pairs');
