@@ -24,6 +24,7 @@ import {
   undertowT21SourceNativePhase1Errors
 } from './UndertowSpillwaySourceNativePhase1Geometry';
 import { UNDERTOW_T21_SOURCE_BATCH2_MESHES, UNDERTOW_T21_SOURCE_BATCH2_SUMMARY, undertowT21SourceBatch2Errors } from './UndertowSpillwaySourceBatch2Geometry';
+import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES, UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY, undertowT21BroadStaticSourceErrors } from './UndertowSpillwayBroadStaticSourceGeometry';
 import { UNDERTOW_VECTOR_TRACES } from './UndertowSpillwayVectorBlueprint';
 import {
   UNDERTOW_T21_VISUAL_REVIEW,
@@ -38,6 +39,7 @@ describe('T21 Undertow visual review contract', () => {
     expect(undertowT21SourceNativeSupplementErrors()).toEqual([]);
     expect(undertowT21SourceNativePhase1Errors()).toEqual([]);
     expect(undertowT21SourceBatch2Errors()).toEqual([]);
+    expect(undertowT21BroadStaticSourceErrors()).toEqual([]);
     expect(UNDERTOW_T21_VISUAL_REVIEW).toMatchObject({
       id: 'undertow-t21-visual-review-v2',
       routeQuery: 'stageReview=undertow',
@@ -92,6 +94,11 @@ describe('T21 Undertow visual review contract', () => {
       reviewOnly:true, runtimePromotionAuthorized:false
     });
     expect(UNDERTOW_T21_VISUAL_REVIEW.sourceBatch2Count).toBe(14);
+    expect(UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES).toHaveLength(8);
+    expect(UNDERTOW_T21_VISUAL_REVIEW.broadStaticSourceCount).toBe(8);
+    expect(UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY).toMatchObject({
+      meshCount:8,pairCount:4,reviewOnly:true,runtimePromotionAuthorized:false
+    });
     expect(UNDERTOW_T21_SOURCE_BATCH2_SUMMARY.sourceAreaSquareMeters).toBeCloseTo(157.9757578473224,8);
     expect(UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES).toHaveLength(10);
     expect(UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY).toMatchObject({
