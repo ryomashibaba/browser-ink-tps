@@ -106,7 +106,7 @@ describe('T21 Phase8 source-native vertical tower/flank/edge faces',()=>{
       .toBeCloseTo(evidence.source3DTriangleAreaSquareMeters,9);
     console.log('T21_PHASE8_SOURCE_EXACT_PASS',JSON.stringify({
       originalXYZVertices:verified,sourceFaces:16,
-      3dSourceTriangleArea:evidence.source3DTriangleAreaSquareMeters,
+      source3DTriangleArea:evidence.source3DTriangleAreaSquareMeters,
       approvedGameplayGeometry:false
     }));
   });
