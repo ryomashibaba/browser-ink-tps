@@ -16,14 +16,14 @@
 - The 0.5m XZ review coverage count changes from **5,200.75m² unshown for 34 source meshes to 5,076.50m² for 48**. The **124.25m²** improvement is independent of and must not be confused with source triangle-area sum. Both figures are approximate display-plan measurements, never walkability proofs.
 - CI checks every decoded float64 triple against the original Pass18C JSON, source Y, mirror symmetry and no runtime promotion.
 
-### Broad static floor terrain, four original mirrored pairs / 8 meshes
+### Broad static floor terrain, three NEW mirrored pairs / 6 meshes
 - `Fld_Temple01_pCube20989_1__FloorConcrete02 c12/c1`, Y+1.5, source area **214.8656m² per side**.
 - `Fld_Temple01_pCube21525_1__FloorConcrete00 c8/c3`, Y+7.5, source area **127.5031m² per side**.
 - Same static FloorConcrete00 `c11/c0`, Y+9.0, area **59.6965m² per side**.
-- Same static FloorConcrete00 `c9/c2`, Y+3.0, area **59.4276m² per side**.
-- **8 original mirrored meshes, 4 pairs**, exact unmodified source triangles. Binary float64 dictionary uses bit-exact XYZ, and the dedicated CI QA checks all original vertex triples against an independent verified OBJ export. Areas are summed 3D source, not new XZ coverage.
+- Same static FloorConcrete00 `c9/c2`, Y+3.0, area **59.4276m² per side**, is **NOT newly registered**: both members duplicate source IDs already present in the frozen original 16-mesh review cohort; the fourth exported pair is retained only as a negative-control source audit.
+- **6 newly registered original mirrored meshes, 3 pairs**, exact unmodified source triangles. The fourth exported pair is recognized as an existing frozen source (2 meshes), not counted as an addition. Binary float64 dictionary uses bit-exact XYZ, and the dedicated CI QA checks all original vertex triples against an independent verified OBJ export. Areas are summed 3D source, not new XZ coverage.
 - Source itself is static `Fld_Temple01`, not PntSet; collision, scoring, paint, route continuity and game-specific participation are still unproven.
-- The existing full 16 + local 10 + Phase1 8 + batch2 14 + broad static 8 now comprise **56 review-only original-source meshes**. Separate review-layer toggles preserve explicit provenance.
+- The existing full 16 + local 10 + Phase1 8 + batch2 14 + broad static 6 now comprise **54 review-only original-source meshes**. Separate review-layer toggles preserve explicit provenance.
 - The broad-floor group's incremental unshown-XZ improvement must be taken from the next successful Ledger v3 CI rather than guessed.
 
 ## Safety gates / next decisions
