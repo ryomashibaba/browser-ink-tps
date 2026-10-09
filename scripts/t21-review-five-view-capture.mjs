@@ -390,8 +390,15 @@ try {
       await sleep(750);
       const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true},25000);
       const bytes=Buffer.from(shot.data||'','base64');
-      if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
-        throw Error('T21_PHASE12E_FOCUSED_ORIGINAL_SCREENSHOT_NOT_PNG');
+      // An isolated original-only mesh on a uniform background compresses
+      // strongly. Check the real PNG signature and IHDR dimensions rather than
+      // discarding valid small screenshots using a JPEG-like size threshold.
+      const pngSignature=Buffer.from([137,80,78,71,13,10,26,10]);
+      const pngValid=bytes.byteLength>=33&&bytes.subarray(0,8).equals(pngSignature);
+      const width=pngValid?bytes.readUInt32BE(16):0;
+      const height=pngValid?bytes.readUInt32BE(20):0;
+      if(!pngValid||width<640||height<360)
+        throw Error('T21_PHASE12E_FOCUSED_ORIGINAL_SCREENSHOT_INVALID_PNG_OR_DIMENSIONS_'+bytes.byteLength+'_'+width+'x'+height);
       const file='T21_PHASE12E_FOCUSED_'+side+'_ORIGINAL_SOURCE.png';
       await writeFile(resolve(destination,file),bytes);
       manifest.phase12ERecoveredFocusDiagnostics.push({
@@ -399,7 +406,7 @@ try {
         originalSourcePieces:2,
         originalSourceTriangles:4,
         allDefault124OriginalSourceMeshesHiddenForIsolation:true,
-        file,bytes:bytes.byteLength,sha256:createHash('sha256').update(bytes).digest('hex'),
+        file,bytes:bytes.byteLength,width,height,sha256:createHash('sha256').update(bytes).digest('hex'),
         renderer:state.renderer,authorizesVisualFreeze:false
       });
     }catch(error){
