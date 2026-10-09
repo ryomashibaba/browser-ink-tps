@@ -13,7 +13,7 @@ describe('T21 broad static source terrain — byte-exact OBJ evidence',()=>{
     expect(UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY).toMatchObject({
       meshCount:6,pairCount:3,reviewOnly:true,runtimePromotionAuthorized:false
     });
-    expect(UNDERTOW_T21_COVERAGE_LEDGER_V3.sourceInventory).toHaveLength(54);
+    expect(UNDERTOW_T21_COVERAGE_LEDGER_V3.sourceInventory).toHaveLength(64);
     expect(UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.activationReady).toBe(false);
     expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
     const p=process.env.T21_BATCH3_EXACT_SOURCE_JSON;
