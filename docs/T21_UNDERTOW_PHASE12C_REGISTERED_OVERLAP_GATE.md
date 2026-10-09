@@ -1,0 +1,11 @@
+# T21 Phase12C — all 124 current source displays vs 162 original candidate triangles
+
+**Purpose:** prevent duplication and hard-XZ overreach before displaying Phase12B's original 16 connected source components. This is strictly source-only evidence, not runtime geometry.
+
+The pinned 43,263,289-byte Temple01 OBJ's SHA256 is validated before parsing. Phase12C re-derives each of the 162 original global face indices, original OBJ vertex triples, projected 3D XYZ, original component face+vertex hash, area and Y range. These must exactly agree with Phase12B source ledger and all 16 independently sampled Phase12A originals.
+
+The companion Vitest imports all 11 arrays used by the currently existing **124 real original-source display meshes**, then compares each candidate triangle against all existing triangles using order-independent Float64-byte XYZ hashing and a conservative 0.0000001m near-coincidence classification. It tests 7 XZ locations per triangle (3 original vertices, 3 segment midpoints and centroid) against the frozen 42-point source hard boundary, plus original source mirror counterparts (same material, triangle count, Y range, area, and vertex multisets reflected through X+X'=0.229368288528164 and Z+Z'=0.194564295456822, 0.2mm maximum point deviation). This diagnoses source symmetry only, not gameplay links.
+
+GitHub Actions writes two independent downloadable reports: `t21-undertow-phase12c-162-original-triangles` (pinned original/source membership) and `t21-undertow-phase12c-registered124-gates` (overlap, outside-XZ samples, symmetry and decisions). Eligible means **only eligible for a future separately toggled source-only review**, NOT automatic runtime activation, walkability, a closed collider, extra XZ floor area or visual freeze. A candidate with any duplicate, near duplicate, original XZ overreach, or ambiguous/missing mirror is held. We do not silently clip or fill.
+
+**Unchanged:** T20 production, T21 activationReady=false, 42-point silhouette, 64 source-walk meshes, 124 registered whole source meshes, existing default browser views and screenshots; no new game, physics, scoring, paint, nav or scene meshes. PR #5 remains Draft and unmerged. Next stage may add a separate opt-in full source rendering only after the proof gates are checked.

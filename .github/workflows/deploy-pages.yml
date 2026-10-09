@@ -80,6 +80,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12C full source triangles preflight
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12c-render-preflight.py --self-test
+          python scripts/undertow-temple01-phase12c-render-preflight.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12b-original-vertex-components.json /tmp/t21-phase12c-original-source-triangles.json
+
+      - name: Upload T21 Phase12C original source triangles
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12c-162-original-triangles
+          path: /tmp/t21-phase12c-original-source-triangles.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 whole-stage walk-source inventory
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -312,6 +328,22 @@ jobs:
         env:
           T21_PHASE12B_COMPONENT_JSON: /tmp/t21-phase12b-original-vertex-components.json
         run: npx vitest run scripts/UndertowSpillwayPhase12BOriginalComponentQa.test.ts
+
+      - name: T21 Phase12C exact registered 124 source-mesh overlap and hard-XZ gate
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12C_SOURCE_JSON: /tmp/t21-phase12c-original-source-triangles.json
+          T21_PHASE12C_GATE_REPORT: /tmp/t21-phase12c-registered124-overlap-report.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12CRegisteredMeshOverlapQa.test.ts
+
+      - name: Upload T21 Phase12C registered 124 overlap evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12c-registered124-gates
+          path: /tmp/t21-phase12c-registered124-overlap-report.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: TypeScript check
         run: npm run typecheck
