@@ -18,7 +18,7 @@ const views=['OVERVIEW','TOP','POS_TO_NEG','SPAWN_A','SPAWN_B'];
 const manifest={
   source:'T21 Visual Review ?stageReview=undertow (NOT production)',
   generatedAt:new Date().toISOString(),
-  evidenceType:'REAL_BROWSER_SCREENSHOTS_IF_WEBGPU_RENDERED',
+  evidenceType:'REAL_BROWSER_SCREENSHOTS_IF_PLAYCANVAS_WEBGPU_OR_WEBGL2_RENDERED',
   authorizesVisualFreeze:false,
   authorizesGameplayOrStageActivation:false,
   status:'BLOCKED',
@@ -94,6 +94,7 @@ try {
     '--no-first-run','--no-default-browser-check','--disable-extensions',
     '--disable-background-networking',
     '--enable-unsafe-webgpu','--enable-features=WebGPU,UnsafeWebGPU',
+    '--enable-unsafe-swiftshader',
     '--use-angle=swiftshader','--enable-dawn-features=allow_unsafe_apis',
     '--window-size=1600,900','--hide-scrollbars',
     '--remote-debugging-port=9229','--remote-allow-origins=*',
@@ -162,27 +163,24 @@ try {
     width:1600,height:900,deviceScaleFactor:1,mobile:false
   });
   await navigate(url);
-  const ready=await poll(async()=>evaluation(`(() => ({
-    loaded:!!document.querySelector('[data-review-view="OVERVIEW"]'),
-    error:document.querySelector('#boot-error')?.textContent||'',
-    gpu:!!navigator.gpu,
-    webgpuCanvas:!!document.querySelector('canvas#app-canvas'),
-    canvasWidth:document.querySelector('canvas#app-canvas')?.width||0,
-    canvasHeight:document.querySelector('canvas#app-canvas')?.height||0
-  }))()`),35_000).then(async()=>{
-    return poll(async()=>{
-      const v=await evaluation(`({
-        loaded:!!document.querySelector('[data-review-view="OVERVIEW"]'),
-        error:document.querySelector('#boot-error')?.textContent||'',
-        gpu:!!navigator.gpu,
-        canvasWidth:document.querySelector('canvas#app-canvas')?.width||0,
-        canvasHeight:document.querySelector('canvas#app-canvas')?.height||0
-      })`);
-      if(v?.error)throw Error('T21 Review failed to boot: '+v.error);
-      return v?.loaded&&v.gpu&&v.canvasWidth>0&&v.canvasHeight>0?v:null;
-    },35_000);
-  });
+  const ready=await poll(async()=>{
+    const v=await evaluation(`(() => ({
+      loaded: !!document.querySelector('[data-review-view="OVERVIEW"]'),
+      panel: !!document.querySelector('#t21-review-panel'),
+      error: document.querySelector('#boot-error')?.textContent || '',
+      documentReady: document.readyState,
+      browserWebGPU: !!navigator.gpu,
+      reviewBackend: document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer || 'NOT_BOOTED',
+      canvasWidth: document.querySelector('#app-canvas')?.width || 0,
+      canvasHeight: document.querySelector('#app-canvas')?.height || 0
+    }))()`);
+    manifest.lastBrowserProbe=v;
+    if(v?.error)throw Error('T21_REVIEW_BOOT_ERROR: '+v.error.slice(0,1200));
+    if(v?.loaded&&v.panel&&v.canvasWidth>=800&&v.canvasHeight>=450)return v;
+    throw Error('T21_REVIEW_NOT_READY: '+JSON.stringify(v).slice(0,1000));
+  },35_000);
   manifest.browserReadiness=ready;
+  manifest.rendererBackend=ready.reviewBackend;
   process.stdout.write('T21_CAPTURE_WEBGPU_READY '+JSON.stringify(ready)+'\n');
   const appliedPreset=await evaluation(`(() => {
     const b=document.querySelector('[data-review-preset="THREE_DIMENSIONAL"]');
@@ -208,7 +206,7 @@ try {
     const name='T21_'+view+'_WEBGPU_REVIEW.png';
     process.stdout.write('T21_CAPTURE_VIEW '+view+' bytes='+bytes.byteLength+'\n');
     await writeFile(resolve(destination,name),bytes);
-    manifest.screenshots.push({view,file:name,sizeBytes:bytes.byteLength,renderer:'Chrome screenshot of PlayCanvas WebGPU canvas and review UI',humanVisualApproval:false});
+    manifest.screenshots.push({view,file:name,sizeBytes:bytes.byteLength,renderer:'Chrome screenshot of PlayCanvas '+manifest.rendererBackend+' review canvas and UI',humanVisualApproval:false});
   }
   if(manifest.screenshots.length!==5)throw Error('T21 five-view screenshot count invalid');
   manifest.status='CAPTURED_PENDING_HUMAN_VISUAL_QA';
@@ -216,6 +214,20 @@ try {
  }catch(error){
   manifest.status='BLOCKED';
   manifest.reason=diagnostic(error);
+  // The failure image is DIAGNOSTIC ONLY. Never count it among five validated
+  // camera screenshots, and never imply renderer/Visual Freeze approval.
+  if(socket?.readyState===WebSocket.OPEN){
+    try{
+      const shot=await command('Page.captureScreenshot',{
+        format:'png',captureBeyondViewport:false,fromSurface:true
+      });
+      const bytes=Buffer.from(shot.data||'','base64');
+      if(bytes.byteLength>=2000){
+        manifest.debugScreenshot='T21_CAPTURE_BLOCKED_DIAGNOSTIC.png';
+        await writeFile(resolve(destination,manifest.debugScreenshot),bytes);
+      }
+    }catch(captureError){manifest.debugScreenshotError=diagnostic(captureError);}
+  }
   try{
     const log=readFileSync(resolve(destination,'chrome-startup.log'),'utf8');
     manifest.chromeStartupTail=log.slice(-3500);

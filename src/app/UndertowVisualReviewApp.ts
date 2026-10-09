@@ -9,6 +9,7 @@ import {
   BLEND_NORMAL,
   createGraphicsDevice,
   DEVICETYPE_WEBGPU,
+  DEVICETYPE_WEBGL2,
   Entity,
   FILLMODE_FILL_WINDOW,
   LightComponentSystem,
@@ -86,13 +87,16 @@ export class UndertowVisualReviewApp {
     uiRoot: HTMLElement
   ): Promise<UndertowVisualReviewApp> {
     const device = await createGraphicsDevice(canvas, {
-      deviceTypes: [DEVICETYPE_WEBGPU],
+      // Review-only browser QA can use WebGL2 when headless WebGPU is not available.
+      // This does NOT change game runtime rendering or stage authority.
+      deviceTypes: [DEVICETYPE_WEBGPU, DEVICETYPE_WEBGL2],
       antialias: true,
       depth: true,
       stencil: false,
       powerPreference: 'high-performance'
     });
     device.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.dataset.t21ReviewRenderer = (device as { deviceType?: string }).deviceType ?? 'unreported';
 
     const options = new AppOptions();
     options.graphicsDevice = device;
