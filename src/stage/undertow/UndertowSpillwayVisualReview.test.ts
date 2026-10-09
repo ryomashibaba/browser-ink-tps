@@ -94,10 +94,10 @@ describe('T21 Undertow visual review contract', () => {
       reviewOnly:true, runtimePromotionAuthorized:false
     });
     expect(UNDERTOW_T21_VISUAL_REVIEW.sourceBatch2Count).toBe(14);
-    expect(UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES).toHaveLength(8);
-    expect(UNDERTOW_T21_VISUAL_REVIEW.broadStaticSourceCount).toBe(8);
+    expect(UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES).toHaveLength(6);
+    expect(UNDERTOW_T21_VISUAL_REVIEW.broadStaticSourceCount).toBe(6);
     expect(UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY).toMatchObject({
-      meshCount:8,pairCount:4,reviewOnly:true,runtimePromotionAuthorized:false
+      meshCount:6,pairCount:3,reviewOnly:true,runtimePromotionAuthorized:false
     });
     expect(UNDERTOW_T21_SOURCE_BATCH2_SUMMARY.sourceAreaSquareMeters).toBeCloseTo(157.9757578473224,8);
     expect(UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES).toHaveLength(10);
