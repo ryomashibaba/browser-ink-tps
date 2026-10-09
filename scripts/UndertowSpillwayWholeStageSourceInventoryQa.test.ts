@@ -66,10 +66,10 @@ describe('T21 Temple01 WHOLE-stage source inventory — evidence-only',()=>{
     )).toBe(true);
     expect(Object.values(audit.zoneStats).reduce((n,z)=>n+z.componentCount,0)).toBe(audit.sourceComponentsTotal);
 
-    // All 54 displayed source meshes must be distinct original
+    // All 64 displayed source meshes must be distinct original
     // source components inside the actual exhaustive model-wide inventory.
     const current=UNDERTOW_T21_COVERAGE_LEDGER_V3.sourceInventory;
-    expect(current).toHaveLength(54);
+    expect(current).toHaveLength(64);
     for(const mesh of current){
       const source=audit.components.find(c=>c.sourceComponentId===mesh.sourceComponentId);
       expect(source,mesh.sourceComponentId).toBeDefined();
