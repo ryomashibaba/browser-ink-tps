@@ -494,6 +494,22 @@ jobs:
           T21_PHASE12G_CONTACT_JSON: /tmp/t21-phase12g-source-segment-contacts.json
         run: npx vitest run scripts/UndertowSpillwayPhase12HSourceContactViewQa.test.ts
 
+      - name: T21 Phase12I independent broad original static source mirror overlap and hard-XZ gate
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12I_SOURCE_JSON: /tmp/t21-phase12i-broad-structure-survey.json
+          T21_PHASE12I_GATE_REPORT: /tmp/t21-phase12i-broad-source-eligibility-gate.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12IBroadSourceGateQa.test.ts
+
+      - name: Upload T21 Phase12I independent eligibility decisions
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12i-136-source-and-hard-xz-gate
+          path: /tmp/t21-phase12i-broad-source-eligibility-gate.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
