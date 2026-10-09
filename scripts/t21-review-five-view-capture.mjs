@@ -78,7 +78,7 @@ try {
   if(!chromeCommand)throw Error('CHROME_NOT_FOUND: Chrome/Chromium binary not available on CI runner');
   manifest.chromium=chromeCommand;
 
-  const server=spawn('npm',['run','preview','--','--host','127.0.0.1','--port','4173','--strictPort'],{
+  const server=spawn('npm',['run','preview','--','--host','127.0.0.1','--port','4173','--strictPort','--base','/browser-ink-tps/'],{
     // Chrome/Vite error logs may be large: never leave PIPE buffers undrained.
     stdio:'ignore',detached:false
   });
@@ -86,6 +86,27 @@ try {
   const url='http://127.0.0.1:4173/browser-ink-tps/?stageReview=undertow';
   manifest.url=url;
   await poll(async()=>{const r=await fetch(url);return r.ok;});
+  // Explicit cross-check: Pages build uses --base=/browser-ink-tps/.
+  // Vite preview MUST use the same base. A SPA index.html fallback on a
+  // wrong path can appear HTTP 200 but serve CSS/ES modules as HTML (blank
+  // white canvas without boot-error), so verify real assets before Chrome.
+  const indexHtml=await (await fetch(url)).text();
+  const assetPaths=[...indexHtml.matchAll(/(?:src|href)="([^"]+)"/g)]
+    .map(match=>match[1])
+    .filter(p=>p.startsWith('/browser-ink-tps/assets/'));
+  if(assetPaths.length<2)
+    throw Error('T21_ASSET_PREFLIGHT: index is missing versioned JS/CSS under /browser-ink-tps/');
+  manifest.assetPreflight=[];
+  for(const assetPath of assetPaths){
+    const res=await fetch(new URL(assetPath,url),{signal:AbortSignal.timeout(5000)});
+    const type=res.headers.get('content-type')||'';
+    const result={path:assetPath,status:res.status,mime:type};
+    manifest.assetPreflight.push(result);
+    if(!res.ok||type.includes('text/html')||
+       (!type.includes('javascript')&&!type.includes('css')))
+      throw Error('T21_ASSET_PREFLIGHT: versioned asset failed '+JSON.stringify(result));
+  }
+  process.stdout.write('T21_ASSET_PREFLIGHT_PASS count='+assetPaths.length+'\\n');
 
   const chromeLog=resolve(destination,'chrome-startup.log');
   const chromeFd=openSync(chromeLog,'w');
