@@ -2152,7 +2152,11 @@ _t21_p8_dictionary=[]
 _t21_p8_component_indices=[]
 _t21_p8_seen=set()
 _t21_p8_existing=set(x for pair in _t21_vpairs for x in pair)
-_t21_p8_existing.update(_t21_high_seen)
+# Phase6 high-source audit includes *undisplayed* central tower candidates.
+# Reuse those source IDs as the NEXT DISPLAY cohort; only prohibit the two
+# already-rendered SealObject high panels. No review mesh identity duplicates.
+_t21_p8_existing.update(x for pair in _t21_high_pairs
+                        for x in pair if "SealObject00" in x)
 _t21_p8_existing.update(_t21_p7_seen)
 for _t21_p8_pid,(_t21_ida,_t21_idb,_t21_kind) in enumerate(_t21_p8_pairs,1):
     _t21_pair=[]
