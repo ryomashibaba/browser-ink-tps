@@ -1906,3 +1906,104 @@ print("T21_VERTICAL_5B",f"pairs={len(_t21_vpairs)} meshes={len(_t21_vrecords)}",
       f"sourceArea={sum(r['sourceAreaSquareMeters'] for r in _t21_vrecords):.3f}",
       f"sourceVertices={sum(r['vertexCount'] for r in _t21_vrecords)}",
       f"bytes={len(_t21_vpacked)}",f"output={_t21_v5b}")
+
+
+# T21 Phase6: high central support/overhead source, not assumed gameplay roof.
+# This specifically excludes raw StageSide external abyss walls and any
+# unverified PntSet instanced source. Source triangles are preserved exactly.
+_t21_high_pairs=[
+ ("Fld_Temple01_CellingBase_1__PillarOld00|Fld_Temple01_PillarOld00|v11",
+  "Fld_Temple01_CellingBase_1__PillarOld00|Fld_Temple01_PillarOld00|v3"),
+ ("Fld_Temple01_CellingBase_1__PillarOld00|Fld_Temple01_PillarOld00|v10",
+  "Fld_Temple01_CellingBase_1__PillarOld00|Fld_Temple01_PillarOld00|v2"),
+ ("Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v338",
+  "Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v100"),
+ ("Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v129",
+  "Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v337"),
+ ("Fld_Temple01_mesh05_low96_1__SealObject00|Fld_Temple01_SealObject00|v3",
+  "Fld_Temple01_mesh05_low96_1__SealObject00|Fld_Temple01_SealObject00|v2"),
+ ("Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v264",
+  "Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v184"),
+ ("Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v255",
+  "Fld_Temple01_PillarBase_2__Pillar00|Fld_Temple01_Pillar00|v177"),
+]
+_t21_high_rows=[]
+_t21_high_blob=bytearray()
+_t21_high_seen=set()
+for _t21_pid,_t21_pair in enumerate(_t21_high_pairs,1):
+    _t21_pair_members=[]
+    for _t21_id in _t21_pair:
+        if _t21_id in _t21_high_seen:
+            raise SystemExit("T21HIGH accidental duplicate "+_t21_id)
+        _t21_high_seen.add(_t21_id)
+        if _t21_id not in _t21_vbyid:
+            raise SystemExit("T21HIGH source identity missing "+_t21_id)
+        _t21_rec=_t21_vbyid[_t21_id]
+        if _t21_rec["outsideHardBoundarySamples"]:
+            raise SystemExit("T21HIGH out-of-silhouette sample "+_t21_id)
+        _t21_obj,_t21_mat,_t21_suffix=_t21_id.split("|")
+        if not _t21_obj.startswith("Fld_Temple01_"):
+            raise SystemExit("T21HIGH prohibited actor instance "+_t21_id)
+        _t21_group=(_t21_obj,_t21_mat)
+        if _t21_group not in _t21_vcached:
+            _t21_comp=componentize(_t21_vertical_groups[_t21_group])
+            _t21_comp.sort(key=lambda ff:(min(ff),len(ff)))
+            _t21_vcached[_t21_group]=_t21_comp
+        _t21_fi=_t21_vcached[_t21_group][int(_t21_suffix[1:])]
+        _t21_source_xyz=mesh_payload(_t21_fi)["vertices"]
+        if len(_t21_source_xyz)!=3*_t21_rec["faceCount"]:
+            raise SystemExit("T21HIGH original face count drift "+_t21_id)
+        _t21_area=component_project_area(_t21_fi)
+        if abs(_t21_area-_t21_rec["sourceAreaSquareMeters"])>1e-8:
+            raise SystemExit("T21HIGH original triangle source area drift "+_t21_id)
+        _t21_side="POSITIVE_Z" if sum(p[2] for p in _t21_source_xyz)>=0 else "NEGATIVE_Z"
+        _t21_m={
+            "pairId":_t21_pid,"sourceComponentId":_t21_id,
+            "sourceMaterial":_t21_mat,
+            "sourceAreaSquareMeters":_t21_area,
+            "yRange":_t21_rec["yRangeProjectMeters"],
+            "sourceVertexCount":len(_t21_source_xyz),
+            "side":_t21_side,
+            "originalFaceMin":_t21_rec["minSourceFaceIndex"],
+            "maxAbsOriginalNormalY":_t21_rec["maxAbsNormalY"],
+            "outsideHardBoundarySamples":0,
+            "sourcePlacement":"STATIC_MODEL_ONLY",
+            "gameRoofOrSupportSemantics":"UNRESOLVED",
+            "reviewOnly":True,
+            "runtimePromotionAuthorized":False
+        }
+        _t21_pair_members.append((_t21_m,_t21_source_xyz))
+    (_t21_a,_t21_av),(_t21_b,_t21_bv)=_t21_pair_members
+    if _t21_a["side"]==_t21_b["side"] or _t21_a["yRange"]!=_t21_b["yRange"] or abs(_t21_a["sourceAreaSquareMeters"]-_t21_b["sourceAreaSquareMeters"])>1e-7:
+        raise SystemExit("T21HIGH pair side/area/Y mismatch "+str(_t21_pid))
+    for _t21_p in _t21_av:
+        if min(math.hypot(_t21_p[0]+q[0]-0.229368288528164,
+                          _t21_p[1]-q[1],
+                          _t21_p[2]+q[2]-0.194564295456822)
+               for q in _t21_bv)>1e-6:
+            raise SystemExit("T21HIGH exact reflected original XYZ mismatch pair "+str(_t21_pid))
+    for _t21_record,_t21_vertices in _t21_pair_members:
+        _t21_high_rows.append(_t21_record)
+        _t21_high_blob.extend(_t21_struct.pack("<H",len(_t21_vertices)))
+        for _t21_vertex in _t21_vertices:
+            _t21_high_blob.extend(_t21_struct.pack("<ddd",*_t21_vertex))
+_t21_high_output=Path("/tmp/t21-high-structure-source-phase6.json")
+_t21_high_output.write_text(json.dumps({
+  "version":"T21_HIGH_STRUCTURE_EXACT_SOURCE_V1",
+  "sourceAuditVersion":audit_output["version"],
+  "sourceAuthority":"PINNED_ORIGINAL_TEMPLE01_OBJ_FLOAT64_XYZ",
+  "sourceType":"STRONGLY_VERTICAL_STATIC_MODEL_FACE_COMPONENTS_ONLY",
+  "exclusion":"NO_STAGESIDE_ABYSS_NO_PNTSET_NO_INFERRED_CLOSED_SOLIDS",
+  "originalTriangleSourceAreaSquareMeters":sum(r["sourceAreaSquareMeters"] for r in _t21_high_rows),
+  "pairs":len(_t21_high_pairs),"meshes":len(_t21_high_rows),
+  "records":_t21_high_rows,
+  "packedFloat64LEBase64":_t21_base64.b64encode(_t21_high_blob).decode("ascii"),
+  "packedByteLength":len(_t21_high_blob),
+  "visualReviewOnly":True,
+  "runtimePromotionAuthorized":False,
+  "connectivityPaintCollisionAndCeilingAuthority":"NONE_UNVERIFIED",
+},separators=(",",":")),encoding="utf-8")
+print("T21_HIGH_STRUCTURE_SOURCE",f"pairs={len(_t21_high_pairs)}",
+    f"meshes={len(_t21_high_rows)}",f"vertices={sum(r['sourceVertexCount'] for r in _t21_high_rows)}",
+    f"area={sum(r['sourceAreaSquareMeters'] for r in _t21_high_rows):.4f}",
+    f"bytes={len(_t21_high_blob)}")
