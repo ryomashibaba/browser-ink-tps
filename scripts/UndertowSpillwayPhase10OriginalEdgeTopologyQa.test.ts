@@ -49,10 +49,14 @@ describe('T21 Phase10 pinned OBJ edge-connected model topology (no gameplay prom
   });
   it('validates actual original vertex-ID seams separately from coincident coordinate seams',()=>{
     const path=process.env.T21_PHASE10_TOPOLOGY_JSON;
-    if(!path||!existsSync(path)){
-      if(process.env.CI)throw new Error('T21 Phase10 independent original-OBJ adjacency fixture missing in CI');
+    if(!path){
+      // npm test runs the entire suite without the original 43MB OBJ.
+      // The dedicated PR gate below passes T21_PHASE10_TOPOLOGY_JSON and
+      // MUST validate the pinned-source evidence rather than silently skip.
       return;
     }
+    if(!existsSync(path))
+      throw new Error('T21 Phase10 supplied original OBJ adjacency fixture missing: '+path);
     const f=JSON.parse(readFileSync(path,'utf8')) as Fixture;
     expect(f).toMatchObject({
       version:'T21_PHASE10_EXACT_SOURCE_EDGE_TOPOLOGY_V1',
