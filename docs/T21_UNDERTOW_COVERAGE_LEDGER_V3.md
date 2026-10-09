@@ -1,3 +1,40 @@
+# T21 — Phase 0 Coverage v3.1 / broad static terrain (2026-10-09)
+
+## Whole-stage source audit vs previous local discovery
+- Original source: pinned KiTrix `Vss_Temple01.obj`, original Pass18C walk-face extraction, excluding FloorLine and FloorFence mark/overlay classes.
+- New `T21_WHOLE_STAGE_WALK_SOURCE_INVENTORY_V1` scans **all active, upward-oriented Temple01 walk-token components** instead of Pass18G's local 12m search boxes. It is **NOT** every possible material, collision asset, actor instance, or gameplay terrain.
+- First measured source inventory: **777 unique source components**; **734** have all 7 source triangle samples per face within the frozen 42-vertex silhouette; **43** need boundary reconciliation. The rule is **sample-based, not exact concave-polygon intersection**.
+- Plan bins by bbox center: center 305 (34 boundary flagged), POS 125 (0), NEG 125 (0), LEFT_SIDE 111 (3), RIGHT_SIDE 111 (6). These are diagnostic groups, NOT authoritative route borders.
+- Artifact `t21-undertow-whole-stage-walk-source-inventory` carries every component ID, original material/object, source triangle area, Y range, plan bbox, boundary sample disposition and pending PntSet placement authority.
+- Previously frozen `FloorConcrete02 c2/c17`, `c3/c16` are **still quarantined on both mirrored sides**. The 42-vertex exterior silhouette and source model were not modified.
+
+## Source additions (review ONLY)
+### Batch2, seven original mirrored pairs / 14 meshes
+- `FloorConcrete00 c7/c6` at project Y+3; `FloorGrass00 c3/c1` at -1.5; `FloorSlope00 c9/c20` at 0→+0.7507.
+- `FldObj_Temple01_PntSet` source slopes: four `FloorSlope00` meshes (-3→-1.5) and four `FloorSlope01` meshes (~0.12→2.93).
+- **14 source-exact meshes**, total **157.9758m² summed original 3D triangle area**, with 8 `PntSet` components marked **SET_ACTOR_PLACEMENT_UNRESOLVED** and separately toggleable. The geometry exists in the source but final in-game actor placement is not proved.
+- The 0.5m XZ review coverage count changes from **5,200.75m² unshown for 34 source meshes to 5,076.50m² for 48**. The **124.25m²** improvement is independent of and must not be confused with source triangle-area sum. Both figures are approximate display-plan measurements, never walkability proofs.
+- CI checks every decoded float64 triple against the original Pass18C JSON, source Y, mirror symmetry and no runtime promotion.
+
+### Broad static floor terrain, four original mirrored pairs / 8 meshes
+- `Fld_Temple01_pCube20989_1__FloorConcrete02 c12/c1`, Y+1.5, source area **214.8656m² per side**.
+- `Fld_Temple01_pCube21525_1__FloorConcrete00 c8/c3`, Y+7.5, source area **127.5031m² per side**.
+- Same static FloorConcrete00 `c11/c0`, Y+9.0, area **59.6965m² per side**.
+- Same static FloorConcrete00 `c9/c2`, Y+3.0, area **59.4276m² per side**.
+- **8 original mirrored meshes, 4 pairs**, exact unmodified source triangles. Binary float64 dictionary uses bit-exact XYZ, and the dedicated CI QA checks all original vertex triples against an independent verified OBJ export. Areas are summed 3D source, not new XZ coverage.
+- Source itself is static `Fld_Temple01`, not PntSet; collision, scoring, paint, route continuity and game-specific participation are still unproven.
+- The existing full 16 + local 10 + Phase1 8 + batch2 14 + broad static 8 now comprise **56 review-only original-source meshes**. Separate review-layer toggles preserve explicit provenance.
+- The broad-floor group's incremental unshown-XZ improvement must be taken from the next successful Ledger v3 CI rather than guessed.
+
+## Safety gates / next decisions
+- T20 production stays `inkworks-junction`; T21 stays `activationReady=false`; PR #5 stays Draft/unmerged.
+- No fake slabs, guessed Y, convenience off-mesh links, collision/nav/paint/scoring/fall-out or CPU promotion.
+- Source-mesh world-space Y from Pass18C is exact; the visual renderer still applies its existing small render-only overlap offset.
+- First run the new whole-stage inventory, source-batch exactness, full TS/Vitest and historical Pass18 audits; five in-browser camera views remain a separate **human-renderer QA gate**.
+- Use the full-stage 777-component ledger to prioritize larger missing left/right side-ground patches, lower/high multilevel overhang source families, then non-ground wall/sidewall meshes. Pair-level checks and registered author evidence precede any Freeze.
+
+---
+
 # T21 Undertow — Coverage Ledger v3 + Phase 1 visual-only source terrain
 
 ## Status and strict authority gates
