@@ -50,6 +50,7 @@ import { UNDERTOW_T21_VISUAL_REVIEW } from '../stage/undertow/UndertowSpillwayVi
 import { UNDERTOW_T21_COVERAGE_LEDGER_V3 } from '../stage/undertow/UndertowSpillwayCoverageLedgerV3';
 import { UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES, UNDERTOW_T21_SOURCE_NATIVE_PHASE1_SUMMARY } from '../stage/undertow/UndertowSpillwaySourceNativePhase1Geometry';
 import { UNDERTOW_T21_SOURCE_BATCH2_MESHES, UNDERTOW_T21_SOURCE_BATCH2_SUMMARY } from '../stage/undertow/UndertowSpillwaySourceBatch2Geometry';
+import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES, UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY } from '../stage/undertow/UndertowSpillwayBroadStaticSourceGeometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 
@@ -108,6 +109,7 @@ export class UndertowVisualReviewApp {
   private readonly sourceNativeRoot = new Entity('T21Review:SourceNativeCandidates');
   private readonly sourceLocalRoot = new Entity('T21Review:SourceLocalCandidates');
   private readonly sourceBatch2Root = new Entity('T21Review:SourceTerrainBatch2');
+  private readonly broadStaticRoot = new Entity('T21Review:BroadStaticSourceTerrain');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -214,6 +216,7 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.sourceNativeRoot);
     this.app.root.addChild(this.sourceLocalRoot);
     this.app.root.addChild(this.sourceBatch2Root);
+    this.app.root.addChild(this.broadStaticRoot);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -260,6 +263,17 @@ export class UndertowVisualReviewApp {
         this.sourceBatch2Root,
         sourceMesh,
         this.materials.sourceLocal
+      );
+    }
+
+    // Four large exact Fld_Temple01 floor pairs, independently source-audited.
+    // Rendering creates no Rapier, Recast, paint, score or kill authority.
+    for (const sourceMesh of UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES) {
+      createSourceNativeReviewMesh(
+        this.app,
+        this.broadStaticRoot,
+        sourceMesh,
+        this.materials.sourceNative
       );
     }
 
@@ -340,6 +354,7 @@ export class UndertowVisualReviewApp {
         <span>Additional local source meshes</span><b>${UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m²</b>
         <span>Phase 1 exact terrain source meshes</span><b>${UNDERTOW_T21_SOURCE_NATIVE_PHASE1_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_NATIVE_PHASE1_SUMMARY.totalSourceTriangleAreaSquareMeters.toFixed(1)} m² (source triangles, not extra XZ)</b>
         <span>Source terrain batch 2</span><b>${UNDERTOW_T21_SOURCE_BATCH2_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_BATCH2_SUMMARY.sourceAreaSquareMeters.toFixed(1)} m² (8 PntSet actor placements pending)</b>
+        <span>Broad static source floors</span><b>${UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.meshCount} / ${UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m² (source triangles, not newly displayed XZ)</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -360,6 +375,7 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-source-native-toggle">Source mesh ON</button>
         <button id="t21-review-source-local-toggle">Local source ON</button>
         <button id="t21-review-source-batch2-toggle">Terrain batch 2 ON</button>
+        <button id="t21-review-broad-static-toggle">Broad static floors ON</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -367,7 +383,7 @@ export class UndertowVisualReviewApp {
       <div class="review-legend">
         <span><i class="confirmed"></i> confirmed/reviewed macro geometry</span>
         <span><i class="occupancy"></i> whole-stage XZ occupancy envelope; NOT a flat floor</span>
-        <span><i class="source-native"></i> exact Temple01 source mesh; connectivity/runtime pending</span>
+        <span><i class="source-native"></i> exact Temple01 source mesh and broad static floors; connectivity/runtime pending</span>
         <span><i class="source-local"></i> local source triangles and batch 2; PntSet actor placement and connectivity pending</span>
         <span><i class="provisional"></i> provisional XZ-only macro envelope; Y unresolved</span>
         <span><i class="unresolved"></i> unresolved detail boundary / ledger item</span>
@@ -480,6 +496,11 @@ export class UndertowVisualReviewApp {
       panel.querySelector<HTMLButtonElement>('#t21-review-source-batch2-toggle'),
       this.sourceBatch2Root,
       'Terrain batch 2'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-broad-static-toggle'),
+      this.broadStaticRoot,
+      'Broad static floors'
     );
     this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
