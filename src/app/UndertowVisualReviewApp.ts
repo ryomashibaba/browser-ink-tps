@@ -52,6 +52,7 @@ import { UNDERTOW_T21_SOURCE_NATIVE_PHASE1_MESHES, UNDERTOW_T21_SOURCE_NATIVE_PH
 import { UNDERTOW_T21_SOURCE_BATCH2_MESHES, UNDERTOW_T21_SOURCE_BATCH2_SUMMARY } from '../stage/undertow/UndertowSpillwaySourceBatch2Geometry';
 import { UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES, UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY } from '../stage/undertow/UndertowSpillwayBroadStaticSourceGeometry';
 import { UNDERTOW_T21_FLANK_ELEVATION_PHASE4_MESHES, UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY } from '../stage/undertow/UndertowSpillwayFlankElevationPhase4Geometry';
+import { UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES, UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY } from '../stage/undertow/UndertowSpillwayVerticalSourcePhase5BGeometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B';
 
@@ -63,6 +64,9 @@ interface ReviewMaterials {
   occupancy: StandardMaterial;
   sourceNative: StandardMaterial;
   sourceLocal: StandardMaterial;
+  sourceVerticalGlass: StandardMaterial;
+  sourceVerticalMetal: StandardMaterial;
+  sourceVerticalPillar: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -112,6 +116,7 @@ export class UndertowVisualReviewApp {
   private readonly sourceBatch2Root = new Entity('T21Review:SourceTerrainBatch2');
   private readonly broadStaticRoot = new Entity('T21Review:BroadStaticSourceTerrain');
   private readonly flankElevationPhase4Root = new Entity('T21Review:FlankElevationPhase4');
+  private readonly verticalSourcePhase5BRoot = new Entity('T21Review:VerticalSourcePhase5B');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -220,6 +225,7 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.sourceBatch2Root);
     this.app.root.addChild(this.broadStaticRoot);
     this.app.root.addChild(this.flankElevationPhase4Root);
+    this.app.root.addChild(this.verticalSourcePhase5BRoot);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -288,6 +294,23 @@ export class UndertowVisualReviewApp {
         this.flankElevationPhase4Root,
         sourceMesh,
         this.materials.sourceNative
+      );
+    }
+
+    // Exact vertical Temple01 source *faces*, NOT gameplay walls or a whole
+    // closed 3D component. Visually colored by source material, with a separate
+    // toggle from 64 upward-walk-source triangles and stage-runtime solids.
+    for (const sourceMesh of UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES) {
+      const material=sourceMesh.visualKind==='GLASS'
+        ? this.materials.sourceVerticalGlass
+        : sourceMesh.visualKind==='METAL_WALL'
+        ? this.materials.sourceVerticalMetal
+        : this.materials.sourceVerticalPillar;
+      createSourceNativeReviewMesh(
+        this.app,
+        this.verticalSourcePhase5BRoot,
+        sourceMesh,
+        material
       );
     }
 
@@ -370,6 +393,7 @@ export class UndertowVisualReviewApp {
         <span>Source terrain batch 2</span><b>${UNDERTOW_T21_SOURCE_BATCH2_SUMMARY.meshCount} / ${UNDERTOW_T21_SOURCE_BATCH2_SUMMARY.sourceAreaSquareMeters.toFixed(1)} m² (8 PntSet actor placements pending)</b>
         <span>Broad static source floors</span><b>${UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.meshCount} / ${UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.totalSourceAreaSquareMeters.toFixed(1)} m² (source triangles, not newly displayed XZ)</b>
         <span>Phase 4 flank / high-ramp source</span><b>${UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY.meshCount} / ${UNDERTOW_T21_FLANK_ELEVATION_PHASE4_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² (unmodified 3D source triangles)</b>
+        <span>Phase 5B vertical source (non-floor)</span><b>${UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY.meshCount} / ${UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_SUMMARY.sourceTriangleAreaSquareMeters.toFixed(1)} m² (exact original wall/glass/pillar facing triangle area)</b>
         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -392,6 +416,7 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-source-batch2-toggle">Terrain batch 2 ON</button>
         <button id="t21-review-broad-static-toggle">Broad static floors ON</button>
         <button id="t21-review-flank-phase4-toggle">Flanks / high ramps ON</button>
+        <button id="t21-review-vertical-phase5b-toggle">Vertical source faces ON</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -401,6 +426,7 @@ export class UndertowVisualReviewApp {
         <span><i class="occupancy"></i> whole-stage XZ occupancy envelope; NOT a flat floor</span>
         <span><i class="source-native"></i> exact Temple01 source floors, side-flanks and high ramps; connectivity/runtime pending</span>
         <span><i class="source-local"></i> local source triangles and batch 2; PntSet actor placement and connectivity pending</span>
+        <span>cyan = original vertical glass faces; blue-grey = wall metal faces; violet = pillar faces; review ONLY, optical transparency and collision unproven</span>
         <span><i class="provisional"></i> provisional XZ-only macro envelope; Y unresolved</span>
         <span><i class="unresolved"></i> unresolved detail boundary / ledger item</span>
         <span><i class="void"></i> intentional void / outside hard silhouette</span>
@@ -522,6 +548,11 @@ export class UndertowVisualReviewApp {
       panel.querySelector<HTMLButtonElement>('#t21-review-flank-phase4-toggle'),
       this.flankElevationPhase4Root,
       'Flanks / high ramps'
+    );
+    this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-vertical-phase5b-toggle'),
+      this.verticalSourcePhase5BRoot,
+      'Vertical source faces'
     );
     this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
@@ -705,6 +736,9 @@ function createReviewMaterials(): ReviewMaterials {
     occupancy: makeMaterial(new Color(0.30, 0.22, 0.065), 0.14),
     sourceNative: makeMaterial(new Color(0.94, 0.46, 0.08), 0.30),
     sourceLocal: makeMaterial(new Color(0.96, 0.64, 0.27), 0.22),
+    sourceVerticalGlass: makeMaterial(new Color(0.35, 0.86, 0.93), 0.36),
+    sourceVerticalMetal: makeMaterial(new Color(0.55, 0.67, 0.79), 0.27),
+    sourceVerticalPillar: makeMaterial(new Color(0.79, 0.51, 0.91), 0.27),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),
