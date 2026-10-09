@@ -1,3 +1,31 @@
+# T21 Phase 8 — source-native central towers, upper flanks and side edge faces (2026-10-09)
+
+## Original frozen baseline
+- Phase7 prior whole-workflow CI #1357 SUCCESS. T20 production `inkworks-junction`, T21 `activationReady=false`, Draft/open/unmerged PR #5 and exact frozen outer 42-vertex XZ outline unchanged.
+- Phase7 review cohort = 64 original walk-facing + 12 Phase5B vertical + 2 Phase6 high + 20 Phase7 supporting source meshes = **98**. The **64 walk-only source XZ floor coverage ledger** stays unchanged in Phase8.
+
+## Phase8 pinned Temple01 source selections
+- Sixteen original static near-vertical source mesh components, exactly eight original near-symmetric pairs, **636 source binary64 XYZ vertices** without rounding and **1,190.818341838822m² summed ORIGINAL 3D triangle area**. No new playable XZ floor area or gameplay navigation evidence.
+- **8 central tower faces** from `Fld_Temple01_Pillar00`, four mirrored pairs: two pairs original Y=9.4…21.4m, two pairs Y=3.4…15.4m. These are original broad side/support surface triangles, NOT confirmation of a sealed in-game tower/ceiling or gameplay collider.
+- **4 upper flank high-support faces** from `Fld_Temple01_PillarBase04`, two mirrored pairs, Y=3.5…11.5m, added beside Phase5B's existing original pillar strips, without inventing missing top/bottom caps.
+- **4 edge-liner vertical source faces** from `Fld_Temple01_FloorLine02`, two mirrored pairs, one Y=5…7m by outer side construction and the other Y=0.5…2.5m near the central-stage edge. Despite a source name containing “Floor”, these are near-vertical source original *face triangles*, NOT walkable floors, paint, collider or routes.
+- All 16 paired components passed original vertical inventory **7-per-triangle sampled hard XZ silhouette**; pair axis `xA+xB=0.229368288528164`, `zA+zB=0.194564295456822`, equal original height ranges and XYZ mirrored to floating tolerance. The sampled XZ envelope is NOT an exact polygon clip. The original pinned OBJ is the sole XYZ geometry authority; active game instance transforms, wall optical/collision semantics and topology connections remain unknown.
+
+## Source pipeline and QA
+- Pinned KiTrix `Vss_Temple01.obj` extraction lives at end of `scripts/undertow-temple01-upper-terrain-audit.py`. New `t21-undertow-phase8-original-support-source` Actions artifact contains 16 component identities, original Y/area, mirror distance, 636 exact triangle vertex Float64 XYZ words, and packed lossless source dictionary/index data. Runtime promotion deliberately disabled.
+- Review stores deterministic gzip `UndertowSpillwayPhase8OriginalPacked.ts` of 229 source float64 dictionary entries and 16 original u16 index streams, decoded by standard browser `DecompressionStream` in `UndertowSpillwayPhase8StaticSourceGeometry.ts`. No geometry inference, rounding or altered triangle winding; actual renderer naturally converts source to float32 at GPU display, while source authority remains binary64.
+- New `scripts/UndertowSpillwayPhase8StaticSourceQa.test.ts` byte-compares each of **636 source XYZ triples** against the independent original OBJ extraction, cross-checks area, Y, source materials, 114 unique total IDs, T20 production unchanged and T21 activation disabled.
+- The new inert visual review layers are **Central source towers** (violet), **Flank high supports** (mint) and **Source edge faces** (gold). All have independent switches and are included in `Floors + 3D structure` and `All evidence` presets; omitted from `Walk-source only`.
+- Updated original-source visual count **114** = 64 walk + 12 Phase5B + 2 Phase6 + 20 Phase7 + 16 Phase8. This total describes **displayed source triangle components, not playable area, fully reconstructed game objects, collider count, completed roofs or corridors**.
+
+## Outstanding
+1. Browser five-view render capture and **human visual comparison** of central tower occlusions and side supports; add missing actual source transitions only where source XYZ/topology evidence permits. Screenshots are not automatically Visual Freeze.
+2. Confirm upper-and-lower side route/central platform physical continuity, real roof/underside placement, respawn paths and actor PntSet instances with valid active game placement evidence.
+3. Source-only appearance remains no authority for gameplay glass, shooting, paint surfaces, nav, kill planes or collision. No runtime 4v4 promotion without separate approval and testing.
+4. PR #5 remains Draft/open and unmerged; T20 remains production.
+
+---
+
 # T21 Phase 7 — original multi-tier flank supports and center glass frames (2026-10-09)
 
 ## Source selection and exactness
