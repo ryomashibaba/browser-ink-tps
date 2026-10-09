@@ -2331,3 +2331,92 @@ print("T21_PHASE9_DOWNWARD_SOURCE",
     "zones="+str({z:sum(r["planZone"]==z for r in _t21_p9_down_rows)
                   for z in ("CENTER","POS","NEG","LEFT_SIDE","RIGHT_SIDE")}),
     "file="+str(_t21_p9_out))
+
+
+# Phase9B: select strictly original, independently audited down-facing
+# source faces in 5 reflected pairs for a *separate visual REVIEW layer*.
+# All source triangle winding and original binary64 XYZ remain unmodified.
+_t21_p9_selected_pairs=[
+ ("CENTER_UNDER_METAL","Fld_Temple01_pCube21772_1__FloorMetal00|Fld_Temple01_FloorMetal00|d0","Fld_Temple01_pCube21772_1__FloorMetal00|Fld_Temple01_FloorMetal00|d1"),
+ ("FLANK_FENCE_UNDER","Fld_Temple01_pPlane157_1__FloorFence00|Fld_Temple01_FloorFence00|d5","Fld_Temple01_pPlane157_1__FloorFence00|Fld_Temple01_FloorFence00|d15"),
+ ("FLANK_FENCE_UNDER","Fld_Temple01_pPlane157_1__FloorFence00|Fld_Temple01_FloorFence00|d25","Fld_Temple01_pPlane157_1__FloorFence00|Fld_Temple01_FloorFence00|d35"),
+ ("FLANK_MEGALITH_UNDER","Fld_Temple01_mesh04_low475_1__Megalith00|Fld_Temple01_Megalith00|d1","Fld_Temple01_mesh04_low475_1__Megalith00|Fld_Temple01_Megalith00|d0"),
+ ("INNER_MEGALITH_UNDER","Fld_Temple01_mesh04_low475_1__Megalith00|Fld_Temple01_Megalith00|d4","Fld_Temple01_mesh04_low475_1__Megalith00|Fld_Temple01_Megalith00|d5")
+]
+_t21_p9_byid={r["sourceComponentId"]:r for r in _t21_p9_down_rows}
+_t21_p9_cached={}
+_t21_p9_selected=[]
+_t21_p9_exact=bytearray()
+_t21_p9_seen=set()
+for _t21_p9_pair_id,(_t21_p9_kind,_t21_p9_aa,_t21_p9_bb) in enumerate(_t21_p9_selected_pairs,1):
+    _t21_p9_mirror=[]
+    for _t21_p9_id in (_t21_p9_aa,_t21_p9_bb):
+        if _t21_p9_id in _t21_p9_seen:raise SystemExit("T21_P9_UNDER duplicate ID "+_t21_p9_id)
+        _t21_p9_seen.add(_t21_p9_id)
+        if _t21_p9_id not in _t21_p9_byid:
+            raise SystemExit("T21_P9_UNDER original downward source ID unverified "+_t21_p9_id)
+        _t21_p9_r=_t21_p9_byid[_t21_p9_id]
+        if _t21_p9_r["outsideHardBoundarySamples"]:
+            raise SystemExit("T21_P9_UNDER original out-of-silhouette sample "+_t21_p9_id)
+        _t21_p9_obj,_t21_p9_mat,_t21_p9_suffix=_t21_p9_id.split("|")
+        _t21_p9_key=(_t21_p9_obj,_t21_p9_mat)
+        if _t21_p9_key not in _t21_p9_cached:
+            _t21_p9_comps=componentize(_t21_p9_down_groups[_t21_p9_key])
+            _t21_p9_comps.sort(key=lambda ff:(min(ff),len(ff)))
+            _t21_p9_cached[_t21_p9_key]=_t21_p9_comps
+        _t21_p9_faceids=_t21_p9_cached[_t21_p9_key][int(_t21_p9_suffix[1:])]
+        _t21_p9_xyz=mesh_payload(_t21_p9_faceids)["vertices"]
+        if len(_t21_p9_xyz)!=3*_t21_p9_r["triangleCount"]:
+            raise SystemExit("T21_P9_UNDER original selected component triangle count drift")
+        _t21_p9_area=component_project_area(_t21_p9_faceids)
+        if abs(_t21_p9_area-_t21_p9_r["originalTriangle3DAreaSquareMeters"])>1e-9:
+            raise SystemExit("T21_P9_UNDER area mismatch "+_t21_p9_id)
+        _t21_p9_record={
+            "pairId":_t21_p9_pair_id,"kind":_t21_p9_kind,
+            "sourceComponentId":_t21_p9_id,"sourceObject":_t21_p9_obj,
+            "sourceMaterial":_t21_p9_mat,"originalSourceAreaSquareMeters":_t21_p9_area,
+            "originalVertexCount":len(_t21_p9_xyz),
+            "originalYRange":_t21_p9_r["originalYRangeMeters"],
+            "originalBBoxXYZ":_t21_p9_r["bboxProjectXYZ"],
+            "side":"POSITIVE_Z" if sum(v[2] for v in _t21_p9_xyz)>=0 else "NEGATIVE_Z",
+            "outsideHardBoundarySamples":0,
+            "sourceOrientation":"OBJ_DOWNWARD_NORMAL_Y_LE_-0.65",
+            "floorCeilingColliderAndConnectivityAuthority":"NONE",
+            "reviewOnly":True,"runtimePromotionAuthorized":False
+        }
+        _t21_p9_mirror.append((_t21_p9_record,_t21_p9_xyz))
+    (_t21_p9_rA,_t21_p9_xyzA),(_t21_p9_rB,_t21_p9_xyzB)=_t21_p9_mirror
+    if _t21_p9_rA["side"]==_t21_p9_rB["side"] or _t21_p9_rA["originalYRange"]!=_t21_p9_rB["originalYRange"] or abs(_t21_p9_rA["originalSourceAreaSquareMeters"]-_t21_p9_rB["originalSourceAreaSquareMeters"])>0.0002:
+        raise SystemExit("T21_P9_UNDER original reflected area/Y/side mismatch pair "+str(_t21_p9_pair_id))
+    _t21_p9_max_dist=max(min(math.hypot(a[0]+b[0]-0.229368288528164,
+                           a[1]-b[1],a[2]+b[2]-0.194564295456822)
+                           for b in _t21_p9_xyzB) for a in _t21_p9_xyzA)
+    if _t21_p9_max_dist>0.0002:
+        raise SystemExit("T21_P9_UNDER original 3D source mirror mismatch pair "+
+                         str(_t21_p9_pair_id)+" "+str(_t21_p9_max_dist))
+    for _t21_p9_rec,_t21_p9_vertices in _t21_p9_mirror:
+        _t21_p9_rec["mirrorMaxDeviationMeters"]=_t21_p9_max_dist
+        _t21_p9_selected.append(_t21_p9_rec)
+        _t21_p9_exact.extend(_t21_struct.pack("<H",len(_t21_p9_vertices)))
+        for _t21_p9_point in _t21_p9_vertices:
+            _t21_p9_exact.extend(_t21_struct.pack("<ddd",*_t21_p9_point))
+_t21_p9_exact_file=Path("/tmp/t21-phase9-exact-downface-review-source.json")
+_t21_p9_exact_file.write_text(json.dumps({
+  "version":"T21_PHASE9_SELECTED_UNDERFACE_EXACT_V1",
+  "originalAuthority":"PINNED_KITRIX_TEMPLE01_ORIGINAL_FLOAT64_XYZ",
+  "sourceDownfacingInventoryVersion":"T21_PHASE9_DOWNFACING_TRIANGLE_AUDIT_V1",
+  "meshCount":len(_t21_p9_selected),"mirrorPairs":len(_t21_p9_selected_pairs),
+  "originalSourceVertexCount":sum(r["originalVertexCount"] for r in _t21_p9_selected),
+  "originalSource3DTriangleAreaSquareMeters":sum(r["originalSourceAreaSquareMeters"] for r in _t21_p9_selected),
+  "records":_t21_p9_selected,
+  "originalBinary64LEPackedBase64":_t21_base64.b64encode(_t21_p9_exact).decode("ascii"),
+  "originalPackedByteLength":len(_t21_p9_exact),
+  "sourceDownfacingNotPlayableUnderfloor":True,
+  "sourceRuntimeMeaning":"UNVERIFIED",
+  "runtimePromotionAuthorized":False,"reviewOnly":True
+},separators=(",",":")),encoding="utf-8")
+print("T21_PHASE9_SELECTED_SOURCE",f"pairs={len(_t21_p9_selected_pairs)}",
+    f"meshes={len(_t21_p9_selected)}",
+    f"vertices={sum(r['originalVertexCount'] for r in _t21_p9_selected)}",
+    f"source3DArea={sum(r['originalSourceAreaSquareMeters'] for r in _t21_p9_selected):.6f}",
+    f"bytes={len(_t21_p9_exact)}")
