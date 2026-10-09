@@ -9,6 +9,7 @@
  */
 import { spawn, execFileSync } from 'node:child_process';
 import { openSync, closeSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { resolve } from 'node:path';
@@ -44,7 +45,7 @@ async function navigate(url){
   const reply=await command('Page.navigate',{url});
   if(reply.errorText)throw Error('Chrome navigation: '+reply.errorText);
 }
-function command(method,params={}){
+function command(method,params={},timeoutMs=10_000){
   if(!socket||socket.readyState!==WebSocket.OPEN)throw Error('Chrome DevTools WebSocket disconnected');
   const id=++serial;
   return new Promise((resolve,reject)=>{
@@ -52,8 +53,8 @@ function command(method,params={}){
     // Every CDP request gets a deadline, independently of readiness polling.
     const deadline=setTimeout(()=>{
       waiting.delete(id);
-      reject(Error('CDP_TIMEOUT: '+method+' did not answer within 10000ms'));
-    },10_000);
+      reject(Error('CDP_TIMEOUT: '+method+' did not answer within '+timeoutMs+'ms'));
+    },timeoutMs);
     waiting.set(id,{
       resolve(value){clearTimeout(deadline);resolve(value);},
       reject(error){clearTimeout(deadline);reject(error);}
@@ -183,51 +184,57 @@ try {
   await command('Emulation.setDeviceMetricsOverride',{
     width:1600,height:900,deviceScaleFactor:1,mobile:false
   });
-  await navigate(url);
-  const ready=await poll(async()=>{
-    const v=await evaluation(`(() => ({
-      loaded: !!document.querySelector('[data-review-view="OVERVIEW"]'),
-      panel: !!document.querySelector('#t21-review-panel'),
-      error: document.querySelector('#boot-error')?.textContent || '',
-      documentReady: document.readyState,
-      browserWebGPU: !!navigator.gpu,
-      reviewBackend: document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer || 'NOT_BOOTED',
-      canvasWidth: document.querySelector('#app-canvas')?.width || 0,
-      canvasHeight: document.querySelector('#app-canvas')?.height || 0
-    }))()`);
-    manifest.lastBrowserProbe=v;
-    if(v?.error)throw Error('T21_REVIEW_BOOT_ERROR: '+v.error.slice(0,1200));
-    if(v?.loaded&&v.panel&&v.canvasWidth>=800&&v.canvasHeight>=450)return v;
-    throw Error('T21_REVIEW_NOT_READY: '+JSON.stringify(v).slice(0,1000));
-  },35_000);
-  manifest.browserReadiness=ready;
-  manifest.rendererBackend=ready.reviewBackend;
-  process.stdout.write('T21_CAPTURE_WEBGPU_READY '+JSON.stringify(ready)+'\n');
-  const appliedPreset=await evaluation(`(() => {
-    const b=document.querySelector('[data-review-preset="THREE_DIMENSIONAL"]');
-    if(!b)return false;
-    b.click();return b.getAttribute('aria-pressed')==='true';
-  })()`);
-  if(!appliedPreset)throw Error('T21 3D geometry source review preset failed to activate');
+  const urlForView=view=>url+'&reviewPreset=THREE_DIMENSIONAL&reviewView='+view;
   manifest.layerPreset='THREE_DIMENSIONAL';
-  await sleep(1200);
-
+  manifest.cameraSelection='URL_BOOTSTRAP_NO_BLOCKING_RUNTIME_CLICK';
+  const hashSet=new Set();
   for(const view of views){
-    const selected=await evaluation(`(() => {
-      const button=document.querySelector('[data-review-view="${view}"]');
-      if(!button)return false;
-      button.click();
-      return true;
-    })()`);
-    if(!selected)throw Error('T21 camera viewpoint control missing '+view);
+    await navigate(urlForView(view));
+    const ready=await poll(async()=>{
+      const state=await evaluation(`(() => ({
+        loaded: !!document.querySelector('[data-review-view="OVERVIEW"]'),
+        panel: !!document.querySelector('#t21-review-panel'),
+        error: document.querySelector('#boot-error')?.textContent || '',
+        documentReady: document.readyState,
+        browserWebGPU: !!navigator.gpu,
+        reviewBackend: document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer || 'NOT_BOOTED',
+        reviewView: document.querySelector('#app-canvas')?.dataset.t21ReviewView || '',
+        reviewPreset: document.querySelector('#app-canvas')?.dataset.t21ReviewPreset || '',
+        canvasWidth: document.querySelector('#app-canvas')?.width || 0,
+        canvasHeight: document.querySelector('#app-canvas')?.height || 0
+      }))()`);
+      manifest.lastBrowserProbe=state;
+      if(state?.error)throw Error('T21_REVIEW_BOOT_ERROR: '+state.error.slice(0,1200));
+      if(state?.loaded&&state.panel&&state.reviewView===view&&
+         state.reviewPreset==='THREE_DIMENSIONAL'&&
+         state.canvasWidth>=800&&state.canvasHeight>=450)return state;
+      throw Error('T21_REVIEW_NOT_READY: '+JSON.stringify(state).slice(0,1000));
+    },35_000);
+    if(!manifest.browserReadiness)manifest.browserReadiness=ready;
+    manifest.rendererBackend=ready.reviewBackend;
+    process.stdout.write('T21_CAPTURE_RENDERER_READY '+view+' '+ready.reviewBackend+'\\n');
     await sleep(850);
-    const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
+    // CDP screenshot is a graphical browser capture, not any simulated image.
+    // The 25s deadline admits slower software SwiftShader rendering.
+    const shot=await command('Page.captureScreenshot',{
+      format:'png',captureBeyondViewport:false,fromSurface:true
+    },25_000);
     const bytes=Buffer.from(shot.data||'','base64');
-    if(bytes.byteLength<8000)throw Error('Suspiciously small screenshot '+view+': '+bytes.byteLength);
-    const name='T21_'+view+'_WEBGPU_REVIEW.png';
-    process.stdout.write('T21_CAPTURE_VIEW '+view+' bytes='+bytes.byteLength+'\n');
+    if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
+      throw Error('T21_SCREENSHOT_INVALID: '+view+' bytes='+bytes.byteLength);
+    const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
+    if(width<1200||height<680)throw Error('T21_SCREENSHOT_RESOLUTION: '+view+' '+width+'x'+height);
+    const sha256=createHash('sha256').update(bytes).digest('hex');
+    if(hashSet.has(sha256))throw Error('T21_SCREENSHOT_DUPLICATE: camera image is bit-identical '+view);
+    hashSet.add(sha256);
+    const name='T21_'+view+'_WEBGPU_OR_WEBGL2_REVIEW.png';
     await writeFile(resolve(destination,name),bytes);
-    manifest.screenshots.push({view,file:name,sizeBytes:bytes.byteLength,renderer:'Chrome screenshot of PlayCanvas '+manifest.rendererBackend+' review canvas and UI',humanVisualApproval:false});
+    manifest.screenshots.push({
+      view,file:name,sizeBytes:bytes.byteLength,width,height,
+      sha256,renderer:'Chrome screenshot of PlayCanvas '+ready.reviewBackend+
+        ' review canvas and UI',humanVisualApproval:false
+    });
+    process.stdout.write('T21_CAPTURE_VIEW '+view+' size='+bytes.byteLength+'\\n');
   }
   if(manifest.screenshots.length!==5)throw Error('T21 five-view screenshot count invalid');
   manifest.status='CAPTURED_PENDING_HUMAN_VISUAL_QA';

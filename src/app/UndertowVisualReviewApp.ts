@@ -154,7 +154,18 @@ export class UndertowVisualReviewApp {
     this.buildNavigationMarkers();
     this.createReviewPanel();
     this.bindControls();
-    this.setView('OVERVIEW');
+    // URL state is for deterministic five-view evidence only. It changes
+    // inert renderer visibility/camera, never runtime stage/collision state.
+    const params=new URL(window.location.href).searchParams;
+    const requestedPreset=params.get('reviewPreset');
+    if(requestedPreset==='WALK_SOURCE'||requestedPreset==='THREE_DIMENSIONAL'||
+       requestedPreset==='ALL_EVIDENCE')this.applyReviewLayerPreset(requestedPreset);
+    const requestedView=params.get('reviewView');
+    const view:ReviewView=
+      requestedView==='TOP'||requestedView==='POS_TO_NEG'||
+      requestedView==='SPAWN_A'||requestedView==='SPAWN_B'
+        ?requestedView:'OVERVIEW';
+    this.setView(view);
     this.updateCamera();
 
     this.app.on('update', (dt: number) => {
@@ -623,6 +634,7 @@ export class UndertowVisualReviewApp {
   private applyReviewLayerPreset(preset:ReviewLayerPreset):void {
     if(preset!=='WALK_SOURCE'&&preset!=='THREE_DIMENSIONAL'&&preset!=='ALL_EVIDENCE')
       throw new Error('T21 unknown review-only layer preset');
+    this.canvas.dataset.t21ReviewPreset=preset;
     const full=preset==='ALL_EVIDENCE';
     const vertical=preset!=='WALK_SOURCE';
     this.confirmedRoot.enabled=vertical;
@@ -744,6 +756,7 @@ export class UndertowVisualReviewApp {
   }
 
   private setView(view: ReviewView): void {
+    this.canvas.dataset.t21ReviewView=view;
     const bounds = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.worldBounds;
     const centerX = (bounds.minX + bounds.maxX) * 0.5;
     const centerZ = (bounds.minZ + bounds.maxZ) * 0.5;
