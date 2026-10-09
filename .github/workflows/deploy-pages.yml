@@ -716,22 +716,8 @@ jobs:
       - name: Build for GitHub Pages
         run: npm run build -- --base=/browser-ink-tps/
 
-      # Screenshots are human visual QA evidence; lack of headless WebGPU must
-      # remain explicitly BLOCKED, not be misreported as Visual Freeze PASS.
-      - name: T21 five-view real WebGPU browser capture
-        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
-        continue-on-error: true
-        timeout-minutes: 3
-        run: node scripts/t21-review-five-view-capture.mjs
-
-      - name: Upload T21 five-view screenshots or BLOCKED manifest
-        if: always() && github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
-        uses: actions/upload-artifact@v4
-        with:
-          name: t21-undertow-real-five-view-capture
-          path: /tmp/t21-review-five-view
-          if-no-files-found: warn
-          retention-days: 14
+      # Fast 5-view evidence capture runs in a separate PARALLEL PR job.
+      # Keep the long frozen Pass18 regression independent of headless Chrome.
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -752,3 +738,42 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+ 
+  t21-visual-evidence:
+    name: T21 fast five-view WebGPU evidence
+    if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact T21 PR revision
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js for visual review
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install pinned browser InkTPS build dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build real source-grounded review app
+        run: npm run build -- --base=/browser-ink-tps/
+
+      - name: T21 bounded five-view headless WebGPU capture
+        id: five_view
+        continue-on-error: true
+        timeout-minutes: 3
+        run: node scripts/t21-review-five-view-capture.mjs
+
+      - name: Always upload five-view captures or explicit BLOCKED manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-real-five-view-capture
+          path: /tmp/t21-review-five-view
+          if-no-files-found: warn
+          retention-days: 14
+
