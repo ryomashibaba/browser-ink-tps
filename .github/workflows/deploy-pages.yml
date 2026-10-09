@@ -64,6 +64,22 @@ jobs:
         shell: bash
         run: python scripts/undertow-temple01-upper-terrain-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj
 
+      - name: T21 Phase12B original OBJ vertex-ID connected-component graph
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12b-component-graph.py --self-test
+          python scripts/undertow-temple01-phase12b-component-graph.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase11-central-nearest-source-geometry.json /tmp/t21-phase12b-original-vertex-components.json
+
+      - name: Upload T21 Phase12B original source connected components
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12b-original-vertex-components
+          path: /tmp/t21-phase12b-original-vertex-components.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 whole-stage walk-source inventory
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -290,6 +306,12 @@ jobs:
         env:
           T21_PHASE11_SOURCE_JSON: /tmp/t21-phase11-central-nearest-source-geometry.json
         run: npx vitest run scripts/UndertowSpillwayPhase12SourceFamilyQa.test.ts
+
+      - name: T21 Phase12B pinned OBJ original-vertex component integrity QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12B_COMPONENT_JSON: /tmp/t21-phase12b-original-vertex-components.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12BOriginalComponentQa.test.ts
 
       - name: TypeScript check
         run: npm run typecheck
