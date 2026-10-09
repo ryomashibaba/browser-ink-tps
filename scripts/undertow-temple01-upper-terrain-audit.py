@@ -1530,3 +1530,86 @@ print(
     f"boundary_pending={sum(v['outsideFrozenBoundarySampleCount']>0 for v in _t21_global_rows)}",
     f"output={_t21_global_output}",
 )
+
+
+# Deliberately small, PRE-SELECTED broad terrain source group: static Fld_Temple01
+# only. It is NOT an indiscriminate all-source promotion. Every component is
+# a high-area original Temple01 walk-source with two fully-inside mirror members.
+# The export records byte-exact float64 triples as artifact for later pinning.
+import struct as _t21_struct
+import base64 as _t21_base64
+_t21_batch3_pairs=[
+  ("Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c12",
+   "Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|c1"),
+  ("Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c8",
+   "Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c3"),
+  ("Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c11",
+   "Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c0"),
+  ("Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c9",
+   "Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|c2"),
+]
+_t21_full_by_id={row["sourceComponentId"]:row for row in _t21_global_rows}
+_t21_batch3_records=[]
+_t21_batch3_bytes=bytearray()
+for _t21_pair_id,_t21_pair in enumerate(_t21_batch3_pairs,1):
+    _t21_pair_records=[]
+    for _t21_id in _t21_pair:
+        if _t21_id not in continuation_by_id or _t21_id not in _t21_full_by_id:
+            raise SystemExit("T21BATCH3 missing whole-model source "+_t21_id)
+        _t21_original=continuation_by_id[_t21_id]
+        _t21_audit=_t21_full_by_id[_t21_id]
+        if _t21_audit["outsideFrozenBoundarySampleCount"] != 0:
+            raise SystemExit("T21BATCH3 source hard-silhouette disagreement "+_t21_id)
+        if not _t21_id.startswith("Fld_Temple01_"):
+            raise SystemExit("T21BATCH3 requires static source identity "+_t21_id)
+        _t21_mesh=mesh_payload(_t21_original["faces"])
+        _t21_verts=_t21_mesh["vertices"]
+        if len(_t21_verts)!=len(_t21_mesh["indices"]) or _t21_mesh["indices"]!=list(range(len(_t21_verts))):
+            raise SystemExit("T21BATCH3 expected original expanded triangle list "+_t21_id)
+        if len(_t21_verts)<3 or len(_t21_verts)%3:
+            raise SystemExit("T21BATCH3 malformed original triangles "+_t21_id)
+        _t21_record={
+            "pairId":_t21_pair_id,
+            "sourceComponentId":_t21_id,
+            "sourceMaterial":_t21_original["sourceMaterial"],
+            "areaSquareMeters":_t21_original["areaSquareMeters"],
+            "yRange":_t21_audit["yRangeProjectMeters"],
+            "vertexCount":len(_t21_verts),
+            "placementAuthority":"STATIC_SOURCE_IDENTITY_ONLY",
+            "runtimePromotionAuthorized":False,
+        }
+        _t21_pair_records.append((_t21_record,_t21_verts))
+    (_t21_a,_t21_av),(_t21_b,_t21_bv)=_t21_pair_records
+    if abs(_t21_a["areaSquareMeters"]-_t21_b["areaSquareMeters"])>1e-6 or _t21_a["yRange"]!=_t21_b["yRange"]:
+        raise SystemExit("T21BATCH3 mirror area/Y mismatch pair "+str(_t21_pair_id))
+    for _t21_point in _t21_av:
+        _t21_match=min(
+           math.hypot(_t21_point[0]+v[0]-0.229368288528164,
+                      _t21_point[1]-v[1],
+                      _t21_point[2]+v[2]-0.194564295456822)
+           for v in _t21_bv)
+        if _t21_match>1e-6:
+            raise SystemExit("T21BATCH3 source mirror XYZ mismatch pair "+str(_t21_pair_id))
+    for _t21_record,_t21_verts in _t21_pair_records:
+        _t21_batch3_records.append(_t21_record)
+        _t21_batch3_bytes.extend(_t21_struct.pack("<H",len(_t21_verts)))
+        for _t21_point in _t21_verts:
+            _t21_batch3_bytes.extend(_t21_struct.pack("<ddd",*_t21_point))
+_t21_batch3_output=Path("/tmp/t21-broad-source-batch3.json")
+_t21_batch3_output.write_text(json.dumps({
+   "version":"T21_LARGE_TERRAIN_BATCH3_V1",
+   "sourceAuditVersion":audit_output["version"],
+   "reviewOnly":True,"runtimePromotionAuthorized":False,
+   "pairCount":len(_t21_batch3_pairs),
+   "meshCount":len(_t21_batch3_records),
+   "records":_t21_batch3_records,
+   "packedFloat64LEBase64":_t21_base64.b64encode(_t21_batch3_bytes).decode("ascii"),
+   "packedByteLength":len(_t21_batch3_bytes),
+   "sourceGeometry":"EXACT_TEMPLE01_SOURCE_NO_REPROJECTION_OR_CLIPPING",
+   "note":"Source visual only; 7-point outer gate and mirror/source exactness verified. Not gameplay collision/paint/nav."
+ },separators=(",",":")),encoding="utf-8")
+print("T21BATCH3 SOURCE_CANDIDATES",
+      f"pairs={len(_t21_batch3_pairs)} meshes={len(_t21_batch3_records)}",
+      f"triangle_area={sum(c['areaSquareMeters'] for c in _t21_batch3_records):.3f}",
+      f"packed_bytes={len(_t21_batch3_bytes)}",
+      f"output={_t21_batch3_output}")
