@@ -151,6 +151,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12I pinned whole original broad-structure candidate survey
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12i-broad-structure-survey.py --self-test
+          python scripts/undertow-temple01-phase12i-broad-structure-survey.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12c-original-source-triangles.json /tmp/t21-phase12d-four-full-original-source-pairs.json /tmp/t21-phase12i-broad-structure-survey.json
+
+      - name: Upload T21 Phase12I broad original structure shortlist
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12i-pinned-broad-original-structures
+          path: /tmp/t21-phase12i-broad-structure-survey.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 Phase12D recovered original source pairs
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
