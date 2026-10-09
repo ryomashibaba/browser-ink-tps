@@ -2243,3 +2243,91 @@ print("T21_PHASE8_ORIGINAL_SUPPORT",f"pairs={len(_t21_p8_pairs)}",
     f"area={sum(r['sourceAreaSquareMeters'] for r in _t21_p8_records):.6f}",
     f"dictionary={len(_t21_p8_dictionary)}",
     f"output={_t21_p8_fixture}")
+
+
+# Phase9 source evidence: inventory original downward-facing source triangles.
+# This is an *orientation class in the OBJ*, never an assertion that the
+# associated surface is a live roof, solid underside, ceiling collider or
+# walkable platform. Index connected by ORIGINAL OBJ vertex IDs per obj/mat.
+_t21_p9_down_groups=defaultdict(list)
+for _t21_p9_fi,_t21_p9_f in enumerate(faces):
+    _t21_p9_o,_t21_p9_m=_t21_p9_f[3:5]
+    if not _t21_p9_o.startswith("Fld_Temple01_") or "PntSet" in _t21_p9_o or "StageSide" in _t21_p9_m:
+        continue
+    _t21_ny=tri_normal(_t21_p9_f)[1]
+    if _t21_ny <= -0.65:
+        _t21_p9_down_groups[(_t21_p9_o,_t21_p9_m)].append(_t21_p9_fi)
+_t21_p9_down_rows=[]
+_t21_p9_down_rejected=defaultdict(int)
+for _t21_p9_key in sorted(_t21_p9_down_groups):
+    _t21_p9_components=componentize(_t21_p9_down_groups[_t21_p9_key])
+    _t21_p9_components.sort(key=lambda ff:(min(ff),len(ff)))
+    for _t21_p9_ci,_t21_p9_ff in enumerate(_t21_p9_components):
+        _t21_p9_area=component_project_area(_t21_p9_ff)
+        if _t21_p9_area < 2.0:
+            _t21_p9_down_rejected["SMALL_ORNAMENT"]+=1
+            continue
+        _t21_p9_bb=project_bbox3(_t21_p9_ff)
+        if _t21_p9_bb[1] < -4 or _t21_p9_bb[4] > 30:
+            _t21_p9_down_rejected["OUTSIDE_FOCUS_ELEVATION"]+=1
+            continue
+        _t21_p9_inside=0
+        _t21_p9_outside=0
+        for _t21_p9_fi in _t21_p9_ff:
+            _t21_p9_xyz=[project_point3(p) for p in tri_points(faces[_t21_p9_fi])]
+            _t21_p9_a,_t21_p9_b,_t21_p9_c=_t21_p9_xyz
+            _t21_p9_points=[
+                (_t21_p9_a[0],_t21_p9_a[2]),
+                (_t21_p9_b[0],_t21_p9_b[2]),
+                (_t21_p9_c[0],_t21_p9_c[2]),
+                ((_t21_p9_a[0]+_t21_p9_b[0])/2,(_t21_p9_a[2]+_t21_p9_b[2])/2),
+                ((_t21_p9_a[0]+_t21_p9_c[0])/2,(_t21_p9_a[2]+_t21_p9_c[2])/2),
+                ((_t21_p9_b[0]+_t21_p9_c[0])/2,(_t21_p9_b[2]+_t21_p9_c[2])/2),
+                ((_t21_p9_a[0]+_t21_p9_b[0]+_t21_p9_c[0])/3,
+                 (_t21_p9_a[2]+_t21_p9_b[2]+_t21_p9_c[2])/3)
+            ]
+            for _t21_p9_point in _t21_p9_points:
+                if _t21_hard_inside(_t21_p9_point):
+                    _t21_p9_inside+=1
+                else:
+                    _t21_p9_outside+=1
+        _t21_p9_center=(
+            (_t21_p9_bb[0]+_t21_p9_bb[3])/2,
+            (_t21_p9_bb[2]+_t21_p9_bb[5])/2
+        )
+        _t21_p9_down_rows.append({
+            "sourceComponentId":_t21_p9_key[0]+"|"+_t21_p9_key[1]+"|d"+str(_t21_p9_ci),
+            "sourceObject":_t21_p9_key[0],
+            "sourceMaterial":_t21_p9_key[1],
+            "sourceFaceMinIndex":min(_t21_p9_ff),
+            "triangleCount":len(_t21_p9_ff),
+            "originalTriangle3DAreaSquareMeters":_t21_p9_area,
+            "bboxProjectXYZ":_t21_p9_bb,
+            "originalYRangeMeters":list((_t21_p9_bb[1],_t21_p9_bb[4])),
+            "planZone":_t21_source_zone(*_t21_p9_center),
+            "insideHardBoundarySamples":_t21_p9_inside,
+            "outsideHardBoundarySamples":_t21_p9_outside,
+            "sourceOrientation":"OBJ_DOWNWARD_NORMAL_Y_LE_-0.65",
+            "sourceMeaning":"FACE_ORIENTATION_ONLY_UNKNOWN_UNDERSIDE_SEMANTICS",
+            "sourcePlacement":"STATIC_ORIGINAL_MESH_NOT_GAME_INSTANCE",
+            "runtimePromotionAuthorized":False
+        })
+_t21_p9_out=Path("/tmp/t21-phase9-downward-source-inventory.json")
+_t21_p9_out.write_text(json.dumps({
+    "version":"T21_PHASE9_DOWNFACING_TRIANGLE_AUDIT_V1",
+    "sourceAuthority":"PINNED_43MB_TEMPLE01_ORIGINAL_OBJ",
+    "downwardOriginalNormalYMaximum":-0.65,
+    "inclusion":"Fld_Temple01 static, no StageSide, Y in [-4,30], original area >=2m2",
+    "sampledBoundaryNotExactPolygon":True,
+    "sourceComponents":_t21_p9_down_rows,
+    "candidateCount":len(_t21_p9_down_rows),
+    "rejectionCounts":dict(_t21_p9_down_rejected),
+    "physicalRoofUndersideCollisionConnectivity":"UNVERIFIED",
+    "reviewOnly":True,"runtimePromotionAuthorized":False
+},separators=(",",":")),encoding="utf-8")
+print("T21_PHASE9_DOWNWARD_SOURCE",
+    "candidates="+str(len(_t21_p9_down_rows)),
+    "insideOnly="+str(sum(not row["outsideHardBoundarySamples"] for row in _t21_p9_down_rows)),
+    "zones="+str({z:sum(r["planZone"]==z for r in _t21_p9_down_rows)
+                  for z in ("CENTER","POS","NEG","LEFT_SIDE","RIGHT_SIDE")}),
+    "file="+str(_t21_p9_out))
