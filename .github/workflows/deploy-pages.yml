@@ -158,6 +158,21 @@ jobs:
           python scripts/undertow-temple01-phase12i-broad-structure-survey.py --self-test
           python scripts/undertow-temple01-phase12i-broad-structure-survey.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12c-original-source-triangles.json /tmp/t21-phase12d-four-full-original-source-pairs.json /tmp/t21-phase12i-broad-structure-survey.json
 
+      - name: T21 Phase12J full original static pillar-neighborhood mirror source search
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        run: |
+          python scripts/undertow-temple01-phase12j-pillar-neighborhood.py --self-test
+          python scripts/undertow-temple01-phase12j-pillar-neighborhood.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12i-broad-structure-survey.json /tmp/t21-phase12i-broad-source-eligibility-gate.json /tmp/t21-phase12j-pillar-neighborhood.json
+
+      - name: Upload T21 Phase12J original pillar-neighborhood candidate ledger
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12j-original-pillar-neighborhood
+          path: /tmp/t21-phase12j-pillar-neighborhood.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 Phase12I broad original structure shortlist
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
