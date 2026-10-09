@@ -96,6 +96,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12D full original FloorLine family symmetry search
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12d-full-family-mirror-audit.py --self-test
+          python scripts/undertow-temple01-phase12d-full-family-mirror-audit.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12c-original-source-triangles.json /tmp/t21-phase12d-full-family-mirror-results.json
+
+      - name: Upload T21 Phase12D full original symmetry evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12d-original-all-family-mirror
+          path: /tmp/t21-phase12d-full-family-mirror-results.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 whole-stage walk-source inventory
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
@@ -351,6 +367,23 @@ jobs:
           T21_PHASE12C_SOURCE_JSON: /tmp/t21-phase12c-original-source-triangles.json
           T21_PHASE12C_GATE_REPORT: /tmp/t21-phase12c-registered124-overlap-report.json
         run: npx vitest run scripts/UndertowSpillwayPhase12COptInFullSourceQa.test.ts
+
+      - name: T21 Phase12D original mirror and frozen outside-XZ distance QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12C_SOURCE_JSON: /tmp/t21-phase12c-original-source-triangles.json
+          T21_PHASE12D_MIRROR_JSON: /tmp/t21-phase12d-full-family-mirror-results.json
+          T21_PHASE12D_HARD_XZ_REPORT: /tmp/t21-phase12d-hard-xz-violation-results.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12DOriginalMirrorAndHardXZQa.test.ts
+
+      - name: Upload T21 Phase12D hard XZ source overrun evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12d-original-hard-xz-overrun
+          path: /tmp/t21-phase12d-hard-xz-violation-results.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: TypeScript check
         run: npm run typecheck
