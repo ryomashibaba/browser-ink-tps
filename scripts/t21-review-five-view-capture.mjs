@@ -47,8 +47,18 @@ function command(method,params={}){
   if(!socket||socket.readyState!==WebSocket.OPEN)throw Error('Chrome DevTools WebSocket disconnected');
   const id=++serial;
   return new Promise((resolve,reject)=>{
-    waiting.set(id,{resolve,reject});
-    socket.send(JSON.stringify({id,method,params}));
+    // A GPU crash or stalled Chrome DevTools socket must never hang the PR CI.
+    // Every CDP request gets a deadline, independently of readiness polling.
+    const deadline=setTimeout(()=>{
+      waiting.delete(id);
+      reject(Error('CDP_TIMEOUT: '+method+' did not answer within 10000ms'));
+    },10_000);
+    waiting.set(id,{
+      resolve(value){clearTimeout(deadline);resolve(value);},
+      reject(error){clearTimeout(deadline);reject(error);}
+    });
+    try{socket.send(JSON.stringify({id,method,params}));}
+    catch(error){clearTimeout(deadline);waiting.delete(id);reject(error);}
   });
 }
 async function evaluation(expression){
@@ -58,16 +68,18 @@ async function evaluation(expression){
 }
 try {
   await mkdir(destination,{recursive:true});
+  process.stdout.write('T21_CAPTURE_START '+new Date().toISOString()+'\\n');
   const chromeCommand=process.env.T21_CHROME_PATH||[
     'google-chrome-stable','google-chrome','chromium','chromium-browser'
   ].find(name=>{
     try{execFileSync('which',[name],{stdio:'ignore'});return true;}catch{return false;}
   });
-  if(!chromeCommand)throw Error('Chrome/Chromium binary not available on CI runner');
+  if(!chromeCommand)throw Error('CHROME_NOT_FOUND: Chrome/Chromium binary not available on CI runner');
   manifest.chromium=chromeCommand;
 
   const server=spawn('npm',['run','preview','--','--host','127.0.0.1','--port','4173','--strictPort'],{
-    stdio:['ignore','pipe','pipe'],detached:false
+    // Chrome/Vite error logs may be large: never leave PIPE buffers undrained.
+    stdio:'ignore',detached:false
   });
   children.push(server);
   const url='http://127.0.0.1:4173/browser-ink-tps/?stageReview=undertow';
@@ -82,9 +94,10 @@ try {
     '--remote-debugging-port=9229','--remote-allow-origins=*',
     '--user-data-dir=/tmp/t21-review-cdp-profile',
     'about:blank'
-  ],{stdio:['ignore','pipe','pipe'],detached:false});
+  ],{stdio:'ignore',detached:false});
   children.push(chrome);
 
+  process.stdout.write('T21_CAPTURE_BROWSER_START chrome='+chromeCommand+'\\n');
   const tab=await poll(async()=>{
     const response=await fetch('http://127.0.0.1:9229/json');
     if(!response.ok)return null;
@@ -92,9 +105,15 @@ try {
     return pages.find(p=>p.type==='page'&&p.webSocketDebuggerUrl);
   },35_000);
   socket=new WebSocket(tab.webSocketDebuggerUrl);
-  await new Promise((done,fail)=>{
-    socket.addEventListener('open',done,{once:true});
-    socket.addEventListener('error',fail,{once:true});
+  await Promise.race([
+    new Promise((done,fail)=>{
+      socket.addEventListener('open',done,{once:true});
+      socket.addEventListener('error',fail,{once:true});
+    }),
+    sleep(10_000).then(()=>{throw Error('CDP_CONNECT_TIMEOUT: WebSocket handshake exceeded 10s')})
+  ]);
+  socket.addEventListener('close',()=>{
+    for(const [id,p] of waiting){p.reject(Error('CDP_SOCKET_CLOSED: request '+id));waiting.delete(id);}
   });
   socket.addEventListener('message',event=>{
     const message=JSON.parse(String(event.data));
@@ -132,6 +151,7 @@ try {
     },35_000);
   });
   manifest.browserReadiness=ready;
+  process.stdout.write('T21_CAPTURE_WEBGPU_READY '+JSON.stringify(ready)+'\\n');
   await sleep(1200);
 
   for(const view of views){
@@ -147,6 +167,7 @@ try {
     const bytes=Buffer.from(shot.data||'','base64');
     if(bytes.byteLength<8000)throw Error('Suspiciously small screenshot '+view+': '+bytes.byteLength);
     const name='T21_'+view+'_WEBGPU_REVIEW.png';
+    process.stdout.write('T21_CAPTURE_VIEW '+view+' bytes='+bytes.byteLength+'\\n');
     await writeFile(resolve(destination,name),bytes);
     manifest.screenshots.push({view,file:name,sizeBytes:bytes.byteLength,renderer:'Chrome screenshot of PlayCanvas WebGPU canvas and review UI',humanVisualApproval:false});
   }
@@ -160,7 +181,7 @@ try {
   try {await mkdir(destination,{recursive:true});await writeFile(resolve(destination,'manifest.json'),JSON.stringify(manifest,null,2));}catch(error){process.stderr.write('T21 manifest write: '+diagnostic(error)+'\n')}
   try {socket?.close();}catch{}
   for(const [id,p] of waiting){p.reject(Error('T21 capture cleanup'));waiting.delete(id);}
-  for(const child of children.reverse())try {child.kill('SIGTERM');}catch{}
+  for(const child of children.reverse())try {child.kill('SIGKILL');}catch{}
 }
 process.stdout.write('T21_FIVE_VIEW_CAPTURE '+JSON.stringify({
   status:manifest.status,
