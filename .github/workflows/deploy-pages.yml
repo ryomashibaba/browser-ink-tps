@@ -135,6 +135,12 @@ jobs:
           T21_FULL_STAGE_SOURCE_JSON: /tmp/t21-whole-stage-source-inventory.json
         run: npx vitest run scripts/UndertowSpillwayWholeStageSourceInventoryQa.test.ts
 
+      - name: T21 large static floor source-XYZ exactness QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_BATCH3_EXACT_SOURCE_JSON: /tmp/t21-broad-source-batch3.json
+        run: npx vitest run scripts/UndertowSpillwayBroadSourceBatch3Qa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
