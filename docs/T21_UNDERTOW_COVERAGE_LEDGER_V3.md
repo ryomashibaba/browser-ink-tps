@@ -1,3 +1,28 @@
+# T21 Phase 7 — original multi-tier flank supports and center glass frames (2026-10-09)
+
+## Source selection and exactness
+- Starting baseline: Phase6 **64 walk-facing + 12 Phase5B near-vertical + 2 Phase6 high = 78 original source review meshes**, source-native Y/XYZ unchanged, 42-vertex playable silhouette preserved, T20 prod `inkworks-junction`, T21 `activationReady=false`, Draft PR #5 unmerged.
+- New Phase7 original KiTrix `Vss_Temple01.obj` static model source: **10 near-mirrored pairs / 20 additional original strongly vertical triangle components**, **1,272 byte-exact Float64 XYZ vertices** and **515.1159629074m² sum 3D source triangle area**. This is NOT playable surface XZ area and NOT a closed game/collision solid.
+- **Six mirrored pairs (12 meshes) of `Fld_Temple01_PillarBase02`** on the two flank lanes: each selected original shell has three original Y bands `[-1,1.4]`, `[1.4,3.4]`, `[3.4,5.8]` with two pillar-source component locations per side. Display material is green-mint. Original source boundaries, vertical voids and all triangle winding remain unmodified.
+- **Four mirrored pairs (8 meshes) of `Fld_Temple01_Glass00`** around the middle structure: original Y bands `[3.5,6.2]`, `[6.6,9.2]`, `[9.6,12.2]`, `[12.6,15.3]`. The 0.4m gaps between some layers are **native source gaps**, not silently filled with invented glass/frames. Source glass receives only translucent blue review tint; original texture, game optical transparency and projectile/collision behavior are unverified.
+- Original source almost, but **not perfectly**, mirrored: pairs 1–3 have native **0.0001037117m (≈0.104mm) max reflected XYZ difference** and ~0.0000871m² native triangle area difference. We preserve those original differences, never force fabricated perfect symmetry. Other selected pairs are reflected to float precision.
+- All 20 components are original static `Fld_Temple01` source, pass frozen 7-samples-per-triangle hard-boundary screening; this screening **does not prove exact polygon containment or active game placement**. Exclude external StageSide abyss/actor PntSet and do not authorize physical/gameplay mesh promotion.
+
+## Visual review and independent verification
+- Packed module: `UndertowSpillwayPhase7OriginalPacked.ts` + `UndertowSpillwayPhase7FramedSourceGeometry.ts`. The lossless Float64 coordinates are stored in a 144-value dictionary with 8-bit triangle component indices, compressed as deterministic gzip and decompressed by native DecompressionStream. No source Y rounding or source vertex construction.
+- CI independent fixture: `t21-undertow-phase7-framed-source` from the pinned OBJ `/tmp/t21-structural-frame-phase7-source.json`; dedicated `UndertowSpillwayPhase7FramedSourceQa.test.ts` verifies **all 1,272 original vertex XYZ binary64 words byte-for-byte**, original per-component identities, materials, heights, surface areas, bounded measured mirror asymmetry, source-scope limits, uniqueness among older 78 and unchanged T20/T21 runtime gate.
+- Existing **64 source-floor meshes + 12 near-vertical + 2 high + 20 Phase7 = 98 distinct original source review mesh IDs**. Floor XZ coverage ledger still includes ONLY the same 64 walk-source meshes; the previously calculated **4,386.5m² undisplayed XZ** is unchanged and does NOT identify missing playable floors.
+- The visual review adds independently toggleable **Source side supports** and **Source glass frames** layers, included in the `Floors + 3D structure` display preset and omitted from `Walk-source only`. A separate `All evidence` preset still exposes provisional XZ and unresolved markers. All materials are inert review-only, no gameplay StageDefinition changes.
+- CI #1355 produced **five real 1600×900 Chrome WebGL2 review images** at OVERVIEW, TOP, POS_TO_NEG, SPAWN_A, SPAWN_B in `t21-undertow-real-five-view-capture`. Images were inspected: visible original pillars, updated source frame structures, nonblank floor/reference body and readable revised sidebar. Do not confuse successful screenshot capture with full source/reference fidelity validation.
+
+## Remaining blockers (Visual Freeze intentionally NOT set)
+1. Original reference-aligned 3D connectivity across central, flank and side ramps, underside construction, support footprint and multi-level walkability — currently only partial source face strips.
+2. Original central objects/sponge, dynamic actors, PntSet source instancing, actual projectile glass/mark sensor interaction and body/edge collision/motion/CPU authority, none verified by static OBJ extraction.
+3. Confirm paint, collision, nav, kill boundaries and both spawn-side playable routes in a separate authorized runtime 4v4 QA gate after geometry confidence and five-view human review.
+4. Retain Draft/open PR #5, no merge, no production switch and no change to prior phase Freeze.
+
+---
+
 # T21 Phase 6 visual inspection QA — 2026-10-09
 
 Actual CI #1346 five-view Chrome WebGL2 screenshots were obtained (OVERVIEW, TOP, POS_TO_NEG, SPAWN_A, SPAWN_B) as original-rendered 1600×900 PNGs in the `t21-undertow-real-five-view-capture` artifact. Source/render URL, 5 hashes and backend were verified by the manifest; these screenshots were visually inspected.
