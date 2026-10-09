@@ -266,7 +266,7 @@ export class UndertowVisualReviewApp {
       );
     }
 
-    // Four large exact Fld_Temple01 floor pairs, independently source-audited.
+    // Three new large exact Fld_Temple01 floor pairs, independently source-audited.
     // Rendering creates no Rapier, Recast, paint, score or kill authority.
     for (const sourceMesh of UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES) {
       createSourceNativeReviewMesh(
