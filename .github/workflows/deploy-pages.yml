@@ -73,6 +73,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload T21 exact flank and elevated source phase 4
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-flank-elevation-phase4-source
+          path: /tmp/t21-flank-elevation-phase4.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 exact broad static floor-source batch 3
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
