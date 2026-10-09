@@ -76,8 +76,8 @@ export function undertowT21Phase12HOriginalContactErrors():readonly string[]{
      seen.add(c.kind);
      if(c.sourceContactFraction<=0||c.sourceContactFraction>=1)
        errors.push('Phase12H source contact is not in original segment interior');
-     const interp=a.map((x,i)=>x+c.sourceContactFraction*(b[i]-x));
-     if(interp.some((x,i)=>Math.abs(x-c.originalContactProjectXYZ[i])>1e-10))
+     const interp=a.map((x,i)=>x+c.sourceContactFraction*(b[i]!-x));
+     if(interp.some((x,i)=>Math.abs(x-c.originalContactProjectXYZ[i]!)>1e-10))
        errors.push('Phase12H source contact moved from original OBJ segment');
    }
    if(!seen.has('WALL_METAL')||!seen.has('GLASS_BODY'))
