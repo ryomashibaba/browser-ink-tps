@@ -1613,3 +1613,92 @@ print("T21BATCH3 SOURCE_CANDIDATES",
       f"triangle_area={sum(c['areaSquareMeters'] for c in _t21_batch3_records):.3f}",
       f"packed_bytes={len(_t21_batch3_bytes)}",
       f"output={_t21_batch3_output}")
+
+
+# T21 Phase 4 — targeted LEFT/RIGHT flank and elevated connector geometry,
+# selected from the WHOLE-MODEL source inventory, not guessed slabs or mirrored
+# invented vertices. The frozen 54 displayed source IDs are preflight-excluded.
+# These components have source XZ triangle samples inside the unchanged hard
+# outline; source Y, full XYZ triangle triples and paired symmetry are checked.
+_t21_flank_pair_ids=[
+  ("Fld_Temple01_pCube21569_1__FloorConcrete03|Fld_Temple01_FloorConcrete03|c0",
+   "Fld_Temple01_pCube21569_1__FloorConcrete03|Fld_Temple01_FloorConcrete03|c8"),
+  ("Fld_Temple01_pCube21569_1__FloorConcrete03|Fld_Temple01_FloorConcrete03|c1",
+   "Fld_Temple01_pCube21569_1__FloorConcrete03|Fld_Temple01_FloorConcrete03|c11"),
+  ("Fld_Temple01_pCube21569_1__FloorConcrete03|Fld_Temple01_FloorConcrete03|c2",
+   "Fld_Temple01_pCube21569_1__FloorConcrete03|Fld_Temple01_FloorConcrete03|c10"),
+  ("Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c0",
+   "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c29"),
+  ("Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c1",
+   "Fld_Temple01_pCube21000_1__FloorSlope00|Fld_Temple01_FloorSlope00|c28"),
+]
+_t21_flank_records=[]
+_t21_flank_bytes=bytearray()
+_t21_flank_centers=[]
+for _t21_pid,_t21_pair in enumerate(_t21_flank_pair_ids,1):
+    _t21_mesh_pair=[]
+    for _t21_source_id in _t21_pair:
+        if _t21_source_id not in continuation_by_id or _t21_source_id not in _t21_full_by_id:
+            raise SystemExit("T21FLANK missing source "+_t21_source_id)
+        if not _t21_source_id.startswith("Fld_Temple01_"):
+            raise SystemExit("T21FLANK requires uninstanced static source "+_t21_source_id)
+        _t21_src=continuation_by_id[_t21_source_id]
+        _t21_inv=_t21_full_by_id[_t21_source_id]
+        if _t21_inv["outsideFrozenBoundarySampleCount"]:
+            raise SystemExit("T21FLANK exterior sample authority conflict "+_t21_source_id)
+        _t21_mesh=mesh_payload(_t21_src["faces"])
+        _t21_vertices=_t21_mesh["vertices"]
+        if _t21_mesh["indices"]!=list(range(len(_t21_vertices))) or len(_t21_vertices)%3 or len(_t21_vertices)<3:
+            raise SystemExit("T21FLANK invalid original source triangle order "+_t21_source_id)
+        _t21_side="POSITIVE_Z" if sum(v[2] for v in _t21_vertices)>=0 else "NEGATIVE_Z"
+        _t21_record={
+            "pairId":_t21_pid,
+            "sourceComponentId":_t21_source_id,
+            "sourceMaterial":_t21_src["sourceMaterial"],
+            "sourceAreaSquareMeters":_t21_src["areaSquareMeters"],
+            "yRange":_t21_inv["yRangeProjectMeters"],
+            "planZoneDiagnostic":_t21_inv["planZoneDiagnostic"],
+            "side":_t21_side,
+            "vertexCount":len(_t21_vertices),
+            "boundarySamplesInside":_t21_inv["withinFrozenBoundarySampleCount"],
+            "boundarySamplesOutside":0,
+            "placementAuthority":"STATIC_SOURCE_IDENTITY_ONLY",
+            "runtimePromotionAuthorized":False,
+        }
+        _t21_mesh_pair.append((_t21_record,_t21_vertices))
+    (_t21_ra,_t21_va),(_t21_rb,_t21_vb)=_t21_mesh_pair
+    if abs(_t21_ra["sourceAreaSquareMeters"]-_t21_rb["sourceAreaSquareMeters"])>1e-6 or _t21_ra["yRange"]!=_t21_rb["yRange"]:
+        raise SystemExit("T21FLANK mirrored source area/Y disagreement pair "+str(_t21_pid))
+    if _t21_ra["side"]==_t21_rb["side"]:
+        raise SystemExit("T21FLANK both candidates belong to same source side "+str(_t21_pid))
+    for _t21_pt in _t21_va:
+        if min(math.hypot(_t21_pt[0]+w[0]-0.229368288528164,
+                          _t21_pt[1]-w[1],
+                          _t21_pt[2]+w[2]-0.194564295456822)
+              for w in _t21_vb)>1e-6:
+            raise SystemExit("T21FLANK original source XYZ mirror mismatch pair "+str(_t21_pid))
+    for _t21_record,_t21_vertices in _t21_mesh_pair:
+        _t21_flank_records.append(_t21_record)
+        _t21_flank_bytes.extend(_t21_struct.pack("<H",len(_t21_vertices)))
+        for _t21_pt in _t21_vertices:
+            _t21_flank_bytes.extend(_t21_struct.pack("<ddd",*_t21_pt))
+_t21_flank_output=Path("/tmp/t21-flank-elevation-phase4.json")
+_t21_flank_output.write_text(json.dumps({
+    "version":"T21_FLANK_ELEVATION_SOURCE_PHASE4_V1",
+    "sourceAuditVersion":audit_output["version"],
+    "originalModel":"PINNED_KITRIX_VSS_TEMPLE01_OBJ",
+    "reviewOnly":True,
+    "runtimePromotionAuthorized":False,
+    "pairs":len(_t21_flank_pair_ids),
+    "records":_t21_flank_records,
+    "packedFloat64LEBase64":_t21_base64.b64encode(_t21_flank_bytes).decode("ascii"),
+    "packedByteLength":len(_t21_flank_bytes),
+    "sourcePrecision":"UNMODIFIED_FLOAT64_XYZ",
+    "boundaryAuthority":"7_SAMPLES_PER_TRIANGLE_NOT_EXACT_POLYGON_INTERSECTION",
+    "connectivityAuthority":"UNRESOLVED",
+    "runtimePropertiesAuthorized":[],
+},separators=(",",":")),encoding="utf-8")
+print("T21FLANK_EXACT_SOURCE",f"pairs={len(_t21_flank_pair_ids)}",
+      f"meshes={len(_t21_flank_records)}",
+      f"original_source_triangle_area={sum(r['sourceAreaSquareMeters'] for r in _t21_flank_records):.3f}",
+      f"bytes={len(_t21_flank_bytes)}",f"output={_t21_flank_output}")
