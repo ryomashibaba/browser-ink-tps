@@ -367,6 +367,46 @@ try {
     manifest.phase12DRecoveredSourceDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
   }
 
+  // Phase12E: two separate original-source-only magnified diagnostics.
+  // Never counted among 5 ordinary screenshots, no gameplay/Freeze authority.
+  manifest.phase12ERecoveredFocusDiagnostics=[];
+  for(const side of ['POSITIVE_Z','NEGATIVE_Z']){
+    try{
+      await navigate(urlForView('CENTER_SOURCE')+'&reviewRecoveredFocus='+side);
+      const state=await poll(async()=>{
+        const value=await evaluation(`(() => ({
+          focus:document.querySelector('#app-canvas')?.dataset.t21ReviewRecoveredFocus,
+          pieces:document.querySelector('#app-canvas')?.dataset.t21ReviewRecoveredFocusPieces,
+          renderer:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer,
+          preset:document.querySelector('#app-canvas')?.dataset.t21ReviewPreset
+        }))()`);
+        if(value?.focus===side&&value.pieces==='2'&&
+           value.renderer==='webgl2'&&value.preset==='FOCUS_ORIGINAL_SOURCE_ONLY')return value;
+        throw Error('T21_PHASE12E_FOCUS_NOT_READY '+JSON.stringify(value));
+      },25000);
+      // Hide only the editor UI panel DURING evidence capture so the small
+      // 3D originals are visible without an overlapping menu.
+      await evaluation(`(() => {const p=document.querySelector('#t21-review-panel');if(p)p.style.display='none';return true;})()`);
+      await sleep(750);
+      const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+      const bytes=Buffer.from(shot.data||'','base64');
+      if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
+        throw Error('T21_PHASE12E_FOCUSED_ORIGINAL_SCREENSHOT_NOT_PNG');
+      const file='T21_PHASE12E_FOCUSED_'+side+'_ORIGINAL_SOURCE.png';
+      await writeFile(resolve(destination,file),bytes);
+      manifest.phase12ERecoveredFocusDiagnostics.push({
+        status:'CAPTURED_NOT_GAMEPLAY_PROOF',side,
+        originalSourcePieces:2,
+        originalSourceTriangles:4,
+        allDefault124OriginalSourceMeshesHiddenForIsolation:true,
+        file,bytes:bytes.byteLength,sha256:createHash('sha256').update(bytes).digest('hex'),
+        renderer:state.renderer,authorizesVisualFreeze:false
+      });
+    }catch(error){
+      manifest.phase12ERecoveredFocusDiagnostics.push({status:'BLOCKED',side,reason:diagnostic(error)});
+    }
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{

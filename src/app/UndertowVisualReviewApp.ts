@@ -233,6 +233,9 @@ export class UndertowVisualReviewApp {
       this.canvas.dataset.t21ReviewRecoveredOriginal='on';
       this.refreshReviewLayerButtons();
     }
+    if(params.get('reviewRecoveredFocus')==='POSITIVE_Z'||params.get('reviewRecoveredFocus')==='NEGATIVE_Z'){
+      this.focusRecoveredSource(params.get('reviewRecoveredFocus') as 'POSITIVE_Z'|'NEGATIVE_Z');
+    }
     if(params.get('reviewTopologyEdges')==='1'){
       this.coordinateSeamPhase10Root.enabled=true;
       this.unmatchedEdgePhase10Root.enabled=true;
@@ -630,6 +633,9 @@ export class UndertowVisualReviewApp {
         <button data-review-view="SPAWN_A">Spawn A / POS</button>
         <button data-review-view="SPAWN_B">Spawn B / NEG</button>
         <button data-review-view="CENTER_SOURCE">Center source close-up</button>
+        <button data-review-recovered-focus="POSITIVE_Z">Original pair / POS close-up</button>
+        <button data-review-recovered-focus="NEGATIVE_Z">Original pair / NEG close-up</button>
+        <button id="t21-review-recovered-focus-exit">Exit source close-up</button>
       </div>
       <div class="review-actions layers">
         <button id="t21-review-confirmed-toggle">Confirmed ON</button>
@@ -761,6 +767,16 @@ export class UndertowVisualReviewApp {
         });
       });
 
+    panel.querySelectorAll<HTMLButtonElement>('[data-review-recovered-focus]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const side=button.dataset.reviewRecoveredFocus;
+        if(side==='POSITIVE_Z'||side==='NEGATIVE_Z')this.focusRecoveredSource(side);
+      });
+    });
+    panel.querySelector<HTMLButtonElement>('#t21-review-recovered-focus-exit')?.addEventListener('click',()=>{
+      this.applyReviewLayerPreset('ALL_EVIDENCE');
+      this.setView('CENTER_SOURCE');
+    });
     this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-confirmed-toggle'),
       this.confirmedRoot,
@@ -933,6 +949,9 @@ export class UndertowVisualReviewApp {
     this.sourceFamiliesPhase12Root.enabled=false;
     this.completeSourcePhase12CRoot.enabled=false;
     this.recoveredSourcePhase12DRoot.enabled=false;
+    for(const piece of this.recoveredSourcePhase12DRoot.children)piece.enabled=true;
+    this.canvas.dataset.t21ReviewRecoveredFocus='off';
+    this.canvas.dataset.t21ReviewRecoveredFocusPieces='0';
     this.canvas.dataset.t21ReviewRecoveredOriginal='off';
     this.canvas.dataset.t21ReviewCompleteCentral='off';
     this.canvas.dataset.t21ReviewSourceFamilies='off';
@@ -949,6 +968,56 @@ export class UndertowVisualReviewApp {
     });
   }
 
+  /** Focus a real source mirror group: no interpolated, widened or runtime shape. */
+  private focusRecoveredSource(side:'POSITIVE_Z'|'NEGATIVE_Z'):void{
+    this.applyReviewLayerPreset('THREE_DIMENSIONAL');
+    // Compare only the two ORIGINAL source components on this side.
+    // All 124 frozen source displays, old source diagnostics and runtime/
+    // provisional geometry are hidden, never modified.
+    for(const root of [
+      this.confirmedRoot,this.occupancyRoot,this.sourceNativeRoot,
+      this.sourceLocalRoot,this.sourceBatch2Root,this.broadStaticRoot,
+      this.flankElevationPhase4Root,this.verticalSourcePhase5BRoot,
+      this.highSourcePhase6Root,this.sideSupportsPhase7Root,
+      this.glassFramesPhase7Root,this.centralTowersPhase8Root,
+      this.flankHighPhase8Root,this.sideEdgePhase8Root,
+      this.centerDownfacePhase9Root,this.fenceDownfacePhase9Root,
+      this.megalithDownfacePhase9Root,this.coordinateSeamPhase10Root,
+      this.unmatchedEdgePhase10Root,this.nearestOriginalPhase11Root,
+      this.sourceFamiliesPhase12Root,this.completeSourcePhase12CRoot,
+      this.provisionalRoot,this.unresolvedRoot,this.navRoot
+    ])root.enabled=false;
+    const selected=UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES.filter(m=>m.side===side);
+    if(selected.length!==2||this.recoveredSourcePhase12DRoot.children.length!==4)
+      throw new Error('T21 Phase12E focus original source inventory drift');
+    this.recoveredSourcePhase12DRoot.enabled=true;
+    for(let i=0;i<4;i++)
+      this.recoveredSourcePhase12DRoot.children[i]!.enabled=
+        UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES[i]!.side===side;
+    const pts=selected.flatMap(m=>m.vertices);
+    const min=([0,1,2] as const).map(k=>Math.min(...pts.map(p=>p[k])));
+    const max=([0,1,2] as const).map(k=>Math.max(...pts.map(p=>p[k])));
+    this.target.set((min[0]+max[0])*0.5,(min[1]+max[1])*0.5,(min[2]+max[2])*0.5);
+    const span=Math.max(max[0]-min[0],max[1]-min[1],max[2]-min[2]);
+    this.distanceMeters=Math.max(7,Math.min(30,span*2.2));
+    this.yawDegrees=side==='POSITIVE_Z'?42:222;
+    this.pitchDegrees=28;
+    this.canvas.dataset.t21ReviewRecoveredFocus=side;
+    this.canvas.dataset.t21ReviewRecoveredFocusPieces='2';
+    this.canvas.dataset.t21ReviewRecoveredOriginal='on';
+    this.canvas.dataset.t21ReviewSourceFamilies='off';
+    this.canvas.dataset.t21ReviewCompleteCentral='off';
+    this.canvas.dataset.t21ReviewPreset='FOCUS_ORIGINAL_SOURCE_ONLY';
+    const label=this.uiRoot.querySelector<HTMLElement>('#t21-review-active-view');
+    if(label)label.textContent='ORIGINAL '+(side==='POSITIVE_Z'?'POS':'NEG')+' / 2 real pieces';
+    this.refreshReviewLayerButtons();
+    this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-preset]').forEach(btn=>{
+      btn.classList.remove('active-mode');
+      btn.setAttribute('aria-pressed','false');
+    });
+    this.updateCamera();
+  }
+
   private bindRootToggle(
     button:HTMLButtonElement|null,root:Entity,label:string
   ):void {
@@ -957,6 +1026,11 @@ export class UndertowVisualReviewApp {
     this.refreshReviewLayerButtons();
     button.addEventListener('click',()=>{
       root.enabled=!root.enabled;
+      // A manual layer change leaves isolated mode; preserve ordinary default
+      // availability without silently changing source coordinates.
+      this.canvas.dataset.t21ReviewRecoveredFocus='off';
+      this.canvas.dataset.t21ReviewRecoveredFocusPieces='0';
+      for(const piece of this.recoveredSourcePhase12DRoot.children)piece.enabled=true;
       // Prevent duplicate Phase12 original single faces and Phase12C full faces.
       if((root===this.completeSourcePhase12CRoot||root===this.recoveredSourcePhase12DRoot)&&root.enabled)
         this.sourceFamiliesPhase12Root.enabled=false;
