@@ -409,14 +409,13 @@ export class UndertowVisualReviewApp {
         <strong>T21 UNDERTOW VISUAL REVIEW v2</strong>
         <span>REVIEW ONLY</span>
       </div>
-      <p class="review-warning">
-        Production remains T20. Cyan is reviewed/confirmed broad geometry. Dark amber is the
-        <b>whole-stage XZ occupancy envelope (not a floor)</b>. Orange is exact Temple01 source
-        mesh shape/Y with route/runtime authority still pending. Light orange is local source
-        geometry and 14 extra source terrain candidates (including PntSet actor placement pending). Yellow is XZ-only provisional
-        macro coverage with unresolved multi-level height. Red marks unresolved detail boundaries.
-        Black outside the hard silhouette stays omitted.
-      </p>
+      <p class="review-warning"><b>T20 production unchanged.</b> Source-based 3D preview ONLY — not playable geometry or a confirmed floor.</p>
+      <p class="review-camera-status">Camera: <b id="t21-review-active-view">OVERVIEW</b> <small>· 5-view source evidence</small></p>
+      <details class="review-source-explanation">
+        <summary>Color legend & evidence limits</summary>
+        <p>Cyan is reviewed/confirmed broad geometry; orange is Temple01 original source XYZ/Y with gameplay authority pending. Dark amber is the whole-stage XZ occupancy outline, not a floor. Light orange includes locally audited source and PntSet actor placement still unresolved. Yellow is provisional XZ-only macro coverage; red flags unresolved details. Black exterior remains omitted. Source face colors do not indicate in-game collision, painting, ceiling or traversal.</p>
+      </details>
+      <details class="review-metrics"><summary>Metrics — 18 regions · 78 original-source display meshes</summary>
       <div class="review-stats macro">
         <span>Macro regions</span><b>${UNDERTOW_T21_VISUAL_REVIEW.macroRegionCount}</b>
         <span>Stage occupancy envelope</span><b>42-vertex XZ / NOT FLOOR</b>
@@ -435,6 +434,7 @@ export class UndertowVisualReviewApp {
         <span>Navigation links</span><b>${UNDERTOW_T21_VISUAL_REVIEW.navigationLinkCount}</b>
         <span>World X/Z span</span><b>${width.toFixed(1)} × ${depth.toFixed(1)} m</b>
       </div>
+      </details>
       <div class="review-actions presets">
         <button data-review-preset="WALK_SOURCE">Walk-source only</button>
         <button data-review-preset="THREE_DIMENSIONAL">Floors + 3D structure</button>
@@ -761,6 +761,14 @@ export class UndertowVisualReviewApp {
 
   private setView(view: ReviewView): void {
     this.canvas.dataset.t21ReviewView=view;
+    // Show which viewpoint is actually selected, including URL-triggered CI views.
+    const label=this.uiRoot.querySelector<HTMLElement>('#t21-review-active-view');
+    if(label)label.textContent=view.replaceAll('_',' ');
+    this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-view]').forEach(button=>{
+      const active=button.dataset.reviewView===view;
+      button.classList.toggle('active-mode',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
     const bounds = UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.worldBounds;
     const centerX = (bounds.minX + bounds.maxX) * 0.5;
     const centerZ = (bounds.minZ + bounds.maxZ) * 0.5;
@@ -790,7 +798,11 @@ export class UndertowVisualReviewApp {
         ? UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.teamASpawnFloorPoint
         : UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY.teamBSpawnFloorPoint;
       this.target.set(source[0], source[1] - 1.2, source[2]);
-      this.yawDegrees = view === 'SPAWN_A' ? 0 : 180;
+      // Off-axis opposite perspectives expose different wall/side-flank
+      // silhouettes; the symmetric frontal views previously looked identical
+      // except the spawn marker tint, concealing visual-review differences.
+      // Source spawn XYZ/Y and any gameplay camera configuration are unchanged.
+      this.yawDegrees = view === 'SPAWN_A' ? 24 : 156;
       this.pitchDegrees = 28;
       this.distanceMeters = Math.max(16, span * 0.23);
       return;

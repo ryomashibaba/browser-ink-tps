@@ -1,3 +1,15 @@
+# T21 Phase 6 visual inspection QA — 2026-10-09
+
+Actual CI #1346 five-view Chrome WebGL2 screenshots were obtained (OVERVIEW, TOP, POS_TO_NEG, SPAWN_A, SPAWN_B) as original-rendered 1600×900 PNGs in the `t21-undertow-real-five-view-capture` artifact. Source/render URL, 5 hashes and backend were verified by the manifest; these screenshots were visually inspected.
+
+- **PASS (capture mechanics)**: nonblank original PlayCanvas source-face geometry appears across the five views; distinct camera screenshots; review-only graphics and original source evidence remain separate from runtime state.
+- **FAIL (review UI usability)**: expanded statistics used CSS grid `minmax(0,1fr) auto`, where very wide value text crushed left labels to a few characters per line and pushed presets/camera buttons off-screen. Fix: collapse lengthy metrics and color explanation by default, constrain value columns to 56%, allow wrapping and emphasize selected camera/preset.
+- **NEEDS DETAIL (5-view orientation)**: POS and NEG spawn screenshots showed near-identical opposing symmetric source compositions, distinguishable largely by spawn marker tint. Review-only spawn camera yaw changed from 0°/180° to 24°/156° (source gameplay spawn coordinates and runtime camera remain unmodified) to improve visibility of asymmetric occlusions/sidewalls. Validate in a fresh five-view artifact.
+- **NOT FREEZE**: cyan/orange sources still show unmodeled vertical construction and incomplete multi-level context, and two tall pale-gold source panels are not a confirmed continuous roof. Original PntSet actor placements, high structure existence vs physical game authority and source exterior containment remain unresolved.
+- Stage T20 production `inkworks-junction`, T21 `activationReady=false`, 42-vertex hard boundary, 64 walk+12 near-vertical+2 high original source meshes, and existing 0.5m XZ ledger remain unchanged. No collision/paint/nav/CPU/score/kill/fall promotion; PR remains Draft/unmerged.
+
+---
+
 # T21 Phase 6 — exact upper-source review and automatic five-view evidence
 
 - Baseline: Phase 5B 64 walk-facing source meshes + 12 near-vertical source faces, all review-only. T20 production remains `inkworks-junction` and T21 `activationReady=false`; no merge, source-geometry rewrite, or runtime promotion.
