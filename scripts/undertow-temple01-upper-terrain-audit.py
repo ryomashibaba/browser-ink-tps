@@ -1702,3 +1702,108 @@ print("T21FLANK_EXACT_SOURCE",f"pairs={len(_t21_flank_pair_ids)}",
       f"meshes={len(_t21_flank_records)}",
       f"original_source_triangle_area={sum(r['sourceAreaSquareMeters'] for r in _t21_flank_records):.3f}",
       f"bytes={len(_t21_flank_bytes)}",f"output={_t21_flank_output}")
+
+
+# Phase 5A: independent ORIGINAL Temple01 vertical source *evidence*.
+# This intentionally does not add StageDefinition solids, inferred terrain,
+# overhang collision, wall paint or runtime movement authority. Upward walk
+# faces are not enough to understand vertical structure; inventory the missing
+# walls, sidewall faces, support pillars and undersides by exact source object.
+# The object/material grouping deliberately preserves original provenance.
+# A component uses shared OBJ vertex IDs within its source object/material.
+_T21_VERTICAL_UP_NORMAL_MAX=0.32
+_T21_VERTICAL_MIN_AREA_SQM=4.0
+_T21_VERTICAL_MIN_HEIGHT_M=0.8
+_t21_vertical_groups=defaultdict(list)
+for _t21_fi,_t21_face in enumerate(faces):
+    _t21_ny=tri_normal(_t21_face)[1]
+    if abs(_t21_ny)<=_T21_VERTICAL_UP_NORMAL_MAX:
+        _t21_vertical_groups[(_t21_face[3],_t21_face[4])].append(_t21_fi)
+_t21_vertical_rows=[]
+_t21_vertical_rejected_low_area=0
+_t21_vertical_rejected_flat_height=0
+for _t21_objmat in sorted(_t21_vertical_groups):
+    _t21_vface_indices=_t21_vertical_groups[_t21_objmat]
+    # A material/object can contain disconnected walls; preserve that fact.
+    _t21_vcomps=componentize(_t21_vface_indices)
+    _t21_vcomps.sort(key=lambda ff:(min(ff),len(ff)))
+    for _t21_component_index,_t21_vfaces in enumerate(_t21_vcomps):
+        _t21_varea=component_project_area(_t21_vfaces)
+        if _t21_varea<_T21_VERTICAL_MIN_AREA_SQM:
+            _t21_vertical_rejected_low_area+=1
+            continue
+        _t21_vbounds=project_bbox3(_t21_vfaces)
+        _t21_yspan=_t21_vbounds[4]-_t21_vbounds[1]
+        if _t21_yspan<_T21_VERTICAL_MIN_HEIGHT_M:
+            _t21_vertical_rejected_flat_height+=1
+            continue
+        _t21_xz_inside=0;_t21_xz_outside=0
+        _t21_sampled_xz_bounds=[]
+        for _t21_fi in _t21_vfaces:
+            _t21_p,_t21_q,_t21_r=[project_point3(v) for v in tri_points(faces[_t21_fi])]
+            _t21_pts=[(_t21_p[0],_t21_p[2]),(_t21_q[0],_t21_q[2]),(_t21_r[0],_t21_r[2]),
+                 ((_t21_p[0]+_t21_q[0])/2,(_t21_p[2]+_t21_q[2])/2),
+                 ((_t21_q[0]+_t21_r[0])/2,(_t21_q[2]+_t21_r[2])/2),
+                 ((_t21_p[0]+_t21_r[0])/2,(_t21_p[2]+_t21_r[2])/2),
+                 ((_t21_p[0]+_t21_q[0]+_t21_r[0])/3,(_t21_p[2]+_t21_q[2]+_t21_r[2])/3)]
+            for _t21_pt in _t21_pts:
+                if _t21_hard_inside(_t21_pt):_t21_xz_inside+=1
+                else:_t21_xz_outside+=1
+        _t21_cx=(_t21_vbounds[0]+_t21_vbounds[3])/2
+        _t21_cz=(_t21_vbounds[2]+_t21_vbounds[5])/2
+        _t21_vid=_t21_objmat[0]+"|"+_t21_objmat[1]+"|v"+str(_t21_component_index)
+        _t21_vertical_rows.append({
+            "sourceComponentId":_t21_vid,
+            "sourceObject":_t21_objmat[0],
+            "sourceMaterial":_t21_objmat[1],
+            "sourceAreaSquareMeters":_t21_varea,
+            "faceCount":len(_t21_vfaces),
+            "minSourceFaceIndex":min(_t21_vfaces),
+            "minAbsNormalY":min(abs(tri_normal(faces[k])[1]) for k in _t21_vfaces),
+            "maxAbsNormalY":max(abs(tri_normal(faces[k])[1]) for k in _t21_vfaces),
+            "bboxProjectXYZ":list(_t21_vbounds),
+            "yRangeProjectMeters":[_t21_vbounds[1],_t21_vbounds[4]],
+            "diagnosticPlanZone":_t21_source_zone(_t21_cx,_t21_cz),
+            "insideHardBoundarySamples":_t21_xz_inside,
+            "outsideHardBoundarySamples":_t21_xz_outside,
+            "boundarySampleAuthority":"SEVEN_XZ_TRIANGLE_SAMPLES_NOT_EXACT_CONTAINMENT",
+            "potentialRole":"VERTICAL_FACING_SOURCE_COMPONENT_ONLY",
+            "sourceGeometryAuthority":"ORIGINAL_OBJ_VSS_TEMPLE01",
+            "placementAuthority":"SET_ACTOR_PLACEMENT_UNRESOLVED" if _t21_objmat[0].startswith("FldObj_") else "STATIC_SOURCE_IDENTITY_ONLY",
+            "connectivityConfidence":"UNRESOLVED",
+            "paintCollisionNavAuthority":"NONE",
+            "reviewOnly":True,
+            "runtimePromotionAuthorized":False,
+        })
+_t21_vertical_rows.sort(key=lambda row:(-row["sourceAreaSquareMeters"],row["sourceComponentId"]))
+_t21_vertical_stats={}
+for _t21_zone in ("CENTER","POS","NEG","LEFT_SIDE","RIGHT_SIDE"):
+    _t21_zone_rows=[r for r in _t21_vertical_rows if r["diagnosticPlanZone"]==_t21_zone]
+    _t21_vertical_stats[_t21_zone]={
+       "candidateCount":len(_t21_zone_rows),
+       "fullyInside7SamplesCount":sum(r["outsideHardBoundarySamples"]==0 for r in _t21_zone_rows),
+       "outOfOutlineCandidateCount":sum(r["outsideHardBoundarySamples"]>0 for r in _t21_zone_rows),
+       "sourceTriangleAreaSumSquareMeters":sum(r["sourceAreaSquareMeters"] for r in _t21_zone_rows)
+    }
+_t21_vertical_output=Path("/tmp/t21-vertical-source-inventory.json")
+_t21_vertical_output.write_text(json.dumps({
+   "version":"T21_VERTICAL_SOURCE_COMPONENTS_V1",
+   "sourceAuditVersion":audit_output["version"],
+   "sourceScope":"ACTIVE_TEMPLE01_ORIGINAL_SOURCE_TRIANGLES_WITH_STRONGLY_VERTICAL_NORMAL",
+   "sourceVerticalMaxAbsoluteNormalY":_T21_VERTICAL_UP_NORMAL_MAX,
+   "minimum3DSourceAreaSquareMeters":_T21_VERTICAL_MIN_AREA_SQM,
+   "minimumVerticalSpanMeters":_T21_VERTICAL_MIN_HEIGHT_M,
+   "sourceComponentCount":len(_t21_vertical_rows),
+   "rejectedTinyAreaCount":_t21_vertical_rejected_low_area,
+   "rejectedInsufficientHeightCount":_t21_vertical_rejected_flat_height,
+   "zoneStats":_t21_vertical_stats,
+   "candidates":_t21_vertical_rows,
+   "sourceTextureAndActorLimit":"ORIGINAL MODEL SURFACE; DOES NOT PROVE ACTIVE SCENE OBJECT, MATERIAL, COLLISION OR WALL LOCATION IN GAME",
+   "boundaryLimit":"7_SAMPLE_APPROXIMATION_NOT_EXACT_POLYGON_CLIP",
+   "noInferredRuntimeAuthority":True,
+   "reviewOnly":True,"runtimePromotionAuthorized":False
+},separators=(",",":")),encoding="utf-8")
+print("T21_VERTICAL_SOURCE",f"candidates={len(_t21_vertical_rows)}",
+      f"fully_inside={sum(r['outsideHardBoundarySamples']==0 for r in _t21_vertical_rows)}",
+      f"exterior_pending={sum(r['outsideHardBoundarySamples']>0 for r in _t21_vertical_rows)}",
+      f"output={_t21_vertical_output}")
