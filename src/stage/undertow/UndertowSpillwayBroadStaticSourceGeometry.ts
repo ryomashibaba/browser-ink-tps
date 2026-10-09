@@ -2,7 +2,7 @@ import type { StageVector3 } from '../StageDefinition';
 import { UNDERTOW_T21_MACRO_OUTER_BOUNDARY } from './UndertowSpillwayMacroCoverage';
 
 /**
- * Four large counterpart pairs (8 ORIGINAL static Temple01 floor meshes).
+ * Three NEW large counterpart pairs (six original Temple01 static floors).\n * A fourth exported source pair was found to duplicate frozen 16-mesh source\n * IDs; it is kept ONLY in the source export for negative-control QA.
  * The binary source is lossless: original float64 source coordinates are stored
  * once in a dictionary and indexed for each original triangle vertex triple.
  * No inferred surfaces, interpolation, source-Y rounding or hard-edge clipping.
@@ -11,7 +11,7 @@ import { UNDERTOW_T21_MACRO_OUTER_BOUNDARY } from './UndertowSpillwayMacroCovera
  * paint/scoring, activeness and gameplay connectivity are NOT established.
  * Source-gated by Pass18C WHOLE-STAGE scan, 7-point/triangle outer check,
  * exact mirrored XYZ, area and source-component identity. CI checks all
- * 252 original triple vertices against an independent OBJ export.
+ * 240 NEW original triangle vertices against an independent OBJ export.\n * The two duplicate meshes are excluded from this module's public inventory.
  */
 const FAMILIES=["Fld_Temple01_pCube20989_1__FloorConcrete02|Fld_Temple01_FloorConcrete02|","Fld_Temple01_pCube21525_1__FloorConcrete00|Fld_Temple01_FloorConcrete00|"];
 const ROWS=[[0,"c12",214.86558121051675,1.5,1.5,72],[0,"c1",214.8655812105167,1.5,1.5,72],[1,"c8",127.50310454417198,7.5,7.5,24],[1,"c3",127.50310454417183,7.5,7.5,24],[1,"c11",59.696493185435834,9,9,24],[1,"c0",59.69649318543566,9,9,24],[1,"c9",59.427590062978815,3,3,6],[1,"c2",59.427590062978744,3,3,6]] as const;
@@ -75,10 +75,10 @@ function decode():readonly UndertowBroadStaticSourceMesh[] {
   if(at!==bytes.length)throw new Error('T21 broad terrain unexpected bytes after decode');
   return Object.freeze(rows);
 }
-export const UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES=decode();
+// The export includes a fourth pair (c9/c2) that is already in the frozen\n// original source-native review set. Do not display or count source IDs twice.\nexport const UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES=Object.freeze(\n  decode().filter(mesh=>mesh.pairId<=3)\n);
 export const UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY=Object.freeze({
   meshCount:UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES.length,
-  pairCount:4,reviewOnly:true as const,runtimePromotionAuthorized:false as const,
+  pairCount:3,reviewOnly:true as const,runtimePromotionAuthorized:false as const,
   totalSourceAreaSquareMeters:UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES.reduce((sum,m)=>sum+m.areaSquareMeters,0)
 });
 type XZ=readonly [number,number];
@@ -97,7 +97,7 @@ function insideHard([x,z]:XZ):boolean{
 export function undertowT21BroadStaticSourceErrors():readonly string[]{
   const errors:string[]=[];
   const meshes=UNDERTOW_T21_BROAD_STATIC_SOURCE_MESHES;
-  if(meshes.length!==8||UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.pairCount!==4||
+  if(meshes.length!==6||UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.pairCount!==3||
     UNDERTOW_T21_BROAD_STATIC_SOURCE_SUMMARY.runtimePromotionAuthorized)
     errors.push('broad source inventory authority drift');
   const ids=new Set<string>();
