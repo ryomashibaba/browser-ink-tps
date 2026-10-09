@@ -1,3 +1,37 @@
+# T21 — Phase 4 whole-stage side-flank & elevated ramp evidence (2026-10-09)
+
+## Validated model source, changes and authority
+- Baseline: T21 Visual Review **54 unique source-only meshes**, CI #1305 SUCCESS; PR #5 remains Draft/open/unmerged. Frozen 16/10/8/14/6 prior cohorts are preserved unchanged.
+- Whole-stage pinned Temple01 source inventory now directly informs the **flank/elevation review**, rather than locally cropped Pass18G discovery. From **777 walk-token upward source components** (not all 3D geometry materials), selected five static `Fld_Temple01` mirrored pairs with exact Y and all 7 XZ samples per triangle within the unchanged 42-vertex hard boundary.
+- **Phase4: 10 new unique source meshes**, 294 original expanded triangle vertices, summed **754.3285510702793m² ORIGINAL 3D source triangles** (NOT incremental floor/plan area):
+  - `Fld_Temple01_FloorConcrete03 c0/c8` — bilateral flank base Y=+4.5m; source area ~302.03m² *each*.
+  - `Fld_Temple01_FloorConcrete03 c1/c11` — side high shelf Y=+6m; ~35.99m² each.
+  - `Fld_Temple01_FloorConcrete03 c2/c10` — transition Y=+6 to +7.5m; ~13.73m² each.
+  - `Fld_Temple01_FloorSlope00 c0/c29` — elevated ramp Y=+7.5 to +9m; ~12.71m² each.
+  - `Fld_Temple01_FloorSlope00 c1/c28` — other elevated ramp Y=+7.5 to +9m; ~12.71m² each.
+- The data module `UndertowSpillwayFlankElevationPhase4Geometry.ts` holds original float64 triple XYZ values via a lossless float64 dictionary. The CI `UndertowSpillwayFlankElevationPhase4Qa.test.ts` compares **every original 64-bit XYZ word** against independently exported pinned source JSON, and checks Y, side, material, source ID, hard-silhouette samples, pairing, no runtime authority and source identity uniqueness.
+- A separate `Flanks / high ramps` toggle was added to `?stageReview=undertow`. Rendering is review-only and uses the inherited source-mesh depth offset, not new authoring/movement geometry.
+
+## Measured 0.5m XZ display coverage after Phase4
+- Original 54 source meshes, stage sample area 8,969.75m², unshown **4,530.50m²**:
+  - CENTER 1,248.50; POS 368.25; NEG 372.25; LEFT_SIDE 1,286.75; RIGHT_SIDE 1,254.75m².
+- New 64 source meshes, same stage sample area, unshown **4,386.50m²**, a **144.00m² reduction**:
+  - CENTER 1,248.50; POS 368.25; NEG 372.25; LEFT_SIDE 1,214.00; RIGHT_SIDE 1,183.50m².
+  - LEFT_SIDE improvement **72.75m²**, RIGHT_SIDE **71.25m²**. The 3D source-triangle area sum 754.33m² is NOT a claim of equivalent new walkable XZ area.
+- This ledger is a DISPLAY sampling comparison. A source-only cell does not establish collision, gameplay participation, travel route, paintability or kill/fall state. No missing cell is inferred to be a floor.
+
+## Next QA / remaining blockers
+1. PASS: freeze source identity/XYZ/Y and mirrored counterpart coverage through independent OBJ export; pass full TS/Vitest, historical Pass18 audits and Pages build on final HEAD **before calling CI SUCCESS**. Source fixtures are uploaded as Actions artifacts.
+2. Actual 5-view renderer review — OVERVIEW, TOP, POS_TO_NEG, SPAWN_A and SPAWN_B — still needs **human-visible rendering verification**; no Visual Freeze yet. Check layer z-fighting, unintended overdraw, actual thickness/vertical gaps and source source-versus-runtime distinction.
+3. Continue whole-stage **multilevel and wall/sidewall geometry** search instead of guessing a plain filler slab. Investigate large remaining LEFT_SIDE/RIGHT_SIDE gap clusters, branch topologies, lower support and all boundary-deferred mirror pairs; PntSet actor position also remains unresolved.
+
+## Strict scope
+- Existing frozen source tri vertices, hard outline and T20 production `inkworks-junction` are unchanged.
+- T21 `activationReady=false` and review-only; no new collision/paint/nav/score/kill/fall or CPU behavior, no PR merge.
+- The source export enforces 7 XZ samples per triangle, which does **not** constitute rigorous containment for every possible concave-polygon edge crossing. Unsupported source/runtime facts remain explicitly unresolved.
+
+---
+
 # T21 — Phase 0 Coverage v3.1 / broad static terrain (2026-10-09)
 
 ## Whole-stage source audit vs previous local discovery
