@@ -285,6 +285,12 @@ jobs:
           T21_PHASE11_SOURCE_JSON: /tmp/t21-phase11-central-nearest-source-geometry.json
         run: npx vitest run scripts/UndertowSpillwayPhase11CentralNearestSurfaceQa.test.ts
 
+      - name: T21 Phase12 pinned original central source-family 16-face binary64 QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE11_SOURCE_JSON: /tmp/t21-phase11-central-nearest-source-geometry.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12SourceFamilyQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 

@@ -62,6 +62,7 @@ import { UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES, UNDERTOW_T21_PHASE8_STATIC_SO
 import { UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES, UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase9DownfaceSourceGeometry';
 import { UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_EVIDENCE, UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY, type UndertowPhase10EdgeEvidence } from '../stage/undertow/UndertowSpillwayPhase10EdgeDiagnosticGeometry';
 import { UNDERTOW_T21_PHASE11_NEAREST_ORIGINAL_SOURCE_TRIANGLES, UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY } from '../stage/undertow/UndertowSpillwayPhase11NearestSourceDiagnostic';
+import {UNDERTOW_T21_PHASE12_FAMILY_TRIANGLES,UNDERTOW_T21_PHASE12_FAMILY_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12SourceFamilyGeometry';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B' | 'CENTER_SOURCE';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
@@ -89,6 +90,11 @@ interface ReviewMaterials {
   sourcePhase10CoordinateSeam: StandardMaterial;
   sourcePhase10UnmatchedEdge: StandardMaterial;
   sourcePhase11OriginalNearby: StandardMaterial;
+  sourcePhase12FloorLine: StandardMaterial;
+  sourcePhase12WallMetal: StandardMaterial;
+  sourcePhase12Pillar: StandardMaterial;
+  sourcePhase12Glass: StandardMaterial;
+  sourcePhase12GlassEdge: StandardMaterial;
   confirmedBoundary: StandardMaterial;
   provisional: StandardMaterial;
   unresolved: StandardMaterial;
@@ -158,6 +164,7 @@ export class UndertowVisualReviewApp {
   private readonly coordinateSeamPhase10Root = new Entity('T21Review:Phase10NonWeldedCoordinateEdges');
   private readonly unmatchedEdgePhase10Root = new Entity('T21Review:Phase10UnmatchedSourceEdges');
   private readonly nearestOriginalPhase11Root = new Entity('T21Review:Phase11ExactNearbyOriginalTriangles');
+  private readonly sourceFamiliesPhase12Root = new Entity('T21Review:Phase12OriginalSourceFamilyFaces');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
   private readonly navRoot = new Entity('T21Review:Navigation');
@@ -201,6 +208,11 @@ export class UndertowVisualReviewApp {
     if(params.get('reviewNearestCentral')==='1'){
       this.nearestOriginalPhase11Root.enabled=true;
       this.canvas.dataset.t21ReviewNearestCentral='on';
+      this.refreshReviewLayerButtons();
+    }
+    if(params.get('reviewSourceFamilies')==='1'){
+      this.sourceFamiliesPhase12Root.enabled=true;
+      this.canvas.dataset.t21ReviewSourceFamilies='on';
       this.refreshReviewLayerButtons();
     }
     if(params.get('reviewTopologyEdges')==='1'){
@@ -303,6 +315,7 @@ export class UndertowVisualReviewApp {
     this.app.root.addChild(this.coordinateSeamPhase10Root);
     this.app.root.addChild(this.unmatchedEdgePhase10Root);
     this.app.root.addChild(this.nearestOriginalPhase11Root);
+    this.app.root.addChild(this.sourceFamiliesPhase12Root);
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -464,6 +477,16 @@ export class UndertowVisualReviewApp {
       );
     }
 
+    // The distinct original Phase12 face samples are opt-in diagnostics only.
+    // Never count these as 16 additional full mesh components or walkable floors.
+    for(const face of UNDERTOW_T21_PHASE12_FAMILY_TRIANGLES){
+      const material=face.sourceFamily==='FloorLine02'?this.materials.sourcePhase12FloorLine:
+        face.sourceFamily==='WallMetal00'?this.materials.sourcePhase12WallMetal:
+        face.sourceFamily==='PillarBase02'?this.materials.sourcePhase12Pillar:
+        face.sourceFamily==='Glass01'?this.materials.sourcePhase12Glass:
+        this.materials.sourcePhase12GlassEdge;
+      createSourceNativeReviewMesh(this.app,this.sourceFamiliesPhase12Root,face,material);
+    }
     for (const surface of UNDERTOW_T21_MACRO_REVIEW_SURFACES) {
       createMacroReviewSurface(
         this.provisionalRoot,
@@ -549,7 +572,8 @@ export class UndertowVisualReviewApp {
         <span>Phase 9 down-facing source (NOT verified underside collider)</span><b>${UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY.sourceComponentCount} original face meshes / ${UNDERTOW_T21_PHASE9_DOWNFACE_SUMMARY.original3DTriangleAreaSquareMeters.toFixed(1)} m² 3D triangle area, no additional floor authority</b>
         <span>Phase 10 original boundary-edge topology</span><b>${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.sharedOriginalOBJVertexIDs} original welded IDs / ${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.coordinateOnlySeams} coordinate-only / ${UNDERTOW_T21_PHASE10_ORIGINAL_EDGE_SUMMARY.unmatchedSourceEdges} unmatched; ZERO proven gameplay connections</b>
         <span>Phase 11 closest center source, NOT connected geometry</span><b>${UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY.sourceTouchingZeroMeterEdges} edge-to-triangle contact at 0m / ${UNDERTOW_T21_PHASE11_CENTRAL_GAP_SUMMARY.source2Point55CentimeterGapEdges} at 0.0255m; 16 source triangles, 0 new original display components</b>
-        <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
+        <span>Phase12 center original family samples</span><b>${UNDERTOW_T21_PHASE12_FAMILY_SUMMARY.sourceFaceSamples} source triangles / ${UNDERTOW_T21_PHASE12_FAMILY_SUMMARY.materialFamilies} materials / 0 new full components / connectivity UNKNOWN</b>
+         <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
         <span>Reviewed solids / paint surfaces</span><b>${UNDERTOW_T21_VISUAL_REVIEW.solidCount} / ${UNDERTOW_T21_VISUAL_REVIEW.paintSurfaceCount}</b>
@@ -562,7 +586,7 @@ export class UndertowVisualReviewApp {
         <button data-review-preset="THREE_DIMENSIONAL">Floors + 3D structure</button>
         <button data-review-preset="ALL_EVIDENCE">All evidence layers</button>
       </div>
-      <p class="review-detail-note">Phase10 source-edge diagnostic: <b>orange = 30 same-XYZ / different OBJ IDs</b>, <b>red = 18 no exact edge match</b>, welded source edges = 0. Phase11 <b>yellow = 16 nearest original source triangle samples</b>: eight 0m source contacts, eight 2.55cm gaps. Neither represents a connected walkable path or game collider.</p>
+      <p class="review-detail-note">Phase10 source-edge diagnostic: <b>orange = 30 same-XYZ / different OBJ IDs</b>, <b>red = 18 no exact edge match</b>, welded source edges = 0. Phase11 <b>yellow = 16 nearest original source triangle samples</b>: eight 0m source contacts, eight 2.55cm gaps. Neither represents a connected walkable path or game collider. Phase12: mint=FloorLine02, coral=WallMetal00, purple=PillarBase02, blue=Glass01, pink=GlassEdge00; all 16 original-face diagnostics only.</p>
       <div class="review-actions views">
         <button data-review-view="OVERVIEW">Overview</button>
         <button data-review-view="TOP">Top</button>
@@ -592,6 +616,7 @@ export class UndertowVisualReviewApp {
         <button id="t21-review-coordinate-seams-phase10-toggle">Phase10 non-welded edges OFF</button>
         <button id="t21-review-unmatched-edges-phase10-toggle">Phase10 unmatched edges OFF</button>
         <button id="t21-review-nearest-phase11-toggle">Phase11 nearest source triangles OFF</button>
+        <button id="t21-review-source-families-phase12-toggle">Phase12 source family faces OFF</button>
         <button id="t21-review-provisional-toggle">Provisional ON</button>
         <button id="t21-review-unresolved-toggle">Unresolved ON</button>
         <button id="t21-review-nav-toggle">Nav markers ON</button>
@@ -799,6 +824,11 @@ export class UndertowVisualReviewApp {
       'Nearest original source'
     );
     this.bindRootToggle(
+      panel.querySelector<HTMLButtonElement>('#t21-review-source-families-phase12-toggle'),
+      this.sourceFamiliesPhase12Root,
+      'Source families'
+    );
+    this.bindRootToggle(
       panel.querySelector<HTMLButtonElement>('#t21-review-provisional-toggle'),
       this.provisionalRoot,
       'Provisional'
@@ -852,6 +882,8 @@ export class UndertowVisualReviewApp {
     this.coordinateSeamPhase10Root.enabled=false;
     this.unmatchedEdgePhase10Root.enabled=false;
     this.nearestOriginalPhase11Root.enabled=false;
+    this.sourceFamiliesPhase12Root.enabled=false;
+    this.canvas.dataset.t21ReviewSourceFamilies='off';
     this.canvas.dataset.t21ReviewTopology='off';
     this.canvas.dataset.t21ReviewNearestCentral='off';
     this.provisionalRoot.enabled=full;
@@ -877,6 +909,8 @@ export class UndertowVisualReviewApp {
         (this.coordinateSeamPhase10Root.enabled||this.unmatchedEdgePhase10Root.enabled)?'on':'off';
       this.canvas.dataset.t21ReviewNearestCentral=
         this.nearestOriginalPhase11Root.enabled?'on':'off';
+      this.canvas.dataset.t21ReviewSourceFamilies=
+        this.sourceFamiliesPhase12Root.enabled?'on':'off';
       this.refreshReviewLayerButtons();
       this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-preset]').forEach(presetButton=>{
         presetButton.classList.remove('active-mode');
@@ -1071,6 +1105,11 @@ function createReviewMaterials(): ReviewMaterials {
     sourcePhase10CoordinateSeam: makeMaterial(new Color(1, 0.68, 0.16), 0.85),
     sourcePhase10UnmatchedEdge: makeMaterial(new Color(1, 0.24, 0.21), 0.95),
     sourcePhase11OriginalNearby: makeVerticalSourceMaterial(new Color(0.99, 0.99, 0.20), 0.55, true),
+    sourcePhase12FloorLine: makeVerticalSourceMaterial(new Color(0.22,0.96,0.62),0.6,true),
+    sourcePhase12WallMetal: makeVerticalSourceMaterial(new Color(1,0.48,0.36),0.6,true),
+    sourcePhase12Pillar: makeVerticalSourceMaterial(new Color(0.83,0.47,0.99),0.6,true),
+    sourcePhase12Glass: makeVerticalSourceMaterial(new Color(0.55,0.80,1),0.6,true),
+    sourcePhase12GlassEdge: makeVerticalSourceMaterial(new Color(1,0.38,0.77),0.6,true),
     confirmedBoundary: makeMaterial(new Color(0.42, 0.88, 0.98), 0.42),
     provisional: makeMaterial(new Color(0.98, 0.72, 0.16), 0.18),
     unresolved: makeMaterial(new Color(1.00, 0.20, 0.16), 0.50),

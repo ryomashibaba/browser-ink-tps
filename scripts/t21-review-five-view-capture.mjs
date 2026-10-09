@@ -275,6 +275,35 @@ try {
     manifest.nearestCentralSourceDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
   }
 
+    // Optional Phase12 ORIGINAL-OBJ source-family samples; independent from mandatory five views.
+  try{
+    await navigate(urlForView('CENTER_SOURCE')+'&reviewTopologyEdges=1&reviewSourceFamilies=1');
+    const ready=await poll(async()=>{
+      const state=await evaluation(`(() => ({
+        view:document.querySelector('#app-canvas')?.dataset.t21ReviewView,
+        families:document.querySelector('#app-canvas')?.dataset.t21ReviewSourceFamilies,
+        backend:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+      }))()`);
+      if(state?.view==='CENTER_SOURCE'&&state.families==='on'&&state.backend==='webgl2')return state;
+      throw Error('T21_PHASE12_SOURCE_FAMILIES_NOT_READY '+JSON.stringify(state));
+    },25000);
+    await sleep(900);
+    const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+    const bytes=Buffer.from(shot.data||'','base64');
+    if(bytes.byteLength<8000||bytes.toString('ascii',1,4)!=='PNG')
+      throw Error('T21_PHASE12_SOURCE_FAMILIES_BAD_SCREENSHOT');
+    const file='T21_PHASE12_CENTRAL_SOURCE_FAMILIES_DIAGNOSTIC.png';
+    await writeFile(resolve(destination,file),bytes);
+    manifest.phase12SourceFamilyDiagnostic={
+      status:'CAPTURED_NOT_GAMEPLAY_PROOF',file,bytes:bytes.byteLength,
+      sha256:createHash('sha256').update(bytes).digest('hex'),
+      originalSourceFaceSamples:16,originalFullComponentsAdded:0,
+      originalVertexIDConnectivityProven:false,renderer:ready.backend
+    };
+  }catch(error){
+    manifest.phase12SourceFamilyDiagnostic={status:'BLOCKED',reason:diagnostic(error)};
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{
