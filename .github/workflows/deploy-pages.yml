@@ -73,6 +73,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload T21 exact vertical glass-metal-pillar source phase 5B
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-exact-vertical-phase5b
+          path: /tmp/t21-vertical-exact-review-phase5b.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload T21 full-stage vertical source inventory
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         uses: actions/upload-artifact@v4
