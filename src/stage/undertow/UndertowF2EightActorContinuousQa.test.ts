@@ -105,8 +105,11 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
   let firstDropFrame=0,closestActorSeparation=Number.POSITIVE_INFINITY;
   let firstOverlap:string|null=null;
   let maxCpuTravel=0;
+  // B4 starts 0.82m IN FRONT of B1 towards the negative-side lip.
+  // Releasing B1 first traps it behind a genuinely stationary capsule;
+  // the physical front-to-back source order clears that lane instead.
   const releaseGroups:readonly (readonly string[])[]=[
-    ['A1','B1'],['A2','B2'],['A3','B3'],['B4']
+    ['A1','B4'],['A3','B1'],['A2','B3'],['B2']
   ];
   let releaseGroupIndex=0;
   const released=new Set<string>();
