@@ -1,0 +1,53 @@
+name: T21 Phase14P 7 CPU and actual player source-backed Chrome WebGL2 QA
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened, synchronize]
+    paths:
+      - "src/app/UndertowPhase14IRealCrowdVisualQaApp.ts"
+      - "src/app/UndertowPhase14KSourceStageLayer.ts"
+      - "src/player/PlayerController.ts"
+      - "src/projectile/ProjectileSystem.ts"
+      - "src/physics/RapierStagePhysics.ts"
+      - "src/ai/CpuAgentSystem.ts"
+      - "src/main.ts"
+      - "src/stage/undertow/UndertowPhase14*"
+      - "scripts/t21-phase14p-eight-actor-player-webgl2-capture.mjs"
+      - ".github/workflows/t21-phase14p-eight-actor-source-webgl2.yml"
+permissions:
+  contents: read
+concurrency:
+  group: t21-phase14p-eight-actor-webgl2
+  cancel-in-progress: true
+jobs:
+  eight-actor:
+    if: github.head_ref == 'codex/t21-undertow-evidence-ledger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Source checkout
+        uses: actions/checkout@v6
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Vite compile source QA route
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Negative capture checks
+        run: |
+          node --check scripts/t21-phase14p-eight-actor-player-webgl2-capture.mjs
+          node scripts/t21-phase14p-eight-actor-player-webgl2-capture.mjs --self-test
+      - name: Capture actual 8 actors with source-only collision and B1-to-player HP
+        run: node scripts/t21-phase14p-eight-actor-player-webgl2-capture.mjs
+      - name: Save independent Chrome PNG and audit manifest even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-phase14p-eight-real-actor-source-webgl2
+          path: /tmp/t21-phase14p-webgl2/
+          if-no-files-found: warn
+          retention-days: 14
