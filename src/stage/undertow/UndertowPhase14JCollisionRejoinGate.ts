@@ -58,7 +58,7 @@ export function auditPhase14JRapierRejoinStep(
     const collisionSourceIds:Array<string>=[];
     for(let i=0;i<controller.numComputedCollisions();i++){
       const hit=controller.computedCollision(i);
-      const id=physics.sourceSolidIdForCollider(hit.collider);
+      const id=hit?.collider?physics.sourceSolidIdForCollider(hit.collider):null;
       if(id&&!collisionSourceIds.includes(id))collisionSourceIds.push(id);
     }
     const xzMismatch=Math.hypot(actual.x-dx,actual.z-dz);
