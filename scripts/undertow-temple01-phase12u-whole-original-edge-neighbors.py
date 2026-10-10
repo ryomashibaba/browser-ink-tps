@@ -91,10 +91,20 @@ def search(vertices,faces,t):
     owners={min(g):set(g) for g in groups.values() if min(g) in {p['minFace'] for p in t['reports']}}
     if len(owners)!=22:raise ValueError('PHASE12U_OWNER_COMPONENTS_DRIFT')
     id_index=defaultdict(list);xyz_index=defaultdict(list)
+    zero_source_edges=0;duplicate_id_edges=0
     for fi,(ids,obj,mat) in enumerate(faces):
         p=[project(vertices[v]) for v in ids]
         for k in range(3):
             a,b=ids[k],ids[(k+1)%3]
+            # Some other original active OBJ faces contain a zero-length
+            # directed edge. They are real pinned source data, not grounds to
+            # create or weld an edge. Record and exclude from the *lookup*.
+            if a==b:
+                duplicate_id_edges+=1
+                continue
+            if canon(p[k])==canon(p[(k+1)%3]):
+                zero_source_edges+=1
+                continue
             id_index[id_edge(a,b)].append((fi,a,b))
             xyz_index[xyz_edge(p[k],p[(k+1)%3])].append((fi,a,b))
     rows=[];count=Counter();other_faces=set()
@@ -142,6 +152,8 @@ def search(vertices,faces,t):
       reviewOnly=True,runtimePromotionAuthorized=False,physicalWeldOrWalkableFloorProven=False,
       closedMeshOrGameplayAuthorized=False,sourceOriginalComponents=22,sourceOriginalFaces=488,
       sourceOriginalBoundaryEdges=524,priorHeld28Unmatched=348,priorHeld28Matched=176,
+      originalDegenerateZeroLengthSourceEdgesIgnored=zero_source_edges,
+      originalDuplicateOBJIDSourceEdgesIgnored=duplicate_id_edges,
       searchedFacesBeyondShown=70396-488,otherOptInSourceComponentsSearched=True,
       ownOriginalComponentExcludedPerBoundary=True,
       wholeOriginalExternalSourceFaceWitnessCount=len(other_faces),
