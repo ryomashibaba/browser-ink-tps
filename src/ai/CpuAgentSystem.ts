@@ -360,7 +360,11 @@ export class CpuAgentSystem {
             bot.position,{x:nx,y:ny,z:nz},dt
           );
           if(!collision.approved)
-            throw new Error('T21_PHASE14J_REJOIN_BLOCKED_BY_REAL_COLLIDER');
+            throw new Error('T21_PHASE14J_REJOIN_BLOCKED_BY_REAL_COLLIDER '+JSON.stringify({
+              id:bot.id,from:[bot.position.x,bot.position.y,bot.position.z],
+              to:[nx,ny,nz],collision,rejoinFrames:bot.rejoinElapsedFrames,
+              stableFrames:bot.rejoinStableFrames
+            }));
           bot.position.set(nx,ny,nz);
           if(d<=maxStep+1e-7){
             bot.mobilityState='GROUND';
