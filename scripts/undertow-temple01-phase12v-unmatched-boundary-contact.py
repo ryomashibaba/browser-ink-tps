@@ -171,6 +171,7 @@ def selftest():
 # Phase12V -- bounded original-source diagnostics for 88 boundary edges which have
 # NO exact XYZ full edge anywhere else in the pinned original 70,396 triangles.
 # This does NOT create a weld, collider, cap, floor, navmesh, paint or runtime authority.
+import struct
 from bisect import bisect_right
 RADIUS=0.5
 EPS=1.e-8
