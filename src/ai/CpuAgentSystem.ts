@@ -181,7 +181,8 @@ export class CpuAgentSystem {
     humanTeam: Team.A | Team.B,
     private readonly phase14eFirstDrop?: UndertowPhase14ECpuAdapter,
     private readonly phase14qGroundCollision?: CpuSharedGroundStepAuthority,
-    private readonly phase14qHumanCrowd?: CpuHumanCrowdFootAuthority
+    private readonly phase14qHumanCrowd?: CpuHumanCrowdFootAuthority,
+    private readonly phase14qF2RecoverableSteps = false
   ) {
     // T20 remains bit-for-bit on the old CPU update path unless an explicit
     // T21-D QA-only runtime adapter is injected. Any other stage FAILS closed.
@@ -196,6 +197,13 @@ export class CpuAgentSystem {
       (!phase14eFirstDrop||
        stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
       throw Error('T21_PHASE14Q_HUMAN_CROWD_PRODUCTION_FORBIDDEN');
+    // F2 is an explicitly opted-in QA reconciliation, never a production
+    // collision bypass. The original strict M4 fail-closed path stays default.
+    if(this.phase14qF2RecoverableSteps&&
+       (!phase14qGroundCollision||!phase14eFirstDrop||
+        !phase14qHumanCrowd||
+        stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
+      throw Error('T21_F2_REQUIRES_FULL_SOURCE_PHYSICAL_QA');
     this.director = new CpuTacticalDirector(gameplayInk, stage);
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
@@ -363,7 +371,7 @@ export class CpuAgentSystem {
         if(!this.phase14eFirstDrop||!bot.agent)
           throw new Error('T21_PHASE14H_REJOIN_AGENT_MISSING');
         bot.rejoinElapsedFrames++;
-        if(bot.rejoinElapsedFrames>45){
+        if(bot.rejoinElapsedFrames>(this.phase14qF2RecoverableSteps?180:45)){
           this.navigation.removeAgent(bot.agent);
           bot.agent=null;
           throw new Error('T21_PHASE14H_REJOIN_STABILITY_TIMEOUT');
@@ -480,6 +488,11 @@ export class CpuAgentSystem {
               bot.id,bot.position,{x:nx,y:ny,z:nz},dt
             );
             if(!shared.approved){
+              if(this.phase14qF2RecoverableSteps){
+                this.reconcileBlockedT21F2CrowdProxy(bot);
+                bot.rejoinStableFrames=0;
+                continue;
+              }
               bot.agent?.resetMoveTarget();
               throw Error('T21_PHASE14Q_REAL_REJOIN_COLLISION_BLOCKED '+JSON.stringify({
                 id:bot.id,sourceFoot:[bot.position.x,bot.position.y,bot.position.z],
@@ -525,15 +538,43 @@ export class CpuAgentSystem {
         bot.agent=null;
         throw new Error('T21_PHASE14G_UNSUPPORTED_CROWD_REJOIN_DISCONTINUITY');
       }
+      // Native Crowd can temporarily lead the physical foot at an
+      // offmesh approach. Consume only a legal per-tick speed envelope;
+      // Rapier still approves the exact motion before visible CPU adoption.
+      // A true vertical offmesh transition is handled above by the genuine
+      // original-source Rapier fall bridge, never by this horizontal clamp.
+      let accepted={x:p.x,y:p.y,z:p.z};
+      if(this.phase14qF2RecoverableSteps){
+        const dx=p.x-bot.position.x,dy=p.y-bot.position.y,
+          dz=p.z-bot.position.z;
+        const d=Math.hypot(dx,dy,dz);
+        const limit=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt;
+        if(d>limit+1e-5&&Math.abs(dy)<=.11){
+          const k=limit/d;
+          accepted={x:bot.position.x+dx*k,
+            y:bot.position.y+dy*k,z:bot.position.z+dz*k};
+        }
+      }
       if(this.phase14qGroundCollision){
-        const shared=this.phase14qGroundCollision.auditGroundStep(
-          bot.id,bot.position,p,dt
-        );
+        let shared:ReturnType<CpuSharedGroundStepAuthority['auditGroundStep']>;
+        try{
+          shared=this.phase14qGroundCollision.auditGroundStep(
+            bot.id,bot.position,accepted,dt
+          );
+        }catch(error){
+          if(this.phase14qF2RecoverableSteps&&
+             String(error).includes('T21_PHASE14Q_CPU_CROWD_OVERSPEED_UNAPPROVED')){
+            this.reconcileBlockedT21F2CrowdProxy(bot);
+            continue;
+          }
+          throw error;
+        }
         if(!shared.approved){
-          // This is not a silent movement correction: the CPU foot is
-          // unchanged, the Crowd target is cancelled, and the current
-          // QA sequence must stop. A later source-backed Crowd/KCC
-          // reconciliation algorithm must be approved separately.
+          if(this.phase14qF2RecoverableSteps){
+            this.reconcileBlockedT21F2CrowdProxy(bot);
+            continue;
+          }
+          // The original strict QA path is intentionally unchanged.
           bot.agent.resetMoveTarget();
           throw Error('T21_PHASE14Q_REAL_CROWD_COLLISION_BLOCKED '+JSON.stringify({
             id:bot.id,sourceFoot:[bot.position.x,bot.position.y,bot.position.z],
@@ -543,7 +584,7 @@ export class CpuAgentSystem {
           }));
         }
       }
-      bot.position.set(p.x, p.y, p.z);
+      bot.position.set(accepted.x,accepted.y,accepted.z);
       this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
 
       bot.paintRemaining -= dt;
@@ -568,6 +609,28 @@ export class CpuAgentSystem {
     }
 
     this.syncStats();
+  }
+
+  /**
+   * Re-anchor ONLY the Recast steering proxy to its existing, verified
+   * original-source physical CPU foot after a blocked candidate. This
+   * does not move the CPU body, image, or original geometry. A new
+   * navigation goal must be requested after the collision clears.
+   */
+  private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
+    if(!this.phase14qF2RecoverableSteps||!bot.agent)
+      throw Error('T21_F2_UNAUTHORIZED_CROWD_RECONCILIATION');
+    const nav=this.navigation.closestPoint(bot.position);
+    if(Math.hypot(nav.x-bot.position.x,nav.y-bot.position.y,
+      nav.z-bot.position.z)>.20)
+      throw Error('T21_F2_PHYSICAL_CPU_OFF_ORIGINAL_NAVMESH');
+    bot.agent.teleport(nav);
+    bot.agent.resetMoveTarget();
+    const p=bot.agent.position();
+    if(Math.hypot(p.x-bot.position.x,p.y-bot.position.y,
+      p.z-bot.position.z)>.20)
+      throw Error('T21_F2_CROWD_PROXY_REANCHOR_FAILED');
+    bot.thinkRemaining=Math.min(bot.thinkRemaining,.20);
   }
 
   public setSplatZonesContext(active: boolean, control: Team): void {
