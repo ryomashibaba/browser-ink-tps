@@ -36,7 +36,7 @@ type Bot={
 beforeAll(async()=>{await Promise.all([initializeRapier(),initializeRecastNavigation()]);});
 afterEach(()=>vi.restoreAllMocks());
 
-function scenario(radius:number){
+function scenario(radius:number,withInternalHumanAnchor=false){
  vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
  const stage=undertowT21dConnectivityQaStage(),stats=new PerformanceStats();
  const physics=new RapierStagePhysics(DT,stage);
@@ -67,8 +67,10 @@ function scenario(radius:number){
  collision.syncActualHumanFoot(human);
  const nav=new RecastStageNavigation(stage,stats);
  const adapter=new UndertowPhase14ECpuHandoff(stage,true);
+ const internalAnchor=withInternalHumanAnchor?
+   new UndertowPhase14QHumanCrowdAnchor(nav,stage,true,human):null;
  const cpu=new CpuAgentSystem(app,nav,ink,{enqueue:vi.fn()} as never,
-   stats,stage,Team.A,adapter,collision);
+   stats,stage,Team.A,adapter,collision,internalAnchor??undefined);
  collision.syncActualHumanFoot(human);
  const bots=(cpu as unknown as {bots:Bot[]}).bots;
  expect(bots).toHaveLength(7);
@@ -104,7 +106,7 @@ function scenario(radius:number){
  b1.thinkRemaining=900;b1.paintRemaining=900;
  b1.fireRemaining=900;b1.jumpCooldownSeconds=900;
  b1.agent.requestMoveTarget(nav.closestPoint(new Vec3(human.x,human.y,human.z)));
- return {cpu,collision,body,human,stats,b1,adapter,stage};
+ return {cpu,collision,body,human,stats,b1,adapter,stage,internalAnchor};
 }
 describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting',()=>{
  it('blocks an actual moving Recast B1 foot on real HUMAN collider without mutating its visible foot or teleporting its Crowd agent',()=>{
@@ -190,6 +192,44 @@ describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting'
   anchor.dispose();
   w.cpu.reset(Team.A);
   expect(w.collision.cpuColliderCount).toBe(0);
+  w.collision.dispose();
+ });
+ it('M4 CpuAgentSystem owns REAL HUMAN passive Recast pre/post updates and physically vetoes CPU capsule penetration on all 90 actual B1 frames',()=>{
+  const w=scenario(.69,true);
+  expect(w.internalAnchor).not.toBeNull();
+  let completedFrames=0;
+  let minCpuHuman=Number.POSITIVE_INFINITY;
+  let peakPostSealDrift=0;
+  let vetoReason:string|null=null;
+  for(let i=0;i<90;i++){
+   try{w.cpu.fixedUpdate(DT,true,Team.A,w.body,false);}
+   catch(error){vetoReason=String(error);break;}
+   completedFrames++;
+   const proxy=w.internalAnchor!.rawCrowdPosition;
+   const drift=Math.hypot(proxy.x-w.human.x,proxy.z-w.human.z);
+   peakPostSealDrift=Math.max(peakPostSealDrift,drift);
+   expect(drift).toBeLessThan(.065);
+   const separation=Math.hypot(w.b1.position.x-w.human.x,
+     w.b1.position.z-w.human.z);
+   minCpuHuman=Math.min(minCpuHuman,separation);
+   expect(separation).toBeGreaterThan(.61);
+  }
+  console.log('T21_PHASE14Q_M4_CPU_NATIVE_PREPOST_ANCHOR_AND_RAPIER_SAFE_B1',JSON.stringify({
+   completedFrames,minCpuHuman,peakPostSealDrift,
+   realHumanPhysicsUnchanged:true,
+   realCpuCrowdTeleports:0,
+   sourceCpuPoseCorrections:0,
+   collisionVetoReason:vetoReason,
+   realPhysicalCollisionGateActive:true,
+   originalT20ProductionChanged:false,
+   fullSevenActorFallKccWorldCertified:false
+  }));
+  expect(completedFrames).toBe(90);
+  expect(vetoReason).toBeNull();
+  expect(minCpuHuman).toBeGreaterThan(.61);
+  w.cpu.reset(Team.A);
+  expect(w.collision.cpuColliderCount).toBe(0);
+  w.internalAnchor!.dispose();
   w.collision.dispose();
  });
  it('rejects the opt-in shared collision authority unless the original T21 Rapier drop adapter is present',()=>{
