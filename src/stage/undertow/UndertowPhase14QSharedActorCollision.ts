@@ -60,7 +60,10 @@ export class UndertowPhase14QSharedActorCollision{
   ){
     if(enabled!==true||stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
       stage.solids.length!==25||stage.paintSurfaces.length!==17||
-      stage.navigationLinks?.length!==26||freeze.activationReady!==false)
+      stage.navigationLinks?.length!==26||freeze.activationReady!==false||
+      stage.solids!==freeze.solids||
+      stage.paintSurfaces!==freeze.paintSurfaces||
+      stage.navigationLinks!==freeze.navigationLinks)
       throw Error('T21_PHASE14Q_NOT_AUTHORIZED_FOR_PRODUCTION');
     this.kcc=createConfiguredPlayerCharacterController(physics.world);
   }
