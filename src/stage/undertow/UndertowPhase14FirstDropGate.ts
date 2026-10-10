@@ -66,7 +66,7 @@ export function auditPhase14FirstDrop(
  const surfacesByBacking=new Map<string,number>();
  for(const surface of stage.paintSurfaces)
   surfacesByBacking.set(surface.backingSolidId,(surfacesByBacking.get(surface.backingSolidId)||0)+1);
- const probesById=new Map(probes.map(p=>[p.id,p]));
+ const probesById=new Map<string,UndertowConnectivityProbe>(probes.map(p=>[p.id,p]));
  const linksById=new Map(stage.navigationLinks.map(l=>[l.id,l]));
  if(stage.activationReady)blockers.push('PHASE14_PREMATURE_STAGE_ACTIVATION');
  if(stage.solids.length!==25||stage.paintSurfaces.length!==17||stage.navigationLinks.length!==26)
