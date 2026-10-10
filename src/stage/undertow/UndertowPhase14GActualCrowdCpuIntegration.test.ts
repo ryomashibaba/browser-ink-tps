@@ -143,7 +143,7 @@ describe('T21 Phase14G real Recast Crowd -> real CpuAgentSystem -> Rapier KCC ->
         r.maxRenderError=Math.max(r.maxRenderError,error);
         // Existing *ground* animation has a small <=2.5cm bob.
         expect(error).toBeLessThan(0.035);
-        if(physical&&bot.mobilityState==='GROUND'){
+        if((physical||states[i]==='FIRST_DROP_REJOIN')&&bot.mobilityState==='GROUND'){
           r.groundedFrame=frame;
           expect(bot.agent).not.toBeNull();
           expect(Math.abs(bot.position.y-3)).toBeLessThan(0.2);
