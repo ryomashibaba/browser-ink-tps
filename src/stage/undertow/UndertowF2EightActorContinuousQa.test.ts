@@ -89,8 +89,10 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     const route=routeOf(bot.id);
     expect(bot.position.distance(new Vec3(...route.start))).toBeLessThan(.2);
     expect(bot.agent).not.toBeNull();
-    bot.agent!.requestMoveTarget(nav.closestPoint(
-      new Vec3(...route.sourceGoal)));
+    // Stage actors are fully real Crowd participants but do not all
+    // charge the same lip. Enable two mirrored actors at a time; this
+    // physical-traffic QA intentionally differs from unrestricted 4v4.
+    bot.agent!.resetMoveTarget();
     bot.thinkRemaining=900;bot.paintRemaining=900;
     bot.fireRemaining=900;bot.jumpCooldownSeconds=900;
   }
@@ -103,7 +105,14 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
   let firstDropFrame=0,closestActorSeparation=Number.POSITIVE_INFINITY;
   let firstOverlap:string|null=null;
   let maxCpuTravel=0;
-  for(let frame=1;frame<=1200;frame++){
+  const releaseGroups:readonly (readonly string[])[]=[
+    ['A1','B1'],['A2','B2'],['A3','B3'],['B4']
+  ];
+  let releaseGroupIndex=0;
+  const released=new Set<string>();
+  const actualReleaseFrames:Record<string,number>={};
+  const actualRejoinFrames:Record<string,number>={};
+  for(let frame=1;frame<=2400;frame++){
     player.computeFixed(DT);physics.step();player.syncAfterPhysics(DT);
     const bodyNow=player.getPosition();
     const actualHumanFoot={
@@ -113,13 +122,31 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     maximumPhysicalHumanDrift=Math.max(maximumPhysicalHumanDrift,
       Math.hypot(actualHumanFoot.x-physicalHumanFoot.x,
         actualHumanFoot.z-physicalHumanFoot.z));
-    // Keep the authored lower link as a test objective. This is a goal
-    // request, NOT a CPU physical foot or stage geometry relocation.
+    // F2 traffic admission: each mirrored pair physically descends and
+    // regains the lower Crowd before the next pair starts. This resolves
+    // the 1200-frame all-neighbours-stuck high-lip deadlock without
+    // teleporting a physical CPU or inventing an alternate stage route.
+    while(releaseGroupIndex<releaseGroups.length&&
+      releaseGroups[releaseGroupIndex]!.every(id=>
+        physicallyRejoined.has(id)))releaseGroupIndex++;
+    const group=releaseGroups[releaseGroupIndex]??[];
+    for(const id of group){
+      if(!released.has(id)){
+        released.add(id);actualReleaseFrames[id]=frame;
+      }
+    }
     for(const bot of bots){
-      if(bot.mobilityState==='GROUND'&&bot.agent&&frame%18===1){
+      if(physicallyRejoined.has(bot.id)){
+        bot.thinkRemaining=900;
+        bot.agent?.resetMoveTarget();
+      }else if(released.has(bot.id)&&
+          bot.mobilityState==='GROUND'&&bot.agent&&frame%18===1){
         bot.agent.requestMoveTarget(nav.closestPoint(
           new Vec3(...routeOf(bot.id).sourceGoal)));
         bot.thinkRemaining=900;
+      }else if(!released.has(bot.id)){
+        bot.thinkRemaining=900;
+        bot.agent?.resetMoveTarget();
       }
     }
     const before=bots.map(b=>b.position.clone());
@@ -145,8 +172,10 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
         if(!firstDropFrame)firstDropFrame=frame;
       }
       if(previousStates[i]==='FIRST_DROP_REJOIN'&&
-          bot.mobilityState==='GROUND')
+          bot.mobilityState==='GROUND'){
         physicallyRejoined.add(bot.id);
+        actualRejoinFrames[bot.id]=frame;
+      }
       const distance=bot.position.distance(starts.get(bot.id)!);
       maxCpuTravel=Math.max(maxCpuTravel,distance);
       historicalMoves.set(bot.id,Math.max(historicalMoves.get(bot.id)??0,
@@ -171,8 +200,11 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     }
   }
   const result={
-    framesCompleted:completedFrame||stopFrame||1200,
-    boundedFrames:1200,
+    framesCompleted:completedFrame||stopFrame||2400,
+    boundedFrames:2400,
+    qaTrafficControl:'MIRRORED_PAIR_STAGING_NOT_UNRESTRICTED_4V4',
+    physicalReleaseFrames:actualReleaseFrames,
+    physicalRejoinFrames:actualRejoinFrames,
     distinctOriginalFirstDropLinks:routePlan.distinctFirstDropLinks,
     assignedOriginalLinks:routePlan.routes.map(r=>({
       actorId:r.actorId,linkId:r.linkId,sourceGoal:r.sourceGoal
@@ -193,7 +225,9 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     maximumStationaryPhysicalHumanHorizontalDriftMeters:maximumPhysicalHumanDrift,
     failClosedRuntimeStop:lastBlocker,
     failClosedRuntimeStopFrame:stopFrame,
-    f2FullSequenceCertified:completedFrame>0&&!firstOverlap&&!lastBlocker,
+    f2StagedPhysicalSequenceCertified:completedFrame>0&&
+      physicallyRejoined.size===7&&!firstOverlap&&!lastBlocker,
+    unrestrictedEightActorCollisionCertified:false,
     realHumanControlledByKeyboard:false,
     sourceScoreablePromotions:0,
     sourceGeometryChanged:false,
@@ -201,6 +235,13 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
   };
   console.log('T21_F2_EIGHT_ACTOR_CONTINUOUS_REAL_SOURCE_DIAGNOSTIC',
     JSON.stringify(result));
+  // This test is the one bounded F2 physical-path gate. A TS/Vitest green
+  // without seven actual drops and lower Crowd rejoins is NOT a pass.
+  expect(physicallyFalling.size).toBe(7);
+  expect(physicallyRejoined.size).toBe(7);
+  expect(completedFrame).toBeGreaterThan(0);
+  expect(firstOverlap).toBeNull();
+  expect(lastBlocker).toBeNull();
   expect(routePlan.releaseAuthorized).toBe(false);
   expect(stage.solids).toBe(frozen.solids);
   expect(stage.paintSurfaces).toBe(frozen.paintSurfaces);
