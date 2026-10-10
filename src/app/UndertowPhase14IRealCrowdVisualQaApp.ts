@@ -41,7 +41,7 @@ type Transition={id:string;side:Side;frame:number;rawStepMeters:number;physical:
 type FrameEntry={id:string;state:string;hasCrowd:boolean;foot:[number,number,number];
  visual:[number,number,number];deltaMeters:number};
 type Snapshot={
- phase:'14I'|'14K';frame:number;mode:'REAL_RECAST_CROWD_UNFORCED';
+ phase:'14I'|'14K'|'14L';frame:number;mode:'REAL_RECAST_CROWD_UNFORCED';
  renderer:'webgl2';transitionCount:number;transitions:Transition[];
  cpu:FrameEntry[];activeRapierBodies:number;
  paintRequests:number;shootingRequests:number;tacticalRetargets:number;
@@ -60,7 +60,7 @@ function coords(p:Readonly<{x:number;y:number;z:number}>):[number,number,number]
 }
 export class UndertowPhase14IRealCrowdVisualQaApp{
  static async boot(canvas:HTMLCanvasElement,panel:HTMLElement){
-  if(!['phase14i','phase14k'].includes(new URL(location.href).searchParams.get('t21Qa')??'')||
+  if(!['phase14i','phase14k','phase14l'].includes(new URL(location.href).searchParams.get('t21Qa')??'')||
      freeze.activationReady!==false)throw Error('T21_PHASE14I_QA_OPT_IN_REQUIRED');
   await Promise.all([initializeRapier(),initializeRecastNavigation()]);
   const device=await createGraphicsDevice(canvas,{
@@ -78,7 +78,9 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   return new UndertowPhase14IRealCrowdVisualQaApp(app,canvas,panel);
  }
 
- private readonly phase14k=new URL(location.href).searchParams.get('t21Qa')==='phase14k';
+ private readonly phase14l=new URL(location.href).searchParams.get('t21Qa')==='phase14l';
+ private readonly phase14k=['phase14k','phase14l'].includes(
+   new URL(location.href).searchParams.get('t21Qa')??'');
  private readonly stage=undertowT21dConnectivityQaStage();
  private readonly sourceContext:T21Phase14KVisualManifest|null;
  private readonly camera:Entity;
@@ -106,7 +108,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   const sun=new Entity('Phase14I:Light');
   sun.addComponent('light',{type:'directional',intensity:1.7,color:new Color(1,1,1)});
   sun.setEulerAngles(45,25,0);app.root.addChild(sun);
-  const camera=new Entity(this.phase14k?'Phase14K:Camera':'Phase14I:Camera');
+  const camera=new Entity(this.phase14l?'Phase14L:Camera':
+   this.phase14k?'Phase14K:Camera':'Phase14I:Camera');
   this.camera=camera;
   camera.addComponent('camera',{
    clearColor:new Color(.015,.025,.045,1),nearClip:.1,
@@ -127,7 +130,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   this.adapter.observe=(id,from,to,dt)=>{
    const accepted=observe(id,from,to,dt);
    if(accepted){
-    const side=id==='A1'?'positive-z':id==='B1'?'negative-z':null;
+    const side=id.startsWith('A')?'positive-z':id.startsWith('B')?'negative-z':null;
     if(!side)throw Error('T21_PHASE14I_UNEXPECTED_CPU_INTERCEPT');
     const audit=auditPhase14CrowdFrame(from,to,dt);
     if(!audit.suspectedInstantTransition)throw Error('T21_PHASE14I_NOT_REAL_OFFMESH');
@@ -141,7 +144,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   // QA-only headless isolation of A1/B1; retains the canonical seven-CPU
   // CpuAgentSystem spawning path. Other five do not participate in movement.
   const bots=(this.cpu as unknown as {bots:QaBot[]}).bots;
-  this.selected=['A1','B1'].map(id=>{
+  this.selected=(this.phase14l?['A1','A2','A3','B1','B2','B3','B4']:
+    ['A1','B1']).map(id=>{
    const found=bots.find(b=>b.id===id);
    if(!found)throw Error('T21_PHASE14I_CPU_COUNT_DRIFT_'+id);
    return found;
@@ -152,7 +156,10 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    bot.agent=null;bot.lifeState='SPLATTED';
    bot.respawnRemainingSeconds=9000;bot.entity.enabled=false;
   }
-  for(const [i,side] of SIDES.entries()){
+  const scenarioSides:readonly Side[]=this.phase14l?
+    this.selected.map(b=>b.id.startsWith('A')?'positive-z':'negative-z'):
+    SIDES;
+  for(const [i,side] of scenarioSides.entries()){
    const bot=this.selected[i]!;
    const probe=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(p=>p.id==='first-drop-'+side);
    const link=this.stage.navigationLinks!.find(l=>l.id==='first-drop-'+side+'-3');
@@ -172,6 +179,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    bot.thinkRemaining=900;bot.paintRemaining=900;bot.fireRemaining=900;
    this.lastPositions.set(bot.id,bot.position.clone());
    this.maxStep.set(bot.id,0);
+   if(this.phase14l&&scenarioSides.indexOf(side)!==i)continue;
    const marker=new Entity('Phase14I:RENDER_ONLY_LANDING_MARKER:'+side);
    marker.addComponent('render',{type:'cylinder',material:material(
     i===0?[.12,.84,.94]:[.96,.22,.74])});
@@ -187,7 +195,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   camera.lookAt(cameraLink.end[0],5.2,cameraLink.end[2]);
   panel.innerHTML='';
   const label=document.createElement('div');
-  label.id=this.phase14k?'t21-phase14k-panel':'t21-phase14i-panel';
+  label.id=this.phase14l?'t21-phase14l-panel':
+   this.phase14k?'t21-phase14k-panel':'t21-phase14i-panel';
   label.style.cssText='position:absolute;left:16px;top:16px;z-index:50;'+
    'background:rgba(4,14,28,.88);color:#f5f9ff;padding:14px 18px;'+
    'font:14px monospace;border:1px solid #6c9ab8;max-width:590px;'+
@@ -205,14 +214,22 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    canvas.dataset.t21Phase14kSide=cameraSide;
    canvas.dataset.t21Phase14kActivation='FORBIDDEN';
   }
+  if(this.phase14l){
+   canvas.dataset.t21Phase14lReady='READY';
+   canvas.dataset.t21Phase14lRenderer=renderer;
+   canvas.dataset.t21Phase14lSide=cameraSide;
+   canvas.dataset.t21Phase14lActivation='FORBIDDEN';
+  }
   const api={
    snapshot:()=>this.snapshot(),
    advance:(count:number)=>this.advance(count),
    advanceUntil:(id:string,state:string,limit:number)=>this.advanceUntil(id,state,limit)
   };
-  (window as unknown as {__t21Phase14I?:typeof api;__t21Phase14K?:typeof api}).__t21Phase14I=api;
-  if(this.phase14k)
+  (window as unknown as {__t21Phase14I?:typeof api}).__t21Phase14I=api;
+  if(this.phase14k&&!this.phase14l)
    (window as unknown as {__t21Phase14K?:typeof api}).__t21Phase14K=api;
+  if(this.phase14l)
+   (window as unknown as {__t21Phase14L?:typeof api}).__t21Phase14L=api;
   this.cpu.render(1);
   if(this.phase14k)this.followPhase14KCamera();
   this.refreshLabel(label);
@@ -274,12 +291,14 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   this.updateLabel();return this.snapshot();
  }
  private updateLabel(){
-  const label=this.panel.querySelector(this.phase14k?'#t21-phase14k-panel':'#t21-phase14i-panel');
+  const label=this.panel.querySelector(this.phase14l?'#t21-phase14l-panel':
+    this.phase14k?'#t21-phase14k-panel':'#t21-phase14i-panel');
   if(label)this.refreshLabel(label as HTMLElement);
  }
  private refreshLabel(label:HTMLElement){
   const snap=this.snapshot();
-  label.textContent=(this.phase14k?'T21 Phase14K — ORIGINAL SOURCE VISUAL + CAMERA QA ONLY\n':'T21 Phase14I — REAL RECAST CROWD / WEBGL2 QA ONLY\n')+
+  label.textContent=(this.phase14l?'T21 Phase14L — SEVEN REAL CPU + RAPIER WEBGL2 QA ONLY\n':
+   this.phase14k?'T21 Phase14K — ORIGINAL SOURCE VISUAL + CAMERA QA ONLY\n':'T21 Phase14I — REAL RECAST CROWD / WEBGL2 QA ONLY\n')+
    'Original one-way links -> real Rapier KCC -> verified Crowd settle\n'+
    'NO source/gameplay promotion. NO human Visual Freeze approval.\n'+
    'frame '+snap.frame+'  real interrupts '+snap.transitionCount+
@@ -289,7 +308,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
  }
  private snapshot():Snapshot{
   return {
-   phase:this.phase14k?'14K':'14I',frame:this.frame,mode:'REAL_RECAST_CROWD_UNFORCED',
+   phase:this.phase14l?'14L':this.phase14k?'14K':'14I',
+   frame:this.frame,mode:'REAL_RECAST_CROWD_UNFORCED',
    renderer:'webgl2',transitionCount:this.transitions.length,
    transitions:this.transitions.map(t=>({...t})),
    cpu:this.selected.map(bot=>{
