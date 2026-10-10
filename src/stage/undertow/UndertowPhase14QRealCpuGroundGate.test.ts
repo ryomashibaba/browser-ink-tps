@@ -67,6 +67,7 @@ function scenario(radius:number){
  const adapter=new UndertowPhase14ECpuHandoff(stage,true);
  const cpu=new CpuAgentSystem(app,nav,ink,{enqueue:vi.fn()} as never,
    stats,stage,Team.A,adapter,collision);
+ collision.syncActualHumanFoot(human);
  const bots=(cpu as unknown as {bots:Bot[]}).bots;
  expect(bots).toHaveLength(7);
  for(const bot of bots){
@@ -136,6 +137,7 @@ describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting'
   expect(w.b1.position.distance(footBefore!)).toBeLessThan(1e-7);
   expect(w.collision.cpuColliderCount).toBe(1);
   w.cpu.reset(Team.A);
+  expect(w.collision.cpuColliderCount).toBe(0);
   w.collision.dispose();
   expect(w.adapter.activeCount).toBe(0);
   expect(freeze.activationReady).toBe(false);
@@ -150,6 +152,7 @@ describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting'
    w.stats,w.stage,Team.A,undefined,w.collision
   )).toThrow('T21_PHASE14Q_SHARED_COLLISION_PRODUCTION_FORBIDDEN');
   w.cpu.reset(Team.A);
+  expect(w.collision.cpuColliderCount).toBe(0);
   w.collision.dispose();
  });
 });
