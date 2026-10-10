@@ -147,6 +147,23 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.actors.cpuColliderCount).toBe(1);
   w.actors.dispose();
  });
+ it('rejects a prospective CPU Crowd endpoint INSIDE the real HUMAN capsule before a tiny physical discrepancy is incorrectly tolerated',()=>{
+  const w=world();
+  const initial={x:w.humanFoot.x+.665,y:w.humanFoot.y,z:w.humanFoot.z};
+  const unsafe={x:w.humanFoot.x+.60,y:w.humanFoot.y,z:w.humanFoot.z};
+  w.actors.syncRealCpuFoot('B3',initial);
+  const result=w.actors.auditGroundStep('B3',initial,unsafe,DT);
+  expect(result.requestedMeters).toBeLessThan(.075);
+  expect(result.proposedActorCapsuleOverlap).toBe(true);
+  expect(result.approved).toBe(false);
+  expect(result.cause).toBe('DYNAMIC_ACTOR_OR_STAGE_BLOCKER');
+  expect(result.cpuVisualTeleportPerformed).toBe(false);
+  expect(result.realHumanCapsulePresent).toBe(true);
+  expect(w.player.getPosition().x).toBeCloseTo(w.humanFoot.x);
+  console.log('T21_PHASE14Q_M3_REJECT_PROSPECTIVE_REAL_HUMAN_CAPSULE_OVERLAP',
+    JSON.stringify(result));
+  w.actors.dispose();
+ });
  it('fails closed on initial actual human/CPU overlap, even if a Rapier KCC does not depenetrate the stationary capsule',()=>{
   const w=world();
   const before={x:w.humanFoot.x+.04,y:w.humanFoot.y,z:w.humanFoot.z};
