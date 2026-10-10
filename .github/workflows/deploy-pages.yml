@@ -610,6 +610,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12Q pinned original XYZ coincidence seam graph (source-only)
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12P_REPORT_INPUT: /tmp/t21-phase12p-original-contact-audit.json
+          T21_PHASE12Q_REPORT: /tmp/t21-phase12q-original-position-seam-graph.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12QOriginalPositionSeamGraphQa.test.ts
+
+      - name: Upload T21 Phase12Q original exact-position graph (not physics)
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12q-source-only-position-seam-graph
+          path: /tmp/t21-phase12q-original-position-seam-graph.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
