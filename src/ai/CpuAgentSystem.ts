@@ -64,6 +64,10 @@ export interface CpuSharedGroundStepAuthority {
   resetActors():void;
   syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
+  /** Real shared-world actor clearance before F2 native offmesh admission. */
+  shouldDeferF2FirstDrop?(
+    id:string,foot:Readonly<{x:number;y:number;z:number}>
+  ):boolean;
   auditAirborneSourceFoot(
     id:string,from:Readonly<{x:number;y:number;z:number}>,
     to:Readonly<{x:number;y:number;z:number}>,dt:number,
@@ -202,6 +206,7 @@ export class CpuAgentSystem {
     if(this.phase14qF2RecoverableSteps&&
        (!phase14qGroundCollision||!phase14eFirstDrop||
         !phase14qHumanCrowd||
+        !phase14qGroundCollision.shouldDeferF2FirstDrop||
         stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
       throw Error('T21_F2_REQUIRES_FULL_SOURCE_PHYSICAL_QA');
     this.director = new CpuTacticalDirector(gameplayInk, stage);
@@ -520,6 +525,21 @@ export class CpuAgentSystem {
       }
 
       const p = bot.agent.position();
+      // F2: the original offmesh event may begin only with a free
+      // original-source physical capsule corridor. Other moving CPUs can
+      // reach the same lip on adjacent links. Queue that fall by leaving
+      // the REAL CPU at its last approved KCC foot and re-anchoring ONLY
+      // the ephemeral Recast steering proxy, never its render/physics foot.
+      // The authentic link is retried after other bodies clear.
+      if(this.phase14qF2RecoverableSteps&&
+         p.y<bot.position.y-.1&&
+         auditPhase14CrowdFrame(bot.position,p,dt).suspectedInstantTransition&&
+         this.phase14qGroundCollision!.shouldDeferF2FirstDrop!(
+           bot.id,bot.position
+         )){
+        this.reconcileBlockedT21F2CrowdProxy(bot);
+        continue;
+      }
       // A real Recast offmesh jump is no longer copied into the CPU render
       // position when (and only when) the T21-D QA adapter is injected.
       if(this.phase14eFirstDrop?.observe(bot.id,bot.position,p,dt)){
