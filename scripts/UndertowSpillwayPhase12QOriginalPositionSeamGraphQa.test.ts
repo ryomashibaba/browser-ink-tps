@@ -136,11 +136,16 @@ function checkPhase12P(rows:readonly Row[]){
  const keyRow=(a:number,b:number)=>[a,b].sort((x,y)=>x-y).join(':');
  const pairs=new Map(rows.map(r=>[keyRow(r.a,r.b),r]));
  expect(pairs.size).toBe(110);
- const compared=new Set<string>();
+ const compared=new Map<string,number>(),directed=new Set<string>();
  let contacts=0;
  for(const original of p.rows){
   const k=keyRow(original.a,original.b);
-  expect(compared.has(k)).toBe(false);compared.add(k);
+  const direction=original.a+':'+original.b;
+  expect(directed.has(direction)).toBe(false);directed.add(direction);
+  const prior=compared.get(k)||0;
+  expect(prior).toBeLessThan(2);
+  if(prior===1)expect(M.some(x=>x.originalMinFace===original.b)).toBe(true);
+  compared.set(k,prior+1);
   const current=pairs.get(k);
   expect(current).toBeDefined();
   expect(M.some(x=>x.originalMinFace===original.a)).toBe(true);
@@ -153,9 +158,13 @@ function checkPhase12P(rows:readonly Row[]){
   expect(original.closestTriangle3DMeters<1e-7).toBe(current!.exactCommonPositionCount>0);
   expect(original.closestSourceVertex3DMeters<1e-7).toBe(current!.exactCommonPositionCount>0);
  }
- expect(compared.size).toBe(80);
+ expect(directed.size).toBe(80);
+ expect(compared.size).toBe(68);
+ expect([...compared.values()].filter(n=>n===2)).toHaveLength(12);
+ expect([...compared.values()].filter(n=>n===1)).toHaveLength(56);
  expect(contacts).toBe(32);
- return {priorReportVerified:true,priorPairs:compared.size,priorContacts:contacts};
+ return {priorReportVerified:true,priorPairs:directed.size,
+  priorDistinctUnorderedPairs:compared.size,priorReverseDirectionPairs:12,priorContacts:contacts};
 }
 describe('T21 Phase12Q independent original-XYZ coincidence and unwelded seam graph',()=>{
  it('preserves T20/T21, complete 22 original source-only parts and hard XZ',()=>{
