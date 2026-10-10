@@ -14,6 +14,7 @@ export type Phase14JRejoinResult=Readonly<{
   computedMeters:number;
   collisionDeltaMeters:number;
   maximumSpeedMeters:number;
+  collisionSourceIds: readonly string[];
 }>;
 
 /**
@@ -39,7 +40,8 @@ export function auditPhase14JRapierRejoinStep(
     throw Error('T21_PHASE14J_OVERSPEED_REJOIN_REQUEST');
   if(requested<1e-8)
     return {approved:true,cause:'CONTINUOUS_CLEAR',requestedMeters:0,
-      computedMeters:0,collisionDeltaMeters:0,maximumSpeedMeters:maxSpeed};
+      computedMeters:0,collisionDeltaMeters:0,maximumSpeedMeters:maxSpeed,
+      collisionSourceIds:[]};
   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
   const world=physics.world;
   const body=world.createRigidBody(RAPIER.RigidBodyDesc
@@ -53,6 +55,12 @@ export function auditPhase14JRapierRejoinStep(
     controller.computeColliderMovement(collider,{x:dx,y:dy,z:dz},
       undefined,undefined,c=>physics.shouldCharacterCollide(c,'HUMAN'));
     const actual=controller.computedMovement();
+    const collisionSourceIds:Array<string>=[];
+    for(let i=0;i<controller.numComputedCollisions();i++){
+      const hit=controller.computedCollision(i);
+      const id=physics.sourceSolidIdForCollider(hit.collider);
+      if(id&&!collisionSourceIds.includes(id))collisionSourceIds.push(id);
+    }
     const xzMismatch=Math.hypot(actual.x-dx,actual.z-dz);
     const yMismatch=Math.abs(actual.y-dy);
     const mismatch=Math.hypot(xzMismatch,yMismatch);
@@ -64,7 +72,8 @@ export function auditPhase14JRapierRejoinStep(
       approved,cause:approved?'CONTINUOUS_CLEAR':'BLOCKED_BY_SOURCE_COLLIDER',
       requestedMeters:requested,
       computedMeters:Math.hypot(actual.x,actual.y,actual.z),
-      collisionDeltaMeters:mismatch,maximumSpeedMeters:maxSpeed
+      collisionDeltaMeters:mismatch,maximumSpeedMeters:maxSpeed,
+      collisionSourceIds
     };
   }finally{
     world.removeCharacterController(controller);
