@@ -723,6 +723,30 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12W original 88 coplanar face-span provenance audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12w-coplanar-contact-provenance.py --self-test
+          python scripts/undertow-temple01-phase12w-coplanar-contact-provenance.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12v-source-only-unmatched-edge-triangles.json /tmp/t21-phase12w-coplanar-original-source-witnesses.json
+
+      - name: T21 Phase12W independently validate original face witness classification
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12V_REPORT_INPUT: /tmp/t21-phase12v-source-only-unmatched-edge-triangles.json
+          T21_PHASE12W_REPORT_INPUT: /tmp/t21-phase12w-coplanar-original-source-witnesses.json
+          T21_PHASE12W_REQUIRED: '1'
+        run: npx vitest run scripts/UndertowSpillwayPhase12WCoplanarOriginalContactQa.test.ts
+
+      - name: Upload T21 Phase12W full original coplanar face witnesses
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12w-original-source-coplanar-witnesses
+          path: /tmp/t21-phase12w-coplanar-original-source-witnesses.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
