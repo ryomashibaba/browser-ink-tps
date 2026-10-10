@@ -97,6 +97,45 @@ export class UndertowPhase14QHumanCrowdAnchor{
     sourceNavmeshModified:false,productionAuthorized:false
    };
  }
+ /**
+  * M4 post-Crowd tick fence. Recast may displace a 0-speed HUMAN
+  * neighbour during a single update. The real Rapier HUMAN position
+  * remains authoritative, so we separately sample that drift and put
+  * ONLY its Crowd proxy back on the same original NavMesh position.
+  * Call AFTER CpuAgentSystem.fixedUpdate. The CPU has already moved
+  * according to Recast, therefore this is NOT collision approval.
+  */
+ sealAfterCrowdUpdate(physicalHumanFoot:T21QFoot):Readonly<{
+   beforeSealHorizontalDriftMeters:number;
+   afterSealHorizontalDriftMeters:number;
+   unapprovedInterTickCrowdDrift:boolean;
+   playerRapierBodyMoved:false;
+   cpuRecastAgentTeleported:false;
+   productionAuthorized:false;
+ }>{
+   if(this.closed)throw Error('T21_PHASE14Q_HUMAN_CROWD_ANCHOR_DISPOSED');
+   const actual=actualRealFoot(physicalHumanFoot);
+   if(!this.lastHumanFoot||
+      Math.hypot(this.lastHumanFoot.x-actual.x,
+       this.lastHumanFoot.y-actual.y,
+       this.lastHumanFoot.z-actual.z)>1e-5)
+     throw Error('T21_PHASE14Q_UNMATCHED_HUMAN_FIXED_TICK');
+   const before=this.agent.position();
+   const drift=Math.hypot(before.x-actual.x,before.z-actual.z);
+   if(!Number.isFinite(drift)||drift>2)
+     throw Error('T21_PHASE14Q_UNBOUNDED_CROWD_DRIFT');
+   const sealed=this.syncActualPlayerFoot(actual);
+   if(sealed.footToCrowdHorizontalMeters>.065)
+     throw Error('T21_PHASE14Q_CROWD_PROXY_POSTSEAL_UNSAFE');
+   return {
+     beforeSealHorizontalDriftMeters:drift,
+     afterSealHorizontalDriftMeters:sealed.footToCrowdHorizontalMeters,
+     unapprovedInterTickCrowdDrift:drift>.15,
+     playerRapierBodyMoved:false,
+     cpuRecastAgentTeleported:false,
+     productionAuthorized:false
+   };
+ }
  get rawCrowdPosition():T21QFoot{
    const p=this.agent.position();
    return {x:p.x,y:p.y,z:p.z};
