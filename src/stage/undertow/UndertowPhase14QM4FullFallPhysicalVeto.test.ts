@@ -28,12 +28,16 @@ const DT=1/60;
 type Bot={id:string;team:Team.A|Team.B;agent:CrowdAgent|null;
  position:Vec3;previousPosition:Vec3;entity:Entity;mobilityState:string;
  thinkRemaining:number;paintRemaining:number;fireRemaining:number;
- jumpCooldownSeconds:number};
+ jumpCooldownSeconds:number;lifeState:'ACTIVE'|'SPLATTED';
+ respawnRemainingSeconds:number};
 beforeAll(async()=>{await Promise.all([initializeRapier(),initializeRecastNavigation()]);});
 afterEach(()=>vi.restoreAllMocks());
 
 describe('T21 Phase14Q M4 REAL original-stage seven-CPU first fall veto',()=>{
- it('stops on the FIRST authentic 60Hz physical actor conflict without copying an unsafe original-KCC foot to any real CPU visible pose',()=>{
+ for(const b1Only of [false,true]){
+ it(b1Only?
+  'isolates B1 genuine ORIGINAL Rapier first drop into player capsule and rejects it BEFORE unsafe visible CPU foot':
+  'records shared source-spawn high-island A1 overlap at first frame without illicit spawn shifts',()=>{
   vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   const stage=undertowT21dConnectivityQaStage();
   const stats=new PerformanceStats(),ink=new GameplayInkSystem();
@@ -72,6 +76,13 @@ describe('T21 Phase14Q M4 REAL original-stage seven-CPU first fall veto',()=>{
   const bots=(cpu as unknown as {bots:Bot[]}).bots;
   expect(bots).toHaveLength(7);
   for(const bot of bots){
+   if(b1Only&&bot.id!=='B1'){
+    if(bot.agent)nav.removeAgent(bot.agent);
+    bot.agent=null;
+    bot.lifeState='SPLATTED';
+    bot.respawnRemainingSeconds=9000;
+    continue;
+   }
    const side=bot.team===Team.A?'positive-z':'negative-z';
    const probe=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(
     p=>p.id==='first-drop-'+side)!;
@@ -115,7 +126,8 @@ describe('T21 Phase14Q M4 REAL original-stage seven-CPU first fall veto',()=>{
    sourceOriginalSolids:stage.solids.length,
    sourceOriginalPaintSurfaces:stage.paintSurfaces.length,
    sourceOriginalNavLinks:stage.navigationLinks?.length,
-   actualSevenCpuAgents:bots.map(b=>b.id),framesCompleted,
+   actualSevenCpuAgents:bots.map(b=>b.id),
+   activeQaCpuIds:b1Only?['B1']:bots.map(b=>b.id),framesCompleted,
    firstUnsafeFrame:blockedFrame,firstUnsafeActor:blockedBot,
    sourceAuthorityRefusal:blocker,
    blockedCpuVisibleFootMutated:actualCpuPoseChangedAfterBlock,
@@ -127,6 +139,15 @@ describe('T21 Phase14Q M4 REAL original-stage seven-CPU first fall veto',()=>{
     JSON.stringify(evidence));
   expect(blockedFrame).toBeGreaterThan(0);
   expect(blockedBot).not.toBeNull();
+  if(b1Only){
+   expect(blockedFrame).toBeGreaterThan(1);
+   expect(blockedBot).toBe('B1');
+   expect(blocker).toContain('T21_PHASE14Q_ACTUAL_FIRST_DROP_ACTOR_CONTACT');
+  }else{
+   expect(blockedFrame).toBe(1);
+   expect(blockedBot).toBe('A1');
+   expect(blocker).toContain('T21_PHASE14Q_REAL_CROWD_COLLISION_BLOCKED');
+  }
   expect(blocker).toMatch(/T21_PHASE14Q_ACTUAL_FIRST_DROP_ACTOR_CONTACT|T21_PHASE14Q_REAL_CROWD_COLLISION_BLOCKED|T21_PHASE14Q_REAL_REJOIN_COLLISION_BLOCKED/);
   expect(actualCpuPoseChangedAfterBlock).toBe(false);
   expect(freeze.activationReady).toBe(false);
@@ -136,4 +157,5 @@ describe('T21 Phase14Q M4 REAL original-stage seven-CPU first fall veto',()=>{
   passiveHuman.dispose();
   shared.dispose();
  });
+ }
 });
