@@ -217,6 +217,6 @@ describe('T21 Phase12R independent original-source edge incidence and surface an
    writeFileSync(process.env.T21_PHASE12R_REPORT,JSON.stringify(result,null,2));
   console.log('T21_PHASE12R_SOURCE_ONLY_EDGE_ANGLE',
    JSON.stringify({pairs:110,geometricEdgePairs:result.sharedGeometricEdgePairs,
-    boundaryPairs:result.originalBoundaryToBoundaryPairs,mirrorChecks:110,crossCheckQ}));
+    boundaryPairs:result.originalBoundaryToBoundaryPairs,mirrorChecks:110,crossCheckQ:crossCheck}));
  });
 });
