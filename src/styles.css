@@ -884,3 +884,18 @@ button.active-weapon {
     max-height: 66vh;
   }
 }
+
+
+/* T21 Phase13D: opt-in original evidence legend, OFF for all canonical captures. */
+#t21-source-evidence-legend {
+  position:fixed;top:18px;right:18px;z-index:19;
+  width:min(310px,35vw);padding:11px 14px;
+  color:#eaf5ff;font:12px/1.5 system-ui,sans-serif;
+  background:rgba(9,22,32,.91);border:1px solid rgba(127,221,248,.55);
+  box-shadow:0 12px 35px rgba(0,0,0,.33);
+  border-radius:12px;pointer-events:none;
+}
+#t21-source-evidence-legend[hidden] { display:none; }
+#t21-source-evidence-legend strong { display:block;letter-spacing:.04em; }
+#t21-source-evidence-legend p { margin:5px 0 0; }
+#t21-source-evidence-legend .t21-evidence-unknown { color:#ffcb88;font-weight:650; }

@@ -73,6 +73,8 @@ import {UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BANDS,UNDERTOW_T21_PHASE12M_ORIGINAL_
 
 import {originalSourceFocusCamera,type UndertowReviewComposition} from './UndertowReviewCameraComposition';
 
+import {type T21EvidenceLens,expectedEvidenceLensGroupVisibility} from './UndertowSourceEvidenceLens';
+
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B' | 'CENTER_SOURCE';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
 
@@ -190,6 +192,8 @@ export class UndertowVisualReviewApp {
   private readonly keys = new Set<string>();
   private readonly layerToggleBindings: Array<{button:HTMLButtonElement;root:Entity;label:string}> = [];
   private reviewComposition:UndertowReviewComposition='BASE';
+  private evidenceLens:T21EvidenceLens='OFF';
+  private evidenceLensSnapshot:Array<{root:Entity;enabled:boolean}>|null=null;
   private yawDegrees = 35;
   private pitchDegrees = 42;
   private distanceMeters = 70;
@@ -218,6 +222,7 @@ export class UndertowVisualReviewApp {
     this.reviewComposition=params.get('reviewComposition')==='CENTER_FOCUS'?'CENTER_FOCUS':'BASE';
     this.canvas.dataset.t21ReviewComposition=this.reviewComposition;
     this.refreshReviewCompositionButtons();
+    this.canvas.dataset.t21ReviewEvidenceLens='OFF';
     const requestedPreset=params.get('reviewPreset');
     if(requestedPreset==='WALK_SOURCE'||requestedPreset==='THREE_DIMENSIONAL'||
        requestedPreset==='ALL_EVIDENCE')this.applyReviewLayerPreset(requestedPreset);
@@ -751,6 +756,12 @@ export class UndertowVisualReviewApp {
         <button data-review-preset="ALL_EVIDENCE">All evidence layers</button>
       </div>
       <p class="review-detail-note">Phase10 source-edge diagnostic: <b>orange = 30 same-XYZ / different OBJ IDs</b>, <b>red = 18 no exact edge match</b>, welded source edges = 0. Phase11 <b>yellow = 16 nearest original source triangle samples</b>: eight 0m source contacts, eight 2.55cm gaps. Neither represents a connected walkable path or game collider. Phase12: mint=FloorLine02, coral=WallMetal00, purple=PillarBase02, blue=Glass01, pink=GlassEdge00; all 16 original-face diagnostics only.</p>
+      <div class="review-actions elevation-lens">
+        <button data-review-evidence-lens="OFF">Normal source layers</button>
+        <button data-review-evidence-lens="WALK_ORIENTED">Route-oriented source (not floor)</button>
+        <button data-review-evidence-lens="VERTICAL_HIGH">Vertical / high source</button>
+      </div>
+      <p class="review-source-note">Lens only isolates source display families. Source XYZ does not prove an in-game floor, collision, ink, nav or route continuity.</p>
       <div class="review-actions composition">
         <button data-review-composition="BASE">Whole-stage camera (unchanged)</button>
         <button data-review-composition="CENTER_FOCUS">Central source detail camera</button>
@@ -906,6 +917,11 @@ export class UndertowVisualReviewApp {
       </p>
     `;
     this.uiRoot.appendChild(panel);
+    const sourceLegend=document.createElement('aside');
+    sourceLegend.id='t21-source-evidence-legend';
+    sourceLegend.hidden=true;
+    sourceLegend.setAttribute('aria-label','Source review authority labels');
+    this.uiRoot.appendChild(sourceLegend);
 
     panel
       .querySelectorAll<HTMLButtonElement>('[data-review-preset]')
@@ -915,6 +931,14 @@ export class UndertowVisualReviewApp {
           this.applyReviewLayerPreset(preset);
         });
       });
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-review-evidence-lens]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const mode=button.dataset.reviewEvidenceLens;
+        if(mode==='OFF'||mode==='WALK_ORIENTED'||mode==='VERTICAL_HIGH')
+          this.selectSourceEvidenceLens(mode);
+      });
+    });
 
     panel.querySelectorAll<HTMLButtonElement>('[data-review-composition]').forEach(button=>{
       button.addEventListener('click',()=>{
@@ -1136,6 +1160,67 @@ export class UndertowVisualReviewApp {
     this.applyReviewLayerPreset('ALL_EVIDENCE');
   }
 
+  private evidenceLensRoots(){
+    return {
+      walk:[this.sourceNativeRoot,this.sourceLocalRoot,this.sourceBatch2Root,
+        this.broadStaticRoot,this.flankElevationPhase4Root],
+      vertical:[this.verticalSourcePhase5BRoot,this.highSourcePhase6Root,
+        this.sideSupportsPhase7Root,this.glassFramesPhase7Root,
+        this.centralTowersPhase8Root,this.flankHighPhase8Root,
+        this.sideEdgePhase8Root,this.centerDownfacePhase9Root,
+        this.fenceDownfacePhase9Root,this.megalithDownfacePhase9Root],
+      context:[this.confirmedRoot,this.occupancyRoot,this.provisionalRoot,
+        this.unresolvedRoot,this.navRoot]
+    };
+  }
+
+  private selectSourceEvidenceLens(mode:T21EvidenceLens):void{
+    // Restore the exact 20 original layer flags before switching.
+    if(this.evidenceLensSnapshot){
+      for(const previous of this.evidenceLensSnapshot)previous.root.enabled=previous.enabled;
+      this.evidenceLensSnapshot=null;
+    }
+    this.evidenceLens=mode;
+    const groups=this.evidenceLensRoots();
+    if(mode!=='OFF'){
+      this.evidenceLensSnapshot=[...groups.walk,...groups.vertical,...groups.context]
+        .map(root=>({root,enabled:root.enabled}));
+      const flags=expectedEvidenceLensGroupVisibility(mode);
+      for(const root of groups.walk)root.enabled=flags.walk;
+      for(const root of groups.vertical)root.enabled=flags.vertical;
+      for(const root of groups.context)root.enabled=flags.context;
+    }
+    this.canvas.dataset.t21ReviewEvidenceLens=mode;
+    this.canvas.dataset.t21ReviewSourceDisplayFamilies=
+      String(groups.walk.filter(x=>x.enabled).length)+'/'+
+      String(groups.vertical.filter(x=>x.enabled).length);
+    this.canvas.dataset.t21ReviewGameplayAuthority='NONE';
+    const hud=this.uiRoot.querySelector<HTMLElement>('#t21-source-evidence-legend');
+    if(hud){
+      hud.hidden=mode==='OFF';
+      hud.textContent='';
+      if(mode!=='OFF'){
+        const title=document.createElement('strong');
+        title.textContent=mode==='WALK_ORIENTED'
+          ?'ROUTE-ORIENTED ORIGINAL SOURCE':'VERTICAL / HIGH ORIGINAL SOURCE';
+        const detail=document.createElement('p');
+        detail.textContent=mode==='WALK_ORIENTED'
+          ?'Walk-oriented source geometry, NOT confirmed walkable surfaces.'
+          :'Original walls, towers, underside and supports, NOT playable platforms.';
+        const warning=document.createElement('p');
+        warning.className='t21-evidence-unknown';
+        warning.textContent='UNKNOWN: collision / reachable routes / painting / nav / score';
+        hud.append(title,detail,warning);
+      }
+    }
+    this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-evidence-lens]').forEach(button=>{
+      const active=button.dataset.reviewEvidenceLens===mode;
+      button.classList.toggle('active-mode',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
+    this.refreshReviewLayerButtons();
+  }
+
   private refreshReviewCompositionButtons():void{
     this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-composition]').forEach(button=>{
       const active=button.dataset.reviewComposition===this.reviewComposition;
@@ -1154,6 +1239,7 @@ export class UndertowVisualReviewApp {
   private applyReviewLayerPreset(preset:ReviewLayerPreset):void {
     if(preset!=='WALK_SOURCE'&&preset!=='THREE_DIMENSIONAL'&&preset!=='ALL_EVIDENCE')
       throw new Error('T21 unknown review-only layer preset');
+    this.selectSourceEvidenceLens('OFF');
     this.canvas.dataset.t21ReviewPreset=preset;
     const full=preset==='ALL_EVIDENCE';
     const vertical=preset!=='WALK_SOURCE';
@@ -1658,6 +1744,7 @@ export class UndertowVisualReviewApp {
     this.layerToggleBindings.push({button,root,label});
     this.refreshReviewLayerButtons();
     button.addEventListener('click',()=>{
+      this.selectSourceEvidenceLens('OFF');
       root.enabled=!root.enabled;
       this.phase12IPillarRoot.enabled=false;
       this.phase12KOldRoot.enabled=false;
