@@ -12,7 +12,7 @@ import {UndertowPhase14ECpuHandoff,nearestT21SourceSupportedLanding} from './Und
 
 const step=1/60;
 const sides=['positive-z','negative-z'] as const;
-const three=(v:Readonly<{x:number;y:number;z:number}>)=>[v.x,v.y,v.z];
+const three=(v:Readonly<{x:number;y:number;z:number}>):[number,number,number]=>[v.x,v.y,v.z];
 const dist=(a:Readonly<{x:number;y:number;z:number}>,b:Readonly<{x:number;y:number;z:number}>)=>
   Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 
