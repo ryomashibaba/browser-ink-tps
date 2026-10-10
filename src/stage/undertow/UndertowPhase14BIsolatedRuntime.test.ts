@@ -25,13 +25,32 @@ const selected=names.map(name=>{
 function interior(s:StageSolidDefinition){
  if(!s.footprint)throw Error('PHASE14B_FOOTPRINT_MISSING');
  const r=rasterizeStageFootprint(s.size[0],s.size[2],s.footprint);
- const ordered=[...r.rectangles].sort((a,b)=>
-  (b.widthMeters*b.depthMeters)-(a.widthMeters*a.depthMeters));
- const c=ordered.find(v=>v.widthMeters>=.5&&v.depthMeters>=.5);
- if(!c)throw Error('PHASE14B_INTERIOR_MISSING:'+s.id);
- return {x:s.center[0]-s.size[0]/2+c.centerU,
+ // Merged rectangles may be 0.125m wide even over a fully supported
+ // contiguous region. Audit the full original active-cell mask instead.
+ const cell=s.footprint.cellSizeMeters;
+ const supportRadius=PLAYER_CHARACTER_PHYSICS.humanRadiusMeters+
+   PLAYER_CHARACTER_PHYSICS.controllerOffsetMeters+.02;
+ const radiusCells=Math.ceil(supportRadius/cell);
+ let chosen:readonly [number,number]|null=null;
+ for(let z=radiusCells;z<r.depthCells-radiusCells&&!chosen;z++){
+  for(let x=radiusCells;x<r.widthCells-radiusCells;x++){
+   if(r.active[z*r.widthCells+x]!==1)continue;
+   let supported=true;
+   for(let dz=-radiusCells;dz<=radiusCells&&supported;dz++){
+    for(let dx=-radiusCells;dx<=radiusCells;dx++){
+     if(Math.hypot(dx,dz)*cell>supportRadius)continue;
+     if(r.active[(z+dz)*r.widthCells+x+dx]!==1){
+      supported=false;break;
+     }
+    }
+   }
+   if(supported){chosen=[x,z];break;}
+  }
+ }
+ if(!chosen)throw Error('PHASE14B_SOURCE_SUPPORT_RADIUS_NOT_PROVEN:'+s.id);
+ return {x:s.center[0]-s.size[0]/2+(chosen[0]+.5)*cell,
   y:s.center[1]+s.size[1]/2,
-  z:s.center[2]-s.size[2]/2+c.centerV};
+  z:s.center[2]-s.size[2]/2+(chosen[1]+.5)*cell};
 }
 beforeAll(async()=>{await initializeRapier();});
 describe('Phase14B actual isolated source-backed physics and ink, NOT full gameplay',()=>{
