@@ -16,6 +16,7 @@ import {
   type SubWeaponId
 } from '../weapons/WeaponKitCatalog';
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
+import type {UndertowPhase14ECpuAdapter} from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import type { StageDefinition } from '../stage/StageDefinition';
 
 export interface CpuCombatHit {
@@ -69,7 +70,8 @@ type CpuMobilityState =
   | 'GROUND'
   | 'JUMP_PREP'
   | 'JUMP_TRAVEL'
-  | 'JUMP_LANDING';
+  | 'JUMP_LANDING'
+  | 'FIRST_DROP_FALL';
 
 interface CpuJumpCandidate {
   id: string;
@@ -141,8 +143,14 @@ export class CpuAgentSystem {
     private readonly coordinator: PaintCoordinator,
     private readonly stats: PerformanceStats,
     private readonly stage: StageDefinition,
-    humanTeam: Team.A | Team.B
+    humanTeam: Team.A | Team.B,
+    private readonly phase14eFirstDrop?: UndertowPhase14ECpuAdapter
   ) {
+    // T20 remains bit-for-bit on the old CPU update path unless an explicit
+    // T21-D QA-only runtime adapter is injected. Any other stage FAILS closed.
+    if (phase14eFirstDrop &&
+        stage.metadata.id !== 'undertow-t21d-partial-connectivity-qa')
+      throw new Error('T21_PHASE14E_PRODUCTION_CPU_ADAPTER_FORBIDDEN');
     this.director = new CpuTacticalDirector(gameplayInk, stage);
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
@@ -150,6 +158,7 @@ export class CpuAgentSystem {
   }
 
   public reset(humanTeam: Team.A | Team.B): void {
+    this.phase14eFirstDrop?.reset();
     for (const bot of this.bots) {
       if (bot.agent) this.navigation.removeAgent(bot.agent);
       bot.entity.destroy();
@@ -194,6 +203,17 @@ export class CpuAgentSystem {
     humanActive: boolean
   ): void {
     if (!matchActive) {
+      // Ensure no kinematic body or detached CrowdAgent leaks across matches.
+      // This branch only exists for the explicitly injected QA-only adapter.
+      if (this.phase14eFirstDrop) {
+        for (const bot of this.bots) {
+          if (bot.mobilityState === 'FIRST_DROP_FALL') {
+            this.phase14eFirstDrop.cancel(bot.id);
+            bot.agent = this.navigation.addAgent(bot.position);
+            bot.mobilityState = 'GROUND';
+          }
+        }
+      }
       this.pendingKitRequests.length = 0;
       if (this.activeLastTick) {
         for (const bot of this.bots) {
@@ -224,6 +244,24 @@ export class CpuAgentSystem {
         bot.specialDecisionCooldownSeconds - dt
       );
       bot.previousPosition.copy(bot.position);
+      if (bot.mobilityState === 'FIRST_DROP_FALL') {
+        const frame=this.phase14eFirstDrop?.advance(bot.id,dt);
+        if (!frame||!frame.continuous)
+          throw new Error('T21_PHASE14E_CPU_FALL_UNSAFE_FRAME');
+        bot.position.set(frame.foot.x,frame.foot.y,frame.foot.z);
+        if(frame.landed){
+          const closest=this.navigation.closestPoint(bot.position);
+          if(Math.hypot(
+            closest.x-bot.position.x,closest.y-bot.position.y,
+            closest.z-bot.position.z)>.65)
+            throw new Error('T21_PHASE14E_UNSUPPORTED_NAV_RESUME');
+          bot.agent=this.navigation.addAgent(bot.position);
+          bot.mobilityState='GROUND';
+          this.phase14eFirstDrop!.cancel(bot.id);
+          bot.thinkRemaining=Math.min(bot.thinkRemaining,.16);
+        }
+        continue;
+      }
 
       if (bot.mobilityState === 'JUMP_TRAVEL' || bot.mobilityState === 'JUMP_LANDING') {
         this.updateCpuJumpAirborne(bot, dt);
@@ -281,6 +319,14 @@ export class CpuAgentSystem {
       }
 
       const p = bot.agent.position();
+      // A real Recast offmesh jump is no longer copied into the CPU render
+      // position when (and only when) the T21-D QA adapter is injected.
+      if(this.phase14eFirstDrop?.observe(bot.id,bot.position,p,dt)){
+        this.navigation.removeAgent(bot.agent);
+        bot.agent=null;
+        bot.mobilityState='FIRST_DROP_FALL';
+        continue;
+      }
       bot.position.set(p.x, p.y, p.z);
 
       bot.paintRemaining -= dt;
@@ -1697,6 +1743,7 @@ export class CpuAgentSystem {
   }
 
   private resetCpuJumpState(bot: CpuBot): void {
+    this.phase14eFirstDrop?.cancel(bot.id);
     bot.mobilityState = 'GROUND';
     bot.jumpMarker.enabled = false;
     bot.jumpTargetId = '-';
@@ -1737,6 +1784,7 @@ export class CpuAgentSystem {
 
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
+    this.phase14eFirstDrop?.cancel(bot.id);
 
     if (bot.agent) {
       this.navigation.removeAgent(bot.agent);
