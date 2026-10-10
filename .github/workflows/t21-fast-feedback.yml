@@ -36,7 +36,9 @@ jobs:
           node --check scripts/t21-review-five-view-capture.mjs
           node --check scripts/t21-phase13a-real-five-view-visual-baseline.mjs
           node --check scripts/t21-phase13b-ui-free-pair-qa.mjs
+          node --check scripts/t21-phase13c-camera-qa.mjs
       - name: Phase13A and B negative-path selftests
         run: |
           node scripts/t21-phase13a-real-five-view-visual-baseline.mjs --self-test
           node scripts/t21-phase13b-ui-free-pair-qa.mjs --self-test
+          node scripts/t21-phase13c-camera-qa.mjs --self-test

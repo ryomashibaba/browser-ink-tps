@@ -1407,6 +1407,24 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase13C two true focused camera PNG and safety QA
+        if: always()
+        run: |
+          node scripts/t21-phase13c-camera-qa.mjs --self-test
+          node scripts/t21-phase13c-camera-qa.mjs --audit /tmp/t21-review-five-view /tmp/t21-review-five-view/T21_PHASE13C_FOCUSED_CAMERA_EVIDENCE.json
+
+      - name: Upload T21 Phase13C original source-only focused camera evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase13c-original-focused-camera-pairs
+          path: |
+            /tmp/t21-review-five-view/T21_PHASE13C_FOCUSED_CAMERA_EVIDENCE.json
+            /tmp/t21-review-five-view/T21_PHASE13C_OVERVIEW_CENTER_FOCUS_WEBGL2.png
+            /tmp/t21-review-five-view/T21_PHASE13C_TOP_CENTER_FOCUS_WEBGL2.png
+          if-no-files-found: error
+          retention-days: 14
+
       - name: T21 Phase13A screenshot source visual baseline and negative QA
         if: always()
         run: |

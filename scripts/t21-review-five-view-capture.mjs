@@ -269,6 +269,41 @@ try {
         reviewOnly:true,sourceOnly:true,authorizesVisualFreeze:false,
         gameplayFloorNavColliderPaintScoringProof:false
       });
+      // Phase13C: optional source review camera A/B while UI is already hidden.
+      // Reuses Chrome/PlayCanvas and never changes source mesh or game physics.
+      manifest.phase13CFocusedCameraPairs??=[];
+      const focusedPre=await evaluation("(() => {const c=document.querySelector('#app-canvas');const b=document.querySelector('[data-review-composition=\"CENTER_FOCUS\"]');if(!c||!b)return null;b.click();return {view:c.dataset.t21ReviewView,mode:c.dataset.t21ReviewComposition,pose:c.dataset.t21ReviewCameraPose,backend:c.dataset.t21ReviewRenderer,preset:c.dataset.t21ReviewPreset,width:c.width,height:c.height};})()");
+      if(!focusedPre||focusedPre.view!==view||focusedPre.mode!=='CENTER_FOCUS'||
+        focusedPre.pose!=='CENTER_FOCUS_'+view||focusedPre.backend!=='webgl2'||
+        focusedPre.preset!=='THREE_DIMENSIONAL'||focusedPre.width!==width||focusedPre.height!==height)
+        throw Error('T21_PHASE13C_CAMERA_MODE_INVALID_'+view);
+      await sleep(600);
+      const shot13c=await command('Page.captureScreenshot',{
+        format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+      const focusedBytes=Buffer.from(shot13c.data||'','base64');
+      if(focusedBytes.length<8000||!focusedBytes.subarray(0,8).equals(sig)||
+         focusedBytes.readUInt32BE(16)!==width||focusedBytes.readUInt32BE(20)!==height)
+        throw Error('T21_PHASE13C_PNG_INVALID_'+view);
+      const focusedFile='T21_PHASE13C_'+view+'_CENTER_FOCUS_WEBGL2.png';
+      await writeFile(resolve(destination,focusedFile),focusedBytes);
+      const focusedPost=await evaluation("(() => {const c=document.querySelector('#app-canvas');return {view:c.dataset.t21ReviewView,mode:c.dataset.t21ReviewComposition,pose:c.dataset.t21ReviewCameraPose,backend:c.dataset.t21ReviewRenderer,preset:c.dataset.t21ReviewPreset,width:c.width,height:c.height};})()");
+      if(JSON.stringify(focusedPre)!==JSON.stringify(focusedPost))
+        throw Error('T21_PHASE13C_CAMERA_CHANGED_DURING_CAPTURE_'+view);
+      manifest.phase13CFocusedCameraPairs.push({
+        view,uiFreeBaselineFile:freeFile,
+        uiFreeBaselineSHA256:createHash('sha256').update(hbytes).digest('hex'),
+        focusedFile,focusedSHA256:createHash('sha256').update(focusedBytes).digest('hex'),
+        focusedSizeBytes:focusedBytes.length,width,height,
+        mode:focusedPost.mode,poseKey:focusedPost.pose,
+        preset:focusedPost.preset,renderer:focusedPost.backend,
+        sourceOnly:true,reviewOnly:true,runtimePromotionAuthorized:false,
+        authorizesVisualFreeze:false,gameplayCameraColliderNavPaintScoreProof:false
+      });
+      const baseState=await evaluation("(() => {const c=document.querySelector('#app-canvas');const b=document.querySelector('[data-review-composition=\"BASE\"]');if(!c||!b)return null;b.click();return {view:c.dataset.t21ReviewView,mode:c.dataset.t21ReviewComposition,pose:c.dataset.t21ReviewCameraPose};})()");
+      if(!baseState||baseState.view!==view||baseState.mode!=='BASE'||baseState.pose!=='BASE_'+view)
+        throw Error('T21_PHASE13C_BASE_CAMERA_NOT_RESTORED_'+view);
+      process.stdout.write('T21_PHASE13C_SOURCE_CAMERA_COMPARE '+view+'\n');
+
       await evaluation("(() => {const p=document.querySelector('#t21-review-panel');p.style.visibility="+JSON.stringify(before.original)+";return true;})()");
       process.stdout.write('T21_PHASE13B_SAME_CAMERA_UI_FREE '+view+'\n');
     }
