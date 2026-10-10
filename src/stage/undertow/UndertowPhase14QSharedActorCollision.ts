@@ -134,7 +134,14 @@ export class UndertowPhase14QSharedActorCollision{
     }
     const errXZ=Math.hypot(movement.x-dx,movement.z-dz);
     const errY=Math.abs(movement.y-dy);
-    const clear=errXZ<=.022&&errY<=.09;
+    // A 2.2cm xz allowance is for the original voxel/triangle seams ONLY.
+    // Rapier can return an apparently tiny .013m clip against a real
+    // PlayerController capsule. An ACTUAL actor collider event always blocks
+    // the candidate, independent of movement epsilon.
+    const actorContact=collisionOwners.some(owner=>
+      owner==='REAL_PLAYER_OR_UNREGISTERED_DYNAMIC_ACTOR'||
+      this.actors.has(owner));
+    const clear=errXZ<=.022&&errY<=.09&&!actorContact;
     // Broad pre-existing visual/physical overlap is a fail-closed initial
     // condition; KCC on already interpenetrating bodies cannot certify
     // collision resolution merely by returning an unchanged small step.
@@ -149,7 +156,8 @@ export class UndertowPhase14QSharedActorCollision{
       horizontalDisagreementMeters:errXZ,
       verticalDisagreementMeters:errY,
       colliderOwnerIds:collisionOwners,
-      realHumanCapsulePresent:this.humanSourceFoot!==null,
+      realHumanCapsulePresent:this.humanSourceFoot!==null&&
+        this.physics.world.bodies.len()>this.actors.size,
 
       originalSourceCollidersIntact:true,
       cpuVisualTeleportPerformed:false,originalNavAuthorityOverridden:false,
