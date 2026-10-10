@@ -124,6 +124,10 @@ export class CpuTacticalDirector {
   }
 
   private painterGoal(context: TacticalAgentContext, out: Vec3): Vec3 {
+    // Partial QA stages may deliberately have zero authoritative tactical
+    // nodes. Hold the current source-backed position instead of inventing
+    // a goal or copying undefined into Vec3. T20 has 25 nodes: unchanged.
+    if (this.nodes.length === 0) return out.copy(context.currentPosition);
     let best = this.nodes[context.slot % this.nodes.length]!;
     let bestScore = -Infinity;
 

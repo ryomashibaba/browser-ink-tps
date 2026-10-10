@@ -1,0 +1,48 @@
+name: T21 Phase14L seven actual CPU Recast Rapier Chrome WebGL2 review
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened, synchronize]
+    paths:
+      - "src/app/UndertowPhase14IRealCrowdVisualQaApp.ts"
+      - "src/app/UndertowPhase14KSourceStageLayer.ts"
+      - "src/main.ts"
+      - "src/ai/CpuAgentSystem.ts"
+      - "src/stage/undertow/UndertowPhase14*"
+      - "scripts/t21-phase14l-seven-real-cpu-webgl2-capture.mjs"
+      - ".github/workflows/t21-phase14l-seven-real-cpu-webgl2.yml"
+permissions:
+  contents: read
+concurrency:
+  group: t21-phase14l-seven-real-cpu-webgl2
+  cancel-in-progress: true
+jobs:
+  seven-real-cpu:
+    if: github.head_ref == 'codex/t21-undertow-evidence-ledger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Exact source checkout
+        uses: actions/checkout@v6
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: TypeScript and Vite built stage
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Browser evidence syntax and negative guard
+        run: |
+          node --check scripts/t21-phase14l-seven-real-cpu-webgl2-capture.mjs
+          node scripts/t21-phase14l-seven-real-cpu-webgl2-capture.mjs --self-test
+      - name: Source-backed seven real CPU Crowd Rapier browser screenshot ledger
+        run: node scripts/t21-phase14l-seven-real-cpu-webgl2-capture.mjs
+      - name: Store screenshots and full diagnostics on all outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-phase14l-seven-real-cpu-source-webgl2
+          path: /tmp/t21-phase14l-webgl2/
+          if-no-files-found: warn
+          retention-days: 14

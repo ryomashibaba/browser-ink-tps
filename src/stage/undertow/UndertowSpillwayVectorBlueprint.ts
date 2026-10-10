@@ -1,0 +1,476 @@
+import type { EvidenceConfidence } from '../measurement/StageMeasurementLedger';
+import type { MetricXZ } from '../measurement/StageMapCalibration';
+
+export type PdfPoint = readonly [number, number];
+
+export type UndertowBlueprintSourceClass =
+  | 'HARD_EDGE'
+  | 'WHITE_SOURCE_FACE'
+  | 'UNINKABLE_GRAY'
+  | 'UNINKABLE_GLASS_OVERHANG'
+  | 'SLOPE_MARKER_FIELD'
+  | 'GRATE_MESH'
+  | 'WATER_CYAN';
+
+export interface UndertowVectorTrace {
+  id: string;
+  geometryKind: 'POINT' | 'POLYLINE' | 'POLYGON';
+  pdfPoints: readonly PdfPoint[];
+  metricPoints: readonly MetricXZ[];
+  sourceClass: UndertowBlueprintSourceClass;
+  confidence: EvidenceConfidence;
+  evidenceIds: readonly string[];
+  notes?: string;
+}
+
+/**
+ * Sunfish Undertow Spillway Turf blueprint, A4 landscape.
+ *
+ * The user-provided JPEG is 3508x2482 and exactly matches the image size used
+ * by the previous T21 measurement pass. The companion PDF is vector CAD
+ * output, so T21-B uses the PDF linework as the primary XZ source and the JPEG
+ * only for visual cross-checking.
+ *
+ * Coordinates in this module use the PDF renderer's top-left origin with +Y
+ * downward, matching the 3508x2482 JPEG pixel convention directly.
+ *
+ * 20 px/m at the JPEG's 300-dpi horizontal export equals 4.8 PDF pt/m.
+ * This remains a HIGH-confidence project calibration, not an official
+ * Nintendo real-world meter specification.
+ */
+export const UNDERTOW_VECTOR_BLUEPRINT_SOURCE = Object.freeze({
+  label: 'Sunfish Undertow Spillway Turf blueprint / user-provided vector PDF',
+  sourceUpdated: '2024-05-06',
+  pageWidthPoints: 841.92,
+  pageHeightPoints: 595.32,
+  jpegWidthPixels: 3508,
+  jpegHeightPixels: 2482,
+  pointsPerProjectMeter: 4.8,
+  pdfCoordinateOrigin: 'TOP_LEFT' as const,
+  pdfPositiveY: 'DOWN' as const,
+  confidence: 'HIGH' as const
+});
+
+export const UNDERTOW_PDF_ORIGIN_PT: PdfPoint = [420.96, 297.66];
+export const UNDERTOW_NEGATIVE_Z_SPAWN_CENTER_PT: PdfPoint = [131.82, 155.58];
+export const UNDERTOW_POSITIVE_Z_SPAWN_CENTER_PT: PdfPoint = [709.98, 439.5];
+
+function normalizedDirection(a: PdfPoint, b: PdfPoint): PdfPoint {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const length = Math.hypot(dx, dy);
+  if (length <= 1e-9) throw new Error('Undertow vector calibration anchors must be distinct.');
+  return [dx / length, dy / length];
+}
+
+const positiveZPdfDirection = normalizedDirection(
+  UNDERTOW_NEGATIVE_Z_SPAWN_CENTER_PT,
+  UNDERTOW_POSITIVE_Z_SPAWN_CENTER_PT
+);
+const positiveXPdfDirection: PdfPoint = [
+  positiveZPdfDirection[1],
+  -positiveZPdfDirection[0]
+];
+
+export function undertowPdfPointToProjectXZ(point: PdfPoint): MetricXZ {
+  const dx = point[0] - UNDERTOW_PDF_ORIGIN_PT[0];
+  const dy = point[1] - UNDERTOW_PDF_ORIGIN_PT[1];
+  const scale = UNDERTOW_VECTOR_BLUEPRINT_SOURCE.pointsPerProjectMeter;
+  return [
+    (dx * positiveXPdfDirection[0] + dy * positiveXPdfDirection[1]) / scale,
+    (dx * positiveZPdfDirection[0] + dy * positiveZPdfDirection[1]) / scale
+  ];
+}
+
+function vectorTrace(
+  id: string,
+  geometryKind: UndertowVectorTrace['geometryKind'],
+  pdfPoints: readonly PdfPoint[],
+  sourceClass: UndertowBlueprintSourceClass,
+  confidence: EvidenceConfidence,
+  notes?: string
+): UndertowVectorTrace {
+  return {
+    id,
+    geometryKind,
+    pdfPoints,
+    metricPoints: pdfPoints.map(undertowPdfPointToProjectXZ),
+    sourceClass,
+    confidence,
+    evidenceIds: ['user-turf-vector-blueprint'],
+    notes
+  };
+}
+
+export const UNDERTOW_VECTOR_TRACES = Object.freeze({
+  commonPlayableOuterBoundary: vectorTrace(
+    'common-playable-outer-boundary',
+    'POLYGON',
+    [
+      [340.56, 119.88],
+      [285.12, 119.88],
+      [285.12, 89.28],
+      [258.36, 89.28],
+      [243.12, 104.64],
+      [243.12, 119.88],
+      [109.44, 119.88],
+      [70.68, 158.64],
+      [70.68, 362.28],
+      [109.8, 408.96],
+      [259.8, 408.96],
+      [259.8, 444.72],
+      [336.0, 444.72],
+      [336.0, 414.84],
+      [345.36, 414.84],
+      [345.36, 444.72],
+      [393.6, 444.72],
+      [393.6, 408.96],
+      [406.08, 408.96],
+      [406.08, 444.72],
+      [501.36, 444.72],
+      [501.36, 475.32],
+      [556.8, 475.32],
+      [556.8, 505.92],
+      [583.56, 505.92],
+      [598.8, 490.56],
+      [598.8, 475.32],
+      [732.48, 475.32],
+      [771.24, 436.56],
+      [771.24, 232.92],
+      [732.12, 186.24],
+      [582.12, 186.24],
+      [582.12, 150.48],
+      [505.92, 150.48],
+      [505.92, 180.36],
+      [496.56, 180.36],
+      [496.56, 150.48],
+      [448.32, 150.48],
+      [448.32, 186.24],
+      [435.84, 186.24],
+      [435.84, 150.48],
+      [340.56, 150.48]
+    ],
+    'HARD_EDGE',
+    'HIGH',
+    'Exact exterior silhouette recovered from the vector hard-line topology. Collinear intermediate vertices are removed only; internal holes/voids are intentionally not encoded by this exterior polygon.'
+  ),
+  negativeZSpawnCenter: vectorTrace(
+    'negative-z-spawn-center',
+    'POINT',
+    [UNDERTOW_NEGATIVE_Z_SPAWN_CENTER_PT],
+    'WHITE_SOURCE_FACE',
+    'HIGH',
+    'Center of the spawn/object ring in the vector source.'
+  ),
+  positiveZSpawnCenter: vectorTrace(
+    'positive-z-spawn-center',
+    'POINT',
+    [UNDERTOW_POSITIVE_Z_SPAWN_CENTER_PT],
+    'WHITE_SOURCE_FACE',
+    'HIGH',
+    'Center of the spawn/object ring in the vector source.'
+  ),
+  teamAFirstDropLip: vectorTrace(
+    'team-a-first-drop-lip',
+    'POLYLINE',
+    [
+      [620.4, 423.12],
+      [664.68, 423.12],
+      [664.68, 394.2]
+    ],
+    'HARD_EDGE',
+    'HIGH',
+    'Positive-Z spawn-side L-shaped hard edge. User video independently confirms this descent is one-way rather than a slope.'
+  ),
+  teamBFirstDropLip: vectorTrace(
+    'team-b-first-drop-lip',
+    'POLYLINE',
+    [
+      [221.52, 172.08],
+      [177.24, 172.08],
+      [177.24, 201.0]
+    ],
+    'HARD_EDGE',
+    'HIGH',
+    '180-degree counterpart of the positive-Z first-drop lip.'
+  ),
+  teamARightSmallDropLip: vectorTrace(
+    'team-a-right-small-drop-lip',
+    'POLYLINE',
+    [
+      [664.68, 394.2],
+      [702.36, 394.2],
+      [702.36, 350.76]
+    ],
+    'HARD_EDGE',
+    'HIGH',
+    'Separate Team A spawn-side right L-shaped drop edge. Do not infer that its upper side is the first-drop landing; Temple01 local registration resolves the two edges as distinct 10.5->6.0m and 10.5->7.5m model-Y discontinuities.'
+  ),
+  teamBRightSmallDropLip: vectorTrace(
+    'team-b-right-small-drop-lip',
+    'POLYLINE',
+    [
+      [177.24, 201.0],
+      [139.56, 201.0],
+      [139.56, 244.44]
+    ],
+    'HARD_EDGE',
+    'HIGH',
+    '180-degree counterpart of the Team A right-side drop edge. Its side identities are resolved by the Temple01 local geometry audit rather than plan adjacency.'
+  ),
+  teamAWaterRegion: vectorTrace(
+    'team-a-water-region',
+    'POLYGON',
+    [
+      [556.8, 444.72],
+      [598.8, 444.72],
+      [598.8, 426.12],
+      [561.36, 426.12],
+      [561.36, 430.68],
+      [556.8, 430.68]
+    ],
+    'WATER_CYAN',
+    'CONFIRMED',
+    'Cyan source fill means a water/submerge hazard in the blueprint legend.'
+  ),
+  teamBWaterRegion: vectorTrace(
+    'team-b-water-region',
+    'POLYGON',
+    [
+      [243.12, 150.48],
+      [243.12, 169.08],
+      [280.56, 169.08],
+      [280.56, 164.52],
+      [285.12, 164.52],
+      [285.12, 150.48]
+    ],
+    'WATER_CYAN',
+    'CONFIRMED',
+    '180-degree counterpart of the positive-Z water region.'
+  ),
+  negativeZGrateMesh: vectorTrace(
+    'negative-z-grate-mesh',
+    'POLYGON',
+    [
+      [340.56, 119.88],
+      [363.48, 119.88],
+      [363.48, 150.48],
+      [340.56, 150.48]
+    ],
+    'GRATE_MESH',
+    'HIGH',
+    'White mesh-pattern source region. Matched to a traversable grate family in the current gameplay captures; no water semantics are attached to this white face.'
+  ),
+  positiveZGrateMesh: vectorTrace(
+    'positive-z-grate-mesh',
+    'POLYGON',
+    [
+      [478.44, 444.72],
+      [501.36, 444.72],
+      [501.36, 475.32],
+      [478.44, 475.32]
+    ],
+    'GRATE_MESH',
+    'HIGH',
+    '180-degree counterpart white grate mesh region.'
+  ),
+  negativeZGlassOverhang: vectorTrace(
+    'negative-z-glass-overhang',
+    'POLYGON',
+    [
+      [382.44, 230.28],
+      [420.96, 230.28],
+      [420.96, 267.84],
+      [382.44, 267.84]
+    ],
+    'UNINKABLE_GLASS_OVERHANG',
+    'HIGH',
+    'Exact symmetric gray source face matched to the current glass overhang in user gameplay captures. Gray confirms uninkable source semantics; gameplay evidence confirms glass and traversable space below.'
+  ),
+  positiveZGlassOverhang: vectorTrace(
+    'positive-z-glass-overhang',
+    'POLYGON',
+    [
+      [420.96, 327.36],
+      [459.48, 327.36],
+      [459.48, 364.92],
+      [420.96, 364.92]
+    ],
+    'UNINKABLE_GLASS_OVERHANG',
+    'HIGH',
+    '180-degree counterpart of the negative-Z glass overhang.'
+  ),
+  negativeZGlassSlopeMarkers: vectorTrace(
+    'negative-z-glass-slope-marker-envelope',
+    'POLYGON',
+    [
+      [382.44, 244.92],
+      [420.96, 244.92],
+      [420.96, 261.24],
+      [382.44, 261.24]
+    ],
+    'SLOPE_MARKER_FIELD',
+    'HIGH',
+    'Envelope of the horizontal dash field inside the gray glass source face. This proves a slope-marked subregion but is not itself a collision boundary.'
+  ),
+  positiveZGlassSlopeMarkers: vectorTrace(
+    'positive-z-glass-slope-marker-envelope',
+    'POLYGON',
+    [
+      [420.96, 333.96],
+      [459.48, 333.96],
+      [459.48, 350.28],
+      [420.96, 350.28]
+    ],
+    'SLOPE_MARKER_FIELD',
+    'HIGH',
+    '180-degree counterpart slope-marker envelope inside the positive-Z glass source face.'
+  ),
+  centerOriginFace: vectorTrace(
+    'center-origin-source-face',
+    'POLYGON',
+    [
+      [406.08, 308.76],
+      [435.84, 308.76],
+      [435.84, 286.44],
+      [406.08, 286.44]
+    ],
+    'WHITE_SOURCE_FACE',
+    'HIGH',
+    'Exact closed source face containing the geometric origin. Temple01 local registration now identifies this as the +1.5m center-step-top face, not the canonical center-low Y=0 polygon.'
+  ),
+  negativeZCenterStepStrip: vectorTrace(
+    'negative-z-center-step-strip',
+    'POLYGON',
+    [
+      [406.08, 282.84],
+      [435.84, 282.84],
+      [435.84, 286.44],
+      [406.08, 286.44]
+    ],
+    'WHITE_SOURCE_FACE',
+    'HIGH',
+    'Exact 0.75m-deep transition strip immediately adjacent to the central origin face. Temple01 shows the origin-face side at model Y=4.5m and the outer lower side at model Y=3.0m.'
+  ),
+  positiveZCenterStepStrip: vectorTrace(
+    'positive-z-center-step-strip',
+    'POLYGON',
+    [
+      [406.08, 308.76],
+      [435.84, 308.76],
+      [435.84, 312.36],
+      [406.08, 312.36]
+    ],
+    'WHITE_SOURCE_FACE',
+    'HIGH',
+    '180-degree counterpart of the negative-Z center small-step strip.'
+  ),
+  negativeZSpawnSideWhiteFace: vectorTrace(
+    'negative-z-spawn-side-white-face',
+    'POLYGON',
+    [
+      [221.52, 150.48],
+      [285.12, 150.48],
+      [285.12, 142.92],
+      [321.84, 142.92],
+      [321.84, 150.48],
+      [340.56, 150.48],
+      [340.56, 119.88],
+      [285.12, 119.88],
+      [285.12, 89.28],
+      [258.36, 89.28],
+      [243.12, 104.64],
+      [243.12, 119.88],
+      [109.44, 119.88],
+      [70.68, 158.64],
+      [70.68, 362.28],
+      [109.8, 408.96],
+      [181.2, 408.96],
+      [181.2, 386.88],
+      [173.52, 386.88],
+      [173.52, 379.2],
+      [131.88, 379.2],
+      [131.88, 349.44],
+      [116.52, 349.44],
+      [116.52, 259.68],
+      [131.88, 259.68],
+      [131.88, 244.44],
+      [139.56, 244.44],
+      [139.56, 201.0],
+      [177.24, 201.0],
+      [177.24, 172.08],
+      [221.52, 172.08]
+    ],
+    'WHITE_SOURCE_FACE',
+    'HIGH',
+    'Exact polygonized bold-line source face around the negative-Z spawn side. It is not equivalent to one flat floor level.'
+  ),
+  positiveZSpawnSideWhiteFace: vectorTrace(
+    'positive-z-spawn-side-white-face',
+    'POLYGON',
+    [
+      [520.08, 444.72],
+      [501.36, 444.72],
+      [501.36, 475.32],
+      [556.8, 475.32],
+      [556.8, 505.92],
+      [583.56, 505.92],
+      [598.8, 490.56],
+      [598.8, 475.32],
+      [732.48, 475.32],
+      [771.24, 436.56],
+      [771.24, 232.92],
+      [732.12, 186.24],
+      [660.72, 186.24],
+      [660.72, 208.32],
+      [668.4, 208.32],
+      [668.4, 216.0],
+      [710.04, 216.0],
+      [710.04, 245.76],
+      [725.4, 245.76],
+      [725.4, 335.52],
+      [710.04, 335.52],
+      [710.04, 350.76],
+      [702.36, 350.76],
+      [702.36, 394.2],
+      [664.68, 394.2],
+      [664.68, 423.12],
+      [620.4, 423.12],
+      [620.4, 444.72],
+      [556.8, 444.72],
+      [556.8, 452.28],
+      [520.08, 452.28]
+    ],
+    'WHITE_SOURCE_FACE',
+    'HIGH',
+    'Exact polygonized bold-line source face around the positive-Z spawn side. It includes multiple elevations/transitions and must not be flattened.'
+  )
+});
+
+const outerBoundaryXs = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints.map(
+  ([x]) => x
+);
+const outerBoundaryZs = UNDERTOW_VECTOR_TRACES.commonPlayableOuterBoundary.metricPoints.map(
+  ([, z]) => z
+);
+
+export const UNDERTOW_VECTOR_BLUEPRINT_AUDIT = Object.freeze({
+  outerSpanXMeters: Math.max(...outerBoundaryXs) - Math.min(...outerBoundaryXs),
+  outerSpanZMeters: Math.max(...outerBoundaryZs) - Math.min(...outerBoundaryZs),
+  spawnSeparationMeters: Math.hypot(
+    UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]![0] -
+      UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]![0],
+    UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]![1] -
+      UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]![1]
+  ),
+  sourceOriginToSpawnMidpointMeters: Math.hypot(
+    (
+      UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]![0] +
+      UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]![0]
+    ) * 0.5,
+    (
+      UNDERTOW_VECTOR_TRACES.positiveZSpawnCenter.metricPoints[0]![1] +
+      UNDERTOW_VECTOR_TRACES.negativeZSpawnCenter.metricPoints[0]![1]
+    ) * 0.5
+  )
+});

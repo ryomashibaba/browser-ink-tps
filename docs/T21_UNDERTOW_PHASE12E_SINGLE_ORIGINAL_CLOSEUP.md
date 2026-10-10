@@ -1,0 +1,7 @@
+# Phase12E component-by-component optical review
+
+After the full #1392 Phase12D original 4-source gate, Phase12E isolated two components per side. That screenshot produced correct 1600x900 real PNGs but showed each tiny FloorLine02 piece on a largely empty background with one piece almost off the right edge, so their shapes remained impossible to evaluate visually.
+
+The improved review adds `reviewRecoveredFace=60006|61516|61728|62086` and four explicit button selectors. Only the requested original source connected mesh (two exact original triangles) is shown. The camera target derives from the full original raw XYZ 3D bbox, camera angles are derived from the actual first source triangle surface normal (no geometry change), and the distance is clamped 2.8–9m for meaningful magnification; the pair is not artificially welded. Existing original FloorLine source data, 42-point hard outline and 124 frozen ordinary meshes stay untouched.
+
+Chrome WebGL2 now records four additional OPTIONAL individual-source-only screenshots `T21_PHASE12E_SINGLE_ORIGINAL_FACE_NNNNN.png` in the five-view artifact. Each screenshot has a valid original-component DOM telemetry, direct PNG signature and IHDR dimension proof, and remains explicitly `CAPTURED_NOT_GAMEPLAY_PROOF` pending visual review. This diagnostic is not an extra stage surface, playable route, collision, nav, paint, gameplay activation or Visual Freeze. T20 production unchanged; PR #5 Draft/unmerged.

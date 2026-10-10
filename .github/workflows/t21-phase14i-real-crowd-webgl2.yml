@@ -1,0 +1,47 @@
+name: T21 Phase14I real Recast Crowd Chrome WebGL2 review
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened, synchronize]
+    paths:
+      - "src/app/UndertowPhase14IRealCrowdVisualQaApp.ts"
+      - "src/main.ts"
+      - "src/ai/CpuAgentSystem.ts"
+      - "src/stage/undertow/UndertowPhase14*"
+      - "scripts/t21-phase14i-real-crowd-webgl2-capture.mjs"
+      - ".github/workflows/t21-phase14i-real-crowd-webgl2.yml"
+permissions:
+  contents: read
+concurrency:
+  group: t21-phase14i-real-crowd-webgl2
+  cancel-in-progress: true
+jobs:
+  t21-real-crowd-gpu:
+    if: github.head_ref == 'codex/t21-undertow-evidence-ledger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v6
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: TypeScript and production-compatible Vite bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Chrome gate syntax and negative test
+        run: |
+          node --check scripts/t21-phase14i-real-crowd-webgl2-capture.mjs
+          node scripts/t21-phase14i-real-crowd-webgl2-capture.mjs --self-test
+      - name: Real Recast Crowd triggering and mirrored Chrome GPU screenshots
+        run: node scripts/t21-phase14i-real-crowd-webgl2-capture.mjs
+      - name: Preserve screenshot and per-step manifest on all outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-phase14i-real-recast-crowd-webgl2
+          path: /tmp/t21-phase14i-webgl2/
+          if-no-files-found: warn
+          retention-days: 14

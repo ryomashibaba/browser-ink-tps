@@ -1,0 +1,50 @@
+name: T21 F3 playable actual Chrome WebGL2 input smoke
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened, synchronize]
+    paths:
+      - "src/app/UndertowF3*"
+      - "src/main.ts"
+      - "src/ai/CpuAgentSystem.ts"
+      - "scripts/t21-f3-browser-smoke.mjs"
+      - ".github/workflows/t21-f3-playable-browser.yml"
+  workflow_dispatch:
+    inputs:
+      long_cpu:
+        description: "Run optional slower 7/7 real Chrome physical CPU integration"
+        type: boolean
+        required: false
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: t21-f3-browser-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  playable:
+    if: github.event_name != 'pull_request' || github.head_ref == 'codex/t21-undertow-evidence-ledger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --no-audit --no-fund
+      - name: Typecheck and browser bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Chrome script syntax
+        run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: Real trusted keyboard mouse and GPU frame
+        env:
+          T21_F3_LONG_CPU: ${{ inputs.long_cpu == true && '1' || '0' }}
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve exact Chrome screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-f3-playable-actual-browser
+          path: /tmp/t21-f3-playable-webgl2/
+          if-no-files-found: warn
+          retention-days: 14

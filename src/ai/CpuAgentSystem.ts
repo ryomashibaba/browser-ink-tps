@@ -1,5 +1,6 @@
 import type { CrowdAgent } from 'recast-navigation';
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+import { PLAYER_CHARACTER_PHYSICS } from '../player/PlayerCharacterPhysics';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
@@ -16,7 +17,9 @@ import {
   type SubWeaponId
 } from '../weapons/WeaponKitCatalog';
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
+import type {UndertowPhase14ECpuAdapter} from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import type { StageDefinition } from '../stage/StageDefinition';
+import {auditPhase14CrowdFrame} from '../stage/undertow/UndertowPhase14CrowdMotionAudit';
 
 export interface CpuCombatHit {
   botId: string;
@@ -54,6 +57,37 @@ export type CpuKitRequest =
       specialId: SpecialWeaponId;
     };
 
+/** Opt-in T21 only. A rejected physical step NEVER becomes an avatar pose
+ * or an implicit Crowd teleport. The caller must handle the fail-closed
+ * rejection before further simulation. T20 passes no authority. */
+export interface CpuSharedGroundStepAuthority {
+  resetActors():void;
+  syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>):void;
+  syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
+  /** Real shared-world actor clearance before F2 native offmesh admission. */
+  shouldDeferF2FirstDrop?(
+    id:string,foot:Readonly<{x:number;y:number;z:number}>
+  ):boolean;
+  auditAirborneSourceFoot(
+    id:string,from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,dt:number,
+    originalKccContinuous:boolean
+  ):Readonly<{approved:boolean;cause:string;actorCollisionCandidate:string|null}>;
+  auditGroundStep(
+    id:string,
+    from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,
+    dt:number
+  ):Readonly<{approved:boolean;cause:string;colliderOwnerIds:readonly string[]}>;
+}
+
+/** T21-D / M4 only: restore the physical HUMAN's passive Crowd footprint
+ * before/after the native Recast step. Never move the real HUMAN or CPU. */
+export interface CpuHumanCrowdFootAuthority {
+  syncActualPlayerFoot(foot:Readonly<{x:number;y:number;z:number}>):unknown;
+  sealAfterCrowdUpdate(foot:Readonly<{x:number;y:number;z:number}>):unknown;
+}
+
 export interface CpuFireRequest {
   sourceId: string;
   team: Team.A | Team.B;
@@ -69,7 +103,9 @@ type CpuMobilityState =
   | 'GROUND'
   | 'JUMP_PREP'
   | 'JUMP_TRAVEL'
-  | 'JUMP_LANDING';
+  | 'JUMP_LANDING'
+  | 'FIRST_DROP_FALL'
+  | 'FIRST_DROP_REJOIN';
 
 interface CpuJumpCandidate {
   id: string;
@@ -107,6 +143,11 @@ interface CpuBot {
   lifeState: 'ACTIVE' | 'SPLATTED';
   respawnRemainingSeconds: number;
   mobilityState: CpuMobilityState;
+  /** T21 QA-only post-offmesh Crowd settlement counters. */
+  rejoinElapsedFrames: number;
+  rejoinStableFrames: number;
+  rejoinRetryCount: number;
+  rejoinPhysicalLandingFoot: Vec3;
   jumpMarker: Entity;
   jumpStartPosition: Vec3;
   jumpTargetPosition: Vec3;
@@ -141,8 +182,32 @@ export class CpuAgentSystem {
     private readonly coordinator: PaintCoordinator,
     private readonly stats: PerformanceStats,
     private readonly stage: StageDefinition,
-    humanTeam: Team.A | Team.B
+    humanTeam: Team.A | Team.B,
+    private readonly phase14eFirstDrop?: UndertowPhase14ECpuAdapter,
+    private readonly phase14qGroundCollision?: CpuSharedGroundStepAuthority,
+    private readonly phase14qHumanCrowd?: CpuHumanCrowdFootAuthority,
+    private readonly phase14qF2RecoverableSteps = false
   ) {
+    // T20 remains bit-for-bit on the old CPU update path unless an explicit
+    // T21-D QA-only runtime adapter is injected. Any other stage FAILS closed.
+    if (phase14eFirstDrop &&
+        stage.metadata.id !== 'undertow-t21d-partial-connectivity-qa')
+      throw new Error('T21_PHASE14E_PRODUCTION_CPU_ADAPTER_FORBIDDEN');
+    if(phase14qGroundCollision &&
+      (!phase14eFirstDrop ||
+       stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
+      throw Error('T21_PHASE14Q_SHARED_COLLISION_PRODUCTION_FORBIDDEN');
+    if(phase14qHumanCrowd&&
+      (!phase14eFirstDrop||
+       stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
+      throw Error('T21_PHASE14Q_HUMAN_CROWD_PRODUCTION_FORBIDDEN');
+    // F2 is an explicitly opted-in QA reconciliation, never a production
+    // collision bypass. The original strict M4 fail-closed path stays default.
+    if(this.phase14qF2RecoverableSteps&&
+       (!phase14qGroundCollision||!phase14eFirstDrop||
+        !phase14qGroundCollision.shouldDeferF2FirstDrop||
+        stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
+      throw Error('T21_F2_REQUIRES_FULL_SOURCE_PHYSICAL_QA');
     this.director = new CpuTacticalDirector(gameplayInk, stage);
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
@@ -150,6 +215,8 @@ export class CpuAgentSystem {
   }
 
   public reset(humanTeam: Team.A | Team.B): void {
+    this.phase14eFirstDrop?.reset();
+    this.phase14qGroundCollision?.resetActors();
     for (const bot of this.bots) {
       if (bot.agent) this.navigation.removeAgent(bot.agent);
       bot.entity.destroy();
@@ -194,12 +261,28 @@ export class CpuAgentSystem {
     humanActive: boolean
   ): void {
     if (!matchActive) {
+      // Ensure no kinematic body or detached CrowdAgent leaks across matches.
+      // This branch only exists for the explicitly injected QA-only adapter.
+      if (this.phase14eFirstDrop) {
+        for (const bot of this.bots) {
+          if (bot.mobilityState === 'FIRST_DROP_FALL') {
+            this.phase14eFirstDrop.cancel(bot.id);
+            bot.agent = this.navigation.addAgent(bot.position);
+            bot.mobilityState = 'GROUND';
+          }
+        }
+      }
       this.pendingKitRequests.length = 0;
       if (this.activeLastTick) {
         for (const bot of this.bots) {
           bot.agent?.resetMoveTarget();
           this.resetCpuWeaponRuntime(bot);
-          if (bot.mobilityState !== 'GROUND') this.cancelCpuJump(bot, true);
+          // T21: preserve source-backed Crowd stabilization across a paused
+          // match. Canceling it as a tactical jump would reactivate the unsafe
+          // recycled offmesh height before the lower-layer gate passes.
+          if (bot.mobilityState !== 'GROUND' &&
+              bot.mobilityState !== 'FIRST_DROP_REJOIN')
+            this.cancelCpuJump(bot, true);
         }
       }
       this.activeLastTick = false;
@@ -208,6 +291,30 @@ export class CpuAgentSystem {
     }
 
     this.activeLastTick = true;
+    // The REAL HUMAN PlayerController is at humanPosition. Only the eighth
+    // passive Crowd neighbour is moved to its source-backed physical foot.
+    // This cannot be applied to production T20 or non-source T21 terrain.
+    const liveHumanFoot=(this.phase14qHumanCrowd||this.phase14qGroundCollision)?{
+      x:humanPosition.x,
+      y:humanPosition.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+      z:humanPosition.z
+    }:null;
+    if(liveHumanFoot){
+      // The physical HUMAN is authoritative even when its passive Crowd
+      // neighbour is omitted (e.g. while a real human freely jumps in F3).
+      this.phase14qHumanCrowd?.syncActualPlayerFoot(liveHumanFoot);
+      this.phase14qGroundCollision?.syncActualHumanFoot(liveHumanFoot);
+    }
+
+    // T21 QA-only: register actual source-authoritative CPU feet in the
+    // PlayerController's original-solid Rapier world before any Crowd step.
+    // Observing feet is not teleport authorization or collision resolution.
+    if(this.phase14qGroundCollision){
+      for(const bot of this.bots){
+        if(bot.lifeState==='ACTIVE')
+          this.phase14qGroundCollision.syncRealCpuFoot(bot.id,bot.position);
+      }
+    }
 
     for (const bot of this.bots) {
       if (bot.lifeState === 'SPLATTED') {
@@ -224,6 +331,83 @@ export class CpuAgentSystem {
         bot.specialDecisionCooldownSeconds - dt
       );
       bot.previousPosition.copy(bot.position);
+      if (bot.mobilityState === 'FIRST_DROP_FALL') {
+        const frame=this.phase14eFirstDrop?.advance(bot.id,dt);
+        if (!frame||!frame.continuous)
+          throw new Error('T21_PHASE14E_CPU_FALL_UNSAFE_FRAME');
+        if(this.phase14qGroundCollision){
+          const contact=this.phase14qGroundCollision.auditAirborneSourceFoot(
+            bot.id,bot.position,frame.foot,dt,frame.continuous
+          );
+          if(!contact.approved)
+            throw Error('T21_PHASE14Q_ACTUAL_FIRST_DROP_ACTOR_CONTACT '+JSON.stringify({
+              botId:bot.id,cause:contact.cause,
+              collidedWith:contact.actorCollisionCandidate,
+              from:[bot.position.x,bot.position.y,bot.position.z],
+              actualOriginalKccCandidate:frame.foot,
+              unchangedBotVisualFoot:true,
+              noRecastTeleport:true,
+              activationAuthorized:false
+            }));
+        }
+        bot.position.set(frame.foot.x,frame.foot.y,frame.foot.z);
+        if(frame.landed){
+          const closest=this.navigation.closestPoint(bot.position);
+          if(Math.hypot(
+            closest.x-bot.position.x,closest.y-bot.position.y,
+            closest.z-bot.position.z)>.65)
+            throw new Error('T21_PHASE14E_UNSUPPORTED_NAV_RESUME');
+          bot.agent=this.navigation.addAgent(bot.position);
+          // This is a landing recovery, not permission to reuse the
+          // upper-to-lower Crowd offmesh target. Let it settle at the
+          // original source-backed lower landing before tactical retarget.
+          bot.agent.resetMoveTarget();
+          bot.mobilityState='FIRST_DROP_REJOIN';
+          bot.rejoinElapsedFrames=0;
+          bot.rejoinStableFrames=0;
+          bot.rejoinRetryCount=0;
+          bot.rejoinPhysicalLandingFoot.copy(bot.position);
+          this.phase14eFirstDrop!.cancel(bot.id);
+          // Wait for the reused offmesh Crowd slot to settle before CPU actions.
+        }
+        continue;
+      }
+
+      if (bot.mobilityState === 'FIRST_DROP_REJOIN') {
+        if(!this.phase14eFirstDrop||!bot.agent)
+          throw new Error('T21_PHASE14H_REJOIN_AGENT_MISSING');
+        bot.rejoinElapsedFrames++;
+        // F2 can meet an old Detour offmesh Crowd slot that keeps
+        // replaying the upper-layer animation after the actual Rapier
+        // KCC has landed on the original lower slab. A bounded retry
+        // rebuilds ONLY that stale steering agent at the still-approved
+        // physical foot. This never moves the CPU, KCC, scene, or stage.
+        if(this.phase14qF2RecoverableSteps&&
+           bot.rejoinElapsedFrames>50&&
+           bot.rejoinStableFrames<3&&
+           bot.rejoinRetryCount<2){
+          const native=this.navigation.closestPoint(bot.position);
+          if(Math.hypot(native.x-bot.position.x,
+             native.y-bot.position.y,native.z-bot.position.z)>.20)
+            throw Error('T21_F2_REJOIN_PHYSICAL_FOOT_NOT_ON_SOURCE_NAV');
+          this.navigation.removeAgent(bot.agent);
+          bot.agent=this.navigation.addAgent(bot.position);
+          bot.agent.resetMoveTarget();
+          bot.rejoinRetryCount++;
+          bot.rejoinElapsedFrames=0;
+          continue;
+        }
+        if(bot.rejoinElapsedFrames>(this.phase14qF2RecoverableSteps?180:45)){
+          this.navigation.removeAgent(bot.agent);
+          bot.agent=null;
+          throw new Error('T21_PHASE14H_REJOIN_STABILITY_TIMEOUT '+JSON.stringify({
+            botId:bot.id,rejoinRetries:bot.rejoinRetryCount,
+            physicalFoot:[bot.position.x,bot.position.y,bot.position.z],
+            sourcePhysicalFootPreserved:true
+          }));
+        }
+        continue;
+      }
 
       if (bot.mobilityState === 'JUMP_TRAVEL' || bot.mobilityState === 'JUMP_LANDING') {
         this.updateCpuJumpAirborne(bot, dt);
@@ -270,8 +454,93 @@ export class CpuAgentSystem {
     }
 
     this.navigation.fixedUpdate(dt);
+    // Rapier remains physical authority. Native Recast Crowd can push even
+    // an idle 0-speed human neighbour ~.40m in this single update. Seal it
+    // immediately so no later CPU action samples the displaced avatar.
+    // This does NOT undo any steering already computed by this Crowd step.
+    if(liveHumanFoot&&this.phase14qHumanCrowd)
+      this.phase14qHumanCrowd.sealAfterCrowdUpdate(liveHumanFoot);
 
     for (const bot of this.bots) {
+      if(bot.lifeState==='ACTIVE'&&bot.mobilityState==='FIRST_DROP_REJOIN'){
+        if(!bot.agent)throw new Error('T21_PHASE14H_REJOIN_AGENT_MISSING');
+        const p=bot.agent.position();
+        const d=Math.hypot(p.x-bot.position.x,p.y-bot.position.y,p.z-bot.position.z);
+        // Phase14L: Crowd avoidance can spread several simultaneous landing
+        // agents by more than the single-agent .65m proximity bound. This is
+        // NOT permission to snap the CPU to its Crowd position. Preserve the
+        // verified original lower vertical layer and a strict 1.6m maximum
+        // candidate envelope; every actual movement still uses original
+        // nav projection and the full Rapier HUMAN KCC.
+        const sameLayer=Math.abs(p.y-bot.position.y)<=.20&&d<=1.6;
+        bot.rejoinStableFrames=sameLayer?bot.rejoinStableFrames+1:0;
+        if(bot.rejoinStableFrames>=3){
+          // Reused Crowd slots briefly replay an old offmesh animation;
+          // never render those out-of-layer positions. Once stable, walk
+          // the real physics foot to the source-derived NavMesh position.
+          const maxStep=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt;
+          const fraction=Math.min(1,maxStep/Math.max(d,1e-9));
+          const nx=bot.position.x+(p.x-bot.position.x)*fraction;
+          const ny=bot.position.y+(p.y-bot.position.y)*fraction;
+          const nz=bot.position.z+(p.z-bot.position.z)*fraction;
+          const closest=this.navigation.closestPoint(new Vec3(nx,ny,nz));
+          if(Math.hypot(closest.x-nx,closest.y-ny,closest.z-nz)>.25||
+             Math.abs(closest.y-ny)>.20)
+            throw new Error('T21_PHASE14H_UNSUPPORTED_REJOIN_SURFACE');
+          // A Recast path alone does not prove the HUMAN capsule fits.
+          // This QA-only preflight uses all 25 original collision solids,
+          // Rapier KCC and the same character profile as the real player.
+          const collision=this.phase14eFirstDrop!.validateRejoinStep(
+            bot.position,{x:nx,y:ny,z:nz},dt
+          );
+          if(!collision.approved&&bot.rejoinRetryCount===0){
+            // Exactly one original-source lower-layer reseed is permitted.
+            // A recycled Recast slot may retain the previous offmesh endpoint
+            // and send a real capsule into the 1.5m-high right-low edge.
+            // Keep the ACTUAL Rapier-foot-derived visible CPU still: no
+            // teleport, no fabricated ramp, no collision bypass.
+            this.navigation.removeAgent(bot.agent);
+            bot.agent=this.navigation.addAgent(bot.rejoinPhysicalLandingFoot);
+            bot.agent.resetMoveTarget();
+            bot.rejoinStableFrames=0;
+            bot.rejoinRetryCount=1;
+            continue;
+          }
+          if(!collision.approved)
+            throw new Error('T21_PHASE14J_REJOIN_BLOCKED_BY_REAL_COLLIDER '+JSON.stringify({
+              id:bot.id,from:[bot.position.x,bot.position.y,bot.position.z],
+              to:[nx,ny,nz],collision,rejoinFrames:bot.rejoinElapsedFrames,
+              stableFrames:bot.rejoinStableFrames,
+              originalSourceReseedAttempted:bot.rejoinRetryCount
+            }));
+          if(this.phase14qGroundCollision){
+            const shared=this.phase14qGroundCollision.auditGroundStep(
+              bot.id,bot.position,{x:nx,y:ny,z:nz},dt
+            );
+            if(!shared.approved){
+              if(this.phase14qF2RecoverableSteps){
+                this.reconcileBlockedT21F2CrowdProxy(bot);
+                bot.rejoinStableFrames=0;
+                continue;
+              }
+              bot.agent?.resetMoveTarget();
+              throw Error('T21_PHASE14Q_REAL_REJOIN_COLLISION_BLOCKED '+JSON.stringify({
+                id:bot.id,sourceFoot:[bot.position.x,bot.position.y,bot.position.z],
+                crowdCandidate:[nx,ny,nz],cause:shared.cause,
+                colliders:shared.colliderOwnerIds,
+                noCpuPoseMutation:true,noRecastTeleport:true
+              }));
+            }
+          }
+          bot.position.set(nx,ny,nz);
+          this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
+          if(d<=maxStep+1e-7){
+            bot.mobilityState='GROUND';
+            bot.thinkRemaining=Math.min(bot.thinkRemaining,.16);
+          }
+        }
+        continue;
+      }
       if (
         bot.lifeState !== 'ACTIVE' ||
         bot.mobilityState !== 'GROUND' ||
@@ -281,7 +550,87 @@ export class CpuAgentSystem {
       }
 
       const p = bot.agent.position();
-      bot.position.set(p.x, p.y, p.z);
+      // F2: the original offmesh event may begin only with a free
+      // original-source physical capsule corridor. Other moving CPUs can
+      // reach the same lip on adjacent links. Queue that fall by leaving
+      // the REAL CPU at its last approved KCC foot and re-anchoring ONLY
+      // the ephemeral Recast steering proxy, never its render/physics foot.
+      // The authentic link is retried after other bodies clear.
+      if(this.phase14qF2RecoverableSteps&&
+         p.y<bot.position.y-.1&&
+         auditPhase14CrowdFrame(bot.position,p,dt).suspectedInstantTransition&&
+         this.phase14qGroundCollision!.shouldDeferF2FirstDrop!(
+           bot.id,bot.position
+         )){
+        this.reconcileBlockedT21F2CrowdProxy(bot);
+        continue;
+      }
+      // A real Recast offmesh jump is no longer copied into the CPU render
+      // position when (and only when) the T21-D QA adapter is injected.
+      if(this.phase14eFirstDrop?.observe(bot.id,bot.position,p,dt)){
+        this.navigation.removeAgent(bot.agent);
+        bot.agent=null;
+        bot.mobilityState='FIRST_DROP_FALL';
+        continue;
+      }
+      // A Crowd reattach after KCC landing can resnap onto a different
+      // vertical navmesh island. Unless this is an explicitly validated
+      // source-backed first drop, NEVER silently copy a discontinuous
+      // Recast position into the real CPU/render pose. QA only: T20 unchanged.
+      if(this.phase14eFirstDrop &&
+          auditPhase14CrowdFrame(bot.position,p,dt).suspectedInstantTransition){
+        this.navigation.removeAgent(bot.agent);
+        bot.agent=null;
+        throw new Error('T21_PHASE14G_UNSUPPORTED_CROWD_REJOIN_DISCONTINUITY');
+      }
+      // Native Crowd can temporarily lead the physical foot at an
+      // offmesh approach. Consume only a legal per-tick speed envelope;
+      // Rapier still approves the exact motion before visible CPU adoption.
+      // A true vertical offmesh transition is handled above by the genuine
+      // original-source Rapier fall bridge, never by this horizontal clamp.
+      let accepted={x:p.x,y:p.y,z:p.z};
+      if(this.phase14qF2RecoverableSteps){
+        const dx=p.x-bot.position.x,dy=p.y-bot.position.y,
+          dz=p.z-bot.position.z;
+        const d=Math.hypot(dx,dy,dz);
+        const limit=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt;
+        if(d>limit+1e-5&&Math.abs(dy)<=.11){
+          const k=limit/d;
+          accepted={x:bot.position.x+dx*k,
+            y:bot.position.y+dy*k,z:bot.position.z+dz*k};
+        }
+      }
+      if(this.phase14qGroundCollision){
+        let shared:ReturnType<CpuSharedGroundStepAuthority['auditGroundStep']>;
+        try{
+          shared=this.phase14qGroundCollision.auditGroundStep(
+            bot.id,bot.position,accepted,dt
+          );
+        }catch(error){
+          if(this.phase14qF2RecoverableSteps&&
+             String(error).includes('T21_PHASE14Q_CPU_CROWD_OVERSPEED_UNAPPROVED')){
+            this.reconcileBlockedT21F2CrowdProxy(bot);
+            continue;
+          }
+          throw error;
+        }
+        if(!shared.approved){
+          if(this.phase14qF2RecoverableSteps){
+            this.reconcileBlockedT21F2CrowdProxy(bot);
+            continue;
+          }
+          // The original strict QA path is intentionally unchanged.
+          bot.agent.resetMoveTarget();
+          throw Error('T21_PHASE14Q_REAL_CROWD_COLLISION_BLOCKED '+JSON.stringify({
+            id:bot.id,sourceFoot:[bot.position.x,bot.position.y,bot.position.z],
+            crowdCandidate:[p.x,p.y,p.z],cause:shared.cause,
+            colliders:shared.colliderOwnerIds,
+            noCpuPoseMutation:true,noRecastTeleport:true
+          }));
+        }
+      }
+      bot.position.set(accepted.x,accepted.y,accepted.z);
+      this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
 
       bot.paintRemaining -= dt;
       if (bot.paintRemaining <= 0) {
@@ -305,6 +654,28 @@ export class CpuAgentSystem {
     }
 
     this.syncStats();
+  }
+
+  /**
+   * Re-anchor ONLY the Recast steering proxy to its existing, verified
+   * original-source physical CPU foot after a blocked candidate. This
+   * does not move the CPU body, image, or original geometry. A new
+   * navigation goal must be requested after the collision clears.
+   */
+  private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
+    if(!this.phase14qF2RecoverableSteps||!bot.agent)
+      throw Error('T21_F2_UNAUTHORIZED_CROWD_RECONCILIATION');
+    const nav=this.navigation.closestPoint(bot.position);
+    if(Math.hypot(nav.x-bot.position.x,nav.y-bot.position.y,
+      nav.z-bot.position.z)>.20)
+      throw Error('T21_F2_PHYSICAL_CPU_OFF_ORIGINAL_NAVMESH');
+    bot.agent.teleport(nav);
+    bot.agent.resetMoveTarget();
+    const p=bot.agent.position();
+    if(Math.hypot(p.x-bot.position.x,p.y-bot.position.y,
+      p.z-bot.position.z)>.20)
+      throw Error('T21_F2_CROWD_PROXY_REANCHOR_FAILED');
+    bot.thinkRemaining=Math.min(bot.thinkRemaining,.20);
   }
 
   public setSplatZonesContext(active: boolean, control: Team): void {
@@ -706,6 +1077,10 @@ export class CpuAgentSystem {
         lifeState: 'ACTIVE',
         respawnRemainingSeconds: 0,
         mobilityState: 'GROUND',
+        rejoinElapsedFrames: 0,
+        rejoinStableFrames: 0,
+        rejoinRetryCount: 0,
+        rejoinPhysicalLandingFoot: start.clone(),
         jumpMarker,
         jumpStartPosition: start.clone(),
         jumpTargetPosition: start.clone(),
@@ -1697,6 +2072,7 @@ export class CpuAgentSystem {
   }
 
   private resetCpuJumpState(bot: CpuBot): void {
+    this.phase14eFirstDrop?.cancel(bot.id);
     bot.mobilityState = 'GROUND';
     bot.jumpMarker.enabled = false;
     bot.jumpTargetId = '-';
@@ -1737,6 +2113,7 @@ export class CpuAgentSystem {
 
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
+    this.phase14eFirstDrop?.cancel(bot.id);
 
     if (bot.agent) {
       this.navigation.removeAgent(bot.agent);
