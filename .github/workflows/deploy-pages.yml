@@ -1425,6 +1425,24 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase13D source-only actual original lens images and negative QA
+        if: always()
+        run: |
+          node scripts/t21-phase13d-source-lens-qa.mjs --self-test
+          node scripts/t21-phase13d-source-lens-qa.mjs --audit /tmp/t21-review-five-view /tmp/t21-review-five-view/T21_PHASE13D_SOURCE_LENS_EVIDENCE.json
+
+      - name: Upload T21 Phase13D original lens actual browser comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase13d-original-source-lens-a-b
+          path: |
+            /tmp/t21-review-five-view/T21_PHASE13D_SOURCE_LENS_EVIDENCE.json
+            /tmp/t21-review-five-view/T21_PHASE13D_WALK_ORIENTED_CENTER_FOCUS_OVERVIEW_WEBGL2.png
+            /tmp/t21-review-five-view/T21_PHASE13D_VERTICAL_HIGH_CENTER_FOCUS_OVERVIEW_WEBGL2.png
+          if-no-files-found: error
+          retention-days: 14
+
       - name: T21 Phase13A screenshot source visual baseline and negative QA
         if: always()
         run: |

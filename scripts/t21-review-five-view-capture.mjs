@@ -299,6 +299,49 @@ try {
         sourceOnly:true,reviewOnly:true,runtimePromotionAuthorized:false,
         authorizesVisualFreeze:false,gameplayCameraColliderNavPaintScoreProof:false
       });
+      // Same Chrome, same source, same focused camera; only root visibility varies.
+      if(view==='OVERVIEW'){
+        manifest.phase13DSourceLensComparisons??=[];
+        for(const [lens,families] of [
+          ['WALK_ORIENTED','5/0'],['VERTICAL_HIGH','0/10']
+        ]){
+          const state=await evaluation("(() => {const c=document.querySelector('#app-canvas');const hud=document.querySelector('#t21-source-evidence-legend');const b=document.querySelector('[data-review-evidence-lens=\""+lens+"\"]');if(!c||!hud||!b)return null;b.click();return {view:c.dataset.t21ReviewView,pose:c.dataset.t21ReviewCameraPose,mode:c.dataset.t21ReviewComposition,lens:c.dataset.t21ReviewEvidenceLens,families:c.dataset.t21ReviewSourceDisplayFamilies,authority:c.dataset.t21ReviewGameplayAuthority,renderer:c.dataset.t21ReviewRenderer,preset:c.dataset.t21ReviewPreset,hud:!hud.hidden,width:c.width,height:c.height};})()");
+          if(!state||state.view!=='OVERVIEW'||state.pose!=='CENTER_FOCUS_OVERVIEW'||
+             state.mode!=='CENTER_FOCUS'||state.lens!==lens||state.families!==families||
+             state.authority!=='NONE'||state.renderer!=='webgl2'||
+             state.preset!=='THREE_DIMENSIONAL'||!state.hud||
+             state.width!==width||state.height!==height)
+             throw Error('T21_PHASE13D_SOURCE_LENS_STATE_BAD_'+lens);
+          await sleep(520);
+          const png=await command('Page.captureScreenshot',{
+            format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+          const raw=Buffer.from(png.data||'','base64');
+          if(raw.length<8000||!raw.subarray(0,8).equals(sig)||
+             raw.readUInt32BE(16)!==width||raw.readUInt32BE(20)!==height)
+            throw Error('T21_PHASE13D_BAD_REAL_PNG_'+lens);
+          const post=await evaluation("(() => {const c=document.querySelector('#app-canvas');const hud=document.querySelector('#t21-source-evidence-legend');return {view:c.dataset.t21ReviewView,pose:c.dataset.t21ReviewCameraPose,mode:c.dataset.t21ReviewComposition,lens:c.dataset.t21ReviewEvidenceLens,families:c.dataset.t21ReviewSourceDisplayFamilies,authority:c.dataset.t21ReviewGameplayAuthority,renderer:c.dataset.t21ReviewRenderer,preset:c.dataset.t21ReviewPreset,hud:!hud.hidden,width:c.width,height:c.height};})()");
+          if(JSON.stringify(post)!==JSON.stringify(state))
+            throw Error('T21_PHASE13D_STATE_CHANGED_DURING_CAPTURE_'+lens);
+          const fn='T21_PHASE13D_'+lens+'_CENTER_FOCUS_OVERVIEW_WEBGL2.png';
+          await writeFile(resolve(destination,fn),raw);
+          manifest.phase13DSourceLensComparisons.push({
+            view:'OVERVIEW',lens,sourceRootCountSignature:families,
+            focusedBaselineFile:focusedFile,
+            focusedBaselineSHA256:createHash('sha256').update(focusedBytes).digest('hex'),
+            file:fn,sha256:createHash('sha256').update(raw).digest('hex'),
+            sizeBytes:raw.length,width,height,cameraPoseKey:post.pose,
+            reviewMode:post.mode,reviewPreset:post.preset,renderer:post.renderer,
+            legendVisible:post.hud,gameplayAuthority:'NONE',
+            sourceOnly:true,reviewOnly:true,sourceGeometryChanged:false,
+            authorizesVisualFreeze:false,authorizesStageActivation:false
+          });
+          process.stdout.write('T21_PHASE13D_SOURCE_LENS '+lens+'\n');
+        }
+        const restored=await evaluation("(() => {const c=document.querySelector('#app-canvas');const hud=document.querySelector('#t21-source-evidence-legend');const b=document.querySelector('[data-review-evidence-lens=\"OFF\"]');if(!c||!hud||!b)return null;b.click();return {lens:c.dataset.t21ReviewEvidenceLens,pose:c.dataset.t21ReviewCameraPose,mode:c.dataset.t21ReviewComposition,hidden:hud.hidden};})()");
+        if(!restored||restored.lens!=='OFF'||!restored.hidden||
+           restored.pose!=='CENTER_FOCUS_OVERVIEW'||restored.mode!=='CENTER_FOCUS')
+          throw Error('T21_PHASE13D_SOURCE_LENS_NOT_RESTORED');
+      }
       const baseState=await evaluation("(() => {const c=document.querySelector('#app-canvas');const b=document.querySelector('[data-review-composition=\"BASE\"]');if(!c||!b)return null;b.click();return {view:c.dataset.t21ReviewView,mode:c.dataset.t21ReviewComposition,pose:c.dataset.t21ReviewCameraPose};})()");
       if(!baseState||baseState.view!==view||baseState.mode!=='BASE'||baseState.pose!=='BASE_'+view)
         throw Error('T21_PHASE13C_BASE_CAMERA_NOT_RESTORED_'+view);
