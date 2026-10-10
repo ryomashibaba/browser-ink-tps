@@ -31,7 +31,10 @@ interface QaBot {
   fireRemaining: number;
   specialPoints: number;
 }
-type QaCpu = CpuAgentSystem & {bots: QaBot[]; splatBot(bot: QaBot): void};
+type QaCpu = Omit<CpuAgentSystem, 'bots' | 'splatBot'> & {
+  bots: QaBot[];
+  splatBot(bot: QaBot): void;
+};
 const sides: readonly Side[] = ['positive-z', 'negative-z'];
 
 function createScene() {
@@ -48,7 +51,7 @@ function createScene() {
   const cpu = new CpuAgentSystem(
     {root} as never, navigation, ink, {enqueue} as never,
     stats, qaStage, Team.A, adapter
-  ) as QaCpu;
+  ) as unknown as QaCpu;
   const bots = cpu.bots;
   const selected = [bots.find(b => b.id === 'A1')!, bots.find(b => b.id === 'B1')!];
   expect(selected.every(Boolean)).toBe(true);
