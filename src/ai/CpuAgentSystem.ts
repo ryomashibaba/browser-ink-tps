@@ -72,7 +72,8 @@ type CpuMobilityState =
   | 'JUMP_PREP'
   | 'JUMP_TRAVEL'
   | 'JUMP_LANDING'
-  | 'FIRST_DROP_FALL';
+  | 'FIRST_DROP_FALL'
+  | 'FIRST_DROP_REJOIN';
 
 interface CpuJumpCandidate {
   id: string;
@@ -110,6 +111,9 @@ interface CpuBot {
   lifeState: 'ACTIVE' | 'SPLATTED';
   respawnRemainingSeconds: number;
   mobilityState: CpuMobilityState;
+  /** T21 QA-only post-offmesh Crowd settlement counters. */
+  rejoinElapsedFrames: number;
+  rejoinStableFrames: number;
   jumpMarker: Entity;
   jumpStartPosition: Vec3;
   jumpTargetPosition: Vec3;
@@ -257,9 +261,23 @@ export class CpuAgentSystem {
             closest.z-bot.position.z)>.65)
             throw new Error('T21_PHASE14E_UNSUPPORTED_NAV_RESUME');
           bot.agent=this.navigation.addAgent(bot.position);
-          bot.mobilityState='GROUND';
+          bot.mobilityState='FIRST_DROP_REJOIN';
+          bot.rejoinElapsedFrames=0;
+          bot.rejoinStableFrames=0;
           this.phase14eFirstDrop!.cancel(bot.id);
-          bot.thinkRemaining=Math.min(bot.thinkRemaining,.16);
+          // Wait for the reused offmesh Crowd slot to settle before CPU actions.
+        }
+        continue;
+      }
+
+      if (bot.mobilityState === 'FIRST_DROP_REJOIN') {
+        if(!this.phase14eFirstDrop||!bot.agent)
+          throw new Error('T21_PHASE14H_REJOIN_AGENT_MISSING');
+        bot.rejoinElapsedFrames++;
+        if(bot.rejoinElapsedFrames>45){
+          this.navigation.removeAgent(bot.agent);
+          bot.agent=null;
+          throw new Error('T21_PHASE14H_REJOIN_STABILITY_TIMEOUT');
         }
         continue;
       }
@@ -311,6 +329,33 @@ export class CpuAgentSystem {
     this.navigation.fixedUpdate(dt);
 
     for (const bot of this.bots) {
+      if(bot.lifeState==='ACTIVE'&&bot.mobilityState==='FIRST_DROP_REJOIN'){
+        if(!bot.agent)throw new Error('T21_PHASE14H_REJOIN_AGENT_MISSING');
+        const p=bot.agent.position();
+        const d=Math.hypot(p.x-bot.position.x,p.y-bot.position.y,p.z-bot.position.z);
+        const sameLayer=Math.abs(p.y-bot.position.y)<=.20&&d<=.65;
+        bot.rejoinStableFrames=sameLayer?bot.rejoinStableFrames+1:0;
+        if(bot.rejoinStableFrames>=3){
+          // Reused Crowd slots briefly replay an old offmesh animation;
+          // never render those out-of-layer positions. Once stable, walk
+          // the real physics foot to the source-derived NavMesh position.
+          const maxStep=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt;
+          const fraction=Math.min(1,maxStep/Math.max(d,1e-9));
+          const nx=bot.position.x+(p.x-bot.position.x)*fraction;
+          const ny=bot.position.y+(p.y-bot.position.y)*fraction;
+          const nz=bot.position.z+(p.z-bot.position.z)*fraction;
+          const closest=this.navigation.closestPoint(new Vec3(nx,ny,nz));
+          if(Math.hypot(closest.x-nx,closest.y-ny,closest.z-nz)>.25||
+             Math.abs(closest.y-ny)>.20)
+            throw new Error('T21_PHASE14H_UNSUPPORTED_REJOIN_SURFACE');
+          bot.position.set(nx,ny,nz);
+          if(d<=maxStep+1e-7){
+            bot.mobilityState='GROUND';
+            bot.thinkRemaining=Math.min(bot.thinkRemaining,.16);
+          }
+        }
+        continue;
+      }
       if (
         bot.lifeState !== 'ACTIVE' ||
         bot.mobilityState !== 'GROUND' ||
@@ -763,6 +808,8 @@ export class CpuAgentSystem {
         lifeState: 'ACTIVE',
         respawnRemainingSeconds: 0,
         mobilityState: 'GROUND',
+        rejoinElapsedFrames: 0,
+        rejoinStableFrames: 0,
         jumpMarker,
         jumpStartPosition: start.clone(),
         jumpTargetPosition: start.clone(),
