@@ -6,10 +6,13 @@ import type {StageDefinition,StageSolidDefinition} from '../StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as freeze} from './UndertowSpillwayBlockoutGeometry';
 import {auditPhase14CrowdFrame} from './UndertowPhase14CrowdMotionAudit';
 import {UndertowCpuDropBridge,type SourceFoot,type T21PhysicalCpuFallFrame} from './UndertowPhase14DPhysicalCpuDrop';
+import {auditPhase14JRapierRejoinStep,type Phase14JRejoinResult} from './UndertowPhase14JCollisionRejoinGate';
 
 export interface UndertowPhase14ECpuAdapter {
   observe(cpuId:string,oldPosition:SourceFoot,crowdPosition:SourceFoot,dt:number):boolean;
   advance(cpuId:string,dt:number):T21PhysicalCpuFallFrame|null;
+  /** Original-solid Rapier KCC collision authority for QA-only rejoin. */
+  validateRejoinStep(from:SourceFoot,to:SourceFoot,dt:number):Phase14JRejoinResult;
   cancel(cpuId:string):void;
   reset():void;
 }
@@ -63,6 +66,8 @@ export function nearestT21SourceSupportedLanding(
  */
 export class UndertowPhase14ECpuHandoff implements UndertowPhase14ECpuAdapter{
  private readonly active=new Map<string,ActiveDrop>();
+ /** Full original geometry for collisions; never the synthetic narrow landing only. */
+ private readonly rejoinPhysics:RapierStagePhysics;
  private readonly eligible:ReadonlyArray<{
   side:typeof sides[number];start:SourceFoot;end:SourceFoot;solid:StageSolidDefinition
  }>;
@@ -73,6 +78,8 @@ export class UndertowPhase14ECpuHandoff implements UndertowPhase14ECpuAdapter{
     qaStage.solids.length!==25||qaStage.paintSurfaces.length!==17||
     qaStage.navigationLinks?.length!==26)
     throw Error('T21_PHASE14E_NOT_OPTED_IN_TO_INACTIVE_QA_STAGE');
+  this.rejoinPhysics=new RapierStagePhysics(kinematicHz,qaStage);
+  this.rejoinPhysics.step();
   this.eligible=sides.map(side=>{
    const link=qaStage.navigationLinks?.find(l=>l.id==='first-drop-'+side+'-3');
    const solid=qaStage.solids.find(s=>s.id==='UndertowT21D:first-drop-landing-'+side);
@@ -116,6 +123,9 @@ export class UndertowPhase14ECpuHandoff implements UndertowPhase14ECpuAdapter{
   const bridge=new UndertowCpuDropBridge(physics,from,target);
   this.active.set(id,{bridge,landingSolidId:match.solid.id,side:match.side});
   return true;
+ }
+ public validateRejoinStep(from:SourceFoot,to:SourceFoot,dt:number):Phase14JRejoinResult{
+  return auditPhase14JRapierRejoinStep(this.rejoinPhysics,from,to,dt);
  }
  public advance(id:string,dt:number):T21PhysicalCpuFallFrame|null{
   return this.active.get(id)?.bridge.step(dt)??null;
