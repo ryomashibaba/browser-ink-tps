@@ -60,7 +60,7 @@ export function planSourceSupportedT21QaSpawnSlots(
     [0,FOOT_RADIUS],[0,-FOOT_RADIUS],
     [FOOT_RADIUS*.72,FOOT_RADIUS*.72],
     [-FOOT_RADIUS*.72,-FOOT_RADIUS*.72]
-   ]){
+   ] as readonly (readonly [number,number])[]){
     const start=new Vec3(x+ox,y+.70,z+oz);
     const end=new Vec3(x+ox,y-.70,z+oz);
     const hit=physics.castStageSegment(start,end,'ink-projectile');
