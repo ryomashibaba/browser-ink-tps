@@ -1386,6 +1386,21 @@ jobs:
           node scripts/t21-review-phase12o-zoom-gate.mjs --self-test
           node scripts/t21-review-phase12o-zoom-gate.mjs
 
+      - name: T21 Phase13A screenshot source visual baseline and negative QA
+        if: always()
+        run: |
+          node scripts/t21-phase13a-real-five-view-visual-baseline.mjs --self-test
+          node scripts/t21-phase13a-real-five-view-visual-baseline.mjs --audit /tmp/t21-review-five-view /tmp/t21-review-five-view/T21_PHASE13A_VISUAL_BASELINE.json
+
+      - name: Upload T21 Phase13A screenshot baseline diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase13a-real-five-view-visual-baseline
+          path: /tmp/t21-review-five-view/T21_PHASE13A_VISUAL_BASELINE.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Always upload five-view captures or explicit BLOCKED manifest
         if: always()
         uses: actions/upload-artifact@v4
