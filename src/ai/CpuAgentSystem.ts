@@ -346,7 +346,13 @@ export class CpuAgentSystem {
         if(!bot.agent)throw new Error('T21_PHASE14H_REJOIN_AGENT_MISSING');
         const p=bot.agent.position();
         const d=Math.hypot(p.x-bot.position.x,p.y-bot.position.y,p.z-bot.position.z);
-        const sameLayer=Math.abs(p.y-bot.position.y)<=.20&&d<=.65;
+        // Phase14L: Crowd avoidance can spread several simultaneous landing
+        // agents by more than the single-agent .65m proximity bound. This is
+        // NOT permission to snap the CPU to its Crowd position. Preserve the
+        // verified original lower vertical layer and a strict 1.6m maximum
+        // candidate envelope; every actual movement still uses original
+        // nav projection and the full Rapier HUMAN KCC.
+        const sameLayer=Math.abs(p.y-bot.position.y)<=.20&&d<=1.6;
         bot.rejoinStableFrames=sameLayer?bot.rejoinStableFrames+1:0;
         if(bot.rejoinStableFrames>=3){
           // Reused Crowd slots briefly replay an old offmesh animation;
