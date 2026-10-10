@@ -6,7 +6,7 @@ import {PerformanceStats} from '../../core/PerformanceStats';
 import {GameplayInkSystem} from '../../ink/GameplayInkSystem';
 import {defineTestSurfaces} from '../TestStage';
 import {rasterizeStageFootprint} from '../StageFootprint';
-import {PaintEventType,PaintSource,SurfaceFlags} from '../../ink/types';
+import {PaintEventType,PaintSource,SurfaceFlags,type PaintEvent} from '../../ink/types';
 import type {PaintRequest} from '../../ink/PaintCoordinator';
 import type {CpuFireRequest} from '../../ai/CpuAgentSystem';
 import {Team} from '../../ink/types';
@@ -218,7 +218,7 @@ describe('T21 Phase14M: seven CPU real rejoin, tactical decisions and source-aut
   const patch=rasterizeStageFootprint(backing.size[0],backing.size[2],
     backing.footprint!).rectangles[0]!;
   expect(patch).toBeDefined();
-  const testPaint={
+  const testPaint:PaintEvent={
     tick:frame+1,source:PaintSource.Debug,team:Team.A,
     surfaceId:sourceSurface!.id,centerU:patch.centerU,centerV:patch.centerV,
     radiusU:.26,radiusV:.26,angle:0,type:PaintEventType.Debug,strength:1
