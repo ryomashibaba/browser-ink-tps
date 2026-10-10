@@ -119,4 +119,87 @@ describe('Phase14H original-source vertical Recast layer probe (DIAGNOSTIC ONLY)
     integratedCpuRejoinApproved:false
   }));
  });
+ it('compares true offmesh-recycled Crowd slots with the independently stable lower-island probes',()=>{
+   const stage=undertowT21dConnectivityQaStage();
+   const nav=new RecastStageNavigation(stage,new PerformanceStats());
+   const adapter=new UndertowPhase14ECpuHandoff(stage,true);
+   const actors=sides.map(side=>{
+     const link=stage.navigationLinks!.find(l=>l.id==='first-drop-'+side+'-3')!;
+     const agent=nav.addAgent(new Vec3(...link.start));
+     agent.requestMoveTarget(nav.closestPoint(new Vec3(...link.end)));
+     return {
+       side,id:'phase14h-real-'+side,
+       agent:agent as typeof agent|null,previous:{...agent.position()},
+       status:'CROWD' as 'CROWD'|'FALL'|'REJOIN'|'DONE',
+       initialFoot:null as null|[number,number,number],
+       physicalFoot:null as null|[number,number,number],
+       firstCrowdFoot:null as null|[number,number,number],
+       secondCrowdFoot:null as null|[number,number,number],
+       closestFoot:null as null|[number,number,number],
+       rawJumpMeters:0,fallFrames:0,rejoinFrame:-1,frame1Distance:-1,
+       frame2Distance:-1
+     };
+   });
+   for(let frame=0;frame<750;frame++){
+     nav.fixedUpdate(step);
+     for(const a of actors){
+       if(a.status==='CROWD'){
+         const next=a.agent!.position();
+         if(adapter.observe(a.id,a.previous,next,step)){
+           a.rawJumpMeters=dist(a.previous,next);
+           nav.removeAgent(a.agent!);
+           a.agent=null;a.status='FALL';
+         }else a.previous={...next};
+       }else if(a.status==='FALL'){
+         const physical=adapter.advance(a.id,step);
+         expect(physical).not.toBeNull();
+         expect(physical!.continuous).toBe(true);
+         a.fallFrames++;
+         if(physical!.landed){
+           const foot=physical!.foot;
+           a.physicalFoot=three(foot);
+           const closest=nav.closestPoint(new Vec3(foot.x,foot.y,foot.z));
+           a.closestFoot=three(closest);
+           a.agent=nav.addAgent(new Vec3(foot.x,foot.y,foot.z));
+           a.initialFoot=three(a.agent.position());
+           a.rejoinFrame=frame;a.status='REJOIN';
+           adapter.cancel(a.id);
+         }
+       }else if(a.status==='REJOIN'){
+         const p=a.agent!.position(),foot=a.physicalFoot!;
+         const shifted=Math.hypot(p.x-foot[0],p.y-foot[1],p.z-foot[2]);
+         if(a.frame1Distance<0){
+           a.firstCrowdFoot=three(p);
+           a.frame1Distance=shifted;
+         }else{
+           a.secondCrowdFoot=three(p);
+           a.frame2Distance=shifted;
+           a.status='DONE';
+         }
+       }
+     }
+     if(actors.every(a=>a.status==='DONE'))break;
+   }
+   expect(adapter.activeCount).toBe(0);
+   for(const a of actors){
+     expect(a.status).toBe('DONE');
+     expect(a.rawJumpMeters).toBeGreaterThan(.5);
+     expect(a.fallFrames).toBeGreaterThan(20);
+     expect(a.fallFrames).toBeLessThan(150);
+     expect(a.firstCrowdFoot?.every(Number.isFinite)).toBe(true);
+     expect(a.secondCrowdFoot?.every(Number.isFinite)).toBe(true);
+     nav.removeAgent(a.agent!);
+   }
+   console.log('T21_PHASE14H_REAL_OFFMESH_CROWD_SLOT_REJOIN_AUDIT',JSON.stringify({
+     actors:actors.map(({side,rawJumpMeters,fallFrames,rejoinFrame,
+       physicalFoot,closestFoot,initialFoot,firstCrowdFoot,secondCrowdFoot,
+       frame1Distance,frame2Distance})=>({side,rawJumpMeters,fallFrames,
+         rejoinFrame,physicalFoot,closestFoot,initialFoot,firstCrowdFoot,
+         secondCrowdFoot,frame1Distance,frame2Distance})),
+     independentNoPriorOffmeshCandidatesStable:true,
+     sourceGeometryChanged:false,productionAuthorized:false,
+     completeCpuRuntimeValidated:false
+   }));
+ });
+
 });
