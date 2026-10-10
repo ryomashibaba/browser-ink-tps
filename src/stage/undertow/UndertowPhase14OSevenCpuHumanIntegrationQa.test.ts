@@ -53,7 +53,7 @@ describe('T21 Phase14O seven real CPUs and one real Rapier PlayerController in a
   const nav=new RecastStageNavigation(stage,stats);
   const handoff=new UndertowPhase14ECpuHandoff(stage,true);
   const cpu=new CpuAgentSystem(app,nav,ink,coordinator as never,stats,
-    stage,Team.A,handoff) as QaCpu;
+    stage,Team.A,handoff) as unknown as QaCpu;
   const bots=cpu.bots;
   expect(bots.map(b=>b.id)).toEqual(['A1','A2','A3','B1','B2','B3','B4']);
 
@@ -84,7 +84,7 @@ describe('T21 Phase14O seven real CPUs and one real Rapier PlayerController in a
     stringerFuse:vi.fn(),stringerBurst:vi.fn(),melee:vi.fn(),beam:vi.fn()};
   const projectile=new ProjectileSystem(app,surfaces,physics,
     coordinator as never,resources,
-    new CombatTargetSystem(app,stats),cpu,feedback as never,stats);
+    new CombatTargetSystem(app,stats),cpu as unknown as CpuAgentSystem,feedback as never,stats);
 
   // ORIGINAL two independently verified first-drop paths. Never inject
   // phase14 adapter.observe, synthesize a bridge or telepose post-landing.
