@@ -123,6 +123,10 @@ async function screenshot(side,tag,state){
     !Number.isFinite(state.human.hp)||
     state.gameplayScoresUnapproved!==true||
     state.sharedDynamicColliderWorld!==false||
+    state.actorSeparationAudit?.source!=='ACTUAL_CPU_RENDER_POSES_AND_REAL_PLAYER_RAPIER_FOOT'||
+    state.actorSeparationAudit.cpuCount!==7||
+    state.actorSeparationAudit.humanCpuPhysicalCollisionApproved!==false||
+    state.actorSeparationAudit.sharedDynamicHumanCpuColliderWorld!==false||
     state.sourceContext?.inputSolids!==25||
     state.sourceContext?.renderedSolids<=0||
     state.sourceContext?.evidenceOnly!==true||
@@ -153,6 +157,7 @@ async function screenshot(side,tag,state){
   cpu:state.cpu,transitions:state.transitions,cpuOptics,humanOptics,
   human:state.human,sourcePaintRequests:state.originalSourcePaintRequests,
   playerHits:state.actualCpuProjectileHits,shotIds:state.originalAuthorizedShotIds,
+  actorSeparation:state.actorSeparationAudit,
   camera:state.cameraAudit,sourceContext:state.sourceContext,
   realUnforcedRecastCrowd:true,realWebGL2Screenshot:true,
   humanVisualApproval:false
@@ -265,6 +270,9 @@ async function run(){
   if(completed.size!==7||
      !['A1','A2','A3','B1','B2','B3','B4'].every(id=>completed.has(id))||
      latest.activeRapierBodies!==0||
+     !latest.actorSeparationAudit.possibleHumanCpuVisualOverlap||
+     !latest.actorSeparationAudit.nearVisualContacts.some(e=>e.id==='B4')||
+     !(latest.actorSeparationAudit.closestHorizontalMeters<.2)||
      latest.transitions.length<7||
      latest.completedOriginalDropRecords.some(e=>!(e.footY>2.8&&e.footY<3.3)))
     fail('REAL_SEVEN_CROWD_KCC_COMPLETIONS_MISSING_'+side+'_'+JSON.stringify({
@@ -331,6 +339,8 @@ async function run(){
     stageScoreablePaintPromoted:false,
     sameTickEightCharacterSimulation:true,
     sharedDynamicColliderWorld:false,
+    sourceTrueNearContacts:latest.actorSeparationAudit.nearVisualContacts,
+    cpuPlayerDynamicOverlapStillBlocked:true,
     noSyntheticObserve:true};
   results.push(evidence);
   console.log('PHASE14P_REAL_CROWD_SIDE_PASS',JSON.stringify(evidence));
