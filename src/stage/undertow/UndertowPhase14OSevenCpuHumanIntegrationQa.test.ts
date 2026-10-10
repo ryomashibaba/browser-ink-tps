@@ -65,8 +65,7 @@ describe('T21 Phase14O seven real CPUs and one real Rapier PlayerController in a
     get squidHeld(){return false;},get jumpHeld(){return false;},
     consumeJump(){return false;}
   } as PlayerInput;
-  const camera={getFlatForward:(v:Vec3)=>v.set(0,0,1)}
-    as ThirdPersonCamera;
+  const camera=({getFlatForward:(v:Vec3)=>v.set(0,0,1)}) as ThirdPersonCamera;
   const player=new PlayerController(app,physics,input,camera,ink,stats);
   player.setTeam(Team.A);
   const originalLink=stage.navigationLinks!.find(x=>
