@@ -18,6 +18,7 @@ import {
 import type { RecastStageNavigation } from '../navigation/RecastStageNavigation';
 import type {UndertowPhase14ECpuAdapter} from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import type { StageDefinition } from '../stage/StageDefinition';
+import {auditPhase14CrowdFrame} from '../stage/undertow/UndertowPhase14CrowdMotionAudit';
 
 export interface CpuCombatHit {
   botId: string;
@@ -326,6 +327,16 @@ export class CpuAgentSystem {
         bot.agent=null;
         bot.mobilityState='FIRST_DROP_FALL';
         continue;
+      }
+      // A Crowd reattach after KCC landing can resnap onto a different
+      // vertical navmesh island. Unless this is an explicitly validated
+      // source-backed first drop, NEVER silently copy a discontinuous
+      // Recast position into the real CPU/render pose. QA only: T20 unchanged.
+      if(this.phase14eFirstDrop &&
+          auditPhase14CrowdFrame(bot.position,p,dt).suspectedInstantTransition){
+        this.navigation.removeAgent(bot.agent);
+        bot.agent=null;
+        throw new Error('T21_PHASE14G_UNSUPPORTED_CROWD_REJOIN_DISCONTINUITY');
       }
       bot.position.set(p.x, p.y, p.z);
 
