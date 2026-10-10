@@ -13,7 +13,7 @@ import {initializeRapier,RapierStagePhysics} from '../../physics/RapierStagePhys
 import {initializeRecastNavigation,RecastStageNavigation}
  from '../../navigation/RecastStageNavigation';
 import {PRODUCTION_STAGE_DEFINITION} from '../StageDefinition';
-import {undertowT21dConnectivityQaStage} from './UndertowSpillwayConnectivityQa';
+import {undertowT21dConnectivityQaStage,UNDERTOW_T21D_CONNECTIVITY_PROBES} from './UndertowSpillwayConnectivityQa';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from './UndertowSpillwayBlockoutGeometry';
 import {UndertowPhase14ECpuHandoff}
@@ -96,6 +96,22 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     bot.thinkRemaining=900;bot.paintRemaining=900;
     bot.fireRemaining=900;bot.jumpCooldownSeconds=900;
   }
+  const originalSourceEgress=new Map<string,readonly [number,number,number]>();
+  for(const bot of bots){
+    const side=bot.team===Team.A?'positive-z':'negative-z';
+    const ramp=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(p=>
+      p.id==='right-low-ramp-'+side);
+    if(!ramp||ramp.expectation!=='MUST_REACH')
+      throw Error('T21_F2_SOURCE_RAMP_AUTHORITY_MISSING_'+bot.id);
+    const originalFoot=new Vec3(...routeOf(bot.id).originalLanding);
+    // Never invent a traffic-clearing point. Both candidates are from the
+    // frozen original FloorConcrete03 ramp, directly inside source NavMesh.
+    const next=[ramp.to,ramp.from].find(point=>
+      nav.auditPath(originalFoot,new Vec3(...point)).reachedTarget&&
+      Math.hypot(point[0]-originalFoot.x,point[2]-originalFoot.z)>2);
+    if(!next)throw Error('T21_F2_NO_SOURCE_NATIVE_LANDING_EGRESS_'+bot.id);
+    originalSourceEgress.set(bot.id,next);
+  }
   const historicalMoves=new Map<string,number>();
   const physicallyFalling=new Set<string>();
   const physicallyRejoined=new Set<string>();
@@ -113,6 +129,8 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
   ];
   let releaseGroupIndex=0;
   const released=new Set<string>();
+  const clearedOriginalLanding=new Set<string>();
+  const actualLandingClearanceFrames:Record<string,number>={};
   const actualReleaseFrames:Record<string,number>={};
   const actualRejoinFrames:Record<string,number>={};
   for(let frame=1;frame<=2400;frame++){
@@ -131,7 +149,7 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     // teleporting a physical CPU or inventing an alternate stage route.
     while(releaseGroupIndex<releaseGroups.length&&
       releaseGroups[releaseGroupIndex]!.every(id=>
-        physicallyRejoined.has(id)))releaseGroupIndex++;
+        clearedOriginalLanding.has(id)))releaseGroupIndex++;
     const group=releaseGroups[releaseGroupIndex]??[];
     for(const id of group){
       if(!released.has(id)){
@@ -141,7 +159,10 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     for(const bot of bots){
       if(physicallyRejoined.has(bot.id)){
         bot.thinkRemaining=900;
-        bot.agent?.resetMoveTarget();
+        if(bot.agent&&frame%18===1&&!clearedOriginalLanding.has(bot.id))
+          bot.agent.requestMoveTarget(nav.closestPoint(
+            new Vec3(...originalSourceEgress.get(bot.id)!)));
+        if(clearedOriginalLanding.has(bot.id))bot.agent?.resetMoveTarget();
       }else if(released.has(bot.id)&&
           bot.mobilityState==='GROUND'&&bot.agent&&frame%18===1){
         bot.agent.requestMoveTarget(nav.closestPoint(
@@ -184,6 +205,29 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
       historicalMoves.set(bot.id,Math.max(historicalMoves.get(bot.id)??0,
         distance));
     }
+    // The next physical drop may begin only after existing real CPU feet
+    // walk to a reachable SOURCE-NATIVE ramp, clear of all upcoming
+    // original first-drop landing endpoints in their team lane.
+    for(const bot of bots){
+      if(!physicallyRejoined.has(bot.id)||clearedOriginalLanding.has(bot.id))
+        continue;
+      const side=bot.team===Team.A?'positive-z':'negative-z';
+      const landingEndpoints=routePlan.routes.filter(r=>
+        r.actorId!==bot.id&&
+        (r.actorId.startsWith(bot.team===Team.A?'A':'B')||
+         (bot.team===Team.A&&r.actorId==='HUMAN')));
+      const safelyClear=landingEndpoints.every(r=>
+        Math.hypot(bot.position.x-r.originalLanding[0],
+          bot.position.z-r.originalLanding[2])>1.55||
+        Math.abs(bot.position.y-r.originalLanding[1])>1.05);
+      const movedFromLanding=Math.hypot(
+        bot.position.x-routeOf(bot.id).originalLanding[0],
+        bot.position.z-routeOf(bot.id).originalLanding[2]);
+      if(safelyClear&&movedFromLanding>1.7){
+        clearedOriginalLanding.add(bot.id);
+        actualLandingClearanceFrames[bot.id]=frame;
+      }
+    }
     const feet=[
       ...bots.map(b=>({id:b.id,x:b.position.x,y:b.position.y,z:b.position.z})),
       {id:'HUMAN',...actualHumanFoot}
@@ -208,6 +252,8 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     qaTrafficControl:'MIRRORED_PAIR_STAGING_NOT_UNRESTRICTED_4V4',
     physicalReleaseFrames:actualReleaseFrames,
     physicalRejoinFrames:actualRejoinFrames,
+    postDropSourceNativeEgress:[...originalSourceEgress],
+    physicalLandingClearanceFrames:actualLandingClearanceFrames,
     distinctOriginalFirstDropLinks:routePlan.distinctFirstDropLinks,
     assignedOriginalLinks:routePlan.routes.map(r=>({
       actorId:r.actorId,linkId:r.linkId,sourceGoal:r.sourceGoal
