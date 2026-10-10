@@ -626,6 +626,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12R independent original source boundary-edge and normal angle QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12Q_REPORT_INPUT: /tmp/t21-phase12q-original-position-seam-graph.json
+          T21_PHASE12R_REPORT: /tmp/t21-phase12r-source-edge-normal-audit.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12ROriginalEdgeNormalsQa.test.ts
+
+      - name: Upload T21 Phase12R source-only original edge angle audit
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12r-original-source-edge-normal-audit
+          path: /tmp/t21-phase12r-source-edge-normal-audit.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
