@@ -23,6 +23,8 @@ import {nearestT21SourceSupportedLanding,UndertowPhase14ECpuHandoff}
  from './UndertowPhase14ECpuHandoff';
 import {UndertowPhase14QSharedActorCollision}
  from './UndertowPhase14QSharedActorCollision';
+import {UndertowPhase14QHumanCrowdAnchor}
+ from './UndertowPhase14QHumanCrowdAnchor';
 
 const DT=1/60;
 type Bot={
@@ -142,6 +144,53 @@ describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting'
   expect(w.adapter.activeCount).toBe(0);
   expect(freeze.activationReady).toBe(false);
   expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
+ });
+ it('genuine CPU Recast navigation with Rapier-anchored eighth HUMAN neighbour never commits a CPU position inside real player capsule',()=>{
+  const w=scenario(.69);
+  const nav=(w.cpu as unknown as {navigation:RecastStageNavigation}).navigation;
+  const anchor=new UndertowPhase14QHumanCrowdAnchor(nav,w.stage,true,w.human);
+  let rejectedAt:number|null=null;
+  let reason='';
+  let minimumAcceptedSeparation=Number.POSITIVE_INFINITY;
+  let lastSuccessfulFrame=0;
+  for(let frame=1;frame<=90;frame++){
+    const humanProxy=anchor.syncActualPlayerFoot(w.human);
+    expect(humanProxy.footToCrowdHorizontalMeters).toBeLessThan(.065);
+    const old=w.b1.position.clone();
+    try{w.cpu.fixedUpdate(DT,true,Team.A,w.body,false);}
+    catch(err){
+      rejectedAt=frame;reason=String(err);
+      expect(w.b1.position.distance(old)).toBeLessThan(1e-7);
+      break;
+    }
+    const dist=Math.hypot(w.b1.position.x-w.human.x,
+      w.b1.position.z-w.human.z);
+    minimumAcceptedSeparation=Math.min(minimumAcceptedSeparation,dist);
+    expect(dist).toBeGreaterThanOrEqual(
+      PLAYER_CHARACTER_PHYSICS.humanRadiusMeters+.29-.01
+    );
+    expect(w.b1.position.distance(old)).toBeLessThan(.075);
+    lastSuccessfulFrame=frame;
+  }
+  if(rejectedAt!==null)
+    expect(reason).toContain('T21_PHASE14Q_REAL_CROWD_COLLISION_BLOCKED');
+  expect(lastSuccessfulFrame).toBeGreaterThan(0);
+  console.log('T21_PHASE14Q_M3_ANCHORED_HUMAN_REAL_CPU_GROUND_VETO',JSON.stringify({
+    genuineCrowdCpuId:w.b1.id,
+    verifiedSuccessfulFrames:lastSuccessfulFrame,
+    physicalCollisionVetoFrame:rejectedAt,
+    minimumAcceptedHorizontalSeparationMeters:minimumAcceptedSeparation,
+    realPlayerSourceFoot:w.human,
+    crowdHumanFinalFoot:anchor.rawCrowdPosition,
+    realPlayerTeleports:0,realCpuCrowdTeleports:0,
+    realCpuVisualPoseCorrection:0,originalNavAndGeometryChanged:false,
+    unsafeCpuCollisionVetoed:rejectedAt!==null,
+    physicalCrowdResumptionCertified:false,productionAuthorized:false
+  }));
+  anchor.dispose();
+  w.cpu.reset(Team.A);
+  expect(w.collision.cpuColliderCount).toBe(0);
+  w.collision.dispose();
  });
  it('rejects the opt-in shared collision authority unless the original T21 Rapier drop adapter is present',()=>{
   const w=scenario(.69);
