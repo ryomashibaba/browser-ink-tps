@@ -26,6 +26,18 @@ export type T21QContactResult=Readonly<{
   productionAuthorized:false;
 }>;
 
+export type T21QAirborneContactResult=Readonly<{
+  approved:boolean;
+  source:'ACTUAL_ORIGINAL_DROP_RAPIER_KCC_FOOT_SHARED_ACTOR_CAPSULE_AUDIT';
+  cause:'SOURCE_CONTINUITY_UNVERIFIED'|'SHARED_ACTOR_CAPSULE_INTERSECTS'|'CLEAR';
+  playerSourceFootRegistered:true;
+  actorCollisionCandidate:string|null;
+  cpuFootTeleportPerformed:false;
+  sourceGeometryModified:false;
+  fullSharedWorldFallingKccProved:false;
+  productionAuthorized:false;
+}>;
+
 interface ActorBody{
   body:RigidBody;
   collider:Collider;
@@ -112,6 +124,48 @@ export class UndertowPhase14QSharedActorCollision{
     if(![foot.x,foot.y,foot.z].every(Number.isFinite))
       throw Error('T21_PHASE14Q_UNTRUSTED_REAL_HUMAN_SOURCE');
     this.humanSourceFoot={...foot};
+  }
+
+  /**
+   * Safety veto for a genuine independently simulated original-source
+   * Rapier FIRST_DROP_FALL candidate BEFORE CpuAgentSystem adopts its
+   * physical foot. The first-drop KCC is currently a separate physics
+   * world, so this is a conservative true-size capsule overlap check,
+   * NOT a claim that both falling KCCs now share one dynamic world.
+   */
+  auditAirborneSourceFoot(
+    id:string,from:T21QFoot,to:T21QFoot,dt:number,
+    originalKccContinuous:boolean
+  ):T21QAirborneContactResult{
+    this.assertFoot(id,from);
+    this.assertFoot(id,to);
+    if(!Number.isFinite(dt)||Math.abs(dt-1/60)>1e-8)
+      throw Error('T21_PHASE14Q_AIRBORNE_EXACT_60HZ_REQUIRED');
+    if(!this.humanSourceFoot)
+      throw Error('T21_PHASE14Q_REAL_HUMAN_FOOT_NOT_SYNCHRONIZED');
+    const actor=this.actors.get(id);
+    if(!actor)throw Error('T21_PHASE14Q_MISSING_REAL_CPU_COLLIDER_'+id);
+    if(Math.hypot(actor.sourceFoot.x-from.x,actor.sourceFoot.y-from.y,
+       actor.sourceFoot.z-from.z)>.025)
+      throw Error('T21_PHASE14Q_AIRBORNE_SOURCE_FOOT_DESYNC');
+    const span=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z);
+    const dxz=Math.hypot(to.x-from.x,to.z-from.z);
+    if(span>.65||dxz>GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt+.04)
+      throw Error('T21_PHASE14Q_AIRBORNE_UNVERIFIED_KCC_STEP');
+    const candidate=this.overlappingActorId(id,to);
+    const cause=!originalKccContinuous?'SOURCE_CONTINUITY_UNVERIFIED':
+      candidate?'SHARED_ACTOR_CAPSULE_INTERSECTS':'CLEAR';
+    return {
+      approved:cause==='CLEAR',
+      source:'ACTUAL_ORIGINAL_DROP_RAPIER_KCC_FOOT_SHARED_ACTOR_CAPSULE_AUDIT',
+      cause,
+      playerSourceFootRegistered:true,
+      actorCollisionCandidate:candidate,
+      cpuFootTeleportPerformed:false,
+      sourceGeometryModified:false,
+      fullSharedWorldFallingKccProved:false,
+      productionAuthorized:false
+    };
   }
 
   public auditGroundStep(id:string,from:T21QFoot,to:T21QFoot,dt:number):T21QContactResult{
@@ -210,20 +264,24 @@ export class UndertowPhase14QSharedActorCollision{
   }
 
   private hasApproximateSameLayerOverlap(id:string,from:T21QFoot):boolean{
+    return this.overlappingActorId(id,from)!==null;
+  }
+
+  private overlappingActorId(id:string,from:T21QFoot):string|null{
     for(const [otherId,other] of this.actors){
       if(otherId===id)continue;
       if(Math.hypot(other.sourceFoot.x-from.x,other.sourceFoot.z-from.z) <
           this.cpuRadius*2-.01&&
         Math.abs(other.sourceFoot.y-from.y)<1)
-        return true;
+        return otherId;
     }
     if(this.humanSourceFoot &&
       Math.hypot(this.humanSourceFoot.x-from.x,
         this.humanSourceFoot.z-from.z)<
           this.cpuRadius+PLAYER_CHARACTER_PHYSICS.humanRadiusMeters-.01&&
       Math.abs(this.humanSourceFoot.y-from.y)<1)
-      return true;
-    return false;
+      return 'HUMAN_PLAYER_CONTROLLER';
+    return null;
   }
 
   private assertFoot(id:string,foot:T21QFoot):void{
