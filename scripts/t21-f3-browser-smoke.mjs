@@ -135,15 +135,28 @@ async function main(){
   'document.pointerLockElement===document.querySelector("#app-canvas")'),12000);
  if(!locked)reject('MOUSE_LOCK_MISSING');
  const before=await evaluate('window.__t21F3.snapshot()');
- await key('keyDown');await sleep(1250);await key('keyUp');
- const after=await evaluate('window.__t21F3.snapshot()');
+ // Headless SwiftShader can stall rendering for more than a wall-clock
+ // second. Assert at least 25 REAL simulation ticks while the trusted
+ // keyboard key remains pressed; never claim movement failure on 0 ticks.
+ await key('keyDown');
+ const after=await waitUntil(async()=>{
+  const state=await evaluate('window.__t21F3.snapshot()');
+  if(state.stopReason)reject('MOVEMENT_SAFE_STOP_'+state.stopReason);
+  return state.tick>=before.tick+25?state:false;
+ },70000);
+ await key('keyUp');
  const move=Math.hypot(...after.player.position.map((v,i)=>v-before.player.position[i]));
  if(move<.18||move>10||after.stopReason)
-  reject('REAL_KEYBOARD_PLAYER_MOVEMENT_FAILED_'+JSON.stringify({move,after}));
+  reject('REAL_KEYBOARD_PLAYER_MOVEMENT_FAILED_'+JSON.stringify({
+   move,simulatedTicks:after.tick-before.tick,after
+  }));
  await mouse('mousePressed');
- await sleep(1500);
+ const fired=await waitUntil(async()=>{
+  const state=await evaluate('window.__t21F3.snapshot()');
+  if(state.stopReason)reject('PROJECTILE_SAFE_STOP_'+state.stopReason);
+  return state.tick>=after.tick+30?state:false;
+ },70000);
  await mouse('mouseReleased');
- const fired=await evaluate('window.__t21F3.snapshot()');
  if(fired.shotsFired<=after.shotsFired||fired.stopReason)
   reject('REAL_MOUSE_PROJECTILE_OR_PHYSICS_FAILED_'+JSON.stringify({
    before:after.shotsFired,after:fired.shotsFired,reason:fired.stopReason
