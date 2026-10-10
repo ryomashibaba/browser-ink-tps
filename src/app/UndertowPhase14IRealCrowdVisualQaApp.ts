@@ -229,8 +229,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    const livePhysics=new RapierStagePhysics(DT,this.stage);
    livePhysics.step();
    this.playerPhysics=livePhysics;
-   const cameraInput={getFlatForward:(out:Vec3)=>out.set(0,0,1)}
-    as ThirdPersonCamera;
+   const cameraInput=({getFlatForward:(out:Vec3)=>out.set(0,0,1)}) as ThirdPersonCamera;
    const player=new PlayerController(app,livePhysics,this.qaInput as PlayerInput,
     cameraInput,this.ink,this.stats);
    this.player=player;
