@@ -590,6 +590,10 @@ jobs:
           T21_PHASE12J_GATE_REPORT: /tmp/t21-phase12j-original-source-eligibility-gate.json
         run: npx vitest run scripts/UndertowSpillwayPhase12NMirrorInspectionQa.test.ts
 
+      - name: T21 Phase12O source-only zoom camera geometry, mirror invariants and 124 default QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        run: npx vitest run scripts/UndertowSpillwayPhase12OOriginalZoomQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
@@ -1166,6 +1170,12 @@ jobs:
         run: |
           node scripts/t21-review-phase12n-mirror-gate.mjs --self-test
           node scripts/t21-review-phase12n-mirror-gate.mjs
+
+      - name: T21 Phase12O verify real locked-camera zoom increases original detail visibility
+        if: always()
+        run: |
+          node scripts/t21-review-phase12o-zoom-gate.mjs --self-test
+          node scripts/t21-review-phase12o-zoom-gate.mjs
 
       - name: Always upload five-view captures or explicit BLOCKED manifest
         if: always()

@@ -757,6 +757,75 @@ try {
     }
   }
 
+  // Phase12O: true original-source close-up at Y25.1..25.6, four
+  // strict opt-in Chrome PlayCanvas WebGL2 captures, BASE/WITH camera-locked.
+  // These are diagnostic extras; mandatory five-view count unchanged.
+  manifest.phase12OOriginalDetailZoomDiagnostics=[];
+  const zoomCameraBySide=new Map();
+  for(const side of ['LEFT','RIGHT']){
+    for(const variant of ['BASE','WITH']){
+      const choice=side+'_'+variant;
+      try{
+        await navigate(urlForView('CENTER_SOURCE')+'&reviewPillarZoom='+choice);
+        const state=await poll(async()=>{
+          const v=await evaluation(`(() => ({
+            side:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12OZoomSide,
+            variant:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12OZoomDetail,
+            components:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12OZoomComponents,
+            triangles:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12OZoomTriangles,
+            camera:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12OZoomCameraKey,
+            preset:document.querySelector('#app-canvas')?.dataset.t21ReviewPreset,
+            renderer:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+          }))()`);
+          if(v?.side===side&&v.variant===variant&&
+             v.components===(variant==='WITH'?'11':'7')&&
+             v.triangles===(variant==='WITH'?'244':'156')&&
+             v.camera?.startsWith(side+'|')&&
+             v.preset==='PHASE12O_PINNED_ORIGINAL_DETAIL_ZOOM_ONLY'&&
+             v.renderer==='webgl2')return v;
+          throw Error('T21_PHASE12O_SOURCE_CLOSEUP_NOT_READY '+JSON.stringify(v));
+        },25000);
+        if(zoomCameraBySide.has(side)&&zoomCameraBySide.get(side)!==state.camera)
+          throw Error('T21_PHASE12O_BASE_WITH_ZOOM_CAMERA_CHANGED_'+side);
+        zoomCameraBySide.set(side,state.camera);
+        await evaluation(`(() => {const p=document.querySelector('#t21-review-panel');if(p)p.style.display='none';return true;})()`);
+        await sleep(650);
+        const capture=await command('Page.captureScreenshot',{
+          format:'png',captureBeyondViewport:false,fromSurface:true
+        },25000);
+        const png=Buffer.from(capture.data||'','base64');
+        const valid=png.length>8000&&png.subarray(0,8).equals(
+          Buffer.from([137,80,78,71,13,10,26,10]));
+        const width=valid?png.readUInt32BE(16):0;
+        const height=valid?png.readUInt32BE(20):0;
+        if(!valid||width!==1600||height!==900)
+          throw Error('T21_PHASE12O_INVALID_REAL_PLAYCANVAS_IMAGE_'+choice);
+        const file='T21_PHASE12O_ZOOM_'+choice+'.png';
+        await writeFile(resolve(destination,file),png);
+        manifest.phase12OOriginalDetailZoomDiagnostics.push({
+          status:'CAPTURED_PENDING_HUMAN_VISUAL_QA',side,variant,
+          sourceDetailsVisible:variant==='WITH',
+          visibleOriginalComponents:Number(state.components),
+          visibleOriginalTriangles:Number(state.triangles),
+          cameraKey:state.camera,sameCameraWithinSide:true,
+          reviewTargetOriginalYMin:25.1,reviewTargetOriginalYMax:25.6,
+          originalSourceSHA256:'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046',
+          defaultSourceMeshes:124,additionalSourceMeshes:0,
+          authorizesVisualFreeze:false,authorizesGameplayOrStageActivation:false,
+          sourcePlaneNotPlayableFloor:true,gameplayAuthority:'NONE',
+          file,width,height,bytes:png.length,
+          sha256:createHash('sha256').update(png).digest('hex'),
+          renderer:state.renderer
+        });
+      }catch(error){
+        manifest.phase12OOriginalDetailZoomDiagnostics.push({
+          status:'BLOCKED',side,variant,reason:diagnostic(error),
+          authorizesVisualFreeze:false,authorizesGameplayOrStageActivation:false
+        });
+      }
+    }
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{
