@@ -675,6 +675,30 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12U original 70396-face whole-source boundary neighbor survey
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12u-whole-original-edge-neighbors.py --self-test
+          python scripts/undertow-temple01-phase12u-whole-original-edge-neighbors.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12t-original-boundary-held-neighbors.json /tmp/t21-phase12u-full-original-source-edge-neighbors.json
+
+      - name: T21 Phase12U independent 524-edge original SHA and T evidence gate
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12U_REPORT_INPUT: /tmp/t21-phase12u-full-original-source-edge-neighbors.json
+          T21_PHASE12T_REPORT_INPUT: /tmp/t21-phase12t-original-boundary-held-neighbors.json
+          T21_PHASE12U_REQUIRED: '1'
+        run: npx vitest run scripts/UndertowSpillwayPhase12UWholeOriginalBoundaryQa.test.ts
+
+      - name: Upload T21 Phase12U 70396-original-face source-only boundary matches
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12u-full-original-source-boundary-neighbors
+          path: /tmp/t21-phase12u-full-original-source-edge-neighbors.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
