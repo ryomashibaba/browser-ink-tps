@@ -114,6 +114,8 @@ interface CpuBot {
   /** T21 QA-only post-offmesh Crowd settlement counters. */
   rejoinElapsedFrames: number;
   rejoinStableFrames: number;
+  rejoinRetryCount: number;
+  rejoinPhysicalLandingFoot: Vec3;
   jumpMarker: Entity;
   jumpStartPosition: Vec3;
   jumpTargetPosition: Vec3;
@@ -273,6 +275,8 @@ export class CpuAgentSystem {
           bot.mobilityState='FIRST_DROP_REJOIN';
           bot.rejoinElapsedFrames=0;
           bot.rejoinStableFrames=0;
+          bot.rejoinRetryCount=0;
+          bot.rejoinPhysicalLandingFoot.copy(bot.position);
           this.phase14eFirstDrop!.cancel(bot.id);
           // Wait for the reused offmesh Crowd slot to settle before CPU actions.
         }
@@ -363,11 +367,25 @@ export class CpuAgentSystem {
           const collision=this.phase14eFirstDrop!.validateRejoinStep(
             bot.position,{x:nx,y:ny,z:nz},dt
           );
+          if(!collision.approved&&bot.rejoinRetryCount===0){
+            // Exactly one original-source lower-layer reseed is permitted.
+            // A recycled Recast slot may retain the previous offmesh endpoint
+            // and send a real capsule into the 1.5m-high right-low edge.
+            // Keep the ACTUAL Rapier-foot-derived visible CPU still: no
+            // teleport, no fabricated ramp, no collision bypass.
+            this.navigation.removeAgent(bot.agent);
+            bot.agent=this.navigation.addAgent(bot.rejoinPhysicalLandingFoot);
+            bot.agent.resetMoveTarget();
+            bot.rejoinStableFrames=0;
+            bot.rejoinRetryCount=1;
+            continue;
+          }
           if(!collision.approved)
             throw new Error('T21_PHASE14J_REJOIN_BLOCKED_BY_REAL_COLLIDER '+JSON.stringify({
               id:bot.id,from:[bot.position.x,bot.position.y,bot.position.z],
               to:[nx,ny,nz],collision,rejoinFrames:bot.rejoinElapsedFrames,
-              stableFrames:bot.rejoinStableFrames
+              stableFrames:bot.rejoinStableFrames,
+              originalSourceReseedAttempted:bot.rejoinRetryCount
             }));
           bot.position.set(nx,ny,nz);
           if(d<=maxStep+1e-7){
@@ -831,6 +849,8 @@ export class CpuAgentSystem {
         mobilityState: 'GROUND',
         rejoinElapsedFrames: 0,
         rejoinStableFrames: 0,
+        rejoinRetryCount: 0,
+        rejoinPhysicalLandingFoot: start.clone(),
         jumpMarker,
         jumpStartPosition: start.clone(),
         jumpTargetPosition: start.clone(),
