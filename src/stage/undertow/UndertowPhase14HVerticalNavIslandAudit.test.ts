@@ -137,7 +137,8 @@ describe('Phase14H original-source vertical Recast layer probe (DIAGNOSTIC ONLY)
        secondCrowdFoot:null as null|[number,number,number],
        closestFoot:null as null|[number,number,number],
        rawJumpMeters:0,fallFrames:0,rejoinFrame:-1,frame1Distance:-1,
-       frame2Distance:-1
+       frame2Distance:-1,settledAtTick:-1,stableTicks:0,settleFrames:0,
+       timeline:[] as Array<{tick:number;y:number;distance:number}>
      };
    });
    for(let frame=0;frame<750;frame++){
@@ -168,14 +169,21 @@ describe('Phase14H original-source vertical Recast layer probe (DIAGNOSTIC ONLY)
        }else if(a.status==='REJOIN'){
          const p=a.agent!.position(),foot=a.physicalFoot!;
          const shifted=Math.hypot(p.x-foot[0],p.y-foot[1],p.z-foot[2]);
-         if(a.frame1Distance<0){
+         a.settleFrames++;
+         a.timeline.push({tick:a.settleFrames,y:p.y,distance:shifted});
+         if(a.settleFrames===1){
            a.firstCrowdFoot=three(p);
            a.frame1Distance=shifted;
-         }else{
+         }
+         if(a.settleFrames===2){
            a.secondCrowdFoot=three(p);
            a.frame2Distance=shifted;
-           a.status='DONE';
          }
+         const sameOriginalHeight=Math.abs(p.y-foot[1])<=.35&&shifted<=.65;
+         a.stableTicks=sameOriginalHeight?a.stableTicks+1:0;
+         if(a.stableTicks===3&&a.settledAtTick<0)
+           a.settledAtTick=a.settleFrames;
+         if(a.settleFrames>=40)a.status='DONE';
        }
      }
      if(actors.every(a=>a.status==='DONE'))break;
@@ -193,9 +201,11 @@ describe('Phase14H original-source vertical Recast layer probe (DIAGNOSTIC ONLY)
    console.log('T21_PHASE14H_REAL_OFFMESH_CROWD_SLOT_REJOIN_AUDIT',JSON.stringify({
      actors:actors.map(({side,rawJumpMeters,fallFrames,rejoinFrame,
        physicalFoot,closestFoot,initialFoot,firstCrowdFoot,secondCrowdFoot,
-       frame1Distance,frame2Distance})=>({side,rawJumpMeters,fallFrames,
-         rejoinFrame,physicalFoot,closestFoot,initialFoot,firstCrowdFoot,
-         secondCrowdFoot,frame1Distance,frame2Distance})),
+       frame1Distance,frame2Distance,settledAtTick,stableTicks,timeline})=>({
+         side,rawJumpMeters,fallFrames,rejoinFrame,physicalFoot,closestFoot,
+         initialFoot,firstCrowdFoot,secondCrowdFoot,frame1Distance,
+         frame2Distance,settledAtTick,stableTicks,timeline
+       })),
      independentNoPriorOffmeshCandidatesStable:true,
      sourceGeometryChanged:false,productionAuthorized:false,
      completeCpuRuntimeValidated:false
