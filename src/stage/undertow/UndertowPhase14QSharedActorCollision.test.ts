@@ -97,6 +97,52 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.actors.cpuColliderCount).toBe(0);
   expect(freeze.activationReady).toBe(false);
  });
+ it('real HUMAN production PlayerController KCC must not walk through a stationary CPU collider in its own Rapier stage world',()=>{
+  // Proven original masked location, not an imaginary obstacle. No manual
+  // player teleport after the first authentic Rapier ground settlement.
+  const w=world();
+  const cpuFoot={x:w.humanFoot.x,y:w.humanFoot.y,
+    z:w.humanFoot.z+.78};
+  const surface=w.ink.sampleWorld(new Vec3(
+    cpuFoot.x,w.humanFoot.y+.05,cpuFoot.z),
+    .34,SurfaceFlags.Paintable);
+  expect(surface,'CPU contact fixture must belong to original landing paint surface')
+    .not.toBeNull();
+  w.actors.syncRealCpuFoot('B4',cpuFoot);
+  const input=(w.player as unknown as {input:PlayerInput}).input as unknown as {
+    moveY:number
+  };
+  input.moveY=1;
+  const before=w.player.getPosition();
+  let minimumDistance=Number.POSITIVE_INFINITY;
+  for(let frame=0;frame<45;frame++){
+    w.player.computeFixed(DT);
+    w.physics.step();
+    w.player.syncAfterPhysics(DT);
+    const p=w.player.getPosition();
+    minimumDistance=Math.min(minimumDistance,
+      Math.hypot(p.x-cpuFoot.x,p.z-cpuFoot.z));
+  }
+  const after=w.player.getPosition();
+  const playerTravel=after.distance(before);
+  console.log('T21_PHASE14Q_ACTUAL_PLAYER_KCC_BLOCKED_BY_REAL_CPU_PROXY',JSON.stringify({
+    playerTravelMeters:playerTravel,
+    closestPlayerCpuHorizontalMeters:minimumDistance,
+    cpuOriginalFoot:cpuFoot,
+    humanFirst:[before.x,before.y,before.z],
+    humanFinal:[after.x,after.y,after.z],
+    cpuCapsuleCount:w.actors.cpuColliderCount,
+    originalGeometryUnchanged:true,
+    cpuRenderMovementFabricated:false,
+    fullCpuCrowdCollisionCouplingApproved:false
+  }));
+  expect(w.stats.playerGrounded).toBe(true);
+  expect(minimumDistance).toBeGreaterThan(.54);
+  expect(playerTravel).toBeGreaterThan(.01);
+  expect(playerTravel).toBeLessThan(.65);
+  expect(w.actors.cpuColliderCount).toBe(1);
+  w.actors.dispose();
+ });
  it('fails closed on initial actual human/CPU overlap, even if a Rapier KCC does not depenetrate the stationary capsule',()=>{
   const w=world();
   const before={x:w.humanFoot.x+.04,y:w.humanFoot.y,z:w.humanFoot.z};
