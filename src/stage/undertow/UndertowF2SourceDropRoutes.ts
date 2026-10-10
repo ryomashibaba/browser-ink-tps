@@ -68,8 +68,19 @@ export function planT21F2SourceDropRoutes(
        .filter(r=>r.linkId.includes(actor.side))
        .map(r=>distance(r.originalLanding,link.end)));
      const crowding=Math.max(0,1.2-nearestLanding)*20;
+     // Do not send a left-hand high spawn through a right-hand lane or
+     // vice versa when real, already-proven source links exist on the
+     // corresponding side. Crossing two authentic Crowd lanes causes
+     // physical high-lip traffic deadlocks even with distinct endpoints.
+     const centerX=actor.side==='positive-z'?
+       stage.metadata.teamASpawn[0]:stage.metadata.teamBSpawn[0];
+     const lateralStart=actor.foot[0]-centerX;
+     const lateralLink=link.start[0]-centerX;
+     const wrongSide=Math.abs(lateralStart)>.4&&
+       Math.abs(lateralLink)>.4&&
+       Math.sign(lateralStart)!==Math.sign(lateralLink);
      const score=distance(actor.foot,link.start)+crowding+
-        (used.has(link.id)?1000:0);
+        (wrongSide?50:0)+(used.has(link.id)?1000:0);
      reachable.push({link,score});
    }
    reachable.sort((a,b)=>a.score-b.score||
