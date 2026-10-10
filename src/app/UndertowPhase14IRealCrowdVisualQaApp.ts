@@ -47,6 +47,8 @@ type Snapshot={
  paintRequests:number;shootingRequests:number;tacticalRetargets:number;
  stageId:string;activationAuthorized:false;humanVisualFreezeApproved:false;
  sourceGeometryPromoted:false;
+ completedOriginalDropIds:readonly string[];
+ completedOriginalDropRecords:readonly {id:string;frame:number;footY:number}[];
  sourceContext:T21Phase14KVisualManifest|null;
  cameraAudit:null|{mode:'SOURCE_RAPIER_CAMERA_QUERY';position:[number,number,number];focus:[number,number,number];blockedBy:string|null};
 };
@@ -91,6 +93,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
  private readonly selected:QaBot[];
  private readonly cpu:CpuAgentSystem;
  private readonly transitions:Transition[]=[];
+ private readonly completedOriginalDropRecords=new Map<string,{id:string;frame:number;footY:number}>();
  private readonly lastPositions=new Map<string,Vec3>();
  private readonly maxStep=new Map<string,number>();
  private frame=0;
@@ -242,11 +245,15 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   // No fake frame interpolation or offmesh interception: real CpuAgentSystem,
   // real Recast crowd update, real Rapier KCC when actual link triggers.
   const previous=this.selected.map(b=>b.position.clone());
+  const previousStates=this.selected.map(b=>b.mobilityState);
   this.cpu.fixedUpdate(DT,true,Team.A,new Vec3(0,7.5,0),false);
   this.cpu.render(1);
   this.frame++;
   if(this.phase14k)this.followPhase14KCamera();
   for(const [i,bot] of this.selected.entries()){
+   if(previousStates[i]==='FIRST_DROP_REJOIN'&&bot.mobilityState==='GROUND'&&
+     !this.completedOriginalDropRecords.has(bot.id))
+    this.completedOriginalDropRecords.set(bot.id,{id:bot.id,frame:this.frame,footY:bot.position.y});
    const d=bot.position.distance(previous[i]!);
    this.maxStep.set(bot.id,Math.max(this.maxStep.get(bot.id)??0,d));
    if(d>.6)throw Error('T21_PHASE14I_DISCONTINUOUS_VISIBLE_CPU_'+bot.id+
@@ -326,6 +333,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    tacticalRetargets:this.stats.cpuTacticalRetargets,
    stageId:this.stage.metadata.id,activationAuthorized:false,
    humanVisualFreezeApproved:false,sourceGeometryPromoted:false,
+   completedOriginalDropIds:[...this.completedOriginalDropRecords.keys()],
+   completedOriginalDropRecords:[...this.completedOriginalDropRecords.values()],
    sourceContext:this.sourceContext,
    cameraAudit:this.phase14k?(()=>{
      const pos=this.camera.getPosition();
