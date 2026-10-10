@@ -60,7 +60,7 @@ function neighbors(faces:Face[]){
       const g=geometry(A).normal,h=geometry(B).normal;
       const dot=g[0]*h[0]+g[1]*h[1]+g[2]*h[2];
       pairs.push({faces:[A.id,B.id],sharedOriginalOBJEdge:e,
-        oppositeOriginalWinding:left.get(ek)!==-right.get(ek)!,normalDot:dot});
+        oppositeOriginalWinding:left.get(ek)===-(right.get(ek)!),normalDot:dot});
     }
   }
   return pairs.sort((a,b)=>a.faces[0]-b.faces[0]);
