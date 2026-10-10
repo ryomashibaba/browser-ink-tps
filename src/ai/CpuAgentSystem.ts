@@ -56,6 +56,19 @@ export type CpuKitRequest =
       specialId: SpecialWeaponId;
     };
 
+/** Opt-in T21 only. A rejected physical step NEVER becomes an avatar pose
+ * or an implicit Crowd teleport. The caller must handle the fail-closed
+ * rejection before further simulation. T20 passes no authority. */
+export interface CpuSharedGroundStepAuthority {
+  syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
+  auditGroundStep(
+    id:string,
+    from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,
+    dt:number
+  ):Readonly<{approved:boolean;cause:string;colliderOwnerIds:readonly string[]}>;
+}
+
 export interface CpuFireRequest {
   sourceId: string;
   team: Team.A | Team.B;
@@ -151,13 +164,18 @@ export class CpuAgentSystem {
     private readonly stats: PerformanceStats,
     private readonly stage: StageDefinition,
     humanTeam: Team.A | Team.B,
-    private readonly phase14eFirstDrop?: UndertowPhase14ECpuAdapter
+    private readonly phase14eFirstDrop?: UndertowPhase14ECpuAdapter,
+    private readonly phase14qGroundCollision?: CpuSharedGroundStepAuthority
   ) {
     // T20 remains bit-for-bit on the old CPU update path unless an explicit
     // T21-D QA-only runtime adapter is injected. Any other stage FAILS closed.
     if (phase14eFirstDrop &&
         stage.metadata.id !== 'undertow-t21d-partial-connectivity-qa')
       throw new Error('T21_PHASE14E_PRODUCTION_CPU_ADAPTER_FORBIDDEN');
+    if(phase14qGroundCollision &&
+      (!phase14eFirstDrop ||
+       stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
+      throw Error('T21_PHASE14Q_SHARED_COLLISION_PRODUCTION_FORBIDDEN');
     this.director = new CpuTacticalDirector(gameplayInk, stage);
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
@@ -240,6 +258,16 @@ export class CpuAgentSystem {
     }
 
     this.activeLastTick = true;
+
+    // T21 QA-only: register actual source-authoritative CPU feet in the
+    // PlayerController's original-solid Rapier world before any Crowd step.
+    // Observing feet is not teleport authorization or collision resolution.
+    if(this.phase14qGroundCollision){
+      for(const bot of this.bots){
+        if(bot.lifeState==='ACTIVE')
+          this.phase14qGroundCollision.syncRealCpuFoot(bot.id,bot.position);
+      }
+    }
 
     for (const bot of this.bots) {
       if (bot.lifeState === 'SPLATTED') {
@@ -393,7 +421,22 @@ export class CpuAgentSystem {
               stableFrames:bot.rejoinStableFrames,
               originalSourceReseedAttempted:bot.rejoinRetryCount
             }));
+          if(this.phase14qGroundCollision){
+            const shared=this.phase14qGroundCollision.auditGroundStep(
+              bot.id,bot.position,{x:nx,y:ny,z:nz},dt
+            );
+            if(!shared.approved){
+              bot.agent?.resetMoveTarget();
+              throw Error('T21_PHASE14Q_REAL_REJOIN_COLLISION_BLOCKED '+JSON.stringify({
+                id:bot.id,sourceFoot:[bot.position.x,bot.position.y,bot.position.z],
+                crowdCandidate:[nx,ny,nz],cause:shared.cause,
+                colliders:shared.colliderOwnerIds,
+                noCpuPoseMutation:true,noRecastTeleport:true
+              }));
+            }
+          }
           bot.position.set(nx,ny,nz);
+          this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
           if(d<=maxStep+1e-7){
             bot.mobilityState='GROUND';
             bot.thinkRemaining=Math.min(bot.thinkRemaining,.16);
@@ -428,7 +471,26 @@ export class CpuAgentSystem {
         bot.agent=null;
         throw new Error('T21_PHASE14G_UNSUPPORTED_CROWD_REJOIN_DISCONTINUITY');
       }
+      if(this.phase14qGroundCollision){
+        const shared=this.phase14qGroundCollision.auditGroundStep(
+          bot.id,bot.position,p,dt
+        );
+        if(!shared.approved){
+          // This is not a silent movement correction: the CPU foot is
+          // unchanged, the Crowd target is cancelled, and the current
+          // QA sequence must stop. A later source-backed Crowd/KCC
+          // reconciliation algorithm must be approved separately.
+          bot.agent.resetMoveTarget();
+          throw Error('T21_PHASE14Q_REAL_CROWD_COLLISION_BLOCKED '+JSON.stringify({
+            id:bot.id,sourceFoot:[bot.position.x,bot.position.y,bot.position.z],
+            crowdCandidate:[p.x,p.y,p.z],cause:shared.cause,
+            colliders:shared.colliderOwnerIds,
+            noCpuPoseMutation:true,noRecastTeleport:true
+          }));
+        }
+      }
       bot.position.set(p.x, p.y, p.z);
+      this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
 
       bot.paintRemaining -= dt;
       if (bot.paintRemaining <= 0) {
