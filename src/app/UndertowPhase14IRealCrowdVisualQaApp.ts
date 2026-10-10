@@ -264,8 +264,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   * A hit is reported; no invented collision or gameplay camera is enabled.
   */
  private followPhase14KCamera(){
-  const preferred=new URL(location.href).searchParams.get('qaSide')==='negative-z'?1:0;
-  const target=this.selected[preferred]!.position;
+  const preferredId=new URL(location.href).searchParams.get('qaSide')==='negative-z'?'B1':'A1';
+  const target=this.selected.find(bot=>bot.id===preferredId)!.position;
   const focus=new Vec3(target.x,target.y+.76,target.z);
   const desired=new Vec3(target.x+9,target.y+10,target.z+16);
   const blocker=this.cameraPhysics!.castStageSegment(focus,desired,'camera');
@@ -338,9 +338,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    sourceContext:this.sourceContext,
    cameraAudit:this.phase14k?(()=>{
      const pos=this.camera.getPosition();
-     const selected=this.selected[
-       new URL(location.href).searchParams.get('qaSide')==='negative-z'?1:0
-     ]!.position;
+     const preferredId=new URL(location.href).searchParams.get('qaSide')==='negative-z'?'B1':'A1';
+     const selected=this.selected.find(bot=>bot.id===preferredId)!.position;
      const focus=new Vec3(selected.x,selected.y+.76,selected.z);
      return {
        mode:'SOURCE_RAPIER_CAMERA_QUERY' as const,
