@@ -376,10 +376,34 @@ export class CpuAgentSystem {
         if(!this.phase14eFirstDrop||!bot.agent)
           throw new Error('T21_PHASE14H_REJOIN_AGENT_MISSING');
         bot.rejoinElapsedFrames++;
+        // F2 can meet an old Detour offmesh Crowd slot that keeps
+        // replaying the upper-layer animation after the actual Rapier
+        // KCC has landed on the original lower slab. A bounded retry
+        // rebuilds ONLY that stale steering agent at the still-approved
+        // physical foot. This never moves the CPU, KCC, scene, or stage.
+        if(this.phase14qF2RecoverableSteps&&
+           bot.rejoinElapsedFrames>50&&
+           bot.rejoinStableFrames<3&&
+           bot.rejoinRetryCount<2){
+          const native=this.navigation.closestPoint(bot.position);
+          if(Math.hypot(native.x-bot.position.x,
+             native.y-bot.position.y,native.z-bot.position.z)>.20)
+            throw Error('T21_F2_REJOIN_PHYSICAL_FOOT_NOT_ON_SOURCE_NAV');
+          this.navigation.removeAgent(bot.agent);
+          bot.agent=this.navigation.addAgent(bot.position);
+          bot.agent.resetMoveTarget();
+          bot.rejoinRetryCount++;
+          bot.rejoinElapsedFrames=0;
+          continue;
+        }
         if(bot.rejoinElapsedFrames>(this.phase14qF2RecoverableSteps?180:45)){
           this.navigation.removeAgent(bot.agent);
           bot.agent=null;
-          throw new Error('T21_PHASE14H_REJOIN_STABILITY_TIMEOUT');
+          throw new Error('T21_PHASE14H_REJOIN_STABILITY_TIMEOUT '+JSON.stringify({
+            botId:bot.id,rejoinRetries:bot.rejoinRetryCount,
+            physicalFoot:[bot.position.x,bot.position.y,bot.position.z],
+            sourcePhysicalFootPreserved:true
+          }));
         }
         continue;
       }
