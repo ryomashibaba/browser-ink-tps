@@ -74,7 +74,7 @@ export class UndertowPhase14ECpuHandoff implements UndertowPhase14ECpuAdapter{
     qaStage.navigationLinks?.length!==26)
     throw Error('T21_PHASE14E_NOT_OPTED_IN_TO_INACTIVE_QA_STAGE');
   this.eligible=sides.map(side=>{
-   const link=qaStage.navigationLinks.find(l=>l.id==='first-drop-'+side+'-3');
+   const link=qaStage.navigationLinks?.find(l=>l.id==='first-drop-'+side+'-3');
    const solid=qaStage.solids.find(s=>s.id==='UndertowT21D:first-drop-landing-'+side);
    if(!link||link.bidirectional!==false||!solid?.footprint||
      link.start[1]!==7.5||link.end[1]!==3)
