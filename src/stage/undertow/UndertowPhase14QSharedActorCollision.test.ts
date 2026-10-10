@@ -159,6 +159,36 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.actors.cpuColliderCount).toBe(1);
   w.actors.dispose();
  });
+ it('match reset removes every CPU proxy but retains the actual PlayerController and static original collision geometry',()=>{
+  const w=world();
+  const a={x:w.humanFoot.x+2,y:w.humanFoot.y,z:w.humanFoot.z};
+  const b={x:w.humanFoot.x-2,y:w.humanFoot.y,z:w.humanFoot.z};
+  w.actors.syncRealCpuFoot('A1',a);
+  w.actors.syncRealCpuFoot('B4',b);
+  expect(w.actors.cpuColliderCount).toBe(2);
+  const originalHumanPosition=w.player.getPosition().clone();
+  const originalProbe=w.physics.castStageSegment(
+    new Vec3(w.humanFoot.x,w.humanFoot.y+1,w.humanFoot.z),
+    new Vec3(w.humanFoot.x,w.humanFoot.y-1,w.humanFoot.z),'ink-projectile');
+  expect(originalProbe?.solidId)
+    .toBe('UndertowT21D:first-drop-landing-negative-z');
+  w.actors.resetActors();
+  expect(w.actors.cpuColliderCount).toBe(0);
+  expect(w.player.getPosition().distance(originalHumanPosition)).toBeLessThan(1e-7);
+  expect(w.physics.castStageSegment(
+    new Vec3(w.humanFoot.x,w.humanFoot.y+1,w.humanFoot.z),
+    new Vec3(w.humanFoot.x,w.humanFoot.y-1,w.humanFoot.z),'ink-projectile')
+    ?.solidId).toBe(originalProbe?.solidId);
+  w.actors.syncRealCpuFoot('B1',a);
+  expect(()=>w.actors.auditGroundStep('B1',a,a,DT))
+    .toThrow('T21_PHASE14Q_REAL_HUMAN_FOOT_NOT_SYNCHRONIZED');
+  w.actors.syncActualHumanFoot(w.humanFoot);
+  const audited=w.actors.auditGroundStep('B1',a,a,DT);
+  expect(audited.realHumanCapsulePresent).toBe(true);
+  expect(audited.originalSourceCollidersIntact).toBe(true);
+  w.actors.dispose();
+  expect(w.actors.cpuColliderCount).toBe(0);
+ });
  it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stages',()=>{
   const w=world();
   const at={x:w.humanFoot.x+2,y:w.humanFoot.y,z:w.humanFoot.z};
