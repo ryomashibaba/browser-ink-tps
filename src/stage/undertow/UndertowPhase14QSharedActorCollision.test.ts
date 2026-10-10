@@ -92,7 +92,11 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(result.source).toBe('ORIGINAL_25_SOLID_RAPIER_SHARED_ACTOR_WORLD');
   expect(result.approved).toBe(false);
   expect(result.cause).toBe('DYNAMIC_ACTOR_OR_STAGE_BLOCKER');
-  expect(result.horizontalDisagreementMeters).toBeGreaterThan(.022);
+  // The actual Rapier HUMAN collider was contacted even though the
+  // computed displacement differed by only 1.3cm: small tolerance MUST
+  // NOT override positive actor-collider evidence.
+  expect(result.horizontalDisagreementMeters).toBeGreaterThan(.005);
+  expect(result.colliderOwnerIds).toContain('REAL_PLAYER_OR_UNREGISTERED_DYNAMIC_ACTOR');
   w.actors.dispose();
   expect(w.actors.cpuColliderCount).toBe(0);
   expect(freeze.activationReady).toBe(false);
