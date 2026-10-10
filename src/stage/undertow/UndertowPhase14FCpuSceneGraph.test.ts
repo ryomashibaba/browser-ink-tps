@@ -213,6 +213,39 @@ describe('T21 Phase14F opt-in CpuAgentSystem / PlayCanvas scene-graph integratio
     expect(scene.qaStage.navigationLinks).toHaveLength(26);
   });
 
+  it('preserves lower-layer settling across pause and rejects a persistent unsupported Crowd height', () => {
+    const scene = createScene();
+    const bot = scene.selected[0]!;
+    startOriginalFall(scene, bot, 'positive-z');
+    for(let i=0;i<120&&bot.mobilityState==='FIRST_DROP_FALL';i++)tick(scene);
+    expect(bot.mobilityState).toBe('FIRST_DROP_REJOIN');
+    expect(bot.agent).not.toBeNull();
+    expect(scene.adapter.activeCount).toBe(0);
+    const physicalFoot=bot.position.clone();
+    tick(scene,false);
+    expect(bot.mobilityState).toBe('FIRST_DROP_REJOIN');
+    expect(bot.agent).not.toBeNull();
+    expect(bot.position.distance(physicalFoot)).toBeLessThan(1e-6);
+    // Negative-path fixture: Crowd is stuck above the original landing.
+    // The QA runtime must never move the visible CPU or enable combat.
+    const frozenPosition={x:bot.position.x,y:bot.position.y+3,z:bot.position.z};
+    vi.spyOn(bot.agent!, 'position').mockImplementation(() => frozenPosition);
+    for(let i=0;i<45;i++){
+      tick(scene);
+      expect(bot.mobilityState).toBe('FIRST_DROP_REJOIN');
+      expect(bot.position.distance(physicalFoot)).toBeLessThan(1e-6);
+    }
+    expect(() => tick(scene)).toThrow('T21_PHASE14H_REJOIN_STABILITY_TIMEOUT');
+    expect(bot.agent).toBeNull();
+    expect(bot.position.distance(physicalFoot)).toBeLessThan(1e-6);
+    expect(scene.stats.cpuPaintRequests).toBe(0);
+    expect(scene.stats.cpuShots).toBe(0);
+    scene.cpu.reset(Team.A);
+    expect(scene.adapter.activeCount).toBe(0);
+    expect(freeze.activationReady).toBe(false);
+    expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
+  });
+
   it('releases a falling CPU on SPLAT, rejects non-60Hz physics, preserves frozen authority', () => {
     const scene = createScene();
     const bot = scene.selected[0]!;
