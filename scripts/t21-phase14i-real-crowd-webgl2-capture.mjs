@@ -5,6 +5,7 @@
  */
 import {spawn, execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {inflateSync} from 'node:zlib';
 import {mkdirSync, writeFileSync, openSync, closeSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
@@ -48,6 +49,66 @@ function verifyPng(bytes){
     bytes.readUInt32BE(16)!==1600||bytes.readUInt32BE(20)!==900)
    fail('REAL_BROWSER_PNG_INVALID');
 }
+/** Actual Chrome PNG framebuffer: lossless scanline decoding, no mocked pixels.
+ * Samples the CPU capsule's cyan/magenta pixels OUTSIDE the top-left HUD.
+ * Rejects a blank review canvas, a frozen colored dot, and HUD-only changes.
+ */
+function measureCpuChromaticEvidence(png,side){
+ verifyPng(png);
+ let offset=8,width=0,height=0,channels=0,ended=false;
+ const idat=[];
+ while(offset+12<=png.length){
+  const len=png.readUInt32BE(offset),type=png.toString('ascii',offset+4,offset+8);
+  if(len>30_000_000||offset+12+len>png.length)fail('CORRUPT_GPU_PNG_CHUNK');
+  const piece=png.subarray(offset+8,offset+8+len);
+  if(type==='IHDR'){
+   width=piece.readUInt32BE(0);height=piece.readUInt32BE(4);
+   channels=piece[9]===2?3:piece[9]===6?4:0;
+   if(piece[8]!==8||piece[12]!==0||!channels)fail('UNSUPPORTED_GPU_PNG_MODE');
+  }else if(type==='IDAT')idat.push(piece);
+  else if(type==='IEND'){ended=true;break;}
+  offset+=12+len;
+ }
+ if(!ended||idat.length===0||width!==1600||height!==900)
+  fail('INCOMPLETE_GPU_PNG_DATA');
+ const raw=inflateSync(Buffer.concat(idat),{maxOutputLength:20_000_000});
+ const stride=width*channels;
+ if(raw.length!==height*(stride+1))fail('GPU_PNG_SCANLINE_SIZE_DRIFT');
+ const pixels=new Uint8Array(stride*height);
+ let n=0,sumX=0,sumY=0;
+ for(let y=0;y<height;y++){
+  const filter=raw[y*(stride+1)];
+  if(filter>4)fail('UNSUPPORTED_GPU_PNG_FILTER');
+  const row=y*stride,scan=y*(stride+1)+1;
+  for(let i=0;i<stride;i++){
+   const a=i>=channels?pixels[row+i-channels]:0;
+   const b=y>0?pixels[row-stride+i]:0;
+   const c=y>0&&i>=channels?pixels[row-stride+i-channels]:0;
+   let p=0;
+   if(filter===1)p=a;
+   else if(filter===2)p=b;
+   else if(filter===3)p=Math.floor((a+b)/2);
+   else if(filter===4){
+    const val=a+b-c,pa=Math.abs(val-a),pb=Math.abs(val-b),pc=Math.abs(val-c);
+    p=pa<=pb&&pa<=pc?a:pb<=pc?b:c;
+   }
+   pixels[row+i]=(raw[scan+i]+p)&255;
+  }
+  // Mask out UI overlay (top-left) and edges. Sample 1px every 4px.
+  if(y<80||y>=850||y%4!==1)continue;
+  for(let x=200;x<1550;x+=4){
+   const idx=row+x*channels;
+   const r=pixels[idx],g=pixels[idx+1],b=pixels[idx+2];
+   const visible=side==='positive-z'
+    ?g>105&&b>130&&g>r*1.5&&b>r*1.5
+    :r>120&&b>90&&r>g*1.8&&b>g*1.7;
+   if(visible){n++;sumX+=x;sumY+=y;}
+  }
+ }
+ if(n<75)fail('CPU_NOT_VISIBLE_IN_REAL_GPU_PNG_'+side+'_PIXELS_'+n);
+ return {sampledCpuPixels:n,centerX:sumX/n,centerY:sumY/n,
+  actualFramebufferColor:side==='positive-z'?'cyan':'magenta'};
+}
 async function screenshot(side,tag,state){
  if(state?.phase!=='14I'||state.mode!=='REAL_RECAST_CROWD_UNFORCED'||
     state.renderer!=='webgl2'||state.activationAuthorized!==false||
@@ -63,13 +124,14 @@ async function screenshot(side,tag,state){
  },30000);
  const bytes=Buffer.from(shot.data||'','base64');
  verifyPng(bytes);
+ const cpuOptics=measureCpuChromaticEvidence(bytes,side);
  const name='T21_PHASE14I_'+side+'_'+tag+'_F'+state.frame+'.png';
  writeFileSync(resolve(dir,name),bytes);
  manifest.screenshotData.push({
   side,tag,frame:state.frame,file:name,
   sha256:createHash('sha256').update(bytes).digest('hex'),
   byteCount:bytes.length,physicalBodies:state.activeRapierBodies,
-  cpu:state.cpu,transitions:state.transitions,
+  cpu:state.cpu,transitions:state.transitions,cpuOptics,
   realUnforcedRecastCrowd:true,realWebGL2Screenshot:true,
   humanVisualApproval:false
  });
@@ -171,6 +233,15 @@ async function run(){
   shots.push(await screenshot(side,'5_TACTICAL_AI_RESUMED',resumed));
   if(new Set(shots.map(x=>createHash('sha256').update(x).digest('hex'))).size!==6)
     fail('REAL_CHROME_FRAMES_IDENTICAL_'+side);
+  const views=manifest.screenshotData.filter(e=>e.side===side);
+  const top=views.find(e=>e.tag==='0_CROWD_START')?.cpuOptics;
+  const mid=views.find(e=>e.tag==='2_PHYSICAL_FALL')?.cpuOptics;
+  const bottom=views.find(e=>e.tag==='3_REJOIN_QUARANTINE')?.cpuOptics;
+  if(!top||!mid||!bottom||!(mid.centerY-top.centerY>24)||
+     !(bottom.centerY-mid.centerY>55))
+    fail('REAL_CHROME_CPU_COLORED_MOTION_NOT_PROVEN_'+side+'_SPANS_'+
+     JSON.stringify({top,mid,bottom}));
+
   const evidence={side,id,triggerFrame:events[0].frame,rawStepMeters:events[0].rawStepMeters,
     frames:{trigger:trigger.frame,physical:falling.frame,rejoin:rejoin.frame,
       ground:ground.frame,resume:resumed.frame},physicalFootY:b(rejoin).foot[1],
@@ -190,6 +261,8 @@ async function run(){
 if(process.argv.includes('--self-test')){
  let rejected=false;try{verifyPng(Buffer.from('NOT_A_PNG'));}catch{rejected=true;}
  if(!rejected)fail('NEGATIVE_PNG_FALSE_PASS');
+ rejected=false;try{measureCpuChromaticEvidence(Buffer.from('BAD'),'positive-z');}catch{rejected=true;}
+ if(!rejected)fail('NEGATIVE_PIXEL_FALSE_PASS');
  console.log('PHASE14I_CAPTURE_NEGATIVE_SELFTEST_PASS');process.exit(0);
 }
 try{await run();}catch(e){manifest.error=err(e);console.error(e);process.exitCode=1;}
