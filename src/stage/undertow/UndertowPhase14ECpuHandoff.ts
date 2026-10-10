@@ -95,10 +95,17 @@ export class UndertowPhase14ECpuHandoff implements UndertowPhase14ECpuAdapter{
   if(this.active.has(id))return false;
   const frame=auditPhase14CrowdFrame(from,to,dt);
   if(!frame.suspectedInstantTransition||to.y>=from.y-.1)return false;
-  const match=this.eligible.find(e=>
-    Math.abs(from.y-e.start.y)<1.5&&
-    horizontal(from,e.start)<5&&horizontal(to,e.end)<9
-  );
+  // Crowd's NavMesh-snapped off-mesh position need not equal the source
+  // link's nominal raster-cell center. The ONLY permitted match is a
+  // radius-supported ORIGINAL landing within 2.5m of the live pre-jump foot;
+  // this is stricter than trusting a broad off-mesh endpoint distance.
+  const match=this.eligible.find(e=>{
+    if(Math.abs(from.y-e.start.y)>=1.5||
+      Math.sign(from.z)!==Math.sign(e.end.z))return false;
+    try{
+      return horizontal(from,nearestT21SourceSupportedLanding(e.solid,from))<=2.5;
+    }catch{return false;}
+  });
   if(!match)return false;
   // Original, unchanged landing footprint + actual collision KCC.
   const target=nearestT21SourceSupportedLanding(match.solid,from);
