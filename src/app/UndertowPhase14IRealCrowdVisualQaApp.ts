@@ -30,6 +30,7 @@ import type {PlayerInput} from '../input/PlayerInput';
 import type {ThirdPersonCamera} from '../camera/ThirdPersonCamera';
 import type {PaintRequest} from '../ink/PaintCoordinator';
 import type {CpuFireRequest} from '../ai/CpuAgentSystem';
+import {auditPhase14PActorSeparation,type Phase14PActorSeparationAudit} from '../stage/undertow/UndertowPhase14PActorSeparationAudit';
 import {auditPhase14CrowdFrame} from '../stage/undertow/UndertowPhase14CrowdMotionAudit';
 import {buildPhase14KSourceVisualLayer,type T21Phase14KVisualManifest} from './UndertowPhase14KSourceStageLayer';
 import {RapierStagePhysics} from '../physics/RapierStagePhysics';
@@ -69,6 +70,7 @@ type Snapshot={
  originalSourcePaintRequests:number;
  actualCpuProjectileHits:number;
  gameplayScoresUnapproved:true;sharedDynamicColliderWorld:false;
+ actorSeparationAudit:Phase14PActorSeparationAudit|null;
 };
 function material(rgb:[number,number,number]){
  const m=new StandardMaterial();
@@ -469,6 +471,13 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    actualCpuProjectileHits:this.stats.cpuPlayerHits,
    gameplayScoresUnapproved:true,
    sharedDynamicColliderWorld:false,
+   actorSeparationAudit:this.player?(()=>{
+    const p=this.player!.getPosition();
+    return auditPhase14PActorSeparation(
+     [p.x,p.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,p.z],
+     this.selected.map(b=>({id:b.id,foot:coords(b.position)}))
+    );
+   })():null,
    cameraAudit:this.phase14k?(()=>{
      const pos=this.camera.getPosition();
      const preferredId=new URL(location.href).searchParams.get('qaSide')==='negative-z'?'B1':'A1';
