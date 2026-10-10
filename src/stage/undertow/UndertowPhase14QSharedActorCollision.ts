@@ -19,6 +19,7 @@ export type T21QContactResult=Readonly<{
   verticalDisagreementMeters:number;
   colliderOwnerIds:readonly string[];
   realHumanCapsulePresent:boolean;
+  proposedActorCapsuleOverlap:boolean;
   originalSourceCollidersIntact:true;
   cpuVisualTeleportPerformed:false;
   originalNavAuthorityOverridden:false;
@@ -163,11 +164,16 @@ export class UndertowPhase14QSharedActorCollision{
     // condition; KCC on already interpenetrating bodies cannot certify
     // collision resolution merely by returning an unchanged small step.
     const actorOverlaps=this.hasApproximateSameLayerOverlap(id,from);
+    // M3: a candidate ending INSIDE a real HUMAN/CPU capsule must never
+    // be committed simply because Rapier returned a movement shorter
+    // than the old source-collider tolerance. Validate the FINAL physical
+    // footprint as well as the origin and swept KCC contact.
+    const destinationOverlaps=this.hasApproximateSameLayerOverlap(id,to);
     const cause=actorOverlaps?'UNSUPPORTED_INITIAL_OVERLAP':
-      clear?'CLEAR':'DYNAMIC_ACTOR_OR_STAGE_BLOCKER';
+      clear&&!destinationOverlaps?'CLEAR':'DYNAMIC_ACTOR_OR_STAGE_BLOCKER';
     return {
       source:'ORIGINAL_25_SOLID_RAPIER_SHARED_ACTOR_WORLD',
-      approved:clear&&!actorOverlaps,cause,
+      approved:clear&&!actorOverlaps&&!destinationOverlaps,cause,
       requestedMeters:wanted,
       actualMeters:Math.hypot(movement.x,movement.y,movement.z),
       horizontalDisagreementMeters:errXZ,
@@ -175,6 +181,7 @@ export class UndertowPhase14QSharedActorCollision{
       colliderOwnerIds:collisionOwners,
       realHumanCapsulePresent:this.humanSourceFoot!==null&&
         this.physics.world.bodies.len()>this.actors.size,
+      proposedActorCapsuleOverlap:destinationOverlaps,
 
       originalSourceCollidersIntact:true,
       cpuVisualTeleportPerformed:false,originalNavAuthorityOverridden:false,
