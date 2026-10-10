@@ -205,7 +205,6 @@ export class CpuAgentSystem {
     // collision bypass. The original strict M4 fail-closed path stays default.
     if(this.phase14qF2RecoverableSteps&&
        (!phase14qGroundCollision||!phase14eFirstDrop||
-        !phase14qHumanCrowd||
         !phase14qGroundCollision.shouldDeferF2FirstDrop||
         stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
       throw Error('T21_F2_REQUIRES_FULL_SOURCE_PHYSICAL_QA');
@@ -295,13 +294,15 @@ export class CpuAgentSystem {
     // The REAL HUMAN PlayerController is at humanPosition. Only the eighth
     // passive Crowd neighbour is moved to its source-backed physical foot.
     // This cannot be applied to production T20 or non-source T21 terrain.
-    const liveHumanFoot=this.phase14qHumanCrowd?{
+    const liveHumanFoot=(this.phase14qHumanCrowd||this.phase14qGroundCollision)?{
       x:humanPosition.x,
       y:humanPosition.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
       z:humanPosition.z
     }:null;
     if(liveHumanFoot){
-      this.phase14qHumanCrowd!.syncActualPlayerFoot(liveHumanFoot);
+      // The physical HUMAN is authoritative even when its passive Crowd
+      // neighbour is omitted (e.g. while a real human freely jumps in F3).
+      this.phase14qHumanCrowd?.syncActualPlayerFoot(liveHumanFoot);
       this.phase14qGroundCollision?.syncActualHumanFoot(liveHumanFoot);
     }
 
@@ -457,8 +458,8 @@ export class CpuAgentSystem {
     // an idle 0-speed human neighbour ~.40m in this single update. Seal it
     // immediately so no later CPU action samples the displaced avatar.
     // This does NOT undo any steering already computed by this Crowd step.
-    if(liveHumanFoot)
-      this.phase14qHumanCrowd!.sealAfterCrowdUpdate(liveHumanFoot);
+    if(liveHumanFoot&&this.phase14qHumanCrowd)
+      this.phase14qHumanCrowd.sealAfterCrowdUpdate(liveHumanFoot);
 
     for (const bot of this.bots) {
       if(bot.lifeState==='ACTIVE'&&bot.mobilityState==='FIRST_DROP_REJOIN'){
