@@ -214,6 +214,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   if(this.phase14k)
    (window as unknown as {__t21Phase14K?:typeof api}).__t21Phase14K=api;
   this.cpu.render(1);
+  if(this.phase14k)this.followPhase14KCamera();
   this.refreshLabel(label);
   window.addEventListener('resize',()=>app.resizeCanvas());
   app.start();
