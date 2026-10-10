@@ -28,6 +28,7 @@ type U={version:string;originalSourceSHA256:string;originalActiveFacesParsed:num
  physicalWeldOrWalkableFloorProven:boolean;closedMeshOrGameplayAuthorized:boolean;
  sourceOriginalComponents:number;sourceOriginalFaces:number;sourceOriginalBoundaryEdges:number;
  priorHeld28Unmatched:number;priorHeld28Matched:number;searchedFacesBeyondShown:number;
+ otherOptInSourceComponentsSearched:boolean;ownOriginalComponentExcludedPerBoundary:boolean;
  counters:Record<string,number>;perPart:{minFace:number;mirrorMinFace:number;
   boundary:number;counts:Record<string,number>}[];rows:Row[]};
 const edge=(ids:readonly number[])=>[...ids].sort((a,b)=>a-b).join(':');
@@ -84,6 +85,8 @@ describe('T21 Phase12U full SHA-pinned Temple01 original-edge evidence-only gate
   expect(u.priorHeld28Matched).toBe(176);
   expect(u.priorHeld28Unmatched).toBe(348);
   expect(u.searchedFacesBeyondShown).toBe(70396-488);
+  expect(u.otherOptInSourceComponentsSearched).toBe(true);
+  expect(u.ownOriginalComponentExcludedPerBoundary).toBe(true);
   expect(u.rows).toHaveLength(524);
   expect(u.perPart).toHaveLength(22);
   const classes=new Set<string>(labels);
