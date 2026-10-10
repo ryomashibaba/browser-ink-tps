@@ -121,13 +121,14 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
   let firstDropFrame=0,closestActorSeparation=Number.POSITIVE_INFINITY;
   let firstOverlap:string|null=null;
   let maxCpuTravel=0;
-  // B4 starts 0.82m IN FRONT of B1 towards the negative-side lip.
-  // Releasing B1 first traps it behind a genuinely stationary capsule;
-  // the physical front-to-back source order clears that lane instead.
-  const releaseGroups:readonly (readonly string[])[]=[
-    ['A1','B4'],['A3','B1'],['A2','B3'],['B2']
-  ];
-  let releaseGroupIndex=0;
+  // Physically independent, source-mirrored lanes must NOT block each
+  // other after their own landing corridors are clear. B4 starts .82m
+  // ahead of B1; each same-side predecessor finishes physical egress
+  // before the next genuinely source-supported actor starts moving.
+  const releaseAfter:Readonly<Record<string,string|null>>={
+    A1:null,A3:'A1',A2:'A3',
+    B4:null,B1:'B4',B3:'B1',B2:'B3'
+  };
   const released=new Set<string>();
   const clearedOriginalLanding=new Set<string>();
   const actualLandingClearanceFrames:Record<string,number>={};
@@ -147,14 +148,11 @@ describe('T21 F2 single-timeline actual seven CPU and PlayerController source QA
     // regains the lower Crowd before the next pair starts. This resolves
     // the 1200-frame all-neighbours-stuck high-lip deadlock without
     // teleporting a physical CPU or inventing an alternate stage route.
-    while(releaseGroupIndex<releaseGroups.length&&
-      releaseGroups[releaseGroupIndex]!.every(id=>
-        clearedOriginalLanding.has(id)))releaseGroupIndex++;
-    const group=releaseGroups[releaseGroupIndex]??[];
-    for(const id of group){
-      if(!released.has(id)){
-        released.add(id);actualReleaseFrames[id]=frame;
-      }
+    for(const [id,previous] of Object.entries(releaseAfter)){
+      if(released.has(id)||
+        (previous!==null&&!clearedOriginalLanding.has(previous)))continue;
+      released.add(id);
+      actualReleaseFrames[id]=frame;
     }
     for(const bot of bots){
       if(physicallyRejoined.has(bot.id)){
