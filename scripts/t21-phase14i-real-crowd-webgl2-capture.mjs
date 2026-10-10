@@ -14,7 +14,7 @@ const origin='http://127.0.0.1:4184/browser-ink-tps/';
 const pngSig=Buffer.from([137,80,78,71,13,10,26,10]);
 const manifest={phase:'14I',status:'BLOCKED',generatedAt:new Date().toISOString(),
   renderer:'CHROME_PLAYCANVAS_WEBGL2',activationAuthorized:false,
-  humanVisualFreezeApproved:false,realRecastTriggerValidatedInBrowser:true,
+  humanVisualFreezeApproved:false,realRecastTriggerValidatedInBrowser:false,
   screenshotData:[],error:null};
 let socket=null,serial=0;
 const pending=new Map(),children=[];
@@ -107,7 +107,7 @@ async function run(){
  ],{stdio:['ignore',log,log]});closeSync(log);children.push(child);
  const tab=await poll(async()=>{
   if(child.exitCode!==null||child.signalCode!==null)fail('CHROME_EXITED');
-  const res=await fetch('http://127.0.0.1:9238/json',{signal:AbortSignal.timeout(2500)});
+  const res=await fetch('http://127.0.0.1:9241/json',{signal:AbortSignal.timeout(2500)});
   const list=await res.json();
   return list.find(x=>x.type==='page'&&x.webSocketDebuggerUrl);
  });
@@ -181,6 +181,7 @@ async function run(){
   console.log('PHASE14I_REAL_CROWD_SIDE_PASS',JSON.stringify(evidence));
  }
 
+ manifest.realRecastTriggerValidatedInBrowser=true;
  manifest.status='CAPTURED_PENDING_HUMAN_VISUAL_QA';
  console.log('PHASE14I_REAL_RECAST_WEBGL2_GPU_CAPTURE_PASS',JSON.stringify({
   imageCount:manifest.screenshotData.length,results
