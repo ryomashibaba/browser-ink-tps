@@ -765,6 +765,25 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12Y original cover face material normal OBJ-ID adjacency evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12W_REPORT_INPUT: /tmp/t21-phase12w-coplanar-original-source-witnesses.json
+          T21_PHASE12X_REPORT_INPUT: /tmp/t21-phase12x-source-original-face-interval-union.json
+          T21_PHASE12S_REPORT_INPUT: /tmp/t21-phase12s-original-objid-boundary-topology.json
+          T21_PHASE12Y_REPORT: /tmp/t21-phase12y-original-cover-face-provenance.json
+          T21_PHASE12Y_REQUIRED: '1'
+        run: npx vitest run scripts/UndertowSpillwayPhase12YOriginalCoverFaceProvenanceQa.test.ts
+
+      - name: Upload T21 Phase12Y original source-only face material and winding evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12y-original-cover-face-provenance
+          path: /tmp/t21-phase12y-original-cover-face-provenance.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
