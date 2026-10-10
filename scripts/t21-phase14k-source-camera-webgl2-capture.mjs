@@ -205,7 +205,7 @@ async function run(){
   const id=side==='positive-z'?'A1':'B1';
   await cmd('Page.navigate',{url:origin+'?t21Qa=phase14k&qaSide='+side});
   await poll(async()=>{
-   const r=await evalPage('({ready:document.querySelector("#app-canvas")?.dataset.t21Phase14iReady, backend:document.querySelector("#app-canvas")?.dataset.t21Phase14iRenderer, side:document.querySelector("#app-canvas")?.dataset.t21Phase14iSide, error:document.querySelector("#boot-error")?.textContent||"", panel:!!document.querySelector("#t21-phase14k-panel"), width:document.querySelector("#app-canvas")?.width, height:document.querySelector("#app-canvas")?.height})');
+   const r=await evalPage('({ready:document.querySelector("#app-canvas")?.dataset.t21Phase14kReady, backend:document.querySelector("#app-canvas")?.dataset.t21Phase14kRenderer, side:document.querySelector("#app-canvas")?.dataset.t21Phase14kSide, error:document.querySelector("#boot-error")?.textContent||"", panel:!!document.querySelector("#t21-phase14k-panel"), width:document.querySelector("#app-canvas")?.width, height:document.querySelector("#app-canvas")?.height})');
    if(r.error)fail('BOOT_ERROR '+r.error.slice(0,1200));
    return r.ready==='READY'&&r.backend==='webgl2'&&r.side===side&&r.panel&&
     r.width===1600&&r.height===900;
