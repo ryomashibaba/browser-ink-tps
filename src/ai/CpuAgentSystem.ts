@@ -60,6 +60,7 @@ export type CpuKitRequest =
  * or an implicit Crowd teleport. The caller must handle the fail-closed
  * rejection before further simulation. T20 passes no authority. */
 export interface CpuSharedGroundStepAuthority {
+  resetActors():void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
   auditGroundStep(
     id:string,
@@ -184,6 +185,7 @@ export class CpuAgentSystem {
 
   public reset(humanTeam: Team.A | Team.B): void {
     this.phase14eFirstDrop?.reset();
+    this.phase14qGroundCollision?.resetActors();
     for (const bot of this.bots) {
       if (bot.agent) this.navigation.removeAgent(bot.agent);
       bot.entity.destroy();
