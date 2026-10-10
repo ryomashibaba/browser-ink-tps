@@ -224,7 +224,12 @@ export class CpuAgentSystem {
         for (const bot of this.bots) {
           bot.agent?.resetMoveTarget();
           this.resetCpuWeaponRuntime(bot);
-          if (bot.mobilityState !== 'GROUND') this.cancelCpuJump(bot, true);
+          // T21: preserve source-backed Crowd stabilization across a paused
+          // match. Canceling it as a tactical jump would reactivate the unsafe
+          // recycled offmesh height before the lower-layer gate passes.
+          if (bot.mobilityState !== 'GROUND' &&
+              bot.mobilityState !== 'FIRST_DROP_REJOIN')
+            this.cancelCpuJump(bot, true);
         }
       }
       this.activeLastTick = false;
