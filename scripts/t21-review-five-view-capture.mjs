@@ -535,6 +535,51 @@ try {
     }
   }
 
+  // Phase12K opt-in only: 4 exact source-only meshes, separately color-coded
+  // old structure / original horizontal cut. Not one of mandatory 5 shots.
+  manifest.phase12KOriginalNeighborDiagnostics=[];
+  for(const choice of ['ALL','OLD','CUT']){
+    try{
+      await navigate(urlForView('CENTER_SOURCE')+'&reviewPillarNeighbors='+choice);
+      const state=await poll(async()=>{
+        const x=await evaluation(`(() => ({
+          choice:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12KNeighbors,
+          count:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12KCount,
+          preset:document.querySelector('#app-canvas')?.dataset.t21ReviewPreset,
+          renderer:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+        }))()`);
+        if(x?.choice===choice&&x.count===(choice==='ALL'?'4':'2')&&
+          x.preset==='PHASE12K_PINNED_ORIGINAL_NEIGHBORS_ONLY'&&x.renderer==='webgl2')return x;
+        throw Error('T21_PHASE12K_SOURCE_ONLY_NOT_READY '+JSON.stringify(x));
+      },25000);
+      await evaluation(`(() => {const p=document.querySelector('#t21-review-panel');if(p)p.style.display='none';return true;})()`);
+      await sleep(850);
+      const shot=await command('Page.captureScreenshot',{format:'png',
+        captureBeyondViewport:false,fromSurface:true},25000);
+      const bytes=Buffer.from(shot.data||'','base64');
+      const valid=bytes.length>33&&bytes.subarray(0,8).equals(
+        Buffer.from([137,80,78,71,13,10,26,10]));
+      const width=valid?bytes.readUInt32BE(16):0,height=valid?bytes.readUInt32BE(20):0;
+      if(!valid||width!==1600||height!==900)
+        throw Error('T21_PHASE12K_SOURCE_PNG_INVALID');
+      const file='T21_PHASE12K_ORIGINAL_NEIGHBORS_'+choice+'.png';
+      await writeFile(resolve(destination,file),bytes);
+      manifest.phase12KOriginalNeighborDiagnostics.push({
+        status:'CAPTURED_NOT_GAMEPLAY_PROOF',selection:choice,
+        sourceOriginalComponents:choice==='ALL'?4:2,
+        originalSourceTriangles:choice==='ALL'?92:choice==='OLD'?44:48,
+        originalSHA256:'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046',
+        originalCutNotPlayableFloor:true,gameplayAuthority:'NONE',
+        defaultReviewMeshesUnchanged:124,authorizesVisualFreeze:false,
+        file,sha256:createHash('sha256').update(bytes).digest('hex'),
+        width,height,bytes:bytes.byteLength,renderer:state.renderer
+      });
+    }catch(error){
+      manifest.phase12KOriginalNeighborDiagnostics.push({
+        status:'BLOCKED',selection:choice,reason:diagnostic(error)});
+    }
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{
