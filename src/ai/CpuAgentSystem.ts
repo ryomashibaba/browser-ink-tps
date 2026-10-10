@@ -64,6 +64,11 @@ export interface CpuSharedGroundStepAuthority {
   resetActors():void;
   syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
+  auditAirborneSourceFoot(
+    id:string,from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,dt:number,
+    originalKccContinuous:boolean
+  ):Readonly<{approved:boolean;cause:string;actorCollisionCandidate:string|null}>;
   auditGroundStep(
     id:string,
     from:Readonly<{x:number;y:number;z:number}>,
@@ -316,6 +321,21 @@ export class CpuAgentSystem {
         const frame=this.phase14eFirstDrop?.advance(bot.id,dt);
         if (!frame||!frame.continuous)
           throw new Error('T21_PHASE14E_CPU_FALL_UNSAFE_FRAME');
+        if(this.phase14qGroundCollision){
+          const contact=this.phase14qGroundCollision.auditAirborneSourceFoot(
+            bot.id,bot.position,frame.foot,dt,frame.continuous
+          );
+          if(!contact.approved)
+            throw Error('T21_PHASE14Q_ACTUAL_FIRST_DROP_ACTOR_CONTACT '+JSON.stringify({
+              botId:bot.id,cause:contact.cause,
+              collidedWith:contact.actorCollisionCandidate,
+              from:[bot.position.x,bot.position.y,bot.position.z],
+              actualOriginalKccCandidate:frame.foot,
+              unchangedBotVisualFoot:true,
+              noRecastTeleport:true,
+              activationAuthorized:false
+            }));
+        }
         bot.position.set(frame.foot.x,frame.foot.y,frame.foot.z);
         if(frame.landed){
           const closest=this.navigation.closestPoint(bot.position);
