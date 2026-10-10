@@ -166,4 +166,51 @@ describe('T21 Phase14N original-source real PlayerController and actual CPU proj
     realUserInput:false,realFull4v4Match:false,activationAuthorized:false
   }));
  });
+ it('blocks a real 60Hz CPU-format projectile at the ORIGINAL source landing floor without leaking damage through the slab',()=>{
+  vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
+  const w=qaWorld();
+  for(let i=0;i<75;i++)w.tickPlayer();
+  const source=w.landing;
+  const from=new Vec3(source.x,source.y+.88,source.z);
+  const to=new Vec3(source.x,source.y-.65,source.z);
+  const original=w.physics.castStageSegment(from,to,'ink-projectile');
+  expect(original?.solidId).toBe(landingSolid.id);
+  expect(original!.distance).toBeGreaterThan(0);
+  expect(original!.distance).toBeLessThan(from.distance(to));
+  const resources=new PlayerResources(w.stats);
+  const paints:PaintRequest[]=[];
+  const coordinator={enqueue:(r:PaintRequest)=>paints.push(r)};
+  const feedback={updateChargeVisual:vi.fn(),shot:vi.fn(),impact:vi.fn(),
+    stringerFuse:vi.fn(),stringerBurst:vi.fn(),melee:vi.fn(),beam:vi.fn()};
+  const cpu={findNearestCombatHit:()=>null,applyAreaDamage:()=>0,
+    applyProjectileHit:()=>null};
+  const projectile=new ProjectileSystem(
+    w.app,w.surfaces,w.physics,coordinator as never,resources,
+    new CombatTargetSystem(w.app,w.stats),cpu as never,feedback as never,w.stats
+  );
+  projectile.queueCpuShot({
+    sourceId:'TEST_ONLY_SOURCE_QUERY_B1',team:Team.B,origin:from,
+    bodyPosition:new Vec3(source.x,source.y,source.z),
+    target:to,weaponId:DEFAULT_WEAPON_ID,charge:0,action:'PROJECTILE'
+  });
+  for(let i=0;i<60&&w.stats.projectileImpacts===0;i++){
+    projectile.fixedUpdate(DT,false,false,w.player.getPosition(),
+      new Vec3(0,0,1),Team.A,w.player.getPosition(),false,false);
+  }
+  expect(w.stats.projectileImpacts).toBeGreaterThanOrEqual(1);
+  expect(resources.currentHp).toBe(100);
+  expect(w.stats.cpuPlayerHits).toBe(0);
+  expect(paints.every(r=>stage.paintSurfaces.some(s=>s.id===r.surfaceId)))
+    .toBe(true);
+  console.log('T21_PHASE14N_ORIGINAL_FROZEN_PROJECTILE_FLOOR_BLOCK_PASS',JSON.stringify({
+    originalBlockingSolidId:original!.solidId,
+    sourceRayDistanceMeters:original!.distance,
+    projectileSystemImpactCount:w.stats.projectileImpacts,
+    humanDamageAllowedInNegativeFixture:false,
+    realPlayerHpUnchanged:resources.currentHp,
+    originalScoreableAreaMeters2:0,sourceGeometryChanged:false,
+    t21ActivationAuthorized:false
+  }));
+ });
+
 });
