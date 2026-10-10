@@ -594,6 +594,22 @@ jobs:
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         run: npx vitest run scripts/UndertowSpillwayPhase12OOriginalZoomQa.test.ts
 
+      - name: T21 Phase12P pinned original OBJ-ID/triangle contact QA (source-only)
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12J_SOURCE_JSON: /tmp/t21-phase12j-pillar-neighborhood.json
+          T21_PHASE12P_REPORT: /tmp/t21-phase12p-original-contact-audit.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12POriginalContactQa.test.ts
+
+      - name: Upload T21 Phase12P original mesh contact audit (no gameplay authority)
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12p-source-only-original-contact-audit
+          path: /tmp/t21-phase12p-original-contact-audit.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
