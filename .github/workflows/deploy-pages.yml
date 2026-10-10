@@ -642,6 +642,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12S original OBJ-ID open boundary/non-manifold topology QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12R_REPORT_INPUT: /tmp/t21-phase12r-source-edge-normal-audit.json
+          T21_PHASE12S_REPORT: /tmp/t21-phase12s-original-objid-boundary-topology.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12SOriginalOpenBoundaryQa.test.ts
+
+      - name: Upload T21 Phase12S original OBJ-ID topology audit (NO gameplay authority)
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12s-source-only-open-boundary-topology
+          path: /tmp/t21-phase12s-original-objid-boundary-topology.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
