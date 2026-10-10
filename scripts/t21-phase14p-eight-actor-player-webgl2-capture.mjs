@@ -307,7 +307,7 @@ async function run(){
   const trueHumanCamera=side==='negative-z' &&
     Math.hypot(...[0,1,2].map(i=>
       end.camera.focus[i]-
-      (end.human.render[i]+(i===1?.76:0))))<.01;
+      (end.human.render[i]+(i===1?.25:0))))<.01;
   if(!start||!middle||!end||
      (side==='positive-z'&&!(totalMove>1.5))||
      !Number.isFinite(dropDelta)||
