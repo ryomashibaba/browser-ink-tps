@@ -133,7 +133,7 @@ function checkPhase12P(rows:readonly Row[]){
  expect(p.rows).toHaveLength(80);
  expect(p.physicalWeldProven).toBe(false);
  expect(p.walkableFloorProven).toBe(false);
- const keyRow=(a:number,b:number)=>a+':'+b;
+ const keyRow=(a:number,b:number)=>[a,b].sort((x,y)=>x-y).join(':');
  const pairs=new Map(rows.map(r=>[keyRow(r.a,r.b),r]));
  expect(pairs.size).toBe(110);
  const compared=new Set<string>();
