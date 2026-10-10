@@ -108,7 +108,7 @@ type Row=ReturnType<typeof audit>;
 function checkQ(rows:readonly Row[]){
  const file=process.env.T21_PHASE12Q_REPORT_INPUT;
  if(!file){
-  if(process.env.GITHUB_ACTIONS)throw Error('PHASE12R_REQUIRED_PHASE12Q_GATE_NOT_SUPPLIED');
+  if(process.env.T21_PHASE12R_REPORT)throw Error('PHASE12R_REQUIRED_PHASE12Q_GATE_NOT_SUPPLIED');
   return {validated:false,matched:0};
  }
  if(!existsSync(file))throw Error('PHASE12R_PINNED_PHASE12Q_JSON_MISSING');
