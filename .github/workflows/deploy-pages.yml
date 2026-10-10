@@ -747,6 +747,24 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12X original coplanar interval union, gap rejection and mirror QA
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12W_REPORT_INPUT: /tmp/t21-phase12w-coplanar-original-source-witnesses.json
+          T21_PHASE12S_REPORT_INPUT: /tmp/t21-phase12s-original-objid-boundary-topology.json
+          T21_PHASE12X_REPORT: /tmp/t21-phase12x-source-original-face-interval-union.json
+          T21_PHASE12X_REQUIRED: '1'
+        run: npx vitest run scripts/UndertowSpillwayPhase12XOriginalIntervalUnionQa.test.ts
+
+      - name: Upload T21 Phase12X immutable original source interval union evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12x-original-source-edge-interval-union
+          path: /tmp/t21-phase12x-source-original-face-interval-union.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
