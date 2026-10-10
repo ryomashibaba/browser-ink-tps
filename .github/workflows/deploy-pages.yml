@@ -662,7 +662,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
         env:
           T21_PHASE12J_SOURCE_JSON: /tmp/t21-phase12j-pillar-neighborhood.json
-          T21_PHASE12S_REPORT_INPUT: /tmp/t21-phase12s-original-open-boundary-topology.json
+          T21_PHASE12S_REPORT_INPUT: /tmp/t21-phase12s-original-objid-boundary-topology.json
           T21_PHASE12T_REPORT: /tmp/t21-phase12t-original-boundary-held-neighbors.json
         run: npx vitest run scripts/UndertowSpillwayPhase12TBoundaryNeighborQa.test.ts
 
