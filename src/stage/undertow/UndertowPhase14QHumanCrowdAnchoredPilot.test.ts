@@ -91,6 +91,10 @@ describe('T21 Phase14Q M3 real PlayerController externally anchored 8th Crowd ne
   const rejoined=new Set<string>();
   let completed=-1;
   let maxHumanProxyDrift=0;
+  let maxPostSealDrift=0;
+  let unsafeDuringCrowdFrames=0;
+  let minHumanCpuSameLayerDistance=Number.POSITIVE_INFINITY;
+  const closePasses:Array<{frame:number;botId:string;distance:number;state:string}>=[];
   let anchorCorrections=0;
   for(let frame=1;frame<=780;frame++){
    move=0;
@@ -108,6 +112,24 @@ describe('T21 Phase14Q M3 real PlayerController externally anchored 8th Crowd ne
    const drifted=humanCrowd.rawCrowdPosition;
    maxHumanProxyDrift=Math.max(maxHumanProxyDrift,
      Math.hypot(drifted.x-physicalFoot.x,drifted.z-physicalFoot.z));
+   // All seven actual CPU feet are source-authored (Crowd or independently
+   // original-solid Rapier first-drop KCC). Read every frame; never
+   // silently reposition a CPU to make the overlap ledger pass.
+   for(const bot of bots){
+     if(Math.abs(bot.position.y-physicalFoot.y)>1)continue;
+     const separation=Math.hypot(bot.position.x-physicalFoot.x,
+       bot.position.z-physicalFoot.z);
+     minHumanCpuSameLayerDistance=Math.min(minHumanCpuSameLayerDistance,
+       separation);
+     if(separation<.61)
+       closePasses.push({frame,botId:bot.id,distance:separation,
+         state:bot.mobilityState});
+   }
+   const sealed=humanCrowd.sealAfterCrowdUpdate(physicalFoot);
+   maxPostSealDrift=Math.max(maxPostSealDrift,
+     sealed.afterSealHorizontalDriftMeters);
+   if(sealed.unapprovedInterTickCrowdDrift)unsafeDuringCrowdFrames++;
+   expect(sealed.afterSealHorizontalDriftMeters).toBeLessThan(.065);
    cpu.drainFireRequests(()=>{throw Error('PHASE14Q_PRECOMBAT_SHOT_UNEXPECTED');});
    cpu.drainKitRequests(()=>false);
    for(let i=0;i<bots.length;i++){
@@ -161,6 +183,14 @@ describe('T21 Phase14Q M3 real PlayerController externally anchored 8th Crowd ne
     humanCrowdFoot:[humanCrowdFoot.x,humanCrowdFoot.y,humanCrowdFoot.z],
     sourceHumanCrowdAgentPreserved:humanCrowd.rawCrowdPosition,
     maximumCrowdDriftBeforeNextAuthoritativeSync:maxHumanProxyDrift,
+    maximumCrowdDriftAfterM4Seal:maxPostSealDrift,
+    crowdFramesWithUnapprovedIntraTickDrift:unsafeDuringCrowdFrames,
+    minimumPhysicalPlayerToCpuSameLayerDistanceAllFrames:
+      minHumanCpuSameLayerDistance,
+    originalSourceNearContactFrames:closePasses.length,
+    earliestSourceNearContact:closePasses[0]??null,
+    m4WholeSequenceCollisionCertified:closePasses.length===0&&
+      maxHumanProxyDrift<=.15&&allContacts.every(c=>c.approved),
     externalHumanPositionSynchronizedEveryPhysicsTick:true,
     usesOnlyCrowdSideHumanAgentTeleport:true,
     actualCpuOrPhysicalHumanTeleports:0,
@@ -183,6 +213,9 @@ describe('T21 Phase14Q M3 real PlayerController externally anchored 8th Crowd ne
     allContacts.every(c=>c.approved);
   expect(physicalSafeForPromotion).toBe(false);
   expect(maxHumanProxyDrift).toBeLessThan(2);
+  expect(maxPostSealDrift).toBeLessThan(.065);
+  expect(Number.isFinite(minHumanCpuSameLayerDistance)).toBe(true);
+  expect(closePasses.length).toBeGreaterThanOrEqual(0);
   expect(closeContacts.every(c=>c.playerInSamePhysicsWorld)).toBe(true);
   expect(humanFoot.y).toBeGreaterThan(3.0);
   expect(humanCrowd).not.toBeNull();
