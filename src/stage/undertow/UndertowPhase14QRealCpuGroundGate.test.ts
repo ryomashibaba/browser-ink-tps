@@ -44,8 +44,7 @@ function scenario(radius:number){
  const app={root:new Entity('T21_Phase14Q_CPU_GROUND_TO_PLAYER_REAL_RAPIER')} as never;
  const input={moveX:0,moveY:0,jumpHeld:false,squidHeld:false,
    consumeJump:()=>false} as PlayerInput;
- const camera=({getFlatForward:(out:Vec3)=>out.set(0,0,1)})
-   as ThirdPersonCamera;
+ const camera=({getFlatForward:(out:Vec3)=>out.set(0,0,1)}) as ThirdPersonCamera;
  const player=new PlayerController(app,physics,input,camera,ink,stats);
  player.setTeam(Team.A);
  const floor=stage.solids.find(s=>s.id==='UndertowT21D:first-drop-landing-negative-z')!;
