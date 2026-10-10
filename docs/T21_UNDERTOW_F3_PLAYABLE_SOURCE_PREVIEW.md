@@ -22,3 +22,12 @@ Default URL still runs frozen T20. Stage review and Phase14I/P QA URLs unchanged
 2. Seven source-drop/rejoin progression under a moving human; physical collision must not be bypassed. Record any safe-stop as failure, not a gameplay PASS.
 3. Visual source completeness + 17-floor/ramp paint rendering review. No invented walls, roofs, score regions or offmesh links.
 4. Only after gated source proof, extend player combat, CPU tactics, subs and full match flow. No broad bypass of the source authority freeze.
+
+## F3 original reviewed optical-only structure layer
+- 38 existing original source components: Phase7 side/glass frames 20, Phase8 central/flank towers/supports 12, Phase12I original large pillar surface components 6. All are static original vertices and triangle winding, with separate translucent materials.
+- Source-original optical triangles are NOT invisible physical walls or walkable floor/caps. GPU-only mesh overlay can be turned off by the play HUD. It adds zero collision, paint, navigation or win-score surfaces.
+- The original 25 frozen physical solids and 17 source paint surfaces are unchanged.
+
+## Fast-track CI
+- Default PR CI checks browser boot, genuine trusted input, player movement, shots, source non-scoring invariants, a PlayCanvas framebuffer and 38 original optical source pieces; it does NOT claim CPU 7/7 in the browser.
+- Optional manual Action workflow_dispatch input `long_cpu=true` attempts a real rendered Chrome 7/7 CPU recovery proof (strict pass/fail, reports progress at 120 actual ticks). Previous Chrome long run timed out in heavy headless SwiftShader; it is NOT a successful unrestricted 4v4 proof.

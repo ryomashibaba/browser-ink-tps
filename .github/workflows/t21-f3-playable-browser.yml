@@ -10,6 +10,12 @@ on:
       - "scripts/t21-f3-browser-smoke.mjs"
       - ".github/workflows/t21-f3-playable-browser.yml"
   workflow_dispatch:
+    inputs:
+      long_cpu:
+        description: "Run optional slower 7/7 real Chrome physical CPU integration"
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -31,6 +37,8 @@ jobs:
       - name: Chrome script syntax
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: Real trusted keyboard mouse and GPU frame
+        env:
+          T21_F3_LONG_CPU: ${{ inputs.long_cpu == true && '1' || '0' }}
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Preserve exact Chrome screenshots
         if: always()

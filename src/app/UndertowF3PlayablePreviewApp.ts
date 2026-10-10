@@ -44,6 +44,8 @@ import {planSourceSupportedT21QaSpawnSlots,
  from '../stage/undertow/UndertowPhase14QSourceSpawnPlan';
 import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
+import {buildF3OriginalOpticalStructures}
+ from './UndertowF3OriginalSourceContext';
 
 const STEP=1/60;
 const PROJECT='Undertow T21 · F3 Play Lab';
@@ -90,6 +92,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly humanSpawn:Vec3;
  private readonly panel:HTMLElement;
  private readonly status:HTMLElement;
+ private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly p=new Vec3();
  private readonly aim=new Vec3();
  private readonly target=new Vec3();
@@ -137,6 +140,9 @@ export class UndertowF3PlayablePreviewApp{
   this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
    GAME_CONFIG.ink.atlasGutterPixels);
   buildTestStage(app,stage,surfaces,this.atlas);
+  // Reviewed true-original optical structure triangles only. All 25
+  // original Rapier solids remain the sole physical stage authority.
+  this.structures=buildF3OriginalOpticalStructures(app);
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats);
   this.input=new PlayerInput(canvas);
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
@@ -177,7 +183,8 @@ export class UndertowF3PlayablePreviewApp{
    '<div id="t21-f3-live" style="white-space:pre-line;margin:11px 0"></div>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
-   '<button id="t21-f3-reset" type="button">Reset (R)</button></div>'+
+   '<button id="t21-f3-reset" type="button">Reset (R)</button>'+ 
+   '<button id="t21-f3-structures" type="button">Original source: ON</button></div>'+
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
@@ -186,6 +193,11 @@ export class UndertowF3PlayablePreviewApp{
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
   this.panel.querySelector('#t21-f3-reset')?.addEventListener('click',()=>this.restart());
+  this.panel.querySelector('#t21-f3-structures')?.addEventListener('click',()=>{
+   this.structures.root.enabled=!this.structures.root.enabled;
+   const btn=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement;
+   btn.textContent='Original source: '+(this.structures.root.enabled?'ON':'OFF');
+  });
   const cross=document.createElement('div');
   cross.id='t21-f3-crosshair';
   cross.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);'+
@@ -307,6 +319,9 @@ export class UndertowF3PlayablePreviewApp{
    originalSourceSolids:this.rawStage.solids.length,
    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
    originalSourceNavigationLinks:this.rawStage.navigationLinks?.length,
+   originalSourceOpticalStructures:this.structures.manifest.originalSourceVisualStructures,
+   originalSourceOpticalTriangles:this.structures.manifest.originalSourceTriangles,
+   sourceOpticalStructuresVisible:this.structures.root.enabled,
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
    unrestricted4v4Certified:false,
@@ -327,6 +342,8 @@ export class UndertowF3PlayablePreviewApp{
     '  INK '+Math.round(state.player.ink),
    'CPU · '+p.physicalRejoins.length+'/7 source drop + recovery',
    'Traffic · '+(p.freeCombatEnabled?'FREE COMBAT':'SAFE STAGED DESCENT'),
+   'Original optical structures · '+state.originalSourceOpticalStructures+
+    ' (non-colliding) | triangles '+state.originalSourceOpticalTriangles,
    'Real drops · '+p.physicalFirstDrops.length+
     ' | original links '+p.originalSourceLinksUsed,
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
