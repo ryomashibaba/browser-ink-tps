@@ -576,6 +576,13 @@ jobs:
           T21_PHASE12J_GATE_REPORT: /tmp/t21-phase12j-original-source-eligibility-gate.json
         run: npx vitest run scripts/UndertowSpillwayPhase12LOriginalObjectRenderQa.test.ts
 
+      - name: T21 Phase12M independent 150-original overlap, exact Float64, mirrors and frozen 42-point XZ
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12J_SOURCE_JSON: /tmp/t21-phase12j-pillar-neighborhood.json
+          T21_PHASE12J_GATE_REPORT: /tmp/t21-phase12j-original-source-eligibility-gate.json
+        run: npx vitest run scripts/UndertowSpillwayPhase12MOriginalRimBandRenderQa.test.ts
+
       - name: TypeScript check
         run: npm run typecheck
 
@@ -1142,6 +1149,10 @@ jobs:
         continue-on-error: true
         timeout-minutes: 3
         run: node scripts/t21-review-five-view-capture.mjs
+
+      - name: T21 Phase12M assert all 3 optional original-only browser screenshots were captured
+        if: always()
+        run: node scripts/t21-review-phase12m-capture-gate.mjs
 
       - name: Always upload five-view captures or explicit BLOCKED manifest
         if: always()

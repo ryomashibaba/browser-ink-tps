@@ -69,6 +69,7 @@ import {UNDERTOW_T21_PHASE12H_SOURCE_CONTACT_EVIDENCE,UNDERTOW_T21_PHASE12H_CONT
 import {UNDERTOW_T21_PHASE12I_ORIGINAL_BROAD_PILLARS,UNDERTOW_T21_PHASE12I_ORIGINAL_BROAD_PILLARS_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12IOriginalBroadPillars';
 import {UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS,UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12KOriginalPillarNeighbors';
 import {UNDERTOW_T21_PHASE12L_ORIGINAL_OBJECT_PARTS,UNDERTOW_T21_PHASE12L_OBJECT_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12LOriginalObjectParts';
+import {UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BANDS,UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BAND_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12MOriginalRimBands';
 
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B' | 'CENTER_SOURCE';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
@@ -178,6 +179,8 @@ export class UndertowVisualReviewApp {
   private readonly phase12KOldRoot = new Entity('T21Review:Phase12KOriginalOldPillar');
   private readonly phase12KCutRoot = new Entity('T21Review:Phase12KOriginalCutPlane');
   private readonly phase12LOriginalObjectRoot = new Entity('T21Review:Phase12LOriginalPillarObject01');
+  private readonly phase12MRimRoot = new Entity('T21Review:Phase12MOriginalFlatRim');
+  private readonly phase12MBandRoot = new Entity('T21Review:Phase12MOriginalVerticalBand');
   private readonly spawnMarkerRoot = new Entity('T21Review:SpawnMarkers');
   private readonly provisionalRoot = new Entity('T21Review:ProvisionalMacro');
   private readonly unresolvedRoot = new Entity('T21Review:Unresolved');
@@ -262,6 +265,10 @@ export class UndertowVisualReviewApp {
       this.focusPhase12KNeighbors(neighbors);
     const context=params.get('reviewPillarContext');
     if(context==='CONTEXT'||context==='OBJECT')this.focusPhase12LOriginalContext(context);
+    const originalDetail=params.get('reviewPillarDetail');
+    if(originalDetail==='CONTEXT'||originalDetail==='ALL'||
+      originalDetail==='RIM'||originalDetail==='BAND')
+      this.focusPhase12MOriginalDetails(originalDetail);
     if(params.get('reviewTopologyEdges')==='1'){
       this.coordinateSeamPhase10Root.enabled=true;
       this.unmatchedEdgePhase10Root.enabled=true;
@@ -374,6 +381,10 @@ export class UndertowVisualReviewApp {
     this.phase12KCutRoot.enabled=false;
     this.app.root.addChild(this.phase12LOriginalObjectRoot);
     this.phase12LOriginalObjectRoot.enabled=false;
+    this.app.root.addChild(this.phase12MRimRoot);
+    this.phase12MRimRoot.enabled=false;
+    this.app.root.addChild(this.phase12MBandRoot);
+    this.phase12MBandRoot.enabled=false;
     this.app.root.addChild(this.provisionalRoot);
     this.app.root.addChild(this.unresolvedRoot);
 
@@ -577,6 +588,13 @@ export class UndertowVisualReviewApp {
     const objectMat=makeVerticalSourceMaterial(new Color(0.18,0.97,0.80),0.43,false);
     for(const m of UNDERTOW_T21_PHASE12L_ORIGINAL_OBJECT_PARTS)
       createSourceNativeReviewMesh(this.app,this.phase12LOriginalObjectRoot,m,objectMat);
+    // Phase12M: exact eight original rim/band meshes; source-only diagnostics.
+    // Flat rims are NOT filled caps or gameplay surfaces; no stage authority.
+    const rimMaterial=makeVerticalSourceMaterial(new Color(0.94,0.93,0.24),0.65,true);
+    const bandMaterial=makeVerticalSourceMaterial(new Color(0.36,0.88,0.99),0.56,false);
+    for(const m of UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BANDS)
+      createSourceNativeReviewMesh(this.app,m.reviewGroup==='RIM'?this.phase12MRimRoot:
+        this.phase12MBandRoot,m,m.reviewGroup==='RIM'?rimMaterial:bandMaterial);
     // Exactly four pinned ORIGINAL intersection coordinates: no new source
     // triangles, no inferred glass wall/floor/collision connectivity.
     const contactEdgeMaterial=makeMaterial(new Color(0.97,0.40,0.94),0.85);
@@ -704,6 +722,7 @@ export class UndertowVisualReviewApp {
         <span>Phase12I original large pillars (OFF)</span><b>${UNDERTOW_T21_PHASE12I_ORIGINAL_BROAD_PILLARS_SUMMARY.componentCount} original whole source meshes / ${UNDERTOW_T21_PHASE12I_ORIGINAL_BROAD_PILLARS_SUMMARY.originalTriangleCount} original faces / ${UNDERTOW_T21_PHASE12I_ORIGINAL_BROAD_PILLARS_SUMMARY.totalOriginal3DAreaSquareMeters.toFixed(1)} m² 3D triangle surface; NOT playable area</b>
         <span>Phase12K original neighbors (OFF)</span><b>${UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS_SUMMARY.componentCount} exact pieces / ${UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS_SUMMARY.originalTriangleCount} source triangles; pink=old structure, amber=horizontal original CUT, NOT playable floor or cap</b>
         <span>Phase12L original lower shells (OFF)</span><b>${UNDERTOW_T21_PHASE12L_OBJECT_SUMMARY.componentCount} exact PillarObject01 parts / ${UNDERTOW_T21_PHASE12L_OBJECT_SUMMARY.originalTriangleCount} source faces; turquoise, original Y22.7-25.1; not a connected gameplay support</b>
+        <span>Phase12M original rim / band (OFF)</span><b>${UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BAND_SUMMARY.componentCount} original pieces / ${UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BAND_SUMMARY.originalTriangleCount} faces; gold=flat rim Y25.6 NOT floor, blue=band Y25.1-25.6; not a collision or connected roof</b>
          <span>Confirmed / provisional</span><b>${counts.CONFIRMED_GEOMETRY} / ${counts.PROVISIONAL_MACRO_GEOMETRY}</b>
         <span>Exists-only / unresolved</span><b>${counts.EXISTS_BUT_NOT_IMPLEMENTED} / ${counts.UNRESOLVED}</b>
         <span>Intentional void/outside</span><b>${counts.INTENTIONAL_VOID_OR_WATER}</b>
@@ -742,6 +761,10 @@ export class UndertowVisualReviewApp {
         <button data-review-phase12k-neighbors="CUT">Phase12K horizontal section / amber (NOT floor)</button>
         <button data-review-phase12l-context="CONTEXT">Phase12L original pillar context / all 14</button>
         <button data-review-phase12l-context="OBJECT">Phase12L original lower shells / four</button>
+        <button data-review-phase12m-detail="CONTEXT">Phase12M all original 22 components</button>
+        <button data-review-phase12m-detail="ALL">Phase12M 8 source detail parts</button>
+        <button data-review-phase12m-detail="RIM">Phase12M flat source rim / gold (NOT floor)</button>
+        <button data-review-phase12m-detail="BAND">Phase12M original vertical bands / blue</button>
         <button id="t21-review-recovered-focus-exit">Exit source close-up</button>
       </div>
       <div class="review-actions layers">
@@ -911,6 +934,13 @@ export class UndertowVisualReviewApp {
       button.addEventListener('click',()=>{
         const x=button.dataset.reviewPhase12lContext;
         if(x==='CONTEXT'||x==='OBJECT')this.focusPhase12LOriginalContext(x);
+      });
+    });
+    panel.querySelectorAll<HTMLButtonElement>('[data-review-phase12m-detail]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const x=button.dataset.reviewPhase12mDetail;
+        if(x==='CONTEXT'||x==='ALL'||x==='RIM'||x==='BAND')
+          this.focusPhase12MOriginalDetails(x);
       });
     });
     panel.querySelector<HTMLButtonElement>('#t21-review-recovered-focus-exit')?.addEventListener('click',()=>{
@@ -1096,6 +1126,10 @@ export class UndertowVisualReviewApp {
     this.phase12KOldRoot.enabled=false;
     this.phase12KCutRoot.enabled=false;
     this.phase12LOriginalObjectRoot.enabled=false;
+    this.phase12MRimRoot.enabled=false;
+    this.phase12MBandRoot.enabled=false;
+    this.canvas.dataset.t21ReviewPhase12MDetail='off';
+    this.canvas.dataset.t21ReviewPhase12MCount='0';
     this.canvas.dataset.t21ReviewPhase12LContext='off';
     this.canvas.dataset.t21ReviewPhase12LCount='0';
     this.canvas.dataset.t21ReviewPhase12KNeighbors='off';
@@ -1255,6 +1289,10 @@ export class UndertowVisualReviewApp {
     this.recoveredSourcePhase12DRoot.enabled=false;
     this.phase12HContactRoot.enabled=false;
     this.phase12IPillarRoot.enabled=true;
+    this.phase12MRimRoot.enabled=false;
+    this.phase12MBandRoot.enabled=false;
+    this.canvas.dataset.t21ReviewPhase12MDetail='off';
+    this.canvas.dataset.t21ReviewPhase12MCount='0';
     this.phase12LOriginalObjectRoot.enabled=false;
     this.canvas.dataset.t21ReviewPhase12LContext='off';
     this.canvas.dataset.t21ReviewPhase12LCount='0';
@@ -1359,6 +1397,62 @@ export class UndertowVisualReviewApp {
     this.updateCamera();
   }
 
+  /** Exact ORIGINAL Phase12M thin rim and band source triangles.
+   * Stage physics, game collision, paint, nav, activation remain untouched. */
+  private focusPhase12MOriginalDetails(selected:'CONTEXT'|'ALL'|'RIM'|'BAND'):void{
+    const parts=UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BANDS;
+    if(parts.length!==8||this.phase12MRimRoot.children.length!==4||
+      this.phase12MBandRoot.children.length!==4||
+      this.phase12LOriginalObjectRoot.children.length!==4||
+      this.phase12IPillarRoot.children.length!==6||
+      this.phase12KOldRoot.children.length!==2||this.phase12KCutRoot.children.length!==2)
+      throw Error('Phase12M complete original contextual source inventory drift');
+    const context=selected==='CONTEXT';
+    // Reuse the proven original-only isolation. This excludes all 124 default
+    // source meshes, provisional graphics and non-original HUD solids.
+    this.focusPhase12IOriginalPillars('ALL');
+    this.phase12IPillarRoot.enabled=context;
+    this.phase12KOldRoot.enabled=context;
+    this.phase12KCutRoot.enabled=context;
+    this.phase12LOriginalObjectRoot.enabled=context;
+    this.phase12MRimRoot.enabled=selected==='RIM'||selected==='ALL'||context;
+    this.phase12MBandRoot.enabled=selected==='BAND'||selected==='ALL'||context;
+    const selectedParts=selected==='RIM'||selected==='BAND'
+      ?parts.filter(x=>x.reviewGroup===selected):parts;
+    if(selectedParts.length!==(selected==='RIM'||selected==='BAND'?4:8))
+      throw Error('Phase12M invalid rim/band selection');
+    const vertices:StageVector3[]=selectedParts.flatMap(x=>x.vertices);
+    if(context){
+      vertices.push(...UNDERTOW_T21_PHASE12I_ORIGINAL_BROAD_PILLARS.flatMap(x=>x.vertices));
+      vertices.push(...UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS.flatMap(x=>x.vertices));
+      vertices.push(...UNDERTOW_T21_PHASE12L_ORIGINAL_OBJECT_PARTS.flatMap(x=>x.vertices));
+    }
+    const lo=([0,1,2] as const).map(i=>Math.min(...vertices.map(v=>v[i])));
+    const hi=([0,1,2] as const).map(i=>Math.max(...vertices.map(v=>v[i])));
+    this.target.set((lo[0]!+hi[0]!)/2,(lo[1]!+hi[1]!)/2,(lo[2]!+hi[2]!)/2);
+    this.yawDegrees=selected==='RIM'?32:40;
+    this.pitchDegrees=selected==='RIM'?62:27;
+    this.distanceMeters=Math.max(28,Math.max(hi[0]!-lo[0]!,
+      hi[1]!-lo[1]!,hi[2]!-lo[2]!)*(context?1.65:1.35));
+    this.canvas.dataset.t21ReviewPhase12IPillars=context?'CONTEXT':'off';
+    this.canvas.dataset.t21ReviewPhase12ICount=context?'6':'0';
+    this.canvas.dataset.t21ReviewPhase12KNeighbors=context?'CONTEXT':'off';
+    this.canvas.dataset.t21ReviewPhase12KCount=context?'4':'0';
+    this.canvas.dataset.t21ReviewPhase12LContext=context?'CONTEXT':'off';
+    this.canvas.dataset.t21ReviewPhase12LCount=context?'4':'0';
+    this.canvas.dataset.t21ReviewPhase12MDetail=selected;
+    this.canvas.dataset.t21ReviewPhase12MCount=context?'22':
+      String(selectedParts.length);
+    this.canvas.dataset.t21ReviewPreset='PHASE12M_EXACT_ORIGINAL_SOURCE_DETAIL_ONLY';
+    const label=this.uiRoot.querySelector<HTMLElement>('#t21-review-active-view');
+    if(label)label.textContent=context
+      ?'22 ORIGINAL PARTS / POSITION CONTEXT ONLY - NOT CONNECTED GAME GEOMETRY'
+      :selected==='RIM'?'4 ORIGINAL FLAT RIMS / NOT PLAYABLE FLOOR'
+      :selected==='BAND'?'4 ORIGINAL VERTICAL BANDS / NOT COLLISION'
+      :'8 ORIGINAL THIN RIM + BAND PARTS / SOURCE ONLY';
+    this.updateCamera();
+  }
+
   private bindRootToggle(
     button:HTMLButtonElement|null,root:Entity,label:string
   ):void {
@@ -1371,6 +1465,10 @@ export class UndertowVisualReviewApp {
       this.phase12KOldRoot.enabled=false;
       this.phase12KCutRoot.enabled=false;
       this.phase12LOriginalObjectRoot.enabled=false;
+      this.phase12MRimRoot.enabled=false;
+      this.phase12MBandRoot.enabled=false;
+      this.canvas.dataset.t21ReviewPhase12MDetail='off';
+      this.canvas.dataset.t21ReviewPhase12MCount='0';
       this.canvas.dataset.t21ReviewPhase12LContext='off';
       this.canvas.dataset.t21ReviewPhase12LCount='0';
       this.canvas.dataset.t21ReviewPhase12KNeighbors='off';

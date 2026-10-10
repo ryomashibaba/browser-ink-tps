@@ -634,6 +634,59 @@ try {
     }
   }
 
+  // Phase12M: three extra *real* PlayCanvas screenshots independent of
+  // the mandatory five views. CONTEXT displays 22 exact originals; RIM/BAND
+  // never imply that a flat original source face is a playable roof.
+  manifest.phase12MOriginalRimBandDiagnostics=[];
+  for(const choice of ['CONTEXT','RIM','BAND']){
+    try{
+      await navigate(urlForView('CENTER_SOURCE')+'&reviewPillarDetail='+choice);
+      const state=await poll(async()=>{
+        const v=await evaluation(`(() => ({
+          selection:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12MDetail,
+          count:document.querySelector('#app-canvas')?.dataset.t21ReviewPhase12MCount,
+          preset:document.querySelector('#app-canvas')?.dataset.t21ReviewPreset,
+          renderer:document.querySelector('#app-canvas')?.dataset.t21ReviewRenderer
+        }))()`);
+        if(v?.selection===choice&&v.count===(choice==='CONTEXT'?'22':'4')&&
+           v.preset==='PHASE12M_EXACT_ORIGINAL_SOURCE_DETAIL_ONLY'&&
+           v.renderer==='webgl2')return v;
+        throw Error('T21_PHASE12M_PINNED_SOURCE_NOT_READY '+JSON.stringify(v));
+      },25000);
+      await evaluation(`(() => {const p=document.querySelector('#t21-review-panel');if(p)p.style.display='none';return true;})()`);
+      await sleep(700);
+      const image=await command('Page.captureScreenshot',{
+        format:'png',captureBeyondViewport:false,fromSurface:true
+      },25000);
+      const bytes=Buffer.from(image.data||'','base64');
+      const valid=bytes.length>8000&&bytes.subarray(0,8).equals(
+        Buffer.from([137,80,78,71,13,10,26,10]));
+      const width=valid?bytes.readUInt32BE(16):0;
+      const height=valid?bytes.readUInt32BE(20):0;
+      if(!valid||width!==1600||height!==900)
+        throw Error('T21_PHASE12M_EMPTY_OR_MALFORMED_REAL_SCREENSHOT');
+      const file='T21_PHASE12M_ORIGINAL_RIM_BAND_'+choice+'.png';
+      await writeFile(resolve(destination,file),bytes);
+      manifest.phase12MOriginalRimBandDiagnostics.push({
+        status:'CAPTURED_PENDING_HUMAN_VISUAL_QA',selection:choice,
+        sourceOriginalComponents:choice==='CONTEXT'?22:4,
+        originalSourceTriangles:choice==='CONTEXT'?488:88,
+        originalSHA256:'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046',
+        sourceRimNotPlayableFloor:true,noPhysicalAttachmentAssertion:true,
+        frozenDefaultSourceMeshCount:124,gameplayAuthority:'NONE',
+        authorizesVisualFreeze:false,authorizesGameplayOrStageActivation:false,
+        file,width,height,bytes:bytes.byteLength,
+        sha256:createHash('sha256').update(bytes).digest('hex'),
+        renderer:state.renderer
+      });
+    }catch(error){
+      manifest.phase12MOriginalRimBandDiagnostics.push({
+        status:'BLOCKED',selection:choice,reason:diagnostic(error),
+        authorizesVisualFreeze:false,authorizesGameplayOrStageActivation:false
+      });
+    }
+  }
+
   // Additional optional diagnostic view, deliberately EXCLUDED from the
   // mandatory five-view screenshot count, and never a visual-freeze PASS.
   try{
