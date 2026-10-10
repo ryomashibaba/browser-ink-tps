@@ -699,6 +699,30 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: T21 Phase12V original 88 unresolved boundary triangle and partial-edge survey
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        shell: bash
+        run: |
+          python scripts/undertow-temple01-phase12v-unmatched-boundary-contact.py --self-test
+          python scripts/undertow-temple01-phase12v-unmatched-boundary-contact.py /tmp/kitrix-lfs/Vss_Temple01.obj /tmp/t21-phase12u-full-original-source-edge-neighbors.json /tmp/t21-phase12v-source-only-unmatched-edge-triangles.json
+
+      - name: T21 Phase12V independent bounded 88 edge and triangle evidence gate
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        env:
+          T21_PHASE12U_REPORT_INPUT: /tmp/t21-phase12u-full-original-source-edge-neighbors.json
+          T21_PHASE12V_REPORT_INPUT: /tmp/t21-phase12v-source-only-unmatched-edge-triangles.json
+          T21_PHASE12V_REQUIRED: '1'
+        run: npx vitest run scripts/UndertowSpillwayPhase12VUnmatchedEdgeTriangleQa.test.ts
+
+      - name: Upload T21 Phase12V source-only 88 edge triangle witnesses
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/t21-undertow-evidence-ledger'
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-undertow-phase12v-88-original-source-edge-triangle
+          path: /tmp/t21-phase12v-source-only-unmatched-edge-triangles.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: TypeScript check
         run: npm run typecheck
 
