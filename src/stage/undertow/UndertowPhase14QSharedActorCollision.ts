@@ -243,6 +243,32 @@ export class UndertowPhase14QSharedActorCollision{
     };
   }
 
+  /**
+   * F2 opt-in first-drop admission gate. Before detaching an authentic
+   * upper Crowd agent into its independent original-source Rapier fall,
+   * keep a short free capsule corridor around the lip. Other physical
+   * actor feet are OBSERVED in this real shared world: nobody is moved.
+   * This is conservative separation/queuing, not geometry invention or
+   * permission to pass through an actor during the actual fall.
+   */
+  public shouldDeferF2FirstDrop(id:string,foot:T21QFoot):boolean{
+    this.assertFoot(id,foot);
+    if(!this.humanSourceFoot)
+      throw Error('T21_F2_DROP_ADMISSION_REQUIRES_REAL_HUMAN');
+    const physical=this.actors.get(id);
+    if(!physical||Math.hypot(
+      physical.sourceFoot.x-foot.x,
+      physical.sourceFoot.y-foot.y,
+      physical.sourceFoot.z-foot.z)>.025)
+      throw Error('T21_F2_DROP_ADMISSION_CPU_FOOT_DESYNC');
+    const atRisk=(p:T21QFoot)=>Math.abs(p.y-foot.y)<1.6&&
+      Math.hypot(p.x-foot.x,p.z-foot.z)<1.45;
+    for(const [otherId,other] of this.actors){
+      if(otherId!==id&&atRisk(other.sourceFoot))return true;
+    }
+    return atRisk(this.humanSourceFoot);
+  }
+
   /** Used for diagnostics; not a correction, and not source NavMesh authority. */
   public approxActorOverlapIds():readonly string[]{
     const out:string[]=[];
