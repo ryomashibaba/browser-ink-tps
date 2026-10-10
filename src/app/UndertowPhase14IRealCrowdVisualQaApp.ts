@@ -19,6 +19,17 @@ import type {PaintCoordinator} from '../ink/PaintCoordinator';
 import {Team} from '../ink/types';
 import {initializeRecastNavigation,RecastStageNavigation} from '../navigation/RecastStageNavigation';
 import {initializeRapier} from '../physics/RapierStagePhysics';
+import {PlayerController} from '../player/PlayerController';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import {PlayerResources} from '../combat/PlayerResources';
+import {CombatTargetSystem} from '../combat/CombatTargetSystem';
+import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {defineTestSurfaces} from '../stage/TestStage';
+import {nearestT21SourceSupportedLanding} from '../stage/undertow/UndertowPhase14ECpuHandoff';
+import type {PlayerInput} from '../input/PlayerInput';
+import type {ThirdPersonCamera} from '../camera/ThirdPersonCamera';
+import type {PaintRequest} from '../ink/PaintCoordinator';
+import type {CpuFireRequest} from '../ai/CpuAgentSystem';
 import {auditPhase14CrowdFrame} from '../stage/undertow/UndertowPhase14CrowdMotionAudit';
 import {buildPhase14KSourceVisualLayer,type T21Phase14KVisualManifest} from './UndertowPhase14KSourceStageLayer';
 import {RapierStagePhysics} from '../physics/RapierStagePhysics';
@@ -41,7 +52,7 @@ type Transition={id:string;side:Side;frame:number;rawStepMeters:number;physical:
 type FrameEntry={id:string;state:string;hasCrowd:boolean;foot:[number,number,number];
  visual:[number,number,number];deltaMeters:number};
 type Snapshot={
- phase:'14I'|'14K'|'14L';frame:number;mode:'REAL_RECAST_CROWD_UNFORCED';
+ phase:'14I'|'14K'|'14L'|'14P';frame:number;mode:'REAL_RECAST_CROWD_UNFORCED';
  renderer:'webgl2';transitionCount:number;transitions:Transition[];
  cpu:FrameEntry[];activeRapierBodies:number;
  paintRequests:number;shootingRequests:number;tacticalRetargets:number;
@@ -51,6 +62,13 @@ type Snapshot={
  completedOriginalDropRecords:readonly {id:string;frame:number;footY:number}[];
  sourceContext:T21Phase14KVisualManifest|null;
  cameraAudit:null|{mode:'SOURCE_RAPIER_CAMERA_QUERY';position:[number,number,number];focus:[number,number,number];blockedBy:string|null};
+ human:null|{actualPlayerController:true;mode:string;grounded:boolean;
+  foot:[number,number,number];render:[number,number,number];hp:number;
+  originalLandingSolid:string;scriptedMovement:boolean};
+ originalAuthorizedShotIds:readonly string[];
+ originalSourcePaintRequests:number;
+ actualCpuProjectileHits:number;
+ gameplayScoresUnapproved:true;sharedDynamicColliderWorld:false;
 };
 function material(rgb:[number,number,number]){
  const m=new StandardMaterial();
@@ -62,7 +80,7 @@ function coords(p:Readonly<{x:number;y:number;z:number}>):[number,number,number]
 }
 export class UndertowPhase14IRealCrowdVisualQaApp{
  static async boot(canvas:HTMLCanvasElement,panel:HTMLElement){
-  if(!['phase14i','phase14k','phase14l'].includes(new URL(location.href).searchParams.get('t21Qa')??'')||
+  if(!['phase14i','phase14k','phase14l','phase14p'].includes(new URL(location.href).searchParams.get('t21Qa')??'')||
      freeze.activationReady!==false)throw Error('T21_PHASE14I_QA_OPT_IN_REQUIRED');
   await Promise.all([initializeRapier(),initializeRecastNavigation()]);
   const device=await createGraphicsDevice(canvas,{
@@ -80,14 +98,17 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   return new UndertowPhase14IRealCrowdVisualQaApp(app,canvas,panel);
  }
 
- private readonly phase14l=new URL(location.href).searchParams.get('t21Qa')==='phase14l';
- private readonly phase14k=['phase14k','phase14l'].includes(
+ private readonly phase14p=new URL(location.href).searchParams.get('t21Qa')==='phase14p';
+ private readonly phase14l=['phase14l','phase14p'].includes(
+   new URL(location.href).searchParams.get('t21Qa')??'');
+ private readonly phase14k=['phase14k','phase14l','phase14p'].includes(
    new URL(location.href).searchParams.get('t21Qa')??'');
  private readonly stage=undertowT21dConnectivityQaStage();
  private readonly sourceContext:T21Phase14KVisualManifest|null;
  private readonly camera:Entity;
  private readonly cameraPhysics:RapierStagePhysics|null;
  private readonly stats=new PerformanceStats();
+ private readonly ink=new GameplayInkSystem();
  private readonly navigation=new RecastStageNavigation(this.stage,this.stats);
  private readonly adapter=new UndertowPhase14ECpuHandoff(this.stage,true);
  private readonly selected:QaBot[];
@@ -97,6 +118,14 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
  private readonly lastPositions=new Map<string,Vec3>();
  private readonly maxStep=new Map<string,number>();
  private frame=0;
+ private player:PlayerController|null=null;
+ private playerPhysics:RapierStagePhysics|null=null;
+ private playerResources:PlayerResources|null=null;
+ private projectiles:ProjectileSystem|null=null;
+ private readonly sourcePaintRequests:PaintRequest[]=[];
+ private readonly cpuShotIds:string[]=[];
+ private readonly qaInput={moveX:0,moveY:0,squidHeld:false,jumpHeld:false,
+   consumeJump:()=>false};
 
  private constructor(
   private readonly app:AppBase,private readonly canvas:HTMLCanvasElement,
@@ -111,7 +140,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   const sun=new Entity('Phase14I:Light');
   sun.addComponent('light',{type:'directional',intensity:1.7,color:new Color(1,1,1)});
   sun.setEulerAngles(45,25,0);app.root.addChild(sun);
-  const camera=new Entity(this.phase14l?'Phase14L:Camera':
+  const camera=new Entity(this.phase14p?'Phase14P:EightActorsCamera':
+   this.phase14l?'Phase14L:Camera':
    this.phase14k?'Phase14K:Camera':'Phase14I:Camera');
   this.camera=camera;
   camera.addComponent('camera',{
@@ -126,7 +156,12 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   this.cameraPhysics=this.phase14k?new RapierStagePhysics(DT,this.stage):null;
   this.cameraPhysics?.step();
 
-  const enqueue=(_:unknown)=>{throw Error('T21_PHASE14I_UNAUTHORIZED_PAINT');};
+  const enqueue=(request:PaintRequest)=>{
+   if(!this.phase14p)throw Error('T21_PHASE14I_UNAUTHORIZED_PAINT');
+   if(!this.stage.paintSurfaces.some(surface=>surface.id===request.surfaceId))
+    throw Error('T21_PHASE14P_NON_SOURCE_PAINT_SURFACE');
+   this.sourcePaintRequests.push(request);
+  };
   // Record ONLY the real CpuAgentSystem-triggered calls; never call observe
   // ourselves. This is evidence of an actual Recast offmesh discontinuity.
   const observe=this.adapter.observe.bind(this.adapter);
@@ -142,7 +177,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    }
    return accepted;
   };
-  this.cpu=new CpuAgentSystem(app,this.navigation,new GameplayInkSystem(),
+  this.cpu=new CpuAgentSystem(app,this.navigation,this.ink,
    {enqueue} as unknown as PaintCoordinator,this.stats,this.stage,Team.A,this.adapter);
   // QA-only headless isolation of A1/B1; retains the canonical seven-CPU
   // CpuAgentSystem spawning path. Other five do not participate in movement.
@@ -190,6 +225,39 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    marker.setPosition(link.end[0],link.end[1]+.03,link.end[2]);
    app.root.addChild(marker);
   }
+  if(this.phase14p){
+   const livePhysics=new RapierStagePhysics(DT,this.stage);
+   livePhysics.step();
+   this.playerPhysics=livePhysics;
+   const cameraInput={getFlatForward:(out:Vec3)=>out.set(0,0,1)}
+    as ThirdPersonCamera;
+   const player=new PlayerController(app,livePhysics,this.qaInput as PlayerInput,
+    cameraInput,this.ink,this.stats);
+   this.player=player;
+   player.setTeam(Team.A);
+   const sourceLink=this.stage.navigationLinks!.find(l=>
+     l.id==='first-drop-negative-z-3')!;
+   const originalLanding=this.stage.solids.find(s=>
+     s.id==='UndertowT21D:first-drop-landing-negative-z')!;
+   const actualFoot=nearestT21SourceSupportedLanding(originalLanding,{
+    x:sourceLink.start[0],y:sourceLink.start[1],z:sourceLink.start[2]
+   });
+   player.teleport(new Vec3(actualFoot.x,
+    actualFoot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,
+    actualFoot.z));
+   const surfaces=defineTestSurfaces(this.ink,this.stage);
+   if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
+    throw Error('T21_PHASE14P_SOURCE_SCOREABILITY_UNAPPROVED');
+   const resources=new PlayerResources(this.stats);
+   this.playerResources=resources;
+   const feedback={
+    updateChargeVisual:()=>{},shot:()=>{},impact:()=>{},
+    stringerFuse:()=>{},stringerBurst:()=>{},melee:()=>{},beam:()=>{}
+   };
+   this.projectiles=new ProjectileSystem(app,surfaces,livePhysics,
+    {enqueue} as PaintCoordinator,resources,
+    new CombatTargetSystem(app,this.stats),this.cpu,feedback as never,this.stats);
+  }
   const cameraSide=new URL(location.href).searchParams.get('qaSide')==='negative-z'
    ?'negative-z':'positive-z';
   const cameraLink=this.stage.navigationLinks!.find(l=>
@@ -198,7 +266,8 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   camera.lookAt(cameraLink.end[0],5.2,cameraLink.end[2]);
   panel.innerHTML='';
   const label=document.createElement('div');
-  label.id=this.phase14l?'t21-phase14l-panel':
+  label.id=this.phase14p?'t21-phase14p-panel':
+   this.phase14l?'t21-phase14l-panel':
    this.phase14k?'t21-phase14k-panel':'t21-phase14i-panel';
   label.style.cssText='position:absolute;left:16px;top:16px;z-index:50;'+
    'background:rgba(4,14,28,.88);color:#f5f9ff;padding:14px 18px;'+
@@ -217,6 +286,12 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    canvas.dataset.t21Phase14kSide=cameraSide;
    canvas.dataset.t21Phase14kActivation='FORBIDDEN';
   }
+  if(this.phase14p){
+   canvas.dataset.t21Phase14pReady='READY';
+   canvas.dataset.t21Phase14pRenderer=renderer;
+   canvas.dataset.t21Phase14pSide=cameraSide;
+   canvas.dataset.t21Phase14pActivation='FORBIDDEN';
+  }
   if(this.phase14l){
    canvas.dataset.t21Phase14lReady='READY';
    canvas.dataset.t21Phase14lRenderer=renderer;
@@ -231,8 +306,10 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   (window as unknown as {__t21Phase14I?:typeof api}).__t21Phase14I=api;
   if(this.phase14k&&!this.phase14l)
    (window as unknown as {__t21Phase14K?:typeof api}).__t21Phase14K=api;
-  if(this.phase14l)
+  if(this.phase14l&&!this.phase14p)
    (window as unknown as {__t21Phase14L?:typeof api}).__t21Phase14L=api;
+  if(this.phase14p)
+   (window as unknown as {__t21Phase14P?:typeof api}).__t21Phase14P=api;
   this.cpu.render(1);
   if(this.phase14k)this.followPhase14KCamera();
   this.refreshLabel(label);
@@ -246,7 +323,40 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   // real Recast crowd update, real Rapier KCC when actual link triggers.
   const previous=this.selected.map(b=>b.position.clone());
   const previousStates=this.selected.map(b=>b.mobilityState);
-  this.cpu.fixedUpdate(DT,true,Team.A,new Vec3(0,7.5,0),false);
+  if(this.phase14p){
+   this.qaInput.moveY=this.frame>=100&&this.frame<118?.1:0;
+   const before=this.player!.getPosition();
+   this.player!.computeFixed(DT);
+   this.playerPhysics!.step();
+   this.player!.syncAfterPhysics(DT);
+   const after=this.player!.getPosition();
+   if(![after.x,after.y,after.z].every(Number.isFinite)||
+     after.distance(before)>.60)
+    throw Error('T21_PHASE14P_REAL_PLAYER_KCC_DISCONTINUITY');
+   if(this.frame===380){
+    if(this.completedOriginalDropRecords.size!==7)
+     throw Error('T21_PHASE14P_CPU_RECOVERIES_NOT_COMPLETE');
+    const bots=(this.cpu as unknown as {bots:QaBot[]}).bots;
+    for(const b of bots){
+     b.thinkRemaining=900;b.paintRemaining=900;b.fireRemaining=900;
+     b.agent?.resetMoveTarget();
+    }
+    bots.find(b=>b.id==='B1')!.fireRemaining=0;
+   }
+  }
+  const readyToShoot=this.phase14p&&this.frame>=380;
+  const humanPosition=this.player?.getPosition()??new Vec3(0,7.5,0);
+  this.cpu.fixedUpdate(DT,true,Team.A,humanPosition,readyToShoot);
+  if(this.phase14p){
+   this.cpu.drainFireRequests((request:CpuFireRequest)=>{
+    if(!readyToShoot)throw Error('T21_PHASE14P_EARLY_CPU_SHOT');
+    this.cpuShotIds.push(request.sourceId);
+    this.projectiles!.queueCpuShot(request);
+   });
+   this.cpu.drainKitRequests(()=>false);
+   this.projectiles!.fixedUpdate(DT,false,false,humanPosition,
+    new Vec3(0,0,1),Team.A,humanPosition,false,readyToShoot);
+  }
   this.cpu.render(1);
   this.frame++;
   if(this.phase14k)this.followPhase14KCamera();
@@ -265,9 +375,13 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   */
  private followPhase14KCamera(){
   const preferredId=new URL(location.href).searchParams.get('qaSide')==='negative-z'?'B1':'A1';
-  const target=this.selected.find(bot=>bot.id===preferredId)!.position;
+  const target=this.phase14p&&preferredId==='B1'?
+   this.player!.getPosition():
+   this.selected.find(bot=>bot.id===preferredId)!.position;
   const focus=new Vec3(target.x,target.y+.76,target.z);
-  const desired=new Vec3(target.x+9,target.y+10,target.z+16);
+  const desired=this.phase14p&&preferredId==='A1'?
+   new Vec3(target.x,target.y+13,target.z-16):
+   new Vec3(target.x+9,target.y+10,target.z+16);
   const blocker=this.cameraPhysics!.castStageSegment(focus,desired,'camera');
   const k=blocker?Math.max(0,(blocker.distance-.42)/Math.max(1e-7,desired.distance(focus))):1;
   const position=new Vec3(focus.x+(desired.x-focus.x)*k,
@@ -298,24 +412,29 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   this.updateLabel();return this.snapshot();
  }
  private updateLabel(){
-  const label=this.panel.querySelector(this.phase14l?'#t21-phase14l-panel':
+  const label=this.panel.querySelector(this.phase14p?'#t21-phase14p-panel':
+    this.phase14l?'#t21-phase14l-panel':
     this.phase14k?'#t21-phase14k-panel':'#t21-phase14i-panel');
   if(label)this.refreshLabel(label as HTMLElement);
  }
  private refreshLabel(label:HTMLElement){
   const snap=this.snapshot();
-  label.textContent=(this.phase14l?'T21 Phase14L — SEVEN REAL CPU + RAPIER WEBGL2 QA ONLY\n':
+  label.textContent=(this.phase14p?'T21 Phase14P — 7 REAL CPU + REAL PLAYER + PROJECTILE WEBGL2 QA ONLY\n':
+   this.phase14l?'T21 Phase14L — SEVEN REAL CPU + RAPIER WEBGL2 QA ONLY\n':
    this.phase14k?'T21 Phase14K — ORIGINAL SOURCE VISUAL + CAMERA QA ONLY\n':'T21 Phase14I — REAL RECAST CROWD / WEBGL2 QA ONLY\n')+
    'Original one-way links -> real Rapier KCC -> verified Crowd settle\n'+
    'NO source/gameplay promotion. NO human Visual Freeze approval.\n'+
    'frame '+snap.frame+'  real interrupts '+snap.transitionCount+
    '  bodies '+snap.activeRapierBodies+'  camera '+this.canvas.dataset.t21Phase14iSide+'\n'+
-   snap.cpu.map(b=>b.id+' '+b.state+' y='+b.foot[1].toFixed(3)).join('\n');
+   snap.cpu.map(b=>b.id+' '+b.state+' y='+b.foot[1].toFixed(3)).join('\n')+
+   (snap.human?'\nPLAYER real KCC footY='+snap.human.foot[1].toFixed(3)+
+     ' HP='+snap.human.hp+' grounded='+snap.human.grounded+
+     ' shots='+snap.originalAuthorizedShotIds.join(','): '');
   this.canvas.dataset.t21Phase14iFrame=String(this.frame);
  }
  private snapshot():Snapshot{
   return {
-   phase:this.phase14l?'14L':this.phase14k?'14K':'14I',
+   phase:this.phase14p?'14P':this.phase14l?'14L':this.phase14k?'14K':'14I',
    frame:this.frame,mode:'REAL_RECAST_CROWD_UNFORCED',
    renderer:'webgl2',transitionCount:this.transitions.length,
    transitions:this.transitions.map(t=>({...t})),
@@ -336,16 +455,36 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
    completedOriginalDropIds:[...this.completedOriginalDropRecords.keys()],
    completedOriginalDropRecords:[...this.completedOriginalDropRecords.values()],
    sourceContext:this.sourceContext,
+   human:this.player?(()=>{
+    const p=this.player!.getPosition();
+    return {actualPlayerController:true as const,
+      mode:this.player!.currentMode,grounded:this.stats.playerGrounded,
+      foot:coords(new Vec3(p.x,p.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,p.z)),
+      render:coords(p),hp:this.playerResources!.currentHp,
+      originalLandingSolid:'UndertowT21D:first-drop-landing-negative-z',
+      scriptedMovement:true
+    };
+   })():null,
+   originalAuthorizedShotIds:[...this.cpuShotIds],
+   originalSourcePaintRequests:this.sourcePaintRequests.length,
+   actualCpuProjectileHits:this.stats.cpuPlayerHits,
+   gameplayScoresUnapproved:true,
+   sharedDynamicColliderWorld:false,
    cameraAudit:this.phase14k?(()=>{
      const pos=this.camera.getPosition();
      const preferredId=new URL(location.href).searchParams.get('qaSide')==='negative-z'?'B1':'A1';
-     const selected=this.selected.find(bot=>bot.id===preferredId)!.position;
+     const selected=this.phase14p&&preferredId==='B1'?
+       this.player!.getPosition():
+       this.selected.find(bot=>bot.id===preferredId)!.position;
      const focus=new Vec3(selected.x,selected.y+.76,selected.z);
+     const desired=this.phase14p&&preferredId==='A1'?
+       new Vec3(selected.x,selected.y+13,selected.z-16):
+       new Vec3(selected.x+9,selected.y+10,selected.z+16);
      return {
        mode:'SOURCE_RAPIER_CAMERA_QUERY' as const,
        position:coords(pos),focus:coords(focus),
        blockedBy:this.cameraPhysics!.castStageSegment(focus,
-         new Vec3(selected.x+9,selected.y+10,selected.z+16),'camera')?.solidId??null
+         desired,'camera')?.solidId??null
      };
    })():null
   };
