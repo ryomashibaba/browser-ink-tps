@@ -266,6 +266,10 @@ export class CpuAgentSystem {
             closest.z-bot.position.z)>.65)
             throw new Error('T21_PHASE14E_UNSUPPORTED_NAV_RESUME');
           bot.agent=this.navigation.addAgent(bot.position);
+          // This is a landing recovery, not permission to reuse the
+          // upper-to-lower Crowd offmesh target. Let it settle at the
+          // original source-backed lower landing before tactical retarget.
+          bot.agent.resetMoveTarget();
           bot.mobilityState='FIRST_DROP_REJOIN';
           bot.rejoinElapsedFrames=0;
           bot.rejoinStableFrames=0;
