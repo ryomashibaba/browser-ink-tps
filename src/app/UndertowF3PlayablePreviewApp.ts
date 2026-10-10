@@ -90,8 +90,11 @@ export class UndertowF3PlayablePreviewApp{
  private readonly humanSpawn:Vec3;
  private readonly panel:HTMLElement;
  private readonly status:HTMLElement;
- private readonly p=new Vec3(),aim=new Vec3(),target=new Vec3(),
-  muzzle=new Vec3(),visual=new Vec3();
+ private readonly p=new Vec3();
+ private readonly aim=new Vec3();
+ private readonly target=new Vec3();
+ private readonly muzzle=new Vec3();
+ private readonly visual=new Vec3();
  private paused=false;
  private stopReason:string|null=null;
  private respawnFrames=0;
@@ -283,6 +286,7 @@ export class UndertowF3PlayablePreviewApp{
    this.feedback.update(cameraDt);
    this.camera.update(this.visual,cameraDt);
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
+   this.stats.frame(dt*1000);
    this.renderedFrames++;
    if(this.renderedFrames%12===0)this.refresh();
   }catch(error){
@@ -308,7 +312,7 @@ export class UndertowF3PlayablePreviewApp{
    unrestricted4v4Certified:false,
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
-   cpu:progress,paintEvents:this.stats.paintEvents,
+   cpu:progress,paintEventsPerSecond:this.stats.paintEventsPerSecond,
    cpuShots:this.stats.cpuShots,shotsFired:this.stats.shotsFired,
    tick:this.clock.tick,paused:this.paused,
    stopReason:this.stopReason
@@ -326,7 +330,7 @@ export class UndertowF3PlayablePreviewApp{
    'Real drops · '+p.physicalFirstDrops.length+
     ' | original links '+p.originalSourceLinksUsed,
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
-    ' | paint events '+state.paintEvents,
+    ' | paint/s '+state.paintEventsPerSecond.toFixed(1),
    'Tick '+state.tick+' · '+(state.paused?'PAUSED':'RUNNING'),
    state.stopReason?'SAFE STOP: '+state.stopReason:''
   ].filter(Boolean).join('\n');
