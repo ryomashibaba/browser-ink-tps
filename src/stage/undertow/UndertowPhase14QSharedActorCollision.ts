@@ -47,6 +47,7 @@ interface ActorBody{
 export class UndertowPhase14QSharedActorCollision{
   private readonly actors=new Map<string,ActorBody>();
   private readonly ownerByHandle=new Map<number,string>();
+  private humanSourceFoot:T21QFoot|null=null;
   private readonly kcc;
   private readonly cpuRadius=.29; // Actual CpuAgentSystem capsule render radius
   private readonly cpuHalfHeight=.39;
@@ -90,6 +91,13 @@ export class UndertowPhase14QSharedActorCollision{
     }
   }
 
+  /** Exact current PlayerController KCC foot, NOT an invented CPU repellor. */
+  public syncActualHumanFoot(foot:T21QFoot):void{
+    if(![foot.x,foot.y,foot.z].every(Number.isFinite))
+      throw Error('T21_PHASE14Q_UNTRUSTED_REAL_HUMAN_SOURCE');
+    this.humanSourceFoot={...foot};
+  }
+
   public auditGroundStep(id:string,from:T21QFoot,to:T21QFoot,dt:number):T21QContactResult{
     this.assertFoot(id,from);
     this.assertFoot(id,to);
@@ -104,7 +112,6 @@ export class UndertowPhase14QSharedActorCollision{
     const wanted=Math.hypot(dx,dy,dz);
     if(wanted>GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt+1e-5)
       throw Error('T21_PHASE14Q_CPU_CROWD_OVERSPEED_UNAPPROVED');
-    const original={...actor.sourceFoot};
     // Ensure the collision test always originates at the verified CPU pose.
     const p=actor.body.translation();
     if(Math.hypot(p.x-from.x,p.y-this.cpuCenterOffset-from.y,p.z-from.z)>.025)
@@ -134,8 +141,6 @@ export class UndertowPhase14QSharedActorCollision{
     const actorOverlaps=this.hasApproximateSameLayerOverlap(id,from);
     const cause=actorOverlaps?'UNSUPPORTED_INITIAL_OVERLAP':
       clear?'CLEAR':'DYNAMIC_ACTOR_OR_STAGE_BLOCKER';
-    if(actor.sourceFoot!==original&&actor.sourceFoot.x!==original.x)
-      throw Error('T21_PHASE14Q_ILLEGAL_CPU_POSE_MUTATION');
     return {
       source:'ORIGINAL_25_SOLID_RAPIER_SHARED_ACTOR_WORLD',
       approved:clear&&!actorOverlaps,cause,
@@ -144,7 +149,8 @@ export class UndertowPhase14QSharedActorCollision{
       horizontalDisagreementMeters:errXZ,
       verticalDisagreementMeters:errY,
       colliderOwnerIds:collisionOwners,
-      realHumanCapsulePresent:this.physics.world.bodies.len()>this.actors.size,
+      realHumanCapsulePresent:this.humanSourceFoot!==null,
+
       originalSourceCollidersIntact:true,
       cpuVisualTeleportPerformed:false,originalNavAuthorityOverridden:false,
       productionAuthorized:false
@@ -182,6 +188,12 @@ export class UndertowPhase14QSharedActorCollision{
         Math.abs(other.sourceFoot.y-from.y)<1)
         return true;
     }
+    if(this.humanSourceFoot &&
+      Math.hypot(this.humanSourceFoot.x-from.x,
+        this.humanSourceFoot.z-from.z)<
+          this.cpuRadius+PLAYER_CHARACTER_PHYSICS.humanRadiusMeters-.01&&
+      Math.abs(this.humanSourceFoot.y-from.y)<1)
+      return true;
     return false;
   }
 
