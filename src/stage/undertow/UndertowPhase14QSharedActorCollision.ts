@@ -68,6 +68,18 @@ export class UndertowPhase14QSharedActorCollision{
     this.kcc=createConfiguredPlayerCharacterController(physics.world);
   }
 
+  /** A match restart is not permission to leave ghost kinematic CPU
+   * bodies behind. Drop all CPU proxies without touching the real
+   * PlayerController body or any frozen source stage collider.
+   * The exact real HUMAN foot must be supplied again after restart. */
+  public resetActors():void{
+    for(const actor of this.actors.values())
+      this.physics.world.removeRigidBody(actor.body);
+    this.actors.clear();
+    this.ownerByHandle.clear();
+    this.humanSourceFoot=null;
+  }
+
   public syncRealCpuFoot(id:string,foot:T21QFoot):void{
     this.assertFoot(id,foot);
     let actor=this.actors.get(id);
@@ -106,6 +118,8 @@ export class UndertowPhase14QSharedActorCollision{
     this.assertFoot(id,to);
     if(!Number.isFinite(dt)||Math.abs(dt-1/60)>1e-8)
       throw Error('T21_PHASE14Q_REQUIRES_EXACT_60HZ');
+    if(!this.humanSourceFoot)
+      throw Error('T21_PHASE14Q_REAL_HUMAN_FOOT_NOT_SYNCHRONIZED');
     const actor=this.actors.get(id);
     if(!actor)throw Error('T21_PHASE14Q_MISSING_REAL_CPU_COLLIDER_'+id);
     if(Math.hypot(actor.sourceFoot.x-from.x,actor.sourceFoot.y-from.y,
@@ -184,11 +198,8 @@ export class UndertowPhase14QSharedActorCollision{
   public get cpuColliderCount():number{return this.actors.size;}
 
   public dispose():void{
+    this.resetActors();
     this.physics.world.removeCharacterController(this.kcc);
-    for(const actor of this.actors.values())
-      this.physics.world.removeRigidBody(actor.body);
-    this.actors.clear();
-    this.ownerByHandle.clear();
   }
 
   private hasApproximateSameLayerOverlap(id:string,from:T21QFoot):boolean{
