@@ -87,7 +87,7 @@ describe('T21 Phase12Y original cover face material, downward normal and OBJ-ID 
     xyz:[[0,0,0],[0,0,1],[1,0,0]]};
   expect(geometry(base).normal[1]).toBeLessThan(-.999999);
   expect(geometry(reversed).normal[1]).toBeGreaterThan(.999999);
-  expect(neighbors([base,reversed])).toHaveLength(3);
+  expect(()=>neighbors([base,reversed])).toThrow('PHASE12Y_TWO_SOURCE_FACES_SHARE_MULTIPLE_EDGES');
   const A:Face={...base,id:3,originalIds:[11,12,13]};
   const B:Face={...base,id:4,originalIds:[21,22,23]};
   expect(neighbors([A,B])).toHaveLength(0);
