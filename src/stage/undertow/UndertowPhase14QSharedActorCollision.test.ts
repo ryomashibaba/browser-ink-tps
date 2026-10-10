@@ -147,6 +147,39 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.actors.cpuColliderCount).toBe(1);
   w.actors.dispose();
  });
+ it('M4 rejects a real-KCC-shaped FIRST_DROP_FALL foot entering actual grounded HUMAN capsule while leaving actual CPU pose untouched',()=>{
+  const w=world();
+  const from={x:w.humanFoot.x+.665,y:w.humanFoot.y+.35,
+    z:w.humanFoot.z};
+  const next={x:w.humanFoot.x+.59,y:w.humanFoot.y+.10,
+    z:w.humanFoot.z};
+  w.actors.syncRealCpuFoot('B1',from);
+  const sourcePlayer=w.player.getPosition().clone();
+  const blocked=w.actors.auditAirborneSourceFoot('B1',from,next,DT,true);
+  expect(blocked.approved).toBe(false);
+  expect(blocked.cause).toBe('SHARED_ACTOR_CAPSULE_INTERSECTS');
+  expect(blocked.actorCollisionCandidate).toBe('HUMAN_PLAYER_CONTROLLER');
+  expect(blocked.cpuFootTeleportPerformed).toBe(false);
+  expect(blocked.fullSharedWorldFallingKccProved).toBe(false);
+  expect(w.player.getPosition().distance(sourcePlayer)).toBeLessThan(1e-7);
+  const clear=w.actors.auditAirborneSourceFoot('B1',from,
+    {x:from.x,y:from.y-.10,z:from.z},DT,true);
+  expect(clear.approved).toBe(true);
+  expect(clear.actorCollisionCandidate).toBeNull();
+  const unproved=w.actors.auditAirborneSourceFoot('B1',from,
+    {x:from.x,y:from.y-.10,z:from.z},DT,false);
+  expect(unproved.approved).toBe(false);
+  expect(unproved.cause).toBe('SOURCE_CONTINUITY_UNVERIFIED');
+  expect(()=>w.actors.auditAirborneSourceFoot('B1',from,
+    {x:from.x+.9,y:from.y,z:from.z},DT,true))
+    .toThrow('T21_PHASE14Q_AIRBORNE_UNVERIFIED_KCC_STEP');
+  console.log('T21_PHASE14Q_M4_ORIGINAL_KCC_FALL_CANDIDATE_HUMAN_VETO',
+    JSON.stringify({blocked,clear,unproved,
+      sameOriginalT21SourceFloor:true,realHumanBodyUnchanged:true,
+      onlyActualFallAdapterMaySupplyApprovedContinuousFoot:true
+    }));
+  w.actors.dispose();
+ });
  it('rejects a prospective CPU Crowd endpoint INSIDE the real HUMAN capsule before a tiny physical discrepancy is incorrectly tolerated',()=>{
   const w=world();
   const initial={x:w.humanFoot.x+.655,y:w.humanFoot.y,z:w.humanFoot.z};
