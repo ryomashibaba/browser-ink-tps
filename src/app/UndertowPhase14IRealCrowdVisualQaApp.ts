@@ -187,7 +187,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   camera.lookAt(cameraLink.end[0],5.2,cameraLink.end[2]);
   panel.innerHTML='';
   const label=document.createElement('div');
-  label.id='t21-phase14i-panel';
+  label.id=this.phase14k?'t21-phase14k-panel':'t21-phase14i-panel';
   label.style.cssText='position:absolute;left:16px;top:16px;z-index:50;'+
    'background:rgba(4,14,28,.88);color:#f5f9ff;padding:14px 18px;'+
    'font:14px monospace;border:1px solid #6c9ab8;max-width:590px;'+
@@ -274,7 +274,7 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   this.updateLabel();return this.snapshot();
  }
  private updateLabel(){
-  const label=this.panel.querySelector('#t21-phase14i-panel');
+  const label=this.panel.querySelector(this.phase14k?'#t21-phase14k-panel':'#t21-phase14i-panel');
   if(label)this.refreshLabel(label as HTMLElement);
  }
  private refreshLabel(label:HTMLElement){
