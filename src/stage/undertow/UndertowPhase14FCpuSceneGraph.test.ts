@@ -216,6 +216,11 @@ describe('T21 Phase14F opt-in CpuAgentSystem / PlayCanvas scene-graph integratio
   it('preserves lower-layer settling across pause and rejects a persistent unsupported Crowd height', () => {
     const scene = createScene();
     const bot = scene.selected[0]!;
+    const partner = scene.selected[1]!;
+    partner.lifeState = 'SPLATTED';
+    partner.respawnRemainingSeconds = 1000;
+    if(partner.agent)scene.navigation.removeAgent(partner.agent);
+    partner.agent = null;
     startOriginalFall(scene, bot, 'positive-z');
     for(let i=0;i<120&&bot.mobilityState==='FIRST_DROP_FALL';i++)tick(scene);
     expect(bot.mobilityState).toBe('FIRST_DROP_REJOIN');
