@@ -117,6 +117,9 @@ describe('T21 Phase14F opt-in CpuAgentSystem / PlayCanvas scene-graph integratio
     for (const bot of scene.selected) travel.set(bot.id, {frames: 0, maxStep: 0});
     const started = performance.now();
     for (let frame = 0; frame < 150; frame++) {
+      const bothFallingAtTickStart = scene.selected.every(
+        bot => bot.mobilityState === 'FIRST_DROP_FALL'
+      );
       const previous = scene.selected.map(bot => bot.position.clone());
       tick(scene);
       for (let i = 0; i < scene.selected.length; i++) {
@@ -133,11 +136,19 @@ describe('T21 Phase14F opt-in CpuAgentSystem / PlayCanvas scene-graph integratio
           scene.cpu.render(alpha);
           const visual = bot.entity.getPosition();
           expect(visual.x).toBeCloseTo(before.x + (bot.position.x - before.x) * alpha, 5);
-          expect(visual.y).toBeCloseTo(before.y + (bot.position.y - before.y) * alpha + 0.68, 5);
+          const interpolatedY = before.y + (bot.position.y - before.y) * alpha + 0.68;
+          // Grounding activates the existing cosmetic bob (<=0.025m). In
+          // FIRST_DROP_FALL it is disabled, so strict physics lerp applies.
+          if (bot.mobilityState === 'FIRST_DROP_FALL')
+            expect(visual.y).toBeCloseTo(interpolatedY, 5);
+          else expect(Math.abs(visual.y - interpolatedY)).toBeLessThanOrEqual(0.03);
           expect(visual.z).toBeCloseTo(before.z + (bot.position.z - before.z) * alpha, 5);
         }
       }
-      // No paint/weapon/kit/tactical action is authorized during descent.
+      // The first landed agent is allowed to resume actions while its mirrored
+      // partner finishes one frame later. Suppression is enforced only while
+      // both are still physically falling.
+      if (bothFallingAtTickStart) {
       expect(scene.stats.cpuPaintRequests).toBe(0);
       expect(scene.stats.cpuShots).toBe(0);
       expect(scene.stats.cpuSubUses).toBe(0);
@@ -149,6 +160,7 @@ describe('T21 Phase14F opt-in CpuAgentSystem / PlayCanvas scene-graph integratio
       scene.cpu.drainKitRequests(r => { kits.push(r); return false; });
       expect(fire).toHaveLength(0);
       expect(kits).toHaveLength(0);
+      }
       if (scene.selected.every(bot => bot.mobilityState === 'GROUND')) break;
     }
     const elapsedMs = performance.now() - started;
