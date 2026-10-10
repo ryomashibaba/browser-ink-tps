@@ -71,6 +71,8 @@ import {UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS,UNDERTOW_T21_PHASE12K_OR
 import {UNDERTOW_T21_PHASE12L_ORIGINAL_OBJECT_PARTS,UNDERTOW_T21_PHASE12L_OBJECT_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12LOriginalObjectParts';
 import {UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BANDS,UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BAND_SUMMARY} from '../stage/undertow/UndertowSpillwayPhase12MOriginalRimBands';
 
+import {originalSourceFocusCamera,type UndertowReviewComposition} from './UndertowReviewCameraComposition';
+
 type ReviewView = 'OVERVIEW' | 'TOP' | 'POS_TO_NEG' | 'SPAWN_A' | 'SPAWN_B' | 'CENTER_SOURCE';
 type ReviewLayerPreset = 'WALK_SOURCE' | 'THREE_DIMENSIONAL' | 'ALL_EVIDENCE';
 
@@ -187,6 +189,7 @@ export class UndertowVisualReviewApp {
   private readonly navRoot = new Entity('T21Review:Navigation');
   private readonly keys = new Set<string>();
   private readonly layerToggleBindings: Array<{button:HTMLButtonElement;root:Entity;label:string}> = [];
+  private reviewComposition:UndertowReviewComposition='BASE';
   private yawDegrees = 35;
   private pitchDegrees = 42;
   private distanceMeters = 70;
@@ -212,6 +215,9 @@ export class UndertowVisualReviewApp {
     // URL state is for deterministic five-view evidence only. It changes
     // inert renderer visibility/camera, never runtime stage/collision state.
     const params=new URL(window.location.href).searchParams;
+    this.reviewComposition=params.get('reviewComposition')==='CENTER_FOCUS'?'CENTER_FOCUS':'BASE';
+    this.canvas.dataset.t21ReviewComposition=this.reviewComposition;
+    this.refreshReviewCompositionButtons();
     const requestedPreset=params.get('reviewPreset');
     if(requestedPreset==='WALK_SOURCE'||requestedPreset==='THREE_DIMENSIONAL'||
        requestedPreset==='ALL_EVIDENCE')this.applyReviewLayerPreset(requestedPreset);
@@ -745,6 +751,11 @@ export class UndertowVisualReviewApp {
         <button data-review-preset="ALL_EVIDENCE">All evidence layers</button>
       </div>
       <p class="review-detail-note">Phase10 source-edge diagnostic: <b>orange = 30 same-XYZ / different OBJ IDs</b>, <b>red = 18 no exact edge match</b>, welded source edges = 0. Phase11 <b>yellow = 16 nearest original source triangle samples</b>: eight 0m source contacts, eight 2.55cm gaps. Neither represents a connected walkable path or game collider. Phase12: mint=FloorLine02, coral=WallMetal00, purple=PillarBase02, blue=Glass01, pink=GlassEdge00; all 16 original-face diagnostics only.</p>
+      <div class="review-actions composition">
+        <button data-review-composition="BASE">Whole-stage camera (unchanged)</button>
+        <button data-review-composition="CENTER_FOCUS">Central source detail camera</button>
+      </div>
+      <p class="review-source-note">Review camera ONLY — not connected flooring, collision or navigation.</p>
       <div class="review-actions views">
         <button data-review-view="OVERVIEW">Overview</button>
         <button data-review-view="TOP">Top</button>
@@ -904,6 +915,18 @@ export class UndertowVisualReviewApp {
           this.applyReviewLayerPreset(preset);
         });
       });
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-review-composition]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const mode=button.dataset.reviewComposition;
+        if(mode==='BASE'||mode==='CENTER_FOCUS'){
+          this.reviewComposition=mode;
+          this.canvas.dataset.t21ReviewComposition=mode;
+          this.refreshReviewCompositionButtons();
+          this.setView((this.canvas.dataset.t21ReviewView as ReviewView)||'OVERVIEW');
+        }
+      });
+    });
 
     panel
       .querySelectorAll<HTMLButtonElement>('[data-review-view]')
@@ -1111,6 +1134,14 @@ export class UndertowVisualReviewApp {
     );
     // Keep prior fully-visible review defaults, with an explicit preset state.
     this.applyReviewLayerPreset('ALL_EVIDENCE');
+  }
+
+  private refreshReviewCompositionButtons():void{
+    this.uiRoot.querySelectorAll<HTMLButtonElement>('[data-review-composition]').forEach(button=>{
+      const active=button.dataset.reviewComposition===this.reviewComposition;
+      button.classList.toggle('active-mode',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
   }
 
   private refreshReviewLayerButtons():void {
@@ -1786,6 +1817,18 @@ export class UndertowVisualReviewApp {
       bounds.maxX - bounds.minX,
       bounds.maxZ - bounds.minZ
     );
+
+    // Opt-in source presentation camera, never stage meshes/collision/paint/nav.
+    if(this.reviewComposition==='CENTER_FOCUS'&&(view==='OVERVIEW'||view==='TOP')){
+      const pose=originalSourceFocusCamera(bounds,view);
+      this.target.set(...pose.target);
+      this.yawDegrees=pose.yawDegrees;
+      this.pitchDegrees=pose.pitchDegrees;
+      this.distanceMeters=pose.distanceMeters;
+      this.canvas.dataset.t21ReviewCameraPose='CENTER_FOCUS_'+view;
+      return;
+    }
+    this.canvas.dataset.t21ReviewCameraPose='BASE_'+view;
 
     if (view === 'CENTER_SOURCE') {
       // Camera only. Both original center FloorMetal downfaces occupy
