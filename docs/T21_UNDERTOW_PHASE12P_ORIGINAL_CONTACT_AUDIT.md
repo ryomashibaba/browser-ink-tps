@@ -19,7 +19,7 @@ Phase12OのWebGL2左右拡大比較は、原本RIM/BANDの視覚的な存在を�
 3. `SHARED_ORIGINAL_OBJ_EDGE` / `SHARED_ORIGINAL_OBJ_VERTEX_ONLY` / `GEOMETRIC_CONTACT_UNWELDED_ORIGINAL_IDS` / `SEPARATED_SOURCE_SURFACES` に分類する。**いずれも物理weldの認定ではない**。
 4. 同一IDの座標整合、488原本Face ID重複なし、Phase12J 44候補JSONからK/L/M 16部品のFace ID/OBJ ID/**IEEE754 Float64完全一致**、T20/T21/64/42 freezeを検証する。
 
-事前オフライン照合（引継ぎZIP内Phase12J同一原本JSON、M対K/L/Mの56組）では、**共有OBJ頂点ID 0組・原本共有辺0組・幾何学的距離約0の組が28組**。ただしIの6柱はPhase12Jの候補JSONには含まれず、GitHub QAで新たにその6部品を対象に追加する。上記の28件は**物理接続・床・実際の衝突の証明ではない**。CI実測の数値が揃うまで、追加24組の結果は未確定。
+事前オフライン照合（引継ぎZIP内Phase12J同一原本JSON、M対K/L/Mの56組）では、**共有OBJ頂点ID 0組・原本共有辺0組・幾何学的距離約0の組が28組**。ただしIの6柱はPhase12Jの候補JSONには含まれず、GitHub QAで新たにその6部品を対象に追加した。**CI #1416の独立Phase12PジョブがSUCCESS**、JSON成果物ID `11658504763` を取得して測定結果を確認：追加したI対Mの**24組のうち4組が3D距離ほぼ0、20組は離隔**。共有OBJ頂点IDと共有OBJ辺は追加24組でもゼロ。従って計80組では**幾何学的接触32組、離隔48組、共有OBJ頂点ID0組、共有OBJ辺0組**。これはあくまで22部品/488三角形の限定監査であり、未表示28部品や全70,396原本Face全体への外挿はしない。**物理接続・床・実際の衝突の証明ではない**。Phase12P独立ジョブSUCCESSと、全CIジョブSUCCESSは別の判定なので、後者は最新再照会が必要。
 
 ## CI成果物と判定
 
