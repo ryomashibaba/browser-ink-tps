@@ -149,8 +149,8 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
  });
  it('rejects a prospective CPU Crowd endpoint INSIDE the real HUMAN capsule before a tiny physical discrepancy is incorrectly tolerated',()=>{
   const w=world();
-  const initial={x:w.humanFoot.x+.665,y:w.humanFoot.y,z:w.humanFoot.z};
-  const unsafe={x:w.humanFoot.x+.60,y:w.humanFoot.y,z:w.humanFoot.z};
+  const initial={x:w.humanFoot.x+.655,y:w.humanFoot.y,z:w.humanFoot.z};
+  const unsafe={x:w.humanFoot.x+.59,y:w.humanFoot.y,z:w.humanFoot.z};
   w.actors.syncRealCpuFoot('B3',initial);
   const result=w.actors.auditGroundStep('B3',initial,unsafe,DT);
   expect(result.requestedMeters).toBeLessThan(.075);
