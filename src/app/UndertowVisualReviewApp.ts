@@ -269,6 +269,10 @@ export class UndertowVisualReviewApp {
     if(originalDetail==='CONTEXT'||originalDetail==='ALL'||
       originalDetail==='RIM'||originalDetail==='BAND')
       this.focusPhase12MOriginalDetails(originalDetail);
+    const inspect=params.get('reviewPillarInspect');
+    if(inspect==='LEFT_BASE'||inspect==='LEFT_WITH'||inspect==='RIGHT_BASE'||inspect==='RIGHT_WITH')
+      this.focusPhase12NMirrorInspection(inspect.startsWith('LEFT')?'LEFT':'RIGHT',
+        inspect.endsWith('WITH'));
     if(params.get('reviewTopologyEdges')==='1'){
       this.coordinateSeamPhase10Root.enabled=true;
       this.unmatchedEdgePhase10Root.enabled=true;
@@ -765,6 +769,10 @@ export class UndertowVisualReviewApp {
         <button data-review-phase12m-detail="ALL">Phase12M 8 source detail parts</button>
         <button data-review-phase12m-detail="RIM">Phase12M flat source rim / gold (NOT floor)</button>
         <button data-review-phase12m-detail="BAND">Phase12M original vertical bands / blue</button>
+        <button data-review-phase12n-inspect="LEFT_BASE">Phase12N left / base 7</button>
+        <button data-review-phase12n-inspect="LEFT_WITH">Phase12N left / with rim+band 11</button>
+        <button data-review-phase12n-inspect="RIGHT_BASE">Phase12N right / base 7</button>
+        <button data-review-phase12n-inspect="RIGHT_WITH">Phase12N right / with rim+band 11</button>
         <button id="t21-review-recovered-focus-exit">Exit source close-up</button>
       </div>
       <div class="review-actions layers">
@@ -941,6 +949,14 @@ export class UndertowVisualReviewApp {
         const x=button.dataset.reviewPhase12mDetail;
         if(x==='CONTEXT'||x==='ALL'||x==='RIM'||x==='BAND')
           this.focusPhase12MOriginalDetails(x);
+      });
+    });
+    panel.querySelectorAll<HTMLButtonElement>('[data-review-phase12n-inspect]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const x=button.dataset.reviewPhase12nInspect;
+        if(x==='LEFT_BASE'||x==='LEFT_WITH'||x==='RIGHT_BASE'||x==='RIGHT_WITH')
+          this.focusPhase12NMirrorInspection(x.startsWith('LEFT')?'LEFT':'RIGHT',
+            x.endsWith('WITH'));
       });
     });
     panel.querySelector<HTMLButtonElement>('#t21-review-recovered-focus-exit')?.addEventListener('click',()=>{
@@ -1130,6 +1146,11 @@ export class UndertowVisualReviewApp {
     this.phase12MBandRoot.enabled=false;
     this.canvas.dataset.t21ReviewPhase12MDetail='off';
     this.canvas.dataset.t21ReviewPhase12MCount='0';
+    this.canvas.dataset.t21ReviewPhase12NSide='off';
+    this.canvas.dataset.t21ReviewPhase12NDetails='off';
+    this.canvas.dataset.t21ReviewPhase12NVisibleComponents='0';
+    this.canvas.dataset.t21ReviewPhase12NVisibleTriangles='0';
+    this.canvas.dataset.t21ReviewPhase12NCameraKey='off';
     this.canvas.dataset.t21ReviewPhase12LContext='off';
     this.canvas.dataset.t21ReviewPhase12LCount='0';
     this.canvas.dataset.t21ReviewPhase12KNeighbors='off';
@@ -1289,6 +1310,11 @@ export class UndertowVisualReviewApp {
     this.recoveredSourcePhase12DRoot.enabled=false;
     this.phase12HContactRoot.enabled=false;
     this.phase12IPillarRoot.enabled=true;
+    this.canvas.dataset.t21ReviewPhase12NSide='off';
+    this.canvas.dataset.t21ReviewPhase12NDetails='off';
+    this.canvas.dataset.t21ReviewPhase12NVisibleComponents='0';
+    this.canvas.dataset.t21ReviewPhase12NVisibleTriangles='0';
+    this.canvas.dataset.t21ReviewPhase12NCameraKey='off';
     this.phase12MRimRoot.enabled=false;
     this.phase12MBandRoot.enabled=false;
     this.canvas.dataset.t21ReviewPhase12MDetail='off';
@@ -1453,6 +1479,77 @@ export class UndertowVisualReviewApp {
     this.updateCamera();
   }
 
+
+  /** Phase12N SOURCE-ONLY mirror A/B. BASE/WITH share bitwise-equivalent
+   * camera settings; source vertices and runtime stage are never edited. */
+  private focusPhase12NMirrorInspection(side:'LEFT'|'RIGHT',withDetail:boolean):void{
+    this.focusPhase12MOriginalDetails('CONTEXT');
+    const groups=[
+      {root:this.phase12IPillarRoot,parts:UNDERTOW_T21_PHASE12I_ORIGINAL_BROAD_PILLARS,half:3},
+      {root:this.phase12KOldRoot,parts:UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS.filter(x=>x.reviewGroup==='OLD'),half:1},
+      {root:this.phase12KCutRoot,parts:UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS.filter(x=>x.reviewGroup==='CUT'),half:1},
+      {root:this.phase12LOriginalObjectRoot,parts:UNDERTOW_T21_PHASE12L_ORIGINAL_OBJECT_PARTS,half:2},
+      {root:this.phase12MRimRoot,parts:UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BANDS.filter(x=>x.reviewGroup==='RIM'),half:2},
+      {root:this.phase12MBandRoot,parts:UNDERTOW_T21_PHASE12M_ORIGINAL_RIM_BANDS.filter(x=>x.reviewGroup==='BAND'),half:2}
+    ];
+    let count=0,visible=0,triangles=0;
+    const allPoints:StageVector3[]=[];
+    for(const group of groups){
+      if(group.root.children.length!==group.parts.length)
+        throw Error('Phase12N source/rendered inventory drift');
+      const detail=group.root===this.phase12MRimRoot||group.root===this.phase12MBandRoot;
+      group.root.enabled=!detail||withDetail;
+      let halfCount=0;
+      for(let i=0;i<group.parts.length;i++){
+        const points=group.parts[i]!.vertices;
+        const x=points.reduce((v,p)=>v+p[0],0)/points.length;
+        if(!Number.isFinite(x)||Math.abs(x)<0.5)
+          throw Error('Phase12N original source ambiguous mirror center');
+        const onSide=side==='LEFT'?x<0:x>0;
+        const render=onSide&&(!detail||withDetail);
+        group.root.children[i]!.enabled=render;
+        if(onSide){
+          halfCount++;count++;allPoints.push(...points);
+          if(render){visible++;triangles+=points.length/3;}
+        }
+      }
+      if(halfCount!==group.half)throw Error('Phase12N source half inventory mismatch');
+    }
+    if(count!==11||visible!==(withDetail?11:7)||triangles!==(withDetail?244:156))
+      throw Error('Phase12N exact original half triangle count drift');
+    // Camera is derived from all ELEVEN originals on this side,
+    // including the four temporarily hidden detail pieces.
+    const lo=([0,1,2] as const).map(i=>Math.min(...allPoints.map(p=>p[i])));
+    const hi=([0,1,2] as const).map(i=>Math.max(...allPoints.map(p=>p[i])));
+    this.target.set((lo[0]!+hi[0]!)/2,(lo[1]!+hi[1]!)/2,(lo[2]!+hi[2]!)/2);
+    this.yawDegrees=side==='LEFT'?38:218;
+    this.pitchDegrees=30;
+    this.distanceMeters=Math.max(26,Math.max(hi[0]!-lo[0]!,
+      hi[1]!-lo[1]!,hi[2]!-lo[2]!)*1.3);
+    const cameraKey=[side,this.target.x.toFixed(6),this.target.y.toFixed(6),
+      this.target.z.toFixed(6),String(this.yawDegrees),String(this.pitchDegrees),
+      this.distanceMeters.toFixed(6)].join('|');
+    this.canvas.dataset.t21ReviewPhase12NSide=side;
+    this.canvas.dataset.t21ReviewPhase12NDetails=withDetail?'WITH':'BASE';
+    this.canvas.dataset.t21ReviewPhase12NVisibleComponents=String(visible);
+    this.canvas.dataset.t21ReviewPhase12NVisibleTriangles=String(triangles);
+    this.canvas.dataset.t21ReviewPhase12NCameraKey=cameraKey;
+    this.canvas.dataset.t21ReviewPhase12IPillars=side;
+    this.canvas.dataset.t21ReviewPhase12ICount='3';
+    this.canvas.dataset.t21ReviewPhase12KNeighbors=side;
+    this.canvas.dataset.t21ReviewPhase12KCount='2';
+    this.canvas.dataset.t21ReviewPhase12LContext=side;
+    this.canvas.dataset.t21ReviewPhase12LCount='2';
+    this.canvas.dataset.t21ReviewPhase12MDetail=withDetail?'SIDE_DETAIL':'off';
+    this.canvas.dataset.t21ReviewPhase12MCount=withDetail?'4':'0';
+    this.canvas.dataset.t21ReviewPreset='PHASE12N_LOCKED_ORIGINAL_MIRROR_SIDE_ONLY';
+    const title=this.uiRoot.querySelector<HTMLElement>('#t21-review-active-view');
+    if(title)title.textContent=side+' SOURCE MIRROR / '+(withDetail
+      ?'11 ORIGINAL PIECES WITH RIM+BAND / NOT FLOOR'
+      :'7 ORIGINAL PIECES / HIDDEN RIM+BAND');
+    this.updateCamera();
+  }
+
   private bindRootToggle(
     button:HTMLButtonElement|null,root:Entity,label:string
   ):void {
@@ -1469,6 +1566,11 @@ export class UndertowVisualReviewApp {
       this.phase12MBandRoot.enabled=false;
       this.canvas.dataset.t21ReviewPhase12MDetail='off';
       this.canvas.dataset.t21ReviewPhase12MCount='0';
+      this.canvas.dataset.t21ReviewPhase12NSide='off';
+      this.canvas.dataset.t21ReviewPhase12NDetails='off';
+      this.canvas.dataset.t21ReviewPhase12NVisibleComponents='0';
+      this.canvas.dataset.t21ReviewPhase12NVisibleTriangles='0';
+      this.canvas.dataset.t21ReviewPhase12NCameraKey='off';
       this.canvas.dataset.t21ReviewPhase12LContext='off';
       this.canvas.dataset.t21ReviewPhase12LCount='0';
       this.canvas.dataset.t21ReviewPhase12KNeighbors='off';
