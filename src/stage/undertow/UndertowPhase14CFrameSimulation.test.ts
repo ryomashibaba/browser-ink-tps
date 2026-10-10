@@ -12,6 +12,7 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage} from './UndertowSpillw
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES as probes,
  undertowT21dConnectivityQaStage} from './UndertowSpillwayConnectivityQa';
 import {auditPhase14FirstDrop} from './UndertowPhase14FirstDropGate';
+import {auditPhase14CrowdFrame} from './UndertowPhase14CrowdMotionAudit';
 
 type Mode='HUMAN'|'SQUID';
 const step=1/60;
@@ -122,14 +123,27 @@ describe('T21 Phase14C 60Hz isolated original first-drop descent and real Crowd 
    const destination=navigation.closestPoint(to);
    agent.requestMoveTarget(destination);
    return {slug,agent,from,to,destination,
-    first:agent.position(),bestErrorMeters:Number.POSITIVE_INFINITY,
-    furthestMovedMeters:0,arrivalFrame:null as number|null};
+    first:{...agent.position()},previous:{...agent.position()},
+    bestErrorMeters:Number.POSITIVE_INFINITY,
+    furthestMovedMeters:0,arrivalFrame:null as number|null,
+    largestFrameDisplacementMeters:0,
+    suspectInstantTransitionFrames:0,
+    largestInstantVerticalChangeMeters:0};
   });
   for(let frame=0;frame<720;frame++){
    navigation.fixedUpdate(step);
    for(const a of agents){
     const p=a.agent.position();
     expect([p.x,p.y,p.z].every(Number.isFinite)).toBe(true);
+    const frameAudit=auditPhase14CrowdFrame(a.previous,p,step);
+    a.largestFrameDisplacementMeters=Math.max(
+      a.largestFrameDisplacementMeters,frameAudit.travelledMeters);
+    if(frameAudit.suspectedInstantTransition){
+      a.suspectInstantTransitionFrames++;
+      a.largestInstantVerticalChangeMeters=Math.max(
+        a.largestInstantVerticalChangeMeters,frameAudit.verticalChangeMeters);
+    }
+    a.previous={x:p.x,y:p.y,z:p.z};
     a.bestErrorMeters=Math.min(a.bestErrorMeters,distance(p,a.destination));
     a.furthestMovedMeters=Math.max(a.furthestMovedMeters,distance(p,a.first));
     if(a.arrivalFrame===null&&a.bestErrorMeters<=.8)a.arrivalFrame=frame;
@@ -141,7 +155,13 @@ describe('T21 Phase14C 60Hz isolated original first-drop descent and real Crowd 
     slug:a.slug,origin:a.first,target:a.destination,
     bestErrorMeters:a.bestErrorMeters,
     furthestMovedMeters:a.furthestMovedMeters,
-    arrivalSeconds:a.arrivalFrame===null?null:(a.arrivalFrame+1)*step
+    arrivalSeconds:a.arrivalFrame===null?null:(a.arrivalFrame+1)*step,
+    largestFrameDisplacementMeters:a.largestFrameDisplacementMeters,
+    suspectInstantTransitionFrames:a.suspectInstantTransitionFrames,
+    largestInstantVerticalChangeMeters:a.largestInstantVerticalChangeMeters,
+    crowdNavigationArrived:a.arrivalFrame!==null,
+    crowdPhysicalFallCertified:false,
+    cpuAgentSystemDecisionLogicVerified:false
    }));
    expect(a.furthestMovedMeters).toBeGreaterThan(3.2);
    expect(a.arrivalFrame).not.toBeNull();

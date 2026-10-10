@@ -15,3 +15,6 @@ If Crowd/engine trajectory fails, preserve failure evidence and determine physic
 
 ## Freeze
 PR #5 Draft, T20 production inkworks-junction, T21 activationReady=false, Visual Freeze not approved. Existing 124 display source / 64 walk / 42 XZ / source-only 22 components 488 original triangles, 28 held components 616 faces, no gameplay promotion.
+
+## Phase14C additional CPU motion-fidelity gate
+The real CI #15 measurement showed the -Z Crowd agent arrived in **0.0833 s** across a 4.5 m height change. This is potentially an instantaneous off-mesh-link transition and must NOT be described as a physically simulated player/CPU fall. Added `UndertowPhase14CrowdMotionAudit.ts` with a per-60Hz-frame guard: a step longer than `dt * hypot(actual CPU max ground speed, actual player terminal fall speed) + 0.12m` is flagged as a suspected instant transition. Integration logs store largest step and per-side count, while source-only route arrival remains a separate PASS. Even zero flagged frames would not be a full CpuAgentSystem movement/animation QA. No physical fall certification is issued or gameplay settings changed. Phase14D must examine how CPU animates/executes the off-mesh descent before permitting stage activation.
