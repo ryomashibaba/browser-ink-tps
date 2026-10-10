@@ -1,5 +1,6 @@
 import type { CrowdAgent } from 'recast-navigation';
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+import { PLAYER_CHARACTER_PHYSICS } from '../player/PlayerCharacterPhysics';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
@@ -61,6 +62,7 @@ export type CpuKitRequest =
  * rejection before further simulation. T20 passes no authority. */
 export interface CpuSharedGroundStepAuthority {
   resetActors():void;
+  syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
   auditGroundStep(
     id:string,
@@ -68,6 +70,13 @@ export interface CpuSharedGroundStepAuthority {
     to:Readonly<{x:number;y:number;z:number}>,
     dt:number
   ):Readonly<{approved:boolean;cause:string;colliderOwnerIds:readonly string[]}>;
+}
+
+/** T21-D / M4 only: restore the physical HUMAN's passive Crowd footprint
+ * before/after the native Recast step. Never move the real HUMAN or CPU. */
+export interface CpuHumanCrowdFootAuthority {
+  syncActualPlayerFoot(foot:Readonly<{x:number;y:number;z:number}>):unknown;
+  sealAfterCrowdUpdate(foot:Readonly<{x:number;y:number;z:number}>):unknown;
 }
 
 export interface CpuFireRequest {
@@ -166,7 +175,8 @@ export class CpuAgentSystem {
     private readonly stage: StageDefinition,
     humanTeam: Team.A | Team.B,
     private readonly phase14eFirstDrop?: UndertowPhase14ECpuAdapter,
-    private readonly phase14qGroundCollision?: CpuSharedGroundStepAuthority
+    private readonly phase14qGroundCollision?: CpuSharedGroundStepAuthority,
+    private readonly phase14qHumanCrowd?: CpuHumanCrowdFootAuthority
   ) {
     // T20 remains bit-for-bit on the old CPU update path unless an explicit
     // T21-D QA-only runtime adapter is injected. Any other stage FAILS closed.
@@ -177,6 +187,10 @@ export class CpuAgentSystem {
       (!phase14eFirstDrop ||
        stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
       throw Error('T21_PHASE14Q_SHARED_COLLISION_PRODUCTION_FORBIDDEN');
+    if(phase14qHumanCrowd&&
+      (!phase14eFirstDrop||
+       stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'))
+      throw Error('T21_PHASE14Q_HUMAN_CROWD_PRODUCTION_FORBIDDEN');
     this.director = new CpuTacticalDirector(gameplayInk, stage);
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
@@ -260,6 +274,18 @@ export class CpuAgentSystem {
     }
 
     this.activeLastTick = true;
+    // The REAL HUMAN PlayerController is at humanPosition. Only the eighth
+    // passive Crowd neighbour is moved to its source-backed physical foot.
+    // This cannot be applied to production T20 or non-source T21 terrain.
+    const liveHumanFoot=this.phase14qHumanCrowd?{
+      x:humanPosition.x,
+      y:humanPosition.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+      z:humanPosition.z
+    }:null;
+    if(liveHumanFoot){
+      this.phase14qHumanCrowd!.syncActualPlayerFoot(liveHumanFoot);
+      this.phase14qGroundCollision?.syncActualHumanFoot(liveHumanFoot);
+    }
 
     // T21 QA-only: register actual source-authoritative CPU feet in the
     // PlayerController's original-solid Rapier world before any Crowd step.
@@ -370,6 +396,12 @@ export class CpuAgentSystem {
     }
 
     this.navigation.fixedUpdate(dt);
+    // Rapier remains physical authority. Native Recast Crowd can push even
+    // an idle 0-speed human neighbour ~.40m in this single update. Seal it
+    // immediately so no later CPU action samples the displaced avatar.
+    // This does NOT undo any steering already computed by this Crowd step.
+    if(liveHumanFoot)
+      this.phase14qHumanCrowd!.sealAfterCrowdUpdate(liveHumanFoot);
 
     for (const bot of this.bots) {
       if(bot.lifeState==='ACTIVE'&&bot.mobilityState==='FIRST_DROP_REJOIN'){
