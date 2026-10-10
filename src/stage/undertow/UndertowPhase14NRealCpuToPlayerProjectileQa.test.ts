@@ -142,7 +142,7 @@ describe('T21 Phase14N genuine CPU shooter -> real projectile -> original Rapier
     confirmedCpuPlayerHits:stats.cpuPlayerHits,
     projectileImpacts:stats.projectileImpacts,simulatedTicks:ticks,
     sourceScoreableArea:0,gamepadOrHumanInputUsed:false,
-    4v4ProductionCertified:false,activationAuthorized:false
+    fullFourVsFourProductionCertified:false,activationAuthorized:false
   }));
   cpu.reset(Team.A);
   expect(adapter.activeCount).toBe(0);
