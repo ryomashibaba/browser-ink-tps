@@ -353,6 +353,14 @@ export class CpuAgentSystem {
           if(Math.hypot(closest.x-nx,closest.y-ny,closest.z-nz)>.25||
              Math.abs(closest.y-ny)>.20)
             throw new Error('T21_PHASE14H_UNSUPPORTED_REJOIN_SURFACE');
+          // A Recast path alone does not prove the HUMAN capsule fits.
+          // This QA-only preflight uses all 25 original collision solids,
+          // Rapier KCC and the same character profile as the real player.
+          const collision=this.phase14eFirstDrop!.validateRejoinStep(
+            bot.position,{x:nx,y:ny,z:nz},dt
+          );
+          if(!collision.approved)
+            throw new Error('T21_PHASE14J_REJOIN_BLOCKED_BY_REAL_COLLIDER');
           bot.position.set(nx,ny,nz);
           if(d<=maxStep+1e-7){
             bot.mobilityState='GROUND';
