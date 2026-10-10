@@ -82,6 +82,11 @@ export class RapierStagePhysics {
     };
   }
 
+  /** Audit-only reverse lookup; does not alter any collision or query authority. */
+  public sourceSolidIdForCollider(collider: Collider): string | null {
+    return this.solidByColliderHandle.get(collider.handle)?.id ?? null;
+  }
+
   public shouldCharacterCollide(
     collider: Collider,
     mode: StageCharacterMode
