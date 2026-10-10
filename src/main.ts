@@ -10,6 +10,11 @@ const appCanvas: HTMLCanvasElement = canvas;
 const appUiRoot: HTMLElement = uiRoot;
 
 async function boot(): Promise<void> {
+  if (new URL(window.location.href).searchParams.get('t21Qa') === 'phase14i') {
+    const { UndertowPhase14IRealCrowdVisualQaApp } = await import('./app/UndertowPhase14IRealCrowdVisualQaApp');
+    await UndertowPhase14IRealCrowdVisualQaApp.boot(appCanvas, appUiRoot);
+    return;
+  }
   if (new URL(window.location.href).searchParams.get('t21Qa') === 'phase14f') {
     const { UndertowPhase14FVisualQaApp } = await import('./app/UndertowPhase14FVisualQaApp');
     await UndertowPhase14FVisualQaApp.boot(appCanvas, appUiRoot);
