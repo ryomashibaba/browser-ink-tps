@@ -4,6 +4,7 @@ import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {inflateSync} from 'node:zlib';
 import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 const VIEWS=['OVERVIEW','TOP','POS_TO_NEG','SPAWN_A','SPAWN_B'];
 function req(x,message){if(!x)throw Error('PHASE13A_'+message);}
@@ -118,7 +119,10 @@ function selftest(){
  catch(e){req(String(e).includes('PHASE13A_BLANK_OR_LOW_CONTRAST_REVIEW_FRAME'),'NEGATIVE_BLANK');}
  console.log('T21_PHASE13A_SYNTHETIC_NEGATIVE_PASS');
 }
+export {decodePng,measure};
+if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
 if(process.argv[2]==='--self-test')selftest();
 else if(process.argv[2]==='--audit')audit(process.argv[3]||'/tmp/t21-review-five-view',
  process.argv[4]||'/tmp/t21-review-five-view/T21_PHASE13A_VISUAL_BASELINE.json');
 else throw Error('Usage: --self-test | --audit [screenshotDir] [jsonOutput]');
+}

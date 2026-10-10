@@ -237,6 +237,41 @@ try {
         ' review canvas and UI',humanVisualApproval:false
     });
     process.stdout.write('T21_CAPTURE_VIEW '+view+' size='+bytes.byteLength+'\\n');
+    // Phase13B: same camera and same browser, only hide the overlay UI.
+    // The five canonical screenshots and game geometry are untouched.
+    if(view==='OVERVIEW'||view==='TOP'){
+      manifest.phase13BUIFreePairs??=[];
+      const before=await evaluation("(() => {const p=document.querySelector('#t21-review-panel');const c=document.querySelector('#app-canvas');if(!p||!c)return null;const original=p.style.visibility;p.style.visibility='hidden';return {original,panelHidden:getComputedStyle(p).visibility==='hidden',view:c.dataset.t21ReviewView,preset:c.dataset.t21ReviewPreset,renderer:c.dataset.t21ReviewRenderer,width:c.width,height:c.height};})()");
+      if(!before||!before.panelHidden||before.view!==view||
+         before.preset!=='THREE_DIMENSIONAL'||before.renderer!=='webgl2'||
+         before.width!==ready.canvasWidth||before.height!==ready.canvasHeight)
+        throw Error('T21_PHASE13B_CAMERA_OR_OVERLAY_DRIFT_'+view);
+      await sleep(200);
+      const hidden=await command('Page.captureScreenshot',{
+        format:'png',captureBeyondViewport:false,fromSurface:true},25000);
+      const hbytes=Buffer.from(hidden.data||'','base64');
+      const sig=Buffer.from([137,80,78,71,13,10,26,10]);
+      if(hbytes.length<8000||!hbytes.subarray(0,8).equals(sig)||
+         hbytes.readUInt32BE(16)!==width||hbytes.readUInt32BE(20)!==height)
+        throw Error('T21_PHASE13B_UI_FREE_PNG_INVALID_'+view);
+      const after=await evaluation("(() => {const p=document.querySelector('#t21-review-panel');const c=document.querySelector('#app-canvas');return {panelHidden:getComputedStyle(p).visibility==='hidden',view:c.dataset.t21ReviewView,preset:c.dataset.t21ReviewPreset,renderer:c.dataset.t21ReviewRenderer,width:c.width,height:c.height};})()");
+      if(!after.panelHidden||after.view!==before.view||after.preset!==before.preset||
+         after.renderer!==before.renderer||after.width!==before.width||after.height!==before.height)
+        throw Error('T21_PHASE13B_CAMERA_DRIFT_AFTER_PNG_'+view);
+      const freeFile='T21_PHASE13B_'+view+'_UI_FREE_WEBGL2.png';
+      await writeFile(resolve(destination,freeFile),hbytes);
+      manifest.phase13BUIFreePairs.push({
+        view,baselineFile:name,baselineSHA256:sha256,
+        uiFreeFile:freeFile,uiFreeSHA256:createHash('sha256').update(hbytes).digest('hex'),
+        uiFreeSizeBytes:hbytes.length,width,height,
+        cameraViewBeforeAfterMatched:true,panelHiddenDuringCapture:true,
+        reviewPreset:before.preset,renderer:before.renderer,
+        reviewOnly:true,sourceOnly:true,authorizesVisualFreeze:false,
+        gameplayFloorNavColliderPaintScoringProof:false
+      });
+      await evaluation("(() => {const p=document.querySelector('#t21-review-panel');p.style.visibility="+JSON.stringify(before.original)+";return true;})()");
+      process.stdout.write('T21_PHASE13B_SAME_CAMERA_UI_FREE '+view+'\n');
+    }
   }
   if(manifest.screenshots.length!==5)throw Error('T21 five-view screenshot count invalid');
   // Phase11 seventh shot: actual original 3D proximity candidates overlay.
