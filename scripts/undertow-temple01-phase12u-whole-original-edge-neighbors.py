@@ -86,6 +86,10 @@ def verify_t(faces,groups,t):
 def search(vertices,faces,t):
     groups=components(faces)
     shown=verify_t(faces,groups,t)
+    # Only the current original ID component is excluded for a given boundary;
+    # the other 21 opt-in source parts remain valid ORIGINAL neighbor witnesses.
+    owners={min(g):set(g) for g in groups.values() if min(g) in {p['minFace'] for p in t['reports']}}
+    if len(owners)!=22:raise ValueError('PHASE12U_OWNER_COMPONENTS_DRIFT')
     id_index=defaultdict(list);xyz_index=defaultdict(list)
     for fi,(ids,obj,mat) in enumerate(faces):
         p=[project(vertices[v]) for v in ids]
@@ -95,6 +99,7 @@ def search(vertices,faces,t):
             xyz_index[xyz_edge(p[k],p[(k+1)%3])].append((fi,a,b))
     rows=[];count=Counter();other_faces=set()
     for part in t['reports']:
+        own=owners[part['minFace']]
         for e in part['originalBoundaryEvidence']:
             fi=e['sourceFace'];ids=tuple(e['originalOBJEdge'])
             tri=faces[fi][0]
@@ -103,8 +108,8 @@ def search(vertices,faces,t):
             if any(coords[v]!=canon(p) for v,p in zip(ids,e['originalXYZ'])):
                 raise ValueError('PHASE12U_ORIGINAL_FLOAT64_XYZ_DRIFT')
             i=id_edge(*ids);k=xyz_edge(coords[ids[0]],coords[ids[1]])
-            im=[x for x in id_index.get(i,()) if x[0] not in shown]
-            gm=[x for x in xyz_index.get(k,()) if x[0] not in shown]
+            im=[x for x in id_index.get(i,()) if x[0] not in own]
+            gm=[x for x in xyz_index.get(k,()) if x[0] not in own]
             if im and not gm:raise ValueError('PHASE12U_SHARED_ORIGINAL_ID_BUT_DIFFERENT_XYZ')
             cl=('OTHER_SOURCE_ORIGINAL_OBJ_ID_SHARED_EDGE' if im else
                 'OTHER_SOURCE_EXACT_XYZ_EDGE_DISTINCT_OBJ_IDS' if gm else
@@ -137,7 +142,9 @@ def search(vertices,faces,t):
       reviewOnly=True,runtimePromotionAuthorized=False,physicalWeldOrWalkableFloorProven=False,
       closedMeshOrGameplayAuthorized=False,sourceOriginalComponents=22,sourceOriginalFaces=488,
       sourceOriginalBoundaryEdges=524,priorHeld28Unmatched=348,priorHeld28Matched=176,
-      searchedFacesBeyondShown=70396-488,wholeOriginalExternalSourceFaceWitnessCount=len(other_faces),
+      searchedFacesBeyondShown=70396-488,otherOptInSourceComponentsSearched=True,
+      ownOriginalComponentExcludedPerBoundary=True,
+      wholeOriginalExternalSourceFaceWitnessCount=len(other_faces),
       counters=dict(count),perPart=per,rows=rows,
       scope='EXACT projected XYZ and OBJ-ID edges among full 70396 original faces; NOT near/intersecting/collision/walkable evidence')
 def selftest():
