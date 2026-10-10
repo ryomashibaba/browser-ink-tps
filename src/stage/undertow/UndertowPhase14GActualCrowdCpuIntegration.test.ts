@@ -116,7 +116,13 @@ describe('T21 Phase14G real Recast Crowd -> real CpuAgentSystem -> Rapier KCC ->
           r.physicalFrames++;
           const step=bot.position.distance(before);
           r.maxFallStep=Math.max(r.maxFallStep,step);
-          expect(step).toBeLessThan(0.6);
+          if(step>=0.6)throw Error('PHASE14G_FALL_STEP_DIAGNOSTIC '+JSON.stringify({
+            id:bot.id,frame,step,stateBefore:states[i],stateAfter:bot.mobilityState,
+            before:[before.x,before.y,before.z],
+            after:[bot.position.x,bot.position.y,bot.position.z],
+            adapter:s.adapter.getActiveDrop(bot.id),
+            interceptions:s.accepted,physicalFrames:r.physicalFrames
+          }));
         }
         const visual=bot.entity.getPosition();
         const mx=(before.x+bot.position.x)*0.5;
