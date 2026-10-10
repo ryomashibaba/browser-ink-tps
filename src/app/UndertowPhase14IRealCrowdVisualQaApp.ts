@@ -379,9 +379,17 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
   const target=this.phase14p&&preferredId==='B1'?
    this.player!.getPosition():
    this.selected.find(bot=>bot.id===preferredId)!.position;
-  const focus=new Vec3(target.x,target.y+.76,target.z);
-  const desired=this.phase14p&&preferredId==='A1'?
-   new Vec3(target.x,target.y+13,target.z-16):
+  // Phase14P uses a shorter SOURCE-AUDITED camera ray. The previously
+  // sampled +Z view is clear along its (0,+13,-16) direction. The actual
+  // player on -Z uses the shorter prefix of the 14O source-clear
+  // (+9,+10,+16) ray, focused near the character torso instead of .76m
+  // ABOVE its central body. Both remain blocked by original Rapier solids.
+  const focus=new Vec3(target.x,target.y+(
+   this.phase14p&&preferredId==='B1'?.25:.76),target.z);
+  const desired=this.phase14p?
+   (preferredId==='A1'?
+    new Vec3(focus.x,focus.y+8.6,focus.z-11.2):
+    new Vec3(focus.x+6.3,focus.y+7,focus.z+11.2)):
    new Vec3(target.x+9,target.y+10,target.z+16);
   const blocker=this.cameraPhysics!.castStageSegment(focus,desired,'camera');
   const k=blocker?Math.max(0,(blocker.distance-.42)/Math.max(1e-7,desired.distance(focus))):1;
@@ -484,9 +492,12 @@ export class UndertowPhase14IRealCrowdVisualQaApp{
      const selected=this.phase14p&&preferredId==='B1'?
        this.player!.getPosition():
        this.selected.find(bot=>bot.id===preferredId)!.position;
-     const focus=new Vec3(selected.x,selected.y+.76,selected.z);
-     const desired=this.phase14p&&preferredId==='A1'?
-       new Vec3(selected.x,selected.y+13,selected.z-16):
+     const focus=new Vec3(selected.x,selected.y+(
+       this.phase14p&&preferredId==='B1'?.25:.76),selected.z);
+     const desired=this.phase14p?
+       (preferredId==='A1'?
+        new Vec3(focus.x,focus.y+8.6,focus.z-11.2):
+        new Vec3(focus.x+6.3,focus.y+7,focus.z+11.2)):
        new Vec3(selected.x+9,selected.y+10,selected.z+16);
      return {
        mode:'SOURCE_RAPIER_CAMERA_QUERY' as const,
