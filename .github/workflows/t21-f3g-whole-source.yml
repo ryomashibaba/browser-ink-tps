@@ -7,6 +7,7 @@ on:
       - "scripts/t21-f3i-scene-inventory.*"
       - "scripts/t21-f3k-family-gallery.*"
       - "src/app/UndertowF3I*"
+      - "src/app/UndertowF3K*"
       - "scripts/t21-f3-browser-smoke.mjs"
       - "src/app/UndertowF3G*"
       - "src/app/UndertowF3PlayablePreviewApp.ts"
