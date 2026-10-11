@@ -19,7 +19,8 @@ export type F3lManifest={
  stagePlayableAuthority:'NONE';productionAuthorization:false;
  actorMatricesRecovered:false;physicsSolidsAdded:0;
  navigationLinksAdded:0;scoreableSurfacesAdded:0;
- totalTriangles:number;triangleCountWithoutSourceUV:0;
+ totalTriangles:number;triangleCountWithoutSourceUV:number;
+ missingUVVertices:number;groupsRequiringFlatFallback:number;
  textureFiles:readonly string[];
  textures:readonly {file:string;bytes:number;sha256:string}[];
  materials:readonly {name:string;kind:Kind;triangles:number;
@@ -34,7 +35,12 @@ export function auditF3lManifest(m:F3lManifest){
   m.stagePlayableAuthority!=='NONE'||m.productionAuthorization!==false||
   m.actorMatricesRecovered!==false||m.physicsSolidsAdded!==0||
   m.navigationLinksAdded!==0||m.scoreableSurfacesAdded!==0||
-  m.totalTriangles!==57578||m.triangleCountWithoutSourceUV!==0||
+  m.totalTriangles!==57578||
+  !Number.isSafeInteger(m.triangleCountWithoutSourceUV)||
+  m.triangleCountWithoutSourceUV<0||m.triangleCountWithoutSourceUV>2000||
+  !Number.isSafeInteger(m.missingUVVertices)||m.missingUVVertices<0||
+  !Number.isSafeInteger(m.groupsRequiringFlatFallback)||
+  m.groupsRequiringFlatFallback<0||m.groupsRequiringFlatFallback>54||
   !Array.isArray(m.materials)||m.materials.length<10||m.materials.length>54||
   !Array.isArray(m.textureFiles)||m.textureFiles.length>20||
   !Array.isArray(m.textures)||m.textures.length!==m.textureFiles.length)
