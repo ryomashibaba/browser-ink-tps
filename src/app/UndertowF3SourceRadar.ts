@@ -6,7 +6,8 @@
 import type {StageDefinition} from '../stage/StageDefinition';
 
 type Actor={id:string;physicalFoot:[number,number,number];mobilityState:string;rejoined:boolean};
-type View={player:{position:number[]};cpu:{cpu:readonly Actor[]};matchState:string};
+type View={player:{position:number[]};cpu:{cpu:readonly Actor[];
+ sourcePatrol:{activeTargets:readonly {id:string;position:readonly number[]}[]}};matchState:string};
 const WIDTH=300,HEIGHT=310,HALF=32,GRID=8;
 export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
  if(stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
@@ -28,7 +29,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
   ' style="width:100%;height:310px;display:block"'+
   ' aria-label="Real actor positions and original source bounds"></canvas>'+
   '<div style="color:#a2bacb;font-size:10px;letter-spacing:.2px">'+
-  'Original 25 collision bounds · 26 link endpoints · 0 inferred paths</div>';
+  '25 original solids · ● real feet / ◌ audited goals · no cross-gap route</div>';
  ui.appendChild(shell);
  const canvas=shell.querySelector('canvas')!;
  canvas.dataset.originalSourceSolids='25';
@@ -80,6 +81,16 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
    ctx.fillStyle='rgba(255,195,101,.75)';
    ctx.beginPath();ctx.moveTo(xx,zz-3);ctx.lineTo(xx+3,zz+2);
    ctx.lineTo(xx-3,zz+2);ctx.closePath();ctx.fill();
+  }
+  // These hollow source-goal rings are actual audited Recast destinations,
+  // never a straight-line route or an asserted connection across the gap.
+  for(const goal of view.cpu.sourcePatrol.activeTargets){
+   const gx=px(goal.position[0]!),gz=pz(goal.position[2]!);
+   ctx.strokeStyle=goal.id.startsWith('A')?'rgba(41,238,243,.72)':
+     'rgba(255,68,141,.72)';
+   ctx.lineWidth=1.6;ctx.setLineDash([3,3]);
+   ctx.beginPath();ctx.arc(gx,gz,9,0,Math.PI*2);ctx.stroke();
+   ctx.setLineDash([]);
   }
   for(const a of view.cpu.cpu){
    const xx=px(a.physicalFoot[0]),zz=pz(a.physicalFoot[2]);

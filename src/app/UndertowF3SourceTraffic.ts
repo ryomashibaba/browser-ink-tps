@@ -36,6 +36,7 @@ export interface F3TrafficSnapshot{
   readonly heldRequests:number;
   readonly travelMeters:number;
   readonly attemptsToCrossUnboundUnderpass:0;
+  readonly activeTargets:readonly {id:string;position:[number,number,number]}[];
   readonly sourceOnly:true;
   readonly productionAuthorized:false;
  };
@@ -250,6 +251,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     travelMeters:this.travelMeters,
+    activeTargets:this.bots.flatMap(bot=>{
+     const index=this.patrolIndex.get(bot.id)??-1;
+     const point=this.patrolGoals.get(bot.id)?.[index];
+     return index>=0&&point&&this.physicallyRejoined.has(bot.id)
+      ?[{id:bot.id,position:[point.x,point.y,point.z] as [number,number,number]}]:[];
+    }),
     attemptsToCrossUnboundUnderpass:0,sourceOnly:true,
     productionAuthorized:false},
    originalSourceLinksUsed:this.routePlan.distinctFirstDropLinks,
