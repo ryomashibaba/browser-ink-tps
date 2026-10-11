@@ -23,6 +23,7 @@ export interface F3TrafficCpu{
  fireRemaining:number;jumpCooldownSeconds:number;
 }
 export interface F3TrafficSnapshot{
+ readonly cpu:readonly {id:string;mobilityState:string;released:boolean;rejoined:boolean;lastMovedTick:number;physicalFoot:[number,number,number]}[];
  readonly physicalFirstDrops:readonly string[];
  readonly physicalRejoins:readonly string[];
  readonly landingCorridorsCleared:readonly string[];
@@ -45,6 +46,8 @@ export class UndertowF3SourceTraffic{
  private readonly cleared=new Set<string>();
  private readonly released=new Set<string>();
  private readonly previous=new Map<string,string>();
+ private readonly previousFeet=new Map<string,Vec3>();
+ private readonly lastMoved=new Map<string,number>();
  private freeCombat=false;
 
  constructor(
@@ -70,6 +73,7 @@ export class UndertowF3SourceTraffic{
    if(!dest)throw Error('T21_F3_SOURCE_EGRESS_UNSUPPORTED_'+bot.id);
    this.egress.set(bot.id,dest);
    this.previous.set(bot.id,bot.mobilityState);
+   this.previousFeet.set(bot.id,bot.position.clone());
    bot.agent?.resetMoveTarget();
   }
  }
@@ -102,8 +106,11 @@ export class UndertowF3SourceTraffic{
   }
  }
 
- observe():void{
+ observe(frame:number):void{
   for(const bot of this.bots){
+   const oldFoot=this.previousFeet.get(bot.id)!;
+   if(oldFoot.distance(bot.position)>.015)this.lastMoved.set(bot.id,frame);
+   oldFoot.copy(bot.position);
    const previous=this.previous.get(bot.id);
    if(bot.mobilityState==='FIRST_DROP_FALL'||
       bot.mobilityState==='FIRST_DROP_REJOIN')
@@ -149,6 +156,10 @@ export class UndertowF3SourceTraffic{
  }
  snapshot():F3TrafficSnapshot{
   return {
+   cpu:this.bots.map(b=>({id:b.id,mobilityState:b.mobilityState,
+    released:this.released.has(b.id),rejoined:this.physicallyRejoined.has(b.id),
+    lastMovedTick:this.lastMoved.get(b.id)??0,
+    physicalFoot:[b.position.x,b.position.y,b.position.z] as [number,number,number]})),
    physicalFirstDrops:[...this.physicallyFalling],
    physicalRejoins:[...this.physicallyRejoined],
    landingCorridorsCleared:[...this.cleared],
