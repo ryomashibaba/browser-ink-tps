@@ -44,8 +44,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
    const stage=withProvisionalT21QaSpawnMetadata(source,slots);
    const pInput={moveX:0,moveY:0,jumpHeld:false,squidHeld:false,
     consumeJump:()=>false} as PlayerInput;
-   const camera=({getFlatForward:(v:Vec3)=>v.set(0,0,1)})
-    as ThirdPersonCamera;
+   const camera=({getFlatForward:(v:Vec3)=>v.set(0,0,1)}) as ThirdPersonCamera;
    const player=new PlayerController(app,physics,pInput,camera,ink,stats);
    player.setTeam(Team.A);
    player.teleport(new Vec3(slots.teamASlots[3]![0],
