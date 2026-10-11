@@ -190,6 +190,36 @@ async function main(){
    if(shown!==true)reject('F3J_BACKGROUND_FAILED_TO_RESTORE');
   }
  }
+ if(process.env.T21_F3K_EXPECT_GALLERY==='1'){
+  const available=await waitUntil(async()=>{
+   const g=await evaluate('window.__t21F3.snapshot().sourceGalleryF3k');
+   if(g.status==='ERROR')reject('F3K_GALLERY_LOAD_ERROR_'+g.error);
+   return g.status==='READY'&&g.totalFamilies===8?g:null;
+  },60000);
+  if(available.productionAuthorized||available.instanceMatricesRecovered||
+     available.realPhysicsAdded!==0||available.originalActorPlacements!==0)
+   reject('F3K_UNTRUSTED_STAGE_AUTHORITY');
+  for(let i=0;i<2;i++){
+   const selected=await evaluate(`(() => {
+    document.querySelector('#t21-f3k-gallery')?.click();
+    return window.__t21F3.snapshot();
+   })()`);
+   if(selected.sourceGalleryF3k.selection!==i||
+      !selected.paused||selected.originalSourceSolids!==25||
+      selected.originalSourceNavigationLinks!==26||
+      selected.sourceScoreablePromotions!==0||
+      selected.sourceGalleryF3k.productionAuthorized!==false)
+    reject('F3K_SOURCE_GALLERY_CHANGED_GAMEPLAY_'+JSON.stringify(selected));
+   await sleep(180);
+   frames.push(await screenshot('F3K_SOURCE_GALLERY_'+i));
+  }
+  for(let i=2;i<=8;i++)await evaluate(`document.querySelector('#t21-f3k-gallery')?.click()`);
+  const end=await evaluate('window.__t21F3.snapshot()');
+  if(end.sourceGalleryF3k.selection!==-1||end.paused!==initial.paused||
+     end.originalSourceSolids!==25||end.originalSourceNavigationLinks!==26||
+     end.sourceScoreablePromotions!==0)
+   reject('F3K_GALLERY_NOT_RETURNED_TO_PLAYER_'+JSON.stringify(end));
+ }
  // These camera-only stage survey frames are a direct inspection of
  // genuine original 3D architecture; no game foot, collider or nav moves.
  for(let n=0;n<6;n++){

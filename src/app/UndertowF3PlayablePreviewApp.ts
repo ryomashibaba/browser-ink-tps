@@ -54,6 +54,7 @@ import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
  from './UndertowF3GWholeSourcePreview';
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
+import {loadF3kGallery} from './UndertowF3KFamilyGallery';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -95,6 +96,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly player:PlayerController;
  private readonly resources:PlayerResources;
  private readonly camera:ThirdPersonCamera;
+ private readonly playerCameraEntity:Entity;
  private readonly input:PlayerInput;
  private readonly coordinator:PaintCoordinator;
  private readonly atlas:GpuInkAtlas;
@@ -117,6 +119,10 @@ export class UndertowF3PlayablePreviewApp{
  private environmentRoot:Entity|null=null;
  private environmentManifest:F3iEnvironmentManifest|null=null;
  private environmentError='';
+ private familyGallery:Awaited<ReturnType<typeof loadF3kGallery>>=null;
+ private galleryIndex=-1;
+ private galleryWasPaused=false;
+ private galleryError='';
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -157,6 +163,7 @@ export class UndertowF3PlayablePreviewApp{
    farClip:400,fov:63,layers:[world.id]
   });
   app.root.addChild(cameraEntity);
+  this.playerCameraEntity=cameraEntity;
   this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,this.rawStage);
   this.nav=new RecastStageNavigation(this.rawStage,this.stats);
   this.physics=new RapierStagePhysics(STEP,this.rawStage);
@@ -223,7 +230,8 @@ export class UndertowF3PlayablePreviewApp{
    '<button id="t21-f3-completion" type="button">Source terrain study: ON</button>'+
    '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button>'+ 
    '<button id="t21-f3h-visual-mode" type="button" hidden>F3H view: SOLID (H)</button>'+ 
-   '<button id="t21-f3i-environment" type="button" hidden>F3I source backdrop: OFF (B)</button></div>'+
+   '<button id="t21-f3i-environment" type="button" hidden>F3I source backdrop: OFF (B)</button>'+ 
+   '<button id="t21-f3k-gallery" type="button" hidden>Source parts showroom (G)</button></div>'+
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
@@ -262,6 +270,8 @@ export class UndertowF3PlayablePreviewApp{
    this.cycleSourceVisualMode());
   this.panel.querySelector('#t21-f3i-environment')?.addEventListener('click',()=>
    this.toggleF3iEnvironment());
+  this.panel.querySelector('#t21-f3k-gallery')?.addEventListener('click',()=>
+   this.cycleSourceGallery());
   this.surveyButton=document.createElement('button');
   this.surveyButton.id='t21-f3-source-survey';
   this.surveyButton.textContent='SURVEY STAGE (V) · next viewpoint';
@@ -287,6 +297,7 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.code==='KeyV')this.toggleSurvey();
    if(ev.code==='KeyH')this.cycleSourceVisualMode();
    if(ev.code==='KeyB')this.toggleF3iEnvironment();
+   if(ev.code==='KeyG')this.cycleSourceGallery();
   });
   const renderer=(app.graphicsDevice as {deviceType?:string}).deviceType;
   if(renderer!=='webgl2')throw Error('T21_F3_REAL_WEBGL2_REQUIRED');
@@ -352,6 +363,13 @@ export class UndertowF3PlayablePreviewApp{
     // F3I failures do not turn off an independently certified F3G source scene.
     this.environmentError=String(error).slice(0,240);
    }
+   try{
+    this.familyGallery=await loadF3kGallery(this.app);
+    const button=this.panel.querySelector('#t21-f3k-gallery') as HTMLButtonElement|null;
+    if(button&&this.familyGallery)button.hidden=false;
+   }catch(error){
+    this.galleryError=String(error).slice(0,240);
+   }
   }catch(e){
    this.wholeSourceError=String(e).slice(0,320);
    this.wholeSourceStatus=this.wholeSourceError.includes('NOT_INSTALLED_HTTP_404')
@@ -381,7 +399,35 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21F3iEnvironment=this.environmentRoot.enabled?'ON':'OFF';
   this.refresh();
  }
+ private cycleSourceGallery(){
+  if(!this.familyGallery||this.wholeSourceStatus!=='READY'||
+     this.survey.snapshot().active)return;
+  const total=this.familyGallery.manifest.components.length;
+  if(this.galleryIndex===total-1){
+   this.familyGallery.close();
+   this.galleryIndex=-1;
+   this.playerCameraEntity.enabled=true;
+   this.paused=this.galleryWasPaused;
+  }else{
+   if(this.galleryIndex===-1){
+    this.galleryWasPaused=this.paused;
+    this.paused=true;
+    if(document.pointerLockElement===this.canvas)document.exitPointerLock();
+    this.playerCameraEntity.enabled=false;
+   }
+   this.galleryIndex++;
+   this.familyGallery.open(this.galleryIndex);
+  }
+  const button=this.panel.querySelector('#t21-f3k-gallery') as HTMLButtonElement|null;
+  if(button)button.textContent=this.galleryIndex<0
+   ?'Source parts showroom (G)'
+   :'F3K ['+(this.galleryIndex+1)+'/'+total+'] '+
+    this.familyGallery.manifest.components[this.galleryIndex]!.family+' (G)';
+  this.canvas.dataset.t21F3kShowroom=this.galleryIndex<0?'CLOSED':'OPEN';
+  this.refresh();
+ }
  private toggleSurvey(){
+  if(this.galleryIndex>=0)return;
   const wasSurvey=this.survey.snapshot().active;
   if(!wasSurvey)this.surveyWasPaused=this.paused;
   const now=this.survey.cycle();
@@ -393,7 +439,7 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
  }
  private togglePause(){
-  if(this.survey.snapshot().active)return;
+  if(this.survey.snapshot().active||this.galleryIndex>=0)return;
   if(this.stopReason)return;
   this.paused=!this.paused;
   this.refresh();
@@ -546,6 +592,16 @@ export class UndertowF3PlayablePreviewApp{
     visible:this.environmentRoot?.enabled??false,
     stageSolidsAdded:0,sourceOnly:true,productionAuthorized:false,
     error:this.environmentError},
+   sourceGalleryF3k:{
+    status:this.familyGallery?'READY':this.galleryError?'ERROR':'UNAVAILABLE',
+    selection:this.galleryIndex,
+    totalFamilies:this.familyGallery?.manifest.components.length??0,
+    selectedFamily:this.galleryIndex>=0
+     ?this.familyGallery?.manifest.components[this.galleryIndex]?.family??null:null,
+    sourceOnly:true,instanceMatricesRecovered:false,
+    originalActorPlacements:0,realPhysicsAdded:0,
+    realNavigationLinksAdded:0,scoreableSurfacesAdded:0,
+    productionAuthorized:false,error:this.galleryError},
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
    unrestricted4v4Certified:false,
@@ -602,6 +658,11 @@ export class UndertowF3PlayablePreviewApp{
     this.environmentManifest.macroAssetFamilies.slice(0,4)
      .map(x=>x.family+'('+x.sourceMeshVariants+' meshes)').join(' · '):'',
    this.environmentError?'F3I SOURCE ERROR · '+this.environmentError:'',
+   this.galleryIndex>=0&&this.familyGallery?'F3K ORIGINAL MESH ['+
+    (this.galleryIndex+1)+'/'+this.familyGallery.manifest.components.length+'] · '+
+    this.familyGallery.manifest.components[this.galleryIndex]!.family+
+    ' · NORMALIZED DISPLAY / NOT WORLD POSITION':'',
+   this.galleryError?'F3K SOURCE ERROR · '+this.galleryError:'',
    'F3F SOURCE ONLY · 8 original underpass pieces (NOT walkable)'+
     ' · unresolved gap '+state.originalSourceStudy.unresolvedUnderpassOriginalGapMeters.toFixed(2)+'m',
    'F3F SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+
