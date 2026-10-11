@@ -49,6 +49,8 @@ import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
+import {loadF3gWholeSource,type F3GPackManifest}
+ from './UndertowF3GWholeSourcePreview';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -101,6 +103,11 @@ export class UndertowF3PlayablePreviewApp{
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
+ private wholeSourceStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
+ private wholeSourceTriangles=0;
+ private wholeSourceGroups=0;
+ private wholeSourceError='';
+ private wholeSourceRoot:Entity|null=null;
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -265,6 +272,33 @@ export class UndertowF3PlayablePreviewApp{
   this.camera.update(this.player.getPosition(this.visual));
   this.refresh();
   app.start();
+  if(new URL(location.href).searchParams.get('t21FullSource')==='review')
+   void this.loadWholeSource();
+ }
+
+ private async loadWholeSource(){
+  if(this.wholeSourceStatus!=='OFF')return;
+  this.wholeSourceStatus='LOADING';
+  this.refresh();
+  try{
+   const installed=await loadF3gWholeSource(this.app);
+   this.wholeSourceRoot=installed.root;
+   this.wholeSourceTriangles=installed.manifest.includedOriginalTriangles;
+   this.wholeSourceGroups=installed.manifest.groups.length;
+   // Avoid duplicate translucent layers obscuring actual source forms.
+   this.sourceCompletion.root.enabled=false;
+   this.structures.root.enabled=false;
+   const f3eButton=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement|null;
+   if(f3eButton)f3eButton.textContent='Source terrain study: OFF';
+   const f3Button=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement|null;
+   if(f3Button)f3Button.textContent='Original source: OFF';
+   this.wholeSourceStatus='READY';
+  }catch(e){
+   this.wholeSourceError=String(e).slice(0,320);
+   this.wholeSourceStatus=this.wholeSourceError.includes('NOT_INSTALLED_HTTP_404')
+    ?'MISSING':'ERROR';
+  }
+  this.refresh();
  }
 
  private toggleSurvey(){
@@ -413,6 +447,13 @@ export class UndertowF3PlayablePreviewApp{
    originalSourceStudyVisible:this.sourceCompletion.root.enabled,
    sourceOpticalStructuresVisible:this.structures.root.enabled,
    sourceSurvey:this.survey.snapshot(),
+   fullSource:{status:this.wholeSourceStatus,
+    sourceOriginalTriangles:this.wholeSourceTriangles,
+    sourceMaterialGroups:this.wholeSourceGroups,
+    enabled:this.wholeSourceRoot?.enabled??false,
+    sourceOnly:true,realPhysicsAdded:0,realNavigationLinksAdded:0,
+    sourceError:this.wholeSourceError,
+    productionAuthorized:false},
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
    unrestricted4v4Certified:false,
@@ -446,6 +487,10 @@ export class UndertowF3PlayablePreviewApp{
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
+   'F3G WHOLE SOURCE · '+this.wholeSourceStatus+
+    (this.wholeSourceStatus==='READY'?' / '+
+     this.wholeSourceTriangles+' original triangles':'')+
+    ' · NO WALK / INK / NAV',
    'F3F SOURCE ONLY · 8 original underpass pieces (NOT walkable)'+
     ' · unresolved gap '+state.originalSourceStudy.unresolvedUnderpassOriginalGapMeters.toFixed(2)+'m',
    'F3F SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+

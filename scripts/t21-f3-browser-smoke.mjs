@@ -105,7 +105,8 @@ async function main(){
  });
  const longCpu=process.env.T21_F3_LONG_CPU==='1';
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'+
-  (longCpu?'&t21QaDrive=source':'')});
+  (longCpu?'&t21QaDrive=source':'')+
+  (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
    ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
@@ -115,6 +116,18 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(process.env.T21_F3G_EXPECT_WHOLE==='1'){
+  const whole=await waitUntil(async()=>{
+   const s=await evaluate('window.__t21F3.snapshot().fullSource');
+   if(s.status==='ERROR'||s.status==='MISSING')
+    reject('T21_F3G_FULL_SOURCE_NOT_DISPLAYED_'+JSON.stringify(s));
+   return s.status==='READY'&&s.sourceOriginalTriangles>1500?s:null;
+  },65000);
+  if(whole.realPhysicsAdded!==0||whole.realNavigationLinksAdded!==0||
+     whole.productionAuthorized!==false||whole.sourceOnly!==true)
+   reject('T21_F3G_WHOLE_SOURCE_GAME_AUTHORITY_DRIFT_'+JSON.stringify(whole));
+  console.log('T21_F3G_LIVE_WHOLE_SOURCE',JSON.stringify(whole));
+ }
  const initial=await evaluate('window.__t21F3.snapshot()');
  const radar=await evaluate(`({solid:document.querySelector("#t21-f3-radar-canvas")?.dataset.originalSourceSolids,
   links:document.querySelector("#t21-f3-radar-canvas")?.dataset.originalSourceNavigationLinks,
