@@ -59,6 +59,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     handoff,shared,liveHuman,true);
    const bots=(cpu as unknown as {bots:Bot[]}).bots;
    const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots);
+   cpu.useF3dOriginalSourceGoals(traffic);
    let done=0,stop:string|null=null,overlap:string|null=null,
     minimumSeparation=Infinity,maxGroundStep=0;
    for(let frame=1;frame<=2400;frame++){
@@ -93,9 +94,9 @@ describe('F3B playable 8-actor original source runtime',()=>{
      if(d<(a.id==='HUMAN'||b.id==='HUMAN'?.58:.56)&&!overlap)
       overlap=frame+':'+a.id+'/'+b.id+'='+d;
     }
-    if(traffic.snapshot().physicalRejoins.length===7){
-     done=frame;break;
-    }
+    if(!done&&traffic.snapshot().physicalRejoins.length===7)
+     done=frame;
+    if(done&&frame>=done+360)break;
    }
    const state=traffic.snapshot();
    console.log('T21_F3B_NATIVE_PLAYABLE_8_ACTOR_DIAGNOSTIC',JSON.stringify({
@@ -107,6 +108,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     freeCombatEnabled:state.freeCombatEnabled,
     sourceLinks:state.originalSourceLinksUsed,
     realHumanPassiveNav:liveHuman.snapshot, movingHuman,
+    sourcePatrol:state.sourcePatrol,
     originalSourceOnly:true,productionAuthorized:false
    }));
    expect(stop).toBeNull();
@@ -114,6 +116,10 @@ describe('F3B playable 8-actor original source runtime',()=>{
    expect(state.physicalFirstDrops).toHaveLength(7);
    expect(state.physicalRejoins).toHaveLength(7);
    expect(state.freeCombatEnabled).toBe(true);
+   expect(state.sourcePatrol.auditedTargets).toBeGreaterThan(0);
+   expect(state.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
+   expect(state.sourcePatrol.travelMeters).toBeGreaterThan(0.5);
+   expect(state.sourcePatrol.attemptsToCrossUnboundUnderpass).toBe(0);
    expect(done).toBeGreaterThan(0);
    expect(maxGroundStep).toBeLessThan(.10);
    expect(stage.solids).toBe(frozen.solids);
