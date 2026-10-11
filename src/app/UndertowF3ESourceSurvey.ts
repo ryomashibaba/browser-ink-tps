@@ -35,7 +35,7 @@ export class UndertowF3ESourceSurvey{
   this.index=this.index>=F3E_SOURCE_SURVEY_VIEWS.length-1?-1:this.index+1;
   const view=F3E_SOURCE_SURVEY_VIEWS[this.index];
   if(view){
-   this.survey.setPosition(...view.camera);
+   this.survey.setPosition(view.camera[0],view.camera[1],view.camera[2]);
    this.survey.lookAt(new Vec3(...view.aim));
   }
   // Mutually exclusive render cameras: KCC and physical actors remain
