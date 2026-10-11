@@ -45,6 +45,7 @@ import {planSourceSupportedT21QaSpawnSlots,
 import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
+import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -94,6 +95,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly humanSpawn:Vec3;
  private readonly panel:HTMLElement;
  private readonly status:HTMLElement;
+ private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly p=new Vec3();
  private readonly aim=new Vec3();
@@ -212,6 +214,7 @@ export class UndertowF3PlayablePreviewApp{
    'color:#e9fdff;text-shadow:0 1px 7px #001';
   cross.textContent='+';
   ui.appendChild(cross);
+  this.radar=createF3SourceRadar(ui,stage);
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
@@ -373,6 +376,9 @@ export class UndertowF3PlayablePreviewApp{
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   cpuPaintRequests:this.stats.cpuPaintRequests,
+   cpuCombatHits:this.stats.cpuCombatHits,
+   cpuSplats:this.stats.cpuSplats,
    paintEventsPerSecond:this.stats.paintEventsPerSecond,
    cpuShots:this.stats.cpuShots,shotsFired:this.stats.shotsFired,
    tick:this.clock.tick,paused:this.paused,
@@ -385,6 +391,7 @@ export class UndertowF3PlayablePreviewApp{
  private refresh(){
   const state=this.snapshot();
   const p=state.cpu;
+  this.radar.render(state);
   this.status.textContent=[
    'HUMAN · '+state.player.mode+
     '  HP '+Math.round(state.player.hp)+
@@ -398,6 +405,8 @@ export class UndertowF3PlayablePreviewApp{
     ' (non-colliding) | triangles '+state.originalSourceOpticalTriangles,
    'Real drops · '+p.physicalFirstDrops.length+
     ' | original links '+p.originalSourceLinksUsed,
+   'CPU paint '+state.cpuPaintRequests+' · CPU hits '+state.cpuCombatHits+
+    ' · CPU splats '+state.cpuSplats,
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
     ' | paint/s '+state.paintEventsPerSecond.toFixed(1),
    'HUMAN avoidance · '+(state.humanCrowd.active?'NATIVE 8TH CROWD':'AIRBORNE / UNVERIFIED')+
