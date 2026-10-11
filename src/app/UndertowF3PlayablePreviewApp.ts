@@ -211,11 +211,12 @@ export class UndertowF3PlayablePreviewApp{
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
    '<button id="t21-f3-reset" type="button">Reset (R)</button>'+ 
    '<button id="t21-f3-structures" type="button">Original source: ON</button>'+
-   '<button id="t21-f3-completion" type="button">Source terrain study: ON</button></div>'+
+   '<button id="t21-f3-completion" type="button">Source terrain study: ON</button>'+
+   '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button></div>'+
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
-   'F3E: original-source terrain study is OPTICAL ONLY. Unverified floor fragments are NOT walkable; Turf score and central navigation are not authorized.</p>';
+   'F3G: full original static OBJ is OPTICAL ONLY. Unverified floor fragments are NOT walkable; Turf score and central navigation are not authorized.</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
@@ -230,6 +231,21 @@ export class UndertowF3PlayablePreviewApp{
    const btn=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement;
    btn.textContent='Source terrain study: '+
     (this.sourceCompletion.root.enabled?'ON':'OFF');
+  });
+  this.panel.querySelector('#t21-f3g-full')?.addEventListener('click',()=>{
+   if(!this.wholeSourceRoot)return;
+   this.wholeSourceRoot.enabled=!this.wholeSourceRoot.enabled;
+   this.sourceCompletion.root.enabled=!this.wholeSourceRoot.enabled;
+   this.structures.root.enabled=!this.wholeSourceRoot.enabled;
+   const btn=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement;
+   btn.textContent='Full source OBJ: '+(this.wholeSourceRoot.enabled?'ON':'OFF');
+   const ref=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement;
+   ref.textContent='Source terrain study: '+
+    (this.sourceCompletion.root.enabled?'ON':'OFF');
+   const optical=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement;
+   optical.textContent='Original source: '+
+    (this.structures.root.enabled?'ON':'OFF');
+   this.refresh();
   });
   this.surveyButton=document.createElement('button');
   this.surveyButton.id='t21-f3-source-survey';
@@ -293,6 +309,8 @@ export class UndertowF3PlayablePreviewApp{
    const f3Button=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement|null;
    if(f3Button)f3Button.textContent='Original source: OFF';
    this.wholeSourceStatus='READY';
+   const button=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
+   if(button){button.hidden=false;button.textContent='Full source OBJ: ON';}
   }catch(e){
    this.wholeSourceError=String(e).slice(0,320);
    this.wholeSourceStatus=this.wholeSourceError.includes('NOT_INSTALLED_HTTP_404')
