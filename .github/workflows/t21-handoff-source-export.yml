@@ -1,0 +1,33 @@
+name: T21 handoff exact source ZIP
+on:
+  push:
+    branches: ["codex/t21-f3g-handoff-export-20261011"]
+    paths: [".github/workflows/t21-handoff-source-export.yml"]
+permissions:
+  contents: read
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 739f64a64b112dd98d757d52da000c838571e9a8
+          fetch-depth: 1
+      - name: Archive the complete pinned source without external game assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/t21-handoff
+          git archive --format=zip --output=/tmp/t21-handoff/SOURCE_browser-ink-tps_F3G_739f64a.zip HEAD
+          printf '%s\n' '739f64a64b112dd98d757d52da000c838571e9a8' > /tmp/t21-handoff/PINNED_HEAD.txt
+          git show -s --format='%H%n%an%n%aI%n%s' HEAD > /tmp/t21-handoff/COMMIT_IDENTITY.txt
+          sha256sum /tmp/t21-handoff/SOURCE_browser-ink-tps_F3G_739f64a.zip > /tmp/t21-handoff/SOURCE_SHA256.txt
+          echo SOURCE_BYTES=$(wc -c < /tmp/t21-handoff/SOURCE_browser-ink-tps_F3G_739f64a.zip)
+          test -s /tmp/t21-handoff/SOURCE_browser-ink-tps_F3G_739f64a.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: t21-f3g-pinned-source-full-snapshot
+          path: /tmp/t21-handoff/
+          if-no-files-found: error
+          retention-days: 14
