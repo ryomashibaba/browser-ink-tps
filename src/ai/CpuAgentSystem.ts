@@ -88,6 +88,11 @@ export interface CpuHumanCrowdFootAuthority {
   sealAfterCrowdUpdate(foot:Readonly<{x:number;y:number;z:number}>):unknown;
 }
 
+/** F3D ONLY: source-audited destinations. Never edit real Crowd/Rapier feet. */
+export interface CpuQaSourceGoalAuthority {
+  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean;
+}
+
 export interface CpuFireRequest {
   sourceId: string;
   team: Team.A | Team.B;
@@ -171,6 +176,7 @@ export class CpuAgentSystem {
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private readonly goal = new Vec3();
+  private f3dSourceGoals:CpuQaSourceGoalAuthority|null=null;
   private readonly samplePoint = new Vec3();
   private readonly targetPoint = new Vec3();
   private activeLastTick = false;
@@ -212,6 +218,16 @@ export class CpuAgentSystem {
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
     this.reset(humanTeam);
+  }
+
+  /** This is intentionally not a production constructor option. */
+  public useF3dOriginalSourceGoals(source:CpuQaSourceGoalAuthority):void{
+    if(!this.phase14qF2RecoverableSteps||
+       !this.phase14eFirstDrop||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       !this.phase14qGroundCollision)
+      throw Error('T21_F3D_SOURCE_TACTICAL_GOALS_NONPRODUCTION_ONLY');
+    this.f3dSourceGoals=source;
   }
 
   public reset(humanTeam: Team.A | Team.B): void {
@@ -428,25 +444,28 @@ export class CpuAgentSystem {
 
       bot.thinkRemaining -= dt;
       if (bot.thinkRemaining <= 0) {
-        const jumpStarted = this.tryStartTacticalJump(
-          bot,
-          humanTeam,
-          humanPosition,
-          humanActive,
-          false
-        );
+        // A QA source-local patrol must not invoke a jump to an
+        // unbound central/high island. Ordinary T20 jump logic is intact.
+        const jumpStarted=this.f3dSourceGoals?false:
+          this.tryStartTacticalJump(
+            bot,humanTeam,humanPosition,humanActive,false
+          );
 
         if (!jumpStarted) {
-          this.director.chooseGoal({
-            team: bot.team,
-            role: bot.role,
-            slot: bot.slot,
-            humanTeam,
-            currentPosition: bot.position,
-            humanPosition
-          }, this.goal);
-          bot.agent?.requestMoveTarget(this.navigation.closestPoint(this.goal));
-          this.stats.cpuTacticalRetargets += 1;
+          const sourceGoal=this.f3dSourceGoals?.chooseSourceGoal(
+            bot.id,bot.position,this.goal)??false;
+          if(sourceGoal||!this.f3dSourceGoals){
+            if(!sourceGoal)this.director.chooseGoal({
+              team: bot.team,
+              role: bot.role,
+              slot: bot.slot,
+              humanTeam,
+              currentPosition: bot.position,
+              humanPosition
+            }, this.goal);
+            bot.agent?.requestMoveTarget(this.navigation.closestPoint(this.goal));
+            this.stats.cpuTacticalRetargets += 1;
+          }else bot.agent?.resetMoveTarget();
         }
 
         bot.thinkRemaining += GAME_CONFIG.cpu.tacticalThinkSeconds;

@@ -10,6 +10,7 @@ import type {CrowdAgent} from 'recast-navigation';
 import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {Team} from '../ink/types';
+import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import type {SourceSpawnPlan}
@@ -29,6 +30,15 @@ export interface F3TrafficSnapshot{
  readonly landingCorridorsCleared:readonly string[];
  readonly releasedCpuIds:readonly string[];
  readonly freeCombatEnabled:boolean;
+ readonly sourcePatrol:{
+  readonly auditedTargets:number;
+  readonly realGoalRequests:number;
+  readonly heldRequests:number;
+  readonly travelMeters:number;
+  readonly attemptsToCrossUnboundUnderpass:0;
+  readonly sourceOnly:true;
+  readonly productionAuthorized:false;
+ };
  readonly originalSourceLinksUsed:number;
  readonly physicalFootRelocations:0;
  readonly productionAuthorized:false;
@@ -38,9 +48,15 @@ const RELEASE_AFTER:Readonly<Record<string,string|null>>={
  B4:null,B1:'B4',B3:'B1',B2:'B3'
 };
 const sourceSides=['positive-z','negative-z'] as const;
-export class UndertowF3SourceTraffic{
+export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  readonly routePlan:T21F2RoutePlan;
  private readonly egress=new Map<string,StageVector3>();
+ private readonly patrolGoals=new Map<string,Vec3[]>();
+ private readonly patrolIndex=new Map<string,number>();
+ private auditedTargets=0;
+ private realGoalRequests=0;
+ private heldRequests=0;
+ private travelMeters=0;
  private readonly physicallyFalling=new Set<string>();
  private readonly physicallyRejoined=new Set<string>();
  private readonly cleared=new Set<string>();
@@ -72,10 +88,69 @@ export class UndertowF3SourceTraffic{
     Math.hypot(p[0]-start.x,p[2]-start.z)>2);
    if(!dest)throw Error('T21_F3_SOURCE_EGRESS_UNSUPPORTED_'+bot.id);
    this.egress.set(bot.id,dest);
+   // Choose only actual, original source-backed LOWER geometry on this
+   // side of the still-unbound underpass. A source authored paint polygon
+   // alone does NOT prove traversal; every candidate must pass Recast.
+   const sideSign=bot.team===Team.A?1:-1;
+   const roots=[...stage.paintSurfaces.map(s=>s.center),
+    route.originalLanding,ramp.from,ramp.to,dest];
+   const targets:Vec3[]=[];
+   for(const point of roots){
+    if(point[2]*sideSign<33||point[1]<2.7||point[1]>5.25)
+      continue;
+    const target=this.nav.closestPoint(new Vec3(...point));
+    if(![target.x,target.y,target.z].every(Number.isFinite)||
+       Math.hypot(target.x-point[0],target.y-point[1],
+         target.z-point[2])>.22)continue;
+    const native=this.nav.auditPath(new Vec3(...route.originalLanding),
+      new Vec3(target.x,target.y,target.z));
+    if(!native.reachedTarget||native.endSnapDistanceMeters>.22||
+       native.startSnapDistanceMeters>.22||native.pointCount===0)
+      continue;
+    if(target.z*sideSign<33||target.y<2.7||target.y>5.25)
+      continue;
+    if(targets.some(p=>p.distance(new Vec3(target.x,target.y,target.z))<1.6))
+      continue;
+    targets.push(new Vec3(target.x,target.y,target.z));
+   }
+   // Deterministic source-only loop, no new navigation links. The
+   // original unbound underpass gap can never be an intermediate goal.
+   targets.sort((a,b)=>b.z*sideSign-a.z*sideSign||
+     a.x-b.x);
+   this.patrolGoals.set(bot.id,targets);
+   this.patrolIndex.set(bot.id,0);
+   this.auditedTargets+=targets.length;
    this.previous.set(bot.id,bot.mobilityState);
    this.previousFeet.set(bot.id,bot.position.clone());
    bot.agent?.resetMoveTarget();
   }
+ }
+
+ chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
+  if(!this.freeCombat||!this.physicallyRejoined.has(id)){
+   this.heldRequests++;return false;
+  }
+  const candidates=this.patrolGoals.get(id);
+  const bot=this.bots.find(b=>b.id===id);
+  if(!bot||!candidates?.length){this.heldRequests++;return false;}
+  const sign=bot.team===Team.A?1:-1;
+  let index=this.patrolIndex.get(id)??0;
+  for(let tries=0;tries<candidates.length;tries++){
+   const goal=candidates[index%candidates.length]!;
+   index++;
+   if(goal.z*sign<33||goal.y<2.7||goal.y>5.25)
+    throw Error('T21_F3D_UNAPPROVED_UNDERPASS_CROSSING_GOAL');
+   const distance=Math.hypot(realFoot.x-goal.x,realFoot.z-goal.z);
+   if(distance<1.5)continue;
+   const audit=this.nav.auditPath(realFoot,goal);
+   // A valid native target on the wrong unconnected island is not
+   // sufficient. Do not use it when real-foot path is unsupported.
+   if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
+      audit.endSnapDistanceMeters>.22)continue;
+   this.patrolIndex.set(id,index%candidates.length);
+   out.copy(goal);this.realGoalRequests++;return true;
+  }
+  this.heldRequests++;return false;
  }
 
  prepare(frame:number):void{
@@ -109,7 +184,10 @@ export class UndertowF3SourceTraffic{
  observe(frame:number):void{
   for(const bot of this.bots){
    const oldFoot=this.previousFeet.get(bot.id)!;
-   if(oldFoot.distance(bot.position)>.015)this.lastMoved.set(bot.id,frame);
+   const step=oldFoot.distance(bot.position);
+   if(step>.015)this.lastMoved.set(bot.id,frame);
+   if(this.freeCombat&&bot.mobilityState==='GROUND'&&step<.18)
+    this.travelMeters+=step;
    oldFoot.copy(bot.position);
    const previous=this.previous.get(bot.id);
    if(bot.mobilityState==='FIRST_DROP_FALL'||
@@ -165,6 +243,12 @@ export class UndertowF3SourceTraffic{
    landingCorridorsCleared:[...this.cleared],
    releasedCpuIds:[...this.released],
    freeCombatEnabled:this.freeCombat,
+   sourcePatrol:{auditedTargets:this.auditedTargets,
+    realGoalRequests:this.realGoalRequests,
+    heldRequests:this.heldRequests,
+    travelMeters:this.travelMeters,
+    attemptsToCrossUnboundUnderpass:0,sourceOnly:true,
+    productionAuthorized:false},
    originalSourceLinksUsed:this.routePlan.distinctFirstDropLinks,
    physicalFootRelocations:0,productionAuthorized:false
   };

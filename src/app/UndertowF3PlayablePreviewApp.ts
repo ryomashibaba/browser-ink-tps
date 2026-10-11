@@ -175,6 +175,7 @@ export class UndertowF3PlayablePreviewApp{
    this.stats,stage,Team.A,adapter,this.shared,this.humanCrowd,true);
   const bots=(this.cpu as unknown as {bots:F3TrafficCpu[]}).bots;
   this.traffic=new UndertowF3SourceTraffic(stage,this.nav,slots,bots);
+  this.cpu.useF3dOriginalSourceGoals(this.traffic);
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
    this.feedback,this.stats);
@@ -400,7 +401,9 @@ export class UndertowF3PlayablePreviewApp{
     ' · NO TURF WINNER',
    'HUMAN SPLATS '+state.humanSplats+' / RESPAWNS '+state.humanRespawns,
    'CPU · '+p.physicalRejoins.length+'/7 source drop + recovery',
-   'Traffic · '+(p.freeCombatEnabled?'FREE COMBAT':'SAFE STAGED DESCENT'),
+   'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL COMBAT':'SAFE STAGED DESCENT'),
+   'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
+    p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
    'Original optical structures · '+state.originalSourceOpticalStructures+
     ' (non-colliding) | triangles '+state.originalSourceOpticalTriangles,
    'Real drops · '+p.physicalFirstDrops.length+
