@@ -249,15 +249,23 @@ async function main(){
     player:completed.player,avoidance:completed.humanCrowd
    }));
   for(let i=0;i<6;i++)completed=await evaluate('window.__t21F3.advanceQaTicks(72)');
-  console.log('T21_F3C_NATIVE_COMBAT_LIVE_EVIDENCE',JSON.stringify({
+  const patrol=completed.cpu.sourcePatrol;
+  console.log('T21_F3D_NATIVE_PATROL_COMBAT_EVIDENCE',JSON.stringify({
    tick:completed.tick,paint:completed.cpuPaintRequests,
    shots:completed.cpuShots,splats:completed.cpuSplats,
    time:completed.timeRemainingSeconds,
-   matchState:completed.matchState,stop:completed.stopReason
+   matchState:completed.matchState,
+   patrol,stop:completed.stopReason
   }));
   if(completed.stopReason||completed.matchState!=='PLAYING'||
      completed.cpuPaintRequests<1)
    reject('NATIVE_F3C_CPU_COMBAT_NOT_LIVE_'+JSON.stringify(completed));
+  if(!patrol||patrol.auditedTargets<7||patrol.realGoalRequests<7||
+     patrol.travelMeters<5||patrol.attemptsToCrossUnboundUnderpass!==0||
+     patrol.productionAuthorized!==false)
+   reject('T21_F3D_NO_SOURCE_NATIVE_POSTDROP_PATROL_'+JSON.stringify({
+    patrol,realFoot:completed.cpu.cpu
+   }));
  }
  if(longCpu)frames.push(await screenshot('F3_2_REAL_SEVEN_CPU_FREE_COMBAT'));
  const out={status:'PASS_REAL_CHROME',
@@ -272,6 +280,7 @@ async function main(){
   humanBlocksCpuLaneByRealKeyboard:longCpu&&process.env.T21_F3_BLOCKED_HUMAN==='1',
   nativeCpuPaintRequests:longCpu?completed.cpuPaintRequests:undefined,
   nativeCpuShots:longCpu?completed.cpuShots:undefined,
+  nativePatrolEvidence:longCpu?completed.cpu.sourcePatrol:undefined,
   perCpuNativeFootEvidence:longCpu?completed.cpu.cpu:undefined,
   fullSevenCpuChromeTestRequested:longCpu,
   cpuChromeCertification:longCpu?'SEVEN_SOURCE_REJOINS':'SHORT_INPUT_ONLY',
