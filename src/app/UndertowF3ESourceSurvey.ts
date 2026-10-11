@@ -11,7 +11,12 @@ export const F3E_SOURCE_SURVEY_VIEWS=Object.freeze([
  {id:'CENTRAL OVERVIEW',camera:[44,49,46],aim:[0,4,0]},
  {id:'TEAM A SOURCE',camera:[34,34,96],aim:[0,4,51]},
  {id:'TEAM B SOURCE',camera:[-34,34,-96],aim:[0,4,-51]},
- {id:'HIGH TOP-DOWN',camera:[0,112,3],aim:[0,2,0]}
+ {id:'HIGH TOP-DOWN',camera:[0,112,3],aim:[0,2,0]},
+ // Observation only. These camera coordinates DO NOT indicate a source
+ // traversable route. Both sides of the unbound ramp-to-underpass gap
+ // remain unconnected after the original-source Recast experiment.
+ {id:'SOURCE GAP / A',camera:[-31,23,53],aim:[-11,3.7,27]},
+ {id:'SOURCE GAP / B',camera:[31,23,-53],aim:[11,3.7,-27]}
 ] as const);
 export class UndertowF3ESourceSurvey{
  private readonly survey:Entity;

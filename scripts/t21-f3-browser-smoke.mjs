@@ -147,7 +147,7 @@ async function main(){
  const frames=[await screenshot('F3_0_SOURCE_STAGE')];
  // These camera-only stage survey frames are a direct inspection of
  // genuine original 3D architecture; no game foot, collider or nav moves.
- for(let n=0;n<4;n++){
+ for(let n=0;n<6;n++){
   const state=await evaluate(`(() => {
     document.querySelector('#t21-f3-source-survey')?.click();
     return window.__t21F3.snapshot();
@@ -157,10 +157,11 @@ async function main(){
      state.originalSourceSolids!==25||
      state.originalSourceStudy.sourceComponents<100)
    reject('T21_F3E_SURVEY_CAMERA_AUTHORITY_UNSAFE_'+JSON.stringify(state));
-  if(n===0||n===3){
+  if(n===0||n===3||n===4||n===5){
    await sleep(160);
    frames.push(await screenshot(n===0?'F3E_SOURCE_CENTER_OVERVIEW':
-    'F3E_SOURCE_HIGH_TOPDOWN'));
+    n===3?'F3E_SOURCE_HIGH_TOPDOWN':
+    n===4?'F3F_UNBOUND_UNDERPASS_A':'F3F_UNBOUND_UNDERPASS_B'));
   }
  }
  const returned=await evaluate(`(() => {
