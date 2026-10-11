@@ -38,7 +38,7 @@ jobs:
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: Real trusted keyboard mouse and GPU frame
         env:
-          T21_F3_LONG_CPU: ${{ inputs.long_cpu == true && '1' || '0' }}
+          T21_F3_LONG_CPU: '1' # F3B one-time rigorous native full 7/7 source gate
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Preserve exact Chrome screenshots
         if: always()
