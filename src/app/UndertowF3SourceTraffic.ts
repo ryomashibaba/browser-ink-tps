@@ -118,7 +118,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    targets.sort((a,b)=>b.z*sideSign-a.z*sideSign||
      a.x-b.x);
    this.patrolGoals.set(bot.id,targets);
-   this.patrolIndex.set(bot.id,0);
+   this.patrolIndex.set(bot.id,-1);
    this.auditedTargets+=targets.length;
    this.previous.set(bot.id,bot.mobilityState);
    this.previousFeet.set(bot.id,bot.position.clone());
@@ -134,20 +134,23 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||!candidates?.length){this.heldRequests++;return false;}
   const sign=bot.team===Team.A?1:-1;
-  let index=this.patrolIndex.get(id)??0;
+  const active=this.patrolIndex.get(id)??-1;
+  // Persist the same audited destination across the tactical think cadence,
+  // instead of jittering between nodes every 0.28 seconds. Only move to
+  // another original-source destination after genuinely reaching this one.
+  const first=active>=0?active:(id.startsWith('A')?0:1);
   for(let tries=0;tries<candidates.length;tries++){
-   const goal=candidates[index%candidates.length]!;
-   index++;
+   const index=(first+tries)%candidates.length;
+   const goal=candidates[index]!;
    if(goal.z*sign<33||goal.y<2.7||goal.y>5.25)
     throw Error('T21_F3D_UNAPPROVED_UNDERPASS_CROSSING_GOAL');
    const distance=Math.hypot(realFoot.x-goal.x,realFoot.z-goal.z);
    if(distance<1.5)continue;
    const audit=this.nav.auditPath(realFoot,goal);
-   // A valid native target on the wrong unconnected island is not
-   // sufficient. Do not use it when real-foot path is unsupported.
+   // Native path from the REAL CPU foot, never only from a stored proxy.
    if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
       audit.endSnapDistanceMeters>.22)continue;
-   this.patrolIndex.set(id,index%candidates.length);
+   this.patrolIndex.set(id,index);
    out.copy(goal);this.realGoalRequests++;return true;
   }
   this.heldRequests++;return false;
