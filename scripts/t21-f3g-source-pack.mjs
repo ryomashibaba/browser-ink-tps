@@ -22,6 +22,8 @@ export function classifyStaticMaterial(mat){
 export function createF3gObjCollector({allowTestFixture=false}={}){
  const points=[];const perKind=Object.fromEntries(F3G_KINDS.map(k=>[k,[]]));
  let object='',material='',vertexCount=0,totalFaces=0,ignoredFaces=0;
+ const staticObjects=new Set(),regionTriangles={positiveZ:0,core:0,negativeZ:0};
+ let unplacedFldObjFaceCount=0,skippedFldBgFaceCount=0;
  const isOriginalStatic=()=>object.startsWith('Fld_Temple01_')&&material.startsWith('Fld_Temple01_');
  return {
   line(line){
@@ -38,7 +40,12 @@ export function createF3gObjCollector({allowTestFixture=false}={}){
     material=line.slice(7).trim();
    }else if(line.startsWith('f ')){
     totalFaces++;
-    if(!isOriginalStatic()){ignoredFaces++;return;}
+    if(!isOriginalStatic()){
+     ignoredFaces++;
+     if(object.startsWith('FldObj_Temple01_'))unplacedFldObjFaceCount++;
+     else if(object.startsWith('FldBG_Temple01_'))skippedFldBgFaceCount++;
+     return;
+    }
     const faces=line.slice(2).trim().split(/\s+/);
     if(faces.length<3)return;
     // OBJ global 1-based indexing; negative relative indices allowed,
@@ -59,13 +66,21 @@ export function createF3gObjCollector({allowTestFixture=false}={}){
      if(all.some(p=>p.some(v=>Math.abs(v)>LIMITS.coordinates))){
       ignoredFaces++;continue;
      }
+     staticObjects.add(object);
      for(const p of all)target.push(p[0],p[1],p[2]);
+     const centroidZ=(p0[2]+p1[2]+p2[2])/3;
+     if(centroidZ>32)regionTriangles.positiveZ++;
+     else if(centroidZ< -32)regionTriangles.negativeZ++;
+     else regionTriangles.core++;
      const tris=F3G_KINDS.reduce((n,k)=>n+perKind[k].length/9,0);
      if(tris>LIMITS.triangles)throw Error('F3G_UNBOUNDED_TRIANGLE_SOURCE');
     }
    }
   },
   finish(){return {perKind,vertexCount,totalFaces,ignoredFaces,
+   coverage:{staticObjectCount:staticObjects.size,unplacedFldObjFaceCount,
+    skippedFldBgFaceCount,regionTriangles,actorPlacementRecovered:false,
+    traversalAuthorityRecovered:false},
    triangleCount:F3G_KINDS.reduce((n,k)=>n+perKind[k].length/9,0)}}
  };
 }
@@ -107,7 +122,7 @@ export async function convertF3gOriginal({input,output,allowTestFixture=false}){
   sourceObjFaceCount:parsed.totalFaces,
   includedOriginalTriangles:parsed.triangleCount,
   excludedNonStaticOrExteriorFaces:parsed.ignoredFaces,
-  groups,
+  groups,coverage:parsed.coverage,
   geometryAuthoritativeOnlyForSourceVisualReview:true,
   stageCollisionSolidsAdded:0,stagePaintSurfacesAdded:0,
   navigationLinksAdded:0,scoreableSurfacesAdded:0,

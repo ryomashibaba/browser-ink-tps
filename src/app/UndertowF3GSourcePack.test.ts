@@ -25,6 +25,11 @@ describe('F3G full-original OBJ optical-only importer',()=>{
   expect(m.perKind.FLOOR?.length).toBe(18);
   expect(m.perKind.GLASS?.length).toBe(9);
   expect(m.perKind.SLOPE?.length).toBe(0);
+  expect(m.coverage.staticObjectCount).toBe(2);
+  expect(m.coverage.unplacedFldObjFaceCount).toBe(1);
+  expect(m.coverage.skippedFldBgFaceCount).toBe(1);
+  expect(Object.values(m.coverage.regionTriangles).reduce((a,b)=>a+b,0)).toBe(3);
+  expect(m.coverage.actorPlacementRecovered).toBe(false);
   expect(classifyStaticMaterial('Fld_Temple01_PillarBase00')).toBe('SUPPORT');
   expect(F3G_KINDS).toHaveLength(7);
   expect(PINNED_TEMPLE01_SHA256).toHaveLength(64);

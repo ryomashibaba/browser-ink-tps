@@ -49,7 +49,8 @@ import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
-import {loadF3gWholeSource,type F3GPackManifest}
+import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
+ type F3HSourceVisualMode,type F3GPackManifest}
  from './UndertowF3GWholeSourcePreview';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
@@ -108,6 +109,9 @@ export class UndertowF3PlayablePreviewApp{
  private wholeSourceGroups=0;
  private wholeSourceError='';
  private wholeSourceRoot:Entity|null=null;
+ private sourceVisualMode:F3HSourceVisualMode='SOLID';
+ private sourceSetVisualMode:((mode:F3HSourceVisualMode)=>F3HSourceVisualMode)|null=null;
+ private sourceCoverage:F3GPackManifest['coverage'];
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -212,7 +216,8 @@ export class UndertowF3PlayablePreviewApp{
    '<button id="t21-f3-reset" type="button">Reset (R)</button>'+ 
    '<button id="t21-f3-structures" type="button">Original source: ON</button>'+
    '<button id="t21-f3-completion" type="button">Source terrain study: ON</button>'+
-   '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button></div>'+
+   '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button>'+ 
+   '<button id="t21-f3h-visual-mode" type="button" hidden>F3H view: SOLID (H)</button></div>'+
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
@@ -247,6 +252,8 @@ export class UndertowF3PlayablePreviewApp{
     (this.structures.root.enabled?'ON':'OFF');
    this.refresh();
   });
+  this.panel.querySelector('#t21-f3h-visual-mode')?.addEventListener('click',()=>
+   this.cycleSourceVisualMode());
   this.surveyButton=document.createElement('button');
   this.surveyButton.id='t21-f3-source-survey';
   this.surveyButton.textContent='SURVEY STAGE (V) · next viewpoint';
@@ -270,6 +277,7 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.code==='KeyP')this.togglePause();
    if(ev.code==='KeyR')this.restart();
    if(ev.code==='KeyV')this.toggleSurvey();
+   if(ev.code==='KeyH')this.cycleSourceVisualMode();
   });
   const renderer=(app.graphicsDevice as {deviceType?:string}).deviceType;
   if(renderer!=='webgl2')throw Error('T21_F3_REAL_WEBGL2_REQUIRED');
@@ -301,6 +309,9 @@ export class UndertowF3PlayablePreviewApp{
    this.wholeSourceRoot=installed.root;
    this.wholeSourceTriangles=installed.manifest.includedOriginalTriangles;
    this.wholeSourceGroups=installed.manifest.groups.length;
+   this.sourceCoverage=installed.manifest.coverage;
+   this.sourceSetVisualMode=installed.setVisualMode;
+   this.sourceSetVisualMode(this.sourceVisualMode);
    // Avoid duplicate translucent layers obscuring actual source forms.
    this.sourceCompletion.root.enabled=false;
    this.structures.root.enabled=false;
@@ -311,6 +322,8 @@ export class UndertowF3PlayablePreviewApp{
    this.wholeSourceStatus='READY';
    const button=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
    if(button){button.hidden=false;button.textContent='Full source OBJ: ON';}
+   const modeButton=this.panel.querySelector('#t21-f3h-visual-mode') as HTMLButtonElement|null;
+   if(modeButton)modeButton.hidden=false;
   }catch(e){
    this.wholeSourceError=String(e).slice(0,320);
    this.wholeSourceStatus=this.wholeSourceError.includes('NOT_INSTALLED_HTTP_404')
@@ -319,6 +332,16 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
  }
 
+ private cycleSourceVisualMode(){
+  if(!this.sourceSetVisualMode||this.wholeSourceStatus!=='READY')return;
+  const index=F3H_SOURCE_VISUAL_MODES.indexOf(this.sourceVisualMode);
+  const next=F3H_SOURCE_VISUAL_MODES[(index+1)%F3H_SOURCE_VISUAL_MODES.length]!;
+  this.sourceVisualMode=this.sourceSetVisualMode(next);
+  const button=this.panel.querySelector('#t21-f3h-visual-mode') as HTMLButtonElement|null;
+  if(button)button.textContent='F3H view: '+next+' (H)';
+  this.canvas.dataset.t21F3hVisualMode=next;
+  this.refresh();
+ }
  private toggleSurvey(){
   const wasSurvey=this.survey.snapshot().active;
   if(!wasSurvey)this.surveyWasPaused=this.paused;
@@ -468,6 +491,7 @@ export class UndertowF3PlayablePreviewApp{
    fullSource:{status:this.wholeSourceStatus,
     sourceOriginalTriangles:this.wholeSourceTriangles,
     sourceMaterialGroups:this.wholeSourceGroups,
+    visualMode:this.sourceVisualMode,coverage:this.sourceCoverage??null,
     enabled:this.wholeSourceRoot?.enabled??false,
     sourceOnly:true,realPhysicsAdded:0,realNavigationLinksAdded:0,
     sourceError:this.wholeSourceError,
@@ -509,6 +533,13 @@ export class UndertowF3PlayablePreviewApp{
     (this.wholeSourceStatus==='READY'?' / '+
      this.wholeSourceTriangles+' original triangles':'')+
     ' · NO WALK / INK / NAV',
+   'F3H SOURCE VIEW · '+this.sourceVisualMode+
+    ' / whole-scene optical-only (H to compare)',
+   this.sourceCoverage?'F3H SOURCE COVERAGE · '+
+    this.sourceCoverage.staticObjectCount+' static objects | '+
+    'Z+/center/Z- '+Object.values(this.sourceCoverage.regionTriangles).join('/')+
+    ' triangles | unplaced actor faces '+this.sourceCoverage.unplacedFldObjFaceCount+
+    ' · NO ACTOR PLACEMENT':'',
    'F3F SOURCE ONLY · 8 original underpass pieces (NOT walkable)'+
     ' · unresolved gap '+state.originalSourceStudy.unresolvedUnderpassOriginalGapMeters.toFixed(2)+'m',
    'F3F SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+

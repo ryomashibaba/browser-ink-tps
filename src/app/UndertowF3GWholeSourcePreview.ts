@@ -6,10 +6,12 @@
  * downloads game content at page runtime. Missing pack is nonfatal.
  * It has NO Rapier, Recast, ink, collision, paint or stage-authority imports.
  */
-import {BLEND_NORMAL,CULLFACE_NONE,Color,Entity,Mesh,MeshInstance,
+import {BLEND_NONE,BLEND_NORMAL,CULLFACE_NONE,Color,Entity,Mesh,MeshInstance,
  StandardMaterial,type AppBase} from 'playcanvas';
 const KINDS=['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as const;
 type Kind=typeof KINDS[number];
+export const F3H_SOURCE_VISUAL_MODES=['SOLID','TRAVERSAL','X_RAY'] as const;
+export type F3HSourceVisualMode=typeof F3H_SOURCE_VISUAL_MODES[number];
 export const T21_F3G_SOURCE_SHA256=
  'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046';
 export type F3GPackManifest={
@@ -25,6 +27,11 @@ export type F3GPackManifest={
  scoreableSurfacesAdded:0;
  inferredFloorOrRouteAdded:0;
  productionAuthorization:false;
+ // Counts describe only pinned OBJ source triangles, not runtime gameplay.
+ coverage?:{staticObjectCount:number;unplacedFldObjFaceCount:number;
+  skippedFldBgFaceCount:number;
+  regionTriangles:{positiveZ:number;core:number;negativeZ:number};
+  actorPlacementRecovered:false;traversalAuthorityRecovered:false};
 };
 export function auditF3gPackManifest(m:F3GPackManifest){
  if(m.schema!=='T21_F3G_PINNED_ORIGINAL_STATIC_OBJ_V1'||
@@ -48,6 +55,17 @@ export function auditF3gPackManifest(m:F3GPackManifest){
    throw Error('T21_F3G_UNSAFE_MESH_GROUP');
   known.add(g.kind);tris+=g.triangles;
  }
+ if(m.coverage){
+  const c=m.coverage;
+  if(!Number.isSafeInteger(c.staticObjectCount)||c.staticObjectCount<1||
+     !Number.isSafeInteger(c.unplacedFldObjFaceCount)||c.unplacedFldObjFaceCount<0||
+     !Number.isSafeInteger(c.skippedFldBgFaceCount)||c.skippedFldBgFaceCount<0||
+     ![c.regionTriangles.positiveZ,c.regionTriangles.core,c.regionTriangles.negativeZ]
+      .every(v=>Number.isSafeInteger(v)&&v>=0)||
+     Object.values(c.regionTriangles).reduce((a,b)=>a+b,0)!==m.includedOriginalTriangles||
+     c.actorPlacementRecovered!==false||c.traversalAuthorityRecovered!==false)
+   throw Error('T21_F3H_SOURCE_COVERAGE_UNTRUSTED');
+ }
  if(tris!==m.includedOriginalTriangles||m.groups.length<3)
   throw Error('T21_F3G_UNVERIFIED_GROUP_TRIANGLE_TOTAL');
  return {sourceTriangles:tris,sourceGroups:m.groups.length,
@@ -63,14 +81,38 @@ const PALETTE:Record<Kind,{rgb:[number,number,number];opacity:number}>={
  STRUCTURE:{rgb:[.28,.39,.51],opacity:.91},
  DETAIL:{rgb:[.70,.68,.53],opacity:.73}
 };
+/** Non-authoritative display presets. SOLID fixes the F3G all-transparent
+ * no-depth-write appearance. TRAVERSAL highlights source floor but grants no
+ * walkability. X_RAY preserves the prior source overlay for comparison. */
+export function f3hSourceMaterialStyle(k:Kind,mode:F3HSourceVisualMode){
+ const base=PALETTE[k];
+ if(mode==='SOLID'){
+  const opacity=k==='GLASS' ? .24 : 1;
+  return {opacity,depthWrite:k!=='GLASS',opaque:k!=='GLASS'};
+ }
+ if(mode==='TRAVERSAL'){
+  const opacity:Record<Kind,number>={FLOOR:1,SLOPE:1,METAL:.30,
+   GLASS:.12,SUPPORT:.16,STRUCTURE:.13,DETAIL:.20};
+  return {opacity:opacity[k],depthWrite:k==='FLOOR'||k==='SLOPE',
+   opaque:k==='FLOOR'||k==='SLOPE'};
+ }
+ return {opacity:base.opacity,depthWrite:false,opaque:false};
+}
 function sourceMaterial(k:Kind){
- const {rgb,opacity}=PALETTE[k];
+ const {rgb}=PALETTE[k];
  const m=new StandardMaterial();
  m.diffuse=new Color(...rgb);
  m.emissive=new Color(rgb[0]*.12,rgb[1]*.12,rgb[2]*.12);
- m.opacity=opacity;m.blendType=BLEND_NORMAL;
- m.cull=CULLFACE_NONE;m.depthWrite=false;
- m.useMetalness=true;m.metalness=.22;m.gloss=.27;m.update();return m;
+ m.cull=CULLFACE_NONE;
+ m.useMetalness=true;m.metalness=.22;m.gloss=.27;
+ applySourceMaterialStyle(m,k,'SOLID');return m;
+}
+function applySourceMaterialStyle(m:StandardMaterial,k:Kind,mode:F3HSourceVisualMode){
+ const style=f3hSourceMaterialStyle(k,mode);
+ m.opacity=style.opacity;
+ m.blendType=style.opaque?BLEND_NONE:BLEND_NORMAL;
+ m.depthWrite=style.depthWrite;
+ m.update();
 }
 function flatOriginalNormals(pos:Float32Array):Float32Array{
  const normal=new Float32Array(pos.length);
@@ -93,6 +135,7 @@ export async function loadF3gWholeSource(app:AppBase){
  const manifest=await response.json() as F3GPackManifest;
  const certification=auditF3gPackManifest(manifest);
  const root=new Entity('T21F3G:WHOLE_ORIGINAL_SOURCE_OPTICAL_ONLY');
+ const materials=new Map<Kind,StandardMaterial>();
  root.enabled=false;
  try{
   for(const group of manifest.groups){
@@ -111,13 +154,20 @@ export async function loadF3gWholeSource(app:AppBase){
    for(let i=0;i<idx.length;i++)idx[i]=i;
    mesh.setIndices(idx);mesh.update();
    const entity=new Entity('T21F3G:SOURCE_'+group.kind+'_NOT_WALKABLE');
+   const material=sourceMaterial(group.kind);
+   materials.set(group.kind,material);
    entity.addComponent('render',{meshInstances:[
-    new MeshInstance(mesh,sourceMaterial(group.kind))
+    new MeshInstance(mesh,material)
    ],castShadows:false,receiveShadows:false});
    root.addChild(entity);
   }
  }catch(error){root.destroy();throw error;}
  app.root.addChild(root);
  root.enabled=true;
- return {root,manifest,certification};
+ return {root,manifest,certification,
+  setVisualMode(mode:F3HSourceVisualMode){
+   if(!F3H_SOURCE_VISUAL_MODES.includes(mode))throw Error('T21_F3H_INVALID_REVIEW_MODE');
+   for(const [kind,material] of materials)applySourceMaterialStyle(material,kind,mode);
+   return mode;
+  }};
 }
