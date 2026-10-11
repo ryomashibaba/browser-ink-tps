@@ -55,6 +55,7 @@ import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
+import {loadF3lTexturedSource} from './UndertowF3LTexturedSourcePreview';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -123,6 +124,10 @@ export class UndertowF3PlayablePreviewApp{
  private galleryIndex=-1;
  private galleryWasPaused=false;
  private galleryError='';
+ private texturedF3l:Awaited<ReturnType<typeof loadF3lTexturedSource>>=null;
+ private texturedF3lStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
+ private texturedF3lError='';
+ private texturedF3lActive=false;
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -231,7 +236,8 @@ export class UndertowF3PlayablePreviewApp{
    '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button>'+ 
    '<button id="t21-f3h-visual-mode" type="button" hidden>F3H view: SOLID (H)</button>'+ 
    '<button id="t21-f3i-environment" type="button" hidden>F3I source backdrop: OFF (B)</button>'+ 
-   '<button id="t21-f3k-gallery" type="button" hidden>Source parts showroom (G)</button></div>'+
+   '<button id="t21-f3k-gallery" type="button" hidden>Source parts showroom (G)</button>'+ 
+   '<button id="t21-f3l-textured" type="button" hidden>F3L original textures: OFF (T)</button></div>'+
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
@@ -253,11 +259,14 @@ export class UndertowF3PlayablePreviewApp{
   });
   this.panel.querySelector('#t21-f3g-full')?.addEventListener('click',()=>{
    if(!this.wholeSourceRoot)return;
-   this.wholeSourceRoot.enabled=!this.wholeSourceRoot.enabled;
+   const currentlyOn=this.wholeSourceRoot.enabled||!!this.texturedF3l?.root.enabled;
+   const next=!currentlyOn;
+   this.wholeSourceRoot.enabled=next&&!this.texturedF3lActive;
+   if(this.texturedF3l)this.texturedF3l.root.enabled=next&&this.texturedF3lActive;
    this.sourceCompletion.root.enabled=!this.wholeSourceRoot.enabled;
    this.structures.root.enabled=!this.wholeSourceRoot.enabled;
    const btn=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement;
-   btn.textContent='Full source OBJ: '+(this.wholeSourceRoot.enabled?'ON':'OFF');
+   btn.textContent='Full source OBJ: '+((this.wholeSourceRoot.enabled||!!this.texturedF3l?.root.enabled)?'ON':'OFF');
    const ref=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement;
    ref.textContent='Source terrain study: '+
     (this.sourceCompletion.root.enabled?'ON':'OFF');
@@ -272,6 +281,8 @@ export class UndertowF3PlayablePreviewApp{
    this.toggleF3iEnvironment());
   this.panel.querySelector('#t21-f3k-gallery')?.addEventListener('click',()=>
    this.cycleSourceGallery());
+  this.panel.querySelector('#t21-f3l-textured')?.addEventListener('click',()=>
+   this.toggleTexturedF3l());
   this.surveyButton=document.createElement('button');
   this.surveyButton.id='t21-f3-source-survey';
   this.surveyButton.textContent='SURVEY STAGE (V) · next viewpoint';
@@ -298,6 +309,7 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.code==='KeyH')this.cycleSourceVisualMode();
    if(ev.code==='KeyB')this.toggleF3iEnvironment();
    if(ev.code==='KeyG')this.cycleSourceGallery();
+   if(ev.code==='KeyT')this.toggleTexturedF3l();
   });
   const renderer=(app.graphicsDevice as {deviceType?:string}).deviceType;
   if(renderer!=='webgl2')throw Error('T21_F3_REAL_WEBGL2_REQUIRED');
@@ -370,6 +382,16 @@ export class UndertowF3PlayablePreviewApp{
    }catch(error){
     this.galleryError=String(error).slice(0,240);
    }
+   this.texturedF3lStatus='LOADING';
+   try{
+    this.texturedF3l=await loadF3lTexturedSource(this.app);
+    this.texturedF3lStatus=this.texturedF3l?'READY':'MISSING';
+    const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
+    if(button&&this.texturedF3l)button.hidden=false;
+   }catch(error){
+    this.texturedF3lStatus='ERROR';
+    this.texturedF3lError=String(error).slice(0,240);
+   }
   }catch(e){
    this.wholeSourceError=String(e).slice(0,320);
    this.wholeSourceStatus=this.wholeSourceError.includes('NOT_INSTALLED_HTTP_404')
@@ -378,6 +400,19 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
  }
 
+ private toggleTexturedF3l(){
+  if(!this.texturedF3l||!this.wholeSourceRoot||
+     this.texturedF3lStatus!=='READY'||this.galleryIndex>=0)return;
+  const visible=this.wholeSourceRoot.enabled||this.texturedF3l.root.enabled;
+  this.texturedF3lActive=!this.texturedF3lActive;
+  this.wholeSourceRoot.enabled=visible&&!this.texturedF3lActive;
+  this.texturedF3l.root.enabled=visible&&this.texturedF3lActive;
+  const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
+  if(button)button.textContent='F3L original textures: '+
+   (this.texturedF3lActive?'ON':'OFF')+' (T)';
+  this.canvas.dataset.t21F3lOriginalTexture=this.texturedF3lActive?'ON':'OFF';
+  this.refresh();
+ }
  private cycleSourceVisualMode(){
   if(!this.sourceSetVisualMode||this.wholeSourceStatus!=='READY')return;
   const index=F3H_SOURCE_VISUAL_MODES.indexOf(this.sourceVisualMode);
@@ -602,6 +637,14 @@ export class UndertowF3PlayablePreviewApp{
     originalActorPlacements:0,realPhysicsAdded:0,
     realNavigationLinksAdded:0,scoreableSurfacesAdded:0,
     productionAuthorized:false,error:this.galleryError},
+   texturedSourceF3l:{status:this.texturedF3lStatus,
+    enabled:this.texturedF3l?.root.enabled??false,
+    materialGroups:this.texturedF3l?.manifest.materials.length??0,
+    verifiedTextures:this.texturedF3l?.gate.verifiedTextures??0,
+    totalOriginalTriangles:this.texturedF3l?.manifest.totalTriangles??0,
+    sourceUVOnly:true,physicsSolidsAdded:0,scoreableSurfacesAdded:0,
+    instanceMatricesRecovered:false,productionAuthorized:false,
+    sourceError:this.texturedF3lError},
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
    unrestricted4v4Certified:false,
@@ -663,6 +706,9 @@ export class UndertowF3PlayablePreviewApp{
     this.familyGallery.manifest.components[this.galleryIndex]!.family+
     ' · NORMALIZED DISPLAY / NOT WORLD POSITION':'',
    this.galleryError?'F3K SOURCE ERROR · '+this.galleryError:'',
+   this.texturedF3lStatus!=='OFF'?'F3L UV ALBEDO · '+
+    this.texturedF3lStatus+' / '+(this.texturedF3lActive?'TEXTURED':'FLAT')+
+    ' (T) · optical-only / NO collision':'',
    'F3F SOURCE ONLY · 8 original underpass pieces (NOT walkable)'+
     ' · unresolved gap '+state.originalSourceStudy.unresolvedUnderpassOriginalGapMeters.toFixed(2)+'m',
    'F3F SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+
