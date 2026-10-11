@@ -54,6 +54,7 @@ jobs:
       - name: Exact whole stage real WebGL2 and existing human controls
         env:
           T21_F3G_EXPECT_WHOLE: "1"
+          T21_F3I_EXPECT_ENV: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()
