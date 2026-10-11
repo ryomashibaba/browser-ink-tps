@@ -18,6 +18,11 @@ export type F3iEnvironmentManifest={
  backgroundTriangleCount:number;backgroundObjectCount:number;
  backgroundFaceCount:number;backgroundExcludedFaces:number;
  actorObjectCount:number;actorFaceCount:number;actorTriangles:number;
+ macroFamilyCount?:number;
+ macroAssetFamilies?:readonly {family:string;sourceMeshVariants:number;
+  sourceFaces:number;sourceTriangles:number;representativeObject:string;
+  representativeTriangles:number}[];
+ macroFamilyLedgerAuthoritativeForPlacements?:false;
  largestUnplacedActors:readonly {
   name:string;faces:number;triangles:number;min:number[];max:number[]
  }[];
@@ -46,6 +51,29 @@ export function auditF3iEnvironmentManifest(m:F3iEnvironmentManifest){
    m.previewBin.bytes!==m.backgroundTriangleCount*36||
    !/^[0-9a-f]{64}$/.test(m.previewBin.sha256))
   throw Error('T21_F3I_UNREGISTERED_OR_UNPINNED_ENVIRONMENT_REJECTED');
+ if(m.macroAssetFamilies!==undefined||m.macroFamilyCount!==undefined||
+   m.macroFamilyLedgerAuthoritativeForPlacements!==undefined){
+  if(!Array.isArray(m.macroAssetFamilies)||
+    !Number.isSafeInteger(m.macroFamilyCount)||m.macroFamilyCount<1||
+    m.macroFamilyCount>m.actorObjectCount||
+    m.macroAssetFamilies.length>24||
+    m.macroAssetFamilies.length>m.macroFamilyCount||
+    m.macroFamilyLedgerAuthoritativeForPlacements!==false)
+   throw Error('T21_F3J_UNPLACED_FAMILY_LEDGER_UNTRUSTED');
+  const names=new Set();
+  for(const a of m.macroAssetFamilies){
+   if(!/^[A-Za-z0-9_.-]{1,128}$/.test(a.family)||
+      names.has(a.family)||
+      !a.representativeObject.startsWith('FldObj_Temple01_')||
+      ![a.sourceMeshVariants,a.sourceFaces,a.sourceTriangles,a.representativeTriangles]
+       .every(n=>Number.isSafeInteger(n)&&n>=1)||
+      a.representativeTriangles>a.sourceTriangles||
+      a.sourceMeshVariants>m.actorObjectCount||
+      a.sourceFaces>m.actorFaceCount||a.sourceTriangles>m.actorTriangles)
+    throw Error('T21_F3J_UNPLACED_FAMILY_LEDGER_UNTRUSTED');
+   names.add(a.family);
+  }
+ }
  for(const a of m.largestUnplacedActors){
   if(typeof a.name!=='string'||!a.name.startsWith('FldObj_Temple01_')||
      !Number.isSafeInteger(a.faces)||a.faces<1||

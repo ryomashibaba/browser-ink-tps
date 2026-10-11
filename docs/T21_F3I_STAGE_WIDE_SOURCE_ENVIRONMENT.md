@@ -14,3 +14,5 @@
 - `FldObj` part bounds are **not** actor placements. The large central physical route continues to be on HOLD pending trustworthy position and collision data.
 - The user-facing priority remains full-stage visual completeness and movement topology, not dozens of tiny fixture additions. Next use the ranked actor inventory to target recoverable placed assets in bulk, conditional on instance transforms.
 - QA: F3I isolated fixture tests; full `typecheck`, unit and Chrome smoke; source SHA and visual-source CI logs; T20 untouched.
+
+F3J advances this manifest to priority structural-family aggregation; see docs/T21_F3J_MACRO_STAGE_SCENERY.md. The opt-in review background is now ON by default, remains entirely optical and can be hidden with B.

@@ -18,6 +18,11 @@ describe('F3I macro environment diagnostic without authority promotion',()=>{
   expect(m.actorObjectCount).toBe(1);
   expect(m.actorFaceCount).toBe(2);
   expect(m.actorTriangles).toBe(2);
+  expect(m.macroFamilyCount).toBe(1);
+  expect(m.macroAssetFamilies).toEqual([{
+   family:'ActorX',sourceMeshVariants:1,sourceFaces:2,sourceTriangles:2,
+   representativeObject:'FldObj_Temple01_ActorX',representativeTriangles:2
+  }]);
   expect(m.largestUnplacedActors[0]?.min).toEqual([0,0,0]);
   expect(m.actorPlacementRecovered).toBe(false);
   expect(m.environmentStageRegistrationRecovered).toBe(false);

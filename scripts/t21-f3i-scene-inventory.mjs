@@ -76,11 +76,36 @@ export function createF3iSceneCollector(){
   finish(){
    const actors=[...actorObjects.values()].sort((a,b)=>
     b.triangles-a.triangles||a.name.localeCompare(b.name));
+   // Canonical source-asset names remove ONLY the mesh/set prefix before
+   // the final "__". They do not represent placed runtime instances.
+   const familyMap=new Map();
+   for(const actor of actors){
+    const separator=actor.name.lastIndexOf('__');
+    const family=separator<0?actor.name.slice('FldObj_Temple01_'.length):
+     actor.name.slice(separator+2);
+    let entry=familyMap.get(family);
+    if(!entry){
+     entry={family,sourceMeshVariants:0,sourceFaces:0,sourceTriangles:0,
+      representativeObject:actor.name,representativeTriangles:actor.triangles};
+     familyMap.set(family,entry);
+    }
+    entry.sourceMeshVariants++;
+    entry.sourceFaces+=actor.faces;
+    entry.sourceTriangles+=actor.triangles;
+    if(actor.triangles>entry.representativeTriangles){
+     entry.representativeTriangles=actor.triangles;
+     entry.representativeObject=actor.name;
+    }
+   }
+   const families=[...familyMap.values()].sort((a,b)=>
+    b.sourceTriangles-a.sourceTriangles||a.family.localeCompare(b.family));
    return {background,backgroundTriangles:bgTriangles,
     backgroundObjects:bgObjects.size,backgroundFaceCount:bgFaceCount,
     backgroundExcludedFaces:bgExcludedFaces,
     actorFaceCount:actorFaces,actorTriangles,actorObjectCount:actors.length,
     largestUnplacedActors:actors.slice(0,24),
+    macroFamilyCount:families.length,
+    macroAssetFamilies:families.slice(0,24),
     actorPlacementRecovered:false,environmentStageRegistrationRecovered:false,
     traversalAuthorityRecovered:false,sourceVertices};
   }
@@ -118,6 +143,9 @@ export async function convertF3iSceneInventory({input,output,allowTestFixture=fa
   actorObjectCount:result.actorObjectCount,
   actorFaceCount:result.actorFaceCount,actorTriangles:result.actorTriangles,
   largestUnplacedActors:result.largestUnplacedActors,
+  macroFamilyCount:result.macroFamilyCount,
+  macroAssetFamilies:result.macroAssetFamilies,
+  macroFamilyLedgerAuthoritativeForPlacements:false,
   previewBin:{file:name,bytes:bin.byteLength,
    sha256:createHash('sha256').update(bin).digest('hex')}
  };
@@ -134,7 +162,11 @@ if(process.argv[1]&&basename(process.argv[1])==='t21-f3i-scene-inventory.mjs'){
    bgExcludedFaces:m.backgroundExcludedFaces,
    actorObjects:m.actorObjectCount,actorFaces:m.actorFaceCount,
    actorPlacementRecovered:false,playableAuthority:'NONE',
-   largestActors:m.largestUnplacedActors.slice(0,6).map(x=>({name:x.name,faces:x.faces}))
+   largestActors:m.largestUnplacedActors.slice(0,6).map(x=>({name:x.name,faces:x.faces})),
+   macroFamilyCount:m.macroFamilyCount,
+   topFamilies:m.macroAssetFamilies.slice(0,8).map(x=>({
+    family:x.family,sourceTriangles:x.sourceTriangles,sourceMeshVariants:x.sourceMeshVariants
+   }))
   }));
  }catch(e){console.error('F3I_FAILED',e);process.exitCode=1;}
 }

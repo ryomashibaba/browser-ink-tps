@@ -167,21 +167,27 @@ async function main(){
    reject('F3I_SOURCE_ENVIRONMENT_AUTHORITY_GATE_'+JSON.stringify(candidate));
   console.log('F3I_REAL_CHROME_ENVIRONMENT',JSON.stringify(candidate));
   if(candidate.candidateTriangles>0){
-   const shown=await evaluate(`(() => {
+   if(candidate.visible!==true)
+    reject('F3J_SCENIC_SOURCE_DEFAULT_NOT_VISIBLE');
+   if(candidate.sourceAssetFamilies<1||
+      candidate.topSourceAssetFamilies.length<1)
+    reject('F3J_MACRO_FAMILY_LEDGER_MISSING');
+   await sleep(300);
+   frames.push(await screenshot('F3J_SCENIC_SOURCE_DEFAULT'));
+   const hidden=await evaluate(`(() => {
     document.querySelector('#t21-f3i-environment')?.click();
     return window.__t21F3.snapshot();
    })()`);
-   if(!shown.environmentF3i.visible||shown.originalSourceSolids!==25||
-      shown.sourceScoreablePromotions!==0||
-      shown.originalSourceNavigationLinks!==26)
-    reject('F3I_BACKGROUND_RENDER_AUTHORITY_CHANGED_'+JSON.stringify(shown));
-   await sleep(300);
-   frames.push(await screenshot('F3I_SOURCE_BACKGROUND_OPTIN_COMPARE'));
-   const hidden=await evaluate(`(() => {
+   if(hidden.environmentF3i.visible||hidden.originalSourceSolids!==25||
+      hidden.sourceScoreablePromotions!==0||
+      hidden.originalSourceNavigationLinks!==26)
+    reject('F3J_BACKGROUND_RENDER_AUTHORITY_CHANGED_'+JSON.stringify(hidden));
+   frames.push(await screenshot('F3J_SCENIC_SOURCE_HIDDEN_COMPARE'));
+   const shown=await evaluate(`(() => {
     document.querySelector('#t21-f3i-environment')?.click();
     return window.__t21F3.snapshot().environmentF3i.visible;
    })()`);
-   if(hidden!==false)reject('F3I_BACKGROUND_FAILED_TO_TOGGLE_OFF');
+   if(shown!==true)reject('F3J_BACKGROUND_FAILED_TO_RESTORE');
   }
  }
  // These camera-only stage survey frames are a direct inspection of

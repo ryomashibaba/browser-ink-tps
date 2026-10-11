@@ -338,8 +338,15 @@ export class UndertowF3PlayablePreviewApp{
     if(environment){
      this.environmentRoot=environment.root;
      this.environmentManifest=environment.manifest;
+     // F3J scenery is visible BY DEFAULT only inside the existing
+     // exact-SHA T21 full-source review gate. No stage registration.
+     environment.root.enabled=true;
+     this.canvas.dataset.t21F3iEnvironment='ON';
      const btn=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
-     if(btn&&environment.manifest.backgroundTriangleCount>0)btn.hidden=false;
+     if(btn&&environment.manifest.backgroundTriangleCount>0){
+      btn.hidden=false;
+      btn.textContent='F3J source scenery: ON (B)';
+     }
     }
    }catch(error){
     // F3I failures do not turn off an independently certified F3G source scene.
@@ -369,7 +376,7 @@ export class UndertowF3PlayablePreviewApp{
      this.environmentManifest.backgroundTriangleCount===0)return;
   this.environmentRoot.enabled=!this.environmentRoot.enabled;
   const btn=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
-  if(btn)btn.textContent='F3I source backdrop: '+
+  if(btn)btn.textContent='F3J source scenery: '+
    (this.environmentRoot.enabled?'ON':'OFF')+' (B)';
   this.canvas.dataset.t21F3iEnvironment=this.environmentRoot.enabled?'ON':'OFF';
   this.refresh();
@@ -533,6 +540,8 @@ export class UndertowF3PlayablePreviewApp{
     candidateTriangles:this.environmentManifest?.backgroundTriangleCount??0,
     unplacedActorObjects:this.environmentManifest?.actorObjectCount??0,
     unplacedActorFaces:this.environmentManifest?.actorFaceCount??0,
+    sourceAssetFamilies:this.environmentManifest?.macroFamilyCount??0,
+    topSourceAssetFamilies:this.environmentManifest?.macroAssetFamilies?.slice(0,8)??[],
     stageCoordinatesVerified:false,actorPlacementsVerified:false,
     visible:this.environmentRoot?.enabled??false,
     stageSolidsAdded:0,sourceOnly:true,productionAuthorized:false,
@@ -584,9 +593,14 @@ export class UndertowF3PlayablePreviewApp{
    this.environmentManifest?'F3I SOURCE BACKDROP · '+
     this.environmentManifest.backgroundTriangleCount+' source triangles ('+
     (this.environmentRoot?.enabled?'VISIBLE':'OFF')+') · OBJ SPACE / NOT REGISTERED':'' ,
-   this.environmentManifest?'F3I UNPLACED ACTORS · '+
-    this.environmentManifest.actorObjectCount+' objects / '+
-    this.environmentManifest.actorFaceCount+' source faces · NO INSTANCE MATRIX':'' ,
+   this.environmentManifest?'F3J UNPLACED SOURCE ASSETS · '+
+    this.environmentManifest.actorObjectCount+' source objects in '+
+    (this.environmentManifest.macroFamilyCount??'?')+
+    ' families · NO PLACEMENT MATRICES':'' ,
+   this.environmentManifest?.macroAssetFamilies?.length?
+    'F3J PRIORITY ORIGINAL FAMILIES · '+
+    this.environmentManifest.macroAssetFamilies.slice(0,4)
+     .map(x=>x.family+'('+x.sourceMeshVariants+' meshes)').join(' · '):'',
    this.environmentError?'F3I SOURCE ERROR · '+this.environmentError:'',
    'F3F SOURCE ONLY · 8 original underpass pieces (NOT walkable)'+
     ' · unresolved gap '+state.originalSourceStudy.unresolvedUnderpassOriginalGapMeters.toFixed(2)+'m',

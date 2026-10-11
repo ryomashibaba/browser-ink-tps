@@ -10,6 +10,10 @@ export declare function createF3iSceneCollector():{
   }>;
   actorPlacementRecovered:false;environmentStageRegistrationRecovered:false;
   traversalAuthorityRecovered:false;
+  macroFamilyCount:number;macroAssetFamilies:Array<{
+   family:string;sourceMeshVariants:number;sourceFaces:number;
+   sourceTriangles:number;representativeObject:string;representativeTriangles:number
+  }>;
  };
 };
 export declare function convertF3iSceneInventory(options:{
@@ -24,5 +28,9 @@ export declare function convertF3iSceneInventory(options:{
  backgroundExcludedFaces:number;actorObjectCount:number;actorFaceCount:number;
  actorTriangles:number;largestUnplacedActors:Array<{name:string;faces:number;
  triangles:number;min:number[];max:number[]}>;
+ macroFamilyCount:number;macroAssetFamilies:Array<{
+   family:string;sourceMeshVariants:number;sourceFaces:number;
+   sourceTriangles:number;representativeObject:string;representativeTriangles:number
+ }>;macroFamilyLedgerAuthoritativeForPlacements:false;
  previewBin:{file:string;bytes:number;sha256:string}
 }>;

@@ -34,5 +34,15 @@ describe('F3I separate environmental visual gate',()=>{
    previewBin:{...sample().previewBin,bytes:73}})).toThrow();
   expect(()=>auditF3iEnvironmentManifest({...sample(),
    stageCollisionSolidsAdded:1 as unknown as 0})).toThrow();
+  expect(()=>auditF3iEnvironmentManifest({...sample(),
+   macroFamilyCount:1,macroFamilyLedgerAuthoritativeForPlacements:false,
+   macroAssetFamilies:[{family:'BridgeMetal00',sourceMeshVariants:1,
+    sourceFaces:1,sourceTriangles:1,representativeObject:'FldObj_Temple01_A',
+    representativeTriangles:1}]})).not.toThrow();
+  expect(()=>auditF3iEnvironmentManifest({...sample(),
+   macroFamilyCount:1,macroFamilyLedgerAuthoritativeForPlacements:true as unknown as false,
+   macroAssetFamilies:[{family:'BridgeMetal00',sourceMeshVariants:1,
+    sourceFaces:1,sourceTriangles:1,representativeObject:'FldObj_Temple01_A',
+    representativeTriangles:1}]})).toThrow('T21_F3J_UNPLACED_FAMILY_LEDGER_UNTRUSTED');
  });
 });
