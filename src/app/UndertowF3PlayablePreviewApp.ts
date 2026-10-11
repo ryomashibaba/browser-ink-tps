@@ -52,6 +52,8 @@ import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
 import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
  type F3HSourceVisualMode,type F3GPackManifest}
  from './UndertowF3GWholeSourcePreview';
+import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
+ from './UndertowF3IEnvironmentPreview';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -112,6 +114,9 @@ export class UndertowF3PlayablePreviewApp{
  private sourceVisualMode:F3HSourceVisualMode='SOLID';
  private sourceSetVisualMode:((mode:F3HSourceVisualMode)=>F3HSourceVisualMode)|null=null;
  private sourceCoverage:F3GPackManifest['coverage'];
+ private environmentRoot:Entity|null=null;
+ private environmentManifest:F3iEnvironmentManifest|null=null;
+ private environmentError='';
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -217,7 +222,8 @@ export class UndertowF3PlayablePreviewApp{
    '<button id="t21-f3-structures" type="button">Original source: ON</button>'+
    '<button id="t21-f3-completion" type="button">Source terrain study: ON</button>'+
    '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button>'+ 
-   '<button id="t21-f3h-visual-mode" type="button" hidden>F3H view: SOLID (H)</button></div>'+
+   '<button id="t21-f3h-visual-mode" type="button" hidden>F3H view: SOLID (H)</button>'+ 
+   '<button id="t21-f3i-environment" type="button" hidden>F3I source backdrop: OFF (B)</button></div>'+
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
@@ -254,6 +260,8 @@ export class UndertowF3PlayablePreviewApp{
   });
   this.panel.querySelector('#t21-f3h-visual-mode')?.addEventListener('click',()=>
    this.cycleSourceVisualMode());
+  this.panel.querySelector('#t21-f3i-environment')?.addEventListener('click',()=>
+   this.toggleF3iEnvironment());
   this.surveyButton=document.createElement('button');
   this.surveyButton.id='t21-f3-source-survey';
   this.surveyButton.textContent='SURVEY STAGE (V) · next viewpoint';
@@ -278,6 +286,7 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.code==='KeyR')this.restart();
    if(ev.code==='KeyV')this.toggleSurvey();
    if(ev.code==='KeyH')this.cycleSourceVisualMode();
+   if(ev.code==='KeyB')this.toggleF3iEnvironment();
   });
   const renderer=(app.graphicsDevice as {deviceType?:string}).deviceType;
   if(renderer!=='webgl2')throw Error('T21_F3_REAL_WEBGL2_REQUIRED');
@@ -324,6 +333,18 @@ export class UndertowF3PlayablePreviewApp{
    if(button){button.hidden=false;button.textContent='Full source OBJ: ON';}
    const modeButton=this.panel.querySelector('#t21-f3h-visual-mode') as HTMLButtonElement|null;
    if(modeButton)modeButton.hidden=false;
+   try{
+    const environment=await loadF3iEnvironmentReview(this.app);
+    if(environment){
+     this.environmentRoot=environment.root;
+     this.environmentManifest=environment.manifest;
+     const btn=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
+     if(btn&&environment.manifest.backgroundTriangleCount>0)btn.hidden=false;
+    }
+   }catch(error){
+    // F3I failures do not turn off an independently certified F3G source scene.
+    this.environmentError=String(error).slice(0,240);
+   }
   }catch(e){
    this.wholeSourceError=String(e).slice(0,320);
    this.wholeSourceStatus=this.wholeSourceError.includes('NOT_INSTALLED_HTTP_404')
@@ -340,6 +361,17 @@ export class UndertowF3PlayablePreviewApp{
   const button=this.panel.querySelector('#t21-f3h-visual-mode') as HTMLButtonElement|null;
   if(button)button.textContent='F3H view: '+next+' (H)';
   this.canvas.dataset.t21F3hVisualMode=next;
+  this.refresh();
+ }
+ private toggleF3iEnvironment(){
+  if(!this.environmentRoot||!this.environmentManifest||
+     this.wholeSourceStatus!=='READY'||
+     this.environmentManifest.backgroundTriangleCount===0)return;
+  this.environmentRoot.enabled=!this.environmentRoot.enabled;
+  const btn=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
+  if(btn)btn.textContent='F3I source backdrop: '+
+   (this.environmentRoot.enabled?'ON':'OFF')+' (B)';
+  this.canvas.dataset.t21F3iEnvironment=this.environmentRoot.enabled?'ON':'OFF';
   this.refresh();
  }
  private toggleSurvey(){
@@ -496,6 +528,15 @@ export class UndertowF3PlayablePreviewApp{
     sourceOnly:true,realPhysicsAdded:0,realNavigationLinksAdded:0,
     sourceError:this.wholeSourceError,
     productionAuthorized:false},
+   environmentF3i:{
+    status:this.environmentManifest?'READY':this.environmentError?'ERROR':'UNAVAILABLE',
+    candidateTriangles:this.environmentManifest?.backgroundTriangleCount??0,
+    unplacedActorObjects:this.environmentManifest?.actorObjectCount??0,
+    unplacedActorFaces:this.environmentManifest?.actorFaceCount??0,
+    stageCoordinatesVerified:false,actorPlacementsVerified:false,
+    visible:this.environmentRoot?.enabled??false,
+    stageSolidsAdded:0,sourceOnly:true,productionAuthorized:false,
+    error:this.environmentError},
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
    unrestricted4v4Certified:false,
@@ -540,6 +581,13 @@ export class UndertowF3PlayablePreviewApp{
     'Z+/center/Z- '+Object.values(this.sourceCoverage.regionTriangles).join('/')+
     ' triangles | unplaced actor faces '+this.sourceCoverage.unplacedFldObjFaceCount+
     ' · NO ACTOR PLACEMENT':'',
+   this.environmentManifest?'F3I SOURCE BACKDROP · '+
+    this.environmentManifest.backgroundTriangleCount+' source triangles ('+
+    (this.environmentRoot?.enabled?'VISIBLE':'OFF')+') · OBJ SPACE / NOT REGISTERED':'' ,
+   this.environmentManifest?'F3I UNPLACED ACTORS · '+
+    this.environmentManifest.actorObjectCount+' objects / '+
+    this.environmentManifest.actorFaceCount+' source faces · NO INSTANCE MATRIX':'' ,
+   this.environmentError?'F3I SOURCE ERROR · '+this.environmentError:'',
    'F3F SOURCE ONLY · 8 original underpass pieces (NOT walkable)'+
     ' · unresolved gap '+state.originalSourceStudy.unresolvedUnderpassOriginalGapMeters.toFixed(2)+'m',
    'F3F SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+
