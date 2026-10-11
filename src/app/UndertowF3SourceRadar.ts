@@ -34,7 +34,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
  canvas.dataset.originalSourceSolids='25';
  canvas.dataset.originalSourceNavigationLinks='26';
  canvas.dataset.productionAuthority='NONE';
- const ctx=canvas.getContext('2d');
+ const ctx=canvas.getContext('2d')!;
  if(!ctx)throw Error('T21_F3C_RADAR_2D_CONTEXT_REQUIRED');
  const linkStarts=stage.navigationLinks!.filter(l=>l.id.startsWith('first-drop-'));
  const solids=stage.solids.map(s=>({
