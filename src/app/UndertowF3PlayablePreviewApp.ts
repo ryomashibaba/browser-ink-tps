@@ -46,6 +46,8 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
+import {buildF3eOriginalSourceCoverage}
+ from './UndertowF3EOriginalSourceCoverage';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -97,6 +99,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
+ private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
  private readonly p=new Vec3();
  private readonly aim=new Vec3();
  private readonly target=new Vec3();
@@ -151,6 +154,7 @@ export class UndertowF3PlayablePreviewApp{
   // Reviewed true-original optical structure triangles only. All 25
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
+  this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats);
   this.input=new PlayerInput(canvas);
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
@@ -194,11 +198,12 @@ export class UndertowF3PlayablePreviewApp{
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
    '<button id="t21-f3-reset" type="button">Reset (R)</button>'+ 
-   '<button id="t21-f3-structures" type="button">Original source: ON</button></div>'+
+   '<button id="t21-f3-structures" type="button">Original source: ON</button>'+
+   '<button id="t21-f3-completion" type="button">Source terrain study: ON</button></div>'+
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
-   'F3B: native staged CPU descent, then 180-second combat sandbox. Turf score, winner and complete source routes are NOT authorized.</p>';
+   'F3E: original-source terrain study is OPTICAL ONLY. Unverified floor fragments are NOT walkable; Turf score and central navigation are not authorized.</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
@@ -207,6 +212,12 @@ export class UndertowF3PlayablePreviewApp{
    this.structures.root.enabled=!this.structures.root.enabled;
    const btn=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement;
    btn.textContent='Original source: '+(this.structures.root.enabled?'ON':'OFF');
+  });
+  this.panel.querySelector('#t21-f3-completion')?.addEventListener('click',()=>{
+   this.sourceCompletion.root.enabled=!this.sourceCompletion.root.enabled;
+   const btn=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement;
+   btn.textContent='Source terrain study: '+
+    (this.sourceCompletion.root.enabled?'ON':'OFF');
   });
   const cross=document.createElement('div');
   cross.id='t21-f3-crosshair';
@@ -370,6 +381,8 @@ export class UndertowF3PlayablePreviewApp{
    originalSourceNavigationLinks:this.rawStage.navigationLinks?.length,
    originalSourceOpticalStructures:this.structures.manifest.originalSourceVisualStructures,
    originalSourceOpticalTriangles:this.structures.manifest.originalSourceTriangles,
+   originalSourceStudy:this.sourceCompletion.manifest,
+   originalSourceStudyVisible:this.sourceCompletion.root.enabled,
    sourceOpticalStructuresVisible:this.structures.root.enabled,
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
@@ -404,6 +417,9 @@ export class UndertowF3PlayablePreviewApp{
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
+   'F3E SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+
+    ' components / '+state.originalSourceStudy.originalTriangles+
+    ' real triangles · NO GAME COLLISION',
    'Original optical structures · '+state.originalSourceOpticalStructures+
     ' (non-colliding) | triangles '+state.originalSourceOpticalTriangles,
    'Real drops · '+p.physicalFirstDrops.length+
