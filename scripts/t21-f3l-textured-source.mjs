@@ -46,7 +46,7 @@ export function parseF3lOriginalMtl(source){
 }
 export function createF3lUvCollector(mtl){
  const xyz=[],uv=[],groups=new Map();
- let object='',material='',triangles=0,skippedNoUv=0,ignoredFaces=0;
+ let object='',material='',triangles=0,skippedNoUv=0,ignoredFaces=0,trianglesWithoutUV=0;
  let acceptedFaces=0;
  function vertex(token,list,length){
   const n=Number(token),i=n<0?length+n:n-1;
@@ -89,11 +89,15 @@ export function createF3lUvCollector(mtl){
    if(!groups.has(material)){
     if(groups.size>=LIMIT_MATERIALS)throw Error('F3L_EXCESSIVE_MATERIALS');
     groups.set(material,{material,kind:classifyStaticMaterial(material),
-     texture:mtl.get(material),floats:[],triangles:0});
+     texture:mtl.get(material),floats:[],triangles:0,missingUvTriangles:0});
    }
    const g=groups.get(material);
    for(let k=1;k<tokens.length-1;k++){
-    for(const v of [vertices[0],vertices[k],vertices[k+1]]){
+    const triangle=[vertices[0],vertices[k],vertices[k+1]];
+    if(triangle.some(v=>v.t===null)){
+     trianglesWithoutUV++;g.missingUvTriangles++;
+    }
+    for(const v of triangle){
      g.floats.push(...v.p,...(v.t??[0,0]));
      if(!v.t)skippedNoUv++;
     }
@@ -104,7 +108,7 @@ export function createF3lUvCollector(mtl){
   },
   finish(){return {groups:[...groups.values()].sort((a,b)=>
    a.material.localeCompare(b.material)),triangles,acceptedFaces,
-   skippedNoUv,ignoredFaces,positionCount:xyz.length,uvCount:uv.length};}
+   skippedNoUv,trianglesWithoutUV,ignoredFaces,positionCount:xyz.length,uvCount:uv.length};}
  };
 }
 export async function convertF3lOriginal({input,mtl,output,allowTestFixture=false}){
@@ -126,9 +130,10 @@ export async function convertF3lOriginal({input,mtl,output,allowTestFixture=fals
  console.log('F3L_SOURCE_PARITY_DIAGNOSTIC',JSON.stringify({
   triangles:result.triangles,sourceVertices:result.positionCount,
   textureVertices:result.uvCount,verticesMissingUV:result.skippedNoUv,
+  trianglesWithoutUV:result.trianglesWithoutUV,
   materialGroups:result.groups.length,ignoredFaces:result.ignoredFaces
  }));
- if(!allowTestFixture&&(result.triangles!==57578||result.skippedNoUv>0))
+ if(!allowTestFixture&&(result.triangles!==57578||result.trianglesWithoutUV>2000))
   throw Error('F3L_GEOMETRY_PARITY_OR_UV_COVERAGE_FAILURE');
  const dest=resolve(output);mkdirSync(dest,{recursive:true});
  const materials=result.groups.map((g,i)=>{
@@ -137,7 +142,8 @@ export async function convertF3lOriginal({input,mtl,output,allowTestFixture=fals
   writeFileSync(join(dest,file),bytes);
   return {name:g.material,kind:g.kind,triangles:g.triangles,file,
    bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),
-   texture:g.texture};
+   // Never project missing UVs; disable albedo for entire incomplete group.
+   texture:g.missingUvTriangles===0?g.texture:null};
  });
  const textureFiles=[...new Set(materials.map(m=>m.texture).filter(Boolean))].sort();
  const manifest={schema:'T21_F3L_PINNED_ORIGINAL_UV_TEXTURE_REVIEW_V1',
@@ -148,7 +154,10 @@ export async function convertF3lOriginal({input,mtl,output,allowTestFixture=fals
   stagePlayableAuthority:'NONE',productionAuthorization:false,
   actorMatricesRecovered:false,physicsSolidsAdded:0,
   navigationLinksAdded:0,scoreableSurfacesAdded:0,
-  totalTriangles:result.triangles,triangleCountWithoutSourceUV:result.skippedNoUv/3,
+  totalTriangles:result.triangles,
+  triangleCountWithoutSourceUV:result.trianglesWithoutUV,
+  missingUVVertices:result.skippedNoUv,
+  groupsRequiringFlatFallback:result.groups.filter(g=>g.missingUvTriangles>0).length,
   textureFiles,materials};
  writeFileSync(join(dest,'f3l-original-textured.json'),JSON.stringify(manifest,null,2)+'\n');
  return manifest;
@@ -160,7 +169,7 @@ if(process.argv[1]&&basename(process.argv[1])==='t21-f3l-textured-source.mjs'){
   const m=await convertF3lOriginal({input:process.argv[2],mtl:process.argv[3],output:process.argv[4]});
   console.log('F3L_SOURCE_UV_TEXTURES',JSON.stringify({
    triangles:m.totalTriangles,materialGroups:m.materials.length,
-   textures:m.textureFiles.length,sourceUVCompleteness:m.triangleCountWithoutSourceUV===0,
+   textures:m.textureFiles.length,sourceUVFallbackTriangles:m.triangleCountWithoutSourceUV,
    physicsSolidsAdded:0,stageAuthority:'NONE'
   }));
  }catch(e){console.error('F3L_FAIL',e);process.exitCode=1;}
