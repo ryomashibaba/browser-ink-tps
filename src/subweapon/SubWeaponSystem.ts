@@ -134,7 +134,7 @@ export class SubWeaponSystem {
       const next = slot.position.clone().add(this.delta);
 
       const paintHit = this.findNearestSurfaceHit(slot.position, next);
-      const blockerHit = this.physics.castStageSegment(slot.position, next, 'projectile');
+      const blockerHit = this.physics.castStageSegment(slot.position, next, 'thrown-sub');
 
       const paintWins = paintHit && (
         !blockerHit ||

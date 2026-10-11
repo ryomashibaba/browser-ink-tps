@@ -3,10 +3,53 @@ import { generateSoloNavMesh } from 'recast-navigation/generators';
 import { Quat, Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
-import type { StageDefinition, StageSolidDefinition } from '../stage/StageDefinition';
+import {
+  stageSolidNavigationEnabled,
+  type StageDefinition,
+  type StageSolidDefinition
+} from '../stage/StageDefinition';
+import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import {
+  stageSolidTriangleMeshErrors,
+  stageSolidTriangleWorldVertices
+} from '../stage/StageTriangleMesh';
 
 export async function initializeRecastNavigation(): Promise<void> {
   await initRecast();
+}
+
+
+
+export interface StageOffMeshConnectionConfig {
+  startPosition: { x: number; y: number; z: number };
+  endPosition: { x: number; y: number; z: number };
+  radius: number;
+  bidirectional: boolean;
+  area: number;
+  flags: number;
+  userId?: number;
+}
+
+export function stageNavigationOffMeshConnections(
+  definition: StageDefinition
+): StageOffMeshConnectionConfig[] {
+  return (definition.navigationLinks ?? []).map((link) => ({
+    startPosition: {
+      x: link.start[0],
+      y: link.start[1],
+      z: link.start[2]
+    },
+    endPosition: {
+      x: link.end[0],
+      y: link.end[1],
+      z: link.end[2]
+    },
+    radius: link.radiusMeters,
+    bidirectional: link.bidirectional,
+    area: link.area ?? 0,
+    flags: link.flags ?? 1,
+    ...(link.userId === undefined ? {} : { userId: link.userId })
+  }));
 }
 
 export class RecastStageNavigation {
@@ -32,7 +75,8 @@ export class RecastStageNavigation {
       mergeRegionArea: 8,
       maxVertsPerPoly: 6,
       detailSampleDist: 6,
-      detailSampleMaxError: 1
+      detailSampleMaxError: 1,
+      offMeshConnections: stageNavigationOffMeshConnections(definition)
     });
 
     if (!generated.success) {
@@ -78,9 +122,79 @@ export class RecastStageNavigation {
       : { x: position.x, y: position.y, z: position.z };
   }
 
+  public auditPath(
+    from: Vec3,
+    to: Vec3,
+    endpointToleranceMeters = 0.6
+  ): {
+    startSnapDistanceMeters: number;
+    endSnapDistanceMeters: number;
+    querySuccess: boolean;
+    pointCount: number;
+    endpointErrorMeters: number;
+    reachedTarget: boolean;
+  } {
+    const startResult = this.query.findClosestPoint({
+      x: from.x,
+      y: from.y,
+      z: from.z
+    });
+    const endResult = this.query.findClosestPoint({
+      x: to.x,
+      y: to.y,
+      z: to.z
+    });
+
+    if (!startResult.success || !endResult.success) {
+      return {
+        startSnapDistanceMeters: Number.POSITIVE_INFINITY,
+        endSnapDistanceMeters: Number.POSITIVE_INFINITY,
+        querySuccess: false,
+        pointCount: 0,
+        endpointErrorMeters: Number.POSITIVE_INFINITY,
+        reachedTarget: false
+      };
+    }
+
+    const startSnapDistanceMeters = distance3(
+      from,
+      new Vec3(startResult.point.x, startResult.point.y, startResult.point.z)
+    );
+    const endSnapDistanceMeters = distance3(
+      to,
+      new Vec3(endResult.point.x, endResult.point.y, endResult.point.z)
+    );
+    const result = this.query.computePath(startResult.point, endResult.point);
+    const path = result.success ? result.path : [];
+    const last = path.length > 0 ? path[path.length - 1]! : null;
+    const endpointErrorMeters = last
+      ? Math.hypot(
+          last.x - endResult.point.x,
+          last.y - endResult.point.y,
+          last.z - endResult.point.z
+        )
+      : Number.POSITIVE_INFINITY;
+
+    return {
+      startSnapDistanceMeters,
+      endSnapDistanceMeters,
+      querySuccess: result.success,
+      pointCount: path.length,
+      endpointErrorMeters,
+      reachedTarget:
+        result.success &&
+        path.length > 0 &&
+        endpointErrorMeters <= endpointToleranceMeters
+    };
+  }
+
   public fixedUpdate(dt: number): void {
     this.crowd.update(dt);
   }
+}
+
+function distance3(a: Vec3, b: Vec3): number {
+  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
 function buildStageTriangleSoup(
@@ -90,13 +204,79 @@ function buildStageTriangleSoup(
   const indices: number[] = [];
 
   for (const solid of definition.solids) {
-    appendBoxSolid(solid, positions, indices);
+    if (!stageSolidNavigationEnabled(solid)) continue;
+    const meshErrors = stageSolidTriangleMeshErrors(solid);
+    if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
+    if (solid.triangleMesh) {
+      appendTriangleMeshSolid(solid, positions, indices);
+    } else {
+      appendBoxSolid(solid, positions, indices);
+    }
   }
 
   return { positions, indices };
 }
 
+function appendTriangleMeshSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  const mesh = solid.triangleMesh;
+  if (!mesh) return;
+  const base = positions.length / 3;
+  for (const vertex of stageSolidTriangleWorldVertices(solid)) {
+    positions.push(vertex[0], vertex[1], vertex[2]);
+  }
+  for (const index of mesh.indices) indices.push(base + index);
+}
+
 function appendBoxSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  if (!solid.footprint) {
+    appendPlainBoxSolid(solid, positions, indices);
+    return;
+  }
+
+  const euler = solid.rotationEulerDegrees ?? [0, 0, 0];
+  const rotation = new Quat().setFromEulerAngles(euler[0], euler[1], euler[2]);
+  const center = new Vec3(solid.center[0], solid.center[1], solid.center[2]);
+  const raster = rasterizeStageFootprint(
+    solid.size[0],
+    solid.size[2],
+    solid.footprint
+  );
+
+  for (const rect of raster.rectangles) {
+    const offset = rotate(
+      new Vec3(
+        rect.centerU - solid.size[0] * 0.5,
+        0,
+        rect.centerV - solid.size[2] * 0.5
+      ),
+      rotation
+    );
+    appendPlainBoxSolid(
+      {
+        ...solid,
+        center: [
+          center.x + offset.x,
+          center.y + offset.y,
+          center.z + offset.z
+        ],
+        size: [rect.widthMeters, solid.size[1], rect.depthMeters],
+        footprint: undefined
+      },
+      positions,
+      indices
+    );
+  }
+}
+
+function appendPlainBoxSolid(
   solid: StageSolidDefinition,
   positions: number[],
   indices: number[]

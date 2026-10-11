@@ -3,3 +3,6 @@ dist/
 .vite/
 *.log
 .DS_Store
+
+# F3G generated derived geometry stays LOCAL, never committed as game assets.
+public/t21-f3g-source/

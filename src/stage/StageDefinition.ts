@@ -1,7 +1,16 @@
 import { SurfaceFlags } from '../ink/types';
+import type { StageFootprint } from './StageFootprint';
 
 export type StageVector3 = readonly [number, number, number];
 export type StageMaterialKey = 'dark' | 'medium' | 'light' | 'accent';
+export type StageSolidCollisionBehavior = 'SOLID' | 'GRATE';
+
+export interface StageTriangleMeshGeometry {
+  /** Local-space vertices relative to StageSolidDefinition.center/rotation. */
+  vertices: readonly StageVector3[];
+  /** Triangle-list indices into vertices. */
+  indices: readonly number[];
+}
 
 export interface StageSolidDefinition {
   id: string;
@@ -12,6 +21,42 @@ export interface StageSolidDefinition {
   render: boolean;
   projectileBlocker: boolean;
   cameraBlocker: boolean;
+  /**
+   * Runtime participation defaults stay backward-compatible:
+   * collisionEnabled defaults to true; navigationEnabled defaults to the
+   * effective collision setting. This allows exact visual-only source meshes
+   * without silently granting gameplay collision/nav authority.
+   */
+  collisionEnabled?: boolean;
+  navigationEnabled?: boolean;
+  /**
+   * SOLID is the frozen default. GRATE is semi-solid: Human form and thrown
+   * subs collide, while Squid form and ordinary ink projectiles pass through.
+   */
+  collisionBehavior?: StageSolidCollisionBehavior;
+  /**
+   * Optional canonical local-XZ footprint for polygonal BLOCKOUT solids.
+   * Coordinates use the solid's lower-left local X/Z bounds as (0,0).
+   * When absent, the legacy full box remains unchanged.
+   */
+  footprint?: StageFootprint;
+  /**
+   * Optional exact local triangle mesh. Mutually exclusive with footprint.
+   * Used only when source geometry itself supplies a non-box planar/mesh shape.
+   */
+  triangleMesh?: StageTriangleMeshGeometry;
+}
+
+export function stageSolidCollisionEnabled(
+  solid: StageSolidDefinition
+): boolean {
+  return solid.collisionEnabled !== false;
+}
+
+export function stageSolidNavigationEnabled(
+  solid: StageSolidDefinition
+): boolean {
+  return solid.navigationEnabled ?? stageSolidCollisionEnabled(solid);
 }
 
 export interface StagePaintSurfaceDefinition {
@@ -23,6 +68,13 @@ export interface StagePaintSurfaceDefinition {
   widthMeters: number;
   heightMeters: number;
   flags: SurfaceFlags;
+  /**
+   * Optional surface-local mask. When omitted, runtime keeps the frozen
+   * behavior of inheriting the backing solid footprint (or using a rectangle
+   * when the backing solid has none). This allows an evidence-backed paint
+   * subregion without promoting the entire backing solid.
+   */
+  footprint?: StageFootprint;
 }
 
 export interface StageWorldBounds {
@@ -41,6 +93,17 @@ export interface SplatZoneDefinition {
   heightMeters: number;
 }
 
+export interface StageNavigationLinkDefinition {
+  id: string;
+  start: StageVector3;
+  end: StageVector3;
+  radiusMeters: number;
+  bidirectional: boolean;
+  area?: number;
+  flags?: number;
+  userId?: number;
+}
+
 export interface StageMetadata {
   id: string;
   displayName: string;
@@ -57,6 +120,12 @@ export interface StageDefinition {
   metadata: StageMetadata;
   solids: readonly StageSolidDefinition[];
   paintSurfaces: readonly StagePaintSurfaceDefinition[];
+  /**
+   * Optional Detour off-mesh links. Omitted means no links, preserving every
+   * frozen T0-T20 stage. T21 Undertow may use unidirectional links for actual
+   * one-way drops instead of inventing ramps or bidirectional connectivity.
+   */
+  navigationLinks?: readonly StageNavigationLinkDefinition[];
 }
 
 const scoreableFloor =

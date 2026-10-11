@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "vitest run"
+    "test": "vitest run",
+    "t21:source:prepare": "node scripts/t21-f3g-prepare.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.20.0",

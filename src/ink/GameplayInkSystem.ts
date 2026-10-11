@@ -116,6 +116,8 @@ export class GameplayInkSystem {
         const normalized = ellipseU * ellipseU * invRadiusUSq + ellipseV * ellipseV * invRadiusVSq;
         if (normalized > 1) continue;
 
+        if (!surface.isCellActive(x, y)) continue;
+
         const index = surface.index(x, y);
         const oldOwner = surface.ownerGrid[index] as Team;
         if (oldOwner === event.team) continue;

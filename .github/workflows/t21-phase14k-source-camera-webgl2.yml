@@ -1,0 +1,48 @@
+name: T21 Phase14K original-source geometry and camera Chrome review
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened, synchronize]
+    paths:
+      - "src/app/UndertowPhase14KSourceStageLayer.ts"
+      - "src/app/UndertowPhase14IRealCrowdVisualQaApp.ts"
+      - "src/main.ts"
+      - "src/ai/CpuAgentSystem.ts"
+      - "src/stage/undertow/UndertowPhase14*"
+      - "scripts/t21-phase14k-source-camera-webgl2-capture.mjs"
+      - ".github/workflows/t21-phase14k-source-camera-webgl2.yml"
+permissions:
+  contents: read
+concurrency:
+  group: t21-phase14k-source-camera
+  cancel-in-progress: true
+jobs:
+  source-camera-browser:
+    if: github.head_ref == 'codex/t21-undertow-evidence-ledger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript and Vite build
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Source-camera capture guard self-tests
+        run: |
+          node --check scripts/t21-phase14k-source-camera-webgl2-capture.mjs
+          node scripts/t21-phase14k-source-camera-webgl2-capture.mjs --self-test
+      - name: Real Recast Crowd and original-source stage camera WebGL2 screenshots
+        run: node scripts/t21-phase14k-source-camera-webgl2-capture.mjs
+      - name: Preserve screenshots, audit metadata and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-phase14k-source-camera-webgl2
+          path: /tmp/t21-phase14k-webgl2/
+          if-no-files-found: warn
+          retention-days: 14

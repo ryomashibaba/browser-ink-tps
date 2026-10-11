@@ -1,5 +1,11 @@
 import { Vec3 } from 'playcanvas';
 import { SurfaceFlags, Team, type AtlasRect } from './types';
+import {
+  pointInStageFootprint,
+  rasterizeStageFootprint,
+  type StageFootprint,
+  type StageFootprintRect
+} from '../stage/StageFootprint';
 
 export interface SurfaceRayHit {
   surface: PaintSurface;
@@ -28,6 +34,8 @@ export class PaintSurface {
   public readonly tilesX: number;
   public readonly tilesY: number;
   public readonly normal: Vec3;
+  private readonly footprintRects: readonly StageFootprintRect[] | null;
+  private readonly activeCellMask: Uint8Array | null;
   public atlasRect: AtlasRect | null = null;
 
   public constructor(
@@ -39,7 +47,8 @@ export class PaintSurface {
     public readonly heightMeters: number,
     public readonly cellSize: number,
     public readonly baseFlags: SurfaceFlags,
-    public readonly tileSizeCells: number
+    public readonly tileSizeCells: number,
+    public readonly footprint?: StageFootprint
   ) {
     if (!Number.isFinite(widthMeters) || widthMeters <= 0) throw new Error(`PaintSurface ${id} has invalid width.`);
     if (!Number.isFinite(heightMeters) || heightMeters <= 0) throw new Error(`PaintSurface ${id} has invalid height.`);
@@ -63,9 +72,32 @@ export class PaintSurface {
     this.heightCells = Math.ceil(heightMeters / cellSize);
     const cellCount = this.widthCells * this.heightCells;
 
+    if (footprint && Math.abs(footprint.cellSizeMeters - cellSize) > 1e-6) {
+      throw new Error(
+        `PaintSurface ${id} footprint cell size ${footprint.cellSizeMeters}m must match gameplay ink cell size ${cellSize}m.`
+      );
+    }
+    const footprintRaster = footprint
+      ? rasterizeStageFootprint(widthMeters, heightMeters, footprint)
+      : null;
+    if (
+      footprintRaster &&
+      (footprintRaster.widthCells !== this.widthCells ||
+        footprintRaster.depthCells !== this.heightCells)
+    ) {
+      throw new Error(`PaintSurface ${id} footprint raster dimensions do not match the gameplay grid.`);
+    }
+    this.activeCellMask = footprintRaster?.active ?? null;
+    this.footprintRects = footprintRaster?.rectangles ?? null;
+
     this.ownerGrid = new Int8Array(cellCount);
     this.flagsGrid = new Uint16Array(cellCount);
     this.flagsGrid.fill(baseFlags);
+    if (this.activeCellMask) {
+      for (let i = 0; i < cellCount; i += 1) {
+        if (this.activeCellMask[i] === 0) this.flagsGrid[i] = 0;
+      }
+    }
     this.scoreWeightGrid = new Float32Array(cellCount);
 
     this.tilesX = Math.ceil(this.widthCells / tileSizeCells);
@@ -97,6 +129,16 @@ export class PaintSurface {
     const tx = Math.floor(x / this.tileSizeCells);
     const ty = Math.floor(y / this.tileSizeCells);
     return ty * this.tilesX + tx;
+  }
+
+  public isCellActive(x: number, y: number): boolean {
+    if (x < 0 || y < 0 || x >= this.widthCells || y >= this.heightCells) return false;
+    if (!this.activeCellMask) return true;
+    return this.activeCellMask[this.index(x, y)] !== 0;
+  }
+
+  public get activeFootprintRectangles(): readonly StageFootprintRect[] | null {
+    return this.footprintRects;
   }
 
   public markTileChanged(tileIndex: number): void {
@@ -151,7 +193,8 @@ export class PaintSurface {
         u >= -epsilon &&
         v >= -epsilon &&
         u <= this.widthMeters + epsilon &&
-        v <= this.heightMeters + epsilon
+        v <= this.heightMeters + epsilon &&
+        (!this.footprint || pointInStageFootprint(u, v, this.footprint))
     };
   }
 
@@ -221,7 +264,10 @@ export class PaintSurface {
       for (let x = 0; x < this.widthCells; x += 1) {
         const remainingU = this.widthMeters - x * this.cellSize;
         const fractionU = Math.min(1, Math.max(0, remainingU / this.cellSize));
-        this.scoreWeightGrid[this.index(x, y)] = fractionU * fractionV;
+        const index = this.index(x, y);
+        this.scoreWeightGrid[index] = this.isCellActive(x, y)
+          ? fractionU * fractionV
+          : 0;
       }
     }
   }

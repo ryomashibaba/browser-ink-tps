@@ -1,0 +1,9 @@
+# Phase12W source-only coplanar original witness gate
+
+The SHA-pinned original Temple01 OBJ is 43,263,289 bytes with SHA256 a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046, 70,396 active source triangles. Phase12S original 22 components / 488 triangles have 524 OBJ ID boundary edges. Phase12U found 436 full matching external XYZ edges, with 88 remaining unmatched (8 components, 11 each). Phase12V measured distance zero to an external original source triangle for all 88, without OBJ ID welding. Phase12W distinguishes why those 88 have distance zero.
+
+Phase12W reparses all 70,396 original faces. Each target excludes only its own OBJ-ID component and performs 0.5-meter AABB filtering, finite segment-triangle distance and unsnapped projected source-coordinate plane and barycentric clipping. Plane distance tolerance: 1e-8 m. Barycentric tolerance: 1e-9. Positive span cutoff: 1e-6 m. Classes include positive-length coplanar face interior, coplanar boundary-only span, coplanar point tangency, noncoplanar endpoint, noncoplanar face boundary tangency and strict face piercing (unexpected and fails). Every contact witness preserves original Face ID, vertex ID triple, unmodified projected XYZ, overlap interval and measured overlap length.
+
+Dedicated independent Vitest checks 88 Phase12V source IDs, all original witnesses using a separately implemented barycentric and plane geometry classifier, source pin and freeze gates. A JSON artifact is uploaded for evidence, not gameplay.
+
+Strict freeze: PR #5 Draft/open/unmerged; T20 production inkworks-junction; T21 activationReady=false; no visual freeze, no mesh/weld/floor/cap/collision/nav/paint/score/AI or deployment; 124 default display, 64 walk-source, 42-point hard XZ, 22 optional review components, 28 unused source components held. Coplanar overlap is NOT original OBJ-ID welding or physics connectivity.

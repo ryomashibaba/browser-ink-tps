@@ -1,0 +1,46 @@
+name: T21 fast feedback - full unit and type checks
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened, synchronize, ready_for_review, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t21-fast-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  t21-fast:
+    if: github.event_name != 'pull_request' || github.head_ref == 'codex/t21-undertow-evidence-ledger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Install dependencies (repository has no npm lockfile)
+        run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Entire unit test suite
+        run: npm test
+      - name: Screenshot scripts syntax preflight
+        run: |
+          node --check scripts/t21-review-five-view-capture.mjs
+          node --check scripts/t21-phase13a-real-five-view-visual-baseline.mjs
+          node --check scripts/t21-phase13b-ui-free-pair-qa.mjs
+          node --check scripts/t21-phase13c-camera-qa.mjs
+          node --check scripts/t21-phase13d-source-lens-qa.mjs
+      - name: Phase13A and B negative-path selftests
+        run: |
+          node scripts/t21-phase13a-real-five-view-visual-baseline.mjs --self-test
+          node scripts/t21-phase13b-ui-free-pair-qa.mjs --self-test
+          node scripts/t21-phase13c-camera-qa.mjs --self-test
+          node scripts/t21-phase13d-source-lens-qa.mjs --self-test

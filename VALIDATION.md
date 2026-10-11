@@ -1408,3 +1408,568 @@ T19C is now **STABLE FREEZE**. Future work must preserve CPU kit assignment auth
 13. Report any mismatch before T20 Freeze. Do not Freeze solely from automated checks.
 
 T20 remains **IMPLEMENTATION CANDIDATE** until these hosted checks are accepted.
+
+
+## T21-A Undertow Spillway Evidence Freeze / Measurement Ledger
+
+Branch: `codex/t21-undertow-evidence-ledger`
+Base main: `fbd922cea900df8e1a139f21b3c61ed927b3fdd9`
+
+Automated scope:
+- evidence IDs are unique and every non-UNKNOWN fact cites evidence
+- unresolved XZ remains UNKNOWN
+- UNKNOWN Y cannot expose an exact numeric value
+- center reference Y=0 is CONFIRMED
+- working 20px/m scale remains HIGH
+- whole-stage ~146x87m remains PROVISIONAL
+- Team A/B first descents are CONFIRMED `ONE_WAY_DROP`
+- Temple01 local registration resolves first-drop magnitude to 4.5m HIGH
+- Temple01 local registration resolves both spawn centers to project Y=7.5 HIGH after final center-low normalization
+- upper glass is explicit UNINKABLE + GLASS gameplay geometry
+- Splat Zones objective count is recorded as two
+- Tower/Rainmaker/Clams geometry differences remain rule-variant facts
+
+This batch intentionally changes no runtime geometry, collision, paint authority, CPU traversal, objective scoring, or UI. Hosted gameplay QA is therefore not required for T21-A itself; PR CI must pass typecheck, Vitest, and production build before the ledger is accepted as the input to T21-B/C.
+
+
+## T21-B / T21-C automated calibration checks
+
+The branch now validates the measured Turf-map frame in addition to the T21-A evidence ledger.
+
+Expected checks:
+- 3508 x 2482 source-map frame is explicit
+- measured origin maps exactly to project X=0, Z=0
+- spawn-pixel distance converts to ~134.413 m at 20 px/m
+- both spawn centers project to the same X axis within millimetric rounding
+- negative/positive spawn Z values are approximately -67.262 / +67.150 m
+- origin differs from spawn midpoint by <0.06 m
+- 180-degree spawn symmetry residual is <0.12 m
+- pixel -> metric -> pixel round-trip is deterministic
+- ~87 m X / ~146 m Z whole-stage bounds remain PROVISIONAL
+- blockout rejects PROVISIONAL/UNKNOWN exact Y
+- Stable Freeze rejects HIGH as well as PROVISIONAL/UNKNOWN Y
+
+Runtime production geometry, collision, paint authority, Recast traversal, T20 scoring, weapons, and Super Jump remain unchanged by this checkpoint.
+
+
+## T21-C vertical-constraint automated checks
+
+New deterministic coverage verifies:
+- HIGH exact vertical relations propagate for BLOCKOUT only
+- HIGH relations do not enter STABLE_FREEZE
+- an unseeded HIGH relation cannot invent an absolute Y
+- contradictory exact constraints are reported
+- center-low Y=0 resolves center small-step to 1.5m at blockout level
+- the remodeled spawn/right-low chain resolves at BLOCKOUT confidence without conflicts
+- Team A/B spawn Y=7.5, first-drop landing Y=3.0, right-low Y=4.5, right-small-drop upper Y=7.5
+- first drop is exact -4.5m HIGH and right small drop is exact -3.0m HIGH
+- glass underpass/high reference resolve from Temple01 geometry at Y=0.0 / 7.5; capture traversal is non-metric
+- slope-high endpoints and grate elevations remain unresolved
+- +4.5 to +6.0m broad upper-band hypothesis and +4.5m raised-platform candidate remain PROVISIONAL
+
+No runtime stage geometry or traversal changes are introduced by this checkpoint.
+
+
+## T21-B vector-source validation
+
+The recovered user Turf archive adds an independent vector-source validation layer.
+
+Expected deterministic checks:
+- vector page is bound to the matching 3508 x 2482 Turf JPEG
+- project vector scale remains 4.8 pt/m HIGH
+- vector spawn-ring centers produce ~134.190 m separation
+- source origin differs from the spawn midpoint by <0.03 m
+- Team A/B first-drop lips are HIGH POLYLINE XZ measurements
+- each first-drop lip has 15.25 m plan length
+- first-drop pair 180-degree residual is <0.03 m
+- the vector source alone does not determine first-drop Y; later Temple01 local registration resolves the magnitude to 4.5m HIGH
+- both mapped cyan water regions are CONFIRMED polygons
+- each mapped water polygon has ~33.004 m² plan area
+- mapped-water pair symmetry residual is <0.03 m
+- raw large spawn-side source faces are preserved as raw plan geometry and never promoted to one flat floor
+- trace-completeness reports 5 / 18 requirements measured
+- broader playable/fall-out boundaries, glass, slopes, grate, center floor and spawn-floor polygons remain UNTRACED
+
+No hosted runtime QA is required for this vector-source checkpoint because production geometry/collision/navigation is still untouched. TypeScript, Vitest, and production build must pass.
+
+
+## T21-B central semantic-binding validation
+
+Deterministic coverage now checks:
+
+- glass overhang pair plan area ~62.796m² each
+- glass overhang 180-degree residual <0.03m
+- glass is HIGH exact XZ + CONFIRMED GLASS/UNINKABLE
+- glass internal slope markers remain distinct from the hard outline
+- vertical reconstruction no longer treats the whole glass footprint as one flat Y
+- center-left/right slope marker centers are approximately X=-9.805/+9.805m, Z≈0
+- center slope marker pair residual <0.03m
+- marker envelopes cannot be used as collision footprints
+- grate pair plan area ~30.441m² each
+- grate pair residual <0.03m
+- grate XZ is HIGH; GRATE/UNINKABLE semantics are CONFIRMED; WATER is absent
+- right-side second-drop pair has 16.90m plan length and <0.04m symmetry residual
+- second-drop XZ is HIGH and vertical delta remains -1.5m HIGH
+- center-small-step XZ is still UNRESOLVED
+- common trace coverage is 8/18
+- T21-D readiness stays false while critical XZ/Y evidence is missing
+- confirmed center-low Y=0 does not bypass the missing center-low XZ-outline requirement
+
+Production StageDefinition, Rapier, GameplayInk, GPU ink, Recast runtime, combat, Super Jump and T20 objectives remain untouched.
+
+
+## T21-B center/outer-vector validation
+
+Latest deterministic checks additionally require:
+- PDF vector coordinates declare TOP_LEFT origin and +Y DOWN
+- glass/source coordinates remain in that convention without a hidden Y flip
+- common outer boundary has 42 vertices
+- outer-boundary area is ~8970.464m² under the HIGH project transform
+- outer-boundary 180-degree residual is <0.03m
+- outer spans are ~98.798m X / ~156.528m Z and HIGH, replacing the old provisional 87/146 envelope
+- center-low exact XZ polygon is present, ~28.830m², while Y=0 remains CONFIRMED
+- both central small-step polygons are present, ~4.650m² each
+- step-strip symmetry residual is <0.03m
+- both step transitions retain +1.5m HIGH vertical relation
+- central slope dash centers use the refined vector coordinates near (-9.909,+0.354) / (+9.931,-0.365)
+- trace coverage is 11/18
+- outer-boundary completion does not automatically complete the internal fall-out/void kill-boundary requirement
+
+T21-D must remain blocked until the remaining required XZ and vertical constraints are resolved.
+
+
+## T21-B/C slope-footprint and readiness validation
+
+Latest deterministic coverage additionally verifies:
+- exact center slope dash rectangles are [393.6,312.36,409.44,369.84] and [432.48,225.36,448.32,282.84] in top-left PDF coordinates
+- each central slope semantic footprint is ~39.5175m²
+- both slope XZ entries are HIGH POLYGON measurements
+- slope transition kind remains SLOPE while endpoint Y stays UNKNOWN
+- T21-B trace coverage is 13/18
+- T21-D vertical readiness runs through the BLOCKOUT constraint resolver
+- center-small-step-top resolves to Y=1.5 and is not reported unresolved
+- glass lower/high reference remain unresolved without an absolute lower seed
+- all four central slope endpoint Y nodes remain unresolved without a seed
+- both grate Y nodes remain unresolved without a seed
+- counterpart slope/grate symmetry relations alone cannot manufacture an absolute Y
+
+The gate must remain false until the remaining XZ and vertical blockers are resolved.
+
+
+## T21-B spawn-terrain and source-limit validation
+
+Automated coverage now additionally requires:
+- both spawn-side connected terrain envelopes are HIGH polygons
+- each spawn region remains vertically UNKNOWN as a whole and explicitly warns against flat-floor use
+- trace gate uses `team-a/b-spawn-terrain-outline` rather than the misleading flat-floor name
+- common trace coverage is 15/18
+- right-low floor partition stays unresolved because the relevant hard edges border the same two connected source faces
+- under-glass walkable outline stays unresolved because no independent lower-layer polygon exists in the vector source
+- internal void classification stays unresolved where top-down overlap is ambiguous
+- the source-topology audit reports exactly those three unresolved vector-topology limits
+
+T21-D readiness must remain false until those geometry limits and the outstanding vertical constraints are resolved.
+
+
+## T21-C center-side slope endpoint validation
+
+Automated checks now require:
+- center-left/right main dash regions use `SLOPE_SEMANTIC_FOOTPRINT`
+- glass internal dash fields remain `MARKER_ENVELOPE_ONLY`
+- BLOCKOUT constraint resolution produces Y=1.5m for both center-side slope endpoints
+- both far/high slope endpoints remain unresolved
+- Stable Freeze still accepts only independently CONFIRMED exact values
+
+
+## T21 final evidence-gap validation
+
+Automated tests now verify that the additional-evidence plan contains exactly three targets matching the unresolved source-topology audit:
+- RIGHT_LOW_PARTITION
+- GLASS_UNDERPASS_CLEARANCE
+- INTERNAL_VOID_CLASSIFICATION
+
+The plan must not request already-resolved spawn terrain, mapped water, upper-glass outline, or first-drop geometry, and captures must include plan-registration landmarks before they can promote XZ evidence.
+
+
+## T21 2026-09-25/26 capture integration validation
+
+Automated checks now verify:
+- both targeted 2026-09-25 traversal files plus the 2026-09-26 corrective still pair are represented as CONFIRMED user capture evidence
+- right-low and underpass entries cite the traversal captures but retain UNRESOLVED XZ until plan registration
+- the former first-drop landing -> right-small-drop upper 0m edge is absent
+- the corrective stills themselves remain qualitative red-guide-side < blue-guide-side evidence
+- Temple01 local registration independently resolves red/blue canonical floor sides
+- right-low -> covered-underpass floor is -4.5m HIGH from Temple01 geometry; capture footage contributes connectivity only
+- right-small-drop upper is 3.0m above right-low
+- first-drop landing is 1.5m below right-low
+- captured topology records non-metric traversable underpass connectivity, a 3.0m right drop, and a visible ramp exit
+- underpass support/wall exclusions remain explicit
+- RIGHT_LOW_PARTITION and GLASS_UNDERPASS_CLEARANCE are CAPTURE_RECEIVED
+- future capture requests require marked-map annotations rather than prose-only directions
+
+T21-D remains gated while exact plan registration and outstanding vertical seeds are unresolved.
+
+
+## T21 targeted-capture plan-registration validation
+
+Automated checks now additionally require:
+- right-low capture is bound to the measured Team A right-small-drop lip
+- underpass capture is bound beneath the measured positive-Z glass-overhang footprint
+- every plan-registration anchor references an existing vector trace
+- both registrations remain PLAN_REGISTERED_POLYGON_UNRESOLVED
+- neither registration may promote a trace to blockout geometry
+- source-topology audit keeps right-low and underpass unsafe for blockout
+- common trace coverage remains 15/18 rather than being inflated from perspective-only geometry
+- UndertowSpillwayBlockoutGate remains false
+
+GitHub Actions run #496 passed TypeScript check, Unit tests, production build, Pages configuration and Pages artifact upload for the first plan-registration implementation. No hosted gameplay QA is required because runtime StageDefinition/collision/navigation remains untouched.
+
+
+## T21 internal-void ambiguity audit validation
+
+Automated checks now additionally verify:
+- both current central undercut regions are retained as HIGH traversable lower-layer topology rather than kill voids
+- the received right-low/underpass connection remains traversable; equal canonical Y is not inferred from the clips
+- the audit does not fabricate an exhaustive no-void conclusion
+- no additional user capture becomes request-ready without a concrete mapped ambiguous region
+- `fall-out-void-kill-boundary` remains UNTRACED
+- common trace coverage remains 15/18 and T21-D remains gated
+
+GitHub Actions run #502 / `36194505652` passed TypeScript check, unit tests, production build, Pages configuration and artifact upload at head `dede055dedaa10c34b6f4fa1c9d3aa7368910cc8`.
+
+No runtime StageDefinition, collision, navigation, paint authority, combat, Super Jump, or T20 objective behavior changed in this checkpoint.
+
+
+## T21-C minimum vertical-evidence audit validation
+
+Automated checks now additionally require:
+- center-low / center-step / center-side slope-low remain a seeded component
+- spawn / first-drop landing / right-low / right-small-drop upper / glass references form one seeded HIGH component
+- first-drop exact relation is -4.5m HIGH
+- right-small-drop exact relation is -3.0m HIGH
+- first-drop landing -> right-low is +1.5m HIGH
+- only central slope-high endpoints and grate elevations remain vertically unseeded
+- the user stills remain qualitative; exact numbers must cite the Temple01 geometry evidence
+
+T21-D remains blocked pending remaining XZ work plus slope-high/grate vertical evidence.
+
+
+## T21-C first-drop interpretation-correction validation
+
+Automated checks now additionally require:
+- no first-drop vertical capture request is request-ready
+- `FIRST_DROP_MAGNITUDE_SIDE_PROFILE` is retained only with status `SUPERSEDED_BY_TEMPLE01_GEOMETRY`
+- the false first-drop landing = right-small-drop upper relation remains absent
+- the corrective still pair remains qualitative evidence only
+- Temple01 local registration supplies the exact 4.5m first-drop and 3.0m right-drop magnitudes
+- right-low -> underpass is -4.5m HIGH from Temple01 geometry; the former capture-only 0m relation is absent
+
+
+## T21-C line-side semantic audit validation
+
+Automated checks now additionally require:
+- both red and blue guide lines still reference existing measured vector traces
+- red lower/upper bind to first-drop landing / spawn floor only through Temple01 local registration
+- blue lower/upper bind to right-low / right-small-drop upper only through Temple01 local registration
+- the user-observed red-vs-blue ordering itself still has no exact delta
+- pre-model media findings remain below canonical side-binding strength
+- the resolved project Y values after final normalization are red lower/upper 3.0/7.5 and blue lower/upper 4.5/7.5
+
+This audit changes evidence semantics only. Runtime geometry, collision, navigation, paint, combat and objectives remain unchanged.
+
+
+## T21-C current Temple01 external-geometry validation
+
+Automated checks now additionally require:
+- remodeled Undertow is identified as `Vss_Temple01` / `Model/Fld_Temple01.bfres`
+- `Vss_Temple00` is retained only as the pre-remodel identity
+- `Vss_Nagasaki03` is explicitly excluded from Undertow geometry
+- SceneInfo / VersusSceneInfo names alone do not expose metric geometry
+- the KiTrix LFS OBJ body is actually retrieved and parsed before any metric promotion
+- Splatoon-3-Map-Editor actor classes alone still do not promote layout coordinates
+- a Temple01 rule-layer path reference alone still does not count as metric geometry
+- local drop-lip geometry may promote HIGH values only after sub-raster discontinuity verification
+- full-exterior registration residuals prohibit blanket PDF->OBJ projection
+
+
+## T21-C external remodeled-geometry source validation
+
+Automated checks now require:
+- the Salmon Run Temple Low/Mid/High source to remain rejected for normal-PvP Y reconstruction
+- Leanny Temple01 metadata to remain the confirmed remodel identity
+- KiTrix Temple01 OBJ body audit to remain the only locally promotable external geometry source
+- KiTrix StageLoader display-name mapping to remain rejected as provenance
+- local promotion remains limited to verified landmarks/drop relations, not arbitrary full-model projection
+- the `PntSet` Turf filter is verified as part of the successful common+Turf local audit
+
+Source audit may change evidence priority, but it must not open the T21-D gate or alter runtime stage geometry.
+
+
+## T21-B Temple01 local XZ contour validation
+
+Automated validation now additionally requires:
+- Temple01 model/project XZ transform round-trips every stored contour point
+- center-low extraction remains model Y=3.0m / project Y=0
+- right-low extraction remains model Y=7.5m / project Y=4.5
+- extraction resolution remains 0.125m with <=0.20m boundary simplification
+- center-low and right-low trace requirements are MEASURED
+- right-low source topology is `RESOLVED_FROM_TEMPLE01_MODEL`
+- the retired right-low user capture no longer appears as a current blocking trace
+- at that checkpoint Blockout readiness reported two missing XZ traces: `glass-underpass-outline` and `fall-out-void-kill-boundary`; the later underpass promotion supersedes this
+- no vertical blocker remains
+
+This checkpoint does not start T21-D and does not mark model-raster contours as Stable Freeze.
+
+
+## T21-C cross-file vertical semantic invariant validation — 2026-09-26
+
+Current head must additionally verify:
+- right-low = project Y 4.5 HIGH
+- glass-underpass floor = project Y 0.0 HIGH
+- glass-overhang high reference = project Y 7.5 HIGH
+- right-low -> underpass = -4.5m HIGH from Temple01 geometry
+- underpass -> glass high reference = +7.5m HIGH from Temple01 geometry
+- the capture-topology edge is TRAVERSABLE_CONNECTION with no deltaYMeters
+- the measurement ledger uses the same Temple01-derived underpass/right-low values
+- source-topology text does not promote the traversal clips to a same-height metric claim
+- the blockout gate remains closed by XZ evidence rather than any vertical inconsistency; after the later underpass promotion only the void boundary remains
+
+
+## T21-B glass-underpass XZ promotion validation — 2026-09-26
+
+Automated/CI evidence now additionally requires:
+- Temple01 model-Y=3.0 / project-Y=0 roofed floor is used rather than the upper PDF glass rectangle
+- floor-level Pillar/Wall exclusions are subtracted before promotion
+- each side has 3951 roofed-floor cells, 88 obstacle cells, and 3863 navigable cells
+- navigable area is 60.359375m² per side
+- the positive/negative raw navigable masks are exact 180-degree counterparts: mirror XOR 0 cells, missing 0, extra 0
+- stored underpass contours retain one support hole per side
+- underpass contour simplification remains <=0.15m at 0.125m raster resolution
+- MeasurementLedger supports POLYGON_SET and stores both symmetric underpass components plus holes
+- center-low/right-low ledger XZ values are also aligned with their already-promoted Temple01 polygon sets
+- `glass-underpass-outline` is MEASURED
+- `glass-underpass-walkable-outline` source topology is `RESOLVED_FROM_TEMPLE01_MODEL`
+- common trace coverage is **17/18**
+- Blockout readiness reports exactly one missing XZ trace: `fall-out-void-kill-boundary`
+- unresolved vertical IDs and relations remain empty
+
+The capture-only plan-registration records remain non-promotable on their own; the XZ promotion comes from independently audited Temple01 geometry. T21-D must remain closed until the remaining void boundary is resolved.
+
+
+## T21-B final void-XZ closure / T21-D gate validation — 2026-09-26
+
+Current validation must additionally require:
+- the common+Turf Temple01 empty-space scan enumerates exactly 6 significant enclosed candidates
+- exactly 2 candidates are the already mapped cyan water pair
+- both non-water candidate pairs are exact 180-degree counterparts at 0.125m
+- the large pair has no matching Y=1.2 FloorLine05 interior hole
+- the small pair has no matching Y=1.5 FloorMetal interior hole
+- FloorMetal interior-hole count = 0
+- FloorLine05 interior-hole count = 0
+- unexplained internal abyss candidate count = 0
+- no new convenience internal kill polygon is introduced
+- `fall-out-void-kill-boundary` is MEASURED HIGH
+- `internal-void-kill-boundaries` is `RESOLVED_FROM_TEMPLE01_MODEL` and BLOCKOUT-safe
+- common trace coverage = **18/18**
+- unresolved source-topology limits = []
+- required capture IDs = []
+- request-ready capture IDs = []
+- Blockout readiness reports:
+  - `ready === true`
+  - `missingTraceIds === []`
+  - `unresolvedVerticalIds === []`
+  - `unresolvedVerticalRelations === []`
+
+The XZ gate opening must not be interpreted as a measured vertical kill plane. No runtime stage geometry, collision, navigation, paint authority, combat, Super Jump, or T20 objective behavior changes merely because the evidence gate is now open. T21-D implementation begins only as a subsequent explicit phase.
+
+
+## T21-D route ramps / one-way drop navigation validation — 2026-09-27
+
+The current partial Undertow package must additionally satisfy:
+
+- exact right-low route ramp geometry:
+  - exactly 2 promoted `FloorConcrete03` source-mesh quads
+  - each has 4 vertices / 6 triangle indices
+  - top/bottom project Y endpoints remain 4.5 / 3.0
+  - model-space mirror validation is performed after project->Temple01 inverse registration
+  - `FloorLine00/03/04` overlays are not duplicated into collision/navigation geometry
+- frozen-stage compatibility:
+  - `StageDefinition.navigationLinks` remains optional
+  - an ordinary stage with no links maps to `offMeshConnections=[]`
+  - T20 `PRODUCTION_STAGE_DEFINITION.metadata.id === 'inkworks-junction'`
+- first drop:
+  - 6 links per side / 12 total
+  - start project Y 7.5, end project Y 3.0
+  - all `bidirectional === false`
+  - NEG model cells are exact 180-degree mirrors of POS cells
+- right-small drop:
+  - 7 links per side / 14 total
+  - start project Y 7.5, end project Y 4.5
+  - all `bidirectional === false`
+  - NEG model cells are exact 180-degree mirrors of POS cells
+- combined current partial package:
+  - exactly **26** audited one-way drop links
+  - navigation-link IDs are unique
+  - Detour user IDs are unique
+  - endpoint radius equals `GAME_CONFIG.cpu.agentRadiusMeters`
+  - no invisible ramp, stairs or bidirectional link is introduced for either hard-edge drop
+- production runtime remains unchanged because the partial package is still `activationReady: false`
+
+CI source acquisition may be optimized by removing the historical inline Temple01 probe only after its derived facts are sealed in code/docs. The LFS object byte size and SHA-256 check plus the authoritative current XZ audit must remain.
+
+## T21-D exact Splat Zones vector registration validation — 2026-09-27
+
+Current validation must additionally require:
+- the public current Sunfish Zones PDF identity remains 112,898 bytes with SHA-256 `ae2c24c3cc0ed09d5711e229deb7fb6535c3ef6505ea7dead1aca5e69c4d1596`
+- the PDF remains one page at 841.92 × 595.32pt
+- repository automation extracts native vector geometry; screenshot/manual tracing remains non-authoritative
+- 40 of 42 compared Turf exterior anchors remain shared within 0.001pt, with exactly two mode-specific changed anchors
+- each Splat Zone remains an exact six-vertex L-shaped ring
+- each source objective plan area remains 117.29875m²
+- only the intersection of each exact objective ring with its audited project-Y=0 underpass footprint is exposed as a paint surface
+- exactly 2 such underpass-backed paint surfaces exist
+- both use explicit surface-local footprints and retain one support hole
+- neither surface has `SurfaceFlags.Scoreable`
+- both whole underpass solid authority records remain `UNKNOWN`
+- at the Pass 8 checkpoint, unresolved solid-level paint count was 6; subsequent Pass 10A may resolve only the separate route-ramp pair without changing either whole-underpass record
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` and `TURF_SCOREABLE_MASK_PENDING` remain activation blockers
+- production stage selection remains frozen at `inkworks-junction`
+- PR #5 remains Draft / unmerged
+
+## T21-D upper-glass authority Resolution Pass 9A validation — 2026-09-27
+
+Validation must additionally require:
+- post-Ver.7.2/current gameplay evidence records the glass high ground as standable/traversable
+- gameplay standability does not silently become exact Glass01 or BridgeMetal collision authority
+- BridgeMetal remains 1083 faces / 709 vertices per side
+- the Pass 9A connected-component audit reports exactly **392 components per side**
+- POS/NEG component signatures remain exact mirrors (signature XOR = 0)
+- no unique standable BridgeMetal component is claimed
+- exact player-collision and navigation face binding remain unresolved
+- projectile behavior remains unresolved independently
+- camera-query behavior remains unresolved independently
+- Glass01 remains render-only and BridgeMetal remains unpromoted
+- production stage remains frozen T20 `inkworks-junction`
+
+## T21-D water / death-volume Resolution Pass 9B validation — 2026-09-27
+
+Validation must additionally require:
+- `Vss_Temple01` current remodeled SceneInfo continues to preload only `Model/Fld_Temple01.bfres` in the audited metadata snapshot
+- no explicit water resource/visual-Y transform is claimed from SceneInfo
+- the public Temple01 actor-class family remains limited to the audited Fld/Pnt/Var/Vcl/Vgl/Vlf classes with no explicit Temple01 Water class
+- actor placement schema continues to expose `Translate / Rotate / Scale`
+- the referenced `Vss_Temple01_Vlf-ModifiedTowerControl.bcett.json` remains classified as a Tower-Control modifier reference only and its unavailable body must not become normal-mode authority
+- `Mpt_PlayerDead` remains directly verified as Cube / Scale 1 / ControlledPlayer in snapshots 720, 800, 920, and 1130
+- generic locator stability must not be interpreted as Temple01 placement authority
+- public Temple01 water-placement recovery remains false
+- public Temple01 death-volume placement recovery remains false
+- `visualPlaneResolved === false` and `visualPlaneMeters === null`
+- `killThresholdResolved === false` and `killThresholdMeters === null`
+- no water visual plane, global kill plane, or convenience death volume is emitted
+- production stage remains `inkworks-junction`
+
+## T21-D route-ramp paint Resolution Pass 10A validation — 2026-09-27
+
+Validation must additionally require:
+- pinned Turf PDF = **100,311 bytes**, SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- both exact `FloorConcrete03` route-ramp source quads remain model-space mirrors
+- each exact ramp 3pt query contains **168** instances of the 0.24pt black / 0.96pt author slope-dash family
+- exact-polygon containment remains pinned:
+  - positive-Z = **133 midpoint-inside / 126 fully-inside** (0.791667 / 0.75)
+  - negative-Z = **126 / 126** (0.75 / 0.75)
+- both midpoint-inside and fully-inside fractions must remain >= **0.70**
+- known central PAINTABLE slope median brightness remains **255**
+- known gray UNINKABLE glass-slope median brightness remains **191**
+- both route-ramp median brightness values remain **255**
+- brightness distance remains **0** to the PAINTABLE median and **64** to the UNINKABLE median
+- exactly 2 route-ramp PaintSurfaces exist
+- both are `Paintable | Swimmable | Ramp`, neither is `Floor` or `Scoreable`
+- Pass 10A checkpoint paint inventory = **13 PAINTABLE / 4 UNINKABLE / 4 UNKNOWN**
+- at the Pass 10A checkpoint, the remaining 4 UNKNOWN solids were the two whole underpass solids and two first-drop landing solids
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
+- `TURF_SCOREABLE_MASK_PENDING` remains separate with zero authorized Scoreable promotions
+- production stage remains frozen T20 `inkworks-junction`
+## T21-D source-gap Resolution Pass 10B validation — 2026-09-27
+
+Validation must additionally require:
+- source-native walk graph remains **276 nodes per side**
+- right-low contacts remain **17 per side**
+- underpass contacts remain **8 per side**
+- no source path exists at **0.03 / 0.08 / 0.18 / 0.30m**
+- relaxed discovery exposes **8 local gaps total / 4 per side**
+- strict bridge threshold remains **0.30m**
+- all-excluded-source search may report 6 apparent strict bridges, but after removing known FloorLine/FloorFence overlays the strict bridge count must remain **0**
+- no ordinary walk surface, runtime connector, or off-mesh link is promoted from this audit
+- both `right-low-to-underpass-*` probes remain diagnostic and unreached
+- `FULL_STAGE_CONNECTIVITY_QA_PENDING` remains active
+
+## T21-D first-drop paint Resolution Pass 10C validation — 2026-09-27
+
+Validation must additionally require:
+- pinned Turf PDF = **100,311 bytes**, SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- exactly 2 first-drop landing components remain bound to model Y **6.0m** / project Y **3.0m**
+- each component remains **3746 cells / 58.53125m²**, 0 holes, 8 outer vertices, mirror XOR 0
+- landing median brightness remains **255** on both sides
+- near-white fraction remains >= **0.90**:
+  - positive-Z = **0.931694**
+  - negative-Z = **0.952110**
+- adjacent author-gray control median brightness remains **191** and dark/gray fraction **1.0**
+- exact landing overlap with the adjacent gray control remains < **1%**
+- maximum first-drop-lip boundary residual remains <= **0.5m**:
+  - positive-Z = **0.347272371m**
+  - negative-Z = **0.442577995m**
+- exactly 2 first-drop PaintSurfaces exist
+- both are `Paintable | Swimmable | Floor`, neither is `Ramp` nor `Scoreable`
+- current paint inventory = **15 PAINTABLE / 4 UNINKABLE / 2 UNKNOWN**
+- the remaining 2 UNKNOWN solids are exactly the two whole underpass solids
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
+- `TURF_SCOREABLE_MASK_PENDING` remains separate with zero authorized Scoreable promotions
+- production stage remains frozen T20 `inkworks-junction`
+
+## T21-D upper-glass projectile Resolution Pass 11A validation — 2026-09-27
+
+Validation must additionally require:
+- Nintendo historical fix remains recorded as opposite-side glass damage being unintended
+- post-Ver.7.2/current glass-high-ground identity remains corroborated
+- Ver.11 grate-edge attack-path evidence remains distinct from glass-body behavior
+- `projectileOcclusionSemanticResolved === true`
+- ordinary cross-glass damage semantic remains blocked
+- grate/edge attack-permissive semantics remain possible
+- exact current projectile collision face binding remains unresolved
+- all-projectile-class behavior remains unresolved
+- runtime projectile promotion remains unauthorized
+- `Glass01` stays visual-only for collision authority
+- `UPPER_GLASS_COLLISION_AUTHORITY_PENDING` remains active
+- `UPPER_GLASS_CAMERA_QUERY_AUTHORITY_PENDING` remains independently active
+## T21-D water/death Resolution Pass 11B validation — 2026-09-27
+
+Validation must additionally require:
+- SceneInfo snapshots `720,800,920,1130` remain verified
+- all audited `Vss_Temple01` SceneInfo rows preload only `Model/Fld_Temple01.bfres`
+- SceneInfo exposes no water visual Y or Temple01 placement transforms
+- VersusSceneInfo exposes no placement reference or BCETT body
+- later `TclSceneName = Vss_Temple00` must not be treated as water/death placement authority
+- LeagueTypeInfo contributes only the Tower-Control modifier reference already classified as non-authoritative for normal/Turf placement
+- no normal-mode Temple01 placement body is claimed recovered
+- `visualPlaneResolved === false` / `visualPlaneMeters === null`
+- `killThresholdResolved === false` / `killThresholdMeters === null`
+- no water plane or death volume is emitted
+- both water activation blockers remain active
+
+## T21-D whole-underpass Resolution Pass 11C validation — 2026-09-27
+
+Validation must additionally require:
+- pinned Turf PDF remains 100,311 bytes with SHA-256 `2be10b1c720fd26dbad251b4cf06106daf50f1d45c869a653559b6310cc7c03f`
+- positive-Z exact underpass projection remains median brightness **191**, dark/gray fraction >= **0.98**
+- negative-Z exact underpass projection remains median brightness **191**, dark/gray fraction >= **0.98**
+- explicit overlapping fill colors remain the author gray class only
+- known Glass overhang overlap remains >= **0.70** on both sides
+- no distinct white underpass-floor vector fill is claimed recovered
+- gray top-view appearance must be interpreted as overlying Glass occlusion, not hidden-floor UNINKABLE authority
+- whole-underpass paint authority remains unresolved
+- runtime promotion remains unauthorized
+- exactly the two whole underpass solids remain solid-level UNKNOWN
+- only the two exact Splat-Zone intersection subregions remain underpass-backed PaintSurfaces
+- `UNKNOWN_PAINT_AUTHORITY_SURFACES_PENDING` remains active
+- no `Scoreable` promotion occurs
+- production stage remains T20 `inkworks-junction`

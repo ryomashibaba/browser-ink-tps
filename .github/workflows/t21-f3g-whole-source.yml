@@ -1,0 +1,93 @@
+name: T21 F3G pinned full original Temple01 visual integration
+on:
+  push:
+    branches: ["codex/t21-undertow-evidence-ledger"]
+    paths:
+      - "scripts/t21-f3g-source-pack.*"
+      - "scripts/t21-f3i-scene-inventory.*"
+      - "scripts/t21-f3k-family-gallery.*"
+      - "scripts/t21-f3l-*"
+      - "src/app/UndertowF3I*"
+      - "src/app/UndertowF3K*"
+      - "src/app/UndertowF3L*"
+      - "scripts/t21-f3-browser-smoke.mjs"
+      - "src/app/UndertowF3G*"
+      - "src/app/UndertowF3PlayablePreviewApp.ts"
+      - ".github/workflows/t21-f3g-whole-source.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-f3g-full-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  full-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --no-audit --no-fund
+      - name: Fetch ONLY pinned original OBJ directly, without Git clone
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/f3g-source/kitrix/stages/Vss_Temple01
+          cd /tmp/f3g-source/kitrix/stages/Vss_Temple01
+          curl --fail --location --show-error --silent \
+            --connect-timeout 12 --max-time 125 --retry 1 \
+            --output Vss_Temple01.obj \
+            https://media.githubusercontent.com/media/kirakira-dev/KiTrix/main/stages/Vss_Temple01/Vss_Temple01.obj
+          test "$(wc -c < Vss_Temple01.obj)" -eq 43263289
+          echo "a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  Vss_Temple01.obj" | sha256sum -c
+          curl --fail --location --show-error --silent \
+            --connect-timeout 12 --max-time 60 --retry 2 \
+            --output Vss_Temple01.mtl \
+            https://raw.githubusercontent.com/kirakira-dev/KiTrix/0611f51b35c9736ee986fb2218461e2585b7875e/stages/Vss_Temple01/Vss_Temple01.mtl
+      - name: Exact-source full-stage visual pack (not committed to Git)
+        run: |
+          node scripts/t21-f3g-source-pack.mjs \
+            /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.obj \
+            public/t21-f3g-source
+          node scripts/t21-f3i-scene-inventory.mjs \
+            /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.obj \
+            public/t21-f3g-source
+          node scripts/t21-f3l-textured-source.mjs \
+            /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.obj \
+            /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.mtl \
+            public/t21-f3g-source
+          mkdir -p public/t21-f3g-source/f3l-textures
+          node -e "const m=require('./public/t21-f3g-source/f3l-original-textured.json');for(const a of m.textureFiles){if(!a.endsWith('_Alb.png')||a.includes('/'))process.exit(1);console.log(a)}" > /tmp/f3l-albedo-files.txt
+          cat /tmp/f3l-albedo-files.txt | xargs -r -P 8 -I{} sh -c 'curl --fail --location --show-error --silent --connect-timeout 12 --max-time 95 --retry 2 --output "public/t21-f3g-source/f3l-textures/$1" "https://raw.githubusercontent.com/kirakira-dev/KiTrix/0611f51b35c9736ee986fb2218461e2585b7875e/stages/Vss_Temple01/textures/$1"' sh {}
+          node scripts/t21-f3l-finalize-textures.mjs public/t21-f3g-source
+          node -e "const m=require('./public/t21-f3g-source/f3l-original-textured.json');if(m.totalTriangles!==57578||m.triangleCountWithoutSourceUV>2000||m.textures.length<8||m.stagePlayableAuthority!=='NONE')process.exit(1);console.log('F3L_PINNED_ORIGINAL_MATERIALS',m.materials.length,m.textures.length,m.totalTriangles)"
+          test -s public/t21-f3g-source/f3i-environment.json
+          test -s public/t21-f3g-source/f3k-family-gallery.json
+          node -e "const m=require('./public/t21-f3g-source/f3k-family-gallery.json');if(m.components.length!==8||m.actorPlacementRecovered!==false||m.stageCollisionSolidsAdded!==0)process.exit(1);console.log('F3K_PINNED_SOURCE_FAMILY_GALLERY',m.components.map(x=>x.family))"
+          node -e "const m=require('./public/t21-f3g-source/f3i-environment.json');if(!m.macroFamilyCount||m.macroAssetFamilies.length<1||m.macroFamilyLedgerAuthoritativeForPlacements!==false||m.actorPlacementRecovered!==false)process.exit(1);console.log('F3J_PINNED_MACRO_ASSET_FAMILIES',m.macroFamilyCount,m.actorObjectCount,m.backgroundTriangleCount)"
+          test -s public/t21-f3g-source/manifest.json
+          node -e "const m=require('./public/t21-f3g-source/manifest.json'); if(!m.verifiedAgainstPinnedSource||m.includedOriginalTriangles<1500||m.stagePlayableAuthority!=='NONE')process.exit(1); console.log('F3G_PINNED_WHOLE_STAGE',m.includedOriginalTriangles,m.groups.length)"
+      - name: Typecheck and build full-source opt-in browser bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Exact whole stage real WebGL2 and existing human controls
+        env:
+          T21_F3G_EXPECT_WHOLE: "1"
+          T21_F3I_EXPECT_ENV: "1"
+          T21_F3K_EXPECT_GALLERY: "1"
+          T21_F3L_EXPECT_TEXTURES: "1"
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Source provenance and real browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-f3g-full-original-source-proof
+          path: |
+            /tmp/t21-f3-playable-webgl2/
+            public/t21-f3g-source/manifest.json
+            public/t21-f3g-source/f3i-environment.json
+            public/t21-f3g-source/f3k-family-gallery.json
+            public/t21-f3g-source/f3l-original-textured.json
+          if-no-files-found: warn
+          retention-days: 14
