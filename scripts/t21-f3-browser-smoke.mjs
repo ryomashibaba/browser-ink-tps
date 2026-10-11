@@ -116,6 +116,12 @@ async function main(){
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
  const initial=await evaluate('window.__t21F3.snapshot()');
+ const radar=await evaluate(`({solid:document.querySelector("#t21-f3-radar-canvas")?.dataset.originalSourceSolids,
+  links:document.querySelector("#t21-f3-radar-canvas")?.dataset.originalSourceNavigationLinks,
+  actors:document.querySelector("#t21-f3-radar-canvas")?.dataset.nativeActorCount,
+  authority:document.querySelector("#t21-f3-radar-canvas")?.dataset.productionAuthority})`);
+ if(radar.solid!=='25'||radar.links!=='26'||radar.actors!=='8'||radar.authority!=='NONE')
+  reject('ORIGINAL_SOURCE_RADAR_UNAUTHORIZED_'+JSON.stringify(radar));
  if(initial.phase!=='F3'||!initial.playableSandbox||
   initial.originalSourceOpticalStructures!==38||
   !(initial.originalSourceOpticalTriangles>200)||
@@ -177,6 +183,8 @@ async function main(){
   // artificially force A3 through a stationary real player. Retreat on
   // ACTUAL physical keyboard input before the full seven-CPU clearance
   // proof, recording both motions to distinguish human-obstructed traffic.
+  const blockedHuman=process.env.T21_F3_BLOCKED_HUMAN==='1';
+  if(!blockedHuman){
   const retreatFrom=await evaluate('window.__t21F3.snapshot()');
   const retreatKey={key:'s',code:'KeyS',
    windowsVirtualKeyCode:83,nativeVirtualKeyCode:83};
@@ -200,6 +208,11 @@ async function main(){
    retreatMeters,separation,retreatTick:retreat.tick,
    physicalSourceOnly:true
   }));
+  }
+  console.log('T21_F3C_START_NATIVE',JSON.stringify({
+   blockedHuman,player:(await evaluate('window.__t21F3.snapshot()')).player,
+   avoidance:(await evaluate('window.__t21F3.snapshot()')).humanCrowd
+  }));
   // Browser-driven native fixed-step integrator. Genuine Rapier and Recast
   // physics, but without waiting for software-GPU 60fps rendering.
   await cmd('Input.dispatchKeyEvent',{
@@ -220,6 +233,7 @@ async function main(){
      tick:completed.tick,physicalDrops:completed.cpu.physicalFirstDrops,
      physicalRejoins:completed.cpu.physicalRejoins,
      perCpu:completed.cpu.cpu,stop:completed.stopReason,
+     humanFoot:completed.player.position,avoidance:completed.humanCrowd,
      freeCombat:completed.cpu.freeCombatEnabled
     }));
    if(completed.stopReason)
@@ -231,8 +245,19 @@ async function main(){
      !completed.cpu.freeCombatEnabled)
    reject('NATIVE_F3_SEVEN_ACTOR_INCOMPLETE_'+JSON.stringify({
     tick:completed.tick,drops:completed.cpu.physicalFirstDrops,
-    rejoins:completed.cpu.physicalRejoins,actors:completed.cpu.cpu
+    rejoins:completed.cpu.physicalRejoins,actors:completed.cpu.cpu,
+    player:completed.player,avoidance:completed.humanCrowd
    }));
+  for(let i=0;i<6;i++)completed=await evaluate('window.__t21F3.advanceQaTicks(72)');
+  console.log('T21_F3C_NATIVE_COMBAT_LIVE_EVIDENCE',JSON.stringify({
+   tick:completed.tick,paint:completed.cpuPaintRequests,
+   shots:completed.cpuShots,splats:completed.cpuSplats,
+   time:completed.timeRemainingSeconds,
+   matchState:completed.matchState,stop:completed.stopReason
+  }));
+  if(completed.stopReason||completed.matchState!=='PLAYING'||
+     completed.cpuPaintRequests<1)
+   reject('NATIVE_F3C_CPU_COMBAT_NOT_LIVE_'+JSON.stringify(completed));
  }
  if(longCpu)frames.push(await screenshot('F3_2_REAL_SEVEN_CPU_FREE_COMBAT'));
  const out={status:'PASS_REAL_CHROME',
@@ -244,6 +269,9 @@ async function main(){
   cpuRejoinCount:completed.cpu.physicalRejoins.length,
   realSourceCpuFreeCombat:completed.cpu.freeCombatEnabled,
   nativeBrowserPhysicsQa:longCpu,
+  humanBlocksCpuLaneByRealKeyboard:longCpu&&process.env.T21_F3_BLOCKED_HUMAN==='1',
+  nativeCpuPaintRequests:longCpu?completed.cpuPaintRequests:undefined,
+  nativeCpuShots:longCpu?completed.cpuShots:undefined,
   perCpuNativeFootEvidence:longCpu?completed.cpu.cpu:undefined,
   fullSevenCpuChromeTestRequested:longCpu,
   cpuChromeCertification:longCpu?'SEVEN_SOURCE_REJOINS':'SHORT_INPUT_ONLY',
