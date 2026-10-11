@@ -1,0 +1,63 @@
+name: T21 F3G pinned full original Temple01 visual integration
+on:
+  push:
+    branches: ["codex/t21-undertow-evidence-ledger"]
+    paths:
+      - "scripts/t21-f3g-source-pack.*"
+      - "scripts/t21-f3-browser-smoke.mjs"
+      - "src/app/UndertowF3G*"
+      - "src/app/UndertowF3PlayablePreviewApp.ts"
+      - ".github/workflows/t21-f3g-whole-source.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-f3g-full-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  full-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --no-audit --no-fund
+      - name: Fetch one pinned public original Temple01 OBJ through Git LFS
+        shell: bash
+        run: |
+          set -euo pipefail
+          git lfs version
+          mkdir -p /tmp/f3g-source
+          git clone -q --depth 1 --filter=blob:none --sparse --no-checkout \
+            -c filter.lfs.smudge= -c filter.lfs.required=false \
+            https://github.com/kirakira-dev/KiTrix.git /tmp/f3g-source/kitrix
+          cd /tmp/f3g-source/kitrix
+          git sparse-checkout set --no-cone stages/Vss_Temple01/Vss_Temple01.obj
+          GIT_LFS_SKIP_SMUDGE=1 git checkout -q HEAD
+          git lfs pull --include="stages/Vss_Temple01/Vss_Temple01.obj" --exclude=""
+          echo "a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  stages/Vss_Temple01/Vss_Temple01.obj" | sha256sum -c
+      - name: Exact-source full-stage visual pack (not committed to Git)
+        run: |
+          node scripts/t21-f3g-source-pack.mjs \
+            /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.obj \
+            public/t21-f3g-source
+          test -s public/t21-f3g-source/manifest.json
+          node -e "const m=require('./public/t21-f3g-source/manifest.json'); if(!m.verifiedAgainstPinnedSource||m.includedOriginalTriangles<1500||m.stagePlayableAuthority!=='NONE')process.exit(1); console.log('F3G_PINNED_WHOLE_STAGE',m.includedOriginalTriangles,m.groups.length)"
+      - name: Typecheck and build full-source opt-in browser bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Exact whole stage real WebGL2 and existing human controls
+        env:
+          T21_F3G_EXPECT_WHOLE: "1"
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Source provenance and real browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-f3g-full-original-source-proof
+          path: |
+            /tmp/t21-f3-playable-webgl2/
+            public/t21-f3g-source/manifest.json
+          if-no-files-found: warn
+          retention-days: 14

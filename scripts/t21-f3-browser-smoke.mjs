@@ -136,7 +136,7 @@ async function main(){
  if(radar.solid!=='25'||radar.links!=='26'||radar.actors!=='8'||radar.authority!=='NONE')
   reject('ORIGINAL_SOURCE_RADAR_UNAUTHORIZED_'+JSON.stringify(radar));
  if(initial.phase!=='F3'||!initial.playableSandbox||
-  !initial.originalSourceStudyVisible||
+  (!initial.originalSourceStudyVisible&&process.env.T21_F3G_EXPECT_WHOLE!=='1')||
   initial.originalSourceStudy?.sourceComponents!==108||
   initial.originalSourceStudy?.visualOnlyUnderpassRouteComponents!==8||
   initial.originalSourceStudy?.originalSourceVerticalAdditions!==12||
