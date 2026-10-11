@@ -12,7 +12,12 @@ on:
   workflow_dispatch:
     inputs:
       long_cpu:
-        description: "Run optional slower 7/7 real Chrome physical CPU integration"
+        description: "Run full actual Chrome 7/7 physical CPU and original lower-source patrol proof"
+        type: boolean
+        required: false
+        default: false
+      blocked_human:
+        description: "Leave actual keyboard-controlled player in the narrow departure corridor during long run"
         type: boolean
         required: false
         default: false
@@ -38,8 +43,8 @@ jobs:
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: Real trusted keyboard mouse and GPU frame
         env:
-          T21_F3_LONG_CPU: '1' # F3D one-time full original-route patrol gate
-          T21_F3_BLOCKED_HUMAN: '1'
+          T21_F3_LONG_CPU: ${{ inputs.long_cpu == true && '1' || '0' }}
+          T21_F3_BLOCKED_HUMAN: ${{ inputs.blocked_human == true && '1' || '0' }}
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Preserve exact Chrome screenshots
         if: always()

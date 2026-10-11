@@ -401,7 +401,7 @@ export class UndertowF3PlayablePreviewApp{
     ' · NO TURF WINNER',
    'HUMAN SPLATS '+state.humanSplats+' / RESPAWNS '+state.humanRespawns,
    'CPU · '+p.physicalRejoins.length+'/7 source drop + recovery',
-   'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL COMBAT':'SAFE STAGED DESCENT'),
+   'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
    'Original optical structures · '+state.originalSourceOpticalStructures+
