@@ -30,13 +30,13 @@ jobs:
           set -euo pipefail
           git lfs version
           mkdir -p /tmp/f3g-source
-          git clone -q --depth 1 --filter=blob:none --sparse --no-checkout \
+          timeout 150 git clone -q --depth 1 --filter=blob:none --sparse --no-checkout \
             -c filter.lfs.smudge= -c filter.lfs.required=false \
             https://github.com/kirakira-dev/KiTrix.git /tmp/f3g-source/kitrix
           cd /tmp/f3g-source/kitrix
           git sparse-checkout set --no-cone stages/Vss_Temple01/Vss_Temple01.obj
           GIT_LFS_SKIP_SMUDGE=1 git checkout -q HEAD
-          git lfs pull --include="stages/Vss_Temple01/Vss_Temple01.obj" --exclude=""
+          timeout 150 git lfs pull --include="stages/Vss_Temple01/Vss_Temple01.obj" --exclude=""
           echo "a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  stages/Vss_Temple01/Vss_Temple01.obj" | sha256sum -c
       - name: Exact-source full-stage visual pack (not committed to Git)
         run: |

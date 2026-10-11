@@ -11,7 +11,7 @@ describe('F3G whole-original source pack source authority',()=>{
   sourceSHA256:T21_F3G_SOURCE_SHA256,
   verifiedAgainstPinnedSource:true,
   includedOriginalTriangles:1600,
-  groups:[{...group('FLOOR'),triangles:1570,bytes:1570*36},
+  groups:[{...group('FLOOR'),triangles:1580,bytes:1580*36},
    group('SLOPE'),group('GLASS')],
   stagePlayableAuthority:'NONE' as const,
   stageCollisionSolidsAdded:0 as const,stagePaintSurfacesAdded:0 as const,
