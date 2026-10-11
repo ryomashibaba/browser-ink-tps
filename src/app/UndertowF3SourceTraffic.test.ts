@@ -66,7 +66,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
      physics.step();player.syncAfterPhysics(DT);
      traffic.prepare(frame);
      cpu.fixedUpdate(DT,true,Team.A,player.getPosition(),true);
-     traffic.observe();
+     traffic.observe(frame);
      cpu.drainFireRequests(()=>{});
      cpu.drainKitRequests(()=>false);
     }catch(e){stop=String(e);break;}

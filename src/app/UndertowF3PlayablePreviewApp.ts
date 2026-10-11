@@ -102,6 +102,10 @@ export class UndertowF3PlayablePreviewApp{
  private stopReason:string|null=null;
  private respawnFrames=0;
  private renderedFrames=0;
+ private matchState:'STAGING'|'PLAYING'|'TIME_UP'='STAGING';
+ private remainingSeconds=180;
+ private humanSplats=0;
+ private humanRespawns=0;
  private constructor(
   private readonly app:AppBase,
   private readonly canvas:HTMLCanvasElement,
@@ -188,7 +192,7 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#adc6d4;margin:9px 0 0">'+
    'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
-   'Source geometry is partial. Turf score, kill threshold and full routes are NOT approved. Staged CPU descent precedes free combat.</p>';
+   'F3B: native staged CPU descent, then 180-second combat sandbox. Turf score, winner and complete source routes are NOT authorized.</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
@@ -218,6 +222,7 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
    pause:()=>{this.paused=true;this.refresh();return this.snapshot();},
+   advanceQaTicks:(count:number)=>this.advanceQaTicks(count),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
@@ -245,12 +250,27 @@ export class UndertowF3PlayablePreviewApp{
   // reload rebuilds the deterministic native source routes and systems.
   window.location.reload();
  }
- private update(dt:number){
-  if(this.paused||this.stopReason)return;
+ private advanceQaTicks(count:number){
+  if(new URL(location.href).searchParams.get('t21QaDrive')!=='source'||
+     !this.paused||document.pointerLockElement===this.canvas||
+     this.stopReason||!Number.isSafeInteger(count)||count<1||count>96)
+   throw Error('T21_F3_QA_PHYSICAL_DRIVE_FORBIDDEN');
   try{
-   const cameraDt=Number.isFinite(dt)?Math.min(Math.max(dt,0),.1):0;
-   this.camera.update(this.player.getPosition(this.p),cameraDt);
-   const report=this.clock.advance(dt,(frame,seconds)=>{
+   for(let i=0;i<count&&this.matchState!=='TIME_UP';i++)
+    this.stepFixed(++this.clock.tick,STEP);
+   this.player.render(1,this.visual);this.cpu.render(1);
+   this.projectiles.render(1);this.camera.update(this.visual);
+   this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
+   this.refresh();
+  }catch(error){
+   this.stopReason=String(error);this.paused=true;
+   this.refresh();throw error;
+  }
+  return this.snapshot();
+ }
+ private stepFixed(frame:number,seconds:number){
+  // Identical 60Hz physical path for live PlayCanvas and explicit QA clock.
+  // No synthetic Crowd state, stage geometry or CPU pose is created.
     // Real keyboard/pointer inputs -> player Rapier KCC -> shared physical
     // CPU collision -> actual Recast/CpuAgentSystem -> projectiles and ink.
     const alive=this.resources.currentHp>0;
@@ -262,7 +282,13 @@ export class UndertowF3PlayablePreviewApp{
     this.traffic.prepare(frame);
     this.cpu.fixedUpdate(seconds,true,Team.A,
      this.player.getPosition(this.p),alive);
-    this.traffic.observe();
+    this.traffic.observe(frame);
+    if(this.matchState==='STAGING'&&this.traffic.snapshot().freeCombatEnabled)
+     this.matchState='PLAYING';
+    if(this.matchState==='PLAYING'){
+     this.remainingSeconds=Math.max(0,this.remainingSeconds-seconds);
+     if(this.remainingSeconds===0)this.matchState='TIME_UP';
+    }
     this.cpu.drainFireRequests(req=>this.projectiles.queueCpuShot(req));
     this.cpu.drainKitRequests(()=>false);
     this.camera.update(this.player.getPosition(this.p));
@@ -278,10 +304,17 @@ export class UndertowF3PlayablePreviewApp{
       alive,alive);
     this.coordinator.processTick(frame);
     if(this.resources.currentHp<=0){
+     if(this.respawnFrames===0){
+      this.humanSplats++;
+      this.player.setLifecycleActive(false);
+      this.feedback.splat(Team.A,this.player.getPosition(this.p));
+     }
      this.respawnFrames++;
      if(this.respawnFrames>=150){
       this.resources.reset();
       this.player.teleport(this.humanSpawn);
+      this.player.setLifecycleActive(true);
+      this.humanRespawns++;
       this.respawnFrames=0;
      }
     }else this.respawnFrames=0;
@@ -291,7 +324,16 @@ export class UndertowF3PlayablePreviewApp{
     if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
         physical.y< -35)
      throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
+ }
+ private update(dt:number){
+  if(this.paused||this.stopReason)return;
+  try{
+   const cameraDt=Number.isFinite(dt)?Math.min(Math.max(dt,0),.1):0;
+   this.camera.update(this.player.getPosition(this.p),cameraDt);
+   const report=this.clock.advance(dt,(frame,seconds)=>{
+    if(this.matchState!=='TIME_UP')this.stepFixed(frame,seconds);
    });
+   if(this.matchState==='TIME_UP')this.paused=true;
    this.player.render(report.alpha,this.visual);
    this.cpu.render(report.alpha);
    this.projectiles.render(report.alpha);
@@ -330,6 +372,9 @@ export class UndertowF3PlayablePreviewApp{
    cpu:progress,paintEventsPerSecond:this.stats.paintEventsPerSecond,
    cpuShots:this.stats.cpuShots,shotsFired:this.stats.shotsFired,
    tick:this.clock.tick,paused:this.paused,
+   matchState:this.matchState,timeRemainingSeconds:this.remainingSeconds,
+   humanSplats:this.humanSplats,humanRespawns:this.humanRespawns,
+   turfResult:'UNAVAILABLE_SOURCE_SCORE_MASK_NOT_AUTHORIZED' as const,
    stopReason:this.stopReason
   };
  }
@@ -340,6 +385,9 @@ export class UndertowF3PlayablePreviewApp{
    'HUMAN · '+state.player.mode+
     '  HP '+Math.round(state.player.hp)+
     '  INK '+Math.round(state.player.ink),
+   'SESSION · '+state.matchState+' · '+Math.ceil(state.timeRemainingSeconds)+'s'+
+    ' · NO TURF WINNER',
+   'HUMAN SPLATS '+state.humanSplats+' / RESPAWNS '+state.humanRespawns,
    'CPU · '+p.physicalRejoins.length+'/7 source drop + recovery',
    'Traffic · '+(p.freeCombatEnabled?'FREE COMBAT':'SAFE STAGED DESCENT'),
    'Original optical structures · '+state.originalSourceOpticalStructures+
@@ -348,6 +396,8 @@ export class UndertowF3PlayablePreviewApp{
     ' | original links '+p.originalSourceLinksUsed,
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
     ' | paint/s '+state.paintEventsPerSecond.toFixed(1),
+   'CPU state · '+p.cpu.map(b=>b.id+':'+
+    (b.rejoined?'LOWER':b.mobilityState==='GROUND'?'UPPER':b.mobilityState)).join(' '),
    'Tick '+state.tick+' · '+(state.paused?'PAUSED':'RUNNING'),
    state.stopReason?'SAFE STOP: '+state.stopReason:''
   ].filter(Boolean).join('\n');
