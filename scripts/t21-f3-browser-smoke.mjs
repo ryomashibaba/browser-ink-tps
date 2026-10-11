@@ -190,6 +190,36 @@ async function main(){
    if(shown!==true)reject('F3J_BACKGROUND_FAILED_TO_RESTORE');
   }
  }
+ if(process.env.T21_F3L_EXPECT_TEXTURES==='1'){
+  const ready=await waitUntil(async()=>{
+   const t=await evaluate('window.__t21F3.snapshot().texturedSourceF3l');
+   if(t.status==='ERROR')reject('F3L_TEXTURED_SOURCE_LOAD_FAILED_'+t.sourceError);
+   return t.status==='READY'&&t.totalOriginalTriangles===57578?t:null;
+  },120000);
+  if(ready.sourceUVOnly!==true||ready.physicsSolidsAdded!==0||
+    ready.scoreableSurfacesAdded!==0||ready.instanceMatricesRecovered!==false||
+    ready.productionAuthorized!==false||ready.verifiedTextures<8||
+    ready.materialGroups<10)
+   reject('F3L_TEXTURED_SOURCE_PARITY_OR_AUTHORITY_DRIFT_'+JSON.stringify(ready));
+  const textured=await evaluate(`(() => {
+   document.querySelector('#t21-f3l-textured')?.click();
+   return window.__t21F3.snapshot();
+  })()`);
+  if(!textured.texturedSourceF3l.enabled||textured.fullSource.enabled||
+     textured.originalSourceSolids!==25||textured.originalSourceNavigationLinks!==26||
+     textured.sourceScoreablePromotions!==0)
+   reject('F3L_SOURCE_TEXTURE_TOGGLE_STAGE_AUTHORITY_CHANGED');
+  await sleep(450);
+  frames.push(await screenshot('F3L_PINNED_ORIGINAL_UV_TEXTURES'));
+  const restored=await evaluate(`(() => {
+   document.querySelector('#t21-f3l-textured')?.click();
+   return window.__t21F3.snapshot();
+  })()`);
+  if(restored.texturedSourceF3l.enabled||!restored.fullSource.enabled)
+   reject('F3L_FLAT_SOURCE_FALLBACK_FAILED');
+  frames.push(await screenshot('F3L_FLAT_SOURCE_RESTORED'));
+  console.log('F3L_REAL_CHROME_UV_TEXTURED_SOURCE',JSON.stringify(ready));
+ }
  if(process.env.T21_F3K_EXPECT_GALLERY==='1'){
   const available=await waitUntil(async()=>{
    const g=await evaluate('window.__t21F3.snapshot().sourceGalleryF3k');
