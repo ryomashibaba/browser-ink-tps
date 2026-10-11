@@ -4,6 +4,8 @@ on:
     branches: ["codex/t21-undertow-evidence-ledger"]
     paths:
       - "scripts/t21-f3g-source-pack.*"
+      - "scripts/t21-f3i-scene-inventory.*"
+      - "src/app/UndertowF3I*"
       - "scripts/t21-f3-browser-smoke.mjs"
       - "src/app/UndertowF3G*"
       - "src/app/UndertowF3PlayablePreviewApp.ts"
@@ -41,6 +43,10 @@ jobs:
           node scripts/t21-f3g-source-pack.mjs \
             /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.obj \
             public/t21-f3g-source
+          node scripts/t21-f3i-scene-inventory.mjs \
+            /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.obj \
+            public/t21-f3g-source
+          test -s public/t21-f3g-source/f3i-environment.json
           test -s public/t21-f3g-source/manifest.json
           node -e "const m=require('./public/t21-f3g-source/manifest.json'); if(!m.verifiedAgainstPinnedSource||m.includedOriginalTriangles<1500||m.stagePlayableAuthority!=='NONE')process.exit(1); console.log('F3G_PINNED_WHOLE_STAGE',m.includedOriginalTriangles,m.groups.length)"
       - name: Typecheck and build full-source opt-in browser bundle
@@ -57,5 +63,6 @@ jobs:
           path: |
             /tmp/t21-f3-playable-webgl2/
             public/t21-f3g-source/manifest.json
+            public/t21-f3g-source/f3i-environment.json
           if-no-files-found: warn
           retention-days: 14
