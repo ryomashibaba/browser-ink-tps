@@ -3,7 +3,11 @@ export declare const F3G_KINDS:readonly string[];
 export declare function classifyStaticMaterial(material:string):string;
 export declare function createF3gObjCollector(options?:{allowTestFixture?:boolean}):{
  line(line:string):void;
- finish():{perKind:Record<string,number[]>;vertexCount:number;totalFaces:number;ignoredFaces:number;triangleCount:number};
+ finish():{perKind:Record<string,number[]>;vertexCount:number;totalFaces:number;ignoredFaces:number;triangleCount:number;
+  coverage:{staticObjectCount:number;unplacedFldObjFaceCount:number;skippedFldBgFaceCount:number;
+   regionTriangles:{positiveZ:number;core:number;negativeZ:number};
+   actorPlacementRecovered:false;traversalAuthorityRecovered:false}
+ };
 };
 export declare function convertF3gOriginal(options:{
  input:string;output:string;allowTestFixture?:boolean
