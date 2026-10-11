@@ -2087,10 +2087,20 @@ export class CpuAgentSystem {
     this.samplePoint.copy(bot.position);
     this.samplePoint.y += 0.10;
 
+    // In the explicit frozen Undertow F3 play lab all 17 verified
+    // original floor paint surfaces are deliberately NON-SCOREABLE.
+    // Requiring Scoreable silently disabled every CPU paint event despite
+    // true source-authorized Paintable surfaces being present. Permit only
+    // physical ink there; never create points, score weights or new floors.
+    // T20 and all other CPU modes preserve the old exact flags.
+    const previewSourcePaintableOnly=this.phase14qF2RecoverableSteps&&
+      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa';
     const sample = this.gameplayInk.sampleWorld(
       this.samplePoint,
       0.45,
-      SurfaceFlags.Paintable | SurfaceFlags.Scoreable,
+      previewSourcePaintableOnly
+        ?SurfaceFlags.Paintable
+        :SurfaceFlags.Paintable | SurfaceFlags.Scoreable,
       SurfaceFlags.Wall
     );
     if (!sample) return;
