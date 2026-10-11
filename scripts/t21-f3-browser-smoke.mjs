@@ -124,12 +124,12 @@ async function main(){
   reject('ORIGINAL_SOURCE_RADAR_UNAUTHORIZED_'+JSON.stringify(radar));
  if(initial.phase!=='F3'||!initial.playableSandbox||
   !initial.originalSourceStudyVisible||
-  initial.originalSourceStudy?.sourceComponents<100||
+  initial.originalSourceStudy?.sourceComponents!==108||
   initial.originalSourceStudy?.visualOnlyUnderpassRouteComponents!==8||
   initial.originalSourceStudy?.originalSourceVerticalAdditions!==12||
   initial.originalSourceStudy?.originalSourceEdgeLinerAdditions!==4||
   initial.originalSourceStudy?.unresolvedUnderpassOriginalGapMeters!==31.71622721122581||
-  initial.originalSourceStudy?.originalTriangles!==590||
+  initial.originalSourceStudy?.originalTriangles!==672||
   initial.originalSourceStudy?.skippedUnplacedActorComponents!==8||
   initial.originalSourceStudy?.addedPhysicalSolids!==0||
   initial.originalSourceStudy?.addedNavigationLinks!==0||
@@ -155,7 +155,7 @@ async function main(){
   if(!state.sourceSurvey?.active||
      state.sourceSurvey.physicalActorRelocations!==0||
      state.originalSourceSolids!==25||
-     state.originalSourceStudy.sourceComponents<100)
+     state.originalSourceStudy.sourceComponents!==108)
    reject('T21_F3E_SURVEY_CAMERA_AUTHORITY_UNSAFE_'+JSON.stringify(state));
   if(n===0||n===3||n===4||n===5){
    await sleep(160);
