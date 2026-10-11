@@ -9,6 +9,7 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {convertF3gOriginal,PINNED_TEMPLE01_SHA256}
  from './t21-f3g-source-pack.mjs';
+import {convertF3iSceneInventory} from './t21-f3i-scene-inventory.mjs';
 const SOURCE_URL=
  'https://media.githubusercontent.com/media/kirakira-dev/KiTrix/main/stages/Vss_Temple01/Vss_Temple01.obj';
 const EXPECTED_BYTES=43263289;
@@ -39,6 +40,9 @@ try{
  if(size!==EXPECTED_BYTES||digest!==PINNED_TEMPLE01_SHA256)
   throw Error('T21_F3G_ORIGINAL_ASSET_VERIFICATION_FAILED size='+size+' sha256='+digest);
  const manifest=await convertF3gOriginal({input:file,output});
+ const environment=await convertF3iSceneInventory({input:file,output});
+ if(environment.productionAuthorization!==false||environment.actorPlacementRecovered!==false)
+  throw Error('T21_F3I_SOURCE_AUTHORITY_INVALID');
  if(manifest.sourceSHA256!==digest||manifest.stagePlayableAuthority!=='NONE')
   throw Error('T21_F3G_PREPARE_AUTHORITY_INVALID');
  console.log('F3G_READY',JSON.stringify({
@@ -46,7 +50,9 @@ try{
   materials:manifest.groups.length,
   output,
   originalSha256:manifest.sourceSHA256,
-  gameplayAuthority:'NONE'
+  gameplayAuthority:'NONE',
+  backgroundCandidateTriangles:environment.backgroundTriangleCount,
+  unplacedActorObjects:environment.actorObjectCount
  }));
  console.log('Start npm run dev and open ?t21Play=preview&t21FullSource=review');
 }catch(error){
