@@ -114,14 +114,21 @@ export async function loadF3lTexturedSource(app:AppBase){
  try{
   const textures=await Promise.all(manifest.textures.map(async file=>{
    const bytes=await verifiedBuffer(base+'f3l-textures/'+file.file,file.bytes,file.sha256);
-   const png=new Blob([bytes],{type:'image/png'});
-   const img=await createImageBitmap(png);
+   const blobUrl=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));
+   const img=new Image();
+   try{
+    await new Promise<void>((ok,no)=>{
+     img.onload=()=>ok();
+     img.onerror=()=>no(Error('F3L_ORIGINAL_PNG_DECODE_FAILED'));
+     img.src=blobUrl;
+    });
+   }finally{URL.revokeObjectURL(blobUrl);}
    const t=new Texture(app.graphicsDevice,{
     name:'F3L_SOURCE_'+file.file,minFilter:FILTER_LINEAR_MIPMAP_LINEAR,
     magFilter:FILTER_LINEAR,addressU:ADDRESS_REPEAT,addressV:ADDRESS_REPEAT,
     mipmaps:true
    });
-   t.setSource(img);img.close();
+   t.setSource(img);
    gpuTextures.push(t);
    return [file.file,t] as const;
   }));
