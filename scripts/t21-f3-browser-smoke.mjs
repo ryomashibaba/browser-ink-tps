@@ -158,6 +158,32 @@ async function main(){
   initial.unrestricted4v4Certified!==false)
   reject('SOURCE_AUTHORITY_OR_STARTUP_DRIFT_'+JSON.stringify(initial));
  const frames=[await screenshot('F3_0_SOURCE_STAGE')];
+ if(process.env.T21_F3I_EXPECT_ENV==='1'){
+  const candidate=await evaluate('window.__t21F3.snapshot().environmentF3i');
+  if(candidate.status!=='READY'||candidate.stageCoordinatesVerified!==false||
+     candidate.actorPlacementsVerified!==false||candidate.stageSolidsAdded!==0||
+     candidate.productionAuthorized!==false||candidate.sourceOnly!==true||
+     candidate.unplacedActorObjects<1)
+   reject('F3I_SOURCE_ENVIRONMENT_AUTHORITY_GATE_'+JSON.stringify(candidate));
+  console.log('F3I_REAL_CHROME_ENVIRONMENT',JSON.stringify(candidate));
+  if(candidate.candidateTriangles>0){
+   const shown=await evaluate(`(() => {
+    document.querySelector('#t21-f3i-environment')?.click();
+    return window.__t21F3.snapshot();
+   })()`);
+   if(!shown.environmentF3i.visible||shown.originalSourceSolids!==25||
+      shown.sourceScoreablePromotions!==0||
+      shown.originalSourceNavigationLinks!==26)
+    reject('F3I_BACKGROUND_RENDER_AUTHORITY_CHANGED_'+JSON.stringify(shown));
+   await sleep(300);
+   frames.push(await screenshot('F3I_SOURCE_BACKGROUND_OPTIN_COMPARE'));
+   const hidden=await evaluate(`(() => {
+    document.querySelector('#t21-f3i-environment')?.click();
+    return window.__t21F3.snapshot().environmentF3i.visible;
+   })()`);
+   if(hidden!==false)reject('F3I_BACKGROUND_FAILED_TO_TOGGLE_OFF');
+  }
+ }
  // These camera-only stage survey frames are a direct inspection of
  // genuine original 3D architecture; no game foot, collider or nav moves.
  for(let n=0;n<6;n++){
