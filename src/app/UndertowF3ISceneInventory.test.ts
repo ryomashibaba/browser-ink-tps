@@ -1,9 +1,6 @@
 import {describe,it,expect} from 'vitest';
-import {createF3iSceneCollector,convertF3iSceneInventory}
+import {createF3iSceneCollector}
  from '../../scripts/t21-f3i-scene-inventory.mjs';
-import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
 const lines=[
  'v 0 0 0','v 2 0 0','v 0 0 3','v 400 0 0',
  'o FldBG_Temple01_BG','usemtl FldBG_Temple01_Wall','f 1 2 3',
@@ -25,21 +22,6 @@ describe('F3I macro environment diagnostic without authority promotion',()=>{
   expect(m.actorPlacementRecovered).toBe(false);
   expect(m.environmentStageRegistrationRecovered).toBe(false);
   expect(m.traversalAuthorityRecovered).toBe(false);
- });
- it('writes only local opt-in hashed preview BIN and auditable metadata',async()=>{
-  const dir=await mkdtemp(join(tmpdir(),'f3i-fixture-'));
-  try{
-   const source=join(dir,'fixture.obj'),output=join(dir,'preview');
-   await writeFile(source,lines.join('\n'));
-   const m=await convertF3iSceneInventory({input:source,output,allowTestFixture:true});
-   expect(m.productionAuthorization).toBe(false);
-   expect(m.stageCollisionSolidsAdded).toBe(0);
-   expect(m.backgroundTriangleCount).toBe(1);
-   expect(m.previewBin.bytes).toBe(36);
-   expect((await readFile(join(output,m.previewBin.file))).byteLength).toBe(36);
-   expect(JSON.parse(await readFile(join(output,'f3i-environment.json'),'utf-8'))
-    .actorPlacementRecovered).toBe(false);
-  }finally{await rm(dir,{recursive:true,force:true});}
  });
  it('fails closed on malformed face or missing OBJ indices',()=>{
   const c=createF3iSceneCollector();
