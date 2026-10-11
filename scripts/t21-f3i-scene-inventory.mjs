@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 import {createInterface} from 'node:readline';
 import {basename,join,resolve} from 'node:path';
 import {PINNED_TEMPLE01_SHA256} from './t21-f3g-source-pack.mjs';
+import {convertF3kGallery} from './t21-f3k-family-gallery.mjs';
 const MAX_COORD=300,MAX_BG_TRIANGLES=180000,MAX_VERTICES=5000000,MAX_OBJECTS=5000;
 export function createF3iSceneCollector(){
  const points=[],background=[];
@@ -150,6 +151,10 @@ export async function convertF3iSceneInventory({input,output,allowTestFixture=fa
    sha256:createHash('sha256').update(bin).digest('hex')}
  };
  writeFileSync(join(dest,'f3i-environment.json'),JSON.stringify(manifest,null,2)+'\n');
+ const gallery=await convertF3kGallery({input:source,output:dest,
+  families:result.macroAssetFamilies.slice(0,8),allowTestFixture});
+ if(gallery.productionAuthorization!==false||gallery.actorPlacementRecovered!==false)
+  throw Error('T21_F3K_ACTOR_PLACEMENT_FORBIDDEN');
  return manifest;
 }
 if(process.argv[1]&&basename(process.argv[1])==='t21-f3i-scene-inventory.mjs'){
@@ -164,6 +169,7 @@ if(process.argv[1]&&basename(process.argv[1])==='t21-f3i-scene-inventory.mjs'){
    actorPlacementRecovered:false,playableAuthority:'NONE',
    largestActors:m.largestUnplacedActors.slice(0,6).map(x=>({name:x.name,faces:x.faces})),
    macroFamilyCount:m.macroFamilyCount,
+   galleryRepresentativeFamilies:Math.min(8,m.macroFamilyCount),
    topFamilies:m.macroAssetFamilies.slice(0,8).map(x=>({
     family:x.family,sourceTriangles:x.sourceTriangles,sourceMeshVariants:x.sourceMeshVariants
    }))

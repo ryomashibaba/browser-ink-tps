@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/t21-f3g-source-pack.*"
       - "scripts/t21-f3i-scene-inventory.*"
+      - "scripts/t21-f3k-family-gallery.*"
       - "src/app/UndertowF3I*"
       - "scripts/t21-f3-browser-smoke.mjs"
       - "src/app/UndertowF3G*"
@@ -47,6 +48,8 @@ jobs:
             /tmp/f3g-source/kitrix/stages/Vss_Temple01/Vss_Temple01.obj \
             public/t21-f3g-source
           test -s public/t21-f3g-source/f3i-environment.json
+          test -s public/t21-f3g-source/f3k-family-gallery.json
+          node -e "const m=require('./public/t21-f3g-source/f3k-family-gallery.json');if(m.components.length!==8||m.actorPlacementRecovered!==false||m.stageCollisionSolidsAdded!==0)process.exit(1);console.log('F3K_PINNED_SOURCE_FAMILY_GALLERY',m.components.map(x=>x.family))"
           node -e "const m=require('./public/t21-f3g-source/f3i-environment.json');if(!m.macroFamilyCount||m.macroAssetFamilies.length<1||m.macroFamilyLedgerAuthoritativeForPlacements!==false||m.actorPlacementRecovered!==false)process.exit(1);console.log('F3J_PINNED_MACRO_ASSET_FAMILIES',m.macroFamilyCount,m.actorObjectCount,m.backgroundTriangleCount)"
           test -s public/t21-f3g-source/manifest.json
           node -e "const m=require('./public/t21-f3g-source/manifest.json'); if(!m.verifiedAgainstPinnedSource||m.includedOriginalTriangles<1500||m.stagePlayableAuthority!=='NONE')process.exit(1); console.log('F3G_PINNED_WHOLE_STAGE',m.includedOriginalTriangles,m.groups.length)"
@@ -56,6 +59,7 @@ jobs:
         env:
           T21_F3G_EXPECT_WHOLE: "1"
           T21_F3I_EXPECT_ENV: "1"
+          T21_F3K_EXPECT_GALLERY: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()
@@ -66,5 +70,6 @@ jobs:
             /tmp/t21-f3-playable-webgl2/
             public/t21-f3g-source/manifest.json
             public/t21-f3g-source/f3i-environment.json
+            public/t21-f3g-source/f3k-family-gallery.json
           if-no-files-found: warn
           retention-days: 14
