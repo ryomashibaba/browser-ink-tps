@@ -53,11 +53,12 @@ export function auditF3iEnvironmentManifest(m:F3iEnvironmentManifest){
   throw Error('T21_F3I_UNREGISTERED_OR_UNPINNED_ENVIRONMENT_REJECTED');
  if(m.macroAssetFamilies!==undefined||m.macroFamilyCount!==undefined||
    m.macroFamilyLedgerAuthoritativeForPlacements!==undefined){
+  const familyCount=m.macroFamilyCount??-1;
   if(!Array.isArray(m.macroAssetFamilies)||
-    !Number.isSafeInteger(m.macroFamilyCount)||m.macroFamilyCount<1||
-    m.macroFamilyCount>m.actorObjectCount||
+    !Number.isSafeInteger(familyCount)||familyCount<1||
+    familyCount>m.actorObjectCount||
     m.macroAssetFamilies.length>24||
-    m.macroAssetFamilies.length>m.macroFamilyCount||
+    m.macroAssetFamilies.length>familyCount||
     m.macroFamilyLedgerAuthoritativeForPlacements!==false)
    throw Error('T21_F3J_UNPLACED_FAMILY_LEDGER_UNTRUSTED');
   const names=new Set();
