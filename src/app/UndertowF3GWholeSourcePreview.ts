@@ -87,7 +87,7 @@ function flatOriginalNormals(pos:Float32Array):Float32Array{
  return normal;
 }
 export async function loadF3gWholeSource(app:AppBase){
- const base=import.meta.env.BASE_URL+'t21-f3g-source/';
+ const base=new URL('t21-f3g-source/',document.baseURI).toString();
  const response=await fetch(base+'manifest.json',{cache:'no-store'});
  if(!response.ok)throw Error('T21_F3G_SOURCE_PACK_NOT_INSTALLED_HTTP_'+response.status);
  const manifest=await response.json() as F3GPackManifest;

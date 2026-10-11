@@ -22,9 +22,9 @@ describe('F3G full-original OBJ optical-only importer',()=>{
   expect(m.totalFaces).toBe(4);
   expect(m.ignoredFaces).toBe(2);
   expect(m.triangleCount).toBe(3);
-  expect(m.perKind.FLOOR.length).toBe(18);
-  expect(m.perKind.GLASS.length).toBe(9);
-  expect(m.perKind.SLOPE.length).toBe(0);
+  expect(m.perKind.FLOOR?.length).toBe(18);
+  expect(m.perKind.GLASS?.length).toBe(9);
+  expect(m.perKind.SLOPE?.length).toBe(0);
   expect(classifyStaticMaterial('Fld_Temple01_PillarBase00')).toBe('SUPPORT');
   expect(F3G_KINDS).toHaveLength(7);
   expect(PINNED_TEMPLE01_SHA256).toHaveLength(64);
