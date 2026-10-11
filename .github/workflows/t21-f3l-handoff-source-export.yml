@@ -1,0 +1,38 @@
+name: T21 exact-head handoff source export
+on:
+  push:
+    branches: [codex/t21-handoff-export-20261011-f3l]
+permissions:
+  contents: read
+jobs:
+  source-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Archive immutable development head and Git history
+        env:
+          EXPECTED_HEAD: 8cfc95756ef0b56e2c33dc9f89a9041126daa272
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${EXPECTED_HEAD}^{commit}"
+          mkdir -p exports
+          git archive --format=zip --output=exports/T21_F3L_EXACT_SOURCE.zip "${EXPECTED_HEAD}"
+          git bundle create exports/T21_F3L_GIT_HISTORY.bundle --all
+          git log --format='%H %aI %s' -n 160 "${EXPECTED_HEAD}" > exports/T21_F3L_RECENT_COMMITS.txt
+          git rev-parse "${EXPECTED_HEAD}^{tree}" > exports/T21_F3L_TREE_SHA.txt
+          git show -s --format='%H%n%cI%n%s' "${EXPECTED_HEAD}" > exports/T21_F3L_PINNED_COMMIT.txt
+          (cd exports && sha256sum T21_F3L_EXACT_SOURCE.zip T21_F3L_GIT_HISTORY.bundle > SOURCE_ARCHIVE_SHA256.txt)
+          test -s exports/T21_F3L_EXACT_SOURCE.zip
+          test -s exports/T21_F3L_GIT_HISTORY.bundle
+      - name: Upload handoff exact-source and Git history
+        uses: actions/upload-artifact@v4
+        with:
+          name: T21-F3L-EXACT-NEW-CHAT-HANDOFF
+          path: exports/
+          if-no-files-found: error
+          retention-days: 7
