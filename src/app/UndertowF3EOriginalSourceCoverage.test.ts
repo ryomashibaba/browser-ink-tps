@@ -12,9 +12,13 @@ describe('F3E all source backed architectural visual terrain only',()=>{
   const before={solids:stage.solids,paint:stage.paintSurfaces,
    links:stage.navigationLinks};
   const {parts,manifest}=auditF3eSourceCoverage(stage);
-  expect(manifest.sourceComponents).toBeGreaterThan(55);
+  expect(manifest.sourceComponents).toBeGreaterThan(95);
   expect(manifest.originalTriangles).toBeGreaterThan(200);
   expect(manifest.skippedUnplacedActorComponents).toBe(8);
+  expect(manifest.visualOnlyUnderpassRouteComponents).toBe(8);
+  expect(manifest.originalSourceVerticalAdditions).toBe(12);
+  expect(manifest.originalSourceEdgeLinerAdditions).toBe(4);
+  expect(manifest.unresolvedUnderpassOriginalGapMeters).toBeCloseTo(31.71622721122581,9);
   expect(new Set(parts.map(m=>m.sourceComponentId)).size).toBe(parts.length);
   expect(parts.every(m=>m.originalMesh&&m.vertices.length%3===0&&
    m.collisionPaintNavigationScoreAuthority==='NONE')).toBe(true);

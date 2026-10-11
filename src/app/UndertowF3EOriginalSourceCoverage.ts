@@ -35,6 +35,12 @@ import {UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES}
  from '../stage/undertow/UndertowSpillwayPhase12DRecoveredSourceGeometry';
 import {UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS}
  from '../stage/undertow/UndertowSpillwayPhase12KOriginalPillarNeighbors';
+import {UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES}
+ from '../stage/undertow/UndertowSpillwayVerticalSourcePhase5BGeometry';
+import {UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES}
+ from '../stage/undertow/UndertowSpillwayPhase8StaticSourceGeometry';
+import {UNDERTOW_UNDERPASS_ROUTE_COMPONENTS,UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT}
+ from '../stage/undertow/UndertowSpillwayUnderpassRouteGeometry';
 
 type Shade='CONCRETE'|'SLOPE'|'WALL'|'GLASS'|'SUPPORT'|'HIGH'|'DETAIL';
 export interface F3ESourceFace{
@@ -50,6 +56,10 @@ export interface F3ECoverageManifest{
  readonly sourceComponents:number;
  readonly originalTriangles:number;
  readonly skippedUnplacedActorComponents:number;
+ readonly visualOnlyUnderpassRouteComponents:number;
+ readonly originalSourceVerticalAdditions:number;
+ readonly originalSourceEdgeLinerAdditions:number;
+ readonly unresolvedUnderpassOriginalGapMeters:31.71622721122581;
  readonly categories:Readonly<Record<Shade,number>>;
  readonly sourceOnly:true;
  readonly addedPhysicalSolids:0;
@@ -66,6 +76,20 @@ type SourceRecord={
  readonly sourceComponentId?:string;
  readonly sourceComponentKey?:string;
 };
+const ORIGINAL_STATIC_ROUTE_STUDIES:readonly SourceRecord[]=
+ UNDERTOW_UNDERPASS_ROUTE_COMPONENTS
+  // Instanced PntSet routes have no independently captured game placement.
+  .filter(m=>!m.sourceObject.startsWith('FldObj_'))
+  .map(m=>({
+   id:m.id,
+   sourceComponentId:'PINNED_TEMPLE01_ROUTE:'+m.sourceObject+'|'+m.id,
+   sourceMaterial:m.sourceMaterial,
+   vertices:m.mesh.indices.map(i=>m.mesh.vertices[i]!),
+   runtimePromotionAuthorized:false as const
+  }));
+const EXTRA_SOURCE_EDGE_LINERS=
+ UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES
+  .filter(m=>m.kind==='SIDE_EDGE_LINER');
 const GROUPS:readonly (readonly SourceRecord[])[]=[
  UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES,
  UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES,
@@ -77,7 +101,12 @@ const GROUPS:readonly (readonly SourceRecord[])[]=[
  UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES,
  UNDERTOW_T21_PHASE12C_ELIGIBLE_ORIGINAL_SOURCE_MESHES,
  UNDERTOW_T21_PHASE12D_RECOVERED_SOURCE_MESHES,
- UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS
+ UNDERTOW_T21_PHASE12K_ORIGINAL_PILLAR_NEIGHBORS,
+ // F3 already renders the other 12 Phase8 source pillars and all
+ // 20 Phase7/6 Phase12I structures. Do not draw those twice.
+ UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES,
+ EXTRA_SOURCE_EDGE_LINERS,
+ ORIGINAL_STATIC_ROUTE_STUDIES
 ];
 function shade(material:string):Shade{
  if(material.includes('Glass'))return 'GLASS';
@@ -98,6 +127,9 @@ export function auditF3eSourceCoverage(stage:StageDefinition){
     stage.solids.length!==25||stage.paintSurfaces.length!==17||
     stage.navigationLinks?.length!==26)
   throw Error('T21_F3E_IMMUTABLE_STAGE_AUTHORITY_REQUIRED');
+ if(UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.runtimePromotionAuthorized!==false||
+    UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.experimentalRuntimeInclusionReachedTarget!==false)
+   throw Error('T21_F3F_FAILED_UNDERPASS_EXPERIMENT_NOT_PHYSICS_AUTHORITY');
  const parts:F3ESourceFace[]=[];
  const seen=new Set<string>();
  let skipped=0;
@@ -123,7 +155,7 @@ export function auditF3eSourceCoverage(stage:StageDefinition){
    collisionPaintNavigationScoreAuthority:'NONE' as const
   }));
  }
- if(parts.length<55||skipped!==8)
+ if(parts.length<95||skipped!==8)
   throw Error('T21_F3E_ORIGINAL_SOURCE_COVERAGE_REGRESSION '+
    parts.length+'/'+skipped);
  const categories={
@@ -134,6 +166,10 @@ export function auditF3eSourceCoverage(stage:StageDefinition){
   sourceComponents:parts.length,
   originalTriangles:parts.reduce((n,p)=>n+p.vertices.length/3,0),
   skippedUnplacedActorComponents:skipped,
+  visualOnlyUnderpassRouteComponents:ORIGINAL_STATIC_ROUTE_STUDIES.length,
+  originalSourceVerticalAdditions:UNDERTOW_T21_VERTICAL_SOURCE_PHASE5B_MESHES.length,
+  originalSourceEdgeLinerAdditions:EXTRA_SOURCE_EDGE_LINERS.length,
+  unresolvedUnderpassOriginalGapMeters:31.71622721122581,
   categories:Object.freeze(categories),
   sourceOnly:true,addedPhysicalSolids:0,addedPaintSurfaces:0,
   addedNavigationLinks:0,inferredCorridorConnections:0,

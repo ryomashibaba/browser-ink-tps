@@ -446,7 +446,9 @@ export class UndertowF3PlayablePreviewApp{
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
-   'F3E SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+
+   'F3F SOURCE ONLY · 8 original underpass pieces (NOT walkable)'+
+    ' · unresolved gap '+state.originalSourceStudy.unresolvedUnderpassOriginalGapMeters.toFixed(2)+'m',
+   'F3F SOURCE SHAPE · '+state.originalSourceStudy.sourceComponents+
     ' components / '+state.originalSourceStudy.originalTriangles+
     ' real triangles · NO GAME COLLISION',
    'Original optical structures · '+state.originalSourceOpticalStructures+
