@@ -123,6 +123,12 @@ async function main(){
  if(radar.solid!=='25'||radar.links!=='26'||radar.actors!=='8'||radar.authority!=='NONE')
   reject('ORIGINAL_SOURCE_RADAR_UNAUTHORIZED_'+JSON.stringify(radar));
  if(initial.phase!=='F3'||!initial.playableSandbox||
+  !initial.originalSourceStudyVisible||
+  initial.originalSourceStudy?.sourceComponents!==84||
+  initial.originalSourceStudy?.originalTriangles!==590||
+  initial.originalSourceStudy?.skippedUnplacedActorComponents!==8||
+  initial.originalSourceStudy?.addedPhysicalSolids!==0||
+  initial.originalSourceStudy?.addedNavigationLinks!==0||
   initial.originalSourceOpticalStructures!==38||
   !(initial.originalSourceOpticalTriangles>200)||
   initial.productionAuthorized!==false||
@@ -135,6 +141,31 @@ async function main(){
   initial.unrestricted4v4Certified!==false)
   reject('SOURCE_AUTHORITY_OR_STARTUP_DRIFT_'+JSON.stringify(initial));
  const frames=[await screenshot('F3_0_SOURCE_STAGE')];
+ // These camera-only stage survey frames are a direct inspection of
+ // genuine original 3D architecture; no game foot, collider or nav moves.
+ for(let n=0;n<4;n++){
+  const state=await evaluate(`(() => {
+    document.querySelector('#t21-f3-source-survey')?.click();
+    return window.__t21F3.snapshot();
+   })()`);
+  if(!state.sourceSurvey?.active||
+     state.sourceSurvey.physicalActorRelocations!==0||
+     state.originalSourceSolids!==25||
+     state.originalSourceStudy.sourceComponents!==84)
+   reject('T21_F3E_SURVEY_CAMERA_AUTHORITY_UNSAFE_'+JSON.stringify(state));
+  if(n===0||n===3){
+   await sleep(160);
+   frames.push(await screenshot(n===0?'F3E_SOURCE_CENTER_OVERVIEW':
+    'F3E_SOURCE_HIGH_TOPDOWN'));
+  }
+ }
+ const returned=await evaluate(`(() => {
+  document.querySelector('#t21-f3-source-survey')?.click();
+  return window.__t21F3.snapshot();
+ })()`);
+ if(returned.sourceSurvey?.active||returned.sourceSurvey.view!=='PLAYER'||
+    returned.sourceSurvey.physicalActorRelocations!==0)
+  reject('T21_F3E_CAMERA_DID_NOT_RETURN_TO_PLAYER');
  await waitUntil(async()=>{
   const s=await evaluate('window.__t21F3.snapshot()');
   if(s.stopReason)reject('PREINPUT_FAIL_CLOSED_'+s.stopReason);

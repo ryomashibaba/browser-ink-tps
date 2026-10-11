@@ -48,6 +48,7 @@ import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
+import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -100,6 +101,9 @@ export class UndertowF3PlayablePreviewApp{
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
+ private readonly survey:UndertowF3ESourceSurvey;
+ private surveyWasPaused=false;
+ private readonly surveyButton:HTMLButtonElement;
  private readonly p=new Vec3();
  private readonly aim=new Vec3();
  private readonly target=new Vec3();
@@ -137,6 +141,7 @@ export class UndertowF3PlayablePreviewApp{
    farClip:400,fov:63,layers:[world.id]
   });
   app.root.addChild(cameraEntity);
+  this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,this.rawStage);
   this.nav=new RecastStageNavigation(this.rawStage,this.stats);
   this.physics=new RapierStagePhysics(STEP,this.rawStage);
   this.physics.step();
@@ -219,6 +224,16 @@ export class UndertowF3PlayablePreviewApp{
    btn.textContent='Source terrain study: '+
     (this.sourceCompletion.root.enabled?'ON':'OFF');
   });
+  this.surveyButton=document.createElement('button');
+  this.surveyButton.id='t21-f3-source-survey';
+  this.surveyButton.textContent='SURVEY STAGE (V) · next viewpoint';
+  this.surveyButton.style.cssText='position:fixed;bottom:16px;left:16px;'+
+   'z-index:55;pointer-events:auto;border:1px solid #49cedb;'+
+   'border-radius:8px;background:#051627;color:#e0fbff;'+
+   'box-shadow:0 10px 28px #0008;padding:10px 15px;'+
+   'font:700 12px ui-monospace,monospace;cursor:pointer';
+  this.surveyButton.addEventListener('click',()=>this.toggleSurvey());
+  ui.appendChild(this.surveyButton);
   const cross=document.createElement('div');
   cross.id='t21-f3-crosshair';
   cross.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);'+
@@ -231,6 +246,7 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
    if(ev.code==='KeyR')this.restart();
+   if(ev.code==='KeyV')this.toggleSurvey();
   });
   const renderer=(app.graphicsDevice as {deviceType?:string}).deviceType;
   if(renderer!=='webgl2')throw Error('T21_F3_REAL_WEBGL2_REQUIRED');
@@ -251,7 +267,19 @@ export class UndertowF3PlayablePreviewApp{
   app.start();
  }
 
+ private toggleSurvey(){
+  const wasSurvey=this.survey.snapshot().active;
+  if(!wasSurvey)this.surveyWasPaused=this.paused;
+  const now=this.survey.cycle();
+  this.paused=now.active?true:this.surveyWasPaused;
+  this.panel.style.display=now.active?'none':'';
+  this.surveyButton.textContent=now.active
+   ?'SURVEY: '+now.view+' · next (V)'
+   :'SURVEY STAGE (V) · next viewpoint';
+  this.refresh();
+ }
  private togglePause(){
+  if(this.survey.snapshot().active)return;
   if(this.stopReason)return;
   this.paused=!this.paused;
   this.refresh();
@@ -384,6 +412,7 @@ export class UndertowF3PlayablePreviewApp{
    originalSourceStudy:this.sourceCompletion.manifest,
    originalSourceStudyVisible:this.sourceCompletion.root.enabled,
    sourceOpticalStructuresVisible:this.structures.root.enabled,
+   sourceSurvey:this.survey.snapshot(),
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
    unrestricted4v4Certified:false,
