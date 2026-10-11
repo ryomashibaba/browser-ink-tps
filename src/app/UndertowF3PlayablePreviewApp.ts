@@ -44,6 +44,7 @@ import {planSourceSupportedT21QaSpawnSlots,
  from '../stage/undertow/UndertowPhase14QSourceSpawnPlan';
 import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
+import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -81,6 +82,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly shared:UndertowPhase14QSharedActorCollision;
  private readonly cpu:CpuAgentSystem;
  private readonly traffic:UndertowF3SourceTraffic;
+ private readonly humanCrowd:UndertowF3NativeHumanCrowd;
  private readonly player:PlayerController;
  private readonly resources:PlayerResources;
  private readonly camera:ThirdPersonCamera;
@@ -164,10 +166,11 @@ export class UndertowF3PlayablePreviewApp{
   this.feedback=new GameFeedback(app,canvas);
   this.shared=new UndertowPhase14QSharedActorCollision(this.physics,stage,true);
   const adapter=new UndertowPhase14ECpuHandoff(stage,true);
-  // No passive Crowd clone of a freely jumping human: real Rapier HUMAN
-  // capsule is still in the common world and vetoes every CPU ground step.
+  // Native eighth Crowd steering neighbour exists ONLY where the true
+  // HUMAN Rapier foot is source-supported. Midair has no fake NavMesh foot.
+  this.humanCrowd=new UndertowF3NativeHumanCrowd(this.nav,stage);
   this.cpu=new CpuAgentSystem(app,this.nav,this.ink,this.coordinator,
-   this.stats,stage,Team.A,adapter,this.shared,undefined,true);
+   this.stats,stage,Team.A,adapter,this.shared,this.humanCrowd,true);
   const bots=(this.cpu as unknown as {bots:F3TrafficCpu[]}).bots;
   this.traffic=new UndertowF3SourceTraffic(stage,this.nav,slots,bots);
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
@@ -369,7 +372,8 @@ export class UndertowF3PlayablePreviewApp{
    unrestricted4v4Certified:false,
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
-   cpu:progress,paintEventsPerSecond:this.stats.paintEventsPerSecond,
+   cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   paintEventsPerSecond:this.stats.paintEventsPerSecond,
    cpuShots:this.stats.cpuShots,shotsFired:this.stats.shotsFired,
    tick:this.clock.tick,paused:this.paused,
    matchState:this.matchState,timeRemainingSeconds:this.remainingSeconds,
@@ -396,6 +400,8 @@ export class UndertowF3PlayablePreviewApp{
     ' | original links '+p.originalSourceLinksUsed,
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
     ' | paint/s '+state.paintEventsPerSecond.toFixed(1),
+   'HUMAN avoidance · '+(state.humanCrowd.active?'NATIVE 8TH CROWD':'AIRBORNE / UNVERIFIED')+
+    ' · anchors '+state.humanCrowd.attaches,
    'CPU state · '+p.cpu.map(b=>b.id+':'+
     (b.rejoined?'LOWER':b.mobilityState==='GROUND'?'UPPER':b.mobilityState)).join(' '),
    'Tick '+state.tick+' · '+(state.paused?'PAUSED':'RUNNING'),

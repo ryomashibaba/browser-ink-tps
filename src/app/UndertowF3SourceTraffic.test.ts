@@ -24,6 +24,7 @@ import {planSourceSupportedT21QaSpawnSlots,withProvisionalT21QaSpawnMetadata}
  from '../stage/undertow/UndertowPhase14QSourceSpawnPlan';
 import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
+import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 
 const DT=1/60;
 type Bot=F3TrafficCpu&{agent:CrowdAgent|null};
@@ -31,7 +32,7 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
- it('reaches all seven real CPU first-drops and lower NavMesh rejoins with a genuine PlayerController and no passive human Crowd proxy',()=>{
+ for(const movingHuman of [false,true])it('7/7 native-source actors with grounded human avoidance, obstructed='+movingHuman,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
    const source=undertowT21dConnectivityQaStage();
@@ -44,7 +45,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
    const stage=withProvisionalT21QaSpawnMetadata(source,slots);
    const pInput={moveX:0,moveY:0,jumpHeld:false,squidHeld:false,
     consumeJump:()=>false} as PlayerInput;
-   const camera=({getFlatForward:(v:Vec3)=>v.set(0,0,1)}) as ThirdPersonCamera;
+   const camera=({getFlatForward:(v:Vec3)=>v.set(0,0,-1)}) as ThirdPersonCamera;
    const player=new PlayerController(app,physics,pInput,camera,ink,stats);
    player.setTeam(Team.A);
    player.teleport(new Vec3(slots.teamASlots[3]![0],
@@ -52,14 +53,17 @@ describe('F3B playable 8-actor original source runtime',()=>{
     slots.teamASlots[3]![2]));
    const shared=new UndertowPhase14QSharedActorCollision(physics,stage,true);
    const handoff=new UndertowPhase14ECpuHandoff(stage,true);
+   const liveHuman=new UndertowF3NativeHumanCrowd(nav,stage);
    const cpu=new CpuAgentSystem(app,nav,ink,
     {enqueue:vi.fn()} as never,stats,stage,Team.A,
-    handoff,shared,undefined,true);
+    handoff,shared,liveHuman,true);
    const bots=(cpu as unknown as {bots:Bot[]}).bots;
    const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots);
    let done=0,stop:string|null=null,overlap:string|null=null,
     minimumSeparation=Infinity,maxGroundStep=0;
    for(let frame=1;frame<=2400;frame++){
+    (pInput as unknown as {moveY:number}).moveY=
+     movingHuman&&frame<=28?1:0;
     const before=bots.map(b=>b.position.clone());
     try{
      player.computeFixed(DT);
@@ -102,6 +106,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     released:state.releasedCpuIds,
     freeCombatEnabled:state.freeCombatEnabled,
     sourceLinks:state.originalSourceLinksUsed,
+    realHumanPassiveNav:liveHuman.snapshot, movingHuman,
     originalSourceOnly:true,productionAuthorized:false
    }));
    expect(stop).toBeNull();
@@ -115,6 +120,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
    expect(stage.paintSurfaces).toBe(frozen.paintSurfaces);
    expect(stage.navigationLinks).toBe(frozen.navigationLinks);
    cpu.reset(Team.A);
+   liveHuman.dispose();
    shared.dispose();
   }finally{stub.mockRestore();}
  });
