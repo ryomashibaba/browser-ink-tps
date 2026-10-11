@@ -44,8 +44,8 @@ export function auditF3kGalleryManifest(m:F3kGalleryManifest){
      !/^[0-9a-f]{64}$/.test(a.sha256)||
      !Array.isArray(a.min)||!Array.isArray(a.max)||
      a.min.length!==3||a.max.length!==3||
-     a.min.some((v,k)=>!Number.isFinite(v)||Math.abs(v)>10000||v>a.max[k]!)||
-     a.max.some(v=>!Number.isFinite(v)||Math.abs(v)>10000))
+     a.min.some((v:number,k:number)=>!Number.isFinite(v)||Math.abs(v)>10000||v>a.max[k]!)||
+     a.max.some((v:number)=>!Number.isFinite(v)||Math.abs(v)>10000))
    throw Error('T21_F3K_INVALID_SOURCE_COMPONENT');
   sum+=a.originalTriangles;
   families.add(a.family);objects.add(a.representativeObject);
