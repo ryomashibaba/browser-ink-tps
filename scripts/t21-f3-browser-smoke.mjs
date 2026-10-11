@@ -172,6 +172,34 @@ async function main(){
  // not an artificial instantaneous state setter or hidden CPU teleport.
  let completed=fired;
  if(longCpu){
+  // In the input smoke, W moves the HUMAN into A3's authentic narrow
+  // original-source departure lane. Collision must NOT be disabled to
+  // artificially force A3 through a stationary real player. Retreat on
+  // ACTUAL physical keyboard input before the full seven-CPU clearance
+  // proof, recording both motions to distinguish human-obstructed traffic.
+  const retreatFrom=await evaluate('window.__t21F3.snapshot()');
+  const retreatKey={key:'s',code:'KeyS',
+   windowsVirtualKeyCode:83,nativeVirtualKeyCode:83};
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...retreatKey});
+  const retreat=await waitUntil(async()=>{
+   const state=await evaluate('window.__t21F3.snapshot()');
+   if(state.stopReason)reject('HUMAN_RETREAT_UNSAFE_'+state.stopReason);
+   return state.tick>=retreatFrom.tick+38?state:false;
+  },70000);
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...retreatKey});
+  const retreatMeters=Math.hypot(...retreat.player.position.map((v,i)=>
+   v-retreatFrom.player.position[i]));
+  const a3Start=[-.8030697107315063,67.07270050048828];
+  const separation=Math.hypot(retreat.player.position[0]-a3Start[0],
+   retreat.player.position[2]-a3Start[1]);
+  if(retreatMeters<1.5||separation<1.6)
+   reject('REAL_PLAYER_STILL_BLOCKS_SOURCE_CPU_LANE_'+JSON.stringify({
+    retreatMeters,separation,retreat
+   }));
+  console.log('T21_F3B_REAL_PLAYER_CLEARS_SOURCE_LANE',JSON.stringify({
+   retreatMeters,separation,retreatTick:retreat.tick,
+   physicalSourceOnly:true
+  }));
   // Browser-driven native fixed-step integrator. Genuine Rapier and Recast
   // physics, but without waiting for software-GPU 60fps rendering.
   await cmd('Input.dispatchKeyEvent',{
