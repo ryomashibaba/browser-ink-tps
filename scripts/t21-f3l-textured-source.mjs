@@ -123,6 +123,11 @@ export async function convertF3lOriginal({input,mtl,output,allowTestFixture=fals
  if(!allowTestFixture&&originalHash!==PINNED_TEMPLE01_SHA256)
   throw Error('F3L_ORIGINAL_OBJ_HASH_MISMATCH');
  const result=collector.finish();
+ console.log('F3L_SOURCE_PARITY_DIAGNOSTIC',JSON.stringify({
+  triangles:result.triangles,sourceVertices:result.positionCount,
+  textureVertices:result.uvCount,verticesMissingUV:result.skippedNoUv,
+  materialGroups:result.groups.length,ignoredFaces:result.ignoredFaces
+ }));
  if(!allowTestFixture&&(result.triangles!==57578||result.skippedNoUv>0))
   throw Error('F3L_GEOMETRY_PARITY_OR_UV_COVERAGE_FAILURE');
  const dest=resolve(output);mkdirSync(dest,{recursive:true});
