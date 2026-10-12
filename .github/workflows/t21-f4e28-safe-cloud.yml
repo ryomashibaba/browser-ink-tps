@@ -1,0 +1,63 @@
+name: T21 F4E28 safe cloud build and browser QA (no deploy)
+
+on:
+  push:
+    branches:
+      - codex/t21-f4e28-ci-sandbox
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t21-f4e28-safe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  baseline-chrome:
+    # Public-repo CI: never check out private original video/Banc/Face-ID ZIPs.
+    # Browser snapshot: pre-existing public-code baseline, NOT F4E27 fidelity proof.
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CI: "true"
+      T21_F3_SHOT_DIR: /tmp/t21-f4e28-ci-safe-baseline
+    steps:
+      - name: Checkout source-only revision
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Cache npm downloads (no repository lockfile)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: t21-f4e28-npm-${{ runner.os }}-${{ hashFiles('package.json') }}
+      - name: Install pinned direct dependencies
+        run: npm install --no-audit --no-fund --prefer-offline
+      - name: Frozen source authority regressions
+        run: |
+          node --test scripts/t21-f3t-source-visibility.test.mjs scripts/t21-f4a-whole-stage-connectivity.test.cjs
+      - name: Typecheck and build immutable production assets
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Reject dev-only dependency URLs and broken build paths
+        run: |
+          node scripts/t21-f4e28-ci-guard.mjs self-test
+          node scripts/t21-f4e28-ci-guard.mjs build
+      - name: Real Chrome WebGL2 smoke of existing public-code stage
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Verify real browser evidence and reject identical frames
+        run: node scripts/t21-f4e28-ci-guard.mjs evidence
+      - name: Upload only a baseline screenshot and sanitized report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-f4e28-public-baseline-only
+          path: |
+            /tmp/t21-f4e28-ci-safe-baseline/F3_0_SOURCE_STAGE.png
+            /tmp/t21-f4e28-ci-safe-baseline/f4e28-safe-qa-report.json
+          if-no-files-found: warn
+          retention-days: 3
