@@ -28,7 +28,7 @@ export async function createOwnedPreview(root,{choosePort=chooseUnoccupiedPort}=
    const index=await fetchImpl(`${baseUrl}/`,{cache:'no-store'});
    if(!index.ok)throw Error('F4E29_PREVIEW_INDEX_NOT_READY');
    const html=await index.text();
-   if(!html.includes('/assets/') || /node_modules\\/.vite\\/deps|\\/@vite\\/client/i.test(html))throw Error('F4E29_NOT_A_PRODUCTION_VITE_BUILD');
+   if(!html.includes('/assets/') || /node_modules\/.vite\/deps|\/@vite\/client/i.test(html))throw Error('F4E29_NOT_A_PRODUCTION_VITE_BUILD');
    if(html!==await readFile(path.join(root,'dist','index.html'),'utf8'))throw Error('F4E29_SERVED_INDEX_DIFFERS_FROM_BUILD');
    verified=true;return true;
   },
