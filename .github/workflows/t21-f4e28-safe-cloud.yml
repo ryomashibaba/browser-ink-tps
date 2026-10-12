@@ -38,12 +38,10 @@ jobs:
           key: t21-f4e28-npm-${{ runner.os }}-${{ hashFiles('package.json') }}
       - name: Install pinned direct dependencies
         run: npm install --no-audit --no-fund --prefer-offline
-      - name: Frozen source authority regressions
-        run: |
-          node --test scripts/t21-f3t-source-visibility.test.mjs
-          node --test scripts/t21-f4a-whole-stage-connectivity.test.cjs
       - name: Typecheck and build immutable production assets
         run: npm run build -- --base=/browser-ink-tps/
+      - name: Source code unit regressions
+        run: npm test
       - name: Reject dev-only dependency URLs and broken build paths
         run: |
           node scripts/t21-f4e28-ci-guard.mjs self-test
