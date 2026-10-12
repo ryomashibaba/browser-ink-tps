@@ -47,8 +47,8 @@ try{
   if(mode==='privacy'){
     // Path-scoped. This does NOT constitute copyright clearance for source-code
     // diffs, but catches accidental staging of explicit locally-only evidence.
-    const paths=execFileSync('git',['ls-files','-z'],{encoding:'utf8'}).split('\\0').filter(Boolean);
-    const forbidden=paths.filter(p=>/(^|\\/)(EVIDENCE\\/ORIGINALS|qa\\/f4e8\\/source_pack|qa\\/f4e18\\/references|qa\\/f4e7\\/portable_truth)\\//i.test(p) || /\\.(?:mp4|obj|face-ids\\.bin)$/i.test(p));
+    const paths=execFileSync('git',['ls-files','-z'],{encoding:'utf8'}).split('\0').filter(Boolean);
+    const forbidden=paths.filter(p=>/(^|\/)(EVIDENCE\/ORIGINALS|qa\/f4e8\/source_pack|qa\/f4e18\/references|qa\/f4e7\/portable_truth)\//i.test(p) || /\.(?:mp4|obj|face-ids\.bin)$/i.test(p));
     assert(forbidden.length===0,'PRIVATE_EVIDENCE_TRACKED:'+forbidden.length);
     console.log('F4E29_PUBLIC_SOURCE_ONLY_PATH_GUARD_PASS',paths.length);
   }else if(mode==='self-test'){
