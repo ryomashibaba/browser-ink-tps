@@ -8,6 +8,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import {execFileSync} from 'node:child_process';
 
 const captureDir=process.env.T21_F3_SHOT_DIR||'/tmp/t21-f4e28-ci-safe-baseline';
 const digest=buffer=>createHash('sha256').update(buffer).digest('hex');
@@ -43,7 +44,14 @@ function verifyEvidence(report,readPNG){
 }
 const mode=process.argv[2];
 try{
-  if(mode==='self-test'){
+  if(mode==='privacy'){
+    // Path-scoped. This does NOT constitute copyright clearance for source-code
+    // diffs, but catches accidental staging of explicit locally-only evidence.
+    const paths=execFileSync('git',['ls-files','-z'],{encoding:'utf8'}).split('\\0').filter(Boolean);
+    const forbidden=paths.filter(p=>/(^|\\/)(EVIDENCE\\/ORIGINALS|qa\\/f4e8\\/source_pack|qa\\/f4e18\\/references|qa\\/f4e7\\/portable_truth)\\//i.test(p) || /\\.(?:mp4|obj|face-ids\\.bin)$/i.test(p));
+    assert(forbidden.length===0,'PRIVATE_EVIDENCE_TRACKED:'+forbidden.length);
+    console.log('F4E29_PUBLIC_SOURCE_ONLY_PATH_GUARD_PASS',paths.length);
+  }else if(mode==='self-test'){
     const html='<script src="/browser-ink-tps/assets/test.js"></script><link href="/browser-ink-tps/assets/test.css">';
     verifyHtml(html);
     for(const unsafe of [html+' /@vite/client',html+' /node_modules/.vite/deps/']){
@@ -65,7 +73,7 @@ try{
     const summary=verifyEvidence(evidence,name=>readFileSync(join(captureDir,name+'.png')));
     writeFileSync(join(captureDir,'f4e28-safe-qa-report.json'),JSON.stringify(summary,null,2));
     console.log('F4E28_SAFE_BASELINE_PASS',JSON.stringify(summary));
-  }else throw Error('Usage: node scripts/t21-f4e28-ci-guard.mjs self-test|build|evidence');
+  }else throw Error('Usage: node scripts/t21-f4e28-ci-guard.mjs privacy|self-test|build|evidence');
 }catch(error){
   if(mode==='evidence'){
     mkdirSync(captureDir,{recursive:true});
