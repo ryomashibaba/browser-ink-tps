@@ -134,6 +134,12 @@ export class PerformanceStats {
   public cpuKits = '-';
   public cpuSubUses = 0;
   public cpuSpecialActivations = 0;
+  /** Actual CpuKitSystem effect activation, distinct from request acceptance. */
+  public cpuSpecialEffectsExecuted = 0;
+  /** Actual special paint queue writes; not a proof of scoreable turf. */
+  public cpuSpecialPaintRequestsEnqueued = 0;
+  /** Actual active subweapon projectiles spawned by CpuKitSystem. */
+  public cpuSubProjectilesLaunched = 0;
   public cpuSpecialReady = 0;
   public cpuAverageSpecialPercent = 0;
   public cpuScoreablePaintMeters2 = 0;
