@@ -417,7 +417,8 @@ async function main(){
    }));
   if(kitQa){
    const armed=await evaluate('window.__t21F3.armCpuKitsQa()');
-   if(!armed.armed||!armed.artificial||armed.kitEnabled!==true||
+   if(!armed.armed||!armed.artificial||armed.artificialInk!==true||
+      armed.kitEnabled!==true||
       armed.authorizedForNormalScoring!==false)
     reject('F3_MANUAL_KIT_QA_NOT_EXPLICIT_'+JSON.stringify(armed));
    console.log('T21_F3_REAL_KIT_QA_MANUALLY_ARMED',JSON.stringify(armed));
@@ -444,7 +445,7 @@ async function main(){
       kit:completed.cpuKitQa,reason:completed.stopReason
      }));
    console.log('T21_F3_MANUAL_KIT_REAL_EFFECT_PASS',JSON.stringify({
-      actor:'A2',realFoot:true,artificialGauge:true,
+      actor:'A2',realFoot:true,artificialGauge:true,artificialInk:true,
       executedSpecials:completed.cpuKitQa.specialEffectsExecuted,
       launchedSubs:completed.cpuKitQa.subProjectilesLaunched,
       enqueuedSpecialPaint:completed.cpuKitQa.specialPaintRequestsEnqueued,
@@ -457,6 +458,7 @@ async function main(){
   if(kitQa){
    const report=completed.cpuKitQa;
    if(!report?.enabled||report.artificialGaugeArms!==1||
+      report.artificialInkRefills!==1||
       report.manualSubRequests!==1||report.manualSpecialRequests!==1||
       report.subProjectilesLaunched<1||report.specialEffectsExecuted<1||
       report.specialPaintRequestsEnqueued<1||
