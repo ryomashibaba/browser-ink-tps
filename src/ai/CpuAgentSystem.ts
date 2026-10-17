@@ -242,6 +242,8 @@ export class CpuAgentSystem {
   public reset(humanTeam: Team.A | Team.B): void {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
+    this.stats.cpuQaSuspectedStalls = 0;
+    this.stats.cpuQaLongestStationarySeconds = 0;
     this.phase14eFirstDrop?.reset();
     this.phase14qGroundCollision?.resetActors();
     for (const bot of this.bots) {
@@ -290,6 +292,8 @@ export class CpuAgentSystem {
     if (!matchActive) {
       this.qaContinuity.reset();
       this.qaMotionGoals.clear();
+      this.stats.cpuQaSuspectedStalls = 0;
+      this.stats.cpuQaLongestStationarySeconds = 0;
       // Ensure no kinematic body or detached CrowdAgent leaks across matches.
       // This branch only exists for the explicitly injected QA-only adapter.
       if (this.phase14eFirstDrop) {
