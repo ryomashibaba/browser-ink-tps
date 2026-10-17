@@ -118,6 +118,8 @@ export class PerformanceStats {
   public cpuTacticalRetargets = 0;
   public cpuPaintRequests = 0;
   public cpuShots = 0;
+  /** QA-only native shots aimed at original paintable surfaces, not enemies. */
+  public cpuSourceTurfShots = 0;
   public cpuCombatHits = 0;
   public cpuSplats = 0;
   public cpuRespawns = 0;
