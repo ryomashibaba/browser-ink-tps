@@ -24,6 +24,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p
 ## 以後の操作
 
 - `RUN_INKTPS_QA.cmd` ダブルクリック：**読み取り専用の接続・正本不変チェック**。実ゲームの計測は起動しない。
+- `RUN_INKTPS_QA_TEST.cmd` ダブルクリック：**W2の実KCC・Crowd計測**。初回の `RUN_INKTPS_QA.cmd` 実行後、自動生成される。以降は毎回これ1回。
 - `RUN_INKTPS_QA.cmd run`：**隔離Q+Uビルド → W2 QA入力パッチ → 再ビルド → ChromeをPointer Lockなしで起動 → 2ルート実KCCとCrowd代理位置を記録**。通常ゲームの物理と安全停止は維持。
 - 結果：`%LOCALAPPDATA%\InkTPS-QA\F4E103W_LAST_REPORT.json`（固定）。詳細ログは `runs/w2-*/F4E103W2_LOCAL_TRACE.json`。
 - 再実行時にGitHubのマニフェストにあるSHA-256と一致するコードだけ更新。以前のVキットはビルド診断部品として再利用するが、Pointer Lockを要求するVのブラウザー自動歩行は呼び出さない。
