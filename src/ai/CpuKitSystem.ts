@@ -106,6 +106,9 @@ export class CpuKitSystem {
       });
     }
 
+    this.stats.cpuSpecialEffectsExecuted = 0;
+    this.stats.cpuSpecialPaintRequestsEnqueued = 0;
+    this.stats.cpuSubProjectilesLaunched = 0;
     this.syncStats();
   }
 
@@ -155,6 +158,9 @@ export class CpuKitSystem {
     this.pendingSpecials.length = 0;
     this.scheduledStrikes.length = 0;
     this.storms.length = 0;
+    this.stats.cpuSpecialEffectsExecuted = 0;
+    this.stats.cpuSpecialPaintRequestsEnqueued = 0;
+    this.stats.cpuSubProjectilesLaunched = 0;
     this.syncStats();
   }
 
@@ -198,6 +204,7 @@ export class CpuKitSystem {
     slot.entity.setLocalScale(d, d, d);
     slot.entity.setPosition(origin);
     slot.entity.enabled = true;
+    this.stats.cpuSubProjectilesLaunched += 1;
 
     this.feedback.subThrow(request.team, origin);
     return true;
@@ -338,6 +345,7 @@ export class CpuKitSystem {
     target: Vec3,
     direction: Vec3
   ): void {
+    this.stats.cpuSpecialEffectsExecuted += 1;
     switch (specialId) {
       case 'turf-pulse':
         this.activateTurfPulse(actorId, team, position);
@@ -611,6 +619,9 @@ export class CpuKitSystem {
       type,
       strength: 1
     });
+    if (type === PaintEventType.Special) {
+      this.stats.cpuSpecialPaintRequestsEnqueued += 1;
+    }
     return true;
   }
 
