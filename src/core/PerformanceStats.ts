@@ -120,6 +120,8 @@ export class PerformanceStats {
   public cpuShots = 0;
   /** QA-only native shots aimed at original paintable surfaces, not enemies. */
   public cpuSourceTurfShots = 0;
+  /** Actual native CPU projectile intersections with paintable surfaces. */
+  public cpuProjectilePaintHits = 0;
   public cpuCombatHits = 0;
   public cpuSplats = 0;
   public cpuRespawns = 0;
