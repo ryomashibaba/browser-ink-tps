@@ -479,7 +479,7 @@ export class CpuAgentSystem {
             const goal = this.navigation.closestPoint(this.goal);
             bot.agent?.requestMoveTarget(goal);
             if (this.phase14qGroundCollision && bot.agent) {
-              this.qaMotionGoals.set(bot.id, goal.clone());
+              this.qaMotionGoals.set(bot.id, new Vec3(goal.x, goal.y, goal.z));
             }
             this.stats.cpuTacticalRetargets += 1;
           } else {
