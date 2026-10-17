@@ -123,6 +123,12 @@ export async function main(args=process.argv.slice(2),env=process.env){
  const cfg=options(args,env);
  if(cfg.mode==='self-test')return {status:'PASS_SELF_TEST',version:VERSION};
  mkdirSync(cfg.root,{recursive:true});
+ // One permanent double-click entry point for real KCC QA. The original
+ // source stays untouched and normal check mode remains read-only.
+ const qaLauncher=join(cfg.root,'RUN_INKTPS_QA_TEST.cmd');
+ if(!existsSync(qaLauncher)){
+  writeFileSync(qaLauncher,'@echo off\r\ncall "%~dp0RUN_INKTPS_QA.cmd" run\r\n','ascii');
+ }
  const finalPath=join(cfg.root,'F4E103W_LAST_REPORT.json');
  const report={schema:'t21-f4e103w-persistent-qa/v1',version:VERSION,
   timestamp:new Date().toISOString(),mode:cfg.mode,status:'HOLD_NOT_STARTED',
