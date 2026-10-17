@@ -67,7 +67,7 @@ jobs:
         shell: node {0}
         run: |
           const {execFileSync}=require('node:child_process');
-          const {writeFileSync}=require('node:fs');
+          const {writeFileSync,rmSync}=require('node:fs');
           const {resolve}=require('node:path');
           const {pathToFileURL}=require('node:url');
           (async()=>{
@@ -79,6 +79,9 @@ jobs:
             if(updated.player!==player)throw Error('Original PlayerInput changed');
             writeFileSync('src/input/PlayerInput.ts',updated.player);
             writeFileSync('src/app/UndertowF3PlayablePreviewApp.ts',updated.app);
+            // QA-branch-only PlayerInput unit tests target its separate branch implementation.
+            // The actual Windows original has no such test file.
+            rmSync('src/input/PlayerInput.qa.test.ts',{force:true});
             console.log('W2 APP-ONLY PATCH APPLIED TO EPHEMERAL CI WORKSPACE');
           })().catch(e=>{console.error(e);process.exitCode=1;});
       - name: Full QA-patched typecheck
