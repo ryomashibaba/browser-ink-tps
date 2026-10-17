@@ -63,7 +63,7 @@ jobs:
         run: npm run typecheck
       - name: QA movement isolation tests
         run: npx vitest run src/input/PlayerInput.qa.test.ts
-      - name: Apply W2 app-only patch to disposable CI workspace
+      - name: Apply W3 app and Crowd guard to disposable CI workspace
         shell: node {0}
         run: |
           const {execFileSync}=require('node:child_process');
@@ -75,19 +75,23 @@ jobs:
             const base='413a0acdfdb2b0f74550b653fa78fff9c0f5727d';
             const player=execFileSync('git',['show',base+':src/input/PlayerInput.ts'],{encoding:'utf8'});
             const app=execFileSync('git',['show',base+':src/app/UndertowF3PlayablePreviewApp.ts'],{encoding:'utf8'});
+            const native=execFileSync('git',['show',base+':src/app/UndertowF3NativeHumanCrowd.ts'],{encoding:'utf8'});
             const updated=patch.patchSources(player,app);
             if(updated.player!==player)throw Error('Original PlayerInput changed');
             writeFileSync('src/input/PlayerInput.ts',updated.player);
             writeFileSync('src/app/UndertowF3PlayablePreviewApp.ts',updated.app);
+            writeFileSync('src/app/UndertowF3NativeHumanCrowd.ts',patch.patchNativeCrowd(native));
             // QA-branch-only PlayerInput unit tests target its separate branch implementation.
             // The actual Windows original has no such test file.
             rmSync('src/input/PlayerInput.qa.test.ts',{force:true});
-            console.log('W2 APP-ONLY PATCH APPLIED TO EPHEMERAL CI WORKSPACE');
+            console.log('W3 APP AND CROWD GUARD PATCHED IN EPHEMERAL CI WORKSPACE');
           })().catch(e=>{console.error(e);process.exitCode=1;});
       - name: Full QA-patched typecheck
         run: npm run typecheck
       - name: Build isolated QA preview
         run: npm run build
+      - name: W3 guarded proxy lifecycle regression
+        run: npx vitest run src/app/UndertowF3NativeHumanCrowd.W3.test.ts
       - name: PowerShell script parser
         if: runner.os == 'Windows'
         shell: pwsh
