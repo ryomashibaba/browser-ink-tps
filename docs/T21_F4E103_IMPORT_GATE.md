@@ -28,3 +28,21 @@ Status on 2026-10-17: **F4E103F local source NOT IMPORTED.** This development br
 ## Next implementation
 
 Obtain F4E103F source or a sanitized source delta; import code after provenance review. Then address F4E103G movement, original lower/underpass connection, CPU stalls and specials, paint/scoreable coverage, and actual 4v4 in dedicated gameplay commits. Do not substitute additional paper audits for gameplay work.
+
+## Source-intake tool now available (metadata only)
+
+The branch includes `scripts/t21-f4e103-source-intake.mjs` and the standalone Node safety tests. This is a **real implementation**, but it does **not** retrieve the Windows project, send code, authorize assets for publication, or prove the F4E103F identity.
+
+After a verified local checkout of this development branch exists, one **optional initial Windows operation** can generate a metadata-only review report (illustrative placeholders, no automatic network transfer):
+
+```powershell
+node scripts/t21-f4e103-source-intake.mjs --source "<F4E103F local game folder>" --baseline "<dev/t21-f4e103 checkout>" --out "$env:TEMP\t21-f4e103-source-intake.json"
+```
+
+- Only recognized source code/config paths in `src/`, `scripts/` and four root files are inventoried. The `public/` tree, original OBJ/ZIP/images/videos and symlinked external trees are **not copied or uploaded**.
+- SHA-256 and relative paths are recorded, with `NEW`, `UNCHANGED`, `CHANGED_OR_UNVERIFIABLE` or `REMOVED_FROM_LOCAL` comparisons when a baseline checkout is supplied. The tool does **not** inspect the `.git` history, confirm license provenance, or prove semantic compatibility.
+- Known sensitive paths, embedded token patterns, binary and oversized content are blocked in the manifest. Geometry-like data is flagged for provenance review. Every remaining code file STILL requires human/publication review: a heuristic scanner cannot approve copyright or privacy.
+- By default the report is written only to stdout; `--out` explicitly creates a new file outside both source and baseline trees, refusing overwrite. No game files are modified. No GitHub push, Drive upload, or browser deployment occurs.
+- The Chrome CI is the older *public source baseline*. When the full F4E103F source is obtained and reviewed, migrate approved code as bounded commits, then independently validate Windows KCC/Recast, paint authority, CPU and real LIVE frame timing.
+
+Do not run this helper from a randomly updated public branch using elevated privileges. The eventual Windows bridge must accept explicit, pinned revisions and refuse untrusted code execution.
