@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {patchSources,apply} from './w2-stage-input.mjs';
+import {patchSources,patchNativeCrowd,apply} from './w2-stage-input.mjs';
 import {SCHEMA} from './w2-worker.mjs';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {join,dirname} from 'node:path';
@@ -11,6 +11,7 @@ const base='413a0acdfdb2b0f74550b653fa78fff9c0f5727d';
 const file=path=>execFileSync('git',['show',base+':'+path],{encoding:'utf8'});
 const playerFile='src/input/PlayerInput.ts';
 const appFile='src/app/UndertowF3PlayablePreviewApp.ts';
+const nativeFile='src/app/UndertowF3NativeHumanCrowd.ts';
 const source=()=>({player:file(playerFile),app:file(appFile)});
 
 test('original PlayerInput is byte-for-byte unchanged by isolated QA patch',()=>{
@@ -81,7 +82,7 @@ test('isolated staging changes only app and never changes original source',()=>{
  const original=join(dir,'original');
  const sandbox=join(dir,'sandbox');
  for(const root of [original,sandbox]){
-  for(const [name,data] of [[playerFile,player],[appFile,app]]){
+  for(const [name,data] of [[playerFile,player],[appFile,app],[nativeFile,file(nativeFile)]]){
    const out=join(root,name);
    mkdirSync(dirname(out),{recursive:true});
    writeFileSync(out,data);
@@ -89,12 +90,46 @@ test('isolated staging changes only app and never changes original source',()=>{
  }
  try{
   const result=apply({sandbox,original});
-  assert.equal(result.status,'PASS_ISOLATED_APP_ONLY_QA_PATCH_NOT_DEPLOYED');
+  assert.equal(result.status,'PASS_ISOLATED_APP_AND_CROWD_GUARD_NOT_DEPLOYED');
   assert.equal(result.playerInputSourceUnchanged,true);
   assert.equal(readFileSync(join(sandbox,playerFile),'utf8'),player);
   assert.equal(readFileSync(join(original,appFile),'utf8'),app);
   assert.equal(readFileSync(join(original,playerFile),'utf8'),player);
+  assert.equal(readFileSync(join(original,nativeFile),'utf8'),file(nativeFile));
+  assert.match(readFileSync(join(sandbox,nativeFile),'utf8'),/WITHHELD_NAV_PROJECTION_HORIZONTAL/);
   assert.notEqual(readFileSync(join(sandbox,appFile),'utf8'),app);
   assert.throws(()=>apply({sandbox:original,original}),/HOLD_W2_ORIGINAL_AND_QA_SANDBOX_OVERLAP/);
+ }finally{rmSync(dir,{recursive:true,force:true})}
+});
+
+test('W3 strict pre-attach projection guard only affects disposable Crowd source',()=>{
+ const original=file(nativeFile);
+ const patched=patchNativeCrowd(original);
+ assert.match(patched,/w3HorizontalOffset<=\.065/);
+ assert.match(patched,/!sourceSupported\|\|!boundedStep\|\|!w3Compatible/);
+ assert.match(patched,/WITHHELD_NAV_PROJECTION_HORIZONTAL/);
+ assert.match(patched,/crowdAvoidanceCertified:false/);
+ assert.match(patched,/this\.anchor\.sealAfterCrowdUpdate\(foot\)/);
+ assert.throws(()=>patchNativeCrowd(patched),/HOLD_W3_NATIVE_ALREADY_PATCHED/);
+ assert.throws(()=>patchNativeCrowd(original.replace('private excluded=0;','private other=0;')),
+  /HOLD_W3_NATIVE_ANCHOR_0_COUNT_0/);
+ const ambiguous=original.replace('private excluded=0;','private excluded=0;\n private excluded=0;');
+ assert.throws(()=>patchNativeCrowd(ambiguous),/HOLD_W3_NATIVE_ANCHOR_0_COUNT_2/);
+});
+
+test('W3 fail-closed: unknown native source rejects before any sandbox writes',()=>{
+ const {player,app}=source(),dir=mkdtempSync(join(tmpdir(),'w3-fail-closed-'));
+ const original=join(dir,'original'),sandbox=join(dir,'sandbox');
+ for(const root of [original,sandbox]){
+  for(const [name,data] of [[playerFile,player],[appFile,app],[nativeFile,'UNKNOWN_SOURCE']]){
+   const target=join(root,name);mkdirSync(dirname(target),{recursive:true});
+   writeFileSync(target,data);
+  }
+ }
+ try{
+  assert.throws(()=>apply({sandbox,original}),/HOLD_W3_UNVERIFIED_NATIVE_CROWD_SOURCE/);
+  assert.equal(readFileSync(join(sandbox,appFile),'utf8'),app);
+  assert.equal(readFileSync(join(sandbox,nativeFile),'utf8'),'UNKNOWN_SOURCE');
+  assert.equal(readFileSync(join(original,appFile),'utf8'),app);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
