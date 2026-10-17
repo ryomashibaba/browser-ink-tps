@@ -133,7 +133,9 @@ const STATE=[
  'scoreablePromotions:s.sourceScoreablePromotions,productionAuthorized:s.productionAuthorized,',
  'sourceGeometryChanged:s.sourceGeometryChanged,',
  'qaInput:typeof a.qaDriveTicks==="function",kccApi:typeof a.kccAudit==="function",',
- 'crowd:s.humanCrowd?.crowdProjectionAudit??null};})()'
+ 'crowd:s.humanCrowd?.crowdProjectionAudit??null,',
+ 'crowdProjectionGuard:s.humanCrowd?.projectionGuard??null,',
+ 'crowdGuardedTicks:s.humanCrowd?.w3GuardedTicks??0};})()'
 ].join('');
 function driveExpr(x,y,ticks){
  return '(()=>{const a=globalThis.__t21F3;try{const s=a.qaDriveTicks('+
@@ -172,13 +174,15 @@ async function routeDrive(cdp,route,core){
  const kcc=core.classifyContactTrace(audit);
  return {route:route.id,stopReason,realKcc:kcc,walk:core.summarizeWalk(samples),
   lastPhysicalPosition:last.player?.position??null,crowd:last.crowd,
+  crowdProjectionGuard:last.crowdProjectionGuard,
+  crowdGuardedTicks:last.crowdGuardedTicks,
   originalStageModified:false,productionAuthorized:false};
 }
 export async function main({root,project,kit,chromeExe='',routeCount=2}){
  const report={schema:SCHEMA,status:'HOLD_NOT_STARTED',started:new Date().toISOString(),
   buildValidated:false,liveKccObserved:false,liveCrowdObserved:false,
   sourceModified:false,geometryAdded:0,navPromotions:0,scorePromotions:0,
-  pointerLockRequested:false,results:[],errors:[]};
+  pointerLockRequested:false,results:[],errors:[],w3ProjectionGuardObserved:false};
  const critical=['src/player/PlayerController.ts','src/app/UndertowF3PlayablePreviewApp.ts',
   'src/stage/undertow/UndertowPhase14QHumanCrowdAnchor.ts',
   'src/app/UndertowF3NativeHumanCrowd.ts'];
@@ -222,7 +226,10 @@ export async function main({root,project,kit,chromeExe='',routeCount=2}){
   }
   report.liveKccObserved=report.results.length===routeCount;
   report.liveCrowdObserved=report.results.some(r=>r.crowd?.source==='LIVE_CROWD_NAV_PROJECTION_READONLY');
-  report.status=report.liveCrowdObserved?'HOLD_LIVE_CROWD_MEASURED_STAGE_CAUSE_UNPROVEN':
+  report.w3ProjectionGuardObserved=report.results.some(r=>r.crowdGuardedTicks>0);
+  report.status=report.w3ProjectionGuardObserved?
+   'HOLD_W3_CROWD_PROXY_WITHHELD_NAV_OFFSET_NOT_CERTIFIED':
+   report.liveCrowdObserved?'HOLD_LIVE_CROWD_MEASURED_STAGE_CAUSE_UNPROVEN':
    'HOLD_LIVE_KCC_MEASURED_CROWD_CAUSE_UNPROVEN';
  }catch(e){
   report.errors.push(String(e?.message??e).slice(0,1000));
