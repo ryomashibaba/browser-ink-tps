@@ -5,8 +5,8 @@
   "permissions": "read-only local game, no network uploads",
   "files": {
     "qa-runner.mjs": {
-      "sha256": "622f2f0006351454e8559475e11b0475c275a7532bb227ae067ecc1df6f0e2a6",
-      "size": 7923
+      "sha256": "b6a03378e1bf9c404126d2c34486b375a3e06124195528d385113e874709884e",
+      "size": 8246
     },
     "w2-stage-input.mjs": {
       "sha256": "2feac4e095233ba0cfadde6143fe9ef340291fd2e21576a902d94997c747ea61",
