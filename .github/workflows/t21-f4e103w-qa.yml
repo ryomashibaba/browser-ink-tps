@@ -5,6 +5,7 @@ on:
       - 'dev/t21-f4e103w-qa-infra'
     paths:
       - 'tools/qa/w/**'
+      - '.gitattributes'
       - '.github/workflows/t21-f4e103w-qa.yml'
   workflow_dispatch:
 jobs:
