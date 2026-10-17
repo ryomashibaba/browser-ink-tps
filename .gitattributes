@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Persistent QA code hashes must match raw GitHub across Windows/Linux.
+tools/qa/w/*.mjs text eol=lf
+tools/qa/w/*.json text eol=lf
+tools/qa/w/*.ps1 text eol=lf
