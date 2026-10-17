@@ -488,6 +488,26 @@ async function main(){
   if(completed.stopReason||completed.matchState!=='PLAYING'||
      completed.cpuPaintRequests<1)
    reject('NATIVE_F3C_CPU_COMBAT_NOT_LIVE_'+JSON.stringify(completed));
+  if(kitQa&&
+     (completed.cpuSourceTurfShots<1||
+      completed.cpuProjectilePaintHits<1||
+      completed.cpuShots<1))
+    reject('T21_F3_AUTONOMOUS_ORIGINAL_TURF_FIRE_MISSING_'+JSON.stringify({
+      cpuShots:completed.cpuShots,
+      actualTurfShots:completed.cpuSourceTurfShots,
+      nativeSurfacePaintHits:completed.cpuProjectilePaintHits,
+      physicalCpuFeet:completed.cpu.cpu,
+      signedSourcePatrol:patrol
+    }));
+  if(kitQa)console.log('T21_F3_NATIVE_AUTONOMOUS_TURF_PAINT_PASS',JSON.stringify({
+    sourceTurfShots:completed.cpuSourceTurfShots,
+    nativePhysicalInkImpacts:completed.cpuProjectilePaintHits,
+    allCpuWeaponShots:completed.cpuShots,
+    originalSourceSolids:completed.originalSourceSolids,
+    nonScoreablePaintSurfaces:completed.originalPaintSurfaces,
+    artificialEnemyTargets:0,
+    authenticEnemyCombatCertified:false
+  }));
   if(!patrol||patrol.auditedTargets<7||patrol.realGoalRequests<7||
      patrol.travelMeters<5||patrol.attemptsToCrossUnboundUnderpass!==0||
      patrol.productionAuthorized!==false)
@@ -508,6 +528,8 @@ async function main(){
   humanBlocksCpuLaneByRealKeyboard:longCpu&&process.env.T21_F3_BLOCKED_HUMAN==='1',
   nativeCpuPaintRequests:longCpu?completed.cpuPaintRequests:undefined,
   nativeCpuShots:longCpu?completed.cpuShots:undefined,
+  nativeAutoTurfShots:longCpu?completed.cpuSourceTurfShots:undefined,
+  nativeAutoTurfInkImpacts:longCpu?completed.cpuProjectilePaintHits:undefined,
   nativePatrolEvidence:longCpu?completed.cpu.sourcePatrol:undefined,
   perCpuNativeFootEvidence:longCpu?completed.cpu.cpu:undefined,
   fullSevenCpuChromeTestRequested:longCpu,
