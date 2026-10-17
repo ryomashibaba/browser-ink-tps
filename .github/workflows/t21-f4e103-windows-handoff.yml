@@ -1,0 +1,90 @@
+name: T21 F4E103F one-time Windows handoff kit (NO local source upload)
+
+on:
+  push:
+    branches:
+      - dev/t21-f4e103
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t21-windows-kit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-handoff:
+    if: github.repository == 'ryomashibaba/browser-ink-tps' && github.ref == 'refs/heads/dev/t21-f4e103'
+    runs-on: windows-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout only public repository revision (no credentials persisted)
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify source intake and pinned baseline behavior on Windows
+        run: node --test scripts/t21-f4e103-portable-handoff.checks.mjs scripts/t21-f4e103-source-intake.checks.mjs
+      - name: Build standalone offline kit pinned to this public commit
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node scripts/t21-f4e103-baseline-snapshot.mjs . $env:GITHUB_SHA "$env:RUNNER_TEMP\t21-f4e103-baseline.json"
+          if ($LASTEXITCODE -ne 0) { throw 'BASELINE_SNAPSHOT_FAILED' }
+          New-Item -ItemType Directory -Force 'handoff-kit\scripts' | Out-Null
+          Copy-Item 'RUN_T21_F4E103F_PRIVATE_HANDOFF_ONCE.cmd' 'handoff-kit\'
+          Copy-Item 'scripts\t21-f4e103-source-intake.mjs' 'handoff-kit\scripts\'
+          Copy-Item 'scripts\t21-f4e103-local-bundle.mjs' 'handoff-kit\scripts\'
+          Copy-Item "$env:RUNNER_TEMP\t21-f4e103-baseline.json" 'handoff-kit\t21-f4e103-baseline.json'
+          @'
+          BROWSER INK TPS — F4E103F ONE-TIME PRIVATE SOURCE REVIEW
+          This kit was built from a pinned public GitHub commit recorded in t21-f4e103-baseline.json.
+          Extract the artifact ZIP; double-click RUN_T21_F4E103F_PRIVATE_HANDOFF_ONCE.cmd.
+          Game folder: Downloads\T21_Undertow_F4E66_Real_Contact_AB_Gated_Handoff (default).
+          Node.js must already be available. No dependencies are installed.
+          Output: Downloads\T21_F4E103F_PRIVATE_SOURCE_REVIEW.zip — stays private.
+          Inspect output before sharing in a private ChatGPT conversation.
+          NEVER upload the generated source ZIP to public GitHub or an unrestricted URL.
+          No automatic source upload, sync, deployment, game writes or restore-point changes.
+          Candidate filtering is heuristic and cannot establish source rights or secret clearance.
+          '@ | Set-Content -Encoding utf8 'handoff-kit\READ_ME_FIRST.txt'
+      - name: Windows CMD end-to-end smoke on synthetic source, never actual user files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $src = Join-Path $env:RUNNER_TEMP 'SYNTHETIC_F4E103F'
+          $out = Join-Path $env:RUNNER_TEMP 'SYNTHETIC_PRIVATE_REVIEW.zip'
+          New-Item -ItemType Directory -Force (Join-Path $src 'src\test') | Out-Null
+          New-Item -ItemType Directory -Force (Join-Path $src 'public') | Out-Null
+          Set-Content (Join-Path $src 'RUN_F4E103F.cmd') '@echo off' -Encoding ascii
+          Set-Content (Join-Path $src 'RESTORE_F4E103E_FROM_F4E103F.cmd') '@echo off' -Encoding ascii
+          Set-Content (Join-Path $src 'src\test\portable_handoff_candidate.ts') 'export const smoke = 103;' -Encoding ascii
+          Set-Content (Join-Path $src 'public\Temple01.obj') 'FAKE ORIGINAL ASSET MUST NEVER BE INCLUDED' -Encoding ascii
+          $env:T21_HANDOFF_SOURCE = $src
+          $env:T21_HANDOFF_OUT = $out
+          $env:T21_HANDOFF_NONINTERACTIVE = '1'
+          $launcher = (Resolve-Path 'handoff-kit\RUN_T21_F4E103F_PRIVATE_HANDOFF_ONCE.cmd').Path
+          $command = 'call "' + $launcher + '"'
+          & cmd.exe /d /c $command
+          if ($LASTEXITCODE -ne 0) { throw "WINDOWS_CMD_FAILED_$LASTEXITCODE" }
+          if (!(Test-Path $out)) { throw 'MISSING_REVIEW_ZIP' }
+          $expanded = Join-Path $env:RUNNER_TEMP 'SYNTHETIC_EXTRACTED'
+          Expand-Archive -Path $out -DestinationPath $expanded
+          if (!(Test-Path (Join-Path $expanded 'candidate-src\src\test\portable_handoff_candidate.ts'))) { throw 'CANDIDATE_MISSING' }
+          $report = Get-Content (Join-Path $expanded 'T21_CANDIDATE_MANIFEST.json') -Raw | ConvertFrom-Json
+          if ($report.baselineSha -ne $env:GITHUB_SHA) { throw 'WRONG_PINNED_BASELINE_SHA' }
+          if ($report.publicationAuthorized -ne $false) { throw 'INCORRECT_RELEASE_AUTHORITY' }
+          if (Test-Path (Join-Path $expanded 'public\Temple01.obj')) { throw 'ORIGINAL_ASSET_INCLUDED' }
+          if ([Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($out)).Contains('FAKE ORIGINAL ASSET MUST NEVER BE INCLUDED')) { throw 'ORIGINAL_BYTES_INCLUDED' }
+          Write-Host 'WINDOWS_END_TO_END_OFFLINE_HANDOFF_PASS'
+      - name: Upload PUBLIC kit only — NEVER upload synthetic or local private source output
+        uses: actions/upload-artifact@v4
+        with:
+          name: T21_F4E103F_ONE_TIME_WINDOWS_HANDOFF_KIT
+          path: handoff-kit/
+          if-no-files-found: error
+          retention-days: 14
