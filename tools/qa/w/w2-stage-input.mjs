@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * W2.2 - app-only, fail-closed QA adaptation inside a separate Q sandbox.
+ * W3 - W2.2 input and isolated F3 Crowd projection-guard adaptation.
  * Does NOT modify PlayerInput constructor/getters or the Windows original.
  * The normal input is overridden on its INSTANCE, briefly, only while
  * the explicit frozen nonproduction source QA advances genuine KCC ticks.
@@ -11,6 +11,7 @@ import {resolve,join,sep} from 'node:path';
 
 const playerFile='src/input/PlayerInput.ts';
 const previewFile='src/app/UndertowF3PlayablePreviewApp.ts';
+const nativeFile='src/app/UndertowF3NativeHumanCrowd.ts';
 const sha=s=>createHash('sha256').update(s).digest('hex');
 
 function replaceOne(source,pattern,replacement,label){
@@ -82,25 +83,66 @@ export function patchSources(player,app){
   throw Error('HOLD_W2_INPUT_CLEANUP_GUARD_MISSING');
  return {player,app:a};
 }
+
+/**
+ * W3: only the isolated QA copy may omit a passive Crowd neighbour whose
+ * original NavMesh projection ALREADY exceeds the unchanged 0.065m seal.
+ * Never move the real Rapier player or CPU, disable a collision veto, invent
+ * source geometry, or certify Crowd avoidance when the proxy is absent.
+ */
+export function patchNativeCrowd(native){
+ if(!native.includes('class UndertowF3NativeHumanCrowd')||
+    !native.includes('T21_F3C_HUMAN_NATIVE_CROWD_NONPRODUCTION_ONLY')||
+    !native.includes('this.anchor.sealAfterCrowdUpdate(foot)'))
+  throw Error('HOLD_W3_UNVERIFIED_NATIVE_CROWD_SOURCE');
+ if(native.includes('w3ProjectionGuard')||native.includes('w3HorizontalOffset'))
+  throw Error('HOLD_W3_NATIVE_ALREADY_PATCHED');
+ const changes=[
+  [/private\s+excluded\s*=\s*0\s*;/g,
+   m=>m+"\n private w3GuardedTicks=0;\n private w3ProjectionGuard={status:'NOT_MEASURED',horizontalMeters:0,verticalMeters:0,threeDMeters:0,limitHorizontalMeters:.065,productionCertified:false};"],
+  [/const\s+sourceSupported\s*=\s*Number\.isFinite\(snap\)\s*&&\s*snap\s*<=\s*\.22\s*;/g,
+   m=>m+"\n  const w3HorizontalOffset=Math.hypot(native.x-foot.x,native.z-foot.z);\n  const w3VerticalOffset=Math.abs(native.y-foot.y);\n  const w3Compatible=Number.isFinite(w3HorizontalOffset)&&w3HorizontalOffset<=.065;"],
+  [/GAME_CONFIG\.player\.humanSpeedMetersPerSecond\/60\s*\+\s*\.12\s*;/g,
+   m=>m+"\n  this.w3ProjectionGuard={status:!sourceSupported?'SOURCE_UNSUPPORTED':!boundedStep?'STEP_UNVERIFIED':!w3Compatible?'WITHHELD_NAV_PROJECTION_HORIZONTAL':'ELIGIBLE_PROXY',horizontalMeters:w3HorizontalOffset,verticalMeters:w3VerticalOffset,threeDMeters:snap,limitHorizontalMeters:.065,productionCertified:false};\n  if(sourceSupported&&boundedStep&&!w3Compatible)this.w3GuardedTicks++;"],
+  [/if\(!sourceSupported\|\|!boundedStep\)\{/g,
+   'if(!sourceSupported||!boundedStep||!w3Compatible){'],
+  [/detaches:this\.detaches,airborneOrUnverifiableTicks:this\.excluded,/g,
+   m=>m+"\n   w3GuardedTicks:this.w3GuardedTicks,projectionGuard:{...this.w3ProjectionGuard},crowdAvoidanceCertified:false,"]
+ ];
+ let result=native;
+ for(let i=0;i<changes.length;i++){
+  const [pattern,replacement]=changes[i],hits=[...result.matchAll(pattern)];
+  if(hits.length!==1)throw Error('HOLD_W3_NATIVE_ANCHOR_'+i+'_COUNT_'+hits.length);
+  result=result.replace(pattern,replacement);
+ }
+ if(!result.includes('WITHHELD_NAV_PROJECTION_HORIZONTAL')||
+    !result.includes('crowdAvoidanceCertified:false'))
+  throw Error('HOLD_W3_GUARD_INCOMPLETE');
+ return result;
+}
+
 export function apply({sandbox,original}){
  if(!sandbox||!original)throw Error('HOLD_W2_EXPECTS_BOTH_PATHS');
  const root=realpathSync(resolve(sandbox)),src=realpathSync(resolve(original));
  if(root===src||root.startsWith(src+sep)||src.startsWith(root+sep))
   throw Error('HOLD_W2_ORIGINAL_AND_QA_SANDBOX_OVERLAP');
- const playerPath=join(root,playerFile),appPath=join(root,previewFile);
- for(const p of [playerPath,appPath]){
+ const playerPath=join(root,playerFile),appPath=join(root,previewFile),nativePath=join(root,nativeFile);
+ for(const p of [playerPath,appPath,nativePath]){
   if(!existsSync(p)||lstatSync(p).isSymbolicLink()||!lstatSync(p).isFile())
    throw Error('HOLD_W2_EXPECTED_PLAIN_SANDBOX_SOURCE_MISSING');
  }
  const player=readFileSync(playerPath,'utf8'),app=readFileSync(appPath,'utf8');
- const patched=patchSources(player,app);
+ const native=readFileSync(nativePath,'utf8');
+ const patched=patchSources(player,app),guarded=patchNativeCrowd(native);
  if(patched.player!==player)throw Error('CRITICAL_W2_PLAYER_INPUT_MODIFIED');
- if(patched.app===app)throw Error('HOLD_W2_APP_NOT_CHANGED');
+ if(patched.app===app||guarded===native)throw Error('HOLD_W3_ISOLATED_PATCH_UNCHANGED');
  // No write occurs before all source checks have succeeded.
  writeFileSync(appPath,patched.app,'utf8');
- return {schema:'t21-f4e103w2-app-only-isolated-stage/v2',
-  status:'PASS_ISOLATED_APP_ONLY_QA_PATCH_NOT_DEPLOYED',
-  changes:[{path:previewFile,oldSha256:sha(app),newSha256:sha(patched.app)}],
+ writeFileSync(nativePath,guarded,'utf8');
+ return {schema:'t21-f4e103w3-app-crowd-isolated-stage/v1',
+  status:'PASS_ISOLATED_APP_AND_CROWD_GUARD_NOT_DEPLOYED',
+  changes:[{path:previewFile,oldSha256:sha(app),newSha256:sha(patched.app)},
+   {path:nativeFile,oldSha256:sha(native),newSha256:sha(guarded)}],
   playerInputSourceUnchanged:true,geometryModified:false,
   navModified:false,productionAuthorized:false};
 }
