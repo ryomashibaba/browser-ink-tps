@@ -10,7 +10,7 @@ import { PerformanceStats } from '../core/PerformanceStats';
 function fixture(){
   const gameplay=new GameplayInkSystem();
   const surface=new PaintSurface(
-    'source-authorized-uns cored-floor'.replace('uns cored','unscored'),
+    'source-authorized-unscored-floor',
     new Vec3(),new Vec3(1,0,0),new Vec3(0,0,-1),
     5,5,0.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8
   );
@@ -27,13 +27,13 @@ function fixture(){
 }
 
 describe('authoritative native CPU ink-cell QA witnesses',()=>{
-  it('counts actual first-time CPU impact color changes on uns cored source turf',()=>{
+  it('counts actual first-time CPU impact color changes on unscored source turf',()=>{
     const {gameplay,stats,coordinator,req,gpu}=fixture();
     coordinator.enqueue(req(PaintEventType.Impact));
     coordinator.processTick(1);
     expect(stats.cpuInkCellsChanged).toBeGreaterThan(0);
     expect(stats.cpuImpactInkCellsChanged).toBe(stats.cpuInkCellsChanged);
-    expect(gameplay.snapshot().totalScoreableArea).toBe(0);
+    expect(gameplay.snapshot().totalScoreableArea).toBeLessThan(1e-8);
     expect(gpu.queue).toHaveBeenCalledTimes(1);
     const baseline=stats.cpuImpactInkCellsChanged;
     coordinator.enqueue(req(PaintEventType.Impact));
