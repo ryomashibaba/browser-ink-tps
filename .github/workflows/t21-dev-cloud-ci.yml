@@ -1,0 +1,66 @@
+name: T21 development CI — public source baseline (no deploy)
+
+on:
+  push:
+    branches:
+      - dev/t21-f4e103
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t21-dev-public-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-baseline:
+    if: github.repository == 'ryomashibaba/browser-ink-tps' && github.ref == 'refs/heads/dev/t21-f4e103'
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CI: "true"
+      T21_F3_SHOT_DIR: /tmp/t21-dev-public-baseline
+    steps:
+      - name: Checkout committed public source without persisted credentials
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Cache npm downloads (no lockfile yet)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: t21-dev-npm-${{ runner.os }}-${{ hashFiles('package.json') }}
+      - name: Install existing pinned direct dependencies
+        run: npm install --no-audit --no-fund --prefer-offline
+      - name: Reject known local-only source paths
+        run: node scripts/t21-f4e28-ci-guard.mjs privacy
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Full public-source unit test suite
+        run: npm test
+      - name: Build browser game (artifact only — no Pages publish)
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Build asset integrity and safety negative tests
+        run: |
+          node scripts/t21-f4e28-ci-guard.mjs self-test
+          node scripts/t21-f4e28-ci-guard.mjs build
+          node --test scripts/t21-f4e29-owned-preview.checks.mjs
+      - name: Chrome WebGL2 smoke of PUBLIC baseline only
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Validate browser evidence (NOT F4E103F local evidence)
+        run: node scripts/t21-f4e28-ci-guard.mjs evidence
+      - name: Upload ONLY sanitized public baseline proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-dev-public-baseline-evidence
+          path: |
+            /tmp/t21-dev-public-baseline/F3_0_SOURCE_STAGE.png
+            /tmp/t21-dev-public-baseline/f4e28-safe-qa-report.json
+          if-no-files-found: warn
+          retention-days: 3
