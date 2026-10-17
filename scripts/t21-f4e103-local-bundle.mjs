@@ -99,7 +99,7 @@ export function buildCandidateZip(source, baseline) {
     originalGameFilesIncluded:'UNVERIFIED_CONTENT_REQUIRES_REVIEW',
     uploadPerformed:false,
     reviewedByHuman:false,
-    baselineSha:'UNVERIFIED_LOCAL_CHECKOUT',
+    baselineSha:report.baselineCommitSha || 'UNVERIFIED_LOCAL_CHECKOUT',
     frozenCountsUnchanged:'NOT_ASSESSED',
     files:manifestFiles,
     excludedCandidateCount:report.files.filter(f=>
