@@ -7,6 +7,7 @@ import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
+import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityMonitor';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
 import {
@@ -176,6 +177,9 @@ export class CpuAgentSystem {
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private readonly goal = new Vec3();
+  /** Read-only QA witness; never touches production T20 behavior. */
+  private readonly qaContinuity = new CpuContinuityMonitor();
+  private readonly qaMotionGoals = new Map<string, Vec3>();
   private f3dSourceGoals:CpuQaSourceGoalAuthority|null=null;
   private readonly samplePoint = new Vec3();
   private readonly targetPoint = new Vec3();
@@ -230,7 +234,14 @@ export class CpuAgentSystem {
     this.f3dSourceGoals=source;
   }
 
+  /** Returns actual accepted CPU-foot trajectories, never Crowd suggestions. */
+  public qaContinuitySnapshot(): CpuContinuityReport {
+    return this.qaContinuity.snapshot();
+  }
+
   public reset(humanTeam: Team.A | Team.B): void {
+    this.qaContinuity.reset();
+    this.qaMotionGoals.clear();
     this.phase14eFirstDrop?.reset();
     this.phase14qGroundCollision?.resetActors();
     for (const bot of this.bots) {
@@ -277,6 +288,8 @@ export class CpuAgentSystem {
     humanActive: boolean
   ): void {
     if (!matchActive) {
+      this.qaContinuity.reset();
+      this.qaMotionGoals.clear();
       // Ensure no kinematic body or detached CrowdAgent leaks across matches.
       // This branch only exists for the explicitly injected QA-only adapter.
       if (this.phase14eFirstDrop) {
@@ -463,9 +476,16 @@ export class CpuAgentSystem {
               currentPosition: bot.position,
               humanPosition
             }, this.goal);
-            bot.agent?.requestMoveTarget(this.navigation.closestPoint(this.goal));
+            const goal = this.navigation.closestPoint(this.goal);
+            bot.agent?.requestMoveTarget(goal);
+            if (this.phase14qGroundCollision && bot.agent) {
+              this.qaMotionGoals.set(bot.id, goal.clone());
+            }
             this.stats.cpuTacticalRetargets += 1;
-          }else bot.agent?.resetMoveTarget();
+          } else {
+            bot.agent?.resetMoveTarget();
+            this.qaMotionGoals.delete(bot.id);
+          }
         }
 
         bot.thinkRemaining += GAME_CONFIG.cpu.tacticalThinkSeconds;
@@ -672,6 +692,22 @@ export class CpuAgentSystem {
       );
     }
 
+    if (this.phase14qGroundCollision) {
+      this.qaContinuity.observe(dt, this.bots.map(bot => {
+        const goal = this.qaMotionGoals.get(bot.id);
+        return {
+          id: bot.id, x: bot.position.x, y: bot.position.y, z: bot.position.z,
+          lifeState: bot.lifeState, mobilityState: bot.mobilityState,
+          hasAgent: bot.agent !== null,
+          expectsMotion: Boolean(goal && Math.hypot(
+            goal.x - bot.position.x, goal.y - bot.position.y, goal.z - bot.position.z
+          ) > 1.5)
+        };
+      }));
+      const report = this.qaContinuity.snapshot();
+      this.stats.cpuQaSuspectedStalls = report.suspectedStallCount;
+      this.stats.cpuQaLongestStationarySeconds = report.longestStallSeconds;
+    }
     this.syncStats();
   }
 
@@ -2142,6 +2178,7 @@ export class CpuAgentSystem {
 
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
+    this.qaMotionGoals.delete(bot.id);
     this.phase14eFirstDrop?.cancel(bot.id);
 
     if (bot.agent) {
@@ -2162,6 +2199,7 @@ export class CpuAgentSystem {
   }
 
   private respawnBot(bot: CpuBot): void {
+    this.qaMotionGoals.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);
     if (bot.agent) this.navigation.removeAgent(bot.agent);
     bot.agent = this.navigation.addAgent(start);
