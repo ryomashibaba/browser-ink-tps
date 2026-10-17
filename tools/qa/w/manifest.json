@@ -1,0 +1,12 @@
+{
+  "schema": "t21-f4e103w-qa-launcher/v1",
+  "version": "F4E103W.1",
+  "branch": "dev/t21-f4e103w-qa-infra",
+  "permissions": "read-only local game, no network uploads",
+  "files": {
+    "qa-runner.mjs": {
+      "sha256": "e71e700a7cad91bd5fe99b40107eacc9901ce65da22505e653b5c6c587643f3d",
+      "size": 6167
+    }
+  }
+}
