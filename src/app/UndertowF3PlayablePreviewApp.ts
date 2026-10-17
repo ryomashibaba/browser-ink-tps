@@ -201,7 +201,12 @@ export class UndertowF3PlayablePreviewApp{
   this.structures=buildF3OriginalOpticalStructures(app);
   this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats);
-  this.input=new PlayerInput(canvas);
+  // Ordinary human input remains unchanged; QA-only axis drive is accepted
+  // solely by the opt-in nonproduction fixed-tick source laboratory.
+  const qa=new URL(location.href).searchParams;
+  this.input=new PlayerInput(canvas,
+   qa.get('t21Play')==='preview'&&qa.get('t21QaDrive')==='source'&&
+   qa.get('t21QaInput')==='deterministic'&&qa.get('t21KccAudit')==='readOnly');
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
   this.player=new PlayerController(app,this.physics,this.input,
    this.camera,this.ink,this.stats);
@@ -337,6 +342,7 @@ export class UndertowF3PlayablePreviewApp{
   const api={snapshot:()=>this.snapshot(),
    pause:()=>{this.paused=true;this.refresh();return this.snapshot();},
    advanceQaTicks:(count:number)=>this.advanceQaTicks(count),
+   qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),
    armCpuKitsQa:()=>this.armCpuKitsQa(),
    fireCpuKitQa:(kind:'SUB'|'SPECIAL')=>this.fireCpuKitQa(kind),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
@@ -552,6 +558,23 @@ export class UndertowF3PlayablePreviewApp{
   return {requested,accepted,kind,actor:'A2',manualSourceQa:true,
    requiresPhysicalAdvance:true,normalEnemyEncounterVerified:false,
    sourceScoreablePromotions:0};
+ }
+ /**
+  * Deterministic source-only QA input; actual PlayerController / Rapier KCC,
+  * CPU and 60Hz physics are unchanged. No Pointer Lock or synthetic movement.
+  * This method cannot work from regular gameplay, production routes, or
+  * while the native real-time game loop is running.
+  */
+ private qaDriveTicks(x:number,y:number,count:number){
+  const qa=new URL(location.href).searchParams;
+  if(qa.get('t21Play')!=='preview'||qa.get('t21QaDrive')!=='source'||
+     qa.get('t21QaInput')!=='deterministic'||qa.get('t21KccAudit')!=='readOnly'||
+     !this.paused||document.pointerLockElement===this.canvas||
+     this.stopReason||!Number.isSafeInteger(count)||count<1||count>96)
+    throw Error('T21_QA_DETERMINISTIC_INPUT_FORBIDDEN');
+  this.input.setQaAxis(x,y);
+  try{return this.advanceQaTicks(count);}
+  finally{this.input.clearQaAxis();}
  }
  private advanceQaTicks(count:number){
   if(new URL(location.href).searchParams.get('t21QaDrive')!=='source'||
