@@ -281,6 +281,25 @@ async function main(){
   if(s.stopReason)reject('PREINPUT_FAIL_CLOSED_'+s.stopReason);
   return s.tick>40?s:false;
  },25000);
+ const cpuFootAudit=await evaluate(`({
+  continuity:window.__t21F3.snapshot().cpuContinuity,
+  visible:document.querySelector('#t21-f3-live')?.textContent?.includes('ACTUAL CPU FOOT')||false
+ })`);
+ if(cpuFootAudit.continuity?.source!=='ACTUAL_CPU_FOOT_QA_ONLY'||
+    !Array.isArray(cpuFootAudit.continuity.actors)||
+    cpuFootAudit.continuity.actors.length!==7||
+    !Number.isFinite(cpuFootAudit.continuity.longestStallSeconds)||
+    !Number.isSafeInteger(cpuFootAudit.continuity.suspectedStallCount)||
+    cpuFootAudit.continuity.suspectedStallCount<0||
+    !cpuFootAudit.visible)
+  reject('CPU_FOOT_QA_NOT_LIVE_IN_REAL_CHROME_'+JSON.stringify(cpuFootAudit));
+ console.log('T21_F3_ACTUAL_CPU_FOOT_MONITOR',JSON.stringify({
+  source:cpuFootAudit.continuity.source,
+  actors:cpuFootAudit.continuity.actors.length,
+  suspectedStalls:cpuFootAudit.continuity.suspectedStallCount,
+  peakSeconds:cpuFootAudit.continuity.longestStallSeconds,
+  statusVisible:cpuFootAudit.visible
+ }));
  await mouse('mousePressed');await mouse('mouseReleased');
  const locked=await waitUntil(async()=>await evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'),12000);
