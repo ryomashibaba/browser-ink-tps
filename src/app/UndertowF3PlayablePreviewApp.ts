@@ -102,6 +102,8 @@ export class UndertowF3PlayablePreviewApp{
   new URL(location.href).searchParams.get('t21CpuKits')==='qa';
  private readonly cpuKit:CpuKitSystem|null;
  private cpuKitArtificialGaugeArms=0;
+ private cpuKitManualSubQa=0;
+ private cpuKitManualSpecialQa=0;
  private readonly traffic:UndertowF3SourceTraffic;
  private readonly humanCrowd:UndertowF3NativeHumanCrowd;
  private readonly player:PlayerController;
@@ -336,6 +338,7 @@ export class UndertowF3PlayablePreviewApp{
    pause:()=>{this.paused=true;this.refresh();return this.snapshot();},
    advanceQaTicks:(count:number)=>this.advanceQaTicks(count),
    armCpuKitsQa:()=>this.armCpuKitsQa(),
+   fireCpuKitQa:(kind:'SUB'|'SPECIAL')=>this.fireCpuKitQa(kind),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
@@ -501,6 +504,8 @@ export class UndertowF3PlayablePreviewApp{
   this.projectiles.reset();
   this.cpuKit?.reset();
   this.cpuKitArtificialGaugeArms=0;
+  this.cpuKitManualSubQa=0;
+  this.cpuKitManualSpecialQa=0;
   this.coordinator.clear();
   // The source-grounded preview uses the same seven real bots. A full
   // actor reset is a deliberate manual restart, not a mid-fall teleport.
@@ -520,6 +525,33 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
   return {armed,artificial:true,source:'MANUAL_QA_ONLY',
    authorizedForNormalScoring:false,kitEnabled:this.cpuKitQaEnabled};
+ }
+ /** One explicit user/QA action from A2's real KCC-approved foot.
+  * Never an autonomous engagement claim, coordinate guess or teleport.
+  */
+ private fireCpuKitQa(kind:'SUB'|'SPECIAL'){
+  if(!this.cpuKitQaEnabled||!this.cpuKit||!this.paused||
+     document.pointerLockElement===this.canvas||this.stopReason||
+     this.matchState!=='PLAYING'||
+     !this.traffic.snapshot().freeCombatEnabled||
+     this.cpuKitArtificialGaugeArms<1||
+     (kind!=='SUB'&&kind!=='SPECIAL'))
+   throw Error('T21_F3_MANUAL_CPU_KIT_EFFECT_QA_FORBIDDEN');
+  const requested=this.cpu.queueSourceCpuKitQaAction('A2',kind);
+  let accepted=requested;
+  if(requested)this.cpu.drainKitRequests(request=>{
+   const queued=this.cpuKit!.queue(request);
+   if(!queued)accepted=false;
+   return queued;
+  });
+  if(accepted){
+   if(kind==='SUB')this.cpuKitManualSubQa++;
+   else this.cpuKitManualSpecialQa++;
+  }
+  this.refresh();
+  return {requested,accepted,kind,actor:'A2',manualSourceQa:true,
+   requiresPhysicalAdvance:true,normalEnemyEncounterVerified:false,
+   sourceScoreablePromotions:0};
  }
  private advanceQaTicks(count:number){
   if(new URL(location.href).searchParams.get('t21QaDrive')!=='source'||
@@ -690,6 +722,12 @@ export class UndertowF3PlayablePreviewApp{
     cpuSubUses:this.stats.cpuSubUses,cpuSpecialActivations:this.stats.cpuSpecialActivations,
     activeSubEffects:this.stats.cpuActiveSubs,
     activeSpecialEffects:this.stats.cpuActiveSpecialEffects,
+    subProjectilesLaunched:this.stats.cpuSubProjectilesLaunched,
+    specialEffectsExecuted:this.stats.cpuSpecialEffectsExecuted,
+    specialPaintRequestsEnqueued:this.stats.cpuSpecialPaintRequestsEnqueued,
+    manualSubRequests:this.cpuKitManualSubQa,
+    manualSpecialRequests:this.cpuKitManualSpecialQa,
+    autonomousEncounterVerified:false,
     sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
    cpuContinuity:this.cpu.qaContinuitySnapshot(),
    cpuPaintRequests:this.stats.cpuPaintRequests,
@@ -731,6 +769,8 @@ export class UndertowF3PlayablePreviewApp{
       state.cpuKitQa.artificialGaugeArms+
       ' / subs '+state.cpuKitQa.cpuSubUses+
       ' / specials '+state.cpuKitQa.cpuSpecialActivations+
+      ' / effects '+state.cpuKitQa.specialEffectsExecuted+
+      ' / manual '+(state.cpuKitQa.manualSubRequests+state.cpuKitQa.manualSpecialRequests)+
       ' · 0 scoreable surfaces':'',
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
