@@ -106,6 +106,9 @@ export class PerformanceStats {
   public playerSuperJumpTargetZ = Number.NaN;
   public playerSuperJumps = 0;
 
+  /** QA-only witness: number of active grounded CPUs stationary for >=5s despite distant goals. */
+  public cpuQaSuspectedStalls = 0;
+  public cpuQaLongestStationarySeconds = 0;
   public cpuNavigationStatus = 'PENDING';
   public cpuNavigationBuildMs = 0;
   public cpuAgents = 0;
