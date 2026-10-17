@@ -679,10 +679,12 @@ export class UndertowF3PlayablePreviewApp{
    'ACTUAL CPU FOOT · '+state.cpuContinuity.suspectedStallCount+
     ' suspected stalls (>5s, goal >1.5m) / peak '+
     state.cpuContinuity.longestStallSeconds.toFixed(1)+'s · QA ONLY',
-   'CPU FOOT DETAIL · '+state.cpuContinuity.actors.map(a=>
-    a.id+':'+a.stationarySeconds.toFixed(1)+'s/'+
-    a.actualTravelMeters.toFixed(1)+'m'+
-    (a.suspectedNavigationStall?' STALLED':'' )).join(' · '),
+   state.cpuContinuity.suspectedStallCount>0
+    ?'STALLED CPU · '+state.cpuContinuity.actors
+      .filter(a=>a.suspectedNavigationStall)
+      .map(a=>a.id+':'+a.stationarySeconds.toFixed(1)+'s/'+
+        a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
+    :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
