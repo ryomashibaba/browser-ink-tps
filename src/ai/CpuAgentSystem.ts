@@ -8,6 +8,7 @@ import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
 import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityMonitor';
+import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
 import {
@@ -56,6 +57,8 @@ export type CpuKitRequest =
       target: Vec3;
       direction: Vec3;
       specialId: SpecialWeaponId;
+      /** Internal transaction state; ignored by the accepted effect system. */
+      rollbackBefore?: CpuSpecialResourceState;
     };
 
 /** Opt-in T21 only. A rejected physical step NEVER becomes an avatar pose
@@ -1248,6 +1251,11 @@ export class CpuAgentSystem {
       bot.specialDecisionCooldownSeconds <= 0 &&
       this.shouldUseCpuSpecial(bot, kit.special, distance)
     ) {
+      const rollbackBefore: CpuSpecialResourceState = {
+        specialPoints: bot.specialPoints,
+        specialDecisionCooldownSeconds: bot.specialDecisionCooldownSeconds,
+        subCooldownSeconds: bot.subCooldownSeconds
+      };
       this.pendingKitRequests.push({
         kind: 'SPECIAL',
         sourceId: bot.id,
@@ -1255,7 +1263,8 @@ export class CpuAgentSystem {
         position: bot.position.clone(),
         target: target.clone(),
         direction: direction.clone(),
-        specialId: kit.special
+        specialId: kit.special,
+        rollbackBefore
       });
       bot.specialPoints = 0;
       bot.specialDecisionCooldownSeconds =
@@ -1300,12 +1309,23 @@ export class CpuAgentSystem {
   }
 
   private rollbackRejectedKitRequest(request: CpuKitRequest): void {
-    if (request.kind !== 'SUB') return;
-
     const bot = this.bots.find(
       (candidate) => candidate.id === request.sourceId
     );
     if (!bot) return;
+
+    if (request.kind === 'SPECIAL') {
+      if (!request.rollbackBefore) {
+        throw Error('CPU_SPECIAL_REJECTED_WITHOUT_RESOURCE_SNAPSHOT');
+      }
+      restoreRejectedCpuSpecial(bot, request.rollbackBefore);
+      this.stats.cpuSpecialActivations = Math.max(
+        0, this.stats.cpuSpecialActivations - 1
+      );
+      this.stats.cpuKitLast = bot.id + ':SPECIAL:REJECTED_NO_EFFECT';
+      this.syncStats();
+      return;
+    }
 
     const profile = subWeaponProfile(request.subId);
     bot.ink = Math.min(
