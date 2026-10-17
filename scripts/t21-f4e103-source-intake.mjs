@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const MAX_BYTES = 2 * 1024 * 1024;
 const ROOT_FILES = new Set(['package.json','tsconfig.json','vite.config.ts','index.html']);
 const CODE_EXTENSION = /^(?:\.ts|\.tsx|\.mts|\.cts|\.js|\.mjs|\.cjs|\.css)$/i;
-const SENSITIVE_PATH = /(^|\/)(?:\.env(?:\..*)?|secrets?|private|credentials?|tokens?|api[-_]?keys?|node_modules|dist)(?:\/|$)/i;
+const SENSITIVE_PATH = /(^|\/)(?:\.env(?:\.[^/]*)?|(?:secret|private|credential|token|api[-_]?key)[a-z0-9_-]*(?:\.[^/]*)?|node_modules|dist)(?=\/|$)/i;
 const PROVENANCE_PATH = /(?:original|kitrix|temple01|face[-_]?id|source[-_]?pack|geometry|banc|asset|evidence)/i;
 const SECRET_TEXT = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[a-z0-9]{20,}|github_pat_[a-z0-9_]{20,}|AKIA[A-Z0-9]{16}/i;
 const ORIGINAL_TEXT = /(?:Vss_Temple01|KiTrix|Face[-_]?ID|source[-_]?pack|original(?:Source|Mesh|Geometry)|(?:Float32|Float64)Array\s*\(|\b(?:vertices|triangles)\s*[:=]\s*\[)/i;
@@ -30,7 +30,10 @@ function listFiles(root) {
       if (e.isSymbolicLink()) continue; // never follow links outside input tree
       const name = prefix ? prefix + '/' + e.name : e.name;
       const abs = join(dir, e.name);
-      if (e.isDirectory()) visit(abs, name);
+      if (e.isDirectory()) {
+        if (/^(?:node_modules|dist|\.git|\.vite|\.cache)$/i.test(e.name)) continue;
+        visit(abs, name);
+      }
       else if (e.isFile() && CODE_EXTENSION.test(extname(e.name))) files.push(name);
     }
   }
