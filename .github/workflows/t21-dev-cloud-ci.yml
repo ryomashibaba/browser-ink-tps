@@ -47,6 +47,8 @@ jobs:
         run: node --test scripts/t21-f4e103-source-intake.checks.mjs
       - name: Offline F4E103F candidate bundle and ZIP integrity tests
         run: node --test scripts/t21-f4e103-local-bundle.checks.mjs
+      - name: Pinned portable baseline and offline transfer regression
+        run: node --test scripts/t21-f4e103-portable-handoff.checks.mjs
       - name: Build browser game (artifact only — no Pages publish)
         run: npm run build -- --base=/browser-ink-tps/
       - name: Build asset integrity and safety negative tests
