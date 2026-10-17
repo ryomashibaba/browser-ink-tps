@@ -72,9 +72,30 @@ export function scanSource(source, baseline = null) {
   const root = resolve(source);
   assertDirectory(root);
   const base = baseline ? resolve(baseline) : null;
-  if (base) assertDirectory(base);
+  let snapshot = null;
+  if (base && lstatSync(base).isFile()) {
+    const parsed = JSON.parse(readFileSync(base, 'utf8'));
+    if (parsed?.schema !== 't21-public-baseline/v1' ||
+        !/^[a-f0-9]{40}$/.test(parsed.commitSha || '') ||
+        !Array.isArray(parsed.files) || parsed.files.length > 20000) {
+      throw Error('INVALID_BASELINE_SNAPSHOT');
+    }
+    const table = new Map();
+    for (const entry of parsed.files) {
+      if (typeof entry.path !== 'string' ||
+          !/^(?:src|scripts)\/[\w.\- /]+\.(?:ts|tsx|mts|cts|js|mjs|cjs|css)$/.test(entry.path) &&
+          !ROOT_FILES.has(entry.path) ||
+          table.has(entry.path) || !/^[a-f0-9]{64}$/.test(entry.sha256 || '')) {
+        throw Error('INVALID_BASELINE_ENTRY');
+      }
+      table.set(entry.path, entry.sha256);
+    }
+    snapshot = { table, sha: parsed.commitSha };
+  } else if (base) {
+    assertDirectory(base);
+  }
   const localNames = listFiles(root);
-  const baseNames = base ? listFiles(base) : [];
+  const baseNames = snapshot ? [...snapshot.table.keys()] : base ? listFiles(base) : [];
   const union = [...new Set([...localNames, ...baseNames])].sort();
   const localSet = new Set(localNames);
   const baseSet = new Set(baseNames);
@@ -90,8 +111,8 @@ export function scanSource(source, baseline = null) {
     if (base) {
       if (!baseSet.has(path)) change = 'NEW';
       else {
-        const b = inspect(base, path);
-        change = b?.sha256 && file.sha256 && b.sha256 === file.sha256 ? 'UNCHANGED' : 'CHANGED_OR_UNVERIFIABLE';
+        const oldSha = snapshot ? snapshot.table.get(path) : inspect(base, path)?.sha256;
+        change = oldSha && file.sha256 && oldSha === file.sha256 ? 'UNCHANGED' : 'CHANGED_OR_UNVERIFIABLE';
       }
     }
     files.push({...file, change});
@@ -110,6 +131,8 @@ export function scanSource(source, baseline = null) {
     windowsLauncherPresent: existsSync(join(root, 'RUN_F4E103F.cmd')),
     restoreLauncherPresent: existsSync(join(root, 'RESTORE_F4E103E_FROM_F4E103F.cmd')),
     comparedToProvidedBaseline: Boolean(base),
+    baselineCommitSha: snapshot?.sha ?? null,
+    baselineFormat: snapshot ? 'PINNED_PUBLIC_SHA256_SNAPSHOT' : base ? 'LOCAL_CHECKOUT' : 'NONE',
     fileCount: files.length,
     counts,
     files
