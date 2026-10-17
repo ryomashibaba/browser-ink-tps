@@ -185,6 +185,7 @@ export class CpuAgentSystem {
   private readonly qaMotionGoals = new Map<string, Vec3>();
   /** Throttles real QA turf projectiles without altering enemy fire rates. */
   private readonly qaTurfShotCooldown = new Map<string, number>();
+  private readonly qaTurfShotsByActor = new Map<string, number>();
   private f3dSourceGoals:CpuQaSourceGoalAuthority|null=null;
   private readonly samplePoint = new Vec3();
   private readonly targetPoint = new Vec3();
@@ -244,10 +245,18 @@ export class CpuAgentSystem {
     return this.qaContinuity.snapshot();
   }
 
+  /** CPU weapon requests accepted for genuine paintable turf, per real actor. */
+  public qaTurfShotSnapshot(): Readonly<Record<string, number>> {
+    return Object.fromEntries(
+      this.bots.map(bot => [bot.id, this.qaTurfShotsByActor.get(bot.id) ?? 0])
+    );
+  }
+
   public reset(humanTeam: Team.A | Team.B): void {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
     this.qaTurfShotCooldown.clear();
+    this.qaTurfShotsByActor.clear();
     this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
@@ -1463,14 +1472,21 @@ export class CpuAgentSystem {
       (profile.weaponClass === 'SHOOTER' ||
        profile.weaponClass === 'DUALIES' ||
        profile.weaponClass === 'BLASTER' ||
-       profile.weaponClass === 'SLOSHER');
+       profile.weaponClass === 'SLOSHER' ||
+       profile.weaponClass === 'CHARGER' ||
+       profile.weaponClass === 'SPLATLING');
     const cooldown = Math.max(0,
       (this.qaTurfShotCooldown.get(bot.id) ?? 0) - dt);
     this.qaTurfShotCooldown.set(bot.id, cooldown);
     const hasCombatInRange = combatTarget !== null &&
       this.cpuTargetInRange(bot, combatTarget, profile);
+    // A Splatling may finish its real burst after its first turf shot;
+    // throttling may prevent a *new* burst, but must not cancel an active one.
+    const finishTurfBurst = profile.weaponClass === 'SPLATLING' &&
+      bot.weaponBurstShotsRemaining > 0;
     const turfTarget = canTurfPaint && !hasCombatInRange &&
-      cooldown <= 0 ? this.chooseOriginalSourceTurfTarget(bot) : null;
+      (cooldown <= 0 || finishTurfBurst)
+      ? this.chooseOriginalSourceTurfTarget(bot) : null;
     const target = turfTarget ?? combatTarget;
 
     if (target) this.updateCpuWeaponFacing(bot, target);
@@ -1478,11 +1494,11 @@ export class CpuAgentSystem {
     switch (profile.weaponClass) {
       case 'SPLATLING':
         bot.weaponGuarding = false;
-        this.updateCpuSplatling(bot, profile, target, dt);
+        this.updateCpuSplatling(bot, profile, target, dt, turfTarget !== null);
         return;
       case 'CHARGER':
         bot.weaponGuarding = false;
-        this.updateCpuCharger(bot, profile, target, dt);
+        this.updateCpuCharger(bot, profile, target, dt, turfTarget !== null);
         return;
       case 'ROLLER':
         bot.weaponGuarding = false;
@@ -1512,8 +1528,7 @@ export class CpuAgentSystem {
 
         if (this.queueCpuWeaponRequest(bot, target, 0, 'PROJECTILE')) {
           if (turfTarget) {
-            this.qaTurfShotCooldown.set(bot.id, 0.85);
-            this.stats.cpuSourceTurfShots += 1;
+            this.recordQaSourceTurfShot(bot);
           }
           bot.fireRemaining = profile.fireIntervalSeconds;
         } else {
@@ -1704,7 +1719,8 @@ export class CpuAgentSystem {
     bot: CpuBot,
     profile: ReturnType<typeof weaponProfile>,
     target: Vec3 | null,
-    dt: number
+    dt: number,
+    turfShot: boolean
   ): void {
     if (!target || !this.cpuTargetInRange(bot, target, profile)) {
       bot.weaponChargeSeconds = 0;
@@ -1721,6 +1737,7 @@ export class CpuAgentSystem {
     if (bot.weaponChargeSeconds + 1e-6 < profile.chargeSeconds) return;
 
     if (this.queueCpuWeaponRequest(bot, target, 1)) {
+      if (turfShot) this.recordQaSourceTurfShot(bot);
       bot.fireRemaining = profile.fireIntervalSeconds;
     } else {
       bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
@@ -1732,7 +1749,8 @@ export class CpuAgentSystem {
     bot: CpuBot,
     profile: ReturnType<typeof weaponProfile>,
     target: Vec3 | null,
-    dt: number
+    dt: number,
+    turfShot: boolean
   ): void {
     if (bot.weaponBurstShotsRemaining > 0) {
       if (!target || !this.cpuTargetInRange(bot, target, profile)) {
@@ -1743,6 +1761,7 @@ export class CpuAgentSystem {
       if (bot.weaponBurstCooldown > 0) return;
 
       if (this.queueCpuWeaponRequest(bot, target, 1)) {
+        if (turfShot) this.recordQaSourceTurfShot(bot);
         bot.weaponBurstShotsRemaining -= 1;
         bot.weaponBurstCooldown = profile.burstIntervalSeconds;
       } else {
@@ -1778,6 +1797,17 @@ export class CpuAgentSystem {
     bot.weaponBurstCooldown = 0;
     bot.weaponChargeSeconds = 0;
     bot.fireRemaining = profile.fireIntervalSeconds;
+  }
+
+  /** Log actual weapon requests; caller has already selected paintable turf.
+   * Counts are not enemy hits, scoreable paint, or confirmed ink coverage.
+   */
+  private recordQaSourceTurfShot(bot: CpuBot): void {
+    this.qaTurfShotCooldown.set(bot.id, 0.85);
+    this.qaTurfShotsByActor.set(
+      bot.id, (this.qaTurfShotsByActor.get(bot.id) ?? 0) + 1
+    );
+    this.stats.cpuSourceTurfShots += 1;
   }
 
   /** T21 F3 only. Derive the ink aim point from a source-verified paint grid
