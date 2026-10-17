@@ -148,7 +148,13 @@ export class UndertowF3PlayablePreviewApp{
  private readonly target=new Vec3();
  private readonly muzzle=new Vec3();
  private readonly visual=new Vec3();
- private paused=false;
+ // Only the explicit read-only, nonproduction QA route may start frozen.
+ // This prevents the native realtime loop from consuming ticks before CDP QA.
+ private paused=new URL(location.href).searchParams.get('t21Play')==='preview'&&
+  new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
+  new URL(location.href).searchParams.get('t21QaInput')==='deterministic'&&
+  new URL(location.href).searchParams.get('t21KccAudit')==='readOnly'&&
+  new URL(location.href).searchParams.get('t21QaPauseOnBoot')==='1';
  private stopReason:string|null=null;
  private respawnFrames=0;
  private renderedFrames=0;
