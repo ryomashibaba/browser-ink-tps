@@ -421,11 +421,46 @@ async function main(){
       armed.authorizedForNormalScoring!==false)
     reject('F3_MANUAL_KIT_QA_NOT_EXPLICIT_'+JSON.stringify(armed));
    console.log('T21_F3_REAL_KIT_QA_MANUALLY_ARMED',JSON.stringify(armed));
+   const sub=await evaluate('window.__t21F3.fireCpuKitQa("SUB")');
+   if(!sub.requested||!sub.accepted||sub.actor!=='A2'||
+      !sub.manualSourceQa||sub.normalEnemyEncounterVerified!==false)
+     reject('F3_REAL_FOOT_MANUAL_SUB_QUEUE_FAILED_'+JSON.stringify(sub));
+   for(let n=0;n<3;n++)
+     completed=await evaluate('window.__t21F3.advanceQaTicks(72)');
+   if(completed.stopReason||completed.cpuKitQa.subProjectilesLaunched<1||
+      completed.cpuKitQa.manualSubRequests!==1)
+     reject('F3_REAL_SUB_EFFECT_NOT_SPAWNED_'+JSON.stringify({
+      kit:completed.cpuKitQa,reason:completed.stopReason
+     }));
+   const special=await evaluate('window.__t21F3.fireCpuKitQa("SPECIAL")');
+   if(!special.requested||!special.accepted||special.actor!=='A2'||
+      !special.manualSourceQa||special.normalEnemyEncounterVerified!==false)
+     reject('F3_REAL_FOOT_MANUAL_SPECIAL_QUEUE_FAILED_'+JSON.stringify(special));
+   completed=await evaluate('window.__t21F3.advanceQaTicks(12)');
+   if(completed.stopReason||completed.cpuKitQa.manualSpecialRequests!==1||
+      completed.cpuKitQa.specialEffectsExecuted<1||
+      completed.cpuKitQa.specialPaintRequestsEnqueued<1)
+     reject('F3_REAL_SPECIAL_EFFECT_AND_PAINT_NOT_EXECUTED_'+JSON.stringify({
+      kit:completed.cpuKitQa,reason:completed.stopReason
+     }));
+   console.log('T21_F3_MANUAL_KIT_REAL_EFFECT_PASS',JSON.stringify({
+      actor:'A2',realFoot:true,artificialGauge:true,
+      executedSpecials:completed.cpuKitQa.specialEffectsExecuted,
+      launchedSubs:completed.cpuKitQa.subProjectilesLaunched,
+      enqueuedSpecialPaint:completed.cpuKitQa.specialPaintRequestsEnqueued,
+      autonomousEnemyCombatCertified:false,
+      scoreablePromotions:completed.sourceScoreablePromotions,
+      realOriginalSourceSolids:completed.originalSourceSolids
+   }));
   }
   for(let i=0;i<6;i++)completed=await evaluate('window.__t21F3.advanceQaTicks(72)');
   if(kitQa){
    const report=completed.cpuKitQa;
    if(!report?.enabled||report.artificialGaugeArms!==1||
+      report.manualSubRequests!==1||report.manualSpecialRequests!==1||
+      report.subProjectilesLaunched<1||report.specialEffectsExecuted<1||
+      report.specialPaintRequestsEnqueued<1||
+      report.autonomousEncounterVerified!==false||
       report.scoreablePromotions!==0||
       !Number.isSafeInteger(report.cpuSpecialActivations)||
       report.cpuSpecialActivations<0||
