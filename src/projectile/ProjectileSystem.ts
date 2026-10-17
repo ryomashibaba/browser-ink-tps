@@ -2041,6 +2041,7 @@ export class ProjectileSystem {
       strength: 1
     };
     this.coordinator.enqueue(request);
+    if (source === PaintSource.Cpu) this.stats.cpuProjectilePaintHits += 1;
   }
 }
 
