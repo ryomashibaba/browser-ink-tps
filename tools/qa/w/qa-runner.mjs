@@ -8,9 +8,10 @@ import {spawn} from 'node:child_process';
 import {existsSync,lstatSync,mkdirSync,readFileSync,renameSync,writeFileSync} from 'node:fs';
 import {homedir} from 'node:os';
 import {dirname,join,resolve,sep} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {fileURLToPath} from 'node:url';
 
-export const VERSION='F4E103W.1';
+export const VERSION='F4E103W.2';
 const ORIGINAL='T21_Undertow_F4E66_Real_Contact_AB_Gated_Handoff';
 const LAST_KIT='BrowserInkTPS_F4E103V_Crowd_Stage_Hotfix';
 const CRITICAL=['src/player/PlayerController.ts',
@@ -59,6 +60,44 @@ function hashes(project){
  }
  return entries;
 }
+
+const W2_BASE='https://raw.githubusercontent.com/ryomashibaba/browser-ink-tps/dev/t21-f4e103w-qa-infra/tools/qa/w/';
+async function prepareW2Modules(root){
+ const system=join(root,'system');mkdirSync(system,{recursive:true});
+ const modules=['w2-stage-input.mjs','w2-worker.mjs'];
+ let manifest=null;
+ try{
+  const res=await fetch(W2_BASE+'manifest.json',{signal:AbortSignal.timeout(15000),redirect:'error'});
+  if(!res.ok)throw Error('HOLD_W2_MANIFEST_HTTP_'+res.status);
+  manifest=await res.json();
+  if(manifest.schema!=='t21-f4e103w-qa-launcher/v1')
+   throw Error('HOLD_W2_UNTRUSTED_MANIFEST_SCHEMA');
+ }catch(e){
+  const saved=join(system,'w2-module-manifest.json');
+  if(!existsSync(saved))throw Error('HOLD_W2_NO_VERIFIED_OFFLINE_MODULES '+e);
+  manifest=JSON.parse(readFileSync(saved,'utf8'));
+ }
+ for(const name of modules){
+  const expected=manifest.files?.[name]?.sha256;
+  if(typeof expected!=='string'||!/^[0-9a-f]{64}$/.test(expected))
+   throw Error('HOLD_W2_MISSING_PIN_'+name);
+  const target=join(system,name);
+  if(existsSync(target)&&digest(target)===expected)continue;
+  const res=await fetch(W2_BASE+name,{signal:AbortSignal.timeout(20000),redirect:'error'});
+  if(!res.ok)throw Error('HOLD_W2_MODULE_FETCH_HTTP_'+res.status);
+  const bytes=Buffer.from(await res.arrayBuffer());
+  if(createHash('sha256').update(bytes).digest('hex')!==expected)
+   throw Error('HOLD_W2_REMOTE_MODULE_HASH_MISMATCH_'+name);
+  const temp=target+'.'+process.pid+'.tmp';
+  writeFileSync(temp,bytes,{flag:'wx'});
+  renameSync(temp,target);
+ }
+ // Only after both module hashes are checked is the offline manifest trusted.
+ const cache=join(system,'w2-module-manifest.json');
+ atomicJson(cache,manifest);
+ return {worker:join(system,'w2-worker.mjs'),patch:join(system,'w2-stage-input.mjs')};
+}
+
 async function runPreviousV({project,root,kit}){
  const runner=join(kit,'scripts','run-f4e103v.mjs');
  if(!existsSync(runner))throw Error('HOLD_OLD_V_RUNNER_MISSING');
@@ -92,23 +131,22 @@ export async function main(args=process.argv.slice(2),env=process.env){
  let before=null;
  try{
   folder(cfg.project,'ORIGINAL_GAME');
-  folder(cfg.kit,'F4E103V_KIT');
+  if(cfg.mode==='run')folder(cfg.kit,'F4E103V_KIT');
   before=hashes(cfg.project);
-  if(!existsSync(join(cfg.kit,'scripts','run-f4e103v.mjs')))
+  if(cfg.mode==='run'&&!existsSync(join(cfg.kit,'scripts','run-f4e103v.mjs')))
    throw Error('HOLD_F4E103V_SCRIPT_MISSING');
   report.status='PASS_PREFLIGHT_READONLY';
   if(cfg.mode==='run'){
-   report.child=await runPreviousV(cfg);
-   const previous=join(cfg.root,'runs','F4E103V_LAST_REPORT.json');
-   if(existsSync(previous)){
-    const v=JSON.parse(readFileSync(previous,'utf8'));
-    report.isolatedBuildPassed=v.isolatedBuildValidated===true&&v.actualGameBuildPassed===true;
-    report.liveKccObserved=v.liveKccObserved===true;
-    report.crowdProjectionObserved=v.crowdAuditObserved===true;
-    report.status=v.status??'HOLD_OLD_KIT_WITHOUT_STATUS';
-    report.routes=v.routeResults?.length??0;
-   }else report.status='HOLD_OLD_KIT_NO_REPORT';
-   if(report.child.status!=='CHILD_EXIT_ZERO')report.warnings.push('CHILD_FAILED_OR_TIMED_OUT');
+   const paths=await prepareW2Modules(cfg.root);
+   const worker=await import(pathToFileURL(paths.worker).href);
+   const result=await worker.main({root:cfg.root,project:cfg.project,kit:cfg.kit});
+   report.status=result.status;
+   report.isolatedBuildPassed=result.buildValidated===true;
+   report.liveKccObserved=result.liveKccObserved===true;
+   report.crowdProjectionObserved=result.liveCrowdObserved===true;
+   report.sourceFilesChanged=result.sourceModified===true;
+   report.routes=result.results?.length??0;
+   report.w2=result;
   }
  }catch(error){
   report.status=String(error?.message??error).slice(0,300);
