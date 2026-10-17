@@ -651,6 +651,7 @@ export class UndertowF3PlayablePreviewApp{
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   cpuContinuity:this.cpu.qaContinuitySnapshot(),
    cpuPaintRequests:this.stats.cpuPaintRequests,
    cpuCombatHits:this.stats.cpuCombatHits,
    cpuSplats:this.stats.cpuSplats,
@@ -675,6 +676,13 @@ export class UndertowF3PlayablePreviewApp{
     ' · NO TURF WINNER',
    'HUMAN SPLATS '+state.humanSplats+' / RESPAWNS '+state.humanRespawns,
    'CPU · '+p.physicalRejoins.length+'/7 source drop + recovery',
+   'ACTUAL CPU FOOT · '+state.cpuContinuity.suspectedStallCount+
+    ' suspected stalls (>5s, goal >1.5m) / peak '+
+    state.cpuContinuity.longestStallSeconds.toFixed(1)+'s · QA ONLY',
+   'CPU FOOT DETAIL · '+state.cpuContinuity.actors.map(a=>
+    a.id+':'+a.stationarySeconds.toFixed(1)+'s/'+
+    a.actualTravelMeters.toFixed(1)+'m'+
+    (a.suspectedNavigationStall?' STALLED':'' )).join(' · '),
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
