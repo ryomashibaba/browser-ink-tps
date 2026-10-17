@@ -865,6 +865,11 @@ export class CpuAgentSystem {
       bot.specialPoints = specialWeaponProfile(special).requiredPoints;
       bot.specialDecisionCooldownSeconds = 0;
       bot.subCooldownSeconds = 0;
+      // This method is explicitly MANUAL QA only: autonomous turf firing may
+      // legitimately use all ink before the isolated subweapon effect probe.
+      // Record synthetic refills distinctly from earned gameplay resources.
+      bot.ink = GAME_CONFIG.inkEconomy.capacity;
+      bot.inkRecoveryLockSeconds = 0;
       changed += 1;
     }
     if (changed > 0) {
