@@ -491,17 +491,28 @@ async function main(){
   if(kitQa&&
      (completed.cpuSourceTurfShots<1||
       completed.cpuProjectilePaintHits<1||
+      completed.cpuImpactInkCellsChanged<1||
+      completed.cpuInkCellsChanged<1||
+      (completed.cpuSourceTurfShotsByActor?.B4??0)<1||
+      Object.values(completed.cpuSourceTurfShotsByActor||{})
+       .reduce((sum,n)=>sum+n,0)!==completed.cpuSourceTurfShots||
       completed.cpuShots<1))
     reject('T21_F3_AUTONOMOUS_ORIGINAL_TURF_FIRE_MISSING_'+JSON.stringify({
       cpuShots:completed.cpuShots,
       actualTurfShots:completed.cpuSourceTurfShots,
       nativeSurfacePaintHits:completed.cpuProjectilePaintHits,
+      actualPaintCellColorChanges:completed.cpuInkCellsChanged,
+      actualImpactInkColorChanges:completed.cpuImpactInkCellsChanged,
+      byActor:completed.cpuSourceTurfShotsByActor,
       physicalCpuFeet:completed.cpu.cpu,
       signedSourcePatrol:patrol
     }));
   if(kitQa)console.log('T21_F3_NATIVE_AUTONOMOUS_TURF_PAINT_PASS',JSON.stringify({
     sourceTurfShots:completed.cpuSourceTurfShots,
     nativePhysicalInkImpacts:completed.cpuProjectilePaintHits,
+    actualCpuInkColorChanges:completed.cpuInkCellsChanged,
+    actualCpuImpactColorChanges:completed.cpuImpactInkCellsChanged,
+    perActorShots:completed.cpuSourceTurfShotsByActor,
     allCpuWeaponShots:completed.cpuShots,
     originalSourceSolids:completed.originalSourceSolids,
     nonScoreablePaintSurfaces:completed.originalPaintSurfaces,
@@ -530,6 +541,9 @@ async function main(){
   nativeCpuShots:longCpu?completed.cpuShots:undefined,
   nativeAutoTurfShots:longCpu?completed.cpuSourceTurfShots:undefined,
   nativeAutoTurfInkImpacts:longCpu?completed.cpuProjectilePaintHits:undefined,
+  nativeAutoInkCellsChanged:longCpu?completed.cpuInkCellsChanged:undefined,
+  nativeAutoImpactInkCellsChanged:longCpu?completed.cpuImpactInkCellsChanged:undefined,
+  nativeAutoShotsByActor:longCpu?completed.cpuSourceTurfShotsByActor:undefined,
   nativePatrolEvidence:longCpu?completed.cpu.sourcePatrol:undefined,
   perCpuNativeFootEvidence:longCpu?completed.cpu.cpu:undefined,
   fullSevenCpuChromeTestRequested:longCpu,
