@@ -30,17 +30,19 @@ export function patchSources(player,app){
  if(app.includes('qaDriveTicks')||app.includes('t21QaPauseOnBoot'))
   throw Error('HOLD_W2_APP_ALREADY_PATCHED');
  let a=app;
- a=replaceOne(a,/(\bprivate\s+paused\s*=\s*)false(\s*;)/g,
-  (_,head,end)=>head+
-  "new URL(location.href).searchParams.get('t21Play')==='preview'&&\n"+
-  "  new URL(location.href).searchParams.get('t21QaDrive')==='source'&&\n"+
-  "  new URL(location.href).searchParams.get('t21QaInput')==='deterministic'&&\n"+
-  "  new URL(location.href).searchParams.get('t21KccAudit')==='readOnly'&&\n"+
-  "  new URL(location.href).searchParams.get('t21QaPauseOnBoot')==='1'"+end,
-  'APP_PAUSED_BOOT');
- a=replaceOne(a,/(\badvanceQaTicks\s*:\s*\(\s*count\s*:\s*number\s*\)\s*=>\s*this\.advanceQaTicks\(\s*count\s*\)\s*,)/g,
-  '$1\n   qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),',
-  'APP_QA_API');
+ a=replaceOne(a,/(\bconst\s+api\s*=\s*\{\s*snapshot\s*:\s*\(\s*\)\s*=>\s*this\.snapshot\(\s*\)\s*,)/g,
+  (_,apiDeclaration)=>[
+  "  // QA-only frozen boot, before the real PlayCanvas update loop starts.",
+  "  const qaBoot=new URL(location.href).searchParams;",
+  "  if(qaBoot.get('t21Play')==='preview'&&",
+  "     qaBoot.get('t21QaDrive')==='source'&&",
+  "     qaBoot.get('t21QaInput')==='deterministic'&&",
+  "     qaBoot.get('t21KccAudit')==='readOnly'&&",
+  "     qaBoot.get('t21QaPauseOnBoot')==='1')this.paused=true;",
+  "  "+apiDeclaration,
+  "   qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),"
+  ].join('\n'),
+  'APP_FROZEN_QA_API');
  const implementation=[
  ' /** W2.2: actual 60Hz PlayerController / Rapier and real CPU fixed ticks.',
  '  * No mouse lock, no teleport, no modification of normal PlayerInput code.',
