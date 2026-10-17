@@ -183,6 +183,8 @@ export class CpuAgentSystem {
   /** Read-only QA witness; never touches production T20 behavior. */
   private readonly qaContinuity = new CpuContinuityMonitor();
   private readonly qaMotionGoals = new Map<string, Vec3>();
+  /** Throttles real QA turf projectiles without altering enemy fire rates. */
+  private readonly qaTurfShotCooldown = new Map<string, number>();
   private f3dSourceGoals:CpuQaSourceGoalAuthority|null=null;
   private readonly samplePoint = new Vec3();
   private readonly targetPoint = new Vec3();
@@ -245,6 +247,8 @@ export class CpuAgentSystem {
   public reset(humanTeam: Team.A | Team.B): void {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
+    this.qaTurfShotCooldown.clear();
+    this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
     this.phase14eFirstDrop?.reset();
@@ -295,6 +299,7 @@ export class CpuAgentSystem {
     if (!matchActive) {
       this.qaContinuity.reset();
       this.qaMotionGoals.clear();
+      this.qaTurfShotCooldown.clear();
       this.stats.cpuQaSuspectedStalls = 0;
       this.stats.cpuQaLongestStationarySeconds = 0;
       // Ensure no kinematic body or detached CrowdAgent leaks across matches.
@@ -1445,12 +1450,28 @@ export class CpuAgentSystem {
       bot.weaponGuardHp = Math.min(100, bot.weaponGuardHp + 28 * dt);
     }
 
-    const target = this.chooseCombatTarget(
-      bot,
-      humanTeam,
-      humanPosition,
-      humanActive
+    // Combat takes priority. F3 source-lab patrols are separated by the
+    // original unbound underpass: without a target in weapon range, paint
+    // the verified ORIGINAL floor instead of firing imaginary enemy shots.
+    const combatTarget = this.chooseCombatTarget(
+      bot, humanTeam, humanPosition, humanActive
     );
+    const canTurfPaint = this.phase14qF2RecoverableSteps &&
+      this.phase14qGroundCollision &&
+      this.f3dSourceGoals &&
+      this.stage.metadata.id === 'undertow-t21d-partial-connectivity-qa' &&
+      (profile.weaponClass === 'SHOOTER' ||
+       profile.weaponClass === 'DUALIES' ||
+       profile.weaponClass === 'BLASTER' ||
+       profile.weaponClass === 'SLOSHER');
+    const cooldown = Math.max(0,
+      (this.qaTurfShotCooldown.get(bot.id) ?? 0) - dt);
+    this.qaTurfShotCooldown.set(bot.id, cooldown);
+    const hasCombatInRange = combatTarget !== null &&
+      this.cpuTargetInRange(bot, combatTarget, profile);
+    const turfTarget = canTurfPaint && !hasCombatInRange &&
+      cooldown <= 0 ? this.chooseOriginalSourceTurfTarget(bot) : null;
+    const target = turfTarget ?? combatTarget;
 
     if (target) this.updateCpuWeaponFacing(bot, target);
 
@@ -1490,6 +1511,10 @@ export class CpuAgentSystem {
         if (!this.cpuTargetInRange(bot, target, profile)) return;
 
         if (this.queueCpuWeaponRequest(bot, target, 0, 'PROJECTILE')) {
+          if (turfTarget) {
+            this.qaTurfShotCooldown.set(bot.id, 0.85);
+            this.stats.cpuSourceTurfShots += 1;
+          }
           bot.fireRemaining = profile.fireIntervalSeconds;
         } else {
           bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
@@ -1753,6 +1778,36 @@ export class CpuAgentSystem {
     bot.weaponBurstCooldown = 0;
     bot.weaponChargeSeconds = 0;
     bot.fireRemaining = profile.fireIntervalSeconds;
+  }
+
+  /** T21 F3 only. Derive the ink aim point from a source-verified paint grid
+   * near the real physics foot and an audited native patrol goal. No new
+   * geometry, nav links, enemy targets or scoreable turf is introduced. */
+  private chooseOriginalSourceTurfTarget(bot: CpuBot): Vec3 | null {
+    if (!bot.agent || bot.lifeState !== 'ACTIVE' ||
+        bot.mobilityState !== 'GROUND') return null;
+    const goal = this.qaMotionGoals.get(bot.id);
+    if (!goal) return null;
+    const dx = goal.x - bot.position.x;
+    const dz = goal.z - bot.position.z;
+    const span = Math.hypot(dx, dz);
+    if (!Number.isFinite(span) || span < 1.65) return null;
+    for (const distance of [3.0, 2.3, 1.7]) {
+      if (span < distance + 0.25) continue;
+      const t = distance / span;
+      this.samplePoint.set(
+        bot.position.x + dx * t,
+        bot.position.y + (goal.y - bot.position.y) * t + 0.10,
+        bot.position.z + dz * t
+      );
+      const sample = this.gameplayInk.sampleWorld(
+        this.samplePoint, 0.28, SurfaceFlags.Paintable, SurfaceFlags.Wall
+      );
+      if (!sample || sample.owner === bot.team ||
+          sample.surface.isScoreable) continue;
+      return sample.surface.localToWorld(sample.u, sample.v);
+    }
+    return null;
   }
 
   private queueCpuWeaponRequest(
