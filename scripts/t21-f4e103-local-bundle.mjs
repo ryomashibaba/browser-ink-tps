@@ -28,14 +28,15 @@ function crc32(data) {
 function zipStored(entries) {
   const locals=[],central=[]; let offset=0;
   for(const {name,data} of entries) {
-    if(!/^[a-zA-Z0-9_.\-/]+$/.test(name) || name.startsWith('/') ||
-       name.split('/').some(x=>x==='..'||x==='')) throw Error('UNSAFE_ZIP_ENTRY');
+    if(/[\x00-\x1F\x7F\\]/.test(name) || name.startsWith('/') ||
+       name.split('/').some(x=>x==='..'||x==='.'||x==='')) throw Error('UNSAFE_ZIP_ENTRY');
     const filename=Buffer.from(name,'utf8');
     if(filename.length>0xFFFF) throw Error('ZIP_FILENAME_TOO_LONG');
     const crc=crc32(data),len=data.length;
     const local=Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50,0);
     local.writeUInt16LE(20,4); // version needed
+    local.writeUInt16LE(0x0800,6); // UTF-8 filenames
     local.writeUInt16LE(0,8); // uncompressed
     local.writeUInt16LE(0x21,12); // 1980-01-01
     local.writeUInt32LE(crc,14);
@@ -46,6 +47,7 @@ function zipStored(entries) {
     centralHeader.writeUInt32LE(0x02014b50,0);
     centralHeader.writeUInt16LE(20,4);
     centralHeader.writeUInt16LE(20,6);
+    centralHeader.writeUInt16LE(0x0800,8); // UTF-8 filenames
     centralHeader.writeUInt16LE(0,10);
     centralHeader.writeUInt16LE(0x21,14);
     centralHeader.writeUInt32LE(crc,16);
