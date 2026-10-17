@@ -5,6 +5,9 @@ on:
       - 'dev/t21-f4e103w-qa-infra'
     paths:
       - 'tools/qa/w/**'
+      - 'src/input/PlayerInput.ts'
+      - 'src/input/PlayerInput.qa.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
       - '.github/workflows/t21-f4e103w-qa.yml'
   workflow_dispatch:
@@ -43,6 +46,15 @@ jobs:
         run: |
           node tools/qa/w/qa-runner.mjs --mode check --root "$RUNNER_TEMP/inkqa" --project "$RUNNER_TEMP/nonexistent-source" --kit "$RUNNER_TEMP/nonexistent-kit"
           node -e "const r=require('$RUNNER_TEMP/inkqa/F4E103W_LAST_REPORT.json'); if(r.status!=='HOLD_ORIGINAL_GAME_MISSING'||r.sourceFilesChanged)process.exit(1);"
+      - name: Install public dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Full project typecheck
+        run: npm run typecheck
+      - name: QA movement isolation tests
+        run: npx vitest run src/input/PlayerInput.qa.test.ts
+      - name: Build isolated QA preview
+        if: runner.os == 'Linux'
+        run: npm run build
       - name: PowerShell script parser
         if: runner.os == 'Windows'
         shell: pwsh
