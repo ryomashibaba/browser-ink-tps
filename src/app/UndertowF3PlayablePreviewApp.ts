@@ -523,7 +523,7 @@ export class UndertowF3PlayablePreviewApp{
   const armed=this.cpu.forceKitQaReady();
   if(armed)this.cpuKitArtificialGaugeArms++;
   this.refresh();
-  return {armed,artificial:true,source:'MANUAL_QA_ONLY',
+  return {armed,artificial:true,artificialInk:true,source:'MANUAL_QA_ONLY',
    authorizedForNormalScoring:false,kitEnabled:this.cpuKitQaEnabled};
  }
  /** One explicit user/QA action from A2's real KCC-approved foot.
@@ -719,6 +719,7 @@ export class UndertowF3PlayablePreviewApp{
     hp:this.resources.currentHp,ink:this.stats.playerInk},
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
    cpuKitQa:{enabled:this.cpuKitQaEnabled,artificialGaugeArms:this.cpuKitArtificialGaugeArms,
+    artificialInkRefills:this.cpuKitArtificialGaugeArms,
     cpuSubUses:this.stats.cpuSubUses,cpuSpecialActivations:this.stats.cpuSpecialActivations,
     activeSubEffects:this.stats.cpuActiveSubs,
     activeSpecialEffects:this.stats.cpuActiveSpecialEffects,
