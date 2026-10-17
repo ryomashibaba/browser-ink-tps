@@ -861,6 +861,71 @@ export class CpuAgentSystem {
     return false;
   }
 
+  /**
+   * Explicit F3 source QA only: manually dispatch an existing real CPU kit
+   * from its actual approved physics foot toward its source-backed patrol
+   * target. Never invent an enemy, spawn point, collision or scoring mask.
+   * This is manual effects QA, NOT evidence of autonomous combat.
+   */
+  public queueSourceCpuKitQaAction(actorId: string, kind: 'SUB' | 'SPECIAL'): boolean {
+    if (!this.phase14qF2RecoverableSteps ||
+        !this.phase14eFirstDrop || !this.phase14qGroundCollision ||
+        !this.f3dSourceGoals ||
+        this.stage.metadata.id !== 'undertow-t21d-partial-connectivity-qa') {
+      throw Error('T21_F3_CPU_KIT_MANUAL_SOURCE_QA_ONLY');
+    }
+    const bot = this.bots.find(b => b.id === actorId);
+    const goal = this.qaMotionGoals.get(actorId);
+    if (!bot || !goal || !bot.agent ||
+        bot.lifeState !== 'ACTIVE' || bot.mobilityState !== 'GROUND') {
+      return false;
+    }
+    // Target derives from the audited native patrol. Only the CPU's
+    // OWN physical pose is used as the launch origin.
+    const direction = goal.clone().sub(bot.position);
+    if (direction.lengthSq() <= 1e-8) return false;
+    direction.normalize();
+    const kit = weaponKit(bot.weaponId);
+    if (kind === 'SUB') {
+      const profile = subWeaponProfile(kit.sub);
+      if (bot.ink + 1e-6 < profile.inkCost || bot.subCooldownSeconds > 0) return false;
+      bot.ink = Math.max(0, bot.ink - profile.inkCost);
+      bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
+      bot.subCooldownSeconds = cpuSubCooldownSeconds(kit.sub, bot.role);
+      this.pendingKitRequests.push({
+        kind: 'SUB', sourceId: bot.id, team: bot.team,
+        position: bot.position.clone(), target: goal.clone(),
+        direction, subId: kit.sub
+      });
+      this.stats.cpuSubUses += 1;
+      this.stats.cpuKitLast = bot.id + ':MANUAL_QA_SUB:' + profile.shortName;
+      this.syncStats();
+      return true;
+    }
+    const special = specialWeaponProfile(kit.special);
+    if (bot.specialPoints + 1e-6 < special.requiredPoints ||
+        bot.specialDecisionCooldownSeconds > 0) return false;
+    const rollbackBefore: CpuSpecialResourceState = {
+      specialPoints: bot.specialPoints,
+      specialDecisionCooldownSeconds: bot.specialDecisionCooldownSeconds,
+      subCooldownSeconds: bot.subCooldownSeconds
+    };
+    this.pendingKitRequests.push({
+      kind: 'SPECIAL', sourceId: bot.id, team: bot.team,
+      position: bot.position.clone(), target: goal.clone(),
+      direction, specialId: kit.special, rollbackBefore
+    });
+    bot.specialPoints = 0;
+    bot.specialDecisionCooldownSeconds =
+      GAME_CONFIG.cpu.kit.postSpecialDecisionCooldownSeconds;
+    bot.subCooldownSeconds = Math.max(bot.subCooldownSeconds,
+      GAME_CONFIG.cpu.kit.postSpecialSubLockSeconds);
+    this.stats.cpuSpecialActivations += 1;
+    this.stats.cpuKitLast = bot.id + ':MANUAL_QA_SPECIAL:' + special.shortName;
+    this.syncStats();
+    return true;
+  }
+
   public forceSuperJumpQa(
     humanTeam: Team.A | Team.B,
     humanPosition: Vec3,
