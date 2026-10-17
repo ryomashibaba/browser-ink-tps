@@ -60,6 +60,15 @@ export class PaintCoordinator {
       const event: PaintEvent = Object.freeze({ tick, ...request, source });
       const result = this.gameplay.apply(event);
       changedCells += result.changedCells;
+      if (event.source === PaintSource.Cpu) {
+        // Count authoritative cell ownership transitions, not just ink
+        // requests or projected hits. Includes the legitimate CPU foot.
+        this.stats.cpuInkCellsChanged += result.changedCells;
+        if (event.type === PaintEventType.Impact ||
+            event.type === PaintEventType.WallImpact) {
+          this.stats.cpuImpactInkCellsChanged += result.changedCells;
+        }
+      }
       if (event.source === PaintSource.Human) {
         humanScoreableAreaMeters2 += result.scoreableAreaMeters2Changed;
       } else if (
@@ -97,6 +106,8 @@ export class PaintCoordinator {
     this.gameplay.reset();
     this.gpu.clear();
     this.lastEvent = null;
+    this.stats.cpuInkCellsChanged = 0;
+    this.stats.cpuImpactInkCellsChanged = 0;
     this.stats.lastPaintSurface = '-';
     this.stats.lastPaintU = Number.NaN;
     this.stats.lastPaintV = Number.NaN;
