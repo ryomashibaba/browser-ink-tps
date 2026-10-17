@@ -96,7 +96,7 @@ export function buildCandidateZip(source, baseline) {
     localVersion:'UNVERIFIED_F4E103F',
     publicationAuthorized:false,
     assetRightsCleared:false,
-    originalGameFilesIncluded:false,
+    originalGameFilesIncluded:'UNVERIFIED_CONTENT_REQUIRES_REVIEW',
     uploadPerformed:false,
     reviewedByHuman:false,
     baselineSha:'UNVERIFIED_LOCAL_CHECKOUT',
