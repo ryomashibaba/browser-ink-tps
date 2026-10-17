@@ -6,7 +6,8 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve, relative, dirname, join, extname, isAbsolute, sep } from 'node:path';
+import { resolve, dirname, join, extname, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const ROOT_FILES = new Set(['package.json','tsconfig.json','vite.config.ts','index.html']);
@@ -141,7 +142,7 @@ export function cli(args) {
     process.stdout.write(JSON.stringify(scanSource(source, baseline), null, 2) + '\n');
   }
 }
-if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try { cli(process.argv.slice(2)); }
   catch (e) { console.error('T21_INTAKE_BLOCKED: ' + String(e.message || e)); process.exitCode = 1; }
 }
