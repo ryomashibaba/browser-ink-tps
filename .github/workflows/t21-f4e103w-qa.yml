@@ -1,0 +1,53 @@
+name: T21 F4E103W QA launcher checks
+on:
+  push:
+    branches:
+      - 'dev/t21-f4e103w-qa-infra'
+    paths:
+      - 'tools/qa/w/**'
+      - '.github/workflows/t21-f4e103w-qa.yml'
+  workflow_dispatch:
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check JavaScript syntax
+        run: node --check tools/qa/w/qa-runner.mjs
+      - name: Verify pinned source checksum
+        shell: node {0}
+        run: |
+          const {readFileSync} = require('node:fs');
+          const {createHash} = require('node:crypto');
+          const manifest=JSON.parse(readFileSync('tools/qa/w/manifest.json','utf8'));
+          if(manifest.schema!=='t21-f4e103w-qa-launcher/v1')throw Error('bad manifest');
+          const bytes=readFileSync('tools/qa/w/qa-runner.mjs');
+          const hash=createHash('sha256').update(bytes).digest('hex');
+          if(hash!==manifest.files['qa-runner.mjs'].sha256)throw Error('SHA-256 mismatch');
+          console.log('SHA-256 verified',hash);
+      - name: Self test without local game
+        run: node tools/qa/w/qa-runner.mjs --mode self-test
+      - name: Offline missing-project fail-closed smoke
+        shell: bash
+        if: runner.os == 'Linux'
+        run: |
+          node tools/qa/w/qa-runner.mjs --mode check --root "$RUNNER_TEMP/inkqa" --project "$RUNNER_TEMP/nonexistent-source" --kit "$RUNNER_TEMP/nonexistent-kit"
+          node -e "const r=require('$RUNNER_TEMP/inkqa/F4E103W_LAST_REPORT.json'); if(r.status!=='HOLD_ORIGINAL_GAME_MISSING'||r.sourceFilesChanged)process.exit(1);"
+      - name: PowerShell script parser
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors=$null
+          $tokens=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/qa/w/bootstrap.ps1').Path,[ref]$tokens,[ref]$errors) | Out-Null
+          if ($errors.Count -ne 0) { throw ($errors | Out-String) }
+          Write-Output 'PowerShell parser PASS'
