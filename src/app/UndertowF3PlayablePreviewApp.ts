@@ -736,7 +736,10 @@ export class UndertowF3PlayablePreviewApp{
    paintEventsPerSecond:this.stats.paintEventsPerSecond,
    cpuShots:this.stats.cpuShots,
    cpuSourceTurfShots:this.stats.cpuSourceTurfShots,
+   cpuSourceTurfShotsByActor:this.cpu.qaTurfShotSnapshot(),
    cpuProjectilePaintHits:this.stats.cpuProjectilePaintHits,
+   cpuInkCellsChanged:this.stats.cpuInkCellsChanged,
+   cpuImpactInkCellsChanged:this.stats.cpuImpactInkCellsChanged,
    shotsFired:this.stats.shotsFired,
    tick:this.clock.tick,paused:this.paused,
    matchState:this.matchState,timeRemainingSeconds:this.remainingSeconds,
@@ -822,6 +825,11 @@ export class UndertowF3PlayablePreviewApp{
    'REAL CPU TURF FIRE · '+state.cpuSourceTurfShots+
     ' source-floor shots / '+state.cpuProjectilePaintHits+
     ' physical paint impacts (QA only)',
+   'REAL CPU INK · '+state.cpuImpactInkCellsChanged+
+    ' impact-recolored cells / '+state.cpuInkCellsChanged+
+    ' all CPU-recolored cells · 0 scoreable',
+   'TURF SHOTS BY ACTOR · '+Object.entries(state.cpuSourceTurfShotsByActor)
+    .map(([id,shots])=>id+':'+shots).join(' · '),
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
     ' | paint/s '+state.paintEventsPerSecond.toFixed(1),
    'HUMAN avoidance · '+(state.humanCrowd.active?'NATIVE 8TH CROWD':'AIRBORNE / UNVERIFIED')+
