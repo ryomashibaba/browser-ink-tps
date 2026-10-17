@@ -22,11 +22,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
       - name: Check JavaScript syntax
-        run: node --check tools/qa/w/qa-runner.mjs
+        run: |
+          node --check tools/qa/w/qa-runner.mjs
+          node --check tools/qa/w/w2-stage-input.mjs
+          node --check tools/qa/w/w2-worker.mjs
+      - name: Assert deterministic QA against original public source
+        run: node --test tools/qa/w/w2-stage-input.test.mjs
       - name: Verify pinned source checksum
         shell: node {0}
         run: |
@@ -34,10 +41,12 @@ jobs:
           const {createHash} = require('node:crypto');
           const manifest=JSON.parse(readFileSync('tools/qa/w/manifest.json','utf8'));
           if(manifest.schema!=='t21-f4e103w-qa-launcher/v1')throw Error('bad manifest');
-          const bytes=readFileSync('tools/qa/w/qa-runner.mjs');
-          const hash=createHash('sha256').update(bytes).digest('hex');
-          if(hash!==manifest.files['qa-runner.mjs'].sha256)throw Error('SHA-256 mismatch');
-          console.log('SHA-256 verified',hash);
+          for(const name of ['qa-runner.mjs','w2-stage-input.mjs','w2-worker.mjs']){
+            const bytes=readFileSync('tools/qa/w/'+name);
+            const hash=createHash('sha256').update(bytes).digest('hex');
+            if(hash!==manifest.files[name].sha256)throw Error('SHA-256 mismatch: '+name);
+            console.log('SHA-256 verified',name,hash);
+          }
       - name: Self test without local game
         run: node tools/qa/w/qa-runner.mjs --mode self-test
       - name: Offline missing-project fail-closed smoke
