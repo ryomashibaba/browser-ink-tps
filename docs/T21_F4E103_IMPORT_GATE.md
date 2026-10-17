@@ -46,3 +46,13 @@ node scripts/t21-f4e103-source-intake.mjs --source "<F4E103F local game folder>"
 - The Chrome CI is the older *public source baseline*. When the full F4E103F source is obtained and reviewed, migrate approved code as bounded commits, then independently validate Windows KCC/Recast, paint authority, CPU and real LIVE frame timing.
 
 Do not run this helper from a randomly updated public branch using elevated privileges. The eventual Windows bridge must accept explicit, pinned revisions and refuse untrusted code execution.
+
+## One-time Windows source handoff (optional; not executed)
+
+A local-only helper now exists at `RUN_T21_F4E103F_PRIVATE_HANDOFF_ONCE.cmd`. Run this **only from the reviewed development-branch checkout** on Windows; it does not clone, update, execute remote PRs, upload files, or alter the F4E103F game.
+
+- Default source: `%USERPROFILE%\Downloads\T21_Undertow_F4E66_Real_Contact_AB_Gated_Handoff`; an explicit folder may be passed as argument.
+- Reads and compares the local source against the checkout using `scripts/t21-f4e103-source-intake.mjs`, requires both F4E103F and F4E103E launcher file names, and refuses to overwrite an existing ZIP.
+- Produces `%USERPROFILE%\Downloads\T21_F4E103F_PRIVATE_SOURCE_REVIEW.zip`. Includes ONLY changed/new candidate source files which pass preliminary filename/content quarantine rules plus a private manifest; **no** full original-source packs, images/videos, or flagged provenance/secret files are automatically added. Important: no scanner can guarantee that every included file is copyright-safe or secret-free.
+- The ZIP remains local until the owner reviews and **explicitly uploads** it. Never push that ZIP to the public GitHub repository. The current public CI does not prove F4E103F gameplay, performance, actor placement or scoreable surfaces.
+- After intake, review the ZIP source by source, import only approved code into dev branch, then move on to F4E103G real-game changes. This one-time handoff is not the future unattended Windows synchronization bridge.
