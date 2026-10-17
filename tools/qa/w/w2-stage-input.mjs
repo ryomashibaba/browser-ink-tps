@@ -1,107 +1,104 @@
 #!/usr/bin/env node
-/** W2: guarded transformation of ISOLATED QA copy only.
- * No edits to originals, stage geometry, NavMesh, paint, or actor poses.
+/**
+ * W2.2 - app-only, fail-closed QA adaptation inside a separate Q sandbox.
+ * Does NOT modify PlayerInput constructor/getters or the Windows original.
+ * The normal input is overridden on its INSTANCE, briefly, only while
+ * the explicit frozen nonproduction source QA advances genuine KCC ticks.
  */
 import {createHash} from 'node:crypto';
 import {existsSync,lstatSync,readFileSync,writeFileSync,realpathSync} from 'node:fs';
 import {resolve,join,sep} from 'node:path';
 
-const names=['src/input/PlayerInput.ts','src/app/UndertowF3PlayablePreviewApp.ts'];
+const playerFile='src/input/PlayerInput.ts';
+const previewFile='src/app/UndertowF3PlayablePreviewApp.ts';
 const sha=s=>createHash('sha256').update(s).digest('hex');
-function once(src,needle,replacement,label){
- const count=src.split(needle).length-1;
- if(count!==1)throw Error('HOLD_W2_ANCHOR_'+label+'_COUNT_'+count);
- return src.replace(needle,replacement);
+
+function replaceOne(source,pattern,replacement,label){
+ const matches=[...source.matchAll(pattern)];
+ if(matches.length!==1)throw Error('HOLD_W2_ANCHOR_'+label+'_COUNT_'+matches.length);
+ return source.replace(pattern,replacement);
 }
 export function patchSources(player,app){
- if(player.includes('qaAxis')||app.includes('qaDriveTicks'))
-  throw Error('HOLD_W2_PREVIOUS_QA_INPUT_PATCH_FOUND');
- let p=player,a=app;
- p=once(p,"  private readonly keys = new Set<string>();",
-  "  private readonly keys = new Set<string>();\n  private qaAxis: Readonly<{x:number;y:number}> | null = null;",'INPUT_FIELD');
- p=once(p,"  public constructor(private readonly canvas: HTMLCanvasElement) {",
-  "  public constructor(\n    private readonly canvas: HTMLCanvasElement,\n    private readonly deterministicQaEnabled = false\n  ) {",'INPUT_CONSTRUCTOR');
- const getterOld=[
- "  public get moveX(): number {",
- "    return (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0);",
- "  }","",
- "  public get moveY(): number {",
- "    return (this.keys.has('KeyW') ? 1 : 0) - (this.keys.has('KeyS') ? 1 : 0);",
- "  }"].join('\n');
- const getterNew=[
- "  /** Only applied for opt-in paused source QA; actual Rapier KCC is retained. */",
- "  public setQaAxis(x: number, y: number): void {",
- "    if (!this.deterministicQaEnabled) throw Error('T21_QA_AXIS_NOT_AUTHORIZED');",
- "    if (![x,y].every(Number.isFinite) || Math.abs(x)>1 || Math.abs(y)>1)",
- "      throw Error('T21_QA_AXIS_OUT_OF_RANGE');",
- "    this.qaAxis = {x,y};",
- "  }",
- "  public clearQaAxis(): void {this.qaAxis = null;}",
- "  public get moveX(): number {",
- "    return this.qaAxis?.x ??",
- "      ((this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0));",
- "  }",
- "  public get moveY(): number {",
- "    return this.qaAxis?.y ??",
- "      ((this.keys.has('KeyW') ? 1 : 0) - (this.keys.has('KeyS') ? 1 : 0));",
- "  }"].join('\n');
- p=once(p,getterOld,getterNew,'INPUT_GETTERS');
- if(!a.includes('T21_F3_EXPLICIT_NONPRODUCTION_PREVIEW_ONLY')||
-    !a.includes('T21_F3_QA_PHYSICAL_DRIVE_FORBIDDEN'))
-  throw Error('HOLD_W2_NOT_FROZEN_QA_STAGE');
- a=once(a,'  this.input=new PlayerInput(canvas);',[
- "  const qa=new URL(location.href).searchParams;",
- "  this.input=new PlayerInput(canvas,",
- "   qa.get('t21Play')==='preview'&&qa.get('t21QaDrive')==='source'&&",
- "   qa.get('t21QaInput')==='deterministic'&&qa.get('t21KccAudit')==='readOnly');"
- ].join('\n'),'APP_INPUT');
- a=once(a,' private paused=false;',[
- " private paused=new URL(location.href).searchParams.get('t21Play')==='preview'&&",
- "  new URL(location.href).searchParams.get('t21QaDrive')==='source'&&",
- "  new URL(location.href).searchParams.get('t21QaInput')==='deterministic'&&",
- "  new URL(location.href).searchParams.get('t21KccAudit')==='readOnly'&&",
- "  new URL(location.href).searchParams.get('t21QaPauseOnBoot')==='1';"
- ].join('\n'),'APP_PAUSED_BOOT');
- a=once(a,'   advanceQaTicks:(count:number)=>this.advanceQaTicks(count),',
- "   advanceQaTicks:(count:number)=>this.advanceQaTicks(count),\n"+
- "   qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),",
- 'APP_QA_API');
- a=once(a,' private advanceQaTicks(count:number){',[
- " /** Preserve actual PlayerController, CPU, Rapier and native 60Hz tick. */",
- " private qaDriveTicks(x:number,y:number,count:number){",
- "  const qa=new URL(location.href).searchParams;",
+ if(!/\bclass\s+PlayerInput\b/.test(player)||
+    !/\bget\s+moveX\s*\(/.test(player)||
+    !/\bget\s+moveY\s*\(/.test(player))
+  throw Error('HOLD_W2_ORIGINAL_PLAYER_INPUT_GETTERS_UNVERIFIED');
+ if(!/\bclass\s+UndertowF3PlayablePreviewApp\b/.test(app)||
+    !app.includes('T21_F3_EXPLICIT_NONPRODUCTION_PREVIEW_ONLY')||
+    !app.includes('T21_F3_QA_PHYSICAL_DRIVE_FORBIDDEN'))
+  throw Error('HOLD_W2_NOT_FROZEN_QA_PREVIEW');
+ if(app.includes('qaDriveTicks')||app.includes('t21QaPauseOnBoot'))
+  throw Error('HOLD_W2_APP_ALREADY_PATCHED');
+ let a=app;
+ a=replaceOne(a,/(\bprivate\s+paused\s*=\s*)false(\s*;)/g,
+  (_,head,end)=>head+
+  "new URL(location.href).searchParams.get('t21Play')==='preview'&&\n"+
+  "  new URL(location.href).searchParams.get('t21QaDrive')==='source'&&\n"+
+  "  new URL(location.href).searchParams.get('t21QaInput')==='deterministic'&&\n"+
+  "  new URL(location.href).searchParams.get('t21KccAudit')==='readOnly'&&\n"+
+  "  new URL(location.href).searchParams.get('t21QaPauseOnBoot')==='1'"+end,
+  'APP_PAUSED_BOOT');
+ a=replaceOne(a,/(\badvanceQaTicks\s*:\s*\(\s*count\s*:\s*number\s*\)\s*=>\s*this\.advanceQaTicks\(\s*count\s*\)\s*,)/g,
+  '$1\n   qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),',
+  'APP_QA_API');
+ const implementation=[
+ ' /** W2.2: actual 60Hz PlayerController / Rapier and real CPU fixed ticks.',
+ '  * No mouse lock, no teleport, no modification of normal PlayerInput code.',
+ '  * Temporary instance getters are ALWAYS removed after the QA tick batch.',
+ '  */',
+ ' private qaDriveTicks(x:number,y:number,count:number){',
+ '  const qa=new URL(location.href).searchParams;',
  "  if(qa.get('t21Play')!=='preview'||qa.get('t21QaDrive')!=='source'||",
  "     qa.get('t21QaInput')!=='deterministic'||qa.get('t21KccAudit')!=='readOnly'||",
- "     !this.paused||document.pointerLockElement===this.canvas||",
- "     this.stopReason||!Number.isSafeInteger(count)||count<1||count>96)",
+ "     qa.get('t21QaPauseOnBoot')!=='1'||",
+ '     !this.paused||document.pointerLockElement===this.canvas||',
+ '     this.stopReason||!Number.isSafeInteger(count)||count<1||count>96||',
+ '     ![x,y].every(Number.isFinite)||Math.abs(x)>1||Math.abs(y)>1)',
  "    throw Error('T21_QA_DETERMINISTIC_INPUT_FORBIDDEN');",
- "  this.input.setQaAxis(x,y);",
- "  try{return this.advanceQaTicks(count);}",
- "  finally{this.input.clearQaAxis();}",
- " }",
- " private advanceQaTicks(count:number){"
- ].join('\n'),'APP_QA_METHOD');
- if(!p.includes('T21_QA_AXIS_NOT_AUTHORIZED')||
-    !a.includes('T21_QA_DETERMINISTIC_INPUT_FORBIDDEN'))
-  throw Error('HOLD_W2_SAFETY_GUARD_MISSING');
- return {player:p,app:a};
+ '  const input=this.input;',
+ "  if(Object.getOwnPropertyDescriptor(input,'moveX')||",
+ "     Object.getOwnPropertyDescriptor(input,'moveY')||",
+ '     !Object.isExtensible(input))',
+ "    throw Error('T21_QA_INPUT_OVERRIDE_UNSAFE');",
+ '  let appliedX=false;',
+ '  try{',
+ "   Object.defineProperty(input,'moveX',{configurable:true,get:()=>x});",
+ '   appliedX=true;',
+ "   Object.defineProperty(input,'moveY',{configurable:true,get:()=>y});",
+ '   return this.advanceQaTicks(count);',
+ '  }finally{',
+ "   if(appliedX)Reflect.deleteProperty(input,'moveX');",
+ "   Reflect.deleteProperty(input,'moveY');",
+ '  }',
+ ' }',
+ ''].join('\n');
+ a=replaceOne(a,/(\bprivate\s+advanceQaTicks\s*\(\s*count\s*:\s*number\s*\)\s*\{)/g,
+  implementation+'$1','APP_QA_METHOD');
+ if(!a.includes('T21_QA_INPUT_OVERRIDE_UNSAFE')||
+    !a.includes('Reflect.deleteProperty')||
+    !a.includes('this.advanceQaTicks(count)'))
+  throw Error('HOLD_W2_INPUT_CLEANUP_GUARD_MISSING');
+ return {player,app:a};
 }
 export function apply({sandbox,original}){
- if(!sandbox||!original)throw Error('HOLD_W2_EXPECTS_SOURCE_PATHS');
- const root=realpathSync(resolve(sandbox)),source=realpathSync(resolve(original));
- if(root===source||root.startsWith(source+sep)||source.startsWith(root+sep))
-  throw Error('HOLD_W2_SANDBOX_OVERLAPS_SOURCE');
- const files=names.map(name=>join(root,name));
- for(const f of files){
-  if(!existsSync(f)||lstatSync(f).isSymbolicLink()||!lstatSync(f).isFile())
-   throw Error('HOLD_W2_EXPECTED_SOURCE_MISSING');
+ if(!sandbox||!original)throw Error('HOLD_W2_EXPECTS_BOTH_PATHS');
+ const root=realpathSync(resolve(sandbox)),src=realpathSync(resolve(original));
+ if(root===src||root.startsWith(src+sep)||src.startsWith(root+sep))
+  throw Error('HOLD_W2_ORIGINAL_AND_QA_SANDBOX_OVERLAP');
+ const playerPath=join(root,playerFile),appPath=join(root,previewFile);
+ for(const p of [playerPath,appPath]){
+  if(!existsSync(p)||lstatSync(p).isSymbolicLink()||!lstatSync(p).isFile())
+   throw Error('HOLD_W2_EXPECTED_PLAIN_SANDBOX_SOURCE_MISSING');
  }
- const old=files.map(f=>readFileSync(f,'utf8'));
- const revised=patchSources(old[0],old[1]),next=[revised.player,revised.app];
- // All source structure gates have passed BEFORE the first isolated write.
- files.forEach((f,i)=>writeFileSync(f,next[i],'utf8'));
- return {schema:'t21-f4e103w2-isolated-stage/v1',
-  status:'PASS_ISOLATED_QA_PATCH_NOT_DEPLOYED',
-  changes:names.map((path,i)=>({path,oldSha256:sha(old[i]),newSha256:sha(next[i])})),
-  geometryModified:false,navModified:false,productionAuthorized:false};
+ const player=readFileSync(playerPath,'utf8'),app=readFileSync(appPath,'utf8');
+ const patched=patchSources(player,app);
+ if(patched.player!==player)throw Error('CRITICAL_W2_PLAYER_INPUT_MODIFIED');
+ if(patched.app===app)throw Error('HOLD_W2_APP_NOT_CHANGED');
+ // No write occurs before all source checks have succeeded.
+ writeFileSync(appPath,patched.app,'utf8');
+ return {schema:'t21-f4e103w2-app-only-isolated-stage/v2',
+  status:'PASS_ISOLATED_APP_ONLY_QA_PATCH_NOT_DEPLOYED',
+  changes:[{path:previewFile,oldSha256:sha(app),newSha256:sha(patched.app)}],
+  playerInputSourceUnchanged:true,geometryModified:false,
+  navModified:false,productionAuthorized:false};
 }
