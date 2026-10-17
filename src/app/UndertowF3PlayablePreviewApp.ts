@@ -734,7 +734,10 @@ export class UndertowF3PlayablePreviewApp{
    cpuCombatHits:this.stats.cpuCombatHits,
    cpuSplats:this.stats.cpuSplats,
    paintEventsPerSecond:this.stats.paintEventsPerSecond,
-   cpuShots:this.stats.cpuShots,shotsFired:this.stats.shotsFired,
+   cpuShots:this.stats.cpuShots,
+   cpuSourceTurfShots:this.stats.cpuSourceTurfShots,
+   cpuProjectilePaintHits:this.stats.cpuProjectilePaintHits,
+   shotsFired:this.stats.shotsFired,
    tick:this.clock.tick,paused:this.paused,
    matchState:this.matchState,timeRemainingSeconds:this.remainingSeconds,
    humanSplats:this.humanSplats,humanRespawns:this.humanRespawns,
@@ -816,6 +819,9 @@ export class UndertowF3PlayablePreviewApp{
     ' | original links '+p.originalSourceLinksUsed,
    'CPU paint '+state.cpuPaintRequests+' · CPU hits '+state.cpuCombatHits+
     ' · CPU splats '+state.cpuSplats,
+   'REAL CPU TURF FIRE · '+state.cpuSourceTurfShots+
+    ' source-floor shots / '+state.cpuProjectilePaintHits+
+    ' physical paint impacts (QA only)',
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
     ' | paint/s '+state.paintEventsPerSecond.toFixed(1),
    'HUMAN avoidance · '+(state.humanCrowd.active?'NATIVE 8TH CROWD':'AIRBORNE / UNVERIFIED')+
