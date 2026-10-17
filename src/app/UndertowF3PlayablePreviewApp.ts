@@ -12,6 +12,7 @@ import {
  TextureHandler,Vec3
 } from 'playcanvas';
 import {CpuAgentSystem} from '../ai/CpuAgentSystem';
+import {CpuKitSystem} from '../ai/CpuKitSystem';
 import {CombatTargetSystem} from '../combat/CombatTargetSystem';
 import {PlayerResources} from '../combat/PlayerResources';
 import {ThirdPersonCamera} from '../camera/ThirdPersonCamera';
@@ -63,7 +64,11 @@ const STEP=1/60;
 const PROJECT='Undertow T21 · F3 Play Lab';
 export class UndertowF3PlayablePreviewApp{
  static async boot(canvas:HTMLCanvasElement,ui:HTMLElement){
-  if(new URL(location.href).searchParams.get('t21Play')!=='preview'||
+  const qaParams=new URL(location.href).searchParams;
+  if(qaParams.has('t21CpuKits')&&
+     (qaParams.get('t21CpuKits')!=='qa'||qaParams.get('t21QaDrive')!=='source'))
+   throw Error('T21_F3_CPU_KITS_REQUIRE_EXPLICIT_SOURCE_QA');
+  if(qaParams.get('t21Play')!=='preview'||
      frozen.activationReady!==false)
    throw Error('T21_F3_EXPLICIT_NONPRODUCTION_PREVIEW_ONLY');
   await Promise.all([initializeRapier(),initializeRecastNavigation()]);
@@ -92,6 +97,11 @@ export class UndertowF3PlayablePreviewApp{
  private readonly nav:RecastStageNavigation;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  private readonly cpu:CpuAgentSystem;
+ /** Explicit source QA only. Never enabled by ordinary T20/T21 routes. */
+ private readonly cpuKitQaEnabled=new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
+  new URL(location.href).searchParams.get('t21CpuKits')==='qa';
+ private readonly cpuKit:CpuKitSystem|null;
+ private cpuKitArtificialGaugeArms=0;
  private readonly traffic:UndertowF3SourceTraffic;
  private readonly humanCrowd:UndertowF3NativeHumanCrowd;
  private readonly player:PlayerController;
@@ -216,6 +226,11 @@ export class UndertowF3PlayablePreviewApp{
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
    this.feedback,this.stats);
+  // Uses the real existing weapon/ink/physics systems, but only on the
+  // explicit F3 + source QA route. No scoreable promotion is authorized.
+  this.cpuKit=this.cpuKitQaEnabled ? new CpuKitSystem(app,surfaces,
+   this.physics,this.coordinator,this.projectiles,this.cpu,
+   this.feedback,this.stats) : null;
   ui.innerHTML='';
   this.panel=document.createElement('section');
   this.panel.id='t21-f3-play-panel';
@@ -320,6 +335,7 @@ export class UndertowF3PlayablePreviewApp{
   const api={snapshot:()=>this.snapshot(),
    pause:()=>{this.paused=true;this.refresh();return this.snapshot();},
    advanceQaTicks:(count:number)=>this.advanceQaTicks(count),
+   armCpuKitsQa:()=>this.armCpuKitsQa(),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
@@ -483,6 +499,8 @@ export class UndertowF3PlayablePreviewApp{
   this.stopReason=null;this.paused=false;this.respawnFrames=0;
   this.resources.reset();
   this.projectiles.reset();
+  this.cpuKit?.reset();
+  this.cpuKitArtificialGaugeArms=0;
   this.coordinator.clear();
   // The source-grounded preview uses the same seven real bots. A full
   // actor reset is a deliberate manual restart, not a mid-fall teleport.
@@ -490,6 +508,18 @@ export class UndertowF3PlayablePreviewApp{
   // The traffic director is one-shot and records true recovery. A page
   // reload rebuilds the deterministic native source routes and systems.
   window.location.reload();
+ }
+ /** Deliberately artificial gauge: only QA, paused, source patrol unlocked. */
+ private armCpuKitsQa(){
+  if(!this.cpuKitQaEnabled||!this.cpuKit||!this.paused||
+     document.pointerLockElement===this.canvas||this.stopReason||
+     !this.traffic.snapshot().freeCombatEnabled)
+   throw Error('T21_F3_CPU_KIT_ARTIFICIAL_GAUGE_FORBIDDEN');
+  const armed=this.cpu.forceKitQaReady();
+  if(armed)this.cpuKitArtificialGaugeArms++;
+  this.refresh();
+  return {armed,artificial:true,source:'MANUAL_QA_ONLY',
+   authorizedForNormalScoring:false,kitEnabled:this.cpuKitQaEnabled};
  }
  private advanceQaTicks(count:number){
   if(new URL(location.href).searchParams.get('t21QaDrive')!=='source'||
@@ -500,7 +530,8 @@ export class UndertowF3PlayablePreviewApp{
    for(let i=0;i<count&&this.matchState!=='TIME_UP';i++)
     this.stepFixed(++this.clock.tick,STEP);
    this.player.render(1,this.visual);this.cpu.render(1);
-   this.projectiles.render(1);this.camera.update(this.visual);
+   this.projectiles.render(1);this.cpuKit?.render(1);
+   this.camera.update(this.visual);
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
    this.refresh();
   }catch(error){
@@ -531,7 +562,9 @@ export class UndertowF3PlayablePreviewApp{
      if(this.remainingSeconds===0)this.matchState='TIME_UP';
     }
     this.cpu.drainFireRequests(req=>this.projectiles.queueCpuShot(req));
-    this.cpu.drainKitRequests(()=>false);
+    // The default remains reject/rollback. Only opt-in QA uses the genuine
+    // weapon execution path; 17 paintable surfaces remain UNSCORED.
+    this.cpu.drainKitRequests(request=>this.cpuKit?.queue(request)??false);
     this.camera.update(this.player.getPosition(this.p));
     this.camera.getAimDirection(this.aim);
     this.player.getMuzzlePosition(this.aim,this.muzzle);
@@ -543,6 +576,7 @@ export class UndertowF3PlayablePreviewApp{
       alive&&this.input.secondaryHeld&&this.player.canShoot,
       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
       alive,alive);
+    this.cpuKit?.fixedUpdate(seconds);
     this.coordinator.processTick(frame);
     if(this.resources.currentHp<=0){
      if(this.respawnFrames===0){
@@ -578,6 +612,7 @@ export class UndertowF3PlayablePreviewApp{
    this.player.render(report.alpha,this.visual);
    this.cpu.render(report.alpha);
    this.projectiles.render(report.alpha);
+   this.cpuKit?.render(report.alpha);
    this.feedback.update(cameraDt);
    this.camera.update(this.visual,cameraDt);
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
@@ -651,6 +686,12 @@ export class UndertowF3PlayablePreviewApp{
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   cpuKitQa:{enabled:this.cpuKitQaEnabled,artificialGaugeArms:this.cpuKitArtificialGaugeArms,
+    cpuSubUses:this.stats.cpuSubUses,cpuSpecialActivations:this.stats.cpuSpecialActivations,
+    activeSubEffects:this.stats.cpuActiveSubs,
+    activeSpecialEffects:this.stats.cpuActiveSpecialEffects,
+    sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
+   cpuContinuity:this.cpu.qaContinuitySnapshot(),
    cpuContinuity:this.cpu.qaContinuitySnapshot(),
    cpuPaintRequests:this.stats.cpuPaintRequests,
    cpuCombatHits:this.stats.cpuCombatHits,
