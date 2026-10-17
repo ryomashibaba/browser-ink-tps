@@ -47,16 +47,22 @@ test('changed getter expression is preserved, not rewritten',()=>{
  assert.equal(patchSources(variant,app).player,variant);
 });
 
-test('changed app pause whitespace is accepted but ambiguous anchors fail closed',()=>{
+test('pause/property whitespace and API formatting differences are supported',()=>{
  const {player,app}=source();
- const space=app.replace(' private paused=false;','  private   paused  =  false ;');
- assert.notEqual(space,app);
- assert.match(patchSources(player,space).app,/t21QaPauseOnBoot/);
- assert.throws(()=>patchSources(player,app.replace(' private paused=false;','')),
-  /HOLD_W2_ANCHOR_APP_PAUSED_BOOT/);
- assert.throws(()=>patchSources(player,app.replace(' private paused=false;',
-  ' private paused=false;\n private paused=false;')),
- /HOLD_W2_ANCHOR_APP_PAUSED_BOOT_COUNT_2/);
+ const varied=app.replace(' private paused=false;','  private   paused  =  false ;')
+  .replace('const api={snapshot:()=>this.snapshot(),',
+    'const api = { snapshot : () => this.snapshot() ,');
+ assert.notEqual(varied,app);
+ assert.match(patchSources(player,varied).app,/t21QaPauseOnBoot/);
+});
+test('missing or repeated F3 API anchors are refused before any writes',()=>{
+ const {player,app}=source();
+ const anchor='const api={snapshot:()=>this.snapshot(),';
+ assert.ok(app.includes(anchor));
+ assert.throws(()=>patchSources(player,app.replace(anchor,'const otherApi=undefined;')),
+  /HOLD_W2_ANCHOR_APP_FROZEN_QA_API_COUNT_0/);
+ assert.throws(()=>patchSources(player,app.replace(anchor,anchor+'\n'+anchor)),
+  /HOLD_W2_ANCHOR_APP_FROZEN_QA_API_COUNT_2/);
 });
 
 test('prepatched/unsupported app or missing real input getters is refused',()=>{
