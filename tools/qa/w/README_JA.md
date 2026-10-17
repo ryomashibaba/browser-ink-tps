@@ -1,10 +1,17 @@
-# Browser Ink TPS — F4E103W 常設QA（初期版）
+# F4E103W2 — 常設QA・決定論的KCC計測
 
-対象ブランチ: `dev/t21-f4e103w-qa-infra`。公開ゲームの本番コード・マップ・CPU挙動は変更しません。
+ブランチ: `dev/t21-f4e103w-qa-infra` (非本番・非デプロイ専用)。2026-10-17。
 
-## 初回だけ
+## 変わらない原則
 
-Windows PowerShell に以下を1回貼り付けて実行します。取得先はユーザー自身のGitHubリポジトリです。
+- 正本 `Downloads/T21_Undertow_F4E66_Real_Contact_AB_Gated_Handoff` を絶対に上書きしない。原作の真正な穴を推測で埋めない。
+- frozen 権限は 25 solids / 17 paint / 26 nav / 0 scoreable のまま。
+- 手入力・ゲーム物理を変更しない。QA限定でPlayerInputへ方向入力を渡すが、本物のRapier KCC・CPUと60Hz固定ステップを使う。
+- Userの明示許可なしにGitHubへの本番変更、非公開アセットや結果のアップロード、Workの使用をしない。
+
+## 初回1回（すでにW登録済みなら不要）
+
+Windows PowerShellでユーザーのGitHubからbootstrapを取得し登録する:
 
 ```powershell
 $p = Join-Path $env:TEMP 'inktps_qa_bootstrap.ps1'
@@ -12,29 +19,24 @@ Invoke-WebRequest 'https://raw.githubusercontent.com/ryomashibaba/browser-ink-tp
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p
 ```
 
-インストール先: `%LOCALAPPDATA%\InkTPS-QA`。常設起動ファイルは `RUN_INKTPS_QA.cmd`。以降は同じファイルを使い、新しいZIPを展開しません。
+常設ファイルは `%LOCALAPPDATA%\InkTPS-QA\RUN_INKTPS_QA.cmd`。
 
-初回と以後の起動時、GitHubの `manifest.json` を照合し、実行プログラムのSHA-256を検証して変更部分だけ取得します。更新ネットワークが失敗しても、検証済みキャッシュのみを使用します。
+## 以後の操作
 
-## 操作と安全性
+- `RUN_INKTPS_QA.cmd` ダブルクリック：**読み取り専用の接続・正本不変チェック**。実ゲームの計測は起動しない。
+- `RUN_INKTPS_QA.cmd run`：**隔離Q+Uビルド → W2 QA入力パッチ → 再ビルド → ChromeをPointer Lockなしで起動 → 2ルート実KCCとCrowd代理位置を記録**。通常ゲームの物理と安全停止は維持。
+- 結果：`%LOCALAPPDATA%\InkTPS-QA\F4E103W_LAST_REPORT.json`（固定）。詳細ログは `runs/w2-*/F4E103W2_LOCAL_TRACE.json`。
+- 再実行時にGitHubのマニフェストにあるSHA-256と一致するコードだけ更新。以前のVキットはビルド診断部品として再利用するが、Pointer Lockを要求するVのブラウザー自動歩行は呼び出さない。
+- Windows正本の元のnode_modulesを依存関係として使う。Vキットの展開済みフォルダーは当面必要だが、**今後新しいZIPの展開は不要**。
 
-- `RUN_INKTPS_QA.cmd` — プロジェクトと旧Vキットの存在確認・重要ソースのチェックサム計測のみ。Chromeやゲームは起動しません。
-- `RUN_INKTPS_QA.cmd run` — 明示した場合のみ、以前のF4E103Vの隔離ビルド・Chrome実測を実行します。**Pointer Lockの問題は未修正なので失敗し得ます**。通常はまだ使用しないでください。
-- `RUN_INKTPS_QA.cmd self-test` — 内部簡易検査。
-- 最新結果: `%LOCALAPPDATA%\InkTPS-QA\F4E103W_LAST_REPORT.json`。
+## 検証レベル
 
-初期版は `Downloads\T21_Undertow_F4E66_Real_Contact_AB_Gated_Handoff` を正本、`Downloads\BrowserInkTPS_F4E103V_Crowd_Stage_Hotfix` を直近の既存キットとして検出します。
+GitHubのWindows/Linux CIで、実コードの型チェック・ビルド・QA入力テスト、歴史的ソースに対する隔離パッチのゲートとSHA-256を検証する。CIには非公開Windows正本がないため、ローカル実測のPASSとは区別する。
 
-## 実装済み
+初回Windows実行はまだ未検証。ソース文字列差異、ChromeやWebGL2不可、予期せぬCrowd安全停止などはHOLDとしてローカルに結果を残す。**床抜けが治ったという意味ではない。**
 
-永続ランチャー、GitHub更新のSHA-256照合、オフラインキャッシュ、安全な分離パス検査、読み取り専用の事前検証、隔離V診断への任意接続、元ファイルSHA照合、固定パスの結果JSON。
+## 現時点の効率改善と未実装
 
-## 未実装・HOLD
+ZIP再配布廃止・同じ起動ファイルを継続・更新差分取得・Pointer Lock解除済みQA設計・安全な実KCCログ。まだ結果をクラウドへ自動転送する仕組みはない。非公開の診断ログを公開GitHubへ自動アップロードしない。
 
-**重要:** 自動Driveアップロード、毎回の自動GitHubコミット、GitHub Pagesへの開発ゲーム同期、Chrome Pointer Lockを使わない真の歩行計測、実Windows環境での動作検証はまだ完了していません。GitHub ActionsのCIは公開ソースだけを検証し、ユーザーPC内のゲームは触りません。
-
-原作Actor配置、真の歩行可能領域、床の正当な穴は未認証です。原作床・コライダー・塗装・ナビゲーション・得点面への変更は全面HOLDです。
-
-## 守る境界
-
-ゲーム正本への書込み不可。非公開原作アセットをGitHubや外部クラウドへ自動送信しない。公開リポジトリへローカルJSON・ファイルパスをプッシュしない。ソース側の安全停止を無効化しない。更新は専用QAブランチのみ。
+今後は正本との差分を見ながら初回Windows実測を確認し、成功したら隔離ビルドの重複処理・キャッシュ・ログ共有を最適化する。実測に基づくまでマップ変更を進めない。
