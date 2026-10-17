@@ -1,5 +1,7 @@
 export class PlayerInput {
   private readonly keys = new Set<string>();
+  // QA-only synthetic axes. Never active during regular Pointer Lock play.
+  private qaAxis: Readonly<{x:number;y:number}> | null = null;
   private fire = false;
   private secondary = false;
   private secondaryPressedQueued = false;
@@ -7,7 +9,10 @@ export class PlayerInput {
   private subPressedQueued = false;
   private specialPressedQueued = false;
 
-  public constructor(private readonly canvas: HTMLCanvasElement) {
+  public constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly deterministicQaEnabled = false
+  ) {
     window.addEventListener('keydown', (event) => {
       if (document.pointerLockElement !== this.canvas) return;
       this.keys.add(event.code);
@@ -71,12 +76,26 @@ export class PlayerInput {
     canvas.addEventListener('pointercancel', () => { this.fire = false; });
   }
 
+  /** Applies only for opt-in, paused, nonproduction source QA tick stepping. */
+  public setQaAxis(x: number, y: number): void {
+    if (!this.deterministicQaEnabled) throw Error('T21_QA_AXIS_NOT_AUTHORIZED');
+    if (![x,y].every(Number.isFinite) || Math.abs(x)>1 || Math.abs(y)>1)
+      throw Error('T21_QA_AXIS_OUT_OF_RANGE');
+    this.qaAxis = {x,y};
+  }
+
+  public clearQaAxis(): void {
+    this.qaAxis = null;
+  }
+
   public get moveX(): number {
-    return (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0);
+    return this.qaAxis?.x ??
+      ((this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0));
   }
 
   public get moveY(): number {
-    return (this.keys.has('KeyW') ? 1 : 0) - (this.keys.has('KeyS') ? 1 : 0);
+    return this.qaAxis?.y ??
+      ((this.keys.has('KeyW') ? 1 : 0) - (this.keys.has('KeyS') ? 1 : 0));
   }
 
   public get squidHeld(): boolean {
