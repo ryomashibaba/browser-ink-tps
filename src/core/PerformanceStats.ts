@@ -122,6 +122,10 @@ export class PerformanceStats {
   public cpuSourceTurfShots = 0;
   /** Actual native CPU projectile intersections with paintable surfaces. */
   public cpuProjectilePaintHits = 0;
+  /** Actual authoritative cell ownership changes from CPU source paint (includes footsteps). */
+  public cpuInkCellsChanged = 0;
+  /** Actual cell ownership changes from native CPU impact paint events. */
+  public cpuImpactInkCellsChanged = 0;
   public cpuCombatHits = 0;
   public cpuSplats = 0;
   public cpuRespawns = 0;
