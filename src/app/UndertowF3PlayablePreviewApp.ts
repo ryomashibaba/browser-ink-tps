@@ -692,7 +692,6 @@ export class UndertowF3PlayablePreviewApp{
     activeSpecialEffects:this.stats.cpuActiveSpecialEffects,
     sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
    cpuContinuity:this.cpu.qaContinuitySnapshot(),
-   cpuContinuity:this.cpu.qaContinuitySnapshot(),
    cpuPaintRequests:this.stats.cpuPaintRequests,
    cpuCombatHits:this.stats.cpuCombatHits,
    cpuSplats:this.stats.cpuSplats,
@@ -727,6 +726,12 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   state.cpuKitQa.enabled
+    ?'CPU KITS QA · real effects ON / artificial gauge arms '+
+      state.cpuKitQa.artificialGaugeArms+
+      ' / subs '+state.cpuKitQa.cpuSubUses+
+      ' / specials '+state.cpuKitQa.cpuSpecialActivations+
+      ' · 0 scoreable surfaces':'',
    'SOURCE PATROL · '+p.sourcePatrol.realGoalRequests+' goals / '+
     p.sourcePatrol.travelMeters.toFixed(1)+'m · '+p.sourcePatrol.auditedTargets+' audited',
    'F3G WHOLE SOURCE · '+this.wholeSourceStatus+
