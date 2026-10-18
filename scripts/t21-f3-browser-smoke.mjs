@@ -164,7 +164,13 @@ async function main(){
   if(!armed.armed)reject('W10B14_GENUINE_WEAPON_NOT_ARMED');
   let splat=null;
   for(let n=0;n<15;n++){
-   const progress=await evaluate('window.__t21F3.advanceQaTicks(12)');
+   const attempted=await evaluate(`(() => {
+    try{return {state:window.__t21F3.advanceQaTicks(12)};}
+    catch(error){return {error:String(error),
+     witness:window.__t21F3.w10B14RenderWitness()};}
+   })()`);
+   if(attempted.error)reject('W10B14_PROJECTILE_PHYSICS_HOLD_'+JSON.stringify(attempted));
+   const progress=attempted.state;
    if(progress.stopReason)reject('W10B14_PROJECTILE_STOP_'+progress.stopReason);
    const now=verify(await evaluate('window.__t21F3.w10B14RenderWitness()'),
     'SHOOTING');
@@ -179,7 +185,13 @@ async function main(){
    frame:await screenshot('W10B14_1_CPU_SPLATTED')});
   let respawn=null;
   for(let n=0;n<20;n++){
-   const progress=await evaluate('window.__t21F3.advanceQaTicks(12)');
+   const attempted=await evaluate(`(() => {
+    try{return {state:window.__t21F3.advanceQaTicks(12)};}
+    catch(error){return {error:String(error),
+     witness:window.__t21F3.w10B14RenderWitness()};}
+   })()`);
+   if(attempted.error)reject('W10B14_RESPAWN_PHYSICS_HOLD_'+JSON.stringify(attempted));
+   const progress=attempted.state;
    if(progress.stopReason)reject('W10B14_RESPAWN_STOP_'+progress.stopReason);
    const now=verify(await evaluate('window.__t21F3.w10B14RenderWitness()'),
     'RESPAWNING');
