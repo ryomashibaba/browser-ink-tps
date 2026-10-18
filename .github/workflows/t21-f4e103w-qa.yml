@@ -18,6 +18,8 @@ on:
       - 'src/stage/undertow/UndertowW10SourceTransitionAudit.test.ts'
       - 'src/stage/undertow/UndertowW10SourceFrontierAudit.ts'
       - 'src/stage/undertow/UndertowW10SourceFrontierAudit.test.ts'
+      - 'src/stage/undertow/UndertowW10SourceSeamSectionAudit.ts'
+      - 'src/stage/undertow/UndertowW10SourceSeamSectionAudit.test.ts'
       - 'src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
@@ -120,6 +122,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW10SourceTransitionAudit.test.ts
       - name: W10-B5 original-source paired Nav/KCC frontier diagnosis
         run: npx vitest run src/stage/undertow/UndertowW10SourceFrontierAudit.test.ts
+      - name: W10-B6 source-only three-height underpass seam QA
+        run: npx vitest run src/stage/undertow/UndertowW10SourceSeamSectionAudit.test.ts
       - name: W9 separately sourced real CPU-projectile to real Human HP gate
         run: npx vitest run src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts
       - name: PowerShell script parser
