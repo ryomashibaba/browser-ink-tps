@@ -13,6 +13,8 @@ on:
       - 'src/stage/undertow/UndertowW7MultiCpuDirectionalQa.test.ts'
       - 'src/stage/undertow/UndertowW8SevenCpuDropPatrolQa.test.ts'
       - 'src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts'
+      - 'src/stage/undertow/UndertowW10SourceTransitionAudit.ts'
+      - 'src/stage/undertow/UndertowW10SourceTransitionAudit.test.ts'
       - 'src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
@@ -111,6 +113,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW8SevenCpuDropPatrolQa.test.ts
       - name: W9 post-drop real CPU projectile ink/impact regression
         run: npx vitest run src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts
+      - name: W10-A original-source Rapier endpoint and native NavMesh gap triage
+        run: npx vitest run src/stage/undertow/UndertowW10SourceTransitionAudit.test.ts
       - name: W9 separately sourced real CPU-projectile to real Human HP gate
         run: npx vitest run src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts
       - name: PowerShell script parser
