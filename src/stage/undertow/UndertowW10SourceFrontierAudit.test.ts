@@ -31,11 +31,24 @@ describe('W10-B5 original-source bilateral Nav/KCC frontier, read-only',()=>{
    expect(x.forward.nativePathReached).toBe(false);
    expect(x.forward.nativeTerminal?.rapierSupported).toBe(true);
    expect(x.nativeTerminalSeparationMeters).not.toBeNull();
-   expect(x.nativeTerminalSeparationMeters!).toBeGreaterThanOrEqual(0);
+   expect(x.nativeTerminalSeparationMeters!).toBeGreaterThan(20);
+   // The current unbound source seam is tens of metres wide; this is only
+   // a terminal-to-terminal straight-line lower bound, not a proposed link.
+   const positive=g.id.endsWith('positive-z');
+   expect(x.forward.nativeTerminal?.solidId).toBe(
+    positive?'UndertowT21D:right-low-team-a':
+     'UndertowT21D:right-low-team-b');
+   expect(x.reverse.nativeTerminal?.solidId).toBe(
+    positive?'UndertowT21D:center-low-team-b':
+     'UndertowT21D:center-low-team-a');
    expect(x.firstChordUnsupportedFromStartMeters).not.toBeNull();
    expect(x.firstChordUnsupportedFromEndMeters).not.toBeNull();
    for(const witness of [x.forwardTerminalKcc,x.reverseTerminalKcc]){
     expect(witness.lastNativeLegOnly).toBe(true);
+    expect(witness.sampleCount).toBeGreaterThan(1);
+    expect(witness.kccStepsAttempted).toBeGreaterThan(0);
+    expect(witness.unsupportedSampleCount).toBe(0);
+    expect(witness.kccBlockedSteps).toBe(0);
     expect(witness.sampleCount).toBe(
      witness.supportedSampleCount+witness.unsupportedSampleCount);
     expect(witness.kccStepsAttempted).toBeLessThanOrEqual(
