@@ -134,7 +134,8 @@ export class ThirdPersonCamera {
     // On visual updates only, optionally check whether the ACTUAL
     // opposite original-stage shoulder ray offers a clear view. Never
     // cast through unverified optical meshes or move the real human.
-    if(this.sourceSmartOcclusionEnabled&&recoveryDtSeconds>0){
+    if(this.sourceSmartOcclusionEnabled&&recoveryDtSeconds>0&&
+       document.pointerLockElement===this.canvas){
       this.sourceSmartOcclusion.tick(recoveryDtSeconds);
       if(blocker&&
          this.sourceSmartOcclusion.mayProbe(recoveryDtSeconds)){
