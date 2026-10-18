@@ -129,6 +129,7 @@ async function main(){
       a.activationReady!==false||a.originalEnemySpawnCertified!==false||
       a.naturalEnemyEncounterCertified!==false||
       a.humanRepositionedForIsolatedQa!==true||
+      a.cpuRepositionedForIsolatedQa!==true||
       a.realProjectileDamage!==true||a.renderComponentPresent!==true||
       a.renderComponentEnabled!==true)
     reject('W10B14_AUTHORITY_OR_COMPONENT_'+phase+' '+JSON.stringify(a));
@@ -188,7 +189,8 @@ async function main(){
    frame:await screenshot('W10B14_2_CPU_RESPAWNED')});
   const result={status:'PASS_REAL_CHROME_RENDER_COMPONENT_LIFECYCLE',
    actualBrowserWebgl2:true,realPlayerProjectileSystem:true,
-   controlledQaPlayerPlacement:true,cpuTeleportDuringWitness:false,
+   controlledQaPlayerPlacement:true,controlledQaCpuPlacement:true,
+   cpuTeleportDuringWitness:true,
    naturalEnemyEncounterCertified:false,
    pixelSilhouetteComparisonCertified:false,
    originalTurfScoringCertified:false,productionAuthorized:false,
