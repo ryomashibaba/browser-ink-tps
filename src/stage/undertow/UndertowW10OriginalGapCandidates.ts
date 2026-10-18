@@ -38,6 +38,11 @@ export interface W10B9OriginalCandidateWitness {
  readonly combinedDistanceLowerBoundMeters:number;
  readonly maxDistanceToEitherSideMeters:number;
  readonly pairwiseWithinThirtyCentimeters:boolean;
+ /** A review component may repeat a face of the already-known seam endpoint.
+  * Never rank that overlap as an independent missing floor. */
+ readonly overlapsKnownUpstreamSource:boolean;
+ readonly overlapsKnownDownstreamSource:boolean;
+ readonly independentOriginalSourceCandidate:boolean;
  readonly originalGeometryOnly:true;
  readonly gameplayCollisionAuthorized:false;
  readonly gameplayNavAuthorized:false;
@@ -53,7 +58,10 @@ export interface W10B9SeamEvidence {
  readonly originalCandidateCount:number;
  readonly exactOriginalCandidateCount:number;
  readonly closestOriginalCandidates:readonly W10B9OriginalCandidateWitness[];
+ readonly closestIndependentCandidates:readonly W10B9OriginalCandidateWitness[];
+ readonly knownEndpointSourceOverlapCount:number;
  readonly strictPairwiseCandidateCount:number;
+ readonly independentStrictPairwiseCandidateCount:number;
  readonly inferredPhysicalConnection:false;
  readonly newNavLinks:0;
  readonly newPhysicsSolids:0;
@@ -103,8 +111,8 @@ function sourceMeshInventory(){
 }
 function scanOne(
  side:Side,seam:W10B9SeamEvidence['seam'],
- up:{id:string;mesh:StageTriangleMeshGeometry},
- down:{id:string;mesh:StageTriangleMeshGeometry},
+ up:{id:string;sourceObject:string;mesh:StageTriangleMeshGeometry},
+ down:{id:string;sourceObject:string;mesh:StageTriangleMeshGeometry},
  inventory:readonly Mesh[]
 ):W10B9SeamEvidence{
  const direct=distanceBetweenExactTriangleMeshes(up.mesh,down.mesh);
@@ -115,6 +123,10 @@ function scanOne(
   const d2=distanceBetweenExactTriangleMeshes(down.mesh,source);
   if(!Number.isFinite(d1)||!Number.isFinite(d2))
    throw Error('W10_B9_NONFINITE_SOURCE_PROXIMITY');
+  const overlapsKnownUpstreamSource=
+   m.sourceComponentId.startsWith(up.sourceObject+'|')&&d1<.000001;
+  const overlapsKnownDownstreamSource=
+   m.sourceComponentId.startsWith(down.sourceObject+'|')&&d2<.000001;
   return {
    side,sourceComponentId:m.sourceComponentId,sourceMaterial:m.sourceMaterial,
    sourceReviewMeshId:m.id,triangleCount:m.vertices.length/3,
@@ -122,6 +134,9 @@ function scanOne(
    combinedDistanceLowerBoundMeters:d1+d2,
    maxDistanceToEitherSideMeters:Math.max(d1,d2),
    pairwiseWithinThirtyCentimeters:d1<=.30&&d2<=.30,
+   overlapsKnownUpstreamSource,overlapsKnownDownstreamSource,
+   independentOriginalSourceCandidate:
+    !overlapsKnownUpstreamSource&&!overlapsKnownDownstreamSource,
    originalGeometryOnly:true,gameplayCollisionAuthorized:false,
    gameplayNavAuthorized:false,originalActorSemanticsResolved:false,
    proposedLinkAuthorized:false
@@ -136,7 +151,13 @@ function scanOne(
   originalCandidateCount:examined.length,
   exactOriginalCandidateCount:examined.length,
   closestOriginalCandidates:all.slice(0,8),
+  closestIndependentCandidates:
+   all.filter(x=>x.independentOriginalSourceCandidate).slice(0,8),
+  knownEndpointSourceOverlapCount:
+   all.filter(x=>!x.independentOriginalSourceCandidate).length,
   strictPairwiseCandidateCount:all.filter(x=>x.pairwiseWithinThirtyCentimeters).length,
+  independentStrictPairwiseCandidateCount:all.filter(x=>
+   x.independentOriginalSourceCandidate&&x.pairwiseWithinThirtyCentimeters).length,
   inferredPhysicalConnection:false,newNavLinks:0,newPhysicsSolids:0,
   productionAuthorized:false
  };
@@ -150,11 +171,14 @@ export function auditW10OriginalGapCandidates():W10B9SourceCandidateResults{
   if(!ramp||chain.length!==5)
    throw Error('W10_B9_ORIGINAL_MIRROR_CHAIN_MISSING');
   seams.push(scanOne(side,'RIGHT_RAMP_TO_ENTRANCE',
-   {id:ramp.id,mesh:ramp.mesh},
-   {id:chain[0]!.id,mesh:chain[0]!.mesh},inventory.meshes));
+   {id:ramp.id,sourceObject:ramp.sourceObject,mesh:ramp.mesh},
+   {id:chain[0]!.id,sourceObject:chain[0]!.sourceObject,
+    mesh:chain[0]!.mesh},inventory.meshes));
   seams.push(scanOne(side,'MID_FLOOR_TO_OUTER_SLOPE',
-   {id:chain[1]!.id,mesh:chain[1]!.mesh},
-   {id:chain[2]!.id,mesh:chain[2]!.mesh},inventory.meshes));
+   {id:chain[1]!.id,sourceObject:chain[1]!.sourceObject,
+    mesh:chain[1]!.mesh},
+   {id:chain[2]!.id,sourceObject:chain[2]!.sourceObject,
+    mesh:chain[2]!.mesh},inventory.meshes));
  }
  return {seams,originalSourceInventoryCount:inventory.meshes.length,
   sourceIdentityDuplicatesOmitted:inventory.duplicates,

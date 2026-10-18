@@ -22,6 +22,13 @@ describe('W10-B9 two mirrored longest gaps versus exact review-only original sou
     expect(seam.originalCandidateCount).toBeGreaterThan(0);
     expect(seam.closestOriginalCandidates.length).toBeGreaterThan(0);
     expect(seam.closestOriginalCandidates.length).toBeLessThanOrEqual(8);
+    // Source components already overlapping an endpoint are provenance,
+    // not newly discovered independent crossing solids.
+    expect(seam.strictPairwiseCandidateCount).toBe(0);
+    expect(seam.independentStrictPairwiseCandidateCount).toBe(0);
+    expect(seam.closestIndependentCandidates.length).toBeGreaterThan(0);
+    expect(seam.closestIndependentCandidates.every(c=>
+     c.independentOriginalSourceCandidate)).toBe(true);
     for(const c of seam.closestOriginalCandidates){
      expect(c.side).toBe(side);
      expect(c.originalGeometryOnly).toBe(true);
@@ -32,12 +39,17 @@ describe('W10-B9 two mirrored longest gaps versus exact review-only original sou
      expect(c.gameplayNavAuthorized).toBe(false);
      expect(c.originalActorSemanticsResolved).toBe(false);
      expect(c.proposedLinkAuthorized).toBe(false);
+     expect(c.independentOriginalSourceCandidate).toBe(
+      !c.overlapsKnownUpstreamSource&&!c.overlapsKnownDownstreamSource);
     }
     expect(seam.inferredPhysicalConnection).toBe(false);
     expect(seam.newNavLinks).toBe(0);
     expect(seam.newPhysicsSolids).toBe(0);
     expect(seam.productionAuthorized).toBe(false);
    }
+   const entrance=sideSeams[0]!,middle=sideSeams[1]!;
+   expect(entrance.knownEndpointSourceOverlapCount).toBe(0);
+   expect(middle.knownEndpointSourceOverlapCount).toBe(2);
   }
   expect(report.frozenRuntimeSolidCount).toBe(25);
   expect(report.frozenRuntimePaintCount).toBe(17);
