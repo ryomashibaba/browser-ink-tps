@@ -143,7 +143,14 @@ async function main(){
    reject('W10B14_INITIAL_RENDER_NOT_LIVE_'+JSON.stringify(pre));
   stages.push({phase:'BEFORE_SHOTS',witness:pre,
    frame:await screenshot('W10B14_0_CPU_ACTIVE')});
-  const ground=await evaluate('window.__t21F3.advanceQaTicks(75)');
+  const groundAttempt=await evaluate(`(() => {
+   try {return {state:window.__t21F3.advanceQaTicks(75)};}
+   catch(error){return {error:String(error),
+    witness:window.__t21F3.w10B14RenderWitness()};}
+  })()`);
+  if(groundAttempt.error)reject('W10B14_PHYSICAL_GROUND_HOLD_'+
+   JSON.stringify(groundAttempt));
+  const ground=groundAttempt.state;
   if(ground.stopReason)reject('W10B14_HUMAN_LANDING_'+ground.stopReason);
   const armAttempt=await evaluate(`(() => {
    try{return window.__t21F3.armW10B14RealProjectiles();}
