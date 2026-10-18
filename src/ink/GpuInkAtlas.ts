@@ -119,13 +119,33 @@ export class GpuInkAtlas {
   private primed = false;
   private clearPending = false;
   private paintedThisFrame = false;
+  // W10-B20: default OFF for every other game route / production stage.
+  // A primed, persistent atlas needs no idle render-target submission.
+  private sourceIdlePostRenderFrames = 0;
+  private sourceBrushRenderFrames = 0;
+  private sourceClearRenderFrames = 0;
+
+  public sourceIdleCameraStatus() {
+    return {
+      sourcePreviewOnly: this.suspendIdleSourceCamera,
+      primed: this.primed,
+      cameraEnabled: this.cameraEntity.camera?.enabled === true,
+      atlasTexturePersistent: true,
+      pendingEvents: this.pending.length,
+      brushRenderFrames: this.sourceBrushRenderFrames,
+      clearRenderFrames: this.sourceClearRenderFrames,
+      idlePostRenderFrames: this.sourceIdlePostRenderFrames,
+      unchangedScoreAuthority: true
+    };
+  }
 
   public constructor(
     private readonly app: AppBase,
     private readonly surfaces: readonly PaintSurface[],
     atlasSize: number,
     pixelsPerMeter: number,
-    gutterPixels: number
+    gutterPixels: number,
+    private readonly suspendIdleSourceCamera = false
   ) {
     this.atlasSize = atlasSize;
     const placements = allocateSurfaceAtlas(surfaces, atlasSize, pixelsPerMeter, gutterPixels);
@@ -198,6 +218,15 @@ export class GpuInkAtlas {
     });
 
     app.on('postrender', () => {
+      // A single init/clear/brush render pass is sufficient; the atlas
+      // texture remains available to all normal world materials while idle.
+      const wasPainted = this.paintedThisFrame;
+      const wasCleared = this.clearPending;
+      if (this.suspendIdleSourceCamera) {
+        if (wasPainted) this.sourceBrushRenderFrames++;
+        if (wasCleared) this.sourceClearRenderFrames++;
+        if (!wasPainted && !wasCleared) this.sourceIdlePostRenderFrames++;
+      }
       if (this.paintedThisFrame && this.batchEntity.render) {
         this.batchEntity.render.enabled = false;
         this.paintedThisFrame = false;
@@ -206,6 +235,11 @@ export class GpuInkAtlas {
         this.cameraEntity.camera.clearColorBuffer = false;
         this.clearPending = false;
         this.primed = true;
+      }
+      if (this.suspendIdleSourceCamera && this.primed && this.cameraEntity.camera) {
+        // Do not clear or destroy the persistent color target. The next
+        // accepted brush batch (or explicit clear) re-enables this camera.
+        this.cameraEntity.camera.enabled = false;
       }
     });
   }
@@ -305,13 +339,18 @@ export class GpuInkAtlas {
 
     if (this.batchEntity.render) this.batchEntity.render.enabled = true;
     this.paintedThisFrame = true;
+    if (this.suspendIdleSourceCamera && this.cameraEntity.camera)
+      this.cameraEntity.camera.enabled = true;
     return { events: count, buildMs: performance.now() - started };
   }
 
   public clear(): void {
     this.pending.length = 0;
     if (this.batchEntity.render) this.batchEntity.render.enabled = false;
-    if (this.cameraEntity.camera) this.cameraEntity.camera.clearColorBuffer = true;
+    if (this.cameraEntity.camera) {
+      this.cameraEntity.camera.clearColorBuffer = true;
+      if (this.suspendIdleSourceCamera) this.cameraEntity.camera.enabled = true;
+    }
     this.clearPending = true;
     this.primed = false;
   }
