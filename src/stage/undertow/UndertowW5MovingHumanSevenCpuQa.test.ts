@@ -104,10 +104,11 @@ describe('W5 actual moving HUMAN + seven native CPUs + shared Rapier world',()=>
    if(chosenBot)break;
    const side=bot.team===Team.A?'positive-z':'negative-z';
    const sourceId='UndertowT21D:spawn-high-'+side;
-   for(const [dx,dz] of [[1.4,0],[-1.4,0],[0,1.4],[0,-1.4]]){
+   for(const [dx,dz] of [[1.4,0],[-1.4,0],[0,1.4],[0,-1.4]] as const){
     const desired=new Vec3(bot.position.x+dx,bot.position.y,
      bot.position.z+dz);
-    const target=nav.closestPoint(desired);
+    const snapped=nav.closestPoint(desired);
+    const target=new Vec3(snapped.x,snapped.y,snapped.z);
     if(Math.hypot(target.x-desired.x,target.y-desired.y,
         target.z-desired.z)>.12)continue;
     const audit=nav.auditPath(bot.position,target);
