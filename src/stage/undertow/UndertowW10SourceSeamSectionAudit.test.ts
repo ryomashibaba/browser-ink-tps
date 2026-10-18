@@ -37,6 +37,12 @@ describe('W10-B6 original-only source support sections, no invented bridge',()=>
     expect(band.supportedSampleCount+band.unsupportedSampleCount)
      .toBe(band.totalSampleCount);
     expect(band.contiguousSpans.length).toBeGreaterThan(0);
+    // W10-B6 actual source measurement: no pre-existing direct bridge at
+    // these three diagnostic heights. Reject accidental invented support.
+    // A future authoritative original route must be evidenced separately.
+    expect(band.unsupportedSampleCount/band.totalSampleCount).toBeGreaterThan(.90);
+    expect(band.contiguousSpans.some(span=>
+     !span.supported&&span.toMeters-span.fromMeters>20)).toBe(true);
     expect(band.contiguousSpans[0]!.fromMeters).toBe(0);
     expect(band.contiguousSpans.at(-1)!.toMeters)
      .toBeCloseTo(audit.planarDirectDistanceMeters,6);
