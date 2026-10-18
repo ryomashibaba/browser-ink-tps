@@ -132,3 +132,76 @@ describe('W4: real Human KCC on four original-source supported walk interiors',(
   });
  }
 });
+
+
+describe('W4: original first-drop landing edge is not an invented bridge',()=>{
+ for(const mirror of [false,true]){
+  it((mirror?'NEGATIVE':'POSITIVE')+' detects a real KCC departure from frozen landing support',()=>{
+   vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
+   const stage=undertowT21dConnectivityQaStage();
+   const physics=new RapierStagePhysics(DT,stage);
+   physics.step();
+   const reflect=(x:number,z:number)=>mirror?[-x,-z] as const:[x,z] as const;
+   const [sx,sz]=undertowTemple01ModelXZToProjectXZ(reflect(-22.5,47));
+   const [ex,ez]=undertowTemple01ModelXZToProjectXZ(reflect(-22.5,54));
+   const footSource='UndertowT21D:first-drop-landing-'+
+    (mirror?'negative-z':'positive-z');
+   const ray=(x:number,z:number)=>{
+    const hit=physics.castStageSegment(
+     new Vec3(x,3.8,z),new Vec3(x,2.2,z),'ink-projectile');
+    return hit?.solidId??null;
+   };
+   expect(ray(sx,sz)).toBe(footSource);
+   // An endpoint beyond this particular audited floor must not be
+   // reclassified as that floor just to make a forward test pass.
+   expect(ray(ex,ez)).not.toBe(footSource);
+   const bearing=new Vec3(ex-sx,0,ez-sz).normalize();
+   let axis=0;
+   const input={get moveX(){return 0;},get moveY(){return axis;},
+    get squidHeld(){return false;},get jumpHeld(){return false;},
+    consumeJump(){return false;}} as PlayerInput;
+   const camera={getFlatForward:(out:Vec3)=>out.copy(bearing)}
+    as ThirdPersonCamera;
+   const stats=new PerformanceStats(),ink=new GameplayInkSystem();
+   const player=new PlayerController(
+    {root:new Entity('W4_SOURCE_EDGE_PHYSICS')} as never,
+    physics,input,camera,ink,stats);
+   player.setTeam(Team.A);
+   player.teleport(new Vec3(sx,3+
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,sz));
+   for(let i=0;i<75;i++){
+    player.computeFixed(DT);physics.step();player.syncAfterPhysics(DT);
+   }
+   expect(stats.playerGrounded).toBe(true);
+   let airborne=0,leftSource=0,firstAirborne=-1,firstLostFoot=-1;
+   let maxDistance=0;
+   axis=1;
+   for(let frame=1;frame<=86;frame++){
+    player.computeFixed(DT);physics.step();player.syncAfterPhysics(DT);
+    const p=player.getPosition();
+    maxDistance=Math.max(maxDistance,Math.hypot(p.x-sx,p.z-sz));
+    if(!stats.playerGrounded){
+     airborne++;if(firstAirborne<0)firstAirborne=frame;
+    }
+    if(ray(p.x,p.z)!==footSource){
+     leftSource++;if(firstLostFoot<0)firstLostFoot=frame;
+    }
+   }
+   const end=player.getPosition();
+   const evidence={side:mirror?'NEGATIVE_Z':'POSITIVE_Z',
+    originalLandingSolid:footSource,airborneTicks:airborne,
+    framesOutsideNamedFloor:leftSource,
+    firstAirborneFrame:firstAirborne,firstNonLandingRayFrame:firstLostFoot,
+    traveledHorizontalMeters:maxDistance,finalY:end.y,
+    sourceFloorAdded:0,navLinkAdded:0,
+    notAClaimOfOriginalGameDeathThreshold:true,
+    originalActivationReady:freeze.activationReady};
+   console.log('T21_W4_ORIGINAL_FLOOR_EDGE_KCC',JSON.stringify(evidence));
+   expect(maxDistance).toBeGreaterThan(3);
+   expect(leftSource).toBeGreaterThan(0);
+   expect(airborne).toBeGreaterThan(0);
+   expect(freeze.activationReady).toBe(false);
+   expect(PRODUCTION_STAGE_DEFINITION.metadata.id).toBe('inkworks-junction');
+  });
+ }
+});
