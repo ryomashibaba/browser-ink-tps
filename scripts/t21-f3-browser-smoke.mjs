@@ -1010,7 +1010,17 @@ async function main(){
     sourcePatrolMeters:audit.sourcePatrol.travelMeters,
     oneBrowserRealCpuFootWitness:true,productionAuthorized:false}));
   }
-  const atlas=completed.sourceGpuAtlasStatus;
+  // The last deterministic QA tick can submit a brush batch before the
+  // asynchronous PlayCanvas postrender pass has disabled its camera.
+  // Re-snapshot after a REAL Chrome render, never assert the stale
+  // pre-render result from advanceQaTicks().
+  const settled=await waitUntil(async()=>{
+   const state=await evaluate('window.__t21F3.snapshot()');
+   if(state.stopReason)reject('W10B20_RENDER_STOP_'+state.stopReason);
+   const a=state.sourceGpuAtlasStatus;
+   return a?.primed&&!a.cameraEnabled&&a.brushRenderFrames>0?state:false;
+  },30000);
+  const atlas=settled.sourceGpuAtlasStatus;
   if(!atlas||atlas.sourcePreviewOnly!==true||!atlas.primed||
      atlas.atlasTexturePersistent!==true||
      atlas.unchangedScoreAuthority!==true||
@@ -1022,7 +1032,7 @@ async function main(){
      completed.sourceScoreablePromotions!==0)
    reject('W10B20_SOURCE_IDLE_ATLAS_AUTHORITY_'+JSON.stringify(atlas));
   if(process.env.T21_W10B20_PROFILE==='1'){
-   const phases=completed.b20CpuPhaseProfile;
+   const phases=settled.b20CpuPhaseProfile;
    if(!phases?.enabled||phases.metric!=='CPU_JS_PHASE_WALL_TIME_NOT_GPU_EXECUTION'||
       !phases.phases.rapierAndHumanKcc?.calls||
       !phases.phases.sevenCpuFixed?.calls||
@@ -1038,7 +1048,7 @@ async function main(){
    const profile={
     status:'PASS_REAL_CHROME_T21_SOURCE_PROFILE',
     environment:'CI_LINUX_HEADLESS_SWIFTSHADER_NOT_OWNER_WINDOWS_GPU',
-    atlas,phases,frameQuality:completed.sourceFrameQuality,
+    atlas,phases,frameQuality:settled.sourceFrameQuality,
     nativePhysicalCpuInkImpacts:completed.cpuProjectilePaintHits,
     scoreablePromotions:completed.sourceScoreablePromotions,
     originalSolids:completed.originalSourceSolids,
