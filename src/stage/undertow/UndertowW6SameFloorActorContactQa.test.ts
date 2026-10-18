@@ -58,8 +58,7 @@ describe('W6: same-floor moving physical Human and seven native CPUs',()=>{
    get squidHeld(){return false;},get jumpHeld(){return false;},
    consumeJump(){return false;}
   } as PlayerInput;
-  const camera=({getFlatForward:(out:Vec3)=>out.copy(approach)})
-   as ThirdPersonCamera;
+  const camera=({getFlatForward:(out:Vec3)=>out.copy(approach)}) as ThirdPersonCamera;
   const app={root:new Entity('W6_REAL_HIGH_SPAWN_8_ACTORS')} as never;
   const player=new PlayerController(app,physics,input,camera,ink,stats);
   player.setTeam(Team.A);
