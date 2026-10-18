@@ -118,7 +118,7 @@ async function main(){
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b16?'&t21W10B16=sourceAutonomy':'')+
-  (w10b21?'&t21W10B21=renderAB':'')+
+  (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
@@ -138,7 +138,9 @@ async function main(){
      before.originalSourceSolids!==25||
      before.originalPaintSurfaces!==17||
      before.originalSourceNavigationLinks!==26||
-     before.sourceScoreablePromotions!==0)
+     before.sourceScoreablePromotions!==0||
+     before.cameraSourcePractice.b26AdaptiveVisibility?.enabled!==true||
+     before.cameraSourcePractice.b26AdaptiveVisibility?.gameplayGeometryModified!==false)
    reject('W10B21_FROZEN_ORIGINAL_SOURCE_REQUIRED_'+JSON.stringify(before));
   const initialPixels=before.b21RenderProbe.canvasPixels;
   if(initialPixels[0]!==1600||initialPixels[1]!==900)
@@ -215,8 +217,26 @@ async function main(){
   },25000);
   if(ownerRunning.b22OwnerGpuTrial.sourceOnly!==true||
      ownerRunning.sourceScoreablePromotions!==0||
-     ownerRunning.originalSourceSolids!==25)
+     ownerRunning.originalSourceSolids!==25||
+     ownerRunning.cameraSourcePractice.b26AdaptiveVisibility.enabled!==true)
    reject('W10B22_OWNER_SOURCE_STATE_DRIFT_'+JSON.stringify(ownerRunning));
+  // Genuine Chrome KeyQ input, not synthetic shoulder state injection.
+  const preManual=ownerRunning.cameraSourcePractice.shoulderSide;
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81});
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81});
+  const manual=await evaluate('window.__t21F3.snapshot()');
+  if(manual.cameraSourcePractice.shoulderSide===preManual||
+     manual.cameraSourcePractice.b26AdaptiveVisibility.manualOverrideSeconds<=0||
+     manual.cameraSourcePractice.b26AdaptiveVisibility.physicsCameraBypass!==false||
+     manual.sourceScoreablePromotions!==0)
+   reject('W10B26_REAL_MANUAL_Q_WINS_OVER_ADAPTIVE_'+
+    JSON.stringify(manual.cameraSourcePractice));
+  console.log('T21_W10B26_ADAPTIVE_VISIBILITY_GENUINE_CHROME_Q_PRIORITY_PASS',
+   JSON.stringify({sourceOnly:true,smartEnabled:true,manualOverride:true,
+    nativeStageSolids:25,sourceScoreablePromotions:0,
+    automaticSwitchClaimed:false,realBrowserPointerLock:true}));
   await evaluate('document.exitPointerLock()');
   const ownerAborted=await waitUntil(async()=>{
    const state=await evaluate('window.__t21F3.snapshot()');
