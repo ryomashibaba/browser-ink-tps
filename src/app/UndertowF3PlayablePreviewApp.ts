@@ -1437,6 +1437,9 @@ export class UndertowF3PlayablePreviewApp{
   };
  }
  private refresh(){
+  // A paused, unlocked or failed source session still updates the practice
+  // card immediately instead of leaving stale RUNNING text on screen.
+  this.refreshB25PaintRun();
   const state=this.snapshot();
   const p=state.cpu;
   if(this.radarVisible)this.radar.render(state);
