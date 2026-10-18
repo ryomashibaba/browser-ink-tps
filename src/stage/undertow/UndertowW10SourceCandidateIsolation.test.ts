@@ -44,7 +44,22 @@ describe('W10-B7: isolated original source candidate ablations, no route promoti
    expect(witnesses.map(x=>x.sourceId)).toEqual(
     records.find(x=>x.kind==='PREFIX'&&x.prefixCount===5)!
      .sourceComponentIds);
+   const entrance=witnesses.find(w=>
+    w.sourceId==='underpass-route-slope01-'+
+     (side==='POSITIVE_Z'?'positive-z':'negative-z'));
+   expect(entrance).toBeDefined();
+   expect(entrance!.firstSlopeEdgeWidthMeters).not.toBeNull();
+   expect(entrance!.firstSlopeEdgeWidthMeters!).toBeGreaterThan(.50);
+   expect(entrance!.firstSlopeEdgeWidthMeters!).toBeLessThan(.54);
+   expect(entrance!.humanCapsuleDiameterMeters).toBeCloseTo(.64,6);
+   expect(entrance!.nominalRecastErosionDiameterMeters).toBeCloseTo(.72,6);
+   expect(entrance!.isolatedFirstSlopeNarrowerThanBoth).toBe(true);
+   expect(entrance!.nearestRecastSnapMeters).toBeGreaterThan(1.0);
    for(const witness of witnesses){
+    if(witness!==entrance){
+     expect(witness.firstSlopeEdgeWidthMeters).toBeNull();
+     expect(witness.nearbyNativeNavRepresentative).toBe(true);
+    }
     expect(witness.nearestRecastSnapMeters).toBeGreaterThanOrEqual(0);
     expect(witness.physicalHumanKccValidated).toBe(false);
     expect(witness.originalGameTravelDirectionProven).toBe(false);

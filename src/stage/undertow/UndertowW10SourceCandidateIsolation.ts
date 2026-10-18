@@ -10,6 +10,8 @@
  */
 import {Vec3} from 'playcanvas';
 import {PerformanceStats} from '../../core/PerformanceStats';
+import {GAME_CONFIG} from '../../config/game/gameConfig';
+import {PLAYER_CHARACTER_PHYSICS} from '../../player/PlayerCharacterPhysics';
 import {RecastStageNavigation} from '../../navigation/RecastStageNavigation';
 import type {StageDefinition,StageSolidDefinition,StageVector3}
  from '../StageDefinition';
@@ -46,6 +48,11 @@ export interface W10CandidateNavRepresentative{
  readonly sourceGraphComponentId:number;
  readonly side:Side;
  readonly exactTriangleCenter:StageVector3;
+ /** First exact slope01 triangle edge only, NOT a complete corridor proof. */
+ readonly firstSlopeEdgeWidthMeters:number|null;
+ readonly humanCapsuleDiameterMeters:number;
+ readonly nominalRecastErosionDiameterMeters:number;
+ readonly isolatedFirstSlopeNarrowerThanBoth:boolean;
  /** The nearest nav point might belong to a different original mesh. */
  readonly nearestRecastSnapMeters:number;
  readonly nearbyNativeNavRepresentative:boolean;
@@ -144,6 +151,14 @@ function candidateNavWitness(
  }
  if(!center||area<=1e-8)throw Error('W10_B7_NO_SOURCE_WALK_FACE');
  const point=new Vec3(...center);
+ const firstSlope=record.id.startsWith('underpass-route-slope01-');
+ const firstA=vertices[0]!,firstB=vertices[1]!;
+ const firstSlopeEdgeWidthMeters=firstSlope?Math.hypot(
+  firstA[0]-firstB[0],firstA[2]-firstB[2]):null;
+ const humanCapsuleDiameterMeters=PLAYER_CHARACTER_PHYSICS.humanRadiusMeters*2;
+ const nominalRecastErosionDiameterMeters=
+  GAME_CONFIG.cpu.navigationWalkableRadiusVoxels*
+  GAME_CONFIG.cpu.navigationCellSizeMeters*2;
  const nearest=nav.auditPath(point,point);
  const fromRight=nav.auditPath(new Vec3(...from),point);
  const fromUnderpass=nav.auditPath(new Vec3(...to),point);
@@ -152,6 +167,15 @@ function candidateNavWitness(
   p.endSnapDistanceMeters<=.25;
  return {sourceId:record.id,sourceGraphComponentId:record.routeGraphComponentId,
   side:record.side,exactTriangleCenter:center,
+  firstSlopeEdgeWidthMeters,humanCapsuleDiameterMeters,
+  nominalRecastErosionDiameterMeters,
+  // An isolated narrow source strip may disappear under Recast erosion.
+  // This does NOT prove the real game cannot traverse adjoining source
+  // geometry, and MUST NOT change global agent settings or invent widening.
+  isolatedFirstSlopeNarrowerThanBoth:
+   firstSlopeEdgeWidthMeters!==null&&
+   firstSlopeEdgeWidthMeters<humanCapsuleDiameterMeters&&
+   firstSlopeEdgeWidthMeters<nominalRecastErosionDiameterMeters,
   nearestRecastSnapMeters:nearest.startSnapDistanceMeters,
   nearbyNativeNavRepresentative:nearest.startSnapDistanceMeters<=.25,
   rightLowToCandidateReached:strictReached(fromRight),
