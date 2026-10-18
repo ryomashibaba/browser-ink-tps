@@ -11,6 +11,7 @@ on:
       - 'src/stage/undertow/UndertowW5MovingHumanSevenCpuQa.test.ts'
       - 'src/stage/undertow/UndertowW6SameFloorActorContactQa.test.ts'
       - 'src/stage/undertow/UndertowW7MultiCpuDirectionalQa.test.ts'
+      - 'src/stage/undertow/UndertowW8SevenCpuDropPatrolQa.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
       - '.github/workflows/t21-f4e103w-qa.yml'
@@ -104,6 +105,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW6SameFloorActorContactQa.test.ts
       - name: W7 multi-CPU convergence with six real Human direction phases
         run: npx vitest run src/stage/undertow/UndertowW7MultiCpuDirectionalQa.test.ts
+      - name: W8 seven physical CPU drops and source patrol extended QA
+        run: npx vitest run src/stage/undertow/UndertowW8SevenCpuDropPatrolQa.test.ts
       - name: PowerShell script parser
         if: runner.os == 'Windows'
         shell: pwsh
