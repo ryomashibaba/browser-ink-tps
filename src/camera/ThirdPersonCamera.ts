@@ -1,4 +1,5 @@
 import { Entity, Vec3 } from 'playcanvas';
+import {UndertowF3SmartOcclusion} from './UndertowF3SmartOcclusion';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
@@ -17,6 +18,9 @@ export class ThirdPersonCamera {
   private currentCameraDistance = Number.NaN;
   /** Gameplay options are opt-in for the T21 source practice preview only. */
   private sourcePracticeControls = false;
+  private sourceSmartOcclusionEnabled = false;
+  private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
+  private readonly alternateCameraPosition=new Vec3();
   private sourceShoulderSide: 'RIGHT' | 'LEFT' = 'RIGHT';
   private currentShoulderOffset = 0.72;
   private sourcePracticeCameraCasts = 0;
@@ -37,9 +41,20 @@ export class ThirdPersonCamera {
     this.sourcePracticeControls = true;
   }
 
+  /** Only the explicitly source-only F3 preview may opt into auto
+   * shoulder recovery. Production/default camera stays fully unchanged. */
+  public enableSourcePracticeSmartOcclusion(){
+    if(!this.sourcePracticeControls)
+      throw Error('T21_B26_SOURCE_PRACTICE_REQUIRED');
+    this.sourceSmartOcclusionEnabled=true;
+  }
   public sourcePracticeViewSnapshot(){
     return {
       sourcePracticeOnly:this.sourcePracticeControls,
+      b26AdaptiveVisibility:{
+       enabled:this.sourceSmartOcclusionEnabled,
+       ...this.sourceSmartOcclusion.snapshot()
+      },
       shoulderSide:this.sourceShoulderSide,
       shoulderOffsetMeters:this.currentShoulderOffset,
       desiredShoulderOffsetMeters:this.shoulder,
@@ -116,6 +131,45 @@ export class ThirdPersonCamera {
       'camera'
     );
     if(this.sourcePracticeControls)this.sourcePracticeCameraCasts++;
+    // On visual updates only, optionally check whether the ACTUAL
+    // opposite original-stage shoulder ray offers a clear view. Never
+    // cast through unverified optical meshes or move the real human.
+    if(this.sourceSmartOcclusionEnabled&&recoveryDtSeconds>0){
+      this.sourceSmartOcclusion.tick(recoveryDtSeconds);
+      if(blocker&&
+         this.sourceSmartOcclusion.mayProbe(recoveryDtSeconds)){
+        const clearance=Math.max(
+         GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
+         Math.min(desiredDistance,blocker.distance-
+          GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters));
+        if(desiredDistance-clearance>=1){
+          // The far-side candidate is a CAMERA ONLY point; no player,
+          // actor, Recast foot or collision is relocated.
+          const altOffset=this.sourceShoulderSide==='RIGHT'?-.72:.72;
+          this.alternateCameraPosition.set(
+           this.target.x-this.forward.x*this.distance+this.right.x*altOffset,
+           this.target.y-this.forward.y*this.distance+this.right.y*altOffset,
+           this.target.z-this.forward.z*this.distance+this.right.z*altOffset);
+          const altBlocker=this.physics.castStageSegment(
+           this.target,this.alternateCameraPosition,'camera');
+          this.sourcePracticeCameraCasts++;
+          const altDistance=this.alternateCameraPosition.distance(this.target);
+          const altClearance=altBlocker?Math.max(
+           GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
+           Math.min(altDistance,altBlocker.distance-
+            GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters)):
+           altDistance;
+          const selected=this.sourceSmartOcclusion.observe({
+            currentClearMeters:clearance,alternateClearMeters:altClearance,
+            desiredMeters:desiredDistance,realDeltaSeconds:recoveryDtSeconds
+          },this.sourceShoulderSide);
+          if(selected!==this.sourceShoulderSide){
+            this.sourceShoulderSide=selected;
+            this.shoulder=selected==='RIGHT'?.72:-.72;
+          }
+        }else this.sourceSmartOcclusion.resetCandidate();
+      }else this.sourceSmartOcclusion.resetCandidate();
+    }
     const targetDistance = blocker
       ? Math.max(
           GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
@@ -219,6 +273,7 @@ export class ThirdPersonCamera {
          document.pointerLockElement!==this.canvas)return;
       this.sourceShoulderSide=this.sourceShoulderSide==='RIGHT'?'LEFT':'RIGHT';
       this.shoulder=this.sourceShoulderSide==='RIGHT'?.72:-.72;
+      this.sourceSmartOcclusion.manual(this.sourceShoulderSide);
       event.preventDefault();
     });
     this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
