@@ -134,7 +134,8 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
   const projectile=new ProjectileSystem(app,surfaces,physics,
    coordinator as never,resources,
    new CombatTargetSystem(app,stats),cpu,feedback as never,stats);
-  let actualIssued=0,firstShot:CpuFireRequest|null=null;
+  const actualCpuShotRecords:CpuFireRequest[]=[];
+  let actualIssued=0;
   let firstSplatFrame=-1,firstRespawnFrame=-1;
   let hpAfterRespawn=100,secondDamageFrame=-1;
   let deadFrames=0,deathEvents=0,respawnEvents=0;
@@ -158,7 +159,7 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
      return;
     }
     actualIssued++;
-    firstShot??=req;
+    actualCpuShotRecords.push(req);
     projectile.queueCpuShot(req);
    });
    cpu.drainKitRequests(()=>false);
@@ -202,9 +203,10 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
    actualSevenCpuAgents:bots.length,realShooterId:shooter.id,
    realCpuIssuedProjectiles:actualIssued,
    authoredShotsInjected:0,unknownActorShots:unauthorizedShots,
-   firstCpuShot:firstShot?{
-    sourceId:firstShot.sourceId,weaponId:firstShot.weaponId,
-    action:firstShot.action
+   firstCpuShot:actualCpuShotRecords.length?{
+    sourceId:actualCpuShotRecords[0]!.sourceId,
+    weaponId:actualCpuShotRecords[0]!.weaponId,
+    action:actualCpuShotRecords[0]!.action
    }:null,
    firstSplatFrame,firstRespawnFrame,secondDamageFrame,
    hpAfterRespawn,hpAfterSecondEngagement:resources.currentHp,
@@ -225,7 +227,7 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
   console.log('T21_W10B12_REAL_CPU_HUMAN_COMBAT_LIFECYCLE',JSON.stringify(evidence));
   expect(unauthorizedShots).toBe(0);
   expect(actualIssued).toBeGreaterThan(3);
-  expect(firstShot).not.toBeNull();
+  expect(actualCpuShotRecords.length).toBeGreaterThan(0);
   expect(firstSplatFrame).toBeGreaterThan(0);
   expect(firstRespawnFrame).toBeGreaterThan(firstSplatFrame);
   expect(firstRespawnFrame-firstSplatFrame).toBe(149);
