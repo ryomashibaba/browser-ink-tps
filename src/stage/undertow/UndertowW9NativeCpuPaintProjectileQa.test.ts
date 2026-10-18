@@ -310,6 +310,11 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   expect(snap.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
   expect(snap.sourcePatrol.engagementGoalRequests)
    .toBeLessThanOrEqual(snap.sourcePatrol.realGoalRequests);
+  // The existing two source-only landing islands are NOT linked for PvP.
+  // An apparent encounter here would be a regression, not W10-B success.
+  expect(snap.sourcePatrol.sameSourceEnemyCandidates).toBe(0);
+  expect(snap.sourcePatrol.engagementGoalRequests).toBe(0);
+  expect(sourceLocalEnemyContactFrames).toBe(0);
   expect(Number.isFinite(closestCrossTeamFeetMeters)).toBe(true);
   expect(closestCrossTeamFeetMeters).toBeGreaterThan(0);
   expect(snap.sourcePatrol.travelMeters).toBeGreaterThan(.5);
