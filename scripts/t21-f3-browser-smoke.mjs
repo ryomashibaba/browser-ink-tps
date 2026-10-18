@@ -104,11 +104,14 @@ async function main(){
   width:1600,height:900,deviceScaleFactor:1,mobile:false
  });
  const w10b14=process.env.T21_W10B14_RENDER_QA==='1';
+ const w10b15=process.env.T21_W10B15_TRUSTED_INPUT==='1';
+ if(w10b14&&w10b15)reject('CONFLICTING_QA_MODES');
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
  const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa;
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'+
-  (w10b14?'&t21QaDrive=source&t21QaInput=deterministic&'+
-   't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render':'')+
+  ((w10b14||w10b15)?'&t21QaDrive=source&t21QaInput=deterministic&'+
+   't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
+   (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
@@ -121,6 +124,120 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(w10b15){
+  const witness=()=>evaluate('window.__t21F3.w10B14RenderWitness()');
+  const advance=async count=>{
+   const result=await evaluate(`(() => {
+    try{return {state:window.__t21F3.advanceQaTicks(${count})};}
+    catch(error){return {error:String(error)};}
+   })()`);
+   if(result.error)reject('W10B15_RAPIER_SOURCE_HOLD_'+result.error);
+   if(result.state?.stopReason)reject('W10B15_STOP_'+result.state.stopReason);
+   return result.state;
+  };
+  let state=await evaluate('window.__t21F3.startW10B14RenderWitness()');
+  if(!state.actualPointerInputRequired||state.cpuRepositionedForIsolatedQa!==true||
+     state.sourceSolids!==25||state.sourcePaint!==17||state.sourceLinks!==26||
+     state.activationReady!==false||state.naturalEnemyEncounterCertified!==false||
+     !state.entityEnabledInHierarchy||state.hp!==100)
+   reject('W10B15_SOURCE_SETUP_UNTRUSTED_'+JSON.stringify(state));
+  const grounded=await advance(75);
+  if(!grounded.player||grounded.stopReason)
+   reject('W10B15_GROUND_STEP_FAILED_'+JSON.stringify(grounded));
+  const armed=await evaluate('window.__t21F3.armW10B14RealProjectiles()');
+  if(!armed.armed||!armed.grounded)
+   reject('W10B15_PHYSICAL_PLAYER_UNGROUNDED_'+JSON.stringify(armed));
+  // CDP browser-native pointer events. No input.fire flag writes, no
+  // CPU-directed launch vector or scripted HP mutation.
+  await mouse('mousePressed');await mouse('mouseReleased');
+  await waitUntil(async()=>await evaluate(
+   'document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
+  let pointer={x:800,y:450},trace=[],aligned=false;
+  for(let n=0;n<15;n++){
+   const before=await witness();
+   const p=before.enemyProjectedScreen;
+   if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))
+    reject('W10B15_PROJECTED_ENEMY_UNKNOWN_'+JSON.stringify(before));
+   const errorX=p.x-800,errorY=p.y-450;
+   trace.push({n,screen:p,errorX,errorY});
+   if(Math.abs(errorX)<10&&Math.abs(errorY)<14&&p.z>0){
+    aligned=true;break;
+   }
+   const dx=Math.max(-90,Math.min(90,errorX*.38));
+   const dy=Math.max(-70,Math.min(70,errorY*.38));
+   pointer.x=Math.max(120,Math.min(1480,pointer.x+dx));
+   pointer.y=Math.max(100,Math.min(800,pointer.y+dy));
+   await cmd('Input.dispatchMouseEvent',{
+    type:'mouseMoved',x:pointer.x,y:pointer.y,button:'none'
+   });
+   await advance(1); // the original real camera sync and real 60Hz physics
+  }
+  state=await witness();
+  console.log('T21_W10B15_REAL_MOUSE_AIM',JSON.stringify({
+   aligned,trace,screen:state.enemyProjectedScreen,
+   pointerLocked:state.pointerLocked
+  }));
+  if(!aligned||!state.pointerLocked)
+   reject('W10B15_UNASSISTED_AIM_NOT_ALIGNED_'+JSON.stringify({trace,state}));
+  const shotsBefore=state.shotsFired,hitsBefore=state.cpuCombatHits;
+  await mouse('mousePressed');
+  const pressed=await witness();
+  if(!pressed.realMouseFireHeld||!pressed.pointerLocked)
+   reject('W10B15_TRUSTED_POINTERDOWN_NOT_RECORDED_'+JSON.stringify(pressed));
+  let splat=null;
+  for(let n=0;n<20;n++){
+   await advance(12);
+   const now=await witness();
+   if(now.lifeState==='SPLATTED'){splat=now;break;}
+  }
+  await mouse('mouseReleased');
+  const released=await witness();
+  if(released.realMouseFireHeld)
+   reject('W10B15_POINTER_RELEASE_NOT_RECORDED_'+JSON.stringify(released));
+  if(!splat||splat.cpuSplats!==1||splat.cpuCombatHits-hitsBefore<3||
+     splat.shotsFired-shotsBefore<3||splat.hp!==0||
+     splat.entityEnabledInHierarchy!==false)
+   reject('W10B15_MOUSE_NOT_NATIVE_COMBAT_'+JSON.stringify({
+    splat,shotsBefore,hitsBefore,trace
+   }));
+  const deathFrame=await screenshot('W10B15_1_TRUE_MOUSE_CPU_SPLAT');
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'Escape',code:'Escape',
+   windowsVirtualKeyCode:27,nativeVirtualKeyCode:27
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'Escape',code:'Escape',
+   windowsVirtualKeyCode:27,nativeVirtualKeyCode:27
+  });
+  await waitUntil(async()=>await evaluate('document.pointerLockElement===null'),12000);
+  let respawn=null;
+  for(let n=0;n<20;n++){
+   await advance(12);
+   const now=await witness();
+   if(now.cpuRespawns>=1){respawn=now;break;}
+  }
+  if(!respawn||respawn.hp!==100||respawn.lifeState!=='ACTIVE'||
+     !respawn.entityEnabledInHierarchy||respawn.cpuRespawns!==1||
+     respawn.stopReason||respawn.sourceSolids!==25||respawn.sourcePaint!==17||
+     respawn.sourceLinks!==26||respawn.activationReady!==false)
+   reject('W10B15_REAL_CPU_RESPAWN_BROKEN_'+JSON.stringify(respawn));
+  const respawnFrame=await screenshot('W10B15_2_RESPAWNED');
+  const out={status:'PASS_REAL_CHROME_TRUSTED_MOUSE_INPUT_NATIVE_COMBAT',
+   originalStageAuthorityChanged:false,isolatedQaEnemyPlacement:true,
+   mousePointerLock:true,unassistedCameraAim:true,
+   realPlayerInputFire:true,realProjectileCpuHits:splat.cpuCombatHits-hitsBefore,
+   actualPlayerShots:splat.shotsFired-shotsBefore,
+   realCpuSplats:1,realCpuRespawns:1,respawnHp:100,
+   scoreableSurfacesAuthorized:0,naturalEncounterCertified:false,
+   pixelsIndependentlyCertified:false,sourceSolids:25,paintSurfaces:17,
+   navLinks:26,productionAuthorized:false,aimTrace:trace,
+   stages:[{phase:'SPLAT',state:splat,frame:deathFrame},
+    {phase:'RESPAWN',state:respawn,frame:respawnFrame}]};
+  writeFileSync(resolve(OUTPUT,'w10b15-trusted-input.json'),
+   JSON.stringify(out,null,2));
+  console.log('T21_W10B15_REAL_INPUT_PASS',JSON.stringify(out));
+  return;
+ }
  if(w10b14){
   const stages=[];
   const verify=(a,phase)=>{
