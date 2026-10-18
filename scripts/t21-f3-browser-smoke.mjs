@@ -341,6 +341,81 @@ async function main(){
   writeFileSync(resolve(OUTPUT,'w10b15-trusted-input.json'),
    JSON.stringify(out,null,2));
   console.log('T21_W10B15_REAL_INPUT_PASS',JSON.stringify(out));
+
+  // W10-B18: unlike the paused-state Q wiring check above, prove actual
+  // camera displacement while real PlayCanvas renders and Rapier ticks run.
+  // Both screenshots use the same ORIGINAL scene; no CPU re-placement.
+  const resumed=await evaluate('window.__t21F3.resume()');
+  if(resumed.stopReason||resumed.sourceScoreablePromotions!==0)
+   reject('W10B18_LIVE_CAMERA_RESUME_HOLD_'+JSON.stringify(resumed));
+  await mouse('mousePressed');await mouse('mouseReleased');
+  await waitUntil(async()=>await evaluate(
+   'document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
+  const base=await waitUntil(async()=>{
+   const a=await evaluate('window.__t21F3.snapshot()');
+   if(a.stopReason)reject('W10B18_LIVE_CAMERA_STOP_'+a.stopReason);
+   return a.tick>=resumed.tick+12?a:false;
+  },70000);
+  if(base.cameraSourcePractice.shoulderSide!=='RIGHT'||
+     !Number.isFinite(base.cameraSourcePractice.currentCameraDistanceMeters)||
+     base.cameraSourcePractice.cameraRaycasts<1)
+   reject('W10B18_REAL_CAMERA_NOT_RENDERING_'+JSON.stringify(base.cameraSourcePractice));
+  const rightShot=await screenshot('W10B18_0_RIGHT_SHOULDER_LIVE');
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  const leftReal=await waitUntil(async()=>{
+   const a=await evaluate('window.__t21F3.snapshot()');
+   if(a.stopReason)reject('W10B18_LEFT_SHOULDER_SOURCE_HOLD_'+a.stopReason);
+   return a.cameraSourcePractice.shoulderSide==='LEFT'&&
+    a.cameraSourcePractice.shoulderOffsetMeters<-.4&&
+    a.tick>=base.tick+10?a:false;
+  },70000);
+  if(leftReal.sourceScoreablePromotions!==0||
+     leftReal.originalSourceSolids!==25||
+     leftReal.originalPaintSurfaces!==17||
+     leftReal.originalSourceNavigationLinks!==26)
+   reject('W10B18_CAMERA_STAGE_AUTHORITY_DRIFT');
+  const leftShot=await screenshot('W10B18_1_LEFT_SHOULDER_LIVE');
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  const restored=await waitUntil(async()=>{
+   const a=await evaluate('window.__t21F3.snapshot()');
+   if(a.stopReason)reject('W10B18_RETURN_SHOULDER_SOURCE_HOLD_'+a.stopReason);
+   return a.cameraSourcePractice.shoulderSide==='RIGHT'&&
+    a.cameraSourcePractice.shoulderOffsetMeters>.4&&
+    a.tick>=leftReal.tick+10?a:false;
+  },70000);
+  const restoredShot=await screenshot('W10B18_2_RIGHT_SHOULDER_RESTORED');
+  if(rightShot.sha256===leftShot.sha256)
+   reject('W10B18_REAL_CAMERA_FRAMES_IDENTICAL');
+  const cameraResult={
+   status:'PASS_REAL_CHROME_LIVE_CAMERA_SHOULDER',
+   actualBrowserWebgl2:true,realPlayerPointerLock:true,
+   realFixedPhysicsTicks:restored.tick-base.tick,
+   initialRightMeters:base.cameraSourcePractice.shoulderOffsetMeters,
+   liveLeftMeters:leftReal.cameraSourcePractice.shoulderOffsetMeters,
+   restoredRightMeters:restored.cameraSourcePractice.shoulderOffsetMeters,
+   originalStageSolids:restored.originalSourceSolids,
+   sourceScoreablePromotions:restored.sourceScoreablePromotions,
+   physicalCpuRelocations:0,productionAuthorized:false,
+   rightShot,leftShot,restoredShot
+  };
+  writeFileSync(resolve(OUTPUT,'w10b18-real-chrome-camera.json'),
+   JSON.stringify(cameraResult,null,2));
+  console.log('T21_W10B18_LIVE_CAMERA_SHOULDER_PASS',
+   JSON.stringify(cameraResult));
   return;
  }
  if(w10b14){
