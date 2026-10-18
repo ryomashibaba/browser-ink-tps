@@ -541,6 +541,10 @@ export class UndertowF3PlayablePreviewApp{
    renderComponentEnabled:e.render?.enabled===true,
    entityPosition:e.getPosition().toArray(),cpuFoot:w.target.position.toArray(),
    playerPosition:this.player.getPosition().toArray(),
+   grounded:this.stats.playerGrounded,
+   qaHumanFoot:w.qaHumanFoot.toArray(),
+   measuredPlayerFootError:this.player.getPosition().y-
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters-w.qaHumanFoot.y,
    shotsFired:this.stats.shotsFired,cpuCombatHits:this.stats.cpuCombatHits,
    cpuSplats:this.stats.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
    firstSplatObserved:w.splatSeen,armed:w.armed,
