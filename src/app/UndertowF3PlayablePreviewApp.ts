@@ -169,6 +169,10 @@ export class UndertowF3PlayablePreviewApp{
  private respawnFrames=0;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
+ /** Profiling is strictly opt-in on the source QA route; no global game hooks. */
+ private readonly b20ProfileEnabled=new URL(location.href).searchParams.get('t21W10B20')==='profile';
+ private readonly b20Profile:Record<string,{calls:number;totalMs:number;peakMs:number}>={};
+ private b20RenderStartMs=0;
  private readonly sourceFrameIntervalsMs:number[]=[];
  private lastSourceFrameAtMs=Number.NaN;
  private lastRealFirePressMeasured=0;
@@ -223,8 +227,10 @@ export class UndertowF3PlayablePreviewApp{
    throw Error('T21_F3_UNAUTHORIZED_TURF_SCORING');
   const atlasSize=Math.min(4096,app.graphicsDevice.maxTextureSize);
   if(atlasSize<2048)throw Error('T21_F3_GPU_MIN_ATLAS_2048');
+  // Only the nonproduction F3 preview skips no-op idle atlas-camera
+  // render-target passes. The production/default GpuInkAtlas remains unchanged.
   this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
-   GAME_CONFIG.ink.atlasGutterPixels);
+   GAME_CONFIG.ink.atlasGutterPixels,true);
   buildTestStage(app,stage,surfaces,this.atlas);
   // Reviewed true-original optical structure triangles only. All 25
   // original Rapier solids remain the sole physical stage authority.
@@ -414,6 +420,11 @@ export class UndertowF3PlayablePreviewApp{
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
   app.on('update',(dt:number)=>this.update(dt));
+  if(this.b20ProfileEnabled){
+   app.on('prerender',()=>{this.b20RenderStartMs=performance.now();});
+   app.on('postrender',()=>this.b20ProfileStop('playcanvasRenderSubmission',
+    this.b20RenderStartMs));
+  }
   window.addEventListener('resize',()=>app.resizeCanvas());
   this.camera.update(this.player.getPosition(this.visual));
   this.refresh();
@@ -834,20 +845,44 @@ export class UndertowF3PlayablePreviewApp{
   }
   return this.snapshot();
  }
+ private b20ProfileStart(){
+  return this.b20ProfileEnabled?performance.now():0;
+ }
+ private b20ProfileStop(phase:string,started:number){
+  if(!this.b20ProfileEnabled||started<=0)return;
+  const duration=Math.max(0,performance.now()-started);
+  const row=this.b20Profile[phase]??={calls:0,totalMs:0,peakMs:0};
+  row.calls++;
+  row.totalMs+=duration;
+  row.peakMs=Math.max(row.peakMs,duration);
+ }
+ private b20ProfileSnapshot(){
+  return {
+   enabled:this.b20ProfileEnabled,
+   metric:'CPU_JS_PHASE_WALL_TIME_NOT_GPU_EXECUTION',
+   phases:Object.fromEntries(Object.entries(this.b20Profile).map(([name,row])=>
+    [name,{calls:row.calls,averageMs:Number((row.totalMs/row.calls).toFixed(3)),
+      peakMs:Number(row.peakMs.toFixed(3)),totalMs:Number(row.totalMs.toFixed(2))}]))
+  };
+ }
  private stepFixed(frame:number,seconds:number){
   // Identical 60Hz physical path for live PlayCanvas and explicit QA clock.
   // No synthetic Crowd state, stage geometry or CPU pose is created.
     // Real keyboard/pointer inputs -> player Rapier KCC -> shared physical
     // CPU collision -> actual Recast/CpuAgentSystem -> projectiles and ink.
     const alive=this.resources.currentHp>0;
+    const playerStart=this.b20ProfileStart();
     if(alive)this.player.computeFixed(seconds);
     this.physics.step();
     this.player.syncAfterPhysics(seconds);
+    this.b20ProfileStop('rapierAndHumanKcc',playerStart);
     if(alive)this.resources.fixedUpdate(
      seconds,this.player.currentMode,this.player.currentInkRelation);
     if(!this.w10b14)this.traffic.prepare(frame);
+    const cpuStart=this.b20ProfileStart();
     this.cpu.fixedUpdate(seconds,true,Team.A,
      this.player.getPosition(this.p),alive&&!this.w10b14);
+    this.b20ProfileStop('sevenCpuFixed',cpuStart);
     if(!this.w10b14)this.traffic.observe(frame);
     if(this.matchState==='STAGING'&&this.traffic.snapshot().freeCombatEnabled)
      this.matchState='PLAYING';
@@ -855,6 +890,7 @@ export class UndertowF3PlayablePreviewApp{
      this.remainingSeconds=Math.max(0,this.remainingSeconds-seconds);
      if(this.remainingSeconds===0)this.matchState='TIME_UP';
     }
+    const projectileStart=this.b20ProfileStart();
     this.cpu.drainFireRequests(req=>this.projectiles.queueCpuShot(req));
     // The default remains reject/rollback. Only opt-in QA uses the genuine
     // weapon execution path; 17 paintable surfaces remain UNSCORED.
@@ -916,7 +952,10 @@ export class UndertowF3PlayablePreviewApp{
       }
     }
     this.cpuKit?.fixedUpdate(seconds);
+    this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
+    const paintStart=this.b20ProfileStart();
     this.coordinator.processTick(frame);
+    this.b20ProfileStop('inkOwnershipTick',paintStart);
     if(this.resources.currentHp<=0){
      if(this.respawnFrames===0){
       this.humanSplats++;
@@ -961,19 +1000,25 @@ export class UndertowF3PlayablePreviewApp{
    // Each fixed tick already updates the real camera before real projectile
    // aiming. The final interpolated visual update also runs below; the
    // extra pre-tick raycast here was redundant every live frame.
+   const simulationStart=this.b20ProfileStart();
    const report=this.clock.advance(dt,(frame,seconds)=>{
     if(this.matchState!=='TIME_UP')this.stepFixed(frame,seconds);
    });
+   this.b20ProfileStop('fixedClockCatchup',simulationStart);
    if(this.matchState==='TIME_UP')this.paused=true;
    this.stats.simulationTicksLastFrame=report.ticks;
    this.stats.droppedSimulationSeconds=report.droppedSeconds;
+   const entityRenderStart=this.b20ProfileStart();
    this.player.render(report.alpha,this.visual);
    this.cpu.render(report.alpha);
    this.projectiles.render(report.alpha);
    this.cpuKit?.render(report.alpha);
    this.feedback.update(cameraDt);
    this.camera.update(this.visual,cameraDt);
+   this.b20ProfileStop('entityAndCameraPreparation',entityRenderStart);
+   const atlasStart=this.b20ProfileStart();
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
+   this.b20ProfileStop('inkAtlasMeshBuild',atlasStart);
    this.stats.frame(dt*1000);
    this.renderedFrames++;
    if(this.renderedFrames%12===0)this.refresh();
@@ -1011,6 +1056,8 @@ export class UndertowF3PlayablePreviewApp{
    playableSandbox:true,actualPlayerInput:true,
    cameraSourcePractice:this.camera.sourcePracticeViewSnapshot(),
    sourceFrameQuality:this.sourceFrameQualitySnapshot(),
+   b20CpuPhaseProfile:this.b20ProfileSnapshot(),
+   sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
    originalSourceSolids:this.rawStage.solids.length,
    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
@@ -1125,6 +1172,13 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   'F3 INK ATLAS · '+(state.sourceGpuAtlasStatus.cameraEnabled?'ACTIVE':'IDLE')+
+    ' / brush frames '+state.sourceGpuAtlasStatus.brushRenderFrames+
+    ' / idle frames '+state.sourceGpuAtlasStatus.idlePostRenderFrames+
+    ' / persistent RT; source-only optimization',
+   state.b20CpuPhaseProfile.enabled?
+    'B20 CPU PROFILE · '+Object.entries(state.b20CpuPhaseProfile.phases)
+     .map(([name,p])=>name+' '+p.averageMs.toFixed(1)+'ms').join(' · '):'',
    'REAL FRAME CALLBACK · p50/p95/p99 '+
     [state.sourceFrameQuality.p50Ms,state.sourceFrameQuality.p95Ms,
      state.sourceFrameQuality.p99Ms].map(v=>v===null?'N/A':v.toFixed(1)).join('/')+
