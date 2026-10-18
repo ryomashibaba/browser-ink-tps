@@ -10,6 +10,7 @@ describe('W10-B7: isolated original source candidate ablations, no route promoti
  it('distinguishes each of five exact original floor/slope components per side',()=>{
   const result=auditW10CandidateNavIsolation();
   expect(result.snapshots).toHaveLength(22);
+  expect(result.componentNavRepresentatives).toHaveLength(10);
   expect(result.allCandidatesNavOnly).toBe(true);
   expect(result.originalLocalKccTracesReplayed).toBe(0);
   expect(result.archivedFiveEachSideDidNotConnect).toBe(true);
@@ -38,6 +39,17 @@ describe('W10-B7: isolated original source candidate ablations, no route promoti
     expect(x.sourcePromoted).toBe(false);
     expect(x.productionAuthorized).toBe(false);
    }
+   const witnesses=result.componentNavRepresentatives.filter(x=>x.side===side);
+   expect(witnesses).toHaveLength(5);
+   expect(witnesses.map(x=>x.sourceId)).toEqual(
+    records.find(x=>x.kind==='PREFIX'&&x.prefixCount===5)!
+     .sourceComponentIds);
+   for(const witness of witnesses){
+    expect(witness.nearestRecastSnapMeters).toBeGreaterThanOrEqual(0);
+    expect(witness.physicalHumanKccValidated).toBe(false);
+    expect(witness.originalGameTravelDirectionProven).toBe(false);
+    expect(witness.sourcePromoted).toBe(false);
+   }
    const baseline=records.find(x=>x.kind==='BASELINE')!;
    expect(baseline.nativePathReached).toBe(false);
    expect(baseline.nativeEndpointErrorMeters).toBeGreaterThan(20);
@@ -62,7 +74,9 @@ describe('W10-B7: isolated original source candidate ablations, no route promoti
    remainingDistanceMeters:x.nativeTerminalDistanceToTargetMeters
   }));
   console.log('T21_W10B7_SOURCE_COMPONENT_ABLATION',JSON.stringify({
-   snapshots:useful,stageFrozen:true,rawOriginalObjNotUsed:true,
+   snapshots:useful,candidateNavRepresentatives:
+    result.componentNavRepresentatives,
+   stageFrozen:true,rawOriginalObjNotUsed:true,
    candidateRuntimeCollisionEnabled:false,
    authoredNewNavLinks:0,sourcePromoted:false,
    productionAuthorized:false

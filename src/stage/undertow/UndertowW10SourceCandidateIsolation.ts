@@ -41,8 +41,25 @@ export interface W10CandidateRecastSnapshot {
  readonly sourcePromoted:false;
  readonly productionAuthorized:false;
 }
+export interface W10CandidateNavRepresentative{
+ readonly sourceId:string;
+ readonly sourceGraphComponentId:number;
+ readonly side:Side;
+ readonly exactTriangleCenter:StageVector3;
+ /** The nearest nav point might belong to a different original mesh. */
+ readonly nearestRecastSnapMeters:number;
+ readonly nearbyNativeNavRepresentative:boolean;
+ readonly rightLowToCandidateReached:boolean;
+ readonly underpassToCandidateReached:boolean;
+ readonly rightLowToCandidateEndpointErrorMeters:number;
+ readonly underpassToCandidateEndpointErrorMeters:number;
+ readonly physicalHumanKccValidated:false;
+ readonly originalGameTravelDirectionProven:false;
+ readonly sourcePromoted:false;
+}
 export interface W10CandidateIsolationResult {
  readonly snapshots:readonly W10CandidateRecastSnapshot[];
+ readonly componentNavRepresentatives:readonly W10CandidateNavRepresentative[];
  readonly allSourceComponentsAlreadyVerified:true;
  readonly archivedFiveEachSideDidNotConnect:true;
  readonly archivedBaselineEndpointErrorMeters:number;
@@ -99,6 +116,52 @@ function record(
   sourcePromoted:false,productionAuthorized:false};
 }
 
+/**
+ * The center of the widest horizontal triangle is a reproducible point
+ * inside the exact recovered face, not a guessed waypoint or actor spawn.
+ * A nearby Recast poly may belong to other source geometry; never treat
+ * this proximity as certified component inclusion or physical traversal.
+ */
+function candidateNavWitness(
+ nav:RecastStageNavigation,
+ record:typeof UNDERTOW_UNDERPASS_ROUTE_COMPONENTS[number],
+ solid:StageSolidDefinition,from:StageVector3,to:StageVector3
+):W10CandidateNavRepresentative{
+ const vertices=solid.triangleMesh?.vertices;
+ if(!vertices||vertices.length<3||vertices.length%3!==0)
+  throw Error('W10_B7_EXACT_SOURCE_CANDIDATE_MESH_INVALID');
+ let area=-1;
+ let center:StageVector3|null=null;
+ for(let i=0;i<vertices.length;i+=3){
+  const a=vertices[i]!,b=vertices[i+1]!,c=vertices[i+2]!;
+  const projectedArea=Math.abs((b[0]-a[0])*(c[2]-a[2])-
+   (b[2]-a[2])*(c[0]-a[0]))/2;
+  if(projectedArea>area){
+   area=projectedArea;
+   center=[(a[0]+b[0]+c[0])/3,
+    (a[1]+b[1]+c[1])/3,(a[2]+b[2]+c[2])/3];
+  }
+ }
+ if(!center||area<=1e-8)throw Error('W10_B7_NO_SOURCE_WALK_FACE');
+ const point=new Vec3(...center);
+ const nearest=nav.auditPath(point,point);
+ const fromRight=nav.auditPath(new Vec3(...from),point);
+ const fromUnderpass=nav.auditPath(new Vec3(...to),point);
+ const strictReached=(p:ReturnType<RecastStageNavigation['auditPath']>)=>
+  p.reachedTarget&&p.startSnapDistanceMeters<=.25&&
+  p.endSnapDistanceMeters<=.25;
+ return {sourceId:record.id,sourceGraphComponentId:record.routeGraphComponentId,
+  side:record.side,exactTriangleCenter:center,
+  nearestRecastSnapMeters:nearest.startSnapDistanceMeters,
+  nearbyNativeNavRepresentative:nearest.startSnapDistanceMeters<=.25,
+  rightLowToCandidateReached:strictReached(fromRight),
+  underpassToCandidateReached:strictReached(fromUnderpass),
+  rightLowToCandidateEndpointErrorMeters:fromRight.endpointErrorMeters,
+  underpassToCandidateEndpointErrorMeters:fromUnderpass.endpointErrorMeters,
+  physicalHumanKccValidated:false,originalGameTravelDirectionProven:false,
+  sourcePromoted:false};
+}
+
 /** Candidate prefix order is the exact source chain order, not invented links. */
 export function auditW10CandidateNavIsolation():W10CandidateIsolationResult{
  const original=undertowT21dConnectivityQaStage();
@@ -127,6 +190,7 @@ export function auditW10CandidateNavIsolation():W10CandidateIsolationResult{
  if(bySide.some(x=>x.chain.length!==5))
   throw Error('W10_B7_MISSING_EXACT_FIVE_SOURCE_FLOORS');
  const snapshots:W10CandidateRecastSnapshot[]=[];
+ const componentNavRepresentatives:W10CandidateNavRepresentative[]=[];
  // Only ten isolated nav additions. No Rapier collision authoring, ever.
  // Evaluate baseline, 5 cumulative prefixes, and all 5 one-component
  // ablations (11 nav builds total, each with the mirrored counterparts).
@@ -155,9 +219,20 @@ export function auditW10CandidateNavIsolation():W10CandidateIsolationResult{
    const active=side.chain.filter(c=>group.componentIds.includes(c.id));
    snapshots.push(record(nav,group.kind,active,
     side.side,side.probe.from,side.probe.to));
+   // The complete original batch is required to answer whether every
+   // recovered floor/slope has a nearby nav representative of its own.
+   if(group.kind==='PREFIX'&&active.length===5){
+    for(const component of active){
+     const mesh=solids.find(s=>s.id==='UndertowT21D:'+component.id);
+     if(!mesh)throw Error('W10_B7_MISSING_EXACT_SOURCE_STAGE_MESH');
+     componentNavRepresentatives.push(candidateNavWitness(
+      nav,component,mesh,side.probe.from,side.probe.to));
+    }
+   }
   }
  }
- return {snapshots,allSourceComponentsAlreadyVerified:true,
+ return {snapshots,componentNavRepresentatives,
+  allSourceComponentsAlreadyVerified:true,
   archivedFiveEachSideDidNotConnect:true,
   archivedBaselineEndpointErrorMeters:
    UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT.experimentalRuntimeEndpointErrorMeters,
