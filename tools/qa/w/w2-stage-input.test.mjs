@@ -157,3 +157,14 @@ test('W3.1 rejects changed guard semantics before writing a sandbox',()=>{
  assert.notEqual(changed,native);
  assert.throws(()=>patchNativeCrowd(changed),/HOLD_W3_NATIVE_ANCHOR_1_COUNT_0/);
 });
+
+test('W3.1 permits reordered snapshot fields but retains explicit noncertification',()=>{
+ const native=file(nativeFile);
+ const reordered=native.replace(
+  'detaches:this.detaches,airborneOrUnverifiableTicks:this.excluded,',
+  'airborneOrUnverifiableTicks:this.excluded,detaches:this.detaches,');
+ assert.notEqual(reordered,native);
+ const patched=patchNativeCrowd(reordered);
+ assert.match(patched,/w3GuardedTicks:this.w3GuardedTicks/);
+ assert.match(patched,/crowdAvoidanceCertified:false/);
+});
