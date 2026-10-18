@@ -43,6 +43,7 @@ export interface F3TrafficSnapshot{
   readonly nativeRouteChecks:number;
   readonly nativeRouteRayProbes:number;
   readonly rejectedUnsupportedNativeRoutes:number;
+  readonly unauditedPatrolRouteRequests:number;
   readonly rejectedUnsupportedGoals:number;
   readonly deniedUnsupportedEnemyFeet:number;
   readonly travelMeters:number;
@@ -75,6 +76,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private nativeRouteChecks=0;
  private nativeRouteRayProbes=0;
  private rejectedUnsupportedNativeRoutes=0;
+ private unauditedPatrolRouteRequests=0;
  private rejectedUnsupportedGoals=0;
  private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
@@ -263,9 +265,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Native path from the REAL CPU foot, never only from a stored proxy.
    if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
       audit.endSnapDistanceMeters>.22)continue;
-   if(!this.hasSourceSupportedRoute(audit,sign)){
-    this.rejectedUnsupportedNativeRoutes++;continue;
-   }
+   // W10-B4 regression finding: rejecting every ray-unsupported Recast
+   // polyline also vetoes previously physically traversed W8 source patrol
+   // paths (B4 then stopped shooting in the full W9 test). The existing
+   // ground movement remains subject to per-frame original human-size
+   // Rapier KCC and physical collision. Log uncertain patrol routes but
+   // do NOT silently rewrite original native goals or cancel that validated
+   // locomotion. New cross-team engagement paths still fail closed above.
+   if(!this.hasSourceSupportedRoute(audit,sign))
+    this.unauditedPatrolRouteRequests++;
    this.patrolIndex.set(id,index);
    out.copy(goal);this.realGoalRequests++;return true;
   }
@@ -372,6 +380,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     nativeRouteChecks:this.nativeRouteChecks,
     nativeRouteRayProbes:this.nativeRouteRayProbes,
     rejectedUnsupportedNativeRoutes:this.rejectedUnsupportedNativeRoutes,
+    unauditedPatrolRouteRequests:this.unauditedPatrolRouteRequests,
     rejectedUnsupportedGoals:this.rejectedUnsupportedGoals,
     deniedUnsupportedEnemyFeet:this.deniedUnsupportedEnemyFeet,
     travelMeters:this.travelMeters,
