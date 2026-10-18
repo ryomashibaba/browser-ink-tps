@@ -167,6 +167,23 @@ async function main(){
   await mouse('mousePressed');await mouse('mouseReleased');
   await waitUntil(async()=>await evaluate(
    'document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
+  // Real press+release before ANY physics tick: never silently lose
+  // a quick mouse tap at 60Hz. The shot must be accepted by the native
+  // ProjectileSystem with a genuine pointer-locked browser event.
+  const quickBefore=await witness();
+  await mouse('mousePressed');await mouse('mouseReleased');
+  await advance(1);
+  const quickAfter=await witness();
+  if(quickAfter.shotsFired<=quickBefore.shotsFired||
+     quickAfter.realMouseFireHeld||!quickAfter.pointerLocked||
+     quickAfter.sourceSolids!==25||quickAfter.scoreablePromotions!==0)
+   reject('W10B19_REAL_QUICK_TAP_LOST_BEFORE_FIXED_TICK_'+
+    JSON.stringify({before:quickBefore,after:quickAfter}));
+  console.log('T21_W10B19_NATIVE_ONE_TICK_QUICK_TAP_PASS',{
+   actualPointerLock:true,pressedAndReleasedBeforePhysics:true,
+   acceptedNativeShots:quickAfter.shotsFired-quickBefore.shotsFired,
+   sourceScoreablePromotions:0
+  });
   // Confirm the optional shoulder control is actual pointer-locked input
   // and never writes a physical actor, stage, CPU foot or score mask.
   const firstView=await evaluate('window.__t21F3.snapshot()');
@@ -279,8 +296,8 @@ async function main(){
   const released=await witness();
   if(released.realMouseFireHeld)
    reject('W10B15_POINTER_RELEASE_NOT_RECORDED_'+JSON.stringify(released));
-  if(!splat||splat.cpuSplats!==1||splat.cpuCombatHits-hitsBefore<3||
-     splat.shotsFired-shotsBefore<3||splat.hp!==0||
+  if(!splat||splat.cpuSplats!==1||splat.cpuCombatHits-quickBefore.cpuCombatHits<3||
+     splat.shotsFired-quickBefore.shotsFired<3||splat.hp!==0||
      splat.entityEnabledInHierarchy!==false)
    reject('W10B15_MOUSE_NOT_NATIVE_COMBAT_'+JSON.stringify({
     splat,shotsBefore,hitsBefore,trace
@@ -400,6 +417,29 @@ async function main(){
   const restoredShot=await screenshot('W10B18_2_RIGHT_SHOULDER_RESTORED');
   if(rightShot.sha256===leftShot.sha256)
    reject('W10B18_REAL_CAMERA_FRAMES_IDENTICAL');
+  // Distinguish live callback interval distribution from GPU frame
+  // completion and the fixed-step 60Hz simulation. The exact camera
+  // raycast delta verifies one original-stage ray per fixed tick PLUS
+  // one per visual callback; the redundant pre-tick ray has been removed.
+  const cameraCastDelta=restored.cameraSourcePractice.cameraRaycasts-
+   base.cameraSourcePractice.cameraRaycasts;
+  const callbackDelta=restored.sourceFrameQuality.liveUpdateFrames-
+   base.sourceFrameQuality.liveUpdateFrames;
+  const fixedTickDelta=restored.tick-base.tick;
+  const measured=restored.sourceFrameQuality;
+  if(cameraCastDelta!==callbackDelta+fixedTickDelta||
+     measured.sampleCount<5||!Number.isFinite(measured.p95Ms)||
+     restored.sourceScoreablePromotions!==0)
+   reject('W10B19_LIVE_FRAME_OR_REDUNDANT_CAMERA_CAST_'+JSON.stringify({
+    cameraCastDelta,callbackDelta,fixedTickDelta,measured
+   }));
+  console.log('T21_W10B19_REAL_FRAME_AND_CAMERA_CAST_PASS',JSON.stringify({
+   metric:measured.metric,sampleCount:measured.sampleCount,
+   p50Ms:measured.p50Ms,p95Ms:measured.p95Ms,p99Ms:measured.p99Ms,
+   cameraCastDelta,callbackDelta,fixedTickDelta,
+   legacyExtraCameraCastsAvoided:callbackDelta,
+   notGpuTime:true,notOwnerWindowsRtxFps:true
+  }));
   const cameraResult={
    status:'PASS_REAL_CHROME_LIVE_CAMERA_SHOULDER',
    actualBrowserWebgl2:true,realPlayerPointerLock:true,
@@ -410,6 +450,10 @@ async function main(){
    originalStageSolids:restored.originalSourceSolids,
    sourceScoreablePromotions:restored.sourceScoreablePromotions,
    physicalCpuRelocations:0,productionAuthorized:false,
+   sourceFrameQuality:measured,
+   cameraCastDelta,callbackDelta,fixedTickDelta,
+   legacyExtraCameraCastsAvoided:callbackDelta,
+   quickTapAcceptedShots:quickAfter.shotsFired-quickBefore.shotsFired,
    rightShot,leftShot,restoredShot
   };
   writeFileSync(resolve(OUTPUT,'w10b18-real-chrome-camera.json'),
