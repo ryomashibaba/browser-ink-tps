@@ -23,12 +23,13 @@ import {GameFeedback} from '../feedback/GameFeedback';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
-import {Team} from '../ink/types';
+import {SurfaceFlags,Team} from '../ink/types';
 import {PlayerInput} from '../input/PlayerInput';
 import {initializeRecastNavigation,RecastStageNavigation}
  from '../navigation/RecastStageNavigation';
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
 import {PlayerController} from '../player/PlayerController';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -61,6 +62,13 @@ import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
 const STEP=1/60;
+type W10B14Actor={
+ id:string;position:Vec3;previousPosition:Vec3;entity:Entity;
+ lifeState:'ACTIVE'|'SPLATTED';hp:number;
+ agent:{resetMoveTarget():void}|null;
+ thinkRemaining:number;paintRemaining:number;fireRemaining:number;
+ jumpCooldownSeconds:number;
+};
 const PROJECT='Undertow T21 · F3 Play Lab';
 export class UndertowF3PlayablePreviewApp{
  static async boot(canvas:HTMLCanvasElement,ui:HTMLElement){
@@ -162,6 +170,11 @@ export class UndertowF3PlayablePreviewApp{
  private remainingSeconds=180;
  private humanSplats=0;
  private humanRespawns=0;
+ /** Browser-only original-floor witness; never a certified 4v4 encounter. */
+ private w10b14:{
+  target:W10B14Actor;armed:boolean;splatSeen:boolean;
+  qaHumanFoot:Vec3;sourceSolidId:string;
+ }|null=null;
  private constructor(
   private readonly app:AppBase,
   private readonly canvas:HTMLCanvasElement,
@@ -351,6 +364,9 @@ export class UndertowF3PlayablePreviewApp{
    qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),
    armCpuKitsQa:()=>this.armCpuKitsQa(),
    fireCpuKitQa:(kind:'SUB'|'SPECIAL')=>this.fireCpuKitQa(kind),
+   startW10B14RenderWitness:()=>this.startW10B14RenderWitness(),
+   armW10B14RealProjectiles:()=>this.armW10B14RealProjectiles(),
+   w10B14RenderWitness:()=>this.w10B14RenderWitness(),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
@@ -510,6 +526,100 @@ export class UndertowF3PlayablePreviewApp{
   this.paused=!this.paused;
   this.refresh();
  }
+ /** Read-only live PlayCanvas render-component witness, not pixel-mask proof. */
+ private w10B14RenderWitness(){
+  const w=this.w10b14;
+  if(!w)throw Error('T21_W10B14_RENDER_WITNESS_NOT_STARTED');
+  const e=w.target.entity;
+  return {
+   isolatedBrowserQa:true,originalEnemySpawnCertified:false,
+   naturalEnemyEncounterCertified:false,realProjectileDamage:true,
+   humanRepositionedForIsolatedQa:true,sourceSolidId:w.sourceSolidId,
+   id:w.target.id,lifeState:w.target.lifeState,hp:w.target.hp,
+   entityEnabled:e.enabled,
+   entityEnabledInHierarchy:e.enabledInHierarchy,
+   renderComponentPresent:!!e.render,
+   renderComponentEnabled:e.render?.enabled===true,
+   entityPosition:e.getPosition().toArray(),cpuFoot:w.target.position.toArray(),
+   playerPosition:this.player.getPosition().toArray(),
+   shotsFired:this.stats.shotsFired,cpuCombatHits:this.stats.cpuCombatHits,
+   cpuSplats:this.stats.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
+   firstSplatObserved:w.splatSeen,armed:w.armed,
+   sourceSolids:this.rawStage.solids.length,
+   sourcePaint:this.rawStage.paintSurfaces.length,
+   sourceLinks:this.rawStage.navigationLinks?.length,
+   scoreablePromotions:0,activationReady:frozen.activationReady,
+   stopReason:this.stopReason
+  };
+ }
+ private startW10B14RenderWitness(){
+  const q=new URL(location.href).searchParams;
+  if(q.get('t21W10B14')!=='render'||
+     q.get('t21Play')!=='preview'||q.get('t21QaDrive')!=='source'||
+     q.get('t21QaInput')!=='deterministic'||
+     q.get('t21KccAudit')!=='readOnly'||!this.paused||
+     document.pointerLockElement===this.canvas||this.stopReason||
+     this.clock.tick!==0||this.w10b14)
+   throw Error('T21_W10B14_PRIVATE_PAUSED_BROWSER_QA_REQUIRED');
+  const bots=(this.cpu as unknown as {bots:W10B14Actor[]}).bots;
+  if(bots.length!==7)throw Error('T21_W10B14_SEVEN_NATIVE_CPU_REQUIRED');
+  const target=bots.find(b=>b.id==='B1');
+  if(!target||target.lifeState!=='ACTIVE'||target.hp!==100)
+   throw Error('T21_W10B14_ORIGINAL_CPU_B1_NOT_READY');
+  const support=this.physics.castStageSegment(
+   target.position.clone().add(new Vec3(0,.70,0)),
+   target.position.clone().add(new Vec3(0,-.70,0)),'ink-projectile');
+  if(!support||!support.solidId.startsWith('UndertowT21D:spawn-high-'))
+   throw Error('T21_W10B14_ENEMY_NOT_ON_ORIGINAL_SOURCE_HIGH_PAD');
+  // Only HUMAN is moved on the SAME source-authorized pad; no CPU warp.
+  // This is isolated laboratory setup, not authored stage placement.
+  const dirs=[[0,1],[1,0],[-1,0],[0,-1],
+   [.707,.707],[-.707,.707],[.707,-.707],[-.707,-.707]];
+  const chosen=dirs.map(([dx,dz])=>{
+   const foot=new Vec3(target.position.x+dx*1.45,
+    target.position.y,target.position.z+dz*1.45);
+   const nav=this.nav.closestPoint(foot);
+   const patch=this.ink.sampleWorld(
+    new Vec3(foot.x,foot.y+.06,foot.z),.34,SurfaceFlags.Paintable);
+   const wall=this.physics.castStageSegment(
+    new Vec3(foot.x,foot.y+.76,foot.z),
+    new Vec3(target.position.x,target.position.y+.76,target.position.z),
+    'ink-projectile');
+   const floor=this.physics.castStageSegment(
+    foot.clone().add(new Vec3(0,.70,0)),
+    foot.clone().add(new Vec3(0,-.70,0)),'ink-projectile');
+   return {foot,patch,wall,floor,nav};
+  }).find(p=>p.patch&&!p.wall&&p.floor?.solidId===support.solidId&&
+   p.nav.distance(p.foot)<.25);
+  if(!chosen)throw Error('T21_W10B14_SOURCE_LOCAL_SHOT_LANE_HOLD');
+  for(const bot of bots){
+   bot.agent?.resetMoveTarget();
+   bot.thinkRemaining=900;bot.paintRemaining=900;
+   bot.fireRemaining=900;bot.jumpCooldownSeconds=900;
+  }
+  this.player.teleport(new Vec3(chosen.foot.x,
+   chosen.foot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,
+   chosen.foot.z));
+  this.camera.update(this.player.getPosition(this.visual));
+  this.w10b14={target,armed:false,splatSeen:false,
+   qaHumanFoot:chosen.foot,sourceSolidId:support.solidId};
+  this.refresh();
+  return this.w10B14RenderWitness();
+ }
+ private armW10B14RealProjectiles(){
+  if(!this.w10b14||!this.paused||this.stopReason||
+     !this.stats.playerGrounded||this.w10b14.armed||
+     this.w10b14.target.lifeState!=='ACTIVE')
+   throw Error('T21_W10B14_SOURCE_GROUNDED_ARM_HOLD');
+  const body=this.player.getPosition();
+  const w=this.w10b14;
+  if(Math.abs(body.y-
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters-w.qaHumanFoot.y)>.18||
+     Math.hypot(body.x-w.qaHumanFoot.x,body.z-w.qaHumanFoot.z)>.3)
+   throw Error('T21_W10B14_ACTUAL_PLAYER_KCC_NOT_AT_SOURCE_FOOT');
+  w.armed=true;
+  return this.w10B14RenderWitness();
+ }
  private restart(){
   this.stopReason=null;this.paused=false;this.respawnFrames=0;
   this.resources.reset();
@@ -612,10 +722,10 @@ export class UndertowF3PlayablePreviewApp{
     this.player.syncAfterPhysics(seconds);
     if(alive)this.resources.fixedUpdate(
      seconds,this.player.currentMode,this.player.currentInkRelation);
-    this.traffic.prepare(frame);
+    if(!this.w10b14)this.traffic.prepare(frame);
     this.cpu.fixedUpdate(seconds,true,Team.A,
-     this.player.getPosition(this.p),alive);
-    this.traffic.observe(frame);
+     this.player.getPosition(this.p),alive&&!this.w10b14);
+    if(!this.w10b14)this.traffic.observe(frame);
     if(this.matchState==='STAGING'&&this.traffic.snapshot().freeCombatEnabled)
      this.matchState='PLAYING';
     if(this.matchState==='PLAYING'){
@@ -627,16 +737,32 @@ export class UndertowF3PlayablePreviewApp{
     // weapon execution path; 17 paintable surfaces remain UNSCORED.
     this.cpu.drainKitRequests(request=>this.cpuKit?.queue(request)??false);
     this.camera.update(this.player.getPosition(this.p));
-    this.camera.getAimDirection(this.aim);
-    this.player.getMuzzlePosition(this.aim,this.muzzle);
-    this.camera.getAimTarget(this.target);
-    this.projectiles.solvePlayerLaunchDirection(
+    if(this.w10b14){
+     const w=this.w10b14;
+     if(w.target.lifeState==='SPLATTED')w.splatSeen=true;
+     this.target.copy(w.target.position).add(new Vec3(0,.68,0));
+     this.aim.copy(this.target).sub(this.player.getPosition(this.p)).normalize();
+     this.player.getMuzzlePosition(this.aim,this.muzzle);
+     this.projectiles.solvePlayerLaunchDirection(
       this.muzzle,this.target,this.aim);
-    this.projectiles.fixedUpdate(seconds,
+     // Real ProjectileSystem and CPU HP lifecycle. No damage injection.
+     this.projectiles.fixedUpdate(seconds,
+      alive&&w.armed&&!w.splatSeen&&w.target.lifeState==='ACTIVE',
+      false,this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
+      alive,alive);
+     if(w.target.lifeState==='SPLATTED')w.splatSeen=true;
+    }else{
+     this.camera.getAimDirection(this.aim);
+     this.player.getMuzzlePosition(this.aim,this.muzzle);
+     this.camera.getAimTarget(this.target);
+     this.projectiles.solvePlayerLaunchDirection(
+      this.muzzle,this.target,this.aim);
+     this.projectiles.fixedUpdate(seconds,
       alive&&this.input.fireHeld&&this.player.canShoot,
       alive&&this.input.secondaryHeld&&this.player.canShoot,
       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
       alive,alive);
+    }
     this.cpuKit?.fixedUpdate(seconds);
     this.coordinator.processTick(frame);
     if(this.resources.currentHp<=0){
