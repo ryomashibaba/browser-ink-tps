@@ -1,0 +1,32 @@
+name: T21 W10-B24 private Banc metadata preflight
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b24-private-banc-preflight.mjs'
+      - 'scripts/t21-w10b24-private-banc-preflight.test.mjs'
+      - 'RUN_T21_W10B24_PRIVATE_BANC_PREFLIGHT_ONCE.cmd'
+      - '.github/workflows/t21-w10b24-private-banc-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check isolated metadata scanner syntax
+        run: |
+          node --check scripts/t21-w10b24-private-banc-preflight.mjs
+          node --check scripts/t21-w10b24-private-banc-preflight.test.mjs
+      - name: Verify private input is not serialized, copied or authorized
+        run: node --test scripts/t21-w10b24-private-banc-preflight.test.mjs
+      - name: Preserve sole original source authority unchanged
+        shell: bash
+        run: |
+          grep -q "readonly originalBancAuthenticityProven:false" src/stage/undertow/UndertowW10SetActorBancEvidenceGate.ts
+          grep -q "newRuntimeSolids:0,newNavLinks:0" src/stage/undertow/UndertowW10SetActorBancEvidenceGate.ts
