@@ -22,10 +22,11 @@ describe('W10-B8 original face adjacency and isolated Human KCC',()=>{
     expect(p.actorTraversalProven).toBe(false);
    }
    const witness=x.slopeWitnesses.find(w=>w.side===side)!;
-   expect(witness.interiorSamples).toBe(17);
+   expect(witness.interiorSamples).toBeGreaterThan(17);
    expect(witness.candidateOnlyPhysicsWorld).toBe(true);
-   expect(witness.kccStepsAttempted).toBe(16);
-   expect(witness.kccBlockedSteps).toBeLessThanOrEqual(16);
+   expect(witness.kccStepsAttempted).toBe(witness.interiorSamples-1);
+   expect(witness.kccBlockedSteps).toBeLessThanOrEqual(
+    witness.kccStepsAttempted);
    expect(witness.isolatedCandidateHitSamples).toBeGreaterThan(0);
    expect(witness.isolatedCandidateSupportedSamples)
     .toBeGreaterThanOrEqual(witness.isolatedCandidateHitSamples);

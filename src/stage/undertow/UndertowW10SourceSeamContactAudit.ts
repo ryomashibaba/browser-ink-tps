@@ -8,6 +8,7 @@
  * Full 3D triangle-triangle distance includes segment/face intersections.
  */
 import {Vec3} from 'playcanvas';
+import {GAME_CONFIG} from '../../config/game/gameConfig';
 import {RapierStagePhysics} from '../../physics/RapierStagePhysics';
 import {auditPhase14JRapierRejoinStep} from './UndertowPhase14JCollisionRejoinGate';
 import type {StageDefinition,StageVector3,StageTriangleMeshGeometry}
@@ -169,7 +170,11 @@ function slopeWitness(original:StageDefinition,baseline:RapierStagePhysics,
  const high=scale(add(v[2]!,v[4]!),.5);
  let baselineSupportedSamples=0,isolatedCandidateSupportedSamples=0;
  let isolatedCandidateHitSamples=0,kccStepsAttempted=0,kccBlockedSteps=0;
- const n=16;
+ // Every isolated KCC move must obey the SAME real 60Hz CPU limit.
+ // The first attempt used fixed 16 steps and correctly failed overspeed.
+ const sampledMeters=Math.hypot(...sub(high,low))*.40;
+ const stepCapMeters=GAME_CONFIG.cpu.maxSpeedMetersPerSecond/60*.60;
+ const n=Math.max(1,Math.ceil(sampledMeters/stepCapMeters));
  const interp=(t:number):P=>add(low,scale(sub(high,low),t));
  let previous=interp(.30);
  for(let i=0;i<=n;i++){
