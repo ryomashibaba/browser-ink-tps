@@ -133,3 +133,27 @@ test('W3 fail-closed: unknown native source rejects before any sandbox writes',(
   assert.equal(readFileSync(join(original,appFile),'utf8'),app);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
+
+test('W3.1 accepts formula formatting differences without changing the source decision',()=>{
+ const native=file(nativeFile);
+ const changed=native
+  .replace('const sourceSupported=Number.isFinite(snap)&&snap<=.22;',
+   'const sourceSupported = Number.isFinite(snap) && (snap <= 0.22);')
+  .replace('GAME_CONFIG.player.humanSpeedMetersPerSecond/60+.12;',
+   '(GAME_CONFIG.player.humanSpeedMetersPerSecond / 60) + 0.12;')
+  .replace('if(!sourceSupported||!boundedStep){',
+   'if ( !sourceSupported || !boundedStep ) {');
+ assert.notEqual(changed,native);
+ const patched=patchNativeCrowd(changed);
+ assert.match(patched,/WITHHELD_NAV_PROJECTION_HORIZONTAL/);
+ assert.match(patched,/!sourceSupported\|\|!boundedStep\|\|!w3Compatible/);
+ assert.match(patched,/const sourceSupported = Number\.isFinite\(snap\) && \(snap <= 0\.22\)/);
+ assert.match(patched,/const w3HorizontalOffset=Math\.hypot/);
+});
+test('W3.1 rejects changed guard semantics before writing a sandbox',()=>{
+ const native=file(nativeFile);
+ const changed=native.replace('if(!sourceSupported||!boundedStep){',
+   'if(!sourceSupported||!boundedStep||overrideHumanCollision){');
+ assert.notEqual(changed,native);
+ assert.throws(()=>patchNativeCrowd(changed),/HOLD_W3_NATIVE_ANCHOR_1_COUNT_0/);
+});
