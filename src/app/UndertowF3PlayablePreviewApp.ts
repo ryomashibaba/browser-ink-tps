@@ -349,8 +349,9 @@ export class UndertowF3PlayablePreviewApp{
   this.b22StartButton.addEventListener('click',()=>{
    if(this.paused||this.stopReason||this.galleryIndex>=0||
       this.survey.snapshot().active||this.matchState==='TIME_UP'||
-      document.pointerLockElement===this.canvas){
-    this.b22TrialStatus.textContent='Resume source practice and unlock pointer first.';
+      document.pointerLockElement===this.canvas||
+      ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)){
+    this.b22TrialStatus.textContent='Finish or interrupt Paint Run before GPU comparison.';
     return;
    }
    if(this.b22Trial.arm()){
