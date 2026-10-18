@@ -26,7 +26,10 @@ describe('W10-B10 original Batch2 exact floor candidate and actor HOLD audit',()
     expect(gap.actorPlacementUnresolvedCandidates).toBe(4);
     expect(gap.nearestStatic).toHaveLength(3);
     expect(gap.nearestActorUnresolved).toHaveLength(4);
-    expect(gap.geometricPairwiseCandidates).toBeGreaterThanOrEqual(0);
+    // All 14 separately sourced meshes were screened against the two
+    // original seams. None individually touches both faces within 30cm.
+    // Retain a HOLD instead of inventing a runtime bridge.
+    expect(gap.geometricPairwiseCandidates).toBe(0);
     for(const record of [
      ...gap.nearestStatic,...gap.nearestActorUnresolved]){
      expect(record.side).toBe(side);
@@ -43,8 +46,23 @@ describe('W10-B10 original Batch2 exact floor candidate and actor HOLD audit',()
     expect(gap.nearestActorUnresolved.every(x=>
      x.placementAuthority==='SET_ACTOR_PLACEMENT_UNRESOLVED')).toBe(true);
     expect(gap.crossingCanBeEnabled).toBe(false);
+    // Distinguish known static floors from model objects whose SetActor
+    // enablement or placement is UNRESOLVED. Neither grants collision.
+    expect(gap.nearestStatic[0]!.minimaxDistanceMeters).toBeGreaterThan(5);
+    expect(gap.nearestActorUnresolved[0]!.placementAuthority)
+     .toBe('SET_ACTOR_PLACEMENT_UNRESOLVED');
     expect(gap.newRuntimeSolids).toBe(0);
     expect(gap.newNavLinks).toBe(0);
+   }
+   // The mirrored candidate family has equal original geometry with tiny
+   // translation-rounding differences. These are NO new playable crossings.
+   if(side==='POSITIVE_Z'){
+    const entrance=gaps[0]!.nearestActorUnresolved[0]!;
+    expect(entrance.distanceToUpstreamMeters).toBeCloseTo(3.595057,3);
+    expect(entrance.distanceToDownstreamMeters).toBeCloseTo(2.852454,3);
+    const intermediate=gaps[1]!.nearestActorUnresolved[0]!;
+    expect(intermediate.distanceToUpstreamMeters).toBeCloseTo(.12,3);
+    expect(intermediate.distanceToDownstreamMeters).toBeCloseTo(20.480614,3);
    }
   }
   expect(report.approvedOriginalGeometryConnections).toBe(0);
