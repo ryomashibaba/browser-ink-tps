@@ -144,8 +144,15 @@ async function main(){
    frame:await screenshot('W10B14_0_CPU_ACTIVE')});
   const ground=await evaluate('window.__t21F3.advanceQaTicks(75)');
   if(ground.stopReason)reject('W10B14_HUMAN_LANDING_'+ground.stopReason);
-  const armed=verify(await evaluate(
-   'window.__t21F3.armW10B14RealProjectiles()'),'ARMED');
+  const armAttempt=await evaluate(`(() => {
+   try{return window.__t21F3.armW10B14RealProjectiles();}
+   catch(error){return {armError:String(error)};}
+  })()`);
+  if(armAttempt.armError)reject('W10B14_SOURCE_ARM_HOLD_'+JSON.stringify({
+   error:armAttempt.armError,player:ground.player,
+   cpu:await evaluate('window.__t21F3.w10B14RenderWitness()')
+  }));
+  const armed=verify(armAttempt,'ARMED');
   if(!armed.armed)reject('W10B14_GENUINE_WEAPON_NOT_ARMED');
   let splat=null;
   for(let n=0;n<15;n++){
