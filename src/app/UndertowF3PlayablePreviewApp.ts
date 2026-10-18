@@ -174,6 +174,7 @@ export class UndertowF3PlayablePreviewApp{
  private w10b14:{
   target:W10B14Actor;armed:boolean;splatSeen:boolean;
   qaHumanFoot:Vec3;sourceSolidId:string;mouseInputOnly:boolean;
+  nativeRespawnFoot:Vec3;
  }|null=null;
  private constructor(
   private readonly app:AppBase,
@@ -367,6 +368,7 @@ export class UndertowF3PlayablePreviewApp{
    startW10B14RenderWitness:()=>this.startW10B14RenderWitness(),
    armW10B14RealProjectiles:()=>this.armW10B14RealProjectiles(),
    w10B14RenderWitness:()=>this.w10B14RenderWitness(),
+   inspectW10B15NativePad:()=>this.inspectW10B15NativePad(),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
@@ -536,6 +538,7 @@ export class UndertowF3PlayablePreviewApp{
    naturalEnemyEncounterCertified:false,realProjectileDamage:true,
    humanRepositionedForIsolatedQa:true,cpuRepositionedForIsolatedQa:true,
    sourceSolidId:w.sourceSolidId,
+   nativeRespawnFoot:w.nativeRespawnFoot.toArray(),
    id:w.target.id,lifeState:w.target.lifeState,hp:w.target.hp,
    entityEnabled:e.enabled,
    entityEnabledInHierarchy:e.enabled&&e.parent?.enabled===true,
@@ -581,6 +584,7 @@ export class UndertowF3PlayablePreviewApp{
   if(!target||target.lifeState!=='ACTIVE'||target.hp!==100)
    throw Error('T21_W10B14_ORIGINAL_CPU_B1_NOT_READY');
 
+  const nativeRespawnFoot=target.position.clone();
   // Reuse W10-B13's genuine original first-drop floor rather than
   // weakening a failed physical grounded check on the initial high pad.
   // Both actor placements are isolated QA, not original authored spawns.
@@ -624,7 +628,8 @@ export class UndertowF3PlayablePreviewApp{
    foot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,foot.z));
   this.w10b14={target,armed:false,splatSeen:false,
    qaHumanFoot:new Vec3(foot.x,foot.y,foot.z),sourceSolidId:solid.id,
-   mouseInputOnly:q.get('t21W10B15')==='trustedMouse'};
+   mouseInputOnly:q.get('t21W10B15')==='trustedMouse',
+   nativeRespawnFoot};
   this.camera.update(this.player.getPosition(this.visual));
   this.refresh();
   return this.w10B14RenderWitness();
@@ -642,6 +647,33 @@ export class UndertowF3PlayablePreviewApp{
    throw Error('T21_W10B14_ACTUAL_PLAYER_KCC_NOT_AT_SOURCE_FOOT');
   w.armed=true;
   return this.w10B14RenderWitness();
+ }
+ /** Fixed source-only camera, never an actor or collision reposition.
+  * B1 stays splatted during the empty-pad screenshot; the same camera
+  * observes B1 again after its native CpuAgentSystem respawn. */
+ private inspectW10B15NativePad(){
+  const w=this.w10b14;
+  if(!w||!w.mouseInputOnly||
+     new URL(location.href).searchParams.get('t21W10B15')!=='trustedMouse'||
+     !this.paused||this.stopReason||document.pointerLockElement!==null||
+     !w.splatSeen||this.stats.cpuSplats!==1)
+   throw Error('T21_W10B15_CAMERA_ONLY_INSPECTION_FORBIDDEN');
+  const target=w.nativeRespawnFoot.clone().add(new Vec3(0,.68,0));
+  const view=target.clone().add(new Vec3(2.3,2.2,5));
+  this.playerCameraEntity.setPosition(view);
+  this.playerCameraEntity.lookAt(target);
+  const screen=this.playerCameraEntity.camera?.worldToScreen(target);
+  return {
+   cameraOnly:true,sourceOriginalFloor:true,physicalActorsMoved:0,
+   geometryModified:false,scoreablePromotions:0,productionAuthorized:false,
+   viewPosition:view.toArray(),lookAt:target.toArray(),
+   screen:screen?{x:screen.x,y:screen.y,z:screen.z}:null,
+   cpuState:w.target.lifeState,cpuEntityEnabled:w.target.entity.enabled,
+   cpuRealFoot:w.target.position.toArray(),
+   originalSolids:this.rawStage.solids.length,
+   originalPaint:this.rawStage.paintSurfaces.length,
+   originalLinks:this.rawStage.navigationLinks?.length
+  };
  }
  private restart(){
   this.stopReason=null;this.paused=false;this.respawnFrames=0;
