@@ -86,7 +86,7 @@ describe('W8: seven original first-drops, Crowd rejoins, autonomous source patro
    bot.thinkRemaining=900;bot.paintRemaining=900;
    bot.fireRemaining=900;bot.jumpCooldownSeconds=900;
   }
-  const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots);
+  const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,physics);
   cpu.useF3dOriginalSourceGoals(traffic);
   const initialFeet=new Map(bots.map(b=>[b.id,b.position.clone()]));
   const acceptedSteps=new Map(bots.map(b=>[b.id,0]));

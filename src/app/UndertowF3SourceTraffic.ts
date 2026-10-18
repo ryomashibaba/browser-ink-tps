@@ -8,6 +8,7 @@
 import {Vec3} from 'playcanvas';
 import type {CrowdAgent} from 'recast-navigation';
 import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
+import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {Team} from '../ink/types';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
@@ -38,6 +39,9 @@ export interface F3TrafficSnapshot{
   readonly engagementGoalRequests:number;
   readonly sameSourceEnemyCandidates:number;
   readonly deniedNativeEnemyPaths:number;
+  readonly sourceEndpointProbes:number;
+  readonly rejectedUnsupportedGoals:number;
+  readonly deniedUnsupportedEnemyFeet:number;
   readonly travelMeters:number;
   readonly attemptsToCrossUnboundUnderpass:0;
   readonly activeTargets:readonly {id:string;position:[number,number,number]}[];
@@ -64,6 +68,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private engagementGoalRequests=0;
  private sameSourceEnemyCandidates=0;
  private deniedNativeEnemyPaths=0;
+ private sourceEndpointProbes=0;
+ private rejectedUnsupportedGoals=0;
+ private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
  private readonly physicallyFalling=new Set<string>();
  private readonly physicallyRejoined=new Set<string>();
@@ -75,8 +82,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private freeCombat=false;
 
  constructor(
-  stage:StageDefinition,private readonly nav:RecastStageNavigation,
-  spawns:SourceSpawnPlan,private readonly bots:readonly F3TrafficCpu[]
+  private readonly stage:StageDefinition,private readonly nav:RecastStageNavigation,
+  spawns:SourceSpawnPlan,private readonly bots:readonly F3TrafficCpu[],
+  private readonly physics:RapierStagePhysics
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -119,6 +127,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       continue;
     if(targets.some(p=>p.distance(new Vec3(target.x,target.y,target.z))<1.6))
       continue;
+    // Recast reachability does not imply an existing physical floor.
+    if(!this.hasSourceFootSupport(target)){
+     this.rejectedUnsupportedGoals++;continue;
+    }
     targets.push(new Vec3(target.x,target.y,target.z));
    }
    // Deterministic source-only loop, no new navigation links. The
@@ -132,6 +144,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.previousFeet.set(bot.id,bot.position.clone());
    bot.agent?.resetMoveTarget();
   }
+ }
+
+ /** Rapier original-source endpoint only; never certifies a KCC route. */
+ private hasSourceFootSupport(foot:Readonly<{x:number;y:number;z:number}>):boolean{
+  this.sourceEndpointProbes++;
+  const hit=this.physics.castStageSegment(
+   new Vec3(foot.x,foot.y+.65,foot.z),
+   new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+  return !!hit&&Math.abs(hit.point.y-foot.y)<=.25&&
+   this.stage.solids.some(s=>s.id===hit.solidId);
  }
 
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
@@ -160,6 +182,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     .sort((a,b)=>a.distance-b.distance);
    for(const {other} of opponents){
     this.sameSourceEnemyCandidates++;
+    if(!this.hasSourceFootSupport(realFoot)||
+       !this.hasSourceFootSupport(other.position)){
+     this.deniedUnsupportedEnemyFeet++;continue;
+    }
     // Both endpoints are actual CPU feet, not hand-authored enemy spawns.
     // Refuse the unbound underpass, snapped cross-height routes and any
     // Recast query that does not arrive at the real opponent position.
@@ -187,6 +213,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     throw Error('T21_F3D_UNAPPROVED_UNDERPASS_CROSSING_GOAL');
    const distance=Math.hypot(realFoot.x-goal.x,realFoot.z-goal.z);
    if(distance<1.5)continue;
+   if(!this.hasSourceFootSupport(goal)){
+    this.rejectedUnsupportedGoals++;continue;
+   }
    const audit=this.nav.auditPath(realFoot,goal);
    // Native path from the REAL CPU foot, never only from a stored proxy.
    if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
@@ -293,6 +322,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     engagementGoalRequests:this.engagementGoalRequests,
     sameSourceEnemyCandidates:this.sameSourceEnemyCandidates,
     deniedNativeEnemyPaths:this.deniedNativeEnemyPaths,
+    sourceEndpointProbes:this.sourceEndpointProbes,
+    rejectedUnsupportedGoals:this.rejectedUnsupportedGoals,
+    deniedUnsupportedEnemyFeet:this.deniedUnsupportedEnemyFeet,
     travelMeters:this.travelMeters,
     activeTargets:this.bots.flatMap(bot=>{
      const index=this.patrolIndex.get(bot.id)??-1;

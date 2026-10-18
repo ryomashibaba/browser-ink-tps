@@ -115,7 +115,7 @@ describe('W9: source turf ink and real projectile effects after seven physical C
    bot.thinkRemaining=900;bot.paintRemaining=900;
    bot.fireRemaining=900;bot.jumpCooldownSeconds=900;
   }
-  const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots);
+  const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,physics);
   cpu.useF3dOriginalSourceGoals(traffic);
   const initialFeet=new Map(bots.map(b=>[b.id,b.position.clone()]));
   const acceptedSteps=new Map(bots.map(b=>[b.id,0]));
@@ -307,6 +307,7 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   expect(postRejoinFrames).toBe(POST_RELEASE_FRAMES);
   expect(snap.freeCombatEnabled).toBe(true);
   expect(snap.sourcePatrol.auditedTargets).toBeGreaterThan(0);
+  expect(snap.sourcePatrol.sourceEndpointProbes).toBeGreaterThan(0);
   expect(snap.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
   expect(snap.sourcePatrol.engagementGoalRequests)
    .toBeLessThanOrEqual(snap.sourcePatrol.realGoalRequests);

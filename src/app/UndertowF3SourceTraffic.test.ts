@@ -58,7 +58,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     {enqueue:vi.fn()} as never,stats,stage,Team.A,
     handoff,shared,liveHuman,true);
    const bots=(cpu as unknown as {bots:Bot[]}).bots;
-   const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots);
+   const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,physics);
    cpu.useF3dOriginalSourceGoals(traffic);
    let done=0,stop:string|null=null,overlap:string|null=null,
     minimumSeparation=Infinity,maxGroundStep=0;

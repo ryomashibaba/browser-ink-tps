@@ -234,7 +234,7 @@ export class UndertowF3PlayablePreviewApp{
   this.cpu=new CpuAgentSystem(app,this.nav,this.ink,this.coordinator,
    this.stats,stage,Team.A,adapter,this.shared,this.humanCrowd,true);
   const bots=(this.cpu as unknown as {bots:F3TrafficCpu[]}).bots;
-  this.traffic=new UndertowF3SourceTraffic(stage,this.nav,slots,bots);
+  this.traffic=new UndertowF3SourceTraffic(stage,this.nav,slots,bots,this.physics);
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
