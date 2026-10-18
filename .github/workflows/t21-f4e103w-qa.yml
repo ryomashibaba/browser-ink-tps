@@ -31,6 +31,7 @@ on:
       - 'src/stage/undertow/UndertowW10SetActorBancEvidenceGate.ts'
       - 'src/stage/undertow/UndertowW10SetActorBancEvidenceGate.test.ts'
       - 'src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts'
+      - 'src/stage/undertow/UndertowW10B12LocalCpuHumanCombatLifecycle.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
       - '.github/workflows/t21-f4e103w-qa.yml'
@@ -146,6 +147,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW10SetActorBancEvidenceGate.test.ts
       - name: W9 separately sourced real CPU-projectile to real Human HP gate
         run: npx vitest run src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts
+      - name: W10-B12 real seven-CPU local Human splat, respawn and second contact
+        run: npx vitest run src/stage/undertow/UndertowW10B12LocalCpuHumanCombatLifecycle.test.ts
       - name: PowerShell script parser
         if: runner.os == 'Windows'
         shell: pwsh
