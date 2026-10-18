@@ -8,7 +8,7 @@
 import {
  AppBase,AppOptions,CameraComponentSystem,Color,ContainerHandler,
  createGraphicsDevice,DEVICETYPE_WEBGL2,Entity,FILLMODE_FILL_WINDOW,
- LightComponentSystem,RenderComponentSystem,RESOLUTION_AUTO,
+ LightComponentSystem,RenderComponentSystem,RESOLUTION_AUTO,RESOLUTION_FIXED,
  TextureHandler,Vec3
 } from 'playcanvas';
 import {CpuAgentSystem} from '../ai/CpuAgentSystem';
@@ -179,6 +179,14 @@ export class UndertowF3PlayablePreviewApp{
  private realPointerToAcceptedShotMs:number|null=null;
  private realPointerToShotSamples=0;
  private readonly obstructionNotice:HTMLElement;
+ private readonly b21QualityButton:HTMLButtonElement;
+ private sourceRenderQuality:'NATIVE'|'PERFORMANCE'='NATIVE';
+ private sourceNativeCanvasResolution:{width:number;height:number}|null=null;
+ /** Explicit source-QA-only benchmark; no production or always-on GPU timer. */
+ private readonly b21QaEnabled=new URL(location.href).searchParams.get('t21W10B21')==='renderAB';
+ private b21ProbeActive=false;
+ private b21RenderBegin=0;
+ private readonly b21RenderSamplesMs:number[]=[];
  private radarVisible=true;
  private matchState:'STAGING'|'PLAYING'|'TIME_UP'='STAGING';
  private remainingSeconds=180;
@@ -297,6 +305,7 @@ export class UndertowF3PlayablePreviewApp{
    'Developer telemetry &amp; source controls</summary>'+
    '<div id="t21-f3-live" style="white-space:pre-line;margin:11px 0;font-size:11px"></div>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+   '<button id="t21-f3-render-quality" type="button">Render quality: NATIVE</button>'+
    '<button id="t21-f3-structures" type="button">Original source: ON</button>'+
    '<button id="t21-f3-completion" type="button">Source terrain study: ON</button>'+
    '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button>'+ 
@@ -310,6 +319,13 @@ export class UndertowF3PlayablePreviewApp{
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · Q switch shoulder · M radar · Esc release · G special</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
+  this.b21QualityButton=this.panel.querySelector('#t21-f3-render-quality') as HTMLButtonElement;
+  this.b21QualityButton.addEventListener('click',()=>{
+   if(document.pointerLockElement===this.canvas||this.stopReason||
+      this.galleryIndex>=0||this.survey.snapshot().active)return;
+   this.configureSourceRenderQuality(
+    this.sourceRenderQuality==='NATIVE'?'PERFORMANCE':'NATIVE');
+  });
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
   this.panel.querySelector('#t21-f3-reset')?.addEventListener('click',()=>this.restart());
   this.panel.querySelector('#t21-f3-structures')?.addEventListener('click',()=>{
@@ -416,10 +432,25 @@ export class UndertowF3PlayablePreviewApp{
    w10B14RenderWitness:()=>this.w10B14RenderWitness(),
    inspectW10B15NativePad:()=>this.inspectW10B15NativePad(),
    auditW10B16NaturalEnemyAccess:()=>this.auditW10B16NaturalEnemyAccess(),
+   startW10B21FrozenRenderProbe:()=>this.startW10B21FrozenRenderProbe(),
+   setW10B21FrozenQuality:(quality:'NATIVE'|'PERFORMANCE')=>
+    this.setW10B21FrozenQuality(quality),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
   app.on('update',(dt:number)=>this.update(dt));
+  if(this.b21QaEnabled){
+   app.on('prerender',()=>{if(this.b21ProbeActive)this.b21RenderBegin=performance.now();});
+   app.on('postrender',()=>{
+    if(!this.b21ProbeActive||!this.b21RenderBegin)return;
+    const elapsed=performance.now()-this.b21RenderBegin;
+    if(elapsed>=0&&Number.isFinite(elapsed)){
+     if(this.b21RenderSamplesMs.length===40)this.b21RenderSamplesMs.shift();
+     this.b21RenderSamplesMs.push(elapsed);
+    }
+    this.b21RenderBegin=0;
+   });
+  }
   if(this.b20ProfileEnabled){
    app.on('prerender',()=>{this.b20RenderStartMs=performance.now();});
    app.on('postrender',()=>this.b20ProfileStop('playcanvasRenderSubmission',
@@ -501,6 +532,58 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
  }
 
+ private configureSourceRenderQuality(quality:'NATIVE'|'PERFORMANCE'){
+  if(this.sourceRenderQuality===quality)return;
+  if(quality==='PERFORMANCE'){
+   // Read true native backing buffer, not guessed CSS or DPR dimensions.
+   this.sourceNativeCanvasResolution={width:this.canvas.width,height:this.canvas.height};
+   const {width,height}=this.sourceNativeCanvasResolution;
+   if(width<300||height<200)throw Error('T21_B21_NATIVE_CANVAS_TOO_SMALL');
+   this.app.setCanvasResolution(RESOLUTION_FIXED,
+    Math.round(width*.75),Math.round(height*.75));
+  }else{
+   this.app.setCanvasResolution(RESOLUTION_AUTO);
+   this.app.resizeCanvas();
+  }
+  this.sourceRenderQuality=quality;
+  this.b21QualityButton.textContent='Render quality: '+
+   (quality==='NATIVE'?'NATIVE':'75% (performance)');
+  this.canvas.dataset.t21SourceRenderQuality=quality;
+ }
+ private b21ProbeSnapshot(){
+  const values=this.b21RenderSamplesMs.slice().sort((a,b)=>a-b);
+  const quantile=(p:number):number|null=>values.length?
+   Number(values[Math.max(0,Math.ceil(p*values.length)-1)]!.toFixed(2)):null;
+  return {
+   metric:'SAME_SCENE_PRERENDER_TO_POSTRENDER_CPU_WALL_MS_NOT_GPU_TIME',
+   enabled:this.b21QaEnabled,active:this.b21ProbeActive,
+   quality:this.sourceRenderQuality,
+   canvasPixels:[this.canvas.width,this.canvas.height],
+   sampleCount:values.length,
+   p50Ms:quantile(.5),p95Ms:quantile(.95),
+   physicsTick:this.clock.tick,
+   scoreableSurfacePromotions:0,originalSourceUnchanged:true
+  };
+ }
+ private startW10B21FrozenRenderProbe(){
+  if(!this.b21QaEnabled||!this.paused||this.stopReason||
+    document.pointerLockElement===this.canvas||this.clock.tick!==0||
+    this.b21ProbeActive||this.galleryIndex>=0||
+    this.survey.snapshot().active)
+   throw Error('T21_W10B21_FROZEN_SOURCE_ONLY_RENDER_A_B_REQUIRED');
+  this.b21ProbeActive=true;
+  this.b21RenderSamplesMs.length=0;
+  return this.b21ProbeSnapshot();
+ }
+ private setW10B21FrozenQuality(quality:'NATIVE'|'PERFORMANCE'){
+  if(!this.b21QaEnabled||!this.b21ProbeActive||!this.paused||
+   this.stopReason||document.pointerLockElement===this.canvas||
+   this.clock.tick!==0||(quality!=='NATIVE'&&quality!=='PERFORMANCE'))
+   throw Error('T21_W10B21_SOURCE_RENDER_QA_FORBIDDEN');
+  this.configureSourceRenderQuality(quality);
+  this.b21RenderSamplesMs.length=0;
+  return this.b21ProbeSnapshot();
+ }
  private toggleTexturedF3l(){
   if(!this.texturedF3l||!this.wholeSourceRoot||
      this.texturedF3lStatus!=='READY'||this.galleryIndex>=0)return;
@@ -1056,6 +1139,7 @@ export class UndertowF3PlayablePreviewApp{
    playableSandbox:true,actualPlayerInput:true,
    cameraSourcePractice:this.camera.sourcePracticeViewSnapshot(),
    sourceFrameQuality:this.sourceFrameQualitySnapshot(),
+   b21RenderProbe:this.b21ProbeSnapshot(),
    b20CpuPhaseProfile:this.b20ProfileSnapshot(),
    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
