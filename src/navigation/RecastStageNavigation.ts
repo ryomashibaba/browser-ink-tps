@@ -131,6 +131,8 @@ export class RecastStageNavigation {
     endSnapDistanceMeters: number;
     querySuccess: boolean;
     pointCount: number;
+    /** Recast path vertices, not physically certified KCC motion. */
+    nativePathPoints: ReadonlyArray<Readonly<{x:number;y:number;z:number}>>;
     endpointErrorMeters: number;
     reachedTarget: boolean;
   } {
@@ -151,6 +153,7 @@ export class RecastStageNavigation {
         endSnapDistanceMeters: Number.POSITIVE_INFINITY,
         querySuccess: false,
         pointCount: 0,
+        nativePathPoints: [],
         endpointErrorMeters: Number.POSITIVE_INFINITY,
         reachedTarget: false
       };
@@ -180,6 +183,7 @@ export class RecastStageNavigation {
       endSnapDistanceMeters,
       querySuccess: result.success,
       pointCount: path.length,
+      nativePathPoints: path.map(p=>({x:p.x,y:p.y,z:p.z})),
       endpointErrorMeters,
       reachedTarget:
         result.success &&

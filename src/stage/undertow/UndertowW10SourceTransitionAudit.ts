@@ -17,6 +17,7 @@ import type {StageVector3} from '../StageDefinition';
 export type W10TransitionHold =
   | 'HOLD_NO_RAPIER_ENDPOINT_SUPPORT'
   | 'HOLD_NO_NATIVE_RECAST_PATH'
+  | 'HOLD_NATIVE_ROUTE_SOURCE_GAP'
   | 'HOLD_STRAIGHT_CHORD_SOURCE_GAP'
   | 'HOLD_STRAIGHT_CHORD_KCC_BLOCKED'
   | 'HOLD_PENDING_ORIGINAL_KCC_REPLAY';
@@ -41,11 +42,24 @@ export interface W10SourceChordAudit {
   readonly fullTrajectoryReplayed:false;
   readonly sourceCertified:false;
 }
+/** Read-only native Recast polyline/ray evidence; NEVER capsule safety proof. */
+export interface W10NativeRouteAudit{
+ readonly nativePolylineOnly:true;
+ readonly evaluated:boolean;
+ readonly waypointCount:number;
+ readonly rapierSamples:number;
+ readonly unsupportedRaySamples:number;
+ readonly firstGap:{readonly leg:number;readonly fraction:number;
+  readonly point:StageVector3}|null;
+ readonly fullTrajectoryReplayed:false;
+ readonly sourceCertified:false;
+}
 export interface W10SourceTransitionResult {
   readonly from:W10SourceEndpoint;
   readonly to:W10SourceEndpoint;
   readonly nativePathReached:boolean;
   readonly chord:W10SourceChordAudit;
+  readonly nativeRoute:W10NativeRouteAudit;
   readonly nativeStartSnapMeters:number;
   readonly nativeEndSnapMeters:number;
   readonly hold:W10TransitionHold;
@@ -111,6 +125,44 @@ function auditStraightChord(physics:RapierStagePhysics,
   fullTrajectoryReplayed:false,sourceCertified:false};
 }
 
+/** Inspect the actual native Recast route, not the straight chord.
+ * Probe polyline legs at <=16cm. Airborne off-mesh links legitimately lack
+ * floor support, so every result remains HOLD pending original KCC replay. */
+function auditNativeRoute(physics:RapierStagePhysics,
+ points:readonly Readonly<{x:number;y:number;z:number}>[]):W10NativeRouteAudit{
+ let rapierSamples=0,unsupportedRaySamples=0;
+ let firstGap:W10NativeRouteAudit['firstGap']=null;
+ for(let leg=0;leg+1<points.length;leg++){
+  const a=points[leg]!,b=points[leg+1]!;
+  const distance=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+  const segments=Math.max(1,Math.ceil(distance/.16));
+  for(let step=leg===0?0:1;step<=segments;step++){
+   const fraction=step/segments;
+   const point:StageVector3=[
+    a.x+(b.x-a.x)*fraction,
+    a.y+(b.y-a.y)*fraction,
+    a.z+(b.z-a.z)*fraction
+   ];
+   rapierSamples++;
+   if(!probeEndpoint(physics,point).raySupported){
+    unsupportedRaySamples++;
+    if(!firstGap)firstGap={leg,fraction,point};
+   }
+  }
+ }
+ if(points.length===1){
+  const p=points[0]!;
+  rapierSamples++;
+  if(!probeEndpoint(physics,[p.x,p.y,p.z]).raySupported){
+   unsupportedRaySamples++;
+   firstGap={leg:0,fraction:0,point:[p.x,p.y,p.z]};
+  }
+ }
+ return {nativePolylineOnly:true,evaluated:points.length>0,
+  waypointCount:points.length,rapierSamples,unsupportedRaySamples,
+  firstGap,fullTrajectoryReplayed:false,sourceCertified:false};
+}
+
 /**
  * Inspect only public, already registered frozen-source collision/NavMesh.
  * Never interpret a pass here as terrain authoring permission or safe KCC.
@@ -127,6 +179,7 @@ export function auditW10SourceTransition(
  const target=probeEndpoint(physics,to);
  const path=nav.auditPath(new Vec3(...from),new Vec3(...to));
  const chord=auditStraightChord(physics,from,to);
+ const nativeRoute=auditNativeRoute(physics,path.nativePathPoints);
  const nativePathReached=path.reachedTarget &&
   path.startSnapDistanceMeters<=.25 &&
   path.endSnapDistanceMeters<=.25;
@@ -135,12 +188,13 @@ export function auditW10SourceTransition(
    ?'HOLD_NO_RAPIER_ENDPOINT_SUPPORT':
   !nativePathReached
    ?'HOLD_NO_NATIVE_RECAST_PATH':
-  chord.sourceGapSamples>0
-   ?'HOLD_STRAIGHT_CHORD_SOURCE_GAP':
+  nativeRoute.unsupportedRaySamples>0
+   ?'HOLD_NATIVE_ROUTE_SOURCE_GAP':
+  // A straight shortcut gap must not condemn a genuine native detour.
   chord.kccBlockedSteps>0
    ?'HOLD_STRAIGHT_CHORD_KCC_BLOCKED':
    'HOLD_PENDING_ORIGINAL_KCC_REPLAY';
- return {from:origin,to:target,chord,
+ return {from:origin,to:target,chord,nativeRoute,
   nativePathReached,
   nativeStartSnapMeters:path.startSnapDistanceMeters,
   nativeEndSnapMeters:path.endSnapDistanceMeters,

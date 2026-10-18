@@ -54,9 +54,17 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(evidence.chord.kccStepsAttempted).toBeGreaterThan(0);
    expect(evidence.chord.fullTrajectoryReplayed).toBe(false);
    expect(evidence.chord.sourceCertified).toBe(false);
+   expect(evidence.nativeRoute.nativePolylineOnly).toBe(true);
+   expect(evidence.nativeRoute.sourceCertified).toBe(false);
+   expect(evidence.nativeRoute.fullTrajectoryReplayed).toBe(false);
+   if(evidence.nativePathReached){
+    expect(evidence.nativeRoute.evaluated).toBe(true);
+    expect(evidence.nativeRoute.rapierSamples).toBeGreaterThan(0);
+   }
    expect(evidence.kccCertified).toBe(false);
    expect(evidence.productionAuthorized).toBe(false);
    return {id:route.id,hold:evidence.hold,chord:evidence.chord,
+    nativeRoute:evidence.nativeRoute,
     nativePathReached:evidence.nativePathReached,
     fromSolid:evidence.from.solidId,toSolid:evidence.to.solidId};
   });
@@ -84,9 +92,12 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(result.kccCertified).toBe(false);
    expect(result.chord.sourceCertified).toBe(false);
    expect(result.chord.fullTrajectoryReplayed).toBe(false);
+   expect(result.nativeRoute.sourceCertified).toBe(false);
+   expect(result.nativeRoute.fullTrajectoryReplayed).toBe(false);
    expect(result.sourcePromoted).toBe(false);
    expect(result.productionAuthorized).toBe(false);
    return {id:g.id,hold:result.hold,chord:result.chord,
+    nativeRoute:result.nativeRoute,
     nativePathReached:result.nativePathReached,
     fromSolid:result.from.solidId,toSolid:result.to.solidId};
   });
