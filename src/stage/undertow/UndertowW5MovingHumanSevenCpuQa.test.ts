@@ -73,8 +73,7 @@ describe('W5 actual moving HUMAN + seven native CPUs + shared Rapier world',()=>
   const input={get moveX(){return 0;},get moveY(){return axis;},
    get squidHeld(){return false;},get jumpHeld(){return false;},
    consumeJump(){return false;}} as PlayerInput;
-  const camera=({getFlatForward:(out:Vec3)=>out.copy(forwardVector)})
-   as ThirdPersonCamera;
+  const camera=({getFlatForward:(out:Vec3)=>out.copy(forwardVector)}) as ThirdPersonCamera;
   const app={root:new Entity('W5_SOURCE_ONLY_EIGHT_ACTOR_QA')} as never;
   const player=new PlayerController(app,physics,input,camera,ink,stats);
   player.setTeam(Team.A);
