@@ -11,6 +11,7 @@ on:
       - 'src/input/PlayerInput.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/projectile/ProjectileSystem.ts'
+      - 'src/ink/GpuInkAtlas.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b15-pixel-diff.mjs'
       - '.github/workflows/t21-w10b15-trusted-input.yml'
@@ -43,6 +44,7 @@ jobs:
       - name: W10-B16 true source-native seven CPU autonomous patrol and ink, diagnose absent cross-team path
         env:
           T21_W10B16_NATURAL_AI: '1'
+          T21_W10B20_PROFILE: '1'
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Preserve real Chromium frames and QA evidence
         if: always()
