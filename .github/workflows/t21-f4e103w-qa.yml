@@ -26,6 +26,8 @@ on:
       - 'src/stage/undertow/UndertowW10SourceSeamContactAudit.test.ts'
       - 'src/stage/undertow/UndertowW10OriginalGapCandidates.ts'
       - 'src/stage/undertow/UndertowW10OriginalGapCandidates.test.ts'
+      - 'src/stage/undertow/UndertowW10Batch2GapCandidates.ts'
+      - 'src/stage/undertow/UndertowW10Batch2GapCandidates.test.ts'
       - 'src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
@@ -136,6 +138,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW10SourceSeamContactAudit.test.ts
       - name: W10-B9 original source-native gap candidate proximity, read-only
         run: npx vitest run src/stage/undertow/UndertowW10OriginalGapCandidates.test.ts
+      - name: W10-B10 archival original Batch2 candidate/actor-placement gate
+        run: npx vitest run src/stage/undertow/UndertowW10Batch2GapCandidates.test.ts
       - name: W9 separately sourced real CPU-projectile to real Human HP gate
         run: npx vitest run src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts
       - name: PowerShell script parser
