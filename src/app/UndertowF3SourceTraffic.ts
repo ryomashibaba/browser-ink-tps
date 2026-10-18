@@ -22,6 +22,7 @@ export interface F3TrafficCpu{
  id:string;team:Team.A|Team.B;position:Vec3;agent:CrowdAgent|null;
  mobilityState:string;thinkRemaining:number;paintRemaining:number;
  fireRemaining:number;jumpCooldownSeconds:number;
+ lifeState?:'ACTIVE'|'SPLATTED';
 }
 export interface F3TrafficSnapshot{
  readonly cpu:readonly {id:string;mobilityState:string;released:boolean;rejoined:boolean;lastMovedTick:number;physicalFoot:[number,number,number]}[];
@@ -34,6 +35,9 @@ export interface F3TrafficSnapshot{
   readonly auditedTargets:number;
   readonly realGoalRequests:number;
   readonly heldRequests:number;
+  readonly engagementGoalRequests:number;
+  readonly sameSourceEnemyCandidates:number;
+  readonly deniedNativeEnemyPaths:number;
   readonly travelMeters:number;
   readonly attemptsToCrossUnboundUnderpass:0;
   readonly activeTargets:readonly {id:string;position:[number,number,number]}[];
@@ -57,6 +61,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private auditedTargets=0;
  private realGoalRequests=0;
  private heldRequests=0;
+ private engagementGoalRequests=0;
+ private sameSourceEnemyCandidates=0;
+ private deniedNativeEnemyPaths=0;
  private travelMeters=0;
  private readonly physicallyFalling=new Set<string>();
  private readonly physicallyRejoined=new Set<string>();
@@ -135,6 +142,39 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||!candidates?.length){this.heldRequests++;return false;}
   const sign=bot.team===Team.A?1:-1;
+  // W10-B1: genuine opponent feet can become tactical destinations ONLY
+  // after all seven original physical drops/rejoins. On this frozen source
+  // lab the two teams currently remain separated, so no false cross-map
+  // engagement is manufactured. Recast supplies a GOAL, never physical
+  // movement authority: CpuAgentSystem still validates every actual step
+  // with the source Rapier human-size KCC and actor collision gate.
+  if(realFoot.z*sign>=33&&realFoot.y>=2.7&&realFoot.y<=5.25){
+   const opponents=this.bots.filter(other=>
+    other.id!==id&&other.team!==bot.team&&
+    other.mobilityState==='GROUND'&&other.lifeState!=='SPLATTED'&&
+    other.position.z*sign>=33&&
+    Math.abs(other.position.y-realFoot.y)<=.30)
+    .map(other=>({other,distance:Math.hypot(
+     other.position.x-realFoot.x,other.position.z-realFoot.z)}))
+    .filter(candidate=>candidate.distance>=1.7&&candidate.distance<=10)
+    .sort((a,b)=>a.distance-b.distance);
+   for(const {other} of opponents){
+    this.sameSourceEnemyCandidates++;
+    // Both endpoints are actual CPU feet, not hand-authored enemy spawns.
+    // Refuse the unbound underpass, snapped cross-height routes and any
+    // Recast query that does not arrive at the real opponent position.
+    const native=this.nav.auditPath(realFoot,other.position);
+    if(!native.reachedTarget||native.startSnapDistanceMeters>.20||
+       native.endSnapDistanceMeters>.20){
+     this.deniedNativeEnemyPaths++;continue;
+    }
+    this.patrolIndex.set(id,-1);
+    out.copy(other.position);
+    this.realGoalRequests++;
+    this.engagementGoalRequests++;
+    return true;
+   }
+  }
   const active=this.patrolIndex.get(id)??-1;
   // Persist the same audited destination across the tactical think cadence,
   // instead of jittering between nodes every 0.28 seconds. Only move to
@@ -250,6 +290,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    sourcePatrol:{auditedTargets:this.auditedTargets,
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
+    engagementGoalRequests:this.engagementGoalRequests,
+    sameSourceEnemyCandidates:this.sameSourceEnemyCandidates,
+    deniedNativeEnemyPaths:this.deniedNativeEnemyPaths,
     travelMeters:this.travelMeters,
     activeTargets:this.bots.flatMap(bot=>{
      const index=this.patrolIndex.get(bot.id)??-1;

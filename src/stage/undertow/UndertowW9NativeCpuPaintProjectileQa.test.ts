@@ -137,6 +137,7 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   let realHumanFootDrift=0,unsupportedHumanFrames=0;
   let humanAirFrames=0,measuredPlayerTravel=0;
   let sentCpuShots=0,scoreablePaintChanged=0;
+  let closestCrossTeamFeetMeters=Infinity,sourceLocalEnemyContactFrames=0;
   const startBody=player.getPosition().clone();
   const previousBody=startBody.clone();
   const statusFrames:Array<{frame:number;drops:number;rejoins:number;freeCombat:boolean;patrolMeters:number}>=[];
@@ -220,6 +221,19 @@ describe('W9: source turf ink and real projectile effects after seven physical C
      expect(distance).toBeGreaterThan(.57);
     }
    }
+   // W10-B1: inspect the REAL physical CPU opponent feet throughout
+   // the SAME source-patrol/projectile/HP run, not a separate placed enemy.
+   let thisFrameLocalEnemyContact=false;
+   for(const a of bots.filter(b=>b.team===Team.A)){
+    for(const b of bots.filter(c=>c.team===Team.B)){
+     const distance=Math.hypot(a.position.x-b.position.x,
+      a.position.z-b.position.z);
+     closestCrossTeamFeetMeters=Math.min(closestCrossTeamFeetMeters,distance);
+     if(Math.abs(a.position.y-b.position.y)<.30&&distance<=10)
+      thisFrameLocalEnemyContact=true;
+    }
+   }
+   if(thisFrameLocalEnemyContact)sourceLocalEnemyContactFrames++;
    const trafficState=traffic.snapshot();
    if(frame%300===0||trafficState.physicalRejoins.length===7&&!allRejoinedFrame)
     statusFrames.push({frame,drops:trafficState.physicalFirstDrops.length,
@@ -263,6 +277,9 @@ describe('W9: source turf ink and real projectile effects after seven physical C
    projectileImpacts:stats.projectileImpacts,
    cpuVsHumanHits:stats.cpuPlayerHits,
    cpuCombatHits:stats.cpuCombatHits,
+   realHumanHpAfterRun:resources.currentHp,
+   sourceLocalEnemyContactFrames,
+   closestCrossTeamFeetMeters,
    scoreablePaintChanged,
    originalScoreAreaA:ink.snapshot().areaA,
    originalScoreAreaB:ink.snapshot().areaB,
@@ -291,6 +308,10 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   expect(snap.freeCombatEnabled).toBe(true);
   expect(snap.sourcePatrol.auditedTargets).toBeGreaterThan(0);
   expect(snap.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
+  expect(snap.sourcePatrol.engagementGoalRequests)
+   .toBeLessThanOrEqual(snap.sourcePatrol.realGoalRequests);
+  expect(Number.isFinite(closestCrossTeamFeetMeters)).toBe(true);
+  expect(closestCrossTeamFeetMeters).toBeGreaterThan(0);
   expect(snap.sourcePatrol.travelMeters).toBeGreaterThan(.5);
   // Do not pass based only on weapon requests. Require actual gameplay ink
   // cell ownership transitions caused by the genuine projectile/paint loop.
