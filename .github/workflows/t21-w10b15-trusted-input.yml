@@ -8,6 +8,7 @@ on:
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/projectile/ProjectileSystem.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'scripts/t21-w10b15-pixel-diff.mjs'
       - '.github/workflows/t21-w10b15-trusted-input.yml'
   workflow_dispatch:
 permissions:
@@ -31,6 +32,8 @@ jobs:
         env:
           T21_W10B15_TRUSTED_INPUT: '1'
         run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Certify native CPU visible respawn from identical-camera real PNG pixels
+        run: node scripts/t21-w10b15-pixel-diff.mjs /tmp/t21-f3-playable-webgl2
       - name: Preserve real Chromium frames and QA evidence
         if: always()
         uses: actions/upload-artifact@v4
