@@ -160,8 +160,7 @@ describe('W4: original first-drop landing edge is not an invented bridge',()=>{
    const input={get moveX(){return 0;},get moveY(){return axis;},
     get squidHeld(){return false;},get jumpHeld(){return false;},
     consumeJump(){return false;}} as PlayerInput;
-   const camera={getFlatForward:(out:Vec3)=>out.copy(bearing)}
-    as ThirdPersonCamera;
+   const camera=({getFlatForward:(out:Vec3)=>out.copy(bearing)}) as ThirdPersonCamera;
    const stats=new PerformanceStats(),ink=new GameplayInkSystem();
    const player=new PlayerController(
     {root:new Entity('W4_SOURCE_EDGE_PHYSICS')} as never,
