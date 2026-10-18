@@ -63,6 +63,8 @@ jobs:
         run: npm run typecheck
       - name: QA movement isolation tests
         run: npx vitest run src/input/PlayerInput.qa.test.ts
+      - name: W4 genuine PlayerController source-grounded paths
+        run: npx vitest run src/stage/undertow/UndertowW4SourceGroundedWalk.test.ts
       - name: Apply W3 app and Crowd guard to disposable CI workspace
         shell: node {0}
         run: |
