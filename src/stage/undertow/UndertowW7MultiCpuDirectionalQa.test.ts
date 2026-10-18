@@ -227,7 +227,7 @@ describe('W7: source-floor directional control with multiple moving CPUs',()=>{
   expect(playerAirTicks).toBe(0);
   expect(unsupportedFloorTicks).toBe(0);
   expect(acceptedCpuSteps).toBeGreaterThan(10);
-  expect(positiveGoalCpuTravelCount).toBe(2);
+  expect(positiveCpuGoalsMoved).toBe(2);
   expect(shared.cpuColliderCount).toBe(7);
   expect(stage.solids).toBe(frozen.solids);
   expect(stage.paintSurfaces).toBe(frozen.paintSurfaces);
