@@ -1,0 +1,40 @@
+name: T21 W10-B14 actual Chrome CPU render lifecycle
+on:
+  push:
+    branches:
+      - dev/t21-f4e103w-qa-infra
+    paths:
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/ai/CpuAgentSystem.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b14-real-chrome.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  w10b14-chrome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: TypeScript check and preview bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Source QA browser script syntax
+        run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: Real Chromium WebGL2 CPU splat and respawn
+        env:
+          T21_W10B14_RENDER_QA: '1'
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve source-only browser witness and PNG frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-w10b14-real-chrome-source-qa
+          path: /tmp/t21-f3-playable-webgl2/
+          if-no-files-found: warn
+          retention-days: 14
