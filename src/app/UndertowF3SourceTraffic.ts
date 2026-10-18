@@ -84,7 +84,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  constructor(
   private readonly stage:StageDefinition,private readonly nav:RecastStageNavigation,
   spawns:SourceSpawnPlan,private readonly bots:readonly F3TrafficCpu[],
-  private readonly physics:RapierStagePhysics
+  private readonly physics?:RapierStagePhysics
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -149,6 +149,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  /** Rapier original-source endpoint only; never certifies a KCC route. */
  private hasSourceFootSupport(foot:Readonly<{x:number;y:number;z:number}>):boolean{
   this.sourceEndpointProbes++;
+  // Old disposable CI app source predates W10-B3. Without a supplied
+  // Rapier authority, refuse every goal; never silently accept a Nav point.
+  if(!this.physics)return false;
   const hit=this.physics.castStageSegment(
    new Vec3(foot.x,foot.y+.65,foot.z),
    new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
