@@ -108,7 +108,8 @@ describe('W10-B13: real Human weapon to genuine seven-CPU combat lifecycle',()=>
     new Vec3(dest.x,foot.y+.06,dest.z),.34,SurfaceFlags.Paintable);
    const snapped=nav.closestPoint(dest);
    return {dest,hit,patch,snapped,
-    snapDistance:snapped.distance(dest)};
+    snapDistance:Math.hypot(snapped.x-dest.x,snapped.y-dest.y,
+     snapped.z-dest.z)};
   }).find(x=>x.patch&&!x.hit&&x.snapDistance<.35);
   expect(setup,'original source-grounded opponent and free attack line')
    .toBeDefined();
