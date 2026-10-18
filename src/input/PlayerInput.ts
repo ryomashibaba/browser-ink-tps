@@ -3,6 +3,10 @@ export class PlayerInput {
   // QA-only synthetic axes. Never active during regular Pointer Lock play.
   private qaAxis: Readonly<{x:number;y:number}> | null = null;
   private fire = false;
+  // A press-and-release entirely between 60Hz ticks must still fire once.
+  private primaryPressedQueued = false;
+  public primaryPressSequence = 0;
+  public primaryPressAtMs = Number.NaN;
   private secondary = false;
   private secondaryPressedQueued = false;
   private jumpQueued = false;
@@ -34,6 +38,7 @@ export class PlayerInput {
     const clearGameplayState = (): void => {
       this.keys.clear();
       this.fire = false;
+      this.primaryPressedQueued = false;
       this.secondary = false;
       this.secondaryPressedQueued = false;
       this.jumpQueued = false;
@@ -57,6 +62,11 @@ export class PlayerInput {
         !event.altKey &&
         document.pointerLockElement === this.canvas
       ) {
+        if (!this.fire) {
+          this.primaryPressedQueued = true;
+          this.primaryPressSequence++;
+          this.primaryPressAtMs = performance.now();
+        }
         this.fire = true;
       }
       if (event.button === 2 && document.pointerLockElement === this.canvas) {
@@ -104,6 +114,13 @@ export class PlayerInput {
 
   public get fireHeld(): boolean {
     return this.fire;
+  }
+
+  /** Consume once per physics tick, including short real pointer taps. */
+  public consumePrimaryPressed(): boolean {
+    const queued = this.primaryPressedQueued;
+    this.primaryPressedQueued = false;
+    return queued;
   }
 
   public get secondaryHeld(): boolean {
