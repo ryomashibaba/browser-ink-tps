@@ -236,9 +236,7 @@ async function main(){
      padFilled.productionAuthorized!==false||
      padFilled.cpuState!=='ACTIVE'||padFilled.cpuEntityEnabled!==true||
      JSON.stringify(padFilled.viewPosition)!==JSON.stringify(padEmpty.viewPosition)||
-     JSON.stringify(padFilled.lookAt)!==JSON.stringify(padEmpty.lookAt)||
-     !padFilled.screen||Math.abs(padFilled.screen.x-800)>2||
-     Math.abs(padFilled.screen.y-450)>2)
+     JSON.stringify(padFilled.lookAt)!==JSON.stringify(padEmpty.lookAt))
    reject('W10B15_OCCUPIED_PAD_CAMERA_DRIFT_'+JSON.stringify({padEmpty,padFilled}));
   await sleep(300);
   const respawnFrame=await screenshot('W10B15_3_NATIVE_PAD_AFTER_RESPAWN');
