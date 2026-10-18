@@ -220,7 +220,12 @@ describe('W7: source-floor directional control with multiple moving CPUs',()=>{
   console.log('T21_W7_MULTI_CPU_DIRECTIONAL_KCC',JSON.stringify(ledger));
   expect(firstUnsafe).toBeNull();
   expect(successfulFrames).toBe(270);
-  expect(totalPlayerTravel).toBeGreaterThan(1.0);
+  expect(totalPlayerTravel).toBeGreaterThan(2.0);
+  // Ensure the six phases actually exercised route reversals and close
+  // same-floor encounters; merely stepping 270 ticks is not sufficient.
+  expect(changedHeadingCount).toBeGreaterThanOrEqual(2);
+  expect([...phaseReached.values()].every(Boolean)).toBe(true);
+  expect(physicallyNearFrames).toBeGreaterThan(30);
   expect(minPlayerCpu).toBeLessThan(.95);
   expect(minPlayerCpu).toBeGreaterThan(.61);
   expect(minCpuCpu).toBeGreaterThan(.57);
