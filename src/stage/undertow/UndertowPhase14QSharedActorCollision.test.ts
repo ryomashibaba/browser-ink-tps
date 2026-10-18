@@ -56,7 +56,14 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
  it('drops the splatted real CPU proxy and rebinds the native respawn foot',()=>{
   const w=world();
   const first={x:w.humanFoot.x+1.45,y:w.humanFoot.y,z:w.humanFoot.z};
-  const again={x:first.x+12,y:first.y+3,z:first.z};
+  // Exact frozen T21-D source-grounded QA high-pad position. This is
+  // NOT evidence for the original game's authored spawn layout.
+  const sourceSpawn=w.stage.metadata.teamBSpawn;
+  const again={x:sourceSpawn[0],y:sourceSpawn[1],z:sourceSpawn[2]};
+  const support=w.physics.castStageSegment(
+   new Vec3(again.x,again.y+.70,again.z),
+   new Vec3(again.x,again.y-.70,again.z),'ink-projectile');
+  expect(support?.solidId).toBe('UndertowT21D:spawn-high-negative-z');
   w.actors.syncRealCpuFoot('B1',first);
   expect(w.actors.cpuColliderCount).toBe(1);
   w.actors.removeRealCpuFoot('B1');
