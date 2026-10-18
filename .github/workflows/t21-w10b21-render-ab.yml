@@ -4,6 +4,8 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/UndertowF3OwnerGpuTrial.ts'
+      - 'src/app/UndertowF3OwnerGpuTrial.test.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
       - '.github/workflows/t21-w10b21-render-ab.yml'
   workflow_dispatch:
@@ -22,6 +24,8 @@ jobs:
         run: npm install --no-audit --no-fund --no-package-lock
       - name: Build actual browser PlayCanvas source preview
         run: npm run build -- --base=/browser-ink-tps/
+      - name: Validate B22 live owner trial state machine and strict source gates
+        run: npx vitest run src/app/UndertowF3OwnerGpuTrial.test.ts
       - name: Validate browser QA syntax
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: A-B-A frozen source-native GPU raster workload comparison
