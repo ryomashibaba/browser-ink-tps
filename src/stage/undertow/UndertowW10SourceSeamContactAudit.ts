@@ -99,7 +99,7 @@ function triangleGap2(a:readonly [P,P,P],b:readonly [P,P,P]):number{
  }
  return Math.max(0,best);
 }
-function meshGap(a:StageTriangleMeshGeometry,b:StageTriangleMeshGeometry):number{
+export function distanceBetweenExactTriangleMeshes(a:StageTriangleMeshGeometry,b:StageTriangleMeshGeometry):number{
  let best=Number.POSITIVE_INFINITY;
  for(let i=0;i<a.indices.length;i+=3)
   for(let j=0;j<b.indices.length;j+=3)
@@ -217,7 +217,7 @@ export function auditW10SourceSeamContact():W10B8Result{
    ...chain.map(x=>({id:x.id,mesh:x.mesh}))];
   for(let i=0;i+1<sorted.length;i++){
    const a=sorted[i]!,b=sorted[i+1]!;
-   const gap=meshGap(a.mesh,b.mesh);
+   const gap=distanceBetweenExactTriangleMeshes(a.mesh,b.mesh);
    if(!Number.isFinite(gap))throw Error('W10B8_SOURCE_DISTANCE_INVALID');
    sourcePairs.push({side,upstreamId:a.id,downstreamId:b.id,
     exactSourceFaceGapMeters:gap,
