@@ -682,6 +682,22 @@ async function main(){
   console.log('T21_F3G_LIVE_WHOLE_SOURCE',JSON.stringify(whole));
  }
  const initial=await evaluate('window.__t21F3.snapshot()');
+ // W10-B23: never show a synthetic enemy hit or Turf score when
+ // no actual HUMAN impact has changed authoritative original ink cells.
+ const b23Dom=await evaluate(`(() => {
+  const e=document.querySelector('#t21-f3-b23-human-ink-confirmation');
+  return {present:!!e,original:e?.dataset.originalSourceOnly,
+   authority:e?.dataset.productionAuthority,
+   scoreable:e?.dataset.scoreablePromotion,hidden:e?.hidden};
+ })()`);
+ if(!b23Dom.present||b23Dom.original!=='true'||
+    b23Dom.authority!=='NONE'||b23Dom.scoreable!=='0'||
+    b23Dom.hidden!==true||
+    initial.b23HumanInkFeedback?.humanChangedImpactCount!==0||
+    initial.b23HumanInkFeedback?.humanChangedCells!==0||
+    initial.b23HumanInkFeedback?.scoreablePromotionCount!==0)
+  reject('W10B23_NO_FAKE_HUMAN_IMPACT_OR_SCORE_'+
+   JSON.stringify({dom:b23Dom,feedback:initial.b23HumanInkFeedback}));
  if(initial.cpuKitQa?.enabled!==kitQa ||
     initial.cpuKitQa?.artificialGaugeArms!==0 ||
     initial.cpuKitQa?.scoreablePromotions!==0 ||
@@ -889,6 +905,20 @@ async function main(){
   reject('REAL_MOUSE_PROJECTILE_OR_PHYSICS_FAILED_'+JSON.stringify({
    before:after.shotsFired,after:fired.shotsFired,reason:fired.stopReason
   }));
+ // Read-only native signal: count ACTUAL human-authoritative ink, not
+ // click count, CPU paint, fake collision or scoreable area.
+ const b23=fired.b23HumanInkFeedback;
+ if(!b23||b23.source!=='REAL_HUMAN_ORIGINAL_PAINT_EVENT'||
+    b23.scoreablePromotionCount!==0||
+    b23.originalSourceOnly!==true||
+    !Number.isSafeInteger(b23.humanChangedImpactCount)||
+    !Number.isSafeInteger(b23.humanChangedCells))
+  reject('W10B23_HUMAN_PAINT_PROVENANCE_INVALID_'+JSON.stringify(b23));
+ console.log('T21_W10B23_NATIVE_HUMAN_INK_PROVENANCE',JSON.stringify({
+  acceptedShots:fired.shotsFired,realHumanChangedImpacts:b23.humanChangedImpactCount,
+  actualChangedCells:b23.humanChangedCells,
+  noCpuConflation:true,noInventedTurfScore:true
+ }));
  frames.push(await screenshot('F3_1_REAL_INPUT_AND_INK'));
  // Full playable preview: unlike short input-only smoke, hold the REAL
  // render-driven 60Hz timeline until all seven native source CPU drops
