@@ -16,6 +16,16 @@ describe('W10-B8 original face adjacency and isolated Human KCC',()=>{
    expect(pairs).toHaveLength(5);
    expect(pairs[0]!.upstreamId).toContain('right-low-route-ramp');
    expect(pairs[0]!.downstreamId).toContain('underpass-route-slope01');
+   // Measured from the ten exact source meshes, not interpolation
+   // or map cosmetics. Explicitly freeze the five direct face separations.
+   const sourceGapWitnessMeters=[
+    1.246508,0.17,2.074235,0.518559,0.518559
+   ] as const;
+   for(let i=0;i<pairs.length;i++)
+    expect(pairs[i]!.exactSourceFaceGapMeters).toBeCloseTo(
+     sourceGapWitnessMeters[i]!,3);
+   expect(pairs.filter(p=>p.withinNominalRecastErosionRadius))
+    .toHaveLength(1);
    for(const p of pairs){
     expect(p.exactSourceFaceGapMeters).toBeGreaterThanOrEqual(0);
     expect(Number.isFinite(p.exactSourceFaceGapMeters)).toBe(true);
@@ -27,7 +37,13 @@ describe('W10-B8 original face adjacency and isolated Human KCC',()=>{
    expect(witness.kccStepsAttempted).toBe(witness.interiorSamples-1);
    expect(witness.kccBlockedSteps).toBeLessThanOrEqual(
     witness.kccStepsAttempted);
-   expect(witness.isolatedCandidateHitSamples).toBeGreaterThan(0);
+   // With the exact source slope temporarily added as a Rapier collider,
+   // its middle 40% supports the HUMAN KCC. It was absent from the
+   // frozen collision world. This is NOT entrance/exit traversal proof.
+   expect(witness.baselineSupportedSamples).toBe(0);
+   expect(witness.isolatedCandidateHitSamples).toBe(
+    witness.interiorSamples);
+   expect(witness.kccBlockedSteps).toBe(0);
    expect(witness.isolatedCandidateSupportedSamples)
     .toBeGreaterThanOrEqual(witness.isolatedCandidateHitSamples);
    expect(witness.fullRouteReplayed).toBe(false);
