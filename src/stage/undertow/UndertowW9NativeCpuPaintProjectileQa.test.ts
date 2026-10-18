@@ -295,7 +295,11 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   // Do not pass based only on weapon requests. Require actual gameplay ink
   // cell ownership transitions caused by the genuine projectile/paint loop.
   expect(sentCpuShots).toBeGreaterThan(0);
+  // Every one of the seven authentic source-patrol CPU actors must fire
+  // on its own goal; one active bot cannot stand in for the whole team.
+  expect(bots.every(bot=>trueShotRequests.some(r=>r.sourceId===bot.id))).toBe(true);
   expect(stats.cpuSourceTurfShots).toBeGreaterThan(0);
+  expect(stats.projectileImpacts).toBeGreaterThan(0);
   expect(paintRequests.length).toBeGreaterThan(0);
   expect(paintRequests.every(req=>
    stage.paintSurfaces.some(s=>s.id===req.surfaceId))).toBe(true);
