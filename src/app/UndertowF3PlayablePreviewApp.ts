@@ -24,6 +24,7 @@ import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {SurfaceFlags,Team} from '../ink/types';
+import type {CrowdAgent} from 'recast-navigation';
 import {PlayerInput} from '../input/PlayerInput';
 import {initializeRecastNavigation,RecastStageNavigation}
  from '../navigation/RecastStageNavigation';
@@ -36,7 +37,7 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
-import {UndertowPhase14ECpuHandoff}
+import {UndertowPhase14ECpuHandoff,nearestT21SourceSupportedLanding}
  from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import {UndertowPhase14QSharedActorCollision}
  from '../stage/undertow/UndertowPhase14QSharedActorCollision';
@@ -64,7 +65,7 @@ const STEP=1/60;
 type W10B14Actor={
  id:string;position:Vec3;previousPosition:Vec3;entity:Entity;
  lifeState:'ACTIVE'|'SPLATTED';hp:number;
- agent:{resetMoveTarget():void}|null;
+ agent:CrowdAgent|null;
  thinkRemaining:number;paintRemaining:number;fireRemaining:number;
  jumpCooldownSeconds:number;
 };
@@ -533,7 +534,8 @@ export class UndertowF3PlayablePreviewApp{
   return {
    isolatedBrowserQa:true,originalEnemySpawnCertified:false,
    naturalEnemyEncounterCertified:false,realProjectileDamage:true,
-   humanRepositionedForIsolatedQa:true,sourceSolidId:w.sourceSolidId,
+   humanRepositionedForIsolatedQa:true,cpuRepositionedForIsolatedQa:true,
+   sourceSolidId:w.sourceSolidId,
    id:w.target.id,lifeState:w.target.lifeState,hp:w.target.hp,
    entityEnabled:e.enabled,
    entityEnabledInHierarchy:e.enabled&&e.parent?.enabled===true,
