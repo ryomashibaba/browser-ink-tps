@@ -29,7 +29,7 @@ import {UndertowF3SourceTraffic} from '../../app/UndertowF3SourceTraffic';
 
 const DT=1/60;
 type RealBot={id:string;team:Team.A|Team.B;agent:CrowdAgent|null;
- position:Vec3;thinkRemaining:number;paintRemaining:number;
+ position:Vec3;mobilityState:string;thinkRemaining:number;paintRemaining:number;
  fireRemaining:number;jumpCooldownSeconds:number};
 beforeAll(async()=>{await Promise.all([initializeRapier(),initializeRecastNavigation()]);});
 afterEach(()=>vi.restoreAllMocks());
@@ -212,7 +212,7 @@ describe('W8: seven original first-drops, Crowd rejoins, autonomous source patro
    acceptedCpuSteps:[...acceptedSteps],
    postRejoinCpuSteps:[...postRejoinSteps],
    postRejoinCpuTravelMeters:[...postRejoinTravel],
-   maxCpuFrameStepMeters,
+   maxCpuFrameStepMeters:maxCpuStepMeters,
    minimumCpuSameLayerSeparationMeters:minCpuSeparation,
    statusFrames,
    sourceSolids:stage.solids.length,
