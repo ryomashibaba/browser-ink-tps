@@ -47,9 +47,16 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(evidence.from.raySupported).toBe(true);
    expect(evidence.to.raySupported).toBe(true);
    expect(evidence.hold).not.toBe('HOLD_NO_RAPIER_ENDPOINT_SUPPORT');
+   expect(evidence.chord.straightChordOnly).toBe(true);
+   expect(evidence.chord.interiorRayProbes).toBeGreaterThan(0);
+   expect(evidence.chord.sourceGapSamples).toBe(0);
+   expect(evidence.chord.kccSweepAttempted).toBe(true);
+   expect(evidence.chord.kccStepsAttempted).toBeGreaterThan(0);
+   expect(evidence.chord.fullTrajectoryReplayed).toBe(false);
+   expect(evidence.chord.sourceCertified).toBe(false);
    expect(evidence.kccCertified).toBe(false);
    expect(evidence.productionAuthorized).toBe(false);
-   return {id:route.id,hold:evidence.hold,
+   return {id:route.id,hold:evidence.hold,chord:evidence.chord,
     nativePathReached:evidence.nativePathReached,
     fromSolid:evidence.from.solidId,toSolid:evidence.to.solidId};
   });
@@ -75,9 +82,11 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(g.expectation).toBe('DIAGNOSTIC_GAP');
    const result=auditW10SourceTransition(physics,nav,g.from,g.to);
    expect(result.kccCertified).toBe(false);
+   expect(result.chord.sourceCertified).toBe(false);
+   expect(result.chord.fullTrajectoryReplayed).toBe(false);
    expect(result.sourcePromoted).toBe(false);
    expect(result.productionAuthorized).toBe(false);
-   return {id:g.id,hold:result.hold,
+   return {id:g.id,hold:result.hold,chord:result.chord,
     nativePathReached:result.nativePathReached,
     fromSolid:result.from.solidId,toSolid:result.to.solidId};
   });
