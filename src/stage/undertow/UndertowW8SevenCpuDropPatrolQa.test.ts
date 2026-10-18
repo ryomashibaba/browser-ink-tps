@@ -205,7 +205,7 @@ describe('W8: seven original first-drops, Crowd rejoins, autonomous source patro
    originalFirstDropLinks:snap.originalSourceLinksUsed,
    fullPatrol:snap.sourcePatrol,
    truePlayerTravelMeters:measuredPlayerTravel,
-   stationarySourceFootDriftMeters:realHumanFootDrift,
+   maximumHumanDisplacementFromStartMeters:realHumanFootDrift,
    humanAirFrames,unsupportedHumanFrames,
    actualCpuShotsQueued:sentCpuShots,
    initialPhysicalFeet:[...initialFeet].map(([id,v])=>({id,x:v.x,y:v.y,z:v.z})),
@@ -233,7 +233,10 @@ describe('W8: seven original first-drops, Crowd rejoins, autonomous source patro
   expect(snap.sourcePatrol.auditedTargets).toBeGreaterThan(0);
   expect(snap.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
   expect(snap.sourcePatrol.travelMeters).toBeGreaterThan(.5);
-  expect([...postRejoinSteps.values()].filter(v=>v>10).length).toBeGreaterThanOrEqual(2);
+  // All seven actual CPU source feet must continue to move after the
+  // native physical first-drop rejoins, not merely remain registered.
+  expect([...postRejoinSteps.values()].filter(v=>v>10).length).toBe(7);
+  expect([...postRejoinTravel.values()].every(v=>v>2)).toBe(true);
   expect(measuredPlayerTravel).toBeGreaterThan(.15);
   expect(humanAirFrames).toBe(0);
   expect(unsupportedHumanFrames).toBe(0);
