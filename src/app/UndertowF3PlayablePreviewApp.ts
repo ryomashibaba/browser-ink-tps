@@ -173,7 +173,7 @@ export class UndertowF3PlayablePreviewApp{
  /** Browser-only original-floor witness; never a certified 4v4 encounter. */
  private w10b14:{
   target:W10B14Actor;armed:boolean;splatSeen:boolean;
-  qaHumanFoot:Vec3;sourceSolidId:string;
+  qaHumanFoot:Vec3;sourceSolidId:string;mouseInputOnly:boolean;
  }|null=null;
  private constructor(
   private readonly app:AppBase,
@@ -550,6 +550,15 @@ export class UndertowF3PlayablePreviewApp{
    shotsFired:this.stats.shotsFired,cpuCombatHits:this.stats.cpuCombatHits,
    cpuSplats:this.stats.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
    firstSplatObserved:w.splatSeen,armed:w.armed,
+   actualPointerInputRequired:w.mouseInputOnly,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   realMouseFireHeld:this.input.fireHeld,
+   enemyProjectedScreen:(()=>{
+    const cam=this.playerCameraEntity.camera;
+    if(!cam)return null;
+    const screen=cam.worldToScreen(e.getPosition());
+    return {x:screen.x,y:screen.y,z:screen.z};
+   })(),
    sourceSolids:this.rawStage.solids.length,
    sourcePaint:this.rawStage.paintSurfaces.length,
    sourceLinks:this.rawStage.navigationLinks?.length,
@@ -614,7 +623,8 @@ export class UndertowF3PlayablePreviewApp{
   this.player.teleport(new Vec3(foot.x,
    foot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,foot.z));
   this.w10b14={target,armed:false,splatSeen:false,
-   qaHumanFoot:new Vec3(foot.x,foot.y,foot.z),sourceSolidId:solid.id};
+   qaHumanFoot:new Vec3(foot.x,foot.y,foot.z),sourceSolidId:solid.id,
+   mouseInputOnly:q.get('t21W10B15')==='trustedMouse'};
   this.camera.update(this.player.getPosition(this.visual));
   this.refresh();
   return this.w10B14RenderWitness();
@@ -707,7 +717,9 @@ export class UndertowF3PlayablePreviewApp{
  }
  private advanceQaTicks(count:number){
   if(new URL(location.href).searchParams.get('t21QaDrive')!=='source'||
-     !this.paused||document.pointerLockElement===this.canvas||
+     !this.paused||
+     (document.pointerLockElement===this.canvas&&
+      !(this.w10b14?.mouseInputOnly===true&&this.w10b14.armed))||
      this.stopReason||!Number.isSafeInteger(count)||count<1||count>96)
    throw Error('T21_F3_QA_PHYSICAL_DRIVE_FORBIDDEN');
   try{
@@ -753,6 +765,20 @@ export class UndertowF3PlayablePreviewApp{
     if(this.w10b14){
      const w=this.w10b14;
      if(w.target.lifeState==='SPLATTED')w.splatSeen=true;
+     if(w.mouseInputOnly){
+      // The real CDP mouse event enters PlayerInput under pointer lock.
+      // The real camera aims, rather than snapping to the CPU target.
+      this.camera.getAimDirection(this.aim);
+      this.player.getMuzzlePosition(this.aim,this.muzzle);
+      this.camera.getAimTarget(this.target);
+      this.projectiles.solvePlayerLaunchDirection(
+       this.muzzle,this.target,this.aim);
+      this.projectiles.fixedUpdate(seconds,
+       alive&&w.armed&&!w.splatSeen&&this.input.fireHeld&&this.player.canShoot&&
+        document.pointerLockElement===this.canvas,
+       false,this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
+       alive,alive);
+     }else{
      this.target.copy(w.target.position).add(new Vec3(0,.68,0));
      this.aim.copy(this.target).sub(this.player.getPosition(this.p)).normalize();
      this.player.getMuzzlePosition(this.aim,this.muzzle);
@@ -763,6 +789,7 @@ export class UndertowF3PlayablePreviewApp{
       alive&&w.armed&&!w.splatSeen&&w.target.lifeState==='ACTIVE',
       false,this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
       alive,alive);
+     }
      if(w.target.lifeState==='SPLATTED')w.splatSeen=true;
     }else{
      this.camera.getAimDirection(this.aim);
