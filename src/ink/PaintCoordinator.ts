@@ -30,7 +30,11 @@ export class PaintCoordinator {
   public constructor(
     private readonly gameplay: GameplayInkSystem,
     private readonly gpu: GpuInkAtlas,
-    private readonly stats: PerformanceStats
+    private readonly stats: PerformanceStats,
+    // Optional read-only observation after authoritative CPU rasterization.
+    // Unused in every production/T20 coordinator; F3 source practice uses
+    // it only for honest human ink visual feedback, never for gameplay.
+    private readonly onAcceptedPaint?: (event: PaintEvent, changedCells: number) => void
   ) {}
 
   public enqueue(request: PaintRequest): void {
@@ -60,6 +64,7 @@ export class PaintCoordinator {
       const event: PaintEvent = Object.freeze({ tick, ...request, source });
       const result = this.gameplay.apply(event);
       changedCells += result.changedCells;
+      this.onAcceptedPaint?.(event, result.changedCells);
       if (event.source === PaintSource.Cpu) {
         // Count authoritative cell ownership transitions, not just ink
         // requests or projected hits. Includes the legitimate CPU foot.
