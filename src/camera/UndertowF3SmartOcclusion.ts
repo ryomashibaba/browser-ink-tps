@@ -26,8 +26,6 @@ export class UndertowF3SmartOcclusion{
    this.candidateSeconds=0;return side;
   }
   const dt=Math.min(.1,rawDt);
-  this.recoveryCooldown=Math.max(0,this.recoveryCooldown-dt);
-  this.manualOverrideSeconds=Math.max(0,this.manualOverrideSeconds-dt);
   this.comparisons++;
   const advantage=alternate-current;
   this.lastCandidateAdvantageMeters=Number(advantage.toFixed(3));
@@ -52,6 +50,13 @@ export class UndertowF3SmartOcclusion{
   this.recoveryCooldown=2.5;
  }
  public resetCandidate(){this.candidateSeconds=0;}
+ /** Advance cool-down only on actual visual update, even without rays. */
+ public tick(realDeltaSeconds:number){
+  if(!Number.isFinite(realDeltaSeconds)||realDeltaSeconds<=0)return;
+  const dt=Math.min(.1,realDeltaSeconds);
+  this.recoveryCooldown=Math.max(0,this.recoveryCooldown-dt);
+  this.manualOverrideSeconds=Math.max(0,this.manualOverrideSeconds-dt);
+ }
  public mayProbe(realDeltaSeconds:number){
   return this.manualOverrideSeconds<=0&&this.recoveryCooldown<=0&&
    Number.isFinite(realDeltaSeconds)&&realDeltaSeconds>0;
