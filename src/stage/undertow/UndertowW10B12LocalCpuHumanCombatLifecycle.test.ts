@@ -139,6 +139,7 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
   let firstSplatFrame=-1,firstRespawnFrame=-1;
   let hpAfterRespawn=100,secondDamageFrame=-1;
   let deadFrames=0,deathEvents=0,respawnEvents=0;
+  let hitsAtFirstSplat=0;
   let maxPhysicalPositionError=0,unauthorizedShots=0;
   let originalBlockedShots=0;
   for(let frame=1;frame<=MAX_FRAMES;frame++){
@@ -171,6 +172,7 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
     if(firstSplatFrame<0){
      firstSplatFrame=frame;
      deathEvents++;
+     hitsAtFirstSplat=stats.cpuPlayerHits;
      player.setLifecycleActive(false);
     }
     deadFrames++;
@@ -212,6 +214,8 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
    hpAfterRespawn,hpAfterSecondEngagement:resources.currentHp,
    deathEvents,respawnEvents,deadFrames,
    realProjectileHits:stats.cpuPlayerHits,
+   cpuHitsBeforeFirstSplat:hitsAtFirstSplat,
+   cpuHitsAfterRespawn:stats.cpuPlayerHits-hitsAtFirstSplat,
    realProjectileImpacts:stats.projectileImpacts,
    maxPhysicalPositionError,
    sourceLandingSolid:originalSolid.id,
@@ -236,7 +240,11 @@ describe('W10-B12: continuous actual source-grounded CPU->Human splat & respawn'
   expect(respawnEvents).toBe(1);
   expect(hpAfterRespawn).toBe(100);
   expect(resources.currentHp).toBeLessThan(100);
-  expect(stats.cpuPlayerHits).toBeGreaterThan(4);
+  // Three real 34-HP hits splat the original 100-HP Human.
+  // A fourth independent real hit lands after resources.reset().
+  expect(hitsAtFirstSplat).toBeGreaterThanOrEqual(3);
+  expect(stats.cpuPlayerHits-hitsAtFirstSplat).toBeGreaterThanOrEqual(1);
+  expect(stats.cpuPlayerHits).toBeGreaterThanOrEqual(4);
   expect(stats.projectileImpacts).toBeGreaterThan(3);
   expect(maxPhysicalPositionError).toBeLessThan(.17);
   expect(feedback.shot).toHaveBeenCalled();
