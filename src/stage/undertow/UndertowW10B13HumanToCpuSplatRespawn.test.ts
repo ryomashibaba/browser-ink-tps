@@ -202,7 +202,6 @@ describe('W10-B13: real Human weapon to genuine seven-CPU combat lifecycle',()=>
    cpuLifeStateAfterRespawn:target.lifeState,
    qaInitialEntityEnabled,
    qaAfterRespawnEntityEnabled:target.entity.enabled,
-   qaEntityEnabledInHierarchy:target.entity.enabledInHierarchy,
    headlessRenderingComponentsMocked:true,
    cpuHpAfterRespawn:hpOnRespawn,
    cpuSplats:stats.cpuSplats,cpuRespawns:stats.cpuRespawns,
