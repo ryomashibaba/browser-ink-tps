@@ -103,9 +103,12 @@ async function main(){
  await cmd('Emulation.setDeviceMetricsOverride',{
   width:1600,height:900,deviceScaleFactor:1,mobile:false
  });
+ const w10b14=process.env.T21_W10B14_RENDER_QA==='1';
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
  const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa;
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'+
+  (w10b14?'&t21QaDrive=source&t21QaInput=deterministic&'+
+   't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render':'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
@@ -118,6 +121,76 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(w10b14){
+  const stages=[];
+  const verify=(a,phase)=>{
+   if(a.stopReason||a.sourceSolids!==25||a.sourcePaint!==17||
+      a.sourceLinks!==26||a.scoreablePromotions!==0||
+      a.activationReady!==false||a.originalEnemySpawnCertified!==false||
+      a.naturalEnemyEncounterCertified!==false||
+      a.humanRepositionedForIsolatedQa!==true||
+      a.realProjectileDamage!==true||a.renderComponentPresent!==true||
+      a.renderComponentEnabled!==true)
+    reject('W10B14_AUTHORITY_OR_COMPONENT_'+phase+' '+JSON.stringify(a));
+   return a;
+  };
+  const pre=verify(await evaluate(
+   'window.__t21F3.startW10B14RenderWitness()'),'INITIAL');
+  if(pre.lifeState!=='ACTIVE'||pre.hp!==100||
+     pre.entityEnabled!==true||pre.entityEnabledInHierarchy!==true||
+     pre.cpuSplats!==0||pre.cpuRespawns!==0)
+   reject('W10B14_INITIAL_RENDER_NOT_LIVE_'+JSON.stringify(pre));
+  stages.push({phase:'BEFORE_SHOTS',witness:pre,
+   frame:await screenshot('W10B14_0_CPU_ACTIVE')});
+  const ground=await evaluate('window.__t21F3.advanceQaTicks(75)');
+  if(ground.stopReason)reject('W10B14_HUMAN_LANDING_'+ground.stopReason);
+  const armed=verify(await evaluate(
+   'window.__t21F3.armW10B14RealProjectiles()'),'ARMED');
+  if(!armed.armed)reject('W10B14_GENUINE_WEAPON_NOT_ARMED');
+  let splat=null;
+  for(let n=0;n<15;n++){
+   const progress=await evaluate('window.__t21F3.advanceQaTicks(12)');
+   if(progress.stopReason)reject('W10B14_PROJECTILE_STOP_'+progress.stopReason);
+   const now=verify(await evaluate('window.__t21F3.w10B14RenderWitness()'),
+    'SHOOTING');
+   if(now.lifeState==='SPLATTED'){splat=now;break;}
+  }
+  if(!splat||splat.entityEnabled!==false||
+     splat.entityEnabledInHierarchy!==false||
+     splat.cpuSplats!==1||splat.cpuCombatHits<3||
+     splat.shotsFired<3||!splat.firstSplatObserved)
+   reject('W10B14_NATIVE_CPU_NOT_SPLATTED_'+JSON.stringify(splat));
+  stages.push({phase:'SPLATTED',witness:splat,
+   frame:await screenshot('W10B14_1_CPU_SPLATTED')});
+  let respawn=null;
+  for(let n=0;n<20;n++){
+   const progress=await evaluate('window.__t21F3.advanceQaTicks(12)');
+   if(progress.stopReason)reject('W10B14_RESPAWN_STOP_'+progress.stopReason);
+   const now=verify(await evaluate('window.__t21F3.w10B14RenderWitness()'),
+    'RESPAWNING');
+   if(now.cpuRespawns>=1){respawn=now;break;}
+  }
+  if(!respawn||respawn.lifeState!=='ACTIVE'||respawn.hp!==100||
+     respawn.cpuRespawns!==1||respawn.cpuSplats!==1||
+     respawn.entityEnabled!==true||
+     respawn.entityEnabledInHierarchy!==true||
+     respawn.renderComponentPresent!==true||
+     respawn.renderComponentEnabled!==true)
+   reject('W10B14_CPU_RENDER_NOT_RESTORED_'+JSON.stringify(respawn));
+  stages.push({phase:'RESPAWNED',witness:respawn,
+   frame:await screenshot('W10B14_2_CPU_RESPAWNED')});
+  const result={status:'PASS_REAL_CHROME_RENDER_COMPONENT_LIFECYCLE',
+   actualBrowserWebgl2:true,realPlayerProjectileSystem:true,
+   controlledQaPlayerPlacement:true,cpuTeleportDuringWitness:false,
+   naturalEnemyEncounterCertified:false,
+   pixelSilhouetteComparisonCertified:false,
+   originalTurfScoringCertified:false,productionAuthorized:false,
+   stages};
+  writeFileSync(resolve(OUTPUT,'w10b14-actual-browser.json'),
+   JSON.stringify(result,null,2));
+  console.log('T21_W10B14_CHROME_RENDER_LIFECYCLE',JSON.stringify(result));
+  return;
+ }
  if(process.env.T21_F3G_EXPECT_WHOLE==='1'){
   const whole=await waitUntil(async()=>{
    const s=await evaluate('window.__t21F3.snapshot().fullSource');
