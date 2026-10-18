@@ -153,7 +153,7 @@ async function main(){
   await waitUntil(async()=>await evaluate(
    'document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
   let pointer={x:800,y:450},trace=[],aligned=false;
-  for(let n=0;n<15;n++){
+  for(let n=0;n<25;n++){
    const before=await witness();
    const p=before.enemyProjectedScreen;
    if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))
