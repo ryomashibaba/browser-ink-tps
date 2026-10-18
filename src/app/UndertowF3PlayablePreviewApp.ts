@@ -23,6 +23,7 @@ import {GameFeedback} from '../feedback/GameFeedback';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
+import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {CrowdAgent} from 'recast-navigation';
@@ -180,6 +181,8 @@ export class UndertowF3PlayablePreviewApp{
  private realPointerToAcceptedShotMs:number|null=null;
  private realPointerToShotSamples=0;
  private readonly obstructionNotice:HTMLElement;
+ private readonly b23InkFeedback=new UndertowF3SourceInkFeedback();
+ private readonly b23PaintMarker:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
  private readonly b22Trial:UndertowF3OwnerGpuTrial;
  private readonly b22StartButton:HTMLButtonElement;
@@ -249,7 +252,9 @@ export class UndertowF3PlayablePreviewApp{
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
   this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
-  this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats);
+  // Read-only truth: fired shots alone are not proof of real ink impact.
+  this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
+   (event,changedCells)=>this.b23InkFeedback.accept(event,changedCells));
   // Ordinary human input remains unchanged; QA-only axis drive is accepted
   // solely by the opt-in nonproduction fixed-tick source laboratory.
   const qa=new URL(location.href).searchParams;
@@ -414,6 +419,24 @@ export class UndertowF3PlayablePreviewApp{
    'color:#e9fdff;text-shadow:0 1px 7px #001';
   cross.textContent='+';
   ui.appendChild(cross);
+  this.b23PaintMarker=document.createElement('div');
+  this.b23PaintMarker.id='t21-f3-b23-human-ink-confirmation';
+  this.b23PaintMarker.dataset.originalSourceOnly='true';
+  this.b23PaintMarker.dataset.productionAuthority='NONE';
+  this.b23PaintMarker.dataset.scoreablePromotion='0';
+  this.b23PaintMarker.setAttribute('aria-label',
+   'Actual human ink contact on original paintable surface, not score');
+  this.b23PaintMarker.hidden=true;
+  this.b23PaintMarker.style.cssText=
+   'position:fixed;left:50%;top:calc(50% + 29px);'+
+   'transform:translateX(-50%);z-index:11;pointer-events:none;'+
+   'min-width:120px;padding:5px 11px;border-radius:20px;'+
+   'border:1px solid rgba(88,245,245,.45);'+
+   'background:rgba(8,29,43,.83);color:#96f5f5;'+
+   'font:800 12px/1.2 system-ui,sans-serif;text-align:center;'+
+   'letter-spacing:.8px;text-shadow:0 1px 5px #001;'+
+   'box-shadow:0 4px 18px #0019';
+  ui.appendChild(this.b23PaintMarker);
   // Warn only on genuine original-stage camera collision. Q remains manual;
   // no invented transparent wall or gameplay physics override.
   this.obstructionNotice=document.createElement('div');
@@ -1186,6 +1209,7 @@ export class UndertowF3PlayablePreviewApp{
    const atlasStart=this.b20ProfileStart();
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
    this.b20ProfileStop('inkAtlasMeshBuild',atlasStart);
+   this.refreshB23PaintFeedback();
    this.stats.frame(dt*1000);
    this.renderedFrames++;
    if(this.renderedFrames%12===0)this.refresh();
@@ -1197,6 +1221,17 @@ export class UndertowF3PlayablePreviewApp{
    console.error('T21_F3_FAIL_CLOSED',error);
    this.refresh();
   }
+ }
+ private refreshB23PaintFeedback(){
+  const event=this.b23InkFeedback.snapshot(this.clock.tick);
+  this.b23PaintMarker.hidden=!event.showPaintConfirmation||
+   this.survey.snapshot().active||this.galleryIndex>=0||this.paused||
+   !!this.stopReason;
+  if(this.b23PaintMarker.hidden)return;
+  this.b23PaintMarker.textContent='INK CONTACT · +'+
+   event.lastImpactChangedCells+' cells';
+  const age=event.elapsedTicks??0;
+  this.b23PaintMarker.style.opacity=String(Math.max(.2,1-age/36));
  }
  private sourceFrameQualitySnapshot(){
   const values=this.sourceFrameIntervalsMs.slice().sort((a,b)=>a-b);
@@ -1225,6 +1260,7 @@ export class UndertowF3PlayablePreviewApp{
    sourceFrameQuality:this.sourceFrameQualitySnapshot(),
    b21RenderProbe:this.b21ProbeSnapshot(),
    b22OwnerGpuTrial:this.b22Trial.snapshot(performance.now()),
+   b23HumanInkFeedback:this.b23InkFeedback.snapshot(this.clock.tick),
    b20CpuPhaseProfile:this.b20ProfileSnapshot(),
    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
@@ -1341,6 +1377,9 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   'B23 HUMAN INK · '+state.b23HumanInkFeedback.humanChangedImpactCount+
+    ' real changed contacts / '+state.b23HumanInkFeedback.humanChangedCells+
+    ' changed cells · UNSCORED',
    'F3 INK ATLAS · '+(state.sourceGpuAtlasStatus.cameraEnabled?'ACTIVE':'IDLE')+
     ' / brush frames '+state.sourceGpuAtlasStatus.brushRenderFrames+
     ' / idle frames '+state.sourceGpuAtlasStatus.idlePostRenderFrames+
