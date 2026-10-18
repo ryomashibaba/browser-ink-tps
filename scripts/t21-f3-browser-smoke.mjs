@@ -117,6 +117,7 @@ async function main(){
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b16?'&t21W10B16=sourceAutonomy':'')+
+  (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -1008,6 +1009,46 @@ async function main(){
     cellsChanged:audit.inkCellsChanged,
     sourcePatrolMeters:audit.sourcePatrol.travelMeters,
     oneBrowserRealCpuFootWitness:true,productionAuthorized:false}));
+  }
+  const atlas=completed.sourceGpuAtlasStatus;
+  if(!atlas||atlas.sourcePreviewOnly!==true||!atlas.primed||
+     atlas.atlasTexturePersistent!==true||
+     atlas.unchangedScoreAuthority!==true||
+     !Number.isSafeInteger(atlas.idlePostRenderFrames)||
+     atlas.idlePostRenderFrames<1||
+     completed.originalSourceSolids!==25||
+     completed.originalPaintSurfaces!==17||
+     completed.originalSourceNavigationLinks!==26||
+     completed.sourceScoreablePromotions!==0)
+   reject('W10B20_SOURCE_IDLE_ATLAS_AUTHORITY_'+JSON.stringify(atlas));
+  if(process.env.T21_W10B20_PROFILE==='1'){
+   const phases=completed.b20CpuPhaseProfile;
+   if(!phases?.enabled||phases.metric!=='CPU_JS_PHASE_WALL_TIME_NOT_GPU_EXECUTION'||
+      !phases.phases.rapierAndHumanKcc?.calls||
+      !phases.phases.sevenCpuFixed?.calls||
+      !phases.phases.aimProjectilesAndKits?.calls||
+      !phases.phases.inkOwnershipTick?.calls||
+      !phases.phases.playcanvasRenderSubmission?.calls||
+      !phases.phases.inkAtlasMeshBuild?.calls)
+    reject('W10B20_SOURCE_PROFILE_INCOMPLETE_'+JSON.stringify(phases));
+   // The real WebGL2 graphics pass still occurs only when the atlas is
+   // first primed, reset, or actually needs to accept a paint batch.
+   if(atlas.brushRenderFrames<1||atlas.cameraEnabled)
+    reject('W10B20_NATIVE_PAINT_PERSISTENCE_NOT_PROVEN_'+JSON.stringify(atlas));
+   const profile={
+    status:'PASS_REAL_CHROME_T21_SOURCE_PROFILE',
+    environment:'CI_LINUX_HEADLESS_SWIFTSHADER_NOT_OWNER_WINDOWS_GPU',
+    atlas,phases,frameQuality:completed.sourceFrameQuality,
+    nativePhysicalCpuInkImpacts:completed.cpuProjectilePaintHits,
+    scoreablePromotions:completed.sourceScoreablePromotions,
+    originalSolids:completed.originalSourceSolids,
+    originalPaint:completed.originalPaintSurfaces,
+    originalNavigationLinks:completed.originalSourceNavigationLinks,
+    crossTeamNaturalPathCertified:false,productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b20-source-cpu-gpu-atlas-profile.json'),
+    JSON.stringify(profile,null,2));
+   console.log('T21_W10B20_PROFILE_AND_ATLAS_PASS',JSON.stringify(profile));
   }
   const patrol=completed.cpu.sourcePatrol;
   console.log('T21_F3D_NATIVE_PATROL_COMBAT_EVIDENCE',JSON.stringify({
