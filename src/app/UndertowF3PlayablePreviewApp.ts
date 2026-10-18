@@ -990,7 +990,7 @@ export class UndertowF3PlayablePreviewApp{
    Number(values[Math.min(values.length-1,Math.ceil(p*values.length)-1)]!.toFixed(2)):null;
   return {
    metric:'LIVE_PLAYCANVAS_FRAME_CALLBACK_INTERVAL_NOT_GPU_TIME',
-   sampleCount:values.length,p50Ms:quantile(.50),
+   sampleCount:values.length,liveUpdateFrames:this.renderedFrames,p50Ms:quantile(.50),
    p95Ms:quantile(.95),p99Ms:quantile(.99),
    simulationTicksLastFrame:this.stats.simulationTicksLastFrame,
    accumulatedDroppedSimulationSeconds:this.stats.droppedSimulationSeconds,
