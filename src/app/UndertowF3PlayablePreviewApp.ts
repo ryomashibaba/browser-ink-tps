@@ -22,6 +22,7 @@ import {PerformanceStats} from '../core/PerformanceStats';
 import {GameFeedback} from '../feedback/GameFeedback';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
+import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {CrowdAgent} from 'recast-navigation';
@@ -180,6 +181,10 @@ export class UndertowF3PlayablePreviewApp{
  private realPointerToShotSamples=0;
  private readonly obstructionNotice:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
+ private readonly b22Trial:UndertowF3OwnerGpuTrial;
+ private readonly b22StartButton:HTMLButtonElement;
+ private readonly b22SaveButton:HTMLButtonElement;
+ private readonly b22TrialStatus:HTMLElement;
  private sourceRenderQuality:'NATIVE'|'PERFORMANCE'='NATIVE';
  private sourceNativeCanvasResolution:{width:number;height:number}|null=null;
  /** Explicit source-QA-only benchmark; no production or always-on GPU timer. */
@@ -300,6 +305,13 @@ export class UndertowF3PlayablePreviewApp{
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
    '<button id="t21-f3-reset" type="button">Reset (R)</button></div>'+
+   '<div style="margin-top:9px;padding:8px;border:1px solid #4ad4e277;border-radius:8px">'+
+   '<div style="font:700 11px system-ui;color:#a9f1ef">OWNER GPU · 36s LIVE PLAY COMPARISON</div>'+
+   '<div id="t21-f3-b22-status" role="status" style="font:11px/1.5 system-ui;'+
+   'color:#d3e4e9;margin:5px 0">Optional · 12s Native / 12s 75% / 12s Native</div>'+
+   '<button id="t21-f3-b22-start" type="button">START LIVE GPU TRIAL</button>'+
+   '<button id="t21-f3-b22-save" type="button" hidden>SAVE LOCAL QA JSON</button>'+
+   '</div>'+
    '<details id="t21-f3-diagnostics" style="margin-top:9px;max-height:min(62vh,540px);overflow:auto">'+
    '<summary style="cursor:pointer;color:#80e4ed;font:700 12px system-ui">'+
    'Developer telemetry &amp; source controls</summary>'+
@@ -319,10 +331,30 @@ export class UndertowF3PlayablePreviewApp{
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · Q switch shoulder · M radar · Esc release · G special</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
+  this.b22Trial=new UndertowF3OwnerGpuTrial(
+   quality=>this.configureSourceRenderQuality(quality),
+   ()=>[this.canvas.width,this.canvas.height]);
+  this.b22StartButton=this.panel.querySelector('#t21-f3-b22-start') as HTMLButtonElement;
+  this.b22SaveButton=this.panel.querySelector('#t21-f3-b22-save') as HTMLButtonElement;
+  this.b22TrialStatus=this.panel.querySelector('#t21-f3-b22-status') as HTMLElement;
+  this.b22StartButton.addEventListener('click',()=>{
+   if(this.paused||this.stopReason||this.galleryIndex>=0||
+      this.survey.snapshot().active||this.matchState==='TIME_UP'||
+      document.pointerLockElement===this.canvas){
+    this.b22TrialStatus.textContent='Resume source practice and unlock pointer first.';
+    return;
+   }
+   if(this.b22Trial.arm()){
+    this.b22SaveButton.hidden=true;
+    this.b22TrialStatus.textContent='ARMED · click game view to lock pointer and play.';
+   }
+  });
+  this.b22SaveButton.addEventListener('click',()=>this.saveW10B22OwnerReport());
   this.b21QualityButton=this.panel.querySelector('#t21-f3-render-quality') as HTMLButtonElement;
   this.b21QualityButton.addEventListener('click',()=>{
    if(document.pointerLockElement===this.canvas||this.stopReason||
-      this.galleryIndex>=0||this.survey.snapshot().active)return;
+      this.galleryIndex>=0||this.survey.snapshot().active||
+      ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
    this.configureSourceRenderQuality(
     this.sourceRenderQuality==='NATIVE'?'PERFORMANCE':'NATIVE');
   });
@@ -532,6 +564,57 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
  }
 
+ private saveW10B22OwnerReport(){
+  const report=this.b22Trial.report();
+  if(!report||this.b22Trial.snapshot().status!=='COMPLETE')return;
+  const payload={...report,
+   exportedAt:new Date().toISOString(),
+   browserUserAgent:navigator.userAgent,
+   screenPixelRatio:window.devicePixelRatio,
+   app:'Browser Ink TPS T21 opt-in source-only practice'};
+  const file=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const href=URL.createObjectURL(file);
+  const link=document.createElement('a');
+  link.href=href;
+  link.download='T21_W10B22_OWNER_REAL_GPU_TRIAL.json';
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(href),15_000);
+ }
+ private updateW10B22OwnerTrial(){
+  const status=this.b22Trial.snapshot().status;
+  if(status!=='ARMED'&&status!=='RUNNING')return;
+  // Derive owner-visible state only from the REAL current simulation.
+  const progress=this.traffic.snapshot();
+  const now=performance.now();
+  this.b22Trial.frame(now,{
+   inputActive:document.pointerLockElement===this.canvas,
+   paused:this.paused,
+   stopped:!!this.stopReason,
+   physicsTick:this.clock.tick,
+   realHumanShots:this.stats.shotsFired,
+   cpuInkImpacts:this.stats.cpuProjectilePaintHits,
+   cpuPatrolMeters:progress.sourcePatrol.travelMeters,
+   originalSolids:this.rawStage.solids.length,
+   originalPaintSurfaces:this.rawStage.paintSurfaces.length,
+   originalNavLinks:this.rawStage.navigationLinks?.length??0,
+   scoreablePromotions:0,
+   cameraBlocked:this.camera.sourcePracticeViewSnapshot().geometryClipped
+  });
+  const trial=this.b22Trial.snapshot(now);
+  if(trial.status==='RUNNING')
+   this.b22TrialStatus.textContent='LIVE '+trial.label+
+    ' · '+trial.secondsLeft+'s left · keep playing; original 4v4 remains HOLD.';
+  if(trial.status==='COMPLETE'){
+   this.b22TrialStatus.textContent='COMPLETE · NATIVE restored. Save JSON locally.';
+   this.b22SaveButton.hidden=false;
+  }
+  if(trial.status==='ABORTED')
+   this.b22TrialStatus.textContent='ABORTED · '+trial.stopReason+
+    ' · NATIVE restored. Start again if needed.';
+ }
  private configureSourceRenderQuality(quality:'NATIVE'|'PERFORMANCE'){
   if(this.sourceRenderQuality===quality)return;
   if(quality==='PERFORMANCE'){
@@ -1062,6 +1145,7 @@ export class UndertowF3PlayablePreviewApp{
      throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
  }
  private update(dt:number){
+  this.updateW10B22OwnerTrial();
   if(this.paused||this.stopReason){
    this.lastSourceFrameAtMs=Number.NaN;
    return;
@@ -1140,6 +1224,7 @@ export class UndertowF3PlayablePreviewApp{
    cameraSourcePractice:this.camera.sourcePracticeViewSnapshot(),
    sourceFrameQuality:this.sourceFrameQualitySnapshot(),
    b21RenderProbe:this.b21ProbeSnapshot(),
+   b22OwnerGpuTrial:this.b22Trial.snapshot(performance.now()),
    b20CpuPhaseProfile:this.b20ProfileSnapshot(),
    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
