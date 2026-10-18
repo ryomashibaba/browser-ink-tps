@@ -25,7 +25,7 @@ describe('W10-B26 source-only genuinely blocked camera shoulder',()=>{
  });
  it('does not switch for weak gains, tiny blockage or blocked alternate',()=>{
   const m=new UndertowF3SmartOcclusion();
-  for(const [cur,alt] of [[5.9,6.4],[2,3.0],[3.2,4.1]]){
+  for(const [cur,alt] of [[5.9,6.4],[2,3.0],[3.2,4.1]] as const){
    for(let i=0;i<60;i++){m.tick(1/60);
     expect(m.observe(probe(cur,alt),'RIGHT')).toBe('RIGHT');}
   }
