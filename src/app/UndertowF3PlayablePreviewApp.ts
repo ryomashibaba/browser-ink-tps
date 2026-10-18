@@ -168,6 +168,13 @@ export class UndertowF3PlayablePreviewApp{
  private stopReason:string|null=null;
  private respawnFrames=0;
  private renderedFrames=0;
+ // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
+ private readonly sourceFrameIntervalsMs:number[]=[];
+ private lastSourceFrameAtMs=Number.NaN;
+ private lastRealFirePressMeasured=0;
+ private realPointerToAcceptedShotMs:number|null=null;
+ private realPointerToShotSamples=0;
+ private readonly obstructionNotice:HTMLElement;
  private radarVisible=true;
  private matchState:'STAGING'|'PLAYING'|'TIME_UP'='STAGING';
  private remainingSeconds=180;
@@ -353,6 +360,17 @@ export class UndertowF3PlayablePreviewApp{
    'color:#e9fdff;text-shadow:0 1px 7px #001';
   cross.textContent='+';
   ui.appendChild(cross);
+  // Warn only on genuine original-stage camera collision. Q remains manual;
+  // no invented transparent wall or gameplay physics override.
+  this.obstructionNotice=document.createElement('div');
+  this.obstructionNotice.id='t21-f3-camera-obstruction';
+  this.obstructionNotice.hidden=true;
+  this.obstructionNotice.style.cssText='position:fixed;left:50%;top:calc(50% + 34px);'+
+   'transform:translateX(-50%);z-index:10;pointer-events:none;'+
+   'padding:4px 9px;border-radius:7px;background:rgba(10,25,38,.86);'+
+   'color:#fff1bd;font:700 11px system-ui;white-space:nowrap';
+  this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
+  ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
   this.radar=createF3SourceRadar(ui,stage);
   window.addEventListener('keydown',ev=>{
@@ -842,6 +860,9 @@ export class UndertowF3PlayablePreviewApp{
     // weapon execution path; 17 paintable surfaces remain UNSCORED.
     this.cpu.drainKitRequests(request=>this.cpuKit?.queue(request)??false);
     this.camera.update(this.player.getPosition(this.p));
+    const primaryTap=this.input.consumePrimaryPressed();
+    const realPointerFire=this.input.fireHeld||primaryTap;
+    const humanShotsBefore=this.stats.shotsFired;
     if(this.w10b14){
      const w=this.w10b14;
      if(w.target.lifeState==='SPLATTED')w.splatSeen=true;
@@ -854,7 +875,7 @@ export class UndertowF3PlayablePreviewApp{
       this.projectiles.solvePlayerLaunchDirection(
        this.muzzle,this.target,this.aim);
       this.projectiles.fixedUpdate(seconds,
-       alive&&w.armed&&!w.splatSeen&&this.input.fireHeld&&this.player.canShoot&&
+       alive&&w.armed&&!w.splatSeen&&realPointerFire&&this.player.canShoot&&
         document.pointerLockElement===this.canvas,
        false,this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
        alive,alive);
@@ -878,10 +899,21 @@ export class UndertowF3PlayablePreviewApp{
      this.projectiles.solvePlayerLaunchDirection(
       this.muzzle,this.target,this.aim);
      this.projectiles.fixedUpdate(seconds,
-      alive&&this.input.fireHeld&&this.player.canShoot,
+      alive&&realPointerFire&&this.player.canShoot,
       alive&&this.input.secondaryHeld&&this.player.canShoot,
       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
       alive,alive);
+    }
+    if(this.stats.shotsFired>humanShotsBefore&&
+       this.input.primaryPressSequence>this.lastRealFirePressMeasured){
+      this.lastRealFirePressMeasured=this.input.primaryPressSequence;
+      // Paused deterministic Chrome QA includes arbitrary CDP wait time,
+      // and must never be treated as real-world input latency.
+      if(!this.paused&&Number.isFinite(this.input.primaryPressAtMs)){
+       this.realPointerToAcceptedShotMs=Math.max(0,
+        performance.now()-this.input.primaryPressAtMs);
+       this.realPointerToShotSamples++;
+      }
     }
     this.cpuKit?.fixedUpdate(seconds);
     this.coordinator.processTick(frame);
@@ -908,14 +940,31 @@ export class UndertowF3PlayablePreviewApp{
      throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
  }
  private update(dt:number){
-  if(this.paused||this.stopReason)return;
+  if(this.paused||this.stopReason){
+   this.lastSourceFrameAtMs=Number.NaN;
+   return;
+  }
   try{
+   const now=performance.now();
+   if(Number.isFinite(this.lastSourceFrameAtMs)){
+    const interval=now-this.lastSourceFrameAtMs;
+    if(interval>0&&interval<250){
+     if(this.sourceFrameIntervalsMs.length===180)
+      this.sourceFrameIntervalsMs.shift();
+     this.sourceFrameIntervalsMs.push(interval);
+    }
+   }
+   this.lastSourceFrameAtMs=now;
    const cameraDt=Number.isFinite(dt)?Math.min(Math.max(dt,0),.1):0;
-   this.camera.update(this.player.getPosition(this.p),cameraDt);
+   // Each fixed tick already updates the real camera before real projectile
+   // aiming. The final interpolated visual update also runs below; the
+   // extra pre-tick raycast here was redundant every live frame.
    const report=this.clock.advance(dt,(frame,seconds)=>{
     if(this.matchState!=='TIME_UP')this.stepFixed(frame,seconds);
    });
    if(this.matchState==='TIME_UP')this.paused=true;
+   this.stats.simulationTicksLastFrame=report.ticks;
+   this.stats.droppedSimulationSeconds=report.droppedSeconds;
    this.player.render(report.alpha,this.visual);
    this.cpu.render(report.alpha);
    this.projectiles.render(report.alpha);
@@ -935,6 +984,23 @@ export class UndertowF3PlayablePreviewApp{
    this.refresh();
   }
  }
+ private sourceFrameQualitySnapshot(){
+  const values=this.sourceFrameIntervalsMs.slice().sort((a,b)=>a-b);
+  const quantile=(p:number):number|null=>values.length?
+   Number(values[Math.min(values.length-1,Math.ceil(p*values.length)-1)]!.toFixed(2)):null;
+  return {
+   metric:'LIVE_PLAYCANVAS_FRAME_CALLBACK_INTERVAL_NOT_GPU_TIME',
+   sampleCount:values.length,p50Ms:quantile(.50),
+   p95Ms:quantile(.95),p99Ms:quantile(.99),
+   simulationTicksLastFrame:this.stats.simulationTicksLastFrame,
+   accumulatedDroppedSimulationSeconds:this.stats.droppedSimulationSeconds,
+   actualStageCameraRaycasts:this.camera.sourcePracticeViewSnapshot().cameraRaycasts,
+   nativePointerToFirstAcceptedShotMs:this.realPointerToAcceptedShotMs,
+   nativePointerShotSamples:this.realPointerToShotSamples,
+   excludedPausedQaInputLatency:true,
+   verifiedUserRtxFps:false
+  };
+ }
  public snapshot(){
   const pos=this.player.getPosition(this.p);
   const progress=this.traffic.snapshot();
@@ -942,6 +1008,7 @@ export class UndertowF3PlayablePreviewApp{
    phase:'F3',renderer:'webgl2',stageId:this.rawStage.metadata.id,
    playableSandbox:true,actualPlayerInput:true,
    cameraSourcePractice:this.camera.sourcePracticeViewSnapshot(),
+   sourceFrameQuality:this.sourceFrameQualitySnapshot(),
    radarVisible:this.radarVisible,
    originalSourceSolids:this.rawStage.solids.length,
    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
@@ -1031,6 +1098,11 @@ export class UndertowF3PlayablePreviewApp{
   const p=state.cpu;
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
+  this.obstructionNotice.hidden=!(
+   state.cameraSourcePractice.geometryClipped&&
+   state.cameraSourcePractice.cameraDistanceMeters<2);
+  this.obstructionNotice.style.display=
+   this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
   this.practiceHud.root.style.display=
    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
   this.status.textContent=[
@@ -1051,6 +1123,15 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   'REAL FRAME CALLBACK · p50/p95/p99 '+
+    [state.sourceFrameQuality.p50Ms,state.sourceFrameQuality.p95Ms,
+     state.sourceFrameQuality.p99Ms].map(v=>v===null?'N/A':v.toFixed(1)).join('/')+
+    ' ms / '+state.sourceFrameQuality.sampleCount+' frames · NOT GPU TIME',
+   '60Hz CLOCK · ticks/frame '+state.sourceFrameQuality.simulationTicksLastFrame+
+    ' / dropped '+state.sourceFrameQuality.accumulatedDroppedSimulationSeconds.toFixed(3)+'s',
+   'INPUT→SHOT · '+(state.sourceFrameQuality.nativePointerToFirstAcceptedShotMs===null
+     ?'not sampled':state.sourceFrameQuality.nativePointerToFirstAcceptedShotMs.toFixed(1)+'ms')+
+    ' · event to accepted simulation shot (not display latency)',
    'CAMERA · Q shoulder '+state.cameraSourcePractice.shoulderSide+
     ' / distance '+state.cameraSourcePractice.cameraDistanceMeters.toFixed(1)+
     'm / source-only obstruction guard'+
