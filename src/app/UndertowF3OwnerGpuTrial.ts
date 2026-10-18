@@ -102,6 +102,11 @@ export class UndertowF3OwnerGpuTrial{
   if(!f.inputActive||f.paused){
    this.abort('POINTER_UNLOCK_OR_PAUSE_DURING_TRIAL');return;
   }
+  const actualPixels=this.backingPixels();
+  if(actualPixels[0]!==this.currentPixels[0]||
+     actualPixels[1]!==this.currentPixels[1]){
+   this.abort('BACKING_BUFFER_CHANGED_DURING_MEASURED_PHASE');return;
+  }
   // Include long callbacks up to three seconds as bad performance,
   // never silently hide slow frames from the owner report.
   const dt=now-this.lastSampleAt;
@@ -112,6 +117,9 @@ export class UndertowF3OwnerGpuTrial{
   if(f.cameraBlocked&&elapsed>=OWNER_WARMUP_MS)this.blocked++;
   this.lastSampleAt=now;
   if(elapsed>=OWNER_PHASE_MS){
+   if(this.samples.length<20){
+    this.abort('INSUFFICIENT_REAL_RENDER_CALLBACKS');return;
+   }
    this.finishPhase(now,f);
    if(this.phaseIndex===2){
     this.changeQuality('NATIVE');
