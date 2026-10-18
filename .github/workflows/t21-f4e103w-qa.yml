@@ -7,6 +7,7 @@ on:
       - 'tools/qa/w/**'
       - 'src/input/PlayerInput.ts'
       - 'src/input/PlayerInput.qa.test.ts'
+      - 'src/stage/undertow/UndertowW4SourceGroundedWalk.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
       - '.github/workflows/t21-f4e103w-qa.yml'
