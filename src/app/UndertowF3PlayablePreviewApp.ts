@@ -267,6 +267,12 @@ export class UndertowF3PlayablePreviewApp{
    qa.get('t21QaInput')==='deterministic'&&qa.get('t21KccAudit')==='readOnly');
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
   this.camera.enableSourcePracticeControls();
+  // The real source-only practice has adaptive original-collider camera
+  // visibility by default. Deterministic B18 camera regression retains its
+  // exact old one-ray budget unless explicitly testing B26.
+  if(qa.get('t21QaDrive')!=='source'||
+     qa.get('t21W10B26')==='smartVisibility')
+   this.camera.enableSourcePracticeSmartOcclusion();
   this.player=new PlayerController(app,this.physics,this.input,
    this.camera,this.ink,this.stats);
   this.player.setTeam(Team.A);
