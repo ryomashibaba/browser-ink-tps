@@ -33,6 +33,9 @@ on:
       - 'src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts'
       - 'src/stage/undertow/UndertowW10B12LocalCpuHumanCombatLifecycle.test.ts'
       - 'src/stage/undertow/UndertowW10B13HumanToCpuSplatRespawn.test.ts'
+      - 'src/ai/CpuAgentSystem.ts'
+      - 'src/stage/undertow/UndertowPhase14QSharedActorCollision.ts'
+      - 'src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
       - '.github/workflows/t21-f4e103w-qa.yml'
@@ -152,6 +155,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW10B12LocalCpuHumanCombatLifecycle.test.ts
       - name: W10-B13 real Human weapon hits native CPU, actual splat and source-supported respawn
         run: npx vitest run src/stage/undertow/UndertowW10B13HumanToCpuSplatRespawn.test.ts
+      - name: W10-B14 source-grounded shared CPU splat and native respawn collision regression
+        run: npx vitest run src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts
       - name: PowerShell script parser
         if: runner.os == 'Windows'
         shell: pwsh
