@@ -8,6 +8,7 @@ on:
       - 'src/input/PlayerInput.ts'
       - 'src/input/PlayerInput.qa.test.ts'
       - 'src/stage/undertow/UndertowW4SourceGroundedWalk.test.ts'
+      - 'src/stage/undertow/UndertowW5MovingHumanSevenCpuQa.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
       - '.github/workflows/t21-f4e103w-qa.yml'
@@ -95,6 +96,8 @@ jobs:
         run: npm run build
       - name: W3 guarded proxy lifecycle regression
         run: npx vitest run src/app/UndertowF3NativeHumanCrowd.W3.test.ts
+      - name: W5 real moving Human and seven CPU shared Rapier QA
+        run: npx vitest run src/stage/undertow/UndertowW5MovingHumanSevenCpuQa.test.ts
       - name: PowerShell script parser
         if: runner.os == 'Windows'
         shell: pwsh
