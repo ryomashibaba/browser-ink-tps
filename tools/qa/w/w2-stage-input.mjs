@@ -97,15 +97,29 @@ export function patchNativeCrowd(native){
   throw Error('HOLD_W3_UNVERIFIED_NATIVE_CROWD_SOURCE');
  if(native.includes('w3ProjectionGuard')||native.includes('w3HorizontalOffset'))
   throw Error('HOLD_W3_NATIVE_ALREADY_PATCHED');
+ // Use only the real existing NavMesh projection and movement guards.
+ // Fail closed before writing if a Windows source has renamed any of them.
+ if(!/\bconst\s+native\s*=/.test(native)||
+    !/\bconst\s+snap\s*=/.test(native)||
+    !/\bconst\s+sourceSupported\s*=/.test(native)||
+    !/\bconst\s+boundedStep\s*=/.test(native))
+  throw Error('HOLD_W3_REQUIRED_NATIVE_VARIABLES_UNVERIFIED');
  const changes=[
   [/private\s+excluded\s*=\s*0\s*;/g,
    m=>m+"\n private w3GuardedTicks=0;\n private w3ProjectionGuard={status:'NOT_MEASURED',horizontalMeters:0,verticalMeters:0,threeDMeters:0,limitHorizontalMeters:.065,productionCertified:false};"],
-  [/const\s+sourceSupported\s*=\s*Number\.isFinite\(snap\)\s*&&\s*snap\s*<=\s*\.22\s*;/g,
-   m=>m+"\n  const w3HorizontalOffset=Math.hypot(native.x-foot.x,native.z-foot.z);\n  const w3VerticalOffset=Math.abs(native.y-foot.y);\n  const w3Compatible=Number.isFinite(w3HorizontalOffset)&&w3HorizontalOffset<=.065;"],
-  [/GAME_CONFIG\.player\.humanSpeedMetersPerSecond\/60\s*\+\s*\.12\s*;/g,
-   m=>m+"\n  this.w3ProjectionGuard={status:!sourceSupported?'SOURCE_UNSUPPORTED':!boundedStep?'STEP_UNVERIFIED':!w3Compatible?'WITHHELD_NAV_PROJECTION_HORIZONTAL':'ELIGIBLE_PROXY',horizontalMeters:w3HorizontalOffset,verticalMeters:w3VerticalOffset,threeDMeters:snap,limitHorizontalMeters:.065,productionCertified:false};\n  if(sourceSupported&&boundedStep&&!w3Compatible)this.w3GuardedTicks++;"],
-  [/if\(!sourceSupported\|\|!boundedStep\)\{/g,
-   'if(!sourceSupported||!boundedStep||!w3Compatible){'],
+  // Anchor to the *decision*, not how the source computes its acceptance
+  // threshold or KCC stride. Windows originals legitimately vary here.
+  // No guard is emitted if the source no longer has this exact fail-closed
+  // two-condition decision; unknown semantics remain HOLD.
+  [/if\s*\(\s*!\s*sourceSupported\s*\|\|\s*!\s*boundedStep\s*\)\s*\{/g,
+   ()=>[
+    '  const w3HorizontalOffset=Math.hypot(native.x-foot.x,native.z-foot.z);',
+    '  const w3VerticalOffset=Math.abs(native.y-foot.y);',
+    '  const w3Compatible=Number.isFinite(w3HorizontalOffset)&&w3HorizontalOffset<=.065;',
+    "  this.w3ProjectionGuard={status:!sourceSupported?'SOURCE_UNSUPPORTED':!boundedStep?'STEP_UNVERIFIED':!w3Compatible?'WITHHELD_NAV_PROJECTION_HORIZONTAL':'ELIGIBLE_PROXY',horizontalMeters:w3HorizontalOffset,verticalMeters:w3VerticalOffset,threeDMeters:snap,limitHorizontalMeters:.065,productionCertified:false};",
+    '  if(sourceSupported&&boundedStep&&!w3Compatible)this.w3GuardedTicks++;',
+    '  if(!sourceSupported||!boundedStep||!w3Compatible){'
+   ].join('\n')],
   [/detaches:this\.detaches,airborneOrUnverifiableTicks:this\.excluded,/g,
    m=>m+"\n   w3GuardedTicks:this.w3GuardedTicks,projectionGuard:{...this.w3ProjectionGuard},crowdAvoidanceCertified:false,"]
  ];
