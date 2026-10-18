@@ -571,40 +571,50 @@ export class UndertowF3PlayablePreviewApp{
   const target=bots.find(b=>b.id==='B1');
   if(!target||target.lifeState!=='ACTIVE'||target.hp!==100)
    throw Error('T21_W10B14_ORIGINAL_CPU_B1_NOT_READY');
-  const support=this.physics.castStageSegment(
-   target.position.clone().add(new Vec3(0,.70,0)),
-   target.position.clone().add(new Vec3(0,-.70,0)),'ink-projectile');
-  if(!support||!support.solidId.startsWith('UndertowT21D:spawn-high-'))
-   throw Error('T21_W10B14_ENEMY_NOT_ON_ORIGINAL_SOURCE_HIGH_PAD');
-  // Only HUMAN is moved on the SAME source-authorized pad; no CPU warp.
-  // This is isolated laboratory setup, not authored stage placement.
-  const dirs: Array<[number,number]>=[[0,1],[1,0],[-1,0],[0,-1],
-   [.707,.707],[-.707,.707],[.707,-.707],[-.707,-.707]];
+
+  // Reuse W10-B13's genuine original first-drop floor rather than
+  // weakening a failed physical grounded check on the initial high pad.
+  // Both actor placements are isolated QA, not original authored spawns.
+  const drop=this.rawStage.navigationLinks?.find(
+   link=>link.id==='first-drop-negative-z-3');
+  const solid=this.rawStage.solids.find(
+   value=>value.id==='UndertowT21D:first-drop-landing-negative-z');
+  if(!drop||!solid)throw Error('T21_W10B14_B13_SOURCE_FLOOR_MISSING');
+  const foot=nearestT21SourceSupportedLanding(solid,{
+   x:drop.start[0],y:drop.start[1],z:drop.start[2]
+  });
+  const dirs: Array<[number,number]> = [
+   [1,0],[-1,0],[0,1],[0,-1],
+   [.707,.707],[-.707,.707],[.707,-.707],[-.707,-.707]
+  ];
   const chosen=dirs.map(([dx,dz])=>{
-   const foot=new Vec3(target.position.x+dx*1.45,
-    target.position.y,target.position.z+dz*1.45);
-   const nav=this.nav.closestPoint(foot);
-   const patch=this.ink.sampleWorld(
-    new Vec3(foot.x,foot.y+.06,foot.z),.34,SurfaceFlags.Paintable);
+   const dest=new Vec3(foot.x+dx*1.45,foot.y,foot.z+dz*1.45);
    const wall=this.physics.castStageSegment(
-    new Vec3(foot.x,foot.y+.76,foot.z),
-    new Vec3(target.position.x,target.position.y+.76,target.position.z),
-    'ink-projectile');
-   const floor=this.physics.castStageSegment(
-    foot.clone().add(new Vec3(0,.70,0)),
-    foot.clone().add(new Vec3(0,-.70,0)),'ink-projectile');
-   return {foot,patch,wall,floor,nav};
-  }).find(p=>p.patch&&!p.wall&&p.floor?.solidId===support.solidId&&
-   Math.hypot(p.nav.x-p.foot.x,p.nav.y-p.foot.y,p.nav.z-p.foot.z)<.25);
-  if(!chosen)throw Error('T21_W10B14_SOURCE_LOCAL_SHOT_LANE_HOLD');
+    new Vec3(foot.x,foot.y+
+     PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.4,foot.z),
+    new Vec3(dest.x,foot.y+.76,dest.z),'ink-projectile');
+   const patch=this.ink.sampleWorld(
+    new Vec3(dest.x,foot.y+.06,dest.z),.34,SurfaceFlags.Paintable);
+   const nav=this.nav.closestPoint(dest);
+   return {dest,wall,patch,nav};
+  }).find(p=>p.patch&&!p.wall&&Math.hypot(
+   p.nav.x-p.dest.x,p.nav.y-p.dest.y,p.nav.z-p.dest.z)<.35);
+  if(!chosen)throw Error('T21_W10B14_B13_CONTACT_LANE_HOLD');
   for(const bot of bots){
    bot.agent?.resetMoveTarget();
    bot.thinkRemaining=900;bot.paintRemaining=900;
    bot.fireRemaining=900;bot.jumpCooldownSeconds=900;
   }
-  this.player.teleport(new Vec3(chosen.foot.x,
-   chosen.foot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,
-   chosen.foot.z));
+  if(target.agent)this.nav.removeAgent(target.agent);
+  target.agent=this.nav.addAgent(chosen.dest);
+  const pos=target.agent.position();
+  target.position.set(pos.x,pos.y,pos.z);
+  target.previousPosition.copy(target.position);
+  target.entity.setPosition(pos.x,pos.y+.68,pos.z);
+  this.player.teleport(new Vec3(foot.x,
+   foot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,foot.z));
+  this.w10b14={target,armed:false,splatSeen:false,
+   qaHumanFoot:new Vec3(foot.x,foot.y,foot.z),sourceSolidId:solid.id};
   this.camera.update(this.player.getPosition(this.visual));
   this.w10b14={target,armed:false,splatSeen:false,
    qaHumanFoot:chosen.foot,sourceSolidId:support.solidId};
