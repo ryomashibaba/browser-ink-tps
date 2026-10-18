@@ -948,7 +948,9 @@ export class UndertowF3PlayablePreviewApp{
    const now=performance.now();
    if(Number.isFinite(this.lastSourceFrameAtMs)){
     const interval=now-this.lastSourceFrameAtMs;
-    if(interval>0&&interval<250){
+    // Slow genuine SwiftShader frames must NOT vanish from p95/p99.
+    // Pause/resume is excluded by resetting lastSourceFrameAtMs above.
+    if(interval>0&&interval<3000){
      if(this.sourceFrameIntervalsMs.length===180)
       this.sourceFrameIntervalsMs.shift();
      this.sourceFrameIntervalsMs.push(interval);
