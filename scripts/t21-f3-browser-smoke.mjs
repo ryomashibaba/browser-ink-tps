@@ -167,6 +167,64 @@ async function main(){
   await mouse('mousePressed');await mouse('mouseReleased');
   await waitUntil(async()=>await evaluate(
    'document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
+  // Confirm the optional shoulder control is actual pointer-locked input
+  // and never writes a physical actor, stage, CPU foot or score mask.
+  const firstView=await evaluate('window.__t21F3.snapshot()');
+  if(!firstView.cameraSourcePractice?.sourcePracticeOnly||
+     firstView.cameraSourcePractice.shoulderSide!=='RIGHT'||
+     firstView.radarVisible!==true)
+   reject('W10B18_SOURCE_CAMERA_NOT_ARMED_'+JSON.stringify(firstView.cameraSourcePractice));
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  const left=await evaluate('window.__t21F3.snapshot()');
+  if(left.cameraSourcePractice.shoulderSide!=='LEFT'||
+     left.cameraSourcePractice.desiredShoulderOffsetMeters>=0||
+     left.originalSourceSolids!==25||left.sourceScoreablePromotions!==0)
+   reject('W10B18_REAL_Q_SHOULDER_FAILED_'+JSON.stringify(left.cameraSourcePractice));
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'q',code:'KeyQ',
+   windowsVirtualKeyCode:81,nativeVirtualKeyCode:81
+  });
+  if((await evaluate('window.__t21F3.snapshot()')).cameraSourcePractice.shoulderSide!=='RIGHT')
+   reject('W10B18_Q_SHOULDER_RESTORE_FAILED');
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'m',code:'KeyM',
+   windowsVirtualKeyCode:77,nativeVirtualKeyCode:77
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'m',code:'KeyM',
+   windowsVirtualKeyCode:77,nativeVirtualKeyCode:77
+  });
+  const radarHidden=await evaluate(`({
+    visible:window.__t21F3.snapshot().radarVisible,
+    display:document.querySelector('#t21-f3-source-radar')?.style.display
+  })`);
+  if(radarHidden.visible!==false||radarHidden.display!=='none')
+   reject('W10B18_M_HIDE_RADAR_FAILED_'+JSON.stringify(radarHidden));
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'m',code:'KeyM',
+   windowsVirtualKeyCode:77,nativeVirtualKeyCode:77
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'m',code:'KeyM',
+   windowsVirtualKeyCode:77,nativeVirtualKeyCode:77
+  });
+  if((await evaluate('window.__t21F3.snapshot()')).radarVisible!==true)
+   reject('W10B18_M_RESTORE_RADAR_FAILED');
+  console.log('T21_W10B18_REAL_Q_SHOULDER_AND_M_RADAR_PASS',{
+   realBrowserPointerLock:true,gameplaySourceOnly:true,
+   physicalActorsRelocated:0,originalSolids:25,scoreablePromotion:0
+  });
   // Do not let the source gallery hijack gameplay input KeyG.
   await cmd('Input.dispatchKeyEvent',{
    type:'keyDown',key:'g',code:'KeyG',

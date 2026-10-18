@@ -168,6 +168,7 @@ export class UndertowF3PlayablePreviewApp{
  private stopReason:string|null=null;
  private respawnFrames=0;
  private renderedFrames=0;
+ private radarVisible=true;
  private matchState:'STAGING'|'PLAYING'|'TIME_UP'='STAGING';
  private remainingSeconds=180;
  private humanSplats=0;
@@ -230,6 +231,7 @@ export class UndertowF3PlayablePreviewApp{
    qa.get('t21Play')==='preview'&&qa.get('t21QaDrive')==='source'&&
    qa.get('t21QaInput')==='deterministic'&&qa.get('t21KccAudit')==='readOnly');
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
+  this.camera.enableSourcePracticeControls();
   this.player=new PlayerController(app,this.physics,this.input,
    this.camera,this.ink,this.stats);
   this.player.setTeam(Team.A);
@@ -292,7 +294,7 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
    'Source models are OPTICAL ONLY where collision is unverified. No invented bridge, NavLink or Turf score.</p></details>'+
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
-   'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left-click fire · Esc release · G gameplay input while locked</p>';
+   'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · Q switch shoulder · M radar · Esc release · G special</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
@@ -357,6 +359,12 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
    if(ev.code==='KeyR')this.restart();
+   if(ev.code==='KeyM'){
+     this.radarVisible=!this.radarVisible;
+     this.radar.canvas.parentElement!.style.display=
+       this.radarVisible?'':'none';
+     this.canvas.dataset.t21F3RadarVisible=this.radarVisible?'true':'false';
+   }
    // Do not let gameplay G (special request in PlayerInput) open the
    // gallery and disable the camera while actual pointer-locked play runs.
    // Source-review shortcuts are intentionally available only unlocked.
@@ -933,6 +941,8 @@ export class UndertowF3PlayablePreviewApp{
   return {
    phase:'F3',renderer:'webgl2',stageId:this.rawStage.metadata.id,
    playableSandbox:true,actualPlayerInput:true,
+   cameraSourcePractice:this.camera.sourcePracticeViewSnapshot(),
+   radarVisible:this.radarVisible,
    originalSourceSolids:this.rawStage.solids.length,
    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
    originalSourceNavigationLinks:this.rawStage.navigationLinks?.length,
@@ -1019,7 +1029,7 @@ export class UndertowF3PlayablePreviewApp{
  private refresh(){
   const state=this.snapshot();
   const p=state.cpu;
-  this.radar.render(state);
+  if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.practiceHud.root.style.display=
    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
@@ -1041,6 +1051,10 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   'CAMERA · Q shoulder '+state.cameraSourcePractice.shoulderSide+
+    ' / distance '+state.cameraSourcePractice.cameraDistanceMeters.toFixed(1)+
+    'm / source-only obstruction guard'+
+    ' · RADAR '+(state.radarVisible?'ON':'OFF')+' (M)',
    state.cpuKitQa.enabled
     ?'CPU KITS QA · real effects ON / artificial gauge arms '+
       state.cpuKitQa.artificialGaugeArms+

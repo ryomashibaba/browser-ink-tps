@@ -15,11 +15,45 @@ export class ThirdPersonCamera {
   private distance = 6.4;
   private shoulder = 0.72;
   private currentCameraDistance = Number.NaN;
+  /** Gameplay options are opt-in for the T21 source practice preview only. */
+  private sourcePracticeControls = false;
+  private sourceShoulderSide: 'RIGHT' | 'LEFT' = 'RIGHT';
+  private currentShoulderOffset = 0.72;
+  private sourcePracticeCameraCasts = 0;
+  private sourcePracticeLastFrameClipped = false;
+  private sourcePracticeLastFrameDistance = 0;
   private readonly target = new Vec3();
   private readonly forward = new Vec3();
   private readonly right = new Vec3();
   private readonly desiredCameraPosition = new Vec3();
   private readonly cameraDirection = new Vec3();
+  // Reuse vector storage for the high-frequency source camera path.
+  // Equivalent world direction; removes transient per-tick clones.
+  private readonly lookAtPoint = new Vec3();
+  private readonly rayEnd = new Vec3();
+
+  /** Never enabled by the normal T20 camera or other stages. */
+  public enableSourcePracticeControls(): void {
+    this.sourcePracticeControls = true;
+  }
+
+  public sourcePracticeViewSnapshot(){
+    return {
+      sourcePracticeOnly:this.sourcePracticeControls,
+      shoulderSide:this.sourceShoulderSide,
+      shoulderOffsetMeters:this.currentShoulderOffset,
+      desiredShoulderOffsetMeters:this.shoulder,
+      zoomMeters:this.distance,
+      currentCameraDistanceMeters:this.currentCameraDistance,
+      yawDegrees:this.yaw,
+      pitchDegrees:this.pitch,
+      cameraRaycasts:this.sourcePracticeCameraCasts,
+      geometryClipped:this.sourcePracticeLastFrameClipped,
+      cameraDistanceMeters:this.sourcePracticeLastFrameDistance,
+      sourcePhysicsModified:false,
+      sourceNavigationModified:false
+    };
+  }
 
   public onDebugInkClick: ((click: DebugInkClick) => void) | null = null;
 
@@ -51,9 +85,22 @@ export class ThirdPersonCamera {
     }
 
     this.target.set(playerPosition.x, playerPosition.y + 0.55, playerPosition.z);
-    this.desiredCameraPosition.copy(this.target)
-      .sub(this.forward.clone().mulScalar(this.distance))
-      .add(this.right.clone().mulScalar(this.shoulder));
+    if(this.sourcePracticeControls&&recoveryDtSeconds>0&&
+       Number.isFinite(recoveryDtSeconds)){
+      const dt=Math.min(recoveryDtSeconds,.10);
+      const blend=1-Math.exp(-14*dt);
+      this.currentShoulderOffset+=
+        (this.shoulder-this.currentShoulderOffset)*blend;
+    }else if(!this.sourcePracticeControls){
+      this.currentShoulderOffset=this.shoulder;
+    }
+    const offset=this.sourcePracticeControls?
+      this.currentShoulderOffset:this.shoulder;
+    this.desiredCameraPosition.set(
+      this.target.x-this.forward.x*this.distance+this.right.x*offset,
+      this.target.y-this.forward.y*this.distance+this.right.y*offset,
+      this.target.z-this.forward.z*this.distance+this.right.z*offset
+    );
 
     this.cameraDirection.copy(this.desiredCameraPosition).sub(this.target);
     const desiredDistance = this.cameraDirection.length();
@@ -68,6 +115,7 @@ export class ThirdPersonCamera {
       this.desiredCameraPosition,
       'camera'
     );
+    if(this.sourcePracticeControls)this.sourcePracticeCameraCasts++;
     const targetDistance = blocker
       ? Math.max(
           GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
@@ -94,12 +142,21 @@ export class ThirdPersonCamera {
     }
 
     this.currentCameraDistance = Math.min(this.currentCameraDistance, targetDistance);
+    if(this.sourcePracticeControls){
+      this.sourcePracticeLastFrameClipped=!!blocker;
+      this.sourcePracticeLastFrameDistance=this.currentCameraDistance;
+    }
     this.cameraEntity.setPosition(
       this.target.x + this.cameraDirection.x * this.currentCameraDistance,
       this.target.y + this.cameraDirection.y * this.currentCameraDistance,
       this.target.z + this.cameraDirection.z * this.currentCameraDistance
     );
-    this.cameraEntity.lookAt(this.target.clone().add(this.forward.clone().mulScalar(12)));
+    this.lookAtPoint.set(
+      this.target.x+this.forward.x*12,
+      this.target.y+this.forward.y*12,
+      this.target.z+this.forward.z*12
+    );
+    this.cameraEntity.lookAt(this.lookAtPoint);
   }
 
   public getAimDirection(out = new Vec3()): Vec3 {
@@ -129,7 +186,11 @@ export class ThirdPersonCamera {
       if (hit && (!best || hit.distance < best.distance)) best = hit;
     }
 
-    const blockerEnd = from.clone().add(direction.clone().mulScalar(fallbackDistance));
+    const blockerEnd=this.rayEnd.set(
+      from.x+direction.x*fallbackDistance,
+      from.y+direction.y*fallbackDistance,
+      from.z+direction.z*fallbackDistance
+    );
     const blocker = this.physics.castStageSegment(from, blockerEnd, 'ink-projectile');
     if (
       best &&
@@ -150,6 +211,16 @@ export class ThirdPersonCamera {
   }
 
   private bind(): void {
+    // The Q shoulder button is a VIEW option, never a movement, aim-assist
+    // or collision bypass. It is disabled for all non-F3 routes.
+    window.addEventListener('keydown', event=>{
+      if(!this.sourcePracticeControls||event.code!=='KeyQ'||
+         event.repeat||event.altKey||event.ctrlKey||event.metaKey||
+         document.pointerLockElement!==this.canvas)return;
+      this.sourceShoulderSide=this.sourceShoulderSide==='RIGHT'?'LEFT':'RIGHT';
+      this.shoulder=this.sourceShoulderSide==='RIGHT'?.72:-.72;
+      event.preventDefault();
+    });
     this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
     // Standard browser-TPS mouse look:
