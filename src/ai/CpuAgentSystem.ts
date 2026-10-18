@@ -68,6 +68,8 @@ export interface CpuSharedGroundStepAuthority {
   resetActors():void;
   syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
+  /** A splatted CPU has no physical capsule; only source-QA shared world. */
+  removeRealCpuFoot?(id:string):void;
   /** Real shared-world actor clearance before F2 native offmesh admission. */
   shouldDeferF2FirstDrop?(
     id:string,foot:Readonly<{x:number;y:number;z:number}>
@@ -2374,6 +2376,9 @@ export class CpuAgentSystem {
     bot.lifeState = 'SPLATTED';
     bot.respawnRemainingSeconds = GAME_CONFIG.match.respawnSeconds;
     bot.entity.enabled = false;
+    // Remove only the splatted actor's QA kinematic proxy. The player,
+    // 25 genuine solids, paint and NavMesh are never modified.
+    this.phase14qGroundCollision?.removeRealCpuFoot?.(bot.id);
     this.stats.cpuSplats += 1;
   }
 
@@ -2384,6 +2389,9 @@ export class CpuAgentSystem {
     bot.agent = this.navigation.addAgent(start);
     bot.position.copy(start);
     bot.previousPosition.copy(start);
+    // Native respawn changes the actual CPU foot; register its physical
+    // capsule BEFORE the next shared-world Crowd/KCC audit.
+    this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
     bot.jumpStartPosition.copy(start);
     bot.jumpTargetPosition.copy(start);
     bot.hp = GAME_CONFIG.combat.playerMaxHp;

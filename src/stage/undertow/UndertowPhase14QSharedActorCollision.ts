@@ -93,6 +93,16 @@ export class UndertowPhase14QSharedActorCollision{
     this.humanSourceFoot=null;
   }
 
+  /** Splatted CPU no longer has an active collision capsule. */
+  public removeRealCpuFoot(id:string):void{
+    const actor=this.actors.get(id);
+    if(!actor)return;
+    const handle=actor.collider.handle;
+    this.physics.world.removeRigidBody(actor.body);
+    this.actors.delete(id);
+    this.ownerByHandle.delete(handle);
+  }
+
   public syncRealCpuFoot(id:string,foot:T21QFoot):void{
     this.assertFoot(id,foot);
     let actor=this.actors.get(id);

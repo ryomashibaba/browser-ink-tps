@@ -53,6 +53,25 @@ function world(){
  return {stage,ink,stats,physics,player,realPlayer,humanFoot,actors};
 }
 describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in T21 only',()=>{
+ it('drops the splatted real CPU proxy and rebinds the native respawn foot',()=>{
+  const w=world();
+  const first={x:w.humanFoot.x+1.45,y:w.humanFoot.y,z:w.humanFoot.z};
+  const again={x:first.x+12,y:first.y+3,z:first.z};
+  w.actors.syncRealCpuFoot('B1',first);
+  expect(w.actors.cpuColliderCount).toBe(1);
+  w.actors.removeRealCpuFoot('B1');
+  expect(w.actors.cpuColliderCount).toBe(0);
+  expect(()=>w.actors.auditGroundStep('B1',first,first,DT))
+   .toThrow('T21_PHASE14Q_MISSING_REAL_CPU_COLLIDER_B1');
+  w.actors.removeRealCpuFoot('B1');
+  w.actors.syncRealCpuFoot('B1',again);
+  expect(w.actors.cpuColliderCount).toBe(1);
+  expect(()=>w.actors.auditGroundStep('B1',again,again,DT))
+   .not.toThrow();
+  w.actors.dispose();
+  expect(w.actors.cpuColliderCount).toBe(0);
+  expect(freeze.activationReady).toBe(false);
+ });
  it('uses one original-solid Rapier world for real player collider and CPU step; a proximity blocker is never promoted to a CPU teleport',()=>{
   const w=world();
   expect(w.stats.playerGrounded).toBe(true);
