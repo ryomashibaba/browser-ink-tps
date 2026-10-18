@@ -1,0 +1,41 @@
+name: T21 W10-B15 trusted mouse input to CPU lifecycle
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/input/PlayerInput.ts'
+      - 'src/camera/ThirdPersonCamera.ts'
+      - 'src/projectile/ProjectileSystem.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b15-trusted-input.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  trusted-input-chrome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install public dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Build real PlayCanvas browser bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Check CDP test syntax
+        run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: Prove pointer-locked actual mouse input through native CPU splat and respawn
+        env:
+          T21_W10B15_TRUSTED_INPUT: '1'
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve real Chromium frames and QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-w10b15-source-only-real-input
+          path: /tmp/t21-f3-playable-webgl2/
+          retention-days: 14
+          if-no-files-found: warn
