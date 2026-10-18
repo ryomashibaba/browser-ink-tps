@@ -28,6 +28,8 @@ on:
       - 'src/stage/undertow/UndertowW10OriginalGapCandidates.test.ts'
       - 'src/stage/undertow/UndertowW10Batch2GapCandidates.ts'
       - 'src/stage/undertow/UndertowW10Batch2GapCandidates.test.ts'
+      - 'src/stage/undertow/UndertowW10SetActorBancEvidenceGate.ts'
+      - 'src/stage/undertow/UndertowW10SetActorBancEvidenceGate.test.ts'
       - 'src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
@@ -140,6 +142,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW10OriginalGapCandidates.test.ts
       - name: W10-B10 archival original Batch2 candidate/actor-placement gate
         run: npx vitest run src/stage/undertow/UndertowW10Batch2GapCandidates.test.ts
+      - name: W10-B11 source-owned Banc SetActor decoded data intake gate (synthetic CI only)
+        run: npx vitest run src/stage/undertow/UndertowW10SetActorBancEvidenceGate.test.ts
       - name: W9 separately sourced real CPU-projectile to real Human HP gate
         run: npx vitest run src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts
       - name: PowerShell script parser
