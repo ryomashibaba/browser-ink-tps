@@ -106,17 +106,19 @@ async function main(){
  const w10b14=process.env.T21_W10B14_RENDER_QA==='1';
  const w10b15=process.env.T21_W10B15_TRUSTED_INPUT==='1';
  const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
- if([w10b14,w10b15,w10b16].filter(Boolean).length>1)
+ const w10b21=process.env.T21_W10B21_RENDER_AB==='1';
+ if([w10b14,w10b15,w10b16,w10b21].filter(Boolean).length>1)
   reject('CONFLICTING_QA_MODES');
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
  const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa||w10b16;
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'+
-  ((w10b14||w10b15)?'&t21QaDrive=source&t21QaInput=deterministic&'+
+  ((w10b14||w10b15||w10b21)?'&t21QaDrive=source&t21QaInput=deterministic&'+
    't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b16?'&t21W10B16=sourceAutonomy':'')+
+  (w10b21?'&t21W10B21=renderAB':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
@@ -128,6 +130,71 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(w10b21){
+  const before=await evaluate('window.__t21F3.snapshot()');
+  if(!before.paused||before.tick!==0||before.stopReason||
+     before.b21RenderProbe.enabled!==true||
+     before.b21RenderProbe.quality!=='NATIVE'||
+     before.originalSourceSolids!==25||
+     before.originalPaintSurfaces!==17||
+     before.originalSourceNavigationLinks!==26||
+     before.sourceScoreablePromotions!==0)
+   reject('W10B21_FROZEN_ORIGINAL_SOURCE_REQUIRED_'+JSON.stringify(before));
+  const initialPixels=before.b21RenderProbe.canvasPixels;
+  if(initialPixels[0]!==1600||initialPixels[1]!==900)
+   reject('W10B21_NATIVE_BACKBUFFER_NOT_1600x900_'+JSON.stringify(initialPixels));
+  const started=await evaluate('window.__t21F3.startW10B21FrozenRenderProbe()');
+  if(!started.active||started.physicsTick!==0)
+   reject('W10B21_PROBE_UNARMED_'+JSON.stringify(started));
+  const collect=async (label,quality,pixels)=>{
+   const observation=await waitUntil(async()=>{
+    const a=await evaluate('window.__t21F3.snapshot()');
+    if(a.stopReason)reject('W10B21_RENDER_SAFE_STOP_'+a.stopReason);
+    const p=a.b21RenderProbe;
+    return p.sampleCount>=5?a:false;
+   },85000);
+   const p=observation.b21RenderProbe;
+   if(p.quality!==quality||p.canvasPixels[0]!==pixels[0]||
+      p.canvasPixels[1]!==pixels[1]||p.physicsTick!==0||
+      !Number.isFinite(p.p50Ms)||!Number.isFinite(p.p95Ms)||
+      observation.originalSourceSolids!==25||
+      observation.originalPaintSurfaces!==17||
+      observation.originalSourceNavigationLinks!==26||
+      observation.sourceScoreablePromotions!==0||
+      JSON.stringify(observation.player.position)!==JSON.stringify(before.player.position)||
+      observation.cameraSourcePractice.yawDegrees!==before.cameraSourcePractice.yawDegrees||
+      observation.cameraSourcePractice.pitchDegrees!==before.cameraSourcePractice.pitchDegrees)
+    reject('W10B21_NOT_SAME_FROZEN_STAGE_'+JSON.stringify({label,p,original:before.player,now:observation.player}));
+   const frame=await screenshot('W10B21_'+label);
+   return {quality,renderPixels:p.canvasPixels,measurement:p,frame};
+  };
+  const fullA=await collect('A_NATIVE_1','NATIVE',[1600,900]);
+  const lowSwitch=await evaluate('window.__t21F3.setW10B21FrozenQuality("PERFORMANCE")');
+  if(lowSwitch.quality!=='PERFORMANCE'||lowSwitch.canvasPixels[0]!==1200||
+     lowSwitch.canvasPixels[1]!==675)
+   reject('W10B21_LOW_MODE_BACKBUFFER_FAILED_'+JSON.stringify(lowSwitch));
+  const lowB=await collect('B_PERFORMANCE_75','PERFORMANCE',[1200,675]);
+  const restored=await evaluate('window.__t21F3.setW10B21FrozenQuality("NATIVE")');
+  if(restored.quality!=='NATIVE'||restored.canvasPixels[0]!==1600||
+     restored.canvasPixels[1]!==900)
+   reject('W10B21_RESTORE_NATIVE_BACKBUFFER_FAILED_'+JSON.stringify(restored));
+  const fullA2=await collect('A2_NATIVE_RESTORED','NATIVE',[1600,900]);
+  const result={
+   status:'PASS_SOURCE_ONLY_REAL_CHROME_SAME_STAGE_ABA',
+   fixedPhysicsTicks:0,realChromiumWebGL2:true,
+   realViewport:[1600,900],pixelWorkFractionAt75:0.5625,
+   originalSolids:25,paintableSurfaces:17,originalNavigationLinks:26,
+   scoreableSurfacesPromoted:0,productionAuthorized:false,
+   natural4v4Certified:false,measureIsCpuWallTimeNotGpu:true,
+   nativeA:fullA,performanceB:lowB,nativeRestoredA:fullA2,
+   changesToActualStageGeometry:0,realActorRelocations:0,
+   warning:'HEADLESS_SWIFTSHADER_NOT_REAL_USER_GPU_NO_CAUSAL_FPS_CLAIM'
+  };
+  writeFileSync(resolve(OUTPUT,'w10b21-source-render-aba.json'),
+   JSON.stringify(result,null,2));
+  console.log('T21_W10B21_REAL_CHROME_RENDER_ABA_PASS',JSON.stringify(result));
+  return;
+ }
  if(w10b15){
   // Test the REAL DOM, not only the helper's pure formatting.
   const hud=await evaluate(`(() => {
