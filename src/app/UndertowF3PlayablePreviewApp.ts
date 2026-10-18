@@ -48,6 +48,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
+import {createF3PlayableHud} from './UndertowF3PlayableHud';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
@@ -127,6 +128,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly panel:HTMLElement;
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
+ private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
  private wholeSourceStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
@@ -262,17 +264,24 @@ export class UndertowF3PlayablePreviewApp{
   this.panel=document.createElement('section');
   this.panel.id='t21-f3-play-panel';
   this.panel.style.cssText='position:fixed;left:14px;top:14px;z-index:40;'+
-   'max-width:390px;color:#eaf9ff;background:rgba(5,15,28,.88);'+
+   'width:min(330px,calc(100vw - 28px));box-sizing:border-box;'+
+   'color:#eaf9ff;background:rgba(5,15,28,.90);'+
    'border:1px solid rgba(95,225,249,.46);border-radius:14px;'+
-   'padding:14px 16px;font:12px/1.45 ui-monospace,monospace;'+
+   'padding:12px 14px;font:12px/1.45 ui-monospace,monospace;'+
    'box-shadow:0 15px 48px #0008;pointer-events:auto';
-  this.panel.innerHTML='<h2 style="font:800 18px system-ui;margin:0 0 7px">'+
+  this.panel.innerHTML='<h2 style="font:800 16px system-ui;margin:0 0 6px">'+
    PROJECT+'</h2><p style="margin:0;color:#9ce8ed">'+
-   'Playable source-grounded sandbox · not a released T21 match</p>'+
-   '<div id="t21-f3-live" style="white-space:pre-line;margin:11px 0"></div>'+
+   'Source-only practice · NOT a scored 4v4 match</p>'+
+   '<p style="margin:7px 0 9px;color:#ffcea9;font:700 11px system-ui">'+
+   'Two map sectors remain disconnected · no turf winner</p>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
-   '<button id="t21-f3-reset" type="button">Reset (R)</button>'+ 
+   '<button id="t21-f3-reset" type="button">Reset (R)</button></div>'+
+   '<details id="t21-f3-diagnostics" style="margin-top:9px;max-height:min(62vh,540px);overflow:auto">'+
+   '<summary style="cursor:pointer;color:#80e4ed;font:700 12px system-ui">'+
+   'Developer telemetry &amp; source controls</summary>'+
+   '<div id="t21-f3-live" style="white-space:pre-line;margin:11px 0;font-size:11px"></div>'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-structures" type="button">Original source: ON</button>'+
    '<button id="t21-f3-completion" type="button">Source terrain study: ON</button>'+
    '<button id="t21-f3g-full" type="button" hidden>Full source OBJ: ON</button>'+ 
@@ -280,10 +289,10 @@ export class UndertowF3PlayablePreviewApp{
    '<button id="t21-f3i-environment" type="button" hidden>F3I source backdrop: OFF (B)</button>'+ 
    '<button id="t21-f3k-gallery" type="button" hidden>Source parts showroom (G)</button>'+ 
    '<button id="t21-f3l-textured" type="button" hidden>F3L original textures: OFF (T)</button></div>'+
-   '<p style="color:#adc6d4;margin:9px 0 0">'+
-   'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left mouse fire · Esc release pointer</p>'+
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
-   'F3G: full original static OBJ is OPTICAL ONLY. Unverified floor fragments are NOT walkable; Turf score and central navigation are not authorized.</p>';
+   'Source models are OPTICAL ONLY where collision is unverified. No invented bridge, NavLink or Turf score.</p></details>'+
+   '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
+   'Click stage to lock mouse · WASD move · Space jump · Shift squid · Left-click fire · Esc release · G gameplay input while locked</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
@@ -342,11 +351,16 @@ export class UndertowF3PlayablePreviewApp{
    'color:#e9fdff;text-shadow:0 1px 7px #001';
   cross.textContent='+';
   ui.appendChild(cross);
+  this.practiceHud=createF3PlayableHud(ui);
   this.radar=createF3SourceRadar(ui,stage);
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
    if(ev.code==='KeyR')this.restart();
+   // Do not let gameplay G (special request in PlayerInput) open the
+   // gallery and disable the camera while actual pointer-locked play runs.
+   // Source-review shortcuts are intentionally available only unlocked.
+   if(document.pointerLockElement===this.canvas)return;
    if(ev.code==='KeyV')this.toggleSurvey();
    if(ev.code==='KeyH')this.cycleSourceVisualMode();
    if(ev.code==='KeyB')this.toggleF3iEnvironment();
@@ -1006,6 +1020,9 @@ export class UndertowF3PlayablePreviewApp{
   const state=this.snapshot();
   const p=state.cpu;
   this.radar.render(state);
+  this.practiceHud.render(state);
+  this.practiceHud.root.style.display=
+   this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
   this.status.textContent=[
    'HUMAN · '+state.player.mode+
     '  HP '+Math.round(state.player.hp)+
