@@ -40,6 +40,9 @@ export interface F3TrafficSnapshot{
   readonly sameSourceEnemyCandidates:number;
   readonly deniedNativeEnemyPaths:number;
   readonly sourceEndpointProbes:number;
+  readonly nativeRouteChecks:number;
+  readonly nativeRouteRayProbes:number;
+  readonly rejectedUnsupportedNativeRoutes:number;
   readonly rejectedUnsupportedGoals:number;
   readonly deniedUnsupportedEnemyFeet:number;
   readonly travelMeters:number;
@@ -69,6 +72,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private sameSourceEnemyCandidates=0;
  private deniedNativeEnemyPaths=0;
  private sourceEndpointProbes=0;
+ private nativeRouteChecks=0;
+ private nativeRouteRayProbes=0;
+ private rejectedUnsupportedNativeRoutes=0;
  private rejectedUnsupportedGoals=0;
  private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
@@ -159,6 +165,37 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.stage.solids.some(s=>s.id===hit.solidId);
  }
 
+ /** W10-B4: fail closed on any unsupported intermediate Recast waypoint.
+  * Applies only after the genuine seven source-backed CPU first drops.
+  * Does not create terrain, navigation, or synthetic actor positions.
+  * Endpoint ray support is not a complete KCC capsule certificate. */
+ private hasSourceSupportedRoute(
+  audit:ReturnType<RecastStageNavigation['auditPath']>,sideSign:number
+ ):boolean{
+  this.nativeRouteChecks++;
+  const points=audit.nativePathPoints;
+  if(!this.physics||points.length===0)return false;
+  const probe=(point:Readonly<{x:number;y:number;z:number}>):boolean=>{
+   this.nativeRouteRayProbes++;
+   return [point.x,point.y,point.z].every(Number.isFinite)&&
+    point.z*sideSign>=33&&point.y>=2.5&&point.y<=5.5&&
+    this.hasSourceFootSupport(point);
+  };
+  if(points.length===1)return probe(points[0]!);
+  for(let leg=0;leg+1<points.length;leg++){
+   const a=points[leg]!,b=points[leg+1]!;
+   const meters=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+   if(!Number.isFinite(meters))return false;
+   const segments=Math.max(1,Math.ceil(meters/.30));
+   for(let i=leg===0?0:1;i<=segments;i++){
+    const f=i/segments;
+    if(!probe({x:a.x+(b.x-a.x)*f,
+     y:a.y+(b.y-a.y)*f,z:a.z+(b.z-a.z)*f}))return false;
+   }
+  }
+  return true;
+ }
+
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   if(!this.freeCombat||!this.physicallyRejoined.has(id)){
    this.heldRequests++;return false;
@@ -197,6 +234,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        native.endSnapDistanceMeters>.20){
      this.deniedNativeEnemyPaths++;continue;
     }
+    if(!this.hasSourceSupportedRoute(native,sign)){
+     this.rejectedUnsupportedNativeRoutes++;continue;
+    }
     this.patrolIndex.set(id,-1);
     out.copy(other.position);
     this.realGoalRequests++;
@@ -223,6 +263,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Native path from the REAL CPU foot, never only from a stored proxy.
    if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
       audit.endSnapDistanceMeters>.22)continue;
+   if(!this.hasSourceSupportedRoute(audit,sign)){
+    this.rejectedUnsupportedNativeRoutes++;continue;
+   }
    this.patrolIndex.set(id,index);
    out.copy(goal);this.realGoalRequests++;return true;
   }
@@ -326,6 +369,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     sameSourceEnemyCandidates:this.sameSourceEnemyCandidates,
     deniedNativeEnemyPaths:this.deniedNativeEnemyPaths,
     sourceEndpointProbes:this.sourceEndpointProbes,
+    nativeRouteChecks:this.nativeRouteChecks,
+    nativeRouteRayProbes:this.nativeRouteRayProbes,
+    rejectedUnsupportedNativeRoutes:this.rejectedUnsupportedNativeRoutes,
     rejectedUnsupportedGoals:this.rejectedUnsupportedGoals,
     deniedUnsupportedEnemyFeet:this.deniedUnsupportedEnemyFeet,
     travelMeters:this.travelMeters,

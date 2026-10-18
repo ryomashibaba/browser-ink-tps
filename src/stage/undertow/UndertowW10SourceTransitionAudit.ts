@@ -62,6 +62,13 @@ export interface W10SourceTransitionResult {
   readonly nativeRoute:W10NativeRouteAudit;
   readonly nativeStartSnapMeters:number;
   readonly nativeEndSnapMeters:number;
+  readonly nativeEndpointErrorMeters:number;
+  readonly nativeTerminal:{
+   readonly point:StageVector3;
+   readonly distanceToRequestedDestinationMeters:number;
+   readonly rapierSupported:boolean;
+   readonly solidId:string|null;
+  }|null;
   readonly hold:W10TransitionHold;
   readonly kccReplayRequired:true;
   readonly kccCertified:false;
@@ -180,6 +187,14 @@ export function auditW10SourceTransition(
  const path=nav.auditPath(new Vec3(...from),new Vec3(...to));
  const chord=auditStraightChord(physics,from,to);
  const nativeRoute=auditNativeRoute(physics,path.nativePathPoints);
+ const last=path.nativePathPoints[path.nativePathPoints.length-1];
+ const terminal=last?probeEndpoint(physics,[last.x,last.y,last.z]):null;
+ const nativeTerminal=terminal?{
+  point:terminal.point,
+  distanceToRequestedDestinationMeters:Math.hypot(
+   terminal.point[0]-to[0],terminal.point[1]-to[1],terminal.point[2]-to[2]),
+  rapierSupported:terminal.raySupported,solidId:terminal.solidId
+ }:null;
  const nativePathReached=path.reachedTarget &&
   path.startSnapDistanceMeters<=.25 &&
   path.endSnapDistanceMeters<=.25;
@@ -198,6 +213,8 @@ export function auditW10SourceTransition(
   nativePathReached,
   nativeStartSnapMeters:path.startSnapDistanceMeters,
   nativeEndSnapMeters:path.endSnapDistanceMeters,
+  nativeEndpointErrorMeters:path.endpointErrorMeters,
+  nativeTerminal,
   hold,kccReplayRequired:true,kccCertified:false,
   sourcePromoted:false,productionAuthorized:false};
 }

@@ -56,6 +56,9 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(evidence.chord.sourceCertified).toBe(false);
    expect(evidence.nativeRoute.nativePolylineOnly).toBe(true);
    expect(evidence.nativeRoute.sourceCertified).toBe(false);
+   expect(evidence.nativeTerminal).not.toBeNull();
+   expect(evidence.nativeTerminal!.distanceToRequestedDestinationMeters)
+    .toBeGreaterThanOrEqual(0);
    expect(evidence.nativeRoute.fullTrajectoryReplayed).toBe(false);
    if(evidence.nativePathReached){
     expect(evidence.nativeRoute.evaluated).toBe(true);
@@ -64,7 +67,8 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(evidence.kccCertified).toBe(false);
    expect(evidence.productionAuthorized).toBe(false);
    return {id:route.id,hold:evidence.hold,chord:evidence.chord,
-    nativeRoute:evidence.nativeRoute,
+    nativeRoute:evidence.nativeRoute,nativeTerminal:evidence.nativeTerminal,
+    nativeEndpointErrorMeters:evidence.nativeEndpointErrorMeters,
     nativePathReached:evidence.nativePathReached,
     fromSolid:evidence.from.solidId,toSolid:evidence.to.solidId};
   });
@@ -94,10 +98,15 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(result.chord.fullTrajectoryReplayed).toBe(false);
    expect(result.nativeRoute.sourceCertified).toBe(false);
    expect(result.nativeRoute.fullTrajectoryReplayed).toBe(false);
+   expect(result.nativePathReached).toBe(false);
+   expect(result.nativeTerminal).not.toBeNull();
+   expect(result.nativeTerminal!.distanceToRequestedDestinationMeters)
+    .toBeGreaterThan(0);
    expect(result.sourcePromoted).toBe(false);
    expect(result.productionAuthorized).toBe(false);
    return {id:g.id,hold:result.hold,chord:result.chord,
-    nativeRoute:result.nativeRoute,
+    nativeRoute:result.nativeRoute,nativeTerminal:result.nativeTerminal,
+    nativeEndpointErrorMeters:result.nativeEndpointErrorMeters,
     nativePathReached:result.nativePathReached,
     fromSolid:result.from.solidId,toSolid:result.to.solidId};
   });

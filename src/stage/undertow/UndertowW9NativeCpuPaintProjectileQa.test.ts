@@ -308,6 +308,8 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   expect(snap.freeCombatEnabled).toBe(true);
   expect(snap.sourcePatrol.auditedTargets).toBeGreaterThan(0);
   expect(snap.sourcePatrol.sourceEndpointProbes).toBeGreaterThan(0);
+  expect(snap.sourcePatrol.nativeRouteChecks).toBeGreaterThan(0);
+  expect(snap.sourcePatrol.nativeRouteRayProbes).toBeGreaterThan(0);
   expect(snap.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
   expect(snap.sourcePatrol.engagementGoalRequests)
    .toBeLessThanOrEqual(snap.sourcePatrol.realGoalRequests);
