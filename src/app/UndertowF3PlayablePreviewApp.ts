@@ -616,8 +616,6 @@ export class UndertowF3PlayablePreviewApp{
   this.w10b14={target,armed:false,splatSeen:false,
    qaHumanFoot:new Vec3(foot.x,foot.y,foot.z),sourceSolidId:solid.id};
   this.camera.update(this.player.getPosition(this.visual));
-  this.w10b14={target,armed:false,splatSeen:false,
-   qaHumanFoot:chosen.foot,sourceSolidId:support.solidId};
   this.refresh();
   return this.w10B14RenderWitness();
  }
