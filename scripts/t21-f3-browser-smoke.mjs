@@ -128,6 +128,18 @@ async function main(){
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
  if(w10b15){
+  // Test the REAL DOM, not only the helper's pure formatting.
+  const hud=await evaluate(`(() => {
+   const e=document.querySelector('#t21-f3-practice-hud');
+   const d=document.querySelector('#t21-f3-diagnostics');
+   return {found:!!e,sourceScoreable:e?.dataset.sourceScoreable,
+    authority:e?.dataset.productionAuthority,closed:!d?.open,
+    clock:e?.dataset.clock,text:e?.textContent?.slice(0,350)};
+  })()`);
+  if(!hud.found||hud.sourceScoreable!=='0'||
+     hud.authority!=='NONE'||!hud.closed||
+     hud.clock!=='3:00'||!hud.text.includes('NO OFFICIAL RESULT'))
+   reject('W10B17_NATIVE_HUD_NOT_READABLE_'+JSON.stringify(hud));
   const witness=()=>evaluate('window.__t21F3.w10B14RenderWitness()');
   const advance=async count=>{
    const result=await evaluate(`(() => {
@@ -155,6 +167,18 @@ async function main(){
   await mouse('mousePressed');await mouse('mouseReleased');
   await waitUntil(async()=>await evaluate(
    'document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
+  // Do not let the source gallery hijack gameplay input KeyG.
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyDown',key:'g',code:'KeyG',
+   windowsVirtualKeyCode:71,nativeVirtualKeyCode:71
+  });
+  await cmd('Input.dispatchKeyEvent',{
+   type:'keyUp',key:'g',code:'KeyG',
+   windowsVirtualKeyCode:71,nativeVirtualKeyCode:71
+  });
+  const gallery=await evaluate('window.__t21F3.snapshot().sourceGalleryF3k.selection');
+  if(gallery!==-1||!(await witness()).pointerLocked)
+   reject('W10B17_GAMEPLAY_G_OPENED_DEBUG_GALLERY_'+gallery);
   let pointer={x:800,y:450},trace=[],aligned=false;
   for(let n=0;n<25;n++){
    const before=await witness();
@@ -743,6 +767,19 @@ async function main(){
       sourcePatrol:completed.cpu.sourcePatrol});
     }
    }
+   const hud=await evaluate(`(() => {
+    const e=document.querySelector('#t21-f3-practice-hud');
+    const d=document.querySelector('#t21-f3-diagnostics');
+    return {scoreable:e?.dataset.sourceScoreable,
+      authority:e?.dataset.productionAuthority,
+      cpu:e?.dataset.cpuRecovered,
+      shots:e?.dataset.cpuTurfShots,
+      text:e?.textContent,collapsed:!d?.open};
+   })()`);
+   if(hud.scoreable!=='0'||hud.authority!=='NONE'||
+      hud.cpu!=='7'||hud.shots!==String(completed.cpuSourceTurfShots)||
+      !hud.text.includes('NO OFFICIAL RESULT')||!hud.collapsed)
+    reject('W10B17_NATIVE_PATROL_HUD_DRIFT_'+JSON.stringify(hud));
    const audit=await evaluate('window.__t21F3.auditW10B16NaturalEnemyAccess()');
    const properPairInventory=audit.pairCount===12&&audit.cpuA.length===3&&
     audit.cpuB.length===4;
