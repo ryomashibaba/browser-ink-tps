@@ -90,6 +90,7 @@ describe('W10-B13: real Human weapon to genuine seven-CPU combat lifecycle',()=>
   const target=bots.find(b=>b.id==='B1')!;
   expect(target.team).toBe(Team.B);
   expect(target.slot).toBe(0);
+  const qaInitialEntityEnabled=target.entity.enabled;
   const directions=[
    new Vec3(1,0,0),new Vec3(-1,0,0),
    new Vec3(0,0,1),new Vec3(0,0,-1),
@@ -199,6 +200,10 @@ describe('W10-B13: real Human weapon to genuine seven-CPU combat lifecycle',()=>
    originalProjectileCpuHits:stats.cpuCombatHits,
    firstActualHit,firstDamage,firstSplat,respawn,
    cpuLifeStateAfterRespawn:target.lifeState,
+   qaInitialEntityEnabled,
+   qaAfterRespawnEntityEnabled:target.entity.enabled,
+   qaEntityEnabledInHierarchy:target.entity.enabledInHierarchy,
+   headlessRenderingComponentsMocked:true,
    cpuHpAfterRespawn:hpOnRespawn,
    cpuSplats:stats.cpuSplats,cpuRespawns:stats.cpuRespawns,
    hitsAtSplat,deadFrames,shotFrames,fireAfterSplat,
@@ -229,7 +234,10 @@ describe('W10-B13: real Human weapon to genuine seven-CPU combat lifecycle',()=>
   expect(hpOnRespawn).toBe(GAME_CONFIG.combat.playerMaxHp);
   expect(stats.cpuRespawns).toBe(1);
   expect(target.agent).not.toBeNull();
-  expect(target.entity.enabled).toBe(true);
+  // In headless Vitest, Entity.addComponent is mocked. Preserve its initial
+  // effective enabled state and separately inspect lifeState/agent/HP;
+  // do not claim a GPU-visible character from a mock-render environment.
+  expect(target.entity.enabled).toBe(qaInitialEntityEnabled);
   expect(target.position.distance(new Vec3(...sourceSpawn))).toBeLessThan(.16);
   expect(respawnRay?.solidId).toBe(sourceSpawnId);
   expect(offSourceOpponentFrames).toBe(0);
