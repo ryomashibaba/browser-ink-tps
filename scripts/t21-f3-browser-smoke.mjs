@@ -193,6 +193,47 @@ async function main(){
   writeFileSync(resolve(OUTPUT,'w10b21-source-render-aba.json'),
    JSON.stringify(result,null,2));
   console.log('T21_W10B21_REAL_CHROME_RENDER_ABA_PASS',JSON.stringify(result));
+  // B22: actual DOM start + browser Pointer Lock + real-frame trial arming.
+  // This is only an ABORT/RECOVERY guard, NOT synthetic evidence of
+  // 36 seconds of user play or the owner's hardware responsiveness.
+  const ownerArm=await evaluate(`(() => {
+   const start=document.querySelector('#t21-f3-b22-start');
+   const save=document.querySelector('#t21-f3-b22-save');
+   if(!start||!save)return {error:'OWNER_CONTROLS_MISSING'};
+   if(!save.hidden)return {error:'OWNER_REPORT_PRESENT_BEFORE_RUN'};
+   window.__t21F3.resume();
+   start.click();
+   return window.__t21F3.snapshot().b22OwnerGpuTrial;
+  })()`);
+  if(ownerArm?.status!=='ARMED')
+   reject('W10B22_OWNER_START_CONTROL_NOT_ARMED_'+JSON.stringify(ownerArm));
+  await mouse('mousePressed');await mouse('mouseReleased');
+  const ownerRunning=await waitUntil(async()=>{
+   const state=await evaluate('window.__t21F3.snapshot()');
+   if(state.stopReason)reject('W10B22_OWNER_REAL_INPUT_STOP_'+state.stopReason);
+   return state.b22OwnerGpuTrial.status==='RUNNING'?state:false;
+  },25000);
+  if(ownerRunning.b22OwnerGpuTrial.sourceOnly!==true||
+     ownerRunning.sourceScoreablePromotions!==0||
+     ownerRunning.originalSourceSolids!==25)
+   reject('W10B22_OWNER_SOURCE_STATE_DRIFT_'+JSON.stringify(ownerRunning));
+  await evaluate('document.exitPointerLock()');
+  const ownerAborted=await waitUntil(async()=>{
+   const state=await evaluate('window.__t21F3.snapshot()');
+   return state.b22OwnerGpuTrial.status==='ABORTED'?state:false;
+  },25000);
+  if(ownerAborted.b22OwnerGpuTrial.stopReason!=='POINTER_UNLOCK_OR_PAUSE_DURING_TRIAL'||
+     ownerAborted.b22OwnerGpuTrial.complete||
+     ownerAborted.sourceScoreablePromotions!==0||
+     ownerAborted.b21RenderProbe.quality!=='NATIVE')
+   reject('W10B22_OWNER_REAL_POINTER_ABORT_FAILED_'+
+    JSON.stringify(ownerAborted.b22OwnerGpuTrial));
+  console.log('T21_W10B22_REAL_CHROME_POINTER_TRIAL_SAFE_ABORT_PASS',JSON.stringify({
+   realWebGL2:true,uiStart:true,realPointerLockedTrial:true,
+   status:ownerAborted.b22OwnerGpuTrial.status,
+   nativeRestored:true,sourceSolids:25,sourceScoring:0,
+   notOwnerWindowsGpu:true
+  }));
   return;
  }
  if(w10b15){
