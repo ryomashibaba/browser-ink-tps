@@ -354,6 +354,65 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   }
  }
 
+ /** W10-B16: read-only O(3x4) native cross-team path probe, called once
+  * after source-authentic drop/rejoin. Not a game AI decision or a
+  * certificate of collision-supported walkability. */
+ auditW10B16NaturalEnemyAccess(){
+  if(!this.freeCombat||this.physicallyRejoined.size!==7||
+     this.bots.length!==7||this.stage.solids.length!==25||
+     this.stage.paintSurfaces.length!==17||
+     this.stage.navigationLinks?.length!==26)
+   throw Error('T21_W10B16_SEVEN_REAL_ORIGINAL_SOURCE_ACTORS_REQUIRED');
+  const active=this.bots.filter(b=>b.mobilityState==='GROUND'&&
+   b.lifeState!=='SPLATTED');
+  const side=(team:Team.A|Team.B)=>active.filter(b=>b.team===team);
+  const a=side(Team.A),b=side(Team.B);
+  const pairs=a.flatMap(left=>b.map(right=>{
+   const native=this.nav.auditPath(left.position,right.position);
+   const realDistance=Math.hypot(
+    left.position.x-right.position.x,
+    left.position.y-right.position.y,
+    left.position.z-right.position.z);
+   const credibleNativeEndpoints=native.reachedTarget&&
+    native.startSnapDistanceMeters<=.20&&
+    native.endSnapDistanceMeters<=.20&&native.pointCount>0;
+   return {actors:[left.id,right.id] as [string,string],
+    positions:[left.position.toArray(),right.position.toArray()],
+    directDistanceMeters:realDistance,
+    nativePathReported:native.reachedTarget,
+    credibleNativeEndpoints,
+    nativeStartSnapMeters:native.startSnapDistanceMeters,
+    nativeEndSnapMeters:native.endSnapDistanceMeters,
+    nativePointCount:native.pointCount};
+  }));
+  const credible=pairs.filter(p=>p.credibleNativeEndpoints).length;
+  return {
+   status:credible===0?'HOLD_NO_CROSS_TEAM_NATIVE_FOOT_PATH':
+    'HOLD_NATIVE_ROUTE_REQUIRES_ORIGINAL_KCC_AND_ACTOR_EVIDENCE',
+   sourceOnly:true,
+   exactNativeCpuFootPairs:true,
+   syntheticCombatantPlacements:0,
+   cpuA:a.map(x=>x.id),cpuB:b.map(x=>x.id),
+   cpuARealFeet:a.map(x=>({id:x.id,foot:x.position.toArray()})),
+   cpuBRealFeet:b.map(x=>({id:x.id,foot:x.position.toArray()})),
+   pairCount:pairs.length,
+   credibleNativeEndpointPairs:credible,
+   shortestCrossTeamDistanceMeters:Math.min(
+    Infinity,...pairs.map(p=>p.directDistanceMeters)),
+   shortestCrossTeamPair:pairs.length?pairs.reduce((u,v)=>
+    u.directDistanceMeters<=v.directDistanceMeters?u:v):null,
+   pairs,
+   originalSourceSolids:this.stage.solids.length,
+   originalPaintSurfaces:this.stage.paintSurfaces.length,
+   originalNavLinks:this.stage.navigationLinks?.length,
+   sourceScoreablePromotions:0,
+   physicalActorTeleports:0,
+   originSetActorBancAuthenticated:false,
+   nativePathIsNotPhysicalKccCertification:true,
+   realEnemyEngagementCertified:false,
+   productionAuthorized:false
+  };
+ }
  private routeFor(id:string){
   const route=this.routePlan.routes.find(r=>r.actorId===id);
   if(!route)throw Error('T21_F3_SOURCE_ROUTE_MISSING_'+id);

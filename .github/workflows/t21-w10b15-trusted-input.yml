@@ -4,6 +4,7 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/UndertowF3SourceTraffic.ts'
       - 'src/input/PlayerInput.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/projectile/ProjectileSystem.ts'
@@ -16,7 +17,7 @@ permissions:
 jobs:
   trusted-input-chrome:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,6 +35,10 @@ jobs:
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Certify native CPU visible respawn from identical-camera real PNG pixels
         run: node scripts/t21-w10b15-pixel-diff.mjs /tmp/t21-f3-playable-webgl2
+      - name: W10-B16 true source-native seven CPU autonomous patrol and ink, diagnose absent cross-team path
+        env:
+          T21_W10B16_NATURAL_AI: '1'
+        run: node scripts/t21-f3-browser-smoke.mjs
       - name: Preserve real Chromium frames and QA evidence
         if: always()
         uses: actions/upload-artifact@v4

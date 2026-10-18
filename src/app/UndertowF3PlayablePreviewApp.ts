@@ -369,6 +369,7 @@ export class UndertowF3PlayablePreviewApp{
    armW10B14RealProjectiles:()=>this.armW10B14RealProjectiles(),
    w10B14RenderWitness:()=>this.w10B14RenderWitness(),
    inspectW10B15NativePad:()=>this.inspectW10B15NativePad(),
+   auditW10B16NaturalEnemyAccess:()=>this.auditW10B16NaturalEnemyAccess(),
    resume:()=>{if(!this.stopReason)this.paused=false;this.refresh();return this.snapshot();},
    restart:()=>{this.restart();return this.snapshot();}};
   (window as unknown as {__t21F3?:typeof api}).__t21F3=api;
@@ -647,6 +648,31 @@ export class UndertowF3PlayablePreviewApp{
    throw Error('T21_W10B14_ACTUAL_PLAYER_KCC_NOT_AT_SOURCE_FOOT');
   w.armed=true;
   return this.w10B14RenderWitness();
+ }
+ /** Read-only browser witness of unassisted, original-source CPU traffic.
+  * No QA enemy foot reposition, aim auto-assistance or target injection. */
+ private auditW10B16NaturalEnemyAccess(){
+  const q=new URL(location.href).searchParams;
+  if(q.get('t21Play')!=='preview'||
+     q.get('t21QaDrive')!=='source'||
+     q.get('t21W10B16')!=='sourceAutonomy'||
+     !this.paused||this.stopReason||
+     document.pointerLockElement===this.canvas||this.w10b14||
+     this.matchState!=='PLAYING')
+   throw Error('T21_W10B16_NATURAL_UNASSISTED_SOURCE_QA_REQUIRED');
+  const audit=this.traffic.auditW10B16NaturalEnemyAccess();
+  return {...audit,tick:this.clock.tick,
+   matchState:this.matchState,
+   timeRemainingSeconds:this.remainingSeconds,
+   sourcePatrol:this.traffic.snapshot().sourcePatrol,
+   originalCpuWeaponShots:this.stats.cpuShots,
+   naturalCpuSourceTurfShots:this.stats.cpuSourceTurfShots,
+   nativeCpuTurfInkImpacts:this.stats.cpuProjectilePaintHits,
+   inkCellsChanged:this.stats.cpuInkCellsChanged,
+   cpuSourceTurfShotsByActor:this.cpu.qaTurfShotSnapshot(),
+   nativeCpuSplatCount:this.stats.cpuSplats,
+   nativeHumanCombatHits:this.stats.cpuCombatHits,
+   sourceAuthorizedNatural4v4:false};
  }
  /** Fixed source-only camera, never an actor or collision reposition.
   * B1 stays splatted during the empty-pad screenshot; the same camera

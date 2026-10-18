@@ -105,15 +105,18 @@ async function main(){
  });
  const w10b14=process.env.T21_W10B14_RENDER_QA==='1';
  const w10b15=process.env.T21_W10B15_TRUSTED_INPUT==='1';
- if(w10b14&&w10b15)reject('CONFLICTING_QA_MODES');
+ const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
+ if([w10b14,w10b15,w10b16].filter(Boolean).length>1)
+  reject('CONFLICTING_QA_MODES');
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
- const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa;
+ const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa||w10b16;
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'+
   ((w10b14||w10b15)?'&t21QaDrive=source&t21QaInput=deterministic&'+
    't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
+  (w10b16?'&t21W10B16=sourceAutonomy':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -716,6 +719,81 @@ async function main(){
       nav:completed.originalSourceNavigationLinks
     }));
    console.log('T21_F3_REAL_CPU_KIT_QA_EVIDENCE',JSON.stringify(report));
+  }
+  if(w10b16){
+   const checkpoints=[];
+   for(let batch=1;batch<=15;batch++){
+    completed=await evaluate('window.__t21F3.advanceQaTicks(72)');
+    if(completed.stopReason||completed.sourceGeometryChanged||
+       completed.sourceScoreablePromotions!==0||
+       completed.cpu.physicalFootRelocations!==0||
+       completed.cpu.physicalRejoins.length!==7||
+       completed.originalSourceSolids!==25||
+       completed.originalPaintSurfaces!==17||
+       completed.originalSourceNavigationLinks!==26)
+     reject('W10B16_AUTHORITY_OR_PHYSICAL_CONTINUITY_DRIFT_'+
+      JSON.stringify({batch,stop:completed.stopReason,cpu:completed.cpu}));
+    if(batch%5===0){
+     checkpoints.push({tick:completed.tick,
+      perCpu:completed.cpu.cpu.map(({id,physicalFoot,mobilityState})=>({
+       id,realPhysicalFoot:physicalFoot,mobilityState})),
+      originalSourceShots:completed.cpuSourceTurfShots,
+      originalPaintHits:completed.cpuProjectilePaintHits,
+      actualInkCellsChanged:completed.cpuInkCellsChanged,
+      sourcePatrol:completed.cpu.sourcePatrol});
+    }
+   }
+   const audit=await evaluate('window.__t21F3.auditW10B16NaturalEnemyAccess()');
+   const properPairInventory=audit.pairCount===12&&audit.cpuA.length===3&&
+    audit.cpuB.length===4;
+   const turfShotCounts=Object.values(audit.cpuSourceTurfShotsByActor||{});
+   if(!properPairInventory||audit.syntheticCombatantPlacements!==0||
+      audit.physicalActorTeleports!==0||
+      audit.originalSourceSolids!==25||
+      audit.originalPaintSurfaces!==17||audit.originalNavLinks!==26||
+      audit.sourceScoreablePromotions!==0||
+      audit.productionAuthorized!==false||
+      audit.realEnemyEngagementCertified!==false||
+      audit.nativePathIsNotPhysicalKccCertification!==true||
+      audit.sourcePatrol.travelMeters<5||
+      audit.sourcePatrol.realGoalRequests<7||
+      !Number.isFinite(audit.shortestCrossTeamDistanceMeters)||
+      audit.naturalCpuSourceTurfShots<1||
+      audit.nativeCpuTurfInkImpacts<1||
+      audit.inkCellsChanged<1||
+      turfShotCounts.reduce((sum,n)=>sum+n,0)!==audit.naturalCpuSourceTurfShots)
+     reject('W10B16_NATIVE_AI_ORIGINAL_TURF_NOT_LIVE_'+JSON.stringify(audit));
+   if(audit.credibleNativeEndpointPairs===0&&
+      audit.status!=='HOLD_NO_CROSS_TEAM_NATIVE_FOOT_PATH')
+     reject('W10B16_NO_PATH_MISCLASSIFIED_'+JSON.stringify(audit));
+   if(audit.credibleNativeEndpointPairs>0&&
+      audit.status!=='HOLD_NATIVE_ROUTE_REQUIRES_ORIGINAL_KCC_AND_ACTOR_EVIDENCE')
+     reject('W10B16_UNPROVEN_PATH_MISCLASSIFIED_'+JSON.stringify(audit));
+   const report={
+    phase:'W10-B16',status:'PASS_REAL_NATIVE_CPU_AUTONOMOUS_PATROL_AND_SOURCE_TURF',
+    naturalCrossTeamMatchStatus:audit.status,
+    realCpuOpponentEngagementCertified:false,
+    exactSourceCpuSpawnsPreserved:true,
+    userControlledHumanRepositionedForSourceLane:false,
+    noCombatTargetTeleport:true,
+    naturalSessionUsesRapierAndRecast:true,
+    browserFixedTickQa:true,
+    realOriginalStageOnly:true,
+    checkpoints,audit};
+   const frame=await screenshot('W10B16_REAL_SEVEN_CPU_NATURAL_PATROL');
+   report.frame=frame;
+   writeFileSync(resolve(OUTPUT,'w10b16-native-autonomous-real-chrome.json'),
+    JSON.stringify(report,null,2));
+   console.log('T21_W10B16_NATIVE_SOURCE_AUTONOMY',JSON.stringify({
+    status:report.status,encounterHold:audit.status,
+    nativeA:audit.cpuA,nativeB:audit.cpuB,realPairs:audit.pairCount,
+    nativeCrossRoutes:audit.credibleNativeEndpointPairs,
+    nearestGap:audit.shortestCrossTeamDistanceMeters,
+    realTurfShots:audit.naturalCpuSourceTurfShots,
+    actualInkImpacts:audit.nativeCpuTurfInkImpacts,
+    cellsChanged:audit.inkCellsChanged,
+    sourcePatrolMeters:audit.sourcePatrol.travelMeters,
+    oneBrowserRealCpuFootWitness:true,productionAuthorized:false}));
   }
   const patrol=completed.cpu.sourcePatrol;
   console.log('T21_F3D_NATIVE_PATROL_COMBAT_EVIDENCE',JSON.stringify({
