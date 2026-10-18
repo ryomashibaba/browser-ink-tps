@@ -122,7 +122,8 @@ export class UndertowF3OwnerGpuTrial{
    }
    this.finishPhase(now,f);
    if(this.phaseIndex===2){
-    this.changeQuality('NATIVE');
+    // A2 switched back to NATIVE before it began; do not issue a
+    // redundant canvas reconfiguration on the final sampled callback.
     this.state='COMPLETE';
     this.completedReport={
      schema:'T21_W10B22_OWNER_RENDER_PLAY_TRIAL_V1',
