@@ -1,0 +1,38 @@
+name: T21 W10-B21 original-source frozen render-scale A-B-A
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b21-render-ab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-render-ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install public dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Build actual browser PlayCanvas source preview
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Validate browser QA syntax
+        run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: A-B-A frozen source-native GPU raster workload comparison
+        env:
+          T21_W10B21_RENDER_AB: '1'
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Save real Chrome same-camera frames and A-B-A report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-w10b21-original-frozen-render-ab
+          path: /tmp/t21-f3-playable-webgl2/
+          if-no-files-found: warn
+          retention-days: 14
