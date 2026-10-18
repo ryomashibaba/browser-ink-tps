@@ -30,7 +30,6 @@ import {initializeRecastNavigation,RecastStageNavigation}
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
 import {PlayerController} from '../player/PlayerController';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
-import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
@@ -537,7 +536,7 @@ export class UndertowF3PlayablePreviewApp{
    humanRepositionedForIsolatedQa:true,sourceSolidId:w.sourceSolidId,
    id:w.target.id,lifeState:w.target.lifeState,hp:w.target.hp,
    entityEnabled:e.enabled,
-   entityEnabledInHierarchy:e.enabledInHierarchy,
+   entityEnabledInHierarchy:e.enabled&&e.parent?.enabled===true,
    renderComponentPresent:!!e.render,
    renderComponentEnabled:e.render?.enabled===true,
    entityPosition:e.getPosition().toArray(),cpuFoot:w.target.position.toArray(),
@@ -573,7 +572,7 @@ export class UndertowF3PlayablePreviewApp{
    throw Error('T21_W10B14_ENEMY_NOT_ON_ORIGINAL_SOURCE_HIGH_PAD');
   // Only HUMAN is moved on the SAME source-authorized pad; no CPU warp.
   // This is isolated laboratory setup, not authored stage placement.
-  const dirs=[[0,1],[1,0],[-1,0],[0,-1],
+  const dirs: Array<[number,number]>=[[0,1],[1,0],[-1,0],[0,-1],
    [.707,.707],[-.707,.707],[.707,-.707],[-.707,-.707]];
   const chosen=dirs.map(([dx,dz])=>{
    const foot=new Vec3(target.position.x+dx*1.45,
@@ -590,7 +589,7 @@ export class UndertowF3PlayablePreviewApp{
     foot.clone().add(new Vec3(0,-.70,0)),'ink-projectile');
    return {foot,patch,wall,floor,nav};
   }).find(p=>p.patch&&!p.wall&&p.floor?.solidId===support.solidId&&
-   p.nav.distance(p.foot)<.25);
+   Math.hypot(p.nav.x-p.foot.x,p.nav.y-p.foot.y,p.nav.z-p.foot.z)<.25);
   if(!chosen)throw Error('T21_W10B14_SOURCE_LOCAL_SHOT_LANE_HOLD');
   for(const bot of bots){
    bot.agent?.resetMoveTarget();
