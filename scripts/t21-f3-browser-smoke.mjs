@@ -210,6 +210,16 @@ async function main(){
    windowsVirtualKeyCode:27,nativeVirtualKeyCode:27
   });
   await waitUntil(async()=>await evaluate('document.pointerLockElement===null'),12000);
+  const padEmpty=await evaluate('window.__t21F3.inspectW10B15NativePad()');
+  if(!padEmpty.cameraOnly||padEmpty.physicalActorsMoved!==0||
+     padEmpty.productionAuthorized!==false||padEmpty.originalSolids!==25||
+     padEmpty.originalPaint!==17||padEmpty.originalLinks!==26||
+     padEmpty.cpuState!=='SPLATTED'||padEmpty.cpuEntityEnabled!==false||
+     !padEmpty.screen||Math.abs(padEmpty.screen.x-800)>2||
+     Math.abs(padEmpty.screen.y-450)>2)
+   reject('W10B15_EMPTY_PAD_CAMERA_INVALID_'+JSON.stringify(padEmpty));
+  await sleep(300);
+  const emptyPadShot=await screenshot('W10B15_2_NATIVE_PAD_BEFORE_RESPAWN');
   let respawn=null;
   for(let n=0;n<20;n++){
    await advance(12);
@@ -221,7 +231,17 @@ async function main(){
      respawn.stopReason||respawn.sourceSolids!==25||respawn.sourcePaint!==17||
      respawn.sourceLinks!==26||respawn.activationReady!==false)
    reject('W10B15_REAL_CPU_RESPAWN_BROKEN_'+JSON.stringify(respawn));
-  const respawnFrame=await screenshot('W10B15_2_RESPAWNED');
+  const padFilled=await evaluate('window.__t21F3.inspectW10B15NativePad()');
+  if(!padFilled.cameraOnly||padFilled.physicalActorsMoved!==0||
+     padFilled.productionAuthorized!==false||
+     padFilled.cpuState!=='ACTIVE'||padFilled.cpuEntityEnabled!==true||
+     JSON.stringify(padFilled.viewPosition)!==JSON.stringify(padEmpty.viewPosition)||
+     JSON.stringify(padFilled.lookAt)!==JSON.stringify(padEmpty.lookAt)||
+     !padFilled.screen||Math.abs(padFilled.screen.x-800)>2||
+     Math.abs(padFilled.screen.y-450)>2)
+   reject('W10B15_OCCUPIED_PAD_CAMERA_DRIFT_'+JSON.stringify({padEmpty,padFilled}));
+  await sleep(300);
+  const respawnFrame=await screenshot('W10B15_3_NATIVE_PAD_AFTER_RESPAWN');
   const out={status:'PASS_REAL_CHROME_TRUSTED_MOUSE_INPUT_NATIVE_COMBAT',
    originalStageAuthorityChanged:false,isolatedQaEnemyPlacement:true,
    mousePointerLock:true,unassistedCameraAim:true,
@@ -229,7 +249,9 @@ async function main(){
    actualPlayerShots:splat.shotsFired-shotsBefore,
    realCpuSplats:1,realCpuRespawns:1,respawnHp:100,
    scoreableSurfacesAuthorized:0,naturalEncounterCertified:false,
-   pixelsIndependentlyCertified:false,sourceSolids:25,paintSurfaces:17,
+   pixelsIndependentlyCertified:false,nativePadCameraOnly:true,
+   sourcePixelComparisonPending:true,padEmpty,padFilled,emptyPadShot,
+   sourceSolids:25,paintSurfaces:17,
    navLinks:26,productionAuthorized:false,aimTrace:trace,
    stages:[{phase:'SPLAT',state:splat,frame:deathFrame},
     {phase:'RESPAWN',state:respawn,frame:respawnFrame}]};
