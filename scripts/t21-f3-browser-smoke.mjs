@@ -234,6 +234,48 @@ async function main(){
    nativeRestored:true,sourceSolids:25,sourceScoring:0,
    notOwnerWindowsGpu:true
   }));
+  // B25 source-only practice requires a real user start and real pointer
+  // ownership. Do not advance a synthetic 60Hz clock to claim success.
+  const paintRunArm=await evaluate(`(() => {
+   const root=document.querySelector('#t21-f3-b25-paint-run');
+   const btn=document.querySelector('#t21-f3-b25-start');
+   if(!root||!btn)return {error:'B25_PRACTICE_CONTROLS_NOT_INSTALLED'};
+   if(root.dataset.sourceOnly!=='true'||root.dataset.scoreable!=='0'||
+      root.dataset.productionAuthority!=='NONE')
+    return {error:'B25_SOURCE_ONLY_AUTHORITY_DRIFT'};
+   btn.click();
+   return window.__t21F3.snapshot().b25SourcePaintRun;
+  })()`);
+  if(paintRunArm?.status!=='ARMED'||paintRunArm.officialWinner!=='NONE'||
+     paintRunArm.physicalStageModifications!==0)
+   reject('W10B25_PRACTICE_MUST_ARM_NONSCORING_'+JSON.stringify(paintRunArm));
+  await mouse('mousePressed');await mouse('mouseReleased');
+  const paintRunLive=await waitUntil(async()=>{
+   const st=await evaluate('window.__t21F3.snapshot()');
+   if(st.stopReason)reject('W10B25_NATIVE_SOURCE_STOP_'+st.stopReason);
+   return st.b25SourcePaintRun.status==='RUNNING'?st:false;
+  },25000);
+  if(paintRunLive.b25SourcePaintRun.mode!=='OPTIONAL_NONSCORING_SOURCE_PAINT_RUN'||
+     paintRunLive.b25SourcePaintRun.cpuPaintingCounted!==false||
+     paintRunLive.b25SourcePaintRun.originalTurfScore!=='UNAVAILABLE'||
+     paintRunLive.b25SourcePaintRun.officialWinner!=='NONE'||
+     paintRunLive.sourceScoreablePromotions!==0||
+     paintRunLive.originalSourceSolids!==25)
+   reject('W10B25_NATIVE_PRACTICE_AUTHORITY_'+JSON.stringify(paintRunLive.b25SourcePaintRun));
+  await evaluate('document.exitPointerLock()');
+  const paintRunAborted=await waitUntil(async()=>{
+   const state=await evaluate('window.__t21F3.snapshot()');
+   return state.b25SourcePaintRun.status==='ABORTED'?state:false;
+  },25000);
+  if(paintRunAborted.b25SourcePaintRun.abortReason!=='PLAYER_POINTER_UNLOCKED'||
+     paintRunAborted.b25SourcePaintRun.officialWinner!=='NONE')
+   reject('W10B25_SOURCE_PRACTICE_ABORT_UNSAFE_'+
+    JSON.stringify(paintRunAborted.b25SourcePaintRun));
+  console.log('T21_W10B25_REAL_CHROME_USER_PRACTICE_ARM_RUN_ABORT_PASS',JSON.stringify({
+   sourceOnly:true,realInput:true,nativePhysicsTicks:paintRunLive.tick,
+   practiceWasRunning:true,pointerUnlockAborts:true,
+   fakeScore:0,natural4v4Certified:false
+  }));
   return;
  }
  if(w10b15){
