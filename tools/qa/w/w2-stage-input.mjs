@@ -120,8 +120,9 @@ export function patchNativeCrowd(native){
     '  if(sourceSupported&&boundedStep&&!w3Compatible)this.w3GuardedTicks++;',
     '  if(!sourceSupported||!boundedStep||!w3Compatible){'
    ].join('\n')],
-  [/detaches:this\.detaches,airborneOrUnverifiableTicks:this\.excluded,/g,
-   m=>m+"\n   w3GuardedTicks:this.w3GuardedTicks,projectionGuard:{...this.w3ProjectionGuard},crowdAvoidanceCertified:false,"]
+   // Snapshot attributes can be reordered in the historical Windows source.
+   [/(get\s+snapshot\s*\(\s*\)\s*\{\s*return\s*\{)/g,
+    m=>m+"\n   w3GuardedTicks:this.w3GuardedTicks,projectionGuard:{...this.w3ProjectionGuard},crowdAvoidanceCertified:false,"]
  ];
  let result=native;
  for(let i=0;i<changes.length;i++){
