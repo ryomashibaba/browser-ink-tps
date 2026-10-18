@@ -24,6 +24,7 @@ import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
 import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
+import {UndertowF3SourcePaintRun} from './UndertowF3SourcePaintRun';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {CrowdAgent} from 'recast-navigation';
@@ -183,6 +184,9 @@ export class UndertowF3PlayablePreviewApp{
  private readonly obstructionNotice:HTMLElement;
  private readonly b23InkFeedback=new UndertowF3SourceInkFeedback();
  private readonly b23PaintMarker:HTMLElement;
+ private readonly b25Run=new UndertowF3SourcePaintRun();
+ private readonly b25RunButton:HTMLButtonElement;
+ private readonly b25RunProgress:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
  private readonly b22Trial:UndertowF3OwnerGpuTrial;
  private readonly b22StartButton:HTMLButtonElement;
@@ -449,6 +453,49 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  const challenge=document.createElement('section');
+  challenge.id='t21-f3-b25-paint-run';
+  challenge.dataset.sourceOnly='true';
+  challenge.dataset.scoreable='0';
+  challenge.dataset.productionAuthority='NONE';
+  challenge.style.cssText='position:fixed;bottom:18px;right:16px;z-index:39;'+
+   'box-sizing:border-box;width:min(256px,calc(100vw - 32px));'+
+   'background:linear-gradient(145deg,rgba(6,29,42,.94),rgba(10,39,55,.94));'+
+   'border:1px solid rgba(95,232,245,.48);border-radius:12px;'+
+   'padding:10px 12px;box-shadow:0 10px 30px #0009;'+
+   'color:#edfcff;font:600 11px/1.4 system-ui,sans-serif';
+  challenge.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:5px">'+
+   '<strong style="letter-spacing:.9px;color:#93f3ee">SOURCE PAINT RUN</strong>'+
+   '<small style="color:#ffcb9d;font-size:9px">PRACTICE · UNSCORED</small></div>'+
+   '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
+   'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
+   '<button id="t21-f3-b25-start" type="button" style="width:100%;'+
+   'font:800 11px system-ui;background:#49d6df;color:#092231;'+
+   'border:0;border-radius:7px;padding:8px;cursor:pointer">'+
+   'START PAINT RUN</button>';
+  ui.appendChild(challenge);
+  this.b25RunButton=challenge.querySelector('#t21-f3-b25-start') as HTMLButtonElement;
+  this.b25RunProgress=challenge.querySelector('#t21-f3-b25-progress') as HTMLElement;
+  this.b25RunButton.addEventListener('click',()=>{
+   if(document.pointerLockElement===this.canvas||this.paused||this.stopReason||
+      this.matchState==='TIME_UP'||this.survey.snapshot().active||
+      this.galleryIndex>=0||['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
+    this.b25RunProgress.textContent='Exit pause/survey and unlock mouse before arming.';
+    return;
+   }
+   if(this.b25Run.arm()){
+    this.b25RunProgress.textContent='ARMED · Click stage to lock mouse, then paint and move.';
+    this.b25RunButton.textContent='PAINT RUN ARMED';
+    this.b25RunButton.disabled=true;
+   }
+  });
+  document.addEventListener('pointerlockchange',()=>{
+   if(document.pointerLockElement!==this.canvas&&
+      this.b25Run.snapshot().status==='RUNNING'){
+    this.b25Run.abort('PLAYER_POINTER_UNLOCKED');
+    this.refreshB25PaintRun();
+   }
+  });
   this.radar=createF3SourceRadar(ui,stage);
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
@@ -767,6 +814,7 @@ export class UndertowF3PlayablePreviewApp{
   if(this.survey.snapshot().active||this.galleryIndex>=0)return;
   if(this.stopReason)return;
   this.paused=!this.paused;
+  if(this.paused)this.b25Run.abort('SESSION_PAUSED');
   this.refresh();
  }
  /** Read-only live PlayCanvas render-component witness, not pixel-mask proof. */
@@ -1160,6 +1208,24 @@ export class UndertowF3PlayablePreviewApp{
       this.respawnFrames=0;
      }
     }else this.respawnFrames=0;
+    const actualHumanInk=this.b23InkFeedback.snapshot(frame);
+    const realFoot=this.player.getPosition(this.p);
+    this.b25Run.observe({
+     tick:frame,paused:this.paused,stopReason:this.stopReason,
+     inputLocked:document.pointerLockElement===this.canvas,
+     sessionEnded:this.matchState==='TIME_UP',
+     sourceSolids:this.rawStage.solids.length,
+     paintableSurfaces:this.rawStage.paintSurfaces.length,
+     originalNavLinks:this.rawStage.navigationLinks?.length??0,
+     scoreableSurfaces:0,
+     foot:{x:realFoot.x,y:realFoot.y,z:realFoot.z,
+      grounded:this.stats.playerGrounded,alive:this.resources.currentHp>0,
+      realPhysicalOriginalStage:true},
+     ink:{changedHumanImpactCells:actualHumanInk.humanChangedCells,
+      changedHumanImpactEvents:actualHumanInk.humanChangedImpactCount,
+      sourceOnly:actualHumanInk.originalSourceOnly,
+      scoreablePromotionCount:0}
+    });
     const physical=this.player.getPosition(this.p);
     // No guessed exterior kill threshold; out-of-world motion is a
     // visible fail-closed hold until the user intentionally restarts.
@@ -1210,6 +1276,7 @@ export class UndertowF3PlayablePreviewApp{
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
    this.b20ProfileStop('inkAtlasMeshBuild',atlasStart);
    this.refreshB23PaintFeedback();
+   if(this.renderedFrames%6===0)this.refreshB25PaintRun();
    this.stats.frame(dt*1000);
    this.renderedFrames++;
    if(this.renderedFrames%12===0)this.refresh();
@@ -1221,6 +1288,27 @@ export class UndertowF3PlayablePreviewApp{
    console.error('T21_F3_FAIL_CLOSED',error);
    this.refresh();
   }
+ }
+ private refreshB25PaintRun(){
+  const run=this.b25Run.snapshot();
+  const button=this.b25RunButton;
+  if(run.status==='IDLE')return;
+  button.disabled=run.status==='ARMED'||run.status==='RUNNING';
+  button.textContent=run.status==='CLEAR'||run.status==='TIME_UP'||
+   run.status==='ABORTED'?'RETRY PAINT RUN':'PAINT RUN ACTIVE';
+  if(run.status==='ARMED'){
+   this.b25RunProgress.textContent='ARMED · Click the stage to play.';
+   return;
+  }
+  const progress='PAINT '+run.humanChangedImpactCells+'/'+
+   run.requiredHumanChangedCells+' real cells\nGROUND '+
+   run.realGroundedTravelMeters.toFixed(1)+'/'+
+   run.requiredRealGroundedTravelMeters+' m';
+  this.b25RunProgress.textContent=
+   run.status==='CLEAR'?'PRACTICE CLEAR · NOT A MATCH WIN\n'+progress:
+   run.status==='TIME_UP'?'PRACTICE TIME UP · NO WINNER\n'+progress:
+   run.status==='ABORTED'?'INTERRUPTED · '+run.abortReason+'\n'+progress:
+   run.secondsRemaining+'s LEFT · '+progress;
  }
  private refreshB23PaintFeedback(){
   const event=this.b23InkFeedback.snapshot(this.clock.tick);
@@ -1261,6 +1349,7 @@ export class UndertowF3PlayablePreviewApp{
    b21RenderProbe:this.b21ProbeSnapshot(),
    b22OwnerGpuTrial:this.b22Trial.snapshot(performance.now()),
    b23HumanInkFeedback:this.b23InkFeedback.snapshot(this.clock.tick),
+   b25SourcePaintRun:this.b25Run.snapshot(),
    b20CpuPhaseProfile:this.b20ProfileSnapshot(),
    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
@@ -1377,6 +1466,10 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   'B25 SOURCE PAINT RUN · '+state.b25SourcePaintRun.status+
+    ' / '+state.b25SourcePaintRun.humanChangedImpactCells+
+    ' human cells / '+state.b25SourcePaintRun.realGroundedTravelMeters+
+    'm genuine grounded · NOT TURF',
    'B23 HUMAN INK · '+state.b23HumanInkFeedback.humanChangedImpactCount+
     ' real changed contacts / '+state.b23HumanInkFeedback.humanChangedCells+
     ' changed cells · UNSCORED',
