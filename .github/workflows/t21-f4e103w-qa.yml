@@ -22,6 +22,8 @@ on:
       - 'src/stage/undertow/UndertowW10SourceSeamSectionAudit.test.ts'
       - 'src/stage/undertow/UndertowW10SourceCandidateIsolation.ts'
       - 'src/stage/undertow/UndertowW10SourceCandidateIsolation.test.ts'
+      - 'src/stage/undertow/UndertowW10SourceSeamContactAudit.ts'
+      - 'src/stage/undertow/UndertowW10SourceSeamContactAudit.test.ts'
       - 'src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.gitattributes'
@@ -128,6 +130,8 @@ jobs:
         run: npx vitest run src/stage/undertow/UndertowW10SourceSeamSectionAudit.test.ts
       - name: W10-B7 five exact source component NavMesh ablations (no runtime promotion)
         run: npx vitest run src/stage/undertow/UndertowW10SourceCandidateIsolation.test.ts
+      - name: W10-B8 original source 3D seam distance and isolated Human KCC witness
+        run: npx vitest run src/stage/undertow/UndertowW10SourceSeamContactAudit.test.ts
       - name: W9 separately sourced real CPU-projectile to real Human HP gate
         run: npx vitest run src/stage/undertow/UndertowPhase14NRealCpuToPlayerProjectileQa.test.ts
       - name: PowerShell script parser
