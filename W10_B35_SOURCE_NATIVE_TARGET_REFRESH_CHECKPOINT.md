@@ -23,7 +23,24 @@ Authentic stage physical provenance remains **25 certified source solids, 17 ori
 
 ## Final evidence and decision
 
-See the real WebGL2/native seven CPU integration run [39227886617](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39227886617). Runtime TypeScript build and B35 isolated unit/source scripts passed. **Final end-to-end result and decision must be populated from the completed, source-verified 1800→2880 A/B report; do not infer a win merely from fewer native requests.**
+[Actual original-stage Chrome seven native CPU and true human trusted input A/B](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39227886617): **SUCCESS** on B35 source code commit `f1d37dd6af8c`. TypeScript build, B35 native retarget unit tests **3/3**, B31/B33/B34 ranking tests **8/8**, trusted source human/CPU splat/respawn and original real WebGL2 CPU seven-agent source comparison all PASS. Both modes physically advanced to exactly source native **tick 1800** then compared only the **subsequent 1,080 fixed ticks**. Physical checkpoints identical: `[2160,2520,2880]`; **absolute tick offset 0**. Counters subtract each session's tick-1800 baseline, avoiding inflated pre-onboarding source paint or patrol.
+
+| Genuine IN-WINDOW original-source metric | Proven FIXED default | B35 sparse native target experiment | B35/FIXED |
+|---|---:|---:|---:|
+| Authoritative changed source ink cells (non-scoring) | **1,407** | **1,124** | **79.89% FAIL** |
+| Accepted true source paint shots | **21** | **16** | **76.19% FAIL** |
+| Real original ink impacts | **20** | **18** | **90%** |
+| Physically supported source-foot patrol meters | **498.42** | **493.50** | **99.01% PASS** |
+| Near-stationary grounded original-foot samples | **78/7,560 (1.03%)** | **401/7,560 (5.30%)** | Worse |
+| Actually submitted original Recast native target calls | B35 gate not active | **248** | Research only |
+| Duplicate native target calls demonstrably suppressed | 0 | **511** | True technical optimization, no proved gameplay gain |
+| True original opponent crossing | 0/12 | 0/12 | HOLD |
+
+No cross-team source route, original SetActor transform, collision, scoreable surface, PvP match or official Turf winner was authorized.
+
+**Result:** B35 demonstrably reduced repeated native Recast goal submissions but **degraded ink output and shooting opportunities** in the actual equal-tick source-only sample. B32 provisional safety gates require at least 95% changed cells, 90% real shots and 90% source-foot travel. B35 **fails the first two**, passes mobility. Final verdict: `RETAIN_FIXED_AS_DEFAULT_WHILE_ADAPTIVE_IS_RESEARCH_OPT_IN`. Ordinary source-only T21 preview remains the previous fixed patrol with every native request; B35 is restricted to explicit `&t21W10B35=nativeTargetRefresh` and is **not recommended for promotion**. The result is observational from two independent browsers sharing native tick interval, not an owner RTX FPS test, randomized reproducible seeded replay, or human subjective gameplay test.
+
+**Next engineering priority:** Stop the B31–B35 cycle of unsuccessful source-only CPU retarget heuristics. Seek authentic `Vss_Temple01` original Banc/SetActor instance identity/transform/layer evidence to enable correct central geometry placement and KCC/recast original connectivity; absent evidence, prioritize a bounded human trial on the authenticated 25-solid floor rather than more AI micro-optimizations.
 
 ## Next
 
