@@ -51,9 +51,11 @@ export interface F3TrafficSnapshot{
   readonly travelMeters:number;
   readonly paintAwareModeEnabled:boolean;
   readonly actualOriginalInkOwnershipLookups:number;
+  readonly actualOriginalInkOwnershipSampled:number;
   readonly realPaintAwareGoalsAccepted:number;
   readonly paintAwareNonOwnedGoalsAccepted:number;
   readonly paintAwareOwnGoalsAccepted:number;
+  readonly paintAwareUnknownInkGoalsAccepted:number;
   readonly paintAwareRouteShortcutsGranted:0;
   readonly attemptsToCrossUnboundUnderpass:0;
   readonly activeTargets:readonly {id:string;position:[number,number,number]}[];
@@ -89,9 +91,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
  private actualOriginalInkOwnershipLookups=0;
+ private actualOriginalInkOwnershipSampled=0;
  private realPaintAwareGoalsAccepted=0;
  private paintAwareNonOwnedGoalsAccepted=0;
  private paintAwareOwnGoalsAccepted=0;
+ private paintAwareUnknownInkGoalsAccepted=0;
  private readonly physicallyFalling=new Set<string>();
  private readonly physicallyRejoined=new Set<string>();
  private readonly cleared=new Set<string>();
@@ -273,7 +277,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const ranked=this.enablePaintAwarePatrol&&this.sourceInk?
    rankOriginalSourcePatrolGoals(candidates,bot.team,this.sourceInk,first):
    null;
-  if(ranked)this.actualOriginalInkOwnershipLookups+=ranked.length;
+  if(ranked){
+   this.actualOriginalInkOwnershipLookups+=ranked.length;
+   this.actualOriginalInkOwnershipSampled+=
+    ranked.filter(r=>r.priority!=='UNSAMPLED').length;
+  }
   for(let tries=0;tries<candidates.length;tries++){
    const rank=ranked?.[tries];
    const index=rank?rank.index:(first+tries)%candidates.length;
@@ -303,6 +311,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(rank){
     this.realPaintAwareGoalsAccepted++;
     if(rank.priority==='OWN')this.paintAwareOwnGoalsAccepted++;
+    else if(rank.priority==='UNSAMPLED')
+     this.paintAwareUnknownInkGoalsAccepted++;
     else this.paintAwareNonOwnedGoalsAccepted++;
    }
    return true;
@@ -475,9 +485,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     travelMeters:this.travelMeters,
     paintAwareModeEnabled:this.enablePaintAwarePatrol&&!!this.sourceInk,
     actualOriginalInkOwnershipLookups:this.actualOriginalInkOwnershipLookups,
+    actualOriginalInkOwnershipSampled:this.actualOriginalInkOwnershipSampled,
     realPaintAwareGoalsAccepted:this.realPaintAwareGoalsAccepted,
     paintAwareNonOwnedGoalsAccepted:this.paintAwareNonOwnedGoalsAccepted,
     paintAwareOwnGoalsAccepted:this.paintAwareOwnGoalsAccepted,
+    paintAwareUnknownInkGoalsAccepted:this.paintAwareUnknownInkGoalsAccepted,
     paintAwareRouteShortcutsGranted:0,
     activeTargets:this.bots.flatMap(bot=>{
      const index=this.patrolIndex.get(bot.id)??-1;
