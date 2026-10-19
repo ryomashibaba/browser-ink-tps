@@ -25,6 +25,8 @@ import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
 import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
 import {UndertowF3SourcePaintRun} from './UndertowF3SourcePaintRun';
+import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
+ from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {CrowdAgent} from 'recast-navigation';
@@ -185,6 +187,12 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b23InkFeedback=new UndertowF3SourceInkFeedback();
  private readonly b23PaintMarker:HTMLElement;
  private readonly b25Run=new UndertowF3SourcePaintRun();
+ private readonly b27KineticView=new UndertowF3KineticView();
+ private readonly b27KineticEnabled=(()=>{
+  const q=new URL(location.href).searchParams;
+  return q.get('t21Play')==='preview'&&
+   (q.get('t21QaDrive')!=='source'||q.get('t21W10B27')==='kinetic');
+ })();
  private readonly b25RunButton:HTMLButtonElement;
  private readonly b25RunProgress:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
@@ -235,6 +243,8 @@ export class UndertowF3PlayablePreviewApp{
   });
   app.root.addChild(cameraEntity);
   this.playerCameraEntity=cameraEntity;
+  if(this.b27KineticEnabled&&cameraEntity.camera?.fov!==B27_SOURCE_BASE_FOV_DEGREES)
+   throw Error('T21_B27_ORIGINAL_CAMERA_BASE_FOV_CHANGED');
   this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,this.rawStage);
   this.nav=new RecastStageNavigation(this.rawStage,this.stats);
   this.physics=new RapierStagePhysics(STEP,this.rawStage);
@@ -1217,6 +1227,15 @@ export class UndertowF3PlayablePreviewApp{
     }else this.respawnFrames=0;
     const actualHumanInk=this.b23InkFeedback.snapshot(frame);
     const realFoot=this.player.getPosition(this.p);
+    if(this.b27KineticEnabled)
+     this.b27KineticView.sampleNativeFoot({
+      tick:frame,x:realFoot.x,y:realFoot.y,z:realFoot.z,
+      grounded:this.stats.playerGrounded,alive:this.resources.currentHp>0,
+      sourceOriginalCollisionOnly:
+       this.rawStage.solids.length===25&&
+       this.rawStage.paintSurfaces.length===17&&
+       this.rawStage.navigationLinks?.length===26
+     });
     this.b25Run.observe({
      tick:frame,paused:this.paused,stopReason:this.stopReason,
      inputLocked:document.pointerLockElement===this.canvas,
@@ -1244,6 +1263,7 @@ export class UndertowF3PlayablePreviewApp{
   this.updateW10B22OwnerTrial();
   if(this.paused||this.stopReason){
    this.lastSourceFrameAtMs=Number.NaN;
+   if(this.b27KineticEnabled)this.resetW10B27KineticLens();
    return;
   }
   try{
@@ -1278,6 +1298,16 @@ export class UndertowF3PlayablePreviewApp{
    this.cpuKit?.render(report.alpha);
    this.feedback.update(cameraDt);
    this.camera.update(this.visual,cameraDt);
+   if(this.b27KineticEnabled){
+    const realPlayerInput=document.pointerLockElement===this.canvas;
+    const gpuTrial=this.b22Trial.snapshot().status;
+    const excludeBenchmark=gpuTrial==='ARMED'||gpuTrial==='RUNNING';
+    const fov=this.b27KineticView.advanceVisual(
+     cameraDt,realPlayerInput,
+     this.paused||!!this.stopReason||excludeBenchmark);
+    const camera=this.playerCameraEntity.camera;
+    if(camera)camera.fov=fov;
+   }
    this.b20ProfileStop('entityAndCameraPreparation',entityRenderStart);
    const atlasStart=this.b20ProfileStart();
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
@@ -1295,6 +1325,11 @@ export class UndertowF3PlayablePreviewApp{
    console.error('T21_F3_FAIL_CLOSED',error);
    this.refresh();
   }
+ }
+ private resetW10B27KineticLens(){
+  this.b27KineticView.resetVisual();
+  const camera=this.playerCameraEntity.camera;
+  if(camera)camera.fov=B27_SOURCE_BASE_FOV_DEGREES;
  }
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
@@ -1357,6 +1392,10 @@ export class UndertowF3PlayablePreviewApp{
    b22OwnerGpuTrial:this.b22Trial.snapshot(performance.now()),
    b23HumanInkFeedback:this.b23InkFeedback.snapshot(this.clock.tick),
    b25SourcePaintRun:this.b25Run.snapshot(),
+   b27KineticSourceView:{
+    enabled:this.b27KineticEnabled,
+    ...this.b27KineticView.snapshot()
+   },
    b20CpuPhaseProfile:this.b20ProfileSnapshot(),
    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
@@ -1476,6 +1515,10 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   'B27 SOURCE MOTION · '+(state.b27KineticSourceView.enabled?'ON':'QA BASELINE')+
+    ' / real foot '+state.b27KineticSourceView.nativeGroundSpeedMetersPerSecond+
+    'm/s / visual FOV '+state.b27KineticSourceView.fieldOfViewDegrees+
+    '° · NO MOVEMENT CHANGE',
    'B25 SOURCE PAINT RUN · '+state.b25SourcePaintRun.status+
     ' / '+state.b25SourcePaintRun.humanChangedImpactCells+
     ' human cells / '+state.b25SourcePaintRun.realGroundedTravelMeters+
