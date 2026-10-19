@@ -548,6 +548,7 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.code==='KeyB')this.toggleF3iEnvironment();
    if(ev.code==='KeyG')this.cycleSourceGallery();
    if(ev.code==='KeyT')this.toggleTexturedF3l();
+   if(ev.code==='KeyY')this.toggleW10B30SourceCutaway();
   });
   const renderer=(app.graphicsDevice as {deviceType?:string}).deviceType;
   if(renderer!=='webgl2')throw Error('T21_F3_REAL_WEBGL2_REQUIRED');
@@ -800,6 +801,20 @@ export class UndertowF3PlayablePreviewApp{
   if(button)button.textContent='F3L original textures: '+
    (this.texturedF3lActive?'ON':'OFF')+' (T)';
   this.canvas.dataset.t21F3lOriginalTexture=this.texturedF3lActive?'ON':'OFF';
+  this.refresh();
+ }
+ private toggleW10B30SourceCutaway(){
+  // A static source floor is NOT certified collision; this optical
+  // review makes the already-existing original 25 Rapier floors visible
+  // without adding a single collider, route, ink surface or actor pose.
+  if(!this.b29ExplicitFullSourceReview||!this.texturedF3l||
+     !this.texturedF3l.root.enabled||
+     this.texturedF3lStatus!=='READY'||this.galleryIndex>=0||
+     this.survey.snapshot().active)return;
+  const next=this.texturedF3l.getReadabilityMode()==='ORIGINAL_UV'
+   ?'SOURCE_CUTAWAY':'ORIGINAL_UV';
+  this.texturedF3l.setReadabilityMode(next);
+  this.canvas.dataset.t21F3lReadability=next;
   this.refresh();
  }
  private toggleW10B28SourceMassing(){
@@ -1498,6 +1513,17 @@ export class UndertowF3PlayablePreviewApp{
     fallbackAvailable:this.wholeSourceStatus==='READY',
     ...B29_SOURCE_VISUAL_AUTHORITY
    },
+   b30SourcePhysicalReadability:{
+    mode:this.texturedF3l?.getReadabilityMode()??'UNAVAILABLE',
+    active:!!this.texturedF3l?.root.enabled,
+    originalSourceOnly:true,
+    ...this.texturedF3l?.b30NonGameplayAuthority,
+    originalPhysicsSolids:this.rawStage.solids.length,
+    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
+    originalNavLinks:this.rawStage.navigationLinks?.length??0,
+    certifiedOriginalScoreableSurfaces:0,
+    physicalSourceRouteAuthorityUnchanged:true
+   },
    texturedSourceF3l:{status:this.texturedF3lStatus,
     enabled:this.texturedF3l?.root.enabled??false,
     materialGroups:this.texturedF3l?.manifest.materials.length??0,
@@ -1621,6 +1647,8 @@ export class UndertowF3PlayablePreviewApp{
     (this.wholeSourceStatus==='READY'?' / '+
      this.wholeSourceTriangles+' original triangles':'')+
     ' · NO WALK / INK / NAV',
+   'B30 SOURCE CUTAWAY · '+state.b30SourcePhysicalReadability.mode+
+    ' / Y: original UV ↔ see-through optical source · NO NEW FOOTPATH',
    'B29 ORIGINAL STATIC STAGE · '+state.b29VerifiedSourcePresentation.selected+
     ' · pinned UV only / no original actor placements',
    'B28 ORIGINAL ARCHITECTURE · '+state.b28OriginalSourceMassing.mode+
