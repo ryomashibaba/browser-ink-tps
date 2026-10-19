@@ -1334,6 +1334,95 @@ async function main(){
     JSON.stringify(surveyResult,null,2));
    console.log('T21_W10B45_ORIGINAL_SOLID_ONLY_RAY_SURVEY',
     JSON.stringify(surveyResult));
+   // B45 stage 2: apply real pointer-locked CDP mouse movement toward a
+   // read-only short-range Rapier-FIRST ray. Projectile trajectory remains
+   // 100% native gravity/fuse; a winning straight line does NOT guarantee
+   // a winning actual ballistic bomb.
+   const b45Target=b45Survey.nearestRayCandidates.find(c=>
+    c.solidDistance<=3&&c.paintSurfaceId===null&&
+    c.sourceSolidId.includes('first-drop-landing-negative-z'))??null;
+   let b45ActualTrial=null, b45Aim=null;
+   if(b45Target){
+    await refill();
+    const locked=await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")');
+    if(!locked)reject('W10B45_NOT_REAL_POINTER_LOCK');
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800,y:450,button:'none'
+    });
+    const a0=await evaluate('window.__t21F3.snapshot()');
+    const wrapYaw=x=>((x+540)%360)-180;
+    const diffYaw=wrapYaw(b45Target.yaw-
+     a0.cameraSourcePractice.yawDegrees);
+    const diffPitch=b45Target.pitch-
+     a0.cameraSourcePractice.pitchDegrees;
+    const dx=Math.round(diffYaw/.22),dy=Math.round(-diffPitch/.18);
+    if(Math.abs(dx)>700||Math.abs(dy)>360)
+     reject('W10B45_REAL_MOUSE_TARGET_OUT_OF_BOUNDED_RANGE');
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800+dx,y:450+dy,button:'none'
+    });
+    let aimed=await evaluate('window.__t21F3.snapshot()');
+    let yawErr=wrapYaw(b45Target.yaw-
+     aimed.cameraSourcePractice.yawDegrees);
+    let pitchErr=b45Target.pitch-
+     aimed.cameraSourcePractice.pitchDegrees;
+    // One measured physical mouse correction; no writes to camera state.
+    if(Math.abs(yawErr)>3||Math.abs(pitchErr)>3){
+     await cmd('Input.dispatchMouseEvent',{
+      type:'mouseMoved',
+      x:800+dx+Math.round(yawErr/.22),
+      y:450+dy+Math.round(-pitchErr/.18),button:'none'
+     });
+     aimed=await evaluate('window.__t21F3.snapshot()');
+     yawErr=wrapYaw(b45Target.yaw-
+      aimed.cameraSourcePractice.yawDegrees);
+     pitchErr=b45Target.pitch-
+      aimed.cameraSourcePractice.pitchDegrees;
+    }
+    const distanceFoot=Math.hypot(...aimed.player.position.map(
+     (v,i)=>v-b45Survey.playerFoot[i]));
+    if(distanceFoot>.1||
+       aimed.originalSourceSolids!==25||
+       aimed.originalPaintSurfaces!==17||
+       aimed.sourceScoreablePromotions!==0)
+     reject('W10B45_NATIVE_FOOT_OR_ORIGINAL_SOURCE_DRIFT');
+    const aligned=Math.abs(yawErr)<=7&&Math.abs(pitchErr)<=7;
+    b45Aim={sourceTarget:b45Target,
+     before:{yaw:a0.cameraSourcePractice.yawDegrees,
+      pitch:a0.cameraSourcePractice.pitchDegrees},
+     after:{yaw:aimed.cameraSourcePractice.yawDegrees,
+      pitch:aimed.cameraSourcePractice.pitchDegrees},
+     actualYawErrorDegrees:yawErr,actualPitchErrorDegrees:pitchErr,
+     originalFootErrorMeters:distanceFoot,aligned,
+     actualPointerLockedMouse:true,syntheticCameraWrites:0};
+    if(aligned){
+     b45ActualTrial=await throwObserved('B45_REAL_MOUSE_SOURCE_RAPIER_RAY_TARGET');
+     if(b45ActualTrial.throwDelta!==1||
+        b45ActualTrial.explosionDelta!==1||
+        b45ActualTrial.scoreablePromotions!==0)
+      reject('W10B45_GENUINE_HUMAN_THROW_AUTHORITY_DRIFT');
+    }
+   }
+   const b45RealResult={
+    status:'B45_SOURCE_RAPIER_RAY_REAL_BALLISTIC_TRIAL_RECORDED',
+    rayTargetFound:b45Target!==null,
+    actualHumanKeyFTrialPerformed:b45ActualTrial!==null,
+    realMouseAim:b45Aim,
+    actualNativeBombTrial:b45ActualTrial,
+    actualRapierSolidContactSelected:
+     b45ActualTrial?.b43NativeExplosionWitness?.contactKind===
+      'RAPIER_STAGE_SOLID',
+    originalGameCollisionCertified:false,
+    originalSurfaceAuthority:[25,17,26,0],
+    anyArtificialWorldOrProjectileChange:false,
+    productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b45-real-targeted-rapier-bomb.json'),
+    JSON.stringify(b45RealResult,null,2));
+   console.log('T21_W10B45_REAL_TARGETED_RAPIER_BOMB',
+    JSON.stringify(b45RealResult));
+
 
 
 
