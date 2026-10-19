@@ -45,7 +45,7 @@ Explicit initial relative pass thresholds (not user-facing official Turf) requir
 - **Final code B21/B22/B23/B25/B26/B27/B28 real Chrome render A/B/A**: [39213335094](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39213335094) SUCCESS.
 - **Final code B14 native Chrome splat and respawn**: [39213335087](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39213335087) SUCCESS.
 - **Final code native Ubuntu+Windows source checks**: [39213335097](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39213335097) SUCCESS. Not the owner's Windows RTX hardware benchmark.
-- **Original 57,578-triangle source texture F3G/F3L full optical Chrome QA** [39213335075](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39213335075) was still running at checkpoint creation; check actual final conclusion before saying green.
+- **Original 57,578-triangle source texture F3G/F3L full optical Chrome QA** [39213335075](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39213335075): **SUCCESS** at final tested B32 runtime, without source optical pack promotion to gameplay collision.
 - Intermediate fail **39212604406**: workflow ran before new comparator file was committed, module-not-found; corrected. Intermediate fail **39212722338**: hard-coded equality of absolute physical tick stamps failed due 5-tick browser startup difference even though 360-tick measurement intervals were identical. Fixed comparator now transparently reports offsets rather than pretending fully identical start moments.
 
 ## What is still unproven / HOLD
