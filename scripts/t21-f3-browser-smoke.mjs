@@ -117,7 +117,8 @@ async function main(){
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
-  (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':''):'')+
+  (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':'')+
+   (process.env.T21_W10B34_STALL==='1'?'&t21W10B34=stallRecovery':''):'')+
   (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility&t21W10B27=kinetic':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
@@ -1371,6 +1372,14 @@ async function main(){
      reject('W10B16_UNPROVEN_PATH_MISCLASSIFIED_'+JSON.stringify(audit));
    if(process.env.T21_W10B31_INK_AWARE==='1'){
     const src=audit.sourcePatrol;
+    if(process.env.T21_W10B34_STALL==='1'&&(
+       src.b34StallRecoveryModeEnabled!==true||
+       src.stalledOriginalGoalReconsiderations<=0||
+       src.approvedAlternativeOriginalGoalsAfterStall<=0||
+       src.approvedAlternativeOriginalGoalsAfterStall>
+        src.stalledOriginalGoalReconsiderations))
+     reject('W10B34_REAL_ORIGINAL_GROUNDED_STALL_ESCAPES_NOT_PROVEN_'+
+      JSON.stringify(src));
     if(process.env.T21_W10B33_STABLE==='1'&&(
        src.stableSourceGoalModeEnabled!==true||
        src.continuedPreviouslyApprovedGoalRequests<=0||
@@ -1394,6 +1403,9 @@ async function main(){
       actualOwnerGridLookups:src.actualOriginalInkOwnershipLookups,
       actualOwnerGridSamples:src.actualOriginalInkOwnershipSampled,
       stableSourceGoalModeEnabled:src.stableSourceGoalModeEnabled,
+      sourceFootStallRecoveryEnabled:src.b34StallRecoveryModeEnabled,
+      actualStallReconsiderations:src.stalledOriginalGoalReconsiderations,
+      approvedOriginalAlternatives:src.approvedAlternativeOriginalGoalsAfterStall,
       continuedPreviouslyApprovedGoalRequests:
        src.continuedPreviouslyApprovedGoalRequests,
       switchedGoalBeforePreviousArrival:
