@@ -10,6 +10,9 @@ on:
       - 'src/app/UndertowF3SourceTraffic.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.test.ts'
+      - 'src/ai/OriginalSourceNativeTargetRefresh.ts'
+      - 'src/ai/OriginalSourceNativeTargetRefresh.test.ts'
+      - 'src/ai/CpuAgentSystem.ts'
       - 'scripts/t21-w10b32-compare-real-source.mjs'
       - 'src/input/PlayerInput.ts'
       - 'src/camera/ThirdPersonCamera.ts'
@@ -36,8 +39,8 @@ jobs:
         run: npm run build -- --base=/browser-ink-tps/
       - name: W10-B17 source-only HUD authority and 3-minute vitals tests
         run: npx vitest run src/app/UndertowF3PlayableHud.test.ts
-      - name: Unit test source-paint-aware real ownerGrid and no invented navigation
-        run: npx vitest run src/app/UndertowF3PaintAwarePatrol.test.ts
+      - name: Test source native goal refresh without false navigation and real ownerGrid ranking
+        run: npx vitest run src/app/UndertowF3PaintAwarePatrol.test.ts src/ai/OriginalSourceNativeTargetRefresh.test.ts
       - name: Check CDP test syntax
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: Prove pointer-locked actual mouse input through native CPU splat and respawn
@@ -55,22 +58,20 @@ jobs:
         run: |
           node scripts/t21-f3-browser-smoke.mjs
           cp /tmp/t21-f3-playable-webgl2/w10b16-native-autonomous-real-chrome.json /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json
-      - name: W10-B34 original source real-foot stall recovery same tick horizon, 7 real CPU actors
+      - name: W10-B35 real source fixed patrol with sparse native Crowd goal refresh, 7 actual CPU
         env:
           T21_W10B16_NATURAL_AI: '1'
-          T21_W10B31_INK_AWARE: '1'
-          T21_W10B33_STABLE: '1'
-          T21_W10B34_STALL: '1'
+          T21_W10B31_INK_AWARE: '0'
+          T21_W10B35_NATIVE: '1'
           T21_W10B34_ALIGN: '1'
           T21_W10B20_PROFILE: '1'
         run: |
           node scripts/t21-f3-browser-smoke.mjs
           cp /tmp/t21-f3-playable-webgl2/w10b16-native-autonomous-real-chrome.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json
-      - name: W10-B34 compare real source fixed vs grounded-stall recovery, never auto-promote
+      - name: W10-B35 compare original real fixed vs sparse native Crowd requests, keep default frozen
         env:
-          T21_W10B33_STABLE: '1'
-          T21_W10B34_STALL: '1'
-        run: node scripts/t21-w10b32-compare-real-source.mjs /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json /tmp/t21-f3-playable-webgl2/w10b34-stall-recovery-vs-fixed.json
+          T21_W10B35_NATIVE: '1'
+        run: node scripts/t21-w10b32-compare-real-source.mjs /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json /tmp/t21-f3-playable-webgl2/w10b35-fixed-vs-sparse-native.json
       - name: Preserve real Chromium frames and QA evidence
         if: always()
         uses: actions/upload-artifact@v4
