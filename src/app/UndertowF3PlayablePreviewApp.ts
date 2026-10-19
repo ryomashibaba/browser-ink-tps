@@ -319,8 +319,11 @@ export class UndertowF3PlayablePreviewApp{
   // audited original-side source foot candidates. Existing fixed
   // trusted-input QA stays deterministic without the explicit B31 flag.
   const b31Params=new URL(location.href).searchParams;
-  const b31Enabled=b31Params.get('t21QaDrive')!=='source'||
-   b31Params.get('t21W10B31')==='inkGoals';
+  // W10-B32 measured the genuine B31 adaptive mode below the fixed
+  // source-patrol painting throughput in an independent real-Chrome A/B.
+  // Keep the new logic available for explicit source-only experiments,
+  // but restore proven fixed patrol as the normal user-facing default.
+  const b31Enabled=b31Params.get('t21W10B31')==='inkGoals';
   this.traffic=new UndertowF3SourceTraffic(
    stage,this.nav,slots,bots,this.physics,this.ink,b31Enabled);
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
