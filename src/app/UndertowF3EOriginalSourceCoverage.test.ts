@@ -4,7 +4,8 @@ import {undertowT21dConnectivityQaStage}
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {PRODUCTION_STAGE_DEFINITION} from '../stage/StageDefinition';
-import {auditF3eSourceCoverage} from './UndertowF3EOriginalSourceCoverage';
+import {auditF3eSourceCoverage,f3eSourceMassingStyle,F3E_SOURCE_MASSING_MODES}
+ from './UndertowF3EOriginalSourceCoverage';
 
 describe('F3E all source backed architectural visual terrain only',()=>{
  it('assembles pinned original OBJ triangles with no fabricated floor, source gameplay authority or actor-set props',()=>{
@@ -37,5 +38,52 @@ describe('F3E all source backed architectural visual terrain only',()=>{
   expect(()=>auditF3eSourceCoverage(PRODUCTION_STAGE_DEFINITION))
    .toThrow('T21_F3E_IMMUTABLE_STAGE_AUTHORITY_REQUIRED');
   console.log('T21_F3E_ARCHITECTURAL_VISUAL_SOURCE',JSON.stringify(manifest));
+ });
+});
+
+describe('W10-B28 visual massing on actual source-only architecture',()=>{
+ it('makes original walls/pillars/high optical structures depth-writing opaque',()=>{
+  expect(F3E_SOURCE_MASSING_MODES).toEqual(['ARCHITECTURE','HOLOGRAM']);
+  for(const kind of ['WALL','SUPPORT','HIGH'] as const){
+   const mass=f3eSourceMassingStyle(kind,'ARCHITECTURE');
+   expect(mass).toMatchObject({opaque:true,depthWrite:true,opacity:1});
+   const old=f3eSourceMassingStyle(kind,'HOLOGRAM');
+   expect(old).toMatchObject({opaque:false,depthWrite:false});
+   expect(old.opacity).toBeLessThan(1);
+  }
+ });
+ it('never makes unverified floor/slope/underpass or glass opaque game surfaces',()=>{
+  for(const kind of ['CONCRETE','SLOPE','GLASS','DETAIL'] as const){
+   const mass=f3eSourceMassingStyle(kind,'ARCHITECTURE');
+   expect(mass.opaque).toBe(false);
+   expect(mass.depthWrite).toBe(false);
+   expect(mass.opacity).toBeLessThan(1);
+  }
+  expect(f3eSourceMassingStyle('GLASS','ARCHITECTURE').opacity)
+   .toBeLessThan(.25);
+ });
+ it('exact same source mesh audit and 25/17/26 original authority across both styles',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const before=[stage.solids,stage.paintSurfaces,stage.navigationLinks] as const;
+  const orig=auditF3eSourceCoverage(stage);
+  for(const mode of F3E_SOURCE_MASSING_MODES){
+   for(const k of Object.keys(orig.manifest.categories) as (
+    keyof typeof orig.manifest.categories)[]){
+     const style=f3eSourceMassingStyle(k,mode);
+     expect(style.rgb.every(x=>Number.isFinite(x)&&x>=0&&x<=1)).toBe(true);
+     expect(style.opacity).toBeGreaterThan(0);
+     expect(style.opacity).toBeLessThanOrEqual(1);
+    }
+   expect(auditF3eSourceCoverage(stage).manifest.originalTriangles)
+    .toBe(orig.manifest.originalTriangles);
+  }
+  expect(stage.solids).toBe(before[0]);
+  expect(stage.paintSurfaces).toBe(before[1]);
+  expect(stage.navigationLinks).toBe(before[2]);
+  expect(stage.solids.length).toBe(25);
+  expect(stage.paintSurfaces.length).toBe(17);
+  expect(stage.navigationLinks?.length).toBe(26);
+  expect(orig.manifest.addedPhysicalSolids).toBe(0);
+  expect(orig.manifest.productionAuthorized).toBe(false);
  });
 });
