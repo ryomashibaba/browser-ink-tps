@@ -57,6 +57,11 @@ export interface F3TrafficSnapshot{
   readonly requestedGoalLongHops:number;
   readonly requestedGoalShortHops:number;
   readonly requestedGoalLengthsSampled:number;
+  readonly trulyNewOriginalGoalSelections:number;
+  readonly newGoalDirectMeters:number;
+  readonly newGoalNativePathMeters:number;
+  readonly newGoalShortHops:number;
+  readonly newGoalLongHops:number;
   readonly paintAwareModeEnabled:boolean;
   readonly stableSourceGoalModeEnabled:boolean;
   readonly continuedPreviouslyApprovedGoalRequests:number;
@@ -108,6 +113,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private requestedGoalLongHops=0;
  private requestedGoalShortHops=0;
  private requestedGoalLengthsSampled=0;
+ private trulyNewOriginalGoalSelections=0;
+ private newGoalDirectMeters=0;
+ private newGoalNativePathMeters=0;
+ private newGoalShortHops=0;
+ private newGoalLongHops=0;
  private continuedPreviouslyApprovedGoalRequests=0;
  private switchedGoalBeforePreviousArrival=0;
  private actualOriginalInkOwnershipLookups=0;
@@ -354,6 +364,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.requestedGoalNativePathMeters+=nativeMeters;
     if(distance<4)this.requestedGoalShortHops++;
     if(distance>9)this.requestedGoalLongHops++;
+    // Count genuine DESTINATION CHANGES separately from 0.28s repeated
+    // requests to an existing original destination. Recast and Rapier
+    // approval remain exactly as before.
+    if(index!==active){
+     this.trulyNewOriginalGoalSelections++;
+     this.newGoalDirectMeters+=distance;
+     this.newGoalNativePathMeters+=nativeMeters;
+     if(distance<4)this.newGoalShortHops++;
+     if(distance>9)this.newGoalLongHops++;
+    }
    }
    this.patrolIndex.set(id,index);
    out.copy(goal);this.realGoalRequests++;
@@ -543,6 +563,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     requestedGoalShortHops:this.requestedGoalShortHops,
     requestedGoalLongHops:this.requestedGoalLongHops,
     requestedGoalLengthsSampled:this.requestedGoalLengthsSampled,
+    trulyNewOriginalGoalSelections:this.trulyNewOriginalGoalSelections,
+    newGoalDirectMeters:this.newGoalDirectMeters,
+    newGoalNativePathMeters:this.newGoalNativePathMeters,
+    newGoalShortHops:this.newGoalShortHops,
+    newGoalLongHops:this.newGoalLongHops,
     paintAwareModeEnabled:this.enablePaintAwarePatrol&&!!this.sourceInk,
     stableSourceGoalModeEnabled:this.enablePaintAwarePatrol&&
      !!this.sourceInk&&this.enableStableSourceGoal,
