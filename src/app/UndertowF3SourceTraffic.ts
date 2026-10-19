@@ -49,6 +49,14 @@ export interface F3TrafficSnapshot{
   readonly rejectedUnsupportedGoals:number;
   readonly deniedUnsupportedEnemyFeet:number;
   readonly travelMeters:number;
+  /** B34 real original-foot locomotion and certified Recast goal traces. */
+  readonly groundedFreeCombatCpuSamples:number;
+  readonly nearlyStationaryGroundedCpuSamples:number;
+  readonly requestedGoalDirectMeters:number;
+  readonly requestedGoalNativePathMeters:number;
+  readonly requestedGoalLongHops:number;
+  readonly requestedGoalShortHops:number;
+  readonly requestedGoalLengthsSampled:number;
   readonly paintAwareModeEnabled:boolean;
   readonly stableSourceGoalModeEnabled:boolean;
   readonly continuedPreviouslyApprovedGoalRequests:number;
@@ -93,6 +101,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private rejectedUnsupportedGoals=0;
  private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
+ private groundedFreeCombatCpuSamples=0;
+ private nearlyStationaryGroundedCpuSamples=0;
+ private requestedGoalDirectMeters=0;
+ private requestedGoalNativePathMeters=0;
+ private requestedGoalLongHops=0;
+ private requestedGoalShortHops=0;
+ private requestedGoalLengthsSampled=0;
  private continuedPreviouslyApprovedGoalRequests=0;
  private switchedGoalBeforePreviousArrival=0;
  private actualOriginalInkOwnershipLookups=0;
@@ -324,6 +339,22 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(index===active)this.continuedPreviouslyApprovedGoalRequests++;
     else this.switchedGoalBeforePreviousArrival++;
    }
+   // B34: measures REAL CPU foot -> PREVERIFIED ORIGINAL goal and
+   // actual Recast path vertices. This observes, never authorizes a new
+   // route or changes previous destination order.
+   const polyline=audit.nativePathPoints;
+   let nativeMeters=0;
+   for(let i=1;i<polyline.length;i++){
+    const prev=polyline[i-1]!,next=polyline[i]!;
+    nativeMeters+=Math.hypot(next.x-prev.x,next.y-prev.y,next.z-prev.z);
+   }
+   if(Number.isFinite(nativeMeters)){
+    this.requestedGoalLengthsSampled++;
+    this.requestedGoalDirectMeters+=distance;
+    this.requestedGoalNativePathMeters+=nativeMeters;
+    if(distance<4)this.requestedGoalShortHops++;
+    if(distance>9)this.requestedGoalLongHops++;
+   }
    this.patrolIndex.set(id,index);
    out.copy(goal);this.realGoalRequests++;
    if(rank){
@@ -371,8 +402,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const oldFoot=this.previousFeet.get(bot.id)!;
    const step=oldFoot.distance(bot.position);
    if(step>.015)this.lastMoved.set(bot.id,frame);
-   if(this.freeCombat&&bot.mobilityState==='GROUND'&&step<.18)
+   if(this.freeCombat&&bot.mobilityState==='GROUND'&&step<.18){
     this.travelMeters+=step;
+    this.groundedFreeCombatCpuSamples++;
+    if(step<=.015)this.nearlyStationaryGroundedCpuSamples++;
+   }
    oldFoot.copy(bot.position);
    const previous=this.previous.get(bot.id);
    if(bot.mobilityState==='FIRST_DROP_FALL'||
@@ -501,6 +535,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     rejectedUnsupportedGoals:this.rejectedUnsupportedGoals,
     deniedUnsupportedEnemyFeet:this.deniedUnsupportedEnemyFeet,
     travelMeters:this.travelMeters,
+    groundedFreeCombatCpuSamples:this.groundedFreeCombatCpuSamples,
+    nearlyStationaryGroundedCpuSamples:
+     this.nearlyStationaryGroundedCpuSamples,
+    requestedGoalDirectMeters:this.requestedGoalDirectMeters,
+    requestedGoalNativePathMeters:this.requestedGoalNativePathMeters,
+    requestedGoalShortHops:this.requestedGoalShortHops,
+    requestedGoalLongHops:this.requestedGoalLongHops,
+    requestedGoalLengthsSampled:this.requestedGoalLengthsSampled,
     paintAwareModeEnabled:this.enablePaintAwarePatrol&&!!this.sourceInk,
     stableSourceGoalModeEnabled:this.enablePaintAwarePatrol&&
      !!this.sourceInk&&this.enableStableSourceGoal,
