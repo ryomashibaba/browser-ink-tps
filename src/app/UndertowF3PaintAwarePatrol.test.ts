@@ -2,7 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {Team,SurfaceFlags} from '../ink/types';
 import type {GameplayInkSystem,GameplayInkSample} from '../ink/GameplayInkSystem';
-import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,B34_GROUNDED_STALL_TICKS} from './UndertowF3PaintAwarePatrol';
 
 const goals=[new Vec3(1,3,40),new Vec3(2,3,41),
  new Vec3(3,3,42),new Vec3(4,3,43)];
@@ -73,5 +73,21 @@ describe('W10-B33 prior original goal hysteresis, not fabricated Nav',()=>{
   const ranks=rankOriginalSourcePatrolGoals(goals,Team.A,ink.system,0);
   expect(prioritizeExistingInFlightSourceGoal(
    ranks,goals,0,new Vec3(Number.NaN,3,0))).toEqual(ranks);
+ });
+});
+
+describe('W10-B34 genuine 36-tick original-foot stalled-goal escape gate',()=>{
+ it('does not permit alternative before 36 continuous grounded-stationary observations',()=>{
+  expect(B34_GROUNDED_STALL_TICKS).toBe(36);
+  for(let steps=0;steps<36;steps++)
+   expect(mayReconsiderStalledOriginalGoal(steps,0,8)).toBe(false);
+  expect(mayReconsiderStalledOriginalGoal(36,0,8)).toBe(true);
+ });
+ it('never manufactures a new goal for already arrived or absent original goals',()=>{
+  expect(mayReconsiderStalledOriginalGoal(100,-1,8)).toBe(false);
+  expect(mayReconsiderStalledOriginalGoal(100,0,1.49)).toBe(false);
+  expect(mayReconsiderStalledOriginalGoal(100,0,Number.NaN)).toBe(false);
+  expect(mayReconsiderStalledOriginalGoal(-1,0,8)).toBe(false);
+  expect(mayReconsiderStalledOriginalGoal(36.5,0,8)).toBe(false);
  });
 });
