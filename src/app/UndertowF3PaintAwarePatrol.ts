@@ -60,3 +60,20 @@ export function prioritizeExistingInFlightSourceGoal(
  const entry=sorted.find(e=>e.index===activeIndex);
  return entry?[entry,...sorted.filter(e=>e.index!==activeIndex)]:[...sorted];
 }
+
+/** B34 experimental source-only true-grounded stall recovery. Only a
+ * verified in-flight original goal may be reconsidered. A prolonged
+ * physically stationary foot is NOT evidence for a new valid route; all
+ * alternate candidate approvals remain in UndertowF3SourceTraffic.
+ */
+export const B34_GROUNDED_STALL_TICKS=36;
+export function mayReconsiderStalledOriginalGoal(
+ stillGroundedTicks:number,originalGoalIndex:number,
+ sourceFootDistanceToOldGoal:number
+):boolean{
+ return Number.isSafeInteger(stillGroundedTicks)&&
+  stillGroundedTicks>=B34_GROUNDED_STALL_TICKS&&
+  Number.isSafeInteger(originalGoalIndex)&&originalGoalIndex>=0&&
+  Number.isFinite(sourceFootDistanceToOldGoal)&&
+  sourceFootDistanceToOldGoal>=1.5;
+}
