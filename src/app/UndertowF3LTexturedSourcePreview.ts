@@ -11,6 +11,30 @@ const MTL_BLOB='93b6d30ecac396e960058d6c71db80aadca10fef';
 const UPSTREAM_COMMIT='0611f51b35c9736ee986fb2218461e2585b7875e';
 const KINDS=['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as const;
 type Kind=typeof KINDS[number];
+/** Display-only masks. CUTAWAY reveals previously drawn certified Rapier
+ * stage meshes behind original static optical imagery: it does not
+ * designate ANY original OBJ triangle walkable, paintable or scoreable. */
+export const F3L_STAGE_READABILITY_MODES=['ORIGINAL_UV','SOURCE_CUTAWAY'] as const;
+export type F3lStageReadabilityMode=typeof F3L_STAGE_READABILITY_MODES[number];
+export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode){
+ if(mode==='ORIGINAL_UV'){
+  const glass=kind==='GLASS';
+  return {opacity:glass?.24:1,depthWrite:!glass,opaque:!glass};
+ }
+ const opacity:Record<Kind,number>={
+  FLOOR:.18,SLOPE:.22,METAL:.37,GLASS:.08,
+  SUPPORT:.40,STRUCTURE:.36,DETAIL:.24
+ };
+ return {opacity:opacity[kind],depthWrite:false,opaque:false};
+}
+function applyF3lReadability(material:StandardMaterial,kind:Kind,
+ mode:F3lStageReadabilityMode){
+ const style=f3lSourceReadabilityStyle(kind,mode);
+ material.opacity=style.opacity;
+ material.blendType=style.opaque?BLEND_NONE:BLEND_NORMAL;
+ material.depthWrite=style.depthWrite;
+ material.update();
+}
 export type F3lManifest={
  schema:'T21_F3L_PINNED_ORIGINAL_UV_TEXTURE_REVIEW_V1';
  sourceSHA256:string;sourceMtlBlobSha:string;sourceRepositoryCommit:string;
@@ -117,6 +141,8 @@ export async function loadF3lTexturedSource(app:AppBase){
  root.enabled=false;
  const gpuTextures:Texture[]=[];
  const textureMap=new Map<string,Texture>();
+ const materialInstances:{kind:Kind;material:StandardMaterial}[]=[];
+ let visualMode:F3lStageReadabilityMode='ORIGINAL_UV';
  try{
   const textures=await Promise.all(manifest.textures.map(async file=>{
    const bytes=await verifiedBuffer(base+'f3l-textures/'+file.file,file.bytes,file.sha256);
@@ -162,12 +188,8 @@ export async function loadF3lTexturedSource(app:AppBase){
    m.cull=CULLFACE_NONE;
    m.useMetalness=true;m.metalness=material.kind==='METAL'?.32:.10;
    m.gloss=material.kind==='METAL'?.48:.23;
-   if(material.kind==='GLASS'){
-    m.opacity=.24;m.blendType=BLEND_NORMAL;m.depthWrite=false;
-   }else{
-    m.opacity=1;m.blendType=BLEND_NONE;m.depthWrite=true;
-   }
-   m.update();
+   applyF3lReadability(m,material.kind,visualMode);
+   materialInstances.push({kind:material.kind,material:m});
    const object=new Entity('T21F3L:ORIGINAL_STATIC_'+material.name+'_NO_COLLISION');
    object.addComponent('render',{meshInstances:[new MeshInstance(mesh,m)],
     castShadows:false,receiveShadows:false});
@@ -178,5 +200,28 @@ export async function loadF3lTexturedSource(app:AppBase){
   throw err;
  }
  app.root.addChild(root);
- return {root,manifest,gate,disable(){root.enabled=false;}};
+ return {
+  root,manifest,gate,disable(){root.enabled=false;},
+  getReadabilityMode:()=>visualMode,
+  setReadabilityMode(mode:F3lStageReadabilityMode){
+   if(!F3L_STAGE_READABILITY_MODES.includes(mode))
+    throw Error('T21_W10B30_INVALID_SOURCE_REVIEW_VISUAL_MODE');
+   if(mode===visualMode)return visualMode;
+   for(const entry of materialInstances)
+    applyF3lReadability(entry.material,entry.kind,mode);
+   visualMode=mode;
+   return visualMode;
+  },
+  b30NonGameplayAuthority:{
+   fullOriginalSourceTriangles:57578,
+   originalUVAndAlbedoUnmodified:true as const,
+   sourceOpticalOnly:true as const,
+   newCollision:0 as const,
+   newNavigation:0 as const,
+   scoredTurf:0 as const,
+   actorInstanceTransformsRecovered:false as const,
+   playableSourceFootpathsCertified:false as const,
+   productionAuthorized:false as const
+  }
+ };
 }
