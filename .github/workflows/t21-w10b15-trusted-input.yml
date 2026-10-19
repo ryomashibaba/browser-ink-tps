@@ -50,6 +50,7 @@ jobs:
         env:
           T21_W10B16_NATURAL_AI: '1'
           T21_W10B31_INK_AWARE: '0'
+          T21_W10B34_ALIGN: '1'
           T21_W10B20_PROFILE: '1'
         run: |
           node scripts/t21-f3-browser-smoke.mjs
@@ -60,6 +61,7 @@ jobs:
           T21_W10B31_INK_AWARE: '1'
           T21_W10B33_STABLE: '1'
           T21_W10B34_STALL: '1'
+          T21_W10B34_ALIGN: '1'
           T21_W10B20_PROFILE: '1'
         run: |
           node scripts/t21-f3-browser-smoke.mjs
