@@ -105,6 +105,7 @@ async function main(){
  });
  const w10b14=process.env.T21_W10B14_RENDER_QA==='1';
  const w10b15=process.env.T21_W10B15_TRUSTED_INPUT==='1';
+ const w10b36=process.env.T21_W10B36_FOCUS==='1';
  const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
  const w10b21=process.env.T21_W10B21_RENDER_AB==='1';
  if([w10b14,w10b15,w10b16,w10b21].filter(Boolean).length>1)
@@ -121,6 +122,7 @@ async function main(){
    (process.env.T21_W10B34_STALL==='1'?'&t21W10B34=stallRecovery':'')+
    (process.env.T21_W10B35_NATIVE==='1'?'&t21W10B35=nativeTargetRefresh':''):'')+
   (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility&t21W10B27=kinetic':'')+
+  (w10b36?'&t21W10B36=playFocus':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
@@ -448,6 +450,25 @@ async function main(){
   await mouse('mousePressed');await mouse('mouseReleased');
   await waitUntil(async()=>await evaluate(
    'document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
+  if(w10b36){
+   const focus=await waitUntil(async()=>{
+    const view=await evaluate(`({
+     mode:document.querySelector('#app-canvas')?.dataset.t21W10B36PlayFocus,
+     panelHidden:document.querySelector('#t21-f3-play-panel')?.hidden,
+     surveyHidden:document.querySelector('#t21-f3-source-survey')?.hidden,
+     idlePracticeHidden:document.querySelector('#t21-f3-b25-paint-run')?.hidden,
+     hudVisible:document.querySelector('#t21-f3-practice-hud')?.hidden===false,
+     crosshairVisible:document.querySelector('#t21-f3-crosshair')?.hidden===false,
+     sourceScoreable:document.querySelector('#t21-f3-practice-hud')?.dataset.sourceScoreable,
+     warningTop:document.querySelector('#t21-f3-camera-obstruction')?.style.top
+    })`);
+    return view.mode==='ON'&&view.panelHidden&&view.surveyHidden&&
+     view.idlePracticeHidden&&view.hudVisible&&view.crosshairVisible?view:false;
+   },15000);
+   if(focus.sourceScoreable!=='0'||focus.warningTop!=='calc(50% + 72px)')
+    reject('W10B36_SOURCE_OVERLAY_OR_AUTHORITY_DRIFT_'+JSON.stringify(focus));
+   console.log('T21_W10B36_REAL_CHROME_POINTERLOCK_FOCUS_PASS',JSON.stringify(focus));
+  }
   // Real press+release before ANY physics tick: never silently lose
   // a quick mouse tap at 60Hz. The shot must be accepted by the native
   // ProjectileSystem with a genuine pointer-locked browser event.
@@ -593,6 +614,23 @@ async function main(){
    windowsVirtualKeyCode:27,nativeVirtualKeyCode:27
   });
   await waitUntil(async()=>await evaluate('document.pointerLockElement===null'),12000);
+  if(w10b36){
+   const restored=await waitUntil(async()=>{
+    const view=await evaluate(`({
+     mode:document.querySelector('#app-canvas')?.dataset.t21W10B36PlayFocus,
+     panelVisible:document.querySelector('#t21-f3-play-panel')?.hidden===false,
+     surveyVisible:document.querySelector('#t21-f3-source-survey')?.hidden===false,
+     practiceVisible:document.querySelector('#t21-f3-b25-paint-run')?.hidden===false,
+     nativeStage:window.__t21F3.snapshot().originalSourceSolids,
+     scores:window.__t21F3.snapshot().sourceScoreablePromotions
+    })`);
+    return view.mode==='OFF'&&view.panelVisible&&view.surveyVisible&&
+     view.practiceVisible?view:false;
+   },15000);
+   if(restored.nativeStage!==25||restored.scores!==0)
+    reject('W10B36_UNLOCK_SOURCE_AUTHORITY_DRIFT_'+JSON.stringify(restored));
+   console.log('T21_W10B36_REAL_CHROME_FOCUS_RESTORE_PASS',JSON.stringify(restored));
+  }
   const padEmpty=await evaluate('window.__t21F3.inspectW10B15NativePad()');
   if(!padEmpty.cameraOnly||padEmpty.physicalActorsMoved!==0||
      padEmpty.productionAuthorized!==false||padEmpty.originalSolids!==25||
