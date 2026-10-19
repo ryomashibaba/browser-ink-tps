@@ -11,6 +11,8 @@ import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
 import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {Team} from '../ink/types';
+import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
+import {rankOriginalSourcePatrolGoals} from './UndertowF3PaintAwarePatrol';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -47,6 +49,12 @@ export interface F3TrafficSnapshot{
   readonly rejectedUnsupportedGoals:number;
   readonly deniedUnsupportedEnemyFeet:number;
   readonly travelMeters:number;
+  readonly paintAwareModeEnabled:boolean;
+  readonly actualOriginalInkOwnershipLookups:number;
+  readonly realPaintAwareGoalsAccepted:number;
+  readonly paintAwareNonOwnedGoalsAccepted:number;
+  readonly paintAwareOwnGoalsAccepted:number;
+  readonly paintAwareRouteShortcutsGranted:0;
   readonly attemptsToCrossUnboundUnderpass:0;
   readonly activeTargets:readonly {id:string;position:[number,number,number]}[];
   readonly sourceOnly:true;
@@ -80,6 +88,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private rejectedUnsupportedGoals=0;
  private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
+ private actualOriginalInkOwnershipLookups=0;
+ private realPaintAwareGoalsAccepted=0;
+ private paintAwareNonOwnedGoalsAccepted=0;
+ private paintAwareOwnGoalsAccepted=0;
  private readonly physicallyFalling=new Set<string>();
  private readonly physicallyRejoined=new Set<string>();
  private readonly cleared=new Set<string>();
@@ -92,7 +104,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  constructor(
   private readonly stage:StageDefinition,private readonly nav:RecastStageNavigation,
   spawns:SourceSpawnPlan,private readonly bots:readonly F3TrafficCpu[],
-  private readonly physics?:RapierStagePhysics
+  private readonly physics?:RapierStagePhysics,
+  private readonly sourceInk?:GameplayInkSystem,
+  private readonly enablePaintAwarePatrol=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -251,8 +265,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // instead of jittering between nodes every 0.28 seconds. Only move to
   // another original-source destination after genuinely reaching this one.
   const first=active>=0?active:(id.startsWith('A')?0:1);
+  // Optional genuine source gameplay only: rank already vetted candidate
+  // endpoints by read-only actual ink ownership. The physical source and
+  // Recast audits below are never skipped for a high-ranked point.
+  // Unavailable original paint-surface sampling simply defers to the
+  // previous deterministic loop: no synthetic paint inference.
+  const ranked=this.enablePaintAwarePatrol&&this.sourceInk?
+   rankOriginalSourcePatrolGoals(candidates,bot.team,this.sourceInk,first):
+   null;
+  if(ranked)this.actualOriginalInkOwnershipLookups+=ranked.length;
   for(let tries=0;tries<candidates.length;tries++){
-   const index=(first+tries)%candidates.length;
+   const rank=ranked?.[tries];
+   const index=rank?rank.index:(first+tries)%candidates.length;
    const goal=candidates[index]!;
    if(goal.z*sign<33||goal.y<2.7||goal.y>5.25)
     throw Error('T21_F3D_UNAPPROVED_UNDERPASS_CROSSING_GOAL');
@@ -275,7 +299,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(!this.hasSourceSupportedRoute(audit,sign))
     this.unauditedPatrolRouteRequests++;
    this.patrolIndex.set(id,index);
-   out.copy(goal);this.realGoalRequests++;return true;
+   out.copy(goal);this.realGoalRequests++;
+   if(rank){
+    this.realPaintAwareGoalsAccepted++;
+    if(rank.priority==='OWN')this.paintAwareOwnGoalsAccepted++;
+    else this.paintAwareNonOwnedGoalsAccepted++;
+   }
+   return true;
   }
   this.heldRequests++;return false;
  }
@@ -443,6 +473,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     rejectedUnsupportedGoals:this.rejectedUnsupportedGoals,
     deniedUnsupportedEnemyFeet:this.deniedUnsupportedEnemyFeet,
     travelMeters:this.travelMeters,
+    paintAwareModeEnabled:this.enablePaintAwarePatrol&&!!this.sourceInk,
+    actualOriginalInkOwnershipLookups:this.actualOriginalInkOwnershipLookups,
+    realPaintAwareGoalsAccepted:this.realPaintAwareGoalsAccepted,
+    paintAwareNonOwnedGoalsAccepted:this.paintAwareNonOwnedGoalsAccepted,
+    paintAwareOwnGoalsAccepted:this.paintAwareOwnGoalsAccepted,
+    paintAwareRouteShortcutsGranted:0,
     activeTargets:this.bots.flatMap(bot=>{
      const index=this.patrolIndex.get(bot.id)??-1;
      const point=this.patrolGoals.get(bot.id)?.[index];
