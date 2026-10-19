@@ -8,6 +8,8 @@ on:
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'
       - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3PaintAwarePatrol.ts'
+      - 'src/app/UndertowF3PaintAwarePatrol.test.ts'
       - 'src/input/PlayerInput.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/projectile/ProjectileSystem.ts'
@@ -33,6 +35,8 @@ jobs:
         run: npm run build -- --base=/browser-ink-tps/
       - name: W10-B17 source-only HUD authority and 3-minute vitals tests
         run: npx vitest run src/app/UndertowF3PlayableHud.test.ts
+      - name: Unit test source-paint-aware real ownerGrid and no invented navigation
+        run: npx vitest run src/app/UndertowF3PaintAwarePatrol.test.ts
       - name: Check CDP test syntax
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: Prove pointer-locked actual mouse input through native CPU splat and respawn
@@ -44,6 +48,7 @@ jobs:
       - name: W10-B16 true source-native seven CPU autonomous patrol and ink, diagnose absent cross-team path
         env:
           T21_W10B16_NATURAL_AI: '1'
+          T21_W10B31_INK_AWARE: '1'
           T21_W10B20_PROFILE: '1'
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Preserve real Chromium frames and QA evidence
