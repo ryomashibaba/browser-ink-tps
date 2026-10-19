@@ -2,7 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {Team,SurfaceFlags} from '../ink/types';
 import type {GameplayInkSystem,GameplayInkSample} from '../ink/GameplayInkSystem';
-import {rankOriginalSourcePatrolGoals} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal} from './UndertowF3PaintAwarePatrol';
 
 const goals=[new Vec3(1,3,40),new Vec3(2,3,41),
  new Vec3(3,3,42),new Vec3(4,3,43)];
@@ -43,5 +43,35 @@ describe('W10-B31 authoritative source-ink-aware CPU patrol only',()=>{
   expect(r.every(x=>x.priority==='UNSAMPLED')).toBe(true);
   expect(()=>rankOriginalSourcePatrolGoals(goals,Team.A,ink.system,-1))
    .toThrow('W10_B31_UNVERIFIED_START_INDEX');
+ });
+});
+
+describe('W10-B33 prior original goal hysteresis, not fabricated Nav',()=>{
+ it('holds an in-flight PREAPPROVED goal before ownership priority',()=>{
+  const ink=ownerInk([Team.A,Team.Neutral,Team.B,Team.A]);
+  const ranks=rankOriginalSourcePatrolGoals(goals,Team.A,ink.system,0);
+  const before=ranks.map(x=>x.index);
+  const held=prioritizeExistingInFlightSourceGoal(
+   ranks,goals,0,new Vec3(-10,3,42));
+  expect(before).toEqual([2,1,0,3]);
+  expect(held.map(x=>x.index)).toEqual([0,2,1,3]);
+  expect(held).toHaveLength(ranks.length);
+  expect(held[0]!.pathAuthorized).toBe(false);
+  expect(ranks.map(x=>x.index)).toEqual(before);
+ });
+ it('reranks after genuine foot arrival, preserving typed source candidates',()=>{
+  const ink=ownerInk([Team.A,Team.Neutral,Team.B,Team.A]);
+  const ranks=rankOriginalSourcePatrolGoals(goals,Team.A,ink.system,0);
+  const arrived=prioritizeExistingInFlightSourceGoal(
+   ranks,goals,0,new Vec3(1.3,3,40));
+  expect(arrived.map(x=>x.index)).toEqual([2,1,0,3]);
+  expect(prioritizeExistingInFlightSourceGoal(
+   ranks,goals,-1,new Vec3(0,3,0))).toEqual(ranks);
+ });
+ it('invalid real foot cannot grant any synthetic route or preference',()=>{
+  const ink=ownerInk([Team.A,Team.Neutral,Team.B,Team.A]);
+  const ranks=rankOriginalSourcePatrolGoals(goals,Team.A,ink.system,0);
+  expect(prioritizeExistingInFlightSourceGoal(
+   ranks,goals,0,new Vec3(Number.NaN,3,0))).toEqual(ranks);
  });
 });
