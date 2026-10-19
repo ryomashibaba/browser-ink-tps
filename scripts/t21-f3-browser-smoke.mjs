@@ -1049,6 +1049,89 @@ async function main(){
     JSON.stringify(varied,null,2));
    console.log('T21_W10B40_NATIVE_BOMB_CONDITIONS_OBSERVED',
     JSON.stringify(varied));
+   // B42: genuine four-direction mouse input, real KeyF + native physics.
+   // This cannot certify physical wall/edge/distance contact elsewhere.
+   const b42MoveAndThrow=async(label,dx,dy)=>{
+    await refill();
+    const before=await evaluate('window.__t21F3.snapshot()');
+    const locked=await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")');
+    if(!locked||!before.paused||before.stopReason||
+       before.sourceScoreablePromotions!==0)
+     reject('W10B42_SOURCE_MOUSE_AUTHORITY_'+label);
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800,y:450,button:'none'
+    });
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800+dx,y:450+dy,button:'none'
+    });
+    const after=await evaluate('window.__t21F3.snapshot()');
+    const yaw=after.cameraSourcePractice.yawDegrees-
+     before.cameraSourcePractice.yawDegrees;
+    const pitch=after.cameraSourcePractice.pitchDegrees-
+     before.cameraSourcePractice.pitchDegrees;
+    if(!Number.isFinite(yaw)||!Number.isFinite(pitch)||
+       Math.hypot(yaw,pitch)<5)
+     reject('W10B42_NATIVE_MOUSE_ANGLE_NOT_CHANGED_'+
+      JSON.stringify({label,yaw,pitch}));
+    const trial=await throwObserved(label);
+    if(Math.abs(trial.cameraYawDegrees-
+       after.cameraSourcePractice.yawDegrees)>.01||
+       Math.abs(trial.cameraPitchDegrees-
+       after.cameraSourcePractice.pitchDegrees)>.01||
+       trial.throwDelta!==1||trial.explosionDelta!==1||
+       trial.genuinePhysicalTicks<1||trial.scoreablePromotions!==0)
+     reject('W10B42_PHYSICAL_THROW_AUTHORITY_'+label);
+    return {name:label,requestedMouseDeltaPixels:{dx,dy},
+     measuredYawDeltaDegrees:yaw,measuredPitchDeltaDegrees:pitch,...trial};
+   };
+   const b42Trials=[
+    await b42MoveAndThrow('DOWNWARD_MOUSE_SWEEP',0,115),
+    await b42MoveAndThrow('RIGHTWARD_MOUSE_SWEEP',140,0),
+    await b42MoveAndThrow('LEFTWARD_MOUSE_SWEEP',-150,0),
+    await b42MoveAndThrow('UPWARD_MOUSE_SWEEP',0,-160)
+   ];
+   const b42Unique=new Set();
+   const foot=initial.player.position;
+   let stamps=0,zero=0,cells=0;
+   for(const trial of b42Trials){
+    if(!trial.actualKeyF||!trial.actualPointerLockedInput||
+       trial.natural4v4Certified!==false||
+       trial.newOriginalPhysicsSolids!==0||trial.newNavLinks!==0||
+       !trial.originalPlayerPosition.every(Number.isFinite)||
+       Math.hypot(...trial.originalPlayerPosition.map(
+        (v,i)=>v-foot[i]))>.1||
+       trial.originalBombStampEvents!==
+        trial.originalZeroChangeStampEvents+trial.originalChangedBombEvents||
+       (trial.authoritativeChangedCells===0)!==
+        (trial.originalChangedBombEvents===0)||
+       trial.zeroChangeIsNotProvenPhysicalMiss!==true)
+     reject('W10B42_INK_OR_ORIGINAL_FOOT_DRIFT_'+trial.name);
+    const direction=[trial.cameraYawDegrees,trial.cameraPitchDegrees]
+     .map(v=>v.toFixed(1)).join('/');
+    if(b42Unique.has(direction))reject('W10B42_DUPLICATE_AIM_'+direction);
+    b42Unique.add(direction);
+    stamps+=trial.originalBombStampEvents;
+    zero+=trial.originalZeroChangeStampEvents;
+    cells+=trial.authoritativeChangedCells;
+   }
+   const b42={
+    status:'PASS_FOUR_REAL_SOURCE_LOCAL_AIM_PROBES',
+    b40InheritedChangedCells:[bombInk.humanBombChangedCells,
+     sameAim.authoritativeChangedCells,pitchAim.authoritativeChangedCells],
+    trials:b42Trials,uniqueRealCameraDirections:b42Unique.size,
+    addedStamps:stamps,addedZeroChangeStamps:zero,addedNewCells:cells,
+    realKeyFThrows:7,nativeExplosions:7,originalSolids:25,
+    originalPaintable:17,originalNavLinks:26,scoreable:0,
+    sourceDistanceCertified:false,physicalWallEdgeCertified:false,
+    originalActorPlacementsCertified:false,natural4v4Certified:false,
+    ownerGpuCertified:false,injectedPlayerOrInk:false,
+    productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b42-native-source-aim-sweep.json'),
+    JSON.stringify(b42,null,2));
+   console.log('T21_W10B42_NATIVE_SOURCE_AIM_SWEEP_RECORDED',
+    JSON.stringify(b42));
   }
   return;
  }
