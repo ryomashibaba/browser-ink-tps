@@ -1422,6 +1422,90 @@ async function main(){
     JSON.stringify(b45RealResult,null,2));
    console.log('T21_W10B45_REAL_TARGETED_RAPIER_BOMB',
     JSON.stringify(b45RealResult));
+   // B46: source-only fine scan (pitch <= native camera max 28 degrees)
+   // followed by at most ONE genuinely played KeyF throw.
+   const b46Scan=b45Survey.b46HighSpawn;
+   if(!b46Scan||b46Scan.tested!==132||
+      b46Scan.status!=='SOURCE_CAMERA_CLAMPED_HIGH_SPAWN_RAP_TIME'||
+      b46Scan.rapierFirst<0||
+      b46Scan.boxBottomFaceHits>b46Scan.rapierFirst||
+      b46Scan.candidates.length>12||
+      b46Scan.actualBombCollisionCertified!==false)
+    reject('B46_FINE_SCAN_INVALID');
+   const candidate=b46Scan.candidates.find(t=>t.boxBottomFaceCandidate&&
+    t.solidDistance<=12)??null;
+   let b46Trial=null,realAim=null;
+   if(candidate){
+    await refill();
+    const pointerLocked=await evaluate(
+      'document.pointerLockElement===document.querySelector("#app-canvas")');
+    if(!pointerLocked)reject('B46_REAL_POINTER_LOCK_MISSING');
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800,y:450,button:'none'
+    });
+    const beforeAim=await evaluate('window.__t21F3.snapshot()');
+    const wrap=x=>((x+540)%360)-180;
+    const dx=Math.round(wrap(candidate.yaw-
+     beforeAim.cameraSourcePractice.yawDegrees)/.22);
+    const dy=Math.round(-(candidate.pitch-
+     beforeAim.cameraSourcePractice.pitchDegrees)/.18);
+    if(Math.abs(dx)>820||Math.abs(dy)>450)
+     reject('B46_TARGET_MOUSE_DELTA_TOO_LARGE');
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800+Math.round(dx/2),
+     y:450+Math.round(dy/2),button:'none'
+    });
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800+dx,y:450+dy,button:'none'
+    });
+    let aimed=await evaluate('window.__t21F3.snapshot()');
+    let yawErr=wrap(candidate.yaw-aimed.cameraSourcePractice.yawDegrees);
+    let pitchErr=candidate.pitch-aimed.cameraSourcePractice.pitchDegrees;
+    if(Math.abs(yawErr)>2||Math.abs(pitchErr)>2){
+     await cmd('Input.dispatchMouseEvent',{
+      type:'mouseMoved',x:800+dx+Math.round(yawErr/.22),
+      y:450+dy+Math.round(-pitchErr/.18),button:'none'
+     });
+     aimed=await evaluate('window.__t21F3.snapshot()');
+     yawErr=wrap(candidate.yaw-aimed.cameraSourcePractice.yawDegrees);
+     pitchErr=candidate.pitch-aimed.cameraSourcePractice.pitchDegrees;
+    }
+    const footDiff=Math.hypot(...aimed.player.position.map(
+      (v,i)=>v-b45Survey.playerFoot[i]));
+    if(footDiff>.1||aimed.originalSourceSolids!==25||
+       aimed.originalPaintSurfaces!==17||
+       aimed.originalSourceNavigationLinks!==26||
+       aimed.sourceScoreablePromotions!==0)
+      reject('B46_PLAYER_FOOT_OR_SOURCE_DRIFT');
+    realAim={candidate,
+     nativeCameraYaw:aimed.cameraSourcePractice.yawDegrees,
+     nativeCameraPitch:aimed.cameraSourcePractice.pitchDegrees,
+     yawError:yawErr,pitchError:pitchErr,sourceFootDiff:footDiff,
+     realPointerLockedInput:true,syntheticAimWrites:0};
+    if(Math.abs(yawErr)<=4&&Math.abs(pitchErr)<=4){
+     b46Trial=await throwObserved('B46_NATIVE_HIGH_SPAWN_BOX_BOTTOM_TRY');
+     if(b46Trial.throwDelta!==1||b46Trial.explosionDelta!==1||
+       b46Trial.b43NativeExplosionWitness.launchId!==12)
+      reject('B46_NATIVE_SUB_THROW_UNVERIFIED');
+    }
+   }
+   const b46={
+    status:'B46_SOURCE_HIGH_SPAWN_RAY_AND_NATIVE_BOMB_OBSERVED',
+    sourceRayScan:b46Scan,realAim,
+    keyFThrown:b46Trial!==null,nativeThrow:b46Trial,
+    actuallyChosenRapierCollider:
+     b46Trial?.b43NativeExplosionWitness?.contactKind==='RAPIER_STAGE_SOLID',
+    originalGameColliderAuthorityCertified:false,
+    officialScoreable:0,originalSolids:25,paintable:17,links:26,
+    normal4v4Certified:false,
+    productionAuthorized:false,
+    syntheticCameraOrPhysicsChanges:0
+   };
+   writeFileSync(resolve(OUTPUT,'w10b46-real-high-spawn-bomb.json'),
+    JSON.stringify(b46,null,2));
+   console.log('T21_W10B46_REAL_HIGH_SPAWN_BOMB_EVIDENCE',
+    JSON.stringify(b46));
+
 
 
 

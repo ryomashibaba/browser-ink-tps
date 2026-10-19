@@ -1613,6 +1613,45 @@ export class UndertowF3PlayablePreviewApp{
     });
    }
   }
+  // B46 additional fine rays are genuine existing source-collider queries,
+  // not proof that a gravity-affected real sub bomb will hit the same face.
+  const fine=[];
+  let fineQueries=0,fineRapierFirst=0,bottomFaceHits=0;
+  for(let yaw=-85;yaw<=20;yaw+=5){
+   const y=yaw*Math.PI/180;
+   for(const pitch of [8,12,16,20,24,28]){
+    const p=pitch*Math.PI/180;
+    dir.set(Math.sin(y)*Math.cos(p),Math.sin(p),
+     -Math.cos(y)*Math.cos(p));
+    this.player.getMuzzlePosition(dir,start);
+    far.copy(start).add(dir.clone().mulScalar(rayLength));
+    const solid=this.physics.castStageSegment(start,far,'thrown-sub');
+    let paint:ReturnType<PaintSurface['intersectSegment']>=null;
+    for(const surface of this.b45SourceSurfaces){
+     const hit=surface.intersectSegment(start,far);
+     if(hit&&(!paint||hit.distance<paint.distance))paint=hit;
+    }
+    fineQueries++;
+    if(!solid||!solid.solidId.endsWith('spawn-high-negative-z')||
+       (paint&&paint.distance<=solid.distance+eps))continue;
+    fineRapierFirst++;
+    const original=this.rawStage.solids.find(v=>v.id===solid.solidId);
+    if(!original)throw Error('B46_UNKNOWN_SOURCE_COLLIDER');
+    const bottomY=original.center[1]-original.size[1]/2;
+    const bottomFace=Boolean(!original.triangleMesh&&
+      Math.abs(solid.point.y-bottomY)<.015);
+    if(bottomFace)bottomFaceHits++;
+    fine.push({yaw,pitch,sourceSolidId:solid.solidId,
+     solidDistance:solid.distance,
+     collisionPoint:[solid.point.x,solid.point.y,solid.point.z],
+     boxBottomY:bottomY,bottomFaceError:solid.point.y-bottomY,
+     boxBottomFaceCandidate:bottomFace,
+     paintId:paint?.surface.id??null,
+     paintDistance:paint?.distance??null});
+   }
+  }
+  fine.sort((a,b)=>Number(b.boxBottomFaceCandidate)-
+    Number(a.boxBottomFaceCandidate)||a.solidDistance-b.solidDistance);
   // Candidates are straight-line queries, not predictions that a
   // gravity-affected bomb will strike this source at this angle.
   surveys.sort((a,b)=>a.solidDistance-b.solidDistance||
@@ -1627,6 +1666,12 @@ export class UndertowF3PlayablePreviewApp{
    totalOriginalSolids:25,totalOriginalPaintable:17,totalOriginalNavLinks:26,
    scoreableSurfaces:0,nonPaintBackedSolidIds:noPaintSolidIds,
    nearestRayCandidates:surveys.slice(0,16),
+   b46HighSpawn:{
+    status:'SOURCE_CAMERA_CLAMPED_HIGH_SPAWN_RAP_TIME',
+    tested:fineQueries,rapierFirst:fineRapierFirst,
+    boxBottomFaceHits:bottomFaceHits,candidates:fine.slice(0,12),
+    actualBombCollisionCertified:false,geometryUnchanged:true
+   },
    authenticBombCollisionCertified:false,
    originalGameCollisionCertified:false,productionAuthorized:false,
    stageGeometryModified:false,scoreablePromotions:0
