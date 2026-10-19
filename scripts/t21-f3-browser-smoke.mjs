@@ -469,6 +469,37 @@ async function main(){
     reject('W10B36_SOURCE_OVERLAY_OR_AUTHORITY_DRIFT_'+JSON.stringify(focus));
    console.log('T21_W10B36_REAL_CHROME_POINTERLOCK_FOCUS_PASS',JSON.stringify(focus));
   }
+  // B37: genuine locked mouse press, deliberately injected DOM cancellation.
+  // This checks application handling, NOT a naturally occurring OS cancellation.
+  const cancelBefore=await witness();
+  await mouse('mousePressed');
+  const cancelPressed=await witness();
+  if(!cancelPressed.realMouseFireHeld||!cancelPressed.pointerLocked)
+   reject('W10B37_NATIVE_PRESS_NOT_HELD_'+JSON.stringify(cancelPressed));
+  const cancellation=await evaluate(`(() => {
+   const canvas=document.querySelector('#app-canvas');
+   const event=new PointerEvent('pointercancel',{bubbles:true,pointerType:'mouse'});
+   canvas.dispatchEvent(event);
+   return {isTrusted:event.isTrusted,pointerLocked:document.pointerLockElement===canvas};
+  })()`);
+  await advance(1);
+  const cancelAfter=await witness();
+  if(cancellation.isTrusted!==false||!cancellation.pointerLocked||
+     cancelAfter.realMouseFireHeld||cancelAfter.shotsFired!==cancelBefore.shotsFired||
+     cancelAfter.sourceSolids!==25||cancelAfter.sourcePaint!==17||
+     cancelAfter.sourceLinks!==26||cancelAfter.activationReady!==false||
+     cancelAfter.scoreablePromotions!==0)
+   reject('W10B37_CANCELLED_PRESS_EXECUTED_OR_AUTHORITY_DRIFT_'+
+    JSON.stringify({cancelBefore,cancelAfter,cancellation}));
+  await mouse('mouseReleased');
+  const cancelEvidence={
+   genuinePointerLockedPress:true,injectedDomCancel:true,naturalOsCancelTested:false,
+   cancelledTapProducedShots:cancelAfter.shotsFired-cancelBefore.shotsFired,
+   heldFireAfterCancel:cancelAfter.realMouseFireHeld,
+   before:cancelBefore,after:cancelAfter,cancellation
+  };
+  writeFileSync(resolve(OUTPUT,'w10b37-pointer-cancel.json'),JSON.stringify(cancelEvidence,null,2));
+  console.log('T21_W10B37_CHROME_INJECTED_CANCEL_PASS',JSON.stringify(cancelEvidence));
   // Real press+release before ANY physics tick: never silently lose
   // a quick mouse tap at 60Hz. The shot must be accepted by the native
   // ProjectileSystem with a genuine pointer-locked browser event.

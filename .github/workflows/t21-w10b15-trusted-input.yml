@@ -15,6 +15,7 @@ on:
       - 'src/ai/CpuAgentSystem.ts'
       - 'scripts/t21-w10b32-compare-real-source.mjs'
       - 'src/input/PlayerInput.ts'
+      - 'src/input/PlayerInput.qa.test.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/projectile/ProjectileSystem.ts'
       - 'src/ink/GpuInkAtlas.ts'
@@ -37,6 +38,8 @@ jobs:
         run: npm install --no-audit --no-fund --no-package-lock
       - name: Build real PlayCanvas browser bundle
         run: npm run build -- --base=/browser-ink-tps/
+      - name: W10-B37 cancelled input and completed short-tap regression tests
+        run: npx vitest run src/input/PlayerInput.qa.test.ts
       - name: W10-B17 source-only HUD authority and 3-minute vitals tests
         run: npx vitest run src/app/UndertowF3PlayableHud.test.ts
       - name: Test source native goal refresh without false navigation and real ownerGrid ranking

@@ -35,12 +35,16 @@ export class PlayerInput {
     });
     window.addEventListener('keyup', (event) => this.keys.delete(event.code));
 
-    const clearGameplayState = (): void => {
-      this.keys.clear();
+    const clearPointerState = (): void => {
       this.fire = false;
       this.primaryPressedQueued = false;
       this.secondary = false;
       this.secondaryPressedQueued = false;
+    };
+
+    const clearGameplayState = (): void => {
+      this.keys.clear();
+      clearPointerState();
       this.jumpQueued = false;
       this.subPressedQueued = false;
       this.specialPressedQueued = false;
@@ -83,7 +87,10 @@ export class PlayerInput {
     };
     canvas.addEventListener('pointerup', releaseFire);
     document.addEventListener('pointerup', releaseFire);
-    canvas.addEventListener('pointercancel', () => { this.fire = false; });
+    // Cancellation is not a completed click: discard both held buttons
+    // and pending taps so the next physics tick cannot execute a stale action.
+    // Keyboard movement remains valid while the canvas still owns Pointer Lock.
+    canvas.addEventListener('pointercancel', clearPointerState);
   }
 
   /** Applies only for opt-in, paused, nonproduction source QA tick stepping. */
