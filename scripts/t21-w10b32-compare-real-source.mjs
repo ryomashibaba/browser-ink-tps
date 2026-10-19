@@ -76,6 +76,13 @@ const assertFrame=(report,mode)=>{
   nativeCpuCount:7,
   checkpoints:ticks,
   sourcePatrolMeters:finite(au.sourcePatrol.travelMeters,'MOBILITY'),
+  groundedCpuSamples:finite(au.sourcePatrol.groundedFreeCombatCpuSamples,'GROUND_SAMPLES'),
+  stationaryGroundedCpuSamples:finite(au.sourcePatrol.nearlyStationaryGroundedCpuSamples,'STATIONARY_GROUND_SAMPLES'),
+  originalGoalDirectDistanceMeters:finite(au.sourcePatrol.requestedGoalDirectMeters,'GOAL_DIRECT_METRES'),
+  originalGoalNativePathDistanceMeters:finite(au.sourcePatrol.requestedGoalNativePathMeters,'GOAL_NATIVE_METRES'),
+  shortOriginalGoalHops:finite(au.sourcePatrol.requestedGoalShortHops,'SHORT_GOAL_HOPS'),
+  longOriginalGoalHops:finite(au.sourcePatrol.requestedGoalLongHops,'LONG_GOAL_HOPS'),
+  nativeGoalLengthsSampled:finite(au.sourcePatrol.requestedGoalLengthsSampled,'GOAL_LENGTH_SAMPLES'),
   actualInkCellsChanged:finite(au.inkCellsChanged,'CHANGED_CELLS'),
   actualOriginalPaintShots:finite(au.naturalCpuSourceTurfShots,'SHOTS'),
   actualOriginalPaintImpacts:finite(au.nativeCpuTurfInkImpacts,'IMPACTS'),
@@ -120,6 +127,20 @@ const dimensions=[
  ['sourcePatrolMeters','Original-foot source patrol metres'],
  ['authorizedSourceGoals','Native Recast/physical-goal requests']
 ];
+const diagnosticDimensions=[
+ ['groundedCpuSamples','Real grounded source-foot CPU observations'],
+ ['stationaryGroundedCpuSamples','Near-stationary real original-foot CPU observations'],
+ ['originalGoalDirectDistanceMeters','Sum of audited real foot to original goal direct distance'],
+ ['originalGoalNativePathDistanceMeters','Sum of native Recast path polyline distance'],
+ ['shortOriginalGoalHops','Accepted original goal selections closer than 4m'],
+ ['longOriginalGoalHops','Accepted original goal selections farther than 9m'],
+ ['nativeGoalLengthsSampled','Accepted actual Recast goal lengths observed']
+];
+const diagnostics=Object.fromEntries(diagnosticDimensions.map(([key,label])=>{
+ const fixedValue=fixed[key],awareValue=aware[key];
+ return [key,{label,fixed:fixedValue,aware:awareValue,
+  delta:Number((awareValue-fixedValue).toFixed(3))}];
+}));
 const differences=Object.fromEntries(dimensions.map(([key,label])=>{
  const l=fixed[key],n=aware[key];
  return [key,{label,fixed:l,aware:n,delta:Number((n-l).toFixed(3)),
@@ -146,7 +167,7 @@ const result={
  tickIntervalsIdentical:true,
  strictAbsoluteNativeTickIdentity:false,
  sameRepoCode:true,independentBrowserSessions:true,
- fixed,aware,differences,gates,verdict,
+ fixed,aware,differences,diagnostics,gates,verdict,
  effectiveSampleCount:1,
  notAFpsOrStatisticallyControlledClaim:true,
  sourceStageSourceOfTruth:'25_SOLIDS_17_PAINT_26_NAV_0_SCORE',
@@ -161,5 +182,5 @@ console.log(b33Stable?'T21_W10B33_STABLE_GOAL_REAL_CHROME_COMPARISON':
  JSON.stringify({fixedTicks:fixed.checkpoints,awareTicks:aware.checkpoints,
   initialTickOffset,tickIntervalsIdentical:true,
   baseline:fixed,paintAware:aware,
-  deltas:differences,gates,verdict,
+  deltas:differences,diagnostics,gates,verdict,
   originalSourceTopologyUnchanged:true}));
