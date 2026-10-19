@@ -117,7 +117,7 @@ async function main(){
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
-  (w10b16?'&t21W10B16=sourceAutonomy':'')+
+  (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':''):'')+
   (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility&t21W10B27=kinetic':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
@@ -1369,6 +1369,30 @@ async function main(){
    if(audit.credibleNativeEndpointPairs>0&&
       audit.status!=='HOLD_NATIVE_ROUTE_REQUIRES_ORIGINAL_KCC_AND_ACTOR_EVIDENCE')
      reject('W10B16_UNPROVEN_PATH_MISCLASSIFIED_'+JSON.stringify(audit));
+   if(process.env.T21_W10B31_INK_AWARE==='1'){
+    const src=audit.sourcePatrol;
+    if(src.paintAwareModeEnabled!==true||
+       src.actualOriginalInkOwnershipLookups<=0||
+       src.realPaintAwareGoalsAccepted<=0||
+       src.paintAwareRouteShortcutsGranted!==0||
+       src.paintAwareNonOwnedGoalsAccepted+src.paintAwareOwnGoalsAccepted!==
+        src.realPaintAwareGoalsAccepted||
+       src.attemptsToCrossUnboundUnderpass!==0||
+       audit.sourceScoreablePromotions!==0)
+     reject('W10B31_REAL_SEVEN_CPU_AUTHORITATIVE_INK_GOALS_INVALID_'+
+      JSON.stringify(src));
+    console.log('T21_W10B31_REAL_CHROME_SEVEN_CPU_PAINT_AWARE_PATROL_PASS',
+     JSON.stringify({nativeOriginalCpu:7,sourceOnly:true,
+      actualOwnerGridLookups:src.actualOriginalInkOwnershipLookups,
+      physicallyAcceptedRealGoals:src.realPaintAwareGoalsAccepted,
+      nonOwnedSourceGoals:src.paintAwareNonOwnedGoalsAccepted,
+      alreadyOwnedSourceGoals:src.paintAwareOwnGoalsAccepted,
+      playerMovementOrTeleportChanged:false,
+      syntheticPaths:src.paintAwareRouteShortcutsGranted,
+      scoredTurf:0,nativeCrossTeamPaths:audit.credibleNativeEndpointPairs,
+      realOriginalFootPatrolMeters:src.travelMeters,
+      fakeEnemyEncounter:false,productionAuthorized:false}));
+   }
    const report={
     phase:'W10-B16',status:'PASS_REAL_NATIVE_CPU_AUTONOMOUS_PATROL_AND_SOURCE_TURF',
     naturalCrossTeamMatchStatus:audit.status,
