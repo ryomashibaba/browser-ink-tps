@@ -1144,6 +1144,75 @@ async function main(){
     JSON.stringify(b42,null,2));
    console.log('T21_W10B42_NATIVE_SOURCE_AIM_SWEEP_RECORDED',
     JSON.stringify(b42));
+   // B43: join exactly seven real native explosions, chosen contact route,
+   // launch/explosion coordinates, and actually enqueued source Paint IDs.
+   // Projection is NOT proof of Nintendo-original collider authority.
+   const b43All=[
+    {case:'FIRST_NATIVE_SOURCE',stamps:bombInk.humanBombStampEvents,
+     sourceId:bombInk.lastBombStampedSurface,
+     witness:exploded.b43NativeBombWitnesses[0]},
+    {case:'REPEAT_SOURCE',stamps:sameAim.originalBombStampEvents,
+     sourceId:sameAim.lastOriginalStampedSurface,
+     witness:sameAim.b43NativeExplosionWitness},
+    {case:'PITCH_VARIANT',stamps:pitchAim.originalBombStampEvents,
+     sourceId:pitchAim.lastOriginalStampedSurface,
+     witness:pitchAim.b43NativeExplosionWitness},
+    ...b42Trials.map(t=>({
+     case:t.name,stamps:t.originalBombStampEvents,
+     sourceId:t.lastOriginalStampedSurface,
+     witness:t.b43NativeExplosionWitness
+    }))
+   ];
+   const b43ContactKinds={PAINT_SURFACE_SEGMENT:0,RAPIER_STAGE_SOLID:0,NONE:0};
+   const b43Triggers={CONTACT_IMPACT:0,LANDED_FUSE:0,FLIGHT_TTL:0};
+   const b43Samples=[];
+   const vec3=v=>Array.isArray(v)&&v.length===3&&v.every(Number.isFinite);
+   for(let i=0;i<b43All.length;i++){
+    const t=b43All[i],w=t.witness;
+    if(!w||w.launchId!==i+1||!vec3(w.launchPoint)||
+       !vec3(w.explosionPoint)||!Number.isSafeInteger(t.stamps)||
+       !Array.isArray(w.enqueuedStampSurfaceIds)||
+       w.enqueuedStampSurfaceIds.length!==t.stamps||
+       w.enqueuedStampSurfaceIds.some(s=>typeof s!=='string'||!s)||
+       w.originalGameCollisionCertified!==false||
+       !Object.hasOwn(b43ContactKinds,w.contactKind)||
+       !Object.hasOwn(b43Triggers,w.trigger))
+     reject('W10B43_NATIVE_WITNESS_SOURCE_INVALID_'+t.case);
+    const hasContact=w.contactKind!=='NONE';
+    if(hasContact!==vec3(w.contactPoint)||
+       hasContact!==Boolean(w.contactSourceId)||
+       (w.trigger==='CONTACT_IMPACT'&&!hasContact)||
+       (w.trigger==='LANDED_FUSE'&&!hasContact)||
+       (hasContact&&Math.hypot(...w.explosionPoint.map(
+        (v,j)=>v-w.contactPoint[j]))>1e-5)||
+       (t.stamps>0&&w.enqueuedStampSurfaceIds.at(-1)!==t.sourceId)||
+       (t.stamps===0&&t.sourceId!==null))
+     reject('W10B43_CONTACT_VS_PROJECTION_AMBIGUITY_'+t.case);
+    b43ContactKinds[w.contactKind]++;
+    b43Triggers[w.trigger]++;
+    b43Samples.push({case:t.case,nativeWitness:w,
+     lastActuallyStampedPaintSurfaceId:t.sourceId,
+     enqueuedStamps:t.stamps,
+     stampIsNotPhysicalContactProof:true});
+   }
+   const b43Record={
+    status:'PASS_NATIVE_EXPLOSION_CONTACT_AND_PROJECTED_STAMP_WITNESS',
+    actualNativeHumanExplosions:b43Samples.length,
+    matchedRealHumanKeyFThrows:7,
+    actualContactKinds:b43ContactKinds,actualExplosionTriggers:b43Triggers,
+    sourceOnlyWitnessSamples:b43Samples,
+    originalSolids:25,paintableSurfaces:17,originalNavLinks:26,
+    scoreableSurfaces:0,originalGameCollisionCertified:false,
+    enqueuedStampNotEqualAuthoritativeOwnerChange:true,
+    physicalContactNotProvenFromPaintProjection:true,
+    originalActorPlacementsCertified:false,natural4v4Certified:false,
+    productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b43-native-bomb-contact-witness.json'),
+    JSON.stringify(b43Record,null,2));
+   console.log('T21_W10B43_NATIVE_BOMB_CONTACT_WITNESS_PASS',
+    JSON.stringify(b43Record));
+
   }
   return;
  }
