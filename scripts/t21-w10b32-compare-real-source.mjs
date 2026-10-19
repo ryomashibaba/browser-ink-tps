@@ -15,6 +15,8 @@ if(!baselineFile||!adaptiveFile||!outFile)
 const read=path=>JSON.parse(readFileSync(resolve(path),'utf8'));
 const b33Stable=process.env.T21_W10B33_STABLE==='1';
 const b34Recover=process.env.T21_W10B34_STALL==='1';
+const b35Native=process.env.T21_W10B35_NATIVE==='1';
+const alignedNative=b34Recover||b35Native;
 const a=read(baselineFile),b=read(adaptiveFile);
 const finite=(v,name)=>{
  if(typeof v!=='number'||!Number.isFinite(v)||v<0)
@@ -40,7 +42,7 @@ const assertFrame=(report,mode)=>{
     report.audit?.originalPaintSurfaces!==17||
     report.audit?.originalNavLinks!==26||
     report.audit?.productionAuthorized!==false||
-    report.audit?.sourcePatrol?.paintAwareModeEnabled!==(mode==='AWARE')||
+    report.audit?.sourcePatrol?.paintAwareModeEnabled!==(mode==='AWARE'&&!b35Native)||
     report.audit?.sourcePatrol?.paintAwareRouteShortcutsGranted!==0||
     (b33Stable&&report.audit?.sourcePatrol?.stableSourceGoalModeEnabled!==
       (mode==='AWARE')))
@@ -62,7 +64,7 @@ const assertFrame=(report,mode)=>{
  if(mode==='FIXED'&&(au.sourcePatrol.realPaintAwareGoalsAccepted!==0||
    au.sourcePatrol.actualOriginalInkOwnershipLookups!==0))
   fail('FIXED_SOURCE_LANE_CONTAMINATED',au.sourcePatrol);
- if(mode==='AWARE'&&(
+ if(mode==='AWARE'&&!b35Native&&(
    au.sourcePatrol.realPaintAwareGoalsAccepted<=0||
    au.sourcePatrol.actualOriginalInkOwnershipSampled<=0||
    au.sourcePatrol.paintAwareUnknownInkGoalsAccepted>0||
@@ -71,6 +73,12 @@ const assertFrame=(report,mode)=>{
     au.sourcePatrol.paintAwareOwnGoalsAccepted+
     au.sourcePatrol.paintAwareUnknownInkGoalsAccepted))
   fail('AWARE_GENUINE_OWNER_GRID_MISSING',au.sourcePatrol);
+ if(b35Native&&(
+   report.b35NativeSourceRetarget?.enabled!==(mode==='AWARE')||
+   mode==='AWARE'&&
+    report.b35NativeSourceRetarget?.redundantUnchangedRequestsSuppressed<=0))
+  fail('SOURCE_CROWD_REFRESH_MODE_NOT_ISOLATED_'+mode,
+   JSON.stringify(report.b35NativeSourceRetarget));
  const src=au.sourcePatrol;
  if(!Number.isSafeInteger(src.groundedFreeCombatCpuSamples)||
     !Number.isSafeInteger(src.nearlyStationaryGroundedCpuSamples)||
@@ -134,8 +142,14 @@ const assertFrame=(report,mode)=>{
   samePreviouslyAuthorizedGoalRequests:
    au.sourcePatrol.continuedPreviouslyApprovedGoalRequests,
   midrouteGoalSwitches:au.sourcePatrol.switchedGoalBeforePreviousArrival,
+  b35NativeSourceMode:report.b35NativeSourceRetarget?.enabled??false,
+  b35PhysicalOriginalCrowdRequests:finite(
+   report.b35NativeSourceRetarget?.nativeRequestIssued??0,'REAL_NATIVE_TARGET_REQUESTS'),
+  b35ExactDuplicateRequestsAvoided:finite(
+   report.b35NativeSourceRetarget?.redundantUnchangedRequestsSuppressed??0,
+   'SUPPRESSED_NATIVE_TARGET_REQUESTS'),
  };
- if(b34Recover){
+ if(alignedNative){
   const origin=report.b34StartAudit;
   if(report.b34SourceMeasurementStartTick!==1800||
      report.checkpoints[0].tick!==2160||
@@ -200,7 +214,7 @@ if(JSON.stringify(normalizedTicks(fixed))!==JSON.stringify(normalizedTicks(aware
    fixed.checkpoints[1]-fixed.checkpoints[0]!==360||
    fixed.checkpoints[2]-fixed.checkpoints[1]!==360||
    !Number.isSafeInteger(initialTickOffset)||
-   (b34Recover?initialTickOffset!==0:Math.abs(initialTickOffset)>12))
+   (alignedNative?initialTickOffset!==0:Math.abs(initialTickOffset)>12))
  fail('NONMATCHED_NATIVE_TICK_INTERVALS_OR_STARTUP_DRIFT',
   JSON.stringify({fixed:fixed.checkpoints,aware:aware.checkpoints,
    initialTickOffset}));
@@ -264,19 +278,22 @@ const productiveEnough=Object.values(gates).every(Boolean);
 const verdict=productiveEnough?'ELIGIBLE_FOR_OWNER_GAMEPLAY_REVIEW':
  'RETAIN_FIXED_AS_DEFAULT_WHILE_ADAPTIVE_IS_RESEARCH_OPT_IN';
 const result={
- phase:b34Recover?'W10-B34':b33Stable?'W10-B33':'W10-B32',
- comparison:b34Recover?
+ phase:b35Native?'W10-B35':b34Recover?'W10-B34':
+  b33Stable?'W10-B33':'W10-B32',
+ comparison:b35Native?
+  'FIXED_SOURCE_ORIGINAL_REPEAT_TARGET_VS_B35_SPARSE_NATIVE_REFRESH':
+  b34Recover?
   'FIXED_VS_STALL_RECOVERED_STABLE_ORIGINAL_SOURCE':
   b33Stable?'FIXED_VS_STABLE_PAINT_AWARE_REAL_ORIGINAL_SOURCE':
   'FIXED_VS_PAINT_AWARE_REAL_ORIGINAL_SOURCE',
- horizon:b34Recover?
+ horizon:alignedNative?
   'EXACT_NATIVE_TICK_1800_START_AND_REAL_1080_TICK_INCREMENT_ONLY':
   'MATCHED_720_TICK_CHECKPOINT_INTERVALS_WITH_INITIAL_STARTUP_TICK_DRIFT',
  initialTickOffset,
  tickIntervalsIdentical:true,
- strictAbsoluteNativeTickIdentity:b34Recover,
- b34AlignedNativeStartTick:b34Recover?1800:null,
- b34CountersExcludeAllPrewindowSourcePaintAndTravel:b34Recover,
+ strictAbsoluteNativeTickIdentity:alignedNative,
+ b34AlignedNativeStartTick:alignedNative?1800:null,
+ b34CountersExcludeAllPrewindowSourcePaintAndTravel:alignedNative,
  sameRepoCode:true,independentBrowserSessions:true,
  fixed,aware,differences,diagnostics,mobilityDiagnosticRatios,
  mobilityCauseNotCertified:true,gates,verdict,
@@ -289,7 +306,8 @@ const result={
  productionPromotionAllowed:false
 };
 writeFileSync(resolve(outFile),JSON.stringify(result,null,2)+'\n');
-console.log(b34Recover?'T21_W10B34_REAL_CHROME_PHYSICAL_STALL_RECOVERY_AB':
+console.log(b35Native?'T21_W10B35_REAL_CHROME_SPARSE_NATIVE_TARGET_REFRESH_AB':
+ b34Recover?'T21_W10B34_REAL_CHROME_PHYSICAL_STALL_RECOVERY_AB':
  b33Stable?'T21_W10B33_STABLE_GOAL_REAL_CHROME_COMPARISON':
  'T21_W10B32_MATCHED_REAL_CHROME_CPU_PATROL_AB_COMPARISON',
  JSON.stringify({fixedTicks:fixed.checkpoints,awareTicks:aware.checkpoints,
