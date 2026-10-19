@@ -136,6 +136,14 @@ export class UndertowF3PlayablePreviewApp{
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
+ // B36: normal source-practice can reclaim view-space when pointer-locked.
+ // Deterministic source QA keeps its prior DOM layout unless opted in.
+ private readonly b36FocusEnabled=(()=>{
+  const params=new URL(location.href).searchParams;
+  return params.get('t21QaDrive')!=='source'||
+   params.get('t21W10B36')==='playFocus';
+ })();
+ private readonly b25RunCard:HTMLElement;
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
  private wholeSourceStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
@@ -496,7 +504,7 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice=document.createElement('div');
   this.obstructionNotice.id='t21-f3-camera-obstruction';
   this.obstructionNotice.hidden=true;
-  this.obstructionNotice.style.cssText='position:fixed;left:50%;top:calc(50% + 34px);'+
+  this.obstructionNotice.style.cssText='position:fixed;left:50%;top:calc(50% + 72px);'+
    'transform:translateX(-50%);z-index:10;pointer-events:none;'+
    'padding:4px 9px;border-radius:7px;background:rgba(10,25,38,.86);'+
    'color:#fff1bd;font:700 11px system-ui;white-space:nowrap';
@@ -514,6 +522,7 @@ export class UndertowF3PlayablePreviewApp{
    'border:1px solid rgba(95,232,245,.48);border-radius:12px;'+
    'padding:10px 12px;box-shadow:0 10px 30px #0009;'+
    'color:#edfcff;font:600 11px/1.4 system-ui,sans-serif';
+  this.b25RunCard=challenge;
   challenge.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:5px">'+
    '<strong style="letter-spacing:.9px;color:#93f3ee">SOURCE PAINT RUN</strong>'+
    '<small style="color:#ffcb9d;font-size:9px">PRACTICE · UNSCORED</small></div>'+
@@ -539,6 +548,7 @@ export class UndertowF3PlayablePreviewApp{
     this.b25RunButton.disabled=true;
    }
   });
+  document.addEventListener('pointerlockchange',()=>this.refreshB36PlayFocus());
   document.addEventListener('pointerlockchange',()=>{
    if(document.pointerLockElement!==this.canvas&&
       this.b25Run.snapshot().status==='RUNNING'){
@@ -1416,6 +1426,22 @@ export class UndertowF3PlayablePreviewApp{
   const camera=this.playerCameraEntity.camera;
   if(camera)camera.fov=B27_SOURCE_BASE_FOV_DEGREES;
  }
+ /** Presentation-only focus: never changes native source physics or
+  * authoritative ink, and never hides the actionable GPU A/B trial.
+  * Restores every control as soon as pointer lock is released.
+  */
+ private refreshB36PlayFocus(){
+  if(!this.b36FocusEnabled)return;
+  const gpu=this.b22Trial.snapshot().status;
+  const activeGpuTrial=gpu==='ARMED'||gpu==='RUNNING';
+  const focus=document.pointerLockElement===this.canvas&&!activeGpuTrial;
+  this.panel.hidden=focus;
+  this.surveyButton.hidden=focus;
+  // Keep real B25 practice progression visible, but hide its unusable
+  // START control while playing without an active practice attempt.
+  this.b25RunCard.hidden=focus&&this.b25Run.snapshot().status==='IDLE';
+  this.canvas.dataset.t21W10B36PlayFocus=focus?'ON':'OFF';
+ }
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
   const button=this.b25RunButton;
@@ -1592,6 +1618,7 @@ export class UndertowF3PlayablePreviewApp{
   };
  }
  private refresh(){
+  this.refreshB36PlayFocus();
   // A paused, unlocked or failed source session still updates the practice
   // card immediately instead of leaving stale RUNNING text on screen.
   this.refreshB25PaintRun();
