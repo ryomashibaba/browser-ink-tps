@@ -46,6 +46,7 @@ jobs:
       - name: Prove pointer-locked actual mouse input through native CPU splat and respawn
         env:
           T21_W10B15_TRUSTED_INPUT: '1'
+          T21_W10B36_FOCUS: '1'
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Certify native CPU visible respawn from identical-camera real PNG pixels
         run: node scripts/t21-w10b15-pixel-diff.mjs /tmp/t21-f3-playable-webgl2
