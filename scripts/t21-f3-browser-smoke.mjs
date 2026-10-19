@@ -984,6 +984,57 @@ async function main(){
     originalSolids:25,originalPaintSurfaces:17,originalNavLinks:26,
     sourceScoreablePromotions:0,originalActorMatricesRecovered:false,
     productionAuthorized:false}));
+  // B30 source material CUTAWAY is purely visual; no new certified
+  // floor, route, actor transform, scored Turf or collision. Use genuine
+  // Chrome keyboard (Y) to compare the SAME fixed original UV scene.
+  const pressCutaway=async()=>{
+   await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'y',code:'KeyY',
+    windowsVirtualKeyCode:89,nativeVirtualKeyCode:89});
+   await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'y',code:'KeyY',
+    windowsVirtualKeyCode:89,nativeVirtualKeyCode:89});
+  };
+  await pressCutaway();
+  const cutaway=await waitUntil(async()=>{
+   const q=await evaluate('window.__t21F3.snapshot()');
+   return q.b30SourcePhysicalReadability.mode==='SOURCE_CUTAWAY'?q:false;
+  },15000);
+  if(!cutaway.b30SourcePhysicalReadability.active||
+     cutaway.b30SourcePhysicalReadability.newCollision!==0||
+     cutaway.b30SourcePhysicalReadability.newNavigation!==0||
+     cutaway.b30SourcePhysicalReadability.scoredTurf!==0||
+     cutaway.b30SourcePhysicalReadability.playableSourceFootpathsCertified!==false||
+     cutaway.b30SourcePhysicalReadability.originalSourceTriangles===0||
+     cutaway.originalSourceSolids!==25||
+     cutaway.originalPaintSurfaces!==17||
+     cutaway.originalSourceNavigationLinks!==26||
+     cutaway.sourceScoreablePromotions!==0)
+   reject('W10B30_SOURCE_CUTAWAY_HAS_NO_GAMEPLAY_AUTHORITY_'+
+    JSON.stringify(cutaway.b30SourcePhysicalReadability));
+  await sleep(450);
+  const ghostImage=await screenshot('W10B30_B_SOURCE_CUTAWAY_ACTUAL_FOOT_READABILITY');
+  await pressCutaway();
+  const uvBack=await waitUntil(async()=>{
+   const q=await evaluate('window.__t21F3.snapshot()');
+   return q.b30SourcePhysicalReadability.mode==='ORIGINAL_UV'?q:false;
+  },15000);
+  if(!uvBack.b30SourcePhysicalReadability.active||
+     uvBack.tick!==cutaway.tick||
+     JSON.stringify(uvBack.player.position)!==JSON.stringify(cutaway.player.position))
+   reject('W10B30_PAUSED_PHYSICAL_STATE_CHANGED');
+  await sleep(450);
+  const returnedUv=await screenshot('W10B30_A2_ORIGINAL_UV_RESTORED');
+  if(originalUv.sha256===ghostImage.sha256||
+     originalUv.sha256!==returnedUv.sha256)
+   reject('W10B30_CHROME_CUTAWAY_NOT_VISUALLY_DISTINCT_AND_REVERSIBLE_'+
+    JSON.stringify({originalUv,ghostImage,returnedUv}));
+  console.log('T21_W10B30_REAL_CHROME_ORIGINAL_UV_CUTAWAY_UV_PASS',
+   JSON.stringify({originalTriangles:57578,sourceOnly:true,
+    originalUVsha256:originalUv.sha256,
+    cutawaySha256:ghostImage.sha256,
+    restoredSha256:returnedUv.sha256,restoredIdentical:true,
+    certifiedSolids:25,paintable:17,navLinks:26,
+    sourceScoreablePromotion:0,actorTransformsRecovered:false,
+    nativeFootpathAdded:false,realGpuBenchmark:false}));
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
