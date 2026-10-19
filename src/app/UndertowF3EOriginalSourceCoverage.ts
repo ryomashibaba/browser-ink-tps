@@ -8,7 +8,7 @@
  * No invented wall/bridge/floor polygons, mirror operations, extrusions,
  * vertex interpolation or transforms are permitted.
  */
-import {BLEND_NORMAL,CULLFACE_NONE,calculateNormals,Color,Entity,Mesh,
+import {BLEND_NONE,BLEND_NORMAL,CULLFACE_NONE,calculateNormals,Color,Entity,Mesh,
  MeshInstance,StandardMaterial,type AppBase} from 'playcanvas';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
@@ -177,27 +177,63 @@ export function auditF3eSourceCoverage(stage:StageDefinition){
  });
  return {parts,manifest};
 }
-function materialFor(shade:Shade){
- // Source materials are CLASSIFICATION data, not a proof of original
- // in-game textures. Render original forms as unmistakably semitransparent
- // holographic study layers, while real paintable floor stays authoritative.
- const map:Record<Shade,[number,number,number,number]>={
-  CONCRETE:[.42,.66,.79,.28],
-  SLOPE:[.90,.66,.39,.33],
-  WALL:[.56,.73,.87,.45],
-  GLASS:[.26,.80,.92,.24],
-  SUPPORT:[.62,.53,.83,.47],
-  HIGH:[.43,.60,.76,.38],
-  DETAIL:[.95,.87,.37,.34]
+/**
+ * B28: faithful original-triangle architecture massing, no new geometry.
+ * Explicitly do NOT suggest FLOOR or SLOPE passability: they stay
+ * translucent in BOTH modes. Only source-backed vertical/static massing
+ * draws with a depth-writing opaque material in ARCHITECTURE.
+ */
+export const F3E_SOURCE_MASSING_MODES=['ARCHITECTURE','HOLOGRAM'] as const;
+export type F3eSourceMassingMode=typeof F3E_SOURCE_MASSING_MODES[number];
+
+export function f3eSourceMassingStyle(shade:Shade,mode:F3eSourceMassingMode){
+ const reference:Record<Shade,{opacity:number;rgb:[number,number,number]}>={
+  CONCRETE:{opacity:.28,rgb:[.42,.66,.79]},
+  SLOPE:{opacity:.33,rgb:[.90,.66,.39]},
+  WALL:{opacity:.45,rgb:[.56,.73,.87]},
+  GLASS:{opacity:.24,rgb:[.26,.80,.92]},
+  SUPPORT:{opacity:.47,rgb:[.62,.53,.83]},
+  HIGH:{opacity:.38,rgb:[.43,.60,.76]},
+  DETAIL:{opacity:.34,rgb:[.95,.87,.37]}
  };
- const [r,g,b,alpha]=map[shade];
- const m=new StandardMaterial();
+ const mass:Record<Shade,{opacity:number;rgb:[number,number,number];
+  opaque:boolean}>={
+  CONCRETE:{opacity:.52,rgb:[.44,.55,.61],opaque:false},
+  SLOPE:{opacity:.44,rgb:[.65,.57,.41],opaque:false},
+  WALL:{opacity:1,rgb:[.39,.56,.64],opaque:true},
+  GLASS:{opacity:.17,rgb:[.29,.77,.89],opaque:false},
+  SUPPORT:{opacity:1,rgb:[.48,.58,.68],opaque:true},
+  HIGH:{opacity:1,rgb:[.43,.52,.63],opaque:true},
+  DETAIL:{opacity:.66,rgb:[.81,.72,.46],opaque:false}
+ };
+ if(mode==='HOLOGRAM'){
+  const original=reference[shade];
+  return {opacity:original.opacity,rgb:original.rgb,
+   opaque:false,depthWrite:false};
+ }
+ const style=mass[shade];
+ return {opacity:style.opacity,rgb:style.rgb,
+  opaque:style.opaque,depthWrite:style.opaque};
+}
+function updateSourceMaterial(m:StandardMaterial,shade:Shade,
+ mode:F3eSourceMassingMode){
+ const style=f3eSourceMassingStyle(shade,mode);
+ const [r,g,b]=style.rgb;
  m.diffuse=new Color(r,g,b);
- m.emissive=new Color(r*.16,g*.16,b*.16);
- m.opacity=alpha;m.blendType=BLEND_NORMAL;
- m.depthWrite=false;m.cull=CULLFACE_NONE;
- m.useMetalness=true;m.metalness=.15;m.gloss=.38;
- m.update();return m;
+ m.emissive=new Color(r*.10,g*.11,b*.12);
+ m.opacity=style.opacity;
+ m.blendType=style.opaque?BLEND_NONE:BLEND_NORMAL;
+ m.depthWrite=style.depthWrite;
+ m.cull=CULLFACE_NONE;
+ m.useMetalness=true;
+ m.metalness=shade==='SUPPORT'?.30:.15;
+ m.gloss=shade==='GLASS'?.57:.35;
+ m.update();
+}
+function materialFor(shade:Shade,mode:F3eSourceMassingMode){
+ const m=new StandardMaterial();
+ updateSourceMaterial(m,shade,mode);
+ return m;
 }
 /** 7 GPU batches instead of ~90 independent source draw calls.
  * Geometry retains exact vertices and triangle order; only render batching
@@ -206,6 +242,8 @@ export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition
  const {parts,manifest}=auditF3eSourceCoverage(stage);
  const root=new Entity('T21F3E:EXACT_ORIGINAL_REFERENCE_ONLY_NO_COLLISION');
  app.root.addChild(root);
+ let visualMode:F3eSourceMassingMode='ARCHITECTURE';
+ const materials=new Map<Shade,StandardMaterial>();
  const categories=Object.keys(manifest.categories) as Shade[];
  for(const kind of categories){
   const items=parts.filter(m=>m.shade===kind);
@@ -220,11 +258,34 @@ export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition
   mesh.setIndices(new Uint32Array(indices));
   mesh.update();
   const node=new Entity('T21F3E:SOURCE_'+kind+'_UNVERIFIED_GAME_SURFACE');
+  const material=materialFor(kind,visualMode);
+  materials.set(kind,material);
   node.addComponent('render',{
-   meshInstances:[new MeshInstance(mesh,materialFor(kind))],
+   meshInstances:[new MeshInstance(mesh,material)],
    castShadows:false,receiveShadows:false
   });
   root.addChild(node);
  }
- return {root,manifest};
+ return {
+  root,manifest,
+  getVisualMode:()=>visualMode,
+  setVisualMode(mode:F3eSourceMassingMode){
+   if(!F3E_SOURCE_MASSING_MODES.includes(mode))
+    throw Error('T21_W10B28_UNAUTHORIZED_SOURCE_VISUAL_MODE');
+   if(mode===visualMode)return visualMode;
+   for(const [shade,material] of materials)
+    updateSourceMaterial(material,shade,mode);
+   visualMode=mode;
+   return visualMode;
+  },
+  renderAuthority:{
+   source:'EXACT_PINNED_ORIGINAL_TRIANGLES_ONLY' as const,
+   originalTriangles:manifest.originalTriangles,
+   physicalCollisionAdded:0 as const,
+   navigationAdded:0 as const,
+   scoreableAdded:0 as const,
+   unplacedActorInstancesRecovered:0 as const,
+   productionAuthorized:false as const
+  }
+ };
 }
