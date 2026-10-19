@@ -1374,7 +1374,8 @@ async function main(){
     if(process.env.T21_W10B33_STABLE==='1'&&(
        src.stableSourceGoalModeEnabled!==true||
        src.continuedPreviouslyApprovedGoalRequests<=0||
-       src.switchedGoalBeforePreviousArrival!==0))
+       !Number.isSafeInteger(src.switchedGoalBeforePreviousArrival)||
+       src.switchedGoalBeforePreviousArrival<0))
      reject('W10B33_CONTINUOUS_ORIGINAL_GOAL_HYSTERESIS_NOT_PROVEN_'+
       JSON.stringify(src));
     if(src.paintAwareModeEnabled!==true||
