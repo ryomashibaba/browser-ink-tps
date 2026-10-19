@@ -24,14 +24,14 @@ Completed pointerup taps retain the existing once-per-tick consumption behavior.
 Blur, hidden document and pointer-lock release still clear all physical gameplay input.
 No new CPU targets, camera behavior, collider, navigation, score or original asset data.
 
-## Verification plan and initial status
+## Verification conditions
 
 - New and existing PlayerInput tests cover cancellation, immediate recovery, completed short left/right taps, lock gating and full focus cleanup. Simulated event handlers, not real browser evidence.
 - Existing trusted-input workflow now runs these input tests.
 - Existing real Chrome WebGL2 smoke presses the mouse through browser-native CDP with actual Pointer Lock, then **injects an untrusted DOM pointercancel** before the next fixed tick and checks that no shot is emitted and held fire is released.
 - The same Chrome run then checks a genuine completed quick-tap, aim, CPU hits/splat/respawn and native render pixel evidence.
 - Chrome cancellation coverage proves the application's response to an injected cancel; it does **not** prove Chrome/Windows/OS naturally issued one. Both button states and queues are covered by unit tests; the browser cancellation probe checks primary fire only.
-- At initial commit authoring all B37 build/tests/Chrome results are **PENDING**. No B37 PASS claimed until actual CI completion is recorded.
+- Initial implementation checkpoint intentionally marked all B37 results PENDING. The completed results below supersede that pending status for the exact implementation SHA.
 
 ## Frozen authority and scope
 
@@ -45,3 +45,29 @@ GitHub connector edits and existing CI are used; no local repository checkout, W
 ## Unverified
 
 Owner Windows/RTX behavior and performance, natural OS pointer cancellation, human-perceived gameplay quality, authentic actor placement, connected natural 4v4 and official Turf outcomes remain unverified or HOLD.
+
+## Completed CI evidence
+
+Implementation and all five workflows tested **`f6b6a6218b651751e6cf92bf709087d53c7818a1`**. This final result update changes documentation only; it is not a claim that CI executed on the later documentation commit.
+
+| Workflow | Result | Evidence |
+| --- | --- | --- |
+| Trusted mouse input / B37 / CPU lifecycle | SUCCESS, no skipped steps | [39238944312](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39238944312) |
+| Actual Chrome CPU render lifecycle | SUCCESS | [39238944311](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39238944311) |
+| Frozen source render A-B-A | SUCCESS | [39238944241](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39238944241) |
+| Full original public-source visual integration | SUCCESS | [39238944333](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39238944333) |
+| QA launcher and physical regressions, Ubuntu + Windows hosted runners | SUCCESS on both jobs | [39238944229](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39238944229) |
+
+The QA launcher matrix skips the PowerShell parser on Ubuntu and the offline missing-project smoke on Windows, as configured. Those skipped steps are not PASS on those platforms. Hosted windows-latest is not the owner's Windows PC.
+
+Trusted-input job log confirms:
+- TypeScript + browser bundle build succeeded.
+- PlayerInput suite: **12 tests passed** (simulated event delivery).
+- Chrome WebGL2: genuine pointer-locked press followed by **untrusted injected DOM cancel**; shots **0 before / 0 after**, held fire **false**, Pointer Lock retained, source authority **25/17/26/0**, activationReady **false**.
+- Artifact `w10b37-pointer-cancel.json` records `naturalOsCancelTested:false`; no OS-generated-cancel certification.
+- Genuine completed quick tap accepted by the next physics tick after the cancelled press; trusted aim and actual projectile CPU splat/respawn continued successfully.
+- Identical-camera CPU respawn image comparison: **9,042 changed pixels**, **8,967 magenta-pixel gain**; isolated QA placements are explicitly declared by that existing test. This is not natural enemy encounter proof.
+- Existing aligned baseline: tick **1800–2880**, changed ink **1,407**, accepted original-paint shots **21**, physical patrol **498.423m**, stationary grounded samples **78**. Optional B35 remains **1,124 / 16 / 493.495m / 401**, with **511** duplicate requests suppressed. The existing comparison workflow succeeded as a research regression; **B35 gameplay quality remains rejected for default activation**.
+
+Code review of the complete base-to-implementation diff found only input cleanup, input tests, the existing browser witness/workflow and this checkpoint. No CPU, source geometry, NavLink, paint authority, score, assets, production workflow or main/PR ref was modified.
+Protected refs checked before implementation: main `fbd922cea900df8e1a139f21b3c61ed927b3fdd9`; PR #5 head `8cfc95756ef0b56e2c33dc9f89a9041126daa272`, open/draft/unmerged. Final read-only verification confirmed these exact states unchanged.
