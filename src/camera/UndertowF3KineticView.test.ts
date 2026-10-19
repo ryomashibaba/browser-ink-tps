@@ -68,7 +68,7 @@ describe('W10-B27 opt-in real certified source grounded camera pace',()=>{
   expect(v.snapshot()).toMatchObject({
    fieldOfViewDegrees:63,targetFovDegrees:63,
    nativeGroundSpeedMetersPerSecond:0,
-   originalTurfScore:'UNAVAILABLE',
+   officialTurfScore:'UNAVAILABLE',
    productionAuthorized:false,
    runtimeCollisionNavOrPaintModified:false
   });
