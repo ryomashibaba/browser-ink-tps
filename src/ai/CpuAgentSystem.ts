@@ -8,6 +8,8 @@ import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
 import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityMonitor';
+import {shouldReissueOriginalSourceNativeTarget}
+ from './OriginalSourceNativeTargetRefresh';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
@@ -185,6 +187,12 @@ export class CpuAgentSystem {
   /** Read-only QA witness; never touches production T20 behavior. */
   private readonly qaContinuity = new CpuContinuityMonitor();
   private readonly qaMotionGoals = new Map<string, Vec3>();
+  private b35OptInNativeRefresh=false;
+  private b35RealNativeRequests=0;
+  private b35DuplicateNativeRequestsSuppressed=0;
+  private readonly b35LastNativeTarget=new Map<string,{
+   agent:CrowdAgent;goal:Vec3;repeat:number
+  }>();
   /** Throttles real QA turf projectiles without altering enemy fire rates. */
   private readonly qaTurfShotCooldown = new Map<string, number>();
   private readonly qaTurfShotsByActor = new Map<string, number>();
@@ -242,6 +250,26 @@ export class CpuAgentSystem {
     this.f3dSourceGoals=source;
   }
 
+  /** Experimental source-only frozen T21; default keeps original
+   * repeated native retarget behavior and production CPU is untouched.
+   */
+  public enableB35SourceNativeRetargetSuppression():void{
+   if(!this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
+      !this.phase14qGroundCollision||
+      this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+    throw Error('T21_W10B35_PRODUCTION_NATIVE_RETARGET_FORBIDDEN');
+   this.b35OptInNativeRefresh=true;
+  }
+  public b35NativeSourceRetargetSnapshot(){
+   return {
+    enabled:this.b35OptInNativeRefresh,
+    nativeRequestIssued:this.b35RealNativeRequests,
+    redundantUnchangedRequestsSuppressed:
+     this.b35DuplicateNativeRequestsSuppressed,
+    noExtraNavOrGameplayAuthority:true,
+    sourceOnly:true,productionAuthorized:false
+   };
+  }
   /** Returns actual accepted CPU-foot trajectories, never Crowd suggestions. */
   public qaContinuitySnapshot(): CpuContinuityReport {
     return this.qaContinuity.snapshot();
@@ -257,6 +285,9 @@ export class CpuAgentSystem {
   public reset(humanTeam: Team.A | Team.B): void {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
+    this.b35LastNativeTarget.clear();
+    this.b35RealNativeRequests=0;
+    this.b35DuplicateNativeRequestsSuppressed=0;
     this.qaTurfShotCooldown.clear();
     this.qaTurfShotsByActor.clear();
     this.stats.cpuSourceTurfShots = 0;
@@ -500,13 +531,36 @@ export class CpuAgentSystem {
               humanPosition
             }, this.goal);
             const goal = this.navigation.closestPoint(this.goal);
-            bot.agent?.requestMoveTarget(goal);
+            if(bot.agent){
+              let submit=true;
+              if(this.b35OptInNativeRefresh&&this.f3dSourceGoals){
+               const old=this.b35LastNativeTarget.get(bot.id);
+               submit=shouldReissueOriginalSourceNativeTarget(
+                old?{x:old.goal.x,y:old.goal.y,z:old.goal.z,
+                 repeatedThinkCycles:old.repeat,
+                 sameAgent:old.agent===bot.agent}:null,goal);
+               if(submit)this.b35LastNativeTarget.set(bot.id,{
+                agent:bot.agent,goal:new Vec3(goal.x,goal.y,goal.z),
+                repeat:0
+               });
+               else{
+                old!.repeat++;
+                this.b35DuplicateNativeRequestsSuppressed++;
+               }
+              }
+              if(submit){
+               bot.agent.requestMoveTarget(goal);
+               if(this.b35OptInNativeRefresh)
+                this.b35RealNativeRequests++;
+              }
+            }
             if (this.phase14qGroundCollision && bot.agent) {
               this.qaMotionGoals.set(bot.id, new Vec3(goal.x, goal.y, goal.z));
             }
             this.stats.cpuTacticalRetargets += 1;
           } else {
             bot.agent?.resetMoveTarget();
+            this.b35LastNativeTarget.delete(bot.id);
             this.qaMotionGoals.delete(bot.id);
           }
         }
