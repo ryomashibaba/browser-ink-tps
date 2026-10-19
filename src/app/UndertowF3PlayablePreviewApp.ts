@@ -37,6 +37,8 @@ import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics
 import {PlayerController} from '../player/PlayerController';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
+import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -130,6 +132,16 @@ export class UndertowF3PlayablePreviewApp{
  private readonly coordinator:PaintCoordinator;
  private readonly atlas:GpuInkAtlas;
  private readonly projectiles:ProjectileSystem;
+ private readonly humanSub:SubWeaponSystem;
+ /** Real F-key human practice sub on verified original surfaces only.
+  * Deterministic source QA must explicitly opt in to avoid changing
+  * B32-B35 baseline or scripted combat tests.
+  */
+ private readonly b38HumanSubEnabled=(()=>{
+  const q=new URL(location.href).searchParams;
+  return q.get('t21QaDrive')!=='source'||
+   q.get('t21W10B38')==='humanSub';
+ })();
  private readonly feedback:GameFeedback;
  private readonly humanSpawn:Vec3;
  private readonly panel:HTMLElement;
@@ -349,6 +361,13 @@ export class UndertowF3PlayablePreviewApp{
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
    this.feedback,this.stats);
+  // Reuse the already-shipped player sub weapon pipeline; this is not
+  // a fabricated source Actor, collider, NavLink or scoreable surface.
+  this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
+   this.coordinator,this.resources,combatTargets,this.cpu,
+   this.feedback,this.stats);
+  this.stats.playerSubWeaponName=subWeaponProfile(
+   weaponKit(this.projectiles.currentPlayerWeapon.id).sub).displayName;
   // Uses the real existing weapon/ink/physics systems, but only on the
   // explicit F3 + source QA route. No scoreable promotion is authorized.
   this.cpuKit=this.cpuKitQaEnabled ? new CpuKitSystem(app,surfaces,
@@ -394,7 +413,7 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
    'Source models are OPTICAL ONLY where collision is unverified. No invented bridge, NavLink or Turf score.</p></details>'+
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
-   'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · Q switch shoulder · M radar · Esc release · G special</p>';
+   'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc release</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   this.b22Trial=new UndertowF3OwnerGpuTrial(
@@ -1104,6 +1123,7 @@ export class UndertowF3PlayablePreviewApp{
   this.stopReason=null;this.paused=false;this.respawnFrames=0;
   this.resources.reset();
   this.projectiles.reset();
+  this.humanSub.reset();
   this.cpuKit?.reset();
   this.cpuKitArtificialGaugeArms=0;
   this.cpuKitManualSubQa=0;
@@ -1183,7 +1203,7 @@ export class UndertowF3PlayablePreviewApp{
    for(let i=0;i<count&&this.matchState!=='TIME_UP';i++)
     this.stepFixed(++this.clock.tick,STEP);
    this.player.render(1,this.visual);this.cpu.render(1);
-   this.projectiles.render(1);this.cpuKit?.render(1);
+   this.projectiles.render(1);this.humanSub.render(1);this.cpuKit?.render(1);
    this.camera.update(this.visual);
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
    this.refresh();
@@ -1246,6 +1266,7 @@ export class UndertowF3PlayablePreviewApp{
     this.camera.update(this.player.getPosition(this.p));
     const primaryTap=this.input.consumePrimaryPressed();
     const realPointerFire=this.input.fireHeld||primaryTap;
+    const subTap=this.input.consumeSubPressed();
     const humanShotsBefore=this.stats.shotsFired;
     if(this.w10b14){
      const w=this.w10b14;
@@ -1299,6 +1320,16 @@ export class UndertowF3PlayablePreviewApp{
        this.realPointerToShotSamples++;
       }
     }
+    // F is a real keyboard sub throw, not CPU automation, free score or
+    // a projectile injected by QA. Original Rapier/paint physics resolve it.
+    // Consume even when disabled or splatted: never fire stale buffered F.
+    if(this.b38HumanSubEnabled&&subTap&&alive&&this.player.canShoot&&
+       document.pointerLockElement===this.canvas&&this.matchState!=='TIME_UP'){
+     this.humanSub.tryThrow(
+      weaponKit(this.projectiles.currentPlayerWeapon.id).sub,Team.A,
+      this.muzzle,this.aim);
+    }
+    this.humanSub.fixedUpdate(seconds);
     this.cpuKit?.fixedUpdate(seconds);
     this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
     const paintStart=this.b20ProfileStart();
@@ -1389,6 +1420,7 @@ export class UndertowF3PlayablePreviewApp{
    this.player.render(report.alpha,this.visual);
    this.cpu.render(report.alpha);
    this.projectiles.render(report.alpha);
+   this.humanSub.render(report.alpha);
    this.cpuKit?.render(report.alpha);
    this.feedback.update(cameraDt);
    this.camera.update(this.visual,cameraDt);
@@ -1586,6 +1618,17 @@ export class UndertowF3PlayablePreviewApp{
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   b38HumanSub:{
+    enabled:this.b38HumanSubEnabled,
+    input:'REAL_POINTER_LOCKED_KEY_F',
+    weapon:subWeaponProfile(weaponKit(this.projectiles.currentPlayerWeapon.id).sub).displayName,
+    throws:this.stats.playerSubThrows,
+    explosions:this.stats.playerSubExplosions,
+    activeOriginalPaintableSurfaces:this.rawStage.paintSurfaces.length,
+    originalScoreableSurfaces:0,
+    nativeSourcePhysicsOnly:true,officialTurfWinner:false,
+    productionAuthorized:false
+   },
    cpuKitQa:{enabled:this.cpuKitQaEnabled,artificialGaugeArms:this.cpuKitArtificialGaugeArms,
     artificialInkRefills:this.cpuKitArtificialGaugeArms,
     cpuSubUses:this.stats.cpuSubUses,cpuSpecialActivations:this.stats.cpuSpecialActivations,
