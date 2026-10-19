@@ -70,6 +70,20 @@ const assertFrame=(report,mode)=>{
     au.sourcePatrol.paintAwareOwnGoalsAccepted+
     au.sourcePatrol.paintAwareUnknownInkGoalsAccepted))
   fail('AWARE_GENUINE_OWNER_GRID_MISSING',au.sourcePatrol);
+ const src=au.sourcePatrol;
+ if(!Number.isSafeInteger(src.groundedFreeCombatCpuSamples)||
+    !Number.isSafeInteger(src.nearlyStationaryGroundedCpuSamples)||
+    src.groundedFreeCombatCpuSamples<=0||
+    src.nearlyStationaryGroundedCpuSamples>src.groundedFreeCombatCpuSamples||
+    src.trulyNewOriginalGoalSelections<=0||
+    src.trulyNewOriginalGoalSelections>src.requestedGoalLengthsSampled||
+    src.newGoalShortHops+src.newGoalLongHops>src.trulyNewOriginalGoalSelections||
+    !Number.isFinite(src.newGoalNativePathMeters)||
+    src.newGoalNativePathMeters<=0||
+    !Number.isFinite(src.newGoalDirectMeters)||
+    src.newGoalDirectMeters<=0)
+  fail('MISSING_REAL_ORIGINAL_MOBILITY_DIAGNOSTICS_'+mode,
+   JSON.stringify(src));
  const metrics={
   sourceOnly:true,
   browserFixedTickQa:true,
@@ -164,6 +178,20 @@ const gates={
  physicalPatrolAtLeast90PercentOfFixed:
   aware.sourcePatrolMeters>=fixed.sourcePatrolMeters*.90
 };
+// B34 records differences; it does NOT infer actual cause without a
+// controlled original-foot position/route experiment. The ratios are
+// grounded only in the two measured separate genuine Chrome sessions.
+const safeRatio=(top,bottom)=>bottom>0?Number((top/bottom).toFixed(4)):null;
+const mobilityDiagnosticRatios={
+ fixedStationaryFraction:safeRatio(fixed.stationaryGroundedCpuSamples,fixed.groundedCpuSamples),
+ awareStationaryFraction:safeRatio(aware.stationaryGroundedCpuSamples,aware.groundedCpuSamples),
+ fixedNewGoalMeanRecastMeters:safeRatio(fixed.newGoalNativePathMeters,fixed.trulyNewOriginalGoalSelections),
+ awareNewGoalMeanRecastMeters:safeRatio(aware.newGoalNativePathMeters,aware.trulyNewOriginalGoalSelections),
+ fixedNewGoalMeanDirectMeters:safeRatio(fixed.newGoalDirectMeters,fixed.trulyNewOriginalGoalSelections),
+ awareNewGoalMeanDirectMeters:safeRatio(aware.newGoalDirectMeters,aware.trulyNewOriginalGoalSelections),
+ fixedShortNewGoalFraction:safeRatio(fixed.newGoalShortHops,fixed.trulyNewOriginalGoalSelections),
+ awareShortNewGoalFraction:safeRatio(aware.newGoalShortHops,aware.trulyNewOriginalGoalSelections)
+};
 const productiveEnough=Object.values(gates).every(Boolean);
 const verdict=productiveEnough?'ELIGIBLE_FOR_OWNER_GAMEPLAY_REVIEW':
  'RETAIN_FIXED_AS_DEFAULT_WHILE_ADAPTIVE_IS_RESEARCH_OPT_IN';
@@ -177,7 +205,8 @@ const result={
  tickIntervalsIdentical:true,
  strictAbsoluteNativeTickIdentity:false,
  sameRepoCode:true,independentBrowserSessions:true,
- fixed,aware,differences,diagnostics,gates,verdict,
+ fixed,aware,differences,diagnostics,mobilityDiagnosticRatios,
+ mobilityCauseNotCertified:true,gates,verdict,
  effectiveSampleCount:1,
  notAFpsOrStatisticallyControlledClaim:true,
  sourceStageSourceOfTruth:'25_SOLIDS_17_PAINT_26_NAV_0_SCORE',
@@ -192,5 +221,5 @@ console.log(b33Stable?'T21_W10B33_STABLE_GOAL_REAL_CHROME_COMPARISON':
  JSON.stringify({fixedTicks:fixed.checkpoints,awareTicks:aware.checkpoints,
   initialTickOffset,tickIntervalsIdentical:true,
   baseline:fixed,paintAware:aware,
-  deltas:differences,diagnostics,gates,verdict,
+  deltas:differences,diagnostics,mobilityDiagnosticRatios,gates,verdict,
   originalSourceTopologyUnchanged:true}));
