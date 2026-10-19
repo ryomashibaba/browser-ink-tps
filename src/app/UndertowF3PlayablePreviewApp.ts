@@ -323,9 +323,12 @@ export class UndertowF3PlayablePreviewApp{
   // source-patrol painting throughput in an independent real-Chrome A/B.
   // Keep the new logic available for explicit source-only experiments,
   // but restore proven fixed patrol as the normal user-facing default.
-  const b31Enabled=b31Params.get('t21W10B31')==='inkGoals';
+  const b33StableGoals=b31Params.get('t21W10B33')==='stableGoals';
+  const b31Enabled=b33StableGoals||
+   b31Params.get('t21W10B31')==='inkGoals';
   this.traffic=new UndertowF3SourceTraffic(
-   stage,this.nav,slots,bots,this.physics,this.ink,b31Enabled);
+   stage,this.nav,slots,bots,this.physics,this.ink,
+   b31Enabled,b33StableGoals);
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
