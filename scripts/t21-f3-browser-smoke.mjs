@@ -1582,6 +1582,129 @@ async function main(){
    writeFileSync(resolve(OUTPUT,'w10b48-source-ballistic-preflight.json'),
     JSON.stringify(b48Report,null,2));
    console.log('T21_W10B48_BALLISTIC_PREFLIGHT',JSON.stringify(b48Report));
+   // B48: aim at two ACTUAL source-foot candidate velocities using the
+   // calibrated NATIVE camera/launch correspondence of real throws
+   // #12 and #14. This is a heuristic; we do NOT claim arbitrary native
+   // velocity is camera-achievable until true KeyF launch is measured.
+   const targetRows=[
+    {anchorId:12,yaw:-60,pitch:30,priorCamera:b46.realAim},
+    {anchorId:14,yaw:-50,pitch:-20,priorCamera:{
+     nativeCameraYaw:b47Extra[1].cameraYawDegrees,
+     nativeCameraPitch:b47Extra[1].cameraPitchDegrees}}
+   ];
+   const b48Actual=[];
+   const wrap48=x=>((x+540)%360)-180;
+   const radToDeg=180/Math.PI;
+   const nativeAngles=v=>{
+    const speed=10.5,upward=4.6;
+    return {yaw:Math.atan2(v[0],-v[2])*radToDeg,
+     pitch:Math.asin(Math.max(-1,Math.min(1,(v[1]-upward)/speed)))*
+      radToDeg};
+   };
+   for(const row of targetRows){
+    const pre=b48Pre.nearestSourceBallisticRapierCandidates.find(v=>
+     v.actualSourceLaunchId===row.anchorId&&
+     v.hypotheticalLaunchYawDegrees===row.yaw&&
+     v.hypotheticalLaunchPitchDegrees===row.pitch);
+    if(!pre)reject('W10B48_GROUNDED_BALLISTIC_SOURCE_CANDIDATE_MISSING');
+    const ref=b47Replay.samples.find(x=>x.launchId===row.anchorId);
+    if(!ref||!row.priorCamera||
+       !Number.isFinite(row.priorCamera.nativeCameraYaw)||
+       !Number.isFinite(row.priorCamera.nativeCameraPitch))
+     reject('W10B48_REAL_HUMAN_CAMERA_CALIBRATION_MISSING');
+    const nativeRef=nativeAngles(ref.initialNativeVelocity);
+    const wantedCameraYaw=wrap48(row.priorCamera.nativeCameraYaw+
+     wrap48(row.yaw-nativeRef.yaw));
+    const rawWantedPitch=row.priorCamera.nativeCameraPitch+
+     row.pitch-nativeRef.pitch;
+    const wantedCameraPitch=Math.max(-55,Math.min(28,rawWantedPitch));
+    await refill();
+    const beforeAim=await evaluate('window.__t21F3.snapshot()');
+    const locked=await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")');
+    if(!locked)reject('W10B48_NATIVE_POINTER_LOCK_NOT_HELD');
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800,y:450,button:'none'
+    });
+    const dx=Math.round(wrap48(wantedCameraYaw-
+     beforeAim.cameraSourcePractice.yawDegrees)/.22);
+    const dy=Math.round(-(wantedCameraPitch-
+     beforeAim.cameraSourcePractice.pitchDegrees)/.18);
+    if(Math.abs(dx)>720||Math.abs(dy)>470)
+     reject('W10B48_CAMERA_SWEEP_UNREALISTIC_'+row.anchorId);
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mouseMoved',x:800+dx,y:450+dy,button:'none'
+    });
+    let aimed=await evaluate('window.__t21F3.snapshot()');
+    let ye=wrap48(wantedCameraYaw-aimed.cameraSourcePractice.yawDegrees);
+    let pe=wantedCameraPitch-aimed.cameraSourcePractice.pitchDegrees;
+    if(Math.abs(ye)>2||Math.abs(pe)>2){
+     await cmd('Input.dispatchMouseEvent',{
+      type:'mouseMoved',x:800+dx+Math.round(ye/.22),
+      y:450+dy+Math.round(-pe/.18),button:'none'
+     });
+     aimed=await evaluate('window.__t21F3.snapshot()');
+     ye=wrap48(wantedCameraYaw-aimed.cameraSourcePractice.yawDegrees);
+     pe=wantedCameraPitch-aimed.cameraSourcePractice.pitchDegrees;
+    }
+    const footDelta=Math.hypot(...aimed.player.position.map(
+     (v,i)=>v-b45Survey.playerFoot[i]));
+    if(footDelta>.1||Math.abs(ye)>4||Math.abs(pe)>4||
+       aimed.originalSourceSolids!==25||
+       aimed.originalPaintSurfaces!==17||
+       aimed.originalSourceNavigationLinks!==26||
+       aimed.sourceScoreablePromotions!==0)
+     reject('W10B48_REAL_SOURCE_FOOT_OR_AIM_DRIFT_'+row.anchorId);
+    const trial=await throwObserved(
+     'B48_ACTUAL_CAMERA_APPROX_CANDIDATE_'+row.anchorId);
+    const witness=trial.b43NativeExplosionWitness;
+    if(trial.throwDelta!==1||trial.explosionDelta!==1||
+       witness.launchId!==14+b48Actual.length+1||
+       witness.originalGameCollisionCertified!==false)
+     reject('W10B48_REAL_KEY_F_OR_SOURCE_AUTHORITY_'+row.anchorId);
+    const actualNative=nativeAngles(witness.initialNativeVelocity);
+    const predicted=pre.hypotheticalInitialVelocity;
+    b48Actual.push({
+     predictedNativeRapierCandidate:pre,
+     calibrationFromRealHumanThrow:row.anchorId,
+     observedCameraYaw:aimed.cameraSourcePractice.yawDegrees,
+     observedCameraPitch:aimed.cameraSourcePractice.pitchDegrees,
+     cameraYawErrorDegrees:ye,cameraPitchErrorDegrees:pe,
+     cameraPitchClamped:rawWantedPitch!==wantedCameraPitch,
+     footDeviationMeters:footDelta,
+     achievedNativeOutgoingYaw:actualNative.yaw,
+     achievedNativeOutgoingPitch:actualNative.pitch,
+     nativeOutgoingYawDeltaFromPrediction:
+      wrap48(actualNative.yaw-row.yaw),
+     nativeOutgoingPitchDeltaFromPrediction:
+      actualNative.pitch-row.pitch,
+     launchVelocityDeviationMetersPerSecond:
+      Math.hypot(...witness.initialNativeVelocity.map(
+       (v,i)=>v-predicted[i])),
+     nativeContactActuallyChosen:witness.contactKind,
+     actualNativeContactSourceId:witness.contactSourceId,
+     actualHumanThrow:trial,
+     actualRapierSelected:witness.contactKind==='RAPIER_STAGE_SOLID',
+     noSyntheticCameraWrites:true,noProjectileInjection:true});
+   }
+   const resultB48Real={
+    status:'B48_TWO_REAL_CALIBRATED_NATIVE_THROW_TRIALS_RECORDED',
+    preflightPredictedRapierCandidates:b48Pre.counts.nativeRapierFirst,
+    realNewKeyFThrows:b48Actual.length,allRealThrows:16,
+    actualSourceTrials:b48Actual,
+    realRapierContactSelectedCount:b48Actual.filter(
+     x=>x.actualRapierSelected).length,
+    hypotheticalVelocityNotAssumedAchievable:true,
+    sourceOriginalSolids:25,originalPaintable:17,
+    originalLinks:26,scoreable:0,
+    originalNintendoColliderCertified:false,
+    productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b48-calibrated-actual-native-keyf.json'),
+    JSON.stringify(resultB48Real,null,2));
+   console.log('T21_W10B48_CALIBRATED_REAL_KEY_F_THROW',
+    JSON.stringify(resultB48Real));
+
 
 
 
