@@ -266,6 +266,7 @@ export class UndertowF3PlayablePreviewApp{
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
   this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
+  this.canvas.dataset.t21F3eMassingMode=this.sourceCompletion.getVisualMode();
   // Read-only truth: fired shots alone are not proof of real ink impact.
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
    (event,changedCells)=>this.b23InkFeedback.accept(event,changedCells));
@@ -534,7 +535,10 @@ export class UndertowF3PlayablePreviewApp{
    // Source-review shortcuts are intentionally available only unlocked.
    if(document.pointerLockElement===this.canvas)return;
    if(ev.code==='KeyV')this.toggleSurvey();
-   if(ev.code==='KeyH')this.cycleSourceVisualMode();
+   if(ev.code==='KeyH'){
+    if(ev.shiftKey)this.toggleW10B28SourceMassing();
+    else this.cycleSourceVisualMode();
+   }
    if(ev.code==='KeyB')this.toggleF3iEnvironment();
    if(ev.code==='KeyG')this.cycleSourceGallery();
    if(ev.code==='KeyT')this.toggleTexturedF3l();
@@ -770,6 +774,18 @@ export class UndertowF3PlayablePreviewApp{
   if(button)button.textContent='F3L original textures: '+
    (this.texturedF3lActive?'ON':'OFF')+' (T)';
   this.canvas.dataset.t21F3lOriginalTexture=this.texturedF3lActive?'ON':'OFF';
+  this.refresh();
+ }
+ private toggleW10B28SourceMassing(){
+  // Same 7 source-verified optical GPU batches; no stage/gameplay writes.
+  if(this.wholeSourceRoot?.enabled||this.texturedF3l?.root.enabled)return;
+  const next=this.sourceCompletion.getVisualMode()==='ARCHITECTURE'
+   ?'HOLOGRAM':'ARCHITECTURE';
+  this.sourceCompletion.setVisualMode(next);
+  this.canvas.dataset.t21F3eMassingMode=next;
+  const button=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement|null;
+  if(button)button.textContent='Source terrain study: '+
+   (this.sourceCompletion.root.enabled?'ON':'OFF')+' ['+next+']';
   this.refresh();
  }
  private cycleSourceVisualMode(){
@@ -1411,6 +1427,11 @@ export class UndertowF3PlayablePreviewApp{
    originalSourceOpticalStructures:this.structures.manifest.originalSourceVisualStructures,
    originalSourceOpticalTriangles:this.structures.manifest.originalSourceTriangles,
    originalSourceStudy:this.sourceCompletion.manifest,
+   b28OriginalSourceMassing:{
+    mode:this.sourceCompletion.getVisualMode(),
+    visible:this.sourceCompletion.root.enabled,
+    ...this.sourceCompletion.renderAuthority
+   },
    originalSourceStudyVisible:this.sourceCompletion.root.enabled,
    sourceOpticalStructuresVisible:this.structures.root.enabled,
    sourceSurvey:this.survey.snapshot(),
@@ -1566,6 +1587,9 @@ export class UndertowF3PlayablePreviewApp{
     (this.wholeSourceStatus==='READY'?' / '+
      this.wholeSourceTriangles+' original triangles':'')+
     ' · NO WALK / INK / NAV',
+   'B28 ORIGINAL ARCHITECTURE · '+state.b28OriginalSourceMassing.mode+
+    ' / '+(state.b28OriginalSourceMassing.visible?'VISIBLE':'OFF')+
+    ' · Shift+H: source massing / hologram · UNSCORED',
    'F3H SOURCE VIEW · '+this.sourceVisualMode+
     ' / whole-scene optical-only (H to compare)',
    this.sourceCoverage?'F3H SOURCE COVERAGE · '+
