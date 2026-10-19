@@ -1,7 +1,7 @@
 name: T21 F3G pinned full original Temple01 visual integration
 on:
   push:
-    branches: ["codex/t21-undertow-evidence-ledger"]
+    branches: ["codex/t21-undertow-evidence-ledger", "dev/t21-f4e103w-qa-infra"]
     paths:
       - "scripts/t21-f3g-source-pack.*"
       - "scripts/t21-f3i-scene-inventory.*"
@@ -10,6 +10,7 @@ on:
       - "src/app/UndertowF3I*"
       - "src/app/UndertowF3K*"
       - "src/app/UndertowF3L*"
+      - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "scripts/t21-f3-browser-smoke.mjs"
       - "src/app/UndertowF3G*"
       - "src/app/UndertowF3PlayablePreviewApp.ts"
@@ -69,6 +70,8 @@ jobs:
           node -e "const m=require('./public/t21-f3g-source/f3i-environment.json');if(!m.macroFamilyCount||m.macroAssetFamilies.length<1||m.macroFamilyLedgerAuthoritativeForPlacements!==false||m.actorPlacementRecovered!==false)process.exit(1);console.log('F3J_PINNED_MACRO_ASSET_FAMILIES',m.macroFamilyCount,m.actorObjectCount,m.backgroundTriangleCount)"
           test -s public/t21-f3g-source/manifest.json
           node -e "const m=require('./public/t21-f3g-source/manifest.json'); if(!m.verifiedAgainstPinnedSource||m.includedOriginalTriangles<1500||m.stagePlayableAuthority!=='NONE')process.exit(1); console.log('F3G_PINNED_WHOLE_STAGE',m.includedOriginalTriangles,m.groups.length)"
+      - name: Test source-only verified UV preference and frozen authority
+        run: npx vitest run src/app/UndertowF3VerifiedSourcePresentation.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts
       - name: Typecheck and build full-source opt-in browser bundle
         run: npm run build -- --base=/browser-ink-tps/
       - name: Exact whole stage real WebGL2 and existing human controls
