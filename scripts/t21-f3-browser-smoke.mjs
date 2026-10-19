@@ -378,10 +378,20 @@ async function main(){
     originalStageSolids:25,scoreablePromotions:0,
     gameplayOrAimChanges:false}));
   await evaluate('document.exitPointerLock()');
-  const unlocked=await evaluate('window.__t21F3.snapshot()');
-  if(unlocked.b27KineticSourceView.fieldOfViewDegrees!==63)
-   reject('W10B27_POINTER_UNLOCK_MUST_INSTANTLY_RESTORE_ORIGINAL_LENS_'+
-    JSON.stringify(unlocked.b27KineticSourceView));
+  // Chrome dispatches pointerlockchange asynchronously after
+  // exitPointerLock(). The genuine event's F3 lens-reset handler is
+  // immediate *when dispatched*, but CDP should not race that event.
+  const unlocked=await waitUntil(async()=>{
+   const view=await evaluate(`({
+    pointerLocked:document.pointerLockElement!==null,
+    source:window.__t21F3.snapshot().b27KineticSourceView
+   })`);
+   return !view.pointerLocked&&view.source.fieldOfViewDegrees===63?
+    view.source:false;
+  },10000);
+  if(unlocked.fieldOfViewDegrees!==63)
+   reject('W10B27_POINTER_UNLOCK_MUST_RESTORE_ORIGINAL_LENS_'+
+    JSON.stringify(unlocked));
   const paintRunAborted=await waitUntil(async()=>{
    const state=await evaluate('window.__t21F3.snapshot()');
    return state.b25SourcePaintRun.status==='ABORTED'?state:false;
