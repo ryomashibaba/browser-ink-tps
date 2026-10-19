@@ -99,3 +99,39 @@ describe('W10-B39 authentic, non-scoring human bomb raster result',()=>{
   });
  });
 });
+
+describe('W10-B41 real explosion and ownership outcome',()=>{
+ it('separates new cells, stamped but unchanged cells, and absent stamps',()=>{
+  const m=new UndertowF3SourceInkFeedback();
+  m.accept(real(20,PaintSource.Human,PaintEventType.Bomb),80);
+  m.observeExplosion(20,1,0,0);
+  expect(m.snapshot(20)).toMatchObject({
+   lastBombOutcome:'NEW_CELLS',lastBombOutcomeStamps:1,
+   lastBombOutcomeChangedCells:80,showBombOutcome:true
+  });
+  const a=m.snapshot(69);
+  m.accept(real(70,PaintSource.Human,PaintEventType.Bomb),0);
+  m.observeExplosion(70,2,a.humanBombStampEvents,a.humanBombChangedCells);
+  expect(m.snapshot(70)).toMatchObject({
+   lastBombOutcome:'STAMP_ZERO_CHANGE',lastBombOutcomeChangedCells:0,
+   lastBombOutcomeStamps:1,showBombConfirmation:false,showBombOutcome:true
+  });
+  const b=m.snapshot(109);
+  m.observeExplosion(110,3,b.humanBombStampEvents,b.humanBombChangedCells);
+  expect(m.snapshot(110)).toMatchObject({
+   lastBombOutcome:'NO_CERTIFIED_STAMP',lastBombOutcomeStamps:0,
+   showBombOutcome:true,scoreablePromotionCount:0
+  });
+  expect(m.snapshot(138).showBombOutcome).toBe(false);
+ });
+ it('marks concurrent explosions ambiguous and rejects decreasing counts',()=>{
+  const m=new UndertowF3SourceInkFeedback();
+  m.accept(real(5,PaintSource.Human,PaintEventType.Bomb),6);
+  m.observeExplosion(5,2,0,0);
+  expect(m.snapshot(5)).toMatchObject({
+   lastBombOutcome:'MULTIPLE_UNRESOLVED',humanBombExplosionsObserved:2
+  });
+  m.observeExplosion(6,1,0,0);
+  expect(m.snapshot(6).humanBombExplosionsObserved).toBe(2);
+ });
+});

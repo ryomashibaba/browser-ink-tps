@@ -1329,11 +1329,15 @@ export class UndertowF3PlayablePreviewApp{
       weaponKit(this.projectiles.currentPlayerWeapon.id).sub,Team.A,
       this.muzzle,this.aim);
     }
+    const b41PreExplosion=this.b23InkFeedback.snapshot(frame);
     this.humanSub.fixedUpdate(seconds);
     this.cpuKit?.fixedUpdate(seconds);
     this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
     const paintStart=this.b20ProfileStart();
     this.coordinator.processTick(frame);
+    this.b23InkFeedback.observeExplosion(
+     frame,this.stats.playerSubExplosions,
+     b41PreExplosion.humanBombStampEvents,b41PreExplosion.humanBombChangedCells);
     this.b20ProfileStop('inkOwnershipTick',paintStart);
     if(this.resources.currentHp<=0){
      if(this.respawnFrames===0){
@@ -1497,18 +1501,27 @@ export class UndertowF3PlayablePreviewApp{
  }
  private refreshB23PaintFeedback(){
   const event=this.b23InkFeedback.snapshot(this.clock.tick);
-  const bombFirst=event.showBombConfirmation&&
+  const bombFirst=event.showBombOutcome&&
    (!event.showPaintConfirmation||
-    (event.lastBombTick??-1)>=(event.lastImpactTick??-1));
+    (event.lastBombOutcomeTick??-1)>=(event.lastImpactTick??-1));
   const visible=bombFirst||event.showPaintConfirmation;
+  this.b23PaintMarker.dataset.t21BombOutcome=bombFirst?
+   (event.lastBombOutcome??'UNKNOWN'):'NONE';
   this.b23PaintMarker.hidden=!visible||
    this.survey.snapshot().active||this.galleryIndex>=0||this.paused||
    !!this.stopReason;
   if(this.b23PaintMarker.hidden)return;
+  // No ink victory from zero changed cells, no unsupported physics-miss claim.
   this.b23PaintMarker.textContent=bombFirst?
-   'BOMB INK · +'+event.lastBombChangedCells+' real cells':
+   event.lastBombOutcome==='NEW_CELLS'?
+    'BOMB INK · +'+event.lastBombOutcomeChangedCells+' real cells':
+   event.lastBombOutcome==='STAMP_ZERO_CHANGE'?
+    'BOMB STAMP · 0 new cells':
+   event.lastBombOutcome==='NO_CERTIFIED_STAMP'?
+    'BOMB · no certified ink stamp':
+    'BOMB · multiple blasts, ink unresolved':
    'INK CONTACT · +'+event.lastImpactChangedCells+' cells';
-  const age=bombFirst?(event.bombElapsedTicks??0):(event.elapsedTicks??0);
+  const age=bombFirst?(event.bombOutcomeElapsedTicks??0):(event.elapsedTicks??0);
   this.b23PaintMarker.style.opacity=String(Math.max(.2,1-age/36));
  }
  private sourceFrameQualitySnapshot(){

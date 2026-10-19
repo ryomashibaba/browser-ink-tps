@@ -875,6 +875,9 @@ async function main(){
       bombInk.humanBombChangedEvents<1||
       bombInk.humanBombChangedCells<1||
       bombInk.lastBombPaintedSurface===null||
+       bombInk.lastBombOutcome!=='NEW_CELLS'||
+       bombInk.lastBombOutcomeStamps!==bombInk.humanBombStampEvents||
+       bombInk.lastBombOutcomeChangedCells!==bombInk.humanBombChangedCells||
       bombInk.scoreablePromotionCount!==0||
       exploded.b25SourcePaintRun.humanChangedImpactCells!==0)
     reject('W10B39_NATIVE_BOMB_DID_NOT_PAINT_AUTHENTIC_CELLS_'+
@@ -963,7 +966,14 @@ async function main(){
     const stamps=newInk.humanBombStampEvents-oldInk.humanBombStampEvents;
     const zeroStamps=newInk.humanBombZeroChangedEvents-
      oldInk.humanBombZeroChangedEvents;
-    if(stamps<0||zeroStamps<0||changedEvents<0||changedCells<0||
+    const outcome=stamps===0?'NO_CERTIFIED_STAMP':
+      changedCells===0?'STAMP_ZERO_CHANGE':'NEW_CELLS';
+     if(newInk.lastBombOutcome!==outcome||
+        newInk.lastBombOutcomeStamps!==stamps||
+        newInk.lastBombOutcomeChangedCells!==changedCells||
+        newInk.humanBombExplosionsObserved!==resolved.b38HumanSub.explosions)
+      reject('W10B41_BOMB_OUTCOME_MISMATCH_'+label);
+     if(stamps<0||zeroStamps<0||changedEvents<0||changedCells<0||
        stamps!==changedEvents+zeroStamps||
        (changedEvents===0)!==(changedCells===0)||
        (stamps>0&&(!newInk.lastBombStampedSurface||
@@ -981,6 +991,8 @@ async function main(){
      originalChangedBombEvents:changedEvents,
      authoritativeChangedCells:changedCells,
      paintFailureObserved:changedCells===0,
+      b41BombOutcome:newInk.lastBombOutcome,
+      zeroChangeIsNotProvenPhysicalMiss:true,
      verifiedChangedOriginalSurface:changedEvents>0?
       newInk.lastBombPaintedSurface:null,
      genuinePhysicalTicks:resolved.tick-accepted.tick,

@@ -6,6 +6,7 @@
  */
 import {PaintEventType,PaintSource,type PaintEvent} from '../ink/types';
 
+export type F3BombOutcome='NEW_CELLS'|'STAMP_ZERO_CHANGE'|'NO_CERTIFIED_STAMP'|'MULTIPLE_UNRESOLVED';
 export interface F3HumanInkContact {
  source:'REAL_HUMAN_ORIGINAL_PAINT_EVENT';
  originalSourceOnly:true;
@@ -30,6 +31,13 @@ export interface F3HumanInkContact {
  lastBombTick:number|null;
  showBombConfirmation:boolean;
  bombElapsedTicks:number|null;
+ humanBombExplosionsObserved:number;
+ lastBombOutcome:F3BombOutcome|null;
+ lastBombOutcomeTick:number|null;
+ lastBombOutcomeStamps:number;
+ lastBombOutcomeChangedCells:number;
+ showBombOutcome:boolean;
+ bombOutcomeElapsedTicks:number|null;
 }
 
 export class UndertowF3SourceInkFeedback {
@@ -47,6 +55,11 @@ export class UndertowF3SourceInkFeedback {
  private lastBombSurface:string|null=null;
  private lastBombCells=0;
  private lastBombTick:number|null=null;
+ private explosionCount=0;
+ private lastOutcome:F3BombOutcome|null=null;
+ private lastOutcomeTick:number|null=null;
+ private lastOutcomeStamps=0;
+ private lastOutcomeCells=0;
  private readonly confirmationDurationTicks=27; // 0.45s at physical 60Hz
 
  public accept(event:PaintEvent,changedCells:number){
@@ -78,12 +91,34 @@ export class UndertowF3SourceInkFeedback {
   this.count++;
   this.cells+=changedCells;
  }
+ /** Called after actual human SubWeaponSystem explosion and same fixed-tick
+  * authoritative PaintCoordinator raster; zero stamp is NOT proof of a miss.
+  */
+ public observeExplosion(tick:number,total:number,oldStamps:number,oldCells:number){
+  if(![tick,total,oldStamps,oldCells].every(Number.isSafeInteger)||
+     tick<0||total<this.explosionCount||oldStamps<0||oldCells<0||
+     oldStamps>this.bombStamps||oldCells>this.bombCells)return;
+  const count=total-this.explosionCount;
+  this.explosionCount=total;
+  if(count===0)return;
+  const stamps=this.bombStamps-oldStamps;
+  const cells=this.bombCells-oldCells;
+  this.lastOutcome=count>1?'MULTIPLE_UNRESOLVED':
+   stamps===0?'NO_CERTIFIED_STAMP':
+   cells===0?'STAMP_ZERO_CHANGE':'NEW_CELLS';
+  this.lastOutcomeTick=tick;
+  this.lastOutcomeStamps=stamps;
+  this.lastOutcomeCells=cells;
+ }
  public snapshot(currentTick:number):F3HumanInkContact{
   const elapsed=this.lastTick===null?null:currentTick-this.lastTick;
   const visible=elapsed!==null&&elapsed>=0&&elapsed<=this.confirmationDurationTicks;
   const bombElapsed=this.lastBombTick===null?null:currentTick-this.lastBombTick;
   const bombVisible=bombElapsed!==null&&bombElapsed>=0&&
    bombElapsed<=this.confirmationDurationTicks;
+  const outcomeElapsed=this.lastOutcomeTick===null?null:currentTick-this.lastOutcomeTick;
+  const outcomeVisible=outcomeElapsed!==null&&outcomeElapsed>=0&&
+   outcomeElapsed<=this.confirmationDurationTicks;
   return {
    source:'REAL_HUMAN_ORIGINAL_PAINT_EVENT',
    originalSourceOnly:true,scoreablePromotionCount:0,
@@ -104,7 +139,14 @@ export class UndertowF3SourceInkFeedback {
    lastBombChangedCells:this.lastBombCells,
    lastBombTick:this.lastBombTick,
    showBombConfirmation:bombVisible,
-   bombElapsedTicks:bombElapsed
+   bombElapsedTicks:bombElapsed,
+   humanBombExplosionsObserved:this.explosionCount,
+   lastBombOutcome:this.lastOutcome,
+   lastBombOutcomeTick:this.lastOutcomeTick,
+   lastBombOutcomeStamps:this.lastOutcomeStamps,
+   lastBombOutcomeChangedCells:this.lastOutcomeCells,
+   showBombOutcome:outcomeVisible,
+   bombOutcomeElapsedTicks:outcomeElapsed
   };
  }
 }
