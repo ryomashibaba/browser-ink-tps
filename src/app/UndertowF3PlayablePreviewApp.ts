@@ -620,6 +620,8 @@ export class UndertowF3PlayablePreviewApp{
   const api={snapshot:()=>this.snapshot(),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
+   auditB48NativeSourceBallisticCandidates:()=>
+    this.auditB48NativeSourceBallisticCandidates(),
    pause:()=>{this.paused=true;this.refresh();return this.snapshot();},
    advanceQaTicks:(count:number)=>this.advanceQaTicks(count),
    qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),
@@ -1757,6 +1759,125 @@ export class UndertowF3PlayablePreviewApp{
    samples:results,sourceSolids:25,paintable:17,links:26,scoreable:0,
    physicsAndPaintUnmodified:true,productionAuthorized:false,
    originalNintendoGameCertified:false
+  };
+ }
+ /** B48: strictly read-only original-body ballistic preflight from
+  * TWO actually observed human muzzle origins. Hypothetical directions
+  * do NOT assert camera reachability nor native player launch acceptance.
+  */
+ private auditB48NativeSourceBallisticCandidates(){
+  const q=new URL(location.href).searchParams;
+  if(q.get('t21QaDrive')!=='source'||
+     q.get('t21W10B38')!=='humanSub'||!this.paused||
+     this.stopReason||this.rawStage.solids.length!==25||
+     this.b45SourceSurfaces.length!==17||
+     this.rawStage.navigationLinks?.length!==26)
+   throw Error('W10_B48_PAUSED_ORIGINAL_QA_ONLY');
+  const anchors=this.b43BombWitnesses.filter(w=>
+   w.launchId===12||w.launchId===14);
+  if(anchors.length!==2)throw Error('W10_B48_REQUIRE_TWO_ACTUAL_MUZZLES');
+  const known=new Set(this.rawStage.solids.map(s=>s.id));
+  const profile=subWeaponProfile('pulse-bomb');
+  const deltaSeconds=1/60;
+  const epsilon=GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters;
+  const rad=Math.PI/180,results=[];
+  const stats={tested:0,nativeRapierFirst:0,nativePaintFirst:0,
+   noContactWithinTtl:0,highSpawnRapierFirst:0,unknownSolidId:0};
+  for(const anchor of anchors){
+   const origin=anchor.launchPoint;
+   for(let yaw=-140;yaw<=20;yaw+=10){
+    const yr=yaw*rad;
+    for(let pitch=-40;pitch<=40;pitch+=5){
+     const pr=pitch*rad;
+     const outgoing=new Vec3(Math.sin(yr)*Math.cos(pr),
+      Math.sin(pr),-Math.cos(yr)*Math.cos(pr));
+     const vel=outgoing.clone().mulScalar(profile.throwSpeedMetersPerSecond);
+     vel.y+=profile.upwardBoostMetersPerSecond;
+     const position=new Vec3(origin[0],origin[1],origin[2]);
+     let ttl=profile.maxFlightSeconds,contact:null|{
+      kind:'RAPIER_STAGE_SOLID'|'PAINT_SURFACE_SEGMENT';
+      sourceId:string;point:[number,number,number];flightTick:number
+     }=null;
+     for(let tick=1;tick<=183;tick++){
+      ttl-=deltaSeconds;
+      if(ttl<=0)break;
+      vel.y-=profile.gravityMetersPerSecond2*deltaSeconds;
+      const next=position.clone().add(vel.clone().mulScalar(deltaSeconds));
+      let paint:ReturnType<PaintSurface['intersectSegment']>=null;
+      for(const surface of this.b45SourceSurfaces){
+       const hit=surface.intersectSegment(position,next);
+       if(hit&&(!paint||hit.distance<paint.distance))paint=hit;
+      }
+      const solid=this.physics.castStageSegment(position,next,'thrown-sub');
+      if(paint&&(!solid||paint.distance<=solid.distance+epsilon)){
+       contact={kind:'PAINT_SURFACE_SEGMENT',sourceId:paint.surface.id,
+        point:[paint.worldPoint.x,paint.worldPoint.y,paint.worldPoint.z],
+        flightTick:tick};
+       break;
+      }
+      if(solid){
+       if(!known.has(solid.solidId)){
+        stats.unknownSolidId++;
+        throw Error('W10_B48_UNREGISTERED_SOURCE_COLLIDER');
+       }
+       contact={kind:'RAPIER_STAGE_SOLID',sourceId:solid.solidId,
+        point:[solid.point.x,solid.point.y,solid.point.z],
+        flightTick:tick};
+       break;
+      }
+      position.copy(next);
+     }
+     stats.tested++;
+     if(!contact){stats.noContactWithinTtl++;continue;}
+     if(contact.kind==='PAINT_SURFACE_SEGMENT'){
+      stats.nativePaintFirst++;continue;
+     }
+     stats.nativeRapierFirst++;
+     if(contact.sourceId.endsWith('spawn-high-negative-z'))
+      stats.highSpawnRapierFirst++;
+     results.push({
+      actualSourceLaunchId:anchor.launchId,
+      nativeMuzzleOrigin:origin,
+      hypotheticalLaunchYawDegrees:yaw,
+      hypotheticalLaunchPitchDegrees:pitch,
+      hypotheticalInitialVelocity:[
+       profile.throwSpeedMetersPerSecond*Math.sin(yr)*Math.cos(pr),
+       profile.throwSpeedMetersPerSecond*Math.sin(pr)+
+        profile.upwardBoostMetersPerSecond,
+       -profile.throwSpeedMetersPerSecond*Math.cos(yr)*Math.cos(pr)
+      ],
+      predictedContact:contact,
+      timeSeconds:contact.flightTick*deltaSeconds,
+      humanCameraAngleCertified:false,actualKeyFContactCertified:false
+     });
+    }
+   }
+  }
+  results.sort((a,b)=>
+   Number(b.predictedContact.sourceId.endsWith('spawn-high-negative-z'))-
+    Number(a.predictedContact.sourceId.endsWith('spawn-high-negative-z'))||
+   a.predictedContact.flightTick-b.predictedContact.flightTick);
+  return {
+   status:'B48_TIME_PARAMETRIZED_SOURCE_MUZZLE_SEARCH',
+   originalMuzzleLaunchIds:[12,14],
+   testedNativeTimeSteppedDirections:stats.tested,
+   yawSampling:{min:-140,max:20,step:10},
+   pitchSampling:{min:-40,max:40,step:5},
+   nativeFixedDeltaSeconds:deltaSeconds,
+   nativeThrowSpeed:profile.throwSpeedMetersPerSecond,
+   nativeUpwardBoost:profile.upwardBoostMetersPerSecond,
+   nativeGravity:profile.gravityMetersPerSecond2,
+   counts:stats,distinctRapierWinnerSourceIds:[
+    ...new Set(results.map(x=>x.predictedContact.sourceId))],
+   nearestSourceBallisticRapierCandidates:results.slice(0,20),
+   selectedNearSourceCandidate:results.find(x=>
+    x.predictedContact.flightTick<=120)??null,
+   candidateFound:results.length>0,
+   actualHumanThrowsAddedBySearch:0,
+   allOriginalSolids:25,allPaintable:17,navLinks:26,scoreable:0,
+   thisIsHypotheticalVelocityNotCameraAim:true,
+   truePlayerAimAndCollisionMustBeVerified:false,
+   actualGamePhysicsModified:false,originalNintendoCertified:false
   };
  }
  public snapshot(){

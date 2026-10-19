@@ -1540,6 +1540,49 @@ async function main(){
     JSON.stringify(b47Result));
    if(b47Replay.exactMatches!==14)
     reject('W10B47_NATIVE_BALLISTIC_REPLAY_MISMATCH');
+   // B48: preflight on existing native launch origins. Hypothetical
+   // launch directions are NEVER assumed to be realizable camera aim.
+   const b48Pre=await evaluate(
+    'window.__t21F3.auditB48NativeSourceBallisticCandidates()');
+   if(b48Pre.status!=='B48_TIME_PARAMETRIZED_SOURCE_MUZZLE_SEARCH'||
+      b48Pre.testedNativeTimeSteppedDirections!==578||
+      b48Pre.counts.tested!==578||
+      b48Pre.counts.nativePaintFirst+
+       b48Pre.counts.nativeRapierFirst+
+       b48Pre.counts.noContactWithinTtl!==578||
+      b48Pre.counts.highSpawnRapierFirst>
+       b48Pre.counts.nativeRapierFirst||
+      b48Pre.allOriginalSolids!==25||b48Pre.allPaintable!==17||
+      b48Pre.navLinks!==26||b48Pre.scoreable!==0||
+      b48Pre.thisIsHypotheticalVelocityNotCameraAim!==true||
+      b48Pre.actualGamePhysicsModified!==false||
+      b48Pre.nearestSourceBallisticRapierCandidates.length>20||
+      b48Pre.actualHumanThrowsAddedBySearch!==0)
+    reject('W10B48_SOURCE_ONLY_NATIVE_TRAJECTORY_SEARCH_INVALID');
+   for(const c of b48Pre.nearestSourceBallisticRapierCandidates){
+    if(![12,14].includes(c.actualSourceLaunchId)||
+       c.predictedContact.kind!=='RAPIER_STAGE_SOLID'||
+       !Number.isInteger(c.predictedContact.flightTick)||
+       c.predictedContact.flightTick<1||
+       c.predictedContact.flightTick>180||
+       c.humanCameraAngleCertified!==false||
+       c.actualKeyFContactCertified!==false)
+     reject('W10B48_UNSUPPORTED_NATIVE_RAPIER_PREDICTION');
+   }
+   // The preflight deliberately does not fire an artificial projectile.
+   // If a candidate exists, a separate genuine mouse+KeyF trial can be
+   // measured and compared to the predicted native outgoing velocity.
+   const b48Report={
+    status:'B48_READONLY_PRE_FLIGHT_SOURCE_SEARCH_RECORDED',
+    preflight:b48Pre,
+    realKeyFThrowsTotal:14,additionalActualThrows:0,
+    predictedRapierIsNotActualRapier:true,
+    productionAuthorized:false,originalCollisionCertified:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b48-source-ballistic-preflight.json'),
+    JSON.stringify(b48Report,null,2));
+   console.log('T21_W10B48_BALLISTIC_PREFLIGHT',JSON.stringify(b48Report));
+
 
 
 
