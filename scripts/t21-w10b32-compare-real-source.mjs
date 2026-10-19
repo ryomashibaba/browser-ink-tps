@@ -14,6 +14,7 @@ if(!baselineFile||!adaptiveFile||!outFile)
  fail('EXPECTED_TWO_REAL_CHROME_REPORTS','usage: compare fixed.json aware.json out.json');
 const read=path=>JSON.parse(readFileSync(resolve(path),'utf8'));
 const b33Stable=process.env.T21_W10B33_STABLE==='1';
+const b34Recover=process.env.T21_W10B34_STALL==='1';
 const a=read(baselineFile),b=read(adaptiveFile);
 const finite=(v,name)=>{
  if(typeof v!=='number'||!Number.isFinite(v)||v<0)
@@ -84,6 +85,15 @@ const assertFrame=(report,mode)=>{
     src.newGoalDirectMeters<=0)
   fail('MISSING_REAL_ORIGINAL_MOBILITY_DIAGNOSTICS_'+mode,
    JSON.stringify(src));
+ if(b34Recover&&(
+  au.sourcePatrol.b34StallRecoveryModeEnabled!==(mode==='AWARE')||
+  mode==='AWARE'&&(
+   au.sourcePatrol.stalledOriginalGoalReconsiderations<=0||
+   au.sourcePatrol.approvedAlternativeOriginalGoalsAfterStall<=0||
+   au.sourcePatrol.approvedAlternativeOriginalGoalsAfterStall>
+    au.sourcePatrol.stalledOriginalGoalReconsiderations)))
+  fail('NO_REAL_RAPIER_APPROVED_STALL_ESCAPE_'+mode,
+   JSON.stringify(au.sourcePatrol));
  const metrics={
   sourceOnly:true,
   browserFixedTickQa:true,
@@ -102,6 +112,11 @@ const assertFrame=(report,mode)=>{
   newGoalNativePathMeters:finite(au.sourcePatrol.newGoalNativePathMeters,'NEW_GOAL_RECAST'),
   newGoalShortHops:finite(au.sourcePatrol.newGoalShortHops,'NEW_SHORT_HOPS'),
   newGoalLongHops:finite(au.sourcePatrol.newGoalLongHops,'NEW_LONG_HOPS'),
+  genuineStallReconsiderations:finite(
+   au.sourcePatrol.stalledOriginalGoalReconsiderations,'STALL_ATTEMPTS'),
+  realCertifiedStallAlternatives:finite(
+   au.sourcePatrol.approvedAlternativeOriginalGoalsAfterStall,'STALLED_ORIGINAL_GOALS'),
+  physicalStallRecoveryEnabled:au.sourcePatrol.b34StallRecoveryModeEnabled,
   actualInkCellsChanged:finite(au.inkCellsChanged,'CHANGED_CELLS'),
   actualOriginalPaintShots:finite(au.naturalCpuSourceTurfShots,'SHOTS'),
   actualOriginalPaintImpacts:finite(au.nativeCpuTurfInkImpacts,'IMPACTS'),
@@ -158,7 +173,9 @@ const diagnosticDimensions=[
  ['newGoalDirectMeters','Direct distance of genuine new goal selections'],
  ['newGoalNativePathMeters','Recast distance of genuine new goal selections'],
  ['newGoalShortHops','Genuinely new source goal hops shorter than 4m'],
- ['newGoalLongHops','Genuinely new source goal hops longer than 9m']
+ ['newGoalLongHops','Genuinely new source goal hops longer than 9m'],
+ ['genuineStallReconsiderations','Real 36-tick stationary old-source goal escape attempts'],
+ ['realCertifiedStallAlternatives','Approved different original-source goal after a genuine stall']
 ];
 const diagnostics=Object.fromEntries(diagnosticDimensions.map(([key,label])=>{
  const fixedValue=fixed[key],awareValue=aware[key];
@@ -196,9 +213,10 @@ const productiveEnough=Object.values(gates).every(Boolean);
 const verdict=productiveEnough?'ELIGIBLE_FOR_OWNER_GAMEPLAY_REVIEW':
  'RETAIN_FIXED_AS_DEFAULT_WHILE_ADAPTIVE_IS_RESEARCH_OPT_IN';
 const result={
- phase:b33Stable?'W10-B33':'W10-B32',
- comparison:b33Stable?
-  'FIXED_VS_STABLE_PAINT_AWARE_REAL_ORIGINAL_SOURCE':
+ phase:b34Recover?'W10-B34':b33Stable?'W10-B33':'W10-B32',
+ comparison:b34Recover?
+  'FIXED_VS_STALL_RECOVERED_STABLE_ORIGINAL_SOURCE':
+  b33Stable?'FIXED_VS_STABLE_PAINT_AWARE_REAL_ORIGINAL_SOURCE':
   'FIXED_VS_PAINT_AWARE_REAL_ORIGINAL_SOURCE',
  horizon:'MATCHED_720_TICK_CHECKPOINT_INTERVALS_WITH_INITIAL_STARTUP_TICK_DRIFT',
  initialTickOffset,
@@ -216,7 +234,8 @@ const result={
  productionPromotionAllowed:false
 };
 writeFileSync(resolve(outFile),JSON.stringify(result,null,2)+'\n');
-console.log(b33Stable?'T21_W10B33_STABLE_GOAL_REAL_CHROME_COMPARISON':
+console.log(b34Recover?'T21_W10B34_REAL_CHROME_PHYSICAL_STALL_RECOVERY_AB':
+ b33Stable?'T21_W10B33_STABLE_GOAL_REAL_CHROME_COMPARISON':
  'T21_W10B32_MATCHED_REAL_CHROME_CPU_PATROL_AB_COMPARISON',
  JSON.stringify({fixedTicks:fixed.checkpoints,awareTicks:aware.checkpoints,
   initialTickOffset,tickIntervalsIdentical:true,
