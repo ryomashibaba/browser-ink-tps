@@ -10,6 +10,7 @@ on:
       - 'src/app/UndertowF3SourceTraffic.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.test.ts'
+      - 'scripts/t21-w10b32-compare-real-source.mjs'
       - 'src/input/PlayerInput.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/projectile/ProjectileSystem.ts'
@@ -45,12 +46,24 @@ jobs:
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Certify native CPU visible respawn from identical-camera real PNG pixels
         run: node scripts/t21-w10b15-pixel-diff.mjs /tmp/t21-f3-playable-webgl2
-      - name: W10-B16 true source-native seven CPU autonomous patrol and ink, diagnose absent cross-team path
+      - name: W10-B32 original source native fixed-patrol baseline at same 1080 physics ticks
+        env:
+          T21_W10B16_NATURAL_AI: '1'
+          T21_W10B31_INK_AWARE: '0'
+          T21_W10B20_PROFILE: '1'
+        run: |
+          node scripts/t21-f3-browser-smoke.mjs
+          cp /tmp/t21-f3-playable-webgl2/w10b16-native-autonomous-real-chrome.json /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json
+      - name: W10-B32 original source paint-aware same tick horizon, 7 real CPU actors
         env:
           T21_W10B16_NATURAL_AI: '1'
           T21_W10B31_INK_AWARE: '1'
           T21_W10B20_PROFILE: '1'
-        run: node scripts/t21-f3-browser-smoke.mjs
+        run: |
+          node scripts/t21-f3-browser-smoke.mjs
+          cp /tmp/t21-f3-playable-webgl2/w10b16-native-autonomous-real-chrome.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json
+      - name: W10-B32 compare two genuine PlayCanvas original-stage captures with no fabricated wins
+        run: node scripts/t21-w10b32-compare-real-source.mjs /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json /tmp/t21-f3-playable-webgl2/w10b32-paired-a-b-report.json
       - name: Preserve real Chromium frames and QA evidence
         if: always()
         uses: actions/upload-artifact@v4
