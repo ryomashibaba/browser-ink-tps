@@ -7,6 +7,8 @@ on:
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/camera/UndertowF3SmartOcclusion.ts'
       - 'src/camera/UndertowF3SmartOcclusion.test.ts'
+      - 'src/camera/UndertowF3KineticView.ts'
+      - 'src/camera/UndertowF3KineticView.test.ts'
       - 'src/app/UndertowF3OwnerGpuTrial.ts'
       - 'src/app/UndertowF3OwnerGpuTrial.test.ts'
       - 'src/app/UndertowF3SourceInkFeedback.ts'
@@ -33,7 +35,7 @@ jobs:
       - name: Build actual browser PlayCanvas source preview
         run: npm run build -- --base=/browser-ink-tps/
       - name: Validate B22 live owner trial state machine and strict source gates
-        run: npx vitest run src/app/UndertowF3OwnerGpuTrial.test.ts src/app/UndertowF3SourceInkFeedback.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/camera/UndertowF3SmartOcclusion.test.ts
+        run: npx vitest run src/app/UndertowF3OwnerGpuTrial.test.ts src/app/UndertowF3SourceInkFeedback.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/camera/UndertowF3KineticView.test.ts
       - name: Validate browser QA syntax
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: A-B-A frozen source-native GPU raster workload comparison
