@@ -867,6 +867,8 @@ async function main(){
     reject('W10B38_NATIVE_SOURCE_SUB_EXPLOSION_INVALID_'+
      JSON.stringify(exploded.b38HumanSub));
    const bombInk=exploded.b39HumanBombInk;
+   if(exploded.b43NativeBombWitnesses?.length!==1)
+    reject('W10B43_INITIAL_NATIVE_EXPLOSION_WITNESS_MISSING');
    // This is a POST-GAMEPLAYINK CPU ownership raster result, not a
    // projectile spawn, an animation, a paint request or a GPU-only frame.
    // A bomb with no real authorized changed cells is an honest HOLD.
@@ -924,6 +926,7 @@ async function main(){
    };
    const throwObserved=async(label)=>{
     const before=await refill();
+    const oldWitnessCount=before.b43NativeBombWitnesses?.length??0;
     const locked=await evaluate(
      'document.pointerLockElement===document.querySelector("#app-canvas")');
     if(!locked||!before.paused||before.b38HumanSub.throws<1)
@@ -960,6 +963,10 @@ async function main(){
      reject('W10B40_SOURCE_BOMB_AUTHORITY_DRIFT_'+
       JSON.stringify({label,before:before.b38HumanSub,
        after:resolved.b38HumanSub,paint:resolved.b39HumanBombInk}));
+    const witnesses=resolved.b43NativeBombWitnesses;
+    if(!Array.isArray(witnesses)||witnesses.length!==oldWitnessCount+1)
+     reject('W10B43_MISSING_NATIVE_EXPLOSION_WITNESS_'+label);
+    const witness=witnesses[oldWitnessCount];
     const oldInk=before.b39HumanBombInk,newInk=resolved.b39HumanBombInk;
     const changedEvents=newInk.humanBombChangedEvents-oldInk.humanBombChangedEvents;
     const changedCells=newInk.humanBombChangedCells-oldInk.humanBombChangedCells;
@@ -979,7 +986,12 @@ async function main(){
        (stamps>0&&(!newInk.lastBombStampedSurface||
         newInk.lastBombStampTick===null)))
      reject('W10B40_INVALID_POST_RASTER_DELTA_'+label);
+    if(witness.enqueuedStampSurfaceIds.length!==stamps||
+       witness.originalGameCollisionCertified!==false||
+       witness.launchId!==resolved.b38HumanSub.throws)
+     reject('W10B43_NATIVE_PROJECTION_WITNESS_MISMATCH_'+label);
     return {
+     b43NativeExplosionWitness:witness,
      case:label,actualKeyF:true,actualPointerLockedInput:true,
      cameraYawDegrees:before.cameraSourcePractice.yawDegrees,
      cameraPitchDegrees:before.cameraSourcePractice.pitchDegrees,

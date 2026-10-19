@@ -15,7 +15,24 @@ import {
   type SubWeaponProfile
 } from '../weapons/WeaponKitCatalog';
 
+/** Source-QA read-only observation of native browser code; not original game collision. */
+export type SubWeaponNativeExplosionWitness=Readonly<{
+ launchId:number;
+ launchPoint:readonly [number,number,number];
+ explosionPoint:readonly [number,number,number];
+ trigger:'CONTACT_IMPACT'|'LANDED_FUSE'|'FLIGHT_TTL';
+ contactKind:'NONE'|'PAINT_SURFACE_SEGMENT'|'RAPIER_STAGE_SOLID';
+ contactSourceId:string|null;
+ contactPoint:readonly [number,number,number]|null;
+ enqueuedStampSurfaceIds:readonly string[];
+ originalGameCollisionCertified:false;
+}>;
 interface BombSlot {
+ launchId:number;
+ launchPoint:Vec3;
+ contactKind:SubWeaponNativeExplosionWitness['contactKind'];
+ contactSourceId:string|null;
+ contactPoint:Vec3|null;
   active: boolean;
   landed: boolean;
   subId: SubWeaponId;
@@ -33,6 +50,8 @@ export class SubWeaponSystem {
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private readonly delta = new Vec3();
+  private nextLaunchId=0;
+  private currentEnqueuedStampSurfaceIds:string[]|null=null;
 
   public constructor(
     app: AppBase,
@@ -43,7 +62,9 @@ export class SubWeaponSystem {
     private readonly combatTargets: CombatTargetSystem,
     private readonly cpuAgents: CpuAgentSystem,
     private readonly feedback: GameFeedback,
-    private readonly stats: PerformanceStats
+    private readonly stats: PerformanceStats,
+    /** Optional QA observer; default production path supplies none. */
+    private readonly onNativeExplosion?: (w:SubWeaponNativeExplosionWitness)=>void
   ) {
     this.materialA = makeBombMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeBombMaterial(GAME_CONFIG.visual.teamB);
@@ -60,6 +81,11 @@ export class SubWeaponSystem {
       app.root.addChild(entity);
 
       this.bombs.push({
+        launchId:0,
+        launchPoint:new Vec3(),
+        contactKind:'NONE',
+        contactSourceId:null,
+        contactPoint:null,
         active: false,
         landed: false,
         subId: 'pulse-bomb',
@@ -88,6 +114,11 @@ export class SubWeaponSystem {
     const aim = direction.clone().normalize();
     slot.active = true;
     slot.landed = false;
+    slot.launchId=++this.nextLaunchId;
+    slot.launchPoint.copy(origin);
+    slot.contactKind='NONE';
+    slot.contactSourceId=null;
+    slot.contactPoint=null;
     slot.subId = subId;
     slot.team = team;
     slot.ttl = profile.maxFlightSeconds;
@@ -119,13 +150,13 @@ export class SubWeaponSystem {
 
       if (slot.landed) {
         slot.fuseSeconds = Math.max(0, slot.fuseSeconds - dt);
-        if (slot.fuseSeconds <= 0) this.explode(slot, profile);
+        if (slot.fuseSeconds <= 0) this.explode(slot, profile, 'LANDED_FUSE');
         continue;
       }
 
       slot.ttl -= dt;
       if (slot.ttl <= 0) {
-        this.explode(slot, profile);
+        this.explode(slot, profile, 'FLIGHT_TTL');
         continue;
       }
 
@@ -143,11 +174,13 @@ export class SubWeaponSystem {
       );
 
       if (paintWins && paintHit) {
-        this.onContact(slot, profile, paintHit.worldPoint);
+        this.onContact(slot, profile, paintHit.worldPoint,
+          'PAINT_SURFACE_SEGMENT', paintHit.surface.id);
         continue;
       }
       if (blockerHit) {
-        this.onContact(slot, profile, blockerHit.point);
+        this.onContact(slot, profile, blockerHit.point,
+          'RAPIER_STAGE_SOLID', blockerHit.solidId);
         continue;
       }
 
@@ -179,14 +212,19 @@ export class SubWeaponSystem {
   private onContact(
     slot: BombSlot,
     profile: SubWeaponProfile,
-    point: Vec3
+    point: Vec3,
+    kind:SubWeaponNativeExplosionWitness['contactKind'],
+    sourceId:string
   ): void {
+    slot.contactKind=kind;
+    slot.contactSourceId=sourceId;
+    slot.contactPoint=point.clone();
     slot.position.copy(point);
     slot.previousPosition.copy(point);
     slot.velocity.set(0, 0, 0);
 
     if (profile.detonateOnImpact) {
-      this.explode(slot, profile);
+      this.explode(slot, profile, 'CONTACT_IMPACT');
       return;
     }
 
@@ -195,7 +233,10 @@ export class SubWeaponSystem {
     this.feedback.subFuse(slot.team, point, slot.fuseSeconds);
   }
 
-  private explode(slot: BombSlot, profile: SubWeaponProfile): void {
+  private explode(
+    slot:BombSlot,profile:SubWeaponProfile,
+    trigger:SubWeaponNativeExplosionWitness['trigger']
+  ): void {
     this.cpuAgents.applyAreaDamage(
       slot.position,
       profile.outerDamageRadiusMeters,
@@ -223,9 +264,29 @@ export class SubWeaponSystem {
       );
     }
 
+    // Stamp projections precede authoritative ownership change in B41.
+    if(this.onNativeExplosion)this.currentEnqueuedStampSurfaceIds=[];
     this.paintExplosion(slot.team, slot.position, profile.paintRadiusMeters);
     this.feedback.subBurst(slot.team, slot.position, profile.paintRadiusMeters);
     this.stats.playerSubExplosions += 1;
+    if(this.onNativeExplosion){
+      const xyz=(v:Vec3):[number,number,number]=>[v.x,v.y,v.z];
+      const witness:SubWeaponNativeExplosionWitness=Object.freeze({
+        launchId:slot.launchId,
+        launchPoint:Object.freeze(xyz(slot.launchPoint)),
+        explosionPoint:Object.freeze(xyz(slot.position)),
+        trigger,contactKind:slot.contactKind,
+        contactSourceId:slot.contactSourceId,
+        contactPoint:slot.contactPoint?
+          Object.freeze(xyz(slot.contactPoint)):null,
+        enqueuedStampSurfaceIds:Object.freeze([
+          ...(this.currentEnqueuedStampSurfaceIds??[])
+        ]),
+        originalGameCollisionCertified:false
+      });
+      this.currentEnqueuedStampSurfaceIds=null;
+      this.onNativeExplosion(witness);
+    }
     this.deactivate(slot);
   }
 
@@ -275,6 +336,7 @@ export class SubWeaponSystem {
     }
 
     if (!best) return false;
+    this.currentEnqueuedStampSurfaceIds?.push(best.surface.id);
 
     this.coordinator.enqueue({
       source: PaintSource.Human,

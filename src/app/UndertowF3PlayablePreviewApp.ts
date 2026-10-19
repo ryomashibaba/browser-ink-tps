@@ -37,7 +37,8 @@ import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics
 import {PlayerController} from '../player/PlayerController';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
-import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
+import {SubWeaponSystem,type SubWeaponNativeExplosionWitness}
+ from '../subweapon/SubWeaponSystem';
 import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
@@ -211,6 +212,7 @@ export class UndertowF3PlayablePreviewApp{
  private realPointerToShotSamples=0;
  private readonly obstructionNotice:HTMLElement;
  private readonly b23InkFeedback=new UndertowF3SourceInkFeedback();
+ private readonly b43BombWitnesses:SubWeaponNativeExplosionWitness[]=[];
  private readonly b23PaintMarker:HTMLElement;
  private readonly b25Run=new UndertowF3SourcePaintRun();
  private readonly b27KineticView=new UndertowF3KineticView();
@@ -365,7 +367,13 @@ export class UndertowF3PlayablePreviewApp{
   // a fabricated source Actor, collider, NavLink or scoreable surface.
   this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
-   this.feedback,this.stats);
+   this.feedback,this.stats,
+   new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
+   new URL(location.href).searchParams.get('t21W10B38')==='humanSub'
+    ?witness=>{
+      this.b43BombWitnesses.push(witness);
+      if(this.b43BombWitnesses.length>16)this.b43BombWitnesses.shift();
+     }:undefined);
   this.stats.playerSubWeaponName=subWeaponProfile(
    weaponKit(this.projectiles.currentPlayerWeapon.id).sub).displayName;
   // Uses the real existing weapon/ink/physics systems, but only on the
@@ -1553,6 +1561,7 @@ export class UndertowF3PlayablePreviewApp{
    b22OwnerGpuTrial:this.b22Trial.snapshot(performance.now()),
    b23HumanInkFeedback:this.b23InkFeedback.snapshot(this.clock.tick),
    b39HumanBombInk:this.b23InkFeedback.snapshot(this.clock.tick),
+   b43NativeBombWitnesses:[...this.b43BombWitnesses],
    b25SourcePaintRun:this.b25Run.snapshot(),
    b27KineticSourceView:{
     enabled:this.b27KineticEnabled,
