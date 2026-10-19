@@ -135,6 +135,57 @@ const assertFrame=(report,mode)=>{
    au.sourcePatrol.continuedPreviouslyApprovedGoalRequests,
   midrouteGoalSwitches:au.sourcePatrol.switchedGoalBeforePreviousArrival,
  };
+ if(b34Recover){
+  const origin=report.b34StartAudit;
+  if(report.b34SourceMeasurementStartTick!==1800||
+     report.checkpoints[0].tick!==2160||
+     !origin||origin.originalSourceSolids!==25||
+     origin.originalPaintSurfaces!==17||
+     origin.originalNavLinks!==26||
+     origin.sourceScoreablePromotions!==0||
+     origin.physicalActorTeleports!==0)
+   fail('UNALIGNED_REAL_SOURCE_MEASUREMENT_START_'+mode,
+    JSON.stringify({start:report.b34SourceMeasurementStartTick,
+     ticks:report.checkpoints.map(c=>c.tick)}));
+  const original=origin.sourcePatrol;
+  // Convert cumulative counters to true IN-WINDOW deltas so different
+  // original physical CPU landing/onboarding lengths cannot leak
+  // pre-window shots, painting or locomotion into the comparison.
+  const entries={
+   sourcePatrolMeters:original.travelMeters,
+   groundedCpuSamples:original.groundedFreeCombatCpuSamples,
+   stationaryGroundedCpuSamples:original.nearlyStationaryGroundedCpuSamples,
+   originalGoalDirectDistanceMeters:original.requestedGoalDirectMeters,
+   originalGoalNativePathDistanceMeters:original.requestedGoalNativePathMeters,
+   shortOriginalGoalHops:original.requestedGoalShortHops,
+   longOriginalGoalHops:original.requestedGoalLongHops,
+   nativeGoalLengthsSampled:original.requestedGoalLengthsSampled,
+   trulyNewOriginalGoalSelections:original.trulyNewOriginalGoalSelections,
+   newGoalDirectMeters:original.newGoalDirectMeters,
+   newGoalNativePathMeters:original.newGoalNativePathMeters,
+   newGoalShortHops:original.newGoalShortHops,
+   newGoalLongHops:original.newGoalLongHops,
+   genuineStallReconsiderations:original.stalledOriginalGoalReconsiderations,
+   realCertifiedStallAlternatives:original.approvedAlternativeOriginalGoalsAfterStall,
+   actualInkCellsChanged:origin.inkCellsChanged,
+   actualOriginalPaintShots:origin.naturalCpuSourceTurfShots,
+   actualOriginalPaintImpacts:origin.nativeCpuTurfInkImpacts,
+   authorizedSourceGoals:original.realGoalRequests,
+   ownerGridLookups:original.actualOriginalInkOwnershipLookups,
+   actualOwnerGridSamples:original.actualOriginalInkOwnershipSampled,
+   acceptedOtherOrNeutralGoals:original.paintAwareNonOwnedGoalsAccepted,
+   acceptedOwnGoals:original.paintAwareOwnGoalsAccepted,
+   acceptedUnknownGoals:original.paintAwareUnknownInkGoalsAccepted,
+   samePreviouslyAuthorizedGoalRequests:original.continuedPreviouslyApprovedGoalRequests,
+   midrouteGoalSwitches:original.switchedGoalBeforePreviousArrival
+  };
+  for(const [key,start] of Object.entries(entries)){
+   const end=metrics[key];
+   metrics[key]=finite(end-start,'B34_NATIVE_IN_WINDOW_'+key);
+  }
+  metrics.originalWindowStartNativeTick=1800;
+  metrics.realSourceWindowTicks=1080;
+ }
  return metrics;
 };
 const fixed=assertFrame(a,'FIXED');
@@ -149,7 +200,7 @@ if(JSON.stringify(normalizedTicks(fixed))!==JSON.stringify(normalizedTicks(aware
    fixed.checkpoints[1]-fixed.checkpoints[0]!==360||
    fixed.checkpoints[2]-fixed.checkpoints[1]!==360||
    !Number.isSafeInteger(initialTickOffset)||
-   Math.abs(initialTickOffset)>12)
+   (b34Recover?initialTickOffset!==0:Math.abs(initialTickOffset)>12))
  fail('NONMATCHED_NATIVE_TICK_INTERVALS_OR_STARTUP_DRIFT',
   JSON.stringify({fixed:fixed.checkpoints,aware:aware.checkpoints,
    initialTickOffset}));
@@ -218,10 +269,14 @@ const result={
   'FIXED_VS_STALL_RECOVERED_STABLE_ORIGINAL_SOURCE':
   b33Stable?'FIXED_VS_STABLE_PAINT_AWARE_REAL_ORIGINAL_SOURCE':
   'FIXED_VS_PAINT_AWARE_REAL_ORIGINAL_SOURCE',
- horizon:'MATCHED_720_TICK_CHECKPOINT_INTERVALS_WITH_INITIAL_STARTUP_TICK_DRIFT',
+ horizon:b34Recover?
+  'EXACT_NATIVE_TICK_1800_START_AND_REAL_1080_TICK_INCREMENT_ONLY':
+  'MATCHED_720_TICK_CHECKPOINT_INTERVALS_WITH_INITIAL_STARTUP_TICK_DRIFT',
  initialTickOffset,
  tickIntervalsIdentical:true,
- strictAbsoluteNativeTickIdentity:false,
+ strictAbsoluteNativeTickIdentity:b34Recover,
+ b34AlignedNativeStartTick:b34Recover?1800:null,
+ b34CountersExcludeAllPrewindowSourcePaintAndTravel:b34Recover,
  sameRepoCode:true,independentBrowserSessions:true,
  fixed,aware,differences,diagnostics,mobilityDiagnosticRatios,
  mobilityCauseNotCertified:true,gates,verdict,
