@@ -1505,6 +1505,42 @@ async function main(){
     JSON.stringify(b46,null,2));
    console.log('T21_W10B46_REAL_HIGH_SPAWN_BOMB_EVIDENCE',
     JSON.stringify(b46));
+   // B47: additional genuine pointer-locked mouse and F-key native
+   // player throws. Actual native launch velocities are observed in the
+   // QA-only SubWeaponSystem callback; never synthetically applied.
+   const b47Extra=[
+    await b42MoveAndThrow('B47_TRUE_BALLISTIC_AIM_A',-80,90),
+    await b42MoveAndThrow('B47_TRUE_BALLISTIC_AIM_B',40,-130)
+   ];
+   const b47Replay=await evaluate(
+    'window.__t21F3.auditB47NativeBallisticReplay()');
+   if(b47Replay.status!=='B47_READONLY_ACTUAL_LAUNCH_NATIVE_PHYSICS_REPLAY'||
+      b47Replay.actualNativeThrows!==14||
+      b47Replay.samples.length!==14||
+      b47Replay.sourceSolids!==25||b47Replay.paintable!==17||
+      b47Replay.links!==26||b47Replay.scoreable!==0||
+      b47Replay.physicsAndPaintUnmodified!==true||
+      b47Extra.some(t=>!t.actualPointerLockedInput||
+       t.throwDelta!==1||t.explosionDelta!==1))
+    reject('W10B47_TRUE_LAUNCH_SOURCE_AUDIT_INVALID');
+   const b47Result={
+    status:b47Replay.exactMatches===14?'B47_NATIVE_REPLAY_14_OF_14_PASS':
+     'B47_NATIVE_REPLAY_DISCREPANCY_HOLD',
+    oldSourceRealKeyFThrows:12,newRealKeyFThrows:2,
+    newThrowCases:b47Extra,readonlyReplay:b47Replay,
+    rapierActualChosen:b47Replay.samples.some(t=>
+     t.realKind==='RAPIER_STAGE_SOLID'),
+    originalNintendoCollisionCertified:false,
+    noArtificialTrajectoriesOrSourceChanges:true,
+    normal4v4Certified:false,productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b47-native-ballistic-traces.json'),
+    JSON.stringify(b47Result,null,2));
+   console.log('T21_W10B47_NATIVE_BALLISTIC_REPLAY_EVIDENCE',
+    JSON.stringify(b47Result));
+   if(b47Replay.exactMatches!==14)
+    reject('W10B47_NATIVE_BALLISTIC_REPLAY_MISMATCH');
+
 
 
 

@@ -19,6 +19,7 @@ import {
 export type SubWeaponNativeExplosionWitness=Readonly<{
  launchId:number;
  launchPoint:readonly [number,number,number];
+ initialNativeVelocity:readonly [number,number,number];
  explosionPoint:readonly [number,number,number];
  trigger:'CONTACT_IMPACT'|'LANDED_FUSE'|'FLIGHT_TTL';
  contactKind:'NONE'|'PAINT_SURFACE_SEGMENT'|'RAPIER_STAGE_SOLID';
@@ -41,6 +42,7 @@ export type SubWeaponNativeExplosionWitness=Readonly<{
 interface BombSlot {
  launchId:number;
  launchPoint:Vec3;
+ initialNativeVelocity:Vec3;
  contactKind:SubWeaponNativeExplosionWitness['contactKind'];
  contactSourceId:string|null;
  contactPoint:Vec3|null;
@@ -99,6 +101,7 @@ export class SubWeaponSystem {
       this.bombs.push({
         launchId:0,
         launchPoint:new Vec3(),
+        initialNativeVelocity:new Vec3(),
         contactKind:'NONE',
         contactSourceId:null,
         contactPoint:null,
@@ -153,6 +156,8 @@ export class SubWeaponSystem {
     slot.previousPosition.copy(origin);
     slot.velocity.copy(aim).mulScalar(profile.throwSpeedMetersPerSecond);
     slot.velocity.y += profile.upwardBoostMetersPerSecond;
+    if(this.onNativeExplosion)
+     slot.initialNativeVelocity.copy(slot.velocity);
 
     const mesh = slot.entity.render?.meshInstances[0];
     if (mesh) mesh.material = team === Team.A ? this.materialA : this.materialB;
@@ -315,6 +320,7 @@ export class SubWeaponSystem {
       const witness:SubWeaponNativeExplosionWitness=Object.freeze({
         launchId:slot.launchId,
         launchPoint:Object.freeze(xyz(slot.launchPoint)),
+        initialNativeVelocity:Object.freeze(xyz(slot.initialNativeVelocity)),
         explosionPoint:Object.freeze(xyz(slot.position)),
         trigger,contactKind:slot.contactKind,
         contactSourceId:slot.contactSourceId,

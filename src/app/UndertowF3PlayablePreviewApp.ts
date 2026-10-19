@@ -619,6 +619,7 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
+   auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    pause:()=>{this.paused=true;this.refresh();return this.snapshot();},
    advanceQaTicks:(count:number)=>this.advanceQaTicks(count),
    qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),
@@ -1675,6 +1676,86 @@ export class UndertowF3PlayablePreviewApp{
    authenticBombCollisionCertified:false,
    originalGameCollisionCertified:false,productionAuthorized:false,
    stageGeometryModified:false,scoreablePromotions:0
+  };
+ }
+ /** B47 QA-only replay: same real original static Rapier/PaintSurface casts.
+  * Never calls SubWeaponSystem.tryThrow or modifies live physics/ink. */
+ private auditB47NativeBallisticReplay(){
+  const q=new URL(location.href).searchParams;
+  if(q.get('t21QaDrive')!=='source'||
+     q.get('t21W10B38')!=='humanSub'||!this.paused||this.stopReason||
+     this.rawStage.solids.length!==25||
+     this.b45SourceSurfaces.length!==17||
+     this.rawStage.navigationLinks?.length!==26)
+   throw Error('B47_REAL_SOURCE_PAUSED_GUARD');
+  const profile=subWeaponProfile('pulse-bomb');
+  const dt=1/60;
+  const eps=GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters;
+  const xyz=(v:Vec3):[number,number,number]=>[v.x,v.y,v.z];
+  const results=[];
+  for(const w of this.b43BombWitnesses){
+   if(w.initialNativeVelocity?.length!==3||
+      !w.initialNativeVelocity.every(Number.isFinite))
+    throw Error('B47_NO_ACTUAL_LAUNCH_VELOCITY');
+   const current=new Vec3(...w.launchPoint);
+   const velocity=new Vec3(...w.initialNativeVelocity);
+   let ttl=profile.maxFlightSeconds;
+   let flightTicks=0,paintCount=0,solidCount=0,bothCount=0;
+   let kind:'NONE'|'RAPIER_STAGE_SOLID'|'PAINT_SURFACE_SEGMENT'='NONE';
+   let id:string|null=null;
+   let point:Vec3|null=null;
+   for(let frame=0;frame<184;frame++){
+    ttl-=dt;
+    if(ttl<=0)break;
+    velocity.y-=profile.gravityMetersPerSecond2*dt;
+    const next=current.clone().add(velocity.clone().mulScalar(dt));
+    let paint:ReturnType<PaintSurface['intersectSegment']>=null;
+    for(const surface of this.b45SourceSurfaces){
+     const hit=surface.intersectSegment(current,next);
+     if(hit&&(!paint||hit.distance<paint.distance))paint=hit;
+    }
+    const solid=this.physics.castStageSegment(current,next,'thrown-sub');
+    flightTicks++;
+    if(paint)paintCount++;
+    if(solid)solidCount++;
+    if(paint&&solid)bothCount++;
+    if(paint&&(!solid||paint.distance<=solid.distance+eps)){
+     kind='PAINT_SURFACE_SEGMENT';id=paint.surface.id;
+     point=paint.worldPoint.clone();break;
+    }
+    if(solid){
+     kind='RAPIER_STAGE_SOLID';id=solid.solidId;
+     point=solid.point.clone();break;
+    }
+    current.copy(next);
+   }
+   const error=point&&w.contactPoint?
+    Math.hypot(...xyz(point).map((v,i)=>v-w.contactPoint![i])):null;
+   const match=kind===w.contactKind&&id===w.contactSourceId&&
+    flightTicks===w.flightQueryTicks&&
+    paintCount===w.paintCandidateTicks&&
+    solidCount===w.rapierCandidateTicks&&
+    bothCount===w.dualCandidateTicks&&
+    (kind==='NONE'?w.contactPoint===null:error!==null&&error<1e-4);
+   results.push({launchId:w.launchId,initialNativeVelocity:w.initialNativeVelocity,
+    replayKind:kind,replaySource:id,replayFlightTicks:flightTicks,
+    replayPaintCandidateTicks:paintCount,replayRapierCandidateTicks:solidCount,
+    replayDualCandidateTicks:bothCount,
+    realKind:w.contactKind,realSource:w.contactSourceId,
+    nativeFlightTicks:w.flightQueryTicks,
+    collisionPositionErrorMeters:error,nativeReplayExact:match});
+  }
+  return {
+   status:'B47_READONLY_ACTUAL_LAUNCH_NATIVE_PHYSICS_REPLAY',
+   actualNativeThrows:results.length,
+   exactMatches:results.filter(x=>x.nativeReplayExact).length,
+   nativeThrowSpeed:profile.throwSpeedMetersPerSecond,
+   nativeUpwardBoost:profile.upwardBoostMetersPerSecond,
+   nativeGravity:profile.gravityMetersPerSecond2,
+   nativeStepSeconds:dt,
+   samples:results,sourceSolids:25,paintable:17,links:26,scoreable:0,
+   physicsAndPaintUnmodified:true,productionAuthorized:false,
+   originalNintendoGameCertified:false
   };
  }
  public snapshot(){
