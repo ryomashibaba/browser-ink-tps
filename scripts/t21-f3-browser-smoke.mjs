@@ -1373,10 +1373,11 @@ async function main(){
     const src=audit.sourcePatrol;
     if(src.paintAwareModeEnabled!==true||
        src.actualOriginalInkOwnershipLookups<=0||
+       src.actualOriginalInkOwnershipSampled<=0||
        src.realPaintAwareGoalsAccepted<=0||
        src.paintAwareRouteShortcutsGranted!==0||
-       src.paintAwareNonOwnedGoalsAccepted+src.paintAwareOwnGoalsAccepted!==
-        src.realPaintAwareGoalsAccepted||
+       src.paintAwareNonOwnedGoalsAccepted+src.paintAwareOwnGoalsAccepted+
+        src.paintAwareUnknownInkGoalsAccepted!==src.realPaintAwareGoalsAccepted||
        src.attemptsToCrossUnboundUnderpass!==0||
        audit.sourceScoreablePromotions!==0)
      reject('W10B31_REAL_SEVEN_CPU_AUTHORITATIVE_INK_GOALS_INVALID_'+
@@ -1384,9 +1385,11 @@ async function main(){
     console.log('T21_W10B31_REAL_CHROME_SEVEN_CPU_PAINT_AWARE_PATROL_PASS',
      JSON.stringify({nativeOriginalCpu:7,sourceOnly:true,
       actualOwnerGridLookups:src.actualOriginalInkOwnershipLookups,
+      actualOwnerGridSamples:src.actualOriginalInkOwnershipSampled,
       physicallyAcceptedRealGoals:src.realPaintAwareGoalsAccepted,
       nonOwnedSourceGoals:src.paintAwareNonOwnedGoalsAccepted,
       alreadyOwnedSourceGoals:src.paintAwareOwnGoalsAccepted,
+      unsampledSourceGoals:src.paintAwareUnknownInkGoalsAccepted,
       playerMovementOrTeleportChanged:false,
       syntheticPaths:src.paintAwareRouteShortcutsGranted,
       scoredTurf:0,nativeCrossTeamPaths:audit.credibleNativeEndpointPairs,
