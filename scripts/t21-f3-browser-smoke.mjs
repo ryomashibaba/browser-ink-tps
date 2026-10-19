@@ -117,7 +117,7 @@ async function main(){
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
-  (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':''):'')+
+  (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':''):'')+
   (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility&t21W10B27=kinetic':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
@@ -1371,6 +1371,12 @@ async function main(){
      reject('W10B16_UNPROVEN_PATH_MISCLASSIFIED_'+JSON.stringify(audit));
    if(process.env.T21_W10B31_INK_AWARE==='1'){
     const src=audit.sourcePatrol;
+    if(process.env.T21_W10B33_STABLE==='1'&&(
+       src.stableSourceGoalModeEnabled!==true||
+       src.continuedPreviouslyApprovedGoalRequests<=0||
+       src.switchedGoalBeforePreviousArrival!==0))
+     reject('W10B33_CONTINUOUS_ORIGINAL_GOAL_HYSTERESIS_NOT_PROVEN_'+
+      JSON.stringify(src));
     if(src.paintAwareModeEnabled!==true||
        src.actualOriginalInkOwnershipLookups<=0||
        src.actualOriginalInkOwnershipSampled<=0||
@@ -1386,6 +1392,11 @@ async function main(){
      JSON.stringify({nativeOriginalCpu:7,sourceOnly:true,
       actualOwnerGridLookups:src.actualOriginalInkOwnershipLookups,
       actualOwnerGridSamples:src.actualOriginalInkOwnershipSampled,
+      stableSourceGoalModeEnabled:src.stableSourceGoalModeEnabled,
+      continuedPreviouslyApprovedGoalRequests:
+       src.continuedPreviouslyApprovedGoalRequests,
+      switchedGoalBeforePreviousArrival:
+       src.switchedGoalBeforePreviousArrival,
       physicallyAcceptedRealGoals:src.realPaintAwareGoalsAccepted,
       nonOwnedSourceGoals:src.paintAwareNonOwnedGoalsAccepted,
       alreadyOwnedSourceGoals:src.paintAwareOwnGoalsAccepted,
