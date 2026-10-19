@@ -984,6 +984,11 @@ async function main(){
     originalSolids:25,originalPaintSurfaces:17,originalNavLinks:26,
     sourceScoreablePromotions:0,originalActorMatricesRecovered:false,
     productionAuthorized:false}));
+  // Resume full source human+CPU game after screenshot-only frozen compare.
+  const resumed=await evaluate('window.__t21F3.resume()');
+  if(resumed.paused||resumed.stopReason||
+     resumed.originalSourceSolids!==25||resumed.sourceScoreablePromotions!==0)
+   reject('W10B29_FROZEN_SOURCE_REVIEW_FAILED_TO_RESUME');
  }
  if(process.env.T21_F3K_EXPECT_GALLERY==='1'){
   const available=await waitUntil(async()=>{
