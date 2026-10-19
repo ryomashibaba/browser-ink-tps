@@ -334,6 +334,10 @@ export class UndertowF3PlayablePreviewApp{
    stage,this.nav,slots,bots,this.physics,this.ink,
    b31Enabled,b33StableGoals,b34Recover);
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
+  // Original T21 preview retains the verified fixed native steering.
+  // Suppress repeated same-goal Recast requests in the explicit B35 lab only.
+  if(b31Params.get('t21W10B35')==='nativeTargetRefresh')
+   this.cpu.enableB35SourceNativeRetargetSuppression();
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
    this.feedback,this.stats);
@@ -1049,6 +1053,7 @@ export class UndertowF3PlayablePreviewApp{
    matchState:this.matchState,
    timeRemainingSeconds:this.remainingSeconds,
    sourcePatrol:this.traffic.snapshot().sourcePatrol,
+   b35NativeSourceRetarget:this.cpu.b35NativeSourceRetargetSnapshot(),
    originalCpuWeaponShots:this.stats.cpuShots,
    naturalCpuSourceTurfShots:this.stats.cpuSourceTurfShots,
    nativeCpuTurfInkImpacts:this.stats.cpuProjectilePaintHits,
