@@ -7,6 +7,8 @@ on:
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'
+      - 'src/app/UndertowF3SourceInkFeedback.ts'
+      - 'src/app/UndertowF3SourceInkFeedback.test.ts'
       - 'src/app/UndertowF3SourceTraffic.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.test.ts'
@@ -44,6 +46,8 @@ jobs:
         run: npx vitest run src/app/UndertowF3PlayableHud.test.ts
       - name: Test source native goal refresh without false navigation and real ownerGrid ranking
         run: npx vitest run src/app/UndertowF3PaintAwarePatrol.test.ts src/ai/OriginalSourceNativeTargetRefresh.test.ts
+      - name: W10-B39 post-raster real human bomb ink / B23 projectile isolation
+        run: npx vitest run src/app/UndertowF3SourceInkFeedback.test.ts
       - name: Check CDP test syntax
         run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: Prove pointer-locked actual mouse input through native CPU splat and respawn

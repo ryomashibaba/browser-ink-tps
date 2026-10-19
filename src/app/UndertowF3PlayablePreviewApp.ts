@@ -1497,13 +1497,18 @@ export class UndertowF3PlayablePreviewApp{
  }
  private refreshB23PaintFeedback(){
   const event=this.b23InkFeedback.snapshot(this.clock.tick);
-  this.b23PaintMarker.hidden=!event.showPaintConfirmation||
+  const bombFirst=event.showBombConfirmation&&
+   (!event.showPaintConfirmation||
+    (event.lastBombTick??-1)>=(event.lastImpactTick??-1));
+  const visible=bombFirst||event.showPaintConfirmation;
+  this.b23PaintMarker.hidden=!visible||
    this.survey.snapshot().active||this.galleryIndex>=0||this.paused||
    !!this.stopReason;
   if(this.b23PaintMarker.hidden)return;
-  this.b23PaintMarker.textContent='INK CONTACT · +'+
-   event.lastImpactChangedCells+' cells';
-  const age=event.elapsedTicks??0;
+  this.b23PaintMarker.textContent=bombFirst?
+   'BOMB INK · +'+event.lastBombChangedCells+' real cells':
+   'INK CONTACT · +'+event.lastImpactChangedCells+' cells';
+  const age=bombFirst?(event.bombElapsedTicks??0):(event.elapsedTicks??0);
   this.b23PaintMarker.style.opacity=String(Math.max(.2,1-age/36));
  }
  private sourceFrameQualitySnapshot(){
@@ -1534,6 +1539,7 @@ export class UndertowF3PlayablePreviewApp{
    b21RenderProbe:this.b21ProbeSnapshot(),
    b22OwnerGpuTrial:this.b22Trial.snapshot(performance.now()),
    b23HumanInkFeedback:this.b23InkFeedback.snapshot(this.clock.tick),
+   b39HumanBombInk:this.b23InkFeedback.snapshot(this.clock.tick),
    b25SourcePaintRun:this.b25Run.snapshot(),
    b27KineticSourceView:{
     enabled:this.b27KineticEnabled,
@@ -1704,6 +1710,10 @@ export class UndertowF3PlayablePreviewApp{
     'm genuine grounded · NOT TURF',
    'B23 HUMAN INK · '+state.b23HumanInkFeedback.humanChangedImpactCount+
     ' real changed contacts / '+state.b23HumanInkFeedback.humanChangedCells+
+    ' changed cells · UNSCORED',
+   'B39 BOMB INK · '+state.b39HumanBombInk.humanBombStampEvents+
+    ' original-surface stamps / '+state.b39HumanBombInk.humanBombChangedEvents+
+    ' real changed events / '+state.b39HumanBombInk.humanBombChangedCells+
     ' changed cells · UNSCORED',
    'F3 INK ATLAS · '+(state.sourceGpuAtlasStatus.cameraEnabled?'ACTIVE':'IDLE')+
     ' / brush frames '+state.sourceGpuAtlasStatus.brushRenderFrames+

@@ -866,12 +866,31 @@ async function main(){
       exploded.productionAuthorized!==false)
     reject('W10B38_NATIVE_SOURCE_SUB_EXPLOSION_INVALID_'+
      JSON.stringify(exploded.b38HumanSub));
+   const bombInk=exploded.b39HumanBombInk;
+   // This is a POST-GAMEPLAYINK CPU ownership raster result, not a
+   // projectile spawn, an animation, a paint request or a GPU-only frame.
+   // A bomb with no real authorized changed cells is an honest HOLD.
+   if(!bombInk||!bombInk.originalSourceOnly||
+      bombInk.humanBombStampEvents<1||
+      bombInk.humanBombChangedEvents<1||
+      bombInk.humanBombChangedCells<1||
+      bombInk.lastBombPaintedSurface===null||
+      bombInk.scoreablePromotionCount!==0||
+      exploded.b25SourcePaintRun.humanChangedImpactCells!==0)
+    reject('W10B39_NATIVE_BOMB_DID_NOT_PAINT_AUTHENTIC_CELLS_'+
+     JSON.stringify({bombInk,practice:exploded.b25SourcePaintRun,
+      sub:exploded.b38HumanSub}));
    const evidence={
     status:'PASS_REAL_CHROME_KEY_F_NATIVE_SOURCE_SUB_AND_EXPLOSION',
     browserKeyEvent:true,authenticPointerLockedInput:true,
     sourceOnlyPractice:true,
     realHumanSubThrows:exploded.b38HumanSub.throws,
     nativeBombExplosions:exploded.b38HumanSub.explosions,
+    humanBombOriginalSurfaceStamps:bombInk.humanBombStampEvents,
+    humanBombChangedEvents:bombInk.humanBombChangedEvents,
+    humanBombRealChangedCells:bombInk.humanBombChangedCells,
+    lastGenuineBombPaintSurface:bombInk.lastBombPaintedSurface,
+    noFakeB25ProjectileImpactCredit:true,
     originalPhysicsTicksAdvanced:exploded.tick-thrown.tick,
     sourceOriginalSolids:25,sourcePaintableSurfaces:17,
     originalNavLinks:26,scoreableSurfaces:0,
