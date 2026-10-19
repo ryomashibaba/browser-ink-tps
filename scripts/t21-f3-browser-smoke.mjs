@@ -118,7 +118,7 @@ async function main(){
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b16?'&t21W10B16=sourceAutonomy':'')+
-  (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility':'')+
+  (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility&t21W10B27=kinetic':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
@@ -140,7 +140,9 @@ async function main(){
      before.originalSourceNavigationLinks!==26||
      before.sourceScoreablePromotions!==0||
      before.cameraSourcePractice.b26AdaptiveVisibility?.enabled!==true||
-     before.cameraSourcePractice.b26AdaptiveVisibility?.gameplayGeometryModified!==false)
+     before.cameraSourcePractice.b26AdaptiveVisibility?.gameplayGeometryModified!==false||
+     before.b27KineticSourceView?.enabled!==true||
+     before.b27KineticSourceView.fieldOfViewDegrees!==63)
    reject('W10B21_FROZEN_ORIGINAL_SOURCE_REQUIRED_'+JSON.stringify(before));
   const initialPixels=before.b21RenderProbe.canvasPixels;
   if(initialPixels[0]!==1600||initialPixels[1]!==900)
@@ -280,9 +282,43 @@ async function main(){
      paintRunLive.b25SourcePaintRun.originalTurfScore!=='UNAVAILABLE'||
      paintRunLive.b25SourcePaintRun.officialWinner!=='NONE'||
      paintRunLive.sourceScoreablePromotions!==0||
-     paintRunLive.originalSourceSolids!==25)
+     paintRunLive.originalSourceSolids!==25||
+     paintRunLive.b27KineticSourceView.enabled!==true)
    reject('W10B25_NATIVE_PRACTICE_AUTHORITY_'+JSON.stringify(paintRunLive.b25SourcePaintRun));
+  // REAL physical W movement during normal browser updates. Do not feed
+  // synthetic QA axes or rewrite player positions.
+  await key('keyDown');
+  const moving=await waitUntil(async()=>{
+   const a=await evaluate('window.__t21F3.snapshot()');
+   if(a.stopReason)reject('W10B27_REAL_KCC_SAFE_STOP_'+a.stopReason);
+   return a.tick>=paintRunLive.tick+25&&
+    a.b27KineticSourceView.acceptedGroundedSteps>=10&&
+    a.b27KineticSourceView.fieldOfViewDegrees>=63.3?a:false;
+  },70000);
+  await key('keyUp');
+  const travel=Math.hypot(...moving.player.position.map((v,i)=>
+   v-paintRunLive.player.position[i]));
+  const pace=moving.b27KineticSourceView;
+  if(travel<.2||travel>9||
+     pace.fieldOfViewDegrees>69||
+     pace.movementControllerModified!==false||
+     pace.runtimeCollisionNavOrPaintModified!==false||
+     pace.productionAuthorized!==false||
+     moving.sourceScoreablePromotions!==0)
+   reject('W10B27_REAL_GROUNDED_VISUAL_NOT_ACTUAL_'+
+    JSON.stringify({pace,travel}));
+  console.log('T21_W10B27_REAL_CHROME_KCC_KINETIC_FOV_PASS',
+   JSON.stringify({realMouseLockedMovement:true,
+    playerDisplacementMeters:Number(travel.toFixed(3)),
+    realOriginalGroundSteps:pace.acceptedGroundedSteps,
+    renderLensFovDegrees:pace.fieldOfViewDegrees,
+    originalStageSolids:25,scoreablePromotions:0,
+    gameplayOrAimChanges:false}));
   await evaluate('document.exitPointerLock()');
+  const unlocked=await evaluate('window.__t21F3.snapshot()');
+  if(unlocked.b27KineticSourceView.fieldOfViewDegrees!==63)
+   reject('W10B27_POINTER_UNLOCK_MUST_INSTANTLY_RESTORE_ORIGINAL_LENS_'+
+    JSON.stringify(unlocked.b27KineticSourceView));
   const paintRunAborted=await waitUntil(async()=>{
    const state=await evaluate('window.__t21F3.snapshot()');
    return state.b25SourcePaintRun.status==='ABORTED'?state:false;
