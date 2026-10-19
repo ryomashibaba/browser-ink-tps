@@ -901,6 +901,133 @@ async function main(){
     JSON.stringify(evidence,null,2));
    console.log('T21_W10B38_REAL_CHROME_KEY_F_SOURCE_BOMB_PASS',
     JSON.stringify(evidence));
+   // B40: Repeat the SAME real input direction after natural ink refill,
+   // then change real pointer-locked mouse pitch for a second independent
+   // trajectory. These are observations, not fabricated actor/paint positions.
+   // Zero newly owned cells must be reported honestly, never hidden as PASS.
+   const originalAim=exploded.cameraSourcePractice;
+   const refill=async()=>{
+    let state=await evaluate('window.__t21F3.snapshot()');
+    for(let n=0;n<12&&state.player.ink<75;n++){
+     state=await evaluate('window.__t21F3.advanceQaTicks(72)');
+     if(state.stopReason||state.matchState==='TIME_UP')
+      reject('W10B40_INK_RECOVERY_SOURCE_HOLD_'+JSON.stringify({
+       tick:state.tick,ink:state.player.ink,stop:state.stopReason,
+       match:state.matchState}));
+    }
+    if(state.player.ink<75)
+     reject('W10B40_REAL_RESOURCE_REFILL_UNAVAILABLE_'+state.player.ink);
+    return state;
+   };
+   const throwObserved=async(label)=>{
+    const before=await refill();
+    const locked=await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")');
+    if(!locked||!before.paused||before.b38HumanSub.throws<1)
+     reject('W10B40_NO_NATIVE_POINTERLOCK_'+label);
+    await cmd('Input.dispatchKeyEvent',{
+     type:'keyDown',key:'f',code:'KeyF',
+     windowsVirtualKeyCode:70,nativeVirtualKeyCode:70
+    });
+    await cmd('Input.dispatchKeyEvent',{
+     type:'keyUp',key:'f',code:'KeyF',
+     windowsVirtualKeyCode:70,nativeVirtualKeyCode:70
+    });
+    const accepted=await evaluate('window.__t21F3.advanceQaTicks(1)');
+    if(accepted.b38HumanSub.throws!==before.b38HumanSub.throws+1||
+       accepted.player.ink>before.player.ink-69)
+     reject('W10B40_REAL_KEY_F_THROW_UNCONFIRMED_'+
+      JSON.stringify({label,before:before.b38HumanSub,
+       accepted:accepted.b38HumanSub,beforeInk:before.player.ink,
+       acceptedInk:accepted.player.ink}));
+    let resolved=accepted;
+    for(let i=0;i<5&&
+        resolved.b38HumanSub.explosions===before.b38HumanSub.explosions;i++){
+     resolved=await evaluate('window.__t21F3.advanceQaTicks(72)');
+     if(resolved.stopReason)reject('W10B40_NATIVE_SOURCE_HOLD_'+resolved.stopReason);
+    }
+    if(resolved.b38HumanSub.explosions!==before.b38HumanSub.explosions+1||
+       resolved.originalSourceSolids!==25||
+       resolved.originalPaintSurfaces!==17||
+       resolved.originalSourceNavigationLinks!==26||
+       resolved.sourceScoreablePromotions!==0||
+       resolved.productionAuthorized!==false||
+       resolved.b25SourcePaintRun.humanChangedImpactCells!==
+        before.b25SourcePaintRun.humanChangedImpactCells)
+     reject('W10B40_SOURCE_BOMB_AUTHORITY_DRIFT_'+
+      JSON.stringify({label,before:before.b38HumanSub,
+       after:resolved.b38HumanSub,paint:resolved.b39HumanBombInk}));
+    const oldInk=before.b39HumanBombInk,newInk=resolved.b39HumanBombInk;
+    const changedEvents=newInk.humanBombChangedEvents-oldInk.humanBombChangedEvents;
+    const changedCells=newInk.humanBombChangedCells-oldInk.humanBombChangedCells;
+    const stamps=newInk.humanBombStampEvents-oldInk.humanBombStampEvents;
+    if(stamps<0||changedEvents<0||changedCells<0||changedEvents>stamps||
+       (changedEvents===0)!==(changedCells===0))
+     reject('W10B40_INVALID_POST_RASTER_DELTA_'+label);
+    return {
+     case:label,actualKeyF:true,actualPointerLockedInput:true,
+     cameraYawDegrees:before.cameraSourcePractice.yawDegrees,
+     cameraPitchDegrees:before.cameraSourcePractice.pitchDegrees,
+     originalPlayerPosition:before.player.position,
+     inkBefore:before.player.ink,inkAfterThrow:accepted.player.ink,
+     throwDelta:1,explosionDelta:1,originalBombStampEvents:stamps,
+     originalChangedBombEvents:changedEvents,
+     authoritativeChangedCells:changedCells,
+     paintFailureObserved:changedCells===0,
+     verifiedChangedOriginalSurface:changedEvents>0?
+      newInk.lastBombPaintedSurface:null,
+     genuinePhysicalTicks:resolved.tick-accepted.tick,
+     scoreablePromotions:0,certifiedOriginalSurfaces:17,
+     newOriginalPhysicsSolids:0,newNavLinks:0,
+     natural4v4Certified:false
+    };
+   };
+   const sameAim=await throwObserved('REPEAT_EXISTING_PAINT_AIM');
+   if(Math.abs(sameAim.cameraPitchDegrees-originalAim.pitchDegrees)>0.01||
+      Math.abs(sameAim.cameraYawDegrees-originalAim.yawDegrees)>0.01)
+    reject('W10B40_REPEATED_AIM_CHANGED_UNEXPECTEDLY');
+   await refill();
+   // Genuine CDP mouse motion while the original canvas has pointer lock:
+   // no direct writes to camera yaw/pitch, projectile direction or stage.
+   const lookBefore=await evaluate('window.__t21F3.snapshot()');
+   await cmd('Input.dispatchMouseEvent',{
+    type:'mouseMoved',x:800,y:450,button:'none'
+   });
+   await cmd('Input.dispatchMouseEvent',{
+    type:'mouseMoved',x:800,y:370,button:'none'
+   });
+   const lookAfter=await evaluate('window.__t21F3.snapshot()');
+   const cameraPitchChange=lookAfter.cameraSourcePractice.pitchDegrees-
+    lookBefore.cameraSourcePractice.pitchDegrees;
+   if(Math.abs(cameraPitchChange)<5)
+    reject('W10B40_REAL_MOUSE_LOOK_UNVERIFIED_'+JSON.stringify({
+     before:lookBefore.cameraSourcePractice,
+     after:lookAfter.cameraSourcePractice
+    }));
+   const pitchAim=await throwObserved('REAL_MOUSE_PITCH_VARIANT');
+   const varied={
+    status:'B40_THREE_NATIVE_BOMB_THROWS_MEASURED_NOT_ALL_PAINT_CERTIFIED',
+    baseline:{
+     case:'B39_REAL_SOURCE_THROW',
+     originalChangedBombEvents:bombInk.humanBombChangedEvents,
+     authoritativeChangedCells:bombInk.humanBombChangedCells,
+     originalBombStampEvents:bombInk.humanBombStampEvents,
+     verifiedChangedOriginalSurface:bombInk.lastBombPaintedSurface,
+     originalPlayerPosition:initial.player.position,
+     actualKeyF:true
+    },
+    sameAim,pitchAim,cameraPitchChange,
+    keyFThrowTotal:3,nativeExplosionTotal:3,
+    zeroChangeIsHonestObservedFailure:true,
+    noInjectedPositionOrInk:true,originalSolids:25,
+    originalPaintable:17,originalNavLinks:26,officialScoreable:0,
+    ownerWindowsGpuUntested:true,natural4v4Certified:false,
+    productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b40-real-bomb-conditions.json'),
+    JSON.stringify(varied,null,2));
+   console.log('T21_W10B40_NATIVE_BOMB_CONDITIONS_OBSERVED',
+    JSON.stringify(varied));
   }
   return;
  }
