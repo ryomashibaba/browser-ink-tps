@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
-import {auditF3lManifest,type F3lManifest}
+import {auditF3lManifest,f3lSourceReadabilityStyle,F3L_STAGE_READABILITY_MODES,type F3lManifest}
  from './UndertowF3LTexturedSourcePreview';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
 describe('F3L original static textured scene review',()=>{
@@ -49,5 +49,27 @@ describe('F3L original static textured scene review',()=>{
    physicsSolidsAdded:1 as unknown as 0})).toThrow();
   expect(()=>auditF3lManifest({...base,
    actorMatricesRecovered:true as unknown as false})).toThrow();
+ });
+});
+describe('W10-B30 source original UV cutaway reveals existing physical-ground render only',()=>{
+ it('does not alter SOURCE_ORIGINAL_UV default material, including original glass',()=>{
+  expect(F3L_STAGE_READABILITY_MODES).toEqual(['ORIGINAL_UV','SOURCE_CUTAWAY']);
+  for(const k of ['FLOOR','SLOPE','METAL','SUPPORT','STRUCTURE','DETAIL'] as const){
+   expect(f3lSourceReadabilityStyle(k,'ORIGINAL_UV')).toEqual({
+    opacity:1,depthWrite:true,opaque:true});
+  }
+  expect(f3lSourceReadabilityStyle('GLASS','ORIGINAL_UV')).toEqual({
+   opacity:.24,depthWrite:false,opaque:false});
+ });
+ it('makes every optical original material translucent for actual source-foot visibility',()=>{
+  for(const k of ['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as const){
+   const x=f3lSourceReadabilityStyle(k,'SOURCE_CUTAWAY');
+   expect(x.opaque).toBe(false);
+   expect(x.depthWrite).toBe(false);
+   expect(x.opacity).toBeGreaterThan(0);
+   expect(x.opacity).toBeLessThan(.5);
+  }
+  expect(f3lSourceReadabilityStyle('FLOOR','SOURCE_CUTAWAY').opacity)
+   .toBeLessThan(f3lSourceReadabilityStyle('SUPPORT','SOURCE_CUTAWAY').opacity);
  });
 });
