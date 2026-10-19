@@ -25,6 +25,17 @@ export type SubWeaponNativeExplosionWitness=Readonly<{
  contactSourceId:string|null;
  contactPoint:readonly [number,number,number]|null;
  enqueuedStampSurfaceIds:readonly string[];
+ firstContactCandidates:Readonly<{
+  paintId:string|null;
+  paintDistance:number|null;
+  rapierId:string|null;
+  rapierDistance:number|null;
+  priorityEpsilon:number;
+ }> | null;
+ flightQueryTicks:number;
+ paintCandidateTicks:number;
+ rapierCandidateTicks:number;
+ dualCandidateTicks:number;
  originalGameCollisionCertified:false;
 }>;
 interface BombSlot {
@@ -33,6 +44,11 @@ interface BombSlot {
  contactKind:SubWeaponNativeExplosionWitness['contactKind'];
  contactSourceId:string|null;
  contactPoint:Vec3|null;
+ contactCandidates:SubWeaponNativeExplosionWitness['firstContactCandidates'];
+ flightQueryTicks:number;
+ paintCandidateTicks:number;
+ rapierCandidateTicks:number;
+ dualCandidateTicks:number;
   active: boolean;
   landed: boolean;
   subId: SubWeaponId;
@@ -86,6 +102,11 @@ export class SubWeaponSystem {
         contactKind:'NONE',
         contactSourceId:null,
         contactPoint:null,
+        contactCandidates:null,
+        flightQueryTicks:0,
+        paintCandidateTicks:0,
+        rapierCandidateTicks:0,
+        dualCandidateTicks:0,
         active: false,
         landed: false,
         subId: 'pulse-bomb',
@@ -119,6 +140,11 @@ export class SubWeaponSystem {
     slot.contactKind='NONE';
     slot.contactSourceId=null;
     slot.contactPoint=null;
+    slot.contactCandidates=null;
+    slot.flightQueryTicks=0;
+    slot.paintCandidateTicks=0;
+    slot.rapierCandidateTicks=0;
+    slot.dualCandidateTicks=0;
     slot.subId = subId;
     slot.team = team;
     slot.ttl = profile.maxFlightSeconds;
@@ -166,6 +192,21 @@ export class SubWeaponSystem {
 
       const paintHit = this.findNearestSurfaceHit(slot.position, next);
       const blockerHit = this.physics.castStageSegment(slot.position, next, 'thrown-sub');
+      // Audit-only: observe both ORIGINAL native queries without changing
+      // who wins, the contact point, the fuse, or the gameplay ink.
+      if(this.onNativeExplosion){
+        slot.flightQueryTicks++;
+        if(paintHit)slot.paintCandidateTicks++;
+        if(blockerHit)slot.rapierCandidateTicks++;
+        if(paintHit&&blockerHit)slot.dualCandidateTicks++;
+        if(paintHit||blockerHit)slot.contactCandidates={
+          paintId:paintHit?.surface.id??null,
+          paintDistance:paintHit?.distance??null,
+          rapierId:blockerHit?.solidId??null,
+          rapierDistance:blockerHit?.distance??null,
+          priorityEpsilon:GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+        };
+      }
 
       const paintWins = paintHit && (
         !blockerHit ||
@@ -282,6 +323,12 @@ export class SubWeaponSystem {
         enqueuedStampSurfaceIds:Object.freeze([
           ...(this.currentEnqueuedStampSurfaceIds??[])
         ]),
+        firstContactCandidates:slot.contactCandidates?
+          Object.freeze({...slot.contactCandidates}):null,
+        flightQueryTicks:slot.flightQueryTicks,
+        paintCandidateTicks:slot.paintCandidateTicks,
+        rapierCandidateTicks:slot.rapierCandidateTicks,
+        dualCandidateTicks:slot.dualCandidateTicks,
         originalGameCollisionCertified:false
       });
       this.currentEnqueuedStampSurfaceIds=null;

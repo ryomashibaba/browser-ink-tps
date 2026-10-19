@@ -1212,6 +1212,82 @@ async function main(){
     JSON.stringify(b43Record,null,2));
    console.log('T21_W10B43_NATIVE_BOMB_CONTACT_WITNESS_PASS',
     JSON.stringify(b43Record));
+   // B44: three more REAL pointer-locked mouse + KeyF native throws.
+   // Actual fallback and TTL are observed, never forced or assumed.
+   const b44New=[
+    await b42MoveAndThrow('B44_REVERSE_AIM',600,0),
+    await b42MoveAndThrow('B44_HIGH_ARC',0,-230),
+    await b42MoveAndThrow('B44_LATERAL_AWAY',-550,0)
+   ];
+   const allB44=[
+    ...b43Samples.map(v=>({label:v.case,w:v.nativeWitness,
+     stamps:v.enqueuedStamps})),
+    ...b44New.map(v=>({label:v.name,w:v.b43NativeExplosionWitness,
+     stamps:v.originalBombStampEvents}))
+   ];
+   const counts={chosenPaint:0,chosenRapier:0,chosenNone:0,
+    withRapierCandidate:0,withDualCandidate:0,flightTtl:0,
+    landedFuse:0,contactImpact:0};
+   const evidence=[];
+   for(let i=0;i<allB44.length;i++){
+    const {label,w,stamps}=allB44[i],c=w?.firstContactCandidates;
+    if(!w||w.launchId!==i+1||w.originalGameCollisionCertified!==false||
+       !Number.isSafeInteger(w.flightQueryTicks)||w.flightQueryTicks<1||
+       !Number.isSafeInteger(w.paintCandidateTicks)||
+       !Number.isSafeInteger(w.rapierCandidateTicks)||
+       !Number.isSafeInteger(w.dualCandidateTicks)||
+       Math.min(w.paintCandidateTicks,w.rapierCandidateTicks,w.dualCandidateTicks)<0||
+       Math.max(w.paintCandidateTicks,w.rapierCandidateTicks,
+        w.dualCandidateTicks)>w.flightQueryTicks||
+       w.dualCandidateTicks>Math.min(w.paintCandidateTicks,w.rapierCandidateTicks)||
+       w.enqueuedStampSurfaceIds.length!==stamps)
+     reject('W10B44_INVALID_NATIVE_QUERY_WITNESS_'+label);
+    if(w.contactKind==='PAINT_SURFACE_SEGMENT')counts.chosenPaint++;
+    else if(w.contactKind==='RAPIER_STAGE_SOLID')counts.chosenRapier++;
+    else if(w.contactKind==='NONE')counts.chosenNone++;
+    else reject('W10B44_UNKNOWN_CONTACT_KIND_'+label);
+    if(w.trigger==='FLIGHT_TTL')counts.flightTtl++;
+    else if(w.trigger==='LANDED_FUSE')counts.landedFuse++;
+    else if(w.trigger==='CONTACT_IMPACT')counts.contactImpact++;
+    else reject('W10B44_UNKNOWN_TRIGGER_'+label);
+    if(w.rapierCandidateTicks>0)counts.withRapierCandidate++;
+    if(w.dualCandidateTicks>0)counts.withDualCandidate++;
+    if((w.contactKind==='NONE')!==(c===null)||
+       (w.contactKind==='PAINT_SURFACE_SEGMENT'&&c?.paintId!==w.contactSourceId)||
+       (w.contactKind==='RAPIER_STAGE_SOLID'&&c?.rapierId!==w.contactSourceId)||
+       (c&&(!Number.isFinite(c.priorityEpsilon)||c.priorityEpsilon<0||
+        (c.paintId!==null)!==Number.isFinite(c.paintDistance)||
+        (c.rapierId!==null)!==Number.isFinite(c.rapierDistance)))||
+       (w.contactKind==='PAINT_SURFACE_SEGMENT'&&c?.rapierId!==null&&
+        c.paintDistance>c.rapierDistance+c.priorityEpsilon+1e-6)||
+       (w.contactKind==='RAPIER_STAGE_SOLID'&&c?.paintId!==null&&
+        c.paintDistance<=c.rapierDistance+c.priorityEpsilon))
+     reject('W10B44_REAL_NATIVE_CONTACT_PRIORITY_MISMATCH_'+label);
+    evidence.push({case:label,launchId:w.launchId,
+     launchPoint:w.launchPoint,explosionPoint:w.explosionPoint,
+     contactKind:w.contactKind,contactSourceId:w.contactSourceId,
+     trigger:w.trigger,firstContactCandidates:c,
+     flightQueryTicks:w.flightQueryTicks,
+     paintCandidateTicks:w.paintCandidateTicks,
+     rapierCandidateTicks:w.rapierCandidateTicks,
+     dualCandidateTicks:w.dualCandidateTicks,stamps});
+   }
+   const result={
+    status:'PASS_REAL_B44_NATIVE_DUAL_QUERY_CANDIDATE_AUDIT',
+    humanKeyFThrows:10,nativeExplosions:10,
+    oldNativeTraces:7,newRealMouseTrajectories:3,
+    counts,traces:evidence,
+    rapierSelectedObserved:counts.chosenRapier>0,
+    noContactFlightTtlObserved:counts.flightTtl>0,
+    originalGameCollisionCertified:false,
+    newPhysicsOrPaintAuthorizations:0,
+    originalSolids:25,originalPaintable:17,navLinks:26,scoreable:0,
+    normal4v4Certified:false,productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b44-real-native-dual-query.json'),
+    JSON.stringify(result,null,2));
+   console.log('T21_W10B44_NATIVE_DUAL_QUERY_AUDIT',JSON.stringify(result));
+
 
   }
   return;
