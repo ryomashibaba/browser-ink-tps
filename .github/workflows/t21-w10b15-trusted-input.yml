@@ -54,16 +54,19 @@ jobs:
         run: |
           node scripts/t21-f3-browser-smoke.mjs
           cp /tmp/t21-f3-playable-webgl2/w10b16-native-autonomous-real-chrome.json /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json
-      - name: W10-B32 original source paint-aware same tick horizon, 7 real CPU actors
+      - name: W10-B33 original source sticky paint-aware same tick horizon, 7 real CPU actors
         env:
           T21_W10B16_NATURAL_AI: '1'
           T21_W10B31_INK_AWARE: '1'
+          T21_W10B33_STABLE: '1'
           T21_W10B20_PROFILE: '1'
         run: |
           node scripts/t21-f3-browser-smoke.mjs
           cp /tmp/t21-f3-playable-webgl2/w10b16-native-autonomous-real-chrome.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json
-      - name: W10-B32 compare two genuine PlayCanvas original-stage captures with no fabricated wins
-        run: node scripts/t21-w10b32-compare-real-source.mjs /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json /tmp/t21-f3-playable-webgl2/w10b32-paired-a-b-report.json
+      - name: W10-B33 compare physical source fixed vs sticky-aware and keep fixed default unless proven
+        env:
+          T21_W10B33_STABLE: '1'
+        run: node scripts/t21-w10b32-compare-real-source.mjs /tmp/t21-f3-playable-webgl2/w10b32-fixed-original-baseline.json /tmp/t21-f3-playable-webgl2/w10b32-ink-aware-original.json /tmp/t21-f3-playable-webgl2/w10b33-stable-vs-fixed.json
       - name: Preserve real Chromium frames and QA evidence
         if: always()
         uses: actions/upload-artifact@v4
