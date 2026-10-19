@@ -64,6 +64,8 @@ import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
 import {loadF3lTexturedSource} from './UndertowF3LTexturedSourcePreview';
+import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
+ from './UndertowF3VerifiedSourcePresentation';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -155,6 +157,10 @@ export class UndertowF3PlayablePreviewApp{
  private texturedF3lStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
  private texturedF3lError='';
  private texturedF3lActive=false;
+ private readonly b29ExplicitFullSourceReview=
+  new URL(location.href).searchParams.get('t21FullSource')==='review';
+ private readonly b29PreferFlat=
+  new URL(location.href).searchParams.get('t21F3lPref')==='flat';
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -648,6 +654,26 @@ export class UndertowF3PlayablePreviewApp{
     this.texturedF3lStatus=this.texturedF3l?'READY':'MISSING';
     const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
     if(button&&this.texturedF3l)button.hidden=false;
+    // Visible verified original UV textures are the default in explicit
+    // full-source review, replacing the previously hidden-until-T behavior.
+    // No source pack means the pinned F3G flat stage simply stays active.
+    const choice=selectVerifiedSourcePresentation({
+     fullSourceReviewRequested:this.b29ExplicitFullSourceReview,
+     flatSourceVerified:this.wholeSourceStatus==='READY',
+     texturedSourceVerified:this.texturedF3lStatus==='READY'&&!!this.texturedF3l,
+     prefersFlat:this.b29PreferFlat
+    });
+    const wasVisible=!!this.wholeSourceRoot?.enabled;
+    if(choice==='F3L_ORIGINAL_UV'&&this.texturedF3l){
+     this.texturedF3lActive=true;
+     this.wholeSourceRoot!.enabled=false;
+     this.texturedF3l.root.enabled=wasVisible;
+     this.canvas.dataset.t21F3lOriginalTexture='ON';
+     if(button)button.textContent='F3L original textures: ON (T)';
+    }else if(this.texturedF3l){
+     this.texturedF3l.root.enabled=false;
+     this.canvas.dataset.t21F3lOriginalTexture='OFF';
+    }
    }catch(error){
     this.texturedF3lStatus='ERROR';
     this.texturedF3lError=String(error).slice(0,240);
@@ -1464,6 +1490,14 @@ export class UndertowF3PlayablePreviewApp{
     originalActorPlacements:0,realPhysicsAdded:0,
     realNavigationLinksAdded:0,scoreableSurfacesAdded:0,
     productionAuthorized:false,error:this.galleryError},
+   b29VerifiedSourcePresentation:{
+    selected:this.texturedF3l?.root.enabled?'F3L_ORIGINAL_UV':
+     this.wholeSourceRoot?.enabled?'F3G_FLAT':'F3E_REFERENCE',
+    verifiedTexturePreference:this.b29PreferFlat?'FLAT_MANUAL':'UV_WHEN_VERIFIED',
+    explicitlyRequestedReview:this.b29ExplicitFullSourceReview,
+    fallbackAvailable:this.wholeSourceStatus==='READY',
+    ...B29_SOURCE_VISUAL_AUTHORITY
+   },
    texturedSourceF3l:{status:this.texturedF3lStatus,
     enabled:this.texturedF3l?.root.enabled??false,
     materialGroups:this.texturedF3l?.manifest.materials.length??0,
@@ -1587,6 +1621,8 @@ export class UndertowF3PlayablePreviewApp{
     (this.wholeSourceStatus==='READY'?' / '+
      this.wholeSourceTriangles+' original triangles':'')+
     ' · NO WALK / INK / NAV',
+   'B29 ORIGINAL STATIC STAGE · '+state.b29VerifiedSourcePresentation.selected+
+    ' · pinned UV only / no original actor placements',
    'B28 ORIGINAL ARCHITECTURE · '+state.b28OriginalSourceMassing.mode+
     ' / '+(state.b28OriginalSourceMassing.visible?'VISIBLE':'OFF')+
     ' · Shift+H: source massing / hologram · UNSCORED',
