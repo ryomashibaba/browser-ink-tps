@@ -15,9 +15,27 @@ The existing project already supports human F-key sub throws using PlayerInput, 
 - Deterministic/benchmark source QA `t21QaDrive=source` leaves human F subs OFF by default so fixed patrol A/B histories remain comparable; explicit `&t21W10B38=humanSub` opts into this QA witness.
 - No stage, bot patrol, NavMesh, original Actor transforms, static scoring or production gameplay files changed. `main` and Draft PR #5 remain untouched.
 
-## Verification
+## Completed verification on exact tested code
 
-At checkpoint creation the B38 real-Chrome and CI runs were PENDING. A dedicated step inside existing trusted Chrome workflow sends a browser-native locked F key, proves exactly one human sub throw with genuine ink cost, advances the real existing 60Hz game simulation until actual bomb explosion, and rejects any source authority drift. This is browser/input/physics evidence but NOT a natural human play session, owner Windows GPU benchmark, or original full 4v4.
+**Tested complete B38 browser/workflow commit:** `aef0fe08686e0436fbd989448114e1c2b8753a43`. The final checkpoint commit is documentation-only and was not separately tested by those workflows.
 
-Frozen source authority: **25 original solids / 17 paintable / 26 NavLinks / zero scoreable / 0/12 certified cross-team paths / activationReady=false**.
-B31-B35 native CPU retargeting research stays opt-in; proven FIXED remains default. Missing original Vss_Temple01 Banc/SetActor identities, transforms and active layers remain HOLD.
+- [Trusted original WebGL2 real mouse/keyboard, human sub F, CPU splat/respawn and fixed/B35 aligned comparison](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39241173280) — **SUCCESS** with every step completed. TypeScript + Vite production-grade build PASS; B37 PlayerInput **12/12**, B17 HUD **4/4**, B31/B33/B34/B35 pure regression **11/11**, actual Chrome trusted input and native source physics PASS. No owner Windows GPU was used.
+- Actual Chrome log: `T21_W10B38_REAL_CHROME_KEY_F_SOURCE_BOMB_PASS` with `browserKeyEvent=true`, genuine pointer-locked F press, **1** human sub throw with real ink deduction, **1** bomb explosion after **144** further genuine 60Hz source simulation ticks. No method call directly forced a bomb, actor, or ink change. Paused deterministic stepping is *not* a real-time FPS test.
+- Chrome regression remained compatible with fixed source CPU patrol: the existing same-source exact ticks **1800–2880** baseline and opt-in B35 research comparison ran successfully; B35 remains below gameplay thresholds and is NOT default.
+- [Real Chrome CPU render/respawn](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39241173157) — **SUCCESS**.
+- [Original-source render A-B-A](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39241173311) — **SUCCESS**.
+- [Pinned full-original source model browser integration](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39241173231) — **SUCCESS**. Original display asset evidence does not grant collision/Actor identity or official score authority.
+- [Ubuntu/Windows hosted QA launcher](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39240798240) — **SUCCESS** on both hosted OS jobs for earlier **runtime implementation commit** `d0331543`; workflow/doc-only B38 `aef0fe08` changes did not edit source runtime. This is not the owner's own PC. Platform-specific skipped steps remain skipped, not PASS.
+
+## Important remaining limits
+
+This browser experiment proves a **human-sub launch and native explosion**. It does not certify a specific amount of human-owned ink cells from the bomb, a naturally occurring opposite-team player hit, an authentic original actor/spawn map, human-sub balance/fun, owner Windows/RTX real-time performance, or a scored Turf winner. The effect may only paint when it intersects the existing authorized paintable surfaces. Practice remains non-scoring. Neither synthetic real-time nor original asset authority should be inferred from test green.
+
+## Frozen project authority and next dependency
+
+- Original certified physical solids **25** / paintable **17** / NavLinks **26** / officially scoreable **0**.
+- Opposite-team source-native reachable routes **0/12** (partial currently certified source, not a theorem about the original game); `activationReady=false`.
+- B31/B33/B34/B35 CPU retargeting research stays explicit opt-in only. Normal CPU source patrol remains **FIXED**.
+- The missing original `Vss_Temple01` Banc/SetActor instance transforms, layers, GUID-to-mesh identity and source-proven natural underpass connections remain **UNKNOWN/HOLD**. No invented floors, spawns, NavMesh links or scoring were inserted; no private source payload was published.
+- Protected `main`, production T19C/T20, hosted Pages, separate Draft PR #5 and user Windows originals remained out of scope.
+- For further fidelity improvement, use lawful private original actor evidence to unlock true routes before claiming unrestricted natural 4v4. While unavailable, prioritize concrete human playability improvements on the authenticated local source instead of renewed CPU retarget heuristic churn.
