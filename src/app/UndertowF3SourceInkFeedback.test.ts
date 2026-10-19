@@ -59,6 +59,9 @@ describe('W10-B39 authentic, non-scoring human bomb raster result',()=>{
   });
   expect(m.snapshot(127).showBombConfirmation).toBe(true);
   expect(m.snapshot(128).showBombConfirmation).toBe(false);
+  expect(v.humanBombZeroChangedEvents).toBe(1);
+  expect(v.lastBombStampedSurface).toBe('ORIGINAL_SOURCE_FLOOR');
+  expect(v.lastBombStampTick).toBe(100);
  });
  it('never treats an explosion or a GPU-only event as changed ink',()=>{
   const m=new UndertowF3SourceInkFeedback();
@@ -66,10 +69,23 @@ describe('W10-B39 authentic, non-scoring human bomb raster result',()=>{
   m.accept(real(4,PaintSource.System,PaintEventType.Bomb),50);
   m.accept(real(4,PaintSource.Human,PaintEventType.Debug),40);
   expect(m.snapshot(5)).toMatchObject({
-   humanBombStampEvents:1,humanBombChangedEvents:0,
-   humanBombChangedCells:0,lastBombTick:null,
+   humanBombStampEvents:1,humanBombZeroChangedEvents:1,
+   lastBombStampTick:3,lastBombStampedSurface:'ORIGINAL_SOURCE_FLOOR',
+   humanBombChangedEvents:0,humanBombChangedCells:0,lastBombTick:null,
    showBombConfirmation:false,showPaintConfirmation:false
   });
+ });
+ it('separates already-painted stamp evidence from newly changed ownership',()=>{
+  const m=new UndertowF3SourceInkFeedback();
+  m.accept(real(10,PaintSource.Human,PaintEventType.Bomb),15);
+  m.accept(real(80,PaintSource.Human,PaintEventType.Bomb),0);
+  const v=m.snapshot(80);
+  expect(v).toMatchObject({humanBombStampEvents:2,
+   humanBombZeroChangedEvents:1,humanBombChangedEvents:1,
+   humanBombChangedCells:15,lastBombChangedCells:15,
+   lastBombStampTick:80,lastBombTick:10,
+   lastBombStampedSurface:'ORIGINAL_SOURCE_FLOOR',
+   showBombConfirmation:false,scoreablePromotionCount:0});
  });
  it('keeps existing B23/B25 projectile-impact accounting unchanged',()=>{
   const m=new UndertowF3SourceInkFeedback();

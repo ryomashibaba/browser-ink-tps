@@ -20,6 +20,9 @@ export interface F3HumanInkContact {
  // Actual HUMAN Bomb events on certified source surfaces only. Unlike
  // B25 practice, B39 never credits a bomb toward projectile-impact goals.
  humanBombStampEvents:number;
+ humanBombZeroChangedEvents:number;
+ lastBombStampedSurface:string|null;
+ lastBombStampTick:number|null;
  humanBombChangedEvents:number;
  humanBombChangedCells:number;
  lastBombPaintedSurface:string|null;
@@ -36,6 +39,9 @@ export class UndertowF3SourceInkFeedback {
  private lastCells=0;
  private lastTick:number|null=null;
  private bombStamps=0;
+ private bombZeroEvents=0;
+ private lastBombStampedSurface:string|null=null;
+ private lastBombStampTick:number|null=null;
  private bombEvents=0;
  private bombCells=0;
  private lastBombSurface:string|null=null;
@@ -50,7 +56,11 @@ export class UndertowF3SourceInkFeedback {
    // Count requests separately from actual changed cells, and keep a
    // zero-change stamp from producing visual success feedback.
    this.bombStamps++;
-   if(changedCells<=0)return;
+   // A stamp on a source paintable is real even when all owned cells
+   // already have this team; it is never proof of a new ink change.
+   this.lastBombStampedSurface=event.surfaceId;
+   this.lastBombStampTick=event.tick;
+   if(changedCells===0){this.bombZeroEvents++;return;}
    if(this.lastBombTick===event.tick)this.lastBombCells+=changedCells;
    else this.lastBombCells=changedCells;
    this.lastBombTick=event.tick;
@@ -85,6 +95,9 @@ export class UndertowF3SourceInkFeedback {
    showPaintConfirmation:visible,
    elapsedTicks:elapsed,
    humanBombStampEvents:this.bombStamps,
+   humanBombZeroChangedEvents:this.bombZeroEvents,
+   lastBombStampedSurface:this.lastBombStampedSurface,
+   lastBombStampTick:this.lastBombStampTick,
    humanBombChangedEvents:this.bombEvents,
    humanBombChangedCells:this.bombCells,
    lastBombPaintedSurface:this.lastBombSurface,

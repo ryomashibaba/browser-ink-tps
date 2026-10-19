@@ -961,8 +961,13 @@ async function main(){
     const changedEvents=newInk.humanBombChangedEvents-oldInk.humanBombChangedEvents;
     const changedCells=newInk.humanBombChangedCells-oldInk.humanBombChangedCells;
     const stamps=newInk.humanBombStampEvents-oldInk.humanBombStampEvents;
-    if(stamps<0||changedEvents<0||changedCells<0||changedEvents>stamps||
-       (changedEvents===0)!==(changedCells===0))
+    const zeroStamps=newInk.humanBombZeroChangedEvents-
+     oldInk.humanBombZeroChangedEvents;
+    if(stamps<0||zeroStamps<0||changedEvents<0||changedCells<0||
+       stamps!==changedEvents+zeroStamps||
+       (changedEvents===0)!==(changedCells===0)||
+       (stamps>0&&(!newInk.lastBombStampedSurface||
+        newInk.lastBombStampTick===null)))
      reject('W10B40_INVALID_POST_RASTER_DELTA_'+label);
     return {
      case:label,actualKeyF:true,actualPointerLockedInput:true,
@@ -971,6 +976,8 @@ async function main(){
      originalPlayerPosition:before.player.position,
      inkBefore:before.player.ink,inkAfterThrow:accepted.player.ink,
      throwDelta:1,explosionDelta:1,originalBombStampEvents:stamps,
+     originalZeroChangeStampEvents:zeroStamps,
+     lastOriginalStampedSurface:stamps>0?newInk.lastBombStampedSurface:null,
      originalChangedBombEvents:changedEvents,
      authoritativeChangedCells:changedCells,
      paintFailureObserved:changedCells===0,
@@ -1012,6 +1019,8 @@ async function main(){
      originalChangedBombEvents:bombInk.humanBombChangedEvents,
      authoritativeChangedCells:bombInk.humanBombChangedCells,
      originalBombStampEvents:bombInk.humanBombStampEvents,
+     originalZeroChangeStampEvents:bombInk.humanBombZeroChangedEvents,
+     lastOriginalStampedSurface:bombInk.lastBombStampedSurface,
      verifiedChangedOriginalSurface:bombInk.lastBombPaintedSurface,
      originalPlayerPosition:initial.player.position,
      actualKeyF:true
