@@ -1003,7 +1003,7 @@ async function main(){
      cutaway.b30SourcePhysicalReadability.newNavigation!==0||
      cutaway.b30SourcePhysicalReadability.scoredTurf!==0||
      cutaway.b30SourcePhysicalReadability.playableSourceFootpathsCertified!==false||
-     cutaway.b30SourcePhysicalReadability.originalSourceTriangles===0||
+     cutaway.b30SourcePhysicalReadability.fullOriginalSourceTriangles!==57578||
      cutaway.originalSourceSolids!==25||
      cutaway.originalPaintSurfaces!==17||
      cutaway.originalSourceNavigationLinks!==26||
