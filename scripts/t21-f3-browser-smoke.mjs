@@ -931,28 +931,59 @@ async function main(){
    return t.status==='READY'&&t.totalOriginalTriangles===57578?t:null;
   },120000);
   if(ready.sourceUVOnly!==true||ready.physicsSolidsAdded!==0||
-    ready.scoreableSurfacesAdded!==0||ready.instanceMatricesRecovered!==false||
-    ready.productionAuthorized!==false||ready.verifiedTextures<8||
-    ready.materialGroups<10)
+     ready.scoreableSurfacesAdded!==0||ready.instanceMatricesRecovered!==false||
+     ready.productionAuthorized!==false||ready.verifiedTextures<8||
+     ready.materialGroups<10)
    reject('F3L_TEXTURED_SOURCE_PARITY_OR_AUTHORITY_DRIFT_'+JSON.stringify(ready));
-  const textured=await evaluate(`(() => {
+  const before=await evaluate('window.__t21F3.snapshot()');
+  if(before.b29VerifiedSourcePresentation.selected!=='F3L_ORIGINAL_UV'||
+     before.b29VerifiedSourcePresentation.explicitlyRequestedReview!==true||
+     before.b29VerifiedSourcePresentation.newGameplayColliders!==0||
+     before.b29VerifiedSourcePresentation.newNavigationLinks!==0||
+     before.b29VerifiedSourcePresentation.originalSetActorMatricesRecovered!==false||
+     !before.texturedSourceF3l.enabled||before.fullSource.enabled||
+     before.originalSourceSolids!==25||before.originalPaintSurfaces!==17||
+     before.originalSourceNavigationLinks!==26||before.sourceScoreablePromotions!==0)
+   reject('W10B29_PINNED_ORIGINAL_UV_DEFAULT_NOT_VERIFIED_'+
+    JSON.stringify(before.b29VerifiedSourcePresentation));
+  // Freeze normal gameplay and camera; each screenshot is from real WebGL2.
+  await evaluate('window.__t21F3.pause()');
+  await sleep(450);
+  const originalUv=await screenshot('W10B29_A_PINNED_FULL_SOURCE_UV');
+  const flat=await evaluate(`(() => {
    document.querySelector('#t21-f3l-textured')?.click();
    return window.__t21F3.snapshot();
   })()`);
-  if(!textured.texturedSourceF3l.enabled||textured.fullSource.enabled||
-     textured.originalSourceSolids!==25||textured.originalSourceNavigationLinks!==26||
-     textured.sourceScoreablePromotions!==0)
-   reject('F3L_SOURCE_TEXTURE_TOGGLE_STAGE_AUTHORITY_CHANGED');
+  if(flat.texturedSourceF3l.enabled||!flat.fullSource.enabled||
+     flat.b29VerifiedSourcePresentation.selected!=='F3G_FLAT'||
+     flat.sourceScoreablePromotions!==0)
+   reject('W10B29_MANUAL_FLAT_FALLBACK_NOT_VALID');
   await sleep(450);
-  frames.push(await screenshot('F3L_PINNED_ORIGINAL_UV_TEXTURES'));
+  const flatImage=await screenshot('W10B29_B_FLAT_SOURCE');
   const restored=await evaluate(`(() => {
    document.querySelector('#t21-f3l-textured')?.click();
    return window.__t21F3.snapshot();
   })()`);
-  if(restored.texturedSourceF3l.enabled||!restored.fullSource.enabled)
-   reject('F3L_FLAT_SOURCE_FALLBACK_FAILED');
-  frames.push(await screenshot('F3L_FLAT_SOURCE_RESTORED'));
-  console.log('F3L_REAL_CHROME_UV_TEXTURED_SOURCE',JSON.stringify(ready));
+  if(!restored.texturedSourceF3l.enabled||restored.fullSource.enabled||
+     restored.b29VerifiedSourcePresentation.selected!=='F3L_ORIGINAL_UV'||
+     restored.originalSourceSolids!==25||restored.originalPaintSurfaces!==17||
+     restored.originalSourceNavigationLinks!==26||restored.sourceScoreablePromotions!==0)
+   reject('W10B29_ORIGINAL_SOURCE_UV_NOT_RESTORED');
+  await sleep(450);
+  const restoredImage=await screenshot('W10B29_A2_UV_RESTORED');
+  if(originalUv.sha256===flatImage.sha256||
+     originalUv.sha256!==restoredImage.sha256)
+   reject('W10B29_REAL_WEBGL2_PIXEL_REVERSIBILITY_FAILED_'+
+    JSON.stringify({originalUv,flatImage,restoredImage}));
+  console.log('T21_W10B29_REAL_CHROME_57578_ORIGINAL_UV_DEFAULT_PASS',
+   JSON.stringify({verifiedTriangleCount:57578,
+    originalTextureCount:ready.verifiedTextures,
+    originalUVsha256:originalUv.sha256,flatSha256:flatImage.sha256,
+    restoredUVsha256:restoredImage.sha256,
+    screenshotRestorationExact:true,sourceOnly:true,
+    originalSolids:25,originalPaintSurfaces:17,originalNavLinks:26,
+    sourceScoreablePromotions:0,originalActorMatricesRecovered:false,
+    productionAuthorized:false}));
  }
  if(process.env.T21_F3K_EXPECT_GALLERY==='1'){
   const available=await waitUntil(async()=>{
