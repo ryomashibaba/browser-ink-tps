@@ -315,7 +315,14 @@ export class UndertowF3PlayablePreviewApp{
   this.cpu=new CpuAgentSystem(app,this.nav,this.ink,this.coordinator,
    this.stats,stage,Team.A,adapter,this.shared,this.humanCrowd,true);
   const bots=(this.cpu as unknown as {bots:F3TrafficCpu[]}).bots;
-  this.traffic=new UndertowF3SourceTraffic(stage,this.nav,slots,bots,this.physics);
+  // Optional real-ink ownerGrid goal ranking across ONLY previously
+  // audited original-side source foot candidates. Existing fixed
+  // trusted-input QA stays deterministic without the explicit B31 flag.
+  const b31Params=new URL(location.href).searchParams;
+  const b31Enabled=b31Params.get('t21QaDrive')!=='source'||
+   b31Params.get('t21W10B31')==='inkGoals';
+  this.traffic=new UndertowF3SourceTraffic(
+   stage,this.nav,slots,bots,this.physics,this.ink,b31Enabled);
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
