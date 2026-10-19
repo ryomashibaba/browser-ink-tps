@@ -40,3 +40,23 @@ export function rankOriginalSourcePatrolGoals(
   ((a.index-startIndex+count)%Math.max(1,count))-
   ((b.index-startIndex+count)%Math.max(1,count)));
 }
+
+/** B33 experimental: original-source goal hysteresis. Keep the PREVIOUSLY
+ * Rapier/Recast-approved goal during an actual trip, then rerank ownerGrid
+ * after coming within the already established 1.5m arrival radius.
+ * This only reorders indices; original physical/nav acceptance remains
+ * mandatory on every chooseSourceGoal call.
+ */
+export function prioritizeExistingInFlightSourceGoal(
+ sorted:readonly OriginalPatrolInkRank[],goals:readonly Vec3[],
+ activeIndex:number,realFoot:Vec3,arrivalMeters=1.5
+):OriginalPatrolInkRank[]{
+ const candidate=goals[activeIndex];
+ if(!candidate||activeIndex<0||!Number.isSafeInteger(activeIndex)||
+    ![realFoot.x,realFoot.y,realFoot.z].every(Number.isFinite))
+  return [...sorted];
+ const distance=Math.hypot(realFoot.x-candidate.x,realFoot.z-candidate.z);
+ if(!Number.isFinite(distance)||distance<arrivalMeters)return [...sorted];
+ const entry=sorted.find(e=>e.index===activeIndex);
+ return entry?[entry,...sorted.filter(e=>e.index!==activeIndex)]:[...sorted];
+}
