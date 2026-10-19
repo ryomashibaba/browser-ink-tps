@@ -1730,7 +1730,8 @@ export class UndertowF3PlayablePreviewApp{
     current.copy(next);
    }
    const error=point&&w.contactPoint?
-    Math.hypot(...xyz(point).map((v,i)=>v-w.contactPoint![i])):null;
+    Math.hypot(point.x-w.contactPoint[0],
+     point.y-w.contactPoint[1],point.z-w.contactPoint[2]):null;
    const match=kind===w.contactKind&&id===w.contactSourceId&&
     flightTicks===w.flightQueryTicks&&
     paintCount===w.paintCandidateTicks&&
