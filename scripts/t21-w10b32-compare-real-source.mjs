@@ -83,6 +83,11 @@ const assertFrame=(report,mode)=>{
   shortOriginalGoalHops:finite(au.sourcePatrol.requestedGoalShortHops,'SHORT_GOAL_HOPS'),
   longOriginalGoalHops:finite(au.sourcePatrol.requestedGoalLongHops,'LONG_GOAL_HOPS'),
   nativeGoalLengthsSampled:finite(au.sourcePatrol.requestedGoalLengthsSampled,'GOAL_LENGTH_SAMPLES'),
+  trulyNewOriginalGoalSelections:finite(au.sourcePatrol.trulyNewOriginalGoalSelections,'NEW_SOURCE_GOALS'),
+  newGoalDirectMeters:finite(au.sourcePatrol.newGoalDirectMeters,'NEW_GOAL_DIRECT'),
+  newGoalNativePathMeters:finite(au.sourcePatrol.newGoalNativePathMeters,'NEW_GOAL_RECAST'),
+  newGoalShortHops:finite(au.sourcePatrol.newGoalShortHops,'NEW_SHORT_HOPS'),
+  newGoalLongHops:finite(au.sourcePatrol.newGoalLongHops,'NEW_LONG_HOPS'),
   actualInkCellsChanged:finite(au.inkCellsChanged,'CHANGED_CELLS'),
   actualOriginalPaintShots:finite(au.naturalCpuSourceTurfShots,'SHOTS'),
   actualOriginalPaintImpacts:finite(au.nativeCpuTurfInkImpacts,'IMPACTS'),
@@ -134,7 +139,12 @@ const diagnosticDimensions=[
  ['originalGoalNativePathDistanceMeters','Sum of native Recast path polyline distance'],
  ['shortOriginalGoalHops','Accepted original goal selections closer than 4m'],
  ['longOriginalGoalHops','Accepted original goal selections farther than 9m'],
- ['nativeGoalLengthsSampled','Accepted actual Recast goal lengths observed']
+ ['nativeGoalLengthsSampled','Accepted actual Recast goal lengths observed'],
+ ['trulyNewOriginalGoalSelections','Changed to a different already-audited original source goal'],
+ ['newGoalDirectMeters','Direct distance of genuine new goal selections'],
+ ['newGoalNativePathMeters','Recast distance of genuine new goal selections'],
+ ['newGoalShortHops','Genuinely new source goal hops shorter than 4m'],
+ ['newGoalLongHops','Genuinely new source goal hops longer than 9m']
 ];
 const diagnostics=Object.fromEntries(diagnosticDimensions.map(([key,label])=>{
  const fixedValue=fixed[key],awareValue=aware[key];
