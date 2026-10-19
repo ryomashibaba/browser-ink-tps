@@ -1228,7 +1228,7 @@ async function main(){
    const counts={chosenPaint:0,chosenRapier:0,chosenNone:0,
     withRapierCandidate:0,withDualCandidate:0,flightTtl:0,
     landedFuse:0,contactImpact:0};
-   const evidence=[];
+   const b44CandidateEvidence=[];
    for(let i=0;i<allB44.length;i++){
     const {label,w,stamps}=allB44[i],c=w?.firstContactCandidates;
     if(!w||w.launchId!==i+1||w.originalGameCollisionCertified!==false||
@@ -1263,7 +1263,7 @@ async function main(){
        (w.contactKind==='RAPIER_STAGE_SOLID'&&c?.paintId!==null&&
         c.paintDistance<=c.rapierDistance+c.priorityEpsilon))
      reject('W10B44_REAL_NATIVE_CONTACT_PRIORITY_MISMATCH_'+label);
-    evidence.push({case:label,launchId:w.launchId,
+    b44CandidateEvidence.push({case:label,launchId:w.launchId,
      launchPoint:w.launchPoint,explosionPoint:w.explosionPoint,
      contactKind:w.contactKind,contactSourceId:w.contactSourceId,
      trigger:w.trigger,firstContactCandidates:c,
@@ -1276,7 +1276,7 @@ async function main(){
     status:'PASS_REAL_B44_NATIVE_DUAL_QUERY_CANDIDATE_AUDIT',
     humanKeyFThrows:10,nativeExplosions:10,
     oldNativeTraces:7,newRealMouseTrajectories:3,
-    counts,traces:evidence,
+    counts,traces:b44CandidateEvidence,
     rapierSelectedObserved:counts.chosenRapier>0,
     noContactFlightTtlObserved:counts.flightTtl>0,
     originalGameCollisionCertified:false,
