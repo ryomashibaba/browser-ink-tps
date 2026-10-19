@@ -1287,6 +1287,54 @@ async function main(){
    writeFileSync(resolve(OUTPUT,'w10b44-real-native-dual-query.json'),
     JSON.stringify(result,null,2));
    console.log('T21_W10B44_NATIVE_DUAL_QUERY_AUDIT',JSON.stringify(result));
+   // B45 samples real original Rapier solid-only rays from the actual
+   // native player muzzle. THIS IS STATIC READ-ONLY LINE-OF-SIGHT,
+   // NOT proof of a ballistic bomb hit or original game world physics.
+   const b45Survey=await evaluate(
+    'window.__t21F3.auditB45OriginalColliderRays()');
+   if(b45Survey.status!=='B45_READ_ONLY_NATIVE_SOURCE_SOLID_ONLY_RAY_SURVEY'||
+      b45Survey.totalOriginalSolids!==25||
+      b45Survey.totalOriginalPaintable!==17||
+      b45Survey.totalOriginalNavLinks!==26||
+      b45Survey.scoreableSurfaces!==0||
+      b45Survey.authenticBombCollisionCertified!==false||
+      b45Survey.originalGameCollisionCertified!==false||
+      b45Survey.productionAuthorized!==false||
+      b45Survey.stageGeometryModified!==false||
+      b45Survey.tested!==648||
+      !Array.isArray(b45Survey.nearestRayCandidates)||
+      b45Survey.nearestRayCandidates.length>16||
+      b45Survey.nearestRayCandidates.length>
+       b45Survey.rapierWins||
+      b45Survey.rapierWins<0||
+      b45Survey.rapierWins>b45Survey.solidHits)
+    reject('W10B45_SOURCE_RAPIER_RAY_SURVEY_AUTHORITY_DRIFT');
+   const nonPaintIds=new Set(b45Survey.nonPaintBackedSolidIds);
+   const candidateIds=new Set(b45Survey.distinctRapierWinnerIds);
+   for(const c of b45Survey.nearestRayCandidates){
+    if(!candidateIds.has(c.sourceSolidId)||
+       !Number.isFinite(c.solidDistance)||
+       c.solidDistance<0||c.solidDistance>30||
+       (c.paintSurfaceId===null)!==(c.paintDistance===null)||
+       (c.paintDistance!==null&&
+        c.paintDistance<=c.solidDistance+0.06)||
+       c.solidHasRegisteredPaintBacking===
+        nonPaintIds.has(c.sourceSolidId))
+     reject('W10B45_FALSE_SOLID_ONLY_RAY_CANDIDATE_'+
+      JSON.stringify(c));
+   }
+   const surveyResult={
+    ...b45Survey,
+    b44NativePriorRealHumanThrows:10,
+    newB45HumanKeyFThrows:0,
+    noArtificialBallisticPrediction:true,
+    originalSourceOnly:true
+   };
+   writeFileSync(resolve(OUTPUT,'w10b45-original-solid-only-rays.json'),
+    JSON.stringify(surveyResult,null,2));
+   console.log('T21_W10B45_ORIGINAL_SOLID_ONLY_RAY_SURVEY',
+    JSON.stringify(surveyResult));
+
 
 
   }

@@ -29,6 +29,7 @@ import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {SurfaceFlags,Team} from '../ink/types';
+import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
 import {PlayerInput} from '../input/PlayerInput';
 import {initializeRecastNavigation,RecastStageNavigation}
@@ -113,6 +114,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly ink=new GameplayInkSystem();
  private readonly rawStage=undertowT21dConnectivityQaStage();
  private readonly physics:RapierStagePhysics;
+ private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  private readonly cpu:CpuAgentSystem;
@@ -281,6 +283,7 @@ export class UndertowF3PlayablePreviewApp{
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
   const surfaces=defineTestSurfaces(this.ink,stage);
+  this.b45SourceSurfaces=surfaces;
   if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
    throw Error('T21_F3_UNAUTHORIZED_TURF_SCORING');
   const atlasSize=Math.min(4096,app.graphicsDevice.maxTextureSize);
@@ -615,6 +618,7 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3SourceStage=stage.metadata.id;
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
+   auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    pause:()=>{this.paused=true;this.refresh();return this.snapshot();},
    advanceQaTicks:(count:number)=>this.advanceQaTicks(count),
    qaDriveTicks:(x:number,y:number,count:number)=>this.qaDriveTicks(x,y,count),
@@ -1547,6 +1551,85 @@ export class UndertowF3PlayablePreviewApp{
    nativePointerShotSamples:this.realPointerToShotSamples,
    excludedPausedQaInputLatency:true,
    verifiedUserRtxFps:false
+  };
+ }
+ /** W10-B45: read-only source-local ray survey, NOT a real bomb throw.
+  * All casts are the SAME native Rapier and PaintSurface queries already used
+  * by SubWeaponSystem. No teleport, artificial projectiles, paint or score.
+  */
+ private auditB45OriginalColliderRays(){
+  const q=new URL(location.href).searchParams;
+  if(q.get('t21QaDrive')!=='source'||q.get('t21W10B38')!=='humanSub'||
+     !this.paused||this.stopReason||this.rawStage.solids.length!==25||
+     this.rawStage.paintSurfaces.length!==17||
+     this.rawStage.navigationLinks?.length!==26||
+     this.b45SourceSurfaces.length!==17)
+   throw Error('W10_B45_SOURCE_ONLY_READ_ONLY_GUARD');
+  const foot=this.player.getPosition();
+  const reference=this.camera.sourcePracticeViewSnapshot();
+  const backing=new Set(this.rawStage.paintSurfaces.map(p=>p.backingSolidId));
+  const noPaintSolidIds=this.rawStage.solids.filter(x=>!backing.has(x.id))
+   .map(x=>x.id);
+  const surveys: Array<{
+   yaw:number;pitch:number;sourceSolidId:string;solidDistance:number;
+   paintSurfaceId:string|null;paintDistance:number|null;
+   solidHasRegisteredPaintBacking:boolean;launchPoint:[number,number,number]
+  }>=[];
+  const ids=new Set(this.rawStage.solids.map(x=>x.id));
+  const eps=GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters;
+  const rayLength=30;
+  let tested=0,solidHits=0,paintHits=0,bothHits=0,paintWins=0,rapierWins=0;
+  const dir=new Vec3(),start=new Vec3(),far=new Vec3();
+  for(let yaw=-180;yaw<180;yaw+=5){
+   const y=yaw*Math.PI/180;
+   for(let pitch=-50;pitch<=30;pitch+=10){
+    const p=pitch*Math.PI/180;
+    dir.set(Math.sin(y)*Math.cos(p),Math.sin(p),
+     -Math.cos(y)*Math.cos(p));
+    this.player.getMuzzlePosition(dir,start);
+    far.copy(start).add(dir.clone().mulScalar(rayLength));
+    const solid=this.physics.castStageSegment(start,far,'thrown-sub');
+    let paint: ReturnType<PaintSurface['intersectSegment']>=null;
+    for(const surface of this.b45SourceSurfaces){
+     const hit=surface.intersectSegment(start,far);
+     if(hit&&(!paint||hit.distance<paint.distance))paint=hit;
+    }
+    tested++;if(solid)solidHits++;if(paint)paintHits++;
+    if(solid&&paint)bothHits++;
+    if(paint&&(!solid||paint.distance<=solid.distance+eps)){
+     paintWins++;continue;
+    }
+    if(!solid)continue;
+    if(!ids.has(solid.solidId))
+     throw Error('W10_B45_UNIDENTIFIED_RAPIER_SOLID');
+    rapierWins++;
+    surveys.push({
+     yaw,pitch,sourceSolidId:solid.solidId,
+     solidDistance:solid.distance,
+     paintSurfaceId:paint?.surface.id??null,
+     paintDistance:paint?.distance??null,
+     solidHasRegisteredPaintBacking:backing.has(solid.solidId),
+     launchPoint:[start.x,start.y,start.z]
+    });
+   }
+  }
+  // Candidates are straight-line queries, not predictions that a
+  // gravity-affected bomb will strike this source at this angle.
+  surveys.sort((a,b)=>a.solidDistance-b.solidDistance||
+    Math.abs(a.pitch)-Math.abs(b.pitch));
+  return {
+   status:'B45_READ_ONLY_NATIVE_SOURCE_SOLID_ONLY_RAY_SURVEY',
+   playerFoot:[foot.x,foot.y,foot.z],
+   referenceCamera:{yaw:reference.yawDegrees,pitch:reference.pitchDegrees},
+   rayLengthMeters:rayLength,angularGridDegrees:{yaw:5,pitch:10},
+   tested,solidHits,paintHits,bothHits,paintWins,rapierWins,
+   distinctRapierWinnerIds:[...new Set(surveys.map(v=>v.sourceSolidId))],
+   totalOriginalSolids:25,totalOriginalPaintable:17,totalOriginalNavLinks:26,
+   scoreableSurfaces:0,nonPaintBackedSolidIds:noPaintSolidIds,
+   nearestRayCandidates:surveys.slice(0,16),
+   authenticBombCollisionCertified:false,
+   originalGameCollisionCertified:false,productionAuthorized:false,
+   stageGeometryModified:false,scoreablePromotions:0
   };
  }
  public snapshot(){
