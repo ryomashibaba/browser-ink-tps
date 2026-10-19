@@ -144,6 +144,68 @@ async function main(){
      before.b27KineticSourceView?.enabled!==true||
      before.b27KineticSourceView.fieldOfViewDegrees!==63)
    reject('W10B21_FROZEN_ORIGINAL_SOURCE_REQUIRED_'+JSON.stringify(before));
+  // W10-B28: real Chrome pixel evidence for identical physical scene
+  // while switching ONLY between existing source architecture materials.
+  if(before.b28OriginalSourceMassing?.mode!=='ARCHITECTURE'||
+     before.b28OriginalSourceMassing.visible!==true||
+     before.b28OriginalSourceMassing.physicalCollisionAdded!==0||
+     before.b28OriginalSourceMassing.navigationAdded!==0||
+     before.b28OriginalSourceMassing.scoreableAdded!==0||
+     before.b28OriginalSourceMassing.unplacedActorInstancesRecovered!==0)
+   reject('W10B28_SOURCE_ARCHITECTURE_NOT_SAFE_'+
+    JSON.stringify(before.b28OriginalSourceMassing));
+  const pressMassing=async()=>{
+   await cmd('Input.dispatchKeyEvent',{
+    type:'keyDown',key:'H',code:'KeyH',modifiers:8,
+    windowsVirtualKeyCode:72,nativeVirtualKeyCode:72});
+   await cmd('Input.dispatchKeyEvent',{
+    type:'keyUp',key:'H',code:'KeyH',modifiers:8,
+    windowsVirtualKeyCode:72,nativeVirtualKeyCode:72});
+  };
+  // Normalize the existing F3E button label on the first round trip;
+  // architecture A and A2 then have exactly the same UI and camera.
+  await pressMassing();await pressMassing();
+  const initialMassing=await evaluate('window.__t21F3.snapshot()');
+  if(initialMassing.b28OriginalSourceMassing.mode!=='ARCHITECTURE')
+   reject('W10B28_INITIAL_ROUNDTRIP_FAILED');
+  await sleep(700);
+  const architectureA=await screenshot('W10B28_A_ORIGINAL_ARCHITECTURE');
+  await pressMassing();
+  const ghost=await waitUntil(async()=>{
+   const st=await evaluate('window.__t21F3.snapshot()');
+   return st.b28OriginalSourceMassing.mode==='HOLOGRAM'?st:false;
+  },15000);
+  await sleep(700);
+  const hologramB=await screenshot('W10B28_B_OPTICAL_HOLOGRAM');
+  await pressMassing();
+  const restoredArchitecture=await waitUntil(async()=>{
+   const st=await evaluate('window.__t21F3.snapshot()');
+   return st.b28OriginalSourceMassing.mode==='ARCHITECTURE'?st:false;
+  },15000);
+  await sleep(700);
+  const architectureA2=await screenshot('W10B28_A2_ARCHITECTURE_RESTORED');
+  if(architectureA.sha256===hologramB.sha256||
+     architectureA.sha256!==architectureA2.sha256||
+     ghost.tick!==before.tick||restoredArchitecture.tick!==before.tick||
+     JSON.stringify(ghost.player.position)!==JSON.stringify(before.player.position)||
+     JSON.stringify(restoredArchitecture.player.position)!==JSON.stringify(before.player.position)||
+     restoredArchitecture.originalSourceSolids!==25||
+     restoredArchitecture.originalPaintSurfaces!==17||
+     restoredArchitecture.originalSourceNavigationLinks!==26||
+     restoredArchitecture.sourceScoreablePromotions!==0)
+   reject('W10B28_REAL_CHROME_MASSING_NOT_REVERSIBLE_'+
+    JSON.stringify({architectureA,hologramB,architectureA2,
+     ghost:ghost.b28OriginalSourceMassing}));
+  console.log('T21_W10B28_REAL_CHROME_ORIGINAL_MASSING_REVERSIBLE_PASS',
+   JSON.stringify({
+    sourceOnly:true,realChromeWebGL2:true,
+    architectureSHA:architectureA.sha256,hologramSHA:hologramB.sha256,
+    restoredIdentical:true,fixedPhysicsTicks:0,
+    originalSourceTriangles:before.b28OriginalSourceMassing.originalTriangles,
+    originalSolids:25,originalPaintable:17,originalNavLinks:26,
+    scoreablePromotions:0,unplacedActorTransformsRecovered:0,
+    actualOriginalMaterialsCertified:false
+   }));
   const initialPixels=before.b21RenderProbe.canvasPixels;
   if(initialPixels[0]!==1600||initialPixels[1]!==900)
    reject('W10B21_NATIVE_BACKBUFFER_NOT_1600x900_'+JSON.stringify(initialPixels));
