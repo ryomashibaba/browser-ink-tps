@@ -105,6 +105,7 @@ async function main(){
  });
  const w10b14=process.env.T21_W10B14_RENDER_QA==='1';
  const w10b15=process.env.T21_W10B15_TRUSTED_INPUT==='1';
+ const w10b38=process.env.T21_W10B38_SUB==='1';
  const w10b36=process.env.T21_W10B36_FOCUS==='1';
  const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
  const w10b21=process.env.T21_W10B21_RENDER_AB==='1';
@@ -123,6 +124,7 @@ async function main(){
    (process.env.T21_W10B35_NATIVE==='1'?'&t21W10B35=nativeTargetRefresh':''):'')+
   (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility&t21W10B27=kinetic':'')+
   (w10b36?'&t21W10B36=playFocus':'')+
+  (w10b38?'&t21W10B38=humanSub':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
  await waitUntil(async()=>{
@@ -810,6 +812,77 @@ async function main(){
    JSON.stringify(cameraResult,null,2));
   console.log('T21_W10B18_LIVE_CAMERA_SHOULDER_PASS',
    JSON.stringify(cameraResult));
+  if(w10b38){
+   // Browser-native, pointer-locked KeyF event enters the existing
+   // PlayerInput queue and actual human SubWeaponSystem.
+   // No force-spawn, direct weapon method, ink-injection or CPU teleport.
+   const initial=await evaluate('window.__t21F3.snapshot()');
+   if(!initial.b38HumanSub?.enabled||initial.b38HumanSub.throws!==0||
+      initial.b38HumanSub.explosions!==0||
+      initial.player.ink<70||initial.sourceScoreablePromotions!==0||
+      !initial.b38HumanSub.nativeSourcePhysicsOnly)
+    reject('W10B38_REAL_SOURCE_HUMAN_SUB_NOT_READY_'+JSON.stringify({
+     sub:initial.b38HumanSub,ink:initial.player.ink,
+     scoring:initial.sourceScoreablePromotions
+    }));
+   await cmd('Input.dispatchKeyEvent',{
+    type:'keyDown',key:'f',code:'KeyF',
+    windowsVirtualKeyCode:70,nativeVirtualKeyCode:70
+   });
+   await cmd('Input.dispatchKeyEvent',{
+    type:'keyUp',key:'f',code:'KeyF',
+    windowsVirtualKeyCode:70,nativeVirtualKeyCode:70
+   });
+   const thrown=await waitUntil(async()=>{
+    const state=await evaluate('window.__t21F3.snapshot()');
+    if(state.stopReason)reject('W10B38_REAL_SOURCE_STOP_'+state.stopReason);
+    return state.b38HumanSub.throws>=1?state:false;
+   },70000);
+   if(thrown.b38HumanSub.throws!==1||
+      thrown.player.ink>initial.player.ink-69||
+      thrown.sourceScoreablePromotions!==0||
+      thrown.originalSourceSolids!==25||
+      thrown.originalPaintSurfaces!==17||
+      thrown.originalSourceNavigationLinks!==26)
+    reject('W10B38_NATIVE_REAL_SUB_THROW_INVALID_'+
+     JSON.stringify({initial:initial.b38HumanSub,thrown:thrown.b38HumanSub,
+      firstInk:initial.player.ink,lastInk:thrown.player.ink}));
+   // The subsequent per-tick projectile trajectory, original Rapier
+   // cast and delayed blast run through the existing native simulator.
+   // Paused QA stepping is NOT evidence of realtime GPU performance.
+   const pausedSub=await evaluate('window.__t21F3.pause()');
+   if(!pausedSub.paused)reject('W10B38_PAUSED_NATIVE_SUB_STEP_REJECTED');
+   let exploded=pausedSub;
+   for(let pass=0;pass<5&&exploded.b38HumanSub.explosions<1;pass++){
+    exploded=await evaluate('window.__t21F3.advanceQaTicks(72)');
+    if(exploded.stopReason)reject('W10B38_NATIVE_BOMB_SOURCE_HOLD_'+exploded.stopReason);
+   }
+   if(exploded.b38HumanSub.explosions!==1||
+      exploded.b38HumanSub.throws!==1||
+      exploded.sourceScoreablePromotions!==0||
+      exploded.originalSourceSolids!==25||
+      exploded.originalPaintSurfaces!==17||
+      exploded.originalSourceNavigationLinks!==26||
+      exploded.productionAuthorized!==false)
+    reject('W10B38_NATIVE_SOURCE_SUB_EXPLOSION_INVALID_'+
+     JSON.stringify(exploded.b38HumanSub));
+   const evidence={
+    status:'PASS_REAL_CHROME_KEY_F_NATIVE_SOURCE_SUB_AND_EXPLOSION',
+    browserKeyEvent:true,authenticPointerLockedInput:true,
+    sourceOnlyPractice:true,
+    realHumanSubThrows:exploded.b38HumanSub.throws,
+    nativeBombExplosions:exploded.b38HumanSub.explosions,
+    originalPhysicsTicksAdvanced:exploded.tick-thrown.tick,
+    sourceOriginalSolids:25,sourcePaintableSurfaces:17,
+    originalNavLinks:26,scoreableSurfaces:0,
+    noOriginalBancActorEvidence:true,natural4v4Certified:false,
+    ownerRtxRealtimeTested:false,productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b38-native-human-sub.json'),
+    JSON.stringify(evidence,null,2));
+   console.log('T21_W10B38_REAL_CHROME_KEY_F_SOURCE_BOMB_PASS',
+    JSON.stringify(evidence));
+  }
   return;
  }
  if(w10b14){
