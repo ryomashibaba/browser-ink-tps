@@ -118,7 +118,8 @@ async function main(){
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':'')+
-   (process.env.T21_W10B34_STALL==='1'?'&t21W10B34=stallRecovery':''):'')+
+   (process.env.T21_W10B34_STALL==='1'?'&t21W10B34=stallRecovery':'')+
+   (process.env.T21_W10B35_NATIVE==='1'?'&t21W10B35=nativeTargetRefresh':''):'')+
   (w10b21?'&t21W10B21=renderAB&t21W10B26=smartVisibility&t21W10B27=kinetic':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
@@ -1459,6 +1460,20 @@ async function main(){
       realOriginalFootPatrolMeters:src.travelMeters,
       fakeEnemyEncounter:false,productionAuthorized:false}));
    }
+   if(process.env.T21_W10B35_NATIVE==='1'){
+    const native=audit.b35NativeSourceRetarget;
+    if(!native?.enabled||native.redundantUnchangedRequestsSuppressed<=0||
+       native.nativeRequestIssued<=0||
+       audit.sourcePatrol.paintAwareModeEnabled||
+       audit.sourcePatrol.b34StallRecoveryModeEnabled||
+       audit.originalSourceSolids!==25||
+       audit.sourceScoreablePromotions!==0)
+     reject('W10B35_REAL_CHROME_ORIGINAL_CROWD_REQUESTS_NOT_VERIFIED_'+
+      JSON.stringify(native));
+    console.log('T21_W10B35_REAL_CHROME_ORIGINAL_NATIVE_DEDUPE_PASS',
+     JSON.stringify({...native,sourceOnly:true,
+      genuineCpuCount:7,originalSourceSolids:25,scoreable:0}));
+   }
    const report={
     phase:'W10-B16',status:'PASS_REAL_NATIVE_CPU_AUTONOMOUS_PATROL_AND_SOURCE_TURF',
     naturalCrossTeamMatchStatus:audit.status,
@@ -1471,6 +1486,7 @@ async function main(){
     realOriginalStageOnly:true,
     b34StartAudit,b34SourceMeasurementStartTick:
      b34StartAudit?1800:null,
+    b35NativeSourceRetarget:audit.b35NativeSourceRetarget,
     checkpoints,audit};
    const frame=await screenshot('W10B16_REAL_SEVEN_CPU_NATURAL_PATROL');
    report.frame=frame;
