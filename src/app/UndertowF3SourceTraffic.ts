@@ -12,7 +12,7 @@ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
-import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -64,6 +64,9 @@ export interface F3TrafficSnapshot{
   readonly newGoalLongHops:number;
   readonly paintAwareModeEnabled:boolean;
   readonly stableSourceGoalModeEnabled:boolean;
+  readonly b34StallRecoveryModeEnabled:boolean;
+  readonly stalledOriginalGoalReconsiderations:number;
+  readonly approvedAlternativeOriginalGoalsAfterStall:number;
   readonly continuedPreviouslyApprovedGoalRequests:number;
   readonly switchedGoalBeforePreviousArrival:number;
   readonly actualOriginalInkOwnershipLookups:number;
@@ -118,6 +121,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private newGoalNativePathMeters=0;
  private newGoalShortHops=0;
  private newGoalLongHops=0;
+ private readonly b34StationarySourceTicks=new Map<string,number>();
+ private stalledOriginalGoalReconsiderations=0;
+ private approvedAlternativeOriginalGoalsAfterStall=0;
  private continuedPreviouslyApprovedGoalRequests=0;
  private switchedGoalBeforePreviousArrival=0;
  private actualOriginalInkOwnershipLookups=0;
@@ -141,7 +147,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly physics?:RapierStagePhysics,
   private readonly sourceInk?:GameplayInkSystem,
   private readonly enablePaintAwarePatrol=false,
-  private readonly enableStableSourceGoal=false
+  private readonly enableStableSourceGoal=false,
+  private readonly enableB34SourceStallRecovery=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -308,7 +315,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const initialRanks=this.enablePaintAwarePatrol&&this.sourceInk?
    rankOriginalSourcePatrolGoals(candidates,bot.team,this.sourceInk,first):
    null;
-  const ranked=initialRanks&&this.enableStableSourceGoal?
+  const prior=candidates[active];
+  const priorDistance=prior?Math.hypot(
+   realFoot.x-prior.x,realFoot.z-prior.z):0;
+  const recovering=this.enableB34SourceStallRecovery&&
+   this.enablePaintAwarePatrol&&this.enableStableSourceGoal&&
+   mayReconsiderStalledOriginalGoal(
+    this.b34StationarySourceTicks.get(id)??0,active,priorDistance);
+  if(recovering)this.stalledOriginalGoalReconsiderations++;
+  const ranked=initialRanks&&this.enableStableSourceGoal&&!recovering?
    prioritizeExistingInFlightSourceGoal(
     initialRanks,candidates,active,realFoot):initialRanks;
   if(ranked){
@@ -319,6 +334,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   for(let tries=0;tries<candidates.length;tries++){
    const rank=ranked?.[tries];
    const index=rank?rank.index:(first+tries)%candidates.length;
+   // B34 can only escape TO A DIFFERENT PRE-EXISTING SOURCE GOAL,
+   // physically supported and native-path audited below. The old goal
+   // remains the Crowd agent's last requested target if no safe alternate.
+   if(recovering&&index===active)continue;
    const goal=candidates[index]!;
    if(goal.z*sign<33||goal.y<2.7||goal.y>5.25)
     throw Error('T21_F3D_UNAPPROVED_UNDERPASS_CROSSING_GOAL');
@@ -375,6 +394,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      if(distance>9)this.newGoalLongHops++;
     }
    }
+   if(recovering){
+    this.approvedAlternativeOriginalGoalsAfterStall++;
+    this.b34StationarySourceTicks.set(id,0);
+   }
    this.patrolIndex.set(id,index);
    out.copy(goal);this.realGoalRequests++;
    if(rank){
@@ -422,6 +445,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const oldFoot=this.previousFeet.get(bot.id)!;
    const step=oldFoot.distance(bot.position);
    if(step>.015)this.lastMoved.set(bot.id,frame);
+   if(this.enableB34SourceStallRecovery&&this.freeCombat&&
+      bot.mobilityState==='GROUND'&&step<.18){
+    this.b34StationarySourceTicks.set(bot.id,
+     step<=.015?Math.min(180,(this.b34StationarySourceTicks.get(bot.id)??0)+1):0);
+   }else this.b34StationarySourceTicks.set(bot.id,0);
    if(this.freeCombat&&bot.mobilityState==='GROUND'&&step<.18){
     this.travelMeters+=step;
     this.groundedFreeCombatCpuSamples++;
@@ -569,6 +597,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     newGoalShortHops:this.newGoalShortHops,
     newGoalLongHops:this.newGoalLongHops,
     paintAwareModeEnabled:this.enablePaintAwarePatrol&&!!this.sourceInk,
+    b34StallRecoveryModeEnabled:this.enableB34SourceStallRecovery&&
+     this.enablePaintAwarePatrol&&!!this.sourceInk&&this.enableStableSourceGoal,
+    stalledOriginalGoalReconsiderations:
+     this.stalledOriginalGoalReconsiderations,
+    approvedAlternativeOriginalGoalsAfterStall:
+     this.approvedAlternativeOriginalGoalsAfterStall,
     stableSourceGoalModeEnabled:this.enablePaintAwarePatrol&&
      !!this.sourceInk&&this.enableStableSourceGoal,
     continuedPreviouslyApprovedGoalRequests:
