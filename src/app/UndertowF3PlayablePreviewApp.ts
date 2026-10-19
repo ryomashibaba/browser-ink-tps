@@ -277,6 +277,11 @@ export class UndertowF3PlayablePreviewApp{
    qa.get('t21QaInput')==='deterministic'&&qa.get('t21KccAudit')==='readOnly');
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
   this.camera.enableSourcePracticeControls();
+  if(this.b27KineticEnabled)
+   document.addEventListener('pointerlockchange',()=>{
+    if(document.pointerLockElement!==this.canvas)
+     this.resetW10B27KineticLens();
+   });
   // The real source-only practice has adaptive original-collider camera
   // visibility by default. Deterministic B18 camera regression retains its
   // exact old one-ray budget unless explicitly testing B26.
@@ -1302,6 +1307,7 @@ export class UndertowF3PlayablePreviewApp{
     const realPlayerInput=document.pointerLockElement===this.canvas;
     const gpuTrial=this.b22Trial.snapshot().status;
     const excludeBenchmark=gpuTrial==='ARMED'||gpuTrial==='RUNNING';
+    if(excludeBenchmark)this.resetW10B27KineticLens();
     const fov=this.b27KineticView.advanceVisual(
      cameraDt,realPlayerInput,
      this.paused||!!this.stopReason||excludeBenchmark);
