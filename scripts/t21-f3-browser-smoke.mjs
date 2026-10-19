@@ -1309,6 +1309,35 @@ async function main(){
    console.log('T21_F3_REAL_CPU_KIT_QA_EVIDENCE',JSON.stringify(report));
   }
   if(w10b16){
+   // B34 compare actual 60Hz source-only CPU sessions at a COMMON
+   // original physical tick, not drifting independent browser startup.
+   let b34StartAudit=null;
+   if(process.env.T21_W10B34_ALIGN==='1'){
+    const commonTick=1800;
+    if(completed.tick>commonTick)
+     reject('W10B34_SOURCE_ONBOARDING_EXCEEDS_COMMON_TICK_'+completed.tick);
+    while(completed.tick<commonTick){
+     const count=Math.min(72,commonTick-completed.tick);
+     completed=await evaluate('window.__t21F3.advanceQaTicks('+count+')');
+     if(completed.stopReason||completed.originalSourceSolids!==25||
+        completed.sourceScoreablePromotions!==0)
+      reject('W10B34_REAL_FIXED_TICK_ALIGNMENT_SOURCE_DRIFT');
+    }
+    if(completed.tick!==commonTick)
+     reject('W10B34_NATIVE_START_NOT_MATCHED_'+completed.tick);
+    b34StartAudit=await evaluate('window.__t21F3.auditW10B16NaturalEnemyAccess()');
+    if(b34StartAudit.originalSourceSolids!==25||
+       b34StartAudit.originalPaintSurfaces!==17||
+       b34StartAudit.originalNavLinks!==26||
+       b34StartAudit.sourceScoreablePromotions!==0||
+       b34StartAudit.physicalActorTeleports!==0)
+     reject('W10B34_PREWINDOW_NATIVE_SOURCE_AUDIT_DRIFT');
+    console.log('T21_W10B34_REAL_SOURCE_MEASUREMENT_START',
+     JSON.stringify({nativeTick:completed.tick,
+      cumulativePatrolMeters:b34StartAudit.sourcePatrol.travelMeters,
+      cumulativeInkCells:b34StartAudit.inkCellsChanged,
+      sevenRealOriginalCpu:true,officialSourceScore:0}));
+   }
    const checkpoints=[];
    for(let batch=1;batch<=15;batch++){
     completed=await evaluate('window.__t21F3.advanceQaTicks(72)');
@@ -1430,6 +1459,8 @@ async function main(){
     naturalSessionUsesRapierAndRecast:true,
     browserFixedTickQa:true,
     realOriginalStageOnly:true,
+    b34StartAudit,b34SourceMeasurementStartTick:
+     b34StartAudit?1800:null,
     checkpoints,audit};
    const frame=await screenshot('W10B16_REAL_SEVEN_CPU_NATURAL_PATROL');
    report.frame=frame;
