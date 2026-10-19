@@ -12,7 +12,7 @@ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
-import {rankOriginalSourcePatrolGoals} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal} from './UndertowF3PaintAwarePatrol';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -50,6 +50,9 @@ export interface F3TrafficSnapshot{
   readonly deniedUnsupportedEnemyFeet:number;
   readonly travelMeters:number;
   readonly paintAwareModeEnabled:boolean;
+  readonly stableSourceGoalModeEnabled:boolean;
+  readonly continuedPreviouslyApprovedGoalRequests:number;
+  readonly switchedGoalBeforePreviousArrival:number;
   readonly actualOriginalInkOwnershipLookups:number;
   readonly actualOriginalInkOwnershipSampled:number;
   readonly realPaintAwareGoalsAccepted:number;
@@ -90,6 +93,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private rejectedUnsupportedGoals=0;
  private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
+ private continuedPreviouslyApprovedGoalRequests=0;
+ private switchedGoalBeforePreviousArrival=0;
  private actualOriginalInkOwnershipLookups=0;
  private actualOriginalInkOwnershipSampled=0;
  private realPaintAwareGoalsAccepted=0;
@@ -110,7 +115,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   spawns:SourceSpawnPlan,private readonly bots:readonly F3TrafficCpu[],
   private readonly physics?:RapierStagePhysics,
   private readonly sourceInk?:GameplayInkSystem,
-  private readonly enablePaintAwarePatrol=false
+  private readonly enablePaintAwarePatrol=false,
+  private readonly enableStableSourceGoal=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -274,9 +280,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Recast audits below are never skipped for a high-ranked point.
   // Unavailable original paint-surface sampling simply defers to the
   // previous deterministic loop: no synthetic paint inference.
-  const ranked=this.enablePaintAwarePatrol&&this.sourceInk?
+  const initialRanks=this.enablePaintAwarePatrol&&this.sourceInk?
    rankOriginalSourcePatrolGoals(candidates,bot.team,this.sourceInk,first):
    null;
+  const ranked=initialRanks&&this.enableStableSourceGoal?
+   prioritizeExistingInFlightSourceGoal(
+    initialRanks,candidates,active,realFoot):initialRanks;
   if(ranked){
    this.actualOriginalInkOwnershipLookups+=ranked.length;
    this.actualOriginalInkOwnershipSampled+=
@@ -306,6 +315,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // locomotion. New cross-team engagement paths still fail closed above.
    if(!this.hasSourceSupportedRoute(audit,sign))
     this.unauditedPatrolRouteRequests++;
+   // Observation only: prove the legacy B31 mode repeatedly retargets
+   // BEFORE reaching its prior native goal. No Actor position write.
+   const oldGoal=active>=0?candidates[active]:undefined;
+   const priorInFlight=!!oldGoal&&
+    Math.hypot(realFoot.x-oldGoal.x,realFoot.z-oldGoal.z)>=1.5;
+   if(priorInFlight){
+    if(index===active)this.continuedPreviouslyApprovedGoalRequests++;
+    else this.switchedGoalBeforePreviousArrival++;
+   }
    this.patrolIndex.set(id,index);
    out.copy(goal);this.realGoalRequests++;
    if(rank){
@@ -484,6 +502,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     deniedUnsupportedEnemyFeet:this.deniedUnsupportedEnemyFeet,
     travelMeters:this.travelMeters,
     paintAwareModeEnabled:this.enablePaintAwarePatrol&&!!this.sourceInk,
+    stableSourceGoalModeEnabled:this.enablePaintAwarePatrol&&
+     !!this.sourceInk&&this.enableStableSourceGoal,
+    continuedPreviouslyApprovedGoalRequests:
+     this.continuedPreviouslyApprovedGoalRequests,
+    switchedGoalBeforePreviousArrival:
+     this.switchedGoalBeforePreviousArrival,
     actualOriginalInkOwnershipLookups:this.actualOriginalInkOwnershipLookups,
     actualOriginalInkOwnershipSampled:this.actualOriginalInkOwnershipSampled,
     realPaintAwareGoalsAccepted:this.realPaintAwareGoalsAccepted,
