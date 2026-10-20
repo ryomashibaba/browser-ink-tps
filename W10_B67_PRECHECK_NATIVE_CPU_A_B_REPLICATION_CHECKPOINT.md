@@ -1,0 +1,16 @@
+# W10-B67 — B65/B66 preflight regression repair and 130s native-ink replication unblock
+
+Date: 2026-10-21 JST. QA-only parent `f8aa8032fe819c7c3caed846cc4dca3ebbe66dd2` on `dev/t21-f4e103w-qa-infra`.
+
+## Grounded facts and previous failure
+- Successful original source-native FIXED vs SWEEP B64 [run 39432637747](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39432637747), exact source SHA `dd6f2d49984d56fe106f03ca2d5cc09ad54419fc`: both **130 native seconds** PASS, FIXED CPU genuine source changed ink 3,615 cells (107 shots) vs opt-in SWEEP 11,473 cells (445 shots), genuine 7/7 source-floor rejoin. 60–120 second source paint increment FIXED +18 / SWEEP +830; 0 CPU native foot stalls; normal FIXED unchanged; no official Turf score. Prior final comparator failure was CI checkout omission, not real gameplay failure.
+- B65 [run 39498542877](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39498542877) and B66 [run 39499619630](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39499619630) both failed in Node negative-test fixtures before starting the real 130s repeat. B66 last issue `B65 original real FOOT travel or stall regression fails closed` expected `candidateForSecondaryIndependentReview=true` with identical FIXED/SWEEP source ink series; source comparator correctly requires **late source ink improvement**, so the test input was wrong, not the strict source-gate logic.
+- Do NOT use these blocked attempts as independent replication evidence; they never executed actual independent native runs.
+
+## B67 repair
+1. Correct the fixture **only in the isolated CPU-foot regression test**: SWEEP true late source paint +600 cells vs FIXED +450 cells at game second 120; 3,100m vs FIXED 3,000m source travel within 5% => qualify for secondary review; 3,500m vs FIXED 3,000m => reject; any real native CPU foot stall => hard reject. The standalone paint-improvement, actor-source count, per-CPU shot distribution, missing 40s native witness and original collision/Scoreable proof gates stay strict.
+2. Add **one mandatory Node 24 B67 fast-preflight GitHub job** before every costly FIXED and SWEEP two-run Chromium session and prior-artifact replay. Require syntactic correctness of source chrome and comparison scripts and all B64/B65/B66 Node tests. With any unit failure, cancel/skip expensive real 130-native-second SwiftShader runners and false status claims. This fixes wasted cloud execution caused by repeating tiny test mistakes.
+3. Reuse existing private-free B64 artifact replay, true B66 anonymous seven CPU source shot-count checks, independent same-source 130s FIXED/SWEEP experiment and B65 replication HOLD gate. Keep stage **25 original solids / 17 Paintable / 26 NavLinks / 0 Scoreable**, `activationReady=false`, original SetActor/Banc 8 PntSet identities unresolved and verified 0/12 cross-team footpaths. Default FIXED; SWEEP source-aim is opt-in only; no automatic deployment or official Turf winner.
+
+## Evidence and verdict
+New exact-SHA preflight and independent native CI must be checked before PASS. No user Windows GPU test or real original 4v4 match has been certified. No modifications to main, frozen T20, Draft PR #5, or Pages.

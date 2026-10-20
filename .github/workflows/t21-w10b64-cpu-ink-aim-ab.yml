@@ -18,8 +18,24 @@ permissions:
   contents: read
   actions: read
 jobs:
+  preflight-unit:
+    name: B67 fast preflight before expensive 130s browser experiments
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --check scripts/t21-w10b64-compare-native-ink.mjs
+      - run: node --check scripts/t21-w10b65-replication-gate.mjs
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - run: node --test scripts/t21-w10b64-compare-native-ink.test.mjs scripts/t21-w10b65-replication-gate.test.mjs
+      - name: The original 25/17/26/0 authority and 0 Turf score stay HOLD
+        run: echo 'B67_PASS_MODEL_PRECHECK_NOT_B66_NATIVE_COMPARE_PASS'
   native-source-ab:
     name: Real 130-second original-source CPU (${{ matrix.mode }})
+    needs: preflight-unit
     runs-on: ubuntu-latest
     timeout-minutes: 65
     strategy:
@@ -69,6 +85,7 @@ jobs:
 
   prior-evidence-review:
     name: Replay independently verified previous exact B64 130s native artifacts
+    needs: preflight-unit
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:

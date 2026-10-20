@@ -41,6 +41,9 @@ test('B64 rejects forged source promotion, mode swap and non-monotonic totals',(
 
 test('B65 original real FOOT travel or stall regression fails closed',()=>{
  const a=series('FIXED'),b=series('SWEEP');
+ // This test checks FOOT delta independently; give SWEEP a real late
+ // ink benefit first instead of incorrectly expecting a tie to qualify.
+ b.points[6].realCpuChangedSourceInkCells=1050;
  b.points[6].cpuSourcePatrolMeters=3100;
  assert.equal(compareB64NativeInk(a,b).candidateForSecondaryIndependentReview,true);
  b.points[6].cpuSourcePatrolMeters=3500;
