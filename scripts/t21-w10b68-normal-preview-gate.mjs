@@ -63,7 +63,7 @@ function audit(x,mode){
   e.sourceCpuShots>=prior.originalCpuShots,
   'FINAL_INK_LESS_THAN_SOURCE_HISTORY');
  return {end:e,last:prior,byTime:t=>x.originalNativeWitnesses.find(
-  y=>Math.abs(y.elapsedMatchSeconds-t)<=1)!};
+  y=>Math.abs(y.elapsedMatchSeconds-t)<=1)};
 }
 export function qualifyB68NormalPreview(fixed,sweep){
  const a=audit(fixed,'FIXED'),b=audit(sweep,'SWEEP');
