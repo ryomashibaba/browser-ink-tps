@@ -568,6 +568,14 @@ export class UndertowF3PlayablePreviewApp{
     'margin:5px 0;cursor:pointer">NEXT RUN · CLASSIC</button>'+
    '<div id="t21-f3-b56-route" style="display:none;color:#ffc98f;'+
     'font:700 10px/1.5 system-ui;margin:5px 0"></div>'+
+   '<div id="t21-f3-b57-relay" style="display:none;border:1px solid #2e7483;'+
+    'border-radius:8px;padding:7px;margin:6px 0;background:#092735">'+
+    '<div id="t21-f3-b57-phase" style="color:#ffc88c;font:800 11px/1.5 system-ui">LEG 1 / 3</div>'+
+    '<div style="height:6px;background:#ffffff20;border-radius:8px;'+
+     'overflow:hidden;margin:5px 0 4px">'+
+     '<div id="t21-f3-b57-paint-bar" style="width:0%;height:100%;background:#ffb66b"></div></div>'+
+    '<div id="t21-f3-b57-count" style="font:700 10px system-ui;color:#edfcff">0 / 60 NEW CELLS</div>'+
+    '</div>'+
    '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
    'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
    '<div id="t21-f3-b53-objectives" style="display:none;margin:9px 0 8px">'+
@@ -592,7 +600,8 @@ export class UndertowF3PlayablePreviewApp{
    .addEventListener('click',()=>{
     const state=this.b25Run.snapshot().status;
     if(state==='ARMED'||state==='RUNNING')return;
-    this.b56NextVariant=this.b56NextVariant==='CLASSIC'?'SWITCHBACK':'CLASSIC';
+    this.b56NextVariant=this.b56NextVariant==='CLASSIC'?'SWITCHBACK':
+     this.b56NextVariant==='SWITCHBACK'?'PAINT_RELAY':'CLASSIC';
     this.refreshB25PaintRun();
    });
   this.b25RunButton.addEventListener('click',()=>{
@@ -1554,6 +1563,23 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.dataset.t21B56ActiveVariant=run.practiceVariant;
   const route=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b56-route')!;
   route.style.display=run.practiceVariant==='SWITCHBACK'?'':'none';
+  const relay=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b57-relay')!;
+  relay.style.display=run.practiceVariant==='PAINT_RELAY'?'':'none';
+  relay.dataset.t21B57Leg=run.relayStage;
+  relay.dataset.t21B57Cells=String(run.relayStagePaintCells);
+  relay.dataset.t21B57ActualTurnCells=String(run.relayTurnPaintCells);
+  relay.dataset.t21B57ActualReturnCells=String(run.relayReturnPaintCells);
+  const relayLeg=run.relayStage==='OUTBOUND_PAINT'?1:
+   run.relayStage==='RETURN_PAINT'?2:3;
+  relay.querySelector<HTMLElement>('#t21-f3-b57-phase')!.textContent=
+   run.relayStage==='COMPLETE'?'THREE LEGS COMPLETE':
+   'LEG '+relayLeg+' / 3 · '+
+   (relayLeg===1?'PAINT + OUT':relayLeg===2?'PAINT + RETURN':'PAINT + FINISH');
+  relay.querySelector<HTMLElement>('#t21-f3-b57-count')!.textContent=
+   Math.min(run.relayCellsPerLeg,run.relayStagePaintCells)+' / '+
+   run.relayCellsPerLeg+' NEW CELLS THIS LEG';
+  relay.querySelector<HTMLElement>('#t21-f3-b57-paint-bar')!.style.width=
+   Math.min(100,run.relayStagePaintCells/run.relayCellsPerLeg*100)+'%';
   route.dataset.t21B56Phase=run.routePhase;
   route.dataset.t21B56TurnReached=String(run.routeTurnReached);
   route.dataset.t21B56Returned=String(run.routeReturned);
@@ -1567,7 +1593,9 @@ export class UndertowF3PlayablePreviewApp{
    'SWITCHBACK · GENUINE OUT + RETURN COMPLETE':
    'CLASSIC · shoot and move on original source floor';
   if(run.status==='IDLE'){
-   this.b25RunProgress.textContent=this.b56NextVariant==='SWITCHBACK'?
+   this.b25RunProgress.textContent=this.b56NextVariant==='PAINT_RELAY'?
+    'PAINT RELAY: paint 60 new cells per leg. Move 1.8m out, return to 0.8m, then finish at 12m original-ground travel.':
+    this.b56NextVariant==='SWITCHBACK'?
     'SWITCHBACK: move 1.8m out, return within 0.8m; paint 180 cells and travel 12m on original floor.':
     'Paint 180 real cells and travel 12m on original floor in 60 sim seconds.';
    return;

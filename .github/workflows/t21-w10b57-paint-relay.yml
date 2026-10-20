@@ -1,0 +1,41 @@
+name: T21 W10-B57 three-leg real ink relay practice
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3SourcePaintRun.ts'
+      - 'src/app/UndertowF3SourcePaintRun.test.ts'
+      - 'src/app/UndertowF3PracticeObjectiveView.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b57-paint-relay.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-relay:
+    name: Native player three-leg source relay clear
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: Real Chrome native source-ground 3-leg paint relay
+        env:
+          T21_W10B57_PAINT_RELAY: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-w10b57
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve real evidence including failed trials
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b57-real-original-source-paint-relay
+          path: /tmp/t21-w10b57/
+          retention-days: 14
+          if-no-files-found: warn

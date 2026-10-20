@@ -110,7 +110,9 @@ async function main(){
  const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
  const w10b50=process.env.T21_W10B50_LANE_ONLY==='1';
  const w10b56=process.env.T21_W10B56_SWITCHBACK==='1';
- const w10b54=process.env.T21_W10B54_FULL_PRACTICE==='1'||w10b56;
+ const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
+ if(w10b56&&w10b57)reject('B56_B57_EXCLUSIVE_REAL_PRACTICE_VARIANTS');
+ const w10b54=process.env.T21_W10B54_FULL_PRACTICE==='1'||w10b56||w10b57;
  if(w10b54&&(process.env.T21_W10B35_NATIVE==='1'||w10b50))
   reject('W10B54_MUST_USE_FIXED_NATIVE_SOURCE');
  const w10b51=process.env.T21_W10B51_EXACT_S_TICKS==='1';
@@ -161,16 +163,20 @@ async function main(){
    reject('B54_UNTRUSTED_NATIVE_SOURCE_START');
   // B56 offers a genuine user-click selection of the separate source-local
   // return-route practice. No invented path, actor or physical destination.
-  if(w10b56){
+  if(w10b56||w10b57){
    const choice=await evaluate(`(() => {
-    document.querySelector('#t21-f3-b56-variant')?.click();
+    const btn=document.querySelector('#t21-f3-b56-variant');
+    btn?.click();
+    ${w10b57?'btn?.click();':''}
     return document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B56NextVariant;
    })()`);
-   if(choice!=='SWITCHBACK')reject('B56_REAL_MODE_CHOICE_FAILED');
+   if(choice!==(w10b57?'PAINT_RELAY':'SWITCHBACK'))
+    reject('B56_B57_REAL_USER_MODE_CHOICE_FAILED');
   }
   const armed=await evaluate("(() => {document.querySelector('#t21-f3-b25-start')?.click();return window.__t21F3.snapshot().b25SourcePaintRun;})()");
   if(armed.status!=='ARMED'||armed.officialWinner!=='NONE'||
-     (w10b56&&armed.practiceVariant!=='SWITCHBACK'))
+     (w10b56&&armed.practiceVariant!=='SWITCHBACK')||
+     (w10b57&&armed.practiceVariant!=='PAINT_RELAY'))
    reject('B54_REAL_SOURCE_PRACTICE_NOT_ARMED');
   await mouse('mousePressed');await mouse('mouseReleased');
   await waitUntil(async()=>await evaluate(
@@ -224,6 +230,10 @@ async function main(){
     b56RoutePhase:run.routePhase,b56PhysicalTurnReached:run.routeTurnReached,
     b56PhysicalReturnReached:run.routeReturned,
     b56TrueFromStartMeters:run.routeDistanceFromStartMeters,
+    b57RelayLeg:run.relayStage,
+    b57RealInkTurnCells:run.relayTurnPaintCells,
+    b57RealInkReturnCells:run.relayReturnPaintCells,
+    b57LegNewInkCells:run.relayStagePaintCells,
     state:run.status};
    samples.push(step);
    console.log('T21_W10B54_ACTUAL_SOURCE_SEGMENT',JSON.stringify(step));
@@ -232,13 +242,21 @@ async function main(){
   const pass=run.status==='CLEAR'&&run.humanChangedImpactCells>=180&&
    run.realGroundedTravelMeters>=12&&
    (!w10b56||(run.practiceVariant==='SWITCHBACK'&&
-    run.routeTurnReached===true&&run.routeReturned===true));
+    run.routeTurnReached===true&&run.routeReturned===true))&&
+   (!w10b57||(run.practiceVariant==='PAINT_RELAY'&&
+    run.relayStage==='COMPLETE'&&run.routeTurnReached===true&&
+    run.routeReturned===true&&run.relayTurnPaintCells>=60&&
+    run.relayReturnPaintCells-run.relayTurnPaintCells>=60&&
+    run.humanChangedImpactCells-run.relayReturnPaintCells>=60));
   // The actual human-visible B53 card must catch up to the true B25
   // CLEAR, showing both goals complete and NO official match winner.
   const visibleClear=pass?await waitUntil(async()=>{
    const ui=await evaluate(`(() => {
     const card=document.querySelector('#t21-f3-b25-paint-run');
-    return {status:card?.dataset.t21B53Status,
+    const relay=card?.querySelector('#t21-f3-b57-relay');
+    return {relayLeg:relay?.dataset.t21B57Leg,
+     relayInk:relay?.dataset.t21B57Cells,
+     status:card?.dataset.t21B53Status,
      paint:card?.dataset.t21B53PaintPercent,
      ground:card?.dataset.t21B53GroundPercent,
      next:card?.querySelector('#t21-f3-b53-next')?.textContent,
@@ -248,10 +266,13 @@ async function main(){
    })()`);
    return ui.status==='CLEAR'&&ui.paint==='100'&&ui.ground==='100'&&
     ui.progress?.includes('PRACTICE CLEAR · NOT A MATCH WIN')&&
-    ui.next?.includes('TWO REAL OBJECTIVES COMPLETE')?ui:false;
+    ui.next?.includes(w10b57?'THREE REAL PAINT LEGS COMPLETE':
+     'TWO REAL OBJECTIVES COMPLETE')&&
+    (!w10b57||ui.relayLeg==='COMPLETE')?ui:false;
   },25000):null;
   const clearedFrame=pass?await screenshot(
-   w10b56?'W10B56_REAL_SOURCE_SWITCHBACK_CLEAR':
+   w10b57?'W10B57_REAL_SOURCE_PAINT_RELAY_CLEAR':
+    w10b56?'W10B56_REAL_SOURCE_SWITCHBACK_CLEAR':
           'W10B54_ACTUAL_SOURCE_PRACTICE_CLEAR'):null;
   const report={status:pass?'B54_ACTUAL_CHROME_SOURCE_PRACTICE_CLEAR':
    'B54_ACTUAL_CHROME_SOURCE_PRACTICE_NOT_CLEARED',
@@ -264,6 +285,7 @@ async function main(){
    actualRealChromeClearScreenshot:clearedFrame,
    genuineB25DualRequirementsMet:pass,
    b56SwitchbackChallenge:w10b56,
+   b57RelayChallenge:w10b57,
    b56GenuineOutboundAndReturn:w10b56?run.routeTurnReached&&run.routeReturned:null,
    originalSolids:actual.originalSourceSolids,
    paintable:actual.originalPaintSurfaces,navLinks:actual.originalSourceNavigationLinks,
@@ -342,6 +364,39 @@ async function main(){
    writeFileSync(resolve(OUTPUT,'w10b56-real-source-switchback.json'),
     JSON.stringify(result,null,2));
    console.log('T21_W10B56_REAL_SOURCE_SWITCHBACK',JSON.stringify(result));
+  }
+  if(w10b57){
+   const valid=run.practiceVariant==='PAINT_RELAY'&&
+    run.relayStage==='COMPLETE'&&run.routeReturned&&
+    run.relayTurnPaintCells>=60&&
+    run.relayReturnPaintCells-run.relayTurnPaintCells>=60&&
+    run.humanChangedImpactCells-run.relayReturnPaintCells>=60&&
+    b55Retry.run.practiceVariant==='PAINT_RELAY'&&
+    b55Retry.run.bestClearElapsedTicks===run.elapsedTicks&&
+    b55Retry.run.completedRealPracticeRuns===1;
+   if(!valid)reject('B57_REAL_SOURCE_3_LEG_INK_OR_RETRY_UNPROVEN');
+   const witness={
+    status:'B57_REAL_CHROME_PAINT_RELAY_3_LEGS_CLEAR',
+    actualChromeKeyboardMouse:true,realSourceOnly:true,
+    noSyntheticPhysicsOrInk:true,firstOutward:samples.find(v=>
+      v.b56PhysicalTurnReached)??null,
+    firstReturn:samples.find(v=>v.b56PhysicalReturnReached)??null,
+    cumulativeNewHumanCellsAtTurn:run.relayTurnPaintCells,
+    cumulativeNewHumanCellsAtReturn:run.relayReturnPaintCells,
+    threeIndependentLegNewCells:[
+     run.relayTurnPaintCells,
+     run.relayReturnPaintCells-run.relayTurnPaintCells,
+     run.humanChangedImpactCells-run.relayReturnPaintCells],
+    trueGroundMeters:run.realGroundedTravelMeters,
+    actualClearTickTime:run.elapsedTicks,
+    sessionBestTicks:b55Retry.run.bestClearElapsedTicks,
+    currentPageOnly:true,
+    humanOwnerWindowsManual:false,scoreable:0,officialWinner:'NONE',
+    sourceSolids:25,paintable:17,navLinks:26,screenshot:clearedFrame
+   };
+   writeFileSync(resolve(OUTPUT,'w10b57-real-source-paint-relay.json'),
+    JSON.stringify(witness,null,2));
+   console.log('T21_W10B57_REAL_SOURCE_PAINT_RELAY',JSON.stringify(witness));
   }
   return;
  }

@@ -187,3 +187,74 @@ describe('W10-B56 source-physical SWITCHBACK practice, no original-route promoti
   expect(r.snapshot().bestClearElapsedTicks).toBeNull();
  });
 });
+
+describe('W10-B57 PAINT RELAY — distinct real impact ink in each physical leg',()=>{
+ const f=(tickNo:number,x:number,cells:number)=>tick(tickNo,{
+  foot:{x,y:1,z:0,grounded:true,alive:true,realPhysicalOriginalStage:true},
+  ink:{changedHumanImpactCells:cells,changedHumanImpactEvents:cells?4:0,
+   sourceOnly:true,scoreablePromotionCount:0}
+ });
+ it('rejects an outbound-and-return when all 180 cells came before the turn',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm('PAINT_RELAY');
+  let n=1,x=0;r.observe(f(n,x,0));
+  for(let i=0;i<12;i++){x+=.2;r.observe(f(++n,x,200));}
+  expect(r.snapshot().routeTurnReached).toBe(true);
+  expect(r.snapshot().relayTurnPaintCells).toBe(200);
+  for(let i=0;i<11;i++){x-=.2;r.observe(f(++n,x,200));}
+  expect(r.snapshot().routeReturned).toBe(false);
+  expect(r.snapshot().status).toBe('RUNNING');
+  expect(r.snapshot().officialWinner).toBe('NONE');
+ });
+ it('must paint ≥60 new cells on each of three ordered legs, then cover 12m',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm('PAINT_RELAY');
+  let n=1,x=0,c=0;r.observe(f(n,x,c));
+  const move=(dest:number,paint:number)=>{
+   while(Math.abs(x-dest)>1e-7){
+    x+=Math.sign(dest-x)*Math.min(.2,Math.abs(dest-x));
+    c+=paint;r.observe(f(++n,x,c));
+   }
+  };
+  move(2.2,6);
+  expect(r.snapshot().relayStage).toBe('RETURN_PAINT');
+  expect(r.snapshot().relayTurnPaintCells).toBeGreaterThanOrEqual(60);
+  const turn=r.snapshot().relayTurnPaintCells;
+  move(.2,7);
+  expect(r.snapshot().relayStage).toBe('FINISH_PAINT');
+  const returned=r.snapshot().relayReturnPaintCells;
+  expect(returned-turn).toBeGreaterThanOrEqual(60);
+  move(2.2,0);
+  expect(r.snapshot().status).toBe('RUNNING');
+  expect(r.snapshot().relayStagePaintCells).toBe(0);
+  move(.2,6);
+  expect(r.snapshot().relayStagePaintCells).toBeGreaterThanOrEqual(60);
+  expect(r.snapshot().status).toBe('RUNNING'); // still <12 real metres
+  for(let i=0;i<2;i++){move(2.2,0);move(.2,0);}
+  const fin=r.snapshot();
+  expect(fin.status).toBe('CLEAR');
+  expect(fin.relayStage).toBe('COMPLETE');
+  expect(fin.humanChangedImpactCells).toBeGreaterThanOrEqual(180);
+  expect(fin.realGroundedTravelMeters).toBeGreaterThanOrEqual(12);
+  expect(fin.bestClearElapsedTicks).toBe(fin.elapsedTicks);
+  expect(fin.originalTurfScore).toBe('UNAVAILABLE');
+  expect(fin.officialWinner).toBe('NONE');
+  expect(r.arm('CLASSIC')).toBe(true);
+  expect(r.snapshot().bestClearElapsedTicks).toBeNull();
+  r.abort('USER_STOP');
+  expect(r.arm('PAINT_RELAY')).toBe(true);
+  expect(r.snapshot().bestClearElapsedTicks).toBe(fin.elapsedTicks);
+ });
+ it('old cumulative ink cannot bypass either leg or avoid physical ground',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm('PAINT_RELAY');
+  let n=1,x=0;r.observe(f(n,x,0));
+  for(let i=0;i<11;i++){x+=.2;r.observe(f(++n,x,40));}
+  expect(r.snapshot().routeTurnReached).toBe(false);
+  r.observe(f(++n,x,70));
+  expect(r.snapshot().routeTurnReached).toBe(true);
+  r.observe(tick(++n,{foot:{x,y:1,z:0,grounded:false,
+   alive:true,realPhysicalOriginalStage:true},
+   ink:{changedHumanImpactCells:200,changedHumanImpactEvents:5,
+    sourceOnly:true,scoreablePromotionCount:0}}));
+  expect(r.snapshot().status).toBe('ABORTED');
+  expect(r.snapshot().completedRealPracticeRuns).toBe(0);
+ });
+});

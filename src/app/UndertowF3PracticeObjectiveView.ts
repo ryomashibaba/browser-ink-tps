@@ -9,8 +9,11 @@ export function sourcePracticeObjectiveView(run:SourceRun){
     run.gameplaySource!=='REAL_HUMAN_AUTHORITATIVE_INK_AND_RAPIER_FOOT'||
     run.requiredHumanChangedCells!==180||
     run.requiredRealGroundedTravelMeters!==12||
-    (run.practiceVariant!=='CLASSIC'&&run.practiceVariant!=='SWITCHBACK')||
+    (run.practiceVariant!=='CLASSIC'&&run.practiceVariant!=='SWITCHBACK'&&run.practiceVariant!=='PAINT_RELAY')||
     run.routeOutMeters!==1.8||run.routeHomeRadiusMeters!==.8||
+    run.relayCellsPerLeg!==60||
+    !Number.isSafeInteger(run.relayStagePaintCells)||
+    run.relayStagePaintCells<0||
     ![run.humanChangedImpactCells,run.realGroundedTravelMeters].every(
      v=>Number.isFinite(v)&&v>=0))
   throw Error('T21_B53_SOURCE_PRACTICE_AUTHORITY_INVALID');
@@ -18,7 +21,11 @@ export function sourcePracticeObjectiveView(run:SourceRun){
  const ground=ratio(run.realGroundedTravelMeters,run.requiredRealGroundedTravelMeters);
  const routeNext=run.practiceVariant==='SWITCHBACK'?
   !run.routeTurnReached?'OUTBOUND':!run.routeReturned?'RETURN':null:null;
- const next=routeNext??(paint<100&&ground<100?
+ const relayNext=run.practiceVariant==='PAINT_RELAY'?
+  run.relayStage==='OUTBOUND_PAINT'?'RELAY_OUT':
+  run.relayStage==='RETURN_PAINT'?'RELAY_RETURN':
+  run.relayStage==='FINISH_PAINT'?'RELAY_FINISH':null:null;
+ const next=relayNext??routeNext??(paint<100&&ground<100?
   (paint<=ground?'PAINT':'GROUND'):paint<100?'PAINT':ground<100?'GROUND':'DONE');
  const headline=run.status==='CLEAR'?'PRACTICE CLEAR · NOT TURF':
   run.status==='TIME_UP'?'PRACTICE TIME UP · NO WINNER':
@@ -26,12 +33,15 @@ export function sourcePracticeObjectiveView(run:SourceRun){
   run.status==='ARMED'?'READY · CLICK STAGE TO START':
   run.status==='RUNNING'?run.secondsRemaining+'s · SOURCE PRACTICE':'START OPTIONAL PRACTICE';
  const hint=run.status==='RUNNING'?
-  (next==='OUTBOUND'?'NEXT · MOVE 1.8m AWAY ON ORIGINAL GROUND':
+  (next==='RELAY_OUT'?'LEG 1 · PAINT 60 NEW CELLS + MOVE 1.8m OUT':
+   next==='RELAY_RETURN'?'LEG 2 · PAINT 60 NEW CELLS + RETURN ≤0.8m':
+   next==='RELAY_FINISH'?'LEG 3 · PAINT 60 MORE NEW CELLS + REACH 12m':
+   next==='OUTBOUND'?'NEXT · MOVE 1.8m AWAY ON ORIGINAL GROUND':
    next==='RETURN'?'NEXT · RETURN WITHIN 0.8m OF START':
    next==='PAINT'?'NEXT · PAINT REAL SOURCE SURFACES':
    next==='GROUND'?'NEXT · MOVE ON ORIGINAL GROUND':
    'BOTH OBJECTIVES COMPLETE'):
-  run.status==='CLEAR'?'TWO REAL OBJECTIVES COMPLETE':
+  run.status==='CLEAR'?(run.practiceVariant==='PAINT_RELAY'?'THREE REAL PAINT LEGS COMPLETE':'TWO REAL OBJECTIVES COMPLETE'):
   run.status==='TIME_UP'?'TRY AGAIN · NO OFFICIAL RESULT':
   run.status==='ABORTED'?'UNLOCKED / INTERRUPTED · RETRY':
   '180 changed cells + 12m real grounded travel';
