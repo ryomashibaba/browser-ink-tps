@@ -78,7 +78,7 @@ export function createF3SourceSessionBoard(
  root.setAttribute('aria-label','Read-only original-source session activities, no Turf score');
  root.dataset.scoreable='0';
  root.dataset.productionAuthority='NONE';
- root.style.cssText='position:fixed;bottom:20px;left:16px;z-index:38;'+
+ root.style.cssText='position:fixed;bottom:72px;left:16px;z-index:38;'+
   'width:min(260px,calc(100vw - 32px));box-sizing:border-box;'+
   'padding:11px 13px;border:1px solid #478d9e;border-radius:12px;'+
   'background:linear-gradient(140deg,rgba(3,24,36,.91),rgba(13,37,48,.93));'+
@@ -89,7 +89,7 @@ export function createF3SourceSessionBoard(
   '<div id="t21-f3-b58-title" style="color:#94eff2;letter-spacing:.6px;'+
    'font-weight:850">SOURCE SESSION · STAGING</div>'+
   '<div style="font-size:10px;color:#ffcb94;margin:4px 0">'+
-   'NON-SCORING · NOT A 4V4 RESULT</div>'+
+   'NON-SCORING · SINCE PAGE LOAD · NOT A 4V4 RESULT</div>'+
   '<div id="t21-f3-b58-counts" style="white-space:pre-line;margin-top:6px"></div>'+
   '<button id="t21-f3-b58-restart" hidden type="button" style="'+
    'background:#51d9e0;color:#08202c;border:0;border-radius:7px;'+
