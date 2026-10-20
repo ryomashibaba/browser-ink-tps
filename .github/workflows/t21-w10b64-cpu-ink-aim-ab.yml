@@ -1,0 +1,60 @@
+name: T21 W10-B64 real original-source CPU paint A-B
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/ai/CpuAgentSystem.ts'
+      - 'src/ai/UndertowF3OriginalSourceInkSweep.ts'
+      - 'src/ai/UndertowF3OriginalSourceInkSweep.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'scripts/t21-w10b64-compare-native-ink.mjs'
+      - 'scripts/t21-w10b64-compare-native-ink.test.mjs'
+      - '.github/workflows/t21-w10b64-cpu-ink-aim-ab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-source-ab:
+    name: Real 130-second original-source CPU (${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [FIXED, SWEEP]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/ai/UndertowF3OriginalSourceInkSweep.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3CpuInkTempo.test.ts
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - run: node --test scripts/t21-w10b64-compare-native-ink.test.mjs
+      - name: Real original FIXED / optional source-ink sweep without synthetic ticks
+        env:
+          T21_W10B64_SOURCE_INK_AIM: ${{ matrix.mode }}
+          T21_F3_SHOT_DIR: /tmp/t21-w10b64
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve true CPU projectiles, ink and ticks on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b64-source-${{ matrix.mode }}
+          path: /tmp/t21-w10b64/w10b64-native-${{ matrix.mode }}.json
+          if-no-files-found: warn
+          retention-days: 14
+  evidence-comparison:
+    name: Compare source ink objectively; no automatic CPU adoption
+    needs: native-source-ab
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: w10b64-source-*
+          path: b64-evidence
+          merge-multiple: true
+      - name: Compare actual real CPU ink evidence only
+        run: node scripts/t21-w10b64-compare-native-ink.mjs b64-evidence

@@ -10,6 +10,7 @@ import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
 import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityMonitor';
 import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
+import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
@@ -196,6 +197,13 @@ export class CpuAgentSystem {
   /** Throttles real QA turf projectiles without altering enemy fire rates. */
   private readonly qaTurfShotCooldown = new Map<string, number>();
   private readonly qaTurfShotsByActor = new Map<string, number>();
+  // B64 experimental source-local alternate AIM only. Original FIXED
+  // goals and original gameplay authority stay unchanged by default.
+  private b64InkAngleSweepEnabled = false;
+  private b64Samples=0;
+  private b64CandidatesUnowned=0;
+  private b64CandidatesChosen=0;
+  private readonly b64NoTargetCooldown = new Map<string,number>();
   private f3dSourceGoals:CpuQaSourceGoalAuthority|null=null;
   private readonly samplePoint = new Vec3();
   private readonly targetPoint = new Vec3();
@@ -270,6 +278,29 @@ export class CpuAgentSystem {
     sourceOnly:true,productionAuthorized:false
    };
   }
+  public enableB64NativeSourceInkAngleSweep():void{
+    if(!this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
+       !this.phase14qGroundCollision||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||
+       this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(p=>(p.flags & SurfaceFlags.Scoreable)!==0))
+      throw Error('W10_B64_UNVERIFIED_SOURCE_INK_SWEEP_FORBIDDEN');
+    this.b64InkAngleSweepEnabled=true;
+  }
+  public b64NativeSourceInkSweepSnapshot(){
+    return {
+      enabled:this.b64InkAngleSweepEnabled,
+      candidateSamples:this.b64Samples,
+      unownedRealSourceCandidates:this.b64CandidatesUnowned,
+      lateralPaintTargetsChosen:this.b64CandidatesChosen,
+      originalSourceOnly:true,
+      alternateCpuModeNotPromotedToDefault:true,
+      newPhysicalSolids:0,newNavLinks:0,newScoreable:0,
+      productionAuthorized:false
+    };
+  }
   /** Returns actual accepted CPU-foot trajectories, never Crowd suggestions. */
   public qaContinuitySnapshot(): CpuContinuityReport {
     return this.qaContinuity.snapshot();
@@ -290,6 +321,10 @@ export class CpuAgentSystem {
     this.b35DuplicateNativeRequestsSuppressed=0;
     this.qaTurfShotCooldown.clear();
     this.qaTurfShotsByActor.clear();
+    this.b64NoTargetCooldown.clear();
+    this.b64Samples=0;
+    this.b64CandidatesUnowned=0;
+    this.b64CandidatesChosen=0;
     this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
@@ -1547,7 +1582,10 @@ export class CpuAgentSystem {
       bot.weaponBurstShotsRemaining > 0;
     const turfTarget = canTurfPaint && !hasCombatInRange &&
       (cooldown <= 0 || finishTurfBurst)
-      ? this.chooseOriginalSourceTurfTarget(bot) : null;
+      ? this.b64InkAngleSweepEnabled?
+         this.chooseB64SourceLateralInkTarget(bot,dt) ??
+          this.chooseOriginalSourceTurfTarget(bot):
+         this.chooseOriginalSourceTurfTarget(bot) : null;
     const target = turfTarget ?? combatTarget;
 
     if (target) this.updateCpuWeaponFacing(bot, target);
@@ -1869,6 +1907,35 @@ export class CpuAgentSystem {
       bot.id, (this.qaTurfShotsByActor.get(bot.id) ?? 0) + 1
     );
     this.stats.cpuSourceTurfShots += 1;
+  }
+
+  private chooseB64SourceLateralInkTarget(bot:CpuBot,dt:number):Vec3|null{
+    if(!this.b64InkAngleSweepEnabled||!bot.agent||
+       bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')
+      return null;
+    const goal=this.qaMotionGoals.get(bot.id);
+    if(!goal)return null;
+    const cooldown=Math.max(0,
+      (this.b64NoTargetCooldown.get(bot.id)??0)-dt);
+    this.b64NoTargetCooldown.set(bot.id,cooldown);
+    if(cooldown>0)return null;
+    const candidates=originalGoalInkSweep(bot.position,goal);
+    // These are only aiming PROPOSALS. A valid aim is recognized ONLY
+    // by actual GameplayInk sampleWorld on a source-backed PaintSurface.
+    for(const candidate of candidates){
+      this.samplePoint.set(candidate.x,candidate.y,candidate.z);
+      this.b64Samples++;
+      const sample=this.gameplayInk.sampleWorld(
+        this.samplePoint,.28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+      if(!sample||sample.surface.isScoreable||
+         sample.owner===bot.team)continue;
+      this.b64CandidatesUnowned++;
+      this.b64CandidatesChosen++;
+      return sample.surface.localToWorld(sample.u,sample.v);
+    }
+    // Avoid 60Hz × 7 × 12 empty ray probes near already-painted source.
+    this.b64NoTargetCooldown.set(bot.id,.25);
+    return null;
   }
 
   /** T21 F3 only. Derive the ink aim point from a source-verified paint grid

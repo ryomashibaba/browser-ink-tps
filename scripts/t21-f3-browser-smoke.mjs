@@ -112,6 +112,9 @@ async function main(){
  const w10b56=process.env.T21_W10B56_SWITCHBACK==='1';
  const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
  const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
+ const w10b64Mode=process.env.T21_W10B64_SOURCE_INK_AIM??'';
+ const w10b64=w10b64Mode==='FIXED'||w10b64Mode==='SWEEP';
+ if(w10b64Mode&&!w10b64)reject('B64_UNKNOWN_SOURCE_LAB_MODE');
  if([w10b56,w10b57,w10b59].filter(Boolean).length>1)
   reject('B56_B57_B59_EXCLUSIVE_NATIVE_TRIALS');
  const w10b54=process.env.T21_W10B54_FULL_PRACTICE==='1'||w10b56||w10b57;
@@ -125,7 +128,7 @@ async function main(){
    process.env.T21_F3_BLOCKED_HUMAN==='1'))
   reject('W10B50_NEEDS_DEFAULT_SOURCE_FIXED_CPU_UNBLOCKED');
  const w10b21=process.env.T21_W10B21_RENDER_AB==='1';
- if([w10b14,w10b15,w10b16,w10b21,w10b54,w10b59].filter(Boolean).length>1)
+ if([w10b14,w10b15,w10b16,w10b21,w10b54,w10b59,w10b64].filter(Boolean).length>1)
   reject('CONFLICTING_QA_MODES');
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
  const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa||w10b16;
@@ -133,7 +136,7 @@ async function main(){
   ((w10b14||w10b15||w10b21)?'&t21QaDrive=source&t21QaInput=deterministic&'+
    't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
-  (longCpu||w10b54||w10b59?'&t21QaDrive=source':'')+
+  (longCpu||w10b54||w10b59||w10b64?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b51?'&t21W10B51=exactInputTicks':'')+
   (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':'')+
@@ -143,7 +146,8 @@ async function main(){
   (w10b36?'&t21W10B36=playFocus':'')+
   (w10b38?'&t21W10B38=humanSub':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
-  (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')});
+  (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')+
+  (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
    ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
@@ -153,6 +157,111 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(w10b64){
+  // W10-B64: SAME SHA, EXACT original 25/17/26/0 stage, untouched
+  // seven FIXED Recast goals; only native source-ground projectile aim
+  // candidate search differs for the explicit experimental SWEEP lane.
+  // Both FIXED and SWEEP have actual render-driven 60Hz native ticks.
+  // Never force native steps, fake CPU projectiles, set paint ownership
+  // or claim an original cross-map enemy encounter.
+  const get=()=>evaluate('window.__t21F3.snapshot()');
+  const boot=await get();
+  if(boot.paused||boot.stopReason||boot.matchState!=='STAGING'||
+     boot.originalSourceSolids!==25||
+     boot.originalPaintSurfaces!==17||
+     boot.originalSourceNavigationLinks!==26||
+     boot.sourceScoreablePromotions!==0||
+     boot.productionAuthorized!==false||
+     boot.b64SourceInkSweep?.enabled!==(w10b64Mode==='SWEEP'))
+   reject('B64_SOURCE_BOOT_AUTHORITY_OR_MODE_INVALID');
+  await mouse('mousePressed');await mouse('mouseReleased');
+  await waitUntil(async()=>await evaluate(
+   'document.pointerLockElement===document.querySelector("#app-canvas")'),12000);
+  const initial=await get();
+  await key('keyDown');await mouse('mousePressed');
+  await waitUntil(async()=>{
+   const now=await get();
+   if(now.stopReason)reject('B64_REAL_HUMAN_INPUT_SOURCE_STOP_'+now.stopReason);
+   return now.tick>=initial.tick+33;
+  },90000);
+  await mouse('mouseReleased');await key('keyUp');
+  const points=[], wallStart=Date.now();
+  let lastNativeSample=-1, lastTick=(await get()).tick;
+  let lastProgress=Date.now();
+  const until=wallStart+48*60*1000;
+  let final=null;
+  try{
+   while(Date.now()<until){
+    await sleep(900);
+    const x=await get();
+    if(x.tick>lastTick){lastTick=x.tick;lastProgress=Date.now();}
+    if(Date.now()-lastProgress>4*60*1000)
+     reject('B64_NO_ACTUAL_NATIVE_TICK_PROGRESS');
+    if(x.stopReason)reject('B64_NATIVE_STOP_'+x.stopReason);
+    if(x.originalSourceSolids!==25||
+       x.originalPaintSurfaces!==17||
+       x.originalSourceNavigationLinks!==26||
+       x.sourceScoreablePromotions!==0||
+       x.productionAuthorized!==false||
+       x.unrestricted4v4Certified!==false||
+       x.b64SourceInkSweep?.enabled!==(w10b64Mode==='SWEEP'))
+     reject('B64_SOURCE_AUTHORITY_DRIFT');
+    if(x.matchState==='TIME_UP')
+     reject('B64_EARLY_FULL_MATCH_END_DURING_130S_STUDY');
+    const elapsed=180-x.timeRemainingSeconds;
+    const sampleIndex=Math.floor(elapsed/20);
+    if(x.matchState==='PLAYING'&&sampleIndex>lastNativeSample){
+     lastNativeSample=sampleIndex;
+     const row={
+      trueNativeMatchSeconds:Number(elapsed.toFixed(3)),
+      realPhysicsTick:x.tick,
+      allSevenCpuOriginalFootRejoined:x.cpu.physicalRejoins.length,
+      realCpuSourceShots:x.cpuSourceTurfShots,
+      realCpuChangedSourceInkCells:x.cpuImpactInkCellsChanged,
+      genuineHumanShots:x.shotsFired,
+      genuineHumanInk:x.b23HumanInkFeedback.humanChangedCells,
+      cpuSourcePatrolMeters:x.cpu.sourcePatrol.travelMeters,
+      suspectedPhysicalCpuStalls:x.cpuContinuity.suspectedStallCount,
+      sourceInkTargetCandidates:x.b64SourceInkSweep.candidateSamples,
+      sourceLateralAimsChosen:x.b64SourceInkSweep.lateralPaintTargetsChosen
+     };
+     points.push(row);
+     console.log('T21_W10B64_TRUE_NATIVE_SOURCE_INK_COMPARISON',
+      JSON.stringify({mode:w10b64Mode,...row}));
+    }
+    if(x.matchState==='PLAYING'&&elapsed>=130){
+     final=x;break;
+    }
+   }
+  }finally{
+   writeFileSync(resolve(OUTPUT,'w10b64-native-'+w10b64Mode+'.json'),
+    JSON.stringify({
+     mode:w10b64Mode,wallElapsedMs:Date.now()-wallStart,
+     truePhysicsUntil130NativeMatchSeconds:!!final,
+     officialWinner:'NONE',naturalCrossTeamPathsCertified:0,
+     originalStageAuthority:'25/17/26/0',sourceCpuFixedGoals:true,
+     experimentalOnly:true,promotedAsNormalCpu:false,
+     originalActorInstanceBindingCertified:false,
+     points
+    },null,2));
+  }
+  if(!final)reject('B64_REAL_130S_SOURCE_A_B_HOST_TIMEOUT');
+  if(final.cpu.physicalRejoins.length!==7||points.length<7||
+     final.cpuSourceTurfShots<=0||
+     final.b64SourceInkSweep.enabled!==(w10b64Mode==='SWEEP')||
+     (w10b64Mode==='FIXED'&&
+      final.b64SourceInkSweep.candidateSamples!==0))
+   reject('B64_ACTUAL_SAME_SOURCE_A_B_PRECONDITIONS');
+  console.log('T21_W10B64_NATIVE_SOURCE_A_B_130S_COMPLETE',JSON.stringify({
+   mode:w10b64Mode,realNativeSeconds:180-final.timeRemainingSeconds,
+   physicsTick:final.tick,sourceCpuShotCount:final.cpuSourceTurfShots,
+   changedOriginalSourceCells:final.cpuImpactInkCellsChanged,
+   actualPhysicalCpuRejoins:final.cpu.physicalRejoins.length,
+   labSamples:final.b64SourceInkSweep.candidateSamples,
+   experimentalNotAdopted:true,original4v4Certified:false
+  }));
+  return;
+ }
  if(w10b59){
   // B59: ONE uninterrupted, actual headless Chrome/WebGL2 source session
   // until the original 180 seconds have elapsed at the REAL fixed 60Hz.

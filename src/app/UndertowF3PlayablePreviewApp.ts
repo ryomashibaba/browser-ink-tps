@@ -367,6 +367,11 @@ export class UndertowF3PlayablePreviewApp{
    stage,this.nav,slots,bots,this.physics,this.ink,
    b31Enabled,b33StableGoals,b34Recover);
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
+  // B64 experimental native source-floor aim. Existing FIXED source CPU
+  // remains default: this does NOT modify Recast/Crowd target steering.
+  if(b31Params.get('t21QaDrive')==='source'&&
+     b31Params.get('t21W10B64')==='inkAngleSweep')
+   this.cpu.enableB64NativeSourceInkAngleSweep();
   // Original T21 preview retains the verified fixed native steering.
   // Suppress repeated same-goal Recast requests in the explicit B35 lab only.
   if(b31Params.get('t21W10B35')==='nativeTargetRefresh')
@@ -2161,6 +2166,7 @@ export class UndertowF3PlayablePreviewApp{
    cpuShots:this.stats.cpuShots,
    cpuSourceTurfShots:this.stats.cpuSourceTurfShots,
    cpuSourceTurfShotsByActor:this.cpu.qaTurfShotSnapshot(),
+   b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    cpuProjectilePaintHits:this.stats.cpuProjectilePaintHits,
    cpuInkCellsChanged:this.stats.cpuInkCellsChanged,
    cpuImpactInkCellsChanged:this.stats.cpuImpactInkCellsChanged,
