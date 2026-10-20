@@ -193,11 +193,41 @@ async function main(){
   }];
   let lastSample=-1;
   const wallStarted=Date.now();
-  const deadline=Date.now()+22*60*1000;
+  // B61: Real SwiftShader's 7-CPU GPU/source run measured 80 native
+  // PLAYING seconds over about 22 wall minutes in B59. 22m was a
+  // BAD QA budget, not evidence of a gameplay 180-second freeze.
+  // Reserve up to 62 wall minutes to reach 180 native PLAYING seconds.
+  // Never accelerate clocks, skip PlayCanvas renders, or inject ticks.
+  const maxWallMs=62*60*1000;
+  const deadline=wallStarted+maxWallMs;
+  let lastTrueProgressAt=wallStarted,lastTrueTick=played.tick;
+  let lastHostHeartbeat=wallStarted,lastProgressWallMs=wallStarted;
   let terminal=null;
   while(Date.now()<deadline){
    await sleep(800);
    const now=await get();
+   if(now.tick>lastTrueTick){
+    lastTrueTick=now.tick;
+    lastTrueProgressAt=Date.now();
+   }
+   if(Date.now()-lastTrueProgressAt>4*60*1000)
+    reject('B61_NATIVE_PHYSICS_TICK_STALLED_FOUR_HOST_MINUTES');
+   if(Date.now()-lastHostHeartbeat>=90*1000){
+    lastHostHeartbeat=Date.now();
+    const heartbeat={
+     kind:'B61_REAL_WALL_LIVENESS_HEARTBEAT',
+     hostElapsedMinutes:Number(((Date.now()-wallStarted)/60000).toFixed(2)),
+     trueNativeTick:now.tick,
+     nativeElapsedPlayingSeconds:Number((180-now.timeRemainingSeconds).toFixed(3)),
+     currentNativePhase:now.matchState,
+     actualCpuSourceShots:now.cpuSourceTurfShots,
+     originalStageSolids:now.originalSourceSolids,
+     originalStageLinks:now.originalSourceNavigationLinks,
+     actualCpuPhysicalRejoins:now.cpu.physicalRejoins.length
+    };
+    console.log('T21_W10B61_NATIVE_FULL_MATCH_HEARTBEAT',
+     JSON.stringify(heartbeat));
+   }
    if(now.stopReason)reject('B59_NATIVE_SIMULATION_STOP_'+now.stopReason);
    if(now.originalSourceSolids!==25||
       now.originalPaintSurfaces!==17||
@@ -207,11 +237,14 @@ async function main(){
       now.unrestricted4v4Certified!==false)
     reject('B59_SOURCE_AUTHORITY_DRIFT');
    if(now.matchState==='TIME_UP'){
+    if(now.timeRemainingSeconds!==0||now.tick<10800)
+     reject('B61_FALSE_END_BEFORE_180_NATIVE_SECONDS');
     terminal=now;break;
    }
    const sample=Math.floor((180-now.timeRemainingSeconds)/20);
    if(now.matchState==='PLAYING'&&sample>lastSample){
     lastSample=sample;
+    lastProgressWallMs=Date.now();
     const row={kind:'NATIVE_20_SECOND_PROGRESS',tick:now.tick,
      elapsedMatchSeconds:Number((180-now.timeRemainingSeconds).toFixed(2)),
      realHumanShots:now.shotsFired,
@@ -224,10 +257,16 @@ async function main(){
   }
   // Write the real history EVEN when no success is proven, for diagnosis.
   writeFileSync(resolve(OUTPUT,'w10b59-source-native-history.json'),
-   JSON.stringify({history,actualWallMs:Date.now()-wallStarted,
+   JSON.stringify({history,
+    verificationVersion:'W10_B61_TRUE_60HZ_RENDER_DRIVEN_FULL_NATIVE_MATCH',
+    earlierB59Failure:'HOST_TEST_BUDGET_22_MINUTES_EXCEEDED_AT_80.08_NATIVE_SECONDS',
+    actualWallMs:Date.now()-wallStarted,
+    maxWallMs,lastTrueTick,lastTrueProgressAt,
+    lastTrueProgressAgeMs:Date.now()-lastTrueProgressAt,
+    lastTwentySecondSampleAgeMs:Date.now()-lastProgressWallMs,
     terminal:terminal?{tick:terminal.tick,timeRemainingSeconds:
      terminal.timeRemainingSeconds,matchState:terminal.matchState}:null},null,2));
-  if(!terminal)reject('B59_REAL_180S_NATIVE_TIMEUP_NOT_REACHED');
+  if(!terminal)reject('B61_REAL_180S_NATIVE_TIMEUP_NOT_REACHED_WITHIN_62_MIN_HOST');
   const finalUi=await waitUntil(async()=>{
    const ui=await evaluate(`(() => {
     const finish=document.querySelector('#t21-f3-b59-session-finished');
@@ -281,6 +320,9 @@ async function main(){
   const proof={
    verdict:'B59_GENUINE_NATIVE_180_SECOND_SOURCE_SESSION_COMPLETE',
    required180SecondsOfNativeMatchClock:true,
+   verifiedByB61LongRunRetry:true,
+   B59Original22MinuteHostBudgetFailed:true,
+   B61WallTimeElapsedMs:Date.now()-wallStarted,
    noArtificialQaTickAdvances:true,
    actualBrowserKeyboardMouse:true,
    actualCpuSevenPresent:terminal.cpu.cpu.length===7,

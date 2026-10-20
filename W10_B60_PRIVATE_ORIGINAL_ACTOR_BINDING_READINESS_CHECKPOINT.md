@@ -20,3 +20,7 @@ Source-provided actor class/name hints, simple JSON schema compliance, SHA256, c
 
 ## Next genuine blocker
 When an actual owner-approved original Banc export exists, run the already existing Windows one-step preflight to produce metadata-only evidence; inspect only that report. A candidate with no actual Actor→specific PntSet component reference cannot authorize promotion, no matter how many class objects it contains. Subsequent work requires legally usable evidence and private instance-level audit, then direct native Rapier/Recast crossing, THEN scoreable-surface authority; until then do not guess.
+
+## B60 actual hosted CI verdict — verified 2026-10-20 JST
+
+Exact code SHA `1fef18289206abdcb2b65b91223f1b019515b7ff` passed [new B60 CI run 39409314136](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39409314136) **SUCCESS**: 8/8 synthetic security/schema/privacy negative tests, Node 24 syntax and assert frozen 25/17/26/0, zero new source authorizations. Existing [B24 original private preflight regression run 39409313129](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39409313129) also **SUCCESS (4/4)**. Combined checks 2/2 green. **B60 private evidence tooling PASS, original Actor instance binding HOLD**. No owner-provided true Nintendo `Vss_Temple01` Banc export in the public repository or GitHub CI, no Actor ↔ eight unresolved PntSet source meshes certified, no original enemy/team continuous paths or source Turf scoring promoted.

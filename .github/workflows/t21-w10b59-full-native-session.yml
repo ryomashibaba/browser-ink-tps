@@ -1,4 +1,4 @@
-name: T21 W10-B59 full 180-second native source session
+name: T21 W10-B61 corrected native 180-second source session
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -12,9 +12,9 @@ permissions:
   contents: read
 jobs:
   genuine-full-session:
-    name: Real full native 180s F3 plus uns cored end and reload
+    name: Real full native 180s original-source session, end and restart
     runs-on: ubuntu-latest
-    timeout-minutes: 28
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,12 +24,12 @@ jobs:
       - run: npm run build -- --base=/browser-ink-tps/
       - run: npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
-      - name: 180 real 60Hz seconds with native input and source seven CPUs
+      - name: Genuine 180 native match seconds; bounded host liveness; 7 fixed CPUs
         env:
           T21_W10B59_FULL_NATIVE_SESSION: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b59
         run: node scripts/t21-f3-browser-smoke.mjs
-      - name: Keep screenshot and 20-second authentic progress history even when failing
+      - name: Keep actual native source progress and end screenshot, even if failing
         if: always()
         uses: actions/upload-artifact@v4
         with:

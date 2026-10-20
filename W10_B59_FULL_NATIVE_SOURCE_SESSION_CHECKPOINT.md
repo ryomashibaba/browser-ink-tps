@@ -18,3 +18,7 @@ Headless *actual Chromium/WebGL2* QA should boot the real source app, move and f
 
 ## Status
 Implementation prepared, exact-SHA GitHub build/CI/results pending. Do not claim PASS until confirmed; preserve CI failure history.
+
+## Observed B59 full real 180s QA failure — verified 2026-10-20 JST
+
+[Original native Chrome workflow run 39407663919](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39407663919) **FAIL** at `ccdf2ce1c5ba34165109297f9b85a6381c6cf3d7`. It started seven original-source CPU, progressed to tick 5,860 / 80.08 of required 180 PLAYING seconds, real CPU source firing reached 101 and source ink recolored 3,597 cells, with seven physical source rejoin witnesses. The **hard-coded 22-minute host timeout** in the test script expired in real slow-rendering SwiftShader. Actual 180s TIME_UP, full-page overlay, pointer unlock and real restart remain NOT VERIFIED. This is NOT a physics-proof failure or passing three-minute run; it is an insufficient hosted wall-clock allowance, and the failed historic CI must remain visible. B61 corrects only the QA host test budget/liveness gates without altering native physics, stage connectivity, CPU or match duration. See B61 checkpoint.
