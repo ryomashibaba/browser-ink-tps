@@ -146,9 +146,14 @@ export class UndertowF3SourcePaintRun{
    f.tick===this.lastTick+1){
    const dx=f.foot.x-old.x,dz=f.foot.z-old.z,dy=f.foot.y-old.y;
    const xz=Math.hypot(dx,dz);
-   if(xz>0&&xz<=MAX_GROUNDED_TRAVEL_PER_TICK&&Math.abs(dy)<.32){
+   if(xz>0&&xz<=MAX_GROUNDED_TRAVEL_PER_TICK&&Math.abs(dy)<.32)
     this.groundedMeters+=xz;
-    if(this.variant!=='CLASSIC'&&this.routeStart){
+   // For PAINT_RELAY, a player who has already arrived at the real
+   // original-ground turn/return threshold may complete the ink quota
+   // while STATIONARY. Untrusted physical deltas still fail closed.
+   if(this.variant!=='CLASSIC'&&this.routeStart&&
+      xz<=MAX_GROUNDED_TRAVEL_PER_TICK&&Math.abs(dy)<.32&&
+      (xz>0||this.variant==='PAINT_RELAY')){
      const dist=Math.hypot(f.foot.x-this.routeStart.x,
                            f.foot.z-this.routeStart.z);
      if(!this.routeOutReached&&dist>=B56_SWITCHBACK_OUT_METERS&&
@@ -169,8 +174,8 @@ export class UndertowF3SourcePaintRun{
       if(this.variant==='PAINT_RELAY')
        this.relayReturnPaintCells=this.actualCells;
      }
-    }
-   }else if(this.variant!=='CLASSIC'&&xz>MAX_GROUNDED_TRAVEL_PER_TICK){
+   }
+   if(this.variant!=='CLASSIC'&&xz>MAX_GROUNDED_TRAVEL_PER_TICK){
     this.abort('SWITCHBACK_INVALID_PHYSICAL_DISPLACEMENT');
     return this.snapshot();
    }

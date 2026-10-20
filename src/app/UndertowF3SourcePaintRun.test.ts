@@ -224,7 +224,9 @@ describe('W10-B57 PAINT RELAY — distinct real impact ink in each physical leg'
   expect(returned-turn).toBeGreaterThanOrEqual(60);
   move(2.2,0);
   expect(r.snapshot().status).toBe('RUNNING');
-  expect(r.snapshot().relayStagePaintCells).toBe(0);
+  // Movement after crossing the return radius can already count as
+  // physically valid FINISH-leg ink. It cannot yet satisfy the 60-cell leg.
+  expect(r.snapshot().relayStagePaintCells).toBeLessThan(60);
   move(.2,6);
   expect(r.snapshot().relayStagePaintCells).toBeGreaterThanOrEqual(60);
   expect(r.snapshot().status).toBe('RUNNING'); // still <12 real metres
@@ -248,6 +250,8 @@ describe('W10-B57 PAINT RELAY — distinct real impact ink in each physical leg'
   let n=1,x=0;r.observe(f(n,x,0));
   for(let i=0;i<11;i++){x+=.2;r.observe(f(++n,x,40));}
   expect(r.snapshot().routeTurnReached).toBe(false);
+  // The player is still physically grounded at the threshold and
+  // legitimately paints enough new cells without another movement key.
   r.observe(f(++n,x,70));
   expect(r.snapshot().routeTurnReached).toBe(true);
   r.observe(tick(++n,{foot:{x,y:1,z:0,grounded:false,
