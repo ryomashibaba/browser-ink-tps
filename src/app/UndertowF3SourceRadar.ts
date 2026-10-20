@@ -54,17 +54,18 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
  const font='11px ui-monospace,monospace';
  let frame=0;
  let compact=false;
+ function setPlayFocus(locked:boolean){
+  if(locked===compact)return;
+  compact=locked;
+  shell.dataset.t21B52RadarMode=compact?'COMPACT':'FULL';
+  shell.style.width=compact?'184px':'300px';
+  shell.style.right=compact?'10px':'16px';
+  shell.style.top=compact?'10px':'15px';
+  shell.style.padding=compact?'7px 8px':'11px 12px';
+  canvas.style.height=compact?'190px':'310px';
+ }
  function render(view:View){
-  const locked=document.pointerLockElement===document.querySelector('#app-canvas');
-  if(locked!==compact){
-   compact=locked;
-   shell.dataset.t21B52RadarMode=compact?'COMPACT':'FULL';
-   shell.style.width=compact?'184px':'300px';
-   shell.style.right=compact?'10px':'16px';
-   shell.style.top=compact?'10px':'15px';
-   shell.style.padding=compact?'7px 8px':'11px 12px';
-   canvas.style.height=compact?'190px':'310px';
-  }
+  setPlayFocus(document.pointerLockElement===document.querySelector('#app-canvas'));
   frame++;
   const x=view.player.position[0]??0,z=view.player.position[2]??0;
   if(![x,z].every(Number.isFinite))return;
@@ -149,5 +150,5 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
   canvas.dataset.nativeActorCount=String(view.cpu.cpu.length+1);
   canvas.dataset.sourceFrame=String(frame);
  }
- return {render,canvas,sourceGeometryAdded:false as const};
+ return {render,canvas,setPlayFocus,sourceGeometryAdded:false as const};
 }

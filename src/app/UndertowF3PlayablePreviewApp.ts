@@ -1492,6 +1492,9 @@ export class UndertowF3PlayablePreviewApp{
   const focus=document.pointerLockElement===this.canvas&&!activeGpuTrial;
   this.panel.hidden=focus;
   this.surveyButton.hidden=focus;
+  // Pointerlockchange updates focus immediately, before next physics frame.
+  // Avoid a stale FULL radar when Chrome checks the newly locked HUD.
+  this.radar.setPlayFocus(focus);
   // Keep real B25 practice progression visible, but hide its unusable
   // START control while playing without an active practice attempt.
   this.b25RunCard.hidden=focus&&this.b25Run.snapshot().status==='IDLE';
