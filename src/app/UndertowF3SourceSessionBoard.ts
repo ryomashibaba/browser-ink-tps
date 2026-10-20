@@ -3,6 +3,8 @@
  * This is NOT an original Turf score, team ranking or a source-authorized
  * opposing-team 4v4 contact claim. Zero gameplay writes.
  */
+import type {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
+
 export interface SourceSessionMetrics {
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  timeRemainingSeconds:number;
@@ -115,6 +117,7 @@ export function createF3SourceSessionBoard(
   'background:linear-gradient(145deg,#092a38,#081722);'+
   'color:#ecfcff;border:1px solid #5ed6e5;border-radius:20px;'+
   'box-shadow:0 25px 90px #000b;font:600 13px/1.7 system-ui;'+
+  'max-height:calc(100vh - 40px);overflow-y:auto;'+
   'font-variant-numeric:tabular-nums;text-align:left';
  panel.innerHTML=
   '<div style="font-size:11px;font-weight:850;letter-spacing:2px;color:#95e6ee">'+
@@ -125,6 +128,9 @@ export function createF3SourceSessionBoard(
     'NO TURF WINNER · CROSS-TEAM ROUTES NOT CERTIFIED</div>'+
   '<div id="t21-f3-b59-final-stats" style="border-top:1px solid #ffffff2d;'+
     'border-bottom:1px solid #ffffff2d;padding:13px 0;white-space:pre-line"></div>'+
+  '<div id="t21-f3-b63-source-paint-tempo" style="margin-top:12px;'+
+   'padding:9px;border:1px solid #4a8d9b;border-radius:9px;'+
+   'font:600 10px/1.5 system-ui;color:#c5eff4" hidden></div>'+
   '<p style="font-size:11px;color:#aacfd7">'+
    'Real source-floor input, ink and CPU activity only. This is not an original 4v4 battle result.</p>'+
   '<button id="t21-f3-b59-restart" type="button" style="'+
@@ -149,6 +155,53 @@ export function createF3SourceSessionBoard(
  finish.appendChild(panel);
  ui.appendChild(finish);
  const finalStats=finish.querySelector<HTMLElement>('#t21-f3-b59-final-stats')!;
+ const tempo=finish.querySelector<HTMLElement>('#t21-f3-b63-source-paint-tempo')!;
+ let lastTempoWritten=false;
+ const setPaintTempo=(result:ReturnType<typeof sourceCpuInkTempo>|null)=>{
+  if(lastTempoWritten||!result||result.status!=='REAL_SOURCE_ACTIVITY_ONLY'||
+     !result.windows.length||finish.dataset.t21B59State!=='FINISHED')return;
+  if(result.officialTurfResult!=='NONE'||result.sourceScoreableCells!==0)
+   throw Error('B63_OFFICIAL_TURF_PROMOTION_FORBIDDEN');
+  const max=Math.max(1,...result.windows.map(w=>w.newlyChangedCpuCells));
+  const header=document.createElement('div');
+  header.style.cssText='font-weight:850;color:#99edf2;margin-bottom:5px';
+  header.textContent='REAL CPU PAINT ACTIVITY · CHANGED CELLS, NOT SCORE';
+  tempo.replaceChildren(header);
+  for(const w of result.windows){
+   const r=document.createElement('div');
+   r.style.cssText='display:grid;grid-template-columns:74px 1fr 124px;'+
+    'align-items:center;gap:7px;margin:4px 0';
+   const range=document.createElement('span');
+   range.textContent=Math.floor(w.fromNativeSecond)+'–'+
+    Math.floor(w.throughNativeSecond)+'s';
+   const track=document.createElement('div');
+   track.style.cssText='height:7px;background:#ffffff20;'+
+    'border-radius:5px;overflow:hidden';
+   const fill=document.createElement('div');
+   fill.style.cssText='height:100%;background:#53d4e7;width:'+
+    (100*w.newlyChangedCpuCells/max).toFixed(1)+'%';
+   track.appendChild(fill);
+   const values=document.createElement('span');
+   values.style.textAlign='right';
+   values.textContent=w.newlyChangedCpuCells+' cells / '+
+    w.cpuShots+' shots';
+   r.append(range,track,values);
+   tempo.appendChild(r);
+  }
+  const note=document.createElement('div');
+  note.style.cssText='color:#ffcf98;margin-top:8px';
+  note.textContent=result.cpuShotWithoutNewInkWindows>0?
+   'CPU fired during '+result.cpuShotWithoutNewInkWindows+
+   ' periods with 0 new ink cells. Cause UNDETERMINED; no winner inferred.':
+   'All recorded periods with CPU shots also changed source ink.';
+  tempo.appendChild(note);
+  tempo.hidden=false;
+  finish.dataset.t21B63TempoState='REAL_NATIVE_SOURCE_30S_WINDOWS';
+  finish.dataset.t21B63Windows=String(result.windows.length);
+  finish.dataset.t21B63ZeroInkPeriods=
+   String(result.cpuShotWithoutNewInkWindows);
+  lastTempoWritten=true;
+ };
  finish.querySelector<HTMLButtonElement>('#t21-f3-b59-restart')!
   .addEventListener('click',onRestart);
  const title=root.querySelector<HTMLElement>('#t21-f3-b58-title')!;
@@ -191,5 +244,5 @@ export function createF3SourceSessionBoard(
   root.dataset.t21B58OriginalScoreable='0';
   return v;
  };
- return {root,finish,render};
+ return {root,finish,render,setPaintTempo};
 }

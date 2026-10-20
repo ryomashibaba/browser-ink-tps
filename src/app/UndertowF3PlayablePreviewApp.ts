@@ -62,6 +62,7 @@ import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud} from './UndertowF3PlayableHud';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
+import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
@@ -2180,12 +2181,18 @@ export class UndertowF3PlayablePreviewApp{
   // Only genuine already-advanced Rapier/Crowd/GameInk state is sampled.
   // Observe BEFORE the real TIME_UP end panel is made clickable.
   this.b62NativeEvidence.observe(state);
+  const completedSourceEvidence=this.b62NativeEvidence.report();
   this.b58SessionBoard.finish.dataset.t21B62NativeEvidenceReady=
-   this.b62NativeEvidence.report()?'REAL_180S_READY':'NOT_READY';
+   completedSourceEvidence?'REAL_180S_READY':'NOT_READY';
   const p=state.cpu;
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.b58SessionBoard.render(state);
+  if(state.matchState==='TIME_UP'){
+   const completed=this.b62NativeEvidence.report();
+   if(completed)this.b58SessionBoard.setPaintTempo(
+    sourceCpuInkTempo(completed.timeline));
+  }
   this.b58SessionBoard.root.hidden=
    this.survey.snapshot().active||this.galleryIndex>=0;
   this.obstructionNotice.hidden=!(
