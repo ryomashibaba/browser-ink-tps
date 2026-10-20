@@ -9,6 +9,8 @@ on:
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3SourceSessionBoard.ts'
       - 'src/app/UndertowF3SourceSessionBoard.test.ts'
+      - 'src/app/UndertowF3NativeSessionEvidence.ts'
+      - 'src/app/UndertowF3NativeSessionEvidence.test.ts'
       - '.github/workflows/t21-w10b54-full-practice.yml'
   workflow_dispatch:
 permissions:
@@ -25,7 +27,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
+      - run: npx vitest run src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: True browser render-driven human input and authoritative ink
         env:

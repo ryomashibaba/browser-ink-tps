@@ -1,0 +1,29 @@
+name: T21 W10-B62 native full session activity evidence
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3NativeSessionEvidence.ts'
+      - 'src/app/UndertowF3NativeSessionEvidence.test.ts'
+      - 'src/app/UndertowF3SourceSessionBoard.ts'
+      - '.github/workflows/t21-w10b62-session-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-evidence:
+    name: Source-only evidence integrity and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts
+      - name: Source authority and owner-only export assertion
+        run: |
+          test ! -d dist/t21-private-original-actors
+          echo 'B62_PUBLIC_CI_HAS_NO_PRIVATE_ACTOR_PAYLOAD_OR_TURF_SCORE'

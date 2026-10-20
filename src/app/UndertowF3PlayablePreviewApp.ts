@@ -61,6 +61,7 @@ import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud} from './UndertowF3PlayableHud';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
+import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
@@ -155,6 +156,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
+ private readonly b62NativeEvidence=new W10B62NativeSessionEvidence();
  // B36: normal source-practice can reclaim view-space when pointer-locked.
  // Deterministic source QA keeps its prior DOM layout unless opted in.
  private readonly b36FocusEnabled=(()=>{
@@ -548,7 +550,8 @@ export class UndertowF3PlayablePreviewApp{
   this.practiceHud=createF3PlayableHud(ui);
   // B58: native session telemetry, not a fabricated Turf scoreboard.
   // Activity and end screen are read from the same 60Hz F3 snapshot.
-  this.b58SessionBoard=createF3SourceSessionBoard(ui,()=>this.restart());
+  this.b58SessionBoard=createF3SourceSessionBoard(
+   ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
   const challenge=document.createElement('section');
   challenge.id='t21-f3-b25-paint-run';
   challenge.dataset.sourceOnly='true';
@@ -817,6 +820,24 @@ export class UndertowF3PlayablePreviewApp{
   link.click();
   link.remove();
   window.setTimeout(()=>URL.revokeObjectURL(href),15_000);
+ }
+ /** B62: user-initiated save after real native TIME_UP only.
+  * Counts and rates, no positions, private source data or auto uploads.
+  */
+ private saveW10B62NativeEvidence(){
+  if(this.matchState!=='TIME_UP'||this.stopReason)return;
+  const report=this.b62NativeEvidence.report();
+  if(!report)return;
+  const bytes=new Blob([JSON.stringify(report,null,2)+'\\n'],
+   {type:'application/json'});
+  const url=URL.createObjectURL(bytes);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='T21_W10B62_REAL_SOURCE_NATIVE_180S_SESSION.json';
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();a.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),15000);
  }
  private updateW10B22OwnerTrial(){
   const status=this.b22Trial.snapshot().status;
@@ -2156,6 +2177,11 @@ export class UndertowF3PlayablePreviewApp{
   // card immediately instead of leaving stale RUNNING text on screen.
   this.refreshB25PaintRun();
   const state=this.snapshot();
+  // Only genuine already-advanced Rapier/Crowd/GameInk state is sampled.
+  // Observe BEFORE the real TIME_UP end panel is made clickable.
+  this.b62NativeEvidence.observe(state);
+  this.b58SessionBoard.finish.dataset.t21B62NativeEvidenceReady=
+   this.b62NativeEvidence.report()?'REAL_180S_READY':'NOT_READY';
   const p=state.cpu;
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);

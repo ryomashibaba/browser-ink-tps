@@ -71,7 +71,7 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
 }
 
 export function createF3SourceSessionBoard(
- ui:HTMLElement,onRestart:()=>void
+ ui:HTMLElement,onRestart:()=>void,onSaveEvidence?:()=>void
 ){
  const root=document.createElement('section');
  root.id='t21-f3-b58-source-session';
@@ -131,6 +131,21 @@ export function createF3SourceSessionBoard(
    'width:100%;padding:12px;margin-top:6px;background:#56d9de;'+
    'color:#05202a;border:0;border-radius:9px;cursor:pointer;'+
    'font:850 14px system-ui">RESTART ORIGINAL-SOURCE SESSION</button>';
+ if(onSaveEvidence){
+  const save=document.createElement('button');
+  save.id='t21-f3-b62-save-evidence';
+  save.type='button';
+  save.textContent='SAVE REAL 180s SESSION DATA (LOCAL JSON)';
+  save.style.cssText='width:100%;padding:10px;margin-top:8px;'+
+   'background:#174459;border:1px solid #59c7d5;color:#e8fcff;'+
+   'border-radius:9px;cursor:pointer;font:800 12px system-ui';
+  save.addEventListener('click',()=>{
+   // User click only, no automatic telemetry or content uploads.
+   if(!finish.hidden&&finish.dataset.t21B59State==='FINISHED')
+    onSaveEvidence();
+  });
+  panel.appendChild(save);
+ }
  finish.appendChild(panel);
  ui.appendChild(finish);
  const finalStats=finish.querySelector<HTMLElement>('#t21-f3-b59-final-stats')!;
