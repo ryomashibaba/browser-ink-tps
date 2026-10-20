@@ -10,10 +10,13 @@ on:
       - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b64-compare-native-ink.mjs'
       - 'scripts/t21-w10b64-compare-native-ink.test.mjs'
+      - 'scripts/t21-w10b65-replication-gate.mjs'
+      - 'scripts/t21-w10b65-replication-gate.test.mjs'
       - '.github/workflows/t21-w10b64-cpu-ink-aim-ab.yml'
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   native-source-ab:
     name: Real 130-second original-source CPU (${{ matrix.mode }})
@@ -51,6 +54,11 @@ jobs:
     needs: native-source-ab
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-w10b64-compare-native-ink.test.mjs
       - uses: actions/download-artifact@v4
         with:
           pattern: w10b64-source-*
@@ -58,3 +66,47 @@ jobs:
           merge-multiple: true
       - name: Compare actual real CPU ink evidence only
         run: node scripts/t21-w10b64-compare-native-ink.mjs b64-evidence
+
+  prior-evidence-review:
+    name: Replay independently verified previous exact B64 130s native artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39432637747
+          github-token: ${{ github.token }}
+          pattern: w10b64-source-*
+          path: b64-prior
+          merge-multiple: true
+      - run: node --test scripts/t21-w10b64-compare-native-ink.test.mjs
+      - run: node scripts/t21-w10b64-compare-native-ink.mjs b64-prior
+
+  independent-replication-gate:
+    name: Both genuine 130s A-B repeats agree; still NO CPU default change
+    needs: [native-source-ab, evidence-comparison, prior-evidence-review]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-w10b65-replication-gate.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39432637747
+          github-token: ${{ github.token }}
+          pattern: w10b64-source-*
+          path: b64-prior
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: w10b64-source-*
+          path: b64-repeat
+          merge-multiple: true
+      - run: node scripts/t21-w10b65-replication-gate.mjs b64-prior b64-repeat
