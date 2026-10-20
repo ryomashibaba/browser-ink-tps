@@ -345,6 +345,17 @@ async function main(){
    btn.click();
    return window.__t21F3.snapshot().b25SourcePaintRun;
   })()`);
+  const b53Armed=await evaluate(`({
+    status:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53Status,
+    paint:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53PaintPercent,
+    ground:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53GroundPercent,
+    source:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53SourceObjectives,
+    next:document.querySelector('#t21-f3-b53-next')?.textContent
+   })`);
+  if(b53Armed.status!=='ARMED'||b53Armed.paint!=='0'||
+     b53Armed.ground!=='0'||b53Armed.source!=='REAL_HUMAN_INK_AND_RAPIER_GROUND'||
+     !b53Armed.next?.includes('180 changed cells'))
+   reject('W10B53_ARMED_SOURCE_OBJECTIVES_INVALID_'+JSON.stringify(b53Armed));
   if(paintRunArm?.status!=='ARMED'||paintRunArm.officialWinner!=='NONE'||
      paintRunArm.physicalStageModifications!==0)
    reject('W10B25_PRACTICE_MUST_ARM_NONSCORING_'+JSON.stringify(paintRunArm));
@@ -373,6 +384,20 @@ async function main(){
     a.b27KineticSourceView.fieldOfViewDegrees>=63.3?a:false;
   },70000);
   await key('keyUp');
+  const b53Moving=await evaluate(`({
+   source:window.__t21F3.snapshot().b25SourcePaintRun,
+   paint:Number(document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53PaintPercent),
+   ground:Number(document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53GroundPercent),
+   next:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53Next
+  })`);
+  if(b53Moving.source.status!=='RUNNING'||b53Moving.ground<=0||
+     b53Moving.ground>100||b53Moving.paint!==0||b53Moving.next!=='PAINT'||
+     b53Moving.source.officialWinner!=='NONE')
+   reject('W10B53_REAL_GROUND_PROGRESS_INVALID_'+JSON.stringify(b53Moving));
+  console.log('T21_W10B53_REAL_CHROME_DUAL_OBJECTIVE_PROGRESS_PASS',
+   JSON.stringify({realGroundMeters:b53Moving.source.realGroundedTravelMeters,
+    groundPercent:b53Moving.ground,paintPercent:b53Moving.paint,
+    actualOriginalPhysicalMovement:true,sourceScoring:0}));
   const travel=Math.hypot(...moving.player.position.map((v,i)=>
    v-paintRunLive.player.position[i]));
   const pace=moving.b27KineticSourceView;
@@ -410,6 +435,12 @@ async function main(){
    const state=await evaluate('window.__t21F3.snapshot()');
    return state.b25SourcePaintRun.status==='ABORTED'?state:false;
   },25000);
+  const b53Abort=await evaluate(`({
+   status:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B53Status,
+   next:document.querySelector('#t21-f3-b53-next')?.textContent
+  })`);
+  if(b53Abort.status!=='ABORTED'||!b53Abort.next?.includes('RETRY'))
+   reject('W10B53_ABORT_MUST_BE_VISIBLE_'+JSON.stringify(b53Abort));
   if(paintRunAborted.b25SourcePaintRun.abortReason!=='PLAYER_POINTER_UNLOCKED'||
      paintRunAborted.b25SourcePaintRun.officialWinner!=='NONE')
    reject('W10B25_SOURCE_PRACTICE_ABORT_UNSAFE_'+

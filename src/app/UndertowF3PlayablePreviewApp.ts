@@ -25,6 +25,7 @@ import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
 import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
 import {UndertowF3SourcePaintRun} from './UndertowF3SourcePaintRun';
+import {sourcePracticeObjectiveView} from './UndertowF3PracticeObjectiveView';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -553,11 +554,23 @@ export class UndertowF3PlayablePreviewApp{
    'padding:10px 12px;box-shadow:0 10px 30px #0009;'+
    'color:#edfcff;font:600 11px/1.4 system-ui,sans-serif';
   this.b25RunCard=challenge;
+  challenge.dataset.t21B53SourceObjectives='REAL_HUMAN_INK_AND_RAPIER_GROUND';
   challenge.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:5px">'+
    '<strong style="letter-spacing:.9px;color:#93f3ee">SOURCE PAINT RUN</strong>'+
    '<small style="color:#ffcb9d;font-size:9px">PRACTICE · UNSCORED</small></div>'+
    '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
    'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
+   '<div id="t21-f3-b53-objectives" style="display:none;margin:9px 0 8px">'+
+    '<div style="display:flex;justify-content:space-between"><span>REAL PAINT</span>'+
+    '<strong id="t21-f3-b53-paint-label">0 / 180</strong></div>'+
+    '<div style="height:7px;background:#ffffff23;border-radius:8px;overflow:hidden;margin:3px 0 9px">'+
+     '<div id="t21-f3-b53-paint-bar" style="width:0%;height:100%;background:#4ae2e9"></div></div>'+
+    '<div style="display:flex;justify-content:space-between"><span>GROUNDED MOVE</span>'+
+    '<strong id="t21-f3-b53-ground-label">0 / 12 m</strong></div>'+
+    '<div style="height:7px;background:#ffffff23;border-radius:8px;overflow:hidden;margin:3px 0 7px">'+
+     '<div id="t21-f3-b53-ground-bar" style="width:0%;height:100%;background:#f4a0c8"></div></div>'+
+    '<div id="t21-f3-b53-next" style="color:#ffdc9a;font-size:10px">NEXT · PAINT</div>'+
+   '</div>'+
    '<button id="t21-f3-b25-start" type="button" style="width:100%;'+
    'font:800 11px system-ui;background:#49d6df;color:#092231;'+
    'border:0;border-radius:7px;padding:8px;cursor:pointer">'+
@@ -1504,6 +1517,23 @@ export class UndertowF3PlayablePreviewApp{
   const run=this.b25Run.snapshot();
   const button=this.b25RunButton;
   if(run.status==='IDLE')return;
+  // Source-authoritative progress: display two independent objectives,
+  // never extrapolate a Turf score or award a winner.
+  const view=sourcePracticeObjectiveView(run);
+  const select=(id:string)=>this.b25RunCard.querySelector<HTMLElement>('#'+id)!;
+  const objective=select('t21-f3-b53-objectives');
+  objective.style.display='';
+  select('t21-f3-b53-paint-bar').style.width=view.paint+'%';
+  select('t21-f3-b53-ground-bar').style.width=view.ground+'%';
+  select('t21-f3-b53-paint-label').textContent=
+   run.humanChangedImpactCells+' / '+run.requiredHumanChangedCells;
+  select('t21-f3-b53-ground-label').textContent=
+   run.realGroundedTravelMeters.toFixed(1)+' / 12 m';
+  select('t21-f3-b53-next').textContent=view.hint;
+  this.b25RunCard.dataset.t21B53Status=view.state;
+  this.b25RunCard.dataset.t21B53PaintPercent=String(view.paint);
+  this.b25RunCard.dataset.t21B53GroundPercent=String(view.ground);
+  this.b25RunCard.dataset.t21B53Next=view.next;
   button.disabled=run.status==='ARMED'||run.status==='RUNNING';
   button.textContent=run.status==='CLEAR'||run.status==='TIME_UP'||
    run.status==='ABORTED'?'RETRY PAINT RUN':'PAINT RUN ACTIVE';
