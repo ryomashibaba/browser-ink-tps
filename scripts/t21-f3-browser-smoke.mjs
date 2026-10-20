@@ -2411,24 +2411,38 @@ async function main(){
   const retreatKey={key:'s',code:'KeyS',
    windowsVirtualKeyCode:83,nativeVirtualKeyCode:83};
   await cmd('Input.dispatchKeyEvent',{type:'keyDown',...retreatKey});
+  // B51: minimum 38 ticks alone does not prove original CPU lane clearance.
+  // Real CDP KeyS remains pressed until ACTUAL Rapier player foot clears both
+  // unchanged 1.5m retreat and 1.6m A3 separation thresholds.
+  const a3Start=[-.8030697107315063,67.07270050048828];
+  const nativeClearance=state=>({
+   retreatMeters:Math.hypot(...state.player.position.map((v,i)=>
+    v-retreatFrom.player.position[i])),
+   separation:Math.hypot(state.player.position[0]-a3Start[0],
+    state.player.position[2]-a3Start[1])
+  });
   const retreat=await waitUntil(async()=>{
    const state=await evaluate('window.__t21F3.snapshot()');
    if(state.stopReason)reject('HUMAN_RETREAT_UNSAFE_'+state.stopReason);
-   return state.tick>=retreatFrom.tick+38?state:false;
+   const metrics=nativeClearance(state);
+   if(state.tick>=retreatFrom.tick+38&&
+      metrics.retreatMeters>=1.5&&metrics.separation>=1.6)return state;
+   if(state.tick>retreatFrom.tick+96)
+    reject('B51_HUMAN_STILL_BLOCKS_NATIVE_LANE_AFTER_96_TICKS_'+
+     JSON.stringify({heldTicks:state.tick-retreatFrom.tick,...metrics}));
+   return false;
   },70000);
   await cmd('Input.dispatchKeyEvent',{type:'keyUp',...retreatKey});
-  const retreatMeters=Math.hypot(...retreat.player.position.map((v,i)=>
-   v-retreatFrom.player.position[i]));
-  const a3Start=[-.8030697107315063,67.07270050048828];
-  const separation=Math.hypot(retreat.player.position[0]-a3Start[0],
-   retreat.player.position[2]-a3Start[1]);
+  const {retreatMeters,separation}=nativeClearance(retreat);
   if(retreatMeters<1.5||separation<1.6)
    reject('REAL_PLAYER_STILL_BLOCKS_SOURCE_CPU_LANE_'+JSON.stringify({
     retreatMeters,separation,retreat
    }));
   console.log('T21_F3B_REAL_PLAYER_CLEARS_SOURCE_LANE',JSON.stringify({
    retreatMeters,separation,retreatTick:retreat.tick,
-   physicalSourceOnly:true
+   observedNativeSHeldTicks:retreat.tick-retreatFrom.tick,
+   originalThresholdsUnchanged:{retreat:1.5,separation:1.6},
+   waitedForRealRapierLaneClearance:true,physicalSourceOnly:true
   }));
   }
   console.log('T21_F3C_START_NATIVE',JSON.stringify({
