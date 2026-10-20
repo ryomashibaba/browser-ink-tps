@@ -60,6 +60,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud} from './UndertowF3PlayableHud';
+import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
@@ -153,6 +154,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
+ private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  // B36: normal source-practice can reclaim view-space when pointer-locked.
  // Deterministic source QA keeps its prior DOM layout unless opted in.
  private readonly b36FocusEnabled=(()=>{
@@ -544,6 +546,9 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  // B58: native session telemetry, not a fabricated Turf scoreboard.
+  // Activity and end screen are read from the same 60Hz F3 snapshot.
+  this.b58SessionBoard=createF3SourceSessionBoard(ui,()=>this.restart());
   const challenge=document.createElement('section');
   challenge.id='t21-f3-b25-paint-run';
   challenge.dataset.sourceOnly='true';
@@ -2148,6 +2153,9 @@ export class UndertowF3PlayablePreviewApp{
   const p=state.cpu;
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
+  this.b58SessionBoard.render(state);
+  this.b58SessionBoard.root.hidden=
+   this.survey.snapshot().active||this.galleryIndex>=0;
   this.obstructionNotice.hidden=!(
    state.cameraSourcePractice.geometryClipped&&
    state.cameraSourcePractice.cameraDistanceMeters<2);

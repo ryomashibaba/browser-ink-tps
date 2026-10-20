@@ -270,6 +270,30 @@ async function main(){
      'TWO REAL OBJECTIVES COMPLETE')&&
     (!w10b57||ui.relayLeg==='COMPLETE')?ui:false;
   },25000):null;
+  // B58: additional source-session HUD uses EXACT existing native play
+  // snapshot counters; no invented scoring and no 180-second time jump.
+  const realSessionHud=pass?await waitUntil(async()=>{
+   const pair=await evaluate(`(() => {
+    const f=window.__t21F3.snapshot();
+    const r=document.querySelector('#t21-f3-b58-source-session');
+    return {shots:f.shotsFired,cells:f.b23HumanInkFeedback.humanChangedCells,
+      cpuInk:f.cpuImpactInkCellsChanged,cpuRejoined:f.cpu.physicalRejoins.length,
+      displayedShots:Number(r?.dataset.t21B58HumanShotCount),
+      displayedCells:Number(r?.dataset.t21B58HumanChangedInk),
+      displayedCpuInk:Number(r?.dataset.t21B58CpuChangedInk),
+      displayedCpuRejoined:Number(r?.dataset.t21B58CpuRejoined),
+      officialWinner:r?.dataset.t21B58OfficialWinner,
+      scoreable:r?.dataset.t21B58OriginalScoreable,
+      label:r?.querySelector('#t21-f3-b58-title')?.textContent,
+      nativeRenderer:f.renderer};
+   })()`);
+   return pair.cells>0&&pair.shots>0&&
+    pair.cells===pair.displayedCells&&pair.shots===pair.displayedShots&&
+    pair.cpuInk===pair.displayedCpuInk&&
+    pair.cpuRejoined===pair.displayedCpuRejoined&&
+    pair.officialWinner==='NONE'&&pair.scoreable==='0'&&
+    pair.nativeRenderer==='webgl2'?pair:false;
+  },25000):null;
   const clearedFrame=pass?await screenshot(
    w10b57?'W10B57_REAL_SOURCE_PAINT_RELAY_CLEAR':
     w10b56?'W10B56_REAL_SOURCE_SWITCHBACK_CLEAR':
@@ -282,6 +306,7 @@ async function main(){
    manualOwnerHumanPlaytest:false,originalGame4v4Certified:false,
    realOriginalHumanShots:actual.shotsFired,practice:run,segments:samples,
    trueHumanVisibleClearCard:visibleClear,
+   b58ReadOnlyRealSessionHud:realSessionHud,
    actualRealChromeClearScreenshot:clearedFrame,
    genuineB25DualRequirementsMet:pass,
    b56SwitchbackChallenge:w10b56,
@@ -293,7 +318,7 @@ async function main(){
   writeFileSync(resolve(OUTPUT,'w10b54-real-source-full-practice.json'),
    JSON.stringify(report,null,2));
   console.log('T21_W10B54_ACTUAL_FULL_PRACTICE',JSON.stringify(report));
-  if(!pass||!visibleClear||!clearedFrame||
+  if(!pass||!visibleClear||!realSessionHud||!clearedFrame||
      actual.originalSourceSolids!==25||
      actual.originalPaintSurfaces!==17||actual.originalSourceNavigationLinks!==26||
      actual.sourceScoreablePromotions!==0||run.officialWinner!=='NONE'||
