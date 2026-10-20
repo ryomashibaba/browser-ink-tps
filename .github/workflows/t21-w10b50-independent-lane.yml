@@ -1,0 +1,48 @@
+name: T21 W10-B50 independent original source lane trials
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b50-independent-lane.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent-source-lane:
+    name: Independent Chrome trial ${{ matrix.trial }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        trial: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Build original PlayCanvas WebGL2
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Check original Chrome script syntax
+        run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: Fresh actual Chrome original player W and shot and S source clearance
+        env:
+          T21_W10B16_NATURAL_AI: '1'
+          T21_W10B31_INK_AWARE: '0'
+          T21_W10B34_ALIGN: '1'
+          T21_W10B20_PROFILE: '1'
+          T21_W10B50_LANE_ONLY: '1'
+          T21_W10B50_TRIAL: ${{ matrix.trial }}
+          T21_F3_SHOT_DIR: /tmp/t21-w10b50-source-lane
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Keep actual source-native measurements also on a genuine failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b50-source-lane-trial-${{ matrix.trial }}
+          path: /tmp/t21-w10b50-source-lane/
+          retention-days: 14
+          if-no-files-found: warn
