@@ -1211,7 +1211,11 @@ export class UndertowF3PlayablePreviewApp{
   if(new URL(location.href).searchParams.get('t21QaDrive')!=='source'||
      !this.paused||
      (document.pointerLockElement===this.canvas&&
-      !(this.w10b14?.mouseInputOnly===true&&this.w10b14.armed))||
+      !(this.w10b14?.mouseInputOnly===true&&this.w10b14.armed)&&
+      !(new URL(location.href).searchParams.get('t21W10B51')===
+       'exactInputTicks'&&
+       new URL(location.href).searchParams.get('t21W10B16')===
+       'sourceAutonomy'))||
      this.stopReason||!Number.isSafeInteger(count)||count<1||count>96)
    throw Error('T21_F3_QA_PHYSICAL_DRIVE_FORBIDDEN');
   try{

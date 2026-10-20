@@ -109,6 +109,10 @@ async function main(){
  const w10b36=process.env.T21_W10B36_FOCUS==='1';
  const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
  const w10b50=process.env.T21_W10B50_LANE_ONLY==='1';
+ const w10b51=process.env.T21_W10B51_EXACT_S_TICKS==='1';
+ const b51Ticks=Number(process.env.T21_W10B51_S_TICKS);
+ if(w10b51&&(!w10b16||w10b50||process.env.T21_W10B35_NATIVE==='1'||![38,42].includes(b51Ticks)))
+  reject('W10B51_REQUIRES_SOURCE_FIXED_AND_38_OR_42_TICKS');
  if(w10b50&&(!w10b16||process.env.T21_W10B35_NATIVE==='1'||
    process.env.T21_F3_BLOCKED_HUMAN==='1'))
   reject('W10B50_NEEDS_DEFAULT_SOURCE_FIXED_CPU_UNBLOCKED');
@@ -123,6 +127,7 @@ async function main(){
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
+  (w10b51?'&t21W10B51=exactInputTicks':'')+
   (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':'')+
    (process.env.T21_W10B34_STALL==='1'?'&t21W10B34=stallRecovery':'')+
    (process.env.T21_W10B35_NATIVE==='1'?'&t21W10B35=nativeTargetRefresh':''):'')+
@@ -2289,6 +2294,36 @@ async function main(){
   noCpuConflation:true,noInventedTurfScore:true
  }));
  frames.push(await screenshot('F3_1_REAL_INPUT_AND_INK'));
+ if(w10b51){
+  const pre=await evaluate('window.__t21F3.pause()');
+  if(!pre.paused||pre.stopReason)reject('W10B51_PAUSE_FAILED');
+  const k={key:'s',code:'KeyS',windowsVirtualKeyCode:83,nativeVirtualKeyCode:83};
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...k});
+  const post=await evaluate('window.__t21F3.advanceQaTicks('+b51Ticks+')');
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...k});
+  const a3=[-.8030697107315063,67.07270050048828];
+  const retreat=Math.hypot(...post.player.position.map((v,i)=>v-pre.player.position[i]));
+  const lane=Math.hypot(post.player.position[0]-a3[0],post.player.position[2]-a3[1]);
+  const result={requestedNativeTicks:b51Ticks,actualNativeTicks:post.tick-pre.tick,
+   realCdpKeyS:true,realPointerLockedInput:true,pausedOriginalRapierClock:true,
+   pre:{tick:pre.tick,foot:pre.player.position},
+   post:{tick:post.tick,foot:post.player.position},
+   realRetreatMeters:retreat,realLaneSeparationMeters:lane,
+   originalThresholds:{retreat:1.5,lane:1.6},
+   margins:{retreat:retreat-1.5,lane:lane-1.6},
+   meetsOriginalB35Gate:retreat>=1.5&&lane>=1.6,
+   source:{solids:post.originalSourceSolids,paintable:post.originalPaintSurfaces,
+    navLinks:post.originalSourceNavigationLinks,scoreable:post.sourceScoreablePromotions},
+   noSyntheticPlayerAxis:true,noTeleports:true,noCpuHeuristicChanges:true,
+   natural4v4Certified:false,productionAuthorized:false};
+  writeFileSync(resolve(OUTPUT,'w10b51-exact-s-'+b51Ticks+'.json'),JSON.stringify(result,null,2));
+  console.log('T21_W10B51_EXACT_NATIVE_S_BOUNDARY',JSON.stringify(result));
+  if(post.tick-pre.tick!==b51Ticks||post.originalSourceSolids!==25||
+     post.originalPaintSurfaces!==17||post.originalSourceNavigationLinks!==26||
+     post.sourceScoreablePromotions!==0||!Number.isFinite(retreat)||!Number.isFinite(lane))
+   reject('W10B51_NATIVE_PHYSICS_OR_SOURCE_INTEGRITY');
+  return;
+ }
  if(w10b50){
   // Genuine source-only trusted W + mouse shot + S, with exactly the
   // original B35 1.5m retreat and 1.6m lane clearance thresholds.

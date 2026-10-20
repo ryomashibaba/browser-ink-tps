@@ -1,0 +1,46 @@
+name: T21 W10-B51 real KeyS exact native tick boundary
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b51-native-tick-boundary.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-key-s:
+    name: Real KeyS ${{ matrix.ticks }} native Rapier ticks
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        ticks: [38, 42]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: Actual CDP KeyS under paused exact original Rapier 60Hz clock
+        env:
+          T21_W10B16_NATURAL_AI: '1'
+          T21_W10B31_INK_AWARE: '0'
+          T21_W10B34_ALIGN: '1'
+          T21_W10B20_PROFILE: '1'
+          T21_W10B51_EXACT_S_TICKS: '1'
+          T21_W10B51_S_TICKS: ${{ matrix.ticks }}
+          T21_F3_SHOT_DIR: /tmp/t21-w10b51
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve original source gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b51-exact-s-${{ matrix.ticks }}
+          path: /tmp/t21-w10b51/
+          retention-days: 14
+          if-no-files-found: warn
