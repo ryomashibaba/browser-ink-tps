@@ -217,6 +217,24 @@ async function main(){
   const actual=await get(),run=actual.b25SourcePaintRun;
   const pass=run.status==='CLEAR'&&run.humanChangedImpactCells>=180&&
    run.realGroundedTravelMeters>=12;
+  // The actual human-visible B53 card must catch up to the true B25
+  // CLEAR, showing both goals complete and NO official match winner.
+  const visibleClear=pass?await waitUntil(async()=>{
+   const ui=await evaluate(`(() => {
+    const card=document.querySelector('#t21-f3-b25-paint-run');
+    return {status:card?.dataset.t21B53Status,
+     paint:card?.dataset.t21B53PaintPercent,
+     ground:card?.dataset.t21B53GroundPercent,
+     next:card?.querySelector('#t21-f3-b53-next')?.textContent,
+     progress:card?.querySelector('#t21-f3-b25-progress')?.textContent,
+     scoreable:card?.dataset.scoreable,
+     authority:card?.dataset.productionAuthority};
+   })()`);
+   return ui.status==='CLEAR'&&ui.paint==='100'&&ui.ground==='100'&&
+    ui.progress?.includes('PRACTICE CLEAR · NOT A MATCH WIN')&&
+    ui.next?.includes('TWO REAL OBJECTIVES COMPLETE')?ui:false;
+  },25000):null;
+  const clearedFrame=pass?await screenshot('W10B54_ACTUAL_SOURCE_PRACTICE_CLEAR'):null;
   const report={status:pass?'B54_ACTUAL_CHROME_SOURCE_PRACTICE_CLEAR':
    'B54_ACTUAL_CHROME_SOURCE_PRACTICE_NOT_CLEARED',
    sourceAuthority:'25_PHYSICAL_17_PAINTABLE_26_LINKS_0_SCOREABLE',
@@ -224,6 +242,8 @@ async function main(){
    noSyntheticMovementOrInk:true,qaPhysicalTickAdvancements:0,
    manualOwnerHumanPlaytest:false,originalGame4v4Certified:false,
    realOriginalHumanShots:actual.shotsFired,practice:run,segments:samples,
+   trueHumanVisibleClearCard:visibleClear,
+   actualRealChromeClearScreenshot:clearedFrame,
    genuineB25DualRequirementsMet:pass,
    originalSolids:actual.originalSourceSolids,
    paintable:actual.originalPaintSurfaces,navLinks:actual.originalSourceNavigationLinks,
@@ -231,7 +251,8 @@ async function main(){
   writeFileSync(resolve(OUTPUT,'w10b54-real-source-full-practice.json'),
    JSON.stringify(report,null,2));
   console.log('T21_W10B54_ACTUAL_FULL_PRACTICE',JSON.stringify(report));
-  if(!pass||actual.originalSourceSolids!==25||
+  if(!pass||!visibleClear||!clearedFrame||
+     actual.originalSourceSolids!==25||
      actual.originalPaintSurfaces!==17||actual.originalSourceNavigationLinks!==26||
      actual.sourceScoreablePromotions!==0||run.officialWinner!=='NONE'||
      run.originalTurfScore!=='UNAVAILABLE')
