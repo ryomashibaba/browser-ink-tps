@@ -9,7 +9,7 @@ export interface SourceSessionMetrics {
  tick:number;
  originalSourceSolids:number;
  originalPaintSurfaces:number;
- originalSourceNavigationLinks:number;
+ originalSourceNavigationLinks?:number;
  sourceScoreablePromotions:number;
  productionAuthorized:boolean;
  unrestricted4v4Certified:boolean;
