@@ -4,6 +4,7 @@
  * paths are inferred from map strokes, no nav, paint or score authority.
  */
 import type {StageDefinition} from '../stage/StageDefinition';
+import {sourceRadarHeightBand} from './UndertowF3RadarElevation';
 
 type Actor={id:string;physicalFoot:[number,number,number];mobilityState:string;rejoined:boolean};
 type View={player:{position:number[]};cpu:{cpu:readonly Actor[];
@@ -31,6 +32,13 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
   '<div style="color:#a2bacb;font-size:10px;letter-spacing:.2px">'+
   '25 original solids · ● real feet / ◌ audited goals · no cross-gap route</div>';
  ui.appendChild(shell);
+ shell.dataset.t21B52RadarMode='FULL';
+ shell.dataset.t21B52HeightAuthority='REAL_RAPIER_FOOT_Y_ONLY';
+ const heightStatus=document.createElement('div');
+ heightStatus.id='t21-f3-radar-elevation';
+ heightStatus.style.cssText='color:#bcecf6;font:700 10px/1.4 ui-monospace,monospace;margin:4px 0';
+ heightStatus.textContent='REAL FOOT Y · pending';
+ shell.appendChild(heightStatus);
  const canvas=shell.querySelector('canvas')!;
  canvas.dataset.originalSourceSolids='25';
  canvas.dataset.originalSourceNavigationLinks='26';
@@ -45,7 +53,18 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
  }));
  const font='11px ui-monospace,monospace';
  let frame=0;
+ let compact=false;
  function render(view:View){
+  const locked=document.pointerLockElement===document.querySelector('#app-canvas');
+  if(locked!==compact){
+   compact=locked;
+   shell.dataset.t21B52RadarMode=compact?'COMPACT':'FULL';
+   shell.style.width=compact?'184px':'300px';
+   shell.style.right=compact?'10px':'16px';
+   shell.style.top=compact?'10px':'15px';
+   shell.style.padding=compact?'7px 8px':'11px 12px';
+   canvas.style.height=compact?'190px':'310px';
+  }
   frame++;
   const x=view.player.position[0]??0,z=view.player.position[2]??0;
   if(![x,z].every(Number.isFinite))return;
@@ -92,15 +111,28 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
    ctx.beginPath();ctx.arc(gx,gz,9,0,Math.PI*2);ctx.stroke();
    ctx.setLineDash([]);
   }
+  const hy=view.player.position[1]??0;
+  const bands={ABOVE:0,LEVEL:0,BELOW:0};
   for(const a of view.cpu.cpu){
+   const band=sourceRadarHeightBand(hy,a.physicalFoot[1]);
+   bands[band]++;
    const xx=px(a.physicalFoot[0]),zz=pz(a.physicalFoot[2]);
    const color=a.id.startsWith('A')?'#38e4f3':'#ff448d';
    ctx.shadowColor=color;ctx.shadowBlur=a.rejoined?13:5;
    ctx.fillStyle=color;ctx.beginPath();ctx.arc(xx,zz,a.rejoined?4.1:3.2,0,Math.PI*2);ctx.fill();
-   ctx.shadowBlur=0;ctx.font=font;ctx.fillStyle=color;
+   ctx.shadowBlur=0;
+   if(band!=='LEVEL'){
+    ctx.strokeStyle=band==='ABOVE'?'#ffe7a2':'#9cbbff';
+    ctx.lineWidth=1.6;ctx.setLineDash(band==='BELOW'?[2,3]:[]);
+    ctx.beginPath();ctx.arc(xx,zz,7,0,Math.PI*2);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='bold 10px ui-monospace,monospace';
+    ctx.fillStyle=band==='ABOVE'?'#ffe7a2':'#9cbbff';
+    ctx.fillText(band==='ABOVE'?'↑':'↓',xx-3,zz-10);
+   }
+   ctx.font=font;ctx.fillStyle=color;
    ctx.fillText(a.id,xx+6,zz-5);
   }
-  const hy=view.player.position[1]??0;
   ctx.strokeStyle='#fff';ctx.lineWidth=2.6;
   ctx.beginPath();ctx.arc(px(x),pz(z),7,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle='#53f2ff';ctx.beginPath();ctx.arc(px(x),pz(z),3,0,Math.PI*2);ctx.fill();
@@ -109,6 +141,11 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
   ctx.fillStyle='#8dc4d5';ctx.fillText('LOCAL ±32m',13,HEIGHT-10);
   ctx.textAlign='right';ctx.fillText('X '+x.toFixed(1)+' · Z '+z.toFixed(1)+
    ' · Y '+hy.toFixed(1),WIDTH-12,HEIGHT-10);ctx.textAlign='left';
+  heightStatus.textContent='REAL FOOT Y · ↑'+bands.ABOVE+' ABOVE / '+
+   bands.LEVEL+' LEVEL / ↓'+bands.BELOW+' BELOW · ±2m';
+  canvas.dataset.t21B52Above=String(bands.ABOVE);
+  canvas.dataset.t21B52Level=String(bands.LEVEL);
+  canvas.dataset.t21B52Below=String(bands.BELOW);
   canvas.dataset.nativeActorCount=String(view.cpu.cpu.length+1);
   canvas.dataset.sourceFrame=String(frame);
  }

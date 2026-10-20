@@ -471,12 +471,20 @@ async function main(){
      hudVisible:document.querySelector('#t21-f3-practice-hud')?.hidden===false,
      crosshairVisible:document.querySelector('#t21-f3-crosshair')?.hidden===false,
      sourceScoreable:document.querySelector('#t21-f3-practice-hud')?.dataset.sourceScoreable,
-     warningTop:document.querySelector('#t21-f3-camera-obstruction')?.style.top
+     warningTop:document.querySelector('#t21-f3-camera-obstruction')?.style.top,
+     radarMode:document.querySelector('#t21-f3-source-radar')?.dataset.t21B52RadarMode,
+     radarWidth:document.querySelector('#t21-f3-source-radar')?.style.width,
+     radarHeightAuthority:document.querySelector('#t21-f3-source-radar')?.dataset.t21B52HeightAuthority,
+     radarActorCount:document.querySelector('#t21-f3-radar-canvas')?.dataset.nativeActorCount,
+     radarBands:['t21B52Above','t21B52Level','t21B52Below'].map(k=>Number(document.querySelector('#t21-f3-radar-canvas')?.dataset[k]))
     })`);
     return view.mode==='ON'&&view.panelHidden&&view.surveyHidden&&
      view.idlePracticeHidden&&view.hudVisible&&view.crosshairVisible?view:false;
    },15000);
-   if(focus.sourceScoreable!=='0'||focus.warningTop!=='calc(50% + 72px)')
+   if(focus.sourceScoreable!=='0'||focus.warningTop!=='calc(50% + 72px)'||
+      focus.radarMode!=='COMPACT'||focus.radarWidth!=='184px'||
+      focus.radarHeightAuthority!=='REAL_RAPIER_FOOT_Y_ONLY'||
+      focus.radarActorCount!=='8'||focus.radarBands.reduce((x,y)=>x+y,0)!==7)
     reject('W10B36_SOURCE_OVERLAY_OR_AUTHORITY_DRIFT_'+JSON.stringify(focus));
    console.log('T21_W10B36_REAL_CHROME_POINTERLOCK_FOCUS_PASS',JSON.stringify(focus));
   }
@@ -664,12 +672,15 @@ async function main(){
      surveyVisible:document.querySelector('#t21-f3-source-survey')?.hidden===false,
      practiceVisible:document.querySelector('#t21-f3-b25-paint-run')?.hidden===false,
      nativeStage:window.__t21F3.snapshot().originalSourceSolids,
-     scores:window.__t21F3.snapshot().sourceScoreablePromotions
+     scores:window.__t21F3.snapshot().sourceScoreablePromotions,
+     radarMode:document.querySelector('#t21-f3-source-radar')?.dataset.t21B52RadarMode,
+     radarWidth:document.querySelector('#t21-f3-source-radar')?.style.width
     })`);
     return view.mode==='OFF'&&view.panelVisible&&view.surveyVisible&&
      view.practiceVisible?view:false;
    },15000);
-   if(restored.nativeStage!==25||restored.scores!==0)
+   if(restored.nativeStage!==25||restored.scores!==0||
+      restored.radarMode!=='FULL'||restored.radarWidth!=='300px')
     reject('W10B36_UNLOCK_SOURCE_AUTHORITY_DRIFT_'+JSON.stringify(restored));
    console.log('T21_W10B36_REAL_CHROME_FOCUS_RESTORE_PASS',JSON.stringify(restored));
   }
