@@ -172,12 +172,14 @@ async function main(){
   },40000);
   const samples=[],wrap=x=>((x+540)%360)-180;
   async function aim(yaw,pitch){
+   // Resetting the CDP mouse coordinate is itself a REAL mouse move and
+   // changes the camera. Calibrate only AFTER that native event completes.
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450,button:'none'});
    const old=(await get()).cameraSourcePractice;
    const dx=Math.round(wrap(yaw-old.yawDegrees)/.22);
    const dy=Math.round(-(pitch-old.pitchDegrees)/.18);
    if(Math.abs(dx)>720||Math.abs(dy)>460)
     reject('B54_UNSUPPORTED_REAL_MOUSE_RANGE');
-   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450,button:'none'});
    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:800+dx,y:450+dy,button:'none'});
    const after=(await get()).cameraSourcePractice;
    if(Math.abs(wrap(yaw-after.yawDegrees))>3||Math.abs(pitch-after.pitchDegrees)>3)
