@@ -112,9 +112,16 @@ async function main(){
  const w10b56=process.env.T21_W10B56_SWITCHBACK==='1';
  const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
  const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
+ const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
+ const w10b68=w10b68Mode==='FIXED'||w10b68Mode==='SWEEP';
+ if(w10b68Mode&&!w10b68)
+  reject('B68_NORMAL_PREVIEW_MODE_MUST_BE_FIXED_OR_SWEEP');
+ if(w10b68&&!w10b59)
+  reject('B68_NEEDS_REAL_180S_NATIVE_SESSION_DRIVER');
  const w10b64Mode=process.env.T21_W10B64_SOURCE_INK_AIM??'';
  const w10b64=w10b64Mode==='FIXED'||w10b64Mode==='SWEEP';
  if(w10b64Mode&&!w10b64)reject('B64_UNKNOWN_SOURCE_LAB_MODE');
+ if(w10b68&&w10b64)reject('B68_NO_MIXED_QA_EXPERIMENT_MODE');
  if([w10b56,w10b57,w10b59].filter(Boolean).length>1)
   reject('B56_B57_B59_EXCLUSIVE_NATIVE_TRIALS');
  const w10b54=process.env.T21_W10B54_FULL_PRACTICE==='1'||w10b56||w10b57;
@@ -136,7 +143,8 @@ async function main(){
   ((w10b14||w10b15||w10b21)?'&t21QaDrive=source&t21QaInput=deterministic&'+
    't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
-  (longCpu||w10b54||w10b59||w10b64?'&t21QaDrive=source':'')+
+  (longCpu||w10b54||(w10b59&&!w10b68)||w10b64?'&t21QaDrive=source':'')+
+  (w10b68Mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b51?'&t21W10B51=exactInputTicks':'')+
   (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':'')+
@@ -286,6 +294,18 @@ async function main(){
      first.sourceScoreablePromotions!==0||
      first.productionAuthorized!==false)
     reject('B59_UNTRUSTED_SOURCE_NATIVE_BOOT');
+  if(w10b68&&(
+     first.b64SourceInkSweep?.enabled!==(w10b68Mode==='SWEEP')||
+     first.sourceFrameQuality?.verifiedUserRtxFps!==false||
+     first.b21RenderProbe?.quality!=='NATIVE'))
+   reject('B68_NORMAL_PREVIEW_SOURCE_OR_DEFAULT_QUALITY_INVALID');
+  if(w10b68){
+   const url=await evaluate('window.location.search');
+   if(url.includes('t21QaDrive=source')||
+      (w10b68Mode==='FIXED'&&url.includes('t21W10B68'))||
+      (w10b68Mode==='SWEEP'&&!url.includes('t21W10B68=previewSweep')))
+    reject('B68_NOT_TRUE_NORMAL_PREVIEW_INPUT_CAMERA_MODE');
+  }
   await mouse('mousePressed');await mouse('mouseReleased');
   await waitUntil(async()=>await evaluate(
    'document.pointerLockElement===document.querySelector("#app-canvas")'),12000);
@@ -372,6 +392,29 @@ async function main(){
      originalCpuShots:now.cpuSourceTurfShots,
      originalCpuInkChanges:now.cpuImpactInkCellsChanged};
     history.push(row);
+    if(w10b68){
+     const seven=Object.values(now.cpuSourceTurfShotsByActor??{});
+     if(seven.length!==7||
+        seven.some(v=>!Number.isSafeInteger(v)||v<0)||
+        seven.reduce((a,b)=>a+b,0)!==now.cpuSourceTurfShots)
+      reject('B68_NATIVE_SEVEN_CPU_SHOTS_MUST_SUM_TO_REAL_SHOTS');
+     const detailed={
+      ...row,
+      realCpuSourcePatrolMeters:now.cpu.sourcePatrol.travelMeters,
+      actualSuspectedCpuStalls:now.cpuContinuity.suspectedStallCount,
+      realSevenCpuShots:seven,
+      nativeAcceptedLateralOriginalPaintAims:
+       now.b64SourceInkSweep.lateralPaintTargetsChosen,
+      originalPaintCandidateSamples:
+       now.b64SourceInkSweep.candidateSamples,
+      humanChangedInkCells:now.b23HumanInkFeedback.humanChangedCells,
+      sourceRenderCallbackP95Ms:now.sourceFrameQuality.p95Ms,
+      outputMode:w10b68Mode
+     };
+     history[history.length-1]=detailed;
+     console.log('T21_W10B68_NORMAL_PREVIEW_REAL_NATIVE_SOURCE',
+      JSON.stringify(detailed));
+    }
     console.log('T21_W10B59_NATIVE_SESSION_PROGRESS',JSON.stringify(row));
    }
   }
@@ -413,6 +456,43 @@ async function main(){
     ui.cpuRejoined===ui.actualCpuRejoined&&
     ui.text.includes('HUMAN')?ui:false;
   },30000);
+  let b68VisualEvidence=null;
+  if(w10b68){
+   const evidence=await evaluate(`(() => {
+    const f=document.querySelector('#t21-f3-b59-session-finished');
+    const graph=document.querySelector('#t21-f3-b63-source-paint-tempo');
+    const save=document.querySelector('#t21-f3-b62-save-evidence');
+    const n=window.__t21F3.snapshot();
+    return {
+     ready:f?.dataset.t21B62NativeEvidenceReady,
+     chartVisible:!!graph&&!graph.hidden,
+     chartStatus:f?.dataset.t21B63TempoState,
+     chartRows:Number(f?.dataset.t21B63Windows),
+     chartZeroInkPeriods:Number(f?.dataset.t21B63ZeroInkPeriods),
+     saveButtonPresent:!!save,
+     nativeCpuPhysicalRejoins:n.cpu.physicalRejoins.length,
+     physicalCpuSuspectedStalls:n.cpuContinuity.suspectedStallCount,
+     cpuPatrolMeters:n.cpu.sourcePatrol.travelMeters,
+     sourceCpuShots:n.cpuSourceTurfShots,
+     changedOriginalSourceCells:n.cpuImpactInkCellsChanged,
+     nativeB64SourceInkAim:n.b64SourceInkSweep.enabled,
+     cpuLateralSourceAims:n.b64SourceInkSweep.lateralPaintTargetsChosen,
+     nativeFrameCallbackP95:n.sourceFrameQuality.p95Ms,
+     renderedFrames:n.sourceFrameQuality.liveUpdateFrames
+    };
+   })()`);
+   if(evidence.ready!=='REAL_180S_READY'||!evidence.chartVisible||
+      evidence.chartStatus!=='REAL_NATIVE_SOURCE_30S_WINDOWS'||
+      evidence.chartRows<5||!evidence.saveButtonPresent||
+      evidence.nativeCpuPhysicalRejoins!==7||
+      evidence.physicalCpuSuspectedStalls!==0||
+      evidence.nativeB64SourceInkAim!==(w10b68Mode==='SWEEP')||
+      (w10b68Mode==='SWEEP'&&evidence.cpuLateralSourceAims<10)||
+      (w10b68Mode==='FIXED'&&evidence.cpuLateralSourceAims!==0))
+    reject('B68_FULL_NORMAL_PREVIEW_END_AND_QUALITY_EVIDENCE_FAILED_'+
+     JSON.stringify(evidence));
+   b68VisualEvidence=evidence;
+  }
   const frame=await screenshot('W10B59_ACTUAL_FULL_180S_NATIVE_END');
   // Real CDP click on the visible end-of-session button, NOT an
   // artificial page-navigation JavaScript call.
@@ -464,6 +544,45 @@ async function main(){
   writeFileSync(resolve(OUTPUT,'w10b59-real-180s-native-session.json'),
    JSON.stringify(proof,null,2));
   console.log('T21_W10B59_TRUE_NATIVE_180S_SESSION',JSON.stringify(proof));
+  if(w10b68){
+   const realHistory=history.filter(x=>x.kind==='NATIVE_20_SECOND_PROGRESS');
+   const last=b68VisualEvidence;
+   const document={
+    schema:'T21_W10B68_TRUE_180S_NORMAL_PREVIEW_CPU_AIM_V1',
+    mode:w10b68Mode,
+    normalPreviewHasNoQaDrive:true,
+    actualChromiumPlayCanvasRapierRecast:true,
+    actualBrowserMouseKeyboard:true,
+    native180SecondTimeUp:true,
+    actualRestartButtonAndFreshStaging:true,
+    sourceOriginalAuthority:'25/17/26/0',
+    sourceGoalMovementFIXED:true,
+    experimentalCpuAimNotPromotedToDefault:true,
+    originalActorBindingProven:false,
+    actualOriginalCrossTeamPathsCertified:0,
+    officialWinner:'NONE',
+    original4v4Certified:false,
+    b68VisualEvidence:last,
+    originalNativeSplatStats:{
+     realHumanSplats:terminal.humanSplats,realCpuSplats:terminal.cpuSplats,
+     realHumanChangedCells:terminal.b23HumanInkFeedback.humanChangedCells
+    },
+    originalNativeWitnesses:realHistory,
+    actualFinalNativeSimulationTick:terminal.tick,
+    originalStageVisualScreenshot:frame
+   };
+   writeFileSync(resolve(OUTPUT,'w10b68-normal-preview-'+w10b68Mode+'.json'),
+    JSON.stringify(document,null,2));
+   console.log('T21_W10B68_REAL_NORMAL_PREVIEW_COMPLETE',JSON.stringify({
+    mode:w10b68Mode,matchSeconds:180,shots:last.sourceCpuShots,
+    genuineSourceCells:last.changedOriginalSourceCells,
+    realPatrolMeters:last.cpuPatrolMeters,
+    actualCpuSplatCount:terminal.cpuSplats,
+    sourceCpuSourceGroundRejoined:last.nativeCpuPhysicalRejoins,
+    truePreviewEndAndRestart:true,actualFrameP95Ms:last.nativeFrameCallbackP95,
+    officialWinner:'NONE',original4v4Certified:false
+   }));
+  }
   return;
  }
  if(w10b54){

@@ -1,0 +1,76 @@
+name: T21 W10-B68 real normal-preview 180s CPU aim qualification
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/ai/UndertowF3OriginalSourceInkSweep.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'scripts/t21-w10b68-normal-preview-gate.mjs'
+      - 'scripts/t21-w10b68-normal-preview-gate.test.mjs'
+      - '.github/workflows/t21-w10b68-normal-preview-180s.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    name: B68 fast fail-closed native preview acceptance model
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - run: node --check scripts/t21-w10b68-normal-preview-gate.mjs
+      - run: node --test scripts/t21-w10b68-normal-preview-gate.test.mjs
+      - run: echo 'B68_VALIDATE_ONLY_NO_DEFAULT_CPU_PROMOTION'
+  normal-preview-full-match:
+    name: Real 180s normal browser preview original CPU (${{ matrix.mode }})
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [FIXED, SWEEP]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/ai/UndertowF3OriginalSourceInkSweep.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3CpuInkTempo.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
+      - name: Genuine 180s original source, normal input/camera, final UI and restart
+        env:
+          T21_W10B59_FULL_NATIVE_SESSION: '1'
+          T21_W10B68_NORMAL_PREVIEW_AIM: ${{ matrix.mode }}
+          T21_F3_SHOT_DIR: /tmp/t21-w10b68
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve genuine CPU ink/movement and restart evidence on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b68-source-${{ matrix.mode }}
+          path: /tmp/t21-w10b68/w10b68-normal-preview-${{ matrix.mode }}.json
+          if-no-files-found: warn
+          retention-days: 14
+  quality-review:
+    name: Qualify real preview ink improvement; NEVER automatically adopt
+    needs: normal-preview-full-match
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-w10b68-normal-preview-gate.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: w10b68-source-*
+          path: b68-evidence
+          merge-multiple: true
+      - run: node scripts/t21-w10b68-normal-preview-gate.mjs b68-evidence

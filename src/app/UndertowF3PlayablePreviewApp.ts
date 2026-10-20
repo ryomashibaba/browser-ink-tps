@@ -369,9 +369,20 @@ export class UndertowF3PlayablePreviewApp{
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   // B64 experimental native source-floor aim. Existing FIXED source CPU
   // remains default: this does NOT modify Recast/Crowd target steering.
-  if(b31Params.get('t21QaDrive')==='source'&&
-     b31Params.get('t21W10B64')==='inkAngleSweep')
+  const b68NormalPreviewSweep=
+   b31Params.get('t21Play')==='preview'&&
+   b31Params.get('t21QaDrive')===null&&
+   b31Params.get('t21W10B68')==='previewSweep';
+  // B68 separate FULL normal-preview quality QA. Explicit opt-in,
+  // nonproduction only; the ordinary F3 preview remains proven FIXED.
+  // No experimental-source normal-default promotion without separate
+  // measured, independently reviewed full-session evidence.
+  if((b31Params.get('t21QaDrive')==='source'&&
+       b31Params.get('t21W10B64')==='inkAngleSweep')||
+      b68NormalPreviewSweep)
    this.cpu.enableB64NativeSourceInkAngleSweep();
+  this.canvas.dataset.t21B68NormalPreviewSweep=
+   b68NormalPreviewSweep?'EXPERIMENTAL_ONLY':'NOT_ENABLED';
   // Original T21 preview retains the verified fixed native steering.
   // Suppress repeated same-goal Recast requests in the explicit B35 lab only.
   if(b31Params.get('t21W10B35')==='nativeTargetRefresh')
