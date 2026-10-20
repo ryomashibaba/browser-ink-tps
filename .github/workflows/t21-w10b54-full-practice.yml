@@ -1,0 +1,36 @@
+name: T21 W10-B54 genuine complete source practice run
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b54-full-practice.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-source-playthrough:
+    name: Actual human weapon ink 180 cells and Rapier grounded 12m
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: True browser render-driven human input and authoritative ink
+        env:
+          T21_W10B54_FULL_PRACTICE: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-w10b54
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Preserve actual input, ink and Rapier evidence, even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b54-actual-original-source-practice
+          path: /tmp/t21-w10b54/
+          if-no-files-found: warn
+          retention-days: 14
