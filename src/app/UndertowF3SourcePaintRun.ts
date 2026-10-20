@@ -48,13 +48,18 @@ export class UndertowF3SourcePaintRun{
  private groundedMeters=0;
  private lastFoot:B25PracticeFoot|null=null;
  private abortReason:string|null=null;
+ private bestTicks:number|null=null;
+ private lastClearTicks:number|null=null;
+ private validClears=0;
+ private newBest=false;
 
  public arm(){
   if(this.status==='ARMED'||this.status==='RUNNING')return false;
   this.status='ARMED';
   this.startTick=0;this.lastTick=-1;this.baseCells=0;this.baseImpacts=0;
   this.actualCells=0;this.actualImpacts=0;this.groundedMeters=0;
-  this.lastFoot=null;this.abortReason=null;
+  this.lastFoot=null;this.abortReason=null;this.newBest=false;
+  // A retry keeps only a real previous in-page practice best.
   return true;
  }
  public abort(reason:string){
@@ -116,6 +121,10 @@ export class UndertowF3SourcePaintRun{
   if(this.actualCells>=B25_SOURCE_PAINT_RUN_REQUIRED_CELLS&&
      this.groundedMeters>=B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS){
    this.status='CLEAR';
+   const elapsed=f.tick-this.startTick;
+   this.validClears++;this.lastClearTicks=elapsed;
+   this.newBest=this.bestTicks===null||elapsed<this.bestTicks;
+   if(this.newBest)this.bestTicks=elapsed;
   }else if(f.tick-this.startTick>=B25_SOURCE_PAINT_RUN_TICKS){
    this.status='TIME_UP';
   }
@@ -139,6 +148,12 @@ export class UndertowF3SourcePaintRun{
    realGroundedTravelMeters:Number(this.groundedMeters.toFixed(2)),
    requiredRealGroundedTravelMeters:B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS,
    abortReason:this.abortReason,
+   bestClearElapsedTicks:this.bestTicks,
+   lastClearElapsedTicks:this.lastClearTicks,
+   completedRealPracticeRuns:this.validClears,
+   newBestOnMostRecentClear:this.newBest,
+   practiceRecordScope:'CURRENT_BROWSER_SESSION_ONLY' as const,
+   officialRanking:'NONE' as const,
    originalTurfScore:'UNAVAILABLE' as const,
    officialWinner:'NONE' as const,
    sourceScoreablePromotions:0 as const,

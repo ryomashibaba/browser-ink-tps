@@ -257,6 +257,51 @@ async function main(){
      actual.sourceScoreablePromotions!==0||run.officialWinner!=='NONE'||
      run.originalTurfScore!=='UNAVAILABLE')
    reject('B54_TRUE_CHROME_SOURCE_PRACTICE_CLEAR_UNVERIFIED');
+  // B55: the first genuine original-source Chrome CLEAR must produce a
+  // live-page-only best. Esc and genuine Retry must preserve it unchanged.
+  const b55Before=await evaluate(`(() => {
+   const card=document.querySelector('#t21-f3-b25-paint-run');
+   return {best:card?.dataset.t21B55BestTicks,
+    count:card?.dataset.t21B55ClearCount,
+    scope:card?.dataset.t21B55RecordScope,
+    label:card?.querySelector('#t21-f3-b55-record')?.textContent};
+  })()`);
+  if(b55Before.best!==String(run.elapsedTicks)||
+     b55Before.count!=='1'||
+     b55Before.scope!=='CURRENT_BROWSER_SESSION_ONLY'||
+     !b55Before.label?.includes('NEW BEST!'))
+   reject('B55_ACTUAL_SOURCE_CLEAR_DID_NOT_SET_RECORD');
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',
+   code:'Escape',windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',
+   code:'Escape',windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+  await waitUntil(async()=>await evaluate('document.pointerLockElement===null'),12000);
+  const b55Retry=await evaluate(`(() => {
+   document.querySelector('#t21-f3-b25-start')?.click();
+   const c=document.querySelector('#t21-f3-b25-paint-run');
+   return {run:window.__t21F3.snapshot().b25SourcePaintRun,
+    best:c?.dataset.t21B55BestTicks,count:c?.dataset.t21B55ClearCount,
+    scoreable:c?.dataset.scoreable};
+  })()`);
+  if(b55Retry.run.status!=='ARMED'||
+     b55Retry.run.bestClearElapsedTicks!==run.elapsedTicks||
+     b55Retry.run.completedRealPracticeRuns!==1||
+     b55Retry.run.newBestOnMostRecentClear!==false||
+     b55Retry.best!==String(run.elapsedTicks)||
+     b55Retry.count!=='1'||b55Retry.scoreable!=='0'||
+     b55Retry.run.officialWinner!=='NONE')
+   reject('B55_RETRY_DID_NOT_KEEP_GENUINE_SESSION_BEST_'+JSON.stringify(b55Retry));
+  const b55Result={status:'B55_REAL_SOURCE_SESSION_BEST_AND_RETRY_PASS',
+   firstRealClearTicks:run.elapsedTicks,
+   currentBestTicks:b55Retry.run.bestClearElapsedTicks,
+   actualClears:b55Retry.run.completedRealPracticeRuns,
+   realHumanInkCells:run.humanChangedImpactCells,
+   realOriginalGroundMeters:run.realGroundedTravelMeters,
+   trueCdpEscapeAndRetry:true,productionAuthorized:false,
+   scoreable:0,officialWinner:'NONE'};
+  writeFileSync(resolve(OUTPUT,'w10b55-real-native-practice-retry.json'),
+   JSON.stringify(b55Result,null,2));
+  console.log('T21_W10B55_REAL_NATIVE_BEST_RETRY',JSON.stringify(b55Result));
   return;
  }
  if(w10b21){

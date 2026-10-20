@@ -558,6 +558,8 @@ export class UndertowF3PlayablePreviewApp{
   challenge.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:5px">'+
    '<strong style="letter-spacing:.9px;color:#93f3ee">SOURCE PAINT RUN</strong>'+
    '<small style="color:#ffcb9d;font-size:9px">PRACTICE · UNSCORED</small></div>'+
+   '<div id="t21-f3-b55-record" role="status" style="font:700 10px/1.5 system-ui;'+
+    'color:#ffe2a2;margin:8px 0 2px">SESSION BEST · NO CLEAR YET</div>'+
    '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
    'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
    '<div id="t21-f3-b53-objectives" style="display:none;margin:9px 0 8px">'+
@@ -1519,6 +1521,15 @@ export class UndertowF3PlayablePreviewApp{
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
   const button=this.b25RunButton;
+  const best=run.bestClearElapsedTicks;
+  const bestLabel=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b55-record')!;
+  bestLabel.textContent=best===null?'SESSION BEST · NO CLEAR YET':
+   'SESSION BEST · '+(best/60).toFixed(2)+'s · '+
+   run.completedRealPracticeRuns+' genuine clears'+
+   (run.status==='CLEAR'&&run.newBestOnMostRecentClear?' · NEW BEST!':'');
+  this.b25RunCard.dataset.t21B55BestTicks=best===null?'NONE':String(best);
+  this.b25RunCard.dataset.t21B55ClearCount=String(run.completedRealPracticeRuns);
+  this.b25RunCard.dataset.t21B55RecordScope=run.practiceRecordScope;
   if(run.status==='IDLE')return;
   // Source-authoritative progress: display two independent objectives,
   // never extrapolate a Turf score or award a winner.

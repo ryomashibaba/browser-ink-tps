@@ -4,6 +4,9 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'src/app/UndertowF3SourcePaintRun.ts'
+      - 'src/app/UndertowF3SourcePaintRun.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.github/workflows/t21-w10b54-full-practice.yml'
   workflow_dispatch:
 permissions:
@@ -20,6 +23,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3SourcePaintRun.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
       - name: True browser render-driven human input and authoritative ink
         env:

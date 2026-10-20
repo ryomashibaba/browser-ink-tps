@@ -75,3 +75,50 @@ describe('W10-B25 real human ink + real original grounded foot practice',()=>{
   expect(stale.snapshot().status).toBe('ABORTED');
  });
 });
+
+describe('B55 real in-page source-local practice records',()=>{
+ const complete=(r:UndertowF3SourcePaintRun,end:number)=>{
+  expect(r.arm()).toBe(true);r.observe(tick(1));
+  for(let n=2;n<=end;n++)r.observe(tick(n,{
+   foot:{x:Math.max(0,n-(end-32))*.375,y:1,z:0,
+    grounded:true,alive:true,realPhysicalOriginalStage:true},
+   ink:{changedHumanImpactCells:190,changedHumanImpactEvents:4,
+    sourceOnly:true,scoreablePromotionCount:0}}));
+  expect(r.snapshot().status).toBe('CLEAR');return r.snapshot();
+ };
+ it('saves genuine first clear, slower retry cannot beat it, faster does',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  const first=complete(r,120);
+  expect(first.completedRealPracticeRuns).toBe(1);
+  expect(first.bestClearElapsedTicks).toBe(first.elapsedTicks);
+  expect(first.newBestOnMostRecentClear).toBe(true);
+  const slow=complete(r,160);
+  expect(slow.completedRealPracticeRuns).toBe(2);
+  expect(slow.bestClearElapsedTicks).toBe(first.elapsedTicks);
+  expect(slow.newBestOnMostRecentClear).toBe(false);
+  const fast=complete(r,100);
+  expect(fast.completedRealPracticeRuns).toBe(3);
+  expect(fast.bestClearElapsedTicks).toBe(fast.elapsedTicks);
+  expect(fast.newBestOnMostRecentClear).toBe(true);
+  expect(fast.practiceRecordScope).toBe('CURRENT_BROWSER_SESSION_ONLY');
+  expect(fast.officialRanking).toBe('NONE');
+  expect(fast.officialWinner).toBe('NONE');
+  expect(r.arm()).toBe(true);
+  expect(r.snapshot().bestClearElapsedTicks).toBe(fast.elapsedTicks);
+  expect(r.snapshot().newBestOnMostRecentClear).toBe(false);
+  expect(r.arm()).toBe(false);
+ });
+ it('one goal alone and player abort must never establish a best',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm();r.observe(tick(1));
+  for(let n=2;n<=180;n++)r.observe(tick(n,{
+   foot:{x:0,y:1,z:0,grounded:true,alive:true,realPhysicalOriginalStage:true},
+   ink:{changedHumanImpactCells:200,changedHumanImpactEvents:5,
+    sourceOnly:true,scoreablePromotionCount:0}}));
+  expect(r.snapshot().bestClearElapsedTicks).toBeNull();
+  r.abort('PLAYER_POINTER_UNLOCKED');
+  expect(r.snapshot().completedRealPracticeRuns).toBe(0);
+  r.arm();r.observe(tick(1));r.observe(tick(2,{paused:true}));
+  expect(r.snapshot().status).toBe('ABORTED');
+  expect(r.snapshot().bestClearElapsedTicks).toBeNull();
+ });
+});
