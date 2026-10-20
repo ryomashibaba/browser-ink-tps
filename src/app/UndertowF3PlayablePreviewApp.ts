@@ -1483,7 +1483,13 @@ export class UndertowF3PlayablePreviewApp{
     if(this.matchState!=='TIME_UP')this.stepFixed(frame,seconds);
    });
    this.b20ProfileStop('fixedClockCatchup',simulationStart);
-   if(this.matchState==='TIME_UP')this.paused=true;
+   if(this.matchState==='TIME_UP'){
+    // B59: native 180-second source-only end, not a Turf result.
+    // The engine already stops future fixed ticks; release actual
+    // pointer lock so the end-screen restart can be clicked.
+    this.paused=true;
+    if(document.pointerLockElement===this.canvas)document.exitPointerLock();
+   }
    this.stats.simulationTicksLastFrame=report.ticks;
    this.stats.droppedSimulationSeconds=report.droppedSeconds;
    const entityRenderStart=this.b20ProfileStart();
@@ -1513,7 +1519,7 @@ export class UndertowF3PlayablePreviewApp{
    if(this.renderedFrames%6===0)this.refreshB25PaintRun();
    this.stats.frame(dt*1000);
    this.renderedFrames++;
-   if(this.renderedFrames%12===0)this.refresh();
+   if(this.matchState==='TIME_UP'||this.renderedFrames%12===0)this.refresh();
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
    // The visible session freezes, preserving the exact failing actor foot.

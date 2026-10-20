@@ -111,7 +111,9 @@ async function main(){
  const w10b50=process.env.T21_W10B50_LANE_ONLY==='1';
  const w10b56=process.env.T21_W10B56_SWITCHBACK==='1';
  const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
- if(w10b56&&w10b57)reject('B56_B57_EXCLUSIVE_REAL_PRACTICE_VARIANTS');
+ const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
+ if([w10b56,w10b57,w10b59].filter(Boolean).length>1)
+  reject('B56_B57_B59_EXCLUSIVE_NATIVE_TRIALS');
  const w10b54=process.env.T21_W10B54_FULL_PRACTICE==='1'||w10b56||w10b57;
  if(w10b54&&(process.env.T21_W10B35_NATIVE==='1'||w10b50))
   reject('W10B54_MUST_USE_FIXED_NATIVE_SOURCE');
@@ -123,7 +125,7 @@ async function main(){
    process.env.T21_F3_BLOCKED_HUMAN==='1'))
   reject('W10B50_NEEDS_DEFAULT_SOURCE_FIXED_CPU_UNBLOCKED');
  const w10b21=process.env.T21_W10B21_RENDER_AB==='1';
- if([w10b14,w10b15,w10b16,w10b21,w10b54].filter(Boolean).length>1)
+ if([w10b14,w10b15,w10b16,w10b21,w10b54,w10b59].filter(Boolean).length>1)
   reject('CONFLICTING_QA_MODES');
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
  const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa||w10b16;
@@ -131,7 +133,7 @@ async function main(){
   ((w10b14||w10b15||w10b21)?'&t21QaDrive=source&t21QaInput=deterministic&'+
    't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
-  (longCpu||w10b54?'&t21QaDrive=source':'')+
+  (longCpu||w10b54||w10b59?'&t21QaDrive=source':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b51?'&t21W10B51=exactInputTicks':'')+
   (w10b16?'&t21W10B16=sourceAutonomy'+(process.env.T21_W10B31_INK_AWARE==='1'?'&t21W10B31=inkGoals':'')+(process.env.T21_W10B33_STABLE==='1'?'&t21W10B33=stableGoals':'')+
@@ -151,6 +153,157 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(w10b59){
+  // B59: ONE uninterrupted, actual headless Chrome/WebGL2 source session
+  // until the original 180 seconds have elapsed at the REAL fixed 60Hz.
+  // No QA time advance, clock patching, artificial actor/spawn or ink.
+  const get=()=>evaluate('window.__t21F3.snapshot()');
+  const first=await get();
+  if(first.paused||first.stopReason||first.matchState!=='STAGING'||
+     first.originalSourceSolids!==25||
+     first.originalPaintSurfaces!==17||
+     first.originalSourceNavigationLinks!==26||
+     first.sourceScoreablePromotions!==0||
+     first.productionAuthorized!==false)
+    reject('B59_UNTRUSTED_SOURCE_NATIVE_BOOT');
+  await mouse('mousePressed');await mouse('mouseReleased');
+  await waitUntil(async()=>await evaluate(
+   'document.pointerLockElement===document.querySelector("#app-canvas")'),12000);
+  const start=await get();
+  // Genuine player-driven walk/fire to give the 3-minute laboratory
+  // independently measurable human input; not a scripted teleport.
+  await key('keyDown');
+  await mouse('mousePressed');
+  await waitUntil(async()=>{
+   const x=await get();
+   if(x.stopReason)reject('B59_NATIVE_INPUT_STOP_'+x.stopReason);
+   return x.tick>=start.tick+33;
+  },90000);
+  await mouse('mouseReleased');
+  await key('keyUp');
+  const played=await get();
+  if(played.shotsFired<=start.shotsFired||
+     played.b23HumanInkFeedback.humanChangedCells<=
+      start.b23HumanInkFeedback.humanChangedCells)
+   reject('B59_NO_REAL_ORIGINAL_SOURCE_PLAYER_PAINT');
+  const history=[{
+   kind:'INITIAL_HUMAN_NATIVE_W_AND_MOUSE',
+   tick:played.tick,originalHumanShots:played.shotsFired,
+   humanCells:played.b23HumanInkFeedback.humanChangedCells
+  }];
+  let lastSample=-1;
+  const wallStarted=Date.now();
+  const deadline=Date.now()+22*60*1000;
+  let terminal=null;
+  while(Date.now()<deadline){
+   await sleep(800);
+   const now=await get();
+   if(now.stopReason)reject('B59_NATIVE_SIMULATION_STOP_'+now.stopReason);
+   if(now.originalSourceSolids!==25||
+      now.originalPaintSurfaces!==17||
+      now.originalSourceNavigationLinks!==26||
+      now.sourceScoreablePromotions!==0||
+      now.productionAuthorized!==false||
+      now.unrestricted4v4Certified!==false)
+    reject('B59_SOURCE_AUTHORITY_DRIFT');
+   if(now.matchState==='TIME_UP'){
+    terminal=now;break;
+   }
+   const sample=Math.floor((180-now.timeRemainingSeconds)/20);
+   if(now.matchState==='PLAYING'&&sample>lastSample){
+    lastSample=sample;
+    const row={kind:'NATIVE_20_SECOND_PROGRESS',tick:now.tick,
+     elapsedMatchSeconds:Number((180-now.timeRemainingSeconds).toFixed(2)),
+     realHumanShots:now.shotsFired,
+     nativeRejoinedCpu:now.cpu.physicalRejoins.length,
+     originalCpuShots:now.cpuSourceTurfShots,
+     originalCpuInkChanges:now.cpuImpactInkCellsChanged};
+    history.push(row);
+    console.log('T21_W10B59_NATIVE_SESSION_PROGRESS',JSON.stringify(row));
+   }
+  }
+  // Write the real history EVEN when no success is proven, for diagnosis.
+  writeFileSync(resolve(OUTPUT,'w10b59-source-native-history.json'),
+   JSON.stringify({history,actualWallMs:Date.now()-wallStarted,
+    terminal:terminal?{tick:terminal.tick,timeRemainingSeconds:
+     terminal.timeRemainingSeconds,matchState:terminal.matchState}:null},null,2));
+  if(!terminal)reject('B59_REAL_180S_NATIVE_TIMEUP_NOT_REACHED');
+  const finalUi=await waitUntil(async()=>{
+   const ui=await evaluate(`(() => {
+    const finish=document.querySelector('#t21-f3-b59-session-finished');
+    const restart=finish?.querySelector('#t21-f3-b59-restart');
+    const stat=finish?.querySelector('#t21-f3-b59-final-stats');
+    const native=window.__t21F3.snapshot();
+    return {visible:finish&&!finish.hidden&&finish.style.display==='flex',
+      state:finish?.dataset.t21B59State,
+      result:finish?.dataset.t21B59OriginalWinner,
+      scoreable:finish?.dataset.originalScoreable,
+      restartVisible:restart&&!restart.hidden,
+      humanInk:Number(finish?.dataset.t21B59HumanInk),
+      cpuRejoined:Number(finish?.dataset.t21B59CpuRejoined),
+      text:stat?.textContent??'',
+      actualHumanInk:native.b23HumanInkFeedback.humanChangedCells,
+      actualCpuRejoined:native.cpu.physicalRejoins.length,
+      pointerUnlocked:document.pointerLockElement===null,
+      paused:native.paused};
+   })()`);
+   return ui.visible&&ui.state==='FINISHED'&&
+    ui.result==='NONE'&&ui.scoreable==='0'&&
+    ui.restartVisible&&ui.pointerUnlocked&&ui.paused&&
+    ui.humanInk===ui.actualHumanInk&&
+    ui.cpuRejoined===ui.actualCpuRejoined&&
+    ui.text.includes('HUMAN')?ui:false;
+  },30000);
+  const frame=await screenshot('W10B59_ACTUAL_FULL_180S_NATIVE_END');
+  // Real CDP click on the visible end-of-session button, NOT an
+  // artificial page-navigation JavaScript call.
+  const pos=await evaluate(`(() => {
+   const r=document.querySelector('#t21-f3-b59-restart').getBoundingClientRect();
+   return {x:r.left+r.width/2,y:r.top+r.height/2};
+  })()`);
+  await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+   x:pos.x,y:pos.y,button:'none'});
+  await cmd('Input.dispatchMouseEvent',{type:'mousePressed',
+   x:pos.x,y:pos.y,button:'left',clickCount:1});
+  await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
+   x:pos.x,y:pos.y,button:'left',clickCount:1});
+  const restarted=await waitUntil(async()=>{
+   const a=await evaluate(`(() => {
+    const x=window.__t21F3?.snapshot?.();
+    return x?{state:x.matchState,paused:x.paused,
+      originalSolids:x.originalSourceSolids,
+      humanShots:x.shotsFired,scoreable:x.sourceScoreablePromotions,
+      endHidden:document.querySelector('#t21-f3-b59-session-finished')?.hidden}:null;
+   })()`);
+   return a?.state==='STAGING'&&a.originalSolids===25&&
+    a.scoreable===0&&a.humanShots===0&&a.endHidden===true?a:false;
+  },90000);
+  const proof={
+   verdict:'B59_GENUINE_NATIVE_180_SECOND_SOURCE_SESSION_COMPLETE',
+   required180SecondsOfNativeMatchClock:true,
+   noArtificialQaTickAdvances:true,
+   actualBrowserKeyboardMouse:true,
+   actualCpuSevenPresent:terminal.cpu.cpu.length===7,
+   actualCpuSourceRejoined:terminal.cpu.physicalRejoins.length,
+   actualNativeSecondsElapsed:180-terminal.timeRemainingSeconds,
+   originalPhysicsTicks:terminal.tick,
+   humanAcceptedShots:terminal.shotsFired,
+   realHumanChangedInk:terminal.b23HumanInkFeedback.humanChangedCells,
+   genuineCpuSourceShots:terminal.cpuSourceTurfShots,
+   genuineCpuChangedInk:terminal.cpuImpactInkCellsChanged,
+   realHumanSplats:terminal.humanSplats,
+   realCpuSplats:terminal.cpuSplats,
+   sourceAuthority:'25_SOLIDS_17_PAINTABLE_26_LINKS_0_SCOREABLE',
+   naturalOpponentPathsCertified:0,
+   officialWinner:'NONE',
+   originalNintendo4v4Certified:false,
+   finalUi,restarted,screenshot:frame,history
+  };
+  writeFileSync(resolve(OUTPUT,'w10b59-real-180s-native-session.json'),
+   JSON.stringify(proof,null,2));
+  console.log('T21_W10B59_TRUE_NATIVE_180S_SESSION',JSON.stringify(proof));
+  return;
+ }
  if(w10b54){
   // True pointer-locked Chrome movement and weapon firing. This mode NEVER
   // calls source qaDriveTicks, advances paused ticks or injects ink/scoring.
