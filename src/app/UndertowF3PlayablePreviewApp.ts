@@ -589,6 +589,9 @@ export class UndertowF3PlayablePreviewApp{
     this.b25RunProgress.textContent='ARMED · Click stage to lock mouse, then paint and move.';
     this.b25RunButton.textContent='PAINT RUN ARMED';
     this.b25RunButton.disabled=true;
+    // Real click updates the dual objective display immediately;
+    // do not wait for the next WebGL render callback.
+    this.refreshB25PaintRun();
    }
   });
   document.addEventListener('pointerlockchange',()=>this.refreshB36PlayFocus());
