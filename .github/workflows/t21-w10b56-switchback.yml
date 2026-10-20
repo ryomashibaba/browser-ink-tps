@@ -1,0 +1,41 @@
+name: T21 W10-B56 genuine source switchback practice
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'src/app/UndertowF3SourcePaintRun.ts'
+      - 'src/app/UndertowF3SourcePaintRun.test.ts'
+      - 'src/app/UndertowF3PracticeObjectiveView.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-w10b56-switchback.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-switchback:
+    name: Real human-input source-ground outbound and return
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: True pointer-locked human native source SWITCHBACK
+        env:
+          T21_W10B56_SWITCHBACK: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-w10b56
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Keep real browser evidence on failure too
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b56-original-source-switchback
+          path: /tmp/t21-w10b56/
+          if-no-files-found: warn
+          retention-days: 14

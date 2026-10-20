@@ -122,3 +122,68 @@ describe('B55 real in-page source-local practice records',()=>{
   expect(r.snapshot().bestClearElapsedTicks).toBeNull();
  });
 });
+
+describe('W10-B56 source-physical SWITCHBACK practice, no original-route promotion',()=>{
+ const real=(t:number,x:number,ink=190)=>tick(t,{
+  foot:{x,y:1,z:0,grounded:true,alive:true,realPhysicalOriginalStage:true},
+  ink:{changedHumanImpactCells:ink,changedHumanImpactEvents:4,
+   sourceOnly:true,scoreablePromotionCount:0}
+ });
+ it('never promotes accumulated pacing without leaving the authentic start',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.arm('SWITCHBACK')).toBe(true);r.observe(real(1,0,0));
+  for(let i=2;i<180;i++){
+   const phase=(i-2)%16;
+   const x=phase<=8?phase*.19:(16-phase)*.19;
+   r.observe(real(i,x));
+  }
+  expect(r.snapshot().realGroundedTravelMeters).toBeGreaterThan(12);
+  expect(r.snapshot().status).toBe('RUNNING');
+  expect(r.snapshot().routeTurnReached).toBe(false);
+  expect(r.snapshot().completedRealPracticeRuns).toBe(0);
+ });
+ it('requires real outbound, return, impact ink and 12m, with separate bests',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  r.arm('SWITCHBACK');r.observe(real(1,0,0));
+  let time=1,x=0;
+  const walk=(target:number)=>{
+   while(Math.abs(target-x)>.00001){
+    x+=Math.sign(target-x)*Math.min(.2,Math.abs(target-x));
+    r.observe(real(++time,x));
+   }
+  };
+  walk(2.2);
+  expect(r.snapshot().routeTurnReached).toBe(true);
+  expect(r.snapshot().routeReturned).toBe(false);
+  walk(.2);
+  expect(r.snapshot().routeReturned).toBe(true);
+  expect(r.snapshot().status).toBe('RUNNING');
+  for(let j=0;j<3;j++){walk(2);walk(.2);}
+  const s=r.snapshot();
+  expect(s.status).toBe('CLEAR');
+  expect(s.practiceVariant).toBe('SWITCHBACK');
+  expect(s.realGroundedTravelMeters).toBeGreaterThanOrEqual(12);
+  expect(s.officialWinner).toBe('NONE');
+  expect(s.sourceScoreablePromotions).toBe(0);
+  expect(s.bestClearElapsedTicks).toBe(s.elapsedTicks);
+  expect(r.arm('CLASSIC')).toBe(true);
+  expect(r.snapshot().bestClearElapsedTicks).toBeNull();
+  expect(r.snapshot().completedRealPracticeRuns).toBe(0);
+  r.abort('USER_STOP');
+  expect(r.arm('SWITCHBACK')).toBe(true);
+  expect(r.snapshot().bestClearElapsedTicks).toBe(s.elapsedTicks);
+  expect(r.snapshot().completedRealPracticeRuns).toBe(1);
+ });
+ it('rejects non-source ground start or large displacement',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  r.arm('SWITCHBACK');
+  r.observe(tick(1,{foot:{x:0,y:1,z:0,grounded:false,
+   alive:true,realPhysicalOriginalStage:true}}));
+  expect(r.snapshot().status).toBe('ABORTED');
+  r.arm('SWITCHBACK');r.observe(real(1,0,0));
+  r.observe(real(2,99));
+  expect(r.snapshot().status).toBe('ABORTED');
+  expect(r.snapshot().routeTurnReached).toBe(false);
+  expect(r.snapshot().bestClearElapsedTicks).toBeNull();
+ });
+});

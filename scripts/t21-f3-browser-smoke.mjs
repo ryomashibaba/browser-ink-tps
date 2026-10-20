@@ -109,7 +109,8 @@ async function main(){
  const w10b36=process.env.T21_W10B36_FOCUS==='1';
  const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
  const w10b50=process.env.T21_W10B50_LANE_ONLY==='1';
- const w10b54=process.env.T21_W10B54_FULL_PRACTICE==='1';
+ const w10b56=process.env.T21_W10B56_SWITCHBACK==='1';
+ const w10b54=process.env.T21_W10B54_FULL_PRACTICE==='1'||w10b56;
  if(w10b54&&(process.env.T21_W10B35_NATIVE==='1'||w10b50))
   reject('W10B54_MUST_USE_FIXED_NATIVE_SOURCE');
  const w10b51=process.env.T21_W10B51_EXACT_S_TICKS==='1';
@@ -158,8 +159,18 @@ async function main(){
      original.sourceScoreablePromotions!==0||
      original.b25SourcePaintRun.status!=='IDLE')
    reject('B54_UNTRUSTED_NATIVE_SOURCE_START');
+  // B56 offers a genuine user-click selection of the separate source-local
+  // return-route practice. No invented path, actor or physical destination.
+  if(w10b56){
+   const choice=await evaluate(`(() => {
+    document.querySelector('#t21-f3-b56-variant')?.click();
+    return document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B56NextVariant;
+   })()`);
+   if(choice!=='SWITCHBACK')reject('B56_REAL_MODE_CHOICE_FAILED');
+  }
   const armed=await evaluate("(() => {document.querySelector('#t21-f3-b25-start')?.click();return window.__t21F3.snapshot().b25SourcePaintRun;})()");
-  if(armed.status!=='ARMED'||armed.officialWinner!=='NONE')
+  if(armed.status!=='ARMED'||armed.officialWinner!=='NONE'||
+     (w10b56&&armed.practiceVariant!=='SWITCHBACK'))
    reject('B54_REAL_SOURCE_PRACTICE_NOT_ARMED');
   await mouse('mousePressed');await mouse('mouseReleased');
   await waitUntil(async()=>await evaluate(
@@ -210,13 +221,18 @@ async function main(){
     genuineShotCount:post.shotsFired,changedHumanImpactCells:run.humanChangedImpactCells,
     actualHumanImpactEvents:run.humanImpactEvents,
     genuineRapierGroundMeters:run.realGroundedTravelMeters,
+    b56RoutePhase:run.routePhase,b56PhysicalTurnReached:run.routeTurnReached,
+    b56PhysicalReturnReached:run.routeReturned,
+    b56TrueFromStartMeters:run.routeDistanceFromStartMeters,
     state:run.status};
    samples.push(step);
    console.log('T21_W10B54_ACTUAL_SOURCE_SEGMENT',JSON.stringify(step));
   }
   const actual=await get(),run=actual.b25SourcePaintRun;
   const pass=run.status==='CLEAR'&&run.humanChangedImpactCells>=180&&
-   run.realGroundedTravelMeters>=12;
+   run.realGroundedTravelMeters>=12&&
+   (!w10b56||(run.practiceVariant==='SWITCHBACK'&&
+    run.routeTurnReached===true&&run.routeReturned===true));
   // The actual human-visible B53 card must catch up to the true B25
   // CLEAR, showing both goals complete and NO official match winner.
   const visibleClear=pass?await waitUntil(async()=>{
@@ -234,7 +250,9 @@ async function main(){
     ui.progress?.includes('PRACTICE CLEAR · NOT A MATCH WIN')&&
     ui.next?.includes('TWO REAL OBJECTIVES COMPLETE')?ui:false;
   },25000):null;
-  const clearedFrame=pass?await screenshot('W10B54_ACTUAL_SOURCE_PRACTICE_CLEAR'):null;
+  const clearedFrame=pass?await screenshot(
+   w10b56?'W10B56_REAL_SOURCE_SWITCHBACK_CLEAR':
+          'W10B54_ACTUAL_SOURCE_PRACTICE_CLEAR'):null;
   const report={status:pass?'B54_ACTUAL_CHROME_SOURCE_PRACTICE_CLEAR':
    'B54_ACTUAL_CHROME_SOURCE_PRACTICE_NOT_CLEARED',
    sourceAuthority:'25_PHYSICAL_17_PAINTABLE_26_LINKS_0_SCOREABLE',
@@ -245,6 +263,8 @@ async function main(){
    trueHumanVisibleClearCard:visibleClear,
    actualRealChromeClearScreenshot:clearedFrame,
    genuineB25DualRequirementsMet:pass,
+   b56SwitchbackChallenge:w10b56,
+   b56GenuineOutboundAndReturn:w10b56?run.routeTurnReached&&run.routeReturned:null,
    originalSolids:actual.originalSourceSolids,
    paintable:actual.originalPaintSurfaces,navLinks:actual.originalSourceNavigationLinks,
    scoreable:actual.sourceScoreablePromotions,originalTurfWinner:'NONE'};
@@ -302,6 +322,27 @@ async function main(){
   writeFileSync(resolve(OUTPUT,'w10b55-real-native-practice-retry.json'),
    JSON.stringify(b55Result,null,2));
   console.log('T21_W10B55_REAL_NATIVE_BEST_RETRY',JSON.stringify(b55Result));
+  if(w10b56){
+   if(run.practiceVariant!=='SWITCHBACK'||!run.routeReturned||
+      !run.routeTurnReached||b55Retry.run.practiceVariant!=='SWITCHBACK'||
+      b55Retry.run.bestClearElapsedTicks!==run.elapsedTicks||
+      b55Retry.run.completedRealPracticeRuns!==1)
+    reject('B56_ACTUAL_SOURCE_SWITCHBACK_AND_DISTINCT_RECORD_NOT_PROVEN');
+   const result={
+    status:'W10B56_REAL_NATIVE_SOURCE_SWITCHBACK_CLEAR_AND_RETRY',
+    originalSourceOnly:true,actualBrowserInput:true,
+    firstOutboundWitness:samples.find(x=>x.b56PhysicalTurnReached)??null,
+    firstReturnWitness:samples.find(x=>x.b56PhysicalReturnReached)??null,
+    clearTicks:run.elapsedTicks,humanChangedImpactCells:run.humanChangedImpactCells,
+    groundedMeters:run.realGroundedTravelMeters,
+    independentMode:run.practiceVariant,sessionBestTicks:b55Retry.run.bestClearElapsedTicks,
+    trueNativeEscapeAndRetry:true,scoreable:0,officialWinner:'NONE',
+    screenshot:clearedFrame
+   };
+   writeFileSync(resolve(OUTPUT,'w10b56-real-source-switchback.json'),
+    JSON.stringify(result,null,2));
+   console.log('T21_W10B56_REAL_SOURCE_SWITCHBACK',JSON.stringify(result));
+  }
   return;
  }
  if(w10b21){

@@ -9,6 +9,11 @@ export const B25_SOURCE_PAINT_RUN_TICKS=60*60;
 export const B25_SOURCE_PAINT_RUN_REQUIRED_CELLS=180;
 export const B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS=12;
 const MAX_GROUNDED_TRAVEL_PER_TICK=.38;
+export type B56PracticeVariant='CLASSIC'|'SWITCHBACK';
+// Relative to the real player's initial original-ground foot, NOT a new
+// stage actor, NavLink, navigation destination or Nintendo-authored route.
+export const B56_SWITCHBACK_OUT_METERS=1.8;
+export const B56_SWITCHBACK_HOME_RADIUS_METERS=.8;
 
 export type B25RunStatus='IDLE'|'ARMED'|'RUNNING'|'CLEAR'|'TIME_UP'|'ABORTED';
 export type B25PracticeFoot=Readonly<{
@@ -52,13 +57,30 @@ export class UndertowF3SourcePaintRun{
  private lastClearTicks:number|null=null;
  private validClears=0;
  private newBest=false;
+ private variant:B56PracticeVariant='CLASSIC';
+ private routeStart:B25PracticeFoot|null=null;
+ private routeOutReached=false;
+ private routeReturned=false;
+ private routeOutAtGroundMeters=0;
+ private readonly bestByVariant:Record<B56PracticeVariant,number|null>={
+  CLASSIC:null,SWITCHBACK:null
+ };
+ private readonly clearsByVariant:Record<B56PracticeVariant,number>={
+  CLASSIC:0,SWITCHBACK:0
+ };
 
- public arm(){
-  if(this.status==='ARMED'||this.status==='RUNNING')return false;
+ public arm(variant:B56PracticeVariant='CLASSIC'){
+  if(this.status==='ARMED'||this.status==='RUNNING'||
+     (variant!=='CLASSIC'&&variant!=='SWITCHBACK'))return false;
+  this.variant=variant;
   this.status='ARMED';
   this.startTick=0;this.lastTick=-1;this.baseCells=0;this.baseImpacts=0;
   this.actualCells=0;this.actualImpacts=0;this.groundedMeters=0;
   this.lastFoot=null;this.abortReason=null;this.newBest=false;
+  this.routeStart=null;this.routeOutReached=false;this.routeReturned=false;
+  this.routeOutAtGroundMeters=0;
+  this.bestTicks=this.bestByVariant[this.variant];
+  this.validClears=this.clearsByVariant[this.variant];
   // A retry keeps only a real previous in-page practice best.
   return true;
  }
@@ -88,6 +110,12 @@ export class UndertowF3SourcePaintRun{
   }
   if(this.status==='ARMED'){
    if(!f.foot.alive)return this.snapshot();
+   if(this.variant==='SWITCHBACK'&&
+      (!f.foot.grounded||!f.foot.realPhysicalOriginalStage)){
+    this.abort('SWITCHBACK_NEEDS_SOURCE_GROUND_START');
+    return this.snapshot();
+   }
+   this.routeStart=f.foot;
    this.status='RUNNING';
    this.startTick=f.tick;this.lastTick=f.tick;
    this.baseCells=f.ink.changedHumanImpactCells;
@@ -114,17 +142,46 @@ export class UndertowF3SourcePaintRun{
    f.tick===this.lastTick+1){
    const dx=f.foot.x-old.x,dz=f.foot.z-old.z,dy=f.foot.y-old.y;
    const xz=Math.hypot(dx,dz);
-   if(xz>0&&xz<=MAX_GROUNDED_TRAVEL_PER_TICK&&Math.abs(dy)<.32)
+   if(xz>0&&xz<=MAX_GROUNDED_TRAVEL_PER_TICK&&Math.abs(dy)<.32){
     this.groundedMeters+=xz;
+    if(this.variant==='SWITCHBACK'&&this.routeStart){
+     const dist=Math.hypot(f.foot.x-this.routeStart.x,
+                           f.foot.z-this.routeStart.z);
+     if(!this.routeOutReached&&dist>=B56_SWITCHBACK_OUT_METERS){
+      this.routeOutReached=true;
+      this.routeOutAtGroundMeters=this.groundedMeters;
+     }else if(this.routeOutReached&&!this.routeReturned&&
+              dist<=B56_SWITCHBACK_HOME_RADIUS_METERS&&
+              this.groundedMeters-this.routeOutAtGroundMeters>=
+               B56_SWITCHBACK_OUT_METERS-B56_SWITCHBACK_HOME_RADIUS_METERS){
+      this.routeReturned=true;
+     }
+    }
+   }else if(this.variant==='SWITCHBACK'&&xz>MAX_GROUNDED_TRAVEL_PER_TICK){
+    this.abort('SWITCHBACK_INVALID_PHYSICAL_DISPLACEMENT');
+    return this.snapshot();
+   }
+  }
+  if(this.variant==='SWITCHBACK'&&old&&
+     (!old.grounded||!f.foot.grounded||
+      !old.realPhysicalOriginalStage||!f.foot.realPhysicalOriginalStage||
+      !old.alive||!f.foot.alive||f.tick!==this.lastTick+1)){
+   this.abort('SWITCHBACK_NOT_CONTINUOUS_ORIGINAL_GROUND');
+   return this.snapshot();
   }
   this.lastFoot=f.foot;this.lastTick=f.tick;
   if(this.actualCells>=B25_SOURCE_PAINT_RUN_REQUIRED_CELLS&&
-     this.groundedMeters>=B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS){
+     this.groundedMeters>=B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS&&
+     (this.variant==='CLASSIC'||this.routeReturned)){
    this.status='CLEAR';
    const elapsed=f.tick-this.startTick;
-   this.validClears++;this.lastClearTicks=elapsed;
-   this.newBest=this.bestTicks===null||elapsed<this.bestTicks;
-   if(this.newBest)this.bestTicks=elapsed;
+   this.clearsByVariant[this.variant]++;
+   this.validClears=this.clearsByVariant[this.variant];
+   this.lastClearTicks=elapsed;
+   this.newBest=this.bestByVariant[this.variant]===null||
+    elapsed<this.bestByVariant[this.variant]!;
+   if(this.newBest)this.bestByVariant[this.variant]=elapsed;
+   this.bestTicks=this.bestByVariant[this.variant];
   }else if(f.tick-this.startTick>=B25_SOURCE_PAINT_RUN_TICKS){
    this.status='TIME_UP';
   }
@@ -136,6 +193,17 @@ export class UndertowF3SourcePaintRun{
     Math.max(0,this.lastTick-this.startTick)):0;
   return {
    status:this.status,
+   practiceVariant:this.variant,
+   routeTurnReached:this.routeOutReached,
+   routeReturned:this.routeReturned,
+   routeDistanceFromStartMeters:this.routeStart&&this.lastFoot?
+    Number(Math.hypot(this.lastFoot.x-this.routeStart.x,
+                      this.lastFoot.z-this.routeStart.z).toFixed(2)):0,
+   routeOutMeters:B56_SWITCHBACK_OUT_METERS,
+   routeHomeRadiusMeters:B56_SWITCHBACK_HOME_RADIUS_METERS,
+   routePhase:this.variant==='CLASSIC'?'NOT_REQUIRED' as const:
+    !this.routeOutReached?'OUTBOUND' as const:
+    !this.routeReturned?'RETURN' as const:'COMPLETE' as const,
    mode:'OPTIONAL_NONSCORING_SOURCE_PAINT_RUN' as const,
    originalStageVerified:true as const,
    gameplaySource:'REAL_HUMAN_AUTHORITATIVE_INK_AND_RAPIER_FOOT' as const,

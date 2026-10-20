@@ -24,7 +24,8 @@ import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
 import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
-import {UndertowF3SourcePaintRun} from './UndertowF3SourcePaintRun';
+import {UndertowF3SourcePaintRun,type B56PracticeVariant}
+ from './UndertowF3SourcePaintRun';
 import {sourcePracticeObjectiveView} from './UndertowF3PracticeObjectiveView';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
@@ -160,6 +161,7 @@ export class UndertowF3PlayablePreviewApp{
    params.get('t21W10B36')==='playFocus';
  })();
  private readonly b25RunCard:HTMLElement;
+ private b56NextVariant:B56PracticeVariant='CLASSIC';
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
  private wholeSourceStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
@@ -560,6 +562,12 @@ export class UndertowF3PlayablePreviewApp{
    '<small style="color:#ffcb9d;font-size:9px">PRACTICE · UNSCORED</small></div>'+
    '<div id="t21-f3-b55-record" role="status" style="font:700 10px/1.5 system-ui;'+
     'color:#ffe2a2;margin:8px 0 2px">SESSION BEST · NO CLEAR YET</div>'+
+   '<button id="t21-f3-b56-variant" type="button" style="width:100%;'+
+    'font:700 10px system-ui;background:#173c4c;color:#c9f9fc;'+
+    'border:1px solid #58c6d1;border-radius:6px;padding:5px;'+
+    'margin:5px 0;cursor:pointer">NEXT RUN · CLASSIC</button>'+
+   '<div id="t21-f3-b56-route" style="display:none;color:#ffc98f;'+
+    'font:700 10px/1.5 system-ui;margin:5px 0"></div>'+
    '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
    'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
    '<div id="t21-f3-b53-objectives" style="display:none;margin:9px 0 8px">'+
@@ -580,6 +588,13 @@ export class UndertowF3PlayablePreviewApp{
   ui.appendChild(challenge);
   this.b25RunButton=challenge.querySelector('#t21-f3-b25-start') as HTMLButtonElement;
   this.b25RunProgress=challenge.querySelector('#t21-f3-b25-progress') as HTMLElement;
+  challenge.querySelector<HTMLButtonElement>('#t21-f3-b56-variant')!
+   .addEventListener('click',()=>{
+    const state=this.b25Run.snapshot().status;
+    if(state==='ARMED'||state==='RUNNING')return;
+    this.b56NextVariant=this.b56NextVariant==='CLASSIC'?'SWITCHBACK':'CLASSIC';
+    this.refreshB25PaintRun();
+   });
   this.b25RunButton.addEventListener('click',()=>{
    if(document.pointerLockElement===this.canvas||this.paused||this.stopReason||
       this.matchState==='TIME_UP'||this.survey.snapshot().active||
@@ -587,7 +602,7 @@ export class UndertowF3PlayablePreviewApp{
     this.b25RunProgress.textContent='Exit pause/survey and unlock mouse before arming.';
     return;
    }
-   if(this.b25Run.arm()){
+   if(this.b25Run.arm(this.b56NextVariant)){
     this.b25RunProgress.textContent='ARMED · Click stage to lock mouse, then paint and move.';
     this.b25RunButton.textContent='PAINT RUN ARMED';
     this.b25RunButton.disabled=true;
@@ -1530,7 +1545,33 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.dataset.t21B55BestTicks=best===null?'NONE':String(best);
   this.b25RunCard.dataset.t21B55ClearCount=String(run.completedRealPracticeRuns);
   this.b25RunCard.dataset.t21B55RecordScope=run.practiceRecordScope;
-  if(run.status==='IDLE')return;
+  const modeButton=this.b25RunCard.querySelector<HTMLButtonElement>(
+   '#t21-f3-b56-variant')!;
+  modeButton.disabled=run.status==='ARMED'||run.status==='RUNNING';
+  modeButton.textContent='NEXT RUN · '+this.b56NextVariant+
+   (modeButton.disabled?' · LOCKED':' · click to switch');
+  this.b25RunCard.dataset.t21B56NextVariant=this.b56NextVariant;
+  this.b25RunCard.dataset.t21B56ActiveVariant=run.practiceVariant;
+  const route=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b56-route')!;
+  route.style.display=run.practiceVariant==='SWITCHBACK'?'':'none';
+  route.dataset.t21B56Phase=run.routePhase;
+  route.dataset.t21B56TurnReached=String(run.routeTurnReached);
+  route.dataset.t21B56Returned=String(run.routeReturned);
+  route.textContent=run.routePhase==='OUTBOUND'?
+   'SWITCHBACK · OUT '+run.routeDistanceFromStartMeters.toFixed(1)+
+   '/1.8m · then return':
+   run.routePhase==='RETURN'?
+   'SWITCHBACK · RETURN '+run.routeDistanceFromStartMeters.toFixed(1)+
+   'm from start (target ≤0.8m)':
+   run.routePhase==='COMPLETE'?
+   'SWITCHBACK · GENUINE OUT + RETURN COMPLETE':
+   'CLASSIC · shoot and move on original source floor';
+  if(run.status==='IDLE'){
+   this.b25RunProgress.textContent=this.b56NextVariant==='SWITCHBACK'?
+    'SWITCHBACK: move 1.8m out, return within 0.8m; paint 180 cells and travel 12m on original floor.':
+    'Paint 180 real cells and travel 12m on original floor in 60 sim seconds.';
+   return;
+  }
   // Source-authoritative progress: display two independent objectives,
   // never extrapolate a Turf score or award a winner.
   const view=sourcePracticeObjectiveView(run);
@@ -1550,7 +1591,7 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.dataset.t21B53Next=view.next;
   button.disabled=run.status==='ARMED'||run.status==='RUNNING';
   button.textContent=run.status==='CLEAR'||run.status==='TIME_UP'||
-   run.status==='ABORTED'?'RETRY PAINT RUN':'PAINT RUN ACTIVE';
+   run.status==='ABORTED'?'RETRY '+run.practiceVariant:'PAINT RUN ACTIVE';
   if(run.status==='ARMED'){
    this.b25RunProgress.textContent='ARMED · Click the stage to play.';
    return;
