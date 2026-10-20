@@ -375,7 +375,7 @@ export class UndertowF3PlayablePreviewApp{
    new URL(location.href).searchParams.get('t21W10B38')==='humanSub'
     ?witness=>{
       this.b43BombWitnesses.push(witness);
-      if(this.b43BombWitnesses.length>16)this.b43BombWitnesses.shift();
+      if(this.b43BombWitnesses.length>32)this.b43BombWitnesses.shift();
      }:undefined);
   this.stats.playerSubWeaponName=subWeaponProfile(
    weaponKit(this.projectiles.currentPlayerWeapon.id).sub).displayName;
