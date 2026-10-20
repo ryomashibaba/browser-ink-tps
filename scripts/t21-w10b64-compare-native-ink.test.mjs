@@ -52,8 +52,24 @@ test('B65 original real FOOT travel or stall regression fails closed',()=>{
 test('B65 missing time windows and wrong original geometry authority cannot pass',()=>{
  const a=series('FIXED'),b=series('SWEEP');
  a.points.splice(2,1);
+ // Keep >=7 well-shaped observed rows to test the actual missing
+ // 40-second window gate instead of tripping the earlier row-count gate.
+ a.points.push({...a.points.at(-1),realPhysicsTick:a.points.at(-1).realPhysicsTick+1});
+ assert.equal(a.points.length,7);
  assert.throws(()=>compareB64NativeInk(a,b),/TIME_WINDOWS/);
  const c=series('FIXED');
  c.originalStageAuthority='26/17/26/0';
  assert.throws(()=>compareB64NativeInk(c,b),/AUTHORITY/);
+});
+
+test('B66 checks real seven anonymous CPU source shot counters, never inferred from aim targets',()=>{
+ const a=series('FIXED'),b=series('SWEEP');
+ for(const v of [a,b])for(let i=0;i<v.points.length;i++)
+  v.points[i].trueSourceShotsBySevenAnonymousCpu=[i,i,i,0,0,0,0];
+ const q=compareB64NativeInk(a,b);
+ assert.equal(q.b66PerCpuSourceFireDiagnostic.historicPairHasPerCpuData,true);
+ assert.equal(q.b66PerCpuSourceFireDiagnostic.repeatPairHasPerCpuData,true);
+ assert.equal(q.b66PerCpuSourceFireDiagnostic.sweepNativeSourceFiringActors,3);
+ b.points[6].trueSourceShotsBySevenAnonymousCpu[0]=100;
+ assert.throws(()=>compareB64NativeInk(a,b),/SHOT_DISTRIBUTION/);
 });

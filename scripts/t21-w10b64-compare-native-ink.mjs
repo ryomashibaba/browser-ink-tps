@@ -15,6 +15,11 @@ export function compareB64NativeInk(a,b){
      r.promotedAsNormalCpu!==false||
      r.points.length<7)throw Error('B64_REAL_SOURCE_AUTHORITY_NOT_VERIFIED');
   let previous=null;
+  const anyPerActor=r.points.some(p=>'trueSourceShotsBySevenAnonymousCpu' in p);
+  if(anyPerActor&&!r.points.every(p=>
+     Array.isArray(p.trueSourceShotsBySevenAnonymousCpu) &&
+     p.trueSourceShotsBySevenAnonymousCpu.length===7))
+   throw Error('B66_INCOMPLETE_REAL_PER_CPU_SHOT_EVIDENCE');
   for(const p of r.points){
    if(![p.realPhysicsTick,p.realCpuSourceShots,
      p.realCpuChangedSourceInkCells,p.allSevenCpuOriginalFootRejoined,
@@ -33,6 +38,14 @@ export function compareB64NativeInk(a,b){
        p.cpuSourcePatrolMeters+1e-6<previous.cpuSourcePatrolMeters||
        p.trueNativeMatchSeconds<previous.trueNativeMatchSeconds)))
     throw Error('B64_NON_NATIVE_OR_NONMONOTONIC_SOURCE_EVIDENCE');
+   if(anyPerActor){
+    const shots=p.trueSourceShotsBySevenAnonymousCpu;
+    if(shots.some(v=>!count(v)) ||
+       shots.reduce((sum,v)=>sum+v,0)!==p.realCpuSourceShots ||
+       (previous&&shots.some((v,i)=>
+         v<previous.trueSourceShotsBySevenAnonymousCpu[i])))
+     throw Error('B66_FALSE_OR_NONMONOTONIC_NATIVE_CPU_SHOT_DISTRIBUTION');
+   }
    previous=p;
   }
   if(previous.trueNativeMatchSeconds<120)throw Error('B64_SOURCE_120S_UNVERIFIED');
@@ -87,6 +100,16 @@ export function compareB64NativeInk(a,b){
     sweep:bf.cpuSourcePatrolMeters},
   relativePatrolDeltaAt120:Number(patrolRelative.toFixed(5)),
   humanInputAndSourceBodyRemainedNative:true,
+  b66PerCpuSourceFireDiagnostic:{
+   historicPairHasPerCpuData:'trueSourceShotsBySevenAnonymousCpu' in a.points.at(-1),
+   repeatPairHasPerCpuData:'trueSourceShotsBySevenAnonymousCpu' in b.points.at(-1),
+   sevenRealQaCpuCount:7,
+   fixedNativeSourceFiringActors:Array.isArray(af.trueSourceShotsBySevenAnonymousCpu)?
+    af.trueSourceShotsBySevenAnonymousCpu.filter(v=>v>0).length:null,
+   sweepNativeSourceFiringActors:Array.isArray(bf.trueSourceShotsBySevenAnonymousCpu)?
+    bf.trueSourceShotsBySevenAnonymousCpu.filter(v=>v>0).length:null,
+   noOriginalActorPositionsOrBancIdentifiers:true
+  },
   candidateForSecondaryIndependentReview:candidateSecondaryReview,
   adoptedToNormalSourcePreview:false,
   decision:'HOLD_PENDING_INDEPENDENT_REPLICATION_AND_DEFAULT_QA',

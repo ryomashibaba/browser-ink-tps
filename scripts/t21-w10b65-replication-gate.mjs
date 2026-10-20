@@ -18,7 +18,19 @@ export function judgeB65IndependentRuns(prior,repeat){
   v.sweep.acceptedLateralOriginalPaintAims>0&&
   v.automaticExperimentalCpuPromotion===false&&
   v.officialWinner==='NONE';
- const both= enough(a)&&enough(b);
+ // B66: the older B64 artifacts predate per-CPU shot telemetry. New
+ // genuine repeat MUST show the 7 actual CPU counters totaling the real
+ // shots in each 20-second witness. We do not require all 7 to fire:
+ // CPU weapon roles differ, and source paths still cannot meet opponents.
+ const ra=b.b66PerCpuSourceFireDiagnostic;
+ const nativeCpuEvidenceComplete=
+  ra.repeatPairHasPerCpuData&&
+  b.b66PerCpuSourceFireDiagnostic.historicPairHasPerCpuData;
+ const activeNativeSourceShooterCount=
+  ra.sweepNativeSourceFiringActors;
+ const both=enough(a)&&enough(b)&&nativeCpuEvidenceComplete&&
+  Number.isSafeInteger(activeNativeSourceShooterCount)&&
+  activeNativeSourceShooterCount>=2;
  return {
   schema:'T21_W10B65_REPLICATED_GENUINE_SOURCE_CPU_INK_AB_V1',
   source:'TWO_INDEPENDENT_CHROMIUM_130_NATIVE_SECONDS_PER_AIM',
@@ -35,6 +47,12 @@ export function judgeB65IndependentRuns(prior,repeat){
    inkChangeDelta60To120:b.matched60To120NativeSecondInkChange.extraChangedCells,
    patrolRelativeDelta:b.relativePatrolDeltaAt120},
   replicatedSubstantiveSourceInkGain:both,
+  B66SourceCpuActorParticipation:{
+   genuineNewRepeatPerCpuEvidenceVerified:nativeCpuEvidenceComplete,
+   actualNativeCpuWithSourceWeaponShots:activeNativeSourceShooterCount,
+   historicalB64RunHasPerActorTelemetry:false,
+   authoritativeNintendoActorBindingsRecovered:false
+  },
   originalPhysics:25,originalPaintable:17,originalNav:26,
   originalScoreable:0,
   realCrossTeamPathsCertified:0,

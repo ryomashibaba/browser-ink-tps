@@ -8,6 +8,7 @@ const mk=(mode,inks,walkMeters)=>({
   trueNativeMatchSeconds:i*20,realPhysicsTick:1000+i*1200,
   allSevenCpuOriginalFootRejoined:7,realCpuSourceShots:i*30,
   realCpuChangedSourceInkCells:v,
+  trueSourceShotsBySevenAnonymousCpu:[i*8,i*7,i*5,i*4,i*3,i*2,i],
   cpuSourcePatrolMeters:walkMeters*i/6,
   suspectedPhysicalCpuStalls:0,
   sourceInkTargetCandidates:mode==='SWEEP'?i*450:0,
@@ -26,6 +27,8 @@ test('B65 two authentic independent source A/B experiments may qualify for separ
  assert.equal(result.originalScoreable,0);
  assert.equal(result.original4v4Certified,false);
  assert.equal(result.prior.changedCellsDeltaAt120,7785);
+ assert.equal(result.B66SourceCpuActorParticipation.genuineNewRepeatPerCpuEvidenceVerified,true);
+ assert.equal(result.B66SourceCpuActorParticipation.actualNativeCpuWithSourceWeaponShots,7);
 });
 test('B65 bad repeat ink, physical foot trajectory or source authorization cannot promote CPU',()=>{
  const x=pairs(),y=pairs();
@@ -40,4 +43,15 @@ test('B65 bad repeat ink, physical foot trajectory or source authorization canno
  const v=pairs();
  v.fixed.points[3].suspectedPhysicalCpuStalls=1;
  assert.throws(()=>judgeB65IndependentRuns(x,v),/STALL/);
+});
+
+test('B66 replica cannot qualify if per-CPU source-shot evidence is missing or forged',()=>{
+ const oldPair=pairs(),repeat=pairs();
+ for(const p of repeat.sweep.points)delete p.trueSourceShotsBySevenAnonymousCpu;
+ const noCpuEvidence=judgeB65IndependentRuns(oldPair,repeat);
+ assert.equal(noCpuEvidence.replicatedSubstantiveSourceInkGain,false);
+ assert.equal(noCpuEvidence.defaultCpuSwitched,false);
+ const forged=pairs();
+ forged.sweep.points[6].trueSourceShotsBySevenAnonymousCpu[0]+=1;
+ assert.throws(()=>judgeB65IndependentRuns(oldPair,forged),/SHOT_DISTRIBUTION/);
 });

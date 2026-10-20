@@ -212,8 +212,19 @@ async function main(){
     const sampleIndex=Math.floor(elapsed/20);
     if(x.matchState==='PLAYING'&&sampleIndex>lastNativeSample){
      lastNativeSample=sampleIndex;
+     // B66 diagnostic: public QA CPU IDs only, no original Banc actor IDs,
+     // poses, source meshes, hidden transforms or serialized world cells.
+     const actorShots=x.cpuSourceTurfShotsByActor;
+     const actualShotCounts=actorShots&&typeof actorShots==='object'?
+      Object.entries(actorShots).sort(([a],[b])=>a.localeCompare(b))
+       .map(([,v])=>v):[];
+     if(actualShotCounts.length!==7||
+        actualShotCounts.some(v=>!Number.isSafeInteger(v)||v<0)||
+        actualShotCounts.reduce((total,v)=>total+v,0)!==x.cpuSourceTurfShots)
+      reject('B66_PER_CPU_REAL_SOURCE_SHOT_TOTALS_NOT_NATIVE');
      const row={
       trueNativeMatchSeconds:Number(elapsed.toFixed(3)),
+      trueSourceShotsBySevenAnonymousCpu:actualShotCounts,
       realPhysicsTick:x.tick,
       allSevenCpuOriginalFootRejoined:x.cpu.physicalRejoins.length,
       realCpuSourceShots:x.cpuSourceTurfShots,
