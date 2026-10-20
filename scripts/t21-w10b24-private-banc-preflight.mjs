@@ -68,6 +68,57 @@ function inspectCandidate(abs){
  });
  const recognized=counts.reduce((n,c)=>n+c.seen,0);
  const correctlyShaped=counts.reduce((n,c)=>n+c.schemaValid,0);
+ // B60: private-in-memory evidence completeness. Only AGGREGATE COUNTS
+ // may leave this process. No GUID, layer name, position, mesh name,
+ // coordinate transform, Actor data or repository upload is permitted.
+ const primary=rows.filter(a=>record(a)&&a.Gyaml==='Lft_FldObj_Temple01_PntSet');
+ const identityKeys=['Hash','Id','ActorHash','InstanceId','GUID','Guid'];
+ const modelKeys=['ModelName','UnitConfigName','AssetName','Model','ResourceName','ModelKey'];
+ const parentKeys=['ParentHash','ParentId','Parent'];
+ const identityKey=(actor)=>{
+  for(const field of identityKeys){
+   const val=actor[field];
+   if((typeof val==='string'&&val.length>0&&val.length<=256)||
+      (typeof val==='number'&&Number.isSafeInteger(val)&&val>=0))
+    return field+':'+String(val);
+  }
+  return null;
+ };
+ const ident=primary.map(identityKey);
+ const known=ident.filter(x=>x!==null);
+ const keysWithDuplicates=known.length-new Set(known).size;
+ const names=(actor,fields)=>fields.some(f=>
+  typeof actor[f]==='string'&&actor[f].length>0&&actor[f].length<=256);
+ const safeLayers=primary.filter(a=>typeof a.Layer==='string'&&a.Layer.length>0);
+ const b60InstanceBindingReadiness={
+  status:'HOLD_ACTOR_INSTANCE_TO_PNTSET_MESH_UNBOUND',
+  stageIdentityIsSelfClaimedNotAuthenticated:stageIdentityExact,
+  pntSetClassActors:primary.length,
+  schemaValidPntSetActors:primary.filter(valid).length,
+  explicitIdentityPresentCount:known.length,
+  duplicateExplicitIdentityCount:keysWithDuplicates,
+  validNonemptyLayerCount:safeLayers.length,
+  distinctLayerCount:new Set(safeLayers.map(a=>a.Layer)).size,
+  actorProvidedModelReferenceHintCount:primary.filter(a=>names(a,modelKeys)).length,
+  actorProvidedParentReferenceHintCount:primary.filter(a=>
+   parentKeys.some(f=>typeof a[f]==='string'&&a[f].length>0&&a[f].length<=256||
+    typeof a[f]==='number'&&Number.isSafeInteger(a[f]))).length,
+  originalSourceProvenanceAuthenticated:false,
+  originalLayerActiveRuntimeVerified:false,
+  originalActorWorldTransformVerified:false,
+  exactInstanceToEightUnboundMeshesVerified:false,
+  candidateMeshMatchesAuthorized:0,
+  stagePhysicsPromoted:0,
+  navLinksPromoted:0,
+  scoreablePromoted:0,
+  nextRequiredEvidence:[
+   'LICENSED_OR_USER_AUTHORIZED_ORIGINAL_BANC_PROVENANCE',
+   'EXACT_ACTOR_INSTANCE_TO_COMPONENT_REFERENCE',
+   'ORIGINAL_ACTIVE_LAYER_BINDING',
+   'ORIGINAL_COORDINATE_SPACE_AND_TRANSFORM_PROVENANCE',
+   'NATIVE_RAPIER_KCC_AND_RECAST_CONTINUOUS_CROSSING'
+  ]
+ };
  return {
   fileName,sourceSha256:digest,
   decodeState:!stageIdentityExact?'HOLD_STAGE_IDENTITY_UNBOUND':
@@ -78,7 +129,8 @@ function inspectCandidate(abs){
   actorCount:rows.length,recognizedSetActorCount:recognized,
   validSetActorCount:correctlyShaped,
   invalidSetActorCount:recognized-correctlyShaped,
-  knownTemple01SetClasses:counts
+  knownTemple01SetClasses:counts,
+  b60InstanceBindingReadiness
  };
 }
 function collect(root){
@@ -136,6 +188,12 @@ export function privateBancPreflight(dir){
   originalConnectionsPromoted:0,
   newCollisionSolids:0,newNavigationLinks:0,newScoreableSurfaces:0,
   productionAuthorized:false,
+  b60PrimarySourceBindingStatus:'HOLD_ACTOR_INSTANCE_TO_PNTSET_MESH_UNBOUND',
+  b60ReadinessVersion:'B60_LOCAL_COUNT_ONLY_V1',
+  b60NewlyAuthenticatedOriginalActorInstances:0,
+  b60NewlyBoundPntSetMeshes:0,
+  b60ActorCoordinatesExported:false,
+  b60PrivateLayerNamesExported:false,
   candidates
  };
 }

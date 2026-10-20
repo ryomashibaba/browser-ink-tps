@@ -1,0 +1,28 @@
+name: T21 W10-B60 private source actor binding readiness
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b24-private-banc-preflight.mjs'
+      - 'scripts/t21-w10b24-private-banc-preflight.test.mjs'
+      - 'scripts/t21-w10b60-private-binding-readiness.test.mjs'
+      - '.github/workflows/t21-w10b60-private-binding-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  privacy-and-structure:
+    name: Synthetic privacy negatives / source authority stays HOLD
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --check scripts/t21-w10b24-private-banc-preflight.mjs
+      - run: node --check scripts/t21-w10b60-private-binding-readiness.test.mjs
+      - run: node --test scripts/t21-w10b24-private-banc-preflight.test.mjs scripts/t21-w10b60-private-binding-readiness.test.mjs
+      - name: No authenticated private source or original gameplay authority is available in public CI
+        run: |
+          node --input-type=module -e "import{privateBancPreflight}from'./scripts/t21-w10b24-private-banc-preflight.mjs';import{mkdtempSync,rmSync}from'node:fs';import{tmpdir}from'node:os';import{join}from'node:path';const p=mkdtempSync(join(tmpdir(),'b60-none-'));try{const q=privateBancPreflight(p);if(q.b60NewlyBoundPntSetMeshes!==0||q.originalConnectionsPromoted!==0||q.frozenStageAuthority.scoreable!==0||q.frozenStageAuthority.activationReady!==false)process.exit(1);console.log('HOLD_ORIGINAL_ACTOR_BINDING_NOT_PROVEN')}finally{rmSync(p,{recursive:true,force:true})}"
