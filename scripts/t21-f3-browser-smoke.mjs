@@ -1704,6 +1704,140 @@ async function main(){
     JSON.stringify(resultB48Real,null,2));
    console.log('T21_W10B48_CALIBRATED_REAL_KEY_F_THROW',
     JSON.stringify(resultB48Real));
+   // B49: repeated genuine Chrome pointer-locked KeyF trials using the
+   // SAME observed camera aim as the first truly Rapier-selected bomb #15.
+   // No camera-setter, no projectile injection, no physical/paint mutation.
+   const b49Baseline=b48Actual[0];
+   const b49Witness=b49Baseline.actualHumanThrow.b43NativeExplosionWitness;
+   if(!b49Baseline.actualRapierSelected||
+      b49Witness.contactKind!=='RAPIER_STAGE_SOLID'||
+      b49Witness.contactSourceId!=='UndertowT21D:right-low-team-b'||
+      b49Witness.firstContactCandidates?.paintId!==null||
+      b49Witness.firstContactCandidates?.rapierId!==b49Witness.contactSourceId)
+    reject('W10B49_NO_REAL_RAPIER_POSITIVE_CONTROL');
+   const b49Repeats=[];
+   const wrap49=x=>((x+540)%360)-180;
+   const xyzDifference=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+   const referenceYaw=b49Baseline.observedCameraYaw;
+   const referencePitch=b49Baseline.observedCameraPitch;
+   for(let i=0;i<3;i++){
+    await refill();
+    const locked=await evaluate(
+      'document.pointerLockElement===document.querySelector("#app-canvas")');
+    if(!locked)reject('W10B49_POINTER_LOCK_LOST_'+i);
+    await cmd('Input.dispatchMouseEvent',{
+      type:'mouseMoved',x:800,y:450,button:'none'
+    });
+    const before=await evaluate('window.__t21F3.snapshot()');
+    if(!before.paused||before.stopReason)
+      reject('W10B49_SOURCE_NOT_PAUSED_'+i);
+    const dx=Math.round(wrap49(referenceYaw-
+      before.cameraSourcePractice.yawDegrees)/.22);
+    const dy=Math.round(-(referencePitch-
+      before.cameraSourcePractice.pitchDegrees)/.18);
+    if(Math.abs(dx)>750||Math.abs(dy)>460)
+      reject('W10B49_UNBOUNDED_REAL_MOUSE_'+i);
+    await cmd('Input.dispatchMouseEvent',{
+      type:'mouseMoved',x:800+dx,y:450+dy,button:'none'
+    });
+    let aimed=await evaluate('window.__t21F3.snapshot()');
+    let yawError=wrap49(referenceYaw-
+      aimed.cameraSourcePractice.yawDegrees);
+    let pitchError=referencePitch-
+      aimed.cameraSourcePractice.pitchDegrees;
+    if(Math.abs(yawError)>.1||Math.abs(pitchError)>.1){
+      await cmd('Input.dispatchMouseEvent',{
+       type:'mouseMoved',x:800+dx+Math.round(yawError/.22),
+       y:450+dy+Math.round(-pitchError/.18),button:'none'
+      });
+      aimed=await evaluate('window.__t21F3.snapshot()');
+      yawError=wrap49(referenceYaw-
+        aimed.cameraSourcePractice.yawDegrees);
+      pitchError=referencePitch-
+        aimed.cameraSourcePractice.pitchDegrees;
+    }
+    const footError=xyzDifference(
+      aimed.player.position,b49Baseline.actualHumanThrow.originalPlayerPosition);
+    if(footError>.1||Math.abs(yawError)>.4||
+       Math.abs(pitchError)>.4||
+       aimed.originalSourceSolids!==25||
+       aimed.originalPaintSurfaces!==17||
+       aimed.originalSourceNavigationLinks!==26||
+       aimed.sourceScoreablePromotions!==0||
+       aimed.productionAuthorized!==false)
+      reject('W10B49_REAL_AIM_FOOT_OR_ORIGINAL_SOURCE_DRIFT_'+i);
+    const result=await throwObserved('B49_TRUE_RAPIER_REPEAT_'+(i+1));
+    const witness=result.b43NativeExplosionWitness;
+    if(!result.actualKeyF||!result.actualPointerLockedInput||
+       result.throwDelta!==1||result.explosionDelta!==1||
+       witness.launchId!==17+i||
+       witness.originalGameCollisionCertified!==false||
+       result.originalBombStampEvents!==witness.enqueuedStampSurfaceIds.length)
+      reject('W10B49_MISSING_NATIVE_HUMAN_WITNESS_'+i);
+    const sameNativeRapierSolid=witness.contactKind==='RAPIER_STAGE_SOLID'&&
+      witness.contactSourceId===b49Witness.contactSourceId&&
+      witness.firstContactCandidates?.rapierId===b49Witness.contactSourceId&&
+      witness.firstContactCandidates?.paintId===null;
+    b49Repeats.push({
+      repetition:i+1,realNativeThrowId:witness.launchId,
+      realMouseYaw:aimed.cameraSourcePractice.yawDegrees,
+      realMousePitch:aimed.cameraSourcePractice.pitchDegrees,
+      nativeCameraYawError:yawError,nativeCameraPitchError:pitchError,
+      originalFootErrorMeters:footError,
+      realLaunchVelocity:witness.initialNativeVelocity,
+      baselineNativeVelocityDeviationMetersPerSecond:
+        xyzDifference(witness.initialNativeVelocity,
+          b49Witness.initialNativeVelocity),
+      actualContactKind:witness.contactKind,
+      actualContactSourceId:witness.contactSourceId,
+      actualContactPosition:witness.contactPoint,
+      originalRapierContactPositionDeviationMeters:witness.contactPoint?
+        xyzDifference(witness.contactPoint,b49Witness.contactPoint):null,
+      nativeFlightQueryTicks:witness.flightQueryTicks,
+      actualExplosionTrigger:witness.trigger,
+      originalStampEvents:result.originalBombStampEvents,
+      postGameplayInkNewOwnerCells:result.authoritativeChangedCells,
+      sameSourceRapierContactReproduced:sameNativeRapierSolid,
+      fullNativeWitness:witness,
+      originalNintendoCollisionCertified:false,
+      noSyntheticCameraOrProjectileWrites:true
+    });
+   }
+   const b49Success=b49Repeats.filter(t=>
+      t.sameSourceRapierContactReproduced);
+   const b49Report={
+     status:b49Success.length===3?
+      'B49_ALL_THREE_NATIVE_SOURCE_RAPIER_REPEATS_CONFIRMED':
+      'B49_PARTIAL_NATIVE_SOURCE_RAPIER_REPEAT_OBSERVATIONS',
+     actualPositiveControlNativeThrowId:b49Witness.launchId,
+     chosenOriginalSolid:b49Witness.contactSourceId,
+     baselineNativeContactPoint:b49Witness.contactPoint,
+     baselineActualLaunchVelocity:b49Witness.initialNativeVelocity,
+     originalBaselineNewOwnerCells:
+      b49Baseline.actualHumanThrow.authoritativeChangedCells,
+     actualNewHumanKeyFThrows:b49Repeats.length,
+     totalNativeHumanKeyFThrows:19,
+     chosenRapierRepeatCount:b49Success.length,
+     actualNativeRepeats:b49Repeats,
+     repeatedNewOwnerCells:b49Repeats.reduce(
+      (sum,t)=>sum+t.postGameplayInkNewOwnerCells,0),
+     maxOriginalRapierContactPointDeviationMeters:b49Success.length?
+      Math.max(...b49Success.map(
+       t=>t.originalRapierContactPositionDeviationMeters)):null,
+     maxNativeLaunchVelocityDeviationMetersPerSecond:Math.max(
+      ...b49Repeats.map(t=>
+       t.baselineNativeVelocityDeviationMetersPerSecond)),
+     physicalOriginalSolids:25,originalPaintable:17,navLinks:26,
+     scoreableSurfaces:0,originalGameCollisionCertified:false,
+     cpuStandardPatrolUnmodified:true,
+     nativePhysicsAndCameraAlgorithmsUnchanged:true,
+     normal4v4Certified:false,productionAuthorized:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b49-real-native-rapier-repeatability.json'),
+    JSON.stringify(b49Report,null,2));
+   console.log('T21_W10B49_REAL_RAPIER_REPEATABILITY',
+    JSON.stringify(b49Report));
+
 
 
 
