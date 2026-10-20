@@ -25,3 +25,13 @@ An authentic **three-minute TIME_UP real Chrome live-clock wall-time playthrough
   - [B57 Chrome PAINT RELAY on final presentation SHA](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39406062487)
 
 **Verdict currently:** B58 core honest session HUD **BROWSER-VERIFIED** at corrected SHA `2c35...`; latest `d68c...` exact-SHA regression and native full-duration end-screen proof are separately **PENDING/HOLD**. Never promote B58 to full Turf victory or original 4v4 authentication. Next high-priority work remains resolving original Banc/SetActor and authentic central source connectivity, not introducing a fourth minigame.
+
+## Retrospective resolution of pending B58 integration (verified 2026-10-20 JST)
+
+All three final-presentation SHA `d68c192952ca87b5d80e5786cdf76b71f0847c8c` native browser regressions later **completed SUCCESS**; they were no longer pending at B59 start:
+
+- B54 [run 39406062794](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39406062794): CLASSIC genuine browser input CLEAR / result board regression green.
+- B56 [run 39406062606](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39406062606): SWITCHBACK genuine browser source-foot outbound and return green.
+- B57 [run 39406062487](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39406062487): PAINT RELAY genuine browser 3-stage independent ink green.
+
+**B58 scoped native short-play integration verdict PASS** (build, model tests, B54/B56/B57 genuine Chrome integration on the exact presentation SHA). The **separate actual native 180-second complete session and actionable end UI remained HOLD**, and are specifically the W10-B59 scope. No claim that original 4v4 or Nintendo-authentic scoring has been achieved.
