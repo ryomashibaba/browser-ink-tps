@@ -3,7 +3,10 @@
  * read-only projections of the existing F3 native simulation snapshot.
  * No score mask, win/loss inference, opponent positions or CPU authority.
  */
-export interface F3PlayableHudState {
+import {B75SourceInkActivity,type B75NativeInkFrame}
+ from './UndertowF3LiveSourceInkActivity';
+
+export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number};
  matchState:string;
  timeRemainingSeconds:number;
@@ -15,7 +18,6 @@ export interface F3PlayableHudState {
  sourceScoreablePromotions:number;
  productionAuthorized:boolean;
  stopReason:string|null;
- paused:boolean;
 }
 const clampPercent=(n:number)=>Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):0;
 export function formatF3PlayableHud(s:F3PlayableHudState){
@@ -76,7 +78,18 @@ export function createF3PlayableHud(ui:HTMLElement){
    '<span id="t21-f3-hud-cpu">CPU 0/7</span>'+
   '</div>'+
   '<div id="t21-f3-hud-practice" style="font-size:10px;margin-top:5px;color:#ffc59b">'+
-   'UNSCORED / NO OFFICIAL RESULT</div>';
+   'UNSCORED / NO OFFICIAL RESULT</div>'+
+  // B75: genuine last-180-physics-tick native source paint difference,
+  // never a simulated turf point, enemy contact or official match score.
+  '<div id="t21-f3-b75-source-ink-live" hidden role="status" aria-live="off"'+
+   ' style="margin-top:7px;padding:6px 8px;border-radius:7px;'+
+   'border:1px solid #477c8d;background:rgba(5,38,54,.88)">'+
+   '<div id="t21-f3-b75-source-ink-head" style="font:800 10px system-ui;'+
+    'color:#85f3ea">REAL SOURCE INK · LAST 3s</div>'+
+   '<div id="t21-f3-b75-source-ink-counts" style="margin:3px 0;'+
+    'font:800 12px system-ui;color:#ebfaff">0 new cells · 0 shots</div>'+
+   '<div style="font:500 9px system-ui;color:#f2cfaa">'+
+    'Native CPU impacts only · NOT TURF SCORE</div></div>';
  ui.appendChild(root);
  const select=(id:string):HTMLElement=>{
   const element=root.querySelector<HTMLElement>('#'+id);
@@ -90,6 +103,10 @@ export function createF3PlayableHud(ui:HTMLElement){
  const vitals=select('t21-f3-hud-vitals');
  const cpu=select('t21-f3-hud-cpu');
  const practice=select('t21-f3-hud-practice');
+ const activity=new B75SourceInkActivity();
+ const activityBox=select('t21-f3-b75-source-ink-live');
+ const activityHead=select('t21-f3-b75-source-ink-head');
+ const activityCounts=select('t21-f3-b75-source-ink-counts');
  function render(value:F3PlayableHudState){
   const v=formatF3PlayableHud(value);
   clock.textContent=v.clock;
@@ -101,6 +118,33 @@ export function createF3PlayableHud(ui:HTMLElement){
   vitals.textContent='HP '+v.hp+' · INK '+v.ink;
   cpu.textContent='CPU '+v.cpuRecovered+'/7 · '+v.sourceState;
   practice.textContent=v.scoring;
+  const source=activity.observe(value);
+  const verified=!!source&&source.status!=='UNVERIFIED';
+  activityBox.hidden=!verified;
+  root.dataset.t21B75SourceAuthority=
+   verified?'REAL_NATIVE_SOURCE_ONLY':'HOLD_OR_NOT_AVAILABLE';
+  if(verified&&source){
+   const label=source.status==='REAL_SOURCE_INK'?
+    'ORIGINAL SOURCE · INK CHANGED':
+    source.status==='SOURCE_SHOTS_NO_NEW_INK'?
+    'CPU FIRED · NO NEW SOURCE INK':
+    source.status==='SOURCE_PATROL_NO_SHOTS'?
+    'SOURCE PATROL · NO RECENT SHOTS':
+    source.status==='STAGING'?'SOURCE DROP · STARTING':
+    'SOURCE ACTIVITY · PAUSED / COMPLETE';
+   activityHead.textContent=label;
+   activityCounts.textContent='+'+source.newSourceCells+
+    ' real source cells · '+source.realCpuShots+' CPU shots / 3s';
+   activityHead.style.color=source.status==='REAL_SOURCE_INK'?
+    '#89f3f0':source.status==='SOURCE_SHOTS_NO_NEW_INK'?
+    '#ffd58e':'#c9e1e9';
+   activityBox.dataset.t21B75Status=source.status;
+   activityBox.dataset.t21B75NativeTick=String(source.actualObservedTicks);
+   activityBox.dataset.t21B75RecentCells=String(source.newSourceCells);
+   activityBox.dataset.t21B75RecentCpuShots=String(source.realCpuShots);
+   activityBox.dataset.t21B75OriginalScoring='0';
+   activityBox.dataset.t21B75Original4v4Certified='false';
+  }
   root.dataset.matchState=value.matchState;
   root.dataset.cpuRecovered=String(v.cpuRecovered);
   root.dataset.humanShots=String(v.humanShots);

@@ -1,0 +1,57 @@
+name: T21 W10-B75 live original-source CPU ink HUD
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3LiveSourceInkActivity.ts'
+      - 'src/app/UndertowF3LiveSourceInkActivity.test.ts'
+      - 'src/app/UndertowF3PlayableHud.ts'
+      - 'src/app/UndertowF3PlayableHud.test.ts'
+      - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
+      - '.github/workflows/t21-w10b75-live-source-ink-hud.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    name: B75 60Hz source ink window and frozen-authority preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3PlayableHud.test.ts
+      - run: node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+  real-native-source-hud:
+    name: Genuine live WebGL2 HUD original CPU ink (${{ matrix.aim }})
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        aim: [FIXED, SWEEP]
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Actual render, mouse, 60Hz, source ink, visible HUD
+        env:
+          T21_W10B75_AIM: ${{ matrix.aim }}
+          T21_F3_SHOT_DIR: /tmp/t21-w10b75
+        run: node scripts/t21-w10b75-live-native-ink-hud.mjs
+      - name: Keep real framebuffer and minimal anonymous source HUD evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b75-live-source-ink-${{ matrix.aim }}
+          path: /tmp/t21-w10b75/
+          if-no-files-found: warn
+          retention-days: 14
