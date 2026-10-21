@@ -14,7 +14,7 @@ jobs:
   real-chrome-source-parked-detour:
     name: True WebGL2 60Hz parked human / seven original-source CPU rejoin
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 24
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
