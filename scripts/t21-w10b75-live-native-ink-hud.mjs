@@ -168,6 +168,39 @@ async function run(){
  },100000);
  await click('mouseReleased');
  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
+ // B90: the extended W+mouse source-ink proof can leave the genuine
+ // HUMAN standing directly at the authentic A3 first-drop approach.
+ // Unlike B81's shorter input, this holds the original collision lip
+ // occupied indefinitely and correctly blocks A3/A2 (5/7). Release
+ // the lane using REAL reverse keyboard movement and unchanged Rapier
+ // KCC, not a CPU teleport or an artificial STAGING->PLAYING override.
+ const reverseStart=await snapshot();
+ const back={key:'s',code:'KeyS',windowsVirtualKeyCode:83,nativeVirtualKeyCode:83};
+ await cmd('Input.dispatchKeyEvent',{type:'keyDown',...back});
+ try{
+  await until(async()=>{
+   const n=await snapshot();
+   if(n.stopReason)fail('B90_NATIVE_REVERSE_SOURCE_STOP_'+n.stopReason);
+   return n.tick>=reverseStart.tick+60;
+  },100000);
+ }finally{
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...back});
+ }
+ const reverseEnd=await snapshot();
+ const oldFoot=reverseStart.player.position,newFoot=reverseEnd.player.position;
+ const actualRetreat=Math.hypot(newFoot[0]-oldFoot[0],newFoot[2]-oldFoot[2]);
+ if(actualRetreat<=.20||reverseEnd.originalSourceSolids!==25||
+    reverseEnd.originalPaintSurfaces!==17||
+    reverseEnd.originalSourceNavigationLinks!==26||
+    reverseEnd.sourceScoreablePromotions!==0)
+  fail('B90_REAL_HUMAN_LANE_CLEARANCE_NOT_PROVED_'+JSON.stringify({
+   actualRetreat,oldFoot,newFoot,sourceSolids:reverseEnd.originalSourceSolids,
+   sourcePaint:reverseEnd.originalPaintSurfaces,
+   sourceLinks:reverseEnd.originalSourceNavigationLinks}));
+ console.log('T21_B90_GENUINE_HUMAN_LANE_CLEARANCE',JSON.stringify({
+  actualRetreat,from:oldFoot,to:newFoot,nativeTicks:reverseEnd.tick-reverseStart.tick,
+  byRealKeyboard:true,unchangedPhysicalStage:true,
+  noCpuWarp:true,noForcedMatchStart:true}));
  console.log('T21_B79_GENUINE_EARLY_HUMAN_SOURCE_PAINT_HUD_PASS',
   JSON.stringify(humanPulse));
  const observations=[], started=Date.now();
