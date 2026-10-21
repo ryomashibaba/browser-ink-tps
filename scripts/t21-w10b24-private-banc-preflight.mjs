@@ -13,6 +13,7 @@ import {createHash} from 'node:crypto';
 import {existsSync,lstatSync,readdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve,relative,dirname,join,sep,extname,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {decodeB71PrivateBancBuffer} from './t21-w10b71-private-byml-metadata.mjs';
 
 export const B24_MAX_BYTES=16*1024*1024;
 export const B24_MAX_DISCOVERED=12000;
@@ -27,11 +28,14 @@ const sourceSideCount=Object.freeze({positiveZ:4,negativeZ:4,totalUnbound:8});
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const inside=(parent,child)=>child===parent||child.startsWith(parent+sep);
 const record=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
-const vec3=x=>Array.isArray(x)&&x.length===3&&x.every(v=>
- typeof v==='number'&&Number.isFinite(v));
+const vec3=x=>(Array.isArray(x)&&x.length===3&&x.every(v=>
+ typeof v==='number'&&Number.isFinite(v)))||
+ (record(x)&&['X','Y','Z'].every(k=>typeof x[k]==='number'&&
+  Number.isFinite(x[k])));
+const vector=x=>Array.isArray(x)?x:[x.X,x.Y,x.Z];
 const valid=x=>record(x)&&typeof x.Gyaml==='string'&&
  vec3(x.Translate)&&vec3(x.Rotate)&&vec3(x.Scale)&&
- x.Scale.every(v=>Math.abs(v)>1e-8)&&
+ vector(x.Scale).every(v=>Math.abs(v)>1e-8)&&
  typeof x.Layer==='string'&&x.Layer.length>0;
 function candidateName(rel){
  // Never inspect all unrelated JSON. Only Temple01-named actor exports
@@ -47,16 +51,33 @@ function inspectCandidate(abs){
    actorCount:0,recognizedSetActorCount:0,validSetActorCount:0};
  const bytes=readFileSync(abs);
  const digest=sha(bytes);
- if(extname(abs).toLowerCase()!=='.json')
-  return {fileName,sourceSha256:digest,decodeState:'NEEDS_PRIVATE_OFFLINE_BYML_DECODE',
-   actorCount:0,recognizedSetActorCount:0,validSetActorCount:0};
- let data;
- try{
-  if(bytes.includes(0))throw Error('BINARY_NOT_JSON');
-  data=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
- }catch{
-  return {fileName,sourceSha256:digest,decodeState:'HOLD_UNREADABLE_DECODED_JSON',
-   actorCount:0,recognizedSetActorCount:0,validSetActorCount:0};
+ const binary=extname(abs).toLowerCase()!=='.json';
+ let data,localBinaryMetadata=null;
+ if(binary){
+  try{
+   const result=decodeB71PrivateBancBuffer(bytes,fileName);
+   data=result.data;
+   localBinaryMetadata={
+    format:'BYML_METADATA_ONLY_NOT_AUTHENTICATED',
+    version:result.binaryVersion,endian:result.binaryEndianness,
+    compression:result.localCompression
+   };
+  }catch(e){
+   const unsupported=String(e?.message??e);
+   return {fileName,sourceSha256:digest,
+    decodeState:unsupported.includes('ZSTD_REQUIRES_DICTIONARY')?
+     'HOLD_PRIVATE_ZSTD_DICTIONARY_OR_UNSUPPORTED_FRAME':
+     'NEEDS_PRIVATE_OFFLINE_BYML_DECODE',
+    actorCount:0,recognizedSetActorCount:0,validSetActorCount:0};
+  }
+ }else{
+  try{
+   if(bytes.includes(0))throw Error('BINARY_NOT_JSON');
+   data=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+  }catch{
+   return {fileName,sourceSha256:digest,decodeState:'HOLD_UNREADABLE_DECODED_JSON',
+    actorCount:0,recognizedSetActorCount:0,validSetActorCount:0};
+  }
  }
  const stageIdentityExact=record(data)&&data.stageRowId==='Vss_Temple01';
  const actors=record(data)&&Array.isArray(data.Actors)&&
@@ -121,10 +142,12 @@ function inspectCandidate(abs){
  };
  return {
   fileName,sourceSha256:digest,
-  decodeState:!stageIdentityExact?'HOLD_STAGE_IDENTITY_UNBOUND':
-   !actors?'HOLD_UNSUPPORTED_ACTORS_STRUCTURE':
+  decodeState:!actors?'HOLD_UNSUPPORTED_ACTORS_STRUCTURE':
    recognized===0?'HOLD_NO_TEMPLE01_SET_ACTORS':
+   binary?'B71_LOCAL_BINARY_METADATA_ONLY_UNVERIFIED':
+   !stageIdentityExact?'HOLD_STAGE_IDENTITY_UNBOUND':
    'DECODED_METADATA_ONLY_INSTANCE_IDENTITY_UNBOUND',
+  ...(localBinaryMetadata?{localBinaryMetadata}:{}),
   stageIdentityExact,actorArraySchemaValid:!!actors,
   actorCount:rows.length,recognizedSetActorCount:recognized,
   validSetActorCount:correctlyShaped,
@@ -162,10 +185,14 @@ export function privateBancPreflight(dir){
  if(!existsSync(root)||!lstatSync(root).isDirectory()||
   lstatSync(root).isSymbolicLink())throw Error('B24_PRIVATE_SOURCE_DIRECTORY_REQUIRED');
  const candidates=collect(root);
- const matched=candidates.filter(x=>x.decodeState===
-  'DECODED_METADATA_ONLY_INSTANCE_IDENTITY_UNBOUND');
+ const matched=candidates.filter(x=>[
+  'DECODED_METADATA_ONLY_INSTANCE_IDENTITY_UNBOUND',
+  'B71_LOCAL_BINARY_METADATA_ONLY_UNVERIFIED'].includes(x.decodeState));
  const hold=matched.length>1?'HOLD_MULTIPLE_UNVERIFIED_BANC_CANDIDATES':
   matched.length===1?'HOLD_BANC_AUTHENTICITY_AND_MESH_BINDING_UNPROVEN':
+  candidates.some(x=>x.decodeState===
+    'HOLD_PRIVATE_ZSTD_DICTIONARY_OR_UNSUPPORTED_FRAME')?
+   'HOLD_PRIVATE_ZSTD_DICTIONARY_REQUIRED':
   candidates.some(x=>x.decodeState==='NEEDS_PRIVATE_OFFLINE_BYML_DECODE')?
    'HOLD_NEEDS_PRIVATE_OFFLINE_BYML_DECODE':
    'HOLD_NO_DECODED_VSS_TEMPLE01_BANC';
@@ -194,6 +221,10 @@ export function privateBancPreflight(dir){
   b60NewlyBoundPntSetMeshes:0,
   b60ActorCoordinatesExported:false,
   b60PrivateLayerNamesExported:false,
+  b71BinaryBymlDecodedPrivateLocalOnly:candidates.some(x=>
+   x.decodeState==='B71_LOCAL_BINARY_METADATA_ONLY_UNVERIFIED'),
+  b71NoOriginalInstancePromotion:true,
+  b71OriginalActorProvenanceStillRequired:true,
   candidates
  };
 }

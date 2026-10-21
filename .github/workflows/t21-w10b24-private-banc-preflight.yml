@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/t21-w10b24-private-banc-preflight.mjs'
       - 'scripts/t21-w10b24-private-banc-preflight.test.mjs'
+      - 'scripts/t21-w10b71-private-byml-metadata.mjs'
+      - 'scripts/t21-w10b71-private-byml-metadata.test.mjs'
       - 'RUN_T21_W10B24_PRIVATE_BANC_PREFLIGHT_ONCE.cmd'
       - '.github/workflows/t21-w10b24-private-banc-preflight.yml'
   workflow_dispatch:
@@ -23,8 +25,10 @@ jobs:
         run: |
           node --check scripts/t21-w10b24-private-banc-preflight.mjs
           node --check scripts/t21-w10b24-private-banc-preflight.test.mjs
+          node --check scripts/t21-w10b71-private-byml-metadata.mjs
+          node --check scripts/t21-w10b71-private-byml-metadata.test.mjs
       - name: Verify private input is not serialized, copied or authorized
-        run: node --test scripts/t21-w10b24-private-banc-preflight.test.mjs
+        run: node --test scripts/t21-w10b24-private-banc-preflight.test.mjs scripts/t21-w10b71-private-byml-metadata.test.mjs
       - name: Preserve sole original source authority unchanged
         shell: bash
         run: |
