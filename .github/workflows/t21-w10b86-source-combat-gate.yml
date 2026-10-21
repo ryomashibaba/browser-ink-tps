@@ -1,0 +1,27 @@
+name: T21 W10-B86 source practice no ghost combat targets
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/combat/CombatTargetSystem.ts'
+      - 'src/combat/CombatTargetSystem.SourcePractice.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-w10b86-source-combat-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-combat-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Compile source-preview application
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Ensure ghost target absence and native gameplay contracts
+        run: npx vitest run src/combat/CombatTargetSystem.SourcePractice.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts
