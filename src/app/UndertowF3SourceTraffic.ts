@@ -478,10 +478,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      bot.position.y,bot.position.z+
       (bot.position.z>=human.z?1:-1)*backMeters);
     const navFoot=this.nav.closestPoint(wanted);
-    if(navFoot.distance(wanted)>.20||
+    if(Math.hypot(navFoot.x-wanted.x,navFoot.y-wanted.y,
+      navFoot.z-wanted.z)>.20||
        Math.abs(navFoot.y-bot.position.y)>.20||
        !this.hasSourceFootSupport(navFoot))continue;
-    const audit=this.nav.auditPath(bot.position,navFoot);
+    const audit=this.nav.auditPath(bot.position,
+     new Vec3(navFoot.x,navFoot.y,navFoot.z));
     if(!audit.reachedTarget||
        audit.startSnapDistanceMeters>.20||
        audit.endSnapDistanceMeters>.20||
