@@ -502,7 +502,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       z:bot.position.z+(navFoot.z-bot.position.z)*t
      })){allSupported=false;break;}
     }
-    if(allSupported)return [navFoot.x,navFoot.y,navFoot.z];
+    if(allSupported)return [navFoot.x,navFoot.y,navFoot.z] as const;
    }
    return null;
   })();
