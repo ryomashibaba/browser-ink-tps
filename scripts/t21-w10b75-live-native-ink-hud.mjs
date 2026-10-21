@@ -167,11 +167,24 @@ async function run(){
    h.acceptedShots>0&&h.acceptedShots<=h.realShots&&
    h.hudScoreable==='0'&&h.hudOriginal4v4==='false'?h:false;
  },180000);
- await until(async()=>{
+ // B98: native CPU collision obstruction depends on WHERE real W keyup
+ // occurs, not on elapsed native ticks since a late asynchronous CDP shot.
+ // B97 kept W for ~10 extra ticks, settled at z=62.87 instead of the
+ // actually blocking original upper lip (z~63.60); A3 recovered without
+ // using any detour. Stop W against the real Rapier human foot itself.
+ const realWRelease=await until(async()=>{
   const n=await snapshot();
   if(n.stopReason)fail('B79_HUMAN_SOURCE_SESSION_STOP_'+n.stopReason);
-  return n.tick>before.tick+(parkedB96?60:33);
+  if(!parkedB96)return n.tick>before.tick+33?n:false;
+  const z=n.player.position[2];
+  if(z<63.70)fail('B98_TRUE_W_KEYUP_OVERSHOT_BLOCKING_LIP_'+
+    JSON.stringify({nativeTick:n.tick,realHumanFoot:n.player.position}));
+  return z<=64.35?n:false;
  },100000);
+ if(parkedB96)console.log('T21_B98_REAL_INPUT_POSITION_GATED_KEYUP',
+  JSON.stringify({tick:realWRelease.tick,
+    realHumanFoot:realWRelease.player.position,realKeyboard:true,
+    usedArtificialQaInput:false}));
  await click('mouseReleased');
  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
  // B96 deliberately retains the HUMAN at the original source lip.
@@ -227,11 +240,18 @@ async function run(){
   const settledHuman=settled.player.position;
   // B97: do not convert ordinary KCC coast into a synthetic fixed pose.
   // Reject a human who never occupied the genuine A3 upper source lip.
-  if(Math.abs(settledHuman[0])>.9||settledHuman[2]<62.8||
-     settledHuman[2]>64.8||settledHuman[1]<8.2||
-     settledHuman[1]>8.6)
-    fail('B97_REAL_HUMAN_NOT_PARKED_ON_OBSTRUCTING_SOURCE_LIP_'+
-      JSON.stringify({settledHuman,nativeTick:settled.tick}));
+  // B92 identified the physically blocked A3 lip from unchanged
+  // collision/real-human KCC feet. Reject easy 7/7 success when the
+  // real HUMAN has walked past the collision choke instead of testing
+  // B95's actual blocked-case autonomous lateral recovery.
+  const authenticBlocker=[-0.21520927548408508,63.60317611694336];
+  const lipError=Math.hypot(
+   settledHuman[0]-authenticBlocker[0],
+   settledHuman[2]-authenticBlocker[1]);
+  if(lipError>.34||settledHuman[1]<8.2||settledHuman[1]>8.6)
+    fail('B98_TRUE_HUMAN_NOT_AT_ORIGINAL_A3_PHYSICAL_BLOCKER_'+
+      JSON.stringify({settledHuman,nativeTick:settled.tick,
+       blockerErrorMeters:lipError,source:'B92_GENUINE_NATIVE_BLOCKER'}));
   console.log('T21_B97_REAL_KEYUP_SETTLED_LIP',JSON.stringify({
     realKeyboardW:true,noKeyboardS:true,settledHuman,
     nativeTick:settled.tick,paused:settled.paused,
@@ -317,10 +337,14 @@ async function run(){
      renderFrames:diag.nativeRenderFrames,paused:n.paused,
      rejoined:diag.actualCpuRejoined,detour}));
    }
+   if(n.cpu.physicalRejoins.length===7&&!detour)
+    fail('B98_FALSE_POSITIVE_SEVEN_REJOINS_WITHOUT_REAL_A3_DETOUR_'+
+      JSON.stringify(storePartial(n,
+       'SEVEN_REJOINED_WITHOUT_LATERAL_DETOUR',humanParked,detour)));
    if(n.tick>=2400&&n.cpu.physicalRejoins.length<7)
-    fail('B96_REAL_CHROME_BLOCKED_SEVEN_SOURCE_CPUS_'+JSON.stringify({
-     tick:n.tick,rejoins:n.cpu.physicalRejoins,
-     actors:n.cpu.cpu,detour,originalSourceOnly:true}));
+    fail('B96_REAL_CHROME_BLOCKED_SEVEN_SOURCE_CPUS_'+JSON.stringify(
+     storePartial(n,'ORIGINAL_SOURCE_SEVEN_NOT_REJOINED_BY_TICK_2400',
+      humanParked,detour)));
    return n.cpu.physicalRejoins.length===7&&
     n.cpu.freeCombatEnabled===true&&n.matchState==='PLAYING'&&
     detour?.linkId.startsWith('first-drop-positive-z-')&&
