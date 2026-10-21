@@ -183,6 +183,17 @@ describe('F3B playable 8-actor original source runtime',()=>{
      return link?nav.auditPath(actor.position,new Vec3(...link.end))
       .nativePathPoints.slice(0,12):[];
     })(),
+    b94UpperOriginalRoute:(()=>{
+     const actor=bots.find(b=>b.id==='A3')!;
+     const link=stage.navigationLinks!.find(l=>
+      l.id===state.b93UpperDetours.find(d=>d.actorId==='A3')?.linkId);
+     if(!link)return null;
+     const path=nav.auditPath(actor.position,new Vec3(...link.start));
+     return {linkId:link.id,reachability:path.reachedTarget,
+      startSnap:path.startSnapDistanceMeters,
+      endSnap:path.endSnapDistanceMeters,
+      points:path.nativePathPoints.slice(0,12)};
+    })(),
     sourcePatrol:state.sourcePatrol,
     originalHumanPlayerFoot:player.getPosition().toArray(),
     actorSteeringFeet:bots.map(b=>({id:b.id,
