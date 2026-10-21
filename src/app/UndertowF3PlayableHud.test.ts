@@ -32,6 +32,21 @@ describe('W10-B17 non-scoring source practice HUD',()=>{
    cpuRecovered:7,sourceState:'SOURCE-LOCAL PATROL',
    sessionState:'SOURCE PRACTICE',humanShots:12,cpuTurfShots:87});
  });
+ it('B82 reports real 60Hz splat time without claiming official combat',()=>{
+  const s=state();s.matchState='PLAYING';s.player.hp=0;
+  s.humanRespawnTicksRemaining=149;
+  expect(formatF3PlayableHud(s)).toMatchObject({
+   lifeState:'SPLATTED',respawnSeconds:2.5,
+   scoring:'UNSCORED / NO OFFICIAL RESULT',
+   originalCrossTeamContactCertified:false});
+  s.humanRespawnTicksRemaining=6;
+  expect(formatF3PlayableHud(s).respawnSeconds).toBe(.1);
+  s.humanRespawnTicksRemaining=151;
+  expect(formatF3PlayableHud(s).respawnSeconds).toBeNull();
+  s.player.hp=100;s.humanRespawnTicksRemaining=30;
+  expect(formatF3PlayableHud(s)).toMatchObject({
+   lifeState:'ACTIVE',respawnSeconds:null});
+ });
  it('time-up never claims a 4v4 result; safe stop is explicit',()=>{
   const s=state();
   s.matchState='TIME_UP';s.timeRemainingSeconds=0;

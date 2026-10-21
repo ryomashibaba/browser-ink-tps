@@ -2207,6 +2207,9 @@ export class UndertowF3PlayablePreviewApp{
    unrestricted4v4Certified:false,
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
+   // B82: native 150-tick recovery counter, never a fabricated respawn event.
+   humanRespawnTicksRemaining:this.resources.currentHp<=0?
+    Math.max(0,150-this.respawnFrames):null,
    // B76: read-only native shot/refill witness for the human player HUD.
    // This is not an ink award, official Turf score or gameplay mutation.
    playerInkRecoveryState:this.stats.playerInkRecoveryState,

@@ -11,6 +11,8 @@ import {B76HumanSourceCoach}
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string};
  playerInkRecoveryState?:string;
+ /** Actual 60Hz native human respawn countdown, never Actor placement. */
+ humanRespawnTicksRemaining?:number|null;
  inkDryFireAttempts?:number;
  matchState:string;
  timeRemainingSeconds:number;
@@ -33,9 +35,16 @@ export function formatF3PlayableHud(s:F3PlayableHudState){
  const minutes=Math.floor(seconds/60);
  const rest=String(seconds%60).padStart(2,'0');
  const cpuCount=Math.max(0,Math.min(7,s.cpu.physicalRejoins.length));
+ const lifeState=Number.isFinite(s.player.hp)&&s.player.hp===0?
+  'SPLATTED' as const:'ACTIVE' as const;
+ const ticks=s.humanRespawnTicksRemaining;
+ const respawnSeconds=lifeState==='SPLATTED'&&Number.isSafeInteger(ticks)&&
+  ticks!==null&&ticks!==undefined&&ticks>=0&&ticks<=150?
+  Math.ceil(ticks/6)/10:null;
  return {
   clock:`${minutes}:${rest}`,
   hp:clampPercent(s.player.hp),
+  lifeState,respawnSeconds,
   ink:clampPercent(s.player.ink),
   cpuRecovered:cpuCount,
   sourceState:cpuCount===7&&s.cpu.freeCombatEnabled?
@@ -104,6 +113,38 @@ export function createF3PlayableHud(ui:HTMLElement){
    '<div id="t21-f3-b76-hint" style="font:500 9px system-ui;'+
     'color:#f0d4a8">Non-scoring real Human Impact changes</div></div>';
  ui.appendChild(root);
+ // B82: visible native human hit/splat cues; source physics & gameplay unchanged.
+ // Independent viewport layers avoid translated status-panel clipping.
+ const damageVignette=document.createElement('div');
+ damageVignette.id='t21-f3-b82-damage-vignette';
+ damageVignette.setAttribute('aria-hidden','true');
+ damageVignette.style.cssText=
+  'position:fixed;inset:0;pointer-events:none;z-index:36;'+
+  'background:radial-gradient(ellipse at center,transparent 45%,rgba(255,35,64,.56) 100%);'+
+  'opacity:0;transition:opacity .12s ease-out';
+ ui.appendChild(damageVignette);
+ const splatNotice=document.createElement('div');
+ splatNotice.id='t21-f3-b82-splat-notice';
+ splatNotice.setAttribute('role','status');
+ splatNotice.hidden=true;
+ splatNotice.style.cssText=
+  'position:fixed;left:50%;top:44%;transform:translate(-50%,-50%);'+
+  'width:min(340px,calc(100vw - 36px));box-sizing:border-box;'+
+  'pointer-events:none;z-index:39;text-align:center;color:#fff;'+
+  'background:rgba(20,15,31,.90);border:2px solid #ff7c94;'+
+  'border-radius:16px;padding:18px 22px;box-shadow:0 12px 50px #220c25a6;'+
+  'font:800 15px/1.6 system-ui,sans-serif';
+ splatNotice.innerHTML=
+  '<strong style="font-size:27px;letter-spacing:2px">SPLATTED</strong>'+
+  '<div id="t21-f3-b82-respawn-countdown"></div>'+
+  '<small style="display:block;font:600 11px/1.5 system-ui;color:#ffe1e6">'+
+  'SOURCE PRACTICE · NO OFFICIAL RESULT</small>';
+ ui.appendChild(splatNotice);
+ const countdown=splatNotice.querySelector<HTMLElement>(
+  '#t21-f3-b82-respawn-countdown')!;
+ let previousHp:number|null=null;
+ let previousTick:number|null=null;
+ let damageFlashThrough=-1;
  const select=(id:string):HTMLElement=>{
   const element=root.querySelector<HTMLElement>('#'+id);
   if(!element)throw Error('T21_W10B17_HUD_MARKUP_MISSING_'+id);
@@ -136,6 +177,27 @@ export function createF3PlayableHud(ui:HTMLElement){
   vitals.textContent='HP '+v.hp+' · INK '+v.ink;
   cpu.textContent='CPU '+v.cpuRecovered+'/7 · '+v.sourceState;
   practice.textContent=v.scoring;
+  const splatted=v.lifeState==='SPLATTED';
+  splatNotice.hidden=!splatted||value.matchState==='TIME_UP'||!!value.stopReason;
+  countdown.textContent=v.respawnSeconds===null?'RESPAWNING…':
+   'RESPAWN IN '+v.respawnSeconds.toFixed(1)+'s';
+  splatNotice.dataset.nativeRespawnSeconds=
+   v.respawnSeconds===null?'UNAVAILABLE':v.respawnSeconds.toFixed(1);
+  const tick=value.tick,hp=value.player.hp;
+  const validTick=Number.isSafeInteger(tick)&&tick!==undefined&&tick>=0;
+  if(validTick&&Number.isFinite(hp)){
+   if(previousTick!==null&&tick<previousTick){
+    previousHp=null;damageFlashThrough=-1;
+   }
+   if(previousTick!==null&&tick>previousTick&&
+      previousHp!==null&&hp<previousHp-.01)
+    damageFlashThrough=tick+20; // Real 60Hz: 0.33s, not wall-clock guessed.
+   previousHp=hp;previousTick=tick;
+  }
+  const hurt=validTick&&!splatted&&!value.paused&&!value.stopReason&&
+   tick<=damageFlashThrough;
+  damageVignette.style.opacity=hurt?'1':'0';
+  damageVignette.dataset.actualHpDrop=hurt?'VISIBLE':'OFF';
   const source=activity.observe(value);
   const verified=!!source&&source.status!=='UNVERIFIED';
   activityBox.hidden=!verified;
@@ -209,6 +271,7 @@ export function createF3PlayableHud(ui:HTMLElement){
   root.dataset.humanSplats=String(v.humanSplats);
   root.dataset.cpuSplats=String(v.cpuSplats);
   root.dataset.humanHp=String(v.hp);
+  root.dataset.b82RealHumanLife=v.lifeState;
   root.dataset.humanInk=String(v.ink);
   root.dataset.clock=v.clock;
   root.dataset.cpuSourceOnly='true';
