@@ -151,3 +151,76 @@ test('B73 rejects untrusted, oversized and empty in-memory Zstd dictionaries',()
    /B71_PRIVATE_DICTIONARY_INVALID_LENGTH/);
  }
 });
+
+/** B74 real BYML format 0xA1/0xA2, synthetic values only.
+ * Creates one otherwise-valid original-looking Actor record with an
+ * unrelated private binary field; never persists or uploads that field.
+ */
+function b74PrivateBinaryField(little,kind){
+ const original=syntheticByml(little);
+ const b=Buffer.alloc(original.length+64);
+ original.copy(b);
+ const rd=p=>little?b.readUInt32LE(p):b.readUInt32BE(p);
+ const wr=(p,n)=>little?b.writeUInt32LE(n,p):b.writeUInt32BE(n,p);
+ const root=rd(12),list=rd(root+8),actor=rd(list+8);
+ assert.equal(b[actor],0xc1);
+ // Synthetic actor Hash is entry 5, repurposed for a private BYML blob.
+ const at=actor+4+5*8;
+ assert.equal(b[at+3],0xd3);
+ const payload=(original.length+3)&~3;
+ b[at+3]=kind;wr(at+4,payload);
+ const secret=Buffer.from('PRIVATE_ACTOR_BINARY_NEVER_EXPORT');
+ wr(payload,secret.length);
+ const prefix=kind===0xa1?4:8;
+ if(kind===0xa2)wr(payload+4,0x1000);
+ secret.copy(b,payload+prefix);
+ if(little)b.writeUInt16LE(kind===0xa1?4:5,2);
+ else b.writeUInt16BE(kind===0xa1?4:5,2);
+ return {buffer:b.subarray(0,payload+prefix+secret.length),
+  payload,at,wr,secret};
+}
+for(const little of [true,false])
+ for(const kind of [0xa1,0xa2])
+  test('B74 genuine BYML binary-node syntax remains safe and retains ACTOR count: '+
+   (little?'YB':'BY')+' '+kind.toString(16),()=>{
+   const f=b74PrivateBinaryField(little,kind);
+   const decoded=readB71BymlData(f.buffer);
+   assert.equal(decoded.data.Actors.length,1);
+   assert.equal(decoded.data.Actors[0].Gyaml,
+    'Lft_FldObj_Temple01_PntSet');
+   assert.equal(decoded.data.Actors[0].Hash,
+    null);
+   assert.equal(JSON.stringify(decoded.data).includes('PRIVATE_ACTOR_BINARY'),false);
+   const dir=mkdtempSync(join(tmpdir(),'b74-opaque-byml-'));
+   try{
+    writeFileSync(join(dir,'Vss_Temple01_Static.byml'),f.buffer);
+    const report=privateBancPreflight(dir);
+    assert.equal(report.hold,'HOLD_BANC_AUTHENTICITY_AND_MESH_BINDING_UNPROVEN');
+    assert.equal(report.candidates[0].validSetActorCount,1);
+    assert.equal(report.b71NoOriginalInstancePromotion,true);
+    assert.equal(report.originalConnectionsPromoted,0);
+    assert.equal(JSON.stringify(report).includes('PRIVATE_ACTOR_BINARY'),false);
+    assert.equal(JSON.stringify(report).includes('733.125'),false);
+   }finally{rmSync(dir,{recursive:true,force:true});}
+  });
+test('B74 corrupt binary offset, length, alignment and version fail closed',()=>{
+ const base=b74PrivateBinaryField(true,0xa1);
+ const invalidOffset=Buffer.from(base.buffer);
+ invalidOffset.writeUInt32LE(0xfffffff0,base.at+4);
+ assert.throws(()=>readB71BymlData(invalidOffset),/INVALID_BINARY_BOUNDS/);
+ const invalidLength=Buffer.from(base.buffer);
+ invalidLength.writeUInt32LE(2*1024*1024,base.payload);
+ assert.throws(()=>readB71BymlData(invalidLength),/OPAQUE_BINARY_NODE_TOO_LARGE/);
+ const oldVersion=Buffer.from(base.buffer);oldVersion.writeUInt16LE(3,2);
+ assert.throws(()=>readB71BymlData(oldVersion),
+  /BINARY_VALUE_BEFORE_SUPPORTED_BYML_VERSION/);
+ const file=b74PrivateBinaryField(true,0xa2);
+ const invalidAlign=Buffer.from(file.buffer);
+ invalidAlign.writeUInt32LE(4,file.payload+4);
+ assert.throws(()=>readB71BymlData(invalidAlign),
+  /UNSUPPORTED_EMBEDDED_FILE_ALIGNMENT/);
+ const corrupt=Buffer.from(syntheticByml(true));
+ const where=corrupt.indexOf('TOP_SECRET_PRIVATE_LAYER');
+ assert.ok(where>0);corrupt[where+4]=0;
+ assert.throws(()=>readB71BymlData(corrupt),/INVALID_STRING_DATA/);
+});

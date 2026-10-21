@@ -20,7 +20,7 @@ export function readB71BymlData(bytes){
   fail('UNSUPPORTED_FILE_LENGTH');
  const magic=bytes.toString('ascii',0,2);
  if(magic!=='YB'&&magic!=='BY')fail('NOT_BYML');
- const little=magic==='YB',length=bytes.length;
+ const little=magic==='YB';
  const u32=p=>{within(p,4,bytes);return little?
   bytes.readUInt32LE(p):bytes.readUInt32BE(p);};
  const s32=p=>{within(p,4,bytes);return little?
@@ -53,7 +53,7 @@ export function readB71BymlData(bytes){
    within(p+a,b-a,bytes);
    const last=bytes[p+b-1]===0?b-1:b;
    const value=utf8.decode(bytes.subarray(p+a,p+last));
-   if(value.length>4096||value.includes('\\0'))
+   if(value.length>4096||value.includes('\0'))
     fail('INVALID_STRING_DATA');
    list.push(value);prev=b;
   }
@@ -70,6 +70,22 @@ export function readB71BymlData(bytes){
   if(kind===0xa0){
    if(values[v]===undefined)fail('INVALID_STRING_INDEX');
    return values[v];
+  }
+  // B74: Nintendo BYML 0xA1/0xA2 are offset-backed private blobs.
+  // Bound-check in memory, but NEVER decode or reflect their contents:
+  // unrelated embedded resources must not conceal valid Actor rows.
+  // Return a constant sentinel; neither length nor bytes are exposed.
+  if(kind===0xa1||kind===0xa2){
+   if(version<(kind===0xa1?4:5))
+    fail('BINARY_VALUE_BEFORE_SUPPORTED_BYML_VERSION');
+   within(v,kind===0xa1?4:8,bytes,16);
+   const size=u32(v);
+   if(size>1024*1024)fail('OPAQUE_BINARY_NODE_TOO_LARGE');
+   if(kind===0xa2&&u32(v+4)!==0x1000)
+    fail('UNSUPPORTED_EMBEDDED_FILE_ALIGNMENT');
+   within(v+(kind===0xa1?4:8),size,bytes,16);
+   // An opaque payload can never impersonate an original Actor ID.
+   return null;
   }
   if(kind===0xd0)return v!==0;
   if(kind===0xd1)return s32(at);
