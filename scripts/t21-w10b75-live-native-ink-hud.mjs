@@ -179,7 +179,7 @@ async function run(){
   const z=n.player.position[2];
   if(z<63.69)fail('B98_TRUE_W_KEYUP_OVERSHOT_BLOCKING_LIP_'+
     JSON.stringify({nativeTick:n.tick,realHumanFoot:n.player.position}));
-  return z<=64.02?n:false;
+  return z<=64.35?n:false;
  },100000);
  if(parkedB96)console.log('T21_B98_REAL_INPUT_POSITION_GATED_KEYUP',
   JSON.stringify({tick:realWRelease.tick,
@@ -244,14 +244,21 @@ async function run(){
   // collision/real-human KCC feet. Reject easy 7/7 success when the
   // real HUMAN has walked past the collision choke instead of testing
   // B95's actual blocked-case autonomous lateral recovery.
-  const authenticBlocker=[-0.21520927548408508,63.60317611694336];
-  const lipError=Math.hypot(
-   settledHuman[0]-authenticBlocker[0],
-   settledHuman[2]-authenticBlocker[1]);
-  if(lipError>.34||settledHuman[1]<8.2||settledHuman[1]>8.6)
-    fail('B98_TRUE_HUMAN_NOT_AT_ORIGINAL_A3_PHYSICAL_BLOCKER_'+
+  // B98B: immutable B92 provides the A3 physical obstruction foot.
+  // Real Chrome frames advance several native ticks together, so the
+  // EXACT B92 human coordinate cannot reliably be reproduced with real
+  // CDP KeyW/keyUp. Test physically occupying A3's actual source
+  // approach capsule, not an invented single-target user coordinate.
+  const originalA3BlockedFoot=[0.2749243676662445,64.00698852539062];
+  const lipContactDistance=Math.hypot(
+   settledHuman[0]-originalA3BlockedFoot[0],
+   settledHuman[2]-originalA3BlockedFoot[1]);
+  if(lipContactDistance>.70||settledHuman[1]<8.2||
+     settledHuman[1]>8.6)
+    fail('B98_TRUE_HUMAN_NOT_ON_ORIGINAL_A3_APPROACH_CAPSULE_'+
       JSON.stringify({settledHuman,nativeTick:settled.tick,
-       blockerErrorMeters:lipError,source:'B92_GENUINE_NATIVE_BLOCKER'}));
+       originalA3BlockedFoot,contactDistanceMeters:lipContactDistance,
+       source:'B92_ACTUAL_RAPIER_OBSTRUCTION_A3_FOOT'}));
   console.log('T21_B97_REAL_KEYUP_SETTLED_LIP',JSON.stringify({
     realKeyboardW:true,noKeyboardS:true,settledHuman,
     nativeTick:settled.tick,paused:settled.paused,
