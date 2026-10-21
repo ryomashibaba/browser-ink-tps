@@ -1,0 +1,46 @@
+name: T21 W10-B81 same-tab FIXED to SWEEP two real 180s
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b81-*.mjs'
+      - '.github/workflows/t21-w10b81-two-native-rounds.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3OwnerAimComparison.test.ts src/app/UndertowF3PreviewAimReview.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
+      - run: node --check scripts/t21-w10b81-two-native-rounds.mjs
+      - run: node --test scripts/t21-w10b81-comparison-witness.test.mjs scripts/t21-w10b80-native-stall-classifier.test.mjs scripts/t21-w10b72-stored-round-witness.test.mjs
+  two-real-rounds:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 135
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Two actual 180s rounds, physical save clicks, rendered comparison and clear
+        env:
+          T21_F3_SHOT_DIR: /tmp/t21-w10b81
+        run: node scripts/t21-w10b81-two-native-rounds.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: w10b81-two-native-rounds
+          path: /tmp/t21-w10b81/
+          if-no-files-found: warn
+          retention-days: 14
