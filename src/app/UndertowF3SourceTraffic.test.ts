@@ -52,6 +52,19 @@ describe('F3B playable 8-actor original source runtime',()=>{
     slots.teamASlots[3]![1]+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,
     slots.teamASlots[3]![2]));
    const shared=new UndertowPhase14QSharedActorCollision(physics,stage,true);
+   // B93: READ-ONLY real shared Rapier KCC rejections (no approval edits).
+   const blockedA3:Array<{cause:string;owners:readonly string[];
+    from:number[];to:number[]}>=[]; 
+   if(humanWalkTicks===240){
+    const realAudit=shared.auditGroundStep.bind(shared);
+    vi.spyOn(shared,'auditGroundStep').mockImplementation((id,from,to,dt)=>{
+     const result=realAudit(id,from,to,dt);
+     if(id==='A3'&&!result.approved&&blockedA3.length<16)
+      blockedA3.push({cause:result.cause,owners:result.colliderOwnerIds,
+       from:[from.x,from.y,from.z],to:[to.x,to.y,to.z]});
+     return result;
+    });
+   }
    const handoff=new UndertowPhase14ECpuHandoff(stage,true);
    const liveHuman=new UndertowF3NativeHumanCrowd(nav,stage);
    const cpu=new CpuAgentSystem(app,nav,ink,
@@ -162,6 +175,14 @@ describe('F3B playable 8-actor original source runtime',()=>{
     b93UpperDetours:state.b93UpperDetours,
     b93ExperimentalEnabled:state.b93ExperimentalEnabled,
     b93ParkedPlayerFoot,
+    blockedA3,
+    b93A3NativePath:(()=>{
+     const actor=bots.find(b=>b.id==='A3')!;
+     const link=stage.navigationLinks!.find(l=>
+      l.id===state.b93UpperDetours.find(d=>d.actorId==='A3')?.linkId);
+     return link?nav.auditPath(actor.position,new Vec3(...link.end))
+      .nativePathPoints.slice(0,12):[];
+    })(),
     sourcePatrol:state.sourcePatrol,
     originalHumanPlayerFoot:player.getPosition().toArray(),
     actorSteeringFeet:bots.map(b=>({id:b.id,
