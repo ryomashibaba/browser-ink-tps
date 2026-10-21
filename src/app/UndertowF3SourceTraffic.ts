@@ -34,7 +34,7 @@ export interface F3TrafficSnapshot{
  readonly landingCorridorsCleared:readonly string[];
  readonly releasedCpuIds:readonly string[];
  readonly freeCombatEnabled:boolean;
- readonly b93UpperDetours:readonly {actorId:string;linkId:string;phase:string}[];
+ readonly b93UpperDetours:readonly {actorId:string;linkId:string;phase:string;escapeFoot:StageVector3|null}[];
  readonly b93ExperimentalEnabled:boolean;
  readonly sourcePatrol:{
   readonly auditedTargets:number;
@@ -144,7 +144,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  /** Explicit opt-in; only Recast targets from immutable source links. */
  private readonly b93UpperDetours=new Map<string,{
   linkId:string;sourceGoal:StageVector3;originalLanding:StageVector3;
-  upperStart:StageVector3;phase:'APPROACH'|'DROP'
+  upperStart:StageVector3;escapeFoot:StageVector3|null;
+  phase:'ESCAPE'|'APPROACH'|'DROP'
  }>();
  private freeCombat=false;
 
@@ -461,9 +462,54 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      Math.abs(b.link.start[0]-bot.position.x)||
      a.link.id.localeCompare(b.link.id))[0]?.link;
   if(!candidate)return;
+  // A valid upper endpoint may still start its shortest Recast route
+  // by steering into the stationary HUMAN. Try an actual navmesh point
+  // sideways/away on the existing high source floor before approaching
+  // that endpoint. Every candidate is both Rapier-ray floor-supported
+  // and natively path-audited. This is a QA steering goal ONLY, not an
+  // authored navigation link or a substitute for a physical KCC step.
+  const offsets:[[number,number],[number,number],[number,number],
+    [number,number],[number,number]]=[
+    [1.5,.4],[1.0,.9],[1.9,.3],[1.4,1.1],[2.2,.7]
+   ];
+  const escapeFoot:StageVector3|null=(()=>{
+   for(const [sideMeters,backMeters] of offsets){
+    const wanted=new Vec3(bot.position.x+direction*sideMeters,
+     bot.position.y,bot.position.z+
+      (bot.position.z>=human.z?1:-1)*backMeters);
+    const navFoot=this.nav.closestPoint(wanted);
+    if(navFoot.distance(wanted)>.20||
+       Math.abs(navFoot.y-bot.position.y)>.20||
+       !this.hasSourceFootSupport(navFoot))continue;
+    const audit=this.nav.auditPath(bot.position,navFoot);
+    if(!audit.reachedTarget||
+       audit.startSnapDistanceMeters>.20||
+       audit.endSnapDistanceMeters>.20||
+       audit.pointCount<2)continue;
+    const points=audit.nativePathPoints;
+    if(!points.every(p=>Math.abs(p.y-bot.position.y)<.3&&
+       Math.hypot(p.x-human.x,p.z-human.z)>.55))continue;
+    const first=points[1]!;
+    if(Math.hypot(first.x-human.x,first.z-human.z)<
+       humanDist-.04)continue;
+    // Check intermediate authentic floor, not merely the endpoint.
+    let allSupported=true;
+    for(let i=1;i<=6;i++){
+     const t=i/6;
+     if(!this.hasSourceFootSupport({
+      x:bot.position.x+(navFoot.x-bot.position.x)*t,
+      y:bot.position.y,
+      z:bot.position.z+(navFoot.z-bot.position.z)*t
+     })){allSupported=false;break;}
+    }
+    if(allSupported)return [navFoot.x,navFoot.y,navFoot.z];
+   }
+   return null;
+  })();
   this.b93UpperDetours.set(bot.id,{linkId:candidate.id,
    sourceGoal:candidate.end,originalLanding:candidate.end,
-   upperStart:candidate.start,phase:'APPROACH'});
+   upperStart:candidate.start,escapeFoot,
+   phase:escapeFoot?'ESCAPE':'APPROACH'});
  }
  prepare(frame:number,humanFoot?:Readonly<{x:number;y:number;z:number}>):void{
   if(this.freeCombat)return;
@@ -486,11 +532,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(bot.mobilityState==='GROUND'&&bot.agent&&frame%18===1){
      if(humanFoot)this.selectB93UpperDetour(bot,humanFoot,frame);
      const detour=this.b93UpperDetours.get(bot.id);
+     if(detour?.phase==='ESCAPE'&&detour.escapeFoot&&
+        Math.hypot(bot.position.x-detour.escapeFoot[0],
+          bot.position.z-detour.escapeFoot[2])<.42)
+       detour.phase='APPROACH';
      if(detour?.phase==='APPROACH'&&
         Math.hypot(bot.position.x-detour.upperStart[0],
           bot.position.z-detour.upperStart[2])<0.9)
        detour.phase='DROP';
-     const goal=detour?.phase==='APPROACH'?detour.upperStart:
+     const goal=detour?.phase==='ESCAPE'&&detour.escapeFoot?
+      detour.escapeFoot:
+      detour?.phase==='APPROACH'?detour.upperStart:
       detour?.sourceGoal??this.routeFor(bot.id).sourceGoal;
      bot.agent.requestMoveTarget(this.nav.closestPoint(new Vec3(...goal)));
     }
@@ -636,7 +688,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    releasedCpuIds:[...this.released],
    freeCombatEnabled:this.freeCombat,
    b93UpperDetours:[...this.b93UpperDetours].map(([actorId,v])=>({
-    actorId,linkId:v.linkId,phase:v.phase})),
+    actorId,linkId:v.linkId,phase:v.phase,escapeFoot:v.escapeFoot})),
    b93ExperimentalEnabled:this.enableB93UpperDetour,
    sourcePatrol:{auditedTargets:this.auditedTargets,
     realGoalRequests:this.realGoalRequests,
