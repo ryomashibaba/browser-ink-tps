@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/app/UndertowF3LiveSourceInkActivity.ts'
       - 'src/app/UndertowF3LiveSourceInkActivity.test.ts'
+      - 'src/app/UndertowF3HumanInkCoach.ts'
+      - 'src/app/UndertowF3HumanInkCoach.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'
       - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
@@ -24,7 +27,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3PlayableHud.test.ts
+      - run: npx vitest run src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: node --check scripts/t21-w10b75-live-native-ink-hud.mjs
   real-native-source-hud:
     name: Genuine live WebGL2 HUD original CPU ink (${{ matrix.aim }})

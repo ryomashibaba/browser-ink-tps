@@ -5,9 +5,13 @@
  */
 import {B75SourceInkActivity,type B75NativeInkFrame}
  from './UndertowF3LiveSourceInkActivity';
+import {B76HumanSourceCoach}
+ from './UndertowF3HumanInkCoach';
 
 export interface F3PlayableHudState extends B75NativeInkFrame {
- player:{hp:number;ink:number};
+ player:{hp:number;ink:number;mode?:string};
+ playerInkRecoveryState?:string;
+ inkDryFireAttempts?:number;
  matchState:string;
  timeRemainingSeconds:number;
  cpu:{physicalRejoins:readonly string[];freeCombatEnabled:boolean};
@@ -89,7 +93,16 @@ export function createF3PlayableHud(ui:HTMLElement){
    '<div id="t21-f3-b75-source-ink-counts" style="margin:3px 0;'+
     'font:800 12px system-ui;color:#ebfaff">0 new cells · 0 shots</div>'+
    '<div style="font:500 9px system-ui;color:#f2cfaa">'+
-    'Native CPU impacts only · NOT TURF SCORE</div></div>';
+    'Native CPU impacts only · NOT TURF SCORE</div></div>'+
+  '<div id="t21-f3-b76-human-ink-coach" hidden'+
+   ' style="margin-top:6px;padding:6px 8px;border-radius:7px;'+
+   'border:1px solid #557d88;background:rgba(3,31,44,.82)">'+
+   '<div id="t21-f3-b76-head" style="font:800 10px system-ui;'+
+    'color:#9bdde7">YOUR SOURCE PAINT · LAST 3s</div>'+
+   '<div id="t21-f3-b76-counts" style="margin:3px 0;'+
+    'font:700 11px system-ui;color:#edfbff">0 real cells · 0 accepted shots</div>'+
+   '<div id="t21-f3-b76-hint" style="font:500 9px system-ui;'+
+    'color:#f0d4a8">Non-scoring real Human Impact changes</div></div>';
  ui.appendChild(root);
  const select=(id:string):HTMLElement=>{
   const element=root.querySelector<HTMLElement>('#'+id);
@@ -107,6 +120,11 @@ export function createF3PlayableHud(ui:HTMLElement){
  const activityBox=select('t21-f3-b75-source-ink-live');
  const activityHead=select('t21-f3-b75-source-ink-head');
  const activityCounts=select('t21-f3-b75-source-ink-counts');
+ const humanCoach=new B76HumanSourceCoach();
+ const humanBox=select('t21-f3-b76-human-ink-coach');
+ const humanHead=select('t21-f3-b76-head');
+ const humanCounts=select('t21-f3-b76-counts');
+ const humanHint=select('t21-f3-b76-hint');
  function render(value:F3PlayableHudState){
   const v=formatF3PlayableHud(value);
   clock.textContent=v.clock;
@@ -144,6 +162,45 @@ export function createF3PlayableHud(ui:HTMLElement){
    activityBox.dataset.t21B75RecentCpuShots=String(source.realCpuShots);
    activityBox.dataset.t21B75OriginalScoring='0';
    activityBox.dataset.t21B75Original4v4Certified='false';
+  }
+  // B76 is truthful native player feedback, NEVER shot hit-rate or
+  // source Turf score; no player health/ink or projectile is modified.
+  const human=humanCoach.observe({...value,
+   player:{mode:value.player.mode??'UNVERIFIED',ink:value.player.ink}});
+  const authorized=!!human&&human.state!=='HOLD';
+  humanBox.hidden=!authorized;
+  root.dataset.t21B76PlayerSourceTruth=
+   authorized?'REAL_HUMAN_ORIGINAL_INK_ONLY':'HOLD_OR_UNAVAILABLE';
+  if(authorized&&human){
+   const recovering=human.state==='REFILLING_ON_OWN_INK';
+   const low=human.state==='LOW_INK'||human.state==='DRY_FIRE';
+   humanHead.textContent=recovering?'REFILLING · OWN INK':
+    low?'INK LOW · RELOAD WITH SHIFT ON OWN INK':
+    human.state==='REAL_SOURCE_PAINT'?'YOUR SHOTS · SOURCE INK CHANGED':
+    human.state==='SHOT_WITHOUT_NEW_PAINT'?
+     'SHOTS ACCEPTED · NO NEW SOURCE INK':
+    human.state==='READY'?'SOURCE PAINT · STAGING':
+    human.state==='SUSPENDED'?'SOURCE PAINT · PAUSED / FINISHED':
+    'YOUR SOURCE PAINT · LAST 3s';
+   humanHead.style.color=low?'#ffd18b':
+    recovering?'#9be6ff':'#99f1eb';
+   humanCounts.textContent='+'+human.actualHumanChangedCells3s+
+    ' real cells · '+human.humanAcceptedShots3s+
+    ' shots · '+human.dryFireAttempts3s+' dry';
+   humanHint.textContent=recovering?
+    'Real SQUID + OWN ink recovery active · not Turf score':
+    low?'Hold Shift to refill faster on your own ink':
+    'Actual original Human Impact ownership changes · no winner';
+   humanBox.dataset.t21B76Status=human.state;
+   humanBox.dataset.t21B76NativeTick=String(human.actualObservedTick);
+   humanBox.dataset.t21B76ChangedSourceCells=
+    String(human.actualHumanChangedCells3s);
+   humanBox.dataset.t21B76HumanShots=
+    String(human.humanAcceptedShots3s);
+   humanBox.dataset.t21B76DryFires=
+    String(human.dryFireAttempts3s);
+   humanBox.dataset.t21B76OriginalScoreable='0';
+   humanBox.dataset.t21B76Original4v4='false';
   }
   root.dataset.matchState=value.matchState;
   root.dataset.cpuRecovered=String(v.cpuRecovered);

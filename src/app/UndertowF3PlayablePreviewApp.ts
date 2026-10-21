@@ -2207,6 +2207,10 @@ export class UndertowF3PlayablePreviewApp{
    unrestricted4v4Certified:false,
    player:{position:[pos.x,pos.y,pos.z],mode:this.player.currentMode,
     hp:this.resources.currentHp,ink:this.stats.playerInk},
+   // B76: read-only native shot/refill witness for the human player HUD.
+   // This is not an ink award, official Turf score or gameplay mutation.
+   playerInkRecoveryState:this.stats.playerInkRecoveryState,
+   inkDryFireAttempts:this.stats.inkDryFireAttempts,
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
    b38HumanSub:{
     enabled:this.b38HumanSubEnabled,
