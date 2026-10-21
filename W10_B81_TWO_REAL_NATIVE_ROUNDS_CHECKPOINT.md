@@ -33,6 +33,44 @@ T19C/T20 must remain untouched. Authority HOLD: 25 solids / 17 Paintable /
 26 NavLinks / 0 Scoreable; eight Actor bindings unresolved; 0/12 natural
 opponent paths; activationReady=false. Default FIXED, SWEEP experimental.
 
-Validation: Node checker regressions 9/9 PASS locally. TypeScript/Vite build
-PASS locally. Exact-commit CI and two-round native result PENDING; no native
-completion is claimed before inspecting the actual workflow result.
+## Verified result
+
+[B81 run 39572819950](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39572819950)
+completed SUCCESS, 2/2 jobs, on code commit
+`581bcac00ee5f8c3df4f7dfb7fa83d82c0816263`. Build, related Vitest 14/14,
+and Node checker/diagnostic regressions 9/9 PASS both locally and in CI.
+The following documentation-only result commit does not change tested code.
+
+| Actual native measurement | FIXED | SWEEP |
+| --- | ---: | ---: |
+| Native match seconds | 180 | 180 |
+| Native terminal tick | 11,859 | 11,860 |
+| Actual CPU source shots | 112 | 491 |
+| CPU impact changed source cells | 3,615 | 11,779 |
+| Original-foot patrol meters | 4,951.4 | 4,951.4 |
+| Distinct physical CPU rejoins | 7 | 7 |
+| Suspected physical stalls | 0 | 0 |
+| Human shots | 8 | 8 |
+| Human changed source cells | 294 | 301 |
+| Host callback p95, ms (not GPU latency) | 1,091.6 | 1,091.8 |
+
+FIXED took 2,085,337 wall ms and SWEEP 2,076,964 wall ms after their early
+human input. Both reached TIME_UP with remaining clock zero, no stop reason
+and genuine native physics; no 90-second tick stall occurred. The whole
+browser job took about 71 minutes using software rendering.
+
+The same tab retained the exact FIXED record after the first actual save
+click and SWEEP reload. SWEEP was not saved until the second actual click.
+The final visible UI reported TWO_REAL_COMPLETED_ROUNDS, matched both actual
+records, displayed the 3.258x source-ink ratio (+8,164 changed cells), and
+correctly warned HUMAN INPUT DIFFERED (294 vs 301 human cells). This is not
+a controlled game-quality benchmark, official Turf score or AI-strength
+result. Explicit refresh was idempotent; explicit clear removed storage
+and hid the comparison. No product defect requiring a gameplay change was
+observed within this test.
+
+[Retained screenshots and anonymous native progress/comparison artifacts](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39572819950/artifacts/12336577478)
+have 14-day retention. B79's earlier intermittent freeze was not reproduced
+here; its original cause is still unresolved. Owner Windows hardware GPU
+performance, original Actor8 bindings, natural opposing paths and formal
+score/4v4 remain unverified. All original authority HOLDs above are retained.
