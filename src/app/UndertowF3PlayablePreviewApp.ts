@@ -373,7 +373,9 @@ export class UndertowF3PlayablePreviewApp{
    b31Params.get('t21W10B31')==='inkGoals';
   this.traffic=new UndertowF3SourceTraffic(
    stage,this.nav,slots,bots,this.physics,this.ink,
-   b31Enabled,b33StableGoals,b34Recover);
+   b31Enabled,b33StableGoals,b34Recover,
+   b31Params.get('t21QaDrive')==='source'&&
+   b31Params.get('t21W10B93')==='upperDetour');
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   // B64 experimental native source-floor aim. Existing FIXED source CPU
   // remains default: this does NOT modify Recast/Crowd target steering.
@@ -1417,7 +1419,13 @@ export class UndertowF3PlayablePreviewApp{
     this.b20ProfileStop('rapierAndHumanKcc',playerStart);
     if(alive)this.resources.fixedUpdate(
      seconds,this.player.currentMode,this.player.currentInkRelation);
-    if(!this.w10b14)this.traffic.prepare(frame);
+    if(!this.w10b14){
+     const foot=this.player.getPosition(this.p);
+     this.traffic.prepare(frame,{
+      x:foot.x,y:foot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+      z:foot.z
+     });
+    }
     const cpuStart=this.b20ProfileStart();
     this.cpu.fixedUpdate(seconds,true,Team.A,
      this.player.getPosition(this.p),alive&&!this.w10b14);
