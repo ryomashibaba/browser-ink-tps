@@ -154,6 +154,7 @@ interface CpuBot {
   ink: number;
   inkRecoveryLockSeconds: number;
   hpRecoveryDelaySeconds: number;
+  lethalHumanDirect: boolean;
   lifeState: 'ACTIVE' | 'SPLATTED';
   respawnRemainingSeconds: number;
   mobilityState: CpuMobilityState;
@@ -344,6 +345,7 @@ export class CpuAgentSystem {
     this.stats.cpuShots = 0;
     this.stats.cpuCombatHits = 0;
     this.stats.humanCpuDirectHits = 0;
+    this.stats.humanCpuDirectSplats = 0;
     this.stats.cpuSplats = 0;
     this.stats.cpuRespawns = 0;
     this.stats.cpuSuperJumps = 0;
@@ -1197,6 +1199,7 @@ export class CpuAgentSystem {
       this.stats.cpuCombatHits += 1;
       // Guarded shots and CPU-vs-CPU damage are not human hit feedback.
       if (sourceKind === 'HUMAN') this.stats.humanCpuDirectHits += 1;
+      if (bot.hp === 0) bot.lethalHumanDirect = sourceKind === 'HUMAN';
     }
   }
 
@@ -1236,6 +1239,7 @@ export class CpuAgentSystem {
       bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
       if (bot.hp < previous) {
         this.stats.cpuCombatHits += 1;
+        if (bot.hp === 0) bot.lethalHumanDirect = false;
         hits += 1;
       }
     }
@@ -1319,6 +1323,7 @@ export class CpuAgentSystem {
         ink: GAME_CONFIG.inkEconomy.capacity,
         inkRecoveryLockSeconds: 0,
         hpRecoveryDelaySeconds: 0,
+        lethalHumanDirect: false,
         lifeState: 'ACTIVE',
         respawnRemainingSeconds: 0,
         mobilityState: 'GROUND',
@@ -2509,6 +2514,8 @@ export class CpuAgentSystem {
     // 25 genuine solids, paint and NavMesh are never modified.
     this.phase14qGroundCollision?.removeRealCpuFoot?.(bot.id);
     this.stats.cpuSplats += 1;
+    if (bot.lethalHumanDirect) this.stats.humanCpuDirectSplats += 1;
+    bot.lethalHumanDirect = false;
   }
 
   private respawnBot(bot: CpuBot): void {
@@ -2524,6 +2531,7 @@ export class CpuAgentSystem {
     bot.jumpStartPosition.copy(start);
     bot.jumpTargetPosition.copy(start);
     bot.hp = GAME_CONFIG.combat.playerMaxHp;
+    bot.lethalHumanDirect = false;
     bot.ink = GAME_CONFIG.inkEconomy.capacity;
     bot.inkRecoveryLockSeconds = 0;
     bot.hpRecoveryDelaySeconds = 0;

@@ -82,6 +82,16 @@ describe('W10-B17 non-scoring source practice HUD',()=>{
   s.originalSourceNavigationLinks=26;s.unrestricted4v4Certified=true;
   expect(formatF3PlayableHud(s).realHumanCpuDirectHits).toBeNull();
  });
+ it('B88 requires authentic direct damage and original source for CPU splat',()=>{
+  const s=state();s.originalSourceSolids=25;s.originalPaintSurfaces=17;
+  s.originalSourceNavigationLinks=26;s.unrestricted4v4Certified=false;
+  s.humanCpuDirectHits=3;s.humanCpuDirectSplats=1;
+  expect(formatF3PlayableHud(s).realHumanCpuDirectSplats).toBe(1);
+  s.humanCpuDirectSplats=4;
+  expect(formatF3PlayableHud(s).realHumanCpuDirectSplats).toBeNull();
+  s.humanCpuDirectSplats=1;s.originalSourceSolids=24;
+  expect(formatF3PlayableHud(s).realHumanCpuDirectSplats).toBeNull();
+ });
  it('time-up never claims a 4v4 result; safe stop is explicit',()=>{
   const s=state();
   s.matchState='TIME_UP';s.timeRemainingSeconds=0;

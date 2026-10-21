@@ -1614,11 +1614,22 @@ async function main(){
   if(!splat||splat.cpuSplats!==1||splat.cpuCombatHits-quickBefore.cpuCombatHits<3||
      !Number.isSafeInteger(splat.humanCpuDirectHits)||
      splat.humanCpuDirectHits<3||splat.humanCpuDirectHits>splat.cpuCombatHits||
+     splat.humanCpuDirectSplats!==1||
      splat.shotsFired-quickBefore.shotsFired<3||splat.hp!==0||
      splat.entityEnabledInHierarchy!==false)
    reject('W10B15_MOUSE_NOT_NATIVE_COMBAT_'+JSON.stringify({
     splat,shotsBefore,hitsBefore,trace
    }));
+  // Isolated native Chrome encounter, not official natural enemy access.
+  const b88=await evaluate(`(() => {
+   const m=document.querySelector('#t21-f3-b87-hit-confirmation');
+   return {text:m?.textContent,visible:!!m,splat:m?.dataset.t21B88HumanDirectSplats,
+    source:m?.dataset.t21B87Source};
+  })()`);
+  if(!b88.visible||b88.text!=='CPU SPLAT'||b88.splat!=='1'||
+     b88.source!=='REAL_HUMAN_DIRECT_DAMAGE_ONLY')
+   reject('B88_REAL_CHROME_HUMAN_SPLAT_MARKER_MISSING_'+JSON.stringify(b88));
+  console.log('B88_REAL_CHROME_SPLAT_FEEDBACK_PASS',JSON.stringify(b88));
   const deathFrame=await screenshot('W10B15_1_TRUE_MOUSE_CPU_SPLAT');
   await cmd('Input.dispatchKeyEvent',{
    type:'keyDown',key:'Escape',code:'Escape',
@@ -1684,6 +1695,7 @@ async function main(){
    mousePointerLock:true,unassistedCameraAim:true,
    realPlayerInputFire:true,realProjectileCpuHits:splat.cpuCombatHits-hitsBefore,
    realHumanDirectCpuDamageEvents:splat.humanCpuDirectHits,
+   humanAttributedNativeCpuSplats:splat.humanCpuDirectSplats,
    actualPlayerShots:splat.shotsFired-shotsBefore,
    realCpuSplats:1,realCpuRespawns:1,respawnHp:100,
    scoreableSurfacesAuthorized:0,naturalEncounterCertified:false,

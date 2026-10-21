@@ -47,6 +47,8 @@ export class PerformanceStats {
   public playerDamageTaken = 0;
   /** Human direct projectile or charger that genuinely reduces CPU HP. */
   public humanCpuDirectHits = 0;
+  /** Native CPU SPLATTED lifecycle following the human's lethal direct hit. */
+  public humanCpuDirectSplats = 0;
   public shotsFired = 0;
   public inkDryFireAttempts = 0;
   public combatHits = 0;
