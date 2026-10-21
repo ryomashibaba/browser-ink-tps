@@ -78,6 +78,11 @@ describe('F3B playable 8-actor original source runtime',()=>{
    let done=0,stop:string|null=null,overlap:string|null=null,
     minimumSeparation=Infinity,maxGroundStep=0;
    let b93ParkedPlayerFoot:number[]|null=null;
+   const b95LateralSourceProbes:Array<{
+    requested:number[];snap:number;nativeEndSnap:number;
+    reached:boolean;pathPoints:number;sourceSolidId:string|null;
+    sourceY:number|null
+   }> = [];
    const b94RouteCheckpoints:Array<{
     tick:number;realFoot:number[];crowdFoot:unknown;phase:string|null;
     physicalRejoins:number;humanFoot:number[];
@@ -139,6 +144,30 @@ describe('F3B playable 8-actor original source runtime',()=>{
       physicalRejoins:traffic.snapshot().physicalRejoins.length,
       humanFoot:player.getPosition().toArray()});
     }
+    if(humanWalkTicks===240&&frame===1500){
+     const bot=bots.find(b=>b.id==='A3')!;
+     const human=player.getPosition();
+     const offsets:[[number,number],[number,number],[number,number],
+       [number,number],[number,number]]=[
+      [1.5,.4],[1.0,.9],[1.9,.3],[1.4,1.1],[2.2,.7]
+     ];
+     for(const [side,back] of offsets){
+      const wanted=new Vec3(bot.position.x+side,bot.position.y,
+       bot.position.z+back);
+      const navFoot=nav.closestPoint(wanted);
+      const path=nav.auditPath(bot.position,
+       new Vec3(navFoot.x,navFoot.y,navFoot.z));
+      const hit=physics.castStageSegment(
+       new Vec3(navFoot.x,navFoot.y+.65,navFoot.z),
+       new Vec3(navFoot.x,navFoot.y-.65,navFoot.z),'ink-projectile');
+      b95LateralSourceProbes.push({
+       requested:wanted.toArray(),snap:Math.hypot(navFoot.x-wanted.x,
+        navFoot.y-wanted.y,navFoot.z-wanted.z),
+       nativeEndSnap:path.endSnapDistanceMeters,
+       reached:path.reachedTarget,pathPoints:path.pointCount,
+       sourceSolidId:hit?.solidId??null,sourceY:hit?.point.y??null});
+     }
+    }
     if(humanWalkTicks===240&&frame===60)
      b93ParkedPlayerFoot=player.getPosition().toArray();
     if(humanWalkTicks===180&&frame===1500){
@@ -188,6 +217,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     b93ExperimentalEnabled:state.b93ExperimentalEnabled,
     b93ParkedPlayerFoot,
     b94RouteCheckpoints,
+    b95LateralSourceProbes,
     blockedA3,
     b93A3NativePath:(()=>{
      const actor=bots.find(b=>b.id==='A3')!;
