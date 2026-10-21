@@ -122,7 +122,7 @@ export function createF3PlayableHud(ui:HTMLElement){
   'position:fixed;inset:0;pointer-events:none;z-index:36;'+
   'background:radial-gradient(ellipse at center,transparent 45%,rgba(255,35,64,.56) 100%);'+
   'opacity:0;transition:opacity .12s ease-out';
- ui.appendChild(damageVignette);
+ // Lazily attach only when native HP actually drops; no idle compositing.
  const splatNotice=document.createElement('div');
  splatNotice.id='t21-f3-b82-splat-notice';
  splatNotice.setAttribute('role','status');
@@ -139,7 +139,7 @@ export function createF3PlayableHud(ui:HTMLElement){
   '<div id="t21-f3-b82-respawn-countdown"></div>'+
   '<small style="display:block;font:600 11px/1.5 system-ui;color:#ffe1e6">'+
   'SOURCE PRACTICE · NO OFFICIAL RESULT</small>';
- ui.appendChild(splatNotice);
+ // Native splat notice also stays fully detached until genuine HP=0.
  const countdown=splatNotice.querySelector<HTMLElement>(
   '#t21-f3-b82-respawn-countdown')!;
  let previousHp:number|null=null;
@@ -179,6 +179,8 @@ export function createF3PlayableHud(ui:HTMLElement){
   practice.textContent=v.scoring;
   const splatted=v.lifeState==='SPLATTED';
   splatNotice.hidden=!splatted||value.matchState==='TIME_UP'||!!value.stopReason;
+  if(!splatNotice.hidden&&!splatNotice.isConnected)ui.appendChild(splatNotice);
+  else if(splatNotice.hidden&&splatNotice.isConnected)splatNotice.remove();
   countdown.textContent=v.respawnSeconds===null?'RESPAWNING…':
    'RESPAWN IN '+v.respawnSeconds.toFixed(1)+'s';
   splatNotice.dataset.nativeRespawnSeconds=
@@ -196,7 +198,13 @@ export function createF3PlayableHud(ui:HTMLElement){
   }
   const hurt=validTick&&!splatted&&!value.paused&&!value.stopReason&&
    tick<=damageFlashThrough;
-  damageVignette.style.opacity=hurt?'1':'0';
+  if(hurt){
+   if(!damageVignette.isConnected)ui.appendChild(damageVignette);
+   damageVignette.style.opacity='1';
+  }else if(damageVignette.isConnected){
+   damageVignette.remove();
+   damageVignette.style.opacity='0';
+  }
   damageVignette.dataset.actualHpDrop=hurt?'VISIBLE':'OFF';
   const source=activity.observe(value);
   const verified=!!source&&source.status!=='UNVERIFIED';
