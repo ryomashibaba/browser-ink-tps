@@ -34,6 +34,8 @@ export interface F3TrafficSnapshot{
  readonly landingCorridorsCleared:readonly string[];
  readonly releasedCpuIds:readonly string[];
  readonly freeCombatEnabled:boolean;
+ readonly b93UpperDetours:readonly {actorId:string;linkId:string}[];
+ readonly b93ExperimentalEnabled:boolean;
  readonly sourcePatrol:{
   readonly auditedTargets:number;
   readonly realGoalRequests:number;
@@ -139,6 +141,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly previous=new Map<string,string>();
  private readonly previousFeet=new Map<string,Vec3>();
  private readonly lastMoved=new Map<string,number>();
+ /** Explicit opt-in; only Recast targets from immutable source links. */
+ private readonly b93UpperDetours=new Map<string,{
+  linkId:string;sourceGoal:StageVector3;originalLanding:StageVector3
+ }>();
  private freeCombat=false;
 
  constructor(
@@ -148,7 +154,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly sourceInk?:GameplayInkSystem,
   private readonly enablePaintAwarePatrol=false,
   private readonly enableStableSourceGoal=false,
-  private readonly enableB34SourceStallRecovery=false
+  private readonly enableB34SourceStallRecovery=false,
+  private readonly enableB93UpperDetour=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -412,7 +419,48 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.heldRequests++;return false;
  }
 
- prepare(frame:number):void{
+ /**
+  * B93: research-only original-source retarget after an ACTUAL physical
+  * stall near the actual human foot. Recast-path approval is NOT proof of
+  * collision-supported traversal. Every candidate step still goes through
+  * unchanged shared Rapier KCC; never move CPU pose/colliders here.
+  */
+ private selectB93UpperDetour(
+  bot:F3TrafficCpu,human:Readonly<{x:number;y:number;z:number}>,frame:number
+ ):void{
+  if(!this.enableB93UpperDetour||this.b93UpperDetours.has(bot.id)||
+     this.physicallyRejoined.has(bot.id)||
+     bot.mobilityState!=='GROUND'||!bot.agent||
+     this.physicallyFalling.has(bot.id))return;
+  const last=this.lastMoved.get(bot.id);
+  if(last===undefined||frame-last<120||
+     Math.abs(bot.position.y-human.y)>1.05)return;
+  const humanDist=Math.hypot(bot.position.x-human.x,bot.position.z-human.z);
+  if(humanDist>.95||humanDist<.56)return;
+  const direction=Math.sign(bot.position.x-human.x);
+  if(direction===0)return;
+  const side=bot.team===Team.A?'positive-z':'negative-z';
+  const original=this.routeFor(bot.id).linkId;
+  const candidate=this.stage.navigationLinks
+   ?.filter(link=>link.id.startsWith('first-drop-'+side+'-')&&
+     link.id!==original&&link.bidirectional===false&&
+     link.start[1]===7.5&&link.end[1]===3&&
+     (link.start[0]-bot.position.x)*direction>=1.5&&
+     Math.hypot(link.start[0]-human.x,link.start[2]-human.z)>3)
+   .map(link=>({link,path:this.nav.auditPath(bot.position,
+     new Vec3(...link.end))}))
+   .filter(x=>x.path.reachedTarget&&
+     x.path.startSnapDistanceMeters<=.22&&
+     x.path.endSnapDistanceMeters<=.22)
+   .sort((a,b)=>
+     Math.abs(a.link.start[0]-bot.position.x)-
+     Math.abs(b.link.start[0]-bot.position.x)||
+     a.link.id.localeCompare(b.link.id))[0]?.link;
+  if(!candidate)return;
+  this.b93UpperDetours.set(bot.id,{linkId:candidate.id,
+   sourceGoal:candidate.end,originalLanding:candidate.end});
+ }
+ prepare(frame:number,humanFoot?:Readonly<{x:number;y:number;z:number}>):void{
   if(this.freeCombat)return;
   for(const [id,requires] of Object.entries(RELEASE_AFTER)){
    if(!this.released.has(id)&&
@@ -430,9 +478,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }else if(this.released.has(bot.id)){
     bot.thinkRemaining=900;bot.paintRemaining=900;bot.fireRemaining=900;
     bot.jumpCooldownSeconds=900;
-    if(bot.mobilityState==='GROUND'&&bot.agent&&frame%18===1)
+    if(bot.mobilityState==='GROUND'&&bot.agent&&frame%18===1){
+     if(humanFoot)this.selectB93UpperDetour(bot,humanFoot,frame);
+     const detour=this.b93UpperDetours.get(bot.id);
      bot.agent.requestMoveTarget(this.nav.closestPoint(
-      new Vec3(...this.routeFor(bot.id).sourceGoal)));
+      new Vec3(...(detour?.sourceGoal??this.routeFor(bot.id).sourceGoal))));
+    }
    }else{
     bot.thinkRemaining=900;bot.paintRemaining=900;bot.fireRemaining=900;
     bot.agent?.resetMoveTarget();
@@ -473,13 +524,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     r.actorId!==bot.id &&
     (r.actorId==='HUMAN'?side===Team.A:
      r.actorId.startsWith(side===Team.A?'A':'B')));
-   const corridorClear=sameSide.every(r=>
-    Math.hypot(bot.position.x-r.originalLanding[0],
-      bot.position.z-r.originalLanding[2])>1.55||
-    Math.abs(bot.position.y-r.originalLanding[1])>1.05);
+   const corridorClear=sameSide.every(r=>{
+    const landing=this.b93UpperDetours.get(r.actorId)?.originalLanding??
+     r.originalLanding;
+    return Math.hypot(bot.position.x-landing[0],
+      bot.position.z-landing[2])>1.55||
+      Math.abs(bot.position.y-landing[1])>1.05;
+   });
+   const actualLanding=this.b93UpperDetours.get(bot.id)?.originalLanding??
+    route.originalLanding;
    if(corridorClear&&Math.hypot(
-      bot.position.x-route.originalLanding[0],
-      bot.position.z-route.originalLanding[2])>1.7)
+      bot.position.x-actualLanding[0],
+      bot.position.z-actualLanding[2])>1.7)
       this.cleared.add(bot.id);
   }
   if(this.physicallyRejoined.size===7&&!this.freeCombat){
@@ -569,6 +625,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    landingCorridorsCleared:[...this.cleared],
    releasedCpuIds:[...this.released],
    freeCombatEnabled:this.freeCombat,
+   b93UpperDetours:[...this.b93UpperDetours].map(([actorId,v])=>({
+    actorId,linkId:v.linkId})),
+   b93ExperimentalEnabled:this.enableB93UpperDetour,
    sourcePatrol:{auditedTargets:this.auditedTargets,
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
