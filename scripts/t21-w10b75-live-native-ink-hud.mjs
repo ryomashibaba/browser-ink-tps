@@ -174,6 +174,8 @@ async function run(){
  let inkPulse=null,firedNoInk=false,lastReported=-1;
  let lastTickAdvanceAt=Date.now(),lastHeartbeatAt=Date.now();
  let progressWitness=null,renderWitness=null;
+ // B89: observe the real seven actor states; never advance or reseed them.
+ let lastRejoinCount=0,lastRejoinTick=0;
  const b80SourceWatch=[];
  const saveB80=classification=>{
   const payload={
@@ -206,6 +208,13 @@ async function run(){
     nativeSimulationTicksLastFrame:n.sourceFrameQuality?.simulationTicksLastFrame,
     nativeSourceCpuRejoined:n.cpu?.physicalRejoins?.length,
     nativeSourceCpuFreeCombat:n.cpu?.freeCombatEnabled,
+    // B89: inspect whether each missing actor is unreleased, airborne,
+    // rejoining or physically blocked; all data come from the actual tick.
+    nativeSourceCpuActors:n.cpu?.cpu?.map(c=>({id:c.id,
+     mobilityState:c.mobilityState,released:c.released,rejoined:c.rejoined,
+     lastMovedTick:c.lastMovedTick,physicalFoot:c.physicalFoot})),
+    nativeSourceReleasedCpuIds:n.cpu?.releasedCpuIds,
+    nativeSourceLandingCorridorsCleared:n.cpu?.landingCorridorsCleared,
     visibilityState:document.visibilityState,
     hasDocumentFocus:document.hasFocus(),
     browserPointerLocked:document.pointerLockElement===
@@ -305,6 +314,27 @@ async function run(){
       stallKind!=='PHYSICS_RUNNING')){
    const outcome=saveB80(stallKind);
    fail('B80_NATIVE_SOURCE_CLOCK_DIAGNOSIS_'+JSON.stringify(outcome));
+  }
+  // A real 40-second fixed-tick rejoin plateau is not a clock stall.
+  // Fail early with actor-level evidence rather than spending 13 wall
+  // minutes waiting for a sixth/seventh CPU that never progresses.
+  if(status.nativeSourceCpuRejoined>lastRejoinCount){
+   lastRejoinCount=status.nativeSourceCpuRejoined;
+   lastRejoinTick=status.tick;
+  }
+  if(status.matchState==='STAGING'&&status.tick>=2400&&
+     status.nativeSourceCpuRejoined>0&&
+     status.nativeSourceCpuRejoined<7&&
+     status.tick-lastRejoinTick>=900){
+   const evidence={schema:'W10_B89_NATIVE_STAGING_REJOIN_PLATEAU_V1',
+    mode,nativeTick:status.tick,lastRejoinTick,
+    rejoined:status.nativeSourceCpuRejoined,
+    actors:status.nativeSourceCpuActors,
+    released:status.nativeSourceReleasedCpuIds,
+    corridorsCleared:status.nativeSourceLandingCorridorsCleared,
+    noPoseMutation:true,noForcedPlaying:true,original4v4Certified:false};
+   console.error('T21_B89_REAL_NATIVE_REJOIN_PLATEAU',JSON.stringify(evidence));
+   fail('B89_NATIVE_STAGING_REJOIN_PLATEAU_'+JSON.stringify(evidence));
   }
   if(status.b76State==='REAL_SOURCE_PAINT'&&
      status.b76RecentCells>0&&status.b76RecentShots>0&&
