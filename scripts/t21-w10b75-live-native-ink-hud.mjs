@@ -14,7 +14,11 @@ import {b80ClassifyNativeStall} from './t21-w10b80-native-stall-classifier.mjs';
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
 const mode=process.env.T21_W10B75_AIM||'FIXED';
+// B96: a completely separate, explicitly opted-in source QA browser run.
+// The ordinary B75 FIXED/SWEEP playback still backs away with actual KeyS.
+const parkedB96=process.env.T21_W10B96_PARKED==='1';
 if(!['FIXED','SWEEP'].includes(mode))throw Error('B75_BAD_MODE');
+if(parkedB96&&mode!=='FIXED')throw Error('B96_EXPERIMENT_MUST_KEEP_FIXED_AIM');
 const children=[],pending=new Map();
 let sock=null,id=0;
 const fail=x=>{throw Error('T21_B75_'+x);};
@@ -83,7 +87,8 @@ async function run(){
  await cmd('Emulation.setDeviceMetricsOverride',{
   width:1600,height:900,deviceScaleFactor:1,mobile:false});
  const search='?t21Play=preview'+
-  (mode==='SWEEP'?'&t21W10B68=previewSweep':'');
+  (mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
+  (parkedB96?'&t21QaDrive=source&t21W10B93=upperDetour':'');
  await cmd('Page.navigate',{url:ROOT+search});
  await until(async()=>await evaluate(`(() => {
   const c=document.querySelector('#app-canvas');
@@ -96,7 +101,8 @@ async function run(){
     boot.originalSourceSolids!==25||boot.originalPaintSurfaces!==17||
     boot.originalSourceNavigationLinks!==26||boot.sourceScoreablePromotions!==0||
     boot.productionAuthorized!==false||boot.unrestricted4v4Certified!==false||
-    boot.b64SourceInkSweep.enabled!==(mode==='SWEEP'))
+    boot.b64SourceInkSweep.enabled!==(mode==='SWEEP')||
+    boot.cpu.b93ExperimentalEnabled!==parkedB96)
   fail('INCORRECT_FROZEN_NATIVE_SOURCE_BOOT');
  const initialHud=await evaluate(`(() => {
    const p=document.querySelector('#t21-f3-practice-hud');
@@ -164,10 +170,13 @@ async function run(){
  await until(async()=>{
   const n=await snapshot();
   if(n.stopReason)fail('B79_HUMAN_SOURCE_SESSION_STOP_'+n.stopReason);
-  return n.tick>before.tick+33;
+  return n.tick>before.tick+(parkedB96?60:33);
  },100000);
  await click('mouseReleased');
  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
+ // B96 deliberately retains the HUMAN at the original source lip.
+ // Standard B75 still performs the original true-keyboard retreat.
+ if(!parkedB96){
  // B90: the extended W+mouse source-ink proof can leave the genuine
  // HUMAN standing directly at the authentic A3 first-drop approach.
  // Unlike B81's shorter input, this holds the original collision lip
@@ -201,8 +210,92 @@ async function run(){
   actualRetreat,from:oldFoot,to:newFoot,nativeTicks:reverseEnd.tick-reverseStart.tick,
   byRealKeyboard:true,unchangedPhysicalStage:true,
   noCpuWarp:true,noForcedMatchStart:true}));
+ }
  console.log('T21_B79_GENUINE_EARLY_HUMAN_SOURCE_PAINT_HUD_PASS',
   JSON.stringify(humanPulse));
+ if(parkedB96){
+  const settled=await until(async()=>{
+   const n=await snapshot();
+   if(n.stopReason)fail('B96_STOP_DURING_TRUE_HUMAN_SETTLE_'+n.stopReason);
+   if(n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
+      n.originalSourceNavigationLinks!==26||n.sourceScoreablePromotions!==0||
+      n.productionAuthorized!==false||n.unrestricted4v4Certified!==false||
+      !n.cpu.b93ExperimentalEnabled)
+     fail('B96_ORIGINAL_SOURCE_AUTHORITY_CHANGED_AT_SETTLE');
+   return n.tick>=before.tick+180?n:false;
+  },120000);
+  const settledHuman=settled.player.position;
+  const observations=[];
+  const completed=await until(async()=>{
+   const n=await snapshot();
+   if(n.stopReason||n.originalSourceSolids!==25||
+      n.originalPaintSurfaces!==17||n.originalSourceNavigationLinks!==26||
+      n.sourceScoreablePromotions!==0||n.productionAuthorized!==false||
+      n.unrestricted4v4Certified!==false||
+      n.cpu.b93ExperimentalEnabled!==true||
+      n.cpu.physicalFootRelocations!==0)
+     fail('B96_REAL_CHROME_ORIGINAL_SOURCE_DRIFT_'+JSON.stringify({
+      tick:n.tick,stop:n.stopReason,source:n.originalSourceSolids,
+      paint:n.originalPaintSurfaces,links:n.originalSourceNavigationLinks,
+      relocations:n.cpu.physicalFootRelocations}));
+   const h=n.player.position;
+   const humanParked=Math.hypot(h[0]-settledHuman[0],
+    h[2]-settledHuman[2]);
+   if(humanParked>.12)
+    fail('B96_HUMAN_MOVED_AFTER_TRUE_SETTLE_'+JSON.stringify({
+     tick:n.tick,humanParked,settledHuman,currentHuman:h}));
+   const detour=n.cpu.b93UpperDetours.find(x=>x.actorId==='A3');
+   if(n.tick%180<15)observations.push({
+    tick:n.tick,rejoins:n.cpu.physicalRejoins.length,
+    realCpuFeet:n.cpu.cpu.filter(c=>c.id==='A2'||c.id==='A3'),
+    detour,actualHuman:h,matchState:n.matchState
+   });
+   if(n.tick>=2400&&n.cpu.physicalRejoins.length<7)
+    fail('B96_REAL_CHROME_BLOCKED_SEVEN_SOURCE_CPUS_'+JSON.stringify({
+     tick:n.tick,rejoins:n.cpu.physicalRejoins,
+     actors:n.cpu.cpu,detour,originalSourceOnly:true}));
+   return n.cpu.physicalRejoins.length===7&&
+    n.cpu.freeCombatEnabled===true&&n.matchState==='PLAYING'&&
+    detour?.linkId.startsWith('first-drop-positive-z-')&&
+    detour?.escapeFoot?.length===3&&
+    n.cpu.cpu.find(x=>x.id==='A3')?.rejoined===true&&
+    n.cpu.cpu.find(x=>x.id==='A2')?.rejoined===true?{n,detour,humanParked}:false;
+  },360000);
+  const n=completed.n;
+  const frame=Buffer.from((await cmd('Page.captureScreenshot',{
+   format:'png',captureBeyondViewport:false,fromSurface:true})).data||'','base64');
+  if(frame.length<10000)fail('B96_NO_REAL_WEBGL_SCREENSHOT');
+  const screenshot='b96-source-human-parked-native-detour.png';
+  writeFileSync(resolve(OUTPUT,screenshot),frame);
+  const proof={
+   schema:'T21_B96_TRUE_CHROME_HUMAN_STATIONARY_B95_DETOUR_V1',
+   chromiumWebGL2:true,realPointerLockedWInput:true,
+   artificialQaTicks:0,realHumanRetreatKeyS:false,
+   sourceQaOptIn:true,normalFixedDefaultUnchanged:true,
+   goalWasOriginalNavLink:completed.detour.linkId,
+   sourceSideEscapeFoot:completed.detour.escapeFoot,
+   realSevenCpuRejoined:n.cpu.physicalRejoins,
+   sourceFirstDropWitnesses:n.cpu.physicalFirstDrops,
+   actualHumanInputStoppedFoot:settledHuman,
+   realHumanFinalFoot:n.player.position,
+   parkedAfterSettlingMeters:completed.humanParked,
+   actualNativeTick:n.tick,matchState:n.matchState,
+   screenshot:{name:screenshot,bytes:frame.length,
+    sha256:createHash('sha256').update(frame).digest('hex')},
+   immutableOriginalAuthority:'25_SOLIDS_17_PAINT_26_NAVLINK_0_SCOREABLE',
+   original4v4Certified:false,productionAuthorized:false,
+   samples:observations
+  };
+  writeFileSync(resolve(OUTPUT,'b96-real-chrome-parked-detour.json'),
+   JSON.stringify(proof,null,2));
+  console.log('T21_B96_REAL_CHROME_HUMAN_PARKED_SEVEN_NATIVE_REJOINS_PASS',
+   JSON.stringify({
+    tick:n.tick,rejoins:n.cpu.physicalRejoins,
+    detour:completed.detour,parkedAfterSettlingMeters:completed.humanParked,
+    noHumanRetreat:true,forcedMatchStart:false,original4v4Certified:false
+   }));
+  return;
+ }
  const observations=[], started=Date.now();
  let inkPulse=null,firedNoInk=false,lastReported=-1;
  let lastTickAdvanceAt=Date.now(),lastHeartbeatAt=Date.now();
