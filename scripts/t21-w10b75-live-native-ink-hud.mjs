@@ -206,7 +206,7 @@ async function run(){
  const observations=[], started=Date.now();
  let inkPulse=null,firedNoInk=false,lastReported=-1;
  let lastTickAdvanceAt=Date.now(),lastHeartbeatAt=Date.now();
- let progressWitness=null,renderWitness=null;
+ let progressWitness=null,renderWitness=null,lastHeartbeatWitness=null;
  // B89: observe the real seven actor states; never advance or reseed them.
  let lastRejoinCount=0,lastRejoinTick=0;
  const b80SourceWatch=[];
@@ -319,6 +319,7 @@ async function run(){
   const nowWall=Date.now();
   if(!progressWitness){
    progressWitness={...currentWitness};
+   lastHeartbeatWitness={...currentWitness};
    lastTickAdvanceAt=nowWall;
   }else if(status.tick>progressWitness.tick){
    progressWitness={...currentWitness};
@@ -327,8 +328,14 @@ async function run(){
   renderWitness={...currentWitness};
   if(nowWall-lastHeartbeatAt>=20000){
    lastHeartbeatAt=nowWall;
+   // B91: a heartbeat compares two distinct observations. Comparing
+   // current to a just-updated progress witness reported false NO_TICK
+   // even as real native CPU physics advanced between heartbeats.
+   // The independent 90-second fail-closed clock gate is not changed.
    const kind=b80ClassifyNativeStall(
-    progressWitness,renderWitness,nowWall-lastTickAdvanceAt);
+    lastHeartbeatWitness??progressWitness,renderWitness,
+    nowWall-lastTickAdvanceAt);
+   lastHeartbeatWitness={...renderWitness};
    const heartbeat={
     mode,classification:kind,
     sameNativeTickWallMs:nowWall-lastTickAdvanceAt,
