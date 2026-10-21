@@ -54,7 +54,9 @@ describe('W10-B17 non-scoring source practice HUD',()=>{
   s.originalSourceSolids=25;s.originalPaintSurfaces=17;
   s.originalSourceNavigationLinks=26;s.unrestricted4v4Certified=false;
   expect(formatF3PlayableHud(s).hazard).toBe('ENEMY_INK');
-  s.player.inkRelation='OWN';s.player.hp=34.2;
+  s.player.hp=34.2;
+  expect(formatF3PlayableHud(s).hazard).toBe('CRITICAL_ENEMY_INK');
+  s.player.inkRelation='OWN';
   expect(formatF3PlayableHud(s).hazard).toBe('LOW_HP');
   s.player.hp=60;
   expect(formatF3PlayableHud(s).hazard).toBe('NONE');

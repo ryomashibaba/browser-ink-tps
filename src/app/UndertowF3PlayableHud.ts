@@ -44,9 +44,11 @@ export function formatF3PlayableHud(s:F3PlayableHudState){
   s.unrestricted4v4Certified===false;
  const warningEnabled=genuineSource&&s.matchState==='PLAYING'&&
   !s.paused&&!s.stopReason&&Number.isFinite(s.player.hp)&&s.player.hp>0;
- const hazard=warningEnabled&&s.player.inkRelation==='ENEMY'?
-  'ENEMY_INK' as const:warningEnabled&&s.player.hp<=35?
-  'LOW_HP' as const:'NONE' as const;
+ // Native enemy ink + critical HP can coexist: do not hide either warning.
+ const enemyInk=warningEnabled&&s.player.inkRelation==='ENEMY';
+ const lowHp=warningEnabled&&s.player.hp<=35;
+ const hazard=enemyInk&&lowHp?'CRITICAL_ENEMY_INK' as const:
+  enemyInk?'ENEMY_INK' as const:lowHp?'LOW_HP' as const:'NONE' as const;
  const respawnSeconds=lifeState==='SPLATTED'&&Number.isSafeInteger(ticks)&&
   ticks!==null&&ticks!==undefined&&ticks>=0&&ticks<=150?
   Math.ceil(ticks/6)/10:null;
@@ -194,11 +196,14 @@ export function createF3PlayableHud(ui:HTMLElement){
   cpu.textContent='CPU '+v.cpuRecovered+'/7 · '+v.sourceState;
   practice.textContent=v.scoring;
   danger.hidden=v.hazard==='NONE';
-  const dangerText=v.hazard==='ENEMY_INK'?
-   'ENEMY INK · LEAVE THE AREA':
+  const dangerText=v.hazard==='CRITICAL_ENEMY_INK'?
+   'CRITICAL HP + ENEMY INK · ESCAPE & RECOVER':
+   v.hazard==='ENEMY_INK'?'ENEMY INK · LEAVE THE AREA':
    v.hazard==='LOW_HP'?'LOW HP · RECOVER':'NONE';
   if(!danger.hidden&&danger.textContent!==dangerText)
    danger.textContent=dangerText;
+  danger.style.borderColor=v.hazard==='CRITICAL_ENEMY_INK'?
+   '#ff5165':'#ff9a85';
   danger.dataset.t21B84RealHazard=v.hazard;
   const splatted=v.lifeState==='SPLATTED';
   splatNotice.hidden=!splatted||value.matchState==='TIME_UP'||!!value.stopReason;
