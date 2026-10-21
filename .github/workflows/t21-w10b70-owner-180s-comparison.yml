@@ -8,6 +8,8 @@ on:
       - 'src/app/UndertowF3OwnerAimComparisonUI.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'scripts/t21-w10b72-stored-round-witness.mjs'
+      - 'scripts/t21-w10b72-stored-round-witness.test.mjs'
       - '.github/workflows/t21-w10b70-owner-180s-comparison.yml'
   workflow_dispatch:
 permissions:
@@ -26,6 +28,8 @@ jobs:
       - run: npm run build -- --base=/browser-ink-tps/
       - run: npx vitest run src/app/UndertowF3OwnerAimComparison.test.ts src/app/UndertowF3PreviewAimReview.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - run: node --check scripts/t21-w10b72-stored-round-witness.mjs
+      - run: node --test scripts/t21-w10b72-stored-round-witness.test.mjs
       - run: echo 'B70_FAST_PASS_ONLY_NOT_OWNER_FULL_NATIVE_CERTIFICATION'
   actual-180s-owner-capture:
     name: Real owner chosen FIXED 180s, browser storage and opt-in SWEEP

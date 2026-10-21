@@ -9,6 +9,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
+import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
 
 const ROOT='http://127.0.0.1:4196/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-f3-playable-webgl2';
@@ -644,13 +645,28 @@ async function main(){
      stage:snap.matchState,
      realActorRejoins:snap.cpu.physicalRejoins.length,
      sourceOriginalSolids:snap.originalSourceSolids,
+     originalPaintable:snap.originalPaintSurfaces,
+     originalLinks:snap.originalSourceNavigationLinks,
      scoreable:snap.sourceScoreablePromotions,
+     productionAuthorized:snap.productionAuthorized,
      noScore:snap.unrestricted4v4Certified===false,
      optInSweep:snap.b64SourceInkSweep.enabled,
-     stored:{schema:q.schema,mode:q.fixed?.mode,
+     b70OwnerOptIn:document.querySelector(
+      '#t21-f3-b70-owner-local-aim-comparison')?.dataset.t21B70OwnerOptIn,
+     b70DataUpload:document.querySelector(
+      '#t21-f3-b70-owner-local-aim-comparison')?.dataset.t21B70DataUpload,
+     b70Stage:document.querySelector(
+      '#t21-f3-b70-owner-local-aim-comparison')?.dataset.t21B70Stage,
+     b70NextUiMode:document.querySelector(
+      '#t21-f3-b69-aim-review')?.dataset.t21B69ActiveMode,
+     persistedSourceRawLength:text.length,
+     stored:{sessionSchema:q.schema,
+      recordSchema:q.fixed?.schema,mode:q.fixed?.mode,
       real180Seconds:q.fixed?.nativeSeconds,
       tick:q.fixed?.nativeTick,sourceInk:q.fixed?.cpuImpactInkChangedCells,
       cpuSourceShots:q.fixed?.cpuSourceShots,
+      originalActorCount:q.fixed?.actualSevenCpuRejoined,
+      productionAuthorized:q.fixed?.productionAuthorized,
       noScore:q.fixed?.scoreable===0,
       noOriginal4v4:q.fixed?.original4v4Certified===false,
       winner:q.fixed?.officialWinner,
@@ -658,18 +674,10 @@ async function main(){
      otherNotSaved:q.sweep===null
     };
    })()`),90000);
-   if(next.stage!=='STAGING'||next.search!==
-      '?t21Play=preview&t21W10B68=previewSweep'||
-      next.optInSweep!==true||next.sourceOriginalSolids!==25||
-      next.scoreable!==0||!next.noScore||
-      next.stored.schema!=='T21_B70_OWNER_CHOSEN_REAL_NATIVE_UNSCORED_ROUND_V1'||
-      next.stored.mode!=='FIXED'||next.stored.real180Seconds!==180||
-      next.stored.tick<10800||next.stored.sourceInk<=0||
-      next.stored.cpuSourceShots<=0||!next.stored.noScore||
-      !next.stored.noOriginal4v4||next.stored.winner!=='NONE'||
-      next.stored.originalCoordFields||!next.otherNotSaved)
-    reject('B70_NATIVE_USER_CLICK_STORAGE_OR_RETURN_UNVERIFIED_'+
-     JSON.stringify(next));
+   const completedB72=auditB72OwnerStoredRound(next);
+   if(completedB72.defaultCpuChanged||
+      completedB72.original4v4Certified)
+    reject('B72_UNAUTHORIZED_CPU_OR_SOURCE_PROMOTION');
    const proof={
     verdict:'B70_REAL_FULL_180S_OWNER_OPTIN_AND_TAB_ONLY_STORAGE_PASS',
     actualNativeFullMatchSeconds:180,
@@ -680,7 +688,7 @@ async function main(){
     originalSource25Solids17Paintable26Links0Score:true,
     automaticTelemetryUploaded:false,
     sourceOriginalActorCoordinatesIncluded:false,
-    owner,afterUserClick:next
+    owner,afterUserClick:next,verifiedNativeBrowserStorage:completedB72
    };
    writeFileSync(resolve(OUTPUT,'w10b70-owner-opt-in-real-180s.json'),
     JSON.stringify(proof,null,2));
