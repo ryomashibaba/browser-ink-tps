@@ -1,0 +1,41 @@
+name: T21 W10-B96 real Chrome parked-human source detour
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
+      - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-w10b96-parked-human-detour.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-chrome-source-parked-detour:
+    name: True WebGL2 60Hz parked human / seven original-source CPU rejoin
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Check real browser script and original-source physics build
+        run: |
+          node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Observe true native original-stage A3 detour with parked real human
+        env:
+          T21_W10B96_PARKED: '1'
+          T21_W10B75_AIM: FIXED
+          T21_F3_SHOT_DIR: /tmp/t21-w10b96
+        run: node scripts/t21-w10b75-live-native-ink-hud.mjs
+      - name: Keep real 60Hz source-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b96-real-chrome-parked-original-source-detour
+          path: /tmp/t21-w10b96/
+          if-no-files-found: warn
+          retention-days: 14
