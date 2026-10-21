@@ -32,7 +32,7 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
- for(const humanWalkTicks of [0,28,60,120])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
+ for(const humanWalkTicks of [0,28,60,120,180])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
    const source=undertowT21dConnectivityQaStage();
@@ -62,8 +62,15 @@ describe('F3B playable 8-actor original source runtime',()=>{
    cpu.useF3dOriginalSourceGoals(traffic);
    let done=0,stop:string|null=null,overlap:string|null=null,
     minimumSeparation=Infinity,maxGroundStep=0;
-   for(let frame=1;frame<=2400;frame++){
+   let obstructionWitness:null|{
+    rejoined:number;released:string[];a3Rejoined:boolean;a2Released:boolean;
+    playerFoot:number[];a3Foot:number[];
+   }=null;
+   // B91: first obstruct the real upper original lip, wait through the
+   // observed 5/7 physical plateau, THEN retreat without restarting.
+   for(let frame=1;frame<=(humanWalkTicks===180?3600:2400);frame++){
     (pInput as unknown as {moveY:number}).moveY=
+     humanWalkTicks===180?(frame<=60?1:frame>1500&&frame<=1560?-1:0):
      humanWalkTicks===120?(frame<=60?1:frame<=120?-1:0):
       frame<=humanWalkTicks?1:0;
     const before=bots.map(b=>b.position.clone());
@@ -95,6 +102,17 @@ describe('F3B playable 8-actor original source runtime',()=>{
      if(d<(a.id==='HUMAN'||b.id==='HUMAN'?.58:.56)&&!overlap)
       overlap=frame+':'+a.id+'/'+b.id+'='+d;
     }
+    if(humanWalkTicks===180&&frame===1500){
+     const checkpoint=traffic.snapshot();
+     obstructionWitness={
+      rejoined:checkpoint.physicalRejoins.length,
+      released:[...checkpoint.releasedCpuIds],
+      a3Rejoined:checkpoint.cpu.find(c=>c.id==='A3')?.rejoined??false,
+      a2Released:checkpoint.cpu.find(c=>c.id==='A2')?.released??false,
+      playerFoot:player.getPosition().toArray(),
+      a3Foot:bots.find(b=>b.id==='A3')!.position.toArray()
+     };
+    }
     if(!done&&traffic.snapshot().physicalRejoins.length===7)
      done=frame;
     if(done&&frame>=done+360)break;
@@ -109,6 +127,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     freeCombatEnabled:state.freeCombatEnabled,
     sourceLinks:state.originalSourceLinksUsed,
     realHumanPassiveNav:liveHuman.snapshot, humanWalkTicks,
+    obstructionWitness,
     sourcePatrol:state.sourcePatrol,
     originalHumanPlayerFoot:player.getPosition().toArray(),
     actorSteeringFeet:bots.map(b=>({id:b.id,
@@ -137,6 +156,19 @@ describe('F3B playable 8-actor original source runtime',()=>{
     expect(state.sourcePatrol.auditedTargets).toBeGreaterThan(0);
     expect(state.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
     expect(state.sourcePatrol.travelMeters).toBeGreaterThan(0.5);
+   }
+   if(humanWalkTicks===180){
+    expect(obstructionWitness).not.toBeNull();
+    expect(obstructionWitness?.rejoined).toBe(5);
+    expect(obstructionWitness?.a3Rejoined).toBe(false);
+    expect(obstructionWitness?.a2Released).toBe(false);
+    // A genuine return across the obstruction MUST precede recovery.
+    expect(Math.hypot(
+     player.getPosition().x-obstructionWitness!.playerFoot[0]!,
+     player.getPosition().z-obstructionWitness!.playerFoot[2]!
+    )).toBeGreaterThan(2);
+    expect(state.physicalRejoins).toHaveLength(7);
+    expect(state.freeCombatEnabled).toBe(true);
    }
    expect(state.sourcePatrol.attemptsToCrossUnboundUnderpass).toBe(0);
    if(humanWalkTicks!==60)expect(done).toBeGreaterThan(0);
