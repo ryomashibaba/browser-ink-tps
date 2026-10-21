@@ -5,7 +5,9 @@
  * No T21 release, win/scoring or unrestricted 4v4 certification is implied.
  */
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdirSync,writeFileSync} from 'node:fs';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {verifyB77OriginalSourceAbaRaster}
+ from './t21-w10b77-source-raster-restore.mjs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
@@ -1115,8 +1117,19 @@ async function main(){
   },15000);
   await sleep(700);
   const architectureA2=await screenshot('W10B28_A2_ARCHITECTURE_RESTORED');
-  if(architectureA.sha256===hologramB.sha256||
-     architectureA.sha256!==architectureA2.sha256||
+  // B77: PNG byte SHA is a bad proxy for material reversibility.
+  // Exact visual forensic analysis of B76's failed B21 artifact found
+  // A/A2 differ in just 258/1,440,000 pixels, all RGB channel deltas
+  // <=1, clustered along rasterized text. The intentional hologram
+  // differs in >40,000 pixels, with substantial channel differences.
+  // Reject anything above a strict one-step quantization budget,
+  // and independently demand a MATERIAL B-frame change.
+  const realAbaRaster=verifyB77OriginalSourceAbaRaster(
+   readFileSync(resolve(OUTPUT,architectureA.name+'.png')),
+   readFileSync(resolve(OUTPUT,hologramB.name+'.png')),
+   readFileSync(resolve(OUTPUT,architectureA2.name+'.png')));
+  if(!realAbaRaster.sourceAppearanceRestored||
+     !realAbaRaster.intentionalHologramMaterialChangeVerified||
      ghost.tick!==before.tick||restoredArchitecture.tick!==before.tick||
      JSON.stringify(ghost.player.position)!==JSON.stringify(before.player.position)||
      JSON.stringify(restoredArchitecture.player.position)!==JSON.stringify(before.player.position)||
@@ -1131,7 +1144,10 @@ async function main(){
    JSON.stringify({
     sourceOnly:true,realChromeWebGL2:true,
     architectureSHA:architectureA.sha256,hologramSHA:hologramB.sha256,
-    restoredIdentical:true,fixedPhysicsTicks:0,
+    restoredRasterWithinOneStepQuantization:true,
+    fidelity:realAbaRaster,
+    restoredIdenticalPNGHash:architectureA.sha256===architectureA2.sha256,
+    fixedPhysicsTicks:0,
     originalSourceTriangles:before.b28OriginalSourceMassing.originalTriangles,
     originalSolids:25,originalPaintable:17,originalNavLinks:26,
     scoreablePromotions:0,unplacedActorTransformsRecovered:0,

@@ -21,6 +21,8 @@ on:
       - 'src/app/UndertowF3PracticeObjectiveView.test.ts'
       - 'src/ink/PaintCoordinator.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'scripts/t21-w10b77-source-raster-restore.mjs'
+      - 'scripts/t21-w10b77-source-raster-restore.test.mjs'
       - '.github/workflows/t21-w10b21-render-ab.yml'
   workflow_dispatch:
 permissions:
@@ -40,8 +42,11 @@ jobs:
         run: npm run build -- --base=/browser-ink-tps/
       - name: Validate B22 live owner trial state machine and strict source gates
         run: npx vitest run src/app/UndertowF3OwnerGpuTrial.test.ts src/app/UndertowF3SourceInkFeedback.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/camera/UndertowF3KineticView.test.ts src/app/UndertowF3EOriginalSourceCoverage.test.ts
-      - name: Validate browser QA syntax
-        run: node --check scripts/t21-f3-browser-smoke.mjs
+      - name: Validate browser QA syntax and hard pixel fidelity gates
+        run: |
+          node --check scripts/t21-f3-browser-smoke.mjs
+          node --check scripts/t21-w10b77-source-raster-restore.mjs
+          node --test scripts/t21-w10b77-source-raster-restore.test.mjs
       - name: A-B-A frozen source-native GPU raster workload comparison
         env:
           T21_W10B21_RENDER_AB: '1'
