@@ -65,6 +65,12 @@ describe('F3B playable 8-actor original source runtime',()=>{
    let obstructionWitness:null|{
     rejoined:number;released:string[];a3Rejoined:boolean;a2Released:boolean;
     playerFoot:number[];a3Foot:number[];
+    genuineSourceAlternateDrops:readonly {
+     linkId:string;sourceStart:number[];sourceEnd:number[];
+     rejoinRouteExists:boolean;upperPhysicalFootSnapMeters:number;
+     endpointSnapMeters:number;nativePathPoints:number;
+     upperStartToHumanMeters:number;
+    }[];
    }=null;
    // B91: first obstruct the real upper original lip, wait through the
    // observed 5/7 physical plateau, THEN retreat without restarting.
@@ -110,7 +116,24 @@ describe('F3B playable 8-actor original source runtime',()=>{
       a3Rejoined:checkpoint.cpu.find(c=>c.id==='A3')?.rejoined??false,
       a2Released:checkpoint.cpu.find(c=>c.id==='A2')?.released??false,
       playerFoot:player.getPosition().toArray(),
-      a3Foot:bots.find(b=>b.id==='A3')!.position.toArray()
+      a3Foot:bots.find(b=>b.id==='A3')!.position.toArray(),
+      // B92: inspect alternatives only from the immutable six HIGH
+      // original positive-z first-drop links. Recast path acceptance is
+      // a navigation observation, NEVER collision-supported passage.
+      genuineSourceAlternateDrops:stage.navigationLinks!
+       .filter(link=>link.id.startsWith('first-drop-positive-z-'))
+       .map(link=>{
+        const foot=bots.find(b=>b.id==='A3')!.position;
+        const native=nav.auditPath(foot,new Vec3(...link.end));
+        const playerFoot=player.getPosition();
+        return {linkId:link.id,sourceStart:[...link.start],
+         sourceEnd:[...link.end],rejoinRouteExists:native.reachedTarget,
+         upperPhysicalFootSnapMeters:native.startSnapDistanceMeters,
+         endpointSnapMeters:native.endSnapDistanceMeters,
+         nativePathPoints:native.pointCount,
+         upperStartToHumanMeters:Math.hypot(
+          link.start[0]-playerFoot.x,link.start[2]-playerFoot.z)};
+       })
      };
     }
     if(!done&&traffic.snapshot().physicalRejoins.length===7)
@@ -160,6 +183,9 @@ describe('F3B playable 8-actor original source runtime',()=>{
    if(humanWalkTicks===180){
     expect(obstructionWitness).not.toBeNull();
     expect(obstructionWitness?.rejoined).toBe(5);
+    expect(obstructionWitness?.genuineSourceAlternateDrops).toHaveLength(6);
+    expect(obstructionWitness?.genuineSourceAlternateDrops.every(x=>
+     x.linkId.startsWith('first-drop-positive-z-'))).toBe(true);
     expect(obstructionWitness?.a3Rejoined).toBe(false);
     expect(obstructionWitness?.a2Released).toBe(false);
     // A genuine return across the obstruction MUST precede recovery.
