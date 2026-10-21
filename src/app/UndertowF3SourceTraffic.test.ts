@@ -216,6 +216,16 @@ describe('F3B playable 8-actor original source runtime',()=>{
      linkId:r.linkId,start:r.start,originalGoal:r.sourceGoal})),
     originalSourceOnly:true,productionAuthorized:false
    }));
+   if(humanWalkTicks===240)console.log(
+    'T21_B95_NATIVE_SOURCE_ESCAPE_WITNESS',JSON.stringify({
+     realHumanHeldFoot:b93ParkedPlayerFoot,
+     nativeA3OriginalFloor:state.cpu.find(c=>c.id==='A3')?.physicalFoot,
+     nativeSourceDetour:state.b93UpperDetours,
+     genuineRapierBlockerCount:blockedA3.length,
+     rejoined:state.physicalRejoins.length,
+     tickFinished:done,
+     sourceScoreable:0,productionAuthorized:false
+    }));
    expect(stop).toBeNull();
    expect(overlap).toBeNull();
    if(humanWalkTicks===60){
