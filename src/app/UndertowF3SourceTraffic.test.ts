@@ -32,7 +32,7 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
- for(const humanWalkTicks of [0,28,60,120])it('7/7 native-source actors with grounded human avoidance, actual W ticks='+humanWalkTicks,()=>{
+ for(const humanWalkTicks of [0,28,60,120])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
    const source=undertowT21dConnectivityQaStage();
