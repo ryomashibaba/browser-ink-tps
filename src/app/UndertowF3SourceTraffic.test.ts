@@ -78,6 +78,10 @@ describe('F3B playable 8-actor original source runtime',()=>{
    let done=0,stop:string|null=null,overlap:string|null=null,
     minimumSeparation=Infinity,maxGroundStep=0;
    let b93ParkedPlayerFoot:number[]|null=null;
+   const b94RouteCheckpoints:Array<{
+    tick:number;realFoot:number[];crowdFoot:unknown;phase:string|null;
+    physicalRejoins:number;humanFoot:number[];
+   }> = [];
    let obstructionWitness:null|{
     rejoined:number;released:string[];a3Rejoined:boolean;a2Released:boolean;
     playerFoot:number[];a3Foot:number[];
@@ -127,6 +131,14 @@ describe('F3B playable 8-actor original source runtime',()=>{
      if(d<(a.id==='HUMAN'||b.id==='HUMAN'?.58:.56)&&!overlap)
       overlap=frame+':'+a.id+'/'+b.id+'='+d;
     }
+    if(humanWalkTicks===240&&[180,360,600,900,1500,2400].includes(frame)){
+     const actor=bots.find(b=>b.id==='A3')!;
+     b94RouteCheckpoints.push({tick:frame,realFoot:actor.position.toArray(),
+      crowdFoot:actor.agent?.position()??null,
+      phase:traffic.snapshot().b93UpperDetours.find(d=>d.actorId==='A3')?.phase??null,
+      physicalRejoins:traffic.snapshot().physicalRejoins.length,
+      humanFoot:player.getPosition().toArray()});
+    }
     if(humanWalkTicks===240&&frame===60)
      b93ParkedPlayerFoot=player.getPosition().toArray();
     if(humanWalkTicks===180&&frame===1500){
@@ -175,6 +187,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     b93UpperDetours:state.b93UpperDetours,
     b93ExperimentalEnabled:state.b93ExperimentalEnabled,
     b93ParkedPlayerFoot,
+    b94RouteCheckpoints,
     blockedA3,
     b93A3NativePath:(()=>{
      const actor=bots.find(b=>b.id==='A3')!;
