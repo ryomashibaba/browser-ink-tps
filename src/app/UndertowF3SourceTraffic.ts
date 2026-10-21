@@ -448,11 +448,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      link.start[1]===7.5&&link.end[1]===3&&
      (link.start[0]-bot.position.x)*direction>=1.5&&
      Math.hypot(link.start[0]-human.x,link.start[2]-human.z)>3)
-   .map(link=>({link,path:this.nav.auditPath(bot.position,
-     new Vec3(...link.end))}))
-   .filter(x=>x.path.reachedTarget&&
-     x.path.startSnapDistanceMeters<=.22&&
-     x.path.endSnapDistanceMeters<=.22)
+   .map(link=>({link,
+     drop:this.nav.auditPath(bot.position,new Vec3(...link.end)),
+     upper:this.nav.auditPath(bot.position,new Vec3(...link.start))}))
+   .filter(x=>x.drop.reachedTarget&&x.upper.reachedTarget&&
+     x.drop.startSnapDistanceMeters<=.22&&
+     x.drop.endSnapDistanceMeters<=.22&&
+     x.upper.startSnapDistanceMeters<=.22&&
+     x.upper.endSnapDistanceMeters<=.22)
    .sort((a,b)=>
      Math.abs(a.link.start[0]-bot.position.x)-
      Math.abs(b.link.start[0]-bot.position.x)||
