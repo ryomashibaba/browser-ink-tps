@@ -1,0 +1,56 @@
+name: T21 W10-B70 real native 180s opt-in same-tab comparison
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3OwnerAimComparison.ts'
+      - 'src/app/UndertowF3OwnerAimComparison.test.ts'
+      - 'src/app/UndertowF3OwnerAimComparisonUI.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b70-owner-180s-comparison.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    name: B70 source authority, privacy, native-metrics model and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3OwnerAimComparison.test.ts src/app/UndertowF3PreviewAimReview.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+      - run: echo 'B70_FAST_PASS_ONLY_NOT_OWNER_FULL_NATIVE_CERTIFICATION'
+  actual-180s-owner-capture:
+    name: Real owner chosen FIXED 180s, browser storage and opt-in SWEEP
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Real 180 native match seconds, physical owner click, tab-local storage
+        env:
+          T21_W10B59_FULL_NATIVE_SESSION: '1'
+          T21_W10B68_NORMAL_PREVIEW_AIM: FIXED
+          T21_W10B70_REAL_OWNER_STORAGE: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-w10b70
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Retain opt-in UI screenshot & anonymous QA witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b70-owner-explicit-180s-source-only
+          path: /tmp/t21-w10b70/
+          if-no-files-found: warn
+          retention-days: 14

@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/app/UndertowF3PreviewAimReview.ts'
       - 'src/app/UndertowF3PreviewAimReview.test.ts'
+      - 'src/app/UndertowF3OwnerAimComparison.ts'
+      - 'src/app/UndertowF3OwnerAimComparison.test.ts'
+      - 'src/app/UndertowF3OwnerAimComparisonUI.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
       - '.github/workflows/t21-w10b69-manual-preview-toggle.yml'
@@ -23,7 +26,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3PreviewAimReview.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3PlayableHud.test.ts
+      - run: npx vitest run src/app/UndertowF3PreviewAimReview.test.ts src/app/UndertowF3OwnerAimComparison.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
   real-one-click:
     name: B69 real Chrome click FIXED to opt-in SWEEP to FIXED

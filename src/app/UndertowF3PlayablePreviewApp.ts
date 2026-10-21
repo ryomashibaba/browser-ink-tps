@@ -63,6 +63,8 @@ import {createF3PlayableHud} from './UndertowF3PlayableHud';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {b69PreviewAimView,b69NextSourcePreviewHref}
  from './UndertowF3PreviewAimReview';
+import {createB70OwnerAimComparisonUI}
+ from './UndertowF3OwnerAimComparisonUI';
 import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {buildF3eOriginalSourceCoverage}
@@ -159,6 +161,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
+ private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
  private readonly b62NativeEvidence=new W10B62NativeSessionEvidence();
  // B36: normal source-practice can reclaim view-space when pointer-locked.
  // Deterministic source QA keeps its prior DOM layout unless opted in.
@@ -621,6 +624,13 @@ export class UndertowF3PlayablePreviewApp{
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
    ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
+  // B70: only normal F3 preview. Persist only after the owner's button
+  // click and real B62 completion; source QA/production never get storage.
+  if(b69){
+   this.b70OwnerComparison=createB70OwnerAimComparisonUI(
+    this.b58SessionBoard.finish,b69.mode,()=>this.snapshot(),
+    ()=>this.b62NativeEvidence.report()!==null);
+  }
   const challenge=document.createElement('section');
   challenge.id='t21-f3-b25-paint-run';
   challenge.dataset.sourceOnly='true';
@@ -2257,6 +2267,8 @@ export class UndertowF3PlayablePreviewApp{
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.b58SessionBoard.render(state);
+  if(state.matchState==='TIME_UP')
+   this.b70OwnerComparison?.render();
   if(state.matchState==='TIME_UP'){
    const completed=this.b62NativeEvidence.report();
    if(completed)this.b58SessionBoard.setPaintTempo(

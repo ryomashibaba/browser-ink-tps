@@ -113,12 +113,15 @@ async function main(){
  const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
  const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
  const w10b69=process.env.T21_W10B69_ONE_CLICK_PREVIEW==='1';
+ const w10b70=process.env.T21_W10B70_REAL_OWNER_STORAGE==='1';
  const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
  const w10b68=w10b68Mode==='FIXED'||w10b68Mode==='SWEEP';
  if(w10b68Mode&&!w10b68)
   reject('B68_NORMAL_PREVIEW_MODE_MUST_BE_FIXED_OR_SWEEP');
  if(w10b68&&!w10b59)
   reject('B68_NEEDS_REAL_180S_NATIVE_SESSION_DRIVER');
+ if(w10b70&&(!w10b59||w10b68Mode!=='FIXED'))
+  reject('B70_REQUIRES_NORMAL_FIXED_180S_OWNER_PREVIEW');
  const w10b64Mode=process.env.T21_W10B64_SOURCE_INK_AIM??'';
  const w10b64=w10b64Mode==='FIXED'||w10b64Mode==='SWEEP';
  if(w10b64Mode&&!w10b64)reject('B64_UNKNOWN_SOURCE_LAB_MODE');
@@ -191,7 +194,12 @@ async function main(){
     original4v4Certified:v.unrestricted4v4Certified,
     sweepEnabled:v.b64SourceInkSweep?.enabled,
     tick:v.tick,stopReason:v.stopReason,
-    gpuQuality:v.b21RenderProbe?.quality
+    gpuQuality:v.b21RenderProbe?.quality,
+    b70UiState:document.querySelector('#t21-f3-b70-owner-local-aim-comparison')?.dataset.t21B70Stage,
+    b70OptIn:document.querySelector('#t21-f3-b70-owner-local-aim-comparison')?.dataset.t21B70OwnerOptIn,
+    b70SaveDisabled:document.querySelector('#t21-f3-b70-save-compare')?.disabled,
+    b70Scoreable:document.querySelector('#t21-f3-b70-owner-local-aim-comparison')?.dataset.t21B70OfficialScoring,
+    b70StoragePresent:sessionStorage.getItem('T21_B70_OPT_IN_SOURCE_CPU_AIM_ROUNDS_V1')!==null
    }:null;
   })()`);
   const validate=(v,mode)=>{
@@ -203,6 +211,9 @@ async function main(){
       v.productionAuthorized!==false||v.original4v4Certified!==false||
       v.sweepEnabled!==(mode==='SWEEP')||
       v.gpuQuality!=='NATIVE'||v.stopReason||
+      v.b70UiState!=='NOT_FINISHED'||
+      v.b70OptIn!=='REQUIRED'||v.b70SaveDisabled!==true||
+      v.b70Scoreable!=='0'||v.b70StoragePresent!==false||
       v.url.includes('t21QaDrive=source'))
     reject('B69_UNTRUSTED_NORMAL_PREVIEW_MODE_'+mode+'_'+JSON.stringify(v));
   };
@@ -585,6 +596,98 @@ async function main(){
    b68VisualEvidence=evidence;
   }
   const frame=await screenshot('W10B59_ACTUAL_FULL_180S_NATIVE_END');
+  if(w10b70){
+   // Only after an ACTUAL F3 real full 180-second completion is the
+   // explicit B70 button enabled; local values must not have been
+   // automatically persisted. User click stores FIXED and navigates to
+   // source-only SWEEP. No user data ever leaves this browser tab.
+   await evaluate(`(() => {
+    document.querySelector('#t21-f3-b70-save-compare')
+     ?.scrollIntoView({block:'center',behavior:'instant'});
+    return true;
+   })()`);
+   const owner=await evaluate(`(() => {
+    const b=document.querySelector('#t21-f3-b70-save-compare');
+    const card=document.querySelector('#t21-f3-b70-owner-local-aim-comparison');
+    const rect=b?.getBoundingClientRect();
+    return {
+     buttonDisabled:b?.disabled,
+     buttonText:b?.textContent,
+     stage:card?.dataset.t21B70Stage,
+     ownerOptIn:card?.dataset.t21B70OwnerOptIn,
+     noAutoUpload:card?.dataset.t21B70DataUpload,
+     scoreable:card?.dataset.t21B70OfficialScoring,
+     storedBefore:sessionStorage.getItem('T21_B70_OPT_IN_SOURCE_CPU_AIM_ROUNDS_V1'),
+     position:rect?{x:rect.left+rect.width/2,
+      y:rect.top+rect.height/2}:null
+    };
+   })()`);
+   if(owner.buttonDisabled!==false||owner.ownerOptIn!=='REQUIRED'||
+      owner.stage!=='REAL_ROUND_AVAILABLE'||owner.noAutoUpload!=='NONE'||
+      owner.scoreable!=='0'||owner.storedBefore!==null||
+      !owner.position||owner.position.y<0||owner.position.y>900)
+    reject('B70_REAL_OWNER_COMPLETE_ROUND_NOT_READY_'+JSON.stringify(owner));
+   const pos=owner.position;
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:pos.x,y:pos.y,
+    button:'none'});
+   await cmd('Input.dispatchMouseEvent',{type:'mousePressed',x:pos.x,y:pos.y,
+    button:'left',clickCount:1});
+   await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',x:pos.x,y:pos.y,
+    button:'left',clickCount:1});
+   const next=await waitUntil(async()=>await evaluate(`(() => {
+    const snap=window.__t21F3?.snapshot?.();
+    const text=sessionStorage.getItem('T21_B70_OPT_IN_SOURCE_CPU_AIM_ROUNDS_V1');
+    if(!snap||!text)return null;
+    let q;try{q=JSON.parse(text);}catch{return null;}
+    return {
+     search:location.search,
+     stage:snap.matchState,
+     realActorRejoins:snap.cpu.physicalRejoins.length,
+     sourceOriginalSolids:snap.originalSourceSolids,
+     scoreable:snap.sourceScoreablePromotions,
+     noScore:snap.unrestricted4v4Certified===false,
+     optInSweep:snap.b64SourceInkSweep.enabled,
+     stored:{schema:q.schema,mode:q.fixed?.mode,
+      real180Seconds:q.fixed?.nativeSeconds,
+      tick:q.fixed?.nativeTick,sourceInk:q.fixed?.cpuImpactInkChangedCells,
+      cpuSourceShots:q.fixed?.cpuSourceShots,
+      noScore:q.fixed?.scoreable===0,
+      noOriginal4v4:q.fixed?.original4v4Certified===false,
+      winner:q.fixed?.officialWinner,
+      originalCoordFields:('actorTransform' in (q.fixed??{}))},
+     otherNotSaved:q.sweep===null
+    };
+   })()`),90000);
+   if(next.stage!=='STAGING'||next.search!==
+      '?t21Play=preview&t21W10B68=previewSweep'||
+      next.optInSweep!==true||next.sourceOriginalSolids!==25||
+      next.scoreable!==0||!next.noScore||
+      next.stored.schema!=='T21_B70_OWNER_CHOSEN_REAL_NATIVE_UNSCORED_ROUND_V1'||
+      next.stored.mode!=='FIXED'||next.stored.real180Seconds!==180||
+      next.stored.tick<10800||next.stored.sourceInk<=0||
+      next.stored.cpuSourceShots<=0||!next.stored.noScore||
+      !next.stored.noOriginal4v4||next.stored.winner!=='NONE'||
+      next.stored.originalCoordFields||!next.otherNotSaved)
+    reject('B70_NATIVE_USER_CLICK_STORAGE_OR_RETURN_UNVERIFIED_'+
+     JSON.stringify(next));
+   const proof={
+    verdict:'B70_REAL_FULL_180S_OWNER_OPTIN_AND_TAB_ONLY_STORAGE_PASS',
+    actualNativeFullMatchSeconds:180,
+    input:'CHROME_REAL_POINTER_LOCK_W_MOUSE',
+    actualNativePhysicsTick:terminal.tick,
+    realOwnerOptInPhysicalClicks:1,
+    pageReloadIntoOriginalSourceSWEEP:true,
+    originalSource25Solids17Paintable26Links0Score:true,
+    automaticTelemetryUploaded:false,
+    sourceOriginalActorCoordinatesIncluded:false,
+    owner,afterUserClick:next
+   };
+   writeFileSync(resolve(OUTPUT,'w10b70-owner-opt-in-real-180s.json'),
+    JSON.stringify(proof,null,2));
+   console.log('T21_W10B70_REAL_NATIVE_USER_CHOSEN_COMPARE',
+    JSON.stringify(proof));
+   return;
+  }
   // Real CDP click on the visible end-of-session button, NOT an
   // artificial page-navigation JavaScript call.
   const pos=await evaluate(`(() => {
