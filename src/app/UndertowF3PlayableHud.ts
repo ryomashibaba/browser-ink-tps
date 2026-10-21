@@ -239,10 +239,10 @@ export function createF3PlayableHud(ui:HTMLElement){
    const monotonic=lastHitCount!==null&&lastSplatCount!==null&&
     hitTick>=lastHitTick&&hitCount>=lastHitCount&&splatCount>=lastSplatCount;
    if(!monotonic)hitMarkerUntil=-1;
-   if(monotonic&&splatCount>lastSplatCount){
+   if(monotonic&&lastSplatCount!==null&&splatCount>lastSplatCount){
     hitMarkerUntil=hitTick+75;
     hitMarker.textContent='CPU SPLAT';
-   }else if(monotonic&&hitCount>lastHitCount){
+   }else if(monotonic&&lastHitCount!==null&&hitCount>lastHitCount){
     hitMarkerUntil=hitTick+48;
     hitMarker.textContent='CPU HIT';
    }
