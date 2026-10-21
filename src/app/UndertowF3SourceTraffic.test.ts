@@ -245,6 +245,10 @@ describe('F3B playable 8-actor original source runtime',()=>{
     )).toBeLessThan(.1);
     expect(state.b93UpperDetours.some(r=>r.actorId==='A3'&&
      r.linkId.startsWith('first-drop-positive-z-'))).toBe(true);
+    // B95: a lateral target is authentic-source-supported and remains
+    // opt-in. This is not a bypass for the real human or any CPU body.
+    expect(state.b93UpperDetours.some(r=>r.actorId==='A3'&&
+     r.escapeFoot!==null)).toBe(true);
    }else expect(state.b93ExperimentalEnabled).toBe(false);
    if(humanWalkTicks===180){
     expect(obstructionWitness).not.toBeNull();
