@@ -32,7 +32,7 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
- for(const movingHuman of [false,true])it('7/7 native-source actors with grounded human avoidance, obstructed='+movingHuman,()=>{
+ for(const humanWalkTicks of [0,28,60])it('7/7 native-source actors with grounded human avoidance, actual W ticks='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
    const source=undertowT21dConnectivityQaStage();
@@ -64,7 +64,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     minimumSeparation=Infinity,maxGroundStep=0;
    for(let frame=1;frame<=2400;frame++){
     (pInput as unknown as {moveY:number}).moveY=
-     movingHuman&&frame<=28?1:0;
+     frame<=humanWalkTicks?1:0;
     const before=bots.map(b=>b.position.clone());
     try{
      player.computeFixed(DT);
@@ -107,7 +107,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     released:state.releasedCpuIds,
     freeCombatEnabled:state.freeCombatEnabled,
     sourceLinks:state.originalSourceLinksUsed,
-    realHumanPassiveNav:liveHuman.snapshot, movingHuman,
+    realHumanPassiveNav:liveHuman.snapshot, humanWalkTicks,
     sourcePatrol:state.sourcePatrol,
     originalSourceOnly:true,productionAuthorized:false
    }));
