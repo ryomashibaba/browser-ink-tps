@@ -343,7 +343,10 @@ export class UndertowF3PlayablePreviewApp{
   );
   this.player.teleport(this.humanSpawn);
   this.resources=new PlayerResources(this.stats);
-  const combatTargets=new CombatTargetSystem(app,this.stats);
+  // B86: never spawn two generic sandbox combat dummies at unauthenticated
+  // original-world coordinates. Genuine seven Recast/Rapier CPUs remain
+  // damageable through CpuAgentSystem; 25/17/26/0 source authority unchanged.
+  const combatTargets=new CombatTargetSystem(app,this.stats,false);
   this.feedback=new GameFeedback(app,canvas);
   this.shared=new UndertowPhase14QSharedActorCollision(this.physics,stage,true);
   const adapter=new UndertowPhase14ECpuHandoff(stage,true);

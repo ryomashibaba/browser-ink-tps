@@ -23,12 +23,16 @@ export class CombatTargetSystem {
 
   public constructor(
     app: AppBase,
-    private readonly stats: PerformanceStats
+    private readonly stats: PerformanceStats,
+    // Source-faithful F3 uses genuine CPU actors, not these generic
+    // sandbox targets at positions never authenticated in Vss_Temple01.
+    // Other game modes retain their original two targets by default.
+    spawnGenericTargets = true
   ) {
-    this.targets = [
+    this.targets = spawnGenericTargets ? [
       this.createTarget(app, 'A', Team.A, new Vec3(-4.0, 0.03, 5.3)),
       this.createTarget(app, 'B', Team.B, new Vec3(4.0, 0.03, 5.3))
-    ];
+    ] : [];
     this.syncStats();
   }
 
