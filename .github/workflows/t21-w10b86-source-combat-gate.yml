@@ -4,6 +4,12 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/combat/CombatTargetSystem.ts'
+      - 'src/projectile/ProjectileSystem.ts'
+      - 'src/ai/CpuAgentSystem.ts'
+      - 'src/core/PerformanceStats.ts'
+      - 'src/app/UndertowF3PlayableHud.ts'
+      - 'src/app/UndertowF3PlayableHud.test.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
       - 'src/combat/CombatTargetSystem.SourcePractice.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.github/workflows/t21-w10b86-source-combat-gate.yml'

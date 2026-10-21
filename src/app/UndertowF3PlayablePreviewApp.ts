@@ -1134,6 +1134,7 @@ export class UndertowF3PlayablePreviewApp{
    measuredPlayerFootError:this.player.getPosition().y-
     PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters-w.qaHumanFoot.y,
    shotsFired:this.stats.shotsFired,cpuCombatHits:this.stats.cpuCombatHits,
+    humanCpuDirectHits:this.stats.humanCpuDirectHits,
    cpuSplats:this.stats.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
    firstSplatObserved:w.splatSeen,armed:w.armed,
    actualPointerInputRequired:w.mouseInputOnly,
@@ -2245,6 +2246,7 @@ export class UndertowF3PlayablePreviewApp{
    cpuContinuity:this.cpu.qaContinuitySnapshot(),
    cpuPaintRequests:this.stats.cpuPaintRequests,
    cpuCombatHits:this.stats.cpuCombatHits,
+   humanCpuDirectHits:this.stats.humanCpuDirectHits,
    cpuSplats:this.stats.cpuSplats,
    paintEventsPerSecond:this.stats.paintEventsPerSecond,
    cpuShots:this.stats.cpuShots,

@@ -445,7 +445,7 @@ export class ProjectileSystem {
           this.combatTargets.applyProjectileHit(qaHit, slot.damage);
         } else if (combatKind === 'CPU' && cpuHit) {
           combatPoint = cpuHit.point.clone();
-          this.cpuAgents.applyProjectileHit(cpuHit, slot.damage);
+          this.cpuAgents.applyProjectileHit(cpuHit, slot.damage, slot.sourceKind);
         } else if (combatKind === 'PLAYER') {
           combatPoint = pointOnSegment(previous, next, combatDistance);
           if (guarding && this.isGuardBlocking(slot, playerPosition, aimDirection)) {
@@ -1020,7 +1020,7 @@ export class ProjectileSystem {
       combatDistance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < worldDistance
     ) {
       if (combatKind === 'QA' && qaHit) this.combatTargets.applyProjectileHit(qaHit, damage);
-      if (combatKind === 'CPU' && cpuHit) this.cpuAgents.applyProjectileHit(cpuHit, damage);
+      if (combatKind === 'CPU' && cpuHit) this.cpuAgents.applyProjectileHit(cpuHit, damage, 'HUMAN');
       return {
         point: origin.clone().add(rayDirection.mulScalar(combatDistance)),
         paintHit: null,

@@ -1612,6 +1612,8 @@ async function main(){
   if(released.realMouseFireHeld)
    reject('W10B15_POINTER_RELEASE_NOT_RECORDED_'+JSON.stringify(released));
   if(!splat||splat.cpuSplats!==1||splat.cpuCombatHits-quickBefore.cpuCombatHits<3||
+     !Number.isSafeInteger(splat.humanCpuDirectHits)||
+     splat.humanCpuDirectHits<3||splat.humanCpuDirectHits>splat.cpuCombatHits||
      splat.shotsFired-quickBefore.shotsFired<3||splat.hp!==0||
      splat.entityEnabledInHierarchy!==false)
    reject('W10B15_MOUSE_NOT_NATIVE_COMBAT_'+JSON.stringify({
@@ -1681,6 +1683,7 @@ async function main(){
    originalStageAuthorityChanged:false,isolatedQaEnemyPlacement:true,
    mousePointerLock:true,unassistedCameraAim:true,
    realPlayerInputFire:true,realProjectileCpuHits:splat.cpuCombatHits-hitsBefore,
+   realHumanDirectCpuDamageEvents:splat.humanCpuDirectHits,
    actualPlayerShots:splat.shotsFired-shotsBefore,
    realCpuSplats:1,realCpuRespawns:1,respawnHp:100,
    scoreableSurfacesAuthorized:0,naturalEncounterCertified:false,

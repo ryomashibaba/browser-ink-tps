@@ -343,6 +343,7 @@ export class CpuAgentSystem {
     this.stats.cpuPaintRequests = 0;
     this.stats.cpuShots = 0;
     this.stats.cpuCombatHits = 0;
+    this.stats.humanCpuDirectHits = 0;
     this.stats.cpuSplats = 0;
     this.stats.cpuRespawns = 0;
     this.stats.cpuSuperJumps = 0;
@@ -1175,7 +1176,10 @@ export class CpuAgentSystem {
     return best;
   }
 
-  public applyProjectileHit(hit: CpuCombatHit, damage: number): void {
+  public applyProjectileHit(
+    hit: CpuCombatHit, damage: number,
+    sourceKind: 'HUMAN' | 'CPU' = 'CPU'
+  ): void {
     const bot = this.bots.find((candidate) => candidate.id === hit.botId);
     if (
       !bot ||
@@ -1189,7 +1193,11 @@ export class CpuAgentSystem {
     const previous = bot.hp;
     bot.hp = Math.max(0, bot.hp - damage);
     bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
-    if (bot.hp < previous) this.stats.cpuCombatHits += 1;
+    if (bot.hp < previous) {
+      this.stats.cpuCombatHits += 1;
+      // Guarded shots and CPU-vs-CPU damage are not human hit feedback.
+      if (sourceKind === 'HUMAN') this.stats.humanCpuDirectHits += 1;
+    }
   }
 
   public applyAreaDamage(

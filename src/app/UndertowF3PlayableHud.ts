@@ -13,6 +13,7 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  playerInkRecoveryState?:string;
  /** Actual 60Hz native human respawn countdown, never Actor placement. */
  humanRespawnTicksRemaining?:number|null;
+ humanCpuDirectHits?:number;
  inkDryFireAttempts?:number;
  matchState:string;
  timeRemainingSeconds:number;
@@ -38,6 +39,9 @@ export function formatF3PlayableHud(s:F3PlayableHudState){
  const lifeState=Number.isFinite(s.player.hp)&&s.player.hp===0?
   'SPLATTED' as const:'ACTIVE' as const;
  const ticks=s.humanRespawnTicksRemaining;
+ const humanCpuDirectHits=Number.isSafeInteger(s.humanCpuDirectHits)&&
+  s.humanCpuDirectHits!==undefined&&s.humanCpuDirectHits>=0?
+  s.humanCpuDirectHits:null;
  // Never claim enemy ink from an unauthenticated stage or synthetic matchup.
  const genuineSource=s.originalSourceSolids===25&&
   s.originalPaintSurfaces===17&&s.originalSourceNavigationLinks===26&&
@@ -56,6 +60,7 @@ export function formatF3PlayableHud(s:F3PlayableHudState){
   clock:`${minutes}:${rest}`,
   hp:clampPercent(s.player.hp),
   lifeState,respawnSeconds,hazard,
+  realHumanCpuDirectHits:genuineSource?humanCpuDirectHits:null,
   ink:clampPercent(s.player.ink),
   cpuRecovered:cpuCount,
   sourceState:cpuCount===7&&s.cpu.freeCombatEnabled?
@@ -162,6 +167,20 @@ export function createF3PlayableHud(ui:HTMLElement){
  let previousHp:number|null=null;
  let previousTick:number|null=null;
  let damageFlashThrough=-1;
+ // B87: show only actual HUMAN-origin CPU HP damage, no aim/paint inference.
+ const hitMarker=document.createElement('div');
+ hitMarker.id='t21-f3-b87-hit-confirmation';
+ hitMarker.setAttribute('aria-live','off');
+ hitMarker.style.cssText=
+  'position:fixed;left:50%;top:calc(50% - 43px);transform:translateX(-50%);'+
+  'z-index:12;pointer-events:none;border-radius:14px;padding:4px 12px;'+
+  'background:rgba(11,41,51,.88);border:1px solid #b1fff0;'+
+  'font:900 12px/1.3 system-ui;color:#dcfff8;letter-spacing:1px';
+ hitMarker.textContent='CPU HIT';
+ hitMarker.dataset.t21B87Source='REAL_HUMAN_DIRECT_DAMAGE_ONLY';
+ let lastHitCount:number|null=null;
+ let lastHitTick=-1;
+ let hitMarkerUntil=-1;
  const select=(id:string):HTMLElement=>{
   const element=root.querySelector<HTMLElement>('#'+id);
   if(!element)throw Error('T21_W10B17_HUD_MARKUP_MISSING_'+id);
@@ -205,6 +224,21 @@ export function createF3PlayableHud(ui:HTMLElement){
   danger.style.borderColor=v.hazard==='CRITICAL_ENEMY_INK'?
    '#ff5165':'#ff9a85';
   danger.dataset.t21B84RealHazard=v.hazard;
+  const hitCount=v.realHumanCpuDirectHits;
+  const hitTick=value.tick;
+  const validHitTick=Number.isSafeInteger(hitTick)&&hitTick!==undefined&&hitTick>=0;
+  if(validHitTick&&hitCount!==null){
+   if(lastHitCount!==null&&hitTick>=lastHitTick&&hitCount>lastHitCount)
+    hitMarkerUntil=hitTick+48;
+   if(lastHitCount!==null&&(hitTick<lastHitTick||hitCount<lastHitCount))
+    hitMarkerUntil=-1;
+   lastHitCount=hitCount;lastHitTick=hitTick;
+  }else hitMarkerUntil=-1;
+  const showRealHit=validHitTick&&hitCount!==null&&hitMarkerUntil>=hitTick&&
+   !value.stopReason&&value.matchState!=='TIME_UP';
+  if(showRealHit&&!hitMarker.isConnected)ui.appendChild(hitMarker);
+  else if(!showRealHit&&hitMarker.isConnected)hitMarker.remove();
+  hitMarker.dataset.t21B87ActualHitCount=String(hitCount??'UNVERIFIED');
   const splatted=v.lifeState==='SPLATTED';
   splatNotice.hidden=!splatted||value.matchState==='TIME_UP'||!!value.stopReason;
   if(!splatNotice.hidden&&!splatNotice.isConnected)ui.appendChild(splatNotice);

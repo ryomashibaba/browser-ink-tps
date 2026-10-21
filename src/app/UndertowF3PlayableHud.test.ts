@@ -69,6 +69,19 @@ describe('W10-B17 non-scoring source practice HUD',()=>{
   s.paused=false;s.player.hp=0;
   expect(formatF3PlayableHud(s).hazard).toBe('NONE');
  });
+ it('B87 verifies human direct CPU hit counters only on original source',()=>{
+  const s=state();
+  s.originalSourceSolids=25;s.originalPaintSurfaces=17;
+  s.originalSourceNavigationLinks=26;s.unrestricted4v4Certified=false;
+  s.humanCpuDirectHits=3;
+  expect(formatF3PlayableHud(s).realHumanCpuDirectHits).toBe(3);
+  s.humanCpuDirectHits=-1;
+  expect(formatF3PlayableHud(s).realHumanCpuDirectHits).toBeNull();
+  s.humanCpuDirectHits=4;s.originalSourceNavigationLinks=25;
+  expect(formatF3PlayableHud(s).realHumanCpuDirectHits).toBeNull();
+  s.originalSourceNavigationLinks=26;s.unrestricted4v4Certified=true;
+  expect(formatF3PlayableHud(s).realHumanCpuDirectHits).toBeNull();
+ });
  it('time-up never claims a 4v4 result; safe stop is explicit',()=>{
   const s=state();
   s.matchState='TIME_UP';s.timeRemainingSeconds=0;

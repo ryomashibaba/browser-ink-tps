@@ -45,6 +45,8 @@ export class PerformanceStats {
   public playerInkRecoveryState = 'READY';
   public playerHpRecoveryState = 'READY';
   public playerDamageTaken = 0;
+  /** Human direct projectile or charger that genuinely reduces CPU HP. */
+  public humanCpuDirectHits = 0;
   public shotsFired = 0;
   public inkDryFireAttempts = 0;
   public combatHits = 0;
