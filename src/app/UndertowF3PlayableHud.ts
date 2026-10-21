@@ -9,7 +9,7 @@ import {B76HumanSourceCoach}
  from './UndertowF3HumanInkCoach';
 
 export interface F3PlayableHudState extends B75NativeInkFrame {
- player:{hp:number;ink:number;mode?:string};
+ player:{hp:number;ink:number;mode?:string;inkRelation?:string};
  playerInkRecoveryState?:string;
  /** Actual 60Hz native human respawn countdown, never Actor placement. */
  humanRespawnTicksRemaining?:number|null;
@@ -38,13 +38,22 @@ export function formatF3PlayableHud(s:F3PlayableHudState){
  const lifeState=Number.isFinite(s.player.hp)&&s.player.hp===0?
   'SPLATTED' as const:'ACTIVE' as const;
  const ticks=s.humanRespawnTicksRemaining;
+ // Never claim enemy ink from an unauthenticated stage or synthetic matchup.
+ const genuineSource=s.originalSourceSolids===25&&
+  s.originalPaintSurfaces===17&&s.originalSourceNavigationLinks===26&&
+  s.unrestricted4v4Certified===false;
+ const warningEnabled=genuineSource&&s.matchState==='PLAYING'&&
+  !s.paused&&!s.stopReason&&Number.isFinite(s.player.hp)&&s.player.hp>0;
+ const hazard=warningEnabled&&s.player.inkRelation==='ENEMY'?
+  'ENEMY_INK' as const:warningEnabled&&s.player.hp<=35?
+  'LOW_HP' as const:'NONE' as const;
  const respawnSeconds=lifeState==='SPLATTED'&&Number.isSafeInteger(ticks)&&
   ticks!==null&&ticks!==undefined&&ticks>=0&&ticks<=150?
   Math.ceil(ticks/6)/10:null;
  return {
   clock:`${minutes}:${rest}`,
   hp:clampPercent(s.player.hp),
-  lifeState,respawnSeconds,
+  lifeState,respawnSeconds,hazard,
   ink:clampPercent(s.player.ink),
   cpuRecovered:cpuCount,
   sourceState:cpuCount===7&&s.cpu.freeCombatEnabled?
@@ -92,6 +101,12 @@ export function createF3PlayableHud(ui:HTMLElement){
   '</div>'+
   '<div id="t21-f3-hud-practice" style="font-size:10px;margin-top:5px;color:#ffc59b">'+
    'UNSCORED / NO OFFICIAL RESULT</div>'+
+  // B84: display only a *real* original-surface enemy ink relation or
+  // actual low player HP. This is practice guidance, never a Turf result.
+  '<div id="t21-f3-b84-danger" hidden role="status" aria-live="off"'+
+   ' style="margin-top:7px;padding:7px 9px;border-radius:7px;'+
+   'background:rgba(88,30,33,.90);border:1px solid #ff9a85;'+
+   'color:#ffe5da;font:800 11px/1.4 system-ui"></div>'+
   // B75: genuine last-180-physics-tick native source paint difference,
   // never a simulated turf point, enemy contact or official match score.
   '<div id="t21-f3-b75-source-ink-live" hidden role="status" aria-live="off"'+
@@ -157,6 +172,7 @@ export function createF3PlayableHud(ui:HTMLElement){
  const vitals=select('t21-f3-hud-vitals');
  const cpu=select('t21-f3-hud-cpu');
  const practice=select('t21-f3-hud-practice');
+ const danger=select('t21-f3-b84-danger');
  const activity=new B75SourceInkActivity();
  const activityBox=select('t21-f3-b75-source-ink-live');
  const activityHead=select('t21-f3-b75-source-ink-head');
@@ -177,6 +193,13 @@ export function createF3PlayableHud(ui:HTMLElement){
   vitals.textContent='HP '+v.hp+' · INK '+v.ink;
   cpu.textContent='CPU '+v.cpuRecovered+'/7 · '+v.sourceState;
   practice.textContent=v.scoring;
+  danger.hidden=v.hazard==='NONE';
+  const dangerText=v.hazard==='ENEMY_INK'?
+   'ENEMY INK · LEAVE THE AREA':
+   v.hazard==='LOW_HP'?'LOW HP · RECOVER':'NONE';
+  if(!danger.hidden&&danger.textContent!==dangerText)
+   danger.textContent=dangerText;
+  danger.dataset.t21B84RealHazard=v.hazard;
   const splatted=v.lifeState==='SPLATTED';
   splatNotice.hidden=!splatted||value.matchState==='TIME_UP'||!!value.stopReason;
   if(!splatNotice.hidden&&!splatNotice.isConnected)ui.appendChild(splatNotice);
@@ -280,6 +303,7 @@ export function createF3PlayableHud(ui:HTMLElement){
   root.dataset.cpuSplats=String(v.cpuSplats);
   root.dataset.humanHp=String(v.hp);
   root.dataset.b82RealHumanLife=v.lifeState;
+  root.dataset.b84Hazard=v.hazard;
   root.dataset.humanInk=String(v.ink);
   root.dataset.clock=v.clock;
   root.dataset.cpuSourceOnly='true';

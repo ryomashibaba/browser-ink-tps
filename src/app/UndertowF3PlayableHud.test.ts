@@ -47,6 +47,26 @@ describe('W10-B17 non-scoring source practice HUD',()=>{
   expect(formatF3PlayableHud(s)).toMatchObject({
    lifeState:'ACTIVE',respawnSeconds:null});
  });
+ it('B84 uses only native original ink relation and actual HP danger',()=>{
+  const s=state();
+  s.matchState='PLAYING';s.player.hp=95;
+  s.player.inkRelation='ENEMY';
+  s.originalSourceSolids=25;s.originalPaintSurfaces=17;
+  s.originalSourceNavigationLinks=26;s.unrestricted4v4Certified=false;
+  expect(formatF3PlayableHud(s).hazard).toBe('ENEMY_INK');
+  s.player.inkRelation='OWN';s.player.hp=34.2;
+  expect(formatF3PlayableHud(s).hazard).toBe('LOW_HP');
+  s.player.hp=60;
+  expect(formatF3PlayableHud(s).hazard).toBe('NONE');
+  s.player.inkRelation='ENEMY';s.originalPaintSurfaces=18;
+  expect(formatF3PlayableHud(s).hazard).toBe('NONE');
+  s.originalPaintSurfaces=17;s.unrestricted4v4Certified=true;
+  expect(formatF3PlayableHud(s).hazard).toBe('NONE');
+  s.unrestricted4v4Certified=false;s.paused=true;
+  expect(formatF3PlayableHud(s).hazard).toBe('NONE');
+  s.paused=false;s.player.hp=0;
+  expect(formatF3PlayableHud(s).hazard).toBe('NONE');
+ });
  it('time-up never claims a 4v4 result; safe stop is explicit',()=>{
   const s=state();
   s.matchState='TIME_UP';s.timeRemainingSeconds=0;
