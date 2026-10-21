@@ -112,6 +112,7 @@ async function main(){
  const w10b56=process.env.T21_W10B56_SWITCHBACK==='1';
  const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
  const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
+ const w10b69=process.env.T21_W10B69_ONE_CLICK_PREVIEW==='1';
  const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
  const w10b68=w10b68Mode==='FIXED'||w10b68Mode==='SWEEP';
  if(w10b68Mode&&!w10b68)
@@ -135,7 +136,7 @@ async function main(){
    process.env.T21_F3_BLOCKED_HUMAN==='1'))
   reject('W10B50_NEEDS_DEFAULT_SOURCE_FIXED_CPU_UNBLOCKED');
  const w10b21=process.env.T21_W10B21_RENDER_AB==='1';
- if([w10b14,w10b15,w10b16,w10b21,w10b54,w10b59,w10b64].filter(Boolean).length>1)
+ if([w10b14,w10b15,w10b16,w10b21,w10b54,w10b59,w10b64,w10b69].filter(Boolean).length>1)
   reject('CONFLICTING_QA_MODES');
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
  const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa||w10b16;
@@ -165,6 +166,96 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(w10b69){
+  // User-visible QA: independent real CDP physical click, not JS
+  // mutation of app internals, gameplay mode, actor path or time.
+  // This is an ordinary source preview without t21QaDrive=source.
+  const get=()=>evaluate(`(() => {
+   const c=document.querySelector('#app-canvas');
+   const v=window.__t21F3?.snapshot?.();
+   const panel=document.querySelector('#t21-f3-b69-aim-review');
+   const b=document.querySelector('#t21-f3-b69-switch');
+   return v?{
+    url:window.location.search,
+    ready:c?.dataset.t21F3Ready,
+    aimMode:c?.dataset.t21B69ActiveMode,
+    defaultPromoted:c?.dataset.t21B69DefaultCpuPromoted,
+    panelVisible:!!panel&&!panel.hidden,
+    sourceScoreable:panel?.dataset.t21B69OfficialScoreable,
+    buttonText:b?.textContent,buttonNext:b?.dataset.t21B69NextMode,
+    originalSolids:v.originalSourceSolids,
+    originalPaintable:v.originalPaintSurfaces,
+    originalLinks:v.originalSourceNavigationLinks,
+    scoreable:v.sourceScoreablePromotions,
+    productionAuthorized:v.productionAuthorized,
+    original4v4Certified:v.unrestricted4v4Certified,
+    sweepEnabled:v.b64SourceInkSweep?.enabled,
+    tick:v.tick,stopReason:v.stopReason,
+    gpuQuality:v.b21RenderProbe?.quality
+   }:null;
+  })()`);
+  const validate=(v,mode)=>{
+   if(!v||v.ready!=='READY'||v.aimMode!==mode||
+      v.defaultPromoted!=='false'||!v.panelVisible||
+      v.sourceScoreable!=='0'||v.buttonNext!==(mode==='FIXED'?'SWEEP':'FIXED')||
+      v.originalSolids!==25||v.originalPaintable!==17||
+      v.originalLinks!==26||v.scoreable!==0||
+      v.productionAuthorized!==false||v.original4v4Certified!==false||
+      v.sweepEnabled!==(mode==='SWEEP')||
+      v.gpuQuality!=='NATIVE'||v.stopReason||
+      v.url.includes('t21QaDrive=source'))
+    reject('B69_UNTRUSTED_NORMAL_PREVIEW_MODE_'+mode+'_'+JSON.stringify(v));
+  };
+  const click=async()=>{
+   const pos=await evaluate(`(() => {
+    const b=document.querySelector('#t21-f3-b69-switch');
+    const r=b?.getBoundingClientRect();
+    return r?{x:r.left+r.width/2,y:r.top+r.height/2}:null;
+   })()`);
+   if(!pos||pos.x<=0||pos.y<=0||pos.y>=900)
+    reject('B69_NO_ACTUAL_VISIBLE_CPU_SWITCH_BUTTON');
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:pos.x,y:pos.y,
+    button:'none'});
+   await cmd('Input.dispatchMouseEvent',{type:'mousePressed',x:pos.x,y:pos.y,
+    button:'left',clickCount:1});
+   await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',x:pos.x,y:pos.y,
+    button:'left',clickCount:1});
+  };
+  const before=await get();validate(before,'FIXED');
+  const baselineFrame=await screenshot('W10B69_NORMAL_PREVIEW_FIXED_ONE_CLICK_PANEL');
+  await click();
+  const sweep=await waitUntil(async()=>{
+   const v=await get();
+   return v?.aimMode==='SWEEP'&&v.ready==='READY'?v:false;
+  },85000);
+  validate(sweep,'SWEEP');
+  if(!sweep.url.includes('t21W10B68=previewSweep'))
+   reject('B69_MANUAL_SWEEP_WAS_NOT_EXPLICITLY_OPTED_IN');
+  const sweepFrame=await screenshot('W10B69_EXPLICIT_SWEEP_SOURCE_ONLY_PANEL');
+  await click();
+  const restored=await waitUntil(async()=>{
+   const v=await get();
+   return v?.aimMode==='FIXED'&&v.ready==='READY'&&!v.url.includes('t21W10B68')?v:false;
+  },85000);
+  validate(restored,'FIXED');
+  const restoredFrame=await screenshot('W10B69_FIXED_RESTORED_BY_REAL_CLICK');
+  const proof={
+   verdict:'B69_REAL_NORMAL_PREVIEW_OPT_IN_AND_RETURN_SUCCESS',
+   actualPhysicalBrowserClicks:2,realPageReloads:2,
+   baseline:before,sweep,restored,frameProof:[
+    baselineFrame,sweepFrame,restoredFrame],
+   normalPreviewCpuDefaultStayedFixed:true,
+   originalPhysics25Paintable17Navigation26Scoreable0:true,
+   noScoreOrWinnerOrOriginal4v4:true,
+   trueOriginalActorPlacementsAuthenticated:false,
+   originalCrossTeamRoutesCertified:0,
+   ownerWindowsGpuProven:false
+  };
+  writeFileSync(resolve(OUTPUT,'w10b69-one-click-normal-preview-source-aim.json'),
+   JSON.stringify(proof,null,2));
+  console.log('T21_W10B69_REAL_PREVIEW_OPT_IN_AND_RETURN',JSON.stringify(proof));
+  return;
+ }
  if(w10b64){
   // W10-B64: SAME SHA, EXACT original 25/17/26/0 stage, untouched
   // seven FIXED Recast goals; only native source-ground projectile aim

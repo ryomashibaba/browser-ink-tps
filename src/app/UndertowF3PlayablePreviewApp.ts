@@ -61,6 +61,8 @@ import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud} from './UndertowF3PlayableHud';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
+import {b69PreviewAimView,b69NextSourcePreviewHref}
+ from './UndertowF3PreviewAimReview';
 import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {buildF3eOriginalSourceCoverage}
@@ -425,6 +427,21 @@ export class UndertowF3PlayablePreviewApp{
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
    '<button id="t21-f3-reset" type="button">Reset (R)</button></div>'+
+   '<div id="t21-f3-b69-aim-review" hidden style="margin-top:9px;'+
+    'padding:9px;border:1px solid #5e9aaf;border-radius:9px;'+
+    'background:#0c2839">'+
+    '<div id="t21-f3-b69-aim-current" style="font:800 11px system-ui;'+
+     'letter-spacing:.2px;color:#85edf1"></div>'+
+    '<p id="t21-f3-b69-aim-detail" style="font:11px/1.45 system-ui;'+
+     'color:#d2e7ea;margin:5px 0 8px"></p>'+
+    '<button id="t21-f3-b69-switch" type="button" style="'+
+     'padding:8px;width:100%;border-radius:7px;cursor:pointer;'+
+     'border:1px solid #7be2e7;color:#defdff;background:#185267;'+
+     'font:800 11px system-ui"></button>'+
+    '<div style="font:10px/1.4 system-ui;color:#e5b993;margin-top:5px">'+
+     'Manual opt-in only. Switching starts a fresh UNSCORED session.'+
+     ' Save your previous local evidence first.</div>'+
+   '</div>'+
    '<div style="margin-top:9px;padding:8px;border:1px solid #4ad4e277;border-radius:8px">'+
    '<div style="font:700 11px system-ui;color:#a9f1ef">OWNER GPU · 36s LIVE PLAY COMPARISON</div>'+
    '<div id="t21-f3-b22-status" role="status" style="font:11px/1.5 system-ui;'+
@@ -451,6 +468,41 @@ export class UndertowF3PlayablePreviewApp{
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc release</p>';
   ui.appendChild(this.panel);
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
+  // B69: an ordinary preview user can explicitly compare the already
+  // B68-proven original source ink candidate and return to baseline with
+  // ONE click. Never display this on source QA, real game or production.
+  const b69=b69PreviewAimView(window.location.search);
+  const aimPanel=this.panel.querySelector<HTMLElement>(
+   '#t21-f3-b69-aim-review')!;
+  if(b69){
+   aimPanel.hidden=false;
+   aimPanel.dataset.t21B69ActiveMode=b69.mode;
+   aimPanel.dataset.t21B69OfficialScoreable='0';
+   aimPanel.dataset.t21B69CpuDefaultPromoted='false';
+   aimPanel.querySelector<HTMLElement>('#t21-f3-b69-aim-current')!
+    .textContent=b69.headline;
+   aimPanel.querySelector<HTMLElement>('#t21-f3-b69-aim-detail')!
+    .textContent=b69.detail;
+   const switchButton=aimPanel.querySelector<HTMLButtonElement>(
+    '#t21-f3-b69-switch')!;
+   switchButton.textContent=b69.switchLabel;
+   switchButton.dataset.t21B69NextMode=b69.nextMode;
+   switchButton.addEventListener('click',()=>{
+    // The normal source preview retains every original collision, bot
+    // foot and source-only stage authority. This is a manual NEW session
+    // navigation, not a mid-tick CPU path/behavior mutation.
+    if(document.pointerLockElement===this.canvas||this.stopReason)return;
+    if(['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
+     aimPanel.querySelector<HTMLElement>('#t21-f3-b69-aim-detail')!
+      .textContent='Finish the ongoing real GPU comparison first.';
+     return;
+    }
+    window.location.assign(b69NextSourcePreviewHref(
+     window.location.pathname,b69.nextMode));
+   });
+  }
+  this.canvas.dataset.t21B69ActiveMode=b69?.mode??'QA_OR_NOT_PREVIEW';
+  this.canvas.dataset.t21B69DefaultCpuPromoted='false';
   this.b22Trial=new UndertowF3OwnerGpuTrial(
    quality=>this.configureSourceRenderQuality(quality),
    ()=>[this.canvas.width,this.canvas.height]);

@@ -1,0 +1,52 @@
+name: T21 W10-B69 manual normal-preview CPU aim toggle and rollback
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3PreviewAimReview.ts'
+      - 'src/app/UndertowF3PreviewAimReview.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - '.github/workflows/t21-w10b69-manual-preview-toggle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  model-preflight:
+    name: B69 default isolation, manual choice and URL safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: npx vitest run src/app/UndertowF3PreviewAimReview.test.ts src/app/UndertowF3NativeSessionEvidence.test.ts src/app/UndertowF3PlayableHud.test.ts
+      - run: node --check scripts/t21-f3-browser-smoke.mjs
+  real-one-click:
+    name: B69 real Chrome click FIXED to opt-in SWEEP to FIXED
+    needs: model-preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Genuine DOM click, reload, source fixed authority and rollback
+        env:
+          T21_W10B69_ONE_CLICK_PREVIEW: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-w10b69
+        run: node scripts/t21-f3-browser-smoke.mjs
+      - name: Keep genuine UI screenshots and source-only mode safety proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b69-manual-aim-real-browser-rollback
+          path: /tmp/t21-w10b69/
+          if-no-files-found: warn
+          retention-days: 14
