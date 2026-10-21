@@ -1,0 +1,17 @@
+# W10-B80 — diagnose genuine opt-in SWEEP native time freeze, not paper over with fake ticks
+
+Date: 2026-10-21 JST. QA branch only. Parent `e78fe62ca39c76750f2388c5878c185c4592dc78`, main `fbd922cea900df8e1a139f21b3c61ed927b3fdd9`, Draft PR #5 untouched.
+
+## Actual B79 evidence (not a PASS)
+[Run 39551608107](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39551608107) exact SHA B79: isolated preflight PASS, genuine FIXED WebGL2/PlayCanvas/Rapier/Recast real mouse Human + CPU source paint PASS (9 accepted Human shots, +365 actual human source cells, +2623 actual native CPU source cells after ~13 real native seconds). SWEEP **FAIL** after a real Human early practice shooter action succeeded (10 shots, +319 native original source Human cells, originally STAGING tick 60). The following 13 wall minutes produced **no native PLAYING time**; the last source HUD sample remained STAGING at tick60. B79 therefore cannot be accepted fully; only early human-source feedback is genuinely verified in both modes. No proof the SWEEP CPU code itself caused this: the test failed after real mouse release, and it did not log browser pause, visibility or PlayCanvas render advancement.
+
+## Why B80
+Do not add more QA scaffolding without resolving this real game-time freeze. B80 creates an isolated, fail-closed **real Chromium watchdog** around the exact B79 short native source HUD test; reports the missing causal data: source tick, real PlayCanvas render callbacks, in-app pause state, stop reason, real seven-CPU source rejoin/free combat, browser visibility, document focus, browser Pointer Lock, source frame callback p95, actual human and CPU source counters, true 25/17/26/0 stage authority. If physical tick has not advanced for 90 **wall** seconds, fail promptly rather than burning 13 wall minutes. Distinguishes app-level pause, hidden/background-throttled page, actual render callback starvation, fixed-step clock not advancing despite rendering, and untrusted counter regression. The watcher never forcibly wakes, reloads, advances ticks, changes CPU aim, fabricates source ink or reclassifies a failed run as green.
+
+- `scripts/t21-w10b80-native-stall-classifier.mjs`: pure deterministic labels and strict invalid-value rejection.
+- `scripts/t21-w10b80-native-stall-classifier.test.mjs`: fast Node24 synthetic negative/positive diagnosis cases, not native game evidence.
+- `scripts/t21-w10b75-live-native-ink-hud.mjs`: actual 20s real-wall heartbeat in each Chrome lane, one compact local-only metadata JSON artifact with a frozen source HOLD, 90s native clock watchdog. Existing early actual Human ink, FIXED/SWEEP original ink and real screenshot success gates unchanged.
+- Only isolated B75 source ink workflow re-runs automatically after script changes, not the broad B21/QA-driven 180s workflows. Exact-SHA CI must be reviewed to infer whether stalled SWEEP is app paused, Chrome throttled, render/canvas stalled or a physics clock issue. No speculative gameplay production changes until proved.
+
+## Hard HOLD
+Original authoritative 25 source Rapier solids, 17 Paintable, 26 NavLinks, 0 Scoreable, 8 original Actor PntSet source instance bindings unverified, 0/12 natural original opposing-team connections, `activationReady=false`. Default CPU FIXED. No original unrestricted 4v4, official Turf score/winner, new architecture, false geometry, or published Pages; Work unused.

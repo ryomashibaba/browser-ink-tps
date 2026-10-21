@@ -11,6 +11,8 @@ on:
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'
       - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
+      - 'scripts/t21-w10b80-native-stall-classifier.mjs'
+      - 'scripts/t21-w10b80-native-stall-classifier.test.mjs'
       - '.github/workflows/t21-w10b75-live-source-ink-hud.yml'
   workflow_dispatch:
 permissions:
@@ -28,7 +30,10 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
       - run: npx vitest run src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts
-      - run: node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+      - run: |
+          node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+          node --check scripts/t21-w10b80-native-stall-classifier.mjs
+          node --test scripts/t21-w10b80-native-stall-classifier.test.mjs
   real-native-source-hud:
     name: Genuine live WebGL2 HUD original CPU ink (${{ matrix.aim }})
     needs: preflight

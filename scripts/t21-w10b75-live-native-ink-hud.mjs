@@ -9,6 +9,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
+import {b80ClassifyNativeStall} from './t21-w10b80-native-stall-classifier.mjs';
 
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
@@ -171,6 +172,26 @@ async function run(){
   JSON.stringify(humanPulse));
  const observations=[], started=Date.now();
  let inkPulse=null,firedNoInk=false,lastReported=-1;
+ let lastTickAdvanceAt=Date.now(),lastHeartbeatAt=Date.now();
+ let progressWitness=null,renderWitness=null;
+ const b80SourceWatch=[];
+ const saveB80=classification=>{
+  const payload={
+   schema:'W10_B80_REAL_CHROME_NATIVE_STAGE_STALL_DIAGNOSTIC_V1',
+   mode,classification,
+   humanPhysicalSourceInkAlreadyVerified:true,
+   nativeModeActuallySelected:mode,
+   lastSourceWitness:progressWitness,
+   currentSourceWitness:renderWitness,
+   readOnly:true,noSyntheticPhysicsAdvance:true,
+   originalScoreable:0,original4v4Certified:false,
+   realObservedIntervals:b80SourceWatch.slice(-12)
+  };
+  writeFileSync(resolve(OUTPUT,
+   'w10b80-source-watch-'+mode.toLowerCase()+'.json'),
+   JSON.stringify(payload,null,2));
+  return payload;
+ };
  while(Date.now()-started<13*60*1000){
   const status=await evaluate(`(() => {
    const n=window.__t21F3.snapshot();
@@ -179,6 +200,16 @@ async function run(){
    const b=document.querySelector('#t21-f3-b76-human-ink-coach');
    return {tick:n.tick,matchState:n.matchState,
     elapsed:180-n.timeRemainingSeconds,
+    nativePaused:n.paused,
+    nativeRenderFrames:n.sourceFrameQuality?.liveUpdateFrames,
+    nativeFrameCallbackP95Ms:n.sourceFrameQuality?.p95Ms,
+    nativeSimulationTicksLastFrame:n.sourceFrameQuality?.simulationTicksLastFrame,
+    nativeSourceCpuRejoined:n.cpu?.physicalRejoins?.length,
+    nativeSourceCpuFreeCombat:n.cpu?.freeCombatEnabled,
+    visibilityState:document.visibilityState,
+    hasDocumentFocus:document.hasFocus(),
+    browserPointerLocked:document.pointerLockElement===
+     document.querySelector('#app-canvas'),
     nativeCpuSourceShots:n.cpuSourceTurfShots,
     nativeCpuChangedSourceCells:n.cpuImpactInkCellsChanged,
     stageSolids:n.originalSourceSolids,
@@ -235,6 +266,46 @@ async function run(){
      status.b76RecentShots>status.acceptedHumanShots||
      status.b76RecentCells>status.actualHumanPaintCells)
    fail('REAL_HUD_OR_STAGE_AUTHORITY_FAILED_'+JSON.stringify(status));
+  // B80 source-only stall differential: every 20 wall seconds emit a
+  // real browser heartbeat, including paused/visibility/render callback,
+  // rather than waiting 13 minutes while STAGING tick remains frozen.
+  const currentWitness={
+   tick:status.tick,renderFrames:status.nativeRenderFrames,
+   paused:status.nativePaused,stop:status.stop,
+   matchState:status.matchState,visibilityState:status.visibilityState
+  };
+  const nowWall=Date.now();
+  if(!progressWitness){
+   progressWitness={...currentWitness};
+   lastTickAdvanceAt=nowWall;
+  }else if(status.tick>progressWitness.tick){
+   progressWitness={...currentWitness};
+   lastTickAdvanceAt=nowWall;
+  }
+  renderWitness={...currentWitness};
+  if(nowWall-lastHeartbeatAt>=20000){
+   lastHeartbeatAt=nowWall;
+   const kind=b80ClassifyNativeStall(
+    progressWitness,renderWitness,nowWall-lastTickAdvanceAt);
+   const heartbeat={
+    mode,classification:kind,
+    sameNativeTickWallMs:nowWall-lastTickAdvanceAt,
+    ...status
+   };
+   b80SourceWatch.push(heartbeat);
+   console.log('T21_B80_GENUINE_NATIVE_PROGRESS_HEARTBEAT',
+    JSON.stringify(heartbeat));
+  }
+  const stallKind=b80ClassifyNativeStall(
+   progressWitness,renderWitness,nowWall-lastTickAdvanceAt);
+  if(stallKind==='HOLD_INVALID_NATIVE_WITNESS'||
+     stallKind==='UNEXPECTED_CLOCK_OR_FRAME_REGRESSION'||
+     stallKind==='SOURCE_FAIL_CLOSED_STOP'||
+     (nowWall-lastTickAdvanceAt>=90000&&
+      stallKind!=='PHYSICS_RUNNING')){
+   const outcome=saveB80(stallKind);
+   fail('B80_NATIVE_SOURCE_CLOCK_DIAGNOSIS_'+JSON.stringify(outcome));
+  }
   if(status.b76State==='REAL_SOURCE_PAINT'&&
      status.b76RecentCells>0&&status.b76RecentShots>0&&
      status.actualHumanPaintCells>0&&status.acceptedHumanShots>0)
@@ -264,6 +335,7 @@ async function run(){
     verifiedTrueNativeOriginalSourceInkPulse:inkPulse,
     verifiedRealHumanSourceInkAndShotPulse:humanPulse,
     liveHumanInkRefillStateFromRealResource:true,
+    b80VerifiedNativeProgress:saveB80('PHYSICS_RUNNING'),
     noInferredHumanHitRate:true,
     lastRealNativeObservation:status,
     actualRecentNoNewInkWithShotsSeen:firedNoInk,
