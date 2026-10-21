@@ -225,7 +225,46 @@ async function run(){
    return n.tick>=before.tick+180?n:false;
   },120000);
   const settledHuman=settled.player.position;
+  // B97: do not convert ordinary KCC coast into a synthetic fixed pose.
+  // Reject a human who never occupied the genuine A3 upper source lip.
+  if(Math.abs(settledHuman[0])>.9||settledHuman[2]<62.8||
+     settledHuman[2]>64.8||settledHuman[1]<8.2||
+     settledHuman[1]>8.6)
+    fail('B97_REAL_HUMAN_NOT_PARKED_ON_OBSTRUCTING_SOURCE_LIP_'+
+      JSON.stringify({settledHuman,nativeTick:settled.tick}));
+  console.log('T21_B97_REAL_KEYUP_SETTLED_LIP',JSON.stringify({
+    realKeyboardW:true,noKeyboardS:true,settledHuman,
+    nativeTick:settled.tick,paused:settled.paused,
+    renderFrames:settled.sourceFrameQuality?.liveUpdateFrames,
+    nativeSourceRejoins:settled.cpu.physicalRejoins.length
+  }));
   const observations=[];
+  let previousTick=settled.tick,lastTickAt=Date.now();
+  const watchingSince=Date.now(),lastReport={wall:0};
+  const storePartial=(n,reason,humanParked,detour)=>{
+   const witness={
+    schema:'W10_B97_UNMODIFIED_NATIVE_WEBGL2_WATCHDOG_V1',
+    reason,readOnly:true,realKeyboardInput:true,
+    userDidNotPressBackwards:true,realNativeTick:n.tick,
+    wallElapsedSeconds:Number(((Date.now()-watchingSince)/1000).toFixed(1)),
+    nativeRenderFrames:n.sourceFrameQuality?.liveUpdateFrames,
+    sourceFrameQuality:n.sourceFrameQuality,
+    paused:n.paused,stop:n.stopReason,matchState:n.matchState,
+    realHumanSettledFoot:settledHuman,realHumanFoot:n.player.position,
+    humanParkedDeltaMeters:humanParked,
+    actualCpuRejoined:n.cpu.physicalRejoins,
+    actorFeet:n.cpu.cpu.filter(x=>['A1','A2','A3','B1','B2','B3','B4'].includes(x.id)),
+    nativeDetour:detour??null,
+    originalSource:[n.originalSourceSolids,
+      n.originalPaintSurfaces,n.originalSourceNavigationLinks,
+      n.sourceScoreablePromotions],
+    original4v4Certified:false,productionAuthorized:false,
+    observations:observations.slice(-30)
+   };
+   writeFileSync(resolve(OUTPUT,'b97-partial-parked-native-watch.json'),
+    JSON.stringify(witness,null,2));
+   return witness;
+  };
   const completed=await until(async()=>{
    const n=await snapshot();
    if(n.stopReason||n.originalSourceSolids!==25||
@@ -245,11 +284,39 @@ async function run(){
     fail('B96_HUMAN_MOVED_AFTER_TRUE_SETTLE_'+JSON.stringify({
      tick:n.tick,humanParked,settledHuman,currentHuman:h}));
    const detour=n.cpu.b93UpperDetours.find(x=>x.actorId==='A3');
-   if(n.tick%180<15)observations.push({
-    tick:n.tick,rejoins:n.cpu.physicalRejoins.length,
-    realCpuFeet:n.cpu.cpu.filter(c=>c.id==='A2'||c.id==='A3'),
-    detour,actualHuman:h,matchState:n.matchState
-   });
+   if(n.tick>previousTick){previousTick=n.tick;lastTickAt=Date.now();}
+   const now=Date.now();
+   if(now-lastReport.wall>=20000){
+    lastReport.wall=now;
+    observations.push({
+     wallElapsedSeconds:Number(((now-watchingSince)/1000).toFixed(1)),
+     tick:n.tick,rejoins:n.cpu.physicalRejoins.length,
+     realCpuFeet:n.cpu.cpu.filter(c=>c.id==='A2'||c.id==='A3'),
+     detour,actualHuman:h,matchState:n.matchState,
+     nativeRenderFrames:n.sourceFrameQuality?.liveUpdateFrames,
+     nativeSimulationTicksLastFrame:
+       n.sourceFrameQuality?.simulationTicksLastFrame
+    });
+    const readOnlyEvidence=storePartial(n,'HEARTBEAT',humanParked,detour);
+    console.log('T21_B97_TRUE_CHROME_PARKED_NATIVE_HEARTBEAT',
+     JSON.stringify({
+      tick:n.tick,wallElapsedSeconds:readOnlyEvidence.wallElapsedSeconds,
+      realRenderFrames:readOnlyEvidence.nativeRenderFrames,
+      nativeRejoined:readOnlyEvidence.actualCpuRejoined,
+      actualA3Foot:readOnlyEvidence.actorFeet.find(a=>a.id==='A3')?.physicalFoot,
+      actualA2Foot:readOnlyEvidence.actorFeet.find(a=>a.id==='A2')?.physicalFoot,
+      detour,parkedDeltaMeters:humanParked,
+      paused:n.paused,stop:n.stopReason
+     }));
+   }
+   if(now-lastTickAt>=90000){
+    const diag=storePartial(n,'REAL_NATIVE_CLOCK_STALL_90_SECONDS',
+       humanParked,detour);
+    fail('B97_REAL_CHROME_NO_NATIVE_TICK_PROGRESS_'+JSON.stringify({
+     tick:n.tick,wall:diag.wallElapsedSeconds,
+     renderFrames:diag.nativeRenderFrames,paused:n.paused,
+     rejoined:diag.actualCpuRejoined,detour}));
+   }
    if(n.tick>=2400&&n.cpu.physicalRejoins.length<7)
     fail('B96_REAL_CHROME_BLOCKED_SEVEN_SOURCE_CPUS_'+JSON.stringify({
      tick:n.tick,rejoins:n.cpu.physicalRejoins,
@@ -260,7 +327,7 @@ async function run(){
     detour?.escapeFoot?.length===3&&
     n.cpu.cpu.find(x=>x.id==='A3')?.rejoined===true&&
     n.cpu.cpu.find(x=>x.id==='A2')?.rejoined===true?{n,detour,humanParked}:false;
-  },360000);
+  },14*60*1000);
   const n=completed.n;
   const frame=Buffer.from((await cmd('Page.captureScreenshot',{
    format:'png',captureBeyondViewport:false,fromSurface:true})).data||'','base64');
