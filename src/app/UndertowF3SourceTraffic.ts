@@ -456,7 +456,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      x.drop.startSnapDistanceMeters<=.22&&
      x.drop.endSnapDistanceMeters<=.22&&
      x.upper.startSnapDistanceMeters<=.22&&
-     x.upper.endSnapDistanceMeters<=.22)
+     // The immutable HIGH source upper endpoint is 0.326m from the
+     // nearest built Recast point in this pinned original geometry.
+     // This ONLY validates a native goal probe, NOT a KCC passage.
+     x.upper.endSnapDistanceMeters<=.35)
    .sort((a,b)=>
      Math.abs(a.link.start[0]-bot.position.x)-
      Math.abs(b.link.start[0]-bot.position.x)||
