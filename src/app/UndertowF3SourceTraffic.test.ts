@@ -279,10 +279,16 @@ describe('F3B playable 8-actor original source runtime',()=>{
    if(humanWalkTicks===240){
     expect(state.b93ExperimentalEnabled).toBe(true);
     expect(b93ParkedPlayerFoot).not.toBeNull();
+    // Releasing W at tick 60 does not instantly cancel existing Rapier
+    // velocity. Compare with the independently observed settled real
+    // human foot at tick 180, then enforce no human intervention.
+    const settledFoot=b94RouteCheckpoints.find(x=>x.tick===180)?.humanFoot;
+    expect(settledFoot).toBeDefined();
     expect(Math.hypot(
-     player.getPosition().x-b93ParkedPlayerFoot![0]!,
-     player.getPosition().z-b93ParkedPlayerFoot![2]!
-    )).toBeLessThan(.1);
+     player.getPosition().x-settledFoot![0]!,
+     player.getPosition().z-settledFoot![2]!
+    )).toBeLessThan(.02);
+    expect(done).toBeGreaterThan(0);
     expect(state.b93UpperDetours.some(r=>r.actorId==='A3'&&
      r.linkId.startsWith('first-drop-positive-z-'))).toBe(true);
     // B95: a lateral target is authentic-source-supported and remains
