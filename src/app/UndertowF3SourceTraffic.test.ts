@@ -109,6 +109,12 @@ describe('F3B playable 8-actor original source runtime',()=>{
     sourceLinks:state.originalSourceLinksUsed,
     realHumanPassiveNav:liveHuman.snapshot, humanWalkTicks,
     sourcePatrol:state.sourcePatrol,
+    originalHumanPlayerFoot:player.getPosition().toArray(),
+    actorSteeringFeet:bots.map(b=>({id:b.id,
+     physicalFoot:b.position.toArray(),mobility:b.mobilityState,
+     nativeSteeringFoot:b.agent?.position()??null})),
+    originalActorRouteGoals:traffic.routePlan.routes.map(r=>({id:r.actorId,
+     linkId:r.linkId,start:r.start,originalGoal:r.sourceGoal})),
     originalSourceOnly:true,productionAuthorized:false
    }));
    expect(stop).toBeNull();
