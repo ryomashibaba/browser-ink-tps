@@ -32,7 +32,7 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
- for(const humanWalkTicks of [0,28,60,120,180])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
+ for(const humanWalkTicks of [0,28,60,120,180,240])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
    const source=undertowT21dConnectivityQaStage();
@@ -58,10 +58,13 @@ describe('F3B playable 8-actor original source runtime',()=>{
     {enqueue:vi.fn()} as never,stats,stage,Team.A,
     handoff,shared,liveHuman,true);
    const bots=(cpu as unknown as {bots:Bot[]}).bots;
-   const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,physics);
+   // B93 is explicitly experimental, never the FIXED retail/QA default.
+   const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,
+    physics,undefined,false,false,false,humanWalkTicks===240);
    cpu.useF3dOriginalSourceGoals(traffic);
    let done=0,stop:string|null=null,overlap:string|null=null,
     minimumSeparation=Infinity,maxGroundStep=0;
+   let b93ParkedPlayerFoot:number[]|null=null;
    let obstructionWitness:null|{
     rejoined:number;released:string[];a3Rejoined:boolean;a2Released:boolean;
     playerFoot:number[];a3Foot:number[];
@@ -76,6 +79,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
    // observed 5/7 physical plateau, THEN retreat without restarting.
    for(let frame=1;frame<=(humanWalkTicks===180?3600:2400);frame++){
     (pInput as unknown as {moveY:number}).moveY=
+     humanWalkTicks===240?(frame<=60?1:0):
      humanWalkTicks===180?(frame<=60?1:frame>1500&&frame<=1560?-1:0):
      humanWalkTicks===120?(frame<=60?1:frame<=120?-1:0):
       frame<=humanWalkTicks?1:0;
@@ -83,7 +87,9 @@ describe('F3B playable 8-actor original source runtime',()=>{
     try{
      player.computeFixed(DT);
      physics.step();player.syncAfterPhysics(DT);
-     traffic.prepare(frame);
+     const h=player.getPosition();
+     traffic.prepare(frame,{x:h.x,
+      y:h.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,z:h.z});
      cpu.fixedUpdate(DT,true,Team.A,player.getPosition(),true);
      traffic.observe(frame);
      cpu.drainFireRequests(()=>{});
@@ -108,6 +114,8 @@ describe('F3B playable 8-actor original source runtime',()=>{
      if(d<(a.id==='HUMAN'||b.id==='HUMAN'?.58:.56)&&!overlap)
       overlap=frame+':'+a.id+'/'+b.id+'='+d;
     }
+    if(humanWalkTicks===240&&frame===60)
+     b93ParkedPlayerFoot=player.getPosition().toArray();
     if(humanWalkTicks===180&&frame===1500){
      const checkpoint=traffic.snapshot();
      obstructionWitness={
@@ -151,6 +159,9 @@ describe('F3B playable 8-actor original source runtime',()=>{
     sourceLinks:state.originalSourceLinksUsed,
     realHumanPassiveNav:liveHuman.snapshot, humanWalkTicks,
     obstructionWitness,
+    b93UpperDetours:state.b93UpperDetours,
+    b93ExperimentalEnabled:state.b93ExperimentalEnabled,
+    b93ParkedPlayerFoot,
     sourcePatrol:state.sourcePatrol,
     originalHumanPlayerFoot:player.getPosition().toArray(),
     actorSteeringFeet:bots.map(b=>({id:b.id,
@@ -180,6 +191,16 @@ describe('F3B playable 8-actor original source runtime',()=>{
     expect(state.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
     expect(state.sourcePatrol.travelMeters).toBeGreaterThan(0.5);
    }
+   if(humanWalkTicks===240){
+    expect(state.b93ExperimentalEnabled).toBe(true);
+    expect(b93ParkedPlayerFoot).not.toBeNull();
+    expect(Math.hypot(
+     player.getPosition().x-b93ParkedPlayerFoot![0]!,
+     player.getPosition().z-b93ParkedPlayerFoot![2]!
+    )).toBeLessThan(.1);
+    expect(state.b93UpperDetours.some(r=>r.actorId==='A3'&&
+     r.linkId.startsWith('first-drop-positive-z-'))).toBe(true);
+   }else expect(state.b93ExperimentalEnabled).toBe(false);
    if(humanWalkTicks===180){
     expect(obstructionWitness).not.toBeNull();
     expect(obstructionWitness?.rejoined).toBe(5);
