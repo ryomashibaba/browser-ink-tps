@@ -121,15 +121,56 @@ async function run(){
  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...kargs});
  await click('mousePressed');
  const before=await snapshot();
+ // B79: the real human paint first happens in STAGING, not 5+ seconds
+ // into PLAYING. The old B76 smoke began looking only after the 3s
+ // activity window expired and falsely failed despite 281 real cells.
+ // Witness the actual live HUD *while* physical mouse+W is held.
+ const humanPulse=await until(async()=>{
+  const h=await evaluate(`(() => {
+   const n=window.__t21F3.snapshot();
+   const p=document.querySelector('#t21-f3-practice-hud');
+   const b=document.querySelector('#t21-f3-b76-human-ink-coach');
+   return {tick:n.tick,matchState:n.matchState,
+    stop:n.stopReason,realShots:n.shotsFired,
+    genuineHumanPaint:n.b23HumanInkFeedback.humanChangedCells,
+    realSolids:n.originalSourceSolids,
+    realPaint:n.originalPaintSurfaces,
+    originalLinks:n.originalSourceNavigationLinks,
+    sourceScoreable:n.sourceScoreablePromotions,
+    original4v4:n.unrestricted4v4Certified,
+    production:n.productionAuthorized,
+    hudAuthority:p?.dataset.t21B76PlayerSourceTruth,
+    hudVisible:!!b&&!b.hidden,
+    hudTick:Number(b?.dataset.t21B76NativeTick),
+    realChangedCells:Number(b?.dataset.t21B76ChangedSourceCells),
+    acceptedShots:Number(b?.dataset.t21B76HumanShots),
+    hudScoreable:b?.dataset.t21B76OriginalScoreable,
+    hudOriginal4v4:b?.dataset.t21B76Original4v4,
+    label:b?.querySelector('#t21-f3-b76-counts')?.textContent
+   };
+  })()`);
+  if(h.stop||h.realSolids!==25||h.realPaint!==17||
+     h.originalLinks!==26||h.sourceScoreable!==0||
+     h.original4v4!==false||h.production!==false)
+    fail('B79_GENUINE_NATIVE_SOURCE_PLAYER_INPUT_DRIFT_'+JSON.stringify(h));
+  return h.realShots>0&&h.genuineHumanPaint>0&&
+   h.hudAuthority==='REAL_HUMAN_ORIGINAL_INK_ONLY'&&h.hudVisible&&
+   h.hudTick>0&&h.hudTick<=h.tick&&
+   h.realChangedCells>0&&h.realChangedCells<=h.genuineHumanPaint&&
+   h.acceptedShots>0&&h.acceptedShots<=h.realShots&&
+   h.hudScoreable==='0'&&h.hudOriginal4v4==='false'?h:false;
+ },180000);
  await until(async()=>{
-  const s=await snapshot();
-  if(s.stopReason)fail('PHYSICS_STOP_'+s.stopReason);
-  return s.tick>before.tick+33;
+  const n=await snapshot();
+  if(n.stopReason)fail('B79_HUMAN_SOURCE_SESSION_STOP_'+n.stopReason);
+  return n.tick>before.tick+33;
  },100000);
  await click('mouseReleased');
  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
+ console.log('T21_B79_GENUINE_EARLY_HUMAN_SOURCE_PAINT_HUD_PASS',
+  JSON.stringify(humanPulse));
  const observations=[], started=Date.now();
- let inkPulse=null,humanPulse=null,firedNoInk=false,lastReported=-1;
+ let inkPulse=null,firedNoInk=false,lastReported=-1;
  while(Date.now()-started<13*60*1000){
   const status=await evaluate(`(() => {
    const n=window.__t21F3.snapshot();
