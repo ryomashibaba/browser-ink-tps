@@ -10,6 +10,7 @@ on:
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'
+      - 'src/app/UndertowF3SourceTraffic.test.ts'
       - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
       - 'scripts/t21-w10b80-native-stall-classifier.mjs'
       - 'scripts/t21-w10b80-native-stall-classifier.test.mjs'
