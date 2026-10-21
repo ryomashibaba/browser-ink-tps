@@ -34,7 +34,7 @@ export interface F3TrafficSnapshot{
  readonly landingCorridorsCleared:readonly string[];
  readonly releasedCpuIds:readonly string[];
  readonly freeCombatEnabled:boolean;
- readonly b93UpperDetours:readonly {actorId:string;linkId:string}[];
+ readonly b93UpperDetours:readonly {actorId:string;linkId:string;phase:string}[];
  readonly b93ExperimentalEnabled:boolean;
  readonly sourcePatrol:{
   readonly auditedTargets:number;
@@ -143,7 +143,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly lastMoved=new Map<string,number>();
  /** Explicit opt-in; only Recast targets from immutable source links. */
  private readonly b93UpperDetours=new Map<string,{
-  linkId:string;sourceGoal:StageVector3;originalLanding:StageVector3
+  linkId:string;sourceGoal:StageVector3;originalLanding:StageVector3;
+  upperStart:StageVector3;phase:'APPROACH'|'DROP'
  }>();
  private freeCombat=false;
 
@@ -458,7 +459,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      a.link.id.localeCompare(b.link.id))[0]?.link;
   if(!candidate)return;
   this.b93UpperDetours.set(bot.id,{linkId:candidate.id,
-   sourceGoal:candidate.end,originalLanding:candidate.end});
+   sourceGoal:candidate.end,originalLanding:candidate.end,
+   upperStart:candidate.start,phase:'APPROACH'});
  }
  prepare(frame:number,humanFoot?:Readonly<{x:number;y:number;z:number}>):void{
   if(this.freeCombat)return;
@@ -481,8 +483,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(bot.mobilityState==='GROUND'&&bot.agent&&frame%18===1){
      if(humanFoot)this.selectB93UpperDetour(bot,humanFoot,frame);
      const detour=this.b93UpperDetours.get(bot.id);
-     bot.agent.requestMoveTarget(this.nav.closestPoint(
-      new Vec3(...(detour?.sourceGoal??this.routeFor(bot.id).sourceGoal))));
+     if(detour?.phase==='APPROACH'&&
+        Math.hypot(bot.position.x-detour.upperStart[0],
+          bot.position.z-detour.upperStart[2])<0.9)
+       detour.phase='DROP';
+     const goal=detour?.phase==='APPROACH'?detour.upperStart:
+      detour?.sourceGoal??this.routeFor(bot.id).sourceGoal;
+     bot.agent.requestMoveTarget(this.nav.closestPoint(new Vec3(...goal)));
     }
    }else{
     bot.thinkRemaining=900;bot.paintRemaining=900;bot.fireRemaining=900;
@@ -626,7 +633,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    releasedCpuIds:[...this.released],
    freeCombatEnabled:this.freeCombat,
    b93UpperDetours:[...this.b93UpperDetours].map(([actorId,v])=>({
-    actorId,linkId:v.linkId})),
+    actorId,linkId:v.linkId,phase:v.phase})),
    b93ExperimentalEnabled:this.enableB93UpperDetour,
    sourcePatrol:{auditedTargets:this.auditedTargets,
     realGoalRequests:this.realGoalRequests,
