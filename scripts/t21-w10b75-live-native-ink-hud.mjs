@@ -177,9 +177,9 @@ async function run(){
   if(n.stopReason)fail('B79_HUMAN_SOURCE_SESSION_STOP_'+n.stopReason);
   if(!parkedB96)return n.tick>before.tick+33?n:false;
   const z=n.player.position[2];
-  if(z<63.70)fail('B98_TRUE_W_KEYUP_OVERSHOT_BLOCKING_LIP_'+
+  if(z<63.69)fail('B98_TRUE_W_KEYUP_OVERSHOT_BLOCKING_LIP_'+
     JSON.stringify({nativeTick:n.tick,realHumanFoot:n.player.position}));
-  return z<=64.35?n:false;
+  return z<=64.02?n:false;
  },100000);
  if(parkedB96)console.log('T21_B98_REAL_INPUT_POSITION_GATED_KEYUP',
   JSON.stringify({tick:realWRelease.tick,
