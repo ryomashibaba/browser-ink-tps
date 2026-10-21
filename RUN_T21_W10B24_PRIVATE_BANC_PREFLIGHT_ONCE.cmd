@@ -27,8 +27,10 @@ if errorlevel 1 (
  goto :FAIL
 )
 echo.
-echo [W10-B24] Scanning local Temple01-named decoded JSON/BYML candidates.
-echo No source archive extraction, no network upload, no coordinates exported.
+echo [W10-B73] Scanning owner-local Temple01 JSON/BYML/Zstd candidates.
+echo A single adjacent RAW .dict/.dic/.zsdic/.zstdict is supported.
+echo Node.js 24.20 or later is recommended for Zstd dictionary support.
+echo No private source extraction from archives, no network upload, no coordinates exported.
 node "%~dp0scripts\t21-w10b24-private-banc-preflight.mjs" --source "%SOURCE%" --out "%OUT%"
 if errorlevel 1 goto :FAIL
 echo.

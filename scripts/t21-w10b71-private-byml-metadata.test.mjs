@@ -111,3 +111,43 @@ test('B71 offline preflight accepts binary metadata but never authenticates acto
     assert.equal(serialized.includes(secret),false);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('B73 privately provided raw Zstd dictionary decodes a local BYML without upload',()=>{
+ const raw=syntheticByml(true);
+ const privateDictionary=Buffer.concat([
+  Buffer.from('B73_LOCAL_DICTIONARY_NEVER_EXPORT_AS_TEXT_'),
+  raw.subarray(0,Math.min(raw.length,600))
+ ]);
+ const compressed=zstdCompressSync(raw,{dictionary:privateDictionary});
+ const decoded=decodeB71PrivateBancBuffer(
+  compressed,'Vss_Temple01_Static.byml.zs',privateDictionary);
+ assert.equal(decoded.localCompression,'ZSTD_LOCAL_OWNER_DICTIONARY');
+ assert.equal(decoded.data.Actors[0].Hash,42);
+ const dir=mkdtempSync(join(tmpdir(),'b73-local-dict-'));
+ try{
+  writeFileSync(join(dir,'Vss_Temple01_Static.byml.zs'),compressed);
+  writeFileSync(join(dir,'Vss_Temple01.zstdict'),privateDictionary);
+  const report=privateBancPreflight(dir);
+  assert.equal(report.hold,'HOLD_BANC_AUTHENTICITY_AND_MESH_BINDING_UNPROVEN');
+  assert.equal(report.b73OwnerRawDictionaryMetadataReadOnly,true);
+  assert.equal(report.b73DictionaryOrPrivateActorPayloadExported,false);
+  assert.equal(report.candidates[0].actorCount,1);
+  assert.equal(report.candidates[0].localBinaryMetadata.b73OwnerRawDictionaryUsed,true);
+  const serialized=JSON.stringify(report);
+  assert.equal(serialized.includes('B73_LOCAL_DICTIONARY_NEVER_EXPORT'),false);
+  assert.equal(serialized.includes('733.125'),false);
+  assert.equal(serialized.includes('TOP_SECRET_PRIVATE_LAYER'),false);
+  writeFileSync(join(dir,'another.dict'),Buffer.from('second ambiguous dictionary'));
+  const ambiguous=privateBancPreflight(dir);
+  assert.equal(ambiguous.hold,'HOLD_AMBIGUOUS_OR_UNSAFE_PRIVATE_DICTIONARY');
+  assert.equal(ambiguous.originalConnectionsPromoted,0);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('B73 rejects untrusted, oversized and empty in-memory Zstd dictionaries',()=>{
+ const bytes=zstdCompressSync(syntheticByml(true));
+ for(const dict of [Buffer.alloc(0),Buffer.alloc(512*1024+1),'not a buffer']){
+  assert.throws(()=>decodeB71PrivateBancBuffer(
+    bytes,'Vss_Temple01_Static.byml.zs',dict),
+   /B71_PRIVATE_DICTIONARY_INVALID_LENGTH/);
+ }
+});

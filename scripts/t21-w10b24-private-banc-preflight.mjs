@@ -43,6 +43,25 @@ function candidateName(rel){
  const normalized=rel.replaceAll('\\','/');
  return /(?:^|[/_.-])(?:Vss_)?Temple01(?:[/_.-]|$)/i.test(normalized);
 }
+/**
+ * B73: exactly one separately owner-provided RAW ZSTD dictionary
+ * in the candidate's directory. Never recurse outside input source,
+ * follow symlinks, derive external URLs, echo its name/content, or
+ * confuse a dictionary with original actor authenticity.
+ */
+function privateAdjacentRawDictionary(abs){
+ const dir=dirname(abs);
+ const files=readdirSync(dir,{withFileTypes:true}).filter(x=>
+  /\.(?:dict|dic|zsdic|zstdict)$/i.test(x.name));
+ if(!files.length)return {state:'NONE',buffer:null};
+ if(files.length!==1||!files[0].isFile()||files[0].isSymbolicLink())
+  return {state:'AMBIGUOUS_OR_NOT_REGULAR',buffer:null};
+ const target=join(dir,files[0].name),stat=lstatSync(target);
+ if(!stat.isFile()||stat.isSymbolicLink()||stat.size<8||
+    stat.size>512*1024)
+  return {state:'INVALID_OWNER_DICTIONARY',buffer:null};
+ return {state:'ONE_OWNER_RAW_DICTIONARY',buffer:readFileSync(target)};
+}
 function inspectCandidate(abs){
  const stat=lstatSync(abs);
  const fileName=basename(abs); // no local absolute paths exported
@@ -55,17 +74,26 @@ function inspectCandidate(abs){
  let data,localBinaryMetadata=null;
  if(binary){
   try{
-   const result=decodeB71PrivateBancBuffer(bytes,fileName);
+   const dict=fileName.toLowerCase().endsWith('.zs')?
+    privateAdjacentRawDictionary(abs):{state:'NONE',buffer:null};
+   if(dict.state==='AMBIGUOUS_OR_NOT_REGULAR'||
+      dict.state==='INVALID_OWNER_DICTIONARY')
+    throw Error('B73_UNSAFE_OR_AMBIGUOUS_PRIVATE_DICTIONARY');
+   const result=decodeB71PrivateBancBuffer(bytes,fileName,dict.buffer);
    data=result.data;
    localBinaryMetadata={
     format:'BYML_METADATA_ONLY_NOT_AUTHENTICATED',
     version:result.binaryVersion,endian:result.binaryEndianness,
-    compression:result.localCompression
+    compression:result.localCompression,
+    b73OwnerRawDictionaryUsed:
+     result.localCompression==='ZSTD_LOCAL_OWNER_DICTIONARY'
    };
   }catch(e){
    const unsupported=String(e?.message??e);
    return {fileName,sourceSha256:digest,
-    decodeState:unsupported.includes('ZSTD_REQUIRES_DICTIONARY')?
+    decodeState:unsupported.includes('B73_UNSAFE_OR_AMBIGUOUS_PRIVATE_DICTIONARY')?
+     'HOLD_AMBIGUOUS_OR_UNSAFE_PRIVATE_DICTIONARY':
+     unsupported.includes('ZSTD_REQUIRES_DICTIONARY')?
      'HOLD_PRIVATE_ZSTD_DICTIONARY_OR_UNSUPPORTED_FRAME':
      'NEEDS_PRIVATE_OFFLINE_BYML_DECODE',
     actorCount:0,recognizedSetActorCount:0,validSetActorCount:0};
@@ -191,6 +219,9 @@ export function privateBancPreflight(dir){
  const hold=matched.length>1?'HOLD_MULTIPLE_UNVERIFIED_BANC_CANDIDATES':
   matched.length===1?'HOLD_BANC_AUTHENTICITY_AND_MESH_BINDING_UNPROVEN':
   candidates.some(x=>x.decodeState===
+    'HOLD_AMBIGUOUS_OR_UNSAFE_PRIVATE_DICTIONARY')?
+   'HOLD_AMBIGUOUS_OR_UNSAFE_PRIVATE_DICTIONARY':
+  candidates.some(x=>x.decodeState===
     'HOLD_PRIVATE_ZSTD_DICTIONARY_OR_UNSUPPORTED_FRAME')?
    'HOLD_PRIVATE_ZSTD_DICTIONARY_REQUIRED':
   candidates.some(x=>x.decodeState==='NEEDS_PRIVATE_OFFLINE_BYML_DECODE')?
@@ -225,6 +256,8 @@ export function privateBancPreflight(dir){
    x.decodeState==='B71_LOCAL_BINARY_METADATA_ONLY_UNVERIFIED'),
   b71NoOriginalInstancePromotion:true,
   b71OriginalActorProvenanceStillRequired:true,
+  b73OwnerRawDictionaryMetadataReadOnly:true,
+  b73DictionaryOrPrivateActorPayloadExported:false,
   candidates
  };
 }

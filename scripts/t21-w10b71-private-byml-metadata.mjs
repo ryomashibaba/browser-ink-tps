@@ -124,18 +124,29 @@ export function readB71BymlData(bytes){
   fail('ROOT_NOT_DICTIONARY');
  return {data,binaryVersion:version,littleEndian:little};
 }
-export function decodeB71PrivateBancBuffer(bytes,fileName=''){
+/**
+ * B73: A private raw ZSTD dictionary is allowed only when the OWNER
+ * already placed it locally. No dictionary may be serialized, uploaded
+ * or chosen from external sources; this never certifies stage provenance.
+ */
+export function decodeB71PrivateBancBuffer(bytes,fileName='',dictionary=null){
  if(!Buffer.isBuffer(bytes)||bytes.length>B71_MAX_DECOMPRESSED_BYTES)
   fail('INPUT_TOO_LARGE');
+ if(dictionary!==null&&(!Buffer.isBuffer(dictionary)||
+    dictionary.length===0||dictionary.length>512*1024))
+  fail('PRIVATE_DICTIONARY_INVALID_LENGTH');
  let data=bytes,compression='NONE';
  if(fileName.toLowerCase().endsWith('.zs')){
   if(bytes.length<4||bytes.readUInt32LE(0)!==0xfd2fb528)
    fail('COMPRESSED_NOT_ZSTD');
   try{
    data=zstdDecompressSync(bytes,{
-    maxOutputLength:B71_MAX_DECOMPRESSED_BYTES});
+    maxOutputLength:B71_MAX_DECOMPRESSED_BYTES,
+    ...(dictionary?{dictionary}:{}),
+    rejectGarbageAfterEnd:true});
   }catch{fail('ZSTD_REQUIRES_DICTIONARY_OR_UNSUPPORTED_FRAME');}
-  compression='ZSTD_LOCAL_NO_DICTIONARY';
+  compression=dictionary?'ZSTD_LOCAL_OWNER_DICTIONARY':
+   'ZSTD_LOCAL_NO_DICTIONARY';
  }
  const decoded=readB71BymlData(data);
  return {data:decoded.data,binaryVersion:decoded.binaryVersion,
