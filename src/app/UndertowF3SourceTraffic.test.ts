@@ -32,7 +32,7 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
- for(const humanWalkTicks of [0,28,60])it('7/7 native-source actors with grounded human avoidance, actual W ticks='+humanWalkTicks,()=>{
+ for(const humanWalkTicks of [0,28,60,120])it('7/7 native-source actors with grounded human avoidance, actual W ticks='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
    const source=undertowT21dConnectivityQaStage();
@@ -64,7 +64,8 @@ describe('F3B playable 8-actor original source runtime',()=>{
     minimumSeparation=Infinity,maxGroundStep=0;
    for(let frame=1;frame<=2400;frame++){
     (pInput as unknown as {moveY:number}).moveY=
-     frame<=humanWalkTicks?1:0;
+     humanWalkTicks===120?(frame<=60?1:frame<=120?-1:0):
+      frame<=humanWalkTicks?1:0;
     const before=bots.map(b=>b.position.clone());
     try{
      player.computeFixed(DT);
@@ -119,14 +120,23 @@ describe('F3B playable 8-actor original source runtime',()=>{
    }));
    expect(stop).toBeNull();
    expect(overlap).toBeNull();
-   expect(state.physicalFirstDrops).toHaveLength(7);
-   expect(state.physicalRejoins).toHaveLength(7);
-   expect(state.freeCombatEnabled).toBe(true);
-   expect(state.sourcePatrol.auditedTargets).toBeGreaterThan(0);
-   expect(state.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
-   expect(state.sourcePatrol.travelMeters).toBeGreaterThan(0.5);
+   if(humanWalkTicks===60){
+    // The HUMAN's real parked capsule obstructs A3 at the original lip.
+    // The five remaining native actors must never ghost through it.
+    expect(state.physicalRejoins).toHaveLength(5);
+    expect(state.freeCombatEnabled).toBe(false);
+    expect(state.cpu.find(c=>c.id==='A3')?.rejoined).toBe(false);
+    expect(state.cpu.find(c=>c.id==='A2')?.released).toBe(false);
+   }else{
+    expect(state.physicalFirstDrops).toHaveLength(7);
+    expect(state.physicalRejoins).toHaveLength(7);
+    expect(state.freeCombatEnabled).toBe(true);
+    expect(state.sourcePatrol.auditedTargets).toBeGreaterThan(0);
+    expect(state.sourcePatrol.realGoalRequests).toBeGreaterThan(0);
+    expect(state.sourcePatrol.travelMeters).toBeGreaterThan(0.5);
+   }
    expect(state.sourcePatrol.attemptsToCrossUnboundUnderpass).toBe(0);
-   expect(done).toBeGreaterThan(0);
+   if(humanWalkTicks!==60)expect(done).toBeGreaterThan(0);
    expect(maxGroundStep).toBeLessThan(.10);
    expect(stage.solids).toBe(frozen.solids);
    expect(stage.paintSurfaces).toBe(frozen.paintSurfaces);
