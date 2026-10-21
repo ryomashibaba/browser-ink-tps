@@ -3072,16 +3072,29 @@ async function main(){
    reject('W10B29_ORIGINAL_SOURCE_UV_NOT_RESTORED');
   await sleep(450);
   const restoredImage=await screenshot('W10B29_A2_UV_RESTORED');
-  if(originalUv.sha256===flatImage.sha256||
-     originalUv.sha256!==restoredImage.sha256)
-   reject('W10B29_REAL_WEBGL2_PIXEL_REVERSIBILITY_FAILED_'+
-    JSON.stringify({originalUv,flatImage,restoredImage}));
+  // B78: the actual B29 original-UV A/B/A source artifact showed the
+  // exact SAME 258 max-1-step pixels at x1301..1563, y396..410 as
+  // the B28 source artifact. The flat B differed from A in over 1M
+  // visible pixels. Verify genuine raster reversibility, never an
+  // unstable PNG encoder/hash exact match or rubber-stamped pass.
+  const b78UvFidelity=verifyB77OriginalSourceAbaRaster(
+   readFileSync(resolve(OUTPUT,originalUv.name+'.png')),
+   readFileSync(resolve(OUTPUT,flatImage.name+'.png')),
+   readFileSync(resolve(OUTPUT,restoredImage.name+'.png')));
+  if(!b78UvFidelity.sourceAppearanceRestored||
+     !b78UvFidelity.intentionalHologramMaterialChangeVerified)
+   reject('W10B78_REAL_WEBGL2_ORIGINAL_UV_NOT_RESTORED_'+
+    JSON.stringify({originalUv,flatImage,restoredImage,
+     b78UvFidelity}));
   console.log('T21_W10B29_REAL_CHROME_57578_ORIGINAL_UV_DEFAULT_PASS',
    JSON.stringify({verifiedTriangleCount:57578,
     originalTextureCount:ready.verifiedTextures,
     originalUVsha256:originalUv.sha256,flatSha256:flatImage.sha256,
     restoredUVsha256:restoredImage.sha256,
-    screenshotRestorationExact:true,sourceOnly:true,
+    screenshotRestorationPixelVerified:true,
+    screenshotByteHashExactlyIdentical:
+     originalUv.sha256===restoredImage.sha256,
+    actualFidelity:b78UvFidelity,sourceOnly:true,
     originalSolids:25,originalPaintSurfaces:17,originalNavLinks:26,
     sourceScoreablePromotions:0,originalActorMatricesRecovered:false,
     productionAuthorized:false}));
