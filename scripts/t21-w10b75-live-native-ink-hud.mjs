@@ -97,7 +97,7 @@ async function run(){
  const search='?t21Play=preview'+
   (mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
   (parkedB96?'&t21QaDrive=source&t21W10B93=upperDetour':'')+
-  (parkedB96&&b100Right?'&t21W10B102=contactProbe':'');
+  (parkedB96?'&t21W10B102=contactProbe':'');
  await cmd('Page.navigate',{url:ROOT+search});
  await until(async()=>await evaluate(`(() => {
   const c=document.querySelector('#app-canvas');
@@ -435,9 +435,9 @@ async function run(){
      renderFrames:diag.nativeRenderFrames,paused:n.paused,
      rejoined:diag.actualCpuRejoined,detour}));
    }
-   if(b100Right&&n.b102OriginalA3Kcc?.enabled!==true)
+   if(parkedB96&&n.b102OriginalA3Kcc?.enabled!==true)
     fail('B102_ORIGINAL_A3_RAPIER_CONTACT_PROBE_NOT_ENABLED');
-   if(b100Right&&n.cpu.physicalRejoins.length===7&&detour&&
+   if(parkedB96&&n.cpu.physicalRejoins.length===7&&detour&&
       n.b102OriginalA3Kcc.humanProximateRapierBlocks===0)
     fail('B102_RIGHT_DETOUR_WITHOUT_RAPIER_DYNAMIC_CONTACT_PROOF_'+
      JSON.stringify(storePartial(n,'NO_REAL_A3_HUMAN_PROXIMATE_RAPIER_BLOCK',
@@ -469,7 +469,7 @@ async function run(){
      b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
    realSidewaysKeyAPulse:b99Left,
    realSidewaysKeyDPulse:b100Right,
-   b102ActualRapierContact:b100Right?n.b102OriginalA3Kcc:null,
+   b102ActualRapierContact:parkedB96?n.b102OriginalA3Kcc:null,
    b101RealLateralCorrection:b101LateralCorrection,
    chromiumWebGL2:true,realPointerLockedWInput:true,
    artificialQaTicks:0,realHumanRetreatKeyS:false,
@@ -497,7 +497,7 @@ async function run(){
      b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
     settledHuman,
     detour:completed.detour,parkedAfterSettlingMeters:completed.humanParked,
-    b102OriginalA3Kcc:b100Right?n.b102OriginalA3Kcc:null,
+    b102OriginalA3Kcc:parkedB96?n.b102OriginalA3Kcc:null,
     noHumanRetreat:true,forcedMatchStart:false,original4v4Certified:false
    }));
   return;
