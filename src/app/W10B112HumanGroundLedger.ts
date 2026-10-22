@@ -24,6 +24,8 @@ export type B112FloorSuspicion={
  actualDetectedBody:[number,number,number];
  previousSupportedBody:[number,number,number]|null;
  downwardMeters:number;
+ /** Measured pre-trigger frames retained across a real respawn. */
+ realNativeFramesBeforeDetection:readonly B112FootSample[];
  originalSourceSupportIdAtDetection:null;
  originalStageGeometryModified:false;
  playerPositionChangedByMonitor:false;
@@ -46,6 +48,12 @@ export class W10B112HumanGroundLedger {
   this.last=null;this.lastSupported=null;this.unsupportedStart=null;
   this.consecutiveUnsupportedTicks=0;this.latched=false;
   this.samples=[];this.suspicions=[];
+ }
+ /** Respawn must not erase the evidence of an immediately preceding fall. */
+ public resetOnRespawn(){
+  this.last=null;this.lastSupported=null;this.unsupportedStart=null;
+  this.consecutiveUnsupportedTicks=0;this.latched=false;this.samples=[];
+  // Genuine actor reset is not a new source hole; retain previous suspects.
  }
  public observe(input:B112FootSample){
   const s:{[K in keyof B112FootSample]:B112FootSample[K]}={
@@ -87,6 +95,9 @@ export class W10B112HumanGroundLedger {
      previousSupportedBody:this.lastSupported?
       [...this.lastSupported.center]:null,
      downwardMeters:Number(drop.toFixed(6)),
+     realNativeFramesBeforeDetection:this.samples.map(row=>({
+      ...row,center:[...row.center]
+     })),
      originalSourceSupportIdAtDetection:null,
      originalStageGeometryModified:false,
      playerPositionChangedByMonitor:false
@@ -116,6 +127,9 @@ export class W10B112HumanGroundLedger {
    suspicions:this.suspicions.map(e=>({...e,
     actualFirstUnsupportedBody:[...e.actualFirstUnsupportedBody],
     actualDetectedBody:[...e.actualDetectedBody],
+    realNativeFramesBeforeDetection:e.realNativeFramesBeforeDetection.map(row=>({
+     ...row,center:[...row.center]
+    })),
     previousSupportedBody:e.previousSupportedBody?
      [...e.previousSupportedBody]:null
    })),
