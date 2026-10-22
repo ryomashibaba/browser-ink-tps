@@ -26,7 +26,7 @@ The B101 recorded KeyW-up before confirming the human paint HUD and preserved ge
 - Exactly **25** source physical solids, **17** original paintable surfaces, **26** actual navigation links, **0** original scoreable promotions.
 - `activationReady=false`; unrestricted real 4v4 **not certified**. Default FIXED CPU remains unchanged; SWEEP is opt-in; B93/B95 detour stays **opt-in QA only**.
 - No `main`, original Draft PR #5, production, or GitHub Pages changes.
-- Native build/24 regression tests and usual B75 Chrome FIXED/SWEEP should be checked for the latest B101 code SHA independently of the opt-in detour CI; do not promote on a partial run result.
+- At B101 code HEAD `03a7d8a`, native build and **24/24 regression tests**, and both ordinary real-Chrome **FIXED** and **SWEEP** jobs passed in [B75 run 39727653495](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39727653495). This still **does not promote** the experimental detour to normal gameplay.
 
 ## Next QA gate: W10-B102
 
