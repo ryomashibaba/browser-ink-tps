@@ -37,3 +37,15 @@ Because the 64.50 attempt never got past Chrome startup, the workflow was narrow
 If the single 64.50 retry qualifies, inspect the genuine original KCC / NavLink / 7-CPU classification before claiming any success. If not qualified or Chrome still cannot run, mark direct B105 reproduction **HOLD** and return effort to F1–F5 playable game objectives instead of extending endless positional micro-calibration.
 
 No B111 direct recovery, 7/7 physical success, source scoreable certification, or formal 4v4 completion has been established by the initial two CI jobs.
+
+## Final bounded retry — confirmed (2026-10-22 JST)
+
+[Actions #39792781308](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39792781308) completed **FAIL-CLOSED** after the single 64.50 genuine Chromium retry, not an infrastructure-only failure this time.
+
+- Script syntax, original TypeScript/Vite build and existing B106 classifier **9/9 PASS**.
+- Real CDP KeyD **6 observed native ticks**; KeyA **6 observed native ticks**.
+- Original player stop body **X=-0.183939129, Y=8.395095825, Z=63.994564056**. Z satisfies the pre-existing candidate range [63.89,64.135], but X is **outside** [-0.12,-0.01] (0.06394m too far left).
+- Accordingly **no 7CPU original A3 contact/rejoin test was run**, and no B105 direct-recovery reproduction was established. B111 ends **HOLD — FINITE CALIBRATION EXHAUSTED**. Do not loosen its gate, mutate the original KCC, or keep searching arbitrary centimeter timings.
+- Return to F1–F5 playable development. Immediate W10-B112 priority is the previously reported human falling-through / floor-support issue, using actual original Rapier witnesses without fictitious floors. A suspicion from a diagnostic ray or downward velocity alone cannot certify a source geometry defect.
+
+**B111 completed research status:** implementation/associated code and classifier checks PASS; real target positioning / B105 reproduction NOT CERTIFIED. Normal FIXED/default gameplay, source 25/17/26/0, Stage source auth, main, frozen PR #5 and public Pages unchanged.
