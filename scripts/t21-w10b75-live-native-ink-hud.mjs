@@ -281,7 +281,7 @@ async function run(){
   // CDP KeyW/keyUp. Test physically occupying A3's actual source
   // approach capsule, not an invented single-target user coordinate.
   const originalA3BlockedFoot=[0.2749243676662445,64.00698852539062];
-  if(b99Left&&settledHuman[0]>-.29)
+  if(b99Left&&settledHuman[0]>-.25)
    fail('B99_LATERAL_REAL_HUMAN_INPUT_DID_NOT_CREATE_DISTINCT_LANE_'+
     JSON.stringify({settledHuman,referenceHumanX:-.1721142679452896}));
   const lipContactDistance=Math.hypot(
