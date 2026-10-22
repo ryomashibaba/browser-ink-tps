@@ -22,7 +22,7 @@ const qaCase='B105_REAL_BRIEF_CONTACT_RETRY';
 // B110 varies ONLY genuine KeyW release after the proven B108 EARLY
 // six-tick KeyA compensation. No original player/CPU code changes.
 const releaseZ=Number(process.env.T21_B110_RELEASE_Z??64.60);
-if(!Number.isFinite(releaseZ)||releaseZ<64.38||releaseZ>64.70)
+if(!Number.isFinite(releaseZ)||releaseZ<64.38||releaseZ>64.90)
  throw Error('B110_KEYW_RELEASE_OUTSIDE_BOUNDED_NATIVE_QA');
 const correctionPhase=process.env.T21_B110_CORRECTION_PHASE??'EARLY';
 if(!['EARLY','LATE'].includes(correctionPhase))
