@@ -1,0 +1,41 @@
+name: T21 W10-B112 original human floor-support witness
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/W10B112HumanGroundLedger.ts'
+      - 'src/app/W10B112HumanGroundLedger.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/physics/RapierStagePhysics.ts'
+      - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - '.github/workflows/t21-w10b112-real-human-floor.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-human-floor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify source foot ledger, original Rapier and source test code
+        run: |
+          node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          npx vitest run src/app/W10B112HumanGroundLedger.test.ts src/physics/RapierStagePhysics.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real Chromium original PlayerController and source Rapier 60Hz walk
+        env:
+          T21_B112_EVIDENCE_DIR: /tmp/t21-w10b112
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Retain bounded genuine original-foot source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b112-real-original-source-human-floor
+          path: /tmp/t21-w10b112/
+          if-no-files-found: warn
+          retention-days: 14
