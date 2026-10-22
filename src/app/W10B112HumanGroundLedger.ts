@@ -96,7 +96,7 @@ export class W10B112HumanGroundLedger {
       [...this.lastSupported.center]:null,
      downwardMeters:Number(drop.toFixed(6)),
      realNativeFramesBeforeDetection:this.samples.map(row=>({
-      ...row,center:[...row.center]
+      ...row,center:[...row.center] as [number,number,number]
      })),
      originalSourceSupportIdAtDetection:null,
      originalStageGeometryModified:false,
@@ -128,7 +128,7 @@ export class W10B112HumanGroundLedger {
     actualFirstUnsupportedBody:[...e.actualFirstUnsupportedBody],
     actualDetectedBody:[...e.actualDetectedBody],
     realNativeFramesBeforeDetection:e.realNativeFramesBeforeDetection.map(row=>({
-     ...row,center:[...row.center]
+     ...row,center:[...row.center] as [number,number,number]
     })),
     previousSupportedBody:e.previousSupportedBody?
      [...e.previousSupportedBody]:null
