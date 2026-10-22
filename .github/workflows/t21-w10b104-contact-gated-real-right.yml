@@ -1,0 +1,42 @@
+name: T21 W10-B104 right-lane contact-gated original seven CPU recovery
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b104-contact-gated-real-right.mjs'
+      - '.github/workflows/t21-w10b104-contact-gated-real-right.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-right-physical-contact-gate:
+    name: Genuine Chrome right pulse ${{ matrix.pulse }} / A3 Rapier contact / 7 CPUs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        pulse: [4, 6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify native script and immutable-source build
+        run: |
+          node --check scripts/t21-w10b104-contact-gated-real-right.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Calibrate real KeyD then demand original Rapier A3 collision and seven physical rejoins
+        env:
+          T21_B104_RIGHT_PULSE_TICKS: ${{ matrix.pulse }}
+          T21_B104_EVIDENCE_DIR: /tmp/t21-w10b104
+        run: node scripts/t21-w10b104-contact-gated-real-right.mjs
+      - name: Preserve candidate misses and actual physics evidence without fabricating success
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b104-true-right-contact-pulse-${{ matrix.pulse }}
+          path: /tmp/t21-w10b104/
+          if-no-files-found: warn
+          retention-days: 14
