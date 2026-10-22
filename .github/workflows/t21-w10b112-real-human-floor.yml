@@ -1,10 +1,12 @@
-name: T21 W10-B112 original human floor-support witness
+name: T21 W10-B112/B113 original human floor-support and local capture QA
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/app/W10B112HumanGroundLedger.ts'
       - 'src/app/W10B112HumanGroundLedger.test.ts'
+      - 'src/app/W10B113NativeFloorTrace.ts'
+      - 'src/app/W10B113NativeFloorTrace.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/physics/RapierStagePhysics.ts'
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
@@ -25,9 +27,9 @@ jobs:
       - name: Verify source foot ledger, original Rapier and source test code
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
-          npx vitest run src/app/W10B112HumanGroundLedger.test.ts src/physics/RapierStagePhysics.test.ts
+          npx vitest run src/app/W10B112HumanGroundLedger.test.ts src/app/W10B113NativeFloorTrace.test.ts src/physics/RapierStagePhysics.test.ts
           npm run build -- --base=/browser-ink-tps/
-      - name: Real Chromium original PlayerController and source Rapier 60Hz walk
+      - name: Real Chromium native PlayerController walk + real mouse-click local floor JSON download
         env:
           T21_B112_EVIDENCE_DIR: /tmp/t21-w10b112
         run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
