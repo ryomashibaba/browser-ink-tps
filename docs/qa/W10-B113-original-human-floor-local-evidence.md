@@ -33,3 +33,12 @@ Open the opt-in QA preview URL with the B112 flag above, reproduce the movement 
   - Real generated filename detection fix: commit `725d4dc0d2d13ee1af28108b1070e88868440fcf`.
 - Corrected exact-SHA workflow: [Actions #39798202896](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39798202896). It was **QUEUED** when checked. Previous queued or completed jobs at earlier B113 SHAs do not prove the corrected exporter works.
 - `src/app/W10B113NativeFloorTrace.test.ts` now belongs to the consolidated B112/B113 workflow. Its pass/fail status must be read from the corrected exact SHA. Do not claim user-clicked JSON verification merely from TypeScript checks or the earlier B112 source walk.
+
+## B113 actual corrected original-browser export — VERIFIED
+
+[Final corrected original Chrome/PlayCanvas workflow #39798202896](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39798202896), source SHA `725d4dc0d2d13ee1af28108b1070e88868440fcf`, **SUCCESS** (verified 2026-10-22 JST):
+- **3 Vitest test files / 10 tests PASS**, TypeScript/Vite build PASS.
+- Genuine original KCC KeyW input **120 native ticks**, measured movement **9.516901m** on the existing upper original source collider; **0** observed unsupported descents in that limited walk.
+- Actual real CDP **Escape**, rendered button mouse press/release, browser native JSON file **`T21_W10B113_ORIGINAL_FLOOR_TRACE_TICK_168.json`** downloaded and parsed. JSON strictly reports 25/17/26/0, no actor mutation, no floor-hole certification and no official result.
+- This is browser automation in hosted SwiftShader, not a user manual local RTX/Windows test and not proof of the historical floor issue or 4v4.
+- B114 separately extends the source support witness from central ray to center+four offset rays; see `docs/qa/W10-B114-original-rapier-five-ray-footprint.md` and its separate exact-SHA CI.
