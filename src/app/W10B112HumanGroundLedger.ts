@@ -19,6 +19,27 @@ export type B112FootSample={
  footprint?:B114OriginalFootprint;
 };
 
+/**
+ * W10-B115: observational diagnosis. A source ray is not a KCC collision.
+ * Never assume an edge ray proves a floor or turn it into walkable geometry.
+ */
+export type B115UnsupportedRayContext=
+ 'EDGE_RAY_VISIBLE_BUT_KCC_UNGROUNDED'|
+ 'NO_NEAR_ORIGINAL_FOOT_RAY_KCC_UNGROUNDED'|
+ 'FIVE_RAY_WITNESS_NOT_AVAILABLE';
+export function classifyB115UnsupportedRayContext(
+ frame:B112FootSample
+):B115UnsupportedRayContext{
+ if(!frame.footprint)return 'FIVE_RAY_WITNESS_NOT_AVAILABLE';
+ return frame.footprint.nearPerimeter?
+  'EDGE_RAY_VISIBLE_BUT_KCC_UNGROUNDED':
+  'NO_NEAR_ORIGINAL_FOOT_RAY_KCC_UNGROUNDED';
+}
+function cloneB115Footprint(f:B114OriginalFootprint):B114OriginalFootprint{
+ return {...f,originalBody:[...f.originalBody],
+  probes:f.probes.map(p=>({...p})),
+  observedSourceSolidIds:[...f.observedSourceSolidIds]};
+}
 export type B112FloorSuspicion={
  status:'SUSPECT_UNSUPPORTED_DESCENT_NOT_PROVEN_FLOOR_HOLE';
  firstUnsupportedNativeTick:number;
@@ -27,6 +48,10 @@ export type B112FloorSuspicion={
  actualDetectedBody:[number,number,number];
  previousSupportedBody:[number,number,number]|null;
  downwardMeters:number;
+ /** W10-B115, read-only actual 5-ray context at detection. */
+ nativeFootprintAtDetection:B114OriginalFootprint|null;
+ unsupportedRayVsKccContext:B115UnsupportedRayContext;
+ rayHitDoesNotProveKccCollision:true;
  /** Measured pre-trigger frames retained across a real respawn. */
  realNativeFramesBeforeDetection:readonly B112FootSample[];
  originalSourceSupportIdAtDetection:null;
@@ -107,6 +132,10 @@ export class W10B112HumanGroundLedger {
      previousSupportedBody:this.lastSupported?
       [...this.lastSupported.center]:null,
      downwardMeters:Number(drop.toFixed(6)),
+     nativeFootprintAtDetection:s.footprint?
+      cloneB115Footprint(s.footprint):null,
+     unsupportedRayVsKccContext:classifyB115UnsupportedRayContext(s),
+     rayHitDoesNotProveKccCollision:true,
      realNativeFramesBeforeDetection:this.samples.map(row=>({
       ...row,center:[...row.center] as [number,number,number]
      })),
@@ -128,21 +157,25 @@ export class W10B112HumanGroundLedger {
    lastNativeTick:this.last?.tick??null,
    lastOriginalSourceHitId:this.last?.sourceSolidId??null,
    lastOriginalSourceGapMeters:this.last?.sourceSupportGapMeters??null,
-   lastOriginalFootprint:this.last?.footprint??null,
+   lastOriginalFootprint:this.last?.footprint?
+    cloneB115Footprint(this.last.footprint):null,
    genuineKccGrounded:this.last?.grounded??null,
    currentUnsupportedNativeTicks:this.consecutiveUnsupportedTicks,
    observedNativeTicks:this.samples.length,
    actualNativeFeet:this.samples.map(s=>({
     tick:s.tick,body:[...s.center],grounded:s.grounded,mode:s.mode,
     sourceSolidId:s.sourceSolidId,gapMeters:s.sourceSupportGapMeters,
-    footprint:s.footprint
+    footprint:s.footprint?cloneB115Footprint(s.footprint):undefined
    })),
    suspicionCount:this.suspicions.length,
    suspicions:this.suspicions.map(e=>({...e,
     actualFirstUnsupportedBody:[...e.actualFirstUnsupportedBody],
     actualDetectedBody:[...e.actualDetectedBody],
+    nativeFootprintAtDetection:e.nativeFootprintAtDetection?
+     cloneB115Footprint(e.nativeFootprintAtDetection):null,
     realNativeFramesBeforeDetection:e.realNativeFramesBeforeDetection.map(row=>({
-     ...row,center:[...row.center] as [number,number,number]
+     ...row,center:[...row.center] as [number,number,number],
+     footprint:row.footprint?cloneB115Footprint(row.footprint):undefined
     })),
     previousSupportedBody:e.previousSupportedBody?
      [...e.previousSupportedBody]:null

@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {W10B112HumanGroundLedger,type B112FootSample}
+import {W10B112HumanGroundLedger,classifyB115UnsupportedRayContext,
+ type B112FootSample}
  from './W10B112HumanGroundLedger';
 
 const frame=(tick:number,centerY:number,grounded:boolean,
@@ -72,6 +73,57 @@ describe('W10-B112 genuine original-source foot support ledger',()=>{
   q.resetOnRespawn();
   expect(q.snapshot().lastOriginalFootprint).toBeNull();
   expect(q.snapshot().sourceFloorHoleCertified).toBe(false);
+ });
+ it('B115 distinguishes existing edge ray from absent ray without certifying KCC contact',()=>{
+  const q=new W10B112HumanGroundLedger();
+  q.observe(frame(1,8.4,true));
+  const first={tick:2,center:[0,8.4,64] as [number,number,number],
+   grounded:false,mode:'HUMAN' as const,
+   sourceSolidId:null,sourceSupportGapMeters:null};
+  const build=(tick:number,centerY:number,edge:boolean):B112FootSample=>{
+   const center:[number,number,number]=[0,centerY,64];
+   const r=.32;
+   const probes=([
+    {name:'CENTER',offsetX:0,offsetZ:0,sourceSolidId:null,gapMeters:null,
+     closeSourceSupport:false},
+    {name:'FRONT',offsetX:0,offsetZ:-r,sourceSolidId:null,gapMeters:null,
+     closeSourceSupport:false},
+    {name:'BACK',offsetX:0,offsetZ:r,sourceSolidId:null,gapMeters:null,
+     closeSourceSupport:false},
+    {name:'LEFT',offsetX:-r,offsetZ:0,
+     sourceSolidId:edge?'original-edge':null,gapMeters:edge?.1:null,
+     closeSourceSupport:edge},
+    {name:'RIGHT',offsetX:r,offsetZ:0,sourceSolidId:null,gapMeters:null,
+     closeSourceSupport:false}
+   ] as const);
+   return {...first,tick,center,footprint:{
+    status:'READ_ONLY_FIVE_ORIGINAL_RAPIER_RAYS' as const,
+    nativeTick:tick,originalBody:[...center] as [number,number,number],
+    radiusMeters:.4,mode:'HUMAN' as const,
+    probes,observedSourceSolidIds:edge?['original-edge']:[],
+    nearCenter:false,nearPerimeter:edge,
+    classification:edge?'EDGE_ONLY_SOURCE_RAY' as const:
+     'NO_NEAR_ORIGINAL_SOURCE_RAY' as const,
+    noActorMutation:true as const,originalGeometryAdded:0 as const,
+    originalFloorHoleCertified:false as const,
+    genuineCapsuleContactCertified:false as const
+   }};
+  };
+  for(let tick=2;tick<=17;tick++)q.observe(build(tick,8.4-(tick-2)*.06,true));
+  const v=q.snapshot();
+  expect(v.suspicionCount).toBe(1);
+  expect(v.suspicions[0]!.unsupportedRayVsKccContext)
+   .toBe('EDGE_RAY_VISIBLE_BUT_KCC_UNGROUNDED');
+  expect(v.suspicions[0]!.nativeFootprintAtDetection?.observedSourceSolidIds)
+   .toEqual(['original-edge']);
+  expect(v.suspicions[0]!.rayHitDoesNotProveKccCollision).toBe(true);
+  expect(v.sourceFloorHoleCertified).toBe(false);
+  expect(classifyB115UnsupportedRayContext(build(20,7,false)))
+   .toBe('NO_NEAR_ORIGINAL_FOOT_RAY_KCC_UNGROUNDED');
+  expect(classifyB115UnsupportedRayContext(frame(20,7,false,null)))
+   .toBe('FIVE_RAY_WITNESS_NOT_AVAILABLE');
+  q.resetOnRespawn();
+  expect(q.snapshot().suspicions[0]!.nativeFootprintAtDetection?.probes).toHaveLength(5);
  });
  it('detects only measured finite ordered native ticks and can reset on respawn',()=>{
   const q=new W10B112HumanGroundLedger();

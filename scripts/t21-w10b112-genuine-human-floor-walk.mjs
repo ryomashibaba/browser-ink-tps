@@ -199,6 +199,11 @@ async function run(){
     trace.productionAuthorized!==false||
     trace.unrestricted4v4Certified!==false||
     trace.observedOriginalFoot?.noActorPositionMutation!==true||
+    trace.observedOriginalFoot?.suspicions?.some(e=>
+     e.rayHitDoesNotProveKccCollision!==true||
+     !['EDGE_RAY_VISIBLE_BUT_KCC_UNGROUNDED',
+       'NO_NEAR_ORIGINAL_FOOT_RAY_KCC_UNGROUNDED',
+       'FIVE_RAY_WITNESS_NOT_AVAILABLE'].includes(e.unsupportedRayVsKccContext))||
     JSON.stringify(trace.originalSourceAuthority)!=='[25,17,26,0]')
   fail('B113_REAL_BROWSER_DOWNLOAD_INVALID');
  console.log('T21_B113_REAL_CHROME_ONE_CLICK_NATIVE_FLOOR_JSON_PASS',

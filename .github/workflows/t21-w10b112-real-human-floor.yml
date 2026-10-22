@@ -1,4 +1,4 @@
-name: T21 W10-B112/B113/B114 actual source floor and five-ray QA
+name: T21 W10-B112-B115 real source floor support and evidence QA
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
