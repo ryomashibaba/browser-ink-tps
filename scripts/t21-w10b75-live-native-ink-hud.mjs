@@ -20,12 +20,13 @@ const parkedB96=process.env.T21_W10B96_PARKED==='1';
 // B99 exercises an actually different collision-side human lane with
 // genuine KeyA+KeyW, never a coordinate relocation or artificial tick.
 const b99Left=process.env.T21_W10B99_VARIANT==='LEFT_SHORT';
-if(process.env.T21_W10B99_VARIANT&&
-   process.env.T21_W10B99_VARIANT!=='LEFT_SHORT')
- throw Error('B99_UNKNOWN_REAL_HUMAN_INPUT_VARIANT');
+const b100Right=process.env.T21_W10B99_VARIANT==='RIGHT_SHORT';
+if(process.env.T21_W10B99_VARIANT&&!b99Left&&!b100Right)
+ throw Error('B100_UNKNOWN_REAL_HUMAN_INPUT_VARIANT');
 if(!['FIXED','SWEEP'].includes(mode))throw Error('B75_BAD_MODE');
 if(parkedB96&&mode!=='FIXED')throw Error('B96_EXPERIMENT_MUST_KEEP_FIXED_AIM');
-if(b99Left&&!parkedB96)throw Error('B99_VARIANT_REQUIRES_B96_ORIGINAL_SOURCE_OPTIN');
+if((b99Left||b100Right)&&!parkedB96)
+ throw Error('B100_VARIANT_REQUIRES_ORIGINAL_SOURCE_OPTIN');
 const children=[],pending=new Map();
 let sock=null,id=0;
 const fail=x=>{throw Error('T21_B75_'+x);};
@@ -135,29 +136,31 @@ async function run(){
  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...kargs});
  await click('mousePressed');
  const before=await snapshot();
- if(b99Left){
-  // The off-centre trial is *real* CDP input. No human/CPU coordinates,
-  // movement speeds or stage colliders are modified. A short KeyA pulse
-  // occurs while the real KeyW remains held, before stopping at the lip.
-  const left={key:'a',code:'KeyA',
-   windowsVirtualKeyCode:65,nativeVirtualKeyCode:65};
-  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...left});
+ if(b99Left||b100Right){
+  // Real CDP side-key plus KeyW, never a setPosition, synthetic crowd
+  // coordinate, synthetic step, extra original nav link or collision veto.
+  const code=b100Right?'KeyD':'KeyA';
+  const key=b100Right?'d':'a';
+  const virtualKey=b100Right?68:65;
+  const sideways={key,code,windowsVirtualKeyCode:virtualKey,
+   nativeVirtualKeyCode:virtualKey};
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...sideways});
   let end;
   try{
    end=await until(async()=>{
     const n=await snapshot();
-    if(n.stopReason)fail('B99_REAL_LEFT_SOURCE_INPUT_STOP_'+n.stopReason);
+    if(n.stopReason)fail('B100_REAL_SIDEWAYS_SOURCE_INPUT_STOP_'+n.stopReason);
     return n.tick>=before.tick+4?n:false;
    },60000);
   }finally{
-   await cmd('Input.dispatchKeyEvent',{type:'keyUp',...left});
+   await cmd('Input.dispatchKeyEvent',{type:'keyUp',...sideways});
   }
-  console.log('T21_B99_NATIVE_SECOND_REAL_KEYBOARD_LANE',
-   JSON.stringify({variant:'LEFT_SHORT',startTick:before.tick,
-    endTick:end.tick,startHumanFoot:before.player.position,
-    endHumanFoot:end.player.position,
+  console.log('T21_B100_NATIVE_REAL_SIDEWAYS_KEYBOARD_LANE',
+   JSON.stringify({variant:b100Right?'RIGHT_SHORT':'LEFT_SHORT',
+    startTick:before.tick,endTick:end.tick,
+    startHumanFoot:before.player.position,endHumanFoot:end.player.position,
     naturalNativeTicks:end.tick-before.tick,
-    actualKeyA:true,actualKeyW:true,poseWrittenByQA:false}));
+    actualSideKey:code,actualKeyW:true,poseWrittenByQA:false}));
  }
  // B79: the real human paint first happens in STAGING, not 5+ seconds
  // into PLAYING. The old B76 smoke began looking only after the 3s
@@ -284,6 +287,9 @@ async function run(){
   if(b99Left&&settledHuman[0]>-.25)
    fail('B99_LATERAL_REAL_HUMAN_INPUT_DID_NOT_CREATE_DISTINCT_LANE_'+
     JSON.stringify({settledHuman,referenceHumanX:-.1721142679452896}));
+  if(b100Right&&settledHuman[0]<-.11)
+   fail('B100_RIGHT_REAL_HUMAN_INPUT_DID_NOT_CREATE_DISTINCT_LANE_'+
+    JSON.stringify({settledHuman,referenceHumanX:-.1721142679452896}));
   const lipContactDistance=Math.hypot(
    settledHuman[0]-originalA3BlockedFoot[0],
    settledHuman[2]-originalA3BlockedFoot[1]);
@@ -306,7 +312,8 @@ async function run(){
    const witness={
     schema:'W10_B97_UNMODIFIED_NATIVE_WEBGL2_WATCHDOG_V1',
     reason,readOnly:true,realKeyboardInput:true,
-    sourceQaVariant:b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
+    sourceQaVariant:b100Right?'B100_RIGHT_SHORT':
+     b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
     userDidNotPressBackwards:true,realNativeTick:n.tick,
     wallElapsedSeconds:Number(((Date.now()-watchingSince)/1000).toFixed(1)),
     nativeRenderFrames:n.sourceFrameQuality?.liveUpdateFrames,
@@ -402,8 +409,10 @@ async function run(){
   writeFileSync(resolve(OUTPUT,screenshot),frame);
   const proof={
    schema:'T21_B96_TRUE_CHROME_HUMAN_STATIONARY_B95_DETOUR_V1',
-   sourceQaVariant:b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
+   sourceQaVariant:b100Right?'B100_RIGHT_SHORT':
+     b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
    realSidewaysKeyAPulse:b99Left,
+   realSidewaysKeyDPulse:b100Right,
    chromiumWebGL2:true,realPointerLockedWInput:true,
    artificialQaTicks:0,realHumanRetreatKeyS:false,
    sourceQaOptIn:true,normalFixedDefaultUnchanged:true,
@@ -426,7 +435,8 @@ async function run(){
   console.log('T21_B96_REAL_CHROME_HUMAN_PARKED_SEVEN_NATIVE_REJOINS_PASS',
    JSON.stringify({
     tick:n.tick,rejoins:n.cpu.physicalRejoins,
-    sourceQaVariant:b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
+    sourceQaVariant:b100Right?'B100_RIGHT_SHORT':
+     b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
     settledHuman,
     detour:completed.detour,parkedAfterSettlingMeters:completed.humanParked,
     noHumanRetreat:true,forcedMatchStart:false,original4v4Certified:false
