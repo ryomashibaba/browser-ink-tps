@@ -1,0 +1,45 @@
+name: T21 W10-B109 real KeyW release / B105 direct-contact proof
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b109-real-keyw-calibrated-direct.mjs'
+      - '.github/workflows/t21-w10b109-real-keyw-direct.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-real-keyw-release:
+    name: True Chrome original human release Z=${{ matrix.release_z }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      matrix:
+        release_z: ['64.42', '64.52', '64.60']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Check source-only physical script and original frozen build
+        run: |
+          node --check scripts/t21-w10b109-real-keyw-calibrated-direct.mjs
+          node --test scripts/t21-w10b106-original-contact-classifier.test.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Actual W/D/A keyboard and original Rapier B105-near direct-recovery proof
+        env:
+          T21_B109_RIGHT_PULSE_TICKS: '6'
+          T21_B109_RELEASE_Z: ${{ matrix.release_z }}
+          T21_B109_CORRECTION_PHASE: EARLY
+          T21_B109_EVIDENCE_DIR: /tmp/t21-w10b109
+        run: node scripts/t21-w10b109-real-keyw-calibrated-direct.mjs
+      - name: Preserve actual real Chrome input, source KCC and fail-closed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b109-native-keyw-release-${{ matrix.release_z }}
+          path: /tmp/t21-w10b109/
+          if-no-files-found: warn
+          retention-days: 14
