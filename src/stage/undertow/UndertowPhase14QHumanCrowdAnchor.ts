@@ -8,6 +8,9 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as freeze}
  from './UndertowSpillwayBlockoutGeometry';
 import type {T21QFoot} from './UndertowPhase14QSharedActorCollision';
 import {auditPhase14QSourceProjectedProxySeal} from './UndertowPhase14QProjectedProxySeal';
+import {diagnoseB118RealOriginalCrowdDrift,
+ type B118NativeCrowdDriftWitness}
+ from './UndertowPhase14QRealCrowdDriftWitness';
 
 export interface Phase14QHumanAnchorFrame{
  source:'ACTUAL_RAPIER_PLAYER_FOOT_TO_EIGHTH_RECAST_CROWD_AGENT';
@@ -39,6 +42,8 @@ export interface Phase14QHumanAnchorFrame{
 export class UndertowPhase14QHumanCrowdAnchor{
  private readonly agent:CrowdAgent;
  private lastHumanFoot:T21QFoot|null=null;
+ private b118SyncedFrame:Phase14QHumanAnchorFrame|null=null;
+ private b118LastWitness:B118NativeCrowdDriftWitness|null=null;
  private closed=false;
  private readonly maximumProjectionMeters=.26;
 
@@ -88,7 +93,7 @@ export class UndertowPhase14QHumanCrowdAnchor{
    if(mismatch>.065)
      throw Error('T21_PHASE14Q_HUMAN_CROWD_PROXY_TELEPORT_DID_NOT_SYNC');
    this.lastHumanFoot={...real};
-   return {
+   const nativeFrame:Phase14QHumanAnchorFrame={
     source:'ACTUAL_RAPIER_PLAYER_FOOT_TO_EIGHTH_RECAST_CROWD_AGENT',
     realHumanFoot:{...real},
     crowdAgentFoot:{x:after.x,y:after.y,z:after.z},
@@ -100,6 +105,8 @@ export class UndertowPhase14QHumanCrowdAnchor{
     cpuAgentTeleported:false,playerRapierBodyMoved:false,
     sourceNavmeshModified:false,productionAuthorized:false
    };
+   this.b118SyncedFrame=nativeFrame;
+   return nativeFrame;
  }
  /**
   * M4 post-Crowd tick fence. Recast may displace a 0-speed HUMAN
@@ -131,9 +138,21 @@ export class UndertowPhase14QHumanCrowdAnchor{
        this.lastHumanFoot.z-actual.z)>1e-5)
      throw Error('T21_PHASE14Q_UNMATCHED_HUMAN_FIXED_TICK');
    const before=this.agent.position();
-   const drift=Math.hypot(before.x-actual.x,before.z-actual.z);
-   if(!Number.isFinite(drift)||drift>2)
-     throw Error('T21_PHASE14Q_UNBOUNDED_CROWD_DRIFT');
+   // Actual passive HUMAN crowd agent before/after this original Recast tick.
+   // This records drift at the original strict fence: it NEVER permits >2m.
+   const synced=this.b118SyncedFrame;
+   if(!synced)throw Error('T21_W10B118_REAL_PRE_CROWD_WITNESS_NOT_AVAILABLE');
+   const witness=diagnoseB118RealOriginalCrowdDrift({
+    physicalHumanFoot:actual,
+    originalNavmeshProjectedFoot:synced.sourceProjectedFoot,
+    synchronizedProxyBeforeCrowd:synced.crowdAgentFoot,
+    actualProxyAfterRecast:{x:before.x,y:before.y,z:before.z}
+   });
+   this.b118LastWitness=witness;
+   if(witness.unboundedOriginalCrowdDrift)
+     throw Error('T21_PHASE14Q_UNBOUNDED_CROWD_DRIFT '+
+      JSON.stringify(witness));
+   const drift=witness.postCrowdVsPhysicalHorizontalMeters;
    const sealed=this.syncActualPlayerFoot(actual);
    // B117: original NavMesh projection may be 0.07–0.26m away from a
    // genuine Rapier foot while the Crowd proxy is *perfectly* restored to
@@ -160,6 +179,19 @@ export class UndertowPhase14QHumanCrowdAnchor{
      cpuRecastAgentTeleported:false,
      productionAuthorized:false
    };
+ }
+ /** Last actual 60Hz passive proxy motion, including before a fail-closed. */
+ get lastB118RealCrowdWitness():B118NativeCrowdDriftWitness|null{
+  return this.b118LastWitness?{
+   ...this.b118LastWitness,
+   actualRapierPlayerFoot:{...this.b118LastWitness.actualRapierPlayerFoot},
+   originalSourceNavmeshProjectedFoot:
+    {...this.b118LastWitness.originalSourceNavmeshProjectedFoot},
+   preCrowdSyncedPassiveProxyFoot:
+    {...this.b118LastWitness.preCrowdSyncedPassiveProxyFoot},
+   postRecastCrowdPassiveProxyFoot:
+    {...this.b118LastWitness.postRecastCrowdPassiveProxyFoot}
+  }:null;
  }
  get rawCrowdPosition():T21QFoot{
    const p=this.agent.position();

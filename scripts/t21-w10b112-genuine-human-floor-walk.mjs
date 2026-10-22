@@ -208,6 +208,7 @@ async function run(){
    actualSuspicionCount>0?'SUSPECTED_UNSUPPORTED_NATIVE_DESCENT':
    !genuineEndpointSourceSupported?'TRUE_KCC_ENDPOINT_SOURCE_UNSUPPORTED':
    'REAL_SUPPORTED_FORWARD_TRAVERSE_GT_20M';
+  const realCrowdDriftWitness=end.humanCrowd?.b118LastRealCrowdDriftWitness??null;
   const report={
    schema:'W10_B116_GENUINE_FORWARD_SOURCE_SUPPORT_TRANSITIONS_V1',
    environment:'REAL_CHROMIUM_HEADLESS_SWIFTSHADER_NOT_OWNER_GPU',
@@ -220,6 +221,7 @@ async function run(){
    genuineOriginalSourceCollidersSeen:supports,
    genuineSourceTransitions:sourceTransitions,
    actualOriginalSourceSamples:samples,
+   b118RealOriginalPassiveCrowdPrePostWitness:realCrowdDriftWitness,
    genuineKccAndOriginalRapierSupportedAtEnd:genuineEndpointSourceSupported,
    actualUnsupportedDescentSuspicionCount:actualSuspicionCount,
    lastMeasuredFiveOriginalRapierRays:footprint,
@@ -240,11 +242,24 @@ async function run(){
     realForwardProgressMeters:forwardProgressMeters,
     actualOriginalSolids:supports,sourceTransitions:sourceTransitions.length,
     actualSuspicionCount,actuallySourceSupportedAtEnd:genuineEndpointSourceSupported,
-    nativeStopReason:end.stopReason,originalAuthority:[25,17,26,0],
+    nativeStopReason:end.stopReason,
+    b118RealRecastCrowdDriftMeters:realCrowdDriftWitness?.
+     postCrowdVsPhysicalHorizontalMeters??null,
+    b118ActualNativeProxyMovedMeters:realCrowdDriftWitness?.
+     recastIntraTickPassiveProxyDisplacementHorizontalMeters??null,
+    originalAuthority:[25,17,26,0],
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
   // Fail closed when a physical stop or insufficient progress prevents the
   // requested route proof; keep JSON/PNG artifact even on CI failure.
+  if(b116Extended&&end.stopReason?.startsWith(
+      'T21_PHASE14Q_UNBOUNDED_CROWD_DRIFT')&&(
+      realCrowdDriftWitness?.schema!==
+       'T21_W10_B118_REAL_ORIGINAL_CROWD_DRIFT_V1'||
+      realCrowdDriftWitness.unboundedOriginalCrowdDrift!==true||
+      realCrowdDriftWitness.existingUnboundedHorizontalFenceMeters!==2))
+   fail('B118_ACTUAL_POST_RECAST_CROWD_WITNESS_MISSING',
+    {reason:end.stopReason,witness:realCrowdDriftWitness});
   if(!reachedTarget||forwardProgressMeters<20||
      actualSuspicionCount>0||!genuineEndpointSourceSupported)
    fail('B116_GENUINE_FORWARD_ROUTE_HOLD',{nativeOutcome,forwardProgressMeters,

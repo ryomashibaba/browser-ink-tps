@@ -14,12 +14,15 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {UndertowPhase14QHumanCrowdAnchor}
  from '../stage/undertow/UndertowPhase14QHumanCrowdAnchor';
+import type {B118NativeCrowdDriftWitness}
+ from '../stage/undertow/UndertowPhase14QRealCrowdDriftWitness';
 
 type Foot=Readonly<{x:number;y:number;z:number}>;
 export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  private anchor:UndertowPhase14QHumanCrowdAnchor|null=null;
  private previous:Foot|null=null;
  private lastFoot:Foot|null=null;
+ private b118Witness:B118NativeCrowdDriftWitness|null=null;
  readonly sourceOnly=true;
  attaches=0;
  detaches=0;
@@ -66,7 +69,10 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
    foot.x-this.lastFoot.x,foot.y-this.lastFoot.y,
    foot.z-this.lastFoot.z)>1e-5)
    throw Error('T21_F3C_HUMAN_PROXY_REAL_FOOT_DRIFT');
-  this.anchor.sealAfterCrowdUpdate(foot);
+  // Preserve the measured pre/post actual Recast tick even if the
+  // original strict >2m safety fence throws before a restoration.
+  try{this.anchor.sealAfterCrowdUpdate(foot);}
+  finally{this.b118Witness=this.anchor.lastB118RealCrowdWitness;}
  }
  private suspend(){
   if(this.anchor){this.anchor.dispose();this.anchor=null;this.detaches++;}
@@ -75,6 +81,7 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  get snapshot(){
   return {active:!!this.anchor,attaches:this.attaches,
    detaches:this.detaches,airborneOrUnverifiableTicks:this.excluded,
+   b118LastRealCrowdDriftWitness:this.b118Witness,
    fakeHumanPhysicalActors:0,playerFootMoved:false,
    sourceNavmeshChanged:false,productionAuthorized:false};
  }
