@@ -24,3 +24,11 @@ The first B112 monitor sampled original Rapier stage under the **capsule centerl
 **Frozen source 25/17/26/0; 60Hz Rapier player; 7 genuine CPU physical agents; FIXED default; scoreable and source actor promotion forbidden; natural enemy cross-routes 0/12; main/Pages/Draft PR #5 untouched.** The geometry is not changed. All B114 results are QA-only *read-only rays* and do not prove the specific historical central-path fall reproduction.
 
 B114 is not COMPLETE until the commit's Vitest/TypeScript/Vite build and actual original-stage Chrome path have run and returned PASS, including truthful B113 manual download. For real-map fixes, first reproduce the actual user's cited area with original collision-triangle/support evidence and source registration; never add guessed bridging floors.
+
+## Original Chrome verified result (B114 exact-source commit `48a005d2b213cb21764d8bee88dfa695fac3e08d`)
+- [Workflow #39799477744](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39799477744), job `119895758491`: **all recorded steps SUCCESS**; workflow overall status was still `in_progress` when last fetched. Do not claim the workflow's final `conclusion` until that field changes.
+- Tests: **4 test files / 15 Vitest tests PASS**, Vite build PASS.
+- Actual Chromium held KeyW drove native original PlayerController for **121 native ticks**, genuine horizontal movement **9.603549m**. Final body approximately `[-0.173460,8.395000,58.291039]`.
+- **5 real original Rapier probes** at tick **127**, `CENTER_AND_EDGE_SOURCE_RAYS`, original ID `UndertowT21D:spawn-high-positive-z`. Not a KCC contact certificate.
+- Real CDP Esc + UI-button mouse and valid downloaded B113 source JSON at tick 169; original authority **25/17/26/0**, suspicious fall count **0**.
+- **No actual central-road or own-home sector floor failure reproduced**. No approved collision/geometry patch.
