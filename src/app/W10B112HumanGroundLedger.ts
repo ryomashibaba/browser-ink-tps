@@ -36,7 +36,7 @@ export function classifyB115UnsupportedRayContext(
   'NO_NEAR_ORIGINAL_FOOT_RAY_KCC_UNGROUNDED';
 }
 function cloneB115Footprint(f:B114OriginalFootprint):B114OriginalFootprint{
- return {...f,originalBody:[...f.originalBody],
+ return {...f,originalBody:[...f.originalBody] as [number,number,number],
   probes:f.probes.map(p=>({...p})),
   observedSourceSolidIds:[...f.observedSourceSolidIds]};
 }
