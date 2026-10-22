@@ -1045,7 +1045,7 @@ export class UndertowF3PlayablePreviewApp{
    matchState:s.matchState,stopReason:s.stopReason,
    footLedger:s.b112OriginalHumanGround
   });
-  const file=new Blob([JSON.stringify(report,null,2)+'\\n'],
+  const file=new Blob([JSON.stringify(report,null,2)+'\n'],
    {type:'application/json'});
   const href=URL.createObjectURL(file);
   const link=document.createElement('a');
