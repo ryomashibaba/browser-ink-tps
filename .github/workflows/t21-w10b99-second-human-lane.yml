@@ -1,0 +1,42 @@
+name: T21 W10-B99 second real human lane original-source detour
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
+      - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-w10b99-second-human-lane.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  second-real-human-lane:
+    name: Real KeyA plus KeyW source-lip collision and native 7/7 recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify unchanged original-source build and native-script syntax
+        run: |
+          node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Prove alternate physically occupied lane with real Chrome input
+        env:
+          T21_W10B96_PARKED: '1'
+          T21_W10B99_VARIANT: LEFT_SHORT
+          T21_W10B75_AIM: FIXED
+          T21_F3_SHOT_DIR: /tmp/t21-w10b99
+        run: node scripts/t21-w10b75-live-native-ink-hud.mjs
+      - name: Preserve real Chrome render and source-only witness on pass or fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b99-second-real-human-lane-source-detour
+          path: /tmp/t21-w10b99/
+          if-no-files-found: warn
+          retention-days: 14
