@@ -68,6 +68,7 @@ import {createB70OwnerAimComparisonUI}
 import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {W10B112HumanGroundLedger} from './W10B112HumanGroundLedger';
+import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
@@ -1720,12 +1721,32 @@ export class UndertowF3PlayablePreviewApp{
      );
      const bodyFootY=physical.y-
       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+     const centerSupport={
+      sourceSolidId:support?.solidId??null,
+      gapMeters:support?Number((bodyFootY-support.point.y).toFixed(6)):null
+     };
+     const mode=this.player.currentMode;
+     const sourceFootprint=auditB114OriginalFootprint({
+      tick:frame,body:[physical.x,physical.y,physical.z],mode,
+      capsuleRadiusMeters:mode==='HUMAN'?
+       PLAYER_CHARACTER_PHYSICS.humanRadiusMeters:
+       PLAYER_CHARACTER_PHYSICS.squidRadiusMeters,
+      center:centerSupport,
+      originalRapierProbe:(dx,dz)=>{
+       const trueOriginalBody=new Vec3(physical.x+dx,physical.y,physical.z+dz);
+       const hit=this.physics.castCharacterFootSupport(
+        trueOriginalBody,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,mode
+       );
+       return {sourceSolidId:hit?.solidId??null,
+        gapMeters:hit?Number((bodyFootY-hit.point.y).toFixed(6)):null};
+      }
+     });
      this.b112GroundLedger.observe({
       tick:frame,center:[physical.x,physical.y,physical.z],
-      grounded:this.stats.playerGrounded,mode:this.player.currentMode,
-      sourceSolidId:support?.solidId??null,
-      sourceSupportGapMeters:support?
-       Number((bodyFootY-support.point.y).toFixed(6)):null
+      grounded:this.stats.playerGrounded,mode,
+      sourceSolidId:centerSupport.sourceSolidId,
+      sourceSupportGapMeters:centerSupport.gapMeters,
+      footprint:sourceFootprint
      });
     }
     // No guessed exterior kill threshold; out-of-world motion is a

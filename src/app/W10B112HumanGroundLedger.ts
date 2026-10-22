@@ -5,6 +5,7 @@
  * alter player movement or decide a Nintendo source-derived death boundary.
  * "SUSPECT" is a reproducible diagnostic pattern, NOT proof of a mesh hole.
  */
+import type {B114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 export type B112FootSample={
  tick:number;
  /** Native body center from PlayerController / Rapier after physics.step. */
@@ -14,6 +15,8 @@ export type B112FootSample={
  sourceSolidId:string|null;
  /** Vertical distance from true capsule foot to original ray hit. */
  sourceSupportGapMeters:number|null;
+ /** B114: optional read-only actual capsule-width original Rapier witness. */
+ footprint?:B114OriginalFootprint;
 };
 
 export type B112FloorSuspicion={
@@ -66,6 +69,15 @@ export class W10B112HumanGroundLedger {
    throw Error('B112_INVALID_NATIVE_FOOT_WITNESS');
   if(this.last!==null&&s.tick<=this.last.tick)
    throw Error('B112_NONMONOTONIC_NATIVE_TICK');
+  if(s.footprint&&(
+    s.footprint.nativeTick!==s.tick||
+    s.footprint.mode!==s.mode||
+    s.footprint.originalBody.some((value,i)=>value!==s.center[i])||
+    s.footprint.probes.length!==5||
+    s.footprint.noActorMutation!==true||
+    s.footprint.originalGeometryAdded!==0||
+    s.footprint.originalFloorHoleCertified!==false))
+   throw Error('B114_NATIVE_FOOTPRINT_NOT_ORIGINAL_READ_ONLY');
   if(s.sourceSolidId===null&&s.sourceSupportGapMeters!==null||
      s.sourceSolidId!==null&&s.sourceSupportGapMeters===null)
    throw Error('B112_SOURCE_HIT_ID_GAP_MISMATCH');
@@ -116,12 +128,14 @@ export class W10B112HumanGroundLedger {
    lastNativeTick:this.last?.tick??null,
    lastOriginalSourceHitId:this.last?.sourceSolidId??null,
    lastOriginalSourceGapMeters:this.last?.sourceSupportGapMeters??null,
+   lastOriginalFootprint:this.last?.footprint??null,
    genuineKccGrounded:this.last?.grounded??null,
    currentUnsupportedNativeTicks:this.consecutiveUnsupportedTicks,
    observedNativeTicks:this.samples.length,
    actualNativeFeet:this.samples.map(s=>({
     tick:s.tick,body:[...s.center],grounded:s.grounded,mode:s.mode,
-    sourceSolidId:s.sourceSolidId,gapMeters:s.sourceSupportGapMeters
+    sourceSolidId:s.sourceSolidId,gapMeters:s.sourceSupportGapMeters,
+    footprint:s.footprint
    })),
    suspicionCount:this.suspicions.length,
    suspicions:this.suspicions.map(e=>({...e,

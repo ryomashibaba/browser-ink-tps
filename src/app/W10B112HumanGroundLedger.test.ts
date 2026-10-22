@@ -46,6 +46,33 @@ describe('W10-B112 genuine original-source foot support ledger',()=>{
   expect(q.snapshot().suspicionCount).toBe(0);
   expect(q.snapshot().currentUnsupportedNativeTicks).toBe(0);
  });
+ it('B114 five true-source rays remain immutable read-only evidence through snapshots',()=>{
+  const q=new W10B112HumanGroundLedger();
+  const v=frame(120,8.4,true);
+  const footprint={
+   status:'READ_ONLY_FIVE_ORIGINAL_RAPIER_RAYS' as const,
+   nativeTick:120,originalBody:[0,8.4,64] as [number,number,number],
+   mode:'HUMAN' as const,radiusMeters:.4,
+   probes:[{name:'CENTER' as const,offsetX:0,offsetZ:0,
+    sourceSolidId:'source-floor',gapMeters:.03,closeSourceSupport:true},
+    ...(['FRONT','BACK','LEFT','RIGHT'] as const).map(name=>({
+     name,offsetX:0,offsetZ:0,sourceSolidId:null,
+     gapMeters:null,closeSourceSupport:false}))],
+   observedSourceSolidIds:['source-floor'],
+   nearCenter:true,nearPerimeter:false,
+   classification:'CENTER_ONLY_SOURCE_RAY' as const,
+   noActorMutation:true as const,originalGeometryAdded:0 as const,
+   originalFloorHoleCertified:false as const,
+   genuineCapsuleContactCertified:false as const
+  };
+  q.observe({...v,footprint});
+  expect(q.snapshot().lastOriginalFootprint?.classification)
+   .toBe('CENTER_ONLY_SOURCE_RAY');
+  expect(q.snapshot().actualNativeFeet[0]!.footprint?.probes).toHaveLength(5);
+  q.resetOnRespawn();
+  expect(q.snapshot().lastOriginalFootprint).toBeNull();
+  expect(q.snapshot().sourceFloorHoleCertified).toBe(false);
+ });
  it('detects only measured finite ordered native ticks and can reset on respawn',()=>{
   const q=new W10B112HumanGroundLedger();
   q.observe(frame(1,8.4,true));

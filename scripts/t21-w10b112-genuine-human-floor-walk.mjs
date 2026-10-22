@@ -125,6 +125,15 @@ async function run(){
   await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
  }
  const end=await snapshot();
+ const footprint=end.b112OriginalHumanGround.lastOriginalFootprint;
+ if(!footprint||footprint.nativeTick>end.tick||
+    footprint.probes?.length!==5||
+    footprint.originalFloorHoleCertified!==false||
+    footprint.noActorMutation!==true||
+    footprint.genuineCapsuleContactCertified!==false||
+    footprint.originalGeometryAdded!==0||
+    footprint.probes?.[0]?.name!=='CENTER')
+  fail('B114_ACTUAL_RAPIER_FOOTPRINT_NOT_VERIFIED');
  const moved=Math.hypot(
   end.player.position[0]-first.player.position[0],
   end.player.position[2]-first.player.position[2]
@@ -144,6 +153,7 @@ async function run(){
   actualHorizontalDisplacementMeters:moved,
   samples,actualNativeGroundSupport:end.b112OriginalHumanGround,
   observedSourceFallSuspicionCount:end.b112OriginalHumanGround.suspicionCount,
+  actualOriginalFootprintB114:footprint,
   observedMapCoverage:'LIMITED_UPPER_SOURCE_WALK_ONLY',
   anySuspectedFloorHoleProven:false,
   originalSourceGeometryChanged:false,scoreablePromotion:0,
@@ -197,6 +207,13 @@ async function run(){
    sourceAuthority:trace.originalSourceAuthority,
    suspectCount:trace.authenticSuspectedDescentEvents,
    originalHoleCertified:false,completeMapCertified:false}));
+ console.log('T21_B114_GENUINE_ORIGINAL_CAPSULE_WIDTH_RAY_WITNESS',JSON.stringify({
+  actualNativeTick:footprint.nativeTick,realProbeCount:footprint.probes.length,
+  sourceRayClassification:footprint.classification,
+  actualOriginalSolids:footprint.observedSourceSolidIds,
+  originalFloorHoleCertified:false,sourceAuth:[25,17,26,0],
+  formal4v4Certified:false
+ }));
  console.log('T21_B112_REAL_ORIGINAL_RAPIER_HUMAN_FOOT_WITNESS',JSON.stringify({
   nativeTicks:end.tick-first.tick,horizontalMovedMeters:moved,
   body:end.player.position,
