@@ -96,7 +96,8 @@ async function run(){
   width:1600,height:900,deviceScaleFactor:1,mobile:false});
  const search='?t21Play=preview'+
   (mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
-  (parkedB96?'&t21QaDrive=source&t21W10B93=upperDetour':'');
+  (parkedB96?'&t21QaDrive=source&t21W10B93=upperDetour':'')+
+  (parkedB96&&b100Right?'&t21W10B102=contactProbe':'');
  await cmd('Page.navigate',{url:ROOT+search});
  await until(async()=>await evaluate(`(() => {
   const c=document.querySelector('#app-canvas');
@@ -167,7 +168,9 @@ async function run(){
  // Rapier physics while W stayed held in software WebGL2 (<1 FPS).
  // Only read the real player foot; do not synthesize ticks or change poses.
  let b101EarlyParkedRelease=null;
- if(parkedB96){
+ if(parkedB96&&!b100Right){
+  // B100's genuine right-KeyD successful test used HUD-first KeyW-up.
+  // B101 early release remains for the ordinary baseline/left variants.
   const gate=await until(async()=>{
    const n=await snapshot();
    if(n.stopReason||n.originalSourceSolids!==25||
@@ -239,18 +242,23 @@ async function run(){
  },180000);
  // B101: independent HUD confirmation must not prolong live KeyW.
  // The ordinary B75 fixed/sweep playback keeps its prior input behavior.
- const realWRelease=parkedB96?b101EarlyParkedRelease:
+ const realWRelease=parkedB96&&!b100Right?b101EarlyParkedRelease:
   await until(async()=>{
    const n=await snapshot();
    if(n.stopReason)fail('B79_HUMAN_SOURCE_SESSION_STOP_'+n.stopReason);
-   return n.tick>before.tick+33?n:false;
-  },100000);
+   if(!parkedB96)return n.tick>before.tick+33?n:false;
+   const z=n.player.position[2];
+   if(z<63.69)fail('B102_TRUE_W_KEYUP_OVERSHOT_RIGHT_SOURCE_LIP_'+
+    JSON.stringify({tick:n.tick,realHumanFoot:n.player.position}));
+   return z<=64.35?n:false;
+  },100000,parkedB96?90:700);
  if(parkedB96)console.log('T21_B98_REAL_INPUT_POSITION_GATED_KEYUP',
   JSON.stringify({tick:realWRelease.tick,
     realHumanFoot:realWRelease.player.position,realKeyboard:true,
-    usedArtificialQaInput:false,earlyBeforeHud:true}));
+    usedArtificialQaInput:false,earlyBeforeHud:!b100Right,
+    sourceContactProbe:b100Right}));
  await click('mouseReleased');
- if(!parkedB96)
+ if(!parkedB96||b100Right)
   await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
  // B96 deliberately retains the HUMAN at the original source lip.
  // Standard B75 still performs the original true-keyboard retreat.
@@ -291,38 +299,9 @@ async function run(){
  }
  console.log('T21_B79_GENUINE_EARLY_HUMAN_SOURCE_PAINT_HUD_PASS',
   JSON.stringify(humanPulse));
- // Real KeyD can coast to x>+.30 in software WebGL2, where the A3
- // source lip is simply no longer obstructed. One genuine KeyA correction
- // before the parked-human witness (NO KeyS) can recover the intended
- // right-offset position. All movement stays with unchanged Rapier KCC.
- let b101LateralCorrection=null;
- if(parkedB96&&b100Right){
-  const start=await snapshot();
-  if(start.player.position[0]>.14){
-   const keyA={key:'a',code:'KeyA',windowsVirtualKeyCode:65,
-    nativeVirtualKeyCode:65};
-   await cmd('Input.dispatchKeyEvent',{type:'keyDown',...keyA});
-   let end;
-   try{
-    end=await until(async()=>{
-     const n=await snapshot();
-     if(n.stopReason)fail('B101_REAL_LATERAL_CORRECTION_STOP_'+n.stopReason);
-     return n.tick>=start.tick+3?n:false;
-    },60000,90);
-   }finally{
-    await cmd('Input.dispatchKeyEvent',{type:'keyUp',...keyA});
-   }
-   b101LateralCorrection={
-    actualRealKeyA:true,realKeyDBeforeCorrection:true,
-    startTick:start.tick,endTick:end.tick,
-    startHumanFoot:start.player.position,
-    endHumanFoot:end.player.position,
-    noManualPoseUpdate:true,noReverseKeyS:true
-   };
-   console.log('T21_B101_TRUE_KEYA_LATERAL_LANE_CORRECTION',
-    JSON.stringify(b101LateralCorrection));
-  }
- }
+ // B102: no genuine KeyA correction after original KeyD; that
+ // produced a non-obstructing position in B101, defeating this probe.
+ const b101LateralCorrection=null;
  if(parkedB96){
   const settled=await until(async()=>{
    const n=await snapshot();
@@ -455,6 +434,8 @@ async function run(){
      renderFrames:diag.nativeRenderFrames,paused:n.paused,
      rejoined:diag.actualCpuRejoined,detour}));
    }
+   if(b100Right&&n.b102OriginalA3Kcc?.enabled!==true)
+    fail('B102_ORIGINAL_A3_RAPIER_CONTACT_PROBE_NOT_ENABLED');
    if(n.cpu.physicalRejoins.length===7&&!detour)
     fail('B98_FALSE_POSITIVE_SEVEN_REJOINS_WITHOUT_REAL_A3_DETOUR_'+
       JSON.stringify(storePartial(n,
