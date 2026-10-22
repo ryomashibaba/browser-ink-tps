@@ -68,6 +68,7 @@ import {createB70OwnerAimComparisonUI}
 import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {W10B112HumanGroundLedger} from './W10B112HumanGroundLedger';
+import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
@@ -184,6 +185,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b62NativeEvidence=new W10B62NativeSessionEvidence();
  // W10-B112 read-only source-foot forensic witness, QA opt-in only.
  private readonly b112GroundLedger=new W10B112HumanGroundLedger();
+ private b113FloorWarning:HTMLElement|null=null;
  private readonly b112GroundEnabled=(()=>{
   const q=new URL(location.href).searchParams;
   return q.get('t21QaDrive')==='source'&&
@@ -614,6 +616,35 @@ export class UndertowF3PlayablePreviewApp{
   });
   this.panel.querySelector('#t21-f3-pause')?.addEventListener('click',()=>this.togglePause());
   this.panel.querySelector('#t21-f3-reset')?.addEventListener('click',()=>this.restart());
+  // W10-B113: one optional local evidence click, no auto-upload or new physics.
+  if(this.b112GroundEnabled){
+   const capture=document.createElement('section');
+   capture.id='t21-f3-b113-floor-capture';
+   capture.dataset.sourceOnly='true';capture.dataset.sourceScoreable='0';
+   capture.style.cssText='margin:9px 0;padding:9px;border:1px solid #f1b86e;'+
+    'border-radius:8px;background:rgba(60,35,12,.88);color:#ffe5c3';
+   const title=document.createElement('div');
+   title.textContent='REAL ORIGINAL FLOOR SUPPORT · QA ONLY';
+   title.style.cssText='font:800 11px/1.4 system-ui';
+   const state=document.createElement('div');
+   state.id='t21-f3-b113-floor-state';
+   state.textContent='Native 60Hz source foot observation';
+   state.style.cssText='font:600 10px/1.5 system-ui;margin:5px 0';
+   const button=document.createElement('button');
+   button.type='button';button.id='t21-f3-b113-floor-save';
+   button.textContent='SAVE REAL FLOOR TRACE JSON';
+   button.style.cssText='padding:7px 9px;width:100%;border:1px solid #ffc98e;'+
+    'border-radius:6px;background:#442b16;color:#fff1d7;'+
+    'font:800 10px system-ui;cursor:pointer';
+   button.addEventListener('click',()=>this.saveW10B113NativeFoot());
+   const note=document.createElement('div');
+   note.textContent='Esc to release mouse, then click save. Suspect does NOT prove a floor hole.';
+   note.style.cssText='font:500 9px/1.5 system-ui;margin-top:5px';
+   capture.append(title,state,button,note);
+   const controls=this.panel.querySelector('#t21-f3-reset')?.parentElement;
+   if(!controls)throw Error('B113_PLAY_CONTROLS_MISSING');
+   controls.insertAdjacentElement('afterend',capture);
+  }
   this.panel.querySelector('#t21-f3-structures')?.addEventListener('click',()=>{
    this.structures.root.enabled=!this.structures.root.enabled;
    const btn=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement;
@@ -698,6 +729,22 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  if(this.b112GroundEnabled){
+   const warning=document.createElement('div');
+   warning.id='t21-f3-b113-ground-warning';
+   warning.hidden=true;
+   warning.style.cssText='position:fixed;left:50%;bottom:76px;'+
+    'transform:translateX(-50%);z-index:44;pointer-events:none;'+
+    'max-width:min(440px,calc(100vw - 36px));'+
+    'padding:10px 14px;border-radius:10px;border:1px solid #ffc07f;'+
+    'background:rgba(56,28,17,.93);color:#fff4dd;text-align:center;'+
+    'font:800 11px/1.4 system-ui;box-shadow:0 10px 30px #0009;'+
+    'display:none';
+   warning.setAttribute('role','status');
+   warning.textContent='POSSIBLE UNSUPPORTED DESCENT · Esc → SAVE FLOOR TRACE (QA)';
+   ui.appendChild(warning);
+   this.b113FloorWarning=warning;
+  }
   // B58: native session telemetry, not a fabricated Turf scoreboard.
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
@@ -977,6 +1024,37 @@ export class UndertowF3PlayablePreviewApp{
   link.click();
   link.remove();
   window.setTimeout(()=>URL.revokeObjectURL(href),15_000);
+ }
+ /** W10-B113 one explicit browser-local source-floor evidence save.
+  * No automatic uploads, manufactured geometry or score authority. */
+ private saveW10B113NativeFoot(){
+  if(!this.b112GroundEnabled||
+     document.pointerLockElement===this.canvas)return;
+  const s=this.snapshot();
+  if(!s.b112OriginalHumanGround.enabled)
+   throw Error('B113_NATIVE_GROUND_NOT_ENABLED');
+  const report=buildB113NativeFloorTrace({
+   nativeTick:s.tick,
+   humanBody:[s.player.position[0]!,s.player.position[1]!,s.player.position[2]!],
+   originalSourceSolids:s.originalSourceSolids,
+   originalPaintSurfaces:s.originalPaintSurfaces,
+   originalSourceNavigationLinks:s.originalSourceNavigationLinks??0,
+   sourceScoreablePromotions:s.sourceScoreablePromotions,
+   productionAuthorized:s.productionAuthorized,
+   unrestricted4v4Certified:s.unrestricted4v4Certified,
+   matchState:s.matchState,stopReason:s.stopReason,
+   footLedger:s.b112OriginalHumanGround
+  });
+  const file=new Blob([JSON.stringify(report,null,2)+'\\n'],
+   {type:'application/json'});
+  const href=URL.createObjectURL(file);
+  const link=document.createElement('a');
+  link.href=href;
+  link.download='T21_W10B113_ORIGINAL_FLOOR_TRACE_TICK_'+s.tick+'.json';
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();link.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(href),15000);
  }
  /** B62: user-initiated save after real native TIME_UP only.
   * Counts and rates, no positions, private source data or auto uploads.
@@ -1601,7 +1679,7 @@ export class UndertowF3PlayablePreviewApp{
      if(this.respawnFrames>=150){
       this.resources.reset();
       this.player.teleport(this.humanSpawn);
-      this.b112GroundLedger.reset(); // real respawn, not a fall witness
+      this.b112GroundLedger.resetOnRespawn(); // retain the real pre-fall witness
       this.player.setLifecycleActive(true);
       this.humanRespawns++;
       this.respawnFrames=0;
@@ -2380,6 +2458,24 @@ export class UndertowF3PlayablePreviewApp{
   // card immediately instead of leaving stale RUNNING text on screen.
   this.refreshB25PaintRun();
   const state=this.snapshot();
+  if(state.b112OriginalHumanGround.enabled){
+   const ground=state.b112OriginalHumanGround;
+   const line=this.panel.querySelector<HTMLElement>('#t21-f3-b113-floor-state');
+   if(line){
+    line.textContent='KCC grounded '+ground.genuineKccGrounded+
+     ' · original solid '+(ground.lastOriginalSourceHitId??'NONE')+
+     ' · suspect descents '+ground.suspicionCount+
+     ' · native tick '+(ground.lastNativeTick??'N/A');
+    line.dataset.realSuspicionCount=String(ground.suspicionCount);
+   }
+   if(this.b113FloorWarning){
+    const visible=ground.suspicionCount>0&&
+     !this.survey.snapshot().active&&this.galleryIndex<0;
+    this.b113FloorWarning.hidden=!visible;
+    this.b113FloorWarning.style.display=visible?'block':'none';
+    this.b113FloorWarning.dataset.originalFloorHoleCertified='false';
+   }
+  }
   // Only genuine already-advanced Rapier/Crowd/GameInk state is sampled.
   // Observe BEFORE the real TIME_UP end panel is made clickable.
   this.b62NativeEvidence.observe(state);
