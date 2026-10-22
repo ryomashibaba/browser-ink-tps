@@ -5,7 +5,7 @@
  * A limited upper-stage path is NOT certification of the complete map.
  */
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdirSync,writeFileSync} from 'node:fs';
+import {mkdirSync,writeFileSync,readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
@@ -91,6 +91,8 @@ async function run(){
   else p.yes(data.result||{});
  });
  await cmd('Page.enable');await cmd('Runtime.enable');
+ // Local download only after genuine CDP click, not automatic.
+ await cmd('Page.setDownloadBehavior',{behavior:'allow',downloadPath:output});
  await cmd('Emulation.setDeviceMetricsOverride',
   {width:1600,height:900,deviceScaleFactor:1,mobile:false});
  await cmd('Page.navigate',{url:root+'?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'});
@@ -151,6 +153,50 @@ async function run(){
  };
  writeFileSync(resolve(output,evidence.screenshot.filename),frame);
  writeFileSync(resolve(output,'b112-real-source-foot-walk.json'),JSON.stringify(evidence,null,2));
+ // W10-B113 actual Chrome Esc, CDP mouse click, and JSON saved to host.
+ const esc={key:'Escape',code:'Escape',
+  windowsVirtualKeyCode:27,nativeVirtualKeyCode:27};
+ await cmd('Input.dispatchKeyEvent',{type:'keyDown',...esc});
+ await cmd('Input.dispatchKeyEvent',{type:'keyUp',...esc});
+ await until(async()=>await evaluate('document.pointerLockElement===null'),20000,150);
+ const point=await evaluate(`(()=>{
+  const button=document.querySelector('#t21-f3-b113-floor-save');
+  const section=document.querySelector('#t21-f3-b113-floor-capture');
+  if(!button||!section||button.hidden||section.hidden)return null;
+  const r=button.getBoundingClientRect();
+  return r.width>50&&r.height>15&&r.left>=0&&r.top>=0&&
+   r.right<=window.innerWidth&&r.bottom<=window.innerHeight?
+   {x:r.left+r.width/2,y:r.top+r.height/2}:null;
+ })()`);
+ if(!point)fail('B113_SAVE_BUTTON_NOT_VISIBLE');
+ await cmd('Input.dispatchMouseEvent',{
+  type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});
+ await cmd('Input.dispatchMouseEvent',{
+  type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1});
+ const saved=await until(async()=>{
+  try{
+   const name=readdirSync(output).find(n=>
+    /^T21_W10B113_ORIGINAL_FLOOR_TRACE_TICK_\\d+\\.json$/.test(n));
+   if(!name)return false;
+   const report=JSON.parse(readFileSync(resolve(output,name),'utf-8'));
+   return report.schema==='W10_B113_MANUAL_ORIGINAL_FLOOR_TRACE_V1'?
+    {name,report}:false;
+  }catch{return false;}
+ },30000,250);
+ const trace=saved.report;
+ if(trace.genuineNativeTick<end.tick||
+    trace.originalSourceFloorHoleCertified!==false||
+    trace.productionAuthorized!==false||
+    trace.unrestricted4v4Certified!==false||
+    trace.observedOriginalFoot?.noActorPositionMutation!==true||
+    JSON.stringify(trace.originalSourceAuthority)!=='[25,17,26,0]')
+  fail('B113_REAL_BROWSER_DOWNLOAD_INVALID');
+ console.log('T21_B113_REAL_CHROME_ONE_CLICK_NATIVE_FLOOR_JSON_PASS',
+  JSON.stringify({realCDPEscapeAndMouse:true,download:saved.name,
+   genuineNativeTick:trace.genuineNativeTick,
+   sourceAuthority:trace.originalSourceAuthority,
+   suspectCount:trace.authenticSuspectedDescentEvents,
+   originalHoleCertified:false,completeMapCertified:false}));
  console.log('T21_B112_REAL_ORIGINAL_RAPIER_HUMAN_FOOT_WITNESS',JSON.stringify({
   nativeTicks:end.tick-first.tick,horizontalMovedMeters:moved,
   body:end.player.position,
