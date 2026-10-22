@@ -126,6 +126,17 @@ export class UndertowF3PlayablePreviewApp{
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
  private readonly shared:UndertowPhase14QSharedActorCollision;
+ // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
+ // No approvals, velocities, poses, colliders or NavLinks are changed.
+ private readonly b102OriginalA3Kcc={
+  enabled:false,a3NativeAudits:0,a3Rejected:0,
+  humanProximateRapierBlocks:0,
+  firstBlocked:[] as Array<{
+   tick:number;cause:string;colliderOwnerIds:readonly string[];
+   a3Foot:[number,number,number];humanPosition:[number,number,number];
+   horizontalSeparationMeters:number
+  }>
+ };
  private readonly cpu:CpuAgentSystem;
  /** Explicit source QA only. Never enabled by ordinary T20/T21 routes. */
  private readonly cpuKitQaEnabled=new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
@@ -349,6 +360,38 @@ export class UndertowF3PlayablePreviewApp{
   const combatTargets=new CombatTargetSystem(app,this.stats,false);
   this.feedback=new GameFeedback(app,canvas);
   this.shared=new UndertowPhase14QSharedActorCollision(this.physics,stage,true);
+  const b102Args=new URL(location.href).searchParams;
+  if(b102Args.get('t21QaDrive')==='source'&&
+     b102Args.get('t21W10B93')==='upperDetour'&&
+     b102Args.get('t21W10B102')==='contactProbe'){
+   this.b102OriginalA3Kcc.enabled=true;
+   const nativeAudit=this.shared.auditGroundStep.bind(this.shared);
+   this.shared.auditGroundStep=(actorId,from,to,dt)=>{
+    const actual=nativeAudit(actorId,from,to,dt);
+    if(actorId==='A3'){
+     this.b102OriginalA3Kcc.a3NativeAudits++;
+     if(!actual.approved){
+      this.b102OriginalA3Kcc.a3Rejected++;
+      const human=this.player.getPosition();
+      const distance=Math.hypot(from.x-human.x,from.z-human.z);
+      const originalDynamic=actual.colliderOwnerIds.includes(
+       'REAL_PLAYER_OR_UNREGISTERED_DYNAMIC_ACTOR');
+      if(originalDynamic&&distance<1.2){
+       this.b102OriginalA3Kcc.humanProximateRapierBlocks++;
+       if(this.b102OriginalA3Kcc.firstBlocked.length<12)
+        this.b102OriginalA3Kcc.firstBlocked.push({
+         tick:this.clock.tick,cause:actual.cause,
+         colliderOwnerIds:actual.colliderOwnerIds,
+         a3Foot:[from.x,from.y,from.z],
+         humanPosition:[human.x,human.y,human.z],
+         horizontalSeparationMeters:distance
+        });
+      }
+     }
+    }
+    return actual;
+   };
+  }
   const adapter=new UndertowPhase14ECpuHandoff(stage,true);
   // Native eighth Crowd steering neighbour exists ONLY where the true
   // HUMAN Rapier foot is source-supported. Midair has no fake NavMesh foot.
@@ -2229,6 +2272,11 @@ export class UndertowF3PlayablePreviewApp{
    playerInkRecoveryState:this.stats.playerInkRecoveryState,
    inkDryFireAttempts:this.stats.inkDryFireAttempts,
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   b102OriginalA3Kcc:{
+    ...this.b102OriginalA3Kcc,
+    originalKccUnchanged:true,actorTeleportPerformed:false,
+    productionAuthorized:false
+   },
    b38HumanSub:{
     enabled:this.b38HumanSubEnabled,
     input:'REAL_POINTER_LOCKED_KEY_F',
