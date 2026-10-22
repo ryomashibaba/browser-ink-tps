@@ -372,6 +372,7 @@ async function run(){
     actualCpuRejoined:n.cpu.physicalRejoins,
     actorFeet:n.cpu.cpu.filter(x=>['A1','A2','A3','B1','B2','B3','B4'].includes(x.id)),
     nativeDetour:detour??null,
+    b102OriginalA3Kcc:n.b102OriginalA3Kcc??null,
     originalSource:[n.originalSourceSolids,
       n.originalPaintSurfaces,n.originalSourceNavigationLinks,
       n.sourceScoreablePromotions],
@@ -436,6 +437,11 @@ async function run(){
    }
    if(b100Right&&n.b102OriginalA3Kcc?.enabled!==true)
     fail('B102_ORIGINAL_A3_RAPIER_CONTACT_PROBE_NOT_ENABLED');
+   if(b100Right&&n.cpu.physicalRejoins.length===7&&detour&&
+      n.b102OriginalA3Kcc.humanProximateRapierBlocks===0)
+    fail('B102_RIGHT_DETOUR_WITHOUT_RAPIER_DYNAMIC_CONTACT_PROOF_'+
+     JSON.stringify(storePartial(n,'NO_REAL_A3_HUMAN_PROXIMATE_RAPIER_BLOCK',
+      humanParked,detour)));
    if(n.cpu.physicalRejoins.length===7&&!detour)
     fail('B98_FALSE_POSITIVE_SEVEN_REJOINS_WITHOUT_REAL_A3_DETOUR_'+
       JSON.stringify(storePartial(n,
@@ -463,6 +469,7 @@ async function run(){
      b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
    realSidewaysKeyAPulse:b99Left,
    realSidewaysKeyDPulse:b100Right,
+   b102ActualRapierContact:b100Right?n.b102OriginalA3Kcc:null,
    b101RealLateralCorrection:b101LateralCorrection,
    chromiumWebGL2:true,realPointerLockedWInput:true,
    artificialQaTicks:0,realHumanRetreatKeyS:false,
@@ -490,6 +497,7 @@ async function run(){
      b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
     settledHuman,
     detour:completed.detour,parkedAfterSettlingMeters:completed.humanParked,
+    b102OriginalA3Kcc:b100Right?n.b102OriginalA3Kcc:null,
     noHumanRetreat:true,forcedMatchStart:false,original4v4Certified:false
    }));
   return;
