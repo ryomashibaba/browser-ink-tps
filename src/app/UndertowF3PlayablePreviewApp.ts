@@ -67,6 +67,7 @@ import {createB70OwnerAimComparisonUI}
  from './UndertowF3OwnerAimComparisonUI';
 import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
+import {W10B112HumanGroundLedger} from './W10B112HumanGroundLedger';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
@@ -181,6 +182,13 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
  private readonly b62NativeEvidence=new W10B62NativeSessionEvidence();
+ // W10-B112 read-only source-foot forensic witness, QA opt-in only.
+ private readonly b112GroundLedger=new W10B112HumanGroundLedger();
+ private readonly b112GroundEnabled=(()=>{
+  const q=new URL(location.href).searchParams;
+  return q.get('t21QaDrive')==='source'&&
+   q.get('t21W10B112')==='humanGround';
+ })();
  // B36: normal source-practice can reclaim view-space when pointer-locked.
  // Deterministic source QA keeps its prior DOM layout unless opted in.
  private readonly b36FocusEnabled=(()=>{
@@ -1593,6 +1601,7 @@ export class UndertowF3PlayablePreviewApp{
      if(this.respawnFrames>=150){
       this.resources.reset();
       this.player.teleport(this.humanSpawn);
+      this.b112GroundLedger.reset(); // real respawn, not a fall witness
       this.player.setLifecycleActive(true);
       this.humanRespawns++;
       this.respawnFrames=0;
@@ -1626,6 +1635,21 @@ export class UndertowF3PlayablePreviewApp{
       scoreablePromotionCount:0}
     });
     const physical=this.player.getPosition(this.p);
+    if(this.b112GroundEnabled&&this.resources.currentHp>0){
+     const support=this.physics.castCharacterFootSupport(
+      physical,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+      this.player.currentMode
+     );
+     const bodyFootY=physical.y-
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+     this.b112GroundLedger.observe({
+      tick:frame,center:[physical.x,physical.y,physical.z],
+      grounded:this.stats.playerGrounded,mode:this.player.currentMode,
+      sourceSolidId:support?.solidId??null,
+      sourceSupportGapMeters:support?
+       Number((bodyFootY-support.point.y).toFixed(6)):null
+     });
+    }
     // No guessed exterior kill threshold; out-of-world motion is a
     // visible fail-closed hold until the user intentionally restarts.
     if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
@@ -2294,6 +2318,12 @@ export class UndertowF3PlayablePreviewApp{
    playerInkRecoveryState:this.stats.playerInkRecoveryState,
    inkDryFireAttempts:this.stats.inkDryFireAttempts,
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   b112OriginalHumanGround:this.b112GroundEnabled?
+    this.b112GroundLedger.snapshot():{
+     enabled:false as const,reason:'OPT_IN_SOURCE_QA_ONLY' as const,
+     sourceFloorHoleCertified:false as const,
+     originalStageGeometryModified:false as const
+    },
    b102OriginalA3Kcc:{
     ...this.b102OriginalA3Kcc,
     originalKccUnchanged:true,actorTeleportPerformed:false,
@@ -2498,6 +2528,13 @@ export class UndertowF3PlayablePreviewApp{
     .map(([id,shots])=>id+':'+shots).join(' · '),
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
     ' | paint/s '+state.paintEventsPerSecond.toFixed(1),
+   state.b112OriginalHumanGround.enabled?
+    'B112 REAL SOURCE RAP FOOT · grounded '+
+     state.b112OriginalHumanGround.genuineKccGrounded+
+     ' / source hit '+(state.b112OriginalHumanGround.lastOriginalSourceHitId??'NONE')+
+     ' / suspected unsupported descents '+
+     state.b112OriginalHumanGround.suspicionCount+
+     ' · NOT PROVEN FLOOR HOLES':'',
    'HUMAN avoidance · '+(state.humanCrowd.active?'NATIVE 8TH CROWD':'AIRBORNE / UNVERIFIED')+
     ' · anchors '+state.humanCrowd.attaches,
    'CPU state · '+p.cpu.map(b=>b.id+':'+
