@@ -10,13 +10,13 @@ permissions:
   contents: read
 jobs:
   real-original-keya-timing:
-    name: True Chrome original KeyA start Z=${{ matrix.keya_z }}
+    name: True Chrome KeyA 65.68 and original KeyW release Z=${{ matrix.release_z }}
     runs-on: ubuntu-latest
     timeout-minutes: 19
     strategy:
       fail-fast: false
       matrix:
-        keya_z: ['65.55', '65.68']
+        release_z: ['64.72', '64.80']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,16 +31,16 @@ jobs:
       - name: Actual real KeyD/KeyA/KeyW input with original Rapier KCC and strict 7 CPU direct-recovery gate
         env:
           T21_B110_RIGHT_PULSE_TICKS: '6'
-          T21_B110_RELEASE_Z: '64.60'
+          T21_B110_RELEASE_Z: ${{ matrix.release_z }}
           T21_B110_CORRECTION_PHASE: EARLY
-          T21_B110_KEYA_TRIGGER_Z: ${{ matrix.keya_z }}
+          T21_B110_KEYA_TRIGGER_Z: '65.68'
           T21_B110_EVIDENCE_DIR: /tmp/t21-w10b110
         run: node scripts/t21-w10b110-independent-lateral-timing.mjs
       - name: Retain failed input geometry and real source 7 CPU evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: w10b110-real-KeyA-trigger-${{ matrix.keya_z }}
+          name: w10b110-real-KeyW-release-${{ matrix.release_z }}
           path: /tmp/t21-w10b110/
           if-no-files-found: warn
           retention-days: 14
