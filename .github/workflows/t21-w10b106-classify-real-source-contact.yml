@@ -1,0 +1,62 @@
+name: T21 W10-B106 classify actual A3 source contact outcomes
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b106-original-contact-classifier.mjs'
+      - 'scripts/t21-w10b106-original-contact-classifier.test.mjs'
+      - 'scripts/t21-w10b106-real-original-classification.mjs'
+      - '.github/workflows/t21-w10b106-classify-real-source-contact.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-pure-classification:
+    name: Original Rapier contact classifier regression & frozen-source build
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify classifier input validity, two real Chrome replay scripts, frozen source
+        run: |
+          node --check scripts/t21-w10b106-original-contact-classifier.mjs
+          node --check scripts/t21-w10b106-real-original-classification.mjs
+          node --test scripts/t21-w10b106-original-contact-classifier.test.mjs
+          npm run build -- --base=/browser-ink-tps/
+  original-chrome-case:
+    name: Original Chrome A3 outcome ${{ matrix.case }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        case: [B104_BLOCKED, B105_BRIEF]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify native classifier and source-only build
+        run: |
+          node --check scripts/t21-w10b106-real-original-classification.mjs
+          node --check scripts/t21-w10b106-original-contact-classifier.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Classify real source A3 KCC rejection/direct or original alternate seven-CPU recovery
+        env:
+          T21_B106_RIGHT_PULSE_TICKS: '6'
+          T21_B106_CASE: ${{ matrix.case }}
+          T21_B106_EVIDENCE_DIR: /tmp/t21-w10b106
+        run: node scripts/t21-w10b106-real-original-classification.mjs
+      - name: Retain genuine WebGL2 evidence, including calibration misses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b106-real-source-${{ matrix.case }}
+          path: /tmp/t21-w10b106/
+          if-no-files-found: warn
+          retention-days: 14
