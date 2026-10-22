@@ -30,10 +30,10 @@ if((b99Left||b100Right)&&!parkedB96)
 const children=[],pending=new Map();
 let sock=null,id=0;
 const fail=x=>{throw Error('T21_B75_'+x);};
-async function until(fn,ms=80000){
+async function until(fn,ms=80000,pollMs=700){
  const deadline=Date.now()+ms;
  while(Date.now()<deadline){
-  const v=await fn();if(v)return v;await sleep(700);
+  const v=await fn();if(v)return v;await sleep(pollMs);
  }
  fail('NATIVE_TIMEOUT_'+ms);
 }
@@ -162,10 +162,46 @@ async function run(){
     naturalNativeTicks:end.tick-before.tick,
     actualSideKey:code,actualKeyW:true,poseWrittenByQA:false}));
  }
+ // B101: stop actual physical KeyW before separately waiting for
+ // human ink HUD. Previously that unrelated async check advanced genuine
+ // Rapier physics while W stayed held in software WebGL2 (<1 FPS).
+ // Only read the real player foot; do not synthesize ticks or change poses.
+ let b101EarlyParkedRelease=null;
+ if(parkedB96){
+  const gate=await until(async()=>{
+   const n=await snapshot();
+   if(n.stopReason||n.originalSourceSolids!==25||
+      n.originalPaintSurfaces!==17||
+      n.originalSourceNavigationLinks!==26||
+      n.sourceScoreablePromotions!==0||
+      n.productionAuthorized!==false||
+      n.unrestricted4v4Certified!==false||
+      n.cpu.b93ExperimentalEnabled!==true)
+    fail('B101_ORIGINAL_SOURCE_AUTHORITY_DRIFT_BEFORE_REAL_KEYUP');
+   const z=n.player.position[2];
+   if(z<63.69)
+    fail('B101_REAL_KEYW_LIP_OVERSHOT_BEFORE_RELEASE_'+
+     JSON.stringify({tick:n.tick,realHumanFoot:n.player.position}));
+   return z<=64.35?n:false;
+  },100000,90);
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
+  b101EarlyParkedRelease=gate;
+  const applied=await snapshot();
+  console.log('T21_B101_EARLY_NATIVE_POSITION_GATED_REAL_KEYW_RELEASE',
+   JSON.stringify({variant:b100Right?'B100_RIGHT_SHORT':
+     b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
+    observedNativeTick:gate.tick,realHumanFootAtObservation:gate.player.position,
+    firstNativeTickAfterRealCDPKeyup:applied.tick,
+    firstHumanFootAfterKeyup:applied.player.position,
+    originalSourceOnly:true,actualCDPKeyEvent:true,
+    noSyntheticSimulationAdvance:true,
+    independentHumanInkHUDStillPending:true}));
+ }
  // B79: the real human paint first happens in STAGING, not 5+ seconds
  // into PLAYING. The old B76 smoke began looking only after the 3s
  // activity window expired and falsely failed despite 281 real cells.
- // Witness the actual live HUD *while* physical mouse+W is held.
+ // Witness genuine held-mouse ink while physical W has been released only
+ // for opt-in parked-source QA; normal B75 still holds both inputs here.
  const humanPulse=await until(async()=>{
   const h=await evaluate(`(() => {
    const n=window.__t21F3.snapshot();
@@ -201,26 +237,21 @@ async function run(){
    h.acceptedShots>0&&h.acceptedShots<=h.realShots&&
    h.hudScoreable==='0'&&h.hudOriginal4v4==='false'?h:false;
  },180000);
- // B98: native CPU collision obstruction depends on WHERE real W keyup
- // occurs, not on elapsed native ticks since a late asynchronous CDP shot.
- // B97 kept W for ~10 extra ticks, settled at z=62.87 instead of the
- // actually blocking original upper lip (z~63.60); A3 recovered without
- // using any detour. Stop W against the real Rapier human foot itself.
- const realWRelease=await until(async()=>{
-  const n=await snapshot();
-  if(n.stopReason)fail('B79_HUMAN_SOURCE_SESSION_STOP_'+n.stopReason);
-  if(!parkedB96)return n.tick>before.tick+33?n:false;
-  const z=n.player.position[2];
-  if(z<63.69)fail('B98_TRUE_W_KEYUP_OVERSHOT_BLOCKING_LIP_'+
-    JSON.stringify({nativeTick:n.tick,realHumanFoot:n.player.position}));
-  return z<=64.35?n:false;
- },100000);
+ // B101: independent HUD confirmation must not prolong live KeyW.
+ // The ordinary B75 fixed/sweep playback keeps its prior input behavior.
+ const realWRelease=parkedB96?b101EarlyParkedRelease:
+  await until(async()=>{
+   const n=await snapshot();
+   if(n.stopReason)fail('B79_HUMAN_SOURCE_SESSION_STOP_'+n.stopReason);
+   return n.tick>before.tick+33?n:false;
+  },100000);
  if(parkedB96)console.log('T21_B98_REAL_INPUT_POSITION_GATED_KEYUP',
   JSON.stringify({tick:realWRelease.tick,
     realHumanFoot:realWRelease.player.position,realKeyboard:true,
-    usedArtificialQaInput:false}));
+    usedArtificialQaInput:false,earlyBeforeHud:true}));
  await click('mouseReleased');
- await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
+ if(!parkedB96)
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...kargs});
  // B96 deliberately retains the HUMAN at the original source lip.
  // Standard B75 still performs the original true-keyboard retreat.
  if(!parkedB96){
