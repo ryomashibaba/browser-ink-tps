@@ -82,6 +82,38 @@ export class RapierStagePhysics {
     };
   }
 
+  /**
+   * B112 observational ray to a genuine existing static Rapier stage solid.
+   * Unlike projectile casts, this filters by original character collision
+   * behavior (including grates for human but not squid). This is NOT a
+   * character collision response and cannot authorize additional floor.
+   */
+  public castCharacterFootSupport(
+    bodyCenter:Vec3,bodyToFootMeters:number,mode:StageCharacterMode
+  ):StageRayHit|null{
+    const footY=bodyCenter.y-bodyToFootMeters;
+    const fromY=footY+.34;
+    const ray=new RAPIER.Ray(
+      {x:bodyCenter.x,y:fromY,z:bodyCenter.z},
+      {x:0,y:-1,z:0}
+    );
+    const hit=this.world.castRay(
+      ray,1.45,true,undefined,undefined,undefined,undefined,
+      (collider:Collider)=>{
+        const solid=this.solidByColliderHandle.get(collider.handle);
+        return !!solid&&stageSolidAllowsCharacterMode(solid,mode);
+      }
+    );
+    if(!hit)return null;
+    const solid=this.solidByColliderHandle.get(hit.collider.handle);
+    if(!solid)return null;
+    return {
+      distance:hit.timeOfImpact,
+      point:new Vec3(bodyCenter.x,fromY-hit.timeOfImpact,bodyCenter.z),
+      collider:hit.collider,solidId:solid.id
+    };
+  }
+
   /** Audit-only reverse lookup; does not alter any collision or query authority. */
   public sourceSolidIdForCollider(collider: Collider): string | null {
     return this.solidByColliderHandle.get(collider.handle)?.id ?? null;
