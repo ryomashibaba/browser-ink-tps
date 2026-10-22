@@ -1,0 +1,43 @@
+name: T21 W10-B105 genuinely distinct real right-lane physics test
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b105-distinct-right-pose.mjs'
+      - '.github/workflows/t21-w10b105-distinct-right-physics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-distinct-human-physical-rejoin:
+    name: Real Chrome KeyW release ${{ matrix.release }} / distinct right contact
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        release: [EARLY, MID]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify source-only physics build and native CI script syntax
+        run: |
+          node --check scripts/t21-w10b105-distinct-right-pose.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Calibrate a genuinely distinct human foot then require actual original Rapier contact and seven native CPU rejoins
+        env:
+          T21_B105_RIGHT_PULSE_TICKS: '6'
+          T21_B105_RELEASE_VARIANT: ${{ matrix.release }}
+          T21_B105_EVIDENCE_DIR: /tmp/t21-w10b105
+        run: node scripts/t21-w10b105-distinct-right-pose.mjs
+      - name: Save genuine original WebGL2 source-physics proof or early-position miss
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b105-real-distinct-right-${{ matrix.release }}
+          path: /tmp/t21-w10b105/
+          if-no-files-found: warn
+          retention-days: 14
