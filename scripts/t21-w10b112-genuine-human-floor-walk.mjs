@@ -198,10 +198,16 @@ async function run(){
     actualFiveRayIds:p.sourceFootprintIds,
     genuineKccGrounded:p.grounded}));
   const reachedTarget=end.tick>=targetTick&&!end.stopReason;
+  const actualSuspicionCount=end.b112OriginalHumanGround.suspicionCount;
+  const genuineEndpointSourceSupported=
+   end.b112OriginalHumanGround.genuineKccGrounded===true&&
+   (footprint.nearCenter===true||footprint.nearPerimeter===true);
   const nativeOutcome=end.stopReason?'NATIVE_STOP_BEFORE_TARGET':
    !reachedTarget?'NATIVE_TICK_TARGET_NOT_REACHED':
    forwardProgressMeters<20?'LIMITED_FORWARD_PROGRESS':
-   'REAL_FORWARD_TRAVERSE_GT_20M';
+   actualSuspicionCount>0?'SUSPECTED_UNSUPPORTED_NATIVE_DESCENT':
+   !genuineEndpointSourceSupported?'TRUE_KCC_ENDPOINT_SOURCE_UNSUPPORTED':
+   'REAL_SUPPORTED_FORWARD_TRAVERSE_GT_20M';
   const report={
    schema:'W10_B116_GENUINE_FORWARD_SOURCE_SUPPORT_TRANSITIONS_V1',
    environment:'REAL_CHROMIUM_HEADLESS_SWIFTSHADER_NOT_OWNER_GPU',
@@ -214,6 +220,8 @@ async function run(){
    genuineOriginalSourceCollidersSeen:supports,
    genuineSourceTransitions:sourceTransitions,
    actualOriginalSourceSamples:samples,
+   genuineKccAndOriginalRapierSupportedAtEnd:genuineEndpointSourceSupported,
+   actualUnsupportedDescentSuspicionCount:actualSuspicionCount,
    lastMeasuredFiveOriginalRapierRays:footprint,
    authenticUnsupportedDescentSuspicions:end.b112OriginalHumanGround.suspicions,
    originalSourceAuthority:[25,17,26,0],
@@ -231,14 +239,16 @@ async function run(){
    JSON.stringify({nativeOutcome,firstTick:first.tick,endTick:end.tick,
     realForwardProgressMeters:forwardProgressMeters,
     actualOriginalSolids:supports,sourceTransitions:sourceTransitions.length,
-    actualSuspicionCount:report.authenticUnsupportedDescentSuspicions.length,
+    actualSuspicionCount,actuallySourceSupportedAtEnd:genuineEndpointSourceSupported,
     nativeStopReason:end.stopReason,originalAuthority:[25,17,26,0],
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
   // Fail closed when a physical stop or insufficient progress prevents the
   // requested route proof; keep JSON/PNG artifact even on CI failure.
-  if(!reachedTarget||forwardProgressMeters<20)
+  if(!reachedTarget||forwardProgressMeters<20||
+     actualSuspicionCount>0||!genuineEndpointSourceSupported)
    fail('B116_GENUINE_FORWARD_ROUTE_HOLD',{nativeOutcome,forwardProgressMeters,
+    actualSuspicionCount,genuineEndpointSourceSupported,
     stopReason:end.stopReason,lastTick:end.tick});
   return;
  }
