@@ -15,7 +15,7 @@ Instead of another small HUD probe, an **independent real Chrome source-route QA
 
 Every >=12 native ticks (and final state), retain the *real actual* player body position, original source-hit solid ID, true KCC grounded state, original five-ray source IDs/classification and physical unsupported descent suspicions. The file `b116-real-forward-original-support-traverse.json` tracks original-solid transitions, furthest actually reached Z, and actual observed native stop reason. A real screenshot `b112-real-source-human-walk.png` is retained in the same Actions artifact.
 
-If a genuine out-of-world failure/stop occurs early, the run writes its recorded evidence first, marks `NATIVE_STOP_BEFORE_TARGET` and **fails closed** without fake ticks, telemetry invention or moving the player to target. If the full 480 ticks occur but actual forward movement remains below 20m, it marks `LIMITED_FORWARD_PROGRESS` and fails closed as a real blocked/insufficient route. Thus a green job never implies floor success merely because the simulation clock advanced.
+If a genuine out-of-world failure/stop occurs early, the run writes its recorded evidence first, marks `NATIVE_STOP_BEFORE_TARGET` and **fails closed** without fake ticks, telemetry invention or moving the player to target. If the full 480 ticks occur but actual forward movement remains below 20m, it marks `LIMITED_FORWARD_PROGRESS` and fails closed as a real blocked/insufficient route. The acceptance gate now also **fails closed if any real unsupported-descent suspicion was recorded**, or if the real Rapier KCC is not grounded on an existing original-source ray at the measured endpoint. A ray never substitutes for actual KCC grounding. This is a limited genuine human route QA, not proof of historically reported home/center holes.
 
 ## Acceptance and non-claims
 
@@ -24,3 +24,7 @@ The exact-SHA [B116 GitHub Actions workflow](https://github.com/ryomashibaba/bro
 **Not certified:** actual historical user-reported self-spawn or central lane gaps, all crossing routes, synthetic stage supports, Nintendo-authorized Turf Winner or unrestricted 4v4. No central-path reach claim without observed supporting source collider / genuine KCC transition. Main, Pages, original source geometry, CPU FIXED default, 0/12 natural opposing routes, official HOLD remain unchanged.
 
 If 480-tick straight W cannot cover the alleged center route, investigate the recorded real stopping pose and original stage navigation before designing a second source-grounded real player steering sequence; never substitute fabricated coordinates, teleports or invented original geometry.
+
+## Specific CI provenance
+- Baseline [B112-B115 workflow #39854344288](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39854344288): **SUCCESS** at B116 initial-source script SHA `71ff1a41be54378d35418ce9e7e9a2c491ee1c78`; backward-compatible 120-tick real browser capture remains functional.
+- Strengthened forward native acceptance SHA `46b443ddd1ba4e395baedf3aa906c101e0460499`: [B116 run #39854645982](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39854645982) **queued when inspected**. A prior queued run on less strict SHA `71ff1a41be54378d35418ce9e7e9a2c491ee1c78` is not a substitute for the final acceptance gate. Verify actual run logs/JSON before asserting long-route reach.
