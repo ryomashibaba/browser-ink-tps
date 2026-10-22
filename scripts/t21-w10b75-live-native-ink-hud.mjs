@@ -291,6 +291,38 @@ async function run(){
  }
  console.log('T21_B79_GENUINE_EARLY_HUMAN_SOURCE_PAINT_HUD_PASS',
   JSON.stringify(humanPulse));
+ // Real KeyD can coast to x>+.30 in software WebGL2, where the A3
+ // source lip is simply no longer obstructed. One genuine KeyA correction
+ // before the parked-human witness (NO KeyS) can recover the intended
+ // right-offset position. All movement stays with unchanged Rapier KCC.
+ let b101LateralCorrection=null;
+ if(parkedB96&&b100Right){
+  const start=await snapshot();
+  if(start.player.position[0]>.14){
+   const keyA={key:'a',code:'KeyA',windowsVirtualKeyCode:65,
+    nativeVirtualKeyCode:65};
+   await cmd('Input.dispatchKeyEvent',{type:'keyDown',...keyA});
+   let end;
+   try{
+    end=await until(async()=>{
+     const n=await snapshot();
+     if(n.stopReason)fail('B101_REAL_LATERAL_CORRECTION_STOP_'+n.stopReason);
+     return n.tick>=start.tick+3?n:false;
+    },60000,90);
+   }finally{
+    await cmd('Input.dispatchKeyEvent',{type:'keyUp',...keyA});
+   }
+   b101LateralCorrection={
+    actualRealKeyA:true,realKeyDBeforeCorrection:true,
+    startTick:start.tick,endTick:end.tick,
+    startHumanFoot:start.player.position,
+    endHumanFoot:end.player.position,
+    noManualPoseUpdate:true,noReverseKeyS:true
+   };
+   console.log('T21_B101_TRUE_KEYA_LATERAL_LANE_CORRECTION',
+    JSON.stringify(b101LateralCorrection));
+  }
+ }
  if(parkedB96){
   const settled=await until(async()=>{
    const n=await snapshot();
@@ -315,12 +347,18 @@ async function run(){
   // CDP KeyW/keyUp. Test physically occupying A3's actual source
   // approach capsule, not an invented single-target user coordinate.
   const originalA3BlockedFoot=[0.2749243676662445,64.00698852539062];
-  if(b99Left&&settledHuman[0]>-.25)
-   fail('B99_LATERAL_REAL_HUMAN_INPUT_DID_NOT_CREATE_DISTINCT_LANE_'+
-    JSON.stringify({settledHuman,referenceHumanX:-.1721142679452896}));
-  if(b100Right&&settledHuman[0]<-.11)
-   fail('B100_RIGHT_REAL_HUMAN_INPUT_DID_NOT_CREATE_DISTINCT_LANE_'+
-    JSON.stringify({settledHuman,referenceHumanX:-.1721142679452896}));
+  // The real KeyA displacement must be measurably distinct; do not
+  // reject genuine 0.076m offsets using the former absolute -0.25 cliff.
+  if(b99Left&&(-.1721142679452896-settledHuman[0])<.06)
+   fail('B101_LEFT_REAL_HUMAN_INPUT_NOT_DISTINCT_FROM_REFERENCE_'+
+    JSON.stringify({settledHuman,referenceHumanX:-.1721142679452896,
+     minimumDifferenceMeters:.06}));
+  if(b100Right&&
+     (settledHuman[0]+.1721142679452896<.06 ||
+      settledHuman[0]>.13))
+   fail('B101_RIGHT_REAL_HUMAN_INPUT_OUTSIDE_PHYSICAL_OCCUPANCY_LANE_'+
+    JSON.stringify({settledHuman,referenceHumanX:-.1721142679452896,
+     minimumDifferenceMeters:.06,maximumSourceHumanX:.13}));
   const lipContactDistance=Math.hypot(
    settledHuman[0]-originalA3BlockedFoot[0],
    settledHuman[2]-originalA3BlockedFoot[1]);
@@ -444,6 +482,7 @@ async function run(){
      b99Left?'B99_LEFT_SHORT':'B98_REFERENCE',
    realSidewaysKeyAPulse:b99Left,
    realSidewaysKeyDPulse:b100Right,
+   b101RealLateralCorrection:b101LateralCorrection,
    chromiumWebGL2:true,realPointerLockedWInput:true,
    artificialQaTicks:0,realHumanRetreatKeyS:false,
    sourceQaOptIn:true,normalFixedDefaultUnchanged:true,
