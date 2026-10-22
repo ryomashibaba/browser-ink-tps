@@ -1,0 +1,45 @@
+name: T21 W10-B107 native brief-contact direct recovery timing
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b107-real-direct-contact-timing.mjs'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-w10b107-real-brief-contact.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-human-brief-contact:
+    name: Real KeyW Z=${{ matrix.release_z }} original A3 short contact
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      matrix:
+        release_z: ['64.52','64.62','64.68']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify source build and QA-only native contact classification
+        run: |
+          node --check scripts/t21-w10b107-real-direct-contact-timing.mjs
+          node --test scripts/t21-w10b106-original-contact-classifier.test.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Qualify true blocked-lane foot and observe actual KCC first/last collision ticks and 7 physical rejoins
+        env:
+          T21_B107_RIGHT_PULSE_TICKS: '6'
+          T21_B107_RELEASE_Z: ${{ matrix.release_z }}
+          T21_B107_EVIDENCE_DIR: /tmp/t21-w10b107
+        run: node scripts/t21-w10b107-real-direct-contact-timing.mjs
+      - name: Save real Chromium screenshots and fail-closed classification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b107-actual-original-A3-contact-${{ matrix.release_z }}
+          path: /tmp/t21-w10b107/
+          if-no-files-found: warn
+          retention-days: 14
