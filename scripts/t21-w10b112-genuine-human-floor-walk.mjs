@@ -176,7 +176,7 @@ async function run(){
  const saved=await until(async()=>{
   try{
    const name=readdirSync(output).find(n=>
-    /^T21_W10B113_ORIGINAL_FLOOR_TRACE_TICK_\\d+\\.json$/.test(n));
+    /^T21_W10B113_ORIGINAL_FLOOR_TRACE_TICK_\d+\.json$/.test(n));
    if(!name)return false;
    const report=JSON.parse(readFileSync(resolve(output,name),'utf-8'));
    return report.schema==='W10_B113_MANUAL_ORIGINAL_FLOOR_TRACE_V1'?
