@@ -29,7 +29,7 @@ if(!['EARLY','LATE'].includes(correctionPhase))
 // an actual browser KeyA press while natural KeyW locomotion continues.
 const correctionTriggerZ=correctionPhase==='EARLY'?66.0:65.15;
 const correctionTargetX=-.035;
-const correctionMaxNativeTicks=12;
+const correctionMaxNativeTicks=6;
 const releaseVariant='REAL_KEYW_Z_'+String(releaseZ)+
  '_REAL_KEYA_'+correctionPhase;
 const expectedClass=B106_CLASS.TRANSIENT_DIRECT;
