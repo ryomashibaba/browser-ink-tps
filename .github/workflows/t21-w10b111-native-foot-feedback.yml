@@ -1,0 +1,46 @@
+name: T21 W10-B111 genuine native-foot feedback and 7 CPU contact classification
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b111-feedback-native-contact.mjs'
+      - '.github/workflows/t21-w10b111-real-keya-timing.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-original-keya-timing:
+    name: True Chrome lateral feedback and native KeyW release Z=${{ matrix.release_z }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      matrix:
+        release_z: ['64.46', '64.50']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify native script, original source and 9 classification regressions
+        run: |
+          node --check scripts/t21-w10b111-feedback-native-contact.mjs
+          node --test scripts/t21-w10b106-original-contact-classifier.test.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Actual real KeyD/KeyA/KeyW input with original Rapier KCC and strict 7 CPU direct-recovery gate
+        env:
+          T21_B111_RIGHT_PULSE_TICKS: '6'
+          T21_B111_RELEASE_Z: ${{ matrix.release_z }}
+          T21_B111_CORRECTION_PHASE: EARLY
+          T21_B111_KEYA_TRIGGER_Z: '65.68'
+          T21_B111_EVIDENCE_DIR: /tmp/t21-w10b111
+        run: node scripts/t21-w10b111-feedback-native-contact.mjs
+      - name: Retain failed input geometry and real source 7 CPU evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b111-genuine-foot-feedback-release-${{ matrix.release_z }}
+          path: /tmp/t21-w10b111/
+          if-no-files-found: warn
+          retention-days: 14
