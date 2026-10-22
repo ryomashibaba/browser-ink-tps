@@ -4,7 +4,7 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/t21-w10b111-feedback-native-contact.mjs'
-      - '.github/workflows/t21-w10b111-real-keya-timing.yml'
+      - '.github/workflows/t21-w10b111-native-foot-feedback.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
           node --check scripts/t21-w10b111-feedback-native-contact.mjs
           node --test scripts/t21-w10b106-original-contact-classifier.test.mjs
           npm run build -- --base=/browser-ink-tps/
-      - name: Actual real KeyD/KeyA/KeyW input with original Rapier KCC and strict 7 CPU direct-recovery gate
+      - name: Actual real KeyD/KeyA/KeyW input with original Rapier KCC and 7 CPU B106 classification gate
         env:
           T21_B111_RIGHT_PULSE_TICKS: '6'
           T21_B111_RELEASE_Z: ${{ matrix.release_z }}
