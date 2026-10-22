@@ -26,3 +26,10 @@ The user's real-world priority is previously reported **falling through floor ne
 Open the opt-in QA preview URL with the B112 flag above, reproduce the movement using real controls (do not teleport), press Esc to unlock, and click **SAVE REAL FLOOR TRACE JSON**. The JSON records actual source foot evidence and the bounded preceding samples. It can be supplied for exact source-collider investigation. No need to manually copy coordinates from the debug HUD.
 
 **Verdict:** B112 limited native source walk **PASS**; B113 implemented and awaiting separately verified original-browser export. Actual historical falling-through locations and complete 4v4 remain **HOLD**.
+
+## B113 execution provenance and export bug audit
+- A static source review found that the first B113 browser export appended a literal escaped backslash+n rather than a JSON trailing newline, and the Chrome download-file matcher used an over-escaped digit pattern. Both were corrected, without touching source collision, native movement or any ink/score authority:
+  - JSON terminator fix: commit `065c92d54305488cbdd5938e414cf37569841a11`.
+  - Real generated filename detection fix: commit `725d4dc0d2d13ee1af28108b1070e88868440fcf`.
+- Corrected exact-SHA workflow: [Actions #39798202896](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39798202896). It was **QUEUED** when checked. Previous queued or completed jobs at earlier B113 SHAs do not prove the corrected exporter works.
+- `src/app/W10B113NativeFloorTrace.test.ts` now belongs to the consolidated B112/B113 workflow. Its pass/fail status must be read from the corrected exact SHA. Do not claim user-clicked JSON verification merely from TypeScript checks or the earlier B112 source walk.
