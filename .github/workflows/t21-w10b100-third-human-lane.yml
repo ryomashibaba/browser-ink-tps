@@ -1,0 +1,42 @@
+name: T21 W10-B100 third real human lane original-source detour
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
+      - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-w10b100-third-human-lane.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  third-real-human-lane:
+    name: True Chrome KeyD and KeyW original A3 lip / native CPU safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify native script and frozen-source browser build
+        run: |
+          node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Test third real player position with immutable collision world
+        env:
+          T21_W10B96_PARKED: '1'
+          T21_W10B99_VARIANT: RIGHT_SHORT
+          T21_W10B75_AIM: FIXED
+          T21_F3_SHOT_DIR: /tmp/t21-w10b100
+        run: node scripts/t21-w10b75-live-native-ink-hud.mjs
+      - name: Retain original collision and real WebGL2 screenshot proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b100-real-KeyD-original-source-detour
+          path: /tmp/t21-w10b100/
+          if-no-files-found: warn
+          retention-days: 14
