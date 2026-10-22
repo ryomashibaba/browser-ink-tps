@@ -12,6 +12,14 @@ import {setTimeout as sleep} from 'node:timers/promises';
 
 const root='http://127.0.0.1:4197/browser-ink-tps/';
 const output=process.env.T21_B112_EVIDENCE_DIR??'/tmp/t21-b112';
+// B116: this is an independently opted-in *real* prolonged KeyW run;
+// the B112-B115 proven 120-tick baseline remains byte-for-byte equivalent.
+const requestedNativeTicks=Number(process.env.T21_B116_FORWARD_NATIVE_TICKS??120);
+if(!Number.isSafeInteger(requestedNativeTicks)||
+   !(requestedNativeTicks===120||
+     (requestedNativeTicks>=240&&requestedNativeTicks<=720)))
+ throw Error('B116_INVALID_TRUE_FORWARD_TICK_REQUEST');
+const b116Extended=requestedNativeTicks>120;
 const children=[];
 let sock,id=0;
 const pending=new Map();
@@ -45,7 +53,7 @@ const key={key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87}
 const click=type=>cmd('Input.dispatchMouseEvent',
  {type,x:800,y:450,button:'left',clickCount:1});
 function verify(n){
- if(n.stopReason||n.originalSourceSolids!==25||
+ if((!b116Extended&&n.stopReason)||n.originalSourceSolids!==25||
     n.originalPaintSurfaces!==17||n.originalSourceNavigationLinks!==26||
     n.sourceScoreablePromotions!==0||n.productionAuthorized!==false||
     n.unrestricted4v4Certified!==false||n.cpu.physicalFootRelocations!==0)
@@ -107,7 +115,7 @@ async function run(){
  await until(async()=>await evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'),20000,150);
  const first=await snapshot();
- const targetTick=first.tick+120;
+ const targetTick=first.tick+requestedNativeTicks;
  const samples=[];
  let later;
  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
@@ -118,8 +126,10 @@ async function run(){
     samples.push({tick:n.tick,body:n.player.position,
      grounded:n.b112OriginalHumanGround.genuineKccGrounded,
      originalSupport:n.b112OriginalHumanGround.lastOriginalSourceHitId,
+     sourceFootprintClass:n.b112OriginalHumanGround.lastOriginalFootprint?.classification??null,
+     sourceFootprintIds:n.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
      suspectedDescents:n.b112OriginalHumanGround.suspicionCount});
-   return n.tick>=targetTick?n:false;
+   return n.tick>=targetTick||(b116Extended&&n.stopReason)?n:false;
   },180000,150);
  }finally{
   await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
@@ -154,7 +164,9 @@ async function run(){
   samples,actualNativeGroundSupport:end.b112OriginalHumanGround,
   observedSourceFallSuspicionCount:end.b112OriginalHumanGround.suspicionCount,
   actualOriginalFootprintB114:footprint,
-  observedMapCoverage:'LIMITED_UPPER_SOURCE_WALK_ONLY',
+  observedMapCoverage:b116Extended?
+   'REAL_EXTENDED_FORWARD_SOURCE_ROUTE_ONLY_NOT_FULL_MAP':
+   'LIMITED_UPPER_SOURCE_WALK_ONLY',
   anySuspectedFloorHoleProven:false,
   originalSourceGeometryChanged:false,scoreablePromotion:0,
   originalCrossTeamPathsCertified:false,formal4v4Certified:false,
@@ -163,6 +175,73 @@ async function run(){
  };
  writeFileSync(resolve(output,evidence.screenshot.filename),frame);
  writeFileSync(resolve(output,'b112-real-source-foot-walk.json'),JSON.stringify(evidence,null,2));
+ if(b116Extended){
+  // A genuine early collision/stop is an outcome to preserve, not a pretext
+  // for teleporting the player, generating geometry or faking native time.
+  if(samples.at(-1)?.tick!==end.tick)
+   samples.push({tick:end.tick,body:end.player.position,
+    grounded:end.b112OriginalHumanGround.genuineKccGrounded,
+    originalSupport:end.b112OriginalHumanGround.lastOriginalSourceHitId,
+    sourceFootprintClass:end.b112OriginalHumanGround.lastOriginalFootprint?.classification??null,
+    sourceFootprintIds:end.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
+    suspectedDescents:end.b112OriginalHumanGround.suspicionCount});
+  const furthestZ=Math.min(...samples.map(p=>p.body[2]));
+  const earliestZ=first.player.position[2];
+  const forwardProgressMeters=earliestZ-furthestZ;
+  const supports=[...new Set(samples.flatMap(p=>[
+   ...(p.originalSupport?[p.originalSupport]:[]),...p.sourceFootprintIds
+  ]))];
+  const sourceTransitions=samples.filter((p,i)=>
+   i===0||p.originalSupport!==samples[i-1].originalSupport)
+   .map(p=>({tick:p.tick,body:p.body,
+    actualOriginalSolidId:p.originalSupport,
+    actualFiveRayIds:p.sourceFootprintIds,
+    genuineKccGrounded:p.grounded}));
+  const reachedTarget=end.tick>=targetTick&&!end.stopReason;
+  const nativeOutcome=end.stopReason?'NATIVE_STOP_BEFORE_TARGET':
+   !reachedTarget?'NATIVE_TICK_TARGET_NOT_REACHED':
+   forwardProgressMeters<20?'LIMITED_FORWARD_PROGRESS':
+   'REAL_FORWARD_TRAVERSE_GT_20M';
+  const report={
+   schema:'W10_B116_GENUINE_FORWARD_SOURCE_SUPPORT_TRANSITIONS_V1',
+   environment:'REAL_CHROMIUM_HEADLESS_SWIFTSHADER_NOT_OWNER_GPU',
+   trueCDPHeldKeyW:true,requestedNativeTicks,
+   firstNativeTick:first.tick,lastNativeTick:end.tick,
+   nativeOutcome,stopReason:end.stopReason,
+   initialOriginalHumanBody:first.player.position,
+   finalOriginalHumanBody:end.player.position,
+   actualForwardProgressMeters:forwardProgressMeters,
+   genuineOriginalSourceCollidersSeen:supports,
+   genuineSourceTransitions:sourceTransitions,
+   actualOriginalSourceSamples:samples,
+   lastMeasuredFiveOriginalRapierRays:footprint,
+   authenticUnsupportedDescentSuspicions:end.b112OriginalHumanGround.suspicions,
+   originalSourceAuthority:[25,17,26,0],
+   originalColliderCreatedByQA:0,
+   actorTeleportsByQA:0,
+   userReportedHomeAndCentralHolesProven:false,
+   centralPathReachCertified:false,
+   crossTeamRouteCertified:false,
+   formal4v4Certified:false,
+   sourceFloorHoleCertified:false
+  };
+  writeFileSync(resolve(output,'b116-real-forward-original-support-traverse.json'),
+   JSON.stringify(report,null,2)+'\n');
+  console.log('T21_B116_REAL_CHROME_EXTENDED_FORWARD_SUPPORT_WITNESS',
+   JSON.stringify({nativeOutcome,firstTick:first.tick,endTick:end.tick,
+    realForwardProgressMeters:forwardProgressMeters,
+    actualOriginalSolids:supports,sourceTransitions:sourceTransitions.length,
+    actualSuspicionCount:report.authenticUnsupportedDescentSuspicions.length,
+    nativeStopReason:end.stopReason,originalAuthority:[25,17,26,0],
+    sourceFloorHoleCertified:false,centralPathCertified:false,
+    formal4v4Certified:false}));
+  // Fail closed when a physical stop or insufficient progress prevents the
+  // requested route proof; keep JSON/PNG artifact even on CI failure.
+  if(!reachedTarget||forwardProgressMeters<20)
+   fail('B116_GENUINE_FORWARD_ROUTE_HOLD',{nativeOutcome,forwardProgressMeters,
+    stopReason:end.stopReason,lastTick:end.tick});
+  return;
+ }
  // W10-B113 actual Chrome Esc, CDP mouse click, and JSON saved to host.
  const esc={key:'Escape',code:'Escape',
   windowsVirtualKeyCode:27,nativeVirtualKeyCode:27};
