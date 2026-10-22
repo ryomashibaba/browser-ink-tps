@@ -1,0 +1,42 @@
+name: T21 W10-B103 short real Chrome right-lane calibration
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b103-real-lane-calibration.mjs'
+      - '.github/workflows/t21-w10b103-real-lane-calibration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-keyd-short-source-calibration:
+    name: Genuine KeyD right-lane pulse ${{ matrix.pulse }} native ticks
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    strategy:
+      fail-fast: false
+      matrix:
+        pulse: [2, 4, 6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify calibration script and unchanged frozen source build
+        run: |
+          node --check scripts/t21-w10b103-real-lane-calibration.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Qualify genuine KeyD-KeyW parked human position only
+        env:
+          T21_B103_RIGHT_PULSE_TICKS: ${{ matrix.pulse }}
+          T21_B103_EVIDENCE_DIR: /tmp/t21-w10b103
+        run: node scripts/t21-w10b103-real-lane-calibration.mjs
+      - name: Keep original real Chrome foot, native tick, and screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b103-genuine-KeyD-pulse-${{ matrix.pulse }}
+          path: /tmp/t21-w10b103/
+          if-no-files-found: warn
+          retention-days: 14
