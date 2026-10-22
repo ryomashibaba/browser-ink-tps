@@ -131,6 +131,13 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b102OriginalA3Kcc={
   enabled:false,a3NativeAudits:0,a3Rejected:0,
   humanProximateRapierBlocks:0,
+  // W10-B107: genuine *native tick* span/streak evidence, read only.
+  // A cumulative count alone cannot establish persistent obstruction.
+  firstHumanProximateBlockTick:null as number|null,
+  lastHumanProximateBlockTick:null as number|null,
+  consecutiveHumanProximateBlockTicks:0,
+  longestHumanProximateBlockStreak:0,
+  distinctHumanProximateBlockTicks:0,
   firstBlocked:[] as Array<{
    tick:number;cause:string;colliderOwnerIds:readonly string[];
    a3Foot:[number,number,number];humanPosition:[number,number,number];
@@ -377,7 +384,22 @@ export class UndertowF3PlayablePreviewApp{
       const originalDynamic=actual.colliderOwnerIds.includes(
        'REAL_PLAYER_OR_UNREGISTERED_DYNAMIC_ACTOR');
       if(originalDynamic&&distance<1.2){
-       this.b102OriginalA3Kcc.humanProximateRapierBlocks++;
+       const proof=this.b102OriginalA3Kcc;
+       proof.humanProximateRapierBlocks++;
+       // One true Rapier rejection per native tick, never synthesize steps.
+       // Multiple actual vetoes in one tick count once for duration/streak.
+       const nativeTick=this.clock.tick;
+       if(proof.lastHumanProximateBlockTick!==nativeTick){
+        proof.consecutiveHumanProximateBlockTicks=
+         proof.lastHumanProximateBlockTick===nativeTick-1?
+          proof.consecutiveHumanProximateBlockTicks+1:1;
+        proof.longestHumanProximateBlockStreak=Math.max(
+         proof.longestHumanProximateBlockStreak,
+         proof.consecutiveHumanProximateBlockTicks);
+        proof.distinctHumanProximateBlockTicks++;
+        proof.firstHumanProximateBlockTick??=nativeTick;
+        proof.lastHumanProximateBlockTick=nativeTick;
+       }
        if(this.b102OriginalA3Kcc.firstBlocked.length<12)
         this.b102OriginalA3Kcc.firstBlocked.push({
          tick:this.clock.tick,cause:actual.cause,
