@@ -16,7 +16,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        release_z: ['64.46', '64.50']
+        release_z: ['64.50']
+    # One controlled retry only: original 64.50 was CHROME_START_TIMEOUT
+    # before any player input, while 64.46 reached genuine calibration.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
