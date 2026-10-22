@@ -1,9 +1,12 @@
-name: T21 W10-B116 genuine forward original-floor traverse
+name: T21 W10-B116/B117 genuine forward native proxy-source audit
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - 'src/stage/undertow/UndertowPhase14QHumanCrowdAnchor.ts'
+      - 'src/stage/undertow/UndertowPhase14QProjectedProxySeal.ts'
+      - 'src/stage/undertow/UndertowPhase14QProjectedProxySeal.test.ts'
       - '.github/workflows/t21-w10b116-genuine-forward-original-floor.yml'
   workflow_dispatch:
 permissions:
@@ -21,7 +24,7 @@ jobs:
       - name: Verify real-input syntax and original runtime build
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
-          npx vitest run src/app/W10B112HumanGroundLedger.test.ts src/app/W10B113NativeFloorTrace.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
+          npx vitest run src/app/W10B112HumanGroundLedger.test.ts src/app/W10B113NativeFloorTrace.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QProjectedProxySeal.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Real Chromium 480 native ticks physical forward, no teleport
         env:

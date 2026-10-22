@@ -7,11 +7,14 @@ import type {StageDefinition} from '../StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as freeze}
  from './UndertowSpillwayBlockoutGeometry';
 import type {T21QFoot} from './UndertowPhase14QSharedActorCollision';
+import {auditPhase14QSourceProjectedProxySeal} from './UndertowPhase14QProjectedProxySeal';
 
 export interface Phase14QHumanAnchorFrame{
  source:'ACTUAL_RAPIER_PLAYER_FOOT_TO_EIGHTH_RECAST_CROWD_AGENT';
  realHumanFoot:T21QFoot;
  crowdAgentFoot:T21QFoot;
+ /** Actual original Recast projection, distinct from the physical Rapier foot. */
+ sourceProjectedFoot:T21QFoot;
  maxSourceSnapDistanceMeters:number;
  sourceProjectionDistanceMeters:number;
  footToCrowdHorizontalMeters:number;
@@ -89,6 +92,7 @@ export class UndertowPhase14QHumanCrowdAnchor{
     source:'ACTUAL_RAPIER_PLAYER_FOOT_TO_EIGHTH_RECAST_CROWD_AGENT',
     realHumanFoot:{...real},
     crowdAgentFoot:{x:after.x,y:after.y,z:after.z},
+    sourceProjectedFoot:{x:projection.x,y:projection.y,z:projection.z},
     maxSourceSnapDistanceMeters:this.maximumProjectionMeters,
     sourceProjectionDistanceMeters:Math.hypot(projection.x-real.x,
       projection.y-real.y,projection.z-real.z),
@@ -108,6 +112,12 @@ export class UndertowPhase14QHumanCrowdAnchor{
  sealAfterCrowdUpdate(physicalHumanFoot:T21QFoot):Readonly<{
    beforeSealHorizontalDriftMeters:number;
    afterSealHorizontalDriftMeters:number;
+   /** Actual 3D discrepancy against projected *original* NavMesh source. */
+   afterSealProjectionResidualMeters:number;
+   /** Physical player body/foot is never replaced by its Recast projection. */
+   humanFootToOriginalNavmeshProjectionMeters:number;
+   /** The projected steering proxy does not certify physical CPU contact. */
+   proxyCertifiesHumanCpuPhysicalCollision:false;
    unapprovedInterTickCrowdDrift:boolean;
    playerRapierBodyMoved:false;
    cpuRecastAgentTeleported:false;
@@ -125,11 +135,26 @@ export class UndertowPhase14QHumanCrowdAnchor{
    if(!Number.isFinite(drift)||drift>2)
      throw Error('T21_PHASE14Q_UNBOUNDED_CROWD_DRIFT');
    const sealed=this.syncActualPlayerFoot(actual);
-   if(sealed.footToCrowdHorizontalMeters>.065)
-     throw Error('T21_PHASE14Q_CROWD_PROXY_POSTSEAL_UNSAFE');
+   // B117: original NavMesh projection may be 0.07–0.26m away from a
+   // genuine Rapier foot while the Crowd proxy is *perfectly* restored to
+   // that source-projected point. Comparing proxy-to-physical at the .065
+   // residual tolerance erroneously reports a post-seal failure.
+   // Preserve both distances; NEVER treat Crowd presence as KCC contact.
+   const audit=auditPhase14QSourceProjectedProxySeal({
+     physicalHumanFoot:actual,
+     originalSourceProjectedFoot:sealed.sourceProjectedFoot,
+     actualSealedCrowdProxy:sealed.crowdAgentFoot,
+     maximumOriginalSourceProjectionMeters:this.maximumProjectionMeters
+   });
    return {
      beforeSealHorizontalDriftMeters:drift,
+     // Compatibility: expose the real physical-to-proxy distance, even if
+     // it exceeds the separate *projection residual* tolerance.
      afterSealHorizontalDriftMeters:sealed.footToCrowdHorizontalMeters,
+     afterSealProjectionResidualMeters:audit.projectedResidualMeters,
+     humanFootToOriginalNavmeshProjectionMeters:
+       audit.actualHumanToOriginalProjectionMeters,
+     proxyCertifiesHumanCpuPhysicalCollision:false,
      unapprovedInterTickCrowdDrift:drift>.15,
      playerRapierBodyMoved:false,
      cpuRecastAgentTeleported:false,
