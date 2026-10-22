@@ -1,0 +1,45 @@
+name: T21 W10-B108 genuine lateral KeyA feedback / brief A3 contact
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b108-genuine-keya-corrected-brief-contact.mjs'
+      - '.github/workflows/t21-w10b108-keya-feedback-brief-contact.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-source-real-side-key-feedback:
+    name: True Chrome A correction ${{ matrix.phase }} genuine A3 source
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      matrix:
+        phase: [EARLY, LATE]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Validate fail-closed original-source classification and build
+        run: |
+          node --check scripts/t21-w10b108-genuine-keya-corrected-brief-contact.mjs
+          node --test scripts/t21-w10b106-original-contact-classifier.test.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real Chrome KeyD+KeyW then bounded genuine KeyA control; qualify true original KCC brief direct physical rejoin
+        env:
+          T21_B108_RIGHT_PULSE_TICKS: '6'
+          T21_B108_RELEASE_Z: '64.68'
+          T21_B108_CORRECTION_PHASE: ${{ matrix.phase }}
+          T21_B108_EVIDENCE_DIR: /tmp/t21-w10b108
+        run: node scripts/t21-w10b108-genuine-keya-corrected-brief-contact.mjs
+      - name: Retain real input, original Rapier KCC and 7-CPU evidence (including qualified misses)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b108-real-KeyA-feedback-${{ matrix.phase }}
+          path: /tmp/t21-w10b108/
+          if-no-files-found: warn
+          retention-days: 14
