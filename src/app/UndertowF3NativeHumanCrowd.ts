@@ -19,6 +19,9 @@ import type {B118NativeCrowdDriftWitness}
 import {auditB119OriginalFirstDropLanding,
  type B119OriginalLandingDecision}
  from '../stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate';
+import {auditB123RegisteredOriginalUphillPassiveGuard,
+ type B123NativePassiveRampGate}
+ from '../stage/undertow/UndertowPhase14QRegisteredUphillPassiveGate';
 
 type Foot=Readonly<{x:number;y:number;z:number}>;
 export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
@@ -28,6 +31,8 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  private b118Witness:B118NativeCrowdDriftWitness|null=null;
  private b119LastGate:B119OriginalLandingDecision|null=null;
  private b119PassiveProxyWithheldTicks=0;
+ private b123LastRealSourceRampGuard:B123NativePassiveRampGate|null=null;
+ private b123OriginalRampPassiveProxyWithheldNativeTicks=0;
  readonly sourceOnly=true;
  attaches=0;
  detaches=0;
@@ -56,6 +61,20 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
    this.suspend();
    this.excluded++;
    this.b119PassiveProxyWithheldTicks++;
+   this.previous={...foot};
+   return;
+  }
+  // W10-B123: the actual original Y3-to-Y4.5 source ramp KCC at tick
+  // 256 was grounded, but the nonphysical passive steering neighbour
+  // leapt 7.15m across the source Recast NavMesh in ONE update.
+  // Withhold ONLY that eighth passive HUMAN agent on the exact source
+  // ramp mesh and Y; preserve the true 2m fence everywhere else.
+  this.b123LastRealSourceRampGuard=
+   auditB123RegisteredOriginalUphillPassiveGuard(foot);
+  if(this.b123LastRealSourceRampGuard.withheld){
+   this.suspend();
+   this.excluded++;
+   this.b123OriginalRampPassiveProxyWithheldNativeTicks++;
    this.previous={...foot};
    return;
   }
@@ -103,6 +122,11 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
    b119OriginalFirstDropPassiveProxyGate:this.b119LastGate,
    b119FirstDropProxyWithheldNativeTicks:this.b119PassiveProxyWithheldTicks,
    b119HumanCpuCrowdAvoidanceCertifiedAtLanding:false,
+   b123LastOriginalUphillPassiveAgentGate:
+    this.b123LastRealSourceRampGuard,
+   b123OriginalRampPassiveProxyWithheldNativeTicks:
+    this.b123OriginalRampPassiveProxyWithheldNativeTicks,
+   b123HumanCpuAvoidanceCertifiedOnRamp:false,
    fakeHumanPhysicalActors:0,playerFootMoved:false,
    sourceNavmeshChanged:false,productionAuthorized:false};
  }

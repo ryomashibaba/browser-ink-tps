@@ -20,3 +20,17 @@ CI: [B123 exact source real Chrome run](https://github.com/ryomashibaba/browser-
 
 ## Classification
 Do not claim any real physical ascent before this GitHub Actions native experiment concludes. If failure occurs, retain exact source ray IDs and every native keyboard phase, interpret real KCC contact versus missing original source, and pick the smallest next steering correction. Never solve failed traversal by generating an unverified ramp.
+
+## B123 native trial #1 actual results — source ramp contact PASS, ascent HOLD
+
+[Actual Chrome #39909590822](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39909590822) at SHA `2bc0e28f8d9d29585ddcbb6b51edb533f742703b` completed **FAIL/HOLD**. 4 Vitest files **19/19 PASS**, Vite/TypeScript build PASS. Actual native input W200, D12, W18, D16 reached **tick 256**, body **[1.7537744,3.9377658,49.2078743]**; original Rapier KCC **grounded** on `UndertowT21D:right-low-route-ramp-positive-z`, foot Y **3.0677658**. Genuine first-drop→registered uphill ramp transition was proven. Higher distinct `right-low-team-a` Y4.5 was **not** reached, so full ascent HOLD.
+
+True independent B118 Crowd witness at same actual native tick 256: original NavMesh foot projection residual 0.1207615m (inside 0.26m); passive HUMAN Crowd agent was synchronized before Recast, then native Recast sent the eighth nonphysical passive HUMAN proxy **7.1525098m horizontally**, 7.9424615m in 3D, including vertical +3.453m. Original strict 2m stop `T21_PHASE14Q_UNBOUNDED_CROWD_DRIFT` correctly held, **NOT** a physical player fall or missing interior ramp.
+
+[Actual B123 raw run artifact ID 12481983879](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39909590822) retains source ray IDs, real Chromium screenshot, real keyboard phases, genuine Crowd witness, stop reason.
+
+## B123 bounded passive-eighth-Crowd source ramp safeguard and recheck
+
+The only new dynamic safeguard `UndertowPhase14QRegisteredUphillPassiveGate.ts` identifies the **exact already-registered** original source mesh triangles of `right-low-route-ramp-positive-z` and its true negative-Z mirror, with actual physical foot within **0.22m of interpolated original ramp surface height**, and then withholds/removes **only the passive 8th Recast human-avoidance proxy**, just as B119 did exclusively for the lower original landing. Actual tick-256 foot matches original source mesh plane within ~0.043m. Recorded withheld native ticks and last source ramp gate in QA snapshot/real JSON. Preserve the same original strict >2m Recast guard, original .065m source residual, .26m source projection, all seven CPU positions, real player Rapier body, original 25/17/26/0 stage arrays. CPU↔HUMAN steering avoidance along the ramp is explicitly **NOT** certified.
+
+5 focused tests verify actual tick256 source coincidence, proper exclusion outside ramp, physically impossible vertical positions, mirror source provenance and nonfinite fail-closed. Original real CDP W200-D12-W18-D90 trial and evidence capture rerun at exact patched SHA. **Do NOT mark B123 raised-floor crossing as PASS unless the real native KCC lands on separately registered `UndertowT21D:right-low-team-a`**. Even then complete 4v4/central source and natural cross-side routes still HOLD.

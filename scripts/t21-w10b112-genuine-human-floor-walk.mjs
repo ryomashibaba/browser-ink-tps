@@ -307,6 +307,10 @@ async function run(){
    b121RealKeyboardSteeringPhases:b121ActualPhases,
    b123RealSourceRampGenuineKeyboardPhases:
     b123OriginalRamp?b121ActualPhases:null,
+   b123OriginalRampPassiveAgentWithheldNativeTicks:
+    end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
+   b123LastOriginalRampPassiveProxySourceGuard:
+    end.humanCrowd?.b123LastOriginalUphillPassiveAgentGate??null,
    b120LastOriginalSourceBoundary:end.b120OriginalSourceBoundary,
    b120ActualRegisteredSourceBoundarySamples:
     samples.filter(s=>s.b120OriginalSourceBoundary?.schema===
@@ -340,6 +344,8 @@ async function run(){
    JSON.stringify({nativeOutcome,firstTick:first.tick,endTick:end.tick,
     realForwardProgressMeters:forwardProgressMeters,
     actualOriginalSolids:supports,sourceTransitions:sourceTransitions.length,
+    b123ActualOriginalRampProxyWithheldNativeTicks:
+     end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
     actualSuspicionCount,actuallySourceSupportedAtEnd:genuineEndpointSourceSupported,
     nativeStopReason:end.stopReason,
     b118RealRecastCrowdDriftMeters:realCrowdDriftWitness?.
@@ -386,6 +392,9 @@ async function run(){
     actuallyPerformedNativeKeyboardPhases:b121ActualPhases,
     actualNativeOriginalSources:observed,
     originalRampColliderId:rampId,
+    actualOriginalRampPassiveAgentExcludedTicks:
+     end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
+    originalRampHumanCpuAvoidanceCertified:false,
     physicalOriginalRampContactObserved:genuinelyRampContactObserved,
     originalFirstDropContactObserved:genuinelyLandingContactObserved,
     originalRaisedFloorId:nextId,
@@ -410,6 +419,8 @@ async function run(){
     JSON.stringify({realEndNativeTick:end.tick,
      nativeOriginalSources:observed,
      genuineOriginalRampContact:genuinelyRampContactObserved,
+     originalRampPassiveProxyWithheldTicks:
+      end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
      realRaisedKccGrounded:genuineNextSourceGrounded,
      originalRaisedFloorId:end.b112OriginalHumanGround.lastOriginalSourceHitId,
      realHumanFootY:actualFootY,

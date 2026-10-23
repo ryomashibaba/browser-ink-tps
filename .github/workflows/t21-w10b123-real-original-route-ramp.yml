@@ -6,6 +6,9 @@ on:
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
       - 'src/app/W10B123OriginalUphillRampSourceAudit.ts'
       - 'src/app/W10B123OriginalUphillRampSourceAudit.test.ts'
+      - 'src/stage/undertow/UndertowPhase14QRegisteredUphillPassiveGate.ts'
+      - 'src/stage/undertow/UndertowPhase14QRegisteredUphillPassiveGate.test.ts'
+      - 'src/app/UndertowF3NativeHumanCrowd.ts'
       - '.github/workflows/t21-w10b123-real-original-route-ramp.yml'
   workflow_dispatch:
 permissions:
@@ -23,7 +26,7 @@ jobs:
       - name: Verify immutable original Y3-to-Y4.5 source contact and native build
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
-          npx vitest run src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
+          npx vitest run src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/stage/undertow/UndertowPhase14QRegisteredUphillPassiveGate.test.ts src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Real native Chromium W200 D12 W18 D90 original right-low uphill approach
         env:
