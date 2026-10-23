@@ -41,7 +41,10 @@ export interface F3NativeCombatPulse{
  * during the isolated genuine pointer-locked combat QA staging phase.
  * STAGING does not grant any new hit or player aim. Only real monotonic
  * direct damage counters, original source 25/17/26/0 and a native event
- * window can render a marker. TIME_UP/paused/unsafe remain suppressed.
+ * window can render a marker. TIME_UP/unsafe remain suppressed.
+ * Paused source-QA executes real Rapier 60Hz steps by advanceQaTicks() to
+ * confirm pointer-locked damage: paused is NOT proof of synthetic damage.
+ * This matches historical B88 visibility while still requiring actual hits.
  */
 export function genuineF3DirectHitVisible(x:{
  sourceTrusted:boolean;nativeTick:number;
@@ -54,7 +57,7 @@ export function genuineF3DirectHitVisible(x:{
   x.realHitCount!==null&&x.realHitCount>=0&&
   Number.isSafeInteger(x.nativeMarkerUntil)&&
   x.nativeMarkerUntil>=x.nativeTick&&
-  x.matchState!=='TIME_UP'&&!x.paused&&!x.stopReason;
+  x.matchState!=='TIME_UP'&&!x.stopReason;
 }
 const clampPercent=(n:number)=>Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):0;
 export function formatF3PlayableHud(s:F3PlayableHudState){

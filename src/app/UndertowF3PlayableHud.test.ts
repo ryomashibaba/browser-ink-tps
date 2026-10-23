@@ -129,7 +129,11 @@ describe('W10-B136 genuine native direct hit and splat marker timing',()=>{
   expect(genuineF3DirectHitVisible({...base,nativeTick:-1})).toBe(false);
   expect(genuineF3DirectHitVisible({...base,nativeTick:0.5})).toBe(false);
   expect(genuineF3DirectHitVisible({...base,matchState:'TIME_UP'})).toBe(false);
-  expect(genuineF3DirectHitVisible({...base,paused:true})).toBe(false);
+  // The actual B15 isolated QA is paused while it advances native
+  // Rapier ticks with real pointer input. Authentic damage still displays.
+  expect(genuineF3DirectHitVisible({...base,paused:true})).toBe(true);
+  expect(genuineF3DirectHitVisible({...base,paused:true,
+   realHitCount:null})).toBe(false);
   expect(genuineF3DirectHitVisible({...base,stopReason:'SOURCE_HOLD'})).toBe(false);
  });
 });

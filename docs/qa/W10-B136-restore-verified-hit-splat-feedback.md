@@ -42,3 +42,22 @@ No original supported cross-side path 0/12, no freely traversable original
 human-vs-CPU enemy encounter proof, no certified unrestricted original 4v4
 Turf result. Keep HOLD, and make F2/F3 natural encounter and combat the
 next high-level objective instead of more minor UI-only tweaks.
+
+## B136.2 — Recheck of first attempted patch (same stage)
+
+At first B136 SHA `2e7c6e2c31ad407855800ae884e88eb7bf8565f8`,
+[real B15 #39964496284](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39964496284)
+still failed `B88_REAL_CHROME_HUMAN_SPLAT_MARKER_MISSING`.
+The first patch correctly restored visibility during STAGING but retained
+a **new `!paused` requirement** that old B88 never had. B15's genuine
+`advanceQaTicks` only functions while paused, and does perform real
+Rapier KCC/projectile ticks after trusted actual pointer-down.
+Thus pause must not erase source-authenticated native direct HIT/SPLAT
+markers. Remove only the *display-level* paused veto; source authority,
+monotonic direct hit/splat counts, true native tick range, no stop/TIME_UP
+and no fabricated official score remain unchanged. The native damage
+vignette and low-HP/enemy-ink logic remain hidden during pause.
+
+A new unit regression asserts that actual paused STAGING hit markers
+are visible **only** with real hit counters. B15 Chrome must be rerun
+after this fix; earlier B136 and B135 browser failures are not PASS.
