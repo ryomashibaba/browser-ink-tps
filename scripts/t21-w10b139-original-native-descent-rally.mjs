@@ -182,9 +182,9 @@ async function doPhysicalTrial(){
    firstMouseRelease=true;
    if(untilShot.shotsFired<=shotsBefore)
     fail('REAL_MOUSE_POINTERLOCK_SHOTS_REQUIRED');
-   // We already used 33 real shots/walk ticks. Still perform a total
-   // of 200 genuine W ticks, not 200 + 33 or a QA-injected clock.
-   phase.ticks=167;
+   // The real 33-tick mouse pulse occurs before the W key goes down:
+   // keep the complete preverified W200 physical source-descent program.
+   // No 167-tick shortening, synthetic game tick, or input substitution.
   }
   const n=await nativeOriginalKeyboard(phase,observe);
   observe(n,phase.name+'_END',true);
