@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `81c6f943569e64393626651ba3075fbef265a019`
-- 最新番号のQAレポート: W10-B135 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B135-real-native-combat-feedback.md
+- 同期元QA HEAD: `2e7c6e2c31ad407855800ae884e88eb7bf8565f8`
+- 最新番号のQAレポート: W10-B136 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B136-restore-verified-hit-splat-feedback.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B136 （着手・完了の保証ではない）
-- レポート記載のActions: 確認できない
+- 次工程候補: W10-B137 （着手・完了の保証ではない）
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39962329703
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
