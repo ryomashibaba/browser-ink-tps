@@ -74,6 +74,7 @@ import {inspectB124ActualRaisedSourceBoundary}
  from './W10B124OriginalRaisedSourceBoundary';
 import {createF3OriginalRaisedEdgeCoach,originalRaisedSourceEdgeStatus}
  from './UndertowF3OriginalEdgeGuidance';
+import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
@@ -2324,12 +2325,15 @@ export class UndertowF3PlayablePreviewApp{
   // B129 is a read-only rendered warning; genuine KCC grounding and
   // a registered original Rapier foot support ID are BOTH required.
   // Avoid extra raycasts away from the known raised Y4.5 original layer.
-  const b129Possible=this.stats.playerGrounded&&this.resources.currentHp>0&&
-   this.player.currentMode==='HUMAN'&&
-   Math.abs(pos.y- (4.5+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters))<=.22;
-  const b129Hit=b129Possible?
-   this.physics.castCharacterFootSupport(pos,
-    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
+  const b130Possible=this.stats.playerGrounded&&this.resources.currentHp>0&&
+   this.player.currentMode==='HUMAN'&&this.matchState==='PLAYING'&&
+   !this.paused&&!this.stopReason;
+  const b129Hit=b130Possible?this.physics.castCharacterFootSupport(
+   pos,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
+  const b130Foot=b129Hit?.solidId?inspectB130OriginalFlatSource({
+   nativeTick:this.clock.tick,actualRapierBody:[pos.x,pos.y,pos.z],
+   actualRapierSupportId:b129Hit.solidId
+  }):null;
   const b129Foot=b129Hit?.solidId==='UndertowT21D:right-low-team-a'?
    inspectB124ActualRaisedSourceBoundary({
     nativeTick:this.clock.tick,actualRapierBody:[pos.x,pos.y,pos.z]
@@ -2338,6 +2342,7 @@ export class UndertowF3PlayablePreviewApp{
    nativeTick:this.clock.tick,nativeKccGrounded:this.stats.playerGrounded,
    realOriginalFootSolidId:b129Hit?.solidId??null,
    actualRaisedFootprint:b129Foot,
+   actualOriginalFlatFootprint:b130Foot,
    stageAuthority:[this.rawStage.solids.length,
     this.rawStage.paintSurfaces.length,
     this.rawStage.navigationLinks?.length??0,0],

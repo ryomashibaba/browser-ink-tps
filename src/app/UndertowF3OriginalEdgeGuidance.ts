@@ -5,6 +5,7 @@
  */
 import type {B124RaisedSourceWitness}
  from './W10B124OriginalRaisedSourceBoundary';
+import type {B130FlatWitness} from './W10B130OriginalFlatEdge';
 
 const SOURCE='UndertowT21D:right-low-team-a';
 export type F3RaisedEdgeInput={
@@ -12,6 +13,7 @@ export type F3RaisedEdgeInput={
  nativeKccGrounded:boolean;
  realOriginalFootSolidId:string|null;
  actualRaisedFootprint:B124RaisedSourceWitness|null;
+ actualOriginalFlatFootprint?:B130FlatWitness|null;
  stageAuthority:readonly [number,number,number,number];
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  paused:boolean;
@@ -21,30 +23,42 @@ export type F3RaisedEdgeInput={
 export function originalRaisedSourceEdgeStatus(input:F3RaisedEdgeInput){
  const w=input.actualRaisedFootprint;
  const authority=input.stageAuthority.join(',')==='25,17,26,0';
- const eligible=authority&&input.matchState==='PLAYING'&&!input.paused&&
-  !input.stopReason&&input.activeHuman&&
-  input.nativeKccGrounded===true&&
-  input.realOriginalFootSolidId===SOURCE&&
-  Number.isSafeInteger(input.nativeTick)&&input.nativeTick>=0&&
-  w?.nativeTick===input.nativeTick&&
-  w.actualNamedOriginalSolidId===SOURCE&&
+ const common=authority&&input.matchState==='PLAYING'&&!input.paused&&
+  !input.stopReason&&input.activeHuman&&input.nativeKccGrounded===true&&
+  Number.isSafeInteger(input.nativeTick)&&input.nativeTick>=0;
+ const eligible=common&&input.realOriginalFootSolidId===SOURCE&&
+  w?.nativeTick===input.nativeTick&&w.actualNamedOriginalSolidId===SOURCE&&
   w.realFootXZInsideOriginalSlab===true&&
   w.originalRaisedSourceVerticalBandWithin22cm===true&&
   Number.isFinite(w.distanceToOriginalSourcePolygonBoundaryMeters)&&
   w.distanceToOriginalSourcePolygonBoundaryMeters>=0&&
   w.originalAuthority.join(',')==='25,17,26,0'&&
   w.generatedSourceFloor===false&&w.sourceNavmeshModified===false;
- const distance=eligible?w!.distanceToOriginalSourcePolygonBoundaryMeters:null;
+ const flat=input.actualOriginalFlatFootprint;
+ const verifiedFlat=common&&flat!==null&&flat!==undefined&&
+  flat.nativeTick===input.nativeTick&&
+  flat.actualNamedOriginalSolidId===input.realOriginalFootSolidId&&
+  flat.insideRegisteredOriginalXZFootprint===true&&
+  flat.originalFlatVerticalBandWithin22cm===true&&
+  Number.isFinite(flat.distanceToOriginalPolygonBoundaryMeters)&&
+  flat.distanceToOriginalPolygonBoundaryMeters>=0&&
+  flat.originalAuthority.join(',')==='25,17,26,0'&&
+  flat.polygonAloneDoesNotCertifyKcc===true&&
+  flat.physicsModified===false&&flat.originalGeometryModified===false;
+ const distance=verifiedFlat?flat.distanceToOriginalPolygonBoundaryMeters:
+  eligible?w!.distanceToOriginalSourcePolygonBoundaryMeters:null;
+ const namedSupport=verifiedFlat?flat.actualNamedOriginalSolidId:
+  eligible?SOURCE:null;
  const severity=distance===null?'UNAVAILABLE' as const:
   distance<.65?'EDGE_RISK' as const:
   distance<1.20?'NEAR_EDGE' as const:'CLEAR' as const;
  return {
-  schema:'W10_B129_NATIVE_ORIGINAL_RAISED_EDGE_HUD_V1' as const,
+  schema:'W10_B130_REGISTERED_ORIGINAL_FLAT_EDGE_HUD_V1' as const,
   severity,
   showCaution:severity==='EDGE_RISK'||severity==='NEAR_EDGE',
   originalRaisedFloorEdgeMeters:distance,
   nativeTick:input.nativeTick,
-  authenticNamedOriginalSupport:eligible?SOURCE:null,
+  authenticNamedOriginalSupport:namedSupport,
   headline:severity==='EDGE_RISK'?'ORIGINAL FLOOR EDGE · CLOSE':
    severity==='NEAR_EDGE'?'ORIGINAL FLOOR EDGE · NEAR':
    'NO EDGE CAUTION',
@@ -87,7 +101,7 @@ export function createF3OriginalRaisedEdgeCoach(ui:HTMLElement){
    root.style.borderColor=value.severity==='EDGE_RISK'?'#ff8679':'#efb67f';
    root.textContent=value.headline+' · '+
     value.originalRaisedFloorEdgeMeters!.toFixed(2)+
-    'm to source boundary · WATCH YOUR STEP';
+    'm from foot center to source boundary · WATCH YOUR STEP';
   }
  }
  return {root,render};
