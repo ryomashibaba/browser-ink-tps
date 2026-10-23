@@ -1757,6 +1757,22 @@ export class UndertowF3PlayablePreviewApp{
       footprint:sourceFootprint
      });
     }
+    // B135: show genuine HP loss, HUMAN damage to CPU and real respawn
+    // during the current native 60Hz KCC/weapon step, without redrawing
+    // the heavy ink/radar/scoreless practice panels every frame.
+    this.practiceHud.renderNativeCombat({
+     tick:frame,hp:this.resources.currentHp,
+     ink:this.stats.playerInk,inkRelation:this.player.currentInkRelation,
+     respawnTicks:this.resources.currentHp<=0?
+      Math.max(0,150-this.respawnFrames):null,
+     hitCount:this.stats.humanCpuDirectHits,
+     splatCount:this.stats.humanCpuDirectSplats,
+     matchState:this.matchState,paused:this.paused,stopReason:this.stopReason,
+     originalSolids:this.rawStage.solids.length,
+     originalPaint:this.rawStage.paintSurfaces.length,
+     originalLinks:this.rawStage.navigationLinks?.length??0,
+     scoreable:0,productionAuthorized:false,unrestricted4v4Certified:false
+    });
     // B134: keep the actual player-facing warning synchronized with
     // authentic 60Hz KCC/support geometry, not every 12th GPU frame.
     // Real Chrome SwiftShader may advance 30-50 native ticks between

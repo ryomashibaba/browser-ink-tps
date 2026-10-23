@@ -27,6 +27,15 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  productionAuthorized:boolean;
  stopReason:string|null;
 }
+/** B135: genuine 60Hz KCC/projectile combat telemetry, without an ink score. */
+export interface F3NativeCombatPulse{
+ tick:number;hp:number;ink:number;inkRelation:string;
+ respawnTicks:number|null;hitCount:number;splatCount:number;
+ matchState:'STAGING'|'PLAYING'|'TIME_UP';
+ paused:boolean;stopReason:string|null;
+ originalSolids:number;originalPaint:number;originalLinks:number;
+ scoreable:number;productionAuthorized:false;unrestricted4v4Certified:false;
+}
 const clampPercent=(n:number)=>Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):0;
 export function formatF3PlayableHud(s:F3PlayableHudState){
  // Never turn this nonproduction lab into an inferred winner or a scored match.
@@ -210,6 +219,106 @@ export function createF3PlayableHud(ui:HTMLElement){
  const humanHead=select('t21-f3-b76-head');
  const humanCounts=select('t21-f3-b76-counts');
  const humanHint=select('t21-f3-b76-hint');
+ function renderNativeCombat(p:F3NativeCombatPulse){
+  // A native pulse is proof of the real source & native stats, NOT
+  // authorization of scoreable Turf or unrestricted 4v4.
+  const legitimate=p.originalSolids===25&&p.originalPaint===17&&
+   p.originalLinks===26&&p.scoreable===0&&
+   p.productionAuthorized===false&&p.unrestricted4v4Certified===false&&
+   Number.isSafeInteger(p.tick)&&p.tick>=0&&
+   Number.isFinite(p.hp)&&p.hp>=0&&p.hp<=100&&
+   Number.isFinite(p.ink)&&p.ink>=0&&p.ink<=100.001&&
+   Number.isSafeInteger(p.hitCount)&&p.hitCount>=0&&
+   Number.isSafeInteger(p.splatCount)&&p.splatCount>=0&&
+   p.splatCount<=p.hitCount;
+  const tick=legitimate?p.tick:-1;
+  const hp=legitimate?p.hp:0;
+  const hitCount=legitimate?p.hitCount:null;
+  const splatCount=legitimate?p.splatCount:null;
+  const splatted=legitimate&&hp===0;
+  if(!legitimate){
+   // Always fail closed on source drift, even if previous HUD was visible.
+   hitMarkerUntil=-1;lastHitCount=null;lastSplatCount=null;
+   lastHitTick=-1;previousHp=null;previousTick=null;
+   damageFlashThrough=-1;
+  }else{
+   const hpText='HP '+Math.round(hp)+' · INK '+Math.round(p.ink);
+   if(vitals.textContent!==hpText)vitals.textContent=hpText;
+   hpBar.style.width=Math.round(hp)+'%';
+   hpBar.style.background=hp<=30?'#ff8888':'#53e4ea';
+   inkBar.style.width=Math.round(p.ink)+'%';
+  }
+  const canWarn=legitimate&&p.matchState==='PLAYING'&&
+   !p.paused&&!p.stopReason&&hp>0;
+  const enemyInk=canWarn&&p.inkRelation==='ENEMY';
+  const lowHp=canWarn&&hp<=35;
+  const nativeHazard=enemyInk&&lowHp?'CRITICAL_ENEMY_INK':
+   enemyInk?'ENEMY_INK':lowHp?'LOW_HP':'NONE';
+  danger.hidden=nativeHazard==='NONE';
+  const nativeDangerText=nativeHazard==='CRITICAL_ENEMY_INK'?
+   'CRITICAL HP + ENEMY INK · ESCAPE & RECOVER':
+   nativeHazard==='ENEMY_INK'?'ENEMY INK · LEAVE THE AREA':
+   nativeHazard==='LOW_HP'?'LOW HP · RECOVER':'NONE';
+  if(!danger.hidden&&danger.textContent!==nativeDangerText)
+   danger.textContent=nativeDangerText;
+  danger.style.borderColor=nativeHazard==='CRITICAL_ENEMY_INK'?
+   '#ff5165':'#ff9a85';
+  danger.dataset.t21B84RealHazard=nativeHazard;
+  const validHitTick=legitimate;
+  if(validHitTick&&hitCount!==null&&splatCount!==null){
+   const monotonic=lastHitCount!==null&&lastSplatCount!==null&&
+    tick>=lastHitTick&&hitCount>=lastHitCount&&splatCount>=lastSplatCount;
+   if(!monotonic)hitMarkerUntil=-1;
+   if(monotonic&&lastSplatCount!==null&&splatCount>lastSplatCount){
+    hitMarkerUntil=tick+75;
+    hitMarker.textContent='CPU SPLAT';
+   }else if(monotonic&&lastHitCount!==null&&hitCount>lastHitCount){
+    hitMarkerUntil=tick+48;
+    hitMarker.textContent='CPU HIT';
+   }
+   lastHitCount=hitCount;lastSplatCount=splatCount;lastHitTick=tick;
+  }else{
+   hitMarkerUntil=-1;lastHitCount=null;lastSplatCount=null;lastHitTick=-1;
+  }
+  const showRealHit=validHitTick&&hitCount!==null&&hitMarkerUntil>=tick&&
+   p.matchState==='PLAYING'&&!p.paused&&!p.stopReason;
+  if(showRealHit&&!hitMarker.isConnected)ui.appendChild(hitMarker);
+  else if(!showRealHit&&hitMarker.isConnected)hitMarker.remove();
+  hitMarker.dataset.t21B87ActualHitCount=String(hitCount??'UNVERIFIED');
+  hitMarker.dataset.t21B88HumanDirectSplats=String(splatCount??'UNVERIFIED');
+  hitMarker.dataset.t21B135NativeTick=String(tick);
+  splatNotice.hidden=!splatted||p.matchState==='TIME_UP'||!!p.stopReason;
+  if(!splatNotice.hidden&&!splatNotice.isConnected)ui.appendChild(splatNotice);
+  else if(splatNotice.hidden&&splatNotice.isConnected)splatNotice.remove();
+  const t=p.respawnTicks;
+  const seconds=splatted&&Number.isSafeInteger(t)&&t!==null&&
+   t>=0&&t<=150?Math.ceil(t/6)/10:null;
+  countdown.textContent=seconds===null?'RESPAWNING…':
+   'RESPAWN IN '+seconds.toFixed(1)+'s';
+  splatNotice.dataset.nativeRespawnSeconds=
+   seconds===null?'UNAVAILABLE':seconds.toFixed(1);
+  splatNotice.dataset.t21B135NativeTick=String(tick);
+  if(legitimate){
+   if(previousTick!==null&&tick<previousTick){
+    previousHp=null;damageFlashThrough=-1;
+   }
+   if(previousTick!==null&&tick>previousTick&&
+      previousHp!==null&&hp<previousHp-.01)
+    damageFlashThrough=tick+20;
+   previousHp=hp;previousTick=tick;
+  }
+  const hurt=legitimate&&!splatted&&!p.paused&&!p.stopReason&&
+   p.matchState==='PLAYING'&&tick<=damageFlashThrough;
+  if(hurt){
+   if(!damageVignette.isConnected)ui.appendChild(damageVignette);
+   damageVignette.style.opacity='1';
+  }else if(damageVignette.isConnected){
+   damageVignette.remove();
+   damageVignette.style.opacity='0';
+  }
+  damageVignette.dataset.actualHpDrop=hurt?'VISIBLE':'OFF';
+  damageVignette.dataset.t21B135NativeTick=String(tick);
+ }
  function render(value:F3PlayableHudState){
   const v=formatF3PlayableHud(value);
   clock.textContent=v.clock;
@@ -231,61 +340,21 @@ export function createF3PlayableHud(ui:HTMLElement){
   danger.style.borderColor=v.hazard==='CRITICAL_ENEMY_INK'?
    '#ff5165':'#ff9a85';
   danger.dataset.t21B84RealHazard=v.hazard;
-  const hitCount=v.realHumanCpuDirectHits;
-  const splatCount=v.realHumanCpuDirectSplats;
-  const hitTick=value.tick;
-  const validHitTick=Number.isSafeInteger(hitTick)&&hitTick!==undefined&&hitTick>=0;
-  if(validHitTick&&hitCount!==null&&splatCount!==null){
-   const monotonic=lastHitCount!==null&&lastSplatCount!==null&&
-    hitTick>=lastHitTick&&hitCount>=lastHitCount&&splatCount>=lastSplatCount;
-   if(!monotonic)hitMarkerUntil=-1;
-   if(monotonic&&lastSplatCount!==null&&splatCount>lastSplatCount){
-    hitMarkerUntil=hitTick+75;
-    hitMarker.textContent='CPU SPLAT';
-   }else if(monotonic&&lastHitCount!==null&&hitCount>lastHitCount){
-    hitMarkerUntil=hitTick+48;
-    hitMarker.textContent='CPU HIT';
-   }
-   lastHitCount=hitCount;lastSplatCount=splatCount;lastHitTick=hitTick;
-  }else{
-   hitMarkerUntil=-1;
-   lastHitCount=null;lastSplatCount=null;lastHitTick=-1;
-  }
-  const showRealHit=validHitTick&&hitCount!==null&&hitMarkerUntil>=hitTick&&
-   !value.stopReason&&value.matchState!=='TIME_UP';
-  if(showRealHit&&!hitMarker.isConnected)ui.appendChild(hitMarker);
-  else if(!showRealHit&&hitMarker.isConnected)hitMarker.remove();
-  hitMarker.dataset.t21B87ActualHitCount=String(hitCount??'UNVERIFIED');
-  hitMarker.dataset.t21B88HumanDirectSplats=String(splatCount??'UNVERIFIED');
-  const splatted=v.lifeState==='SPLATTED';
-  splatNotice.hidden=!splatted||value.matchState==='TIME_UP'||!!value.stopReason;
-  if(!splatNotice.hidden&&!splatNotice.isConnected)ui.appendChild(splatNotice);
-  else if(splatNotice.hidden&&splatNotice.isConnected)splatNotice.remove();
-  countdown.textContent=v.respawnSeconds===null?'RESPAWNING…':
-   'RESPAWN IN '+v.respawnSeconds.toFixed(1)+'s';
-  splatNotice.dataset.nativeRespawnSeconds=
-   v.respawnSeconds===null?'UNAVAILABLE':v.respawnSeconds.toFixed(1);
-  const tick=value.tick,hp=value.player.hp;
-  const validTick=Number.isSafeInteger(tick)&&tick!==undefined&&tick>=0;
-  if(validTick&&Number.isFinite(hp)){
-   if(previousTick!==null&&tick<previousTick){
-    previousHp=null;damageFlashThrough=-1;
-   }
-   if(previousTick!==null&&tick>previousTick&&
-      previousHp!==null&&hp<previousHp-.01)
-    damageFlashThrough=tick+20; // Real 60Hz: 0.33s, not wall-clock guessed.
-   previousHp=hp;previousTick=tick;
-  }
-  const hurt=validTick&&!splatted&&!value.paused&&!value.stopReason&&
-   tick<=damageFlashThrough;
-  if(hurt){
-   if(!damageVignette.isConnected)ui.appendChild(damageVignette);
-   damageVignette.style.opacity='1';
-  }else if(damageVignette.isConnected){
-   damageVignette.remove();
-   damageVignette.style.opacity='0';
-  }
-  damageVignette.dataset.actualHpDrop=hurt?'VISIBLE':'OFF';
+  renderNativeCombat({
+   tick:value.tick??-1,hp:value.player.hp,ink:value.player.ink,
+   inkRelation:value.player.inkRelation??'UNVERIFIED',
+   respawnTicks:value.humanRespawnTicksRemaining??null,
+   hitCount:value.humanCpuDirectHits??-1,
+   splatCount:value.humanCpuDirectSplats??-1,
+   matchState:value.matchState as F3NativeCombatPulse['matchState'],
+   paused:value.paused,stopReason:value.stopReason,
+   originalSolids:value.originalSourceSolids??-1,
+   originalPaint:value.originalPaintSurfaces??-1,
+   originalLinks:value.originalSourceNavigationLinks??-1,
+   scoreable:value.sourceScoreablePromotions,
+   productionAuthorized:value.productionAuthorized as false,
+   unrestricted4v4Certified:value.unrestricted4v4Certified as false
+  });
   const source=activity.observe(value);
   const verified=!!source&&source.status!=='UNVERIFIED';
   activityBox.hidden=!verified;
@@ -366,5 +435,5 @@ export function createF3PlayableHud(ui:HTMLElement){
   root.dataset.cpuSourceOnly='true';
   root.dataset.crossTeamContactCertified='false';
  }
- return {root,render};
+ return {root,render,renderNativeCombat};
 }
