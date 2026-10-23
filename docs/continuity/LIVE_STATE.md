@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `d2031644654a21833846d88ed4dcc95561bd0c28`
-- 最新番号のQAレポート: W10-B137 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B137-original-native-ally-rally.md
+- 同期元QA HEAD: `8d154a6328c0d7db2e992fa872dbf93fad9d4d39`
+- 最新番号のQAレポート: W10-B138 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B138-native-A1-ally-original-180s.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B138 （着手・完了の保証ではない）
+- 次工程候補: W10-B139 （着手・完了の保証ではない）
 - レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39969010303
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
