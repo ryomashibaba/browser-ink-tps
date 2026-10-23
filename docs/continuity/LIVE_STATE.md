@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `e861b118284d733e439d0f7e57431f6989464c0e`
-- 最新番号のQAレポート: W10-B139 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B139-true-native-human-descent-ally.md
+- 同期元QA HEAD: `011bbefeac28e894f62d2d4a8df4fe71bbc201f8`
+- 最新番号のQAレポート: W10-B140 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B140-native-physical-trace-repair.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B140 （着手・完了の保証ではない）
-- レポート記載のActions: 確認できない
+- 次工程候補: W10-B141 （着手・完了の保証ではない）
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39977722919
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
