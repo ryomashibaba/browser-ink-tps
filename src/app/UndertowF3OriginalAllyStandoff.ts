@@ -26,3 +26,28 @@ export function chooseB142OriginalAllyStandoff(
  }
  return null;
 }
+
+/** B143: hold ONLY a previously source-audited B142 target, not a new
+ * unverified rally goal. Runtime fully rechecks Rapier footprints + both
+ * true original native paths before using the retained target. */
+export function mayRetainB143OriginalAllyStandoff(x:{
+ nativeTick:number;previousApprovedTick:number;
+ realCpuFoot:B142Foot;realHumanFoot:B142Foot;
+ lastApprovedHumanFoot:B142Foot;originalGoal:B142Foot;
+}):boolean{
+ if(!Number.isSafeInteger(x.nativeTick)||x.nativeTick<0||
+    !Number.isSafeInteger(x.previousApprovedTick)||
+    x.previousApprovedTick>x.nativeTick||
+    x.nativeTick-x.previousApprovedTick>120)return false;
+ const a=x.realCpuFoot,h=x.realHumanFoot,
+  old=x.lastApprovedHumanFoot,t=x.originalGoal;
+ if([a,h,old,t].some(p=>![p.x,p.y,p.z].every(Number.isFinite)||
+     p.z<33||p.y<2.7||p.y>5.25))return false;
+ if(Math.abs(a.y-h.y)>.30||Math.abs(t.y-h.y)>.30||
+    Math.hypot(h.x-old.x,h.z-old.z)>.25||
+    Math.abs(h.y-old.y)>.10)return false;
+ const separation=Math.hypot(a.x-h.x,a.z-h.z);
+ const humanToGoal=Math.hypot(t.x-h.x,t.z-h.z);
+ return separation>=1.7&&separation<3&&
+  humanToGoal>=1.7&&humanToGoal<=3.5;
+}

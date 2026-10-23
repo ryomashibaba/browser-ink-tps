@@ -14,7 +14,8 @@ import {Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
-import {chooseB142OriginalAllyStandoff} from './UndertowF3OriginalAllyStandoff';
+import {chooseB142OriginalAllyStandoff,mayRetainB143OriginalAllyStandoff}
+ from './UndertowF3OriginalAllyStandoff';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
@@ -50,6 +51,8 @@ export interface F3TrafficSnapshot{
   readonly b137MissingSourceFloorProof:number;
   readonly b142OriginalStandoffGoalsApproved:number;
   readonly b142UnsafeStandoffGoalsDenied:number;
+  readonly b143ReauthorizedStableStandoffGoals:number;
+  readonly b143UnsafeOrStaleGoalHoldsRejected:number;
   readonly realGoalRequests:number;
   readonly heldRequests:number;
   readonly engagementGoalRequests:number;
@@ -119,6 +122,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b137MissingSourceFloorProof=0;
  private b142OriginalStandoffGoalsApproved=0;
  private b142UnsafeStandoffGoalsDenied=0;
+ private b143ReauthorizedStableStandoffGoals=0;
+ private b143UnsafeOrStaleGoalHoldsRejected=0;
+ private b143ApprovedNativeAllyGoal:{
+  readonly target:Vec3;readonly humanFoot:Vec3;readonly lastCheckedTick:number
+ }|null=null;
  private readonly b137ActualHumanFoot=new Vec3();
  private b137HumanFootValid=false;
  private b137NativeTick=-1;
@@ -342,6 +350,62 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(this.enableB137OriginalAllyRally&&id==='A1'){
    this.b137RealCandidateChecks++;
    const human=this.b137ActualHumanFoot;
+   // B143: after an actually source-certified B142 goal, keep A1
+   // approaching the old 2m standoff in [1.7,3)m rather than rejoining
+   // unrelated patrol when the new B137 >=3m goal gate closes.
+   const previous=this.b143ApprovedNativeAllyGoal;
+   if(previous){
+    const retain=this.b137HumanFootValid&&!!this.physics&&
+     bot.team===Team.A&&bot.mobilityState==='GROUND'&&
+     bot.lifeState!=='SPLATTED'&&mayRetainB143OriginalAllyStandoff({
+      nativeTick:this.b137NativeTick,
+      previousApprovedTick:previous.lastCheckedTick,
+      realCpuFoot:realFoot,realHumanFoot:human,
+      lastApprovedHumanFoot:previous.humanFoot,
+      originalGoal:previous.target
+     });
+    if(retain){
+     const sourceFlat=(v:Vec3)=>{
+      const hit=this.physics!.castStageSegment(
+       new Vec3(v.x,v.y+.65,v.z),
+       new Vec3(v.x,v.y-.65,v.z),'ink-projectile');
+      return hit?inspectB130OriginalFlatSource({
+       nativeTick:this.b137NativeTick,
+       actualRapierBody:[v.x,v.y+
+        PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,v.z],
+       actualRapierSupportId:hit.solidId
+      }):null;
+     };
+     const hasStrictFlat=(v:Vec3)=>{
+      const w=sourceFlat(v);
+      return !!w?.insideRegisteredOriginalXZFootprint&&
+       w.originalFlatVerticalBandWithin22cm&&
+       w.distanceToOriginalPolygonBoundaryMeters>=.75;
+     };
+     if(hasStrictFlat(realFoot)&&hasStrictFlat(human)&&
+        hasStrictFlat(previous.target)){
+      const toHuman=this.nav.auditPath(realFoot,human);
+      const toTarget=this.nav.auditPath(realFoot,previous.target);
+      const valid=(audit:typeof toHuman)=>audit.reachedTarget&&
+       audit.startSnapDistanceMeters<=.20&&
+       audit.endSnapDistanceMeters<=.20&&
+       this.hasSourceSupportedRoute(audit,1);
+      if(valid(toHuman)&&valid(toTarget)){
+       this.patrolIndex.set(id,-1);
+       out.copy(previous.target);
+       this.realGoalRequests++;
+       this.b143ReauthorizedStableStandoffGoals++;
+       this.b143ApprovedNativeAllyGoal={
+        target:previous.target.clone(),humanFoot:human.clone(),
+        lastCheckedTick:this.b137NativeTick
+       };
+       return true;
+      }
+     }
+    }
+    this.b143UnsafeOrStaleGoalHoldsRejected++;
+    this.b143ApprovedNativeAllyGoal=null;
+   }
    if(this.b137HumanFootValid&&
       eligibleB137OriginalAllyRally({
        enabled:true,actorId:id,team:bot.team,
@@ -394,6 +458,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
          this.realGoalRequests++;
          this.b137ApprovedNativeRallies++;
          this.b142OriginalStandoffGoalsApproved++;
+         this.b143ApprovedNativeAllyGoal={
+          target:target.clone(),humanFoot:human.clone(),
+          lastCheckedTick:this.b137NativeTick
+         };
          return true;
         }
        }
@@ -809,6 +877,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b137MissingSourceFloorProof:this.b137MissingSourceFloorProof,
      b142OriginalStandoffGoalsApproved:this.b142OriginalStandoffGoalsApproved,
      b142UnsafeStandoffGoalsDenied:this.b142UnsafeStandoffGoalsDenied,
+     b143ReauthorizedStableStandoffGoals:
+      this.b143ReauthorizedStableStandoffGoals,
+     b143UnsafeOrStaleGoalHoldsRejected:
+      this.b143UnsafeOrStaleGoalHoldsRejected,
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     engagementGoalRequests:this.engagementGoalRequests,
