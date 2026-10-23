@@ -13,6 +13,9 @@ import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
+import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
+import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -38,6 +41,12 @@ export interface F3TrafficSnapshot{
  readonly b93ExperimentalEnabled:boolean;
  readonly sourcePatrol:{
   readonly auditedTargets:number;
+  /** B137: opt-in true HUMAN + friendly A1 source-only tactical rally. */
+  readonly b137AllyRallyOptIn:boolean;
+  readonly b137RealCandidateChecks:number;
+  readonly b137ApprovedNativeRallies:number;
+  readonly b137UnsafeOrUnsupportedRallies:number;
+  readonly b137MissingSourceFloorProof:number;
   readonly realGoalRequests:number;
   readonly heldRequests:number;
   readonly engagementGoalRequests:number;
@@ -101,6 +110,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private realGoalRequests=0;
  private heldRequests=0;
  private engagementGoalRequests=0;
+ private b137RealCandidateChecks=0;
+ private b137ApprovedNativeRallies=0;
+ private b137UnsafeOrUnsupportedRallies=0;
+ private b137MissingSourceFloorProof=0;
+ private readonly b137ActualHumanFoot=new Vec3();
+ private b137HumanFootValid=false;
+ private b137NativeTick=-1;
  private sameSourceEnemyCandidates=0;
  private deniedNativeEnemyPaths=0;
  private sourceEndpointProbes=0;
@@ -157,7 +173,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enablePaintAwarePatrol=false,
   private readonly enableStableSourceGoal=false,
   private readonly enableB34SourceStallRecovery=false,
-  private readonly enableB93UpperDetour=false
+  private readonly enableB93UpperDetour=false,
+  private readonly enableB137OriginalAllyRally=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -309,6 +326,59 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.realGoalRequests++;
     this.engagementGoalRequests++;
     return true;
+   }
+  }
+  // B137: A1 may rally to the REAL, same-team human foot in the
+  // already reachable source-lower area, after 7 true CPU releases.
+  // Unlike legacy patrol (which keeps per-step KCC defense), this dynamic
+  // actor-following target requires a full original floor + endpoint +
+  // EVERY-intermediate Recast/Rapier source path audit. If any check
+  // fails, use the exact unchanged original patrol below.
+  if(this.enableB137OriginalAllyRally&&id==='A1'){
+   this.b137RealCandidateChecks++;
+   const human=this.b137ActualHumanFoot;
+   if(this.b137HumanFootValid&&
+      eligibleB137OriginalAllyRally({
+       enabled:true,actorId:id,team:bot.team,
+       cpuGrounded:bot.mobilityState==='GROUND',
+       humanGrounded:true,humanActive:true,
+       realCpuFoot:realFoot,realHumanFoot:human
+      })&&this.physics){
+    // Both exact physical endpoint source solids, NOT a paint decal.
+    const nativeFootHit=(p:Vec3)=>this.physics!.castStageSegment(
+     new Vec3(p.x,p.y+.65,p.z),
+     new Vec3(p.x,p.y-.65,p.z),'ink-projectile');
+    const botHit=nativeFootHit(realFoot),humanHit=nativeFootHit(human);
+    if(botHit&&humanHit){
+     const originalFlat=(foot:Vec3,id:string)=>inspectB130OriginalFlatSource({
+      nativeTick:this.b137NativeTick,
+      actualRapierBody:[foot.x,foot.y+
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,foot.z],
+      actualRapierSupportId:id
+     });
+     const b=originalFlat(realFoot,botHit.solidId);
+     const h=originalFlat(human,humanHit.solidId);
+     // Foot CENTER must be safely in an actual unmodified polygon,
+     // including original holes. This does NOT certify capsule clearance.
+     if(b?.insideRegisteredOriginalXZFootprint&&
+        b.originalFlatVerticalBandWithin22cm&&
+        b.distanceToOriginalPolygonBoundaryMeters>=.75&&
+        h?.insideRegisteredOriginalXZFootprint&&
+        h.originalFlatVerticalBandWithin22cm&&
+        h.distanceToOriginalPolygonBoundaryMeters>=.75){
+      const route=this.nav.auditPath(realFoot,human);
+      if(route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
+         route.endSnapDistanceMeters<=.20&&
+         this.hasSourceSupportedRoute(route,1)){
+       this.patrolIndex.set(id,-1);
+       out.copy(human);
+       this.realGoalRequests++;
+       this.b137ApprovedNativeRallies++;
+       return true;
+      }
+      this.b137UnsafeOrUnsupportedRallies++;
+     }else this.b137MissingSourceFloorProof++;
+    }else this.b137MissingSourceFloorProof++;
    }
   }
   const active=this.patrolIndex.get(id)??-1;
@@ -516,7 +586,20 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    upperStart:candidate.start,escapeFoot,
    phase:escapeFoot?'ESCAPE':'APPROACH'});
  }
- prepare(frame:number,humanFoot?:Readonly<{x:number;y:number;z:number}>):void{
+ prepare(frame:number,humanFoot?:Readonly<{
+  x:number;y:number;z:number;grounded?:boolean;active?:boolean
+ }>):void{
+  // Cache only the ACTUAL native input for this fixed step. No foot
+  // relocation and no synthetic actor position. Even when all CPUs are
+  // released, refresh validity each physical tick before CPU goal choice.
+  this.b137NativeTick=frame;
+  this.b137HumanFootValid=false;
+  if(this.enableB137OriginalAllyRally&&
+     humanFoot?.grounded===true&&humanFoot.active===true&&
+     [humanFoot.x,humanFoot.y,humanFoot.z].every(Number.isFinite)){
+   this.b137ActualHumanFoot.set(humanFoot.x,humanFoot.y,humanFoot.z);
+   this.b137HumanFootValid=true;
+  }
   if(this.freeCombat)return;
   for(const [id,requires] of Object.entries(RELEASE_AFTER)){
    if(!this.released.has(id)&&
@@ -696,6 +779,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     actorId,linkId:v.linkId,phase:v.phase,escapeFoot:v.escapeFoot})),
    b93ExperimentalEnabled:this.enableB93UpperDetour,
    sourcePatrol:{auditedTargets:this.auditedTargets,
+    b137AllyRallyOptIn:this.enableB137OriginalAllyRally,
+    b137RealCandidateChecks:this.b137RealCandidateChecks,
+    b137ApprovedNativeRallies:this.b137ApprovedNativeRallies,
+    b137UnsafeOrUnsupportedRallies:this.b137UnsafeOrUnsupportedRallies,
+    b137MissingSourceFloorProof:this.b137MissingSourceFloorProof,
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     engagementGoalRequests:this.engagementGoalRequests,

@@ -458,7 +458,11 @@ export class UndertowF3PlayablePreviewApp{
    stage,this.nav,slots,bots,this.physics,this.ink,
    b31Enabled,b33StableGoals,b34Recover,
    b31Params.get('t21QaDrive')==='source'&&
-   b31Params.get('t21W10B93')==='upperDetour');
+   b31Params.get('t21W10B93')==='upperDetour',
+   b31Params.get('t21W10B137')==='allyRally');
+  this.canvas.dataset.t21B137AllyRally=
+   b31Params.get('t21W10B137')==='allyRally'?
+    'ORIGINAL_GROUNDED_ALLY_EXPERIMENT':'FIXED_PATROL_DEFAULT';
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   // B64 experimental native source-floor aim. Existing FIXED source CPU
   // remains default: this does NOT modify Recast/Crowd target steering.
@@ -1583,7 +1587,7 @@ export class UndertowF3PlayablePreviewApp{
      const foot=this.player.getPosition(this.p);
      this.traffic.prepare(frame,{
       x:foot.x,y:foot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
-      z:foot.z
+      z:foot.z,grounded:this.stats.playerGrounded,active:alive
      });
     }
     const cpuStart=this.b20ProfileStart();
