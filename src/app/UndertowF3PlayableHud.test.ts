@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {formatF3PlayableHud,type F3PlayableHudState}
+import {formatF3PlayableHud,genuineF3DirectHitVisible,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
 function state():F3PlayableHudState{
@@ -108,5 +108,28 @@ describe('W10-B17 non-scoring source practice HUD',()=>{
   expect(()=>formatF3PlayableHud(s)).toThrow('T21_W10B17_HUD_MUST_NEVER_CERTIFY_TURF_SCORE');
   s.sourceScoreablePromotions=0;s.productionAuthorized=true;
   expect(()=>formatF3PlayableHud(s)).toThrow('T21_W10B17_HUD_MUST_NEVER_CERTIFY_TURF_SCORE');
+ });
+});
+
+describe('W10-B136 genuine native direct hit and splat marker timing',()=>{
+ const base={sourceTrusted:true,nativeTick:190,
+  realHitCount:1,nativeMarkerUntil:238,
+  matchState:'STAGING' as 'STAGING'|'PLAYING'|'TIME_UP',
+  paused:false,stopReason:null as string|null};
+ it('restores real B15 staging QA hit/splat without manufacturing hits',()=>{
+  expect(genuineF3DirectHitVisible(base)).toBe(true);
+  expect(genuineF3DirectHitVisible({...base,matchState:'PLAYING'})).toBe(true);
+  expect(genuineF3DirectHitVisible({...base,realHitCount:0,
+   nativeMarkerUntil:-1})).toBe(false);
+  expect(genuineF3DirectHitVisible({...base,realHitCount:null})).toBe(false);
+  expect(genuineF3DirectHitVisible({...base,sourceTrusted:false})).toBe(false);
+ });
+ it('rejects stale markers, unsound native ticks and ended sessions',()=>{
+  expect(genuineF3DirectHitVisible({...base,nativeTick:239})).toBe(false);
+  expect(genuineF3DirectHitVisible({...base,nativeTick:-1})).toBe(false);
+  expect(genuineF3DirectHitVisible({...base,nativeTick:0.5})).toBe(false);
+  expect(genuineF3DirectHitVisible({...base,matchState:'TIME_UP'})).toBe(false);
+  expect(genuineF3DirectHitVisible({...base,paused:true})).toBe(false);
+  expect(genuineF3DirectHitVisible({...base,stopReason:'SOURCE_HOLD'})).toBe(false);
  });
 });

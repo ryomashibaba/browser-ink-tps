@@ -36,6 +36,26 @@ export interface F3NativeCombatPulse{
  originalSolids:number;originalPaint:number;originalLinks:number;
  scoreable:number;productionAuthorized:false;unrestricted4v4Certified:false;
 }
+/**
+ * B136 — a source-certified real CPU damage marker can also be displayed
+ * during the isolated genuine pointer-locked combat QA staging phase.
+ * STAGING does not grant any new hit or player aim. Only real monotonic
+ * direct damage counters, original source 25/17/26/0 and a native event
+ * window can render a marker. TIME_UP/paused/unsafe remain suppressed.
+ */
+export function genuineF3DirectHitVisible(x:{
+ sourceTrusted:boolean;nativeTick:number;
+ realHitCount:number|null;nativeMarkerUntil:number;
+ matchState:'STAGING'|'PLAYING'|'TIME_UP';
+ paused:boolean;stopReason:string|null;
+}):boolean{
+ return x.sourceTrusted&&Number.isSafeInteger(x.nativeTick)&&
+  x.nativeTick>=0&&Number.isSafeInteger(x.realHitCount)&&
+  x.realHitCount!==null&&x.realHitCount>=0&&
+  Number.isSafeInteger(x.nativeMarkerUntil)&&
+  x.nativeMarkerUntil>=x.nativeTick&&
+  x.matchState!=='TIME_UP'&&!x.paused&&!x.stopReason;
+}
 const clampPercent=(n:number)=>Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):0;
 export function formatF3PlayableHud(s:F3PlayableHudState){
  // Never turn this nonproduction lab into an inferred winner or a scored match.
@@ -280,8 +300,12 @@ export function createF3PlayableHud(ui:HTMLElement){
   }else{
    hitMarkerUntil=-1;lastHitCount=null;lastSplatCount=null;lastHitTick=-1;
   }
-  const showRealHit=validHitTick&&hitCount!==null&&hitMarkerUntil>=tick&&
-   p.matchState==='PLAYING'&&!p.paused&&!p.stopReason;
+  const showRealHit=genuineF3DirectHitVisible({
+   sourceTrusted:legitimate&&validHitTick,
+   nativeTick:tick,realHitCount:hitCount,
+   nativeMarkerUntil:hitMarkerUntil,matchState:p.matchState,
+   paused:p.paused,stopReason:p.stopReason
+  });
   if(showRealHit&&!hitMarker.isConnected)ui.appendChild(hitMarker);
   else if(!showRealHit&&hitMarker.isConnected)hitMarker.remove();
   hitMarker.dataset.t21B87ActualHitCount=String(hitCount??'UNVERIFIED');
