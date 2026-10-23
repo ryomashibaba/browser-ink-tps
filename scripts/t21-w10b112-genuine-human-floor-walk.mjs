@@ -222,6 +222,11 @@ async function run(){
    genuineSourceTransitions:sourceTransitions,
    actualOriginalSourceSamples:samples,
    b118RealOriginalPassiveCrowdPrePostWitness:realCrowdDriftWitness,
+   b119LastOriginalFirstDropProxyGate:
+    end.humanCrowd?.b119OriginalFirstDropPassiveProxyGate??null,
+   b119OriginalFirstDropProxyWithheldNativeTicks:
+    end.humanCrowd?.b119FirstDropProxyWithheldNativeTicks??0,
+   b119HumanCpuCrowdAvoidanceCertifiedAtLanding:false,
    genuineKccAndOriginalRapierSupportedAtEnd:genuineEndpointSourceSupported,
    actualUnsupportedDescentSuspicionCount:actualSuspicionCount,
    lastMeasuredFiveOriginalRapierRays:footprint,
@@ -247,6 +252,10 @@ async function run(){
      postCrowdVsPhysicalHorizontalMeters??null,
     b118ActualNativeProxyMovedMeters:realCrowdDriftWitness?.
      recastIntraTickPassiveProxyDisplacementHorizontalMeters??null,
+    b119FirstDropHumanProxyWithheldNativeTicks:
+     end.humanCrowd?.b119FirstDropProxyWithheldNativeTicks??0,
+    b119ExactOriginalFirstDropGate:
+     end.humanCrowd?.b119OriginalFirstDropPassiveProxyGate?.status??null,
     originalAuthority:[25,17,26,0],
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));

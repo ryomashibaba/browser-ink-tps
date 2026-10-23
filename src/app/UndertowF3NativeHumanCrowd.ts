@@ -16,6 +16,9 @@ import {UndertowPhase14QHumanCrowdAnchor}
  from '../stage/undertow/UndertowPhase14QHumanCrowdAnchor';
 import type {B118NativeCrowdDriftWitness}
  from '../stage/undertow/UndertowPhase14QRealCrowdDriftWitness';
+import {auditB119OriginalFirstDropLanding,
+ type B119OriginalLandingDecision}
+ from '../stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate';
 
 type Foot=Readonly<{x:number;y:number;z:number}>;
 export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
@@ -23,6 +26,8 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  private previous:Foot|null=null;
  private lastFoot:Foot|null=null;
  private b118Witness:B118NativeCrowdDriftWitness|null=null;
+ private b119LastGate:B119OriginalLandingDecision|null=null;
+ private b119PassiveProxyWithheldTicks=0;
  readonly sourceOnly=true;
  attaches=0;
  detaches=0;
@@ -41,6 +46,19 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  syncActualPlayerFoot(foot:Foot){
   if(![foot.x,foot.y,foot.z].every(Number.isFinite))
    throw Error('T21_F3C_HUMAN_NONFINITE_PHYSICAL_FOOT');
+  // A single Recast update moved ONLY this passive human crowd proxy
+  // 108m at a genuine first-drop landing. Withhold the unsafe passive
+  // proxy solely on the exact two original-source slab footprints.
+  // The REAL physical HUMAN and all seven original CPU actors stay.
+  this.b119LastGate=auditB119OriginalFirstDropLanding(
+   foot,this.stage.solids);
+  if(this.b119LastGate.withheld){
+   this.suspend();
+   this.excluded++;
+   this.b119PassiveProxyWithheldTicks++;
+   this.previous={...foot};
+   return;
+  }
   const native=this.nav.closestPoint(new Vec3(foot.x,foot.y,foot.z));
   const snap=Math.hypot(native.x-foot.x,native.y-foot.y,native.z-foot.z);
   const sourceSupported=Number.isFinite(snap)&&snap<=.22;
@@ -82,6 +100,9 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
   return {active:!!this.anchor,attaches:this.attaches,
    detaches:this.detaches,airborneOrUnverifiableTicks:this.excluded,
    b118LastRealCrowdDriftWitness:this.b118Witness,
+   b119OriginalFirstDropPassiveProxyGate:this.b119LastGate,
+   b119FirstDropProxyWithheldNativeTicks:this.b119PassiveProxyWithheldTicks,
+   b119HumanCpuCrowdAvoidanceCertifiedAtLanding:false,
    fakeHumanPhysicalActors:0,playerFootMoved:false,
    sourceNavmeshChanged:false,productionAuthorized:false};
  }

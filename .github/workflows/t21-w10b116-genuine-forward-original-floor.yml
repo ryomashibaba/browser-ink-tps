@@ -1,4 +1,4 @@
-name: T21 W10-B116/B117/B118 genuine forward real Crowd drift witness
+name: T21 W10-B119 exact source first-drop passive crowd mitigation
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -6,6 +6,8 @@ on:
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
       - 'src/stage/undertow/UndertowPhase14QRealCrowdDriftWitness.ts'
       - 'src/stage/undertow/UndertowPhase14QRealCrowdDriftWitness.test.ts'
+      - 'src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.ts'
+      - 'src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts'
       - 'src/stage/undertow/UndertowPhase14QHumanCrowdAnchor.ts'
       - 'src/app/UndertowF3NativeHumanCrowd.ts'
       - 'src/stage/undertow/UndertowPhase14QHumanCrowdAnchor.ts'
@@ -28,7 +30,7 @@ jobs:
       - name: Verify real-input syntax and original runtime build
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
-          npx vitest run src/app/W10B112HumanGroundLedger.test.ts src/app/W10B113NativeFloorTrace.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QProjectedProxySeal.test.ts src/stage/undertow/UndertowPhase14QRealCrowdDriftWitness.test.ts
+          npx vitest run src/app/W10B112HumanGroundLedger.test.ts src/app/W10B113NativeFloorTrace.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QProjectedProxySeal.test.ts src/stage/undertow/UndertowPhase14QRealCrowdDriftWitness.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Real Chromium 480 native ticks physical forward, no teleport
         env:
