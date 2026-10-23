@@ -60,6 +60,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud} from './UndertowF3PlayableHud';
+import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {b69PreviewAimView,b69NextSourcePreviewHref}
  from './UndertowF3PreviewAimReview';
@@ -187,6 +188,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
+ private b141RealAllyIndicator:HTMLElement|null=null;
  private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
@@ -741,6 +743,24 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  // Actual native teammate orientation for explicitly opted-in gameplay.
+  if(this.canvas.dataset.t21B137AllyRally==='ORIGINAL_GROUNDED_ALLY_EXPERIMENT'){
+   const indicator=document.createElement('div');
+   indicator.id='t21-f3-b141-real-ally';
+   indicator.dataset.t21B141PhysicalOnly='REAL_RAPIER_AND_KCC';
+   indicator.dataset.t21B141Scoreable='0';
+   indicator.dataset.t21B141CertifiedRoute='false';
+   indicator.setAttribute('role','status');
+   indicator.style.cssText='position:fixed;left:50%;top:calc(50% + 112px);'+
+    'transform:translateX(-50%);z-index:12;pointer-events:none;'+
+    'max-width:min(440px,calc(100vw - 28px));padding:7px 11px;'+
+    'border-radius:9px;border:1px solid #5fdfdb88;'+
+    'background:rgba(4,29,40,.87);color:#e5fcff;'+
+    'font:700 11px/1.4 system-ui;text-align:center';
+   indicator.hidden=true;
+   ui.appendChild(indicator);
+   this.b141RealAllyIndicator=indicator;
+  }
   this.b129EdgeCoach=createF3OriginalRaisedEdgeCoach(ui);
   if(this.b112GroundEnabled){
    const warning=document.createElement('div');
@@ -2584,6 +2604,17 @@ export class UndertowF3PlayablePreviewApp{
   this.b58SessionBoard.finish.dataset.t21B62NativeEvidenceReady=
    completedSourceEvidence?'REAL_180S_READY':'NOT_READY';
   const p=state.cpu;
+  if(this.b141RealAllyIndicator){
+   const info=describeB141RealOriginalAlly(state,
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters);
+   const visible=info.code!=='OFF'&&state.matchState!=='TIME_UP'&&
+    !this.survey.snapshot().active&&this.galleryIndex<0;
+   this.b141RealAllyIndicator.hidden=!visible;
+   this.b141RealAllyIndicator.style.display=visible?'block':'none';
+   this.b141RealAllyIndicator.textContent=info.text;
+   this.b141RealAllyIndicator.dataset.t21B141State=info.code;
+   this.b141RealAllyIndicator.dataset.t21B141CertifiedRoute='false';
+  }
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
