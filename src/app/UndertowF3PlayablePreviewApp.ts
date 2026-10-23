@@ -1757,6 +1757,15 @@ export class UndertowF3PlayablePreviewApp{
       footprint:sourceFootprint
      });
     }
+    // B134: keep the actual player-facing warning synchronized with
+    // authentic 60Hz KCC/support geometry, not every 12th GPU frame.
+    // Real Chrome SwiftShader may advance 30-50 native ticks between
+    // full HUD redraws: that can hide a genuine 0.14m original edge.
+    // This DOM-only presentation NEVER alters physics, CPU, source data,
+    // actor pose, camera or normal Turf scoring.
+    const trueNativeEdge=this.originalEdgeGuidance(frame);
+    this.b129EdgeCoach.render(trueNativeEdge,
+     this.survey.snapshot().active||this.galleryIndex>=0);
     // No guessed exterior kill threshold; out-of-world motion is a
     // visible fail-closed hold until the user intentionally restarts.
     if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
@@ -2320,7 +2329,7 @@ export class UndertowF3PlayablePreviewApp{
    actualGamePhysicsModified:false,originalNintendoCertified:false
   };
  }
- public snapshot(){
+ private originalEdgeGuidance(nativeTick:number){
   const pos=this.player.getPosition(this.p);
   // B129 is a read-only rendered warning; genuine KCC grounding and
   // a registered original Rapier foot support ID are BOTH required.
@@ -2331,15 +2340,15 @@ export class UndertowF3PlayablePreviewApp{
   const b129Hit=b130Possible?this.physics.castCharacterFootSupport(
    pos,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
   const b130Foot=b129Hit?.solidId?inspectB130OriginalFlatSource({
-   nativeTick:this.clock.tick,actualRapierBody:[pos.x,pos.y,pos.z],
+   nativeTick,actualRapierBody:[pos.x,pos.y,pos.z],
    actualRapierSupportId:b129Hit.solidId
   }):null;
   const b129Foot=b129Hit?.solidId==='UndertowT21D:right-low-team-a'?
    inspectB124ActualRaisedSourceBoundary({
-    nativeTick:this.clock.tick,actualRapierBody:[pos.x,pos.y,pos.z]
+    nativeTick,actualRapierBody:[pos.x,pos.y,pos.z]
    }):null;
-  const b129Edge=originalRaisedSourceEdgeStatus({
-   nativeTick:this.clock.tick,nativeKccGrounded:this.stats.playerGrounded,
+  return originalRaisedSourceEdgeStatus({
+   nativeTick,nativeKccGrounded:this.stats.playerGrounded,
    realOriginalFootSolidId:b129Hit?.solidId??null,
    actualRaisedFootprint:b129Foot,
    actualOriginalFlatFootprint:b130Foot,
@@ -2349,6 +2358,10 @@ export class UndertowF3PlayablePreviewApp{
    matchState:this.matchState,paused:this.paused,stopReason:this.stopReason,
    activeHuman:this.resources.currentHp>0
   });
+ }
+ public snapshot(){
+  const pos=this.player.getPosition(this.p);
+  const b129Edge=this.originalEdgeGuidance(this.clock.tick);
   const progress=this.traffic.snapshot();
   return {
    phase:'F3',renderer:'webgl2',stageId:this.rawStage.metadata.id,
