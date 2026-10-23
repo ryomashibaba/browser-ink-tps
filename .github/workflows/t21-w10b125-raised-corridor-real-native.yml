@@ -1,11 +1,13 @@
-name: T21 W10-B125 true original raised right-low corridor
+name: T21 W10-B125/B126 original raised corridor and real steer
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
       - 'src/app/W10B125OriginalRaisedCorridorForecast.test.ts'
+      - 'src/app/W10B126OriginalCorridorSteeringForecast.test.ts'
       - '.github/workflows/t21-w10b125-raised-corridor-real-native.yml'
+      - 'docs/qa/W10-B126-original-raised-corridor-actual-steering.md'
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,7 +25,7 @@ jobs:
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
           node --test scripts/t21-w10b124-native-event-bounded-keys.test.mjs
-          npx vitest run src/app/W10B125OriginalRaisedCorridorForecast.test.ts src/app/W10B124OriginalRaisedSourceBoundary.test.ts src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
+          npx vitest run src/app/W10B126OriginalCorridorSteeringForecast.test.ts src/app/W10B125OriginalRaisedCorridorForecast.test.ts src/app/W10B124OriginalRaisedSourceBoundary.test.ts src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Real CDP W200 D12 W18 D until original raised floor then 5 times W24
         env:
@@ -31,11 +33,25 @@ jobs:
           T21_B125_ORIGINAL_RAISED_CORRIDOR: source
           T21_B112_EVIDENCE_DIR: /tmp/t21-b125-actual-source-corridor
         run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: B126 real original right-low steering — B125 replay then KeyA12 KeyW12
+        env:
+          T21_B116_FORWARD_NATIVE_TICKS: '464'
+          T21_B126_ORIGINAL_RAISED_STEER: source
+          T21_B112_EVIDENCE_DIR: /tmp/t21-b126-actual-source-steer
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
       - name: Retain genuine source-native JSON and screenshot even if fail closed
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: w10b125-real-original-raised-corridor-native-source
           path: /tmp/t21-b125-actual-source-corridor/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Retain B126 actual native source JSON, screenshot even if HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b126-real-original-raised-steer-native-source
+          path: /tmp/t21-b126-actual-source-steer/
           if-no-files-found: warn
           retention-days: 14

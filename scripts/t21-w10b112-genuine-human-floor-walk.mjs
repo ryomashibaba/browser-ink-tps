@@ -27,6 +27,7 @@ const b122OriginalSteer=process.env.T21_B122_REAL_LANDING_STEER==='source';
 const b123OriginalRamp=process.env.T21_B123_REAL_RAMP_ASCENT==='source';
 const b124RaisedContinue=process.env.T21_B124_RAISED_ORIGINAL_CONTINUE==='source';
 const b125RaisedCorridor=process.env.T21_B125_ORIGINAL_RAISED_CORRIDOR==='source';
+const b126OriginalSteering=process.env.T21_B126_ORIGINAL_RAISED_STEER==='source';
 if(b121OriginalSteer&&(requestedNativeTicks!==280||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'||b122OriginalSteer))
  throw Error('B121_NATIVE_280_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
@@ -44,11 +45,30 @@ if(b124RaisedContinue&&(requestedNativeTicks!==368||
  throw Error('B124_RAISED_SOURCE_REQUIRES_368_GENUINE_KEYBOARD_TICKS');
 if(b125RaisedCorridor&&(requestedNativeTicks!==440||
    b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
-   b124RaisedContinue||process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+   b124RaisedContinue||b126OriginalSteering||
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
  throw Error('B125_RAISED_CORRIDOR_REQUIRES_EXCLUSIVE_440_NATIVE_TICK_BUDGET');
+if(b126OriginalSteering&&(requestedNativeTicks!==464||
+   b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
+   b124RaisedContinue||b125RaisedCorridor||
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+ throw Error('B126_RAISED_STEERING_REQUIRES_EXCLUSIVE_464_NATIVE_TICK_BUDGET');
 const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
 if(b120TouchdownOnly&&requestedNativeTicks!==240)
  throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
+const b126TrialKeys=new Set(['RAISED_SOURCE_B126_REAL_KEYA_LEFT_12',
+ 'RAISED_SOURCE_B126_REAL_KEYW_FORWARD_12']);
+function b126NativeUnsafe(n){
+ const w=n.b124OriginalRaisedRightLowFootprint;
+ return !!n.stopReason||
+  n.b112OriginalHumanGround?.genuineKccGrounded!==true||
+  n.b112OriginalHumanGround?.lastOriginalSourceHitId!==
+   'UndertowT21D:right-low-team-a'||
+  w?.realFootXZInsideOriginalSlab!==true||
+  w.originalRaisedSourceVerticalBandWithin22cm!==true||
+  !Number.isFinite(w.distanceToOriginalSourcePolygonBoundaryMeters)||
+  w.distanceToOriginalSourcePolygonBoundaryMeters<.60;
+}
 const children=[];
 let sock,id=0;
 const pending=new Map();
@@ -150,7 +170,7 @@ async function run(){
  const b125GenuinePolls=[];
  let later;
  const collectNativeFoot=(n,label)=>{
-  if(b125RaisedCorridor&&(
+  if((b125RaisedCorridor||b126OriginalSteering)&&(
     !b125GenuinePolls.length||n.tick>b125GenuinePolls.at(-1).tick))
    b125GenuinePolls.push({tick:n.tick,
     actualHumanBody:n.player.position,
@@ -171,25 +191,29 @@ async function run(){
   }
  };
  if(b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
-    b124RaisedContinue||b125RaisedCorridor){
+    b124RaisedContinue||b125RaisedCorridor||b126OriginalSteering){
   const keys={
    KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
    KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
    KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
   };
-  const program=(b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor)?[
+  const program=(b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor||b126OriginalSteering)?[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
    {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
    {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:18},
    {name:'REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP',keys:['KeyD'],ticks:90},
-   ...((b124RaisedContinue||b125RaisedCorridor)?[
+   ...((b124RaisedContinue||b125RaisedCorridor||b126OriginalSteering)?[
     {name:'RAISED_RIGHT_LOW_REAL_KEYW_INWARD_1',keys:['KeyW'],ticks:24},
     {name:'RAISED_RIGHT_LOW_REAL_KEYW_INWARD_2',keys:['KeyW'],ticks:24}
    ]:[]),
-   ...(b125RaisedCorridor?[
+   ...((b125RaisedCorridor||b126OriginalSteering)?[
     {name:'RAISED_SOURCE_CORRIDOR_KEYW_3',keys:['KeyW'],ticks:24},
     {name:'RAISED_SOURCE_CORRIDOR_KEYW_4',keys:['KeyW'],ticks:24},
     {name:'RAISED_SOURCE_CORRIDOR_KEYW_5',keys:['KeyW'],ticks:24}
+   ]:[]),
+   ...(b126OriginalSteering?[
+    {name:'RAISED_SOURCE_B126_REAL_KEYA_LEFT_12',keys:['KeyA'],ticks:12},
+    {name:'RAISED_SOURCE_B126_REAL_KEYW_FORWARD_12',keys:['KeyW'],ticks:12}
    ]:[])
   ]:[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
@@ -211,12 +235,14 @@ async function run(){
      const n=await snapshot();
      collectNativeFoot(n,null);
      const genuinelyReachedOriginalRightLow=
-      (b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor)&&
-      stage.name==='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
+      (b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor||b126OriginalSteering)&&
+      stage.name='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
       n.b112OriginalHumanGround.genuineKccGrounded===true&&
       n.b112OriginalHumanGround.lastOriginalSourceHitId===
        'UndertowT21D:right-low-team-a';
      return n.tick>=before.tick+stage.ticks||n.stopReason||
+      (b126OriginalSteering&&b126TrialKeys.has(stage.name)&&
+       b126NativeUnsafe(n))||
       genuinelyReachedOriginalRightLow?n:false;
     },120000,110);
     collectNativeFoot(native,stage.name);
@@ -231,7 +257,9 @@ async function run(){
      actualRaisedSourceBoundary:native.b124OriginalRaisedRightLowFootprint,
      stopReason:native.stopReason
     });
-    if(native.stopReason)break;
+    if(native.stopReason||
+      (b126OriginalSteering&&b126TrialKeys.has(stage.name)&&
+       b126NativeUnsafe(native)))break;
    }
    later=native;
   }finally{
@@ -320,10 +348,10 @@ async function run(){
   const genuineEndpointSourceSupported=
    end.b112OriginalHumanGround.genuineKccGrounded===true&&
    (footprint.nearCenter===true||footprint.nearPerimeter===true);
-  const b124NativeRealPhaseAudit=(b124RaisedContinue||b125RaisedCorridor)?
+  const b124NativeRealPhaseAudit=(b124RaisedContinue||b125RaisedCorridor||b126OriginalSteering)?
    auditB124RealNativeEventBoundedKeyboardPhases(
-    b125RaisedCorridor?b121ActualPhases.slice(0,6):b121ActualPhases,
-    first.tick,b125RaisedCorridor?
+    (b125RaisedCorridor||b126OriginalSteering)?b121ActualPhases.slice(0,6):b121ActualPhases,
+    first.tick,(b125RaisedCorridor||b126OriginalSteering)?
      b121ActualPhases[5]?.genuineEndTick:end.tick):null;
   const nativeOutcome=end.stopReason?'NATIVE_STOP_BEFORE_TARGET':
    b124NativeRealPhaseAudit?.completed===true?
@@ -353,9 +381,10 @@ async function run(){
     b124RaisedContinue?b121ActualPhases:null,
    b124TrueNativeEventBoundedKeyboardPhaseAudit:b124NativeRealPhaseAudit,
    b125ActualNineNativeKeyboardPhases:
-    b125RaisedCorridor?b121ActualPhases:null,
+    (b125RaisedCorridor||b126OriginalSteering)?b121ActualPhases:null,
+   b126ActualNativeKeyboardPhases:b126OriginalSteering?b121ActualPhases:null,
    b125AllPolledActualNativeHumanSource:
-    b125RaisedCorridor?b125GenuinePolls:null,
+    (b125RaisedCorridor||b126OriginalSteering)?b125GenuinePolls:null,
    b124RealRaisedSourceBoundary:end.b124OriginalRaisedRightLowFootprint,
    b123OriginalRampPassiveAgentWithheldNativeTicks:
     end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
@@ -411,6 +440,130 @@ async function run(){
      end.b124OriginalRaisedRightLowFootprint?.realFootXZInsideOriginalSlab??null,
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
+  // B126: true CDP left correction and small W continuation from B125.
+  // This certifies at most a same-floor turn; NOT a distinct floor or 4v4.
+  if(b126OriginalSteering){
+   const raised='UndertowT21D:right-low-team-a';
+   const phases=b121ActualPhases;
+   const baselineNames=['RAISED_SOURCE_CORRIDOR_KEYW_3',
+    'RAISED_SOURCE_CORRIDOR_KEYW_4','RAISED_SOURCE_CORRIDOR_KEYW_5'];
+   const b125Replay=phases.length===11&&
+    b124NativeRealPhaseAudit?.completed===true&&
+    phases.slice(6,9).every((p,i)=>
+     p.label===baselineNames[i]&&
+     p.actualCDPKeyboardKeys?.length===1&&
+     p.actualCDPKeyboardKeys[0]==='KeyW'&&
+     p.genuineStartTick===phases[i+5]?.genuineEndTick&&
+     p.genuineEndTick-p.genuineStartTick>=24&&
+     p.observedSourceSolid===raised&&p.trueKccGrounded===true&&
+     p.actualRaisedSourceBoundary?.realFootXZInsideOriginalSlab===true&&
+     p.actualRaisedSourceBoundary?.
+      originalRaisedSourceVerticalBandWithin22cm===true&&
+     p.actualRaisedSourceBoundary?.
+      distanceToOriginalSourcePolygonBoundaryMeters>=.65);
+   const replayEnd=phases[8];
+   const baselinePolls=b125GenuinePolls.filter(p=>
+    replayEnd&&phases[5]&&p.tick>phases[5].genuineEndTick&&
+    p.tick<=replayEnd.genuineEndTick);
+   const b125PollsSupported=baselinePolls.length>=5&&
+    baselinePolls.every(p=>p.originalFloorId===raised&&
+     p.nativeKccGrounded===true&&!p.nativeStopReason&&
+     p.registeredRaisedSource?.realFootXZInsideOriginalSlab===true&&
+     p.registeredRaisedSource?.
+      originalRaisedSourceVerticalBandWithin22cm===true&&
+     p.registeredRaisedSource?.
+      distanceToOriginalSourcePolygonBoundaryMeters>=.60);
+   const turn=phases[9],forward=phases[10];
+   const actualNewPolls=b125GenuinePolls.filter(p=>replayEnd&&
+    p.tick>replayEnd.genuineEndTick);
+   const supported=(p,minimum)=>
+    p?.observedSourceSolid===raised&&p.trueKccGrounded===true&&
+    p.actualRaisedSourceBoundary?.realFootXZInsideOriginalSlab===true&&
+    p.actualRaisedSourceBoundary?.
+     originalRaisedSourceVerticalBandWithin22cm===true&&
+    p.actualRaisedSourceBoundary?.
+     distanceToOriginalSourcePolygonBoundaryMeters>=minimum;
+   const steeringActual=turn?.label==='RAISED_SOURCE_B126_REAL_KEYA_LEFT_12'&&
+    turn.actualCDPKeyboardKeys?.length===1&&
+    turn.actualCDPKeyboardKeys[0]==='KeyA'&&
+    turn.genuineStartTick===replayEnd?.genuineEndTick&&
+    turn.genuineEndTick-turn.genuineStartTick>=12&&
+    supported(turn,.65);
+   const forwardActual=forward?.label==='RAISED_SOURCE_B126_REAL_KEYW_FORWARD_12'&&
+    forward.actualCDPKeyboardKeys?.length===1&&
+    forward.actualCDPKeyboardKeys[0]==='KeyW'&&
+    forward.genuineStartTick===turn?.genuineEndTick&&
+    forward.genuineEndTick-forward.genuineStartTick>=12&&
+    supported(forward,.65);
+   const allActualPollsSafe=actualNewPolls.length>=2&&
+    actualNewPolls.every(p=>p.originalFloorId===raised&&
+     p.nativeKccGrounded===true&&!p.nativeStopReason&&
+     p.registeredRaisedSource?.realFootXZInsideOriginalSlab===true&&
+     p.registeredRaisedSource?.
+      originalRaisedSourceVerticalBandWithin22cm===true&&
+     p.registeredRaisedSource?.
+      distanceToOriginalSourcePolygonBoundaryMeters>=.60);
+   const baselineBody=replayEnd?.observedOriginalHumanEndingBody;
+   const turnBody=turn?.observedOriginalHumanEndingBody;
+   const trueLeftMeters=baselineBody&&turnBody?
+    baselineBody[0]-turnBody[0]:null;
+   const trueNewForwardMeters=turnBody?
+    turnBody[2]-end.player.position[2]:null;
+   const minimumTrueEdge=Math.min(...actualNewPolls.map(p=>
+    p.registeredRaisedSource?.
+     distanceToOriginalSourcePolygonBoundaryMeters??Infinity));
+   const endpoint=end.b124OriginalRaisedRightLowFootprint;
+   const passed=b125Replay&&b125PollsSupported&&steeringActual&&
+    forwardActual&&allActualPollsSafe&&!end.stopReason&&
+    actualSuspicionCount<=1&&genuineEndpointSourceSupported&&
+    supported(forward,.65)&&
+    Number.isFinite(trueLeftMeters)&&trueLeftMeters>=.15&&
+    Number.isFinite(trueNewForwardMeters)&&trueNewForwardMeters>=.35&&
+    end.b112OriginalHumanGround.lastOriginalSourceHitId===raised&&
+    endpoint?.realFootXZInsideOriginalSlab===true&&
+    endpoint.originalRaisedSourceVerticalBandWithin22cm===true&&
+    endpoint.distanceToOriginalSourcePolygonBoundaryMeters>=.65;
+   const outcome={
+    schema:'W10_B126_ACTUAL_NATIVE_ORIGINAL_RAISED_CORRIDOR_STEER_V1',
+    actualGenuineCDPKeyboardPhases:phases,
+    originalSixPhaseProof:b124NativeRealPhaseAudit,
+    ninePhaseB125ReplaySupported:b125Replay&&b125PollsSupported,
+    b125ActualBaselinePolls:baselinePolls,
+    newAThenWActualNativePolls:actualNewPolls,
+    trueLeftCorrectionMeters:trueLeftMeters,
+    truePostSteeringForwardMeters:trueNewForwardMeters,
+    minimumRealOriginalEdgeMeters:minimumTrueEdge,
+    realFinalHumanRapierBody:end.player.position,
+    finalKccGrounded:end.b112OriginalHumanGround.genuineKccGrounded,
+    finalOriginalRaisedSource: end.b112OriginalHumanGround.lastOriginalSourceHitId,
+    finalOriginalPolygonWitness:endpoint,
+    actualSuspectedDescentCount:actualSuspicionCount,
+    supportedSameSourceTurnAndShortAdvance:passed,
+    distinctOriginalFloorCertified:false,
+    centralOrCrossTeamRouteCertified:false,
+    cpuHumanAvoidanceAtExcludedSourcesCertified:false,
+    formal4v4Certified:false,
+    originalSourceAuthority:[25,17,26,0],
+    originalStageOrNavmeshOrScoreEdited:false,
+    physicalHumanOrCpuTeleported:false,
+    safetyThresholdsRelaxed:false
+   };
+   writeFileSync(resolve(output,'b126-real-original-raised-corridor-steering.json'),
+    JSON.stringify(outcome,null,2)+'\n');
+   console.log('T21_B126_REAL_ORIGINAL_RAISED_CORRIDOR_STEER',
+    JSON.stringify({nativeTick:end.tick,phases:phases.length,
+     actualLeftMeters:trueLeftMeters,actualNewForwardMeters:trueNewForwardMeters,
+     minimumTrueEdge,source:outcome.finalOriginalRaisedSource,
+     b125Replay,b125PollsSupported,steeringActual,forwardActual,
+     allActualPollsSafe,passed,originalAuthority:[25,17,26,0],
+     nextFloorOr4v4Certified:false}));
+   if(!passed)fail('B126_ACTUAL_SOURCE_STEERING_HOLD',{
+    tick:end.tick,reason:end.stopReason,phases:phases.length,
+    b125Replay,b125PollsSupported,steeringActual,forwardActual,
+    allActualPollsSafe,trueLeftMeters,trueNewForwardMeters,
+    minimumTrueEdge,finalWitness:endpoint});
+   return;
+  }
   // B125 deliberately ends before the forecast registered raised edge.
   // All contact metrics are actual native KCC/source, not projections.
   if(b125RaisedCorridor){
