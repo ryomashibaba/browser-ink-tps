@@ -1,0 +1,42 @@
+name: T21 B138 real original ally A1 versus FIXED 180s
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b138-native-ally-comparison.mjs'
+      - 'scripts/t21-w10b138-native-ally-comparison.test.mjs'
+      - '.github/workflows/t21-w10b138-native-ally-comparison.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-source-ally-ab:
+    name: Chromium native Rapier 180s (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [FIXED_DEFAULT, ALLY_RALLY]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --test scripts/t21-w10b138-native-ally-comparison.test.mjs
+      - run: node --check scripts/t21-w10b138-native-ally-comparison.mjs
+      - name: Actual human input and A1 Rapier 180-second native trial
+        env:
+          T21_B138_VARIANT: ${{ matrix.variant }}
+          T21_F3_SHOT_DIR: /tmp/b138-native-source
+        run: node scripts/t21-w10b138-native-ally-comparison.mjs
+      - name: Retain read-only gameplay telemetry and real WebGL2 image
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b138-original-native-${{ matrix.variant }}
+          path: /tmp/b138-native-source/
+          if-no-files-found: warn
+          retention-days: 14
