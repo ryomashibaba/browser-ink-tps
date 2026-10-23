@@ -4,6 +4,7 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/t21-w10b132-*'
+      - 'scripts/t21-w10b133-*'
       - '.github/workflows/t21-w10b132-real-source-edge-hud.yml'
   workflow_dispatch:
 permissions:
@@ -21,6 +22,7 @@ jobs:
       - name: B132 source/DOM semantic guard, B129/B130 and real browser bundle
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          node --test scripts/t21-w10b133-actual-playing-original-edge.test.mjs
           node --test scripts/t21-w10b132-real-original-edge-hud-audit.test.mjs
           npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts
           npm run build -- --base=/browser-ink-tps/

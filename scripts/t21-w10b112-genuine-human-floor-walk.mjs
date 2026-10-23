@@ -178,12 +178,45 @@ async function run(){
  await click('mousePressed');await click('mouseReleased');
  await until(async()=>await evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'),20000,150);
+ // B133: the old source QA route was physically real but all 326
+ // positions were STAGING. Normal gameplay becomes PLAYING only after
+ // the seven REAL CPU Recast/Rapier first-drop/rejoin gates complete.
+ // Wait at the original spawn without key input, tick injection,
+ // collision override, teleport or a forged match-state assignment.
+ let b133ActualGameStart=null;
+ if(b132RealEdgeHud){
+  const waiting=await snapshot();
+  if(waiting.matchState!=='STAGING'&&waiting.matchState!=='PLAYING')
+   fail('B133_INVALID_INITIAL_MATCH_STATE',waiting.matchState);
+  const playing=await until(async()=>{
+   const n=await snapshot();
+   if(n.stopReason||n.productionAuthorized!==false||
+      n.unrestricted4v4Certified!==false||
+      n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
+      n.originalSourceNavigationLinks!==26||
+      n.sourceScoreablePromotions!==0)
+    fail('B133_SOURCE_OR_REAL_NATIVE_LIVENESS_DRIFT');
+   return n.matchState==='PLAYING'?n:false;
+  },480000,450);
+  b133ActualGameStart={
+   realNativeTickBeforeCpuRelease:waiting.tick,
+   realNativeTickAtPlaying:playing.tick,
+   nativeTicksActuallyElapsed:playing.tick-waiting.tick,
+   realCpuDropAndRejoinCompleted:true,
+   originalActorStateMutatedByQa:false,
+   directMatchStateChangeByQa:false,
+   nativeTickInjected:false
+  };
+  console.log('T21_B133_REAL_GAMEPLAY_START_AFTER_NATIVE_CPU_RELEASE',
+   JSON.stringify(b133ActualGameStart));
+ }
  const first=await snapshot();
  const targetTick=first.tick+requestedNativeTicks;
  const samples=[];
  const b121ActualPhases=[];
  const b125GenuinePolls=[];
  const b132UiWitnesses=[];
+ let b133LastLiveWarningTick=-Infinity;
  // Single-page CDP read. This is a rendered HUD snapshot after actual
  // native KCC/Crowd ticks and real keyboard input, not an injected pose.
  const b132PageProbe=()=>evaluate(`(() => {
@@ -280,6 +313,19 @@ async function run(){
     native=await until(async()=>{
      const n=await snapshot();
      collectNativeFoot(n,null);
+     // B133: catch short-lived real original-floor warnings BETWEEN
+     // keyboard stage boundaries. This is read-only native state + DOM.
+     // Keep at most 32 bounded samples, separated by >=6 REAL ticks.
+     if(b132RealEdgeHud&&
+       n.b129OriginalRaisedEdgeGuidance?.showCaution===true&&
+       n.tick-b133LastLiveWarningTick>=6&&
+       b132UiWitnesses.length<32){
+      b133LastLiveWarningTick=n.tick;
+      b132UiWitnesses.push({
+       stage:stage.name+':NATIVE_VISIBLE_CAUTION',
+       ...await b132PageProbe()
+      });
+     }
      const genuinelyReachedOriginalRightLow=
       (b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor||b126OriginalSteering||b127OriginalRoute)&&
       stage.name==='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
@@ -336,7 +382,8 @@ async function run(){
   const validation=auditB132RealBrowserEdgeWitness(b132UiWitnesses);
   writeFileSync(resolve(output,'b132-native-original-edge-hud.json'),
    JSON.stringify({schema:'W10_B132_REAL_NATIVE_EDGE_HUD_PROOF_V1',
-    originalSourceInput:'REAL_CDP_KEYS_W200_D12_W18_D_UP_TO_SOURCE_RAMP',
+    originalSourceInput:'REAL_GAMEPLAY_CPU_RELEASE_THEN_CDP_W200_D12_W18_D',
+    b133RealPlayingFromNativeCpuRelease:b133ActualGameStart,
     actualBrowserSamples:b132UiWitnesses,validation,
     genuineActorTeleports:0,fabricatedTicks:0,
     officialTurfOrCrossTeamCertified:false},null,2)+'\n');
@@ -344,6 +391,8 @@ async function run(){
    JSON.stringify({passed:validation.passed,
     visibleSources:validation.visibleOriginalSupportIds,
     samples:b132UiWitnesses.length,
+    matchStateAtEnd:end.matchState,
+    b133RealCpuRelease:b133ActualGameStart,
     nativeLastTick:end.tick,physicsChanged:false,
     official4v4Certified:false}));
   if(!validation.passed)
