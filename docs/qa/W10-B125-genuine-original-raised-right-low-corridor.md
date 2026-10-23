@@ -15,3 +15,17 @@ The original B124 six-phase native event proof remains independently verified vi
 [Dedicated B125 actual GitHub Actions](https://github.com/ryomashibaba/browser-ink-tps/actions/workflows/t21-w10b125-raised-corridor-real-native.yml).
 
 Any user-reported central road floor holes, 0/12 opponent paths, eighth passive steering exclusion on original lower floor/ramp and full 4v4 remain HOLD.
+
+## Final B125 physical native result — scoped PASS
+
+[Exact-source GitHub Actions #39919712337](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39919712337) on code SHA `360cdc6374216e3e11b1d970ca099bf578d91a9f` **COMPLETED SUCCESS**. Original source Vitest **5 files / 23 tests PASS**, B124 native event-auditor **5/5 Node tests PASS**, Vite/TypeScript build PASS, true original headless Chromium Rapier 60Hz CDP 9-key phases PASS. No engine/stage/source KCC changes.
+
+[Original real JSON + screenshot artifact 12485869218](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39919712337) downloaded and independently read from the archive, not inferred from job status:
+- Real native **tick 6→446**, nine measured physical keyboard phases: `W 204`, `D 12`, `W 18`, `D 86` (released on genuine new original source), original raised `W24 + W24`, and three **new** `W24 + W24 + W24`. The physical phase end ticks were **210, 222, 240, 326, 350, 374, 398, 422, 446**. No artificial native ticks or setPosition.
+- Last actual original HUMAN body **[7.512452602386475, 5.395108222961426, 39.904239654541016]**, KCC **grounded on the exact original `UndertowT21D:right-low-team-a`**. Real HUMAN foot Y **4.525108222961426m** versus frozen source raised Y4.5.
+- Additional genuine distance *beyond the already-proven B124 end* **6.0627517703766385m**. All three new real W24 endpoints remained source and KCC supported, and **all 12 actual browser-native polled frames** from native tick 380 to 446 were originally grounded at Y4.5, inside the exact source polygon with its original holes. Measured shortest edge distance was **0.8325375250049644m** at tick 446, safely above the unchanged B125 >=.60m poll and >=.65m phase endpoint fences; intermediate samples went from 2.43m to 2.85m before narrowing steadily to 0.833m.
+- Named original source sequence remains high spawn → first-drop landing → already-existing ramp → raised same-team `right-low-team-a`. The one true original natural high→low descent suspicion remained recorded, not reinterpreted as a missing floor or suppressed.
+- Extra eighth HUMAN Recast steering proxy was withheld on recorded original lower landing/ramp source surfaces due proven runaway risk. Physical HUMAN, seven CPU positions, original KCC collision guards and frozen source 25/17/26/0 remain unchanged; CPU↔HUMAN real avoidance at excluded source areas remains **UNCERTIFIED**. Original source's much narrower corridor beyond these 72 ticks has **NOT** been traversed or certified.
+- 0/12 certified opposing-team paths, user-reported central-road floor holes, complete original stage, official 4v4, online play and production release **remain HOLD**.
+
+**W10-B125 verdict:** verified same-team, same-raised-original-floor continuation through an existing gradually narrowing original corridor, no observed physical floor failure in tested segment. Next W10-B126 should make a deliberately bounded steering decision before crossing the source's next narrow edge; do not presume straight W or add any fake geometry.
