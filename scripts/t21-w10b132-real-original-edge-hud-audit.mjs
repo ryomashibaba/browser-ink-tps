@@ -17,11 +17,13 @@ export function auditB132RealBrowserEdgeWitness(samples){
     s.actualNativeTick<previousTick)
    failures.push('INVALID_NATIVE_TICK');
   previousTick=s.actualNativeTick;
-  if(JSON.stringify(s.sourceAuthority)!=='[25,17,26,0]'||
-   s.originalUnrestricted4v4!==false||s.production!==false||
-   s.stop!==null)failures.push('SOURCE_AUTHORITY_OR_STOP');
+  // Native source drift invalidates each individual witness too: an
+  // earlier good sample cannot launder a later invalid one into matches.
+  const sourceTrusted=JSON.stringify(s.sourceAuthority)==='[25,17,26,0]'&&
+   s.originalUnrestricted4v4===false&&s.production===false&&s.stop===null;
+  if(!sourceTrusted)failures.push('SOURCE_AUTHORITY_OR_STOP');
   const w=s.snapshotWarning,d=s.dom;
-  const qualifies=!!w&&!!d&&
+  const qualifies=sourceTrusted&&!!w&&!!d&&
    s.matchState==='PLAYING'&&s.actualKccGrounded===true&&
    sources.has(s.actualOriginalRapierSolid)&&
    w.showCaution===true&&

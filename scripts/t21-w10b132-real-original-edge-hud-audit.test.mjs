@@ -37,8 +37,10 @@ test('nonphysical, stale, invisible or mismatched browser warning never passes',
   {snapshotWarning:{...baseline.snapshotWarning,playerPhysicsModified:true}},
  ]){
   const r=audit([sample(L,200),{...baseline,...change}]);
-  if(r.passed)assert.equal(r.visibleOriginalSupportIds.length,1);
+  // Good earlier L is allowed; corrupt R must not enter any proof array.
   assert.equal(r.visibleOriginalSupportIds.includes(R),false);
+  assert.equal(r.matches.some(m=>m.actualGroundedOriginalSupport===R),false);
+  if(r.passed)assert.deepEqual(r.visibleOriginalSupportIds,[L]);
  }
 });
 test('no warning and corrupt source authority stop fail closed',()=>{
@@ -49,4 +51,20 @@ test('no warning and corrupt source authority stop fail closed',()=>{
  const first={...a,snapshotWarning:null,dom:{...a.dom,visible:false}};
  assert.equal(audit([first,{...first,actualNativeTick:327}]).passed,false);
  assert.equal(audit([a,{...a,actualNativeTick:325}]).passed,false);
+});
+
+test('bad original authority never borrows a prior good Chrome sample',()=>{
+ const good=sample(L,200);
+ for(const change of [
+  {sourceAuthority:[25,17,26,1]},
+  {originalUnrestricted4v4:true},
+  {production:true},
+  {stop:'NATIVE_STOP'}
+ ]){
+  const r=audit([good,{...sample(R,300),...change}]);
+  assert.equal(r.passed,false);
+  assert.equal(r.visibleOriginalSupportIds.includes(R),false);
+  assert.deepEqual(r.visibleOriginalSupportIds,[L]);
+  assert.match(r.reason,/SOURCE_AUTHORITY_OR_STOP/);
+ }
 });
