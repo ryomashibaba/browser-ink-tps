@@ -3,7 +3,6 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3SourceRadar.ts'
       - 'src/app/UndertowF3RadarElevation.ts'
       - 'src/app/UndertowF3RadarElevation.test.ts'
@@ -26,7 +25,6 @@ on:
       - 'src/ink/GpuInkAtlas.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b15-pixel-diff.mjs'
-      - '.github/workflows/t21-w10b15-trusted-input.yml'
   workflow_dispatch:
 permissions:
   contents: read

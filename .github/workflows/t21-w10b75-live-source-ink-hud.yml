@@ -9,10 +9,6 @@ on:
       - 'src/app/UndertowF3HumanInkCoach.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
-      - 'src/app/UndertowF3OriginalEdgeGuidance.ts'
-      - 'src/app/UndertowF3OriginalEdgeGuidance.test.ts'
-      - 'src/app/W10B130OriginalFlatEdge.ts'
-      - 'src/app/W10B130OriginalFlatEdge.test.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'
       - 'src/app/UndertowF3SourceTraffic.test.ts'
       - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
@@ -34,8 +30,9 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts
+      - run: npx vitest run src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts
       - run: |
+          node --test scripts/t21-w10b131-trigger-matrix.test.mjs
           node --check scripts/t21-w10b75-live-native-ink-hud.mjs
           node --check scripts/t21-w10b80-native-stall-classifier.mjs
           node --test scripts/t21-w10b80-native-stall-classifier.test.mjs

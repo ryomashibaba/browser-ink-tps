@@ -6,11 +6,9 @@ on:
       - 'src/app/UndertowF3OwnerAimComparison.ts'
       - 'src/app/UndertowF3OwnerAimComparison.test.ts'
       - 'src/app/UndertowF3OwnerAimComparisonUI.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b72-stored-round-witness.mjs'
       - 'scripts/t21-w10b72-stored-round-witness.test.mjs'
-      - '.github/workflows/t21-w10b70-owner-180s-comparison.yml'
   workflow_dispatch:
 permissions:
   contents: read

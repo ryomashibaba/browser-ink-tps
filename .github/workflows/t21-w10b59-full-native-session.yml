@@ -4,9 +4,7 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/app/UndertowF3SourceSessionBoard.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
-      - '.github/workflows/t21-w10b59-full-native-session.yml'
   workflow_dispatch:
 permissions:
   contents: read

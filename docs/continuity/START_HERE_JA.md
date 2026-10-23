@@ -30,3 +30,7 @@
 
 QAブランチのpush時、[軽量自動索引CI](../../.github/workflows/t21-continuity-state.yml)がレポート名とソースSHAから参照用状態を作り、**別ブランチ** `meta/t21-continuity` の `docs/continuity/LIVE_STATE.md` にだけ保存する。ゲームソース、QAブランチ、main、Pagesにボットが書き戻すことはない。CI停止・古いキャッシュを検出したら、必ず上記1・4・5から現在の事実を再取得する。自動索引は**ゲーム完成や物理を新しく認証しない**。
 
+
+## CIの起動条件（B131以降）
+
+共有F3アプリ変更で古い個別CIを大量起動しないよう、[CIトリガーの運用・復旧手順](CI_TRIGGER_MATRIX_JA.md)を参照する。B75等の中心的な統合QAは維持し、必要な旧試験は専用コード変更またはGitHub Actionsの手動実行で利用する。

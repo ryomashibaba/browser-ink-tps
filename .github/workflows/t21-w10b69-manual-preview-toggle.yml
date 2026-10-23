@@ -8,9 +8,7 @@ on:
       - 'src/app/UndertowF3OwnerAimComparison.ts'
       - 'src/app/UndertowF3OwnerAimComparison.test.ts'
       - 'src/app/UndertowF3OwnerAimComparisonUI.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
-      - '.github/workflows/t21-w10b69-manual-preview-toggle.yml'
   workflow_dispatch:
 permissions:
   contents: read

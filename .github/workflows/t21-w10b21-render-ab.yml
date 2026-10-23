@@ -3,7 +3,6 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3EOriginalSourceCoverage.ts'
       - 'src/app/UndertowF3EOriginalSourceCoverage.test.ts'
@@ -24,7 +23,6 @@ on:
       - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b77-source-raster-restore.mjs'
       - 'scripts/t21-w10b77-source-raster-restore.test.mjs'
-      - '.github/workflows/t21-w10b21-render-ab.yml'
   workflow_dispatch:
 permissions:
   contents: read

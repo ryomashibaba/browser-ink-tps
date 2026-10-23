@@ -6,14 +6,12 @@ on:
       - 'scripts/t21-f3-browser-smoke.mjs'
       - 'src/app/UndertowF3SourcePaintRun.ts'
       - 'src/app/UndertowF3SourcePaintRun.test.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3SourceSessionBoard.ts'
       - 'src/app/UndertowF3SourceSessionBoard.test.ts'
       - 'src/app/UndertowF3NativeSessionEvidence.ts'
       - 'src/app/UndertowF3NativeSessionEvidence.test.ts'
       - 'src/app/UndertowF3CpuInkTempo.ts'
       - 'src/app/UndertowF3CpuInkTempo.test.ts'
-      - '.github/workflows/t21-w10b54-full-practice.yml'
   workflow_dispatch:
 permissions:
   contents: read

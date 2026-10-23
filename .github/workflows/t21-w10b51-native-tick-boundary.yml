@@ -3,9 +3,7 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
-      - '.github/workflows/t21-w10b51-native-tick-boundary.yml'
   workflow_dispatch:
 permissions:
   contents: read

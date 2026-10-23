@@ -5,11 +5,9 @@ on:
     paths:
       - 'src/app/W10B124OriginalRaisedSourceBoundary.ts'
       - 'src/app/W10B124OriginalRaisedSourceBoundary.test.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
       - 'scripts/t21-w10b124-native-event-bounded-keys.mjs'
       - 'scripts/t21-w10b124-native-event-bounded-keys.test.mjs'
-      - '.github/workflows/t21-w10b124-real-raised-right-low-continuation.yml'
   workflow_dispatch:
 permissions:
   contents: read

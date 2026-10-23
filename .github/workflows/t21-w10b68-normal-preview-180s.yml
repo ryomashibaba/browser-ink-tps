@@ -3,12 +3,10 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/ai/UndertowF3OriginalSourceInkSweep.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b68-normal-preview-gate.mjs'
       - 'scripts/t21-w10b68-normal-preview-gate.test.mjs'
-      - '.github/workflows/t21-w10b68-normal-preview-180s.yml'
   workflow_dispatch:
 permissions:
   contents: read

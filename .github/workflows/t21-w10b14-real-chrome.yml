@@ -4,10 +4,8 @@ on:
     branches:
       - dev/t21-f4e103w-qa-infra
     paths:
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/ai/CpuAgentSystem.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
-      - '.github/workflows/t21-w10b14-real-chrome.yml'
   workflow_dispatch:
 permissions:
   contents: read

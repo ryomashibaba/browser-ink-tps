@@ -6,11 +6,9 @@ on:
       - 'src/app/UndertowF3SourcePaintRun.ts'
       - 'src/app/UndertowF3SourcePaintRun.test.ts'
       - 'src/app/UndertowF3PracticeObjectiveView.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3SourceSessionBoard.ts'
       - 'src/app/UndertowF3SourceSessionBoard.test.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
-      - '.github/workflows/t21-w10b57-paint-relay.yml'
   workflow_dispatch:
 permissions:
   contents: read
