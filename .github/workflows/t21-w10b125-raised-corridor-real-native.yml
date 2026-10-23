@@ -1,0 +1,41 @@
+name: T21 W10-B125 true original raised right-low corridor
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - 'src/app/W10B125OriginalRaisedCorridorForecast.test.ts'
+      - '.github/workflows/t21-w10b125-raised-corridor-real-native.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-source-corridor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Preserve original 25-17-26-0 source, KCC and forecast test
+        run: |
+          node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          node --test scripts/t21-w10b124-native-event-bounded-keys.test.mjs
+          npx vitest run src/app/W10B125OriginalRaisedCorridorForecast.test.ts src/app/W10B124OriginalRaisedSourceBoundary.test.ts src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real CDP W200 D12 W18 D until original raised floor then 5 times W24
+        env:
+          T21_B116_FORWARD_NATIVE_TICKS: '440'
+          T21_B125_ORIGINAL_RAISED_CORRIDOR: source
+          T21_B112_EVIDENCE_DIR: /tmp/t21-b125-actual-source-corridor
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Retain genuine source-native JSON and screenshot even if fail closed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b125-real-original-raised-corridor-native-source
+          path: /tmp/t21-b125-actual-source-corridor/
+          if-no-files-found: warn
+          retention-days: 14

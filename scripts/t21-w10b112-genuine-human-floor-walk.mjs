@@ -26,6 +26,7 @@ const b121OriginalSteer=process.env.T21_B121_REAL_LANDING_STEER==='source';
 const b122OriginalSteer=process.env.T21_B122_REAL_LANDING_STEER==='source';
 const b123OriginalRamp=process.env.T21_B123_REAL_RAMP_ASCENT==='source';
 const b124RaisedContinue=process.env.T21_B124_RAISED_ORIGINAL_CONTINUE==='source';
+const b125RaisedCorridor=process.env.T21_B125_ORIGINAL_RAISED_CORRIDOR==='source';
 if(b121OriginalSteer&&(requestedNativeTicks!==280||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'||b122OriginalSteer))
  throw Error('B121_NATIVE_280_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
@@ -38,8 +39,13 @@ if(b123OriginalRamp&&(requestedNativeTicks!==320||
  throw Error('B123_ORIGINAL_RAMP_REQUIRES_EXCLUSIVE_NATIVE_320_TICK_TRIAL');
 if(b124RaisedContinue&&(requestedNativeTicks!==368||
    b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
+   b125RaisedCorridor||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
  throw Error('B124_RAISED_SOURCE_REQUIRES_368_GENUINE_KEYBOARD_TICKS');
+if(b125RaisedCorridor&&(requestedNativeTicks!==440||
+   b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
+   b124RaisedContinue||process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+ throw Error('B125_RAISED_CORRIDOR_REQUIRES_EXCLUSIVE_440_NATIVE_TICK_BUDGET');
 const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
 if(b120TouchdownOnly&&requestedNativeTicks!==240)
  throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
@@ -141,8 +147,17 @@ async function run(){
  const targetTick=first.tick+requestedNativeTicks;
  const samples=[];
  const b121ActualPhases=[];
+ const b125GenuinePolls=[];
  let later;
  const collectNativeFoot=(n,label)=>{
+  if(b125RaisedCorridor&&(
+    !b125GenuinePolls.length||n.tick>b125GenuinePolls.at(-1).tick))
+   b125GenuinePolls.push({tick:n.tick,
+    actualHumanBody:n.player.position,
+    originalFloorId:n.b112OriginalHumanGround.lastOriginalSourceHitId,
+    nativeKccGrounded:n.b112OriginalHumanGround.genuineKccGrounded,
+    registeredRaisedSource:n.b124OriginalRaisedRightLowFootprint,
+    nativeStopReason:n.stopReason});
   if(samples.length===0||n.tick-samples.at(-1).tick>=12||label){
    samples.push({tick:n.tick,body:n.player.position,
     grounded:n.b112OriginalHumanGround.genuineKccGrounded,
@@ -156,20 +171,25 @@ async function run(){
   }
  };
  if(b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
-    b124RaisedContinue){
+    b124RaisedContinue||b125RaisedCorridor){
   const keys={
    KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
    KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
    KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
   };
-  const program=(b123OriginalRamp||b124RaisedContinue)?[
+  const program=(b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor)?[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
    {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
    {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:18},
    {name:'REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP',keys:['KeyD'],ticks:90},
-   ...(b124RaisedContinue?[
+   ...((b124RaisedContinue||b125RaisedCorridor)?[
     {name:'RAISED_RIGHT_LOW_REAL_KEYW_INWARD_1',keys:['KeyW'],ticks:24},
     {name:'RAISED_RIGHT_LOW_REAL_KEYW_INWARD_2',keys:['KeyW'],ticks:24}
+   ]:[]),
+   ...(b125RaisedCorridor?[
+    {name:'RAISED_SOURCE_CORRIDOR_KEYW_3',keys:['KeyW'],ticks:24},
+    {name:'RAISED_SOURCE_CORRIDOR_KEYW_4',keys:['KeyW'],ticks:24},
+    {name:'RAISED_SOURCE_CORRIDOR_KEYW_5',keys:['KeyW'],ticks:24}
    ]:[])
   ]:[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
@@ -191,7 +211,7 @@ async function run(){
      const n=await snapshot();
      collectNativeFoot(n,null);
      const genuinelyReachedOriginalRightLow=
-      (b123OriginalRamp||b124RaisedContinue)&&
+      (b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor)&&
       stage.name==='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
       n.b112OriginalHumanGround.genuineKccGrounded===true&&
       n.b112OriginalHumanGround.lastOriginalSourceHitId===
@@ -300,9 +320,11 @@ async function run(){
   const genuineEndpointSourceSupported=
    end.b112OriginalHumanGround.genuineKccGrounded===true&&
    (footprint.nearCenter===true||footprint.nearPerimeter===true);
-  const b124NativeRealPhaseAudit=b124RaisedContinue?
+  const b124NativeRealPhaseAudit=(b124RaisedContinue||b125RaisedCorridor)?
    auditB124RealNativeEventBoundedKeyboardPhases(
-    b121ActualPhases,first.tick,end.tick):null;
+    b125RaisedCorridor?b121ActualPhases.slice(0,6):b121ActualPhases,
+    first.tick,b125RaisedCorridor?
+     b121ActualPhases[5]?.genuineEndTick:end.tick):null;
   const nativeOutcome=end.stopReason?'NATIVE_STOP_BEFORE_TARGET':
    b124NativeRealPhaseAudit?.completed===true?
     'B124_REAL_EVENT_BOUNDED_NATIVE_PHASES_COMPLETED':
@@ -330,6 +352,10 @@ async function run(){
    b124RealRaisedOriginalContinuationPhases:
     b124RaisedContinue?b121ActualPhases:null,
    b124TrueNativeEventBoundedKeyboardPhaseAudit:b124NativeRealPhaseAudit,
+   b125ActualNineNativeKeyboardPhases:
+    b125RaisedCorridor?b121ActualPhases:null,
+   b125AllPolledActualNativeHumanSource:
+    b125RaisedCorridor?b125GenuinePolls:null,
    b124RealRaisedSourceBoundary:end.b124OriginalRaisedRightLowFootprint,
    b123OriginalRampPassiveAgentWithheldNativeTicks:
     end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
@@ -385,6 +411,90 @@ async function run(){
      end.b124OriginalRaisedRightLowFootprint?.realFootXZInsideOriginalSlab??null,
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
+  // B125 deliberately ends before the forecast registered raised edge.
+  // All contact metrics are actual native KCC/source, not projections.
+  if(b125RaisedCorridor){
+   const raised='UndertowT21D:right-low-team-a';
+   const stages=b121ActualPhases;
+   const firstSix=b124NativeRealPhaseAudit?.completed===true;
+   const extra=stages.slice(6);
+   const start=stages[5]?.observedOriginalHumanEndingBody;
+   const displacement=start?Math.hypot(
+    end.player.position[0]-start[0],
+    end.player.position[2]-start[2]):0;
+   const actualPolls=b125GenuinePolls.filter(p=>
+    stages[5]&&p.tick>stages[5].genuineEndTick);
+   const eachNewPhaseSupported=extra.length===3&&
+    extra.every((p,i)=>
+     p.label===['RAISED_SOURCE_CORRIDOR_KEYW_3',
+      'RAISED_SOURCE_CORRIDOR_KEYW_4',
+      'RAISED_SOURCE_CORRIDOR_KEYW_5'][i]&&
+     p.actualCDPKeyboardKeys?.length===1&&
+     p.actualCDPKeyboardKeys[0]==='KeyW'&&
+     p.genuineEndTick-p.genuineStartTick>=24&&
+     p.genuineStartTick===stages[i+5]?.genuineEndTick&&
+     p.observedSourceSolid===raised&&p.trueKccGrounded===true&&
+     p.actualRaisedSourceBoundary?.realFootXZInsideOriginalSlab===true&&
+     p.actualRaisedSourceBoundary?.
+      originalRaisedSourceVerticalBandWithin22cm===true&&
+     p.actualRaisedSourceBoundary?.
+      distanceToOriginalSourcePolygonBoundaryMeters>=.65);
+   const eachNativePollSupported=actualPolls.length>=5&&
+    actualPolls.every(p=>p.originalFloorId===raised&&
+     p.nativeKccGrounded===true&&!p.nativeStopReason&&
+     p.registeredRaisedSource?.realFootXZInsideOriginalSlab===true&&
+     p.registeredRaisedSource?.
+      originalRaisedSourceVerticalBandWithin22cm===true&&
+     p.registeredRaisedSource?.
+      distanceToOriginalSourcePolygonBoundaryMeters>=.6);
+   const minimumTrueEdge=Math.min(...actualPolls.map(p=>
+    p.registeredRaisedSource?.distanceToOriginalSourcePolygonBoundaryMeters??
+     Infinity));
+   const endpoint=end.b124OriginalRaisedRightLowFootprint;
+   const passed=firstSix&&stages.length===9&&eachNewPhaseSupported&&
+    eachNativePollSupported&&!end.stopReason&&
+    actualSuspicionCount<=1&&genuineEndpointSourceSupported&&
+    end.b112OriginalHumanGround.lastOriginalSourceHitId===raised&&
+    endpoint?.realFootXZInsideOriginalSlab===true&&
+    endpoint.originalRaisedSourceVerticalBandWithin22cm===true&&
+    endpoint.distanceToOriginalSourcePolygonBoundaryMeters>=.65&&
+    displacement>=4.5;
+   const outcome={schema:'W10_B125_TRUE_NATIVE_RAISED_SOURCE_CORRIDOR_V1',
+    actualNativeOriginalKeyboardPhases:stages,
+    originalSixPhasesPreviouslyProved:b124NativeRealPhaseAudit,
+    allActualNativeSourceObservations:actualPolls,
+    allThreeAddedPhysicalW24EndpointsSupported:eachNewPhaseSupported,
+    allPolledOriginalNativeKccSupported:eachNativePollSupported,
+    shortestActualOriginalEdgeMeters:minimumTrueEdge,
+    actualNewNativeDisplacementMeters:displacement,
+    realEndpointOriginalNamedSource:
+     end.b112OriginalHumanGround.lastOriginalSourceHitId,
+    actualRaisedSourcePolygon:endpoint,
+    physicallyVerifiedRaisedSourceCorridor:passed,
+    originalSourceAuthority:[25,17,26,0],
+    originalGeomNavOrScoreChanges:0,physicalHumanOrCpuTeleports:0,
+    originalHumanCpuCrowdAvoidanceCertified:false,
+    nextDistinctOriginalSourceCertified:false,
+    centerRoadOrOpposingRouteCertified:false,
+    unrestricted4v4Certified:false};
+   writeFileSync(resolve(output,'b125-real-native-raised-source-corridor.json'),
+    JSON.stringify(outcome,null,2)+'\n');
+   console.log('T21_B125_GENUINE_ORIGINAL_RAISED_CORRIDOR',
+    JSON.stringify({nativeTick:end.tick,phases:stages.length,
+     newActualDisplacementMeters:displacement,
+     nearestRealOriginalEdgeMeters:minimumTrueEdge,
+     originalEndpointSource:outcome.realEndpointOriginalNamedSource,
+     nativeSamples:actualPolls.length,passed,
+     originalSourceAuthority:[25,17,26,0],
+     full4v4Certified:false}));
+   if(!passed)fail('B125_ACTUAL_ORIGINAL_RAISED_CORRIDOR_HOLD',{
+    nativeTick:end.tick,stop:end.stopReason,
+    source:outcome.realEndpointOriginalNamedSource,
+    boundary:endpoint,displacement,firstSix,
+    eachNewPhaseSupported,eachNativePollSupported,
+    minimumTrueEdge,phaseEndpoints:extra});
+   return;
+  }
   // B124: two real W segments CONTINUE the proven original Y4.5
   // raised right-low floor; require retained KCC and original 5-rays.
   // This is only source-floor continuation, never 4v4 authorization.
