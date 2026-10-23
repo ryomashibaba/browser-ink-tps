@@ -236,7 +236,7 @@ async function run(){
      collectNativeFoot(n,null);
      const genuinelyReachedOriginalRightLow=
       (b123OriginalRamp||b124RaisedContinue||b125RaisedCorridor||b126OriginalSteering)&&
-      stage.name='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
+      stage.name==='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
       n.b112OriginalHumanGround.genuineKccGrounded===true&&
       n.b112OriginalHumanGround.lastOriginalSourceHitId===
        'UndertowT21D:right-low-team-a';
