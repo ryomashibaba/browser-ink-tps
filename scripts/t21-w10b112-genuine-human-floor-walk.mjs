@@ -20,6 +20,9 @@ if(!Number.isSafeInteger(requestedNativeTicks)||
      (requestedNativeTicks>=240&&requestedNativeTicks<=720)))
  throw Error('B116_INVALID_TRUE_FORWARD_TICK_REQUEST');
 const b116Extended=requestedNativeTicks>120;
+const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
+if(b120TouchdownOnly&&requestedNativeTicks!==240)
+ throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
 const children=[];
 let sock,id=0;
 const pending=new Map();
@@ -128,7 +131,8 @@ async function run(){
      originalSupport:n.b112OriginalHumanGround.lastOriginalSourceHitId,
      sourceFootprintClass:n.b112OriginalHumanGround.lastOriginalFootprint?.classification??null,
      sourceFootprintIds:n.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
-     suspectedDescents:n.b112OriginalHumanGround.suspicionCount});
+     suspectedDescents:n.b112OriginalHumanGround.suspicionCount,
+     b120OriginalSourceBoundary:n.b120OriginalSourceBoundary});
    return n.tick>=targetTick||(b116Extended&&n.stopReason)?n:false;
   },180000,150);
  }finally{
@@ -184,7 +188,8 @@ async function run(){
     originalSupport:end.b112OriginalHumanGround.lastOriginalSourceHitId,
     sourceFootprintClass:end.b112OriginalHumanGround.lastOriginalFootprint?.classification??null,
     sourceFootprintIds:end.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
-    suspectedDescents:end.b112OriginalHumanGround.suspicionCount});
+    suspectedDescents:end.b112OriginalHumanGround.suspicionCount,
+    b120OriginalSourceBoundary:end.b120OriginalSourceBoundary});
   const furthestZ=Math.min(...samples.map(p=>p.body[2]));
   const earliestZ=first.player.position[2];
   const forwardProgressMeters=earliestZ-furthestZ;
@@ -221,6 +226,14 @@ async function run(){
    genuineOriginalSourceCollidersSeen:supports,
    genuineSourceTransitions:sourceTransitions,
    actualOriginalSourceSamples:samples,
+   b120LastOriginalSourceBoundary:end.b120OriginalSourceBoundary,
+   b120ActualRegisteredSourceBoundarySamples:
+    samples.filter(s=>s.b120OriginalSourceBoundary?.schema===
+     'W10_B120_REAL_ORIGINAL_FIRST_DROP_POLYGON_WITNESS_V1')
+     .map(s=>({tick:s.tick,actualBody:s.body,
+      nativeOriginalSupport:s.originalSupport,
+      nativeKccGrounded:s.grounded,
+      witness:s.b120OriginalSourceBoundary})),
    b118RealOriginalPassiveCrowdPrePostWitness:realCrowdDriftWitness,
    b119LastOriginalFirstDropProxyGate:
     end.humanCrowd?.b119OriginalFirstDropPassiveProxyGate??null,
@@ -259,6 +272,56 @@ async function run(){
     originalAuthority:[25,17,26,0],
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
+  // B120 independent limited actual source touchdown QA: releasing real
+  // KeyW at native tick 240, BEFORE walking beyond the registered landing.
+  // The natural airborne first-drop suspicion is preserved verbatim and
+  // expressly not promoted to a complete safe route/collision certificate.
+  if(b120TouchdownOnly){
+   const boundary=end.b120OriginalSourceBoundary;
+   const realLanding=end.b112OriginalHumanGround.lastOriginalSourceHitId;
+   const actualGrounded=end.b112OriginalHumanGround.genuineKccGrounded===true;
+   const observed=samples.some(s=>
+    s.originalSupport==='UndertowT21D:spawn-high-positive-z')&&
+    samples.some(s=>s.originalSupport===
+     'UndertowT21D:first-drop-landing-positive-z');
+   const touchDownPass=reachedTarget&&actualGrounded&&
+    realLanding==='UndertowT21D:first-drop-landing-positive-z'&&
+    boundary?.originalFootInsideXZ===true&&
+    boundary?.originalSourceSolidId===realLanding&&observed&&
+    actualSuspicionCount<=1&&
+    end.humanCrowd?.b119FirstDropProxyWithheldNativeTicks>0;
+   const touchDownReport={
+    schema:'W10_B120_REAL_FIRST_DROP_TOUCHDOWN_ONLY_V1',
+    nativeTicksActuallyRun:end.tick-first.tick,
+    recordedNativeSuspicions:end.b112OriginalHumanGround.suspicions,
+    genuineFirstDropLandingKccGrounded:actualGrounded,
+    realOriginalFootSupportId:realLanding,
+    registeredOriginalBoundary:boundary,
+    actualNativeLandingReached:touchDownPass,
+    realOriginalSourceEvidence:report.genuineSourceTransitions,
+    physicalHumanOrSevenCpuTeleported:false,
+    wholeMapOrNextRouteCertified:false,
+    firstDropHumanCpuAvoidanceCertified:false,
+    missingFloorProven:false,
+    originalSourceAuthority:[25,17,26,0]
+   };
+   writeFileSync(resolve(output,'b120-real-original-first-drop-touchdown.json'),
+    JSON.stringify(touchDownReport,null,2)+'\n');
+   console.log('T21_B120_ACTUAL_NATIVE_ORIGINAL_FIRST_DROP_TOUCHDOWN',
+    JSON.stringify({nativeTick:end.tick,realLanding,actualGrounded,
+     insideRegisteredSource:boundary?.originalFootInsideXZ,
+     nativeSuspicionCount:actualSuspicionCount,
+     b119ExcludedNativeTicks:end.humanCrowd?.
+      b119FirstDropProxyWithheldNativeTicks,
+     touchdownPass:touchDownPass,
+     longerSafeRouteCertified:false,originalSourceAuth:[25,17,26,0]}));
+   if(!touchDownPass)
+    fail('B120_GENUINE_FIRST_DROP_TOUCHDOWN_HOLD',{
+     actualTick:end.tick,stop:end.stopReason,realLanding,
+     nativeSuspicionCount:actualSuspicionCount,
+     sourceFootprint:boundary,actualGrounded});
+   return;
+  }
   // Fail closed when a physical stop or insufficient progress prevents the
   // requested route proof; keep JSON/PNG artifact even on CI failure.
   if(b116Extended&&end.stopReason?.startsWith(

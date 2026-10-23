@@ -1,0 +1,42 @@
+name: T21 W10-B120 genuine first-drop touchdown and original boundary
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/W10B120OriginalSourceBoundary.ts'
+      - 'src/app/W10B120OriginalSourceBoundary.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - '.github/workflows/t21-w10b120-genuine-original-touchdown.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-first-drop-source-touchdown:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Exact original source boundary and physical KCC tests
+        run: |
+          node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          npx vitest run src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real Chromium physical 240 native-tick original first-drop touchdown
+        env:
+          T21_B116_FORWARD_NATIVE_TICKS: '240'
+          T21_B120_TOUCHDOWN_ONLY: source
+          T21_B112_EVIDENCE_DIR: /tmp/t21-w10b120-original-touchdown
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Preserve actual source polygon boundary, KCC, and original first-drop landing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b120-original-registered-source-first-drop-touchdown
+          path: /tmp/t21-w10b120-original-touchdown/
+          if-no-files-found: warn
+          retention-days: 14

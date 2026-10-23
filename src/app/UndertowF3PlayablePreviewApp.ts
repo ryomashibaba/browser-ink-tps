@@ -69,6 +69,7 @@ import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {W10B112HumanGroundLedger} from './W10B112HumanGroundLedger';
 import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
+import {inspectB120OriginalFirstDropBoundary} from './W10B120OriginalSourceBoundary';
 import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
@@ -2417,6 +2418,12 @@ export class UndertowF3PlayablePreviewApp{
    playerInkRecoveryState:this.stats.playerInkRecoveryState,
    inkDryFireAttempts:this.stats.inkDryFireAttempts,
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   b120OriginalSourceBoundary:this.b112GroundEnabled?
+    inspectB120OriginalFirstDropBoundary({
+     nativeTick:this.clock.tick,
+     actualRapierBody:[pos.x,pos.y,pos.z],
+     side:pos.z>=0?'positive-z':'negative-z'
+    }):null,
    b112OriginalHumanGround:this.b112GroundEnabled?
     this.b112GroundLedger.snapshot():{
      enabled:false as const,reason:'OPT_IN_SOURCE_QA_ONLY' as const,
