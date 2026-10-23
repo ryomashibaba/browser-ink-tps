@@ -11,3 +11,6 @@ Only explicit `t21W10B137=allyRally` nonproduction F3 mode gets a compact teamma
 Code is view-only; no CPU target, collision, original stage geometry, scoreable mask, player movement, shooting, simulated tick, or NavMesh was modified. Original 25 solids/17 PaintSurface/26 NavLinks/0 Scoreable, opponent original routes 0/12, productionAuthorized=false, unrestricted4v4Certified=false, activationReady=false, formal 4v4 HOLD.
 
 Regression: B75 TypeScript/Vitest and real WebGL2 FIXED/SWEEP. Do not claim this UI solves actual teammate physical meeting or genuine original human descent until native evidence exists.
+
+## Native UI witness added before original-key descent
+The genuine B139/B140 native pointer-locked CDP driver also checks that an opt-in source run renders the live A1 read-only overlay with 0 scoreable and no certified route, while FIXED without opt-in has no ally overlay at all. It saves the observed DOM evidence before any physical W200/D12/W18 run. The independent pure view-model test additionally uses the canonical human BODY-to-foot offset; the matching-floor test uses y=5.27m for a 4.47m A1 foot. The read-only browser witness is NOT a synthetic gameplay result; it requires actual Chrome CI before PASS.

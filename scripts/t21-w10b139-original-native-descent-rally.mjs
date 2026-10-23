@@ -131,6 +131,25 @@ async function doPhysicalTrial(){
   }
  };
  observe(nativeGameStart,'REAL_7_OF_7_PLAYING',true);
+ // B141: verify the actual opt-in on-screen physical distance indicator
+ // in a real WebGL2/pointer-locked browser. The UI remains a pure view:
+ // no original route, target, player pose or actor state is manipulated.
+ const b141Observed=await until(async()=>{
+  const hud=await evaluate(`(() => {
+   const el=document.querySelector('#t21-f3-b141-real-ally');
+   return el?{visible:!el.hidden&&el.style.display!=='none',
+    sourceOnly:el.dataset.t21B141PhysicalOnly,
+    scoreable:el.dataset.t21B141Scoreable,
+    routeCertified:el.dataset.t21B141CertifiedRoute,
+    state:el.dataset.t21B141State,text:el.textContent}:null;
+  })()`);
+  if(!allyOptIn)return hud===null?{normalFixedNoAllyHud:true}:false;
+  return hud?.visible&&hud.sourceOnly==='REAL_RAPIER_AND_KCC'&&
+   hud.scoreable==='0'&&hud.routeCertified==='false'&&
+   hud.text?.includes('A1')&&hud.state!=='WAITING_7_CPU'?hud:false;
+ },40000);
+ history.push({b141ActualPointerLockedSourceHud:b141Observed,realNativeTick:nativeGameStart.tick});
+ save();
  const beforeMove=await snapshot();
  let firstMouseRelease=false;
  for(const phase of steps){
@@ -187,6 +206,7 @@ async function doPhysicalTrial(){
   nativePlayingTick:nativeGameStart.tick,
   startBeforeRealInputTick:beforeMove.tick,
   actualPhysicalSourceRouteProgram:steps,
+  originalB141VisibleAllyUiEvidence:b141Observed,
   endNativeTick:final.tick,
   originalSource:'25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE',
   originalOppositeSideNaturalPaths:'0/12',

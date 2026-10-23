@@ -28,7 +28,7 @@ describe('B141 source practice teammate real physical orientation',()=>{
   expect(view(altered).code).toBe('SOURCE_HOLD');
  });
  it('only uses actually available released and grounded real foot',()=>{
-  const n=sample();n.cpu.physicalRejoins.length=0;
+  const n=sample();n.cpu.physicalRejoins=[];
   expect(view(n).code).toBe('WAITING_7_CPU');
   const absent=sample();absent.cpu.cpu[0]!.physicalFoot=[NaN,4,52];
   expect(view(absent).code).toBe('MISSING_REAL_FOOT');
@@ -37,12 +37,12 @@ describe('B141 source practice teammate real physical orientation',()=>{
  });
  it('historical goal count never becomes live route or arrival proof',()=>{
   const n=sample();
-  n.player.position=[0,3.9,49];
+  n.player.position=[0,5.27,49];
   expect(view(n).code).toBe('SAME_LEVEL_UNPROVEN');
   n.cpu.sourcePatrol.b137ApprovedNativeRallies=4;
   expect(view(n).code).toBe('HISTORICAL_GOAL_REQUEST');
   expect(view(n).physicalMeetingCertified).toBe(false);
-  n.player.position=[7,3.9,52];
+  n.player.position=[7,5.27,52];
   expect(view(n).code).toBe('CLOSE_XZ');
  });
 });
