@@ -13,6 +13,8 @@ import {auditB124RealNativeEventBoundedKeyboardPhases}
  from './t21-w10b124-native-event-bounded-keys.mjs';
 import {B127_STAGES,B127_LATE_NAMES,auditB127}
  from './t21-w10b127-original-corridor-plan.mjs';
+import {auditB132RealBrowserEdgeWitness}
+ from './t21-w10b132-real-original-edge-hud-audit.mjs';
 
 const root='http://127.0.0.1:4197/browser-ink-tps/';
 const output=process.env.T21_B112_EVIDENCE_DIR??'/tmp/t21-b112';
@@ -27,7 +29,12 @@ const b116Extended=requestedNativeTicks>120;
 const b121OriginalSteer=process.env.T21_B121_REAL_LANDING_STEER==='source';
 const b122OriginalSteer=process.env.T21_B122_REAL_LANDING_STEER==='source';
 const b123OriginalRamp=process.env.T21_B123_REAL_RAMP_ASCENT==='source';
+// B132: use an existing legitimate Y3-to-Y4.5 real-key route for a
+// read-only live DOM warning witness, no altered stage inputs or KCC.
+const b132RealEdgeHud=process.env.T21_B132_REAL_EDGE_HUD==='source';
 const b124RaisedContinue=process.env.T21_B124_RAISED_ORIGINAL_CONTINUE==='source';
+if(b132RealEdgeHud&&(!b123OriginalRamp||requestedNativeTicks!==320))
+ throw Error('B132_ONLY_REAL_320_TICK_ORIGINAL_RAMP_PROGRAM');
 const b125RaisedCorridor=process.env.T21_B125_ORIGINAL_RAISED_CORRIDOR==='source';
 const b126OriginalSteering=process.env.T21_B126_ORIGINAL_RAISED_STEER==='source';
 const b127OriginalRoute=process.env.T21_B127_ORIGINAL_NEXT_ROUTE==='source';
@@ -176,6 +183,37 @@ async function run(){
  const samples=[];
  const b121ActualPhases=[];
  const b125GenuinePolls=[];
+ const b132UiWitnesses=[];
+ // Single-page CDP read. This is a rendered HUD snapshot after actual
+ // native KCC/Crowd ticks and real keyboard input, not an injected pose.
+ const b132PageProbe=()=>evaluate(`(() => {
+  const s=window.__t21F3.snapshot();
+  const w=s.b129OriginalRaisedEdgeGuidance;
+  const el=document.querySelector('#t21-f3-b129-original-edge-coach');
+  return {
+   actualNativeTick:s.tick,matchState:s.matchState,
+   sourceAuthority:[s.originalSourceSolids,s.originalPaintSurfaces,
+    s.originalSourceNavigationLinks,s.sourceScoreablePromotions],
+   originalUnrestricted4v4:s.unrestricted4v4Certified,
+   production:s.productionAuthorized,stop:s.stopReason,
+   actualKccGrounded:s.b112OriginalHumanGround.genuineKccGrounded,
+   actualOriginalRapierSolid:s.b112OriginalHumanGround.lastOriginalSourceHitId,
+   snapshotWarning:w?{
+    severity:w.severity,showCaution:w.showCaution,
+    distance:w.originalRaisedFloorEdgeMeters,
+    source:w.authenticNamedOriginalSupport,nativeTick:w.nativeTick,
+    playerPhysicsModified:w.playerPhysicsModified,
+    originalGeometryModified:w.originalGeometryModified}:null,
+   dom:el?{
+    visible:!el.hidden&&el.style.display!=='none'&&
+     el.getBoundingClientRect().width>0,
+    severity:el.dataset.state,nativeTick:Number(el.dataset.nativeTick),
+    distance:Number(el.dataset.sourceEdgeMeters),
+    text:el.textContent,officialScoreable:el.dataset.originalScoreable,
+    original4v4:el.dataset.original4v4Certified,
+    floorHole:el.dataset.originalFloorHoleCertified}:null
+  };
+ })()`);
  let later;
  const collectNativeFoot=(n,label)=>{
   if((b125RaisedCorridor||b126OriginalSteering||b127OriginalRoute)&&(
@@ -255,6 +293,10 @@ async function run(){
       genuinelyReachedOriginalRightLow?n:false;
     },120000,110);
     collectNativeFoot(native,stage.name);
+    if(b132RealEdgeHud){
+     const live=await b132PageProbe();
+     b132UiWitnesses.push({stage:stage.name,...live});
+    }
     b121ActualPhases.push({
      label:stage.name,actualCDPKeyboardKeys:stage.keys,
      genuineStartTick:before.tick,genuineEndTick:native.tick,
@@ -289,6 +331,24 @@ async function run(){
   }
  }
  const end=await snapshot();
+ if(b132RealEdgeHud){
+  b132UiWitnesses.push({stage:'RELEASED_NATIVE_END',...await b132PageProbe()});
+  const validation=auditB132RealBrowserEdgeWitness(b132UiWitnesses);
+  writeFileSync(resolve(output,'b132-native-original-edge-hud.json'),
+   JSON.stringify({schema:'W10_B132_REAL_NATIVE_EDGE_HUD_PROOF_V1',
+    originalSourceInput:'REAL_CDP_KEYS_W200_D12_W18_D_UP_TO_SOURCE_RAMP',
+    actualBrowserSamples:b132UiWitnesses,validation,
+    genuineActorTeleports:0,fabricatedTicks:0,
+    officialTurfOrCrossTeamCertified:false},null,2)+'\n');
+  console.log('T21_B132_NATIVE_REAL_ORIGINAL_EDGE_HUD',
+   JSON.stringify({passed:validation.passed,
+    visibleSources:validation.visibleOriginalSupportIds,
+    samples:b132UiWitnesses.length,
+    nativeLastTick:end.tick,physicsChanged:false,
+    official4v4Certified:false}));
+  if(!validation.passed)
+   fail('B132_REAL_NATIVE_IN_GAME_ORIGINAL_EDGE_HUD_HOLD',validation);
+ }
  const footprint=end.b112OriginalHumanGround.lastOriginalFootprint;
  if(!footprint||footprint.nativeTick>end.tick||
     footprint.probes?.length!==5||

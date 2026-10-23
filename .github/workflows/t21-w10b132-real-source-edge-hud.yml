@@ -1,0 +1,41 @@
+name: T21 W10-B132 actual native original floor edge HUD
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b132-*'
+      - '.github/workflows/t21-w10b132-real-source-edge-hud.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-native-floor-edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: B132 source/DOM semantic guard, B129/B130 and real browser bundle
+        run: |
+          node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          node --test scripts/t21-w10b132-real-original-edge-hud-audit.test.mjs
+          npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real WebGL2 and true keyboard W200-D12-W18-D to registered uphill
+        env:
+          T21_B116_FORWARD_NATIVE_TICKS: '320'
+          T21_B123_REAL_RAMP_ASCENT: source
+          T21_B132_REAL_EDGE_HUD: source
+          T21_B112_EVIDENCE_DIR: /tmp/t21-w10b132-real-edge
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Archive unchanged native physics plus real screen and HUD JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b132-actual-original-source-floor-edge
+          path: /tmp/t21-w10b132-real-edge/
+          if-no-files-found: warn
+          retention-days: 14
