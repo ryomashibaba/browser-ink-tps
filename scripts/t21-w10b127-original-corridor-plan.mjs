@@ -40,7 +40,9 @@ export function auditB127({phases,polls,b124,stop,suspicions,body,sourceId,groun
     end-start>=(i===3?1:s.ticks)&&(i!==3||end-start<=90)&&
     (i===0||start===phases[i-1]?.genuineEndTick);
   });
- const replay=order&&b124?.completed===true&&phases.slice(3,11).every(p=>source(p,.65));
+ const replay=order&&b124?.completed===true&&// The ramp edge-touch at phase[3] is a valid registered source
+  // transition, not a corridor waypoint with 0.65m margin.
+  phases.slice(4,11).every(p=>source(p,.65));
  const newEndpoints=order&&phases.slice(11).every(p=>source(p,.65));
  const actualPolls=order&&Array.isArray(polls)?polls.filter(p=>p.tick>phases[10].genuineEndTick):[];
  const samplesGood=actualPolls.length>=2&&actualPolls.every(p=>poll(p,.6));

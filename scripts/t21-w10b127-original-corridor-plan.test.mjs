@@ -10,7 +10,9 @@ function valid(){
   const start=tick;tick+=i===3?86:s.ticks;
   return {label:s.name,actualCDPKeyboardKeys:s.keys,genuineStartTick:start,
    genuineEndTick:tick,observedOriginalHumanEndingBody:[6,5.4,38.9],
-   observedSourceSolid:R,trueKccGrounded:true,actualRaisedSourceBoundary:boundary()};
+   observedSourceSolid:R,trueKccGrounded:true,
+   actualRaisedSourceBoundary:i===3?
+    {...boundary(),distanceToOriginalSourcePolygonBoundaryMeters:.035}:boundary()};
  });
  const poll=(tick)=>({tick,originalFloorId:R,nativeKccGrounded:true,
   nativeStopReason:null,registeredRaisedSource:boundary()});
@@ -38,4 +40,22 @@ test('real new displacement and stop reason are mandatory',()=>{
  assert.equal(auditB127(x).supportedSameFloorCorridorContinuation,false);
  x.body=[6,5.4,37.5];x.stop='ORIGINAL_SOURCE_UNSUPPORTED';
  assert.equal(auditB127(x).supportedSameFloorCorridorContinuation,false);
+});
+
+test('true ramp-edge arrival does not erase registered B126 replay',()=>{
+ const r=auditB127(valid());
+ assert.equal(r.priorB126ActuallyReplayed,true);
+ assert.equal(r.supportedSameFloorCorridorContinuation,true);
+});
+test('real 0.470m last source edge remains HOLD with correct replay',()=>{
+ const x=valid();
+ x.phases[12].actualRaisedSourceBoundary.distanceToOriginalSourcePolygonBoundaryMeters=.47065559;
+ x.polls[1].registeredRaisedSource.distanceToOriginalSourcePolygonBoundaryMeters=.47065559;
+ x.boundary.distanceToOriginalSourcePolygonBoundaryMeters=.47065559;
+ const r=auditB127(x);
+ assert.equal(r.priorB126ActuallyReplayed,true);
+ assert.equal(r.newEndpointsSupported,false);
+ assert.equal(r.everyNativeSampleSupported,false);
+ assert.equal(r.supportedSameFloorCorridorContinuation,false);
+ assert.equal(r.unrestricted4v4Certified,false);
 });

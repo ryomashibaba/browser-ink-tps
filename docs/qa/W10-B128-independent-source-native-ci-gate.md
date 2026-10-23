@@ -23,3 +23,11 @@ The combined original-corridor workflow now runs **all three independent real Ch
 ## Remaining HOLD
 
 No full native B127 PASS was yet demonstrated at the previous source SHA. Outcome of this newly isolated workflow must be verified from Actions on its **exact SHA and preserved artifacts**. Frozen 25 original solids, 17 PaintSurface, 26 NavLinks, 0 Scoreable, 0/12 cross-team routes, local passive proxy CPU/HUMAN avoidance uncertainty, official unrestricted 4v4 all remain unchanged and HOLD. F1/F2/F3 playable match integration remains the priority over repeating tiny step-length tuning.
+
+## Exact verified B128 integrated Chromium outcome
+
+[Actions #39942307098](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39942307098) on implementation SHA `ad6f598d2732e72f4165c352a72ce1f41f1fce52`: **completed FAILURE by design**. Node unit + Vitest + Vite build PASS. All three independent real-source steps ran; B125 **PASS** (9 phases, native tick 444, nearest real edge 0.90946m); B126 **PASS** (11 phases, native tick 468, real left X correction 0.56331m, forward 0.56260m, min new edge 0.88365m); **B127 HOLD** (13 actual phases, native tick 492, additional source-grounded XZ travel 2.07920m, final body [6.2972092628479,5.395079135894775,36.603267669677734], actual source edge **0.47065559022147196m**, below both 0.60m per-poll guard and 0.65m final boundary threshold). The source floor is original Team A right-low Y4.5. No next original surface, central connection or production 4v4 certified.
+
+**Additional audit defect found in B127:** The pure B127 replay predicate had incorrectly demanded 0.65m raised-floor margin at phase 3, the genuine source *uphill-ramp-to-raised-floor arrival event*. Prior B124 source-certified arrival at approximately 0.035m source polygon edge is permitted by B124 and is **not** a corridor waypoint. The separate native B127 failure remains real: the final 0.47066m source edge is genuinely unsafe. Correct the replay predicate to apply 0.65m only from phase 4 onward and add regression cases for (a) valid ramp-edge arrival and (b) still rejecting final 0.47066m edge. This fixes attribution but **cannot** promote B127 to PASS.
+
+Next major development emphasis must pivot to substantive F2/F3 source-backed playable stage work, not dozens more blind small W12 corridor repetitions.
