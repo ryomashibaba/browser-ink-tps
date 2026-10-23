@@ -7,6 +7,8 @@ on:
       - 'src/app/W10B124OriginalRaisedSourceBoundary.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - 'scripts/t21-w10b124-native-event-bounded-keys.mjs'
+      - 'scripts/t21-w10b124-native-event-bounded-keys.test.mjs'
       - '.github/workflows/t21-w10b124-real-raised-right-low-continuation.yml'
   workflow_dispatch:
 permissions:
@@ -24,6 +26,7 @@ jobs:
       - name: Exact original polygon witness, native source KCC, and build
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          node --test scripts/t21-w10b124-native-event-bounded-keys.test.mjs
           npx vitest run src/app/W10B124OriginalRaisedSourceBoundary.test.ts src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Real 368 native key requests W200-D12-W18-D90-W24-W24 after ramp

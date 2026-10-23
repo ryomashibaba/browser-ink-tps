@@ -9,6 +9,8 @@ import {mkdirSync,writeFileSync,readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
+import {auditB124RealNativeEventBoundedKeyboardPhases}
+ from './t21-w10b124-native-event-bounded-keys.mjs';
 
 const root='http://127.0.0.1:4197/browser-ink-tps/';
 const output=process.env.T21_B112_EVIDENCE_DIR??'/tmp/t21-b112';
@@ -298,7 +300,12 @@ async function run(){
   const genuineEndpointSourceSupported=
    end.b112OriginalHumanGround.genuineKccGrounded===true&&
    (footprint.nearCenter===true||footprint.nearPerimeter===true);
+  const b124NativeRealPhaseAudit=b124RaisedContinue?
+   auditB124RealNativeEventBoundedKeyboardPhases(
+    b121ActualPhases,first.tick,end.tick):null;
   const nativeOutcome=end.stopReason?'NATIVE_STOP_BEFORE_TARGET':
+   b124NativeRealPhaseAudit?.completed===true?
+    'B124_REAL_EVENT_BOUNDED_NATIVE_PHASES_COMPLETED':
    !reachedTarget?'NATIVE_TICK_TARGET_NOT_REACHED':
    forwardProgressMeters<20?'LIMITED_FORWARD_PROGRESS':
    actualSuspicionCount>0?'SUSPECTED_UNSUPPORTED_NATIVE_DESCENT':
@@ -322,6 +329,7 @@ async function run(){
     b123OriginalRamp?b121ActualPhases:null,
    b124RealRaisedOriginalContinuationPhases:
     b124RaisedContinue?b121ActualPhases:null,
+   b124TrueNativeEventBoundedKeyboardPhaseAudit:b124NativeRealPhaseAudit,
    b124RealRaisedSourceBoundary:end.b124OriginalRaisedRightLowFootprint,
    b123OriginalRampPassiveAgentWithheldNativeTicks:
     end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
@@ -421,8 +429,9 @@ async function run(){
    const observedRamp=sourceSamples.includes(ramp);
    const realKcc=end.b112OriginalHumanGround.genuineKccGrounded===true;
    const lastSource=end.b112OriginalHumanGround.lastOriginalSourceHitId;
-   const passed=reachedTarget&&!end.stopReason&&
-    firstFourSourceCorrect&&everyActualContinuedPhaseSafe&&
+   const passed=b124NativeRealPhaseAudit?.completed===true&&
+    !end.stopReason&&firstFourSourceCorrect&&
+    everyActualContinuedPhaseSafe&&
     everyObservedSampleSupported&&observedRamp&&
     displacementXZ>=1.5&&lastSource===raised&&realKcc&&
     genuineEndpointSourceSupported&&
@@ -433,6 +442,7 @@ async function run(){
    const record={
     schema:'W10_B124_REAL_NATIVE_RAISED_ORIGINAL_SOURCE_CONTINUATION_V1',
     actualNativeKeyboardPhaseWitnesses:phases,
+    strictRealEventBoundedKeyboardPhaseAudit:b124NativeRealPhaseAudit,
     measuredOriginalRightLowRaisedFootprint:end.b124OriginalRaisedRightLowFootprint,
     sampledActualNativeContinuation:continuedSnapshots,
     everyRealNativeContinuationProbeSupported:everyObservedSampleSupported,
@@ -462,6 +472,8 @@ async function run(){
       currentBoundary?.distanceToOriginalSourcePolygonBoundaryMeters,
      realNewPhysicalDistanceMeters:displacementXZ,
      actualContinuationSamples:continuedSnapshots.length,
+     genuineEventBoundedKeyboardNativeTicks:
+      b124NativeRealPhaseAudit?.measuredActualNativePhaseDurations??null,
      genuinelyKccGrounded:realKcc,
      originallySourceSupported:everyObservedSampleSupported,
      actualNaturalSuspicionCount:actualSuspicionCount,
