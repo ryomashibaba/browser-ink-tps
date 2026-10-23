@@ -1,0 +1,11 @@
+# W10-B142 — Physically safer original native A1 teammate approach
+
+Date 2026-10-24 JST. QA F2/F3 opt-in movement only.
+
+B137's human A1 rally formerly requested the **exact real human foot**, where the human Rapier capsule already stands. B142 replaces that occupied destination with a proposal TWO METERS before the human along the verified TRUE original Recast polyline. A pure deterministic planner refuses routes with incomplete/invalid native segments, endpoint snap beyond .20m from actual human, insufficient route length, >.30m Y mismatch, or path bends resulting in a waypoint closer than 1.7m / farther than 3.5m horizontal from human.
+
+This candidate is **not** automatically approved. A1 may receive it only after the previous real A1-to-human native Recast/Rapier route passes and the new candidate independently passes original physical Rapier solid raycast, B130 frozen original flat polygon (holes included; >=.75m edge clearance, <=.22m floor height), new true Recast path from real A1 foot (<=.20m start/end snaps), and every 0.30m source Rapier supported sample. Otherwise EXACT prior original-source patrol is chosen. CPU physical KCC and actor collision checks remain mandatory each 60Hz tick. No NavMesh link, actor position, floor, score or fake tick is created. Normal FIXED is unaffected; this only runs with explicit B137 opt-in, native A1, same grounded source side and true 7/7 CPU release.
+
+New native counters `b142OriginalStandoffGoalsApproved` and `b142UnsafeStandoffGoalsDenied` distinguish genuinely route-audited standoff goals from safe rejections. Neither count proves physical rendezvous. B138 [#39976080987](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39976080987) verified two 180s true native runs, but human stayed on a different source level and **zero** ally requests were accepted. Later B139/B141 native lower-floor trials were still queued when this was implemented. B75 build/Vitest/real WebGL2 coverage, including B142 pure-path tests, must be observed on this SHA before claiming PASS.
+
+Hard freezes: original 25 solids / 17 PaintSurface / 26 source NavLinks / 0 Scoreable, opponent native routes 0/12; activationReady=false, productionAuthorized=false, unrestricted4v4Certified=false; formal original 4v4 HOLD. No main, T19C/T20, Pages, PR #5 or private stage assets changed.

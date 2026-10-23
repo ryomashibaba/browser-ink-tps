@@ -14,6 +14,7 @@ import {Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
+import {chooseB142OriginalAllyStandoff} from './UndertowF3OriginalAllyStandoff';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
@@ -47,6 +48,8 @@ export interface F3TrafficSnapshot{
   readonly b137ApprovedNativeRallies:number;
   readonly b137UnsafeOrUnsupportedRallies:number;
   readonly b137MissingSourceFloorProof:number;
+  readonly b142OriginalStandoffGoalsApproved:number;
+  readonly b142UnsafeStandoffGoalsDenied:number;
   readonly realGoalRequests:number;
   readonly heldRequests:number;
   readonly engagementGoalRequests:number;
@@ -114,6 +117,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b137ApprovedNativeRallies=0;
  private b137UnsafeOrUnsupportedRallies=0;
  private b137MissingSourceFloorProof=0;
+ private b142OriginalStandoffGoalsApproved=0;
+ private b142UnsafeStandoffGoalsDenied=0;
  private readonly b137ActualHumanFoot=new Vec3();
  private b137HumanFootValid=false;
  private b137NativeTick=-1;
@@ -370,11 +375,29 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       if(route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
          route.endSnapDistanceMeters<=.20&&
          this.hasSourceSupportedRoute(route,1)){
-       this.patrolIndex.set(id,-1);
-       out.copy(human);
-       this.realGoalRequests++;
-       this.b137ApprovedNativeRallies++;
-       return true;
+       // B142: never steer native A1 into the REAL human occupied capsule.
+       // The path-derived 2m standoff is a proposal, not navigation authority.
+       const candidate=chooseB142OriginalAllyStandoff(
+        route.nativePathPoints,human);
+       const target=candidate?new Vec3(candidate.x,candidate.y,candidate.z):null;
+       const hit=target?nativeFootHit(target):null;
+       const flat=hit&&target?originalFlat(target,hit.solidId):null;
+       if(target&&flat?.insideRegisteredOriginalXZFootprint&&
+          flat.originalFlatVerticalBandWithin22cm&&
+          flat.distanceToOriginalPolygonBoundaryMeters>=.75){
+        const path=this.nav.auditPath(realFoot,target);
+        if(path.reachedTarget&&path.startSnapDistanceMeters<=.20&&
+           path.endSnapDistanceMeters<=.20&&
+           this.hasSourceSupportedRoute(path,1)){
+         this.patrolIndex.set(id,-1);
+         out.copy(target);
+         this.realGoalRequests++;
+         this.b137ApprovedNativeRallies++;
+         this.b142OriginalStandoffGoalsApproved++;
+         return true;
+        }
+       }
+       this.b142UnsafeStandoffGoalsDenied++;
       }
       this.b137UnsafeOrUnsupportedRallies++;
      }else this.b137MissingSourceFloorProof++;
@@ -784,6 +807,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b137ApprovedNativeRallies:this.b137ApprovedNativeRallies,
     b137UnsafeOrUnsupportedRallies:this.b137UnsafeOrUnsupportedRallies,
     b137MissingSourceFloorProof:this.b137MissingSourceFloorProof,
+     b142OriginalStandoffGoalsApproved:this.b142OriginalStandoffGoalsApproved,
+     b142UnsafeStandoffGoalsDenied:this.b142UnsafeStandoffGoalsDenied,
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     engagementGoalRequests:this.engagementGoalRequests,
