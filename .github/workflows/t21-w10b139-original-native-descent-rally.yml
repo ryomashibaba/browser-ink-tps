@@ -5,10 +5,15 @@ on:
     paths:
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
       - 'scripts/t21-w10b139-original-native-descent-rally.test.mjs'
+      - 'scripts/t21-w10b140-real-physics-sample.mjs'
+      - 'scripts/t21-w10b140-real-physics-sample.test.mjs'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: b139-original-real-rally-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   genuine-descent-ally:
     name: Native original human walk and A1 physics (${{ matrix.variant }})
@@ -25,7 +30,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs
+      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-w10b140-real-physics-sample.test.mjs
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Real PlayCanvas Rapier KCC W200 D12 W18 after genuine CPU 7/7
         env:

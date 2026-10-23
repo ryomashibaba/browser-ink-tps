@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {sampleB140RealSourcePhysicalTrace} from './t21-w10b140-real-physics-sample.mjs';
 const s=readFileSync('scripts/t21-w10b139-original-native-descent-rally.mjs','utf8');
 const w=readFileSync('.github/workflows/t21-w10b139-original-native-descent-rally.yml','utf8');
 test('B139 genuine source-only real keyboard first descent and 7 CPU gating',()=>{
@@ -10,7 +11,8 @@ test('B139 genuine source-only real keyboard first descent and 7 CPU gating',()=
   "n.cpu.freeCombatEnabled","b112OriginalHumanGround","actualHumanKccBody",
   "actualA1RapierFoot","actualHumanKccGrounded","t21W10B137=allyRally",
   "n.cpu.physicalFootRelocations!==0","originalRapierSupportId",
-  "Input.dispatchKeyEvent","Input.dispatchMouseEvent"])
+  "Input.dispatchKeyEvent","Input.dispatchMouseEvent",
+  "sampleB140RealSourcePhysicalTrace(n,phase)"])
   assert.ok(s.includes(sample),'Missing genuine native evidence: '+sample);
  assert.match(w,/variant: \[FIXED_DEFAULT, ALLY_RALLY\]/);
 });

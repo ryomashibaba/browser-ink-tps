@@ -5,6 +5,7 @@ import {spawn,execFileSync} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
+import {sampleB140RealSourcePhysicalTrace} from './t21-w10b140-real-physics-sample.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -16,7 +17,7 @@ if(!['FIXED_DEFAULT','ALLY_RALLY'].includes(variant))
 const allyOptIn=variant==='ALLY_RALLY';
 const children=[],pending=new Map(),history=[];
 let socket=null,sequence=0;
-const fail=reason=>{throw Error('B81_'+reason);};
+const fail=reason=>{throw Error('B140_'+reason);};
 const save=()=>writeFileSync(resolve(OUTPUT,'w10b139-progress.json'),
  JSON.stringify({sourceAuthority:'25/17/26/0',activationReady:false,
   unresolvedActors:8,naturalOpponentPaths:'0/12',history},null,2));
@@ -68,40 +69,6 @@ async function picture(name){
  if(bytes.length<10000||bytes.readUInt32BE(16)!==1600||
     bytes.readUInt32BE(20)!==900)fail('FRAMEBUFFER');
  writeFileSync(resolve(OUTPUT,name+'.png'),bytes);
-}
-// Read-only original source body, contact and CPU evidence on natural 60Hz ticks.
-function observation(n,phase){
- const cpu=n.cpu.cpu.find(c=>c.id==='A1');
- const foot=n.b112OriginalHumanGround;
- const originalSupport=foot?.lastOriginalSourceHitId??null;
- const actualHumanBody=n.player.position;
- const realCpuFoot=cpu?.physicalFoot??null;
- return {
-  phase,actualTick:n.tick,matchState:n.matchState,
-  actualHumanKccBody,actualA1RapierFoot:realCpuFoot,
-  realSeparationXZ:realCpuFoot?
-   Math.hypot(realCpuFoot[0]-actualHumanBody[0],
-    realCpuFoot[2]-actualHumanBody[2]):null,
-  actualHumanKccGrounded:foot?.genuineKccGrounded??null,
-  originalRapierSupportId:originalSupport,
-  originalSourceFootprintClass:foot?.lastOriginalFootprint?.classification??null,
-  realCpuA1Mobility:cpu?.mobilityState??null,
-  realCpuRejoins:n.cpu.physicalRejoins.length,
-  realCpuFootRelocations:n.cpu.physicalFootRelocations,
-  sourcePatrol:{
-   optIn:n.cpu.sourcePatrol.b137AllyRallyOptIn,
-   checks:n.cpu.sourcePatrol.b137RealCandidateChecks,
-   approved:n.cpu.sourcePatrol.b137ApprovedNativeRallies,
-   denied:n.cpu.sourcePatrol.b137UnsafeOrUnsupportedRallies,
-   missingSourceFloor:n.cpu.sourcePatrol.b137MissingSourceFloorProof
-  },
-  humanShotCount:n.shotsFired,
-  humanChangedOriginalPaintCells:n.b23HumanInkFeedback.humanChangedCells,
-  cpuSourceTurfShots:n.cpuSourceTurfShots,
-  cpuSourceChangedCells:n.cpuImpactInkCellsChanged,
-  officialScoreable:n.sourceScoreablePromotions,
-  original4v4Certified:n.unrestricted4v4Certified
- };
 }
 const realKeys={
  KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
@@ -157,7 +124,7 @@ async function doPhysicalTrial(){
  const observe=(n,phase,force=false)=>{
   if(force||n.tick-lastSampleTick>=12){
    lastSampleTick=n.tick;
-   const sample=observation(n,phase);
+   const sample=sampleB140RealSourcePhysicalTrace(n,phase);
    routeWitness.push(sample);
    history.push(sample);
    if(history.length%12===0)save();

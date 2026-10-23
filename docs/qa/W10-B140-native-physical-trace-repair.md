@@ -1,0 +1,15 @@
+# W10-B140 — B138/B139 actual native evidence + B139 physical-sample repair
+
+Date 2026-10-24 JST. Scope QA branch only, F2/F3 authentic playable quality.
+
+## B138 completed, not a physical teammate arrival
+[Real original 180-second comparison #39976080987](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39976080987): both FIXED_DEFAULT and ALLY_RALLY GitHub Actions **SUCCESS**, native WebGL2 180s, true 7/7 physical CPU rejoins, 0 position relocation, 3,615 original CPU paint-changed cells, 112 CPU turf shots. **Both** had 0 native teammate source goal approvals. In the ALLY_RALLY condition, the native source A1 goal gate was checked **650** times but actual human remained about Y=8.395m at 180s, whereas real A1 physical foot ended Y=4.472m. Hence this experiment shows the original spatial conditions did not match, NOT that real A1 failed to traverse an approved rally path. FIXED default remains unchanged. Human initial native key shots differed, so B138 is **not** a strict identical-body initial-condition experiment.
+
+## B139 completed CI with a hard test script error
+[B139 CI #39977722919](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39977722919): both independent branches compiled and passed source string tests, then both native jobs reached real 7/7 CPU release but crashed at first `observation()` due to a `ReferenceError: actualHumanKccBody is not defined` (local binding was `actualHumanBody`). Neither generated lower-route or rally completion evidence. **NOT a gameplay, geometry, physics, or ally behavior failure.** No fabricated outcomes.
+
+## B140 action: fix actual evidence collector, harden it
+Move read-only physical serialization to `scripts/t21-w10b140-real-physics-sample.mjs`. The B139 runner now calls a correct serializer which copies `n.player.position` as `actualHumanKccBody`, separately copies real A1 `physicalFoot`, computes XZ separation, carries true original KCC grounded / support and actual B137 counts. Reject malformed non-finite human or CPU state rather than recording fictional proof. Unit test fixture is explicitly serializer-only; it is **not native game test data**. Retain real 7/7 staging and true CDP W200/D12/W18 original movement. Workflow builds/tests/runs both actual native FIXED and ALLY conditions; concurrency prevents redundant future versions of the same expensive job. No new floors, source links, actor positions, physics ticks, scoring authority or geometry thresholds. Track fresh CI separately; do not claim actual rally until genuine evidence exists.
+
+## Future F2/F3 implementation gate
+If true lower-ground samples are observed but native route approvals remain zero, inspect actual original collider-footproof, snap and route audit with true real physical foot coordinates. If approval succeeds, next measure actual A1 distance and collision movement to test real rally rather than mere goal authorization. Preserve 25 Rapier solids / 17 PaintSurface / 26 source NavLinks / 0 Scoreable, 0/12 opponent paths, activationReady=false, productionAuthorized=false, unrestricted4v4Certified=false; formal 4v4 HOLD. No main/Pages/PR #5 merges.
