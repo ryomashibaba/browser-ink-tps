@@ -15,3 +15,17 @@
 
 ## Formal HOLD
 No user-reported central road fix approved. No new original geometry, NavLink, scoreable, CPU/player body relocation, production/main/Pages/PR #5 mutation. 0/12 certified cross-side natural routes. Need evidence to choose source-backed next physical route before adding any collision or turning input.
+
+## Verified final genuine Chromium acceptance (actual JSON readback)
+
+[B120 exact-source Actions #39899687346](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39899687346), code SHA `11b2d44cb566c6d49048396308dbb02e4b18a760`, **COMPLETED SUCCESS**. The hosted genuine PlayCanvas/WebGL2 + original native Rapier 60Hz, actual real CDP KeyW 240 native ticks all completed. **4 Vitest files / 19 tests PASS**, TypeScript + Vite build PASS.
+
+[Actual uploaded artifact ID 12478267544](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39899687346): original files `b120-real-original-first-drop-touchdown.json`, `b116-real-forward-original-support-traverse.json`, `b112-real-source-foot-walk.json`, `b112-real-source-human-walk.png`. Read the saved JSON (not just CI job status):
+- True Chrome native ticks **6→246**, forward movement **19.837749481201172m**, original solids witnessed `spawn-high-positive-z` → `first-drop-landing-positive-z`; no stop.
+- Real original last body `[-0.17384958267211914,3.8949997425079346,48.05495071411133]`. Physical foot Y **3.0249997425079345** above exact named original source slab top **Y=3.0** (gap .025m).
+- The actual original solid is `UndertowT21D:first-drop-landing-positive-z`; genuine KCC grounded **true**, physical foot **INSIDE** source-registered XZ footprint. Actual horizontal distance to original polygon boundary **1.2100706086707809m**.
+- Passive extra eighth human Crowd neighbour withheld while truly on source lower landing **73 native ticks**; no 108m Crowd proxy jump in this bounded trial. This does NOT certify native Crowd avoidance for human vs seven CPU.
+- Exactly **1 existing natural unsupported-descent suspicion** remains in native report during high→lower first-drop flight; ungrounded is not hidden or relabeled as a certified floor hole.
+- No physical actor teleport, no invented original floor/NavLink, no score promotion; original frozen counts remain **25/17/26/0**, and route/central-path/full 4v4 certification remain HOLD.
+
+**B120 ACCEPTED within explicitly scoped touchdown QA.** B119 full 480-tick unsteered forward attempt still fails closed because the real actor **walked outside the registered original lower slab** at approximately native tick 270, then fell (no next floor authorized). Next engineering task should identify and genuinely drive a source-backed lateral turn/path or explicitly report insufficient original-source connection; do not bridge the gap with geometry conjecture.
