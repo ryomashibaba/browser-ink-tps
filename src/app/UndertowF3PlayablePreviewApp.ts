@@ -72,6 +72,8 @@ import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 import {inspectB120OriginalFirstDropBoundary} from './W10B120OriginalSourceBoundary';
 import {inspectB124ActualRaisedSourceBoundary}
  from './W10B124OriginalRaisedSourceBoundary';
+import {createF3OriginalRaisedEdgeCoach,originalRaisedSourceEdgeStatus}
+ from './UndertowF3OriginalEdgeGuidance';
 import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
@@ -184,6 +186,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
+ private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
  private readonly b62NativeEvidence=new W10B62NativeSessionEvidence();
@@ -733,6 +736,7 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  this.b129EdgeCoach=createF3OriginalRaisedEdgeCoach(ui);
   if(this.b112GroundEnabled){
    const warning=document.createElement('div');
    warning.id='t21-f3-b113-ground-warning';
@@ -2317,6 +2321,29 @@ export class UndertowF3PlayablePreviewApp{
  }
  public snapshot(){
   const pos=this.player.getPosition(this.p);
+  // B129 is a read-only rendered warning; genuine KCC grounding and
+  // a registered original Rapier foot support ID are BOTH required.
+  // Avoid extra raycasts away from the known raised Y4.5 original layer.
+  const b129Possible=this.stats.playerGrounded&&this.resources.currentHp>0&&
+   this.player.currentMode==='HUMAN'&&
+   Math.abs(pos.y- (4.5+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters))<=.22;
+  const b129Hit=b129Possible?
+   this.physics.castCharacterFootSupport(pos,
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
+  const b129Foot=b129Hit?.solidId==='UndertowT21D:right-low-team-a'?
+   inspectB124ActualRaisedSourceBoundary({
+    nativeTick:this.clock.tick,actualRapierBody:[pos.x,pos.y,pos.z]
+   }):null;
+  const b129Edge=originalRaisedSourceEdgeStatus({
+   nativeTick:this.clock.tick,nativeKccGrounded:this.stats.playerGrounded,
+   realOriginalFootSolidId:b129Hit?.solidId??null,
+   actualRaisedFootprint:b129Foot,
+   stageAuthority:[this.rawStage.solids.length,
+    this.rawStage.paintSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,0],
+   matchState:this.matchState,paused:this.paused,stopReason:this.stopReason,
+   activeHuman:this.resources.currentHp>0
+  });
   const progress=this.traffic.snapshot();
   return {
    phase:'F3',renderer:'webgl2',stageId:this.rawStage.metadata.id,
@@ -2420,6 +2447,7 @@ export class UndertowF3PlayablePreviewApp{
    playerInkRecoveryState:this.stats.playerInkRecoveryState,
    inkDryFireAttempts:this.stats.inkDryFireAttempts,
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   b129OriginalRaisedEdgeGuidance:b129Edge,
    b124OriginalRaisedRightLowFootprint:this.b112GroundEnabled?
     inspectB124ActualRaisedSourceBoundary({
      nativeTick:this.clock.tick,
@@ -2520,6 +2548,8 @@ export class UndertowF3PlayablePreviewApp{
   const p=state.cpu;
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
+  this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
+   this.survey.snapshot().active||this.galleryIndex>=0);
   this.b58SessionBoard.render(state);
   if(state.matchState==='TIME_UP')
    this.b70OwnerComparison?.render();
