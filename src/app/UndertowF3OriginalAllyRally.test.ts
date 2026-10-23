@@ -1,7 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {Team} from '../ink/types';
 import {eligibleB137OriginalAllyRally as allow} from './UndertowF3OriginalAllyRally';
-const base={
+// Keep the fixture's team in the gate's actual A/B domain, not wider Team.
+const base:Parameters<typeof allow>[0]={
  enabled:true,actorId:'A1',team:Team.A,
  cpuGrounded:true,humanGrounded:true,humanActive:true,
  realCpuFoot:{x:1,y:3,z:48},realHumanFoot:{x:8,y:3,z:48}
