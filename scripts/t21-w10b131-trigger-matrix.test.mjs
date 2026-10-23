@@ -62,6 +62,8 @@ test('B131: four important gates still run on preview app integration change',()
  assert.ok(b75.includes('npm run build -- --base=/browser-ink-tps/'));
  assert.ok(b75.includes('UndertowF3OriginalEdgeGuidance.test.ts'));
  assert.ok(b75.includes('W10B130OriginalFlatEdge.test.ts'));
+ assert.ok(b75.includes("- 'src/app/W10B130OriginalFlatEdge.ts'"));
+ assert.ok(b75.includes("- 'src/app/UndertowF3OriginalEdgeGuidance.ts'"));
  assert.ok(b75.includes('t21-w10b131-trigger-matrix.test.mjs'));
  assert.ok(b75.includes('matrix:'));
  assert.ok(b75.includes('aim: [FIXED, SWEEP]'));
