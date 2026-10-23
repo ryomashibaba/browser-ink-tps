@@ -22,12 +22,17 @@ if(!Number.isSafeInteger(requestedNativeTicks)||
 const b116Extended=requestedNativeTicks>120;
 const b121OriginalSteer=process.env.T21_B121_REAL_LANDING_STEER==='source';
 const b122OriginalSteer=process.env.T21_B122_REAL_LANDING_STEER==='source';
+const b123OriginalRamp=process.env.T21_B123_REAL_RAMP_ASCENT==='source';
 if(b121OriginalSteer&&(requestedNativeTicks!==280||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'||b122OriginalSteer))
  throw Error('B121_NATIVE_280_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
 if(b122OriginalSteer&&(requestedNativeTicks!==266||
-   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'||b123OriginalRamp))
  throw Error('B122_NATIVE_266_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
+if(b123OriginalRamp&&(requestedNativeTicks!==320||
+   b121OriginalSteer||b122OriginalSteer||
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+ throw Error('B123_ORIGINAL_RAMP_REQUIRES_EXCLUSIVE_NATIVE_320_TICK_TRIAL');
 const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
 if(b120TouchdownOnly&&requestedNativeTicks!==240)
  throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
@@ -142,13 +147,18 @@ async function run(){
     b121Phase:label??null});
   }
  };
- if(b121OriginalSteer||b122OriginalSteer){
+ if(b121OriginalSteer||b122OriginalSteer||b123OriginalRamp){
   const keys={
    KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
    KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
    KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
   };
-  const program=[
+  const program=b123OriginalRamp?[
+   {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
+   {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
+   {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:18},
+   {name:'REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP',keys:['KeyD'],ticks:90}
+  ]:[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
    {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
    {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:b122OriginalSteer?18:16},
@@ -167,7 +177,14 @@ async function run(){
     native=await until(async()=>{
      const n=await snapshot();
      collectNativeFoot(n,null);
-     return n.tick>=before.tick+stage.ticks||n.stopReason?n:false;
+     const genuinelyReachedOriginalRightLow=
+      b123OriginalRamp&&
+      stage.name==='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
+      n.b112OriginalHumanGround.genuineKccGrounded===true&&
+      n.b112OriginalHumanGround.lastOriginalSourceHitId===
+       'UndertowT21D:right-low-team-a';
+     return n.tick>=before.tick+stage.ticks||n.stopReason||
+      genuinelyReachedOriginalRightLow?n:false;
     },120000,110);
     collectNativeFoot(native,stage.name);
     b121ActualPhases.push({
@@ -288,6 +305,8 @@ async function run(){
    genuineSourceTransitions:sourceTransitions,
    actualOriginalSourceSamples:samples,
    b121RealKeyboardSteeringPhases:b121ActualPhases,
+   b123RealSourceRampGenuineKeyboardPhases:
+    b123OriginalRamp?b121ActualPhases:null,
    b120LastOriginalSourceBoundary:end.b120OriginalSourceBoundary,
    b120ActualRegisteredSourceBoundarySamples:
     samples.filter(s=>s.b120OriginalSourceBoundary?.schema===
@@ -334,6 +353,84 @@ async function run(){
     originalAuthority:[25,17,26,0],
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
+  // B123: original Temple01 Y=3.0→4.5 slope is already registered.
+  // Require the actual original RAPiER KCC to touch both the named
+  // source ramp and the independently registered raised right-low slab.
+  // A geometric quad overlap or CDP key alone is not route proof.
+  if(b123OriginalRamp){
+   const rampId='UndertowT21D:right-low-route-ramp-positive-z';
+   const firstDropId='UndertowT21D:first-drop-landing-positive-z';
+   const nextId='UndertowT21D:right-low-team-a';
+   const observed=[...new Set(samples.flatMap(s=>
+    [...(s.originalSupport?[s.originalSupport]:[]),
+     ...(s.sourceFootprintIds??[])]))];
+   const genuinelyRampContactObserved=observed.includes(rampId);
+   const genuinelyLandingContactObserved=observed.includes(firstDropId);
+   const genuineNextSourceGrounded=
+    end.b112OriginalHumanGround.lastOriginalSourceHitId===nextId&&
+    end.b112OriginalHumanGround.genuineKccGrounded===true&&
+    (footprint.nearCenter===true||footprint.nearPerimeter===true);
+   const actualFootY=end.player.position[1]-.87;
+   const originalRaisedFloorY=4.5;
+   const matchedY=Math.abs(actualFootY-originalRaisedFloorY)<=.22;
+   const correctFourNativePhases=b121ActualPhases.length===4&&
+    b121ActualPhases[0].observedSourceSolid===firstDropId&&
+    b121ActualPhases[1].observedSourceSolid===firstDropId&&
+    b121ActualPhases[2].observedSourceSolid===firstDropId;
+   const trueAscended=genuinelyRampContactObserved&&
+    genuinelyLandingContactObserved&&
+    correctFourNativePhases&&genuineNextSourceGrounded&&
+    matchedY&&!end.stopReason&&actualSuspicionCount<=1;
+   const rampRecord={
+    schema:'W10_B123_GENUINE_ORIGINAL_FIRST_DROP_TO_RIGHT_LOW_RAMP_V1',
+    actuallyPerformedNativeKeyboardPhases:b121ActualPhases,
+    actualNativeOriginalSources:observed,
+    originalRampColliderId:rampId,
+    physicalOriginalRampContactObserved:genuinelyRampContactObserved,
+    originalFirstDropContactObserved:genuinelyLandingContactObserved,
+    originalRaisedFloorId:nextId,
+    realRapierHumanFootY:actualFootY,originalRaisedFloorY,
+    realRapierKccGroundedOnRaisedFloor:genuineNextSourceGrounded,
+    terminalRealHumanBody:end.player.position,
+    genuineNativeOriginalSourceEvidence:sourceTransitions,
+    completeOriginalNativeFloorTrace:
+     end.b112OriginalHumanGround,
+    originalNaturalDescentSuspicions:actualSuspicionCount,
+    actualLowerToRaisedRampAscentVerified:trueAscended,
+    originalGeometryModified:false,originalNavmeshModified:false,
+    humanOrSevenCpuTeleported:false,scoreablePromoted:0,
+    humanCpuPhysicalContactCertified:false,
+    crossingToOpposingTeamCertified:false,
+    formal4v4Certified:false,
+    frozenOriginalSourceAuthority:[25,17,26,0]
+   };
+   writeFileSync(resolve(output,'b123-real-physical-original-ramp-ascent.json'),
+    JSON.stringify(rampRecord,null,2)+'\n');
+   console.log('T21_B123_GENUINE_ORIGINAL_FIRST_DROP_RAMP_ASCENT',
+    JSON.stringify({realEndNativeTick:end.tick,
+     nativeOriginalSources:observed,
+     genuineOriginalRampContact:genuinelyRampContactObserved,
+     realRaisedKccGrounded:genuineNextSourceGrounded,
+     originalRaisedFloorId:end.b112OriginalHumanGround.lastOriginalSourceHitId,
+     realHumanFootY:actualFootY,
+     actualNativeSteeringPhases:b121ActualPhases.length,
+     actualNaturalDescentSuspicions:actualSuspicionCount,
+     genuinelySourceAscended:trueAscended,
+     authenticHumanCpuInteractionCertified:false,
+     originalFrozenAuthority:[25,17,26,0]}));
+   if(!trueAscended)
+    fail('B123_GENUINE_ORIGINAL_RAMP_ASCENT_HOLD',{
+     nativeTick:end.tick,originalObservedSources:observed,
+     genuineOriginalRampContact:genuinelyRampContactObserved,
+     actuallyRaisedKccGrounded:genuineNextSourceGrounded,
+     physicalBody:end.player.position,
+     realHumanFootY:actualFootY,
+     genuineOriginalFloor:end.b112OriginalHumanGround.lastOriginalSourceHitId,
+     actualStop:end.stopReason,
+     actualNativeSteeringPhases:b121ActualPhases
+    });
+   return;
+  }
   // B121: source-grounded real keyboard steering witness. This NEVER
   // approves a route to another solid solely from a successful turn.
   if(b121OriginalSteer||b122OriginalSteer){

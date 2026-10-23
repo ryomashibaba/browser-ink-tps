@@ -1,0 +1,41 @@
+name: T21 W10-B123 real physical first-drop ramp ascent source
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - 'src/app/W10B123OriginalUphillRampSourceAudit.ts'
+      - 'src/app/W10B123OriginalUphillRampSourceAudit.test.ts'
+      - '.github/workflows/t21-w10b123-real-original-route-ramp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-uphill-original-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify immutable original Y3-to-Y4.5 source contact and native build
+        run: |
+          node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          npx vitest run src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real native Chromium W200 D12 W18 D90 original right-low uphill approach
+        env:
+          T21_B116_FORWARD_NATIVE_TICKS: '320'
+          T21_B123_REAL_RAMP_ASCENT: source
+          T21_B112_EVIDENCE_DIR: /tmp/t21-w10b123-native-original-ramp
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Preserve genuine original source ramp and actual KCC evidence on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b123-real-first-drop-original-uphill-ramp
+          path: /tmp/t21-w10b123-native-original-ramp/
+          if-no-files-found: warn
+          retention-days: 14
