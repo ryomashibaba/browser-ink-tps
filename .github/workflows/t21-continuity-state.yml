@@ -1,0 +1,57 @@
+name: T21 Continuity index (metadata only)
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: t21-continuity-metadata
+  cancel-in-progress: true
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject other repository or branch
+        run: |
+          test "$GITHUB_REPOSITORY" = "ryomashibaba/browser-ink-tps"
+          test "$GITHUB_REF" = "refs/heads/dev/t21-f4e103w-qa-infra"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Source-only continuity parser tests and snapshot
+        run: |
+          node --test scripts/t21-continuity-state.test.mjs
+          node scripts/t21-continuity-state.mjs > "$RUNNER_TEMP/t21-live-state.md"
+          test -s "$RUNNER_TEMP/t21-live-state.md"
+      - name: Refuse to copy stale source revision
+        id: check
+        run: |
+          now="$(git ls-remote origin refs/heads/dev/t21-f4e103w-qa-infra | cut -f1)"
+          if [ "$now" = "$GITHUB_SHA" ]; then
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+            echo "QA advanced since this run; stale snapshot discarded."
+          fi
+      - name: Commit metadata on separate branch ONLY
+        if: steps.check.outputs.fresh == 'true'
+        run: |
+          git fetch origin meta/t21-continuity
+          git switch -C meta/t21-continuity FETCH_HEAD
+          mkdir -p docs/continuity
+          cp "$RUNNER_TEMP/t21-live-state.md" docs/continuity/LIVE_STATE.md
+          if git diff --quiet -- docs/continuity/LIVE_STATE.md; then
+            echo "Metadata already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/continuity/LIVE_STATE.md
+          git commit -m "chore(continuity): snapshot QA HEAD $GITHUB_SHA [skip ci]"
+          git push origin HEAD:refs/heads/meta/t21-continuity
