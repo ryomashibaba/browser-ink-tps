@@ -462,7 +462,7 @@ async function run(){
     boundary:end.b124OriginalRaisedRightLowFootprint
    });
    writeFileSync(resolve(output,'b127-real-source-narrow-continuation.json'),
-    JSON.stringify(result,null,2)+'\\n');
+    JSON.stringify(result,null,2)+'\n');
    console.log('T21_B127_REAL_SOURCE_NARROW_CORRIDOR',JSON.stringify({
     nativeTick:end.tick,phases:b121ActualPhases.length,
     physicalForwardMeters:result.actualNewForwardZMeters,
