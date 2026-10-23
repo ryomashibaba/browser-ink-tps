@@ -20,6 +20,10 @@ if(!Number.isSafeInteger(requestedNativeTicks)||
      (requestedNativeTicks>=240&&requestedNativeTicks<=720)))
  throw Error('B116_INVALID_TRUE_FORWARD_TICK_REQUEST');
 const b116Extended=requestedNativeTicks>120;
+const b121OriginalSteer=process.env.T21_B121_REAL_LANDING_STEER==='source';
+if(b121OriginalSteer&&(requestedNativeTicks!==280||
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+ throw Error('B121_NATIVE_280_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
 const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
 if(b120TouchdownOnly&&requestedNativeTicks!==240)
  throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
@@ -120,23 +124,76 @@ async function run(){
  const first=await snapshot();
  const targetTick=first.tick+requestedNativeTicks;
  const samples=[];
+ const b121ActualPhases=[];
  let later;
- await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
- try{
-  later=await until(async()=>{
-   const n=await snapshot();
-   if(samples.length===0||n.tick-samples.at(-1).tick>=12)
-    samples.push({tick:n.tick,body:n.player.position,
-     grounded:n.b112OriginalHumanGround.genuineKccGrounded,
-     originalSupport:n.b112OriginalHumanGround.lastOriginalSourceHitId,
-     sourceFootprintClass:n.b112OriginalHumanGround.lastOriginalFootprint?.classification??null,
-     sourceFootprintIds:n.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
-     suspectedDescents:n.b112OriginalHumanGround.suspicionCount,
-     b120OriginalSourceBoundary:n.b120OriginalSourceBoundary});
-   return n.tick>=targetTick||(b116Extended&&n.stopReason)?n:false;
-  },180000,150);
- }finally{
-  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
+ const collectNativeFoot=(n,label)=>{
+  if(samples.length===0||n.tick-samples.at(-1).tick>=12||label){
+   samples.push({tick:n.tick,body:n.player.position,
+    grounded:n.b112OriginalHumanGround.genuineKccGrounded,
+    originalSupport:n.b112OriginalHumanGround.lastOriginalSourceHitId,
+    sourceFootprintClass:n.b112OriginalHumanGround.lastOriginalFootprint?.classification??null,
+    sourceFootprintIds:n.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
+    suspectedDescents:n.b112OriginalHumanGround.suspicionCount,
+    b120OriginalSourceBoundary:n.b120OriginalSourceBoundary,
+    b121Phase:label??null});
+  }
+ };
+ if(b121OriginalSteer){
+  const keys={
+   KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
+   KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
+   KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
+  };
+  const program=[
+   {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
+   {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
+   {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:16},
+   {name:'LOWER_LANDING_REAL_KEYA_CORRECTION',keys:['KeyA'],ticks:24},
+   {name:'LOWER_LANDING_REAL_FORWARD_AFTER_STEER',keys:['KeyW'],ticks:28}
+  ];
+  let held=new Set(),native=first;
+  try{
+   for(const stage of program){
+    for(const k of held)if(!stage.keys.includes(k))
+     await cmd('Input.dispatchKeyEvent',{type:'keyUp',...keys[k]});
+    for(const k of stage.keys)if(!held.has(k))
+     await cmd('Input.dispatchKeyEvent',{type:'keyDown',...keys[k]});
+    held=new Set(stage.keys);
+    const before=native;
+    native=await until(async()=>{
+     const n=await snapshot();
+     collectNativeFoot(n,null);
+     return n.tick>=before.tick+stage.ticks||n.stopReason?n:false;
+    },120000,110);
+    collectNativeFoot(native,stage.name);
+    b121ActualPhases.push({
+     label:stage.name,actualCDPKeyboardKeys:stage.keys,
+     genuineStartTick:before.tick,genuineEndTick:native.tick,
+     observedOriginalHumanStartingBody:before.player.position,
+     observedOriginalHumanEndingBody:native.player.position,
+     observedSourceSolid:native.b112OriginalHumanGround.lastOriginalSourceHitId,
+     trueKccGrounded:native.b112OriginalHumanGround.genuineKccGrounded,
+     actualRegisteredFloor:native.b120OriginalSourceBoundary,
+     stopReason:native.stopReason
+    });
+    if(native.stopReason)break;
+   }
+   later=native;
+  }finally{
+   for(const k of held)
+    await cmd('Input.dispatchKeyEvent',{type:'keyUp',...keys[k]});
+  }
+ }else{
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
+  try{
+   later=await until(async()=>{
+    const n=await snapshot();
+    collectNativeFoot(n,null);
+    return n.tick>=targetTick||(b116Extended&&n.stopReason)?n:false;
+   },180000,150);
+  }finally{
+   await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
+  }
  }
  const end=await snapshot();
  const footprint=end.b112OriginalHumanGround.lastOriginalFootprint;
@@ -226,6 +283,7 @@ async function run(){
    genuineOriginalSourceCollidersSeen:supports,
    genuineSourceTransitions:sourceTransitions,
    actualOriginalSourceSamples:samples,
+   b121RealKeyboardSteeringPhases:b121ActualPhases,
    b120LastOriginalSourceBoundary:end.b120OriginalSourceBoundary,
    b120ActualRegisteredSourceBoundarySamples:
     samples.filter(s=>s.b120OriginalSourceBoundary?.schema===
@@ -272,6 +330,74 @@ async function run(){
     originalAuthority:[25,17,26,0],
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
+  // B121: source-grounded real keyboard steering witness. This NEVER
+  // approves a route to another solid solely from a successful turn.
+  if(b121OriginalSteer){
+   const actualLanding=end.b112OriginalHumanGround.lastOriginalSourceHitId;
+   const originalBoundary=end.b120OriginalSourceBoundary;
+   const d=b121ActualPhases.find(p=>
+    p.label==='LOWER_LANDING_REAL_KEYD_LATERAL');
+   const a=b121ActualPhases.find(p=>
+    p.label==='LOWER_LANDING_REAL_KEYA_CORRECTION');
+   const deltaD=d?d.observedOriginalHumanEndingBody[0]-
+    d.observedOriginalHumanStartingBody[0]:null;
+   const deltaA=a?a.observedOriginalHumanEndingBody[0]-
+    a.observedOriginalHumanStartingBody[0]:null;
+   const genuineLeftRight=(deltaD!==null&&deltaA!==null&&
+    deltaD>.2&&deltaA<-.2);
+   const genuineSteeringOnOriginal= b121ActualPhases.length===5&&
+    reachedTarget&&genuineLeftRight&&genuineEndpointSourceSupported&&
+    actualLanding==='UndertowT21D:first-drop-landing-positive-z'&&
+    originalBoundary?.originalFootInsideXZ===true&&
+    actualSuspicionCount<=1;
+   const nextSource=actualLanding&&
+    !['UndertowT21D:spawn-high-positive-z',
+      'UndertowT21D:first-drop-landing-positive-z'].includes(actualLanding)?
+    actualLanding:null;
+   const outcome=genuineSteeringOnOriginal?
+    'REAL_BOUNDED_STEERING_ON_FIRST_DROP_LANDING_ONLY':
+    'REAL_KEYBOARD_STEERING_OR_GROUND_SUPPORT_HOLD';
+   const steerReport={
+    schema:'W10_B121_TRUE_CHROMIUM_FIRST_DROP_LANDING_STEER_V1',
+    originalSourceAuthority:[25,17,26,0],
+    originalPhysicalHumanKeyWKeyAKeyD:true,
+    actuallyObservedNativePhases:b121ActualPhases,
+    actualKccFinalBody:end.player.position,
+    actualOriginalSourceFloor:actualLanding,
+    genuineRegisteredOriginalFootprintAtEnd:originalBoundary,
+    physicalKeyDDeltaXMeters:deltaD,physicalKeyADeltaXMeters:deltaA,
+    nativeSourceGroundedAtEnd:genuineEndpointSourceSupported,
+    genuineNativeUnsupportedDescentEvents:
+     end.b112OriginalHumanGround.suspicions,
+    actualOriginalSourceSolidTransitions:sourceTransitions,
+    observedGenuineLateralKeyDThenKeyA:genuineLeftRight,
+    genuineSteeringOnExistingSourceLanding:genuineSteeringOnOriginal,
+    nextOriginalFloorReachedAndVerified:nextSource,
+    outcome,sourceFloorHoleCertified:false,
+    nextRouteCertified:false,humanCpuCollisionCertified:false,
+    official4v4Certified:false,actorTeleportPerformed:false,
+    originalStageGeometryOrNavmeshModified:false
+   };
+   writeFileSync(resolve(output,'b121-real-keya-keyd-original-steering.json'),
+    JSON.stringify(steerReport,null,2)+'\n');
+   console.log('T21_B121_TRUE_CHROMIUM_ORIGINAL_STEERING',JSON.stringify({
+    outcome,actuallyNativeTick:end.tick,phases:b121ActualPhases.length,
+    keyDRealHorizontalXDelta:deltaD,keyARealHorizontalXDelta:deltaA,
+    sourceGroundedAtEnd:genuineEndpointSourceSupported,
+    namedSource:actualLanding,originalBoundaryInside:
+     originalBoundary?.originalFootInsideXZ,
+    nextSource,actualSuspicionCount,sourceHoleCertified:false,
+    official4v4Certified:false
+   }));
+   if(!genuineSteeringOnOriginal)
+    fail('B121_TRUE_ORIGINAL_SOURCE_STEER_HOLD',{
+     outcome,stopReason:end.stopReason,actualTick:end.tick,
+     finalOriginalSource:actualLanding,originalBoundary,
+     keyDRealHorizontalXDelta:deltaD,
+     keyARealHorizontalXDelta:deltaA
+    });
+   return;
+  }
   // B120 independent limited actual source touchdown QA: releasing real
   // KeyW at native tick 240, BEFORE walking beyond the registered landing.
   // The natural airborne first-drop suspicion is preserved verbatim and

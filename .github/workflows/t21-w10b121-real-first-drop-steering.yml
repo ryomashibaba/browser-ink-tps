@@ -1,0 +1,39 @@
+name: T21 W10-B121 real W-D-W-A-W source first-drop steering
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - '.github/workflows/t21-w10b121-real-first-drop-steering.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-real-chromium-landing-steer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Retain original native source, physics, and typed build authority
+        run: |
+          node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          npx vitest run src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real Chromium source-bound first-drop forward and D-A genuine lateral adjustment
+        env:
+          T21_B116_FORWARD_NATIVE_TICKS: '280'
+          T21_B121_REAL_LANDING_STEER: source
+          T21_B112_EVIDENCE_DIR: /tmp/t21-w10b121-actual-original-steer
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Preserve even unsafe real native key steering and registered source boundary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b121-real-chromium-original-first-drop-keyboard-steering
+          path: /tmp/t21-w10b121-actual-original-steer/
+          if-no-files-found: warn
+          retention-days: 14
