@@ -1,4 +1,4 @@
-name: T21 W10-B125/B126/B127 original corridor native steering
+name: T21 W10-B125/B126/B127 independent source-native validations
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -30,23 +30,49 @@ jobs:
           npx vitest run src/app/W10B127OriginalCorridorNextForecast.test.ts src/app/W10B126OriginalCorridorSteeringForecast.test.ts src/app/W10B125OriginalRaisedCorridorForecast.test.ts src/app/W10B124OriginalRaisedSourceBoundary.test.ts src/app/W10B123OriginalUphillRampSourceAudit.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Real CDP W200 D12 W18 D until original raised floor then 5 times W24
+        id: b125
+        continue-on-error: true
         env:
           T21_B116_FORWARD_NATIVE_TICKS: '440'
           T21_B125_ORIGINAL_RAISED_CORRIDOR: source
           T21_B112_EVIDENCE_DIR: /tmp/t21-b125-actual-source-corridor
         run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
       - name: B126 real original right-low steering — B125 replay then KeyA12 KeyW12
+        id: b126
+        continue-on-error: true
         env:
           T21_B116_FORWARD_NATIVE_TICKS: '464'
           T21_B126_ORIGINAL_RAISED_STEER: source
           T21_B112_EVIDENCE_DIR: /tmp/t21-b126-actual-source-steer
         run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
       - name: B127 real raised source path, replay 11 stages and two short W12
+        id: b127
+        continue-on-error: true
         env:
           T21_B116_FORWARD_NATIVE_TICKS: '488'
           T21_B127_ORIGINAL_NEXT_ROUTE: source
           T21_B112_EVIDENCE_DIR: /tmp/t21-b127-native-source
         run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Fail closed if ANY independent real original-source trial failed
+        if: always()
+        env:
+          B125_OUTCOME: ${{ steps.b125.outcome }}
+          B126_OUTCOME: ${{ steps.b126.outcome }}
+          B127_OUTCOME: ${{ steps.b127.outcome }}
+        run: |
+          echo "B125 original source: $B125_OUTCOME"
+          echo "B126 original steer: $B126_OUTCOME"
+          echo "B127 source corridor: $B127_OUTCOME"
+          {
+            echo "## True CDP source-route outcomes"
+            echo "- B125: $B125_OUTCOME"
+            echo "- B126: $B126_OUTCOME"
+            echo "- B127: $B127_OUTCOME"
+            echo "Any failed or skipped trial means the full B128 gate is **HOLD**."
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$B125_OUTCOME" = success
+          test "$B126_OUTCOME" = success
+          test "$B127_OUTCOME" = success
       - name: Retain genuine source-native JSON and screenshot even if fail closed
         if: always()
         uses: actions/upload-artifact@v4
