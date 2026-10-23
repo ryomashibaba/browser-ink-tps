@@ -10,10 +10,13 @@ test('B139 genuine source-only real keyboard first descent and 7 CPU gating',()=
   "n.matchState==='PLAYING'","n.cpu.physicalRejoins.length===7",
   "n.cpu.freeCombatEnabled","b112OriginalHumanGround","actualHumanKccBody",
   "actualA1RapierFoot","actualHumanKccGrounded","t21W10B137=allyRally",
-  "n.cpu.physicalFootRelocations!==0","originalRapierSupportId",
+  "n.cpu.physicalFootRelocations!==0",
   "Input.dispatchKeyEvent","Input.dispatchMouseEvent",
   "sampleB140RealSourcePhysicalTrace(n,phase)"])
   assert.ok(s.includes(sample),'Missing genuine native evidence: '+sample);
+ const helper=readFileSync('scripts/t21-w10b140-real-physics-sample.mjs','utf8');
+ assert.match(helper,/originalRapierSupportId/);
+ assert.match(helper,/actualHumanKccBody:\[\.\.\.realHumanBody\]/);
  assert.match(w,/variant: \[FIXED_DEFAULT, ALLY_RALLY\]/);
 });
 test('B139 makes no synthetic game progress or source authority promotions',()=>{
