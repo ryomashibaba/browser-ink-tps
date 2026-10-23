@@ -26,6 +26,8 @@ describe('B141 source practice teammate real physical orientation',()=>{
   expect(view(n).code).toBe('OFF');
   const altered=sample();altered.sourceScoreablePromotions=1;
   expect(view(altered).code).toBe('SOURCE_HOLD');
+  const missing=sample();missing.originalSourceNavigationLinks=undefined;
+  expect(view(missing).code).toBe('SOURCE_HOLD');
  });
  it('only uses actually available released and grounded real foot',()=>{
   const n=sample();n.cpu.physicalRejoins=[];

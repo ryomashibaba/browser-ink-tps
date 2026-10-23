@@ -11,7 +11,7 @@ export interface B141AllyNativeView{
   sourcePatrol:{b137AllyRallyOptIn:boolean;b137ApprovedNativeRallies:number};
  };
  originalSourceSolids:number;originalPaintSurfaces:number;
- originalSourceNavigationLinks:number;sourceScoreablePromotions:number;
+ originalSourceNavigationLinks:number|undefined;sourceScoreablePromotions:number;
  productionAuthorized:boolean;unrestricted4v4Certified:boolean;
 }
 export function describeB141RealOriginalAlly(n:B141AllyNativeView,footOffset:number){

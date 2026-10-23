@@ -79,3 +79,21 @@ test('B131: code-space static gate is independent from official Turf results',()
  assert.ok(!b75.includes('unrestricted4v4Certified: true'));
  assert.ok(b75.includes('permissions:\n  contents: read'));
 });
+
+test('B144: original SourceTraffic changes use consolidated B75 instead of five old Chrome runners',()=>{
+ const shared="- 'src/app/UndertowF3SourceTraffic.ts'";
+ const b75=read('t21-w10b75-live-source-ink-hud.yml');
+ assert.ok(b75.includes(shared));
+ assert.ok(b75.includes('UndertowF3SourceTraffic.test.ts'));
+ for(const name of [
+  't21-w10b15-trusted-input.yml',
+  't21-w10b96-parked-human-detour.yml',
+  't21-w10b99-second-human-lane.yml',
+  't21-w10b100-third-human-lane.yml',
+  't21-f4e103w-qa.yml'
+ ]){
+  const s=read(name);
+  assert.ok(!s.split('\n').some(line=>line.trim()===shared));
+  assert.ok(s.includes('  workflow_dispatch:'),'keep manual '+name);
+ }
+});
