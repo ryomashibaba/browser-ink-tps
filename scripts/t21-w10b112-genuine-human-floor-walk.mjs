@@ -23,6 +23,7 @@ const b116Extended=requestedNativeTicks>120;
 const b121OriginalSteer=process.env.T21_B121_REAL_LANDING_STEER==='source';
 const b122OriginalSteer=process.env.T21_B122_REAL_LANDING_STEER==='source';
 const b123OriginalRamp=process.env.T21_B123_REAL_RAMP_ASCENT==='source';
+const b124RaisedContinue=process.env.T21_B124_RAISED_ORIGINAL_CONTINUE==='source';
 if(b121OriginalSteer&&(requestedNativeTicks!==280||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'||b122OriginalSteer))
  throw Error('B121_NATIVE_280_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
@@ -30,9 +31,13 @@ if(b122OriginalSteer&&(requestedNativeTicks!==266||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'||b123OriginalRamp))
  throw Error('B122_NATIVE_266_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
 if(b123OriginalRamp&&(requestedNativeTicks!==320||
-   b121OriginalSteer||b122OriginalSteer||
+   b121OriginalSteer||b122OriginalSteer||b124RaisedContinue||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
  throw Error('B123_ORIGINAL_RAMP_REQUIRES_EXCLUSIVE_NATIVE_320_TICK_TRIAL');
+if(b124RaisedContinue&&(requestedNativeTicks!==368||
+   b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+ throw Error('B124_RAISED_SOURCE_REQUIRES_368_GENUINE_KEYBOARD_TICKS');
 const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
 if(b120TouchdownOnly&&requestedNativeTicks!==240)
  throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
@@ -144,20 +149,26 @@ async function run(){
     sourceFootprintIds:n.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
     suspectedDescents:n.b112OriginalHumanGround.suspicionCount,
     b120OriginalSourceBoundary:n.b120OriginalSourceBoundary,
+    b124OriginalRaisedSourceBoundary:n.b124OriginalRaisedRightLowFootprint,
     b121Phase:label??null});
   }
  };
- if(b121OriginalSteer||b122OriginalSteer||b123OriginalRamp){
+ if(b121OriginalSteer||b122OriginalSteer||b123OriginalRamp||
+    b124RaisedContinue){
   const keys={
    KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
    KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
    KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
   };
-  const program=b123OriginalRamp?[
+  const program=(b123OriginalRamp||b124RaisedContinue)?[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
    {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
    {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:18},
-   {name:'REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP',keys:['KeyD'],ticks:90}
+   {name:'REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP',keys:['KeyD'],ticks:90},
+   ...(b124RaisedContinue?[
+    {name:'RAISED_RIGHT_LOW_REAL_KEYW_INWARD_1',keys:['KeyW'],ticks:24},
+    {name:'RAISED_RIGHT_LOW_REAL_KEYW_INWARD_2',keys:['KeyW'],ticks:24}
+   ]:[])
   ]:[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
    {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
@@ -178,7 +189,7 @@ async function run(){
      const n=await snapshot();
      collectNativeFoot(n,null);
      const genuinelyReachedOriginalRightLow=
-      b123OriginalRamp&&
+      (b123OriginalRamp||b124RaisedContinue)&&
       stage.name==='REAL_KEYD_ACROSS_REGISTERED_UPHILL_RAMP'&&
       n.b112OriginalHumanGround.genuineKccGrounded===true&&
       n.b112OriginalHumanGround.lastOriginalSourceHitId===
@@ -195,6 +206,7 @@ async function run(){
      observedSourceSolid:native.b112OriginalHumanGround.lastOriginalSourceHitId,
      trueKccGrounded:native.b112OriginalHumanGround.genuineKccGrounded,
      actualRegisteredFloor:native.b120OriginalSourceBoundary,
+     actualRaisedSourceBoundary:native.b124OriginalRaisedRightLowFootprint,
      stopReason:native.stopReason
     });
     if(native.stopReason)break;
@@ -267,7 +279,8 @@ async function run(){
     sourceFootprintClass:end.b112OriginalHumanGround.lastOriginalFootprint?.classification??null,
     sourceFootprintIds:end.b112OriginalHumanGround.lastOriginalFootprint?.observedSourceSolidIds??[],
     suspectedDescents:end.b112OriginalHumanGround.suspicionCount,
-    b120OriginalSourceBoundary:end.b120OriginalSourceBoundary});
+    b120OriginalSourceBoundary:end.b120OriginalSourceBoundary,
+   b124OriginalRaisedSourceBoundary:end.b124OriginalRaisedRightLowFootprint});
   const furthestZ=Math.min(...samples.map(p=>p.body[2]));
   const earliestZ=first.player.position[2];
   const forwardProgressMeters=earliestZ-furthestZ;
@@ -307,6 +320,9 @@ async function run(){
    b121RealKeyboardSteeringPhases:b121ActualPhases,
    b123RealSourceRampGenuineKeyboardPhases:
     b123OriginalRamp?b121ActualPhases:null,
+   b124RealRaisedOriginalContinuationPhases:
+    b124RaisedContinue?b121ActualPhases:null,
+   b124RealRaisedSourceBoundary:end.b124OriginalRaisedRightLowFootprint,
    b123OriginalRampPassiveAgentWithheldNativeTicks:
     end.humanCrowd?.b123OriginalRampPassiveProxyWithheldNativeTicks??0,
    b123LastOriginalRampPassiveProxySourceGuard:
@@ -357,8 +373,106 @@ async function run(){
     b119ExactOriginalFirstDropGate:
      end.humanCrowd?.b119OriginalFirstDropPassiveProxyGate?.status??null,
     originalAuthority:[25,17,26,0],
+    b124ActualOriginalRaisedFootprintInside:
+     end.b124OriginalRaisedRightLowFootprint?.realFootXZInsideOriginalSlab??null,
     sourceFloorHoleCertified:false,centralPathCertified:false,
     formal4v4Certified:false}));
+  // B124: two real W segments CONTINUE the proven original Y4.5
+  // raised right-low floor; require retained KCC and original 5-rays.
+  // This is only source-floor continuation, never 4v4 authorization.
+  if(b124RaisedContinue){
+   const raised='UndertowT21D:right-low-team-a';
+   const ramp='UndertowT21D:right-low-route-ramp-positive-z';
+   const phases=b121ActualPhases;
+   const firstFourSourceCorrect=phases.length===6&&
+    phases[0]?.observedSourceSolid===
+     'UndertowT21D:first-drop-landing-positive-z'&&
+    phases[1]?.observedSourceSolid===
+     'UndertowT21D:first-drop-landing-positive-z'&&
+    phases[2]?.observedSourceSolid===
+     'UndertowT21D:first-drop-landing-positive-z'&&
+    phases[3]?.observedSourceSolid===raised&&
+    phases[3]?.trueKccGrounded===true;
+   const continuedPhases=phases.slice(4);
+   const continuedSnapshots=samples.filter(p=>
+    phases[3]&&p.tick>phases[3].genuineEndTick);
+   const everyActualContinuedPhaseSafe=continuedPhases.length===2&&
+    continuedPhases.every(p=>p.observedSourceSolid===raised&&
+     p.trueKccGrounded===true&&
+     p.actualRaisedSourceBoundary?.realFootXZInsideOriginalSlab===true&&
+     p.actualRaisedSourceBoundary?.
+      originalRaisedSourceVerticalBandWithin22cm===true&&
+     p.actualRaisedSourceBoundary?.
+      distanceToOriginalSourcePolygonBoundaryMeters>=.4);
+   const everyObservedSampleSupported=continuedSnapshots.length>=2&&
+    continuedSnapshots.every(p=>p.originalSupport===raised&&
+     p.grounded===true&&
+     p.b124OriginalRaisedSourceBoundary?.
+      realFootXZInsideOriginalSlab===true&&
+     p.b124OriginalRaisedSourceBoundary?.
+      originalRaisedSourceVerticalBandWithin22cm===true);
+   const start=phases[3]?.observedOriginalHumanEndingBody;
+   const displacementXZ=start?Math.hypot(
+    end.player.position[0]-start[0],
+    end.player.position[2]-start[2]):0;
+   const sourceSamples=[...new Set(samples.flatMap(p=>
+    [p.originalSupport,...(p.sourceFootprintIds??[])].filter(Boolean)))];
+   const currentBoundary=end.b124OriginalRaisedRightLowFootprint;
+   const observedRamp=sourceSamples.includes(ramp);
+   const realKcc=end.b112OriginalHumanGround.genuineKccGrounded===true;
+   const lastSource=end.b112OriginalHumanGround.lastOriginalSourceHitId;
+   const passed=reachedTarget&&!end.stopReason&&
+    firstFourSourceCorrect&&everyActualContinuedPhaseSafe&&
+    everyObservedSampleSupported&&observedRamp&&
+    displacementXZ>=1.5&&lastSource===raised&&realKcc&&
+    genuineEndpointSourceSupported&&
+    currentBoundary?.realFootXZInsideOriginalSlab===true&&
+    currentBoundary.originalRaisedSourceVerticalBandWithin22cm===true&&
+    currentBoundary.distanceToOriginalSourcePolygonBoundaryMeters>=.55&&
+    actualSuspicionCount<=1;
+   const record={
+    schema:'W10_B124_REAL_NATIVE_RAISED_ORIGINAL_SOURCE_CONTINUATION_V1',
+    actualNativeKeyboardPhaseWitnesses:phases,
+    measuredOriginalRightLowRaisedFootprint:end.b124OriginalRaisedRightLowFootprint,
+    sampledActualNativeContinuation:continuedSnapshots,
+    everyRealNativeContinuationProbeSupported:everyObservedSampleSupported,
+    everyRealWPhaseTrueKccAndSourceGrounded:everyActualContinuedPhaseSafe,
+    actuallyCoveredDistanceBeyondProvenRampMeters:displacementXZ,
+    raisedOriginalSourceId:raised,
+    originallyObservedRampId:ramp,
+    originalSourceColliderSequence:sourceTransitions,
+    raisedFloorContinuationPass:passed,
+    realUnsupportedDescentLedger:end.b112OriginalHumanGround.suspicions,
+    realNativeStopReason:end.stopReason,
+    originalSourceAuthority:[25,17,26,0],
+    originalSolidOrNavLinkCreated:0,realHumanActorTeleported:false,
+    cpuActorPositionsModified:false,sourcePhysicsModified:false,
+    onRampHumanCpuCrowdAvoidanceCertified:false,
+    crossTeamNavigationCertified:false,
+    completeMapFloorOr4v4Certified:false
+   };
+   writeFileSync(resolve(output,'b124-real-raised-original-continuation.json'),
+    JSON.stringify(record,null,2)+'\n');
+   console.log('T21_B124_GENUINE_RAISED_ORIGINAL_SOURCE_CONTINUATION',
+    JSON.stringify({nativeTick:end.tick,
+     physicalOriginalSource:lastSource,
+     originalRaisedSourceBoundaryInside:
+      currentBoundary?.realFootXZInsideOriginalSlab,
+     lastOriginalRaisedEdgeClearance:
+      currentBoundary?.distanceToOriginalSourcePolygonBoundaryMeters,
+     realNewPhysicalDistanceMeters:displacementXZ,
+     actualContinuationSamples:continuedSnapshots.length,
+     genuinelyKccGrounded:realKcc,
+     originallySourceSupported:everyObservedSampleSupported,
+     actualNaturalSuspicionCount:actualSuspicionCount,
+     passed,fullMap4v4Certified:false,source:[25,17,26,0]}));
+   if(!passed)
+    fail('B124_REAL_ORIGINAL_RAISED_FLOOR_CONTINUATION_HOLD',{
+     nativeTick:end.tick,lastSource,body:end.player.position,
+     stop:end.stopReason,displacementXZ,
+     currentBoundary,phases,continuedSnapshots});
+   return;
+  }
   // B123: original Temple01 Y=3.0→4.5 slope is already registered.
   // Require the actual original RAPiER KCC to touch both the named
   // source ramp and the independently registered raised right-low slab.

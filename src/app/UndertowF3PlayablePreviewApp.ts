@@ -70,6 +70,8 @@ import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {W10B112HumanGroundLedger} from './W10B112HumanGroundLedger';
 import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 import {inspectB120OriginalFirstDropBoundary} from './W10B120OriginalSourceBoundary';
+import {inspectB124ActualRaisedSourceBoundary}
+ from './W10B124OriginalRaisedSourceBoundary';
 import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
@@ -2418,6 +2420,11 @@ export class UndertowF3PlayablePreviewApp{
    playerInkRecoveryState:this.stats.playerInkRecoveryState,
    inkDryFireAttempts:this.stats.inkDryFireAttempts,
    cpu:progress,humanCrowd:this.humanCrowd.snapshot,
+   b124OriginalRaisedRightLowFootprint:this.b112GroundEnabled?
+    inspectB124ActualRaisedSourceBoundary({
+     nativeTick:this.clock.tick,
+     actualRapierBody:[pos.x,pos.y,pos.z]
+    }):null,
    b120OriginalSourceBoundary:this.b112GroundEnabled?
     inspectB120OriginalFirstDropBoundary({
      nativeTick:this.clock.tick,
