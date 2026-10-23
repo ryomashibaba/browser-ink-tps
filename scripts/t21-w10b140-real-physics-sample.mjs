@@ -32,6 +32,14 @@ export function sampleB140RealSourcePhysicalTrace(n,phase){
   originalRapierSourceSupportGapMeters:
    foot?.lastOriginalSourceGapMeters??null,
   originalSourceFootprintClass:foot?.lastOriginalFootprint?.classification??null,
+  b146OriginalFlatEdgeClearanceMeters:
+   n.b146OriginalLowerFootprint?.distanceToOriginalPolygonBoundaryMeters??null,
+  b146OriginalFlatInside:
+   n.b146OriginalLowerFootprint?.insideRegisteredOriginalXZFootprint??null,
+  b146OriginalFlatVerticalBandWithin22cm:
+   n.b146OriginalLowerFootprint?.originalFlatVerticalBandWithin22cm??null,
+  b146OriginalFlatSourceId:
+   n.b146OriginalLowerFootprint?.actualNamedOriginalSolidId??null,
   realCpuA1Mobility:cpu?.mobilityState??null,
   realCpuRejoins:n.cpu.physicalRejoins.length,
   realCpuFootRelocations:n.cpu.physicalFootRelocations,

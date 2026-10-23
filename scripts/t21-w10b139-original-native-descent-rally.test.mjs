@@ -41,3 +41,18 @@ test('B145 requires actual lower grounded human KCC AND original source support'
  assert.ok(s.includes("nativeOutcome:'UNVERIFIED_AFTER_FAILURE'"));
  assert.ok(!s.includes('x.actualHumanKccBody[2]>=33).length'));
 });
+
+test('B146 genuine physical KeyA then no-input coast on unchanged real source',()=>{
+ const app=readFileSync('src/app/UndertowF3PlayablePreviewApp.ts','utf8');
+ const sample=readFileSync('scripts/t21-w10b140-real-physics-sample.mjs','utf8');
+ assert.ok(s.includes("B146_TRUE_ORIGINAL_INWARD_A12"));
+ assert.ok(s.includes("B146_TRUE_ORIGINAL_COAST60"));
+ assert.ok(s.includes("KeyA:{key:'a',code:'KeyA'"));
+ assert.ok(s.includes("b146ActualNativeSourceInward:b146ActualNativeSourceInward"));
+ assert.ok(s.includes("x.b146OriginalFlatEdgeClearanceMeters>=.75"));
+ assert.ok(app.includes('b146OriginalLowerFootprint:b146Flat'));
+ assert.ok(app.includes('inspectB130OriginalFlatSource({'));
+ assert.ok(sample.includes('b146OriginalFlatEdgeClearanceMeters:'));
+ for(const forbidden of ['teleport(', 'setTranslation(', 'qaDriveTicks('])
+  assert.ok(!s.includes(forbidden),'synthetic physical input forbidden: '+forbidden);
+});

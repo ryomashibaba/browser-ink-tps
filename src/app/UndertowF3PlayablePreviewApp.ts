@@ -2403,6 +2403,19 @@ export class UndertowF3PlayablePreviewApp{
   const pos=this.player.getPosition(this.p);
   const b129Edge=this.originalEdgeGuidance(this.clock.tick);
   const progress=this.traffic.snapshot();
+  // B146: read real grounded original KCC foot against the frozen B130
+  // footprint. Observation only: not actor or navigation authority.
+  const b146Foot=this.b112GroundEnabled?
+   this.b112GroundLedger.snapshot():null;
+  const b146Flat=b146Foot?.genuineKccGrounded===true&&
+   typeof b146Foot.lastOriginalSourceHitId==='string'&&
+   typeof b146Foot.lastOriginalSourceGapMeters==='number'&&
+   Math.abs(b146Foot.lastOriginalSourceGapMeters)<=.22?
+   inspectB130OriginalFlatSource({
+    nativeTick:this.clock.tick,
+    actualRapierBody:[pos.x,pos.y,pos.z],
+    actualRapierSupportId:b146Foot.lastOriginalSourceHitId
+   }):null;
   return {
    phase:'F3',renderer:'webgl2',stageId:this.rawStage.metadata.id,
    playableSandbox:true,actualPlayerInput:true,
@@ -2517,8 +2530,9 @@ export class UndertowF3PlayablePreviewApp{
      actualRapierBody:[pos.x,pos.y,pos.z],
      side:pos.z>=0?'positive-z':'negative-z'
     }):null,
-   b112OriginalHumanGround:this.b112GroundEnabled?
-    {...this.b112GroundLedger.snapshot(),
+   b146OriginalLowerFootprint:b146Flat,
+   b112OriginalHumanGround:b146Foot?
+    {...b146Foot,
      // B145: real character body-to-foot conversion, source-only QA.
      canonicalHumanFootOffsetMeters:
       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters}:{

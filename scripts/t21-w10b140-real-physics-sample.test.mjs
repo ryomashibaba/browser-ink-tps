@@ -7,6 +7,12 @@ const f=()=>({
  b112OriginalHumanGround:{genuineKccGrounded:true,lastOriginalSourceHitId:'original-fixture',
   lastOriginalSourceGapMeters:.02,canonicalHumanFootOffsetMeters:.87,
   lastOriginalFootprint:{classification:'INTERIOR'}},
+ b146OriginalLowerFootprint:{
+  actualNamedOriginalSolidId:'original-fixture',
+  distanceToOriginalPolygonBoundaryMeters:1.17,
+  insideRegisteredOriginalXZFootprint:true,
+  originalFlatVerticalBandWithin22cm:true
+ },
  cpu:{cpu:[{id:'A1',physicalFoot:[9,3.2,48],mobilityState:'GROUND'}],
   physicalRejoins:['A1','A2','A3','B1','B2','B3','B4'],physicalFootRelocations:0,
   sourcePatrol:{b137AllyRallyOptIn:true,b137RealCandidateChecks:5,
@@ -24,6 +30,10 @@ test('B140 correctly serializes real KCC body and CPU A1 physical foot read-only
  assert.equal(serialized.realCpuRejoins,7);
  assert.equal(serialized.canonicalHumanFootOffsetMeters,.87);
  assert.equal(serialized.originalRapierSourceSupportGapMeters,.02);
+ assert.equal(serialized.b146OriginalFlatEdgeClearanceMeters,1.17);
+ assert.equal(serialized.b146OriginalFlatInside,true);
+ assert.equal(serialized.b146OriginalFlatVerticalBandWithin22cm,true);
+ assert.equal(serialized.b146OriginalFlatSourceId,'original-fixture');
  assert.equal(serialized.sourcePatrol.approved,2);
  assert.equal(serialized.officialScoreable,0);
  serialized.actualHumanKccBody[0]=33;

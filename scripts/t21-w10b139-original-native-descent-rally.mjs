@@ -72,7 +72,8 @@ async function picture(name){
 }
 const realKeys={
  KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
- KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
+ KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68},
+ KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65}
 };
 async function nativeOriginalKeyboard(stage,observe){
  const pressed=new Set();
@@ -117,7 +118,13 @@ async function doPhysicalTrial(){
   // PlayCanvas camera-relative CDP inputs, never snap or position set.
   {name:'TRUE_SOURCE_FIRST_DROP_W200',keys:['KeyW'],ticks:200},
   {name:'TRUE_SOURCE_LOWER_LANDING_D12',keys:['KeyD'],ticks:12},
-  {name:'TRUE_SOURCE_LOWER_FORWARD_W18',keys:['KeyW'],ticks:18}
+  {name:'TRUE_SOURCE_LOWER_FORWARD_W18',keys:['KeyW'],ticks:18},
+  // B146: B145 actual lower KCC foot was .442m from the *existing*
+  // original polygon boundary, below the .75m safe native rally inset.
+  // Real KeyA12 was independently demonstrated on an original floor in
+  // B126; transfer is unproven here and measured, never asserted.
+  {name:'B146_TRUE_ORIGINAL_INWARD_A12',keys:['KeyA'],ticks:12},
+  {name:'B146_TRUE_ORIGINAL_COAST60',keys:[],ticks:60}
  ];
  let lastSampleTick=-1000;
  const routeWitness=[];
@@ -212,6 +219,34 @@ async function doPhysicalTrial(){
   return footY>=2.7&&footY<=5.25&&x.actualHumanKccBody[2]>=33;
  });
  const meaningful=realLower.length;
+ const beforeInward=routeWitness.find(x=>
+  x.phase==='TRUE_SOURCE_LOWER_FORWARD_W18_END')??null;
+ const afterInward=routeWitness.find(x=>
+  x.phase==='B146_TRUE_ORIGINAL_COAST60_END')??null;
+ const genuineInnerFoot=realLower.filter(x=>
+  x.b146OriginalFlatInside===true&&
+  x.b146OriginalFlatVerticalBandWithin22cm===true&&
+  Number.isFinite(x.b146OriginalFlatEdgeClearanceMeters)&&
+  x.b146OriginalFlatEdgeClearanceMeters>=.75);
+ const b146ActualNativeSourceInward={
+  bodyBeforeRealKeyA:beforeInward?.actualHumanKccBody??null,
+  bodyAfterRealKeyAAndCoast:afterInward?.actualHumanKccBody??null,
+  frozenPolygonMarginBeforeKeyA:
+   beforeInward?.b146OriginalFlatEdgeClearanceMeters??null,
+  frozenPolygonMarginAfterKeyA:
+   afterInward?.b146OriginalFlatEdgeClearanceMeters??null,
+  genuineLowerInteriorNativeSamples:genuineInnerFoot.length,
+  sourceOriginalKccGroundedAfterCoast:
+   afterInward?.actualHumanKccGrounded===true,
+  originalFlatInsetSafeAtSettle:
+   afterInward?.b146OriginalFlatInside===true&&
+   afterInward?.b146OriginalFlatVerticalBandWithin22cm===true&&
+   Number.isFinite(afterInward?.b146OriginalFlatEdgeClearanceMeters)&&
+   afterInward.b146OriginalFlatEdgeClearanceMeters>=.75,
+  sourceActorTeleports:0,originalStageAddedSolids:0,
+  originalStageAddedNavLinks:0,scoreablePromotions:0,
+  actualAllyPhysicalMeetingCertified:false
+ };
  const sameLevel=realLower.filter(x=>x.realCpuA1Mobility==='GROUND'&&
   Array.isArray(x.actualA1RapierFoot)&&
   x.actualA1RapierFoot.every(Number.isFinite)&&
@@ -255,6 +290,7 @@ async function doPhysicalTrial(){
   sourceAllyNativeGoalApprovals:approved,
   realOriginalSupportedGroundSamples:meaningful,
   b145NativeOriginalLowerFootEvidence:realNativeEvidence,
+  b146ActualNativeSourceInward:b146ActualNativeSourceInward,
   interpretation:realNativeEvidence.interpretation,
   actualHumanAndA1RapierFootSamples:routeWitness,
   finalNativePatrol:final.cpu.sourcePatrol,
@@ -269,6 +305,8 @@ async function doPhysicalTrial(){
   finalTick:final.tick,physicalCpuRejoins:final.cpu.physicalRejoins.length,
   genuineGroundSupportSamples:meaningful,
   sameLowerA1FootSamples:sameLevel.length,
+  realLowerInteriorSamples:genuineInnerFoot.length,
+  originalInsetAfterRealKeyA:b146ActualNativeSourceInward.frozenPolygonMarginAfterKeyA,
   b142StandoffGoalApprovals:
    realNativeEvidence.observedA1NativeStandoffGoalApprovals,
   b143RetainedRequests:
