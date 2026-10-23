@@ -21,9 +21,13 @@ if(!Number.isSafeInteger(requestedNativeTicks)||
  throw Error('B116_INVALID_TRUE_FORWARD_TICK_REQUEST');
 const b116Extended=requestedNativeTicks>120;
 const b121OriginalSteer=process.env.T21_B121_REAL_LANDING_STEER==='source';
+const b122OriginalSteer=process.env.T21_B122_REAL_LANDING_STEER==='source';
 if(b121OriginalSteer&&(requestedNativeTicks!==280||
-   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'||b122OriginalSteer))
  throw Error('B121_NATIVE_280_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
+if(b122OriginalSteer&&(requestedNativeTicks!==266||
+   process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
+ throw Error('B122_NATIVE_266_TICK_STEER_REQUIRES_EXCLUSIVE_SOURCE_TRIAL');
 const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
 if(b120TouchdownOnly&&requestedNativeTicks!==240)
  throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
@@ -138,7 +142,7 @@ async function run(){
     b121Phase:label??null});
   }
  };
- if(b121OriginalSteer){
+ if(b121OriginalSteer||b122OriginalSteer){
   const keys={
    KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
    KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
@@ -147,9 +151,9 @@ async function run(){
   const program=[
    {name:'FIRST_DROP_GENUINE_FORWARD',keys:['KeyW'],ticks:200},
    {name:'LOWER_LANDING_REAL_KEYD_LATERAL',keys:['KeyD'],ticks:12},
-   {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:16},
-   {name:'LOWER_LANDING_REAL_KEYA_CORRECTION',keys:['KeyA'],ticks:24},
-   {name:'LOWER_LANDING_REAL_FORWARD_AFTER_STEER',keys:['KeyW'],ticks:28}
+   {name:'LOWER_LANDING_FORWARD',keys:['KeyW'],ticks:b122OriginalSteer?18:16},
+   {name:'LOWER_LANDING_REAL_KEYA_CORRECTION',keys:['KeyA'],ticks:b122OriginalSteer?16:24},
+   {name:'LOWER_LANDING_REAL_FORWARD_AFTER_STEER',keys:['KeyW'],ticks:b122OriginalSteer?20:28}
   ];
   let held=new Set(),native=first;
   try{
@@ -332,7 +336,7 @@ async function run(){
     formal4v4Certified:false}));
   // B121: source-grounded real keyboard steering witness. This NEVER
   // approves a route to another solid solely from a successful turn.
-  if(b121OriginalSteer){
+  if(b121OriginalSteer||b122OriginalSteer){
    const actualLanding=end.b112OriginalHumanGround.lastOriginalSourceHitId;
    const originalBoundary=end.b120OriginalSourceBoundary;
    const d=b121ActualPhases.find(p=>
@@ -345,11 +349,23 @@ async function run(){
     a.observedOriginalHumanStartingBody[0]:null;
    const genuineLeftRight=(deltaD!==null&&deltaA!==null&&
     deltaD>.2&&deltaA<-.2);
+   const b122MinimumObservedLandingEdgeClearanceMeters=
+    b122OriginalSteer?Math.min(...b121ActualPhases.slice(1).map(p=>
+     p.actualRegisteredFloor?.originalFootInsideXZ===true?
+      p.actualRegisteredFloor.actualHorizontalDistanceToOriginalPolygonEdgeMeters:
+      -1)):null;
+   const b122AllActualLowerSourcePhaseChecks=b122OriginalSteer&&
+    b121ActualPhases.length===5&&b121ActualPhases.slice(1).every(p=>
+     p.observedSourceSolid==='UndertowT21D:first-drop-landing-positive-z'&&
+     p.trueKccGrounded===true&&
+     p.actualRegisteredFloor?.originalFootInsideXZ===true);
    const genuineSteeringOnOriginal= b121ActualPhases.length===5&&
     reachedTarget&&genuineLeftRight&&genuineEndpointSourceSupported&&
     actualLanding==='UndertowT21D:first-drop-landing-positive-z'&&
     originalBoundary?.originalFootInsideXZ===true&&
-    actualSuspicionCount<=1;
+    actualSuspicionCount<=1&&
+    (!b122OriginalSteer||(b122AllActualLowerSourcePhaseChecks&&
+     originalBoundary.actualHorizontalDistanceToOriginalPolygonEdgeMeters>=.35));
    const nextSource=actualLanding&&
     !['UndertowT21D:spawn-high-positive-z',
       'UndertowT21D:first-drop-landing-positive-z'].includes(actualLanding)?
@@ -358,7 +374,14 @@ async function run(){
     'REAL_BOUNDED_STEERING_ON_FIRST_DROP_LANDING_ONLY':
     'REAL_KEYBOARD_STEERING_OR_GROUND_SUPPORT_HOLD';
    const steerReport={
-    schema:'W10_B121_TRUE_CHROMIUM_FIRST_DROP_LANDING_STEER_V1',
+    schema:b122OriginalSteer?
+     'W10_B122_TRUE_CHROMIUM_BOUNDED_FIRST_DROP_STEER_V1':
+     'W10_B121_TRUE_CHROMIUM_FIRST_DROP_LANDING_STEER_V1',
+    b122RevisedNativeSourceInputProgram:b122OriginalSteer?
+     ['W200','D12','W18','A16','W20']:null,
+    b122AllLowerLandingNativePhaseChecks:
+     b122OriginalSteer?b122AllActualLowerSourcePhaseChecks:null,
+    b122MinimumObservedLandingEdgeClearanceMeters,
     originalSourceAuthority:[25,17,26,0],
     originalPhysicalHumanKeyWKeyAKeyD:true,
     actuallyObservedNativePhases:b121ActualPhases,
@@ -378,19 +401,26 @@ async function run(){
     official4v4Certified:false,actorTeleportPerformed:false,
     originalStageGeometryOrNavmeshModified:false
    };
-   writeFileSync(resolve(output,'b121-real-keya-keyd-original-steering.json'),
+   writeFileSync(resolve(output,b122OriginalSteer?
+     'b122-real-revised-original-steering.json':
+     'b121-real-keya-keyd-original-steering.json'),
     JSON.stringify(steerReport,null,2)+'\n');
-   console.log('T21_B121_TRUE_CHROMIUM_ORIGINAL_STEERING',JSON.stringify({
+   console.log(b122OriginalSteer?
+    'T21_B122_TRUE_CHROMIUM_REVISED_SOURCE_STEERING':
+    'T21_B121_TRUE_CHROMIUM_ORIGINAL_STEERING',JSON.stringify({
     outcome,actuallyNativeTick:end.tick,phases:b121ActualPhases.length,
     keyDRealHorizontalXDelta:deltaD,keyARealHorizontalXDelta:deltaA,
     sourceGroundedAtEnd:genuineEndpointSourceSupported,
     namedSource:actualLanding,originalBoundaryInside:
      originalBoundary?.originalFootInsideXZ,
     nextSource,actualSuspicionCount,sourceHoleCertified:false,
+    b122MinimumObservedLandingEdgeClearanceMeters,
+    b122AllActualLowerSourcePhaseChecks,
     official4v4Certified:false
    }));
    if(!genuineSteeringOnOriginal)
-    fail('B121_TRUE_ORIGINAL_SOURCE_STEER_HOLD',{
+    fail(b122OriginalSteer?'B122_TRUE_SOURCE_REVISED_STEER_HOLD':
+     'B121_TRUE_ORIGINAL_SOURCE_STEER_HOLD',{
      outcome,stopReason:end.stopReason,actualTick:end.tick,
      finalOriginalSource:actualLanding,originalBoundary,
      keyDRealHorizontalXDelta:deltaD,

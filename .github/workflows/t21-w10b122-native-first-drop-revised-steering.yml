@@ -1,0 +1,39 @@
+name: T21 W10-B122 corrected genuine source landing turn
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
+      - '.github/workflows/t21-w10b122-native-first-drop-revised-steering.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  true-revised-original-steering:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Preserve original Rapier and source registration
+        run: |
+          node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
+          npx vitest run src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real CDP W200 D12 W18 A16 W20 on original first-drop source
+        env:
+          T21_B116_FORWARD_NATIVE_TICKS: '266'
+          T21_B122_REAL_LANDING_STEER: source
+          T21_B112_EVIDENCE_DIR: /tmp/t21-w10b122-revised-source-steer
+        run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
+      - name: Archive actual keyboard poses and source KCC even on genuine HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b122-native-registered-original-first-drop-turn
+          path: /tmp/t21-w10b122-revised-source-steer/
+          if-no-files-found: warn
+          retention-days: 14
