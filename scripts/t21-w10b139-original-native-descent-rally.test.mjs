@@ -27,3 +27,17 @@ test('B139 makes no synthetic game progress or source authority promotions',()=>
   "n.productionAuthorized!==false","n.unrestricted4v4Certified!==false"])
   assert.ok(s.includes(strict));
 });
+
+test('B145 requires actual lower grounded human KCC AND original source support',()=>{
+ const app=readFileSync('src/app/UndertowF3PlayablePreviewApp.ts','utf8');
+ const physical=readFileSync('scripts/t21-w10b140-real-physics-sample.mjs','utf8');
+ assert.ok(app.includes('canonicalHumanFootOffsetMeters:'));
+ assert.ok(app.includes('PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters'));
+ assert.ok(physical.includes('originalRapierSourceSupportGapMeters'));
+ assert.ok(s.includes('x.actualHumanKccGrounded!==true'));
+ assert.ok(s.includes('Math.abs(x.originalRapierSourceSupportGapMeters)>.22'));
+ assert.ok(s.includes('footY>=2.7&&footY<=5.25'));
+ assert.ok(s.includes('b145NativeOriginalLowerFootEvidence:realNativeEvidence'));
+ assert.ok(s.includes("nativeOutcome:'UNVERIFIED_AFTER_FAILURE'"));
+ assert.ok(!s.includes('x.actualHumanKccBody[2]>=33).length'));
+});

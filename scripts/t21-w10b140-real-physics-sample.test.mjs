@@ -5,6 +5,7 @@ import {sampleB140RealSourcePhysicalTrace as sample} from './t21-w10b140-real-ph
 const f=()=>({
  tick:123,matchState:'PLAYING',player:{position:[2,4.2,45]},
  b112OriginalHumanGround:{genuineKccGrounded:true,lastOriginalSourceHitId:'original-fixture',
+  lastOriginalSourceGapMeters:.02,canonicalHumanFootOffsetMeters:.87,
   lastOriginalFootprint:{classification:'INTERIOR'}},
  cpu:{cpu:[{id:'A1',physicalFoot:[9,3.2,48],mobilityState:'GROUND'}],
   physicalRejoins:['A1','A2','A3','B1','B2','B3','B4'],physicalFootRelocations:0,
@@ -21,6 +22,8 @@ test('B140 correctly serializes real KCC body and CPU A1 physical foot read-only
  assert.deepEqual(serialized.actualA1RapierFoot,[9,3.2,48]);
  assert.equal(serialized.realSeparationXZ,Math.hypot(7,3));
  assert.equal(serialized.realCpuRejoins,7);
+ assert.equal(serialized.canonicalHumanFootOffsetMeters,.87);
+ assert.equal(serialized.originalRapierSourceSupportGapMeters,.02);
  assert.equal(serialized.sourcePatrol.approved,2);
  assert.equal(serialized.officialScoreable,0);
  serialized.actualHumanKccBody[0]=33;

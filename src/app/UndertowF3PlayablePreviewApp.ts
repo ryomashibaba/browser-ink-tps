@@ -2518,7 +2518,10 @@ export class UndertowF3PlayablePreviewApp{
      side:pos.z>=0?'positive-z':'negative-z'
     }):null,
    b112OriginalHumanGround:this.b112GroundEnabled?
-    this.b112GroundLedger.snapshot():{
+    {...this.b112GroundLedger.snapshot(),
+     // B145: real character body-to-foot conversion, source-only QA.
+     canonicalHumanFootOffsetMeters:
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters}:{
      enabled:false as const,reason:'OPT_IN_SOURCE_QA_ONLY' as const,
      sourceFloorHoleCertified:false as const,
      originalStageGeometryModified:false as const

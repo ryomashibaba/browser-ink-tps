@@ -131,6 +131,7 @@ async function doPhysicalTrial(){
   }
  };
  observe(nativeGameStart,'REAL_7_OF_7_PLAYING',true);
+ save(); // Keep genuine 7/7 evidence even if later native input fails.
  // B141: verify the actual opt-in on-screen physical distance indicator
  // in a real WebGL2/pointer-locked browser. The UI remains a pure view:
  // no original route, target, player pose or actor state is manipulated.
@@ -174,6 +175,7 @@ async function doPhysicalTrial(){
   }
   const n=await nativeOriginalKeyboard(phase,observe);
   observe(n,phase.name+'_END',true);
+  save(); // Record each genuine real-key stage before followup.
  }
  if(!firstMouseRelease)fail('REAL_MOUSE_NOT_RELEASED');
  const routeEnd=await snapshot();
@@ -195,9 +197,45 @@ async function doPhysicalTrial(){
  const approved=final.cpu.sourcePatrol.b137ApprovedNativeRallies;
  if(!allyOptIn&&approved!==0)fail('FIXED_SOURCE_GOAL_CONTAMINATED');
  await picture('w10b139-'+variant.toLowerCase()+'-source-physics');
- const meaningful=routeWitness.filter(x=>x.actualHumanKccGrounded&&
-  x.actualA1RapierFoot?.length===3&&
-  x.actualHumanKccBody[2]>=33).length;
+ // B145: actual original LOWER source foot, not merely positive-Z upper
+ // source plateau. Native B112 KCC + original floor-gap proof are required.
+ const realLower=routeWitness.filter(x=>{
+  const footOffset=x.canonicalHumanFootOffsetMeters;
+  if(!Number.isFinite(footOffset)||footOffset<=0||footOffset>=2||
+     !Array.isArray(x.actualHumanKccBody)||
+     !x.actualHumanKccBody.every(Number.isFinite)||
+     x.actualHumanKccGrounded!==true||
+     typeof x.originalRapierSupportId!=='string'||
+     !Number.isFinite(x.originalRapierSourceSupportGapMeters)||
+     Math.abs(x.originalRapierSourceSupportGapMeters)>.22)return false;
+  const footY=x.actualHumanKccBody[1]-footOffset;
+  return footY>=2.7&&footY<=5.25&&x.actualHumanKccBody[2]>=33;
+ });
+ const meaningful=realLower.length;
+ const sameLevel=realLower.filter(x=>x.realCpuA1Mobility==='GROUND'&&
+  Array.isArray(x.actualA1RapierFoot)&&
+  x.actualA1RapierFoot.every(Number.isFinite)&&
+  x.actualA1RapierFoot[2]>=33&&
+  Math.abs(x.actualHumanKccBody[1]-
+   x.canonicalHumanFootOffsetMeters-x.actualA1RapierFoot[1])<=.30);
+ const eligibleSameLevel=sameLevel.filter(x=>x.realSeparationXZ>=3&&
+  x.realSeparationXZ<=18);
+ const realNativeEvidence={
+  actualLowerGroundedSampleCount:meaningful,
+  actualSameLowerA1FootSampleCount:sameLevel.length,
+  actualSameLowerNativeCandidateBandSamples:eligibleSameLevel.length,
+  observedA1NativeStandoffGoalApprovals:
+   final.cpu.sourcePatrol.b142OriginalStandoffGoalsApproved,
+  observedA1RetainedNativeStandoffRequests:
+   final.cpu.sourcePatrol.b143ReauthorizedStableStandoffGoals,
+  physicalMeetingCertified:false,
+  lowerFloorOriginalRayAloneDoesNotCertifyCapsule:true,
+  interpretation:meaningful===0?
+   'HOLD_NO_REAL_ORIGINAL_LOWER_GROUNDED_KCC_SAMPLES':
+   sameLevel.length===0?'HOLD_HUMAN_AND_A1_DIFFERENT_ACTUAL_LOWER_FEET':
+   approved===0?'HOLD_NO_ORIGINAL_NATIVE_ALLY_APPROVAL':
+   'NATIVE_SOURCE_GOAL_APPROVED_BUT_PHYSICAL_MEETING_UNVERIFIED'
+ };
  const evidence={
   schema:'W10_B139_TRUE_ORIGINAL_REAL_CHROME_SOURCE_DESCENT_ALLY_V1',
   variant,
@@ -216,9 +254,8 @@ async function doPhysicalTrial(){
   cpuFootRelocations:final.cpu.physicalFootRelocations,
   sourceAllyNativeGoalApprovals:approved,
   realOriginalSupportedGroundSamples:meaningful,
-  interpretation:approved>0?
-   'NATIVE_SOURCE_ALLY_DESTINATION_APPROVED_NOT_PHYSICAL_ARRIVAL':
-   'HOLD_ORIGINAL_SOURCE_ALLY_DESTINATION_NOT_APPROVED',
+  b145NativeOriginalLowerFootEvidence:realNativeEvidence,
+  interpretation:realNativeEvidence.interpretation,
   actualHumanAndA1RapierFootSamples:routeWitness,
   finalNativePatrol:final.cpu.sourcePatrol,
   physicalRallyCompletionCertified:false,
@@ -230,7 +267,13 @@ async function doPhysicalTrial(){
   variant,playingTick:nativeGameStart.tick,
   originalRealInputStages:steps.map(x=>x.name),
   finalTick:final.tick,physicalCpuRejoins:final.cpu.physicalRejoins.length,
-  genuineGroundSupportSamples:meaningful,sourceAllyGoalApprovals:approved,
+  genuineGroundSupportSamples:meaningful,
+  sameLowerA1FootSamples:sameLevel.length,
+  b142StandoffGoalApprovals:
+   realNativeEvidence.observedA1NativeStandoffGoalApprovals,
+  b143RetainedRequests:
+   realNativeEvidence.observedA1RetainedNativeStandoffRequests,
+  sourceAllyGoalApprovals:approved,
   interpretation:evidence.interpretation,formal4v4Hold:true
  }));
 }
@@ -268,5 +311,10 @@ async function run(){
  await ready();
  await doPhysicalTrial();
 }
-try{await run();}catch(err){console.error(err);process.exitCode=1;}
+try{await run();}catch(err){
+ // A rejected Chrome trial still preserves actual early native evidence.
+ history.push({fatalNativeError:String(err),nativeOutcome:'UNVERIFIED_AFTER_FAILURE'});
+ try{save();}catch{}
+ console.error(err);process.exitCode=1;
+}
 finally{socket?.close();for(const child of children)child.kill('SIGTERM');}

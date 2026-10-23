@@ -22,12 +22,15 @@ export function sampleB140RealSourcePhysicalTrace(n,phase){
  return {
   phase,actualTick:n.tick,matchState:n.matchState,
   actualHumanKccBody:[...realHumanBody],
+  canonicalHumanFootOffsetMeters:foot?.canonicalHumanFootOffsetMeters??null,
   actualA1RapierFoot:realA1RapierFoot?[...realA1RapierFoot]:null,
   realSeparationXZ:realA1RapierFoot?
    Math.hypot(realA1RapierFoot[0]-realHumanBody[0],
     realA1RapierFoot[2]-realHumanBody[2]):null,
   actualHumanKccGrounded:foot?.genuineKccGrounded??null,
   originalRapierSupportId:foot?.lastOriginalSourceHitId??null,
+  originalRapierSourceSupportGapMeters:
+   foot?.lastOriginalSourceGapMeters??null,
   originalSourceFootprintClass:foot?.lastOriginalFootprint?.classification??null,
   realCpuA1Mobility:cpu?.mobilityState??null,
   realCpuRejoins:n.cpu.physicalRejoins.length,
@@ -37,7 +40,11 @@ export function sampleB140RealSourcePhysicalTrace(n,phase){
    checks:patrol.b137RealCandidateChecks,
    approved:patrol.b137ApprovedNativeRallies,
    denied:patrol.b137UnsafeOrUnsupportedRallies,
-   missingSourceFloor:patrol.b137MissingSourceFloorProof
+   missingSourceFloor:patrol.b137MissingSourceFloorProof,
+   b142OriginalStandoffGoalsApproved:
+    patrol.b142OriginalStandoffGoalsApproved??0,
+   b143ReauthorizedStableStandoffGoals:
+    patrol.b143ReauthorizedStableStandoffGoals??0
   },
   humanShotCount:n.shotsFired,
   humanChangedOriginalPaintCells:n.b23HumanInkFeedback.humanChangedCells,
