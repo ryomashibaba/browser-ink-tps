@@ -9,7 +9,9 @@ on:
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/B161OriginalAllySyncPractice.test.ts'
       - 'src/app/B165OriginalAllyPracticeProgress.ts'
-      - 'src/app/B165OriginalAllyPracticeProgress.test.ts'
+      - 'src/app/B165OriginalAllyPracticeProgress.test.ts src/app/B166OriginalAllyRendezvous.test.ts'
+      - 'src/app/B166OriginalAllyRendezvous.ts'
+      - 'src/app/B166OriginalAllyRendezvous.test.ts'
       - '.github/workflows/t21-w10b162-real-ally-sync.yml'
   workflow_dispatch:
 permissions:

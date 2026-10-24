@@ -29,6 +29,8 @@ import {UndertowF3SourcePaintRun,type B56PracticeVariant}
 import {sourcePracticeObjectiveView} from './UndertowF3PracticeObjectiveView';
 import {summarizeB165OriginalAllyPractice}
  from './B165OriginalAllyPracticeProgress';
+import {getB166OriginalAllyRendezvous}
+ from './B166OriginalAllyRendezvous';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -984,6 +986,10 @@ export class UndertowF3PlayablePreviewApp{
      '<div id="t21-f3-b165-ink-bar" style="width:0%;height:100%;'+
      'background:#72e9a6"></div></div>'+
     '<div id="t21-f3-b165-impacts">0 genuine A1 impact events · UNSCORED</div>'+
+    '<div id="t21-f3-b166-tactics" role="status" aria-live="off" '+
+     'style="border-top:1px solid #ffffff28;margin-top:7px;'+
+     'padding-top:6px;color:#d4f4ee;font:600 10px/1.5 system-ui">'+
+     'A1 true native rendezvous · pending actual foot positions</div>'+
     '</div>'+
    '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
    'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
@@ -2190,6 +2196,47 @@ export class UndertowF3PlayablePreviewApp{
   b165('t21-f3-b165-impacts').textContent=
    run.actualOriginalA1TaggedImpactEvents+
    ' real tagged A1 impacts · NO SCORE, NO WINNER';
+  // B166: genuine measured actor relative-foot guidance for manual play.
+  // No proposed route, inferred floor or CPU command is ever constructed.
+  const b166Card=b165('t21-f3-b166-tactics');
+  if(run.practiceVariant==='ALLY_SYNC'){
+   const traffic=this.traffic.snapshot();
+   const realBody=this.player.getPosition(this.p);
+   const cpuA1=traffic.cpu.find(c=>c.id==='A1');
+   const sourceCoopOptIn=
+    this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
+    this.canvas.dataset.t21B137AllyRally===
+     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT';
+   const guidance=getB166OriginalAllyRendezvous({
+    actualNativeTick:this.clock.tick,
+    sourceStage:[this.rawStage.solids.length,
+     this.rawStage.paintSurfaces.length,
+     this.rawStage.navigationLinks?.length??0,0],
+    sourceCoopOptIn,
+    matchState:this.matchState,paused:this.paused,
+    stopReason:this.stopReason,
+    human:{position:[realBody.x,realBody.y,realBody.z],
+     grounded:this.stats.playerGrounded,
+     alive:this.resources.currentHp>0},
+    ally:cpuA1?{id:cpuA1.id,physicalFoot:cpuA1.physicalFoot,
+     physicallyRejoined:cpuA1.rejoined}:null,
+    realNewTaggedA1ImpactCells:run.actualOriginalA1ChangedImpactCells,
+    realNewTaggedA1ImpactEvents:run.actualOriginalA1TaggedImpactEvents
+   });
+   b166Card.dataset.t21B166Status=guidance?.state??'NOT_AVAILABLE';
+   b166Card.dataset.t21B166DirectIsNotPath='true';
+   b166Card.dataset.t21B166OfficialWinner='NONE';
+   b166Card.textContent=guidance?guidance.headline+
+    ' · actual A1 planar separation '+
+    (guidance.actualA1HorizontalSeparationMeters?.toFixed(2)??'N/A')+
+    'm / true foot ΔY '+
+    (guidance.actualA1VerticalDifferenceMeters?.toFixed(2)??'N/A')+
+    'm · DIRECT DISTANCE IS NOT A SAFE ROUTE':
+    'Source ally practice authority unavailable · NO ROUTE CERTIFIED';
+  }else{
+   b166Card.dataset.t21B166Status='OFF';
+   b166Card.textContent='';
+  }
   const relay=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b57-relay')!;
   relay.style.display=run.practiceVariant==='PAINT_RELAY'?'':'none';
   relay.dataset.t21B57Leg=run.relayStage;

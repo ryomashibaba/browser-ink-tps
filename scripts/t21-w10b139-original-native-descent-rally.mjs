@@ -363,6 +363,9 @@ async function playB162GenuineAllySync(routeSteps){
    b165NoWinner:a?.dataset.t21B165OriginalWinner,
    b165Scoreable:a?.dataset.t21B165SourceScoreable,
    b165LiveGuidance:a?.querySelector('#t21-f3-b165-status')?.textContent,
+   b166RealAllyStatus:a?.querySelector('#t21-f3-b166-tactics')?.dataset.t21B166Status,
+   b166NoInventedRoute:a?.querySelector('#t21-f3-b166-tactics')?.dataset.t21B166DirectIsNotPath,
+   b166NoWinner:a?.querySelector('#t21-f3-b166-tactics')?.dataset.t21B166OfficialWinner,
    scoreable:card?.dataset.scoreable,
    sourceAuthority:card?.dataset.productionAuthority};
  })()`);
@@ -379,6 +382,9 @@ async function playB162GenuineAllySync(routeSteps){
    ui.b165GenuineClear==='true'&&
    ui.b165NoWinner==='NONE'&&ui.b165Scoreable==='0'&&
    ui.b165LiveGuidance?.includes('COOPERATIVE PRACTICE CLEAR')&&
+   ui.b166RealAllyStatus!==undefined&&
+   ui.b166RealAllyStatus!=='OFF'&&
+   ui.b166NoInventedRoute==='true'&&ui.b166NoWinner==='NONE'&&
    ui.winner==='NONE'&&
    ui.scoreable==='0'&&ui.sourceAuthority==='NONE';
  saveAttempt(final,actualClear?

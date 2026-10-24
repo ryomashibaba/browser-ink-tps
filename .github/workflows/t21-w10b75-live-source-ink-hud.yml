@@ -49,6 +49,8 @@ on:
       - 'src/app/B161OriginalAllySyncPractice.test.ts'
       - 'src/app/B165OriginalAllyPracticeProgress.ts'
       - 'src/app/B165OriginalAllyPracticeProgress.test.ts'
+      - 'src/app/B166OriginalAllyRendezvous.ts'
+      - 'src/app/B166OriginalAllyRendezvous.test.ts'
       - 'src/navigation/RecastStageNavigation.ts'
       - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.ts'
       - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.test.ts'
@@ -71,7 +73,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3OriginalAllyRally.test.ts src/app/UndertowF3OriginalAllyProximity.test.ts src/app/UndertowF3OriginalAllyStandoff.test.ts src/app/UndertowF3OriginalAllySupportInk.test.ts src/app/W10B152AllyPaintProvenance.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/W10B155OriginalSourceConnectivityReview.test.ts src/app/W10B156OriginalGapTriage.test.ts src/app/W10B157OriginalBidirectionalSourceAudit.test.ts src/app/W10B157OriginalUnderpassPointMap.test.ts src/app/W10B158OriginalSourceFaceRecastMatch.test.ts src/app/W10B159OriginalFaceNavMeshProjection.test.ts src/app/B160SourceCpuActivityView.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/B161OriginalAllySyncPractice.test.ts src/app/B165OriginalAllyPracticeProgress.test.ts src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.test.ts
+      - run: npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3OriginalAllyRally.test.ts src/app/UndertowF3OriginalAllyProximity.test.ts src/app/UndertowF3OriginalAllyStandoff.test.ts src/app/UndertowF3OriginalAllySupportInk.test.ts src/app/W10B152AllyPaintProvenance.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/W10B155OriginalSourceConnectivityReview.test.ts src/app/W10B156OriginalGapTriage.test.ts src/app/W10B157OriginalBidirectionalSourceAudit.test.ts src/app/W10B157OriginalUnderpassPointMap.test.ts src/app/W10B158OriginalSourceFaceRecastMatch.test.ts src/app/W10B159OriginalFaceNavMeshProjection.test.ts src/app/B160SourceCpuActivityView.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/B161OriginalAllySyncPractice.test.ts src/app/B165OriginalAllyPracticeProgress.test.ts src/app/B166OriginalAllyRendezvous.test.ts src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.test.ts
       - run: |
           node --test scripts/t21-w10b131-trigger-matrix.test.mjs
           node --test scripts/t21-w10b134-native-edge-cadence.test.mjs
