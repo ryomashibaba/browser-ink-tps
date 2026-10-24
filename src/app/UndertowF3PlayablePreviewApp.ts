@@ -78,6 +78,8 @@ import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud} from './UndertowF3PlayableHud';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
+import {createB160SourceCpuActivityView}
+ from './B160SourceCpuActivityView';
 import {b69PreviewAimView,b69NextSourcePreviewHref}
  from './UndertowF3PreviewAimReview';
 import {createB70OwnerAimComparisonUI}
@@ -244,6 +246,8 @@ export class UndertowF3PlayablePreviewApp{
  private b141RealAllyIndicator:HTMLElement|null=null;
  private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
+ private readonly b160CpuInkActivityView:
+  ReturnType<typeof createB160SourceCpuActivityView>;
  private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
  private readonly b62NativeEvidence=new W10B62NativeSessionEvidence();
  // W10-B112 read-only source-foot forensic witness, QA opt-in only.
@@ -916,6 +920,10 @@ export class UndertowF3PlayablePreviewApp{
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
    ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
+  // B160: visible seven actual original CPU ink contributors on existing
+  // unscored local practice UI, with no team winner or gameplay writes.
+  this.b160CpuInkActivityView=createB160SourceCpuActivityView(
+   ui,this.b58SessionBoard.finish);
   // B70: only normal F3 preview. Persist only after the owner's button
   // click and real B62 completion; source QA/production never get storage.
   if(b69){
@@ -2894,6 +2902,10 @@ export class UndertowF3PlayablePreviewApp{
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
    this.survey.snapshot().active||this.galleryIndex>=0);
   this.b58SessionBoard.render(state);
+  this.b160CpuInkActivityView.render(
+   state.b154NativeSevenCpuInk,state.matchState,Boolean(state.stopReason));
+  this.b160CpuInkActivityView.live.hidden=
+   this.survey.snapshot().active||this.galleryIndex>=0;
   if(state.matchState==='TIME_UP')
    this.b70OwnerComparison?.render();
   if(state.matchState==='TIME_UP'){

@@ -33,6 +33,8 @@ on:
       - 'src/app/W10B158OriginalSourceFaceRecastMatch.test.ts'
       - 'src/app/W10B159OriginalFaceNavMeshProjection.ts'
       - 'src/app/W10B159OriginalFaceNavMeshProjection.test.ts'
+      - 'src/app/B160SourceCpuActivityView.ts'
+      - 'src/app/B160SourceCpuActivityView.test.ts'
       - 'src/navigation/RecastStageNavigation.ts'
       - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.ts'
       - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.test.ts'

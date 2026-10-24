@@ -208,6 +208,12 @@ async function doPhysicalTrial(){
  }
  const final=await snapshot();authority(final,'FIXED');
  observe(final,'FINAL_REAL_SOURCE',true);
+ // B160 user-facing REAL seven-CPU changed ink HUD, source-only no winner.
+ const b160Live=await evaluate('document.querySelector("#t21-f3-b160-native-ink-live")?.textContent ?? ""');
+ const b160Winner=await evaluate('document.querySelector("#t21-f3-b160-native-ink-live")?.dataset.t21B160OfficialWinner ?? ""');
+ if(!b160Live.includes('7 CPU REAL INK CHANGES')||
+    !b160Live.includes('no winner')||b160Winner!=='NONE')
+  fail('B160_REAL_NATIVE_UNSCORED_CPU_INK_UI_MISSING');
  const approved=final.cpu.sourcePatrol.b137ApprovedNativeRallies;
  if(!allyOptIn&&approved!==0)fail('FIXED_SOURCE_GOAL_CONTAMINATED');
  await picture('w10b139-'+variant.toLowerCase()+'-source-physics');
@@ -323,6 +329,8 @@ async function doPhysicalTrial(){
    final.b158OriginalSourceFaceRecastMatch,
   b159OriginalFaceNavMeshProjection:
    final.b159OriginalFaceNavMeshProjection,
+  b160OriginalCpuPaintHudNativeObserved:b160Live,
+  b160OriginalCpuPaintHudWinner:b160Winner,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
