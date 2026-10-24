@@ -3046,7 +3046,7 @@ export class UndertowF3PlayablePreviewApp{
   this.camera.getAimDirection(this.aim);
   const cue=sourceB167EnemyCombatCue({
    nativeTick:state.tick,sourceStage:[state.originalSourceSolids,
-    state.originalPaintSurfaces,state.originalSourceNavigationLinks,0],
+    state.originalPaintSurfaces,state.originalSourceNavigationLinks??-1,0],
    matchState:state.matchState,paused:state.paused,stopReason:state.stopReason,
    human:{body:state.player.position,grounded:this.stats.playerGrounded,
     alive:state.player.hp>0},
