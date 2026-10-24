@@ -16,6 +16,9 @@ if(!['FIXED_DEFAULT','ALLY_RALLY','TEAM_COVERAGE'].includes(variant))
  throw Error('B139_EXPLICIT_VARIANT_REQUIRED');
 const allyOptIn=variant!=='FIXED_DEFAULT';
 const b154TeamCoverage=variant==='TEAM_COVERAGE';
+const b162CoopTrial=process.env.T21_B162_REAL_ALLY_SYNC==='1';
+if(b162CoopTrial&&variant!=='ALLY_RALLY')
+ throw Error('B162_ONLY_ORIGINAL_ALLY_RALLY_OPT_IN');
 const children=[],pending=new Map(),history=[];
 let socket=null,sequence=0;
 const fail=reason=>{throw Error('B140_'+reason);};
@@ -77,6 +80,7 @@ async function picture(name){
 }
 const realKeys={
  KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
+ KeyS:{key:'s',code:'KeyS',windowsVirtualKeyCode:83,nativeVirtualKeyCode:83},
  KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68},
  KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65}
 };
@@ -98,6 +102,159 @@ async function nativeOriginalKeyboard(stage,observe){
   for(const key of pressed)
    await cmd('Input.dispatchKeyEvent',{type:'keyUp',...realKeys[key]});
  }
+}
+/** B162: real native original route then real on-screen cooperative
+ * 60Hz practice, no injected native ticks, movement, A1 paint or win.
+ * This runs ONLY with explicit one-run QA opt-in on the A1 source variant.
+ */
+async function playB162GenuineAllySync(routeSteps){
+ const checkpoint=await snapshot();authority(checkpoint,'FIXED');
+ for(const type of ['keyDown','keyUp'])
+  await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
+   windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+ await until(()=>evaluate('document.pointerLockElement===null'),25000);
+ const control=await evaluate(`(() => {
+  const card=document.querySelector('#t21-f3-b25-paint-run');
+  return {available:card?.dataset.t21B161AllySyncAvailable,
+   winner:card?.dataset.t21B161OfficialWinner,
+   stage:card?.dataset.sourceOnly,scoreable:card?.dataset.scoreable};
+ })()`);
+ if(control.available!=='true'||control.winner!=='NONE'||
+    control.stage!=='true'||control.scoreable!=='0')
+  fail('B162_SOURCE_ONLY_COOP_CONTROL_NOT_ELIGIBLE');
+ for(let i=0;i<3;i++)await clickButton('#t21-f3-b56-variant');
+ const choice=await evaluate(
+  'document.querySelector("#t21-f3-b25-paint-run")?.dataset.t21B56NextVariant');
+ if(choice!=='ALLY_SYNC')fail('B162_COOP_CHALLENGE_NOT_ACTUALLY_SELECTED');
+ await clickButton('#t21-f3-b25-start');
+ const armed=(await snapshot()).b25SourcePaintRun;
+ if(armed.status!=='ARMED'||armed.practiceVariant!=='ALLY_SYNC'||
+    armed.officialWinner!=='NONE')
+  fail('B162_REAL_ALLY_SYNC_NOT_ARMED');
+ await click(800,450);
+ await until(()=>evaluate(
+  'document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
+ const started=await until(async()=>{
+  const n=await snapshot();authority(n,'FIXED');
+  return n.b25SourcePaintRun.status==='RUNNING'?n:false;
+ },100000);
+ const baseline=started.b152ExactAllyAimPaintProvenance;
+ const history162=[];
+ const saveAttempt=(n,verdict)=>{
+  const output={schema:'B162_REAL_ORIGINAL_HUMAN_A1_NATIVE_COOP_V1',
+   verdict,realCDPMouseAndKeyboard:true,virtualTickInjection:false,
+   syntheticInkOrFloor:false,normalCpuFixedPatrolChanged:false,
+   originalSource:'25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE',
+   originalOpponentNaturalRoutes:'0/12',
+   productionAuthorized:false,unrestricted4v4Certified:false,
+   officialWinner:'NONE',routeSteps,
+   actualSourcePreArmTick:checkpoint.tick,
+   realStartTick:started.tick,
+   baselineExactA1SourceInk:baseline,
+   realObservedSegments:history162,
+   finalPractice:n?.b25SourcePaintRun??null,
+   actualSourceA1Ink:n?.b152ExactAllyAimPaintProvenance??null,
+   nativeTick:n?.tick??null};
+  writeFileSync(resolve(OUTPUT,'w10b162-real-ally-sync-practice.json'),
+   JSON.stringify(output,null,2));
+ };
+ saveAttempt(started,'B162_ACTUALLY_ARMED_NATIVE_COOP_RUNNING');
+ const wrap=x=>((x+540)%360)-180;
+ for(let i=0;i<27;i++){
+  const before=await snapshot();authority(before,'FIXED');
+  if(['CLEAR','ABORTED','TIME_UP'].includes(before.b25SourcePaintRun.status))
+   break;
+  // Independent ACTUAL CDP pointer aim/movement: real original
+  // physics and player gun; no virtual camera or actor pose edit.
+  await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450,button:'none'});
+  const angle=(await snapshot()).cameraSourcePractice;
+  const pair=Math.floor(i/2)%6;
+  const targetYaw=[0,0,10,-10,0,0][pair];
+  const targetPitch=[-12,-20,-28,-37,-46,-25][pair];
+  const dx=Math.round(wrap(targetYaw-angle.yawDegrees)/.22);
+  const dy=Math.round(-(targetPitch-angle.pitchDegrees)/.18);
+  if(!Number.isFinite(dx)||!Number.isFinite(dy)||
+     Math.abs(dx)>720||Math.abs(dy)>460)
+   fail('B162_NATIVE_CDPMOUSE_REAIM_LIMIT');
+  await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+   x:800+dx,y:450+dy,button:'none'});
+  const firing=i%3!==2;
+  if(firing)await cmd('Input.dispatchMouseEvent',{
+   type:'mousePressed',x:800,y:450,button:'left',clickCount:1});
+  let n;
+  try{
+   n=await nativeOriginalKeyboard(
+    {name:'B162_REAL_SOURCE_PRACTICE_'+(i+1),
+     keys:[i%2===0?'KeyW':'KeyS'],ticks:34},()=>{});
+  }finally{
+   if(firing)await cmd('Input.dispatchMouseEvent',{
+    type:'mouseReleased',x:800,y:450,button:'left',clickCount:1});
+  }
+  const practice=n.b25SourcePaintRun;
+  const sample={segment:i+1,tick:n.tick,
+   nativeHumanFoot:n.player.position,
+   humanChangedInkCells:practice.humanChangedImpactCells,
+   nativeOriginalGroundMeters:practice.realGroundedTravelMeters,
+   exactA1ChangedCellsSinceArming:
+    practice.actualOriginalA1ChangedImpactCells,
+   actualA1TaggedImpactEvents:
+    practice.actualOriginalA1TaggedImpactEvents,
+   nativePracticeState:practice.status};
+  history162.push(sample);
+  console.log('B162_REAL_ORIGINAL_COOP_STEP',JSON.stringify(sample));
+  saveAttempt(n,'B162_REAL_BROWSER_INPUT_IN_PROGRESS');
+ }
+ // A1 may only aim after reaching the genuine player KCC position.
+ // Allow native time, not simulated shots, for any delayed source impact.
+ let final=await snapshot();
+ const settleMax=Math.min(started.tick+3300,final.tick+1200);
+ while(final.tick<settleMax&&
+       final.b25SourcePaintRun.status==='RUNNING'&&
+       final.matchState==='PLAYING'){
+  await sleep(500);
+  final=await snapshot();authority(final,'FIXED');
+  if(final.stopReason)fail('B162_REAL_SOURCE_STOP_'+final.stopReason);
+ }
+ const run=final.b25SourcePaintRun;
+ const ui=await evaluate(`(() => {
+  const card=document.querySelector('#t21-f3-b25-paint-run');
+  const a=document.querySelector('#t21-f3-b161-ally');
+  return {status:card?.dataset.t21B53Status,
+   mode:card?.dataset.t21B56ActiveVariant,
+   allyCells:a?.dataset.t21B161ActualOriginalA1ChangedInk,
+   allyText:a?.textContent,winner:a?.dataset.t21B161OfficialWinner,
+   scoreable:card?.dataset.scoreable,
+   sourceAuthority:card?.dataset.productionAuthority};
+ })()`);
+ const actualClear=run.status==='CLEAR'&&run.practiceVariant==='ALLY_SYNC'&&
+   run.humanChangedImpactCells>=180&&
+   run.realGroundedTravelMeters>=12&&
+   run.actualOriginalA1ChangedImpactCells>=30&&
+   run.actualOriginalA1TaggedImpactEvents>0&&
+   run.originalA1CooperativeGoalSatisfied===true&&
+   run.officialWinner==='NONE'&&final.sourceScoreablePromotions===0&&
+   ui.status==='CLEAR'&&ui.mode==='ALLY_SYNC'&&
+   Number(ui.allyCells)>=30&&ui.winner==='NONE'&&
+   ui.scoreable==='0'&&ui.sourceAuthority==='NONE';
+ saveAttempt(final,actualClear?
+  'B162_NATIVE_60HZ_GENUINE_COOPERATIVE_CLEAR':
+  'B162_HOLD_REAL_SOURCE_COOPERATIVE_NOT_CLEARED');
+ if(!actualClear){
+  console.error('B162_REAL_SOURCE_COOPERATIVE_HOLD',JSON.stringify({
+   humanCells:run.humanChangedImpactCells,
+   realGroundMeters:run.realGroundedTravelMeters,
+   exactA1InkSinceStart:run.actualOriginalA1ChangedImpactCells,
+   taggedA1Impacts:run.actualOriginalA1TaggedImpactEvents,
+   status:run.status,abort:run.abortReason,ui}));
+  fail('B162_NATIVE_ORIGINAL_ALLY_SYNC_NOT_CLEARED');
+ }
+ await picture('W10B162_GENUINE_ORIGINAL_COOPERATIVE_CLEAR');
+ console.log('B162_NATIVE_ORIGINAL_ALLY_SYNC_CLEAR',JSON.stringify({
+  ticks:run.elapsedTicks,actualHumanInk:run.humanChangedImpactCells,
+  realGroundMeters:run.realGroundedTravelMeters,
+  actualNewTaggedA1Ink:run.actualOriginalA1ChangedImpactCells,
+  sourceA1ImpactEvents:run.actualOriginalA1TaggedImpactEvents,
+  officialWinner:'NONE'}));
 }
 async function doPhysicalTrial(){
  const boot=await snapshot();authority(boot,'FIXED');
@@ -201,6 +358,10 @@ async function doPhysicalTrial(){
   save(); // Record each genuine real-key stage before followup.
  }
  if(!firstMouseRelease)fail('REAL_MOUSE_NOT_RELEASED');
+ if(b162CoopTrial){
+  await playB162GenuineAllySync(steps);
+  return;
+ }
  const routeEnd=await snapshot();
  const continuedUntil=routeEnd.tick+900;
  const settleStart=Date.now();

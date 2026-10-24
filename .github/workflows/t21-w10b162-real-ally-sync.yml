@@ -1,0 +1,44 @@
+name: T21 W10-B162 real original A1 cooperative practice
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'src/app/UndertowF3SourcePaintRun.ts'
+      - 'src/app/UndertowF3PracticeObjectiveView.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/B161OriginalAllySyncPractice.test.ts'
+      - '.github/workflows/t21-w10b162-real-ally-sync.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-original-ally-sync:
+    name: True CDP human plus A1 source physical cooperative clear
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Prevent forged ally ink and protect previous source run behavior
+        run: npx vitest run src/app/B161OriginalAllySyncPractice.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts src/app/B160SourceCpuActivityView.test.ts
+      - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs
+      - name: Real original-ground CDP mouse keyboard 60Hz human A1 cooperative trial
+        env:
+          T21_B139_VARIANT: ALLY_RALLY
+          T21_B162_REAL_ALLY_SYNC: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-w10b162
+        run: node scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Preserve real A1 and human attempted trial whether CLEAR or HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w10b162-actual-original-human-A1-ally-sync
+          path: /tmp/t21-w10b162/
+          retention-days: 14
+          if-no-files-found: warn
