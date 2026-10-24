@@ -29,7 +29,7 @@ const b155=():B155SourceConnectivityReview=>({
   recastStartSnapMeters:.1,recastEndSnapMeters:.1,
   recastEndpointErrorMeters:p.expectation==='DIAGNOSTIC_GAP'?32:0,
   recastPathPoints:2,recastPathTerminal:p.expectation==='DIAGNOSTIC_GAP'?
-   [1,4,30] as const:p.end,
+   [1,4,30] as const:p.to,
   recastPathTerminalToRequestedGoalMeters:p.expectation==='DIAGNOSTIC_GAP'?32:0,
   originalStageRayWitnesses:[0,.25,.5,.75,1].map(fraction=>({
    fraction,originalSolidId:null,verticalDifferenceMeters:null,
