@@ -46,7 +46,7 @@ describe('B160 source-only genuine seven-CPU ink activity, not Turf score',()=>{
    Partial<B160OriginalCpuInkSource['byActor']>).B4;
   expect(()=>summarizeB160CpuActivity(missing))
    .toThrow(/NATIVE_SOURCE_UNSCORABLE/);
-  const fake=sample();fake.byActor.B1.changedCells=-3;
+  const fake=sample();fake.byActor.B1!.changedCells=-3;
   expect(()=>summarizeB160CpuActivity(fake))
    .toThrow(/INVALID_ACTOR_RASTER/);
   const inflated=sample();inflated.teamBChangedCells=999;

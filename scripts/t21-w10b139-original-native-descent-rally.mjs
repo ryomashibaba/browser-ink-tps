@@ -101,6 +101,15 @@ async function nativeOriginalKeyboard(stage,observe){
 }
 async function doPhysicalTrial(){
  const boot=await snapshot();authority(boot,'FIXED');
+ // B161: real on-page source-only cooperative challenge is discoverable
+ // exclusively with explicit A1 rally + real A1 ink experimental opt-in.
+ const b161Option=await evaluate(
+  'document.querySelector("#t21-f3-b25-paint-run")?.dataset.t21B161AllySyncAvailable ?? ""');
+ const b161Winner=await evaluate(
+  'document.querySelector("#t21-f3-b25-paint-run")?.dataset.t21B161OfficialWinner ?? ""');
+ if(b161Option!==(allyOptIn?'true':'false')||b161Winner!=='NONE')
+  fail('B161_SOURCE_ALLY_SYNC_OPT_IN_OR_TURF_AUTHORITY');
+
  if(boot.matchState!=='STAGING'||boot.paused||
     boot.cpu.sourcePatrol.b137AllyRallyOptIn!==allyOptIn||
     boot.b112OriginalHumanGround?.enabled!==true)
@@ -331,6 +340,8 @@ async function doPhysicalTrial(){
    final.b159OriginalFaceNavMeshProjection,
   b160OriginalCpuPaintHudNativeObserved:b160Live,
   b160OriginalCpuPaintHudWinner:b160Winner,
+  b161SourceAllySyncOptInEligible:b161Option,
+  b161SourcePracticeWinner:b161Winner,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };

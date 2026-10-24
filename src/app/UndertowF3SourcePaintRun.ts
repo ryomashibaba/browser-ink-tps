@@ -9,7 +9,9 @@ export const B25_SOURCE_PAINT_RUN_TICKS=60*60;
 export const B25_SOURCE_PAINT_RUN_REQUIRED_CELLS=180;
 export const B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS=12;
 const MAX_GROUNDED_TRAVEL_PER_TICK=.38;
-export type B56PracticeVariant='CLASSIC'|'SWITCHBACK'|'PAINT_RELAY';
+export type B56PracticeVariant='CLASSIC'|'SWITCHBACK'|'PAINT_RELAY'|'ALLY_SYNC';
+/** Only actual B152 tagged source-aim -> projectile -> original impact ink. */
+export const B161_ALLY_REAL_IMPACT_CELLS=30;
 export const B57_RELAY_CELLS_PER_LEG=60;
 // Relative to the real player's initial original-ground foot, NOT a new
 // stage actor, NavLink, navigation destination or Nintendo-authored route.
@@ -25,11 +27,18 @@ export type B25PracticeInk=Readonly<{
  changedHumanImpactCells:number;changedHumanImpactEvents:number;
  sourceOnly:boolean;scoreablePromotionCount:0;
 }>;
+/** Optional for prior run variants. Mandatory A1 native provenance for ALLY_SYNC. */
+export type B161AllyPhysicalInk=Readonly<{
+ allyId:'A1';qaOptIn:boolean;realOriginalSourceOnly:boolean;
+ genuineOriginalA1AimChangedImpactCells:number;
+ genuineOriginalA1AimImpactEvents:number;scoreablePromotionCount:0;
+}>;
 export type B25PracticeFrame=Readonly<{
  tick:number;paused:boolean;stopReason:string|null;
  inputLocked:boolean;sessionEnded:boolean;
  sourceSolids:number;paintableSurfaces:number;originalNavLinks:number;
  scoreableSurfaces:number;foot:B25PracticeFoot;ink:B25PracticeInk;
+ ally?:B161AllyPhysicalInk;
 }>;
 
 function validFrame(f:B25PracticeFrame){
@@ -51,6 +60,10 @@ export class UndertowF3SourcePaintRun{
  private baseImpacts=0;
  private actualCells=0;
  private actualImpacts=0;
+ private initialRealA1Cells=0;
+ private initialRealA1Impacts=0;
+ private realA1ChangedImpactCells=0;
+ private realA1OriginalImpactEvents=0;
  private groundedMeters=0;
  private lastFoot:B25PracticeFoot|null=null;
  private abortReason:string|null=null;
@@ -66,19 +79,22 @@ export class UndertowF3SourcePaintRun{
  private relayTurnPaintCells=0;
  private relayReturnPaintCells=0;
  private readonly bestByVariant:Record<B56PracticeVariant,number|null>={
-  CLASSIC:null,SWITCHBACK:null,PAINT_RELAY:null
+  CLASSIC:null,SWITCHBACK:null,PAINT_RELAY:null,ALLY_SYNC:null
  };
  private readonly clearsByVariant:Record<B56PracticeVariant,number>={
-  CLASSIC:0,SWITCHBACK:0,PAINT_RELAY:0
+  CLASSIC:0,SWITCHBACK:0,PAINT_RELAY:0,ALLY_SYNC:0
  };
 
  public arm(variant:B56PracticeVariant='CLASSIC'){
   if(this.status==='ARMED'||this.status==='RUNNING'||
-     (variant!=='CLASSIC'&&variant!=='SWITCHBACK'&&variant!=='PAINT_RELAY'))return false;
+     (variant!=='CLASSIC'&&variant!=='SWITCHBACK'&&
+      variant!=='PAINT_RELAY'&&variant!=='ALLY_SYNC'))return false;
   this.variant=variant;
   this.status='ARMED';
   this.startTick=0;this.lastTick=-1;this.baseCells=0;this.baseImpacts=0;
   this.actualCells=0;this.actualImpacts=0;this.groundedMeters=0;
+  this.initialRealA1Cells=0;this.initialRealA1Impacts=0;
+  this.realA1ChangedImpactCells=0;this.realA1OriginalImpactEvents=0;
   this.lastFoot=null;this.abortReason=null;this.newBest=false;
   this.routeStart=null;this.routeOutReached=false;this.routeReturned=false;
   this.routeOutAtGroundMeters=0;
@@ -103,6 +119,20 @@ export class UndertowF3SourcePaintRun{
   if(!validFrame(f)){
    this.abort('SOURCE_AUTHORITY_OR_INVALID_SAMPLE');return this.snapshot();
   }
+  // B161: no CPU foot ink, generic impacts or shot requests allowed.
+  // Only the exact B152 original A1 source paint provenance is eligible.
+  const ally=f.ally;
+  if(this.variant==='ALLY_SYNC'&&(!ally||
+    ally.allyId!=='A1'||ally.qaOptIn!==true||
+    ally.realOriginalSourceOnly!==true||
+    ally.scoreablePromotionCount!==0||
+    !Number.isSafeInteger(ally.genuineOriginalA1AimChangedImpactCells)||
+    ally.genuineOriginalA1AimChangedImpactCells<0||
+    !Number.isSafeInteger(ally.genuineOriginalA1AimImpactEvents)||
+    ally.genuineOriginalA1AimImpactEvents<0)){
+   this.abort('ALLY_SYNC_GENUINE_A1_PROVENANCE_REQUIRED');
+   return this.snapshot();
+  }
   if(f.stopReason||f.paused||f.sessionEnded){
    this.abort('SESSION_STOPPED');return this.snapshot();
   }
@@ -114,7 +144,7 @@ export class UndertowF3SourcePaintRun{
   }
   if(this.status==='ARMED'){
    if(!f.foot.alive)return this.snapshot();
-   if(this.variant!=='CLASSIC'&&
+   if((this.variant==='SWITCHBACK'||this.variant==='PAINT_RELAY')&&
       (!f.foot.grounded||!f.foot.realPhysicalOriginalStage)){
     this.abort('SWITCHBACK_NEEDS_SOURCE_GROUND_START');
     return this.snapshot();
@@ -124,6 +154,10 @@ export class UndertowF3SourcePaintRun{
    this.startTick=f.tick;this.lastTick=f.tick;
    this.baseCells=f.ink.changedHumanImpactCells;
    this.baseImpacts=f.ink.changedHumanImpactEvents;
+   if(this.variant==='ALLY_SYNC'&&ally){
+    this.initialRealA1Cells=ally.genuineOriginalA1AimChangedImpactCells;
+    this.initialRealA1Impacts=ally.genuineOriginalA1AimImpactEvents;
+   }
    this.lastFoot=f.foot;
    return this.snapshot();
   }
@@ -138,6 +172,18 @@ export class UndertowF3SourcePaintRun{
   // timer. If the game stalls, do not pretend 60Hz gameplay happened.
   this.actualCells=f.ink.changedHumanImpactCells-this.baseCells;
   this.actualImpacts=f.ink.changedHumanImpactEvents-this.baseImpacts;
+  if(this.variant==='ALLY_SYNC'&&ally){
+   if(ally.genuineOriginalA1AimChangedImpactCells<this.initialRealA1Cells||
+      ally.genuineOriginalA1AimImpactEvents<this.initialRealA1Impacts){
+    this.abort('ALLY_SYNC_A1_PROVENANCE_COUNTER_RESET');
+    return this.snapshot();
+   }
+   this.realA1ChangedImpactCells=
+    ally.genuineOriginalA1AimChangedImpactCells-this.initialRealA1Cells;
+   this.realA1OriginalImpactEvents=
+    ally.genuineOriginalA1AimImpactEvents-this.initialRealA1Impacts;
+  }
+  const routeMode=this.variant==='SWITCHBACK'||this.variant==='PAINT_RELAY';
   // No credit for jumping, falling, respawn, teleport or out-of-map.
   // Credit only short, continuous, REAL grounded displacement.
   const old=this.lastFoot;
@@ -151,7 +197,7 @@ export class UndertowF3SourcePaintRun{
    // For PAINT_RELAY, a player who has already arrived at the real
    // original-ground turn/return threshold may complete the ink quota
    // while STATIONARY. Untrusted physical deltas still fail closed.
-   if(this.variant!=='CLASSIC'&&this.routeStart&&
+   if(routeMode&&this.routeStart&&
       xz<=MAX_GROUNDED_TRAVEL_PER_TICK&&Math.abs(dy)<.32&&
       (xz>0||this.variant==='PAINT_RELAY')){
      const dist=Math.hypot(f.foot.x-this.routeStart.x,
@@ -175,12 +221,12 @@ export class UndertowF3SourcePaintRun{
        this.relayReturnPaintCells=this.actualCells;
      }
    }
-   if(this.variant!=='CLASSIC'&&xz>MAX_GROUNDED_TRAVEL_PER_TICK){
+   if(routeMode&&xz>MAX_GROUNDED_TRAVEL_PER_TICK){
     this.abort('SWITCHBACK_INVALID_PHYSICAL_DISPLACEMENT');
     return this.snapshot();
    }
   }
-  if(this.variant!=='CLASSIC'&&old&&
+  if(routeMode&&old&&
      (!old.grounded||!f.foot.grounded||
       !old.realPhysicalOriginalStage||!f.foot.realPhysicalOriginalStage||
       !old.alive||!f.foot.alive||f.tick!==this.lastTick+1)){
@@ -190,7 +236,11 @@ export class UndertowF3SourcePaintRun{
   this.lastFoot=f.foot;this.lastTick=f.tick;
   if(this.actualCells>=B25_SOURCE_PAINT_RUN_REQUIRED_CELLS&&
      this.groundedMeters>=B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS&&
-     (this.variant==='CLASSIC'||this.routeReturned)&&
+     (this.variant==='CLASSIC'||this.variant==='ALLY_SYNC'||
+      this.routeReturned)&&
+     (this.variant!=='ALLY_SYNC'||(
+      this.realA1ChangedImpactCells>=B161_ALLY_REAL_IMPACT_CELLS&&
+      this.realA1OriginalImpactEvents>0))&&
      (this.variant!=='PAINT_RELAY'||
       this.actualCells-this.relayReturnPaintCells>=
        B57_RELAY_CELLS_PER_LEG)){
@@ -233,7 +283,8 @@ export class UndertowF3SourcePaintRun{
     Math.max(0,this.actualCells-this.relayReturnPaintCells),
    routeOutMeters:B56_SWITCHBACK_OUT_METERS,
    routeHomeRadiusMeters:B56_SWITCHBACK_HOME_RADIUS_METERS,
-   routePhase:this.variant==='CLASSIC'?'NOT_REQUIRED' as const:
+   routePhase:this.variant==='CLASSIC'||this.variant==='ALLY_SYNC'?
+    'NOT_REQUIRED' as const:
     !this.routeOutReached?'OUTBOUND' as const:
     !this.routeReturned?'RETURN' as const:'COMPLETE' as const,
    mode:'OPTIONAL_NONSCORING_SOURCE_PAINT_RUN' as const,
@@ -245,6 +296,13 @@ export class UndertowF3SourcePaintRun{
    humanChangedImpactCells:this.actualCells,
    requiredHumanChangedCells:B25_SOURCE_PAINT_RUN_REQUIRED_CELLS,
    humanImpactEvents:this.actualImpacts,
+   actualOriginalA1ChangedImpactCells:this.realA1ChangedImpactCells,
+   actualOriginalA1TaggedImpactEvents:this.realA1OriginalImpactEvents,
+   requiredOriginalA1ChangedImpactCells:B161_ALLY_REAL_IMPACT_CELLS,
+   originalA1CooperativeGoalSatisfied:this.variant==='ALLY_SYNC'&&
+    this.realA1ChangedImpactCells>=B161_ALLY_REAL_IMPACT_CELLS&&
+    this.realA1OriginalImpactEvents>0,
+   cooperativeModeNeverCertifiesOpponentEngagement:true as const,
    realGroundedTravelMeters:Number(this.groundedMeters.toFixed(2)),
    requiredRealGroundedTravelMeters:B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS,
    abortReason:this.abortReason,

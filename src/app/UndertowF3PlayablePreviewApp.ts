@@ -944,6 +944,11 @@ export class UndertowF3PlayablePreviewApp{
    'color:#edfcff;font:600 11px/1.4 system-ui,sans-serif';
   this.b25RunCard=challenge;
   challenge.dataset.t21B53SourceObjectives='REAL_HUMAN_INK_AND_RAPIER_GROUND';
+  challenge.dataset.t21B161AllySyncAvailable=
+   this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
+   this.canvas.dataset.t21B137AllyRally===
+    'ORIGINAL_GROUNDED_ALLY_EXPERIMENT'?'true':'false';
+  challenge.dataset.t21B161OfficialWinner='NONE';
   challenge.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:5px">'+
    '<strong style="letter-spacing:.9px;color:#93f3ee">SOURCE PAINT RUN</strong>'+
    '<small style="color:#ffcb9d;font-size:9px">PRACTICE · UNSCORED</small></div>'+
@@ -963,6 +968,10 @@ export class UndertowF3PlayablePreviewApp{
      '<div id="t21-f3-b57-paint-bar" style="width:0%;height:100%;background:#ffb66b"></div></div>'+
     '<div id="t21-f3-b57-count" style="font:700 10px system-ui;color:#edfcff">0 / 60 NEW CELLS</div>'+
     '</div>'+
+   '<div id="t21-f3-b161-ally" style="display:none;padding:6px 7px;'+
+    'margin:5px 0;border:1px solid #53a8aa;border-radius:7px;'+
+    'color:#aaf3dd;font:700 10px/1.5 system-ui">'+
+    'A1 COOPERATIVE SOURCE INK · WAITING FOR REAL IMPACT</div>'+
    '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
    'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
    '<div id="t21-f3-b53-objectives" style="display:none;margin:9px 0 8px">'+
@@ -987,8 +996,14 @@ export class UndertowF3PlayablePreviewApp{
    .addEventListener('click',()=>{
     const state=this.b25Run.snapshot().status;
     if(state==='ARMED'||state==='RUNNING')return;
+    const genuineAllyPracticeAvailable=
+     this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
+     this.canvas.dataset.t21B137AllyRally===
+      'ORIGINAL_GROUNDED_ALLY_EXPERIMENT';
     this.b56NextVariant=this.b56NextVariant==='CLASSIC'?'SWITCHBACK':
-     this.b56NextVariant==='SWITCHBACK'?'PAINT_RELAY':'CLASSIC';
+     this.b56NextVariant==='SWITCHBACK'?'PAINT_RELAY':
+     this.b56NextVariant==='PAINT_RELAY'&&genuineAllyPracticeAvailable?
+      'ALLY_SYNC':'CLASSIC';
     this.refreshB25PaintRun();
    });
   this.b25RunButton.addEventListener('click',()=>{
@@ -996,6 +1011,14 @@ export class UndertowF3PlayablePreviewApp{
       this.matchState==='TIME_UP'||this.survey.snapshot().active||
       this.galleryIndex>=0||['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
     this.b25RunProgress.textContent='Exit pause/survey and unlock mouse before arming.';
+    return;
+   }
+   if(this.b56NextVariant==='ALLY_SYNC'&&
+      (this.canvas.dataset.t21B150AllyInk!=='SOURCE_ONLY_OPT_IN'||
+       this.canvas.dataset.t21B137AllyRally!==
+        'ORIGINAL_GROUNDED_ALLY_EXPERIMENT')){
+    this.b25RunProgress.textContent=
+     'ALLY SYNC requires explicit original A1 rally + ink opt-in.';
     return;
    }
    if(this.b25Run.arm(this.b56NextVariant)){
@@ -1926,7 +1949,21 @@ export class UndertowF3PlayablePreviewApp{
      ink:{changedHumanImpactCells:actualHumanInk.humanChangedCells,
       changedHumanImpactEvents:actualHumanInk.humanChangedImpactCount,
       sourceOnly:actualHumanInk.originalSourceOnly,
-      scoreablePromotionCount:0}
+      scoreablePromotionCount:0},
+     // B161: exact B152 A1 real source aim -> projectile ->
+     // registered original impact -> accepted changed ink.
+     ally:{
+      allyId:'A1',
+      qaOptIn:this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
+       this.canvas.dataset.t21B137AllyRally===
+        'ORIGINAL_GROUNDED_ALLY_EXPERIMENT',
+      realOriginalSourceOnly:actualHumanInk.originalSourceOnly,
+      genuineOriginalA1AimChangedImpactCells:
+       this.b152ProvenAllyAimInk.changedImpactCells,
+      genuineOriginalA1AimImpactEvents:
+       this.b152ProvenAllyAimInk.impactEvents,
+      scoreablePromotionCount:0
+     }
     });
     const physical=this.player.getPosition(this.p);
     if(this.b112GroundEnabled&&this.resources.currentHp>0){
@@ -2115,6 +2152,17 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.dataset.t21B56ActiveVariant=run.practiceVariant;
   const route=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b56-route')!;
   route.style.display=run.practiceVariant==='SWITCHBACK'?'':'none';
+  const b161Ally=this.b25RunCard.querySelector<HTMLElement>(
+   '#t21-f3-b161-ally')!;
+  b161Ally.style.display=run.practiceVariant==='ALLY_SYNC'?'':'none';
+  b161Ally.dataset.t21B161ActualOriginalA1ChangedInk=
+   String(run.actualOriginalA1ChangedImpactCells);
+  b161Ally.dataset.t21B161OfficialWinner='NONE';
+  b161Ally.textContent='ALLY SYNC · A1 genuine original-impact changed ink '+
+   run.actualOriginalA1ChangedImpactCells+'/'+
+   run.requiredOriginalA1ChangedImpactCells+' · real tagged A1 impacts '+
+   run.actualOriginalA1TaggedImpactEvents+
+   ' · HUMAN ink + physical movement also required · NO TURF SCORE';
   const relay=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b57-relay')!;
   relay.style.display=run.practiceVariant==='PAINT_RELAY'?'':'none';
   relay.dataset.t21B57Leg=run.relayStage;
@@ -2145,7 +2193,11 @@ export class UndertowF3PlayablePreviewApp{
    'SWITCHBACK · GENUINE OUT + RETURN COMPLETE':
    'CLASSIC · shoot and move on original source floor';
   if(run.status==='IDLE'){
-   this.b25RunProgress.textContent=this.b56NextVariant==='PAINT_RELAY'?
+   this.b25RunProgress.textContent=this.b56NextVariant==='ALLY_SYNC'?
+    'ALLY SYNC (explicit QA ally-ink only): paint 180 HUMAN real cells,'+
+    ' move 12m on original floor and receive 30 FRESH actual A1'+
+    ' source-impact changed cells AFTER arming. No score or winner.':
+    this.b56NextVariant==='PAINT_RELAY'?
     'PAINT RELAY: paint 60 new cells per leg. Move 1.8m out, return to 0.8m, then finish at 12m original-ground travel.':
     this.b56NextVariant==='SWITCHBACK'?
     'SWITCHBACK: move 1.8m out, return within 0.8m; paint 180 cells and travel 12m on original floor.':
