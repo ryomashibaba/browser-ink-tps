@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `63f2d49e3381aa3a9605098fce8e5d2d9b76845e`
-- 最新番号のQAレポート: W10-B158 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B158-native-recast-to-known-original-face-matching.md
+- 同期元QA HEAD: `dfc21d324fe2e1d4da8fe0410a2948d6dc84afc4`
+- 最新番号のQAレポート: W10-B159 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B159-original-source-face-recast-projection-coverage.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B159 （着手・完了の保証ではない）
-- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40079370894
+- 次工程候補: W10-B160 （着手・完了の保証ではない）
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40080457543
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
