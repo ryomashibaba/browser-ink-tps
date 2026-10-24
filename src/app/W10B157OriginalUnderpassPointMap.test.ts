@@ -37,7 +37,9 @@ describe('B157 original registered endpoint map visual is NOT a path',()=>{
   expect(html).toContain('Team A / +Z');
   expect(html).toContain('Team B / -Z');
   expect(html).toContain('native Recast forward terminal');
-  expect(html).toContain('POINTS ONLY');
+  expect(html).toContain('OBSERVED POINTS + 42 existing exact CI #688 source triangles only');
+  expect(html.match(/<polygon /g)).toHaveLength(42);
+  expect(html).toContain('CI688_EXACT_FACE_NOT_RUNTIME');
   expect(html.match(/<circle /g)).toHaveLength(8);
   expect(html).not.toContain('<line');
   expect(html).not.toContain('<path');

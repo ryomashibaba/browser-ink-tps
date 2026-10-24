@@ -42,6 +42,8 @@ import {auditB157OriginalBidirectionalGaps}
  from './W10B157OriginalBidirectionalSourceAudit';
 import {renderB157OriginalUnderpassPointMap}
  from './W10B157OriginalUnderpassPointMap';
+import {matchB158OriginalSourceFaces}
+ from './W10B158OriginalSourceFaceRecastMatch';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -152,6 +154,8 @@ export class UndertowF3PlayablePreviewApp{
   ReturnType<typeof buildB155OriginalSourceConnectivityReview>;
  private readonly b157OriginalBidirectionalSourceAudit:
   ReturnType<typeof auditB157OriginalBidirectionalGaps>;
+ private readonly b158OriginalSourceFaceRecastMatch:
+  ReturnType<typeof matchB158OriginalSourceFaces>;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
@@ -386,6 +390,10 @@ export class UndertowF3PlayablePreviewApp{
   this.b157OriginalBidirectionalSourceAudit=
    auditB157OriginalBidirectionalGaps(
     this.rawStage,this.nav,this.physics,this.b155SourceConnectivityReview);
+  // B158: exact previously CI #688 source triangles already held in repo,
+  // CI #691 negative path trial still honored; NO solid/nav/paint changes.
+  this.b158OriginalSourceFaceRecastMatch=
+   matchB158OriginalSourceFaces(this.b157OriginalBidirectionalSourceAudit);
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
@@ -2756,6 +2764,8 @@ export class UndertowF3PlayablePreviewApp{
     triageB156OriginalGaps(this.b155SourceConnectivityReview),
    b157OriginalBidirectionalSourceAudit:
     this.b157OriginalBidirectionalSourceAudit,
+   b158OriginalSourceFaceRecastMatch:
+    this.b158OriginalSourceFaceRecastMatch,
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -2815,7 +2825,12 @@ export class UndertowF3PlayablePreviewApp{
      x=>(x.side==='POSITIVE_Z'?'+Z':'-Z')+':'+
      (x.reverseRecastEndpointReached?'RECAST REACHED':'NOT REACHED')
     ).join('/')+
-    ' · only registered rays, 4v4 HOLD';
+    ' · exact original face nearest '+
+    state.b158OriginalSourceFaceRecastMatch.comparisons
+     .filter(x=>x.terminal==='FORWARD')
+     .map(x=>x.side+':'+x.originalTriangleSpatialDistanceMeters.toFixed(1)+'m')
+     .join(' / ')+
+    ' · CI #691 route failed · 4v4 HOLD';
    b155Panel.dataset.t21B155StageAuthority=audit.stage;
    b155Panel.dataset.t21B155UnderpassAuthorized='false';
    b155Panel.dataset.t21B155RealKccRouteCertified='false';
@@ -2904,7 +2919,11 @@ export class UndertowF3PlayablePreviewApp{
      'm').join(' · ')+
     ' · B157 reverse '+state.b157OriginalBidirectionalSourceAudit.sides.map(
      x=>x.side+':'+x.routeDiagnosis).join(' · ')+
-    ' · original faces NOT yet matched · 4v4 HOLD',
+    ' · B158 nearest CI688 source faces '+
+     state.b158OriginalSourceFaceRecastMatch.comparisons.map(x=>
+      x.id+':'+x.originalRouteComponentId+' '+
+      x.originalTriangleSpatialDistanceMeters.toFixed(2)+'m').join(' · ')+
+    ' · CI691 failed: 4v4 HOLD',
    'B27 SOURCE MOTION · '+(state.b27KineticSourceView.enabled?'ON':'QA BASELINE')+
     ' / real foot '+state.b27KineticSourceView.nativeGroundSpeedMetersPerSecond+
     'm/s / visual FOV '+state.b27KineticSourceView.fieldOfViewDegrees+

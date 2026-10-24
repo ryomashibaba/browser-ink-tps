@@ -29,6 +29,10 @@ on:
       - 'src/app/W10B157OriginalBidirectionalSourceAudit.test.ts'
       - 'src/app/W10B157OriginalUnderpassPointMap.ts'
       - 'src/app/W10B157OriginalUnderpassPointMap.test.ts'
+      - 'src/app/W10B158OriginalSourceFaceRecastMatch.ts'
+      - 'src/app/W10B158OriginalSourceFaceRecastMatch.test.ts'
+      - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.ts'
+      - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.test.ts'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:

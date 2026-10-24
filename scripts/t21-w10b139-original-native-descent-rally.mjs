@@ -319,6 +319,8 @@ async function doPhysicalTrial(){
    final.b156OriginalUnderpassGapTriage,
   b157OriginalBidirectionalSourceAudit:
    final.b157OriginalBidirectionalSourceAudit,
+  b158OriginalSourceFaceRecastMatch:
+   final.b158OriginalSourceFaceRecastMatch,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -359,6 +361,12 @@ async function doPhysicalTrial(){
    final.b155OriginalSourceConnectivityReview.diagnosticOriginalRayMisses,
   b156BothUnderpassesPathStoppedShort:
    final.b156OriginalUnderpassGapTriage.bothSidesNativeRecastStoppedShort,
+  b158NearestExactOriginalSourceFaces:
+   final.b158OriginalSourceFaceRecastMatch.comparisons.map(x=>({
+    side:x.side,terminal:x.terminal,
+    component:x.originalRouteComponentId,
+    distanceMeters:x.originalTriangleSpatialDistanceMeters
+   })),
   b157ReverseUnderpassNativeSourcePaths:
    final.b157OriginalBidirectionalSourceAudit.sides.map(x=>({
     side:x.side,reverseReached:x.reverseRecastEndpointReached,
