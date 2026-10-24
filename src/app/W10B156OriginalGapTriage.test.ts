@@ -77,8 +77,7 @@ describe('B156 actual-evidence interpreter (synthetic fixture only)',()=>{
   const data=witness();
   // Test an intentionally malformed external witness; it must not type-check
   // as a normally produced B155 source report.
-  const forged={...data,productionAuthorized:true} as unknown
-   as B155SourceConnectivityReview;
+  const forged={...data,productionAuthorized:true} as unknown as B155SourceConnectivityReview;
   expect(()=>triage(forged))
    .toThrow(/ORIGINAL_EVIDENCE_AUTHORITY/);
   expect(()=>triage({...data,routes:data.routes.slice(1)}))
