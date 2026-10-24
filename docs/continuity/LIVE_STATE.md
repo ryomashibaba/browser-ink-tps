@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `cf467ef1d3255d2aac440edfa30babd923e934d2`
+- 同期元QA HEAD: `b6034dc755f90a88facee9160fadc9fffa399d94`
 - 最新番号のQAレポート: W10-B167 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B167-real-native-enemy-engagement-cue.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B168 （着手・完了の保証ではない）
