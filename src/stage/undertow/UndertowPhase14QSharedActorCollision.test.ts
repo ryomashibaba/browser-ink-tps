@@ -139,6 +139,13 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(surface,'CPU contact fixture must belong to original landing paint surface')
     .not.toBeNull();
   w.actors.syncRealCpuFoot('B4',cpuFoot);
+  // B149: actual PlayerController KCC collider handle, not generic
+  // REAL_PLAYER_OR_UNREGISTERED_DYNAMIC_ACTOR owner-label inference.
+  const sourceCpu=w.actors.qaRegisteredRealCpuCapsule('B4');
+  expect(sourceCpu?.actualSharedRapierBodyAndFootAgree).toBe(true);
+  expect(sourceCpu?.actualSharedWorld).toBe(true);
+  const realB4Handle=sourceCpu!.actualRapierColliderHandle;
+  let exactHumanKccB4ContactFrames=0;
   const input=(w.player as unknown as {input:PlayerInput}).input as unknown as {
     moveY:number
   };
@@ -149,6 +156,8 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
     w.player.computeFixed(DT);
     w.physics.step();
     w.player.syncAfterPhysics(DT);
+    if(w.player.qaActualKccComputedColliderHandles().includes(realB4Handle))
+      exactHumanKccB4ContactFrames++;
     const p=w.player.getPosition();
     minimumDistance=Math.min(minimumDistance,
       Math.hypot(p.x-cpuFoot.x,p.z-cpuFoot.z));
@@ -168,6 +177,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   }));
   expect(w.stats.playerGrounded).toBe(true);
   expect(minimumDistance).toBeGreaterThan(.54);
+  expect(exactHumanKccB4ContactFrames).toBeGreaterThan(0);
   expect(playerTravel).toBeGreaterThan(.01);
   expect(playerTravel).toBeLessThan(.65);
   expect(w.actors.cpuColliderCount).toBe(1);

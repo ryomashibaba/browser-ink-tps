@@ -102,7 +102,8 @@ async function doPhysicalTrial(){
   fail('NOT_REAL_ORIGINAL_7CPU_KCC_BOOT');
  const search=await evaluate('location.search');
  if(search!==('?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
-   (allyOptIn?'&t21W10B137=allyRally':'')))
+   (allyOptIn?'&t21W10B137=allyRally':'')+
+   '&t21W10B149=contactTrace'))
   fail('INVALID_SOURCE_PRACTICE_URL');
  await click(800,450);
  await until(()=>evaluate('document.pointerLockElement===document.querySelector("#app-canvas")'),20000);
@@ -291,6 +292,7 @@ async function doPhysicalTrial(){
   realOriginalSupportedGroundSamples:meaningful,
   b145NativeOriginalLowerFootEvidence:realNativeEvidence,
   b146ActualNativeSourceInward:b146ActualNativeSourceInward,
+  b149ActualNativeHumanA1Contact:final.b149ActualNativeHumanA1Contact,
   interpretation:realNativeEvidence.interpretation,
   actualHumanAndA1RapierFootSamples:routeWitness,
   finalNativePatrol:final.cpu.sourcePatrol,
@@ -306,6 +308,10 @@ async function doPhysicalTrial(){
   genuineGroundSupportSamples:meaningful,
   sameLowerA1FootSamples:sameLevel.length,
   realLowerInteriorSamples:genuineInnerFoot.length,
+  b149NearPhysicalNativeFrames:
+   final.b149ActualNativeHumanA1Contact.actualNearNativeFrames,
+  b149ActualHumanKccA1Contacts:
+   final.b149ActualNativeHumanA1Contact.actualNativeKccA1Contacts,
   originalInsetAfterRealKeyA:b146ActualNativeSourceInward.frozenPolygonMarginAfterKeyA,
   b142StandoffGoalApprovals:
    realNativeEvidence.observedA1NativeStandoffGoalApprovals,
@@ -343,7 +349,8 @@ async function run(){
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
-   (allyOptIn?'&t21W10B137=allyRally':'')});
+   (allyOptIn?'&t21W10B137=allyRally':'')+
+   '&t21W10B149=contactTrace'});
  const ready=()=>until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),100000);
  await ready();

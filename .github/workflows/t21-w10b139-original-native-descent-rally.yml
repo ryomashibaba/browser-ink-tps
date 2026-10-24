@@ -11,6 +11,8 @@ on:
       - 'scripts/t21-w10b147-native-teammate-approach-audit.test.mjs'
       - 'scripts/t21-w10b148-original-A1-station-audit.mjs'
       - 'scripts/t21-w10b148-original-A1-station-audit.test.mjs'
+      - 'scripts/t21-w10b149-native-A1-KCC-contact-audit.mjs'
+      - 'scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
@@ -36,6 +38,8 @@ jobs:
       - run: npm run build -- --base=/browser-ink-tps/
       - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-w10b140-real-physics-sample.test.mjs scripts/t21-w10b147-native-teammate-approach-audit.test.mjs
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Real shared Rapier PlayerController KCC-to-CPU collider identity regression
+        run: npx vitest run src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts
       - name: Real PlayCanvas Rapier KCC W200 D12 W18 after genuine CPU 7/7
         env:
           T21_B139_VARIANT: ${{ matrix.variant }}
@@ -61,8 +65,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Run strict original-ground physics and near-human station verifier regressions
-        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b148-original-A1-station-audit.test.mjs
+      - name: Run strict real native proof chain regressions
+        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b148-original-A1-station-audit.test.mjs scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs
       - name: Retrieve independently recorded real opt-in human/A1 feet
         uses: actions/download-artifact@v4
         with:
@@ -87,6 +91,14 @@ jobs:
             /tmp/t21-b147/fixed/w10b139-fixed_default.json \
             /tmp/t21-b147/result/b147-real-native-physical-ally-proof.json \
             /tmp/t21-b147/result/b148-real-native-source-A1-station.json
+      - name: B149 exact actual 60Hz HUMAN KCC versus A1 Rapier collider identity
+        run: |
+          node scripts/t21-w10b149-native-A1-KCC-contact-audit.mjs \
+            /tmp/t21-b147/ally/w10b139-ally_rally.json \
+            /tmp/t21-b147/fixed/w10b139-fixed_default.json \
+            /tmp/t21-b147/result/b147-real-native-physical-ally-proof.json \
+            /tmp/t21-b147/result/b148-real-native-source-A1-station.json \
+            /tmp/t21-b147/result/b149-real-Rapier-KCC-A1-contact.json
       - name: Retain independent measured physical rally verdict, including failures
         if: always()
         uses: actions/upload-artifact@v4

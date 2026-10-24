@@ -138,6 +138,23 @@ export class UndertowF3PlayablePreviewApp{
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
+ // B149: explicit URL opt-in, 60Hz READ-ONLY native pair monitoring.
+ // Never affects FIXED/ALLY steering, Rapier KCC, or actor pose.
+ private readonly b149ActualContact={
+  enabled:new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
+   new URL(location.href).searchParams.get('t21W10B149')==='contactTrace',
+  source:'ACTUAL_PLAYER_KCC_AND_REAL_A1_SHARED_RAPIER_COLLIDER' as const,
+  actualNearNativeFrames:0,actualNativeKccA1Contacts:0,
+  observedCapsuleOverlapFrames:0,originalGroundedNearFrames:0,
+  originalSourceSupportFailuresNear:0,sharedActorPoseDesyncNear:0,
+  minimumRealPairDistanceMeters:null as number|null,
+  minimumPositiveRadialCapsuleClearanceMeters:null as number|null,
+  firstNearNativeTick:null as number|null,
+  lastNearNativeTick:null as number|null,
+  nearFramesSourceOnly:true as const,actorPositionWritten:false as const,
+  continuousBetweenFrameContactCertified:false as const,
+  fullOriginal4v4Certified:false as const
+ };
  private readonly b102OriginalA3Kcc={
   enabled:false,a3NativeAudits:0,a3Rejected:0,
   humanProximateRapierBlocks:0,
@@ -1614,6 +1631,41 @@ export class UndertowF3PlayablePreviewApp{
     this.cpu.fixedUpdate(seconds,true,Team.A,
      this.player.getPosition(this.p),alive&&!this.w10b14);
     this.b20ProfileStop('sevenCpuFixed',cpuStart);
+    // Only after real native 60Hz CPU physics; use ACTUAL shared Rapier
+    // A1 collider identity and ACTUAL PlayerController KCC contacts.
+    if(this.b149ActualContact.enabled&&this.matchState==='PLAYING'){
+     const a=this.shared.qaRegisteredRealCpuCapsule('A1');
+     const body=this.player.getPosition(this.p);
+     if(a){
+      const d=Math.hypot(body.x-a.foot.x,body.z-a.foot.z);
+      const actualFoot=body.y-
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+      if(Math.abs(actualFoot-a.foot.y)<=.30&&d<=2.4){
+       const t=this.b149ActualContact;
+       t.actualNearNativeFrames++;
+       t.firstNearNativeTick??=frame;
+       t.lastNearNativeTick=frame;
+       t.minimumRealPairDistanceMeters=Math.min(
+        t.minimumRealPairDistanceMeters??Infinity,d);
+       const clearance=d-a.cpuRadiusMeters-a.actualHumanRadiusMeters;
+       t.minimumPositiveRadialCapsuleClearanceMeters=Math.min(
+        t.minimumPositiveRadialCapsuleClearanceMeters??Infinity,clearance);
+       if(clearance<0)t.observedCapsuleOverlapFrames++;
+       if(!a.actualSharedRapierBodyAndFootAgree)
+        t.sharedActorPoseDesyncNear++;
+       if(this.player.qaActualKccComputedColliderHandles().includes(
+        a.actualRapierColliderHandle))t.actualNativeKccA1Contacts++;
+       const floor=this.physics.castCharacterFootSupport(
+        body,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+        this.player.currentMode);
+       if(this.stats.playerGrounded&&
+          floor?.solidId==='UndertowT21D:first-drop-landing-positive-z'&&
+          Math.abs(actualFoot-floor.point.y)<=.22)
+        t.originalGroundedNearFrames++;
+       else t.originalSourceSupportFailuresNear++;
+      }
+     }
+    }
     if(!this.w10b14)this.traffic.observe(frame);
     if(this.matchState==='STAGING'&&this.traffic.snapshot().freeCombatEnabled)
      this.matchState='PLAYING';
@@ -2531,6 +2583,7 @@ export class UndertowF3PlayablePreviewApp{
      side:pos.z>=0?'positive-z':'negative-z'
     }):null,
    b146OriginalLowerFootprint:b146Flat,
+   b149ActualNativeHumanA1Contact:{...this.b149ActualContact},
    b112OriginalHumanGround:b146Foot?
     {...b146Foot,
      // B145: real character body-to-foot conversion, source-only QA.

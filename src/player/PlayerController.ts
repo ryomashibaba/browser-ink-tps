@@ -542,6 +542,17 @@ export class PlayerController {
     return out.copy(this.renderPosition);
   }
 
+  /** B149: read computed contacts from the ACTUAL PlayerController Rapier
+   * KCC, not from an ambiguous CPU-side owner label. No new contact query. */
+  public qaActualKccComputedColliderHandles():readonly number[]{
+    const out:number[]=[];
+    for(let i=0;i<this.character.numComputedCollisions();i++){
+      const hit=this.character.computedCollision(i)?.collider;
+      if(hit)out.push(hit.handle);
+    }
+    return out;
+  }
+
   public getPosition(out = new Vec3()): Vec3 {
     return out.copy(this.position);
   }

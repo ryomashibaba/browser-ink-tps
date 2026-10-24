@@ -292,6 +292,25 @@ export class UndertowPhase14QSharedActorCollision{
     return out;
   }
 
+  /** B149 observational identity of the actual in-world A1 Rapier
+   * capsule. Recast HUMAN proxy and its position are NOT used. */
+  public qaRegisteredRealCpuCapsule(id:string){
+    const actor=this.actors.get(id);
+    if(!actor)return null;
+    const actual=actor.body.translation();
+    const foot=actor.sourceFoot;
+    return {
+      id,foot:{...foot},actualRapierColliderHandle:actor.collider.handle,
+      cpuRadiusMeters:this.cpuRadius,
+      actualHumanRadiusMeters:PLAYER_CHARACTER_PHYSICS.humanRadiusMeters,
+      actualSharedRapierBodyAndFootAgree:
+       Math.hypot(actual.x-foot.x,
+        actual.y-this.cpuCenterOffset-foot.y,actual.z-foot.z)<.025,
+      actualSharedWorld:true,virtualCrowdProxyUsed:false,
+      stageSolidsAdded:0,actorPositionWritten:false
+    };
+  }
+
   public get cpuColliderCount():number{return this.actors.size;}
 
   public dispose():void{
