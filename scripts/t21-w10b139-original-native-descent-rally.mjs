@@ -160,12 +160,13 @@ async function playB162GenuineAllySync(routeSteps){
  };
  saveAttempt(started,'B162_ACTUALLY_ARMED_NATIVE_COOP_RUNNING');
  const wrap=x=>((x+540)%360)-180;
- for(let i=0;i<27;i++){
+ // B163 repairs the actual B162 failure: the first post-arm W/S
+ // steps were taken from the lower edge, falling from Y=3.8 to -29m.
+ // Reuse independently PASSed B54 upper-floor real human 18x34 inputs.
+ for(let i=0;i<18;i++){
   const before=await snapshot();authority(before,'FIXED');
   if(['CLEAR','ABORTED','TIME_UP'].includes(before.b25SourcePaintRun.status))
    break;
-  // Independent ACTUAL CDP pointer aim/movement: real original
-  // physics and player gun; no virtual camera or actor pose edit.
   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450,button:'none'});
   const angle=(await snapshot()).cameraSourcePractice;
   const pair=Math.floor(i/2)%6;
@@ -175,7 +176,7 @@ async function playB162GenuineAllySync(routeSteps){
   const dy=Math.round(-(targetPitch-angle.pitchDegrees)/.18);
   if(!Number.isFinite(dx)||!Number.isFinite(dy)||
      Math.abs(dx)>720||Math.abs(dy)>460)
-   fail('B162_NATIVE_CDPMOUSE_REAIM_LIMIT');
+   fail('B163_NATIVE_MOUSE_AIM_UNSUPPORTED');
   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
    x:800+dx,y:450+dy,button:'none'});
   const firing=i%3!==2;
@@ -183,26 +184,54 @@ async function playB162GenuineAllySync(routeSteps){
    type:'mousePressed',x:800,y:450,button:'left',clickCount:1});
   let n;
   try{
-   n=await nativeOriginalKeyboard(
-    {name:'B162_REAL_SOURCE_PRACTICE_'+(i+1),
-     keys:[i%2===0?'KeyW':'KeyS'],ticks:34},()=>{});
+   n=await nativeOriginalKeyboard({
+    name:'B163_REUSED_PASSED_B54_HUMAN_'+(i+1),
+    keys:[i%2===0?'KeyW':'KeyS'],ticks:34
+   },()=>{});
   }finally{
    if(firing)await cmd('Input.dispatchMouseEvent',{
     type:'mouseReleased',x:800,y:450,button:'left',clickCount:1});
   }
-  const practice=n.b25SourcePaintRun;
-  const sample={segment:i+1,tick:n.tick,
-   nativeHumanFoot:n.player.position,
-   humanChangedInkCells:practice.humanChangedImpactCells,
-   nativeOriginalGroundMeters:practice.realGroundedTravelMeters,
-   exactA1ChangedCellsSinceArming:
-    practice.actualOriginalA1ChangedImpactCells,
-   actualA1TaggedImpactEvents:
-    practice.actualOriginalA1TaggedImpactEvents,
-   nativePracticeState:practice.status};
-  history162.push(sample);
-  console.log('B162_REAL_ORIGINAL_COOP_STEP',JSON.stringify(sample));
-  saveAttempt(n,'B162_REAL_BROWSER_INPUT_IN_PROGRESS');
+  const p=n.b25SourcePaintRun;
+  const measurement={phase:'B163_REAL_UPPER_HUMAN_INK_AND_KCC',
+   segment:i+1,tick:n.tick,physicalFoot:n.player.position,
+   humanChangedCells:p.humanChangedImpactCells,
+   realGroundedMeters:p.realGroundedTravelMeters,
+   freshOriginalA1ImpactCells:p.actualOriginalA1ChangedImpactCells,
+   taggedA1Impacts:p.actualOriginalA1TaggedImpactEvents,
+   status:p.status,abortReason:p.abortReason};
+  history162.push(measurement);
+  saveAttempt(n,'B163_REAL_NATIVE_UPPER_PRACTICE');
+  console.log('B163_REAL_NATIVE_PRACTICE',JSON.stringify(measurement));
+  // Finish the actual W/S pair before leaving the certified upper zone.
+  if(i%2===1&&p.humanChangedImpactCells>=180&&
+     p.realGroundedTravelMeters>=12)break;
+ }
+ const human=await snapshot();authority(human,'FIXED');
+ if(human.b25SourcePaintRun.status==='RUNNING'&&
+    human.b25SourcePaintRun.humanChangedImpactCells>=180&&
+    human.b25SourcePaintRun.realGroundedTravelMeters>=12){
+  // Advance via B139's already-known genuine original source descent
+  // toward A1. Only real CDP key events, actual KCC and source geometry.
+  for(const stage of routeSteps){
+   const n=await nativeOriginalKeyboard(stage,()=>{});
+   const p=n.b25SourcePaintRun;
+   const measurement={phase:'B163_REAL_ORIGINAL_LOWER_A1_APPROACH',
+    stage:stage.name,tick:n.tick,physicalFoot:n.player.position,
+    humanChangedCells:p.humanChangedImpactCells,
+    realGroundedMeters:p.realGroundedTravelMeters,
+    freshOriginalA1ImpactCells:p.actualOriginalA1ChangedImpactCells,
+    taggedA1Impacts:p.actualOriginalA1TaggedImpactEvents,
+    status:p.status};
+   history162.push(measurement);
+   saveAttempt(n,'B163_TRUE_ORIGINAL_A1_APPROACH');
+   console.log('B163_REAL_A1_APPROACH',JSON.stringify(measurement));
+   if(['CLEAR','ABORTED','TIME_UP'].includes(p.status))break;
+  }
+ }else{
+  saveAttempt(human,'B163_HOLD_REAL_HUMAN_OBJECTIVES_UNMET');
+  console.log('B163_NATIVE_HUMAN_OBJECTIVE_HOLD',
+   JSON.stringify(human.b25SourcePaintRun));
  }
  // A1 may only aim after reaching the genuine player KCC position.
  // Allow native time, not simulated shots, for any delayed source impact.
@@ -299,6 +328,12 @@ async function doPhysicalTrial(){
   {name:'B146_TRUE_ORIGINAL_INWARD_A12',keys:['KeyA'],ticks:12},
   {name:'B146_TRUE_ORIGINAL_COAST60',keys:[],ticks:60}
  ];
+ if(b162CoopTrial){
+  // B163: arm on original certified upper floor, BEFORE the first
+  // descent; the prior route-then-W/S order caused a genuine fall.
+  await playB162GenuineAllySync(steps);
+  return;
+ }
  let lastSampleTick=-1000;
  const routeWitness=[];
  const observe=(n,phase,force=false)=>{
@@ -358,10 +393,6 @@ async function doPhysicalTrial(){
   save(); // Record each genuine real-key stage before followup.
  }
  if(!firstMouseRelease)fail('REAL_MOUSE_NOT_RELEASED');
- if(b162CoopTrial){
-  await playB162GenuineAllySync(steps);
-  return;
- }
  const routeEnd=await snapshot();
  const continuedUntil=routeEnd.tick+900;
  const settleStart=Date.now();
