@@ -27,6 +27,8 @@ import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
 import {UndertowF3SourcePaintRun,type B56PracticeVariant}
  from './UndertowF3SourcePaintRun';
 import {sourcePracticeObjectiveView} from './UndertowF3PracticeObjectiveView';
+import {summarizeB165OriginalAllyPractice}
+ from './B165OriginalAllyPracticeProgress';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -971,7 +973,18 @@ export class UndertowF3PlayablePreviewApp{
    '<div id="t21-f3-b161-ally" style="display:none;padding:6px 7px;'+
     'margin:5px 0;border:1px solid #53a8aa;border-radius:7px;'+
     'color:#aaf3dd;font:700 10px/1.5 system-ui">'+
-    'A1 COOPERATIVE SOURCE INK · WAITING FOR REAL IMPACT</div>'+
+    '<strong id="t21-f3-b165-heading">A1 COOPERATIVE SOURCE INK</strong>'+
+    '<div id="t21-f3-b165-status" role="status" aria-live="polite" '+
+     'style="margin:4px 0;color:#f5d5a4">Start to earn real human + A1 ink</div>'+
+    '<div style="display:flex;justify-content:space-between;gap:4px">'+
+     '<span>REAL A1 SOURCE IMPACT</span>'+
+     '<strong id="t21-f3-b165-ink-label">0 / 30</strong></div>'+
+    '<div style="height:7px;background:#ffffff20;border-radius:7px;'+
+     'overflow:hidden;margin:4px 0 6px">'+
+     '<div id="t21-f3-b165-ink-bar" style="width:0%;height:100%;'+
+     'background:#72e9a6"></div></div>'+
+    '<div id="t21-f3-b165-impacts">0 genuine A1 impact events · UNSCORED</div>'+
+    '</div>'+
    '<div id="t21-f3-b25-progress" style="white-space:pre-line;color:#d4edf2;margin:8px 0">'+
    'Paint 180 real cells and travel 12 m on original floor in 60 sim seconds.</div>'+
    '<div id="t21-f3-b53-objectives" style="display:none;margin:9px 0 8px">'+
@@ -2158,11 +2171,25 @@ export class UndertowF3PlayablePreviewApp{
   b161Ally.dataset.t21B161ActualOriginalA1ChangedInk=
    String(run.actualOriginalA1ChangedImpactCells);
   b161Ally.dataset.t21B161OfficialWinner='NONE';
-  b161Ally.textContent='ALLY SYNC · A1 genuine original-impact changed ink '+
-   run.actualOriginalA1ChangedImpactCells+'/'+
-   run.requiredOriginalA1ChangedImpactCells+' · real tagged A1 impacts '+
+  const realAlly=summarizeB165OriginalAllyPractice(run);
+  b161Ally.dataset.t21B165Phase=realAlly?.phase??'OFF';
+  b161Ally.dataset.t21B165GenuineClear=String(
+   realAlly?.genuinePracticeClear??false);
+  b161Ally.dataset.t21B165OriginalWinner='NONE';
+  b161Ally.dataset.t21B165SourceScoreable='0';
+  const b165=(id:string)=>b161Ally.querySelector<HTMLElement>('#'+id)!;
+  b165('t21-f3-b165-heading').textContent=
+   realAlly?.genuinePracticeClear?
+    'REAL COOPERATIVE PRACTICE CLEAR · NO TURF WINNER':
+    'ALLY SYNC · GENUINE SOURCE INK';
+  b165('t21-f3-b165-status').textContent=realAlly?.guidance??'';
+  b165('t21-f3-b165-ink-label').textContent=
+   run.actualOriginalA1ChangedImpactCells+'/30 cells';
+  b165('t21-f3-b165-ink-bar').style.width=
+   (realAlly?.realA1ImpactPct??0)+'%';
+  b165('t21-f3-b165-impacts').textContent=
    run.actualOriginalA1TaggedImpactEvents+
-   ' · HUMAN ink + physical movement also required · NO TURF SCORE';
+   ' real tagged A1 impacts · NO SCORE, NO WINNER';
   const relay=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b57-relay')!;
   relay.style.display=run.practiceVariant==='PAINT_RELAY'?'':'none';
   relay.dataset.t21B57Leg=run.relayStage;

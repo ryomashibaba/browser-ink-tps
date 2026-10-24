@@ -358,6 +358,11 @@ async function playB162GenuineAllySync(routeSteps){
    mode:card?.dataset.t21B56ActiveVariant,
    allyCells:a?.dataset.t21B161ActualOriginalA1ChangedInk,
    allyText:a?.textContent,winner:a?.dataset.t21B161OfficialWinner,
+   b165Phase:a?.dataset.t21B165Phase,
+   b165GenuineClear:a?.dataset.t21B165GenuineClear,
+   b165NoWinner:a?.dataset.t21B165OriginalWinner,
+   b165Scoreable:a?.dataset.t21B165SourceScoreable,
+   b165LiveGuidance:a?.querySelector('#t21-f3-b165-status')?.textContent,
    scoreable:card?.dataset.scoreable,
    sourceAuthority:card?.dataset.productionAuthority};
  })()`);
@@ -369,7 +374,12 @@ async function playB162GenuineAllySync(routeSteps){
    run.originalA1CooperativeGoalSatisfied===true&&
    run.officialWinner==='NONE'&&final.sourceScoreablePromotions===0&&
    ui.status==='CLEAR'&&ui.mode==='ALLY_SYNC'&&
-   Number(ui.allyCells)>=30&&ui.winner==='NONE'&&
+   Number(ui.allyCells)>=30&&
+   ui.b165Phase==='REAL_COOPERATIVE_CLEAR'&&
+   ui.b165GenuineClear==='true'&&
+   ui.b165NoWinner==='NONE'&&ui.b165Scoreable==='0'&&
+   ui.b165LiveGuidance?.includes('COOPERATIVE PRACTICE CLEAR')&&
+   ui.winner==='NONE'&&
    ui.scoreable==='0'&&ui.sourceAuthority==='NONE';
  saveAttempt(final,actualClear?
   'B162_NATIVE_60HZ_GENUINE_COOPERATIVE_CLEAR':
