@@ -27,6 +27,8 @@ interface ProjectileSlot {
   entity: Entity;
   sourceKind: 'HUMAN' | 'CPU';
   sourceId: string;
+  /** B152 read-only QA provenance, not a collision/rasterization rule. */
+  qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
   weaponId: WeaponId;
   damage: number;
   paintRadius: number;
@@ -66,6 +68,8 @@ export class ProjectileSystem {
   private readonly guardEntity: Entity;
   private readonly delta = new Vec3();
   private readonly queuedCpuShots: CpuFireRequest[] = [];
+  private b152OriginalAllyAimProjectilesSpawned=0;
+  private b152OriginalAllyAimSurfaceCollisions=0;
   private readonly cpuAimDirection = new Vec3();
   private readonly tempForward = new Vec3();
   private fireCooldown = 0;
@@ -191,7 +195,17 @@ export class ProjectileSystem {
     return this.solveLaunchDirection(origin, target, out, this.currentPlayerWeapon);
   }
 
+  /** Actual spawned projectiles and original-surface collisions, not paint. */
+  public qaOriginalAllyInkProjectilesSnapshot(){
+    return {
+      spawned:this.b152OriginalAllyAimProjectilesSpawned,
+      originalSourceSurfaceCollisions:this.b152OriginalAllyAimSurfaceCollisions
+    };
+  }
+
   public reset(): void {
+    this.b152OriginalAllyAimProjectilesSpawned=0;
+    this.b152OriginalAllyAimSurfaceCollisions=0;
     for (const slot of this.slots) this.deactivate(slot);
     this.delayedBursts.length = 0;
     this.fireCooldown = 0;
@@ -234,7 +248,8 @@ export class ProjectileSystem {
       target: request.target.clone(),
       weaponId: request.weaponId,
       charge: request.charge,
-      action: request.action
+      action: request.action,
+      qaSourceAim:request.qaSourceAim
     });
   }
 
@@ -473,7 +488,8 @@ export class ProjectileSystem {
           paintHit,
           slot.paintRadius,
           slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu,
-          slot.sourceKind === 'CPU' ? slot.sourceId : undefined
+          slot.sourceKind === 'CPU' ? slot.sourceId : undefined,
+          slot.qaSourceAim
         );
         this.finishProjectile(slot, paintHit.worldPoint, paintHit);
         continue;
@@ -1263,7 +1279,8 @@ export class ProjectileSystem {
           0,
           0,
           'CPU',
-          request.sourceId
+          request.sourceId,
+          request.qaSourceAim
         );
         spawned += 1;
       }
@@ -1647,13 +1664,18 @@ export class ProjectileSystem {
     delayedBurstDamage: number,
     delayedBurstPaintRadius: number,
     sourceKind: 'HUMAN' | 'CPU' = 'HUMAN',
-    sourceId = 'human'
+    sourceId = 'human',
+    qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK'
   ): void {
     slot.active = true;
     slot.ttl = life;
     slot.team = team;
     slot.sourceKind = sourceKind;
     slot.sourceId = sourceId;
+    slot.qaSourceAim=sourceKind==='CPU'&&sourceId==='A1'?
+      qaSourceAim:undefined;
+    if(slot.qaSourceAim==='A1_ORIGINAL_ALLY_SUPPORT_INK')
+      this.b152OriginalAllyAimProjectilesSpawned++;
     slot.weaponId = profile.id;
     slot.gravity = gravity;
     slot.damage = damage;
@@ -2024,12 +2046,14 @@ export class ProjectileSystem {
     hit: SurfaceRayHit,
     paintRadius: number,
     source: PaintSource,
-    actorId?: string
+    actorId?: string,
+    qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK'
   ): void {
     const isWall = (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0;
     const request: PaintRequest = {
       source,
       actorId,
+      qaSourceAim,
       team,
       surfaceId: hit.surface.id,
       centerU: hit.u,
@@ -2041,6 +2065,9 @@ export class ProjectileSystem {
       strength: 1
     };
     this.coordinator.enqueue(request);
+    if(source===PaintSource.Cpu&&actorId==='A1'&&
+       qaSourceAim==='A1_ORIGINAL_ALLY_SUPPORT_INK')
+      this.b152OriginalAllyAimSurfaceCollisions++;
     if (source === PaintSource.Cpu) this.stats.cpuProjectilePaintHits += 1;
   }
 }

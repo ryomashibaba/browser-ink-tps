@@ -37,6 +37,8 @@ export interface PaintEvent {
   source: PaintSource;
   /** Optional source actor identity. Additive metadata only; never used for coordinate authority. */
   actorId?: string;
+  /** B152 original A1 ally-aim projectile provenance, diagnostics only. */
+  qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
   /** false prevents this paint from contributing to the source actor's Special gauge. */
   gaugeEligible?: boolean;
   team: Team.A | Team.B;

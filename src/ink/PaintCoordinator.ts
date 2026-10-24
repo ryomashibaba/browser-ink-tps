@@ -6,6 +6,8 @@ import { PaintEventType, PaintSource, Team, type PaintEvent } from './types';
 export interface PaintRequest {
   source?: PaintSource;
   actorId?: string;
+  /** B152 informational only; forwarded to the immutable PaintEvent. */
+  qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
   gaugeEligible?: boolean;
   team: Team.A | Team.B;
   surfaceId: string;

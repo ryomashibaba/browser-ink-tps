@@ -30,6 +30,8 @@ import {sourcePracticeObjectiveView} from './UndertowF3PracticeObjectiveView';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
+import {isB152ExactAllySupportInkImpact}
+ from './W10B152AllyPaintProvenance';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -142,6 +144,9 @@ export class UndertowF3PlayablePreviewApp{
  // Never affects FIXED/ALLY steering, Rapier KCC, or actor pose.
  private readonly b151AllyActualInk={
   impactEvents:0,changedImpactCells:0
+ };
+ private readonly b152ProvenAllyAimInk={
+  impactEvents:0,changedImpactCells:0,zeroChangedInkImpacts:0
  };
  private readonly b149ActualContact={
   enabled:new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
@@ -381,6 +386,13 @@ export class UndertowF3PlayablePreviewApp{
         event.type===PaintEventType.WallImpact)){
      this.b151AllyActualInk.impactEvents++;
      this.b151AllyActualInk.changedImpactCells+=changedCells;
+     // B152: genuine source aim -> weapon shot -> physical projectile ->
+     // original stage collision -> authoritative paint result.
+     if(isB152ExactAllySupportInkImpact(event)){
+      this.b152ProvenAllyAimInk.impactEvents++;
+      this.b152ProvenAllyAimInk.changedImpactCells+=changedCells;
+      if(changedCells===0)this.b152ProvenAllyAimInk.zeroChangedInkImpacts++;
+     }
     }
    });
   // Ordinary human input remains unchanged; QA-only axis drive is accepted
@@ -1520,6 +1532,11 @@ export class UndertowF3PlayablePreviewApp{
   this.cpuKitManualSubQa=0;
   this.cpuKitManualSpecialQa=0;
   this.coordinator.clear();
+  this.b151AllyActualInk.impactEvents=0;
+  this.b151AllyActualInk.changedImpactCells=0;
+  this.b152ProvenAllyAimInk.impactEvents=0;
+  this.b152ProvenAllyAimInk.changedImpactCells=0;
+  this.b152ProvenAllyAimInk.zeroChangedInkImpacts=0;
   // The source-grounded preview uses the same seven real bots. A full
   // actor reset is a deliberate manual restart, not a mid-fall teleport.
   this.cpu.reset(Team.A);
@@ -2657,6 +2674,15 @@ export class UndertowF3PlayablePreviewApp{
     source:'REAL_PAINT_COORDINATOR_A1_PROJECTILE_ONLY',
     originalScoreablePromotions:0,
     allActualImpactChangesNotNecessarilyFromB151NewAim:true
+   },
+   b152ExactAllyAimPaintProvenance:{
+    qaOptIn:this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN',
+    acceptedSourceAimShotRequests:this.cpu.qaOriginalAllyInkShotRequests(),
+    ...this.projectiles.qaOriginalAllyInkProjectilesSnapshot(),
+    ...this.b152ProvenAllyAimInk,
+    source:'A1_SOURCE_AIM_TO_PHYSICAL_PROJECTILE_TO_PAINT_EVENT',
+    sourceTagDoesNotGrantInkOrMovementAuthority:true,
+    scoreablePromotions:0,full4v4Certified:false
    },
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    cpuProjectilePaintHits:this.stats.cpuProjectilePaintHits,

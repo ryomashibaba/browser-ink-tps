@@ -301,6 +301,8 @@ async function doPhysicalTrial(){
   b150VerifiedSourceAimProposals:final.cpu.sourcePatrol.b150ApprovedInkAims,
   b150RealPaintHitsNotInferredFromAimProposals:true,
   b151A1RealProjectileImpactInk:final.b151AllyRealInkImpactEvidence,
+  b152ExactOriginalAllyAimPaintProvenance:
+   final.b152ExactAllyAimPaintProvenance,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -322,6 +324,16 @@ async function doPhysicalTrial(){
    final.b151AllyRealInkImpactEvidence?.impactEvents??0,
   b151A1RealImpactInkChangedCells:
    final.b151AllyRealInkImpactEvidence?.changedImpactCells??0,
+  b152VerifiedAimShotRequests:
+   final.b152ExactAllyAimPaintProvenance?.acceptedSourceAimShotRequests??0,
+  b152SourceAimProjectilesSpawned:
+   final.b152ExactAllyAimPaintProvenance?.spawned??0,
+  b152SourceAimRealSurfaceImpacts:
+   final.b152ExactAllyAimPaintProvenance?.originalSourceSurfaceCollisions??0,
+  b152SourceAimPaintImpactEvents:
+   final.b152ExactAllyAimPaintProvenance?.impactEvents??0,
+  b152SourceAimChangedCells:
+   final.b152ExactAllyAimPaintProvenance?.changedImpactCells??0,
   originalInsetAfterRealKeyA:b146ActualNativeSourceInward.frozenPolygonMarginAfterKeyA,
   b142StandoffGoalApprovals:
    realNativeEvidence.observedA1NativeStandoffGoalApprovals,

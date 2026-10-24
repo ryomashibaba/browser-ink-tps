@@ -115,6 +115,8 @@ export interface CpuFireRequest {
   weaponId: WeaponId;
   charge: number;
   action: CpuWeaponAction;
+  /** B152 source-only provenance; never grants weapon or stage authority. */
+  qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
 }
 
 type CpuMobilityState =
@@ -202,6 +204,7 @@ export class CpuAgentSystem {
   /** Throttles real QA turf projectiles without altering enemy fire rates. */
   private readonly qaTurfShotCooldown = new Map<string, number>();
   private readonly qaTurfShotsByActor = new Map<string, number>();
+  private b152AcceptedSourceAimShots=0;
   // B64 experimental source-local alternate AIM only. Original FIXED
   // goals and original gameplay authority stay unchanged by default.
   private b64InkAngleSweepEnabled = false;
@@ -318,6 +321,11 @@ export class CpuAgentSystem {
     );
   }
 
+  /** Exact accepted ally-aim requests, not physical projectile proof. */
+  public qaOriginalAllyInkShotRequests():number{
+    return this.b152AcceptedSourceAimShots;
+  }
+
   public reset(humanTeam: Team.A | Team.B): void {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
@@ -326,6 +334,7 @@ export class CpuAgentSystem {
     this.b35DuplicateNativeRequestsSuppressed=0;
     this.qaTurfShotCooldown.clear();
     this.qaTurfShotsByActor.clear();
+    this.b152AcceptedSourceAimShots=0;
     this.b64NoTargetCooldown.clear();
     this.b64Samples=0;
     this.b64CandidatesUnowned=0;
@@ -1652,7 +1661,9 @@ export class CpuAgentSystem {
         if (!target || bot.fireRemaining > 0) return;
         if (!this.cpuTargetInRange(bot, target, profile)) return;
 
-        if (this.queueCpuWeaponRequest(bot, target, 0, 'PROJECTILE')) {
+        if (this.queueCpuWeaponRequest(bot, target, 0, 'PROJECTILE',
+          allyInk&&bot.id==='A1'?'A1_ORIGINAL_ALLY_SUPPORT_INK':undefined)) {
+          if(allyInk&&bot.id==='A1')this.b152AcceptedSourceAimShots++;
           if (turfTarget) {
             this.recordQaSourceTurfShot(bot);
           }
@@ -1999,7 +2010,8 @@ export class CpuAgentSystem {
     bot: CpuBot,
     target: Vec3,
     charge: number,
-    action: CpuWeaponAction = 'PROJECTILE'
+    action: CpuWeaponAction = 'PROJECTILE',
+    qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK'
   ): boolean {
     const profile = weaponProfile(bot.weaponId);
     const inkCost = cpuWeaponInkCost(profile, action, charge);
@@ -2022,7 +2034,8 @@ export class CpuAgentSystem {
       target: target.clone(),
       weaponId: bot.weaponId,
       charge,
-      action
+      action,
+      qaSourceAim
     });
     this.stats.cpuShots += 1;
     return true;
