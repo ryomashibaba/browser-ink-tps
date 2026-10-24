@@ -13,13 +13,17 @@ on:
       - 'scripts/t21-w10b148-original-A1-station-audit.test.mjs'
       - 'scripts/t21-w10b149-native-A1-KCC-contact-audit.mjs'
       - 'scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs'
+      - 'scripts/t21-w10b153-real-A1-support-ink-audit.mjs'
+      - 'scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: b139-original-real-rally-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve the existing genuine B152 Chrome run and its independent
+  # B147-B149 evidence, even when a later QA batch is pushed.
+  cancel-in-progress: false
 jobs:
   genuine-descent-ally:
     name: Native original human walk and A1 physics (${{ matrix.variant }})
@@ -66,7 +70,7 @@ jobs:
         with:
           node-version: '24'
       - name: Run strict real native proof chain regressions
-        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b148-original-A1-station-audit.test.mjs scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs
+        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b148-original-A1-station-audit.test.mjs scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs
       - name: Retrieve independently recorded real opt-in human/A1 feet
         uses: actions/download-artifact@v4
         with:
@@ -99,6 +103,12 @@ jobs:
             /tmp/t21-b147/result/b147-real-native-physical-ally-proof.json \
             /tmp/t21-b147/result/b148-real-native-source-A1-station.json \
             /tmp/t21-b147/result/b149-real-Rapier-KCC-A1-contact.json
+      - name: Independently audit B152/B153 actual source-ink provenance
+        run: |
+          node scripts/t21-w10b153-real-A1-support-ink-audit.mjs \
+            /tmp/t21-b147/ally/w10b139-ally_rally.json \
+            /tmp/t21-b147/fixed/w10b139-fixed_default.json \
+            /tmp/t21-b147/result/b153-native-A1-support-ink-proof.json
       - name: Retain independent measured physical rally verdict, including failures
         if: always()
         uses: actions/upload-artifact@v4

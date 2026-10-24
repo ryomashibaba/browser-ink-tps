@@ -47,3 +47,19 @@ export function b150OriginalAllyInkCandidates(
  }
  return output;
 }
+
+/** B153: spread genuine A1 paint attempts across distinct candidate rays.
+ * Reordering CANNOT authorize any original floor, aim or scoreable paint.
+ * SourceTraffic still validates every rotated candidate using the original
+ * human exclusion, ink ownership, Rapier solid and polygon inset gates.
+ * The submitted proposals are never edited or promoted to game state.
+ */
+export function diversifyB153OriginalAllyInkCandidates(
+ points:readonly B150Foot[],completedApprovals:number
+):readonly B150Foot[]{
+ if(!Number.isSafeInteger(completedApprovals)||completedApprovals<0)
+  return [];
+ if(points.length<=1)return [...points];
+ const start=completedApprovals%points.length;
+ return [...points.slice(start),...points.slice(0,start)];
+}

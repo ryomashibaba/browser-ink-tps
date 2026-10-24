@@ -16,7 +16,8 @@ import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayRe
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
 import {chooseB142OriginalAllyStandoff,mayRetainB143OriginalAllyStandoff}
  from './UndertowF3OriginalAllyStandoff';
-import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates}
+import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
+ diversifyB153OriginalAllyInkCandidates}
  from './UndertowF3OriginalAllySupportInk';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
@@ -58,6 +59,8 @@ export interface F3TrafficSnapshot{
   readonly b150AllySupportInkOptIn:boolean;
   readonly b150SourceCandidateSamples:number;
   readonly b150ApprovedInkAims:number;
+  /** B153 source-verified A1 aim proposals after rotation. */
+  readonly b153DiversifiedAimApprovals:number;
   readonly realGoalRequests:number;
   readonly heldRequests:number;
   readonly engagementGoalRequests:number;
@@ -131,6 +134,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b143UnsafeOrStaleGoalHoldsRejected=0;
  private b150SourceCandidateSamples=0;
  private b150ApprovedInkAims=0;
+ private b153DiversifiedAimApprovals=0;
  private b151LastSupportInkProbeTick=-1;
  private b143ApprovedNativeAllyGoal:{
   readonly target:Vec3;readonly humanFoot:Vec3;readonly lastCheckedTick:number
@@ -350,7 +354,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      source.solidId!==humanSource.solidId||
      !flat(realFoot,source.solidId)||
      !flat(human,humanSource.solidId))return false;
-  for(const samplePoint of b150OriginalAllyInkCandidates(realFoot,human)){
+  const candidates=b150OriginalAllyInkCandidates(realFoot,human);
+  const diversified=diversifyB153OriginalAllyInkCandidates(
+   candidates,this.b150ApprovedInkAims);
+  for(const samplePoint of diversified){
    this.b150SourceCandidateSamples++;
    const sample=this.sourceInk.sampleWorld(
     new Vec3(samplePoint.x,samplePoint.y+.10,samplePoint.z),
@@ -364,6 +371,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       Math.abs(targetHit.point.y-target.y)>.22||
       !flat(target,targetHit.solidId))continue;
    out.copy(target);
+   if(this.b150ApprovedInkAims>0)this.b153DiversifiedAimApprovals++;
    this.b150ApprovedInkAims++;
    return true;
   }
@@ -961,6 +969,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b150AllySupportInkOptIn:this.enableB150AllySupportInk,
     b150SourceCandidateSamples:this.b150SourceCandidateSamples,
     b150ApprovedInkAims:this.b150ApprovedInkAims,
+    b153DiversifiedAimApprovals:this.b153DiversifiedAimApprovals,
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     engagementGoalRequests:this.engagementGoalRequests,
