@@ -9,6 +9,8 @@ on:
       - 'scripts/t21-w10b140-real-physics-sample.test.mjs'
       - 'scripts/t21-w10b147-native-teammate-approach-audit.mjs'
       - 'scripts/t21-w10b147-native-teammate-approach-audit.test.mjs'
+      - 'scripts/t21-w10b148-original-A1-station-audit.mjs'
+      - 'scripts/t21-w10b148-original-A1-station-audit.test.mjs'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
@@ -59,8 +61,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Run strict original-ground physics verifier unit regressions
-        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs
+      - name: Run strict original-ground physics and near-human station verifier regressions
+        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b148-original-A1-station-audit.test.mjs
       - name: Retrieve independently recorded real opt-in human/A1 feet
         uses: actions/download-artifact@v4
         with:
@@ -78,6 +80,13 @@ jobs:
             /tmp/t21-b147/ally/w10b139-ally_rally.json \
             /tmp/t21-b147/fixed/w10b139-fixed_default.json \
             /tmp/t21-b147/result/b147-real-native-physical-ally-proof.json
+      - name: Prove B148 sustained physically stable original-source teammate station
+        run: |
+          node scripts/t21-w10b148-original-A1-station-audit.mjs \
+            /tmp/t21-b147/ally/w10b139-ally_rally.json \
+            /tmp/t21-b147/fixed/w10b139-fixed_default.json \
+            /tmp/t21-b147/result/b147-real-native-physical-ally-proof.json \
+            /tmp/t21-b147/result/b148-real-native-source-A1-station.json
       - name: Retain independent measured physical rally verdict, including failures
         if: always()
         uses: actions/upload-artifact@v4
