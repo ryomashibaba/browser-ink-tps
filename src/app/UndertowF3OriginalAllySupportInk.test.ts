@@ -1,7 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {eligibleB150OriginalAllyInk as eligible,
  b150OriginalAllyInkCandidates as candidates,
- diversifyB153OriginalAllyInkCandidates as diversify}
+ diversifyB153OriginalAllyInkCandidates as diversify,
+ type B150Foot}
  from './UndertowF3OriginalAllySupportInk';
 describe('B150 opt-in real station must precede any source ink aim',()=>{
  const base=()=>({
@@ -35,7 +36,7 @@ describe('B150 opt-in real station must precede any source ink aim',()=>{
 });
 
 describe('B153 diversify only already source-proposed directions',()=>{
- const points=Object.freeze([
+ const points:readonly B150Foot[]=Object.freeze([
   Object.freeze({x:1,y:3,z:38}),Object.freeze({x:2,y:3,z:38}),
   Object.freeze({x:3,y:3,z:38})
  ]);
