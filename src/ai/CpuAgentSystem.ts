@@ -1599,7 +1599,11 @@ export class CpuAgentSystem {
       bot.weaponBurstShotsRemaining > 0;
     // B150 opt-in: source-audited close teammate paints nearby true floor.
     // Existing enemy engagement wins; all real projectile logic is reused.
+    // B151: A SOURCE AIM IS NOT A SHOT. Don't consume a scarce
+    // floor candidate while the genuine weapon fire timer still blocks
+    // a projectile; the original actual CPU weapon decides readiness.
     const allyInk = canTurfPaint && !hasCombatInRange && cooldown <= 0 &&
+      bot.fireRemaining <= 0 &&
       this.f3dSourceGoals?.chooseSourceAllySupportInkTarget?.(
        bot.id,bot.position,this.targetPoint)
       ? this.targetPoint.clone() : null;

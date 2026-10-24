@@ -131,6 +131,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b143UnsafeOrStaleGoalHoldsRejected=0;
  private b150SourceCandidateSamples=0;
  private b150ApprovedInkAims=0;
+ private b151LastSupportInkProbeTick=-1;
  private b143ApprovedNativeAllyGoal:{
   readonly target:Vec3;readonly humanFoot:Vec3;readonly lastCheckedTick:number
  }|null=null;
@@ -326,6 +327,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    cpu:realFoot,human,approvedGoal:approved.target,
    approvedHuman:approved.humanFoot
   }))return false;
+  // The previous B150 loop read 5,052 candidates but approved only 3.
+  // Avoid repeating 42 genuine CPU/Rapier probes at every 60Hz frame.
+  if(this.b137NativeTick-this.b151LastSupportInkProbeTick<8)return false;
+  this.b151LastSupportInkProbeTick=this.b137NativeTick;
   const hit=(p:Readonly<{x:number;y:number;z:number}>)=>
    this.physics!.castStageSegment(new Vec3(p.x,p.y+.65,p.z),
     new Vec3(p.x,p.y-.65,p.z),'ink-projectile');

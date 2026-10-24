@@ -22,7 +22,10 @@ describe('B150 opt-in real station must precede any source ink aim',()=>{
   const cpu=Object.freeze({x:6,y:3,z:48});
   const human=Object.freeze({x:8,y:3,z:48});
   const points=candidates(cpu,human);
-  expect(points).toHaveLength(15);
+  // B151 probes up to 6 source-local radii × 7 angles, filtering
+  // the candidates inside the real human's exclusion area first.
+  expect(points.length).toBeGreaterThan(20);
+  expect(points.length).toBeLessThanOrEqual(42);
   expect(points.every(p=>p.x<=cpu.x+1e-8)).toBe(true);
   expect(points.every(p=>Math.hypot(p.x-human.x,p.z-human.z)>2.6)).toBe(true);
   expect(cpu.x).toBe(6);expect(human.x).toBe(8);

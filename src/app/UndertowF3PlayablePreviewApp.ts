@@ -30,7 +30,7 @@ import {sourcePracticeObjectiveView} from './UndertowF3PracticeObjectiveView';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
-import {SurfaceFlags,Team} from '../ink/types';
+import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
 import {PlayerInput} from '../input/PlayerInput';
@@ -140,6 +140,9 @@ export class UndertowF3PlayablePreviewApp{
  // No approvals, velocities, poses, colliders or NavLinks are changed.
  // B149: explicit URL opt-in, 60Hz READ-ONLY native pair monitoring.
  // Never affects FIXED/ALLY steering, Rapier KCC, or actor pose.
+ private readonly b151AllyActualInk={
+  impactEvents:0,changedImpactCells:0
+ };
  private readonly b149ActualContact={
   enabled:new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
    new URL(location.href).searchParams.get('t21W10B149')==='contactTrace',
@@ -368,7 +371,18 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21F3eMassingMode=this.sourceCompletion.getVisualMode();
   // Read-only truth: fired shots alone are not proof of real ink impact.
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
-   (event,changedCells)=>this.b23InkFeedback.accept(event,changedCells));
+   (event,changedCells)=>{
+    this.b23InkFeedback.accept(event,changedCells);
+    // B151: read the actual per-actor CPU PaintCoordinator outcome only.
+    // Target proposals, shot requests and Foot paint are not impacts.
+    if(this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
+       event.source===PaintSource.Cpu&&event.actorId==='A1'&&
+       (event.type===PaintEventType.Impact||
+        event.type===PaintEventType.WallImpact)){
+     this.b151AllyActualInk.impactEvents++;
+     this.b151AllyActualInk.changedImpactCells+=changedCells;
+    }
+   });
   // Ordinary human input remains unchanged; QA-only axis drive is accepted
   // solely by the opt-in nonproduction fixed-tick source laboratory.
   const qa=new URL(location.href).searchParams;
@@ -2638,6 +2652,12 @@ export class UndertowF3PlayablePreviewApp{
    cpuShots:this.stats.cpuShots,
    cpuSourceTurfShots:this.stats.cpuSourceTurfShots,
    cpuSourceTurfShotsByActor:this.cpu.qaTurfShotSnapshot(),
+   b151AllyRealInkImpactEvidence:{
+    ...this.b151AllyActualInk,
+    source:'REAL_PAINT_COORDINATOR_A1_PROJECTILE_ONLY',
+    originalScoreablePromotions:0,
+    allActualImpactChangesNotNecessarilyFromB151NewAim:true
+   },
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    cpuProjectilePaintHits:this.stats.cpuProjectilePaintHits,
    cpuInkCellsChanged:this.stats.cpuInkCellsChanged,

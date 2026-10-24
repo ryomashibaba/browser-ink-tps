@@ -300,6 +300,7 @@ async function doPhysicalTrial(){
   b150SourceInkCandidates:final.cpu.sourcePatrol.b150SourceCandidateSamples,
   b150VerifiedSourceAimProposals:final.cpu.sourcePatrol.b150ApprovedInkAims,
   b150RealPaintHitsNotInferredFromAimProposals:true,
+  b151A1RealProjectileImpactInk:final.b151AllyRealInkImpactEvidence,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -316,6 +317,11 @@ async function doPhysicalTrial(){
    final.b149ActualNativeHumanA1Contact.actualNearNativeFrames,
   b149ActualHumanKccA1Contacts:
    final.b149ActualNativeHumanA1Contact.actualNativeKccA1Contacts,
+  b151A1SourceTurfShots:final.cpuSourceTurfShotsByActor?.A1??0,
+  b151A1RealImpactInkEvents:
+   final.b151AllyRealInkImpactEvidence?.impactEvents??0,
+  b151A1RealImpactInkChangedCells:
+   final.b151AllyRealInkImpactEvidence?.changedImpactCells??0,
   originalInsetAfterRealKeyA:b146ActualNativeSourceInward.frozenPolygonMarginAfterKeyA,
   b142StandoffGoalApprovals:
    realNativeEvidence.observedA1NativeStandoffGoalApprovals,

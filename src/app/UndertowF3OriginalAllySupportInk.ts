@@ -30,12 +30,20 @@ export function b150OriginalAllyInkCandidates(
  const dx=cpu.x-human.x,dz=cpu.z-human.z,length=Math.hypot(dx,dz);
  if(!Number.isFinite(length)||length<1.7||
     ![cpu.y,human.y].every(Number.isFinite))return [];
- const ux=dx/length,uz=dz/length,angles=[0,Math.PI/4,-Math.PI/4,Math.PI/2,-Math.PI/2];
+ // B151: investigate multiple REAL floor patches on the source side.
+ // The previous 15 sparse proposals had 3 approvals but ZERO A1 shots
+ // in genuine B150 Chromium. Wider/finer proposals are NOT authority:
+ // each must pass the unchanged exact original solid + ink checks.
+ const ux=dx/length,uz=dz/length;
+ const angles=[0,Math.PI/6,-Math.PI/6,Math.PI/3,-Math.PI/3,
+  Math.PI/2,-Math.PI/2];
  const output:B150Foot[]=[];
- for(const radius of [2.4,1.9,3.1])for(const theta of angles){
+ for(const radius of [1.2,1.6,2,2.4,2.8,3.2])for(const theta of angles){
   const c=Math.cos(theta),s=Math.sin(theta);
-  output.push({x:cpu.x+radius*(ux*c-uz*s),y:cpu.y,
-   z:cpu.z+radius*(uz*c+ux*s)});
+  const x=cpu.x+radius*(ux*c-uz*s);
+  const z=cpu.z+radius*(uz*c+ux*s);
+  if(Math.hypot(x-human.x,z-human.z)<=2.6)continue;
+  output.push({x,y:cpu.y,z});
  }
  return output;
 }
