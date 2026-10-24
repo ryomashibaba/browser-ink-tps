@@ -100,6 +100,10 @@ export interface CpuHumanCrowdFootAuthority {
 /** F3D ONLY: source-audited destinations. Never edit real Crowd/Rapier feet. */
 export interface CpuQaSourceGoalAuthority {
   chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean;
+  /** Optional original-source aim, not a new movement or scoring goal. */
+  chooseSourceAllySupportInkTarget?(
+    id:string,realFoot:Vec3,out:Vec3
+  ):boolean;
 }
 
 export interface CpuFireRequest {
@@ -1593,12 +1597,18 @@ export class CpuAgentSystem {
     // throttling may prevent a *new* burst, but must not cancel an active one.
     const finishTurfBurst = profile.weaponClass === 'SPLATLING' &&
       bot.weaponBurstShotsRemaining > 0;
+    // B150 opt-in: source-audited close teammate paints nearby true floor.
+    // Existing enemy engagement wins; all real projectile logic is reused.
+    const allyInk = canTurfPaint && !hasCombatInRange && cooldown <= 0 &&
+      this.f3dSourceGoals?.chooseSourceAllySupportInkTarget?.(
+       bot.id,bot.position,this.targetPoint)
+      ? this.targetPoint.clone() : null;
     const turfTarget = canTurfPaint && !hasCombatInRange &&
       (cooldown <= 0 || finishTurfBurst)
-      ? this.b64InkAngleSweepEnabled?
+      ? allyInk ?? (this.b64InkAngleSweepEnabled?
          this.chooseB64SourceLateralInkTarget(bot,dt) ??
           this.chooseOriginalSourceTurfTarget(bot):
-         this.chooseOriginalSourceTurfTarget(bot) : null;
+         this.chooseOriginalSourceTurfTarget(bot)) : null;
     const target = turfTarget ?? combatTarget;
 
     if (target) this.updateCpuWeaponFacing(bot, target);

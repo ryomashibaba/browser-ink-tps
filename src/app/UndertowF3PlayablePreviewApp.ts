@@ -478,7 +478,14 @@ export class UndertowF3PlayablePreviewApp{
    b31Enabled,b33StableGoals,b34Recover,
    b31Params.get('t21QaDrive')==='source'&&
    b31Params.get('t21W10B93')==='upperDetour',
-   b31Params.get('t21W10B137')==='allyRally');
+   b31Params.get('t21W10B137')==='allyRally',
+   b31Params.get('t21QaDrive')==='source'&&
+   b31Params.get('t21W10B137')==='allyRally'&&
+   b31Params.get('t21W10B150')==='allyInk');
+  this.canvas.dataset.t21B150AllyInk=
+   b31Params.get('t21QaDrive')==='source'&&
+   b31Params.get('t21W10B137')==='allyRally'&&
+   b31Params.get('t21W10B150')==='allyInk'?'SOURCE_ONLY_OPT_IN':'OFF';
   this.canvas.dataset.t21B137AllyRally=
    b31Params.get('t21W10B137')==='allyRally'?
     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT':'FIXED_PATROL_DEFAULT';

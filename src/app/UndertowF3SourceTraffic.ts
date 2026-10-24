@@ -10,12 +10,14 @@ import type {CrowdAgent} from 'recast-navigation';
 import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
 import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
-import {Team} from '../ink/types';
+import {SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
 import {chooseB142OriginalAllyStandoff,mayRetainB143OriginalAllyStandoff}
  from './UndertowF3OriginalAllyStandoff';
+import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates}
+ from './UndertowF3OriginalAllySupportInk';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
@@ -53,6 +55,9 @@ export interface F3TrafficSnapshot{
   readonly b142UnsafeStandoffGoalsDenied:number;
   readonly b143ReauthorizedStableStandoffGoals:number;
   readonly b143UnsafeOrStaleGoalHoldsRejected:number;
+  readonly b150AllySupportInkOptIn:boolean;
+  readonly b150SourceCandidateSamples:number;
+  readonly b150ApprovedInkAims:number;
   readonly realGoalRequests:number;
   readonly heldRequests:number;
   readonly engagementGoalRequests:number;
@@ -124,6 +129,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b142UnsafeStandoffGoalsDenied=0;
  private b143ReauthorizedStableStandoffGoals=0;
  private b143UnsafeOrStaleGoalHoldsRejected=0;
+ private b150SourceCandidateSamples=0;
+ private b150ApprovedInkAims=0;
  private b143ApprovedNativeAllyGoal:{
   readonly target:Vec3;readonly humanFoot:Vec3;readonly lastCheckedTick:number
  }|null=null;
@@ -187,7 +194,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableStableSourceGoal=false,
   private readonly enableB34SourceStallRecovery=false,
   private readonly enableB93UpperDetour=false,
-  private readonly enableB137OriginalAllyRally=false
+  private readonly enableB137OriginalAllyRally=false,
+  private readonly enableB150AllySupportInk=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -291,6 +299,70 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
   }
   return true;
+ }
+
+ /** B150 source-only real A1 teammate ink support. Real source foot,
+  * approved B142/B143 station, same original Rapier solid, original
+  * footprint margin and genuinely unowned Paintable cells are mandatory.
+  * Never mutate player, bot, NavMesh, stage or scoreable authority.
+  */
+ chooseSourceAllySupportInkTarget(id:string,realFoot:Vec3,out:Vec3):boolean{
+  const bot=this.bots.find(b=>b.id===id);
+  const approved=this.b143ApprovedNativeAllyGoal;
+  if(!this.enableB150AllySupportInk||
+     !this.enableB137OriginalAllyRally||id!=='A1'||
+     !bot||bot.team!==Team.A||bot.lifeState==='SPLATTED'||
+     bot.mobilityState!=='GROUND'||!bot.agent||
+     !this.freeCombat||!this.physicallyRejoined.has('A1')||
+     !this.b137HumanFootValid||!this.sourceInk||!this.physics||!approved||
+     this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+     this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+     this.stage.navigationLinks?.length!==26||
+     this.stage.paintSurfaces.some(s=>(s.flags & SurfaceFlags.Scoreable)!==0))
+   return false;
+  const human=this.b137ActualHumanFoot;
+  if(!eligibleB150OriginalAllyInk({
+   nativeTick:this.b137NativeTick,approvedTick:approved.lastCheckedTick,
+   cpu:realFoot,human,approvedGoal:approved.target,
+   approvedHuman:approved.humanFoot
+  }))return false;
+  const hit=(p:Readonly<{x:number;y:number;z:number}>)=>
+   this.physics!.castStageSegment(new Vec3(p.x,p.y+.65,p.z),
+    new Vec3(p.x,p.y-.65,p.z),'ink-projectile');
+  const flat=(p:Vec3,id:string)=>{
+   const f=inspectB130OriginalFlatSource({
+    nativeTick:this.b137NativeTick,
+    actualRapierBody:[p.x,p.y+
+     PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,p.z],
+    actualRapierSupportId:id
+   });
+   return !!f?.insideRegisteredOriginalXZFootprint&&
+    f.originalFlatVerticalBandWithin22cm&&
+    f.distanceToOriginalPolygonBoundaryMeters>=.75;
+  };
+  const source=hit(realFoot),humanSource=hit(human);
+  if(!source||!humanSource||
+     source.solidId!==humanSource.solidId||
+     !flat(realFoot,source.solidId)||
+     !flat(human,humanSource.solidId))return false;
+  for(const samplePoint of b150OriginalAllyInkCandidates(realFoot,human)){
+   this.b150SourceCandidateSamples++;
+   const sample=this.sourceInk.sampleWorld(
+    new Vec3(samplePoint.x,samplePoint.y+.10,samplePoint.z),
+    .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+   if(!sample||sample.owner===Team.A||sample.surface.isScoreable)continue;
+   const target=sample.surface.localToWorld(sample.u,sample.v);
+   if(![target.x,target.y,target.z].every(Number.isFinite)||
+      Math.hypot(target.x-human.x,target.z-human.z)<=2.6)continue;
+   const targetHit=hit(target);
+   if(!targetHit||targetHit.solidId!==source.solidId||
+      Math.abs(targetHit.point.y-target.y)>.22||
+      !flat(target,targetHit.solidId))continue;
+   out.copy(target);
+   this.b150ApprovedInkAims++;
+   return true;
+  }
+  return false;
  }
 
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
@@ -881,6 +953,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b143ReauthorizedStableStandoffGoals,
      b143UnsafeOrStaleGoalHoldsRejected:
       this.b143UnsafeOrStaleGoalHoldsRejected,
+    b150AllySupportInkOptIn:this.enableB150AllySupportInk,
+    b150SourceCandidateSamples:this.b150SourceCandidateSamples,
+    b150ApprovedInkAims:this.b150ApprovedInkAims,
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     engagementGoalRequests:this.engagementGoalRequests,
