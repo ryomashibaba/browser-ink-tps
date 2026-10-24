@@ -36,6 +36,8 @@ import {b154OriginalTeamInkOptIn}
  from './W10B154OriginalTeamInkMode';
 import {buildB155OriginalSourceConnectivityReview}
  from './W10B155OriginalSourceConnectivityReview';
+import {triageB156OriginalGaps}
+ from './W10B156OriginalGapTriage';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -2733,6 +2735,8 @@ export class UndertowF3PlayablePreviewApp{
    },
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
+   b156OriginalUnderpassGapTriage:
+    triageB156OriginalGaps(this.b155SourceConnectivityReview),
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -2774,11 +2778,13 @@ export class UndertowF3PlayablePreviewApp{
    '#t21-f3-b155-source-routes');
   if(b155Panel){
    const audit=state.b155OriginalSourceConnectivityReview;
+   const triage=state.b156OriginalUnderpassGapTriage;
    b155Panel.textContent=
     'F4 ORIGINAL · Recast '+audit.mustReachRecastPaths+
-    '/6 authored endpoints · underpass ±Z '+audit.heldDiagnosticGaps+
-    ' HELD · original ray misses/offset '+
-    audit.diagnosticOriginalRayMisses+'/10 · 4v4 unverified';
+    '/6 normal paths · underpass ±Z: '+
+    (triage.bothSidesNativeRecastStoppedShort?
+     'both STOP ~32m short':'both HELD / require further evidence')+
+    ' · original midspan support UNVERIFIED · 4v4 HOLD';
    b155Panel.dataset.t21B155StageAuthority=audit.stage;
    b155Panel.dataset.t21B155UnderpassAuthorized='false';
    b155Panel.dataset.t21B155RealKccRouteCertified='false';
@@ -2860,9 +2866,12 @@ export class UndertowF3PlayablePreviewApp{
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
    'F4 SOURCE CONNECTIVITY · Recast '+
     state.b155OriginalSourceConnectivityReview.mustReachRecastPaths+
-    '/6 original endpoints; underpass ±Z HELD 2/2; ray misses/offset '+
-    state.b155OriginalSourceConnectivityReview.diagnosticOriginalRayMisses+
-    '/10 (not KCC proof) · 4v4 HOLD',
+    '/6 endpoints · underpass ±Z '+
+    state.b156OriginalUnderpassGapTriage.sides.map(x=>
+     x.side+':'+x.recastClassification+
+     ' '+(x.remainingNativeEndpointErrorMeters?.toFixed(1)??'N/A')+
+     'm').join(' · ')+
+    ' · original faces NOT yet matched · 4v4 HOLD',
    'B27 SOURCE MOTION · '+(state.b27KineticSourceView.enabled?'ON':'QA BASELINE')+
     ' / real foot '+state.b27KineticSourceView.nativeGroundSpeedMetersPerSecond+
     'm/s / visual FOV '+state.b27KineticSourceView.fieldOfViewDegrees+

@@ -24,6 +24,10 @@ export interface B155RouteWitness{
  recastEndSnapMeters:number|null;
  recastEndpointErrorMeters:number|null;
  recastPathPoints:number;
+ /** Genuine path terminal returned by Recast, may stop before the target. */
+ recastPathTerminal:readonly [number,number,number]|null;
+ /** Measured distance from real path's last waypoint to requested goal. */
+ recastPathTerminalToRequestedGoalMeters:number|null;
  /** Physical stage RAY hits only; not player KCC or confirmed traversal. */
  originalStageRayWitnesses:readonly {
   fraction:number;originalSolidId:string|null;
@@ -75,6 +79,9 @@ export function buildB155OriginalSourceConnectivityReview(
  const routes:B155RouteWitness[]=probes.map(probe=>{
   const a=new Vec3(...probe.from),b=new Vec3(...probe.to);
   const path:NativePathAudit=nav.auditPath(a,b);
+  const terminal=path.nativePathPoints[path.nativePathPoints.length-1];
+  const terminalDist=terminal?Math.hypot(
+   terminal.x-b.x,terminal.y-b.y,terminal.z-b.z):null;
   const evidence=[0,.25,.5,.75,1].map(fraction=>{
    const x=a.x+(b.x-a.x)*fraction;
    const y=a.y+(b.y-a.y)*fraction;
@@ -98,6 +105,9 @@ export function buildB155OriginalSourceConnectivityReview(
    recastEndSnapMeters:finiteOrNull(path.endSnapDistanceMeters),
    recastEndpointErrorMeters:finiteOrNull(path.endpointErrorMeters),
    recastPathPoints:path.pointCount,
+   recastPathTerminal:terminal?[terminal.x,terminal.y,terminal.z]:null,
+   recastPathTerminalToRequestedGoalMeters:
+    terminalDist===null?null:finiteOrNull(terminalDist),
    originalStageRayWitnesses:evidence,
    likelyMissingFloorRaySamples:evidence.filter(v=>!v.apparentOriginalSupport).length,
    status:probe.expectation==='DIAGNOSTIC_GAP'

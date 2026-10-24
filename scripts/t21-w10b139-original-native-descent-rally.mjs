@@ -315,6 +315,8 @@ async function doPhysicalTrial(){
   // These observations NEVER certify a continuous original KCC route.
   b155OriginalSourceConnectivityReview:
    final.b155OriginalSourceConnectivityReview,
+  b156OriginalUnderpassGapTriage:
+   final.b156OriginalUnderpassGapTriage,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -353,6 +355,13 @@ async function doPhysicalTrial(){
    final.b155OriginalSourceConnectivityReview.heldDiagnosticGaps,
   b155OriginalUnderpassStaticRayMisses:
    final.b155OriginalSourceConnectivityReview.diagnosticOriginalRayMisses,
+  b156BothUnderpassesPathStoppedShort:
+   final.b156OriginalUnderpassGapTriage.bothSidesNativeRecastStoppedShort,
+  b156UnderpassNativeTerminalPoints:
+   final.b156OriginalUnderpassGapTriage.sides.map(x=>({
+    side:x.side,pathTerminus:x.nativePathTerminal,
+    endpointErrorMeters:x.remainingNativeEndpointErrorMeters
+   })),
   b154PerActorRealInkChangedCells:
    Object.fromEntries(Object.entries(final.b154NativeSevenCpuInk.byActor)
     .map(([id,v])=>[id,v.changedCells])),
