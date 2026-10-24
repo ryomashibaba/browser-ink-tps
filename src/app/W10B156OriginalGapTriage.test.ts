@@ -75,7 +75,11 @@ describe('B156 actual-evidence interpreter (synthetic fixture only)',()=>{
  });
  it('keeps bad source authority, invalid intermediate ray or missing path held',()=>{
   const data=witness();
-  expect(()=>triage({...data,productionAuthorized:true}))
+  // Test an intentionally malformed external witness; it must not type-check
+  // as a normally produced B155 source report.
+  const forged={...data,productionAuthorized:true} as unknown
+   as B155SourceConnectivityReview;
+  expect(()=>triage(forged))
    .toThrow(/ORIGINAL_EVIDENCE_AUTHORITY/);
   expect(()=>triage({...data,routes:data.routes.slice(1)}))
    .toThrow(/ORIGINAL_EVIDENCE_AUTHORITY/);
