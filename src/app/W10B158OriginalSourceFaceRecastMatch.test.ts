@@ -57,9 +57,8 @@ describe('B158 original CI688 exact triangles / actual-source witness matching',
  });
  it('rejects unsafe stage authority and missing genuine Recast terminals',()=>{
   const f=fixture(true);
-  expect(()=>match({...f,productionAuthorized:true}
-    as unknown as B157OriginalBidirectionalSourceAudit))
-   .toThrow(/SOURCE_FACE_AUTHORITY/);
+  const forged={...f,productionAuthorized:true} as unknown as B157OriginalBidirectionalSourceAudit;
+  expect(()=>match(forged)).toThrow(/SOURCE_FACE_AUTHORITY/);
   const bad={...f,sides:f.sides.map((x,i)=>i===0?{
    ...x,forwardNativeTerminal:null
   }:x)} as unknown as B157OriginalBidirectionalSourceAudit;
