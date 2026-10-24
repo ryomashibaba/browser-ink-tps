@@ -21,6 +21,8 @@ on:
       - 'src/app/UndertowF3OriginalAllySupportInk.test.ts'
       - 'src/app/W10B154OriginalTeamInkMode.ts'
       - 'src/app/W10B154OriginalTeamInkMode.test.ts'
+      - 'src/app/W10B155OriginalSourceConnectivityReview.ts'
+      - 'src/app/W10B155OriginalSourceConnectivityReview.test.ts'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
@@ -46,7 +48,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-w10b140-real-physics-sample.test.mjs scripts/t21-w10b147-native-teammate-approach-audit.test.mjs
+      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-w10b140-real-physics-sample.test.mjs scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Real shared Rapier PlayerController KCC-to-CPU collider identity regression
         run: npx vitest run src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts

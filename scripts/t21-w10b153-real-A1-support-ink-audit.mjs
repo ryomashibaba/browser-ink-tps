@@ -51,6 +51,15 @@ export function auditB153OriginalAllyAimInk(ally,fixed){
     ally.b149ActualNativeHumanA1Contact?.actualNativeKccA1Contacts!==0||
     fixed.b149ActualNativeHumanA1Contact?.actualNativeKccA1Contacts!==0)
   stop('WRONG_NATIVE_ORIGINAL_AUTHORITY_OR_UNSAFE_RALLY');
+ // Keep diagnostic failures specific: reject any fixed-mode attributed
+ // source-only projectile evidence before normal numeric consistency gates.
+ // Genuine FIXED_DEFAULT has none; early rejection only changes error order.
+ const fixedProvenance=fixed?.b152ExactOriginalAllyAimPaintProvenance;
+ if(fixedProvenance&&[
+  'acceptedSourceAimShotRequests','spawned','originalSourceSurfaceCollisions',
+  'impactEvents','changedImpactCells','zeroChangedInkImpacts'
+ ].some(key=>fixedProvenance[key]!==0))
+  stop('FIXED_DEFAULT_PROVENANCE_CONTAMINATION');
  const a=sourceWitness(ally,true),f=sourceWitness(fixed,false);
  if(f.acceptedSourceAimShotRequests!==0||f.spawned!==0||
     f.originalSourceSurfaceCollisions!==0||f.impactEvents!==0||

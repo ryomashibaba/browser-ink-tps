@@ -34,6 +34,8 @@ import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
 import {b154OriginalTeamInkOptIn}
  from './W10B154OriginalTeamInkMode';
+import {buildB155OriginalSourceConnectivityReview}
+ from './W10B155OriginalSourceConnectivityReview';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -139,6 +141,9 @@ export class UndertowF3PlayablePreviewApp{
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
+ /** Read-only original underpass gap review; never CPU path authority. */
+ private readonly b155SourceConnectivityReview:
+  ReturnType<typeof buildB155OriginalSourceConnectivityReview>;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
@@ -362,6 +367,11 @@ export class UndertowF3PlayablePreviewApp{
   this.nav=new RecastStageNavigation(this.rawStage,this.stats);
   this.physics=new RapierStagePhysics(STEP,this.rawStage);
   this.physics.step();
+  // B155/F4: read real original Recast paths and Rapier stage rays
+  // once per boot; never fabricate missing walkway or NavLink.
+  this.b155SourceConnectivityReview=
+   buildB155OriginalSourceConnectivityReview(
+    this.rawStage,this.nav,this.physics);
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
@@ -602,6 +612,11 @@ export class UndertowF3PlayablePreviewApp{
    'Source-only practice · NOT a scored 4v4 match</p>'+
    '<p style="margin:7px 0 9px;color:#ffcea9;font:700 11px system-ui">'+
    'Two map sectors remain disconnected · no turf winner</p>'+
+   '<div id="t21-f3-b155-source-routes" role="status" style="'+
+    'margin:7px 0;padding:7px;border:1px solid #ffce8b55;'+
+    'border-radius:6px;font:11px/1.4 system-ui;color:#ffe7bd">'+
+    'Original underpass ±Z connectivity: UNVERIFIED'+
+   '</div>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
    '<button id="t21-f3-reset" type="button">Reset (R)</button></div>'+
@@ -2717,6 +2732,7 @@ export class UndertowF3PlayablePreviewApp{
     scoreablePromotions:0,full4v4Certified:false
    },
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
+   b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -2754,6 +2770,19 @@ export class UndertowF3PlayablePreviewApp{
   // card immediately instead of leaving stale RUNNING text on screen.
   this.refreshB25PaintRun();
   const state=this.snapshot();
+  const b155Panel=this.panel.querySelector<HTMLElement>(
+   '#t21-f3-b155-source-routes');
+  if(b155Panel){
+   const audit=state.b155OriginalSourceConnectivityReview;
+   b155Panel.textContent=
+    'F4 ORIGINAL · Recast '+audit.mustReachRecastPaths+
+    '/6 authored endpoints · underpass ±Z '+audit.heldDiagnosticGaps+
+    ' HELD · original ray misses/offset '+
+    audit.diagnosticOriginalRayMisses+'/10 · 4v4 unverified';
+   b155Panel.dataset.t21B155StageAuthority=audit.stage;
+   b155Panel.dataset.t21B155UnderpassAuthorized='false';
+   b155Panel.dataset.t21B155RealKccRouteCertified='false';
+  }
   if(state.b112OriginalHumanGround.enabled){
    const ground=state.b112OriginalHumanGround;
    const line=this.panel.querySelector<HTMLElement>('#t21-f3-b113-floor-state');
@@ -2829,6 +2858,11 @@ export class UndertowF3PlayablePreviewApp{
         a.actualTravelMeters.toFixed(1)+'m actual').join(' · ')
     :'',
    'Traffic · '+(p.freeCombatEnabled?'SOURCE-LOCAL PATROL':'SAFE STAGED DESCENT'),
+   'F4 SOURCE CONNECTIVITY · Recast '+
+    state.b155OriginalSourceConnectivityReview.mustReachRecastPaths+
+    '/6 original endpoints; underpass ±Z HELD 2/2; ray misses/offset '+
+    state.b155OriginalSourceConnectivityReview.diagnosticOriginalRayMisses+
+    '/10 (not KCC proof) · 4v4 HOLD',
    'B27 SOURCE MOTION · '+(state.b27KineticSourceView.enabled?'ON':'QA BASELINE')+
     ' / real foot '+state.b27KineticSourceView.nativeGroundSpeedMetersPerSecond+
     'm/s / visual FOV '+state.b27KineticSourceView.fieldOfViewDegrees+

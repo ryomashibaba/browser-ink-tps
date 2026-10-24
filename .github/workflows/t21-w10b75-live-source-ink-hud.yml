@@ -29,6 +29,8 @@ on:
       - 'src/app/UndertowF3OriginalAllySupportInk.test.ts'
       - 'src/app/W10B154OriginalTeamInkMode.ts'
       - 'src/app/W10B154OriginalTeamInkMode.test.ts'
+      - 'src/app/W10B155OriginalSourceConnectivityReview.ts'
+      - 'src/app/W10B155OriginalSourceConnectivityReview.test.ts'
       - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
       - 'scripts/t21-w10b80-native-stall-classifier.mjs'
       - 'scripts/t21-w10b80-native-stall-classifier.test.mjs'
@@ -48,12 +50,12 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3OriginalAllyRally.test.ts src/app/UndertowF3OriginalAllyProximity.test.ts src/app/UndertowF3OriginalAllyStandoff.test.ts src/app/UndertowF3OriginalAllySupportInk.test.ts src/app/W10B152AllyPaintProvenance.test.ts src/app/W10B154OriginalTeamInkMode.test.ts
+      - run: npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3OriginalAllyRally.test.ts src/app/UndertowF3OriginalAllyProximity.test.ts src/app/UndertowF3OriginalAllyStandoff.test.ts src/app/UndertowF3OriginalAllySupportInk.test.ts src/app/W10B152AllyPaintProvenance.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/W10B155OriginalSourceConnectivityReview.test.ts
       - run: |
           node --test scripts/t21-w10b131-trigger-matrix.test.mjs
           node --test scripts/t21-w10b134-native-edge-cadence.test.mjs
           node --test scripts/t21-w10b135-native-combat-pulse.test.mjs
-          node --test scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs
+          node --test scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs
           node --check scripts/t21-w10b75-live-native-ink-hud.mjs
           node --check scripts/t21-w10b80-native-stall-classifier.mjs
           node --test scripts/t21-w10b80-native-stall-classifier.test.mjs

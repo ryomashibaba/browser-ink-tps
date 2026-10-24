@@ -60,7 +60,10 @@ test('B153 rejects contaminated fixed default and fabricated cell proof',()=>{
   /CHANGED_CELLS_WITHOUT/);
  assert.throws(()=>run({spawned:1,originalSourceSurfaceCollisions:2}),
   /INCONSISTENT_NATIVE/);
- assert.throws(()=>run({impactEvents:8}),
+ // Keep the chain internally consistent to reach the independent
+ // all-A1 paint comparison, rather than failing an earlier invariant.
+ assert.throws(()=>run({spawned:8,originalSourceSurfaceCollisions:8,
+   impactEvents:8}),
   /TAGGED_PROVENANCE_EXCEEDS/);
  assert.throws(()=>run({scoreablePromotions:1}),/MISSING_REAL_ORIGINAL/);
  assert.throws(()=>run({qaOptIn:false}),/MISSING_REAL_ORIGINAL/);

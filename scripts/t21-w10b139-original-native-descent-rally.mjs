@@ -311,6 +311,10 @@ async function doPhysicalTrial(){
    final.b152ExactAllyAimPaintProvenance,
   b154NativeSevenCpuInk:final.b154NativeSevenCpuInk,
   b154SourceInkSweepAuthority:final.b64SourceInkSweep,
+  // B155: actual original NavMesh + registered Rapier source-only rays.
+  // These observations NEVER certify a continuous original KCC route.
+  b155OriginalSourceConnectivityReview:
+   final.b155OriginalSourceConnectivityReview,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -343,6 +347,12 @@ async function doPhysicalTrial(){
   b152SourceAimChangedCells:
    final.b152ExactAllyAimPaintProvenance?.changedImpactCells??0,
   b154TeamCoverageOptIn:b154TeamCoverage,
+  b155ActualRecastAuthorisedEndpointCount:
+   final.b155OriginalSourceConnectivityReview.mustReachRecastPaths,
+  b155UnverifiedOriginalUnderpassGaps:
+   final.b155OriginalSourceConnectivityReview.heldDiagnosticGaps,
+  b155OriginalUnderpassStaticRayMisses:
+   final.b155OriginalSourceConnectivityReview.diagnosticOriginalRayMisses,
   b154PerActorRealInkChangedCells:
    Object.fromEntries(Object.entries(final.b154NativeSevenCpuInk.byActor)
     .map(([id,v])=>[id,v.changedCells])),
