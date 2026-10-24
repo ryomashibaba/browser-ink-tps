@@ -17,6 +17,10 @@ on:
       - 'scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs'
       - 'scripts/t21-w10b154-seven-cpu-source-coverage-audit.mjs'
       - 'scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs'
+      - 'src/app/UndertowF3OriginalAllySupportInk.ts'
+      - 'src/app/UndertowF3OriginalAllySupportInk.test.ts'
+      - 'src/app/W10B154OriginalTeamInkMode.ts'
+      - 'src/app/W10B154OriginalTeamInkMode.test.ts'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
