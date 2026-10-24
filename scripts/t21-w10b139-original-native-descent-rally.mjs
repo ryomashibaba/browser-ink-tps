@@ -109,6 +109,13 @@ async function nativeOriginalKeyboard(stage,observe){
  */
 async function playB162GenuineAllySync(routeSteps){
  const checkpoint=await snapshot();authority(checkpoint,'FIXED');
+ // Native B139 original successful entrance camera orientation.
+ // Restore this through REAL mouse movement after human upper practice;
+ // never assign camera yaw/pitch or player/cpu body positions.
+ const originalCamera=checkpoint.cameraSourcePractice;
+ if(!Number.isFinite(originalCamera?.yawDegrees)||
+    !Number.isFinite(originalCamera?.pitchDegrees))
+  fail('B164_ORIGINAL_NATIVE_CAMERA_REFERENCE_MISSING');
  for(const type of ['keyDown','keyUp'])
   await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
    windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
@@ -213,6 +220,35 @@ async function playB162GenuineAllySync(routeSteps){
     human.b25SourcePaintRun.realGroundedTravelMeters>=12){
   // Advance via B139's already-known genuine original source descent
   // toward A1. Only real CDP key events, actual KCC and source geometry.
+  // B164: upper challenge shooting legitimately rotates player view.
+  // B139 true-native source route was certified under ORIGINAL heading.
+  // Reacquire that heading via actual CDP mouse input before using same
+  // W200/D12/W18/A12/coast physical route (not camera state injection).
+  for(let attempt=0;attempt<4;attempt++){
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+    x:800,y:450,button:'none'});
+   const angle=(await snapshot()).cameraSourcePractice;
+   const yawError=wrap(originalCamera.yawDegrees-angle.yawDegrees);
+   const pitchError=originalCamera.pitchDegrees-angle.pitchDegrees;
+   if(Math.abs(yawError)<1.2&&Math.abs(pitchError)<1.2)break;
+   const dx=Math.round(yawError/.22);
+   const dy=Math.round(-pitchError/.18);
+   if(!Number.isFinite(dx)||!Number.isFinite(dy)||
+      Math.abs(dx)>720||Math.abs(dy)>500)
+    fail('B164_ORIGINAL_CAMERA_REAIM_UNSUPPORTED');
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+    x:800+dx,y:450+dy,button:'none'});
+  }
+  const heading=(await snapshot()).cameraSourcePractice;
+  const headingDelta=Math.abs(wrap(originalCamera.yawDegrees-heading.yawDegrees));
+  const pitchDelta=Math.abs(originalCamera.pitchDegrees-heading.pitchDegrees);
+  const headingWitness={phase:'B164_REAL_CDP_RESTORED_ORIGINAL_HEADING',
+   nativeTick:(await snapshot()).tick,
+   originalCamera,actualHeading:heading,headingDelta,pitchDelta};
+  history162.push(headingWitness);
+  saveAttempt(await snapshot(),'B164_NATIVE_ORIGINAL_CAMERA_OBSERVED');
+  if(headingDelta>3||pitchDelta>3)
+   fail('B164_TRUE_ORIGINAL_MOUSE_REAIM_NOT_CONFIRMED');
   for(const stage of routeSteps){
    const n=await nativeOriginalKeyboard(stage,()=>{});
    const p=n.b25SourcePaintRun;
@@ -228,6 +264,76 @@ async function playB162GenuineAllySync(routeSteps){
    console.log('B163_REAL_A1_APPROACH',JSON.stringify(measurement));
    if(['CLEAR','ABORTED','TIME_UP'].includes(p.status))break;
   }
+  // B164: the independently proven B139 ALLY_RALLY source foot was
+  // (0.1375, 3.8951, 48.1784) and produced 7 REAL original A1
+  // source projectile impacts. This is a REFERENCE to a genuine past
+  // human KCC state, not a teleport, new NavLink or invented route.
+  const supportedOriginalFoot=[.137514,3.895089,48.178444];
+  const originalLowerDistance=n=>Math.hypot(
+   n.player.position[0]-supportedOriginalFoot[0],
+   n.player.position[2]-supportedOriginalFoot[2]);
+  const sourceSafeFoot=n=>
+   n.matchState==='PLAYING'&&
+   n.player.position.every(Number.isFinite)&&
+   n.player.position[1]>=3.55&&n.player.position[1]<=4.65&&
+   n.player.position[0]>=-1.2&&n.player.position[0]<=4.8&&
+   n.player.position[2]>=46.8&&n.player.position[2]<=52.5&&
+   n.b25SourcePaintRun.status==='RUNNING';
+  // Only if the original route landed elsewhere, use SMALL real
+  // bounded original movement inputs, checking real KCC after each.
+  // Stop rather than bridge a gap, virtualize motion, or adjust actors.
+  let previousDistance=originalLowerDistance(await snapshot());
+  for(let i=0;i<17&&previousDistance>.85;i++){
+   const before=await snapshot();authority(before,'FIXED');
+   if(!sourceSafeFoot(before)){
+    saveAttempt(before,'B164_HOLD_REAL_LOWER_SOURCE_KCC_OUTSIDE_GUARD');
+    break;
+   }
+   const key=before.player.position[0]>supportedOriginalFoot[0]+.5?
+    'KeyA':before.player.position[2]>supportedOriginalFoot[2]+.5?
+     'KeyW':'KeyS';
+   const moved=await nativeOriginalKeyboard({
+    name:'B164_REAL_BOUNDED_ORIGINAL_FOOT_CORRECTION_'+(i+1),
+    keys:[key],ticks:6
+   },()=>{});
+   const distance=originalLowerDistance(moved);
+   const witness={phase:'B164_ACTUAL_KCC_TO_PREVIOUSLY_PROVEN_B139_FOOT',
+    step:i+1,nativeTick:moved.tick,keyUsed:key,
+    currentTrueBody:moved.player.position,
+    originalB139HumanReference:supportedOriginalFoot,
+    horizontalDistanceBeforeMeters:previousDistance,
+    horizontalDistanceAfterMeters:distance,
+    actualA1TaggedChangedCells:
+     moved.b152ExactAllyAimPaintProvenance.changedImpactCells,
+    actualA1SourceAimShotRequests:
+     moved.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests,
+    sourcePatrolApprovedRallies:
+     moved.cpu.sourcePatrol.b137ApprovedNativeRallies,
+    sourcePatrolApprovedA1InkAims:
+     moved.cpu.sourcePatrol.b150ApprovedInkAims};
+   history162.push(witness);
+   saveAttempt(moved,'B164_TRUE_ORIGINAL_BOUNDED_KCC_CORRECTION');
+   console.log('B164_TRUE_ORIGINAL_KCC_CORRECTION',JSON.stringify(witness));
+   if(!sourceSafeFoot(moved)||distance>previousDistance+.45){
+    saveAttempt(moved,'B164_HOLD_NO_SAFE_PROGRESS_ON_ACTUAL_ORIGINAL_KCC');
+    break;
+   }
+   previousDistance=distance;
+  }
+  const actualLower=await snapshot();authority(actualLower,'FIXED');
+  const lowerReport={
+   phase:'B164_ACTUAL_ORIGINAL_SUPPORT_RALLY_ELIGIBILITY_WITNESS',
+   tick:actualLower.tick,actualBody:actualLower.player.position,
+   originalReference:supportedOriginalFoot,
+   distanceToPreviouslyNativeProvenBody:originalLowerDistance(actualLower),
+   approvedRallies:actualLower.cpu.sourcePatrol.b137ApprovedNativeRallies,
+   approvedA1InkAims:actualLower.cpu.sourcePatrol.b150ApprovedInkAims,
+   acceptedRealA1AimShots:
+    actualLower.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests
+  };
+  history162.push(lowerReport);
+  saveAttempt(actualLower,'B164_GENUINE_LOWER_SOURCE_FOOT_AND_A1_GATE');
+  console.log('B164_ACTUAL_SOURCE_STANDOFF_WITNESS',JSON.stringify(lowerReport));
  }else{
   saveAttempt(human,'B163_HOLD_REAL_HUMAN_OBJECTIVES_UNMET');
   console.log('B163_NATIVE_HUMAN_OBJECTIVE_HOLD',
