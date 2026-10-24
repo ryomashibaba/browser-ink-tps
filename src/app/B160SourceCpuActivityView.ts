@@ -10,7 +10,7 @@ export interface B160OriginalCpuInkSource{
  originalScoreablePromotions:number;
  normalPreviewDefaultChanged:boolean;productionAuthorized:boolean;
  teamAChangedCells:number;teamBChangedCells:number;
- byActor:Record<ActorId,{
+ byActor:Record<string,{
   stampEvents:number;changedCells:number;impactEvents:number;
   impactChangedCells:number;footChangedCells:number
  }>;
