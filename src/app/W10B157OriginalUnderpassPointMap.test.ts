@@ -45,8 +45,7 @@ describe('B157 original registered endpoint map visual is NOT a path',()=>{
  });
  it('fails closed if original runtime score/nav authority changes',()=>{
   const {b155,b157}=props();
-  const altered={...b157,addedNavigationLinks:1}
-   as unknown as B157OriginalBidirectionalSourceAudit;
+  const altered={...b157,addedNavigationLinks:1} as unknown as B157OriginalBidirectionalSourceAudit;
   expect(()=>map(b155,altered)).toThrow(/UNAUTHORIZED_SOURCE_MAP/);
  });
 });
