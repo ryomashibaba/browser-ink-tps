@@ -15,6 +15,8 @@ on:
       - 'scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs'
       - 'scripts/t21-w10b153-real-A1-support-ink-audit.mjs'
       - 'scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs'
+      - 'scripts/t21-w10b154-seven-cpu-source-coverage-audit.mjs'
+      - 'scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
@@ -32,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [FIXED_DEFAULT, ALLY_RALLY]
+        variant: [FIXED_DEFAULT, ALLY_RALLY, TEAM_COVERAGE]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -70,7 +72,7 @@ jobs:
         with:
           node-version: '24'
       - name: Run strict real native proof chain regressions
-        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b148-original-A1-station-audit.test.mjs scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs
+        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs scripts/t21-w10b148-original-A1-station-audit.test.mjs scripts/t21-w10b149-native-A1-KCC-contact-audit.test.mjs scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs
       - name: Retrieve independently recorded real opt-in human/A1 feet
         uses: actions/download-artifact@v4
         with:
@@ -81,6 +83,11 @@ jobs:
         with:
           name: b139-original-FIXED_DEFAULT
           path: /tmp/t21-b147/fixed
+      - name: Retrieve real combined seven-CPU ink and A1 ally actions
+        uses: actions/download-artifact@v4
+        with:
+          name: b139-original-TEAM_COVERAGE
+          path: /tmp/t21-b147/team
       - name: Certify only actual source-backed physically convergent A1 behavior
         run: |
           mkdir -p /tmp/t21-b147/result
@@ -109,6 +116,13 @@ jobs:
             /tmp/t21-b147/ally/w10b139-ally_rally.json \
             /tmp/t21-b147/fixed/w10b139-fixed_default.json \
             /tmp/t21-b147/result/b153-native-A1-support-ink-proof.json
+      - name: Compare three actual source-only 7CPU ink variants
+        run: |
+          node scripts/t21-w10b154-seven-cpu-source-coverage-audit.mjs \
+            /tmp/t21-b147/fixed/w10b139-fixed_default.json \
+            /tmp/t21-b147/ally/w10b139-ally_rally.json \
+            /tmp/t21-b147/team/w10b139-team_coverage.json \
+            /tmp/t21-b147/result/b154-seven-cpu-source-coverage.json
       - name: Retain independent measured physical rally verdict, including failures
         if: always()
         uses: actions/upload-artifact@v4

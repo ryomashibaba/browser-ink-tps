@@ -12,9 +12,10 @@ const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
 // B139: independent true-Chromium runs with identical real input; only
 // the native source-backed A1 rally URL flag differs. Never the default.
 const variant=process.env.T21_B139_VARIANT;
-if(!['FIXED_DEFAULT','ALLY_RALLY'].includes(variant))
+if(!['FIXED_DEFAULT','ALLY_RALLY','TEAM_COVERAGE'].includes(variant))
  throw Error('B139_EXPLICIT_VARIANT_REQUIRED');
-const allyOptIn=variant==='ALLY_RALLY';
+const allyOptIn=variant!=='FIXED_DEFAULT';
+const b154TeamCoverage=variant==='TEAM_COVERAGE';
 const children=[],pending=new Map(),history=[];
 let socket=null,sequence=0;
 const fail=reason=>{throw Error('B140_'+reason);};
@@ -61,7 +62,11 @@ function authority(n,mode){
  if(n.stopReason||n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
     n.originalSourceNavigationLinks!==26||n.sourceScoreablePromotions!==0||
     n.productionAuthorized!==false||n.unrestricted4v4Certified!==false||
-    n.b64SourceInkSweep.enabled!==(mode==='SWEEP'))fail('SOURCE_AUTHORITY_OR_MODE');
+    n.b64SourceInkSweep.enabled!==b154TeamCoverage||
+    n.b154NativeSevenCpuInk?.coordinatedMode!==b154TeamCoverage||
+    n.b154NativeSevenCpuInk?.originalScoreablePromotions!==0||
+    n.b154NativeSevenCpuInk?.normalPreviewDefaultChanged!==false)
+   fail('SOURCE_AUTHORITY_OR_MODE');
 }
 async function picture(name){
  const bytes=Buffer.from((await cmd('Page.captureScreenshot',{
@@ -103,6 +108,7 @@ async function doPhysicalTrial(){
  const search=await evaluate('location.search');
  if(search!==('?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
    (allyOptIn?'&t21W10B137=allyRally&t21W10B150=allyInk':'')+
+   (b154TeamCoverage?'&t21W10B154=teamCoverage':'')+
    '&t21W10B149=contactTrace'))
   fail('INVALID_SOURCE_PRACTICE_URL');
  await click(800,450);
@@ -303,6 +309,8 @@ async function doPhysicalTrial(){
   b151A1RealProjectileImpactInk:final.b151AllyRealInkImpactEvidence,
   b152ExactOriginalAllyAimPaintProvenance:
    final.b152ExactAllyAimPaintProvenance,
+  b154NativeSevenCpuInk:final.b154NativeSevenCpuInk,
+  b154SourceInkSweepAuthority:final.b64SourceInkSweep,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -334,6 +342,16 @@ async function doPhysicalTrial(){
    final.b152ExactAllyAimPaintProvenance?.impactEvents??0,
   b152SourceAimChangedCells:
    final.b152ExactAllyAimPaintProvenance?.changedImpactCells??0,
+  b154TeamCoverageOptIn:b154TeamCoverage,
+  b154PerActorRealInkChangedCells:
+   Object.fromEntries(Object.entries(final.b154NativeSevenCpuInk.byActor)
+    .map(([id,v])=>[id,v.changedCells])),
+  b154AllSevenCpuInkChangedCells:
+   Object.values(final.b154NativeSevenCpuInk.byActor)
+    .reduce((sum,v)=>sum+v.changedCells,0),
+  b154ConfirmedCpuProjectileInkCells:
+   Object.values(final.b154NativeSevenCpuInk.byActor)
+    .reduce((sum,v)=>sum+v.impactChangedCells,0),
   originalInsetAfterRealKeyA:b146ActualNativeSourceInward.frozenPolygonMarginAfterKeyA,
   b142StandoffGoalApprovals:
    realNativeEvidence.observedA1NativeStandoffGoalApprovals,
@@ -372,6 +390,7 @@ async function run(){
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
    (allyOptIn?'&t21W10B137=allyRally&t21W10B150=allyInk':'')+
+   (b154TeamCoverage?'&t21W10B154=teamCoverage':'')+
    '&t21W10B149=contactTrace'});
  const ready=()=>until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),100000);

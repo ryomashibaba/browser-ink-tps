@@ -1,0 +1,25 @@
+# W10-B154 — 7-CPU original-source team ink coverage (batched QA)
+
+**2026-10-24 JST**. QA-only development `dev/t21-f4e103w-qa-infra`; original stage authority must remain 25 physics solids / 17 paintable surfaces / 26 authored NavLinks / 0 Scoreable, 0/12 verified natural cross-team access. Not a full Nintendo 180-second 4v4.
+
+## Verified inputs, not a claim for B154
+- Existing B64/B65 original-source Chromium 120-second FIXED vs SWEEP replicated twice: genuine CPU changed cells 3,615 vs 11,417, 7 shooting source actors, original geometry and patrol unchanged, original 4v4 and winner unavailable. B64 sweep not automatically promoted to default.
+- B152 exact-shot provenance `d654a371...`, actual B139 ALLY_RALLY: 6 A1 support-aim CPU requests -> 6 real projectile spawns -> 6 original-surface impacts -> 6 actual rasterized paint events -> **175 changed source cells**; FIXED 0 tagged ally support-aim changes.
+- B153 had a source-only A1 aim-rotation change; its exact-SHA Chrome verification may still be pending. Do **not** attribute B154 changes to B153 unless independently measured.
+
+## B154 delivered in one integrated batch
+1. **Explicit combined playable non-production mode** `?t21Play=preview&t21QaDrive=source&t21W10B137=allyRally&t21W10B150=allyInk&t21W10B154=teamCoverage`. Runs existing source-verified B64 lateral original-source ownership-directed ink target finder for all seven actual Recast/Rapier CPUs, while preserving B152/B153 ally station source aim priority for genuine human and A1. This changes only CPU shot aim in QA; it does not write CPU/player feet, Recast links, stage geometry, paint requests without actual projectiles, or score masks. Normal T20/Pages/default F3 remains FIXED, opt-in B64/B68 remain separate.
+2. **Per-CPU true ink contribution** recorded after normal authoritative `PaintCoordinator.processTick` rasterization (not candidate or request counts). Snapshot and source diagnostics show all seven actor IDs, accepted stamp events, real changed owner cells, real projectile impact changes, foot paint changes, actual QA accepted source turf-shot requests, and team A vs team B real changed-cell totals. Each is a monotonically accumulated within-session source-only measurement; it is not certified Turf percent or winner. Reset clears every diagnostic.
+3. **Third real-Chromium source variant** `TEAM_COVERAGE` appended to the existing B139 baseline `FIXED_DEFAULT` and `ALLY_RALLY` native input program. Keep original genuine seven physical CPU joins, real mouse/keyboard steps W200 D12 W18 A12/COAST60, shared Rapier KCC, exact same 25/17/26/0 gate. Existing B147/B148/B149 and B153 independent safety + A1 aim-to-ink audit still consume real FIXED and ALLY. New B154 independent audit also consumes TEAM_COVERAGE, validates all seven original CPU ink measurement records, negative/no-authority assertions, coherent A/B totals, original 7 CPU actual physics, strict explicit mode flags, and writes source `b154-seven-cpu-source-coverage.json` in the existing proof artifact.
+4. **Batch regressions**: pure source-only combined-mode query-gating Vitest (all flags mandatory), B154 native-audit negative tests (missing actor, forged changed cell counts, false production or default activation, inconsistent teams), existing B75 preflight + B139 proof QA. No synthetic fixture can be used as actual gameplay evidence.
+
+## Exact run and acceptance gates
+- B154 commit test preflight & Chromium must complete **on the same SHA**. Inspect [the QA branch](https://github.com/ryomashibaba/browser-ink-tps/tree/dev/t21-f4e103w-qa-infra) and B139 real native proof artifact.
+- Check original seven physical CPU joins, 0 real KCC/player A1 contact, no actual actor relocation, `b154NativeSevenCpuInk.coordinatedMode` true only in TEAM_COVERAGE, `b64SourceInkSweep.enabled` true only there, and all seven actor paint changes.
+- Only `SCOPED_REAL_SEVEN_CPU_INK_PARTICIPATION` means all seven real actors changed some original-source cells in this observed trial. A positive delta from another real independent variant is **not** a controlled causal proof, map completeness, opponent access, original 4v4 or legal Turf score.
+- If any test fails or the combined mode reduces actual painting, leave mode opt-in, debug or revert source aiming; never relax the original map authority.
+
+## Explicit limits and next milestone
+This is an unscored limited original-source practice. The two team sectors still have no independently certified walkable original connection; real across-teams engagement remains unsupported. Maintain `activationReady=false`, `productionAuthorized=false`, `unrestricted4v4Certified=false`, and full original 4v4 **HOLD**. Frozen `main`, T19C/T20 stable, Pages, Draft PR #5 and original Windows source are not modified.
+
+After actual B154 evidence, prioritize genuine 180-second multi-CPU participation, session-level per-team real ink and human control experience, plus independent original-map traversal / source-derived connectivity reconstruction. Avoid repeated minute micro-stages with no visible gameplay value.

@@ -32,6 +32,8 @@ import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
+import {b154OriginalTeamInkOptIn}
+ from './W10B154OriginalTeamInkMode';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -148,6 +150,11 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b152ProvenAllyAimInk={
   impactEvents:0,changedImpactCells:0,zeroChangedInkImpacts:0
  };
+ // B154 authentic per-CPU accepted ink; source-only observation, no bonus.
+ private readonly b154AcceptedCpuInk=new Map<string,{
+  stampEvents:number;changedCells:number;
+  impactEvents:number;impactChangedCells:number;footChangedCells:number;
+ }>();
  private readonly b149ActualContact={
   enabled:new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
    new URL(location.href).searchParams.get('t21W10B149')==='contactTrace',
@@ -378,6 +385,25 @@ export class UndertowF3PlayablePreviewApp{
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
    (event,changedCells)=>{
     this.b23InkFeedback.accept(event,changedCells);
+    // B154: real rasterized changes from ALL seven native original CPUs.
+    // A projectile request, candidate or a fake actor is never paint.
+    if(event.source===PaintSource.Cpu&&event.actorId&&
+       ['A1','A2','A3','B1','B2','B3','B4'].includes(event.actorId)){
+     const ink=this.b154AcceptedCpuInk.get(event.actorId)??{
+      stampEvents:0,changedCells:0,
+      impactEvents:0,impactChangedCells:0,footChangedCells:0
+     };
+     ink.stampEvents++;
+     ink.changedCells+=changedCells;
+     if(event.type===PaintEventType.Impact||
+        event.type===PaintEventType.WallImpact){
+      ink.impactEvents++;
+      ink.impactChangedCells+=changedCells;
+     }
+     if(event.type===PaintEventType.Foot)
+      ink.footChangedCells+=changedCells;
+     this.b154AcceptedCpuInk.set(event.actorId,ink);
+    }
     // B151: read the actual per-actor CPU PaintCoordinator outcome only.
     // Target proposals, shot requests and Foot paint are not impacts.
     if(this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
@@ -526,10 +552,15 @@ export class UndertowF3PlayablePreviewApp{
   // nonproduction only; the ordinary F3 preview remains proven FIXED.
   // No experimental-source normal-default promotion without separate
   // measured, independently reviewed full-session evidence.
+  // B154: combine independently tested source A1 support + seven-source-
+  // CPU lateral ink behind a THIRD explicit source QA flag only.
+  const b154TeamCoverage=b154OriginalTeamInkOptIn(b31Params);
   if((b31Params.get('t21QaDrive')==='source'&&
        b31Params.get('t21W10B64')==='inkAngleSweep')||
-      b68NormalPreviewSweep)
+      b68NormalPreviewSweep||b154TeamCoverage)
    this.cpu.enableB64NativeSourceInkAngleSweep();
+  this.canvas.dataset.t21B154TeamCoverage=
+   b154TeamCoverage?'SOURCE_ONLY_EXPERIMENT':'DISABLED';
   this.canvas.dataset.t21B68NormalPreviewSweep=
    b68NormalPreviewSweep?'EXPERIMENTAL_ONLY':'NOT_ENABLED';
   // Original T21 preview retains the verified fixed native steering.
@@ -1537,6 +1568,7 @@ export class UndertowF3PlayablePreviewApp{
   this.b152ProvenAllyAimInk.impactEvents=0;
   this.b152ProvenAllyAimInk.changedImpactCells=0;
   this.b152ProvenAllyAimInk.zeroChangedInkImpacts=0;
+  this.b154AcceptedCpuInk.clear();
   // The source-grounded preview uses the same seven real bots. A full
   // actor reset is a deliberate manual restart, not a mid-fall teleport.
   this.cpu.reset(Team.A);
@@ -2685,6 +2717,26 @@ export class UndertowF3PlayablePreviewApp{
     scoreablePromotions:0,full4v4Certified:false
    },
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
+   b154NativeSevenCpuInk:{
+    coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
+     'SOURCE_ONLY_EXPERIMENT',
+    byActor:Object.fromEntries(['A1','A2','A3','B1','B2','B3','B4'].map(id=>[
+     id,{...(this.b154AcceptedCpuInk.get(id)??{
+      stampEvents:0,changedCells:0,
+      impactEvents:0,impactChangedCells:0,footChangedCells:0
+     })}
+    ])),
+    source:'REAL_PAINT_COORDINATOR_GAMEPLAY_INK_ACCEPTED_CHANGES',
+    excludesUnexecutedCpuShotRequests:true,
+    actualAcceptedSourceTurfShotRequests:
+     this.cpu.qaTurfShotSnapshot(),
+    teamAChangedCells:['A1','A2','A3'].reduce(
+     (sum,id)=>sum+(this.b154AcceptedCpuInk.get(id)?.changedCells??0),0),
+    teamBChangedCells:['B1','B2','B3','B4'].reduce(
+     (sum,id)=>sum+(this.b154AcceptedCpuInk.get(id)?.changedCells??0),0),
+    sourceOnly:true,originalScoreablePromotions:0,
+    normalPreviewDefaultChanged:false,productionAuthorized:false
+   },
    cpuProjectilePaintHits:this.stats.cpuProjectilePaintHits,
    cpuInkCellsChanged:this.stats.cpuInkCellsChanged,
    cpuImpactInkCellsChanged:this.stats.cpuImpactInkCellsChanged,
@@ -2877,6 +2929,11 @@ export class UndertowF3PlayablePreviewApp{
    'REAL CPU INK · '+state.cpuImpactInkCellsChanged+
     ' impact-recolored cells / '+state.cpuInkCellsChanged+
     ' all CPU-recolored cells · 0 scoreable',
+   'B154 ACTUAL CPU PAINT · '+Object.entries(state.b154NativeSevenCpuInk.byActor)
+    .map(([id,v])=>id+':'+v.changedCells+' cells').join(' · ')+
+    ' / TEAM A '+state.b154NativeSevenCpuInk.teamAChangedCells+
+    ' vs B '+state.b154NativeSevenCpuInk.teamBChangedCells+
+    ' · UNSCORED',
    'TURF SHOTS BY ACTOR · '+Object.entries(state.cpuSourceTurfShotsByActor)
     .map(([id,shots])=>id+':'+shots).join(' · '),
    'Shots '+state.shotsFired+' | CPU shots '+state.cpuShots+
