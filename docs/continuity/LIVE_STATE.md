@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `24a902e76b9efd99a97d85d0a3205f5ab211e998`
+- 同期元QA HEAD: `ae2bcdc8557f91f937f556d9b67673a08c87dae9`
 - 最新番号のQAレポート: W10-B154 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B154-original-seven-cpu-team-ink-batched.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B155 （着手・完了の保証ではない）
