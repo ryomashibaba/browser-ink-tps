@@ -17,7 +17,11 @@ test('B139 genuine source-only real keyboard first descent and 7 CPU gating',()=
  const helper=readFileSync('scripts/t21-w10b140-real-physics-sample.mjs','utf8');
  assert.match(helper,/originalRapierSupportId/);
  assert.match(helper,/actualHumanKccBody:\[\.\.\.realHumanBody\]/);
- assert.match(w,/variant: \[FIXED_DEFAULT, ALLY_RALLY\]/);
+ assert.match(w,/variant: \[FIXED_DEFAULT, ALLY_RALLY, TEAM_COVERAGE\]/);
+ assert.match(s,/const allyOptIn=variant!=='FIXED_DEFAULT'/);
+ assert.match(s,/const b154TeamCoverage=variant==='TEAM_COVERAGE'/);
+ // Third variant is opt-in and cannot contaminate either frozen baseline.
+ assert.match(s,/b154TeamCoverage\?'&t21W10B154=teamCoverage'/);
 });
 test('B139 makes no synthetic game progress or source authority promotions',()=>{
  for(const forbidden of ["qaDriveTicks(", "teleport(", "setTranslation(", "this.matchState='PLAYING'"])
