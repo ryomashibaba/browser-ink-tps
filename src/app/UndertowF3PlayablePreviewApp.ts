@@ -44,6 +44,8 @@ import {renderB157OriginalUnderpassPointMap}
  from './W10B157OriginalUnderpassPointMap';
 import {matchB158OriginalSourceFaces}
  from './W10B158OriginalSourceFaceRecastMatch';
+import {examineB159OriginalSourceFaceProjections}
+ from './W10B159OriginalFaceNavMeshProjection';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -156,6 +158,8 @@ export class UndertowF3PlayablePreviewApp{
   ReturnType<typeof auditB157OriginalBidirectionalGaps>;
  private readonly b158OriginalSourceFaceRecastMatch:
   ReturnType<typeof matchB158OriginalSourceFaces>;
+ private readonly b159OriginalFaceNavMeshProjection:
+  ReturnType<typeof examineB159OriginalSourceFaceProjections>;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
@@ -394,6 +398,13 @@ export class UndertowF3PlayablePreviewApp{
   // CI #691 negative path trial still honored; NO solid/nav/paint changes.
   this.b158OriginalSourceFaceRecastMatch=
    matchB158OriginalSourceFaces(this.b157OriginalBidirectionalSourceAudit);
+  // B159: read-only original Temple01 source Face → current actual
+  // Recast nearest polygon and original Rapier registered collider.
+  // 42 finite samples, without adding geometry or navigation.
+  this.b159OriginalFaceNavMeshProjection=
+   examineB159OriginalSourceFaceProjections(
+    this.rawStage,this.nav,this.physics,
+    this.b158OriginalSourceFaceRecastMatch);
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
@@ -2766,6 +2777,8 @@ export class UndertowF3PlayablePreviewApp{
     this.b157OriginalBidirectionalSourceAudit,
    b158OriginalSourceFaceRecastMatch:
     this.b158OriginalSourceFaceRecastMatch,
+   b159OriginalFaceNavMeshProjection:
+    this.b159OriginalFaceNavMeshProjection,
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -2830,7 +2843,12 @@ export class UndertowF3PlayablePreviewApp{
      .filter(x=>x.terminal==='FORWARD')
      .map(x=>x.side+':'+x.originalTriangleSpatialDistanceMeters.toFixed(1)+'m')
      .join(' / ')+
-    ' · CI #691 route failed · 4v4 HOLD';
+    ' · B159 source centroid near Recast '+state.b159OriginalFaceNavMeshProjection
+     .components.reduce((n,x)=>n+x.nearNavMeshSamples035m,0)+
+    '/42, real registered rays '+
+    state.b159OriginalFaceNavMeshProjection.components
+     .reduce((n,x)=>n+x.rayHitRegisteredOriginalSolidCount,0)+
+    '/42 (not source membership) · CI #691 failed · 4v4 HOLD';
    b155Panel.dataset.t21B155StageAuthority=audit.stage;
    b155Panel.dataset.t21B155UnderpassAuthorized='false';
    b155Panel.dataset.t21B155RealKccRouteCertified='false';
@@ -2923,6 +2941,10 @@ export class UndertowF3PlayablePreviewApp{
      state.b158OriginalSourceFaceRecastMatch.comparisons.map(x=>
       x.id+':'+x.originalRouteComponentId+' '+
       x.originalTriangleSpatialDistanceMeters.toFixed(2)+'m').join(' · ')+
+    ' · B159 original 42-source-face 3D Recast projections '+
+     state.b159OriginalFaceNavMeshProjection.components.map(x=>
+      x.id+':'+x.nearNavMeshSamples035m+'/'+x.originalFaceCount+
+      ' near').join(' · ')+
     ' · CI691 failed: 4v4 HOLD',
    'B27 SOURCE MOTION · '+(state.b27KineticSourceView.enabled?'ON':'QA BASELINE')+
     ' / real foot '+state.b27KineticSourceView.nativeGroundSpeedMetersPerSecond+

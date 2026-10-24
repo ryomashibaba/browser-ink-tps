@@ -321,6 +321,8 @@ async function doPhysicalTrial(){
    final.b157OriginalBidirectionalSourceAudit,
   b158OriginalSourceFaceRecastMatch:
    final.b158OriginalSourceFaceRecastMatch,
+  b159OriginalFaceNavMeshProjection:
+   final.b159OriginalFaceNavMeshProjection,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -361,6 +363,16 @@ async function doPhysicalTrial(){
    final.b155OriginalSourceConnectivityReview.diagnosticOriginalRayMisses,
   b156BothUnderpassesPathStoppedShort:
    final.b156OriginalUnderpassGapTriage.bothSidesNativeRecastStoppedShort,
+  b159ActualOriginalSourceFaceProjectedNear:
+   final.b159OriginalFaceNavMeshProjection.components.reduce(
+    (sum,x)=>sum+x.nearNavMeshSamples035m,0),
+  b159Original42FaceNativeProjectionByComponent:
+   final.b159OriginalFaceNavMeshProjection.components.map(x=>({
+    component:x.id,faceCount:x.originalFaceCount,
+    nativeProjections:x.successfulNativeProjectionCount,
+    nativeNear035m:x.nearNavMeshSamples035m,
+    exactRegisteredColliderHits:x.exactSourceComponentColliderHitCount
+   })),
   b158NearestExactOriginalSourceFaces:
    final.b158OriginalSourceFaceRecastMatch.comparisons.map(x=>({
     side:x.side,terminal:x.terminal,

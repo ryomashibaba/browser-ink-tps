@@ -122,6 +122,32 @@ export class RecastStageNavigation {
       : { x: position.x, y: position.y, z: position.z };
   }
 
+  /**
+   * B159 read-only original Recast nearest-poly observation.
+   * Unlike closestPoint(), failed queries return null, never the request
+   * coordinate disguised as a native NavMesh point.
+   * Native proximity is NOT proof of source Face membership or KCC travel.
+   */
+  public auditNavMeshProjection(position: Vec3): {
+    success: boolean;
+    nearestPoint: Readonly<{x:number;y:number;z:number}>|null;
+    distanceMeters: number|null;
+  } {
+    const result=this.query.findClosestPoint({
+      x:position.x,y:position.y,z:position.z
+    });
+    if(!result.success||!result.point)return {
+      success:false,nearestPoint:null,distanceMeters:null
+    };
+    const nearestPoint={x:result.point.x,y:result.point.y,z:result.point.z};
+    const distanceMeters=distance3(position,
+      new Vec3(nearestPoint.x,nearestPoint.y,nearestPoint.z));
+    if(!Number.isFinite(distanceMeters))return {
+      success:false,nearestPoint:null,distanceMeters:null
+    };
+    return {success:true,nearestPoint,distanceMeters};
+  }
+
   public auditPath(
     from: Vec3,
     to: Vec3,
