@@ -38,6 +38,10 @@ import {buildB155OriginalSourceConnectivityReview}
  from './W10B155OriginalSourceConnectivityReview';
 import {triageB156OriginalGaps}
  from './W10B156OriginalGapTriage';
+import {auditB157OriginalBidirectionalGaps}
+ from './W10B157OriginalBidirectionalSourceAudit';
+import {renderB157OriginalUnderpassPointMap}
+ from './W10B157OriginalUnderpassPointMap';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -146,6 +150,8 @@ export class UndertowF3PlayablePreviewApp{
  /** Read-only original underpass gap review; never CPU path authority. */
  private readonly b155SourceConnectivityReview:
   ReturnType<typeof buildB155OriginalSourceConnectivityReview>;
+ private readonly b157OriginalBidirectionalSourceAudit:
+  ReturnType<typeof auditB157OriginalBidirectionalGaps>;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
@@ -374,6 +380,12 @@ export class UndertowF3PlayablePreviewApp{
   this.b155SourceConnectivityReview=
    buildB155OriginalSourceConnectivityReview(
     this.rawStage,this.nav,this.physics);
+  // B157: reversed REAL Recast reachability for the existing two gaps
+  // plus read-only Rapier casts at the native Recast terminal points.
+  // Original movement, stage, navigation, CPU and score stay frozen.
+  this.b157OriginalBidirectionalSourceAudit=
+   auditB157OriginalBidirectionalGaps(
+    this.rawStage,this.nav,this.physics,this.b155SourceConnectivityReview);
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
@@ -619,6 +631,11 @@ export class UndertowF3PlayablePreviewApp{
     'border-radius:6px;font:11px/1.4 system-ui;color:#ffe7bd">'+
     'Original underpass ±Z connectivity: UNVERIFIED'+
    '</div>'+
+   '<details style="margin:5px 0 8px;padding:5px;border:1px solid #48697b">'+
+    '<summary style="cursor:pointer;color:#d8eaff">F4 source gap map'+
+    ' (original endpoints & real Recast terminals; no road)</summary>'+
+    '<div id="t21-f3-b157-original-map" style="margin-top:6px"></div>'+
+   '</details>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
    '<button id="t21-f3-reset" type="button">Reset (R)</button></div>'+
@@ -2737,6 +2754,8 @@ export class UndertowF3PlayablePreviewApp{
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b156OriginalUnderpassGapTriage:
     triageB156OriginalGaps(this.b155SourceConnectivityReview),
+   b157OriginalBidirectionalSourceAudit:
+    this.b157OriginalBidirectionalSourceAudit,
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -2774,6 +2793,14 @@ export class UndertowF3PlayablePreviewApp{
   // card immediately instead of leaving stale RUNNING text on screen.
   this.refreshB25PaintRun();
   const state=this.snapshot();
+  const b157Map=this.panel.querySelector<HTMLElement>(
+   '#t21-f3-b157-original-map');
+  if(b157Map&&b157Map.dataset.nativeReadOnlyMapReady!=='true'){
+   b157Map.innerHTML=renderB157OriginalUnderpassPointMap(
+    this.b155SourceConnectivityReview,
+    this.b157OriginalBidirectionalSourceAudit);
+   b157Map.dataset.nativeReadOnlyMapReady='true';
+  }
   const b155Panel=this.panel.querySelector<HTMLElement>(
    '#t21-f3-b155-source-routes');
   if(b155Panel){
@@ -2783,8 +2810,12 @@ export class UndertowF3PlayablePreviewApp{
     'F4 ORIGINAL · Recast '+audit.mustReachRecastPaths+
     '/6 normal paths · underpass ±Z: '+
     (triage.bothSidesNativeRecastStoppedShort?
-     'both STOP ~32m short':'both HELD / require further evidence')+
-    ' · original midspan support UNVERIFIED · 4v4 HOLD';
+     'both forward paths STOP ~32m short':'forward paths HELD')+
+    ' · reverse '+state.b157OriginalBidirectionalSourceAudit.sides.map(
+     x=>(x.side==='POSITIVE_Z'?'+Z':'-Z')+':'+
+     (x.reverseRecastEndpointReached?'RECAST REACHED':'NOT REACHED')
+    ).join('/')+
+    ' · only registered rays, 4v4 HOLD';
    b155Panel.dataset.t21B155StageAuthority=audit.stage;
    b155Panel.dataset.t21B155UnderpassAuthorized='false';
    b155Panel.dataset.t21B155RealKccRouteCertified='false';
@@ -2871,6 +2902,8 @@ export class UndertowF3PlayablePreviewApp{
      x.side+':'+x.recastClassification+
      ' '+(x.remainingNativeEndpointErrorMeters?.toFixed(1)??'N/A')+
      'm').join(' · ')+
+    ' · B157 reverse '+state.b157OriginalBidirectionalSourceAudit.sides.map(
+     x=>x.side+':'+x.routeDiagnosis).join(' · ')+
     ' · original faces NOT yet matched · 4v4 HOLD',
    'B27 SOURCE MOTION · '+(state.b27KineticSourceView.enabled?'ON':'QA BASELINE')+
     ' / real foot '+state.b27KineticSourceView.nativeGroundSpeedMetersPerSecond+

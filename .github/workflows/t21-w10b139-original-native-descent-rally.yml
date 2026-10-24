@@ -25,6 +25,10 @@ on:
       - 'src/app/W10B155OriginalSourceConnectivityReview.test.ts'
       - 'src/app/W10B156OriginalGapTriage.ts'
       - 'src/app/W10B156OriginalGapTriage.test.ts'
+      - 'src/app/W10B157OriginalBidirectionalSourceAudit.ts'
+      - 'src/app/W10B157OriginalBidirectionalSourceAudit.test.ts'
+      - 'src/app/W10B157OriginalUnderpassPointMap.ts'
+      - 'src/app/W10B157OriginalUnderpassPointMap.test.ts'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:

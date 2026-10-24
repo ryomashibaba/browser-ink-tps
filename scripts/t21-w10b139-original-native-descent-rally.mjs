@@ -317,6 +317,8 @@ async function doPhysicalTrial(){
    final.b155OriginalSourceConnectivityReview,
   b156OriginalUnderpassGapTriage:
    final.b156OriginalUnderpassGapTriage,
+  b157OriginalBidirectionalSourceAudit:
+   final.b157OriginalBidirectionalSourceAudit,
   physicalRallyCompletionCertified:false,
   formalOriginal4v4Certified:false
  };
@@ -357,6 +359,13 @@ async function doPhysicalTrial(){
    final.b155OriginalSourceConnectivityReview.diagnosticOriginalRayMisses,
   b156BothUnderpassesPathStoppedShort:
    final.b156OriginalUnderpassGapTriage.bothSidesNativeRecastStoppedShort,
+  b157ReverseUnderpassNativeSourcePaths:
+   final.b157OriginalBidirectionalSourceAudit.sides.map(x=>({
+    side:x.side,reverseReached:x.reverseRecastEndpointReached,
+    reverseRemainingMeters:x.reverseTerminalRemainingStartMeters,
+    forwardOriginalStageRayHit:x.forwardTerminalOriginalStageSolid,
+    routeDiagnosis:x.routeDiagnosis
+   })),
   b156UnderpassNativeTerminalPoints:
    final.b156OriginalUnderpassGapTriage.sides.map(x=>({
     side:x.side,pathTerminus:x.nativePathTerminal,

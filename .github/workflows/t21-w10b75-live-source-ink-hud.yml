@@ -33,6 +33,10 @@ on:
       - 'src/app/W10B155OriginalSourceConnectivityReview.test.ts'
       - 'src/app/W10B156OriginalGapTriage.ts'
       - 'src/app/W10B156OriginalGapTriage.test.ts'
+      - 'src/app/W10B157OriginalBidirectionalSourceAudit.ts'
+      - 'src/app/W10B157OriginalBidirectionalSourceAudit.test.ts'
+      - 'src/app/W10B157OriginalUnderpassPointMap.ts'
+      - 'src/app/W10B157OriginalUnderpassPointMap.test.ts'
       - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
       - 'scripts/t21-w10b80-native-stall-classifier.mjs'
       - 'scripts/t21-w10b80-native-stall-classifier.test.mjs'
@@ -52,7 +56,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3OriginalAllyRally.test.ts src/app/UndertowF3OriginalAllyProximity.test.ts src/app/UndertowF3OriginalAllyStandoff.test.ts src/app/UndertowF3OriginalAllySupportInk.test.ts src/app/W10B152AllyPaintProvenance.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/W10B155OriginalSourceConnectivityReview.test.ts src/app/W10B156OriginalGapTriage.test.ts
+      - run: npx vitest run src/app/UndertowF3OriginalEdgeGuidance.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3LiveSourceInkActivity.test.ts src/app/UndertowF3HumanInkCoach.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3OriginalAllyRally.test.ts src/app/UndertowF3OriginalAllyProximity.test.ts src/app/UndertowF3OriginalAllyStandoff.test.ts src/app/UndertowF3OriginalAllySupportInk.test.ts src/app/W10B152AllyPaintProvenance.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/W10B155OriginalSourceConnectivityReview.test.ts src/app/W10B156OriginalGapTriage.test.ts src/app/W10B157OriginalBidirectionalSourceAudit.test.ts src/app/W10B157OriginalUnderpassPointMap.test.ts
       - run: |
           node --test scripts/t21-w10b131-trigger-matrix.test.mjs
           node --test scripts/t21-w10b134-native-edge-cadence.test.mjs
