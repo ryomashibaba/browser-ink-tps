@@ -33,10 +33,10 @@ export interface F3TrafficCpu{
  id:string;team:Team.A|Team.B;position:Vec3;agent:CrowdAgent|null;
  mobilityState:string;thinkRemaining:number;paintRemaining:number;
  fireRemaining:number;jumpCooldownSeconds:number;
- lifeState?:'ACTIVE'|'SPLATTED';
+ lifeState?:'ACTIVE'|'SPLATTED';hp?:number;
 }
 export interface F3TrafficSnapshot{
- readonly cpu:readonly {id:string;mobilityState:string;released:boolean;rejoined:boolean;lastMovedTick:number;physicalFoot:[number,number,number]}[];
+ readonly cpu:readonly {id:string;mobilityState:string;released:boolean;rejoined:boolean;lastMovedTick:number;physicalFoot:[number,number,number];lifeState:'ACTIVE'|'SPLATTED'|'UNKNOWN';hp:number|null}[];
  readonly physicalFirstDrops:readonly string[];
  readonly physicalRejoins:readonly string[];
  readonly landingCorridorsCleared:readonly string[];
@@ -945,7 +945,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    cpu:this.bots.map(b=>({id:b.id,mobilityState:b.mobilityState,
     released:this.released.has(b.id),rejoined:this.physicallyRejoined.has(b.id),
     lastMovedTick:this.lastMoved.get(b.id)??0,
-    physicalFoot:[b.position.x,b.position.y,b.position.z] as [number,number,number]})),
+    physicalFoot:[b.position.x,b.position.y,b.position.z] as [number,number,number],
+     lifeState:b.lifeState??'UNKNOWN',hp:Number.isFinite(b.hp)?b.hp!:null})),
    physicalFirstDrops:[...this.physicallyFalling],
    physicalRejoins:[...this.physicallyRejoined],
    landingCorridorsCleared:[...this.cleared],

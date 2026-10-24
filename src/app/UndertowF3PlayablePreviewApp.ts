@@ -31,6 +31,7 @@ import {summarizeB165OriginalAllyPractice}
  from './B165OriginalAllyPracticeProgress';
 import {getB166OriginalAllyRendezvous}
  from './B166OriginalAllyRendezvous';
+import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -247,6 +248,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
+ private readonly b167CombatNotice:HTMLElement;
  private b141RealAllyIndicator:HTMLElement|null=null;
  private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
@@ -885,6 +887,22 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  // B167 genuine opponent awareness, always read-only and scoreless.
+  const combatNotice=document.createElement('aside');
+  combatNotice.id='t21-f3-b167-combat-cue';
+  combatNotice.setAttribute('aria-label','Original physical opponent contact cue');
+  combatNotice.dataset.productionAuthority='NONE';
+  combatNotice.dataset.originalScoreable='0';
+  combatNotice.dataset.originalCrossMapPathCertified='false';
+  combatNotice.style.cssText='position:fixed;top:104px;left:50%;'+
+   'transform:translateX(-50%);z-index:38;pointer-events:none;'+
+   'max-width:min(440px,94vw);box-sizing:border-box;padding:6px 12px;'+
+   'border-radius:10px;background:rgba(5,18,33,.84);'+
+   'border:1px solid rgba(255,159,195,.56);color:#ffe4ee;'+
+   'font:750 11px/1.45 system-ui;text-align:center;'+
+   'box-shadow:0 8px 22px #0019';
+  combatNotice.hidden=true;ui.appendChild(combatNotice);
+  this.b167CombatNotice=combatNotice;
   // Actual native teammate orientation for explicitly opted-in gameplay.
   if(this.canvas.dataset.t21B137AllyRally==='ORIGINAL_GROUNDED_ALLY_EXPERIMENT'){
    const indicator=document.createElement('div');
@@ -3023,6 +3041,30 @@ export class UndertowF3PlayablePreviewApp{
    this.b141RealAllyIndicator.dataset.t21B141State=info.code;
    this.b141RealAllyIndicator.dataset.t21B141CertifiedRoute='false';
   }
+  // B167 native physical enemy feet + actual registered stage-ray cover.
+  // Camera look is observation only: no retargeting or auto-aim.
+  this.camera.getAimDirection(this.aim);
+  const cue=sourceB167EnemyCombatCue({
+   nativeTick:state.tick,sourceStage:[state.originalSourceSolids,
+    state.originalPaintSurfaces,state.originalSourceNavigationLinks,0],
+   matchState:state.matchState,paused:state.paused,stopReason:state.stopReason,
+   human:{body:state.player.position,grounded:this.stats.playerGrounded,
+    alive:state.player.hp>0},
+   aim:[this.aim.x,this.aim.y,this.aim.z],cpu:state.cpu.cpu,
+   stageRayBlocked:(from,to)=>!!this.physics.castStageSegment(
+    new Vec3(...from),new Vec3(...to),'ink-projectile')
+  });
+  this.b167CombatNotice.hidden=!cue;
+  if(cue){
+   this.b167CombatNotice.textContent=cue.label;
+   this.b167CombatNotice.dataset.t21B167ContactState=cue.state;
+   this.b167CombatNotice.dataset.t21B167Actor=cue.actorId;
+   this.b167CombatNotice.dataset.t21B167NativeTick=String(cue.nativeTick);
+   this.b167CombatNotice.dataset.t21B167PhysicalRayOnly='true';
+   this.b167CombatNotice.dataset.t21B167CertifiedShot='false';
+   this.b167CombatNotice.style.borderColor=cue.state==='STAGE_RAY_CLEAR'?
+    'rgba(103,235,212,.68)':'rgba(255,159,195,.56)';
+  }else this.b167CombatNotice.dataset.t21B167ContactState='OFF';
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
