@@ -7,6 +7,8 @@ on:
       - 'scripts/t21-w10b139-original-native-descent-rally.test.mjs'
       - 'scripts/t21-w10b140-real-physics-sample.mjs'
       - 'scripts/t21-w10b140-real-physics-sample.test.mjs'
+      - 'scripts/t21-w10b147-native-teammate-approach-audit.mjs'
+      - 'scripts/t21-w10b147-native-teammate-approach-audit.test.mjs'
       - '.github/workflows/t21-w10b139-original-native-descent-rally.yml'
   workflow_dispatch:
 permissions:
@@ -30,7 +32,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-w10b140-real-physics-sample.test.mjs
+      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-w10b140-real-physics-sample.test.mjs scripts/t21-w10b147-native-teammate-approach-audit.test.mjs
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Real PlayCanvas Rapier KCC W200 D12 W18 after genuine CPU 7/7
         env:
@@ -43,5 +45,44 @@ jobs:
         with:
           name: b139-original-${{ matrix.variant }}
           path: /tmp/t21-b139-source/
+          retention-days: 14
+          if-no-files-found: warn
+
+  b147-physical-ally-proof:
+    name: B147 true A1 physical approach proof from BOTH original Chrome artifacts
+    needs: [genuine-descent-ally]
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run strict original-ground physics verifier unit regressions
+        run: node --test scripts/t21-w10b147-native-teammate-approach-audit.test.mjs
+      - name: Retrieve independently recorded real opt-in human/A1 feet
+        uses: actions/download-artifact@v4
+        with:
+          name: b139-original-ALLY_RALLY
+          path: /tmp/t21-b147/ally
+      - name: Retrieve real unchanged FIXED default feet
+        uses: actions/download-artifact@v4
+        with:
+          name: b139-original-FIXED_DEFAULT
+          path: /tmp/t21-b147/fixed
+      - name: Certify only actual source-backed physically convergent A1 behavior
+        run: |
+          mkdir -p /tmp/t21-b147/result
+          node scripts/t21-w10b147-native-teammate-approach-audit.mjs \
+            /tmp/t21-b147/ally/w10b139-ally_rally.json \
+            /tmp/t21-b147/fixed/w10b139-fixed_default.json \
+            /tmp/t21-b147/result/b147-real-native-physical-ally-proof.json
+      - name: Retain independent measured physical rally verdict, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b147-real-native-ally-physical-proof
+          path: /tmp/t21-b147/result/
           retention-days: 14
           if-no-files-found: warn
