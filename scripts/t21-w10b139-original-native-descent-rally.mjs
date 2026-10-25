@@ -366,6 +366,10 @@ async function playB162GenuineAllySync(routeSteps){
    b166RealAllyStatus:a?.querySelector('#t21-f3-b166-tactics')?.dataset.t21B166Status,
    b166NoInventedRoute:a?.querySelector('#t21-f3-b166-tactics')?.dataset.t21B166DirectIsNotPath,
    b166NoWinner:a?.querySelector('#t21-f3-b166-tactics')?.dataset.t21B166OfficialWinner,
+   b168NativeUiStatus:card?.dataset.t21B168DisplayedNativeStatus,
+   b168NativeUiTick:card?.dataset.t21B168DisplayedNativeTick,
+   b168ClearToastVisible:document.querySelector('#t21-f3-b168-real-practice-clear')?.hidden===false,
+   b168ClearToastGenuine:document.querySelector('#t21-f3-b168-real-practice-clear')?.dataset.t21B168GenuineClear,
    scoreable:card?.dataset.scoreable,
    sourceAuthority:card?.dataset.productionAuthority};
  })()`);
@@ -385,6 +389,10 @@ async function playB162GenuineAllySync(routeSteps){
    ui.b166RealAllyStatus!==undefined&&
    ui.b166RealAllyStatus!=='OFF'&&
    ui.b166NoInventedRoute==='true'&&ui.b166NoWinner==='NONE'&&
+   ui.b168NativeUiStatus==='CLEAR'&&
+   Number.isSafeInteger(Number(ui.b168NativeUiTick))&&
+   Number(ui.b168NativeUiTick)>0&&
+   ui.b168ClearToastVisible===true&&ui.b168ClearToastGenuine==='true'&&
    ui.winner==='NONE'&&
    ui.scoreable==='0'&&ui.sourceAuthority==='NONE';
  saveAttempt(final,actualClear?

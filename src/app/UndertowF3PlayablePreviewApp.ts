@@ -32,6 +32,7 @@ import {summarizeB165OriginalAllyPractice}
 import {getB166OriginalAllyRendezvous}
  from './B166OriginalAllyRendezvous';
 import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
+import {shouldPresentB168NativePractice} from './B168NativePracticePresentation';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -338,6 +339,8 @@ export class UndertowF3PlayablePreviewApp{
    (q.get('t21QaDrive')!=='source'||q.get('t21W10B27')==='kinetic');
  })();
  private readonly b25RunButton:HTMLButtonElement;
+ private readonly b168PracticeClearToast:HTMLElement;
+ private b168LastPresentedNativeTick=-1;
  private readonly b25RunProgress:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
  private readonly b22Trial:UndertowF3OwnerGpuTrial;
@@ -1027,6 +1030,25 @@ export class UndertowF3PlayablePreviewApp{
    'border:0;border-radius:7px;padding:8px;cursor:pointer">'+
    'START PAINT RUN</button>';
   ui.appendChild(challenge);
+  // B168: a real native 60Hz objective CLEAR appears immediately,
+  // without waiting for slow WebGL frame cadence.
+  const clearToast=document.createElement('div');
+  clearToast.id='t21-f3-b168-real-practice-clear';
+  clearToast.setAttribute('role','status');
+  clearToast.setAttribute('aria-live','polite');
+  clearToast.dataset.sourceOnly='true';
+  clearToast.dataset.officialTurfWinner='NONE';
+  clearToast.dataset.sourceScoreable='0';
+  clearToast.style.cssText='position:fixed;left:50%;bottom:14%;'+
+   'transform:translateX(-50%);z-index:37;pointer-events:none;'+
+   'max-width:min(520px,92vw);padding:12px 19px;'+
+   'border-radius:15px;background:rgba(5,42,49,.94);'+
+   'border:2px solid #77f5d0;color:#dffff5;'+
+   'text-shadow:0 1px 6px #002;font:850 14px/1.6 system-ui;'+
+   'text-align:center;box-shadow:0 14px 40px #001a';
+  clearToast.hidden=true;
+  ui.appendChild(clearToast);
+  this.b168PracticeClearToast=clearToast;
   this.b25RunButton=challenge.querySelector('#t21-f3-b25-start') as HTMLButtonElement;
   this.b25RunProgress=challenge.querySelector('#t21-f3-b25-progress') as HTMLElement;
   challenge.querySelector<HTMLButtonElement>('#t21-f3-b56-variant')!
@@ -1972,7 +1994,8 @@ export class UndertowF3PlayablePreviewApp{
        this.rawStage.paintSurfaces.length===17&&
        this.rawStage.navigationLinks?.length===26
      });
-    this.b25Run.observe({
+    const beforeNativePractice=this.b25Run.snapshot();
+    const afterNativePractice=this.b25Run.observe({
      tick:frame,paused:this.paused,stopReason:this.stopReason,
      inputLocked:document.pointerLockElement===this.canvas,
      sessionEnded:this.matchState==='TIME_UP',
@@ -2002,6 +2025,14 @@ export class UndertowF3PlayablePreviewApp{
       scoreablePromotionCount:0
      }
     });
+    // Authoritative 60Hz progress, not stale WebGL render-frame samples.
+    // 10Hz running updates, immediate genuine A1 ink and terminal CLEAR.
+    if(shouldPresentB168NativePractice(
+      beforeNativePractice,afterNativePractice,frame,
+      this.b168LastPresentedNativeTick)){
+     this.refreshB25PaintRun();
+     this.b168LastPresentedNativeTick=frame;
+    }
     const physical=this.player.getPosition(this.p);
     if(this.b112GroundEnabled&&this.resources.currentHp>0){
      const support=this.physics.castCharacterFootSupport(
@@ -2170,6 +2201,29 @@ export class UndertowF3PlayablePreviewApp{
  }
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
+  const authenticClear=run.status==='CLEAR'&&
+   run.originalStageVerified===true&&
+   run.gameplaySource==='REAL_HUMAN_AUTHORITATIVE_INK_AND_RAPIER_FOOT'&&
+   run.sourceScoreablePromotions===0&&run.officialWinner==='NONE'&&
+   (run.practiceVariant!=='ALLY_SYNC'||(
+    run.originalA1CooperativeGoalSatisfied===true&&
+    run.actualOriginalA1TaggedImpactEvents>0));
+  const clearVisible=authenticClear&&this.matchState==='PLAYING'&&
+   !this.survey.snapshot().active&&this.galleryIndex<0;
+  this.b168PracticeClearToast.hidden=!clearVisible;
+  this.b168PracticeClearToast.dataset.t21B168GenuineClear=String(authenticClear);
+  this.b168PracticeClearToast.dataset.t21B168NativeTick=String(this.clock.tick);
+  if(clearVisible)this.b168PracticeClearToast.textContent=
+   run.practiceVariant==='ALLY_SYNC'?
+    'REAL ALLY SYNC CLEAR · HUMAN '+run.humanChangedImpactCells+
+    ' + A1 '+run.actualOriginalA1ChangedImpactCells+
+    ' changed cells · PRACTICE ONLY, NO TURF WINNER':
+    'REAL '+run.practiceVariant+' PRACTICE CLEAR · '+
+    run.humanChangedImpactCells+' changed cells + '+
+    run.realGroundedTravelMeters.toFixed(1)+
+    'm actual grounded travel · NO TURF WINNER';
+  this.b25RunCard.dataset.t21B168DisplayedNativeStatus=run.status;
+  this.b25RunCard.dataset.t21B168DisplayedNativeTick=String(this.clock.tick);
   const button=this.b25RunButton;
   const best=run.bestClearElapsedTicks;
   const bestLabel=this.b25RunCard.querySelector<HTMLElement>('#t21-f3-b55-record')!;
