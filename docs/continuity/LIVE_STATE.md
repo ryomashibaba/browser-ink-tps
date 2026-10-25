@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `971e83d1d05730cbd53c186f0bfac4ae0c63e60b`
+- 同期元QA HEAD: `5c0d70fb2746d3e4c240afafc6ecee39ff3c8b5b`
 - 最新番号のQAレポート: W10-B209 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B209-original-ramp-edge-native-play-and-true-mission-hud.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B210 （着手・完了の保証ではない）
