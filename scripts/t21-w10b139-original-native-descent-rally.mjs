@@ -21,6 +21,8 @@ const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
 const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
 const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
 const b202ControlsTrial=process.env.T21_B202_REAL_CONTROLS==='1';
+const b203FullRoundTrial=process.env.T21_B203_REAL_FULL_ROUND==='1';
+if(b203FullRoundTrial&&!b194ButtonTrial)throw Error('B203_REQUIRES_REAL_SELECTED_COOP');
 if(b200ReplayTrial&&!b194ButtonTrial)
  throw Error('B200_REQUIRES_REAL_PLAYER_SELECTED_A1_COOP');
 if(b162CoopTrial&&variant!=='ALLY_RALLY')
@@ -566,7 +568,8 @@ async function doPhysicalTrial(coopAttempt=1){
   fail('NOT_REAL_ORIGINAL_7CPU_KCC_BOOT');
  const search=await evaluate('location.search');
  const actualUserUrl=b194ButtonTrial?
-  '?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop':
+  ('?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop'+
+   (b203FullRoundTrial?'&t21W10B203=fullRound':'')):
   ('?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
    (allyOptIn?'&t21W10B137=allyRally&t21W10B150=allyInk':'')+
    (b154TeamCoverage?'&t21W10B154=teamCoverage':'')+
@@ -959,7 +962,74 @@ async function run(){
   await picture('W10B194_REAL_PLAYER_COOP_BUTTON');
   console.log('B194_USER_BUTTON_REAL_A1_COOP_SELECTED',JSON.stringify(proof));
  }
+ if(b203FullRoundTrial){
+  await clickButton('#t21-f3-b203-full-round');
+  const selected=await until(async()=>{
+   try{
+    const s=await evaluate(`(() => ({
+     url:location.search,ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+     round:document.querySelector('#app-canvas')?.dataset.t21B203FullRound,
+     coop:document.querySelector('#app-canvas')?.dataset.t21B193Coop,
+     label:document.querySelector('#t21-f3-b203-full-round')?.textContent,
+     rejoins:window.__t21F3?.snapshot()?.cpu?.physicalRejoins?.length
+    }))()`);
+    return s.ready==='READY'&&s.round==='REAL_180S_SOURCE_PLAY'?s:false;
+   }catch{return false;}
+  },100000);
+  if(selected.url!=='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound'||
+     selected.coop!=='REAL_A1_ORIGINAL_SOURCE'||selected.rejoins!==0||
+     !selected.label?.includes('180s SOURCE ROUND ON'))
+   fail('B203_REAL_MODE_SELECTION_FAILED_'+JSON.stringify(selected));
+  console.log('B203_REAL_FULL_ROUND_USER_MODE',JSON.stringify(selected));
+ }
  await doPhysicalTrial();
+ if(b203FullRoundTrial){
+  const clear=await snapshot();authority(clear,'FIXED');
+  if(clear.matchState!=='PLAYING'||clear.b25SourcePaintRun.status!=='CLEAR'||
+     clear.timeRemainingSeconds<=0)fail('B203_ROUND_NOT_PLAYING_AFTER_CLEAR');
+  const p={key:'p',code:'KeyP',windowsVirtualKeyCode:80,nativeVirtualKeyCode:80};
+  for(const type of ['keyDown','keyUp'])
+   await cmd('Input.dispatchKeyEvent',{type,...p});
+  const paused=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   const ui=await evaluate(`(() => ({
+    unlocked:document.pointerLockElement===null,
+    shown:document.querySelector('#t21-f3-b202-real-pause')?.hidden===false,
+    state:document.querySelector('#t21-f3-b202-real-pause')?.dataset.t21B202NativeState
+   }))()`);
+   return n.paused&&n.b25SourcePaintRun.status==='CLEAR'&&
+    ui.unlocked&&ui.shown&&ui.state==='NATIVE_PAUSED'?n:false;
+  },25000);
+  await sleep(700);
+  const held=await snapshot();authority(held,'FIXED');
+  if(held.tick!==paused.tick||
+     held.timeRemainingSeconds!==paused.timeRemainingSeconds||
+     held.b25SourcePaintRun.status!=='CLEAR'||
+     held.b23HumanInkFeedback.humanChangedCells!==
+      paused.b23HumanInkFeedback.humanChangedCells)
+   fail('B203_FULL_ROUND_PAUSE_CLOCK_OR_INK_DRIFT');
+  await clickButton('#t21-f3-b202-resume');
+  const resumed=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   const locked=await evaluate(
+    'document.pointerLockElement===document.querySelector("#app-canvas")');
+   return locked&&!n.paused&&n.tick>=held.tick+5&&
+    n.matchState==='PLAYING'&&n.b25SourcePaintRun.status==='CLEAR'?n:false;
+  },100000);
+  const proof={schema:'B203_REAL_FULL_ROUND_AFTER_OBJECTIVE_CLEAR',
+   input:'ACTUAL_BUTTON_PLUS_NATIVE_P_AND_RESUME',
+   remainingAtPause:paused.timeRemainingSeconds,
+   actualPauseTick:paused.tick,heldTick:held.tick,
+   genuineResumeTick:resumed.tick,matchState:resumed.matchState,
+   objective:resumed.b25SourcePaintRun.status,
+   physicallyRejoinedCpu:resumed.cpu.physicalRejoins.length,
+   authority:'25/17/26/0',scoreable:0,officialWinner:'NONE',
+   syntheticTicks:false,actorTeleports:false};
+  writeFileSync(resolve(OUTPUT,'w10b203-real-full-round.json'),
+   JSON.stringify(proof,null,2));
+  console.log('B203_REAL_FULL_ROUND_NATIVE_PAUSE_AFTER_CLEAR',JSON.stringify(proof));
+ }
+
 
  if(b200ReplayTrial){
   // CDP REAL input. Two physically independent ALLY_SYNC CLEARs, then

@@ -339,6 +339,12 @@ export class UndertowF3PlayablePreviewApp{
  private respawnFrames=0;
  // B201: full native-world mission pause, resumed only on real pointer relock.
  private resumeAfterRealPointerLock=false;
+ /** Opt-in REAL 180s source session, without any turf scoring. */
+ private readonly b203FullRound=(()=>{
+  const p=new URL(location.href).searchParams;
+  return p.get('t21Play')==='preview'&&p.get('t21W10B203')==='fullRound';
+ })();
+ private b203EverLockedRealPointer=false;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
  /** Profiling is strictly opt-in on the source QA route; no global game hooks. */
@@ -599,6 +605,8 @@ export class UndertowF3PlayablePreviewApp{
   const b31Params=new URL(location.href).searchParams;
   const b193Coop=sourceCoopEligible(b31Params);
   this.canvas.dataset.t21B193Coop=b193Coop?'REAL_A1_ORIGINAL_SOURCE':'OFF';
+  this.canvas.dataset.t21B203FullRound=
+   this.b203FullRound?'REAL_180S_SOURCE_PLAY':'OFF';
   if(b193Coop)this.b56NextVariant='ALLY_SYNC';
   // W10-B32 measured the genuine B31 adaptive mode below the fixed
   // source-patrol painting throughput in an independent real-Chrome A/B.
@@ -882,6 +890,31 @@ export class UndertowF3PlayablePreviewApp{
     coop.insertAdjacentElement('afterend',note);
    }
   }
+  // B203: ordinary player chooses a fresh source-backed 180s round.
+  {
+   const button=document.createElement('button');
+   button.id='t21-f3-b203-full-round';button.type='button';
+   button.dataset.sourceOnly='true';button.dataset.scoreable='0';
+   button.dataset.original4v4Certified='false';
+   button.textContent=this.b203FullRound?
+    '180s SOURCE ROUND ON · EXIT TO PRACTICE':
+    'PLAY FULL 180s SOURCE ROUND · NO OFFICIAL WINNER';
+   button.style.cssText='display:block;width:100%;padding:12px;margin:8px 0;'+
+    'border-radius:10px;background:#12485b;border:1px solid #75d1e7;'+
+    'color:#f2feff;cursor:pointer;font:800 11px/1.45 system-ui';
+   button.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||this.stopReason||
+       this.galleryIndex>=0||this.survey.snapshot().active||
+       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
+       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
+    const dest=new URL(window.location.href);
+    dest.searchParams.set('t21Play','preview');
+    if(this.b203FullRound)dest.searchParams.delete('t21W10B203');
+    else dest.searchParams.set('t21W10B203','fullRound');
+    window.location.assign(dest.href);
+   });
+   this.panel.querySelector('h2')!.insertAdjacentElement('afterend',button);
+  }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   // B69: an ordinary preview user can explicitly compare the already
   // B68-proven original source ink candidate and return to baseline with
@@ -1092,7 +1125,7 @@ export class UndertowF3PlayablePreviewApp{
    'font:850 12px/1.45 system-ui;cursor:pointer;pointer-events:auto';
   resumeButton.addEventListener('click',()=>{
    if(this.resumeAfterRealPointerLock&&!this.stopReason&&
-      this.b25Run.snapshot().status==='RUNNING'&&
+      (this.b203FullRound||this.b25Run.snapshot().status==='RUNNING')&&
       this.matchState==='PLAYING')void this.canvas.requestPointerLock();
   });
   const pauseHint=document.createElement('div');
@@ -1340,6 +1373,7 @@ export class UndertowF3PlayablePreviewApp{
   document.addEventListener('pointerlockchange',()=>{
    const running=this.b25Run.snapshot().status==='RUNNING';
    if(document.pointerLockElement===this.canvas){
+    this.b203EverLockedRealPointer=true;
     if(this.resumeAfterRealPointerLock&&this.matchState==='PLAYING'&&
        !this.stopReason){
      this.resumeAfterRealPointerLock=false;this.paused=false;
@@ -1347,8 +1381,9 @@ export class UndertowF3PlayablePreviewApp{
     }
     return;
    }
-   if(running&&this.matchState==='PLAYING'&&!this.stopReason){
-    // Freeze the actual fixed-step clock, native CPU, KCC and ink.
+   if((running||(this.b203FullRound&&this.b203EverLockedRealPointer))&&
+      this.matchState==='PLAYING'&&!this.stopReason){
+    // Genuine 180s clock stays frozen after mission CLEAR, too.
     this.resumeAfterRealPointerLock=true;this.paused=true;
     this.refreshB25PaintRun();this.refresh();
     return;
@@ -1361,9 +1396,9 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
    if(ev.code==='Escape'&&document.pointerLockElement===this.canvas&&
-      this.b25Run.snapshot().status==='RUNNING'&&
+      (this.b203FullRound||this.b25Run.snapshot().status==='RUNNING')&&
       this.matchState==='PLAYING'&&!this.stopReason){
-    // Before the browser asynchronous pointerlockchange can arrive.
+    // Freeze synchronously before the browser releases pointer lock.
     this.paused=true;this.resumeAfterRealPointerLock=true;
     this.refreshB25PaintRun();
    }
@@ -1788,7 +1823,8 @@ export class UndertowF3PlayablePreviewApp{
  private togglePause(){
   if(this.survey.snapshot().active||this.galleryIndex>=0)return;
   if(this.stopReason)return;
-  if(this.b25Run.snapshot().status==='RUNNING'&&this.matchState==='PLAYING'){
+  if((this.b203FullRound||this.b25Run.snapshot().status==='RUNNING')&&
+     this.matchState==='PLAYING'){
    if(this.resumeAfterRealPointerLock){
     this.b25RunProgress.textContent='PAUSED · CLICK STAGE TO RESUME ACTUAL SOURCE PLAY';
     return;
@@ -2892,7 +2928,8 @@ export class UndertowF3PlayablePreviewApp{
    sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
   });
   const actuallyPaused=this.resumeAfterRealPointerLock&&
-   run.status==='RUNNING'&&this.matchState==='PLAYING'&&!this.stopReason&&
+   (this.b203FullRound||run.status==='RUNNING')&&
+   this.matchState==='PLAYING'&&!this.stopReason&&
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
@@ -2900,7 +2937,7 @@ export class UndertowF3PlayablePreviewApp{
    actuallyPaused?'NATIVE_PAUSED':'INACTIVE';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
    .textContent=actuallyPaused?
-    Math.ceil(this.remainingSeconds)+'s actual match clock remaining · source-only, uns cored'.replace('uns cored','unscored'):'';
+    Math.ceil(this.remainingSeconds)+'s actual 180s match left · 7 CPU source local · NO TURF WINNER':'';
   this.b25RunCard.dataset.t21B197FreshWorldReplay=String(replay.replay);
   this.b25RunCard.dataset.t21B197ReplayReason=replay.reason;
   button.disabled=!replay.replay&&(run.status==='ARMED'||run.status==='RUNNING');

@@ -14,6 +14,19 @@ describe('B193 original source cooperative play choice',()=>{
    't21Play=preview&t21QaDrive=source&t21W10B193=allyCoop&t21W10B192=humanCombat'
   ))).toBe(false);
  });
+ it('retains user-selected 180s round but excludes unsafe experiment flags',()=>{
+  const old='https://example.com/game?t21Play=preview&t21QaDrive=source'+
+   '&t21W10B193=allyCoop&t21W10B203=fullRound&t21W10B93=upperDetour';
+  const next=new URL(sourceCoopNavigationUrl(old,true));
+  expect(sourceCoopEligible(next.searchParams)).toBe(true);
+  expect(next.searchParams.get('t21W10B203')).toBe('fullRound');
+  expect(next.searchParams.has('t21W10B93')).toBe(false);
+  expect([...next.searchParams.keys()].sort()).toEqual(
+   ['t21Play','t21QaDrive','t21W10B183','t21W10B193','t21W10B203'].sort());
+  const solo=new URL(sourceCoopNavigationUrl(next.href,false));
+  expect(solo.searchParams.get('t21W10B203')).toBe('fullRound');
+  expect(sourceCoopEligible(solo.searchParams)).toBe(false);
+ });
  it('reboots original stage and excludes experimental flags',()=>{
   const source='https://example.com/ink?t21Play=preview&t21QaDrive=source'+
    '&t21W10B192=humanCombat&t21W10B137=allyRally';

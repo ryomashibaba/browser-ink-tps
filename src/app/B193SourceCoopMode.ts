@@ -11,5 +11,8 @@ export function sourceCoopNavigationUrl(current:string,enable:boolean):string{
  dest.searchParams.set('t21QaDrive','source');
  dest.searchParams.set('t21W10B183','firstDropPlay');
  if(enable)dest.searchParams.set('t21W10B193','allyCoop');
+ // Preserve the explicit 180s play choice across true clean-world replays.
+ if(old.searchParams.get('t21W10B203')==='fullRound')
+  dest.searchParams.set('t21W10B203','fullRound');
  return dest.href;
 }
