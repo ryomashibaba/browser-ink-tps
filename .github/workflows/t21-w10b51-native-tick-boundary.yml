@@ -3,7 +3,7 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'src/input/PlayerInput.ts'
   workflow_dispatch:
 permissions:
   contents: read

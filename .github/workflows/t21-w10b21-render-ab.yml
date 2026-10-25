@@ -20,7 +20,6 @@ on:
       - 'src/app/UndertowF3PracticeObjectiveView.ts'
       - 'src/app/UndertowF3PracticeObjectiveView.test.ts'
       - 'src/ink/PaintCoordinator.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b77-source-raster-restore.mjs'
       - 'scripts/t21-w10b77-source-raster-restore.test.mjs'
   workflow_dispatch:

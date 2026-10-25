@@ -3,7 +3,6 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'scripts/t21-f3-browser-smoke.mjs'
       - 'src/app/UndertowF3SourcePaintRun.ts'
       - 'src/app/UndertowF3SourcePaintRun.test.ts'
       - 'src/app/UndertowF3SourceSessionBoard.ts'

@@ -5,7 +5,6 @@ on:
       - dev/t21-f4e103w-qa-infra
     paths:
       - 'src/ai/CpuAgentSystem.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
   workflow_dispatch:
 permissions:
   contents: read
