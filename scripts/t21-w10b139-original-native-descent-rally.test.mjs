@@ -23,6 +23,15 @@ test('B139 genuine source-only real keyboard first descent and 7 CPU gating',()=
  // Third variant is opt-in and cannot contaminate either frozen baseline.
  assert.match(s,/b154TeamCoverage\?'&t21W10B154=teamCoverage'/);
 });
+test('B194 real player button starts a new original-source A1 session',()=>{
+ const app=readFileSync('src/app/UndertowF3PlayablePreviewApp.ts','utf8');
+ for(const x of ["T21_B194_REAL_PLAYER_BUTTON","clickButton('#t21-f3-b193-ally-coop')",
+  'B194_USER_BUTTON_REAL_A1_COOP_SELECTED','w10b194-real-player-coop-entry.json',
+  "selected.variant!=='ALLY_SYNC'","selected.sub!==true"])
+  assert.ok(s.includes(x),x);
+ assert.ok(app.includes("insertAdjacentElement('afterend',coop)"));
+ assert.ok(app.includes('overflow-y:auto'));
+});
 test('B139 makes no synthetic game progress or source authority promotions',()=>{
  for(const forbidden of ["qaDriveTicks(", "teleport(", "setTranslation(", "this.matchState='PLAYING'"])
   assert.ok(!s.includes(forbidden),'Forbidden original source manipulation: '+forbidden);

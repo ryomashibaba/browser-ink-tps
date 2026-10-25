@@ -703,6 +703,7 @@ export class UndertowF3PlayablePreviewApp{
   this.panel.id='t21-f3-play-panel';
   this.panel.style.cssText='position:fixed;left:14px;top:14px;z-index:40;'+
    'width:min(330px,calc(100vw - 28px));box-sizing:border-box;'+
+   'max-height:calc(100vh - 28px);overflow-y:auto;overscroll-behavior:contain;'+
    'color:#eaf9ff;background:rgba(5,15,28,.90);'+
    'border:1px solid rgba(95,225,249,.46);border-radius:14px;'+
    'padding:12px 14px;font:12px/1.45 ui-monospace,monospace;'+
@@ -859,7 +860,7 @@ export class UndertowF3PlayablePreviewApp{
     window.location.assign(sourceCoopNavigationUrl(
       window.location.href,!b193Coop));
    });
-   this.panel.appendChild(coop);
+   this.panel.querySelector('h2')!.insertAdjacentElement('afterend',coop);
    if(b193Coop){
     const note=document.createElement('p');
     note.id='t21-f3-b193-coop-guide';
@@ -867,7 +868,7 @@ export class UndertowF3PlayablePreviewApp{
       'shoot and use F sub. A1 must physically rejoin; only its actual '+
       'projectile impact ink counts. Practice, not official Turf.';
     note.style.cssText='color:#b2f4d8;font:650 11px/1.5 system-ui;margin:6px 0';
-    this.panel.appendChild(note);
+    coop.insertAdjacentElement('afterend',note);
    }
   }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;

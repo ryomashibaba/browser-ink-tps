@@ -17,8 +17,11 @@ if(!['FIXED_DEFAULT','ALLY_RALLY','TEAM_COVERAGE'].includes(variant))
 const allyOptIn=variant!=='FIXED_DEFAULT';
 const b154TeamCoverage=variant==='TEAM_COVERAGE';
 const b162CoopTrial=process.env.T21_B162_REAL_ALLY_SYNC==='1';
+const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
 if(b162CoopTrial&&variant!=='ALLY_RALLY')
  throw Error('B162_ONLY_ORIGINAL_ALLY_RALLY_OPT_IN');
+if(b194ButtonTrial&&(!b162CoopTrial||variant!=='ALLY_RALLY'))
+ throw Error('B194_REQUIRES_EXISTING_REAL_A1_NATIVE_TRIAL');
 const children=[],pending=new Map(),history=[];
 let socket=null,sequence=0;
 const fail=reason=>{throw Error('B140_'+reason);};
@@ -129,7 +132,8 @@ async function playB162GenuineAllySync(routeSteps){
  if(control.available!=='true'||control.winner!=='NONE'||
     control.stage!=='true'||control.scoreable!=='0')
   fail('B162_SOURCE_ONLY_COOP_CONTROL_NOT_ELIGIBLE');
- for(let i=0;i<3;i++)await clickButton('#t21-f3-b56-variant');
+ if(!b194ButtonTrial)
+  for(let i=0;i<3;i++)await clickButton('#t21-f3-b56-variant');
  const choice=await evaluate(
   'document.querySelector("#t21-f3-b25-paint-run")?.dataset.t21B56NextVariant');
  if(choice!=='ALLY_SYNC')fail('B162_COOP_CHALLENGE_NOT_ACTUALLY_SELECTED');
@@ -451,13 +455,16 @@ async function doPhysicalTrial(){
 
  if(boot.matchState!=='STAGING'||boot.paused||
     boot.cpu.sourcePatrol.b137AllyRallyOptIn!==allyOptIn||
-    boot.b112OriginalHumanGround?.enabled!==true)
+    boot.b112OriginalHumanGround?.enabled!==(b194ButtonTrial?false:true))
   fail('NOT_REAL_ORIGINAL_7CPU_KCC_BOOT');
  const search=await evaluate('location.search');
- if(search!==('?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
+ const actualUserUrl=b194ButtonTrial?
+  '?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop':
+  ('?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
    (allyOptIn?'&t21W10B137=allyRally&t21W10B150=allyInk':'')+
    (b154TeamCoverage?'&t21W10B154=teamCoverage':'')+
-   '&t21W10B149=contactTrace'))
+   '&t21W10B149=contactTrace');
+ if(search!==actualUserUrl)
   fail('INVALID_SOURCE_PRACTICE_URL');
  await click(800,450);
  await until(()=>evaluate('document.pointerLockElement===document.querySelector("#app-canvas")'),20000);
@@ -807,6 +814,44 @@ async function run(){
  const ready=()=>until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),100000);
  await ready();
+ if(b194ButtonTrial){
+  const visible=await evaluate(`(() => {
+   const b=document.querySelector('#t21-f3-b193-ally-coop');
+   const r=b?.getBoundingClientRect();
+   return {label:b?.textContent,source:document.querySelector('#app-canvas')?.dataset.t21B193Coop,
+    top:r?.top,bottom:r?.bottom};
+  })()`);
+  if(!visible.label?.includes('PLAY WITH REAL ALLY A1')||
+     visible.source!=='OFF'||!(visible.top>=0&&visible.bottom<=900))
+   fail('B194_PLAYER_BUTTON_NOT_VISIBLE');
+  await clickButton('#t21-f3-b193-ally-coop');
+  const selected=await until(async()=>{
+   try {
+    const state=await evaluate(`(() => ({
+     url:location.search,loaded:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+     mode:document.querySelector('#app-canvas')?.dataset.t21B193Coop,
+     label:document.querySelector('#t21-f3-b193-ally-coop')?.textContent,
+     variant:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B56NextVariant,
+     sub:window.__t21F3?.snapshot()?.b38HumanSub?.enabled
+    }))()`);
+    return state.loaded==='READY'&&
+     state.url==='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop'
+     ?state:false;
+   } catch{return false;}
+  },100000);
+  if(selected.mode!=='REAL_A1_ORIGINAL_SOURCE'||
+     !selected.label?.includes('A1 CO-OP ON')||
+     selected.variant!=='ALLY_SYNC'||selected.sub!==true)
+   fail('B194_PLAYER_MODE_NOT_NATIVE_READY_'+JSON.stringify(selected));
+  const proof={realCDPMouseClick:true,initialLabel:visible.label,
+   newSourceWorld:selected.url,activeMode:selected.mode,
+   actualPreselectedChallenge:selected.variant,realSubWeapon:selected.sub,
+   sourceScoreable:0,productionAuthorized:false};
+  writeFileSync(resolve(OUTPUT,'w10b194-real-player-coop-entry.json'),
+   JSON.stringify(proof,null,2));
+  await picture('W10B194_REAL_PLAYER_COOP_BUTTON');
+  console.log('B194_USER_BUTTON_REAL_A1_COOP_SELECTED',JSON.stringify(proof));
+ }
  await doPhysicalTrial();
 }
 try{await run();}catch(err){
