@@ -43,6 +43,7 @@ import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
 import {sourceCoopEligible,sourceCoopNavigationUrl} from './B193SourceCoopMode';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
+import {b197CoopReplayDecision} from './B197CoopReplayDecision';
 import {b154OriginalTeamInkOptIn}
  from './W10B154OriginalTeamInkMode';
 import {buildB155OriginalSourceConnectivityReview}
@@ -1241,7 +1242,9 @@ export class UndertowF3PlayablePreviewApp{
   challenge.querySelector<HTMLButtonElement>('#t21-f3-b56-variant')!
    .addEventListener('click',()=>{
     const state=this.b25Run.snapshot().status;
-    if(state==='ARMED'||state==='RUNNING')return;
+    // A dedicated co-op world always runs a genuine ALLY_SYNC mission;
+    // changing to CLASSIC would lose the actual A1 objective silently.
+    if(b193Coop||state==='ARMED'||state==='RUNNING')return;
     const genuineAllyPracticeAvailable=
      this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
      this.canvas.dataset.t21B137AllyRally===
@@ -1253,6 +1256,21 @@ export class UndertowF3PlayablePreviewApp{
     this.refreshB25PaintRun();
    });
   this.b25RunButton.addEventListener('click',()=>{
+   // B197: genuine full world restart for co-op terminal states ONLY.
+   // The old B25 local retry is not a physical reset after a one-way drop.
+   const replay=b197CoopReplayDecision({
+    originalSourceCoop:b193Coop,
+    practiceStatus:this.b25Run.snapshot().status,
+    sessionEnded:this.matchState==='TIME_UP',
+    nativeStopped:!!this.stopReason
+   });
+   if(replay.replay&&document.pointerLockElement!==this.canvas&&
+      !this.survey.snapshot().active&&this.galleryIndex<0){
+    this.b25RunButton.disabled=true;
+    this.b25RunProgress.textContent='RESTARTING ORIGINAL A1 SOURCE WORLD · NO ACTOR WARP';
+    window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
+    return;
+   }
    if(document.pointerLockElement===this.canvas||this.paused||this.stopReason||
       this.matchState==='TIME_UP'||this.survey.snapshot().active||
       this.galleryIndex>=0||['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
@@ -1288,7 +1306,12 @@ export class UndertowF3PlayablePreviewApp{
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
-   if(ev.code==='KeyR')this.restart();
+   // Source co-op R always starts a fresh true Rapier/Recast world,
+   // not the local PlayerController teleport used by legacy trial QA.
+   if(ev.code==='KeyR'){
+    if(b193Coop)window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
+    else this.restart();
+   }
    if(ev.code==='KeyM'){
      this.radarVisible=!this.radarVisible;
      this.radar.canvas.parentElement!.style.display=
@@ -2563,7 +2586,12 @@ export class UndertowF3PlayablePreviewApp{
   const pulse=run.status==='RUNNING'&&this.clock.tick<this.b195A1PulseUntilTick;
   root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
    pulse?'A1 REAL SHOT IMPACT!':info.headline;
-  root.querySelector<HTMLElement>('#t21-f3-b195-next')!.textContent=info.next;
+  const replay=b197CoopReplayDecision({
+   originalSourceCoop:true,practiceStatus:run.status,
+   sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
+  });
+  root.querySelector<HTMLElement>('#t21-f3-b195-next')!.textContent=
+   replay.replay?replay.guidance:info.next;
   const fields=[
    ['human',info.human+'/'+info.humanGoal+' INK',info.humanPct],
    ['ground',info.grounded.toFixed(1)+'/'+info.groundGoal+' m',info.groundPct],
@@ -2615,8 +2643,10 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.dataset.t21B55RecordScope=run.practiceRecordScope;
   const modeButton=this.b25RunCard.querySelector<HTMLButtonElement>(
    '#t21-f3-b56-variant')!;
-  modeButton.disabled=run.status==='ARMED'||run.status==='RUNNING';
-  modeButton.textContent='NEXT RUN · '+this.b56NextVariant+
+  const dedicatedCoop=this.canvas.dataset.t21B193Coop==='REAL_A1_ORIGINAL_SOURCE';
+  modeButton.disabled=dedicatedCoop||run.status==='ARMED'||run.status==='RUNNING';
+  modeButton.textContent=dedicatedCoop?'ALLY SYNC · TRUE A1 IMPACT GOAL':
+   'NEXT RUN · '+this.b56NextVariant+
    (modeButton.disabled?' · LOCKED':' · click to switch');
   this.b25RunCard.dataset.t21B56NextVariant=this.b56NextVariant;
   this.b25RunCard.dataset.t21B56ActiveVariant=run.practiceVariant;
@@ -2746,9 +2776,23 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.dataset.t21B53PaintPercent=String(view.paint);
   this.b25RunCard.dataset.t21B53GroundPercent=String(view.ground);
   this.b25RunCard.dataset.t21B53Next=view.next;
-  button.disabled=run.status==='ARMED'||run.status==='RUNNING';
-  button.textContent=run.status==='CLEAR'||run.status==='TIME_UP'||
-   run.status==='ABORTED'?'RETRY '+run.practiceVariant:'PAINT RUN ACTIVE';
+  const replay=b197CoopReplayDecision({
+   originalSourceCoop:dedicatedCoop,practiceStatus:run.status,
+   sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
+  });
+  this.b25RunCard.dataset.t21B197FreshWorldReplay=String(replay.replay);
+  this.b25RunCard.dataset.t21B197ReplayReason=replay.reason;
+  button.disabled=!replay.replay&&(run.status==='ARMED'||run.status==='RUNNING');
+  button.textContent=replay.replay?replay.buttonText:
+   run.status==='CLEAR'||run.status==='TIME_UP'||run.status==='ABORTED'?
+   'RETRY '+run.practiceVariant:'PAINT RUN ACTIVE';
+  if(replay.replay){
+   this.b25RunProgress.textContent=replay.guidance+'\n'+
+    'ACTUAL HUMAN '+run.humanChangedImpactCells+' / '+run.requiredHumanChangedCells+
+    ' cells · REAL A1 '+run.actualOriginalA1ChangedImpactCells+' / '+
+    run.requiredOriginalA1ChangedImpactCells+' cells';
+   return;
+  }
   if(run.status==='ARMED'){
    this.b25RunProgress.textContent='ARMED · Click the stage to play.';
    return;
