@@ -29,6 +29,30 @@ describe('B169 original human approach and genuine A1 lower guard',()=>{
   expect(rank({...x,preferPlayableCoopNearGuard:true,
    alreadyAuditedOriginalPatrolFeet:[]})).toEqual([]);
  });
+ it('B198 refuses real-player first-drop ingress blockers on original source',()=>{
+  const original=base();
+  const laneBlock=p(.2,3.9,53.2);
+  const safeLateral=p(2.3,3.9,52);
+  const unsafeInventory={...original,alreadyAuditedOriginalPatrolFeet:[
+   laneBlock,safeLateral
+  ]};
+  // Legacy experiment remains unchanged and can return this source foot;
+  // actual user-selected B193 MUST deny the potential human KCC blocker.
+  expect(rank(unsafeInventory)).toContainEqual(laneBlock);
+  const result=rank({...unsafeInventory,preferPlayableCoopNearGuard:true});
+  expect(result).not.toContainEqual(laneBlock);
+  expect(result).toEqual([safeLateral]);
+  expect(rank({...unsafeInventory,preferPlayableCoopNearGuard:true,
+   alreadyAuditedOriginalPatrolFeet:[laneBlock]})).toEqual([]);
+ });
+ it('B198 exclusion never becomes an invented source path or CPU position',()=>{
+  const x=base();
+  const result=rank({...x,preferPlayableCoopNearGuard:true});
+  expect(result.every(goal=>x.alreadyAuditedOriginalPatrolFeet.includes(goal))).toBe(true);
+  expect(result.every(goal=>goal.z>=33&&goal.y>=2.7&&goal.y<=5.25)).toBe(true);
+  expect(rank({...x,preferPlayableCoopNearGuard:true,
+   realUpperHumanFoot:p(0,8.39,49)})).toEqual([]);
+ });
  it('only arms with a grounded live human on the source upper area',()=>{
   const x=base();
   expect(rank({...x,realUpperHumanFoot:p(0,3.9,48)})).toEqual([]);
