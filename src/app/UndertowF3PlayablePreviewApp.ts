@@ -43,6 +43,7 @@ import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
+import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209OriginalRampEdge';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
 import {b154OriginalTeamInkOptIn}
@@ -273,6 +274,7 @@ export class UndertowF3PlayablePreviewApp{
  })();
  private b141RealAllyIndicator:HTMLElement|null=null;
  private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
+ private readonly b209RampEdgeCoach:ReturnType<typeof createB209OriginalRampEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private readonly b205RoundClock:HTMLElement|null;
  private readonly b160CpuInkActivityView:
@@ -1224,6 +1226,7 @@ export class UndertowF3PlayablePreviewApp{
    this.b141RealAllyIndicator=indicator;
   }
   this.b129EdgeCoach=createF3OriginalRaisedEdgeCoach(ui);
+  this.b209RampEdgeCoach=createB209OriginalRampEdgeCoach(ui);
   if(this.b112GroundEnabled){
    const warning=document.createElement('div');
    warning.id='t21-f3-b113-ground-warning';
@@ -2548,6 +2551,11 @@ export class UndertowF3PlayablePreviewApp{
       this.b168LastPresentedNativeTick)){
      this.refreshB25PaintRun();
      this.b168LastPresentedNativeTick=frame;
+     // B209: a TRUE mission CLEAR is terminal for B25 but never for the
+     // full source match. Immediately synchronize the native round HUD
+     // instead of leaving its mission flag stale until a GPU redraw.
+     if(beforeNativePractice.status!=='CLEAR'&&
+        afterNativePractice.status==='CLEAR')this.refresh();
     }
     const physical=this.player.getPosition(this.p);
     if(this.b112GroundEnabled&&this.resources.currentHp>0){
@@ -2610,6 +2618,27 @@ export class UndertowF3PlayablePreviewApp{
     const trueNativeEdge=this.originalEdgeGuidance(frame);
     this.b129EdgeCoach.render(trueNativeEdge,
      this.survey.snapshot().active||this.galleryIndex>=0);
+    // B209: warn at an actual original Ramp FloorConcrete03 edge, using
+    // its exact registered triangle quad + actual Rapier ground ray.
+    // A polygon footprint ALONE never proves an actual safe next step.
+    const rampVicinity=physical.y>=2.4&&physical.y<=6.4&&
+     Math.abs(physical.z)>42&&Math.abs(physical.z)<57&&
+     Math.abs(physical.x)<11;
+    const rampRealRay=(this.b203FullRound||this.b183DropPlayEnabled)&&
+     rampVicinity&&this.resources.currentHp>0?
+     this.physics.castCharacterFootSupport(
+      physical,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+      this.player.currentMode):null;
+    this.b209RampEdgeCoach.render(b209OriginalRampEdge({
+     nativeTick:frame,
+     body:[physical.x,physical.y,physical.z],
+     stage:[this.rawStage.solids.length,
+      this.rawStage.paintSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,0],
+     nativeKccGrounded:this.stats.playerGrounded,
+     actualOriginalFootSupportId:rampRealRay?.solidId??null,
+     matchState:this.matchState,paused:this.paused,stopReason:this.stopReason
+    }),this.b203FullRound||this.b183DropPlayEnabled);
     // No guessed exterior kill threshold; out-of-world motion is a
     // visible fail-closed hold until the user intentionally restarts.
     if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
