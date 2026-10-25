@@ -38,6 +38,21 @@ export class B186RealOriginalSourceCircuit{
  private originalRampPhysicalContactObserved=false;
  private originalRaisedConfirmedTick:number|null=null;
  private rejectedUnphysicalSteps=0;
+ /**
+  * Only the real game lifecycle after 150 authentic 60Hz death ticks calls
+  * this. Normal source-backed respawn starts a fresh LIFE, unlike a
+  * challenge-only reset which could forge a successful native traversal.
+  */
+ public resetForActualNativeHumanRespawn(){
+  this.status='WAIT_FIRST_DROP';
+  this.lastTick=-1;this.lastBody=null;
+  this.lastWasGenuineGrounded=false;
+  this.dropStartTick=null;this.baselineCells=0;this.baselineImpacts=0;
+  this.freshCells=0;this.realGroundTravelMeters=0;
+  this.originalRampPhysicalContactObserved=false;
+  this.originalRaisedConfirmedTick=null;
+  this.rejectedUnphysicalSteps=0;
+ }
  observe(f:B186CircuitFrame){
   if(this.status==='REAL_LOCAL_CIRCUIT_CLEAR'||
      this.status==='INVALID_SOURCE_WITNESS')return this.snapshot();

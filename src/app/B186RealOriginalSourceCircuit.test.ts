@@ -112,3 +112,44 @@ describe('B186 registered original ramp mandatory',()=>{
   expect(d.snapshot().originalDropStartNativeTick).toBe(1);
  });
 });
+
+describe('B188 authentic native respawn unblocks a terminal circuit witness',()=>{
+ it('resets fail-closed invalid circuit ONLY on a separate actual respawn call',()=>{
+  const d=new B186RealOriginalSourceCircuit();
+  d.observe(source(1));
+  d.observe(source(2,10));
+  expect(d.snapshot()).toMatchObject({
+   status:'INVALID_SOURCE_WITNESS',physicallyRejectedSteps:1
+  });
+  // No regular frame, including lower landing, can bypass the HOLD.
+  d.observe(source(3));
+  expect(d.snapshot().status).toBe('INVALID_SOURCE_WITNESS');
+  // Only the actual native lifecycle may invoke this user-controlled retry.
+  d.resetForActualNativeHumanRespawn();
+  expect(d.snapshot()).toMatchObject({
+   status:'WAIT_FIRST_DROP',physicallyRejectedSteps:0,
+   originalDropStartNativeTick:null,actualOriginalRampTouched:false
+  });
+  d.observe({...source(1500),originalDropVerified:false});
+  expect(d.snapshot().status).toBe('WAIT_FIRST_DROP');
+  d.observe(source(1501));
+  expect(d.snapshot()).toMatchObject({
+   status:'MOVE_TO_ORIGINAL_RAISED',originalDropStartNativeTick:1501
+  });
+ });
+ it('never carries previous native-life paint, ramp or travel into new circuit',()=>{
+  const d=new B186RealOriginalSourceCircuit();
+  d.observe(source(1));
+  for(let i=1;i<=30;i++)d.observe(source(i+1,i*.1,
+   3.87+Math.min(1.5,i*.05),i===30?RAISED:
+    'UndertowT21D:right-low-route-ramp-positive-z'));
+  expect(d.snapshot().actualOriginalRampTouched).toBe(true);
+  d.resetForActualNativeHumanRespawn();
+  expect(d.snapshot()).toMatchObject({
+   actualOriginalRampTouched:false,
+   firstActualRaisedGroundedTick:null,
+   genuineGroundedTravelMeters:0,
+   realPostDropHumanImpactChangedCells:0
+  });
+ });
+});

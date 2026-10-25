@@ -750,21 +750,34 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc release</p>';
   ui.appendChild(this.panel);
-  // One-click real source-only player descent, starting a new uns cored run.
-  if(!this.b183DropPlayEnabled){
+  // B188: the verified original drop is one-way. Failed witness or
+  // completed source-local practice needs a *new* real physics session,
+  // never a mid-game fabricated source player teleport or stage reset.
+  // The same click target starts source practice or retries it.
+  {
    const button=document.createElement('button');
-   button.id='t21-f3-b183-start-descent';button.type='button';
-   button.textContent='PLAY ORIGINAL UPPER → LOWER DESCENT (SOURCE QA)';
+   button.id=this.b183DropPlayEnabled?
+    't21-f3-b188-retry-source-circuit':'t21-f3-b183-start-descent';
+   button.type='button';
+   button.textContent=this.b183DropPlayEnabled?
+    'RETRY ORIGINAL DESCENT → RAMP → INK (NEW PHYSICAL SESSION)':
+    'PLAY ORIGINAL DESCENT → RAMP → INK (SOURCE QA)';
+   button.dataset.originalSourceOnly='true';
+   button.dataset.scoreablePromotions='0';
+   button.dataset.retryActorTeleport='false';
+   button.dataset.retryNativeTickInjection='false';
    button.style.cssText='display:block;width:100%;margin-top:9px;'+
     'padding:10px 7px;background:#134b63;color:#dbffff;'+
     'border:1px solid #55d6e0;border-radius:8px;'+
     'font:750 11px/1.4 system-ui;cursor:pointer';
    button.addEventListener('click',()=>{
-    if(document.pointerLockElement===this.canvas||this.stopReason||
+    if(document.pointerLockElement===this.canvas||
       this.survey.snapshot().active||
       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)||
       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status))
      return;
+    // Browser-initiated navigation reboots the existing authored QA stage
+    // through the normal PlayerController constructor and frozen sources.
     const dest=new URL(window.location.pathname,window.location.origin);
     dest.searchParams.set('t21Play','preview');
     dest.searchParams.set('t21QaDrive','source');
@@ -2064,8 +2077,10 @@ export class UndertowF3PlayablePreviewApp{
       this.b112GroundLedger.resetOnRespawn(); // retain the real pre-fall witness
       // B186: the previous human life must never satisfy a new
       // physical original descent after genuine 150-tick respawn.
-      if(this.b183DropPlayEnabled)
+      if(this.b183DropPlayEnabled){
        this.b183Drop.resetForActualNativeHumanRespawn();
+       this.b186Circuit.resetForActualNativeHumanRespawn();
+      }
       this.player.setLifecycleActive(true);
       this.humanRespawns++;
       this.respawnFrames=0;
@@ -2173,7 +2188,7 @@ export class UndertowF3PlayablePreviewApp{
         'DROP COMPLETE · MOVE TO ORIGINAL UPHILL RAMP AND RAISED RIGHT-LOW FLOOR · '+
         circuit.genuineGroundedTravelMeters.toFixed(1)+' / 2.0m TRUE GROUNDED WALK':
        circuit.status==='INVALID_SOURCE_WITNESS'?
-        'CIRCUIT HOLD · Source physical or paint evidence invalid · manual restart':
+        'CIRCUIT HOLD · Source physical or paint evidence invalid · ESC and RETRY':
         'NEXT · ORIGINAL FIRST DROP, THEN WALK THE AUTHENTIC RAMP AND PAINT';
       this.b183DropNotice.dataset.b186NativeStatus=circuit.status;
       this.b183DropNotice.dataset.b186RealLocalPracticeClear=

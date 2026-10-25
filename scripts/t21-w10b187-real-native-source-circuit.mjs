@@ -130,6 +130,27 @@ async function run(){
  const start=await snapshot('ORIGINAL_CHROME_BOOT');
  if(start.matchState!=='STAGING'||start.paused)
   fail('NOT_ORIGINAL_STAGING',{state:start.matchState});
+ // B188: this one-way original drop must be retryable by normal page
+ // reinitialization, never by source floor, actor or clock mutation.
+ const realRetryControl=await evaluate(`(()=>{
+  const b=document.querySelector('#t21-f3-b188-retry-source-circuit');
+  return b?{
+   visible:!b.hidden&&b.getBoundingClientRect().width>0,
+   enabled:!b.disabled,sourceOnly:b.dataset.originalSourceOnly,
+   scoreable:b.dataset.scoreablePromotions,
+   teleport:b.dataset.retryActorTeleport,
+   fakeNativeTicks:b.dataset.retryNativeTickInjection
+  }:null;
+ })()`);
+ if(!realRetryControl?.visible||!realRetryControl.enabled||
+    realRetryControl.sourceOnly!=='true'||
+    realRetryControl.scoreable!=='0'||
+    realRetryControl.teleport!=='false'||
+    realRetryControl.fakeNativeTicks!=='false')
+  fail('B188_SOURCE_CIRCUIT_RETRY_MUST_BE_TRUE_NEW_SESSION',
+   realRetryControl);
+ console.log('T21_B188_REAL_ORIGINAL_RETRY_BUTTON_VISIBLE',
+  JSON.stringify(realRetryControl));
  await mouse('mousePressed');await mouse('mouseReleased');
  await until(async()=>await evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'
