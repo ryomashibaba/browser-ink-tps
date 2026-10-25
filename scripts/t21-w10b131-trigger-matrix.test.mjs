@@ -25,6 +25,13 @@ const legacy=[
  "t21-w10b59-full-native-session.yml",
  "t21-f3g-whole-source.yml"
 ];
+// B179+: legacy three-contact occupied-human native variants are
+// explicitly manual only, not on every shared B75 script edit.
+const manualOnly=new Set([
+ 't21-w10b96-parked-human-detour.yml',
+ 't21-w10b99-second-human-lane.yml',
+ 't21-w10b100-third-human-lane.yml'
+]);
 const retained=[
  't21-w10b75-live-source-ink-hud.yml',
  't21-f4e103w-qa.yml',
@@ -40,6 +47,11 @@ test('B131: 19 historical one-off suites retain manual dispatch and domain trigg
  for(const name of legacy){
   const s=read(name);
   assert.ok(s.includes('  workflow_dispatch:'),name+' manual fallback');
+  if(manualOnly.has(name)){
+   assert.ok(!s.includes('  push:'),
+    name+' must NOT auto-run 24-minute historical native collision smoke');
+   continue;
+  }
   assert.ok(s.includes('    paths:'),name+' push path gating');
   assert.equal(appTriggerLines(s).length,0,name+' must not rerun on every app edit');
   assert.ok(s.split('\n').some(line=>
@@ -51,10 +63,15 @@ test('B131: 19 historical one-off suites retain manual dispatch and domain trigg
    name+' workflow edits should not immediately spawn an expensive historical run');
  }
 });
-test('B178: generic CPU changes use B64 source-ink validation, not obsolete Chrome fanout',()=>{
+test('B180: shared CPU changes use B75 short actual Chrome, not legacy 130s or occupied-lane fanout',()=>{
  const common="- 'src/ai/CpuAgentSystem.ts'";
  const b64=read('t21-w10b64-cpu-ink-aim-ab.yml');
- assert.ok(b64.includes(common),'retain the real native 130s comparison');
+ const b75=read('t21-w10b75-live-source-ink-hud.yml');
+ assert.ok(b75.includes(common),'real source CPU must retain B75 live Chrome coverage');
+ assert.ok(!b64.includes(common),
+  'do not re-run expensive 130s A/B for every generic CPU change');
+ assert.ok(b64.includes("- 'src/ai/UndertowF3OriginalSourceInkSweep.ts'"),
+  'keep native 130s A/B for changes to its genuine B64 aim algorithm');
  for(const name of [
   't21-w10b14-real-chrome.yml',
   't21-w10b15-trusted-input.yml',

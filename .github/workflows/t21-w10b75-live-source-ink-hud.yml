@@ -12,6 +12,7 @@ on:
       - 'src/ai/B178OriginalSourceInkResources.test.ts'
       - 'src/ai/B180OriginalSourcePaintOpportunity.ts'
       - 'src/ai/B180OriginalSourcePaintOpportunity.test.ts'
+      - 'src/ai/CpuAgentSystem.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3OriginalEdgeGuidance.ts'
       - 'src/app/UndertowF3OriginalEdgeGuidance.test.ts'
