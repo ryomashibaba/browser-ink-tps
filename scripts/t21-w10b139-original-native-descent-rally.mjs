@@ -19,6 +19,7 @@ const b154TeamCoverage=variant==='TEAM_COVERAGE';
 const b162CoopTrial=process.env.T21_B162_REAL_ALLY_SYNC==='1';
 const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
 const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
+const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
 if(b200ReplayTrial&&!b194ButtonTrial)
  throw Error('B200_REQUIRES_REAL_PLAYER_SELECTED_A1_COOP');
 if(b162CoopTrial&&variant!=='ALLY_RALLY')
@@ -175,6 +176,44 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    JSON.stringify({...output,coopAttempt},null,2));
  };
  saveAttempt(started,'B162_ACTUALLY_ARMED_NATIVE_COOP_RUNNING');
+ if(b201PauseTrial&&coopAttempt===1){
+  // Real CDP ESC + real mouse click; no fake simulation step.
+  for(const type of ['keyDown','keyUp'])
+   await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
+    windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+  const atPause=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   return n.paused&&n.b25SourcePaintRun.status==='RUNNING'&&
+    await evaluate('document.pointerLockElement===null')?n:false;
+  },25000);
+  await sleep(650);
+  const held=await snapshot();authority(held,'FIXED');
+  if(held.tick!==atPause.tick||!held.paused||
+     held.b25SourcePaintRun.status!=='RUNNING'||
+     held.b25SourcePaintRun.humanChangedImpactCells!==
+      atPause.b25SourcePaintRun.humanChangedImpactCells||
+     held.b25SourcePaintRun.actualOriginalA1ChangedImpactCells!==
+      atPause.b25SourcePaintRun.actualOriginalA1ChangedImpactCells)
+   fail('B201_PAUSE_MUST_FREEZE_TRUE_TICK_AND_INK');
+  await click(800,450);
+  const resumed=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   return !n.paused&&n.tick>=held.tick+5&&
+    n.b25SourcePaintRun.status==='RUNNING'&&
+    await evaluate('document.pointerLockElement===document.querySelector("#app-canvas")')?n:false;
+  },100000);
+  const witness={schema:'B201_REAL_SOURCE_PAUSE_AND_RESUME',
+   input:'CDP_REAL_ESCAPE_AND_CLICK',pauseTick:atPause.tick,
+   heldTick:held.tick,resumedTick:resumed.tick,
+   humanInkAtPause:atPause.b25SourcePaintRun.humanChangedImpactCells,
+   a1InkAtPause:atPause.b25SourcePaintRun.actualOriginalA1ChangedImpactCells,
+   sameOriginalRapierWorld:true,syntheticTickInjection:false,
+   status:resumed.b25SourcePaintRun.status,
+   officialWinner:'NONE',originalAuthority:'25/17/26/0'};
+  writeFileSync(resolve(OUTPUT,'w10b201-real-native-pause-resume.json'),
+   JSON.stringify(witness,null,2));
+  console.log('B201_REAL_NATIVE_PAUSE_RESUME',JSON.stringify(witness));
+ }
  const wrap=x=>((x+540)%360)-180;
  // B163 repairs the actual B162 failure: the first post-arm W/S
  // steps were taken from the lower edge, falling from Y=3.8 to -29m.

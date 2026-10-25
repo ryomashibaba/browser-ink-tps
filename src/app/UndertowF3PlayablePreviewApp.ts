@@ -335,6 +335,8 @@ export class UndertowF3PlayablePreviewApp{
   new URL(location.href).searchParams.get('t21QaPauseOnBoot')==='1';
  private stopReason:string|null=null;
  private respawnFrames=0;
+ // B201: full native-world mission pause, resumed only on real pointer relock.
+ private resumeAfterRealPointerLock=false;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
  /** Profiling is strictly opt-in on the source QA route; no global game hooks. */
@@ -771,7 +773,7 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#ffd8a0;margin:8px 0 0">'+
    'Source models are OPTICAL ONLY where collision is unverified. No invented bridge, NavLink or Turf score.</p></details>'+
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
-   'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc release</p>';
+   'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc/P pause mission · click stage to resume</p>';
   ui.appendChild(this.panel);
   // B188: the verified original drop is one-way. Failed witness or
   // completed source-local practice needs a *new* real physics session,
@@ -1294,16 +1296,35 @@ export class UndertowF3PlayablePreviewApp{
   });
   document.addEventListener('pointerlockchange',()=>this.refreshB36PlayFocus());
   document.addEventListener('pointerlockchange',()=>{
-   if(document.pointerLockElement!==this.canvas&&
-      this.b25Run.snapshot().status==='RUNNING'){
-    this.b25Run.abort('PLAYER_POINTER_UNLOCKED');
-    this.refreshB25PaintRun();
+   const running=this.b25Run.snapshot().status==='RUNNING';
+   if(document.pointerLockElement===this.canvas){
+    if(this.resumeAfterRealPointerLock&&this.matchState==='PLAYING'&&
+       !this.stopReason){
+     this.resumeAfterRealPointerLock=false;this.paused=false;
+     this.refreshB25PaintRun();this.refresh();
+    }
+    return;
    }
+   if(running&&this.matchState==='PLAYING'&&!this.stopReason){
+    // Freeze the actual fixed-step clock, native CPU, KCC and ink.
+    this.resumeAfterRealPointerLock=true;this.paused=true;
+    this.refreshB25PaintRun();this.refresh();
+    return;
+   }
+   if(running)this.b25Run.abort('PLAYER_POINTER_UNLOCKED');
+   this.refreshB25PaintRun();
   });
   this.radar=createF3SourceRadar(ui,stage);
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
+   if(ev.code==='Escape'&&document.pointerLockElement===this.canvas&&
+      this.b25Run.snapshot().status==='RUNNING'&&
+      this.matchState==='PLAYING'&&!this.stopReason){
+    // Before the browser asynchronous pointerlockchange can arrive.
+    this.paused=true;this.resumeAfterRealPointerLock=true;
+    this.refreshB25PaintRun();
+   }
    // Source co-op R always starts a fresh true Rapier/Recast world,
    // not the local PlayerController teleport used by legacy trial QA.
    if(ev.code==='KeyR'){
@@ -1725,6 +1746,16 @@ export class UndertowF3PlayablePreviewApp{
  private togglePause(){
   if(this.survey.snapshot().active||this.galleryIndex>=0)return;
   if(this.stopReason)return;
+  if(this.b25Run.snapshot().status==='RUNNING'&&this.matchState==='PLAYING'){
+   if(this.resumeAfterRealPointerLock){
+    this.b25RunProgress.textContent='PAUSED · CLICK STAGE TO RESUME ACTUAL SOURCE PLAY';
+    return;
+   }
+   this.paused=true;this.resumeAfterRealPointerLock=true;
+   if(document.pointerLockElement===this.canvas)document.exitPointerLock();
+   this.refreshB25PaintRun();this.refresh();
+   return;
+  }
   this.paused=!this.paused;
   if(this.paused)this.b25Run.abort('SESSION_PAUSED');
   this.refresh();
@@ -2619,7 +2650,12 @@ export class UndertowF3PlayablePreviewApp{
    sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
   });
   root.querySelector<HTMLElement>('#t21-f3-b195-next')!.textContent=
-   replay.replay?replay.guidance:info.next;
+   this.resumeAfterRealPointerLock&&run.status==='RUNNING'?
+    '60Hz source world paused · click stage to resume':
+    replay.replay?replay.guidance:info.next;
+  if(this.resumeAfterRealPointerLock&&run.status==='RUNNING')
+   root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
+    'SOURCE PRACTICE PAUSED · RESUME REAL PLAY';
   const direct=root.querySelector<HTMLButtonElement>('#t21-f3-b200-replay')!;
   direct.hidden=!replay.replay;
   direct.style.display=replay.replay?'block':'none';
@@ -2824,6 +2860,11 @@ export class UndertowF3PlayablePreviewApp{
     'ACTUAL HUMAN '+run.humanChangedImpactCells+' / '+run.requiredHumanChangedCells+
     ' cells · REAL A1 '+run.actualOriginalA1ChangedImpactCells+' / '+
     run.requiredOriginalA1ChangedImpactCells+' cells';
+   return;
+  }
+  if(run.status==='RUNNING'&&this.resumeAfterRealPointerLock){
+   this.b25RunProgress.textContent=
+    'PAUSED · REAL SOURCE WORLD RETAINED · CLICK STAGE TO RESUME';
    return;
   }
   if(run.status==='ARMED'){
