@@ -5,7 +5,6 @@ on:
     paths:
       - 'src/combat/CombatTargetSystem.ts'
       - 'src/projectile/ProjectileSystem.ts'
-      - 'src/ai/CpuAgentSystem.ts'
       - 'src/core/PerformanceStats.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'

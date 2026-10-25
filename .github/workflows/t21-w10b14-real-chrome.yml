@@ -4,7 +4,7 @@ on:
     branches:
       - dev/t21-f4e103w-qa-infra
     paths:
-      - 'src/ai/CpuAgentSystem.ts'
+      - 'src/ai/CpuLoadoutCatalog.ts'
   workflow_dispatch:
 permissions:
   contents: read

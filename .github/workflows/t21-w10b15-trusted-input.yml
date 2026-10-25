@@ -15,7 +15,6 @@ on:
       - 'src/app/UndertowF3PaintAwarePatrol.test.ts'
       - 'src/ai/OriginalSourceNativeTargetRefresh.ts'
       - 'src/ai/OriginalSourceNativeTargetRefresh.test.ts'
-      - 'src/ai/CpuAgentSystem.ts'
       - 'scripts/t21-w10b32-compare-real-source.mjs'
       - 'src/input/PlayerInput.ts'
       - 'src/input/PlayerInput.qa.test.ts'

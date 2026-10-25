@@ -51,6 +51,20 @@ test('B131: 19 historical one-off suites retain manual dispatch and domain trigg
    name+' workflow edits should not immediately spawn an expensive historical run');
  }
 });
+test('B178: generic CPU changes use B64 source-ink validation, not obsolete Chrome fanout',()=>{
+ const common="- 'src/ai/CpuAgentSystem.ts'";
+ const b64=read('t21-w10b64-cpu-ink-aim-ab.yml');
+ assert.ok(b64.includes(common),'retain the real native 130s comparison');
+ for(const name of [
+  't21-w10b14-real-chrome.yml',
+  't21-w10b15-trusted-input.yml',
+  't21-w10b86-source-combat-gate.yml'
+ ]){
+  assert.ok(!read(name).includes(common),
+   'historical '+name+' is still manually dispatchable, not on every CPU change');
+ }
+});
+
 test('B173: shared real CDP driver changes do NOT fan out legacy browser workflows',()=>{
  for(const name of legacy.filter(name=>name!=='t21-w10b59-full-native-session.yml')){
   const s=read(name);
