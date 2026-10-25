@@ -34,6 +34,7 @@ describe('B180 real source patch aiming only on actual owner grid',()=>{
   expect(p(sample(f),Team.A)).toBe(0);
   f.ownerGrid[f.index(10,10)]=Team.B;
   expect(p(sample(f),Team.A)).toBe(1.25);
-  expect(p(sample(f),Team.B)).toBe(8);
+  // Eight true opposing source cells, each carrying 1.25 opportunity.
+  expect(p(sample(f),Team.B)).toBe(10);
  });
 });
