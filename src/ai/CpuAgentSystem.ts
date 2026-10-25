@@ -15,6 +15,7 @@ import {b180OriginalSourcePatchOpportunity}
  from './B180OriginalSourcePaintOpportunity';
 import {chooseB181OriginalSourceSight,b182ReuseNativeSight,type B181SightPoint}
  from './B181OriginalSourceCombatSight';
+import {b212NativeLead} from './B212MovingNativeProjectileAim';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -225,6 +226,12 @@ export class CpuAgentSystem {
   private b181ActualStageRays=0;
   private b181ActualSourceOcclusions=0;
   private b181VisibleSelections=0;
+  private b212NativeLeadEnabled=false;
+  private b212PriorHuman:Vec3|null=null;
+  private b212PreviousHuman:Vec3|null=null;
+  private b212NativeLeadCandidates=0;
+  private b212NativeAimAccepted=0;
+  private b212OriginalCoverRejects=0;
   private b182RecheckedStaleNativeSight=0;
   private b182ReusedLiveNativeSight=0;
   private b180SelectedRealSourcePatches=0;
@@ -367,6 +374,26 @@ export class CpuAgentSystem {
     this.b181OriginalCombatStageRay=originalStageRayBlocked;
     this.b181CachedCombat.clear();
   }
+  public enableB212OriginalPhysicalMovingEnemyAim():void{
+    if(!this.b181OriginalCombatStageRay||!this.f3dSourceGoals||
+       !this.phase14qF2RecoverableSteps||!this.phase14eFirstDrop||
+       !this.phase14qGroundCollision||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0))
+      throw Error('B212_PRODUCTION_ORIGINAL_COMBAT_LEAD_FORBIDDEN');
+    this.b212NativeLeadEnabled=true;
+  }
+  public b212OriginalPhysicalEnemyAimSnapshot(){
+    return {enabled:this.b212NativeLeadEnabled,
+     realPhysicalVelocitySamples:this.b212NativeLeadCandidates,
+     actualNativeAimAdjustments:this.b212NativeAimAccepted,
+     originalRapierCoverRejects:this.b212OriginalCoverRejects,
+     targetTeleports:0 as const,damageInjected:0 as const,
+     opponentRoutesCertified:0 as const,sourceScoreable:0 as const,
+     productionAuthorized:false as const};
+  }
   public b181OriginalSourceCombatSightSnapshot(){
     return {
       enabled:this.b181OriginalCombatStageRay!==null,
@@ -506,6 +533,8 @@ export class CpuAgentSystem {
     humanActive: boolean
   ): void {
     if (!matchActive) {
+      this.b212PriorHuman=null;
+      this.b212PreviousHuman=null;
       this.qaContinuity.reset();
       this.qaMotionGoals.clear();
       this.qaTurfShotCooldown.clear();
@@ -542,6 +571,9 @@ export class CpuAgentSystem {
 
     this.activeLastTick = true;
     if(this.b181OriginalCombatStageRay)this.b181NativeFrame++;
+    this.b212PriorHuman=this.b212PreviousHuman;
+    this.b212PreviousHuman=this.b212NativeLeadEnabled&&humanActive?
+      humanPosition.clone():null;
     // The REAL HUMAN PlayerController is at humanPosition. Only the eighth
     // passive Crowd neighbour is moved to its source-backed physical foot.
     // This cannot be applied to production T20 or non-source T21 terrain.
@@ -1714,7 +1746,7 @@ export class CpuAgentSystem {
     // original unbound underpass: without a target in weapon range, paint
     // the verified ORIGINAL floor instead of firing imaginary enemy shots.
     const combatTarget = this.chooseCombatTarget(
-      bot, humanTeam, humanPosition, humanActive
+      bot, humanTeam, humanPosition, humanActive, dt
     );
     const canTurfPaint = this.phase14qF2RecoverableSteps &&
       this.phase14qGroundCollision &&
@@ -2194,11 +2226,46 @@ export class CpuAgentSystem {
     return horizontalDistanceSq(bot.position, target) <= range * range;
   }
 
+  /** Aim adjustment: original Rapier blocker rechecked BEFORE shot. All
+   * projectile damage/hits remain in unchanged ProjectileSystem. */
+  private b212AimAtMovingNativeActor(
+    bot:CpuBot,id:string|null,actual:B181SightPoint,dt:number
+  ):Vec3{
+    const fixed=new Vec3(actual.x,actual.y,actual.z);
+    if(!this.b212NativeLeadEnabled||!id||
+       !this.b181OriginalCombatStageRay)return fixed;
+    const weapon=weaponProfile(bot.weaponId);
+    if(['CHARGER','ROLLER','BRUSH','SPLATANA'].includes(weapon.weaponClass))
+      return fixed;
+    const enemy=id==='HUMAN'?null:this.bots.find(b=>b.id===id);
+    const now=enemy?.position??this.b212PreviousHuman;
+    const prior=enemy?.previousPosition??this.b212PriorHuman;
+    if(!now||!prior||enemy&&
+       (enemy.lifeState!=='ACTIVE'||enemy.mobilityState!=='GROUND'))
+      return fixed;
+    const origin={x:bot.position.x,y:bot.position.y+.85,z:bot.position.z};
+    const candidate=b212NativeLead({
+      muzzle:origin,actualBody:actual,
+      currentFoot:now,previousFoot:prior,dt,
+      projectileSpeed:weapon.speedMetersPerSecond
+    });
+    if(!candidate)return fixed;
+    this.b212NativeLeadCandidates++;
+    const predicted=candidate.aim;
+    if(!this.cpuTargetInRange(bot,new Vec3(
+      predicted.x,predicted.y,predicted.z),weapon))return fixed;
+    if(this.b181OriginalCombatStageRay(origin,predicted)){
+      this.b212OriginalCoverRejects++;return fixed;
+    }
+    this.b212NativeAimAccepted++;
+    return new Vec3(predicted.x,predicted.y,predicted.z);
+  }
   private chooseCombatTarget(
     bot: CpuBot,
     humanTeam: Team.A | Team.B,
     humanPosition: Vec3,
-    humanActive: boolean
+    humanActive: boolean,
+    dt:number
   ): Vec3 | null {
     // Registered original-stage visibility from actual live actor bodies.
     // Only explicit B181 source QA takes this path; T20/default is frozen.
@@ -2221,7 +2288,7 @@ export class CpuAgentSystem {
           const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,origin,candidates);
           if(fresh){
             this.b182ReusedLiveNativeSight++;
-            return new Vec3(fresh.x,fresh.y,fresh.z);
+            return this.b212AimAtMovingNativeActor(bot,old.actorId,fresh,dt);
           }
           this.b182RecheckedStaleNativeSight++;
         }else if(candidates.length===0){
@@ -2240,7 +2307,8 @@ export class CpuAgentSystem {
         frame:this.b181NativeFrame,actorId:result.actorId,origin,
         target:result.target
       });
-      return aim?.clone()??null;
+      return aim?this.b212AimAtMovingNativeActor(bot,result.actorId,
+        {x:aim.x,y:aim.y,z:aim.z},dt):null;
     }
     let bestDistanceSq = Number.POSITIVE_INFINITY;
     let found = false;

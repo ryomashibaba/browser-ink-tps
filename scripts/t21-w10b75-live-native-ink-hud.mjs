@@ -897,6 +897,18 @@ async function run(){
       realCpuIds:realSeven.cpu.cpu.map(x=>x.id),scoreable:0,
       manufacturedHits:0,officialWinner:'NONE'},null,2));
     console.log('B211_NATIVE_BATTLE_ROSTER_REAL_1_PLUS_7',JSON.stringify(r211));
+    const nativeLead=realSeven.b212RealMovingEnemyAim;
+    if(!nativeLead||nativeLead.enabled!==true||
+       nativeLead.targetTeleports!==0||nativeLead.damageInjected!==0||
+       nativeLead.sourceScoreable!==0||nativeLead.opponentRoutesCertified!==0||
+       !Number.isSafeInteger(nativeLead.realPhysicalVelocitySamples)||
+       !Number.isSafeInteger(nativeLead.actualNativeAimAdjustments)||
+       nativeLead.actualNativeAimAdjustments>nativeLead.realPhysicalVelocitySamples)
+      fail('B212_NATIVE_SOURCE_AIM_AUTHORITY_'+JSON.stringify(nativeLead));
+    console.log('B212_REAL_NATIVE_MOVING_ENEMY_AIM_GATED',JSON.stringify({
+     realPhysicalVelocitySamples:nativeLead.realPhysicalVelocitySamples,
+     actualNativeAimAdjustments:nativeLead.actualNativeAimAdjustments,
+     enemyRoutesCertified:0,actorTeleports:0,officialWinner:'NONE'}));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),
