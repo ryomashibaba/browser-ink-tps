@@ -42,6 +42,7 @@ import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
 import {sourceCoopEligible,sourceCoopNavigationUrl} from './B193SourceCoopMode';
+import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b154OriginalTeamInkOptIn}
  from './W10B154OriginalTeamInkMode';
 import {buildB155OriginalSourceConnectivityReview}
@@ -264,7 +265,8 @@ export class UndertowF3PlayablePreviewApp{
   const q=new URL(location.href).searchParams;
   return q.get('t21Play')==='preview'&&
    q.get('t21QaDrive')==='source'&&
-   q.get('t21W10B183')==='firstDropPlay';
+   q.get('t21W10B183')==='firstDropPlay'&&
+   !sourceCoopEligible(q);
  })();
  private b141RealAllyIndicator:HTMLElement|null=null;
  private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
@@ -356,6 +358,10 @@ export class UndertowF3PlayablePreviewApp{
  })();
  private readonly b25RunButton:HTMLButtonElement;
  private readonly b168PracticeClearToast:HTMLElement;
+ private readonly b195CoopHud:HTMLElement|null;
+ private b195PreviousA1ImpactCount=0;
+ private b195PreviousA1ChangedCells=0;
+ private b195A1PulseUntilTick=0;
  private b168LastPresentedNativeTick=-1;
  private readonly b25RunProgress:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
@@ -1229,6 +1235,7 @@ export class UndertowF3PlayablePreviewApp{
   clearToast.hidden=true;
   ui.appendChild(clearToast);
   this.b168PracticeClearToast=clearToast;
+  this.b195CoopHud=b193Coop?this.createB195CoopHud(ui):null;
   this.b25RunButton=challenge.querySelector('#t21-f3-b25-start') as HTMLButtonElement;
   this.b25RunProgress=challenge.querySelector('#t21-f3-b25-progress') as HTMLElement;
   challenge.querySelector<HTMLButtonElement>('#t21-f3-b56-variant')!
@@ -2500,8 +2507,79 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.hidden=focus&&this.b25Run.snapshot().status==='IDLE';
   this.canvas.dataset.t21W10B36PlayFocus=focus?'ON':'OFF';
  }
+ private createB195CoopHud(ui:HTMLElement){
+  const root=document.createElement('section');
+  root.id='t21-f3-b195-native-coop';
+  root.dataset.originalSourceOnly='true';
+  root.dataset.originalScoreable='0';
+  root.dataset.officialWinner='NONE';
+  root.dataset.certifiedOpponentRoute='false';
+  root.setAttribute('aria-label','Live source cooperative progress with A1');
+  root.style.cssText='position:fixed;left:50%;top:14px;'+
+   'transform:translateX(-50%);width:min(445px,calc(100vw - 32px));'+
+   'box-sizing:border-box;z-index:36;pointer-events:none;'+
+   'padding:10px 14px;background:rgba(4,23,34,.90);'+
+   'border:1px solid #60d9b4;border-radius:13px;color:#e0fff5;'+
+   'font:700 11px/1.3 system-ui;text-align:center;'+
+   'box-shadow:0 8px 27px #0019';
+  const line=(id:string,css:string)=>{
+   const x=document.createElement('div');x.id=id;x.style.cssText=css;
+   root.appendChild(x);return x;
+  };
+  line('t21-f3-b195-head','font:850 12px/1.5 system-ui;color:#c2ffe7');
+  line('t21-f3-b195-next','font:550 10px/1.5 system-ui;color:#bcd6d2;margin:3px 0 8px');
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px';
+  for(const k of ['human','ground','a1']){
+   const cell=document.createElement('div');
+   const v=document.createElement('div');v.id='t21-f3-b195-'+k;
+   v.style.cssText='font:750 10px/1.3 system-ui;color:#eafff8';
+   const bar=document.createElement('div');
+   bar.style.cssText='margin-top:4px;height:5px;background:#ffffff26;'+
+    'overflow:hidden;border-radius:5px';
+   const fill=document.createElement('div');
+   fill.id='t21-f3-b195-'+k+'-bar';
+   fill.style.cssText='height:100%;width:0;background:#64e3c4';
+   bar.appendChild(fill);cell.appendChild(v);cell.appendChild(bar);
+   grid.appendChild(cell);
+  }
+  root.appendChild(grid);
+  line('t21-f3-b195-time','margin-top:7px;font:600 9px system-ui;color:#9ccdc7');
+  ui.appendChild(root);
+  return root;
+ }
+ private refreshB195CoopHud(run:ReturnType<UndertowF3SourcePaintRun['snapshot']>){
+  const root=this.b195CoopHud;if(!root)return;
+  const info=b195NativeCoopMissionView(run,
+   this.matchState==='PLAYING'&&this.traffic.snapshot().freeCombatEnabled);
+  if(info.a1Impacts>this.b195PreviousA1ImpactCount&&
+     info.a1>this.b195PreviousA1ChangedCells)
+   this.b195A1PulseUntilTick=this.clock.tick+90;
+  this.b195PreviousA1ImpactCount=info.a1Impacts;
+  this.b195PreviousA1ChangedCells=info.a1;
+  root.dataset.t21B195Status=info.state;
+  root.dataset.t21B195TrueA1Impacts=String(info.a1Impacts);
+  root.dataset.t21B195RealSourceClear=String(info.verifiedClear);
+  const pulse=run.status==='RUNNING'&&this.clock.tick<this.b195A1PulseUntilTick;
+  root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
+   pulse?'A1 REAL SHOT IMPACT!':info.headline;
+  root.querySelector<HTMLElement>('#t21-f3-b195-next')!.textContent=info.next;
+  const fields=[
+   ['human',info.human+'/'+info.humanGoal+' INK',info.humanPct],
+   ['ground',info.grounded.toFixed(1)+'/'+info.groundGoal+' m',info.groundPct],
+   ['a1',info.a1+'/'+info.a1Goal+' A1',info.a1Pct]
+  ] as const;
+  for(const [key,label,pct] of fields){
+   root.querySelector<HTMLElement>('#t21-f3-b195-'+key)!.textContent=label;
+   root.querySelector<HTMLElement>('#t21-f3-b195-'+key+'-bar')!.style.width=pct+'%';
+  }
+  root.querySelector<HTMLElement>('#t21-f3-b195-time')!.textContent=
+   info.secondsRemaining+'s LEFT · SOURCE PRACTICE · NO TURF WINNER';
+  root.hidden=this.survey.snapshot().active||this.galleryIndex>=0;
+ }
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
+  this.refreshB195CoopHud(run);
   const authenticClear=run.status==='CLEAR'&&
    run.originalStageVerified===true&&
    run.gameplaySource==='REAL_HUMAN_AUTHORITATIVE_INK_AND_RAPIER_FOOT'&&
