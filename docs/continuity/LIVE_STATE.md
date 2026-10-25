@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `4a4870e1eede1786d43393518c82fccf3364833f`
-- 最新番号のQAレポート: W10-B172 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B172-active-human-seven-native-cpu-180s.md
+- 同期元QA HEAD: `c4c46ae85be1a2fbbb0001ab6c93def3a7d30dd0`
+- 最新番号のQAレポート: W10-B173 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B173-original-source-route-chain-and-ci-efficiency.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B173 （着手・完了の保証ではない）
+- 次工程候補: W10-B174 （着手・完了の保証ではない）
 - レポート記載のActions: 確認できない
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
