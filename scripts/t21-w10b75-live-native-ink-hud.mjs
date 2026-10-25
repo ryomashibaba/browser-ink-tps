@@ -920,6 +920,30 @@ async function run(){
         counter.originalSightAcceptedRetaliations!==0))
       fail('B213_SOURCE_ACTUAL_HIT_RETALIATION_HOLD_'+JSON.stringify(counter));
     console.log('B213_REAL_NATIVE_COUNTERFIRE_READONLY_WITNESS',JSON.stringify(counter));
+    // B214 actual player-selected B207 world only. Verify REAL source
+    // owner-grid recovery and patch aim are wired into the same 7 CPU.
+    const b214=realSeven.b214SustainedBattleInk,
+     r=realSeven.b178SourceInkRecovery,
+     p=realSeven.b180OriginalPatchAim,
+     a=realSeven.b64SourceInkSweep;
+    const marker=await evaluate(
+     'document.querySelector("#app-canvas")?.dataset.t21B214NativeBattleInk');
+    if(!b214?.enabled||b214.originalScoreable!==0||
+       b214.syntheticAmmoAdded!==0||b214.syntheticShotsAdded!==0||
+       r?.enabled!==true||r?.zeroSourceScoreable!==true||
+       p?.enabled!==true||p?.sourceScoreable!==0||
+       a?.enabled!==true||marker!=='REAL_SOURCE_INK_ECONOMY'||
+       realSeven.sourceScoreablePromotions!==0||
+       realSeven.cpu.physicalFootRelocations!==0)
+      fail('B214_REAL_NATIVE_SOURCE_CPU_INK_UNAVAILABLE_'+JSON.stringify({
+       b214,r,p,a,marker
+      }));
+    console.log('B214_GENUINE_SELECTED_SOURCE_CPU_INK_ECONOMY',
+     JSON.stringify({genuineSevenCpu:realSeven.cpu.physicalRejoins.length,
+      actualNativeOwnerInkRecovered:r.b179ActuallyRecoveredOwnSourceInk,
+      originalUnpaintedPatchSelections:p.chosenRealUnpaintedSourcePatches,
+      sourceAimSamples:a.candidateSamples,
+      scoreable:0,actorTeleports:0,officialWinner:'NONE'}));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),

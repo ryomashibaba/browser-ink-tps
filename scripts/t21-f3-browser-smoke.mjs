@@ -712,6 +712,13 @@ async function main(){
      nativeRejoinedCpu:now.cpu.physicalRejoins.length,
      originalCpuShots:now.cpuSourceTurfShots,
      originalCpuInkChanges:now.cpuImpactInkCellsChanged};
+    if(b210SafeCombat)Object.assign(row,{
+      b214OriginalInkEnabled:now.b214SustainedBattleInk?.enabled===true,
+      nativeOwnInkRecovered:
+       now.b178SourceInkRecovery?.b179ActuallyRecoveredOwnSourceInk??0,
+      realUnpaintedPatchAimSelections:
+       now.b180OriginalPatchAim?.chosenRealUnpaintedSourcePatches??0
+    });
     history.push(row);
     if(w10b68){
      const seven=Object.values(now.cpuSourceTurfShotsByActor??{});
@@ -815,6 +822,43 @@ async function main(){
   if(b210SafeCombat){
    // Real original KCC support at native TIME_UP, not inferred floor.
    const foot=terminal.b112OriginalHumanGround;
+   // B214 verify the SAME full real 180s CPU ink economy. Never invent
+   // late-game shots, compare truthfully to the previous B210 baseline.
+   const at20=history.find(x=>x.kind==='NATIVE_20_SECOND_PROGRESS'&&
+      x.elapsedMatchSeconds>=20&&x.elapsedMatchSeconds<40);
+   const at160=history.find(x=>x.kind==='NATIVE_20_SECOND_PROGRESS'&&
+      x.elapsedMatchSeconds>=160&&x.elapsedMatchSeconds<180);
+   const after20=terminal.cpuSourceTurfShots-
+      (at20?.originalCpuShots??terminal.cpuSourceTurfShots);
+   const economy=terminal.b178SourceInkRecovery,
+    patches=terminal.b180OriginalPatchAim,
+    sweep=terminal.b64SourceInkSweep;
+   const b214Proof={
+    genuine180Seconds:terminal.timeRemainingSeconds===0,
+    cpuAt20s:at20?.originalCpuShots??null,
+    cpuAt160s:at160?.originalCpuShots??null,
+    cpuAt180s:terminal.cpuSourceTurfShots,
+    genuineCpuShotsAfter20s:after20,
+    trueNativeSourceOwnInkRecovered:
+     economy?.b179ActuallyRecoveredOwnSourceInk??0,
+    originalUnpaintedPatchAims:
+     patches?.chosenRealUnpaintedSourcePatches??0,
+    actualSourceCpuRejoined:terminal.cpu.physicalRejoins.length,
+    baselineB210Cpu180sShots:112,officialWinner:'NONE',
+    originalScoreable:terminal.sourceScoreablePromotions,
+    syntheticTimeOrShots:false
+   };
+   writeFileSync(resolve(OUTPUT,'w10b214-real-180s-cpu-ink.json'),
+      JSON.stringify(b214Proof,null,2));
+   if(terminal.b214SustainedBattleInk?.enabled!==true||
+      economy?.enabled!==true||patches?.enabled!==true||
+      sweep?.enabled!==true||!at20||!at160||
+      !Number.isSafeInteger(after20)||after20<0||
+      terminal.sourceScoreablePromotions!==0)
+    reject('B214_SOURCE_CPU_180S_REAL_INK_GATE_HOLD_'+
+      JSON.stringify(b214Proof));
+   console.log('B214_REAL_180S_NATIVE_CPU_SOURCE_ECONOMY',
+    JSON.stringify(b214Proof));
    if(b176DescentStarted||activeHumanPairs.length!==7||
       terminal.cpu.physicalRejoins.length!==7||
       foot?.genuineKccGrounded!==true||

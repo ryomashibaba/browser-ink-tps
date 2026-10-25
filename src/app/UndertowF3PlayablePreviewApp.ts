@@ -44,6 +44,7 @@ import {isB152ExactAllySupportInkImpact}
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
+import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209OriginalRampEdge';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
@@ -632,6 +633,10 @@ export class UndertowF3PlayablePreviewApp{
    b31Params.get('t21W10B192')==='humanCombat';
   this.canvas.dataset.t21B192HumanCombat=
    b192HumanCombatEnabled?'REAL_SOURCE_ONLY':'OFF';
+  const b214BattleInk=b214EligibleSourceBattleInk(b31Params)&&
+   b192HumanCombatEnabled&&this.b203FullRound;
+  this.canvas.dataset.t21B214NativeBattleInk=b214BattleInk?
+   'REAL_SOURCE_INK_ECONOMY':'OFF';
   const realAllyRally=b193Coop||
    b31Params.get('t21W10B137')==='allyRally';
   const realAllyInk=b193Coop||
@@ -667,14 +672,15 @@ export class UndertowF3PlayablePreviewApp{
   const b154TeamCoverage=b154OriginalTeamInkOptIn(b31Params);
   if((b31Params.get('t21QaDrive')==='source'&&
        b31Params.get('t21W10B64')==='inkAngleSweep')||
-      b68NormalPreviewSweep||b154TeamCoverage)
+      b68NormalPreviewSweep||b154TeamCoverage||b214BattleInk)
    this.cpu.enableB64NativeSourceInkAngleSweep();
   // Optional real CPU resource economy on original, uns cored paint.
   // No default source SWEEP/FIXED or production behavior change.
   if(b31Params.get('t21Play')==='preview'&&
      b31Params.get('t21QaDrive')==='source'&&
      b31Params.get('t21W10B64')==='inkAngleSweep'&&
-     b31Params.get('t21W10B178')==='sourceInkRecovery')
+     b31Params.get('t21W10B178')==='sourceInkRecovery'||
+     b214BattleInk)
    this.cpu.enableB178OriginalSourceInkRecovery();
   // B180 requires BOTH existing B178 source-ink policy and B64 source
   // paint aiming. This only ranks actual ownerGrid cells as shot targets.
@@ -682,7 +688,8 @@ export class UndertowF3PlayablePreviewApp{
      b31Params.get('t21QaDrive')==='source'&&
      b31Params.get('t21W10B64')==='inkAngleSweep'&&
      b31Params.get('t21W10B178')==='sourceInkRecovery'&&
-     b31Params.get('t21W10B180')==='originalUnpaintedPatches')
+     b31Params.get('t21W10B180')==='originalUnpaintedPatches'||
+     b214BattleInk)
    this.cpu.enableB180OriginalPatchPaintAim();
   // B181 opt-in: only real original Rapier stage cover may veto a
   // native opponent combat aim. No actor/route/score authority added.
@@ -3673,6 +3680,11 @@ export class UndertowF3PlayablePreviewApp{
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
+   b214SustainedBattleInk:{
+    enabled:this.canvas.dataset.t21B214NativeBattleInk===
+     'REAL_SOURCE_INK_ECONOMY',originalSourceOnly:true as const,
+    syntheticAmmoAdded:0 as const,syntheticShotsAdded:0 as const,
+    originalScoreable:0 as const,productionAuthorized:false as const},
    b181OriginalCombatSight:this.cpu.b181OriginalSourceCombatSightSnapshot(),
    b212RealMovingEnemyAim:this.cpu.b212OriginalPhysicalEnemyAimSnapshot(),
    b213ActualSourceCounterfire:this.cpu.b213SourceCounterfireSnapshot(),
