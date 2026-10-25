@@ -839,6 +839,8 @@ async function main(){
     cpuAt160s:at160?.originalCpuShots??null,
     cpuAt180s:terminal.cpuSourceTurfShots,
     genuineCpuShotsAfter20s:after20,
+    actualRealWeaponCooldownPaintScansDeferred:
+      terminal.b215RealBattleAimPacing?.realWeaponCooldownPaintScansDeferred??0,
     trueNativeSourceOwnInkRecovered:
      economy?.b179ActuallyRecoveredOwnSourceInk??0,
     originalUnpaintedPatchAims:
@@ -851,6 +853,8 @@ async function main(){
    writeFileSync(resolve(OUTPUT,'w10b214-real-180s-cpu-ink.json'),
       JSON.stringify(b214Proof,null,2));
    if(terminal.b214SustainedBattleInk?.enabled!==true||
+      terminal.b215RealBattleAimPacing?.enabled!==true||
+      terminal.b215RealBattleAimPacing?.playerAmmoOrCpuShotInjection!==0||
       economy?.enabled!==true||patches?.enabled!==true||
       sweep?.enabled!==true||!at20||!at160||
       !Number.isSafeInteger(after20)||after20<0||

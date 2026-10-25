@@ -17,6 +17,7 @@ import {chooseB181OriginalSourceSight,b182ReuseNativeSight,type B181SightPoint}
  from './B181OriginalSourceCombatSight';
 import {b212NativeLead} from './B212MovingNativeProjectileAim';
 import {b213RealAttackerPreference} from './B213NativeCounterfire';
+import {b215ShouldQueryNativePaintCandidate} from './B215SourceWeaponReadyPaintAim';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -238,6 +239,8 @@ export class CpuAgentSystem {
   private b213SourceCounterfireEnabled=false;
   private b213RealAttackerDamageEvents=0;
   private b213VisibleRetaliationSelections=0;
+  private b215SelectedBattlePaintPacing=false;
+  private b215RealWeaponCooldownPaintScansDeferred=0;
   private b182RecheckedStaleNativeSight=0;
   private b182ReusedLiveNativeSight=0;
   private b180SelectedRealSourcePatches=0;
@@ -420,6 +423,30 @@ export class CpuAgentSystem {
       actorTeleports:0 as const,originalRoutesCertified:0 as const,
       originalScoreable:0 as const,productionAuthorized:false as const};
   }
+  /** B215 reuses B214 genuine B64/B178/B180, never production. */
+  public enableB215SourceBattleNativeWeaponReadyPaintPacing():void{
+    if(!this.b64InkAngleSweepEnabled||!this.b178RealSourceInkRecovery||
+       !this.b180OriginalPatchAimEnabled||!this.b212NativeLeadEnabled||
+       !this.b213SourceCounterfireEnabled||
+       !this.phase14qF2RecoverableSteps||!this.phase14qGroundCollision||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(x=>(x.flags&SurfaceFlags.Scoreable)!==0))
+      throw Error('B215_UNAUTHORIZED_NATIVE_SOURCE_PAINT_PACING');
+    this.b215SelectedBattlePaintPacing=true;
+  }
+  public b215RealSourceBattlePaintPacingSnapshot(){
+    return {
+      enabled:this.b215SelectedBattlePaintPacing,
+      realWeaponCooldownPaintScansDeferred:
+       this.b215RealWeaponCooldownPaintScansDeferred,
+      playerAmmoOrCpuShotInjection:0 as const,
+      originalNavLinkWrites:0 as const,
+      originalScoreableWrites:0 as const,
+      productionAuthorized:false as const
+    };
+  }
   public b181OriginalSourceCombatSightSnapshot(){
     return {
       enabled:this.b181OriginalCombatStageRay!==null,
@@ -505,6 +532,7 @@ export class CpuAgentSystem {
     this.b181NativeFrame=0;
     this.b213RealAttackerDamageEvents=0;
     this.b213VisibleRetaliationSelections=0;
+    this.b215RealWeaponCooldownPaintScansDeferred=0;
     this.b181ActualStageRays=0;
     this.b181ActualSourceOcclusions=0;
     this.b181VisibleSelections=0;
@@ -1824,8 +1852,20 @@ export class CpuAgentSystem {
       this.f3dSourceGoals?.chooseSourceAllySupportInkTarget?.(
        bot.id,bot.position,this.targetPoint)
       ? this.targetPoint.clone() : null;
+    // B215 (opt-in REAL B207): B64/B180 samples actual expensive
+    // original ownerGrid cells. Do not scan 7*60 times a second while
+    // the REAL main weapon still cannot emit a physical shot. Keep
+    // existing source default, genuine co-op and Splatling bursts intact.
+    const b215QueryPaint=b215ShouldQueryNativePaintCandidate({
+      selectedSourceBattle:this.b215SelectedBattlePaintPacing,
+      actualWeaponFireRemaining:bot.fireRemaining,
+      completingActualSplatlingBurst:finishTurfBurst
+    });
+    if(this.b215SelectedBattlePaintPacing&&canTurfPaint&&
+       !hasCombatInRange&&cooldown<=0&&!b215QueryPaint)
+      this.b215RealWeaponCooldownPaintScansDeferred++;
     const turfTarget = canTurfPaint && !hasCombatInRange &&
-      (cooldown <= 0 || finishTurfBurst)
+      b215QueryPaint&&(cooldown <= 0 || finishTurfBurst)
       ? allyInk ?? (this.b64InkAngleSweepEnabled?
          this.chooseB64SourceLateralInkTarget(bot,dt) ??
           this.chooseOriginalSourceTurfTarget(bot):

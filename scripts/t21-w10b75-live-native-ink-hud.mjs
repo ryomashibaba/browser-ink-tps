@@ -944,6 +944,22 @@ async function run(){
       originalUnpaintedPatchSelections:p.chosenRealUnpaintedSourcePatches,
       sourceAimSamples:a.candidateSamples,
       scoreable:0,actorTeleports:0,officialWinner:'NONE'}));
+    const pacing=realSeven.b215RealBattleAimPacing;
+    if(pacing?.enabled!==true||
+       !Number.isSafeInteger(pacing.realWeaponCooldownPaintScansDeferred)||
+       pacing.realWeaponCooldownPaintScansDeferred<0||
+       pacing.playerAmmoOrCpuShotInjection!==0||
+       pacing.originalNavLinkWrites!==0||
+       pacing.originalScoreableWrites!==0||
+       pacing.productionAuthorized!==false)
+      fail('B215_NATIVE_REAL_WEAPON_COOLDOWN_PACING_NOT_ARMED_'+
+       JSON.stringify(pacing));
+    console.log('B215_REAL_SOURCE_CPU_SHOT_READY_PAINT_PACING',JSON.stringify({
+       selectedActualPlayerBattle:true,
+       trueCooldownBlockedAimQueries:pacing.realWeaponCooldownPaintScansDeferred,
+       fabricatedMainWeaponShots:0,
+       fabricatedCpuFootPaths:0,officialWinner:'NONE'
+    }));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),

@@ -706,6 +706,8 @@ export class UndertowF3PlayablePreviewApp{
   if(b192HumanCombatEnabled&&this.b203FullRound){
     this.cpu.enableB212OriginalPhysicalMovingEnemyAim();
     this.cpu.enableB213SourcePhysicalCounterfire();
+    if(b214BattleInk)
+      this.cpu.enableB215SourceBattleNativeWeaponReadyPaintPacing();
   }
   this.canvas.dataset.t21B154TeamCoverage=
    b154TeamCoverage?'SOURCE_ONLY_EXPERIMENT':'DISABLED';
@@ -3680,6 +3682,7 @@ export class UndertowF3PlayablePreviewApp{
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
+   b215RealBattleAimPacing:this.cpu.b215RealSourceBattlePaintPacingSnapshot(),
    b214SustainedBattleInk:{
     enabled:this.canvas.dataset.t21B214NativeBattleInk===
      'REAL_SOURCE_INK_ECONOMY',originalSourceOnly:true as const,
