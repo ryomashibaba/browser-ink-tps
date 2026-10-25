@@ -41,7 +41,7 @@ import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
-import {sourceCoopEligible,sourceCoopNavigationUrl} from './B193SourceCoopMode';
+import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
 import {b154OriginalTeamInkOptIn}
@@ -1346,7 +1346,16 @@ export class UndertowF3PlayablePreviewApp{
      this.b25RunProgress.textContent='Press ESC and close gallery/survey before replay.';
     return;
    }
-   if(document.pointerLockElement===this.canvas||this.paused||this.stopReason||
+   const permittedPausedArm=sourceFullRoundCanArmWhilePaused({
+    enabled:this.b203FullRound,paused:this.paused,
+    awaitingPointerRelock:this.resumeAfterRealPointerLock,
+    realPointerPreviouslyLocked:this.b203EverLockedRealPointer,
+    matchState:this.matchState,
+    practiceStatus:this.b25Run.snapshot().status,
+    stopReason:this.stopReason
+   });
+   if(document.pointerLockElement===this.canvas||
+      (this.paused&&!permittedPausedArm)||this.stopReason||
       this.matchState==='TIME_UP'||this.survey.snapshot().active||
       this.galleryIndex>=0||['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
     this.b25RunProgress.textContent='Exit pause/survey and unlock mouse before arming.';
@@ -1361,7 +1370,7 @@ export class UndertowF3PlayablePreviewApp{
     return;
    }
    if(this.b25Run.arm(this.b56NextVariant)){
-    this.b25RunProgress.textContent='ARMED · Click stage to lock mouse, then paint and move.';
+    this.b25RunProgress.textContent='ARMED · Click stage for real pointer lock and 60Hz resume.';
     this.b25RunButton.textContent='PAINT RUN ARMED';
     this.b25RunButton.disabled=true;
     // Real click updates the dual objective display immediately;

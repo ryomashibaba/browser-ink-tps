@@ -148,7 +148,12 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  const armed=(await snapshot()).b25SourcePaintRun;
  if(armed.status!=='ARMED'||armed.practiceVariant!=='ALLY_SYNC'||
     armed.officialWinner!=='NONE')
-  fail('B162_REAL_ALLY_SYNC_NOT_ARMED');
+  fail('B162_REAL_ALLY_SYNC_NOT_ARMED_'+JSON.stringify({
+   status:armed.status,variant:armed.practiceVariant,
+   fullRound:b203FullRoundTrial,paused:(await snapshot()).paused,
+   remaining:(await snapshot()).timeRemainingSeconds,
+   ui:await evaluate('document.querySelector("#t21-f3-b25-progress")?.textContent')
+  }));
  await click(800,450);
  await until(()=>evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
@@ -1057,7 +1062,8 @@ async function run(){
     }))()`);
     return p.origin>origin&&p.ready==='READY'&&
       p.coop==='REAL_A1_ORIGINAL_SOURCE'&&
-      p.url==='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop'&&
+      p.url===('?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop'+
+       (b203FullRoundTrial?'&t21W10B203=fullRound':''))&&
       p.variant==='ALLY_SYNC'?p:false;
    }catch{return false;}},100000);
    const n=await snapshot();authority(n,'FIXED');

@@ -16,3 +16,15 @@ export function sourceCoopNavigationUrl(current:string,enable:boolean):string{
   dest.searchParams.set('t21W10B203','fullRound');
  return dest.href;
 }
+
+/** B204: UI-only mission arming during genuine pointer-unlocked paused 180s round. */
+export function sourceFullRoundCanArmWhilePaused(v:{
+ enabled:boolean;paused:boolean;awaitingPointerRelock:boolean;
+ realPointerPreviouslyLocked:boolean;matchState:'STAGING'|'PLAYING'|'TIME_UP';
+ practiceStatus:'IDLE'|'ARMED'|'RUNNING'|'CLEAR'|'TIME_UP'|'ABORTED';
+ stopReason:string|null;
+}):boolean{
+ return v.enabled&&v.paused&&v.awaitingPointerRelock&&
+  v.realPointerPreviouslyLocked&&v.matchState==='PLAYING'&&
+  v.practiceStatus==='IDLE'&&!v.stopReason;
+}
