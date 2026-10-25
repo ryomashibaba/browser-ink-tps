@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `970ecde01be92562a88e9de1a980274988991bcd`
-- 最新番号のQAレポート: W10-B194 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B194-player-button-source-ally-session.md
+- 同期元QA HEAD: `9d9b59eaf45444f7c3567d2445142ed0d4027abc`
+- 最新番号のQAレポート: W10-B195 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B195-real-A1-playable-mission-feedback.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B195 （着手・完了の保証ではない）
-- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40167192967
+- 次工程候補: W10-B196 （着手・完了の保証ではない）
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40173186549
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
