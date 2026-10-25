@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {b209OriginalRampEdge,type B209RampFrame} from './B209OriginalRampEdge';
 const input=(body:readonly [number,number,number],
- support='UndertowT21D:right-low-route-ramp-positive-z'):B209RampFrame=>({
+ support:string|null='UndertowT21D:right-low-route-ramp-positive-z'):B209RampFrame=>({
  nativeTick:9764,body,stage:[25,17,26,0],nativeKccGrounded:true,
  actualOriginalFootSupportId:support,matchState:'PLAYING',paused:false,stopReason:null
 });
