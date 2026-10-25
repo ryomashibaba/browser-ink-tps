@@ -973,6 +973,28 @@ async function run(){
       fail('B216_NATIVE_ORIGINAL_BACKFILL_NOT_VERIFIED_'+JSON.stringify(backfill));
     console.log('B216_GENUINE_SOURCE_RAPIER_BACKFILL_IN_PLAYER_BATTLE',
       JSON.stringify(backfill));
+    // B217 visible, read-only source combat feedback, sourced from
+    // native CPU shot requests and REAL changed paint cells independently.
+    const live=await evaluate(`(() => {
+     const clock=document.querySelector('#t21-f3-b205-real-round');
+     return {source:clock?.dataset.t21B217RealSourceOnly,
+      shots:clock?.dataset.t21B217SourceCpuShots,
+      paint:clock?.dataset.t21B217CpuRealPaintCells,
+      lastTick:clock?.dataset.t21B217LatestWindowTick,
+      winner:clock?.dataset.t21B217OfficialWinner,
+      text:clock?.textContent??''};
+    })()`);
+    if(live.source!=='true'||live.winner!=='NONE'||
+       !Number.isSafeInteger(Number(live.shots))||
+       !Number.isSafeInteger(Number(live.paint))||
+       Number(live.shots)<0||Number(live.paint)<0||
+       !Number.isSafeInteger(Number(live.lastTick))||
+       !live.text.includes('CPU ACTIVITY')||
+       !live.text.includes('SOURCE CPU SHOTS')||
+       !live.text.includes('ENEMY SIGHT')||
+       !live.text.includes('NO OFFICIAL WINNER'))
+      fail('B217_NATIVE_REAL_COMBAT_HUD_NOT_READONLY_'+JSON.stringify(live));
+    console.log('B217_REAL_SOURCE_5S_CPU_ACTIVITY_HUD',JSON.stringify(live));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),

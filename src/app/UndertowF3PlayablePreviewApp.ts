@@ -45,6 +45,7 @@ import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePau
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
+import {B217ActualNativePaintTempo} from './B217ActualNativePaintTempo';
 import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209OriginalRampEdge';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
@@ -280,6 +281,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private readonly b205RoundClock:HTMLElement|null;
  private readonly b211Roster:ReturnType<typeof createB211RealBattleRoster>|null;
+ private readonly b217NativePaintTempo=new B217ActualNativePaintTempo();
  private readonly b160CpuInkActivityView:
   ReturnType<typeof createB160SourceCpuActivityView>;
  private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
@@ -3708,6 +3710,7 @@ export class UndertowF3PlayablePreviewApp{
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
    b215RealBattleAimPacing:this.cpu.b215RealSourceBattlePaintPacingSnapshot(),
    b216RealNativePaintBackfill:this.cpu.b216OriginalSourceBackfillSnapshot(),
+   b217ActualLivePaintTempo:this.b217NativePaintTempo.snapshot(),
    b214SustainedBattleInk:{
     enabled:this.canvas.dataset.t21B214NativeBattleInk===
      'REAL_SOURCE_INK_ECONOMY',originalSourceOnly:true as const,
@@ -3886,6 +3889,14 @@ export class UndertowF3PlayablePreviewApp{
    this.survey.snapshot().active||this.galleryIndex>=0);
   this.b58SessionBoard.render(state);
   if(this.b205RoundClock){
+   // B217 only observes B207 player's existing native counters. No
+   // fake increment, paint-to-shot attribution or official Turf scoring.
+   const b217=this.b211Roster?this.b217NativePaintTempo.observe({
+    tick:state.tick,cpuSourceShots:state.cpuSourceTurfShots,
+    cpuImpactPaintChanges:state.cpuImpactInkCellsChanged,
+    humanShots:state.shotsFired,
+    sourceScoreable:state.sourceScoreablePromotions
+   }):null;
    const remaining=Math.ceil(state.timeRemainingSeconds);
    const clock=String(Math.floor(remaining/60)).padStart(2,'0')+':'+
     String(remaining%60).padStart(2,'0');
@@ -3901,9 +3912,28 @@ export class UndertowF3PlayablePreviewApp{
     'HUMAN INK '+state.b23HumanInkFeedback.humanChangedCells+
     ' · CPU INK '+state.cpuImpactInkCellsChanged+'\n'+
     'SPLATS '+state.humanSplats+' / '+state.cpuSplats+
-    ' · RESPAWNS '+state.humanRespawns+'\nNO OFFICIAL WINNER';
+    ' · RESPAWNS '+state.humanRespawns+'\n'+
+    (this.b211Roster?
+      'SOURCE CPU SHOTS '+state.cpuSourceTurfShots+'\n'+
+      (b217?'CPU ACTIVITY · LAST '+(b217.nativeTicks/60).toFixed(1)+
+       's: '+b217.genuineCpuSourceShots+' SHOTS / '+
+       b217.actualCpuChangedPaintCells+' REAL INK CELLS\n':
+       'CPU ACTIVITY · WAITING FOR 5s REAL NATIVE SAMPLE\n')+
+      'ENEMY SIGHT '+state.b181OriginalCombatSight.visibleEnemySelections+
+      ' · DIRECT HITS '+state.humanCpuDirectHits+'\n':'')+
+    'NO OFFICIAL WINNER';
    this.b205RoundClock.style.whiteSpace='pre-line';
    this.b205RoundClock.dataset.t21B205NativePhase=phase;
+   if(this.b211Roster){
+    this.b205RoundClock.dataset.t21B217RealSourceOnly='true';
+    this.b205RoundClock.dataset.t21B217SourceCpuShots=
+     String(state.cpuSourceTurfShots);
+    this.b205RoundClock.dataset.t21B217CpuRealPaintCells=
+     String(state.cpuImpactInkCellsChanged);
+    this.b205RoundClock.dataset.t21B217LatestWindowTick=
+     String(b217?.toTick??-1);
+    this.b205RoundClock.dataset.t21B217OfficialWinner='NONE';
+   }
    this.b205RoundClock.dataset.t21B205RealClock=clock;
    this.b205RoundClock.dataset.t21B205MissionClear=String(cleared);
    this.b205RoundClock.dataset.t21B205HumanInk=

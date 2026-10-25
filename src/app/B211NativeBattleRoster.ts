@@ -52,7 +52,7 @@ export function b211RealNativeRoster(v:B211NativeInput){
 export function createB211RealBattleRoster(ui:HTMLElement){
  const el=document.createElement('aside');
  el.id='t21-f3-b211-real-battle-roster';
- el.style.cssText='position:fixed;top:185px;right:14px;z-index:36;'+
+ el.style.cssText='position:fixed;top:225px;right:14px;z-index:36;'+
   'pointer-events:none;box-sizing:border-box;width:220px;'+
   'max-width:calc(100vw - 28px);border:1px solid #65b5c0;'+
   'border-radius:10px;background:rgba(3,27,38,.91);'+
