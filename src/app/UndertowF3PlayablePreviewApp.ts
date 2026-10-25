@@ -33,6 +33,7 @@ import {getB166OriginalAllyRendezvous}
  from './B166OriginalAllyRendezvous';
 import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
 import {shouldPresentB168NativePractice} from './B168NativePracticePresentation';
+import {B183OriginalHumanDescent} from './B183OriginalHumanDescent';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -250,6 +251,15 @@ export class UndertowF3PlayablePreviewApp{
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
  private readonly b167CombatNotice:HTMLElement;
+ // B183 original-source native first-drop game challenge, without route writes.
+ private readonly b183DropNotice:HTMLElement;
+ private readonly b183Drop=new B183OriginalHumanDescent();
+ private readonly b183DropPlayEnabled=(()=>{
+  const q=new URL(location.href).searchParams;
+  return q.get('t21Play')==='preview'&&
+   q.get('t21QaDrive')==='source'&&
+   q.get('t21W10B183')==='firstDropPlay';
+ })();
  private b141RealAllyIndicator:HTMLElement|null=null;
  private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
@@ -735,6 +745,29 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc release</p>';
   ui.appendChild(this.panel);
+  // One-click real source-only player descent, starting a new uns cored run.
+  if(!this.b183DropPlayEnabled){
+   const button=document.createElement('button');
+   button.id='t21-f3-b183-start-descent';button.type='button';
+   button.textContent='PLAY ORIGINAL UPPER → LOWER DESCENT (SOURCE QA)';
+   button.style.cssText='display:block;width:100%;margin-top:9px;'+
+    'padding:10px 7px;background:#134b63;color:#dbffff;'+
+    'border:1px solid #55d6e0;border-radius:8px;'+
+    'font:750 11px/1.4 system-ui;cursor:pointer';
+   button.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||this.stopReason||
+      this.survey.snapshot().active||
+      ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)||
+      ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status))
+     return;
+    const dest=new URL(window.location.pathname,window.location.origin);
+    dest.searchParams.set('t21Play','preview');
+    dest.searchParams.set('t21QaDrive','source');
+    dest.searchParams.set('t21W10B183','firstDropPlay');
+    window.location.assign(dest.href);
+   });
+   this.panel.appendChild(button);
+  }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   // B69: an ordinary preview user can explicitly compare the already
   // B68-proven original source ink candidate and return to baseline with
@@ -930,6 +963,23 @@ export class UndertowF3PlayablePreviewApp{
    'box-shadow:0 8px 22px #0019';
   combatNotice.hidden=true;ui.appendChild(combatNotice);
   this.b167CombatNotice=combatNotice;
+  const dropNotice=document.createElement('aside');
+  dropNotice.id='t21-f3-b183-real-first-drop';
+  dropNotice.dataset.originalSourceOnly='true';
+  dropNotice.dataset.scoreablePromotions='0';
+  dropNotice.dataset.crossTeamRouteCertified='false';
+  dropNotice.dataset.officialWinner='NONE';
+  dropNotice.setAttribute('role','status');
+  dropNotice.style.cssText='position:fixed;right:16px;bottom:100px;'+
+   'max-width:min(325px,calc(100vw - 32px));z-index:36;'+
+   'pointer-events:none;padding:10px 14px;'+
+   'border-radius:11px;border:1px solid #59d3e0;'+
+   'background:rgba(5,26,39,.91);color:#defaff;'+
+   'font:750 12px/1.5 system-ui;box-shadow:0 12px 32px #0019';
+  dropNotice.hidden=!this.b183DropPlayEnabled;
+  dropNotice.textContent='NATIVE SOURCE DESCENT · Wait for PLAYING, then descend from genuine upper source floor to original lower floor · UNSCORED';
+  ui.appendChild(dropNotice);
+  this.b183DropNotice=dropNotice;
   // Actual native teammate orientation for explicitly opted-in gameplay.
   if(this.canvas.dataset.t21B137AllyRally==='ORIGINAL_GROUNDED_ALLY_EXPERIMENT'){
    const indicator=document.createElement('div');
@@ -2013,6 +2063,51 @@ export class UndertowF3PlayablePreviewApp{
     }else this.respawnFrames=0;
     const actualHumanInk=this.b23InkFeedback.snapshot(frame);
     const realFoot=this.player.getPosition(this.p);
+    // B183: real native Rapier player KCC, unscored first-drop activity.
+    if(this.b183DropPlayEnabled){
+     const before=this.b183Drop.snapshot();
+     const actualSupport=this.resources.currentHp>0&&
+      this.stats.playerGrounded&&
+      this.player.currentMode==='HUMAN'&&
+      realFoot.y>=3.2&&realFoot.y<=9.6?
+       this.physics.castCharacterFootSupport(realFoot,
+        PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
+     this.b183Drop.observe({
+      tick:frame,nativePlaying:this.matchState==='PLAYING'&&
+       !this.paused&&!this.stopReason,
+      alive:this.resources.currentHp>0,
+      mode:this.player.currentMode==='HUMAN'?'HUMAN':'SQUID',
+      sourceStage:[this.rawStage.solids.length,
+       this.rawStage.paintSurfaces.length,
+       this.rawStage.navigationLinks?.length??0,0],
+      body:[realFoot.x,realFoot.y,realFoot.z],
+      nativeGrounded:this.stats.playerGrounded,
+      originalRapierSupportId:actualSupport?.solidId??null,
+      sourceFootGapMeters:actualSupport?
+       realFoot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters-
+       actualSupport.point.y:null
+     });
+     const drop=this.b183Drop.snapshot();
+     if(before.status!==drop.status||frame%6===0){
+      this.b183DropNotice.dataset.nativeState=drop.status;
+      this.b183DropNotice.dataset.trueNativeTick=String(frame);
+      this.b183DropNotice.dataset.genuineRapierLanding=
+       String(drop.originalFirstDropLocalPracticeClear);
+      this.b183DropNotice.style.borderColor=
+       drop.originalFirstDropLocalPracticeClear?'#83ffd4':'#59d3e0';
+      this.b183DropNotice.textContent=
+       drop.status==='SOURCE_LOWER_LANDED'?
+        'GENUINE FIRST DROP CLEAR · Registered source Rapier lower landing at native tick '+
+        drop.trueNativeLandingTick+' · NO CROSS-TEAM ROUTE OR TURF WINNER':
+       drop.status==='DESCENDING'?
+        'REAL SOURCE DESCENT · Airborne native human KCC · land on REGISTERED lower floor':
+       drop.status==='UPPER_READY'?
+        'ORIGINAL UPPER FLOOR CONFIRMED · Descend naturally to the lower original floor':
+       drop.status==='WITNESS_INVALID'?
+        'SOURCE DESCENT HOLD · Unverified native transition · Restart to retry':
+        'SOURCE FIRST DROP · Reach genuine upper floor, then descend · PRACTICE ONLY';
+     }
+    }
     if(this.b27KineticEnabled)
      this.b27KineticView.sampleNativeFoot({
       tick:frame,x:realFoot.x,y:realFoot.y,z:realFoot.z,
@@ -3007,6 +3102,10 @@ export class UndertowF3PlayablePreviewApp{
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
    b181OriginalCombatSight:this.cpu.b181OriginalSourceCombatSightSnapshot(),
+   b183OriginalHumanDescent:{
+    ...this.b183Drop.snapshot(),enabled:this.b183DropPlayEnabled,
+    realNativeSourceOnly:true as const
+   },
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b156OriginalUnderpassGapTriage:
     triageB156OriginalGaps(this.b155SourceConnectivityReview),
