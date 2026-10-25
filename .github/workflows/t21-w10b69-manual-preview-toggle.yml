@@ -8,7 +8,6 @@ on:
       - 'src/app/UndertowF3OwnerAimComparison.ts'
       - 'src/app/UndertowF3OwnerAimComparison.test.ts'
       - 'src/app/UndertowF3OwnerAimComparisonUI.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
   workflow_dispatch:
 permissions:
   contents: read

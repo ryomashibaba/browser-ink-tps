@@ -9,7 +9,6 @@ on:
       - 'src/core/PerformanceStats.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
       - 'src/combat/CombatTargetSystem.SourcePractice.test.ts'
   workflow_dispatch:
 permissions:

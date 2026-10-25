@@ -8,7 +8,6 @@ on:
       - 'src/app/UndertowF3PracticeObjectiveView.ts'
       - 'src/app/UndertowF3SourceSessionBoard.ts'
       - 'src/app/UndertowF3SourceSessionBoard.test.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
   workflow_dispatch:
 permissions:
   contents: read

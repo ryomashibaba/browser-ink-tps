@@ -6,7 +6,6 @@ on:
       - 'src/app/UndertowF3OwnerAimComparison.ts'
       - 'src/app/UndertowF3OwnerAimComparison.test.ts'
       - 'src/app/UndertowF3OwnerAimComparisonUI.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b72-stored-round-witness.mjs'
       - 'scripts/t21-w10b72-stored-round-witness.test.mjs'
   workflow_dispatch:

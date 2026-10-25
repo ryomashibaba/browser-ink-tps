@@ -11,7 +11,6 @@ on:
       - "src/app/UndertowF3K*"
       - "src/app/UndertowF3L*"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
-      - "scripts/t21-f3-browser-smoke.mjs"
       - "src/app/UndertowF3G*"
   workflow_dispatch:
 permissions:
