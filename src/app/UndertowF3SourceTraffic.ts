@@ -14,6 +14,7 @@ import {SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
+import {rankB169OriginalAdvanceGuardGoals} from './B169OriginalAllyAdvanceGuard';
 import {chooseB142OriginalAllyStandoff,mayRetainB143OriginalAllyStandoff}
  from './UndertowF3OriginalAllyStandoff';
 import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
@@ -57,6 +58,9 @@ export interface F3TrafficSnapshot{
   readonly b143ReauthorizedStableStandoffGoals:number;
   readonly b143UnsafeOrStaleGoalHoldsRejected:number;
   readonly b150AllySupportInkOptIn:boolean;
+  readonly b169SourceAdvanceGuardChecks:number;
+  readonly b169NativeAdvanceGuardTargets:number;
+  readonly b169RejectedUnsafeOrUnreachableGoals:number;
   readonly b150SourceCandidateSamples:number;
   readonly b150ApprovedInkAims:number;
   /** B153 source-verified A1 aim proposals after rotation. */
@@ -125,6 +129,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private heldRequests=0;
  private engagementGoalRequests=0;
  private b137RealCandidateChecks=0;
+ private b169SourceAdvanceGuardChecks=0;
+ private b169NativeAdvanceGuardTargets=0;
+ private b169RejectedUnsafeOrUnreachableGoals=0;
+ private b169HumanUpperGrounded=false;
  private b137ApprovedNativeRallies=0;
  private b137UnsafeOrUnsupportedRallies=0;
  private b137MissingSourceFloorProof=0;
@@ -426,7 +434,43 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     return true;
    }
   }
-  // B137: A1 may rally to the REAL, same-team human foot in the
+  // B169: only explicit source ally-ink opt-in, while the real human is
+   // physically grounded at the original upper area. Reposition real A1
+   // toward an EXISTING source patrol foot away from the authored HUMAN
+   // first-drop landing, rather than letting A1 wander during the upper
+   // human ink challenge. Every actual source Rapier point and all Recast
+   // polyline segments must pass again. If none pass, legacy patrol wins.
+   if(this.enableB137OriginalAllyRally&&
+      this.enableB150AllySupportInk&&id==='A1'&&
+      this.b169HumanUpperGrounded){
+    this.b169SourceAdvanceGuardChecks++;
+    const landing=this.routeFor('HUMAN').originalLanding;
+    const goals=rankB169OriginalAdvanceGuardGoals({
+     enabled:true,humanGrounded:true,humanActive:true,
+     realUpperHumanFoot:this.b137ActualHumanFoot,
+     realLowerA1Foot:realFoot,
+     authoredHumanDropLanding:{x:landing[0],y:landing[1],z:landing[2]},
+     alreadyAuditedOriginalPatrolFeet:candidates
+    });
+    for(const goal of goals){
+     if(!this.hasSourceFootSupport(realFoot)||
+        !this.hasSourceFootSupport(goal)){
+      this.b169RejectedUnsafeOrUnreachableGoals++;continue;
+     }
+     const native=this.nav.auditPath(realFoot,goal);
+     if(!native.reachedTarget||native.startSnapDistanceMeters>.20||
+        native.endSnapDistanceMeters>.20||
+        !this.hasSourceSupportedRoute(native,1)){
+      this.b169RejectedUnsafeOrUnreachableGoals++;continue;
+     }
+     this.patrolIndex.set(id,-1);
+     out.copy(goal);
+     this.realGoalRequests++;
+     this.b169NativeAdvanceGuardTargets++;
+     return true;
+    }
+   }
+   // B137: A1 may rally to the REAL, same-team human foot in the
   // already reachable source-lower area, after 7 true CPU releases.
   // Unlike legacy patrol (which keeps per-step KCC defense), this dynamic
   // actor-following target requires a full original floor + endpoint +
@@ -770,11 +814,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // released, refresh validity each physical tick before CPU goal choice.
   this.b137NativeTick=frame;
   this.b137HumanFootValid=false;
+  this.b169HumanUpperGrounded=false;
   if(this.enableB137OriginalAllyRally&&
      humanFoot?.grounded===true&&humanFoot.active===true&&
      [humanFoot.x,humanFoot.y,humanFoot.z].every(Number.isFinite)){
    this.b137ActualHumanFoot.set(humanFoot.x,humanFoot.y,humanFoot.z);
    this.b137HumanFootValid=true;
+   this.b169HumanUpperGrounded=humanFoot.y>=7&&
+    humanFoot.y<=9.5&&humanFoot.z>=33;
   }
   if(this.freeCombat)return;
   for(const [id,requires] of Object.entries(RELEASE_AFTER)){
@@ -968,6 +1015,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      b143UnsafeOrStaleGoalHoldsRejected:
       this.b143UnsafeOrStaleGoalHoldsRejected,
     b150AllySupportInkOptIn:this.enableB150AllySupportInk,
+    b169SourceAdvanceGuardChecks:this.b169SourceAdvanceGuardChecks,
+    b169NativeAdvanceGuardTargets:this.b169NativeAdvanceGuardTargets,
+    b169RejectedUnsafeOrUnreachableGoals:
+     this.b169RejectedUnsafeOrUnreachableGoals,
     b150SourceCandidateSamples:this.b150SourceCandidateSamples,
     b150ApprovedInkAims:this.b150ApprovedInkAims,
     b153DiversifiedAimApprovals:this.b153DiversifiedAimApprovals,
