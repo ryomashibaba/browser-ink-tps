@@ -35,6 +35,7 @@ import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
 import {shouldPresentB168NativePractice} from './B168NativePracticePresentation';
 import {B183OriginalHumanDescent} from './B183OriginalHumanDescent';
 import {b185OriginalDropGuidance} from './B185OriginalDropGuidance';
+import {B186RealOriginalSourceCircuit} from './B186RealOriginalSourceCircuit';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -255,6 +256,7 @@ export class UndertowF3PlayablePreviewApp{
  // B183 original-source native first-drop game challenge, without route writes.
  private readonly b183DropNotice:HTMLElement;
  private readonly b183Drop=new B183OriginalHumanDescent();
+ private readonly b186Circuit=new B186RealOriginalSourceCircuit();
  private b185LatestOriginalDropCue:
   ReturnType<typeof b185OriginalDropGuidance>|null=null;
  private readonly b183DropPlayEnabled=(()=>{
@@ -2060,6 +2062,10 @@ export class UndertowF3PlayablePreviewApp{
       this.resources.reset();
       this.player.teleport(this.humanSpawn);
       this.b112GroundLedger.resetOnRespawn(); // retain the real pre-fall witness
+      // B186: the previous human life must never satisfy a new
+      // physical original descent after genuine 150-tick respawn.
+      if(this.b183DropPlayEnabled)
+       this.b183Drop.resetForActualNativeHumanRespawn();
       this.player.setLifecycleActive(true);
       this.humanRespawns++;
       this.respawnFrames=0;
@@ -2092,7 +2098,30 @@ export class UndertowF3PlayablePreviewApp{
        actualSupport.point.y:null
      });
      const drop=this.b183Drop.snapshot();
-     if(before.status!==drop.status||frame%6===0){
+     const previousCircuit=this.b186Circuit.snapshot();
+     const circuit=this.b186Circuit.observe({
+      nativeTick:frame,livePlaying:this.matchState==='PLAYING'&&
+       !this.paused&&!this.stopReason,
+      alive:this.resources.currentHp>0,
+      mode:this.player.currentMode==='HUMAN'?'HUMAN':'SQUID',
+      frozenStage:[this.rawStage.solids.length,
+       this.rawStage.paintSurfaces.length,
+       this.rawStage.navigationLinks?.length??0,0],
+      originalDropVerified:drop.originalFirstDropLocalPracticeClear,
+      dropLowerColliderId:drop.actualOriginalRapierLowerLandingId,
+      body:[realFoot.x,realFoot.y,realFoot.z],
+      nativeKccGrounded:this.stats.playerGrounded,
+      actualRapierSupportId:actualSupport?.solidId??null,
+      actualFootSupportGapMeters:actualSupport?
+       realFoot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters-
+       actualSupport.point.y:null,
+      humanSourceOriginalOnly:actualHumanInk.originalSourceOnly,
+      actualHumanImpactChangedCells:actualHumanInk.humanChangedCells,
+      actualHumanImpactEvents:actualHumanInk.humanChangedImpactCount,
+      lastActualHumanImpactTick:actualHumanInk.lastImpactTick
+     });
+     if(before.status!==drop.status||
+        previousCircuit.status!==circuit.status||frame%6===0){
       // B185: observations of frozen *original* upper/lower polygons.
       // XZ projection does NOT prove traversability or a safe landing.
       const lowerBoundary=inspectB120OriginalFirstDropBoundary({
@@ -2131,7 +2160,28 @@ export class UndertowF3PlayablePreviewApp{
        drop.status==='WITNESS_INVALID'?
         'SOURCE DESCENT HOLD · Unverified native transition · Restart to retry':
         'SOURCE FIRST DROP · Reach genuine upper floor, then descend · PRACTICE ONLY';
-      this.b183DropNotice.textContent+='\n'+guidance.label;
+      const circuitInstruction=circuit.status==='REAL_LOCAL_CIRCUIT_CLEAR'?
+       'FULL SOURCE-LOCAL CIRCUIT COMPLETE · REAL DESCENT + ORIGINAL RAMP + '+
+        circuit.realPostDropHumanImpactChangedCells+
+        ' NEW HUMAN IMPACT CELLS · PRACTICE ONLY':
+       circuit.status==='PAINT_ON_RAISED'?
+        'ORIGINAL RAMP REACHED · Paint '+circuit.requiredHumanImpactChangedCells+
+        ' FRESH CHANGED CELLS FROM HUMAN PROJECTILE IMPACTS · '+
+        circuit.realPostDropHumanImpactChangedCells+' / '+
+        circuit.requiredHumanImpactChangedCells:
+       circuit.status==='MOVE_TO_ORIGINAL_RAISED'?
+        'DROP COMPLETE · MOVE TO ORIGINAL UPHILL RAMP AND RAISED RIGHT-LOW FLOOR · '+
+        circuit.genuineGroundedTravelMeters.toFixed(1)+' / 2.0m TRUE GROUNDED WALK':
+       circuit.status==='INVALID_SOURCE_WITNESS'?
+        'CIRCUIT HOLD · Source physical or paint evidence invalid · manual restart':
+        'NEXT · ORIGINAL FIRST DROP, THEN WALK THE AUTHENTIC RAMP AND PAINT';
+      this.b183DropNotice.dataset.b186NativeStatus=circuit.status;
+      this.b183DropNotice.dataset.b186RealLocalPracticeClear=
+       String(circuit.sourceLocalPlayClear);
+      this.b183DropNotice.dataset.b186RealImpactChangedCells=
+       String(circuit.realPostDropHumanImpactChangedCells);
+      this.b183DropNotice.textContent+='\n'+
+       circuitInstruction+'\n'+guidance.label;
      }
     }
     if(this.b27KineticEnabled)
@@ -3133,6 +3183,10 @@ export class UndertowF3PlayablePreviewApp{
     realNativeSourceOnly:true as const
    },
    b185RealOriginalLandingFootprintCue:this.b185LatestOriginalDropCue,
+   b186RealOriginalHumanCircuit:{
+    ...this.b186Circuit.snapshot(),enabled:this.b183DropPlayEnabled,
+    originalSourceOnly:true as const
+   },
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b156OriginalUnderpassGapTriage:
     triageB156OriginalGaps(this.b155SourceConnectivityReview),

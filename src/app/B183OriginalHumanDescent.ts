@@ -29,6 +29,17 @@ export class B183OriginalHumanDescent {
  private landingId:string|null=null;
  private landingNativeTick:number|null=null;
  private sourceStageMaintained=true;
+ /**
+  * Called only by the actual 150-tick native human respawn lifecycle.
+  * A landing from the previous life must never arm new local activity.
+  */
+ public resetForActualNativeHumanRespawn(){
+  this.state='SEEK_UPPER';this.lastTick=-1;this.lastBody=null;
+  this.upperBodyY=null;this.upperSide=0;
+  this.upperOriginalSupportId=null;this.fallingSince=null;
+  this.landingId=null;this.landingNativeTick=null;
+  this.realObservedTicks=0;this.sourceStageMaintained=true;
+ }
  private readonly valid=(p:readonly number[])=>p.length===3&&p.every(Number.isFinite);
  public observe(f:B183OriginalDescentInput):void{
   if(this.state==='SOURCE_LOWER_LANDED'||this.state==='WITNESS_INVALID')return;

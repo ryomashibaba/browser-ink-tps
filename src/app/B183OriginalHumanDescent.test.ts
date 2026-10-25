@@ -102,3 +102,20 @@ describe('B184 no invented first-drop authority',()=>{
   });
  });
 });
+
+describe('B186 original native respawn cannot reuse last life first drop',()=>{
+ it('drops previous physical landing identity when real human respawns',()=>{
+  const d=new B183OriginalHumanDescent();
+  d.observe(sample(1,8.7,true));
+  let y=8.7;
+  for(let i=2;i<=13;i++){y-=.4;d.observe(sample(i,y,false));}
+  d.observe(sample(14,3.9,true));
+  expect(d.snapshot().originalFirstDropLocalPracticeClear).toBe(true);
+  d.resetForActualNativeHumanRespawn();
+  expect(d.snapshot()).toMatchObject({
+   status:'SEEK_UPPER',originalFirstDropLocalPracticeClear:false,
+   actualOriginalRapierUpperStartId:null,
+   actualOriginalRapierLowerLandingId:null
+  });
+ });
+});
