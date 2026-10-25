@@ -51,6 +51,21 @@ test('B131: 19 historical one-off suites retain manual dispatch and domain trigg
    name+' workflow edits should not immediately spawn an expensive historical run');
  }
 });
+test('B173: shared real CDP driver changes do NOT fan out legacy browser workflows',()=>{
+ for(const name of legacy){
+  const s=read(name);
+  assert.ok(!s.includes("- 'scripts/t21-f3-browser-smoke.mjs'")&&
+   !s.includes('- "scripts/t21-f3-browser-smoke.mjs"'),
+   'shared source driver must not auto-trigger historical '+name);
+ }
+ const b50=read('t21-w10b50-independent-lane.yml');
+ assert.ok(!b50.includes("- 'scripts/t21-f3-browser-smoke.mjs'"));
+ const full=read('t21-w10b59-full-native-session.yml');
+ assert.ok(full.includes("- 'scripts/t21-f3-browser-smoke.mjs'"),
+  'real 180s end-to-end test remains the ONE shared driver owner');
+ assert.ok(full.includes("T21_B172_ACTIVE_180S: '1'"));
+});
+
 test('B131: four important gates still run on preview app integration change',()=>{
  assert.equal(retained.length,4);
  for(const name of retained){
