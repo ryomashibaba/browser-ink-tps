@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `1d09124b3f3acb6de57d01e61c57bf68772cc6b9`
-- 最新番号のQAレポート: W10-B212 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B212-real-source-physics-enemy-shot-leading.md
+- 同期元QA HEAD: `28930746b47fe7b53efe8cf192e806f5c8864ae3`
+- 最新番号のQAレポート: W10-B213 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B213-real-source-hit-counterfire.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B213 （着手・完了の保証ではない）
+- 次工程候補: W10-B214 （着手・完了の保証ではない）
 - レポート記載のActions: 確認できない
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
