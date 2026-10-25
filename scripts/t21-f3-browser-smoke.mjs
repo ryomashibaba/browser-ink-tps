@@ -121,12 +121,18 @@ async function main(){
  const b174Active=process.env.T21_B174_EXPLICIT_SOURCE_SWEEP_180S==='1';
  const b176RealDrop=process.env.T21_B176_REAL_NATIVE_HUMAN_DROP==='1';
  const b206FullRound=process.env.T21_B206_REAL_PLAYER_FULL_ROUND==='1';
- if(b206FullRound&&(!w10b59||!b172Active||!b174Active||!b176RealDrop))
+ const b210SafeCombat=process.env.T21_B210_SAFE_COMBAT_180S==='1';
+ if(b206FullRound&&(!w10b59||!b172Active||
+    !(b174Active&&b176RealDrop||b210SafeCombat)))
   reject('B206_NEEDS_TRUE_B59_HUMAN_7CPU_SOURCE_SESSION');
  const w10b69=process.env.T21_W10B69_ONE_CLICK_PREVIEW==='1';
  const w10b70=process.env.T21_W10B70_REAL_OWNER_STORAGE==='1';
  const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
  const w10b68=w10b68Mode==='FIXED'||w10b68Mode==='SWEEP';
+ // No unverified B176 real ramp trajectory in this 180-second combat run.
+ if(b210SafeCombat&&(!b206FullRound||!w10b59||!b172Active||
+    b174Active||b176RealDrop||w10b68))
+  reject('B210_REQUIRES_FIXED_REAL_COMBAT_AND_NO_UNPROVEN_RAMP');
  if(w10b68Mode&&!w10b68)
   reject('B68_NORMAL_PREVIEW_MODE_MUST_BE_FIXED_OR_SWEEP');
  if(b176RealDrop&&(!b174Active||!b172Active||!w10b59||w10b68))
@@ -189,17 +195,20 @@ async function main(){
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
  if(b206FullRound){
-  // Real user-chosen 180s. Preserve all existing source CPU and KCC tests.
+  // Real user click: B210 launches source combat AND the 180s match.
+  const selector=b210SafeCombat?'#t21-f3-b207-combat-round':
+   '#t21-f3-b203-full-round';
   const original=await evaluate(`(() => ({
    mode:document.querySelector('#app-canvas')?.dataset.t21B203FullRound,
-   button:document.querySelector('#t21-f3-b203-full-round')?.textContent,
+   button:document.querySelector('${selector}')?.textContent,
    realCpu:window.__t21F3?.snapshot()?.cpu?.physicalRejoins?.length
   }))()`);
-  if(original.mode!=='OFF'||!original.button?.includes('PLAY FULL 180s')||
+  if(original.mode!=='OFF'||!original.button?.includes(b210SafeCombat?
+    'PLAY 180s SOURCE COMBAT':'PLAY FULL 180s')||
      original.realCpu!==0)
    reject('B206_FULL_ROUND_USER_BUTTON_NOT_AVAILABLE_'+JSON.stringify(original));
   const pos=await evaluate(`(() => {
-   const b=document.querySelector('#t21-f3-b203-full-round');
+   const b=document.querySelector('${selector}');
    b?.scrollIntoView({block:'center',behavior:'instant'});
    const r=b?.getBoundingClientRect();
    return r?{x:r.left+r.width/2,y:r.top+r.height/2}:null;
@@ -217,6 +226,7 @@ async function main(){
     const s=window.__t21F3?.snapshot?.();
     return s?{ready:c?.dataset.t21F3Ready,
      mode:c?.dataset.t21B203FullRound,url:location.search,
+     combat:c?.dataset.t21B192HumanCombat,
      game:s.matchState,cpu:s.cpu.physicalRejoins.length,
      clock:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205RealClock,
      winner:document.querySelector('#t21-f3-b205-real-round')?.dataset.officialWinner,
@@ -225,6 +235,8 @@ async function main(){
    return n?.ready==='READY'&&n.mode==='REAL_180S_SOURCE_PLAY'?n:false;
   },100000);
   if(!selected.url.includes('t21W10B203=fullRound')||
+     (b210SafeCombat&&(!selected.url.includes('t21W10B192=humanCombat')||
+      selected.combat!=='REAL_SOURCE_ONLY'))||
      selected.game!=='STAGING'||selected.cpu!==0||selected.clock!=='03:00'||
      selected.winner!=='NONE'||selected.score!==0)
    reject('B206_TRUE_USER_180S_BOOT_INVALID_'+JSON.stringify(selected));
@@ -800,6 +812,31 @@ async function main(){
     terminal:terminal?{tick:terminal.tick,timeRemainingSeconds:
      terminal.timeRemainingSeconds,matchState:terminal.matchState}:null},null,2));
   if(!terminal)reject('B61_REAL_180S_NATIVE_TIMEUP_NOT_REACHED_WITHIN_62_MIN_HOST');
+  if(b210SafeCombat){
+   // Real original KCC support at native TIME_UP, not inferred floor.
+   const foot=terminal.b112OriginalHumanGround;
+   if(b176DescentStarted||activeHumanPairs.length!==7||
+      terminal.cpu.physicalRejoins.length!==7||
+      foot?.genuineKccGrounded!==true||
+      typeof foot.lastOriginalSourceHitId!=='string'||
+      !foot.lastOriginalSourceHitId.startsWith('UndertowT21D:')||
+      !Number.isFinite(foot.lastOriginalSourceGapMeters)||
+      Math.abs(foot.lastOriginalSourceGapMeters)>.22||
+      terminal.shotsFired<1||terminal.cpuSourceTurfShots<1)
+    reject('B210_TRUE_COMBAT_180S_NATIVE_SUPPORT_OR_ACTIVITY_HOLD_'+
+     JSON.stringify({realNativeTick:terminal.tick,realCpuRejoined:
+      terminal.cpu.physicalRejoins.length,realHumanInputPairs:
+      activeHumanPairs.length,originalSupport:foot,rampStarted:
+      b176DescentStarted,realHumanShots:terminal.shotsFired,
+      realCpuShots:terminal.cpuSourceTurfShots}));
+   console.log('B210_REAL_SOURCE_COMBAT_TIMEUP_PHYSICAL_WITNESS',
+    JSON.stringify({realNativeTick:terminal.tick,originalGround:
+     foot.lastOriginalSourceHitId,realHumanInputPairs:activeHumanPairs.length,
+     actualCpuShots:terminal.cpuSourceTurfShots,
+     realCpuRejoined:terminal.cpu.physicalRejoins.length,
+     unverifiedLowerRampRetainedHOLD:true,
+     naturalOpposingRouteCertified:false}));
+  }
   if(b206FullRound){
    const end=await evaluate(`(() => ({
     phase:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205NativePhase,

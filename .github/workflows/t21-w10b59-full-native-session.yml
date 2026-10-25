@@ -1,4 +1,4 @@
-name: T21 B177 real Rapier KCC-balanced human + 7CPU 180s source
+name: T21 B210 real source combat human + seven CPU 180s
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -8,6 +8,7 @@ on:
       - 'scripts/t21-w10b174-active-source-sweep-gate.mjs'
       - 'scripts/t21-w10b174-active-source-sweep-gate.test.mjs'
       - 'scripts/t21-w10b176-real-lower-route-source.test.mjs'
+      - 'scripts/t21-w10b210-real-source-combat-timeup.test.mjs'
       - 'scripts/t21-w10b177-physical-homecoming.mjs'
       - 'scripts/t21-w10b177-physical-homecoming.test.mjs'
   workflow_dispatch:
@@ -27,14 +28,15 @@ jobs:
       - run: npm run build -- --base=/browser-ink-tps/
       - run: npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
-      - run: node --test scripts/t21-w10b174-active-source-sweep-gate.test.mjs scripts/t21-w10b176-real-lower-route-source.test.mjs scripts/t21-w10b177-physical-homecoming.test.mjs
-      - name: B175 180 native seconds + true sustained CPU source ink and user
+      - run: node --test scripts/t21-w10b174-active-source-sweep-gate.test.mjs scripts/t21-w10b176-real-lower-route-source.test.mjs scripts/t21-w10b177-physical-homecoming.test.mjs scripts/t21-w10b210-real-source-combat-timeup.test.mjs
+      - name: B210 genuine real 180s combat human and original 7 CPU
         env:
           T21_W10B59_FULL_NATIVE_SESSION: '1'
           T21_B172_ACTIVE_180S: '1'
-          T21_B174_EXPLICIT_SOURCE_SWEEP_180S: '1'
-          T21_B176_REAL_NATIVE_HUMAN_DROP: '1'
+          T21_B174_EXPLICIT_SOURCE_SWEEP_180S: '0'
+          T21_B176_REAL_NATIVE_HUMAN_DROP: '0'
           T21_B206_REAL_PLAYER_FULL_ROUND: '1'
+          T21_B210_SAFE_COMBAT_180S: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b59
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Keep actual native source progress and end screenshot, even if failing

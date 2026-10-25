@@ -8,6 +8,9 @@ export function b207CombatRoundUrl(current:string):string{
  next.searchParams.set('t21QaDrive','source');
  next.searchParams.set('t21W10B183','firstDropPlay');
  next.searchParams.set('t21W10B192','humanCombat');
+ // Read-only real Rapier five-foot-ray safety ledger on the selected
+ // user game. This never changes physics or certifies a route.
+ next.searchParams.set('t21W10B112','humanGround');
  next.searchParams.set('t21W10B203','fullRound');
  return next.href;
 }

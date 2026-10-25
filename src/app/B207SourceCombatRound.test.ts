@@ -5,7 +5,8 @@ describe('B207 real native 180s combat world selection',()=>{
   const q=new URL(b207CombatRoundUrl('https://example.org/game')).searchParams;
   expect(Object.fromEntries(q.entries())).toEqual({
    t21Play:'preview',t21QaDrive:'source',t21W10B183:'firstDropPlay',
-   t21W10B192:'humanCombat',t21W10B203:'fullRound'});
+   t21W10B192:'humanCombat',t21W10B112:'humanGround',
+   t21W10B203:'fullRound'});
  });
  it('discards former ally and unauthenticated QA stage shortcuts',()=>{
   const u=new URL(b207CombatRoundUrl('https://example.org/game?'+
