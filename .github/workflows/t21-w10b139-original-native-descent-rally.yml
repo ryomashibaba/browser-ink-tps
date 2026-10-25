@@ -17,6 +17,9 @@ on:
       - 'scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs'
       - 'scripts/t21-w10b154-seven-cpu-source-coverage-audit.mjs'
       - 'scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs'
+      # B171: genuine ally-guard policy changes need strict native B147
+      # comparison, without rerunning three Chrome variants for every UI edit.
+      - 'src/app/B169OriginalAllyAdvanceGuard.ts'
       - 'src/app/UndertowF3OriginalAllySupportInk.ts'
       - 'src/app/UndertowF3OriginalAllySupportInk.test.ts'
       - 'src/app/W10B154OriginalTeamInkMode.ts'
