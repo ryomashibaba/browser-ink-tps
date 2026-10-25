@@ -206,6 +206,10 @@ async function playB162GenuineAllySync(routeSteps){
    realGroundedMeters:p.realGroundedTravelMeters,
    freshOriginalA1ImpactCells:p.actualOriginalA1ChangedImpactCells,
    taggedA1Impacts:p.actualOriginalA1TaggedImpactEvents,
+   realA1Foot:n.cpu.cpu.find(x=>x.id==='A1')?.physicalFoot??null,
+   b169ActualGuardApprovals:n.cpu.sourcePatrol.b169NativeAdvanceGuardTargets,
+   b169RejectedSourceGuardGoals:
+    n.cpu.sourcePatrol.b169RejectedUnsafeOrUnreachableGoals,
    status:p.status,abortReason:p.abortReason};
   history162.push(measurement);
   saveAttempt(n,'B163_REAL_NATIVE_UPPER_PRACTICE');
@@ -258,6 +262,10 @@ async function playB162GenuineAllySync(routeSteps){
     realGroundedMeters:p.realGroundedTravelMeters,
     freshOriginalA1ImpactCells:p.actualOriginalA1ChangedImpactCells,
     taggedA1Impacts:p.actualOriginalA1TaggedImpactEvents,
+    realA1Foot:n.cpu.cpu.find(x=>x.id==='A1')?.physicalFoot??null,
+    b169ActualGuardApprovals:n.cpu.sourcePatrol.b169NativeAdvanceGuardTargets,
+    b169RejectedSourceGuardGoals:
+     n.cpu.sourcePatrol.b169RejectedUnsafeOrUnreachableGoals,
     status:p.status};
    history162.push(measurement);
    saveAttempt(n,'B163_TRUE_ORIGINAL_A1_APPROACH');
@@ -332,6 +340,12 @@ async function playB162GenuineAllySync(routeSteps){
     b169RejectedGuardGoals:
      actualLower.cpu.sourcePatrol.b169RejectedUnsafeOrUnreachableGoals,
    approvedA1InkAims:actualLower.cpu.sourcePatrol.b150ApprovedInkAims,
+   realA1Foot:actualLower.cpu.cpu.find(x=>x.id==='A1')?.physicalFoot??null,
+   actualA1HumanPlanarGap:(()=>{
+    const f=actualLower.cpu.cpu.find(x=>x.id==='A1')?.physicalFoot;
+    return f?Math.hypot(f[0]-actualLower.player.position[0],
+     f[2]-actualLower.player.position[2]):null;
+   })(),
    acceptedRealA1AimShots:
     actualLower.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests
   };

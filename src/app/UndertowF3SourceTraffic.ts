@@ -442,7 +442,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // polyline segments must pass again. If none pass, legacy patrol wins.
    if(this.enableB137OriginalAllyRally&&
       this.enableB150AllySupportInk&&id==='A1'&&
-      this.b169HumanUpperGrounded){
+      bot.lifeState!=='SPLATTED'&&this.b169HumanUpperGrounded){
     this.b169SourceAdvanceGuardChecks++;
     const landing=this.routeFor('HUMAN').originalLanding;
     const goals=rankB169OriginalAdvanceGuardGoals({
@@ -453,18 +453,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      alreadyAuditedOriginalPatrolFeet:candidates
     });
     for(const goal of goals){
+     // B170: the ranker returns original coordinates, not Vec3 instances.
+     // Preserve the EXACT original foot when invoking native Recast/Crowd.
+     const sourceGoal=new Vec3(goal.x,goal.y,goal.z);
      if(!this.hasSourceFootSupport(realFoot)||
-        !this.hasSourceFootSupport(goal)){
+        !this.hasSourceFootSupport(sourceGoal)){
       this.b169RejectedUnsafeOrUnreachableGoals++;continue;
      }
-     const native=this.nav.auditPath(realFoot,goal);
+     const native=this.nav.auditPath(realFoot,sourceGoal);
      if(!native.reachedTarget||native.startSnapDistanceMeters>.20||
         native.endSnapDistanceMeters>.20||
         !this.hasSourceSupportedRoute(native,1)){
       this.b169RejectedUnsafeOrUnreachableGoals++;continue;
      }
      this.patrolIndex.set(id,-1);
-     out.copy(goal);
+     out.copy(sourceGoal);
      this.realGoalRequests++;
      this.b169NativeAdvanceGuardTargets++;
      return true;
