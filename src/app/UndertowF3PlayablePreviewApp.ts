@@ -34,6 +34,7 @@ import {getB166OriginalAllyRendezvous}
 import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
 import {shouldPresentB168NativePractice} from './B168NativePracticePresentation';
 import {B183OriginalHumanDescent} from './B183OriginalHumanDescent';
+import {b185OriginalDropGuidance} from './B185OriginalDropGuidance';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -254,6 +255,8 @@ export class UndertowF3PlayablePreviewApp{
  // B183 original-source native first-drop game challenge, without route writes.
  private readonly b183DropNotice:HTMLElement;
  private readonly b183Drop=new B183OriginalHumanDescent();
+ private b185LatestOriginalDropCue:
+  ReturnType<typeof b185OriginalDropGuidance>|null=null;
  private readonly b183DropPlayEnabled=(()=>{
   const q=new URL(location.href).searchParams;
   return q.get('t21Play')==='preview'&&
@@ -977,6 +980,7 @@ export class UndertowF3PlayablePreviewApp{
    'background:rgba(5,26,39,.91);color:#defaff;'+
    'font:750 12px/1.5 system-ui;box-shadow:0 12px 32px #0019';
   dropNotice.hidden=!this.b183DropPlayEnabled;
+  dropNotice.style.whiteSpace='pre-line';
   dropNotice.textContent='NATIVE SOURCE DESCENT · Wait for PLAYING, then descend from genuine upper source floor to original lower floor · UNSCORED';
   ui.appendChild(dropNotice);
   this.b183DropNotice=dropNotice;
@@ -2089,6 +2093,27 @@ export class UndertowF3PlayablePreviewApp{
      });
      const drop=this.b183Drop.snapshot();
      if(before.status!==drop.status||frame%6===0){
+      // B185: observations of frozen *original* upper/lower polygons.
+      // XZ projection does NOT prove traversability or a safe landing.
+      const lowerBoundary=inspectB120OriginalFirstDropBoundary({
+       nativeTick:frame,
+       actualRapierBody:[realFoot.x,realFoot.y,realFoot.z],
+       side:realFoot.z>=0?'positive-z':'negative-z'
+      });
+      const upperBoundary=actualSupport?.solidId.startsWith(
+       'UndertowT21D:spawn-high-')?
+       inspectB130OriginalFlatSource({
+        nativeTick:frame,
+        actualRapierBody:[realFoot.x,realFoot.y,realFoot.z],
+        actualRapierSupportId:actualSupport.solidId
+       }):null;
+      const guidance=b185OriginalDropGuidance(
+       drop.status,frame,lowerBoundary,upperBoundary);
+      this.b185LatestOriginalDropCue=guidance;
+      this.b183DropNotice.dataset.originalLandingXZ=
+       guidance.lowerRegisteredFootprintXZ;
+      this.b183DropNotice.dataset.safeRouteInferred='false';
+      this.b183DropNotice.dataset.nativeOriginalCueTick=String(frame);
       this.b183DropNotice.dataset.nativeState=drop.status;
       this.b183DropNotice.dataset.trueNativeTick=String(frame);
       this.b183DropNotice.dataset.genuineRapierLanding=
@@ -2106,6 +2131,7 @@ export class UndertowF3PlayablePreviewApp{
        drop.status==='WITNESS_INVALID'?
         'SOURCE DESCENT HOLD · Unverified native transition · Restart to retry':
         'SOURCE FIRST DROP · Reach genuine upper floor, then descend · PRACTICE ONLY';
+      this.b183DropNotice.textContent+='\n'+guidance.label;
      }
     }
     if(this.b27KineticEnabled)
@@ -3106,6 +3132,7 @@ export class UndertowF3PlayablePreviewApp{
     ...this.b183Drop.snapshot(),enabled:this.b183DropPlayEnabled,
     realNativeSourceOnly:true as const
    },
+   b185RealOriginalLandingFootprintCue:this.b185LatestOriginalDropCue,
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b156OriginalUnderpassGapTriage:
     triageB156OriginalGaps(this.b155SourceConnectivityReview),
