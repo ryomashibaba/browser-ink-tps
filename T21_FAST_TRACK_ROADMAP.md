@@ -34,3 +34,7 @@
 
 **What has definitely improved:** real original GPU source geometry, seven Recast/Rapier/Crowd recoveries, real HUMAN PlayerController on source floor, actual CPU-authored projectile damage, source camera alternatives, collision veto, 4+4 original-high-pad QA spawn allocation.  
 **What is not done:** full human-played T21 4v4, eight-actor continuous physical collisions, verified source Turf scoring, complete map connectivity, production activation.
+
+## 2026-10-25 execution reform (user approved)
+
+This F1–F5 roadmap is **retained**, not replaced. Implement coherent player-visible slices instead of one micro-QA proof per B number. Preserve the exact 25 original solids / 17 paint / 26 links / 0 scoreable and all activation/release HOLD gates. Use the implementation/acceptance checklist in [docs/continuity/FAST_TRACK_EXECUTION_JA.md](docs/continuity/FAST_TRACK_EXECUTION_JA.md) as the current execution plan. Queued B187–B191 native Chrome is **unverified**, even if earlier separate B123/B182/B186 jobs passed within their narrower scopes. Keep old workflows, avoid repeated runs, and do not use absent source authority as a pretext for invented geometry.
