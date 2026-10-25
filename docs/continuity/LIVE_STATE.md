@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `9506239fbae0f66962126a78d916e646bb9c4d2f`
-- 最新番号のQAレポート: W10-B170 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B170-real-native-A1-advance-guard-build-repair.md
+- 同期元QA HEAD: `f0a1d387c3ab52407e51f31e983538f790097378`
+- 最新番号のQAレポート: W10-B171 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B171-source-ally-practice-scope-and-fast-track-review.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B171 （着手・完了の保証ではない）
-- レポート記載のActions: 確認できない
+- 次工程候補: W10-B172 （着手・完了の保証ではない）
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40149038766
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
