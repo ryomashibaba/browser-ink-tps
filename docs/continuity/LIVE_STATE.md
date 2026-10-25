@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `689b11efb541b846d59bd98ee89e7d125a357f75`
+- 同期元QA HEAD: `c072025ba7ea781255b564d4d68588cb1b0f43ae`
 - 最新番号のQAレポート: W10-B179 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B179-real-source-ink-recovery.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B180 （着手・完了の保証ではない）
