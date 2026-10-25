@@ -22,6 +22,7 @@ import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
  from './UndertowF3OriginalAllySupportInk';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import {eligibleB192SourceHumanPursuit} from './B192SourceHumanPursuit';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -68,6 +69,8 @@ export interface F3TrafficSnapshot{
   readonly realGoalRequests:number;
   readonly heldRequests:number;
   readonly engagementGoalRequests:number;
+  readonly b192ApprovedHumanCombatGoals:number;
+  readonly b192RejectedHumanCombatGoals:number;
   readonly sameSourceEnemyCandidates:number;
   readonly deniedNativeEnemyPaths:number;
   readonly sourceEndpointProbes:number;
@@ -150,6 +153,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  }|null=null;
  private readonly b137ActualHumanFoot=new Vec3();
  private b137HumanFootValid=false;
+ private readonly b192NativeHumanFoot=new Vec3();
+ private b192HumanAliveGrounded=false;
+ private b192HumanTick=-1;
+ private b192ApprovedHumanCombatGoals=0;
+ private b192RejectedHumanCombatGoals=0;
  private b137NativeTick=-1;
  private sameSourceEnemyCandidates=0;
  private deniedNativeEnemyPaths=0;
@@ -209,7 +217,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableB34SourceStallRecovery=false,
   private readonly enableB93UpperDetour=false,
   private readonly enableB137OriginalAllyRally=false,
-  private readonly enableB150AllySupportInk=false
+  private readonly enableB150AllySupportInk=false,
+  private readonly enableB192HumanCombat=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -395,6 +404,40 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||!candidates?.length){this.heldRequests++;return false;}
   const sign=bot.team===Team.A?1:-1;
+  // F3-B: in this opt-in source game only, real B-team CPUs can pursue
+  // the real grounded HUMAN when the human actually occupies their
+  // registered B-side source floor. Recast is a goal, never movement.
+  const h=this.b192NativeHumanFoot;
+  if(eligibleB192SourceHumanPursuit({
+   enabled:this.enableB192HumanCombat,
+   nativeTick:this.b137NativeTick,humanTick:this.b192HumanTick,
+   cpuId:id,cpuTeam:bot.team,
+   cpuGrounded:bot.mobilityState==='GROUND',
+   cpuRejoined:this.physicallyRejoined.has(id),
+   sevenRejoined:this.physicallyRejoined.size===7,
+   humanAliveGrounded:this.b192HumanAliveGrounded,
+   cpuFoot:realFoot,humanFoot:h,
+   solids:this.stage.solids.length,paint:this.stage.paintSurfaces.length,
+   links:this.stage.navigationLinks?.length??0,
+   scoreable:this.stage.paintSurfaces.filter(
+    p=>(p.flags & SurfaceFlags.Scoreable)!==0).length
+  })){
+   // Same original floor-support and full Recast+Rapier intermediate path
+   // checks as the already existing native CPU-vs-CPU engagement.
+   if(this.hasSourceFootSupport(realFoot)&&this.hasSourceFootSupport(h)){
+    const route=this.nav.auditPath(realFoot,h);
+    if(route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
+       route.endSnapDistanceMeters<=.20&&
+       this.hasSourceSupportedRoute(route,sign)){
+     this.patrolIndex.set(id,-1);
+     out.copy(h); // NO physical actor pose write or warp
+     this.realGoalRequests++;this.engagementGoalRequests++;
+     this.b192ApprovedHumanCombatGoals++;
+     return true;
+    }
+   }
+   this.b192RejectedHumanCombatGoals++;
+  }
   // W10-B1: genuine opponent feet can become tactical destinations ONLY
   // after all seven original physical drops/rejoins. On this frozen source
   // lab the two teams currently remain separated, so no false cross-map
@@ -822,6 +865,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // released, refresh validity each physical tick before CPU goal choice.
   this.b137NativeTick=frame;
   this.b137HumanFootValid=false;
+  this.b192HumanAliveGrounded=false;
+  this.b192HumanTick=-1;
+  if(this.enableB192HumanCombat&&
+     humanFoot?.active===true&&humanFoot.grounded===true&&
+     [humanFoot.x,humanFoot.y,humanFoot.z].every(Number.isFinite)){
+   this.b192NativeHumanFoot.set(humanFoot.x,humanFoot.y,humanFoot.z);
+   this.b192HumanTick=frame;
+   this.b192HumanAliveGrounded=true;
+  }
   this.b169HumanUpperGrounded=false;
   this.b171AllySyncPracticeRunning=false;
   if(this.enableB137OriginalAllyRally&&
@@ -1035,6 +1087,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     engagementGoalRequests:this.engagementGoalRequests,
+    b192ApprovedHumanCombatGoals:this.b192ApprovedHumanCombatGoals,
+    b192RejectedHumanCombatGoals:this.b192RejectedHumanCombatGoals,
     sameSourceEnemyCandidates:this.sameSourceEnemyCandidates,
     deniedNativeEnemyPaths:this.deniedNativeEnemyPaths,
     sourceEndpointProbes:this.sourceEndpointProbes,

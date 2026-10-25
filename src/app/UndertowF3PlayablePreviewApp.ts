@@ -596,6 +596,13 @@ export class UndertowF3PlayablePreviewApp{
    b31Params.get('t21W10B33')==='stableGoals';
   const b31Enabled=b33StableGoals||
    b31Params.get('t21W10B31')==='inkGoals';
+  // User-selected SOURCE practice only; fixed patrol remains default.
+  const b192HumanCombatEnabled=
+   b31Params.get('t21Play')==='preview'&&
+   b31Params.get('t21QaDrive')==='source'&&
+   b31Params.get('t21W10B192')==='humanCombat';
+  this.canvas.dataset.t21B192HumanCombat=
+   b192HumanCombatEnabled?'REAL_SOURCE_ONLY':'OFF';
   this.traffic=new UndertowF3SourceTraffic(
    stage,this.nav,slots,bots,this.physics,this.ink,
    b31Enabled,b33StableGoals,b34Recover,
@@ -604,7 +611,8 @@ export class UndertowF3PlayablePreviewApp{
    b31Params.get('t21W10B137')==='allyRally',
    b31Params.get('t21QaDrive')==='source'&&
    b31Params.get('t21W10B137')==='allyRally'&&
-   b31Params.get('t21W10B150')==='allyInk');
+   b31Params.get('t21W10B150')==='allyInk',
+   b192HumanCombatEnabled);
   this.canvas.dataset.t21B150AllyInk=
    b31Params.get('t21QaDrive')==='source'&&
    b31Params.get('t21W10B137')==='allyRally'&&
@@ -649,7 +657,8 @@ export class UndertowF3PlayablePreviewApp{
   // native opponent combat aim. No actor/route/score authority added.
   if(b31Params.get('t21Play')==='preview'&&
      b31Params.get('t21QaDrive')==='source'&&
-     b31Params.get('t21W10B181')==='originalCombatSight')
+     (b31Params.get('t21W10B181')==='originalCombatSight'||
+      b192HumanCombatEnabled))
     this.cpu.enableB181OriginalSourceCombatSight((from,to)=>
       !!this.physics.castStageSegment(
         new Vec3(from.x,from.y,from.z),
@@ -782,9 +791,40 @@ export class UndertowF3PlayablePreviewApp{
     dest.searchParams.set('t21Play','preview');
     dest.searchParams.set('t21QaDrive','source');
     dest.searchParams.set('t21W10B183','firstDropPlay');
+    if(b192HumanCombatEnabled)
+     dest.searchParams.set('t21W10B192','humanCombat');
     window.location.assign(dest.href);
    });
    this.panel.appendChild(button);
+  }
+  // The combat mode is selected through a NEW browser session, never
+  // by moving live CPU actors, changing original floors or adding score.
+  if(b31Params.get('t21QaDrive')==='source'){
+   const combat=document.createElement('button');
+   combat.id='t21-f3-b192-combat-mode';
+   combat.type='button';
+   combat.textContent=b192HumanCombatEnabled?
+    'REAL SOURCE COMBAT · ON (RESTART TO DISABLE)':
+    'TRY REAL SOURCE COMBAT (NEW PHYSICAL SESSION)';
+   combat.dataset.sourceOnly='true';
+   combat.dataset.scoreable='0';
+   combat.dataset.actorTeleports='0';
+   combat.dataset.certifiedOpponentRoutes='0';
+   combat.style.cssText='display:block;width:100%;margin-top:7px;'+
+    'padding:10px;background:#183f49;border:1px solid #65c8ba;'+
+    'border-radius:8px;color:#defff6;font:750 11px system-ui;'+
+    'cursor:pointer';
+   combat.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||
+       this.survey.snapshot().active)return;
+    const dest=new URL(window.location.href);
+    dest.searchParams.set('t21Play','preview');
+    dest.searchParams.set('t21QaDrive','source');
+    if(b192HumanCombatEnabled)dest.searchParams.delete('t21W10B192');
+    else dest.searchParams.set('t21W10B192','humanCombat');
+    window.location.assign(dest.href);
+   });
+   this.panel.appendChild(combat);
   }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   // B69: an ordinary preview user can explicitly compare the already
