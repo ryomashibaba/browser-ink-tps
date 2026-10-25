@@ -17,6 +17,13 @@ export class B183OriginalHumanDescent {
  private lastBody:readonly [number,number,number]|null=null;
  private upperBodyY:number|null=null;
  private upperSide=0;
+ private upperOriginalSupportId:string|null=null;
+ private readonly originalPadPair=(side:number)=>{
+  if(side!==1&&side!==-1)return null;
+  const suffix=side===1?'positive-z':'negative-z';
+  return {upper:'UndertowT21D:spawn-high-'+suffix,
+   lower:'UndertowT21D:first-drop-landing-'+suffix};
+ };
  private fallingSince:number|null=null;
  private realObservedTicks=0;
  private landingId:string|null=null;
@@ -39,6 +46,7 @@ export class B183OriginalHumanDescent {
   if(!f.nativePlaying||!f.alive||f.mode!=='HUMAN'){
    this.lastTick=f.tick;this.lastBody=null;
    this.state='SEEK_UPPER';this.upperBodyY=null;
+   this.upperOriginalSupportId=null;this.upperSide=0;
    this.fallingSince=null;return;
   }
   if(this.lastBody&&Math.hypot(
@@ -52,17 +60,27 @@ export class B183OriginalHumanDescent {
   const supported=f.nativeGrounded&&!!f.originalRapierSupportId&&
    f.sourceFootGapMeters!==null&&Number.isFinite(f.sourceFootGapMeters)&&
    Math.abs(f.sourceFootGapMeters)<=.22;
-  const upper=supported&&f.body[1]>=8.1&&f.body[1]<=9.6;
-  const lower=supported&&f.body[1]>=3.2&&f.body[1]<=6.25;
+  const side=Math.sign(f.body[2]);
+  const pair=this.originalPadPair(side);
+  // Original-source support identity is the authority; body Y is only
+  // the verified secondary consistency window, not an arbitrary floor.
+  const upper=supported&&pair!==null&&
+   f.originalRapierSupportId===pair.upper&&
+   f.body[1]>=8.1&&f.body[1]<=9.6;
+  const lower=supported&&pair!==null&&
+   f.originalRapierSupportId===pair.lower&&
+   f.body[1]>=3.2&&f.body[1]<=6.25;
   if(this.state==='SEEK_UPPER'){
    if(upper){
     this.state='UPPER_READY';this.upperBodyY=f.body[1];
-    this.upperSide=Math.sign(f.body[2]);this.fallingSince=null;
+    this.upperSide=side;this.upperOriginalSupportId=pair!.upper;
+    this.fallingSince=null;
    }
    return;
   }
   if(Math.sign(f.body[2])!==this.upperSide||!this.upperSide){
    this.state='SEEK_UPPER';this.upperBodyY=null;
+   this.upperOriginalSupportId=null;this.upperSide=0;
    this.fallingSince=null;return;
   }
   if(this.state==='UPPER_READY'){
@@ -78,7 +96,8 @@ export class B183OriginalHumanDescent {
     this.state='UPPER_READY';this.upperBodyY=f.body[1];
     this.fallingSince=null;return;
    }
-   if(lower&&this.upperBodyY!==null&&
+   if(lower&&this.upperBodyY!==null&&pair!==null&&
+      this.upperOriginalSupportId===pair.upper&&
       this.upperBodyY-f.body[1]>=2&&this.fallingSince!==null&&
       f.tick-this.fallingSince>=2){
     this.state='SOURCE_LOWER_LANDED';
@@ -87,7 +106,7 @@ export class B183OriginalHumanDescent {
    }
    if(f.nativeGrounded){
     this.state='SEEK_UPPER';this.fallingSince=null;
-    this.upperBodyY=null;
+    this.upperBodyY=null;this.upperOriginalSupportId=null;
    }
   }
  }
@@ -96,6 +115,7 @@ export class B183OriginalHumanDescent {
    enabled:true as const,status:this.state,
    authenticNativeTicksObserved:this.realObservedTicks,
    sourceStageMaintained:this.sourceStageMaintained,
+   actualOriginalRapierUpperStartId:this.upperOriginalSupportId,
    actualOriginalRapierLowerLandingId:this.landingId,
    trueNativeLandingTick:this.landingNativeTick,
    originalFirstDropLocalPracticeClear:

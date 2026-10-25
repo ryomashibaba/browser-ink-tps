@@ -6,6 +6,8 @@ on:
       - 'src/app/W10B120OriginalSourceBoundary.ts'
       - 'src/app/W10B120OriginalSourceBoundary.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/B183OriginalHumanDescent.ts'
+      - 'src/app/B183OriginalHumanDescent.test.ts'
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
       - '.github/workflows/t21-w10b120-genuine-original-touchdown.yml'
   workflow_dispatch:
@@ -24,12 +26,13 @@ jobs:
       - name: Exact original source boundary and physical KCC tests
         run: |
           node --check scripts/t21-w10b112-genuine-human-floor-walk.mjs
-          npx vitest run src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts
+          npx vitest run src/app/B183OriginalHumanDescent.test.ts src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Real Chromium physical 240 native-tick original first-drop touchdown
         env:
           T21_B116_FORWARD_NATIVE_TICKS: '240'
           T21_B120_TOUCHDOWN_ONLY: source
+          T21_B184_REAL_PLAYABLE_FIRST_DROP: source
           T21_B112_EVIDENCE_DIR: /tmp/t21-w10b120-original-touchdown
         run: node scripts/t21-w10b112-genuine-human-floor-walk.mjs
       - name: Preserve actual source polygon boundary, KCC, and original first-drop landing

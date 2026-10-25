@@ -69,6 +69,9 @@ if(b127OriginalRoute&&(requestedNativeTicks!==488||
    process.env.T21_B120_TOUCHDOWN_ONLY==='source'))
  throw Error('B127_SOURCE_NEXT_ROUTE_REQUIRES_EXCLUSIVE_488_TICK_BUDGET');
 const b120TouchdownOnly=process.env.T21_B120_TOUCHDOWN_ONLY==='source';
+const b184NativePlayableDrop=process.env.T21_B184_REAL_PLAYABLE_FIRST_DROP==='source';
+if(b184NativePlayableDrop&&(!b120TouchdownOnly||requestedNativeTicks!==240))
+ throw Error('B184_REQUIRES_REAL_SOURCE_TOUCHDOWN_240_TICKS');
 if(b120TouchdownOnly&&requestedNativeTicks!==240)
  throw Error('B120_ORIGINAL_TOUCHDOWN_REQUIRES_240_GENUINE_TICKS');
 const b126TrialKeys=new Set(['RAISED_SOURCE_B126_REAL_KEYA_LEFT_12',
@@ -167,7 +170,9 @@ async function run(){
  await cmd('Page.setDownloadBehavior',{behavior:'allow',downloadPath:output});
  await cmd('Emulation.setDeviceMetricsOverride',
   {width:1600,height:900,deviceScaleFactor:1,mobile:false});
- await cmd('Page.navigate',{url:root+'?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'});
+ await cmd('Page.navigate',{url:root+
+  '?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
+  (b184NativePlayableDrop?'&t21W10B183=firstDropPlay':'')});
  await until(async()=>await evaluate(`(()=>{
   const c=document.querySelector('#app-canvas');
   return c?.dataset.t21F3Ready==='READY'&&c?.dataset.t21F3Renderer==='webgl2';
@@ -184,7 +189,7 @@ async function run(){
  // Wait at the original spawn without key input, tick injection,
  // collision override, teleport or a forged match-state assignment.
  let b133ActualGameStart=null;
- if(b132RealEdgeHud){
+ if(b132RealEdgeHud||b184NativePlayableDrop){
   const waiting=await snapshot();
   if(waiting.matchState!=='STAGING'&&waiting.matchState!=='PLAYING')
    fail('B133_INVALID_INITIAL_MATCH_STATE',waiting.matchState);
@@ -1076,6 +1081,56 @@ async function run(){
   // The natural airborne first-drop suspicion is preserved verbatim and
   // expressly not promoted to a complete safe route/collision certificate.
   if(b120TouchdownOnly){
+   if(b184NativePlayableDrop){
+    const native=end.b183OriginalHumanDescent;
+    const browser=await evaluate(`(()=>{
+      const s=window.__t21F3.snapshot();
+      const el=document.querySelector('#t21-f3-b183-real-first-drop');
+      return {realNativeTick:s.tick,
+       genuineBody:s.player?.position,
+       snapshot:s.b183OriginalHumanDescent,
+       renderedUi:el?{
+        visible:!el.hidden,realState:el.dataset.nativeState,
+        nativeTick:Number(el.dataset.trueNativeTick),
+        genuineLanding:el.dataset.genuineRapierLanding,
+        originalScoreable:el.dataset.scoreablePromotions,
+        crossMapRouteCertified:el.dataset.crossTeamRouteCertified,
+        originalWinner:el.dataset.officialWinner,
+        text:el.textContent
+       }:null};
+    })()`);
+    const validated=native?.originalFirstDropLocalPracticeClear===true&&
+     native.actualOriginalRapierUpperStartId===
+       'UndertowT21D:spawn-high-positive-z'&&
+     native.actualOriginalRapierLowerLandingId===
+       'UndertowT21D:first-drop-landing-positive-z'&&
+     native.sourceStageMaintained===true&&
+     native.crossTeamRouteCertified===false&&
+     native.sourceScoreablePromotions===0&&
+     browser?.renderedUi?.visible===true&&
+     browser.renderedUi.realState==='SOURCE_LOWER_LANDED'&&
+     browser.renderedUi.genuineLanding==='true'&&
+     browser.renderedUi.originalScoreable==='0'&&
+     browser.renderedUi.crossMapRouteCertified==='false'&&
+     browser.renderedUi.originalWinner==='NONE';
+    const witness={
+     schema:'W10_B184_GENUINE_CHROME_NATIVE_FIRST_DROP_PLAYER_UI_V1',
+     actualNativePlayingStart:b133ActualGameStart,
+     nativeTicksAfterRealCpuStart:end.tick-first.tick,
+     genuineSourcePlayerObservedState:native,
+     realRenderedDomEvidence:browser,
+     recordedNativeOriginalFloorIds:samples.map(s=>s.originalSupport),
+     realNativePlayableFirstDropClear:validated,
+     syntheticInputOrBodyTeleport:false,
+     official4v4Certified:false,originalSourceScoreable:0
+    };
+    writeFileSync(resolve(output,'b184-real-native-playable-first-drop.json'),
+     JSON.stringify(witness,null,2)+'\n');
+    console.log('T21_B184_REAL_NATIVE_FIRST_DROP_PLAYER_UI',
+     JSON.stringify({validated,ui:browser?.renderedUi,
+      native,realTick:end.tick}));
+    if(!validated)fail('B184_NATIVE_FIRST_DROP_GAMEPLAY_HOLD',witness);
+   }
    const boundary=end.b120OriginalSourceBoundary;
    const realLanding=end.b112OriginalHumanGround.lastOriginalSourceHitId;
    const actualGrounded=end.b112OriginalHumanGround.genuineKccGrounded===true;
