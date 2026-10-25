@@ -1,10 +1,12 @@
-name: T21 B172 genuine 180s active human + seven CPU source session
+name: T21 B174 active 180s human + 7 CPU explicit original source ink SWEEP trial
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/app/UndertowF3SourceSessionBoard.ts'
       - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'scripts/t21-w10b174-active-source-sweep-gate.mjs'
+      - 'scripts/t21-w10b174-active-source-sweep-gate.test.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,10 +24,12 @@ jobs:
       - run: npm run build -- --base=/browser-ink-tps/
       - run: npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
-      - name: Genuine 180 native match seconds; bounded host liveness; 7 fixed CPUs
+      - run: node --test scripts/t21-w10b174-active-source-sweep-gate.test.mjs
+      - name: Genuine 180 native match seconds; user + seven original CPU SWEEP
         env:
           T21_W10B59_FULL_NATIVE_SESSION: '1'
           T21_B172_ACTIVE_180S: '1'
+          T21_B174_EXPLICIT_SOURCE_SWEEP_180S: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b59
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Keep actual native source progress and end screenshot, even if failing

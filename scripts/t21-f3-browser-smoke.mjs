@@ -12,6 +12,7 @@ import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
+import {verifyB174ActualSourceSweepRound} from './t21-w10b174-active-source-sweep-gate.mjs';
 
 const ROOT='http://127.0.0.1:4196/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-f3-playable-webgl2';
@@ -116,12 +117,15 @@ async function main(){
  const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
  const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
  const b172Active=process.env.T21_B172_ACTIVE_180S==='1';
+ const b174Active=process.env.T21_B174_EXPLICIT_SOURCE_SWEEP_180S==='1';
  const w10b69=process.env.T21_W10B69_ONE_CLICK_PREVIEW==='1';
  const w10b70=process.env.T21_W10B70_REAL_OWNER_STORAGE==='1';
  const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
  const w10b68=w10b68Mode==='FIXED'||w10b68Mode==='SWEEP';
  if(w10b68Mode&&!w10b68)
   reject('B68_NORMAL_PREVIEW_MODE_MUST_BE_FIXED_OR_SWEEP');
+ if(b174Active&&(!b172Active||!w10b59||w10b68))
+  reject('B174_REQUIRES_REAL_B172_ACTIVE_SOURCE_SESSION_NOT_PRODUCTION');
  if(b172Active&&(!w10b59||w10b68))
   reject('B172_ONLY_REAL_180S_FIXED_SOURCE_SESSION');
  if(w10b68&&!w10b59)
@@ -155,6 +159,7 @@ async function main(){
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu||w10b54||(w10b59&&!w10b68)||w10b64?'&t21QaDrive=source':'')+
   (b172Active?'&t21W10B112=humanGround':'')+
+  (b174Active?'&t21W10B64=inkAngleSweep':'')+
   (w10b68Mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b51?'&t21W10B51=exactInputTicks':'')+
@@ -403,6 +408,8 @@ async function main(){
      first.sourceScoreablePromotions!==0||
      first.productionAuthorized!==false)
     reject('B59_UNTRUSTED_SOURCE_NATIVE_BOOT');
+  if(b174Active&&first.b64SourceInkSweep?.enabled!==true)
+   reject('B174_EXPLICIT_SOURCE_SWEEP_NOT_ACTIVE_IN_NATIVE_CPU');
   if(w10b68&&(
      first.b64SourceInkSweep?.enabled!==(w10b68Mode==='SWEEP')||
      first.sourceFrameQuality?.verifiedUserRtxFps!==false||
@@ -443,6 +450,7 @@ async function main(){
   // B172: real human never teleports or skips physics. Native source
   // floor/KCC is re-probed for every real keyboard leg across 180s.
   const activeHumanPairs=[];
+  const b174NativeCpuSampleHistory=[];
   let lastActiveBucket=0;
   const actualOriginalGround=x=>{
    const f=x?.b112OriginalHumanGround,body=x?.player?.position;
@@ -575,6 +583,28 @@ async function main(){
      history[history.length-1]=detailed;
      console.log('T21_W10B68_NORMAL_PREVIEW_REAL_NATIVE_SOURCE',
       JSON.stringify(detailed));
+    }
+    if(b174Active){
+     const shotByActor=now.cpuSourceTurfShotsByActor;
+     if(!shotByActor||Object.keys(shotByActor).length!==7||
+        Object.values(shotByActor).some(x=>!Number.isSafeInteger(x)||x<0)||
+        Object.values(shotByActor).reduce((sum,x)=>sum+x,0)!==now.cpuSourceTurfShots)
+      reject('B174_CPU_SHOT_PROVENANCE_NOT_ACTUAL_SEVEN');
+     const real={
+      nativeTick:now.tick,realElapsedSeconds:elapsed,
+      actualOriginalCpuShots:now.cpuSourceTurfShots,
+      actualOriginalCpuChangedInkCells:now.cpuImpactInkCellsChanged,
+      sevenActorAcceptedShotCounters:{...shotByActor},
+      actualOriginalRejoinedCpu:now.cpu.physicalRejoins.length,
+      trueNativeLateralOriginalAimApprovals:
+       now.b64SourceInkSweep.lateralPaintTargetsChosen,
+      nativeOriginalCandidateSamples:now.b64SourceInkSweep.candidateSamples,
+      authenticSourceSplatCount:now.cpuSplats,
+      noOriginalScoreable:now.sourceScoreablePromotions===0,
+      exactNativeSourceAimEnabled:now.b64SourceInkSweep.enabled===true
+     };
+     b174NativeCpuSampleHistory.push(real);
+     console.log('B174_ACTUAL_ACTIVE_180S_CPU_SOURCE_ACTIVITY',JSON.stringify(real));
     }
     console.log('T21_W10B59_NATIVE_SESSION_PROGRESS',JSON.stringify(row));
    }
@@ -799,6 +829,24 @@ async function main(){
    return a?.state==='STAGING'&&a.originalSolids===25&&
     a.scoreable===0&&a.humanShots===0&&a.endHidden===true?a:false;
   },90000);
+  const b174Round=b174Active?verifyB174ActualSourceSweepRound({
+   finalNativeSeconds:180-terminal.timeRemainingSeconds,
+   realHumanActivityPairs:activeHumanPairs.length,
+   genuineRejoinedCpu:terminal.cpu.physicalRejoins.length,
+   realCpuShotCount:terminal.cpuSourceTurfShots,
+   realCpuChangedCells:terminal.cpuImpactInkCellsChanged,
+   actualLateralOriginalAimApprovals:terminal.b64SourceInkSweep.lateralPaintTargetsChosen,
+   nativeSweepingEnabled:terminal.b64SourceInkSweep.enabled===true,
+   officialSourceScoreable:terminal.sourceScoreablePromotions,
+   actualWinner:'NONE',
+   perActorRealShots:terminal.cpuSourceTurfShotsByActor,
+   samples:b174NativeCpuSampleHistory
+  }):null;
+  if(b174Active){
+   writeFileSync(resolve(OUTPUT,'w10b174-actual-active-180s-source-sweep.json'),
+    JSON.stringify(b174Round,null,2));
+   console.log('B174_REAL_ACTIVE_180S_SOURCE_CPU_AIM',JSON.stringify(b174Round));
+  }
   if(b172Active&&(activeHumanPairs.length!==7||
      activeHumanPairs.some(s=>s.genuineSevenCpuRejoined!==7)||
      terminal.cpu.physicalRejoins.length!==7))
@@ -813,6 +861,7 @@ async function main(){
    actualBrowserKeyboardMouse:true,
    b172ContinuousReal180sHumanParticipation:b172Active,
    b172RealKeyboardMouseActivityPairs:activeHumanPairs,
+   b174ActualExtendedCpuSourceAim:b174Round,
    actualCpuSevenPresent:terminal.cpu.cpu.length===7,
    actualCpuSourceRejoined:terminal.cpu.physicalRejoins.length,
    actualNativeSecondsElapsed:180-terminal.timeRemainingSeconds,
