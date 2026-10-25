@@ -29,6 +29,15 @@ export function verifyB174ActualSourceSweepRound(input){
     s.actualOriginalCpuChangedInkCells<
      samples[i-1].actualOriginalCpuChangedInkCells))))
   bad('MONOTONIC_ORIGINAL_CPU_SHOT_PAINT_HISTORY');
+ // Real FIXED B172 added only 18 source cells from 60s to 120s.
+ // A B175 sustained-play claim must improve AFTER the opening rush,
+ // using sampled native changed cells, not merely early CPU bursts.
+ const at60=samples.find(s=>s.realElapsedSeconds>=60);
+ const at120=samples.find(s=>s.realElapsedSeconds>=120);
+ if(!at60||!at120||at120.realElapsedSeconds<=at60.realElapsedSeconds||
+    at120.actualOriginalCpuChangedInkCells-
+     at60.actualOriginalCpuChangedInkCells<=18)
+  bad('NO_TRUE_SOURCE_LATE_60_TO_120_PAINT_PROGRESS');
  if(realCpuShotCount<=112||realCpuChangedCells<=3615||
     actualLateralOriginalAimApprovals<=0||
     samples.at(-1).actualOriginalCpuShots>realCpuShotCount||
@@ -46,6 +55,12 @@ export function verifyB174ActualSourceSweepRound(input){
   officialWinner:'NONE',
   historicalB172FixedCpuShots:112,
   historicalB172FixedCpuChangedInkCells:3615,
+  historicalFixedNative60To120NewSourceCells:18,
+  native60To120SourceCells:
+   at120.actualOriginalCpuChangedInkCells-
+    at60.actualOriginalCpuChangedInkCells,
+  actualNative60SampleSeconds:at60.realElapsedSeconds,
+  actualNative120SampleSeconds:at120.realElapsedSeconds,
   compareCaveat:'HISTORICAL_DIFFERENT_COMMIT_NOT_SAME_SHA_AB',
   actualSourceOnly:true,
   originalPhysicalRoutesNotPromoted:true,

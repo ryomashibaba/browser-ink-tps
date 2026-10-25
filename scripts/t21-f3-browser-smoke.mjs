@@ -408,8 +408,13 @@ async function main(){
      first.sourceScoreablePromotions!==0||
      first.productionAuthorized!==false)
     reject('B59_UNTRUSTED_SOURCE_NATIVE_BOOT');
-  if(b174Active&&first.b64SourceInkSweep?.enabled!==true)
-   reject('B174_EXPLICIT_SOURCE_SWEEP_NOT_ACTIVE_IN_NATIVE_CPU');
+  if(b174Active&&(
+   first.b64SourceInkSweep?.enabled!==true||
+   !Number.isSafeInteger(first.cpuSourceTurfShots)||
+   !Number.isSafeInteger(first.cpuImpactInkCellsChanged)||
+   first.cpuSourceTurfShotsByActor===null||
+   Object.keys(first.cpuSourceTurfShotsByActor??{}).length!==7))
+   reject('B175_NATIVE_SOURCE_SWEEP_TELEMETRY_BOOT_NOT_AUTHENTIC');
   if(w10b68&&(
      first.b64SourceInkSweep?.enabled!==(w10b68Mode==='SWEEP')||
      first.sourceFrameQuality?.verifiedUserRtxFps!==false||
@@ -591,7 +596,7 @@ async function main(){
         Object.values(shotByActor).reduce((sum,x)=>sum+x,0)!==now.cpuSourceTurfShots)
       reject('B174_CPU_SHOT_PROVENANCE_NOT_ACTUAL_SEVEN');
      const real={
-      nativeTick:now.tick,realElapsedSeconds:elapsed,
+      nativeTick:now.tick,realElapsedSeconds:row.elapsedMatchSeconds,
       actualOriginalCpuShots:now.cpuSourceTurfShots,
       actualOriginalCpuChangedInkCells:now.cpuImpactInkCellsChanged,
       sevenActorAcceptedShotCounters:{...shotByActor},
@@ -604,6 +609,17 @@ async function main(){
       exactNativeSourceAimEnabled:now.b64SourceInkSweep.enabled===true
      };
      b174NativeCpuSampleHistory.push(real);
+     // B175: preserve true native proof BEFORE the expensive 180s run
+     // finishes, even when a subsequent original KCC/paint gate fails.
+     writeFileSync(resolve(OUTPUT,'w10b174-native-source-progress.json'),
+      JSON.stringify({
+       actualSourceOnly:true,
+       originalStageAuthority:'25_PHYSICS_17_PAINT_26_NAV_0_SCOREABLE',
+       experimentalOriginalSweepNotProduction:true,
+       actualMeasuredNativeSamples:b174NativeCpuSampleHistory,
+       realUserKeyboardMousePairsCompleted:activeHumanPairs.length,
+       noInventedSourceRoute:true
+      },null,2));
      console.log('B174_ACTUAL_ACTIVE_180S_CPU_SOURCE_ACTIVITY',JSON.stringify(real));
     }
     console.log('T21_W10B59_NATIVE_SESSION_PROGRESS',JSON.stringify(row));

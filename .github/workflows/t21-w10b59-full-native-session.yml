@@ -25,7 +25,7 @@ jobs:
       - run: npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
       - run: node --test scripts/t21-w10b174-active-source-sweep-gate.test.mjs
-      - name: Genuine 180 native match seconds; user + seven original CPU SWEEP
+      - name: B175 180 native seconds + true sustained CPU source ink and user
         env:
           T21_W10B59_FULL_NATIVE_SESSION: '1'
           T21_B172_ACTIVE_180S: '1'
