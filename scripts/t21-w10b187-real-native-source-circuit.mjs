@@ -14,6 +14,8 @@ import {b189RealSevenCpuSourceRelease}
  from './t21-w10b189-real-cpu-release-gate.mjs';
 import {b190NativeCpuStartProgress}
  from './t21-w10b190-native-start-evidence.mjs';
+import {b191ActualNativeRaisedOriginalArrival}
+ from './t21-w10b191-raised-source-native-stop.mjs';
 const root='http://127.0.0.1:4197/browser-ink-tps/';
 const output=process.env.T21_B187_EVIDENCE_DIR??
  '/tmp/t21-b187-native-original-circuit';
@@ -255,7 +257,15 @@ async function run(){
      });
      previousSample=s.tick;
     }
-    return s.tick>=untilTick?s:false;
+    if(s.matchState==='TIME_UP')
+     fail('REAL_MATCH_TIME_UP_DURING_HUMAN_ORIGINAL_STAGE',{
+      stage:name,tick:s.tick,circuit:s.b186RealOriginalHumanCircuit
+     });
+    // B191: use B123's proven real KCC arrival event to release true KeyD
+    // immediately. Holding KeyD for the entire 90-tick maximum after the
+    // original named raised collider is reached can walk off a valid floor.
+    const reached=b191ActualNativeRaisedOriginalArrival(s,name);
+    return reached||s.tick>=untilTick?s:false;
    },180000,110);
   }finally{
    for(const key of pressed)await cmd('Input.dispatchKeyEvent',
@@ -272,24 +282,40 @@ async function run(){
    'UndertowT21D:first-drop-landing-positive-z'||
   !landing.b183OriginalHumanDescent?.originalFirstDropLocalPracticeClear)
   fail('GENUINE_LOWER_FIRST_DROP_HOLD',collect('LANDING_HOLD',landing));
- // Start genuine human projectile fire only after the witnessed descent:
- // pre-drop paint can never be included in the post-drop circuit quota.
+ // B191: retain the proven B123 keyboard path, with NO shooting
+ // between genuine lower-floor landing and named raised-floor arrival.
+ // Firing prematurely could spend native human ink before the player
+ // actually reaches a paintable raised surface, falsely rejecting play.
+ await exercise('ACTUAL_KEYD_12_LOWER_ALIGNMENT',['KeyD'],12);
+ await exercise('ACTUAL_KEYW_18_LOWER_ADVANCE',['KeyW'],18);
+ let final=await exercise('ACTUAL_KEYD_90_ORIGINAL_UPHILL',['KeyD'],90);
+ const reachedNamedOriginalRaised=
+  final.b112OriginalHumanGround?.genuineKccGrounded===true&&
+  final.b112OriginalHumanGround.lastOriginalSourceHitId===
+   'UndertowT21D:right-low-team-a'&&
+  final.b186RealOriginalHumanCircuit?.actualOriginalRampTouched===true&&
+  ['PAINT_ON_RAISED','REAL_LOCAL_CIRCUIT_CLEAR'].includes(
+   final.b186RealOriginalHumanCircuit?.status);
+ if(!reachedNamedOriginalRaised){
+  fail('ACTUAL_REGISTERED_UPHILL_RAMP_OR_RAISED_FOOT_HOLD',
+   collect('TRUE_UPHILL_SOURCE_HOLD',final));
+ }
+ // Only now is genuine human shooting actually armed; paints must
+ // physically hit original Paintable surfaces and CHANGE source cells.
+ // No paint requests, ammo, regeneration, pose, or tick fabricated by QA.
+ evidence.humanNativeShotStartTick=final.tick;
  await mouse('mousePressed');
- let final;
  try{
-  await exercise('ACTUAL_KEYD_12_LOWER_ALIGNMENT',['KeyD'],12);
-  await exercise('ACTUAL_KEYW_18_LOWER_ADVANCE',['KeyW'],18);
-  final=await exercise('ACTUAL_KEYD_90_ORIGINAL_UPHILL',['KeyD'],90);
-  if(!final.b186RealOriginalHumanCircuit?.sourceLocalPlayClear){
-   // One real, finite continued human shooting window at the actual
-   // original raised KCC foot, no artificial positions or paint writes.
-   final=await until(async()=>{
-    const s=await snapshot('STATIONARY_REAL_HUMAN_PROJECTILES');
-    return s.b186RealOriginalHumanCircuit?.sourceLocalPlayClear||
-     s.tick>=final.tick+120?s:false;
-   },150000,170);
-   collect('POST_UPHILL_REAL_HUMAN_FIRE',final);
-  }
+  const fireStartTick=final.tick;
+  final=await until(async()=>{
+   const s=await snapshot('REAL_RAISED_ORIGINAL_HUMAN_FIRE');
+   if(s.matchState==='TIME_UP')
+    fail('REAL_MATCH_TIME_UP_DURING_RAISED_SHOOTING',
+     {tick:s.tick,circuit:s.b186RealOriginalHumanCircuit});
+   return s.b186RealOriginalHumanCircuit?.sourceLocalPlayClear||
+    s.tick>=fireStartTick+120?s:false;
+  },150000,170);
+  collect('TRUE_RAISED_FLOOR_REAL_HUMAN_FIRE',final);
  }finally{await mouse('mouseReleased');}
  const last=await snapshot('END_SOURCE_LOCAL_CIRCUIT');
  const dom=await evaluate(`(()=>{

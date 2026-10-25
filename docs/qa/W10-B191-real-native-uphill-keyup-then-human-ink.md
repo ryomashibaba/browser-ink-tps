@@ -1,0 +1,25 @@
+# W10-B191 — Gameplay input sequence: do not overshoot original raised floor or dry-fire before landing
+
+Date 2026-10-25 JST; QA continuation from B190 `839835aad8e7a8e4f3e0917edead560326d46be2`.
+
+## Exact evidence scope
+B190 real native browser run [40168284687](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40168284687) and previous B189/B188/B187 runs were still **QUEUED** at B191 intake. No B187/B186 end-to-end browser circuit result exists from those queued runs; do not call new code a successful Chrome test. Previous actual registered original physical first-drop -> authentic uphill ramp -> right-low raised floor WAS proved in B123 2026-10-23 exact SHA `47f9bca5f833bdb72b7a455d45d6ab91e8fcb183`, [native Chrome #39910040914](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/39910040914): real original upper/lower/ramp/raised floor IDs, KCC height 4.525m, four true CDP key phases, no actor teleport and no 4v4.
+
+## Root causes in new B187 integration compared with actual successful B123 logic
+- B123's actual Chrome CDP W200→D12→W18→D90 program **stopped D90 early** as soon as the genuine native human KCC reached the original registered raised right-low floor `UndertowT21D:right-low-team-a`, rather than blindly moving the full 90 physical ticks. B187 incorrectly held D90 until the entire 90-tick budget elapsed even when actual native KCC already reached the raised source floor. On a bounded original slab, continuing to move can walk beyond real supporting geometry and turn a successful original ascent into a false fail.
+- B187 also pressed and **held human primary fire immediately at lower landing** throughout D12/W18/D90. The native PlayerResources ink pool and real ImpactPaintCoordinator can deplete ink, and changed impacts down below cannot guarantee adequate ammunition/aim on the actual raised platform. The practice requirement is a *physical* lower→ramp→raised traversal and human physical paint changes; the automation must not sabotage that with premature shots.
+- Correction to an initial review hypothesis: the B185 `guidance.label` is **already displayed** in the B183 notice (`this.b183DropNotice.textContent += '\\n' + circuitInstruction + '\\n' + guidance.label`). No redundant HUD display edits are needed. This B191 change is focused on **actual user input timing**.
+
+## B191 delivered
+- Add small pure `b191ActualNativeRaisedOriginalArrival(snapshot,stageName)` reading only existing true `b112OriginalHumanGround.genuineKccGrounded`, exact original raised solid ID, source foot-support gap ≤0.22m, genuine B183 original positive-side first-drop state and tick ordering, frozen [25/17/26/0] and NO authorized full-map 4v4. It grants **only early CDP KeyD-up at real source platform**, never a floor/nav/score/route award. Reject anything not the intended uphill stage.
+- Modify B187 real Chromium driver `exercise()` to end `ACTUAL_KEYD_90_ORIGINAL_UPHILL` at the first genuine registered KCC contact or at the existing maximum 90 native ticks, whichever comes first. Its `finally` always sends a true CDP `keyUp`. Preserve actual original first-drop check and do not permit other source IDs.
+- Keep mouse unpressed during first drop, D12, W18 and D90. Require actual named raised source and B186 genuine registered ramp contact; only then send true pointer-locked mouse press and allow **up to 120 real native ticks** for ≥60 changed HUMAN Impact/WallImpact cells from real original PaintCoordinator. Genuine death, timeout, missing original ramp or out-of-bounds stage remains HOLD, not a fake PASS.
+- Add five focused pure Node unit tests for exact native raised contact, not-yet-raised, missing original first drop, wrong stage/native tick, wrong source/score flags. Reuse the same B120 CI preflight + single real Chrome job; no additional workflow or shared human/CPU physics/production app file touched.
+
+## Product impact and limitations
+This restores the successful B123's *actual physical key stop behavior* and makes the real source-local B186 challenge comparable to how a human plays (move first, conserve ammo, then paint), rather than testing an input sequence known to overshoot and possibly deplete resources. It does **not** establish a successful full native circuit until an exact-B191 WebGL2 run produces positive real KCC, screenshot, changing source human ink and HUD evidence. No new synthetic paint, original source geometry, actor warp, animation, scoring or artificial advances were added.
+
+## Frozen authority and B192
+Source 25 Rapier solids / 17 Paintable / 26 NavLinks / 0 Scoreable, original opponent natural paths **0/12**, `activationReady=false`, `productionAuthorized=false`, `unrestricted4v4Certified=false`, official full 4v4 HOLD; protected main/Pages/T19C/T20/PR #5 untouched.
+
+B192: inspect the first B191 exact-SHA real Chrome result once queued runners start. If native CPU release, 200-tick touchdown, uphill original ramp or changed human impacts HOLD, use saved real JSON and screenshots to repair the *actual* blocked gameplay behavior, not to invent an original floor or declare 4v4 done.

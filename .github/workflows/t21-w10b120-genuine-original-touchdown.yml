@@ -15,6 +15,8 @@ on:
       - 'scripts/t21-w10b189-real-cpu-release-gate.test.mjs'
       - 'scripts/t21-w10b190-native-start-evidence.mjs'
       - 'scripts/t21-w10b190-native-start-evidence.test.mjs'
+      - 'scripts/t21-w10b191-raised-source-native-stop.mjs'
+      - 'scripts/t21-w10b191-raised-source-native-stop.test.mjs'
       - 'scripts/t21-w10b112-genuine-human-floor-walk.mjs'
       - '.github/workflows/t21-w10b120-genuine-original-touchdown.yml'
   workflow_dispatch:
@@ -38,6 +40,8 @@ jobs:
           node --test scripts/t21-w10b189-real-cpu-release-gate.test.mjs
           node --check scripts/t21-w10b190-native-start-evidence.mjs
           node --test scripts/t21-w10b190-native-start-evidence.test.mjs
+          node --check scripts/t21-w10b191-raised-source-native-stop.mjs
+          node --test scripts/t21-w10b191-raised-source-native-stop.test.mjs
           npx vitest run src/app/B183OriginalHumanDescent.test.ts src/app/B186RealOriginalSourceCircuit.test.ts src/app/W10B120OriginalSourceBoundary.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts
           npm run build -- --base=/browser-ink-tps/
       # B187 supersedes the narrow B120 proof with ONE genuine physical
