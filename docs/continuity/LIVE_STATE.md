@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `d218d9dc71981fb4b26e31d855a60f6ce2c97fc0`
+- 同期元QA HEAD: `1011ecb66efb2396d5f63314c9c4ca1fdf2ece39`
 - 最新番号のQAレポート: W10-B199 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B199-actual-original-A1-human-kcc-collision-recovery.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B200 （着手・完了の保証ではない）
