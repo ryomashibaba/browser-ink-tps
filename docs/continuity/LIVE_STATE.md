@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `01d4b0615d658b1330275afdd6efa83f8b7dc55b`
-- 最新番号のQAレポート: W10-B214 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B214-sustained-source-combat-ink.md
+- 同期元QA HEAD: `37e29b146d8eded9d55bf02ebf2ff46de827e940`
+- 最新番号のQAレポート: W10-B215 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B215-real-source-battle-ink-pacing.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B215 （着手・完了の保証ではない）
+- 次工程候補: W10-B216 （着手・完了の保証ではない）
 - レポート記載のActions: 確認できない
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
