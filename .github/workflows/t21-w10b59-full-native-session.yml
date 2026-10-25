@@ -26,7 +26,7 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
-      - run: npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts
+      - run: npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/B207SourceCombatRound.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
       - run: node --test scripts/t21-w10b174-active-source-sweep-gate.test.mjs scripts/t21-w10b176-real-lower-route-source.test.mjs scripts/t21-w10b177-physical-homecoming.test.mjs scripts/t21-w10b210-real-source-combat-timeup.test.mjs
       - name: B210 genuine real 180s combat human and original 7 CPU

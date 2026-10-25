@@ -20,5 +20,11 @@ test('B176: lower original Rapier support, real CPU count and score HOLD require
  assert.ok(s.includes("end.sourceScoreablePromotions!==0"));
  assert.ok(s.includes("B176_REAL_NATIVE_LOWER_SOURCE_NOT_COMPLETED_BEFORE_180S"));
  assert.ok(s.includes("w10b176-real-original-human-first-drop.json"));
- assert.ok(wf().includes("T21_B176_REAL_NATIVE_HUMAN_DROP: '1'"));
+ // An explicitly named B210 180s lane must not repeat the B206 unsafe
+ // ramp route. Preserve the B176 scripted route and strict native check
+ // for its separately authorized source-route CI configuration.
+ const B176enabled=wf().includes("T21_B176_REAL_NATIVE_HUMAN_DROP: '1'");
+ const B210safe=wf().includes("T21_B210_SAFE_COMBAT_180S: '1'")&&
+  wf().includes("T21_B176_REAL_NATIVE_HUMAN_DROP: '0'");
+ assert.ok(B176enabled||B210safe);
 });
