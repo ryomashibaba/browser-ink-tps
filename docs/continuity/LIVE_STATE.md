@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `a23ec7e6f1eeb3436c0f8b869372a73cea91dd59`
+- 同期元QA HEAD: `1d09124b3f3acb6de57d01e61c57bf68772cc6b9`
 - 最新番号のQAレポート: W10-B212 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B212-real-source-physics-enemy-shot-leading.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B213 （着手・完了の保証ではない）
