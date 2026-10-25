@@ -218,7 +218,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableB93UpperDetour=false,
   private readonly enableB137OriginalAllyRally=false,
   private readonly enableB150AllySupportInk=false,
-  private readonly enableB192HumanCombat=false
+  private readonly enableB192HumanCombat=false,
+  private readonly preferB196PlayableCoopNearGuard=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -493,6 +494,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     const landing=this.routeFor('HUMAN').originalLanding;
     const goals=rankB169OriginalAdvanceGuardGoals({
      enabled:true,allySyncPracticeRunning:this.b171AllySyncPracticeRunning,
+     preferPlayableCoopNearGuard:this.preferB196PlayableCoopNearGuard,
      humanGrounded:true,humanActive:true,
      realUpperHumanFoot:this.b137ActualHumanFoot,
      realLowerA1Foot:realFoot,

@@ -3,6 +3,8 @@
 export type B169Foot=Readonly<{x:number;y:number;z:number}>;
 export function rankB169OriginalAdvanceGuardGoals(input:{
  enabled:boolean;allySyncPracticeRunning:boolean;
+ /** B196 player-selected A1 co-op: prefer genuine audited near-landing feet. */
+ preferPlayableCoopNearGuard?:boolean;
  humanGrounded:boolean;humanActive:boolean;
  realUpperHumanFoot:B169Foot;realLowerA1Foot:B169Foot;
  authoredHumanDropLanding:B169Foot;
@@ -25,7 +27,14 @@ export function rankB169OriginalAdvanceGuardGoals(input:{
  }).slice().sort((u,v)=>{
   const aDist=Math.hypot(u.x-d.x,u.z-d.z);
   const bDist=Math.hypot(v.x-d.x,v.z-d.z);
-  return Math.abs(aDist-5)-Math.abs(bDist-5)||
+  // Original experimental QA retains the prior 5m guard. B194 real
+  // player-selected session failed with A1 3.57m away and zero native
+  // A1 shots; the existing A1 standoff/ink requires a genuinely near foot.
+  // Rank ONLY the same previously audited original patrol feet closer to
+  // the real authored landing. Physical Rapier + full Recast proof are
+  // still mandatory in SourceTraffic for the chosen candidate.
+  const preferred=input.preferPlayableCoopNearGuard?3:5;
+  return Math.abs(aDist-preferred)-Math.abs(bDist-preferred)||
    aDist-bDist||u.x-v.x||u.z-v.z;
  });
 }

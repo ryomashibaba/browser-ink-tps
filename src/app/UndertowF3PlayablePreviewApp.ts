@@ -625,7 +625,7 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally,
    b31Params.get('t21QaDrive')==='source'&&
    realAllyRally&&realAllyInk,
-   b192HumanCombatEnabled);
+   b192HumanCombatEnabled,b193Coop);
   this.canvas.dataset.t21B150AllyInk=
    b31Params.get('t21QaDrive')==='source'&&
    realAllyRally&&realAllyInk?'SOURCE_ONLY_OPT_IN':'OFF';

@@ -17,6 +17,18 @@ describe('B169 original human approach and genuine A1 lower guard',()=>{
   expect(result.every(g=>x.alreadyAuditedOriginalPatrolFeet.includes(g))).toBe(true);
   expect(result).not.toContainEqual(p(1,3.9,49));
  });
+ it('B196 opts in ONLY to reorder existing audited source feet near original landing',()=>{
+  const x=base();
+  const legacy=rank(x);
+  const coOp=rank({...x,preferPlayableCoopNearGuard:true});
+  expect(legacy[0]).toEqual(p(3,3.9,53));
+  expect(coOp[0]).toEqual(p(2,3.9,51.5));
+  expect(coOp).toHaveLength(legacy.length);
+  expect(coOp.every(g=>x.alreadyAuditedOriginalPatrolFeet.includes(g))).toBe(true);
+  expect(coOp).not.toContainEqual(p(1,3.9,49));
+  expect(rank({...x,preferPlayableCoopNearGuard:true,
+   alreadyAuditedOriginalPatrolFeet:[]})).toEqual([]);
+ });
  it('only arms with a grounded live human on the source upper area',()=>{
   const x=base();
   expect(rank({...x,realUpperHumanFoot:p(0,3.9,48)})).toEqual([]);
