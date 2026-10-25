@@ -775,6 +775,67 @@ async function run(){
     realHumanChangedSourceCells:status.actualHumanPaintCells,
     humanHudChangedCellsAtPulse:humanPulse.b76RecentCells,
     officialWinner:'NONE',original4v4Certified:false}));
+   if(mode==='FIXED'&&process.env.T21_B207_REAL_COMBAT_SELECT==='1'){
+    // Genuine CDP UI action AFTER original CPU+HUMAN ink gameplay PASS.
+    for(const type of ['keyDown','keyUp'])
+     await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
+      windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+    await until(()=>evaluate('document.pointerLockElement===null'),25000);
+    const c=await evaluate(`(() => {
+     const b=document.querySelector('#t21-f3-b207-combat-round');
+     b?.scrollIntoView({block:'center',behavior:'instant'});
+     const r=b?.getBoundingClientRect();
+     return {label:b?.textContent,disabled:b?.disabled,
+      source:b?.dataset.originalSourceOnly,score:b?.dataset.scoreable,
+      paths:b?.dataset.originalOpponentRoutesCertified,
+      x:r?.left+r?.width/2,y:r?.top+r?.height/2};
+    })()`);
+    if(!c.label?.includes('PLAY 180s SOURCE COMBAT')||c.disabled||
+       c.source!=='true'||c.score!=='0'||c.paths!=='0'||
+       !(c.x>0&&c.x<1600&&c.y>0&&c.y<900))
+     fail('B207_SOURCE_COMBAT_BUTTON_UNAVAILABLE_'+JSON.stringify(c));
+    const before=await evaluate('performance.timeOrigin');
+    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+     x:c.x,y:c.y,button:'none'});
+    for(const type of ['mousePressed','mouseReleased'])
+     await cmd('Input.dispatchMouseEvent',{type,x:c.x,y:c.y,
+      button:'left',clickCount:1});
+    const selected=await until(async()=>{try{
+     const x=await evaluate(`(() => {
+      const s=window.__t21F3?.snapshot?.(),canvas=document.querySelector('#app-canvas');
+      return s?{origin:performance.timeOrigin,
+       ready:canvas?.dataset.t21F3Ready,
+       combat:canvas?.dataset.t21B192HumanCombat,
+       full:canvas?.dataset.t21B203FullRound,
+       url:location.search,stage:[s.originalSourceSolids,s.originalPaintSurfaces,
+        s.originalSourceNavigationLinks,s.sourceScoreablePromotions],
+       cpuRejoins:s.cpu.physicalRejoins.length,
+       actorRelocations:s.cpu.physicalFootRelocations,
+       matchState:s.matchState,authorized:s.productionAuthorized,
+       note:document.querySelector('#t21-f3-b207-source-combat-caveat')?.textContent
+      }:null;
+     })()`);
+     return x?.origin>before&&x.ready==='READY'&&
+      x.combat==='REAL_SOURCE_ONLY'&&x.full==='REAL_180S_SOURCE_PLAY'?x:false;
+    }catch{return false;}},100000);
+    if(selected.url!=='?t21Play=preview&t21QaDrive=source&'+
+       't21W10B183=firstDropPlay&t21W10B192=humanCombat&t21W10B203=fullRound'||
+       selected.stage.join('/')!=='25/17/26/0'||
+       selected.cpuRejoins!==0||selected.actorRelocations!==0||
+       selected.matchState!=='STAGING'||selected.authorized!==false||
+       !selected.note?.includes('0/12'))
+     fail('B207_NEW_REAL_COMBAT_WORLD_UNTRUSTED_'+JSON.stringify(selected));
+    const evidence={schema:'B207_ACTUAL_USER_SELECTED_180S_SOURCE_COMBAT',
+     actualVisibleCDPMouseClick:true,newSourceTimeOrigin:selected.origin,
+     originalSourceStage:selected.stage.join('/'),
+     originalHumanCombatEnabled:true,actual180sSourceMode:true,
+     sourceCpuRejoinsAtBoot:0,actorTeleports:0,
+     actualOpponentRoutesCertified:'0/12',officialWinner:'NONE',
+     nativeEnemyEngagementCertified:false,noTickOrInkInjection:true};
+    writeFileSync(resolve(OUTPUT,'w10b207-real-combat-source-select.json'),
+     JSON.stringify(evidence,null,2));
+    console.log('B207_REAL_180S_COMBAT_WORLD_USER_SELECTED',JSON.stringify(evidence));
+   }
    return;
   }
   await sleep(850);

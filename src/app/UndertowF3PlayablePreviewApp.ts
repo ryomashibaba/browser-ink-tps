@@ -42,6 +42,7 @@ import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
+import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
 import {b154OriginalTeamInkOptIn}
@@ -854,6 +855,37 @@ export class UndertowF3PlayablePreviewApp{
     window.location.assign(dest.href);
    });
    this.panel.appendChild(combat);
+   // B207: a fresh native 180s battle-lab session in one user click.
+   // The original opposing footpaths remain UNVERIFIED (0/12).
+   const round=document.createElement('button');
+   round.id='t21-f3-b207-combat-round';round.type='button';
+   round.dataset.originalSourceOnly='true';round.dataset.scoreable='0';
+   round.dataset.originalOpponentRoutesCertified='0';
+   round.dataset.officialWinner='NONE';round.dataset.actorTeleports='0';
+   round.disabled=b192HumanCombatEnabled&&this.b203FullRound;
+   round.textContent=round.disabled?
+    '180s SOURCE COMBAT SELECTED · ENEMY ROUTES HOLD':
+    'PLAY 180s SOURCE COMBAT · 7 REAL CPU · ROUTES HOLD';
+   round.style.cssText='display:block;width:100%;margin-top:7px;'+
+    'padding:11px;border-radius:8px;cursor:pointer;'+
+    'background:#244b61;border:1px solid #87c8eb;color:#e9faff;'+
+    'font:800 11px/1.5 system-ui';
+   round.addEventListener('click',()=>{
+    if(round.disabled||document.pointerLockElement===this.canvas||
+       this.stopReason||this.survey.snapshot().active||this.galleryIndex>=0||
+       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
+       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
+    window.location.assign(b207CombatRoundUrl(window.location.href));
+   });
+   combat.insertAdjacentElement('afterend',round);
+   if(round.disabled){
+    const note=document.createElement('p');
+    note.id='t21-f3-b207-source-combat-caveat';
+    note.textContent='Real 7 CPU, original Rapier + Recast and physical hits only. '+
+     'Opposing routes are 0/12; no enemy encounter, splat or Turf result is guaranteed.';
+    note.style.cssText='color:#f5d6aa;font:650 10px/1.5 system-ui;margin:6px 0';
+    round.insertAdjacentElement('afterend',note);
+   }
   }
   // B193: real selected coop joins the preexisting native A1 rally,
   // projectile ink, human sub, and 60Hz ALLY_SYNC play objective.

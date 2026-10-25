@@ -1,0 +1,9 @@
+# W10-B207 — Real 180s source combat one-click launch
+
+2026-10-25 JST. B206 original Chrome coop Actions #40187270601 SUCCESS at SHA e7693f7a6992cb6d57059b55dbb4bb8332841136: 48 tests PASS, real visible RESUME click native tick 1060→1066, CPU7 physical join, true human/A1 cooperative CLEAR twice (808/38 then 808/52 impact changed cells), genuine new-world card/HUD/R replays. Existing real 180s B59 Actions #40187270605 still running when B207 was developed; full 180s TIME_UP not inferred.
+
+B207 is a USER-PLAYABLE choice, not a new physics authority: click **PLAY 180s SOURCE COMBAT · 7 REAL CPU · ROUTES HOLD** to reboot a genuine source-only world with existing B192 human pursuit/true original cover gate and B203 full 180s PlayCanvas/Rapier/Recast simulation. New URL includes ONLY t21Play=preview, t21QaDrive=source, t21W10B183=firstDropPlay, t21W10B192=humanCombat and t21W10B203=fullRound. Never retain unapproved underpass, QA tick input, previous ally mission, actor placement, CPU warp, score or Turf winner. During selected mode, a permanent user-visible note explicitly says natural opposing routes 0/12; no forced encounter or splat is promised.
+
+Exact-SHA native acceptance pending: reuse B75 existing native real Chromium FIXED/SWEEP CI (no new workflow). The FIXED lane first proves original native human+7CPU actual ink; after the normal genuine paint PASS, CDP ESC releases mouse and physically CLICKS the new user-facing B207 selector. Require genuinely new browser time origin, strict stage 25/17/26/0, B192 real source + B203 real 180s, CPU rejoins 0 before new world boot, no actor teleport, and displayed 0/12 caveat. Save w10b207-real-combat-source-select.json. SWEEP lane unchanged. Such success certifies original combat-mode *selection* and new native world, not actual opponent engagement or full 180s completion.
+
+Official scoring and unrestricted 4v4 remain HOLD; protect main, T19C/T20, Pages, PR #5, and private original files.
