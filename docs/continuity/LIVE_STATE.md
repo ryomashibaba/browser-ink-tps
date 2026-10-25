@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `9aee5a69d454a315bfa3aecfc700820dec44ae46`
+- 同期元QA HEAD: `5cd7809bf76ce74a54375b643b39d1cd13451d42`
 - 最新番号のQAレポート: W10-B180 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B180-original-unpainted-patch-targeting.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B181 （着手・完了の保証ではない）
