@@ -819,7 +819,8 @@ async function run(){
       x.combat==='REAL_SOURCE_ONLY'&&x.full==='REAL_180S_SOURCE_PLAY'?x:false;
     }catch{return false;}},100000);
     if(selected.url!=='?t21Play=preview&t21QaDrive=source&'+
-       't21W10B183=firstDropPlay&t21W10B192=humanCombat&t21W10B203=fullRound'||
+       't21W10B183=firstDropPlay&t21W10B192=humanCombat&'+
+       't21W10B112=humanGround&t21W10B203=fullRound'||
        selected.stage.join('/')!=='25/17/26/0'||
        selected.cpuRejoins!==0||selected.actorRelocations!==0||
        selected.matchState!=='STAGING'||selected.authorized!==false||
@@ -879,6 +880,23 @@ async function run(){
      fail('B208_REAL_SOURCE_BATTLE_NATIVE_PLAY_FAILED_'+JSON.stringify({
       moved,shots:realSeven.shotsFired,cpu:realSeven.cpu.physicalRejoins.length,
       cpuInk:realSeven.cpuImpactInkCellsChanged}));
+    const r211=await evaluate(`(() => {
+      const r=document.querySelector('#t21-f3-b211-real-battle-roster');
+      return {visible:!!r&&!r.hidden,source:r?.dataset.sourceOnly,
+       count:Number(r?.dataset.realCpuCount),score:r?.dataset.scoreable,
+       winner:r?.dataset.officialWinner,certified:r?.dataset.actualEnemyEncounterCertified,
+       text:r?.textContent??'',tick:Number(r?.dataset.nativeTick)};
+    })()`);
+    if(!r211.visible||r211.source!=='true'||r211.count!==7||
+       r211.score!=='0'||r211.winner!=='NONE'||r211.certified!=='false'||
+       !r211.text.includes('A1')||!r211.text.includes('B4')||
+       !r211.text.includes('REAL 1 + 7'))
+      fail('B211_REAL_NATIVE_ROSTER_NOT_VISIBLE_'+JSON.stringify(r211));
+    writeFileSync(resolve(OUTPUT,'w10b211-actual-cpu-life-roster.json'),
+     JSON.stringify({nativeTick:realSeven.tick,display:r211,
+      realCpuIds:realSeven.cpu.cpu.map(x=>x.id),scoreable:0,
+      manufacturedHits:0,officialWinner:'NONE'},null,2));
+    console.log('B211_NATIVE_BATTLE_ROSTER_REAL_1_PLUS_7',JSON.stringify(r211));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),

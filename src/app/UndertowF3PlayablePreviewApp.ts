@@ -43,6 +43,7 @@ import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
+import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
 import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209OriginalRampEdge';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
@@ -277,6 +278,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b209RampEdgeCoach:ReturnType<typeof createB209OriginalRampEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private readonly b205RoundClock:HTMLElement|null;
+ private readonly b211Roster:ReturnType<typeof createB211RealBattleRoster>|null;
  private readonly b160CpuInkActivityView:
   ReturnType<typeof createB160SourceCpuActivityView>;
  private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
@@ -1250,6 +1252,8 @@ export class UndertowF3PlayablePreviewApp{
   // B205: genuine user-selected full 180s clock and native life activity.
   const round=this.b203FullRound?document.createElement('aside'):null;
   this.b205RoundClock=round;
+  this.b211Roster=b192HumanCombatEnabled&&this.b203FullRound?
+   createB211RealBattleRoster(ui):null;
   if(round){
    round.id='t21-f3-b205-real-round';
    round.dataset.originalSourceOnly='true';
@@ -3816,6 +3820,18 @@ export class UndertowF3PlayablePreviewApp{
    this.b167CombatNotice.style.borderColor=cue.state==='STAGE_RAY_CLEAR'?
     'rgba(103,235,212,.68)':'rgba(255,159,195,.56)';
   }else this.b167CombatNotice.dataset.t21B167ContactState='OFF';
+  // B211 reads only actual 60Hz CPU/HUMAN life state, never source authority.
+  this.b211Roster?.render(b211RealNativeRoster({
+   selected:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+   tick:state.tick,stage:[state.originalSourceSolids,
+    state.originalPaintSurfaces,state.originalSourceNavigationLinks??-1,
+    state.sourceScoreablePromotions],
+   matchState:state.matchState,paused:state.paused,stopReason:state.stopReason,
+   humanHp:state.player.hp,humanDirectHits:state.humanCpuDirectHits,
+   humanDirectSplats:state.humanCpuDirectSplats,
+   cpuSplats:state.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
+   cpu:state.cpu.cpu
+  }),this.survey.snapshot().active||this.galleryIndex>=0);
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
