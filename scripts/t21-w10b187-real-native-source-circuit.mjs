@@ -10,6 +10,8 @@ import {spawn,execFileSync} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
+import {b189RealSevenCpuSourceRelease}
+ from './t21-w10b189-real-cpu-release-gate.mjs';
 const root='http://127.0.0.1:4197/browser-ink-tps/';
 const output=process.env.T21_B187_EVIDENCE_DIR??
  '/tmp/t21-b187-native-original-circuit';
@@ -157,16 +159,21 @@ async function run(){
  ),20000,150);
  // Do NOT flip match state or synthesize extra ticks. CPU must genuinely
  // fall and rejoin through original Recast/Rapier source first.
+ // B189: the previous wait incorrectly used nonexistent
+ // snapshot.nativeSourceCpuRejoined / nativeSourceCpuFreeCombat fields.
+ // The actual engine publishes cpu.physicalRejoins and cpu.freeCombatEnabled.
+ let physicalRelease=null;
  const playing=await until(async()=>{
   const s=await snapshot('WAIT_SEVEN_REAL_SOURCE_CPU');
-  return s.matchState==='PLAYING'&&
-   s.nativeSourceCpuRejoined===7&&
-   s.nativeSourceCpuFreeCombat===true?s:false;
+  const witness=b189RealSevenCpuSourceRelease(s);
+  if(witness){physicalRelease=witness;return s;}
+  return false;
  },480000,350);
  const evidence={
   schema:'W10_B187_ONE_REAL_NATIVE_ORIGINAL_PLAYABLE_CIRCUIT_V1',
   nativeSourceStartTick:playing.tick,
-  cpuRejoinedNaturally:playing.nativeSourceCpuRejoined,
+  cpuRejoinedNaturally:physicalRelease.actualNativeCpuRejoined,
+  realSourcePhysicalCpuRelease:physicalRelease,
   stages:[],
   sampleHistory:[],
   initialFrozenStage:[25,17,26,0],
@@ -195,6 +202,8 @@ async function run(){
   return item;
  };
  collect('AFTER_ACTUAL_SEVEN_CPU_RELEASE',playing);
+ console.log('T21_B189_SEVEN_GENUINE_SOURCE_CPU_RELEASE',
+  JSON.stringify({nativeTick:playing.tick,...physicalRelease}));
  const exercise=async(name,pressed,nativeTicks)=>{
   const before=await snapshot(name+'_BEFORE');
   for(const key of pressed)await cmd('Input.dispatchKeyEvent',
