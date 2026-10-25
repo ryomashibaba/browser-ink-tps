@@ -877,13 +877,13 @@ async function run(){
   };
   const verifyNewWorld=async(origin,via)=>{
    const page=await until(async()=>{try{
-    const p=await evaluate(\`(() => ({
+    const p=await evaluate(`(() => ({
      origin:performance.timeOrigin,
      ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
      coop:document.querySelector('#app-canvas')?.dataset.t21B193Coop,
      url:location.search,
      variant:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B56NextVariant
-    }))()\`);
+    }))()`);
     return p.origin>origin&&p.ready==='READY'&&
       p.coop==='REAL_A1_ORIGINAL_SOURCE'&&
       p.url==='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop'&&
@@ -907,12 +907,12 @@ async function run(){
    a1:first.b25SourcePaintRun.actualOriginalA1ChangedImpactCells};
   persist();
   await esc();
-  const missionCard=await evaluate(\`(() => {
+  const missionCard=await evaluate(`(() => {
    const c=document.querySelector('#t21-f3-b25-paint-run');
    const b=document.querySelector('#t21-f3-b25-start');
    return {replay:c?.dataset.t21B197FreshWorldReplay,
     enabled:!b?.disabled,label:b?.textContent};
-  })()\`);
+  })()`);
   if(missionCard.replay!=='true'||!missionCard.enabled||
      !missionCard.label?.includes('REPLAY REAL A1 CO-OP'))
    fail('B200_MISSION_CARD_REPLAY_UNAVAILABLE');
@@ -934,12 +934,12 @@ async function run(){
    impacts:r.actualOriginalA1TaggedImpactEvents};
   persist();
   await esc();
-  const button=await evaluate(\`(() => {
+  const button=await evaluate(`(() => {
    const b=document.querySelector('#t21-f3-b200-replay');
    const r=b?.getBoundingClientRect();
    return {visible:b?.hidden===false&&b?.style.display!=='none',
     enabled:!b?.disabled,top:r?.top};
-  })()\`);
+  })()`);
   if(!button.visible||!button.enabled||!(button.top>=0&&button.top<900))
    fail('B200_VISIBLE_ENDSCREEN_REPLAY_MISSING');
   await picture('W10B200_REAL_TERMINAL_REPLAY_BUTTON');
