@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `9e4a3d5016cd70a064556800c5a69c28e2450957`
+- 同期元QA HEAD: `4a4870e1eede1786d43393518c82fccf3364833f`
 - 最新番号のQAレポート: W10-B172 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B172-active-human-seven-native-cpu-180s.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B173 （着手・完了の保証ではない）
