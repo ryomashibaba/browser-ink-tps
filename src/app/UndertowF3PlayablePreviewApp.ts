@@ -64,6 +64,7 @@ import {matchB158OriginalSourceFaces}
 import {examineB159OriginalSourceFaceProjections}
  from './W10B159OriginalFaceNavMeshProjection';
 import {b218OriginalRouteFaceChainSeams} from './B218OriginalRouteFaceChainSeams';
+import {b219TriageOriginalNavmeshSourceFailure} from './B219OriginalUnderpassDisconnection';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -182,6 +183,8 @@ export class UndertowF3PlayablePreviewApp{
   ReturnType<typeof examineB159OriginalSourceFaceProjections>;
  private readonly b218OriginalRouteFaceSeams:
   ReturnType<typeof b218OriginalRouteFaceChainSeams>;
+ private readonly b219OriginalSourceBlockerTriage:
+  ReturnType<typeof b219TriageOriginalNavmeshSourceFailure>;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
@@ -466,6 +469,11 @@ export class UndertowF3PlayablePreviewApp{
   // B218 read-only geometry: the exact CI688 source face chain is not
   // physical terrain, a traversable Recast path or player KCC authority.
   this.b218OriginalRouteFaceSeams=b218OriginalRouteFaceChainSeams();
+  // B219 ranks actual original source geometric and native projection
+  // blockers. This cannot make any CPU cross a missing source passage.
+  this.b219OriginalSourceBlockerTriage=
+   b219TriageOriginalNavmeshSourceFailure(
+    this.b218OriginalRouteFaceSeams,this.b159OriginalFaceNavMeshProjection);
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
@@ -3744,6 +3752,7 @@ export class UndertowF3PlayablePreviewApp{
    b159OriginalFaceNavMeshProjection:
     this.b159OriginalFaceNavMeshProjection,
    b218OriginalFaceChainSeams:this.b218OriginalRouteFaceSeams,
+   b219OriginalUnderpassBlockerTriage:this.b219OriginalSourceBlockerTriage,
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -3816,7 +3825,13 @@ export class UndertowF3PlayablePreviewApp{
     '/42 (not source membership) · B218 largest original face seams '+
     state.b218OriginalFaceChainSeams.widestBySide.map(x=>
      x.side+':'+x.meters.toFixed(2)+'m').join('/')+
-    ' (not physical) · CI #691 failed · 4v4 HOLD';
+    ' (not physical) · B219 first investigate '+
+    (state.b219OriginalUnderpassBlockerTriage.firstCandidateToInspect?.from??'NONE')+
+    ' → '+
+    (state.b219OriginalUnderpassBlockerTriage.firstCandidateToInspect?.to??'NONE')+
+    ' / '+
+    (state.b219OriginalUnderpassBlockerTriage.firstCandidateToInspect?.diagnosis??'UNRESOLVED')+
+    ' · CI #691 failed · 4v4 HOLD';
    b155Panel.dataset.t21B155StageAuthority=audit.stage;
    b155Panel.dataset.t21B155UnderpassAuthorized='false';
    b155Panel.dataset.t21B155RealKccRouteCertified='false';

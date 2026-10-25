@@ -1060,6 +1060,28 @@ async function run(){
     console.log('B218_EXACT_ORIGINAL_TEMPLE01_FACE_SEAMS',
       JSON.stringify({seams:b218.seams,widestBySide:b218.widestBySide,
         originalCrossTeamRoutes:'0/12',addedSolids:0,addedLinks:0}));
+    const b219=realSeven.b219OriginalUnderpassBlockerTriage;
+    if(!b219||b219.originalAuthority!==
+       '25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE'||
+       b219.results?.length!==8||
+       b219.priorityRankedSeams?.length!==8||
+       b219.addedGeometry!==0||b219.addedNavLinks!==0||
+       b219.sourceScoreableAdded!==0||
+       b219.priorCi691AllComponentsAddedButRecastFailed!==true||
+       b219.nativeRecastCorridorCertified!==false||
+       b219.physicalKccCorridorCertified!==false||
+       b219.originalEnemyNativeFootRoutesCertified!=='0/12'||
+       b219.productionAuthorized!==false)
+      fail('B219_REAL_ORIGINAL_DISCONNECTED_RECAST_TRIAGE_HOLD_'+
+       JSON.stringify(b219));
+    writeFileSync(resolve(OUTPUT,'w10b219-genuine-original-gap-triage.json'),
+     JSON.stringify(b219,null,2));
+    console.log('B219_GENUINE_SOURCE_GAP_AND_NATIVE_RECAST_TRIAGE',
+      JSON.stringify({first:b219.firstCandidateToInspect,
+        gapSeams:b219.measuredGeometricGapsOver30cm,
+        realRecastNearFaces:b219.sourceOriginalRecastNearFaceSamples,
+        originalRapierHitSamples:b219.actualRegisteredRapierRayHits,
+        originalCrossTeamRoutes:'0/12',noExtraGeometry:true}));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),
