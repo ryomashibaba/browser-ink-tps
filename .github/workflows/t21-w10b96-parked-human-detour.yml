@@ -1,9 +1,7 @@
 name: T21 W10-B96 real Chrome parked-human source detour
+# B179: historical lane is available on explicit dispatch only.
+# Changes to the shared B75 driver are covered by its native FIXED/SWEEP CI.
 on:
-  push:
-    branches: [dev/t21-f4e103w-qa-infra]
-    paths:
-      - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
   workflow_dispatch:
 permissions:
   contents: read
