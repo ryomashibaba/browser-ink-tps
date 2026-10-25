@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `e7693f7a6992cb6d57059b55dbb4bb8332841136`
-- 最新番号のQAレポート: W10-B206 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B206-real-native-180s-source-full-round.md
+- 同期元QA HEAD: `c12a2df45d15344e2b109ec57ddce4bff6c38652`
+- 最新番号のQAレポート: W10-B207 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B207-real-source-combat-180s-one-click.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B207 （着手・完了の保証ではない）
+- 次工程候補: W10-B208 （着手・完了の保証ではない）
 - レポート記載のActions: 確認できない
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
