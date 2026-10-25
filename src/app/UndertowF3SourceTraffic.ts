@@ -15,6 +15,7 @@ import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
 import {rankB169OriginalAdvanceGuardGoals} from './B169OriginalAllyAdvanceGuard';
+import {b199ActualAllyCollisionReliefCandidates} from './B199ActualAllyCollisionRelief';
 import {chooseB142OriginalAllyStandoff,mayRetainB143OriginalAllyStandoff}
  from './UndertowF3OriginalAllyStandoff';
 import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
@@ -62,6 +63,9 @@ export interface F3TrafficSnapshot{
   readonly b169SourceAdvanceGuardChecks:number;
   readonly b169NativeAdvanceGuardTargets:number;
   readonly b169RejectedUnsafeOrUnreachableGoals:number;
+  readonly b199ActualCollisionReliefChecks:number;
+  readonly b199OriginalNativeReliefGoals:number;
+  readonly b199RejectedUnsafeReliefPaths:number;
   readonly b150SourceCandidateSamples:number;
   readonly b150ApprovedInkAims:number;
   /** B153 source-verified A1 aim proposals after rotation. */
@@ -135,6 +139,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b169SourceAdvanceGuardChecks=0;
  private b169NativeAdvanceGuardTargets=0;
  private b169RejectedUnsafeOrUnreachableGoals=0;
+ private b199ActualCollisionReliefChecks=0;
+ private b199OriginalNativeReliefGoals=0;
+ private b199RejectedUnsafeReliefPaths=0;
  private b169HumanUpperGrounded=false;
  private b171AllySyncPracticeRunning=false;
  private b137ApprovedNativeRallies=0;
@@ -219,7 +226,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableB137OriginalAllyRally=false,
   private readonly enableB150AllySupportInk=false,
   private readonly enableB192HumanCombat=false,
-  private readonly preferB196PlayableCoopNearGuard=false
+  private readonly enableB199PlayerCoopCollisionRecovery=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -494,7 +501,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     const landing=this.routeFor('HUMAN').originalLanding;
     const goals=rankB169OriginalAdvanceGuardGoals({
      enabled:true,allySyncPracticeRunning:this.b171AllySyncPracticeRunning,
-     preferPlayableCoopNearGuard:this.preferB196PlayableCoopNearGuard,
+     // B196-198 tight guard failed native human KCC three times.
+     // Restore B195-proven 5m guard; react only to actual KCC overlap.
+     preferPlayableCoopNearGuard:false,
      humanGrounded:true,humanActive:true,
      realUpperHumanFoot:this.b137ActualHumanFoot,
      realLowerA1Foot:realFoot,
@@ -519,6 +528,41 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      out.copy(sourceGoal);
      this.realGoalRequests++;
      this.b169NativeAdvanceGuardTargets++;
+     return true;
+    }
+   }
+   // B199: real player-selected A1 co-op only. B196-B198 native Chrome
+   // trapped the human at a genuine 0.6m separation from physical A1,
+   // and BOTH actor shots and movement stalled. Offer a DIFFERENT
+   // EXISTING original patrol foot outside the actual human's lane.
+   // Never reposition actor directly: original native Recast plus Rapier
+   // must approve the whole path before CpuAgentSystem can attempt movement.
+   if(this.enableB199PlayerCoopCollisionRecovery&&id==='A1'&&
+      bot.team===Team.A&&bot.mobilityState==='GROUND'&&
+      bot.lifeState!=='SPLATTED'&&this.physics&&
+      this.b137HumanFootValid&&this.b171AllySyncPracticeRunning){
+    const h=this.b137ActualHumanFoot;
+    const safe=b199ActualAllyCollisionReliefCandidates({
+     enabled:true,allySyncPracticeRunning:this.b171AllySyncPracticeRunning,
+     humanGrounded:true,humanActive:true,cpuRejoined:this.physicallyRejoined.has(id),
+     human:h,cpu:realFoot,existingAuditedSourceFeet:candidates
+    });
+    if(safe.length)this.b199ActualCollisionReliefChecks++;
+    for(const candidate of safe){
+     const g=new Vec3(candidate.x,candidate.y,candidate.z);
+     if(!this.hasSourceFootSupport(g)){
+      this.b199RejectedUnsafeReliefPaths++;continue;
+     }
+     const native=this.nav.auditPath(realFoot,g);
+     if(!native.reachedTarget||native.startSnapDistanceMeters>.20||
+        native.endSnapDistanceMeters>.20||
+        !this.hasSourceSupportedRoute(native,1)){
+      this.b199RejectedUnsafeReliefPaths++;continue;
+     }
+     this.b143ApprovedNativeAllyGoal=null;
+     this.patrolIndex.set(id,-1);
+     out.copy(g);this.realGoalRequests++;
+     this.b199OriginalNativeReliefGoals++;
      return true;
     }
    }
@@ -1083,6 +1127,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b169NativeAdvanceGuardTargets:this.b169NativeAdvanceGuardTargets,
     b169RejectedUnsafeOrUnreachableGoals:
      this.b169RejectedUnsafeOrUnreachableGoals,
+    b199ActualCollisionReliefChecks:this.b199ActualCollisionReliefChecks,
+    b199OriginalNativeReliefGoals:this.b199OriginalNativeReliefGoals,
+    b199RejectedUnsafeReliefPaths:this.b199RejectedUnsafeReliefPaths,
     b150SourceCandidateSamples:this.b150SourceCandidateSamples,
     b150ApprovedInkAims:this.b150ApprovedInkAims,
     b153DiversifiedAimApprovals:this.b153DiversifiedAimApprovals,
