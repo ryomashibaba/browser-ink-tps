@@ -8,6 +8,8 @@ on:
       - 'src/app/UndertowF3HumanInkCoach.ts'
       - 'src/app/UndertowF3HumanInkCoach.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/B209OriginalRampEdge.ts'
+      - 'src/app/B209OriginalRampEdge.test.ts'
       - 'src/app/B183OriginalHumanDescent.ts'
       - 'src/app/B183OriginalHumanDescent.test.ts'
       - 'src/app/B185OriginalDropGuidance.ts'
