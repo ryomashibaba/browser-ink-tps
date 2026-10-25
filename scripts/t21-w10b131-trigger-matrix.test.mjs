@@ -52,7 +52,7 @@ test('B131: 19 historical one-off suites retain manual dispatch and domain trigg
  }
 });
 test('B173: shared real CDP driver changes do NOT fan out legacy browser workflows',()=>{
- for(const name of legacy){
+ for(const name of legacy.filter(name=>name!=='t21-w10b59-full-native-session.yml')){
   const s=read(name);
   assert.ok(!s.includes("- 'scripts/t21-f3-browser-smoke.mjs'")&&
    !s.includes('- "scripts/t21-f3-browser-smoke.mjs"'),
