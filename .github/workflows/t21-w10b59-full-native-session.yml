@@ -34,6 +34,7 @@ jobs:
           T21_B172_ACTIVE_180S: '1'
           T21_B174_EXPLICIT_SOURCE_SWEEP_180S: '1'
           T21_B176_REAL_NATIVE_HUMAN_DROP: '1'
+          T21_B206_REAL_PLAYER_FULL_ROUND: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b59
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Keep actual native source progress and end screenshot, even if failing

@@ -169,7 +169,36 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    remaining:(await snapshot()).timeRemainingSeconds,
    ui:await evaluate('document.querySelector("#t21-f3-b25-progress")?.textContent')
   }));
- await click(800,450);
+ if(b203FullRoundTrial&&coopAttempt===1){
+  // B206: B205's REAL pause overlay is now visible and may intercept
+  // the old arbitrary center click. Use its real interactive RESUME.
+  const prior=await snapshot();authority(prior,'FIXED');
+  const overlay=await evaluate(`(() => ({
+   active:document.querySelector('#t21-f3-b202-real-pause')?.dataset.t21B202NativeState,
+   shown:document.querySelector('#t21-f3-b202-real-pause')?.hidden===false,
+   button:document.querySelector('#t21-f3-b202-resume')?.textContent
+  }))()`);
+  if(prior.b25SourcePaintRun.status!=='ARMED'||!prior.paused||
+     overlay.active!=='NATIVE_PAUSED'||!overlay.shown)
+   fail('B206_REAL_ARMED_SOURCE_PAUSE_UNAVAILABLE_'+JSON.stringify(overlay));
+  await clickButton('#t21-f3-b202-resume');
+  const resumed=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   const locked=await evaluate(
+    'document.pointerLockElement===document.querySelector("#app-canvas")');
+   return locked&&!n.paused&&n.tick>=prior.tick+5?n:false;
+  },30000);
+  const proof={schema:'B206_REAL_PAUSED_ARMED_RESUME',
+   actualUserResumeButtonClick:true,originalNativePauseTick:prior.tick,
+   actualResumedTick:resumed.tick,
+   missionStatus:resumed.b25SourcePaintRun.status,
+   physicallyRejoinedCpu:resumed.cpu.physicalRejoins.length,
+   nativeTicksFabricated:false,actorTeleports:0,
+   sourceAuthority:'25/17/26/0',officialWinner:'NONE'};
+  writeFileSync(resolve(OUTPUT,'w10b206-real-armed-resume.json'),
+   JSON.stringify(proof,null,2));
+  console.log('B206_REAL_SOURCE_ARMED_BUTTON_RESUME',JSON.stringify(proof));
+ }else await click(800,450);
  await until(()=>evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
  const started=await until(async()=>{

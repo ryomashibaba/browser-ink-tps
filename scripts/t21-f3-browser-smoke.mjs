@@ -120,6 +120,9 @@ async function main(){
  const b172Active=process.env.T21_B172_ACTIVE_180S==='1';
  const b174Active=process.env.T21_B174_EXPLICIT_SOURCE_SWEEP_180S==='1';
  const b176RealDrop=process.env.T21_B176_REAL_NATIVE_HUMAN_DROP==='1';
+ const b206FullRound=process.env.T21_B206_REAL_PLAYER_FULL_ROUND==='1';
+ if(b206FullRound&&(!w10b59||!b172Active||!b174Active||!b176RealDrop))
+  reject('B206_NEEDS_TRUE_B59_HUMAN_7CPU_SOURCE_SESSION');
  const w10b69=process.env.T21_W10B69_ONE_CLICK_PREVIEW==='1';
  const w10b70=process.env.T21_W10B70_REAL_OWNER_STORAGE==='1';
  const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
@@ -185,6 +188,49 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(b206FullRound){
+  // Real user-chosen 180s. Preserve all existing source CPU and KCC tests.
+  const original=await evaluate(`(() => ({
+   mode:document.querySelector('#app-canvas')?.dataset.t21B203FullRound,
+   button:document.querySelector('#t21-f3-b203-full-round')?.textContent,
+   realCpu:window.__t21F3?.snapshot()?.cpu?.physicalRejoins?.length
+  }))()`);
+  if(original.mode!=='OFF'||!original.button?.includes('PLAY FULL 180s')||
+     original.realCpu!==0)
+   reject('B206_FULL_ROUND_USER_BUTTON_NOT_AVAILABLE_'+JSON.stringify(original));
+  const pos=await evaluate(`(() => {
+   const b=document.querySelector('#t21-f3-b203-full-round');
+   b?.scrollIntoView({block:'center',behavior:'instant'});
+   const r=b?.getBoundingClientRect();
+   return r?{x:r.left+r.width/2,y:r.top+r.height/2}:null;
+  })()`);
+  if(!pos||pos.x<=0||pos.x>=1600||pos.y<=0||pos.y>=900)
+   reject('B206_FULL_ROUND_BUTTON_NOT_VISIBLE');
+  await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+   x:pos.x,y:pos.y,button:'none'});
+  for(const type of ['mousePressed','mouseReleased'])
+   await cmd('Input.dispatchMouseEvent',{type,x:pos.x,y:pos.y,
+    button:'left',clickCount:1});
+  const selected=await waitUntil(async()=>{
+   const n=await evaluate(`(() => {
+    const c=document.querySelector('#app-canvas');
+    const s=window.__t21F3?.snapshot?.();
+    return s?{ready:c?.dataset.t21F3Ready,
+     mode:c?.dataset.t21B203FullRound,url:location.search,
+     game:s.matchState,cpu:s.cpu.physicalRejoins.length,
+     clock:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205RealClock,
+     winner:document.querySelector('#t21-f3-b205-real-round')?.dataset.officialWinner,
+     score:s.sourceScoreablePromotions}:null;
+   })()`);
+   return n?.ready==='READY'&&n.mode==='REAL_180S_SOURCE_PLAY'?n:false;
+  },100000);
+  if(!selected.url.includes('t21W10B203=fullRound')||
+     selected.game!=='STAGING'||selected.cpu!==0||selected.clock!=='03:00'||
+     selected.winner!=='NONE'||selected.score!==0)
+   reject('B206_TRUE_USER_180S_BOOT_INVALID_'+JSON.stringify(selected));
+  console.log('B206_REAL_USER_SOURCE_180S_SELECTED',JSON.stringify(selected));
+  await screenshot('W10B206_REAL_PLAYER_CHOSEN_180S');
+ }
  if(w10b69){
   // User-visible QA: independent real CDP physical click, not JS
   // mutation of app internals, gameplay mode, actor path or time.
@@ -754,6 +800,18 @@ async function main(){
     terminal:terminal?{tick:terminal.tick,timeRemainingSeconds:
      terminal.timeRemainingSeconds,matchState:terminal.matchState}:null},null,2));
   if(!terminal)reject('B61_REAL_180S_NATIVE_TIMEUP_NOT_REACHED_WITHIN_62_MIN_HOST');
+  if(b206FullRound){
+   const end=await evaluate(`(() => ({
+    phase:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205NativePhase,
+    clock:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205RealClock,
+    winner:document.querySelector('#t21-f3-b205-real-round')?.dataset.officialWinner,
+    score:document.querySelector('#t21-f3-b205-real-round')?.dataset.scoreable
+   }))()`);
+   if(end.phase!=='COMPLETE'||end.clock!=='00:00'||
+      end.winner!=='NONE'||end.score!=='0')
+    reject('B206_REAL_180S_TIMEUP_DISPLAY_FAIL_'+JSON.stringify(end));
+   console.log('B206_REAL_SOURCE_180S_TIMEUP',JSON.stringify(end));
+  }
   const finalUi=await waitUntil(async()=>{
    const ui=await evaluate(`(() => {
     const finish=document.querySelector('#t21-f3-b59-session-finished');
@@ -940,6 +998,18 @@ async function main(){
    return a?.state==='STAGING'&&a.originalSolids===25&&
     a.scoreable===0&&a.humanShots===0&&a.endHidden===true?a:false;
   },90000);
+  if(b206FullRound){
+   const replay=await evaluate(`(() => ({
+    mode:document.querySelector('#app-canvas')?.dataset.t21B203FullRound,
+    clock:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205RealClock,
+    url:location.search,
+    winner:document.querySelector('#t21-f3-b205-real-round')?.dataset.officialWinner
+   }))()`);
+   if(replay.mode!=='REAL_180S_SOURCE_PLAY'||replay.clock!=='03:00'||
+      !replay.url.includes('t21W10B203=fullRound')||replay.winner!=='NONE')
+    reject('B206_REAL_NEW_ROUND_USER_MODE_LOST_'+JSON.stringify(replay));
+   console.log('B206_REAL_USER_SOURCE_180S_RESTART',JSON.stringify(replay));
+  }
   if(b176RealDrop&&!b176DescentPassed)
    reject('B176_REAL_NATIVE_LOWER_SOURCE_NOT_COMPLETED_BEFORE_180S');
   const b174Round=b174Active?verifyB174ActualSourceSweepRound({
