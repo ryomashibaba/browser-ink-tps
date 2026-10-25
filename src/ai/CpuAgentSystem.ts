@@ -18,6 +18,7 @@ import {chooseB181OriginalSourceSight,b182ReuseNativeSight,type B181SightPoint}
 import {b212NativeLead} from './B212MovingNativeProjectileAim';
 import {b213RealAttackerPreference} from './B213NativeCounterfire';
 import {b215ShouldQueryNativePaintCandidate} from './B215SourceWeaponReadyPaintAim';
+import {b216OriginalFootBackfillCandidates} from './B216OriginalSourceBackfillInk';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -241,6 +242,11 @@ export class CpuAgentSystem {
   private b213VisibleRetaliationSelections=0;
   private b215SelectedBattlePaintPacing=false;
   private b215RealWeaponCooldownPaintScansDeferred=0;
+  private b216SourceStageAimValidated:
+    ((muzzle:B181SightPoint,target:B181SightPoint,
+      actualFoot:B181SightPoint)=>boolean)|null=null;
+  private b216RealOriginalFloorSightChecks=0;
+  private b216ApprovedPhysicalSourceAimTargets=0;
   private b182RecheckedStaleNativeSight=0;
   private b182ReusedLiveNativeSight=0;
   private b180SelectedRealSourcePatches=0;
@@ -447,6 +453,34 @@ export class CpuAgentSystem {
       productionAuthorized:false as const
     };
   }
+  /** Original stage physics decides if each real source aim is reachable
+   * by a genuine projectile. This cannot certify a CPU's walking path. */
+  public enableB216OriginalSourceFloorSightBackfill(
+    sourceStageAimValidated:(muzzle:B181SightPoint,
+      target:B181SightPoint,actualFoot:B181SightPoint)=>boolean
+  ):void{
+    if(!this.b215SelectedBattlePaintPacing||
+       !this.b64InkAngleSweepEnabled||!this.b178RealSourceInkRecovery||
+       !this.b180OriginalPatchAimEnabled||
+       !this.phase14qF2RecoverableSteps||!this.phase14qGroundCollision||
+       !this.b181OriginalCombatStageRay||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0))
+      throw Error('B216_NONORIGINAL_SOURCE_BACKFILL_FORBIDDEN');
+    this.b216SourceStageAimValidated=sourceStageAimValidated;
+  }
+  public b216OriginalSourceBackfillSnapshot(){
+    return {
+      enabled:this.b216SourceStageAimValidated!==null,
+      realRapierStageAimChecks:this.b216RealOriginalFloorSightChecks,
+      originalSourceBackfillAims:this.b216ApprovedPhysicalSourceAimTargets,
+      actorFootWrites:0 as const,newNavLinks:0 as const,
+      fakeShots:0 as const,scoreableSourcePaint:0 as const,
+      certifiedOpponentRoutes:0 as const,productionAuthorized:false as const
+    };
+  }
   public b181OriginalSourceCombatSightSnapshot(){
     return {
       enabled:this.b181OriginalCombatStageRay!==null,
@@ -533,6 +567,8 @@ export class CpuAgentSystem {
     this.b213RealAttackerDamageEvents=0;
     this.b213VisibleRetaliationSelections=0;
     this.b215RealWeaponCooldownPaintScansDeferred=0;
+    this.b216RealOriginalFloorSightChecks=0;
+    this.b216ApprovedPhysicalSourceAimTargets=0;
     this.b181ActualStageRays=0;
     this.b181ActualSourceOcclusions=0;
     this.b181VisibleSelections=0;
@@ -1868,7 +1904,8 @@ export class CpuAgentSystem {
       b215QueryPaint&&(cooldown <= 0 || finishTurfBurst)
       ? allyInk ?? (this.b64InkAngleSweepEnabled?
          this.chooseB64SourceLateralInkTarget(bot,dt) ??
-          this.chooseOriginalSourceTurfTarget(bot):
+          this.chooseOriginalSourceTurfTarget(bot)??
+          this.chooseB216ActualOriginalPaintBackfill(bot):
          this.chooseOriginalSourceTurfTarget(bot)) : null;
     const target = turfTarget ?? combatTarget;
 
@@ -2242,6 +2279,38 @@ export class CpuAgentSystem {
   /** T21 F3 only. Derive the ink aim point from a source-verified paint grid
    * near the real physics foot and an audited native patrol goal. No new
    * geometry, nav links, enemy targets or scoreable turf is introduced. */
+  /** Only after B64 + source-goal frontal pixels are exhausted. Never
+   * relocate any CPU; all paint pixels, ground and sight are REAL source. */
+  private chooseB216ActualOriginalPaintBackfill(bot:CpuBot):Vec3|null{
+    if(!this.b216SourceStageAimValidated||!bot.agent||
+       bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')return null;
+    const goal=this.qaMotionGoals.get(bot.id);
+    if(!goal)return null;
+    const proposals=b216OriginalFootBackfillCandidates(bot.position,goal);
+    if(proposals.length===0)return null;
+    const muzzle={x:bot.position.x,
+      y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,z:bot.position.z};
+    let best:Vec3|null=null,opportunity=0;
+    for(const proposed of proposals){
+      this.samplePoint.set(proposed.x,proposed.y,proposed.z);
+      const sample=this.gameplayInk.sampleWorld(this.samplePoint,
+       .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+      if(!sample||sample.surface.isScoreable||sample.owner===bot.team)
+       continue;
+      const candidate=sample.surface.localToWorld(sample.u,sample.v);
+      if(![candidate.x,candidate.y,candidate.z].every(Number.isFinite)||
+         Math.abs(candidate.y-bot.position.y)>.35)continue;
+      const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
+      if(value<=opportunity)continue;
+      this.b216RealOriginalFloorSightChecks++;
+      if(!this.b216SourceStageAimValidated(muzzle,candidate,
+        bot.position))continue;
+      best=candidate;opportunity=value;
+    }
+    if(best)this.b216ApprovedPhysicalSourceAimTargets++;
+    return best;
+  }
+
   private chooseOriginalSourceTurfTarget(bot: CpuBot): Vec3 | null {
     if (!bot.agent || bot.lifeState !== 'ACTIVE' ||
         bot.mobilityState !== 'GROUND') return null;

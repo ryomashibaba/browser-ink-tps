@@ -841,6 +841,10 @@ async function main(){
     genuineCpuShotsAfter20s:after20,
     actualRealWeaponCooldownPaintScansDeferred:
       terminal.b215RealBattleAimPacing?.realWeaponCooldownPaintScansDeferred??0,
+    actualOriginalFloorSightAimChecks:
+      terminal.b216RealNativePaintBackfill?.realRapierStageAimChecks??0,
+    actuallyApprovedBackfillAimTargets:
+      terminal.b216RealNativePaintBackfill?.originalSourceBackfillAims??0,
     trueNativeSourceOwnInkRecovered:
      economy?.b179ActuallyRecoveredOwnSourceInk??0,
     originalUnpaintedPatchAims:
@@ -855,6 +859,9 @@ async function main(){
    if(terminal.b214SustainedBattleInk?.enabled!==true||
       terminal.b215RealBattleAimPacing?.enabled!==true||
       terminal.b215RealBattleAimPacing?.playerAmmoOrCpuShotInjection!==0||
+      terminal.b216RealNativePaintBackfill?.enabled!==true||
+      terminal.b216RealNativePaintBackfill?.actorFootWrites!==0||
+      terminal.b216RealNativePaintBackfill?.fakeShots!==0||
       economy?.enabled!==true||patches?.enabled!==true||
       sweep?.enabled!==true||!at20||!at160||
       !Number.isSafeInteger(after20)||after20<0||

@@ -960,6 +960,19 @@ async function run(){
        fabricatedMainWeaponShots:0,
        fabricatedCpuFootPaths:0,officialWinner:'NONE'
     }));
+    const backfill=realSeven.b216RealNativePaintBackfill;
+    if(!backfill||backfill.enabled!==true||
+       !Number.isSafeInteger(backfill.realRapierStageAimChecks)||
+       !Number.isSafeInteger(backfill.originalSourceBackfillAims)||
+       backfill.realRapierStageAimChecks<
+        backfill.originalSourceBackfillAims||
+       backfill.actorFootWrites!==0||backfill.newNavLinks!==0||
+       backfill.fakeShots!==0||backfill.scoreableSourcePaint!==0||
+       backfill.certifiedOpponentRoutes!==0||
+       backfill.productionAuthorized!==false)
+      fail('B216_NATIVE_ORIGINAL_BACKFILL_NOT_VERIFIED_'+JSON.stringify(backfill));
+    console.log('B216_GENUINE_SOURCE_RAPIER_BACKFILL_IN_PLAYER_BATTLE',
+      JSON.stringify(backfill));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),

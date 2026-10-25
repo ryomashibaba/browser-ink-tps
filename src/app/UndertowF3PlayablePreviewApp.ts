@@ -706,8 +706,32 @@ export class UndertowF3PlayablePreviewApp{
   if(b192HumanCombatEnabled&&this.b203FullRound){
     this.cpu.enableB212OriginalPhysicalMovingEnemyAim();
     this.cpu.enableB213SourcePhysicalCounterfire();
-    if(b214BattleInk)
+    if(b214BattleInk){
       this.cpu.enableB215SourceBattleNativeWeaponReadyPaintPacing();
+      // B216: existing original Rapier target support at BOTH endpoints
+      // plus original-stage projectile blocker; never a traversable route.
+      this.cpu.enableB216OriginalSourceFloorSightBackfill(
+       (muzzle,target,actualFoot)=>{
+        const f=new Vec3(actualFoot.x,actualFoot.y,actualFoot.z);
+        const t=new Vec3(target.x,target.y,target.z);
+        const footHit=this.physics.castStageSegment(
+         new Vec3(f.x,f.y+.55,f.z),new Vec3(f.x,f.y-.55,f.z),
+         'ink-projectile');
+        const targetHit=this.physics.castStageSegment(
+         new Vec3(t.x,t.y+.55,t.z),new Vec3(t.x,t.y-.55,t.z),
+         'ink-projectile');
+        if(!footHit||!targetHit||
+           footHit.solidId!==targetHit.solidId||
+           Math.abs(footHit.point.y-f.y)>.25||
+           Math.abs(targetHit.point.y-t.y)>.25)return false;
+        const block=this.physics.castStageSegment(
+         new Vec3(muzzle.x,muzzle.y,muzzle.z),
+         new Vec3(t.x,t.y+.07,t.z),'ink-projectile');
+        // Reject original walls or solid boundaries BEFORE target.
+        return !block||Math.hypot(block.point.x-t.x,
+         block.point.y-t.y,block.point.z-t.z)<.22;
+       });
+    }
   }
   this.canvas.dataset.t21B154TeamCoverage=
    b154TeamCoverage?'SOURCE_ONLY_EXPERIMENT':'DISABLED';
@@ -3683,6 +3707,7 @@ export class UndertowF3PlayablePreviewApp{
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
    b215RealBattleAimPacing:this.cpu.b215RealSourceBattlePaintPacingSnapshot(),
+   b216RealNativePaintBackfill:this.cpu.b216OriginalSourceBackfillSnapshot(),
    b214SustainedBattleInk:{
     enabled:this.canvas.dataset.t21B214NativeBattleInk===
      'REAL_SOURCE_INK_ECONOMY',originalSourceOnly:true as const,

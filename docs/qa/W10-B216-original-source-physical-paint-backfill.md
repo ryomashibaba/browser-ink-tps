@@ -1,0 +1,11 @@
+# W10-B216 — Source-verified native 180s CPU ink backfill in real battle
+
+2026-10-25 JST. QA parent `37e29b146d8eded9d55bf02ebf2ff46de827e940`. Do NOT promote to production.
+
+B215 build/180s was queued at B216 start; no claim of B215 native improvements without a completed run. The real B210 native 180s baseline passed with 7/7 physically rejoined CPU, 112 shots (86 by 20s), 138 human shots, true TIME_UP+restart. B214 integrates B64/B178/B180 existing independently native-proven source ink economy, B215 paces expensive native-grid paint queries to real weapon firing opportunities.
+
+B216 fixes a substantive B64 limitation: CPU ink aim only probes a 12-sample cone forward toward its genuine source-audited Crowd goal; once those source grid pixels are owned, shooting can stagnate despite other nearby ORIGINAL paintable cells. In the user-selected B207+B214+B215 SOURCE battle only, when the original B64 and original straight-ahead source target BOTH fail, sample a bounded 12-point 2.5m/3.5m horizontal backfill around the CPU's ACTUAL original Rapier physical foot, oriented by its REAL audited goal. Return only original paint-grid surface pixels that are not already owned. A real original Rapier segment confirms BOTH physical support points lie on the SAME existing stage solid within 25cm vertical and an original projectile ray does not hit a blocker before the target. Rank by existing B180 REAL ownerGrid patch opportunity. Never add collision, nav path, foot teleports, weapon damage, fake paint or official scoring. Rejected samples cause no shot. If the original paintable source is genuinely exhausted, late-game shot counts may stay flat and must be reported as such.
+
+B216 unit tests cover bounded sample positions, laterals/rearward, invalid source feet and no mutation. Existing B75 genuine Chromium B207 selection checks enabled native original backfill statistics without inventing accepted aims. Existing genuine 180s run records accepted aims and real shots at 20/160/180s; measurable improvement over B210's 112 original CPU shots must come from true browser evidence.
+
+Original source 25 solids, 17 paint, 26 links, 0 scoreable; original natural opponent routes 0/12. ProductionAuthorized=false, ActivationReady=false, official winner NONE, unrestricted 4v4 uncertified. Main, PR #5, Pages, T19C/T20 unchanged.
