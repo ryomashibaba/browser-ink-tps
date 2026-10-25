@@ -16,6 +16,7 @@ import {b180OriginalSourcePatchOpportunity}
 import {chooseB181OriginalSourceSight,b182ReuseNativeSight,type B181SightPoint}
  from './B181OriginalSourceCombatSight';
 import {b212NativeLead} from './B212MovingNativeProjectileAim';
+import {b213RealAttackerPreference} from './B213NativeCounterfire';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -167,6 +168,8 @@ interface CpuBot {
   inkRecoveryLockSeconds: number;
   hpRecoveryDelaySeconds: number;
   lethalHumanDirect: boolean;
+  b213ActualAttackerId:string|null;
+  b213ActualHitTick:number;
   lifeState: 'ACTIVE' | 'SPLATTED';
   respawnRemainingSeconds: number;
   mobilityState: CpuMobilityState;
@@ -232,6 +235,9 @@ export class CpuAgentSystem {
   private b212NativeLeadCandidates=0;
   private b212NativeAimAccepted=0;
   private b212OriginalCoverRejects=0;
+  private b213SourceCounterfireEnabled=false;
+  private b213RealAttackerDamageEvents=0;
+  private b213VisibleRetaliationSelections=0;
   private b182RecheckedStaleNativeSight=0;
   private b182ReusedLiveNativeSight=0;
   private b180SelectedRealSourcePatches=0;
@@ -394,6 +400,26 @@ export class CpuAgentSystem {
      opponentRoutesCertified:0 as const,sourceScoreable:0 as const,
      productionAuthorized:false as const};
   }
+  /** B213 genuine local source combat only. Original B181 cover stays required. */
+  public enableB213SourcePhysicalCounterfire():void{
+    if(!this.b212NativeLeadEnabled||!this.b181OriginalCombatStageRay||
+       !this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
+       !this.phase14qGroundCollision||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0))
+      throw Error('B213_UNAUTHORIZED_NATIVE_CPU_COUNTERFIRE');
+    this.b213SourceCounterfireEnabled=true;
+  }
+  public b213SourceCounterfireSnapshot(){
+    return {enabled:this.b213SourceCounterfireEnabled,
+      actualProjectileDamageAttributions:this.b213RealAttackerDamageEvents,
+      originalSightAcceptedRetaliations:this.b213VisibleRetaliationSelections,
+      fabricatedShots:0 as const,fabricatedDamage:0 as const,
+      actorTeleports:0 as const,originalRoutesCertified:0 as const,
+      originalScoreable:0 as const,productionAuthorized:false as const};
+  }
   public b181OriginalSourceCombatSightSnapshot(){
     return {
       enabled:this.b181OriginalCombatStageRay!==null,
@@ -477,6 +503,8 @@ export class CpuAgentSystem {
     this.b180SelectedRealPatchOpportunity=0;
     this.b181CachedCombat.clear();
     this.b181NativeFrame=0;
+    this.b213RealAttackerDamageEvents=0;
+    this.b213VisibleRetaliationSelections=0;
     this.b181ActualStageRays=0;
     this.b181ActualSourceOcclusions=0;
     this.b181VisibleSelections=0;
@@ -1342,7 +1370,8 @@ export class CpuAgentSystem {
 
   public applyProjectileHit(
     hit: CpuCombatHit, damage: number,
-    sourceKind: 'HUMAN' | 'CPU' = 'CPU'
+    sourceKind: 'HUMAN' | 'CPU' = 'CPU',
+    actualCpuAttackerId?:string
   ): void {
     const bot = this.bots.find((candidate) => candidate.id === hit.botId);
     if (
@@ -1361,6 +1390,19 @@ export class CpuAgentSystem {
       this.stats.cpuCombatHits += 1;
       // Guarded shots and CPU-vs-CPU damage are not human hit feedback.
       if (sourceKind === 'HUMAN') this.stats.humanCpuDirectHits += 1;
+      // This runs only AFTER actual projectile HP reduction. Shield
+      // absorption and surface paint cannot create false retaliation.
+      if(this.b213SourceCounterfireEnabled){
+        const shooter=sourceKind==='HUMAN'?'HUMAN':
+          this.bots.find(b=>b.id===actualCpuAttackerId&&
+            b.team!==bot.team&&b.lifeState==='ACTIVE')?.id??null;
+        if(shooter){
+          bot.b213ActualAttackerId=shooter;
+          bot.b213ActualHitTick=this.b181NativeFrame;
+          this.b181CachedCombat.delete(bot.id);
+          this.b213RealAttackerDamageEvents++;
+        }
+      }
       if (bot.hp === 0) bot.lethalHumanDirect = sourceKind === 'HUMAN';
     }
   }
@@ -1486,6 +1528,8 @@ export class CpuAgentSystem {
         inkRecoveryLockSeconds: 0,
         hpRecoveryDelaySeconds: 0,
         lethalHumanDirect: false,
+        b213ActualAttackerId:null,
+        b213ActualHitTick:-1,
         lifeState: 'ACTIVE',
         respawnRemainingSeconds: 0,
         mobilityState: 'GROUND',
@@ -2284,8 +2328,15 @@ export class CpuAgentSystem {
             y:enemy.position.y+.68,z:enemy.position.z}}))
       ];
       const origin={x:bot.position.x,y:bot.position.y+.85,z:bot.position.z};
+      const hitAttacker=b213RealAttackerPreference({
+        enabled:this.b213SourceCounterfireEnabled,
+        tick:this.b181NativeFrame,hitTick:bot.b213ActualHitTick,
+        attacker:bot.b213ActualAttackerId,
+        actualLivingEnemyIds:candidates.map(x=>x.id)
+      });
       const old=this.b181CachedCombat.get(bot.id);
-      if(old&&this.b181NativeFrame-old.frame<8){
+      if(old&&this.b181NativeFrame-old.frame<8&&
+         (!hitAttacker||old.actorId===hitAttacker)){
         if(old.actorId!==null){
           // Current candidates require real living grounded native actors.
           const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,origin,candidates);
@@ -2300,10 +2351,12 @@ export class CpuAgentSystem {
       }
       const result=chooseB181OriginalSourceSight(
         origin,candidates,this.b181OriginalCombatStageRay,
-        bot.role==='SKIRMISHER'?'HUMAN':null);
+        hitAttacker??(bot.role==='SKIRMISHER'?'HUMAN':null));
       this.b181ActualStageRays+=result.rays;
       this.b181ActualSourceOcclusions+=result.coverRejects;
       if(result.target)this.b181VisibleSelections++;
+      if(hitAttacker&&result.actorId===hitAttacker)
+        this.b213VisibleRetaliationSelections++;
       const aim=result.target?new Vec3(
         result.target.x,result.target.y,result.target.z):null;
       this.b181CachedCombat.set(bot.id,{
@@ -2792,6 +2845,8 @@ export class CpuAgentSystem {
       GAME_CONFIG.cpu.kit.splatSpecialDecisionCooldownSeconds;
 
     bot.lifeState = 'SPLATTED';
+    bot.b213ActualAttackerId=null;
+    bot.b213ActualHitTick=-1;
     bot.respawnRemainingSeconds = GAME_CONFIG.match.respawnSeconds;
     bot.entity.enabled = false;
     // Remove only the splatted actor's QA kinematic proxy. The player,
@@ -2816,6 +2871,8 @@ export class CpuAgentSystem {
     bot.jumpTargetPosition.copy(start);
     bot.hp = GAME_CONFIG.combat.playerMaxHp;
     bot.lethalHumanDirect = false;
+    bot.b213ActualAttackerId=null;
+    bot.b213ActualHitTick=-1;
     bot.ink = GAME_CONFIG.inkEconomy.capacity;
     bot.inkRecoveryLockSeconds = 0;
     bot.hpRecoveryDelaySeconds = 0;

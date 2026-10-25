@@ -460,7 +460,8 @@ export class ProjectileSystem {
           this.combatTargets.applyProjectileHit(qaHit, slot.damage);
         } else if (combatKind === 'CPU' && cpuHit) {
           combatPoint = cpuHit.point.clone();
-          this.cpuAgents.applyProjectileHit(cpuHit, slot.damage, slot.sourceKind);
+          this.cpuAgents.applyProjectileHit(cpuHit,slot.damage,slot.sourceKind,
+             slot.sourceKind==='CPU'?slot.sourceId:undefined);
         } else if (combatKind === 'PLAYER') {
           combatPoint = pointOnSegment(previous, next, combatDistance);
           if (guarding && this.isGuardBlocking(slot, playerPosition, aimDirection)) {
@@ -1594,7 +1595,7 @@ export class ProjectileSystem {
         combatDistance
       );
       if (combatKind === 'CPU' && cpuHit) {
-        this.cpuAgents.applyProjectileHit(cpuHit, damage);
+        this.cpuAgents.applyProjectileHit(cpuHit,damage,'CPU',request.sourceId);
       } else if (combatKind === 'PLAYER') {
         if (
           guarding &&

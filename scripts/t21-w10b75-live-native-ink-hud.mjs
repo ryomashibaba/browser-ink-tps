@@ -909,6 +909,17 @@ async function run(){
      realPhysicalVelocitySamples:nativeLead.realPhysicalVelocitySamples,
      actualNativeAimAdjustments:nativeLead.actualNativeAimAdjustments,
      enemyRoutesCertified:0,actorTeleports:0,officialWinner:'NONE'}));
+    const counter=realSeven.b213ActualSourceCounterfire;
+    if(!counter||counter.enabled!==true||
+       counter.fabricatedShots!==0||counter.fabricatedDamage!==0||
+       counter.actorTeleports!==0||counter.originalRoutesCertified!==0||
+       counter.originalScoreable!==0||counter.productionAuthorized!==false||
+       !Number.isSafeInteger(counter.actualProjectileDamageAttributions)||
+       !Number.isSafeInteger(counter.originalSightAcceptedRetaliations)||
+       (counter.actualProjectileDamageAttributions===0&&
+        counter.originalSightAcceptedRetaliations!==0))
+      fail('B213_SOURCE_ACTUAL_HIT_RETALIATION_HOLD_'+JSON.stringify(counter));
+    console.log('B213_REAL_NATIVE_COUNTERFIRE_READONLY_WITNESS',JSON.stringify(counter));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),

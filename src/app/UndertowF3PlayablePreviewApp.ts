@@ -696,8 +696,10 @@ export class UndertowF3PlayablePreviewApp{
         new Vec3(to.x,to.y,to.z),'ink-projectile'));
   // Genuine B207 source combat only: leading modifies accepted CPU aim,
   // with an EXTRA original Rapier cover check, not a collision/route edit.
-  if(b192HumanCombatEnabled&&this.b203FullRound)
+  if(b192HumanCombatEnabled&&this.b203FullRound){
     this.cpu.enableB212OriginalPhysicalMovingEnemyAim();
+    this.cpu.enableB213SourcePhysicalCounterfire();
+  }
   this.canvas.dataset.t21B154TeamCoverage=
    b154TeamCoverage?'SOURCE_ONLY_EXPERIMENT':'DISABLED';
   this.canvas.dataset.t21B68NormalPreviewSweep=
@@ -3673,6 +3675,7 @@ export class UndertowF3PlayablePreviewApp{
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
    b181OriginalCombatSight:this.cpu.b181OriginalSourceCombatSightSnapshot(),
    b212RealMovingEnemyAim:this.cpu.b212OriginalPhysicalEnemyAimSnapshot(),
+   b213ActualSourceCounterfire:this.cpu.b213SourceCounterfireSnapshot(),
    b183OriginalHumanDescent:{
     ...this.b183Drop.snapshot(),enabled:this.b183DropPlayEnabled,
     realNativeSourceOnly:true as const
