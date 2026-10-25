@@ -3891,12 +3891,18 @@ export class UndertowF3PlayablePreviewApp{
   if(this.b205RoundClock){
    // B217 only observes B207 player's existing native counters. No
    // fake increment, paint-to-shot attribution or official Turf scoring.
-   const b217=this.b211Roster?this.b217NativePaintTempo.observe({
-    tick:state.tick,cpuSourceShots:state.cpuSourceTurfShots,
-    cpuImpactPaintChanges:state.cpuImpactInkCellsChanged,
-    humanShots:state.shotsFired,
-    sourceScoreable:state.sourceScoreablePromotions
-   }):null;
+   // Only measure actual PLAYING native simulation. The original
+   // STAGING countdown is not a five-second player activity window.
+   if(this.b211Roster&&state.matchState==='STAGING')
+    this.b217NativePaintTempo.reset();
+   const b217=this.b211Roster&&state.matchState==='PLAYING'&&
+    !state.paused&&!state.stopReason?
+    this.b217NativePaintTempo.observe({
+      tick:state.tick,cpuSourceShots:state.cpuSourceTurfShots,
+      cpuImpactPaintChanges:state.cpuImpactInkCellsChanged,
+      humanShots:state.shotsFired,
+      sourceScoreable:state.sourceScoreablePromotions
+    }):this.b217NativePaintTempo.snapshot();
    const remaining=Math.ceil(state.timeRemainingSeconds);
    const clock=String(Math.floor(remaining/60)).padStart(2,'0')+':'+
     String(remaining%60).padStart(2,'0');

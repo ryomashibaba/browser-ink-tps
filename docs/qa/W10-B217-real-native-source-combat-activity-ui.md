@@ -13,3 +13,5 @@ The existing B75 FIXED authentic Chromium mouse user-click source battle verifie
 Frozen 25 physical source solids / 17 paint / 26 links / 0 scoreable, natural routes 0/12; official winner NONE; productionAuthorized=false and unrestricted4v4Certified=false. main/Pages/T19C/T20/PR#5 not touched.
 
 B217-F1 strengthens the real FIXED B75 Chromium selected-combat lane: wait for at least 300 extra actual 60Hz native ticks with real 7/7 CPU, then verify one complete read-only 5+ second tempo window is both painted on the player's round UI and returned from the same actual snapshot. Save the exact measured source-CPU weapon-request delta and changed-ink-cell delta independently; never claim those are direct combat hits or official Turf.
+
+B217-F2: source activity sampling starts only after the actual native match state is PLAYING, never counts staging countdown seconds. It retains the last genuine window during native pause and resets on a real new STAGING round.
