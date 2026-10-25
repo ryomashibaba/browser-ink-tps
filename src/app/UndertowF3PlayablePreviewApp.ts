@@ -41,6 +41,7 @@ import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
+import {sourceCoopEligible,sourceCoopNavigationUrl} from './B193SourceCoopMode';
 import {b154OriginalTeamInkOptIn}
  from './W10B154OriginalTeamInkMode';
 import {buildB155OriginalSourceConnectivityReview}
@@ -244,7 +245,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b38HumanSubEnabled=(()=>{
   const q=new URL(location.href).searchParams;
   return q.get('t21QaDrive')!=='source'||
-   q.get('t21W10B38')==='humanSub';
+   q.get('t21W10B38')==='humanSub'||sourceCoopEligible(q);
  })();
  private readonly feedback:GameFeedback;
  private readonly humanSpawn:Vec3;
@@ -285,7 +286,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b36FocusEnabled=(()=>{
   const params=new URL(location.href).searchParams;
   return params.get('t21QaDrive')!=='source'||
-   params.get('t21W10B36')==='playFocus';
+   params.get('t21W10B36')==='playFocus'||sourceCoopEligible(params);
  })();
  private readonly b25RunCard:HTMLElement;
  private b56NextVariant:B56PracticeVariant='CLASSIC';
@@ -585,6 +586,9 @@ export class UndertowF3PlayablePreviewApp{
   // audited original-side source foot candidates. Existing fixed
   // trusted-input QA stays deterministic without the explicit B31 flag.
   const b31Params=new URL(location.href).searchParams;
+  const b193Coop=sourceCoopEligible(b31Params);
+  this.canvas.dataset.t21B193Coop=b193Coop?'REAL_A1_ORIGINAL_SOURCE':'OFF';
+  if(b193Coop)this.b56NextVariant='ALLY_SYNC';
   // W10-B32 measured the genuine B31 adaptive mode below the fixed
   // source-patrol painting throughput in an independent real-Chrome A/B.
   // Keep the new logic available for explicit source-only experiments,
@@ -603,22 +607,24 @@ export class UndertowF3PlayablePreviewApp{
    b31Params.get('t21W10B192')==='humanCombat';
   this.canvas.dataset.t21B192HumanCombat=
    b192HumanCombatEnabled?'REAL_SOURCE_ONLY':'OFF';
+  const realAllyRally=b193Coop||
+   b31Params.get('t21W10B137')==='allyRally';
+  const realAllyInk=b193Coop||
+   b31Params.get('t21W10B150')==='allyInk';
   this.traffic=new UndertowF3SourceTraffic(
    stage,this.nav,slots,bots,this.physics,this.ink,
    b31Enabled,b33StableGoals,b34Recover,
    b31Params.get('t21QaDrive')==='source'&&
    b31Params.get('t21W10B93')==='upperDetour',
-   b31Params.get('t21W10B137')==='allyRally',
+   realAllyRally,
    b31Params.get('t21QaDrive')==='source'&&
-   b31Params.get('t21W10B137')==='allyRally'&&
-   b31Params.get('t21W10B150')==='allyInk',
+   realAllyRally&&realAllyInk,
    b192HumanCombatEnabled);
   this.canvas.dataset.t21B150AllyInk=
    b31Params.get('t21QaDrive')==='source'&&
-   b31Params.get('t21W10B137')==='allyRally'&&
-   b31Params.get('t21W10B150')==='allyInk'?'SOURCE_ONLY_OPT_IN':'OFF';
+   realAllyRally&&realAllyInk?'SOURCE_ONLY_OPT_IN':'OFF';
   this.canvas.dataset.t21B137AllyRally=
-   b31Params.get('t21W10B137')==='allyRally'?
+   realAllyRally?
     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT':'FIXED_PATROL_DEFAULT';
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   // B64 experimental native source-floor aim. Existing FIXED source CPU
@@ -793,6 +799,7 @@ export class UndertowF3PlayablePreviewApp{
     dest.searchParams.set('t21W10B183','firstDropPlay');
     if(b192HumanCombatEnabled)
      dest.searchParams.set('t21W10B192','humanCombat');
+    if(b193Coop)dest.searchParams.set('t21W10B193','allyCoop');
     window.location.assign(dest.href);
    });
    this.panel.appendChild(button);
@@ -821,10 +828,47 @@ export class UndertowF3PlayablePreviewApp{
     dest.searchParams.set('t21Play','preview');
     dest.searchParams.set('t21QaDrive','source');
     if(b192HumanCombatEnabled)dest.searchParams.delete('t21W10B192');
-    else dest.searchParams.set('t21W10B192','humanCombat');
+    else {dest.searchParams.set('t21W10B192','humanCombat');
+     dest.searchParams.delete('t21W10B193');}
     window.location.assign(dest.href);
    });
    this.panel.appendChild(combat);
+  }
+  // B193: real selected coop joins the preexisting native A1 rally,
+  // projectile ink, human sub, and 60Hz ALLY_SYNC play objective.
+  // The choice always boots a clean original world. No actor teleport.
+  {
+   const coop=document.createElement('button');
+   coop.id='t21-f3-b193-ally-coop';
+   coop.type='button';
+   coop.dataset.originalSourceOnly='true';
+   coop.dataset.scoreable='0';
+   coop.dataset.actorTeleports='0';
+   coop.dataset.productionAuthorized='false';
+   coop.textContent=b193Coop?
+    'A1 CO-OP ON · RETURN TO SOLO SOURCE PLAY':
+    'PLAY WITH REAL ALLY A1 · SOURCE CO-OP';
+   coop.style.cssText='display:block;width:100%;padding:10px;'+
+    'margin-top:8px;border:1px solid #68dabb;border-radius:8px;'+
+    'color:#e3fff0;background:#174c48;cursor:pointer;'+
+    'font:800 11px/1.45 system-ui';
+   coop.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||
+       this.survey.snapshot().active||this.galleryIndex>=0||
+       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status))return;
+    window.location.assign(sourceCoopNavigationUrl(
+      window.location.href,!b193Coop));
+   });
+   this.panel.appendChild(coop);
+   if(b193Coop){
+    const note=document.createElement('p');
+    note.id='t21-f3-b193-coop-guide';
+    note.textContent='START REAL A1 CO-OP, move on actual original floor, '+
+      'shoot and use F sub. A1 must physically rejoin; only its actual '+
+      'projectile impact ink counts. Practice, not official Turf.';
+    note.style.cssText='color:#b2f4d8;font:650 11px/1.5 system-ui;margin:6px 0';
+    this.panel.appendChild(note);
+   }
   }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   // B69: an ordinary preview user can explicitly compare the already
@@ -1107,8 +1151,10 @@ export class UndertowF3PlayablePreviewApp{
    this.canvas.dataset.t21B137AllyRally===
     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT'?'true':'false';
   challenge.dataset.t21B161OfficialWinner='NONE';
+  challenge.dataset.t21B193CoopActive=String(b193Coop);
   challenge.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:5px">'+
-   '<strong style="letter-spacing:.9px;color:#93f3ee">SOURCE PAINT RUN</strong>'+
+   '<strong style="letter-spacing:.9px;color:#93f3ee">'+
+    (b193Coop?'REAL A1 COOPERATIVE PLAY':'SOURCE PAINT RUN')+'</strong>'+
    '<small style="color:#ffcb9d;font-size:9px">PRACTICE · UNSCORED</small></div>'+
    '<div id="t21-f3-b55-record" role="status" style="font:700 10px/1.5 system-ui;'+
     'color:#ffe2a2;margin:8px 0 2px">SESSION BEST · NO CLEAR YET</div>'+
@@ -1161,7 +1207,7 @@ export class UndertowF3PlayablePreviewApp{
    '<button id="t21-f3-b25-start" type="button" style="width:100%;'+
    'font:800 11px system-ui;background:#49d6df;color:#092231;'+
    'border:0;border-radius:7px;padding:8px;cursor:pointer">'+
-   'START PAINT RUN</button>';
+   (b193Coop?'START REAL A1 CO-OP':'START PAINT RUN')+'</button>';
   ui.appendChild(challenge);
   // B168: a real native 60Hz objective CLEAR appears immediately,
   // without waiting for slow WebGL frame cadence.
