@@ -144,6 +144,21 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  const choice=await evaluate(
   'document.querySelector("#t21-f3-b25-paint-run")?.dataset.t21B56NextVariant');
  if(choice!=='ALLY_SYNC')fail('B162_COOP_CHALLENGE_NOT_ACTUALLY_SELECTED');
+ if(b203FullRoundTrial&&coopAttempt===1){
+  const n=await snapshot();authority(n,'FIXED');
+  const v=await evaluate(`(() => ({
+   overlay:document.querySelector('#t21-f3-b202-real-pause')?.dataset.t21B202NativeState,
+   visible:document.querySelector('#t21-f3-b202-real-pause')?.hidden===false,
+   phase:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205NativePhase,
+   clock:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205RealClock,
+   winner:document.querySelector('#t21-f3-b205-real-round')?.dataset.officialWinner
+  }))()`);
+  if(n.b25SourcePaintRun.status!=='IDLE'||!n.paused||
+     v.overlay!=='NATIVE_PAUSED'||!v.visible||
+     v.phase!=='PAUSED'||v.winner!=='NONE')
+   fail('B205_TRUE_IDLE_PAUSE_VIEW_UNAVAILABLE_'+JSON.stringify(v));
+  console.log('B205_GENUINE_180S_IDLE_PAUSE_UI',JSON.stringify(v));
+ }
  await clickButton('#t21-f3-b25-start');
  const armed=(await snapshot()).b25SourcePaintRun;
  if(armed.status!=='ARMED'||armed.practiceVariant!=='ALLY_SYNC'||
@@ -992,6 +1007,16 @@ async function run(){
   const clear=await snapshot();authority(clear,'FIXED');
   if(clear.matchState!=='PLAYING'||clear.b25SourcePaintRun.status!=='CLEAR'||
      clear.timeRemainingSeconds<=0)fail('B203_ROUND_NOT_PLAYING_AFTER_CLEAR');
+  const ui=await evaluate(`(() => ({
+   phase:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205NativePhase,
+   clear:document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205MissionClear,
+   humanInk:Number(document.querySelector('#t21-f3-b205-real-round')?.dataset.t21B205HumanInk),
+   text:document.querySelector('#t21-f3-b195-next')?.textContent
+  }))()`);
+  if(ui.phase!=='PLAYING'||ui.clear!=='true'||
+     ui.humanInk!==clear.b23HumanInkFeedback.humanChangedCells||
+     !ui.text?.includes('KEEP PLAYING'))
+   fail('B205_REAL_180S_AFTER_MISSION_CLEAR_VIEW_'+JSON.stringify(ui));
   const p={key:'p',code:'KeyP',windowsVirtualKeyCode:80,nativeVirtualKeyCode:80};
   for(const type of ['keyDown','keyUp'])
    await cmd('Input.dispatchKeyEvent',{type,...p});

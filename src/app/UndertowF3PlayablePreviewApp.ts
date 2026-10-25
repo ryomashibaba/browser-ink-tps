@@ -273,6 +273,7 @@ export class UndertowF3PlayablePreviewApp{
  private b141RealAllyIndicator:HTMLElement|null=null;
  private readonly b129EdgeCoach:ReturnType<typeof createF3OriginalRaisedEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
+ private readonly b205RoundClock:HTMLElement|null;
  private readonly b160CpuInkActivityView:
   ReturnType<typeof createB160SourceCpuActivityView>;
  private b70OwnerComparison:ReturnType<typeof createB70OwnerAimComparisonUI>|null=null;
@@ -1207,6 +1208,22 @@ export class UndertowF3PlayablePreviewApp{
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
    ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
+  // B205: genuine user-selected full 180s clock and native life activity.
+  const round=this.b203FullRound?document.createElement('aside'):null;
+  this.b205RoundClock=round;
+  if(round){
+   round.id='t21-f3-b205-real-round';
+   round.dataset.originalSourceOnly='true';
+   round.dataset.officialWinner='NONE';
+   round.dataset.scoreable='0';
+   round.style.cssText='position:fixed;right:14px;top:14px;z-index:37;'+
+    'width:210px;max-width:calc(100vw - 28px);box-sizing:border-box;'+
+    'padding:10px 12px;border:1px solid #68d9dd;border-radius:12px;'+
+    'background:rgba(4,26,39,.92);color:#e9fff9;text-align:right;'+
+    'pointer-events:none;font:700 11px/1.5 system-ui;';
+   round.setAttribute('aria-label','Real 180 second source round activity, not a Turf score');
+   ui.appendChild(round);
+  }
   // B160: visible seven actual original CPU ink contributors on existing
   // unscored local practice UI, with no team winner or gameplay writes.
   this.b160CpuInkActivityView=createB160SourceCpuActivityView(
@@ -2737,8 +2754,12 @@ export class UndertowF3PlayablePreviewApp{
    sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
   });
   root.querySelector<HTMLElement>('#t21-f3-b195-next')!.textContent=
-   this.resumeAfterRealPointerLock&&run.status==='RUNNING'?
-    '60Hz source world paused · click stage to resume':
+   this.resumeAfterRealPointerLock&&
+    (this.b203FullRound||run.status==='RUNNING')?
+    'REAL 180s ROUND PAUSED · RESUME TO CONTINUE':
+   this.b203FullRound&&run.status==='CLEAR'&&
+    this.matchState==='PLAYING'?
+    'A1 CO-OP CLEAR · KEEP PLAYING THE 180s ROUND':
     replay.replay?replay.guidance:info.next;
   if(this.resumeAfterRealPointerLock&&run.status==='RUNNING')
    root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
@@ -2758,11 +2779,26 @@ export class UndertowF3PlayablePreviewApp{
    root.querySelector<HTMLElement>('#t21-f3-b195-'+key+'-bar')!.style.width=pct+'%';
   }
   root.querySelector<HTMLElement>('#t21-f3-b195-time')!.textContent=
-   info.secondsRemaining+'s LEFT · SOURCE PRACTICE · NO TURF WINNER';
+   (this.b203FullRound?Math.ceil(this.remainingSeconds):
+    info.secondsRemaining)+'s LEFT · '+
+   (this.b203FullRound?'REAL 180s ROUND':'SOURCE PRACTICE')+
+   ' · NO TURF WINNER';
   root.hidden=this.survey.snapshot().active||this.galleryIndex>=0;
  }
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
+  // The native round may pause even if the optional challenge is still IDLE.
+  const actuallyPaused=this.resumeAfterRealPointerLock&&
+   (this.b203FullRound||run.status==='RUNNING')&&
+   this.matchState==='PLAYING'&&!this.stopReason&&
+   !this.survey.snapshot().active&&this.galleryIndex<0;
+  this.b202PauseOverlay.hidden=!actuallyPaused;
+  this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
+  this.b202PauseOverlay.dataset.t21B202NativeState=
+   actuallyPaused?'NATIVE_PAUSED':'INACTIVE';
+  this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
+   .textContent=actuallyPaused?
+    Math.ceil(this.remainingSeconds)+'s actual 180s match left · 7 CPU source local · NO TURF WINNER':'';
   this.refreshB195CoopHud(run);
   const authenticClear=run.status==='CLEAR'&&
    run.originalStageVerified===true&&
@@ -2936,17 +2972,6 @@ export class UndertowF3PlayablePreviewApp{
    originalSourceCoop:dedicatedCoop,practiceStatus:run.status,
    sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
   });
-  const actuallyPaused=this.resumeAfterRealPointerLock&&
-   (this.b203FullRound||run.status==='RUNNING')&&
-   this.matchState==='PLAYING'&&!this.stopReason&&
-   !this.survey.snapshot().active&&this.galleryIndex<0;
-  this.b202PauseOverlay.hidden=!actuallyPaused;
-  this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
-  this.b202PauseOverlay.dataset.t21B202NativeState=
-   actuallyPaused?'NATIVE_PAUSED':'INACTIVE';
-  this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
-   .textContent=actuallyPaused?
-    Math.ceil(this.remainingSeconds)+'s actual 180s match left · 7 CPU source local · NO TURF WINNER':'';
   this.b25RunCard.dataset.t21B197FreshWorldReplay=String(replay.replay);
   this.b25RunCard.dataset.t21B197ReplayReason=replay.reason;
   button.disabled=!replay.replay&&(run.status==='ARMED'||run.status==='RUNNING');
@@ -3731,6 +3756,30 @@ export class UndertowF3PlayablePreviewApp{
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
    this.survey.snapshot().active||this.galleryIndex>=0);
   this.b58SessionBoard.render(state);
+  if(this.b205RoundClock){
+   const remaining=Math.ceil(state.timeRemainingSeconds);
+   const clock=String(Math.floor(remaining/60)).padStart(2,'0')+':'+
+    String(remaining%60).padStart(2,'0');
+   const phase=state.stopReason?'SAFE_STOP':
+    state.matchState==='TIME_UP'?'COMPLETE':
+    state.paused?'PAUSED':state.matchState;
+   const cleared=state.b25SourcePaintRun.status==='CLEAR';
+   this.b205RoundClock.textContent='FULL SOURCE ROUND · UNSCORED\n'+
+    clock+' · '+phase+'\n'+
+    (cleared&&phase==='PLAYING'?'A1 CLEAR · KEEP PLAYING\n':'')+
+    'HP '+Math.round(state.player.hp)+' · INK '+Math.round(state.player.ink)+
+    ' · CPU '+state.cpu.physicalRejoins.length+'/7\n'+
+    'HUMAN INK '+state.b23HumanInkFeedback.humanChangedCells+
+    ' · CPU INK '+state.cpuImpactInkCellsChanged+'\n'+
+    'SPLATS '+state.humanSplats+' / '+state.cpuSplats+
+    ' · RESPAWNS '+state.humanRespawns+'\nNO OFFICIAL WINNER';
+   this.b205RoundClock.style.whiteSpace='pre-line';
+   this.b205RoundClock.dataset.t21B205NativePhase=phase;
+   this.b205RoundClock.dataset.t21B205RealClock=clock;
+   this.b205RoundClock.dataset.t21B205MissionClear=String(cleared);
+   this.b205RoundClock.dataset.t21B205HumanInk=
+    String(state.b23HumanInkFeedback.humanChangedCells);
+  }
   this.b160CpuInkActivityView.render(
    state.b154NativeSevenCpuInk,state.matchState,Boolean(state.stopReason));
   this.b160CpuInkActivityView.live.hidden=

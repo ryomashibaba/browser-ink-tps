@@ -1,0 +1,9 @@
+# W10-B205 — Actual 180s round native clock and independent pause controls
+
+2026-10-25 JST. B204 genuine Chromium PASS at exact SHA f1f156a0fd4d703c98f73a782b0c3bfda23dd68a, Actions https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40184862454: 48 Vitest PASS, real A1 co-op CLEAR twice (human 808/541 changed cells, A1 56/42 cells), true P pause after CLEAR with native tick 1808 held and resume 1814, 7 actual CPU physically rejoined, still PLAYING with 167.45 seconds remaining. Card/HUD/R actual browser replay on fresh worlds passed. No full 180s TIME_UP certified.
+
+B205 feature: Fix actual full-round IDLE pause overlay that previously remained hidden because optional challenge's IDLE rendering returned early. Always refresh pause control before the optional mission early return; native physics remains truly frozen until real mouse relock. Add source-only real round activity HUD showing original full-round remaining MM:SS, HP/ink, seven genuine CPU rejoin count, actual HUMAN/CPU impact-changed cells, splats/respawns, and explicit UNSCORED/NO OFFICIAL WINNER. During genuine A1 short CLEAR the still running real 180s clock remains visible with KEEP PLAYING; co-op footer now shows real match time, not completed short mission timer.
+
+Same SHA native Chromium acceptance pending: existing B162 real runner now verifies IDLE pause overlay and real clock before mission arming, followed by real original physical A1 co-op CLEAR and continued PLAYING source readout, P pause after CLEAR, true Resume, independent fresh-world replay. No new workflow, no clock skipping, no invented score, actors, floor or original path.
+
+Original certification unchanged: 25 original Rapier solids,17 PaintSurfaces,26 authored NavLinks,0 Scoreable, natural opponent routes 0/12, full 4v4 and production HOLD. Full actual 180s time-up plus natural opposing encounter/splats await separate real Chromium proof.
