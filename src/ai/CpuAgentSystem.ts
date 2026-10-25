@@ -11,6 +11,8 @@ import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityM
 import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
+import {b180OriginalSourcePatchOpportunity}
+ from './B180OriginalSourcePaintOpportunity';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -210,6 +212,9 @@ export class CpuAgentSystem {
   // goals and original gameplay authority stay unchanged by default.
   private b64InkAngleSweepEnabled = false;
   private b178RealSourceInkRecovery=false;
+  private b180OriginalPatchAimEnabled=false;
+  private b180SelectedRealSourcePatches=0;
+  private b180SelectedRealPatchOpportunity=0;
   private b178OwnNativeTicks=0;
   private b178EnemyNativeTicks=0;
   private b178NeutralNativeTicks=0;
@@ -321,6 +326,26 @@ export class CpuAgentSystem {
       throw Error('B178_NONORIGINAL_NONSCORING_SOURCE_RECOVERY_FORBIDDEN');
     this.b178RealSourceInkRecovery=true;
   }
+  /** B180: explicit-only more useful original-source unpainted patches.
+   * Candidate selection only, never changes CPU foot, goal or damage.
+   */
+  public enableB180OriginalPatchPaintAim():void{
+    if(!this.b178RealSourceInkRecovery||!this.b64InkAngleSweepEnabled||
+       !this.f3dSourceGoals||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(x=>(x.flags & SurfaceFlags.Scoreable)!==0))
+      throw Error('B180_UNVERIFIED_ORIGINAL_PATCH_AIM_NOT_ALLOWED');
+    this.b180OriginalPatchAimEnabled=true;
+  }
+  public b180OriginalPatchAimSnapshot(){
+    return {enabled:this.b180OriginalPatchAimEnabled,
+      chosenRealUnpaintedSourcePatches:this.b180SelectedRealSourcePatches,
+      actualRealOwnerGridOpportunitySum:this.b180SelectedRealPatchOpportunity,
+      cpuNavUnchanged:true as const,sourceScoreable:0 as const,
+      productionAuthorized:false as const};
+  }
   public b178SourceInkResourceSnapshot(){
     return {enabled:this.b178RealSourceInkRecovery,
       actualOwnPaintFootTicks:this.b178OwnNativeTicks,
@@ -379,6 +404,8 @@ export class CpuAgentSystem {
     this.b179ActualOwnInkRecovered=0;
     this.b179ActualOwnRecoverTicks=0;
     this.b179ActualEnemyHpLost=0;
+    this.b180SelectedRealSourcePatches=0;
+    this.b180SelectedRealPatchOpportunity=0;
     this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
@@ -2010,8 +2037,10 @@ export class CpuAgentSystem {
     this.b64NoTargetCooldown.set(bot.id,cooldown);
     if(cooldown>0)return null;
     const candidates=originalGoalInkSweep(bot.position,goal);
-    // These are only aiming PROPOSALS. A valid aim is recognized ONLY
-    // by actual GameplayInk sampleWorld on a source-backed PaintSurface.
+    // B180 is a strict source-only opt-in. Rank ONLY truly unowned,
+    // active original ownerGrid patch cells; do not alter physics or nav.
+    // The entire original B64 first-valid sample is unchanged otherwise.
+    let bestPatch:Vec3|null=null,bestOpportunity=0;
     for(const candidate of candidates){
       this.samplePoint.set(candidate.x,candidate.y,candidate.z);
       this.b64Samples++;
@@ -2020,8 +2049,21 @@ export class CpuAgentSystem {
       if(!sample||sample.surface.isScoreable||
          sample.owner===bot.team)continue;
       this.b64CandidatesUnowned++;
+      if(!this.b180OriginalPatchAimEnabled){
+        this.b64CandidatesChosen++;
+        return sample.surface.localToWorld(sample.u,sample.v);
+      }
+      const opportunity=b180OriginalSourcePatchOpportunity(sample,bot.team);
+      if(opportunity>bestOpportunity){
+        bestOpportunity=opportunity;
+        bestPatch=sample.surface.localToWorld(sample.u,sample.v);
+      }
+    }
+    if(this.b180OriginalPatchAimEnabled&&bestPatch){
+      this.b180SelectedRealSourcePatches++;
+      this.b180SelectedRealPatchOpportunity+=bestOpportunity;
       this.b64CandidatesChosen++;
-      return sample.surface.localToWorld(sample.u,sample.v);
+      return bestPatch;
     }
     // Avoid 60Hz × 7 × 12 empty ray probes near already-painted source.
     this.b64NoTargetCooldown.set(bot.id,.25);

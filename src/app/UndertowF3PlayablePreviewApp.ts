@@ -622,6 +622,14 @@ export class UndertowF3PlayablePreviewApp{
      b31Params.get('t21W10B64')==='inkAngleSweep'&&
      b31Params.get('t21W10B178')==='sourceInkRecovery')
    this.cpu.enableB178OriginalSourceInkRecovery();
+  // B180 requires BOTH existing B178 source-ink policy and B64 source
+  // paint aiming. This only ranks actual ownerGrid cells as shot targets.
+  if(b31Params.get('t21Play')==='preview'&&
+     b31Params.get('t21QaDrive')==='source'&&
+     b31Params.get('t21W10B64')==='inkAngleSweep'&&
+     b31Params.get('t21W10B178')==='sourceInkRecovery'&&
+     b31Params.get('t21W10B180')==='originalUnpaintedPatches')
+   this.cpu.enableB180OriginalPatchPaintAim();
   this.canvas.dataset.t21B154TeamCoverage=
    b154TeamCoverage?'SOURCE_ONLY_EXPERIMENT':'DISABLED';
   this.canvas.dataset.t21B68NormalPreviewSweep=
@@ -2988,6 +2996,7 @@ export class UndertowF3PlayablePreviewApp{
    },
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
+   b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b156OriginalUnderpassGapTriage:
     triageB156OriginalGaps(this.b155SourceConnectivityReview),

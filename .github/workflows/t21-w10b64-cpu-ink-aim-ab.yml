@@ -3,7 +3,9 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'src/ai/CpuAgentSystem.ts'
+      # B180: shared CPU changes are preflighted by B75 real WebGL2
+      # and core QA; historical 130s A/B now runs on its own source
+      # paint algorithm and native-comparison script changes only.
       - 'src/ai/UndertowF3OriginalSourceInkSweep.ts'
       - 'src/ai/UndertowF3OriginalSourceInkSweep.test.ts'
       - 'scripts/t21-w10b64-compare-native-ink.mjs'
