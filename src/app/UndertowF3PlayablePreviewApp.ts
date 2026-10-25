@@ -630,6 +630,15 @@ export class UndertowF3PlayablePreviewApp{
      b31Params.get('t21W10B178')==='sourceInkRecovery'&&
      b31Params.get('t21W10B180')==='originalUnpaintedPatches')
    this.cpu.enableB180OriginalPatchPaintAim();
+  // B181 opt-in: only real original Rapier stage cover may veto a
+  // native opponent combat aim. No actor/route/score authority added.
+  if(b31Params.get('t21Play')==='preview'&&
+     b31Params.get('t21QaDrive')==='source'&&
+     b31Params.get('t21W10B181')==='originalCombatSight')
+    this.cpu.enableB181OriginalSourceCombatSight((from,to)=>
+      !!this.physics.castStageSegment(
+        new Vec3(from.x,from.y,from.z),
+        new Vec3(to.x,to.y,to.z),'ink-projectile'));
   this.canvas.dataset.t21B154TeamCoverage=
    b154TeamCoverage?'SOURCE_ONLY_EXPERIMENT':'DISABLED';
   this.canvas.dataset.t21B68NormalPreviewSweep=
@@ -2997,6 +3006,7 @@ export class UndertowF3PlayablePreviewApp{
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
+   b181OriginalCombatSight:this.cpu.b181OriginalSourceCombatSightSnapshot(),
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b156OriginalUnderpassGapTriage:
     triageB156OriginalGaps(this.b155SourceConnectivityReview),

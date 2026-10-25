@@ -13,6 +13,8 @@ import {shouldReissueOriginalSourceNativeTarget}
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import {b180OriginalSourcePatchOpportunity}
  from './B180OriginalSourcePaintOpportunity';
+import {chooseB181OriginalSourceSight,type B181SightPoint}
+ from './B181OriginalSourceCombatSight';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -213,6 +215,14 @@ export class CpuAgentSystem {
   private b64InkAngleSweepEnabled = false;
   private b178RealSourceInkRecovery=false;
   private b180OriginalPatchAimEnabled=false;
+  // Opt-in source-only real collider visibility, never original route authority.
+  private b181OriginalCombatStageRay:
+    ((from:B181SightPoint,to:B181SightPoint)=>boolean)|null=null;
+  private b181NativeFrame=0;
+  private readonly b181CachedCombat=new Map<string,{frame:number;target:Vec3|null}>();
+  private b181ActualStageRays=0;
+  private b181ActualSourceOcclusions=0;
+  private b181VisibleSelections=0;
   private b180SelectedRealSourcePatches=0;
   private b180SelectedRealPatchOpportunity=0;
   private b178OwnNativeTicks=0;
@@ -339,6 +349,32 @@ export class CpuAgentSystem {
       throw Error('B180_UNVERIFIED_ORIGINAL_PATCH_AIM_NOT_ALLOWED');
     this.b180OriginalPatchAimEnabled=true;
   }
+  /** B181: only original registered Rapier cover; no path/hit scoring. */
+  public enableB181OriginalSourceCombatSight(
+    originalStageRayBlocked:(from:B181SightPoint,to:B181SightPoint)=>boolean
+  ):void{
+    if(!this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
+       !this.phase14qGroundCollision||!this.phase14eFirstDrop||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(x=>(x.flags&SurfaceFlags.Scoreable)!==0))
+      throw Error('B181_ORIGINAL_SOURCE_COMBAT_SIGHT_FORBIDDEN');
+    this.b181OriginalCombatStageRay=originalStageRayBlocked;
+    this.b181CachedCombat.clear();
+  }
+  public b181OriginalSourceCombatSightSnapshot(){
+    return {
+      enabled:this.b181OriginalCombatStageRay!==null,
+      actualRegisteredStageRays:this.b181ActualStageRays,
+      originalCoverRejects:this.b181ActualSourceOcclusions,
+      visibleEnemySelections:this.b181VisibleSelections,
+      actualEnemyWeaponHitsCertified:false as const,
+      opponentNaturalRoutesCertified:false as const,
+      sourceScoreablePromotions:0 as const,
+      productionAuthorized:false as const
+    };
+  }
   public b180OriginalPatchAimSnapshot(){
     return {enabled:this.b180OriginalPatchAimEnabled,
       chosenRealUnpaintedSourcePatches:this.b180SelectedRealSourcePatches,
@@ -406,6 +442,11 @@ export class CpuAgentSystem {
     this.b179ActualEnemyHpLost=0;
     this.b180SelectedRealSourcePatches=0;
     this.b180SelectedRealPatchOpportunity=0;
+    this.b181CachedCombat.clear();
+    this.b181NativeFrame=0;
+    this.b181ActualStageRays=0;
+    this.b181ActualSourceOcclusions=0;
+    this.b181VisibleSelections=0;
     this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
@@ -492,6 +533,7 @@ export class CpuAgentSystem {
     }
 
     this.activeLastTick = true;
+    if(this.b181OriginalCombatStageRay)this.b181NativeFrame++;
     // The REAL HUMAN PlayerController is at humanPosition. Only the eighth
     // passive Crowd neighbour is moved to its source-backed physical foot.
     // This cannot be applied to production T20 or non-source T21 terrain.
@@ -2150,6 +2192,34 @@ export class CpuAgentSystem {
     humanPosition: Vec3,
     humanActive: boolean
   ): Vec3 | null {
+    // Registered original-stage visibility from actual live actor bodies.
+    // Only explicit B181 source QA takes this path; T20/default is frozen.
+    if(this.b181OriginalCombatStageRay){
+      const old=this.b181CachedCombat.get(bot.id);
+      if(old&&this.b181NativeFrame-old.frame<8)
+        return old.target?.clone()??null;
+      const candidates=[
+        ...(humanActive&&humanTeam!==bot.team?
+          [{id:'HUMAN',body:{x:humanPosition.x,
+            y:humanPosition.y,z:humanPosition.z}}]:[]),
+        ...this.bots.filter(enemy=>
+          enemy.id!==bot.id&&enemy.team!==bot.team&&
+          enemy.lifeState==='ACTIVE'&&enemy.mobilityState==='GROUND')
+          .map(enemy=>({id:enemy.id,body:{x:enemy.position.x,
+            y:enemy.position.y+.68,z:enemy.position.z}}))
+      ];
+      const result=chooseB181OriginalSourceSight(
+        {x:bot.position.x,y:bot.position.y+.85,z:bot.position.z},
+        candidates,this.b181OriginalCombatStageRay,
+        bot.role==='SKIRMISHER'?'HUMAN':null);
+      this.b181ActualStageRays+=result.rays;
+      this.b181ActualSourceOcclusions+=result.coverRejects;
+      if(result.target)this.b181VisibleSelections++;
+      const aim=result.target?new Vec3(
+        result.target.x,result.target.y,result.target.z):null;
+      this.b181CachedCombat.set(bot.id,{frame:this.b181NativeFrame,target:aim});
+      return aim?.clone()??null;
+    }
     let bestDistanceSq = Number.POSITIVE_INFINITY;
     let found = false;
 
