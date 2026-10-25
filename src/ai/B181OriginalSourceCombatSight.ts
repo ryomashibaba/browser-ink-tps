@@ -28,3 +28,34 @@ export function chooseB181OriginalSourceSight(
   const chosen=preferred??best;
   return {actorId:chosen?.id??null,target:chosen?.body??null,rays,coverRejects};
 }
+
+// B182: only reuse a recent sight line while BOTH true native bodies
+// remain close to where the registered original-stage ray was checked.
+// Any corpse, stale actor, camera-less synthetic point or significant
+// movement forces a fresh original Rapier stage query instead of an aim.
+export function b182ReuseNativeSight(
+  cached:Readonly<{
+    frame:number;actorId:string|null;
+    origin:B181SightPoint;target:B181SightPoint|null
+  }>,
+  currentFrame:number,
+  currentOrigin:B181SightPoint,
+  currentOpponents:readonly B181SightOpponent[]
+):B181SightPoint|null{
+  const valid=(p:B181SightPoint)=>[p.x,p.y,p.z].every(Number.isFinite);
+  if(!Number.isSafeInteger(currentFrame)||currentFrame<cached.frame||
+     currentFrame-cached.frame>=8||!cached.actorId||!cached.target||
+     !valid(currentOrigin)||!valid(cached.origin)||
+     !valid(cached.target))return null;
+  const actor=currentOpponents.find(x=>x.id===cached.actorId);
+  if(!actor||!valid(actor.body))return null;
+  const d=(a:B181SightPoint,b:B181SightPoint)=>
+    Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+  // Stricter cache invalidation is not a relaxed physics boundary.
+  if(d(cached.origin,currentOrigin)>.20||
+     d(cached.target,actor.body)>.20||
+     Math.abs(actor.body.y-currentOrigin.y)>2.4||
+     Math.hypot(actor.body.x-currentOrigin.x,actor.body.z-currentOrigin.z)>32)
+    return null;
+  return actor.body;
+}

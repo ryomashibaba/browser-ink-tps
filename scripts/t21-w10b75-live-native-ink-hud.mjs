@@ -17,6 +17,9 @@ const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
 const mode=process.env.T21_W10B75_AIM||'FIXED';
 const b179Recovery=process.env.T21_B179_NATIVE_SOURCE_RECOVERY==='1';
 const b180Patches=process.env.T21_B180_NATIVE_SOURCE_PATCH_AIM==='1';
+const b182NativeSight=process.env.T21_B182_NATIVE_ORIGINAL_COMBAT_SIGHT==='1';
+if(b182NativeSight&&mode!=='SWEEP')
+ throw Error('B182_REGISTERED_SOURCE_SIGHT_SWEEP_QA_ONLY');
 if(b180Patches&&!b179Recovery)
  throw Error('B180_SOURCE_PATCH_AIM_REQUIRES_B178_REAL_INK_RECOVERY');
 if(b179Recovery&&mode!=='SWEEP')throw Error('B179_SOURCE_QA_SWEEP_ONLY');
@@ -103,7 +106,8 @@ async function run(){
  const search=b179Recovery?
   '?t21Play=preview&t21QaDrive=source&'+
   't21W10B64=inkAngleSweep&t21W10B178=sourceInkRecovery'+
-  (b180Patches?'&t21W10B180=originalUnpaintedPatches':''):
+  (b180Patches?'&t21W10B180=originalUnpaintedPatches':'')+
+  (b182NativeSight?'&t21W10B181=originalCombatSight':''):
   '?t21Play=preview'+
   (mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
   (parkedB96?'&t21QaDrive=source&t21W10B93=upperDetour':'')+
@@ -123,7 +127,8 @@ async function run(){
     boot.b64SourceInkSweep.enabled!==(mode==='SWEEP')||
     boot.cpu.b93ExperimentalEnabled!==parkedB96||
     boot.b178SourceInkRecovery?.enabled!==b179Recovery||
-    boot.b180OriginalPatchAim?.enabled!==b180Patches)
+    boot.b180OriginalPatchAim?.enabled!==b180Patches||
+    boot.b181OriginalCombatSight?.enabled!==b182NativeSight)
   fail('INCORRECT_FROZEN_NATIVE_SOURCE_BOOT');
  const initialHud=await evaluate(`(() => {
    const p=document.querySelector('#t21-f3-practice-hud');
@@ -587,6 +592,7 @@ async function run(){
     originalInkRecoveryState:n.playerInkRecoveryState,
     b179OriginalCpuEconomy:n.b178SourceInkRecovery,
     b180OriginalCpuPatchAim:n.b180OriginalPatchAim,
+    b182OriginalCpuSight:n.b181OriginalCombatSight,
     nativeHumanDryFireAttempts:n.inkDryFireAttempts,
     b76Authority:h?.dataset.t21B76PlayerSourceTruth,
     b76Visible:!!b&&!b.hidden,
@@ -605,6 +611,7 @@ async function run(){
      status.original4v4!==false||status.mode!==mode||
      status.b179OriginalCpuEconomy?.enabled!==b179Recovery||
      status.b180OriginalCpuPatchAim?.enabled!==b180Patches||
+     status.b182OriginalCpuSight?.enabled!==b182NativeSight||
      status.hubAuthority!=='REAL_NATIVE_SOURCE_ONLY'||
      !status.panelVisible||status.panelScoreable!=='0'||
      status.panel4v4!=='false'||status.panelTick>status.tick||
@@ -736,6 +743,7 @@ async function run(){
     schema:'W10_B75_GENUINE_READ_ONLY_NATIVE_SOURCE_INK_HUD_V1',
     b179ExperimentalRealCpuInkRecovery:b179Witness,
     b180TrueNativeSourcePaintPatchAim:status.b180OriginalCpuPatchAim,
+    b182RealNativeSourceSight:status.b182OriginalCpuSight,
     mode,realBrowserWebGL2:true,nativeRealRenderer:true,
     noArtificialQaTickAdvance:true,actualPointerLockAndMouseInput:true,
     verifiedTrueNativeOriginalSourceInkPulse:inkPulse,
@@ -758,6 +766,8 @@ async function run(){
    console.log('T21_W10B75_REAL_NATIVE_INK_HUD_PASS',JSON.stringify({
     mode,realNativeSeconds:Number(status.elapsed.toFixed(2)),
     b179RealSourceCpuOwnInkRecovery:b179Witness?.actuallyRecoveredOwnSourceInk??null,
+    b182RealOriginalStageRays:status.b182OriginalCpuSight?.actualRegisteredStageRays??0,
+    b182VisibleEnemies:status.b182OriginalCpuSight?.visibleEnemySelections??0,
     pulseCells:inkPulse.recentCells,pulseShots:inkPulse.recentShots,
     totalCpuShots:status.nativeCpuSourceShots,
     changedCells:status.nativeCpuChangedSourceCells,

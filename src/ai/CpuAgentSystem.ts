@@ -13,7 +13,7 @@ import {shouldReissueOriginalSourceNativeTarget}
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import {b180OriginalSourcePatchOpportunity}
  from './B180OriginalSourcePaintOpportunity';
-import {chooseB181OriginalSourceSight,type B181SightPoint}
+import {chooseB181OriginalSourceSight,b182ReuseNativeSight,type B181SightPoint}
  from './B181OriginalSourceCombatSight';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
@@ -219,10 +219,14 @@ export class CpuAgentSystem {
   private b181OriginalCombatStageRay:
     ((from:B181SightPoint,to:B181SightPoint)=>boolean)|null=null;
   private b181NativeFrame=0;
-  private readonly b181CachedCombat=new Map<string,{frame:number;target:Vec3|null}>();
+  private readonly b181CachedCombat=new Map<string,{
+    frame:number;actorId:string|null;origin:B181SightPoint;target:B181SightPoint|null
+  }>();
   private b181ActualStageRays=0;
   private b181ActualSourceOcclusions=0;
   private b181VisibleSelections=0;
+  private b182RecheckedStaleNativeSight=0;
+  private b182ReusedLiveNativeSight=0;
   private b180SelectedRealSourcePatches=0;
   private b180SelectedRealPatchOpportunity=0;
   private b178OwnNativeTicks=0;
@@ -369,6 +373,8 @@ export class CpuAgentSystem {
       actualRegisteredStageRays:this.b181ActualStageRays,
       originalCoverRejects:this.b181ActualSourceOcclusions,
       visibleEnemySelections:this.b181VisibleSelections,
+      b182RealActorSightCacheRechecks:this.b182RecheckedStaleNativeSight,
+      b182FreshNativeSightCacheReuses:this.b182ReusedLiveNativeSight,
       actualEnemyWeaponHitsCertified:false as const,
       opponentNaturalRoutesCertified:false as const,
       sourceScoreablePromotions:0 as const,
@@ -447,6 +453,8 @@ export class CpuAgentSystem {
     this.b181ActualStageRays=0;
     this.b181ActualSourceOcclusions=0;
     this.b181VisibleSelections=0;
+    this.b182RecheckedStaleNativeSight=0;
+    this.b182ReusedLiveNativeSight=0;
     this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
@@ -2195,9 +2203,6 @@ export class CpuAgentSystem {
     // Registered original-stage visibility from actual live actor bodies.
     // Only explicit B181 source QA takes this path; T20/default is frozen.
     if(this.b181OriginalCombatStageRay){
-      const old=this.b181CachedCombat.get(bot.id);
-      if(old&&this.b181NativeFrame-old.frame<8)
-        return old.target?.clone()??null;
       const candidates=[
         ...(humanActive&&humanTeam!==bot.team?
           [{id:'HUMAN',body:{x:humanPosition.x,
@@ -2208,16 +2213,33 @@ export class CpuAgentSystem {
           .map(enemy=>({id:enemy.id,body:{x:enemy.position.x,
             y:enemy.position.y+.68,z:enemy.position.z}}))
       ];
+      const origin={x:bot.position.x,y:bot.position.y+.85,z:bot.position.z};
+      const old=this.b181CachedCombat.get(bot.id);
+      if(old&&this.b181NativeFrame-old.frame<8){
+        if(old.actorId!==null){
+          // Current candidates require real living grounded native actors.
+          const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,origin,candidates);
+          if(fresh){
+            this.b182ReusedLiveNativeSight++;
+            return new Vec3(fresh.x,fresh.y,fresh.z);
+          }
+          this.b182RecheckedStaleNativeSight++;
+        }else if(candidates.length===0){
+          return null;
+        }
+      }
       const result=chooseB181OriginalSourceSight(
-        {x:bot.position.x,y:bot.position.y+.85,z:bot.position.z},
-        candidates,this.b181OriginalCombatStageRay,
+        origin,candidates,this.b181OriginalCombatStageRay,
         bot.role==='SKIRMISHER'?'HUMAN':null);
       this.b181ActualStageRays+=result.rays;
       this.b181ActualSourceOcclusions+=result.coverRejects;
       if(result.target)this.b181VisibleSelections++;
       const aim=result.target?new Vec3(
         result.target.x,result.target.y,result.target.z):null;
-      this.b181CachedCombat.set(bot.id,{frame:this.b181NativeFrame,target:aim});
+      this.b181CachedCombat.set(bot.id,{
+        frame:this.b181NativeFrame,actorId:result.actorId,origin,
+        target:result.target
+      });
       return aim?.clone()??null;
     }
     let bestDistanceSq = Number.POSITIVE_INFINITY;
