@@ -1590,11 +1590,14 @@ export class CpuAgentSystem {
       return;
     }
 
+    // Tactical SUB/SPECIAL target must remain the actual current enemy
+    // position: B212 is only for physical main-weapon projectile velocity.
     const target = this.chooseCombatTarget(
       bot,
       humanTeam,
       humanPosition,
-      humanActive
+      humanActive,
+      0
     );
     if (!target) return;
 
