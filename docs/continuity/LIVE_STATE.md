@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `9d9b59eaf45444f7c3567d2445142ed0d4027abc`
-- 最新番号のQAレポート: W10-B195 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B195-real-A1-playable-mission-feedback.md
+- 同期元QA HEAD: `e01631caf5f21e7c866f50428cb3c2985b0b9384`
+- 最新番号のQAレポート: W10-B196 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B196-real-A1-source-coop-near-guard-repair.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B196 （着手・完了の保証ではない）
+- 次工程候補: W10-B197 （着手・完了の保証ではない）
 - レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40173186549
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
