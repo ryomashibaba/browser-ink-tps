@@ -995,6 +995,55 @@ async function run(){
        !live.text.includes('NO OFFICIAL WINNER'))
       fail('B217_NATIVE_REAL_COMBAT_HUD_NOT_READONLY_'+JSON.stringify(live));
     console.log('B217_REAL_SOURCE_5S_CPU_ACTIVITY_HUD',JSON.stringify(live));
+    // B217 genuine 5-second 60Hz browser proof: one complete
+    // native window, not only a newly created DOM field. No QA ticks.
+    const b217TrueWindow=await until(async()=>{
+      const after=await snapshot();
+      if(after.stopReason)
+       fail('B217_NATIVE_5S_STOP_'+after.stopReason);
+      if(after.matchState!=='PLAYING'||after.paused||
+         after.tick<realSeven.tick+300||
+         after.cpu.physicalRejoins.length!==7)return false;
+      const el=await evaluate(`(() => {
+       const c=document.querySelector('#t21-f3-b205-real-round');
+       return {lastTick:Number(c?.dataset.t21B217LatestWindowTick),
+        shotCount:Number(c?.dataset.t21B217SourceCpuShots),
+        paintChanges:Number(c?.dataset.t21B217CpuRealPaintCells),
+        text:c?.textContent??''};
+      })()`);
+      const window=after.b217ActualLivePaintTempo;
+      return window&&window.nativeTicks>=300&&
+       window.toTick===el.lastTick&&
+       el.lastTick<=after.tick&&
+       el.text.includes('CPU ACTIVITY · LAST ')?
+         {after,el,window}:false;
+    },180000);
+    const win=b217TrueWindow.window,physical=b217TrueWindow.after;
+    if(win.sourceScoreable!==0||
+       !Number.isSafeInteger(win.genuineCpuSourceShots)||
+       !Number.isSafeInteger(win.actualCpuChangedPaintCells)||
+       win.genuineCpuSourceShots<0||
+       win.actualCpuChangedPaintCells<0||
+       physical.sourceScoreablePromotions!==0||
+       physical.cpu.physicalFootRelocations!==0||
+       physical.productionAuthorized!==false||
+       b217TrueWindow.el.shotCount<realSeven.cpuSourceTurfShots||
+       b217TrueWindow.el.paintChanges<realSeven.cpuImpactInkCellsChanged)
+      fail('B217_REAL_NATIVE_ACTIVITY_WINDOW_DRIFT_'+JSON.stringify({
+       win,el:b217TrueWindow.el
+      }));
+    const genuineWindow={
+      schema:'B217_GENUINE_5S_NATIVE_PLAYER_BATTLE_ACTIVITY',
+      actualRealCpuRejoined:physical.cpu.physicalRejoins.length,
+      currentTrueNativeTick:physical.tick,
+      window:win,realDisplayedCounters:b217TrueWindow.el,
+      virtualTicksInjected:false,syntheticInkAdded:false,
+      officialWinner:'NONE',originalScoreable:0
+    };
+    writeFileSync(resolve(OUTPUT,'w10b217-genuine-5s-combat-activity.json'),
+     JSON.stringify(genuineWindow,null,2));
+    console.log('B217_REAL_5S_NATIVE_CPU_PAINT_TEMPO_PASS',
+     JSON.stringify(genuineWindow));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),
