@@ -247,7 +247,18 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      held.b25SourcePaintRun.actualOriginalA1ChangedImpactCells!==
       atPause.b25SourcePaintRun.actualOriginalA1ChangedImpactCells)
    fail('B201_PAUSE_MUST_FREEZE_TRUE_TICK_AND_INK');
-  await click(800,450);
+  // B213: B201 browser timeout followed a blind viewport center click.
+  // Use the SAME genuine user-facing button proven by B206 immediately
+  // earlier in this actual Chromium run: never force native ticks or lock.
+  const pauseUI=await evaluate(`(() => ({
+    state:document.querySelector('#t21-f3-b202-real-pause')?.dataset.t21B202NativeState,
+    visible:document.querySelector('#t21-f3-b202-real-pause')?.hidden===false,
+    resumeDisabled:document.querySelector('#t21-f3-b202-resume')?.disabled
+  }))()`);
+  if(pauseUI.state!=='NATIVE_PAUSED'||!pauseUI.visible||
+     pauseUI.resumeDisabled)
+    fail('B213_NATIVE_REAL_RESUME_BUTTON_MISSING_'+JSON.stringify(pauseUI));
+  await clickButton('#t21-f3-b202-resume');
   const resumed=await until(async()=>{
    const n=await snapshot();authority(n,'FIXED');
    return !n.paused&&n.tick>=held.tick+5&&
@@ -255,7 +266,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
     await evaluate('document.pointerLockElement===document.querySelector("#app-canvas")')?n:false;
   },100000);
   const witness={schema:'B201_REAL_SOURCE_PAUSE_AND_RESUME',
-   input:'CDP_REAL_ESCAPE_AND_CLICK',pauseTick:atPause.tick,
+   input:'CDP_REAL_ESCAPE_AND_VISIBLE_RESUME_BUTTON',pauseTick:atPause.tick,
    heldTick:held.tick,resumedTick:resumed.tick,
    humanInkAtPause:atPause.b25SourcePaintRun.humanChangedImpactCells,
    a1InkAtPause:atPause.b25SourcePaintRun.actualOriginalA1ChangedImpactCells,

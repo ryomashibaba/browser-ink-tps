@@ -69,3 +69,14 @@ test('B146 genuine physical KeyA then no-input coast on unchanged real source',(
  for(const forbidden of ['teleport(', 'setTranslation(', 'qaDriveTicks('])
   assert.ok(!s.includes(forbidden),'synthetic physical input forbidden: '+forbidden);
 });
+
+test('B213 B201 resume uses the proven visible button and real lock/ticks',()=>{
+ const a=s.indexOf('if(b201PauseTrial&&coopAttempt===1)');
+ const b=s.indexOf('if(b202ControlsTrial&&coopAttempt===1)',a);
+ const segment=s.slice(a,b);
+ assert.ok(segment.includes("await clickButton('#t21-f3-b202-resume')"));
+ assert.ok(segment.includes("pauseUI.state!=='NATIVE_PAUSED'"));
+ assert.ok(segment.includes('n.tick>=held.tick+5'));
+ assert.ok(!segment.includes('await click(800,450)'));
+ assert.ok(!segment.includes('qaDriveTicks('));
+});
