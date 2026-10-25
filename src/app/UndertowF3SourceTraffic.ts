@@ -133,6 +133,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b169NativeAdvanceGuardTargets=0;
  private b169RejectedUnsafeOrUnreachableGoals=0;
  private b169HumanUpperGrounded=false;
+ private b171AllySyncPracticeRunning=false;
  private b137ApprovedNativeRallies=0;
  private b137UnsafeOrUnsupportedRallies=0;
  private b137MissingSourceFloorProof=0;
@@ -434,7 +435,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     return true;
    }
   }
-  // B169: only explicit source ally-ink opt-in, while the real human is
+  // B171: only actual RUNNING ALLY_SYNC, not baseline ALLY_RALLY.
+  // B169: explicit source ally-ink opt-in, while the real human is
    // physically grounded at the original upper area. Reposition real A1
    // toward an EXISTING source patrol foot away from the authored HUMAN
    // first-drop landing, rather than letting A1 wander during the upper
@@ -442,11 +444,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // polyline segments must pass again. If none pass, legacy patrol wins.
    if(this.enableB137OriginalAllyRally&&
       this.enableB150AllySupportInk&&id==='A1'&&
-      bot.lifeState!=='SPLATTED'&&this.b169HumanUpperGrounded){
+      bot.lifeState!=='SPLATTED'&&this.b169HumanUpperGrounded&&
+      this.b171AllySyncPracticeRunning){
     this.b169SourceAdvanceGuardChecks++;
     const landing=this.routeFor('HUMAN').originalLanding;
     const goals=rankB169OriginalAdvanceGuardGoals({
-     enabled:true,humanGrounded:true,humanActive:true,
+     enabled:true,allySyncPracticeRunning:this.b171AllySyncPracticeRunning,
+     humanGrounded:true,humanActive:true,
      realUpperHumanFoot:this.b137ActualHumanFoot,
      realLowerA1Foot:realFoot,
      authoredHumanDropLanding:{x:landing[0],y:landing[1],z:landing[2]},
@@ -810,7 +814,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    phase:escapeFoot?'ESCAPE':'APPROACH'});
  }
  prepare(frame:number,humanFoot?:Readonly<{
-  x:number;y:number;z:number;grounded?:boolean;active?:boolean
+  x:number;y:number;z:number;grounded?:boolean;active?:boolean;
+  allySyncPracticeRunning?:boolean
  }>):void{
   // Cache only the ACTUAL native input for this fixed step. No foot
   // relocation and no synthetic actor position. Even when all CPUs are
@@ -818,11 +823,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.b137NativeTick=frame;
   this.b137HumanFootValid=false;
   this.b169HumanUpperGrounded=false;
+  this.b171AllySyncPracticeRunning=false;
   if(this.enableB137OriginalAllyRally&&
      humanFoot?.grounded===true&&humanFoot.active===true&&
      [humanFoot.x,humanFoot.y,humanFoot.z].every(Number.isFinite)){
    this.b137ActualHumanFoot.set(humanFoot.x,humanFoot.y,humanFoot.z);
    this.b137HumanFootValid=true;
+   this.b171AllySyncPracticeRunning=humanFoot.allySyncPracticeRunning===true;
    this.b169HumanUpperGrounded=humanFoot.y>=7&&
     humanFoot.y<=9.5&&humanFoot.z>=33;
   }

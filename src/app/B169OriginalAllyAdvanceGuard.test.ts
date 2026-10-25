@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {rankB169OriginalAdvanceGuardGoals as rank} from './B169OriginalAllyAdvanceGuard';
 const p=(x:number,y:number,z:number)=>({x,y,z});
 const base=()=>({
- enabled:true,humanGrounded:true,humanActive:true,
+ enabled:true,allySyncPracticeRunning:true,
+ humanGrounded:true,humanActive:true,
  realUpperHumanFoot:p(0,8.39,66),realLowerA1Foot:p(2,3.9,51),
  authoredHumanDropLanding:p(0,3,49),
  alreadyAuditedOriginalPatrolFeet:[p(3,3.9,53),p(2,3.9,51.5),
@@ -22,6 +23,8 @@ describe('B169 original human approach and genuine A1 lower guard',()=>{
   expect(rank({...x,humanGrounded:false})).toEqual([]);
   expect(rank({...x,humanActive:false})).toEqual([]);
   expect(rank({...x,enabled:false})).toEqual([]);
+  // B139 ally opt-in alone must not enable B169 prepositioning.
+  expect(rank({...x,allySyncPracticeRunning:false})).toEqual([]);
  });
  it('refuses opposing zones, invalid goals and wrong elevations',()=>{
   const x=base();

@@ -2,7 +2,8 @@
  * endpoint and native path is independently revalidated by the caller. */
 export type B169Foot=Readonly<{x:number;y:number;z:number}>;
 export function rankB169OriginalAdvanceGuardGoals(input:{
- enabled:boolean;humanGrounded:boolean;humanActive:boolean;
+ enabled:boolean;allySyncPracticeRunning:boolean;
+ humanGrounded:boolean;humanActive:boolean;
  realUpperHumanFoot:B169Foot;realLowerA1Foot:B169Foot;
  authoredHumanDropLanding:B169Foot;
  alreadyAuditedOriginalPatrolFeet:readonly B169Foot[];
@@ -10,7 +11,8 @@ export function rankB169OriginalAdvanceGuardGoals(input:{
  const {realUpperHumanFoot:h,realLowerA1Foot:a,
   authoredHumanDropLanding:d}=input;
  const valid=(p:B169Foot)=>[p.x,p.y,p.z].every(Number.isFinite);
- if(!input.enabled||!input.humanGrounded||!input.humanActive||
+ if(!input.enabled||!input.allySyncPracticeRunning||
+  !input.humanGrounded||!input.humanActive||
   !valid(h)||!valid(a)||!valid(d)||
   h.y<7||h.y>9.5||h.z<33||a.y<2.7||a.y>5.25||
   a.z<33||d.y<2.5||d.y>5.5||d.z<33)return [];

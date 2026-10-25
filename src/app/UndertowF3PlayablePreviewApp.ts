@@ -1835,9 +1835,13 @@ export class UndertowF3PlayablePreviewApp{
      seconds,this.player.currentMode,this.player.currentInkRelation);
     if(!this.w10b14){
      const foot=this.player.getPosition(this.p);
+     const actualPractice=this.b25Run.snapshot();
+     // True native user-armed ALLY_SYNC only, never the B139 baseline.
      this.traffic.prepare(frame,{
       x:foot.x,y:foot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
-      z:foot.z,grounded:this.stats.playerGrounded,active:alive
+      z:foot.z,grounded:this.stats.playerGrounded,active:alive,
+      allySyncPracticeRunning:actualPractice.status==='RUNNING'&&
+       actualPractice.practiceVariant==='ALLY_SYNC'
      });
     }
     const cpuStart=this.b20ProfileStart();
