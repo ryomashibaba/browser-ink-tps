@@ -10,10 +10,13 @@ import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {b80ClassifyNativeStall} from './t21-w10b80-native-stall-classifier.mjs';
+import {verifyB179RealNativeResourceProof} from './t21-w10b179-real-resource-economy-gate.mjs';
 
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
 const mode=process.env.T21_W10B75_AIM||'FIXED';
+const b179Recovery=process.env.T21_B179_NATIVE_SOURCE_RECOVERY==='1';
+if(b179Recovery&&mode!=='SWEEP')throw Error('B179_SOURCE_QA_SWEEP_ONLY');
 // B96: a completely separate, explicitly opted-in source QA browser run.
 // The ordinary B75 FIXED/SWEEP playback still backs away with actual KeyS.
 const parkedB96=process.env.T21_W10B96_PARKED==='1';
@@ -94,7 +97,10 @@ async function run(){
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{
   width:1600,height:900,deviceScaleFactor:1,mobile:false});
- const search='?t21Play=preview'+
+ const search=b179Recovery?
+  '?t21Play=preview&t21QaDrive=source&'+
+  't21W10B64=inkAngleSweep&t21W10B178=sourceInkRecovery':
+  '?t21Play=preview'+
   (mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
   (parkedB96?'&t21QaDrive=source&t21W10B93=upperDetour':'')+
   (parkedB96?'&t21W10B102=contactProbe':'');
@@ -111,7 +117,8 @@ async function run(){
     boot.originalSourceNavigationLinks!==26||boot.sourceScoreablePromotions!==0||
     boot.productionAuthorized!==false||boot.unrestricted4v4Certified!==false||
     boot.b64SourceInkSweep.enabled!==(mode==='SWEEP')||
-    boot.cpu.b93ExperimentalEnabled!==parkedB96)
+    boot.cpu.b93ExperimentalEnabled!==parkedB96||
+    boot.b178SourceInkRecovery?.enabled!==b179Recovery)
   fail('INCORRECT_FROZEN_NATIVE_SOURCE_BOOT');
  const initialHud=await evaluate(`(() => {
    const p=document.querySelector('#t21-f3-practice-hud');
@@ -573,6 +580,7 @@ async function run(){
     acceptedHumanShots:n.shotsFired,
     actualHumanPaintCells:n.b23HumanInkFeedback.humanChangedCells,
     originalInkRecoveryState:n.playerInkRecoveryState,
+    b179OriginalCpuEconomy:n.b178SourceInkRecovery,
     nativeHumanDryFireAttempts:n.inkDryFireAttempts,
     b76Authority:h?.dataset.t21B76PlayerSourceTruth,
     b76Visible:!!b&&!b.hidden,
@@ -589,6 +597,7 @@ async function run(){
   if(status.stop||status.stageSolids!==25||status.stagePaint!==17||
      status.sourceLinks!==26||status.scoreable!==0||status.production!==false||
      status.original4v4!==false||status.mode!==mode||
+     status.b179OriginalCpuEconomy?.enabled!==b179Recovery||
      status.hubAuthority!=='REAL_NATIVE_SOURCE_ONLY'||
      !status.panelVisible||status.panelScoreable!=='0'||
      status.panel4v4!=='false'||status.panelTick>status.tick||
@@ -690,6 +699,7 @@ async function run(){
    console.log('T21_W10B75_GENUINE_NATIVE_LIVE_HUD',JSON.stringify(status));
   }
   if(inkPulse&&humanPulse&&status.elapsed>=13&&
+     (!b179Recovery||status.b179OriginalCpuEconomy?.b179ActuallyRecoveredOwnSourceInk>0)&&
      status.nativeCpuSourceShots>0&&
      status.nativeCpuChangedSourceCells>0){
    const shot=Buffer.from((await cmd('Page.captureScreenshot',{
@@ -697,8 +707,23 @@ async function run(){
    if(shot.length<10000)fail('BAD_REAL_CHROME_SCREENSHOT');
    const name='w10b75-source-live-'+mode.toLowerCase()+'.png';
    writeFileSync(resolve(OUTPUT,name),shot);
+   const b179Witness=b179Recovery?verifyB179RealNativeResourceProof({
+    trueNativeSeconds:status.elapsed,
+    originalStage:[status.stageSolids,status.stagePaint,status.sourceLinks,status.scoreable],
+    authenticSevenCpuRejoined:status.nativeSourceCpuRejoined,
+    genuineCpuSourceWeaponShots:status.nativeCpuSourceShots,
+    genuineSourceInkChangedCells:status.nativeCpuChangedSourceCells,
+    actualNativeEconomy:status.b179OriginalCpuEconomy
+   }):null;
+   if(b179Recovery){
+    writeFileSync(resolve(OUTPUT,'w10b179-real-source-resource-recovery.json'),
+     JSON.stringify(b179Witness,null,2));
+    console.log('B179_NATIVE_REAL_CPU_SOURCE_OWN_INK_RECOVERED',
+     JSON.stringify(b179Witness));
+   }
    const proof={
     schema:'W10_B75_GENUINE_READ_ONLY_NATIVE_SOURCE_INK_HUD_V1',
+    b179ExperimentalRealCpuInkRecovery:b179Witness,
     mode,realBrowserWebGL2:true,nativeRealRenderer:true,
     noArtificialQaTickAdvance:true,actualPointerLockAndMouseInput:true,
     verifiedTrueNativeOriginalSourceInkPulse:inkPulse,
@@ -720,6 +745,7 @@ async function run(){
     JSON.stringify(proof,null,2));
    console.log('T21_W10B75_REAL_NATIVE_INK_HUD_PASS',JSON.stringify({
     mode,realNativeSeconds:Number(status.elapsed.toFixed(2)),
+    b179RealSourceCpuOwnInkRecovery:b179Witness?.actuallyRecoveredOwnSourceInk??null,
     pulseCells:inkPulse.recentCells,pulseShots:inkPulse.recentShots,
     totalCpuShots:status.nativeCpuSourceShots,
     changedCells:status.nativeCpuChangedSourceCells,

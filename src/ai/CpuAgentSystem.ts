@@ -213,6 +213,9 @@ export class CpuAgentSystem {
   private b178OwnNativeTicks=0;
   private b178EnemyNativeTicks=0;
   private b178NeutralNativeTicks=0;
+  private b179ActualOwnInkRecovered=0;
+  private b179ActualOwnRecoverTicks=0;
+  private b179ActualEnemyHpLost=0;
   private b64Samples=0;
   private b64CandidatesUnowned=0;
   private b64CandidatesChosen=0;
@@ -323,6 +326,9 @@ export class CpuAgentSystem {
       actualOwnPaintFootTicks:this.b178OwnNativeTicks,
       actualEnemyPaintFootTicks:this.b178EnemyNativeTicks,
       actualNeutralFootTicks:this.b178NeutralNativeTicks,
+      b179ActuallyRecoveredOwnSourceInk:Number(this.b179ActualOwnInkRecovered.toFixed(6)),
+      b179OwnInkNativeRecoveryTicks:this.b179ActualOwnRecoverTicks,
+      b179ActuallyLostHpOnEnemySourceInk:Number(this.b179ActualEnemyHpLost.toFixed(6)),
       zeroSourceScoreable:true as const,productionAuthorized:false as const};
   }
   public b64NativeSourceInkSweepSnapshot(){
@@ -370,6 +376,9 @@ export class CpuAgentSystem {
     this.b178OwnNativeTicks=0;
     this.b178EnemyNativeTicks=0;
     this.b178NeutralNativeTicks=0;
+    this.b179ActualOwnInkRecovered=0;
+    this.b179ActualOwnRecoverTicks=0;
+    this.b179ActualEnemyHpLost=0;
     this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
@@ -1421,7 +1430,13 @@ export class CpuAgentSystem {
       const rate = relation === 'OWN'
         ? GAME_CONFIG.cpu.ownInkRecoveryPerSecond
         : GAME_CONFIG.inkEconomy.humanRecoveryPerSecond;
+      const actualInkBefore=bot.ink;
       bot.ink = Math.min(GAME_CONFIG.inkEconomy.capacity, bot.ink + rate * dt);
+      if(this.b178RealSourceInkRecovery&&relation==='OWN'&&
+         bot.ink>actualInkBefore){
+        this.b179ActualOwnInkRecovered+=bot.ink-actualInkBefore;
+        this.b179ActualOwnRecoverTicks++;
+      }
     }
 
     if (relation === 'ENEMY' && bot.hp > GAME_CONFIG.combat.enemyInkMinimumHp) {
@@ -1430,6 +1445,7 @@ export class CpuAgentSystem {
         bot.hp - GAME_CONFIG.combat.enemyInkMinimumHp
       );
       bot.hp -= damage;
+      if(this.b178RealSourceInkRecovery)this.b179ActualEnemyHpLost+=damage;
       if (damage > 0) bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
     } else if (bot.hp > 0 && bot.hpRecoveryDelaySeconds <= 0) {
       const rate = relation === 'OWN'
