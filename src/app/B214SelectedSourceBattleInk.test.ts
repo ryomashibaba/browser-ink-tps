@@ -8,8 +8,8 @@ describe('B214 original-source actual player combat ink policy',()=>{
   expect(ok(source())).toBe(true);
  });
  it('forbids normal preview, default source and missing B203',()=>{
-  for(const [k,v] of [['t21Play','other'],['t21QaDrive',''],
-    ['t21W10B192','off'],['t21W10B203','off']]){
+  for(const [k,v] of ([['t21Play','other'],['t21QaDrive',''],
+    ['t21W10B192','off'],['t21W10B203','off']] as const)){
    const p=source();p.set(k,v);expect(ok(p)).toBe(false);
   }
  });
