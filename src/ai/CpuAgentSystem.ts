@@ -11,6 +11,7 @@ import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityM
 import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
+import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
@@ -208,6 +209,10 @@ export class CpuAgentSystem {
   // B64 experimental source-local alternate AIM only. Original FIXED
   // goals and original gameplay authority stay unchanged by default.
   private b64InkAngleSweepEnabled = false;
+  private b178RealSourceInkRecovery=false;
+  private b178OwnNativeTicks=0;
+  private b178EnemyNativeTicks=0;
+  private b178NeutralNativeTicks=0;
   private b64Samples=0;
   private b64CandidatesUnowned=0;
   private b64CandidatesChosen=0;
@@ -297,6 +302,29 @@ export class CpuAgentSystem {
       throw Error('W10_B64_UNVERIFIED_SOURCE_INK_SWEEP_FORBIDDEN');
     this.b64InkAngleSweepEnabled=true;
   }
+  /** Genuine source-lab ONLY: non-scoreable original paint under an actual
+   * CPU foot affects recovery using the EXISTING CPU resource rules.
+   * The standard scoreable Turf semantics are unaffected.
+   */
+  public enableB178OriginalSourceInkRecovery():void{
+    if(!this.b64InkAngleSweepEnabled||!this.f3dSourceGoals||
+       !this.phase14eFirstDrop||!this.phase14qGroundCollision||
+       !this.phase14qF2RecoverableSteps||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       this.stage.solids.length!==25||
+       this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(x=>(x.flags & SurfaceFlags.Scoreable)!==0))
+      throw Error('B178_NONORIGINAL_NONSCORING_SOURCE_RECOVERY_FORBIDDEN');
+    this.b178RealSourceInkRecovery=true;
+  }
+  public b178SourceInkResourceSnapshot(){
+    return {enabled:this.b178RealSourceInkRecovery,
+      actualOwnPaintFootTicks:this.b178OwnNativeTicks,
+      actualEnemyPaintFootTicks:this.b178EnemyNativeTicks,
+      actualNeutralFootTicks:this.b178NeutralNativeTicks,
+      zeroSourceScoreable:true as const,productionAuthorized:false as const};
+  }
   public b64NativeSourceInkSweepSnapshot(){
     return {
       enabled:this.b64InkAngleSweepEnabled,
@@ -339,6 +367,9 @@ export class CpuAgentSystem {
     this.b64Samples=0;
     this.b64CandidatesUnowned=0;
     this.b64CandidatesChosen=0;
+    this.b178OwnNativeTicks=0;
+    this.b178EnemyNativeTicks=0;
+    this.b178NeutralNativeTicks=0;
     this.stats.cpuSourceTurfShots = 0;
     this.stats.cpuQaSuspectedStalls = 0;
     this.stats.cpuQaLongestStationarySeconds = 0;
@@ -1374,12 +1405,17 @@ export class CpuAgentSystem {
     const sample = this.gameplayInk.sampleWorld(
       this.samplePoint,
       0.48,
-      SurfaceFlags.Scoreable,
+      b178FootMask(this.b178RealSourceInkRecovery),
       SurfaceFlags.Wall
     );
-    const relation = !sample || sample.owner === Team.Neutral
-      ? 'NEUTRAL'
-      : sample.owner === bot.team ? 'OWN' : 'ENEMY';
+    const relation=b178FootRelation(
+      sample,bot.team,this.b178RealSourceInkRecovery
+    );
+    if(this.b178RealSourceInkRecovery){
+      if(relation==='OWN')this.b178OwnNativeTicks++;
+      else if(relation==='ENEMY')this.b178EnemyNativeTicks++;
+      else this.b178NeutralNativeTicks++;
+    }
 
     if (bot.inkRecoveryLockSeconds <= 0) {
       const rate = relation === 'OWN'

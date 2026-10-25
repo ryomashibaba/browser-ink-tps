@@ -615,6 +615,13 @@ export class UndertowF3PlayablePreviewApp{
        b31Params.get('t21W10B64')==='inkAngleSweep')||
       b68NormalPreviewSweep||b154TeamCoverage)
    this.cpu.enableB64NativeSourceInkAngleSweep();
+  // Optional real CPU resource economy on original, uns cored paint.
+  // No default source SWEEP/FIXED or production behavior change.
+  if(b31Params.get('t21Play')==='preview'&&
+     b31Params.get('t21QaDrive')==='source'&&
+     b31Params.get('t21W10B64')==='inkAngleSweep'&&
+     b31Params.get('t21W10B178')==='sourceInkRecovery')
+   this.cpu.enableB178OriginalSourceInkRecovery();
   this.canvas.dataset.t21B154TeamCoverage=
    b154TeamCoverage?'SOURCE_ONLY_EXPERIMENT':'DISABLED';
   this.canvas.dataset.t21B68NormalPreviewSweep=
@@ -2980,6 +2987,7 @@ export class UndertowF3PlayablePreviewApp{
     scoreablePromotions:0,full4v4Certified:false
    },
    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
+   b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b155OriginalSourceConnectivityReview:this.b155SourceConnectivityReview,
    b156OriginalUnderpassGapTriage:
     triageB156OriginalGaps(this.b155SourceConnectivityReview),
