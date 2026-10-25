@@ -1264,11 +1264,9 @@ export class UndertowF3PlayablePreviewApp{
     sessionEnded:this.matchState==='TIME_UP',
     nativeStopped:!!this.stopReason
    });
-   if(replay.replay&&document.pointerLockElement!==this.canvas&&
-      !this.survey.snapshot().active&&this.galleryIndex<0){
-    this.b25RunButton.disabled=true;
-    this.b25RunProgress.textContent='RESTARTING ORIGINAL A1 SOURCE WORLD · NO ACTOR WARP';
-    window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
+   if(replay.replay){
+    if(!this.requestFreshSourceCoopReplay())
+     this.b25RunProgress.textContent='Press ESC and close gallery/survey before replay.';
     return;
    }
    if(document.pointerLockElement===this.canvas||this.paused||this.stopReason||
@@ -1905,6 +1903,22 @@ export class UndertowF3PlayablePreviewApp{
    originalPaint:this.rawStage.paintSurfaces.length,
    originalLinks:this.rawStage.navigationLinks?.length
   };
+ }
+ /** B200: one shared TRUE new-world action. No live actor/ink/tick reset. */
+ private requestFreshSourceCoopReplay():boolean{
+  const decision=b197CoopReplayDecision({
+   originalSourceCoop:sourceCoopEligible(new URLSearchParams(window.location.search)),
+   practiceStatus:this.b25Run.snapshot().status,
+   sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
+  });
+  if(!decision.replay||document.pointerLockElement===this.canvas||
+     this.survey.snapshot().active||this.galleryIndex>=0)return false;
+  this.b25RunButton.disabled=true;
+  const hud=this.b195CoopHud?.querySelector<HTMLButtonElement>('#t21-f3-b200-replay');
+  if(hud)hud.disabled=true;
+  this.b25RunProgress.textContent='RESTARTING ORIGINAL A1 SOURCE WORLD · NO ACTOR WARP';
+  window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
+  return true;
  }
  private restart(){
   this.stopReason=null;this.paused=false;this.respawnFrames=0;
@@ -2568,6 +2582,20 @@ export class UndertowF3PlayablePreviewApp{
   }
   root.appendChild(grid);
   line('t21-f3-b195-time','margin-top:7px;font:600 9px system-ui;color:#9ccdc7');
+  // Visible terminal game action, not a hidden left-side QA panel control.
+  const replayButton=document.createElement('button');
+  replayButton.id='t21-f3-b200-replay';replayButton.type='button';
+  replayButton.hidden=true;replayButton.disabled=true;
+  replayButton.textContent='REPLAY A1 CO-OP · NEW SOURCE WORLD';
+  replayButton.style.cssText='display:none;width:100%;margin-top:9px;'+
+   'padding:9px 7px;background:#18664e;color:#eafff5;'+
+   'border:1px solid #91f5ce;border-radius:8px;cursor:pointer;'+
+   'font:850 11px/1.35 system-ui;pointer-events:auto';
+  replayButton.addEventListener('click',()=>{
+   if(!this.requestFreshSourceCoopReplay())
+    this.b25RunProgress.textContent='Press ESC to unlock mouse before replay.';
+  });
+  root.appendChild(replayButton);
   ui.appendChild(root);
   return root;
  }
@@ -2592,6 +2620,11 @@ export class UndertowF3PlayablePreviewApp{
   });
   root.querySelector<HTMLElement>('#t21-f3-b195-next')!.textContent=
    replay.replay?replay.guidance:info.next;
+  const direct=root.querySelector<HTMLButtonElement>('#t21-f3-b200-replay')!;
+  direct.hidden=!replay.replay;
+  direct.style.display=replay.replay?'block':'none';
+  direct.disabled=!replay.replay;
+  root.style.pointerEvents=replay.replay?'auto':'none';
   const fields=[
    ['human',info.human+'/'+info.humanGoal+' INK',info.humanPct],
    ['ground',info.grounded.toFixed(1)+'/'+info.groundGoal+' m',info.groundPct],

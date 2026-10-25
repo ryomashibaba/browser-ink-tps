@@ -18,6 +18,9 @@ const allyOptIn=variant!=='FIXED_DEFAULT';
 const b154TeamCoverage=variant==='TEAM_COVERAGE';
 const b162CoopTrial=process.env.T21_B162_REAL_ALLY_SYNC==='1';
 const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
+const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
+if(b200ReplayTrial&&!b194ButtonTrial)
+ throw Error('B200_REQUIRES_REAL_PLAYER_SELECTED_A1_COOP');
 if(b162CoopTrial&&variant!=='ALLY_RALLY')
  throw Error('B162_ONLY_ORIGINAL_ALLY_RALLY_OPT_IN');
 if(b194ButtonTrial&&(!b162CoopTrial||variant!=='ALLY_RALLY'))
@@ -110,7 +113,7 @@ async function nativeOriginalKeyboard(stage,observe){
  * 60Hz practice, no injected native ticks, movement, A1 paint or win.
  * This runs ONLY with explicit one-run QA opt-in on the A1 source variant.
  */
-async function playB162GenuineAllySync(routeSteps){
+async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  const checkpoint=await snapshot();authority(checkpoint,'FIXED');
  // Native B139 original successful entrance camera orientation.
  // Restore this through REAL mouse movement after human upper practice;
@@ -166,8 +169,10 @@ async function playB162GenuineAllySync(routeSteps){
    finalPractice:n?.b25SourcePaintRun??null,
    actualSourceA1Ink:n?.b152ExactAllyAimPaintProvenance??null,
    nativeTick:n?.tick??null};
-  writeFileSync(resolve(OUTPUT,'w10b162-real-ally-sync-practice.json'),
-   JSON.stringify(output,null,2));
+  writeFileSync(resolve(OUTPUT,coopAttempt===1?
+   'w10b162-real-ally-sync-practice.json':
+   'w10b200-second-real-ally-sync-practice.json'),
+   JSON.stringify({...output,coopAttempt},null,2));
  };
  saveAttempt(started,'B162_ACTUALLY_ARMED_NATIVE_COOP_RUNNING');
  const wrap=x=>((x+540)%360)-180;
@@ -434,7 +439,8 @@ async function playB162GenuineAllySync(routeSteps){
    status:run.status,abort:run.abortReason,ui}));
   fail('B162_NATIVE_ORIGINAL_ALLY_SYNC_NOT_CLEARED');
  }
- await picture('W10B162_GENUINE_ORIGINAL_COOPERATIVE_CLEAR');
+ await picture(coopAttempt===1?'W10B162_GENUINE_ORIGINAL_COOPERATIVE_CLEAR':
+  'W10B200_SECOND_GENUINE_ORIGINAL_COOPERATIVE_CLEAR');
  console.log('B162_NATIVE_ORIGINAL_ALLY_SYNC_CLEAR',JSON.stringify({
   ticks:run.elapsedTicks,actualHumanInk:run.humanChangedImpactCells,
   realGroundMeters:run.realGroundedTravelMeters,
@@ -442,7 +448,7 @@ async function playB162GenuineAllySync(routeSteps){
   sourceA1ImpactEvents:run.actualOriginalA1TaggedImpactEvents,
   officialWinner:'NONE'}));
 }
-async function doPhysicalTrial(){
+async function doPhysicalTrial(coopAttempt=1){
  const boot=await snapshot();authority(boot,'FIXED');
  // B161: real on-page source-only cooperative challenge is discoverable
  // exclusively with explicit A1 rally + real A1 ink experimental opt-in.
@@ -491,7 +497,7 @@ async function doPhysicalTrial(){
  if(b162CoopTrial){
   // B163: arm on original certified upper floor, BEFORE the first
   // descent; the prior route-then-W/S order caused a genuine fall.
-  await playB162GenuineAllySync(steps);
+  await playB162GenuineAllySync(steps,coopAttempt);
   return;
  }
  let lastSampleTick=-1000;
@@ -853,6 +859,103 @@ async function run(){
   console.log('B194_USER_BUTTON_REAL_A1_COOP_SELECTED',JSON.stringify(proof));
  }
  await doPhysicalTrial();
+
+ if(b200ReplayTrial){
+  // CDP REAL input. Two physically independent ALLY_SYNC CLEARs, then
+  // both visible HUD and R-key navigation. Never inject game state/ticks.
+  const proof={schema:'B200_REAL_CDP_FRESH_REPLAY_V1',firstClear:null,
+   cardReplay:null,secondClear:null,hudReplay:null,keyboardReplay:null,
+   sourceAuthority:'25/17/26/0',naturalOpponentPaths:'0/12',
+   officialWinner:'NONE',syntheticInput:false,teleportedActors:false};
+  const persist=()=>writeFileSync(resolve(OUTPUT,'w10b200-real-replay.json'),
+   JSON.stringify(proof,null,2));
+  const esc=async()=>{
+   for(const type of ['keyDown','keyUp'])
+    await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
+     windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+   await until(()=>evaluate('document.pointerLockElement===null'),25000);
+  };
+  const verifyNewWorld=async(origin,via)=>{
+   const page=await until(async()=>{try{
+    const p=await evaluate(\`(() => ({
+     origin:performance.timeOrigin,
+     ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+     coop:document.querySelector('#app-canvas')?.dataset.t21B193Coop,
+     url:location.search,
+     variant:document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B56NextVariant
+    }))()\`);
+    return p.origin>origin&&p.ready==='READY'&&
+      p.coop==='REAL_A1_ORIGINAL_SOURCE'&&
+      p.url==='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop'&&
+      p.variant==='ALLY_SYNC'?p:false;
+   }catch{return false;}},100000);
+   const n=await snapshot();authority(n,'FIXED');
+   if(n.matchState!=='STAGING'||n.cpu.physicalRejoins.length!==0||
+      n.cpu.physicalFootRelocations!==0||
+      n.b25SourcePaintRun.status!=='IDLE'||n.sourceScoreablePromotions!==0)
+    fail('B200_NEW_SOURCE_WORLD_NOT_CLEAN_'+via);
+   return {via,previousTimeOrigin:origin,newTimeOrigin:page.origin,
+    newWorldTick:n.tick,staging:n.matchState,practiceStatus:n.b25SourcePaintRun.status,
+    cpuRejoinsAtBoot:n.cpu.physicalRejoins.length,actorTeleports:n.cpu.physicalFootRelocations};
+  };
+  const first=await snapshot();authority(first,'FIXED');
+  if(first.b25SourcePaintRun.status!=='CLEAR')
+   fail('B200_NO_FIRST_GENUINE_CLEAR');
+  proof.firstClear={tick:first.tick,
+   human:first.b25SourcePaintRun.humanChangedImpactCells,
+   grounded:first.b25SourcePaintRun.realGroundedTravelMeters,
+   a1:first.b25SourcePaintRun.actualOriginalA1ChangedImpactCells};
+  persist();
+  await esc();
+  const missionCard=await evaluate(\`(() => {
+   const c=document.querySelector('#t21-f3-b25-paint-run');
+   const b=document.querySelector('#t21-f3-b25-start');
+   return {replay:c?.dataset.t21B197FreshWorldReplay,
+    enabled:!b?.disabled,label:b?.textContent};
+  })()\`);
+  if(missionCard.replay!=='true'||!missionCard.enabled||
+     !missionCard.label?.includes('REPLAY REAL A1 CO-OP'))
+   fail('B200_MISSION_CARD_REPLAY_UNAVAILABLE');
+  const original1=await evaluate('performance.timeOrigin');
+  await clickButton('#t21-f3-b25-start');
+  proof.cardReplay=await verifyNewWorld(original1,'REAL_CDP_MISSION_CARD_CLICK');
+  persist();
+  // A second full genuine session, not a screenshot/QA-state substitution.
+  await doPhysicalTrial(2);
+  const second=await snapshot();authority(second,'FIXED');
+  const r=second.b25SourcePaintRun;
+  if(r.status!=='CLEAR'||r.humanChangedImpactCells<180||
+     r.realGroundedTravelMeters<12||
+     r.actualOriginalA1ChangedImpactCells<30||
+     r.actualOriginalA1TaggedImpactEvents<1)
+   fail('B200_SECOND_SOURCE_ALLY_MISSION_NOT_CLEAR');
+  proof.secondClear={tick:second.tick,human:r.humanChangedImpactCells,
+   grounded:r.realGroundedTravelMeters,a1:r.actualOriginalA1ChangedImpactCells,
+   impacts:r.actualOriginalA1TaggedImpactEvents};
+  persist();
+  await esc();
+  const button=await evaluate(\`(() => {
+   const b=document.querySelector('#t21-f3-b200-replay');
+   const r=b?.getBoundingClientRect();
+   return {visible:b?.hidden===false&&b?.style.display!=='none',
+    enabled:!b?.disabled,top:r?.top};
+  })()\`);
+  if(!button.visible||!button.enabled||!(button.top>=0&&button.top<900))
+   fail('B200_VISIBLE_ENDSCREEN_REPLAY_MISSING');
+  await picture('W10B200_REAL_TERMINAL_REPLAY_BUTTON');
+  const original2=await evaluate('performance.timeOrigin');
+  await clickButton('#t21-f3-b200-replay');
+  proof.hudReplay=await verifyNewWorld(original2,'REAL_CDP_TERMINAL_HUD_CLICK');
+  persist();
+  const original3=await evaluate('performance.timeOrigin');
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'r',code:'KeyR',
+   windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',
+   windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
+  proof.keyboardReplay=await verifyNewWorld(original3,'REAL_CDP_KEY_R');
+  persist();
+  console.log('B200_REAL_TWICE_CLEARED_AND_FRESH_REPLAY',JSON.stringify(proof));
+ }
 }
 try{await run();}catch(err){
  // A rejected Chrome trial still preserves actual early native evidence.
