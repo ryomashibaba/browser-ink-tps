@@ -63,6 +63,7 @@ import {matchB158OriginalSourceFaces}
  from './W10B158OriginalSourceFaceRecastMatch';
 import {examineB159OriginalSourceFaceProjections}
  from './W10B159OriginalFaceNavMeshProjection';
+import {b218OriginalRouteFaceChainSeams} from './B218OriginalRouteFaceChainSeams';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -179,6 +180,8 @@ export class UndertowF3PlayablePreviewApp{
   ReturnType<typeof matchB158OriginalSourceFaces>;
  private readonly b159OriginalFaceNavMeshProjection:
   ReturnType<typeof examineB159OriginalSourceFaceProjections>;
+ private readonly b218OriginalRouteFaceSeams:
+  ReturnType<typeof b218OriginalRouteFaceChainSeams>;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
@@ -460,6 +463,9 @@ export class UndertowF3PlayablePreviewApp{
    examineB159OriginalSourceFaceProjections(
     this.rawStage,this.nav,this.physics,
     this.b158OriginalSourceFaceRecastMatch);
+  // B218 read-only geometry: the exact CI688 source face chain is not
+  // physical terrain, a traversable Recast path or player KCC authority.
+  this.b218OriginalRouteFaceSeams=b218OriginalRouteFaceChainSeams();
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
@@ -3737,6 +3743,7 @@ export class UndertowF3PlayablePreviewApp{
     this.b158OriginalSourceFaceRecastMatch,
    b159OriginalFaceNavMeshProjection:
     this.b159OriginalFaceNavMeshProjection,
+   b218OriginalFaceChainSeams:this.b218OriginalRouteFaceSeams,
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -3806,7 +3813,10 @@ export class UndertowF3PlayablePreviewApp{
     '/42, real registered rays '+
     state.b159OriginalFaceNavMeshProjection.components
      .reduce((n,x)=>n+x.rayHitRegisteredOriginalSolidCount,0)+
-    '/42 (not source membership) · CI #691 failed · 4v4 HOLD';
+    '/42 (not source membership) · B218 largest original face seams '+
+    state.b218OriginalFaceChainSeams.widestBySide.map(x=>
+     x.side+':'+x.meters.toFixed(2)+'m').join('/')+
+    ' (not physical) · CI #691 failed · 4v4 HOLD';
    b155Panel.dataset.t21B155StageAuthority=audit.stage;
    b155Panel.dataset.t21B155UnderpassAuthorized='false';
    b155Panel.dataset.t21B155RealKccRouteCertified='false';

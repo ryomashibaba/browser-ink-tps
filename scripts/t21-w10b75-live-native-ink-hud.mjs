@@ -1044,6 +1044,22 @@ async function run(){
      JSON.stringify(genuineWindow,null,2));
     console.log('B217_REAL_5S_NATIVE_CPU_PAINT_TEMPO_PASS',
      JSON.stringify(genuineWindow));
+    const b218=realSeven.b218OriginalFaceChainSeams;
+    if(!b218||b218.originalAuthority!==
+       '25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE'||
+       b218.adjacentSeams!==8||b218.seams?.length!==8||
+       b218.seams.some(x=>!Number.isFinite(x.gapMeters)||
+        x.nativeConnectedCertified!==false||
+        x.physicalKccCertified!==false)||
+       b218.inventedStageSolids!==0||b218.navLinksAdded!==0||
+       b218.scoreablePromotions!==0||
+       b218.previousAllFiveFaceRecastExperimentSucceeded!==false||
+       b218.productionAuthorized!==false)
+      fail('B218_EXACT_NATIVE_ORIGINAL_FACE_CHAIN_AUTHORITY_'+
+        JSON.stringify(b218));
+    console.log('B218_EXACT_ORIGINAL_TEMPLE01_FACE_SEAMS',
+      JSON.stringify({seams:b218.seams,widestBySide:b218.widestBySide,
+        originalCrossTeamRoutes:'0/12',addedSolids:0,addedLinks:0}));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),
