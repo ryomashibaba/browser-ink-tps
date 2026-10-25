@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `f0a1d387c3ab52407e51f31e983538f790097378`
+- 同期元QA HEAD: `39345a1239bc10b0892883c09646e5740c1b0f50`
 - 最新番号のQAレポート: W10-B171 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B171-source-ally-practice-scope-and-fast-track-review.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B172 （着手・完了の保証ではない）
