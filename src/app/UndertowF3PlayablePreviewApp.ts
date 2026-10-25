@@ -255,6 +255,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
+ private readonly b202PauseOverlay:HTMLElement;
  private readonly b167CombatNotice:HTMLElement;
  // B183 original-source native first-drop game challenge, without route writes.
  private readonly b183DropNotice:HTMLElement;
@@ -289,7 +290,8 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b36FocusEnabled=(()=>{
   const params=new URL(location.href).searchParams;
   return params.get('t21QaDrive')!=='source'||
-   params.get('t21W10B36')==='playFocus'||sourceCoopEligible(params);
+   params.get('t21W10B36')==='playFocus'||
+   params.get('t21W10B192')==='humanCombat'||sourceCoopEligible(params);
  })();
  private readonly b25RunCard:HTMLElement;
  private b56NextVariant:B56PracticeVariant='CLASSIC';
@@ -1059,6 +1061,46 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  // B202: a real player-visible way to resume the existing frozen
+  // Rapier/Recast/ink world, not a restart or fabricated native tick.
+  const pauseOverlay=document.createElement('section');
+  pauseOverlay.id='t21-f3-b202-real-pause';
+  pauseOverlay.hidden=true;
+  pauseOverlay.dataset.originalSourceOnly='true';
+  pauseOverlay.dataset.officialWinner='NONE';
+  pauseOverlay.dataset.sourceScoreable='0';
+  pauseOverlay.setAttribute('role','dialog');
+  pauseOverlay.setAttribute('aria-label','Source practice paused');
+  pauseOverlay.style.cssText='position:fixed;left:50%;top:37%;'+
+   'transform:translate(-50%,-50%);width:min(410px,calc(100vw - 32px));'+
+   'z-index:45;box-sizing:border-box;padding:20px;pointer-events:none;'+
+   'color:#edfff9;background:rgba(4,27,40,.96);text-align:center;'+
+   'border:2px solid #82ebd6;border-radius:17px;'+
+   'box-shadow:0 16px 60px #001b;font:700 12px/1.6 system-ui;display:none';
+  const pauseTitle=document.createElement('div');
+  pauseTitle.textContent='PAUSED · REAL SOURCE WORLD';
+  pauseTitle.style.cssText='font:850 17px/1.4 system-ui;color:#bdfff1';
+  const pauseInfo=document.createElement('p');
+  pauseInfo.id='t21-f3-b202-remaining';
+  pauseInfo.style.cssText='color:#c9ebe8;margin:9px 0 12px';
+  const resumeButton=document.createElement('button');
+  resumeButton.id='t21-f3-b202-resume';
+  resumeButton.type='button';
+  resumeButton.textContent='RESUME THIS ROUND · SAME REAL WORLD';
+  resumeButton.style.cssText='padding:12px;width:100%;border-radius:9px;'+
+   'border:1px solid #bcffe9;background:#14604f;color:#edfff8;'+
+   'font:850 12px/1.45 system-ui;cursor:pointer;pointer-events:auto';
+  resumeButton.addEventListener('click',()=>{
+   if(this.resumeAfterRealPointerLock&&!this.stopReason&&
+      this.b25Run.snapshot().status==='RUNNING'&&
+      this.matchState==='PLAYING')void this.canvas.requestPointerLock();
+  });
+  const pauseHint=document.createElement('div');
+  pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
+  pauseHint.style.cssText='margin-top:9px;color:#b9d9e4;font:600 10px/1.5 system-ui';
+  pauseOverlay.append(pauseTitle,pauseInfo,resumeButton,pauseHint);
+  ui.appendChild(pauseOverlay);
+  this.b202PauseOverlay=pauseOverlay;
   // B167 genuine opponent awareness, always read-only and scoreless.
   const combatNotice=document.createElement('aside');
   combatNotice.id='t21-f3-b167-combat-cue';
@@ -2583,7 +2625,7 @@ export class UndertowF3PlayablePreviewApp{
   root.dataset.officialWinner='NONE';
   root.dataset.certifiedOpponentRoute='false';
   root.setAttribute('aria-label','Live source cooperative progress with A1');
-  root.style.cssText='position:fixed;left:50%;top:14px;'+
+  root.style.cssText='position:fixed;left:50%;bottom:20px;'+
    'transform:translateX(-50%);width:min(445px,calc(100vw - 32px));'+
    'box-sizing:border-box;z-index:36;pointer-events:none;'+
    'padding:10px 14px;background:rgba(4,23,34,.90);'+
@@ -2849,6 +2891,16 @@ export class UndertowF3PlayablePreviewApp{
    originalSourceCoop:dedicatedCoop,practiceStatus:run.status,
    sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
   });
+  const actuallyPaused=this.resumeAfterRealPointerLock&&
+   run.status==='RUNNING'&&this.matchState==='PLAYING'&&!this.stopReason&&
+   !this.survey.snapshot().active&&this.galleryIndex<0;
+  this.b202PauseOverlay.hidden=!actuallyPaused;
+  this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
+  this.b202PauseOverlay.dataset.t21B202NativeState=
+   actuallyPaused?'NATIVE_PAUSED':'INACTIVE';
+  this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
+   .textContent=actuallyPaused?
+    Math.ceil(this.remainingSeconds)+'s actual match clock remaining · source-only, uns cored'.replace('uns cored','unscored'):'';
   this.b25RunCard.dataset.t21B197FreshWorldReplay=String(replay.replay);
   this.b25RunCard.dataset.t21B197ReplayReason=replay.reason;
   button.disabled=!replay.replay&&(run.status==='ARMED'||run.status==='RUNNING');

@@ -51,6 +51,7 @@ jobs:
           T21_B194_REAL_PLAYER_BUTTON: '1'
           T21_B200_REAL_REPLAY: '1'
           T21_B201_REAL_PAUSE_RESUME: '1'
+          T21_B202_REAL_CONTROLS: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b162
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Preserve real A1 and human attempted trial whether CLEAR or HOLD

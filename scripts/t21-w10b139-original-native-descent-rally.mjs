@@ -20,6 +20,7 @@ const b162CoopTrial=process.env.T21_B162_REAL_ALLY_SYNC==='1';
 const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
 const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
 const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
+const b202ControlsTrial=process.env.T21_B202_REAL_CONTROLS==='1';
 if(b200ReplayTrial&&!b194ButtonTrial)
  throw Error('B200_REQUIRES_REAL_PLAYER_SELECTED_A1_COOP');
 if(b162CoopTrial&&variant!=='ALLY_RALLY')
@@ -213,6 +214,67 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   writeFileSync(resolve(OUTPUT,'w10b201-real-native-pause-resume.json'),
    JSON.stringify(witness,null,2));
   console.log('B201_REAL_NATIVE_PAUSE_RESUME',JSON.stringify(witness));
+ }
+ if(b202ControlsTrial&&coopAttempt===1){
+  const ui=await evaluate(`(() => {
+   const hud=document.querySelector('#t21-f3-practice-hud');
+   const coop=document.querySelector('#t21-f3-b195-native-coop');
+   const main=hud?.getBoundingClientRect();
+   const mission=coop?.getBoundingClientRect();
+   return {mainBottom:main?.bottom,missionTop:mission?.top,
+    missionBottom:mission?.bottom,viewportHeight:innerHeight,
+    focus:document.querySelector('#app-canvas')?.dataset.t21W10B36PlayFocus,
+    realCoop:coop?.dataset.originalSourceOnly,
+    scoreable:coop?.dataset.originalScoreable};
+  })()`);
+  if(!(ui.missionTop>ui.mainBottom+18)&&
+     !(ui.mainBottom>=0&&ui.missionTop>=0))
+   fail('B202_MAIN_HUD_AND_MISSION_OVERLAP');
+  if(ui.missionTop<ui.mainBottom+18||
+     ui.missionBottom>ui.viewportHeight||
+     ui.focus!=='ON'||ui.realCoop!=='true'||ui.scoreable!=='0')
+   fail('B202_GAMEPLAY_FOCUS_OR_HUD_LAYOUT_'+JSON.stringify(ui));
+  const key={key:'p',code:'KeyP',windowsVirtualKeyCode:80,nativeVirtualKeyCode:80};
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
+  const pause=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   const overlay=await evaluate(`(() => ({
+    unlocked:document.pointerLockElement===null,
+    state:document.querySelector('#t21-f3-b202-real-pause')?.dataset.t21B202NativeState,
+    shown:document.querySelector('#t21-f3-b202-real-pause')?.hidden===false,
+    resumeEnabled:!document.querySelector('#t21-f3-b202-resume')?.disabled
+   }))()`);
+   return n.paused&&n.b25SourcePaintRun.status==='RUNNING'&&
+    overlay.unlocked&&overlay.state==='NATIVE_PAUSED'&&overlay.shown&&
+    overlay.resumeEnabled?{n,overlay}:false;
+  },25000);
+  await sleep(650);
+  const held=await snapshot();authority(held,'FIXED');
+  if(held.tick!==pause.n.tick||!held.paused||
+     held.timeRemainingSeconds!==pause.n.timeRemainingSeconds||
+     held.b25SourcePaintRun.status!=='RUNNING')
+   fail('B202_REAL_P_PAUSE_TICK_OR_180S_TIMER_DRIFT');
+  await clickButton('#t21-f3-b202-resume');
+  const continued=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   const locked=await evaluate(
+    'document.pointerLockElement===document.querySelector("#app-canvas")');
+   return locked&&!n.paused&&n.tick>=held.tick+5&&
+    n.b25SourcePaintRun.status==='RUNNING'?n:false;
+  },100000);
+  const proof={schema:'B202_REAL_GAMEPLAY_CONTROLS',
+   actualKeyboardP:true,realBrowserResumeButtonClick:true,
+   mainHudBottom:ui.mainBottom,coopHudTop:ui.missionTop,
+   hudsDoNotOverlap:true,playerFocusEnabled:true,
+   pausedTick:pause.n.tick,heldTick:held.tick,
+   actualClockAtPause:pause.n.timeRemainingSeconds,
+   realResumedTick:continued.tick,realSameWorld:true,
+   afterResumeStatus:continued.b25SourcePaintRun.status,
+   scoreable:0,originalAuthority:'25/17/26/0',officialWinner:'NONE'};
+  writeFileSync(resolve(OUTPUT,'w10b202-real-gameplay-controls.json'),
+   JSON.stringify(proof,null,2));
+  console.log('B202_REAL_GAMEPLAY_CONTROLS',JSON.stringify(proof));
  }
  const wrap=x=>((x+540)%360)-180;
  // B163 repairs the actual B162 failure: the first post-arm W/S
