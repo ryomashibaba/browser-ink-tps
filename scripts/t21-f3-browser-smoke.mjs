@@ -118,12 +118,15 @@ async function main(){
  const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
  const b172Active=process.env.T21_B172_ACTIVE_180S==='1';
  const b174Active=process.env.T21_B174_EXPLICIT_SOURCE_SWEEP_180S==='1';
+ const b176RealDrop=process.env.T21_B176_REAL_NATIVE_HUMAN_DROP==='1';
  const w10b69=process.env.T21_W10B69_ONE_CLICK_PREVIEW==='1';
  const w10b70=process.env.T21_W10B70_REAL_OWNER_STORAGE==='1';
  const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
  const w10b68=w10b68Mode==='FIXED'||w10b68Mode==='SWEEP';
  if(w10b68Mode&&!w10b68)
   reject('B68_NORMAL_PREVIEW_MODE_MUST_BE_FIXED_OR_SWEEP');
+ if(b176RealDrop&&(!b174Active||!b172Active||!w10b59||w10b68))
+  reject('B176_SOURCE_ONLY_REAL_180S_WITH_SEVEN_CPU_REQUIRED');
  if(b174Active&&(!b172Active||!w10b59||w10b68))
   reject('B174_REQUIRES_REAL_B172_ACTIVE_SOURCE_SESSION_NOT_PRODUCTION');
  if(b172Active&&(!w10b59||w10b68))
@@ -456,6 +459,8 @@ async function main(){
   // floor/KCC is re-probed for every real keyboard leg across 180s.
   const activeHumanPairs=[];
   const b174NativeCpuSampleHistory=[];
+  const b176TrueHumanDescent=[];
+  let b176DescentStarted=false,b176DescentPassed=false;
   let lastActiveBucket=0;
   const actualOriginalGround=x=>{
    const f=x?.b112OriginalHumanGround,body=x?.player?.position;
@@ -504,6 +509,74 @@ async function main(){
     verifiedOriginalSupportId:
      after.b112OriginalHumanGround.lastOriginalSourceHitId,
     actualRapierBody:after.player.position};
+  }
+  // B176: the same REAL physical first-drop route that B139 proved
+  // separately. Run only AFTER the seven B172 input pairs in this same
+  // 180-second game. If true KCC cannot reach source lower, FAIL; do not
+  // invent a bridge, move an actor or relax original collision authority.
+  async function b176RealOriginalHumanFirstDrop(){
+   const initial=await get();
+   if(!actualOriginalGround(initial)||
+      initial.cpu.physicalRejoins.length!==7||activeHumanPairs.length!==7)
+    reject('B176_NO_TRUE_7CPU_ORIGINAL_HIGH_SOURCE_BEGIN');
+   const keys={
+    KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
+    KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68},
+    KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65}
+   };
+   for(const [code,ticks] of [['KeyW',200],['KeyD',12],['KeyW',18],['KeyA',12]]){
+    const start=await get();let end=null;
+    await cmd('Input.dispatchKeyEvent',{type:'keyDown',...keys[code]});
+    try{
+     end=await waitUntil(async()=>{
+      const x=await get();
+      if(x.stopReason||x.matchState!=='PLAYING')
+       reject('B176_NATIVE_GAME_STOP_DURING_REAL_HUMAN_DROP');
+      return x.tick>=start.tick+ticks?x:false;
+     },120000);
+    }finally{
+     await cmd('Input.dispatchKeyEvent',{type:'keyUp',...keys[code]});
+    }
+    const p=end?.player?.position;
+    if(!p||p.length!==3||!p.every(Number.isFinite)||
+       end.cpu.physicalRejoins.length!==7||
+       end.originalSourceSolids!==25||end.originalPaintSurfaces!==17||
+       end.originalSourceNavigationLinks!==26||end.sourceScoreablePromotions!==0)
+     reject('B176_UNTRUSTED_REAL_RAPIER_ACTOR_OR_SOURCE');
+    const actualTravel=Math.hypot(p[0]-start.player.position[0],
+     p[2]-start.player.position[2]);
+    if(actualTravel<.16)reject('B176_NO_ACTUAL_PLAYER_KCC_TRAVEL_'+code);
+    const report={code,requestedTrueKeyTicks:ticks,
+     startRealTick:start.tick,endRealTick:end.tick,
+     actualKccHorizontalMeters:Number(actualTravel.toFixed(3)),
+     actualHumanRapierBody:[...p],
+     trueOriginalSupportId:end.b112OriginalHumanGround?.lastOriginalSourceHitId,
+     actualKccGrounded:end.b112OriginalHumanGround?.genuineKccGrounded,
+     actualSevenCpuRejoined:end.cpu.physicalRejoins.length,
+     officialSourceScoreable:end.sourceScoreablePromotions,
+     syntheticPlayerMovement:false};
+    b176TrueHumanDescent.push(report);
+    writeFileSync(resolve(OUTPUT,'w10b176-real-original-human-first-drop.json'),
+     JSON.stringify({realNativeKeyStages:b176TrueHumanDescent,
+      originalAuthority:'25/17/26/0',physicalActorsChangedByQa:false,
+      original4v4Certified:false},null,2));
+    console.log('B176_NATIVE_REAL_ORIGINAL_FIRST_DROP_STEP',JSON.stringify(report));
+   }
+   const finished=await get(),body=finished.player.position;
+   const foot=finished.b112OriginalHumanGround;
+   if(body[1]<3.2||body[1]>6.25||
+      foot?.genuineKccGrounded!==true||
+      typeof foot.lastOriginalSourceHitId!=='string'||
+      !foot.lastOriginalSourceHitId.startsWith('UndertowT21D:')||
+      !Number.isFinite(foot.lastOriginalSourceGapMeters)||
+      Math.abs(foot.lastOriginalSourceGapMeters)>.22)
+    reject('B176_REAL_HUMAN_DID_NOT_REACH_SUPPORTED_ORIGINAL_LOWER_'+
+     JSON.stringify({actualBody:body,foot}));
+   b176DescentPassed=true;
+   console.log('B176_NATIVE_REAL_ORIGINAL_HUMAN_LOWER_REACHED',
+    JSON.stringify({realBody:body,actualOriginalSolid:foot.lastOriginalSourceHitId,
+     actualFloorGap:foot.lastOriginalSourceGapMeters,
+     sevenCpu:finished.cpu.physicalRejoins.length}));
   }
   let lastSample=-1;
   const wallStarted=Date.now();
@@ -645,6 +718,11 @@ async function main(){
       sourceAuthority:'25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE',
       noSyntheticTickOrPaint:true},null,2));
     console.log('B172_REAL_180S_ACTIVE_PLAYER_SOURCE',JSON.stringify(witness));
+   }
+   if(b176RealDrop&&!b176DescentStarted&&lastActiveBucket===7&&
+      now.matchState==='PLAYING'){
+    b176DescentStarted=true;
+    await b176RealOriginalHumanFirstDrop();
    }
   }
   // Write the real history EVEN when no success is proven, for diagnosis.
@@ -845,6 +923,8 @@ async function main(){
    return a?.state==='STAGING'&&a.originalSolids===25&&
     a.scoreable===0&&a.humanShots===0&&a.endHidden===true?a:false;
   },90000);
+  if(b176RealDrop&&!b176DescentPassed)
+   reject('B176_REAL_NATIVE_LOWER_SOURCE_NOT_COMPLETED_BEFORE_180S');
   const b174Round=b174Active?verifyB174ActualSourceSweepRound({
    finalNativeSeconds:180-terminal.timeRemainingSeconds,
    realHumanActivityPairs:activeHumanPairs.length,
@@ -878,6 +958,8 @@ async function main(){
    b172ContinuousReal180sHumanParticipation:b172Active,
    b172RealKeyboardMouseActivityPairs:activeHumanPairs,
    b174ActualExtendedCpuSourceAim:b174Round,
+   b176TrueOriginalHumanLowerAfter180s:b176RealDrop&&b176DescentPassed,
+   b176NativeRealKccSourceRoute:b176TrueHumanDescent,
    actualCpuSevenPresent:terminal.cpu.cpu.length===7,
    actualCpuSourceRejoined:terminal.cpu.physicalRejoins.length,
    actualNativeSecondsElapsed:180-terminal.timeRemainingSeconds,
