@@ -1082,6 +1082,31 @@ async function run(){
         realRecastNearFaces:b219.sourceOriginalRecastNearFaceSamples,
         originalRapierHitSamples:b219.actualRegisteredRapierRayHits,
         originalCrossTeamRoutes:'0/12',noExtraGeometry:true}));
+    const b220=realSeven.b220ActualNativeSourceSeamProbes;
+    if(!b220||b220.originalAuthority!==
+        '25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE'||
+       b220.actualNativeRecastAuditPathQueries!==8||
+       b220.actualNativeNearestProjectionQueries!==16||
+       b220.actualOriginalRapierStageRayQueries!==16||
+       b220.actualOriginalFacePairs?.length!==8||
+       b220.actualOriginalFacePairs.some(x=>
+        x.referenceIsSourceTriangleCentroidNotPhysicalActor!==true||
+        x.genuineCPUPathTraversalTested!==false||
+        x.characterKccPhysicallyTraversed!==false||
+        x.gameRouteAuthorized!==false)||
+       b220.originalCrossTeamRoutesCertified!=='0/12'||
+       b220.physicalKccTraversalCertified!==false||
+       b220.addedPhysicsBodies!==0||b220.addedNavLinks!==0||
+       b220.addedScoreable!==0||b220.productionAuthorized!==false)
+      fail('B220_NATIVE_ORIGINAL_SOURCE_SEAM_RECAST_PHYSICS_AUDIT_'+
+       JSON.stringify(b220));
+    writeFileSync(resolve(OUTPUT,'w10b220-exact-native-seam-recast-rapier.json'),
+     JSON.stringify(b220,null,2));
+    console.log('B220_ORIGINAL_RECAST_RAPIER_SEAM_WITNESS',
+      JSON.stringify({first:b220.firstPrioritySeam,
+       originalSourceSeams:b220.actualOriginalFacePairs.length,
+       nativeRecastQueries:8,originalRapierRays:16,
+       newNavLinks:0,sourceScoreable:0,crossTeamRoutes:'0/12'}));
     const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
      realButtonClick:true,newWorldTimeOrigin:selected.origin,
      humanKccMeters:Number(moved.toFixed(3)),

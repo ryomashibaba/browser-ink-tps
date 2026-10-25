@@ -65,6 +65,7 @@ import {examineB159OriginalSourceFaceProjections}
  from './W10B159OriginalFaceNavMeshProjection';
 import {b218OriginalRouteFaceChainSeams} from './B218OriginalRouteFaceChainSeams';
 import {b219TriageOriginalNavmeshSourceFailure} from './B219OriginalUnderpassDisconnection';
+import {b220AuditOriginalRecastSeamWitnesses} from './B220OriginalNativeRecastSeamProbe';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -185,6 +186,8 @@ export class UndertowF3PlayablePreviewApp{
   ReturnType<typeof b218OriginalRouteFaceChainSeams>;
  private readonly b219OriginalSourceBlockerTriage:
   ReturnType<typeof b219TriageOriginalNavmeshSourceFailure>;
+ private readonly b220NativeSourceSeamProbes:
+  ReturnType<typeof b220AuditOriginalRecastSeamWitnesses>;
  private readonly shared:UndertowPhase14QSharedActorCollision;
  // B102 opt-in read-only mirror of ACTUAL original Rapier KCC results.
  // No approvals, velocities, poses, colliders or NavLinks are changed.
@@ -474,6 +477,10 @@ export class UndertowF3PlayablePreviewApp{
   this.b219OriginalSourceBlockerTriage=
    b219TriageOriginalNavmeshSourceFailure(
     this.b218OriginalRouteFaceSeams,this.b159OriginalFaceNavMeshProjection);
+  // B220 actual native audit queries at ORIGINAL source-face centroids;
+  // read-only: neither Recast paths nor stage rays authorize a KCC move.
+  this.b220NativeSourceSeamProbes=b220AuditOriginalRecastSeamWitnesses(
+   this.rawStage,this.nav,this.physics,this.b219OriginalSourceBlockerTriage);
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,this.nav,this.physics);
   const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
@@ -3753,6 +3760,7 @@ export class UndertowF3PlayablePreviewApp{
     this.b159OriginalFaceNavMeshProjection,
    b218OriginalFaceChainSeams:this.b218OriginalRouteFaceSeams,
    b219OriginalUnderpassBlockerTriage:this.b219OriginalSourceBlockerTriage,
+   b220ActualNativeSourceSeamProbes:this.b220NativeSourceSeamProbes,
    b154NativeSevenCpuInk:{
     coordinatedMode:this.canvas.dataset.t21B154TeamCoverage===
      'SOURCE_ONLY_EXPERIMENT',
@@ -3831,6 +3839,10 @@ export class UndertowF3PlayablePreviewApp{
     (state.b219OriginalUnderpassBlockerTriage.firstCandidateToInspect?.to??'NONE')+
     ' / '+
     (state.b219OriginalUnderpassBlockerTriage.firstCandidateToInspect?.diagnosis??'UNRESOLVED')+
+    ' · B220 original centroids native '+
+    (state.b220ActualNativeSourceSeamProbes.firstPrioritySeam?.nativeRecast.credibleOriginalSourceEndpoints?'REACHED':'BLOCKED')+
+    ' / Rapier '+
+    (state.b220ActualNativeSourceSeamProbes.firstPrioritySeam?.bothOriginalEndpointsRapierSupported?'BOTH':'MISSING')+
     ' · CI #691 failed · 4v4 HOLD';
    b155Panel.dataset.t21B155StageAuthority=audit.stage;
    b155Panel.dataset.t21B155UnderpassAuthorized='false';
