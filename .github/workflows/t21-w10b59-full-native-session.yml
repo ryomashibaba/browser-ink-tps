@@ -1,4 +1,4 @@
-name: T21 W10-B61 corrected native 180-second source session
+name: T21 B172 genuine 180s active human + seven CPU source session
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -25,6 +25,7 @@ jobs:
       - name: Genuine 180 native match seconds; bounded host liveness; 7 fixed CPUs
         env:
           T21_W10B59_FULL_NATIVE_SESSION: '1'
+          T21_B172_ACTIVE_180S: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b59
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Keep actual native source progress and end screenshot, even if failing

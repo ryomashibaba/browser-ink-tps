@@ -4,7 +4,6 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/ai/UndertowF3OriginalSourceInkSweep.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
       - 'scripts/t21-w10b68-normal-preview-gate.mjs'
       - 'scripts/t21-w10b68-normal-preview-gate.test.mjs'
   workflow_dispatch:

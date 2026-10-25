@@ -115,12 +115,15 @@ async function main(){
  const w10b56=process.env.T21_W10B56_SWITCHBACK==='1';
  const w10b57=process.env.T21_W10B57_PAINT_RELAY==='1';
  const w10b59=process.env.T21_W10B59_FULL_NATIVE_SESSION==='1';
+ const b172Active=process.env.T21_B172_ACTIVE_180S==='1';
  const w10b69=process.env.T21_W10B69_ONE_CLICK_PREVIEW==='1';
  const w10b70=process.env.T21_W10B70_REAL_OWNER_STORAGE==='1';
  const w10b68Mode=process.env.T21_W10B68_NORMAL_PREVIEW_AIM??'';
  const w10b68=w10b68Mode==='FIXED'||w10b68Mode==='SWEEP';
  if(w10b68Mode&&!w10b68)
   reject('B68_NORMAL_PREVIEW_MODE_MUST_BE_FIXED_OR_SWEEP');
+ if(b172Active&&(!w10b59||w10b68))
+  reject('B172_ONLY_REAL_180S_FIXED_SOURCE_SESSION');
  if(w10b68&&!w10b59)
   reject('B68_NEEDS_REAL_180S_NATIVE_SESSION_DRIVER');
  if(w10b70&&(!w10b59||w10b68Mode!=='FIXED'))
@@ -151,6 +154,7 @@ async function main(){
    't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
   (longCpu||w10b54||(w10b59&&!w10b68)||w10b64?'&t21QaDrive=source':'')+
+  (b172Active?'&t21W10B112=humanGround':'')+
   (w10b68Mode==='SWEEP'?'&t21W10B68=previewSweep':'')+
   (kitQa?'&t21CpuKits=qa':'')+
   (w10b51?'&t21W10B51=exactInputTicks':'')+
@@ -436,6 +440,58 @@ async function main(){
    tick:played.tick,originalHumanShots:played.shotsFired,
    humanCells:played.b23HumanInkFeedback.humanChangedCells
   }];
+  // B172: real human never teleports or skips physics. Native source
+  // floor/KCC is re-probed for every real keyboard leg across 180s.
+  const activeHumanPairs=[];
+  let lastActiveBucket=0;
+  const actualOriginalGround=x=>{
+   const f=x?.b112OriginalHumanGround,body=x?.player?.position;
+   return x?.matchState==='PLAYING'&&!x?.stopReason&&
+    x?.player?.hp>0&&Array.isArray(body)&&body.length===3&&
+    body.every(Number.isFinite)&&body[1]>=8.1&&body[1]<=9.6&&
+    f?.enabled===true&&f?.genuineKccGrounded===true&&
+    typeof f?.lastOriginalSourceHitId==='string'&&
+    f.lastOriginalSourceHitId.startsWith('UndertowT21D:')&&
+    Number.isFinite(f?.lastOriginalSourceGapMeters)&&
+    Math.abs(f.lastOriginalSourceGapMeters)<=.22;
+  };
+  async function realHumanB172Leg(code){
+   const before=await get();
+   if(!actualOriginalGround(before))
+    reject('B172_NATIVE_ORIGINAL_GROUND_MISSING_BEFORE_'+code);
+   const params={key:code==='KeyS'?'s':'w',code,
+    windowsVirtualKeyCode:code==='KeyS'?83:87,
+    nativeVirtualKeyCode:code==='KeyS'?83:87};
+   let after=null;
+   await cmd('Input.dispatchKeyEvent',{type:'keyDown',...params});
+   try{
+    await mouse('mousePressed');
+    after=await waitUntil(async()=>{
+     const n=await get();
+     if(n.stopReason)reject('B172_TRUE_PHYSICS_STOP_'+n.stopReason);
+     return n.tick>=before.tick+34?n:false;
+    },120000);
+   }finally{
+    await mouse('mouseReleased');
+    await cmd('Input.dispatchKeyEvent',{type:'keyUp',...params});
+   }
+   if(!actualOriginalGround(after))
+    reject('B172_LOST_TRUE_KCC_SOURCE_SUPPORT_'+JSON.stringify({
+     code,tick:after?.tick,body:after?.player?.position,
+     sourceGround:after?.b112OriginalHumanGround?.lastOriginalSourceHitId}));
+   const moved=Math.hypot(
+    after.player.position[0]-before.player.position[0],
+    after.player.position[2]-before.player.position[2]);
+   if(moved<.35||moved>3.6||after.shotsFired<=before.shotsFired)
+    reject('B172_REAL_KEY_AND_MOUSE_NOT_APPLIED_'+JSON.stringify({
+     code,moved,shots:after.shotsFired-before.shotsFired}));
+   return {code,startTick:before.tick,endTick:after.tick,
+    actualKccMovementMeters:Number(moved.toFixed(3)),
+    truePlayerShotDelta:after.shotsFired-before.shotsFired,
+    verifiedOriginalSupportId:
+     after.b112OriginalHumanGround.lastOriginalSourceHitId,
+    actualRapierBody:after.player.position};
+  }
   let lastSample=-1;
   const wallStarted=Date.now();
   // B61: Real SwiftShader's 7-CPU GPU/source run measured 80 native
@@ -521,6 +577,28 @@ async function main(){
       JSON.stringify(detailed));
     }
     console.log('T21_W10B59_NATIVE_SESSION_PROGRESS',JSON.stringify(row));
+   }
+   if(b172Active&&now.matchState==='PLAYING'&&sample>=1&&
+      sample<=7&&sample>lastActiveBucket){
+    lastActiveBucket=sample;
+    // Only previously proven short upper-floor S34/W34 motions.
+    // Keeps user participation alive throughout seven distinct moments.
+    const legs=[await realHumanB172Leg('KeyS'),
+     await realHumanB172Leg('KeyW')];
+    const after=await get();
+    const witness={kind:'B172_REAL_NATIVE_HUMAN_CPU_SIMULTANEOUS_PLAY',
+     nativeTimeBucket20s:sample,trueEndTick:after.tick,
+     actualKccKeyboardMouseLegs:legs,
+     genuineSevenCpuRejoined:after.cpu.physicalRejoins.length,
+     officialScoreable:after.sourceScoreablePromotions,
+     officialWinner:'NONE',fakeTimeOrActorMovement:false};
+    activeHumanPairs.push(witness);
+    history.push(witness);
+    writeFileSync(resolve(OUTPUT,'w10b172-genuine-active-180s.json'),
+     JSON.stringify({actualNativePlayerSegments:activeHumanPairs,
+      sourceAuthority:'25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE',
+      noSyntheticTickOrPaint:true},null,2));
+    console.log('B172_REAL_180S_ACTIVE_PLAYER_SOURCE',JSON.stringify(witness));
    }
   }
   // Write the real history EVEN when no success is proven, for diagnosis.
@@ -721,6 +799,10 @@ async function main(){
    return a?.state==='STAGING'&&a.originalSolids===25&&
     a.scoreable===0&&a.humanShots===0&&a.endHidden===true?a:false;
   },90000);
+  if(b172Active&&(activeHumanPairs.length!==7||
+     activeHumanPairs.some(s=>s.genuineSevenCpuRejoined!==7)||
+     terminal.cpu.physicalRejoins.length!==7))
+   reject('B172_GENUINE_180S_PLAYER_CPU_ACTIVITY_NOT_COMPLETE');
   const proof={
    verdict:'B59_GENUINE_NATIVE_180_SECOND_SOURCE_SESSION_COMPLETE',
    required180SecondsOfNativeMatchClock:true,
@@ -729,6 +811,8 @@ async function main(){
    B61WallTimeElapsedMs:Date.now()-wallStarted,
    noArtificialQaTickAdvances:true,
    actualBrowserKeyboardMouse:true,
+   b172ContinuousReal180sHumanParticipation:b172Active,
+   b172RealKeyboardMouseActivityPairs:activeHumanPairs,
    actualCpuSevenPresent:terminal.cpu.cpu.length===7,
    actualCpuSourceRejoined:terminal.cpu.physicalRejoins.length,
    actualNativeSecondsElapsed:180-terminal.timeRemainingSeconds,
