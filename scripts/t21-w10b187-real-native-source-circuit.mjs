@@ -12,6 +12,8 @@ import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {b189RealSevenCpuSourceRelease}
  from './t21-w10b189-real-cpu-release-gate.mjs';
+import {b190NativeCpuStartProgress}
+ from './t21-w10b190-native-start-evidence.mjs';
 const root='http://127.0.0.1:4197/browser-ink-tps/';
 const output=process.env.T21_B187_EVIDENCE_DIR??
  '/tmp/t21-b187-native-original-circuit';
@@ -162,26 +164,53 @@ async function run(){
  // B189: the previous wait incorrectly used nonexistent
  // snapshot.nativeSourceCpuRejoined / nativeSourceCpuFreeCombat fields.
  // The actual engine publishes cpu.physicalRejoins and cpu.freeCombatEnabled.
- let physicalRelease=null;
- const playing=await until(async()=>{
-  const s=await snapshot('WAIT_SEVEN_REAL_SOURCE_CPU');
-  const witness=b189RealSevenCpuSourceRelease(s);
-  if(witness){physicalRelease=witness;return s;}
-  return false;
- },480000,350);
+ // B190: initialize real evidence BEFORE the long seven-CPU wait.
+ // Previously a genuine CPU-release stall/180s TIME_UP had no saved
+ // in-browser native stage/actor positions, making the failure opaque.
  const evidence={
-  schema:'W10_B187_ONE_REAL_NATIVE_ORIGINAL_PLAYABLE_CIRCUIT_V1',
-  nativeSourceStartTick:playing.tick,
-  cpuRejoinedNaturally:physicalRelease.actualNativeCpuRejoined,
-  realSourcePhysicalCpuRelease:physicalRelease,
-  stages:[],
-  sampleHistory:[],
+  schema:'W10_B190_EARLY_AND_FULL_REAL_NATIVE_ORIGINAL_CIRCUIT_V2',
+  nativeSourceStartTick:null,
+  cpuRejoinedNaturally:0,
+  realSourcePhysicalCpuRelease:null,
+  cpuReleaseProgress:[],
+  stages:[],sampleHistory:[],
   initialFrozenStage:[25,17,26,0],
   syntheticSimulationTicks:0,actorTeleportsByTest:0,
   extraOriginalSolids:0,extraNavigationLinks:0,officialWinner:'NONE',
   nativeClear:false
  };
  latestEvidence=evidence;
+ let physicalRelease=null;
+ let lastProgressTick=-Infinity;
+ let lastProgressState='';
+ const playing=await until(async()=>{
+  const s=await snapshot('WAIT_SEVEN_REAL_SOURCE_CPU');
+  const progress=b190NativeCpuStartProgress(s);
+  // Preserve only distinct genuine 60Hz milestones; source snapshots may
+  // be polled repeatedly with no fixed-step advance on slow software GPU.
+  if(progress.realNativeTick!==null&&
+     (progress.realNativeTick-lastProgressTick>=30||
+      progress.matchState!==lastProgressState)){
+   evidence.cpuReleaseProgress.push(progress);
+   if(evidence.cpuReleaseProgress.length>180)
+    evidence.cpuReleaseProgress.shift();
+   lastProgressTick=progress.realNativeTick;
+   lastProgressState=progress.matchState;
+  }
+  if(progress.outcome==='GAME_TIMEOUT_NO_CIRCUIT_PROOF')
+   fail('REAL_MATCH_ENDED_BEFORE_HUMAN_SOURCE_CIRCUIT',progress);
+  if(progress.outcome==='NATIVE_SOURCE_STOP')
+   fail('REAL_SOURCE_CPU_RELEASE_STOPPED',progress);
+  const witness=b189RealSevenCpuSourceRelease(s);
+  if(witness){
+   physicalRelease=witness;
+   return s;
+  }
+  return false;
+ },480000,350);
+ evidence.nativeSourceStartTick=playing.tick;
+ evidence.cpuRejoinedNaturally=physicalRelease.actualNativeCpuRejoined;
+ evidence.realSourcePhysicalCpuRelease=physicalRelease;
  const collect=(label,s)=>{
   const p=s.player?.position??null;
   const item={label,tick:s.tick,matchState:s.matchState,
