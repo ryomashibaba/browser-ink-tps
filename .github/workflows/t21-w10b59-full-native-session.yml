@@ -1,4 +1,4 @@
-name: T21 B176 actual human original first drop + 180s 7CPU source ink SWEEP
+name: T21 B177 real Rapier KCC-balanced human + 7CPU 180s source
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -8,6 +8,8 @@ on:
       - 'scripts/t21-w10b174-active-source-sweep-gate.mjs'
       - 'scripts/t21-w10b174-active-source-sweep-gate.test.mjs'
       - 'scripts/t21-w10b176-real-lower-route-source.test.mjs'
+      - 'scripts/t21-w10b177-physical-homecoming.mjs'
+      - 'scripts/t21-w10b177-physical-homecoming.test.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,7 +27,7 @@ jobs:
       - run: npm run build -- --base=/browser-ink-tps/
       - run: npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: node --check scripts/t21-f3-browser-smoke.mjs
-      - run: node --test scripts/t21-w10b174-active-source-sweep-gate.test.mjs scripts/t21-w10b176-real-lower-route-source.test.mjs
+      - run: node --test scripts/t21-w10b174-active-source-sweep-gate.test.mjs scripts/t21-w10b176-real-lower-route-source.test.mjs scripts/t21-w10b177-physical-homecoming.test.mjs
       - name: B175 180 native seconds + true sustained CPU source ink and user
         env:
           T21_W10B59_FULL_NATIVE_SESSION: '1'

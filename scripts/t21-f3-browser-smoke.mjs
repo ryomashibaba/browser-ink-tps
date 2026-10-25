@@ -13,6 +13,7 @@ import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
 import {verifyB174ActualSourceSweepRound} from './t21-w10b174-active-source-sweep-gate.mjs';
+import {b177OriginalKccHomeDecision} from './t21-w10b177-physical-homecoming.mjs';
 
 const ROOT='http://127.0.0.1:4196/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-f3-playable-webgl2';
@@ -458,6 +459,7 @@ async function main(){
   // B172: real human never teleports or skips physics. Native source
   // floor/KCC is re-probed for every real keyboard leg across 180s.
   const activeHumanPairs=[];
+  const b177TrueUpperHome=played.player.position.slice();
   const b174NativeCpuSampleHistory=[];
   const b176TrueHumanDescent=[];
   let b176DescentStarted=false,b176DescentPassed=false;
@@ -473,7 +475,7 @@ async function main(){
     Number.isFinite(f?.lastOriginalSourceGapMeters)&&
     Math.abs(f.lastOriginalSourceGapMeters)<=.22;
   };
-  async function realHumanB172Leg(code){
+  async function realHumanB172Leg(code,returnToMeasuredHome=false){
    const before=await get();
    if(!actualOriginalGround(before))
     reject('B172_NATIVE_ORIGINAL_GROUND_MISSING_BEFORE_'+code);
@@ -487,6 +489,16 @@ async function main(){
     after=await waitUntil(async()=>{
      const n=await get();
      if(n.stopReason)reject('B172_TRUE_PHYSICS_STOP_'+n.stopReason);
+     if(returnToMeasuredHome){
+      const d=b177OriginalKccHomeDecision({
+       sourceUpperHome:b177TrueUpperHome,
+       realKccBody:n.player.position,
+       realOriginalGrounded:actualOriginalGround(n),
+       trueNativeTicks:n.tick-before.tick
+      });
+      if(d.status==='UNSAFE')reject('B177_UNSAFE_NATIVE_UPPER_HOME_'+JSON.stringify(d));
+      return d.status==='ARRIVED'?n:false;
+     }
      return n.tick>=before.tick+34?n:false;
     },120000);
    }finally{
@@ -504,6 +516,10 @@ async function main(){
     reject('B172_REAL_KEY_AND_MOUSE_NOT_APPLIED_'+JSON.stringify({
      code,moved,shots:after.shotsFired-before.shotsFired}));
    return {code,startTick:before.tick,endTick:after.tick,
+    b177MeasuredUpperHome:returnToMeasuredHome?[...b177TrueUpperHome]:null,
+    b177OriginalKccReturnResidualMeters:returnToMeasuredHome?
+     Number(Math.hypot(after.player.position[0]-b177TrueUpperHome[0],
+      after.player.position[2]-b177TrueUpperHome[2]).toFixed(3)):null,
     actualKccMovementMeters:Number(moved.toFixed(3)),
     truePlayerShotDelta:after.shotsFired-before.shotsFired,
     verifiedOriginalSupportId:
@@ -700,10 +716,11 @@ async function main(){
    if(b172Active&&now.matchState==='PLAYING'&&sample>=1&&
       sample<=7&&sample>lastActiveBucket){
     lastActiveBucket=sample;
-    // Only previously proven short upper-floor S34/W34 motions.
-    // Keeps user participation alive throughout seven distinct moments.
+    // B177: S34 then real KeyW until the true original Rapier body
+    // returns near the same measured source floor start; never teleport.
+    // Fixed W34 drifted rearward and caused an actual fall at 140s.
     const legs=[await realHumanB172Leg('KeyS'),
-     await realHumanB172Leg('KeyW')];
+     await realHumanB172Leg('KeyW',true)];
     const after=await get();
     const witness={kind:'B172_REAL_NATIVE_HUMAN_CPU_SIMULTANEOUS_PLAY',
      nativeTimeBucket20s:sample,trueEndTick:after.tick,
