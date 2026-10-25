@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `20b040f50d9941d3f3185a6b4a7de6a492eaac77`
+- 同期元QA HEAD: `7cdd9d837a82fbf06cca0e15f6ae809cfae4ff4b`
 - 最新番号のQAレポート: W10-B178 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B178-actual-source-ink-resource-economy.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B179 （着手・完了の保証ではない）
