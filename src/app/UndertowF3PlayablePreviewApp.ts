@@ -855,6 +855,10 @@ export class UndertowF3PlayablePreviewApp{
     window.location.assign(dest.href);
    });
    this.panel.appendChild(combat);
+  }
+  // B208: make combat mode accessible from ordinary F3 preview, not
+  // just ?t21QaDrive=source. A clean genuine world is still mandatory.
+  {
    // B207: a fresh native 180s battle-lab session in one user click.
    // The original opposing footpaths remain UNVERIFIED (0/12).
    const round=document.createElement('button');
@@ -877,7 +881,7 @@ export class UndertowF3PlayablePreviewApp{
        ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
     window.location.assign(b207CombatRoundUrl(window.location.href));
    });
-   combat.insertAdjacentElement('afterend',round);
+   this.panel.appendChild(round);
    if(round.disabled){
     const note=document.createElement('p');
     note.id='t21-f3-b207-source-combat-caveat';

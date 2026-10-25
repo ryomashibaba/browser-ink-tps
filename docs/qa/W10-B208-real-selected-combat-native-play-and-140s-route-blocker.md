@@ -1,0 +1,11 @@
+# W10-B208 — Ordinary-to-native 180s combat, actual 7CPU + human playable after new boot
+
+2026-10-25 JST. Based on exact B207 and B206 real native CI failures noted in W10-B207 QA.
+
+**Player issue repaired:** B207 put the FULL 180s SOURCE COMBAT button inside the source QA conditional, making it absent from ordinary F3 FIXED preview. B208 mounts it for BOTH ordinary and source F3 preview, while B192's *legacy debug toggle* remains QA-scoped. One genuine click still reboots into the same exact source-only B192/B203 real world; original 25/17/26/0 with 0/12 cross-team routes unchanged. No scoring, fake CPU positions, floor or teleport.
+
+**Broader game acceptance, same existing B75 FIXED Chromium CI:** after actual source ink gameplay, CDP clicks new button, waits for real page reload/changed time origin and exact B192+B203 selection, verifies original source world with zero CPU physical rejoins, then ACTUALLY gets pointer lock, presses genuine W+mouse to move and fire and change original HUMAN ink cells, waits for all seven original source CPU physical rejoins plus CPU genuine ink changes, verifies true native frame ticks, real remaining source clock, original physics 25/17/26/0, zero score/teleports, and writes `w10b208-real-selected-source-battle.json`. A B208 PASS would certify one-click native 180s source battle round is playable with actual human+7CPU, NOT natural opponent meeting/damage/splat or all 180 seconds completed. Existing B75 SWEEP remains untouched. No new workflow.
+
+**Separate blocker (do not conceal):** B206 long native 180s trial failed at ~140s on B176 actual original-right-ramp human support loss (tick 9785, human original foot support 0/5), despite 7CPU rejoin and 11,499 impact-changed original CPU cells. No inserted floor or modified NavLink to manufacture success; lower route and full 180s integration remain HOLD until original authentic geometry / fully grounded native human KCC evidence. Standalone 180s completion and B176 verified lower-route are distinct acceptance questions; do not falsely promote either.
+
+Immutable scope: 25 Rapier solids, 17 PaintSurfaces, 26 NavLinks, 0 scoreable, natural opposing routes 0/12. No main, Pages, T19C/T20, PR5, private source material or certified 4v4 claim altered.

@@ -835,6 +835,67 @@ async function run(){
     writeFileSync(resolve(OUTPUT,'w10b207-real-combat-source-select.json'),
      JSON.stringify(evidence,null,2));
     console.log('B207_REAL_180S_COMBAT_WORLD_USER_SELECTED',JSON.stringify(evidence));
+    // B208: continue from the freshly selected world, with real browser
+    // pointer lock, native HUMAN keyboard/mouse and seven ORIGINAL CPU.
+    // This proves an actual playable source battle round, not only URL.
+    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+     x:800,y:450,button:'none'});
+    for(const type of ['mousePressed','mouseReleased'])
+     await cmd('Input.dispatchMouseEvent',{type,x:800,y:450,
+      button:'left',clickCount:1});
+    await until(()=>evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
+    const realStart=await snapshot();
+    const key={key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
+    await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
+    await cmd('Input.dispatchMouseEvent',{type:'mousePressed',
+     x:800,y:450,button:'left',clickCount:1});
+    await until(async()=>{
+     const s=await snapshot();
+     if(s.stopReason)fail('B208_NEW_SOURCE_PLAYER_KCC_STOP_'+s.stopReason);
+     return s.tick>=realStart.tick+42&&s.shotsFired>realStart.shotsFired&&
+      s.b23HumanInkFeedback.humanChangedCells>
+       realStart.b23HumanInkFeedback.humanChangedCells?s:false;
+    },90000);
+    await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
+     x:800,y:450,button:'left',clickCount:1});
+    await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
+    const realSeven=await until(async()=>{
+     const s=await snapshot();
+     if(s.stopReason)fail('B208_SOURCE_SEVEN_CPU_ORIGINAL_STOP_'+s.stopReason);
+     return s.matchState==='PLAYING'&&s.cpu.physicalRejoins.length===7&&
+      s.cpuImpactInkCellsChanged>0?s:false;
+    },210000);
+    const moved=Math.hypot(
+     realSeven.player.position[0]-realStart.player.position[0],
+     realSeven.player.position[2]-realStart.player.position[2]);
+    if(moved<.20||realSeven.shotsFired<=realStart.shotsFired||
+       realSeven.b23HumanInkFeedback.humanChangedCells<=
+        realStart.b23HumanInkFeedback.humanChangedCells||
+       realSeven.sourceScoreablePromotions!==0||
+       realSeven.productionAuthorized!==false||
+       realSeven.unrestricted4v4Certified!==false||
+       realSeven.cpu.physicalFootRelocations!==0)
+     fail('B208_REAL_SOURCE_BATTLE_NATIVE_PLAY_FAILED_'+JSON.stringify({
+      moved,shots:realSeven.shotsFired,cpu:realSeven.cpu.physicalRejoins.length,
+      cpuInk:realSeven.cpuImpactInkCellsChanged}));
+    const native={schema:'B208_NATIVE_180S_COMBAT_MODE_PLAYABLE',
+     realButtonClick:true,newWorldTimeOrigin:selected.origin,
+     humanKccMeters:Number(moved.toFixed(3)),
+     truePlayerShots:realSeven.shotsFired,
+     humanImpactChangedCells:realSeven.b23HumanInkFeedback.humanChangedCells,
+     genuineCpuRejoins:realSeven.cpu.physicalRejoins.length,
+     genuineCpuImpactChangedCells:realSeven.cpuImpactInkCellsChanged,
+     trueNativeTicks:realSeven.tick,
+     stillPlaying:realSeven.matchState,
+     actualClockRemaining:realSeven.timeRemainingSeconds,
+     actualEnemyEncounterVerified:false,actualSplatVerified:false,
+     certifiedOppositeRoutes:'0/12',officialWinner:'NONE',
+     originalStage:'25/17/26/0',actorTeleports:0,
+     fakeNativeTicks:false,productionAuthorized:false};
+    writeFileSync(resolve(OUTPUT,'w10b208-real-selected-source-battle.json'),
+     JSON.stringify(native,null,2));
+    console.log('B208_REAL_COMBAT_ROUND_HUMAN_AND_7CPU',JSON.stringify(native));
    }
    return;
   }
