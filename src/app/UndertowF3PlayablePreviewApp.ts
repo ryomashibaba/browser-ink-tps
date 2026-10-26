@@ -680,6 +680,13 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally?
     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT':'FIXED_PATROL_DEFAULT';
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
+  // B234: actual 7 real CpuAgentSystem actors, *read-only* source collision
+  // readiness in unchanged 25-solid F3. No fake source floor activation.
+  if(b31Params.get('t21QaDrive')==='source'&&
+     b31Params.get('t21W10B234')==='realCpuGapReadiness'){
+   this.cpu.enableB234OriginalGapReadinessReadOnly(this.physics);
+   this.canvas.dataset.t21B234RealCpuGapQa='FROZEN_25_READ_ONLY';
+  }
   // B64 experimental native source-floor aim. Existing FIXED source CPU
   // remains default: this does NOT modify Recast/Crowd target steering.
   const b68NormalPreviewSweep=
@@ -3566,6 +3573,7 @@ export class UndertowF3PlayablePreviewApp{
    b20CpuPhaseProfile:this.b20ProfileSnapshot(),
    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
+   b234RealCpuGapReadiness:this.cpu.b234OriginalGapReadinessSnapshot(),
    originalSourceSolids:this.rawStage.solids.length,
    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
    originalSourceNavigationLinks:this.rawStage.navigationLinks?.length,

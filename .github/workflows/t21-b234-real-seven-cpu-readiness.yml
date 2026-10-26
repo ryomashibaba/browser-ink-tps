@@ -1,0 +1,34 @@
+name: T21 B234 real seven CPU F3 physical source handoff readiness
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/ai/B234OriginalCpuGapReadinessAudit.ts'
+      - 'src/ai/CpuAgentSystem.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-b234-real-seven-cpu-gap-readiness.mjs'
+      - '.github/workflows/t21-b234-real-seven-cpu-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-seven-native-cpu-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-b234-real-seven-cpu-gap-readiness.mjs
+      - name: Genuine F3 Chrome and 7 existing CpuAgentSystem actors, source ground refusal
+        run: node scripts/t21-b234-real-seven-cpu-gap-readiness.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b234-real-f3-seven-cpu-source-readiness
+          path: /tmp/t21-b234/
+          retention-days: 14
+          if-no-files-found: warn

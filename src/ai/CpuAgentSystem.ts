@@ -1,4 +1,7 @@
 import type { CrowdAgent } from 'recast-navigation';
+import {B234OriginalCpuGapReadinessAudit}
+ from './B234OriginalCpuGapReadinessAudit';
+import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
 import { PLAYER_CHARACTER_PHYSICS } from '../player/PlayerCharacterPhysics';
 import { GAME_CONFIG } from '../config/game/gameConfig';
@@ -262,6 +265,7 @@ export class CpuAgentSystem {
   private b64CandidatesChosen=0;
   private readonly b64NoTargetCooldown = new Map<string,number>();
   private f3dSourceGoals:CpuQaSourceGoalAuthority|null=null;
+  private b234OriginalCpuReadiness:B234OriginalCpuGapReadinessAudit|null=null;
   private readonly samplePoint = new Vec3();
   private readonly targetPoint = new Vec3();
   private activeLastTick = false;
@@ -315,6 +319,28 @@ export class CpuAgentSystem {
     this.f3dSourceGoals=source;
   }
 
+  /** B234 opt-in on the real 7 CpuBot objects, only with full F3 guards.
+   * Deliberately no new jump authority: missing source faces stay missing. */
+  public enableB234OriginalGapReadinessReadOnly(physics:RapierStagePhysics):void{
+   if(!this.f3dSourceGoals||!this.phase14eFirstDrop||
+      !this.phase14qGroundCollision||!this.phase14qF2RecoverableSteps||
+      this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+    throw Error('B234_REAL_F3_CPU_READINESS_NOT_AUTHORIZED');
+   this.b234OriginalCpuReadiness=
+    new B234OriginalCpuGapReadinessAudit(this.stage,physics,this.navigation);
+   this.b234ObserveRealCpu();
+  }
+  public b234OriginalGapReadinessSnapshot(){
+   return this.b234OriginalCpuReadiness?.snapshot()??null;
+  }
+  private b234ObserveRealCpu():void{
+   this.b234OriginalCpuReadiness?.observeActualSevenCpu(
+    this.bots.map(bot=>({
+     id:bot.id,foot:bot.position,lifeState:bot.lifeState,
+     mobilityState:bot.mobilityState,
+     crowdPosition:bot.agent?.position()??null
+    })));
+  }
   /** Experimental source-only frozen T21; default keeps original
    * repeated native retarget behavior and production CPU is untouched.
    */
@@ -1077,6 +1103,7 @@ export class CpuAgentSystem {
       this.stats.cpuQaSuspectedStalls = report.suspectedStallCount;
       this.stats.cpuQaLongestStationarySeconds = report.longestStallSeconds;
     }
+    this.b234ObserveRealCpu();
     this.syncStats();
   }
 
