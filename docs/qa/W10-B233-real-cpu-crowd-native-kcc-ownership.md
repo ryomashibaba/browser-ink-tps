@@ -28,3 +28,31 @@ Original 25 solids + 17 original paint surfaces + 26 original navigation links w
 Initial successful integrated run: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40311198089. The initial preceding attempt #40310879121 contained a TypeScript parse error in the new test file and did not evaluate B233 physics; it was repaired in `8739909cb2415557d45a37095427ab0c42388b1b`.
 
 This boundary is now a strict 4-of-4 CI regression with genuinely queried gap nav disconnection; failed/lost KCC support or unsupported stage provenance blocks completion. No new production changes.
+
+## Final strict B233 physical control-plane CI — SUCCESS
+
+On implementation head `21691bf8244a9274cb9c2dab208e0fa0daf29417`, real GitHub Actions [#40311526841](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40311526841) **SUCCESS** (application build + 4 source QA test files, 7 tests PASS); the independent metadata continuity index [#40311526755](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40311526755) was also SUCCESS.
+
+The B233 4-direction strict gate requires:
+- Native Recast Crowd genuine *original-source local approach* and same-source Rapier KCC ground contacts, ≥12 real approach frames and ≥0.48m actor movement before Crowd removal.
+- The **same Rapier physical body**, without a new spawn/teleport, physically takes off on the registered original CI688 QA source collider (exact actual foot ID), performs one real ballistic jump, remains actually airborne, and lands ≥18 consecutive grounded KCC ticks on the exact opposite original source collider.
+- Native Recast Crowd reattaches only after genuine Rapier landing and performs ≥10 grounded KCC-accepted frames, ≥0.45m true actor movement.
+- The jump remains **actually queried and disconnected on native Recast**; the source gap cannot be misrepresented as a newly created ordinary walk edge.
+- Both mirror sides and directions must pass. Source-only worlds include the unchanged frozen 25 solids/17 paint surfaces/26 links and original CI688 triangles; no arbitrary offmesh connector, scored paint, teleport, official win or production permission.
+
+Recorded real Crowd preapproach/postrejoin supported KCC distances in metres:
+`positive floor→slope 0.913108 / 0.473458`,
+`positive slope→floor 0.907136 / 0.469879`,
+`negative floor→slope 0.874420 / 0.473238`,
+`negative slope→floor 0.906415 / 0.459879`. No teleport or second KCC instance occurred after initial spawn. Strict gate `B233_TRUE_CROWD_KCC_JUMP_CROWD_FULL_SOURCE_SEQUENCE_4_PASS` logged 4/4.
+
+### Critical quality-first whole-project correction — B234 next
+
+Repeated isolated KCC/Crowd proofs have now established a strong **movement primitive**, but **NOT gameplay**. More tiny sandbox-only motion tests would not meaningfully improve the user's intended playable Turf War. B234 should prioritize establishing a genuine **opt-in F3 QA application / real CpuAgentSystem ownership-integration point**, while refusing to promote original source geometry to the official 25-solid stage:
+
+1. Map the actual `CpuAgentSystem` native Crowd steering and `phase14qGroundCollision` ownership boundaries. Design a *strictly gated explicit QA adapter* allowing only selected original-source evidence for F3; default stage, T19C/T20, main/Pages, and official score must remain unchanged.
+2. Demonstrate an **actual CPU actor**, not a stand-alone mock, with its own Crowd agent suspended and its **physical** actor followed continuously by the approved native Rapier source KCC, with true rendered pose provenance and subsequent safe Crowd rejoin.
+3. Require exact original CI688 provenance, real source mesh geometry visibility/authorization in that isolated F3 QA environment, and a verified original 25-solid connection (B228) before any opponent-crossing route can be credited. The 2.074235m airborne transfer is never just an offmesh teleport.
+4. If actual CPU/Stage integration is blocked by missing source faces or a fake NavMesh island, **report the blocker without rebranding the sandbox success as live AI**. Freeze official 25/17/26/0, 0/12 true opposing routes, `productionAuthorized=false`, `unrestricted4v4Certified=false`, `officialWinner=NONE`.
+
+This is a major milestone in control handoff *only*. User-visible outcome remains an incomplete frozen-layout gameplay prototype until actual native bot and stage connectivity are established.
