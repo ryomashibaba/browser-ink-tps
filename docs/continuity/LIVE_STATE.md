@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `3107b60d35d4b0e2d957f3ea68585705404f37df`
+- 同期元QA HEAD: `a844b72fbb2348c0ed11a81a6a8038742f43ed1f`
 - 最新番号のQAレポート: W10-B231 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B231-real-recast-crowd-physical-landing-handoff.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B232 （着手・完了の保証ではない）
