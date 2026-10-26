@@ -47,7 +47,8 @@ const originalCases=[
  {id:'FINER_CELL_SAFE_NO_REGION_EROSION',cellSize:.09,cellHeight:.05,radius:4,minRegion:0,mergeRegion:0,slope:52},
  {id:'SLOPE_55_ONLY',cellSize:.18,cellHeight:.10,radius:2,minRegion:3,mergeRegion:8,slope:55},
  {id:'RADIUS_1_DIAGNOSTIC_UNSAFE',cellSize:.18,cellHeight:.10,radius:1,minRegion:3,mergeRegion:8,slope:52},
- {id:'RADIUS_0_DIAGNOSTIC_UNSAFE',cellSize:.18,cellHeight:.10,radius:0,minRegion:3,mergeRegion:8,slope:52}
+ {id:'RADIUS_0_DIAGNOSTIC_UNSAFE',cellSize:.18,cellHeight:.10,radius:0,minRegion:3,mergeRegion:8,slope:52},
+ {id:'RADIUS_0_NO_OFFMESH_DIAGNOSTIC_UNSAFE',cellSize:.18,cellHeight:.10,radius:0,minRegion:3,mergeRegion:8,slope:52}
 ] as const;
 type Case=typeof originalCases[number];
 const terminal:Record<Side,V3>={
@@ -125,7 +126,10 @@ function generateVariation(stage:ReturnType<typeof b240IsolatedOriginalStage>,
   walkableRadius:config.radius,maxEdgeLen:24,maxSimplificationError:1.1,
   minRegionArea:config.minRegion,mergeRegionArea:config.mergeRegion,
   maxVertsPerPoly:6,detailSampleDist:6,detailSampleMaxError:1,
-  offMeshConnections:stageNavigationOffMeshConnections(stage)
+  // Diagnostic linkless run removes links from the generated QA query ONLY.
+  // It does not mutate the frozen stage or remove its 26 original links.
+  offMeshConnections:config.id==='RADIUS_0_NO_OFFMESH_DIAGNOSTIC_UNSAFE'
+   ?[]:stageNavigationOffMeshConnections(stage)
  });
  if(!nav.success)throw Error('B240_GENERATOR_'+nav.error);
  return new NavMeshQuery(nav.navMesh);
@@ -225,6 +229,23 @@ describe('B240 original FloorLine00 Recast parameter isolation',()=>{
    expect(baselinePath?.snapEnd).toBeGreaterThan(1.0);
    expect(baselinePath?.strict).toBe(false);
    expect(cases.filter(c=>c.id.startsWith('RADIUS_')).every(c=>!c.cpuFootprintValid)).toBe(true);
+   // CI #40329965562 is first controlled pinned-original B240 trial:
+   // normal region removal, slope 55 or finer CPU-safe voxel scales
+   // cannot authenticate BOTH original mirrors. Zero-radius can route,
+   // but violates both physical human (0.32m) and CPU (0.30m) clearance.
+   expect(cases.filter(c=>c.cpuFootprintValid).every(c=>
+    c.nativeGenerationSucceeded&&c.navFromRecordedRightLowToSlope?.strict===false)).toBe(true);
+   expect(cases.find(c=>c.id==='RADIUS_0_DIAGNOSTIC_UNSAFE')?.
+    navFromRecordedRightLowToSlope?.strict).toBe(true);
+   expect(cases.find(c=>c.id==='RADIUS_0_DIAGNOSTIC_UNSAFE')?.
+    realHumanCapsuleValid).toBe(false);
+   // On zero-radius NavMesh, source samples may project close to the
+   // real triangle, but this cannot justify a CPU radius change.
+   const zeroFoots=cases.find(c=>c.id==='RADIUS_0_DIAGNOSTIC_UNSAFE')?.
+    originalSourceFeet as Array<{sample:string;
+      navNearFootPhysicallyMatchingExactSource:boolean}>|undefined;
+   expect(zeroFoots?.filter(p=>p.sample.startsWith('ORIGINAL_CENTROID_')&&
+    p.navNearFootPhysicallyMatchingExactSource)).toHaveLength(2);
    expect(sourceFootSupports.filter(x=>x.sample.startsWith('REAL_KCC_TICK_')&&
     x.originalRapierSourceSupported).length).toBeGreaterThanOrEqual(2);
    all.push({side,originalSHA256:B240_SOURCE_PIN,
