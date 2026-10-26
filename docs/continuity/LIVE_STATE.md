@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `fce53dfd55a48102405c371504fd96d26dff1ec1`
+- 同期元QA HEAD: `290ab45204fcbb494ce2db2f8d4bb211bd6b03d6`
 - 最新番号のQAレポート: W10-B228 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B228-source-to-registered-underpass-real-input.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B229 （着手・完了の保証ではない）
