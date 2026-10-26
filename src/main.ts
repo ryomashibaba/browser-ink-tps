@@ -10,6 +10,11 @@ const appCanvas: HTMLCanvasElement = canvas;
 const appUiRoot: HTMLElement = uiRoot;
 
 async function boot(): Promise<void> {
+  if (new URL(window.location.href).searchParams.get('t21Qa') === 'b224OriginalGapInput') {
+    const { T21B224OriginalGapInputQaApp } = await import('./app/T21B224OriginalGapInputQaApp');
+    await T21B224OriginalGapInputQaApp.boot(appCanvas, appUiRoot);
+    return;
+  }
   if (new URL(window.location.href).searchParams.get('t21Play') === 'preview') {
     const { UndertowF3PlayablePreviewApp } = await import('./app/UndertowF3PlayablePreviewApp');
     await UndertowF3PlayablePreviewApp.boot(appCanvas, appUiRoot);

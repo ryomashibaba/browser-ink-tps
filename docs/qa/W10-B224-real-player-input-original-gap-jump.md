@@ -1,0 +1,9 @@
+# W10-B224 — genuine CDP keyboard PlayerInput -> PlayerController source jump
+
+26 October 2026 JST, first source QA implementation.
+
+B222's directly provided KCC translation vectors and B223's 25-solid collision context were real Rapier physical proofs **but were not real player input tests**. B224 adds a separate, explicit `t21Qa=b224OriginalGapInput&t21B224Source=isolated-ci688` lab route. It is not accessible from the production/default game routes. The lab uses the existing exact original 25 registered solids plus precisely two CI688 source-authentic triangle mesh colliders (QA only), original 17 paint definitions and original 26 links. It runs the actual `PlayerInput`, `PlayerController`, `ThirdPersonCamera`, `RapierStagePhysics` at 60 Hz, rather than injecting movement into a KCC. Browser CDP sends actual W/S, Space keydown/keyup events after acquiring pointer lock and records actual grounded/airborne/landing and destination-solid Rapier foot support. Four mirrored forward/reverse jump trials run separately from new page loads, with exactly one initial QA spawn per trial and no teleport during input play.
+
+**Safety:** source QA does not modify T19C/T20, 25/17/26/0 stage, CPU, Recast navigation, official scoring, production or Pages. Source face collider additions are not production-authorized. The absence of original enemy-facing full traversal still means 0/12 and winner NONE. A four-trial PASS only certifies a small local input-driven QA lane, NOT natural gameplay or official 4v4. B223's separate original-full-static KCC regression remains in place.
+
+GitHub Actions: `t21-b224-original-gap-input-qa.yml` (separate targeted workflow, to avoid rerunning the expensive entire B75 suite for an isolated QA harness). It saves the full evidence report on success and after real test failures when possible.
