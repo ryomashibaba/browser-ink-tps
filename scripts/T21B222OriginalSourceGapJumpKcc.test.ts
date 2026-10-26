@@ -87,7 +87,7 @@ function run(
   ?'underpass-route-slope00-outer':'underpass-route-floor-concrete01',side);
  const body:RigidBody=physics.world.createRigidBody(
   RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
-   start[0],start[1]+HUM.humanFootOffsetMeters+0.06,start[2]));
+   start[0],start[1]+HUMAN.humanFootOffsetMeters+0.06,start[2]));
  const collider:Collider=physics.world.createCollider(
   RAPIER.ColliderDesc.capsule(
    HUMAN.humanHalfHeightMeters,HUMAN.humanRadiusMeters),body);
@@ -125,14 +125,14 @@ function run(
   if(leftGround&&grounded)landedAfterAirborne=true;
   if(grounded&&vy<0)vy=-0.5;
   const p=body.translation();
-  const footY=p.y-HUM.humanFootOffsetMeters;
+  const footY=p.y-HUMAN.humanFootOffsetMeters;
   minFootY=Math.min(minFootY,footY);
   maxFootY=Math.max(maxFootY,footY);
   finishGrounded=grounded;
   const err=Math.hypot(end[0]-p.x,end[2]-p.z);
   if(err<=0.22&&grounded){
    const hit=physics.castCharacterFootSupport(
-    new Vec3(p.x,p.y,p.z),HUM.humanFootOffsetMeters,'HUMAN');
+    new Vec3(p.x,p.y,p.z),HUMAN.humanFootOffsetMeters,'HUMAN');
    finishSupportedByTarget=hit?.solidId===targetId&&
     Math.abs(hit.point.y-end[1])<=0.20;
    if(finishSupportedByTarget)break;
@@ -141,7 +141,7 @@ function run(
  const p=body.translation();
  const finalHorizontalErrorMeters=Math.hypot(end[0]-p.x,end[2]-p.z);
  const finalFootHeightErrorMeters=Math.abs(
-  (p.y-HUM.humanFootOffsetMeters)-end[1]);
+  (p.y-HUMAN.humanFootOffsetMeters)-end[1]);
  const success=settled&&leftGround&&landedAfterAirborne&&
   finishGrounded&&finishSupportedByTarget&&
   finalHorizontalErrorMeters<=0.22&&finalFootHeightErrorMeters<=0.22;
@@ -161,7 +161,7 @@ describe('B222 exact original 2m floor-to-slope gap, isolated production KCC',()
   expect(STAGE.paintSurfaces).toHaveLength(17);
   expect(STAGE.navigationLinks).toHaveLength(26);
   expect(STAGE.activationReady).toBe(false);
-  expect(HUM.humanRadiusMeters).toBe(0.32);
+  expect(HUMAN.humanRadiusMeters).toBe(0.32);
   expect(GAME_CONFIG.player.jumpSpeedMetersPerSecond).toBe(8.2);
   expect(GAME_CONFIG.player.gravityMetersPerSecond2).toBe(28);
   const outcomes:Result[]=[];
