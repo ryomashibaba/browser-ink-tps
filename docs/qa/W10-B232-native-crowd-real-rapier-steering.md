@@ -26,3 +26,22 @@ CI proof: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/403078539
 ## Next productive B233 decision
 
 A fully authenticated *local* Crowd-moving Rapier body now exists in isolated QA after the real initial jump. The next hardest true blocker is not increasing scripted locomotion coverage: it is identifying a source-authorized **Crowd navigation intent to physically take over the 2.074m jump** and resume the real physical actor afterward, without allowing Detour's disconnected graph to invent a path and without silently handing it a manufactured offmesh teleport. Need an opt-in QA-only suspend → exactly-original-source-lip gate → KCC jump → Crowd rejoin sequence, with explicit actor identity/provenance proof, followed by a real `CpuAgentSystem` integration test if feasible. Distinguish that from autonomous seven-CPU 4v4 and keep frozen 25/17/26/0 and 0/12.
+
+## B232 final strict regression — #40308183853 SUCCESS
+
+CI on implementation commit `b8a7c161cf3a472fcb7df0c1b0043fc8de51ffef` completed with **application build SUCCESS, 3 test files PASS, 5 test cases PASS**. The genuine native Crowd requested a path on each local original source landing, the **same existing B230 native Rapier KCC body** physically responded, and no unrelated frozen collider touched.
+
+| Original mirrored route | Native Crowd request → real grounded KCC frames | Actual source-foot travel | Maximum Crowd-to-Rapier distance |
+|---|---:|---:|---:|
+| Positive FloorConcrete01 → outer Slope00 (onward on slope) | 20/20 | 0.504296m | 0.196572m |
+| Positive outer Slope00 → FloorConcrete01 (onward on floor) | 18/18 | 0.735689m | 0.077192m |
+| Negative FloorConcrete01 → outer Slope00 (onward on slope) | 20/20 | 0.504697m | 0.191451m |
+| Negative outer Slope00 → FloorConcrete01 (onward on floor) | 18/18 | 0.730882m | 0.075581m |
+
+The strict regression test requires true native local Recast path and direct source/destination snaps, at least 15 actual Crowd frames each, 100% accepted original-source Rapier KCC movement frames, physical actor displacement ≥0.45m, maximum Crowd/physical divergence below **0.25m** and no missing original source support. These are now hard tests, not only recorded diagnostics.
+
+**Fail-closed adversarial controls also PASS (4/4):** after genuine B230 landing on both sides, send a nonfinite proposal and a remote +10m proposal. Each is rejected *before native physical movement* with explicit reason (`B232_CROWD_NONFINITE_PROPOSAL` / `B232_UNTRUSTED_CROWD_DISPLACEMENT`); the original physical actor body position remains unchanged, no teleports, no new Space action, and the QA controller fails closed.
+
+Evidence: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40308183853. Previous B231/B230 standalone regression tests were included in the same final run; no regressions detected. Continuity index #40308183993 SUCCESS.
+
+**Do not overclaim:** this is real autonomous native Recast **local target-request steering** into the physical KCC only in isolated QA. It is **not** real `CpuAgentSystem` full actor ownership or a solved discontinuous first source gap Recast navigation edge; no genuine opponent crossing among 12 is authorized. The original gameplay package is unchanged: 25 solids / 17 paint surfaces / 26 nav links / zero scoreable, `productionAuthorized=false`, `officialWinner=NONE`. B233 should focus on the actual CpuAgentSystem / Crowd ownership transfer (source takeoff and rejoin) with real original geometry and no discontinuity teleport, not repeat B232 local motion measurements.
