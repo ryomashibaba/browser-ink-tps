@@ -60,9 +60,11 @@ function stage(side:Side):StageDefinition{
     base+(side==='POSITIVE_Z'?'-positive-z':'-negative-z'));
   if(!record)throw Error('B229_MISSING_EXACT_CI688_SOURCE_'+base);
   const v=record.mesh.vertices;
-  const size=([0,1,2] as const).map(k=>
-   Math.max(...v.map(p=>p[k]))-Math.min(...v.map(p=>p[k])))
-   as unknown as StageVector3;
+  const size:StageVector3=[
+    Math.max(...v.map(p=>p[0]))-Math.min(...v.map(p=>p[0])),
+    Math.max(...v.map(p=>p[1]))-Math.min(...v.map(p=>p[1])),
+    Math.max(...v.map(p=>p[2]))-Math.min(...v.map(p=>p[2]))
+   ];
   return {id:sourceId(base,side),center:[0,0,0],size,
    material:'medium',render:false,cameraBlocker:false,
    projectileBlocker:false,collisionEnabled:true,
@@ -95,7 +97,7 @@ type Witness={
  finalSupportId:string|null;finalGrounded:boolean;
  finalPosition:[number,number,number];totalTickCount:number;
  nativeKccSteps:number;teleportsAfterInitialSpawn:0;
- nativeCpuAcceleration:A;nativeCpuSpeed:typeof FULL_V;
+ nativeCpuAcceleration:typeof A;nativeCpuSpeed:typeof FULL_V;
  sourceFaceAdditions:2;liveStageModified:false;
  physicalTargetReached:boolean;accepted:boolean;
 };
