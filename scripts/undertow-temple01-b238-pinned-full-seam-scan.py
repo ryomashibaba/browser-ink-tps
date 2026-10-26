@@ -239,6 +239,26 @@ def main(path,seedpath,output):
                "physicalKccTraversalProven":False,
                "runtimePromotionAuthorized":False})
         rankrows.sort(key=lambda q:q["sumDistanceMeters"])
+        # Reproduce only tiny real candidate face sets, never infer gameplay.
+        for candidate in rankrows:
+            if not candidate["geometricDoubleContactWithin035"]:continue
+            key=candidate["originalObjIdComponentRootFaceIndex"]
+            members=[]
+            for face_i,(ids,obj,mat) in enumerate(faces):
+                if root(face_i)!=key:continue
+                xyz=tuple(coords[v] for v in ids)
+                u=sub(xyz[1],xyz[0]);v=sub(xyz[2],xyz[0])
+                norm=(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])
+                length=math.sqrt(dot(norm,norm))
+                members.append({"originalActiveSourceFaceIndex":face_i,
+                    "sourceObject":obj,"sourceMaterial":mat,
+                    "originalOBJVertexIDs":ids,
+                    "actualOriginalTriangleProjectXYZ":xyz,
+                    "triangle3DAreaSquareMeters":length/2,
+                    "unitNormalY":norm[1]/length if length>1e-12 else None})
+            if len(members)!=candidate["originalObjMaterialEdgeConnectedFaceCount"]:
+                raise ValueError("B238_EXACT_ORIGINAL_EDGE_COMPONENT_MEMBERSHIP_DRIFT")
+            candidate["completeExactOriginalCandidateFaceEvidence"]=members
         result[side]={"fullyPinnedOriginalSourceFaces":FACES,
           "broadphaseTriangleHits":counts[side],
           "originalObjIdExactEdgeConnectedComponentsWithBothRegionalAnchors":len(rankrows),

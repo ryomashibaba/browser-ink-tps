@@ -39,6 +39,8 @@ jobs:
           test "$(wc -c </tmp/b238/original.obj)" -eq 43263289
       - name: Full original 70396 active faces and OBJ-ID connected local source components
         run: python3 scripts/undertow-temple01-b238-pinned-full-seam-scan.py --obj /tmp/b238/original.obj --seed /tmp/b238/actual-original-seams.json --out /tmp/b238/b238-original-obj-source-only-results.json
+      - name: Fail closed on 3 authentic source contacts per side and two nonwalkable vertical candidates
+        run: python3 scripts/undertow-temple01-b238-strict-source-verdict.py /tmp/b238/b238-original-obj-source-only-results.json
       - name: Never upload copyrighted original OBJ - only small original face IDs and numeric evidence
         if: always()
         uses: actions/upload-artifact@v4
