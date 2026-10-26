@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `dd68dde8e1d1d5c4319dc302e6e006fe5e2a7e9b`
+- 同期元QA HEAD: `d07e49485dd0c31600b4625b896e553438d30a73`
 - 最新番号のQAレポート: W10-B238 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B238-full-pinned-Temple01-source-ingress.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B239 （着手・完了の保証ではない）
-- レポート記載のActions: 確認できない
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40323037306
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
