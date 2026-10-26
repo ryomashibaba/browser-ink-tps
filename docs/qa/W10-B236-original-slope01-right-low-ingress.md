@@ -21,3 +21,27 @@ The initial B236 CI #40318115028 failed the **new audit itself** because exact C
 - Thus the fifth exact CI688 `FloorSlope01` is a **plausible original geometric descent candidate**, but **not a connected physical or CPU-native ingress** from existing right-low. Source provenance, NavMesh polygon fidelity and the actual gap require new evidence before any jump/local-route approval.
 
 B236 strict regression will now fail if these exact original source contact/route errors are accidentally reported as successful native navigation; native full-speed ballistic reach vs original XZ source boundary is also calculated from actual GAME_CONFIG values. Nothing is promoted into the original gameplay stage (still 25/17/26/0, 0/12).
+
+## Final B236 strict native CI — #40318763660 SUCCESS
+
+The final strict CI [#40318763660](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40318763660) on code head `4dcc3bc994167608ab5c74e609492fa606e73ff1` passed application build, two test files and **4/4 tests**, including B235 genuine seven prior-Chrome CPU-entry position regression, B236 positive/negative exact original source geometric/native Recast/Rapier proof, original 25/17/26/0 source preservation, and explicit native refusal of misrepresented Crowd walk paths. The metadata-only continuity index [#40318763749](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40318763749) also **SUCCESS**.
+
+| Physical / original source measurement | POSITIVE_Z | NEGATIVE_Z |
+|---|---:|---:|
+| Exact right-low source boundary → exact original Slope01 upper source edge horizontal distance | **4.219995886m** | **4.219995886m** |
+| Difference from existing right-low model Y7.5 to original source slope upper model Y5.93 | **1.570m** | **1.570m** |
+| Native QA30 Rapier at actual source slope upper / lower | both original-source contact | both original-source contact |
+| Original live 25 Rapier at same slope upper | **no original source collider** | **no original source collider** |
+| Native Recast right-low terminal → actual slope upper raw endpoint query | reported reached target | reported reached target |
+| Actual distance to Recast snapped target (must be ≤0.30m) | **1.177147m — invalid** | **1.034338m — invalid** |
+| Native Recast slope upper → slope lower | **disconnected** (7.621m endpoint error) | **disconnected** (7.539m endpoint error) |
+| Proposed CPU-speed ballistic jump center travel upper bound with vertical drop 1.57m | **3.245994m** | **3.245994m** |
+| Shortfall between this bound and actual 4.220m source-boundary gap | **0.974002m** | **0.974002m** |
+
+The theoretical ballistic center reach uses the genuine game's speed 4.4m/s, QA natural jump launch speed 8.2m/s and gravity 28m/s². It is an **ideal kinematic center bound**, not a full player-capsule KCC jump trial; do not interpret it as conclusive impossibility. Either a different original source access surface is needed or an independently physically verified legitimate input route must be found. Importantly raw Recast `reachedTarget:true` with >1m target snap **does not** constitute an authenticated source route. The Slope01 mesh is a real source part, but it is NOT already connected from the currently registered CPU floor.
+
+### Efficient next decision B237
+
+Do not spend the next phase merely changing Recast radius, injecting offmesh links, or repeating B230–B235 local KCC success. The high-impact missing fact is whether some **other existing exact original Temple01 structure** occupies the 4.22m x/z and 1.57m vertical mismatch at the right-low to Slope01 upper interface, or whether this corridor must be approached from a different original floor. Inspect only original-source-extracted candidate components and player-scale physical data near this source interface, explicitly audit collisions with registered original 25 and the exact supplemental source triangles. If none are authentic and traversable, leave CPU cross-team routes 0/12 and disclose the incomplete original stage faithfully. Never create an unauthenticated floor or CPU teleport to make the tests pass.
+
+Formal 4v4 release unchanged: 25 solids, 17 paint, 26 navlinks, zero scoreable, source geometry not promoted, productionAuthorized:false, unrestricted4v4Certified:false, officialWinner:NONE. The B236 CI validates the *correct classification of the blocker*, not a gameplay-route repair.
