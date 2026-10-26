@@ -33,13 +33,14 @@ try{
  await key('keyUp','w','KeyW',87);await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',x:800,y:450,button:'left',clickCount:1});
  const moved=await snapshot();await screenshot('play');
  await key('keyDown','p','KeyP',80);await key('keyUp','p','KeyP',80);await until(async()=> (await snapshot()).paused);const paused=await snapshot();await sleep(1200);const still=await snapshot();if(paused.tick!==still.tick)throw Error('PAUSE drift');await clickButton();await until(async()=>!(await snapshot()).paused);
+ writeFileSync(resolve(output,'controls.json'),JSON.stringify({boot,ready,moved,paused,still},null,2));
  const begin=Date.now();let lastLog=0;
  while(Date.now()-begin<900000){
-  const s=await snapshot();samples.push(s);writeFileSync(resolve(output,'latest.json'),JSON.stringify(s,null,2));
+  const s=await snapshot();samples.push(s);writeFileSync(resolve(output,'latest.json'),JSON.stringify(s,null,2));writeFileSync(resolve(output,'samples.json'),JSON.stringify(samples,null,2));
   if(s.stopReason)throw Error(s.stopReason);
-  if(s.paused)throw Error('Unexpected pause');
   if(Date.now()-lastLog>20000){lastLog=Date.now();console.log(label,JSON.stringify({tick:s.tick,phase:s.matchState,seconds:s.timeRemainingSeconds,rejoins:s.cpu.physicalRejoins.length,hp:s.player.hp,shots:s.cpuShots,paint:s.cpuImpactInkCellsChanged,sight:s.b181OriginalCombatSight}));}
   if(s.matchState==='TIME_UP'){await screenshot('time-up');break;}
+  if(s.paused)throw Error('Unexpected pause');
   await sleep(3000);
  }
  const final=await snapshot();writeFileSync(resolve(output,'samples.json'),JSON.stringify(samples,null,2));
