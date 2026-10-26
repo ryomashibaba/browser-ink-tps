@@ -1,0 +1,69 @@
+name: T21 B240 real-KCC grounded original Recast clearance diagnostic
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/navigation/RecastStageNavigation.ts'
+      - 'scripts/t21-b240-pinned-original-floorline-qa.ts'
+      - 'scripts/T21B240OriginalRecastClearanceRootCause.test.ts'
+      - '.github/workflows/t21-b240-original-recast-clearance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b240-authentic-native-recast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Build real game without changing production source stage
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Recreate actual registered 25-solid right-low source and CI688 slope
+        env:
+          T21_B238_SEED_OUTPUT: /tmp/b240/b238-original-seam-seed.json
+        run: npx vitest run scripts/T21B238FullOriginalObjSeamSeed.test.ts --reporter=verbose
+      - name: Download original KiTrix 43MB full OBJ, not an LFS pointer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b240
+          curl --fail --location --retry 3 --retry-delay 3 --max-time 220 \
+            --output /tmp/b240/original.obj \
+            'https://media.githubusercontent.com/media/kirakira-dev/KiTrix/main/stages/Vss_Temple01/Vss_Temple01.obj'
+          echo 'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  /tmp/b240/original.obj' | sha256sum --check
+          test "$(wc -c </tmp/b240/original.obj)" -eq 43263289
+      - name: Strict entire authentic OBJ scan and isolated B239 exact face extraction
+        run: |
+          python3 scripts/undertow-temple01-b238-pinned-full-seam-scan.py \
+            --obj /tmp/b240/original.obj \
+            --seed /tmp/b240/b238-original-seam-seed.json \
+            --out /tmp/b240/original-source-report.json
+          python3 scripts/undertow-temple01-b238-strict-source-verdict.py /tmp/b240/original-source-report.json
+          python3 scripts/undertow-temple01-b239-extract-exact-floorline.py \
+            --in-report /tmp/b240/original-source-report.json \
+            --out /tmp/b240/b239-only-exact-original-triangles.json
+      - name: Re-measure ACTUAL Rapier KCC walking both mirrored original sources
+        env:
+          T21_B239_FACES_OUTPUT: /tmp/b240/b239-only-exact-original-triangles.json
+          T21_B239_RESULT_OUTPUT: /tmp/b240/b239-actual-KCC-walk.json
+        run: npx vitest run scripts/T21B239ExactFloorlineNativeIngress.test.ts --reporter=verbose
+      - name: Controlled native Recast parameter matrix on measured KCC feet - QA only
+        env:
+          T21_B239_FACES_OUTPUT: /tmp/b240/b239-only-exact-original-triangles.json
+          T21_B239_RESULT_OUTPUT: /tmp/b240/b239-actual-KCC-walk.json
+          T21_B240_RESULT_OUTPUT: /tmp/b240/b240-native-recast-parameter-diagnosis.json
+        run: npx vitest run scripts/T21B240OriginalRecastClearanceRootCause.test.ts --reporter=verbose
+      - name: Store numeric provenance/QA only - never third-party OBJ
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b240-recast-original-clearance-numeric-qa
+          path: |
+            /tmp/b240/b239-actual-KCC-walk.json
+            /tmp/b240/b240-native-recast-parameter-diagnosis.json
+          retention-days: 14
+          if-no-files-found: warn
