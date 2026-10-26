@@ -270,8 +270,7 @@ export class B230CpuLocalGapQaActuator {
   if(moved>SPEED*DT+.001)
    return reject('B233_PRELAUNCH_CPU_SPEED_LIMIT');
   return {approved:true,reason:'B233_GENUINE_CROWD_STEERED_NATIVE_KCC',
-   foot:[after.x,after.y-PROFILE.humanFootOffsetMeters,after.z]
-    as [number,number,number],
+   foot:[after.x,after.y-PROFILE.humanFootOffsetMeters,after.z] as [number,number,number],
    nativeKccSteps:this.stepCount,speedMetersPerSecond:this.speed,
    grounded:this.grounded,colliderId:this.latestCollider,
    actualMoveMeters:moved};
