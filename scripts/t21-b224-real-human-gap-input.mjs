@@ -53,6 +53,17 @@ async function scenario(side,direction){
     initial.physicalSolidsInsideQa!==27)throw Error('B224_SOURCE_BOOT_UNTRUSTED');
  await click();
  await wait(()=>read('document.pointerLockElement===document.querySelector("#app-canvas")'),10000);
+ // B224 original source model/project registration rotates the XZ crossing:
+ // the authentic target changes X ~-1.278m and Z ~-2.607m.
+ // Genuine CDP mouseLook (not QA pose/axis injection) rotates the camera
+ // ~-26 degrees so that the existing W/S input points at the actual mesh.
+ await cmd('Input.dispatchMouseEvent',{
+  type:'mouseMoved',x:381,y:330,button:'none'});
+ const oriented=await wait(async()=>{
+  const p=await read('window.__t21B224.snapshot()');
+  return p&&Math.abs(p.actualCameraYawDegrees+26.12)<4?p:false;
+ },6000);
+ if(!oriented.pointerLocked)throw Error('B224_MOUSE_LOOK_NO_POINTER_LOCK');
  const w= (side==='POSITIVE_Z')===(direction==='FLOOR_TO_SLOPE');
  const moveKey=w?'KeyW':'KeyS';
  await key(moveKey,true);
@@ -74,7 +85,7 @@ async function scenario(side,direction){
   const o=await read('window.__t21B224.snapshot()');
   return o.successTick!==null||o.tick>=near.tick+30?o:false;
  },7000);
- const result={side,direction,pre,near,end,
+ const result={side,direction,oriented,pre,near,end,
   actualKeydown:true,realPlayerController:true,actorTeleports:0};
  console.log('B224_REAL_BROWSER_SOURCE_JUMP',JSON.stringify({
   side,direction,atTick:end.tick,jumpInputs:end.validJumpInputs,

@@ -144,6 +144,7 @@ export class T21B224OriginalGapInputQaApp{
     originalCrossTeamRoutesCertified:'0/12',officialWinner:'NONE',
     pointerLocked:document.pointerLockElement===canvas,
     inputAxis:[input.moveX,input.moveY],
+    actualCameraYawDegrees:camera.sourcePracticeViewSnapshot().yawDegrees,
     lastFixedInputAxis:[lastInputX,lastInputY],
     validJumpInputs,firstJumpTick,realWorldTick:tick,
     playerPosition:[p.x,p.y,p.z],
