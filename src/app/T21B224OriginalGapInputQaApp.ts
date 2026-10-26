@@ -70,8 +70,10 @@ function exactQaStage(side:Side,corridor=false):StageDefinition{
 export class T21B224OriginalGapInputQaApp{
  static async boot(canvas:HTMLCanvasElement,_ui:HTMLElement){
   const q=new URL(location.href).searchParams;
-  const corridor=q.get('t21Qa')==='b225OriginalCorridorInput'&&
-    q.get('t21B225Source')==='isolated-ci688';
+  const b226=q.get('t21Qa')==='b226InnerSlopeInput'&&
+    q.get('t21B226Source')==='isolated-ci688';
+  const corridor=b226||(q.get('t21Qa')==='b225OriginalCorridorInput'&&
+    q.get('t21B225Source')==='isolated-ci688');
   if(!corridor&&(q.get('t21Qa')!=='b224OriginalGapInput'||
      q.get('t21B224Source')!=='isolated-ci688'))
    throw Error('B224_B225_EXPLICIT_SOURCE_QA_ONLY');
@@ -110,6 +112,11 @@ export class T21B224OriginalGapInputQaApp{
   // It is not a bridge surface, NavMesh point, or manufactured collider.
   const b225NextTarget=point(-6,4.5,14.30,side);
   const b225NextSolid='B224_QA_ONLY:'+faceId('floor-concrete02',side);
+  // B226 follows same character from the B225 second landing.
+  // Both target positions are interior to original CI688 extracted faces.
+  const b226Waypoint=point(-12.1,4.5,12.2,side);
+  const b226InnerTarget=point(-12.05,3+(10.15-6)/3,10.15,side);
+  const b226InnerId='B224_QA_ONLY:'+faceId('slope00-inner',side);
   const startSolid='B224_QA_ONLY:'+faceId(
    direction==='FLOOR_TO_SLOPE'?'floor-concrete01':'slope00-outer',side);
   const endSolid='B224_QA_ONLY:'+faceId(
@@ -141,6 +148,15 @@ export class T21B224OriginalGapInputQaApp{
   let b225SecondLegStartedTick:number|null=null;
   let b225SecondLegUngroundedTicks=0,b225SecondLegGroundedTicks=0;
   let b225LongestUngroundedStreak=0,b225CurrentUngroundedStreak=0;
+  let b226ThirdLegStartTick:number|null=null;
+  let b226ActualInnerSupportTick:number|null=null;
+  let b226StableInnerTick:number|null=null,b226StableInnerGroundedTicks=0;
+  let b226ThirdLegGroundedTicks=0,b226ThirdLegUngroundedTicks=0;
+  let b226ThirdLegLongestAirborneStreak=0,b226CurrentAirborneStreak=0;
+  let b226NearestInnerMeters=Infinity;
+  let b226WaypointNearestMeters=Infinity;
+  let b226VisitedWaypoint=false;
+  let b226ThirdLegJumpEventsAtStart:number|null=null;
   const vec=new Vec3();
   const floorHit=()=>{
    const p=player.getPosition(vec);
@@ -164,6 +180,15 @@ export class T21B224OriginalGapInputQaApp{
     source:'CI688_EXACT_SOURCE_FACES',
     physicalSolidsInsideQa:corridor?30:27,
     b225CorridorEnabled:corridor,
+    b226Enabled:b226,b226Waypoint,b226InnerTarget,b226InnerId,
+    b226ThirdLegStartTick,b226ActualInnerSupportTick,b226StableInnerTick,
+    b226StableInnerGroundedTicks,b226ThirdLegGroundedTicks,
+    b226ThirdLegUngroundedTicks,b226ThirdLegLongestAirborneStreak,
+    b226NearestInnerMeters:Number.isFinite(b226NearestInnerMeters)?
+       b226NearestInnerMeters:null,
+    b226WaypointNearestMeters:Number.isFinite(b226WaypointNearestMeters)?
+       b226WaypointNearestMeters:null,
+    b226VisitedWaypoint,b226ThirdLegJumpEventsAtStart,
     b225NextTarget,b225NextSolid,
     originalSolidsStill25:FROZEN.solids.length===25,
     originalPaintStill17:FROZEN.paintSurfaces.length===17,
@@ -273,6 +298,41 @@ export class T21B224OriginalGapInputQaApp{
          b225StableNextTick=tick;
        }else b225StableNextTicks=0;
       }else b225StableNextTicks=0;
+     }
+     if(b226&&b225StableNextTick!==null){
+      const toWaypoint=Math.hypot(
+       p.x-b226Waypoint[0],p.z-b226Waypoint[2]);
+      const toInner=Math.hypot(
+       p.x-b226InnerTarget[0],p.z-b226InnerTarget[2]);
+      b226WaypointNearestMeters=Math.min(b226WaypointNearestMeters,toWaypoint);
+      b226NearestInnerMeters=Math.min(b226NearestInnerMeters,toInner);
+      if(stats.playerGrounded&&support===b225NextSolid&&toWaypoint<.75)
+       b226VisitedWaypoint=true;
+      if(b226ThirdLegStartTick===null&&
+         (input.moveX!==0||input.moveY!==0)){
+       b226ThirdLegStartTick=tick;
+       b226ThirdLegJumpEventsAtStart=validJumpInputs;
+      }
+      if(b226ThirdLegStartTick!==null&&b226StableInnerTick===null){
+       if(stats.playerGrounded){
+        b226ThirdLegGroundedTicks++;
+        b226CurrentAirborneStreak=0;
+       }else{
+        b226ThirdLegUngroundedTicks++;
+        b226CurrentAirborneStreak++;
+        b226ThirdLegLongestAirborneStreak=Math.max(
+         b226ThirdLegLongestAirborneStreak,b226CurrentAirborneStreak);
+       }
+       if(stats.playerGrounded&&support===b226InnerId){
+        b226ActualInnerSupportTick??=tick;
+        if(input.moveX===0&&input.moveY===0&&
+           toInner<.90&&validJumpInputs===1){
+         b226StableInnerGroundedTicks++;
+         if(b226StableInnerGroundedTicks>=18)
+          b226StableInnerTick??=tick;
+        }else b226StableInnerGroundedTicks=0;
+       }else b226StableInnerGroundedTicks=0;
+      }
      }
      if(dist<=.22&&stats.playerGrounded&&support===endSolid){
       physicallyEnteredTarget=true;

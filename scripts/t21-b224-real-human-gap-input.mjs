@@ -5,7 +5,8 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
-const corridor=process.env.T21_B225_CORRIDOR==='1';
+const b226=process.env.T21_B226_INNER_SLOPE==='1';
+const corridor=b226||process.env.T21_B225_CORRIDOR==='1';
 const OUT=process.env.T21_B224_OUT||'/tmp/t21-b224';
 const children=[],pending=new Map();
 let ws=null,sequence=0;
@@ -41,7 +42,10 @@ async function click(){
    button:'left',clickCount:1});
 }
 async function scenario(side,direction){
- const url=corridor
+ const url=b226
+  ?ROOT+'?t21Qa=b226InnerSlopeInput&t21B226Source=isolated-ci688'+
+    '&side='+side+'&direction=FLOOR_TO_SLOPE'
+  :corridor
   ?ROOT+'?t21Qa=b225OriginalCorridorInput&t21B225Source=isolated-ci688'+
     '&side='+side+'&direction=FLOOR_TO_SLOPE'
   :ROOT+'?t21Qa=b224OriginalGapInput&t21B224Source=isolated-ci688'+
@@ -55,7 +59,8 @@ async function scenario(side,direction){
     !initial.originalPaintStill17||!initial.originalNavLinksStill26||
     initial.sourceScoreablePromotions!==0||initial.productionAuthorized!==false||
     initial.physicalSolidsInsideQa!==(corridor?30:27)||
-    initial.b225CorridorEnabled!==corridor)
+    initial.b225CorridorEnabled!==corridor||
+    initial.b226Enabled!==b226)
   throw Error('B224_B225_SOURCE_BOOT_UNTRUSTED');
  await click();
  await wait(()=>read('document.pointerLockElement===document.querySelector("#app-canvas")'),10000);
@@ -146,7 +151,103 @@ async function scenario(side,direction){
    originalColliderCollisions:parked.originalColliderContactCount,
    finalBodyPosition:parked.playerPosition}));
  }
- const result={side,direction,oriented,pre,near,end,b225SecondLeg,
+ let b226ThirdLeg=null;
+ if(b226){
+  if(!b225SecondLeg?.stableFloor02)
+   throw Error('B226_CANNOT_TRAVERSE_BEFORE_REAL_FLOOR02_STABILITY');
+  const beforeThird=b225SecondLeg.parked;
+  if(beforeThird.currentFootSolid!==beforeThird.b225NextSolid)
+   throw Error('B226_CANNOT_START_OFF_AUTHENTIC_FLOOR02');
+  const baseMouseX=381;
+  const moveKeyThird=moveKey;
+  async function aimAt(point){
+   const current=await read('window.__t21B224.snapshot()');
+   const dx=point[0]-current.playerPosition[0],
+    dz=point[2]-current.playerPosition[2];
+   const sign=side==='POSITIVE_Z'?1:-1;
+   const desired=Math.atan2(dx*sign,-dz*sign)*180/Math.PI;
+   let delta=desired-current.actualCameraYawDegrees;
+   while(delta>180)delta-=360;
+   while(delta<-180)delta+=360;
+   const targetX=Math.round(500+delta/.22);
+   // CDP generates true mousemove pixels, no synthetic player axis.
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+    x:targetX,y:330,button:'none'});
+   const aimed=await read('window.__t21B224.snapshot()');
+   return {desiredYaw:desired,deltaYaw:delta,targetX,
+    observedYaw:aimed.actualCameraYawDegrees};
+  }
+  // Prior recorded mouse was x=381, so relative CDP look must start
+  // from that actual pixel. 500 is the viewport center only, not
+  // the last event. x=381+delta/.22 gives the intended real movement.
+  async function aimFromLast(point,lastMouseX){
+   const current=await read('window.__t21B224.snapshot()');
+   const dx=point[0]-current.playerPosition[0],
+     dz=point[2]-current.playerPosition[2];
+   const sign=side==='POSITIVE_Z'?1:-1;
+   const desired=Math.atan2(dx*sign,-dz*sign)*180/Math.PI;
+   let d=desired-current.actualCameraYawDegrees;
+   while(d>180)d-=360;
+   while(d< -180)d+=360;
+   const x=lastMouseX+Math.round(d/.22);
+   if(x<10||x>990)throw Error('B226_REAL_MOUSE_VIEWPORT_LIMIT');
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+    x,y:330,button:'none'});
+   const after=await read('window.__t21B224.snapshot()');
+   return {x,desired,actual:after.actualCameraYawDegrees};
+  }
+  const wayAim=await aimFromLast(beforeThird.b226Waypoint,381);
+  await key(moveKeyThird,true);
+  const waypointApproach=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return o.b226VisitedWaypoint||o.tick>beforeThird.tick+150?o:false;
+  },28000);
+  await key(moveKeyThird,false);
+  const waypointRest=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return (o.grounded&&o.currentFootSolid===o.b225NextSolid&&
+      o.b226VisitedWaypoint&&
+      o.b226WaypointNearestMeters<.75&&
+      o.tick>=waypointApproach.tick+20)||
+      o.tick>=waypointApproach.tick+70?o:false;
+  },13000);
+  const innerAim=await aimFromLast(waypointRest.b226InnerTarget,wayAim.x);
+  await key(moveKeyThird,true);
+  const innerApproach=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return o.b226ActualInnerSupportTick!==null||
+     o.b226NearestInnerMeters<.45||
+     o.tick>=waypointRest.tick+115?o:false;
+  },26000);
+  await key(moveKeyThird,false);
+  const innerParked=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return o.b226StableInnerTick!==null||o.tick>=innerApproach.tick+85?o:false;
+  },19000);
+  b226ThirdLeg={wayAim,waypointApproach,waypointRest,innerAim,
+   innerApproach,innerParked,onePlayer:true,
+   stableFirstJump:beforeThird.stableLandingTick!==null,
+   stableSecondFloor:beforeThird.b225StableNextTick!==null,
+   visitedWaypoint:innerParked.b226VisitedWaypoint,
+   physicallyTouchedInnerSlope:innerParked.b226ActualInnerSupportTick!==null,
+   physicallyStableInnerSlope:innerParked.b226StableInnerTick!==null,
+   totalSpaceInputs:innerParked.validJumpInputs,
+   noTeleport:innerParked.teleportsAfterQaSpawn===0,
+   originalRuntimeContacts:innerParked.originalColliderContactCount};
+  console.log('B226_REAL_BROWSER_INNER_SLOPE_CONTINUITY',JSON.stringify({
+   side,visitedWaypoint:b226ThirdLeg.visitedWaypoint,
+   waypointNearest:innerParked.b226WaypointNearestMeters,
+   touchedInnerSlope:b226ThirdLeg.physicallyTouchedInnerSlope,
+   stableInnerSlope:b226ThirdLeg.physicallyStableInnerSlope,
+   innerSlopeClosestMeters:innerParked.b226NearestInnerMeters,
+   observedThirdGroundedTicks:innerParked.b226ThirdLegGroundedTicks,
+   observedThirdAirborneTicks:innerParked.b226ThirdLegUngroundedTicks,
+   totalSpaceInputs:innerParked.validJumpInputs,
+   originalStageCollisions:innerParked.originalColliderContactCount,
+   sourceFootChain:innerParked.b225NativeSourceSupportOrder,
+   finalPosition:innerParked.playerPosition}));
+ }
+ const result={side,direction,oriented,pre,near,end,b225SecondLeg,b226ThirdLeg,
   actualKeydown:true,realPlayerController:true,actorTeleports:0};
  console.log('B224_REAL_BROWSER_SOURCE_JUMP',JSON.stringify({
   side,direction,atTick:end.tick,jumpInputs:end.validJumpInputs,
@@ -202,7 +303,9 @@ try{
        ['FLOOR_TO_SLOPE','SLOPE_TO_FLOOR']))
    reports.push(await scenario(side,direction));
  }
- const summary={schema:corridor?'B225_REAL_CDP_CONTINUOUS_SOURCE_CORRIDOR':'B224_REAL_CDP_INPUT_PLAYERCONTROLLER_RAPIER',
+ const summary={schema:b226?'B226_REAL_CDP_INNER_SLOPE_SOURCE_CONTINUITY':
+  corridor?'B225_REAL_CDP_CONTINUOUS_SOURCE_CORRIDOR':
+   'B224_REAL_CDP_INPUT_PLAYERCONTROLLER_RAPIER',
   qaOnly:true,productionAuthorized:false,scoreable:0,
   sourceStage25_17_26_0:true,actorTeleportsAfterSpawn:0,
   nativeRealPlayerKeyboard:true,realBrowserWebGL2:true,
@@ -211,14 +314,35 @@ try{
   stableSourceLandingCount:reports.filter(x=>x.end.stableLandingTick!==null).length,
   secondStageTouched:reports.filter(x=>x.b225SecondLeg?.physicallyTouchedOriginalFloor02).length,
   secondStageStable:reports.filter(x=>x.b225SecondLeg?.stableFloor02).length,
+  b226WaypointReached:reports.filter(x=>x.b226ThirdLeg?.visitedWaypoint).length,
+  b226InnerSourceTouched:reports.filter(x=>x.b226ThirdLeg?.physicallyTouchedInnerSlope).length,
+  b226InnerSourceStable:reports.filter(x=>x.b226ThirdLeg?.physicallyStableInnerSlope).length,
   reports};
- writeFileSync(resolve(OUT,corridor?'b225-continuous-native-source-corridor.json':
+ writeFileSync(resolve(OUT,b226?'b226-inner-slope-source.json':
+  corridor?'b225-continuous-native-source-corridor.json':
   'b224-native-input-rapier.json'),JSON.stringify(summary,null,2));
  console.log('B224_REAL_KEYBOARD_FINAL',JSON.stringify({tested:summary.completed,
   physicallyStableLandings:summary.stableSourceLandingCount,
   preciseCenterLandings:summary.preciseCenterSuccessCount,
   sourceStage25_17_26_0:true,officialWinner:'NONE'}));
- if(corridor){
+ if(b226){
+  if(summary.completed!==2||summary.stableSourceLandingCount!==2||
+     summary.secondStageStable!==2||
+     reports.some(r=>!r.b226ThirdLeg||
+       !r.b226ThirdLeg.noTeleport||
+       r.b226ThirdLeg.totalSpaceInputs!==1||
+       r.b226ThirdLeg.originalRuntimeContacts!==0))
+   throw Error('B226_EARLIER_ORIGINAL_SOURCE_GATES_FAILED');
+  // First diagnostic execution must show truthful inner-seam outcome, not
+  // fail CI solely because a new (unverified) route remains disconnected.
+  console.log('B226_REAL_CORRIDOR_RESULT',JSON.stringify({
+   sourceLanding2of2:summary.stableSourceLandingCount,
+   nextFloor2of2:summary.secondStageStable,
+   waypoint:summary.b226WaypointReached,
+   innerSlopeTouch:summary.b226InnerSourceTouched,
+   innerSlopeStable:summary.b226InnerSourceStable,
+   originalStage:'25/17/26/0',authorized:false}));
+ }else if(corridor){
   // The B225 pass certifies actual keyboard action, 2m source jump, and
   // genuine onward probe execution. Whether the 0.5186m seam is walkable
   // must be judged separately from the logged evidence, never faked.

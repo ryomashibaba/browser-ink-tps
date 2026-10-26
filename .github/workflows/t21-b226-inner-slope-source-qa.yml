@@ -1,0 +1,37 @@
+name: T21 B226 original inner slope real input continuation
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/main.ts'
+      - 'src/app/T21B224OriginalGapInputQaApp.ts'
+      - 'scripts/t21-b224-real-human-gap-input.mjs'
+      - '.github/workflows/t21-b226-inner-slope-source-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  authentic-inner-slope:
+    name: B226 real Chromium three-segment original source continuation
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-b224-real-human-gap-input.mjs
+      - name: Real human source corridor toward inner slope
+        env:
+          T21_B226_INNER_SLOPE: '1'
+          T21_B224_OUT: /tmp/t21-b226
+        run: node scripts/t21-b224-real-human-gap-input.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b226-real-inner-slope-source-corridor
+          path: /tmp/t21-b226/
+          retention-days: 14
+          if-no-files-found: warn
