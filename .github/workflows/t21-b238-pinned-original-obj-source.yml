@@ -4,6 +4,7 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/undertow-temple01-b238-pinned-full-seam-scan.py'
+      - 'scripts/undertow-temple01-b238-strict-source-verdict.py'
       - 'scripts/T21B238FullOriginalObjSeamSeed.test.ts'
       - '.github/workflows/t21-b238-pinned-original-obj-source.yml'
   workflow_dispatch:
