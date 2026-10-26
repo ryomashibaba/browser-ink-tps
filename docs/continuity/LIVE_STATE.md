@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `8739909cb2415557d45a37095427ab0c42388b1b`
+- 同期元QA HEAD: `21691bf8244a9274cb9c2dab208e0fa0daf29417`
 - 最新番号のQAレポート: W10-B233 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B233-real-cpu-crowd-native-kcc-ownership.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B234 （着手・完了の保証ではない）
-- レポート記載のActions: 確認できない
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40311198089
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
