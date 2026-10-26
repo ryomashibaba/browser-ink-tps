@@ -1,0 +1,25 @@
+name: T21 B230 physical CPU local source gap actuator QA
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/ai/B230CpuLocalGapQaActuator.ts'
+      - 'scripts/T21B230CpuLocalGapActuator.test.ts'
+      - '.github/workflows/t21-b230-cpu-local-gap-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cpu-native-kcc-local-gap:
+    name: B230 authentic CPU speed native KCC actuator and fail-closed inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: B230 authentic native CPU locomotion and negative guards
+        run: npx vitest run scripts/T21B230CpuLocalGapActuator.test.ts scripts/T21B229CpuSpeedOriginalGapKcc.test.ts --reporter=verbose
