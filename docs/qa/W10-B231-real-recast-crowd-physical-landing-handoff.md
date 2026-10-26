@@ -1,0 +1,11 @@
+# B231 genuine native Recast Crowd proxy after actual CPU-speed original physical landing
+
+2026-10-26 JST, parent `0a7b24a6757225fba52e675f8787d7a99c76dc2f`. B230 proved four physically backed genuine Rapier source jumps at CPU speed 4.4m/s and acceleration 18m/s², each landing 18 consecutive ticks on exact CI688 opposite source mesh. The physical pilot is NOT yet `CpuAgentSystem` or Crowd.
+
+## Scope and hard release guard
+
+B231 implements the missing **control-plane boundary** as `B231CrowdLandingHandoffQa`: it accepts an immutable B230 KCC final observation only when actual native landing on the exact target solid, at least 18 consecutive grounded ticks, launch one physical jump, no actor relocation and no collisions against unrelated original solids are proven. It then uses the genuine `RecastStageNavigation` native query at the **actual physical foot** (not capsule center): snapped candidate must lie ≤0.30m away, and `Crowd.addAgent` must yield the same local pose within 0.30m. A real native 24-frame Crowd hold must remain ≤0.30m from the Rapier landing without any guessed path, offmesh connection or CPU position mutation. The Crowd is a **new QA steering proxy, not the original physical actor**; it is removed after the probe. No fake resume and no `CpuAgentSystem` method is patched.
+
+Comparison: unchanged 25-solid Recast nav (source faces absent) and a *separately and explicitly* source-inclusive 30-solid **QA-only** Recast nav (the original 25 + precisely the five original CI688 source triangle meshes of this mirror, navigation enabled only in memory). Native Crowd never mutates the 27-solid Rapier pilot. Existing 26 nav links are held constant and no offmesh jump bridging 2.074235m is added. Native `auditPath` across this real physical jump is recorded and cannot be conflated with direct walk.
+
+This is a diagnostic gate first: if the 25-solid closest-poly would snap the CPU proxy somewhere else, refuse; if the source-inclusive Recast cannot maintain Crowd pose, refuse. On positive evidence a later strict gate can certify local *steering proxy handoff*, but this still DOES NOT establish real seven-bot `CpuAgentSystem`, actual CPU auto route, full stage crossing or any production-scored match. Frozen 25/17/26/0, 0/12, productionAuthorized false, winner NONE.
