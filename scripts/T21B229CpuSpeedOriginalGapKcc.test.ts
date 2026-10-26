@@ -251,10 +251,30 @@ describe('B229 source gap physical candidate with real CPU locomotive constraint
    !x.liveStageModified&&x.teleportsAfterInitialSpawn===0&&
    x.nativeKccSteps>0)).toBe(true);
   expect(walks.every(x=>!x.accepted)).toBe(true);
-  // First B229 experiment is diagnostic: launch and safe landing must be
-  // measured before the physical jump gate can be promoted to strict PASS.
-  // Never silently count a Recast projected endpoint as actual landing.
+  // B229 real native CI #40301261366: 4/4 native CPU-speed jumps
+  // have real original-source ground-backed launches, actual airborne KCC,
+  // target original-source landings and 18 consecutive stable grounded ticks.
+  // WALK_ONLY 0/4. Reject any later implicit success based on nearestNav.
   expect(jumps).toHaveLength(4);
+  expect(walks).toHaveLength(4);
+  expect(walks.every(x=>!x.physicalTargetReached&&
+   x.firstTargetLandingTick===null)).toBe(true);
+  expect(jumps.every(x=>x.accepted&&x.startOriginalSourceSupported&&
+   x.physicallyGroundedAtLaunch&&x.actualLaunchSupportId?.startsWith(
+    'B229_QA:underpass-route-')&&
+   x.launchTick!==null&&
+   x.launchSpeedMetersPerSecond!==null&&
+   x.launchSpeedMetersPerSecond<=GAME_CONFIG.cpu.maxSpeedMetersPerSecond&&
+   x.leftGround&&x.landedAfterJump&&
+   x.firstTargetLandingTick!==null&&
+   x.maxStableTargetTicks>=18&&
+   x.closestGroundedOriginalTargetMeters!==null&&
+   x.closestGroundedOriginalTargetMeters<=.65&&
+   x.collisionsAgainstOriginal25.length===0)).toBe(true);
+  console.log('B229_CPU_SPEED_RAPIER_LOCAL_GAP_STRICT_GATE_PASS',
+   JSON.stringify({tested:4,cpuSpeedKccLandings:4,
+    groundOnlyCrossings:0,liveCpuAgentSystemAuthorization:false,
+    realCrowdPathCertified:false,productionAuthorized:false}));
   expect(FROZEN.solids).toHaveLength(25);
   expect(FROZEN.paintSurfaces).toHaveLength(17);
   expect(FROZEN.navigationLinks).toHaveLength(26);
