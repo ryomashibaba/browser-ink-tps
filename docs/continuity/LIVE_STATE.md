@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `0a7b24a6757225fba52e675f8787d7a99c76dc2f`
-- 最新番号のQAレポート: W10-B230 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B230-local-cpu-physical-jump-actuator.md
+- 同期元QA HEAD: `3107b60d35d4b0e2d957f3ea68585705404f37df`
+- 最新番号のQAレポート: W10-B231 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B231-real-recast-crowd-physical-landing-handoff.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B231 （着手・完了の保証ではない）
-- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40304161442
+- 次工程候補: W10-B232 （着手・完了の保証ではない）
+- レポート記載のActions: 確認できない
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
