@@ -131,7 +131,32 @@ describe('B231 genuine Crowd proxy rejoin after independently proven KCC landing
   expect(records).toHaveLength(4);
   expect(records.every(x=>x.forgedPhysicalWasBlocked&&
    x.original25FrozenGate==='BLOCKED')).toBe(true);
-  // The initial B231 pilot is diagnostic: don't claim rejoin until
-  // genuine native projection, Crowd add and 24-frame hold are observed.
+  // B231 CI #40305468838 directly verified four successful true
+  // native Crowd proxy registrations and 24-frame stationary holds.
+  // Preserve them as a hard regression gate; NOT full route certification.
+  expect(records.every(x=>
+   x.realKccStable&&x.original25Projection.success===false&&
+   x.original25FrozenGate==='BLOCKED'&&
+   x.actual27PhysicalPlus30NavCrowdLab.decision==='QA_CROWD_PROXY_REJOIN'&&
+   x.actual27PhysicalPlus30NavCrowdLab.nativeCrowdFrames===24&&
+   x.actual27PhysicalPlus30NavCrowdLab.nativeNearestMeters!==null&&
+   x.actual27PhysicalPlus30NavCrowdLab.nativeNearestMeters<=.3&&
+   x.actual27PhysicalPlus30NavCrowdLab.initialCrowdSnappedMeters!==null&&
+   x.actual27PhysicalPlus30NavCrowdLab.initialCrowdSnappedMeters<=.3&&
+   x.actual27PhysicalPlus30NavCrowdLab.finalCrowdDistanceFromRealLandingMeters!==null&&
+   x.actual27PhysicalPlus30NavCrowdLab.finalCrowdDistanceFromRealLandingMeters<=.3&&
+   x.actual27PhysicalPlus30NavCrowdLab.nativeCrowdFootPositions.length===24&&
+   x.actual27PhysicalPlus30NavCrowdLab.actualPhysicalActorMovedByCrowd===false&&
+   x.directAcrossGapNativePath.reachedTarget===false&&
+   x.directAcrossGapNativePath.endpointError>2.9)).toBe(true);
+  console.log('B231_NATIVE_CROWD_4_LOCAL_REJOIN_CANDIDATES_PASS',
+   JSON.stringify({physicalB230NativeKccLandings:4,
+    actualNativeRecastCrowdProxyRegistrations:4,
+    nativeCrowdHoldFramesEach:24,
+    original25RejoinRefusals:4,
+    disconnectedCrossGapRecastPaths:4,
+    physicalActorPositionCopiedFromCrowd:false,
+    liveCpuAgentsOrCrossTeamRoutesCertified:false,
+    productionAuthorized:false,originalWinner:'NONE'}));
  },120000);
 });

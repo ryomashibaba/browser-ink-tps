@@ -9,3 +9,20 @@ B231 implements the missing **control-plane boundary** as `B231CrowdLandingHando
 Comparison: unchanged 25-solid Recast nav (source faces absent) and a *separately and explicitly* source-inclusive 30-solid **QA-only** Recast nav (the original 25 + precisely the five original CI688 source triangle meshes of this mirror, navigation enabled only in memory). Native Crowd never mutates the 27-solid Rapier pilot. Existing 26 nav links are held constant and no offmesh jump bridging 2.074235m is added. Native `auditPath` across this real physical jump is recorded and cannot be conflated with direct walk.
 
 This is a diagnostic gate first: if the 25-solid closest-poly would snap the CPU proxy somewhere else, refuse; if the source-inclusive Recast cannot maintain Crowd pose, refuse. On positive evidence a later strict gate can certify local *steering proxy handoff*, but this still DOES NOT establish real seven-bot `CpuAgentSystem`, actual CPU auto route, full stage crossing or any production-scored match. Frozen 25/17/26/0, 0/12, productionAuthorized false, winner NONE.
+
+## Actual first CI result — #40305468838 SUCCESS (2026-10-26)
+
+**This first run returned clear positive data that is now fixed as strict QA regression assertions.** B230 real Rapier KCC succeeded on all four original two-face jump directions; *fresh native Recast Crowd* registration was supported locally at those KCC landing feet only on the QA 30-source-face NavMesh. The actual original 25-solid Recast has no closest polygon at any of the four original source destinations and its handoff gate refused them, correctly.
+
+| Mirrored B230 physical landing | Original 25 Recast landing projection | QA30 nearest/snap from exact physical foot | Real Crowd stationary hold | Native Recast source-gap path |
+|---|---|---:|---|---|
+| Positive FloorConcrete01→outer Slope00 | failed | 0.068977m | 24 frames, within 0.30m | **DISCONNECTED** (~2.987m endpoint error) |
+| Positive outer Slope00→FloorConcrete01 | failed | 0.110048m | 24 frames, within 0.30m | **DISCONNECTED** (~2.953m endpoint error) |
+| Negative FloorConcrete01→outer Slope00 | failed | 0.065563m | 24 frames, within 0.30m | **DISCONNECTED** (~2.977m endpoint error) |
+| Negative outer Slope00→FloorConcrete01 | failed | 0.102698m | 24 frames, within 0.30m | **DISCONNECTED** (~2.953m endpoint error) |
+
+The genuine Crowd was instantiated *as a QA-only newly-created steering proxy* after the independently verified physical Rapier landing. No previously steering real `CpuAgentSystem` actor was resumed: **this is not real CPU rejoin yet**. The actual KCC body was not moved by Crowd; no source meshes or offmesh links were promoted to production. B231 now explicitly demands 4/4 local native Crowd handoffs and 4/4 failed unsupported original 25-solid NavMesh handoffs. It also insists that the 2.074m jump remains disconnected on native Recast, correctly classified as physical jump, not a walkable polygon link.
+
+### Next decision (B232)
+
+Before attaching to `CpuAgentSystem`, demonstrate a true moving **native Crowd target request on a local exact source floor** and physical validity for those proposed steps, including any initial Recast snap and all resultant KCC collisions. Then design explicit suspend/rejoin ownership for existing CPU Crowd agents without relocating the physical actor. The Recast first gap must remain disconnected until a separately authenticated *physical-jump transition control* exists; later two grounded but nav-disconnected seams also require source-respecting navigation transitions. No release or 4v4 claim.
