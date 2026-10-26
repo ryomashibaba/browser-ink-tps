@@ -228,6 +228,55 @@ export class B230CpuLocalGapQaActuator {
   return this.snapshot();
  }
  /**
+  * B233 Crowd-controlled source run-up, on the ORIGINAL grounded Rapier
+  * body that later jumps. A native Crowd foot is steering input only.
+  * It NEVER sets the physical pose, creates a fake link, or authorizes CPU.
+  * The jump itself is still the B230 genuine KCC computation.
+  */
+ public advanceSourceCrowdApproachQa(proposedFoot:Readonly<{x:number;y:number;z:number}>){
+  const before=this.body.translation();
+  const footY=before.y-PROFILE.humanFootOffsetMeters;
+  const position:[number,number,number]=[before.x,footY,before.z];
+  const reject=(reason:string)=>{
+   this.fail(reason);
+   return {approved:false,reason,foot:position,
+    nativeKccSteps:this.stepCount,speedMetersPerSecond:this.speed,
+    grounded:this.grounded,colliderId:this.latestCollider,
+    actualMoveMeters:0};
+  };
+  if(this.phase!=='APPROACH'||this.launchAt!==null||
+    !this.grounded||this.latestCollider!==this.sourceId)
+   return reject('B233_PRELAUNCH_NOT_ON_EXACT_ORIGINAL_SOURCE');
+  if(![proposedFoot.x,proposedFoot.y,proposedFoot.z].every(Number.isFinite))
+   return reject('B233_CROWD_PROPOSAL_NONFINITE');
+  const dx=proposedFoot.x-before.x,dz=proposedFoot.z-before.z;
+  const dist=Math.hypot(dx,dz);
+  if(dist>.30||Math.abs(proposedFoot.y-footY)>.18)
+   return reject('B233_CROWD_PROPOSAL_OFF_PHYSICAL_SOURCE');
+  if(++this.tickIndex>240)return reject('B233_APPROACH_TIMEOUT');
+  this.speed=Math.min(SPEED,Math.sqrt(2*ACCEL*dist),
+   this.speed+ACCEL*DT);
+  const distance=Math.min(dist,this.speed*DT);
+  this.grounded=this.stepNative(
+   dist>1e-8?dx/dist*distance:0,-.12,
+   dist>1e-8?dz/dist*distance:0);
+  this.latestCollider=this.footSolid();
+  const after=this.body.translation();
+  const moved=Math.hypot(after.x-before.x,after.z-before.z);
+  if(!this.grounded||this.latestCollider!==this.sourceId)
+   return reject('B233_PRELAUNCH_SOURCE_FOOT_LOST');
+  if(this.originalCollisionIds.size)
+   return reject('B233_PRELAUNCH_UNRELATED_FROZEN_COLLISION');
+  if(moved>SPEED*DT+.001)
+   return reject('B233_PRELAUNCH_CPU_SPEED_LIMIT');
+  return {approved:true,reason:'B233_GENUINE_CROWD_STEERED_NATIVE_KCC',
+   foot:[after.x,after.y-PROFILE.humanFootOffsetMeters,after.z]
+    as [number,number,number],
+   nativeKccSteps:this.stepCount,speedMetersPerSecond:this.speed,
+   grounded:this.grounded,colliderId:this.latestCollider,
+   actualMoveMeters:moved};
+ }
+ /**
   * B232 native-Crowd *steering candidate*, QA only. This method directly
   * continues the SAME genuine Rapier body that finished the B230 jump.
   * Crowd cannot position or teleport this KCC. It requests an XZ step,

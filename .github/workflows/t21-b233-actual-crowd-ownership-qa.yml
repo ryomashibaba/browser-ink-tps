@@ -1,0 +1,26 @@
+name: T21 B233 real Crowd source approach to native KCC jump and rejoin
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/ai/B230CpuLocalGapQaActuator.ts'
+      - 'src/ai/B233CpuCrowdKccOwnershipQa.ts'
+      - 'scripts/T21B233CpuCrowdOwnership.test.ts'
+      - '.github/workflows/t21-b233-actual-crowd-ownership-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b233-physical-cpu-ownership:
+    name: B233 real native Crowd approach and same Rapier body jump and return
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Actual Recast Crowd → original KCC jump → moving Crowd QA
+        run: npx vitest run scripts/T21B233CpuCrowdOwnership.test.ts scripts/T21B232CrowdKccMovement.test.ts scripts/T21B231NativeCrowdRejoin.test.ts scripts/T21B230CpuLocalGapActuator.test.ts --reporter=verbose
