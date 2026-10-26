@@ -92,8 +92,11 @@ try{
     now.foot[2]-before.foot[2]):0};
   });
   const moved=displacement.filter(x=>x.metres>.30).length;
-  return moved>0?{...x,displacement,moved}:false;
- },115000);
+  // STAGING may contain real initial spawn movement/first drop;
+  // B234 must actually observe native PLAYING, not prematurely accept.
+  return moved>0&&x.stage==='PLAYING'
+   ?{...x,displacement,moved}:false;
+ },170000);
  const r=movementWitness.actual;
  const expected=['A1','A2','A3','B1','B2','B3','B4'];
  const pass=ready.browserEnabled==='FROZEN_25_READ_ONLY'&&
