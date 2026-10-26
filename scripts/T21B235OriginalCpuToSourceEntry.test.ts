@@ -102,6 +102,13 @@ describe('B235 native original CPU genuine grounded positions versus source entr
     const fromQa=nav.auditNavMeshProjection(foot);
     const originalRoute=base.auditPath(foot,vec(entry),.30);
     const qaRoute=nav.auditPath(foot,vec(entry),.30);
+    const terminal=qaRoute.nativePathPoints.at(-1)??null;
+    const terminalFoot=terminal?[
+     terminal.x,terminal.y,terminal.z] as [number,number,number]:null;
+    const finalPhysical25=terminalFoot?
+     physicalFoot(baselinePhysics,terminalFoot):null;
+    const finalPhysical30=terminalFoot?
+     physicalFoot(rapier,terminalFoot):null;
     cpu.push({id:bot.id,
      browserSample:'B234_PLAYING_FRAME_1057_TRUE_CPU_FOOT',
      foot:bot.foot,originalRegisteredSupportId:bot.originalRegisteredSupportId,
@@ -118,7 +125,14 @@ describe('B235 native original CPU genuine grounded positions versus source entr
       endpointErrorMeters:qaRoute.endpointErrorMeters,
       startSnapDistanceMeters:qaRoute.startSnapDistanceMeters,
       endSnapDistanceMeters:qaRoute.endSnapDistanceMeters,
-      points:qaRoute.pointCount},
+      points:qaRoute.pointCount,
+      lastNativePathPoint:terminal,
+      nativeTerminalGroundOriginal25:finalPhysical25,
+      nativeTerminalGroundQa30:finalPhysical30,
+      terminalXZToSourceEntryMeters:terminal?
+       Math.hypot(terminal.x-entry[0],terminal.z-entry[2]):null,
+      terminalHeightDifferenceToSourceEntryMeters:terminal?
+       terminal.y-entry[1]:null},
      trueGapPhysicalJumpNotTestedHere:true,originalCpuDidNotTraversePath:true
     });
    }
@@ -155,8 +169,38 @@ describe('B235 native original CPU genuine grounded positions versus source entr
     expect(cpu.originalNavStart.success).toBe(true);
     expect(cpu.qaNavStart.success).toBe(true);
     expect(cpu.originalCpuDidNotTraversePath).toBe(true);
+    // Native Recast, not a guessed obstruction: 7/7 actual real F3
+    // sample origins stop > 13m before exact original FloorConcrete01.
+    expect(cpu.baseline25.reachedTarget).toBe(false);
+    expect(cpu.added30.querySuccess).toBe(true);
+    expect(cpu.added30.reachedTarget).toBe(false);
+    expect(cpu.added30.startSnapDistanceMeters).toBeLessThan(.3);
+    expect(cpu.added30.endSnapDistanceMeters).toBeLessThan(.3);
+    expect(cpu.added30.endpointErrorMeters).toBeGreaterThan(13.0);
+    expect(cpu.added30.endpointErrorMeters).toBeLessThan(14.0);
+    expect(cpu.added30.lastNativePathPoint).not.toBeNull();
+    expect(cpu.added30.nativeTerminalGroundOriginal25?.id).not.toBeNull();
+    expect(cpu.added30.nativeTerminalGroundQa30?.id).not.toBeNull();
    }
   }
+  console.log('B235_NATIVE_CPU_STAGE_ENTRY_7_OF_7_BLOCKED_STRICT',
+   JSON.stringify({nativeCpuStartSamples:7,
+    exactSourceEntryFacesAddedInQaPerSide:5,
+    qaSourceEntryGroundedBothSides:true,
+    directlyNavProjectedQaEntryBothSides:true,
+    actualNativeCpuToEntryPathsConnected:0,
+    measuredNativeEndpointErrorsMeters:results.flatMap(x=>
+      x.actualRealCpuStarts.map(y=>({cpuId:y.id,
+       error:y.added30.endpointErrorMeters,
+       terminal:y.added30.lastNativePathPoint,
+       original25NativeGround:y.added30.nativeTerminalGroundOriginal25?.id,
+       qa30NativeGround:y.added30.nativeTerminalGroundQa30?.id,
+       terminalXZToEntry:y.added30.terminalXZToSourceEntryMeters,
+       terminalYDeltaToEntry:y.added30.terminalHeightDifferenceToSourceEntryMeters}))),
+    stageAuthorityStill:'25/17/26/0',
+    realCPUAutonomousNavigationNewlyAuthorized:false,
+    originalOpponentRoutesCertified:'0/12',officialWinner:'NONE',
+    productionAuthorized:false}));
   expect(FROZEN.solids).toHaveLength(25);
   expect(FROZEN.paintSurfaces).toHaveLength(17);
   expect(FROZEN.navigationLinks).toHaveLength(26);
