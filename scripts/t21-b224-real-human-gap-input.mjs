@@ -320,12 +320,48 @@ async function scenario(side,direction){
     o.tick>=beforeFourth.tick+150?o:false;
   },29000,30);
   await key(moveKey,false);
-  const underpassRest=await wait(async()=>{
+  let underpassRest=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
    return o.b228StableNativeTick!==null||
     o.tick>=underpassApproach.tick+110?o:false;
   },24000);
+  const realRegisteredFloorNudges=[];
+  // Native original foot may be briefly touched at the source seam.
+  // Only short real keyboard W/S pushes can settle the actual body.
+  for(let i=0;i<3&&underpassRest.b228StableNativeTick===null&&
+      underpassRest.b228FirstNativeFootTick!==null;i++){
+   const beforeNudge=underpassRest;
+   await key(moveKey,true);
+   const nudge=await wait(async()=>{
+    const o=await read('window.__t21B224.snapshot()');
+    return o.tick>=beforeNudge.tick+8?o:false;
+   },5000,15);
+   await key(moveKey,false);
+   underpassRest=await wait(async()=>{
+    const o=await read('window.__t21B224.snapshot()');
+    return o.b228StableNativeTick!==null||
+     o.tick>=nudge.tick+80?o:false;
+   },15000,30);
+   realRegisteredFloorNudges.push({
+    side,attempt:i+1,fromTick:beforeNudge.tick,endTick:underpassRest.tick,
+    actualNativeSourceFootAtEnd:underpassRest.currentFootSolid,
+    stableNativeAfterRealKey:underpassRest.b228StableNativeTick!==null,
+    actualNativeSupportCount:underpassRest.b228NativeColliderSupportTicks,
+    consecutiveNativeRestTicks:underpassRest.b228StableNativeTicks,
+    grounded:underpassRest.grounded,
+    lastAxis:underpassRest.lastFixedInputAxis,
+    targetErrorMeters:Math.hypot(
+     underpassRest.playerPosition[0]-underpassRest.b228UnderpassTarget[0],
+     underpassRest.playerPosition[2]-underpassRest.b228UnderpassTarget[2]),
+    totalSpaceInputs:underpassRest.validJumpInputs,
+    actorRelocations:underpassRest.teleportsAfterQaSpawn
+   });
+  }
+  if(realRegisteredFloorNudges.length)
+   console.log('B228_REAL_NATIVE_FLOOR_KEYBOARD_SETTLE',
+    JSON.stringify(realRegisteredFloorNudges));
   b228FourthLeg={beforeFourth,underpassAim,underpassApproach,underpassRest,
+   realRegisteredFloorNudges,
    samePlayer:true,oneSpaceOnly:underpassRest.validJumpInputs===1,
    physicalOriginalUnderpassHit:underpassRest.b228FirstNativeFootTick!==null,
    stableOriginalUnderpass:underpassRest.b228StableNativeTick!==null,
@@ -342,6 +378,15 @@ async function scenario(side,direction){
     !b228FourthLeg.originalContactAlreadyBeforeMove,
    originalRegisteredFootId:underpassRest.b228UnderpassSolid,
    actualNativeFootId:b228FourthLeg.actualNativeFootId,
+   finalActualFootId:underpassRest.currentFootSolid,
+   finalActualFixedAxis:underpassRest.lastFixedInputAxis,
+   finalActualMoveAxis:underpassRest.inputAxis,
+   finalNativeConsecutiveRestTicks:underpassRest.b228StableNativeTicks,
+   totalNativeOriginalSupportTicks:underpassRest.b228NativeColliderSupportTicks,
+   originalRegisteredFloorNudges:realRegisteredFloorNudges.length,
+   finalDistanceMeters:Math.hypot(
+    underpassRest.playerPosition[0]-underpassRest.b228UnderpassTarget[0],
+    underpassRest.playerPosition[2]-underpassRest.b228UnderpassTarget[2]),
    originalRegisteredFootContact:b228FourthLeg.physicalOriginalUnderpassHit,
    stableGroundedNativeUnderpass:b228FourthLeg.stableOriginalUnderpass,
    firstOriginalGroundedTick:underpassRest.b228FirstNativeFootTick,
