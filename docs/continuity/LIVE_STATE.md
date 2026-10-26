@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `7ae1ab0dda97a27c2e2049e02d5d9ba7703f84a0`
+- 同期元QA HEAD: `b6bcf1b2b63ba511f246f7c42e0a2307a30930c2`
 - 最新番号のQAレポート: W10-B240 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B240-original-source-recast-clearance-root-cause.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B241 （着手・完了の保証ではない）
