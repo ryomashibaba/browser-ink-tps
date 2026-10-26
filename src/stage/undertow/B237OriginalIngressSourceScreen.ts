@@ -120,9 +120,11 @@ export function b237OriginalIngressSourceScreen(
   seen.add(token);
   const verts=c.originalVertices;
   const xs=verts.map(v=>v[0]),ys=verts.map(v=>v[1]),zs=verts.map(v=>v[2]);
-  const bounds={x:[Math.min(...xs),Math.max(...xs)],
-   y:[Math.min(...ys),Math.max(...ys)],
-   z:[Math.min(...zs),Math.max(...zs)]};
+  const bounds={
+   x:[Math.min(...xs),Math.max(...xs)] as const,
+   y:[Math.min(...ys),Math.max(...ys)] as const,
+   z:[Math.min(...zs),Math.max(...zs)] as const
+  };
   const morphology=shape(verts);
   // Only cheap exact 3D bounds for dispatch, not a "no missing sources" proof.
   const slopeZ=slope.mesh.vertices.map(v=>v[2]);
