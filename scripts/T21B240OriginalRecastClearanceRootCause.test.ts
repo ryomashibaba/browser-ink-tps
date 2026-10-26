@@ -239,6 +239,16 @@ describe('B240 original FloorLine00 Recast parameter isolation',()=>{
     navFromRecordedRightLowToSlope?.strict).toBe(true);
    expect(cases.find(c=>c.id==='RADIUS_0_DIAGNOSTIC_UNSAFE')?.
     realHumanCapsuleValid).toBe(false);
+   // Native #40330372402: radius-zero local topology remains connected
+   // EVEN when NO existing original links are passed to the QA navmesh.
+   // This is still physically UNSAFE for a 0.30m CPU / 0.32m capsule.
+   const zero=cases.find(c=>c.id==='RADIUS_0_DIAGNOSTIC_UNSAFE');
+   const linkless=cases.find(c=>c.id==='RADIUS_0_NO_OFFMESH_DIAGNOSTIC_UNSAFE');
+   expect(linkless?.navFromRecordedRightLowToSlope?.strict).toBe(true);
+   expect(linkless?.navFromRecordedRightLowToSlope?.snapEnd).toBeCloseTo(
+    zero?.navFromRecordedRightLowToSlope?.snapEnd??NaN,5);
+   expect(linkless?.cpuFootprintValid).toBe(false);
+   expect(linkless?.realHumanCapsuleValid).toBe(false);
    // On zero-radius NavMesh, source samples may project close to the
    // real triangle, but this cannot justify a CPU radius change.
    const zeroFoots=cases.find(c=>c.id==='RADIUS_0_DIAGNOSTIC_UNSAFE')?.
