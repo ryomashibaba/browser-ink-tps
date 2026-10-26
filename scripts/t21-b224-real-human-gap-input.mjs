@@ -112,8 +112,12 @@ async function scenario(side,direction){
   await key(moveKey,true);
   const advance=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
+   // B226 may not stop merely near the model centroid:
+   // negative-side CI #40293452614 reached <0.22m but remained supported
+   // by the outer slope. Keep REAL W/S pressed until Floor02 truly holds
+   // the human capsule. Baseline B225 behavior is unchanged.
    return o.b225FirstNextSupportTick!==null||
-     o.b225MinNextErrorMeters<.55||
+     (!b226&&o.b225MinNextErrorMeters<.55)||
      o.tick>=secondLegStart.tick+120?o:false;
   },33000);
   await key(moveKey,false);
