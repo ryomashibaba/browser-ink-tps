@@ -1,0 +1,25 @@
+name: T21 B236 original right-low to source Slope01 ingress geometry
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/stage/undertow/B236OriginalSlope01IngressAudit.ts'
+      - 'scripts/T21B236OriginalSlopeIngress.test.ts'
+      - '.github/workflows/t21-b236-original-slope-ingress.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-slope01-ingress:
+    name: B236 exact source entrance original right-low to Slope01 native audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Actual original right-low source to slope01 and floor01 source probes
+        run: npx vitest run scripts/T21B236OriginalSlopeIngress.test.ts scripts/T21B235OriginalCpuToSourceEntry.test.ts --reporter=verbose
