@@ -1,0 +1,51 @@
+name: T21 B238 pinned full original Temple01 OBJ right-low ingress 3D source survey
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/undertow-temple01-b238-pinned-full-seam-scan.py'
+      - 'scripts/T21B238FullOriginalObjSeamSeed.test.ts'
+      - '.github/workflows/t21-b238-pinned-original-obj-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b238-pinned-full-source:
+    name: B238 exact KiTrix 43MB Git LFS source scan without runtime route promotion
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Exact original registered seam seed and physical source baseline
+        env:
+          T21_B238_SEED_OUTPUT: /tmp/b238/actual-original-seams.json
+        run: npx vitest run scripts/T21B238FullOriginalObjSeamSeed.test.ts scripts/T21B237AlternateOriginalIngressSource.test.ts --reporter=verbose
+      - name: Strict standalone original triangle geometry tests
+        run: python3 scripts/undertow-temple01-b238-pinned-full-seam-scan.py --self-test
+      - name: Retrieve the exact external 43MB Temple01 LFS original
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b238
+          curl --fail --location --retry 3 --retry-delay 3 --max-time 220 \
+            --output /tmp/b238/original.obj \
+            'https://media.githubusercontent.com/media/kirakira-dev/KiTrix/main/stages/Vss_Temple01/Vss_Temple01.obj'
+          echo 'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  /tmp/b238/original.obj' | sha256sum --check
+          test "$(wc -c </tmp/b238/original.obj)" -eq 43263289
+      - name: Full original 70396 active faces and OBJ-ID connected local source components
+        run: python3 scripts/undertow-temple01-b238-pinned-full-seam-scan.py --obj /tmp/b238/original.obj --seed /tmp/b238/actual-original-seams.json --out /tmp/b238/b238-original-obj-source-only-results.json
+      - name: Never upload copyrighted original OBJ - only small original face IDs and numeric evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b238-pin-checked-original-source-ingress-numeric-evidence
+          path: |
+            /tmp/b238/actual-original-seams.json
+            /tmp/b238/b238-original-obj-source-only-results.json
+          retention-days: 14
+          if-no-files-found: warn
