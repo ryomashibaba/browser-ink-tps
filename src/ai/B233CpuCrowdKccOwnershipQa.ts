@@ -38,7 +38,7 @@ export type B233Outcome={
  rejoinedCrowdLocalPathReached:boolean;
  resumedCrowdPhysicalKccFrames:number;
  rejoinedPhysicalTravelMeters:number;
- nativeCrossGapRecastConnected:false;
+ nativeCrossGapRecastConnected:boolean;
  originalStage:'25/17/26/0';
  sourceOnlySandbox:true;originalCpuAgentSystemUsed:false;
  realCpuOpponentRoutesCertified:'0/12';
@@ -108,6 +108,14 @@ export function b233RunRealCrowdOwnershipQa(
  let snapshot=kcc.snapshot();
  result.initialSourceFootVerified=snapshot.groundSupportedAtSpawn;
  if(!snapshot.groundSupportedAtSpawn)return fail('ORIGINAL_SOURCE_FOOT_MISSING');
+ // A physical original gap MUST remain a jump, not a secretly added
+ // Recast footpath. This is a genuine native query on the same QA mesh.
+ const acrossGap=nav.auditPath(
+  new Vec3(...plan.start),new Vec3(...plan.target),.30);
+ result.nativeCrossGapRecastConnected=acrossGap.reachedTarget;
+ if(acrossGap.reachedTarget||
+    acrossGap.endpointErrorMeters<2.5)
+  return fail('RECAST_WALK_BRIDGE_MASQUERADING_AS_PHYSICAL_JUMP');
  const prelip=plan.direction==='FLOOR_TO_SLOPE'?
   model(-6,3,22.2,plan.side):
   model(-6,3+(19.5-18.2)/3,18.2,plan.side);

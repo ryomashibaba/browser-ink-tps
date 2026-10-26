@@ -74,11 +74,32 @@ describe('B233 actual native Crowd → same KCC jump → fresh native Crowd owne
     noOffmeshOrFakeGeometry:true,officialWinner:'NONE',
     productionAuthorized:false}));
   expect(results).toHaveLength(4);
-  // Diagnostic until actual Crowd→KCC→Crowd physical results reviewed.
-  expect(results.every(x=>x.initialSourceFootVerified&&
+  // First genuine continuous native CI #40311198089 measured 4/4.
+  // Make every ownership boundary, original source foot, no-Recast-walk
+  // gap and physically moving postjump agent a hard regression gate.
+  expect(results.every(x=>
+   x.completed&&x.cause==='QA_NATIVE_CROWD_TO_KCC_JUMP_TO_CROWD'&&
+   x.initialSourceFootVerified&&x.approachNativeRecastPathReached&&
+   x.approachCrowdActualKccFrames>=12&&
+   x.approachOriginalSourceFootFrames===x.approachCrowdActualKccFrames&&
+   x.approachActualKccTravelMeters>=.48&&
+   x.preJumpCrowdRemoved&&x.sourceOwnedTakeoff&&x.oneRealJump&&
+   x.actualRapierAirborne&&x.realSourceLanding18Ticks&&
+   x.landingNativeCrowdHold&&x.rejoinedCrowdLocalPathReached&&
+   x.resumedCrowdPhysicalKccFrames>=10&&
+   x.rejoinedPhysicalTravelMeters>=.45&&
+   x.nativeCrossGapRecastConnected===false&&
    x.originalStage==='25/17/26/0'&&
    x.realCpuOpponentRoutesCertified==='0/12'&&
-   x.productionAuthorized===false)).toBe(true);
+   x.sourceOnlySandbox===true&&
+   x.originalCpuAgentSystemUsed===false&&
+   x.productionAuthorized===false&&x.officialWinner==='NONE')).toBe(true);
+  console.log('B233_TRUE_CROWD_KCC_JUMP_CROWD_FULL_SOURCE_SEQUENCE_4_PASS',
+   JSON.stringify({originalMirroredDirections:4,realCrowdApproaches:4,
+    exactSourceGroundedPhysicalJumps:4,
+    trueNativeCrowdRejoinsAndMotion:4,
+    artificialWalkableNavBridge:0,realLiveCpuAgentSystemInstantiated:false,
+    certifiedOpponentCrossings:'0/12',productionAuthorized:false}));
  },120000);
  it('prevents accidental stage/authority promotion and unapproved jump',()=>{
   const source=stage('POSITIVE_Z',false);
