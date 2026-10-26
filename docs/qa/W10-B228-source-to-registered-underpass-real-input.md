@@ -44,3 +44,30 @@ The B228 runner now reports final real Rapier collider ID, current keyboard axis
 The strict B228 workflow FAILED with positive Z after real native glass-underpass contact: at the genuine target area the original registered human foot support changed to **UndertowT21D:center-low-team-b**. Original glass-underpass was truly hit 22 times, but requiring 18 *consecutive* casts to select only that one object ID is not equivalent to requiring 18 consecutive grounded ticks on original registered floor. The actor remained genuinely grounded with **zero airborne ticks**; the extra forward-only input pushes, which are now merely bounded recovery diagnostics, carried it further onto the true original center-low floor while the single-ID gate still failed. Negative Z independently reached 23 true consecutive glass-underpass support ticks. Neither side needed any invented collider. This is original 25-solid geometry overlap, not a fake completion.
 
 **New precise B228 criterion:** actual original glass-underpass exact ID must still occur at least once; after that the stationary real human KCC must remain grounded **18 consecutive native ticks** at <=0.90m of the authentic underpass target, on a collider from the **original 25 registered solids** at the same original floor Y=3m elevation (project Y=0). Thus either original glass-underpass or original center-low can genuinely support the character at the overlapping physical exit. The actual original floor IDs and both counts are logged individually. Exact single-glass-ID stability remains an independently reported stricter diagnostic, not overwritten or falsely presented as achieved. QA-only added source faces cannot fulfill the original-floor gate; actor cannot teleport, Space count remains one, airborne ticks must remain zero and real target proximity is unchanged. Next real CI determines whether both sides meet this non-invented physical support rule.
+
+## Final B228 strict real Chromium proof — run #40299954989 SUCCESS
+
+As measured on actual head `8bff849d5bdf7e2529eeef3935e30bd5872a5f87`, the corrected semantic floor-support gate is now strict, reproducible, and **SUCCESS**. The *same physical actor*, under actual CDP W/S/mouse and one initial Space jump, traverses the four CI688-only source faces to a foot hit on the **already registered original** `UndertowT21D:glass-underpass-{side}`. It then remains grounded for at least 18 **consecutive true native ticks** at original floor level, within 0.90m of that fixed target, with final support supplied by a registered **original 25-solid** member. These are not physics proxies or synthesized floor IDs.
+
+| Real mirrored side | Underpass exact original ID first touched (tick) | Stable same-elevation registered-original floor (tick) | Final registered foot collider | Fourth-leg grounded/ungrounded | Within original 0.90m target radius | Original glass-underpass-only 18-consecutive-tick diagnostic |
+|---|---:|---:|---|---:|---|---|
+| POSITIVE_Z | 393 | 412 | `UndertowT21D:glass-underpass-positive-z` | 80/0 | 0.274130m | NOT MET (12 observed consecutive underpass-only ticks) |
+| NEGATIVE_Z | 374 | 392 | `UndertowT21D:center-low-team-a` | 76/0 | 0.034301m | NOT MET (underpass exact source touched 4 times, but the registered center-low floor alternated as support) |
+
+Both sides' registered floor support IDs genuinely included **two different existing stage solids**: `glass-underpass-{side}` and `center-low-team-{a/b}`. Correct authentic foot provenance is preserved; the single-ID-only 18-consecutive diagnostic is reported separately and must NOT be conflated with stable registered-floor support. No additional key pushes were needed in the final run, no extra Space press was sent, and no pose teleport or collision representation change occurred.
+
+Direct evidence: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40299954989
+
+### Confirmed regressions on the same code revision
+
+- B224 actual four mirrored original gap keyboard/PlayerController/Rapier trials: SUCCESS https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40299954960
+- B225 physical mirrored two-leg real keyboard grounded source corridor: SUCCESS https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40299954964
+- B226 physical mirrored inner-slope/third-leg source corridor: SUCCESS https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40299954882
+- B228 native registered floor rejoin: SUCCESS as above.
+- Metadata-only continuity index: SUCCESS #40299955208.
+
+### B229 decision / user value
+
+This proves a **complete local reconstructed human physical lane** (source floor01 → outer slope → floor02 → inner slope → already registered underpass) under a 30-solid isolated CI688 QA world. It does NOT prove the same route is accessible inside the unchanged live 25-solid runtime. B227 separately showed the first four source collision anchors absent from production and the first three Recast paths disconnected even after QA source inclusion; those failures still stand. The next high-leverage task is a bounded, separately-authorized QA **CPU navigation transition design** with genuine Recast representative validity, actual CPU KCC enforcement and real jump authorization across 2.074235m, not a new high-resolution Recast parameter sweep and not a production four-versus-four toggle.
+
+Frozen release authority: 25/17/26/0, protected main, PR #5, Pages and original source unmodified; opposing team route authority 0/12, official winner NONE, scoring off, productionAuthorized=false.
