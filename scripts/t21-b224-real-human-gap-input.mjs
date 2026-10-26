@@ -401,14 +401,31 @@ try{
   if(summary.completed!==2||summary.stableSourceLandingCount!==2||
      summary.secondStageStable!==2||
      summary.b226InnerSourceStable!==2||
-     reports.some(x=>!x.b228FourthLeg||
-      x.b228FourthLeg.afterSpawnTeleports!==0||
-      !x.b228FourthLeg.oneSpaceOnly||
-      !x.b228FourthLeg.startedFromInner||
-      !x.b228FourthLeg.physicalOriginalUnderpassHit))
-   throw Error('B228_REAL_SOURCE_TO_REGISTERED_NATIVE_CONTACT_MISSING');
-  // First measured B228 experiment: genuine native foot contact required,
-  // but stability/airborne outcome remains diagnostic until observed.
+     reports.some(x=>{
+      const t=x.b228FourthLeg,p=t?.underpassRest;
+      const suffix=x.side==='POSITIVE_Z'?'positive-z':'negative-z';
+      const expectedId='UndertowT21D:glass-underpass-'+suffix;
+      const chain=['floor-concrete01','slope00-outer',
+       'floor-concrete02','slope00-inner'].map(id=>
+        'B224_QA_ONLY:underpass-route-'+id+'-'+suffix);
+      return !t||!p||t.afterSpawnTeleports!==0||
+       !t.oneSpaceOnly||!t.startedFromInner||
+       !t.physicalOriginalUnderpassHit||!t.stableOriginalUnderpass||
+       !t.sourceToOriginalContact||t.originalContactAlreadyBeforeMove||
+       t.actualNativeFootId!==expectedId||
+       p.currentFootSolid!==expectedId||
+       p.b228NativeGroundedTicks<18||
+       p.b228NativeUngroundedTicks!==0||
+       p.validJumpInputs!==1||p.b228AtFourthJumpInputs!==1||
+       p.b228ClosestNativeGroundedErrorMeters===null||
+       p.b228ClosestNativeGroundedErrorMeters>.9||
+       !chain.every((id,i)=>p.b225NativeSourceSupportOrder[i]===id);
+     }))
+   throw Error('B228_REAL_REGISTERED_UNDERPASS_CONTINUITY_REGRESSION');
+  // Actual B228 native Chromium CI #40297678361 measured real, stable
+  // registered 25-solid underpass foot support on both mirrored sides,
+  // with zero airborne ticks after the third stable original source leg.
+  console.log('B228_REAL_REGISTERED_UNDERPASS_STABLE_4TH_LEG_GATE_PASS');
   console.log('B228_REAL_SOURCE_TO_REGISTERED_CONTACT_GATE_PASS',
    JSON.stringify({tested:2,realNativeContact:summary.b228NativeUnderpassTouched,
     stableNative:summary.b228NativeUnderpassStable,

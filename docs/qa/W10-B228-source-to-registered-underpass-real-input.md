@@ -11,3 +11,18 @@ The first real B228 CI requires the native registered Rapier collider to support
 ## First native run #40297420186 (FAIL; retained)
 
 The initial dedicated four-leg test failed **before the fourth leg**, during the inherited B225 landing at FloorConcrete02 on POSITIVE_Z. Native first FloorConcrete02 support was recorded (tick 156), but the real actor finished at XZ [0.62118,15.39207], approximately 0.87m from its source target, just outside the unchanged <=0.85m stable landing gate, following CDP wait's 150ms polling. No missing physical floor was demonstrated by this failure. For B228 and all prior input QA, the next correction is to poll **actual source collider support** every 20ms during the floor02 approach, and then release genuine W/S at the first recorded support. The 0.85m landing tolerance, original 25/17/26/0, and no teleport remain unchanged. The fourth-leg outcome is not yet known.
+
+## First complete native real-browser outcome — #40297678361 SUCCESS
+
+The first attempted B228 workflow #40297420186 failed earlier at FloorConcrete02 before the new fourth leg: the actor did touch the correct exact original source floor but after W/S release had overshot the 0.85m stable-landing radius due to 150ms CDP polling. The corrective commit `7c2e547535309592c4ec98ef06119eaf5b8ab9f0` decreased the actual native foot-support observation interval to 20ms, maintaining identical collision mesh, Space count and all collision/landing gates. No pose snapping or larger landing tolerance.
+
+Real WebGL2/Chromium CI [#40297678361](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40297678361) **SUCCESS**. Both mirrored physical human lanes continued the same body through the exact source FloorConcrete01 → outer Slope00 → FloorConcrete02 → inner Slope00 and then genuinely contacted the **pre-existing frozen runtime** solid `UndertowT21D:glass-underpass-{side}` without another Space or teleport. Native physical foot support is actual original 25-solid data, not a QA-added fifth mesh.
+
+| Side | First true registered underpass foot tick | Stable >=18 grounded ticks at native 25-solid floor | Fourth leg grounded ticks | Fourth leg ungrounded ticks | Closest native grounded position error |
+|---|---:|---|---:|---:|---:|
+| POSITIVE_Z | 396 | YES (tick 419) | 88 | **0** | 0.092891m |
+| NEGATIVE_Z | 380 | YES (tick 405) | 84 | **0** | 0.025209m |
+
+**Strict source-to-registered native gate upgrade:** The original Phase B228 diagnostic only required two true first contacts. After independently seeing both stable lanes, the code now **requires** both original collider IDs, first-on-source proof, native floor support 18+ ticks, zero airborne fourth-leg ticks, one total genuine Space input, zero post-spawn relocations, correct prior four source-face order, and proximity <0.9m, without any new original gameplay colliders. These protections are tested in a new full native CI rather than taken as an implied result.
+
+**Certification boundary:** this proves an actual physically traversable *QA reconstructed 30-solid* lane to the already registered original underpass floor. It does NOT register any missing 5+5 original source faces in production, does NOT establish Recast crossing across the first three physical seams, and does NOT authorize autonomous CPU, unrestricted 4v4, official paint scoring, or winner. Source live frozen 25/17/26/0 and opposing routes 0/12 remain unchanged.
