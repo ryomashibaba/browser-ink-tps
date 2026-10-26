@@ -622,7 +622,8 @@ async function doPhysicalTrial(coopAttempt=1){
  if(b161Option!==(allyOptIn?'true':'false')||b161Winner!=='NONE')
   fail('B161_SOURCE_ALLY_SYNC_OPT_IN_OR_TURF_AUTHORITY');
 
- if(boot.matchState!=='STAGING'||boot.paused||
+ if(boot.matchState!=='STAGING'||boot.paused!==b203FullRoundTrial||
+    (b203FullRoundTrial&&(boot.tick!==0||boot.timeRemainingSeconds!==180))||
     boot.cpu.sourcePatrol.b137AllyRallyOptIn!==allyOptIn||
     boot.b112OriginalHumanGround?.enabled!==(b194ButtonTrial?false:true))
   fail('NOT_REAL_ORIGINAL_7CPU_KCC_BOOT');
@@ -636,7 +637,16 @@ async function doPhysicalTrial(coopAttempt=1){
    '&t21W10B149=contactTrace');
  if(search!==actualUserUrl)
   fail('INVALID_SOURCE_PRACTICE_URL');
- await click(800,450);
+ // B242: full rounds require the real player's explicit ready/start click.
+ if(b203FullRoundTrial){
+  const ready=await evaluate(`(() => {
+   const p=document.querySelector('#t21-f3-b202-real-pause');
+   return {state:p?.dataset.t21B202NativeState,visible:!!p&&!p.hidden};
+  })()`);
+  if(ready.state!=='READY_TO_START'||ready.visible!==true)
+   fail('B242_FULL_COOP_ROUND_NOT_READY');
+  await clickButton('#t21-f3-b202-resume');
+ }else await click(800,450);
  await until(()=>evaluate('document.pointerLockElement===document.querySelector("#app-canvas")'),20000);
  const started=boot.tick;
  const nativeGameStart=await until(async()=>{
