@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `fd1af81701ef4fa0877b52cf291888a1345338a8`
+- 同期元QA HEAD: `16d0d740973bf16f45f1e1e4e4d673c809128e1e`
 - 最新番号のQAレポート: W10-B239 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B239-original-floorline-real-rapier-kcc-navigation.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B240 （着手・完了の保証ではない）
