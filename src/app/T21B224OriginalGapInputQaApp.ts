@@ -138,6 +138,9 @@ export class T21B224OriginalGapInputQaApp{
   let b225LastSupportedId:string|null=null;
   let b225NativeAfterFirstLandingTicks=0;
   let b225SecondLegNoJumpInputsAtStart:number|null=null;
+  let b225SecondLegStartedTick:number|null=null;
+  let b225SecondLegUngroundedTicks=0,b225SecondLegGroundedTicks=0;
+  let b225LongestUngroundedStreak=0,b225CurrentUngroundedStreak=0;
   const vec=new Vec3();
   const floorHit=()=>{
    const p=player.getPosition(vec);
@@ -191,6 +194,9 @@ export class T21B224OriginalGapInputQaApp{
     b225NativeNextSupportedTicks,b225FirstNextSupportTick,
     b225NativeSourceSupportOrder,b225NativeSourceSupportTransitions,
     b225NativeAfterFirstLandingTicks,b225SecondLegNoJumpInputsAtStart,
+    b225SecondLegStartedTick,
+    b225SecondLegUngroundedTicks,b225SecondLegGroundedTicks,
+    b225LongestUngroundedStreak,
     teleportsAfterQaSpawn:0,
     noNavMeshCertification:true};
   };
@@ -236,6 +242,22 @@ export class T21B224OriginalGapInputQaApp{
       stableTargetGroundedTicks=0;
      }
      if(corridor&&stableLandingTick!==null){
+      if(b225SecondLegStartedTick===null&&
+         (input.moveX!==0||input.moveY!==0)){
+       b225SecondLegStartedTick=tick;
+       b225SecondLegNoJumpInputsAtStart=validJumpInputs;
+      }
+      if(b225SecondLegStartedTick!==null&&b225StableNextTick===null){
+       if(stats.playerGrounded){
+        b225SecondLegGroundedTicks++;
+        b225CurrentUngroundedStreak=0;
+       }else{
+        b225SecondLegUngroundedTicks++;
+        b225CurrentUngroundedStreak++;
+        b225LongestUngroundedStreak=Math.max(
+         b225LongestUngroundedStreak,b225CurrentUngroundedStreak);
+       }
+      }
       b225NativeAfterFirstLandingTicks++;
       const nextError=Math.hypot(p.x-b225NextTarget[0],p.z-b225NextTarget[2]);
       b225MinNextErrorMeters=Math.min(b225MinNextErrorMeters,nextError);

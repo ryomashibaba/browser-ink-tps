@@ -120,6 +120,12 @@ async function scenario(side,direction){
   b225SecondLeg={sourceAtStart:secondLegStart.currentFootSolid,
    startNativeTick:secondLegStart.tick,advance,parked,
    physicallyTouchedOriginalFloor02:parked.b225FirstNextSupportTick!==null,
+   secondLegStartedTick:parked.b225SecondLegStartedTick,
+   noSecondJump:
+    parked.b225SecondLegNoJumpInputsAtStart===1&&parked.validJumpInputs===1,
+   secondLegGroundedTicks:parked.b225SecondLegGroundedTicks,
+   secondLegUngroundedTicks:parked.b225SecondLegUngroundedTicks,
+   longestAirborneStreak:parked.b225LongestUngroundedStreak,
    stableFloor02:parked.b225StableNextTick!==null,
    jumpInputs:parked.validJumpInputs,
    stageColliderCollisions:parked.originalColliderContactCount,
@@ -134,6 +140,9 @@ async function scenario(side,direction){
    nextFloorStableTick:parked.b225StableNextTick,
    minSecondTargetErrorMeters:parked.b225MinNextErrorMeters,
    sourceSupportOrder:parked.b225NativeSourceSupportOrder,
+   secondLegGroundedTicks:parked.b225SecondLegGroundedTicks,
+   secondLegUngroundedTicks:parked.b225SecondLegUngroundedTicks,
+   longestAirborneStreak:parked.b225LongestUngroundedStreak,
    originalColliderCollisions:parked.originalColliderContactCount,
    finalBodyPosition:parked.playerPosition}));
  }
@@ -214,9 +223,20 @@ try{
   // genuine onward probe execution. Whether the 0.5186m seam is walkable
   // must be judged separately from the logged evidence, never faked.
   if(summary.completed!==2||summary.stableSourceLandingCount!==2||
-     reports.some(x=>!x.b225SecondLeg||x.b225SecondLeg.jumpInputs!==1||
-       !x.b225SecondLeg.noTeleport))
+     reports.some(x=>{
+       const lane=x.b225SecondLeg;
+       const suffix=x.side==='POSITIVE_Z'?'positive-z':'negative-z';
+       const chain=['floor-concrete01','slope00-outer','floor-concrete02']
+        .map(id=>'B224_QA_ONLY:underpass-route-'+id+'-'+suffix);
+       return !lane||!lane.noSecondJump||!lane.noTeleport||
+        !lane.physicallyTouchedOriginalFloor02||!lane.stableFloor02||
+        lane.stageColliderCollisions!==0||
+        lane.secondLegStartedTick===null||
+        !(lane.secondLegStartedTick>x.end.stableLandingTick)||
+        !chain.every((id,i)=>lane.originalSourceSupportOrder[i]===id);
+     }))
    throw Error('B225_INITIAL_GAP_OR_REAL_SECOND_CONTROL_INVALID');
+  console.log('B225_NATIVE_CONTINUOUS_GROUNDED_GATE_PASS');
   console.log('B225_CONTINUOUS_LANE_EVIDENCE',JSON.stringify({
    sides:summary.completed,stableFirstJumps:summary.stableSourceLandingCount,
    realSecondFloorContacts:summary.secondStageTouched,
