@@ -5,6 +5,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
+const corridor=process.env.T21_B225_CORRIDOR==='1';
 const OUT=process.env.T21_B224_OUT||'/tmp/t21-b224';
 const children=[],pending=new Map();
 let ws=null,sequence=0;
@@ -40,8 +41,11 @@ async function click(){
    button:'left',clickCount:1});
 }
 async function scenario(side,direction){
- const url=ROOT+'?t21Qa=b224OriginalGapInput&t21B224Source=isolated-ci688'+
-  '&side='+side+'&direction='+direction;
+ const url=corridor
+  ?ROOT+'?t21Qa=b225OriginalCorridorInput&t21B225Source=isolated-ci688'+
+    '&side='+side+'&direction=FLOOR_TO_SLOPE'
+  :ROOT+'?t21Qa=b224OriginalGapInput&t21B224Source=isolated-ci688'+
+    '&side='+side+'&direction='+direction;
  await cmd('Page.navigate',{url});
  const initial=await wait(async()=>{
   try{const o=await read('window.__t21B224?.snapshot()');
@@ -50,7 +54,9 @@ async function scenario(side,direction){
  if(initial.initialSupport===null||!initial.originalSolidsStill25||
     !initial.originalPaintStill17||!initial.originalNavLinksStill26||
     initial.sourceScoreablePromotions!==0||initial.productionAuthorized!==false||
-    initial.physicalSolidsInsideQa!==27)throw Error('B224_SOURCE_BOOT_UNTRUSTED');
+    initial.physicalSolidsInsideQa!==(corridor?30:27)||
+    initial.b225CorridorEnabled!==corridor)
+  throw Error('B224_B225_SOURCE_BOOT_UNTRUSTED');
  await click();
  await wait(()=>read('document.pointerLockElement===document.querySelector("#app-canvas")'),10000);
  // B224 original source model/project registration rotates the XZ crossing:
@@ -85,7 +91,53 @@ async function scenario(side,direction){
   const o=await read('window.__t21B224.snapshot()');
   return o.stableLandingTick!==null||o.tick>=near.tick+100?o:false;
  },13000);
- const result={side,direction,oriented,pre,near,end,
+ let b225SecondLeg=null;
+ if(corridor){
+  if(end.stableLandingTick===null)
+   throw Error('B225_INITIAL_AUTHENTIC_2M_JUMP_NOT_STABLE');
+  if(end.currentFootSolid!=='B224_QA_ONLY:underpass-route-slope00-outer-'+
+     (side==='POSITIVE_Z'?'positive-z':'negative-z'))
+   throw Error('B225_FIRST_LEG_DESTINATION_NO_LONGER_SUPPORTED');
+  // Continue from same real PlayerController body. NO respawn.
+  // This second segment uses the real held W/S input, *without* another
+  // Space command. Rapier's configured physical grounding must decide
+  // whether the authentic 0.5186m outer-slope -> FloorConcrete02 seam can
+  // be safely walked. The result is evidence, not an assumed PASS.
+  const secondLegStart=end;
+  await key(moveKey,true);
+  const advance=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return o.b225FirstNextSupportTick!==null||
+     o.b225MinNextErrorMeters<.55||
+     o.tick>=secondLegStart.tick+120?o:false;
+  },33000);
+  await key(moveKey,false);
+  const parked=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return o.b225StableNextTick!==null||
+     o.tick>=advance.tick+120?o:false;
+  },33000);
+  b225SecondLeg={sourceAtStart:secondLegStart.currentFootSolid,
+   startNativeTick:secondLegStart.tick,advance,parked,
+   physicallyTouchedOriginalFloor02:parked.b225FirstNextSupportTick!==null,
+   stableFloor02:parked.b225StableNextTick!==null,
+   jumpInputs:parked.validJumpInputs,
+   stageColliderCollisions:parked.originalColliderContactCount,
+   originalSourceSupportOrder:parked.b225NativeSourceSupportOrder,
+   noTeleport:parked.teleportsAfterQaSpawn===0};
+  console.log('B225_REAL_BROWSER_CONTINUOUS_CORRIDOR',JSON.stringify({
+   side,oneActualBody:true,firstJumpStable:end.stableLandingTick!==null,
+   secondLegJumpInputCount:parked.validJumpInputs,
+   genuineNextFloorContact:b225SecondLeg.physicallyTouchedOriginalFloor02,
+   genuineStableNextFloor:b225SecondLeg.stableFloor02,
+   nextFloorSupportTick:parked.b225FirstNextSupportTick,
+   nextFloorStableTick:parked.b225StableNextTick,
+   minSecondTargetErrorMeters:parked.b225MinNextErrorMeters,
+   sourceSupportOrder:parked.b225NativeSourceSupportOrder,
+   originalColliderCollisions:parked.originalColliderContactCount,
+   finalBodyPosition:parked.playerPosition}));
+ }
+ const result={side,direction,oriented,pre,near,end,b225SecondLeg,
   actualKeydown:true,realPlayerController:true,actorTeleports:0};
  console.log('B224_REAL_BROWSER_SOURCE_JUMP',JSON.stringify({
   side,direction,atTick:end.tick,jumpInputs:end.validJumpInputs,
@@ -136,23 +188,42 @@ try{
  await cmd('Emulation.setDeviceMetricsOverride',{
   width:1000,height:660,deviceScaleFactor:1,mobile:false});
  const reports=[];
- for(const side of ['POSITIVE_Z','NEGATIVE_Z'])
-  for(const direction of ['FLOOR_TO_SLOPE','SLOPE_TO_FLOOR'])
+ for(const side of ['POSITIVE_Z','NEGATIVE_Z']){
+  for(const direction of (corridor?['FLOOR_TO_SLOPE']:
+       ['FLOOR_TO_SLOPE','SLOPE_TO_FLOOR']))
    reports.push(await scenario(side,direction));
- const summary={schema:'B224_REAL_CDP_INPUT_PLAYERCONTROLLER_RAPIER',
+ }
+ const summary={schema:corridor?'B225_REAL_CDP_CONTINUOUS_SOURCE_CORRIDOR':'B224_REAL_CDP_INPUT_PLAYERCONTROLLER_RAPIER',
   qaOnly:true,productionAuthorized:false,scoreable:0,
   sourceStage25_17_26_0:true,actorTeleportsAfterSpawn:0,
   nativeRealPlayerKeyboard:true,realBrowserWebGL2:true,
   completed:reports.length,
   preciseCenterSuccessCount:reports.filter(x=>x.end.successTick!==null).length,
   stableSourceLandingCount:reports.filter(x=>x.end.stableLandingTick!==null).length,
+  secondStageTouched:reports.filter(x=>x.b225SecondLeg?.physicallyTouchedOriginalFloor02).length,
+  secondStageStable:reports.filter(x=>x.b225SecondLeg?.stableFloor02).length,
   reports};
- writeFileSync(resolve(OUT,'b224-native-input-rapier.json'),JSON.stringify(summary,null,2));
+ writeFileSync(resolve(OUT,corridor?'b225-continuous-native-source-corridor.json':
+  'b224-native-input-rapier.json'),JSON.stringify(summary,null,2));
  console.log('B224_REAL_KEYBOARD_FINAL',JSON.stringify({tested:summary.completed,
   physicallyStableLandings:summary.stableSourceLandingCount,
   preciseCenterLandings:summary.preciseCenterSuccessCount,
   sourceStage25_17_26_0:true,officialWinner:'NONE'}));
- if(summary.stableSourceLandingCount!==4)
+ if(corridor){
+  // The B225 pass certifies actual keyboard action, 2m source jump, and
+  // genuine onward probe execution. Whether the 0.5186m seam is walkable
+  // must be judged separately from the logged evidence, never faked.
+  if(summary.completed!==2||summary.stableSourceLandingCount!==2||
+     reports.some(x=>!x.b225SecondLeg||x.b225SecondLeg.jumpInputs!==1||
+       !x.b225SecondLeg.noTeleport))
+   throw Error('B225_INITIAL_GAP_OR_REAL_SECOND_CONTROL_INVALID');
+  console.log('B225_CONTINUOUS_LANE_EVIDENCE',JSON.stringify({
+   sides:summary.completed,stableFirstJumps:summary.stableSourceLandingCount,
+   realSecondFloorContacts:summary.secondStageTouched,
+   realSecondFloorStable:summary.secondStageStable,
+   officialWinner:'NONE',routeCertification:'0/12',
+   productionAuthorized:false}));
+ }else if(summary.stableSourceLandingCount!==4)
   throw Error('B224_REAL_INPUT_STABLE_SOURCE_LANDINGS_NOT_CERTIFIED');
 }catch(e){console.error(e);process.exitCode=1;}
 finally{ws?.close();for(const child of children)child.kill('SIGTERM');}

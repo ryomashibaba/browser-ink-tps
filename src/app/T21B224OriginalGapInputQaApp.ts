@@ -37,11 +37,13 @@ const point=(x:number,y:number,z:number,side:Side):StageVector3=>{
 };
 const floor=(side:Side)=>point(-6,3,21.9,side);
 const slope=(side:Side)=>point(-6,3+(19.5-19.1)/3,19.1,side);
-function exactQaStage(side:Side):StageDefinition{
+function exactQaStage(side:Side,corridor=false):StageDefinition{
  if(FROZEN.solids.length!==25||FROZEN.paintSurfaces.length!==17||
     FROZEN.navigationLinks.length!==26||FROZEN.activationReady!==false)
   throw Error('B224_SOURCE_AUTHORITY_DRIFT');
- const exact=['floor-concrete01','slope00-outer'].map(kind=>{
+ const exact=(corridor?
+  ['floor-concrete01','slope00-outer','floor-concrete02','slope00-inner','slope01']:
+  ['floor-concrete01','slope00-outer']).map(kind=>{
   const id=faceId(kind,side);
   const record=FACES.find(f=>f.id===id);
   if(!record)throw Error('B224_MISSING_CI688_SOURCE_'+id);
@@ -68,13 +70,17 @@ function exactQaStage(side:Side):StageDefinition{
 export class T21B224OriginalGapInputQaApp{
  static async boot(canvas:HTMLCanvasElement,_ui:HTMLElement){
   const q=new URL(location.href).searchParams;
-  if(q.get('t21Qa')!=='b224OriginalGapInput'||
-     q.get('t21B224Source')!=='isolated-ci688')
-   throw Error('B224_EXPLICIT_SOURCE_QA_ONLY');
+  const corridor=q.get('t21Qa')==='b225OriginalCorridorInput'&&
+    q.get('t21B225Source')==='isolated-ci688';
+  if(!corridor&&(q.get('t21Qa')!=='b224OriginalGapInput'||
+     q.get('t21B224Source')!=='isolated-ci688'))
+   throw Error('B224_B225_EXPLICIT_SOURCE_QA_ONLY');
   const side=q.get('side'),direction=q.get('direction');
   if((side!=='POSITIVE_Z'&&side!=='NEGATIVE_Z')||
      (direction!=='FLOOR_TO_SLOPE'&&direction!=='SLOPE_TO_FLOOR'))
    throw Error('B224_EXPLICIT_SIDE_AND_DIRECTION_REQUIRED');
+  if(corridor&&direction!=='FLOOR_TO_SLOPE')
+   throw Error('B225_REQUIRES_CONTINUOUS_FORWARD_ROUTE');
   await initializeRapier();
   const device=await createGraphicsDevice(canvas,{
    deviceTypes:[DEVICETYPE_WEBGL2],antialias:false,depth:true,stencil:false,
@@ -86,7 +92,7 @@ export class T21B224OriginalGapInputQaApp{
   const app=new AppBase(canvas);app.init(options);
   app.setCanvasFillMode(FILLMODE_FILL_WINDOW);
   app.setCanvasResolution(RESOLUTION_AUTO);
-  const stage=exactQaStage(side);
+  const stage=exactQaStage(side,corridor);
   const physics=new RapierStagePhysics(DT,stage);physics.step();
   const cameraEntity=new Entity('B224QA:Camera');
   const world=app.scene.layers.getLayerByName('World');
@@ -100,6 +106,10 @@ export class T21B224OriginalGapInputQaApp{
   const player=new PlayerController(app,physics,input,camera,ink,stats);
   const start=direction==='FLOOR_TO_SLOPE'?floor(side):slope(side);
   const target=direction==='FLOOR_TO_SLOPE'?slope(side):floor(side);
+  // This endpoint lies on the *exact* FloorConcrete02 original triangles.
+  // It is not a bridge surface, NavMesh point, or manufactured collider.
+  const b225NextTarget=point(-6,4.5,14.30,side);
+  const b225NextSolid='B224_QA_ONLY:'+faceId('floor-concrete02',side);
   const startSolid='B224_QA_ONLY:'+faceId(
    direction==='FLOOR_TO_SLOPE'?'floor-concrete01':'slope00-outer',side);
   const endSolid='B224_QA_ONLY:'+faceId(
@@ -119,6 +129,15 @@ export class T21B224OriginalGapInputQaApp{
   let stableLandingPosition:null|[number,number,number]=null;
   let closestGroundedTargetErrorMeters=Infinity;
   let lastInputX=0,lastInputY=0;
+  let b225FirstGroundedTargetTick:number|null=null;
+  let b225StableNextTick:number|null=null,b225StableNextTicks=0;
+  let b225MinNextErrorMeters=Infinity;
+  let b225NativeNextSupportedTicks=0,b225FirstNextSupportTick:number|null=null;
+  let b225NativeSourceSupportOrder:string[]=[];
+  let b225NativeSourceSupportTransitions=0;
+  let b225LastSupportedId:string|null=null;
+  let b225NativeAfterFirstLandingTicks=0;
+  let b225SecondLegNoJumpInputsAtStart:number|null=null;
   const vec=new Vec3();
   const floorHit=()=>{
    const p=player.getPosition(vec);
@@ -139,7 +158,10 @@ export class T21B224OriginalGapInputQaApp{
    return {schema:'B224_PLAYER_INPUT_NATIVE_SOURCE_QA',
     ready,tick,side,direction,
     actualPlayerInput:true,actualPlayerController:true,actualRapier:true,
-    source:'CI688_EXACT_SOURCE_FACES',physicalSolidsInsideQa:27,
+    source:'CI688_EXACT_SOURCE_FACES',
+    physicalSolidsInsideQa:corridor?30:27,
+    b225CorridorEnabled:corridor,
+    b225NextTarget,b225NextSolid,
     originalSolidsStill25:FROZEN.solids.length===25,
     originalPaintStill17:FROZEN.paintSurfaces.length===17,
     originalNavLinksStill26:FROZEN.navigationLinks.length===26,
@@ -162,6 +184,13 @@ export class T21B224OriginalGapInputQaApp{
     finishAtSuccess,stableTargetGroundedTicks,stableLandingTick,
     stableLandingPosition,
     closestGroundedTargetErrorMeters:Number.isFinite(closestGroundedTargetErrorMeters)?closestGroundedTargetErrorMeters:null,
+    b225FirstGroundedTargetTick,
+    b225StableNextTick,b225StableNextTicks,
+    b225MinNextErrorMeters:Number.isFinite(b225MinNextErrorMeters)?
+      b225MinNextErrorMeters:null,
+    b225NativeNextSupportedTicks,b225FirstNextSupportTick,
+    b225NativeSourceSupportOrder,b225NativeSourceSupportTransitions,
+    b225NativeAfterFirstLandingTicks,b225SecondLegNoJumpInputsAtStart,
     teleportsAfterQaSpawn:0,
     noNavMeshCertification:true};
   };
@@ -186,6 +215,13 @@ export class T21B224OriginalGapInputQaApp{
      if(!stats.playerGrounded&&validJumpInputs>0)leftGround=true;
      if(leftGround&&stats.playerGrounded)landed=true;
      const support=floorHit();
+     if(corridor&&stats.playerGrounded&&support?.startsWith('B224_QA_ONLY:')){
+      if(support!==b225LastSupportedId){
+       b225NativeSourceSupportTransitions++;
+       b225NativeSourceSupportOrder.push(support);
+      }
+      b225LastSupportedId=support;
+     }
      if(landed&&support===endSolid)firstLandingSupport??=support;
      if(landed&&stats.playerGrounded&&support===endSolid&&
         validJumpInputs===1&&input.moveX===0&&input.moveY===0){
@@ -198,6 +234,23 @@ export class T21B224OriginalGapInputQaApp{
       }
      }else{
       stableTargetGroundedTicks=0;
+     }
+     if(corridor&&stableLandingTick!==null){
+      b225NativeAfterFirstLandingTicks++;
+      const nextError=Math.hypot(p.x-b225NextTarget[0],p.z-b225NextTarget[2]);
+      b225MinNextErrorMeters=Math.min(b225MinNextErrorMeters,nextError);
+      if(stats.playerGrounded&&support===b225NextSolid){
+       b225NativeNextSupportedTicks++;
+       b225FirstNextSupportTick??=tick;
+       if(b225FirstGroundedTargetTick===null)
+        b225FirstGroundedTargetTick=tick;
+       if(input.moveX===0&&input.moveY===0&&
+          nextError<=.85&&validJumpInputs===1){
+        b225StableNextTicks++;
+        if(b225StableNextTicks>=18&&b225StableNextTick===null)
+         b225StableNextTick=tick;
+       }else b225StableNextTicks=0;
+      }else b225StableNextTicks=0;
      }
      if(dist<=.22&&stats.playerGrounded&&support===endSolid){
       physicallyEnteredTarget=true;

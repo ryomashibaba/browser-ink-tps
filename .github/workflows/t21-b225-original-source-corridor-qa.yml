@@ -1,0 +1,37 @@
+name: T21 B225 real original corridor ingress and egress QA
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/main.ts'
+      - 'src/app/T21B224OriginalGapInputQaApp.ts'
+      - 'scripts/t21-b224-real-human-gap-input.mjs'
+      - '.github/workflows/t21-b225-original-source-corridor-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  continuous-source-corridor:
+    name: B225 genuine Chromium 2-leg player corridor
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-b224-real-human-gap-input.mjs
+      - name: Genuine two-leg source corridor input experiment
+        env:
+          T21_B225_CORRIDOR: '1'
+          T21_B224_OUT: /tmp/t21-b225
+        run: node scripts/t21-b224-real-human-gap-input.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b225-native-original-corridor
+          path: /tmp/t21-b225/
+          retention-days: 14
+          if-no-files-found: warn
