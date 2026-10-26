@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `845693b11427e6998c2a05bd59af6678c053db53`
-- 最新番号のQAレポート: W10-B241 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B241-original-floorline-physical-width-lateral-support.md
+- 同期元QA HEAD: `13242af5aa3e94d06a25f8ef877893cee562ff59`
+- 最新番号のQAレポート: W10-B242 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B242-source-authority-hold-playable-round-lifecycle.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B242 （着手・完了の保証ではない）
+- 次工程候補: W10-B243 （着手・完了の保証ではない）
 - レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40333114860
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
