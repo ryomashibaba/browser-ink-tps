@@ -836,16 +836,90 @@ async function run(){
     writeFileSync(resolve(OUTPUT,'w10b207-real-combat-source-select.json'),
      JSON.stringify(evidence,null,2));
     console.log('B207_REAL_180S_COMBAT_WORLD_USER_SELECTED',JSON.stringify(evidence));
+    // B242: compare the actual frozen world before the first user click.
+    const stableRound=s=>({
+     tick:s.tick,phase:s.matchState,time:s.timeRemainingSeconds,
+     hp:s.player.hp,ink:s.player.ink,foot:s.player.position,
+     shots:s.shotsFired,cpuShots:s.cpuSourceTurfShots,
+     humanInk:s.b23HumanInkFeedback.humanChangedCells,
+     cpuInk:s.cpuImpactInkCellsChanged,
+     cpu:s.cpu.cpu.map(x=>({id:x.id,foot:x.physicalFoot,hp:x.hp,
+      life:x.lifeState,mobility:x.mobilityState})),
+     relocated:s.cpu.physicalFootRelocations
+    });
+    const readyBefore=await snapshot();
+    for(const type of ['keyDown','keyUp'])
+     await cmd('Input.dispatchKeyEvent',{type,key:'p',code:'KeyP',
+      windowsVirtualKeyCode:80,nativeVirtualKeyCode:80});
+    await sleep(1500);
+    const readyAfter=await snapshot();
+    const readyUi=await evaluate(`(() => {
+     const p=document.querySelector('#t21-f3-b202-real-pause');
+     return {visible:!!p&&!p.hidden,state:p?.dataset.t21B202NativeState,
+      button:document.querySelector('#t21-f3-b202-resume')?.textContent};
+    })()`);
+    if(!readyAfter.paused||readyAfter.tick!==0||
+       readyAfter.timeRemainingSeconds!==180||
+       JSON.stringify(stableRound(readyBefore))!==JSON.stringify(stableRound(readyAfter))||
+       readyUi.visible!==true||readyUi.state!=='READY_TO_START'||
+       readyUi.button!=='START 180s ROUND')
+     fail('B242_FIRST_CLICK_READY_WORLD_ADVANCED_'+JSON.stringify({
+      before:stableRound(readyBefore),after:stableRound(readyAfter),ui:readyUi}));
+    const readyImage=Buffer.from((await cmd('Page.captureScreenshot',{
+     format:'png',captureBeyondViewport:false})).data,'base64');
+    writeFileSync(resolve(OUTPUT,'b242-source-round-ready.png'),readyImage);
+    async function clickRoundButton(){
+     const b=await evaluate(`(() => {
+      const b=document.querySelector('#t21-f3-b202-resume');
+      const r=b?.getBoundingClientRect();
+      return {x:r?.left+r?.width/2,y:r?.top+r?.height/2};
+     })()`);
+     if(!(b.x>0&&b.x<1600&&b.y>0&&b.y<900))
+      fail('B242_START_RESUME_BUTTON_OUTSIDE_VIEW');
+     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:b.x,y:b.y,button:'none'});
+     for(const type of ['mousePressed','mouseReleased'])
+      await cmd('Input.dispatchMouseEvent',{type,x:b.x,y:b.y,button:'left',clickCount:1});
+    }
+    async function verifyPausedRound(label){
+     await until(async()=>{
+      const s=await snapshot();
+      return s.paused&&!s.stopReason&&
+       await evaluate('document.pointerLockElement===null')?s:false;
+     },25000);
+     const before=await snapshot();
+     await sleep(1200);
+     const after=await snapshot();
+     if(JSON.stringify(stableRound(before))!==JSON.stringify(stableRound(after)))
+      fail('B242_'+label+'_PAUSED_NATIVE_WORLD_CHANGED');
+     const p=await evaluate(`(() => {
+      const p=document.querySelector('#t21-f3-b202-real-pause');
+      return {visible:!!p&&!p.hidden,state:p?.dataset.t21B202NativeState};
+     })()`);
+     if(p.visible!==true||p.state!=='NATIVE_PAUSED')
+      fail('B242_'+label+'_PAUSE_NOT_VISIBLE');
+     await clickRoundButton();
+     const resumed=await until(async()=>{
+      const s=await snapshot();
+      return !s.paused&&!s.stopReason&&s.tick>after.tick&&
+       await evaluate('document.pointerLockElement===document.querySelector("#app-canvas")')?s:false;
+     },30000);
+     const origin=await evaluate('performance.timeOrigin');
+     if(origin!==selected.origin||resumed.cpu.physicalFootRelocations!==0||
+        resumed.sourceScoreablePromotions!==0||resumed.productionAuthorized!==false)
+      fail('B242_'+label+'_RESUME_WORLD_OR_AUTHORITY_CHANGED');
+     return {label,paused:stableRound(after),resumedTick:resumed.tick,
+      sameWorldTimeOrigin:origin,actualUiClick:true};
+    }
     // B208: continue from the freshly selected world, with real browser
     // pointer lock, native HUMAN keyboard/mouse and seven ORIGINAL CPU.
     // This proves an actual playable source battle round, not only URL.
-    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
-     x:800,y:450,button:'none'});
-    for(const type of ['mousePressed','mouseReleased'])
-     await cmd('Input.dispatchMouseEvent',{type,x:800,y:450,
-      button:'left',clickCount:1});
+    await clickRoundButton();
     await until(()=>evaluate(
      'document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
+    for(const type of ['keyDown','keyUp'])
+     await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
+      windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+    const stagingPause=await verifyPausedRound('STAGING_ESCAPE');
     const realStart=await snapshot();
     const key={key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
     await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
@@ -1060,6 +1134,24 @@ async function run(){
      JSON.stringify(genuineWindow,null,2));
     console.log('B217_REAL_5S_NATIVE_CPU_PAINT_TEMPO_PASS',
      JSON.stringify(genuineWindow));
+    // Activate a real second Chrome target; no synthetic DOM blur event.
+    const focusTab=await cmd('Target.createTarget',{url:'about:blank'});
+    try{
+     await cmd('Target.activateTarget',{targetId:focusTab.targetId});
+     await until(async()=>{const s=await snapshot();return s.paused?s:false;},25000);
+     await cmd('Target.activateTarget',{targetId:tab.id});
+     await cmd('Page.bringToFront');
+    }finally{
+     await cmd('Target.closeTarget',{targetId:focusTab.targetId});
+    }
+    const focusPause=await verifyPausedRound('PLAYING_FOCUS_LOSS');
+    const lifecycle={schema:'B242_REAL_SOURCE_ROUND_READY_PAUSE_RESUME',
+     ready:{before:stableRound(readyBefore),after:stableRound(readyAfter),ui:readyUi},
+     stagingPause,focusPause,virtualTicksInjected:false,
+     actorRelocations:0,originalStage:'25/17/26/0',officialWinner:'NONE'};
+    writeFileSync(resolve(OUTPUT,'b242-real-source-round-lifecycle.json'),
+     JSON.stringify(lifecycle,null,2));
+    console.log('B242_REAL_SOURCE_ROUND_LIFECYCLE_PASS',JSON.stringify(lifecycle));
     const b218=realSeven.b218OriginalFaceChainSeams;
     if(!b218||b218.originalAuthority!==
        '25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE'||

@@ -346,13 +346,16 @@ export class UndertowF3PlayablePreviewApp{
  private readonly target=new Vec3();
  private readonly muzzle=new Vec3();
  private readonly visual=new Vec3();
- // Only the explicit read-only, nonproduction QA route may start frozen.
- // This prevents the native realtime loop from consuming ticks before CDP QA.
- private paused=new URL(location.href).searchParams.get('t21Play')==='preview'&&
-  new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
-  new URL(location.href).searchParams.get('t21QaInput')==='deterministic'&&
-  new URL(location.href).searchParams.get('t21KccAudit')==='readOnly'&&
-  new URL(location.href).searchParams.get('t21QaPauseOnBoot')==='1';
+ // Full source rounds wait for the player's first real mouse lock.
+ // The entire native world stays frozen, including staging and the clock.
+ private paused=(()=>{
+  const p=new URL(location.href).searchParams;
+  return p.get('t21Play')==='preview'&&(
+   p.get('t21W10B203')==='fullRound'||
+   p.get('t21QaDrive')==='source'&&
+   p.get('t21QaInput')==='deterministic'&&
+   p.get('t21KccAudit')==='readOnly'&&p.get('t21QaPauseOnBoot')==='1');
+ })();
  private stopReason:string|null=null;
  private respawnFrames=0;
  // B201: full native-world mission pause, resumed only on real pointer relock.
@@ -1221,6 +1224,7 @@ export class UndertowF3PlayablePreviewApp{
    'border:2px solid #82ebd6;border-radius:17px;'+
    'box-shadow:0 16px 60px #001b;font:700 12px/1.6 system-ui;display:none';
   const pauseTitle=document.createElement('div');
+  pauseTitle.id='t21-f3-b242-round-focus-title';
   pauseTitle.textContent='PAUSED · REAL SOURCE WORLD';
   pauseTitle.style.cssText='font:850 17px/1.4 system-ui;color:#bdfff1';
   const pauseInfo=document.createElement('p');
@@ -1234,9 +1238,10 @@ export class UndertowF3PlayablePreviewApp{
    'border:1px solid #bcffe9;background:#14604f;color:#edfff8;'+
    'font:850 12px/1.45 system-ui;cursor:pointer;pointer-events:auto';
   resumeButton.addEventListener('click',()=>{
-   if(this.resumeAfterRealPointerLock&&!this.stopReason&&
-      (this.b203FullRound||this.b25Run.snapshot().status==='RUNNING')&&
-      this.matchState==='PLAYING')void this.canvas.requestPointerLock();
+   if(!this.stopReason&&this.matchState!=='TIME_UP'&&
+      (this.b203FullRound||
+       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
+    void this.canvas.requestPointerLock();
   });
   const pauseHint=document.createElement('div');
   pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
@@ -1511,31 +1516,41 @@ export class UndertowF3PlayablePreviewApp{
   document.addEventListener('pointerlockchange',()=>{
    const running=this.b25Run.snapshot().status==='RUNNING';
    if(document.pointerLockElement===this.canvas){
+    const firstStart=this.b203FullRound&&!this.b203EverLockedRealPointer;
+    // A delayed lock after blur must not resume an unfocused window.
+    if(document.hidden||!document.hasFocus()||this.stopReason||
+       this.matchState==='TIME_UP'){
+     document.exitPointerLock();return;
+    }
     this.b203EverLockedRealPointer=true;
-    if(this.resumeAfterRealPointerLock&&this.matchState==='PLAYING'&&
-       !this.stopReason){
+    if((firstStart||this.resumeAfterRealPointerLock)&&
+       (this.matchState==='PLAYING'||this.b203FullRound)){
      this.resumeAfterRealPointerLock=false;this.paused=false;
      this.refreshB25PaintRun();this.refresh();
     }
     return;
    }
-   if((running||(this.b203FullRound&&this.b203EverLockedRealPointer))&&
-      this.matchState==='PLAYING'&&!this.stopReason){
-    // Genuine 180s clock stays frozen after mission CLEAR, too.
-    this.resumeAfterRealPointerLock=true;this.paused=true;
-    this.refreshB25PaintRun();this.refresh();
-    return;
+   if((running&&this.matchState==='PLAYING'||
+       this.b203FullRound&&this.b203EverLockedRealPointer&&this.matchState!=='TIME_UP')&&
+      !this.stopReason){
+    this.pauseSourceRoundOnFocusLoss();return;
    }
    if(running)this.b25Run.abort('PLAYER_POINTER_UNLOCKED');
    this.refreshB25PaintRun();
+  });
+  // Returning app/tab focus alone never resumes the native world.
+  window.addEventListener('blur',()=>this.pauseSourceRoundOnFocusLoss());
+  document.addEventListener('visibilitychange',()=>{
+   if(document.hidden)this.pauseSourceRoundOnFocusLoss();
   });
   this.radar=createF3SourceRadar(ui,stage);
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
    if(ev.code==='Escape'&&document.pointerLockElement===this.canvas&&
-      (this.b203FullRound||this.b25Run.snapshot().status==='RUNNING')&&
-      this.matchState==='PLAYING'&&!this.stopReason){
+      (this.b203FullRound&&this.matchState!=='TIME_UP'||
+       this.b25Run.snapshot().status==='RUNNING'&&this.matchState==='PLAYING')&&
+      !this.stopReason){
     // Freeze synchronously before the browser releases pointer lock.
     this.paused=true;this.resumeAfterRealPointerLock=true;
     this.refreshB25PaintRun();
@@ -1958,12 +1973,21 @@ export class UndertowF3PlayablePreviewApp{
    :'SURVEY STAGE (V) · next viewpoint';
   this.refresh();
  }
+ private pauseSourceRoundOnFocusLoss(){
+  if(this.stopReason||this.matchState==='TIME_UP'||
+     !(this.b203FullRound&&this.b203EverLockedRealPointer||
+       this.b25Run.snapshot().status==='RUNNING'&&this.matchState==='PLAYING'))return;
+  this.paused=true;this.resumeAfterRealPointerLock=true;
+  if(document.pointerLockElement===this.canvas)document.exitPointerLock();
+  this.refreshB25PaintRun();this.refresh();
+ }
  private togglePause(){
   if(this.survey.snapshot().active||this.galleryIndex>=0)return;
-  if(this.stopReason)return;
-  if((this.b203FullRound||this.b25Run.snapshot().status==='RUNNING')&&
-     this.matchState==='PLAYING'){
-   if(this.resumeAfterRealPointerLock){
+  if(this.stopReason||this.matchState==='TIME_UP')return;
+  if(this.b203FullRound||
+     this.b25Run.snapshot().status==='RUNNING'&&this.matchState==='PLAYING'){
+   if(this.b203FullRound&&!this.b203EverLockedRealPointer||
+      this.resumeAfterRealPointerLock){
     this.b25RunProgress.textContent='PAUSED · CLICK STAGE TO RESUME ACTUAL SOURCE PLAY';
     return;
    }
@@ -2720,6 +2744,8 @@ export class UndertowF3PlayablePreviewApp{
  }
  private update(dt:number){
   this.updateW10B22OwnerTrial();
+  // A generic QA/UI pause toggle cannot consume the player's ready time.
+  if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
   if(this.paused||this.stopReason){
    this.lastSourceFrameAtMs=Number.NaN;
    if(this.b27KineticEnabled)this.resetW10B27KineticLens();
@@ -2926,17 +2952,25 @@ export class UndertowF3PlayablePreviewApp{
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
   // The native round may pause even if the optional challenge is still IDLE.
-  const actuallyPaused=this.resumeAfterRealPointerLock&&
-   (this.b203FullRound||run.status==='RUNNING')&&
-   this.matchState==='PLAYING'&&!this.stopReason&&
+  const ready=this.b203FullRound&&!this.b203EverLockedRealPointer&&
+   !this.stopReason&&this.matchState!=='TIME_UP';
+  const actuallyPaused=(ready||this.resumeAfterRealPointerLock&&
+   (this.b203FullRound||run.status==='RUNNING'))&&
+   this.matchState!=='TIME_UP'&&!this.stopReason&&
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
   this.b202PauseOverlay.dataset.t21B202NativeState=
-   actuallyPaused?'NATIVE_PAUSED':'INACTIVE';
+   actuallyPaused?(ready?'READY_TO_START':'NATIVE_PAUSED'):'INACTIVE';
+  this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b242-round-focus-title')!
+   .textContent=ready?'READY · 180s SOURCE ROUND':'PAUSED · REAL SOURCE WORLD';
+  this.b202PauseOverlay.querySelector<HTMLButtonElement>('#t21-f3-b202-resume')!
+   .textContent=ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
-   .textContent=actuallyPaused?
-    Math.ceil(this.remainingSeconds)+'s actual 180s match left · 7 CPU source local · NO TURF WINNER':'';
+   .textContent=actuallyPaused?(ready?
+    'WASD move · Mouse aim / fire · Shift squid · Space jump. Click Start when ready.':
+    Math.ceil(this.remainingSeconds)+'s left · CPU, ink and positions retained')+
+    ' · UNSCORED / NO OFFICIAL RESULT':'';
   this.refreshB195CoopHud(run);
   const authenticClear=run.status==='CLEAR'&&
    run.originalStageVerified===true&&
