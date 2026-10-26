@@ -1,4 +1,5 @@
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+import { fixedStepLaunch } from './FixedStepLaunch';
 import type { CpuAgentSystem, CpuFireRequest } from '../ai/CpuAgentSystem';
 import type { CombatTargetSystem } from '../combat/CombatTargetSystem';
 import type { PlayerResources } from '../combat/PlayerResources';
@@ -61,6 +62,10 @@ interface DirectRayResult {
 }
 
 export class ProjectileSystem {
+  private sourceFixedStepAim = false;
+
+  /** Selected source round only; preserves the frozen default weapon behavior. */
+  public enableSourceFixedStepAim(): void { this.sourceFixedStepAim = true; }
   private readonly slots: ProjectileSlot[] = [];
   private readonly delayedBursts: DelayedBurst[] = [];
   private readonly materialA: StandardMaterial;
@@ -266,6 +271,13 @@ export class ProjectileSystem {
     const speed = profile.speedMetersPerSecond;
     const gravity = profile.gravityMetersPerSecond2;
 
+    // These weapons launch at the profile speed; charged and lobbed actions
+    // change speed or elevation later and retain their existing behavior.
+    if (this.sourceFixedStepAim &&
+        ['SHOOTER', 'DUALIES', 'BRELLA', 'SPLATLING', 'BLASTER'].includes(profile.weaponClass)) {
+      const launch = fixedStepLaunch(dx, dy, dz, speed, gravity, 1 / 60, profile.lifeSeconds);
+      if (launch) return out.set(launch.x, launch.y, launch.z).normalize();
+    }
     if (speed <= 0 || gravity <= 0 || horizontalDistance < 1e-5) {
       out.set(dx, dy, dz);
       return out.lengthSq() > 1e-8 ? out.normalize() : out.set(0, 0, -1);

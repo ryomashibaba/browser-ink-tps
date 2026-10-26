@@ -778,6 +778,8 @@ export class UndertowF3PlayablePreviewApp{
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
    this.feedback,this.stats);
+  if(b192HumanCombatEnabled&&this.b203FullRound)
+   this.projectiles.enableSourceFixedStepAim();
   // Reuse the already-shipped player sub weapon pipeline; this is not
   // a fabricated source Actor, collider, NavLink or scoreable surface.
   this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
