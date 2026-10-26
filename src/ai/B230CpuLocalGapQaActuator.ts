@@ -62,10 +62,10 @@ const sourceId=(kind:string,side:B230Side)=>
 function validPlan(stage:StageDefinition,plan:B230LocalGapPlan){
  if(stage.metadata.id!=='b230-exact-source-local-cpu-qa'||
   stage.solids.length!==27||stage.paintSurfaces.length!==17||
-  stage.navigationLinks.length!==26||
+  stage.navigationLinks?.length!==26||
   stage.solids.slice(0,25).some((s,i)=>s!==FROZEN.solids[i])||
   stage.paintSurfaces.some((s,i)=>s!==FROZEN.paintSurfaces[i])||
-  stage.navigationLinks.some((s,i)=>s!==FROZEN.navigationLinks[i])||
+  stage.navigationLinks?.some((s,i)=>s!==FROZEN.navigationLinks[i])||
   FROZEN.solids.length!==25||FROZEN.activationReady!==false)
   throw Error('B230_LIVE_OR_UNTRUSTED_STAGE_REFUSED');
  const floor=sourceId('floor-concrete01',plan.side);
@@ -104,15 +104,19 @@ export class B230CpuLocalGapQaActuator {
  private verticalSpeed=-.5;
  private phase:B230Status='APPROACH';
  private failReason:string|null=null;
- private tickIndex=0,stepCount=0;
+ private tickIndex=0;
+ private stepCount=0;
  private jumpCommands=0;
  private launchAt:number|null=null;
  private launchSpeed:number|null=null;
  private launchCollider:string|null=null;
  private launchWasGrounded=false;
- private leftGround=false,landedAfterAirborne=false;
+ private leftGround=false;
+ private landedAfterAirborne=false;
  private firstTargetTick:number|null=null;
- private targetStreak=0,maxStreak=0,closestError=Infinity;
+ private targetStreak=0;
+ private maxStreak=0;
+ private closestError=Infinity;
  private latestCollider:string|null=null;
  constructor(stage:StageDefinition,plan:B230LocalGapPlan){
   validPlan(stage,plan);
