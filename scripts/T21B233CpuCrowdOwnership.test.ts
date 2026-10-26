@@ -22,9 +22,11 @@ function stage(side:B230Side,nav:boolean):StageDefinition{
    (side==='POSITIVE_Z'?'-positive-z':'-negative-z'));
   if(!face)throw Error('B233_MISSING_CI688_FACE');
   const v=face.mesh.vertices;
-  const size:StageVector3=[0,1,2].map(i=>
-   Math.max(...v.map(p=>p[i]!))-Math.min(...v.map(p=>p[i]!)))
-   as StageVector3;
+  const size:StageVector3=[
+   Math.max(...v.map(p=>p[0]))-Math.min(...v.map(p=>p[0])),
+   Math.max(...v.map(p=>p[1]))-Math.min(...v.map(p=>p[1])),
+   Math.max(...v.map(p=>p[2]))-Math.min(...v.map(p=>p[2]))
+  ];
   return {id:(nav?'B231_QA:':'B230_QA:')+face.id,
    center:[0,0,0],size,material:'medium',render:false,
    cameraBlocker:false,projectileBlocker:false,
