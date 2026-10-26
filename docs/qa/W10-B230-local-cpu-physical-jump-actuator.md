@@ -11,3 +11,24 @@ The constructor refuses any stage outside `b230-exact-source-local-cpu-qa`, any 
 **Success means only a reusable isolated CPU-speed real physical actuator candidate**. The test does not instantiate `CpuAgentSystem` or native `Crowd`, and does not identify an authenticated Recast connector. Never count this as original CPU autonomous path completion, official 4v4, score or winner; opposing routes remain 0/12, productionAuthorized=false.
 
 Next gate after measured CI: independently verify physically safe source launch plus Recast Crowd approach/hold/rejoin *within a QA sandbox* without altering the 25 source-stage original or producing an arbitrary offmesh teleport.
+
+## Verified B230 strict native Rapier CI — #40304161442 SUCCESS
+
+One new stateful CPU-speed native Rapier actuator and the previous B229 baseline were both executed in GitHub Actions with an ordinary application build, genuine Rapier WASM ground/collider contact and explicit negative controls.
+
+| CI688 source gap direction | QA local takeoff tick | Native first target collider landing tick | Target stable grounded | Original 25-solid collisions | Accepted |
+|---|---:|---:|---:|---:|---|
+| POSITIVE_Z FloorConcrete01 → outer Slope00 | 29 | 63 | 18 consecutive ticks | 0 | YES |
+| POSITIVE_Z outer Slope00 → FloorConcrete01 | 39 | 73 | 18 consecutive ticks | 0 | YES |
+| NEGATIVE_Z FloorConcrete01 → outer Slope00 | 30 | 64 | 18 consecutive ticks | 0 | YES |
+| NEGATIVE_Z outer Slope00 → FloorConcrete01 | 39 | 73 | 18 consecutive ticks | 0 | YES |
+
+The corresponding four walk-only tests had **0 success** and failed normally when the real native KCC capsule left the source floor. The target distances in all four successful cases were approximately 0.0015–0.0027m. No interpolated superjump, Crowd teleport, scripted pose assignment after initial spawn, substituted floor, or score change occurred. The physical actuator itself decides when the real 60Hz KCC has reached the source-backed takeoff region and may launch only when the exact original CI688 source collider supports the body.
+
+**Fail-closed constructor negative cases pass** for normal production-stage ID, incomplete 26-solid package, navigation-enabled source mesh, and deliberately distant target; no registration or scoring authority is gained. The test logs `actualCpuAgentSystemInstantiated:false`, `cpuNavigationPathCertified:false`, `productionAuthorized:false`. This is a physical CPU-speed actuator *candidate*, not certified AI gameplay.
+
+CI: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40304161442. Three tests across the B229+B230 test files passed and the project build passed. Earlier CI #40303601004 failed on TypeScript class field declaration syntax before the physics tests; corrected in commit `b26384bfeedb31d294f2805d4feb63bca49d3160`.
+
+## B231 focused plan (quality, not repetitive test inflation)
+
+The next meaningful blocker is that the original Recast graph still does not span FloorConcrete01 → outer Slope00 (a true *jump*, not walking), nor the two later human-grounded seams. The live 25-solid stage does not register those source faces. Do **not** simply attach this test actuator to production CPU code or declare 12 team-crossing routes: first develop a separate, explicit QA-only transition interface for a genuine `CpuAgentSystem`/Crowd agent that can relinquish its invalid Crowd steer **without teleport**, use the B230 real KCC actor, and safely resume Crowd only on a physically and nav-supported original destination. Reject any crossing whose source/target original face provenance, launch support or real return-to-Crowd match fails. The first two-side true transition and actual gameplay encounters must precede any release authority, paint scoring or winner logic.
