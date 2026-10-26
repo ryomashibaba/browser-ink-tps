@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `f6de0f6f5dc14e91f245bbf6d8e4a9165c211f53`
+- 同期元QA HEAD: `2e7b9ee72f01c386197f74da64c9d7702a802b55`
 - 最新番号のQAレポート: W10-B234 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B234-real-seven-cpu-source-readiness.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B235 （着手・完了の保証ではない）
