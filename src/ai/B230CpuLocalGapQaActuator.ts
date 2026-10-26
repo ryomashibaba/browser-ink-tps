@@ -227,6 +227,63 @@ export class B230CpuLocalGapQaActuator {
    this.landedAfterAirborne?'SETTLING':'AIRBORNE';
   return this.snapshot();
  }
+ /**
+  * B232 native-Crowd *steering candidate*, QA only. This method directly
+  * continues the SAME genuine Rapier body that finished the B230 jump.
+  * Crowd cannot position or teleport this KCC. It requests an XZ step,
+  * bounded by real CPU speed; native Rapier computes the actual movement.
+  * On unexpected floor, ghost snap or agent drift the session fails shut.
+  */
+ public advanceNativeCrowdQa(proposedFoot:Readonly<{x:number;y:number;z:number}>):
+  Readonly<{approved:boolean;reason:string;actualFoot:readonly[number,number,number];
+   sourceFootId:string|null;nativeGrounded:boolean;crowdDeltaXZ:number;
+   actualDeltaXZ:number;driftMeters:number;actualKccStepCount:number}>{
+  const before=this.body.translation();
+  const oldFoot:[number,number,number]=[
+   before.x,before.y-PROFILE.humanFootOffsetMeters,before.z];
+  const failed=(reason:string,delta=0,actual=0,drift=Infinity)=>{
+   this.fail(reason);
+   return {approved:false,reason,
+    actualFoot:oldFoot as readonly[number,number,number],
+    sourceFootId:this.latestCollider,nativeGrounded:this.grounded,
+    crowdDeltaXZ:delta,actualDeltaXZ:actual,driftMeters:drift,
+    actualKccStepCount:this.stepCount};
+  };
+  if(this.phase!=='SUCCEEDED'||this.jumpCommands!==1||
+   this.targetStreak<18||!this.grounded||this.latestCollider!==this.targetId)
+   return failed('B232_KCC_NOT_ON_PHYSICALLY_CERTIFIED_LANDING');
+  if(![proposedFoot.x,proposedFoot.y,proposedFoot.z].every(Number.isFinite))
+   return failed('B232_CROWD_NONFINITE_PROPOSAL');
+  const delta=Math.hypot(proposedFoot.x-before.x,proposedFoot.z-before.z);
+  if(delta>.30||Math.abs(proposedFoot.y-oldFoot[1])>.18)
+   return failed('B232_UNTRUSTED_CROWD_DISPLACEMENT',delta);
+  const maxStep=SPEED*DT;
+  const factor=delta>maxStep?maxStep/delta:1;
+  const dx=(proposedFoot.x-before.x)*factor;
+  const dz=(proposedFoot.z-before.z)*factor;
+  this.grounded=this.stepNative(dx,-.12,dz);
+  this.latestCollider=this.footSolid();
+  const after=this.body.translation();
+  const foot:[number,number,number]=[
+   after.x,after.y-PROFILE.humanFootOffsetMeters,after.z];
+  const moved=Math.hypot(after.x-before.x,after.z-before.z);
+  const drift=Math.hypot(foot[0]-proposedFoot.x,
+   foot[1]-proposedFoot.y,foot[2]-proposedFoot.z);
+  let reason='NATIVE_RAPIER_CROWD_STEP_APPROVED';
+  if(!this.grounded||this.latestCollider!==this.targetId)
+   reason='B232_NATIVE_KCC_LOST_ORIGINAL_DESTINATION_FACE';
+  else if(this.originalCollisionIds.size)
+   reason='B232_NATIVE_KCC_CONTACTED_UNRELATED_25_SOLID';
+  else if(drift>.30)
+   reason='B232_REAL_PHYSICAL_FOOT_DIVERGED_FROM_CROWD';
+  else if(moved>maxStep+.001)
+   reason='B232_NATIVE_KCC_EXCEEDED_CPU_SPEED';
+  if(reason!=='NATIVE_RAPIER_CROWD_STEP_APPROVED')this.fail(reason);
+  return {approved:reason==='NATIVE_RAPIER_CROWD_STEP_APPROVED',
+   reason,actualFoot:foot,sourceFootId:this.latestCollider,
+   nativeGrounded:this.grounded,crowdDeltaXZ:delta,actualDeltaXZ:moved,
+   driftMeters:drift,actualKccStepCount:this.stepCount};
+ }
  public snapshot():B230NativeSnapshot{
   const p=this.body.translation();
   return {phase:this.phase,reason:this.failReason,tick:this.tickIndex,

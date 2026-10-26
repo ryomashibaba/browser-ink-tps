@@ -1,0 +1,25 @@
+name: T21 B232 genuine moving Crowd requests validated by same Rapier body
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/ai/B230CpuLocalGapQaActuator.ts'
+      - 'scripts/T21B232CrowdKccMovement.test.ts'
+      - '.github/workflows/t21-b232-crowd-physical-steering.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-crowd-movement:
+    name: B232 actual Recast target requests with unchanged Rapier KCC body
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Real native Crowd targets and original source grounded motion
+        run: npx vitest run scripts/T21B232CrowdKccMovement.test.ts scripts/T21B231NativeCrowdRejoin.test.ts scripts/T21B230CpuLocalGapActuator.test.ts --reporter=verbose
