@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `9cfa363ec35c01eaef721a69279921d17996c162`
-- 最新番号のQAレポート: W10-B235 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B235-real-seven-cpu-source-entry.md
+- 同期元QA HEAD: `7bd60e1360d0506d09543c28a5c46d8765c2413a`
+- 最新番号のQAレポート: W10-B236 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B236-original-slope01-right-low-ingress.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B236 （着手・完了の保証ではない）
+- 次工程候補: W10-B237 （着手・完了の保証ではない）
 - レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40316183955
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
