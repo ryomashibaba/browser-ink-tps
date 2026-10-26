@@ -11,9 +11,9 @@ const corridor=b226||process.env.T21_B225_CORRIDOR==='1';
 const OUT=process.env.T21_B224_OUT||'/tmp/t21-b224';
 const children=[],pending=new Map();
 let ws=null,sequence=0;
-async function wait(fn,ms=45000){
+async function wait(fn,ms=45000,poll=150){
  const until=Date.now()+ms;
- while(Date.now()<until){const v=await fn();if(v)return v;await sleep(150);}
+ while(Date.now()<until){const v=await fn();if(v)return v;await sleep(poll);}
  throw Error('B224_WAIT_TIMEOUT_'+ms);
 }
 async function cmd(method,params={}){
@@ -125,7 +125,7 @@ async function scenario(side,direction){
    // all corridor QA modes, or the bounded 120-native-tick timeout.
    return o.b225FirstNextSupportTick!==null||
      o.tick>=secondLegStart.tick+120?o:false;
-  },33000);
+  },33000,20);
   await key(moveKey,false);
   const parked=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
@@ -231,7 +231,7 @@ async function scenario(side,direction){
    return o.b226ActualInnerSupportTick!==null||
      o.b226NearestInnerMeters<.45||
      o.tick>=waypointRest.tick+115?o:false;
-  },26000);
+  },26000,30);
   await key(moveKeyThird,false);
   const innerParked=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
@@ -273,7 +273,7 @@ async function scenario(side,direction){
    const o=await read('window.__t21B224.snapshot()');
    return o.b228FirstNativeFootTick!==null||
     o.tick>=beforeFourth.tick+150?o:false;
-  },29000);
+  },29000,30);
   await key(moveKey,false);
   const underpassRest=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
