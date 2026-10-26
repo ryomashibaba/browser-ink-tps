@@ -3,11 +3,11 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `81790da7d9deed8e12c3fc385c84a8f4655ecbf7`
-- 最新番号のQAレポート: W10-B239 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B239-original-floorline-real-rapier-kcc-navigation.md
+- 同期元QA HEAD: `7ae1ab0dda97a27c2e2049e02d5d9ba7703f84a0`
+- 最新番号のQAレポート: W10-B240 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B240-original-source-recast-clearance-root-cause.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B240 （着手・完了の保証ではない）
-- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40328240414
+- 次工程候補: W10-B241 （着手・完了の保証ではない）
+- レポート記載のActions: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40330372402
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
 - 正式4対4: HOLD（明示承認なしに解除禁止）
