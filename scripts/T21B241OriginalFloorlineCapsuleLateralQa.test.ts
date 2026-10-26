@@ -35,6 +35,7 @@ type Trace={version:string;originalSHA256:string;productionAuthorized:boolean;
   teleportsAfterSpawn:number;maxAirborneFrames:number;
   sparseFrames:Array<{tick:number;foot:V3;grounded:boolean;physicalSupportId:string}>
  }}}>;
+};
 const len=(a:V3,b:V3)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
 const avg=(points:readonly V3[]):V3=>[
  points.reduce((a,p)=>a+p[0],0)/points.length,
