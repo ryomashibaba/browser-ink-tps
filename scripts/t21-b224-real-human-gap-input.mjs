@@ -231,6 +231,9 @@ try{
        return !lane||!lane.noSecondJump||!lane.noTeleport||
         !lane.physicallyTouchedOriginalFloor02||!lane.stableFloor02||
         lane.stageColliderCollisions!==0||
+        lane.secondLegGroundedTicks<18||
+        lane.secondLegUngroundedTicks!==0||
+        lane.longestAirborneStreak!==0||
         lane.secondLegStartedTick===null||
         !(lane.secondLegStartedTick>x.end.stableLandingTick)||
         !chain.every((id,i)=>lane.originalSourceSupportOrder[i]===id);

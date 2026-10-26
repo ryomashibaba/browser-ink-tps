@@ -30,3 +30,16 @@ No character relocalization after initial lab spawn; no collision with the exist
 ## Fail-closed B225 regression gate and second-leg airborne evidence
 
 The B225 browser workflow now **requires** both stable FloorConcrete02 landings, strictly ordered support transitions, first jump stability, no second Space input, no original-stage collider collision and no teleport after initial QA spawn. It separately records all real native grounded ticks, ungrounded ticks and longest airborne streak *after the first leg's stable landing*. Consequently, a briefly airborne 0.518559m second seam cannot accidentally be described as always-grounded walking. Only real KCC grounding determines whether the character remained supported, even when no second Space was sent. A workflow PASS is still a 30-solid lab PASS, not CPU Recast certification.
+
+## Fully grounded B225 native CI verification — run #40291938082
+
+The revised post-B225 mandatory regression workflow is **SUCCESS**, as is the B224 baseline workflow #40291938084. In addition to genuine source floor 3-step support order and required true stable landings, the same human KCC yielded:
+
+| Side | Real native grounded ticks in second leg | Ungrounded ticks | Maximum airborne streak | FloorConcrete02 stable | Original 25 collider collisions |
+|---|---:|---:|---:|---|---:|
+| POSITIVE_Z | 84 | 0 | 0 | YES (tick 171) | 0 |
+| NEGATIVE_Z | 91 | 0 | 0 | YES (tick 173) | 0 |
+
+Minimum second-leg target-distance errors were respectively 0.052680m and 0.129994m. No second Space keydown, teleport, floor bridge, KCC authority override or synthetic tick was used. This **establishes fully grounded real keyboard-based traversal of the localized 0.518559m second seam** under the isolated source QA world, following the genuine initial jump. The CI regression assertion now requires zero airborne ticks and at least 18 grounded ticks on this second leg, in addition to reaching and holding the correct next original source floor.
+
+It does **not** establish that an original player or CPU can enter this QA geometry from the whole authentic 25-solid runtime (which does not yet register the source meshes). Further candidates: the next original FloorConcrete02-to-inner-Slope00 seam, connection of this extracted chain to registered underpass geometry, actual live integration under strictly controlled authority, Recast route validation, and a real CPU actor walk. Continue to honor historical CI691 Recast disconnection.
