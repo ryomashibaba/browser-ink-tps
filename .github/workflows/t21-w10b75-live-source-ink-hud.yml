@@ -56,6 +56,13 @@ on:
       - 'src/app/W10B158OriginalSourceFaceRecastMatch.test.ts'
       - 'src/app/W10B159OriginalFaceNavMeshProjection.ts'
       - 'src/app/W10B159OriginalFaceNavMeshProjection.test.ts'
+      # B221: all source seam producers must trigger the full source QA.
+      - 'src/app/B218OriginalRouteFaceChainSeams.ts'
+      - 'src/app/B218OriginalRouteFaceChainSeams.test.ts'
+      - 'src/app/B219OriginalUnderpassDisconnection.ts'
+      - 'src/app/B219OriginalUnderpassDisconnection.test.ts'
+      - 'src/app/B220OriginalNativeRecastSeamProbe.ts'
+      - 'src/app/B220OriginalNativeRecastSeamProbe.test.ts'
       - 'src/app/B173OriginalUnderpassSurfaceChain.ts'
       - 'src/app/B173OriginalUnderpassSurfaceChain.test.ts'
       - 'src/app/B160SourceCpuActivityView.ts'

@@ -19,6 +19,22 @@ describe('B218 immutable original source 42-face chain seam geometry',()=>{
   expect(()=>dist(a,{vertices:a.vertices,indices:[0,1,8]})).toThrow();
   expect(()=>dist(a,triangle([[NaN,0,0],[1,0,0],[0,0,1]]))).toThrow();
  });
+ it('locks measured CI688 original face chain without invented bridge geometry',()=>{
+  const original=report(),plus=original.seams.filter(x=>
+    x.side==='POSITIVE_Z'),minus=original.seams.filter(x=>
+    x.side==='NEGATIVE_Z');
+  const expected=[.17,2.074235,.518559,.518559];
+  expect(plus).toHaveLength(4);
+  expect(minus).toHaveLength(4);
+  for(let i=0;i<4;i++){
+    expect(plus[i]!.gapMeters).toBeCloseTo(expected[i]!,5);
+    expect(minus[i]!.gapMeters).toBeCloseTo(expected[i]!,5);
+    expect(plus[i]!.gapMeters).toBe(minus[i]!.gapMeters);
+    expect(plus[i]!.nativeConnectedCertified).toBe(false);
+    expect(plus[i]!.physicalKccCertified).toBe(false);
+  }
+  expect(original.originalRouteCertified).toBe('0/12');
+ });
  it('measures eight authentic source-face seams but grants no traversal',()=>{
   const result=report();
   expect(result.seams).toHaveLength(8);
