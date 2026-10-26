@@ -95,7 +95,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
-import {createF3PlayableHud} from './UndertowF3PlayableHud';
+import {createF3PlayableHud,sourceF3RealAimLineCue} from './UndertowF3PlayableHud';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {createB160SourceCpuActivityView}
@@ -271,6 +271,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
  private readonly b202PauseOverlay:HTMLElement;
  private readonly b167CombatNotice:HTMLElement;
+ private readonly b243AimLineNotice:HTMLElement;
  // B183 original-source native first-drop game challenge, without route writes.
  private readonly b183DropNotice:HTMLElement;
  private readonly b183Drop=new B183OriginalHumanDescent();
@@ -1265,6 +1266,31 @@ export class UndertowF3PlayablePreviewApp{
    'box-shadow:0 8px 22px #0019';
   combatNotice.hidden=true;ui.appendChild(combatNotice);
   this.b167CombatNotice=combatNotice;
+  // B243 real full-round reticle. Never implies projectile hits or
+  // a certified path to an opponent; the existing hit HUD remains authoritative.
+  const aimLine=document.createElement('div');
+  aimLine.id='t21-f3-b243-source-aim-line';
+  aimLine.hidden=true;aimLine.dataset.realSourceOnly='true';
+  aimLine.dataset.projectileHitCertified='false';
+  aimLine.dataset.enemyContactCertified='false';
+  aimLine.dataset.originalScoreable='0';
+  aimLine.style.cssText=
+   'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);'+
+   'z-index:11;pointer-events:none;text-align:center;color:#d8e5ed';
+  const aimCross=document.createElement('span');
+  aimCross.textContent='+';
+  aimCross.setAttribute('aria-hidden','true');
+  aimCross.style.cssText='display:block;font:900 22px/20px system-ui;'+
+   'text-shadow:0 1px 5px #001a';
+  const aimLabel=document.createElement('span');
+  aimLabel.id='t21-f3-b243-source-aim-caption';
+  aimLabel.style.cssText='position:absolute;left:50%;top:99px;'+
+   'transform:translateX(-50%);white-space:nowrap;'+
+   'padding:4px 8px;border-radius:7px;border:1px solid #6b8798;'+
+   'background:rgba(4,21,35,.85);font:800 10px/1.4 system-ui;'+
+   'letter-spacing:.3px';
+  aimLine.append(aimCross,aimLabel);ui.appendChild(aimLine);
+  this.b243AimLineNotice=aimLine;
   const dropNotice=document.createElement('aside');
   dropNotice.id='t21-f3-b183-real-first-drop';
   dropNotice.dataset.originalSourceOnly='true';
@@ -3950,6 +3976,53 @@ export class UndertowF3PlayablePreviewApp{
    this.b167CombatNotice.style.borderColor=cue.state==='STAGE_RAY_CLEAR'?
     'rgba(103,235,212,.68)':'rgba(255,159,195,.56)';
   }else this.b167CombatNotice.dataset.t21B167ContactState='OFF';
+  // Actual view target and original Rapier/paintable line from the HUMAN
+  // muzzle. No target correction, autolock, gameplay write or hit claim.
+  const aimActive=this.b203FullRound&&
+   state.originalSourceSolids===25&&state.originalPaintSurfaces===17&&
+   state.originalSourceNavigationLinks===26&&
+   state.sourceScoreablePromotions===0&&
+   state.matchState==='PLAYING'&&!state.paused&&!state.stopReason&&
+   state.player.hp>0&&document.pointerLockElement===this.canvas&&
+   !this.survey.snapshot().active&&this.galleryIndex<0;
+  this.b243AimLineNotice.hidden=true;
+  if(aimActive){
+   const lineDir=this.camera.getAimDirection(new Vec3());
+   const muzzle=this.player.getMuzzlePosition(lineDir,new Vec3());
+   const cameraTarget=this.camera.getAimTarget(new Vec3());
+   let paintHit:ReturnType<PaintSurface['intersectSegment']>=null;
+   for(const surface of this.b45SourceSurfaces){
+    const hit=surface.intersectSegment(muzzle,cameraTarget);
+    if(hit&&(!paintHit||hit.distance<paintHit.distance))paintHit=hit;
+   }
+   const registeredSolid=this.physics.castStageSegment(
+    muzzle,cameraTarget,'ink-projectile');
+   const paintFirst=!!paintHit&&(!registeredSolid||
+    paintHit.distance<=registeredSolid.distance+
+     GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters);
+   const kind:'SOURCE_PAINT'|'SOURCE_SOLID'|'NO_REGISTERED_HIT'=
+    paintFirst?'SOURCE_PAINT':registeredSolid?
+    'SOURCE_SOLID':'NO_REGISTERED_HIT';
+   const distance=paintFirst?paintHit!.distance:
+    registeredSolid?.distance??null;
+   const line=sourceF3RealAimLineCue({
+    stage:[state.originalSourceSolids,state.originalPaintSurfaces,
+     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
+    nativeTick:state.tick,matchState:state.matchState,paused:state.paused,
+    stopReason:state.stopReason,pointerLocked:true,
+    hitKind:kind,rayDistanceMeters:distance
+   });
+   if(line){
+    this.b243AimLineNotice.hidden=false;
+    this.b243AimLineNotice.dataset.t21B243AimLineKind=line.kind;
+    this.b243AimLineNotice.dataset.t21B243ActualTick=String(state.tick);
+    this.b243AimLineNotice.style.color=line.tint;
+    const caption=this.b243AimLineNotice.querySelector<HTMLElement>(
+     '#t21-f3-b243-source-aim-caption')!;
+    caption.textContent=line.label+' · NO HIT CLAIM';
+    caption.style.borderColor=line.tint;
+   }
+  }else this.b243AimLineNotice.dataset.t21B243AimLineKind='OFF';
   // B211 reads only actual 60Hz CPU/HUMAN life state, never source authority.
   this.b211Roster?.render(b211RealNativeRoster({
    selected:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',

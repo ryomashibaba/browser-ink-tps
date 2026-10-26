@@ -59,6 +59,41 @@ export function genuineF3DirectHitVisible(x:{
   x.nativeMarkerUntil>=x.nativeTick&&
   x.matchState!=='TIME_UP'&&!x.stopReason;
 }
+/**
+ * B243: read-only sight-line feedback for the real source round. This is
+ * camera-target/muzzle geometry only, not a projectile collision, enemy
+ * hit, paint event, or authority to score original Turf.
+ */
+export type F3SourceAimRayKind='SOURCE_PAINT'|'SOURCE_SOLID'|'NO_REGISTERED_HIT';
+export function sourceF3RealAimLineCue(x:{
+ stage:readonly number[];nativeTick:number;
+ matchState:'STAGING'|'PLAYING'|'TIME_UP';
+ paused:boolean;stopReason:string|null;pointerLocked:boolean;
+ hitKind:F3SourceAimRayKind;rayDistanceMeters:number|null;
+}){
+ if(x.stage.join(',')!=='25,17,26,0'||x.matchState!=='PLAYING'||
+    x.paused||x.stopReason||!x.pointerLocked||
+    !Number.isSafeInteger(x.nativeTick)||x.nativeTick<0||
+    (x.hitKind!=='NO_REGISTERED_HIT'&&
+     (typeof x.rayDistanceMeters!=='number'||
+      !Number.isFinite(x.rayDistanceMeters)||x.rayDistanceMeters<0)))
+  return null;
+ const distance=x.rayDistanceMeters===null?'':x.rayDistanceMeters.toFixed(1)+'m';
+ const label=x.hitKind==='SOURCE_PAINT'?
+   'SOURCE PAINT LINE · '+distance:
+  x.hitKind==='SOURCE_SOLID'?
+   'REGISTERED COVER LINE · '+distance:
+   'NO REGISTERED SURFACE ON AIM LINE';
+ return {
+  kind:x.hitKind,label,
+  tint:x.hitKind==='SOURCE_PAINT'?'#8af6ed':
+   x.hitKind==='SOURCE_SOLID'?'#ffd48c':'#d8e5ed',
+  physicalAimLineOnly:true as const,
+  projectileHitCertified:false as const,
+  enemyContactCertified:false as const,
+  gameplayWrites:0 as const,sourceScoreablePromotions:0 as const
+ };
+}
 const clampPercent=(n:number)=>Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):0;
 export function formatF3PlayableHud(s:F3PlayableHudState){
  // Never turn this nonproduction lab into an inferred winner or a scored match.

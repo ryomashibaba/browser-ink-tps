@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {formatF3PlayableHud,genuineF3DirectHitVisible,type F3PlayableHudState}
+import {formatF3PlayableHud,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
 function state():F3PlayableHudState{
@@ -135,5 +135,36 @@ describe('W10-B136 genuine native direct hit and splat marker timing',()=>{
   expect(genuineF3DirectHitVisible({...base,paused:true,
    realHitCount:null})).toBe(false);
   expect(genuineF3DirectHitVisible({...base,stopReason:'SOURCE_HOLD'})).toBe(false);
+ });
+});
+
+describe('B243 real source muzzle-to-camera aim-line feedback',()=>{
+ const base={
+  stage:[25,17,26,0],nativeTick:1200,
+  matchState:'PLAYING' as const,paused:false,
+  stopReason:null as string|null,pointerLocked:true,
+  hitKind:'SOURCE_PAINT' as const,rayDistanceMeters:8.25
+ };
+ it('distinguishes real source paint, registered cover, and empty rays',()=>{
+  expect(sourceF3RealAimLineCue(base)).toMatchObject({
+   kind:'SOURCE_PAINT',physicalAimLineOnly:true,
+   projectileHitCertified:false,enemyContactCertified:false,
+   gameplayWrites:0,sourceScoreablePromotions:0
+  });
+  expect(sourceF3RealAimLineCue({
+   ...base,hitKind:'SOURCE_SOLID',rayDistanceMeters:2.5
+  })?.label).toContain('REGISTERED COVER LINE');
+  expect(sourceF3RealAimLineCue({
+   ...base,hitKind:'NO_REGISTERED_HIT',rayDistanceMeters:null
+  })?.label).toContain('NO REGISTERED SURFACE');
+ });
+ it('fails closed outside real source play without invented hit results',()=>{
+  expect(sourceF3RealAimLineCue({...base,stage:[25,17,26,1]})).toBeNull();
+  expect(sourceF3RealAimLineCue({...base,paused:true})).toBeNull();
+  expect(sourceF3RealAimLineCue({...base,pointerLocked:false})).toBeNull();
+  expect(sourceF3RealAimLineCue({...base,stopReason:'SOURCE_HOLD'})).toBeNull();
+  expect(sourceF3RealAimLineCue({...base,nativeTick:2.5})).toBeNull();
+  expect(sourceF3RealAimLineCue({...base,matchState:'TIME_UP'})).toBeNull();
+  expect(sourceF3RealAimLineCue({...base,rayDistanceMeters:NaN})).toBeNull();
  });
 });

@@ -1145,9 +1145,27 @@ async function run(){
      await cmd('Target.closeTarget',{targetId:focusTab.targetId});
     }
     const focusPause=await verifyPausedRound('PLAYING_FOCUS_LOSS');
+    // B243: inspect the genuine player-facing reticle, never a fake hit.
+    const liveAim=await until(async()=>{
+     const x=await evaluate(`(() => {
+      const root=document.querySelector('#t21-f3-b243-source-aim-line');
+      const caption=document.querySelector('#t21-f3-b243-source-aim-caption');
+      return {visible:!!root&&!root.hidden,
+       kind:root?.dataset.t21B243AimLineKind,
+       certifiedHit:root?.dataset.projectileHitCertified,
+       certifiedEnemy:root?.dataset.enemyContactCertified,
+       scoreable:root?.dataset.originalScoreable,
+       label:caption?.textContent};
+     })()`);
+     return x.visible?x:false;
+    },25000);
+    if(!['SOURCE_PAINT','SOURCE_SOLID','NO_REGISTERED_HIT'].includes(liveAim.kind)||
+       liveAim.certifiedHit!=='false'||liveAim.certifiedEnemy!=='false'||
+       liveAim.scoreable!=='0'||!liveAim.label.includes('NO HIT CLAIM'))
+     fail('B243_REAL_SOURCE_AIM_LINE_UNTRUSTED_'+JSON.stringify(liveAim));
     const lifecycle={schema:'B242_REAL_SOURCE_ROUND_READY_PAUSE_RESUME',
      ready:{before:stableRound(readyBefore),after:stableRound(readyAfter),ui:readyUi},
-     stagingPause,focusPause,virtualTicksInjected:false,
+     stagingPause,focusPause,b243LiveAim:liveAim,virtualTicksInjected:false,
      actorRelocations:0,originalStage:'25/17/26/0',officialWinner:'NONE'};
     writeFileSync(resolve(OUTPUT,'b242-real-source-round-lifecycle.json'),
      JSON.stringify(lifecycle,null,2));
