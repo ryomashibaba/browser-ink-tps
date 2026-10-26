@@ -4,6 +4,7 @@
  * registered surfaces, NEVER fabricates a bridge or route link.
  */
 import {Vec3} from 'playcanvas';
+import {GAME_CONFIG} from '../../config/game/gameConfig';
 import {UNDERTOW_MODEL_XZ_GEOMETRY}
  from './UndertowSpillwayModelXZGeometry';
 import {UNDERTOW_UNDERPASS_ROUTE_COMPONENTS}
@@ -98,6 +99,11 @@ export function b236InspectOriginalSlopeEntrance(side:B235Side){
  const separation=boundaryToLine(contour.projectOuter,upper,upper2);
  const floorY=3-3;
  const sample=pointOnRamp(.10),lower=pointOnRamp(.90);
+ const drop=contour.sourceYProjectMeters-hi;
+ const v=GAME_CONFIG.player.jumpSpeedMetersPerSecond;
+ const g=GAME_CONFIG.player.gravityMetersPerSecond2;
+ const idealTravel=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*
+  (v+Math.sqrt(v*v+2*g*drop))/g;
  return {side,
   slopeOriginalSourceObject:slope.sourceObject,
   registeredRightLowSourceY:contour.sourceYProjectMeters,
@@ -111,6 +117,12 @@ export function b236InspectOriginalSlopeEntrance(side:B235Side){
   dropFromRightLowToSlopeAt90pctMeters:
    contour.sourceYProjectMeters-lower.y,
   horizontalSlopeMidlineMeters:Math.hypot(t[0]-bt[0],t[2]-bt[2]),
+  idealConstantMaxCpuSpeedAirborneCenterReachMeters:idealTravel,
+  idealCenterReachShortOfAuthenticSourceBoundaryMeters:
+   separation.distanceMeters-idealTravel,
+  cpuOriginalMaxSpeed:GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
+  verticalTestJumpSpeed:GAME_CONFIG.player.jumpSpeedMetersPerSecond,
+  nativeGravity:GAME_CONFIG.player.gravityMetersPerSecond2,
   sourceFloorY:floorY,sourceFloorOriginalObject:floor.sourceObject,
   originalRightLowContourPointCount:contour.projectOuter.length,
   triangleCount:slope.mesh.indices.length/3,

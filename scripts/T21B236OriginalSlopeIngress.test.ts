@@ -84,6 +84,14 @@ describe('B236 original high-to-low source ingress geometry and native Recast/Ra
      targetSnapDistanceMeters:native.endSnapDistanceMeters,
      endpointErrorMeters:native.endpointErrorMeters,
      nativePointCount:native.pointCount,
+     // Recast reachedTarget alone is NOT an authenticated route:
+     // nearest-poly may be more than a metre from exact source foot.
+     trustworthySourceFloorNativePath:native.reachedTarget&&
+      native.startSnapDistanceMeters<=.30&&
+      native.endSnapDistanceMeters<=.30,
+     misleadingRecastReachedWithDistantSourceSnap:native.reachedTarget&&
+      (native.startSnapDistanceMeters>.30||
+       native.endSnapDistanceMeters>.30),
      truePhysicalSourceFoot:foot(physics,edge.from),
      truePhysicalTargetFoot:foot(physics,edge.to),
      targetNativeProjection:projection,
@@ -125,7 +133,43 @@ describe('B236 original high-to-low source ingress geometry and native Recast/Ra
     row.actuallyRegisteredRightLowTerminal25.id);
    expect(row.routes).toHaveLength(4);
    expect(row.routes[0]!.kccGroundedTraversalActuallyTested).toBe(false);
+   expect(row.source.closestRightLowPolygonToSlopeTopEdge.distanceMeters)
+    .toBeGreaterThan(4.20);
+   expect(row.source.closestRightLowPolygonToSlopeTopEdge.distanceMeters)
+    .toBeLessThan(4.24);
+   expect(row.source.idealConstantMaxCpuSpeedAirborneCenterReachMeters)
+    .toBeLessThan(row.source.closestRightLowPolygonToSlopeTopEdge.distanceMeters);
+   expect(row.source.idealCenterReachShortOfAuthenticSourceBoundaryMeters)
+    .toBeGreaterThan(.90);
+   expect(row.candidateTopFloor25.id).toBeNull();
+   expect(row.candidateTopSource30.id).toBe(
+    'B235_EXACT_CI688_QA:underpass-route-slope01-'+
+    (row.side==='POSITIVE_Z'?'positive-z':'negative-z'));
+   expect(row.candidateLowerSource30.id).toBe(row.candidateTopSource30.id);
+   expect(row.routes[0]!.nativePathReached).toBe(true);
+   expect(row.routes[0]!.trustworthySourceFloorNativePath).toBe(false);
+   expect(row.routes[0]!.misleadingRecastReachedWithDistantSourceSnap)
+    .toBe(true);
+   expect(row.routes[0]!.targetSnapDistanceMeters).toBeGreaterThan(1.0);
+   expect(row.routes[1]!.nativePathReached).toBe(false);
+   expect(row.routes[1]!.trustworthySourceFloorNativePath).toBe(false);
+   expect(row.routes[1]!.endpointErrorMeters).toBeGreaterThan(7.0);
+   // Later Recast partial positives also snap too far away from the
+   // exact FloorConcrete01 source surface to certify an actor route.
+   expect(row.routes[2]!.trustworthySourceFloorNativePath).toBe(false);
+   expect(row.routes[3]!.trustworthySourceFloorNativePath).toBe(false);
   }
+  console.log('B236_STRICT_ORIGINAL_RIGHT_LOW_SLOPE01_INGRESS_BLOCKED',
+   JSON.stringify({sides:2,sourceUpperSlopeTrueRapierContact:2,
+    frozen25Slope01SourceContact:0,
+    exactSourceToRightLowHorizontalGapMeters:
+     result.map(x=>x.source.closestRightLowPolygonToSlopeTopEdge.distanceMeters),
+    idealFullSpeedCpuBallisticCenterReachMeters:
+     result.map(x=>x.source.idealConstantMaxCpuSpeedAirborneCenterReachMeters),
+    navFalseReachDueToOneMeterSnap:2,
+    nativeSlopeUpperToLowerDisconnected:2,
+    actualCpuTraversalsAuthorized:0,
+    originalCpuRoutes:'0/12',productionAuthorized:false}));
  },120000);
  it('does not add source geometry to original 25/17/26/0',()=>{
   expect(FROZEN.solids).toHaveLength(25);
