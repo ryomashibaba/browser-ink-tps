@@ -76,15 +76,30 @@ try{
     readiness:a.b234RealCpuGapReadiness}:null})()`);
   return x?.readiness?.enabled&&x.readiness?.realCpuObjectsAudited===7?x:false;
  },100000);
- const later=await wait(async()=>{
-  const x=await evaluate('window.__t21F3?.snapshot?.()?.b234RealCpuGapReadiness');
-  return x?.sampledNativeFrames>=80?x:false;
- },90000);
- const r=later;
+ // Separate mere STAGING presence from ACTUAL moving CpuAgentSystem
+ // actors. No in-browser actor setters or forced 60Hz ticks.
+ const movementWitness=await wait(async()=>{
+  const x=await evaluate(`(()=>{const q=window.__t21F3?.snapshot?.();
+   return q?{stage:q.matchState,stopped:q.stopReason,
+    actual:q.b234RealCpuGapReadiness}:null})()`);
+  const a=x?.actual;
+  if(!a||a.sampledNativeFrames<180||x.stopped)return false;
+  const initial=ready.readiness.actualPhysicalCpuPositions;
+  const displacement=a.actualPhysicalCpuPositions.map(now=>{
+   const before=initial.find(v=>v.id===now.id);
+   return {id:now.id,metres:before?Math.hypot(
+    now.foot[0]-before.foot[0],now.foot[1]-before.foot[1],
+    now.foot[2]-before.foot[2]):0};
+  });
+  const moved=displacement.filter(x=>x.metres>.30).length;
+  return moved>0?{...x,displacement,moved}:false;
+ },115000);
+ const r=movementWitness.actual;
  const expected=['A1','A2','A3','B1','B2','B3','B4'];
  const pass=ready.browserEnabled==='FROZEN_25_READ_ONLY'&&
   ready.stage===25&&ready.paint===17&&ready.links===26&&
-  r.realCpuObjectsAudited===7&&
+  r.realCpuObjectsAudited===7&&movementWitness.moved>0&&
+  movementWitness.stage==='PLAYING'&&
   r.actualPhysicalCpuPositions?.length===7&&
   r.actualSevenCpuIds?.every((id,i)=>id===expected[i])&&
   r.anchors?.length===8&&r.authenticGapAnchorSupports===0&&
@@ -98,7 +113,11 @@ try{
   r.actualPhysicalCpuPositions.every(a=>a.foot.every(Number.isFinite));
  const result={pass,scenario:'REAL_F3_CHROMIUM_SEVEN_NATIVE_CPU_GAP_SOURCE_READINESS',
   ready:{state:ready.state,stage:ready.stage,paint:ready.paint,links:ready.links,
-   browserEnabled:ready.browserEnabled},final:r,
+   browserEnabled:ready.browserEnabled},
+  liveState:movementWitness.stage,
+  actuallyMovedCpuCount:movementWitness.moved,
+  genuineCpuDisplacementsMeters:movementWitness.displacement,
+  final:r,
   truthfulOutcome:'BLOCKED_MISSING_ORIGINAL_CI688_COLLISION_AND_NAVMESH',
   actualCPUJumpTested:false,realOriginalRoutesCertified:'0/12'};
  writeFileSync(resolve(OUT,'b234-real-chromium-seven-cpu-readiness.json'),
