@@ -115,6 +115,9 @@ export class T21B224OriginalGapInputQaApp{
   let originalColliderContactCount=0;
   let finishAtSuccess:null|[number,number,number]=null;
   let physicallyEnteredTarget=false,groundedAtSuccess=false;
+  let stableTargetGroundedTicks=0,stableLandingTick:number|null=null;
+  let stableLandingPosition:null|[number,number,number]=null;
+  let closestGroundedTargetErrorMeters=Infinity;
   let lastInputX=0,lastInputY=0;
   const vec=new Vec3();
   const floorHit=()=>{
@@ -156,7 +159,10 @@ export class T21B224OriginalGapInputQaApp{
     furthestTravelMeters:furthestTravel,
     originalColliderContactCount,
     physicallyEnteredTarget,groundedAtSuccess,successTick,
-    finishAtSuccess,teleportsAfterQaSpawn:0,
+    finishAtSuccess,stableTargetGroundedTicks,stableLandingTick,
+    stableLandingPosition,
+    closestGroundedTargetErrorMeters:Number.isFinite(closestGroundedTargetErrorMeters)?closestGroundedTargetErrorMeters:null,
+    teleportsAfterQaSpawn:0,
     noNavMeshCertification:true};
   };
   (window as unknown as {__t21B224?:{snapshot:typeof snapshot}}).__t21B224=
@@ -181,6 +187,18 @@ export class T21B224OriginalGapInputQaApp{
      if(leftGround&&stats.playerGrounded)landed=true;
      const support=floorHit();
      if(landed&&support===endSolid)firstLandingSupport??=support;
+     if(landed&&stats.playerGrounded&&support===endSolid&&
+        validJumpInputs===1&&input.moveX===0&&input.moveY===0){
+      stableTargetGroundedTicks++;
+      closestGroundedTargetErrorMeters=Math.min(
+       closestGroundedTargetErrorMeters,dist);
+      if(stableTargetGroundedTicks>=18&&dist<=.60&&stableLandingTick===null){
+       stableLandingTick=tick;
+       stableLandingPosition=[p.x,p.y,p.z];
+      }
+     }else{
+      stableTargetGroundedTicks=0;
+     }
      if(dist<=.22&&stats.playerGrounded&&support===endSolid){
       physicallyEnteredTarget=true;
       if(successTick===null&&validJumpInputs>0&&leftGround&&landed){

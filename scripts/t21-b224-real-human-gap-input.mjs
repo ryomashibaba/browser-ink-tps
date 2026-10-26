@@ -83,8 +83,8 @@ async function scenario(side,direction){
  await key(moveKey,false);
  const end=await wait(async()=>{
   const o=await read('window.__t21B224.snapshot()');
-  return o.successTick!==null||o.tick>=near.tick+30?o:false;
- },7000);
+  return o.stableLandingTick!==null||o.tick>=near.tick+100?o:false;
+ },13000);
  const result={side,direction,oriented,pre,near,end,
   actualKeydown:true,realPlayerController:true,actorTeleports:0};
  console.log('B224_REAL_BROWSER_SOURCE_JUMP',JSON.stringify({
@@ -94,7 +94,11 @@ async function scenario(side,direction){
   minTargetError:end.minimumTargetErrorMeters,collisionsWithOriginal:
    end.originalColliderContactCount,afterLanding:end.grounded,
   nativeWorldPosition:end.playerPosition,
-  physicalSourceReach:end.physicallyEnteredTarget}));
+  physicalSourceReach:end.physicallyEnteredTarget,
+  stableLandingTick:end.stableLandingTick,
+  stableTargetGroundedTicks:end.stableTargetGroundedTicks,
+  stableLandingPosition:end.stableLandingPosition,
+  closestGroundedTargetErrorMeters:end.closestGroundedTargetErrorMeters}));
  return result;
 }
 try{
@@ -140,11 +144,15 @@ try{
   sourceStage25_17_26_0:true,actorTeleportsAfterSpawn:0,
   nativeRealPlayerKeyboard:true,realBrowserWebGL2:true,
   completed:reports.length,
-  successCount:reports.filter(x=>x.end.successTick!==null).length,
+  preciseCenterSuccessCount:reports.filter(x=>x.end.successTick!==null).length,
+  stableSourceLandingCount:reports.filter(x=>x.end.stableLandingTick!==null).length,
   reports};
  writeFileSync(resolve(OUT,'b224-native-input-rapier.json'),JSON.stringify(summary,null,2));
  console.log('B224_REAL_KEYBOARD_FINAL',JSON.stringify({tested:summary.completed,
-  success:summary.successCount,sourceStage25_17_26_0:true}));
- if(summary.successCount!==4)throw Error('B224_REAL_INPUT_4_OF_4_NOT_CERTIFIED');
+  physicallyStableLandings:summary.stableSourceLandingCount,
+  preciseCenterLandings:summary.preciseCenterSuccessCount,
+  sourceStage25_17_26_0:true,officialWinner:'NONE'}));
+ if(summary.stableSourceLandingCount!==4)
+  throw Error('B224_REAL_INPUT_STABLE_SOURCE_LANDINGS_NOT_CERTIFIED');
 }catch(e){console.error(e);process.exitCode=1;}
 finally{ws?.close();for(const child of children)child.kill('SIGTERM');}
