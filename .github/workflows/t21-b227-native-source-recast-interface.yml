@@ -1,0 +1,24 @@
+name: T21 B227 real native floor and Recast interface audit
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/T21B227SourceRuntimeInterface.test.ts'
+      - '.github/workflows/t21-b227-native-source-recast-interface.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-source-interface:
+    name: B227 original human Rapier vs Recast stage support
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Actual frozen Recast settings and native Rapier physics
+        run: npx vitest run scripts/T21B227SourceRuntimeInterface.test.ts --reporter=verbose
