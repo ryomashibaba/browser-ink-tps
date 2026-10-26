@@ -26,7 +26,7 @@ export interface SourceSide{
  sourceAreaSquareMeters:number;
  sourceMaterial:string;
  triangles:readonly SourceFace[];
- rightLowWitness:{originalTriangleNearestWitness:V3};
+ rightLowWitness:{registeredBoundaryWitness:V3;originalTriangleNearestWitness:V3};
  slopeTopWitness:{originalTriangleNearestWitness:V3};
 }
 export interface SourceSeed{
