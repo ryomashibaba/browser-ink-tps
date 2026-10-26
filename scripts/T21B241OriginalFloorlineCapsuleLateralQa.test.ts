@@ -180,11 +180,12 @@ function driven(side:Side,c:SourceSide,offset:number){
    if(grounded&&hit.id!==physicalFloorline&&hit.id!==physicalSlope&&
     hit.id!==registeredRight&&
     hit.id!=='UndertowT21D:first-drop-landing-'+
-      (side==='POSITIVE_Z'?'positive-z':'negative-z'))
+      (side==='POSITIVE_Z'?'positive-z':'negative-z')) {
      unexpectedSupportTicks++;
      if(unexpectedSupportDetails.length<24)
       unexpectedSupportDetails.push({tick:i,solidId:hit.id,foot:q,
        rayHeightMismatchMeters:hit.mismatch});
+   }
   }
   if(hit.mismatch!==null&&sourceEntered)
    maxSourceSupportError=Math.max(maxSourceSupportError,hit.mismatch);
