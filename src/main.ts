@@ -10,6 +10,12 @@ const appCanvas: HTMLCanvasElement = canvas;
 const appUiRoot: HTMLElement = uiRoot;
 
 async function boot(): Promise<void> {
+  if(new URL(window.location.href).searchParams.get('t21Qa')==='b228UnderpassInput'){
+    const {T21B224OriginalGapInputQaApp}=
+      await import('./app/T21B224OriginalGapInputQaApp');
+    await T21B224OriginalGapInputQaApp.boot(appCanvas,appUiRoot);
+    return;
+  }
   if(new URL(window.location.href).searchParams.get('t21Qa')==='b226InnerSlopeInput'){
     const {T21B224OriginalGapInputQaApp}=
       await import('./app/T21B224OriginalGapInputQaApp');

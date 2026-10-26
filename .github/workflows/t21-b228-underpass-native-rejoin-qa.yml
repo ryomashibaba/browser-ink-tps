@@ -1,0 +1,37 @@
+name: T21 B228 real source to registered underpass rejoin
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/main.ts'
+      - 'src/app/T21B224OriginalGapInputQaApp.ts'
+      - 'scripts/t21-b224-real-human-gap-input.mjs'
+      - '.github/workflows/t21-b228-underpass-native-rejoin-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-underpass-rejoin:
+    name: B228 real Chromium source slope into registered original underpass
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-b224-real-human-gap-input.mjs
+      - name: Real same human physical registered underpass ingress
+        env:
+          T21_B228_REGISTERED_UNDERPASS: '1'
+          T21_B224_OUT: /tmp/t21-b228
+        run: node scripts/t21-b224-real-human-gap-input.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b228-native-registered-original-underpass
+          path: /tmp/t21-b228/
+          retention-days: 14
+          if-no-files-found: warn

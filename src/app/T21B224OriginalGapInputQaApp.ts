@@ -70,8 +70,10 @@ function exactQaStage(side:Side,corridor=false):StageDefinition{
 export class T21B224OriginalGapInputQaApp{
  static async boot(canvas:HTMLCanvasElement,_ui:HTMLElement){
   const q=new URL(location.href).searchParams;
-  const b226=q.get('t21Qa')==='b226InnerSlopeInput'&&
-    q.get('t21B226Source')==='isolated-ci688';
+  const b228=q.get('t21Qa')==='b228UnderpassInput'&&
+    q.get('t21B228Source')==='isolated-ci688';
+  const b226=b228||(q.get('t21Qa')==='b226InnerSlopeInput'&&
+    q.get('t21B226Source')==='isolated-ci688');
   const corridor=b226||(q.get('t21Qa')==='b225OriginalCorridorInput'&&
     q.get('t21B225Source')==='isolated-ci688');
   if(!corridor&&(q.get('t21Qa')!=='b224OriginalGapInput'||
@@ -117,6 +119,11 @@ export class T21B224OriginalGapInputQaApp{
   const b226Waypoint=point(-12.1,4.5,12.2,side);
   const b226InnerTarget=point(-12.05,3+(10.15-6)/3,10.15,side);
   const b226InnerId='B224_QA_ONLY:'+faceId('slope00-inner',side);
+  // B227 confirmed a real ORIGINAL 25-solid underpass floor here,
+  // distinct from all five CI688 source QA meshes.
+  const b228UnderpassTarget=point(-12.1,3,5.5,side);
+  const b228UnderpassSolid='UndertowT21D:glass-underpass-'+
+   (side==='POSITIVE_Z'?'positive-z':'negative-z');
   const startSolid='B224_QA_ONLY:'+faceId(
    direction==='FLOOR_TO_SLOPE'?'floor-concrete01':'slope00-outer',side);
   const endSolid='B224_QA_ONLY:'+faceId(
@@ -157,6 +164,17 @@ export class T21B224OriginalGapInputQaApp{
   let b226WaypointNearestMeters=Infinity;
   let b226VisitedWaypoint=false;
   let b226ThirdLegJumpEventsAtStart:number|null=null;
+  let b228FourthLegStartTick:number|null=null,b228FirstNativeFootTick:number|null=null;
+  let b228StableNativeTick:number|null=null,b228StableNativeTicks=0;
+  let b228NativeGroundedTicks=0,b228NativeUngroundedTicks=0;
+  let b228MinUnderpassErrorMeters=Infinity;
+  let b228ClosestNativeGroundedErrorMeters=Infinity;
+  let b228NativeColliderSupportTicks=0;
+  let b228LastNativeFootId:string|null=null;
+  let b228FootTransitionSourceToRegistered=false;
+  let b228NativeSupportBeforeFourth=false;
+  let b228WasOnInnerWhenFourthStarted=false;
+  let b228AtFourthJumpInputs:number|null=null;
   const vec=new Vec3();
   const floorHit=()=>{
    const p=player.getPosition(vec);
@@ -181,6 +199,18 @@ export class T21B224OriginalGapInputQaApp{
     physicalSolidsInsideQa:corridor?30:27,
     b225CorridorEnabled:corridor,
     b226Enabled:b226,b226Waypoint,b226InnerTarget,b226InnerId,
+    b228Enabled:b228,b228UnderpassTarget,b228UnderpassSolid,
+    b228FourthLegStartTick,b228FirstNativeFootTick,b228StableNativeTick,
+    b228StableNativeTicks,b228NativeGroundedTicks,b228NativeUngroundedTicks,
+    b228NativeColliderSupportTicks,b228LastNativeFootId,
+    b228FootTransitionSourceToRegistered,
+    b228NativeSupportBeforeFourth,b228WasOnInnerWhenFourthStarted,
+    b228AtFourthJumpInputs,
+    b228MinUnderpassErrorMeters:Number.isFinite(b228MinUnderpassErrorMeters)?
+     b228MinUnderpassErrorMeters:null,
+    b228ClosestNativeGroundedErrorMeters:
+     Number.isFinite(b228ClosestNativeGroundedErrorMeters)?
+      b228ClosestNativeGroundedErrorMeters:null,
     b226ThirdLegStartTick,b226ActualInnerSupportTick,b226StableInnerTick,
     b226StableInnerGroundedTicks,b226ThirdLegGroundedTicks,
     b226ThirdLegUngroundedTicks,b226ThirdLegLongestAirborneStreak,
@@ -332,6 +362,46 @@ export class T21B224OriginalGapInputQaApp{
           b226StableInnerTick??=tick;
         }else b226StableInnerGroundedTicks=0;
        }else b226StableInnerGroundedTicks=0;
+      }
+     }
+     if(b228&&b226StableInnerTick!==null){
+      const nativeDist=Math.hypot(
+       p.x-b228UnderpassTarget[0],p.z-b228UnderpassTarget[2]);
+      b228MinUnderpassErrorMeters=Math.min(
+       b228MinUnderpassErrorMeters,nativeDist);
+      if(b228FourthLegStartTick===null){
+       if(support===b228UnderpassSolid)
+        b228NativeSupportBeforeFourth=true;
+       if(input.moveX!==0||input.moveY!==0){
+        b228FourthLegStartTick=tick;
+        b228WasOnInnerWhenFourthStarted=
+         stats.playerGrounded&&support===b226InnerId;
+        b228AtFourthJumpInputs=validJumpInputs;
+       }
+      }
+      if(b228FourthLegStartTick!==null){
+       if(stats.playerGrounded)b228NativeGroundedTicks++;
+       else b228NativeUngroundedTicks++;
+       if(support===b228UnderpassSolid&&stats.playerGrounded){
+        b228FirstNativeFootTick??=tick;
+        b228NativeColliderSupportTicks++;
+        b228LastNativeFootId=support;
+        b228ClosestNativeGroundedErrorMeters=Math.min(
+         b228ClosestNativeGroundedErrorMeters,nativeDist);
+        if(input.moveX===0&&input.moveY===0&&
+           nativeDist<=.90&&validJumpInputs===1){
+         b228StableNativeTicks++;
+         if(b228StableNativeTicks>=18)
+          b228StableNativeTick??=tick;
+        }else b228StableNativeTicks=0;
+       }else{
+        if(support===b226InnerId)b228LastNativeFootId=support;
+        b228StableNativeTicks=0;
+       }
+       if(b228FirstNativeFootTick!==null&&
+          b228WasOnInnerWhenFourthStarted&&
+          !b228NativeSupportBeforeFourth)
+        b228FootTransitionSourceToRegistered=true;
       }
      }
      if(dist<=.22&&stats.playerGrounded&&support===endSolid){

@@ -5,7 +5,8 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
-const b226=process.env.T21_B226_INNER_SLOPE==='1';
+const b228=process.env.T21_B228_REGISTERED_UNDERPASS==='1';
+const b226=b228||process.env.T21_B226_INNER_SLOPE==='1';
 const corridor=b226||process.env.T21_B225_CORRIDOR==='1';
 const OUT=process.env.T21_B224_OUT||'/tmp/t21-b224';
 const children=[],pending=new Map();
@@ -42,7 +43,10 @@ async function click(){
    button:'left',clickCount:1});
 }
 async function scenario(side,direction){
- const url=b226
+ const url=b228
+  ?ROOT+'?t21Qa=b228UnderpassInput&t21B228Source=isolated-ci688'+
+    '&side='+side+'&direction=FLOOR_TO_SLOPE'
+  :b226
   ?ROOT+'?t21Qa=b226InnerSlopeInput&t21B226Source=isolated-ci688'+
     '&side='+side+'&direction=FLOOR_TO_SLOPE'
   :corridor
@@ -60,7 +64,7 @@ async function scenario(side,direction){
     initial.sourceScoreablePromotions!==0||initial.productionAuthorized!==false||
     initial.physicalSolidsInsideQa!==(corridor?30:27)||
     initial.b225CorridorEnabled!==corridor||
-    initial.b226Enabled!==b226)
+    initial.b226Enabled!==b226||initial.b228Enabled!==b228)
   throw Error('B224_B225_SOURCE_BOOT_UNTRUSTED');
  await click();
  await wait(()=>read('document.pointerLockElement===document.querySelector("#app-canvas")'),10000);
@@ -158,6 +162,8 @@ async function scenario(side,direction){
    finalBodyPosition:parked.playerPosition}));
  }
  let b226ThirdLeg=null;
+ let b228FourthLeg=null;
+ let aimAfterInner=null;
  if(b226){
   if(!b225SecondLeg?.stableFloor02)
    throw Error('B226_CANNOT_TRAVERSE_BEFORE_REAL_FLOOR02_STABILITY');
@@ -218,6 +224,7 @@ async function scenario(side,direction){
       o.tick>=waypointApproach.tick+70?o:false;
   },13000);
   const innerAim=await aimFromLast(waypointRest.b226InnerTarget,wayAim.x);
+  aimAfterInner=(point)=>aimFromLast(point,innerAim.x);
   await key(moveKeyThird,true);
   const innerApproach=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
@@ -253,7 +260,60 @@ async function scenario(side,direction){
    sourceFootChain:innerParked.b225NativeSourceSupportOrder,
    finalPosition:innerParked.playerPosition}));
  }
- const result={side,direction,oriented,pre,near,end,b225SecondLeg,b226ThirdLeg,
+ if(b228){
+  if(!b226ThirdLeg?.physicallyStableInnerSlope||!aimAfterInner)
+   throw Error('B228_ORIGINAL_INNER_SOURCE_NOT_STABLE');
+  const beforeFourth=b226ThirdLeg.innerParked;
+  if(beforeFourth.currentFootSolid!==beforeFourth.b226InnerId||
+     !beforeFourth.grounded||beforeFourth.validJumpInputs!==1)
+   throw Error('B228_INITIAL_SOURCE_INNER_NOT_PHYSICALLY_GROUNDED');
+  const underpassAim=await aimAfterInner(beforeFourth.b228UnderpassTarget);
+  await key(moveKey,true);
+  const underpassApproach=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return o.b228FirstNativeFootTick!==null||
+    o.tick>=beforeFourth.tick+150?o:false;
+  },29000);
+  await key(moveKey,false);
+  const underpassRest=await wait(async()=>{
+   const o=await read('window.__t21B224.snapshot()');
+   return o.b228StableNativeTick!==null||
+    o.tick>=underpassApproach.tick+110?o:false;
+  },24000);
+  b228FourthLeg={beforeFourth,underpassAim,underpassApproach,underpassRest,
+   samePlayer:true,oneSpaceOnly:underpassRest.validJumpInputs===1,
+   physicalOriginalUnderpassHit:underpassRest.b228FirstNativeFootTick!==null,
+   stableOriginalUnderpass:underpassRest.b228StableNativeTick!==null,
+   actualNativeFootId:underpassRest.b228LastNativeFootId,
+   sourceToOriginalContact:underpassRest.b228FootTransitionSourceToRegistered,
+   startedFromInner:underpassRest.b228WasOnInnerWhenFourthStarted,
+   originalContactAlreadyBeforeMove:underpassRest.b228NativeSupportBeforeFourth,
+   inputInitialSpaceCount:underpassRest.b228AtFourthJumpInputs,
+   afterSpawnTeleports:underpassRest.teleportsAfterQaSpawn};
+  console.log('B228_REAL_BROWSER_ORIGINAL_UNDERPASS_REJOIN',JSON.stringify({
+   side,samePlayer:true,oneSpaceOnly:b228FourthLeg.oneSpaceOnly,
+   startedOnInner:b228FourthLeg.startedFromInner,
+   originalCollisionWasAbsentBeforeMove:
+    !b228FourthLeg.originalContactAlreadyBeforeMove,
+   originalRegisteredFootId:underpassRest.b228UnderpassSolid,
+   actualNativeFootId:b228FourthLeg.actualNativeFootId,
+   originalRegisteredFootContact:b228FourthLeg.physicalOriginalUnderpassHit,
+   stableGroundedNativeUnderpass:b228FourthLeg.stableOriginalUnderpass,
+   firstOriginalGroundedTick:underpassRest.b228FirstNativeFootTick,
+   stableOriginalTick:underpassRest.b228StableNativeTick,
+   fourthLegGroundedTicks:underpassRest.b228NativeGroundedTicks,
+   fourthLegUngroundedTicks:underpassRest.b228NativeUngroundedTicks,
+   closestGroundedNativeTargetMeters:
+    underpassRest.b228ClosestNativeGroundedErrorMeters,
+   footSupportOrder:underpassRest.b225NativeSourceSupportOrder,
+   trueSourceToRegisteredRejoin:
+    b228FourthLeg.sourceToOriginalContact,
+   finalGrounded:underpassRest.grounded,
+   finalPlayerPosition:underpassRest.playerPosition,
+   postSpawnTeleports:underpassRest.teleportsAfterQaSpawn,
+   routeCertification:'0/12',officialWinner:'NONE'}));
+ }
+ const result={side,direction,oriented,pre,near,end,b225SecondLeg,b226ThirdLeg,b228FourthLeg,
   actualKeydown:true,realPlayerController:true,actorTeleports:0};
  console.log('B224_REAL_BROWSER_SOURCE_JUMP',JSON.stringify({
   side,direction,atTick:end.tick,jumpInputs:end.validJumpInputs,
@@ -309,7 +369,8 @@ try{
        ['FLOOR_TO_SLOPE','SLOPE_TO_FLOOR']))
    reports.push(await scenario(side,direction));
  }
- const summary={schema:b226?'B226_REAL_CDP_INNER_SLOPE_SOURCE_CONTINUITY':
+ const summary={schema:b228?'B228_REAL_CDP_SOURCE_TO_REGISTERED_UNDERPASS':
+  b226?'B226_REAL_CDP_INNER_SLOPE_SOURCE_CONTINUITY':
   corridor?'B225_REAL_CDP_CONTINUOUS_SOURCE_CORRIDOR':
    'B224_REAL_CDP_INPUT_PLAYERCONTROLLER_RAPIER',
   qaOnly:true,productionAuthorized:false,scoreable:0,
@@ -323,15 +384,36 @@ try{
   b226WaypointReached:reports.filter(x=>x.b226ThirdLeg?.visitedWaypoint).length,
   b226InnerSourceTouched:reports.filter(x=>x.b226ThirdLeg?.physicallyTouchedInnerSlope).length,
   b226InnerSourceStable:reports.filter(x=>x.b226ThirdLeg?.physicallyStableInnerSlope).length,
+  b228NativeUnderpassTouched:reports.filter(x=>
+    x.b228FourthLeg?.physicalOriginalUnderpassHit).length,
+  b228NativeUnderpassStable:reports.filter(x=>
+    x.b228FourthLeg?.stableOriginalUnderpass).length,
   reports};
- writeFileSync(resolve(OUT,b226?'b226-inner-slope-source.json':
+ writeFileSync(resolve(OUT,b228?'b228-original-underpass-rejoin.json':
+  b226?'b226-inner-slope-source.json':
   corridor?'b225-continuous-native-source-corridor.json':
   'b224-native-input-rapier.json'),JSON.stringify(summary,null,2));
  console.log('B224_REAL_KEYBOARD_FINAL',JSON.stringify({tested:summary.completed,
   physicallyStableLandings:summary.stableSourceLandingCount,
   preciseCenterLandings:summary.preciseCenterSuccessCount,
   sourceStage25_17_26_0:true,officialWinner:'NONE'}));
- if(b226){
+ if(b228){
+  if(summary.completed!==2||summary.stableSourceLandingCount!==2||
+     summary.secondStageStable!==2||
+     summary.b226InnerSourceStable!==2||
+     reports.some(x=>!x.b228FourthLeg||
+      x.b228FourthLeg.afterSpawnTeleports!==0||
+      !x.b228FourthLeg.oneSpaceOnly||
+      !x.b228FourthLeg.startedFromInner||
+      !x.b228FourthLeg.physicalOriginalUnderpassHit))
+   throw Error('B228_REAL_SOURCE_TO_REGISTERED_NATIVE_CONTACT_MISSING');
+  // First measured B228 experiment: genuine native foot contact required,
+  // but stability/airborne outcome remains diagnostic until observed.
+  console.log('B228_REAL_SOURCE_TO_REGISTERED_CONTACT_GATE_PASS',
+   JSON.stringify({tested:2,realNativeContact:summary.b228NativeUnderpassTouched,
+    stableNative:summary.b228NativeUnderpassStable,
+    productionAuthorized:false,routeCertification:'0/12'}));
+ }else if(b226){
   if(summary.completed!==2||summary.stableSourceLandingCount!==2||
      summary.secondStageStable!==2||
      reports.some(r=>!r.b226ThirdLeg||
