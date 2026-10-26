@@ -297,6 +297,24 @@ describe('B239 full pinned source FloorLine00 isolated Rapier KCC + Recast',()=>
    expect(qa.paintSurfaces).toBe(FROZEN.paintSurfaces);
    expect(qa.navigationLinks).toBe(FROZEN.navigationLinks);
    expect(staticContact).toHaveLength(4);
+   // First verified B239 native run #40328240414: genuine two-sided
+   // physical source ingresses succeed, with no teleport or invented floor.
+   // A raycast alone is not sufficient: the SAME Rapier body must be
+   // grounded on BOTH the new original FloorLine and exact Slope01.
+   expect(staticContact.slice(0,2).every(x=>
+    x.source30.id===null&&
+    x.source31.id==='B239_PINNED_ORIGINAL_FLOORLINE:'+side&&
+    x.source31.verticalError!==null&&x.source31.verticalError<.00001)).toBe(true);
+   expect(walking.exactSourceIngressPhysicallyTraversed).toBe(true);
+   expect(jumping.exactSourceIngressPhysicallyTraversed).toBe(true);
+   expect(walking.floorlineSupportGroundedTicks).toBeGreaterThanOrEqual(3);
+   expect(walking.slopeGroundedTicks).toBeGreaterThanOrEqual(3);
+   // The native Recast "reached target" flag currently projects the
+   // *real slope target* ~1m away. Never call this CPU navigation success.
+   expect(ingressAfter.nativeReachedTarget).toBe(true);
+   expect(ingressAfter.endSnap).toBeGreaterThan(1.0);
+   expect(ingressAfter.strictConnected).toBe(false);
+   expect(row.physicalAndNavIngressAuthenticated).toBe(false);
    expect(walking.initialReal25Supported).toBe(true);
    expect(jumping.initialReal25Supported).toBe(true);
    expect(walking.nativeKccSteps).toBeGreaterThan(1);
