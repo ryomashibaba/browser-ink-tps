@@ -149,6 +149,69 @@ describe('B232 native Crowd movement on true original supported physical actor',
   expect(records.every(x=>x.firstHold==='QA_CROWD_PROXY_REJOIN'&&
    x.nativeCrowdRequestMade&&x.initialNativeCrowdSnap<=.3&&
    x.nativeCrowdFrames>0&&x.liveCpuAgentSystemInstantiated===false)).toBe(true);
-  // First experiment measures real source-grounded steering, then tightens.
+  // First B232 run #40307853903 measured 4/4 genuine moving Crowd
+  // requests physically accepted by the SAME already-landed Rapier body.
+  // Promotion to a strict QA regression, NOT live CPU route authority.
+  expect(records.every(x=>
+    x.nativeSourceProjection.success===true&&
+    x.nativeSourceProjection.distanceMeters!==null&&
+    x.nativeSourceProjection.distanceMeters<=.30&&
+    x.destinationProjection.success===true&&
+    x.destinationProjection.distanceMeters!==null&&
+    x.destinationProjection.distanceMeters<=.30&&
+    x.path.reachedTarget&&x.path.endError<=.30&&
+    x.path.startSnap<=.30&&x.path.endSnap<=.30&&
+    x.firstHold==='QA_CROWD_PROXY_REJOIN'&&
+    x.nativeCrowdFrames>=15&&
+    x.physicallyApprovedFrames===x.nativeCrowdFrames&&
+    x.physicallyRemainedOnSource&&x.firstFailure===null&&
+    x.realPhysicalSameKccDisplacementMeters>=.45&&
+    x.realPhysicalSameKccDisplacementMeters<=1.0&&
+    x.maxDrift<.25&&
+    x.firstFive.every(s=>s.approved&&s.nativeKccSteps>0)&&
+    x.finalFootSolid?.startsWith('B230_QA:underpass-route-')&&
+    x.liveCpuAgentSystemInstantiated===false)).toBe(true);
+  console.log('B232_MOVING_NATIVE_CROWD_SAME_RAPIER_KCC_4_OF_4_PASS',
+   JSON.stringify({genuineLocalCrowdRequests:4,
+    physicallyVerifiedMovingSameB230Body:4,
+    minimumRealMovementMeters:.45,
+    maxAcceptableCrowdRapierDriftMeters:.25,
+    liveCpuAgentSystemTested:false,
+    trueSourceGapRecastStillDisconnected:true,
+    original25SolidsUnchanged:true,
+    cpuOpposingRoutesCertified:'0/12',
+    productionAuthorized:false,officialWinner:'NONE'}));
+ },120000);
+ it('refuses nonfinite and remote Crowd commands without moving the physically landed body',()=>{
+  const records=[];
+  for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const){
+   for(const kind of ['NONFINITE','REMOTE'] as const){
+    const actor=new B230CpuLocalGapQaActuator(
+     stage(side,false),plan(side,'FLOOR_TO_SLOPE'));
+    let snapshot=actor.snapshot();
+    for(let i=0;i<240&&!snapshot.accepted&&snapshot.phase!=='FAILED';i++)
+     snapshot=actor.advance();
+    expect(snapshot.accepted).toBe(true);
+    const original=Array.from(snapshot.actorPosition);
+    const footY=snapshot.actorPosition[1]-PROFILE.humanFootOffsetMeters;
+    const proposal=kind==='NONFINITE'
+     ?{x:NaN,y:footY,z:snapshot.actorPosition[2]}
+     :{x:snapshot.actorPosition[0]+10,y:footY,z:snapshot.actorPosition[2]};
+    const result=actor.advanceNativeCrowdQa(proposal);
+    const afterward=actor.snapshot();
+    expect(result.approved).toBe(false);
+    expect(result.reason).toBe(kind==='NONFINITE'
+     ?'B232_CROWD_NONFINITE_PROPOSAL':'B232_UNTRUSTED_CROWD_DISPLACEMENT');
+    expect(afterward.phase).toBe('FAILED');
+    expect(afterward.actorPosition).toEqual(original);
+    expect(afterward.teleportsAfterInitialQaSpawn).toBe(0);
+    expect(afterward.totalLocalJumpCommands).toBe(1);
+    records.push({side,kind,reason:result.reason,noActorMovement:true});
+   }
+  }
+  console.log('B232_UNTRUSTED_CROWD_COMMANDS_REJECTED',
+   JSON.stringify({records,originalPhysicalActorNeverTeleported:true,
+    releaseAuthority:false}));
+  expect(records).toHaveLength(4);
  },120000);
 });
