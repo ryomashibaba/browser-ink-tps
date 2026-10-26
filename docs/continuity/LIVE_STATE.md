@@ -3,10 +3,10 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `6584bbbaf544b0f1f5c6a96391e752adb9a8cfc9`
-- 最新番号のQAレポート: W10-B221 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B221-real-source-underpass-geometry-and-build-recovery.md
+- 同期元QA HEAD: `b3daf12317d165c23d4121e430961a27fdf64221`
+- 最新番号のQAレポート: W10-B222 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B222-original-2m-gap-human-kcc-jump-isolation.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
-- 次工程候補: W10-B222 （着手・完了の保証ではない）
+- 次工程候補: W10-B223 （着手・完了の保証ではない）
 - レポート記載のActions: 確認できない
 - 原作認証権限: 25 solids / 17 paint / 26 NavLinks / 0 Scoreable
 - 相手陣接続: 0/12（新しい原作認証が確認されない限りHOLD）
