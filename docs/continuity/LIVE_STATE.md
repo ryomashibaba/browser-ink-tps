@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `a8e314e728a1850fd2b26a90d87a11f3ebc4d5a5`
+- 同期元QA HEAD: `060c0fe95d20183efad6659bea2887db27302877`
 - 最新番号のQAレポート: W10-B229 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B229-cpu-speed-native-source-jump-feasibility.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B230 （着手・完了の保証ではない）
