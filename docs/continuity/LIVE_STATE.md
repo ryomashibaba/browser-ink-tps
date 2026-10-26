@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `0b31e00c9a5f87db31e05a753659a42d740a0b7a`
+- 同期元QA HEAD: `2d8fa1e1bffee0aa8bc3bf159ca848d65a8c084b`
 - 最新番号のQAレポート: W10-B237 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B237-alternate-original-source-ingress.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B238 （着手・完了の保証ではない）
