@@ -70,7 +70,12 @@ export function b236InspectOriginalSlopeEntrance(side:B235Side){
   floor.sourceObject!=='Fld_Temple01_pCube21595_1__FloorConcrete01'||
   contour.sourceYModelMeters!==7.5||contour.sourceYProjectMeters!==4.5)
   throw Error('B236_SOURCE_HEIGHT_OR_MATERIAL_CHANGED');
- const mesh=slope.mesh.vertices;
+ // CI688 source triangles are intentionally nonindexed: six actual
+ // original triangle corners including duplicate shared corner positions.
+ // Deduplicate *only for the geometry audit*, never change the source mesh.
+ const corners=slope.mesh.vertices;
+ const mesh=[...new Map(corners.map(v=>[
+  v.map(n=>n.toFixed(10)).join(','),v] as const)).values()];
  const hi=Math.max(...mesh.map(x=>x[1]));
  const low=Math.min(...mesh.map(x=>x[1]));
  const top=mesh.filter(v=>Math.abs(v[1]-hi)<1e-5);
@@ -93,9 +98,6 @@ export function b236InspectOriginalSlopeEntrance(side:B235Side){
  const separation=boundaryToLine(contour.projectOuter,upper,upper2);
  const floorY=3-3;
  const sample=pointOnRamp(.10),lower=pointOnRamp(.90);
- const floorCenter=(side==='POSITIVE_Z'?[-19.75,34.8]:[19.75,-34.8]);
- // Note: floorCenter is only a QA probe; authentic source face hit
- // must be checked by Rapier before it counts as a usable floor.
  return {side,
   slopeOriginalSourceObject:slope.sourceObject,
   registeredRightLowSourceY:contour.sourceYProjectMeters,
