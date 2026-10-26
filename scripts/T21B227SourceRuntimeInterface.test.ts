@@ -188,6 +188,41 @@ describe('B227 original human real physical source floor vs production Recast pr
     x.qaSideSourceMeshCount===5&&x.physicalAddedSolids===5)).toBe(true);
   expect(records.every(x=>x.physicalCollider
    .slice(0,4).every(p=>p.expectedSourceColliderContact))).toBe(true);
+  // B227 CI #40296331486: explicitly distinguish two separate failures.
+  // The authentic 25-solid runtime lacks these 4 source-face colliders;
+  // adding 5 exact faces in *isolated* QA does not make Recast choose a
+  // valid native path over all four human-physically proven transitions.
+  for(const record of records){
+   expect(record.originalNative25Collider.slice(0,4)
+     .every(p=>p.hitSolidId===null)).toBe(true);
+   expect(record.originalNative25Collider[4]?.registeredNativeRuntimeColliderContact)
+    .toBe(true);
+   expect(record.originalNative25Recast.buildSuccess).toBe(true);
+   expect(record.qaExactSourceAddedNav.buildSuccess).toBe(true);
+   expect(record.originalNative25Recast.projection
+    .slice(0,4).every(p=>!p.success)).toBe(true);
+   expect(record.qaExactSourceAddedNav.projection
+    .filter(p=>['floor01','outerSlope','innerSlope','underpass']
+     .includes(p.anchor)).every(p=>p.directlyTrusted)).toBe(true);
+   const nav=record.qaExactSourceAddedNav.paths;
+   const edge=(from:string,to:string)=>nav.find(x=>x.from===from&&x.to===to);
+   expect(edge('floor01','outerSlope')?.representationalPathCandidate).toBe(false);
+   expect(edge('outerSlope','floor02')?.representationalPathCandidate).toBe(false);
+   expect(edge('floor02','innerSlope')?.representationalPathCandidate).toBe(false);
+   // Native Recast finds local inner-slope to registered underpass:
+   // the KCC has not traversed that fourth link, so not physical proof.
+   expect(edge('innerSlope','underpass')?.representationalPathCandidate).toBe(true);
+   expect(edge('floor01','underpass')?.representationalPathCandidate).toBe(false);
+  }
+  console.log('B227_NATIVE_INTERFACE_REGRESSION_PASS',JSON.stringify({
+   original25SourceFloorSupports:'0/8',qa30AuthenticSupports:'8/8',
+   qa30NativeRecastFourSegmentEdges:'1/4_ON_EACH_SIDE',
+   firstGapHumanJumpRequired:true,
+   nextTwoGroundedHumanButRecastDisconnected:true,
+   finalInnerToRegisteredUnderpassNavOnly:true,
+   physicalAndNavigationAreNotInterchangeable:true,
+   productionAuthorized:false,officialWinner:'NONE'
+  }));
   expect(FROZEN.solids).toHaveLength(25);
   expect(FROZEN.paintSurfaces).toHaveLength(17);
   expect(FROZEN.navigationLinks).toHaveLength(26);
