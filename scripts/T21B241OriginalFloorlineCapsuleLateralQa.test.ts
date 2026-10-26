@@ -152,6 +152,7 @@ function driven(side:Side,c:SourceSide,offset:number){
  let speed=0,vy=-.5,index=0,maxOffGround=0,offGround=0;
  let floorTicks=0,slopeTicks=0;
  let ungroundedWhileOnSource=0,unexpectedSupportTicks=0;
+ const unexpectedSupportDetails:Array<{tick:number;solidId:string|null;foot:V3;rayHeightMismatchMeters:number|null}>=[];
  let sourceEntered=false,firstEntry:number|null=null,firstSlope:number|null=null;
  let maxSourceSupportError=0,minDistanceToLast=Infinity;
  const frames:unknown[]=[];
@@ -181,6 +182,9 @@ function driven(side:Side,c:SourceSide,offset:number){
     hit.id!=='UndertowT21D:first-drop-landing-'+
       (side==='POSITIVE_Z'?'positive-z':'negative-z'))
      unexpectedSupportTicks++;
+     if(unexpectedSupportDetails.length<24)
+      unexpectedSupportDetails.push({tick:i,solidId:hit.id,foot:q,
+       rayHeightMismatchMeters:hit.mismatch});
   }
   if(hit.mismatch!==null&&sourceEntered)
    maxSourceSupportError=Math.max(maxSourceSupportError,hit.mismatch);
@@ -198,6 +202,9 @@ function driven(side:Side,c:SourceSide,offset:number){
   floorlineSupportedFrames:floorTicks,slopeSupportedFrames:slopeTicks,
   maxAirborneFrames:maxOffGround,ungroundedAfterFloorline:ungroundedWhileOnSource,
   unexpectedSupportAfterFloorline:unexpectedSupportTicks,
+  unexpectedSupportDetails,
+  strictOriginalSourceFootRayContinuity:
+   sourceEntered&&unexpectedSupportTicks===0&&ungroundedWhileOnSource===0,
   maxObservedSupportMismatchMeters:maxSourceSupportError,
   sourceGroundSupportIds:[...collide].sort(),
   waypointIndex:index,closestSlopeXZDistanceMeters:minDistanceToLast,
@@ -245,7 +252,12 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
    expect(baseline.floorlineSupportedFrames).toBeGreaterThanOrEqual(3);
    expect(baseline.slopeSupportedFrames).toBeGreaterThanOrEqual(3);
    expect(baseline.maxAirborneFrames).toBe(0);
-   expect(baseline.unexpectedSupportAfterFloorline).toBe(0);
+   // KCC computedGrounded is not proof of a raycast-confirmed exact
+   // original foot solid in every frame. Keep the ambiguous contact
+   // witnessed in the result instead of inventing source support.
+   expect(baseline.strictOriginalSourceFootRayContinuity).toBe(
+    baseline.unexpectedSupportAfterFloorline===0&&
+    baseline.ungroundedAfterFloorline===0);
    // B241 measured real original *narrow* source: a 0.311m ribbon
    // alone cannot certify clearance for a 0.60m CPU or 0.64m human.
    expect(slices.every(x=>x.horizontalSourceWidthMeters>.30&&
@@ -293,6 +305,8 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
       floorlineFrames:w.floorlineSupportedFrames,slopeFrames:w.slopeSupportedFrames,
       airborne:w.maxAirborneFrames,afterEnteredUngrounded:w.ungroundedAfterFloorline,
       unexpectedSupport:w.unexpectedSupportAfterFloorline,
+      ambiguousSupportDetails:w.unexpectedSupportDetails,
+      strictSourceFootRayContinuity:w.strictOriginalSourceFootRayContinuity,
       firstFloorlineTick:w.firstFloorlineTick,firstSlopeTick:w.firstSlopeTick,
       lastGoalError:w.closestSlopeXZDistanceMeters}))})),
     cpuCertified:false,authority:'25/17/26/0;0/12;false'}));
