@@ -151,9 +151,14 @@ def main(path,seedpath,output):
         if rank[a]<rank[b]:a,b=b,a
         parent[b]=a
         if rank[a]==rank[b]:rank[a]+=1
+    # A common OBJ VERTEX alone is not a walkable triangle seam.
+    # Require an exact original OBJ-ID EDGE on same original object
+    # and same source material, not a coincident coordinate/point.
     for i,(ids,obj,mat) in enumerate(faces):
-        for vertex in ids:
-            key=(obj,mat,vertex)
+        for j in range(3):
+            u=ids[j];v=ids[(j+1)%3]
+            if u==v:continue
+            key=(obj,mat,min(u,v),max(u,v))
             other=indexed.setdefault(key,i)
             if other!=i:union(i,other)
     region=[]
@@ -168,13 +173,26 @@ def main(path,seedpath,output):
         pointset=[p for line in segments.values() for pair in line for p in pair]
         region.append((name,segments,bbox(pointset)))
     records={}
-    comps=defaultdict(lambda:dict(sourceFaces=0,objects=set(),materials=set(),sides={}))
+    comps=defaultdict(lambda:dict(sourceFaces=0,source3DArea=0.,
+       floorFacingTriangles=0,nearVerticalTriangles=0,
+       actualMinY=math.inf,actualMaxY=-math.inf,
+       objects=set(),materials=set(),sides={}))
     counts=defaultdict(int)
     for i,(ids,obj,mat) in enumerate(faces):
         tri=tuple(coords[v] for v in ids)
         rootid=root(i);record=comps[rootid]
         record["sourceFaces"]+=1
         record["objects"].add(obj);record["materials"].add(mat)
+        u=sub(tri[1],tri[0]);v=sub(tri[2],tri[0])
+        normal=(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])
+        norm=math.sqrt(dot(normal,normal))
+        record["source3DArea"]+=norm/2.
+        if norm>1e-12:
+            if abs(normal[1])/norm>=.5:record["floorFacingTriangles"]+=1
+            if abs(normal[1])/norm<.15:record["nearVerticalTriangles"]+=1
+        for vtx in tri:
+            record["actualMinY"]=min(record["actualMinY"],vtx[1])
+            record["actualMaxY"]=max(record["actualMaxY"],vtx[1])
         box=bbox(tri)
         for side,segments,regionbox in region:
             if not near(box,regionbox,RADIUS):continue
@@ -194,7 +212,10 @@ def main(path,seedpath,output):
                     row[label]={"distanceMeters":dist,"originalActiveFaceIndex":i,
                       "originalOBJVertexIDs":ids,"originalObject":obj,
                       "originalMaterial":mat,"registeredBoundaryWitness":p,
-                      "originalTriangleNearestWitness":q}
+                      "originalTriangleNearestWitness":q,
+                      "originalTriangleVerticesProjectXYZ":tri,
+                      "sourceNormalUnitY":normal[1]/norm if norm>1e-12 else None,
+                      "sourceTriangle3DAreaSquareMeters":norm/2.}
     result={}
     for side,_,_ in region:
         rankrows=[]
@@ -204,7 +225,11 @@ def main(path,seedpath,output):
             a=anchors["registeredRightLow"];b=anchors["authenticSlope01Top"]
             rankrows.append({
                "originalObjIdComponentRootFaceIndex":key,
-               "originalObjMaterialConnectedFaceCount":rec["sourceFaces"],
+               "originalObjMaterialEdgeConnectedFaceCount":rec["sourceFaces"],
+               "originalOriginalTriangleAreaSquareMeters":rec["source3DArea"],
+               "actualComponentYRange":[rec["actualMinY"],rec["actualMaxY"]],
+               "sourceFloorFacingTriangleCount":rec["floorFacingTriangles"],
+               "sourceNearVerticalTriangleCount":rec["nearVerticalTriangles"],
                "originalSourceObjects":sorted(rec["objects"]),
                "originalMaterials":sorted(rec["materials"]),
                "rightLow":a,"slopeTop":b,
@@ -216,7 +241,7 @@ def main(path,seedpath,output):
         rankrows.sort(key=lambda q:q["sumDistanceMeters"])
         result[side]={"fullyPinnedOriginalSourceFaces":FACES,
           "broadphaseTriangleHits":counts[side],
-          "originalObjIdConnectedComponentsWithBothRegionalAnchors":len(rankrows),
+          "originalObjIdExactEdgeConnectedComponentsWithBothRegionalAnchors":len(rankrows),
           "closestConnectedOriginalComponentCandidates":rankrows[:16],
           "geometricDoubleContactCandidateCount":
             sum(x["geometricDoubleContactWithin035"] for x in rankrows),
@@ -228,7 +253,7 @@ def main(path,seedpath,output):
        "sha256":PIN,"sourceBytes":SIZE,
        "wholeOriginalSourceActiveTrianglesParsed":FACES,
        "wholeOriginalSourceVerticesParsed":VERTICES,
-       "componentScope":"OBJ_VERTEX_ID_SAME_OBJECT_AND_MATERIAL",
+       "componentScope":"EXACT_ORIGINAL_OBJ_EDGE_IDS_SAME_OBJECT_AND_MATERIAL_NOT_VERTEX_ONLY",
        "fullOriginalObjPassed":True,
        "sourceRegionRadiusMeters":RADIUS,
        "exactOriginalRegisteredSeamsFromSourceSeed":True,
@@ -242,16 +267,25 @@ def main(path,seedpath,output):
        "sourceSHA256":PIN,
        "originalFaces":FACES,
        "originalVertices":VERTICES,
+       "componentDefinition":"EXACT_SHARED_ORIGINAL_OBJ_ID_EDGE_NO_VERTEX_ONLY_OR_XYZ_WELD",
        "bySide":{name:{
          "nativeRegionTriangleHits":data["broadphaseTriangleHits"],
          "nativeOriginalConnectedCandidateCount":
-           data["originalObjIdConnectedComponentsWithBothRegionalAnchors"],
+           data["originalObjIdExactEdgeConnectedComponentsWithBothRegionalAnchors"],
          "geometricDoubleContacts":
            data["geometricDoubleContactCandidateCount"],
          "topOriginalComponentCandidates":[{
            "originalSourceObjects":q["originalSourceObjects"],
            "materials":q["originalMaterials"],
-           "connectedFaces":q["originalObjMaterialConnectedFaceCount"],
+           "edgeConnectedFaces":q["originalObjMaterialEdgeConnectedFaceCount"],
+           "componentAreaSquareMeters":q["originalOriginalTriangleAreaSquareMeters"],
+           "componentFloorFacingTriangles":q["sourceFloorFacingTriangleCount"],
+           "componentNearVerticalTriangles":q["sourceNearVerticalTriangleCount"],
+           "heightRange":q["actualComponentYRange"],
+           "rightLowWitnessFaceIndex":q["rightLow"]["originalActiveFaceIndex"],
+           "slopeWitnessFaceIndex":q["slopeTop"]["originalActiveFaceIndex"],
+           "originalOBJVertexIDsRightLow":q["rightLow"]["originalOBJVertexIDs"],
+           "originalOBJVertexIDsSlopeTop":q["slopeTop"]["originalOBJVertexIDs"],
            "rightLowMeters":q["rightLow"]["distanceMeters"],
            "slopeTopMeters":q["slopeTop"]["distanceMeters"],
            "sumDistanceMeters":q["sumDistanceMeters"]}
