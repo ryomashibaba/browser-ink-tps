@@ -10,6 +10,10 @@ export interface DebugInkClick {
   clientY: number;
 }
 
+/** Read-only intersection with the same live hit volumes used by projectiles. */
+export type CombatAimQuery = (from: Vec3, to: Vec3) =>
+  { distance: number; point: Vec3 } | null;
+
 export class ThirdPersonCamera {
   private yaw = 0;
   private pitch = -12;
@@ -35,6 +39,12 @@ export class ThirdPersonCamera {
   // Equivalent world direction; removes transient per-tick clones.
   private readonly lookAtPoint = new Vec3();
   private readonly rayEnd = new Vec3();
+  private sourceCombatAimQuery: CombatAimQuery | null = null;
+
+  public enableSourceCombatAim(query: CombatAimQuery): void {
+    if (!this.sourcePracticeControls) throw Error('SOURCE_PRACTICE_REQUIRED');
+    this.sourceCombatAimQuery = query;
+  }
 
   /** Never enabled by the normal T20 camera or other stages. */
   public enableSourcePracticeControls(): void {
@@ -253,10 +263,23 @@ export class ThirdPersonCamera {
         best.distance <=
           blocker.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
     ) {
-      return out.copy(best.worldPoint);
+      out.copy(best.worldPoint);
+    } else if (blocker) {
+      out.copy(blocker.point);
+    } else {
+      out.copy(from).add(direction.mulScalar(fallbackDistance));
     }
-    if (blocker) return out.copy(blocker.point);
-    return out.copy(from).add(direction.mulScalar(fallbackDistance));
+    // Exact center-ray intersection only: no cone, sticky target, prediction,
+    // HP write or hit award. World cover wins ties just as for projectiles.
+    // Resolve distance at the actor rather than compensating parallax/gravity
+    // for a floor or fallback point far BEHIND the actor.
+    const actor = this.sourceCombatAimQuery?.(from, out);
+    if (actor && Number.isFinite(actor.distance) && actor.distance >= 0 &&
+        actor.distance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < from.distance(out) &&
+        [actor.point.x, actor.point.y, actor.point.z].every(Number.isFinite)) {
+      out.copy(actor.point);
+    }
+    return out;
   }
 
   public getFlatForward(out = new Vec3()): Vec3 {
