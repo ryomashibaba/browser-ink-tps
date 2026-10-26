@@ -73,7 +73,10 @@ export function b220AuditOriginalRecastSeamWitnesses(
     previous.productionAuthorized!==false||
     faces.length!==10)
   throw Error('B220_FROZEN_ORIGINAL_RECAST_RAPIER_ONLY');
- const map=new Map(faces.map(f=>[f.id,f]));
+ // B221: B219 ranked seam IDs are strings; resolve them in the exact
+ // original source map and still fail closed on unknown or wrong-side IDs.
+ const map=new Map<string,UndertowUnderpassRouteRecord>(
+  faces.map(f=>[f.id,f]));
  if(map.size!==10)throw Error('B220_ORIGINAL_SOURCE_FACE_DUPLICATION');
  const sources=previous.priorityRankedSeams.map(seam=>{
   const from=map.get(seam.from),to=map.get(seam.to);
