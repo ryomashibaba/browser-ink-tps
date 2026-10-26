@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `8c4cf14fb1771caa2196ed41cd33ec3870f32078`
+- 同期元QA HEAD: `e9c08d95a02a68bc3ae7ea6dedc9ea919d8957ab`
 - 最新番号のQAレポート: W10-B223 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B223-full-stage-native-rapier-source-gap-jump.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B224 （着手・完了の保証ではない）
