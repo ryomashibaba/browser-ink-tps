@@ -3,7 +3,7 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'scripts/t21-b241-pinned-original-floorline-qa.ts'
+      - 'scripts/t21-b240-pinned-original-floorline-qa.ts'
       - 'scripts/T21B241OriginalFloorlineCapsuleLateralQa.test.ts'
       - '.github/workflows/t21-b241-original-capsule-lateral.yml'
   workflow_dispatch:
@@ -63,6 +63,6 @@ jobs:
           name: b241-original-physical-width-lateral-numeric-qa
           path: |
             /tmp/b241/b239-actual-KCC-walk.json
-            /tmp/b241/b241-native-recast-parameter-diagnosis.json
+            /tmp/b241/b241-physical-width-and-lateral-qa.json
           retention-days: 14
           if-no-files-found: warn
