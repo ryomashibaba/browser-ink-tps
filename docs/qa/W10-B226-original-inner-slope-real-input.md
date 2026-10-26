@@ -26,3 +26,22 @@ First B226 QA run #40293452614 initially **failed** on the negative Z side becau
 | Negative Z | all four authentic collider supports observed, inner stable | 150 ticks | 0 | 0.038887 m |
 
 The old B224 four-direction browser QA was also SUCCESS at #40293716502. **However, old B225 browser QA #40293716588 FAILED** on the negative side for the same false-near-target release, even while retaining physical ground support on the outer slope. Consequently the geometric stop is now removed in **both** B225 and B226 corridor scripts: they must observe the exact FloorConcrete02 real foot-support collider, not centroid proximity. The 120-native-tick safety ceiling is retained. B226 real inner-slope stability and ground continuity are promoted to hard CI assertions only after this measured proof. Entire procedure stays isolated QA with 30 solids, not the actual runtime's 25.
+
+## Final B226 true Chromium result — all regressions green
+
+Source implementation at `aa3c69c008ae4a14839418373926d42f6deccbad` was checked in the three real-browser CI workflows:
+
+- B226 three-leg (including both mirrored inner slopes) **SUCCESS**: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40293999559
+- B225 real two-leg grounded regression **SUCCESS**: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40293999528
+- B224 four-direction source jump regression **SUCCESS**: https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40293999462
+
+B226 Native CDP log for the **same** player physical body, following FloorConcrete01 -> outer Slope00 -> FloorConcrete02 -> inner Slope00, strictly ordered original collider supports:
+
+| Side | Waypoint reached on authentic FloorConcrete02 | Third-leg grounded native ticks | Third-leg ungrounded native ticks | Inner Slope00 contacted and stable | Minimum inner-target XZ error | Extra Space inputs | Collisions against 25 existing solids |
+|---|---|---:|---:|---|---:|---:|---:|
+| POSITIVE_Z | YES | 149 | **0** | YES | 0.183773 m | 0 | 0 |
+| NEGATIVE_Z | YES | 159 | **0** | YES | 0.014317 m | 0 | 0 |
+
+B226 strict gate `B226_REAL_INNER_SLOPE_GROUNDED_GATE_PASS` is emitted only after both inner slope stable contacts, 18+ grounded third-leg ticks each, zero airborne third-leg ticks, one total first-gap Space press, exact original source support-chain order, no teleport after initial test spawn, and zero contacts against the 25 existing original runtime solids. No fake clock, KCC displacement injection, artificial floor or scoring promotion.
+
+**Bounded claim:** full original five-source-component local chain is physically navigable by actual user keyboard/mouse input in **an isolated 30-solid QA environment**, for the tested trajectories; this says nothing about live runtime availability of these components or a Recast/Crowd CPU planning path. Live 25/17/26/0 remains unchanged; genuine cross-team routes remain 0/12, productionAuthorized=false, unrestricted4v4Certified=false and officialWinner NONE. Future B227 should seek authentic physical and Recast ingress into the currently registered 25-solid playable world without replacing the original source package or inventing artificial connectors. Do not repeat CI691's failed 5+5 NavMesh promotion.
