@@ -1,0 +1,24 @@
+name: T21 B237 original Temple01 alternate right-low ingress face review
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/stage/undertow/B237OriginalIngressSourceScreen.ts'
+      - 'scripts/T21B237AlternateOriginalIngressSource.test.ts'
+      - '.github/workflows/t21-b237-original-ingress-source-screen.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b237-source-ingress-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Exact original review-only Temple01 triangle candidate screen and B236 physical regression
+        run: npx vitest run scripts/T21B237AlternateOriginalIngressSource.test.ts scripts/T21B236OriginalSlopeIngress.test.ts --reporter=verbose
