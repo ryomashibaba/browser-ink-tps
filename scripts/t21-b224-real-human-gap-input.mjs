@@ -127,13 +127,58 @@ async function scenario(side,direction){
      o.tick>=secondLegStart.tick+120?o:false;
   },33000,20);
   await key(moveKey,false);
-  const parked=await wait(async()=>{
+  let parked=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
    return o.b225StableNextTick!==null||
      o.tick>=advance.tick+120?o:false;
   },33000);
+  const genuineKeyboardBrakeCorrections=[];
+  // The B228 strict run #40298370469 reproduces a real issue:
+  // native Floor02 support exists, but releasing W/S at full speed lets
+  // inertia carry the human outside the ORIGINAL <=0.85m park radius.
+  // Only actual keyboard W/S pulses, with NO body set/teleport and NO
+  // tolerance change, are permitted as corrections.
+  for(let attempt=0;attempt<3&&parked.b225StableNextTick===null&&
+      parked.b225FirstNextSupportTick!==null;attempt++){
+   const origin=parked.stableLandingPosition??end.stableLandingPosition;
+   const goal=parked.b225NextTarget;
+   if(!origin||!goal)throw Error('B228_NO_REAL_SOURCE_ORIGIN_FOR_BRAKING');
+   const forwardX=goal[0]-origin[0],forwardZ=goal[2]-origin[2];
+   const dot=(parked.playerPosition[0]-goal[0])*forwardX+
+     (parked.playerPosition[2]-goal[2])*forwardZ;
+   const brakingKey=dot>0?
+     (moveKey==='KeyW'?'KeyS':'KeyW'):moveKey;
+   const beforeCorrection=parked;
+   await key(brakingKey,true);
+   const close=await wait(async()=>{
+    const o=await read('window.__t21B224.snapshot()');
+    const d=Math.hypot(o.playerPosition[0]-goal[0],
+     o.playerPosition[2]-goal[2]);
+    return (o.currentFootSolid===o.b225NextSolid&&o.grounded&&
+      d<=.25)?o:o.tick>=beforeCorrection.tick+65?o:false;
+   },16000,20);
+   await key(brakingKey,false);
+   parked=await wait(async()=>{
+    const o=await read('window.__t21B224.snapshot()');
+    return o.b225StableNextTick!==null||
+      o.tick>=close.tick+80?o:false;
+   },16000,25);
+   genuineKeyboardBrakeCorrections.push({
+    side,attempt:attempt+1,brakingKey,
+    beforeTick:beforeCorrection.tick,afterTick:parked.tick,
+    beforePosition:beforeCorrection.playerPosition,
+    closest:parked.b225MinNextErrorMeters,
+    stableNativeFloor02:parked.b225StableNextTick!==null,
+    totalSpaceInputs:parked.validJumpInputs,
+    noRelocations:parked.teleportsAfterQaSpawn===0
+   });
+  }
+  if(genuineKeyboardBrakeCorrections.length)
+   console.log('B228_REAL_KEYBOARD_MOMENTUM_CORRECTION',
+    JSON.stringify(genuineKeyboardBrakeCorrections));
   b225SecondLeg={sourceAtStart:secondLegStart.currentFootSolid,
    startNativeTick:secondLegStart.tick,advance,parked,
+   genuineKeyboardBrakeCorrections,
    physicallyTouchedOriginalFloor02:parked.b225FirstNextSupportTick!==null,
    secondLegStartedTick:parked.b225SecondLegStartedTick,
    noSecondJump:
