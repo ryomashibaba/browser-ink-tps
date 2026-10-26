@@ -44,10 +44,10 @@ const point=(modelX:number,modelY:number,modelZ:number,side:Side):StageVector3=>
 const floorPoint=(side:Side)=>point(-6,3,21.9,side);
 const slopePoint=(side:Side)=>point(-6,3+(19.5-19.1)/3,19.1,side);
 
-function stageFor(side:Side):StageDefinition {
+function stageFor(side:Side, includeRuntimeStage=false):StageDefinition {
  const floor=source('underpass-route-floor-concrete01',side);
  const slope=source('underpass-route-slope00-outer',side);
- const solids:StageSolidDefinition[]=[floor,slope].map(f=>({
+ const sourceSolids:StageSolidDefinition[]=[floor,slope].map(f=>({
   id:'B222:'+f.id,center:[0,0,0],
   size:[
    Math.max(...f.mesh.vertices.map(v=>v[0]))-Math.min(...f.mesh.vertices.map(v=>v[0])),
@@ -57,14 +57,17 @@ function stageFor(side:Side):StageDefinition {
   cameraBlocker:false,collisionEnabled:true,navigationEnabled:false,
   triangleMesh:f.mesh
  }));
+ const solids:readonly StageSolidDefinition[]=includeRuntimeStage
+  ?[...STAGE.solids,...sourceSolids]:sourceSolids;
  return {metadata:{
-  id:'b222-source-only-'+side,
+  id:(includeRuntimeStage?'b223-full-static-plus-source-':'b222-source-only-')+side,
   displayName:'B222 isolated original source KCC QA',
   worldBounds:STAGE.worldBounds,
   teamASpawn:[0,0,0],teamBSpawn:[0,0,0],
   teamASpawnSlots:[[0,0,0]],teamBSpawnSlots:[[0,0,0]],
   tacticalNodes:[],splatZones:[]},
-  solids,paintSurfaces:[],navigationLinks:[]};
+  solids,paintSurfaces:includeRuntimeStage?STAGE.paintSurfaces:[],
+  navigationLinks:includeRuntimeStage?STAGE.navigationLinks:[]};
 }
 
 interface Result {
@@ -74,15 +77,21 @@ interface Result {
  finalHorizontalErrorMeters:number;finalFootHeightErrorMeters:number;
  minFootBelowTargetMeters:number;maxRiseMeters:number;
  jumpUsed:boolean;success:boolean;
+ originalStageIncluded:boolean;sourceSolidsAdded:2;
+ nativeCollisionSolidIds:readonly string[];
+ initialSourceFootSupported:boolean;initialSupportSolidId:string|null;
 }
 function run(
- side:Side,motion:Motion,direction:Result['direction']
+ side:Side,motion:Motion,direction:Result['direction'],
+ includeRuntimeStage=false
 ):Result{
- const qa=stageFor(side);
+ const qa=stageFor(side,includeRuntimeStage);
  const physics=new RapierStagePhysics(DT,qa);
  physics.step();
  const start=direction==='FLOOR_TO_SLOPE'?floorPoint(side):slopePoint(side);
  const end=direction==='FLOOR_TO_SLOPE'?slopePoint(side):floorPoint(side);
+ const startId='B222:'+sid(direction==='FLOOR_TO_SLOPE'
+  ?'underpass-route-floor-concrete01':'underpass-route-slope00-outer',side);
  const targetId='B222:'+sid(direction==='FLOOR_TO_SLOPE'
   ?'underpass-route-slope00-outer':'underpass-route-floor-concrete01',side);
  const body:RigidBody=physics.world.createRigidBody(
@@ -92,10 +101,21 @@ function run(
   RAPIER.ColliderDesc.capsule(
    HUMAN.humanHalfHeightMeters,HUMAN.humanRadiusMeters),body);
  const ctrl=createConfiguredPlayerCharacterController(physics.world);
+ const nativeCollisionSolidIds=new Set<string>();
  const step=(x:number,y:number,z:number)=>{
   const before=body.translation();
   ctrl.computeColliderMovement(collider,new Vec3(x,y,z),
    undefined,undefined,c=>physics.shouldCharacterCollide(c,'HUMAN'));
+  if(includeRuntimeStage){
+   for(let k=0;k<ctrl.numComputedCollisions();k++){
+    const c=ctrl.computedCollision(k)?.collider;
+    if(c){
+     const solidId=physics.sourceSolidIdForCollider(c);
+     if(solidId&&STAGE.solids.some(s=>s.id===solidId))
+      nativeCollisionSolidIds.add(solidId);
+    }
+   }
+  }
   const corrected=ctrl.computedMovement();
   body.setNextKinematicTranslation({
    x:before.x+corrected.x,y:before.y+corrected.y,z:before.z+corrected.z});
@@ -108,6 +128,11 @@ function run(
   settled=step(0,-0.12,0);
   if(settled)break;
  }
+ const afterSettle=body.translation();
+ const initialSupport=physics.castCharacterFootSupport(
+  new Vec3(afterSettle.x,afterSettle.y,afterSettle.z),
+  HUMAN.humanFootOffsetMeters,'HUMAN');
+ const initialSourceFootSupported=initialSupport?.solidId===startId;
  let vy=motion==='JUMP'&&settled?GAME_CONFIG.player.jumpSpeedMetersPerSecond:0;
  let leftGround=false,landedAfterAirborne=false,finishGrounded=false;
  let minFootY=Infinity,maxFootY=-Infinity;
@@ -150,7 +175,10 @@ function run(
   finishSupportedByTarget,finishGrounded,finalHorizontalErrorMeters,
   finalFootHeightErrorMeters,
   minFootBelowTargetMeters:Math.max(0,end[1]-minFootY),
-  maxRiseMeters:maxFootY-start[1],jumpUsed:motion==='JUMP',success
+  maxRiseMeters:maxFootY-start[1],jumpUsed:motion==='JUMP',success,
+  originalStageIncluded:includeRuntimeStage,sourceSolidsAdded:2,
+  nativeCollisionSolidIds:[...nativeCollisionSolidIds].sort(),
+  initialSourceFootSupported,initialSupportSolidId:initialSupport?.solidId??null
  };
 }
 beforeAll(async()=>initializeRapier());
@@ -191,4 +219,56 @@ describe('B222 exact original 2m floor-to-slope gap, isolated production KCC',()
    &&o.finalFootHeightErrorMeters<0.22)).toBe(true);
   expect(STAGE.activationReady).toBe(false);
  },30000);
+});
+
+/**
+ * B223 -- full existing 25-solid Rapier static context (exactly as used by F3)
+ * plus ONLY two CI688 original source faces on the requested mirrored side.
+ * The extra two meshes never enter production stage, Recast, paint, CPU or
+ * scoring. Critically, collision contacts of the 25 real bodies are recorded
+ * and a simulated jump is not certified merely because NavMesh can route it.
+ */
+describe('B223 full original static scene with isolated CI688 jump meshes',()=>{
+ it('compares real Human KCC source gap traversal with all 25 existing colliders active',()=>{
+  expect(STAGE.solids).toHaveLength(25);
+  expect(new Set(STAGE.solids.map(s=>s.id)).size).toBe(25);
+  expect(STAGE.paintSurfaces).toHaveLength(17);
+  expect(STAGE.navigationLinks).toHaveLength(26);
+  expect(STAGE.activationReady).toBe(false);
+  const results:Result[]=[];
+  for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const){
+   const qa=stageFor(side,true);
+   expect(qa.solids).toHaveLength(27);
+   expect(qa.solids.slice(0,25)).toEqual(STAGE.solids);
+   expect(qa.paintSurfaces).toEqual(STAGE.paintSurfaces);
+   expect(qa.navigationLinks).toEqual(STAGE.navigationLinks);
+   for(const direction of ['FLOOR_TO_SLOPE','SLOPE_TO_FLOOR'] as const)
+    for(const motion of ['WALK','JUMP'] as const)
+     results.push(run(side,motion,direction,true));
+  }
+  const witness={
+   evidence:'B223_REAL_25_ORIGINAL_STATIC_PLUS_2_EXACT_CI688_SOURCE_COLLIDERS',
+   qaOnly:true,productionAuthorized:false,officialWinner:'NONE',
+   runtimeStageUnmodified:true,sourceSolidsInProduction:0,
+   originalAuthority:'25_SOLIDS_17_PAINT_26_NAVLINKS_0_SCOREABLE',
+   currentCrossTeamRoutesCertified:'0/12',
+   originalStageColliderCount:25,qaSourceCollidersPerSide:2,
+   noNavmeshClaim:true,noActorTeleports:true,noGameplayJumpCertified:true,
+   results
+  };
+  console.log('B223_FULL_STAGE_ORIGINAL_RAPIER_JUMP_WITNESS',
+   JSON.stringify(witness));
+  expect(results).toHaveLength(8);
+  expect(results.every(x=>x.originalStageIncluded&&x.sourceSolidsAdded===2
+   &&Number.isFinite(x.finalHorizontalErrorMeters)
+   &&Number.isFinite(x.finalFootHeightErrorMeters)
+   &&x.nativeCollisionSolidIds.every(id=>STAGE.solids.some(s=>s.id===id))
+  )).toBe(true);
+  // Outcomes intentionally discovered by real Rapier, not asserted as
+  // success before we have evidence of actual native-stage clearance.
+  expect(STAGE.solids).toHaveLength(25);
+  expect(STAGE.paintSurfaces).toHaveLength(17);
+  expect(STAGE.navigationLinks).toHaveLength(26);
+  expect(STAGE.activationReady).toBe(false);
+ },40000);
 });
