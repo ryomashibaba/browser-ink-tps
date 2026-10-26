@@ -170,6 +170,9 @@ export class T21B224OriginalGapInputQaApp{
   let b228MinUnderpassErrorMeters=Infinity;
   let b228ClosestNativeGroundedErrorMeters=Infinity;
   let b228NativeColliderSupportTicks=0;
+  let b228RegisteredOriginalGroundedTicks=0;
+  let b228RegisteredStableTick:number|null=null,b228RegisteredStableTicks=0;
+  const b228RegisteredOriginalFloorIds:string[]=[];
   let b228LastNativeFootId:string|null=null;
   let b228FootTransitionSourceToRegistered=false;
   let b228NativeSupportBeforeFourth=false;
@@ -202,7 +205,10 @@ export class T21B224OriginalGapInputQaApp{
     b228Enabled:b228,b228UnderpassTarget,b228UnderpassSolid,
     b228FourthLegStartTick,b228FirstNativeFootTick,b228StableNativeTick,
     b228StableNativeTicks,b228NativeGroundedTicks,b228NativeUngroundedTicks,
-    b228NativeColliderSupportTicks,b228LastNativeFootId,
+    b228NativeColliderSupportTicks,
+    b228RegisteredOriginalGroundedTicks,b228RegisteredStableTick,
+    b228RegisteredStableTicks,b228RegisteredOriginalFloorIds,
+    b228LastNativeFootId,
     b228FootTransitionSourceToRegistered,
     b228NativeSupportBeforeFourth,b228WasOnInnerWhenFourthStarted,
     b228AtFourthJumpInputs,
@@ -382,6 +388,30 @@ export class T21B224OriginalGapInputQaApp{
       if(b228FourthLegStartTick!==null){
        if(stats.playerGrounded)b228NativeGroundedTicks++;
        else b228NativeUngroundedTicks++;
+       // Original underpass and original center-low both physically occupy
+       // the lower-floor exit. A native foot-ray may change authentic
+       // registered IDs without a single grounded KCC tick being lost.
+       // Require first actual glass-underpass ID, then >=18 consecutive
+       // stationary ticks on ANY ORIGINAL registered 25-solid floor at
+       // the SAME Y=3m model elevation. No source CI688 face can satisfy.
+       const registered=stats.playerGrounded&&!!support&&
+        FROZEN.solids.some(s=>s.id===support);
+       const groundHit=registered?physics.castCharacterFootSupport(
+        p,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
+       const originalLowerFloor=registered&&groundHit&&
+        Math.abs(groundHit.point.y-b228UnderpassTarget[1])<=.15;
+       if(originalLowerFloor){
+        b228RegisteredOriginalGroundedTicks++;
+        if(!b228RegisteredOriginalFloorIds.includes(support!))
+         b228RegisteredOriginalFloorIds.push(support!);
+       }
+       if(b228FirstNativeFootTick!==null&&
+          originalLowerFloor&&input.moveX===0&&input.moveY===0&&
+          nativeDist<=.90&&validJumpInputs===1){
+        b228RegisteredStableTicks++;
+        if(b228RegisteredStableTicks>=18)
+         b228RegisteredStableTick??=tick;
+       }else b228RegisteredStableTicks=0;
        if(support===b228UnderpassSolid&&stats.playerGrounded){
         b228FirstNativeFootTick??=tick;
         b228NativeColliderSupportTicks++;

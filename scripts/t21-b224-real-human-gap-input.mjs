@@ -322,13 +322,13 @@ async function scenario(side,direction){
   await key(moveKey,false);
   let underpassRest=await wait(async()=>{
    const o=await read('window.__t21B224.snapshot()');
-   return o.b228StableNativeTick!==null||
+   return o.b228RegisteredStableTick!==null||
     o.tick>=underpassApproach.tick+110?o:false;
   },24000);
   const realRegisteredFloorNudges=[];
   // Native original foot may be briefly touched at the source seam.
   // Only short real keyboard W/S pushes can settle the actual body.
-  for(let i=0;i<3&&underpassRest.b228StableNativeTick===null&&
+  for(let i=0;i<3&&underpassRest.b228RegisteredStableTick===null&&
       underpassRest.b228FirstNativeFootTick!==null;i++){
    const beforeNudge=underpassRest;
    await key(moveKey,true);
@@ -339,15 +339,22 @@ async function scenario(side,direction){
    await key(moveKey,false);
    underpassRest=await wait(async()=>{
     const o=await read('window.__t21B224.snapshot()');
-    return o.b228StableNativeTick!==null||
+    return o.b228RegisteredStableTick!==null||
      o.tick>=nudge.tick+80?o:false;
    },15000,30);
    realRegisteredFloorNudges.push({
     side,attempt:i+1,fromTick:beforeNudge.tick,endTick:underpassRest.tick,
     actualNativeSourceFootAtEnd:underpassRest.currentFootSolid,
-    stableNativeAfterRealKey:underpassRest.b228StableNativeTick!==null,
+    stableOriginalRegisteredFloor:
+     underpassRest.b228RegisteredStableTick!==null,
+    stableUnderpassSpecificID:
+     underpassRest.b228StableNativeTick!==null,
     actualNativeSupportCount:underpassRest.b228NativeColliderSupportTicks,
     consecutiveNativeRestTicks:underpassRest.b228StableNativeTicks,
+    consecutiveRegisteredOriginalFloorTicks:
+     underpassRest.b228RegisteredStableTicks,
+    observedRegisteredOriginalFloors:
+     underpassRest.b228RegisteredOriginalFloorIds,
     grounded:underpassRest.grounded,
     lastAxis:underpassRest.lastFixedInputAxis,
     targetErrorMeters:Math.hypot(
@@ -365,6 +372,7 @@ async function scenario(side,direction){
    samePlayer:true,oneSpaceOnly:underpassRest.validJumpInputs===1,
    physicalOriginalUnderpassHit:underpassRest.b228FirstNativeFootTick!==null,
    stableOriginalUnderpass:underpassRest.b228StableNativeTick!==null,
+   stableOriginalRegisteredFloor:underpassRest.b228RegisteredStableTick!==null,
    actualNativeFootId:underpassRest.b228LastNativeFootId,
    sourceToOriginalContact:underpassRest.b228FootTransitionSourceToRegistered,
    startedFromInner:underpassRest.b228WasOnInnerWhenFourthStarted,
@@ -382,6 +390,9 @@ async function scenario(side,direction){
    finalActualFixedAxis:underpassRest.lastFixedInputAxis,
    finalActualMoveAxis:underpassRest.inputAxis,
    finalNativeConsecutiveRestTicks:underpassRest.b228StableNativeTicks,
+   registeredOriginalRestTicks:underpassRest.b228RegisteredStableTicks,
+   registeredOriginalStableTick:underpassRest.b228RegisteredStableTick,
+   nativeOriginalFloorIds:underpassRest.b228RegisteredOriginalFloorIds,
    totalNativeOriginalSupportTicks:underpassRest.b228NativeColliderSupportTicks,
    originalRegisteredFloorNudges:realRegisteredFloorNudges.length,
    finalDistanceMeters:Math.hypot(
@@ -389,6 +400,7 @@ async function scenario(side,direction){
     underpassRest.playerPosition[2]-underpassRest.b228UnderpassTarget[2]),
    originalRegisteredFootContact:b228FourthLeg.physicalOriginalUnderpassHit,
    stableGroundedNativeUnderpass:b228FourthLeg.stableOriginalUnderpass,
+   stableOnOriginal25Floor:b228FourthLeg.stableOriginalRegisteredFloor,
    firstOriginalGroundedTick:underpassRest.b228FirstNativeFootTick,
    stableOriginalTick:underpassRest.b228StableNativeTick,
    fourthLegGroundedTicks:underpassRest.b228NativeGroundedTicks,
@@ -478,6 +490,8 @@ try{
     x.b228FourthLeg?.physicalOriginalUnderpassHit).length,
   b228NativeUnderpassStable:reports.filter(x=>
     x.b228FourthLeg?.stableOriginalUnderpass).length,
+  b228RegisteredFloorStable:reports.filter(x=>
+    x.b228FourthLeg?.stableOriginalRegisteredFloor).length,
   reports};
  writeFileSync(resolve(OUT,b228?'b228-original-underpass-rejoin.json':
   b226?'b226-inner-slope-source.json':
@@ -491,6 +505,7 @@ try{
   if(summary.completed!==2||summary.stableSourceLandingCount!==2||
      summary.secondStageStable!==2||
      summary.b226InnerSourceStable!==2||
+     summary.b228RegisteredFloorStable!==2||
      reports.some(x=>{
       const t=x.b228FourthLeg,p=t?.underpassRest;
       const suffix=x.side==='POSITIVE_Z'?'positive-z':'negative-z';
@@ -500,10 +515,16 @@ try{
         'B224_QA_ONLY:underpass-route-'+id+'-'+suffix);
       return !t||!p||t.afterSpawnTeleports!==0||
        !t.oneSpaceOnly||!t.startedFromInner||
-       !t.physicalOriginalUnderpassHit||!t.stableOriginalUnderpass||
+       !t.physicalOriginalUnderpassHit||!t.stableOriginalRegisteredFloor||
        !t.sourceToOriginalContact||t.originalContactAlreadyBeforeMove||
        t.actualNativeFootId!==expectedId||
-       p.currentFootSolid!==expectedId||
+       !p.b228RegisteredOriginalFloorIds.includes(expectedId)||
+       !p.b228RegisteredOriginalFloorIds.every(id=>
+        id.startsWith('UndertowT21D:')&&
+        p.originalSolidsStill25)||
+       p.b228RegisteredStableTick===null||
+       p.b228RegisteredStableTicks<18||
+       !p.currentFootSolid?.startsWith('UndertowT21D:')||
        p.b228NativeGroundedTicks<18||
        p.b228NativeUngroundedTicks!==0||
        p.validJumpInputs!==1||p.b228AtFourthJumpInputs!==1||
@@ -518,7 +539,8 @@ try{
   console.log('B228_REAL_REGISTERED_UNDERPASS_STABLE_4TH_LEG_GATE_PASS');
   console.log('B228_REAL_SOURCE_TO_REGISTERED_CONTACT_GATE_PASS',
    JSON.stringify({tested:2,realNativeContact:summary.b228NativeUnderpassTouched,
-    stableNative:summary.b228NativeUnderpassStable,
+    stableNativeIdOnly:summary.b228NativeUnderpassStable,
+    stableOriginalRegisteredFloor:summary.b228RegisteredFloorStable,
     productionAuthorized:false,routeCertification:'0/12'}));
  }else if(b226){
   if(summary.completed!==2||summary.stableSourceLandingCount!==2||
