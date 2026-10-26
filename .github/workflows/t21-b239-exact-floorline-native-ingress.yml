@@ -1,0 +1,70 @@
+name: T21 B239 pinned FloorLine00 real Rapier KCC Recast isolation QA
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/undertow-temple01-b239-extract-exact-floorline.py'
+      - 'scripts/T21B239ExactFloorlineNativeIngress.test.ts'
+      - '.github/workflows/t21-b239-exact-floorline-native-ingress.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b239-pinned-source-native-physics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Full TypeScript and app production build remains intact
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Regenerate native original-25 boundary and exact CI688 slope source input
+        env:
+          T21_B238_SEED_OUTPUT: /tmp/b239/original-seams.json
+        run: npx vitest run scripts/T21B238FullOriginalObjSeamSeed.test.ts --reporter=verbose
+      - name: Verify B238 original finite segment-triangle geometry
+        run: python3 scripts/undertow-temple01-b238-pinned-full-seam-scan.py --self-test
+      - name: Re-fetch immutable full ORIGINAL OBJ via LFS with SHA256 and size gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b239
+          curl --fail --location --retry 3 --retry-delay 3 --max-time 220 \
+            --output /tmp/b239/original.obj \
+            'https://media.githubusercontent.com/media/kirakira-dev/KiTrix/main/stages/Vss_Temple01/Vss_Temple01.obj'
+          echo 'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046  /tmp/b239/original.obj' | sha256sum --check
+          test "$(wc -c </tmp/b239/original.obj)" -eq 43263289
+      - name: Rebuild ALL 70396 original faces and exact OBJ edge-connected contact evidence
+        run: |
+          python3 scripts/undertow-temple01-b238-pinned-full-seam-scan.py \
+            --obj /tmp/b239/original.obj --seed /tmp/b239/original-seams.json \
+            --out /tmp/b239/original-source-report.json
+          python3 scripts/undertow-temple01-b238-strict-source-verdict.py \
+            /tmp/b239/original-source-report.json
+      - name: Extract only the four original ordered triangles from the validated OBJ report
+        run: |
+          python3 scripts/undertow-temple01-b239-extract-exact-floorline.py \
+            --in-report /tmp/b239/original-source-report.json \
+            --out /tmp/b239/b239-only-4-exact-original-triangles.json
+      - name: REAL Rapier capsule KCC and native Recast before-after, both mirrored sides
+        env:
+          T21_B239_FACES_OUTPUT: /tmp/b239/b239-only-4-exact-original-triangles.json
+          T21_B239_RESULT_OUTPUT: /tmp/b239/b239-real-native-physics-recast.json
+        run: |
+          npx vitest run \
+            scripts/T21B239ExactFloorlineNativeIngress.test.ts \
+            scripts/T21B236OriginalSlopeIngress.test.ts \
+            --reporter=verbose
+      - name: Original copyright protected source must not appear in artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b239-original-floorline-numeric-kcc-recast-qa
+          path: |
+            /tmp/b239/b239-only-4-exact-original-triangles.json
+            /tmp/b239/b239-real-native-physics-recast.json
+          retention-days: 14
+          if-no-files-found: warn
