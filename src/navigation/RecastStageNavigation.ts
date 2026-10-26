@@ -227,6 +227,20 @@ function distance3(a: Vec3, b: Vec3): number {
   return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
+/**
+ * B240 uses the EXACT production triangle soup, but permits isolated native
+ * Recast parameter diagnostics without ever changing gameplay nav settings.
+ * Only a separately named source-only test stage may enter this gate.
+ */
+export function b240IsolatedOriginalStageTriangleSoup(
+  definition: StageDefinition
+): { positions: number[]; indices: number[] } {
+  if (!definition.metadata.id.startsWith('b240-isolated-original-floorline-')) {
+    throw new Error('B240_RECAST_SOURCE_SOUP_REQUIRES_ISOLATED_STAGE');
+  }
+  return buildStageTriangleSoup(definition);
+}
+
 function buildStageTriangleSoup(
   definition: StageDefinition
 ): { positions: number[]; indices: number[] } {
