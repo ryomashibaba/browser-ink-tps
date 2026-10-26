@@ -1,7 +1,7 @@
 # W10-B242 — SOURCE_AUTHORITY HOLD; player-owned source round lifecycle
 
 2026-10-26 JST. Baseline QA HEAD: `845693b11427e6998c2a05bd59af6678c053db53`.
-Branch: `dev/t21-f4e103w-qa-infra`. Implementation/browser acceptance is pending CI; this document does not claim browser PASS.
+Branch: `dev/t21-f4e103w-qa-infra`. Implementation and round-control browser acceptance PASS. Corridor certification remains SOURCE_AUTHORITY HOLD.
 
 ## B242 corridor decision: SOURCE_AUTHORITY HOLD — research stopped
 
@@ -34,12 +34,38 @@ The selected 180s SOURCE round previously advanced physical staging and eventual
 
 ## Acceptance and evidence
 
-Existing B75 FIXED/SWEEP integration is reused; no workflow is added. The existing F3 app push gates remain active.
-Lightweight candidate checks: real JavaScript syntax check PASS; TypeScript 5.8.3 parse diagnostics: zero. Full semantic type/build and browser outcomes await Actions.
+Existing B75 FIXED/SWEEP integration was reused; no workflow was added.
+Game/application + B75 acceptance code SHA: `13242af5aa3e94d06a25f8ef877893cee562ff59`.
+Cooperative test-harness adaptation SHA: `97731ecfeb25eea4c25374472a7fbeaeb80f0bf2`; application and B75 runner are byte-identical to the game SHA. The later report-only HEAD does not introduce untested gameplay.
 
-B75 FIXED additionally checks real ready/P-key waiting, an actual Start click, STAGING Esc pause, resumed real HUMAN movement/shots/paint and 7 CPU rejoins, actual PLAYING focus loss via a second Chrome target, unchanged native clock/HP/ink/positions/shots while paused, explicit resume with identical performance.timeOrigin, zero actor relocation and unchanged source authority. It saves a ready framebuffer and a numeric lifecycle JSON. No QA ticks or fabricated state are introduced.
+| Existing Actions | SHA | Measured result |
+| --- | --- | --- |
+| [B75 #40340049154](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340049154) | 13242af | SUCCESS: type/build, 47 Vitest files / 208 tests, node regressions, real FIXED + SWEEP |
+| [Windows/Linux QA #40340049080](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340049080) | 13242af | SUCCESS, both OS jobs |
+| [B112–115 #40340049044](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340049044) | 13242af | SUCCESS, real browser original-floor witness |
+| [B120 #40340049457](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340049457) | 13242af | SUCCESS, actual descent/ramp/human ink |
+| [B234 #40340049193](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340049193) | 13242af | SUCCESS, seven real CPU readiness; no corridor promotion |
+| [B139 #40340716069](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340716069) | 97731ec | SUCCESS: FIXED_DEFAULT / TEAM_COVERAGE / ALLY_RALLY and paired proof |
+| [B162 #40340716095](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340716095) | 97731ec | SUCCESS: actual co-op clear twice, pause/resume and fresh replay |
 
-This is a round-control and gameplay-regression acceptance, not a newly completed 180s match, natural cross-team encounter, hit/splat guarantee or official 4v4 result. Earlier B210's 180s evidence remains historical evidence for its own SHA.
+The first [B162 #40340049433](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40340049433) failed `B140_NOT_REAL_ORIGINAL_7CPU_KCC_BOOT`: its historic full-round boot assertion required unpaused play before the first click. The existing runner was updated to require the stronger real READY / tick 0 / 180s state, then click the visible START button. No movement, paint, clearance or authority threshold was relaxed. The later B162 success above is the corrected verification; the earlier failure is not concealed.
+
+### Genuine Chromium measurements (B75 FIXED)
+
+Artifact `w10b75-live-source-ink-FIXED` contains `b242-real-source-round-lifecycle.json` and `b242-source-round-ready.png`.
+
+- Ready and real P-key waiting: native tick 0 → 0, time 180 → 180, HP/ink/positions/shots/CPU unchanged.
+- Real START button; STAGING Esc pause at tick 0, explicit same-world resume to tick 6.
+- Real human KCC travel **3.556m**, **9** accepted shots, **365** changed human impact cells; real CPU rejoin **7/7**. These are movement/shots/paint observations, not hits or Turf score.
+- Genuine activity window: **360 native ticks / 6.0s**, **70** CPU source-shot requests and **3,172** CPU changed paint cells. These counters are separate observations, not causal shot-to-cell attribution.
+- A real second Chrome target caused PLAYING focus loss. Native world remained unchanged during the pause at tick **1505**, time **173.9s**. Explicit UI click resumed tick **1511** with the same `performance.timeOrigin`. Actor relocations **0**, injected QA ticks **0**.
+- The actual ready framebuffer was inspected: the central instructions and START button are readable. Inherited peripheral diagnostic panels remain dense/overlapping; overall HUD/visual quality is still a POLISH/VISUAL_FIDELITY task, not completed by this slice.
+
+### Existing cooperative game regression (B162)
+
+Two genuine source-limited cooperative CLEARs: human impact cells **808 / 818**, grounded travel **35.76 / 35.86m**, tagged actual A1 changed cells **41 / 37**. Actual pause/resume succeeds before and after objective CLEAR. Mission-card, terminal HUD and R-key replays rebuild clean worlds (native tick 0, STAGING, no CPU rejoin yet, zero actor relocation). These are existing local cooperative objectives, not cross-team encounters or official wins.
+
+PASS covers player-controlled round start, same-world interruption/resume, native movement/ink/CPU activity, existing cooperative replay and the listed regressions. No newly completed 180-second match is claimed on this SHA. Natural enemy encounter, actual enemy hit/splat guarantee, full-stage routes and official 4v4 remain HOLD. Earlier B210's 180s evidence remains historical evidence for its own SHA.
 
 ## Frozen boundary and next playable work
 
