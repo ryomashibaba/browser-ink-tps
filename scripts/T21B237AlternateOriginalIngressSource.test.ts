@@ -108,9 +108,24 @@ describe('B237 source-only alternate authentic right-low to narrow Slope01 geome
     realCpuOriginalSourceTraversalTested:false,
     officialOriginalStage:'25/17/26/0',crossTeamRoutes:'0/12',
     unrestricted4v4Certified:false,productionAuthorized:false}));
+  expect(c).toHaveLength(104);
+  expect(plus.candidateRegionCount).toBe(minus.candidateRegionCount);
+  expect(plus.candidateRegionCount).toBe(20);
+  expect(plus.bestCandidateRows[0]?.registeredRightLowBoundarySeparation
+   .distanceMeters).toBeCloseTo(
+    minus.bestCandidateRows[0]!.registeredRightLowBoundarySeparation.distanceMeters,6);
   for(const r of [plus,minus]){
-   expect(r.candidateCatalogCount).toBeGreaterThan(25);
-   expect(r.candidateRegionCount).toBeGreaterThan(0);
+   // 52 mirrored pre-extracted SOURCE-REVIEW components on each side,
+   // screen-only: no measured dual contact. This is not a complete OBJ
+   // scan, nor a proof of impossible physical crossing.
+   expect(r.candidateCatalogCount).toBe(52);
+   expect(r.candidateRegionCount).toBe(20);
+   expect(r.geometricallyNearBothBoundarySamples).toHaveLength(0);
+   expect(r.bestCandidateRows[0]?.material).toBe('Fld_Temple01_FloorConcrete01');
+   expect(r.bestCandidateRows[0]?.registeredRightLowBoundarySeparation.distanceMeters)
+    .toBeGreaterThan(4.50);
+   expect(r.bestCandidateRows[0]?.exactOriginalSlopeTopSeparation.distanceMeters)
+    .toBeGreaterThan(3.40);
    expect(r.exactSlope01TopY).toBeCloseTo(2.93,3);
    expect(r.originalRightLowContourY).toBe(4.5);
    expect(r.candidateScreenCompleteSourceScan).toBe(false);
@@ -124,6 +139,15 @@ describe('B237 source-only alternate authentic right-low to narrow Slope01 geome
     x.sourceFaceConnectivityBetweenContactsVerified===false&&
     x.physicalCpuTraversalVerified===false)).toBe(true);
   }
+  console.log('B237_STRICT_104_ORIGINAL_REVIEW_CANDIDATES_NO_FALSE_INGRESS',
+   JSON.stringify({originalSourceCatalogMeshes:104,
+    sampledSourceRegionCandidatesPerSide:20,
+    authenticatedGeometricDoubleContacts:0,
+    actuallyTraversedByNativeCpu:0,
+    originalObjFullSourceScanPerformed:false,
+    result:'NOT_FOUND_IN_PREVIOUSLY_EXTRACTED_REVIEW_ONLY_CATALOG',
+    sourceSolidProductionAdditions:0,actualCpuRoutesCertified:'0/12',
+    productionAuthorized:false}));
  });
  it('rejects fake source authorization, mislabeled side and duplicate entries',()=>{
   const x=c.find(x=>x.side==='POSITIVE_Z')!;
