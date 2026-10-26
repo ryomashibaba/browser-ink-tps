@@ -178,11 +178,17 @@ describe('B222 exact original 2m floor-to-slope gap, isolated production KCC',()
   expect(outcomes).toHaveLength(8);
   expect(outcomes.every(o=>o.settled)).toBe(true);
   expect(outcomes.filter(o=>o.motion==='WALK').every(o=>!o.success)).toBe(true);
-  // Do not manufacture a PASS: the next decision follows real Rapier outcomes.
+  // Actual B222 native run 40285215169: all four isolated authentic
+  // source-mesh jumps landed with registered target support.
+  // Fail CI closed if any mirrored/directional physical return regresses.
   const jumps=outcomes.filter(o=>o.motion==='JUMP');
   expect(jumps).toHaveLength(4);
+  expect(jumps.every(o=>o.success&&o.leftGround&&o.landedAfterAirborne
+   &&o.finishSupportedByTarget&&o.finishGrounded)).toBe(true);
   expect(jumps.every(o=>Number.isFinite(o.finalHorizontalErrorMeters)
-   &&Number.isFinite(o.finalFootHeightErrorMeters))).toBe(true);
+   &&o.finalHorizontalErrorMeters<0.22
+   &&Number.isFinite(o.finalFootHeightErrorMeters)
+   &&o.finalFootHeightErrorMeters<0.22)).toBe(true);
   expect(STAGE.activationReady).toBe(false);
  },30000);
 });

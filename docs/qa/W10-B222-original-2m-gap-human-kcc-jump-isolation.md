@@ -15,3 +15,7 @@ The test runs in the B75 **preflight**, alongside baseline Vitest and full Chrom
 ## Required promotion gate
 
 Even if both KCC jump directions are physically successful, preserve 25 solids / 17 paint / 26 links / 0 scoreable, productionAuthorized=false, original opposing routes 0/12 and officialWinner NONE. Before considering an AI traversal, verify original traversal semantics and actual gameplay input-driven jump in an isolated native browser scene, then test Recast route, contact, source-lane safety and return direction. No auto-jump or teleport shortcuts.
+
+## Actual isolated Rapier results (B222 CI 40285215169, preflight SUCCESS)
+
+The new fixture was executed, not inferred: **all four WALK controls failed** to achieve target ground support, while **all four genuine Human JUMP runs succeeded** with genuine airborne then grounded phases and target-solid Rapier foot support. Mirrored sides and forward/reverse each passed. Maximum successful-jump horizontal endpoint error 0.0439464m; maximum foot-height error 0.059021m; rise 1.1583–1.1757m. This proves local Human KCC jump feasibility on the two exact CI688 surfaces only. Runtime cross-team travel, original-game traversal semantics and CPU route certification remain unproven. The jump outcomes are now strict assertions for future regressions.
