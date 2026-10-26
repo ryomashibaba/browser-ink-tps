@@ -67,7 +67,7 @@ export function b231AuditedCrowdRejoin(
   officialWinner:'NONE' as const
  };
  const blocked=(cause:string):B231CrowdLandingQaResult=>
-  {...base,decision:'BLOCKED',cause};
+  ({...base,decision:'BLOCKED',cause});
  const expectedLanding=sourceId(side,
   direction==='FLOOR_TO_SLOPE'?'slope00-outer':'floor-concrete01');
  // Strict geometry and authority; never use this class for any live stage.
