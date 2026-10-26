@@ -17,6 +17,8 @@ import {UNDERTOW_T21_PHASE9_ORIGINAL_DOWNFACES}
  from '../src/stage/undertow/UndertowSpillwayPhase9DownfaceSourceGeometry';
 import {UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES}
  from '../src/stage/undertow/UndertowSpillwayPhase7FramedSourceGeometry';
+import {UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES}
+ from '../src/stage/undertow/UndertowSpillwayPhase8StaticSourceGeometry';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as FROZEN}
  from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
 const c:B237SourceCandidate[]=[
@@ -74,6 +76,14 @@ const c:B237SourceCandidate[]=[
  })),
  ...UNDERTOW_T21_PHASE7_FRAMED_SOURCE_MESHES.map(m=>({
   family:'PHASE7_FRAMES',id:m.id,
+  sourceComponent:m.sourceComponentId,
+  sourceMaterial:m.sourceMaterial,side:m.side,
+  originalVertices:m.vertices,
+  originalRuntimePromotionAuthorized:m.runtimePromotionAuthorized,
+  originalSourceShapeNotGameplayAuthority:true as const
+ })),
+ ...UNDERTOW_T21_PHASE8_STATIC_SOURCE_MESHES.map(m=>({
+  family:'PHASE8_STATIC_ORIGINAL_FLOAT64',id:m.id,
   sourceComponent:m.sourceComponentId,
   sourceMaterial:m.sourceMaterial,side:m.side,
   originalVertices:m.vertices,
