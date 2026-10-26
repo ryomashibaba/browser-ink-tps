@@ -116,8 +116,10 @@ async function scenario(side,direction){
    // negative-side CI #40293452614 reached <0.22m but remained supported
    // by the outer slope. Keep REAL W/S pressed until Floor02 truly holds
    // the human capsule. Baseline B225 behavior is unchanged.
+   // The source-ramp may still support the capsule even with <0.55m
+   // centroid distance. Require exact destination *collider support* in
+   // all corridor QA modes, or the bounded 120-native-tick timeout.
    return o.b225FirstNextSupportTick!==null||
-     (!b226&&o.b225MinNextErrorMeters<.55)||
      o.tick>=secondLegStart.tick+120?o:false;
   },33000);
   await key(moveKey,false);
@@ -337,8 +339,28 @@ try{
        r.b226ThirdLeg.totalSpaceInputs!==1||
        r.b226ThirdLeg.originalRuntimeContacts!==0))
    throw Error('B226_EARLIER_ORIGINAL_SOURCE_GATES_FAILED');
-  // First diagnostic execution must show truthful inner-seam outcome, not
-  // fail CI solely because a new (unverified) route remains disconnected.
+  // B226 run 40293716638 confirmed both real source inner-slope
+  // landings. Make the actual physical outcome a strict regression:
+  // requiring verified Floor02/inner support and no airborne third leg.
+  if(summary.b226WaypointReached!==2||
+     summary.b226InnerSourceTouched!==2||
+     summary.b226InnerSourceStable!==2||
+     reports.some(r=>{
+      const q=r.b226ThirdLeg,foot=q?.innerParked;
+      const suffix=r.side==='POSITIVE_Z'?'positive-z':'negative-z';
+      const chain=['floor-concrete01','slope00-outer',
+        'floor-concrete02','slope00-inner']
+       .map(id=>'B224_QA_ONLY:underpass-route-'+id+'-'+suffix);
+      return !q||!q.visitedWaypoint||
+       !q.physicallyTouchedInnerSlope||!q.physicallyStableInnerSlope||
+       q.totalSpaceInputs!==1||q.originalRuntimeContacts!==0||
+       !q.noTeleport||!foot||
+       foot.b226ThirdLegGroundedTicks<18||
+       foot.b226ThirdLegUngroundedTicks!==0||
+       foot.b226ThirdLegLongestAirborneStreak!==0||
+       !chain.every((id,i)=>foot.b225NativeSourceSupportOrder[i]===id);
+     }))throw Error('B226_INNER_SLOPE_NATIVE_PHYSICAL_CONTINUITY_FAILED');
+  console.log('B226_REAL_INNER_SLOPE_GROUNDED_GATE_PASS');
   console.log('B226_REAL_CORRIDOR_RESULT',JSON.stringify({
    sourceLanding2of2:summary.stableSourceLandingCount,
    nextFloor2of2:summary.secondStageStable,

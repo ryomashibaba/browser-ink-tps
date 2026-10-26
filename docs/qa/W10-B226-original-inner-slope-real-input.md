@@ -15,3 +15,14 @@ Positive Z with one real human, original five CI688 QA meshes and the immutable 
 Negative Z independently repeated the first real 2m jump but second-leg W/S was released when merely **0.216853m from the FloorConcrete02 target**, before a registered FloorConcrete02 support hit: the existing B225 early stop condition also accepted proximity <0.55m. Therefore the following B226 segment did not start, and the workflow correctly FAILED. This does not yet prove negative-side geometry untraversable.
 
 The correction only for B226 keeps real W/S input active until **actual native source FloorConcrete02 support**, not guessed geometric proximity (or the existing 120-tick safety cap). The B225 baseline stopping behavior remains unchanged; no pose adjustments or fabricated supports are allowed.
+
+## B226 first corrected Chromium run #40293716638 — successful three-leg physics
+
+First B226 QA run #40293452614 initially **failed** on the negative Z side because the B225 inherited stopping rule accepted a small XZ distance before confirming FloorConcrete02 actually supported the character. The first dedicated B226 correction (commit `ed6ce35062a63a7a24840fa7d5b7a464b8576d9f`) removed that premature geometric stop condition **only in B226**. Native run #40293716638 then **SUCCEEDED** on both sides, using one physical human, one actual Space input, and the true player camera/movement controls:
+
+| Side | FloorConcrete01 -> outer Slope00 -> FloorConcrete02 -> inner Slope00 | Third-leg grounded | Third-leg airborne | Closest inner target |
+|---|---|---:|---:|---:|
+| Positive Z | all four authentic collider supports observed, inner stable | 156 ticks | 0 | 0.089170 m |
+| Negative Z | all four authentic collider supports observed, inner stable | 150 ticks | 0 | 0.038887 m |
+
+The old B224 four-direction browser QA was also SUCCESS at #40293716502. **However, old B225 browser QA #40293716588 FAILED** on the negative side for the same false-near-target release, even while retaining physical ground support on the outer slope. Consequently the geometric stop is now removed in **both** B225 and B226 corridor scripts: they must observe the exact FloorConcrete02 real foot-support collider, not centroid proximity. The 120-native-tick safety ceiling is retained. B226 real inner-slope stability and ground continuity are promoted to hard CI assertions only after this measured proof. Entire procedure stays isolated QA with 30 solids, not the actual runtime's 25.
