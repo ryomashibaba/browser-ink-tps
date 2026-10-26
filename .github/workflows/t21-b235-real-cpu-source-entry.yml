@@ -1,0 +1,25 @@
+name: T21 B235 real seven F3 CPU native entry access 25 vs 30 source QA
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/stage/undertow/B235ExactOriginalSourceEntryQa.ts'
+      - 'scripts/T21B235OriginalCpuToSourceEntry.test.ts'
+      - '.github/workflows/t21-b235-real-cpu-source-entry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-cpu-source-entry:
+    name: B235 genuine original CPU recorded feet and native Rapier/Recast source access
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Actual B234 seven CPU landing foot inputs versus source extra five face native access
+        run: npx vitest run scripts/T21B235OriginalCpuToSourceEntry.test.ts scripts/T21B227SourceRuntimeInterface.test.ts --reporter=verbose
