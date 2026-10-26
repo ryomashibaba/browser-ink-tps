@@ -861,12 +861,28 @@ async function run(){
     await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
      x:800,y:450,button:'left',clickCount:1});
     await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
+    // B223 real Chromium 40285688396 timed out at 210s after the
+    // B207 world-select PASS. A prior successful B221 run needed ~205s
+    // to rejoin 7 CPUs. This is a bounded wall-clock variance allowance,
+    // NEVER a fake tick advance, actor relocation or relaxed gameplay gate.
+    let b223RejoinPolls=0;
     const realSeven=await until(async()=>{
      const s=await snapshot();
      if(s.stopReason)fail('B208_SOURCE_SEVEN_CPU_ORIGINAL_STOP_'+s.stopReason);
+     if(++b223RejoinPolls%24===0)
+      console.log('B223_REAL_B207_REJOIN_PROGRESS',JSON.stringify({
+       realNativeTick:s.tick,matchState:s.matchState,
+       genuinelyRejoined:s.cpu.physicalRejoins.length,
+       realSourceInkChanges:s.cpuImpactInkCellsChanged,
+       actorRelocations:s.cpu.physicalFootRelocations,
+       originalSolids:s.originalSourceSolids,
+       originalLinks:s.originalSourceNavigationLinks,
+       sourceScoreable:s.sourceScoreablePromotions,
+       productionAuthorized:s.productionAuthorized
+      }));
      return s.matchState==='PLAYING'&&s.cpu.physicalRejoins.length===7&&
       s.cpuImpactInkCellsChanged>0?s:false;
-    },210000);
+    },270000);
     const moved=Math.hypot(
      realSeven.player.position[0]-realStart.player.position[0],
      realSeven.player.position[2]-realStart.player.position[2]);

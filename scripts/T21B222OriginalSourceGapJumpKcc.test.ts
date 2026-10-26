@@ -260,12 +260,24 @@ describe('B223 full original static scene with isolated CI688 jump meshes',()=>{
    JSON.stringify(witness));
   expect(results).toHaveLength(8);
   expect(results.every(x=>x.originalStageIncluded&&x.sourceSolidsAdded===2
+   &&x.settled&&x.initialSourceFootSupported
    &&Number.isFinite(x.finalHorizontalErrorMeters)
    &&Number.isFinite(x.finalFootHeightErrorMeters)
    &&x.nativeCollisionSolidIds.every(id=>STAGE.solids.some(s=>s.id===id))
   )).toBe(true);
-  // Outcomes intentionally discovered by real Rapier, not asserted as
-  // success before we have evidence of actual native-stage clearance.
+  const walks=results.filter(x=>x.motion==='WALK');
+  const jumps=results.filter(x=>x.motion==='JUMP');
+  expect(walks).toHaveLength(4);
+  expect(walks.every(x=>!x.success&&!x.finishSupportedByTarget)).toBe(true);
+  // B223 observed run 40287332365: source-supported takeoff/landing
+  // without touching any unrelated ORIGINAL runtime collider. A future
+  // regression must FAIL, not be silently counted as another QA success.
+  expect(jumps).toHaveLength(4);
+  expect(jumps.every(x=>x.success&&x.leftGround
+   &&x.landedAfterAirborne&&x.finishGrounded
+   &&x.finishSupportedByTarget&&x.nativeCollisionSolidIds.length===0
+   &&x.finalHorizontalErrorMeters<.22
+   &&x.finalFootHeightErrorMeters<.22)).toBe(true);
   expect(STAGE.solids).toHaveLength(25);
   expect(STAGE.paintSurfaces).toHaveLength(17);
   expect(STAGE.navigationLinks).toHaveLength(26);
