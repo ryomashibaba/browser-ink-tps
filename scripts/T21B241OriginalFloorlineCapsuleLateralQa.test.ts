@@ -151,7 +151,7 @@ function driven(side:Side,c:SourceSide,offset:number){
  const initially=support(world,current());
  let speed=0,vy=-.5,index=0,maxOffGround=0,offGround=0;
  let floorTicks=0,slopeTicks=0;
- let ungroundedWhileOnSource=0,nonOriginalFootTicks=0;
+ let ungroundedWhileOnSource=0,unexpectedSupportTicks=0;
  let sourceEntered=false,firstEntry:number|null=null,firstSlope:number|null=null;
  let maxSourceSupportError=0,minDistanceToLast=Infinity;
  const frames:unknown[]=[];
@@ -177,9 +177,10 @@ function driven(side:Side,c:SourceSide,offset:number){
   if(sourceEntered){
    if(!grounded)ungroundedWhileOnSource++;
    if(grounded&&hit.id!==physicalFloorline&&hit.id!==physicalSlope&&
+    hit.id!==registeredRight&&
     hit.id!=='UndertowT21D:first-drop-landing-'+
       (side==='POSITIVE_Z'?'positive-z':'negative-z'))
-     nonOriginalFootTicks++;
+     unexpectedSupportTicks++;
   }
   if(hit.mismatch!==null&&sourceEntered)
    maxSourceSupportError=Math.max(maxSourceSupportError,hit.mismatch);
@@ -196,7 +197,7 @@ function driven(side:Side,c:SourceSide,offset:number){
   kccSteps:ticks,firstFloorlineTick:firstEntry,firstSlopeTick:firstSlope,
   floorlineSupportedFrames:floorTicks,slopeSupportedFrames:slopeTicks,
   maxAirborneFrames:maxOffGround,ungroundedAfterFloorline:ungroundedWhileOnSource,
-  nonOriginalGroundAfterFloorline:nonOriginalFootTicks,
+  unexpectedSupportAfterFloorline:unexpectedSupportTicks,
   maxObservedSupportMismatchMeters:maxSourceSupportError,
   sourceGroundSupportIds:[...collide].sort(),
   waypointIndex:index,closestSlopeXZDistanceMeters:minDistanceToLast,
@@ -244,6 +245,20 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
    expect(baseline.floorlineSupportedFrames).toBeGreaterThanOrEqual(3);
    expect(baseline.slopeSupportedFrames).toBeGreaterThanOrEqual(3);
    expect(baseline.maxAirborneFrames).toBe(0);
+   expect(baseline.unexpectedSupportAfterFloorline).toBe(0);
+   // B241 measured real original *narrow* source: a 0.311m ribbon
+   // alone cannot certify clearance for a 0.60m CPU or 0.64m human.
+   expect(slices.every(x=>x.horizontalSourceWidthMeters>.30&&
+    x.horizontalSourceWidthMeters<.32&&
+    x.sourceWidthExceedsCpuDiameter===false&&
+    x.sourceWidthExceedsHumanDiameter===false)).toBe(true);
+   // First actual physical CI #40332224903: a +.50m excursion
+   // produced unsupported KCC frames on BOTH genuine mirrors.
+   // Never represent reaching the endpoint after an airborne fall
+   // as a strictly grounded supported path.
+   const risky=attempts.find(x=>x.lateralDeviationMeters===.50);
+   expect(risky?.physicallyTraversedOriginalSource).toBe(false);
+   expect(risky?.maxAirborneFrames).toBeGreaterThan(0);
    expect(attempts.every(x=>x.teleportsAfterSpawn===0&&
     x.sameNativeRapierBody&&x.liveCpuAgentSystemInstantiated===false)).toBe(true);
    expect(slices).toHaveLength(5);
@@ -277,7 +292,7 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
       walked:w.physicallyTraversedOriginalSource,
       floorlineFrames:w.floorlineSupportedFrames,slopeFrames:w.slopeSupportedFrames,
       airborne:w.maxAirborneFrames,afterEnteredUngrounded:w.ungroundedAfterFloorline,
-      offOriginalGround:w.nonOriginalGroundAfterFloorline,
+      unexpectedSupport:w.unexpectedSupportAfterFloorline,
       firstFloorlineTick:w.firstFloorlineTick,firstSlopeTick:w.firstSlopeTick,
       lastGoalError:w.closestSlopeXZDistanceMeters}))})),
     cpuCertified:false,authority:'25/17/26/0;0/12;false'}));
