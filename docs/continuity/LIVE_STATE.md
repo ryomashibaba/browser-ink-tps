@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `39ba2accd59f2f4e99b19a5fc1732f40739612da`
+- 同期元QA HEAD: `3b9a978039654e609c79a03ffb224396283035d0`
 - 最新番号のQAレポート: W10-B242 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B242-source-authority-hold-playable-round-lifecycle.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B243 （着手・完了の保証ではない）
