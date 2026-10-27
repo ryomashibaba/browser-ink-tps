@@ -3776,7 +3776,7 @@ export class UndertowF3PlayablePreviewApp{
     enabled:this.b253InkSafeVisualEnabled,
     registeredGameSolids:this.rawStage.solids.length,
     originalPaintSurfaces:this.rawStage.paintSurfaces.length,
-    originalNavLinks:this.rawStage.navigationLinks.length,
+    originalNavLinks:this.rawStage.navigationLinks?.length??0,
     textureReadabilityOnly:true,
     actorPlacementsRecovered:false,
     official4v4Certified:false,productionAuthorized:false
