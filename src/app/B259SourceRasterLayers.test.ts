@@ -11,6 +11,9 @@ const c={paused:true,staging:true,stopped:false,fullRound:false,
 describe('B259 strictly paused original-source framebuffer layer isolation',()=>{
  it('requires exact URL, original SHA-verified layers and safe paused camera',()=>{
   expect(b259RasterEligible(url,c)).toBe(true);
+  const deterministic=new URLSearchParams(url);
+  deterministic.set('t21QaInput','deterministic');
+  expect(b259RasterEligible(deterministic,c)).toBe(false);
   for(const k of ['t21B259','t21B258','t21B253','t21FullSource']){
    const u=new URLSearchParams(url);u.delete(k);
    expect(b259RasterEligible(u,c)).toBe(false);
