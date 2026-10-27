@@ -2110,9 +2110,9 @@ export class UndertowF3PlayablePreviewApp{
   const solids=stage.children.filter(c=>!c.name.startsWith('PaintSurface:'));
   const renderSolids=this.rawStage.solids.filter(s=>s.render);
   if(original.length!==materials.length||
-     original.some((c,i)=>!c.render||
+     original.some((c,i)=>!(c instanceof Entity)||!c.render||
       c.name!=='T21F3L:ORIGINAL_STATIC_'+materials[i]!.name+'_NO_COLLISION')||
-     paint.length!==17||paint.some(c=>!c.render||
+     paint.length!==17||paint.some(c=>!(c instanceof Entity)||!c.render||
       !this.b45SourceSurfaces.some(s=>c.name==='PaintSurface:'+s.id))||
      solids.length!==renderSolids.length||
      solids.some(c=>!renderSolids.some(s=>s.id===c.name)))
