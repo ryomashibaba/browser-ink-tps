@@ -59,7 +59,15 @@ Terra's `fixedStepLaunch` matches semi-implicit 60Hz ballistic travel under its 
 - Original natural opponent crossings **0/12 certified**. FloorLine00 physical source authority **HOLD**.
 - Official 4v4, win/loss, scoring, production activation **HOLD**.
 - main, frozen T19C/T20, published Pages, Draft PR #5 unchanged.
-- A previous B162 run for the shared baseline (`40404097487`) failed `B140_WAIT_TIMEOUT`. Such an already recorded base failure is not a new Sol regression. The post-adoption B162 run must be evaluated independently.
+- A previous B162 run for the shared baseline (`40404097487`) failed `B140_WAIT_TIMEOUT`. That failure is not a new Sol regression. **Post-adoption B162 passed** in [Actions #40428707759](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707759): 11 Vitest files / 52 tests, genuine A1 clear twice, actual human source ink 808 cells per clear, 35.76m and 35.91m real grounded travel, A1 original ink 41 and 58 changed cells, fresh native replay tick0, zero Actor teleports, no official Turf winner.
+
+## Adoption branch post-merge CI confirmed
+
+- Adopted source-only native CPU center-ray aim into regular QA at `3b9a978039654e609c79a03ffb224396283035d0` (gameplay and one targeted test only).
+- Fresh [B75 #40428707736](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707736) was **SUCCESS** across preflight, FIXED and SWEEP genuine Chromium jobs. FIXED native result: 73 CPU shots, 3142 source-changed cells, 10 human accepted shots, 392 human changed cells, genuine 7 CPU, 0 registered enemy selections, official winner NONE; 6s source CPU window reported 78 shots and 3659 paint changes. None is proof of natural enemy combat.
+- Fresh [B162 #40428707759](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707759) was **SUCCESS** and covered two honest human+A1 original-source co-op clears and 3 true input-based fresh replays (see above).
+- Other post-adoption QA Actions had confirmed SUCCESS: [B15 #40428707740](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707740), [B120 #40428707724](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707724), [B112-B115 #40428707773](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707773), [B234 #40428707748](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707748), [B21 #40428707692](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707692), launcher [#40428707703](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40428707703). This is limited to the respective test scenarios, NOT unrestricted4v4 certification.
+- The prior base B162 timeout was not repeated after the latest adoption. A timing/runner flake or a base/environment issue is plausible but root cause was not conclusively established. Do not pretend that passing once proves all prior failures fixed.
 
 ## Next gameplay work
 
