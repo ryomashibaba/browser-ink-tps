@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {B248_SOURCE_VISUAL_AUTHORITY,b248HumanParts} from './B248SourceActorVisuals';
+import {B248_SOURCE_VISUAL_AUTHORITY,b248HumanParts,b249FacingDegrees,b249StrideDegrees} from './B248SourceActorVisuals';
 describe('B248 source-only actor visual boundary',()=>{
  it('never creates any game physics or score authority',()=>{
   expect(B248_SOURCE_VISUAL_AUTHORITY).toMatchObject({
@@ -21,5 +21,26 @@ describe('B248 source-only actor visual boundary',()=>{
   const names=b248HumanParts().map(x=>x.name);
   for(const x of ['helmet','visor','torso','boot-left','boot-right','ink-tank','nozzle'])
    expect(names).toContain(x);
+ });
+});
+
+describe('B249 native actor-facing render-only animation',()=>{
+ it('turns -Z local forward toward the actual measured direction',()=>{
+  expect(b249FacingDegrees(0,-1,44)).toBe(0);
+  expect(b249FacingDegrees(1,0,44)).toBe(-90);
+  expect(b249FacingDegrees(-1,0,44)).toBe(90);
+  expect(Math.abs(b249FacingDegrees(0,1,44))).toBe(180);
+ });
+ it('preserves actual prior facing if movement is too small or invalid',()=>{
+  expect(b249FacingDegrees(0,0,42)).toBe(42);
+  expect(b249FacingDegrees(Number.NaN,1,42)).toBe(42);
+  expect(b249FacingDegrees(.00001,0,42)).toBe(42);
+ });
+ it('has bounded leg and arm stride and no animation without movement',()=>{
+  expect(b249StrideDegrees(0,Math.PI/2)).toBe(0);
+  expect(b249StrideDegrees(1,Math.PI/2)).toBeCloseTo(24);
+  expect(b249StrideDegrees(2,-Math.PI/2)).toBeCloseTo(-24);
+  expect(b249StrideDegrees(Number.NaN,1)).toBe(0);
+  expect(b249StrideDegrees(.5,Number.NaN)).toBe(0);
  });
 });

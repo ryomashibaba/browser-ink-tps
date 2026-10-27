@@ -207,6 +207,7 @@ export class CpuAgentSystem {
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private b248VisualEnabled=false;
+  private readonly b248VisualByActor=new Map<string,ReturnType<typeof decorateB248Actor>>();
   private readonly goal = new Vec3();
   /** Read-only QA witness; never touches production T20 behavior. */
   private readonly qaContinuity = new CpuContinuityMonitor();
@@ -315,8 +316,8 @@ export class CpuAgentSystem {
   public enableB248Visuals():void {
     if(this.b248VisualEnabled)return;
     this.b248VisualEnabled=true;
-    for(const bot of this.bots)
-      decorateB248Actor(bot.entity,bot.team===Team.A?'A':'B','CPU');
+    for(const bot of this.bots)this.b248VisualByActor.set(
+      bot.id,decorateB248Actor(bot.entity,bot.team===Team.A?'A':'B','CPU'));
   }
 
   /** This is intentionally not a production constructor option. */
@@ -1166,6 +1167,9 @@ export class CpuAgentSystem {
         bot.entity.setPosition(x, y + 0.68, z);
         bot.entity.setLocalScale(0.50, 1.02, 0.50);
         bot.entity.setLocalEulerAngles(progress * 720, progress * 300, 0);
+        this.b248VisualByActor.get(bot.id)?.setPose(
+          bot.position.x-bot.previousPosition.x,
+          bot.position.z-bot.previousPosition.z,0,0);
         bot.guardEntity.enabled = false;
         continue;
       }
@@ -1185,6 +1189,7 @@ export class CpuAgentSystem {
         0.58 * (1 + squash)
       );
       bot.entity.setLocalEulerAngles(0, 0, 0);
+      this.b248VisualByActor.get(bot.id)?.setPose(dx,dz,moving,phase*1.8);
       this.renderCpuGuard(bot, x, y, z);
     }
   }
@@ -1571,8 +1576,9 @@ export class CpuAgentSystem {
       entity.setLocalScale(0.58, 0.88, 0.58);
       entity.setPosition(start.x, start.y + 0.68, start.z);
       this.app.root.addChild(entity);
-      if(this.b248VisualEnabled)
-        decorateB248Actor(entity,team===Team.A?'A':'B','CPU');
+      if(this.b248VisualEnabled)this.b248VisualByActor.set(
+        `${team===Team.A?'A':'B'}${slot+1}`,
+        decorateB248Actor(entity,team===Team.A?'A':'B','CPU'));
 
       const jumpMarker = new Entity(`CPUJumpMarker:${team === Team.A ? 'A' : 'B'}:${slot + 1}`);
       jumpMarker.addComponent('render', {

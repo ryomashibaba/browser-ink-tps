@@ -642,6 +642,7 @@ export class UndertowF3PlayablePreviewApp{
    if(this.b203FullRound&&b31Params.get('t21QaInput')!=='deterministic'){
     this.player.enableB248Visual();this.cpu.enableB248Visuals();
     this.canvas.dataset.t21B248Visual='EIGHT_NATIVE_ACTORS_RENDER_ONLY';
+    this.canvas.dataset.t21B249VisualPose='NATIVE_ACTOR_FACING_STRIDE';
    }
    const b193Coop=sourceCoopEligible(b31Params);
   this.canvas.dataset.t21B193Coop=b193Coop?'REAL_A1_ORIGINAL_SOURCE':'OFF';

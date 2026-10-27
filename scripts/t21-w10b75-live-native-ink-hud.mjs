@@ -995,6 +995,39 @@ async function run(){
     await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
      x:800,y:450,button:'left',clickCount:1});
     await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
+    // B249: one real, pointer-locked native gameplay frame, after actual
+    // human KCC movement + original impact ink, with no readiness overlay.
+    const b249Frame=await b246Screenshot('b249-real-native-inplay');
+    const b249Read=await evaluate(`(() => {
+      const s=window.__t21F3.snapshot();
+      const canvas=document.querySelector('#app-canvas');
+      return {visual:canvas?.dataset.t21B248Visual,
+       pose:canvas?.dataset.t21B249VisualPose,
+       renderer:canvas?.dataset.t21F3Renderer,
+       tick:s.tick,paused:s.paused,matchState:s.matchState,
+       shots:s.shotsFired,humanInk:s.b23HumanInkFeedback.humanChangedCells,
+       nativeCpu:s.cpu.cpu.length,relocations:s.cpu.physicalFootRelocations,
+       authority:[s.originalSourceSolids,s.originalPaintSurfaces,
+        s.originalSourceNavigationLinks,s.sourceScoreablePromotions],
+       realPointerLock:document.pointerLockElement===canvas};
+    })()`);
+    if(b249Read.visual!=='EIGHT_NATIVE_ACTORS_RENDER_ONLY'||
+       b249Read.pose!=='NATIVE_ACTOR_FACING_STRIDE'||
+       b249Read.renderer!=='webgl2'||b249Read.tick<=realStart.tick||
+       b249Read.paused!==false||b249Read.matchState!=='PLAYING'||
+       b249Read.shots<=0||b249Read.humanInk<=0||
+       b249Read.nativeCpu!==7||b249Read.relocations!==0||
+       !b249Read.realPointerLock||
+       b249Read.authority.join('/')!=='25/17/26/0'||
+       b249Frame.bytes<100000)
+      fail('B249_NATIVE_REAL_GAMEPLAY_FRAME_INVALID_'+JSON.stringify(b249Read));
+    const b249Evidence={schema:'B249_REAL_NATIVE_GAMEPLAY_VISUAL',
+      screenshot:b249Frame,snapshot:b249Read,
+      renderOnly:true,newActors:0,fakeTicks:0,officialWinner:'NONE'};
+    writeFileSync(resolve(OUTPUT,'b249-real-native-gameplay-visual.json'),
+     JSON.stringify(b249Evidence,null,2));
+    console.log('B249_REAL_NATIVE_GAMEPLAY_VISUAL_PASS',
+     JSON.stringify(b249Evidence));
     // B223 real Chromium 40285688396 timed out at 210s after the
     // B207 world-select PASS. A prior successful B221 run needed ~205s
     // to rejoin 7 CPUs. This is a bounded wall-clock variance allowance,

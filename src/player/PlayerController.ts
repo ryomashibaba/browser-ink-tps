@@ -758,6 +758,11 @@ export class PlayerController {
       ? Math.sin(time * 13.5) * 0.035 * Math.min(speedRatio, 1)
       : 0;
 
+    // B249: human visual faces camera forward; KCC and projectile ray unchanged.
+    this.camera.getFlatForward(this.flatForward);
+    this.b248Visual?.setPose(this.flatForward.x,this.flatForward.z,
+      animated&&this.grounded&&this.mode==='HUMAN'?
+       Math.min(1,speedRatio):0,time*12);
     this.entity.setPosition(
       position.x,
       position.y +

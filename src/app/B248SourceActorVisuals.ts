@@ -47,13 +47,33 @@ function piece(parent:Entity,p:Part,colors:Record<MaterialId,StandardMaterial>){
  e.setLocalPosition(...p.pos);e.setLocalScale(...p.size);
  parent.addChild(e);
 }
-export type B248Visual={setMode:(mode:'HUMAN'|'SQUID')=>void};
+/** B249: render-only yaw; -Z is the local model's forward axis.
+ * No movement => last real facing remains; no synthetic movement. */
+export function b249FacingDegrees(x:number,z:number,last:number):number{
+ if(!Number.isFinite(x)||!Number.isFinite(z)||x*x+z*z<1e-8)return last;
+ return Math.atan2(-x,-z)*180/Math.PI;
+}
+export function b249StrideDegrees(activity:number,phase:number):number{
+ if(!Number.isFinite(activity)||!Number.isFinite(phase))return 0;
+ return Math.sin(phase)*24*Math.max(0,Math.min(1,activity));
+}
+export type B248Visual={
+ setMode:(mode:'HUMAN'|'SQUID')=>void;
+ setPose:(dx:number,dz:number,activity:number,phase:number)=>void;
+};
 export function decorateB248Actor(parent:Entity,team:'A'|'B',
  role:'PLAYER'|'CPU'):B248Visual{
  if(!parent.render)throw Error('B248_EXISTING_ACTOR_RENDER_REQUIRED');
  const colors=makeColors(team),humanRoot=new Entity('B248:GEAR_VISUAL');
  parent.addChild(humanRoot);
- for(const p of human)piece(humanRoot,p,colors);
+ const limbs=new Map<string,Entity>();
+ for(const p of human){
+  const e=new Entity('B248:VISUAL_ONLY:'+p.name);
+  e.addComponent('render',{type:p.type,material:colors[p.tint],
+   castShadows:false,receiveShadows:false});
+  e.setLocalPosition(...p.pos);e.setLocalScale(...p.size);
+  humanRoot.addChild(e);limbs.set(p.name,e);
+ }
  const squidRoot=new Entity('B248:SQUID_VISUAL');
  parent.addChild(squidRoot);
  if(role==='PLAYER')for(const p of [
@@ -69,6 +89,18 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   humanRoot.enabled=mode==='HUMAN';
   squidRoot.enabled=mode==='SQUID'&&role==='PLAYER';
  };
+ let facing=team==='B'?180:0;
+ const setPose=(dx:number,dz:number,activity:number,phase:number)=>{
+  facing=b249FacingDegrees(dx,dz,facing);
+  humanRoot.setLocalEulerAngles(0,facing,0);
+  squidRoot.setLocalEulerAngles(0,facing,0);
+  const swing=b249StrideDegrees(activity,phase);
+  for(const [part,sign] of [
+   ['arm-left',-1],['arm-right',1],
+   ['leg-left',1],['leg-right',-1],
+   ['boot-left',1],['boot-right',-1]
+  ] as const)limbs.get(part)?.setLocalEulerAngles(swing*sign,0,0);
+ };
  setMode('HUMAN');
- return {setMode};
+ return {setMode,setPose};
 }
