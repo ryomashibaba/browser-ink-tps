@@ -1,0 +1,60 @@
+name: TEMP model comparison same-condition source gate
+on:
+  push:
+    branches: [experiment/gpt-compare-20261027-verification]
+    paths: ['.github/workflows/t21-temp-model-comparison.yml']
+permissions:
+  contents: read
+jobs:
+  source-acceptance:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: baseline
+            ref: 39ba2accd59f2f4e99b19a5fc1732f40739612da
+          - variant: sol-low
+            ref: 5efdff9010b93925d60b2cde89ad2146751fafed
+          - variant: terra-high
+            ref: 2196f0cabd7e2f83bc470312e414fddc891f351b
+    name: Comparison ${{ matrix.variant }} (build, unit, real Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Report immutable comparison identity
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ matrix.ref }}"
+          echo "COMPARE_VARIANT=${{ matrix.variant }}"
+          echo "COMPARE_SHA=$(git rev-parse HEAD)"
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Same core original-source / combat gates and candidate-specific tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B167NativeEnemyCombatCue.test.ts src/app/B207SourceCombatRound.test.ts src/ai/B181OriginalSourceCombatSight.test.ts src/ai/B212MovingNativeProjectileAim.test.ts src/combat/CombatTargetSystem.SourcePractice.test.ts
+          if test -f src/camera/ThirdPersonCamera.combat.test.ts; then npx vitest run src/camera/ThirdPersonCamera.combat.test.ts; fi
+          if test -f src/projectile/FixedStepLaunch.test.ts; then npx vitest run src/projectile/FixedStepLaunch.test.ts; fi
+          node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+      - name: Actual source-only WebGL2, real 60Hz and player input (FIXED)
+        env:
+          T21_W10B75_AIM: FIXED
+          T21_B207_REAL_COMBAT_SELECT: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-model-comparison
+        run: node scripts/t21-w10b75-live-native-ink-hud.mjs
+      - name: Preserve same-scenario anonymous frames and native JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-model-${{ matrix.variant }}
+          path: /tmp/t21-model-comparison/
+          if-no-files-found: warn
+          retention-days: 7
