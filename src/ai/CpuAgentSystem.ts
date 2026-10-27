@@ -3,6 +3,7 @@ import {B234OriginalCpuGapReadinessAudit}
  from './B234OriginalCpuGapReadinessAudit';
 import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+import {decorateB248Actor} from '../app/B248SourceActorVisuals';
 import { PLAYER_CHARACTER_PHYSICS } from '../player/PlayerCharacterPhysics';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
@@ -205,6 +206,7 @@ export class CpuAgentSystem {
   private readonly director: CpuTacticalDirector;
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
+  private b248VisualEnabled=false;
   private readonly goal = new Vec3();
   /** Read-only QA witness; never touches production T20 behavior. */
   private readonly qaContinuity = new CpuContinuityMonitor();
@@ -307,6 +309,14 @@ export class CpuAgentSystem {
     this.materialA = makeCpuMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuMaterial(GAME_CONFIG.visual.teamB);
     this.reset(humanTeam);
+  }
+
+  /** Decorates seven EXISTING native CPU entities. Render only. */
+  public enableB248Visuals():void {
+    if(this.b248VisualEnabled)return;
+    this.b248VisualEnabled=true;
+    for(const bot of this.bots)
+      decorateB248Actor(bot.entity,bot.team===Team.A?'A':'B','CPU');
   }
 
   /** This is intentionally not a production constructor option. */
@@ -1561,6 +1571,8 @@ export class CpuAgentSystem {
       entity.setLocalScale(0.58, 0.88, 0.58);
       entity.setPosition(start.x, start.y + 0.68, start.z);
       this.app.root.addChild(entity);
+      if(this.b248VisualEnabled)
+        decorateB248Actor(entity,team===Team.A?'A':'B','CPU');
 
       const jumpMarker = new Entity(`CPUJumpMarker:${team === Team.A ? 'A' : 'B'}:${slot + 1}`);
       jumpMarker.addComponent('render', {

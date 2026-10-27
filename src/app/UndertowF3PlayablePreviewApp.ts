@@ -638,7 +638,12 @@ export class UndertowF3PlayablePreviewApp{
   // audited original-side source foot candidates. Existing fixed
   // trusted-input QA stays deterministic without the explicit B31 flag.
   const b31Params=new URL(location.href).searchParams;
-  const b193Coop=sourceCoopEligible(b31Params);
+  // B248: no Actor or SOURCE physics changes, purely original 3D silhouettes.
+   if(this.b203FullRound&&b31Params.get('t21QaInput')!=='deterministic'){
+    this.player.enableB248Visual();this.cpu.enableB248Visuals();
+    this.canvas.dataset.t21B248Visual='EIGHT_NATIVE_ACTORS_RENDER_ONLY';
+   }
+   const b193Coop=sourceCoopEligible(b31Params);
   this.canvas.dataset.t21B193Coop=b193Coop?'REAL_A1_ORIGINAL_SOURCE':'OFF';
   this.canvas.dataset.t21B203FullRound=
    this.b203FullRound?'REAL_180S_SOURCE_PLAY':'OFF';

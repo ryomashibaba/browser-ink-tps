@@ -5,6 +5,7 @@ import RAPIER, {
 } from '@dimforge/rapier3d-compat';
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
 import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
+import {decorateB248Actor,type B248Visual} from '../app/B248SourceActorVisuals';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSystem';
@@ -43,6 +44,7 @@ export class PlayerController {
   private readonly characterCollisionFilter: (collider: Collider) => boolean;
   private readonly entity: Entity;
   private readonly material: StandardMaterial;
+  private b248Visual:B248Visual|null=null;
   private readonly velocity = new Vec3();
   private readonly flatForward = new Vec3();
   private readonly right = new Vec3();
@@ -134,6 +136,14 @@ export class PlayerController {
     this.syncAfterPhysics();
   }
 
+  /** Replaces only render primitives during SOURCE full-round QA. */
+  public enableB248Visual():void {
+    if(this.b248Visual)return;
+    this.b248Visual=decorateB248Actor(this.entity,
+      this.team===Team.A?'A':'B','PLAYER');
+    this.b248Visual.setMode(this.mode);
+  }
+
   public get canShoot(): boolean {
     return this.mode === 'HUMAN' &&
       this.weaponDodgeStartupSeconds <= 0 &&
@@ -221,6 +231,7 @@ export class PlayerController {
     this.activeCollider = this.humanCollider;
     this.entity.enabled = true;
     this.entity.setLocalScale(0.72, 0.92, 0.72);
+    this.b248Visual?.setMode('HUMAN');
 
     this.body.setTranslation({ x: position.x, y: position.y, z: position.z }, true);
     this.body.setNextKinematicTranslation({ x: position.x, y: position.y, z: position.z });
@@ -725,6 +736,7 @@ export class PlayerController {
       this.activeCollider = this.humanCollider;
       this.entity.setLocalScale(0.72, 0.92, 0.72);
     }
+    this.b248Visual?.setMode(nextMode);
   }
 
   private setSnapToGround(enabled: boolean): void {
