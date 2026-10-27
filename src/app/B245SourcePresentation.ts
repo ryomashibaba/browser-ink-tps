@@ -6,6 +6,12 @@ export function b245InitialSourceView(search:string):B245View {
   q.get('t21QaInput')==='deterministic'||
   q.get('t21Presentation')==='qa'?'QA':'PLAYER';
 }
+/** Presentation-only radar policy; undefined B245 data keeps legacy behavior. */
+export function b247ShouldCompactSourceRadar(
+ pointerLocked:boolean,playerView:boolean,inspectingQa:boolean
+):boolean {
+ return !inspectingQa&&(pointerLocked||playerView);
+}
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
 ):void {

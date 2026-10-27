@@ -4,6 +4,7 @@
  * paths are inferred from map strokes, no nav, paint or score authority.
  */
 import type {StageDefinition} from '../stage/StageDefinition';
+import {b247ShouldCompactSourceRadar} from './B245SourcePresentation';
 import {sourceRadarHeightBand} from './UndertowF3RadarElevation';
 
 type Actor={id:string;physicalFoot:[number,number,number];mobilityState:string;rejoined:boolean};
@@ -65,7 +66,12 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
   canvas.style.height=compact?'190px':'310px';
  }
  function render(view:View){
-  setPlayFocus(document.pointerLockElement===document.querySelector('#app-canvas'));
+  // B247: native frame renders must respect PLAYER/QA inspection selection.
+  // Earlier pointer-lock-only refresh overwrote B245's compact ready radar.
+  const pointerLocked=document.pointerLockElement===document.querySelector('#app-canvas');
+  setPlayFocus(b247ShouldCompactSourceRadar(pointerLocked,
+   ui.dataset.t21B245Presentation==='PLAYER',
+   ui.dataset.t21B245Inspect==='true'));
   frame++;
   const x=view.player.position[0]??0,z=view.player.position[2]??0;
   if(![x,z].every(Number.isFinite))return;
