@@ -684,6 +684,11 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally?
     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT':'FIXED_PATROL_DEFAULT';
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
+  // SOURCE combat uses actual CPU hit volumes on the unmodified center ray.
+  // Projectiles still independently resolve muzzle-side cover, flight and HP.
+  if(b192HumanCombatEnabled&&this.b203FullRound)
+   this.camera.enableSourceCombatAim((from,to)=>
+    this.cpu.findNearestCombatHit(from,to,Team.A));
   // B234: actual 7 real CpuAgentSystem actors, *read-only* source collision
   // readiness in unchanged 25-solid F3. No fake source floor activation.
   if(b31Params.get('t21QaDrive')==='source'&&
