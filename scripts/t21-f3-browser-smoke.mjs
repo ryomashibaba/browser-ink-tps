@@ -463,7 +463,8 @@ async function main(){
   // No QA time advance, clock patching, artificial actor/spawn or ink.
   const get=()=>evaluate('window.__t21F3.snapshot()');
   const first=await get();
-  if(first.paused||first.stopReason||first.matchState!=='STAGING'||
+  if(first.paused!==b206FullRound||first.stopReason||
+     first.matchState!=='STAGING'||
      first.originalSourceSolids!==25||
      first.originalPaintSurfaces!==17||
      first.originalSourceNavigationLinks!==26||
@@ -489,7 +490,34 @@ async function main(){
       (w10b68Mode==='SWEEP'&&!url.includes('t21W10B68=previewSweep')))
     reject('B68_NOT_TRUE_NORMAL_PREVIEW_INPUT_CAMERA_MODE');
   }
-  await mouse('mousePressed');await mouse('mouseReleased');
+  if(b206FullRound){
+   // B252: the real selected SOURCE round boots READY and paused.
+   // Only a trusted CDP click of its actual START button resumes it.
+   const button=await evaluate(`(() => {
+    const e=document.querySelector('#t21-f3-b202-resume');
+    const p=document.querySelector('#t21-f3-b202-real-pause');
+    if(!e||!p||p.hidden||e.hidden||e.disabled)return null;
+    const r=e.getBoundingClientRect();
+    return {x:r.left+r.width/2,y:r.top+r.height/2,
+     text:e.textContent,state:p.dataset.t21B202NativeState};
+   })()`);
+   if(!button||button.state!=='READY_TO_START'||
+      button.text!=='START 180s ROUND'||
+      !(button.x>0&&button.x<1600&&button.y>0&&button.y<900))
+    reject('B252_NATIVE_180S_REAL_START_CONTROL_MISSING_'+
+     JSON.stringify(button));
+   await cmd('Page.bringToFront');
+   await cmd('Input.dispatchMouseEvent',
+    {type:'mouseMoved',x:button.x,y:button.y,button:'none'});
+   for(const type of ['mousePressed','mouseReleased'])
+    await cmd('Input.dispatchMouseEvent',
+     {type,x:button.x,y:button.y,button:'left',clickCount:1});
+   console.log('B252_180S_REAL_PLAYER_BUTTON_CLICKED',
+    JSON.stringify({actualUiClick:true,forcedGameTicks:0,
+     actorRelocations:0,sourceOnly:true}));
+  }else{
+   await mouse('mousePressed');await mouse('mouseReleased');
+  }
   await waitUntil(async()=>await evaluate(
    'document.pointerLockElement===document.querySelector("#app-canvas")'),12000);
   const start=await get();
