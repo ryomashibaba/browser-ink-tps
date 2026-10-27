@@ -51,7 +51,8 @@ function piece(parent:Entity,p:Part,colors:Record<MaterialId,StandardMaterial>){
  * No movement => last real facing remains; no synthetic movement. */
 export function b249FacingDegrees(x:number,z:number,last:number):number{
  if(!Number.isFinite(x)||!Number.isFinite(z)||x*x+z*z<1e-8)return last;
- return Math.atan2(-x,-z)*180/Math.PI;
+ const yaw=Math.atan2(-x,-z)*180/Math.PI;
+ return yaw===0?0:yaw;
 }
 export function b249StrideDegrees(activity:number,phase:number):number{
  if(!Number.isFinite(activity)||!Number.isFinite(phase))return 0;
