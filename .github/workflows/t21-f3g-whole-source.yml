@@ -12,6 +12,7 @@ on:
       - "src/app/UndertowF3I*"
       - "src/app/UndertowF3K*"
       - "src/app/UndertowF3L*"
+      - "src/app/UndertowF3PlayablePreviewApp.ts"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
   workflow_dispatch:
