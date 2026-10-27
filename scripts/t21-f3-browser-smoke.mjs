@@ -3695,7 +3695,7 @@ async function main(){
    const before=await evaluate('window.__t21F3.snapshot()');
    if(before.b253SourceUvLiveInk.enabled||
       !before.b253SourceUvLiveInk.requested||
-      before.texturedSourceF3l.mode!=='ORIGINAL_UV')
+      before.b30SourcePhysicalReadability.mode!=='ORIGINAL_UV')
     reject('B253_NATIVE_REAL_SOURCE_OPTIN_UNSAFE');
    const original=await screenshot('B253_UV_ORIGINAL_READY');
    const ink=await evaluate('window.__t21F3.setB253SourceUvLiveInk(true)');
@@ -3877,7 +3877,7 @@ async function main(){
   const state=await evaluate('window.__t21F3.snapshot()');
   const frame=await screenshot('B253_REAL_HUMAN_SOURCE_UV_PAINT_GAMEPLAY');
   if(!state.b253SourceUvLiveInk.enabled||
-     state.texturedSourceF3l.mode!=='INK_SAFE_REVIEW'||
+     state.b30SourcePhysicalReadability.mode!=='INK_SAFE_REVIEW'||
      state.originalSourceSolids!==25||
      state.originalPaintSurfaces!==17||
      state.originalSourceNavigationLinks!==26||
