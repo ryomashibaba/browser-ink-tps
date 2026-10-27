@@ -3606,6 +3606,9 @@ async function main(){
   // B252 true six-camera source research, kept exclusively in opt-in F3G
   // CI where SHA-pinned original static UV/albedo assets are prepared.
   // No gameplay topology, OBJ actor placement, or original scoring claims.
+  // B253 uses its own real framebuffer A-B-A and does not re-run the
+  // already-certified six-view B252 atlas sweep on every visual iteration.
+  if(process.env.T21_B253_LIVE_INK!=='1'){
   const b252Views=['CENTRAL OVERVIEW','TEAM A SOURCE','TEAM B SOURCE',
    'HIGH TOP-DOWN','SOURCE GAP / A','SOURCE GAP / B'];
   const b252Before=await evaluate('window.__t21F3.snapshot()');
@@ -3690,6 +3693,7 @@ async function main(){
     lowDifferenceViews:b252Report.viewsWithLowUvVsFlatContrast,
     sourceTriangles:57578,originalTextures:ready.verifiedTextures,
     trueActorPlacementsRecovered:false,sourceAuthority:'25/17/26/0'}));
+  }
   if(process.env.T21_B253_LIVE_INK==='1'){
    // Exact same paused PlayCanvas native player camera, real framebuffer.
    const before=await evaluate('window.__t21F3.snapshot()');
