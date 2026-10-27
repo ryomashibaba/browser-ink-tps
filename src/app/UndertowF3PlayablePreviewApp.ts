@@ -1903,8 +1903,10 @@ export class UndertowF3PlayablePreviewApp{
       this.texturedF3l.manifest.totalTriangles,
       this.texturedF3l.manifest.textures.length))
    throw Error('B254_ONLY_FROZEN_RESEARCH_VIEW_CAN_HIDE_ACTOR_RENDER');
-  const actor=this.app.root.findByName('Player');
-  const bots=(this.cpu as unknown as {bots:F3TrafficCpu[]}).bots;
+  const actor=this.app.root.findByName('Player') as Entity|null;
+  const bots=(this.cpu as unknown as {
+   bots:{id:string;entity:Entity}[]
+  }).bots;
   if(!actor?.render||bots.length!==7||
      bots.some(b=>!b.entity.render)||
      this.canvas.dataset.t21B248Visual==='EIGHT_NATIVE_ACTORS_RENDER_ONLY')
