@@ -181,15 +181,43 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   if(prior.b25SourcePaintRun.status!=='ARMED'||!prior.paused||
      overlay.active!=='NATIVE_PAUSED'||!overlay.shown)
    fail('B206_REAL_ARMED_SOURCE_PAUSE_UNAVAILABLE_'+JSON.stringify(overlay));
-  await clickButton('#t21-f3-b202-resume');
-  const resumed=await until(async()=>{
+  // B251 QA recovery — real Chromium clicks only, never synthetic ticks.
+  const observeResume=ms=>until(async()=>{
    const n=await snapshot();authority(n,'FIXED');
    const locked=await evaluate(
     'document.pointerLockElement===document.querySelector("#app-canvas")');
    return locked&&!n.paused&&n.tick>=prior.tick+5?n:false;
-  },30000);
+  },ms);
+  await cmd('Page.bringToFront');
+  await clickButton('#t21-f3-b202-resume');
+  let resumed,retryUsed=false,retryWitness=null;
+  try{resumed=await observeResume(9000);}
+  catch(error){
+   retryWitness=await evaluate(`(() => {
+    const b=document.querySelector('#t21-f3-b202-resume');
+    const r=b?.getBoundingClientRect();
+    const hit=r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2):null;
+    const overlay=document.querySelector('#t21-f3-b202-real-pause');
+    const n=window.__t21F3?.snapshot?.();
+    return {focused:document.hasFocus(),hidden:document.hidden,
+     pointerLocked:document.pointerLockElement===
+      document.querySelector('#app-canvas'),
+     hitElement:hit?.id??'',overlayVisible:!!overlay&&!overlay.hidden,
+     overlayState:overlay?.dataset.t21B202NativeState,
+     paused:n?.paused,tick:n?.tick,stop:n?.stopReason??null};
+   })()`);
+   console.log('B251_REAL_SOURCE_COOP_PAUSE_RESUME_RETRY_WITNESS',
+    JSON.stringify(retryWitness));
+   if(retryWitness.pointerLocked||retryWitness.paused!==true||
+      !retryWitness.overlayVisible||retryWitness.stop)throw error;
+   await cmd('Page.bringToFront');
+   await clickButton('#t21-f3-b202-resume');
+   retryUsed=true;
+   resumed=await observeResume(30000);
+  }
   const proof={schema:'B206_REAL_PAUSED_ARMED_RESUME',
-   actualUserResumeButtonClick:true,originalNativePauseTick:prior.tick,
+   actualUserResumeButtonClick:true,realCdpRetryUsed:retryUsed,
+   firstAttemptWitness:retryWitness,originalNativePauseTick:prior.tick,
    actualResumedTick:resumed.tick,
    missionStatus:resumed.b25SourcePaintRun.status,
    physicallyRejoinedCpu:resumed.cpu.physicalRejoins.length,
