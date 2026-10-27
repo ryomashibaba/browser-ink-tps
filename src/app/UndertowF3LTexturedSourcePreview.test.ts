@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
-import {auditF3lManifest,f3lSourceReadabilityStyle,F3L_STAGE_READABILITY_MODES,type F3lManifest}
+import {auditF3lManifest,f3lSourceReadabilityStyle,F3L_STAGE_READABILITY_MODES,b253VerifiedInkVisualOptIn,type F3lManifest}
  from './UndertowF3LTexturedSourcePreview';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
 describe('F3L original static textured scene review',()=>{
@@ -53,7 +53,7 @@ describe('F3L original static textured scene review',()=>{
 });
 describe('W10-B30 source original UV cutaway reveals existing physical-ground render only',()=>{
  it('does not alter SOURCE_ORIGINAL_UV default material, including original glass',()=>{
-  expect(F3L_STAGE_READABILITY_MODES).toEqual(['ORIGINAL_UV','SOURCE_CUTAWAY']);
+  expect(F3L_STAGE_READABILITY_MODES).toEqual(['ORIGINAL_UV','SOURCE_CUTAWAY','INK_SAFE_REVIEW']);
   for(const k of ['FLOOR','SLOPE','METAL','SUPPORT','STRUCTURE','DETAIL'] as const){
    expect(f3lSourceReadabilityStyle(k,'ORIGINAL_UV')).toEqual({
     opacity:1,depthWrite:true,opaque:true});
@@ -71,5 +71,40 @@ describe('W10-B30 source original UV cutaway reveals existing physical-ground re
   }
   expect(f3lSourceReadabilityStyle('FLOOR','SOURCE_CUTAWAY').opacity)
    .toBeLessThan(f3lSourceReadabilityStyle('SUPPORT','SOURCE_CUTAWAY').opacity);
+ });
+});
+
+describe('B253 authentic source UV supports opt-in real-ink view',()=>{
+ it('does not hide certified ink beneath opaque static original floors',()=>{
+  expect(f3lSourceReadabilityStyle('FLOOR','INK_SAFE_REVIEW'))
+   .toEqual({opacity:.12,depthWrite:false,opaque:false});
+  expect(f3lSourceReadabilityStyle('SLOPE','INK_SAFE_REVIEW'))
+   .toEqual({opacity:.20,depthWrite:false,opaque:false});
+  expect(f3lSourceReadabilityStyle('SUPPORT','INK_SAFE_REVIEW').opacity)
+   .toBeGreaterThan(.8);
+  for(const k of ['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as const){
+   const s=f3lSourceReadabilityStyle(k,'INK_SAFE_REVIEW');
+   expect(s.depthWrite).toBe(false);
+   expect(s.opaque).toBe(false);
+   expect(s.opacity).toBeGreaterThan(0);
+   expect(s.opacity).toBeLessThan(1);
+  }
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV').opaque)
+   .toBe(true);
+ });
+ it('fails closed without explicit review and original verified source UV',()=>{
+  const q=new URLSearchParams(
+   't21Play=preview&t21FullSource=review&t21B253=liveInk');
+  expect(b253VerifiedInkVisualOptIn(q,57578,19)).toBe(true);
+  expect(b253VerifiedInkVisualOptIn(q,57577,19)).toBe(false);
+  expect(b253VerifiedInkVisualOptIn(q,57578,0)).toBe(false);
+  for(const bad of ['t21Play=production&t21FullSource=review&t21B253=liveInk',
+   't21Play=preview&t21B253=liveInk',
+   't21Play=preview&t21FullSource=review']){
+   expect(b253VerifiedInkVisualOptIn(new URLSearchParams(bad),57578,19))
+    .toBe(false);
+  }
+  expect(b253VerifiedInkVisualOptIn(new URLSearchParams(
+   q.toString()+'&t21QaInput=deterministic'),57578,19)).toBe(false);
  });
 });

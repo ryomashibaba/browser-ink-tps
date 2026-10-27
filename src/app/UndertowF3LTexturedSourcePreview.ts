@@ -14,12 +14,31 @@ type Kind=typeof KINDS[number];
 /** Display-only masks. CUTAWAY reveals previously drawn certified Rapier
  * stage meshes behind original static optical imagery: it does not
  * designate ANY original OBJ triangle walkable, paintable or scoreable. */
-export const F3L_STAGE_READABILITY_MODES=['ORIGINAL_UV','SOURCE_CUTAWAY'] as const;
+export const F3L_STAGE_READABILITY_MODES=['ORIGINAL_UV','SOURCE_CUTAWAY','INK_SAFE_REVIEW'] as const;
 export type F3lStageReadabilityMode=typeof F3L_STAGE_READABILITY_MODES[number];
+export function b253VerifiedInkVisualOptIn(
+ search:URLSearchParams,originalTriangles:number,verifiedTextures:number
+){
+ return search.get('t21Play')==='preview'&&
+  search.get('t21FullSource')==='review'&&
+  search.get('t21B253')==='liveInk'&&
+  search.get('t21QaInput')!=='deterministic'&&
+  originalTriangles===57578&&Number.isSafeInteger(verifiedTextures)&&
+  verifiedTextures>=8&&verifiedTextures<=20;
+}
 export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode){
  if(mode==='ORIGINAL_UV'){
   const glass=kind==='GLASS';
   return {opacity:glass?.24:1,depthWrite:!glass,opaque:!glass};
+ }
+ if(mode==='INK_SAFE_REVIEW'){
+  // B253: the visually original static UV plane is NOT a registered
+  // paintable/physical floor. Keep it behind actual live ink and KCC.
+  const alpha:Record<Kind,number>={
+   FLOOR:.12,SLOPE:.20,METAL:.43,GLASS:.09,
+   SUPPORT:.86,STRUCTURE:.82,DETAIL:.72
+  };
+  return {opacity:alpha[kind],depthWrite:false,opaque:false};
  }
  const opacity:Record<Kind,number>={
   FLOOR:.18,SLOPE:.22,METAL:.37,GLASS:.08,

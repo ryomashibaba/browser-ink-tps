@@ -125,7 +125,8 @@ import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
-import {loadF3lTexturedSource} from './UndertowF3LTexturedSourcePreview';
+import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
+ from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -341,6 +342,7 @@ export class UndertowF3PlayablePreviewApp{
  private texturedF3lStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
  private texturedF3lError='';
  private texturedF3lActive=false;
+ private b253InkSafeVisualEnabled=false;
  private readonly b29ExplicitFullSourceReview=
   new URL(location.href).searchParams.get('t21FullSource')==='review';
  private readonly b29PreferFlat=
@@ -1649,6 +1651,7 @@ export class UndertowF3PlayablePreviewApp{
   const api={snapshot:()=>this.snapshot(),
     setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
     setB251OpticalSeparation:(on:boolean)=>this.setB251OpticalSeparation(on),
+    setB253SourceUvLiveInk:(on:boolean)=>this.setB253SourceUvLiveInk(on),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -1882,6 +1885,29 @@ export class UndertowF3PlayablePreviewApp{
   if(trial.status==='ABORTED')
    this.b22TrialStatus.textContent='ABORTED · '+trial.stopReason+
     ' · NATIVE restored. Start again if needed.';
+ }
+ private setB253SourceUvLiveInk(on:boolean){
+  if(!this.paused||this.stopReason||this.survey.snapshot().active||
+     this.galleryIndex>=0||document.pointerLockElement===this.canvas||
+     !this.texturedF3l||this.texturedF3lStatus!=='READY'||
+     !this.texturedF3l.root.enabled||
+     !b253VerifiedInkVisualOptIn(
+      new URL(location.href).searchParams,
+      this.texturedF3l.manifest.totalTriangles,
+      this.texturedF3l.manifest.textures.length))
+   throw Error('B253_SOURCE_UV_LIVE_INK_VISUAL_NOT_AUTHORIZED');
+  const mode=this.texturedF3l.setReadabilityMode(
+   on?'INK_SAFE_REVIEW':'ORIGINAL_UV');
+  this.b253InkSafeVisualEnabled=on;
+  this.canvas.dataset.t21B253InkSafe=on?'ON':'OFF';
+  this.refresh();
+  return {enabled:on,mode,sourceTriangles:57578,
+   sourceTextures:this.texturedF3l.manifest.textures.length,
+   sourceAuthority:'25/17/26/0' as const,
+   actorPlacementsRecovered:false as const,
+   newColliders:0 as const,newNavLinks:0 as const,
+   scoredSurfacePromotions:0 as const,
+   productionAuthorized:false as const};
  }
  private setB251OpticalSeparation(on:boolean){
   if(!this.b251OpticalView||!this.b203FullRound||!this.paused||
@@ -3744,6 +3770,16 @@ export class UndertowF3PlayablePreviewApp{
     explicitlyRequestedReview:this.b29ExplicitFullSourceReview,
     fallbackAvailable:this.wholeSourceStatus==='READY',
     ...B29_SOURCE_VISUAL_AUTHORITY
+   },
+   b253SourceUvLiveInk:{
+    requested:new URL(location.href).searchParams.get('t21B253')==='liveInk',
+    enabled:this.b253InkSafeVisualEnabled,
+    registeredGameSolids:this.rawStage.solids.length,
+    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
+    originalNavLinks:this.rawStage.navigationLinks.length,
+    textureReadabilityOnly:true,
+    actorPlacementsRecovered:false,
+    official4v4Certified:false,productionAuthorized:false
    },
    b30SourcePhysicalReadability:{
     mode:this.texturedF3l?.getReadabilityMode()??'UNAVAILABLE',

@@ -184,6 +184,7 @@ async function main(){
   (w10b38?'&t21W10B38=humanSub':'')+
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')+
+  (process.env.T21_B253_LIVE_INK==='1'?'&t21B253=liveInk':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -3689,6 +3690,57 @@ async function main(){
     lowDifferenceViews:b252Report.viewsWithLowUvVsFlatContrast,
     sourceTriangles:57578,originalTextures:ready.verifiedTextures,
     trueActorPlacementsRecovered:false,sourceAuthority:'25/17/26/0'}));
+  if(process.env.T21_B253_LIVE_INK==='1'){
+   // Exact same paused PlayCanvas native player camera, real framebuffer.
+   const before=await evaluate('window.__t21F3.snapshot()');
+   if(before.b253SourceUvLiveInk.enabled||
+      !before.b253SourceUvLiveInk.requested||
+      before.texturedSourceF3l.mode!=='ORIGINAL_UV')
+    reject('B253_NATIVE_REAL_SOURCE_OPTIN_UNSAFE');
+   const original=await screenshot('B253_UV_ORIGINAL_READY');
+   const ink=await evaluate('window.__t21F3.setB253SourceUvLiveInk(true)');
+   if(ink.mode!=='INK_SAFE_REVIEW'||ink.sourceTriangles!==57578||
+      ink.sourceTextures<8||ink.sourceAuthority!=='25/17/26/0'||
+      ink.newColliders!==0||ink.newNavLinks!==0||
+      ink.scoredSurfacePromotions!==0||
+      ink.actorPlacementsRecovered!==false||
+      ink.productionAuthorized!==false)
+    reject('B253_SOURCE_UV_INK_UNVERIFIED_'+JSON.stringify(ink));
+   await sleep(240);
+   const inkFrame=await screenshot('B253_UV_INK_SAFE_READY');
+   await evaluate('window.__t21F3.setB253SourceUvLiveInk(false)');
+   await sleep(240);
+   const originalRestored=await screenshot('B253_UV_ORIGINAL_RESTORED');
+   const pixel=inspectB252OriginalUvRaster(
+    readFileSync(resolve(OUTPUT,original.name+'.png')),
+    readFileSync(resolve(OUTPUT,inkFrame.name+'.png')),
+    readFileSync(resolve(OUTPUT,originalRestored.name+'.png')));
+   if(!pixel.appearanceRestored||!pixel.clearlyDifferent)
+    reject('B253_SOURCE_UV_PAINT_CUTAWAY_RASTER_FAIL_'+
+     JSON.stringify(pixel));
+   await evaluate('window.__t21F3.setB253SourceUvLiveInk(true)');
+   const afterVisual=await evaluate('window.__t21F3.snapshot()');
+   if(afterVisual.tick!==before.tick||
+      JSON.stringify(afterVisual.player.position)!==
+       JSON.stringify(before.player.position)||
+      afterVisual.originalSourceSolids!==25||
+      afterVisual.originalPaintSurfaces!==17||
+      afterVisual.originalSourceNavigationLinks!==26||
+      afterVisual.sourceScoreablePromotions!==0||
+      !afterVisual.b253SourceUvLiveInk.enabled)
+    reject('B253_VISUAL_TOGGLE_CHANGED_NATIVE_WORLD');
+   writeFileSync(resolve(OUTPUT,'b253-real-source-uv-ink-safe-ab.json'),
+    JSON.stringify({schema:'B253_SOURCE_UV_REAL_WEBGL2_INK_SAFE_AB',
+     source:'25/17/26/0',verifiedSourceTriangles:57578,
+     verifiedTextures:ink.sourceTextures,
+     original,inkSafe:inkFrame,restored:originalRestored,
+     pixels:pixel,physicalActorRelocations:0,originalRouteCertification:'0/12',
+     officialScore:0,productionAuthorized:false},null,2));
+   console.log('B253_REAL_SOURCE_UV_INK_SAFE_AB_PASS',
+    JSON.stringify({pixels:pixel,originalSource:'25/17/26/0',
+     originalUvTriangles:57578,verifiedTextures:ink.sourceTextures,
+     noActorMoves:true}));
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -3821,6 +3873,29 @@ async function main(){
   noCpuConflation:true,noInventedTurfScore:true
  }));
  frames.push(await screenshot('F3_1_REAL_INPUT_AND_INK'));
+ if(process.env.T21_B253_LIVE_INK==='1'){
+  const state=await evaluate('window.__t21F3.snapshot()');
+  const frame=await screenshot('B253_REAL_HUMAN_SOURCE_UV_PAINT_GAMEPLAY');
+  if(!state.b253SourceUvLiveInk.enabled||
+     state.texturedSourceF3l.mode!=='INK_SAFE_REVIEW'||
+     state.originalSourceSolids!==25||
+     state.originalPaintSurfaces!==17||
+     state.originalSourceNavigationLinks!==26||
+     state.sourceScoreablePromotions!==0||
+     fired.shotsFired<=after.shotsFired||
+     state.productionAuthorized!==false)
+   reject('B253_REAL_NATIVE_SOURCE_UV_PAINT_AUTHORITY');
+  const evidence={schema:'B253_GENUINE_NATIVE_SOURCE_UV_PLAYER_PRACTICE',
+   realKeyboardMeters:move,realPlayerShots:fired.shotsFired-after.shotsFired,
+   genuineHumanChangedCells:b23.humanChangedCells,
+   source:'25/17/26/0',verifiedOriginalTriangles:57578,
+   realWebGl2Frame:frame,scoreable:0,sourceActorPlacementCertified:false,
+   actualOppositeTeamCrossingCertified:false,productionAuthorized:false};
+  writeFileSync(resolve(OUTPUT,'b253-real-source-uv-native-gameplay.json'),
+   JSON.stringify(evidence,null,2));
+  console.log('B253_REAL_NATIVE_SOURCE_UV_INK_GAMEPLAY_PASS',
+   JSON.stringify(evidence));
+ }
  if(w10b51){
   const pre=await evaluate('window.__t21F3.pause()');
   if(!pre.paused||pre.stopReason)reject('W10B51_PAUSE_FAILED');
