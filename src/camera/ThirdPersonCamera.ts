@@ -76,7 +76,11 @@ export class ThirdPersonCamera {
   public setB258ResearchCameraProfile(name:B258CameraProfile):void{
    if(!this.b258ResearchEnabled)
     throw Error('B258_NATIVE_SOURCE_CAMERA_UNAUTHORIZED');
-   if(!this.b258OriginalCamera){
+   // Each A/B/A cycle takes the ACTUAL current native baseline.
+   // The actor may have genuinely moved between frozen and post-ink studies;
+   // never restore a stale earlier camera distance onto the new scene.
+   if(!this.b258OriginalCamera||
+      (name!=='BASELINE'&&this.b258ResearchProfile==='BASELINE')){
     this.b258OriginalCamera={
      pitch:this.pitch,distance:this.distance,shoulder:this.shoulder,
      offset:this.currentShoulderOffset,
