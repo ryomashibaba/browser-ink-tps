@@ -2139,8 +2139,7 @@ export class UndertowF3PlayablePreviewApp{
   const originalMeshes=original.map(c=>collectMeshes(c as Entity));
   const paintMeshes=paint.map(c=>collectMeshes(c as Entity));
   const solidMeshes=solids.map(c=>collectMeshes(c as Entity));
-  const previous=(this.canvas.dataset.t21B259RasterLayer??'BASELINE')
-   as B259RasterMask;
+  const previous=(this.canvas.dataset.t21B259RasterLayer??'BASELINE') as B259RasterMask;
   if(!B259_RASTER_MASKS.includes(previous))
    throw Error('B259_UNEXPECTED_PRIOR_DRAW_MASK');
   // Never mutate half the scene if another system changed rendering.
