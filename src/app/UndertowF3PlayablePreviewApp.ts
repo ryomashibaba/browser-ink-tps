@@ -129,6 +129,8 @@ import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
  type B254NativeVisualMode} from './B254NativeActorVisualIsolation';
 import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
  type B255ActorPresentation} from './B255SourceActorReview';
+import {b256SourceOpticalEligible,B256_OPTICAL_AUTHORITY}
+ from './B256SourceOpticalAperture';
 import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
  from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
@@ -1660,6 +1662,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB254NativeVisualIsolation(mode),
     setB255SourceActorPresentation:(mode:B255ActorPresentation)=>
      this.setB255SourceActorPresentation(mode),
+    setB256SourceOpticalAperture:(on:boolean)=>
+     this.setB256SourceOpticalAperture(on),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -1758,7 +1762,8 @@ export class UndertowF3PlayablePreviewApp{
    }
    this.texturedF3lStatus='LOADING';
    try{
-    this.texturedF3l=await loadF3lTexturedSource(this.app);
+    this.texturedF3l=await loadF3lTexturedSource(this.app,
+      new URL(location.href).searchParams.get('t21B256')==='opticalAperture');
     this.texturedF3lStatus=this.texturedF3l?'READY':'MISSING';
     const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
     if(button&&this.texturedF3l)button.hidden=false;
@@ -1957,6 +1962,29 @@ export class UndertowF3PlayablePreviewApp{
   return {mode,existingPlayerActor:1,existingCpuActors:bots.length,
    genuineCpuIds:bots.map(b=>b.id),nativeCapsulesVisible:!humanoid,
    humanoidVisualsVisible:humanoid,...B255_ACTOR_REVIEW_AUTHORITY};
+ }
+ /** B256 shader-only aperture in authentic, pinned, nonproduction SOURCE UV.
+  * Uses screen-relative fragment attenuation, never a synthetic collision. */
+ private setB256SourceOpticalAperture(on:boolean){
+  const p=new URL(location.href).searchParams;
+  if(!this.texturedF3l||!b256SourceOpticalEligible(p,{
+   paused:this.paused,staging:this.matchState==='STAGING',
+   fullRound:this.b203FullRound,stopReason:!!this.stopReason,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   verifiedUv:this.texturedF3lStatus==='READY'&&
+    !!this.texturedF3l.root.enabled,
+   inkSafe:this.b253InkSafeVisualEnabled,
+   humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+   sourceTriangles:this.texturedF3l.manifest.totalTriangles,
+   textures:this.texturedF3l.manifest.textures.length,
+   solids:this.rawStage.solids.length,paintable:this.rawStage.paintSurfaces.length,
+   navLinks:this.rawStage.navigationLinks?.length??0,scoreable:0
+  }))
+   throw Error('B256_UNAUTHORIZED_OR_UNVERIFIED_SOURCE_OPTICAL_APERTURE');
+  const out=this.texturedF3l.setB256OpticalAperture(
+   on,this.canvas.width,this.canvas.height);
+  this.canvas.dataset.t21B256OpticalAperture=on?'ON':'OFF';
+  return {...out,...B256_OPTICAL_AUTHORITY};
  }
  private setB253SourceUvLiveInk(on:boolean){
   if(!this.paused||this.stopReason||this.survey.snapshot().active||
@@ -3842,6 +3870,12 @@ export class UndertowF3PlayablePreviewApp{
     explicitlyRequestedReview:this.b29ExplicitFullSourceReview,
     fallbackAvailable:this.wholeSourceStatus==='READY',
     ...B29_SOURCE_VISUAL_AUTHORITY
+   },
+   b256OpticalAperture:{
+    requested:new URL(location.href).searchParams.get('t21B256')==='opticalAperture',
+    enabled:this.canvas.dataset.t21B256OpticalAperture==='ON',
+    renderOnly:true,sourceAuthority:'25/17/26/0',
+    productionAuthorized:false
    },
    b255SourceActorStudy:{
     requested:new URL(location.href).searchParams.get('t21B255')==='actorStudy',

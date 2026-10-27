@@ -5,8 +5,10 @@
  */
 import {ADDRESS_REPEAT,BLEND_NONE,BLEND_NORMAL,CULLFACE_NONE,Color,Entity,
  FILTER_LINEAR,FILTER_LINEAR_MIPMAP_LINEAR,Mesh,MeshInstance,
- StandardMaterial,Texture,type AppBase} from 'playcanvas';
+ StandardMaterial,Texture,SHADERLANGUAGE_GLSL,type AppBase} from 'playcanvas';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
+import {B256_APERTURE_FOCUS,b256OpticalMaterialEligible}
+ from './B256SourceOpticalAperture';
 const MTL_BLOB='93b6d30ecac396e960058d6c71db80aadca10fef';
 const UPSTREAM_COMMIT='0611f51b35c9736ee986fb2218461e2585b7875e';
 const KINDS=['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as const;
@@ -144,12 +146,36 @@ async function verifiedBuffer(url:string,bytes:number,hash:string){
  if(sha!==hash)throw Error('F3L_SOURCE_FILE_HASH_MISMATCH');
  return b;
 }
+
+/** Exactly PlayCanvas 2.22.1's standard opacityPS plus one screen-local
+ * render-only attenuation term. This changes NO mesh vertices/UV/authority.
+ * Never install except under explicit B256 nonproduction URL. */
+const B256_OPACITY_GLSL=`
+uniform float material_opacity;
+uniform float material_alphaDitherScale;
+uniform vec4 b256Aperture;
+uniform vec2 b256InvViewport;
+uniform float b256ApertureStrength;
+void getOpacity() {
+ dAlpha = material_opacity;
+ #ifdef STD_OPACITY_TEXTURE
+ dAlpha *= texture2DBias({STD_OPACITY_TEXTURE_NAME}, {STD_OPACITY_TEXTURE_UV}, textureBias).{STD_OPACITY_TEXTURE_CHANNEL};
+ #endif
+ #ifdef STD_OPACITY_VERTEX
+ dAlpha *= clamp(vVertexColor.{STD_OPACITY_VERTEX_CHANNEL}, 0.0, 1.0);
+ #endif
+ vec2 screenUv=gl_FragCoord.xy*b256InvViewport;
+ float aperture=1.0-smoothstep(0.57,1.0,
+  length((screenUv-b256Aperture.xy)/b256Aperture.zw));
+ dAlpha*=1.0-b256ApertureStrength*aperture;
+}
+`;
 const BASE_COLOR:Record<Kind,[number,number,number]>={
  FLOOR:[.46,.53,.59],SLOPE:[.64,.59,.47],METAL:[.40,.47,.51],
  GLASS:[.32,.67,.76],SUPPORT:[.54,.57,.59],STRUCTURE:[.49,.53,.56],
  DETAIL:[.66,.65,.56]
 };
-export async function loadF3lTexturedSource(app:AppBase){
+export async function loadF3lTexturedSource(app:AppBase,b256Research=false){
  const base=new URL('t21-f3g-source/',document.baseURI).toString();
  const response=await fetch(base+'f3l-original-textured.json',{cache:'no-store'});
  if(response.status===404)return null;
@@ -161,6 +187,19 @@ export async function loadF3lTexturedSource(app:AppBase){
  const gpuTextures:Texture[]=[];
  const textureMap=new Map<string,Texture>();
  const materialInstances:{kind:Kind;material:StandardMaterial}[]=[];
+ const b256Materials:StandardMaterial[]=[];
+ let b256ApertureRequested=false;
+ const applyB256=(width:number,height:number)=>{
+  if(width<=0||height<=0||!Number.isFinite(width)||!Number.isFinite(height))
+   throw Error('B256_BAD_VIEWPORT');
+  for(const m of b256Materials){
+   m.setParameter('b256Aperture',B256_APERTURE_FOCUS);
+   m.setParameter('b256InvViewport',new Float32Array([1/width,1/height]));
+   m.setParameter('b256ApertureStrength',
+    b256ApertureRequested&&visualMode==='INK_SAFE_REVIEW'?.87:0);
+  }
+ };
+
  let visualMode:F3lStageReadabilityMode='ORIGINAL_UV';
  try{
   const textures=await Promise.all(manifest.textures.map(async file=>{
@@ -208,6 +247,15 @@ export async function loadF3lTexturedSource(app:AppBase){
    m.useMetalness=true;m.metalness=material.kind==='METAL'?.32:.10;
    m.gloss=material.kind==='METAL'?.48:.23;
    applyF3lReadability(m,material.kind,visualMode);
+   if(b256Research&&b256OpticalMaterialEligible(material.kind)){
+    m.getShaderChunks(SHADERLANGUAGE_GLSL).set('opacityPS',B256_OPACITY_GLSL);
+    m.shaderChunksVersion='2.22';
+    m.update();
+    b256Materials.push(m);
+    m.setParameter('b256Aperture',B256_APERTURE_FOCUS);
+    m.setParameter('b256InvViewport',new Float32Array([1,1]));
+    m.setParameter('b256ApertureStrength',0);
+   }
    materialInstances.push({kind:material.kind,material:m});
    const object=new Entity('T21F3L:ORIGINAL_STATIC_'+material.name+'_NO_COLLISION');
    object.addComponent('render',{meshInstances:[new MeshInstance(mesh,m)],
@@ -229,7 +277,20 @@ export async function loadF3lTexturedSource(app:AppBase){
    for(const entry of materialInstances)
     applyF3lReadability(entry.material,entry.kind,mode);
    visualMode=mode;
+   // A different research UV mode must never retain an invisible aperture.
+   if(b256Research)applyB256(app.graphicsDevice.width,app.graphicsDevice.height);
    return visualMode;
+  },
+  setB256OpticalAperture(on:boolean,width:number,height:number){
+   if(!b256Research||b256Materials.length===0||
+      (on&&visualMode!=='INK_SAFE_REVIEW'))
+    throw Error('B256_NOT_VERIFIED_INK_SAFE_OPTICAL_REVIEW');
+   b256ApertureRequested=on;
+   applyB256(width,height);
+   return {enabled:on,affectedMaterialGroups:b256Materials.length,
+    sourceTrianglesUnchanged:57578,originalUvAltered:false,
+    physicalSolidsAdded:0,navLinksAdded:0,scoreablesAdded:0,
+    researchOnly:true,productionAuthorized:false};
   },
   b30NonGameplayAuthority:{
    fullOriginalSourceTriangles:57578,

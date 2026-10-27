@@ -186,6 +186,7 @@ async function main(){
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')+
   (process.env.T21_B253_LIVE_INK==='1'?'&t21B253=liveInk':'')+
   (process.env.T21_B255_ACTOR_STUDY==='1'?'&t21B255=actorStudy':'')+
+  (process.env.T21_B256_OPTICAL_APERTURE==='1'?'&t21B256=opticalAperture':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -3857,6 +3858,57 @@ async function main(){
    console.log('B255_REAL_NATIVE_ACTOR_VISUAL_ABA_PASS',
     JSON.stringify({pixels:p,actorCount:8}));
   }
+  // B256: same native camera aperture A-B-A; only optical UV materials.
+  if(process.env.T21_B256_OPTICAL_APERTURE==='1'){
+   if(process.env.T21_B255_ACTOR_STUDY!=='1')
+    reject('B256_REQUIRES_VERIFIED_B255_HUMANOID_REVIEW');
+   const before=await evaluate('window.__t21F3.snapshot()');
+   if(!before.paused||before.matchState!=='STAGING'||
+      !before.b253SourceUvLiveInk.enabled||
+      before.b255SourceActorStudy.presentation!=='HUMANOID'||
+      before.b256OpticalAperture.enabled)
+    reject('B256_NATIVE_FROZEN_OPTICAL_AUTHORITY_MISSING');
+   const a=await screenshot('B256_A_HUMANOID_ORIGINAL_OPTICAL_DEPTH');
+   const cut=await evaluate('window.__t21F3.setB256SourceOpticalAperture(true)');
+   if(!cut.enabled||cut.affectedMaterialGroups<1||
+      cut.source!=='25/17/26/0'||cut.newRapierSolids!==0||
+      cut.newPaintableSurfaces!==0||cut.newNavLinks!==0||
+      cut.scoreableSurfaces!==0||cut.originalUvPositionDataUnmodified!==true||
+      cut.productionAuthorized!==false)
+    reject('B256_OPTICAL_SHADER_ONLY_SOURCE_PROOF_INVALID_'+JSON.stringify(cut));
+   await sleep(300);
+   const b=await screenshot('B256_B_LOCAL_SOURCE_OPTICAL_SIGHTLINE');
+   await evaluate('window.__t21F3.setB256SourceOpticalAperture(false)');
+   await sleep(300);
+   const a2=await screenshot('B256_A2_RESTORED_SOURCE_OPTICS');
+   const p=inspectB252OriginalUvRaster(
+    readFileSync(resolve(OUTPUT,a.name+'.png')),
+    readFileSync(resolve(OUTPUT,b.name+'.png')),
+    readFileSync(resolve(OUTPUT,a2.name+'.png')));
+   const after=await evaluate('window.__t21F3.snapshot()');
+   if(!p.clearlyDifferent||!p.appearanceRestored||
+      p.uvVsFlat.changedByAtLeastEight<500||
+      before.tick!==after.tick||
+      JSON.stringify(before.player.position)!==
+       JSON.stringify(after.player.position)||
+      after.originalSourceSolids!==25||after.originalPaintSurfaces!==17||
+      after.originalSourceNavigationLinks!==26||
+      after.sourceScoreablePromotions!==0||
+      after.b256OpticalAperture.enabled)
+    reject('B256_NATIVE_OPTICAL_A_B_A_UNVERIFIED_'+JSON.stringify(p));
+   await evaluate('window.__t21F3.setB256SourceOpticalAperture(true)');
+   writeFileSync(resolve(OUTPUT,'b256-native-camera-optical-aperture-ab.json'),
+    JSON.stringify({schema:'B256_PINNED_UV_OPTICAL_APERTURE_REAL_WEBGL2',
+     original:a,aperture:b,restored:a2,pixels:p,
+     cutawayGroups:cut.affectedMaterialGroups,
+     source:'25/17/26/0',sameNativeTick:before.tick,
+     actorMotionDuringFrozenAB:0,realSourceUvModified:false,
+     nativeCameraOpticalOnly:true,certifiedEnemyRoutes:'0/12',
+     productionAuthorized:false},null,2));
+   console.log('B256_REAL_WEBGL2_OPTICAL_APERTURE_ABA_PASS',
+    JSON.stringify({raster:p,originalSource:'25/17/26/0',
+     materials:cut.affectedMaterialGroups}));
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4028,6 +4080,30 @@ async function main(){
     JSON.stringify(witness,null,2));
    console.log('B255_NATIVE_REAL_GAMEPLAY_VISUAL_PROOF_PASS',
     JSON.stringify(witness));
+  }
+  if(process.env.T21_B256_OPTICAL_APERTURE==='1'){
+   const native=await evaluate('window.__t21F3.snapshot()');
+   const shot=await screenshot('B256_REAL_HUMAN_INK_OPTICAL_APERTURE');
+   if(!native.b256OpticalAperture.enabled||
+      native.b255SourceActorStudy.presentation!=='HUMANOID'||
+      native.originalSourceSolids!==25||
+      native.originalPaintSurfaces!==17||
+      native.originalSourceNavigationLinks!==26||
+      native.sourceScoreablePromotions!==0||
+      move<=0||fired.shotsFired<=after.shotsFired||
+      b23.humanChangedCells<=0)
+    reject('B256_NATIVE_OPTICAL_APERTURE_LIVE_INK_PROOF_MISSING');
+   const record={schema:'B256_NATIVE_CAMERA_OPTICAL_REAL_INK_COMPOSITION',
+    image:shot,realMovementMeters:move,
+    actualShots:fired.shotsFired-after.shotsFired,
+    humanChangedCells:b23.humanChangedCells,
+    renderOnly:true,source:'25/17/26/0',
+    certifiedEnemyRoutes:'0/12',officialScore:0,
+    productionAuthorized:false};
+   writeFileSync(resolve(OUTPUT,'b256-native-source-optical-live-ink.json'),
+    JSON.stringify(record,null,2));
+   console.log('B256_REAL_HUMAN_OPTICAL_APERTURE_GAMEPLAY_PASS',
+    JSON.stringify(record));
   }
  }
  if(w10b51){
