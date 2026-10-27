@@ -18,7 +18,8 @@ describe('B259 strictly paused original-source framebuffer layer isolation',()=>
   for(const bad of [{paused:false},{pointerLocked:true},{fullRound:true},
    {scoreable:1},{solids:24},{paintable:18},{links:27},
    {triangles:57577},{cameraBaseline:false},{b256Active:true},
-   {cpuCount:6},{otherStudy:true},{verifiedUv:false},{humanoid:false}]){
+   {cpuCount:6},{otherStudy:true},{verifiedUv:false},{humanoid:false},
+   {textures:7},{textures:21},{stopped:true},{inkSafe:false}]){
    expect(b259RasterEligible(url,{...c,...bad})).toBe(false);
   }
  });
