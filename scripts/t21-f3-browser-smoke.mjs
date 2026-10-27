@@ -4252,6 +4252,12 @@ async function main(){
    // The human just REALLY walked/fired and painted the original 17 surfaces.
    // Compare alternatives while paused; restore before further live play.
    if(process.env.T21_B258_CAMERA_STUDY==='1'){
+    // The preceding real CDP shooting test genuinely owns pointer lock.
+    // Release only the browser camera input before the frozen B257 audit:
+    // never synthesize a player pose, real shot, ink cell or stage collider.
+    await evaluate('document.exitPointerLock()');
+    await waitUntil(async()=>await evaluate(
+     'document.pointerLockElement===null'),12000);
     const frozen=await evaluate('window.__t21F3.pause()');
     if(!frozen.paused||frozen.matchState!=='STAGING'||
        frozen.b258NativeCameraComposition.profile!=='BASELINE')

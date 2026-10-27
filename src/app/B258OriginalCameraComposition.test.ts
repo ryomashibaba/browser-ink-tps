@@ -9,6 +9,15 @@ const safe={paused:true,staging:true,stopped:false,fullRound:false,
 describe('B258 native third-person certified clipping research',()=>{
  it('preserves the old camera as a strictly reversible baseline',()=>{
   expect(B258_CAMERA_NAMES).toEqual(['BASELINE','REAR_WIDE','ELEVATED_RIGHT']);
+  // All candidates remain within the existing SOURCE TPS pitch/zoom band.
+  for(const name of B258_CAMERA_NAMES){
+   const p=b258Pose(name);
+   expect(p.distanceMeters).toBeGreaterThanOrEqual(3.6);
+   expect(p.distanceMeters).toBeLessThanOrEqual(9.5);
+   expect(p.pitchDegrees).toBeGreaterThanOrEqual(-55);
+   expect(p.pitchDegrees).toBeLessThanOrEqual(28);
+   expect(p.shoulderMeters).toBeLessThanOrEqual(1.5);
+  }
   expect(b258Pose('BASELINE')).toEqual({
    distanceMeters:6.4,pitchDegrees:-12,shoulderMeters:.72});
   expect(b258Pose('REAR_WIDE').distanceMeters).toBeGreaterThan(6.4);
