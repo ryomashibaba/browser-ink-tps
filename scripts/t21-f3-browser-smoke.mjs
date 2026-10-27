@@ -3595,15 +3595,23 @@ async function main(){
    reject('W10B30_PAUSED_PHYSICAL_STATE_CHANGED');
   await sleep(450);
   const returnedUv=await screenshot('W10B30_A2_ORIGINAL_UV_RESTORED');
-  if(originalUv.sha256===ghostImage.sha256||
-     originalUv.sha256!==returnedUv.sha256)
+  // B77's existing bounded GPU quantization rule: <=1 RGB channel
+  // step for <=0.04% pixels. Never accept a changed optical structure.
+  const b30Raster=inspectB252OriginalUvRaster(
+   readFileSync(resolve(OUTPUT,originalUv.name+'.png')),
+   readFileSync(resolve(OUTPUT,ghostImage.name+'.png')),
+   readFileSync(resolve(OUTPUT,returnedUv.name+'.png')));
+  if(!b30Raster.clearlyDifferent||!b30Raster.appearanceRestored)
    reject('W10B30_CHROME_CUTAWAY_NOT_VISUALLY_DISTINCT_AND_REVERSIBLE_'+
-    JSON.stringify({originalUv,ghostImage,returnedUv}));
+    JSON.stringify({originalUv,ghostImage,returnedUv,b30Raster}));
   console.log('T21_W10B30_REAL_CHROME_ORIGINAL_UV_CUTAWAY_UV_PASS',
    JSON.stringify({originalTriangles:57578,sourceOnly:true,
     originalUVsha256:originalUv.sha256,
     cutawaySha256:ghostImage.sha256,
-    restoredSha256:returnedUv.sha256,restoredIdentical:true,
+    restoredSha256:returnedUv.sha256,
+    restoredIdentical:originalUv.sha256===returnedUv.sha256,
+    boundedOneStepGpuQuantization:b30Raster.originalUvRestoration,
+    visuallyReversible:true,
     certifiedSolids:25,paintable:17,navLinks:26,
     sourceScoreablePromotion:0,actorTransformsRecovered:false,
     nativeFootpathAdded:false,realGpuBenchmark:false}));

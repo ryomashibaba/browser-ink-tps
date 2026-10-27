@@ -19,6 +19,12 @@ describe('B258 native third-person certified clipping research',()=>{
  });
  it('requires native frozen B257 and rejects competing B256 optics',()=>{
   expect(b258CameraEligible(p,safe)).toBe(true);
+  const deterministic=new URLSearchParams(p);
+  deterministic.set('t21QaInput','deterministic');
+  expect(b258CameraEligible(deterministic,safe)).toBe(false);
+  const wrongReview=new URLSearchParams(p);
+  wrongReview.set('t21FullSource','production');
+  expect(b258CameraEligible(wrongReview,safe)).toBe(false);
   for(const k of ['t21Play','t21FullSource','t21B253','t21B255','t21B257','t21B258']){
    const q=new URLSearchParams(p);q.delete(k);
    expect(b258CameraEligible(q,safe),k).toBe(false);
