@@ -129,6 +129,8 @@ import {loadF3lTexturedSource} from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
+import {installB251SourceOpticalSeparation,type B251OpticalView}
+ from './B251SourceOpticalSeparation';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -319,6 +321,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
  private b250SourceView:B250SourceView|null=null;
+ private b251OpticalView:B251OpticalView|null=null;
  private wholeSourceStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
  private wholeSourceTriangles=0;
  private wholeSourceGroups=0;
@@ -511,6 +514,14 @@ export class UndertowF3PlayablePreviewApp{
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
   this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
+  // B251 only applies to actual 180s source player rounds. Optical
+  // vertices stay pinned and no Rapier/NavMesh/ink authority is changed.
+  if(this.b203FullRound&&
+     new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'){
+   this.b251OpticalView=installB251SourceOpticalSeparation(
+    app,this.structures.root,this.sourceCompletion.root);
+   this.canvas.dataset.t21B251OpticalSeparation='SEPARATED';
+  }
   this.canvas.dataset.t21F3eMassingMode=this.sourceCompletion.getVisualMode();
   // Read-only truth: fired shots alone are not proof of real ink impact.
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
@@ -1636,6 +1647,7 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
     setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
+    setB251OpticalSeparation:(on:boolean)=>this.setB251OpticalSeparation(on),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -1869,6 +1881,15 @@ export class UndertowF3PlayablePreviewApp{
   if(trial.status==='ABORTED')
    this.b22TrialStatus.textContent='ABORTED · '+trial.stopReason+
     ' · NATIVE restored. Start again if needed.';
+ }
+ private setB251OpticalSeparation(on:boolean){
+  if(!this.b251OpticalView||!this.b203FullRound||!this.paused||
+     this.clock.tick!==0||this.stopReason||
+     document.pointerLockElement===this.canvas)
+   throw Error('B251_ORIGINAL_OPTICS_AB_ONLY_FROZEN_READY');
+  this.b251OpticalView.setEnabled(on);
+  this.canvas.dataset.t21B251OpticalSeparation=on?'SEPARATED':'ORIGINAL';
+  return this.b251OpticalView.snapshot();
  }
  private setB250StageReadability(on:boolean){
   if(!this.b250SourceView||!this.b203FullRound||!this.paused||

@@ -957,6 +957,38 @@ async function run(){
      JSON.stringify(b250Evidence,null,2));
     console.log('B250_REAL_REGISTERED_STAGE_MATERIAL_AB_PASS',
      JSON.stringify(b250Evidence));
+    // B251: A/B only the existing pinned optical materials, with
+    // B250's physical registered solids, ambient and camera unchanged.
+    const b251Before=await snapshot();
+    const b251Off=await evaluate('window.__t21F3.setB251OpticalSeparation(false)');
+    await sleep(180);
+    const b251OriginalFrame=await b246Screenshot('b251-original-optical-ready');
+    const b251On=await evaluate('window.__t21F3.setB251OpticalSeparation(true)');
+    await sleep(180);
+    const b251ReadableFrame=await b246Screenshot('b251-separated-optical-ready');
+    const b251After=await snapshot();
+    if(b251Off.enabled!==false||b251On.enabled!==true||
+       b251On.existingStructureObjects!==38||
+       b251On.existingReferenceBatches<4||
+       b251On.materialBindings<42||
+       b251On.geometryAdded!==0||b251On.collidersAdded!==0||
+       b251On.source!=='25/17/26/0'||
+       b251On.certifiedPhysicalStructureAdded!==false||
+       b251OriginalFrame.sha256===b251ReadableFrame.sha256||
+       JSON.stringify(stableRound(b251Before))!==
+        JSON.stringify(stableRound(b251After))||
+       b251After.sourceScoreablePromotions!==0)
+      fail('B251_PINNED_OPTICAL_MATERIAL_AB_FAILED_'+
+       JSON.stringify({b251Off,b251On,b251OriginalFrame,b251ReadableFrame}));
+    const b251Evidence={schema:'B251_REAL_CHROMIUM_UNREGISTERED_OPTICAL_AB',
+     original:b251Off,separated:b251On,
+     frames:[b251OriginalFrame,b251ReadableFrame],
+     originalPhysics:'25/17/26/0',actorRelocations:0,
+     geometryWrites:0,sourceClockBeforeFirstClick:0,officialWinner:'NONE'};
+    writeFileSync(resolve(OUTPUT,'b251-optical-separation-ab.json'),
+     JSON.stringify(b251Evidence,null,2));
+    console.log('B251_REAL_CHROMIUM_PINNED_OPTICAL_AB_PASS',
+     JSON.stringify(b251Evidence));
     const readyImage=Buffer.from((await cmd('Page.captureScreenshot',{
      format:'png',captureBeyondViewport:false})).data,'base64');
     writeFileSync(resolve(OUTPUT,'b242-source-round-ready.png'),readyImage);
@@ -1069,6 +1101,10 @@ async function run(){
       "document.querySelector('#app-canvas')?.dataset.t21B250Readability");
     if(b250Active!=='READABLE')
      fail('B250_REAL_PLAYING_SOURCE_VISUAL_NOT_ACTIVE_'+b250Active);
+    const b251Active=await evaluate(
+      "document.querySelector('#app-canvas')?.dataset.t21B251OpticalSeparation");
+    if(b251Active!=='SEPARATED')
+     fail('B251_NATIVE_REAL_PLAYING_OPTICS_NOT_ACTIVE_'+b251Active);
     const b249Read=await evaluate(`(() => {
       const s=window.__t21F3.snapshot();
       const canvas=document.querySelector('#app-canvas');
