@@ -3,6 +3,7 @@ on:
   push:
     branches: ["codex/t21-undertow-evidence-ledger", "dev/t21-f4e103w-qa-infra"]
     paths:
+      - ".github/workflows/t21-f3g-whole-source.yml"
       - "scripts/t21-f3g-source-pack.*"
       - "scripts/t21-f3i-scene-inventory.*"
       - "scripts/t21-f3k-family-gallery.*"
