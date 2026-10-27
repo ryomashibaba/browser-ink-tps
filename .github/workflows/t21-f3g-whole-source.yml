@@ -3,17 +3,14 @@ on:
   push:
     branches: ["codex/t21-undertow-evidence-ledger", "dev/t21-f4e103w-qa-infra"]
     paths:
-      - ".github/workflows/t21-f3g-whole-source.yml"
       - "scripts/t21-f3g-source-pack.*"
       - "scripts/t21-f3i-scene-inventory.*"
       - "scripts/t21-f3k-family-gallery.*"
       - "scripts/t21-f3l-*"
-      - "scripts/t21-f3-browser-smoke.mjs"
       - "scripts/t21-w10b77-source-raster-restore.*"
       - "src/app/UndertowF3I*"
       - "src/app/UndertowF3K*"
       - "src/app/UndertowF3L*"
-      - "src/app/UndertowF3PlayablePreviewApp.ts"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
   workflow_dispatch:
