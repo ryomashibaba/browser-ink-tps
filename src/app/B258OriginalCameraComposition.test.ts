@@ -28,6 +28,10 @@ describe('B258 native third-person certified clipping research',()=>{
  });
  it('requires native frozen B257 and rejects competing B256 optics',()=>{
   expect(b258CameraEligible(p,safe)).toBe(true);
+  // After authentic mouse shots, CDP must release actual pointer lock
+  // before any frozen read-only B257 ray audit or B258 camera switch.
+  expect(b258CameraEligible(p,{...safe,pointerLocked:true})).toBe(false);
+  expect(b258CameraEligible(p,{...safe,pointerLocked:false})).toBe(true);
   const deterministic=new URLSearchParams(p);
   deterministic.set('t21QaInput','deterministic');
   expect(b258CameraEligible(deterministic,safe)).toBe(false);
