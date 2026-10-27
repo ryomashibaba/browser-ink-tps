@@ -2117,10 +2117,47 @@ export class UndertowF3PlayablePreviewApp{
      solids.length!==renderSolids.length||
      solids.some(c=>!renderSolids.some(s=>s.id===c.name)))
    throw Error('B259_SOURCE_RENDER_IDENTITY_NOT_VERIFIED');
-  for(let i=0;i<original.length;i++)
-   original[i]!.enabled=b259UvVisible(mask,materials[i]!.kind);
-  for(const c of paint)c.enabled=b259NativeVisible(mask,'PAINT');
-  for(const c of solids)c.enabled=b259NativeVisible(mask,'SOLID');
+  // GraphNode.enabled removes and reinserts MeshInstances into render layers.
+  // For 0.09..0.86-alpha original UV, that can alter transparent draw
+  // ordering EVEN AFTER the nodes are re-enabled. Only change the existing
+  // MeshInstance.visible bit: never detach any renderer or alter alpha/depth.
+  const collectMeshes=(root:Entity)=>{
+   const all:Array<{visible:boolean}>=[];
+   const stack:Entity[]=[root];
+   while(stack.length){
+    const node=stack.pop()!;
+    if(node.render)all.push(...node.render.meshInstances);
+    for(const child of node.children){
+     if(!(child instanceof Entity))
+      throw Error('B259_UNKNOWN_SOURCE_DRAW_NODE');
+     stack.push(child);
+    }
+   }
+   if(!all.length)throw Error('B259_SOURCE_DRAW_MESHES_MISSING');
+   return all;
+  };
+  const originalMeshes=original.map(c=>collectMeshes(c as Entity));
+  const paintMeshes=paint.map(c=>collectMeshes(c as Entity));
+  const solidMeshes=solids.map(c=>collectMeshes(c as Entity));
+  const previous=(this.canvas.dataset.t21B259RasterLayer??'BASELINE')
+   as B259RasterMask;
+  if(!B259_RASTER_MASKS.includes(previous))
+   throw Error('B259_UNEXPECTED_PRIOR_DRAW_MASK');
+  // Never mutate half the scene if another system changed rendering.
+  if(originalMeshes.some((row,i)=>row.some(m=>
+     m.visible!==b259UvVisible(previous,materials[i]!.kind)))||
+     paintMeshes.some(row=>row.some(m=>
+      m.visible!==b259NativeVisible(previous,'PAINT')))||
+     solidMeshes.some(row=>row.some(m=>
+      m.visible!==b259NativeVisible(previous,'SOLID'))))
+   throw Error('B259_SOURCE_RENDER_VISIBILITY_DRIFT');
+  originalMeshes.forEach((row,i)=>row.forEach(m=>{
+   m.visible=b259UvVisible(mask,materials[i]!.kind);
+  }));
+  for(const row of paintMeshes)for(const m of row)
+   m.visible=b259NativeVisible(mask,'PAINT');
+  for(const row of solidMeshes)for(const m of row)
+   m.visible=b259NativeVisible(mask,'SOLID');
   this.canvas.dataset.t21B259RasterLayer=mask;
   return {mask,originalGroups:original.length,
    originalTriangles:uv.manifest.totalTriangles,
