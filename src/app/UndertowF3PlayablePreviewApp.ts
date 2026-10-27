@@ -137,6 +137,9 @@ import {b258CameraEligible,B258_CAMERA_AUTHORITY,
  type B258CameraProfile} from './B258OriginalCameraComposition';
 import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
  from './UndertowF3LTexturedSourcePreview';
+import {B259_RASTER_MASKS,b259RasterEligible,b259UvVisible,
+ b259NativeVisible,B259_RASTER_AUTHORITY,type B259RasterMask}
+ from './B259SourceRasterLayers';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1676,6 +1679,8 @@ export class UndertowF3PlayablePreviewApp{
      this.auditB257OriginalDepthComposition(),
     setB258OriginalCameraProfile:(name:B258CameraProfile)=>
      this.setB258OriginalCameraProfile(name),
+    setB259SourceRasterLayer:(mask:B259RasterMask)=>
+     this.setB259SourceRasterLayer(mask),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -2071,6 +2076,59 @@ export class UndertowF3PlayablePreviewApp{
    originalActorPlacementMatricesRecovered:false,
    ...B257_AUDIT_AUTHORITY
   };
+ }
+ /** B259: exact existing native StageRoot and original UV DRAW entities.
+  * This is a paused diagnostic, not a game presentation candidate.
+  * Rapier stage, paint atlas, actor poses and Recast never change.
+  */
+ private setB259SourceRasterLayer(mask:B259RasterMask){
+  if(!B259_RASTER_MASKS.includes(mask))
+   throw Error('B259_UNKNOWN_SOURCE_RASTER_LAYER');
+  const uv=this.texturedF3l;
+  const stage=this.app.root.findByName('StageRoot') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  if(!uv||!b259RasterEligible(new URL(location.href).searchParams,{
+   paused:this.paused,staging:this.matchState==='STAGING',
+   stopped:!!this.stopReason,fullRound:this.b203FullRound,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+   verifiedUv:this.texturedF3lStatus==='READY'&&!!uv.root.enabled,
+   inkSafe:this.b253InkSafeVisualEnabled,
+   humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+   b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+   cameraBaseline:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+   solids:this.rawStage.solids.length,
+   paintable:this.rawStage.paintSurfaces.length,
+   links:this.rawStage.navigationLinks?.length??0,scoreable:0,
+   triangles:uv.manifest.totalTriangles,
+   textures:uv.manifest.textures.length,cpuCount:bots.length
+  })||!stage?.enabled)
+   throw Error('B259_FROZEN_PINNED_SOURCE_LAYER_AUDIT_UNAUTHORIZED');
+  const materials=uv.manifest.materials;
+  const original=uv.root.children;
+  const paint=stage.children.filter(c=>c.name.startsWith('PaintSurface:'));
+  const solids=stage.children.filter(c=>!c.name.startsWith('PaintSurface:'));
+  const renderSolids=this.rawStage.solids.filter(s=>s.render);
+  if(original.length!==materials.length||
+     original.some((c,i)=>!c.render||
+      c.name!=='T21F3L:ORIGINAL_STATIC_'+materials[i]!.name+'_NO_COLLISION')||
+     paint.length!==17||paint.some(c=>!c.render||
+      !this.b45SourceSurfaces.some(s=>c.name==='PaintSurface:'+s.id))||
+     solids.length!==renderSolids.length||
+     solids.some(c=>!renderSolids.some(s=>s.id===c.name)))
+   throw Error('B259_SOURCE_RENDER_IDENTITY_NOT_VERIFIED');
+  for(let i=0;i<original.length;i++)
+   original[i]!.enabled=b259UvVisible(mask,materials[i]!.kind);
+  for(const c of paint)c.enabled=b259NativeVisible(mask,'PAINT');
+  for(const c of solids)c.enabled=b259NativeVisible(mask,'SOLID');
+  this.canvas.dataset.t21B259RasterLayer=mask;
+  return {mask,originalGroups:original.length,
+   originalTriangles:uv.manifest.totalTriangles,
+   originalVisibleGroups:materials.filter(m=>b259UvVisible(mask,m.kind)).length,
+   realPaintSurfaces:paint.length,realSolidRenderGroups:solids.length,
+   paintDrawVisible:b259NativeVisible(mask,'PAINT'),
+   solidDrawVisible:b259NativeVisible(mask,'SOLID'),
+   exactSourceRenderIdentityVerified:true,...B259_RASTER_AUTHORITY};
  }
  /** B258 opt-in camera-only study: real Rapier stage camera cast retained. */
  private setB258OriginalCameraProfile(name:B258CameraProfile){
@@ -3987,6 +4045,12 @@ export class UndertowF3PlayablePreviewApp{
     explicitlyRequestedReview:this.b29ExplicitFullSourceReview,
     fallbackAvailable:this.wholeSourceStatus==='READY',
     ...B29_SOURCE_VISUAL_AUTHORITY
+   },
+   b259RasterLayerAudit:{
+    requested:new URL(location.href).searchParams.get('t21B259')==='layerAudit',
+    mask:this.canvas.dataset.t21B259RasterLayer??'BASELINE',
+    renderOnly:true,sourceAuthority:'25/17/26/0',
+    artCertified:false,productionAuthorized:false
    },
    b258NativeCameraComposition:{
     requested:new URL(location.href).searchParams.get('t21B258')==='cameraStudy',

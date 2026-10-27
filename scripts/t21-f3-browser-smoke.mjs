@@ -62,6 +62,77 @@ async function screenshot(name){
  return {name,bytes:png.length,
   sha256:createHash('sha256').update(png).digest('hex')};
 }
+/** B259 original, native WebGL2 framebuffer visibility ablations.
+ * Render mask areas can overlap through depth and alpha, so pixel changes
+ * identify contributing draw layers; they are NOT additive occupancy masks.
+ */
+async function captureB259LayerAudit(label){
+ const before=await evaluate('window.__t21F3.snapshot()');
+ if(!before.paused||before.matchState!=='STAGING'||
+    !before.b253SourceUvLiveInk.enabled||
+    !before.texturedSourceF3l.enabled||
+    before.b256OpticalAperture.enabled||
+    before.b258NativeCameraComposition.profile!=='BASELINE'||
+    before.b255SourceActorStudy.presentation!=='HUMANOID'||
+    !before.b259RasterLayerAudit.requested||
+    before.b259RasterLayerAudit.mask!=='BASELINE'||
+    before.originalSourceSolids!==25||before.originalPaintSurfaces!==17||
+    before.originalSourceNavigationLinks!==26||
+    before.sourceScoreablePromotions!==0)
+  reject('B259_SOURCE_LAYER_BASELINE_NOT_VERIFIED_'+label);
+ const a=await screenshot('B259_'+label+'_A_NATIVE');
+ const original=readFileSync(resolve(OUTPUT,a.name+'.png'));
+ const results=[];
+ for(const mask of ['HIDE_UV_DETAIL','HIDE_UV_GLASS','HIDE_ALL_UV',
+                    'HIDE_STAGE_SOLIDS','HIDE_PAINT_SURFACES']){
+  const layer=await evaluate('window.__t21F3.setB259SourceRasterLayer('+
+   JSON.stringify(mask)+')');
+  if(layer.mask!==mask||layer.source!=='25/17/26/0'||
+     layer.originalTriangles!==57578||layer.realPaintSurfaces!==17||
+     !layer.exactSourceRenderIdentityVerified||
+     layer.physicsSolidsAdded!==0||layer.navLinksAdded!==0||
+     layer.originalUvAltered!==false||
+     layer.scoreableSurfacesAdded!==0||layer.artAccepted!==false||
+     layer.productionAuthorized!==false)
+   reject('B259_SOURCE_LAYER_PROVENANCE_INVALID_'+mask);
+  await sleep(230);
+  const b=await screenshot('B259_'+label+'_B_'+mask);
+  const back=await evaluate('window.__t21F3.setB259SourceRasterLayer("BASELINE")');
+  if(back.mask!=='BASELINE'||!back.paintDrawVisible||
+     !back.solidDrawVisible||back.originalVisibleGroups!==back.originalGroups)
+   reject('B259_LAYER_RESTORE_API_FAILED_'+mask);
+  await sleep(230);
+  const a2=await screenshot('B259_'+label+'_A2_'+mask);
+  const pixels=inspectB252OriginalUvRaster(
+   original,readFileSync(resolve(OUTPUT,b.name+'.png')),
+   readFileSync(resolve(OUTPUT,a2.name+'.png')));
+  if(!pixels.appearanceRestored)
+   reject('B259_SOURCE_LAYER_RASTER_NOT_RESTORED_'+mask+
+    JSON.stringify(pixels.originalUvRestoration));
+  const state=await evaluate('window.__t21F3.snapshot()');
+  if(state.tick!==before.tick||
+     JSON.stringify(state.player.position)!==JSON.stringify(before.player.position)||
+     state.sourceScoreablePromotions!==0||state.originalSourceSolids!==25||
+     state.originalPaintSurfaces!==17||
+     state.originalSourceNavigationLinks!==26||
+     state.b259RasterLayerAudit.mask!=='BASELINE')
+   reject('B259_SOURCE_WORLD_MUTATED_'+mask);
+  results.push({mask,layer,frame:b,restored:a2,pixels});
+ }
+ const proof={schema:'B259_NATIVE_WEBGL2_SOURCE_LAYER_ABA',
+  context:label,baseline:a,results,unchangedTick:before.tick,
+  realPaintSurfaces:17,certifiedSolids:25,sourceNavLinks:26,
+  originalUvTriangles:57578,scoreable:0,source:'25/17/26/0',
+  masksAreDiagnosticOnly:true,artAccepted:false,productionAuthorized:false};
+ writeFileSync(resolve(OUTPUT,'b259-'+label.toLowerCase()+
+  '-source-raster-layer-ablation.json'),JSON.stringify(proof,null,2));
+ console.log('B259_REAL_WEBGL2_RENDER_LAYERS_ABA_PASS',JSON.stringify({
+  context:label,masks:results.map(x=>({name:x.mask,
+   changed:x.pixels.uvVsFlat.changedPixels,ratio:x.pixels.uvVsFlat.ratio})),
+  restoration:true,artAccepted:false
+ }));
+}
+
 async function main(){
  mkdirSync(OUTPUT,{recursive:true});
  const chrome=process.env.T21_CHROME_PATH||
@@ -189,6 +260,7 @@ async function main(){
   (process.env.T21_B256_OPTICAL_APERTURE==='1'?'&t21B256=opticalAperture':'')+
   (process.env.T21_B257_DEPTH_AUDIT==='1'?'&t21B257=depthAudit':'')+
   (process.env.T21_B258_CAMERA_STUDY==='1'?'&t21B258=cameraStudy':'')+
+  (process.env.T21_B259_LAYER_AUDIT==='1'?'&t21B259=layerAudit':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4028,6 +4100,11 @@ async function main(){
      physicsClipped:x.audit.cameraSettings.geometryClipped
     }))}));
   }
+  if(process.env.T21_B259_LAYER_AUDIT==='1'){
+   if(process.env.T21_B258_CAMERA_STUDY!=='1')
+    reject('B259_REQUIRES_NATIVE_B258_CAMERA_BASELINE');
+   await captureB259LayerAudit('FROZEN');
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4306,6 +4383,8 @@ async function main(){
     console.log('B258_GENUINE_HUMAN_PAINT_CAMERA_ABCA_PASS',
      JSON.stringify({pixels:px,paint:b23.humanChangedCells,
       profiles:tests.map(x=>x.profile)}));
+    if(process.env.T21_B259_LAYER_AUDIT==='1')
+     await captureB259LayerAudit('REAL_INK');
     await evaluate('window.__t21F3.resume()');
    }
  }
