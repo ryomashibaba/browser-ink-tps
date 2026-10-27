@@ -136,12 +136,18 @@ export class PlayerController {
     this.syncAfterPhysics();
   }
 
-  /** Replaces only render primitives during SOURCE full-round QA. */
+  /** Replaces only render primitives on existing SOURCE actor. */
   public enableB248Visual():void {
     if(this.b248Visual)return;
     this.b248Visual=decorateB248Actor(this.entity,
       this.team===Team.A?'A':'B','PLAYER');
     this.b248Visual.setMode(this.mode);
+  }
+
+  /** B255 source-only visual study; never alter the real player body. */
+  public setB248VisualShown(shown:boolean):void {
+    if(!this.b248Visual&&shown)this.enableB248Visual();
+    this.b248Visual?.setEnabled(shown);
   }
 
   public get canShoot(): boolean {

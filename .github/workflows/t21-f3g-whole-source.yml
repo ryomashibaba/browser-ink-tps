@@ -12,6 +12,7 @@ on:
       - "src/app/UndertowF3K*"
       - "src/app/UndertowF3L*"
       - "src/app/B254NativeActorVisualIsolation*"
+      - "src/app/B255SourceActorReview*"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
   workflow_dispatch:
@@ -71,6 +72,8 @@ jobs:
           node -e "const m=require('./public/t21-f3g-source/manifest.json'); if(!m.verifiedAgainstPinnedSource||m.includedOriginalTriangles<1500||m.stagePlayableAuthority!=='NONE')process.exit(1); console.log('F3G_PINNED_WHOLE_STAGE',m.includedOriginalTriangles,m.groups.length)"
       - name: B254 actor visibility authority tests
         run: npx vitest run src/app/B254NativeActorVisualIsolation.test.ts
+      - name: B255 actor silhouette opt-in safety tests
+        run: npx vitest run src/app/B255SourceActorReview.test.ts src/app/B248SourceActorVisuals.test.ts
       - name: B253 opt-in original UV paint-readability material tests
         run: npx vitest run src/app/UndertowF3LTexturedSourcePreview.test.ts
       - name: Test source-only verified UV preference and frozen authority
@@ -86,7 +89,8 @@ jobs:
           T21_F3K_EXPECT_GALLERY: "1"
           T21_F3L_EXPECT_TEXTURES: "1"
           T21_B253_LIVE_INK: "1"
-          T21_B254_NATIVE_VISUAL_ISOLATION: "1"
+          T21_B254_NATIVE_VISUAL_ISOLATION: "0"
+          T21_B255_ACTOR_STUDY: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()

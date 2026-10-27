@@ -60,6 +60,7 @@ export function b249StrideDegrees(activity:number,phase:number):number{
 }
 export type B248Visual={
  setMode:(mode:'HUMAN'|'SQUID')=>void;
+ setEnabled:(shown:boolean)=>void;
  setPose:(dx:number,dz:number,activity:number,phase:number)=>void;
 };
 export function decorateB248Actor(parent:Entity,team:'A'|'B',
@@ -85,10 +86,18 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   {name:'squid-eye-r',type:'sphere',tint:'VISOR',
    pos:[.22,.18,-.43],size:[.20,.23,.15]}
  ] as const)piece(squidRoot,p,colors);
- parent.render.enabled=false;
+ // B255: reversible display only, retaining the same native actor Entity.
+ let requestedMode:'HUMAN'|'SQUID'='HUMAN',shown=true;
+ const syncVisibility=()=>{
+  parent.render!.enabled=!shown;
+  humanRoot.enabled=shown&&requestedMode==='HUMAN';
+  squidRoot.enabled=shown&&requestedMode==='SQUID'&&role==='PLAYER';
+ };
  const setMode=(mode:'HUMAN'|'SQUID')=>{
-  humanRoot.enabled=mode==='HUMAN';
-  squidRoot.enabled=mode==='SQUID'&&role==='PLAYER';
+  requestedMode=mode;syncVisibility();
+ };
+ const setEnabled=(next:boolean)=>{
+  shown=next;syncVisibility();
  };
  let facing=team==='B'?180:0;
  const setPose=(dx:number,dz:number,activity:number,phase:number)=>{
@@ -103,5 +112,5 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   ] as const)limbs.get(part)?.setLocalEulerAngles(swing*sign,0,0);
  };
  setMode('HUMAN');
- return {setMode,setPose};
+ return {setMode,setEnabled,setPose};
 }

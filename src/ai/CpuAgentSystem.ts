@@ -207,6 +207,7 @@ export class CpuAgentSystem {
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private b248VisualEnabled=false;
+  private b248VisualShown=true;
   private readonly b248VisualByActor=new Map<string,ReturnType<typeof decorateB248Actor>>();
   private readonly goal = new Vec3();
   /** Read-only QA witness; never touches production T20 behavior. */
@@ -318,6 +319,14 @@ export class CpuAgentSystem {
     this.b248VisualEnabled=true;
     for(const bot of this.bots)this.b248VisualByActor.set(
       bot.id,decorateB248Actor(bot.entity,bot.team===Team.A?'A':'B','CPU'));
+  }
+
+  /** B255 native source visual only; keep all real CPU bodies and AI. */
+  public setB248VisualsShown(shown:boolean):void {
+    if(!this.b248VisualEnabled&&shown)this.enableB248Visuals();
+    this.b248VisualShown=shown;
+    for(const visual of this.b248VisualByActor.values())
+      visual.setEnabled(shown);
   }
 
   /** This is intentionally not a production constructor option. */
@@ -1576,9 +1585,11 @@ export class CpuAgentSystem {
       entity.setLocalScale(0.58, 0.88, 0.58);
       entity.setPosition(start.x, start.y + 0.68, start.z);
       this.app.root.addChild(entity);
-      if(this.b248VisualEnabled)this.b248VisualByActor.set(
-        `${team===Team.A?'A':'B'}${slot+1}`,
-        decorateB248Actor(entity,team===Team.A?'A':'B','CPU'));
+      if(this.b248VisualEnabled){
+         const visual=decorateB248Actor(entity,team===Team.A?'A':'B','CPU');
+         visual.setEnabled(this.b248VisualShown);
+         this.b248VisualByActor.set(`${team===Team.A?'A':'B'}${slot+1}`,visual);
+       }
 
       const jumpMarker = new Entity(`CPUJumpMarker:${team === Team.A ? 'A' : 'B'}:${slot + 1}`);
       jumpMarker.addComponent('render', {

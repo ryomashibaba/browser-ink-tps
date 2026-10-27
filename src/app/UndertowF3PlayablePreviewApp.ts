@@ -127,6 +127,8 @@ import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
 import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
  type B254NativeVisualMode} from './B254NativeActorVisualIsolation';
+import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
+ type B255ActorPresentation} from './B255SourceActorReview';
 import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
  from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
@@ -1656,6 +1658,8 @@ export class UndertowF3PlayablePreviewApp{
     setB253SourceUvLiveInk:(on:boolean)=>this.setB253SourceUvLiveInk(on),
     setB254NativeVisualIsolation:(mode:B254NativeVisualMode)=>
      this.setB254NativeVisualIsolation(mode),
+    setB255SourceActorPresentation:(mode:B255ActorPresentation)=>
+     this.setB255SourceActorPresentation(mode),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -1919,6 +1923,40 @@ export class UndertowF3PlayablePreviewApp{
    playerRenderVisible:flags.playerVisible,
    sourceCpuCount:bots.length,sourceIdLabels:bots.map(b=>b.id),
    ...B254_NATIVE_VISUAL_AUTHORITY};
+ }
+ /** B255: reversible native SOURCE render-only A/B under explicit URL. */
+ private setB255SourceActorPresentation(mode:B255ActorPresentation){
+  if(mode!=='CAPSULE'&&mode!=='HUMANOID')
+   throw Error('B255_UNKNOWN_ACTOR_STUDY_MODE');
+  const params=new URL(location.href).searchParams;
+  const actor=this.app.root.findByName('Player') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  if(!b255ActorReviewEligible(params,{
+   paused:this.paused,staging:this.matchState==='STAGING',
+   stopped:!!this.stopReason,fullRound:this.b203FullRound,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   otherStudyActive:this.survey.snapshot().active||this.galleryIndex>=0,
+   inkSafeEnabled:this.b253InkSafeVisualEnabled,
+   verifiedUvActive:!!this.texturedF3l?.root.enabled&&
+    this.texturedF3lStatus==='READY',
+   sourceTriangles:this.texturedF3l?.manifest.totalTriangles??0,
+   verifiedTextures:this.texturedF3l?.manifest.textures.length??0,
+   existingCpuActors:bots.length,registeredSolids:this.rawStage.solids.length,
+   paintableSurfaces:this.rawStage.paintSurfaces.length,
+   genuineLinks:this.rawStage.navigationLinks?.length??0,
+   scoreableSurfaces:0
+  })||!actor?.render||bots.some(b=>!b.entity.render)||
+     (this.canvas.dataset.t21B254VisualIsolation!==undefined&&
+      this.canvas.dataset.t21B254VisualIsolation!=='ALL'))
+   throw Error('B255_ONLY_GENUINE_FROZEN_UV_ACTOR_STUDY');
+  const humanoid=mode==='HUMANOID';
+  this.player.setB248VisualShown(humanoid);
+  this.cpu.setB248VisualsShown(humanoid);
+  this.canvas.dataset.t21B248Visual='B255_RESEARCH_ACTOR_DRAW_ONLY';
+  this.canvas.dataset.t21B255ActorPresentation=mode;
+  return {mode,existingPlayerActor:1,existingCpuActors:bots.length,
+   genuineCpuIds:bots.map(b=>b.id),nativeCapsulesVisible:!humanoid,
+   humanoidVisualsVisible:humanoid,...B255_ACTOR_REVIEW_AUTHORITY};
  }
  private setB253SourceUvLiveInk(on:boolean){
   if(!this.paused||this.stopReason||this.survey.snapshot().active||
@@ -3804,6 +3842,12 @@ export class UndertowF3PlayablePreviewApp{
     explicitlyRequestedReview:this.b29ExplicitFullSourceReview,
     fallbackAvailable:this.wholeSourceStatus==='READY',
     ...B29_SOURCE_VISUAL_AUTHORITY
+   },
+   b255SourceActorStudy:{
+    requested:new URL(location.href).searchParams.get('t21B255')==='actorStudy',
+    presentation:this.canvas.dataset.t21B255ActorPresentation??'CAPSULE',
+    researchOnly:true,sourceAuthority:'25/17/26/0',
+    productionAuthorized:false
    },
    b253SourceUvLiveInk:{
     requested:new URL(location.href).searchParams.get('t21B253')==='liveInk',

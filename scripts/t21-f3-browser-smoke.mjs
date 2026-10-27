@@ -185,6 +185,7 @@ async function main(){
   (process.env.T21_W10B20_PROFILE==='1'?'&t21W10B20=profile':'')+
   (process.env.T21_F3G_EXPECT_WHOLE==='1'?'&t21FullSource=review':'')+
   (process.env.T21_B253_LIVE_INK==='1'?'&t21B253=liveInk':'')+
+  (process.env.T21_B255_ACTOR_STUDY==='1'?'&t21B255=actorStudy':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -3806,6 +3807,56 @@ async function main(){
      originalUvTriangles:57578,verifiedTextures:ink.sourceTextures,
      noActorMoves:true}));
   }
+  // B255: same-camera A-B-A after the independent B253 UV restoration.
+  if(process.env.T21_B255_ACTOR_STUDY==='1'){
+   const before=await evaluate('window.__t21F3.snapshot()');
+   if(!before.paused||before.matchState!=='STAGING'||
+      !before.b253SourceUvLiveInk.enabled||
+      before.b255SourceActorStudy.presentation!=='CAPSULE')
+    reject('B255_NATIVE_UV_FROZEN_VIEW_NOT_READY');
+   const a=await screenshot('B255_A_CAPSULE_SAME_CAMERA');
+   const human=await evaluate(
+    'window.__t21F3.setB255SourceActorPresentation("HUMANOID")');
+   if(human.mode!=='HUMANOID'||human.existingCpuActors!==7||
+      human.existingPlayerActor!==1||human.source!=='25/17/26/0'||
+      human.gameBodiesMoved!==0||human.sourceNavLinksAdded!==0||
+      human.scoreableSurfacesAdded!==0||human.productionAuthorized!==false)
+    reject('B255_RENDER_ONLY_VISUAL_BOUNDARY_'+JSON.stringify(human));
+   await sleep(240);
+   const h=await screenshot('B255_B_EXISTING_HUMANOID_SAME_CAMERA');
+   const back=await evaluate(
+    'window.__t21F3.setB255SourceActorPresentation("CAPSULE")');
+   if(back.mode!=='CAPSULE'||!back.nativeCapsulesVisible)
+    reject('B255_CAPSULE_RESTORATION_DENIED');
+   await sleep(240);
+   const a2=await screenshot('B255_A2_CAPSULE_RESTORED_SAME_CAMERA');
+   const p=inspectB252OriginalUvRaster(
+    readFileSync(resolve(OUTPUT,a.name+'.png')),
+    readFileSync(resolve(OUTPUT,h.name+'.png')),
+    readFileSync(resolve(OUTPUT,a2.name+'.png')));
+   const after=await evaluate('window.__t21F3.snapshot()');
+   if(!p.clearlyDifferent||!p.appearanceRestored||
+      p.uvVsFlat.changedByAtLeastEight<500||
+      before.tick!==after.tick||
+      JSON.stringify(before.player.position)!==
+       JSON.stringify(after.player.position)||
+      after.originalSourceSolids!==25||
+      after.originalPaintSurfaces!==17||
+      after.originalSourceNavigationLinks!==26||
+      after.sourceScoreablePromotions!==0)
+    reject('B255_NATIVE_SAME_CAMERA_SILHOUETTE_ABA_FAILED_'+JSON.stringify(p));
+   await evaluate('window.__t21F3.setB255SourceActorPresentation("HUMANOID")');
+   const witness={schema:'B255_REAL_WEBGL2_NATIVE_ACTOR_CAPSULE_HUMAN_ABA',
+    capsule:a,humanoid:h,capsuleRestored:a2,pixels:p,
+    existingPlayerActor:1,existingCpuActors:7,source:'25/17/26/0',
+    sameFrozenTick:before.tick,noActorMovement:true,
+    originalActorMatricesRecovered:false,officialMatch:false,
+    productionAuthorized:false};
+   writeFileSync(resolve(OUTPUT,'b255-native-actor-humanoid-ab.json'),
+    JSON.stringify(witness,null,2));
+   console.log('B255_REAL_NATIVE_ACTOR_VISUAL_ABA_PASS',
+    JSON.stringify({pixels:p,actorCount:8}));
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -3960,6 +4011,24 @@ async function main(){
    JSON.stringify(evidence,null,2));
   console.log('B253_REAL_NATIVE_SOURCE_UV_INK_GAMEPLAY_PASS',
    JSON.stringify(evidence));
+  if(process.env.T21_B255_ACTOR_STUDY==='1'){
+   const realFrame=await screenshot('B255_REAL_HUMANOID_SOURCE_UV_INK_PLAY');
+   if(state.b255SourceActorStudy.presentation!=='HUMANOID'||
+      b23.humanChangedCells<1||move<=0||
+      fired.shotsFired-after.shotsFired<1)
+    reject('B255_REAL_NATIVE_VISUAL_AND_GENUINE_INK_MISSING');
+   const witness={schema:'B255_NATIVE_HUMANOID_REAL_KEYBOARD_MOUSE_INK',
+    screenshot:realFrame,realKeyboardMeters:move,
+    realPlayerShots:fired.shotsFired-after.shotsFired,
+    genuineChangedPaintCells:b23.humanChangedCells,
+    realWebgl2:true,source:'25/17/26/0',
+    humanAndSevenCpuVisualsOnly:true,officialMatch:false,
+    productionAuthorized:false};
+   writeFileSync(resolve(OUTPUT,'b255-native-actor-real-ink-play.json'),
+    JSON.stringify(witness,null,2));
+   console.log('B255_NATIVE_REAL_GAMEPLAY_VISUAL_PROOF_PASS',
+    JSON.stringify(witness));
+  }
  }
  if(w10b51){
   const pre=await evaluate('window.__t21F3.pause()');
