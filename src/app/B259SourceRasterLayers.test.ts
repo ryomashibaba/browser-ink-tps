@@ -42,5 +42,8 @@ describe('B259 strictly paused original-source framebuffer layer isolation',()=>
   expect(b259NativeVisible('HIDE_PAINT_SURFACES','PAINT')).toBe(false);
   expect(B259_RASTER_AUTHORITY.physicsSolidsAdded).toBe(0);
   expect(B259_RASTER_AUTHORITY.artAccepted).toBe(false);
+  expect(B259_RASTER_AUTHORITY.hidesAreOnlyDiagnostic).toBe(true);
+  expect(B259_RASTER_AUTHORITY.renderOnly).toBe(true);
+  expect(B259_RASTER_AUTHORITY.sourceTrianglesModified).toBe(0);
  });
 });
