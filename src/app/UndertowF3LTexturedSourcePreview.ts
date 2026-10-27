@@ -5,10 +5,12 @@
  */
 import {ADDRESS_REPEAT,BLEND_NONE,BLEND_NORMAL,CULLFACE_NONE,Color,Entity,
  FILTER_LINEAR,FILTER_LINEAR_MIPMAP_LINEAR,Mesh,MeshInstance,
- StandardMaterial,Texture,SHADERLANGUAGE_GLSL,type AppBase} from 'playcanvas';
+ StandardMaterial,Texture,SHADERLANGUAGE_GLSL,Vec3,type AppBase} from 'playcanvas';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
 import {B256_APERTURE_FOCUS,b256OpticalMaterialEligible}
  from './B256SourceOpticalAperture';
+import {traceB257SourceOpticalRays,type B257OpticalMesh}
+ from './B257OriginalSourceDepthAudit';
 const MTL_BLOB='93b6d30ecac396e960058d6c71db80aadca10fef';
 const UPSTREAM_COMMIT='0611f51b35c9736ee986fb2218461e2585b7875e';
 const KINDS=['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as const;
@@ -175,7 +177,8 @@ const BASE_COLOR:Record<Kind,[number,number,number]>={
  GLASS:[.32,.67,.76],SUPPORT:[.54,.57,.59],STRUCTURE:[.49,.53,.56],
  DETAIL:[.66,.65,.56]
 };
-export async function loadF3lTexturedSource(app:AppBase,b256Research=false){
+export async function loadF3lTexturedSource(
+ app:AppBase,b256Research=false,b257Research=false){
  const base=new URL('t21-f3g-source/',document.baseURI).toString();
  const response=await fetch(base+'f3l-original-textured.json',{cache:'no-store'});
  if(response.status===404)return null;
@@ -188,6 +191,7 @@ export async function loadF3lTexturedSource(app:AppBase,b256Research=false){
  const textureMap=new Map<string,Texture>();
  const materialInstances:{kind:Kind;material:StandardMaterial}[]=[];
  const b256Materials:StandardMaterial[]=[];
+ const b257OriginalStaticMeshes:B257OpticalMesh[]=[];
  let b256ApertureRequested=false;
  const applyB256=(width:number,height:number)=>{
   if(width<=0||height<=0||!Number.isFinite(width)||!Number.isFinite(height))
@@ -237,6 +241,11 @@ export async function loadF3lTexturedSource(app:AppBase,b256Research=false){
    const idx=new Uint32Array(pos.length/3);
    for(let i=0;i<idx.length;i++)idx[i]=i;
    mesh.setIndices(idx);mesh.update();
+   // Only exact, already SHA256-verified source position buffers. No
+   // inferred instance transform or synthetic collision.
+   if(b257Research)b257OriginalStaticMeshes.push({
+    name:material.name,kind:material.kind,vertices:pos
+   });
    const m=new StandardMaterial();
    const [red,green,blue]=BASE_COLOR[material.kind];
    const tex=material.texture?textureMap.get(material.texture):undefined;
@@ -280,6 +289,11 @@ export async function loadF3lTexturedSource(app:AppBase,b256Research=false){
    // A different research UV mode must never retain an invisible aperture.
    if(b256Research)applyB256(app.graphicsDevice.width,app.graphicsDevice.height);
    return visualMode;
+  },
+  auditB257OriginalStaticRay(from:Vec3,to:Vec3){
+   if(!b257Research||b257OriginalStaticMeshes.length!==manifest.materials.length)
+    throw Error('B257_ORIGINAL_OPTICAL_MESHES_NOT_VERIFIED');
+   return traceB257SourceOpticalRays(b257OriginalStaticMeshes,from,to);
   },
   setB256OpticalAperture(on:boolean,width:number,height:number){
    if(!b256Research||b256Materials.length===0||

@@ -14,6 +14,7 @@ on:
       - "src/app/B254NativeActorVisualIsolation*"
       - "src/app/B255SourceActorReview*"
       - "src/app/B256SourceOpticalAperture*"
+      - "src/app/B257OriginalSourceDepthAudit*"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
   workflow_dispatch:
@@ -77,6 +78,8 @@ jobs:
         run: npx vitest run src/app/B255SourceActorReview.test.ts src/app/B248SourceActorVisuals.test.ts
       - name: B256 screen-local optical aperture source safety tests
         run: npx vitest run src/app/B256SourceOpticalAperture.test.ts
+      - name: B257 original optical triangles / real Rapier separation tests
+        run: npx vitest run src/app/B257OriginalSourceDepthAudit.test.ts
       - name: B253 opt-in original UV paint-readability material tests
         run: npx vitest run src/app/UndertowF3LTexturedSourcePreview.test.ts
       - name: Test source-only verified UV preference and frozen authority
@@ -95,6 +98,7 @@ jobs:
           T21_B254_NATIVE_VISUAL_ISOLATION: "0"
           T21_B255_ACTOR_STUDY: "1"
           T21_B256_OPTICAL_APERTURE: "1"
+          T21_B257_DEPTH_AUDIT: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()

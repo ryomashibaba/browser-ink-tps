@@ -131,6 +131,8 @@ import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
  type B255ActorPresentation} from './B255SourceActorReview';
 import {b256SourceOpticalEligible,B256_OPTICAL_AUTHORITY}
  from './B256SourceOpticalAperture';
+import {B257_SCREEN_PROBES,B257_AUDIT_AUTHORITY,b257AuditEligible}
+ from './B257OriginalSourceDepthAudit';
 import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
  from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
@@ -1664,6 +1666,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB255SourceActorPresentation(mode),
     setB256SourceOpticalAperture:(on:boolean)=>
      this.setB256SourceOpticalAperture(on),
+    auditB257OriginalDepthComposition:()=>
+     this.auditB257OriginalDepthComposition(),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -1763,7 +1767,8 @@ export class UndertowF3PlayablePreviewApp{
    this.texturedF3lStatus='LOADING';
    try{
     this.texturedF3l=await loadF3lTexturedSource(this.app,
-      new URL(location.href).searchParams.get('t21B256')==='opticalAperture');
+      new URL(location.href).searchParams.get('t21B256')==='opticalAperture',
+      new URL(location.href).searchParams.get('t21B257')==='depthAudit');
     this.texturedF3lStatus=this.texturedF3l?'READY':'MISSING';
     const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
     if(button&&this.texturedF3l)button.hidden=false;
@@ -1985,6 +1990,79 @@ export class UndertowF3PlayablePreviewApp{
    on,this.canvas.width,this.canvas.height);
   this.canvas.dataset.t21B256OpticalAperture=on?'ON':'OFF';
   return {...out,...B256_OPTICAL_AUTHORITY};
+ }
+ /** B257: read-only exact source optical ray vs real certified Rapier ray.
+  * Never changes camera, actor, original triangles or physical stage. */
+ private auditB257OriginalDepthComposition(){
+  const p=new URL(location.href).searchParams;
+  const texture=this.texturedF3l;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  if(!texture||!b257AuditEligible(p,{
+   paused:this.paused,staging:this.matchState==='STAGING',
+   fullRound:this.b203FullRound,pointerLocked:document.pointerLockElement===this.canvas,
+   stopped:!!this.stopReason,
+   otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+   verifiedUv:this.texturedF3lStatus==='READY'&&!!texture.root.enabled,
+   inkSafe:this.b253InkSafeVisualEnabled,
+   humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+   b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+   solids:this.rawStage.solids.length,
+   paintable:this.rawStage.paintSurfaces.length,
+   links:this.rawStage.navigationLinks?.length??0,scoreable:0,
+   triangles:texture.manifest.totalTriangles,
+   textures:texture.manifest.textures.length,cpuCount:bots.length
+  }))throw Error('B257_ONLY_REAL_FROZEN_NATIVE_SOURCE_DEPTH_AUDIT');
+  const cam=this.playerCameraEntity.camera;
+  if(!cam)throw Error('B257_NO_NATIVE_SOURCE_CAMERA');
+  const width=this.canvas.width,height=this.canvas.height;
+  const vec=(v:Vec3):[number,number,number]=>[v.x,v.y,v.z];
+  const actorProjection=(id:string,v:Vec3)=>{
+   const screen=cam.worldToScreen(v);
+   const head=cam.worldToScreen(new Vec3(v.x,v.y+1.4,v.z));
+   return {id,worldPositionMeters:vec(v),
+    screenCenterPx:[screen.x,screen.y,screen.z],
+    screenHeadPx:[head.x,head.y,head.z],
+    projectedHeadToCenterPx:Math.hypot(head.x-screen.x,head.y-screen.y),
+    insideCanvas:screen.x>=0&&screen.x<=width&&
+     screen.y>=0&&screen.y<=height};
+  };
+  const samples=B257_SCREEN_PROBES.map(({id,x,y})=>{
+   const from=cam.screenToWorld(x*width,y*height,cam.nearClip);
+   const to=cam.screenToWorld(x*width,y*height,60);
+   const optical=texture.auditB257OriginalStaticRay(from,to);
+   const physical=this.physics.castStageSegment(from,to,'camera');
+   return {id,screenUv:[x,y],rayOriginMeters:vec(from),
+    rayEndMeters:vec(to),originalTrianglesScanned:optical.scannedTriangles,
+    originalOpticalNearest:optical.nearest,
+    originalOpticalFirstSixGroups:optical.nearestGroups,
+    certifiedRapierNearest:physical?{
+     solidId:physical.solidId,distanceMeters:physical.distance,
+     pointMeters:vec(physical.point)
+    }:null,
+    opticalBeforeCertifiedRapier:!!optical.nearest&&
+     (!physical||optical.nearest.distanceMeters<physical.distance),
+    opticalMinusRapierDistanceMeters:optical.nearest&&physical?
+     optical.nearest.distanceMeters-physical.distance:null};
+  });
+  const player=this.player.getPosition(new Vec3());
+  return {
+   schema:'B257_NATIVE_CAMERA_OPTICAL_AND_RAPIER_3D_RAY_AUDIT',
+   sameFrozenSourceTick:this.clock.tick,
+   cameraWorldMeters:vec(this.playerCameraEntity.getPosition()),
+   cameraForwardWorld:vec(this.playerCameraEntity.forward),
+   viewportPixels:[width,height],
+   cameraSettings:this.camera.sourcePracticeViewSnapshot(),
+   actualActorScreenProjections:[
+    actorProjection('HUMAN',player),
+    ...bots.map(b=>actorProjection(b.id,b.entity.getPosition()))
+   ],
+   rays:samples,
+   opticalMaterialGroups:texture.manifest.materials.length,
+   sourceOriginalTriangles:texture.manifest.totalTriangles,
+   verifiedSourceTextures:texture.manifest.textures.length,
+   originalActorPlacementMatricesRecovered:false,
+   ...B257_AUDIT_AUTHORITY
+  };
  }
  private setB253SourceUvLiveInk(on:boolean){
   if(!this.paused||this.stopReason||this.survey.snapshot().active||
@@ -3870,6 +3948,10 @@ export class UndertowF3PlayablePreviewApp{
     explicitlyRequestedReview:this.b29ExplicitFullSourceReview,
     fallbackAvailable:this.wholeSourceStatus==='READY',
     ...B29_SOURCE_VISUAL_AUTHORITY
+   },
+   b257SourceDepthAudit:{
+    requested:new URL(location.href).searchParams.get('t21B257')==='depthAudit',
+    readOnly:true,productionAuthorized:false
    },
    b256OpticalAperture:{
     requested:new URL(location.href).searchParams.get('t21B256')==='opticalAperture',
