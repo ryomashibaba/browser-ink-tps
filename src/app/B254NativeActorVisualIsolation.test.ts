@@ -13,6 +13,8 @@ describe('B254 source actor silhouette visual diagnostics',()=>{
    .toEqual({cpuVisible:true,playerVisible:false});
   expect(b254ActorRenderFlags('HIDE_BOTH'))
    .toEqual({cpuVisible:false,playerVisible:false});
+  expect(()=>b254ActorRenderFlags('INVALID' as never))
+   .toThrow('B254_UNKNOWN_SOURCE_VISUAL_DIAGNOSTIC');
  });
  it('never authorizes an added SOURCE surface, source instance, scoring, or route',()=>{
   expect(B254_NATIVE_VISUAL_AUTHORITY).toMatchObject({
