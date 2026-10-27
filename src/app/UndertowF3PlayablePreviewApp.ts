@@ -520,7 +520,8 @@ export class UndertowF3PlayablePreviewApp{
      new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'){
    this.b251OpticalView=installB251SourceOpticalSeparation(
     app,this.structures.root,this.sourceCompletion.root);
-   this.canvas.dataset.t21B251OpticalSeparation='SEPARATED';
+   // ART HOLD: keep the source display unchanged outside explicit A/B QA.
+   this.canvas.dataset.t21B251OpticalSeparation='ORIGINAL';
   }
   this.canvas.dataset.t21F3eMassingMode=this.sourceCompletion.getVisualMode();
   // Read-only truth: fired shots alone are not proof of real ink impact.

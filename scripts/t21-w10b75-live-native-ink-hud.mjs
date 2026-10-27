@@ -966,8 +966,15 @@ async function run(){
     const b251On=await evaluate('window.__t21F3.setB251OpticalSeparation(true)');
     await sleep(180);
     const b251ReadableFrame=await b246Screenshot('b251-separated-optical-ready');
+    // A-B-A recovery: the cosmetic variant is ART HOLD, NOT default.
+    const b251Restored=await evaluate(
+     'window.__t21F3.setB251OpticalSeparation(false)');
+    await sleep(180);
+    const b251RestoredFrame=await b246Screenshot('b251-restored-optical-ready');
     const b251After=await snapshot();
     if(b251Off.enabled!==false||b251On.enabled!==true||
+       b251Restored.enabled!==false||
+       b251OriginalFrame.sha256!==b251RestoredFrame.sha256||
        b251On.existingStructureObjects!==38||
        b251On.existingReferenceBatches<4||
        b251On.materialBindings<42||
@@ -981,8 +988,9 @@ async function run(){
       fail('B251_PINNED_OPTICAL_MATERIAL_AB_FAILED_'+
        JSON.stringify({b251Off,b251On,b251OriginalFrame,b251ReadableFrame}));
     const b251Evidence={schema:'B251_REAL_CHROMIUM_UNREGISTERED_OPTICAL_AB',
-     original:b251Off,separated:b251On,
-     frames:[b251OriginalFrame,b251ReadableFrame],
+     original:b251Off,separated:b251On,restored:b251Restored,
+     frames:[b251OriginalFrame,b251ReadableFrame,b251RestoredFrame],
+     artDecision:'HOLD_REVERT_TO_ORIGINAL_AFTER_AB',
      originalPhysics:'25/17/26/0',actorRelocations:0,
      geometryWrites:0,sourceClockBeforeFirstClick:0,officialWinner:'NONE'};
     writeFileSync(resolve(OUTPUT,'b251-optical-separation-ab.json'),
@@ -1103,8 +1111,8 @@ async function run(){
      fail('B250_REAL_PLAYING_SOURCE_VISUAL_NOT_ACTIVE_'+b250Active);
     const b251Active=await evaluate(
       "document.querySelector('#app-canvas')?.dataset.t21B251OpticalSeparation");
-    if(b251Active!=='SEPARATED')
-     fail('B251_NATIVE_REAL_PLAYING_OPTICS_NOT_ACTIVE_'+b251Active);
+    if(b251Active!=='ORIGINAL')
+     fail('B251_ART_HOLD_NATIVE_PLAYING_OPTICS_NOT_RESTORED_'+b251Active);
     const b249Read=await evaluate(`(() => {
       const s=window.__t21F3.snapshot();
       const canvas=document.querySelector('#app-canvas');

@@ -96,7 +96,10 @@ export function installB251SourceOpticalSeparation(
   enabled=on;
   for(const {mesh,before,after} of entries)mesh.material=on?after:before;
  };
- setEnabled(true);
+ // B251 art gate: actual 1600x900 same-frame A/B showed insufficient
+ // readable-stage improvement. Preserve native source appearance by default;
+ // enable only during the explicit frozen-source QA comparison.
+ setEnabled(false);
  return {setEnabled,snapshot:()=>({
   enabled,existingStructureObjects:structures,existingReferenceBatches:batches,
   materialBindings:entries.length,geometryAdded:0 as const,
