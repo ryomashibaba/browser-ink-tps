@@ -133,6 +133,8 @@ import {b256SourceOpticalEligible,B256_OPTICAL_AUTHORITY}
  from './B256SourceOpticalAperture';
 import {B257_SCREEN_PROBES,B257_AUDIT_AUTHORITY,b257AuditEligible}
  from './B257OriginalSourceDepthAudit';
+import {b258CameraEligible,B258_CAMERA_AUTHORITY,
+ type B258CameraProfile} from './B258OriginalCameraComposition';
 import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
  from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
@@ -582,6 +584,10 @@ export class UndertowF3PlayablePreviewApp{
    qa.get('t21QaInput')==='deterministic'&&qa.get('t21KccAudit')==='readOnly');
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
   this.camera.enableSourcePracticeControls();
+  if(qa.get('t21B258')==='cameraStudy'&&
+     qa.get('t21Play')==='preview'&&
+     qa.get('t21FullSource')==='review')
+   this.camera.enableB258ResearchCamera();
   if(this.b27KineticEnabled)
    document.addEventListener('pointerlockchange',()=>{
     if(document.pointerLockElement!==this.canvas)
@@ -1668,6 +1674,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB256SourceOpticalAperture(on),
     auditB257OriginalDepthComposition:()=>
      this.auditB257OriginalDepthComposition(),
+    setB258OriginalCameraProfile:(name:B258CameraProfile)=>
+     this.setB258OriginalCameraProfile(name),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -2063,6 +2071,37 @@ export class UndertowF3PlayablePreviewApp{
    originalActorPlacementMatricesRecovered:false,
    ...B257_AUDIT_AUTHORITY
   };
+ }
+ /** B258 opt-in camera-only study: real Rapier stage camera cast retained. */
+ private setB258OriginalCameraProfile(name:B258CameraProfile){
+  const texture=this.texturedF3l;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  if(!texture||!b258CameraEligible(
+   new URL(location.href).searchParams,{
+    paused:this.paused,staging:this.matchState==='STAGING',
+    stopped:!!this.stopReason,fullRound:this.b203FullRound,
+    pointerLocked:document.pointerLockElement===this.canvas,
+    otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+    verifiedUv:this.texturedF3lStatus==='READY'&&!!texture.root.enabled,
+    inkSafe:this.b253InkSafeVisualEnabled,
+    humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+    b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+    solids:this.rawStage.solids.length,
+    paintable:this.rawStage.paintSurfaces.length,
+    links:this.rawStage.navigationLinks?.length??0,scoreable:0,
+    triangles:texture.manifest.totalTriangles,
+    textures:texture.manifest.textures.length,cpuCount:bots.length
+   }))throw Error('B258_UNAUTHORIZED_NATIVE_CAMERA_COMPOSITION_STUDY');
+  this.camera.setB258ResearchCameraProfile(name);
+  this.camera.update(this.player.getPosition(new Vec3()));
+  this.canvas.dataset.t21B258CameraProfile=name;
+  const camera=this.camera.sourcePracticeViewSnapshot();
+  const pos=this.playerCameraEntity.getPosition();
+  return {profile:name,
+   nativeCameraWorldMeters:[pos.x,pos.y,pos.z],
+   actualRapierCameraDistanceMeters:camera.cameraDistanceMeters,
+   certifiedRapierCameraRayClipped:camera.geometryClipped,
+   ...B258_CAMERA_AUTHORITY};
  }
  private setB253SourceUvLiveInk(on:boolean){
   if(!this.paused||this.stopReason||this.survey.snapshot().active||
@@ -3948,6 +3987,11 @@ export class UndertowF3PlayablePreviewApp{
     explicitlyRequestedReview:this.b29ExplicitFullSourceReview,
     fallbackAvailable:this.wholeSourceStatus==='READY',
     ...B29_SOURCE_VISUAL_AUTHORITY
+   },
+   b258NativeCameraComposition:{
+    requested:new URL(location.href).searchParams.get('t21B258')==='cameraStudy',
+    profile:this.canvas.dataset.t21B258CameraProfile??'BASELINE',
+    physicalRapierClippingRetained:true,productionAuthorized:false
    },
    b257SourceDepthAudit:{
     requested:new URL(location.href).searchParams.get('t21B257')==='depthAudit',

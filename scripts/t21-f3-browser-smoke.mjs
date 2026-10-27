@@ -188,6 +188,7 @@ async function main(){
   (process.env.T21_B255_ACTOR_STUDY==='1'?'&t21B255=actorStudy':'')+
   (process.env.T21_B256_OPTICAL_APERTURE==='1'?'&t21B256=opticalAperture':'')+
   (process.env.T21_B257_DEPTH_AUDIT==='1'?'&t21B257=depthAudit':'')+
+  (process.env.T21_B258_CAMERA_STUDY==='1'?'&t21B258=cameraStudy':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -3958,6 +3959,67 @@ async function main(){
   if(process.env.T21_B257_DEPTH_AUDIT==='1'&&
      process.env.T21_B256_OPTICAL_APERTURE==='1')
    await evaluate('window.__t21F3.setB256SourceOpticalAperture(false)');
+
+  // B258: real Rapier-clipped camera positions at one frozen source tick.
+  if(process.env.T21_B258_CAMERA_STUDY==='1'){
+   if(process.env.T21_B257_DEPTH_AUDIT!=='1')
+    reject('B258_REAL_SOURCE_DEPTH_AUDIT_REQUIRED');
+   const before=await evaluate('window.__t21F3.snapshot()');
+   if(!before.paused||before.matchState!=='STAGING'||
+      before.b256OpticalAperture.enabled||
+      before.b255SourceActorStudy.presentation!=='HUMANOID')
+    reject('B258_SOURCE_CAMERA_NOT_FROZEN');
+   const reference=await evaluate('window.__t21F3.auditB257OriginalDepthComposition()');
+   const a=await screenshot('B258_A_FROZEN_ORIGINAL_NATIVE_CAMERA');
+   const candidates=[];
+   for(const profile of ['REAR_WIDE','ELEVATED_RIGHT']){
+    const applied=await evaluate(
+     'window.__t21F3.setB258OriginalCameraProfile("'+profile+'")');
+    const audit=await evaluate('window.__t21F3.auditB257OriginalDepthComposition()');
+    await sleep(220);
+    const frame=await screenshot('B258_B_FROZEN_'+profile);
+    if(applied.profile!==profile||applied.gameActorsMoved!==0||
+       applied.certifiedRapierCameraClipping!==true||
+       applied.sourceStage!=='25/17/26/0'||audit.rays.length!==9||
+       audit.actualActorScreenProjections.length!==8||
+       JSON.stringify(audit.cameraWorldMeters)===JSON.stringify(reference.cameraWorldMeters)||
+       JSON.stringify(audit.actualActorScreenProjections.map(x=>x.worldPositionMeters))!==
+        JSON.stringify(reference.actualActorScreenProjections.map(x=>x.worldPositionMeters)))
+     reject('B258_CAMERA_REPOSITION_OR_ACTOR_DRIFT_'+profile);
+    candidates.push({profile,applied,audit,frame});
+   }
+   await evaluate('window.__t21F3.setB258OriginalCameraProfile("BASELINE")');
+   await sleep(250);
+   const restored=await screenshot('B258_A2_FROZEN_NATIVE_CAMERA_RESTORED');
+   const raster=inspectB252OriginalUvRaster(
+    readFileSync(resolve(OUTPUT,a.name+'.png')),
+    readFileSync(resolve(OUTPUT,candidates[0].frame.name+'.png')),
+    readFileSync(resolve(OUTPUT,restored.name+'.png')));
+   const final=await evaluate('window.__t21F3.snapshot()');
+   const original=await evaluate('window.__t21F3.auditB257OriginalDepthComposition()');
+   if(!raster.clearlyDifferent||!raster.appearanceRestored||
+      final.tick!==before.tick||
+      final.b258NativeCameraComposition.profile!=='BASELINE'||
+      JSON.stringify(before.player.position)!==JSON.stringify(final.player.position)||
+      JSON.stringify(reference.cameraWorldMeters)!==
+       JSON.stringify(original.cameraWorldMeters)||
+      final.originalSourceSolids!==25||
+      final.originalPaintSurfaces!==17||
+      final.originalSourceNavigationLinks!==26||
+      final.sourceScoreablePromotions!==0)
+    reject('B258_NATIVE_CAMERA_RESTORATION_FAILED_'+JSON.stringify(raster));
+   writeFileSync(resolve(OUTPUT,'b258-frozen-native-camera-abca.json'),
+    JSON.stringify({schema:'B258_REAL_RAPIER_CAMERA_ABCA',
+     baseline:reference,baselineFrame:a,candidates,restoredFrame:restored,
+     raster,actorsMoved:0,source:'25/17/26/0',productionAuthorized:false},null,2));
+   console.log('B258_NATIVE_SOURCE_CAMERA_ABCA_PASS',
+    JSON.stringify({raster,candidates:candidates.map(x=>({
+     profile:x.profile,world:x.audit.cameraWorldMeters,
+     actorHeadSizes:x.audit.actualActorScreenProjections.slice(0,4)
+      .map(a=>a.projectedHeadToCenterPx),
+     physicsClipped:x.audit.cameraSettings.geometryClipped
+    }))}));
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4179,6 +4241,59 @@ async function main(){
     JSON.stringify(proof,null,2));
    console.log('B257_REAL_NATIVE_UNMODIFIED_OPTICAL_INK_PASS',JSON.stringify(proof));
   }
+   // The human just REALLY walked/fired and painted the original 17 surfaces.
+   // Compare alternatives while paused; restore before further live play.
+   if(process.env.T21_B258_CAMERA_STUDY==='1'){
+    const frozen=await evaluate('window.__t21F3.pause()');
+    if(!frozen.paused||frozen.matchState!=='STAGING'||
+       frozen.b258NativeCameraComposition.profile!=='BASELINE')
+     reject('B258_REAL_PAINT_SOURCE_VIEW_NOT_FROZEN');
+    const baseline=await evaluate('window.__t21F3.auditB257OriginalDepthComposition()');
+    const frame=await screenshot('B258_INK_A_ORIGINAL_NATIVE_CAMERA');
+    const tests=[];
+    for(const profile of ['REAR_WIDE','ELEVATED_RIGHT']){
+     const pose=await evaluate(
+      'window.__t21F3.setB258OriginalCameraProfile("'+profile+'")');
+     const audit=await evaluate('window.__t21F3.auditB257OriginalDepthComposition()');
+     await sleep(230);
+     const shot=await screenshot('B258_INK_B_'+profile);
+     if(pose.gameActorsMoved!==0||pose.sourceStage!=='25/17/26/0'||
+        JSON.stringify(audit.actualActorScreenProjections.map(x=>x.worldPositionMeters))!==
+         JSON.stringify(baseline.actualActorScreenProjections.map(x=>x.worldPositionMeters)))
+      reject('B258_REAL_INK_ACTORS_MOVED_'+profile);
+     tests.push({profile,pose,audit,shot});
+    }
+    await evaluate('window.__t21F3.setB258OriginalCameraProfile("BASELINE")');
+    await sleep(250);
+    const back=await screenshot('B258_INK_A2_NATIVE_CAMERA_RESTORED');
+    const px=inspectB252OriginalUvRaster(
+     readFileSync(resolve(OUTPUT,frame.name+'.png')),
+     readFileSync(resolve(OUTPUT,tests[0].shot.name+'.png')),
+     readFileSync(resolve(OUTPUT,back.name+'.png')));
+    const afterFrozen=await evaluate('window.__t21F3.snapshot()');
+    if(!px.clearlyDifferent||!px.appearanceRestored||
+       frozen.tick!==afterFrozen.tick||
+       afterFrozen.b258NativeCameraComposition.profile!=='BASELINE'||
+       JSON.stringify(frozen.player.position)!==
+        JSON.stringify(afterFrozen.player.position)||
+       afterFrozen.originalSourceSolids!==25||
+       afterFrozen.originalPaintSurfaces!==17||
+       afterFrozen.originalSourceNavigationLinks!==26||
+       afterFrozen.sourceScoreablePromotions!==0||
+       b23.humanChangedCells<1||move<=0)
+     reject('B258_REAL_INK_CAMERA_NOT_RESTORED_'+JSON.stringify(px));
+    writeFileSync(resolve(OUTPUT,'b258-real-ink-camera-abca.json'),
+     JSON.stringify({schema:'B258_NATIVE_REAL_INK_CAMERA_ABCA',
+      baseline:frame,baselineDepth:baseline,candidates:tests,
+      restored:back,pixels:px,
+      genuineHumanChangedCells:b23.humanChangedCells,
+      realMoveMeters:move,realShots:fired.shotsFired-after.shotsFired,
+      source:'25/17/26/0',productionAuthorized:false},null,2));
+    console.log('B258_GENUINE_HUMAN_PAINT_CAMERA_ABCA_PASS',
+     JSON.stringify({pixels:px,paint:b23.humanChangedCells,
+      profiles:tests.map(x=>x.profile)}));
+    await evaluate('window.__t21F3.resume()');
+   }
  }
  if(w10b51){
   const pre=await evaluate('window.__t21F3.pause()');

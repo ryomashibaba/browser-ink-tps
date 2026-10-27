@@ -1,5 +1,7 @@
 import { Entity, Vec3 } from 'playcanvas';
 import {UndertowF3SmartOcclusion} from './UndertowF3SmartOcclusion';
+import {b258Pose,type B258CameraProfile}
+ from '../app/B258OriginalCameraComposition';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
@@ -25,6 +27,13 @@ export class ThirdPersonCamera {
   private sourceSmartOcclusionEnabled = false;
   private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
   private readonly alternateCameraPosition=new Vec3();
+  // B258: one opt-in paused, certified physics-clipped camera study.
+  private b258ResearchEnabled=false;
+  private b258ResearchProfile:B258CameraProfile='BASELINE';
+  private b258OriginalCamera:{
+   pitch:number;distance:number;shoulder:number;
+   offset:number;physicalDistance:number;side:'RIGHT'|'LEFT'
+  }|null=null;
   private sourceShoulderSide: 'RIGHT' | 'LEFT' = 'RIGHT';
   private currentShoulderOffset = 0.72;
   private sourcePracticeCameraCasts = 0;
@@ -58,9 +67,51 @@ export class ThirdPersonCamera {
       throw Error('T21_B26_SOURCE_PRACTICE_REQUIRED');
     this.sourceSmartOcclusionEnabled=true;
   }
+  /** Called exclusively by verified SOURCE QA app after URL opt-in. */
+  public enableB258ResearchCamera():void{
+   if(!this.sourcePracticeControls)throw Error('B258_SOURCE_PRACTICE_REQUIRED');
+   this.b258ResearchEnabled=true;
+  }
+  /** Replace only camera geometry; retain original real stage clipping. */
+  public setB258ResearchCameraProfile(name:B258CameraProfile):void{
+   if(!this.b258ResearchEnabled)
+    throw Error('B258_NATIVE_SOURCE_CAMERA_UNAUTHORIZED');
+   if(!this.b258OriginalCamera){
+    this.b258OriginalCamera={
+     pitch:this.pitch,distance:this.distance,shoulder:this.shoulder,
+     offset:this.currentShoulderOffset,
+     physicalDistance:this.currentCameraDistance,side:this.sourceShoulderSide
+    };
+   }
+   const original=this.b258OriginalCamera;
+   if(name==='BASELINE'){
+    this.pitch=original.pitch;
+    this.distance=original.distance;
+    this.shoulder=original.shoulder;
+    this.currentShoulderOffset=original.offset;
+    this.currentCameraDistance=original.physicalDistance;
+    this.sourceShoulderSide=original.side;
+   }else{
+    const pose=b258Pose(name);
+    this.pitch=pose.pitchDegrees;
+    this.distance=pose.distanceMeters;
+    this.shoulder=pose.shoulderMeters;
+    this.currentShoulderOffset=pose.shoulderMeters;
+    // Each study pose uses the genuine source 25-solid Rapier cast.
+    this.currentCameraDistance=Number.NaN;
+    this.sourceShoulderSide='RIGHT';
+   }
+   this.b258ResearchProfile=name;
+  }
   public sourcePracticeViewSnapshot(){
     return {
       sourcePracticeOnly:this.sourcePracticeControls,
+      b258OriginalCameraResearch:{
+       enabled:this.b258ResearchEnabled,
+       profile:this.b258ResearchProfile,
+       baselineStored:!!this.b258OriginalCamera,
+       researchOnly:true,physicalStageUnchanged:true
+      },
       b26AdaptiveVisibility:{
        enabled:this.sourceSmartOcclusionEnabled,
        ...this.sourceSmartOcclusion.snapshot()
