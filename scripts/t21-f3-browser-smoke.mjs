@@ -6,7 +6,7 @@
  */
 import {spawn,execFileSync} from 'node:child_process';
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
-import {verifyB77OriginalSourceAbaRaster}
+import {verifyB77OriginalSourceAbaRaster,inspectB252OriginalUvRaster}
  from './t21-w10b77-source-raster-restore.mjs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -3574,6 +3574,93 @@ async function main(){
     certifiedSolids:25,paintable:17,navLinks:26,
     sourceScoreablePromotion:0,actorTransformsRecovered:false,
     nativeFootpathAdded:false,realGpuBenchmark:false}));
+  // B252 true six-camera source research, kept exclusively in opt-in F3G
+  // CI where SHA-pinned original static UV/albedo assets are prepared.
+  // No gameplay topology, OBJ actor placement, or original scoring claims.
+  const b252Views=['CENTRAL OVERVIEW','TEAM A SOURCE','TEAM B SOURCE',
+   'HIGH TOP-DOWN','SOURCE GAP / A','SOURCE GAP / B'];
+  const b252Before=await evaluate('window.__t21F3.snapshot()');
+  const b252Frames=[];
+  for(let i=0;i<b252Views.length;i++){
+   const view=await evaluate(`(() => {
+    document.querySelector('#t21-f3-source-survey')?.click();
+    return window.__t21F3.snapshot();
+   })()`);
+   if(!view.sourceSurvey.active||view.sourceSurvey.view!==b252Views[i]||
+      !view.paused||!view.texturedSourceF3l.enabled||
+      view.originalSourceSolids!==25||view.originalPaintSurfaces!==17||
+      view.originalSourceNavigationLinks!==26||
+      view.sourceScoreablePromotions!==0||
+      view.sourceSurvey.physicalActorRelocations!==0)
+    reject('B252_SURVEY_ORIGINAL_SOURCE_AUTHORITY_'+b252Views[i]);
+   await sleep(200);
+   const id=String(i+1).padStart(2,'0');
+   const uv=await screenshot('B252_UV_'+id);
+   const flat=await evaluate(`(() => {
+    document.querySelector('#t21-f3l-textured')?.click();
+    return window.__t21F3.snapshot();
+   })()`);
+   if(flat.texturedSourceF3l.enabled||!flat.fullSource.enabled||
+      flat.sourceSurvey.view!==b252Views[i]||flat.tick!==view.tick||
+      flat.sourceScoreablePromotions!==0)
+    reject('B252_FLAT_SOURCE_REVIEW_AUTHORITY_'+b252Views[i]);
+   await sleep(200);
+   const flatShot=await screenshot('B252_FLAT_'+id);
+   const restored=await evaluate(`(() => {
+    document.querySelector('#t21-f3l-textured')?.click();
+    return window.__t21F3.snapshot();
+   })()`);
+   if(!restored.texturedSourceF3l.enabled||restored.fullSource.enabled||
+      restored.sourceSurvey.view!==b252Views[i]||
+      restored.tick!==view.tick||restored.sourceScoreablePromotions!==0)
+    reject('B252_UV_RESTORE_SOURCE_AUTHORITY_'+b252Views[i]);
+   await sleep(200);
+   const uvBack=await screenshot('B252_UV_RETURN_'+id);
+   const raster=inspectB252OriginalUvRaster(
+    readFileSync(resolve(OUTPUT,uv.name+'.png')),
+    readFileSync(resolve(OUTPUT,flatShot.name+'.png')),
+    readFileSync(resolve(OUTPUT,uvBack.name+'.png')));
+   if(!raster.appearanceRestored)
+    reject('B252_SOURCE_UV_VISUAL_NOT_RESTORED_'+
+     JSON.stringify({view:b252Views[i],restore:raster.originalUvRestoration}));
+   b252Frames.push({view:b252Views[i],uv,flat:flatShot,restored:uvBack,
+    raster,actorRelocations:0});
+  }
+  const b252End=await evaluate(`(() => {
+   document.querySelector('#t21-f3-source-survey')?.click();
+   return window.__t21F3.snapshot();
+  })()`);
+  if(b252End.sourceSurvey.active||b252End.sourceSurvey.view!=='PLAYER'||
+     !b252End.paused||!b252End.texturedSourceF3l.enabled||
+     b252End.tick!==b252Before.tick||
+     JSON.stringify(b252End.player.position)!==
+      JSON.stringify(b252Before.player.position)||
+     b252End.originalSourceSolids!==25||
+     b252End.originalPaintSurfaces!==17||
+     b252End.originalSourceNavigationLinks!==26||
+     b252End.sourceScoreablePromotions!==0)
+   reject('B252_SIX_CAMERA_SOURCE_WORLD_WAS_NOT_RESTORED');
+  const b252Report={
+   schema:'B252_PINNED_STATIC_ORIGINAL_UV_SIX_VIEW_EVIDENCE',
+   sourceTriangles:57578,originalTextures:ready.verifiedTextures,
+   observations:b252Frames,
+   viewsWithClearUvVsFlatContrast:b252Frames.filter(
+    p=>p.raster.clearlyDifferent).length,
+   viewsWithLowUvVsFlatContrast:b252Frames.filter(
+    p=>!p.raster.clearlyDifferent).map(p=>p.view),
+   allSixUvViewsRestored:true,actualActorPlacementRecovered:false,
+   actorRelocations:0,sourceAuthority:'25/17/26/0',
+   certifiedOpponentRoutes:'0/12',
+   releaseAuthorized:false,artVerdict:'HOLD_PENDING_VISUAL_EVALUATION'
+  };
+  writeFileSync(resolve(OUTPUT,'b252-six-view-source-fidelity.json'),
+   JSON.stringify(b252Report,null,2));
+  console.log('B252_REAL_WEBGL2_ORIGINAL_UV_SIX_VIEW_EVIDENCE_PASS',
+   JSON.stringify({views:b252Frames.length,
+    clearlyChanged:b252Report.viewsWithClearUvVsFlatContrast,
+    lowDifferenceViews:b252Report.viewsWithLowUvVsFlatContrast,
+    sourceTriangles:57578,originalTextures:ready.verifiedTextures,
+    trueActorPlacementsRecovered:false,sourceAuthority:'25/17/26/0'}));
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||

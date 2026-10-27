@@ -91,6 +91,20 @@ function compare(a,b){
   maxChannelDelta,
   totalPixels:count};
 }
+/** Report real source stage coverage differences, including empty/unchanged views.
+ * Never infer missing actor placements or physical navigation from pixels. */
+export function inspectB252OriginalUvRaster(uv,flat,restored){
+ const a=decodePng8(uv),b=decodePng8(flat),a2=decodePng8(restored);
+ const difference=compare(a,b),restore=compare(a,a2);
+ return {
+  uvVsFlat:difference,originalUvRestoration:restore,
+  appearanceRestored:restore.maxChannelDelta<=1&&
+   restore.changedPixels<=Math.max(3,Math.floor(restore.totalPixels*.0004)),
+  clearlyDifferent:difference.ratio>=.005&&
+   difference.changedByAtLeastEight>=Math.floor(difference.totalPixels*.002),
+  actorInstancesVerified:false,navigationCertified:false
+ };
+}
 export function verifyB77OriginalSourceAbaRaster(aPng,bPng,a2Png){
  const a=decodePng8(aPng),b=decodePng8(bPng),a2=decodePng8(a2Png);
  const restore=compare(a,a2),toggle=compare(a,b);

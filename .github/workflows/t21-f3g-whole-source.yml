@@ -7,6 +7,8 @@ on:
       - "scripts/t21-f3i-scene-inventory.*"
       - "scripts/t21-f3k-family-gallery.*"
       - "scripts/t21-f3l-*"
+      - "scripts/t21-f3-browser-smoke.mjs"
+      - "scripts/t21-w10b77-source-raster-restore.*"
       - "src/app/UndertowF3I*"
       - "src/app/UndertowF3K*"
       - "src/app/UndertowF3L*"
@@ -69,6 +71,8 @@ jobs:
           node -e "const m=require('./public/t21-f3g-source/manifest.json'); if(!m.verifiedAgainstPinnedSource||m.includedOriginalTriangles<1500||m.stagePlayableAuthority!=='NONE')process.exit(1); console.log('F3G_PINNED_WHOLE_STAGE',m.includedOriginalTriangles,m.groups.length)"
       - name: Test source-only verified UV preference and frozen authority
         run: npx vitest run src/app/UndertowF3VerifiedSourcePresentation.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts
+      - name: B252 original UV six-view raster analysis unit test
+        run: node --test scripts/t21-w10b77-source-raster-restore.test.mjs
       - name: Typecheck and build full-source opt-in browser bundle
         run: npm run build -- --base=/browser-ink-tps/
       - name: Exact whole stage real WebGL2 and existing human controls

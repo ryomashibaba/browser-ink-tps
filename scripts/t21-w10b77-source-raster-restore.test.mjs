@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {deflateSync} from 'node:zlib';
-import {verifyB77OriginalSourceAbaRaster} from './t21-w10b77-source-raster-restore.mjs';
+import {verifyB77OriginalSourceAbaRaster,inspectB252OriginalUvRaster} from './t21-w10b77-source-raster-restore.mjs';
 const header=Buffer.from([137,80,78,71,13,10,26,10]);
 const ch=(type,payload)=>{
  const name=Buffer.from(type),size=Buffer.alloc(4);
@@ -60,4 +60,16 @@ test('B77 strict PNG raster truncation/format safety',()=>{
  const corrupt=Buffer.from(a);corrupt[0]=0;
  assert.throws(()=>verifyB77OriginalSourceAbaRaster(corrupt,b,a2),
   /INVALID_REAL_BROWSER_PNG_HEADER/);
+});
+
+test('B252 reports both visible UV differences and absent contrast without inventing paths',()=>{
+ const real=inspectB252OriginalUvRaster(a,b,a2);
+ assert.equal(real.appearanceRestored,true);
+ assert.equal(real.clearlyDifferent,true);
+ assert.equal(real.uvVsFlat.changedPixels,5000);
+ assert.equal(real.actorInstancesVerified,false);
+ assert.equal(real.navigationCertified,false);
+ const blank=inspectB252OriginalUvRaster(a,a,a);
+ assert.equal(blank.appearanceRestored,true);
+ assert.equal(blank.clearlyDifferent,false);
 });
