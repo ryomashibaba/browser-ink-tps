@@ -19,6 +19,7 @@ export function installB245SourcePresentation(
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-play-panel,',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-source-survey,',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b58-source-session,',
+  '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b183-real-first-drop,',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b205-real-round,',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b211-real-battle-roster,',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b75-source-ink-live,',

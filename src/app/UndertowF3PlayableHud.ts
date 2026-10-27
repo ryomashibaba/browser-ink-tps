@@ -384,7 +384,11 @@ export function createF3PlayableHud(ui:HTMLElement){
  function render(value:F3PlayableHudState){
   const v=formatF3PlayableHud(value);
   clock.textContent=v.clock;
-  state.textContent=v.sessionState;
+  // B246: genuine frozen STAGING is READY in player view, not paused play.
+  // Legacy QA evidence text remains unchanged outside that display mode.
+  state.textContent=value.matchState==='STAGING'&&value.paused&&
+   ui.dataset.t21B245Presentation==='PLAYER'&&value.stopReason===null?
+    'READY · SOURCE ROUND':v.sessionState;
   state.style.color=value.stopReason?'#ff8790':'#90e8f2';
   hpBar.style.width=v.hp+'%';
   hpBar.style.background=v.hp<=30?'#ff8888':'#53e4ea';

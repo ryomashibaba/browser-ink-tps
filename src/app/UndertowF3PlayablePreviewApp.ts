@@ -2866,16 +2866,18 @@ export class UndertowF3PlayablePreviewApp{
   if(!this.b36FocusEnabled)return;
   const gpu=this.b22Trial.snapshot().status;
   const activeGpuTrial=gpu==='ARMED'||gpu==='RUNNING';
+  const presentation=this.panel.parentElement?.dataset.t21B245Presentation;
+  const playerView=presentation==='PLAYER';
   const inspecting=this.panel.parentElement?.dataset.t21B245Inspect==='true';
   const focus=document.pointerLockElement===this.canvas&&!activeGpuTrial&&!inspecting;
   this.panel.hidden=focus;
   this.surveyButton.hidden=focus;
   // Pointerlockchange updates focus immediately, before next physics frame.
   // Avoid a stale FULL radar when Chrome checks the newly locked HUD.
-  this.radar.setPlayFocus(focus);
-  // Keep real B25 practice progression visible, but hide its unusable
-  // START control while playing without an active practice attempt.
-  this.b25RunCard.hidden=focus&&this.b25Run.snapshot().status==='IDLE';
+  this.radar.setPlayFocus(focus||playerView);
+  // An inactive local paint challenge is not the 180s full round.
+  // Retain native challenges whenever ARMED/RUNNING/CLEAR for truthful play.
+  this.b25RunCard.hidden=(focus||playerView)&&this.b25Run.snapshot().status==='IDLE';
   this.canvas.dataset.t21W10B36PlayFocus=focus?'ON':'OFF';
  }
  private createB195CoopHud(ui:HTMLElement){

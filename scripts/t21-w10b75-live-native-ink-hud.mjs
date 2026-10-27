@@ -865,6 +865,66 @@ async function run(){
        readyUi.button!=='START 180s ROUND')
      fail('B242_FIRST_CLICK_READY_WORLD_ADVANCED_'+JSON.stringify({
       before:stableRound(readyBefore),after:stableRound(readyAfter),ui:readyUi}));
+    // B246: prove actual F8 PLAYER <-> QA reversibility on one frozen
+    // source READY world. Screenshots are real CDP Chromium framebuffers.
+    async function b246Screenshot(name){
+     const b=Buffer.from((await cmd('Page.captureScreenshot',
+      {format:'png',captureBeyondViewport:false})).data||'','base64');
+     if(b.length<10000||b.readUInt32BE(16)!==1600||b.readUInt32BE(20)!==900)
+      fail('B246_INVALID_CHROMIUM_FRAME_'+name);
+     writeFileSync(resolve(OUTPUT,name+'.png'),b);
+     return {file:name+'.png',bytes:b.length,sha256:createHash('sha256').update(b).digest('hex')};
+    }
+    const b246Read=()=>evaluate("(() => {\n const root=document.querySelector('#ui-root');\n const id=x=>document.getElementById(x);\n const visible=x=>{const e=id(x);return !!e&&!e.hidden&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;};\n const a=window.__t21F3?.snapshot?.();\n return {view:root?.dataset.t21B245Presentation,inspect:root?.dataset.t21B245Inspect,\n  status:id('t21-f3-hud-state')?.textContent,\n  stage:[a?.originalSourceSolids,a?.originalPaintSurfaces,a?.originalSourceNavigationLinks,a?.sourceScoreablePromotions],\n  tick:a?.tick,paused:a?.paused,remaining:a?.timeRemainingSeconds,\n  renderer:id('app-canvas')?.dataset.t21F3Renderer,\n  playerHud:visible('t21-f3-practice-hud'),\n  fullRoundDiagnostic:visible('t21-f3-b205-real-round'),\n  sessionDiagnostic:visible('t21-f3-b58-source-session'),\n  panel:visible('t21-f3-play-panel'),\n  paintChallenge:visible('t21-f3-b25-paint-run'),\n  descentDiagnostic:visible('t21-f3-b183-real-first-drop'),\n  radar:id('t21-f3-source-radar')?.dataset.t21B52RadarMode,\n  radarVisible:visible('t21-f3-source-radar'),\n  readyButton:visible('t21-f3-b202-resume'),\n  evidenceNodesPreserved:['t21-f3-b205-real-round','t21-f3-b58-source-session','t21-f3-b211-real-battle-roster',\n   't21-f3-b75-source-ink-live','t21-f3-b76-human-ink-coach'].every(x=>!!id(x)),\n  toggle:id('t21-f3-b245-view-toggle')?.textContent\n };\n})()");
+    const b246Before=await b246Read();
+    if(b246Before.view!=='PLAYER'||b246Before.inspect!=='false'||
+       b246Before.status!=='READY · SOURCE ROUND'||
+       b246Before.renderer!=='webgl2'||!b246Before.playerHud||
+       b246Before.fullRoundDiagnostic||b246Before.sessionDiagnostic||
+       b246Before.panel||b246Before.paintChallenge||
+       b246Before.descentDiagnostic||b246Before.radar!=='COMPACT'||
+       !b246Before.radarVisible||!b246Before.readyButton||
+       !b246Before.evidenceNodesPreserved||
+       b246Before.stage.join('/')!=='25/17/26/0'||
+       b246Before.tick!==0||b246Before.paused!==true||
+       b246Before.remaining!==180)
+     fail('B246_REAL_READY_PLAYER_HUD_INCOMPLETE_'+JSON.stringify(b246Before));
+    const b246PlayerFrame=await b246Screenshot('b246-source-player-ready');
+    const b246F8=async()=> {
+     for(const type of ['keyDown','keyUp'])
+      await cmd('Input.dispatchKeyEvent',{type,key:'F8',code:'F8',
+       windowsVirtualKeyCode:119,nativeVirtualKeyCode:119});
+    };
+    await b246F8();
+    const b246Qa=await b246Read();
+    if(b246Qa.view!=='QA'||b246Qa.inspect!=='true'||
+       !b246Qa.playerHud||!b246Qa.fullRoundDiagnostic||
+       !b246Qa.sessionDiagnostic||!b246Qa.panel||
+       !b246Qa.paintChallenge||!b246Qa.descentDiagnostic||
+       b246Qa.radar!=='FULL'||!b246Qa.evidenceNodesPreserved||
+       b246Qa.tick!==0||b246Qa.remaining!==180)
+     fail('B246_REAL_READY_QA_RECOVERY_FAILED_'+JSON.stringify(b246Qa));
+    const b246QaFrame=await b246Screenshot('b246-source-qa-ready');
+    await b246F8();
+    const b246Restored=await b246Read();
+    if(b246Restored.view!=='PLAYER'||b246Restored.inspect!=='false'||
+       b246Restored.status!=='READY · SOURCE ROUND'||
+       b246Restored.panel||b246Restored.paintChallenge||
+       b246Restored.descentDiagnostic||b246Restored.radar!=='COMPACT'||
+       b246Restored.tick!==0||b246Restored.remaining!==180||
+       b246Restored.fullRoundDiagnostic||!b246Restored.readyButton||
+       JSON.stringify(stableRound(readyAfter))!==
+        JSON.stringify(stableRound(await snapshot())))
+     fail('B246_F8_RESTORED_WORLD_OR_LAYOUT_CHANGED_'+JSON.stringify(b246Restored));
+    const b246RestoredFrame=await b246Screenshot('b246-source-player-restored');
+    const b246Evidence={schema:'B246_GENUINE_CHROMIUM_SOURCE_PRESENTATION',
+     fixedOriginalAuthority:'25/17/26/0',nativeTickBeforeStart:0,
+     noSyntheticTimeOrActors:true,officialWinner:'NONE',
+     player:b246Before,qa:b246Qa,restored:b246Restored,
+     screenshots:[b246PlayerFrame,b246QaFrame,b246RestoredFrame]};
+    writeFileSync(resolve(OUTPUT,'b246-native-player-qa-hud.json'),
+     JSON.stringify(b246Evidence,null,2));
+    console.log('B246_REAL_CHROMIUM_HUD_DISPLAY_RESTORED',JSON.stringify(b246Evidence));
     const readyImage=Buffer.from((await cmd('Page.captureScreenshot',{
      format:'png',captureBeyondViewport:false})).data,'base64');
     writeFileSync(resolve(OUTPUT,'b242-source-round-ready.png'),readyImage);
