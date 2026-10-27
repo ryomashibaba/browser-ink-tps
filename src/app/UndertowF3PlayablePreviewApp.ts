@@ -2877,7 +2877,11 @@ export class UndertowF3PlayablePreviewApp{
   this.radar.setPlayFocus(focus||playerView);
   // An inactive local paint challenge is not the 180s full round.
   // Retain native challenges whenever ARMED/RUNNING/CLEAR for truthful play.
-  this.b25RunCard.hidden=(focus||playerView)&&this.b25Run.snapshot().status==='IDLE';
+  // A1 co-op uses this card as its real user-start control even at READY.
+  // Hiding it would prevent B162 native co-op from being armed.
+  const dedicatedCoop=this.canvas.dataset.t21B193Coop==='REAL_A1_ORIGINAL_SOURCE';
+  this.b25RunCard.hidden=(focus||playerView)&&
+   this.b25Run.snapshot().status==='IDLE'&&!dedicatedCoop;
   this.canvas.dataset.t21W10B36PlayFocus=focus?'ON':'OFF';
  }
  private createB195CoopHud(ui:HTMLElement){
