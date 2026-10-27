@@ -96,6 +96,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud,sourceF3RealAimLineCue} from './UndertowF3PlayableHud';
+import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {createB160SourceCpuActivityView}
@@ -1575,6 +1576,8 @@ export class UndertowF3PlayablePreviewApp{
    if(document.hidden)this.pauseSourceRoundOnFocusLoss();
   });
   this.radar=createF3SourceRadar(ui,stage);
+  // B245 player view preserves all QA nodes, snapshots, physics and controls.
+  installB245SourcePresentation(ui,()=>this.refreshB36PlayFocus());
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
@@ -2863,7 +2866,8 @@ export class UndertowF3PlayablePreviewApp{
   if(!this.b36FocusEnabled)return;
   const gpu=this.b22Trial.snapshot().status;
   const activeGpuTrial=gpu==='ARMED'||gpu==='RUNNING';
-  const focus=document.pointerLockElement===this.canvas&&!activeGpuTrial;
+  const inspecting=this.panel.parentElement?.dataset.t21B245Inspect==='true';
+  const focus=document.pointerLockElement===this.canvas&&!activeGpuTrial&&!inspecting;
   this.panel.hidden=focus;
   this.surveyButton.hidden=focus;
   // Pointerlockchange updates focus immediately, before next physics frame.
