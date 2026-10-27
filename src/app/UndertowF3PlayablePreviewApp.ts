@@ -125,6 +125,8 @@ import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
+import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
+ type B254NativeVisualMode} from './B254NativeActorVisualIsolation';
 import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
  from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
@@ -1652,6 +1654,8 @@ export class UndertowF3PlayablePreviewApp{
     setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
     setB251OpticalSeparation:(on:boolean)=>this.setB251OpticalSeparation(on),
     setB253SourceUvLiveInk:(on:boolean)=>this.setB253SourceUvLiveInk(on),
+    setB254NativeVisualIsolation:(mode:B254NativeVisualMode)=>
+     this.setB254NativeVisualIsolation(mode),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -1885,6 +1889,34 @@ export class UndertowF3PlayablePreviewApp{
   if(trial.status==='ABORTED')
    this.b22TrialStatus.textContent='ABORTED · '+trial.stopReason+
     ' · NATIVE restored. Start again if needed.';
+ }
+ private setB254NativeVisualIsolation(mode:B254NativeVisualMode){
+  const p=new URL(location.href).searchParams;
+  // The B253 original UV material may reveal opaque native actor proxies
+  // THROUGH an unregistered source wall. This diagnosis is NEVER gameplay.
+  if(!this.paused||this.matchState!=='STAGING'||this.stopReason||
+     this.b203FullRound||!this.b253InkSafeVisualEnabled||
+     this.survey.snapshot().active||this.galleryIndex>=0||
+     document.pointerLockElement===this.canvas||
+     !this.texturedF3l?.root.enabled||
+     !b253VerifiedInkVisualOptIn(p,
+      this.texturedF3l.manifest.totalTriangles,
+      this.texturedF3l.manifest.textures.length))
+   throw Error('B254_ONLY_FROZEN_RESEARCH_VIEW_CAN_HIDE_ACTOR_RENDER');
+  const actor=this.app.root.findByName('Player');
+  const bots=(this.cpu as unknown as {bots:F3TrafficCpu[]}).bots;
+  if(!actor?.render||bots.length!==7||
+     bots.some(b=>!b.entity.render)||
+     this.canvas.dataset.t21B248Visual==='EIGHT_NATIVE_ACTORS_RENDER_ONLY')
+   throw Error('B254_NATIVE_ACTOR_RENDER_SOURCE_DRIFT');
+  const flags=b254ActorRenderFlags(mode);
+  actor.render.enabled=flags.playerVisible;
+  for(const b of bots)b.entity.render!.enabled=flags.cpuVisible;
+  this.canvas.dataset.t21B254VisualIsolation=mode;
+  return {mode,cpuRendersVisible:flags.cpuVisible?7:0,
+   playerRenderVisible:flags.playerVisible,
+   sourceCpuCount:bots.length,sourceIdLabels:bots.map(b=>b.id),
+   ...B254_NATIVE_VISUAL_AUTHORITY};
  }
  private setB253SourceUvLiveInk(on:boolean){
   if(!this.paused||this.stopReason||this.survey.snapshot().active||

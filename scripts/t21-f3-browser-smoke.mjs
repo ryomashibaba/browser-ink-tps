@@ -3712,6 +3712,67 @@ async function main(){
     reject('B253_SOURCE_UV_INK_UNVERIFIED_'+JSON.stringify(ink));
    await sleep(240);
    const inkFrame=await screenshot('B253_UV_INK_SAFE_READY');
+   if(process.env.T21_B254_NATIVE_VISUAL_ISOLATION==='1'){
+    // B254: frozen genuine player-camera pixel evidence, NOT renderer mocks.
+    // Isolate all seven existing CPU visual capsules from the real player
+    // capsule, then return to ALL before ANY actual gameplay input.
+    const firstState=await evaluate('window.__t21F3.snapshot()');
+    const proofs=[];
+    for(const mode of ['HIDE_CPU','HIDE_PLAYER','HIDE_BOTH','ALL']){
+     const change=await evaluate(
+      'window.__t21F3.setB254NativeVisualIsolation('+JSON.stringify(mode)+')');
+     if(change.mode!==mode||change.sourceCpuCount!==7||
+        change.source!=='25/17/26/0'||change.gameBodiesMoved!==0||
+        change.sourceNavLinksAdded!==0||
+        change.originalScoreablesAdded!==0||
+        change.staticOriginalMeshModified!==false||
+        change.productionAuthorized!==false)
+      reject('B254_RENDER_ONLY_NATIVE_ACTOR_ISOLATION_DENIED_'+
+       JSON.stringify(change));
+     await sleep(240);
+     const shot=await screenshot('B254_REAL_NATIVE_VISUAL_'+mode);
+     const raster=inspectB252OriginalUvRaster(
+      readFileSync(resolve(OUTPUT,inkFrame.name+'.png')),
+      readFileSync(resolve(OUTPUT,shot.name+'.png')),
+      readFileSync(resolve(OUTPUT,inkFrame.name+'.png')));
+     proofs.push({mode,shot,
+      cpuVisible:change.cpuRendersVisible,
+      playerVisible:change.playerRenderVisible,
+      realFrameDifference:raster.uvVsFlat});
+    }
+    const last=proofs[proofs.length-1];
+    const afterState=await evaluate('window.__t21F3.snapshot()');
+    const returned=readFileSync(resolve(OUTPUT,last.shot.name+'.png'));
+    const originalReady=readFileSync(resolve(OUTPUT,inkFrame.name+'.png'));
+    if(!returned.equals(originalReady)||
+       !proofs.find(x=>x.mode==='HIDE_BOTH')?.realFrameDifference.changedByAtLeastEight||
+       firstState.tick!==afterState.tick||
+       JSON.stringify(firstState.player.position)!==
+        JSON.stringify(afterState.player.position)||
+       afterState.originalSourceSolids!==25||
+       afterState.originalPaintSurfaces!==17||
+       afterState.originalSourceNavigationLinks!==26||
+       afterState.sourceScoreablePromotions!==0)
+     reject('B254_RENDER_ONLY_NATIVE_ACTOR_NO_GAME_STATE_RESTORATION');
+    const witness={
+     schema:'B254_FROZEN_ACTOR_PROXY_VISIBILITY_ABCD',
+     views:proofs,originalUvTriangles:57578,
+     nativeCpuActorsInspected:7,playerNativeRenderInspected:1,
+     originalImageRestoredByteForByte:true,
+     nativeWorldTickUnchanged:true,gameplaySource:'25/17/26/0',
+     stageAdded:0,actorPositionsChanged:0,
+     actorPlacementsCertified:false,officialMatchCertified:false,
+     sourceAssetsPublished:false
+    };
+    writeFileSync(resolve(OUTPUT,'b254-frozen-native-actor-visual-provenance.json'),
+     JSON.stringify(witness,null,2));
+    console.log('B254_NATIVE_ACTOR_RENDER_ISOLATION_PASS',
+     JSON.stringify(proofs.map(x=>({mode:x.mode,
+      changedPixelRatio:x.realFrameDifference.ratio,
+      changedStrong:x.realFrameDifference.changedByAtLeastEight,
+      cpuRendersVisible:x.cpuVisible,
+      playerRenderVisible:x.playerVisible}))));
+   }
    await evaluate('window.__t21F3.setB253SourceUvLiveInk(false)');
    await sleep(240);
    const originalRestored=await screenshot('B253_UV_ORIGINAL_RESTORED');
