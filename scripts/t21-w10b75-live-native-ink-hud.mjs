@@ -925,6 +925,38 @@ async function run(){
     writeFileSync(resolve(OUTPUT,'b246-native-player-qa-hud.json'),
      JSON.stringify(b246Evidence,null,2));
     console.log('B246_REAL_CHROMIUM_HUD_DISPLAY_RESTORED',JSON.stringify(b246Evidence));
+    // B250: same Chromium camera and paused zero-tick world, with only
+    // registered solid material/sky switch. No source/paint/actor writes.
+    const b250Before=await snapshot();
+    const b250Original=await evaluate(
+     'window.__t21F3.setB250StageReadability(false)');
+    await sleep(180);
+    const b250OriginalShot=await b246Screenshot('b250-original-source-ready');
+    const b250Readable=await evaluate(
+     'window.__t21F3.setB250StageReadability(true)');
+    await sleep(180);
+    const b250ReadableShot=await b246Screenshot('b250-readable-source-ready');
+    const b250After=await snapshot();
+    if(b250Original.enabled!==false||b250Readable.enabled!==true||
+       b250Readable.sourceSolids!==25||b250Readable.materialBindings<=0||
+       b250Original.renderSolids!==b250Readable.renderSolids||
+       b250Original.authority!=='25/17/26/0'||
+       b250Readable.authority!=='25/17/26/0'||
+       b250OriginalShot.sha256===b250ReadableShot.sha256||
+       b250Readable.productionAuthorized!==false||
+       b250After.sourceScoreablePromotions!==0||
+       JSON.stringify(stableRound(b250Before))!==
+        JSON.stringify(stableRound(b250After)))
+      fail('B250_RENDER_ONLY_AB_UNTRUSTED_'+
+       JSON.stringify({b250Original,b250Readable,b250OriginalShot,b250ReadableShot}));
+    const b250Evidence={schema:'B250_GENUINE_CHROMIUM_REGISTERED_SOURCE_AB',
+     original:b250Original,readable:b250Readable,
+     screenshots:[b250OriginalShot,b250ReadableShot],
+     tick:0,actorTeleports:0,source:'25/17/26/0',officialWinner:'NONE'};
+    writeFileSync(resolve(OUTPUT,'b250-render-source-ab.json'),
+     JSON.stringify(b250Evidence,null,2));
+    console.log('B250_REAL_REGISTERED_STAGE_MATERIAL_AB_PASS',
+     JSON.stringify(b250Evidence));
     const readyImage=Buffer.from((await cmd('Page.captureScreenshot',{
      format:'png',captureBeyondViewport:false})).data,'base64');
     writeFileSync(resolve(OUTPUT,'b242-source-round-ready.png'),readyImage);
@@ -1033,6 +1065,10 @@ async function run(){
     // B249: true PLAYING after seven existing CPUs physically rejoin. Native
     // human KCC, original impact ink and 25/17/26/0 are still measured.
     const b249Frame=await b246Screenshot('b249-real-native-inplay');
+    const b250Active=await evaluate(
+      "document.querySelector('#app-canvas')?.dataset.t21B250Readability");
+    if(b250Active!=='READABLE')
+     fail('B250_REAL_PLAYING_SOURCE_VISUAL_NOT_ACTIVE_'+b250Active);
     const b249Read=await evaluate(`(() => {
       const s=window.__t21F3.snapshot();
       const canvas=document.querySelector('#app-canvas');

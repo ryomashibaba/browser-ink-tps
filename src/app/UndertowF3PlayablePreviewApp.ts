@@ -128,6 +128,7 @@ import {loadF3kGallery} from './UndertowF3KFamilyGallery';
 import {loadF3lTexturedSource} from './UndertowF3LTexturedSourcePreview';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
+import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
 import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
@@ -317,6 +318,7 @@ export class UndertowF3PlayablePreviewApp{
  private b56NextVariant:B56PracticeVariant='CLASSIC';
  private readonly structures:ReturnType<typeof buildF3OriginalOpticalStructures>;
  private readonly sourceCompletion:ReturnType<typeof buildF3eOriginalSourceCoverage>;
+ private b250SourceView:B250SourceView|null=null;
  private wholeSourceStatus:'OFF'|'LOADING'|'READY'|'MISSING'|'ERROR'='OFF';
  private wholeSourceTriangles=0;
  private wholeSourceGroups=0;
@@ -500,6 +502,11 @@ export class UndertowF3PlayablePreviewApp{
   this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
    GAME_CONFIG.ink.atlasGutterPixels,true);
   buildTestStage(app,stage,surfaces,this.atlas);
+  if(this.b203FullRound&&
+     new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'){
+   this.b250SourceView=installB250SourceView(app,cameraEntity,stage);
+   this.canvas.dataset.t21B250Readability='READABLE';
+  }
   // Reviewed true-original optical structure triangles only. All 25
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
@@ -1628,6 +1635,7 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3SourceStage=stage.metadata.id;
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
+    setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -1861,6 +1869,15 @@ export class UndertowF3PlayablePreviewApp{
   if(trial.status==='ABORTED')
    this.b22TrialStatus.textContent='ABORTED · '+trial.stopReason+
     ' · NATIVE restored. Start again if needed.';
+ }
+ private setB250StageReadability(on:boolean){
+  if(!this.b250SourceView||!this.b203FullRound||!this.paused||
+     this.clock.tick!==0||this.stopReason||
+     document.pointerLockElement===this.canvas)
+   throw Error('B250_REQUIRES_FROZEN_SOURCE_READY');
+  this.b250SourceView.setEnabled(on);
+  this.canvas.dataset.t21B250Readability=on?'READABLE':'ORIGINAL';
+  return this.b250SourceView.snapshot();
  }
  private configureSourceRenderQuality(quality:'NATIVE'|'PERFORMANCE'){
   if(this.sourceRenderQuality===quality)return;
