@@ -140,6 +140,8 @@ import {loadF3lTexturedSource,b253VerifiedInkVisualOptIn}
 import {B259_RASTER_MASKS,b259RasterEligible,b259UvVisible,
  b259NativeVisible,B259_RASTER_AUTHORITY,type B259RasterMask}
  from './B259SourceRasterLayers';
+import {B260_SOURCE_TARGETS,b260Target,b260SourceGate,b260DrawVisible,
+ B260_SOURCE_AUTHORITY} from './B260SourceMaterialAttribution';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1681,6 +1683,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB258OriginalCameraProfile(name),
     setB259SourceRasterLayer:(mask:B259RasterMask)=>
      this.setB259SourceRasterLayer(mask),
+    setB260SourceMaterialHidden:(name:string|null)=>
+     this.setB260SourceMaterialHidden(name),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -2165,6 +2169,75 @@ export class UndertowF3PlayablePreviewApp{
    paintDrawVisible:b259NativeVisible(mask,'PAINT'),
    solidDrawVisible:b259NativeVisible(mask,'SOLID'),
    exactSourceRenderIdentityVerified:true,...B259_RASTER_AUTHORITY};
+ }
+ /** B260 original SHA-verified UV material optical isolation only.
+  * Never alter physics, paint, actor, alpha/depth or source mesh bytes. */
+ private setB260SourceMaterialHidden(name:string|null){
+  if(name!==null&&!b260Target(name))
+   throw Error('B260_UNKNOWN_ORIGINAL_UV_MATERIAL');
+  const uv=this.texturedF3l;
+  const stage=this.app.root.findByName('StageRoot') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  if(!uv||!stage?.enabled||!b260SourceGate(
+   new URL(location.href).searchParams,{
+    paused:this.paused,staging:this.matchState==='STAGING',
+    stopped:!!this.stopReason,fullRound:this.b203FullRound,
+    pointerLocked:document.pointerLockElement===this.canvas,
+    otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+    verifiedUv:this.texturedF3lStatus==='READY'&&!!uv.root.enabled,
+    inkSafe:this.b253InkSafeVisualEnabled,
+    humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+    b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+    cameraBaseline:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+    solids:this.rawStage.solids.length,
+    paintable:this.rawStage.paintSurfaces.length,
+    links:this.rawStage.navigationLinks?.length??0,scoreable:0,
+    triangles:uv.manifest.totalTriangles,
+    textures:uv.manifest.textures.length,cpuCount:bots.length
+   },this.canvas.dataset.t21B259RasterLayer??'BASELINE'))
+   throw Error('B260_FROZEN_PINNED_SOURCE_MATERIAL_AUDIT_UNAUTHORIZED');
+  const source=uv.manifest.materials,children=uv.root.children;
+  if(source.length!==children.length||
+     !B260_SOURCE_TARGETS.every(t=>
+      source.filter(m=>m.name===t.name&&m.kind===t.kind).length===1)||
+     source.reduce((sum,m)=>sum+m.triangles,0)!==57578)
+   throw Error('B260_ORIGINAL_MATERIAL_SOURCE_IDENTITY_INVALID');
+  const prior=this.canvas.dataset.t21B260HiddenMaterial||null;
+  if(prior!==null&&!b260Target(prior))
+   throw Error('B260_UNKNOWN_PREVIOUS_MATERIAL');
+  const rows=children.map((child,i)=>{
+   const expected='T21F3L:ORIGINAL_STATIC_'+source[i]!.name+'_NO_COLLISION';
+   if(!(child instanceof Entity)||child.name!==expected||
+      !child.render||child.render.meshInstances.length!==1)
+    throw Error('B260_SOURCE_RENDERER_PROVENANCE_INVALID');
+   return child.render.meshInstances;
+  });
+  if(rows.some((row,i)=>row.some(mesh=>
+       mesh.visible!==b260DrawVisible(source[i]!.name,prior))))
+   throw Error('B260_ORIGINAL_MATERIAL_RENDERER_DRIFT');
+  const paint=stage.children.filter(c=>c.name.startsWith('PaintSurface:'));
+  const solids=stage.children.filter(c=>!c.name.startsWith('PaintSurface:'));
+  if(paint.length!==17||paint.some(c=>!(c instanceof Entity)||!c.render||
+      !this.b45SourceSurfaces.some(surface=>c.name==='PaintSurface:'+surface.id)||
+      c.render.meshInstances.some(m=>!m.visible))||
+     solids.length!==this.rawStage.solids.filter(s=>s.render).length||
+     solids.some(c=>!(c instanceof Entity)||!c.render||
+      !this.rawStage.solids.some(s=>s.id===c.name&&s.render)||
+      c.render.meshInstances.some(m=>!m.visible)))
+   throw Error('B260_NATIVE_PAINT_OR_SOLIDS_DISPLAY_DRIFT');
+  rows.forEach((row,i)=>row.forEach(m=>{
+   m.visible=b260DrawVisible(source[i]!.name,name);
+  }));
+  this.canvas.dataset.t21B260HiddenMaterial=name??'';
+  const selected=b260Target(name);
+  return {hiddenMaterial:name,materialKind:selected?.kind??null,
+   hiddenTriangles:source.find(m=>m.name===name)?.triangles??0,
+   sourceMaterialGroups:source.length,
+   originalVisibleGroups:source.filter(m=>b260DrawVisible(m.name,name)).length,
+   verifiedSourceTextures:uv.manifest.textures.length,
+   actualPaintDisplayGroups:paint.length,
+   existingSolidDisplayGroups:solids.length,
+   exactSourceMaterialIdentityVerified:true,...B260_SOURCE_AUTHORITY};
  }
  /** B258 opt-in camera-only study: real Rapier stage camera cast retained. */
  private setB258OriginalCameraProfile(name:B258CameraProfile){
@@ -4085,6 +4158,12 @@ export class UndertowF3PlayablePreviewApp{
    b259RasterLayerAudit:{
     requested:new URL(location.href).searchParams.get('t21B259')==='layerAudit',
     mask:this.canvas.dataset.t21B259RasterLayer??'BASELINE',
+    renderOnly:true,sourceAuthority:'25/17/26/0',
+    artCertified:false,productionAuthorized:false
+   },
+   b260OriginalSourceMaterialAudit:{
+    requested:new URL(location.href).searchParams.get('t21B260')==='materialAudit',
+    hiddenMaterial:this.canvas.dataset.t21B260HiddenMaterial||null,
     renderOnly:true,sourceAuthority:'25/17/26/0',
     artCertified:false,productionAuthorized:false
    },
