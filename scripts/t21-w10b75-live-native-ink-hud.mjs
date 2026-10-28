@@ -17,6 +17,7 @@ const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
 const mode=process.env.T21_W10B75_AIM||'FIXED';
 const b287ReadyOnly=process.env.T21_B287_READY_ONLY==='1';
 const b288ActorAb=process.env.T21_B288_ACTOR_AB==='1';
+const b289InPlayAb=process.env.T21_B289_INPLAY_ACTOR_AB==='1';
 const b179Recovery=process.env.T21_B179_NATIVE_SOURCE_RECOVERY==='1';
 const b180Patches=process.env.T21_B180_NATIVE_SOURCE_PATCH_AIM==='1';
 const b182NativeSight=process.env.T21_B182_NATIVE_ORIGINAL_COMBAT_SIGHT==='1';
@@ -35,6 +36,8 @@ const b100Right=process.env.T21_W10B99_VARIANT==='RIGHT_SHORT';
 if(process.env.T21_W10B99_VARIANT&&!b99Left&&!b100Right)
  throw Error('B100_UNKNOWN_REAL_HUMAN_INPUT_VARIANT');
 if(!['FIXED','SWEEP'].includes(mode))throw Error('B75_BAD_MODE');
+if(b289InPlayAb&&(!b287ReadyOnly||mode!=='FIXED'))
+ throw Error('B289_REQUIRES_GENUINE_180S_READY_NATIVE_FIXED_PATH');
 if(b288ActorAb&&!b287ReadyOnly)
  throw Error('B288_ACTOR_AB_REQUIRES_B287_NATIVE_READY_GATE');
 if(b287ReadyOnly&&(mode!=='FIXED'||
@@ -1015,6 +1018,143 @@ async function run(){
        JSON.stringify(evidence,null,2));
       console.log('B288_REAL_CHROMIUM_ACTOR_RENDER_ABCA_PASS',
        JSON.stringify(evidence));
+     }
+     if(b289InPlayAb){
+      // B289: choose actual START 180s by CDP mouse; use genuine
+      // 60Hz native KeyW+real bullets, not synthetic snapshots or teleports.
+      const ready=await snapshot();
+      if(ready.tick!==0||ready.timeRemainingSeconds!==180||!ready.paused)
+       fail('B289_ORIGINAL_NATIVE_READY_NOT_STABLE');
+      const origin=ready.player.position;
+      const chosen=await evaluate(`(() => {
+       const b=document.querySelector('#t21-f3-b202-resume');
+       const r=b?.getBoundingClientRect();
+       return {button:b?.textContent,x:r?.left+r?.width/2,
+        y:r?.top+r?.height/2};
+      })()`);
+      if(!chosen.button?.includes('START 180s')||
+         !(chosen.x>0&&chosen.x<1600&&chosen.y>0&&chosen.y<900))
+       fail('B289_GENUINE_ROUND_START_UNAVAILABLE');
+      await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+       x:chosen.x,y:chosen.y,button:'none'});
+      for(const type of ['mousePressed','mouseReleased'])
+       await cmd('Input.dispatchMouseEvent',
+        {type,x:chosen.x,y:chosen.y,button:'left',clickCount:1});
+      const started=await until(async()=>{
+       const s=await snapshot();
+       return s.matchState==='PLAYING'&&!s.paused&&s.tick>0?s:false;
+      },45000);
+      const forward={key:'w',code:'KeyW',windowsVirtualKeyCode:87,
+       nativeVirtualKeyCode:87};
+      await cmd('Input.dispatchKeyEvent',{type:'keyDown',...forward});
+      await cmd('Input.dispatchMouseEvent',{type:'mousePressed',
+       x:800,y:450,button:'left',clickCount:1});
+      let moved;
+      try{
+       moved=await until(async()=>{
+        const s=await snapshot();
+        if(s.stopReason)fail('B289_REAL_NATIVE_KCC_SAFETY_STOP_'+s.stopReason);
+        const p=s.player.position;
+        const distance=Math.hypot(p[0]-origin[0],p[1]-origin[1],p[2]-origin[2]);
+        return s.matchState==='PLAYING'&&s.tick>=started.tick+42&&
+         s.shotsFired>=1&&s.b23HumanInkFeedback.humanChangedCells>0&&
+         distance>=.3?s:false;
+       },120000);
+      }finally{
+       await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
+        x:800,y:450,button:'left',clickCount:1});
+       await cmd('Input.dispatchKeyEvent',{type:'keyUp',...forward});
+      }
+      const genuineLive=await b246Screenshot('b289-real-input-live-before-pause');
+      for(const type of ['keyDown','keyUp'])
+       await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
+        windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+      const paused=await until(async()=>{
+       const s=await snapshot();
+       return s.paused&&s.matchState==='PLAYING'&&!s.stopReason&&
+        await evaluate('document.pointerLockElement===null')?s:false;
+      },30000);
+      await sleep(300);
+      const still=await snapshot();
+      if(still.tick!==paused.tick||still.cpu.physicalFootRelocations!==0||
+         still.originalSourceSolids!==25||still.originalPaintSurfaces!==17||
+         still.originalSourceNavigationLinks!==26||
+         still.sourceScoreablePromotions!==0||
+         still.b23HumanInkFeedback.humanChangedCells<1||
+         still.timeRemainingSeconds>=180)
+       fail('B289_NATIVE_PAUSED_SOURCE_CHANGED');
+      // URL fragment is an explicit nonproduction research permission,
+      // not a game tick or actor write; restore original URL after A/B/C/A.
+      const originalUrl=await evaluate('location.href');
+      await evaluate(`(() => {const u=new URL(location.href);
+       u.searchParams.set('t21B289','nativeInPlayActorArt');
+       history.replaceState(null,'',u.href);return true;})()`);
+      const cleanStable=JSON.stringify(stableRound(still));
+      // UI-only photo mode: hide PAUSE modal without unpausing the world;
+      // keep other native player HUD, radar and real scene intact.
+      const modal=await evaluate(`(() => {
+       const el=document.querySelector('#t21-f3-b202-real-pause');
+       if(!el||el.hidden||getComputedStyle(el).display==='none')
+        return {valid:false};
+       const visibility=el.style.visibility;
+       el.style.visibility='hidden';
+       return {valid:true,visibility};
+      })()`);
+      if(!modal.valid)fail('B289_NATIVE_PAUSE_MODAL_UNAVAILABLE');
+      try{
+       await sleep(170);
+       const snaps=[{mode:'B248_ORIGINAL',
+        image:await b246Screenshot('b289-native-a-original-after-ink')}];
+       for(const variant of ['B268_COMPACT','B269_REAR_IDENTITY','B248_ORIGINAL']){
+        const reply=await evaluate(
+         'window.__t21F3.setB289RealInPlayActorVisual('+
+         JSON.stringify(variant)+','+JSON.stringify(origin)+')');
+        if(reply.mode!==variant||reply.visualsOnly!==true||
+           reply.existingActors!==8||reply.actorRelocations!==0||
+           reply.nativeWorldWrites!==0||reply.scoreablePromotions!==0||
+           reply.originalSourceCollidersAdded!==0||
+           reply.artAccepted!==false||reply.productionAuthorized!==false||
+           reply.actualCpuIds.join(',')!=='A1,A2,A3,B1,B2,B3,B4')
+         fail('B289_ART_VARIANT_AUTHORITY_DRIFT_'+JSON.stringify(reply));
+        await sleep(190);
+        const image=await b246Screenshot(
+         variant==='B268_COMPACT'?'b289-native-b-compact-after-ink':
+         variant==='B269_REAR_IDENTITY'?'b289-native-c-identity-after-ink':
+         'b289-native-a-restored-after-ink');
+        snaps.push({mode:variant,image});
+        if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+         fail('B289_NATIVE_PLAYER_CPU_WORLD_CHANGED');
+       }
+       if(snaps[0].image.sha256===snaps[1].image.sha256||
+          snaps[1].image.sha256===snaps[2].image.sha256||
+          snaps[0].image.sha256===snaps[2].image.sha256||
+          snaps[0].image.sha256!==snaps[3].image.sha256)
+        fail('B289_NATIVE_AFTER_INK_ART_ABCA_RASTER_IDENTITY_FAILED');
+       const out={schema:'B289_REAL_NATIVE_MOVED_PAINTED_PAUSED_ART_ABCA',
+        originalSource:'25/17/26/0',startTick:ready.tick,
+        finalTrueNativeTick:still.tick,
+        realPlayerPositionBefore:origin,
+        realPlayerPositionAfter:still.player.position,
+        realPlayerShots:still.shotsFired,
+        realHumanPaintCells:still.b23HumanInkFeedback.humanChangedCells,
+        genuineCpuRejoinedAtFreeze:still.cpu.physicalRejoins.length,
+        trueInPlayFrame:genuineLive,identicalFrozenFrames:snaps,
+        exactOriginalFramebufferRestored:true,
+        actorRelocations:0,addedColliders:0,addedNavLinks:0,
+        scoreablePromotions:0,artAccepted:false,
+        unrestricted4v4Certified:false,productionAuthorized:false};
+       writeFileSync(resolve(OUTPUT,'b289-native-real-ink-actor-art-abca.json'),
+        JSON.stringify(out,null,2));
+       console.log('B289_REAL_NATIVE_INPLAY_ART_ABCA_PASS',JSON.stringify(out));
+      }finally{
+       await evaluate(`(() => {
+        const el=document.querySelector('#t21-f3-b202-real-pause');
+        if(el)el.style.visibility=${JSON.stringify(modal.visibility)};
+        history.replaceState(null,'',${JSON.stringify(originalUrl)});
+        return true;})()`);
+      }
+      if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+       fail('B289_NATIVE_WORLD_NOT_RESTORED_AFTER_STUDY');
      }
      return;
     }

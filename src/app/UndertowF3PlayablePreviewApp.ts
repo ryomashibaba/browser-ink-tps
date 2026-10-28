@@ -131,6 +131,8 @@ import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
 import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
  type B255ActorPresentation} from './B255SourceActorReview';
 import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
+import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
+ from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
  from './B288NativeSourceActorArtGate';
 import {b268VariantAccepted,b268RenderResearchGate,B268_VISUAL_AUTHORITY,
@@ -1713,6 +1715,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB268SourceActorComposition(mode),
     setB288FrozenSourceActorVisual:(mode:B268RenderVariant)=>
      this.setB288FrozenSourceActorVisual(mode),
+    setB289RealInPlayActorVisual:(mode:B268RenderVariant,origin:readonly [number,number,number])=>
+     this.setB289RealInPlayActorVisual(mode,origin),
     setB256SourceOpticalAperture:(on:boolean)=>
      this.setB256SourceOpticalAperture(on),
     auditB257OriginalDepthComposition:()=>
@@ -2119,6 +2123,56 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21B288SourceActorStyle=mode;
   return {mode,previous,actualRealCpuIds:bots.map(b=>b.id),
    ...B288_ART_RESEARCH_AUTHORITY};
+ }
+ /** B289 art study: after true source human movement and real ink,
+  * compare existing actor art on the SAME genuinely paused native round. */
+ private setB289RealInPlayActorVisual(mode:B268RenderVariant,
+  origin:readonly [number,number,number]){
+  if(origin.length!==3||origin.some(x=>!Number.isFinite(x)))
+   throw Error('B289_INVALID_NATIVE_INITIAL_FOOT');
+  const actual=this.snapshot();
+  const here=actual.player.position;
+  const meters=Math.hypot(
+   here[0]-origin[0],here[1]-origin[1],here[2]-origin[2]);
+  const player=this.app.root.findByName('Player') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  const actors=player?[player,...bots.map(x=>x.entity)]:[];
+  const visuals=actors.map(x=>b248ExistingSourceActorVisual(x));
+  const valid=b289RealSourceInPlayArtEligible({
+   url:new URL(location.href).searchParams,
+   selectedNativeCombat:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+   fullRound:this.b203FullRound,paused:this.paused,nativeTick:this.clock.tick,
+   matchState:this.matchState,stopReason:this.stopReason,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   surveyActive:this.survey.snapshot().active,
+   galleryActive:this.galleryIndex>=0,nativeRenderer:actual.renderer,
+   originalSolids:this.rawStage.solids.length,
+   originalPaint:this.rawStage.paintSurfaces.length,
+   originalLinks:this.rawStage.navigationLinks?.length??0,
+   scoreable:this.b45SourceSurfaces.filter(x=>x.isScoreable).length,
+   cpuActorIds:bots.map(x=>x.id),
+   playerRenderInstalled:!!player?.render&&
+    !!player.children.find(x=>x.name==='B248:GEAR_VISUAL'),
+   sourceVisualsInstalled:actors.filter((x,i)=>!!x.render&&
+    !!visuals[i]&&
+    x.children.filter(y=>y.name==='B248:GEAR_VISUAL').length===1).length,
+   actorBodyRelocations:actual.cpu.physicalFootRelocations,
+   acceptedHumanShots:actual.shotsFired,
+   actualHumanPaintCells:actual.b23HumanInkFeedback.humanChangedCells,
+   genuinePlayerTravelMeters:meters,
+   timeRemainingSeconds:actual.timeRemainingSeconds
+  },mode);
+  if(!valid)throw Error('B289_REAL_NATIVE_INPLAY_ART_STUDY_UNAUTHORIZED');
+  const previous=this.canvas.dataset.t21B289ActorVariant??'B248_ORIGINAL';
+  if(!b268VariantAccepted(previous))
+   throw Error('B289_BAD_PREVIOUS_REAL_ACTOR_RENDER');
+  for(const visual of visuals)visual!.setResearchVariant(mode);
+  this.canvas.dataset.t21B289ActorVariant=mode;
+  return {mode,previous,actualPlayerTravelMeters:meters,
+   realHumanShots:actual.shotsFired,
+   realHumanChangedCells:actual.b23HumanInkFeedback.humanChangedCells,
+   realOriginalTick:actual.tick,
+   actualCpuIds:bots.map(x=>x.id),...B289_NATIVE_ART_AUTHORITY};
  }
  /** B256 shader-only aperture in authentic, pinned, nonproduction SOURCE UV.
   * Uses screen-relative fragment attenuation, never a synthetic collision. */
