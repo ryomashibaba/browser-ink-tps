@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {B260_SOURCE_TARGETS,b260Target,b260SourceGate,
- b260DrawVisible,B260_SOURCE_AUTHORITY} from './B260SourceMaterialAttribution';
+ b260DrawVisible,b260NestedDrawGroupVisible,B260_SOURCE_AUTHORITY} from './B260SourceMaterialAttribution';
 const url=new URLSearchParams('t21Play=preview&t21FullSource=review&'+
  't21B253=liveInk&t21B255=actorStudy&t21B257=depthAudit&'+
  't21B258=cameraStudy&t21B259=layerAudit&t21B260=materialAudit');
@@ -25,6 +25,21 @@ describe('B260 original source material pixel sensitivity study',()=>{
   const deterministic=new URLSearchParams(url);
   deterministic.set('t21QaInput','deterministic');
   expect(b260SourceGate(deterministic,ctx,'BASELINE')).toBe(false);
+ });
+ it('traverses certified footprint child renderers, not only a parent component',()=>{
+  const footprint={render:null,children:[
+   {render:{meshInstances:[{visible:true}]},children:[]},
+   {render:{meshInstances:[{visible:true}]},children:[]}
+  ]};
+  expect(b260NestedDrawGroupVisible(footprint)).toBe(true);
+  expect(b260NestedDrawGroupVisible({...footprint,children:[
+   {render:{meshInstances:[{visible:true}]},children:[]},
+   {render:{meshInstances:[{visible:false}]},children:[]}
+  ]})).toBe(false);
+  expect(b260NestedDrawGroupVisible({render:null,children:[]})).toBe(false);
+  expect(()=>b260NestedDrawGroupVisible({
+   render:null,children:[null]
+  })).toThrow('B260_INVALID_DRAW_TREE_NODE');
  });
  it('can hide ONLY one known original material, never all UV/paint',()=>{
   expect(B260_SOURCE_TARGETS.length).toBe(2);
