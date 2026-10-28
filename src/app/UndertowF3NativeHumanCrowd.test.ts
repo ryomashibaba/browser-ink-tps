@@ -39,6 +39,25 @@ describe('F3C live human native Crowd life cycle',()=>{
   expect(steering.snapshot.playerFootMoved).toBe(false);
   expect(steering.snapshot.sourceNavmeshChanged).toBe(false);
   expect(steering.snapshot.fakeHumanPhysicalActors).toBe(0);
+  // B280 reproduces the genuine B279 unsafe mid-descent physical HUMAN foot.
+  // A matching Recast projection must NEVER substitute for actual Rapier
+  // grounded authority; withhold only the eighth passive Crowd proxy.
+  const realAirborneFoot={x:0.01658373326063156,
+   y:6.200106029510498,z:55.496639251708984};
+  steering.syncActualPlayerFoot(realAirborneFoot,false);
+  expect(steering.snapshot.active).toBe(false);
+  expect(steering.snapshot.detaches).toBe(2);
+  expect(steering.snapshot.airborneOrUnverifiableTicks).toBeGreaterThanOrEqual(2);
+  expect(steering.snapshot.playerFootMoved).toBe(false);
+  expect(steering.snapshot.sourceNavmeshChanged).toBe(false);
+  // Re-acquisition requires real stable grounded native KCC across steps,
+  // not an immediate synthetic snap to a new original source location.
+  steering.syncActualPlayerFoot(human,true);
+  expect(steering.snapshot.active).toBe(false);
+  steering.syncActualPlayerFoot(human,true);
+  expect(steering.snapshot.active).toBe(true);
+  expect(steering.snapshot.attaches).toBe(3);
+  expect(steering.snapshot.productionAuthorized).toBe(false);
   steering.dispose();
   expect(steering.snapshot.active).toBe(false);
   expect(steering.snapshot.productionAuthorized).toBe(false);

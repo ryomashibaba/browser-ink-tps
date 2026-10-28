@@ -6,6 +6,10 @@ on:
       - "scripts/qa-offline/t21-b273-real-native-kcc-transition*.mjs"
       - "scripts/qa-offline/t21-b275-fast-native-kcc.mjs"
       - "scripts/qa-offline/t21-b277-real-keyboard-diagnostic*.mjs"
+      - "src/ai/CpuAgentSystem.ts"
+      - "src/app/UndertowF3NativeHumanCrowd.ts"
+      - "src/app/UndertowF3NativeHumanCrowd.test.ts"
+      - "src/app/UndertowF3PlayablePreviewApp.ts"
       - ".github/workflows/t21-b275-fast-native-kcc.yml"
   workflow_dispatch:
 permissions:
@@ -67,7 +71,8 @@ jobs:
           node --check scripts/qa-offline/t21-b275-fast-native-kcc.mjs
           node --test scripts/qa-offline/t21-b273-real-native-kcc-transition.test.mjs
           node --test scripts/qa-offline/t21-b277-real-keyboard-diagnostic.test.mjs
-      - name: Build unchanged source browser game
+          npx vitest run src/app/UndertowF3NativeHumanCrowd.test.ts
+      - name: Build real original-source game with bounded passive-human gate
         run: npm run build -- --base=/browser-ink-tps/
       - name: Real Chrome WebGL2 source KCC from native keyboard
         run: node scripts/qa-offline/t21-b275-fast-native-kcc.mjs

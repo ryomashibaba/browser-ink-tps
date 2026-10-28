@@ -48,9 +48,20 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
     stage.navigationLinks!==frozen.navigationLinks)
    throw Error('T21_F3C_HUMAN_NATIVE_CROWD_NONPRODUCTION_ONLY');
  }
- syncActualPlayerFoot(foot:Foot){
+ syncActualPlayerFoot(foot:Foot,rapierGrounded=true){
   if(![foot.x,foot.y,foot.z].every(Number.isFinite))
    throw Error('T21_F3C_HUMAN_NONFINITE_PHYSICAL_FOOT');
+  // B280: physical Rapier KCC may be airborne while source Recast
+  // closestPoint coincidentally reports a 0m projection residual.
+  // The eighth nonphysical HUMAN steering proxy MUST be withheld until
+  // genuine Rapier grounded. This does not suppress seven CPUs, change
+  // collision, relax the original 2m drift safety fence or add geometry.
+  if(rapierGrounded!==true){
+   this.suspend();
+   this.excluded++;
+   this.previous={...foot};
+   return;
+  }
   // A single Recast update moved ONLY this passive human crowd proxy
   // 108m at a genuine first-drop landing. Withhold the unsafe passive
   // proxy solely on the exact two original-source slab footprints.

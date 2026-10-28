@@ -3216,8 +3216,13 @@ export class UndertowF3PlayablePreviewApp{
      });
     }
     const cpuStart=this.b20ProfileStart();
+    // B280: actual native Rapier grounded state (already synchronized by
+    // player.syncAfterPhysics), not a Recast projection/QA movement guess.
+    // Only the eighth NONPHYSICAL passive-human Crowd steering proxy uses
+    // this flag; actual seven CPUs and human Rapier collision remain intact.
     this.cpu.fixedUpdate(seconds,true,Team.A,
-     this.player.getPosition(this.p),alive&&!this.w10b14);
+     this.player.getPosition(this.p),alive&&!this.w10b14,
+     this.stats.playerGrounded);
     this.b20ProfileStop('sevenCpuFixed',cpuStart);
     // Only after real native 60Hz CPU physics; use ACTUAL shared Rapier
     // A1 collider identity and ACTUAL PlayerController KCC contacts.

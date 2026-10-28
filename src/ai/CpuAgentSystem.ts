@@ -106,7 +106,9 @@ export interface CpuSharedGroundStepAuthority {
 /** T21-D / M4 only: restore the physical HUMAN's passive Crowd footprint
  * before/after the native Recast step. Never move the real HUMAN or CPU. */
 export interface CpuHumanCrowdFootAuthority {
-  syncActualPlayerFoot(foot:Readonly<{x:number;y:number;z:number}>):unknown;
+  /** B280: real Rapier grounded state, not mere Recast closestPoint. */
+  syncActualPlayerFoot(foot:Readonly<{x:number;y:number;z:number}>,
+    rapierGrounded?:boolean):unknown;
   sealAfterCrowdUpdate(foot:Readonly<{x:number;y:number;z:number}>):unknown;
 }
 
@@ -668,7 +670,8 @@ export class CpuAgentSystem {
     matchActive: boolean,
     humanTeam: Team.A | Team.B,
     humanPosition: Vec3,
-    humanActive: boolean
+    humanActive: boolean,
+    humanNativeGrounded = true
   ): void {
     if (!matchActive) {
       this.b212PriorHuman=null;
@@ -723,7 +726,11 @@ export class CpuAgentSystem {
     if(liveHumanFoot){
       // The physical HUMAN is authoritative even when its passive Crowd
       // neighbour is omitted (e.g. while a real human freely jumps in F3).
-      this.phase14qHumanCrowd?.syncActualPlayerFoot(liveHumanFoot);
+      // B280: never attach nonphysical eighth steering proxy during
+      // genuine Rapier airborne descent. Preserve ALL seven real CPU
+      // agents and original shared Rapier collision regardless.
+      this.phase14qHumanCrowd?.syncActualPlayerFoot(
+        liveHumanFoot,humanActive&&humanNativeGrounded);
       this.phase14qGroundCollision?.syncActualHumanFoot(liveHumanFoot);
     }
 
