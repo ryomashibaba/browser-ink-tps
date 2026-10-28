@@ -1067,6 +1067,28 @@ async function run(){
         x:800,y:450,button:'left',clickCount:1});
        await cmd('Input.dispatchKeyEvent',{type:'keyUp',...forward});
       }
+      // B291: genuine original-source paint notice must stay outside the aim zone.
+      const b291Notice=await evaluate(`(() => {
+       const m=document.querySelector('#t21-f3-b23-human-ink-confirmation');
+       const c=document.querySelector('#t21-f3-crosshair');
+       if(!m||!c)return {valid:false};
+       const r=m.getBoundingClientRect(),a=c.getBoundingClientRect();
+       const gap=Number((a.top-r.bottom).toFixed(2));
+       return {valid:true,visible:!m.hidden,gapAboveAimPx:gap,
+        markerTopCss:getComputedStyle(m).top,
+        originalSource:m.dataset.originalSourceOnly==='true',
+        scoreablePromotions:m.dataset.scoreablePromotion,
+        acceptedHumanPaint:window.__t21F3.snapshot().b23HumanInkFeedback.humanChangedCells};
+      })()`);
+      if(!b291Notice.valid||b291Notice.gapAboveAimPx<60||
+         !b291Notice.originalSource||b291Notice.scoreablePromotions!=='0'||
+         b291Notice.acceptedHumanPaint<1)
+       fail('B291_REAL_INK_NOTICE_AIM_OBSTRUCTED_'+JSON.stringify(b291Notice));
+      writeFileSync(resolve(OUTPUT,'b291-native-ink-notice-aim-clear.json'),
+       JSON.stringify({schema:'B291_REAL_INK_NOTICE_AIM_CLEAR',
+        ...b291Notice,originalSource:'25/17/26/0',actorRelocations:0,
+        scoreablePromotions:0,artAccepted:false,productionAuthorized:false},null,2));
+      console.log('B291_REAL_INK_NOTICE_AIM_CLEAR_PASS',JSON.stringify(b291Notice));
       const genuineLive=await b246Screenshot('b289-real-input-live-before-pause');
       for(const type of ['keyDown','keyUp'])
        await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',

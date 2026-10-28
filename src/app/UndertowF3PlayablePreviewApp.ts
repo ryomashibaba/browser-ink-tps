@@ -1270,7 +1270,7 @@ export class UndertowF3PlayablePreviewApp{
    'Actual human ink contact on original paintable surface, not score');
   this.b23PaintMarker.hidden=true;
   this.b23PaintMarker.style.cssText=
-   'position:fixed;left:50%;top:calc(50% + 29px);'+
+   'position:fixed;left:50%;top:clamp(108px,16vh,144px);'+
    'transform:translateX(-50%);z-index:11;pointer-events:none;'+
    'min-width:120px;padding:5px 11px;border-radius:20px;'+
    'border:1px solid rgba(88,245,245,.45);'+
