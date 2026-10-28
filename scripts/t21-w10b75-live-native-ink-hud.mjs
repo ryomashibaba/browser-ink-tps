@@ -1454,6 +1454,62 @@ async function run(){
        console.log('B303_NATIVE_TRUE_OWNER_RASTER_METRICS',
         JSON.stringify({ownerSamples:b303.actualOwnerProjectedSamples,
          candidateStats:b303.candidateStats,exactRestoration:b303.exactRestoration}));
+       // B304: change ONLY the paused original camera FOV with actual
+       // painted-stage geometry, actor positions and 17 ink meshes intact.
+       await evaluate(`(() => {const u=new URL(location.href);
+        u.searchParams.set('t21B304','nativePaintedOptics');
+        history.replaceState(null,'',u.href);return true;})()`);
+       const b304Wide=await evaluate(
+        'window.__t21F3.setB304NativePaintedCameraFov('+
+        JSON.stringify('WIDE')+','+JSON.stringify(origin)+')');
+       if(b304Wide.mode!=='WIDE'||b304Wide.fovDegrees!==76||
+          b304Wide.onlyPausedOpticalFovChanged!==true)
+        fail('B304_GENUINE_WIDE_CAMERA_RESEARCH_FORBIDDEN');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B304_WIDE_CHANGED_NATIVE_PHYSICS_OR_INK');
+       await sleep(190);
+       const b304B=await b246Screenshot('b304-native-painted-optic-wide');
+       if(b304B.sha256===snaps[0].image.sha256)
+        fail('B304_REAL_WIDE_CAMERA_DID_NOT_CHANGE_FRAME');
+       const b304Focus=await evaluate(
+        'window.__t21F3.setB304NativePaintedCameraFov('+
+        JSON.stringify('FOCUS')+','+JSON.stringify(origin)+')');
+       if(b304Focus.mode!=='FOCUS'||b304Focus.fovDegrees!==52)
+        fail('B304_GENUINE_FOCUSED_CAMERA_RESEARCH_FORBIDDEN');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B304_FOCUS_CHANGED_NATIVE_PHYSICS_OR_INK');
+       await sleep(190);
+       const b304C=await b246Screenshot('b304-native-painted-optic-focus');
+       if(b304C.sha256===b304B.sha256||
+          b304C.sha256===snaps[0].image.sha256)
+        fail('B304_NATIVE_OPTICAL_RESEARCH_FRAMES_UNCHANGED');
+       const b304Restore=await evaluate(
+        'window.__t21F3.setB304NativePaintedCameraFov('+
+        JSON.stringify('ORIGINAL')+','+JSON.stringify(origin)+')');
+       if(b304Restore.mode!=='ORIGINAL'||b304Restore.fovDegrees!==63)
+        fail('B304_ORIGINAL_CAMERA_FOV_NOT_RESTORED');
+       await sleep(190);
+       const b304A2=await b246Screenshot('b304-native-painted-optic-restored');
+       if(b304A2.sha256!==snaps[0].image.sha256||
+          JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B304_NATIVE_OPTIC_OR_WORLD_EXACT_RESTORE_FAILED');
+       const b304Report={schema:'B304_GENUINE_PAINTED_STAGE_FOV_ONLY_ABCA',
+        source:'25/17/26/0',nativeTick:still.tick,
+        actualHumanShots:still.shotsFired,
+        actualHumanPaintedCells:still.b23HumanInkFeedback.humanChangedCells,
+        ownerSamples:realInk.paintSampleCount,
+        original:snaps[0].image,wide:b304B,focus:b304C,restored:b304A2,
+        exactOriginalFrameRestored:true,
+        originalActorBodiesUnchanged:true,
+        paintSurfaceCount:17,newPaintMeshes:0,newColliders:0,newNavLinks:0,
+        scoredPaint:0,teamColorsOrAtlasEdited:false,
+        nativeGameplayChanged:false,artAccepted:false,
+        unrestricted4v4Certified:false,productionAuthorized:false};
+       writeFileSync(resolve(OUTPUT,'b304-native-paint-camera-fov-abca.json'),
+        JSON.stringify(b304Report,null,2));
+       console.log('B304_GENUINE_FOV_ONLY_ABCA_PASS',
+        JSON.stringify({tick:still.tick,baselineFov:63,wide:76,focus:52,
+         source:'25/17/26/0',exactOriginalRestored:true}));
        console.log('B302_GENUINE_OWNED_TEAM_A_COLOR_A_B_C_A_PASS',
         JSON.stringify({tick:still.tick,
          nativePaintMeshes:17,originalFrameRestored:true,
