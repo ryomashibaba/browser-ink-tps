@@ -1197,9 +1197,13 @@ async function run(){
         await evaluate(`(() => {const u=new URL(location.href);
          u.searchParams.set('t21B293','realInkViewport');
          history.replaceState(null,'',u.href);return true;})()`);
-        const realInk=await evaluate(
-         'window.__t21F3.auditB293ActualInkViewport('+
-         JSON.stringify(origin)+')');
+        const b293Outcome=await evaluate(`(() => {try {
+         return {ok:true,data:window.__t21F3.auditB293ActualInkViewport(
+          ${JSON.stringify(origin)})};
+        }catch(e){return {ok:false,error:String(e?.message??e)};}})()`);
+        if(!b293Outcome.ok)
+         fail('B293_NATIVE_READONLY_PROBE_REASON_'+b293Outcome.error);
+        const realInk=b293Outcome.data;
         if(realInk.nativeTick!==still.tick||
            realInk.actualHumanPaintCells<1||realInk.actualHumanShots<1||
            realInk.actualOwnerCells<1||

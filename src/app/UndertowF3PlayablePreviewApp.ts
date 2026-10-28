@@ -2609,7 +2609,21 @@ export class UndertowF3PlayablePreviewApp{
    actorRelocations:s.cpu.physicalFootRelocations
   });
   if(!gate||!cam||render.length!==17)
-   throw Error('B293_REAL_NATIVE_INK_VIEWPORT_FORBIDDEN');
+   throw Error('B293_REAL_NATIVE_INK_VIEWPORT_FORBIDDEN_'+JSON.stringify({
+    tick:s.tick,paused:this.paused,phase:this.matchState,
+    locked:document.pointerLockElement===this.canvas,shots:s.shotsFired,
+    cells:s.b23HumanInkFeedback.humanChangedCells,travel,
+    stage:!!stage?.enabled,uv:uv?.root.enabled,
+    inkSafe:this.b253InkSafeVisualEnabled,
+    textures:uv?.manifest.textures.length,
+    sourceMeshCount:render.length,
+    sourceMeshVisible:render.filter(x=>x.render?.meshInstances[0]?.visible).length,
+    originalPaintObjects:same,originalCameraBaseline:
+     (this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+    b259:this.canvas.dataset.t21B259RasterLayer??'BASELINE',
+    b260:this.canvas.dataset.t21B260HiddenMaterial??'',
+    cpuMoves:s.cpu.physicalFootRelocations,
+    urlB293:new URL(location.href).searchParams.get('t21B293') }));
   const projection=b263ReadNativeInkProjection(this.b45SourceSurfaces,
    point=>{const x=cam.worldToScreen(new Vec3(point.x,point.y,point.z));
     return {x:x.x,y:x.y,z:x.z};},
