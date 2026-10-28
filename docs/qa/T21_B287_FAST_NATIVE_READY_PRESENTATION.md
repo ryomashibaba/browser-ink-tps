@@ -29,3 +29,21 @@ The actual earlier **B286 FIXED** source-Chromium artifact (run #40685368214, `w
 B287 moves the genuine compact panel only to the **previously free bottom-right** of the actual 1600x900 original preview, expands bounded width to 278px, increases text background opacity to .97, and keeps the opponent count on one line. This is a **display-only DOM/CSS change**; no source physics, material assets, camera, AI, score or registered collisions change.
 
 The early B287 true Chromium READY probe now **fails closed** if the original F3 tactical radar and B286 compact box have any nonzero bounding-rectangle overlap or if the count line overflows/wraps. It checks both PLAYER views before/after F8 QA, retains exact native tick0/180s time and screenshot saves. ART HOLD remains for game-wide stage/actor presentation; B287 can only establish correct compact UI placement in the tested real source viewport.
+
+## Exact-SHA native B287 early gate (2026-10-28)
+
+The source-code commit under test was `3081bed8f7eec2fc11e264389ba34c27001f1cd8`.
+The new [B287 consolidated Actions run #40687710260](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40687710260) completed:
+- TypeScript/Vite + source regression preflight: **SUCCESS**.
+- Independent `B287 fast genuine Chromium selected-round READY and F8 player HUD` job: **SUCCESS**.
+- Saved [actual browser artifact #12814864930](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40687710260/artifacts/12814864930), including `b246-source-player-ready.png`, `b246-source-qa-ready.png`, `b246-source-player-restored.png` and `b287-fast-original-player-ready.json`.
+
+The **actual 1600×900 framebuffer was downloaded and inspected**, not merely asserted from DOM. The original top-right `SOURCE / TACTICAL` radar is fully unobstructed; the new bottom-right compact team panel has no text bleeding, and its ally/opponent count is on a single line. Independent native DOM:
+- `compactRadarOverlap:0`; `compactCountsSingleLine:true` in both PLAYER frames.
+- Actual user-selected round remains at `tick:0`, `timeRemaining:180`; CPU participation rightly shows `0/3,0/4,7 REJOINING`.
+- QA F8 hides compact and restores full source evidence. Returning to PLAYER restores the exact original framebuffer SHA256 `2f946a6d9674ae4fe1d56b02a03c4a334f5fabd94788de2ce675ff61b3805955`.
+- Original world unchanged, virtual ticks 0, actor relocations 0, Scoreable 0, official winner NONE, ART accepted false.
+
+The **full** genuine B75 FIXED/SWEEP follow-up jobs belong to the same Actions run but were still in progress when this specific B287 *early* acceptance was recorded; their outcomes must be checked independently. The older B286 run [#40685368214](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40685368214) fully completed **SUCCESS** on old source HEAD `1c4f02882c3b6d019fe5f477474c56e17398f468`, proving actual 7CPU 3/3 and 4/4 roster after 0 physical warps. It did **not** carry the subsequent B287 radar overlap correction.
+
+**Disposition**: B287 early source-ready real-browser UI and proof acceleration **TECH PASS**. Stage/actor art, original-game collision inclusion for FloorLine00, 12 opposing routes, formal full 4v4 and production remain **HOLD**.
