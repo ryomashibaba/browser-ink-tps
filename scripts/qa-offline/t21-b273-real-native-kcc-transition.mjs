@@ -5,6 +5,8 @@
 import {writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as nativeSleep} from 'node:timers/promises';
+import {b281AuditNativeAirborneProxyAndLowerSource}
+ from './t21-b281-airborne-original-crowd-gate.mjs';
 export const B273_SOURCE='25/17/26/0';
 /** B274: a genuine browser pointer lock is a precondition for PlayerInput
  * keydown. B258 exits pointer lock for read-only art review, so the real CDP
@@ -179,6 +181,22 @@ export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screensho
  }
  const trace=b273AuditContinuousKeyboardLegs(samples);
  const after=await screenshot('B273_REAL_KCC_B_AFTER_KEYBOARD');
+ // B281: source-native browser report may only claim a real first drop if
+ // the same real KCC samples prove midair passenger proxy was WITHHELD.
+ // Does not relabel unverified lower route as a successful connection.
+ const b281NativeSafety=trace.actualVerifiedLowerSupportReached?
+  b281AuditNativeAirborneProxyAndLowerSource(samples):null;
+ if(b281NativeSafety){
+  writeFileSync(resolve(output,'b281-genuine-native-airborne-proxy-and-lower-source.json'),
+   JSON.stringify(b281NativeSafety,null,2));
+  console.log('B281_GENUINE_AIRBORNE_SOURCE_SAFETY',
+   JSON.stringify({status:b281NativeSafety.status,
+    realRapierAirborneSamples:b281NativeSafety.realRapierAirborneSamples,
+    realAirborneSamplesWithPassiveProxy:0,
+    cpuActors:b281NativeSafety.nativeSevenCpuIdCount,
+    originalLandingTick:b281NativeSafety.verifiedGenuineFirstDropLandingTick,
+    source:b281NativeSafety.verifiedOriginalLandingSourceId}));
+ }
  // Preserve the failed native witness rather than losing diagnostic samples.
  if(trace.actualNativeTickSpan<1||trace.actualFullMotionMeters<.1){
   writeFileSync(resolve(output,'b274-real-kcc-no-motion-diagnostic.json'),
@@ -203,6 +221,7 @@ export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screensho
   termination:stopReason,b274RealBrowserInput:pointerLock,
   b279AfterScreenshotNativeBaseline:screenshotBaseline,
   preImage:before,postImage:after,
+  b281NativeOriginalAirborneSafety:b281NativeSafety,
   ...trace,
   noFakeSurfaceReachability:!trace.actualVerifiedLowerSupportReached,
   nativePaintOwnershipWasNotInjected:true,

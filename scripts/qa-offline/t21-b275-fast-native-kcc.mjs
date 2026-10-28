@@ -152,11 +152,23 @@ async function main(){
   fail('REAL_MOVEMENT_WITHOUT_TRUSTED_W_KEY_EVENT');
  if(trace.actualFullMotionMeters<.1||trace.actualNativeTickSpan<1||
     trace.b274RealBrowserInput?.afterLocked!==true)fail('UNVERIFIED_PHYSICAL_MOTION');
+ // B281 locked-source regression: 7 actual CPU records, original Rapier
+ // airborne sample with NO eighth proxy, and genuinely grounded original
+ // lower source. A future 0m/unsupported route cannot silently PASS.
+ if(!trace.actualVerifiedLowerSupportReached||
+    trace.b281NativeOriginalAirborneSafety?.status!==
+      'ORIGINAL_FIRST_DROP_KCC_AND_AIRBORNE_PROXY_OBSERVED'||
+    trace.b281NativeOriginalAirborneSafety?.nativeSevenCpuIdCount!==7||
+    trace.b281NativeOriginalAirborneSafety?.realRapierAirborneSamples<1)
+  fail('B281_REAL_AIRBORNE_PASSIVE_CROWD_AND_FIRST_DROP_GATE_HOLD');
  const report={status:trace.actualVerifiedLowerSupportReached?'ORIGINAL_LOWER_REACHED':
    'REAL_KCC_MOVED_LOWER_ROUTE_HOLD',
   trueNativeTicks:trace.actualNativeTickSpan,trueKccMeters:trace.actualFullMotionMeters,
   originalSupportIds:[...new Set(trace.legs.map(x=>x.endOriginalSupportId))],
   originalLowerReached:trace.actualVerifiedLowerSupportReached,source:'25/17/26/0',
+  b281ActualRapierAirborneSamples:trace.b281NativeOriginalAirborneSafety.realRapierAirborneSamples,
+  b281AirborneProxyActiveSamples:trace.b281NativeOriginalAirborneSafety.realAirborneSamplesWithPassiveProxy,
+  b281NativeCpuActors:trace.b281NativeOriginalAirborneSafety.nativeSevenCpuIdCount,
   observedTrustedForwardKeydowns:trusted.events.filter(x=>x.code==='KeyW'&&
    x.type==='keydown'&&x.realTrustedEvent===true).length,
   realForwardKeyHold:verifiedHold,
