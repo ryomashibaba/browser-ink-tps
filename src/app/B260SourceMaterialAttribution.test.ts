@@ -42,10 +42,11 @@ describe('B260 original source material pixel sensitivity study',()=>{
   })).toThrow('B260_INVALID_DRAW_TREE_NODE');
  });
  it('can hide ONLY one known original material, never all UV/paint',()=>{
-  expect(B260_SOURCE_TARGETS.length).toBe(2);
-  expect(B260_SOURCE_TARGETS.map(t=>t.kind)).toEqual(['DETAIL','GLASS']);
+  expect(B260_SOURCE_TARGETS.length).toBe(3);
+  expect(B260_SOURCE_TARGETS.map(t=>t.kind)).toEqual(['DETAIL','GLASS','METAL']);
   expect(B260_SOURCE_TARGETS.map(t=>t.name)).toEqual([
-   'Fld_Temple01_FloorLine02','Fld_Temple01_Glass01']);
+   'Fld_Temple01_FloorLine02','Fld_Temple01_Glass01',
+   'Fld_Temple01_WallMetal00']);
   for(const target of B260_SOURCE_TARGETS){
    expect(b260Target(target.name)).toEqual(target);
    expect(b260DrawVisible(target.name,target.name)).toBe(false);

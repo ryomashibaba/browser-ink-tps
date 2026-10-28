@@ -10,6 +10,7 @@ import {verifyB77OriginalSourceAbaRaster,inspectB252OriginalUvRaster}
  from './t21-w10b77-source-raster-restore.mjs';
 import {resolve} from 'node:path';
 import {captureB260OriginalMaterials} from './t21-b260-native-material-aba.mjs';
+import {captureB265WallMetalAba} from './t21-b265-wallmetal-optical-aba.mjs';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
@@ -4363,6 +4364,12 @@ async function main(){
     reject('B264_REQUIRES_ACTUAL_B263_PAINT_OWNER_CAMERA_PROOF');
    await captureB264SourceInkRays('FROZEN');
   }
+  if(process.env.T21_B265_METAL_ABA==='1'){
+   if(process.env.T21_B264_NATIVE_RAY_AUDIT!=='1')
+    reject('B265_REQUIRES_GENUINE_B264_SOURCE_RAY_AUDIT');
+   await captureB265WallMetalAba('FROZEN',{
+    evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4654,6 +4661,9 @@ async function main(){
      await captureB263NativeInkProjection('REAL_INK');
     if(process.env.T21_B264_NATIVE_RAY_AUDIT==='1')
      await captureB264SourceInkRays('REAL_INK');
+    if(process.env.T21_B265_METAL_ABA==='1')
+     await captureB265WallMetalAba('REAL_INK',{
+      evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
     await evaluate('window.__t21F3.resume()');
    }
  }

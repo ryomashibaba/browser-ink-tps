@@ -23,6 +23,7 @@ on:
       - "src/app/B263RealInkScreenWitness*"
       - "src/app/B264RealInkOpticalSightlines*"
       - "scripts/t21-b260-native-material-aba.mjs"
+      - "scripts/t21-b265-*"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
   workflow_dispatch:
@@ -128,6 +129,7 @@ jobs:
           T21_B262_QA_FOCUS: "1"
           T21_B263_PAINT_PROJECTION: "1"
           T21_B264_NATIVE_RAY_AUDIT: "1"
+          T21_B265_METAL_ABA: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()

@@ -5,7 +5,9 @@ import {b259RasterEligible} from './B259SourceRasterLayers';
 
 export const B260_SOURCE_TARGETS=Object.freeze([
  {name:'Fld_Temple01_FloorLine02',kind:'DETAIL',label:'FLOORLINE'},
- {name:'Fld_Temple01_Glass01',kind:'GLASS',label:'GLASS'}
+ {name:'Fld_Temple01_Glass01',kind:'GLASS',label:'GLASS'},
+ // B265: pinned original METAL optical group; diagnostic visibility only.
+ {name:'Fld_Temple01_WallMetal00',kind:'METAL',label:'WALLMETAL'}
 ] as const);
 export type B260SourceTarget=typeof B260_SOURCE_TARGETS[number]['name'];
 export function b260Target(name:string|null){
