@@ -30,7 +30,7 @@ describe('B270 original source genuine screen attribution',()=>{
   expect(()=>b270ActorOnlyArtScopeAudit(g)).toThrow(/PINNED_GENUINE_SOURCE/);
  });
  it('refuses to mislabel widespread stage changes as actor-only',()=>{
-  const f=fixture();f.B269.roi.actor_nearfield.pixels=35000;
+  const f=fixture();f.B269.roi.actor_nearfield={pixels:35000,atLeast8:31000,atLeast24:19000};
   expect(()=>b270ActorOnlyArtScopeAudit(f)).toThrow(/ACTOR_ONLY_ATTRIBUTION/);
   const g=fixture();g.B268.roi.upper_stage_without_hud.pixels=800;
   expect(()=>b270ActorOnlyArtScopeAudit(g)).toThrow(/UPPER_STAGE_ALTERED/);

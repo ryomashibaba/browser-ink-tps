@@ -13,6 +13,7 @@ import {captureB260OriginalMaterials} from './t21-b260-native-material-aba.mjs';
 import {captureB265WallMetalAba} from './t21-b265-wallmetal-optical-aba.mjs';
 import {captureB268ActorComposition} from './t21-b268-native-actor-composition.mjs';
 import {captureB269RearIdentity} from './t21-b269-native-rear-identity.mjs';
+import {captureB271MultiSurface} from './t21-b271-multi-surface-registration.mjs';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
@@ -498,6 +499,7 @@ async function main(){
   (process.env.T21_B264_NATIVE_RAY_AUDIT==='1'?'&t21B264=inkOpticalRays':'')+
   (process.env.T21_B268_ACTOR_COMPOSITION==='1'?'&t21B268=actorComposition':'')+
   (process.env.T21_B269_REAR_IDENTITY==='1'?'&t21B269=rearIdentity':'')+
+  (process.env.T21_B271_MULTISURFACE==='1'?'&t21B271=multiSurfaceRegistration':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4387,6 +4389,11 @@ async function main(){
    await captureB269RearIdentity('FROZEN',{
     evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
   }
+  if(process.env.T21_B271_MULTISURFACE==='1'){
+   if(process.env.T21_B263_PAINT_PROJECTION!=='1')
+    reject('B271_REQUIRES_REAL_ORIGINAL_B263_PAINT_SURFACES');
+   await captureB271MultiSurface('FROZEN',{evaluate,output:OUTPUT});
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4687,6 +4694,8 @@ async function main(){
     if(process.env.T21_B269_REAR_IDENTITY==='1')
      await captureB269RearIdentity('REAL_INK',{
       evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
+    if(process.env.T21_B271_MULTISURFACE==='1')
+     await captureB271MultiSurface('REAL_INK',{evaluate,output:OUTPUT});
     await evaluate('window.__t21F3.resume()');
    }
  }

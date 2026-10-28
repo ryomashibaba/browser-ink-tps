@@ -150,6 +150,9 @@ import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStud
 import {b263ScreenWitnessGate,b263ReadNativeInkProjection} from './B263RealInkScreenWitness';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
+import {b271RegistrationGate,b271NativeFootprintProbes,
+ b271ClassifyOpticalPhysicalRay,B271_REGISTRATION_AUTHORITY}
+ from './B271MultiSurfaceRegistration';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1713,6 +1716,8 @@ export class UndertowF3PlayablePreviewApp{
     setB262QaPanelFocused:(on:boolean)=>this.setB262QaPanelFocused(on),
     auditB263NativePaintProjection:()=>this.auditB263NativePaintProjection(),
     auditB264RealInkOpticalSightlines:()=>this.auditB264RealInkOpticalSightlines(),
+    auditB271OriginalMultiSurfaceRegistration:()=>
+     this.auditB271OriginalMultiSurfaceRegistration(),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -2523,6 +2528,103 @@ export class UndertowF3PlayablePreviewApp{
    rays:checks,artAccepted:false as const,
    unrestricted4v4Certified:false as const,
    productionAuthorized:false as const};
+ }
+ /** B271 bounded read-only optical / real Rapier / all 17 original
+  * active PaintSurface footprint audit. A nearby NavLink is NOT a route. */
+ private auditB271OriginalMultiSurfaceRegistration(){
+  const uv=this.texturedF3l;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  const p=new URL(location.href).searchParams;
+  const owner=this.auditB263NativePaintProjection();
+  const raster=this.canvas.dataset.t21B259RasterLayer??'BASELINE';
+  const metal=this.canvas.dataset.t21B260HiddenMaterial||null;
+  if(!uv||!b271RegistrationGate(p,{
+    paused:this.paused,staging:this.matchState==='STAGING',
+    stopped:!!this.stopReason,fullRound:this.b203FullRound,
+    pointerLocked:document.pointerLockElement===this.canvas,
+    otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+    verifiedUv:this.texturedF3lStatus==='READY'&&uv.root.enabled,
+    inkSafe:this.b253InkSafeVisualEnabled,
+    humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+    b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+    cameraBaseline:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+    solids:this.rawStage.solids.length,
+    paintable:this.rawStage.paintSurfaces.length,
+    links:this.rawStage.navigationLinks?.length??0,
+    scoreable:0,triangles:uv.manifest.totalTriangles,
+    textures:uv.manifest.textures.length,cpuCount:bots.length
+  },raster,metal,this.canvas.dataset.t21B262QaFocus==='ON')||
+     this.b45SourceSurfaces.length!==17||
+     this.rawStage.solids.length!==25||
+     this.rawStage.navigationLinks?.length!==26||
+     this.b45SourceSurfaces.some(s=>s.isScoreable||
+       this.ink.getSurface(s.id)!==s))
+   throw Error('B271_GENUINE_ORIGINAL_SURFACE_REGISTRATION_UNAUTHORIZED');
+  const camera=this.playerCameraEntity.camera;
+  if(!camera)throw Error('B271_NO_REAL_NATIVE_CAMERA');
+  const from=this.playerCameraEntity.getPosition();
+  const player=this.player.getPosition(new Vec3());
+  const nav=this.rawStage.navigationLinks!;
+  const endpoints=nav.flatMap(link=>[link.start,link.end]);
+  if(endpoints.length!==52)throw Error('B271_SOURCE_NAV_LINK_ENDPOINT_DRIFT');
+  const length=(a:Vec3,b:Vec3)=>a.distance(b);
+  const rows=this.b45SourceSurfaces.map(surface=>{
+   const footprint=b271NativeFootprintProbes(surface);
+   const rays=footprint.probes.map(probe=>{
+    const to=new Vec3(...probe.world);
+    const distance=length(from,to);
+    const optical=uv.auditB257OriginalStaticRay(from,to);
+    const physical=this.physics.castStageSegment(from,to,'camera');
+    const navDistance=Math.min(...endpoints.map(q=>
+      Math.hypot(to.x-q[0],to.y-q[1],to.z-q[2])));
+    const screen=camera.worldToScreen(to);
+    return {grid:probe.grid,owner:probe.owner,
+     nativeWorldMeters:probe.world,
+     screenPx:[screen.x,screen.y,screen.z],
+     insideViewport:screen.z>0&&screen.x>=0&&screen.x<this.canvas.width&&
+      screen.y>=0&&screen.y<this.canvas.height,
+     nativePlayerDistanceMeters:length(player,to),
+     rayLengthMeters:distance,
+     originalOpticalTrianglesScanned:optical.scannedTriangles,
+     ...b271ClassifyOpticalPhysicalRay(distance,
+       optical.nearestGroups,physical?{
+        solidId:physical.solidId,distanceMeters:physical.distance
+       }:null,navDistance)};
+   });
+   const original=owner.perSurface.find(x=>x.surfaceId===surface.id);
+   if(!original||original.owned!==footprint.ownedCells)
+    throw Error('B271_ORIGINAL_INK_SURFACE_LEDGER_DIVERGED');
+   return {surfaceId:surface.id,activeFootprintCells:footprint.activeCells,
+    actualOwnerCells:footprint.ownedCells,paintedA:original.ownedA,
+    paintedB:original.ownedB,originalSourceOnly:true,
+    sampledActiveProbes:rays.length,rays};
+  });
+  const rays=rows.flatMap(x=>x.rays);
+  if(rows.length!==17||rays.length>51||
+     new Set(rows.map(x=>x.surfaceId)).size!==17||
+     rows.reduce((n,x)=>n+x.actualOwnerCells,0)!==owner.ownedCells||
+     rows.reduce((n,x)=>n+x.paintedA,0)!==owner.ownedA||
+     rows.reduce((n,x)=>n+x.paintedB,0)!==owner.ownedB)
+   throw Error('B271_NATIVE_SEVENTEEN_SURFACE_PROOF_DRIFT');
+  return {schema:'B271_SEVENTEEN_ORIGINAL_FOOTPRINT_OPTICAL_PHYSICAL_REGISTRATION',
+   nativeTick:this.clock.tick,
+   cameraWorldMeters:[from.x,from.y,from.z],
+   humanWorldMeters:[player.x,player.y,player.z],
+   viewport:[this.canvas.width,this.canvas.height],
+   nativeOriginalOwnedCells:owner.ownedCells,
+   nativeOriginalOwnedA:owner.ownedA,nativeOriginalOwnedB:owner.ownedB,
+   ownedSurfaces:rows.filter(x=>x.actualOwnerCells>0).length,
+   unpaintedSurfaces:rows.filter(x=>x.actualOwnerCells===0).length,
+   sampledActiveProbeRays:rays.length,
+   opticalBeforeCount:rays.filter(x=>x.opticalHitsBeforeSourcePaint>0).length,
+   physicalBeforeCount:rays.filter(x=>x.physicalBeforeSourcePaint).length,
+   viewportSamples:rays.filter(x=>x.insideViewport).length,
+   originalNavigationEndpoints:52,
+   sourceStageSurfaceRows:rows,
+   sourceRegistrationOnlyNotRouteCertification:true,
+   officialOriginalConnectivityUncertified:true,
+   nativePaintedFramebufferPixelsNotMeasured:true,
+   ...B271_REGISTRATION_AUTHORITY};
  }
  /** B258 opt-in camera-only study: real Rapier stage camera cast retained. */
  private setB258OriginalCameraProfile(name:B258CameraProfile){
