@@ -1,0 +1,150 @@
+{
+  "schema": "B295_SAME_REAL_NATIVE_A_D_A_ACTOR_ROI_ART_REJECT",
+  "nativeEvidenceRun": 40704492050,
+  "artifactId": 12823203308,
+  "source": "25/17/26/0",
+  "nativeTick": 85,
+  "actualShots": 8,
+  "realHumanInkChangedCells": 315,
+  "sourcePixelSize": [
+    1600,
+    900
+  ],
+  "frames": {
+    "baseline": "b289-native-a-original-after-ink.png",
+    "candidate": "b292-flow-organic-inplay.png",
+    "restored": "b292-flow-baseline-restored.png"
+  },
+  "sha256": {
+    "baseline": "cff7fbca874e710fbd0bd0e3c9d218d9dd7c4af28a2bea3ef94a923869459072",
+    "flow": "2ab020d9fbf3d61ef205d52a35c2015691173206398dd792b0b3a57ef80cabb8",
+    "restore": "cff7fbca874e710fbd0bd0e3c9d218d9dd7c4af28a2bea3ef94a923869459072"
+  },
+  "baselineRestoredExactly": true,
+  "roiDefinitions": {
+    "full_frame": [
+      0,
+      0,
+      1600,
+      900
+    ],
+    "actor_foreground": [
+      560,
+      395,
+      1050,
+      780
+    ],
+    "aim_and_paint_neighborhood": [
+      700,
+      385,
+      900,
+      520
+    ],
+    "upper_original_optical_stage": [
+      360,
+      145,
+      1300,
+      390
+    ],
+    "lower_floor_outside_actors_left": [
+      0,
+      490,
+      530,
+      890
+    ],
+    "lower_floor_outside_actors_right": [
+      1060,
+      490,
+      1280,
+      790
+    ]
+  },
+  "regions": {
+    "full_frame": {
+      "rect": [
+        0,
+        0,
+        1600,
+        900
+      ],
+      "total_pixels": 1440000,
+      "changed_pixels": 81270,
+      "changed_pct": 5.6437,
+      "max_rgb_delta_ge_8": 78217,
+      "max_rgb_delta_ge_24": 51513
+    },
+    "actor_foreground": {
+      "rect": [
+        560,
+        395,
+        1050,
+        780
+      ],
+      "total_pixels": 188650,
+      "changed_pixels": 75477,
+      "changed_pct": 40.009,
+      "max_rgb_delta_ge_8": 72495,
+      "max_rgb_delta_ge_24": 48350
+    },
+    "aim_and_paint_neighborhood": {
+      "rect": [
+        700,
+        385,
+        900,
+        520
+      ],
+      "total_pixels": 27000,
+      "changed_pixels": 14622,
+      "changed_pct": 54.1556,
+      "max_rgb_delta_ge_8": 14131,
+      "max_rgb_delta_ge_24": 10590
+    },
+    "upper_original_optical_stage": {
+      "rect": [
+        360,
+        145,
+        1300,
+        390
+      ],
+      "total_pixels": 230300,
+      "changed_pixels": 154,
+      "changed_pct": 0.0669,
+      "max_rgb_delta_ge_8": 142,
+      "max_rgb_delta_ge_24": 93
+    },
+    "lower_floor_outside_actors_left": {
+      "rect": [
+        0,
+        490,
+        530,
+        890
+      ],
+      "total_pixels": 212000,
+      "changed_pixels": 218,
+      "changed_pct": 0.1028,
+      "max_rgb_delta_ge_8": 217,
+      "max_rgb_delta_ge_24": 93
+    },
+    "lower_floor_outside_actors_right": {
+      "rect": [
+        1060,
+        490,
+        1280,
+        790
+      ],
+      "total_pixels": 66000,
+      "changed_pixels": 0,
+      "changed_pct": 0,
+      "max_rgb_delta_ge_8": 0,
+      "max_rgb_delta_ge_24": 0
+    }
+  },
+  "changedInNearFieldPercent": 92.8719,
+  "changedOutsideNearFieldPixels": 5793,
+  "changesInUpperOpticalStagePixels": 154,
+  "rasterPixelChangeIsNotArtOrInkVisibility": true,
+  "sourceGeometryShaderCameraUnaffectedByActorStudy": true,
+  "artAccepted": false,
+  "fullFourVsFourCertified": false,
+  "productionAuthorized": false
+}
