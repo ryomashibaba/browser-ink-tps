@@ -106,11 +106,21 @@ jobs:
             const player=execFileSync('git',['show',base+':src/input/PlayerInput.ts'],{encoding:'utf8'});
             const app=execFileSync('git',['show',base+':src/app/UndertowF3PlayablePreviewApp.ts'],{encoding:'utf8'});
             const native=execFileSync('git',['show',base+':src/app/UndertowF3NativeHumanCrowd.ts'],{encoding:'utf8'});
+            // B282: W3 restores a historical source contract; its historical
+            // baseline unit tests must come from the SAME immutable commit.
+            // Current B280 two-parameter native-grounded tests are verified
+            // in unpatched project typecheck and the true Chrome KCC lane.
+            const nativeTest=execFileSync('git',['show',base+':src/app/UndertowF3NativeHumanCrowd.test.ts'],{encoding:'utf8'});
+            if(!nativeTest.includes("describe('F3C live human native Crowd life cycle'"))
+              throw Error('W3_HISTORICAL_TEST_SOURCE_IDENTITY_MISSING');
             const updated=patch.patchSources(player,app);
             if(updated.player!==player)throw Error('Original PlayerInput changed');
             writeFileSync('src/input/PlayerInput.ts',updated.player);
             writeFileSync('src/app/UndertowF3PlayablePreviewApp.ts',updated.app);
             writeFileSync('src/app/UndertowF3NativeHumanCrowd.ts',patch.patchNativeCrowd(native));
+            writeFileSync('src/app/UndertowF3NativeHumanCrowd.test.ts',nativeTest);
+            // Historical frozen W3 overlay is never used to weaken the
+            // current B280/B281 live-source original-grounded assertions.
             // QA-branch-only PlayerInput unit tests target its separate branch implementation.
             // The actual Windows original has no such test file.
             rmSync('src/input/PlayerInput.qa.test.ts',{force:true});
@@ -120,6 +130,8 @@ jobs:
         run: npm run typecheck
       - name: Build isolated QA preview
         run: npm run build
+      - name: W3 exact historical native-human Crowd lifecycle regression
+        run: npx vitest run src/app/UndertowF3NativeHumanCrowd.test.ts
       - name: W3 guarded proxy lifecycle regression
         run: npx vitest run src/app/UndertowF3NativeHumanCrowd.W3.test.ts
       - name: W5 real moving Human and seven CPU shared Rapier QA
