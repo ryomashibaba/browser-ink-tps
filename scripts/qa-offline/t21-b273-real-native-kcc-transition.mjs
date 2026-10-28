@@ -110,17 +110,42 @@ export function b273AuditContinuousKeyboardLegs(samples){
   original4v4Certified:false,artAccepted:false,
   productionAuthorized:false,legs};
 }
+/** B279: GPU screenshot work may advance the real game tick while the
+ * operator has NOT yet pressed KeyW. Do not count those ticks as key input.
+ * Read-only continuity check; no game state or actor movement is written.
+ */
+export function b279InspectAfterSourceScreenshot(pre,post){
+ const a=b273InspectNativeKccSample(pre);
+ const b=b273InspectNativeKccSample(post);
+ if(b.tick<a.tick||a.supportId!==b.supportId||
+    near(a.worldMeters,b.worldMeters)>.1)
+  throw Error('B279_NATIVE_PRE_KEY_SOURCE_BASELINE_DRIFT');
+ return {preScreenshotTick:a.tick,
+  postScreenshotNativeTick:b.tick,
+  unpressedScreenshotTickSpan:b.tick-a.tick,
+  postScreenshotWorldMeters:b.worldMeters,
+  originalSourceSupport:b.supportId,
+  playerNotTeleported:true,
+  screenshotTicksNotCountedAsKeyboard:true,
+  noArtificialClockChanges:true};
+}
 export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screenshot,output}){
  const pointerLock=await b274EnsureNativeKeyboardInput({evaluate,cmd,waitUntil});
  console.log('B274_GENUINE_BROWSER_INPUT_READY',JSON.stringify(pointerLock));
- const first=await evaluate('window.__t21F3.snapshot()');
- const initial=b273InspectNativeKccSample(first);
+ // Initial physical source authority can be checked before the GPU frame;
+ // the actual KeyW tick baseline MUST be read AFTER expensive capture.
+ const preShot=await evaluate('window.__t21F3.snapshot()');
+ const initial=b273InspectNativeKccSample(preShot);
  if(initial.supportId!==upper||initial.worldMeters[1]<8.1||
     initial.worldMeters[1]>9.6)
   throw Error('B273_REAL_NATIVE_START_NOT_GROUNDED_UPPER_SOURCE');
+ const before=await screenshot('B273_REAL_KCC_A_UPPER_PRE_INPUT');
+ const first=await evaluate('window.__t21F3.snapshot()');
+ const screenshotBaseline=b279InspectAfterSourceScreenshot(preShot,first);
+ console.log('B279_POST_SCREENSHOT_TRUE_NATIVE_KEY_BASELINE',
+  JSON.stringify(screenshotBaseline));
  const samples=[first],key={key:'w',code:'KeyW',
   windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
- const before=await screenshot('B273_REAL_KCC_A_UPPER_PRE_INPUT');
  let stopReason='EIGHT_BOUND_TRUE_KEY_STAGES_COMPLETED';
  for(let i=0;i<B273_MAX_KEY_LEGS;i++){
   const from=samples.at(-1);
@@ -158,7 +183,8 @@ export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screensho
  if(trace.actualNativeTickSpan<1||trace.actualFullMotionMeters<.1){
   writeFileSync(resolve(output,'b274-real-kcc-no-motion-diagnostic.json'),
    JSON.stringify({failure:'B273_REAL_NATIVE_NO_KCC_MOTION',
-    browserInput: pointerLock,initialSnapshot:initial,
+    browserInput:pointerLock,initialSnapshot:initial,
+    screenshotNativeBaseline:screenshotBaseline,
     termination:stopReason,trueNativeTrace:trace,
     source:B273_SOURCE,sourceAuthorityUnchanged:true,
     artificialTimeOrMovement:false,
@@ -175,6 +201,7 @@ export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screensho
   allEightActorsUntouched:true,
   trueKeyPressStages:trace.legs.length,
   termination:stopReason,b274RealBrowserInput:pointerLock,
+  b279AfterScreenshotNativeBaseline:screenshotBaseline,
   preImage:before,postImage:after,
   ...trace,
   noFakeSurfaceReachability:!trace.actualVerifiedLowerSupportReached,

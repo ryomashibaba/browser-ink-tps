@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import {strict as assert} from 'node:assert';
-import {b273InspectNativeKccSample,b273AuditContinuousKeyboardLegs,b274EnsureNativeKeyboardInput}
+import {b273InspectNativeKccSample,b273AuditContinuousKeyboardLegs,b274EnsureNativeKeyboardInput,b279InspectAfterSourceScreenshot}
  from './t21-b273-real-native-kcc-transition.mjs';
 function state(tick,z,y=8.4,hit='UndertowT21D:spawn-high-positive-z'){
  return {paused:false,matchState:'STAGING',stopReason:null,
@@ -104,4 +104,25 @@ test('B274 rejects hidden browser without attempting a native key or mouse',asyn
   cmd:async()=>{throw Error('should not run CDP actions');},
   waitUntil:async()=>{throw Error('should not poll');}
  }),/B274_NATIVE_BROWSER_FOCUS_OR_CANVAS_UNAVAILABLE/);
+});
+
+test('B279 excludes 30 native ticks spent capturing original GPU screenshot before KeyW',()=>{
+ const before=state(43,67.8927,8.39507);
+ const after=state(73,67.8927,8.39507);
+ const valid=b279InspectAfterSourceScreenshot(before,after);
+ assert.equal(valid.preScreenshotTick,43);
+ assert.equal(valid.postScreenshotNativeTick,73);
+ assert.equal(valid.unpressedScreenshotTickSpan,30);
+ assert.equal(valid.originalSourceSupport,'UndertowT21D:spawn-high-positive-z');
+ assert.equal(valid.screenshotTicksNotCountedAsKeyboard,true);
+ assert.equal(valid.noArtificialClockChanges,true);
+});
+test('B279 refuses pre-input actor jump or invalid original support during image capture',()=>{
+ assert.throws(()=>b279InspectAfterSourceScreenshot(
+  state(43,68),state(42,68)),/NATIVE_PRE_KEY_SOURCE_BASELINE_DRIFT/);
+ assert.throws(()=>b279InspectAfterSourceScreenshot(
+  state(43,68),state(73,69)),/NATIVE_PRE_KEY_SOURCE_BASELINE_DRIFT/);
+ assert.throws(()=>b279InspectAfterSourceScreenshot(
+  state(43,68),state(73,68,5.5,'UndertowT21D:right-low-team-a')),
+ /NATIVE_PRE_KEY_SOURCE_BASELINE_DRIFT/);
 });
