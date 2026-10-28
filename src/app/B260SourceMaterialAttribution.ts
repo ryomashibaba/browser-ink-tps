@@ -21,6 +21,28 @@ export function b260DrawVisible(materialName:string,hidden:string|null){
   throw Error('B260_UNVERIFIED_SOURCE_MATERIAL_NAME');
  return materialName!==hidden;
 }
+/** The original StageRoot uses parent solids containing footprint-piece
+ * render children. Unlike F3L optical meshes, a certified solid parent
+ * is NOT required to own a direct RenderComponent. */
+export type B260DrawTreeNode={
+ render?:{meshInstances:readonly {visible:boolean}[]}|null;
+ children?:readonly unknown[]
+};
+export function b260NestedDrawGroupVisible(root:B260DrawTreeNode){
+ const stack:unknown[]=[root];let found=0;
+ while(stack.length){
+  const node=stack.pop();
+  if(!node||typeof node!=='object')
+   throw Error('B260_INVALID_DRAW_TREE_NODE');
+  const n=node as B260DrawTreeNode;
+  for(const mesh of n.render?.meshInstances??[]){
+   found++;
+   if(!mesh.visible)return false;
+  }
+  for(const child of n.children??[])stack.push(child);
+ }
+ return found>0;
+}
 export const B260_SOURCE_AUTHORITY=Object.freeze({
  source:'25/17/26/0' as const,originalUvTriangles:57578 as const,
  renderOnly:true as const,materialBytesChanged:0 as const,
