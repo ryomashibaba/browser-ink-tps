@@ -5,12 +5,13 @@
  * CPU AIM selection stays default FIXED unless explicitly opted in.
  */
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdirSync,writeFileSync} from 'node:fs';
+import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {b80ClassifyNativeStall} from './t21-w10b80-native-stall-classifier.mjs';
 import {verifyB179RealNativeResourceProof} from './t21-w10b179-real-resource-economy-gate.mjs';
+import {b303OwnedInkRasterAudit} from './t21-b303-native-ink-pixel-attribution.mjs';
 
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
@@ -1442,6 +1443,17 @@ async function run(){
         artAccepted:false,full4v4Certified:false,productionAuthorized:false};
        writeFileSync(resolve(OUTPUT,'b302-original-ink-team-a-tone-abca.json'),
         JSON.stringify(b302Report,null,2));
+       // B303: decode the actual captured Chromium PNG bytes and cross-check
+       // their changed pixels against real B293 source-owner projections.
+       const b303=b303OwnedInkRasterAudit(
+        ...[b302Report.original,b302Report.deep,b302Report.bright,
+         b302Report.restored].map(x=>readFileSync(resolve(OUTPUT,x.file))),
+        realInk.sampledProjectedCells);
+       writeFileSync(resolve(OUTPUT,'b303-true-native-owner-pixel-attribution.json'),
+        JSON.stringify(b303,null,2));
+       console.log('B303_NATIVE_TRUE_OWNER_RASTER_METRICS',
+        JSON.stringify({ownerSamples:b303.actualOwnerProjectedSamples,
+         candidateStats:b303.candidateStats,exactRestoration:b303.exactRestoration}));
        console.log('B302_GENUINE_OWNED_TEAM_A_COLOR_A_B_C_A_PASS',
         JSON.stringify({tick:still.tick,
          nativePaintMeshes:17,originalFrameRestored:true,

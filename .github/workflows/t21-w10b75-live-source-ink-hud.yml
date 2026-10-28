@@ -113,6 +113,8 @@ on:
       - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.ts'
       - 'src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.test.ts'
       - 'scripts/t21-w10b75-live-native-ink-hud.mjs'
+      - 'scripts/t21-b303-native-ink-pixel-attribution.mjs'
+      - 'scripts/t21-b303-native-ink-pixel-attribution.test.mjs'
       - 'scripts/t21-w10b179-real-resource-economy-gate.mjs'
       - 'scripts/t21-w10b179-real-resource-economy-gate.test.mjs'
       - 'scripts/t21-w10b80-native-stall-classifier.mjs'
@@ -140,6 +142,8 @@ jobs:
           node --test scripts/t21-w10b135-native-combat-pulse.test.mjs
           node --test scripts/t21-w10b153-real-A1-support-ink-audit.test.mjs scripts/t21-w10b154-seven-cpu-source-coverage-audit.test.mjs
           node --check scripts/t21-w10b75-live-native-ink-hud.mjs
+          node --test scripts/t21-b303-native-ink-pixel-attribution.test.mjs
+          node --check scripts/t21-b303-native-ink-pixel-attribution.mjs
           node --test scripts/t21-w10b179-real-resource-economy-gate.test.mjs
           node --check scripts/t21-w10b80-native-stall-classifier.mjs
           node --test scripts/t21-w10b80-native-stall-classifier.test.mjs
