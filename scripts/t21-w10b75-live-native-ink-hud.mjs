@@ -15,6 +15,7 @@ import {verifyB179RealNativeResourceProof} from './t21-w10b179-real-resource-eco
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
 const mode=process.env.T21_W10B75_AIM||'FIXED';
+const b287ReadyOnly=process.env.T21_B287_READY_ONLY==='1';
 const b179Recovery=process.env.T21_B179_NATIVE_SOURCE_RECOVERY==='1';
 const b180Patches=process.env.T21_B180_NATIVE_SOURCE_PATCH_AIM==='1';
 const b182NativeSight=process.env.T21_B182_NATIVE_ORIGINAL_COMBAT_SIGHT==='1';
@@ -33,6 +34,9 @@ const b100Right=process.env.T21_W10B99_VARIANT==='RIGHT_SHORT';
 if(process.env.T21_W10B99_VARIANT&&!b99Left&&!b100Right)
  throw Error('B100_UNKNOWN_REAL_HUMAN_INPUT_VARIANT');
 if(!['FIXED','SWEEP'].includes(mode))throw Error('B75_BAD_MODE');
+if(b287ReadyOnly&&(mode!=='FIXED'||
+  process.env.T21_B207_REAL_COMBAT_SELECT!=='1'))
+ throw Error('B287_READY_SMOKE_REQUIRES_REAL_FIXED_PLAYER_ROUND');
 if(parkedB96&&mode!=='FIXED')throw Error('B96_EXPERIMENT_MUST_KEEP_FIXED_AIM');
 if((b99Left||b100Right)&&!parkedB96)
  throw Error('B100_VARIANT_REQUIRES_ORIGINAL_SOURCE_OPTIN');
@@ -932,6 +936,29 @@ async function run(){
     writeFileSync(resolve(OUTPUT,'b246-native-player-qa-hud.json'),
      JSON.stringify(b246Evidence,null,2));
     console.log('B246_REAL_CHROMIUM_HUD_DISPLAY_RESTORED',JSON.stringify(b246Evidence));
+    // B287: genuine selected 180s READY, paused native tick 0, actual
+    // player/QA/F8/restored framebuffer and compact source team checked.
+    // Exit BEFORE the costly B250+ optical material A/B and B223 long
+    // seven-CPU rejoin. This does not certify later gameplay or art.
+    if(b287ReadyOnly){
+     const proof={schema:'B287_GENUINE_CHROMIUM_FAST_READY_PLAYER_QA_V1',
+      originalSource:[25,17,26,0],realUserClickedSourceCombat:true,
+      nativeTick:0,nativeTimeRemaining:180,
+      readyPlayerNativeRosterCount:b246Before.compactRejoining,
+      readyPlayerAllyCount:b246Before.compactAlly,
+      readyPlayerEnemyCount:b246Before.compactEnemy,
+      playerQaPlayerRestored:
+       b246Before.compactTeam&&!b246Qa.compactTeam&&b246Restored.compactTeam,
+      originalWorldUnchanged:true,virtualTicksInjected:0,actorRelocations:0,
+      scoreablePromotions:0,officialWinner:'NONE',
+      photos:b246Evidence.screenshots,
+      laterPhysicalMatchCertified:false,artAccepted:false,
+      productionAuthorized:false,unrestricted4v4Certified:false};
+     writeFileSync(resolve(OUTPUT,'b287-fast-original-player-ready.json'),
+      JSON.stringify(proof,null,2));
+     console.log('B287_REAL_CHROMIUM_READY_PLAYER_QA_SMOKE_PASS',JSON.stringify(proof));
+     return;
+    }
     // B250: same Chromium camera and paused zero-tick world, with only
     // registered solid material/sky switch. No source/paint/actor writes.
     const b250Before=await snapshot();

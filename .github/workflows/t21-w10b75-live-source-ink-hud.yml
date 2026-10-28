@@ -127,9 +127,36 @@ jobs:
           node --test scripts/t21-w10b179-real-resource-economy-gate.test.mjs
           node --check scripts/t21-w10b80-native-stall-classifier.mjs
           node --test scripts/t21-w10b80-native-stall-classifier.test.mjs
+  b287-native-ready-smoke:
+    name: B287 fast genuine Chromium selected-round READY and F8 player HUD
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Native CDP user-select, frozen READY, F8 and source team
+        env:
+          T21_W10B75_AIM: FIXED
+          T21_B207_REAL_COMBAT_SELECT: '1'
+          T21_B287_READY_ONLY: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-b287
+        run: node scripts/t21-w10b75-live-native-ink-hud.mjs
+      - name: Preserve genuine READY PLAYER-QA-PLAYER frames and zero-tick evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b287-real-native-player-ready-qa
+          path: /tmp/t21-b287/
+          if-no-files-found: warn
+          retention-days: 14
   real-native-source-hud:
     name: Genuine live WebGL2 HUD original CPU ink (${{ matrix.aim }})
-    needs: preflight
+    needs: [preflight, b287-native-ready-smoke]
     strategy:
       fail-fast: false
       matrix:
