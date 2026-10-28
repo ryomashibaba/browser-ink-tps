@@ -1,4 +1,6 @@
-# T21 B283 — registered polygon steering screen and target-source identity HOLD
+# T21 B283 — registered polygon steering screen (B284 identity correction applies)
+
+> **Superseded identity warning, 2026-10-28:** B283 missed the already-existing 2026-09-28 `UndertowSpillwayStageSourceIdentityAudit.ts`. Independent B284 reinspection of actual Leanny `SceneInfo.json` rows for 720 / 920 / 1130 verifies `Vss_Temple01 = マテガイ放水路（改修後）`, `Vss_Nagasaki03 = チョウザメ造船`. The KiTrix `StageLoader.swift` convenience human-name map is contradicted by authoritative game-data rows. **Stage model identity is resolved; the FloorLine00 *original-game collision role*, physical support continuity, and connected full-game route are NOT resolved.** Keep all authentic earlier KCC results and all collision / production HOLDs. See `T21_B284_PINNED_SCENEINFO_SOURCE_IDENTITY.md`.
 
 Date: 2026-10-28 JST. QA branch only. This is *geometry research plus a read-only regression*, not new native motion, collision registration, route completion, CPU autonomy, visual acceptance or publishing authority.
 

@@ -20,7 +20,7 @@ export const UNDERTOW_STAGE_SOURCE_IDENTITY_AUDIT = Object.freeze({
   }),
   kitrixHumanNameMapConflict: Object.freeze({
     repository: 'kirakira-dev/KiTrix' as const,
-    sourceCommit: '0611f51b35c9736ee986fb2218461e2585b7875e6' as const,
+    sourceCommit: '0611f51b35c9736ee986fb2218461e2585b7875e' as const,
     stageLoaderMapsUndertowToNagasaki03: true,
     stageLoaderMapsCampTriggerfishToTemple01: true,
     trustedForStageSourceIdentity: false,
@@ -62,6 +62,13 @@ export function undertowStageSourceIdentityAuditErrors(): readonly string[] {
     a.leannyEvidence.verifiedSnapshots.join(',') !== '720,920,1130'
   ) {
     errors.push('cross-snapshot source identity evidence is incomplete');
+  }
+
+  if (
+    !/^[0-9a-f]{40}$/.test(a.kitrixHumanNameMapConflict.sourceCommit) ||
+    !/^[0-9a-f]{40}$/.test(a.leannyEvidence.sourceCommit)
+  ) {
+    errors.push('pinned upstream source commits must be exact 40-character SHA-1 IDs');
   }
 
   if (

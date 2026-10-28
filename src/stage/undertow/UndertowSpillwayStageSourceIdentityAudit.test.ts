@@ -26,6 +26,13 @@ describe('T21 remodeled Undertow stage source identity', () => {
     expect(a.conclusion.previousTemple01GeometryWorkRequiresRollback).toBe(false);
   });
 
+  it('pins valid exact upstream commit SHA identities for future CI', () => {
+    const a = UNDERTOW_STAGE_SOURCE_IDENTITY_AUDIT;
+    expect(a.leannyEvidence.sourceCommit).toMatch(/^[a-f0-9]{40}$/);
+    expect(a.kitrixHumanNameMapConflict.sourceCommit).toMatch(/^[a-f0-9]{40}$/);
+    expect(a.kitrixHumanNameMapConflict.sourceCommit).toBe('0611f51b35c9736ee986fb2218461e2585b7875e');
+  });
+
   it('passes the source identity audit', () => {
     expect(undertowStageSourceIdentityAuditErrors()).toEqual([]);
   });
