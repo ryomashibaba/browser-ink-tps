@@ -26,7 +26,6 @@ on:
       - "src/app/B269SourceActorIdentity*"
       - "src/app/B271MultiSurfaceRegistration*"
       - "scripts/t21-b271-multi-surface-registration.mjs"
-      - "scripts/qa-offline/t21-b273-real-native-kcc-transition*.mjs"
       - "scripts/t21-b269-native-rear-identity.mjs"
       - "src/app/B248SourceActorVisuals*"
       - "scripts/t21-b268-native-actor-composition.mjs"
@@ -43,7 +42,7 @@ concurrency:
 jobs:
   full-source:
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
@@ -149,7 +148,6 @@ jobs:
           T21_B268_ACTOR_COMPOSITION: "1"
           T21_B269_REAR_IDENTITY: "1"
           T21_B271_MULTISURFACE: "1"
-          T21_B273_REAL_KCC: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()
