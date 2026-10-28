@@ -16,6 +16,7 @@ const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
 const mode=process.env.T21_W10B75_AIM||'FIXED';
 const b287ReadyOnly=process.env.T21_B287_READY_ONLY==='1';
+const b288ActorAb=process.env.T21_B288_ACTOR_AB==='1';
 const b179Recovery=process.env.T21_B179_NATIVE_SOURCE_RECOVERY==='1';
 const b180Patches=process.env.T21_B180_NATIVE_SOURCE_PATCH_AIM==='1';
 const b182NativeSight=process.env.T21_B182_NATIVE_ORIGINAL_COMBAT_SIGHT==='1';
@@ -34,6 +35,8 @@ const b100Right=process.env.T21_W10B99_VARIANT==='RIGHT_SHORT';
 if(process.env.T21_W10B99_VARIANT&&!b99Left&&!b100Right)
  throw Error('B100_UNKNOWN_REAL_HUMAN_INPUT_VARIANT');
 if(!['FIXED','SWEEP'].includes(mode))throw Error('B75_BAD_MODE');
+if(b288ActorAb&&!b287ReadyOnly)
+ throw Error('B288_ACTOR_AB_REQUIRES_B287_NATIVE_READY_GATE');
 if(b287ReadyOnly&&(mode!=='FIXED'||
   process.env.T21_B207_REAL_COMBAT_SELECT!=='1'))
  throw Error('B287_READY_SMOKE_REQUIRES_REAL_FIXED_PLAYER_ROUND');
@@ -966,6 +969,53 @@ async function run(){
      writeFileSync(resolve(OUTPUT,'b287-fast-original-player-ready.json'),
       JSON.stringify(proof,null,2));
      console.log('B287_REAL_CHROMIUM_READY_PLAYER_QA_SMOKE_PASS',JSON.stringify(proof));
+     if(b288ActorAb){
+      // Compare three real render-only variants on SAME genuine paused
+      // Chromium WebGL2 native source 25/17/26/0 snapshot & camera.
+      const initial=await snapshot();
+      const stable=JSON.stringify(stableRound(initial));
+      const frames=[{variant:'B248_ORIGINAL',
+       frame:await b246Screenshot('b288-actor-a-original')}];
+      for(const variant of ['B268_COMPACT','B269_REAR_IDENTITY','B248_ORIGINAL']){
+       const change=await evaluate(
+        'window.__t21F3.setB288FrozenSourceActorVisual('+JSON.stringify(variant)+')');
+       if(change.mode!==variant||change.realActors!==8||
+          change.actorBodyRelocations!==0||change.rapierCollidersAdded!==0||
+          change.navLinksAdded!==0||change.paintCellsModified!==0||
+          change.scoreablePromotions!==0||change.productionAuthorized!==false||
+          change.artAccepted!==false||
+          change.actualRealCpuIds.join(',')!=='A1,A2,A3,B1,B2,B3,B4')
+        fail('B288_NON_NATIVE_RENDER_ONLY_AUTHORITY_'+JSON.stringify(change));
+       await sleep(180);
+       const frame=await b246Screenshot(
+        variant==='B268_COMPACT'?'b288-actor-b-compact':
+        variant==='B269_REAR_IDENTITY'?'b288-actor-c-rear-identity':
+        'b288-actor-a-restored');
+       frames.push({variant,frame});
+       if(JSON.stringify(stableRound(await snapshot()))!==stable)
+        fail('B288_ACTOR_AB_ACTUAL_NATIVE_WORLD_CHANGED');
+      }
+      const [original,compact,rear,restore]=frames.map(x=>x.frame.sha256);
+      if(original===compact||original===rear||compact===rear||
+         original!==restore)
+       fail('B288_ACTOR_AB_NATIVE_FRAME_OR_RESTORE_FAILED_'+
+        JSON.stringify({original,compact,rear,restore}));
+      const evidence={
+       schema:'B288_FROZEN_NATIVE_3D_ACTOR_VARIANT_ABCA_V1',
+       nativeRenderer:'webgl2',nativeStage:'25/17/26/0',
+       sameGenuinePausedCpuPlayerWorld:true,originalNativeTick:0,
+       variants:frames,originalFrameRestoredExactly:true,
+       actualActorWorldRelocations:0,collidersAdded:0,
+       sourceOpticalGeometryModified:0,navLinksAdded:0,
+       scoreablePromotions:0,officialWinner:'NONE',
+       artAccepted:false,productionAuthorized:false,
+       crossTeamNaturalRoutesCertified:'0/12'
+      };
+      writeFileSync(resolve(OUTPUT,'b288-original-source-actor-abc-a.json'),
+       JSON.stringify(evidence,null,2));
+      console.log('B288_REAL_CHROMIUM_ACTOR_RENDER_ABCA_PASS',
+       JSON.stringify(evidence));
+     }
      return;
     }
     // B250: same Chromium camera and paused zero-tick world, with only

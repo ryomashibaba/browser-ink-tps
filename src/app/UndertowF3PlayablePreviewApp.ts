@@ -131,6 +131,8 @@ import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
 import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
  type B255ActorPresentation} from './B255SourceActorReview';
 import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
+import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
+ from './B288NativeSourceActorArtGate';
 import {b268VariantAccepted,b268RenderResearchGate,B268_VISUAL_AUTHORITY,
  type B268RenderVariant} from './B268SourceActorComposition';
 import {b256SourceOpticalEligible,B256_OPTICAL_AUTHORITY}
@@ -1709,6 +1711,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB255SourceActorPresentation(mode),
     setB268SourceActorComposition:(mode:B268RenderVariant)=>
      this.setB268SourceActorComposition(mode),
+    setB288FrozenSourceActorVisual:(mode:B268RenderVariant)=>
+     this.setB288FrozenSourceActorVisual(mode),
     setB256SourceOpticalAperture:(on:boolean)=>
      this.setB256SourceOpticalAperture(on),
     auditB257OriginalDepthComposition:()=>
@@ -2077,6 +2081,44 @@ export class UndertowF3PlayablePreviewApp{
    existingCpuActorIds:bots.map(b=>b.id),source:'25/17/26/0' as const,
    realOriginalPaintSurfaces:this.b45SourceSurfaces.length,
    ...B268_VISUAL_AUTHORITY};
+ }
+ /** B288: never alter source actor world position, physics, real ink
+  * or score; only change the existing B248/B268/B269 art mesh.
+  * Explicit frozen source combat mode and strict original 25/17/26/0. */
+ private setB288FrozenSourceActorVisual(mode:B268RenderVariant){
+  const player=this.app.root.findByName('Player') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  const actors=player?[player,...bots.map(b=>b.entity)]:[];
+  const visuals=actors.map(x=>b248ExistingSourceActorVisual(x));
+  const scoreable=this.b45SourceSurfaces.filter(s=>s.isScoreable).length;
+  const eligible=b288FrozenVisualStudyEligible({
+   url:new URL(location.href).searchParams,
+   selectedNativeCombat:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+   fullRound:this.b203FullRound,paused:this.paused,nativeTick:this.clock.tick,
+   matchState:this.matchState,stopReason:this.stopReason,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   surveyActive:this.survey.snapshot().active,
+   galleryActive:this.galleryIndex>=0,
+   nativeRenderer:this.canvas.dataset.t21F3Renderer??'',
+   originalSolids:this.rawStage.solids.length,
+   originalPaint:this.rawStage.paintSurfaces.length,
+   originalLinks:this.rawStage.navigationLinks?.length??0,
+   scoreable,cpuActorIds:bots.map(b=>b.id),
+   playerRenderInstalled:!!player?.render&&
+    !!player.children.find(x=>x.name==='B248:GEAR_VISUAL'),
+   sourceVisualsInstalled:actors.filter((a,i)=>
+    !!a.render&&!!visuals[i]&&
+    a.children.filter(x=>x.name==='B248:GEAR_VISUAL').length===1).length,
+   actorBodyRelocations:this.stats.cpuPhysicalFootRelocations??0
+  },mode);
+  if(!eligible)throw Error('B288_FROZEN_REAL_SOURCE_ACTOR_STUDY_UNAUTHORIZED');
+  const previous=this.canvas.dataset.t21B288SourceActorStyle??'B248_ORIGINAL';
+  if(!b268VariantAccepted(previous))
+   throw Error('B288_UNKNOWN_PRIOR_ACTOR_STYLE');
+  for(const visual of visuals)visual!.setResearchVariant(mode);
+  this.canvas.dataset.t21B288SourceActorStyle=mode;
+  return {mode,previous,actualRealCpuIds:bots.map(b=>b.id),
+   ...B288_ART_RESEARCH_AUTHORITY};
  }
  /** B256 shader-only aperture in authentic, pinned, nonproduction SOURCE UV.
   * Uses screen-relative fragment attenuation, never a synthetic collision. */
