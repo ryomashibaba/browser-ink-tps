@@ -2022,6 +2022,8 @@ export class UndertowF3PlayablePreviewApp{
   const actor=this.app.root.findByName('Player') as Entity|null;
   const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
   const p=new URL(location.href).searchParams;
+  if(mode==='B269_REAR_IDENTITY'&&p.get('t21B269')!=='rearIdentity')
+   throw Error('B269_OPT_IN_ORIGINAL_SOURCE_ACTOR_ART_RESEARCH_REQUIRED');
   if(!uv||!actor?.render||bots.length!==7||
      !b268RenderResearchGate(p,{
       paused:this.paused,staging:this.matchState==='STAGING',

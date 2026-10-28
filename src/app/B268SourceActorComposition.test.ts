@@ -48,9 +48,10 @@ describe('B268 genuine-source render-only alternative silhouette',()=>{
    scoreableSurfacesAdded:0,actorPositionsModified:0,
    productionAuthorized:false,artAccepted:false});
  });
- it('only accepts the two deliberately limited styles',()=>{
+ it('only accepts three deliberately limited research styles',()=>{
   expect(b268VariantAccepted('B248_ORIGINAL')).toBe(true);
   expect(b268VariantAccepted('B268_COMPACT')).toBe(true);
+  expect(b268VariantAccepted('B269_REAR_IDENTITY')).toBe(true);
   expect(b268VariantAccepted('REPLACE_SOURCE')).toBe(false);
  });
 });

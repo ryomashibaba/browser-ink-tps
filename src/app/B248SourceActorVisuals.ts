@@ -4,6 +4,8 @@ import {Color,Entity,StandardMaterial} from 'playcanvas';
 import {GAME_CONFIG} from '../config/game/gameConfig';
 import {B268_COMPACT_HUMAN_PARTS,b268VariantAccepted,
  type B268RenderVariant} from './B268SourceActorComposition';
+import {B269_REAR_IDENTITY_PARTS,b269ValidateParts}
+ from './B269SourceActorIdentity';
 type Primitive='box'|'sphere'|'capsule'|'cylinder';
 type MaterialId='SUIT'|'TEAM'|'VISOR'|'DARK'|'GEAR';
 type Part={name:string;type:Primitive;tint:MaterialId;
@@ -98,6 +100,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
  let requestedMode:'HUMAN'|'SQUID'='HUMAN',shown=true;
  let researchVariant:B268RenderVariant='B248_ORIGINAL';
  let compactRoot:Entity|null=null;
+ let identityRoot:Entity|null=null;
  const ensureCompact=()=>{
   if(compactRoot)return;
   const root=new Entity('B268:RESEARCH_ONLY_COMPACT_SILHOUETTE');
@@ -118,12 +121,40 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   parent.addChild(root);
   compactRoot=root;
  };
+ const ensureIdentity=()=>{
+  if(identityRoot)return;
+  b269ValidateParts(B269_REAR_IDENTITY_PARTS);
+  const root=new Entity('B269:RESEARCH_ONLY_REAR_IDENTITY');
+  root.enabled=false;
+  const pigment=team==='A'?GAME_CONFIG.visual.teamA:GAME_CONFIG.visual.teamB;
+  const materials={
+   ARMOR:make([.11,.17,.22]),
+   FABRIC:make([.075,.11,.14]),
+   PLATE:make([.25,.33,.38]),
+   TEAM:make(pigment,.42),
+   VISOR:make([.68,.88,.96],.20),
+   STEEL:make([.15,.22,.27])
+  };
+  for(const p of B269_REAR_IDENTITY_PARTS){
+   const child=new Entity('B269:VISUAL_ONLY:'+p.name);
+   child.addComponent('render',{type:p.type,material:materials[p.tone],
+    castShadows:false,receiveShadows:false});
+   child.setLocalPosition(...p.pos);
+   child.setLocalScale(...p.size);
+   if(p.euler)child.setLocalEulerAngles(...p.euler);
+   root.addChild(child);
+  }
+  parent.addChild(root);
+  identityRoot=root;
+ };
  const syncVisibility=()=>{
   parent.render!.enabled=!shown;
   humanRoot.enabled=shown&&requestedMode==='HUMAN'&&
    researchVariant==='B248_ORIGINAL';
   if(compactRoot)compactRoot.enabled=shown&&requestedMode==='HUMAN'&&
    researchVariant==='B268_COMPACT';
+  if(identityRoot)identityRoot.enabled=shown&&requestedMode==='HUMAN'&&
+   researchVariant==='B269_REAR_IDENTITY';
   squidRoot.enabled=shown&&requestedMode==='SQUID'&&role==='PLAYER';
  };
  const setMode=(mode:'HUMAN'|'SQUID')=>{
@@ -135,12 +166,19 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
  const setResearchVariant=(mode:B268RenderVariant)=>{
   if(!b268VariantAccepted(mode))throw Error('B268_UNKNOWN_SOURCE_ACTOR_STYLE');
   if(mode==='B268_COMPACT')ensureCompact();
+  if(mode==='B269_REAR_IDENTITY')ensureIdentity();
+  // A frozen study must use the *last real native movement yaw*, not a
+  // synthetic forward-facing mannequin pose after the model is spawned.
+  if(compactRoot)compactRoot.setLocalEulerAngles(0,facing,0);
+  if(identityRoot)identityRoot.setLocalEulerAngles(0,facing,0);
   researchVariant=mode;syncVisibility();
  };
  let facing=team==='B'?180:0;
  const setPose=(dx:number,dz:number,activity:number,phase:number)=>{
   facing=b249FacingDegrees(dx,dz,facing);
   humanRoot.setLocalEulerAngles(0,facing,0);
+  if(compactRoot)compactRoot.setLocalEulerAngles(0,facing,0);
+  if(identityRoot)identityRoot.setLocalEulerAngles(0,facing,0);
   squidRoot.setLocalEulerAngles(0,facing,0);
   const swing=b249StrideDegrees(activity,phase);
   for(const [part,sign] of [
