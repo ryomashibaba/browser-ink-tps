@@ -1,0 +1,61 @@
+{
+  "schema": "B299_GENUINE_NATIVE_PAINT_SURFACE_FRAMEBUFFER_ATTRIBUTION",
+  "artVerdict": "HOLD",
+  "testScope": "post-real-shots frozen original 1600x900 Chromium framebuffer",
+  "runId": 40770325123,
+  "artifactId": 12852139903,
+  "head": "7350400eeac2fa885bff75114dca9eb792fe4237",
+  "nativeTick": 86,
+  "realHumanShots": 8,
+  "nativeOwnerCells": 315,
+  "sampledNativeOwnerCenters": 79,
+  "preservedOriginalBoundary": [
+    25,
+    17,
+    26,
+    0
+  ],
+  "imageA": "b289-native-a-original-after-ink.png",
+  "imageB": "b298-native-after-real-ink-paint-draw-hidden.png",
+  "imageA2": "b298-native-after-real-ink-paint-draw-restored.png",
+  "imageOriginalExactRestored": true,
+  "wholePixels": 1440000,
+  "changedRGBPixels": 676136,
+  "changedPixelsPct": 46.95388888888889,
+  "changedScreenBounds": [
+    0,
+    308,
+    1599,
+    899
+  ],
+  "upperScreenY0to349ChangedPixels": 1403,
+  "lowerScreenY350to899ChangedPixels": 674733,
+  "nativeOwnedCentersExactlyChanged": 32,
+  "nativeOwnedCentersWithin1PxChanged": 37,
+  "nativeOwnedCentersWithin2PxChanged": 40,
+  "nativeOwnedCentersWithin5PxChanged": 52,
+  "sourceGroundFloorSampleRgb": {
+    "x": 1000,
+    "y": 500,
+    "original": [
+      60,
+      68,
+      78
+    ],
+    "paintRenderHidden": [
+      158,
+      183,
+      193
+    ]
+  },
+  "verifiedF3lLoadedInThisNativeRun": false,
+  "analysisInterpretation": "Original registered neutral opaque paint meshes darken a huge proportion of native ground. The original texture-only F3L source is not active; a native shader neutral-color-only reversible trial can compare perceptual uplift without altering paint ownership or certified physics.",
+  "notCertified": [
+    "individual ownership to exact screen pixel proof",
+    "every RGB pixel change due to team ink",
+    "F3L original material parity",
+    "full original 4v4",
+    "art acceptance",
+    "production"
+  ]
+}
