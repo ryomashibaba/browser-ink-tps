@@ -5,6 +5,33 @@
 import {writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 export const B273_SOURCE='25/17/26/0';
+/** B274: a genuine browser pointer lock is a precondition for PlayerInput
+ * keydown. B258 exits pointer lock for read-only art review, so the real CDP
+ * KCC witness must re-acquire it through native mouse input, not a JS flag.
+ */
+export async function b274EnsureNativeKeyboardInput({evaluate,cmd,waitUntil}){
+ const stateExpr="({hasCanvas:!!document.querySelector('#app-canvas'),hasFocus:document.hasFocus(),hidden:document.hidden,locked:document.pointerLockElement===document.querySelector('#app-canvas')})";
+ const before=await evaluate(stateExpr);
+ if(before?.hasCanvas!==true||before.hasFocus!==true||before.hidden!==false)
+  throw Error('B274_NATIVE_BROWSER_FOCUS_OR_CANVAS_UNAVAILABLE');
+ if(before.locked!==true){
+  // A real CDP mouse press/release is required; never set input/lock in JS.
+  const click={x:800,y:450,button:'left',clickCount:1};
+  await cmd('Input.dispatchMouseEvent',{type:'mousePressed',...click});
+  await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',...click});
+  await waitUntil(async()=>{
+   const s=await evaluate(stateExpr);
+   return s?.hasCanvas===true&&s?.hasFocus===true&&s?.hidden===false&&
+    s?.locked===true?s:false;
+  },12000);
+ }
+ const after=await evaluate(stateExpr);
+ if(after?.locked!==true||after?.hasFocus!==true||after?.hidden!==false)
+  throw Error('B274_NATIVE_POINTER_LOCK_NOT_VERIFIED');
+ return {beforeLocked:before.locked===true,afterLocked:true,
+  relockedByRealCdpMouse:before.locked!==true};
+}
+
 export const B273_MAX_KEY_LEGS=8;
 export const B273_TRUE_KEY_TICKS=24;
 const upper='UndertowT21D:spawn-high-positive-z';
@@ -70,6 +97,8 @@ export function b273AuditContinuousKeyboardLegs(samples){
   productionAuthorized:false,legs};
 }
 export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screenshot,output}){
+ const pointerLock=await b274EnsureNativeKeyboardInput({evaluate,cmd,waitUntil});
+ console.log('B274_GENUINE_BROWSER_INPUT_READY',JSON.stringify(pointerLock));
  const first=await evaluate('window.__t21F3.snapshot()');
  const initial=b273InspectNativeKccSample(first);
  if(initial.supportId!==upper||initial.worldMeters[1]<8.1||
@@ -105,9 +134,18 @@ export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screensho
  }
  const trace=b273AuditContinuousKeyboardLegs(samples);
  const after=await screenshot('B273_REAL_KCC_B_AFTER_KEYBOARD');
- if(trace.actualNativeTickSpan<1||
-    trace.actualFullMotionMeters<.1)
+ // Preserve the failed native witness rather than losing diagnostic samples.
+ if(trace.actualNativeTickSpan<1||trace.actualFullMotionMeters<.1){
+  writeFileSync(resolve(output,'b274-real-kcc-no-motion-diagnostic.json'),
+   JSON.stringify({failure:'B273_REAL_NATIVE_NO_KCC_MOTION',
+    browserInput: pointerLock,initialSnapshot:initial,
+    termination:stopReason,trueNativeTrace:trace,
+    source:B273_SOURCE,sourceAuthorityUnchanged:true,
+    artificialTimeOrMovement:false,
+    original4v4Certified:false,artAccepted:false,
+    productionAuthorized:false},null,2));
   throw Error('B273_REAL_NATIVE_NO_KCC_MOTION');
+ }
  const report={schema:'B273_NATIVE_REAL_KEYBOARD_RAPIER_SUPPORT_TRANSFER',
   source:B273_SOURCE,sourceOriginalUvTriangles:57578,
   originalSolids:25,originalPaintSurfaces:17,
@@ -116,7 +154,8 @@ export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screensho
   actualBrowserBasedSimulation:true,
   allEightActorsUntouched:true,
   trueKeyPressStages:trace.legs.length,
-  termination:stopReason,preImage:before,postImage:after,
+  termination:stopReason,b274RealBrowserInput:pointerLock,
+  preImage:before,postImage:after,
   ...trace,
   noFakeSurfaceReachability:!trace.actualVerifiedLowerSupportReached,
   nativePaintOwnershipWasNotInjected:true,

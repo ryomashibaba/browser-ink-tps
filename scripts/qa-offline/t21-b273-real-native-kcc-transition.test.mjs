@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import {strict as assert} from 'node:assert';
-import {b273InspectNativeKccSample,b273AuditContinuousKeyboardLegs}
+import {b273InspectNativeKccSample,b273AuditContinuousKeyboardLegs,b274EnsureNativeKeyboardInput}
  from './t21-b273-real-native-kcc-transition.mjs';
 function state(tick,z,y=8.4,hit='UndertowT21D:spawn-high-positive-z'){
  return {paused:false,matchState:'STAGING',stopReason:null,
@@ -43,4 +43,35 @@ test('no fake ground ledger may promote a nav endpoint into support',()=>{
  const s=state(201,68);
  s.b112OriginalHumanGround.lastOriginalSourceHitId='Invented:low';
  assert.equal(b273InspectNativeKccSample(s).supportId,null);
+});
+
+test('B274 restores source keyboard gate with ONLY real CDP pointer input',async()=>{
+ let locked=false;const sent=[];
+ const evaluate=async()=>({hasCanvas:true,hasFocus:true,hidden:false,locked});
+ const cmd=async(method,params)=>{
+  sent.push({method,type:params.type});
+  if(params.type==='mouseReleased')locked=true;
+ };
+ const waitUntil=async(check)=>{const value=await check();assert.ok(value);return value;};
+ const r=await b274EnsureNativeKeyboardInput({evaluate,cmd,waitUntil});
+ assert.deepEqual(r,{beforeLocked:false,afterLocked:true,
+  relockedByRealCdpMouse:true});
+ assert.deepEqual(sent.map(x=>x.type),['mousePressed','mouseReleased']);
+ assert.ok(sent.every(x=>x.method==='Input.dispatchMouseEvent'));
+});
+test('B274 already-locked real input does not fire extra mouse press',async()=>{
+ let calls=0;
+ const r=await b274EnsureNativeKeyboardInput({
+  evaluate:async()=>({hasCanvas:true,hasFocus:true,hidden:false,locked:true}),
+  cmd:async()=>{calls++;},waitUntil:async()=>{calls++;}});
+ assert.equal(calls,0);
+ assert.equal(r.relockedByRealCdpMouse,false);
+});
+test('B274 rejects unfocused browser instead of claiming native keyboard motion',async()=>{
+ await assert.rejects(
+  b274EnsureNativeKeyboardInput({
+   evaluate:async()=>({hasCanvas:true,hasFocus:false,hidden:false,locked:false}),
+   cmd:async()=>{throw Error('must not dispatch');},
+   waitUntil:async()=>{throw Error('must not poll');}
+  }),/B274_NATIVE_BROWSER_FOCUS_OR_CANVAS_UNAVAILABLE/);
 });
