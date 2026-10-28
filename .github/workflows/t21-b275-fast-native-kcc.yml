@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/qa-offline/t21-b273-real-native-kcc-transition*.mjs"
       - "scripts/qa-offline/t21-b275-fast-native-kcc.mjs"
+      - "scripts/qa-offline/t21-b277-real-keyboard-diagnostic*.mjs"
       - ".github/workflows/t21-b275-fast-native-kcc.yml"
   workflow_dispatch:
 permissions:
@@ -65,6 +66,7 @@ jobs:
         run: |
           node --check scripts/qa-offline/t21-b275-fast-native-kcc.mjs
           node --test scripts/qa-offline/t21-b273-real-native-kcc-transition.test.mjs
+          node --test scripts/qa-offline/t21-b277-real-keyboard-diagnostic.test.mjs
       - name: Build unchanged source browser game
         run: npm run build -- --base=/browser-ink-tps/
       - name: Real Chrome WebGL2 source KCC from native keyboard

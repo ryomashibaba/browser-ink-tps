@@ -6,6 +6,9 @@ import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {captureB273NativeKccDrop} from './t21-b273-real-native-kcc-transition.mjs';
+import {b277InstallKeyEventObserver,b277ReadKeyEventObserver,
+ b277CaptureReverseControl}
+ from './t21-b277-real-keyboard-diagnostic.mjs';
 const root='http://127.0.0.1:4196/browser-ink-tps/';
 const output='/tmp/t21-b275-fast-native-kcc';
 const children=[],pending=new Map();let socket=null,seq=0;
@@ -96,7 +99,37 @@ async function main(){
  writeFileSync(resolve(output,'b276-native-source-before-real-input.json'),
   JSON.stringify(readySource,null,2));
  console.log('B275_NATIVE_SOURCE_READY',JSON.stringify(readySource));
- const trace=await captureB273NativeKccDrop({evaluate,cmd,waitUntil,screenshot,output});
+ await b277InstallKeyEventObserver(evaluate);
+ let trace;
+ try{
+  trace=await captureB273NativeKccDrop({evaluate,cmd,waitUntil,screenshot,output});
+ }catch(error){
+  if(String(error).includes('B273_REAL_NATIVE_NO_KCC_MOTION')){
+   try{
+    const triage=await b277CaptureReverseControl({
+     evaluate,cmd,waitUntil,output});
+    console.log('B277_REAL_NATIVE_INPUT_DIRECTION_TRIAGE',JSON.stringify({
+     classification:triage.classification,
+     trustedForwardKeyObserved:triage.originalForwardKeyObserved,
+     trustedReverseKeyObserved:triage.originalReverseKeyObserved,
+     realReverseMeters:triage.reverseControl.realPhysicalMeters,
+     realReentryMeters:triage.returnControl?.realPhysicalMeters??null,
+     noRouteCertified:true}));
+   }catch(triageError){
+    console.error('B277_GENUINE_REVERSE_DIAGNOSTIC_UNAVAILABLE',String(triageError));
+    const evidence=await b277ReadKeyEventObserver(evaluate).catch(e=>({
+     readError:String(e)}));
+    writeFileSync(resolve(output,'b277-native-key-event-triage-unavailable.json'),
+     JSON.stringify({originalFailure:String(error),triageFailure:String(triageError),
+      events:evidence,source:'25/17/26/0',productionAuthorized:false},null,2));
+   }
+  }
+  throw error;
+ }
+ const trusted=await b277ReadKeyEventObserver(evaluate);
+ if(!trusted.events.some(x=>x.code==='KeyW'&&x.type==='keydown'&&
+    x.realTrustedEvent===true&&x.canvasLocked===true&&x.focused===true))
+  fail('REAL_MOVEMENT_WITHOUT_TRUSTED_W_KEY_EVENT');
  if(trace.actualFullMotionMeters<.1||trace.actualNativeTickSpan<1||
     trace.b274RealBrowserInput?.afterLocked!==true)fail('UNVERIFIED_PHYSICAL_MOTION');
  const report={status:trace.actualVerifiedLowerSupportReached?'ORIGINAL_LOWER_REACHED':
@@ -104,6 +137,8 @@ async function main(){
   trueNativeTicks:trace.actualNativeTickSpan,trueKccMeters:trace.actualFullMotionMeters,
   originalSupportIds:[...new Set(trace.legs.map(x=>x.endOriginalSupportId))],
   originalLowerReached:trace.actualVerifiedLowerSupportReached,source:'25/17/26/0',
+  observedTrustedForwardKeydowns:trusted.events.filter(x=>x.code==='KeyW'&&
+   x.type==='keydown'&&x.realTrustedEvent===true).length,
   artAccepted:false,productionAuthorized:false,official4v4Certified:false};
  writeFileSync(resolve(output,'b275-real-kcc-summary.json'),JSON.stringify(report,null,2));
  console.log('B275_REAL_KCC_RESULT',JSON.stringify(report));
