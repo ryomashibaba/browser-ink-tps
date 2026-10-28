@@ -1390,8 +1390,8 @@ async function run(){
          nativePaintMeshes:17,originalFrameRestored:true,
          shots:still.shotsFired,
          ownedHumanInk:still.b23HumanInkFeedback.humanChangedCells}));
-       // B302 native A-B-C-A: two real ShaderMaterial neutral real-ink
-       // colors with *identical* original team ink/atlas/world and actors.
+       // B302 native A-B-C-A: two original ShaderMaterial Team A ink
+       // uniform alternatives with identical source ink atlas/ownership, Team B, neutral, physics and actors.
        await evaluate(`(() => {const u=new URL(location.href);
         u.searchParams.set('t21B302','realInkContrast');
         history.replaceState(null,'',u.href);return true;})()`);
@@ -1399,7 +1399,7 @@ async function run(){
         JSON.stringify('DEEP')+','+JSON.stringify(origin)+')');
        if(b302Deep.tone!=='DEEP'||b302Deep.existingOriginalMeshes!==17||
           b302Deep.teamAUniformOnly!==true)
-        fail('B302_AUTHENTIC_NEUTRAL_DEEP_UNIFORMS_NOT_INSTALLED');
+        fail('B302_ORIGINAL_OWNED_TEAM_A_DEEP_UNIFORMS_NOT_INSTALLED');
        if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
         fail('B302_DEEP_CHANGED_REAL_GAMEPLAY');
        await sleep(190);
@@ -1436,13 +1436,13 @@ async function run(){
         restored:b302A2,actualInkOwnerSamples:realInk.paintSampleCount,
         originalFramebufferRestoredByteExact:true,
         sourceActorPositionsUntouched:true,
-        originalNativeShaderAtlasTeamColorsUntouched:true,
+        originalNativeShaderAtlasTeamBAndNeutralUntouched:true,
         newPaintMeshes:0,newColliders:0,newNavLinks:0,
         scoreablePromotions:0,originalGameplayPhysicsUntouched:true,
         artAccepted:false,full4v4Certified:false,productionAuthorized:false};
        writeFileSync(resolve(OUTPUT,'b302-original-ink-team-a-tone-abca.json'),
         JSON.stringify(b302Report,null,2));
-       console.log('B302_GENUINE_NATIVE_NEUTRAL_TONE_A_B_C_A_PASS',
+       console.log('B302_GENUINE_OWNED_TEAM_A_COLOR_A_B_C_A_PASS',
         JSON.stringify({tick:still.tick,
          nativePaintMeshes:17,originalFrameRestored:true,
          shots:still.shotsFired,

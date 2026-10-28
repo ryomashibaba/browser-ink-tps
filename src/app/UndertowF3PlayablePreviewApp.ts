@@ -2833,7 +2833,7 @@ export class UndertowF3PlayablePreviewApp{
    nativeWorldUntouched:true as const,source:'25/17/26/0' as const,
    artAccepted:false as const,productionAuthorized:false as const};
  }
- /** B302: original shader team A ink UNIFORM ONLY; actual team colors,
+ /** B302: original shader team A ink UNIFORM ONLY; original Team B and neutral colors,
   * real ink atlas, owner-grid, geometry, source/physics/nav untouched. */
  private setB302NativeTeamATone(
   tone:B302NativeTeamATone,origin:readonly [number,number,number]){
@@ -2903,7 +2903,7 @@ export class UndertowF3PlayablePreviewApp{
    this.b302OriginalParameterRefs=null;
    this.auditB294SourceInkShaderBindings(origin);
   }
-  this.canvas.dataset.t21B302NeutralArt=tone;
+  this.canvas.dataset.t21B302TeamAArt=tone;
   return {tone,nativeTick:n.tick,existingOriginalMeshes:17,
    teamAUniformOnly:true as const,originalPaintAtlasUntouched:true as const,
    originalTeamBColorUntouched:true as const,
