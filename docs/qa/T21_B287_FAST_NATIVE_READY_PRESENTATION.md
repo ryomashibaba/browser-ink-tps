@@ -21,3 +21,11 @@ The eventual full B75 FIXED still proves only its original 180s source **non-sco
 ### Before claiming B287 acceptance
 
 Record exact GitHub Actions SHA, B287 fast job result, FRAMEBUFFER screenshot artifacts and separate full FIXED/SWEEP conclusions. Do not claim B287 successful merely from B75 SWEEP or a completed TypeScript build.
+
+## B287 genuine screenshot inspection and correction (not merely DOM tests)
+
+The actual earlier **B286 FIXED** source-Chromium artifact (run #40685368214, `w10b75-live-source-ink-FIXED`) was opened and its **1600x900** `b246-source-player-ready.png` and `b249-real-native-inplay.png` inspected. It showed functional truth (`0/3,0/4,7/7 REJOINING` at READY, `3/3,4/4` after seven genuine CPU rejoin) **but visual failure**: B286 panel was placed at right/top 14px directly over the existing original tactical radar, bleeding its `SOURCE / TACTICAL LIVE PHYSICS` content through B286's translucent background; narrow 212px panel wrapped `OPPONENTS 4/4` into a separate line. B286 was TECH PASS but UI VISUAL HOLD.
+
+B287 moves the genuine compact panel only to the **previously free bottom-right** of the actual 1600x900 original preview, expands bounded width to 278px, increases text background opacity to .97, and keeps the opponent count on one line. This is a **display-only DOM/CSS change**; no source physics, material assets, camera, AI, score or registered collisions change.
+
+The early B287 true Chromium READY probe now **fails closed** if the original F3 tactical radar and B286 compact box have any nonzero bounding-rectangle overlap or if the count line overflows/wraps. It checks both PLAYER views before/after F8 QA, retains exact native tick0/180s time and screenshot saves. ART HOLD remains for game-wide stage/actor presentation; B287 can only establish correct compact UI placement in the tested real source viewport.

@@ -49,10 +49,12 @@ export function createB286CompactSourceTeam(ui:HTMLElement){
  root.dataset.enemyContactCertified='false';
  root.dataset.gameplayWrites='0';
  root.style.cssText=
-  'position:fixed;right:14px;top:14px;z-index:37;pointer-events:none;'+
-  'width:min(212px,calc(100vw - 28px));box-sizing:border-box;'+
+  // F3 radar occupies top-right (up to Y~326 in real Chromium).
+  // Put compact team at bottom-right: no radar overlap or ghost text.
+  'position:fixed;right:14px;bottom:18px;z-index:37;pointer-events:none;'+
+  'width:min(278px,calc(100vw - 28px));box-sizing:border-box;'+
   'padding:10px 12px;border-radius:11px;border:1px solid #65c8d4;'+
-  'color:#edfcff;background:rgba(5,28,42,.88);'+
+  'color:#edfcff;background:rgba(5,28,42,.97);'+
   'box-shadow:0 9px 25px rgba(0,14,29,.25);'+
   'font:700 11px/1.45 system-ui;'+
   'font-variant-numeric:tabular-nums;';
@@ -61,7 +63,7 @@ export function createB286CompactSourceTeam(ui:HTMLElement){
  heading.style.cssText='font-size:10px;letter-spacing:.7px;color:#87dfe7;';
  const counts=document.createElement('div');
  counts.id='t21-f3-b286-team-counts';
- counts.style.cssText='font-size:13px;margin-top:4px;color:#f1fcff;';
+ counts.style.cssText='font-size:12px;margin-top:4px;white-space:nowrap;color:#f1fcff;';;
  const detail=document.createElement('div');
  detail.id='t21-f3-b286-team-detail';
  detail.style.cssText='font-size:9px;margin-top:4px;color:#d7e8ee;';
