@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
-      - name: B284 regression: stage identity is distinct from collision provenance
+      - name: "B284 regression: stage identity is distinct from collision provenance"
         run: node --test scripts/qa-offline/t21-b284-stage-identity-provenance.test.mjs
       - name: B284 verify the three exact pinned upstream SceneInfo versions
         env:
