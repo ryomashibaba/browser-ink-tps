@@ -154,7 +154,7 @@ import {b261SourceGate,classifyB261SourceDrawState} from './B261SourceRenderOrde
 import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStudy';
 import {b263ScreenWitnessGate,b263ReadNativeInkProjection} from './B263RealInkScreenWitness';
 import {b293Eligible,b293QuantifyInkProjections} from './B293ActualInkViewport';
-import {b294ClassifySourceAtlasBindings} from './B294NativeInkAtlasMaterialProof';
+import {b294ClassifySourceAtlasBindings,b294ParameterData} from './B294NativeInkAtlasMaterialProof';
 import {surfaceTextureUvRect} from '../ink/AtlasCoordinates';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
@@ -2676,14 +2676,14 @@ export class UndertowF3PlayablePreviewApp{
     existingSourceMesh:!!mi&&!!e?.render&&
      e.render.meshInstances.length===1,
     visible:mi?.visible===true&&e?.render?.enabled===true,
-    atlasSameTexture:m?.getParameter('uInkAtlas')===this.atlas.texture,
-    atlasRectMatches:!!uv&&matches(m?.getParameter('uAtlasRect'),
+    atlasSameTexture:b294ParameterData(m?.getParameter('uInkAtlas'))===this.atlas.texture,
+    atlasRectMatches:!!uv&&matches(b294ParameterData(m?.getParameter('uAtlasRect')),
      [uv.x,uv.y,uv.width,uv.height]),
-    teamAUniformMatches:matches(m?.getParameter('uTeamAColor'),
+    teamAUniformMatches:matches(b294ParameterData(m?.getParameter('uTeamAColor')),
      GAME_CONFIG.visual.teamA),
-    teamBUniformMatches:matches(m?.getParameter('uTeamBColor'),
+    teamBUniformMatches:matches(b294ParameterData(m?.getParameter('uTeamBColor')),
      GAME_CONFIG.visual.teamB),
-    neutralUniformMatches:matches(m?.getParameter('uNeutralColor'),
+    neutralUniformMatches:matches(b294ParameterData(m?.getParameter('uNeutralColor')),
      GAME_CONFIG.visual.neutral)
    };
   });

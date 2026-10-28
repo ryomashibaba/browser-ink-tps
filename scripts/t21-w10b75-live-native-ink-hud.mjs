@@ -1224,6 +1224,15 @@ async function run(){
          researchFramebuffer:b293Image,exactNativeFramebufferRestoration:true};
         writeFileSync(resolve(OUTPUT,'b293-actual-native-ink-viewport.json'),
          JSON.stringify(report,null,2));
+        console.log('B293_REAL_NATIVE_INK_VIEWPORT_PASS',JSON.stringify({
+         nativeTick:realInk.nativeTick,
+         uvOptIn:realInk.sourceUvOptIn,
+         actualOwnerCells:realInk.actualOwnerCells,
+         actualHumanPaintCells:realInk.actualHumanPaintCells,
+         sampled:realInk.paintSampleCount,inside:realInk.insideScreen,
+         behind:realInk.behindCamera,outside:realInk.outsideScreen,
+         aim:realInk.nearAim,lower:realInk.lowerScreen,
+         source:'25/17/26/0',sameRaster:true}));
         const a294=await evaluate(`(() => {try {
          return {ok:true,data:window.__t21F3.auditB294SourceInkShaderBindings(
           ${JSON.stringify(origin)})};
@@ -1249,15 +1258,7 @@ async function run(){
           matchedRects:binding.atlasUvRectsMatched,
           matchedTeamColors:binding.teamAndNeutralColorUniformsMatched,
           optionalF3l:binding.sourceUvOptIn,source:'25/17/26/0'}));
-        console.log('B293_REAL_NATIVE_INK_VIEWPORT_PASS',JSON.stringify({
-         nativeTick:realInk.nativeTick,
-         uvOptIn:realInk.sourceUvOptIn,
-         actualOwnerCells:realInk.actualOwnerCells,
-         actualHumanPaintCells:realInk.actualHumanPaintCells,
-         sampled:realInk.paintSampleCount,inside:realInk.insideScreen,
-         behind:realInk.behindCamera,outside:realInk.outsideScreen,
-         aim:realInk.nearAim,lower:realInk.lowerScreen,
-         source:'25/17/26/0',sameRaster:true}));
+
        // B292: separate same-native-snapshot A-D-A visual-only trial.
        const dReply=await evaluate('window.__t21F3.setB289RealInPlayActorVisual('+
         JSON.stringify('B292_FLOW_SILHOUETTE')+','+JSON.stringify(origin)+')');

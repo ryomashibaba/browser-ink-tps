@@ -2,6 +2,12 @@
  * Pure validation. A correct binding does not prove the atlas contains
  * colored GPU texels or certify that the pixels survive original optical
  * transparency or native camera occlusion. */
+/** PlayCanvas 2.22.1 returns {data, scopeId} from Material.getParameter.
+ * Never confuse the descriptor with its texture/uniform payload. */
+export function b294ParameterData(param:unknown):unknown{
+ if(!param||typeof param!=='object'||!('data' in param))return undefined;
+ return (param as {data:unknown}).data;
+}
 export type B294SourceAtlasRow=Readonly<{
  surfaceId:string;existingSourceMesh:boolean;visible:boolean;
  atlasSameTexture:boolean;atlasRectMatches:boolean;
