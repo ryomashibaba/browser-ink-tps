@@ -2578,7 +2578,8 @@ export class UndertowF3PlayablePreviewApp{
   const s=this.snapshot(),uv=this.texturedF3l;
   const stage=this.app.root.findByName('StageRoot') as Entity|null;
   const cam=this.playerCameraEntity.camera;
-  const render=stage?.children.filter(x=>x.name.startsWith('PaintSurface:'))??[];
+  const render=stage?.children.filter((x):x is Entity=>
+   x instanceof Entity&&x.name.startsWith('PaintSurface:'))??[];
   const realFoot=s.player.position;
   const travel=origin.length===3&&origin.every(Number.isFinite)?
    Math.hypot(realFoot[0]!-origin[0],realFoot[1]!-origin[1],
