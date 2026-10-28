@@ -1,0 +1,20 @@
+name: T21 B272 genuine 180s local KCC versus 17-surface evidence gate
+on:
+  push:
+    branches: ["dev/t21-f4e103w-qa-infra"]
+    paths:
+      - "scripts/qa-offline/t21-b272-distinct-native-route-evidence*.mjs"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Independent source evidence cross-run route attribution tests
+        run: node --test scripts/qa-offline/t21-b272-distinct-native-route-evidence.test.mjs
