@@ -19,6 +19,7 @@ on:
       - "src/app/B259SourceRasterLayers*"
       - "src/app/B260SourceMaterialAttribution*"
       - "scripts/t21-b260-native-material-aba.mjs"
+      - "scripts/t21-f3-browser-smoke.mjs"
       - ".github/workflows/t21-f3g-whole-source.yml"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
