@@ -141,7 +141,7 @@ import {B259_RASTER_MASKS,b259RasterEligible,b259UvVisible,
  b259NativeVisible,B259_RASTER_AUTHORITY,type B259RasterMask}
  from './B259SourceRasterLayers';
 import {B260_SOURCE_TARGETS,b260Target,b260SourceGate,b260DrawVisible,
- B260_SOURCE_AUTHORITY} from './B260SourceMaterialAttribution';
+ b260NestedDrawGroupVisible,B260_SOURCE_AUTHORITY} from './B260SourceMaterialAttribution';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -2217,13 +2217,16 @@ export class UndertowF3PlayablePreviewApp{
    throw Error('B260_ORIGINAL_MATERIAL_RENDERER_DRIFT');
   const paint=stage.children.filter(c=>c.name.startsWith('PaintSurface:'));
   const solids=stage.children.filter(c=>!c.name.startsWith('PaintSurface:'));
+  // Certified original solids can be footprint parents with multiple
+  // existing rendered child pieces (TestStage.buildSolid). Checking
+  // parent.render rejects valid stage geometry; recurse without changing it.
   if(paint.length!==17||paint.some(c=>!(c instanceof Entity)||!c.render||
       !this.b45SourceSurfaces.some(surface=>c.name==='PaintSurface:'+surface.id)||
-      c.render.meshInstances.some(m=>!m.visible))||
+      !b260NestedDrawGroupVisible(c))||
      solids.length!==this.rawStage.solids.filter(s=>s.render).length||
-     solids.some(c=>!(c instanceof Entity)||!c.render||
+     solids.some(c=>!(c instanceof Entity)||
       !this.rawStage.solids.some(s=>s.id===c.name&&s.render)||
-      c.render.meshInstances.some(m=>!m.visible)))
+      !b260NestedDrawGroupVisible(c)))
    throw Error('B260_NATIVE_PAINT_OR_SOLIDS_DISPLAY_DRIFT');
   rows.forEach((row,i)=>row.forEach(m=>{
    m.visible=b260DrawVisible(source[i]!.name,name);
