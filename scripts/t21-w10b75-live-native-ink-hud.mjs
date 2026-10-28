@@ -12,6 +12,7 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import {b80ClassifyNativeStall} from './t21-w10b80-native-stall-classifier.mjs';
 import {verifyB179RealNativeResourceProof} from './t21-w10b179-real-resource-economy-gate.mjs';
 import {b303OwnedInkRasterAudit} from './t21-b303-native-ink-pixel-attribution.mjs';
+import {b305AuditRealActorDraw} from './t21-b305-native-actor-draw-pixel-attribution.mjs';
 
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
@@ -1510,6 +1511,48 @@ async function run(){
        console.log('B304_GENUINE_FOV_ONLY_ABCA_PASS',
         JSON.stringify({tick:still.tick,baselineFov:63,wide:76,focus:52,
          source:'25/17/26/0',exactOriginalRestored:true}));
+       // B305: remove only the 8 EXISTING actor visuals on same genuine
+       // paused post-paint frame; no actor physical body or ink edit.
+       await evaluate(`(() => {const u=new URL(location.href);
+        u.searchParams.set('t21B305','actorDrawWitness');
+        history.replaceState(null,'',u.href);return true;})()`);
+       const b305Hide=await evaluate(
+        'window.__t21F3.setB305RealActorDrawHidden('+
+         JSON.stringify(true)+','+JSON.stringify(origin)+')');
+       if(!b305Hide.hidden||b305Hide.visuals!==8||
+          b305Hide.renderOnly!==true)
+        fail('B305_REAL_ORIGINAL_EIGHT_ACTORS_NOT_RENDER_HIDDEN');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B305_HIDDEN_ACTORS_CHANGED_TRUE_PHYSICS');
+       await sleep(190);
+       const b305B=await b246Screenshot('b305-real-native-existing-actors-draw-hidden');
+       if(b305B.sha256===snaps[0].image.sha256)
+        fail('B305_REAL_NATIVE_ACTOR_VISUAL_HAS_NO_FRAMEBUFFER_EFFECT');
+       const b305Show=await evaluate(
+        'window.__t21F3.setB305RealActorDrawHidden('+
+         JSON.stringify(false)+','+JSON.stringify(origin)+')');
+       if(b305Show.hidden||b305Show.visuals!==8)
+        fail('B305_NATIVE_ACTOR_VISUALS_NOT_RESTORED');
+       await sleep(190);
+       const b305A2=await b246Screenshot('b305-real-native-existing-actors-draw-restored');
+       if(b305A2.sha256!==snaps[0].image.sha256||
+          JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B305_REAL_NATIVE_RASTER_OR_WORLD_RESTORE_FAILURE');
+       const b305Metrics=b305AuditRealActorDraw(
+        readFileSync(resolve(OUTPUT,snaps[0].image.file)),
+        readFileSync(resolve(OUTPUT,b305B.file)),
+        readFileSync(resolve(OUTPUT,b305A2.file)),
+        realInk.sampledProjectedCells);
+       const b305={...b305Metrics,original:snaps[0].image,
+        temporarilyHidden:b305B,restored:b305A2,
+        originalActorCount:8,noActorRelocations:true};
+       writeFileSync(resolve(OUTPUT,'b305-native-actor-occlusion-source-ink-aba.json'),
+        JSON.stringify(b305,null,2));
+       console.log('B305_REAL_NATIVE_8_ACTOR_RENDER_OCCLUSION_ABA_PASS',
+        JSON.stringify({changedPixels:b305.actorDrawChangedPixels,
+         ownedProjections:b305.actualProjectedOwnerSamples,
+         nearChanged:b305.sourceOwnedCenterPixelsChangedWhenActorsHidden,
+         restored:true}));
        console.log('B302_GENUINE_OWNED_TEAM_A_COLOR_A_B_C_A_PASS',
         JSON.stringify({tick:still.tick,
          nativePaintMeshes:17,originalFrameRestored:true,

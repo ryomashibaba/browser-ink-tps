@@ -162,6 +162,7 @@ import {b302NativeTeamAEligible,B302_NATIVE_TEAM_A_TONES,
  type B302NativeTeamATone} from './B302RealInkTeamColorTrial';
 import {b304CameraEligible,B304_REAL_FOV,
  type B304RealFov} from './B304NativePaintedCameraFovTrial';
+import {b305NativeActorDrawEligible} from './B305GenuineNativeActorOcclusion';
 import {surfaceTextureUvRect} from '../ink/AtlasCoordinates';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
@@ -323,6 +324,7 @@ export class UndertowF3PlayablePreviewApp{
  private b304TrialMode:B304RealFov='ORIGINAL';
  private b304TrialStartedTick:number|null=null;
  private b304OriginalFov:number|null=null;
+ private b305ActorHiddenTick:number|null=null;
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
@@ -1762,6 +1764,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB302NativeTeamATone(tone,origin),
     setB304NativePaintedCameraFov:(fov:B304RealFov,origin:readonly [number,number,number])=>
      this.setB304NativePaintedCameraFov(fov,origin),
+    setB305RealActorDrawHidden:(hidden:boolean,origin:readonly [number,number,number])=>
+     this.setB305RealActorDrawHidden(hidden,origin),
     auditB264RealInkOpticalSightlines:()=>this.auditB264RealInkOpticalSightlines(),
     auditB271OriginalMultiSurfaceRegistration:()=>
      this.auditB271OriginalMultiSurfaceRegistration(),
@@ -2965,6 +2969,48 @@ export class UndertowF3PlayablePreviewApp{
    originalSource:'25/17/26/0' as const,
    official4v4Certified:false as const,artAccepted:false as const,
    productionAuthorized:false as const};
+ }
+ /** B305 actor-draw attribution on the real post-ink frozen source.
+  * Uses installed B248 visual switches, not actor entity/collider removal. */
+ private setB305RealActorDrawHidden(
+  hidden:boolean,origin:readonly [number,number,number]){
+  const n=this.snapshot();
+  const player=this.app.root.findByName('Player') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  const actors=player?[player,...bots.map(x=>x.entity)]:[];
+  const visuals=actors.map(x=>b248ExistingSourceActorVisual(x));
+  const originalHumanVisible=actors.filter(x=>
+   x.children.find(y=>y.name==='B248:GEAR_VISUAL')?.enabled===true).length;
+  if(!b305NativeActorDrawEligible({
+   optIn:new URL(location.href).searchParams.get('t21B305')==='actorDrawWitness',
+   paused:this.paused,pointerLocked:document.pointerLockElement===this.canvas,
+   stopped:!!this.stopReason,fullRound:this.b203FullRound,
+   phase:this.matchState,tick:n.tick,shots:n.shotsFired,
+   paintCells:n.b23HumanInkFeedback.humanChangedCells,
+   source:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,
+    this.b45SourceSurfaces.filter(x=>x.isScoreable).length],
+   actors:actors.length,visuals:visuals.filter(Boolean).length,
+   originalHumanVisible,
+   originalActorStyle:(this.canvas.dataset.t21B289ActorVariant??
+    'B248_ORIGINAL')==='B248_ORIGINAL',
+   relocations:n.cpu.physicalFootRelocations,
+   cameraFov:this.playerCameraEntity.camera?.fov??NaN,
+   hiddenAtTick:this.b305ActorHiddenTick,requestHide:hidden
+  })||origin.length!==3||!origin.every(Number.isFinite))
+   throw Error('B305_NATIVE_SOURCE_ACTOR_DRAW_WITNESS_FORBIDDEN');
+  if(hidden)this.auditB294SourceInkShaderBindings(origin);
+  for(const visual of visuals)visual!.setEnabled(!hidden);
+  this.b305ActorHiddenTick=hidden?n.tick:null;
+  if(!hidden)this.auditB294SourceInkShaderBindings(origin);
+  this.canvas.dataset.t21B305ActorDraw=hidden?'HIDDEN':'ORIGINAL';
+  return {hidden,nativeTick:n.tick,actors:8,visuals:8,
+   originalSourceAuthority:'25/17/26/0' as const,
+   playerAndCpuPositionsUnchanged:true as const,
+   originalInkAndMaterialUniformsUnchanged:true as const,
+   renderOnly:true as const,sourceColliderCountAdded:0 as const,
+   scoreablePromotions:0 as const,artAccepted:false as const,
+   full4v4Certified:false as const,productionAuthorized:false as const};
  }
  /** B264: 24 source-verified real owned paint cell rays maximum.
   * Ray checks compare exact original F3L optical triangles and certified
