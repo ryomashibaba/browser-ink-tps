@@ -1333,6 +1333,63 @@ async function run(){
        console.log('B298_REAL_PAINT_DRAW_A_B_A_PASS',JSON.stringify({
         nativeTick:still.tick,realOwnerSamples:realInk.paintSampleCount,
         nativePaintRenderers:17,sameOriginalFrameRestored:true}));
+       // B300 native A-B-C-A: two real ShaderMaterial neutral undercoat
+       // colors with *identical* original team ink/atlas/world and actors.
+       await evaluate(`(() => {const u=new URL(location.href);
+        u.searchParams.set('t21B300','nativeNeutralArt');
+        history.replaceState(null,'',u.href);return true;})()`);
+       const b300Slate=await evaluate('window.__t21F3.setB300NativeNeutralTone('+
+        JSON.stringify('SLATE')+','+JSON.stringify(origin)+')');
+       if(b300Slate.tone!=='SLATE'||b300Slate.existingOriginalMeshes!==17||
+          b300Slate.neutralUniformOnly!==true)
+        fail('B300_AUTHENTIC_NEUTRAL_SLATE_UNIFORMS_NOT_INSTALLED');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B300_SLATE_CHANGED_REAL_GAMEPLAY');
+       await sleep(190);
+       const b300B=await b246Screenshot('b300-genuine-original-ink-slate-undercoat');
+       if(b300B.sha256===snaps[0].image.sha256)
+        fail('B300_NATIVE_SLATE_VISUAL_UNCHANGED');
+       const b300Stone=await evaluate('window.__t21F3.setB300NativeNeutralTone('+
+        JSON.stringify('STONE')+','+JSON.stringify(origin)+')');
+       if(b300Stone.tone!=='STONE')
+        fail('B300_ORIGINAL_STONE_NOT_APPLIED');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B300_STONE_CHANGED_REAL_GAMEPLAY');
+       await sleep(190);
+       const b300C=await b246Screenshot('b300-genuine-original-ink-stone-undercoat');
+       if(b300C.sha256===b300B.sha256||
+          b300C.sha256===snaps[0].image.sha256)
+        fail('B300_STONE_AND_SLATE_DO_NOT_DIFFER_FROM_REAL_BASELINE');
+       const b300Original=await evaluate(
+        'window.__t21F3.setB300NativeNeutralTone('+
+        JSON.stringify('ORIGINAL')+','+JSON.stringify(origin)+')');
+       if(b300Original.tone!=='ORIGINAL'||
+          b300Original.originalTeamColorsUntouched!==true||
+          b300Original.originalPaintAtlasUntouched!==true)
+        fail('B300_ORIGINAL_NATIVE_SHADER_COLORS_NOT_RESTORED');
+       await sleep(190);
+       const b300A2=await b246Screenshot('b300-genuine-original-ink-neutral-restored');
+       if(b300A2.sha256!==snaps[0].image.sha256||
+          JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B300_GENUINE_ORIGINAL_RASTER_OR_GAMEPLAY_RESTORE_FAILURE');
+       const b300Report={schema:'B300_SAME_TRUE_NATIVE_INK_UNDERCOAT_ABCA',
+        source:'25/17/26/0',tick:still.tick,realShotCount:still.shotsFired,
+        realHumanChangedCells:still.b23HumanInkFeedback.humanChangedCells,
+        original:snaps[0].image,slate:b300B,stone:b300C,
+        restored:b300A2,actualInkOwnerSamples:realInk.paintSampleCount,
+        originalFramebufferRestoredByteExact:true,
+        sourceActorPositionsUntouched:true,
+        originalNativeShaderAtlasTeamColorsUntouched:true,
+        newPaintMeshes:0,newColliders:0,newNavLinks:0,
+        scoreablePromotions:0,originalGameplayPhysicsUntouched:true,
+        artAccepted:false,full4v4Certified:false,productionAuthorized:false};
+       writeFileSync(resolve(OUTPUT,'b300-original-ink-neutral-tone-abca.json'),
+        JSON.stringify(b300Report,null,2));
+       console.log('B300_GENUINE_NATIVE_NEUTRAL_TONE_A_B_C_A_PASS',
+        JSON.stringify({tick:still.tick,
+         nativePaintMeshes:17,originalFrameRestored:true,
+         shots:still.shotsFired,
+         ownedHumanInk:still.b23HumanInkFeedback.humanChangedCells}));
       }finally{
        await evaluate(`(() => {
         const el=document.querySelector('#t21-f3-b202-real-pause');
