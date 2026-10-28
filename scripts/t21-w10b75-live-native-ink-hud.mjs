@@ -1079,6 +1079,26 @@ async function run(){
       },30000);
       await sleep(300);
       const still=await snapshot();
+      // B290: actual post-input paused STAGING never says READY.
+      const b290Hud=await until(async()=>{
+       const label=await evaluate(`(() => {
+        const s=window.__t21F3?.snapshot?.();
+        return {label:document.querySelector('#t21-f3-hud-state')?.textContent,
+         nativeTick:s?.tick,paused:s?.paused,
+         pauseMode:document.querySelector('#t21-f3-b202-real-pause')
+          ?.dataset.t21B202NativeState};
+       })()`);
+       const expected=still.matchState==='STAGING'?
+        'PAUSED · SOURCE REJOIN':'PAUSED';
+       return label?.label===expected&&label.nativeTick===still.tick&&
+        label.paused===true&&label.pauseMode==='NATIVE_PAUSED'?label:false;
+      },12000);
+      writeFileSync(resolve(OUTPUT,'b290-native-postplay-hud-phase.json'),
+       JSON.stringify({schema:'B290_GENUINE_POST_INPUT_SOURCE_PHASE',
+        ...b290Hud,actualNativePhase:still.matchState,
+        originalSource:'25/17/26/0',sourceScoreablePromotions:0,
+        productionAuthorized:false},null,2));
+      console.log('B290_POST_PLAY_SOURCE_HUD_PHASE_PASS',JSON.stringify(b290Hud));
       if(still.tick!==paused.tick||still.cpu.physicalFootRelocations!==0||
          still.originalSourceSolids!==25||still.originalPaintSurfaces!==17||
          still.originalSourceNavigationLinks!==26||

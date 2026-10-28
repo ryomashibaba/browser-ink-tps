@@ -150,6 +150,19 @@ export function formatF3PlayableHud(s:F3PlayableHudState){
   productionAuthorized:false as const
  };
 }
+/** B290: real native tick0 alone can label a frozen source STAGING READY. */
+export function b290SourcePlayerHudPhase(x:{
+ matchState:string;paused:boolean;tick:number|undefined;
+ stopReason:string|null;playerView:boolean;formattedState:string;
+}):string{
+ if(x.stopReason||x.matchState==='TIME_UP'||!x.playerView)
+  return x.formattedState;
+ if(!x.paused||x.matchState!=='STAGING')return x.formattedState;
+ if(x.tick===0)return 'READY · SOURCE ROUND';
+ if(Number.isSafeInteger(x.tick)&&x.tick!==undefined&&x.tick>0)
+  return 'PAUSED · SOURCE REJOIN';
+ return x.formattedState;
+}
 export function createF3PlayableHud(ui:HTMLElement){
  const root=document.createElement('section');
  root.id='t21-f3-practice-hud';
@@ -384,11 +397,13 @@ export function createF3PlayableHud(ui:HTMLElement){
  function render(value:F3PlayableHudState){
   const v=formatF3PlayableHud(value);
   clock.textContent=v.clock;
-  // B246: genuine frozen STAGING is READY in player view, not paused play.
-  // Legacy QA evidence text remains unchanged outside that display mode.
-  state.textContent=value.matchState==='STAGING'&&value.paused&&
-   ui.dataset.t21B245Presentation==='PLAYER'&&value.stopReason===null?
-    'READY · SOURCE ROUND':v.sessionState;
+  // B290: post-input native STAGING is not the real tick0 READY world.
+  state.textContent=b290SourcePlayerHudPhase({
+   matchState:value.matchState,paused:value.paused,tick:value.tick,
+   stopReason:value.stopReason,
+   playerView:ui.dataset.t21B245Presentation==='PLAYER',
+   formattedState:v.sessionState
+  });
   state.style.color=value.stopReason?'#ff8790':'#90e8f2';
   hpBar.style.width=v.hp+'%';
   hpBar.style.background=v.hp<=30?'#ff8888':'#53e4ea';

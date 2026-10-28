@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {formatF3PlayableHud,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
+import {formatF3PlayableHud,b290SourcePlayerHudPhase,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
 function state():F3PlayableHudState{
@@ -166,5 +166,30 @@ describe('B243 real source muzzle-to-camera aim-line feedback',()=>{
   expect(sourceF3RealAimLineCue({...base,nativeTick:2.5})).toBeNull();
   expect(sourceF3RealAimLineCue({...base,matchState:'TIME_UP'})).toBeNull();
   expect(sourceF3RealAimLineCue({...base,rayDistanceMeters:NaN})).toBeNull();
+ });
+});
+
+describe('B290 no fictitious READY after real native source movement',()=>{
+ const v={matchState:'STAGING',paused:true,tick:0,
+  stopReason:null as string|null,playerView:true,formattedState:'PAUSED'};
+ it('shows genuine native tick0 READY and post-input tick85 as paused rejoin',()=>{
+  expect(b290SourcePlayerHudPhase(v)).toBe('READY · SOURCE ROUND');
+  expect(b290SourcePlayerHudPhase({...v,tick:85})).toBe('PAUSED · SOURCE REJOIN');
+  expect(b290SourcePlayerHudPhase({...v,tick:1})).toBe('PAUSED · SOURCE REJOIN');
+ });
+ it('never calls invalid, unknown or negative ticks READY',()=>{
+  for(const tick of [undefined,NaN,-1,2.5]){
+   expect(b290SourcePlayerHudPhase({...v,tick})).toBe('PAUSED');
+  }
+ });
+ it('preserves QA, running STAGING, real PLAYING, stop and time-up',()=>{
+  expect(b290SourcePlayerHudPhase({...v,playerView:false})).toBe('PAUSED');
+  expect(b290SourcePlayerHudPhase({...v,paused:false,
+   formattedState:'SOURCE STAGING'})).toBe('SOURCE STAGING');
+  expect(b290SourcePlayerHudPhase({...v,matchState:'PLAYING'})).toBe('PAUSED');
+  expect(b290SourcePlayerHudPhase({...v,stopReason:'SOURCE_HOLD',
+   formattedState:'SAFE STOP'})).toBe('SAFE STOP');
+  expect(b290SourcePlayerHudPhase({...v,matchState:'TIME_UP',
+   formattedState:'TIME COMPLETE — NO WINNER'})).toBe('TIME COMPLETE — NO WINNER');
  });
 });
