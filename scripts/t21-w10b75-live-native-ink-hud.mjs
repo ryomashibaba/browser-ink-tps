@@ -875,14 +875,7 @@ async function run(){
      writeFileSync(resolve(OUTPUT,name+'.png'),b);
      return {file:name+'.png',bytes:b.length,sha256:createHash('sha256').update(b).digest('hex')};
     }
-    const b246Read=()=>evaluate("(() => {\n const root=document.querySelector('#ui-root');\n const id=x=>document.getElementById(x);\n const visible=x=>{const e=id(x);return !!e&&!e.hidden&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;};\n const a=window.__t21F3?.snapshot?.();\n return {view:root?.dataset.t21B245Presentation,inspect:root?.dataset.t21B245Inspect,\n  status:id('t21-f3-hud-state')?.textContent,\n  stage:[a?.originalSourceSolids,a?.originalPaintSurfaces,a?.originalSourceNavigationLinks,a?.sourceScoreablePromotions],\n  tick:a?.tick,paused:a?.paused,remaining:a?.timeRemainingSeconds,\n  renderer:id('app-canvas')?.dataset.t21F3Renderer,\n  playerHud:visible('t21-f3-practice-hud'),\n  fullRoundDiagnostic:visible('t21-f3-b205-real-round'),
-  compactTeam:visible('t21-f3-b286-source-team'),
-  compactAlly:document.querySelector('#t21-f3-b286-source-team')?.dataset.allyActive,
-  compactEnemy:document.querySelector('#t21-f3-b286-source-team')?.dataset.enemyActive,
-  compactRejoining:document.querySelector('#t21-f3-b286-source-team')?.dataset.rejoining,
-  compactNoScore:document.querySelector('#t21-f3-b286-source-team')?.dataset.scoreable,
-  compactNoEnemyContact:document.querySelector('#t21-f3-b286-source-team')?.dataset.enemyContactCertified,
-  compactLabels:document.querySelector('#t21-f3-b286-source-team')?.textContent,\n  sessionDiagnostic:visible('t21-f3-b58-source-session'),\n  panel:visible('t21-f3-play-panel'),\n  paintChallenge:visible('t21-f3-b25-paint-run'),\n  descentDiagnostic:visible('t21-f3-b183-real-first-drop'),\n  radar:id('t21-f3-source-radar')?.dataset.t21B52RadarMode,\n  radarVisible:visible('t21-f3-source-radar'),\n  readyButton:visible('t21-f3-b202-resume'),\n  evidenceNodesPreserved:['t21-f3-b205-real-round','t21-f3-b58-source-session','t21-f3-b211-real-battle-roster',\n   't21-f3-b75-source-ink-live','t21-f3-b76-human-ink-coach'].every(x=>!!id(x)),\n  toggle:id('t21-f3-b245-view-toggle')?.textContent\n };\n})()");
+    const b246Read=()=>evaluate("(() => {\n const root=document.querySelector('#ui-root');\n const id=x=>document.getElementById(x);\n const visible=x=>{const e=id(x);return !!e&&!e.hidden&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;};\n const a=window.__t21F3?.snapshot?.();\n return {view:root?.dataset.t21B245Presentation,inspect:root?.dataset.t21B245Inspect,\n  status:id('t21-f3-hud-state')?.textContent,\n  stage:[a?.originalSourceSolids,a?.originalPaintSurfaces,a?.originalSourceNavigationLinks,a?.sourceScoreablePromotions],\n  tick:a?.tick,paused:a?.paused,remaining:a?.timeRemainingSeconds,\n  renderer:id('app-canvas')?.dataset.t21F3Renderer,\n  playerHud:visible('t21-f3-practice-hud'),\n  fullRoundDiagnostic:visible('t21-f3-b205-real-round'),\n  compactTeam:visible('t21-f3-b286-source-team'),\n  compactAlly:document.querySelector('#t21-f3-b286-source-team')?.dataset.allyActive,\n  compactEnemy:document.querySelector('#t21-f3-b286-source-team')?.dataset.enemyActive,\n  compactRejoining:document.querySelector('#t21-f3-b286-source-team')?.dataset.rejoining,\n  compactNoScore:document.querySelector('#t21-f3-b286-source-team')?.dataset.scoreable,\n  compactNoEnemyContact:document.querySelector('#t21-f3-b286-source-team')?.dataset.enemyContactCertified,\n  compactLabels:document.querySelector('#t21-f3-b286-source-team')?.textContent,\n  sessionDiagnostic:visible('t21-f3-b58-source-session'),\n  panel:visible('t21-f3-play-panel'),\n  paintChallenge:visible('t21-f3-b25-paint-run'),\n  descentDiagnostic:visible('t21-f3-b183-real-first-drop'),\n  radar:id('t21-f3-source-radar')?.dataset.t21B52RadarMode,\n  radarVisible:visible('t21-f3-source-radar'),\n  readyButton:visible('t21-f3-b202-resume'),\n  evidenceNodesPreserved:['t21-f3-b205-real-round','t21-f3-b58-source-session','t21-f3-b211-real-battle-roster',\n   't21-f3-b75-source-ink-live','t21-f3-b76-human-ink-coach'].every(x=>!!id(x)),\n  toggle:id('t21-f3-b245-view-toggle')?.textContent\n };\n})()");
     const b246Before=await b246Read();
     if(b246Before.view!=='PLAYER'||b246Before.inspect!=='false'||
        b246Before.status!=='READY · SOURCE ROUND'||
@@ -1103,6 +1096,40 @@ async function run(){
      return s.matchState==='PLAYING'&&s.cpu.physicalRejoins.length===7&&
       s.cpuImpactInkCellsChanged>0?s:false;
     },270000);
+    // B286: after genuine, untouched source 7-CPU rejoin, the same
+    // PLAYER compact status must reflect native lives without score claims.
+    // Observe only; never advance virtual ticks, warp CPUs or synthesize HP.
+    const b286Live=await until(async()=>{
+     const x=await evaluate(`(() => {
+      const el=document.querySelector('#t21-f3-b286-source-team');
+      const state=window.__t21F3?.snapshot?.();
+      return {visible:!!el&&!el.hidden&&getComputedStyle(el).display!=='none',
+       view:document.querySelector('#ui-root')?.dataset.t21B245Presentation,
+       actualRejoined:state?.cpu?.physicalRejoins?.length,
+       actualSource:[state?.originalSourceSolids,state?.originalPaintSurfaces,
+        state?.originalSourceNavigationLinks,state?.sourceScoreablePromotions],
+       noWarps:state?.cpu?.physicalFootRelocations,
+       ally:el?.dataset.allyActive,enemy:el?.dataset.enemyActive,
+       rejoining:el?.dataset.rejoining,
+       scoreable:el?.dataset.scoreable,
+       officialWinner:el?.dataset.officialWinner,
+       certifiedEncounter:el?.dataset.enemyContactCertified,
+       ownLabel:el?.textContent};
+     })()`);
+     return x?.visible&&x.view==='PLAYER'&&x.actualRejoined===7&&
+      x.rejoining==='0'&&x.scoreable==='0'&&
+      x.officialWinner==='NONE'&&x.certifiedEncounter==='false'&&
+      x.noWarps===0&&x.actualSource.join('/')==='25/17/26/0'&&
+      Number.isInteger(Number(x.ally))&&Number(x.ally)>=0&&Number(x.ally)<=3&&
+      Number.isInteger(Number(x.enemy))&&Number(x.enemy)>=0&&Number(x.enemy)<=4&&
+      x.ownLabel?.includes('UNSCORED')?x:false;
+    },30000);
+    writeFileSync(resolve(OUTPUT,'b286-source-real-team-after-rejoin.json'),
+     JSON.stringify({schema:'B286_REAL_CHROMIUM_TEAM_AFTER_SEVEN_REJOIN',
+      evidence:b286Live,officialWinner:'NONE',virtualTicks:0,
+      actorRelocations:0,scoreablePromotions:0},null,2));
+    console.log('B286_REAL_CHROMIUM_SOURCE_TEAM_REJOIN_PASS',
+     JSON.stringify(b286Live));
     const moved=Math.hypot(
      realSeven.player.position[0]-realStart.player.position[0],
      realSeven.player.position[2]-realStart.player.position[2]);
