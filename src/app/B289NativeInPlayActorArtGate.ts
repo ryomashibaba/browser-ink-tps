@@ -18,10 +18,13 @@ export function b289RealSourceInPlayArtEligible(
  p.get('t21W10B192')==='humanCombat'&&
  p.get('t21W10B203')==='fullRound'&&p.get('t21QaInput')!=='deterministic'&&
  w.selectedNativeCombat&&w.fullRound&&w.paused&&!w.pointerLocked&&
- w.nativeTick>=42&&w.matchState==='PLAYING'&&!w.stopReason&&
+ w.nativeTick>=42&&
+ (w.matchState==='STAGING'||w.matchState==='PLAYING')&&!w.stopReason&&
  w.acceptedHumanShots>0&&w.actualHumanPaintCells>0&&
  w.genuinePlayerTravelMeters>0.25&&
- w.timeRemainingSeconds>0&&w.timeRemainingSeconds<180&&
+ w.timeRemainingSeconds>0&&w.timeRemainingSeconds<=180&&
+ (w.matchState==='STAGING'?w.timeRemainingSeconds===180:
+  w.timeRemainingSeconds<180)&&
  !w.surveyActive&&!w.galleryActive&&w.nativeRenderer==='webgl2'&&
  w.originalSolids===25&&w.originalPaint===17&&
  w.originalLinks===26&&w.scoreable===0&&

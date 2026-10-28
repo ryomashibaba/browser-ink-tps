@@ -1042,7 +1042,8 @@ async function run(){
         {type,x:chosen.x,y:chosen.y,button:'left',clickCount:1});
       const started=await until(async()=>{
        const s=await snapshot();
-       return s.matchState==='PLAYING'&&!s.paused&&s.tick>0?s:false;
+       return ['STAGING','PLAYING'].includes(s.matchState)&&
+        !s.paused&&s.tick>0?s:false;
       },45000);
       const forward={key:'w',code:'KeyW',windowsVirtualKeyCode:87,
        nativeVirtualKeyCode:87};
@@ -1056,7 +1057,8 @@ async function run(){
         if(s.stopReason)fail('B289_REAL_NATIVE_KCC_SAFETY_STOP_'+s.stopReason);
         const p=s.player.position;
         const distance=Math.hypot(p[0]-origin[0],p[1]-origin[1],p[2]-origin[2]);
-        return s.matchState==='PLAYING'&&s.tick>=started.tick+42&&
+        return ['STAGING','PLAYING'].includes(s.matchState)&&
+         s.tick>=started.tick+42&&
          s.shotsFired>=1&&s.b23HumanInkFeedback.humanChangedCells>0&&
          distance>=.3?s:false;
        },120000);
@@ -1071,7 +1073,8 @@ async function run(){
         windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
       const paused=await until(async()=>{
        const s=await snapshot();
-       return s.paused&&s.matchState==='PLAYING'&&!s.stopReason&&
+       return s.paused&&['STAGING','PLAYING'].includes(s.matchState)&&
+        !s.stopReason&&
         await evaluate('document.pointerLockElement===null')?s:false;
       },30000);
       await sleep(300);
@@ -1081,7 +1084,7 @@ async function run(){
          still.originalSourceNavigationLinks!==26||
          still.sourceScoreablePromotions!==0||
          still.b23HumanInkFeedback.humanChangedCells<1||
-         still.timeRemainingSeconds>=180)
+         (still.matchState==='PLAYING'&&still.timeRemainingSeconds>=180))
        fail('B289_NATIVE_PAUSED_SOURCE_CHANGED');
       // URL fragment is an explicit nonproduction research permission,
       // not a game tick or actor write; restore original URL after A/B/C/A.
@@ -1133,6 +1136,8 @@ async function run(){
        const out={schema:'B289_REAL_NATIVE_MOVED_PAINTED_PAUSED_ART_ABCA',
         originalSource:'25/17/26/0',startTick:ready.tick,
         finalTrueNativeTick:still.tick,
+        exactNativeRoundPhase:still.matchState,
+        nativeTimeRemainingSeconds:still.timeRemainingSeconds,
         realPlayerPositionBefore:origin,
         realPlayerPositionAfter:still.player.position,
         realPlayerShots:still.shotsFired,

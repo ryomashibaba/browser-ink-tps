@@ -17,6 +17,15 @@ describe('B289 real in-play actor comparison is fail-closed',()=>{
   for(const mode of ['B248_ORIGINAL','B268_COMPACT','B269_REAR_IDENTITY'] as const)
    expect(b289RealSourceInPlayArtEligible(input(),mode)).toBe(true);
  });
+ it('accepts genuine 60Hz input during native STAGING before 7CPU free combat',()=>{
+  const x=input();
+  expect(b289RealSourceInPlayArtEligible(
+   {...x,matchState:'STAGING',timeRemainingSeconds:180},
+   'B269_REAR_IDENTITY')).toBe(true);
+  expect(b289RealSourceInPlayArtEligible(
+   {...x,matchState:'STAGING',timeRemainingSeconds:179.5},
+   'B269_REAR_IDENTITY')).toBe(false);
+ });
  it('rejects simulated evidence and actual running context',()=>{
   const v=input();
   for(const patch of [
@@ -24,7 +33,7 @@ describe('B289 real in-play actor comparison is fail-closed',()=>{
    {genuinePlayerTravelMeters:0},{genuinePlayerTravelMeters:.2},
    {nativeTick:0},{nativeTick:41},{paused:false},{pointerLocked:true},
    {timeRemainingSeconds:180},{timeRemainingSeconds:0},
-   {matchState:'STAGING'},{stopReason:'STOP'},
+   {matchState:'TIME_UP'},{stopReason:'STOP'},
    {originalSolids:26},{originalPaint:18},{originalLinks:25},
    {scoreable:1},{actorBodyRelocations:1},{nativeRenderer:'webgpu'},
    {sourceVisualsInstalled:7},{cpuActorIds:['A1','A1','A2','B1','B2','B3','B4']},
