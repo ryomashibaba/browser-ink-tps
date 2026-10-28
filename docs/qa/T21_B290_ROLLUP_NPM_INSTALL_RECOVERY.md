@@ -1,0 +1,7 @@
+# B290 dependency resolution follow-up (2026-10-28 JST)
+
+Original B290 code HEAD `4ba78139` triggered [B75 #40697841939](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40697841939), which **FAILED before source build or tests** during `npm install --no-package-lock`. Exact npm stderr: `E404 GET https://registry.npmjs.org/rollup/-/rollup-4.66.0.tgz`. Thus it is **not a TypeScript regression from the B290 HUD change**, and no browser PASS may be claimed for that HEAD.
+
+The repository has no checked-in package-lock.json; Vite 7.1.7 and Vitest 4.1.11 resolve transitive Rollup at installation time. The next release candidate `rollup@4.66.0` tarball was not retrievable in the observed Actions runner. Rollup `4.65.1` is an already published 26 Oct 2026 version (verified public package-version listing). A minimally invasive npm `overrides.rollup=4.65.1` is added to existing package.json; Vite and Vitest major versions, gameplay source, 25/17/26/0 and production are untouched. The existing B75 workflow explicitly watches package.json changes so the pinned dependency configuration is tested, rather than relying on a build from an older commit. No lockfile claim is made; transitive dependencies outside Rollup remain unpinned.
+
+If npm still fails, inspect that **specific** registry error and preserve CI HOLD, rather than loosening native browser/physics guards. This is a build-environment reliability fix, not an art or physics improvement.

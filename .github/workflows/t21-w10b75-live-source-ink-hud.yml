@@ -3,6 +3,8 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
+      # B290: dependency-resolution changes must test the real native runner.
+      - 'package.json'
       - 'src/app/B245SourcePresentation.ts'
       - 'src/app/B289NativeInPlayActorArtGate.ts'
       - 'src/app/B289NativeInPlayActorArtGate.test.ts'
