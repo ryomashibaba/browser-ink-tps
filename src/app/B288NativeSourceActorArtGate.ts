@@ -37,7 +37,7 @@ export function b288FrozenVisualStudyEligible(w:B288FrozenActorStudyWitness,
   w.playerRenderInstalled&&w.sourceVisualsInstalled===8;
 }
 export const B288_ART_RESEARCH_AUTHORITY=Object.freeze({
- mode:'NATIVE_REAL_SOURCE_FROZEN_RENDER_ONLY_ABA' as const,
+ study:'NATIVE_REAL_SOURCE_FROZEN_RENDER_ONLY_ABA' as const,
  variants:['B248_ORIGINAL','B268_COMPACT','B269_REAR_IDENTITY'] as const,
  originalStage:'25/17/26/0' as const,realActors:8 as const,
  actorBodyRelocations:0 as const,rapierCollidersAdded:0 as const,
