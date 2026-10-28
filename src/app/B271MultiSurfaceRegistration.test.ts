@@ -26,6 +26,16 @@ describe('B271 17 authentic footprint surfaces / optical and physics separated',
   const s=surface('s');s.ownerGrid[0]=1;
   expect(()=>b271NativeFootprintProbes(s)).toThrow(/INK_OUTSIDE/);
  });
+ it('preserves Team B as -1, rejects fabricated owner values and clamps partial edge cells',()=>{
+  const s=surface('B-real');s.ownerGrid[1]=-1;
+  s.widthMeters=1.94;s.heightMeters=1.94;
+  const r=b271NativeFootprintProbes(s);
+  expect(r.ownedCells).toBe(2);
+  expect(r.probes.some(p=>p.owner===-1)).toBe(true);
+  expect(r.probes.every(p=>p.world[0]<=1.94&&p.world[2]<=1.94)).toBe(true);
+  s.ownerGrid[1]=2;
+  expect(()=>b271NativeFootprintProbes(s)).toThrow(/UNKNOWN_NATIVE_PAINT_OWNER/);
+ });
  it('does not infer original reachability from optical or nav endpoint',()=>{
   const result=b271ClassifyOpticalPhysicalRay(20,[
    {name:'glass',kind:'GLASS',distanceMeters:1},
