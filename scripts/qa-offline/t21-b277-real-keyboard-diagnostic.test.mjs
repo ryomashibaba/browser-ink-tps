@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import {strict as assert} from 'node:assert';
-import {b277ClassifyNativeInputEvidence,
+import {b277ClassifyNativeInputEvidence,b278AuditNativeKeyHold,
  b277InstallKeyEventObserver,b277ReadKeyEventObserver}
  from './t21-b277-real-keyboard-diagnostic.mjs';
 const event=(code,type='keydown',realTrustedEvent=true)=>({
@@ -60,4 +60,38 @@ test('B277 instrument only reads events, no synthetic key injection or game sett
  assert.ok(expressions[0].includes("event.isTrusted"));
  assert.ok(!expressions[0].includes("dispatchEvent("));
  assert.ok(!expressions[0].includes("setQaAxis"));
+});
+test('B278 rejects nominal 32 physics ticks caused by a 20.6ms real KeyW press',()=>{
+ const e=[{...event('KeyW','keydown'),nativeWallTime:32015.1,nativeTick:43},
+  {...event('KeyW','keyup'),nativeWallTime:32035.7,nativeTick:75}];
+ const result=b278AuditNativeKeyHold(e,'KeyW');
+ assert.equal(result.pairs[0].durationMs,20.6);
+ assert.equal(result.pairs[0].actualHeldNativeTicks,32);
+ assert.equal(result.genuineHeldKeyOverlap,false);
+});
+test('B278 certifies a trusted held real KeyW only with browser duration AND tick overlap',()=>{
+ const e=[{...event('KeyW','keydown'),nativeWallTime:4000,nativeTick:15},
+  {...event('KeyW','keyup'),nativeWallTime:5200,nativeTick:39}];
+ const result=b278AuditNativeKeyHold(e,'KeyW');
+ assert.equal(result.genuineHeldKeyOverlap,true);
+ assert.equal(result.pairs[0].actualHeldNativeTicks,24);
+ assert.equal(result.noArtificialTicks,true);
+});
+test('B278 refuses trusted but event-loop starved key held across no real Rapier ticks',()=>{
+ const e=[{...event('KeyW','keydown'),nativeWallTime:2000,nativeTick:20},
+  {...event('KeyW','keyup'),nativeWallTime:3100,nativeTick:20}];
+ assert.equal(b278AuditNativeKeyHold(e,'KeyW').genuineHeldKeyOverlap,false);
+});
+test('B278 fails closed for untrusted or pointer-unlocked key events and malformed time',()=>{
+ const a={...event('KeyS','keydown'),nativeWallTime:0,nativeTick:1};
+ const b={...event('KeyS','keyup'),nativeWallTime:1200,nativeTick:20};
+ assert.equal(b278AuditNativeKeyHold([{...a,canvasLocked:false},b],'KeyS').genuineHeldKeyOverlap,false);
+ assert.equal(b278AuditNativeKeyHold([a,{...b,realTrustedEvent:false}],'KeyS').genuineHeldKeyOverlap,false);
+ assert.equal(b278AuditNativeKeyHold([a,{...b,nativeWallTime:NaN}],'KeyS').genuineHeldKeyOverlap,false);
+});
+test('B278 unpaired KeyW keydown cannot validate physical overlap',()=>{
+ assert.equal(b278AuditNativeKeyHold([
+  {...event('KeyW'),nativeWallTime:0,nativeTick:0}
+ ],'KeyW').genuineHeldKeyOverlap,false);
+ assert.throws(()=>b278AuditNativeKeyHold(null,'KeyW'),/INVALID_REAL_KEY_HOLD_EVIDENCE/);
 });

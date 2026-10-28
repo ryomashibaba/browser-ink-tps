@@ -3,9 +3,10 @@
  * JS event dispatch, synthetic axis, source collider or game-tick alteration.
  */
 import {writeFileSync} from 'node:fs';
+import {setTimeout as nativeSleep} from 'node:timers/promises';
 import {resolve} from 'node:path';
 import {b273InspectNativeKccSample,b273AuditContinuousKeyboardLegs} from './t21-b273-real-native-kcc-transition.mjs';
-const witnessCode="(() => {if(window.__t21B277KeyEvidence)return true;const events=[];for(const type of ['keydown','keyup'])window.addEventListener(type,event=>{if(!['KeyW','KeyS'].includes(event.code))return;if(events.length>=16)return;events.push({type:event.type,code:event.code,realTrustedEvent:event.isTrusted===true,canvasLocked:document.pointerLockElement===document.querySelector('#app-canvas'),focused:document.hasFocus(),hidden:document.hidden,nativeWallTime:performance.now()});});window.__t21B277KeyEvidence={events};return true;})()";
+const witnessCode="(() => {if(window.__t21B277KeyEvidence)return true;const events=[];for(const type of ['keydown','keyup'])window.addEventListener(type,event=>{if(!['KeyW','KeyS'].includes(event.code))return;if(events.length>=16)return;events.push({type:event.type,code:event.code,realTrustedEvent:event.isTrusted===true,canvasLocked:document.pointerLockElement===document.querySelector('#app-canvas'),focused:document.hasFocus(),hidden:document.hidden,nativeWallTime:performance.now(),nativeTick:window.__t21F3?.snapshot?.().tick??null});});window.__t21B277KeyEvidence={events};return true;})()";
 const witnessRead="(() => {const e=window.__t21B277KeyEvidence;return e?{events:e.events.slice(),canvasLocked:document.pointerLockElement===document.querySelector('#app-canvas'),focused:document.hasFocus(),hidden:document.hidden}:null;})()";
 export async function b277InstallKeyEventObserver(evaluate){
  if(await evaluate(witnessCode)!==true)throw Error('B277_READONLY_KEY_OBSERVER_UNAVAILABLE');
@@ -14,6 +15,39 @@ export async function b277ReadKeyEventObserver(evaluate){
  const witness=await evaluate(witnessRead);
  if(!witness||!Array.isArray(witness.events))throw Error('B277_KEY_OBSERVER_MISSING');
  return witness;
+}
+/** B278: audit the genuine event DOWN-UP interval and native tick overlap.
+ * A tick-span sampled before/after CDP dispatch is NOT held-key evidence.
+ */
+export function b278AuditNativeKeyHold(events,code,minimumHoldMs=500,minimumNativeTicks=3){
+ if(!Array.isArray(events)||!['KeyW','KeyS'].includes(code))
+  throw Error('B278_INVALID_REAL_KEY_HOLD_EVIDENCE');
+ const pairs=[];
+ let down=null;
+ for(const e of events){
+  if(e?.code!==code)continue;
+  if(e.type==='keydown'&&down===null){
+   down=e;
+  }else if(e.type==='keyup'&&down){
+   const durationMs=e.nativeWallTime-down.nativeWallTime;
+   const nativeTickSpan=e.nativeTick-down.nativeTick;
+   const realInputValid=[down,e].every(x=>
+    x.realTrustedEvent===true&&x.canvasLocked===true&&
+    x.focused===true&&x.hidden===false);
+   pairs.push({code,
+    durationMs:Number.isFinite(durationMs)?+durationMs.toFixed(2):null,
+    actualHeldNativeTicks:Number.isSafeInteger(nativeTickSpan)?nativeTickSpan:null,
+    realInputValid,
+    verifiedOverlap:realInputValid&&Number.isFinite(durationMs)&&
+     durationMs>=minimumHoldMs&&Number.isSafeInteger(nativeTickSpan)&&
+     nativeTickSpan>=minimumNativeTicks});
+   down=null;
+  }
+ }
+ return {code,minimumHoldMs,minimumNativeTicks,
+  pairs,
+  genuineHeldKeyOverlap:pairs.some(x=>x.verifiedOverlap),
+  noArtificialTicks:true,noSyntheticKeyState:true};
 }
 export function b277ClassifyNativeInputEvidence({forwardMeters,reverseMeters,returnMeters,events}){
  if(!Array.isArray(events)||![forwardMeters,reverseMeters].every(Number.isFinite))
@@ -50,6 +84,8 @@ async function realKeyLeg(code,{evaluate,cmd,waitUntil}){
  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...c});
  let end;
  try{
+  // B278: genuine CDP key remains pressed for a measurable browser interval.
+  await nativeSleep(900);
   end=await waitUntil(async()=>{
    const x=await evaluate('window.__t21F3.snapshot()');
    return x?.stopReason||x?.tick>=start.tick+24?x:false;
@@ -72,14 +108,19 @@ export async function b277CaptureReverseControl({evaluate,cmd,waitUntil,output})
  const keyW=keyS.realPhysicalMeters>=.1?
   await realKeyLeg('KeyW',{evaluate,cmd,waitUntil}):null;
  const events=await b277ReadKeyEventObserver(evaluate);
+ const keyWOverlap=b278AuditNativeKeyHold(events.events,'KeyW');
+ const keySOverlap=b278AuditNativeKeyHold(events.events,'KeyS');
  const summary=b277ClassifyNativeInputEvidence({
   forwardMeters:0,reverseMeters:keyS.realPhysicalMeters,
   returnMeters:keyW?.realPhysicalMeters??null,events:events.events});
  const report={schema:'B277_REAL_CHROMIUM_KEYBOARD_DIRECTION_TRIAGE',
   evidence:events.events,reverseControl:keyS,returnControl:keyW,
+  realKeyWOverlap:keyWOverlap,realKeySOverlap:keySOverlap,
   ...summary,source:'25/17/26/0',
   nonProductionQa:true,originalLowerRouteCertified:false};
  writeFileSync(resolve(output,'b277-real-native-keyboard-direction-triage.json'),
   JSON.stringify(report,null,2));
+ if(!keyWOverlap.genuineHeldKeyOverlap||!keySOverlap.genuineHeldKeyOverlap)
+  throw Error('B278_UNVERIFIED_TRUSTED_KEY_HOLD_NATIVE_OVERLAP');
  return report;
 }

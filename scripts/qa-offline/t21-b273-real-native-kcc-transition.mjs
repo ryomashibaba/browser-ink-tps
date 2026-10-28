@@ -4,6 +4,7 @@
  */
 import {writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
+import {setTimeout as nativeSleep} from 'node:timers/promises';
 export const B273_SOURCE='25/17/26/0';
 /** B274: a genuine browser pointer lock is a precondition for PlayerInput
  * keydown. B258 exits pointer lock for read-only art review, so the real CDP
@@ -82,7 +83,7 @@ export function b273AuditContinuousKeyboardLegs(samples){
  const stage=samples.map(b273InspectNativeKccSample),legs=[];
  for(let i=1;i<stage.length;i++){
   const a=stage[i-1],b=stage[i],delta=b.tick-a.tick;
-  if(delta<1||delta>60)throw Error('B273_INVALID_TRUE_NATIVE_TICK_STEP');
+  if(delta<1||delta>96)throw Error('B273_INVALID_TRUE_NATIVE_TICK_STEP');
   const length=near(a.worldMeters,b.worldMeters);
   if(!Number.isFinite(length)||length>6.5)
    throw Error('B273_UNTRUSTED_PHYSICAL_MOVEMENT_JUMP');
@@ -126,6 +127,12 @@ export async function captureB273NativeKccDrop({evaluate,cmd,waitUntil,screensho
   await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
   let next;
   try{
+   // B278: physical CDP KeyW must remain held across actual browser time.
+   // B277 had a genuine 20.6ms press while tick jumped 32: the apparent
+   // no-motion was not sufficient to prove a forward Rapier obstacle.
+   // This waits in the host while Chrome advances normally; no clock, KCC,
+   // input axis, or original actor state is written.
+   await nativeSleep(900);
    next=await waitUntil(async()=>{
     const s=await evaluate('window.__t21F3.snapshot()');
     if(s?.stopReason)

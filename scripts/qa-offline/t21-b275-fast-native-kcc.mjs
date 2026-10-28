@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {captureB273NativeKccDrop} from './t21-b273-real-native-kcc-transition.mjs';
 import {b277InstallKeyEventObserver,b277ReadKeyEventObserver,
- b277CaptureReverseControl}
+ b277CaptureReverseControl,b278AuditNativeKeyHold}
  from './t21-b277-real-keyboard-diagnostic.mjs';
 const root='http://127.0.0.1:4196/browser-ink-tps/';
 const output='/tmp/t21-b275-fast-native-kcc';
@@ -105,6 +105,19 @@ async function main(){
   trace=await captureB273NativeKccDrop({evaluate,cmd,waitUntil,screenshot,output});
  }catch(error){
   if(String(error).includes('B273_REAL_NATIVE_NO_KCC_MOTION')){
+   // B278 explicitly distinguishes a true held movement key from pre/post
+   // tick changes. Always preserve the first key's original event trace.
+   const originalEvents=await b277ReadKeyEventObserver(evaluate).catch(e=>({
+    events:[],readError:String(e)}));
+   const firstWOverlap=b278AuditNativeKeyHold(originalEvents.events,'KeyW');
+   writeFileSync(resolve(output,'b278-first-forward-native-hold.json'),
+    JSON.stringify({originalFailure:String(error),
+     firstRealKeyWOverlap:firstWOverlap,
+     eventEvidence:originalEvents.events,
+     noSyntheticKeysOrTime:true,source:'25/17/26/0',
+     productionAuthorized:false},null,2));
+   console.log('B278_FIRST_NATIVE_FORWARD_HOLD',
+    JSON.stringify(firstWOverlap));
    try{
     const triage=await b277CaptureReverseControl({
      evaluate,cmd,waitUntil,output});
@@ -114,6 +127,8 @@ async function main(){
      trustedReverseKeyObserved:triage.originalReverseKeyObserved,
      realReverseMeters:triage.reverseControl.realPhysicalMeters,
      realReentryMeters:triage.returnControl?.realPhysicalMeters??null,
+     keyWRealHoldProved:triage.realKeyWOverlap.genuineHeldKeyOverlap,
+     keySRealHoldProved:triage.realKeySOverlap.genuineHeldKeyOverlap,
      noRouteCertified:true}));
    }catch(triageError){
     console.error('B277_GENUINE_REVERSE_DIAGNOSTIC_UNAVAILABLE',String(triageError));
@@ -127,6 +142,11 @@ async function main(){
   throw error;
  }
  const trusted=await b277ReadKeyEventObserver(evaluate);
+ const verifiedHold=b278AuditNativeKeyHold(trusted.events,'KeyW');
+ writeFileSync(resolve(output,'b278-success-native-key-hold.json'),
+  JSON.stringify(verifiedHold,null,2));
+ if(!verifiedHold.genuineHeldKeyOverlap)
+  fail('REAL_FORWARD_MOTION_WITHOUT_PROVEN_HELD_KEY_TICK_OVERLAP');
  if(!trusted.events.some(x=>x.code==='KeyW'&&x.type==='keydown'&&
     x.realTrustedEvent===true&&x.canvasLocked===true&&x.focused===true))
   fail('REAL_MOVEMENT_WITHOUT_TRUSTED_W_KEY_EVENT');
@@ -139,6 +159,7 @@ async function main(){
   originalLowerReached:trace.actualVerifiedLowerSupportReached,source:'25/17/26/0',
   observedTrustedForwardKeydowns:trusted.events.filter(x=>x.code==='KeyW'&&
    x.type==='keydown'&&x.realTrustedEvent===true).length,
+  realForwardKeyHold:verifiedHold,
   artAccepted:false,productionAuthorized:false,official4v4Certified:false};
  writeFileSync(resolve(output,'b275-real-kcc-summary.json'),JSON.stringify(report,null,2));
  console.log('B275_REAL_KCC_RESULT',JSON.stringify(report));
