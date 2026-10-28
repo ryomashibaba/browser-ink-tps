@@ -153,6 +153,7 @@ import {B260_SOURCE_TARGETS,b260Target,b260SourceGate,b260DrawVisible,
 import {b261SourceGate,classifyB261SourceDrawState} from './B261SourceRenderOrderAudit';
 import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStudy';
 import {b263ScreenWitnessGate,b263ReadNativeInkProjection} from './B263RealInkScreenWitness';
+import {b293Eligible,b293QuantifyInkProjections} from './B293ActualInkViewport';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
 import {b271RegistrationGate,b271NativeFootprintProbes,
@@ -1730,6 +1731,8 @@ export class UndertowF3PlayablePreviewApp{
     auditB261SourceRenderOrder:()=>this.auditB261SourceRenderOrder(),
     setB262QaPanelFocused:(on:boolean)=>this.setB262QaPanelFocused(on),
     auditB263NativePaintProjection:()=>this.auditB263NativePaintProjection(),
+    auditB293ActualInkViewport:(origin:readonly [number,number,number])=>
+     this.auditB293ActualInkViewport(origin),
     auditB264RealInkOpticalSightlines:()=>this.auditB264RealInkOpticalSightlines(),
     auditB271OriginalMultiSurfaceRegistration:()=>
      this.auditB271OriginalMultiSurfaceRegistration(),
@@ -2568,6 +2571,60 @@ export class UndertowF3PlayablePreviewApp{
     this.playerCameraEntity.getPosition().y,
     this.playerCameraEntity.getPosition().z],
    ...proof};
+ }
+ /** B293 genuine paused native human-shot ink ownership sightline
+  * in real camera, not fabricated painted pixels or modified render passes. */
+ private auditB293ActualInkViewport(origin:readonly [number,number,number]){
+  const s=this.snapshot(),uv=this.texturedF3l;
+  const stage=this.app.root.findByName('StageRoot') as Entity|null;
+  const cam=this.playerCameraEntity.camera;
+  const render=stage?.children.filter(x=>x.name.startsWith('PaintSurface:'))??[];
+  const realFoot=s.player.position;
+  const travel=origin.length===3&&origin.every(Number.isFinite)?
+   Math.hypot(realFoot[0]!-origin[0],realFoot[1]!-origin[1],
+    realFoot[2]!-origin[2]):NaN;
+  const same=this.b45SourceSurfaces.length===17&&
+   this.b45SourceSurfaces.every(x=>!x.isScoreable&&
+    this.ink.getSurface(x.id)===x);
+  const gate=b293Eligible({
+   url:new URL(location.href).searchParams,tick:s.tick,
+   phase:this.matchState,paused:this.paused,
+   locked:document.pointerLockElement===this.canvas,stopped:!!this.stopReason,
+   fullRound:this.b203FullRound,shots:s.shotsFired,
+   cells:s.b23HumanInkFeedback.humanChangedCells,travel,
+   renderer:s.renderer,uvTriangles:uv?.manifest.totalTriangles??0,
+   textures:uv?.manifest.textures.length??0,
+   sourceVisible:!!uv?.root.enabled&&this.texturedF3lStatus==='READY'&&
+    this.b253InkSafeVisualEnabled&&!!stage?.enabled,
+   solids:this.rawStage.solids.length,paint:this.rawStage.paintSurfaces.length,
+   links:this.rawStage.navigationLinks?.length??0,
+   scoreable:this.b45SourceSurfaces.filter(x=>x.isScoreable).length,
+   paintMeshes:render.filter(e=>!!e.render&&
+    e.render.meshInstances.length===1&&e.render.meshInstances[0]!.visible).length,
+   samePaintInstances:same,
+   cameraUnchanged:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE'&&
+    (this.canvas.dataset.t21B259RasterLayer??'BASELINE')==='BASELINE'&&
+    !this.canvas.dataset.t21B260HiddenMaterial,
+   actorRelocations:s.cpu.physicalFootRelocations
+  });
+  if(!gate||!cam||render.length!==17)
+   throw Error('B293_REAL_NATIVE_INK_VIEWPORT_FORBIDDEN');
+  const projection=b263ReadNativeInkProjection(this.b45SourceSurfaces,
+   point=>{const x=cam.worldToScreen(new Vec3(point.x,point.y,point.z));
+    return {x:x.x,y:x.y,z:x.z};},
+   this.canvas.width,this.canvas.height,96);
+  const classification=b293QuantifyInkProjections(
+   projection,this.canvas.width,this.canvas.height);
+  return {nativeTick:s.tick,actualHumanShots:s.shotsFired,
+   actualHumanPaintCells:s.b23HumanInkFeedback.humanChangedCells,
+   nativePhase:this.matchState,cameraPosition:this.playerCameraEntity
+    .getPosition().toArray(),originalStageAuthority:'25/17/26/0' as const,
+   registeredSourcePaintRenderMeshes:render.length,
+   visibleSourcePaintRenderMeshes:render.filter(x=>
+    x.render?.meshInstances[0]?.visible).length,
+   originalSourceUvTriangles:uv!.manifest.totalTriangles,
+   ...classification, nativeWorldEdited:false as const,
+   paintedSourceMeshesEdited:false as const};
  }
  /** B264: 24 source-verified real owned paint cell rays maximum.
   * Ray checks compare exact original F3L optical triangles and certified

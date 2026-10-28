@@ -1193,6 +1193,41 @@ async function run(){
        writeFileSync(resolve(OUTPUT,'b289-native-real-ink-actor-art-abca.json'),
         JSON.stringify(out,null,2));
        console.log('B289_REAL_NATIVE_INPLAY_ART_ABCA_PASS',JSON.stringify(out));
+        // B293: inspect all real native owner cells, not fabricated ink.
+        await evaluate(`(() => {const u=new URL(location.href);
+         u.searchParams.set('t21B293','realInkViewport');
+         history.replaceState(null,'',u.href);return true;})()`);
+        const realInk=await evaluate(
+         'window.__t21F3.auditB293ActualInkViewport('+
+         JSON.stringify(origin)+')');
+        if(realInk.nativeTick!==still.tick||
+           realInk.actualHumanPaintCells<1||realInk.actualHumanShots<1||
+           realInk.actualOwnerCells<1||
+           realInk.registeredSourcePaintRenderMeshes!==17||
+           realInk.visibleSourcePaintRenderMeshes!==17||
+           realInk.originalStageAuthority!=='25/17/26/0'||
+           realInk.framebufferInkVisibilityCertified!==false||
+           realInk.scoreablePromotions!==0||
+           realInk.nativeWorldEdited!==false)
+         fail('B293_NATIVE_INK_VIEWPORT_WITNESS_INVALID_'+JSON.stringify(realInk));
+        if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+         fail('B293_OWNERSHIP_PROJECTION_CHANGED_NATIVE_WORLD');
+        await sleep(190);
+        const b293Image=await b246Screenshot('b293-real-native-ink-same-frame');
+        if(b293Image.sha256!==snaps[0].image.sha256)
+         fail('B293_READ_ONLY_AUDIT_CHANGED_REAL_FRAMEBUFFER');
+        const report={...realInk,sameFrameNativeBaseline:snaps[0].image,
+         researchFramebuffer:b293Image,exactNativeFramebufferRestoration:true};
+        writeFileSync(resolve(OUTPUT,'b293-actual-native-ink-viewport.json'),
+         JSON.stringify(report,null,2));
+        console.log('B293_REAL_NATIVE_INK_VIEWPORT_PASS',JSON.stringify({
+         nativeTick:realInk.nativeTick,
+         actualOwnerCells:realInk.actualOwnerCells,
+         actualHumanPaintCells:realInk.actualHumanPaintCells,
+         sampled:realInk.paintSampleCount,inside:realInk.insideScreen,
+         behind:realInk.behindCamera,outside:realInk.outsideScreen,
+         aim:realInk.nearAim,lower:realInk.lowerScreen,
+         source:'25/17/26/0',sameRaster:true}));
        // B292: separate same-native-snapshot A-D-A visual-only trial.
        const dReply=await evaluate('window.__t21F3.setB289RealInPlayActorVisual('+
         JSON.stringify('B292_FLOW_SILHOUETTE')+','+JSON.stringify(origin)+')');

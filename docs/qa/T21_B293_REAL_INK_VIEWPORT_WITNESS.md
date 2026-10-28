@@ -1,0 +1,9 @@
+# B293 true native source ink visibility forensics
+
+The original in-play frame after real player movement/shots is gray even though B292 genuine Chromium measured 315 owner changes; the previous visual-only B292 character remains ART REJECT. B263 real owner-grid projection was previously inaccessible in the genuine B289 post-movement full-round context.
+
+B293 connects the exact read-only B263 cell projection to the existing genuine Chromium 60Hz B289 STAGING/PLAYING paused *after* true keyboard/mouse input and impact ink. Requires explicit `t21B293=realInkViewport`, 25 original solids/17 original paint surfaces/26 real nav links/0 score, 57578 UV triangles/19 textures, 17 visible registered real render meshes, exactly the native owner grid objects, original camera, no relocated physics actors. Reject unpainted, tick <42, synthetic/unpaused, pointer locked, changed camera, scores or mismatched surfaces.
+
+Collect owner counts on all 17 surfaces and up to 96 projected real owned cell centers each. Classify in camera, behind, outside, near reticle, lower frame and by surface IDs. A projected cell does **NOT** prove framebuffer appearance, UV correctness, visibility through optical geometry, physical route or original game scoring. Run identical same-native-pause screenshot before and after the pure read-only audit and require SHA256 equality. No painting, camera, material, original triangles, colliders, CPU or score modifications. B293 is a diagnostic source for deciding whether to investigate original aim/surface location vs render/occlusion.
+
+Art HOLD, 4v4 HOLD, CPU original route crossings 0/12, production forbidden; keep main/T20/Pages/PR #5 protected.
