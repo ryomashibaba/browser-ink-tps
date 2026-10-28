@@ -1,0 +1,20 @@
+name: T21 B267 existing native camera + owned ink alignment audit
+on:
+  push:
+    branches: ["dev/t21-f4e103w-qa-infra"]
+    paths:
+      - "scripts/qa-offline/t21-b267-native-integrated-camera-review*.mjs"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b267-registered-view:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Existing genuine-source camera geometry and no-ART-promote tests
+        run: node --test scripts/qa-offline/t21-b267-native-integrated-camera-review.test.mjs
