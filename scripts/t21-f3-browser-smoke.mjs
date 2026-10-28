@@ -9,6 +9,7 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {verifyB77OriginalSourceAbaRaster,inspectB252OriginalUvRaster}
  from './t21-w10b77-source-raster-restore.mjs';
 import {resolve} from 'node:path';
+import {captureB260OriginalMaterials} from './t21-b260-native-material-aba.mjs';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
@@ -261,6 +262,7 @@ async function main(){
   (process.env.T21_B257_DEPTH_AUDIT==='1'?'&t21B257=depthAudit':'')+
   (process.env.T21_B258_CAMERA_STUDY==='1'?'&t21B258=cameraStudy':'')+
   (process.env.T21_B259_LAYER_AUDIT==='1'?'&t21B259=layerAudit':'')+
+  (process.env.T21_B260_MATERIAL_AUDIT==='1'?'&t21B260=materialAudit':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4105,6 +4107,12 @@ async function main(){
     reject('B259_REQUIRES_NATIVE_B258_CAMERA_BASELINE');
    await captureB259LayerAudit('FROZEN');
   }
+  if(process.env.T21_B260_MATERIAL_AUDIT==='1'){
+   if(process.env.T21_B259_LAYER_AUDIT!=='1')
+    reject('B260_REQUIRES_B259_SOURCE_LAYER_EVIDENCE');
+   await captureB260OriginalMaterials('FROZEN',{
+    evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4385,6 +4393,9 @@ async function main(){
       profiles:tests.map(x=>x.profile)}));
     if(process.env.T21_B259_LAYER_AUDIT==='1')
      await captureB259LayerAudit('REAL_INK');
+    if(process.env.T21_B260_MATERIAL_AUDIT==='1')
+     await captureB260OriginalMaterials('REAL_INK',{
+      evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
     await evaluate('window.__t21F3.resume()');
    }
  }
