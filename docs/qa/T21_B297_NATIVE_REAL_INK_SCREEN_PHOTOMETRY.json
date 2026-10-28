@@ -1,0 +1,73 @@
+{
+  "schema": "B297_VERIFIED_NATIVE_REAL_INK_FRAMEBUFFER_SAMPLE_PHOTOMETRY",
+  "sourceRun": 40710941604,
+  "sourceAttempt": 2,
+  "sourceArtifactId": 12827716063,
+  "source": "25/17/26/0",
+  "sourceScreenshot": "b293-real-native-ink-same-frame.png",
+  "screenshotSha256": "55da5966b1da01114c8104f3baad0e4e4f9fdc6973496d5d160e43880330b564",
+  "sampleJSON": "b293-actual-native-ink-viewport.json",
+  "nativeTick": 85,
+  "realHumanShots": 8,
+  "actualHumanOwnedPaintCells": 315,
+  "totalRegisteredNativePaintSurfaces": 17,
+  "paintedSurfaceIds": [
+    "UndertowT21D:spawn-high-positive-z:paint"
+  ],
+  "ownedSamples": 79,
+  "samplesInNativeCamera": 79,
+  "viewportPx": [
+    1600,
+    900
+  ],
+  "pixelSampleMethod": "Pillow RGB, round projected screen XY, median of 5x5 native screenshot patch at each of 79 sampled authentic owned-cell centers",
+  "projectionBoundsPx": {
+    "minX": 759.30908065,
+    "maxX": 850.32987267,
+    "minY": 451.68255434,
+    "maxY": 509.91270259
+  },
+  "projectionBoundingAreaPx2": 5300.154213,
+  "projectionBoundingScreenPercent": 0.368066,
+  "medianSamplePatchRgb8": [
+    31,
+    70,
+    102
+  ],
+  "samplePatchRgbP10": [
+    14.8,
+    59.8,
+    88.8
+  ],
+  "samplePatchRgbP90": [
+    41,
+    242,
+    255
+  ],
+  "descriptiveThresholds": {
+    "cyanHeuristic": {
+      "definition": "5x5 median G>=130 and B>=150 and (B-R)>=80",
+      "samplesMatching": 33,
+      "samplesTotal": 79
+    },
+    "darkHeuristic": {
+      "definition": "mean(5x5 median R,G,B)<=100",
+      "samplesMatching": 46,
+      "samplesTotal": 79
+    },
+    "darkLowChromaHeuristic": {
+      "definition": "mean(R,G,B)<=100 and max(R,G,B)-min(R,G,B)<=75",
+      "samplesMatching": 42,
+      "samplesTotal": 79
+    }
+  },
+  "proofScope": {
+    "actualPaintTexelColorVisible": false,
+    "originalGPUAtlasReadback": false,
+    "individualPixelActorOcclusionResolved": false,
+    "sourceOpticalUVLoadedInThisMode": false,
+    "artAccepted": false,
+    "unrestricted4v4Certified": false,
+    "productionAuthorized": false
+  }
+}
