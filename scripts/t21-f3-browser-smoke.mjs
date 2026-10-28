@@ -43,7 +43,15 @@ async function cmd(method,params={}){
 }
 async function evaluate(expression){
  const r=await cmd('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
- if(r.exceptionDetails)reject('PAGE_EXCEPTION '+JSON.stringify(r.exceptionDetails).slice(0,600));
+ if(r.exceptionDetails){
+  // Preserve the actual browser throw reason, not only minified stack frames.
+  // A B260 browser failure previously truncated the meaningful exception.
+  const e=r.exceptionDetails;
+  reject('PAGE_EXCEPTION '+JSON.stringify({
+   message:e.exception?.description??e.exception?.value??e.text,
+   text:e.text,frames:e.stackTrace?.callFrames?.slice(0,3)
+  }).slice(0,2200));
+ }
  return r.result?.value;
 }
 const key=(type)=>cmd('Input.dispatchKeyEvent',{
