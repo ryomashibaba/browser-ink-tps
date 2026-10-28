@@ -18,6 +18,7 @@ on:
       - "src/app/B258OriginalCameraComposition*"
       - "src/app/B259SourceRasterLayers*"
       - "src/app/B260SourceMaterialAttribution*"
+      - "src/app/B261SourceRenderOrderAudit*"
       - "scripts/t21-b260-native-material-aba.mjs"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
@@ -90,6 +91,8 @@ jobs:
         run: npx vitest run src/app/B259SourceRasterLayers.test.ts
       - name: B260 source-pinned individual UV materials and paused gates
         run: npx vitest run src/app/B260SourceMaterialAttribution.test.ts
+      - name: B261 original glass versus opaque paint render pass tests
+        run: npx vitest run src/app/B261SourceRenderOrderAudit.test.ts
       - name: B253 opt-in original UV paint-readability material tests
         run: npx vitest run src/app/UndertowF3LTexturedSourcePreview.test.ts
       - name: Test source-only verified UV preference and frozen authority
@@ -112,6 +115,7 @@ jobs:
           T21_B258_CAMERA_STUDY: "1"
           T21_B259_LAYER_AUDIT: "1"
           T21_B260_MATERIAL_AUDIT: "1"
+          T21_B261_ORDER_AUDIT: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()

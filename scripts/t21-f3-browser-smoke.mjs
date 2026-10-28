@@ -142,6 +142,43 @@ async function captureB259LayerAudit(label){
  }));
 }
 
+/** B261 observe the existing real opaque/transparent passes; no mutation. */
+async function captureB261RenderOrder(label){
+ const before=await evaluate('window.__t21F3.snapshot()');
+ if(!before.paused||before.matchState!=='STAGING'||
+    !before.b261OriginalSourceDrawOrderAudit.requested||
+    before.b260OriginalSourceMaterialAudit.hiddenMaterial!==null||
+    before.b259RasterLayerAudit.mask!=='BASELINE')
+  reject('B261_UNTRUSTED_PAUSED_SOURCE_BASELINE_'+label);
+ const order=await evaluate('window.__t21F3.auditB261SourceRenderOrder()');
+ if(order.nativeTick!==before.tick||order.source!=='25/17/26/0'||
+    order.originalUvTriangles!==57578||order.paintCount!==17||
+    order.glass.name!=='Fld_Temple01_Glass01'||
+    order.changedDrawBuckets!==0||order.changedDrawOrders!==0||
+    order.changedMaterials!==0||order.changedLayerAssignments!==0||
+    order.changedPaintSurfaces!==0||order.changedPhysicsSolids!==0||
+    order.changedNavLinks!==0||order.changedScoreable!==0||
+    order.artAccepted!==false||order.productionAuthorized!==false)
+  reject('B261_REAL_RENDERER_SOURCE_IDENTITY_DRIFT_'+label);
+ const frame=await screenshot('B261_'+label+'_REAL_RENDER_PASS');
+ const after=await evaluate('window.__t21F3.snapshot()');
+ if(after.tick!==before.tick||
+    JSON.stringify(after.player.position)!==JSON.stringify(before.player.position)||
+    after.originalSourceSolids!==25||after.originalPaintSurfaces!==17||
+    after.originalSourceNavigationLinks!==26||
+    after.sourceScoreablePromotions!==0)
+  reject('B261_RENDERER_AUDIT_WORLD_DRIFT_'+label);
+ writeFileSync(resolve(OUTPUT,'b261-'+label.toLowerCase()+
+  '-native-source-render-pass.json'),JSON.stringify({
+   context:label,frame,order,source:'25/17/26/0',
+   artAccepted:false,productionAuthorized:false},null,2));
+ console.log('B261_REAL_WEBGL2_RENDER_PASS_AUDIT_PASS',JSON.stringify({
+  context:label,glassBlend:order.glass.blendType,
+  paintBlend:order.paintMaterials.map(x=>x.blendType),
+  conclusion:order.conclusion,sameWorldLayer:order.sameWorldLayer,
+  opaqueInk:order.opaqueInk,translucentGlass:order.translucentGlass,
+  backToFront:order.backToFront,artAccepted:false}));
+}
 async function main(){
  mkdirSync(OUTPUT,{recursive:true});
  const chrome=process.env.T21_CHROME_PATH||
@@ -271,6 +308,7 @@ async function main(){
   (process.env.T21_B258_CAMERA_STUDY==='1'?'&t21B258=cameraStudy':'')+
   (process.env.T21_B259_LAYER_AUDIT==='1'?'&t21B259=layerAudit':'')+
   (process.env.T21_B260_MATERIAL_AUDIT==='1'?'&t21B260=materialAudit':'')+
+  (process.env.T21_B261_ORDER_AUDIT==='1'?'&t21B261=sortAudit':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4121,6 +4159,11 @@ async function main(){
    await captureB260OriginalMaterials('FROZEN',{
     evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
   }
+  if(process.env.T21_B261_ORDER_AUDIT==='1'){
+   if(process.env.T21_B260_MATERIAL_AUDIT!=='1')
+    reject('B261_REQUIRES_B260_REAL_SOURCE_MATERIAL_BASELINE');
+   await captureB261RenderOrder('FROZEN');
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4404,6 +4447,8 @@ async function main(){
     if(process.env.T21_B260_MATERIAL_AUDIT==='1')
      await captureB260OriginalMaterials('REAL_INK',{
       evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
+    if(process.env.T21_B261_ORDER_AUDIT==='1')
+     await captureB261RenderOrder('REAL_INK');
     await evaluate('window.__t21F3.resume()');
    }
  }
