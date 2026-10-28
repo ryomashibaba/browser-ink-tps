@@ -144,6 +144,7 @@ import {B260_SOURCE_TARGETS,b260Target,b260SourceGate,b260DrawVisible,
  b260NestedDrawGroupVisible,B260_SOURCE_AUTHORITY} from './B260SourceMaterialAttribution';
 import {b261SourceGate,classifyB261SourceDrawState} from './B261SourceRenderOrderAudit';
 import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStudy';
+import {b263ScreenWitnessGate,b263ReadNativeInkProjection} from './B263RealInkScreenWitness';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1703,6 +1704,7 @@ export class UndertowF3PlayablePreviewApp{
      this.setB260SourceMaterialHidden(name),
     auditB261SourceRenderOrder:()=>this.auditB261SourceRenderOrder(),
     setB262QaPanelFocused:(on:boolean)=>this.setB262QaPanelFocused(on),
+    auditB263NativePaintProjection:()=>this.auditB263NativePaintProjection(),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -2354,6 +2356,48 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21B262QaFocus=on?'ON':'OFF';
   return {active:on,fullQaControlsRestored:!on,
    ...b262FocusPresentation(on)};
+ }
+ /** B263: inspect ACTUAL ownerGrid cells and project only samples to the
+  * genuine fixed native camera. This does not paint or reveal occluded ink. */
+ private auditB263NativePaintProjection(){
+  const uv=this.texturedF3l;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  const stage=this.app.root.findByName('StageRoot') as Entity|null;
+  const cam=this.playerCameraEntity.camera;
+  if(!uv||!stage?.enabled||!cam||
+   !b263ScreenWitnessGate(new URL(location.href).searchParams,{
+    paused:this.paused,staging:this.matchState==='STAGING',
+    stopped:!!this.stopReason,fullRound:this.b203FullRound,
+    pointerLocked:document.pointerLockElement===this.canvas,
+    otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+    verifiedUv:this.texturedF3lStatus==='READY'&&!!uv.root.enabled,
+    inkSafe:this.b253InkSafeVisualEnabled,
+    humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+    b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+    cameraBaseline:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+    solids:this.rawStage.solids.length,
+    paintable:this.rawStage.paintSurfaces.length,
+    links:this.rawStage.navigationLinks?.length??0,scoreable:0,
+    triangles:uv.manifest.totalTriangles,textures:uv.manifest.textures.length,
+    cpuCount:bots.length
+   },this.canvas.dataset.t21B259RasterLayer??'BASELINE',
+   this.canvas.dataset.t21B260HiddenMaterial||null,
+   this.canvas.dataset.t21B262QaFocus==='ON')||
+   this.b45SourceSurfaces.length!==17||
+   this.b45SourceSurfaces.some(s=>s.isScoreable||
+    this.ink.getSurface(s.id)!==s))
+   throw Error('B263_NATIVE_OWNER_GRID_CAMERA_AUDIT_UNAUTHORIZED');
+  const width=this.canvas.width,height=this.canvas.height;
+  const proof=b263ReadNativeInkProjection(this.b45SourceSurfaces,
+   world=>{
+    const s=cam.worldToScreen(new Vec3(world.x,world.y,world.z));
+    return {x:s.x,y:s.y,z:s.z};
+   },width,height);
+  return {nativeTick:this.clock.tick,
+   cameraWorld:[this.playerCameraEntity.getPosition().x,
+    this.playerCameraEntity.getPosition().y,
+    this.playerCameraEntity.getPosition().z],
+   ...proof};
  }
  /** B258 opt-in camera-only study: real Rapier stage camera cast retained. */
  private setB258OriginalCameraProfile(name:B258CameraProfile){
@@ -4296,6 +4340,11 @@ export class UndertowF3PlayablePreviewApp{
     reopenTabVisible:!!this.b262QaReopenButton&&!this.b262QaReopenButton.hidden,
     source:'25/17/26/0',noGameRenderChanges:true,artCertified:false,
     productionAuthorized:false
+   },
+   b263RealInkProjectionAudit:{
+    requested:new URL(location.href).searchParams.get('t21B263')==='paintProjection',
+    nativeReadOnly:true,source:'25/17/26/0',
+    occlusionCertified:false,artCertified:false,productionAuthorized:false
    },
    b258NativeCameraComposition:{
     requested:new URL(location.href).searchParams.get('t21B258')==='cameraStudy',

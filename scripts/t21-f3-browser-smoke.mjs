@@ -239,6 +239,60 @@ async function captureB262QaFocus(label){
   restorationPixels:pixels.originalUvRestoration.changedPixels,
   originalStage:'25/17/26/0',artAccepted:false}));
 }
+/** B263 genuine ownerGrid camera projection. No ink or scene mutation.
+ * A projected sample may still be occluded or visually indistinguishable. */
+async function captureB263NativeInkProjection(label){
+ const pre=await evaluate('window.__t21F3.snapshot()');
+ if(!pre.paused||pre.matchState!=='STAGING'||
+    !pre.b263RealInkProjectionAudit.requested||
+    pre.b262SourceQaFocusAudit.active||
+    pre.b259RasterLayerAudit.mask!=='BASELINE'||
+    pre.b260OriginalSourceMaterialAudit.hiddenMaterial!==null)
+  reject('B263_NATIVE_PAINT_GRID_BASELINE_NOT_VERIFIED_'+label);
+ const projection=await evaluate('window.__t21F3.auditB263NativePaintProjection()');
+ if(projection.nativeTick!==pre.tick||
+    projection.schema!=='B263_ACTUAL_NATIVE_PAINT_CELL_CAMERA_PROJECTION'||
+    projection.source!=='25/17/26/0'||projection.sourcePaintSurfaces!==17||
+    projection.sourceUvTriangles!==57578||projection.projectionOnly!==true||
+    projection.occlusionTested!==false||
+    projection.renderedInkPixelsCertified!==false||
+    projection.humanProvenanceFromOwnershipAlone!==false||
+    projection.originalGeometryModified!==0||
+    projection.paintOwnershipModified!==0||
+    projection.originalPaintAtlasModified!==0||
+    projection.physicsSolidsModified!==0||projection.navLinksModified!==0||
+    projection.scoreableSurfacesAdded!==0||
+    projection.ownedCells!==projection.ownedA+projection.ownedB||
+    projection.samplesInsideViewport>projection.sampledCells||
+    projection.sampledCells>17*96||
+    projection.perSurface.length!==17||
+    projection.artAccepted!==false||projection.productionAuthorized!==false)
+  reject('B263_GENUINE_NATIVE_PAINT_PROVENANCE_DRIFT_'+label);
+ if(label==='REAL_INK'&&
+    (pre.b23HumanInkFeedback.humanChangedCells<1||projection.ownedCells<1))
+  reject('B263_REAL_HUMAN_INK_PROJECTION_MISSING_OWNERSHIP');
+ const frame=await screenshot('B263_'+label+'_OWNER_GRID_SCREEN_PROJECTION');
+ const post=await evaluate('window.__t21F3.snapshot()');
+ if(post.tick!==pre.tick||post.originalSourceSolids!==25||
+    post.originalPaintSurfaces!==17||
+    post.originalSourceNavigationLinks!==26||
+    post.sourceScoreablePromotions!==0||
+    JSON.stringify(post.player.position)!==JSON.stringify(pre.player.position))
+  reject('B263_READ_ONLY_WORLD_PROJECTION_DRIFT_'+label);
+ writeFileSync(resolve(OUTPUT,'b263-'+label.toLowerCase()+
+  '-native-owned-ink-screen-projection.json'),JSON.stringify({
+   context:label,frame,projection,
+   genuineHumanChangedCells:pre.b23HumanInkFeedback.humanChangedCells,
+   noActualPixelVisibilityClaim:true,source:'25/17/26/0',
+   artAccepted:false,productionAuthorized:false},null,2));
+ console.log('B263_GENUINE_SOURCE_OWNED_INK_PROJECTION_PASS',
+  JSON.stringify({context:label,owned:projection.ownedCells,
+   A:projection.ownedA,B:projection.ownedB,
+   samples:projection.sampledCells,
+   samplesInside:projection.samplesInsideViewport,
+   humanChanged:pre.b23HumanInkFeedback.humanChangedCells,
+   visibleInkPixelsCertified:false,artAccepted:false}));
+}
 async function main(){
  mkdirSync(OUTPUT,{recursive:true});
  const chrome=process.env.T21_CHROME_PATH||
@@ -370,6 +424,7 @@ async function main(){
   (process.env.T21_B260_MATERIAL_AUDIT==='1'?'&t21B260=materialAudit':'')+
   (process.env.T21_B261_ORDER_AUDIT==='1'?'&t21B261=sortAudit':'')+
   (process.env.T21_B262_QA_FOCUS==='1'?'&t21B262=qaFocusAudit':'')+
+  (process.env.T21_B263_PAINT_PROJECTION==='1'?'&t21B263=paintProjection':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4230,6 +4285,11 @@ async function main(){
     reject('B262_REQUIRES_REAL_B261_PASS_AUDIT');
    await captureB262QaFocus('FROZEN');
   }
+  if(process.env.T21_B263_PAINT_PROJECTION==='1'){
+   if(process.env.T21_B262_QA_FOCUS!=='1')
+    reject('B263_REQUIRES_B262_SOURCE_QA_BASELINE');
+   await captureB263NativeInkProjection('FROZEN');
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4517,6 +4577,8 @@ async function main(){
      await captureB261RenderOrder('REAL_INK');
     if(process.env.T21_B262_QA_FOCUS==='1')
      await captureB262QaFocus('REAL_INK');
+    if(process.env.T21_B263_PAINT_PROJECTION==='1')
+     await captureB263NativeInkProjection('REAL_INK');
     await evaluate('window.__t21F3.resume()');
    }
  }
