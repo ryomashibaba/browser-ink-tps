@@ -179,6 +179,66 @@ async function captureB261RenderOrder(label){
   opaqueInk:order.opaqueInk,translucentGlass:order.translucentGlass,
   backToFront:order.backToFront,artAccepted:false}));
 }
+/** B262 exact A-B-A source QA HUD decluttering, no game render changes. */
+async function captureB262QaFocus(label){
+ const before=await evaluate('window.__t21F3.snapshot()');
+ if(!before.paused||before.matchState!=='STAGING'||
+    !before.b262SourceQaFocusAudit.requested||
+    before.b262SourceQaFocusAudit.active||
+    before.b262SourceQaFocusAudit.qaPanelHidden||
+    before.b262SourceQaFocusAudit.reopenTabVisible||
+    before.b260OriginalSourceMaterialAudit.hiddenMaterial!==null||
+    before.b259RasterLayerAudit.mask!=='BASELINE')
+  reject('B262_UNVERIFIED_NATIVE_QA_OVERLAY_BASELINE_'+label);
+ const frameA=await screenshot('B262_'+label+'_A_FULL_QA');
+ const a=readFileSync(resolve(OUTPUT,frameA.name+'.png'));
+ const focus=await evaluate('window.__t21F3.setB262QaPanelFocused(true)');
+ if(!focus.active||!focus.qaPanelHidden||!focus.restoreButtonVisible||
+    focus.source!=='25/17/26/0'||focus.originalSourceTriangles!==57578||
+    focus.changedOriginalMeshes!==0||focus.changedMaterialState!==0||
+    focus.changedPaintSurfaces!==0||focus.changedPhysicsSolids!==0||
+    focus.changedNavLinks!==0||focus.changedScoreable!==0||
+    focus.productionAuthorized!==false||focus.artAccepted!==false)
+  reject('B262_RENDER_ONLY_FOCUS_PROVENANCE_DRIFT_'+label);
+ await sleep(240);
+ const frameB=await screenshot('B262_'+label+'_B_COMPACT_QA');
+ const back=await evaluate('window.__t21F3.setB262QaPanelFocused(false)');
+ if(back.active||!back.fullQaControlsRestored||back.qaPanelHidden||
+    back.restoreButtonVisible)
+  reject('B262_ORIGINAL_QA_CONTROLS_NOT_RESTORED_'+label);
+ await sleep(240);
+ const frameA2=await screenshot('B262_'+label+'_A2_RESTORED_QA');
+ const pixels=inspectB252OriginalUvRaster(a,
+  readFileSync(resolve(OUTPUT,frameB.name+'.png')),
+  readFileSync(resolve(OUTPUT,frameA2.name+'.png')));
+ const after=await evaluate('window.__t21F3.snapshot()');
+ if(!pixels.appearanceRestored||pixels.originalUvRestoration.changedPixels!==0||
+    pixels.uvVsFlat.changedPixels<2500||
+    after.tick!==before.tick||
+    JSON.stringify(after.player.position)!==JSON.stringify(before.player.position)||
+    after.originalSourceSolids!==25||after.originalPaintSurfaces!==17||
+    after.originalSourceNavigationLinks!==26||
+    after.sourceScoreablePromotions!==0||
+    after.b262SourceQaFocusAudit.active||
+    after.b262SourceQaFocusAudit.qaPanelHidden||
+    after.b262SourceQaFocusAudit.reopenTabVisible||
+    after.b259RasterLayerAudit.mask!=='BASELINE'||
+    after.b260OriginalSourceMaterialAudit.hiddenMaterial!==null)
+  reject('B262_REAL_SOURCE_QA_OVERLAY_PIXEL_OR_WORLD_DRIFT_'+label+
+   JSON.stringify(pixels));
+ writeFileSync(resolve(OUTPUT,'b262-'+label.toLowerCase()+
+  '-original-source-qa-focus-aba.json'),JSON.stringify({
+   schema:'B262_GENUINE_PAUSED_SOURCE_QA_UI_ABA',context:label,
+   frameA,frameB,frameA2,pixels,nativeTick:before.tick,
+   source:'25/17/26/0',originalUvTriangles:57578,
+   uiOnly:true,realInkGeometryUnchanged:true,artAccepted:false,
+   productionAuthorized:false},null,2));
+ console.log('B262_REAL_WEBGL2_QA_FOCUS_ABA_PASS',JSON.stringify({
+  context:label,changedPixels:pixels.uvVsFlat.changedPixels,
+  changedRatio:pixels.uvVsFlat.ratio,
+  restorationPixels:pixels.originalUvRestoration.changedPixels,
+  originalStage:'25/17/26/0',artAccepted:false}));
+}
 async function main(){
  mkdirSync(OUTPUT,{recursive:true});
  const chrome=process.env.T21_CHROME_PATH||
@@ -309,6 +369,7 @@ async function main(){
   (process.env.T21_B259_LAYER_AUDIT==='1'?'&t21B259=layerAudit':'')+
   (process.env.T21_B260_MATERIAL_AUDIT==='1'?'&t21B260=materialAudit':'')+
   (process.env.T21_B261_ORDER_AUDIT==='1'?'&t21B261=sortAudit':'')+
+  (process.env.T21_B262_QA_FOCUS==='1'?'&t21B262=qaFocusAudit':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4164,6 +4225,11 @@ async function main(){
     reject('B261_REQUIRES_B260_REAL_SOURCE_MATERIAL_BASELINE');
    await captureB261RenderOrder('FROZEN');
   }
+  if(process.env.T21_B262_QA_FOCUS==='1'){
+   if(process.env.T21_B261_ORDER_AUDIT!=='1')
+    reject('B262_REQUIRES_REAL_B261_PASS_AUDIT');
+   await captureB262QaFocus('FROZEN');
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4449,6 +4515,8 @@ async function main(){
       evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
     if(process.env.T21_B261_ORDER_AUDIT==='1')
      await captureB261RenderOrder('REAL_INK');
+    if(process.env.T21_B262_QA_FOCUS==='1')
+     await captureB262QaFocus('REAL_INK');
     await evaluate('window.__t21F3.resume()');
    }
  }

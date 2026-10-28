@@ -143,6 +143,7 @@ import {B259_RASTER_MASKS,b259RasterEligible,b259UvVisible,
 import {B260_SOURCE_TARGETS,b260Target,b260SourceGate,b260DrawVisible,
  b260NestedDrawGroupVisible,B260_SOURCE_AUTHORITY} from './B260SourceMaterialAttribution';
 import {b261SourceGate,classifyB261SourceDrawState} from './B261SourceRenderOrderAudit';
+import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStudy';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -287,6 +288,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly feedback:GameFeedback;
  private readonly humanSpawn:Vec3;
  private readonly panel:HTMLElement;
+ private b262QaReopenButton:HTMLButtonElement|null=null;
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
@@ -917,6 +919,19 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc/P pause mission · click stage to resume</p>';
   ui.appendChild(this.panel);
+  // B262 opt-in diagnostic, source QA only; full controls remain one click away.
+  if(b31Params.get('t21B262')==='qaFocusAudit'){
+   const tab=document.createElement('button');
+   tab.id='t21-f3-b262-restore-qa-panel';
+   tab.type='button';tab.hidden=true;tab.textContent='QA PANEL';
+   tab.setAttribute('aria-label','Restore original source QA diagnostics');
+   tab.style.cssText='position:fixed;left:14px;top:14px;z-index:45;'+
+    'padding:9px 13px;border-radius:9px;border:1px solid #7ac9e9;'+
+    'background:#0b2538;color:#e9fbff;font:700 12px system-ui;'+
+    'box-shadow:0 6px 18px #0007;cursor:pointer;pointer-events:auto';
+   tab.addEventListener('click',()=>this.setB262QaPanelFocused(false));
+   ui.appendChild(tab);this.b262QaReopenButton=tab;
+  }
   // B188: the verified original drop is one-way. Failed witness or
   // completed source-local practice needs a *new* real physics session,
   // never a mid-game fabricated source player teleport or stage reset.
@@ -1687,6 +1702,7 @@ export class UndertowF3PlayablePreviewApp{
     setB260SourceMaterialHidden:(name:string|null)=>
      this.setB260SourceMaterialHidden(name),
     auditB261SourceRenderOrder:()=>this.auditB261SourceRenderOrder(),
+    setB262QaPanelFocused:(on:boolean)=>this.setB262QaPanelFocused(on),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -2303,6 +2319,41 @@ export class UndertowF3PlayablePreviewApp{
     world:{id:world.id,opaqueSortMode:world.opaqueSortMode,
      transparentSortMode:world.transparentSortMode}
    })};
+ }
+ /** B262 frozen QA panel visibility study: no PlayCanvas/source writes. */
+ private setB262QaPanelFocused(on:boolean){
+  const uv=this.texturedF3l;
+  const stage=this.app.root.findByName('StageRoot') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  const tab=this.b262QaReopenButton;
+  if(typeof on!=='boolean'||!uv||!stage?.enabled||!tab||
+    !b262QaFocusEligible(new URL(location.href).searchParams,{
+     paused:this.paused,staging:this.matchState==='STAGING',
+     stopped:!!this.stopReason,fullRound:this.b203FullRound,
+     pointerLocked:document.pointerLockElement===this.canvas,
+     otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+     verifiedUv:this.texturedF3lStatus==='READY'&&!!uv.root.enabled,
+     inkSafe:this.b253InkSafeVisualEnabled,
+     humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+     b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+     cameraBaseline:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+     solids:this.rawStage.solids.length,paintable:this.rawStage.paintSurfaces.length,
+     links:this.rawStage.navigationLinks?.length??0,scoreable:0,
+     triangles:uv.manifest.totalTriangles,textures:uv.manifest.textures.length,
+     cpuCount:bots.length
+    },this.canvas.dataset.t21B259RasterLayer??'BASELINE',
+    this.canvas.dataset.t21B260HiddenMaterial||null))
+   throw Error('B262_PAUSED_SOURCE_QA_FOCUS_UNAUTHORIZED');
+  const prev=this.canvas.dataset.t21B262QaFocus==='ON';
+  if(this.panel.hidden!==prev||tab.hidden!==!prev||
+    this.rawStage.solids.length!==25||this.rawStage.paintSurfaces.length!==17||
+    this.rawStage.navigationLinks?.length!==26||
+    uv.manifest.totalTriangles!==57578)
+   throw Error('B262_QA_PANEL_RESTORE_STATE_DRIFT');
+  this.panel.hidden=on;tab.hidden=!on;
+  this.canvas.dataset.t21B262QaFocus=on?'ON':'OFF';
+  return {active:on,fullQaControlsRestored:!on,
+   ...b262FocusPresentation(on)};
  }
  /** B258 opt-in camera-only study: real Rapier stage camera cast retained. */
  private setB258OriginalCameraProfile(name:B258CameraProfile){
@@ -3390,7 +3441,7 @@ export class UndertowF3PlayablePreviewApp{
   const playerView=presentation==='PLAYER';
   const inspecting=this.panel.parentElement?.dataset.t21B245Inspect==='true';
   const focus=document.pointerLockElement===this.canvas&&!activeGpuTrial&&!inspecting;
-  this.panel.hidden=focus;
+  if(this.canvas.dataset.t21B262QaFocus!=='ON')this.panel.hidden=focus;
   this.surveyButton.hidden=focus;
   // Pointerlockchange updates focus immediately, before next physics frame.
   // Avoid a stale FULL radar when Chrome checks the newly locked HUD.
@@ -4236,6 +4287,14 @@ export class UndertowF3PlayablePreviewApp{
     requested:new URL(location.href).searchParams.get('t21B261')==='sortAudit',
     renderOnly:true,sourceAuthority:'25/17/26/0',
     materialOverrides:0,layerOverrides:0,artCertified:false,
+    productionAuthorized:false
+   },
+   b262SourceQaFocusAudit:{
+    requested:new URL(location.href).searchParams.get('t21B262')==='qaFocusAudit',
+    active:this.canvas.dataset.t21B262QaFocus==='ON',
+    qaPanelHidden:this.panel.hidden,
+    reopenTabVisible:!!this.b262QaReopenButton&&!this.b262QaReopenButton.hidden,
+    source:'25/17/26/0',noGameRenderChanges:true,artCertified:false,
     productionAuthorized:false
    },
    b258NativeCameraComposition:{
