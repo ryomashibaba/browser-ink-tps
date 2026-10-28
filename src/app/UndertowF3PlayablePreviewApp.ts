@@ -145,6 +145,8 @@ import {B260_SOURCE_TARGETS,b260Target,b260SourceGate,b260DrawVisible,
 import {b261SourceGate,classifyB261SourceDrawState} from './B261SourceRenderOrderAudit';
 import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStudy';
 import {b263ScreenWitnessGate,b263ReadNativeInkProjection} from './B263RealInkScreenWitness';
+import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
+ b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1705,6 +1707,7 @@ export class UndertowF3PlayablePreviewApp{
     auditB261SourceRenderOrder:()=>this.auditB261SourceRenderOrder(),
     setB262QaPanelFocused:(on:boolean)=>this.setB262QaPanelFocused(on),
     auditB263NativePaintProjection:()=>this.auditB263NativePaintProjection(),
+    auditB264RealInkOpticalSightlines:()=>this.auditB264RealInkOpticalSightlines(),
    auditB45OriginalColliderRays:()=>this.auditB45OriginalColliderRays(),
    auditB47NativeBallisticReplay:()=>this.auditB47NativeBallisticReplay(),
    auditB48NativeSourceBallisticCandidates:()=>
@@ -2398,6 +2401,70 @@ export class UndertowF3PlayablePreviewApp{
     this.playerCameraEntity.getPosition().y,
     this.playerCameraEntity.getPosition().z],
    ...proof};
+ }
+ /** B264: 24 source-verified real owned paint cell rays maximum.
+  * Ray checks compare exact original F3L optical triangles and certified
+  * Rapier geometry. They do not assert that translucent GLASS blocks paint. */
+ private auditB264RealInkOpticalSightlines(){
+  const uv=this.texturedF3l;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  if(!uv||!b264SourceRayGate(new URL(location.href).searchParams,{
+    paused:this.paused,staging:this.matchState==='STAGING',
+    stopped:!!this.stopReason,fullRound:this.b203FullRound,
+    pointerLocked:document.pointerLockElement===this.canvas,
+    otherStudy:this.survey.snapshot().active||this.galleryIndex>=0,
+    verifiedUv:this.texturedF3lStatus==='READY'&&!!uv.root.enabled,
+    inkSafe:this.b253InkSafeVisualEnabled,
+    humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+    b256Active:this.canvas.dataset.t21B256OpticalAperture==='ON',
+    cameraBaseline:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+    solids:this.rawStage.solids.length,
+    paintable:this.rawStage.paintSurfaces.length,
+    links:this.rawStage.navigationLinks?.length??0,scoreable:0,
+    triangles:uv.manifest.totalTriangles,
+    textures:uv.manifest.textures.length,cpuCount:bots.length
+   },this.canvas.dataset.t21B259RasterLayer??'BASELINE',
+   this.canvas.dataset.t21B260HiddenMaterial||null,
+   this.canvas.dataset.t21B262QaFocus==='ON'))
+   throw Error('B264_REAL_SOURCE_OPTICAL_RAY_AUDIT_UNAUTHORIZED');
+  const ownership=this.auditB263NativePaintProjection();
+  const cells=b264SelectNativeVisibleProjectionSamples(ownership.samples);
+  const from=this.playerCameraEntity.getPosition();
+  const checks=cells.map(cell=>{
+   const to=new Vec3(...cell.world);
+   const distance=to.distance(from);
+   const original=uv.auditB257OriginalStaticRay(from,to);
+   const certified=this.physics.castStageSegment(from,to,'camera');
+   const compare=b264ClassifyNativePaintSightline(distance,
+    original.nearest,certified?{
+     solidId:certified.solidId,distanceMeters:certified.distance
+    }:null);
+   return {surfaceId:cell.surfaceId,team:cell.team,
+    ownerCellGrid:cell.grid,
+    trueOwnerCellWorld:cell.world,nativeScreenPx:cell.screenPx,
+    originalRayTrianglesScanned:original.scannedTriangles,
+    originalOpticalFirstSix:original.nearestGroups.slice(0,6),
+    ...compare};
+  });
+  return {schema:'B264_ACTUAL_NATIVE_INK_CELL_OPTICAL_AND_RAPIER_DEPTH',
+   nativeTick:this.clock.tick,source:'25/17/26/0',
+   originalSourceTriangles:uv.manifest.totalTriangles,
+   realPaintSurfaces:this.b45SourceSurfaces.length,
+   ownerCells:ownership.ownedCells,
+   projectedPaintCellSamples:ownership.samplesInsideViewport,
+   sampledRays:checks.length,maximumNativeSourceRays:24,
+   opticalBeforePaintCount:checks.filter(c=>c.opticalBeforePaint).length,
+   certifiedRapierBeforePaintCount:
+    checks.filter(c=>c.physicalBeforePaint).length,
+   originalColorOpacityCertified:false as const,
+   actualPaintPixelVisibilityCertified:false as const,
+   originalOpticalOnlyNoCollisionAuthority:true as const,
+   changedInkOwnership:0 as const,changedOriginalMeshes:0 as const,
+   newCollisionSolids:0 as const,newNavigationLinks:0 as const,
+   newScoreableSurfaces:0 as const,
+   rays:checks,artAccepted:false as const,
+   unrestricted4v4Certified:false as const,
+   productionAuthorized:false as const};
  }
  /** B258 opt-in camera-only study: real Rapier stage camera cast retained. */
  private setB258OriginalCameraProfile(name:B258CameraProfile){
@@ -4345,6 +4412,13 @@ export class UndertowF3PlayablePreviewApp{
     requested:new URL(location.href).searchParams.get('t21B263')==='paintProjection',
     nativeReadOnly:true,source:'25/17/26/0',
     occlusionCertified:false,artCertified:false,productionAuthorized:false
+   },
+   b264RealInkRayAudit:{
+    requested:new URL(location.href).searchParams.get('t21B264')==='inkOpticalRays',
+    source:'25/17/26/0',maxSourceRays:24,
+    collisionAltered:false,inkAltered:false,
+    original4v4Certified:false,artCertified:false,
+    productionAuthorized:false
    },
    b258NativeCameraComposition:{
     requested:new URL(location.href).searchParams.get('t21B258')==='cameraStudy',

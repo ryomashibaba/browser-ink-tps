@@ -293,6 +293,73 @@ async function captureB263NativeInkProjection(label){
    humanChanged:pre.b23HumanInkFeedback.humanChangedCells,
    visibleInkPixelsCertified:false,artAccepted:false}));
 }
+/** B264 compare exact real owned ink target points with already pinned
+ * source optical triangles and physical Rapier rays, with no scene change.
+ * The original optical ray is double-sided, not an opacity proof. */
+async function captureB264SourceInkRays(label){
+ const before=await evaluate('window.__t21F3.snapshot()');
+ if(!before.paused||before.matchState!=='STAGING'||
+    !before.b264RealInkRayAudit.requested||
+    before.originalSourceSolids!==25||
+    before.originalPaintSurfaces!==17||
+    before.originalSourceNavigationLinks!==26||
+    before.sourceScoreablePromotions!==0||
+    before.b259RasterLayerAudit.mask!=='BASELINE'||
+    before.b260OriginalSourceMaterialAudit.hiddenMaterial!==null||
+    before.b262SourceQaFocusAudit.active)
+  reject('B264_SOURCE_NATIVE_INK_RAY_BASELINE_NOT_VERIFIED_'+label);
+ const report=await evaluate('window.__t21F3.auditB264RealInkOpticalSightlines()');
+ if(report.schema!=='B264_ACTUAL_NATIVE_INK_CELL_OPTICAL_AND_RAPIER_DEPTH'||
+    report.source!=='25/17/26/0'||
+    report.nativeTick!==before.tick||
+    report.realPaintSurfaces!==17||
+    report.originalSourceTriangles!==57578||
+    report.ownerCells<0||
+    report.sampledRays>24||
+    report.sampledRays>report.projectedPaintCellSamples||
+    report.opticalBeforePaintCount>report.sampledRays||
+    report.certifiedRapierBeforePaintCount>report.sampledRays||
+    report.rays.length!==report.sampledRays||
+    report.rays.some(ray=>ray.originalRayTrianglesScanned!==57578||
+      ray.realInkFramebufferVisibilityCertified!==false||
+      ray.translucentGlassBlocksPaintCertified!==false||
+      ray.artAccepted!==false||
+      ray.productionAuthorized!==false)||
+    report.originalColorOpacityCertified!==false||
+    report.actualPaintPixelVisibilityCertified!==false||
+    report.changedInkOwnership!==0||report.changedOriginalMeshes!==0||
+    report.newCollisionSolids!==0||
+    report.newNavigationLinks!==0||
+    report.newScoreableSurfaces!==0||
+    report.productionAuthorized!==false||report.artAccepted!==false)
+  reject('B264_NATIVE_OPTICAL_DEPTH_PROVENANCE_INVALID_'+label);
+ if(label==='FROZEN'&&(report.ownerCells!==0||report.sampledRays!==0))
+  reject('B264_FROZEN_SOURCE_ALREADY_PAINTED');
+ if(label==='REAL_INK'&&(report.ownerCells<1||report.sampledRays<1))
+  reject('B264_REAL_SOURCE_PAINTED_RAYS_MISSING');
+ const after=await evaluate('window.__t21F3.snapshot()');
+ if(after.tick!==before.tick||
+    JSON.stringify(after.player.position)!==JSON.stringify(before.player.position)||
+    after.originalSourceSolids!==25||
+    after.originalPaintSurfaces!==17||
+    after.originalSourceNavigationLinks!==26||
+    after.sourceScoreablePromotions!==0)
+  reject('B264_READ_ONLY_NATIVE_WORLD_MUTATED_'+label);
+ writeFileSync(resolve(OUTPUT,'b264-'+label.toLowerCase()+
+  '-genuine-owned-ink-optical-and-rapier-ray.json'),
+  JSON.stringify({context:label,report,
+    matchesB263ScreenContext:true,source:'25/17/26/0',
+    originalOpticalIsNotPhysics:true,
+    visibleInkPixelsCertified:false,artAccepted:false,
+    productionAuthorized:false},null,2));
+ console.log('B264_REAL_PAINT_OPTICAL_RAPIER_DEPTH_PASS',JSON.stringify({
+  context:label,paintedCells:report.ownerCells,
+  rays:report.sampledRays,
+  opticalBefore:report.opticalBeforePaintCount,
+  rapierBefore:report.certifiedRapierBeforePaintCount,
+  materialKinds:[...new Set(report.rays.map(x=>x.opticalKind).filter(Boolean))],
+  actualPaintVisibilityUnverified:true,artAccepted:false}));
+}
 async function main(){
  mkdirSync(OUTPUT,{recursive:true});
  const chrome=process.env.T21_CHROME_PATH||
@@ -425,6 +492,7 @@ async function main(){
   (process.env.T21_B261_ORDER_AUDIT==='1'?'&t21B261=sortAudit':'')+
   (process.env.T21_B262_QA_FOCUS==='1'?'&t21B262=qaFocusAudit':'')+
   (process.env.T21_B263_PAINT_PROJECTION==='1'?'&t21B263=paintProjection':'')+
+  (process.env.T21_B264_NATIVE_RAY_AUDIT==='1'?'&t21B264=inkOpticalRays':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4290,6 +4358,11 @@ async function main(){
     reject('B263_REQUIRES_B262_SOURCE_QA_BASELINE');
    await captureB263NativeInkProjection('FROZEN');
   }
+  if(process.env.T21_B264_NATIVE_RAY_AUDIT==='1'){
+   if(process.env.T21_B263_PAINT_PROJECTION!=='1')
+    reject('B264_REQUIRES_ACTUAL_B263_PAINT_OWNER_CAMERA_PROOF');
+   await captureB264SourceInkRays('FROZEN');
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4579,6 +4652,8 @@ async function main(){
      await captureB262QaFocus('REAL_INK');
     if(process.env.T21_B263_PAINT_PROJECTION==='1')
      await captureB263NativeInkProjection('REAL_INK');
+    if(process.env.T21_B264_NATIVE_RAY_AUDIT==='1')
+     await captureB264SourceInkRays('REAL_INK');
     await evaluate('window.__t21F3.resume()');
    }
  }
