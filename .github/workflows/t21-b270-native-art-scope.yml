@@ -1,0 +1,23 @@
+name: T21 B270 measured native whole-view art scope audit
+on:
+  push:
+    branches: ["dev/t21-f4e103w-qa-infra"]
+    paths:
+      - "src/app/B270SourceWholeViewAttribution*"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b270-real-screen-attribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --no-audit --no-fund
+      - name: B270 original WebGL2 evidence attribution and no premature art pass
+        run: npx vitest run src/app/B270SourceWholeViewAttribution.test.ts
+      - name: TypeScript full project typecheck
+        run: npx tsc --noEmit
