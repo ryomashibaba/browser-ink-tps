@@ -2109,7 +2109,7 @@ export class UndertowF3PlayablePreviewApp{
    sourceVisualsInstalled:actors.filter((a,i)=>
     !!a.render&&!!visuals[i]&&
     a.children.filter(x=>x.name==='B248:GEAR_VISUAL').length===1).length,
-   actorBodyRelocations:this.stats.cpuPhysicalFootRelocations??0
+   actorBodyRelocations:this.snapshot().cpu.physicalFootRelocations
   },mode);
   if(!eligible)throw Error('B288_FROZEN_REAL_SOURCE_ACTOR_STUDY_UNAUTHORIZED');
   const previous=this.canvas.dataset.t21B288SourceActorStyle??'B248_ORIGINAL';
