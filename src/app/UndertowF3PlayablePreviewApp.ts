@@ -154,6 +154,8 @@ import {b261SourceGate,classifyB261SourceDrawState} from './B261SourceRenderOrde
 import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStudy';
 import {b263ScreenWitnessGate,b263ReadNativeInkProjection} from './B263RealInkScreenWitness';
 import {b293Eligible,b293QuantifyInkProjections} from './B293ActualInkViewport';
+import {b294ClassifySourceAtlasBindings} from './B294NativeInkAtlasMaterialProof';
+import {surfaceTextureUvRect} from '../ink/AtlasCoordinates';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
 import {b271RegistrationGate,b271NativeFootprintProbes,
@@ -1733,6 +1735,8 @@ export class UndertowF3PlayablePreviewApp{
     auditB263NativePaintProjection:()=>this.auditB263NativePaintProjection(),
     auditB293ActualInkViewport:(origin:readonly [number,number,number])=>
      this.auditB293ActualInkViewport(origin),
+    auditB294SourceInkShaderBindings:(origin:readonly [number,number,number])=>
+     this.auditB294SourceInkShaderBindings(origin),
     auditB264RealInkOpticalSightlines:()=>this.auditB264RealInkOpticalSightlines(),
     auditB271OriginalMultiSurfaceRegistration:()=>
      this.auditB271OriginalMultiSurfaceRegistration(),
@@ -2630,16 +2634,68 @@ export class UndertowF3PlayablePreviewApp{
    this.canvas.width,this.canvas.height,96);
   const classification=b293QuantifyInkProjections(
    projection,this.canvas.width,this.canvas.height);
-  return {nativeTick:s.tick,actualHumanShots:s.shotsFired,
+  return {sourceUvOptIn:{
+    f3lOriginalUvLoaded:!!uv,
+    f3lOriginalUvEnabled:!!uv?.root.enabled,
+    f3lInkSafeOptIn:this.b253InkSafeVisualEnabled,
+    verifiedF3lUvTriangles:uv?.manifest.totalTriangles??0,
+    verifiedF3lTextureCount:uv?.manifest.textures.length??0,
+    notRequiredForRegisteredSourcePaint:true as const
+   },nativeTick:s.tick,actualHumanShots:s.shotsFired,
    actualHumanPaintCells:s.b23HumanInkFeedback.humanChangedCells,
    nativePhase:this.matchState,cameraPosition:this.playerCameraEntity
     .getPosition().toArray(),originalStageAuthority:'25/17/26/0' as const,
    registeredSourcePaintRenderMeshes:render.length,
    visibleSourcePaintRenderMeshes:render.filter(x=>
     x.render?.meshInstances[0]?.visible).length,
-   originalSourceUvTriangles:uv!.manifest.totalTriangles,
+   originalSourceUvTriangles:uv?.manifest.totalTriangles??0,
    ...classification, nativeWorldEdited:false as const,
    paintedSourceMeshesEdited:false as const};
+ }
+ /** B294 after real input: read actual 17 source paint renderer uniforms,
+  * strict genuine B293 source gate, no framebuffer/atlas writes. */
+ private auditB294SourceInkShaderBindings(
+  origin:readonly [number,number,number]){
+  const native=this.auditB293ActualInkViewport(origin);
+  const root=this.app.root.findByName('StageRoot') as Entity|null;
+  if(!root)throw Error('B294_TRUE_SOURCE_STAGE_MISSING');
+  const matches=(a:unknown,expected:readonly number[])=>{
+   if(!a||typeof a!=='object'||!('length' in a))return false;
+   const actual=a as ArrayLike<number>;
+   return actual.length===expected.length&&expected.every((v,i)=>
+    typeof actual[i]==='number'&&Number.isFinite(actual[i])&&
+    Math.abs(actual[i]-v)<.00002);
+  };
+  const rows=this.b45SourceSurfaces.map(surface=>{
+   const e=root.findByName('PaintSurface:'+surface.id) as Entity|null;
+   const mi=e?.render?.meshInstances[0];
+   const m=mi?.material;
+   const sourceRect=surface.atlasRect;
+   const uv=sourceRect?surfaceTextureUvRect(surface,sourceRect):null;
+   return {surfaceId:surface.id,
+    existingSourceMesh:!!mi&&!!e?.render&&
+     e.render.meshInstances.length===1,
+    visible:mi?.visible===true&&e?.render?.enabled===true,
+    atlasSameTexture:m?.getParameter('uInkAtlas')===this.atlas.texture,
+    atlasRectMatches:!!uv&&matches(m?.getParameter('uAtlasRect'),
+     [uv.x,uv.y,uv.width,uv.height]),
+    teamAUniformMatches:matches(m?.getParameter('uTeamAColor'),
+     GAME_CONFIG.visual.teamA),
+    teamBUniformMatches:matches(m?.getParameter('uTeamBColor'),
+     GAME_CONFIG.visual.teamB),
+    neutralUniformMatches:matches(m?.getParameter('uNeutralColor'),
+     GAME_CONFIG.visual.neutral)
+   };
+  });
+  const status=b294ClassifySourceAtlasBindings(
+   rows,this.b45SourceSurfaces.length);
+  return {nativeTick:native.nativeTick,
+   realHumanChangedCells:native.actualHumanPaintCells,
+   sourceUvOptIn:native.sourceUvOptIn,
+   ...status,
+   shaderRows:rows,
+   originalSourceRegisteredOnly:true as const,
+   originalPhysicalStage:'25/17/26/0' as const};
  }
  /** B264: 24 source-verified real owned paint cell rays maximum.
   * Ray checks compare exact original F3L optical triangles and certified

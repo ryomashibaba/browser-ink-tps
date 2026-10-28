@@ -1,0 +1,14 @@
+# B293 repaired real-source mode; B294 source shader-binding proof
+
+## Actual bug and evidence
+First B293 build failed from GraphNode access; its narrowed Entity type fixed all TypeScript and regression tests. Subsequent genuine WebGL2 failed **inside the B293 trial only**, before CPU/screenshot change. The new real source exception witness in [B75 run 40709635727](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40709635727) found: native tick85, paused STAGING, true human shots8, true cells315, moved3.221m, 17 source registered paint meshes all visible, exact original owner objects, zero physics actor relocations, baseline original camera, **F3L optional overlay absent** (`uv` undefined, `b253InkSafeVisualEnabled=false`). B293 had incorrectly conflated independent original-source gameplay paint shader with the separately opt-in original UV review overlay. No change to original stage was needed.
+
+## Correction
+The B293 gate now accepts the actual legitimate untextured/registered gameplay PaintSurface-only view as well as a verified optional F3L overlay. Always require original 25/17/26/0, 17 visible original PaintSurface meshInstances, genuine 60Hz shots+owner changes+movement, real paused native tick, unchanged camera, original owner grid reference identity. Reject unknown partial UV manifest. Report the F3L overlay absence explicitly, not treat missing optical art as missing paint ownership or a zero-coverage event.
+
+## Independent B294 diagnostic
+At the identical genuine post-input paused state and original camera, inspect the actual 17 PlayCanvas paint render MeshInstances. The existing TestStage binds the authentic `ShaderMaterial` uniform `uInkAtlas` from the actual persistent `GpuInkAtlas.texture`, native `surfaceTextureUvRect`, and real configured three TeamA/TeamB/Neutral color uniforms. B294 compares exact source surface and material references without modifying the source atlas contents, shader, original optical UV, team ownership, render passes or physics; return per-original-surface bool witness and bounded counts.
+
+PASS means references/rect/color uniforms agree with the existing CPU-side painting structures; it **does not** certify that painted texels survive GLASS/METAL/DETAIL compositing, that the atlas brush actually wrote the owned cells, or that ink-colored pixels are readable on screen. Original B263 showed 58/58 real sampled owner cells inside tiny x764..834/y444..461 area, and B264 20/20 candidate optical intersections in GLASS; these are geometric findings not real pixel colors. Use next-stage measured optical/compositing evidence, never invent paintings, remove source geometry, or promote scoreable/route.
+
+Original safety boundary unchanged: source 25/17/26/0, opponent natural crossing 0/12, ART HOLD, unrestricted 4v4 HOLD, production FORBIDDEN. No change to main, Pages, T20 or Draft PR5.

@@ -9,6 +9,10 @@ const gate:B293EvidenceGate={url,tick:85,phase:'STAGING',paused:true,
 describe('B293 original source read-only ink visibility',()=>{
  it('requires genuine already-painted paused native source',()=>{
   expect(b293Eligible(gate)).toBe(true);
+  expect(b293Eligible({...gate,uvTriangles:0,textures:0,
+   sourceVisible:false})).toBe(true);
+  expect(b293Eligible({...gate,uvTriangles:123,textures:3,
+   sourceVisible:true})).toBe(false);
   for(const patch of [{paused:false},{tick:0},{shots:0},{cells:0},
    {travel:0},{paint:18},{solids:26},{links:25},{scoreable:1},
    {paintMeshes:16},{samePaintInstances:false},{actorRelocations:1},

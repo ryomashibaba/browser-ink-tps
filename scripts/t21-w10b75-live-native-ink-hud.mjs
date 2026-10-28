@@ -1224,8 +1224,34 @@ async function run(){
          researchFramebuffer:b293Image,exactNativeFramebufferRestoration:true};
         writeFileSync(resolve(OUTPUT,'b293-actual-native-ink-viewport.json'),
          JSON.stringify(report,null,2));
+        const a294=await evaluate(`(() => {try {
+         return {ok:true,data:window.__t21F3.auditB294SourceInkShaderBindings(
+          ${JSON.stringify(origin)})};
+        }catch(e){return {ok:false,error:String(e?.message??e)};}})()`);
+        if(!a294.ok)fail('B294_SHADER_AUDIT_EXCEPTION_'+a294.error);
+        const binding=a294.data;
+        if(binding.nativeTick!==still.tick||
+           binding.realHumanChangedCells<1||
+           binding.registeredOriginalPaintMeshes!==17||
+           !binding.allBindingsConsistent||
+           binding.actualGPUAtlasTexelReadbackDone!==false||
+           binding.actualFramebufferInkVisibilityCertified!==false||
+           binding.scoreablePromotions!==0||
+           binding.productionAuthorized!==false)
+         fail('B294_NATIVE_SHADER_REFERENCE_DRIFT_'+JSON.stringify(binding));
+        if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+         fail('B294_SHADER_INSPECTION_CHANGED_REAL_NATIVE_WORLD');
+        writeFileSync(resolve(OUTPUT,'b294-original-native-ink-material-bindings.json'),
+         JSON.stringify(binding,null,2));
+        console.log('B294_NATIVE_SOURCE_SHADER_BINDINGS_PASS',
+         JSON.stringify({nativeTick:binding.nativeTick,
+          matchedTextures:binding.atlasTextureIdentityMatched,
+          matchedRects:binding.atlasUvRectsMatched,
+          matchedTeamColors:binding.teamAndNeutralColorUniformsMatched,
+          optionalF3l:binding.sourceUvOptIn,source:'25/17/26/0'}));
         console.log('B293_REAL_NATIVE_INK_VIEWPORT_PASS',JSON.stringify({
          nativeTick:realInk.nativeTick,
+         uvOptIn:realInk.sourceUvOptIn,
          actualOwnerCells:realInk.actualOwnerCells,
          actualHumanPaintCells:realInk.actualHumanPaintCells,
          sampled:realInk.paintSampleCount,inside:realInk.insideScreen,

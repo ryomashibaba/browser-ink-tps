@@ -18,8 +18,13 @@ export function b293Eligible(x:B293EvidenceGate){
   x.tick>=42&&['STAGING','PLAYING'].includes(x.phase)&&x.paused&&
   !x.locked&&!x.stopped&&x.fullRound&&x.shots>0&&x.cells>0&&
   Number.isFinite(x.travel)&&x.travel>=.75&&
-  x.renderer==='webgl2'&&x.uvTriangles===57578&&x.textures===19&&
-  x.sourceVisible&&x.solids===25&&x.paint===17&&x.links===26&&
+  x.renderer==='webgl2'&&
+  // Real B289 native gameplay deliberately has NO opt-in F3L renderer.
+  // Registered PaintSurface shaders alone own paint authority. A separately
+  // present verified F3L layer is optional, never silently required.
+  ((x.uvTriangles===0&&x.textures===0&&!x.sourceVisible)||
+   (x.uvTriangles===57578&&x.textures===19))&&
+  x.solids===25&&x.paint===17&&x.links===26&&
   x.scoreable===0&&x.paintMeshes===17&&x.samePaintInstances&&
   x.cameraUnchanged&&x.actorRelocations===0;
 }
