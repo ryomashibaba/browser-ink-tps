@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {b264SelectNativeVisibleProjectionSamples,
- b264ClassifyNativePaintSightline,b264SourceRayGate}
+ b264ClassifyNativePaintSightline,b264SourceRayGate,
+ type B264PaintedCellSample}
  from './B264RealInkOpticalSightlines';
 const p=new URLSearchParams('t21Play=preview&t21FullSource=review&'+
  't21B253=liveInk&t21B255=actorStudy&t21B257=depthAudit&'+
@@ -30,7 +31,7 @@ describe('B264 real source paint ray comparison',()=>{
   expect(b264SourceRayGate(p,ctx,'BASELINE',null,true)).toBe(false);
  });
  it('bounds real on-screen owned-cell samples without synthetic positions',()=>{
-  const inp=Array.from({length:115},(_,i)=>sample(i));
+  const inp:B264PaintedCellSample[]=Array.from({length:115},(_,i)=>sample(i));
   const selected=b264SelectNativeVisibleProjectionSamples(inp);
   expect(selected.length).toBeLessThanOrEqual(24);
   expect(selected[0]?.grid).toEqual([0,0]);
