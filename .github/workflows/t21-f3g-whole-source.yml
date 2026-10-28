@@ -18,6 +18,7 @@ on:
       - "src/app/B258OriginalCameraComposition*"
       - "src/app/B259SourceRasterLayers*"
       - "src/app/B260SourceMaterialAttribution*"
+      - "src/app/UndertowF3PlayablePreviewApp.ts"
       - "scripts/t21-b260-native-material-aba.mjs"
       - "scripts/t21-f3-browser-smoke.mjs"
       - ".github/workflows/t21-f3g-whole-source.yml"
