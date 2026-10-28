@@ -55,7 +55,7 @@ test('B274 restores source keyboard gate with ONLY real CDP pointer input',async
  const waitUntil=async(check)=>{const value=await check();assert.ok(value);return value;};
  const r=await b274EnsureNativeKeyboardInput({evaluate,cmd,waitUntil});
  assert.deepEqual(r,{beforeLocked:false,afterLocked:true,
-  relockedByRealCdpMouse:true});
+  relockedByRealCdpMouse:true,focusedByRealCdpTabActivation:false});
  assert.deepEqual(sent.map(x=>x.type),['mousePressed','mouseReleased']);
  assert.ok(sent.every(x=>x.method==='Input.dispatchMouseEvent'));
 });
@@ -67,11 +67,41 @@ test('B274 already-locked real input does not fire extra mouse press',async()=>{
  assert.equal(calls,0);
  assert.equal(r.relockedByRealCdpMouse,false);
 });
-test('B274 rejects unfocused browser instead of claiming native keyboard motion',async()=>{
+test('B276 brings an initially unfocused native browser tab to front BEFORE CDP mouse',async()=>{
+ let focused=false,locked=false;const sent=[];
+ const state=()=>({hasCanvas:true,hasFocus:focused,hidden:false,locked});
+ const cmd=async(method,params={})=>{
+  sent.push(method+(params.type?':'+params.type:''));
+  if(method==='Page.bringToFront')focused=true;
+  if(method==='Input.dispatchMouseEvent'&&params.type==='mouseReleased')locked=true;
+ };
+ const waitUntil=async(check)=>{const found=await check();assert.ok(found);return found;};
+ const result=await b274EnsureNativeKeyboardInput({
+  evaluate:async()=>state(),cmd,waitUntil});
+ assert.deepEqual(sent,[
+  'Page.bringToFront',
+  'Input.dispatchMouseEvent:mousePressed',
+  'Input.dispatchMouseEvent:mouseReleased'
+ ]);
+ assert.deepEqual(result,{
+  beforeLocked:false,afterLocked:true,
+  relockedByRealCdpMouse:true,focusedByRealCdpTabActivation:true
+ });
+});
+test('B276 will not simulate keys if the real Chrome tab cannot acquire focus',async()=>{
+ const sent=[];
  await assert.rejects(
   b274EnsureNativeKeyboardInput({
    evaluate:async()=>({hasCanvas:true,hasFocus:false,hidden:false,locked:false}),
-   cmd:async()=>{throw Error('must not dispatch');},
-   waitUntil:async()=>{throw Error('must not poll');}
-  }),/B274_NATIVE_BROWSER_FOCUS_OR_CANVAS_UNAVAILABLE/);
+   cmd:async(method)=>{sent.push(method);},
+   waitUntil:async()=>{throw Error('B276_REAL_TAB_FOCUS_TIMEOUT');}
+  }),/B276_REAL_TAB_FOCUS_TIMEOUT/);
+ assert.deepEqual(sent,['Page.bringToFront']);
+});
+test('B274 rejects hidden browser without attempting a native key or mouse',async()=>{
+ await assert.rejects(b274EnsureNativeKeyboardInput({
+  evaluate:async()=>({hasCanvas:true,hasFocus:false,hidden:true,locked:false}),
+  cmd:async()=>{throw Error('should not run CDP actions');},
+  waitUntil:async()=>{throw Error('should not poll');}
+ }),/B274_NATIVE_BROWSER_FOCUS_OR_CANVAS_UNAVAILABLE/);
 });

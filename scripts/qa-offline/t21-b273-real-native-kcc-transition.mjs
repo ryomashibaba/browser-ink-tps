@@ -11,9 +11,21 @@ export const B273_SOURCE='25/17/26/0';
  */
 export async function b274EnsureNativeKeyboardInput({evaluate,cmd,waitUntil}){
  const stateExpr="({hasCanvas:!!document.querySelector('#app-canvas'),hasFocus:document.hasFocus(),hidden:document.hidden,locked:document.pointerLockElement===document.querySelector('#app-canvas')})";
- const before=await evaluate(stateExpr);
- if(before?.hasCanvas!==true||before.hasFocus!==true||before.hidden!==false)
+ let before=await evaluate(stateExpr);
+ if(before?.hasCanvas!==true||before.hidden!==false)
   throw Error('B274_NATIVE_BROWSER_FOCUS_OR_CANVAS_UNAVAILABLE');
+ const focusedByRealCdpTabActivation=before.hasFocus!==true;
+ if(focusedByRealCdpTabActivation){
+  // Chrome owns the native focused tab. Never spoof DOM focus, user input,
+  // or gameplay state with Runtime.evaluate.
+  await cmd('Page.bringToFront');
+  before=await waitUntil(async()=>{
+   const s=await evaluate(stateExpr);
+   return s?.hasCanvas===true&&s?.hidden===false&&s?.hasFocus===true?s:false;
+  },12000);
+ }
+ if(before?.hasFocus!==true||before.hidden!==false)
+  throw Error('B276_REAL_BROWSER_TAB_FOCUS_NOT_ACQUIRED');
  if(before.locked!==true){
   // A real CDP mouse press/release is required; never set input/lock in JS.
   const click={x:800,y:450,button:'left',clickCount:1};
@@ -29,7 +41,8 @@ export async function b274EnsureNativeKeyboardInput({evaluate,cmd,waitUntil}){
  if(after?.locked!==true||after?.hasFocus!==true||after?.hidden!==false)
   throw Error('B274_NATIVE_POINTER_LOCK_NOT_VERIFIED');
  return {beforeLocked:before.locked===true,afterLocked:true,
-  relockedByRealCdpMouse:before.locked!==true};
+  relockedByRealCdpMouse:before.locked!==true,
+  focusedByRealCdpTabActivation};
 }
 
 export const B273_MAX_KEY_LEGS=8;

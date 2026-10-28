@@ -68,6 +68,8 @@ async function main(){
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
  await cmd('Page.navigate',{url:root+'?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround&t21FullSource=review'});
+ // Real browser-tab activation; do not mutate document.hasFocus or PlayerInput.
+ await cmd('Page.bringToFront');
  await waitUntil(async()=>{
   const x=await evaluate("({ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,renderer:document.querySelector('#app-canvas')?.dataset.t21F3Renderer,error:document.querySelector('#boot-error')?.textContent||''})");
   if(x?.error)fail('BOOT_'+x.error.slice(0,500));
@@ -87,8 +89,13 @@ async function main(){
   return x.tick>=42&&!x.paused&&x.b112OriginalHumanGround?.enabled===true&&
    x.b112OriginalHumanGround?.genuineKccGrounded===true?x:false;
  },100000);
- console.log('B275_NATIVE_SOURCE_READY',JSON.stringify({tick:s.tick,body:s.player.position,
-  source:s.b112OriginalHumanGround.lastOriginalSourceHitId,authority:'25/17/26/0'}));
+ const readySource={tick:s.tick,body:s.player.position,
+  source:s.b112OriginalHumanGround.lastOriginalSourceHitId,authority:'25/17/26/0',
+  genuineKccGrounded:s.b112OriginalHumanGround.genuineKccGrounded,
+  syntheticActorMotion:false,productionAuthorized:false};
+ writeFileSync(resolve(output,'b276-native-source-before-real-input.json'),
+  JSON.stringify(readySource,null,2));
+ console.log('B275_NATIVE_SOURCE_READY',JSON.stringify(readySource));
  const trace=await captureB273NativeKccDrop({evaluate,cmd,waitUntil,screenshot,output});
  if(trace.actualFullMotionMeters<.1||trace.actualNativeTickSpan<1||
     trace.b274RealBrowserInput?.afterLocked!==true)fail('UNVERIFIED_PHYSICAL_MOTION');
@@ -101,5 +108,27 @@ async function main(){
  writeFileSync(resolve(output,'b275-real-kcc-summary.json'),JSON.stringify(report,null,2));
  console.log('B275_REAL_KCC_RESULT',JSON.stringify(report));
 }
-try{await main();}catch(error){console.error(error);process.exitCode=1;}
+async function persistFailureEvidence(error){
+ try{
+  const online=socket?.readyState===WebSocket.OPEN;
+  const browser=online?await evaluate("({canvasExists:!!document.querySelector('#app-canvas'),canvasReady:document.querySelector('#app-canvas')?.dataset.t21F3Ready,renderer:document.querySelector('#app-canvas')?.dataset.t21F3Renderer,hasFocus:document.hasFocus(),hidden:document.hidden,pointerLocked:document.pointerLockElement===document.querySelector('#app-canvas')})").catch(e=>({readError:String(e)})):null;
+  const state=online?await evaluate("(() => {const v=window.__t21F3?.snapshot?.();return v?{tick:v.tick,matchState:v.matchState,paused:v.paused,stopReason:v.stopReason,body:v.player?.position,originalSupport:v.b112OriginalHumanGround?.lastOriginalSourceHitId,grounded:v.b112OriginalHumanGround?.genuineKccGrounded,source:[v.originalSourceSolids,v.originalPaintSurfaces,v.originalSourceNavigationLinks,v.sourceScoreablePromotions]}:null})()").catch(e=>({readError:String(e)})):null;
+  const diagnostic={
+   schema:'B276_NATIVE_BROWSER_FAILURE_EVIDENCE',
+   failure:String(error),browser,state,
+   originalStageMutated:false,syntheticKeyboard:false,
+   original4v4Certified:false,artAccepted:false,
+   productionAuthorized:false
+  };
+  mkdirSync(output,{recursive:true});
+  writeFileSync(resolve(output,'b276-real-browser-failure-diagnostic.json'),
+   JSON.stringify(diagnostic,null,2));
+  console.error('B276_FAILURE_BROWSER_STATE',JSON.stringify(diagnostic));
+  if(online&&browser?.renderer==='webgl2')
+   await screenshot('B276_REAL_BROWSER_FAILURE').catch(e=>
+    console.error('B276_FAILURE_SCREENSHOT_UNAVAILABLE',String(e)));
+ }catch(failure){console.error('B276_FAILURE_EVIDENCE_WRITE_ERROR',failure);}
+}
+try{await main();}
+catch(error){await persistFailureEvidence(error);console.error(error);process.exitCode=1;}
 finally{socket?.close();for(const child of children)child.kill('SIGTERM');}
