@@ -44,6 +44,7 @@ import {isB152ExactAllySupportInkImpact}
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
+import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {B217ActualNativePaintTempo} from './B217ActualNativePaintTempo';
 import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209OriginalRampEdge';
@@ -323,6 +324,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private readonly b205RoundClock:HTMLElement|null;
  private readonly b211Roster:ReturnType<typeof createB211RealBattleRoster>|null;
+ private readonly b286CompactTeam:ReturnType<typeof createB286CompactSourceTeam>|null;
  private readonly b217NativePaintTempo=new B217ActualNativePaintTempo();
  private readonly b160CpuInkActivityView:
   ReturnType<typeof createB160SourceCpuActivityView>;
@@ -1431,6 +1433,11 @@ export class UndertowF3PlayablePreviewApp{
   this.b205RoundClock=round;
   this.b211Roster=b192HumanCombatEnabled&&this.b203FullRound?
    createB211RealBattleRoster(ui):null;
+  // B286: small genuine source team-state HUD in PLAYER presentation only.
+  // QA/deterministic modes continue to use the full B211 evidence panel.
+  this.b286CompactTeam=this.b211Roster&&
+   new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'?
+   createB286CompactSourceTeam(ui):null;
   if(round){
    round.id='t21-f3-b205-real-round';
    round.dataset.originalSourceOnly='true';
@@ -4961,7 +4968,7 @@ export class UndertowF3PlayablePreviewApp{
    }
   }else this.b243AimLineNotice.dataset.t21B243AimLineKind='OFF';
   // B211 reads only actual 60Hz CPU/HUMAN life state, never source authority.
-  this.b211Roster?.render(b211RealNativeRoster({
+  const nativeB211Roster=b211RealNativeRoster({
    selected:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
    tick:state.tick,stage:[state.originalSourceSolids,
     state.originalPaintSurfaces,state.originalSourceNavigationLinks??-1,
@@ -4971,7 +4978,10 @@ export class UndertowF3PlayablePreviewApp{
    humanDirectSplats:state.humanCpuDirectSplats,
    cpuSplats:state.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
    cpu:state.cpu.cpu
-  }),this.survey.snapshot().active||this.galleryIndex>=0);
+  });
+  const sourceOverlayHidden=this.survey.snapshot().active||this.galleryIndex>=0;
+  this.b211Roster?.render(nativeB211Roster,sourceOverlayHidden);
+  this.b286CompactTeam?.render(nativeB211Roster,sourceOverlayHidden);
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,

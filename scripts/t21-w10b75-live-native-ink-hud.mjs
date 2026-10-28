@@ -875,7 +875,14 @@ async function run(){
      writeFileSync(resolve(OUTPUT,name+'.png'),b);
      return {file:name+'.png',bytes:b.length,sha256:createHash('sha256').update(b).digest('hex')};
     }
-    const b246Read=()=>evaluate("(() => {\n const root=document.querySelector('#ui-root');\n const id=x=>document.getElementById(x);\n const visible=x=>{const e=id(x);return !!e&&!e.hidden&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;};\n const a=window.__t21F3?.snapshot?.();\n return {view:root?.dataset.t21B245Presentation,inspect:root?.dataset.t21B245Inspect,\n  status:id('t21-f3-hud-state')?.textContent,\n  stage:[a?.originalSourceSolids,a?.originalPaintSurfaces,a?.originalSourceNavigationLinks,a?.sourceScoreablePromotions],\n  tick:a?.tick,paused:a?.paused,remaining:a?.timeRemainingSeconds,\n  renderer:id('app-canvas')?.dataset.t21F3Renderer,\n  playerHud:visible('t21-f3-practice-hud'),\n  fullRoundDiagnostic:visible('t21-f3-b205-real-round'),\n  sessionDiagnostic:visible('t21-f3-b58-source-session'),\n  panel:visible('t21-f3-play-panel'),\n  paintChallenge:visible('t21-f3-b25-paint-run'),\n  descentDiagnostic:visible('t21-f3-b183-real-first-drop'),\n  radar:id('t21-f3-source-radar')?.dataset.t21B52RadarMode,\n  radarVisible:visible('t21-f3-source-radar'),\n  readyButton:visible('t21-f3-b202-resume'),\n  evidenceNodesPreserved:['t21-f3-b205-real-round','t21-f3-b58-source-session','t21-f3-b211-real-battle-roster',\n   't21-f3-b75-source-ink-live','t21-f3-b76-human-ink-coach'].every(x=>!!id(x)),\n  toggle:id('t21-f3-b245-view-toggle')?.textContent\n };\n})()");
+    const b246Read=()=>evaluate("(() => {\n const root=document.querySelector('#ui-root');\n const id=x=>document.getElementById(x);\n const visible=x=>{const e=id(x);return !!e&&!e.hidden&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;};\n const a=window.__t21F3?.snapshot?.();\n return {view:root?.dataset.t21B245Presentation,inspect:root?.dataset.t21B245Inspect,\n  status:id('t21-f3-hud-state')?.textContent,\n  stage:[a?.originalSourceSolids,a?.originalPaintSurfaces,a?.originalSourceNavigationLinks,a?.sourceScoreablePromotions],\n  tick:a?.tick,paused:a?.paused,remaining:a?.timeRemainingSeconds,\n  renderer:id('app-canvas')?.dataset.t21F3Renderer,\n  playerHud:visible('t21-f3-practice-hud'),\n  fullRoundDiagnostic:visible('t21-f3-b205-real-round'),
+  compactTeam:visible('t21-f3-b286-source-team'),
+  compactAlly:document.querySelector('#t21-f3-b286-source-team')?.dataset.allyActive,
+  compactEnemy:document.querySelector('#t21-f3-b286-source-team')?.dataset.enemyActive,
+  compactRejoining:document.querySelector('#t21-f3-b286-source-team')?.dataset.rejoining,
+  compactNoScore:document.querySelector('#t21-f3-b286-source-team')?.dataset.scoreable,
+  compactNoEnemyContact:document.querySelector('#t21-f3-b286-source-team')?.dataset.enemyContactCertified,
+  compactLabels:document.querySelector('#t21-f3-b286-source-team')?.textContent,\n  sessionDiagnostic:visible('t21-f3-b58-source-session'),\n  panel:visible('t21-f3-play-panel'),\n  paintChallenge:visible('t21-f3-b25-paint-run'),\n  descentDiagnostic:visible('t21-f3-b183-real-first-drop'),\n  radar:id('t21-f3-source-radar')?.dataset.t21B52RadarMode,\n  radarVisible:visible('t21-f3-source-radar'),\n  readyButton:visible('t21-f3-b202-resume'),\n  evidenceNodesPreserved:['t21-f3-b205-real-round','t21-f3-b58-source-session','t21-f3-b211-real-battle-roster',\n   't21-f3-b75-source-ink-live','t21-f3-b76-human-ink-coach'].every(x=>!!id(x)),\n  toggle:id('t21-f3-b245-view-toggle')?.textContent\n };\n})()");
     const b246Before=await b246Read();
     if(b246Before.view!=='PLAYER'||b246Before.inspect!=='false'||
        b246Before.status!=='READY · SOURCE ROUND'||
@@ -884,6 +891,11 @@ async function run(){
        b246Before.panel||b246Before.paintChallenge||
        b246Before.descentDiagnostic||b246Before.radar!=='COMPACT'||
        !b246Before.radarVisible||!b246Before.readyButton||
+       !b246Before.compactTeam||b246Before.compactAlly!=='0'||
+       b246Before.compactEnemy!=='0'||b246Before.compactRejoining!=='7'||
+       b246Before.compactNoScore!=='0'||
+       b246Before.compactNoEnemyContact!=='false'||
+       !b246Before.compactLabels?.includes('UNSCORED')||
        !b246Before.evidenceNodesPreserved||
        b246Before.stage.join('/')!=='25/17/26/0'||
        b246Before.tick!==0||b246Before.paused!==true||
@@ -901,7 +913,8 @@ async function run(){
        !b246Qa.playerHud||!b246Qa.fullRoundDiagnostic||
        !b246Qa.sessionDiagnostic||!b246Qa.panel||
        !b246Qa.paintChallenge||!b246Qa.descentDiagnostic||
-       b246Qa.radar!=='FULL'||!b246Qa.evidenceNodesPreserved||
+       b246Qa.radar!=='FULL'||b246Qa.compactTeam||
+       !b246Qa.evidenceNodesPreserved||
        b246Qa.tick!==0||b246Qa.remaining!==180)
      fail('B246_REAL_READY_QA_RECOVERY_FAILED_'+JSON.stringify(b246Qa));
     const b246QaFrame=await b246Screenshot('b246-source-qa-ready');
@@ -912,7 +925,8 @@ async function run(){
        b246Restored.panel||b246Restored.paintChallenge||
        b246Restored.descentDiagnostic||b246Restored.radar!=='COMPACT'||
        b246Restored.tick!==0||b246Restored.remaining!==180||
-       b246Restored.fullRoundDiagnostic||!b246Restored.readyButton||
+       b246Restored.fullRoundDiagnostic||!b246Restored.compactTeam||
+       b246Restored.compactRejoining!=='7'||!b246Restored.readyButton||
        JSON.stringify(stableRound(readyAfter))!==
         JSON.stringify(stableRound(await snapshot())))
      fail('B246_F8_RESTORED_WORLD_OR_LAYOUT_CHANGED_'+JSON.stringify(b246Restored));
