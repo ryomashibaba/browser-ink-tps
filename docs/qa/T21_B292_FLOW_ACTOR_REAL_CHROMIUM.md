@@ -1,0 +1,9 @@
+# B292 organic native source actor (render-only study)
+
+B290/B291 were fully SUCCESS on pinned Actions 40698131203 and 40700894113. B291's real source ink marker passed with 271 genuinely changed cells and measured 263.11px clearance above reticle. After 91 native ticks of real keyboard and pointer input, STAGING paused HUD correctly said PAUSED · SOURCE REJOIN. These are technical findings only.
+
+The actual 1600x900 in-play image still shows four large cyan humanoids obscuring the original floor and center aiming lane. B248/B268/B269 previously failed to give a compelling silhouette. B292 changes **3D shape and proportion, not just color/alpha**: narrow rounded jacket, smaller head, flowing cloth/head fins, organic limbs, asymmetric rear sash, single compact ink vial and smaller off-axis weapon. All new meshes are solely render children of the **existing human + seven CPU actor entities**. No physical actor moved, collision/nav/ink/score mesh added, or actual source UV changed. Baseline unchanged; B292 never default-enabled.
+
+The historical B288 frozen three-way trial rejects B292. Existing B289 genuine post-input real Chrome A-B-C-A continues unchanged, then an independent B292 A-D-A is performed at the same frozen native tick. Save source shot and cells, true framebuffer PNG, SHA and exact same-frame restoration. The new visual is NOT art-certified based on distinct frame SHA or its being slimmer; a human review must confirm target visibility, natural character design and original ink visibility. Short STAGING still means CPU rejoin 0/7 and no actual 4v4 proof.
+
+Never promote without human art review. Hold original Rapier25/Paint17/Nav26/Score0, opposite crossing0/12, activationReady=false, ART HOLD, unrestricted4v4 HOLD, production HOLD, main/T20/Pages/Draft PR#5 protected.

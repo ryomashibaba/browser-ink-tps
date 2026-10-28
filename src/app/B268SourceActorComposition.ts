@@ -2,7 +2,7 @@
  * Purpose: compare whole-view identity and gameplay ink readability with
  * compact, dark readable silhouettes, not replace source 3D/physics assets.
  * No colliders, actors, source geometry, score or projectile surfaces added. */
-export const B268_RENDER_VARIANTS=['B248_ORIGINAL','B268_COMPACT','B269_REAR_IDENTITY'] as const;
+export const B268_RENDER_VARIANTS=['B248_ORIGINAL','B268_COMPACT','B269_REAR_IDENTITY','B292_FLOW_SILHOUETTE'] as const;
 export type B268RenderVariant=typeof B268_RENDER_VARIANTS[number];
 export type B268Primitive='box'|'sphere'|'capsule'|'cylinder';
 export type B268Tone='ARMOR'|'TRIM'|'VISOR'|'INK'|'FABRIC'|'METAL';

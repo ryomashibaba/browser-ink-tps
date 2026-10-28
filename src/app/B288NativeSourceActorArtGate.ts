@@ -18,7 +18,7 @@ export type B288FrozenActorStudyWitness={
 const IDS=['A1','A2','A3','B1','B2','B3','B4'] as const;
 export function b288FrozenVisualStudyEligible(w:B288FrozenActorStudyWitness,
  variant:B268RenderVariant):boolean{
- if(!b268VariantAccepted(variant))return false;
+ if(!b268VariantAccepted(variant)||variant==='B292_FLOW_SILHOUETTE')return false; // B288 historical study
  const ids=w.cpuActorIds;
  const params=w.url;
  return params.get('t21Play')==='preview'&&

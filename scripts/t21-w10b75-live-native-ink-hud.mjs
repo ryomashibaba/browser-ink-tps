@@ -1193,6 +1193,40 @@ async function run(){
        writeFileSync(resolve(OUTPUT,'b289-native-real-ink-actor-art-abca.json'),
         JSON.stringify(out,null,2));
        console.log('B289_REAL_NATIVE_INPLAY_ART_ABCA_PASS',JSON.stringify(out));
+       // B292: separate same-native-snapshot A-D-A visual-only trial.
+       const dReply=await evaluate('window.__t21F3.setB289RealInPlayActorVisual('+
+        JSON.stringify('B292_FLOW_SILHOUETTE')+','+JSON.stringify(origin)+')');
+       if(dReply.mode!=='B292_FLOW_SILHOUETTE'||!dReply.visualsOnly||
+          dReply.existingActors!==8||dReply.actorRelocations!==0||
+          dReply.scoreablePromotions!==0||dReply.artAccepted!==false)
+        fail('B292_REAL_RENDER_AUTHORITY_DRIFT');
+       await sleep(190);
+       const dFrame=await b246Screenshot('b292-flow-organic-inplay');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B292_NATIVE_WORLD_CHANGE');
+       const restored=await evaluate('window.__t21F3.setB289RealInPlayActorVisual('+
+        JSON.stringify('B248_ORIGINAL')+','+JSON.stringify(origin)+')');
+       if(restored.mode!=='B248_ORIGINAL')fail('B292_RESTORE_FAILED');
+       await sleep(190);
+       const aFrame=await b246Screenshot('b292-flow-baseline-restored');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable||
+          dFrame.sha256===snaps[0].image.sha256||
+          dFrame.sha256===snaps[1].image.sha256||
+          dFrame.sha256===snaps[2].image.sha256||
+          aFrame.sha256!==snaps[0].image.sha256)
+        fail('B292_NATIVE_A_D_A_SOURCE_RASTER_FAILED');
+       const b292={schema:'B292_GENUINE_NATIVE_AFTER_INK_A_D_A',
+        source:'25/17/26/0',nativeTick:still.tick,
+        humanShots:still.shotsFired,
+        humanPaintCells:still.b23HumanInkFeedback.humanChangedCells,
+        nativePhase:still.matchState,baseline:snaps[0].image,
+        flowCandidate:dFrame,baselineRestored:aFrame,
+        exactRasterRollback:true,nativeWorldChanges:0,
+        addedColliders:0,navLinksAdded:0,scoreablePromotions:0,
+        artAccepted:false,productionAuthorized:false};
+       writeFileSync(resolve(OUTPUT,'b292-real-inplay-organic-ada.json'),
+        JSON.stringify(b292,null,2));
+       console.log('B292_NATIVE_REAL_FLOW_A_D_A_PASS',JSON.stringify(b292));
       }finally{
        await evaluate(`(() => {
         const el=document.querySelector('#t21-f3-b202-real-pause');

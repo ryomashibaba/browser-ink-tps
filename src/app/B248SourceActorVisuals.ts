@@ -6,6 +6,7 @@ import {B268_COMPACT_HUMAN_PARTS,b268VariantAccepted,
  type B268RenderVariant} from './B268SourceActorComposition';
 import {B269_REAR_IDENTITY_PARTS,b269ValidateParts}
  from './B269SourceActorIdentity';
+import {B292_PARTS,b292Validate} from './B292FlowSourceActor';
 type Primitive='box'|'sphere'|'capsule'|'cylinder';
 type MaterialId='SUIT'|'TEAM'|'VISOR'|'DARK'|'GEAR';
 type Part={name:string;type:Primitive;tint:MaterialId;
@@ -101,6 +102,8 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
  let researchVariant:B268RenderVariant='B248_ORIGINAL';
  let compactRoot:Entity|null=null;
  let identityRoot:Entity|null=null;
+ let flowRoot:Entity|null=null;
+ const flowLimb=new Map<string,Entity>();
  const ensureCompact=()=>{
   if(compactRoot)return;
   const root=new Entity('B268:RESEARCH_ONLY_COMPACT_SILHOUETTE');
@@ -147,6 +150,29 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   parent.addChild(root);
   identityRoot=root;
  };
+ const ensureFlow=()=>{
+  if(flowRoot)return;
+  b292Validate();
+  const root=new Entity('B292:RESEARCH_ONLY_ORGANIC_SILHOUETTE');
+  root.enabled=false;
+  const pigment=team==='A'?GAME_CONFIG.visual.teamA:GAME_CONFIG.visual.teamB;
+  const materials={
+   SUIT:make([.09,.15,.20]),CLOTH:make([.17,.25,.29]),
+   TEAM:make(pigment,.18),VISOR:make([.36,.71,.78],.12),
+   GEAR:make([.08,.12,.16])
+  };
+  for(const p of B292_PARTS){
+   const e=new Entity('B292:VISUAL_ONLY:'+p.name);
+   e.addComponent('render',{type:p.type,material:materials[p.tone],
+    castShadows:false,receiveShadows:false});
+   e.setLocalPosition(...p.pos);e.setLocalScale(...p.size);
+   if(p.angle)e.setLocalEulerAngles(...p.angle);
+   root.addChild(e);
+   if(['left-arm','right-arm','left-leg','right-leg'].includes(p.name))
+    flowLimb.set(p.name,e);
+  }
+  parent.addChild(root);flowRoot=root;
+ };
  const syncVisibility=()=>{
   parent.render!.enabled=!shown;
   humanRoot.enabled=shown&&requestedMode==='HUMAN'&&
@@ -155,6 +181,8 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
    researchVariant==='B268_COMPACT';
   if(identityRoot)identityRoot.enabled=shown&&requestedMode==='HUMAN'&&
    researchVariant==='B269_REAR_IDENTITY';
+  if(flowRoot)flowRoot.enabled=shown&&requestedMode==='HUMAN'&&
+   researchVariant==='B292_FLOW_SILHOUETTE';
   squidRoot.enabled=shown&&requestedMode==='SQUID'&&role==='PLAYER';
  };
  const setMode=(mode:'HUMAN'|'SQUID')=>{
@@ -167,10 +195,12 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   if(!b268VariantAccepted(mode))throw Error('B268_UNKNOWN_SOURCE_ACTOR_STYLE');
   if(mode==='B268_COMPACT')ensureCompact();
   if(mode==='B269_REAR_IDENTITY')ensureIdentity();
+  if(mode==='B292_FLOW_SILHOUETTE')ensureFlow();
   // A frozen study must use the *last real native movement yaw*, not a
   // synthetic forward-facing mannequin pose after the model is spawned.
   if(compactRoot)compactRoot.setLocalEulerAngles(0,facing,0);
   if(identityRoot)identityRoot.setLocalEulerAngles(0,facing,0);
+  if(flowRoot)flowRoot.setLocalEulerAngles(0,facing,0);
   researchVariant=mode;syncVisibility();
  };
  let facing=team==='B'?180:0;
@@ -179,8 +209,13 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   humanRoot.setLocalEulerAngles(0,facing,0);
   if(compactRoot)compactRoot.setLocalEulerAngles(0,facing,0);
   if(identityRoot)identityRoot.setLocalEulerAngles(0,facing,0);
+  if(flowRoot)flowRoot.setLocalEulerAngles(0,facing,0);
   squidRoot.setLocalEulerAngles(0,facing,0);
   const swing=b249StrideDegrees(activity,phase);
+  for(const [part,sign] of [
+   ['left-arm',-1],['right-arm',1],
+   ['left-leg',1],['right-leg',-1]
+  ] as const)flowLimb.get(part)?.setLocalEulerAngles(swing*sign,0,0);
   for(const [part,sign] of [
    ['arm-left',-1],['arm-right',1],
    ['leg-left',1],['leg-right',-1],
