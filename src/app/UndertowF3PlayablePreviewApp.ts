@@ -2133,7 +2133,8 @@ export class UndertowF3PlayablePreviewApp{
   const actual=this.snapshot();
   const here=actual.player.position;
   const meters=Math.hypot(
-   here[0]-origin[0],here[1]-origin[1],here[2]-origin[2]);
+   (here[0]??NaN)-origin[0],(here[1]??NaN)-origin[1],
+   (here[2]??NaN)-origin[2]);
   const player=this.app.root.findByName('Player') as Entity|null;
   const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
   const actors=player?[player,...bots.map(x=>x.entity)]:[];
