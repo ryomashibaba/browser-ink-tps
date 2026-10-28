@@ -66,7 +66,8 @@ export function auditB285FrozenFlatSurfaceGaps(){
    throw Error('B285_SOURCE_FLAT_REGISTRATION_INVALID_'+p.id);
  }
  const byId=new Map(UNDERTOW_MODEL_XZ_GEOMETRY.map(p=>[p.id,p]));
- function auditPair(sourceId:string,destId:string){
+ type RegisteredId=(typeof UNDERTOW_MODEL_XZ_GEOMETRY)[number]['id'];
+ function auditPair(sourceId:RegisteredId,destId:RegisteredId){
   const a=byId.get(sourceId),b=byId.get(destId);
   if(!a||!b)throw Error('B285_EXPECTED_SOURCE_ID_NOT_REGISTERED');
   return {
