@@ -28,7 +28,7 @@ export function b270ActorOnlyArtScopeAudit(data:B270InputEvidence){
  check(data&&data.B268&&data.B269&&
   data.crossrunSameBaseline===false,'DISTINCT_RUN_BASELINES_REQUIRED');
  const actors=[];
- for(const version of ['B268','B269']){
+ for(const version of ['B268','B269'] as const){
   const obj=data[version],m=obj.metadata,region=obj.roi;
   check(m&&m.source==='25/17/26/0'&&
    m.realInkOwnedCells===115&&m.artAccepted===false&&

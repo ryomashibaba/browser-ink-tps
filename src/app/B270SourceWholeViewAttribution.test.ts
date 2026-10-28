@@ -15,9 +15,9 @@ const fixture=()=>({B268:entry(45611,45610,1,'a'),
 describe('B270 original source genuine screen attribution',()=>{
  it('real screenshots constrain actor-only studies; no ART promotion',()=>{
   const x=b270ActorOnlyArtScopeAudit(fixture());
-  expect(x.actors[0].outsideNearfieldChangedPixels).toBe(1);
-  expect(x.actors[1].outsideNearfieldChangedPixels).toBe(2);
-  expect(x.actors[0].nearfieldShareOfChange).toBeGreaterThan(.999);
+  expect(x.actors[0]!.outsideNearfieldChangedPixels).toBe(1);
+  expect(x.actors[1]!.outsideNearfieldChangedPixels).toBe(2);
+  expect(x.actors[0]!.nearfieldShareOfChange).toBeGreaterThan(.999);
   expect(x.artAccepted).toBe(false);
   expect(x.betterGameArtCertified).toBe(false);
   expect(x.originalSolids).toBe(25);
