@@ -155,6 +155,7 @@ import {b262QaFocusEligible,b262FocusPresentation} from './B262SourceQaFocusStud
 import {b263ScreenWitnessGate,b263ReadNativeInkProjection} from './B263RealInkScreenWitness';
 import {b293Eligible,b293QuantifyInkProjections} from './B293ActualInkViewport';
 import {b294ClassifySourceAtlasBindings,b294ParameterData} from './B294NativeInkAtlasMaterialProof';
+import {b298PaintDrawEligible} from './B298RealPaintDrawGate';
 import {surfaceTextureUvRect} from '../ink/AtlasCoordinates';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
@@ -306,6 +307,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly humanSpawn:Vec3;
  private readonly panel:HTMLElement;
  private b262QaReopenButton:HTMLButtonElement|null=null;
+  private b298HiddenTick:number|null=null;
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
@@ -1737,6 +1739,8 @@ export class UndertowF3PlayablePreviewApp{
      this.auditB293ActualInkViewport(origin),
     auditB294SourceInkShaderBindings:(origin:readonly [number,number,number])=>
      this.auditB294SourceInkShaderBindings(origin),
+    setB298NativePaintDrawHidden:(hidden:boolean,origin:readonly [number,number,number])=>
+     this.setB298NativePaintDrawHidden(hidden,origin),
     auditB264RealInkOpticalSightlines:()=>this.auditB264RealInkOpticalSightlines(),
     auditB271OriginalMultiSurfaceRegistration:()=>
      this.auditB271OriginalMultiSurfaceRegistration(),
@@ -2696,6 +2700,47 @@ export class UndertowF3PlayablePreviewApp{
    shaderRows:rows,
    originalSourceRegisteredOnly:true as const,
    originalPhysicalStage:'25/17/26/0' as const};
+ }
+ /** B298: real source paint renders only; no source/gameplay edits.
+  * Requires exact B293 real human ink evidence when entering B. */
+ private setB298NativePaintDrawHidden(hidden:boolean,
+  origin:readonly [number,number,number]){
+  const n=this.snapshot(),root=this.app.root.findByName('StageRoot');
+  const entities=this.b45SourceSurfaces.map(p=>
+   root?.findByName('PaintSurface:'+p.id) as Entity|null);
+  const meshes=entities.map(e=>e?.render?.meshInstances[0]??null);
+  const matches=entities.every((e,i)=>
+   !!e&&e.render?.meshInstances.length===1&&
+   this.ink.getSurface(this.b45SourceSurfaces[i]!.id)===
+    this.b45SourceSurfaces[i]&&!this.b45SourceSurfaces[i]!.isScoreable);
+  if(!b298PaintDrawEligible({
+   enabled:new URL(location.href).searchParams.get('t21B298')==='paintDrawAba',
+   paused:this.paused,locked:document.pointerLockElement===this.canvas,
+   stopped:!!this.stopReason,fullRound:this.b203FullRound,
+   tick:n.tick,phase:this.matchState,shots:n.shotsFired,
+   cells:n.b23HumanInkFeedback.humanChangedCells,
+   source:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,
+    this.b45SourceSurfaces.filter(p=>p.isScoreable).length],
+   nativePaintMeshes:meshes.filter(Boolean).length,
+   visibleMeshes:meshes.filter(m=>m?.visible===true).length,
+   ownerReferencesExact:matches,
+   originalActorStyle:(this.canvas.dataset.t21B289ActorVariant??
+    'B248_ORIGINAL')==='B248_ORIGINAL',
+   physicalActorRelocations:n.cpu.physicalFootRelocations,
+   hiddenAtTick:this.b298HiddenTick,requestHide:hidden
+  })||origin.length!==3||!origin.every(Number.isFinite))
+   throw Error('B298_REAL_SOURCE_PAINT_RENDER_ABA_GATE_REJECTED');
+  if(hidden)this.auditB293ActualInkViewport(origin);
+  for(const m of meshes)m!.visible=!hidden;
+  this.b298HiddenTick=hidden?n.tick:null;
+  return {hidden,nativeTick:n.tick,paintRenderers:17,
+   visibleRenderers:meshes.filter(m=>m!.visible).length,
+   authority:'25/17/26/0' as const,
+   nativeGameplayEdited:false as const,
+   originalOwnerGridEdited:false as const,
+   gpuInkAtlasEdited:false as const,
+   artAccepted:false as const,productionAuthorized:false as const};
  }
  /** B264: 24 source-verified real owned paint cell rays maximum.
   * Ray checks compare exact original F3L optical triangles and certified

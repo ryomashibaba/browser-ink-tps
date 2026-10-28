@@ -1293,6 +1293,46 @@ async function run(){
        writeFileSync(resolve(OUTPUT,'b292-real-inplay-organic-ada.json'),
         JSON.stringify(b292,null,2));
        console.log('B292_NATIVE_REAL_FLOW_A_D_A_PASS',JSON.stringify(b292));
+       // B298 genuine 17 pre-existing PaintSurface draw A-B-A on same
+       // post-ink paused native snapshot. No own painting or shading edits.
+       await evaluate(`(() => {const u=new URL(location.href);
+        u.searchParams.set('t21B298','paintDrawAba');
+        history.replaceState(null,'',u.href);return true;})()`);
+       const b298off=await evaluate('window.__t21F3.setB298NativePaintDrawHidden(true,'+
+        JSON.stringify(origin)+')');
+       if(!b298off.hidden||b298off.visibleRenderers!==0||
+          b298off.paintRenderers!==17||b298off.nativeGameplayEdited!==false)
+        fail('B298_ACTUAL_PAINT_MESH_HIDE_FAIL');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B298_NATIVE_WORLD_MUTATED_WHILE_HIDDEN');
+       await sleep(190);
+       const b298B=await b246Screenshot('b298-native-after-real-ink-paint-draw-hidden');
+       if(b298B.sha256===snaps[0].image.sha256)
+        fail('B298_PAINT_DRAW_HAS_ZERO_FRAMEBUFFER_CONTRIBUTION');
+       const b298on=await evaluate('window.__t21F3.setB298NativePaintDrawHidden(false,'+
+        JSON.stringify(origin)+')');
+       if(b298on.hidden||b298on.visibleRenderers!==17)
+        fail('B298_ACTUAL_PAINT_DRAW_NOT_RESTORED');
+       await sleep(190);
+       const b298A2=await b246Screenshot('b298-native-after-real-ink-paint-draw-restored');
+       if(b298A2.sha256!==snaps[0].image.sha256||
+          JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B298_NATIVE_PAINT_DRAW_A_B_A_RESTORE_MISMATCH');
+       const b298={schema:'B298_SAME_REAL_PAINT_SURFACE_RENDER_ABA',
+        genuineNativeTick:still.tick,original:'25/17/26/0',
+        realOwnedCells:realInk.actualOwnerCells,
+        actualCellCameraSamples:realInk.sampledProjectedCells.map(x=>({
+         sourceId:x.surfaceId,grid:x.grid,screenPx:x.screenPx.slice(0,2)})),
+        baseline:snaps[0].image,hidden:b298B,restored:b298A2,
+        exactOriginalFramebufferRestored:true,
+        noPaintAuthorityModification:true,realNativeWorldUnchanged:true,
+        coloredInkFramebufferCertified:false,artAccepted:false,
+        original4v4Certified:false,productionAuthorized:false};
+       writeFileSync(resolve(OUTPUT,'b298-real-painted-surface-draw-aba.json'),
+        JSON.stringify(b298,null,2));
+       console.log('B298_REAL_PAINT_DRAW_A_B_A_PASS',JSON.stringify({
+        nativeTick:still.tick,realOwnerSamples:realInk.paintSampleCount,
+        nativePaintRenderers:17,sameOriginalFrameRestored:true}));
       }finally{
        await evaluate(`(() => {
         const el=document.querySelector('#t21-f3-b202-real-pause');
