@@ -26,6 +26,7 @@ on:
       - "src/app/B269SourceActorIdentity*"
       - "src/app/B271MultiSurfaceRegistration*"
       - "scripts/t21-b271-multi-surface-registration.mjs"
+      - "scripts/qa-offline/t21-b273-real-native-kcc-transition*.mjs"
       - "scripts/t21-b269-native-rear-identity.mjs"
       - "src/app/B248SourceActorVisuals*"
       - "scripts/t21-b268-native-actor-composition.mjs"
@@ -116,6 +117,8 @@ jobs:
         run: npx vitest run src/app/B269SourceActorIdentity.test.ts
       - name: B271 exact original 17 surface footprint / optical / Rapier safety
         run: npx vitest run src/app/B271MultiSurfaceRegistration.test.ts
+      - name: B273 bounded real keyboard/KCC support transfer invariants
+        run: node --test scripts/qa-offline/t21-b273-real-native-kcc-transition.test.mjs
       - name: B253 opt-in original UV paint-readability material tests
         run: npx vitest run src/app/UndertowF3LTexturedSourcePreview.test.ts
       - name: Test source-only verified UV preference and frozen authority
@@ -146,6 +149,7 @@ jobs:
           T21_B268_ACTOR_COMPOSITION: "1"
           T21_B269_REAR_IDENTITY: "1"
           T21_B271_MULTISURFACE: "1"
+          T21_B273_REAL_KCC: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()

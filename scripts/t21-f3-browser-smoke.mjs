@@ -14,6 +14,7 @@ import {captureB265WallMetalAba} from './t21-b265-wallmetal-optical-aba.mjs';
 import {captureB268ActorComposition} from './t21-b268-native-actor-composition.mjs';
 import {captureB269RearIdentity} from './t21-b269-native-rear-identity.mjs';
 import {captureB271MultiSurface} from './t21-b271-multi-surface-registration.mjs';
+import {captureB273NativeKccDrop} from './qa-offline/t21-b273-real-native-kcc-transition.mjs';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
@@ -500,6 +501,7 @@ async function main(){
   (process.env.T21_B268_ACTOR_COMPOSITION==='1'?'&t21B268=actorComposition':'')+
   (process.env.T21_B269_REAR_IDENTITY==='1'?'&t21B269=rearIdentity':'')+
   (process.env.T21_B271_MULTISURFACE==='1'?'&t21B271=multiSurfaceRegistration':'')+
+  (process.env.T21_B273_REAL_KCC==='1'?'&t21QaDrive=source&t21W10B112=humanGround':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -5237,6 +5239,16 @@ async function main(){
    }));
  }
  if(longCpu)frames.push(await screenshot('F3_2_REAL_SEVEN_CPU_FREE_COMBAT'));
+ // B273 is LAST so 25/17/26/0 same-frame raster experiments remain intact.
+ // This is real KCC movement, not synthetic source navigation or ink.
+ if(process.env.T21_B273_REAL_KCC==='1'){
+  if(process.env.T21_B271_MULTISURFACE!=='1'||
+     process.env.T21_B263_PAINT_PROJECTION!=='1'||
+     process.env.T21_F3G_EXPECT_WHOLE!=='1')
+   reject('B273_REQUIRES_B271_PINNED_REAL_SOURCE_17_SURFACES');
+  await captureB273NativeKccDrop({
+   evaluate,cmd,waitUntil,screenshot,output:OUTPUT});
+ }
  const out={status:'PASS_REAL_CHROME',
   revision:process.env.GITHUB_SHA||'unknown',
   renderer:'webgl2',realKeyboardMeters:move,
