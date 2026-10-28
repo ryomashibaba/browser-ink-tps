@@ -1,5 +1,5 @@
 /** B302 research-only GPU uniform trial on the 17 *existing* source
- * PaintSurface ShaderMaterials. Team colors and ink atlas stay immutable. */
+ * PaintSurface ShaderMaterials. Original Team B, neutral and ink atlas stay immutable. */
 export const B302_NATIVE_TEAM_A_TONES={
  ORIGINAL:[.02,.84,.96],
  DEEP:[0,.68,.92],

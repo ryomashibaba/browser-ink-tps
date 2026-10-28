@@ -158,6 +158,8 @@ import {b294ClassifySourceAtlasBindings,b294ParameterData} from './B294NativeInk
 import {b298PaintDrawEligible} from './B298RealPaintDrawGate';
 import {b300NativeToneEligible,B300_NATIVE_NEUTRAL_TONES,
  type B300NativeTone} from './B300OriginalNativeInkNeutralToneTrial';
+import {b302NativeTeamAEligible,B302_NATIVE_TEAM_A_TONES,
+ type B302NativeTeamATone} from './B302RealInkTeamColorTrial';
 import {surfaceTextureUvRect} from '../ink/AtlasCoordinates';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
@@ -313,6 +315,9 @@ export class UndertowF3PlayablePreviewApp{
  private b300TrialMode:B300NativeTone='ORIGINAL';
  private b300TrialStartedTick:number|null=null;
  private b300OriginalParameterRefs:Map<string,Float32Array>|null=null;
+ private b302TrialMode:B302NativeTeamATone='ORIGINAL';
+ private b302TrialStartedTick:number|null=null;
+ private b302OriginalParameterRefs:Map<string,Float32Array>|null=null;
  private readonly status:HTMLElement;
  private readonly radar:ReturnType<typeof createF3SourceRadar>;
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
@@ -1748,6 +1753,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB298NativePaintDrawHidden(hidden,origin),
     setB300NativeNeutralTone:(tone:B300NativeTone,origin:readonly [number,number,number])=>
      this.setB300NativeNeutralTone(tone,origin),
+    setB302NativeTeamATone:(tone:B302NativeTeamATone,origin:readonly [number,number,number])=>
+     this.setB302NativeTeamATone(tone,origin),
     auditB264RealInkOpticalSightlines:()=>this.auditB264RealInkOpticalSightlines(),
     auditB271OriginalMultiSurfaceRegistration:()=>
      this.auditB271OriginalMultiSurfaceRegistration(),
@@ -2823,6 +2830,83 @@ export class UndertowF3PlayablePreviewApp{
   return {tone,nativeTick:n.tick,existingOriginalMeshes:17,
    neutralUniformOnly:true as const,originalPaintAtlasUntouched:true as const,
    originalTeamColorsUntouched:true as const,
+   nativeWorldUntouched:true as const,source:'25/17/26/0' as const,
+   artAccepted:false as const,productionAuthorized:false as const};
+ }
+ /** B302: original shader team A ink UNIFORM ONLY; actual team colors,
+  * real ink atlas, owner-grid, geometry, source/physics/nav untouched. */
+ private setB302NativeTeamATone(
+  tone:B302NativeTeamATone,origin:readonly [number,number,number]){
+  const n=this.snapshot(),root=this.app.root.findByName('StageRoot');
+  const entities=this.b45SourceSurfaces.map(p=>
+   root?.findByName('PaintSurface:'+p.id) as Entity|null);
+  const meshes=entities.map(e=>e?.render?.meshInstances[0]??null);
+  const sameOwner=entities.every((e,i)=>
+   !!e&&e.render?.meshInstances.length===1&&
+   this.ink.getSurface(this.b45SourceSurfaces[i]!.id)===
+    this.b45SourceSurfaces[i]&&!this.b45SourceSurfaces[i]!.isScoreable);
+  if(!b302NativeTeamAEligible({
+   optIn:new URL(location.href).searchParams.get('t21B302')==='realInkContrast',
+   paused:this.paused,pointerLocked:document.pointerLockElement===this.canvas,
+   stopped:!!this.stopReason,originalFullRound:this.b203FullRound,
+   phase:this.matchState,nativeTick:n.tick,actualHumanShots:n.shotsFired,
+   actualOwnedPaintCells:n.b23HumanInkFeedback.humanChangedCells,
+   sourceBoundary:[this.rawStage.solids.length,
+    this.b45SourceSurfaces.length,this.rawStage.navigationLinks?.length??0,
+    this.b45SourceSurfaces.filter(p=>p.isScoreable).length],
+   meshCount:meshes.filter(Boolean).length,
+   visibleMeshes:meshes.filter(m=>m?.visible===true).length,
+   registeredOwnerObjectsExact:sameOwner,
+   originalActorStyle:(this.canvas.dataset.t21B289ActorVariant??
+    'B248_ORIGINAL')==='B248_ORIGINAL',
+   relocatedActors:n.cpu.physicalFootRelocations,
+   current:this.b302TrialMode,requested:tone,
+   startedAtTick:this.b302TrialStartedTick
+  })||origin.length!==3||!origin.every(Number.isFinite))
+   throw Error('B302_GENUINE_TEAM_A_UNIFORM_ART_TRIAL_FORBIDDEN');
+  // Verify *all* real current data and reference identities before any
+  // uniform is modified, avoiding partial 17-mesh mutations on failure.
+  if(this.b302TrialMode==='ORIGINAL')
+   this.auditB294SourceInkShaderBindings(origin);
+  const refs=new Map<string,Float32Array>();
+  for(let i=0;i<meshes.length;i++){
+   const m=meshes[i]!.material;
+   const sid=this.b45SourceSurfaces[i]!.id;
+   const col=b294ParameterData(m.getParameter('uTeamAColor'));
+   if(!(col instanceof Float32Array)||col.length!==3||
+      b294ParameterData(m.getParameter('uInkAtlas'))!==this.atlas.texture)
+    throw Error('B302_EXISTING_NATIVE_TEAM_A_SHADER_PARAMETER_MISSING');
+   const expected=B302_NATIVE_TEAM_A_TONES[this.b302TrialMode];
+   if(!expected.every((v,k)=>Math.abs(col[k]!-v)<.00002))
+    throw Error('B302_UNEXPECTED_PREVIOUS_GPU_TEAM_A_TONE');
+   refs.set(sid,col);
+  }
+  if(tone==='DEEP'){
+   this.auditB293ActualInkViewport(origin);
+   this.b302OriginalParameterRefs=refs;
+   this.b302TrialStartedTick=n.tick;
+  }
+  const chosen=B302_NATIVE_TEAM_A_TONES[tone];
+  for(let i=0;i<meshes.length;i++){
+   const material=meshes[i]!.material;
+   const sid=this.b45SourceSurfaces[i]!.id;
+   const color=tone==='ORIGINAL'
+    ?this.b302OriginalParameterRefs!.get(sid)!
+    :new Float32Array(chosen);
+   if(!color||color.length!==3)
+    throw Error('B302_ORIGINAL_COLOR_IDENTITY_MISSING');
+   material.setParameter('uTeamAColor',color);
+  }
+  this.b302TrialMode=tone;
+  if(tone==='ORIGINAL'){
+   this.b302TrialStartedTick=null;
+   this.b302OriginalParameterRefs=null;
+   this.auditB294SourceInkShaderBindings(origin);
+  }
+  this.canvas.dataset.t21B302NeutralArt=tone;
+  return {tone,nativeTick:n.tick,existingOriginalMeshes:17,
+   teamAUniformOnly:true as const,originalPaintAtlasUntouched:true as const,
+   originalTeamBColorUntouched:true as const,
    nativeWorldUntouched:true as const,source:'25/17/26/0' as const,
    artAccepted:false as const,productionAuthorized:false as const};
  }
