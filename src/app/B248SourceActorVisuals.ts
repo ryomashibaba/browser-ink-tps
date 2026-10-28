@@ -2,6 +2,8 @@
  * attack targets, stage solids, paint surfaces, Recast links or score. */
 import {Color,Entity,StandardMaterial} from 'playcanvas';
 import {GAME_CONFIG} from '../config/game/gameConfig';
+import {B268_COMPACT_HUMAN_PARTS,b268VariantAccepted,
+ type B268RenderVariant} from './B268SourceActorComposition';
 type Primitive='box'|'sphere'|'capsule'|'cylinder';
 type MaterialId='SUIT'|'TEAM'|'VISOR'|'DARK'|'GEAR';
 type Part={name:string;type:Primitive;tint:MaterialId;
@@ -61,8 +63,14 @@ export function b249StrideDegrees(activity:number,phase:number):number{
 export type B248Visual={
  setMode:(mode:'HUMAN'|'SQUID')=>void;
  setEnabled:(shown:boolean)=>void;
+ setResearchVariant:(mode:B268RenderVariant)=>void;
  setPose:(dx:number,dz:number,activity:number,phase:number)=>void;
 };
+const b268ActorVisuals=new WeakMap<Entity,B248Visual>();
+/** Exact existing native source entities only, not inferred placements. */
+export function b248ExistingSourceActorVisual(parent:Entity):B248Visual|null{
+ return b268ActorVisuals.get(parent)??null;
+}
 export function decorateB248Actor(parent:Entity,team:'A'|'B',
  role:'PLAYER'|'CPU'):B248Visual{
  if(!parent.render)throw Error('B248_EXISTING_ACTOR_RENDER_REQUIRED');
@@ -88,9 +96,34 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
  ] as const)piece(squidRoot,p,colors);
  // B255: reversible display only, retaining the same native actor Entity.
  let requestedMode:'HUMAN'|'SQUID'='HUMAN',shown=true;
+ let researchVariant:B268RenderVariant='B248_ORIGINAL';
+ let compactRoot:Entity|null=null;
+ const ensureCompact=()=>{
+  if(compactRoot)return;
+  const root=new Entity('B268:RESEARCH_ONLY_COMPACT_SILHOUETTE');
+  root.enabled=false;
+  const originalTeam=team==='A'?GAME_CONFIG.visual.teamA:GAME_CONFIG.visual.teamB;
+  const materials={
+   ARMOR:make([.075,.115,.165]),TRIM:make([.17,.23,.29]),
+   VISOR:make([.38,.8,.92],.35),INK:make(originalTeam,.23),
+   FABRIC:make([.06,.085,.115]),METAL:make([.23,.3,.37])
+  };
+  for(const p of B268_COMPACT_HUMAN_PARTS){
+   const part=new Entity('B268:VISUAL_ONLY:'+p.name);
+   part.addComponent('render',{type:p.primitive,
+    material:materials[p.surface],castShadows:false,receiveShadows:false});
+   part.setLocalPosition(...p.pos);part.setLocalScale(...p.size);
+   root.addChild(part);
+  }
+  parent.addChild(root);
+  compactRoot=root;
+ };
  const syncVisibility=()=>{
   parent.render!.enabled=!shown;
-  humanRoot.enabled=shown&&requestedMode==='HUMAN';
+  humanRoot.enabled=shown&&requestedMode==='HUMAN'&&
+   researchVariant==='B248_ORIGINAL';
+  if(compactRoot)compactRoot.enabled=shown&&requestedMode==='HUMAN'&&
+   researchVariant==='B268_COMPACT';
   squidRoot.enabled=shown&&requestedMode==='SQUID'&&role==='PLAYER';
  };
  const setMode=(mode:'HUMAN'|'SQUID')=>{
@@ -98,6 +131,11 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
  };
  const setEnabled=(next:boolean)=>{
   shown=next;syncVisibility();
+ };
+ const setResearchVariant=(mode:B268RenderVariant)=>{
+  if(!b268VariantAccepted(mode))throw Error('B268_UNKNOWN_SOURCE_ACTOR_STYLE');
+  if(mode==='B268_COMPACT')ensureCompact();
+  researchVariant=mode;syncVisibility();
  };
  let facing=team==='B'?180:0;
  const setPose=(dx:number,dz:number,activity:number,phase:number)=>{
@@ -112,5 +150,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   ] as const)limbs.get(part)?.setLocalEulerAngles(swing*sign,0,0);
  };
  setMode('HUMAN');
- return {setMode,setEnabled,setPose};
+ const visual={setMode,setEnabled,setPose,setResearchVariant};
+ b268ActorVisuals.set(parent,visual);
+ return visual;
 }

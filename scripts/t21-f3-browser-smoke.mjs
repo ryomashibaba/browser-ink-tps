@@ -11,6 +11,7 @@ import {verifyB77OriginalSourceAbaRaster,inspectB252OriginalUvRaster}
 import {resolve} from 'node:path';
 import {captureB260OriginalMaterials} from './t21-b260-native-material-aba.mjs';
 import {captureB265WallMetalAba} from './t21-b265-wallmetal-optical-aba.mjs';
+import {captureB268ActorComposition} from './t21-b268-native-actor-composition.mjs';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {auditB72OwnerStoredRound} from './t21-w10b72-stored-round-witness.mjs';
@@ -494,6 +495,7 @@ async function main(){
   (process.env.T21_B262_QA_FOCUS==='1'?'&t21B262=qaFocusAudit':'')+
   (process.env.T21_B263_PAINT_PROJECTION==='1'?'&t21B263=paintProjection':'')+
   (process.env.T21_B264_NATIVE_RAY_AUDIT==='1'?'&t21B264=inkOpticalRays':'')+
+  (process.env.T21_B268_ACTOR_COMPOSITION==='1'?'&t21B268=actorComposition':'')+
   (w10b64Mode==='SWEEP'?'&t21W10B64=inkAngleSweep':'')});
  await waitUntil(async()=>{
   const ready=await evaluate(`({
@@ -4370,6 +4372,13 @@ async function main(){
    await captureB265WallMetalAba('FROZEN',{
     evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
   }
+  if(process.env.T21_B268_ACTOR_COMPOSITION==='1'){
+   if(process.env.T21_B263_PAINT_PROJECTION!=='1'||
+      process.env.T21_B255_ACTOR_STUDY!=='1')
+    reject('B268_REQUIRES_GENUINE_NATIVE_OWNED_INK_AND_ACTOR_BASELINE');
+   await captureB268ActorComposition('FROZEN',{
+    evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
+  }
   // Resume full source human+CPU game after screenshot-only frozen compare.
   const resumed=await evaluate('window.__t21F3.resume()');
   if(resumed.paused||resumed.stopReason||
@@ -4663,6 +4672,9 @@ async function main(){
      await captureB264SourceInkRays('REAL_INK');
     if(process.env.T21_B265_METAL_ABA==='1')
      await captureB265WallMetalAba('REAL_INK',{
+      evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
+    if(process.env.T21_B268_ACTOR_COMPOSITION==='1')
+     await captureB268ActorComposition('REAL_INK',{
       evaluate,screenshot,inspect:inspectB252OriginalUvRaster,output:OUTPUT});
     await evaluate('window.__t21F3.resume()');
    }

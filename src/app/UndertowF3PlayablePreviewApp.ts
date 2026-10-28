@@ -129,6 +129,9 @@ import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
  type B254NativeVisualMode} from './B254NativeActorVisualIsolation';
 import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
  type B255ActorPresentation} from './B255SourceActorReview';
+import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
+import {b268VariantAccepted,b268RenderResearchGate,B268_VISUAL_AUTHORITY,
+ type B268RenderVariant} from './B268SourceActorComposition';
 import {b256SourceOpticalEligible,B256_OPTICAL_AUTHORITY}
  from './B256SourceOpticalAperture';
 import {B257_SCREEN_PROBES,B257_AUDIT_AUTHORITY,b257AuditEligible}
@@ -1694,6 +1697,8 @@ export class UndertowF3PlayablePreviewApp{
      this.setB254NativeVisualIsolation(mode),
     setB255SourceActorPresentation:(mode:B255ActorPresentation)=>
      this.setB255SourceActorPresentation(mode),
+    setB268SourceActorComposition:(mode:B268RenderVariant)=>
+     this.setB268SourceActorComposition(mode),
     setB256SourceOpticalAperture:(on:boolean)=>
      this.setB256SourceOpticalAperture(on),
     auditB257OriginalDepthComposition:()=>
@@ -2007,6 +2012,57 @@ export class UndertowF3PlayablePreviewApp{
   return {mode,existingPlayerActor:1,existingCpuActors:bots.length,
    genuineCpuIds:bots.map(b=>b.id),nativeCapsulesVisible:!humanoid,
    humanoidVisualsVisible:humanoid,...B255_ACTOR_REVIEW_AUTHORITY};
+ }
+ /** B268: one original-source-only frozen actor silhouette A/B/A.
+  * Eight existing actor render children, no gameplay or camera changes. */
+ private setB268SourceActorComposition(mode:B268RenderVariant){
+  if(!b268VariantAccepted(mode))
+   throw Error('B268_INVALID_SOURCE_ACTOR_RESEARCH_STYLE');
+  const uv=this.texturedF3l;
+  const actor=this.app.root.findByName('Player') as Entity|null;
+  const bots=(this.cpu as unknown as {bots:{id:string;entity:Entity}[]}).bots;
+  const p=new URL(location.href).searchParams;
+  if(!uv||!actor?.render||bots.length!==7||
+     !b268RenderResearchGate(p,{
+      paused:this.paused,staging:this.matchState==='STAGING',
+      stopped:!!this.stopReason,fullRound:this.b203FullRound,
+      pointerLocked:document.pointerLockElement===this.canvas,
+      verifiedUv:this.texturedF3lStatus==='READY'&&uv.root.enabled,
+      inkSafe:this.b253InkSafeVisualEnabled,
+      humanoid:this.canvas.dataset.t21B255ActorPresentation==='HUMANOID',
+      surveyActive:this.survey.snapshot().active||this.galleryIndex>=0,
+      cameraBaseline:(this.canvas.dataset.t21B258CameraProfile??'BASELINE')==='BASELINE',
+      qaFocusOff:this.canvas.dataset.t21B262QaFocus!=='ON',
+      b256Off:this.canvas.dataset.t21B256OpticalAperture!=='ON',
+      solidCount:this.rawStage.solids.length,
+      paintSurfaceCount:this.rawStage.paintSurfaces.length,
+      navCount:this.rawStage.navigationLinks?.length??0,scoreableCount:0,
+      triangles:uv.manifest.totalTriangles,
+      textureCount:uv.manifest.textures.length,cpuCount:bots.length,
+      rasterBaseline:(this.canvas.dataset.t21B259RasterLayer??'BASELINE')==='BASELINE',
+      metalRestored:!this.canvas.dataset.t21B260HiddenMaterial
+     })||
+     (this.canvas.dataset.t21B254VisualIsolation!==undefined&&
+      this.canvas.dataset.t21B254VisualIsolation!=='ALL')||
+     !this.b45SourceSurfaces.every(s=>!s.isScoreable&&
+      this.ink.getSurface(s.id)===s))
+   throw Error('B268_FROZEN_PINNED_SOURCE_ACTOR_STUDY_UNAUTHORIZED');
+  const actors=[actor,...bots.map(b=>b.entity)];
+  if(actors.some(a=>!a.render||
+    a.children.filter(x=>x.name==='B248:GEAR_VISUAL').length!==1))
+   throw Error('B268_ORIGINAL_ACTOR_RENDER_IDENTITY_DRIFT');
+  const visuals=actors.map(a=>b248ExistingSourceActorVisual(a));
+  if(visuals.some(v=>!v))
+   throw Error('B268_EXISTING_ACTOR_RENDER_KIT_NOT_INSTALLED');
+  const old=this.canvas.dataset.t21B268ActorComposition??'B248_ORIGINAL';
+  if(!b268VariantAccepted(old))
+   throw Error('B268_UNVERIFIED_PREVIOUS_ACTOR_STYLE');
+  for(const visual of visuals)visual!.setResearchVariant(mode);
+  this.canvas.dataset.t21B268ActorComposition=mode;
+  return {mode,priorStyle:old,existingNativeActors:actors.length,
+   existingCpuActorIds:bots.map(b=>b.id),source:'25/17/26/0' as const,
+   realOriginalPaintSurfaces:this.b45SourceSurfaces.length,
+   ...B268_VISUAL_AUTHORITY};
  }
  /** B256 shader-only aperture in authentic, pinned, nonproduction SOURCE UV.
   * Uses screen-relative fragment attenuation, never a synthetic collision. */
@@ -4434,6 +4490,12 @@ export class UndertowF3PlayablePreviewApp{
     enabled:this.canvas.dataset.t21B256OpticalAperture==='ON',
     renderOnly:true,sourceAuthority:'25/17/26/0',
     productionAuthorized:false
+   },
+   b268SourceActorComposition:{
+    requested:new URL(location.href).searchParams.get('t21B268')==='actorComposition',
+    variant:this.canvas.dataset.t21B268ActorComposition??'B248_ORIGINAL',
+    existingActorsOnly:8,originalSource:'25/17/26/0',
+    productionAuthorized:false,artAccepted:false
    },
    b255SourceActorStudy:{
     requested:new URL(location.href).searchParams.get('t21B255')==='actorStudy',

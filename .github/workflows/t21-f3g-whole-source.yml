@@ -22,6 +22,9 @@ on:
       - "src/app/B262SourceQaFocusStudy*"
       - "src/app/B263RealInkScreenWitness*"
       - "src/app/B264RealInkOpticalSightlines*"
+      - "src/app/B268SourceActorComposition*"
+      - "src/app/B248SourceActorVisuals*"
+      - "scripts/t21-b268-native-actor-composition.mjs"
       - "scripts/t21-b260-native-material-aba.mjs"
       - "scripts/t21-b265-*"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
@@ -103,6 +106,8 @@ jobs:
         run: npx vitest run src/app/B263RealInkScreenWitness.test.ts
       - name: B264 bounded native owner-cell optical / Rapier depth tests
         run: npx vitest run src/app/B264RealInkOpticalSightlines.test.ts
+      - name: B268 exact-eight-actor nonproduction 3D composition and provenance tests
+        run: npx vitest run src/app/B268SourceActorComposition.test.ts src/app/B248SourceActorVisuals.test.ts
       - name: B253 opt-in original UV paint-readability material tests
         run: npx vitest run src/app/UndertowF3LTexturedSourcePreview.test.ts
       - name: Test source-only verified UV preference and frozen authority
@@ -130,6 +135,7 @@ jobs:
           T21_B263_PAINT_PROJECTION: "1"
           T21_B264_NATIVE_RAY_AUDIT: "1"
           T21_B265_METAL_ABA: "1"
+          T21_B268_ACTOR_COMPOSITION: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()
