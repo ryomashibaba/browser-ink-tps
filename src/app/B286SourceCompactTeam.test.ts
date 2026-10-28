@@ -26,8 +26,9 @@ describe('B286 source team compact HUD, native read-only roster',()=>{
  });
  it('reports genuine ally/enemy status and independently observed splats',()=>{
   const d=input();d.tick=190;d.matchState='PLAYING';d.paused=false;
-  d.cpu=d.cpu.map(x=>({...x,rejoined:true}));
-  d.cpu[5]={...d.cpu[5]!,lifeState:'SPLATTED',hp:0};
+  d.cpu=d.cpu.map((x,i)=>({...x,rejoined:true,
+   lifeState:i===5?'SPLATTED' as const:'ACTIVE' as const,
+   hp:i===5?0:100}));
   d.cpuRespawns=2;
   const result=b286CompactNativeRoster(b211RealNativeRoster(d));
   expect(result).toMatchObject({allyActive:3,enemyActive:3,
@@ -42,7 +43,7 @@ describe('B286 source team compact HUD, native read-only roster',()=>{
   d.stage=[25,17,26,0];d.cpu=d.cpu.slice(0,6);
   expect(b286CompactNativeRoster(b211RealNativeRoster(d))).toBeNull();
   const v=b211RealNativeRoster(input())!;
-  expect(b286CompactNativeRoster({...v,officialWinner:'TEAM_A'} as typeof v)).toBeNull();
+  expect(b286CompactNativeRoster({...v,officialWinner:'TEAM_A'} as unknown as typeof v)).toBeNull();
   expect(b286CompactNativeRoster({...v,rows:[...v.rows].reverse()})).toBeNull();
  });
 });
