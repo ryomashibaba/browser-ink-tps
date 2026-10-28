@@ -17,6 +17,9 @@ on:
       - "src/app/B257OriginalSourceDepthAudit*"
       - "src/app/B258OriginalCameraComposition*"
       - "src/app/B259SourceRasterLayers*"
+      - "src/app/B260SourceMaterialAttribution*"
+      - "scripts/t21-b260-native-material-aba.mjs"
+      - ".github/workflows/t21-f3g-whole-source.yml"
       - "src/app/UndertowF3VerifiedSourcePresentation*"
       - "src/app/UndertowF3G*"
   workflow_dispatch:
@@ -86,6 +89,8 @@ jobs:
         run: npx vitest run src/app/B258OriginalCameraComposition.test.ts
       - name: B259 original source layer provenance and URL gating tests
         run: npx vitest run src/app/B259SourceRasterLayers.test.ts
+      - name: B260 source-pinned individual UV materials and paused gates
+        run: npx vitest run src/app/B260SourceMaterialAttribution.test.ts
       - name: B253 opt-in original UV paint-readability material tests
         run: npx vitest run src/app/UndertowF3LTexturedSourcePreview.test.ts
       - name: Test source-only verified UV preference and frozen authority
@@ -107,6 +112,7 @@ jobs:
           T21_B257_DEPTH_AUDIT: "1"
           T21_B258_CAMERA_STUDY: "1"
           T21_B259_LAYER_AUDIT: "1"
+          T21_B260_MATERIAL_AUDIT: "1"
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Source provenance and real browser screenshots
         if: always()
