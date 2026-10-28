@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {b270ActorOnlyArtScopeAudit} from './B270SourceWholeViewAttribution';
-const hash=n=>n.repeat(64);
-const entry=(n,near,background,marker)=>({
+const hash=(n:string)=>n.repeat(64);
+const entry=(n:number,near:number,background:number,marker:string)=>({
  metadata:{source:'25/17/26/0',frameSize:[1600,900],
   realInkOwnedCells:115,artAccepted:false,nativeAsha:hash(marker),
   nativeBsha:hash('c')},
