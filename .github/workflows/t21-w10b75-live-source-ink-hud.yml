@@ -132,6 +132,12 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# B309: only newest pushed QA HEAD should use expensive true Chromium.
+# Explicit manual workflow_dispatch receives a unique run-specific group
+# and is never cancelled by unrelated development pushes.
+concurrency:
+  group: t21-b75-source-${{ github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   preflight:
     name: B75 60Hz source ink window and frozen-authority preflight
