@@ -33,8 +33,11 @@ jobs:
           T21_B162_REAL_ALLY_SYNC: '1'
           T21_B194_REAL_PLAYER_BUTTON: '1'
           T21_B200_REAL_REPLAY: '0'
-          T21_B201_REAL_PAUSE_RESUME: '1'
-          T21_B202_REAL_CONTROLS: '1'
+          # B317: B201/B202 optional pause/HUD reruns are separately
+          # verified; don't let their intermittent CDP pointer lock
+          # timeout preempt the native ramp KCC research.
+          T21_B201_REAL_PAUSE_RESUME: '0'
+          T21_B202_REAL_CONTROLS: '0'
           T21_B203_REAL_FULL_ROUND: '1'
           T21_B312_SECOND_HUMAN_SURFACE: '1'
           T21_B316_GENUINE_RAMP_WALK: '1'
