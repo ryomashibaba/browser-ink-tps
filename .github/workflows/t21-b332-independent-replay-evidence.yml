@@ -21,4 +21,5 @@ jobs:
       - run: node --check scripts/t21-b332-independent-original-replay.mjs
       - run: node --test scripts/t21-b332-independent-original-replay.test.mjs
       - name: Keep real B200 evidence on HOLD until 5 original JSON files and 2 genuine frames exist
-        run: echo 'B332 schema-only tests: no real replay PASS is inferred until genuine Chrome artifacts are verified'
+        run: |
+          echo 'B332 schema-only tests: no real replay PASS is inferred until genuine Chrome artifacts are verified'
