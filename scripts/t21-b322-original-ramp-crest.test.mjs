@@ -24,7 +24,7 @@ const at=(u,v,tick,solid=ramp)=>{
 };
 const example=()=>{
  const first=at(.419,.66,2100);
- return {schema:'B322_REAL_NATIVE_CRE​ST_EXIT',source:'25/17/26/0',
+ return {schema:'B322_REAL_NATIVE_CREST_EXIT',source:'25/17/26/0',
   productionAuthorized:false,original4v4Certified:false,
   artAccepted:false,prerequisiteB321Passed:true,first,
   steps:[.73,.8,.86,.92].map((v,i)=>({

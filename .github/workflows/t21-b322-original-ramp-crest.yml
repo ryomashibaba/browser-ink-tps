@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: t21-b322-true-original-crest-\${{ github.ref }}
+  group: t21-b322-true-original-crest-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   real-original-crest:
@@ -41,7 +41,7 @@ jobs:
           T21_B318_INTERIOR_RAMP_WALK: '1'
           T21_B320_TRUE_SOURCE_RAMP_UPHILL: '1'
           T21_B321_TRUE_UPPER_RAMP_KCC: '1'
-          T21_B322_TRUE_CRE​ST_EXIT: '1'
+          T21_B322_TRUE_CREST_EXIT: '1'
           T21_F3_SHOT_DIR: /tmp/t21-b322
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Independent original three-surface human ink proof

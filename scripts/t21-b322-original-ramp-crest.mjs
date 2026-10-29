@@ -30,7 +30,7 @@ export function b322PlanActualOriginalCrest(ledger,camera){
  const distance=Math.hypot(dx,dz);
  const yaw=Math.atan2(dx,-dz)*180/Math.PI;
  const mx=Math.round(wrap(yaw-camera.yawDegrees)/.22);
- return {schema:'B322_SOURCE_CRE​ST_CAMERA_PLAN',source:'25/17/26/0',
+ return {schema:'B322_SOURCE_CREST_CAMERA_PLAN',source:'25/17/26/0',
   start,world,coord:q,mouseX:mx,screenX:800+mx,targetYaw:yaw,distance,
   geometryOnly:true,realHumanPathNotInferred:true,
   safe:q.insideSourceQuadXZ&&q.originalUphillFraction>=.96&&
@@ -38,7 +38,7 @@ export function b322PlanActualOriginalCrest(ledger,camera){
    800+mx>=10&&800+mx<=1590};
 }
 export function b322AuditNativeOriginalCrestExit(d){
- check(d?.schema==='B322_REAL_NATIVE_CRE​ST_EXIT'&&
+ check(d?.schema==='B322_REAL_NATIVE_CREST_EXIT'&&
   d.source==='25/17/26/0'&&d.productionAuthorized===false&&
   d.original4v4Certified===false&&d.artAccepted===false,
   'AUTHORITY');

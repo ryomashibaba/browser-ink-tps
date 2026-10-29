@@ -38,7 +38,7 @@ const b316GenuineRampWalk=process.env.T21_B316_GENUINE_RAMP_WALK==='1';
 const b318InteriorWalk=process.env.T21_B318_INTERIOR_RAMP_WALK==='1';
 const b320UphillStudy=process.env.T21_B320_TRUE_SOURCE_RAMP_UPHILL==='1';
 const b321HigherRamp=process.env.T21_B321_TRUE_UPPER_RAMP_KCC==='1';
-const b322RealCrest=process.env.T21_B322_TRUE_CRE​ST_EXIT==='1';
+const b322RealCrest=process.env.T21_B322_TRUE_CREST_EXIT==='1';
 if(b322RealCrest&&!b321HigherRamp)
  throw Error('B322_REQUIRES_B321_PHYSICAL_HIGH_RAMP');
 if(b321HigherRamp&&!b320UphillStudy)
@@ -981,7 +981,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      const qualified=finalHigh.verdict===
       'PASS_GENUINE_ORIGINAL_RAMP_HIGH_SECTION_KCC';
      const save=(status,plan=null)=>{
-      const data={schema:'B322_REAL_NATIVE_CRE​ST_EXIT',
+      const data={schema:'B322_REAL_NATIVE_CREST_EXIT',
        source:'25/17/26/0',status,first,plan,steps,
        prerequisiteB321Passed:qualified,productionAuthorized:false,
        original4v4Certified:false,artAccepted:false};
