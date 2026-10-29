@@ -173,7 +173,8 @@ import {b271RegistrationGate,b271NativeFootprintProbes,
 import {b308NativeRouteOpportunityGate,b308NativePathIsOnlyCandidate,
  b308SummarizeNativeOriginalSurfaces} from './B308NativeOriginalOtherPaintRoute';
 import {b310CheckOriginalTripleRoutes} from './B310RealThreeSourceFootProbes';
-import {b312ValidateOriginalOwnerFrame} from './B312NativeOriginalSecondHumanInk';
+import {b312ValidateOriginalOwnerFrame,b312JudgeRealHumanSecondSurface,
+ type B312RealReadOnlyFrame} from './B312NativeOriginalSecondHumanInk';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1762,6 +1763,9 @@ export class UndertowF3PlayablePreviewApp{
     auditB308NativeOtherPaintSurfaceRoutes:(origin:readonly [number,number,number])=>
      this.auditB308NativeOtherPaintSurfaceRoutes(origin),
     auditB312NativeHumanOwnerLedger:()=>this.auditB312NativeHumanOwnerLedger(),
+    judgeB312NativeHumanSecondSource:(before:B312RealReadOnlyFrame,
+      after:B312RealReadOnlyFrame,targetId:string)=>
+     b312JudgeRealHumanSecondSurface(before,after,targetId),
     auditB294SourceInkShaderBindings:(origin:readonly [number,number,number])=>
      this.auditB294SourceInkShaderBindings(origin),
     setB298NativePaintDrawHidden:(hidden:boolean,origin:readonly [number,number,number])=>

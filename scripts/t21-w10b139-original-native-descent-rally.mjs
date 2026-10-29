@@ -622,19 +622,16 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      const after=await b312Ledger();
      const originalBefore=before.originalRows.find(r=>r.surfaceId===targetId);
      const originalAfter=after.originalRows.find(r=>r.surfaceId===targetId);
-     const hitNew=after.humanLastPaintedSurface===targetId&&
-      after.humanLastImpactTick!==null&&
-      after.humanLastImpactTick>before.tick&&
-      after.humanChangedCells>before.humanChangedCells;
-     const exactOwnerIncrease=originalAfter.originalOwnedA>
-      originalBefore.originalOwnedA;
-     const previousHumanSource=b312UpperBaseline.humanLastPaintedSurface;
-     const second=hitNew&&exactOwnerIncrease&&
-      previousHumanSource!==null&&previousHumanSource!==targetId&&
-      after.shots>before.shots;
-     const verdict=second?'GENUINE_SECOND_SOURCE_HUMAN_PAINT_PASS':
-      'HOLD_NO_PROVEN_SECOND_HUMAN_SOURCE_PAINT';
-     const proof={targetId,verdict,fromTick:before.tick,toTick:after.tick,
+     // The upper baseline is captured BEFORE upper practice; it may have
+     // no human shot. Compare instead the actual immediately pre-shot
+     // Human impact source, not a fabricated earlier reference.
+     const previousHumanSource=before.humanLastPaintedSurface;
+     const audited=await evaluate(
+      'window.__t21F3.judgeB312NativeHumanSecondSource('+
+       JSON.stringify(before)+','+JSON.stringify(after)+','+
+       JSON.stringify(targetId)+')');
+     const verdict=audited.verdict;
+     const proof={...audited,targetId,verdict,fromTick:before.tick,toTick:after.tick,
       beforeShots:before.shots,afterShots:after.shots,
       afterHumanLastImpact:after.humanLastImpactTick,
       afterHumanSource:after.humanLastPaintedSurface,
