@@ -649,6 +649,13 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       afterBody:after.actualBodyMeters,
       selectedOriginalActiveCell:selected,
       measuredRealCameraAfterAim:actualLook,
+      // B315: retain the WHOLE original source ledger before/after each
+      // genuine human CDP shot to separate CPU A-owner changes from
+      // actual human provenance and prevent single-target extrapolation.
+      original17Before:before.originalRows,
+      original17After:after.originalRows,
+      realHumanFootSupportedBefore:before.realHumanOriginalFootSupported,
+      realHumanFootSupportedAfter:after.realHumanOriginalFootSupported,
       originalSource:'25/17/26/0',officialWinner:'NONE',
       productionAuthorized:false};
      observations.push(proof);
