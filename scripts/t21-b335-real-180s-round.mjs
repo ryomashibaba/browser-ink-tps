@@ -157,7 +157,20 @@ async function run(){
   'document.querySelector("#app-canvas")?.dataset.t21B193Coop==="REAL_A1_ORIGINAL_SOURCE"'+
   '&&document.querySelector("#app-canvas")?.dataset.t21F3Ready==="READY"');}
   catch{return false;}},110000);
- await clickButton('#t21-f3-b203-full-round');await ready();
+ await clickButton('#t21-f3-b203-full-round');
+ // Require the freshly selected full-round SOURCE world; a stale READY
+ // flag from the previous coop page must NOT satisfy this gate.
+ const realFullRound=await wait(async()=>{
+  try{return await read('(() => ({ready:document.querySelector("#app-canvas")?.dataset.t21F3Ready,'+
+   'mode:document.querySelector("#app-canvas")?.dataset.t21B203FullRound,'+
+   'search:location.search}))()');}
+  catch{return false;}
+ },100000);
+ if(realFullRound.ready!=='READY'||
+  realFullRound.mode!=='REAL_180S_SOURCE_PLAY'||
+  realFullRound.search!=='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound')
+  fail('B335_FULL_ROUND_NEW_WORLD_IDENTITY_UNVERIFIED');
  const boot=verifyAuthority(await snapshot());
  if(boot.matchState!=='STAGING'||!boot.paused||
   boot.timeRemainingSeconds!==180||boot.tick!==0||
