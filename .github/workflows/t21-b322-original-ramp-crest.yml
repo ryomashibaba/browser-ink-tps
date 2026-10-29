@@ -7,6 +7,8 @@ on:
       - 'scripts/t21-b322-original-ramp-crest.test.mjs'
       - 'scripts/t21-b324-original-upper-floor-continuation.mjs'
       - 'scripts/t21-b324-original-upper-floor-continuation.test.mjs'
+      - 'scripts/t21-b326-extended-original-upper-floor.mjs'
+      - 'scripts/t21-b326-extended-original-upper-floor.test.mjs'
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
       - '.github/workflows/t21-b322-original-ramp-crest.yml'
   workflow_dispatch:
@@ -26,7 +28,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
-      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b315-verify-native-three-surface-ink.test.mjs scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs scripts/t21-b320-original-ramp-uphill-kcc.test.mjs scripts/t21-b321-real-upper-ramp-kcc.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs
+      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b315-verify-native-three-surface-ink.test.mjs scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs scripts/t21-b320-original-ramp-uphill-kcc.test.mjs scripts/t21-b321-real-upper-ramp-kcc.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
       - run: npm run build -- --base=/browser-ink-tps/
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Real CDP player KCC from original spawn through ramp crest
@@ -45,6 +47,7 @@ jobs:
           T21_B321_TRUE_UPPER_RAMP_KCC: '1'
           T21_B322_TRUE_CREST_EXIT: '1'
           T21_B324_REAL_UPPER_FLOOR_CONTINUATION: '1'
+          T21_B326_EXTENDED_UPPER_FLOOR: '1'
           T21_F3_SHOT_DIR: /tmp/t21-b322
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Independent original three-surface human ink proof
@@ -55,6 +58,8 @@ jobs:
         run: node scripts/t21-b322-original-ramp-crest.mjs /tmp/t21-b322/b322-actual-original-ramp-crest.json
       - name: Independent original upper floor continuous human KCC proof
         run: node scripts/t21-b324-original-upper-floor-continuation.mjs /tmp/t21-b322/b322-actual-original-ramp-crest.json /tmp/t21-b322/b324-real-original-upper-floor.json
+      - name: Independent extended genuine original upper-floor KCC proof
+        run: node scripts/t21-b326-extended-original-upper-floor.mjs /tmp/t21-b322/b322-actual-original-ramp-crest.json /tmp/t21-b322/b324-real-original-upper-floor.json /tmp/t21-b322/b326-extended-original-upper-floor.json
       - name: Preserve true Chromium evidence including HOLD
         if: always()
         uses: actions/upload-artifact@v4

@@ -20,6 +20,8 @@ import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
  UPPER_FLOOR_SOLID} from './t21-b322-original-ramp-crest.mjs';
 import {b324AuditGenuineUpperFloor}
  from './t21-b324-original-upper-floor-continuation.mjs';
+import {b326AuditExtendedUpperFloor}
+ from './t21-b326-extended-original-upper-floor.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -42,6 +44,9 @@ const b320UphillStudy=process.env.T21_B320_TRUE_SOURCE_RAMP_UPHILL==='1';
 const b321HigherRamp=process.env.T21_B321_TRUE_UPPER_RAMP_KCC==='1';
 const b322RealCrest=process.env.T21_B322_TRUE_CREST_EXIT==='1';
 const b324UpperFloor=process.env.T21_B324_REAL_UPPER_FLOOR_CONTINUATION==='1';
+const b326ExtendedFloor=process.env.T21_B326_EXTENDED_UPPER_FLOOR==='1';
+if(b326ExtendedFloor&&!b324UpperFloor)
+ throw Error('B326_REQUIRES_B324_GENUINE_UPPER_FLOOR');
 if(b324UpperFloor&&!b322RealCrest)
  throw Error('B324_REQUIRES_B322_TRUE_RAMP_CREST');
 if(b322RealCrest&&!b321HigherRamp)
@@ -1084,11 +1089,64 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       }
       const report=saveUpper(stepsUpper.length?
        'REAL_UPPER_FLOOR_KCC_OBSERVED':'HOLD_NO_REAL_UPPER_FLOOR_INPUT');
-      await picture('B324_TRUE_ORIGINAL_UPPER_FLOOR_KCC');
       console.log('B324_NATIVE_ORIGINAL_UPPER_FLOOR_RESULT',JSON.stringify({
        verdict:report.verdict,supported:report.genuineSupportedNativeSteps??0,
        meters:report.witnessedPlanarMeters??0,
        source:'25/17/26/0',productionAuthorized:false}));
+      if(b326ExtendedFloor){
+       const priorB324=JSON.parse(readFileSync(
+        resolve(OUTPUT,'b324-real-original-upper-floor.json'),'utf8'));
+       // Continue from the last actual B324 state, before any framebuffer
+       // capture. Never relocate the actor or modify the game clock.
+       const nextStart=stepsUpper.at(-1)?.after??firstUpper;
+       const extended=[];
+       const saveB326=status=>{
+        const data={schema:'B326_NATIVE_SOURCE_UPPER_FLOOR_EXTENSION',
+         source:'25/17/26/0',status,first:nextStart,steps:extended,
+         productionAuthorized:false,original4v4Certified:false,
+         artAccepted:false};
+        const verdict=b326AuditExtendedUpperFloor(
+         priorB322,priorB324,data);
+        writeFileSync(resolve(OUTPUT,'b326-extended-original-upper-floor.json'),
+         JSON.stringify({...data,preliminary:verdict},null,2));
+        return verdict;
+       };
+       if(report.continuousUpperFloor&&
+          nextStart.realHumanOriginalFootSupported===true&&
+          nextStart.genuineHumanOriginalFootSolid===UPPER_FLOOR_SOLID){
+        for(let i=0;i<8;i++){
+         const before=await b312Ledger();
+         if(!before.realHumanOriginalFootSupported||
+            before.genuineHumanOriginalFootSolid!==UPPER_FLOOR_SOLID)break;
+         const pressed=await b319TrueShortNativeKey('KeyW',2);
+         const after=await b312Ledger();
+         extended.push({realKey:'KeyW',nativeInputTicks:2,
+          actualNativeTickDelta:after.tick-before.tick,
+          actualTick:pressed.tick,before,after});
+         const witness=saveB326('REAL_NATIVE_EXTENSION_OBSERVED');
+         console.log('B326_ORIGINAL_UPPER_FLOOR_STEP',JSON.stringify({
+          step:i+1,body:after.actualBodyMeters,
+          nativeFoot:after.genuineHumanOriginalFootSolid,
+          verdict:witness.verdict,
+          extraMeters:witness.actualAdditionalPlanarMeters??0}));
+         if(witness.extendedUpperFloorProven||
+            witness.firstUnsupportedStep!==null||
+            !after.realHumanOriginalFootSupported||
+            after.genuineHumanOriginalFootSolid!==UPPER_FLOOR_SOLID)break;
+        }
+       }
+       const result=saveB326(extended.length?
+        'GENUINE_EXTENDED_KCC_INPUT_RECORDED':
+        'HOLD_NO_EXTENDED_ORIGINAL_UPPER_FLOOR_INPUT');
+       await picture('B326_TRUE_UPPER_FLOOR_EXTENSION');
+       console.log('B326_NATIVE_EXTENDED_UPPER_FLOOR_RESULT',
+        JSON.stringify({verdict:result.verdict,
+         extraMeters:result.actualAdditionalPlanarMeters??0,
+         totalVerifiedMeters:result.combinedVerifiedUpperFloorMeters??0,
+         source:'25/17/26/0',productionAuthorized:false}));
+      }
+      // This screenshot cannot interrupt the B324->B326 KCC chain.
+      await picture('B324_TRUE_ORIGINAL_UPPER_FLOOR_KCC');
      }
      // Record a true framebuffer without interrupting the B322->B324
      // input chain. B322's independent pass uses native per-step ledgers.
