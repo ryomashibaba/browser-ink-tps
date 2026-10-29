@@ -1,0 +1,52 @@
+name: T21 B328 real source human A1 rally recovery
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b328-genuine-a1-native-approach.mjs'
+      - 'scripts/t21-b328-genuine-a1-native-approach.test.mjs'
+      - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - '.github/workflows/t21-b328-real-source-ally-recovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b328-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  original-human-a1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: node --test scripts/t21-b328-genuine-a1-native-approach.test.mjs
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Genuine original A1 and human source KCC trial
+        env:
+          T21_B139_VARIANT: ALLY_RALLY
+          T21_B162_REAL_ALLY_SYNC: '1'
+          T21_B194_REAL_PLAYER_BUTTON: '1'
+          T21_B200_REAL_REPLAY: '0'
+          T21_B201_REAL_PAUSE_RESUME: '0'
+          T21_B202_REAL_CONTROLS: '0'
+          T21_B203_REAL_FULL_ROUND: '1'
+          T21_B328_TRUE_A1_NATIVE_RECOVERY: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-b328
+        run: node scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Independently verify true A1 approach, if witnessed
+        if: always()
+        continue-on-error: true
+        run: node scripts/t21-b328-genuine-a1-native-approach.mjs /tmp/t21-b328/b328-actual-original-human-a1.json
+      - name: Preserve native source A1 recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b328-actual-original-human-a1-recovery
+          path: /tmp/t21-b328/
+          retention-days: 14
+          if-no-files-found: warn

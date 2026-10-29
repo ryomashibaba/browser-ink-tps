@@ -24,6 +24,8 @@ import {b326AuditExtendedUpperFloor}
  from './t21-b326-extended-original-upper-floor.mjs';
 import {b327CheckGenuinePostClearLowerShot}
  from './t21-b327-original-lower-post-clear-shot.mjs';
+import {b328Plan,b328AuditStep}
+ from './t21-b328-genuine-a1-native-approach.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -63,6 +65,10 @@ if(b316GenuineRampWalk&&(!b162CoopTrial||!b203FullRoundTrial||
  !process.env.T21_B312_SECOND_HUMAN_SURFACE||b200ReplayTrial))
  throw Error('B316_REQUIRES_B315_SINGLE_ORIGINAL_COOP_SHOOTING');
 const b312SecondInkTrial=process.env.T21_B312_SECOND_HUMAN_SURFACE==='1';
+const b328NativeA1=process.env.T21_B328_TRUE_A1_NATIVE_RECOVERY==='1';
+if(b328NativeA1&&(!b162CoopTrial||!b203FullRoundTrial||
+ b312SecondInkTrial||b316GenuineRampWalk||variant!=='ALLY_RALLY'))
+ throw Error('B328_RESTRICT_TO_SOURCE_ONLY_A1_NATIVE_TRIAL');
 if(b312SecondInkTrial&&(!b162CoopTrial||!b203FullRoundTrial||
  variant!=='ALLY_RALLY'))throw Error('B312_REQUIRES_TRUE_ORIGINAL_COOP');
 
@@ -194,6 +200,40 @@ async function b319TrueShortNativeKey(key,wantedTicks){
  const after=await snapshot();authority(after,'FIXED');
  if(after.tick<result.tick||after.tick-before.tick>24)
   fail('B319_REAL_INPUT_OVERRUN_HOLD');
+ return after;
+}
+/** B328: short CDP WASD input, not a scripted position/tick change. */
+async function b328ShortNativeKey(key,ticks){
+ if(!['KeyW','KeyA','KeyS','KeyD'].includes(key)||ticks!==2)
+  fail('B328_REJECT_UNVERIFIED_KEY');
+ const before=await snapshot();authority(before,'FIXED');
+ if(before.paused||before.matchState!=='PLAYING'||
+  before.cpu.physicalFootRelocations!==0)
+  fail('B328_NOT_ORIGINAL_NATIVE_PLAYING');
+ let pressed=false,seen=null;
+ try{
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...realKeys[key]});
+  pressed=true;
+  const deadline=Date.now()+6000;
+  while(Date.now()<deadline){
+   await sleep(35);
+   const n=await snapshot();authority(n,'FIXED');
+   if(n.cpu.physicalFootRelocations!==0)
+    fail('B328_ORIGINAL_CPU_RELOCATED');
+   if(n.tick>before.tick){
+    seen=n;
+    if(n.tick-before.tick>=ticks||n.paused||
+       n.matchState!=='PLAYING')break;
+   }
+  }
+ }finally{
+  if(pressed)await cmd('Input.dispatchKeyEvent',
+   {type:'keyUp',...realKeys[key]});
+ }
+ const after=await snapshot();authority(after,'FIXED');
+ if(!seen||seen.tick<=before.tick||
+  after.tick<=before.tick||after.tick-before.tick>24)
+  fail('B328_NATIVE_INPUT_TICK_HOLD');
  return after;
 }
 /** B162: real native original route then real on-screen cooperative
@@ -1171,6 +1211,45 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   }
   saveAttempt(actualLower,'B164_GENUINE_LOWER_SOURCE_FOOT_AND_A1_GATE');
   console.log('B164_ACTUAL_SOURCE_STANDOFF_WITNESS',JSON.stringify(lowerReport));
+  if(b328NativeA1&&coopAttempt===1){
+   await evaluate(`(() => {const u=new URL(location.href);
+    u.searchParams.set('t21B312','genuineSecondHumanPaint');
+    history.replaceState(null,'',u.href);return true;})()`);
+   const steps=[];
+   const saveRally=status=>writeFileSync(
+    resolve(OUTPUT,'b328-actual-original-human-a1.json'),
+    JSON.stringify({schema:'B328_TRUE_NATIVE_A1_RECOVERY',
+     source:'25/17/26/0',status,steps,
+     realHumanInputOnly:true,sourceRouteCertified:false,
+     productionAuthorized:false,original4v4Certified:false},null,2));
+   saveRally('ORIGINAL_NATIVE_A1_RESEARCH_STARTED');
+   for(let i=0;i<8;i++){
+    const before=await snapshot();authority(before,'FIXED');
+    if(before.b25SourcePaintRun.status!=='RUNNING'||
+       before.matchState!=='PLAYING')break;
+    const initial=await b312Ledger();
+    const plan=b328Plan(before,initial);
+    if(!plan.eligible){
+     console.log('B328_HOLD_NO_REAL_SUPPORTED_A1_INPUT',
+      JSON.stringify({step:i+1,reason:plan.reason,gap:plan.gap}));
+     break;
+    }
+    await b328ShortNativeKey(plan.key,2);
+    const after=await snapshot();authority(after,'FIXED');
+    const final=await b312Ledger();
+    const audit=b328AuditStep(before,initial,after,final,plan);
+    steps.push({before,initial,after,final,plan,audit});
+    saveRally('REAL_CDP_INPUT_OBSERVED');
+    console.log('B328_REAL_HUMAN_ORIGINAL_A1_KCC_STEP',
+     JSON.stringify({step:i+1,key:plan.key,
+      humanMeters:audit.actualHumanMeters,
+      gapReduced:audit.measuredA1GapReductionMeters,
+      verdict:audit.verdict}));
+    if(!audit.passes)break;
+   }
+   saveRally(steps.length?'REAL_NATIVE_MOVEMENT_ATTEMPT':'HOLD_NO_INPUT');
+   await picture('B328_REAL_SOURCE_A1_APPROACH');
+  }
  }else{
   saveAttempt(human,'B163_HOLD_REAL_HUMAN_OBJECTIVES_UNMET');
   console.log('B163_NATIVE_HUMAN_OBJECTIVE_HOLD',
