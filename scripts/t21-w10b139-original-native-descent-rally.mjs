@@ -131,6 +131,44 @@ async function nativeOriginalKeyboard(stage,observe){
    await cmd('Input.dispatchKeyEvent',{type:'keyUp',...realKeys[key]});
  }
 }
+/** B319: short real human key press with 35ms native observation,
+ * NOT a fake tick step. B316's 500ms polling overshot its first 6-tick
+ * request to 24 actual native ticks on the ramp's sharp lower corner. */
+async function b319TrueShortNativeKey(key,wantedTicks){
+ if(key!=='KeyW'||!Number.isSafeInteger(wantedTicks)||
+  wantedTicks<1||wantedTicks>6)fail('B319_UNVERIFIED_REAL_INPUT_PLAN');
+ const before=await snapshot();authority(before,'FIXED');
+ if(before.paused||before.matchState!=='PLAYING'||
+    before.cpu.physicalFootRelocations!==0)
+  fail('B319_NOT_TRUE_RUNNING_ORIGINAL_HUMAN');
+ let held=false,result=null;
+ const originalKey=realKeys[key];
+ try{
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...originalKey});
+  held=true;
+  const deadline=Date.now()+6000;
+  while(Date.now()<deadline){
+   await sleep(35);
+   const current=await snapshot();authority(current,'FIXED');
+   if(current.cpu.physicalFootRelocations!==0)
+    fail('B319_ACTOR_TELEPORT_OR_ORIGINAL_ACTOR_CHANGED');
+   if(current.tick>before.tick){
+    result=current;
+    if(current.tick-before.tick>=wantedTicks||
+       current.paused||current.matchState!=='PLAYING')break;
+   }
+  }
+ }finally{
+  if(held)await cmd('Input.dispatchKeyEvent',
+   {type:'keyUp',...originalKey});
+ }
+ if(!result||result.tick<=before.tick)
+  fail('B319_REAL_BROWSER_NATIVE_CLOCK_DID_NOT_ADVANCE');
+ const after=await snapshot();authority(after,'FIXED');
+ if(after.tick<result.tick||after.tick-before.tick>24)
+  fail('B319_REAL_INPUT_OVERRUN_HOLD');
+ return after;
+}
 /** B162: real native original route then real on-screen cooperative
  * 60Hz practice, no injected native ticks, movement, A1 paint or win.
  * This runs ONLY with explicit one-run QA opt-in on the A1 source variant.
@@ -749,15 +787,18 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       if(prior.realHumanOriginalFootSupported!==true||
          prior.sourceActorRelocations!==0||
          prior.tick>=stoppedAtTick+240)break;
-      const step=await nativeOriginalKeyboard({
-       name:(b318InteriorWalk?'B318':'B316')+'_REAL_RAMP_KCC_STEP_'+(i+1),
-       keys:['KeyW'],ticks:b318InteriorWalk?4:6
-      },()=>{});
+      const step=b318InteriorWalk?
+       await b319TrueShortNativeKey('KeyW',4):
+       await nativeOriginalKeyboard({
+        name:'B316_REAL_RAMP_KCC_STEP_'+(i+1),
+        keys:['KeyW'],ticks:6
+       },()=>{});
       const after=await b312Ledger();
       const seam=b318OriginalQuadPlanarSignedMargin(
        after.originalPositiveRampSourceQuad,after.actualBodyMeters);
       const witness={realKey:'KeyW',
-       nativeInputTicks:b318InteriorWalk?4:6,
+       nativeInputTicks:b318InteriorWalk?Math.min(4,after.tick-prior.tick):6,
+       actualNativeTickDelta:after.tick-prior.tick,
        nativeOriginalRampQuadMargin:seam,
        actualGameTick:step.tick,after};
       steps.push(witness);
