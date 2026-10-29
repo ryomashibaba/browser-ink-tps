@@ -1,0 +1,7 @@
+# B322 — Real source ramp crest, independent of upper floor transfer
+
+B321 authentic Chromium evidence in Actions #40834771091 confirmed human 60Hz KCC on the original right-low-route-ramp-positive-z for five supported steps; the farthest original uphill fraction was .65984, with 0.546m body height gain relative to the B320 entry. The actual right-low-team-a upper floor has NOT yet been physically reached.
+
+B322 starts at that actual B321 foot, aims via genuine CDP mouse to an INSIDE-original-ramp four-vertex target at uphill fraction .97, checks actual camera yaw (<=3 degrees difference), then sends bounded two-tick original human KeyW input. Each actual observed step records true Rapier support solid, real foot gap, original PaintSurface active footprint, true body world position, height compared with source ramp grade, and original 25/17/26/0 authority. An independent script checks continuity with maximum 0.8m planar and 0.35m vertical step, and no altered actors, ink, input ticks or navigation.
+
+Crest PASS requires actual continuous original ramp foot, v>=.90 and >=.32m body rise from B321. Floor transfer is a separate higher gate requiring the exact real Rapier solid \`UndertowT21D:right-low-team-a\` AND active \`right-low-team-a:paint\` directly under the human. If support disappears, HOLD; do not invent a bridge or route. The independent CI demands crest evidence but does not require transfer if no native transfer is observed. No original score, source solids, NavLink, 4v4, ART approval or production authorization changes.
