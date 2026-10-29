@@ -1,0 +1,24 @@
+name: T21 B332 independent real replay evidence validator
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b332-independent-original-replay.mjs'
+      - 'scripts/t21-b332-independent-original-replay.test.mjs'
+      - '.github/workflows/t21-b332-independent-replay-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect-source-proof-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --check scripts/t21-b332-independent-original-replay.mjs
+      - run: node --test scripts/t21-b332-independent-original-replay.test.mjs
+      - name: Keep real B200 evidence on HOLD until 5 original JSON files and 2 genuine frames exist
+        run: echo 'B332 schema-only tests: no real replay PASS is inferred until genuine Chrome artifacts are verified'
