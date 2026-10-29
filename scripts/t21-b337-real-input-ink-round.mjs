@@ -201,6 +201,32 @@ async function run(){
  writeFileSync(resolve(DIR,'b338-real-playing-hud.json'),
   JSON.stringify({schema:'B338_REAL_CHROMIUM_PLAYING_HUD',
    source:'25/17/26/0',winner:'NONE',nativeTick:started.tick,...b338Dom},null,2)+'\n');
+ // B338: true F8 QA→PLAYER round-trip inside the same native game.
+ const f8={key:'F8',code:'F8',windowsVirtualKeyCode:119,nativeVirtualKeyCode:119};
+ const toggleView=async()=>{for(const type of ['keyDown','keyUp'])
+  await send('Input.dispatchKeyEvent',{type,...f8});};
+ const uiState=()=>read('(() => {const u=document.querySelector("#ui-root"),g=document.querySelector("#t21-f3-b338-source-guide"),q=document.querySelector("#t21-f3-b205-real-round"),p=document.querySelector("#t21-f3-b25-paint-run");return {view:u?.dataset.t21B245Presentation,phase:u?.dataset.t21B338Phase,guideHidden:!g||getComputedStyle(g).display==="none",qaVisible:!!q&&getComputedStyle(q).display!=="none",practiceVisible:!!p&&getComputedStyle(p).display!=="none"}})()');
+ await toggleView();
+ const qaView=await wait(async()=>{
+  const u=await uiState();return u.view==='QA'&&u.guideHidden&&u.qaVisible?u:false;
+ },20000);
+ await toggleView();
+ const restoredView=await wait(async()=>{
+  const u=await uiState();
+  return u.view==='PLAYER'&&u.phase==='PLAYING'&&!u.guideHidden&&
+   !u.qaVisible&&!u.practiceVisible?u:false;
+ },20000);
+ const nativeAfterF8=verifyAuthority(await snapshot());
+ if(nativeAfterF8.matchState!=='PLAYING'||nativeAfterF8.paused||
+  nativeAfterF8.cpu.physicalRejoins.length!==7)
+  fail('B338_F8_CHANGED_NATIVE_WORLD');
+ writeFileSync(resolve(DIR,'b338-real-playing-hud.json'),
+  JSON.stringify({schema:'B338_REAL_CHROMIUM_PLAYING_HUD',
+   source:'25/17/26/0',winner:'NONE',
+   nativeTick:started.tick,...b338Dom,
+   genuineF8QaRoundTrip:{qaView,restoredView,
+    nativeTickAfter:nativeAfterF8.tick,
+    nativeOriginalAuthorityUnchanged:true}},null,2)+'\\n');
  await picture('B337_START');
  await send('Input.dispatchMouseEvent',
   {type:'mouseMoved',x:820,y:450,button:'none'});
