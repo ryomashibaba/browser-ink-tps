@@ -193,6 +193,14 @@ async function run(){
   return s;
  };
  const started=await sample('START');
+ const b338Dom=await read('(() => {const ui=document.querySelector("#ui-root"),g=document.querySelector("#t21-f3-b338-source-guide"),card=document.querySelector("#t21-f3-b25-paint-run"),qa=document.querySelector("#t21-f3-b205-real-round");return {view:ui?.dataset.t21B245Presentation,phase:ui?.dataset.t21B338Phase,text:g?.textContent,guideShown:!!g&&getComputedStyle(g).display!=="none",cardVisible:!!card&&getComputedStyle(card).display!=="none",qaVisible:!!qa&&getComputedStyle(qa).display!=="none",scoreable:document.querySelector("#t21-f3-practice-hud")?.dataset.sourceScoreable}})()');
+ if(b338Dom?.view!=='PLAYER'||b338Dom.phase!=='PLAYING'||
+  !b338Dom.guideShown||!b338Dom.text?.includes('WASD MOVE')||
+  b338Dom.cardVisible||b338Dom.qaVisible||b338Dom.scoreable!=='0')
+  fail('B338_REAL_PLAYER_PHASE_NOT_ISOLATED_'+JSON.stringify(b338Dom));
+ writeFileSync(resolve(DIR,'b338-real-playing-hud.json'),
+  JSON.stringify({schema:'B338_REAL_CHROMIUM_PLAYING_HUD',
+   source:'25/17/26/0',winner:'NONE',nativeTick:started.tick,...b338Dom},null,2)+'\n');
  await picture('B337_START');
  await send('Input.dispatchMouseEvent',
   {type:'mouseMoved',x:820,y:450,button:'none'});

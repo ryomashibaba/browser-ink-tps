@@ -27,6 +27,9 @@ export function installB245SourcePresentation(
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b58-source-session,',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b183-real-first-drop,',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b205-real-round,',
+  // B338: play without a floating practice card; F8 QA or PAUSE restores it.
+  '#ui-root[data-t21-b245-presentation="PLAYER"][data-t21-b338-phase="PLAYING"] #t21-f3-b25-paint-run',
+  '{display:none!important;}',
   '#ui-root[data-t21-b245-presentation="QA"] #t21-f3-b286-source-team',
   '{display:none!important;}',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b211-real-battle-roster,',

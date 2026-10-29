@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {formatF3PlayableHud,b290SourcePlayerHudPhase,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
+import {formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
 function state():F3PlayableHudState{
@@ -191,5 +191,26 @@ describe('B290 no fictitious READY after real native source movement',()=>{
    formattedState:'SAFE STOP'})).toBe('SAFE STOP');
   expect(b290SourcePlayerHudPhase({...v,matchState:'TIME_UP',
    formattedState:'TIME COMPLETE — NO WINNER'})).toBe('TIME COMPLETE — NO WINNER');
+ });
+});
+
+describe('B338 actual native phase explanation, no fabricated result',()=>{
+ const g=(matchState:'STAGING'|'PLAYING'|'TIME_UP',paused:boolean,
+  tick:number,stopReason:string|null=null,playerView=true)=>
+  b338SourceRoundGuide({matchState,paused,tick,stopReason,playerView});
+ it('distinguishes tick0 READY, staging, paused rejoin and pause',()=>{
+  expect(g('STAGING',true,0).phase).toBe('READY');
+  expect(g('STAGING',false,0).phase).toBe('STAGING');
+  expect(g('STAGING',true,6).phase).toBe('PAUSED');
+  expect(g('PLAYING',true,100).phase).toBe('PAUSED');
+ });
+ it('shows actual controls only in PLAYING and no winner at TIME_UP',()=>{
+  expect(g('PLAYING',false,101).phase).toBe('PLAYING');
+  expect(g('PLAYING',false,101).text).toContain('WASD MOVE');
+  expect(g('TIME_UP',true,10800).text).toContain('NO WINNER');
+ });
+ it('preserves invisible QA and explicit safety stop',()=>{
+  expect(g('PLAYING',false,101,null,false)).toEqual({phase:'QA',text:''});
+  expect(g('PLAYING',false,101,'FAILED').phase).toBe('STOP');
  });
 });

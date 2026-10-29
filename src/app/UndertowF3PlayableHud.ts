@@ -163,6 +163,24 @@ export function b290SourcePlayerHudPhase(x:{
   return 'PAUSED · SOURCE REJOIN';
  return x.formattedState;
 }
+/** B338: only native-authoritative read-only source round guidance. */
+export function b338SourceRoundGuide(x:{
+ playerView:boolean;matchState:'STAGING'|'PLAYING'|'TIME_UP';
+ paused:boolean;tick:number|undefined;stopReason:string|null;
+}):{phase:'READY'|'STAGING'|'PLAYING'|'PAUSED'|'TIME_UP'|'STOP'|'QA';text:string}{
+ if(!x.playerView)return {phase:'QA',text:''};
+ if(x.stopReason)return {phase:'STOP',text:'SAFE STOP · NO OFFICIAL RESULT'};
+ if(x.matchState==='TIME_UP')return {phase:'TIME_UP',
+  text:'TIME UP · NO WINNER · USE REPLAY CONTROLS'};
+ if(x.paused&&x.matchState==='STAGING'&&x.tick===0)
+  return {phase:'READY',text:'READY · CLICK START · 180s SOURCE-ONLY'};
+ if(x.paused)return {phase:'PAUSED',
+  text:'PAUSED · CLICK RESUME TO CONTINUE THIS WORLD'};
+ if(x.matchState==='STAGING')
+  return {phase:'STAGING',text:'STAGING · 7 REAL CPU PREPARING'};
+ return {phase:'PLAYING',
+  text:'WASD MOVE · MOUSE AIM · LEFT CLICK FIRE · ESC / P PAUSE'};
+}
 export function createF3PlayableHud(ui:HTMLElement){
  const root=document.createElement('section');
  root.id='t21-f3-practice-hud';
@@ -194,6 +212,9 @@ export function createF3PlayableHud(ui:HTMLElement){
   '</div>'+
   '<div id="t21-f3-hud-practice" style="font-size:10px;margin-top:5px;color:#ffc59b">'+
    'UNSCORED / NO OFFICIAL RESULT</div>'+
+  '<div id="t21-f3-b338-source-guide" hidden aria-live="off"'+
+  ' style="margin-top:6px;padding-top:6px;border-top:1px solid #ffffff32;'+
+  'color:#bdedf1;font:650 10px/1.4 system-ui"></div>'+
   // B84: display only a *real* original-surface enemy ink relation or
   // actual low player HP. This is practice guidance, never a Turf result.
   '<div id="t21-f3-b84-danger" hidden role="status" aria-live="off"'+
@@ -280,6 +301,7 @@ export function createF3PlayableHud(ui:HTMLElement){
  const vitals=select('t21-f3-hud-vitals');
  const cpu=select('t21-f3-hud-cpu');
  const practice=select('t21-f3-hud-practice');
+ const b338Guide=select('t21-f3-b338-source-guide');
  const danger=select('t21-f3-b84-danger');
  const activity=new B75SourceInkActivity();
  const activityBox=select('t21-f3-b75-source-ink-live');
@@ -411,6 +433,16 @@ export function createF3PlayableHud(ui:HTMLElement){
   vitals.textContent='HP '+v.hp+' · INK '+v.ink;
   cpu.textContent='CPU '+v.cpuRecovered+'/7 · '+v.sourceState;
   practice.textContent=v.scoring;
+  const b338=b338SourceRoundGuide({
+   playerView:ui.dataset.t21B245Presentation==='PLAYER',
+   matchState:value.matchState,paused:value.paused,tick:value.tick,
+   stopReason:value.stopReason
+  });
+  ui.dataset.t21B338Phase=b338.phase;
+  b338Guide.hidden=b338.phase==='QA';
+  if(!b338Guide.hidden&&b338Guide.textContent!==b338.text)
+   b338Guide.textContent=b338.text;
+  b338Guide.dataset.t21B338GameplayWrites='0';
   danger.hidden=v.hazard==='NONE';
   const dangerText=v.hazard==='CRITICAL_ENEMY_INK'?
    'CRITICAL HP + ENEMY INK · ESCAPE & RECOVER':
