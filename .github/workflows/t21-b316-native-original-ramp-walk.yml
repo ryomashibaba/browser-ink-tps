@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/t21-b316-native-human-ramp-walk.mjs'
       - 'scripts/t21-b316-native-human-ramp-walk.test.mjs'
+      - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
       - '.github/workflows/t21-b316-native-original-ramp-walk.yml'
   workflow_dispatch:
 permissions:
