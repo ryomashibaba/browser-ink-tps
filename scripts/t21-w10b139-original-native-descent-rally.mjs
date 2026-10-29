@@ -14,6 +14,8 @@ import {b318NativeOriginalRampInterior,b318OriginalQuadPlanarSignedMargin}
  from './t21-b318-original-ramp-interior.mjs';
 import {RAMP_SOLID,b320PlanOriginalTrueRampUphill,b320AuditActualNativeRampAscent}
  from './t21-b320-original-ramp-uphill-kcc.mjs';
+import {b321OriginalRampHighSectionPlan,b321AuditTrueOriginalHigherRamp}
+ from './t21-b321-real-upper-ramp-kcc.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -33,6 +35,9 @@ const b203FullRoundTrial=process.env.T21_B203_REAL_FULL_ROUND==='1';
 const b316GenuineRampWalk=process.env.T21_B316_GENUINE_RAMP_WALK==='1';
 const b318InteriorWalk=process.env.T21_B318_INTERIOR_RAMP_WALK==='1';
 const b320UphillStudy=process.env.T21_B320_TRUE_SOURCE_RAMP_UPHILL==='1';
+const b321HigherRamp=process.env.T21_B321_TRUE_UPPER_RAMP_KCC==='1';
+if(b321HigherRamp&&!b320UphillStudy)
+ throw Error('B321_REQUIRES_TRUE_B320_UPHILL_KCC');
 if(b320UphillStudy&&(!b318InteriorWalk||!b316GenuineRampWalk))
  throw Error('B320_REQUIRES_GENUINE_B318_ORIGINAL_RAMP_KCC');
 if(b318InteriorWalk&&!b316GenuineRampWalk)
@@ -900,6 +905,72 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      realSteps:ascentSteps.length,
      gain:verdict.actualMaximumHumanBodyHeightGainMeters??null,
      source:'25/17/26/0',productionAuthorized:false}));
+   if(b321HigherRamp){
+    const realStart=await b312Ledger();
+    const highSteps=[];
+    const baselinePassed=verdict.verdict===
+     'PASS_GENUINE_ORIGINAL_RAMP_UPHILL_KCC';
+    const saveHigh=(status,aimPlan=null)=>{
+     const payload={schema:'B321_TRUE_CDP_UPPER_RAMP_TRAVERSE',
+      source:'25/17/26/0',status,
+      prerequisiteB320Passed:baselinePassed,
+      first:realStart,aimPlan,steps:highSteps,
+      productionAuthorized:false,original4v4Certified:false,
+      artAccepted:false};
+     const report=b321AuditTrueOriginalHigherRamp(payload);
+     writeFileSync(resolve(OUTPUT,'b321-true-original-upper-ramp.json'),
+      JSON.stringify({...payload,preliminary:report},null,2));
+     return report;
+    };
+    if(baselinePassed&&realStart.realHumanOriginalFootSupported&&
+       realStart.genuineHumanOriginalFootSolid===RAMP_SOLID){
+     await cmd('Input.dispatchMouseEvent',
+      {type:'mouseMoved',x:800,y:450,button:'none'});
+     const beforeCamera=(await snapshot()).cameraSourcePractice;
+     const target=b321OriginalRampHighSectionPlan({
+      ledger:realStart,camera:beforeCamera});
+     if(target.safe){
+      await cmd('Input.dispatchMouseEvent',
+       {type:'mouseMoved',x:target.screenX,y:450,button:'none'});
+      await sleep(150);
+      const rotated=(await snapshot()).cameraSourcePractice;
+      const cameraDelta=Math.abs(wrap(target.targetYaw-rotated.yawDegrees));
+      if(cameraDelta<=3){
+       for(let i=0;i<14;i++){
+        const before=await b312Ledger();
+        if(!before.realHumanOriginalFootSupported||
+         before.genuineHumanOriginalFootSolid!==RAMP_SOLID)break;
+        const stepped=await b319TrueShortNativeKey('KeyW',4);
+        const after=await b312Ledger();
+        highSteps.push({realKey:'KeyW',nativeInputTicks:Math.min(4,
+         after.tick-before.tick),actualNativeTickDelta:after.tick-before.tick,
+         trueNativeTick:stepped.tick,after});
+        const audit=saveHigh('REAL_ORIGINAL_UPPER_RAMP_KCC_IN_PROGRESS',target);
+        console.log('B321_TRUE_ORIGINAL_HIGH_RAMP_STEP',JSON.stringify({
+         count:i+1,realNativeTick:after.tick,
+         genuineSupport:after.genuineHumanOriginalFootSolid,
+         actualBody:after.actualBodyMeters,
+         gainedMeters:audit.maximumHeightIncreaseMeters??null,
+         verdict:audit.verdict}));
+        if(audit.verdict==='PASS_GENUINE_ORIGINAL_RAMP_HIGH_SECTION_KCC'||
+         !after.realHumanOriginalFootSupported||
+         after.genuineHumanOriginalFootSolid!==RAMP_SOLID)break;
+       }
+      }else console.log('B321_HOLD_ORIGINAL_REAL_CDP_YAW_MISMATCH',
+       JSON.stringify({desired:target.targetYaw,
+        actual:rotated.yawDegrees,cameraDelta}));
+     }
+    }
+    const finalHigh=saveHigh(highSteps.length?
+     'TRUE_ORIGINAL_HIGH_RAMP_KCC_OBSERVED':
+     'HOLD_NOT_YET_PHYSICALLY_ATTEMPTED');
+    await picture('B321_TRUE_ORIGINAL_UPPER_RAMP_KCC');
+    console.log('B321_FINAL_NATIVE_UPPER_RAMP_RESULT',
+     JSON.stringify({verdict:finalHigh.verdict,
+      actualKccSteps:highSteps.length,
+      physicalHeightGained:finalHigh.maximumHeightIncreaseMeters??0,
+      source:'25/17/26/0',artAccepted:false}));
+   }
   }
  }
   }

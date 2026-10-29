@@ -1,0 +1,9 @@
+# B321 real ORIGINAL high-section ramp walk (not crest-exit approval)
+
+The prior real [B320 Chromium CI #40833843551](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40833843551) SUCCESS and independent KCC JSON provided an authentic body starting at (1.9850,4.0714,48.7325) on original right-low ramp and three more continuously supported 60Hz KCC steps to (2.9113,4.2852,49.1098), **+0.214m true body height**, source ramp uphill coordinate +.1426 to .2486. B315 actual Human 3 original painted surfaces, B319 true original-ramp entrance also independently passed in the same run.
+
+B321 adds another QA-only research segment **after and only if native B320 physical PASS**. Use the original ramp four-vertex basis to select an upper INTERIOR target at original width ~.43 and uphill fraction ~.75, never a new solid/NavLink, never an imposed player or camera pose. Send only actual CDP mouse events and verify real camera yaw, then at most 14 measured 4-native-tick KeyW actions. Observe actual original Rapier human foot support, original paint surface active footprint, actor position/ticks and height versus the actual registered slope (source-plane expected y change).
+
+For B321 physical high-section PASS: at least four actual steps, genuine original ramp support at every step, original active ramp paint footprint, measured foot gap <=.18m, measured body elevation >=.45m from B320 endpoint, and native original ramp uphill coordinate at least .60. Source-based coordinates alone cannot count as an actual climb, nor can a partial body height change without true support. Failure/unsafe step yields HOLD. This threshold proves **high section**, not full 4.5m crest or next-high-floor connectivity.
+
+No stage geometry, 25/17/26/0 authority, actual CPU actor movement, ink, official score, production, or formal 4v4 certification is modified. ART HOLD remains.
