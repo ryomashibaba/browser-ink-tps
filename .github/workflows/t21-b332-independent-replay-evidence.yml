@@ -9,10 +9,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   inspect-source-proof-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +21,33 @@ jobs:
           node-version: '24'
       - run: node --check scripts/t21-b332-independent-original-replay.mjs
       - run: node --test scripts/t21-b332-independent-original-replay.test.mjs
-      - name: Keep real B200 evidence on HOLD until 5 original JSON files and 2 genuine frames exist
+      # Pin to a completed, independently inspected B331 Chromium run.
+      # Do not infer a new pass from the unit tests or a mismatched artifact.
+      - name: Verify actual B331 source run and immutable HEAD
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo 'B332 schema-only tests: no real replay PASS is inferred until genuine Chrome artifacts are verified'
+          gh api repos/${{ github.repository }}/actions/runs/40865251955 \
+            --jq '[.conclusion,.status,.head_sha,.head_branch] | @tsv' \
+            | tee /tmp/b332-source-run.txt
+          test "$(cat /tmp/b332-source-run.txt)" = "$(printf 'success\tcompleted\t1159b6643124dd2f5cbdfd34325e0cbddff0e6b4\tdev/t21-f4e103w-qa-infra')"
+      - name: Download completed B331 genuine browser evidence (not fixture)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 40865251955
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          name: w10b162-actual-original-human-A1-ally-sync
+          path: /tmp/t21-b332-real
+      - name: Independently audit two TRUE clears and three fresh Chromium worlds
+        run: node scripts/t21-b332-independent-original-replay.mjs /tmp/t21-b332-real
+      - name: Preserve source artifacts and independent B332 PASS or HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b333-pinned-b331-independent-real-replay-verdict
+          path: |
+            /tmp/b332-source-run.txt
+            /tmp/t21-b332-real/
+          retention-days: 14
+          if-no-files-found: warn
