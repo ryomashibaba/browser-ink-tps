@@ -1588,6 +1588,10 @@ async function run(){
           b308.noPhysicallyCertifiedOtherSurfaceYet!==true||
           b308.source!=='25/17/26/0'||b308.official4v4Certified!==false)
         fail('B308_REAL_NATIVE_17_SURFACE_ROUTE_LEDGER_INVALID');
+       if(b308.b310NativeThreeFootProbes?.originalPaintSurfaceCount!==17||
+          b308.b310NativeThreeFootProbes?.actualActiveOriginalCellProbes>51||
+          b308.b310NativeThreeFootProbes?.truePlayerKccTraversalProven!==false)
+        fail('B310_NATIVE_THREE_FOOT_PROBES_NOT_GROUNDED');
        if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
         fail('B308_AUDIT_CHANGED_REAL_PLAYER_OR_INK_WORLD');
        await sleep(190);
@@ -1596,6 +1600,13 @@ async function run(){
         fail('B308_READONLY_RECAST_AUDIT_CHANGED_REAL_FRAMEBUFFER');
        writeFileSync(resolve(OUTPUT,'b308-real-original-multisurface-recast-opportunity.json'),
         JSON.stringify(b308,null,2));
+       writeFileSync(resolve(OUTPUT,'b310-real-17-original-nav-rapier-foot.json'),
+        JSON.stringify(b308.b310NativeThreeFootProbes,null,2));
+       console.log('B310_TRUE_NATIVE_ORIGINAL_FOOT_TRIPLE_PROBES',
+        JSON.stringify({probes:b308.b310NativeThreeFootProbes.actualActiveOriginalCellProbes,
+         candidate:b308.b310NativeThreeFootProbes.navCandidateSources.length,
+         staticFoot:b308.b310NativeThreeFootProbes.navPlusStaticFootSources.length,
+         actualHumanKccProven:false}));
        console.log('B308_REAL_NATIVE_17_ORIGINAL_SURFACE_ROUTE_AUDIT',
         JSON.stringify({originalPaintedSurfaces:b308.originalPaintedSurfaceCount,
          candidates:b308.nextUnpaintedNativeNavCandidateCount,

@@ -172,6 +172,7 @@ import {b271RegistrationGate,b271NativeFootprintProbes,
  from './B271MultiSurfaceRegistration';
 import {b308NativeRouteOpportunityGate,b308NativePathIsOnlyCandidate,
  b308SummarizeNativeOriginalSurfaces} from './B308NativeOriginalOtherPaintRoute';
+import {b310CheckOriginalTripleRoutes} from './B310RealThreeSourceFootProbes';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -3082,6 +3083,27 @@ export class UndertowF3PlayablePreviewApp{
     endSnap:path.endSnapDistanceMeters,
     endpointError:path.endpointErrorMeters,reachedTarget:path.reachedTarget
    });
+   // B310: first original native Recast path is reused; the two
+   // other ORIGINAL ACTIVE footprint probes are read-only.
+   const nativeProbes=f.probes.map((cell,i)=>{
+    const point=new Vec3(...cell.world);
+    const p=i===0?path:this.nav.auditPath(player,point,.6);
+    const foot=this.physics.castCharacterFootSupport(
+     new Vec3(point.x,point.y+
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,point.z),
+     PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+    const gap=foot?Math.abs(foot.point.y-point.y):null;
+    return {grid:cell.grid,world:cell.world,owner:cell.owner,
+     navCandidate:b308NativePathIsOnlyCandidate({
+      querySuccess:p.querySuccess,pointCount:p.pointCount,
+      startSnap:p.startSnapDistanceMeters,endSnap:p.endSnapDistanceMeters,
+      endpointError:p.endpointErrorMeters,reachedTarget:p.reachedTarget}),
+     startSnap:finite(p.startSnapDistanceMeters),
+     endSnap:finite(p.endSnapDistanceMeters),pathPointCount:p.pointCount,
+     endError:finite(p.endpointErrorMeters),
+     footSolidId:foot?.solidId??null,footGapMeters:gap,
+     footObserved:foot!==null&&gap!==null&&gap<=.4};
+   });
    return {surfaceId:surface.id,actualOwnerCells:actualOwned,
     activeFootprintCells:f.activeCells,
     sourceCellWorld:probe.world,
@@ -3092,14 +3114,19 @@ export class UndertowF3PlayablePreviewApp{
     nativePathPointCount:path.pointCount,
     nativePathEndpointErrorMeters:finite(path.endpointErrorMeters),
     nativePathReachesSnappedTarget:path.reachedTarget,
-    strictNativeNavCandidateOnly:navCandidate
+    strictNativeNavCandidateOnly:navCandidate,
+    nativeProbes
    };
   });
   return {nativeTick:n.tick,actualPlayerPosition:human,
    actualHumanShots:n.shotsFired,
    actualHumanPaintCells:n.b23HumanInkFeedback.humanChangedCells,
    genuinePlayerTravelMeters:moved,
-   ...b308SummarizeNativeOriginalSurfaces(rows,owner.actualOwnerCells)};
+   ...b308SummarizeNativeOriginalSurfaces(rows,owner.actualOwnerCells),
+   b310NativeThreeFootProbes:b310CheckOriginalTripleRoutes(
+    rows.map(r=>({surfaceId:r.surfaceId,owned:r.actualOwnerCells,
+     active:r.activeFootprintCells,probes:r.nativeProbes})),
+    owner.actualOwnerCells)};
  }
  /** B264: 24 source-verified real owned paint cell rays maximum.
   * Ray checks compare exact original F3L optical triangles and certified
