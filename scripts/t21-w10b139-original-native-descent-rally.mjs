@@ -8,6 +8,8 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import {sampleB140RealSourcePhysicalTrace} from './t21-w10b140-real-physics-sample.mjs';
 import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
  from './t21-b313-actual-original-cell-aim.mjs';
+import {RAMP,planB316ActualOriginalRampApproach,auditB316RealMovement}
+ from './t21-b316-native-human-ramp-walk.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -24,6 +26,10 @@ const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
 const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
 const b202ControlsTrial=process.env.T21_B202_REAL_CONTROLS==='1';
 const b203FullRoundTrial=process.env.T21_B203_REAL_FULL_ROUND==='1';
+const b316GenuineRampWalk=process.env.T21_B316_GENUINE_RAMP_WALK==='1';
+if(b316GenuineRampWalk&&(!b162CoopTrial||!b203FullRoundTrial||
+ !process.env.T21_B312_SECOND_HUMAN_SURFACE||b200ReplayTrial))
+ throw Error('B316_REQUIRES_B315_SINGLE_ORIGINAL_COOP_SHOOTING');
 const b312SecondInkTrial=process.env.T21_B312_SECOND_HUMAN_SURFACE==='1';
 if(b312SecondInkTrial&&(!b162CoopTrial||!b203FullRoundTrial||
  variant!=='ALLY_RALLY'))throw Error('B312_REQUIRES_TRUE_ORIGINAL_COOP');
@@ -772,6 +778,82 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   actualNewTaggedA1Ink:run.actualOriginalA1ChangedImpactCells,
   sourceA1ImpactEvents:run.actualOriginalA1TaggedImpactEvents,
   officialWinner:'NONE'}));
+ if(b316GenuineRampWalk&&coopAttempt===1){
+  // Run AFTER actual B162 first ally clear. It may fail KCC ramp traversal
+  // without losing the independently verified B315 3-source proof.
+  const first=await b312Ledger();
+  const angle=(await snapshot()).cameraSourcePractice;
+  const plan=planB316ActualOriginalRampApproach({ledger:first,camera:angle});
+  const steps=[];
+  const saveB316=(status)=>{
+   const result={schema:'B316_TRUE_CDP_LOWER_ORIGINAL_RAMP_WALK',
+    status,first,angle,plan,steps,
+    ...(steps.length?auditB316RealMovement({first,steps}):{
+     verdict:'HOLD_NO_SAFE_ORIGINAL_RAMP_MOVEMENT_STARTED',
+     reachedOriginalRampOnGenuineCharacterKcc:false}),
+    original4v4Certified:false,productionAuthorized:false,artAccepted:false};
+   writeFileSync(resolve(OUTPUT,'b316-genuine-original-human-ramp-walk.json'),
+    JSON.stringify(result,null,2));
+   return result;
+  };
+  if(plan.candidate&&first.realHumanOriginalFootSupported){
+   // This is a real CDP mouse turn. The original PlayerController uses
+   // forward [sin(yaw),0,-cos(yaw)] for KeyW, not shot target yaw.
+   await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+    x:800,y:450,button:'none'});
+   const cameraBefore=(await snapshot()).cameraSourcePractice;
+   const freshPlan=planB316ActualOriginalRampApproach({
+    ledger:first,camera:cameraBefore});
+   const selected=freshPlan.candidate;
+   if(selected){
+    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+     x:selected.screenX,y:450,button:'none'});
+    await sleep(160);
+    const turned=(await snapshot()).cameraSourcePractice;
+    const turnError=Math.abs(wrap(
+     selected.targetForwardYaw-turned.yawDegrees));
+    if(turnError<=3&&first.realHumanOriginalFootSupported){
+     const stoppedAtTick=(await snapshot()).tick;
+     for(let i=0;i<12;i++){
+      const prior=await b312Ledger();
+      if(prior.realHumanOriginalFootSupported!==true||
+         prior.sourceActorRelocations!==0||
+         prior.tick>=stoppedAtTick+240)break;
+      const step=await nativeOriginalKeyboard({
+       name:'B316_REAL_RAMP_KCC_STEP_'+(i+1),
+       keys:['KeyW'],ticks:6
+      },()=>{});
+      const after=await b312Ledger();
+      const witness={realKey:'KeyW',nativeInputTicks:6,
+       actualGameTick:step.tick,after};
+      steps.push(witness);
+      const report=auditB316RealMovement({first,steps});
+      console.log('B316_GENUINE_ORIGINAL_SHORT_KCC_STEP',
+       JSON.stringify({step:i+1,foot:after.genuineHumanOriginalFootSolid,
+        body:after.actualBodyMeters,displacement:
+         report.actualMaximumPlanarDisplacementMeters,
+        rampAccepted:report.reachedOriginalRampOnGenuineCharacterKcc}));
+      saveB316('REAL_INPUT_IN_PROGRESS');
+      if(report.reachedOriginalRampOnGenuineCharacterKcc||
+         after.realHumanOriginalFootSupported!==true||
+         after.genuineHumanOriginalFootSolid!==
+          'UndertowT21D:first-drop-landing-positive-z'&&
+         after.genuineHumanOriginalFootSolid!==RAMP)break;
+     }
+    }else console.log('B316_HOLD_GENUINE_PLAYER_CAMERA_TURN_MISMATCH',
+     JSON.stringify({actualYaw:turned.yawDegrees,desired:
+      selected.targetForwardYaw,turnError}));
+   }
+  }
+  const finalB316=saveB316(steps.length?'REAL_NATIVE_KCC_ROUTE_OBSERVED':
+   'HOLD_UNSAFE_OR_UNREACHABLE_RAMP_APPROACH');
+  await picture('B316_REAL_ORIGINAL_RAMP_KCC_AFTER_ATTEMPT');
+  console.log('B316_REAL_ORIGINAL_RAMP_KCC_VERDICT',JSON.stringify({
+   verdict:finalB316.verdict,
+   realSteps:steps.length,
+   physicallyReached:finalB316.reachedOriginalRampOnGenuineCharacterKcc,
+   source:'25/17/26/0',productionAuthorized:false}));
+ }
 }
 async function doPhysicalTrial(coopAttempt=1){
  const boot=await snapshot();authority(boot,'FIXED');
