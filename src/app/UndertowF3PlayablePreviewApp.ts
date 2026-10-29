@@ -170,6 +170,8 @@ import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
 import {b271RegistrationGate,b271NativeFootprintProbes,
  b271ClassifyOpticalPhysicalRay,B271_REGISTRATION_AUTHORITY}
  from './B271MultiSurfaceRegistration';
+import {b308NativeRouteOpportunityGate,b308NativePathIsOnlyCandidate,
+ b308SummarizeNativeOriginalSurfaces} from './B308NativeOriginalOtherPaintRoute';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1755,6 +1757,8 @@ export class UndertowF3PlayablePreviewApp{
     auditB263NativePaintProjection:()=>this.auditB263NativePaintProjection(),
     auditB293ActualInkViewport:(origin:readonly [number,number,number])=>
      this.auditB293ActualInkViewport(origin),
+    auditB308NativeOtherPaintSurfaceRoutes:(origin:readonly [number,number,number])=>
+     this.auditB308NativeOtherPaintSurfaceRoutes(origin),
     auditB294SourceInkShaderBindings:(origin:readonly [number,number,number])=>
      this.auditB294SourceInkShaderBindings(origin),
     setB298NativePaintDrawHidden:(hidden:boolean,origin:readonly [number,number,number])=>
@@ -3032,6 +3036,70 @@ export class UndertowF3PlayablePreviewApp{
    renderOnly:true as const,sourceColliderCountAdded:0 as const,
    scoreablePromotions:0 as const,artAccepted:false as const,
    full4v4Certified:false as const,productionAuthorized:false as const};
+ }
+ /** B308: no proposed route may pass merely because two surfaces
+  * look close. Query real native Recast without moving the actor or path. */
+ private auditB308NativeOtherPaintSurfaceRoutes(
+  origin:readonly [number,number,number]){
+  const n=this.snapshot();
+  const human=n.player.position;
+  const moved=origin.length===3&&origin.every(Number.isFinite)?
+   Math.hypot(...human.map((x,i)=>x-origin[i]!)):NaN;
+  if(!b308NativeRouteOpportunityGate({
+   requested:new URL(location.href).searchParams.get('t21B308')===
+    'originalOtherSurfacePath',
+   paused:this.paused,locked:document.pointerLockElement===this.canvas,
+   stopped:!!this.stopReason,fullRound:this.b203FullRound,
+   phase:this.matchState,tick:n.tick,shots:n.shotsFired,
+   humanCells:n.b23HumanInkFeedback.humanChangedCells,
+   movedMeters:moved,
+   originalActors:(this.canvas.dataset.t21B289ActorVariant??
+    'B248_ORIGINAL')==='B248_ORIGINAL',
+   actorsRelocated:n.cpu.physicalFootRelocations,
+   solids:this.rawStage.solids.length,paint:this.b45SourceSurfaces.length,
+   links:this.rawStage.navigationLinks?.length??0,
+   scoreable:this.b45SourceSurfaces.filter(x=>x.isScoreable).length
+  })||this.b45SourceSurfaces.some(x=>this.ink.getSurface(x.id)!==x))
+   throw Error('B308_GENUINE_SOURCE_17_NAV_ROUTE_AUDIT_UNAUTHORIZED');
+  const owner=this.auditB293ActualInkViewport(origin);
+  const player=new Vec3(...human);
+  const finite=(x:number)=>Number.isFinite(x)?x:null;
+  const rows=this.b45SourceSurfaces.map(surface=>{
+   const f=b271NativeFootprintProbes(surface);
+   const probe=f.probes[0]!;
+   if(!probe||f.probes.length<1)
+    throw Error('B308_NO_ACTIVE_ORIGINAL_SOURCE_SURFACE_PROBE');
+   const target=new Vec3(...probe.world);
+   const path=this.nav.auditPath(player,target,.6);
+   const original=owner.paintSurfacesWithOwner.find(
+    x=>x.surfaceId===surface.id);
+   const actualOwned=original?.owned??0;
+   if(actualOwned!==f.ownedCells)
+    throw Error('B308_ORIGINAL_OWNER_GRID_AND_PAINT_LEDGER_DISAGREE');
+   const navCandidate=b308NativePathIsOnlyCandidate({
+    querySuccess:path.querySuccess,pointCount:path.pointCount,
+    startSnap:path.startSnapDistanceMeters,
+    endSnap:path.endSnapDistanceMeters,
+    endpointError:path.endpointErrorMeters,reachedTarget:path.reachedTarget
+   });
+   return {surfaceId:surface.id,actualOwnerCells:actualOwned,
+    activeFootprintCells:f.activeCells,
+    sourceCellWorld:probe.world,
+    playerToCellEuclideanMeters:player.distance(target),
+    startSnapDistanceMeters:finite(path.startSnapDistanceMeters),
+    endSnapDistanceMeters:finite(path.endSnapDistanceMeters),
+    nativePathQuerySuccess:path.querySuccess,
+    nativePathPointCount:path.pointCount,
+    nativePathEndpointErrorMeters:finite(path.endpointErrorMeters),
+    nativePathReachesSnappedTarget:path.reachedTarget,
+    strictNativeNavCandidateOnly:navCandidate
+   };
+  });
+  return {nativeTick:n.tick,actualPlayerPosition:human,
+   actualHumanShots:n.shotsFired,
+   actualHumanPaintCells:n.b23HumanInkFeedback.humanChangedCells,
+   genuinePlayerTravelMeters:moved,
+   ...b308SummarizeNativeOriginalSurfaces(rows,owner.actualOwnerCells)};
  }
  /** B264: 24 source-verified real owned paint cell rays maximum.
   * Ray checks compare exact original F3L optical triangles and certified

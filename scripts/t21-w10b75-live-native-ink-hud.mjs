@@ -1573,6 +1573,34 @@ async function run(){
          baselineSampleEnvelopeFraction:
           b306Scope.baselineSampleEnvelopeScreenFraction,
          localNotFullMatch:b306Scope.shortLocalStudyNotFullSceneReview}));
+       // B308: on the actual played/painted frozen frame, inspect ALL 17
+       // original paint surfaces using the true Recast NavMesh. Native
+       // path proximity never claims verified physical human traversal.
+       await evaluate(`(() => {const u=new URL(location.href);
+        u.searchParams.set('t21B308','originalOtherSurfacePath');
+        history.replaceState(null,'',u.href);return true;})()`);
+       const b308=await evaluate(
+        'window.__t21F3.auditB308NativeOtherPaintSurfaceRoutes('+
+         JSON.stringify(origin)+')');
+       if(b308.nativeTick!==still.tick||b308.originalSurfaceRows.length!==17||
+          b308.originalPaintedSurfaceCount<1||
+          b308.actualHumanPaintCells!==still.b23HumanInkFeedback.humanChangedCells||
+          b308.noPhysicallyCertifiedOtherSurfaceYet!==true||
+          b308.source!=='25/17/26/0'||b308.official4v4Certified!==false)
+        fail('B308_REAL_NATIVE_17_SURFACE_ROUTE_LEDGER_INVALID');
+       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
+        fail('B308_AUDIT_CHANGED_REAL_PLAYER_OR_INK_WORLD');
+       await sleep(190);
+       const b308Frame=await b246Screenshot('b308-original-other-paint-surface-recast-readonly');
+       if(b308Frame.sha256!==snaps[0].image.sha256)
+        fail('B308_READONLY_RECAST_AUDIT_CHANGED_REAL_FRAMEBUFFER');
+       writeFileSync(resolve(OUTPUT,'b308-real-original-multisurface-recast-opportunity.json'),
+        JSON.stringify(b308,null,2));
+       console.log('B308_REAL_NATIVE_17_ORIGINAL_SURFACE_ROUTE_AUDIT',
+        JSON.stringify({originalPaintedSurfaces:b308.originalPaintedSurfaceCount,
+         candidates:b308.nextUnpaintedNativeNavCandidateCount,
+         sourceIds:b308.candidateSourceIds.slice(0,5),
+         noHumanTravelProven:true,unchangedFramebuffer:true}));
        console.log('B302_GENUINE_OWNED_TEAM_A_COLOR_A_B_C_A_PASS',
         JSON.stringify({tick:still.tick,
          nativePaintMeshes:17,originalFrameRestored:true,
