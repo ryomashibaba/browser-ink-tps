@@ -226,7 +226,7 @@ async function run(){
    nativeTick:started.tick,...b338Dom,
    genuineF8QaRoundTrip:{qaView,restoredView,
     nativeTickAfter:nativeAfterF8.tick,
-    nativeOriginalAuthorityUnchanged:true}},null,2)+'\\n');
+    nativeOriginalAuthorityUnchanged:true}},null,2)+'\n');
  await picture('B337_START');
  await send('Input.dispatchMouseEvent',
   {type:'mouseMoved',x:820,y:450,button:'none'});
