@@ -3193,6 +3193,8 @@ export class UndertowF3PlayablePreviewApp{
     actualHumanFootOnOriginalActiveSurface:actualFootIsOnSourcePlane,
     realFootPlaneDistanceMeters:projection.planeDistance,
     humanFootGrid:[gx,gy],originalSourceActiveProbeWorld:sampleClosest.world,
+    originalSourceActiveProbeCells:sample.probes.map(p=>({
+     grid:p.grid,world:p.world,originalOwner:p.owner})),
     originalSourceSamplePlanarDistanceMeters:Math.hypot(
      sampleClosest.world[0]-body.x,sampleClosest.world[2]-body.z)};
   });
