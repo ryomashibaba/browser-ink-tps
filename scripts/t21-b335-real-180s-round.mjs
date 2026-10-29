@@ -163,7 +163,8 @@ async function run(){
  const realFullRound=await wait(async()=>{
   try{return await read('(() => ({ready:document.querySelector("#app-canvas")?.dataset.t21F3Ready,'+
    'mode:document.querySelector("#app-canvas")?.dataset.t21B203FullRound,'+
-   'search:location.search}))()');}
+   'search:location.search}))()').then(x=>
+    x?.ready==='READY'&&x?.mode==='REAL_180S_SOURCE_PLAY'?x:false);}
   catch{return false;}
  },100000);
  if(realFullRound.ready!=='READY'||
