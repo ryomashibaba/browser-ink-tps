@@ -30,6 +30,8 @@ export function installB245SourcePresentation(
   // B338: play without a floating practice card; F8 QA or PAUSE restores it.
   '#ui-root[data-t21-b245-presentation="PLAYER"][data-t21-b338-phase="PLAYING"] #t21-f3-b25-paint-run',
   '{display:none!important;}',
+  // B338: F8 hides player-only hints synchronously, not after 12 WebGL frames.
+  '#ui-root[data-t21-b245-presentation="QA"] #t21-f3-b338-source-guide,',
   '#ui-root[data-t21-b245-presentation="QA"] #t21-f3-b286-source-team',
   '{display:none!important;}',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b211-real-battle-roster,',
