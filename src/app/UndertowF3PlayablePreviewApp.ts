@@ -4415,6 +4415,9 @@ export class UndertowF3PlayablePreviewApp{
    // aiming. The final interpolated visual update also runs below; the
    // extra pre-tick raycast here was redundant every live frame.
    const simulationStart=this.b20ProfileStart();
+   // B338: detect native STAGING to PLAYING / TIME_UP transition without
+   // waiting up to twelve slow software-rendered WebGL frames.
+   const priorNativeRoundPhase=this.matchState;
    const report=this.clock.advance(dt,(frame,seconds)=>{
     if(this.matchState!=='TIME_UP')this.stepFixed(frame,seconds);
    });
@@ -4455,7 +4458,10 @@ export class UndertowF3PlayablePreviewApp{
    if(this.renderedFrames%6===0)this.refreshB25PaintRun();
    this.stats.frame(dt*1000);
    this.renderedFrames++;
-   if(this.matchState==='TIME_UP'||this.renderedFrames%12===0)this.refresh();
+   // B338: the first real native phase transition is immediately visible.
+   // The rest of the expensive HUD still renders every twelve visual frames.
+   if(this.matchState!==priorNativeRoundPhase||
+      this.matchState==='TIME_UP'||this.renderedFrames%12===0)this.refresh();
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
    // The visible session freezes, preserving the exact failing actor foot.
