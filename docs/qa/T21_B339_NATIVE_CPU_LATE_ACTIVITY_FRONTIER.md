@@ -2,6 +2,12 @@
 
 **2026-10-30 JST.** QA-only, no gameplay/collision changes.
 
+## Verified B339 historic audit (real saved 180s)
+
+[GitHub Actions #40975075064](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40975075064), job `offline-source-quality-frontier`, on commit `909abb815d465de42ec4d504412b1ab0c59aa46d`: **8/8 Node independent/historical tests PASS**. The original B335 archive SHA256, run ID, artifact ID and 25/17/26/0 boundaries were checked. First-window proportion 90.82%; 150–180s/0–30s change ratio 0.0060.
+
+**This is an evidence audit, not a CPU gameplay fix**. The genuine B339 per-actor Chromium experiment must pass separately on the exact source SHA before declaring its numbers observed.
+
 ## Proven before B339
 
 B335 genuine [180-second CI #40878994476](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40878994476), exact saved original B336 SHA-verified.
