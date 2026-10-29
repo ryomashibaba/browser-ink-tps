@@ -1,0 +1,42 @@
+name: T21 B335 real 180-second source round with seven native CPU
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b335-real-180s-guard.mjs'
+      - 'scripts/t21-b335-real-180s-guard.test.mjs'
+      - 'scripts/t21-b335-real-180s-round.mjs'
+      - '.github/workflows/t21-b335-native-180s-source-round.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b335-native-full-180s-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  genuine-original-full-round:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: node --test scripts/t21-b335-real-180s-guard.test.mjs
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-b335-real-180s-round.mjs
+      - name: True Chromium pointer-locked 180s human plus seven CPU source game
+        env:
+          T21_B335_OUTPUT: /tmp/t21-b335
+        run: node scripts/t21-b335-real-180s-round.mjs
+      - name: Independent true 180-second WebGL original owner and clock proof
+        run: node scripts/t21-b335-real-180s-guard.mjs /tmp/t21-b335
+      - name: Retain actual source gameplay or HOLD evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b335-real-chromium-180s-source-round
+          path: /tmp/t21-b335/
+          retention-days: 14
+          if-no-files-found: warn
