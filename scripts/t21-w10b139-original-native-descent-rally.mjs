@@ -593,7 +593,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      const routeNear=entry.originalSourceSamplePlanarDistanceMeters<=10;
      const aimSafe=routeNear&&flat>.15&&
       [mx,my,desiredYaw,desiredPitch].every(Number.isFinite)&&
-      Math.abs(mx)<=720&&Math.abs(my)<=480&&
+      Math.abs(mx)<=720&&Math.abs(my)<=440&&
       desiredPitch>=-78&&desiredPitch<=12;
      if(!aimSafe||!before.realHumanOriginalFootSupported){
       observations.push({targetId,verdict:'HOLD_NO_SAFE_GENUINE_AIM',

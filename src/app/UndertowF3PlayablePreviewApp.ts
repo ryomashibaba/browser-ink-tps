@@ -3144,7 +3144,7 @@ export class UndertowF3PlayablePreviewApp{
    params.get('t21W10B193')!=='allyCoop'||
    params.get('t21W10B203')!=='fullRound'||
    !this.b203FullRound||this.paused||this.stopReason||
-   this.matchState!=='PLAYING'||n.tick<1||
+   !['STAGING','PLAYING'].includes(this.matchState)||n.tick<1||
    this.rawStage.solids.length!==25||
    this.b45SourceSurfaces.length!==17||
    this.rawStage.navigationLinks?.length!==26||
