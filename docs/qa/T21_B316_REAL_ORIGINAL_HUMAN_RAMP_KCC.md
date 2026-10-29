@@ -10,3 +10,8 @@ Reuse a B315 real input single original full-round, preserve independently check
 - Save separate genuine PNG and `b316-genuine-original-human-ramp-walk.json`. Independent B315 three-surface shooting proof must continue to pass. Original 25/17/26/0, unreleased 4v4, ART HOLD, QA-only.
 
 Research changes no stage solidity, navigation, paint, CPU actors, source geometry or production. Third-party scripts and games not rewritten.
+
+## B316 true CI correction after first failure
+The first dedicated [B316 run 40814662192](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40814662192) ended FAILURE **before any new KCC walk**, because B162 A1 ally mission did not clear in that independent 7-CPU play. Its true original B312 evidence nevertheless recorded Human Impact/ownerGrid PASS for both landing and ramp again (actual Human interval deltas +50 and +79), independently of the variable A1 AI ally result. B316 must never claim A1 CLEAR if the source A1 native impact remains zero.
+
+Change: perform native B316 walking immediately after proving the two additional ORIGINAL human-painted surface IDs from the genuine B312 multi-surface result, before the unrelated A1 mission end-of-round check. If B316 research data exists and truly has three original Human impact sources, B162's nonclear is persisted as `B162_HOLD_REAL_SOURCE_COOPERATIVE_NOT_CLEARED` and logged without causing B316 research to fail. B315 separately validates actual 17 original grid snapshots + Human impact provenance as its independent formal CI; it continues to gate the B316 workflow. Ordinary B162/B200 tests without explicit B316 opt-in preserve their original strict A1 CLEAR criteria and will still fail if A1 does not cooperate.
