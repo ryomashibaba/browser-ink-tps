@@ -2,7 +2,7 @@
 /** B139: real original 7-CPU game + physically walked lower-floor A1 ally trial. No time,
  * physics, ink, storage, source geometry or CPU configuration injection. */
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdirSync,writeFileSync} from 'node:fs';
+import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {sampleB140RealSourcePhysicalTrace} from './t21-w10b140-real-physics-sample.mjs';
@@ -18,6 +18,8 @@ import {b321OriginalRampHighSectionPlan,b321AuditTrueOriginalHigherRamp}
  from './t21-b321-real-upper-ramp-kcc.mjs';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
  UPPER_FLOOR_SOLID} from './t21-b322-original-ramp-crest.mjs';
+import {b324AuditGenuineUpperFloor}
+ from './t21-b324-original-upper-floor-continuation.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -39,6 +41,9 @@ const b318InteriorWalk=process.env.T21_B318_INTERIOR_RAMP_WALK==='1';
 const b320UphillStudy=process.env.T21_B320_TRUE_SOURCE_RAMP_UPHILL==='1';
 const b321HigherRamp=process.env.T21_B321_TRUE_UPPER_RAMP_KCC==='1';
 const b322RealCrest=process.env.T21_B322_TRUE_CREST_EXIT==='1';
+const b324UpperFloor=process.env.T21_B324_REAL_UPPER_FLOOR_CONTINUATION==='1';
+if(b324UpperFloor&&!b322RealCrest)
+ throw Error('B324_REQUIRES_B322_TRUE_RAMP_CREST');
 if(b322RealCrest&&!b321HigherRamp)
  throw Error('B322_REQUIRES_B321_PHYSICAL_HIGH_RAMP');
 if(b321HigherRamp&&!b320UphillStudy)
@@ -1038,6 +1043,52 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       verdict:verdict.verdict,crest:verdict.crestProven,
       nextOriginalFloor:verdict.originalUpperFloorReached,
       steps:steps.length,source:'25/17/26/0'}));
+
+     if(b324UpperFloor){
+      const priorB322=JSON.parse(readFileSync(
+       resolve(OUTPUT,'b322-actual-original-ramp-crest.json'),'utf8'));
+      const firstUpper=await b312Ledger(),stepsUpper=[];
+      const saveUpper=status=>{
+       const attempt={schema:'B324_REAL_ORIGINAL_UPPER_FLOOR',
+        source:'25/17/26/0',status,first:firstUpper,steps:stepsUpper,
+        productionAuthorized:false,original4v4Certified:false,
+        artAccepted:false};
+       const audit=b324AuditGenuineUpperFloor(priorB322,attempt);
+       writeFileSync(resolve(OUTPUT,'b324-real-original-upper-floor.json'),
+        JSON.stringify({...attempt,preliminary:audit},null,2));
+       return audit;
+      };
+      if(verdict.originalUpperFloorReached===true&&
+         firstUpper.realHumanOriginalFootSupported===true&&
+         firstUpper.genuineHumanOriginalFootSolid===UPPER_FLOOR_SOLID){
+       for(let i=0;i<8;i++){
+        const before=await b312Ledger();
+        if(!before.realHumanOriginalFootSupported||
+           before.genuineHumanOriginalFootSolid!==UPPER_FLOOR_SOLID)break;
+        const press=await b319TrueShortNativeKey('KeyW',2);
+        const after=await b312Ledger();
+        stepsUpper.push({realKey:'KeyW',nativeInputTicks:2,
+         actualNativeTickDelta:after.tick-before.tick,
+         actualTick:press.tick,after});
+        const result=saveUpper('GENUINE_UPPER_FLOOR_NATIVE_INPUT');
+        console.log('B324_REAL_ORIGINAL_UPPER_FLOOR_STEP',JSON.stringify({
+         i:i+1,body:after.actualBodyMeters,
+         nativeFoot:after.genuineHumanOriginalFootSolid,
+         verdict:result.verdict}));
+        if(result.continuousUpperFloor||
+           result.firstUnsupportedStep!==null||
+           !after.realHumanOriginalFootSupported||
+           after.genuineHumanOriginalFootSolid!==UPPER_FLOOR_SOLID)break;
+       }
+      }
+      const report=saveUpper(stepsUpper.length?
+       'REAL_UPPER_FLOOR_KCC_OBSERVED':'HOLD_NO_REAL_UPPER_FLOOR_INPUT');
+      await picture('B324_TRUE_ORIGINAL_UPPER_FLOOR_KCC');
+      console.log('B324_NATIVE_ORIGINAL_UPPER_FLOOR_RESULT',JSON.stringify({
+       verdict:report.verdict,supported:report.genuineSupportedNativeSteps??0,
+       meters:report.witnessedPlanarMeters??0,
+       source:'25/17/26/0',productionAuthorized:false}));
+     }
     }
 
    }
