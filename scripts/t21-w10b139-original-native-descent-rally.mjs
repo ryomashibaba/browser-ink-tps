@@ -26,6 +26,8 @@ import {b327CheckGenuinePostClearLowerShot}
  from './t21-b327-original-lower-post-clear-shot.mjs';
 import {b328Plan,b328AuditStep}
  from './t21-b328-genuine-a1-native-approach.mjs';
+import {b330AuditArmedReplayResume}
+ from './t21-b330-replay-armed-resume-guard.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -293,7 +295,9 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    remaining:(await snapshot()).timeRemainingSeconds,
    ui:await evaluate('document.querySelector("#t21-f3-b25-progress")?.textContent')
   }));
- if(b203FullRoundTrial&&coopAttempt===1){
+ if(b203FullRoundTrial){
+  // B330: both independent real rounds start through the visible native
+  // pause/resume button; a center click cannot arm the second fresh world.
   // B206: B205's REAL pause overlay is now visible and may intercept
   // the old arbitrary center click. Use its real interactive RESUME.
   const prior=await snapshot();authority(prior,'FIXED');
@@ -302,9 +306,20 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    shown:document.querySelector('#t21-f3-b202-real-pause')?.hidden===false,
    button:document.querySelector('#t21-f3-b202-resume')?.textContent
   }))()`);
-  if(prior.b25SourcePaintRun.status!=='ARMED'||!prior.paused||
-     overlay.active!=='NATIVE_PAUSED'||!overlay.shown)
-   fail('B206_REAL_ARMED_SOURCE_PAUSE_UNAVAILABLE_'+JSON.stringify(overlay));
+  const b330Gate=b330AuditArmedReplayResume({
+   coopAttempt,matchState:prior.matchState,
+   practiceStatus:prior.b25SourcePaintRun.status,
+   practiceVariant:prior.b25SourcePaintRun.practiceVariant,
+   paused:prior.paused,stopReason:prior.stopReason,
+   sourceAuthority:'25/17/26/0',
+   originalCpuFootRelocations:prior.cpu.physicalFootRelocations,
+   overlayState:overlay.active,overlayVisible:overlay.shown,
+   productionAuthorized:prior.productionAuthorized,
+   officialWinner:prior.b25SourcePaintRun.officialWinner
+  });
+  if(!b330Gate.allowRealButtonClick)
+   fail('B330_REAL_ARMED_SOURCE_PAUSE_UNAVAILABLE_'+JSON.stringify({
+    overlay,gate:b330Gate}));
   // B251 QA recovery — real Chromium clicks only, never synthetic ticks.
   const observeResume=ms=>until(async()=>{
    const n=await snapshot();authority(n,'FIXED');
@@ -347,9 +362,12 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    physicallyRejoinedCpu:resumed.cpu.physicalRejoins.length,
    nativeTicksFabricated:false,actorTeleports:0,
    sourceAuthority:'25/17/26/0',officialWinner:'NONE'};
-  writeFileSync(resolve(OUTPUT,'w10b206-real-armed-resume.json'),
-   JSON.stringify(proof,null,2));
-  console.log('B206_REAL_SOURCE_ARMED_BUTTON_RESUME',JSON.stringify(proof));
+  writeFileSync(resolve(OUTPUT,coopAttempt===1?
+   'w10b206-real-armed-resume.json':'w10b330-second-real-armed-resume.json'),
+   JSON.stringify({...proof,coopAttempt},null,2));
+  console.log(coopAttempt===1?'B206_REAL_SOURCE_ARMED_BUTTON_RESUME':
+   'B330_SECOND_GENUINE_FULL_ROUND_BUTTON_RESUME',
+   JSON.stringify({...proof,coopAttempt}));
  }else await click(800,450);
  await until(()=>evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'),25000);

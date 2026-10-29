@@ -80,3 +80,15 @@ test('B213 B201 resume uses the proven visible button and real lock/ticks',()=>{
  assert.ok(!segment.includes('await click(800,450)'));
  assert.ok(!segment.includes('qaDriveTicks('));
 });
+
+test('B330 second fresh world uses same genuine visible Resume button',()=>{
+ const p=s.indexOf("await clickButton('#t21-f3-b25-start')");
+ const q=s.indexOf("const started=await until",p);
+ const chunk=s.slice(p,q);
+ assert.ok(chunk.includes('if(b203FullRoundTrial){'));
+ assert.ok(chunk.includes('b330AuditArmedReplayResume({'));
+ assert.ok(chunk.includes("await clickButton('#t21-f3-b202-resume')"));
+ assert.ok(chunk.includes("'w10b330-second-real-armed-resume.json'"));
+ assert.ok(!chunk.includes("if(b203FullRoundTrial&&coopAttempt===1)"));
+ assert.ok(!chunk.includes('qaDriveTicks('));
+});

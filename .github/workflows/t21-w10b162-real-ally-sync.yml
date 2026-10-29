@@ -4,6 +4,8 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b330-replay-armed-resume-guard.mjs'
+      - 'scripts/t21-b330-replay-armed-resume-guard.test.mjs'
       - 'src/app/UndertowF3SourcePaintRun.ts'
       - 'src/app/UndertowF3PracticeObjectiveView.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
@@ -45,7 +47,7 @@ jobs:
       - name: Prevent forged ally ink and protect previous source run behavior
         run: npx vitest run src/app/B161OriginalAllySyncPractice.test.ts src/app/B193SourceCoopMode.test.ts src/app/B195NativeCoopMissionView.test.ts src/app/B209OriginalRampEdge.test.ts src/app/B169OriginalAllyAdvanceGuard.test.ts src/app/B199ActualAllyCollisionRelief.test.ts src/app/B197CoopReplayDecision.test.ts src/app/B165OriginalAllyPracticeProgress.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts src/app/B160SourceCpuActivityView.test.ts
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
-      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs
+      - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-b330-replay-armed-resume-guard.test.mjs
       - name: Real player A1 co-op button then 60Hz authentic native challenge
         env:
           T21_B139_VARIANT: ALLY_RALLY
