@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/app/B312NativeOriginalSecondHumanInk.ts'
       - 'src/app/B312NativeOriginalSecondHumanInk.test.ts'
+      - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
       - '.github/workflows/t21-b312-real-lower-second-original-ink.yml'
   workflow_dispatch:
 permissions:
