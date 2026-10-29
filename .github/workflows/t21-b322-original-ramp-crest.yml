@@ -10,6 +10,8 @@ on:
       - 'scripts/t21-b326-extended-original-upper-floor.mjs'
       - 'scripts/t21-b326-extended-original-upper-floor.test.mjs'
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b327-original-lower-post-clear-shot.mjs'
+      - 'scripts/t21-b327-original-lower-post-clear-shot.test.mjs'
       - '.github/workflows/t21-b322-original-ramp-crest.yml'
   workflow_dispatch:
 permissions:
@@ -28,7 +30,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
-      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b315-verify-native-three-surface-ink.test.mjs scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs scripts/t21-b320-original-ramp-uphill-kcc.test.mjs scripts/t21-b321-real-upper-ramp-kcc.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
+      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b315-verify-native-three-surface-ink.test.mjs scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs scripts/t21-b320-original-ramp-uphill-kcc.test.mjs scripts/t21-b321-real-upper-ramp-kcc.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs scripts/t21-b327-original-lower-post-clear-shot.test.mjs
       - run: npm run build -- --base=/browser-ink-tps/
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Real CDP player KCC from original spawn through ramp crest

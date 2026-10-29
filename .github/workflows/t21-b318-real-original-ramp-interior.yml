@@ -7,6 +7,8 @@ on:
       - 'scripts/t21-b318-original-ramp-interior.mjs'
       - 'scripts/t21-b318-original-ramp-interior.test.mjs'
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b327-original-lower-post-clear-shot.mjs'
+      - 'scripts/t21-b327-original-lower-post-clear-shot.test.mjs'
       - 'scripts/t21-b319-audit-real-ramp-kcc-artifact.mjs'
       - 'scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs'
       - '.github/workflows/t21-b318-real-original-ramp-interior.yml'
@@ -27,7 +29,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
-      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b315-verify-native-three-surface-ink.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b318-original-ramp-interior.test.mjs scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs
+      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b315-verify-native-three-surface-ink.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b318-original-ramp-interior.test.mjs scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs scripts/t21-b327-original-lower-post-clear-shot.test.mjs
       - run: npm run build -- --base=/browser-ink-tps/
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Real lower body KCC interior ramp crossing, every 4 native ticks

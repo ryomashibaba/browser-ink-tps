@@ -22,6 +22,8 @@ import {b324AuditGenuineUpperFloor}
  from './t21-b324-original-upper-floor-continuation.mjs';
 import {b326AuditExtendedUpperFloor}
  from './t21-b326-extended-original-upper-floor.mjs';
+import {b327CheckGenuinePostClearLowerShot}
+ from './t21-b327-original-lower-post-clear-shot.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -652,8 +654,16 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
     'UndertowT21D:first-drop-landing-positive-z:paint',
     'UndertowT21D:right-low-route-ramp-positive-z:paint'];
    const observations=[];
-   if(sourceSafeFoot(actualLower)&&
-      lowerInitial.realHumanOriginalFootSupported===true){
+   // A1's practice CLEAR is not a physical-match stop. B318 CI had
+   // repeatedly abandoned genuine original lower-foot contact as
+   // HOLD_REAL_LOWER_FOOT_NOT_PROVEN solely because the objective cleared.
+   // Keep the stage/match, source foot and no-mutation checks strict;
+   // do NOT invent projectile impact or bypass B315 evidence.
+   const lowerShotGate=b327CheckGenuinePostClearLowerShot(
+    actualLower,lowerInitial);
+   console.log('B327_TRUE_ORIGINAL_LOWER_SHOT_ELIGIBILITY',
+    JSON.stringify(lowerShotGate));
+   if(lowerShotGate.eligible){
     for(const targetId of targets){
      const before=await b312Ledger();
      const entry=before.originalRows.find(r=>r.surfaceId===targetId);
@@ -746,6 +756,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    const result={schema:'B312_GENUINE_SECOND_ORIGINAL_HUMAN_PAINT_ATTEMPT',
     genuineCDPKeyboardMouse:true,source:'25/17/26/0',
     upperBaseline:b312UpperBaseline,lowerInitial,
+    lowerShotEligibility:lowerShotGate,
     originalTargetAttempts:observations,
     provenSecondPaintSources:observations.filter(r=>
      r.verdict==='GENUINE_SECOND_SOURCE_HUMAN_PAINT_PASS')
