@@ -6,6 +6,8 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {sampleB140RealSourcePhysicalTrace} from './t21-w10b140-real-physics-sample.mjs';
+import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
+ from './t21-b313-actual-original-cell-aim.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -581,34 +583,37 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      const before=await b312Ledger();
      const entry=before.originalRows.find(r=>r.surfaceId===targetId);
      if(!entry)fail('B312_ORIGINAL_TARGET_ID_MISSING');
-     const target=entry.originalSourceActiveProbeWorld;
-     const cam=before.actualCameraMeters;
-     const dx=target[0]-cam[0],dz=target[2]-cam[2];
-     const flat=Math.hypot(dx,dz);
-     const desiredYaw=Math.atan2(dx,dz)*180/Math.PI;
-     const desiredPitch=Math.atan2(target[1]-cam[1],flat)*180/Math.PI;
-     const angle=(await snapshot()).cameraSourcePractice;
-     const mx=Math.round(wrap(desiredYaw-angle.yawDegrees)/.22);
-     const my=Math.round(-(desiredPitch-angle.pitchDegrees)/.18);
-     const routeNear=entry.originalSourceSamplePlanarDistanceMeters<=10;
-     const aimSafe=routeNear&&flat>.15&&
-      [mx,my,desiredYaw,desiredPitch].every(Number.isFinite)&&
-      Math.abs(mx)<=720&&Math.abs(my)<=440&&
-      desiredPitch>=-78&&desiredPitch<=12;
-     if(!aimSafe||!before.realHumanOriginalFootSupported){
-      observations.push({targetId,verdict:'HOLD_NO_SAFE_GENUINE_AIM',
-       player:before.actualBodyMeters,
-       support:before.genuineHumanOriginalFootSolid,
-       nearestOriginalSampleMeters:
-        entry.originalSourceSamplePlanarDistanceMeters,desiredYaw,desiredPitch});
+     // True CDP center first. Re-sample camera AFTER the real input,
+     // never infer camera heading or alter player orientation directly.
+     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+      x:800,y:450,button:'none'});
+     const aimFrame=await b312Ledger();
+     const realAngle=(await snapshot()).cameraSourcePractice;
+     const actualEntry=aimFrame.originalRows.find(r=>r.surfaceId===targetId);
+     const option=b313ChooseOriginalActiveAim({
+      cells:actualEntry.originalSourceActiveProbeCells,
+      body:aimFrame.actualBodyMeters,camera:aimFrame.actualCameraMeters,
+      yaw:realAngle.yawDegrees,pitch:realAngle.pitchDegrees});
+     const selected=option.selected;
+     if(!selected||!aimFrame.realHumanOriginalFootSupported){
+      observations.push({targetId,verdict:'HOLD_NO_SAFE_REAL_ACTIVE_SOURCE_CELL',
+       realBody:aimFrame.actualBodyMeters,foot:aimFrame.genuineHumanOriginalFootSolid,
+       candidates:option.originalAlternatives,cameraBefore:realAngle});
       continue;
      }
      await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
-      x:800,y:450,button:'none'});
-     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
-      x:800+mx,y:450+my,button:'none'});
+      x:selected.actualCDP[0],y:selected.actualCDP[1],button:'none'});
+     await sleep(160);
+     const actualLook=(await snapshot()).cameraSourcePractice;
+     if(!b313ObservedRealAimMatch(selected,actualLook)){
+      observations.push({targetId,verdict:'HOLD_TRUE_MOUSE_AIM_NOT_AT_ORIGINAL_CELL',
+       selectedSourceCell:selected,beforeRealCamera:realAngle,
+       afterRealCamera:actualLook});
+      continue;
+     }
      await cmd('Input.dispatchMouseEvent',{type:'mousePressed',
-      x:800,y:450,button:'left',clickCount:1});
+      x:selected.actualCDP[0],y:selected.actualCDP[1],
+      button:'left',clickCount:1});
      let moved;
      try{
       moved=await nativeOriginalKeyboard({
@@ -617,7 +622,8 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       },()=>{});
      }finally{
       await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
-       x:800,y:450,button:'left',clickCount:1});
+       x:selected.actualCDP[0],y:selected.actualCDP[1],
+       button:'left',clickCount:1});
      }
      const after=await b312Ledger();
      const originalBefore=before.originalRows.find(r=>r.surfaceId===targetId);
@@ -641,6 +647,8 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       beforeFoot:before.genuineHumanOriginalFootSolid,
       afterFoot:after.genuineHumanOriginalFootSolid,
       afterBody:after.actualBodyMeters,
+      selectedOriginalActiveCell:selected,
+      measuredRealCameraAfterAim:actualLook,
       originalSource:'25/17/26/0',officialWinner:'NONE',
       productionAuthorized:false};
      observations.push(proof);

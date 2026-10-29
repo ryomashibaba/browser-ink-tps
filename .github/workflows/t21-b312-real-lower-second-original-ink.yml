@@ -6,6 +6,8 @@ on:
       - 'src/app/B312NativeOriginalSecondHumanInk.ts'
       - 'src/app/B312NativeOriginalSecondHumanInk.test.ts'
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b313-actual-original-cell-aim.mjs'
+      - 'scripts/t21-b313-actual-original-cell-aim.test.mjs'
       - '.github/workflows/t21-b312-real-lower-second-original-ink.yml'
   workflow_dispatch:
 permissions:
@@ -24,6 +26,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
+      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs
       - run: npx vitest run src/app/B312NativeOriginalSecondHumanInk.test.ts
       - run: npm run build -- --base=/browser-ink-tps/
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
