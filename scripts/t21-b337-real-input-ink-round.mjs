@@ -175,6 +175,14 @@ async function run(){
    turfResult:n.turfResult,
    cpuCount:n.cpu.cpu.length,cpuRejoined:n.cpu.physicalRejoins.length,
    cpuRelocations:n.cpu.physicalFootRelocations,
+   // B339: read only genuine seven-actor SOURCE weapon/owner counters.
+   b339CpuSnapshot:{
+    source:'25/17/26/0',
+    acceptedCpuSourceShots:n.cpuSourceTurfShots,
+    actualCpuImpactChangedCells:n.cpuImpactInkCellsChanged,
+    cpuShotsByActor:n.cpuSourceTurfShotsByActor,
+    sourceInk:n.b154NativeSevenCpuInk
+   },
    humanShots:n.shotsFired,
    humanInk:n.b23HumanInkFeedback.humanChangedCells,
    lastHumanImpactTick:ledger.humanLastImpactTick,

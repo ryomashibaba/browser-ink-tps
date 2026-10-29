@@ -11,6 +11,11 @@ on:
       - 'scripts/t21-b337-real-input-ink-audit.mjs'
       - 'scripts/t21-b337-real-input-ink-audit.test.mjs'
       - 'scripts/t21-b337-real-input-ink-round.mjs'
+      - 'scripts/t21-b339-native-cpu-activity-audit.mjs'
+      - 'scripts/t21-b339-native-cpu-activity-audit.test.mjs'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/UndertowF3PlayableHud.ts'
+      - 'src/app/B245SourcePresentation.ts'
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,18 +28,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test scripts/t21-b336-real-gameplay-frontier.test.mjs
+      - run: node --test scripts/t21-b336-real-gameplay-frontier.test.mjs scripts/t21-b339-native-cpu-activity-audit.test.mjs
       - name: Audit original evidence read-only without rerunning costly browser
         run: |
           node scripts/t21-b336-real-gameplay-frontier.mjs \
             docs/qa/evidence/T21_B335_40878994476_real_round.json.gz.b64 \
             docs/qa/evidence/T21_B335_40878994476_manifest.json \
             /tmp/t21-b336-source-frontier.json
+      - name: B339 historic CPU painted-cells slowdown, no inferred root cause
+        run: |
+          node scripts/t21-b339-native-cpu-activity-audit.mjs \
+            docs/qa/evidence/T21_B335_40878994476_real_round.json.gz.b64 \
+            docs/qa/evidence/T21_B335_40878994476_manifest.json \
+            /tmp/t21-b339-historic-frontier.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: b336-genuine-source-gameplay-frontier
-          path: /tmp/t21-b336-source-frontier.json
+          path: |
+            /tmp/t21-b336-source-frontier.json
+            /tmp/t21-b339-historic-frontier.json
           retention-days: 14
           if-no-files-found: warn
 
@@ -57,6 +70,13 @@ jobs:
         run: node scripts/t21-b337-real-input-ink-round.mjs
       - name: Independently validate actual short native witness and PNGs
         run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b337
+      - name: B339 examine seven genuine CPU shot and owner counters in that SAME native world
+        run: |
+          node scripts/t21-b339-native-cpu-activity-audit.mjs \
+            docs/qa/evidence/T21_B335_40878994476_real_round.json.gz.b64 \
+            docs/qa/evidence/T21_B335_40878994476_manifest.json \
+            /tmp/t21-b337/b339-native-cpu-activity.json \
+            /tmp/t21-b337/b337-real-input-ink.json
       - name: Preserve genuine evidence or failed HOLD checkpoint
         if: always()
         uses: actions/upload-artifact@v4
