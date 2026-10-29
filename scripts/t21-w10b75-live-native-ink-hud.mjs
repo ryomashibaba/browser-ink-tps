@@ -13,6 +13,7 @@ import {b80ClassifyNativeStall} from './t21-w10b80-native-stall-classifier.mjs';
 import {verifyB179RealNativeResourceProof} from './t21-w10b179-real-resource-economy-gate.mjs';
 import {b303OwnedInkRasterAudit} from './t21-b303-native-ink-pixel-attribution.mjs';
 import {b305AuditRealActorDraw} from './t21-b305-native-actor-draw-pixel-attribution.mjs';
+import {b306AuditSampleScope} from './t21-b306-real-ink-sample-scope.mjs';
 
 const ROOT='http://127.0.0.1:4197/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b75';
@@ -1553,6 +1554,18 @@ async function run(){
          ownedProjections:b305.actualProjectedOwnerSamples,
          nearChanged:b305.sourceOwnedCenterPixelsChangedWhenActorsHidden,
          restored:true}));
+       // B306: independent honest evidence-scope report. These camera
+       // envelopes are only geometry projections of sample cells, never
+       // measured framebuffer ink area or all-game art certification.
+       const b306Scope=b306AuditSampleScope(realInk,origin,still);
+       writeFileSync(resolve(OUTPUT,'b306-real-ink-sample-scope.json'),
+        JSON.stringify(b306Scope,null,2));
+       console.log('B306_REAL_NATIVE_PAINT_VISUAL_SCOPE_AUDITED',
+        JSON.stringify({actualOwnerSamples:b306Scope.trulySampledOwnerCells,
+         uniqueSurfaces:b306Scope.distinctSampledPaintSurfaces.length,
+         baselineSampleEnvelopeFraction:
+          b306Scope.baselineSampleEnvelopeScreenFraction,
+         localNotFullMatch:b306Scope.shortLocalStudyNotFullSceneReview}));
        console.log('B302_GENUINE_OWNED_TEAM_A_COLOR_A_B_C_A_PASS',
         JSON.stringify({tick:still.tick,
          nativePaintMeshes:17,originalFrameRestored:true,

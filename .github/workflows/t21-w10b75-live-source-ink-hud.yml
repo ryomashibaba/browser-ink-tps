@@ -38,6 +38,8 @@ on:
       - 'src/app/B305GenuineNativeActorOcclusion.ts'
       - 'src/app/B305GenuineNativeActorOcclusion.test.ts'
       - 'scripts/t21-b305-native-actor-draw-pixel-attribution.mjs'
+      - 'scripts/t21-b306-real-ink-sample-scope.mjs'
+      - 'scripts/t21-b306-real-ink-sample-scope.test.mjs'
       - 'src/ink/InkSurfaceMaterial.ts'
       - 'src/ink/GpuInkAtlas.ts'
       - 'src/app/B209OriginalRampEdge.ts'
@@ -150,6 +152,7 @@ jobs:
           node --test scripts/t21-b303-native-ink-pixel-attribution.test.mjs
           node --check scripts/t21-b303-native-ink-pixel-attribution.mjs
           node --check scripts/t21-b305-native-actor-draw-pixel-attribution.mjs
+          node --test scripts/t21-b306-real-ink-sample-scope.test.mjs
           node --test scripts/t21-w10b179-real-resource-economy-gate.test.mjs
           node --check scripts/t21-w10b80-native-stall-classifier.mjs
           node --test scripts/t21-w10b80-native-stall-classifier.test.mjs
