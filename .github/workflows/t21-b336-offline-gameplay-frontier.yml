@@ -1,4 +1,4 @@
-name: T21 B336 offline audit of saved genuine 180s gameplay
+name: T21 B336 offline evidence plus B337 short native input source gate
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -8,6 +8,9 @@ on:
       - 'docs/qa/evidence/T21_B335_40878994476_real_round.json.gz.b64'
       - 'docs/qa/evidence/T21_B335_40878994476_manifest.json'
       - '.github/workflows/t21-b336-offline-gameplay-frontier.yml'
+      - 'scripts/t21-b337-real-input-ink-audit.mjs'
+      - 'scripts/t21-b337-real-input-ink-audit.test.mjs'
+      - 'scripts/t21-b337-real-input-ink-round.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,5 +35,33 @@ jobs:
         with:
           name: b336-genuine-source-gameplay-frontier
           path: /tmp/t21-b336-source-frontier.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  b337-real-short-input:
+    needs: offline-source-quality-frontier
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: node --test scripts/t21-b337-real-input-ink-audit.test.mjs
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-b337-real-input-ink-round.mjs
+      - name: Genuine Chromium short native WASD, mouse aim, original foot and ink
+        env:
+          T21_B337_OUTPUT: /tmp/t21-b337
+        run: node scripts/t21-b337-real-input-ink-round.mjs
+      - name: Independently validate actual short native witness and PNGs
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b337
+      - name: Preserve genuine evidence or failed HOLD checkpoint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b337-genuine-native-wasd-mouse-ink-original-foot
+          path: /tmp/t21-b337/
           retention-days: 14
           if-no-files-found: warn
