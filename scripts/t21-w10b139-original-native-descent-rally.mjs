@@ -10,6 +10,8 @@ import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
  from './t21-b313-actual-original-cell-aim.mjs';
 import {RAMP,planB316ActualOriginalRampApproach,auditB316RealMovement}
  from './t21-b316-native-human-ramp-walk.mjs';
+import {b318NativeOriginalRampInterior,b318OriginalQuadPlanarSignedMargin}
+ from './t21-b318-original-ramp-interior.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -27,6 +29,9 @@ const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
 const b202ControlsTrial=process.env.T21_B202_REAL_CONTROLS==='1';
 const b203FullRoundTrial=process.env.T21_B203_REAL_FULL_ROUND==='1';
 const b316GenuineRampWalk=process.env.T21_B316_GENUINE_RAMP_WALK==='1';
+const b318InteriorWalk=process.env.T21_B318_INTERIOR_RAMP_WALK==='1';
+if(b318InteriorWalk&&!b316GenuineRampWalk)
+ throw Error('B318_REQUIRES_TRUE_ORIGINAL_B316_WALK');
 if(b316GenuineRampWalk&&(!b162CoopTrial||!b203FullRoundTrial||
  !process.env.T21_B312_SECOND_HUMAN_SURFACE||b200ReplayTrial))
  throw Error('B316_REQUIRES_B315_SINGLE_ORIGINAL_COOP_SHOOTING');
@@ -702,11 +707,15 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   // without losing the independently verified B315 3-source proof.
   const first=await b312Ledger();
   const angle=(await snapshot()).cameraSourcePractice;
-  const plan=planB316ActualOriginalRampApproach({ledger:first,camera:angle});
+  const plan=b318InteriorWalk?
+   b318NativeOriginalRampInterior({quad:first.originalPositiveRampSourceQuad,
+    body:first.actualBodyMeters,yaw:angle.yawDegrees}):
+   planB316ActualOriginalRampApproach({ledger:first,camera:angle});
   const steps=[];
   const saveB316=(status)=>{
    const result={schema:'B316_TRUE_CDP_LOWER_ORIGINAL_RAMP_WALK',
     status,first,angle,plan,steps,
+    b318OriginalRampInteriorGuideOptIn:b318InteriorWalk,
     ...(steps.length?auditB316RealMovement({first,steps}):{
      verdict:'HOLD_NO_SAFE_ORIGINAL_RAMP_MOVEMENT_STARTED',
      reachedOriginalRampOnGenuineCharacterKcc:false}),
@@ -721,8 +730,10 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
     x:800,y:450,button:'none'});
    const cameraBefore=(await snapshot()).cameraSourcePractice;
-   const freshPlan=planB316ActualOriginalRampApproach({
-    ledger:first,camera:cameraBefore});
+   const freshPlan=b318InteriorWalk?
+    b318NativeOriginalRampInterior({quad:first.originalPositiveRampSourceQuad,
+     body:first.actualBodyMeters,yaw:cameraBefore.yawDegrees}):
+    planB316ActualOriginalRampApproach({ledger:first,camera:cameraBefore});
    const selected=freshPlan.candidate;
    if(selected){
     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
@@ -739,11 +750,15 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
          prior.sourceActorRelocations!==0||
          prior.tick>=stoppedAtTick+240)break;
       const step=await nativeOriginalKeyboard({
-       name:'B316_REAL_RAMP_KCC_STEP_'+(i+1),
-       keys:['KeyW'],ticks:6
+       name:(b318InteriorWalk?'B318':'B316')+'_REAL_RAMP_KCC_STEP_'+(i+1),
+       keys:['KeyW'],ticks:b318InteriorWalk?4:6
       },()=>{});
       const after=await b312Ledger();
-      const witness={realKey:'KeyW',nativeInputTicks:6,
+      const seam=b318OriginalQuadPlanarSignedMargin(
+       after.originalPositiveRampSourceQuad,after.actualBodyMeters);
+      const witness={realKey:'KeyW',
+       nativeInputTicks:b318InteriorWalk?4:6,
+       nativeOriginalRampQuadMargin:seam,
        actualGameTick:step.tick,after};
       steps.push(witness);
       const report=auditB316RealMovement({first,steps});

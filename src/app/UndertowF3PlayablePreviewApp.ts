@@ -48,6 +48,7 @@ import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {B217ActualNativePaintTempo} from './B217ActualNativePaintTempo';
 import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209OriginalRampEdge';
+import {UNDERTOW_RIGHT_LOW_ROUTE_RAMPS} from '../stage/undertow/UndertowSpillwayRouteRampGeometry';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
 import {b154OriginalTeamInkOptIn}
@@ -3209,6 +3210,16 @@ export class UndertowF3PlayablePreviewApp{
    actualCameraMeters:(()=>{
     const p=this.playerCameraEntity.getPosition();
     return [p.x,p.y,p.z] as [number,number,number];
+   })(),
+   // B318: only four EXACT source-mesh vertices; never a collider,
+   // inferred bridge, invented navigable path or renderer override.
+   originalPositiveRampSourceQuad:(()=>{
+    const source=UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.find(x=>
+     x.id==='right-low-route-ramp-positive-z');
+    if(!source||source.mesh.vertices.length!==4)
+     throw Error('B318_ORIGINAL_QUAD_MISSING');
+    return {id:source.id,sourceObject:source.sourceObject,
+     vertices:source.mesh.vertices.map(v=>[...v])};
    })(),
    genuineHumanOriginalFootSolid:originalFoot?.solidId??null,
    genuineOriginalFootGapMeters:footGap,

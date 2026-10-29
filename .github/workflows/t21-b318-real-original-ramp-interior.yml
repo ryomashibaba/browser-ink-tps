@@ -1,0 +1,53 @@
+name: T21 B318 genuine human interior ramp crossing
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-b318-original-ramp-interior.mjs'
+      - 'scripts/t21-b318-original-ramp-interior.test.mjs'
+      - '.github/workflows/t21-b318-real-original-ramp-interior.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b318-original-ramp-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  original-interior:
+    name: True original KCC interior ramp from real human landing
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b315-verify-native-three-surface-ink.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b318-original-ramp-interior.test.mjs
+      - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Real lower body KCC interior ramp crossing, every 4 native ticks
+        env:
+          T21_B139_VARIANT: ALLY_RALLY
+          T21_B162_REAL_ALLY_SYNC: '1'
+          T21_B194_REAL_PLAYER_BUTTON: '1'
+          T21_B200_REAL_REPLAY: '0'
+          T21_B201_REAL_PAUSE_RESUME: '0'
+          T21_B202_REAL_CONTROLS: '0'
+          T21_B203_REAL_FULL_ROUND: '1'
+          T21_B312_SECOND_HUMAN_SURFACE: '1'
+          T21_B316_GENUINE_RAMP_WALK: '1'
+          T21_B318_INTERIOR_RAMP_WALK: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-b318
+        run: node scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Independently prove actual 3 original Human ink source IDs
+        run: node scripts/t21-b315-verify-native-three-surface-ink.mjs /tmp/t21-b318/b312-real-original-lower-second-ink.json
+      - name: Preserve all true KCC and player input proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b318-genuine-original-ramp-interior
+          path: /tmp/t21-b318/
+          retention-days: 14
+          if-no-files-found: warn
