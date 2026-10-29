@@ -162,7 +162,8 @@ import {b302NativeTeamAEligible,B302_NATIVE_TEAM_A_TONES,
  type B302NativeTeamATone} from './B302RealInkTeamColorTrial';
 import {b304CameraEligible,B304_REAL_FOV,
  type B304RealFov} from './B304NativePaintedCameraFovTrial';
-import {b305NativeActorDrawEligible} from './B305GenuineNativeActorOcclusion';
+import {b305NativeActorDrawEligible,b307ActorDrawVisibilityProof}
+ from './B305GenuineNativeActorOcclusion';
 import {surfaceTextureUvRect} from '../ink/AtlasCoordinates';
 import {b264SourceRayGate,b264SelectNativeVisibleProjectionSamples,
  b264ClassifyNativePaintSightline} from './B264RealInkOpticalSightlines';
@@ -3000,11 +3001,31 @@ export class UndertowF3PlayablePreviewApp{
   })||origin.length!==3||!origin.every(Number.isFinite))
    throw Error('B305_NATIVE_SOURCE_ACTOR_DRAW_WITNESS_FORBIDDEN');
   if(hidden)this.auditB294SourceInkShaderBindings(origin);
-  for(const visual of visuals)visual!.setEnabled(!hidden);
+  // B307: normal setEnabled(false) reveals the original primitive capsule.
+  // This opt-in audit suppresses both render paths, not the actor Entity.
+  const drawState=()=>actors.map(x=>{
+   const find=(name:string)=>x.children.find(y=>y.name===name)?.enabled===true;
+   return {hasRender:!!x.render,primitiveVisible:x.render?.enabled===true,
+    humanVisible:find('B248:GEAR_VISUAL'),
+    compactVisible:find('B268:RESEARCH_ONLY_COMPACT_SILHOUETTE'),
+    identityVisible:find('B269:RESEARCH_ONLY_REAR_IDENTITY'),
+    flowVisible:find('B292:RESEARCH_ONLY_ORGANIC_SILHOUETTE'),
+    squidVisible:find('B248:SQUID_VISUAL')};
+  });
+  if(hidden&&!b307ActorDrawVisibilityProof(drawState(),false))
+   throw Error('B307_EIGHT_ACTOR_BASELINE_NOT_ORIGINAL');
+  for(const visual of visuals)visual!.setAuditDrawHidden(hidden);
+  const complete=b307ActorDrawVisibilityProof(drawState(),hidden);
+  if(!complete){
+   for(const visual of visuals)visual!.setAuditDrawHidden(false);
+   throw Error('B307_EIGHT_ACTOR_DRAW_SUBTREE_MISMATCH');
+  }
   this.b305ActorHiddenTick=hidden?n.tick:null;
   if(!hidden)this.auditB294SourceInkShaderBindings(origin);
   this.canvas.dataset.t21B305ActorDraw=hidden?'HIDDEN':'ORIGINAL';
   return {hidden,nativeTick:n.tick,actors:8,visuals:8,
+   allEightDrawSubtreesVerified:complete as true,
+   fallbackPrimitiveDraws:0 as const,
    originalSourceAuthority:'25/17/26/0' as const,
    playerAndCpuPositionsUnchanged:true as const,
    originalInkAndMaterialUniformsUnchanged:true as const,

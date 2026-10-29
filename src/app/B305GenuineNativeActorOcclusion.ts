@@ -17,3 +17,16 @@ export function b305NativeActorDrawEligible(s:B305NativeActorDrawGate){
   (s.requestHide?s.hiddenAtTick===null&&s.originalHumanVisible===8:
     s.hiddenAtTick===s.tick&&s.originalHumanVisible===0);
 }
+
+/** B307: fail closed unless all eight original actor visual trees match. */
+export function b307ActorDrawVisibilityProof(
+ records:readonly {hasRender:boolean;primitiveVisible:boolean;
+  humanVisible:boolean;compactVisible:boolean;identityVisible:boolean;
+  flowVisible:boolean;squidVisible:boolean;}[],hidden:boolean){
+ if(records.length!==8)return false;
+ return records.every(r=>r.hasRender&&
+  (hidden?!r.primitiveVisible&&!r.humanVisible&&!r.compactVisible&&
+   !r.identityVisible&&!r.flowVisible&&!r.squidVisible:
+   !r.primitiveVisible&&r.humanVisible&&!r.compactVisible&&
+   !r.identityVisible&&!r.flowVisible&&!r.squidVisible));
+}

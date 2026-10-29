@@ -1521,7 +1521,9 @@ async function run(){
         'window.__t21F3.setB305RealActorDrawHidden('+
          JSON.stringify(true)+','+JSON.stringify(origin)+')');
        if(!b305Hide.hidden||b305Hide.visuals!==8||
-          b305Hide.renderOnly!==true)
+          b305Hide.renderOnly!==true||
+          b305Hide.allEightDrawSubtreesVerified!==true||
+          b305Hide.fallbackPrimitiveDraws!==0)
         fail('B305_REAL_ORIGINAL_EIGHT_ACTORS_NOT_RENDER_HIDDEN');
        if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
         fail('B305_HIDDEN_ACTORS_CHANGED_TRUE_PHYSICS');
@@ -1532,7 +1534,9 @@ async function run(){
        const b305Show=await evaluate(
         'window.__t21F3.setB305RealActorDrawHidden('+
          JSON.stringify(false)+','+JSON.stringify(origin)+')');
-       if(b305Show.hidden||b305Show.visuals!==8)
+       if(b305Show.hidden||b305Show.visuals!==8||
+          b305Show.allEightDrawSubtreesVerified!==true||
+          b305Show.fallbackPrimitiveDraws!==0)
         fail('B305_NATIVE_ACTOR_VISUALS_NOT_RESTORED');
        await sleep(190);
        const b305A2=await b246Screenshot('b305-real-native-existing-actors-draw-restored');
@@ -1546,7 +1550,10 @@ async function run(){
         realInk.sampledProjectedCells);
        const b305={...b305Metrics,original:snaps[0].image,
         temporarilyHidden:b305B,restored:b305A2,
-        originalActorCount:8,noActorRelocations:true};
+        originalActorCount:8,noActorRelocations:true,
+        allEightActorDrawSubtreesActuallyInvisible:true,
+        noPrimitiveFallbackRendered:true,
+        previousB305CapsuleFallbackEvidenceInvalid:true};
        writeFileSync(resolve(OUTPUT,'b305-native-actor-occlusion-source-ink-aba.json'),
         JSON.stringify(b305,null,2));
        console.log('B305_REAL_NATIVE_8_ACTOR_RENDER_OCCLUSION_ABA_PASS',

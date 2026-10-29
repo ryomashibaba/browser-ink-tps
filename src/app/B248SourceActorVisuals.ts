@@ -66,6 +66,8 @@ export function b249StrideDegrees(activity:number,phase:number):number{
 export type B248Visual={
  setMode:(mode:'HUMAN'|'SQUID')=>void;
  setEnabled:(shown:boolean)=>void;
+ /** B307 QA: hide every actor draw without enabling primitive fallback. */
+ setAuditDrawHidden:(hidden:boolean)=>void;
  setResearchVariant:(mode:B268RenderVariant)=>void;
  setPose:(dx:number,dz:number,activity:number,phase:number)=>void;
 };
@@ -99,6 +101,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
  ] as const)piece(squidRoot,p,colors);
  // B255: reversible display only, retaining the same native actor Entity.
  let requestedMode:'HUMAN'|'SQUID'='HUMAN',shown=true;
+ let auditDrawHidden=false;
  let researchVariant:B268RenderVariant='B248_ORIGINAL';
  let compactRoot:Entity|null=null;
  let identityRoot:Entity|null=null;
@@ -174,22 +177,27 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   parent.addChild(root);flowRoot=root;
  };
  const syncVisibility=()=>{
-  parent.render!.enabled=!shown;
-  humanRoot.enabled=shown&&requestedMode==='HUMAN'&&
+  // B307: setEnabled(false) normally enables the primitive fallback.
+  // Research-only optical audit must suppress both outfit AND fallback.
+  parent.render!.enabled=!shown&&!auditDrawHidden;
+  humanRoot.enabled=shown&&!auditDrawHidden&&requestedMode==='HUMAN'&&
    researchVariant==='B248_ORIGINAL';
-  if(compactRoot)compactRoot.enabled=shown&&requestedMode==='HUMAN'&&
+  if(compactRoot)compactRoot.enabled=shown&&!auditDrawHidden&&requestedMode==='HUMAN'&&
    researchVariant==='B268_COMPACT';
-  if(identityRoot)identityRoot.enabled=shown&&requestedMode==='HUMAN'&&
+  if(identityRoot)identityRoot.enabled=shown&&!auditDrawHidden&&requestedMode==='HUMAN'&&
    researchVariant==='B269_REAR_IDENTITY';
-  if(flowRoot)flowRoot.enabled=shown&&requestedMode==='HUMAN'&&
+  if(flowRoot)flowRoot.enabled=shown&&!auditDrawHidden&&requestedMode==='HUMAN'&&
    researchVariant==='B292_FLOW_SILHOUETTE';
-  squidRoot.enabled=shown&&requestedMode==='SQUID'&&role==='PLAYER';
+  squidRoot.enabled=shown&&!auditDrawHidden&&requestedMode==='SQUID'&&role==='PLAYER';
  };
  const setMode=(mode:'HUMAN'|'SQUID')=>{
   requestedMode=mode;syncVisibility();
  };
  const setEnabled=(next:boolean)=>{
   shown=next;syncVisibility();
+ };
+ const setAuditDrawHidden=(hidden:boolean)=>{
+  auditDrawHidden=hidden;syncVisibility();
  };
  const setResearchVariant=(mode:B268RenderVariant)=>{
   if(!b268VariantAccepted(mode))throw Error('B268_UNKNOWN_SOURCE_ACTOR_STYLE');
@@ -223,7 +231,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   ] as const)limbs.get(part)?.setLocalEulerAngles(swing*sign,0,0);
  };
  setMode('HUMAN');
- const visual={setMode,setEnabled,setPose,setResearchVariant};
+ const visual={setMode,setEnabled,setAuditDrawHidden,setPose,setResearchVariant};
  b268ActorVisuals.set(parent,visual);
  return visual;
 }
