@@ -1,0 +1,13 @@
+{
+  "schema": "T21_B335_GENUINE_CHROMIUM_SOURCE_PROVENANCE",
+  "sourceRunId": 40878994476,
+  "sourceArtifactId": 12901783202,
+  "headSha": "48cd94c451ce327a79ba53d66af43d58ae8b0e43",
+  "originalArtifactUrl": "https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40878994476/artifacts/12901783202",
+  "artifactZipDigest": "sha256:1179d3e6c89cd7c585a16a1597d40fd5af6ee99f84937b0d535252e4c1ed0c7e",
+  "storedEncoding": "gzip-base64-no-loss",
+  "realRoundJsonSha256": "5a0249b6a9185cd68f835e8311fe3b2c33c05063cf835dd4cd89511cfe48dbc0",
+  "stageAuthority": "25/17/26/0",
+  "scope": "READ_ONLY_SAVED_GENUINE_CHROMIUM_WITNESS",
+  "authorityToProduction": false
+}
