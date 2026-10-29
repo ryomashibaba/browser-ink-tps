@@ -165,7 +165,7 @@ export function b290SourcePlayerHudPhase(x:{
 }
 /** B338: only native-authoritative read-only source round guidance. */
 export function b338SourceRoundGuide(x:{
- playerView:boolean;matchState:'STAGING'|'PLAYING'|'TIME_UP';
+ playerView:boolean;matchState:string;
  paused:boolean;tick:number|undefined;stopReason:string|null;
 }):{phase:'READY'|'STAGING'|'PLAYING'|'PAUSED'|'TIME_UP'|'STOP'|'QA';text:string}{
  if(!x.playerView)return {phase:'QA',text:''};
@@ -178,6 +178,8 @@ export function b338SourceRoundGuide(x:{
   text:'PAUSED · CLICK RESUME TO CONTINUE THIS WORLD'};
  if(x.matchState==='STAGING')
   return {phase:'STAGING',text:'STAGING · 7 REAL CPU PREPARING'};
+ if(x.matchState!=='PLAYING')
+  return {phase:'STOP',text:'UNVERIFIED SOURCE PHASE · NO RESULT'};
  return {phase:'PLAYING',
   text:'WASD MOVE · MOUSE AIM · LEFT CLICK FIRE · ESC / P PAUSE'};
 }
