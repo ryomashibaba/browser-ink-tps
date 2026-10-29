@@ -22,6 +22,10 @@ const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
 const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
 const b202ControlsTrial=process.env.T21_B202_REAL_CONTROLS==='1';
 const b203FullRoundTrial=process.env.T21_B203_REAL_FULL_ROUND==='1';
+const b312SecondInkTrial=process.env.T21_B312_SECOND_HUMAN_SURFACE==='1';
+if(b312SecondInkTrial&&(!b162CoopTrial||!b203FullRoundTrial||
+ variant!=='ALLY_RALLY'))throw Error('B312_REQUIRES_TRUE_ORIGINAL_COOP');
+
 if(b203FullRoundTrial&&!b194ButtonTrial)throw Error('B203_REQUIRES_REAL_SELECTED_COOP');
 if(b200ReplayTrial&&!b194ButtonTrial)
  throw Error('B200_REQUIRES_REAL_PLAYER_SELECTED_A1_COOP');
@@ -71,6 +75,7 @@ async function clickButton(selector){
  await click(p.x,p.y);
 }
 const snapshot=()=>evaluate('window.__t21F3.snapshot()');
+const b312Ledger=()=>evaluate('window.__t21F3.auditB312NativeHumanOwnerLedger()');
 function authority(n,mode){
  if(n.stopReason||n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
     n.originalSourceNavigationLinks!==26||n.sourceScoreablePromotions!==0||
@@ -233,6 +238,18 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   const n=await snapshot();authority(n,'FIXED');
   return n.b25SourcePaintRun.status==='RUNNING'?n:false;
  },100000);
+ let b312UpperBaseline=null;
+ if(b312SecondInkTrial&&coopAttempt===1){
+  await evaluate(`(() => {const u=new URL(location.href);
+   u.searchParams.set('t21B312','genuineSecondHumanPaint');
+   history.replaceState(null,'',u.href);return true;})()`);
+  b312UpperBaseline=await b312Ledger();
+  if(b312UpperBaseline.originalRows.length!==17||
+     b312UpperBaseline.realHumanOriginalFootSupported!==true)
+   console.log('B312_UPPER_START_FOOT_NOT_GROUNDED',
+    JSON.stringify({tick:b312UpperBaseline.tick,
+     foot:b312UpperBaseline.genuineHumanOriginalFootSolid}));
+ }
  const baseline=started.b152ExactAllyAimPaintProvenance;
  const history162=[];
  const saveAttempt=(n,verdict)=>{
@@ -550,6 +567,111 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
     actualLower.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests
   };
   history162.push(lowerReport);
+  // B312: strict follow-up research is genuinely fired only on the
+  // original KCC-verified lower body, not by a fake hit/ownership write.
+  if(b312SecondInkTrial&&coopAttempt===1){
+   const lowerInitial=await b312Ledger();
+   const targets=[
+    'UndertowT21D:first-drop-landing-positive-z:paint',
+    'UndertowT21D:right-low-route-ramp-positive-z:paint'];
+   const observations=[];
+   if(sourceSafeFoot(actualLower)&&
+      lowerInitial.realHumanOriginalFootSupported===true){
+    for(const targetId of targets){
+     const before=await b312Ledger();
+     const entry=before.originalRows.find(r=>r.surfaceId===targetId);
+     if(!entry)fail('B312_ORIGINAL_TARGET_ID_MISSING');
+     const target=entry.originalSourceActiveProbeWorld;
+     const cam=before.actualCameraMeters;
+     const dx=target[0]-cam[0],dz=target[2]-cam[2];
+     const flat=Math.hypot(dx,dz);
+     const desiredYaw=Math.atan2(dx,dz)*180/Math.PI;
+     const desiredPitch=Math.atan2(target[1]-cam[1],flat)*180/Math.PI;
+     const angle=(await snapshot()).cameraSourcePractice;
+     const mx=Math.round(wrap(desiredYaw-angle.yawDegrees)/.22);
+     const my=Math.round(-(desiredPitch-angle.pitchDegrees)/.18);
+     const routeNear=entry.originalSourceSamplePlanarDistanceMeters<=10;
+     const aimSafe=routeNear&&flat>.15&&
+      [mx,my,desiredYaw,desiredPitch].every(Number.isFinite)&&
+      Math.abs(mx)<=720&&Math.abs(my)<=480&&
+      desiredPitch>=-78&&desiredPitch<=12;
+     if(!aimSafe||!before.realHumanOriginalFootSupported){
+      observations.push({targetId,verdict:'HOLD_NO_SAFE_GENUINE_AIM',
+       player:before.actualBodyMeters,
+       support:before.genuineHumanOriginalFootSolid,
+       nearestOriginalSampleMeters:
+        entry.originalSourceSamplePlanarDistanceMeters,desiredYaw,desiredPitch});
+      continue;
+     }
+     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+      x:800,y:450,button:'none'});
+     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+      x:800+mx,y:450+my,button:'none'});
+     await cmd('Input.dispatchMouseEvent',{type:'mousePressed',
+      x:800,y:450,button:'left',clickCount:1});
+     let moved;
+     try{
+      moved=await nativeOriginalKeyboard({
+       name:'B312_REAL_ORIGINAL_LOWER_HUMAN_SHOTS_'+targetId,
+       keys:[],ticks:34
+      },()=>{});
+     }finally{
+      await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
+       x:800,y:450,button:'left',clickCount:1});
+     }
+     const after=await b312Ledger();
+     const originalBefore=before.originalRows.find(r=>r.surfaceId===targetId);
+     const originalAfter=after.originalRows.find(r=>r.surfaceId===targetId);
+     const hitNew=after.humanLastPaintedSurface===targetId&&
+      after.humanLastImpactTick!==null&&
+      after.humanLastImpactTick>before.tick&&
+      after.humanChangedCells>before.humanChangedCells;
+     const exactOwnerIncrease=originalAfter.originalOwnedA>
+      originalBefore.originalOwnedA;
+     const previousHumanSource=b312UpperBaseline.humanLastPaintedSurface;
+     const second=hitNew&&exactOwnerIncrease&&
+      previousHumanSource!==null&&previousHumanSource!==targetId&&
+      after.shots>before.shots;
+     const verdict=second?'GENUINE_SECOND_SOURCE_HUMAN_PAINT_PASS':
+      'HOLD_NO_PROVEN_SECOND_HUMAN_SOURCE_PAINT';
+     const proof={targetId,verdict,fromTick:before.tick,toTick:after.tick,
+      beforeShots:before.shots,afterShots:after.shots,
+      afterHumanLastImpact:after.humanLastImpactTick,
+      afterHumanSource:after.humanLastPaintedSurface,
+      beforeUpperHumanSurface:previousHumanSource,
+      targetTeamABefore:originalBefore.originalOwnedA,
+      targetTeamAAfter:originalAfter.originalOwnedA,
+      beforeFoot:before.genuineHumanOriginalFootSolid,
+      afterFoot:after.genuineHumanOriginalFootSolid,
+      afterBody:after.actualBodyMeters,
+      originalSource:'25/17/26/0',officialWinner:'NONE',
+      productionAuthorized:false};
+     observations.push(proof);
+     console.log('B312_TRUE_ORIGINAL_SECOND_SURFACE_TRIAL',
+      JSON.stringify(proof));
+     await picture('B312_REAL_ORIGINAL_LOWER_HUMAN_'+
+      targetId.split(':')[1].replace(/[^a-z0-9-]/gi,'-'));
+     if(moved.stopReason||moved.matchState!=='PLAYING')break;
+    }
+   }else observations.push({verdict:'HOLD_REAL_LOWER_FOOT_NOT_PROVEN',
+    nativeTick:lowerInitial.tick,body:lowerInitial.actualBodyMeters,
+    solid:lowerInitial.genuineHumanOriginalFootSolid});
+   const result={schema:'B312_GENUINE_SECOND_ORIGINAL_HUMAN_PAINT_ATTEMPT',
+    genuineCDPKeyboardMouse:true,source:'25/17/26/0',
+    upperBaseline:b312UpperBaseline,lowerInitial,
+    originalTargetAttempts:observations,
+    provenSecondPaintSources:observations.filter(r=>
+     r.verdict==='GENUINE_SECOND_SOURCE_HUMAN_PAINT_PASS')
+      .map(r=>r.targetId),original4v4Certified:false,
+    artAccepted:false,productionAuthorized:false};
+   writeFileSync(resolve(OUTPUT,'b312-real-original-lower-second-ink.json'),
+    JSON.stringify(result,null,2));
+   console.log('B312_REAL_ORIGINAL_SECOND_SURFACE_VERDICT',
+    JSON.stringify({verdict:result.provenSecondPaintSources.length?
+     'Genuine second surface impact witnessed':
+     'HOLD not yet physically proven',
+     surfaceIds:result.provenSecondPaintSources}));
+  }
   saveAttempt(actualLower,'B164_GENUINE_LOWER_SOURCE_FOOT_AND_A1_GATE');
   console.log('B164_ACTUAL_SOURCE_STANDOFF_WITNESS',JSON.stringify(lowerReport));
  }else{

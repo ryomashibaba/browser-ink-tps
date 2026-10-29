@@ -173,6 +173,7 @@ import {b271RegistrationGate,b271NativeFootprintProbes,
 import {b308NativeRouteOpportunityGate,b308NativePathIsOnlyCandidate,
  b308SummarizeNativeOriginalSurfaces} from './B308NativeOriginalOtherPaintRoute';
 import {b310CheckOriginalTripleRoutes} from './B310RealThreeSourceFootProbes';
+import {b312ValidateOriginalOwnerFrame} from './B312NativeOriginalSecondHumanInk';
 import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
@@ -1760,6 +1761,7 @@ export class UndertowF3PlayablePreviewApp{
      this.auditB293ActualInkViewport(origin),
     auditB308NativeOtherPaintSurfaceRoutes:(origin:readonly [number,number,number])=>
      this.auditB308NativeOtherPaintSurfaceRoutes(origin),
+    auditB312NativeHumanOwnerLedger:()=>this.auditB312NativeHumanOwnerLedger(),
     auditB294SourceInkShaderBindings:(origin:readonly [number,number,number])=>
      this.auditB294SourceInkShaderBindings(origin),
     setB298NativePaintDrawHidden:(hidden:boolean,origin:readonly [number,number,number])=>
@@ -3127,6 +3129,89 @@ export class UndertowF3PlayablePreviewApp{
     rows.map(r=>({surfaceId:r.surfaceId,owned:r.actualOwnerCells,
      active:r.activeFootprintCells,probes:r.nativeProbes})),
     owner.actualOwnerCells)};
+ }
+ /** B312 17 original source human/CPU-owner ledger while a real human
+  * session is running. Never rewrites ink, physics, camera or tick. */
+ private auditB312NativeHumanOwnerLedger(){
+  const n=this.snapshot();
+  const params=new URL(location.href).searchParams;
+  if(params.get('t21B312')!=='genuineSecondHumanPaint'||
+   params.get('t21Play')!=='preview'||
+   params.get('t21W10B193')!=='allyCoop'||
+   params.get('t21W10B203')!=='fullRound'||
+   !this.b203FullRound||this.paused||this.stopReason||
+   this.matchState!=='PLAYING'||n.tick<1||
+   this.rawStage.solids.length!==25||
+   this.b45SourceSurfaces.length!==17||
+   this.rawStage.navigationLinks?.length!==26||
+   this.b45SourceSurfaces.some(x=>x.isScoreable||
+    this.ink.getSurface(x.id)!==x))
+   throw Error('B312_NOT_GENUINE_PLAYING_ORIGINAL_17_SOURCE');
+  const body=this.player.getPosition(new Vec3());
+  const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const expectedFootY=body.y-footOffset;
+  const originalFoot=this.physics.castCharacterFootSupport(
+   body,footOffset,'HUMAN');
+  const footGap=originalFoot?Math.abs(originalFoot.point.y-expectedFootY):null;
+  const actualFoot=new Vec3(body.x,
+   originalFoot?.point.y??expectedFootY,body.z);
+  const originalRows=this.b45SourceSurfaces.map(surface=>{
+   let originalOwnedA=0,originalOwnedB=0,originalNeutral=0,active=0;
+   for(let y=0;y<surface.heightCells;y++)
+    for(let x=0;x<surface.widthCells;x++){
+     const index=y*surface.widthCells+x;
+     const owner=surface.ownerGrid[index]!;
+     if(!surface.isCellActive(x,y)){
+      if(owner!==0)
+       throw Error('B312_SOURCE_PAINT_OWNER_OUTSIDE_ACTIVE_FOOTPRINT');
+      continue;
+     }
+     active++;
+     if(owner===1)originalOwnedA++;
+     else if(owner===-1)originalOwnedB++;
+     else if(owner===0)originalNeutral++;
+     else throw Error('B312_UNKNOWN_ORIGINAL_OWNER_GRID_VALUE');
+    }
+   const projection=surface.projectWorldPoint(actualFoot);
+   const gx=Math.min(surface.widthCells-1,
+    Math.max(0,Math.floor(projection.u/surface.cellSize)));
+   const gy=Math.min(surface.heightCells-1,
+    Math.max(0,Math.floor(projection.v/surface.cellSize)));
+   const actualFootIsOnSourcePlane=projection.inside&&
+    projection.planeDistance<=.4&&surface.isCellActive(gx,gy)&&
+    originalFoot!==null&&footGap!==null&&footGap<=.4;
+   const sample=b271NativeFootprintProbes(surface);
+   const sampleClosest=sample.probes.slice().sort((a,b)=>
+    Math.hypot(a.world[0]-body.x,a.world[2]-body.z)-
+    Math.hypot(b.world[0]-body.x,b.world[2]-body.z))[0]!;
+   return {surfaceId:surface.id,originalOwnedA,originalOwnedB,
+    originalNeutral,activeOriginalCells:active,
+    actualHumanFootOnOriginalActiveSurface:actualFootIsOnSourcePlane,
+    realFootPlaneDistanceMeters:projection.planeDistance,
+    humanFootGrid:[gx,gy],originalSourceActiveProbeWorld:sampleClosest.world,
+    originalSourceSamplePlanarDistanceMeters:Math.hypot(
+     sampleClosest.world[0]-body.x,sampleClosest.world[2]-body.z)};
+  });
+  const event=n.b23HumanInkFeedback;
+  const frame={source:'25/17/26/0' as const,tick:n.tick,
+   shots:n.shotsFired,humanChangedCells:event.humanChangedCells,
+   humanLastImpactTick:event.lastImpactTick,
+   humanLastPaintedSurface:event.lastPaintedSurface,
+   originalRows};
+  b312ValidateOriginalOwnerFrame(frame);
+  return {...frame,actualBodyMeters:[body.x,body.y,body.z],
+   actualCameraMeters:(()=>{
+    const p=this.playerCameraEntity.getPosition();
+    return [p.x,p.y,p.z] as [number,number,number];
+   })(),
+   genuineHumanOriginalFootSolid:originalFoot?.solidId??null,
+   genuineOriginalFootGapMeters:footGap,
+   realHumanOriginalFootSupported:originalFoot!==null&&
+    footGap!==null&&footGap<=.4,
+   scoreable:0 as const,sourceActorRelocations:n.cpu.physicalFootRelocations,
+   sourceInkRewritten:false as const,
+   playerPositionRewritten:false as const,
+   original4v4Certified:false as const,productionAuthorized:false as const};
  }
  /** B264: 24 source-verified real owned paint cell rays maximum.
   * Ray checks compare exact original F3L optical triangles and certified
