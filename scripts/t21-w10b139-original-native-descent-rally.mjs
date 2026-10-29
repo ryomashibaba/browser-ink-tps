@@ -12,6 +12,8 @@ import {RAMP,planB316ActualOriginalRampApproach,auditB316RealMovement}
  from './t21-b316-native-human-ramp-walk.mjs';
 import {b318NativeOriginalRampInterior,b318OriginalQuadPlanarSignedMargin}
  from './t21-b318-original-ramp-interior.mjs';
+import {RAMP_SOLID,b320PlanOriginalTrueRampUphill,b320AuditActualNativeRampAscent}
+ from './t21-b320-original-ramp-uphill-kcc.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -30,6 +32,9 @@ const b202ControlsTrial=process.env.T21_B202_REAL_CONTROLS==='1';
 const b203FullRoundTrial=process.env.T21_B203_REAL_FULL_ROUND==='1';
 const b316GenuineRampWalk=process.env.T21_B316_GENUINE_RAMP_WALK==='1';
 const b318InteriorWalk=process.env.T21_B318_INTERIOR_RAMP_WALK==='1';
+const b320UphillStudy=process.env.T21_B320_TRUE_SOURCE_RAMP_UPHILL==='1';
+if(b320UphillStudy&&(!b318InteriorWalk||!b316GenuineRampWalk))
+ throw Error('B320_REQUIRES_GENUINE_B318_ORIGINAL_RAMP_KCC');
 if(b318InteriorWalk&&!b316GenuineRampWalk)
  throw Error('B318_REQUIRES_TRUE_ORIGINAL_B316_WALK');
 if(b316GenuineRampWalk&&(!b162CoopTrial||!b203FullRoundTrial||
@@ -828,6 +833,74 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    realSteps:steps.length,
    physicallyReached:finalB316.reachedOriginalRampOnGenuineCharacterKcc,
    source:'25/17/26/0',productionAuthorized:false}));
+  if(b320UphillStudy){
+   const rampStart=await b312Ledger();
+   const ascentSteps=[];
+   const b320Save=(status,plan=null,aim=null)=>{
+    const payload={schema:'B320_TRUE_CDP_ORIGINAL_RAMP_ASCENT',
+     status,source:'25/17/26/0',first:rampStart,
+     plan,aim,steps:ascentSteps,original4v4Certified:false,
+     artAccepted:false,productionAuthorized:false};
+    const result=(()=>{
+     try{return b320AuditActualNativeRampAscent(payload);}
+     catch(error){return {verdict:'HOLD_TRUE_ORIGINAL_RAMP_START_UNPROVEN',
+      reason:String(error)};}
+    })();
+    writeFileSync(resolve(OUTPUT,'b320-genuine-original-ramp-uphill.json'),
+     JSON.stringify({...payload,independentPreliminary:result},null,2));
+    return result;
+   };
+   if(finalB316.reachedOriginalRampOnGenuineCharacterKcc===true&&
+      rampStart.realHumanOriginalFootSupported===true&&
+      rampStart.genuineHumanOriginalFootSolid===RAMP_SOLID){
+    await cmd('Input.dispatchMouseEvent',
+     {type:'mouseMoved',x:800,y:450,button:'none'});
+    const freshCamera=(await snapshot()).cameraSourcePractice;
+    const guide=b320PlanOriginalTrueRampUphill({
+     ledger:rampStart,camera:freshCamera});
+    if(guide.safe){
+     await cmd('Input.dispatchMouseEvent',
+      {type:'mouseMoved',x:guide.screenX,y:450,button:'none'});
+     await sleep(140);
+     const checkedCamera=(await snapshot()).cameraSourcePractice;
+     const error=Math.abs(wrap(guide.targetYaw-checkedCamera.yawDegrees));
+     if(error<=3){
+      for(let i=0;i<14;i++){
+       const prior=await b312Ledger();
+       if(prior.realHumanOriginalFootSupported!==true||
+        prior.genuineHumanOriginalFootSolid!==RAMP_SOLID)break;
+       const step=await b319TrueShortNativeKey('KeyW',4);
+       const after=await b312Ledger();
+       ascentSteps.push({realKey:'KeyW',nativeInputTicks:Math.min(4,
+        after.tick-prior.tick),actualNativeTickDelta:after.tick-prior.tick,
+        trueNativeTick:step.tick,after});
+       const report=b320Save('GENUINE_SHORT_UPHILL_KCC_IN_PROGRESS',
+        guide,checkedCamera);
+       console.log('B320_REAL_ORIGINAL_UPHILL_KCC_STEP',
+        JSON.stringify({number:i+1,foot:after.genuineHumanOriginalFootSolid,
+         body:after.actualBodyMeters,
+         supported:after.realHumanOriginalFootSupported,
+         ascentMeters:report.actualMaximumHumanBodyHeightGainMeters??null,
+         verdict:report.verdict}));
+       if(report.verdict==='PASS_GENUINE_ORIGINAL_RAMP_UPHILL_KCC'||
+        after.realHumanOriginalFootSupported!==true||
+        after.genuineHumanOriginalFootSolid!==RAMP_SOLID)break;
+      }
+     }else console.log('B320_HOLD_TRUE_CDP_CAMERA_ALIGNMENT',
+      JSON.stringify({error,requested:guide.targetYaw,
+       actual:checkedCamera.yawDegrees}));
+    }
+   }
+   const verdict=b320Save(ascentSteps.length?
+    'GENUINE_KCC_UPHILL_OBSERVED':'HOLD_NO_UPHILL_INPUT',
+    null,null);
+   await picture('B320_ACTUAL_ORIGINAL_RAMP_UPHILL_KCC');
+   console.log('B320_REAL_ORIGINAL_RAMP_UPHILL_VERDICT',
+    JSON.stringify({verdict:verdict.verdict,
+     realSteps:ascentSteps.length,
+     gain:verdict.actualMaximumHumanBodyHeightGainMeters??null,
+     source:'25/17/26/0',productionAuthorized:false}));
+  }
  }
   }
   saveAttempt(actualLower,'B164_GENUINE_LOWER_SOURCE_FOOT_AND_A1_GATE');
