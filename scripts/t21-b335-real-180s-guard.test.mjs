@@ -9,7 +9,7 @@ function f(){
   samples:times.map((time,i)=>({
    thresholdSeconds:time,remainingSeconds:i===0?179.98:time,
    tick:1000+i*1800,wallMs:i*30000,
-   matchState:i===6?'TIME_UP':'PLAYING',paused:false,stopReason:null,
+   matchState:i===6?'TIME_UP':'PLAYING',paused:i===6,stopReason:null,
    originalSolids:25,originalPaint:17,originalNavLinks:26,scoreable:0,
    unrestricted4v4Certified:false,productionAuthorized:false,
    officialWinner:'NONE',turfResult:'UNAVAILABLE_SOURCE_SCORE_MASK_NOT_AUTHORIZED',
@@ -52,4 +52,11 @@ test('nonmonotonic clock, ink or missing original foot witness is HOLD',()=>{
  w=f();w.samples[4].cpuInk=0;assert.throws(()=>audit(w),/NATIVE_MONOTONIC_4/);
  w=f();delete w.samples[4].originalHumanFootSupport;
  assert.throws(()=>audit(w),/SOURCE_SAMPLE_4/);
+});
+
+test('native TIME_UP freezes the match, while PLAYING cannot be paused',()=>{
+ const finished=f();finished.samples[6].paused=false;
+ assert.throws(()=>audit(finished),/NATIVE_TIME_UP/);
+ const active=f();active.samples[3].paused=true;
+ assert.throws(()=>audit(active),/SOURCE_SAMPLE_3/);
 });

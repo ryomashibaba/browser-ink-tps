@@ -18,7 +18,7 @@ export function b335VerifyNativeRound(w){
  need(start.matchState==='PLAYING'&&start.paused===false&&
   number(start.remainingSeconds)&&start.remainingSeconds>149&&
   start.remainingSeconds<=180,'PLAYING_180S_START');
- need(end.matchState==='TIME_UP'&&end.paused===false&&
+ need(end.matchState==='TIME_UP'&&end.paused===true&&
   end.remainingSeconds===0&&
   Number.isSafeInteger(end.tick)&&Number.isSafeInteger(start.tick)&&
   end.tick-start.tick>=(start.remainingSeconds*60)-12,'NATIVE_TIME_UP');
@@ -28,7 +28,7 @@ export function b335VerifyNativeRound(w){
  for(let i=0;i<7;i++){
   const s=v[i];
   need(s.matchState===(i===6?'TIME_UP':'PLAYING')&&
-   s.paused===false&&s.stopReason===null&&
+   (i===6?s.paused===true:s.paused===false)&&s.stopReason===null&&
    Number.isSafeInteger(s.tick)&&number(s.remainingSeconds)&&
    s.remainingSeconds<=s.thresholdSeconds+.2&&s.remainingSeconds>=0&&
    s.originalSolids===25&&s.originalPaint===17&&
