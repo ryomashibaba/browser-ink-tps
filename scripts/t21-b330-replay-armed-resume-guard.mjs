@@ -1,10 +1,12 @@
 /** B330: REAL button arm gate for BOTH independent original 180s rounds.
- * A freshly replayed world starts STAGING + PAUSED; canvas center clicks are
- * not a replacement for the actual visible Resume control. */
+ * A fresh world starts in STAGING, but playB162GenuineAllySync is entered
+ * only AFTER actual native PLAYING and 7/7 physically rejoined. The mission
+ * is armed while the real PLAYING round is paused. A center click is never
+ * a replacement for the actual visible Resume control. */
 export function b330AuditArmedReplayResume(input){
  const i=input??{};
  const genuine=[1,2].includes(i.coopAttempt)&&
-  i.matchState==='STAGING'&&i.practiceStatus==='ARMED'&&
+  i.matchState==='PLAYING'&&i.practiceStatus==='ARMED'&&
   i.practiceVariant==='ALLY_SYNC'&&i.paused===true&&
   i.stopReason===null&&i.sourceAuthority==='25/17/26/0'&&
   i.originalCpuFootRelocations===0&&

@@ -10,6 +10,8 @@ on:
       - 'scripts/t21-b326-extended-original-upper-floor.mjs'
       - 'scripts/t21-b326-extended-original-upper-floor.test.mjs'
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b330-replay-armed-resume-guard.mjs'
+      - 'scripts/t21-b330-replay-armed-resume-guard.test.mjs'
       - 'scripts/t21-b327-original-lower-post-clear-shot.mjs'
       - 'scripts/t21-b327-original-lower-post-clear-shot.test.mjs'
       - '.github/workflows/t21-b322-original-ramp-crest.yml'
