@@ -1038,7 +1038,6 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      }
      const verdict=save(steps.length?'REAL_PHYSICAL_CREST_ATTEMPT':
       'HOLD_NO_PHYSICAL_CREST_INPUT');
-     await picture('B322_TRUE_ORIGINAL_RAMP_CREST_EXIT_KCC');
      console.log('B322_NATIVE_REAL_CREST_RESULT',JSON.stringify({
       verdict:verdict.verdict,crest:verdict.crestProven,
       nextOriginalFloor:verdict.originalUpperFloorReached,
@@ -1047,7 +1046,9 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      if(b324UpperFloor){
       const priorB322=JSON.parse(readFileSync(
        resolve(OUTPUT,'b322-actual-original-ramp-crest.json'),'utf8'));
-      const firstUpper=await b312Ledger(),stepsUpper=[];
+      // Anchor directly to the final genuine B322 KCC witness. Do not
+      // insert a screenshot/another snapshot between the two actual paths.
+      const firstUpper=steps.at(-1)?.after??await b312Ledger(),stepsUpper=[];
       const saveUpper=status=>{
        const attempt={schema:'B324_REAL_ORIGINAL_UPPER_FLOOR',
         source:'25/17/26/0',status,first:firstUpper,steps:stepsUpper,
@@ -1069,7 +1070,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
         const after=await b312Ledger();
         stepsUpper.push({realKey:'KeyW',nativeInputTicks:2,
          actualNativeTickDelta:after.tick-before.tick,
-         actualTick:press.tick,after});
+         actualTick:press.tick,before,after});
         const result=saveUpper('GENUINE_UPPER_FLOOR_NATIVE_INPUT');
         console.log('B324_REAL_ORIGINAL_UPPER_FLOOR_STEP',JSON.stringify({
          i:i+1,body:after.actualBodyMeters,
@@ -1089,6 +1090,10 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
        meters:report.witnessedPlanarMeters??0,
        source:'25/17/26/0',productionAuthorized:false}));
      }
+     // Record a true framebuffer without interrupting the B322->B324
+     // input chain. B322's independent pass uses native per-step ledgers.
+     // When B324 ran, this is a POST-continuation upper-floor screenshot.
+     await picture('B322_TRUE_ORIGINAL_RAMP_CREST_EXIT_KCC');
     }
 
    }

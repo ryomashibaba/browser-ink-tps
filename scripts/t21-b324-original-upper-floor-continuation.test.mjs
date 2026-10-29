@@ -33,16 +33,20 @@ function fixture(){
  prior.steps.push({phase:'EXIT',realKey:'KeyW',
   nativeInputTicks:2,actualNativeTickDelta:6,
   after:at(.5,1.01,2130,UPPER_FLOOR_SOLID)});
- const first=structuredClone(prior.steps.at(-1).after);first.tick+=6;
+ const first=structuredClone(prior.steps.at(-1).after);
  const attempt={schema:'B324_REAL_ORIGINAL_UPPER_FLOOR',
   source:'25/17/26/0',productionAuthorized:false,
   original4v4Certified:false,artAccepted:false,first,
   steps:Array.from({length:5},(_,i)=>{
-   const s=structuredClone(first);
-   s.tick+=6*(i+1);s.actualBodyMeters[0]+=.11*(i+1);
-   s.actualBodyMeters[2]-=.03*(i+1);
+   const before=structuredClone(first);
+   before.tick+=6*i;
+   before.actualBodyMeters[0]+=.11*i;
+   before.actualBodyMeters[2]-=.03*i;
+   const s=structuredClone(before);
+   s.tick+=6;s.actualBodyMeters[0]+=.11;
+   s.actualBodyMeters[2]-=.03;
    return {realKey:'KeyW',nativeInputTicks:2,
-    actualNativeTickDelta:6,after:s};
+    actualNativeTickDelta:6,before,after:s};
   })};
  return {prior,attempt};
 }
@@ -74,5 +78,16 @@ test('tampering with native position or source relocation rejects',()=>{
 });
 test('B322 predecessor HOLD cannot promote B324',()=>{
  const {prior,attempt}=fixture();prior.prerequisiteB321Passed=false;
+ assert.equal(b324AuditGenuineUpperFloor(prior,attempt).continuousUpperFloor,false);
+});
+
+test('real before/after snapshots must agree with native input ticks',()=>{
+ const {prior,attempt}=fixture();
+ attempt.steps[0].before.tick+=2;
+ assert.throws(()=>b324AuditGenuineUpperFloor(prior,attempt),/ACTUAL_NATIVE_INPUT/);
+});
+test('large idle movement between genuine observations cannot establish a route',()=>{
+ const {prior,attempt}=fixture();
+ attempt.steps[1].before.actualBodyMeters[0]+=.28;
  assert.equal(b324AuditGenuineUpperFloor(prior,attempt).continuousUpperFloor,false);
 });

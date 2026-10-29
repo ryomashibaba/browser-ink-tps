@@ -21,8 +21,8 @@ export function b324AuditGenuineUpperFloor(prior,attempt){
  const last=prior.steps.at(-1)?.after,first=attempt.first;
  gate(last?.genuineHumanOriginalFootSolid===UPPER_FLOOR_SOLID&&
   good3(last.actualBodyMeters)&&good3(first?.actualBodyMeters)&&
-  first.tick>=last.tick&&first.tick<=last.tick+120&&
-  Math.hypot(...first.actualBodyMeters.map((v,i)=>v-last.actualBodyMeters[i]))<=.10&&
+  first.tick===last.tick&&
+  Math.hypot(...first.actualBodyMeters.map((v,i)=>v-last.actualBodyMeters[i]))<=1e-6&&
   first.realHumanOriginalFootSupported===true&&
   first.genuineHumanOriginalFootSolid===UPPER_FLOOR_SOLID&&
   first.originalRows?.length===17&&
@@ -32,19 +32,37 @@ export function b324AuditGenuineUpperFloor(prior,attempt){
  let prev=first,supported=0,meters=0,firstBad=null;
  const trace=[];
  for(let i=0;i<attempt.steps.length;i++){
-  const t=attempt.steps[i],s=t?.after;
-  gate(t.realKey==='KeyW'&&t.nativeInputTicks===2&&
+  const t=attempt.steps[i],before=t?.before,s=t?.after;
+  gate(t?.realKey==='KeyW'&&t.nativeInputTicks===2&&
    Number.isSafeInteger(t.actualNativeTickDelta)&&
    t.actualNativeTickDelta>=1&&t.actualNativeTickDelta<=24&&
+   before?.source==='25/17/26/0'&&
+   Number.isSafeInteger(before.tick)&&
+   before.tick>=prev.tick&&before.tick-prev.tick<=18&&
+   good3(before.actualBodyMeters)&&before.originalRows?.length===17&&
+   before.sourceActorRelocations===0&&
+   before.sourceInkRewritten===false&&
+   before.playerPositionRewritten===false&&
    s?.source==='25/17/26/0'&&Number.isSafeInteger(s.tick)&&
-   s.tick>prev.tick&&s.tick-prev.tick===t.actualNativeTickDelta&&
+   s.tick>before.tick&&s.tick-before.tick===t.actualNativeTickDelta&&
    good3(s.actualBodyMeters)&&s.originalRows?.length===17&&
    s.sourceActorRelocations===0&&s.sourceInkRewritten===false&&
    s.playerPositionRewritten===false,'ACTUAL_NATIVE_INPUT_'+i);
-  const planar=Math.hypot(s.actualBodyMeters[0]-prev.actualBodyMeters[0],
-   s.actualBodyMeters[2]-prev.actualBodyMeters[2]);
-  const rise=Math.abs(s.actualBodyMeters[1]-prev.actualBodyMeters[1]);
-  const onFloor=planar<=.8&&rise<=.22&&
+  // Observe pre-input KCC, not merely the later shot. No hidden relocation,
+  // source change, or large unobserved drift between real observations.
+  const inter=Math.hypot(...before.actualBodyMeters.map(
+   (value,index)=>value-prev.actualBodyMeters[index]));
+  const planar=Math.hypot(s.actualBodyMeters[0]-before.actualBodyMeters[0],
+   s.actualBodyMeters[2]-before.actualBodyMeters[2]);
+  const rise=Math.abs(s.actualBodyMeters[1]-before.actualBodyMeters[1]);
+  const beforeFloor=inter<=.15&&before.realHumanOriginalFootSupported===true&&
+   before.genuineHumanOriginalFootSolid===UPPER_FLOOR_SOLID&&
+   Number.isFinite(before.genuineOriginalFootGapMeters)&&
+   before.genuineOriginalFootGapMeters>=0&&
+   before.genuineOriginalFootGapMeters<=.18&&
+   before.originalRows.some(r=>r.surfaceId===UPPER_FLOOR_PAINT&&
+    r.actualHumanFootOnOriginalActiveSurface===true);
+  const onFloor=beforeFloor&&planar<=.8&&rise<=.22&&
    Math.abs(s.actualBodyMeters[1]-first.actualBodyMeters[1])<=.20&&
    s.realHumanOriginalFootSupported===true&&
    s.genuineHumanOriginalFootSolid===UPPER_FLOOR_SOLID&&
@@ -54,8 +72,9 @@ export function b324AuditGenuineUpperFloor(prior,attempt){
     r.actualHumanFootOnOriginalActiveSurface===true);
   if(!onFloor&&firstBad===null)firstBad=i+1;
   if(onFloor&&firstBad===null){supported++;meters+=planar;}
-  trace.push({step:i+1,tick:s.tick,body:s.actualBodyMeters,
-   genuineOriginalUpperFloorSupport:onFloor,actualPlanarMeters:planar,
+  trace.push({step:i+1,tick:s.tick,beforeTick:before.tick,body:s.actualBodyMeters,
+   interInputDriftMeters:inter,genuineOriginalUpperFloorSupport:onFloor,
+   actualPlanarMeters:planar,
    supportingSolid:s.genuineHumanOriginalFootSolid});
   prev=s;
  }
