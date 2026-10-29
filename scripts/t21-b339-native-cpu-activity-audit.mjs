@@ -113,7 +113,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const native=nativePath?b339AuditNativeEarlyCpu(
   JSON.parse(readFileSync(nativePath,'utf8'))):null;
  const full={historic,native,
-  noCpuBehaviorChange:true,noTurfScoreOrWinner:false,
+  noCpuBehaviorChange:true,noTurfScoreOrWinner:true,
   missingLateShotEvidence:true,overallStatus:'B339_CAUSALITY_HOLD'};
  writeFileSync(output,JSON.stringify(full,null,2)+'\n');
  console.log('B339_REAL_CPU_ACTIVITY_FRONTIER',JSON.stringify(full));
