@@ -1,0 +1,47 @@
+name: T21 B346 real SOURCE physical shooter spawn and collision evidence
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b346-physical-shooter-round.mjs'
+      - 'scripts/t21-b346-native-projectile-audit.mjs'
+      - 'scripts/t21-b346-native-projectile-audit.test.mjs'
+      - '.github/workflows/t21-b346-true-native-projectile-physics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: b346-true-native-shooter-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  original-physical-human-shooter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b346-native-projectile-audit.test.mjs
+      - run: node --check scripts/t21-b346-physical-shooter-round.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/projectile/B346NativeShooterWitness.test.ts src/projectile/B345SourceShooterOpeningCadence.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Genuine Chromium pointer-locked native shooter source 3D physical events
+        env:
+          T21_B346_OUTPUT: /tmp/t21-b346
+        run: node scripts/t21-b346-physical-shooter-round.mjs
+      - name: Verify B337 original mouse, WASD, native foot and paint
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b346
+      - name: Verify B344 actual continuous shooter real tick/ink
+        run: node scripts/t21-b344-native-shooter-audit.mjs /tmp/t21-b346
+      - name: Verify B345 real first-press opening correction
+        run: node scripts/t21-b345-native-shooter-audit.mjs /tmp/t21-b346
+      - name: Independent B346 real launch ID, velocity and native collision provenance
+        run: node scripts/t21-b346-native-projectile-audit.mjs /tmp/t21-b346
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b346-native-real-original-shooter-3d-physics
+          path: /tmp/t21-b346/
+          retention-days: 14
