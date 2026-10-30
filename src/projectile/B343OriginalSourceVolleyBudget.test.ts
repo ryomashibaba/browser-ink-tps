@@ -26,7 +26,7 @@ describe('one-click genuine SOURCE shooter practice',()=>{
    ['t21Play','preview'],['t21QaDrive','source'],['t21W10B203','fullRound'],
    ['t21W10B343','sourceVolleyAtomic'],['t21W10B355','realInkHud'],
    ['t21W10B356','realImpactReticle']
-  ])expect(target.searchParams.get(k)).toBe(v);
+  ] as [string,string][])expect(target.searchParams.get(k)).toBe(v);
   expect(target.searchParams.has('t21W10B348')).toBe(false);
  });
  it('returns to baseline without retaining research flags',()=>{
