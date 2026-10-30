@@ -40,7 +40,17 @@ export function auditB349TrueGroundAir(w,realPhysical){
     Array.isArray(e.worldVelocity)&&e.worldVelocity.length===3&&
     e.worldVelocity.every((x,k)=>Number.isFinite(x)&&
      Math.abs(x-f.worldVelocity[k])<1e-8)&&
-    Array.isArray(e.worldPosition)&&e.worldPosition.length===3,
+    Array.isArray(e.worldPosition)&&e.worldPosition.length===3&&
+    e.worldPosition.every((v,k)=>Number.isFinite(v)&&
+     Math.abs(v-f.worldPosition[k])<1e-8)&&
+    Number.isSafeInteger(e.tick)&&
+    e.tick>0&&e.tick<=w.originalNativeTick&&
+    (i===0||e.tick>actual[i-1].tick)&&
+    // A physical airborne launch must occur after the *actual* Space
+    // keyDown and before native KCC landing; flags/counters alone
+    // cannot prove that jump -> air-shot causal ordering.
+    (e.kccGrounded||
+     (e.tick>j[0].tick&&e.tick<j[2].tick)),
     'TRUE_SOURCE_SHOOTER_KCC_SPAWN_'+i);
   if(e.kccGrounded)ground++;else air++;
  }

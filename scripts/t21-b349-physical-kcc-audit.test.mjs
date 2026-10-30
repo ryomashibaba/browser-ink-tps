@@ -34,6 +34,12 @@ test('fail closed for fake jump, absent KCC air and mismatched physical IDs',()=
   o=>o.w.realSpaceEvents[1].kccGrounded=true,
   o=>o.w.realSpaceEvents[1].bodyY=8.2,
   o=>o.w.nativeShooterLaunches[5].kccGrounded=true,
+  // Native Space down was moved after the first recorded airborne
+  // launch while the rest of the event sequence remains plausible.
+  o=>o.w.realSpaceEvents[0].tick=131,
+  // Prevent an independently sampled 3D muzzle position from being
+  // silently changed while the physical witness remains unchanged.
+  o=>o.w.nativeShooterLaunches[0].worldPosition[2]+=1,
   o=>o.w.realAirShots=0,
   o=>o.p.truePhysicalEvidence.events[0].nativeTick=444
  ]){
