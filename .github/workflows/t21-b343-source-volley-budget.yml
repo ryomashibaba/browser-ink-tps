@@ -1,0 +1,25 @@
+name: T21 B343 source-only real projectile pool ink budget
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/projectile/B343OriginalSourceVolleyBudget.ts'
+      - 'src/projectile/B343OriginalSourceVolleyBudget.test.ts'
+      - 'src/projectile/ProjectileSystem.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-b343-source-volley-budget.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-weapon-budget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/projectile/B343OriginalSourceVolleyBudget.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/

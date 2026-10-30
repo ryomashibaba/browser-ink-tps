@@ -3,6 +3,7 @@ import type { CpuAgentSystem, CpuFireRequest } from '../ai/CpuAgentSystem';
 import type { CombatTargetSystem } from '../combat/CombatTargetSystem';
 import type { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
+import {b343CanLaunchSourceVolley} from './B343OriginalSourceVolleyBudget';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
@@ -68,6 +69,8 @@ export class ProjectileSystem {
   private readonly guardEntity: Entity;
   private readonly delta = new Vec3();
   private readonly queuedCpuShots: CpuFireRequest[] = [];
+  private b343SourceVolleyAtomic=false;
+  private b343RejectedVolleys=0;
   private b152OriginalAllyAimProjectilesSpawned=0;
   private b152OriginalAllyAimSurfaceCollisions=0;
   private readonly cpuAimDirection = new Vec3();
@@ -156,6 +159,24 @@ export class ProjectileSystem {
   public get currentPlayerWeapon(): WeaponProfile {
     return weaponProfile(this.playerWeaponId);
   }
+  /** Opt-in genuine SOURCE ONLY. Preserve T20 and normal preview behavior. */
+  public enableB343OriginalSourceVolleyBudget(stage:{
+    id:string;solids:number;paint:number;nav:number;scoreable:number
+  }):void{
+    if(stage.id!=='undertow-t21d-partial-connectivity-qa'||
+       stage.solids!==25||stage.paint!==17||stage.nav!==26||
+       stage.scoreable!==0||this.surfaces.length!==17)
+      throw Error('B343_NONORIGINAL_SOURCE_FORBIDDEN');
+    this.b343SourceVolleyAtomic=true;
+  }
+  public b343OriginalSourceVolleyBudgetSnapshot(){
+    return {enabled:this.b343SourceVolleyAtomic,
+      rejectedVolleys:this.b343RejectedVolleys,
+      physicalPoolSize:this.slots.length,
+      actualFreeSlots:this.slots.filter(s=>!s.active).length,
+      syntheticShots:0 as const,syntheticInk:0 as const,
+      scoreable:0 as const,productionAuthorized:false as const};
+  }
 
   public setPlayerWeapon(id: WeaponId): void {
     if (id === this.playerWeaponId) return;
@@ -206,6 +227,7 @@ export class ProjectileSystem {
   public reset(): void {
     this.b152OriginalAllyAimProjectilesSpawned=0;
     this.b152OriginalAllyAimSurfaceCollisions=0;
+    this.b343RejectedVolleys=0;
     for (const slot of this.slots) this.deactivate(slot);
     this.delayedBursts.length = 0;
     this.fireCooldown = 0;
@@ -1109,6 +1131,15 @@ export class ProjectileSystem {
       paintMultiplier?: number;
     }
   ): boolean {
+    // B343 SOURCE QA: reject a real all-or-nothing volley before ink spend
+    // when insufficient physical slots exist. No fabricated paint/shots.
+    if(this.b343SourceVolleyAtomic){
+      const available=this.slots.filter(slot=>!slot.active).length;
+      if(!b343CanLaunchSourceVolley(available,count)){
+        this.b343RejectedVolleys++;
+        return false;
+      }
+    }
     if (!this.resources.tryConsumeShotInk(options?.inkCost ?? profile.inkCost)) return false;
 
     const damageMultiplier = options?.damageMultiplier ??

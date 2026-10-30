@@ -877,6 +877,16 @@ export class UndertowF3PlayablePreviewApp{
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
    this.feedback,this.stats);
+  // B343 requires explicit frozen SOURCE world; no change to default/T20.
+  if(b31Params.get('t21W10B343')==='sourceVolleyAtomic'&&
+     b31Params.get('t21QaDrive')==='source'&&this.b203FullRound){
+    const s=this.rawStage;
+    this.projectiles.enableB343OriginalSourceVolleyBudget({
+      id:s.metadata.id,solids:s.solids.length,paint:s.paintSurfaces.length,
+      nav:s.navigationLinks?.length??0,
+      scoreable:s.paintSurfaces.filter(p=>
+       (p.flags&SurfaceFlags.Scoreable)!==0).length});
+  }
   // Reuse the already-shipped player sub weapon pipeline; this is not
   // a fabricated source Actor, collider, NavLink or scoreable surface.
   this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
@@ -5502,7 +5512,9 @@ export class UndertowF3PlayablePreviewApp{
     sourceTagDoesNotGrantInkOrMovementAuthority:true,
     scoreablePromotions:0,full4v4Certified:false
    },
-   b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
+   b343OriginalSourceVolleyBudget:
+     this.projectiles.b343OriginalSourceVolleyBudgetSnapshot(),
+    b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
    b215RealBattleAimPacing:this.cpu.b215RealSourceBattlePaintPacingSnapshot(),
