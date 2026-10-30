@@ -5,11 +5,7 @@ on:
     paths:
       - 'src/projectile/B343OriginalSourceVolleyBudget.ts'
       - 'src/projectile/B343OriginalSourceVolleyBudget.test.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
-      - 'src/app/UndertowF3PlayableHud.ts'
-      - 'src/app/UndertowF3PlayableHud.test.ts'
       - 'scripts/t21-b343-real-source-volley-round.mjs'
-      - '.github/workflows/t21-b343-source-volley-budget.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - run: node --test scripts/t21-w10b131-trigger-matrix.test.mjs
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npx vitest run src/projectile/B343OriginalSourceVolleyBudget.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts src/app/UndertowF3PlayableHud.test.ts
       - run: npm run build -- --base=/browser-ink-tps/
