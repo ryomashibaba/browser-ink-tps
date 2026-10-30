@@ -1,0 +1,48 @@
+name: T21 B347 actual original source pointer sweep shooter 3D paint
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b347-real-aim-sweep-round.mjs'
+      - 'scripts/t21-b347-real-aim-sweep-audit.mjs'
+      - 'scripts/t21-b347-real-aim-sweep-audit.test.mjs'
+      - '.github/workflows/t21-b347-real-native-aim.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: b347-real-source-aim-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-true-original-source-mouse-sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b347-real-aim-sweep-audit.test.mjs
+      - run: node --check scripts/t21-b347-real-aim-sweep-round.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: True Chromium pointer-locked mouse aim moves and physically painted 3D
+        env:
+          T21_B347_OUTPUT: /tmp/t21-b347
+        run: node scripts/t21-b347-real-aim-sweep-round.mjs
+      - name: Independently verify genuine human B337 original source
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b347
+      - name: Independently verify genuine B344 native shooter
+        run: node scripts/t21-b344-native-shooter-audit.mjs /tmp/t21-b347
+      - name: Independently verify B345 real first-press source cadence
+        run: node scripts/t21-b345-native-shooter-audit.mjs /tmp/t21-b347
+      - name: Independently verify B346 real physical bullets
+        run: node scripts/t21-b346-native-projectile-audit.mjs /tmp/t21-b347
+      - name: Independently verify real B347 camera/physics/owner cell increase
+        run: node scripts/t21-b347-real-aim-sweep-audit.mjs /tmp/t21-b347
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b347-actual-original-source-pointer-sweep-3d-ink
+          path: /tmp/t21-b347/
+          retention-days: 14
