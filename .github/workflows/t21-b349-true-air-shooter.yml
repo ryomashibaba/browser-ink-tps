@@ -1,0 +1,48 @@
+name: T21 B349 genuine SOURCE human Space jump and airborne shooter
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b349-source-real-air-shooter-round.mjs'
+      - 'scripts/t21-b349-source-real-air-shooter-audit.mjs'
+      - 'scripts/t21-b349-source-real-air-shooter-audit.test.mjs'
+      - '.github/workflows/t21-b349-true-air-shooter.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b349-true-native-air-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-kcc-air-shooter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b349-source-real-air-shooter-audit.test.mjs
+      - run: node --check scripts/t21-b349-source-real-air-shooter-round.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Genuine native CDP Space and physical grounded/airborne SHOOTER
+        env:
+          T21_B349_OUTPUT: /tmp/t21-b349
+        run: node scripts/t21-b349-source-real-air-shooter-round.mjs
+      - name: Independent B337 original native human source foot/ink
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b349
+      - name: Independent B344 genuine human shooter held clock
+        run: node scripts/t21-b344-native-shooter-audit.mjs /tmp/t21-b349
+      - name: Independent B345 true first-press shooter cadence
+        run: node scripts/t21-b345-native-shooter-audit.mjs /tmp/t21-b349
+      - name: Independent B346 true real PlayCanvas physical projectile ledger
+        run: node scripts/t21-b346-native-projectile-audit.mjs /tmp/t21-b349
+      - name: Independent B349 real Space original KCC/airborne shot witness
+        run: node scripts/t21-b349-source-real-air-shooter-audit.mjs /tmp/t21-b349
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b349-true-source-human-jump-and-airborne-shooter
+          path: /tmp/t21-b349/
+          retention-days: 14
