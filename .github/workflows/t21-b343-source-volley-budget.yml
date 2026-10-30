@@ -8,6 +8,7 @@ on:
       - 'src/projectile/ProjectileSystem.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.github/workflows/t21-b343-source-volley-budget.yml'
+      - 'scripts/t21-b343-real-source-volley-round.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,3 +24,17 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npx vitest run src/projectile/B343OriginalSourceVolleyBudget.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts
       - run: npm run build -- --base=/browser-ink-tps/
+      - run: node --check scripts/t21-b343-real-source-volley-round.mjs
+      - name: Real Chromium native player with explicit original source B343 weapon
+        env:
+          T21_B343_OUTPUT: /tmp/t21-b343
+        run: node scripts/t21-b343-real-source-volley-round.mjs
+      - name: Independent B337 original physical input, foot and ink evidence gate
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b343
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b343-genuine-native-player-source-volley-ink-evidence
+          path: /tmp/t21-b343/
+          retention-days: 14
+          if-no-files-found: warn
