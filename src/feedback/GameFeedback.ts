@@ -199,6 +199,16 @@ export class GameFeedback {
     this.playTone(118 * profile.audioPitch, 0.018, 0.055, 'triangle', 0.72);
   }
 
+  /** B351 feedback is only invoked following genuine enemy CPU HP loss. */
+  public confirmedHumanCpuDamage(
+    team:Team.A|Team.B,at:Vec3,profile:WeaponProfile
+  ):void {
+    this.spawnFx(team,at,0.18*profile.fxScale,0.19);
+    this.spawnFx(team,at.clone().add(new Vec3(0,0.19,0)),
+      0.085*profile.fxScale,0.13);
+    this.playTone(660*profile.audioPitch,0.024,0.06,'sine',1.05);
+  }
+
   public stringerFuse(
     team: Team.A | Team.B,
     position: Vec3,

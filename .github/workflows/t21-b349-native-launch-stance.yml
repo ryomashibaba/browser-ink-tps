@@ -6,6 +6,9 @@ on:
       - 'src/projectile/B346NativeShooterWitness.ts'
       - 'src/projectile/ProjectileSystem.ts'
       - 'src/projectile/B349SourceGroundAirWitness.test.ts'
+      - 'src/projectile/B351SourceHitFeedback.ts'
+      - 'src/projectile/B351SourceHitFeedback.test.ts'
+      - 'src/feedback/GameFeedback.ts'
       - '.github/workflows/t21-b349-native-launch-stance.yml'
   workflow_dispatch:
 permissions:
@@ -20,5 +23,5 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
-      - run: npx vitest run src/projectile/B349SourceGroundAirWitness.test.ts src/projectile/B346NativeShooterWitness.test.ts src/projectile/B348SourceShooterAccuracyCandidate.test.ts
+      - run: npx vitest run src/projectile/B349SourceGroundAirWitness.test.ts src/projectile/B346NativeShooterWitness.test.ts src/projectile/B348SourceShooterAccuracyCandidate.test.ts src/projectile/B351SourceHitFeedback.test.ts
       - run: npm run build -- --base=/browser-ink-tps/

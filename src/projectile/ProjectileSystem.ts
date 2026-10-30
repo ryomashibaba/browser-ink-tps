@@ -7,6 +7,7 @@ import {b343CanLaunchSourceVolley} from './B343OriginalSourceVolleyBudget';
 import {b345BoundOpeningCooldown} from './B345SourceShooterOpeningCadence';
 import {B346NativeShooterWitness, type B346ShooterExitKind} from './B346NativeShooterWitness';
 import {b348CandidateShooterAngles} from './B348SourceShooterAccuracyCandidate';
+import {b351RealCpuDamageCue} from './B351SourceHitFeedback';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
@@ -85,6 +86,8 @@ export class ProjectileSystem {
   private b348AirShots=0;
   private b348LastYaw=0;
   private b348LastPitch=0;
+  private b351CueOn=false;
+  private b351TrueDamageCues=0;
   private b152OriginalAllyAimProjectilesSpawned=0;
   private b152OriginalAllyAimSurfaceCollisions=0;
   private readonly cpuAimDirection = new Vec3();
@@ -242,6 +245,22 @@ export class ProjectileSystem {
     productionAuthorized:false as const};
   }
 
+  /** Explicit opt-in B351 source-only, no source geometry change. */
+  public enableB351ActualHitCue():void {
+    if(!this.b343SourceVolleyAtomic||
+      !this.b345SourceShooterOpeningEnabled||
+      !this.b346ShooterWitness.snapshot().enabled||
+      !this.b348ShooterCandidateEnabled||this.surfaces.length!==17)
+      throw Error('B351_SOURCE_ONLY_PRECONDITION');
+    this.b351CueOn=true;
+  }
+  public b351ActualHitCueSnapshot(){
+    return {enabled:this.b351CueOn,realDamageCues:this.b351TrueDamageCues,
+      source:'25/17/26/0' as const,syntheticHits:0 as const,
+      scoreable:0 as const,NintendoVisualCertified:false as const,
+      productionAuthorized:false as const};
+  }
+
   public setPlayerWeapon(id: WeaponId): void {
     if (id === this.playerWeaponId) return;
     this.playerWeaponId = id;
@@ -299,6 +318,7 @@ export class ProjectileSystem {
     this.b348AirShots=0;
     this.b348LastYaw=0;
     this.b348LastPitch=0;
+    this.b351TrueDamageCues=0;
     for (const slot of this.slots) this.deactivate(slot);
     this.delayedBursts.length = 0;
     this.fireCooldown = 0;
@@ -563,8 +583,17 @@ export class ProjectileSystem {
           this.combatTargets.applyProjectileHit(qaHit, slot.damage);
         } else if (combatKind === 'CPU' && cpuHit) {
           combatPoint = cpuHit.point.clone();
+          // Enemy HP may have absorbed this hit via guard: inspect actual
+          // post-damage counter, never treat a ray match as a true hit.
+          const beforeHit=this.stats.humanCpuDirectHits;
           this.cpuAgents.applyProjectileHit(cpuHit,slot.damage,slot.sourceKind,
              slot.sourceKind==='CPU'?slot.sourceId:undefined);
+          if(b351RealCpuDamageCue(this.b351CueOn,slot.sourceKind,
+            slot.weaponId,beforeHit,this.stats.humanCpuDirectHits)){
+            this.b351TrueDamageCues++;
+            this.feedback.confirmedHumanCpuDamage(slot.team,combatPoint,
+              weaponProfile(slot.weaponId));
+          }
         } else if (combatKind === 'PLAYER') {
           combatPoint = pointOnSegment(previous, next, combatDistance);
           if (guarding && this.isGuardBlocking(slot, playerPosition, aimDirection)) {
