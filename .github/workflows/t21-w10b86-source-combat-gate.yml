@@ -4,7 +4,6 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/combat/CombatTargetSystem.ts'
-      - 'src/projectile/ProjectileSystem.ts'
       - 'src/core/PerformanceStats.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/UndertowF3PlayableHud.test.ts'

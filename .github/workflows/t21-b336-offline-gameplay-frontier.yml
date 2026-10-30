@@ -7,13 +7,11 @@ on:
       - 'scripts/t21-b336-real-gameplay-frontier.test.mjs'
       - 'docs/qa/evidence/T21_B335_40878994476_real_round.json.gz.b64'
       - 'docs/qa/evidence/T21_B335_40878994476_manifest.json'
-      - '.github/workflows/t21-b336-offline-gameplay-frontier.yml'
       - 'scripts/t21-b337-real-input-ink-audit.mjs'
       - 'scripts/t21-b337-real-input-ink-audit.test.mjs'
       - 'scripts/t21-b337-real-input-ink-round.mjs'
       - 'scripts/t21-b339-native-cpu-activity-audit.mjs'
       - 'scripts/t21-b339-native-cpu-activity-audit.test.mjs'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3PlayableHud.ts'
       - 'src/app/B245SourcePresentation.ts'
   workflow_dispatch:

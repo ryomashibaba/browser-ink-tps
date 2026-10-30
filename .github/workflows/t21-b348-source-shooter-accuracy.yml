@@ -5,9 +5,6 @@ on:
     paths:
       - 'src/projectile/B348SourceShooterAccuracyCandidate.ts'
       - 'src/projectile/B348SourceShooterAccuracyCandidate.test.ts'
-      - 'src/projectile/ProjectileSystem.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
-      - '.github/workflows/t21-b348-source-shooter-accuracy.yml'
   workflow_dispatch:
 permissions:
   contents: read

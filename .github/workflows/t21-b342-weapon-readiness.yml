@@ -4,10 +4,8 @@ on:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'src/weapons/**'
-      - 'src/projectile/ProjectileSystem.ts'
       - 'scripts/t21-b342-weapon-readiness-audit.mjs'
       - 'scripts/t21-b342-weapon-readiness-audit.test.mjs'
-      - '.github/workflows/t21-b342-weapon-readiness.yml'
   workflow_dispatch:
 permissions:
   contents: read

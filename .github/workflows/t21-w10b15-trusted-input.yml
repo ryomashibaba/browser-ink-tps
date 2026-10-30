@@ -19,7 +19,6 @@ on:
       - 'src/input/PlayerInput.ts'
       - 'src/input/PlayerInput.qa.test.ts'
       - 'src/camera/ThirdPersonCamera.ts'
-      - 'src/projectile/ProjectileSystem.ts'
       - 'src/ink/GpuInkAtlas.ts'
       - 'scripts/t21-w10b15-pixel-diff.mjs'
   workflow_dispatch:

@@ -3,7 +3,6 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-b318-original-ramp-interior.mjs'
       - 'scripts/t21-b318-original-ramp-interior.test.mjs'
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
@@ -11,7 +10,6 @@ on:
       - 'scripts/t21-b327-original-lower-post-clear-shot.test.mjs'
       - 'scripts/t21-b319-audit-real-ramp-kcc-artifact.mjs'
       - 'scripts/t21-b319-audit-real-ramp-kcc-artifact.test.mjs'
-      - '.github/workflows/t21-b318-real-original-ramp-interior.yml'
   workflow_dispatch:
 permissions:
   contents: read

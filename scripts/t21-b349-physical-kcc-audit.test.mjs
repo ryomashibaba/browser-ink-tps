@@ -17,7 +17,7 @@ const sample=()=>{
     {kind:'realKccLanding',tick:190,kccGrounded:true,bodyY:8.2}
    ],nativeShooterLaunches:launches.map(e=>({
     id:e.launchId,tick:e.nativeTick,kccGrounded:e.nativeGroundedAtLaunch,
-    worldVelocity:e.worldVelocity,worldPosition:e.worldPosition
+    worldVelocity:[...e.worldVelocity],worldPosition:[...e.worldPosition]
    }))},
   p:{realNativeFinalTick:200,
    truePhysicalEvidence:{events:launches,totalActualShooterLaunches:10}}
@@ -40,6 +40,7 @@ test('fail closed for fake jump, absent KCC air and mismatched physical IDs',()=
   // Prevent an independently sampled 3D muzzle position from being
   // silently changed while the physical witness remains unchanged.
   o=>o.w.nativeShooterLaunches[0].worldPosition[2]+=1,
+  o=>o.p.truePhysicalEvidence.events[0].worldPosition[1]+=1,
   o=>o.w.realAirShots=0,
   o=>o.p.truePhysicalEvidence.events[0].nativeTick=444
  ]){

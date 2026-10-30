@@ -5,9 +5,6 @@ on:
     paths:
       - 'src/projectile/B346NativeShooterWitness.ts'
       - 'src/projectile/B346NativeShooterWitness.test.ts'
-      - 'src/projectile/ProjectileSystem.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
-      - '.github/workflows/t21-b346-physical-projectile-witness.yml'
   workflow_dispatch:
 permissions:
   contents: read

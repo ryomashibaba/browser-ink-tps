@@ -5,9 +5,7 @@ on:
     paths:
       - 'src/ai/B234OriginalCpuGapReadinessAudit.ts'
       - 'src/ai/CpuAgentSystem.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'scripts/t21-b234-real-seven-cpu-gap-readiness.mjs'
-      - '.github/workflows/t21-b234-real-seven-cpu-readiness.yml'
   workflow_dispatch:
 permissions:
   contents: read

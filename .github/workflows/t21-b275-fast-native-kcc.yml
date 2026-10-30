@@ -10,8 +10,6 @@ on:
       - "src/ai/CpuAgentSystem.ts"
       - "src/app/UndertowF3NativeHumanCrowd.ts"
       - "src/app/UndertowF3NativeHumanCrowd.test.ts"
-      - "src/app/UndertowF3PlayablePreviewApp.ts"
-      - ".github/workflows/t21-b275-fast-native-kcc.yml"
   workflow_dispatch:
 permissions:
   contents: read

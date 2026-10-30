@@ -20,3 +20,7 @@ for B351 negative checks. No new CI workflow. Actual native enemy
 HP loss + cue/frame capture is NOT YET verified. Official Nintendo
 visual/audio match and ART remain HOLD; 0/12 opposite-team route,
 no Scoreable, 4v4, winner and production HOLD.
+
+
+## 2026-10-30 B351 CI検証更新
+[CI 41060649046](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41060649046): B351 negative Vitest, B349 witness tests and TypeScript/Vite build SUCCESS. Real original-CPU hit+HP loss+world cue in one native Chromium scene is NOT certified; no legitimate cross-team access (0/12). Unit success is not playtest success. ART and official 4v4 remain HOLD.

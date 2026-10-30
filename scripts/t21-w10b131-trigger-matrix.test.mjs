@@ -143,3 +143,25 @@ test('B144: original SourceTraffic changes use consolidated B75 instead of five 
   assert.ok(s.includes('  workflow_dispatch:'),'keep manual '+name);
  }
 });
+
+
+// B352 specialist CI dedup regression. Keep manually dispatchable domain CI
+// while shared integration changes use the original retained source gates.
+const b352Pruned=[["t21-w10b86-source-combat-gate.yml",["src/projectile/ProjectileSystem.ts"]],["t21-b348-source-shooter-accuracy.yml",["src/projectile/ProjectileSystem.ts","src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-b345-source-shooter.yml",["src/projectile/ProjectileSystem.ts","src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-b275-fast-native-kcc.yml",["src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-b234-real-seven-cpu-readiness.yml",["src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-w10b162-real-ally-sync.yml",["src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-b318-real-original-ramp-interior.yml",["src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-b346-physical-projectile-witness.yml",["src/projectile/ProjectileSystem.ts","src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-b342-weapon-readiness.yml",["src/projectile/ProjectileSystem.ts"]],["t21-b343-source-volley-budget.yml",["src/projectile/ProjectileSystem.ts","src/app/UndertowF3PlayablePreviewApp.ts"]],["t21-w10b15-trusted-input.yml",["src/projectile/ProjectileSystem.ts"]],["t21-b336-offline-gameplay-frontier.yml",["src/app/UndertowF3PlayablePreviewApp.ts"]]];
+test('B352 shared app/projectile changes do not spawn specialist CI suites',()=>{
+ for(const [name,paths] of b352Pruned){
+  const s=read(name),lines=s.split('\n').map(x=>x.trim());
+  assert.ok(s.includes('  workflow_dispatch:'),name+' retains manual execution');
+  for(const path of paths){
+   assert.ok(!lines.includes("- '"+path+"'")&&!lines.includes('- "'+path+'"'),
+    name+' unnecessary shared path: '+path);
+  }
+  const self='.github/workflows/'+name;
+  assert.ok(!lines.includes("- '"+self+"'")&&!lines.includes('- "'+self+'"'),
+   name+' workflow changes must not retrigger expensive historic CI');
+ }
+ assert.ok(read('t21-b349-native-launch-stance.yml').includes(
+  "- 'src/projectile/ProjectileSystem.ts'"),'retain focused projectile build');
+ assert.ok(read('t21-w10b75-live-source-ink-hud.yml').includes(
+  "- 'src/app/UndertowF3PlayablePreviewApp.ts'"),'retain native browser coverage');
+});

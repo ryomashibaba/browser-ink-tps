@@ -8,7 +8,6 @@ on:
       - 'scripts/t21-b330-replay-armed-resume-guard.test.mjs'
       - 'src/app/UndertowF3SourcePaintRun.ts'
       - 'src/app/UndertowF3PracticeObjectiveView.ts'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/B209OriginalRampEdge.ts'
       - 'src/app/B209OriginalRampEdge.test.ts'
       - 'src/app/B161OriginalAllySyncPractice.test.ts'
@@ -28,7 +27,6 @@ on:
       - 'src/app/B197CoopReplayDecision.test.ts'
       - 'src/app/B166OriginalAllyRendezvous.ts'
       - 'src/app/B166OriginalAllyRendezvous.test.ts'
-      - '.github/workflows/t21-w10b162-real-ally-sync.yml'
   workflow_dispatch:
 permissions:
   contents: read

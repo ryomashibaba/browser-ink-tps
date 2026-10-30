@@ -19,3 +19,15 @@ B130の元HEAD `2cd35b10bc37c58cb5aebce99cd7ebbb466b2a0c` で作成した [B75 A
 ## 運用
 
 通常のF3アプリ改善：B75＋QA＋B112＋B120で回帰。旧B14/B15/B21/B51/B54/B56/B57/B59/B64/B68/B69/B70/B86/B96/B99/B100/B107/B124/F3Gの対象部分を直接変更した場合は、その専用ワークフローで検査。単独で再現・検証したい場合は該当の `workflow_dispatch` を利用。CIが未終了ならユーザー報告ではHOLD/queuedと表記する。
+
+
+## 2026-10-30 B352実測に基づく再集約
+B351 commit `5782f494` は18本のActionsを自動発火。B131の旧19本の整理後に、後発の領域専用CIが共有 `UndertowF3PlayablePreviewApp.ts` と `ProjectileSystem.ts` を広く購読し、CI扇状発火が再発していた。
+
+今回12本の**旧・領域別専門CI**について、一般的な共有アプリ/射撃実装の変更だけでは起動しないよう整理。専用領域のコード・スクリプトのpushトリガー、手動 `workflow_dispatch` は維持。変更されたYAML自身で無駄に旧検査を再起動しないよう自身のpush pathも除外。B131静的検査にB352回帰を追加。
+
+維持する自動統合網: B75真正Chrome、F4E103W、B112/B120 KCC原作床、B349 projectile source witness、元のSOURCE gameplay統合検査。**テストの閾値・本体・認証は変更せず、消したのは過剰な自動起動だけ。**実際の新HEAD発火本数と成功は別途CIの実測を確認するまで未認証。
+
+B350 CI [41059504859](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41059504859) の単体テスト失敗は、負のテストfixtureで `nativeShooterLaunches.worldPosition` と `physicalWitness.events.worldPosition` が同じJS配列を参照していたことによる偽陰性。片方の値を変えると両方変わるため `Missing expected exception`。B352で２つの独立した配列に修正、両方向の改変を負検査へ追加。真正Chromium含むB350 PASSは新CIが終わるまで主張しない。
+
+B351追加の型チェック・負検査・ビルドは [41060649046](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41060649046) SUCCESS。しかし敵CPUへの自然な人間射撃命中と命中音/エフェクトの同時記録は未実証。別件A1協力試験 [41060648940](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41060648940) は `B140_WAIT_TIMEOUT` で失敗、原因と再現性は未確定、HOLDを維持。
