@@ -24,6 +24,7 @@ describe('one-click genuine SOURCE shooter practice',()=>{
   expect(target.pathname).toBe('/browser-ink-tps/');
   for(const [k,v] of [
    ['t21Play','preview'],['t21QaDrive','source'],
+   ['t21W10B183','firstDropPlay'],
    ['t21W10B192','humanCombat'],['t21W10B112','humanGround'],
    ['t21W10B203','fullRound'],
    ['t21W10B343','sourceVolleyAtomic'],
@@ -39,6 +40,8 @@ describe('one-click genuine SOURCE shooter practice',()=>{
   expect(target.searchParams.has('t21W10B193')).toBe(false);
   expect(target.searchParams.has('t21QaInput')).toBe(false);
   expect(target.searchParams.has('cpuWarp')).toBe(false);
+  expect(target.searchParams.has('t21W10B193')).toBe(false);
+  expect(target.searchParams.has('t21QaInput')).toBe(false);
  });
  it('returns to baseline without retaining research flags',()=>{
   const target=b343SourceShooterPracticeHref(url,true)!;

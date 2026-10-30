@@ -15,6 +15,10 @@ export function b343SourceShooterPracticeHref(href:string,enable:boolean):string
  if(enable){
   // Existing B192 CPU combat is source-only and still requires REAL
   // Recast paths, original supported feet and same-side encounter.
+  // Existing B183/B186 is an actual 60Hz source-grounded, original-ramp
+  // descent -> raised-floor -> human impact ink gameplay goal.
+  // No route is generated; physical KCC movement is player-operated.
+  next.searchParams.set('t21W10B183','firstDropPlay');
   next.searchParams.set('t21W10B192','humanCombat');
   // B112 is read-only authentic Rapier foot support evidence.
   next.searchParams.set('t21W10B112','humanGround');

@@ -1171,6 +1171,7 @@ export class UndertowF3PlayablePreviewApp{
   // Only explicit user navigation reboots the real source-backed physics.
   if(b31Params.get('t21QaDrive')==='source'){
    const active=this.b203FullRound&&
+    this.b183DropPlayEnabled&&
     b31Params.get('t21W10B192')==='humanCombat'&&
     b31Params.get('t21W10B343')==='sourceVolleyAtomic'&&
     b31Params.get('t21W10B345')==='sourceShooterOpening'&&
@@ -1187,8 +1188,8 @@ export class UndertowF3PlayablePreviewApp{
    button.dataset.productionAuthorized='false';
    button.dataset.actorTeleports='0';
    button.textContent=active?
-    'EXIT REAL SHOOTER + CPU7 · FRESH BASELINE':
-    'PLAY REAL SHOOTER + CPU7 · SOURCE SPREAD TEST (180s)';
+    'EXIT SHOOTER + ORIGINAL CIRCUIT · FRESH BASELINE':
+    'PLAY 180s REAL SHOOTER + CPU7 · ORIGINAL DROP / RAMP / INK';
    button.style.cssText='display:block;width:100%;margin:7px 0;'+
     'padding:12px 9px;border-radius:9px;border:1px solid #8fe6d1;'+
     'background:#145747;color:#e3fff4;cursor:pointer;'+

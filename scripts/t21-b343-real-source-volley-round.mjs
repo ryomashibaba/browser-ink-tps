@@ -129,7 +129,8 @@ async function run(){
  // fresh native stage and DOES NOT smuggle research flags into the round.
  await clickButton('#t21-f3-source-shooter-practice');
  const selectedSearch='?t21Play=preview&t21QaDrive=source&'+
-  't21W10B192=humanCombat&t21W10B112=humanGround&'+
+  't21W10B183=firstDropPlay&t21W10B192=humanCombat&'+
+  't21W10B112=humanGround&'+
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
   't21W10B345=sourceShooterOpening&'+
   't21W10B346=nativeShooterPhysicsWitness&'+
@@ -148,6 +149,18 @@ async function run(){
  if(mode.search!==selectedSearch)
    fail('EXPLICIT_PLAYER_SELECTED_SOURCE_URL_IDENTITY');
  const boot=verifyAuthority(await snapshot());
+ const originalCircuit=boot.b186RealOriginalHumanCircuit;
+ const actualDrop=boot.b183OriginalHumanDescent;
+ if(originalCircuit?.enabled!==true||
+    originalCircuit.sourceLocalPlayClear!==false||
+    originalCircuit.actualOriginalRaisedFootColliderId!==null||
+    originalCircuit.naturalCrossTeamRouteProven!==false||
+    originalCircuit.actualOpponentCombatCertified!==false||
+    originalCircuit.sourceScoreablePromotions!==0||
+    actualDrop?.enabled!==true||
+    actualDrop.originalFirstDropLocalPracticeClear!==false)
+  fail('B365_ORIGINAL_SOURCE_CIRCUIT_NOT_PLAYER_ARMED_'+
+   JSON.stringify({actualDrop,originalCircuit}));
  const combatUi=await read('(() => ({source:document.querySelector("#app-canvas")?.dataset.t21B192HumanCombat,'+
   'roster:!!document.querySelector("#t21-f3-b211-real-battle-roster"),'+
   'score:document.querySelector("#t21-f3-b211-real-battle-roster")?.dataset.scoreable,'+
@@ -240,6 +253,37 @@ async function run(){
   return s;
  };
  const started=await sample('START');
+ // B365 is the genuine B183/B186 SOURCE-local gameplay challenge,
+ // integrated with actual B192 CPU combat and B343 physical shooter.
+ // The upper-floor start must not silently award lower-floor landing,
+ // ramp ascent, human changed ink, opponent hits or any official winner.
+ const missionDom=await read('(() => {const e=document.querySelector('+
+  '"#t21-f3-b183-real-first-drop");return {exists:!!e,'+
+  'hidden:e?.hidden,source:e?.dataset.originalSourceOnly,'+
+  'scoring:e?.dataset.scoreablePromotions,'+
+  'status:e?.dataset.b186NativeStatus,'+
+  'clear:e?.dataset.b186RealLocalPracticeClear,'+
+  'actualInk:e?.dataset.b186RealImpactChangedCells,'+
+  'text:e?.textContent}})()');
+ const startedCircuit=verifyAuthority(await snapshot()).b186RealOriginalHumanCircuit;
+ if(!missionDom.exists||missionDom.source!=='true'||
+    missionDom.scoring!=='0'||missionDom.clear!=='false'||
+    !['WAIT_FIRST_DROP','MOVE_TO_ORIGINAL_RAISED'].includes(missionDom.status)||
+    startedCircuit?.sourceLocalPlayClear!==false||
+    startedCircuit?.firstActualRaisedGroundedTick!==null)
+  fail('B365_SOURCE_CIRCUIT_NATIVE_PLAYER_ISSUE_'+
+   JSON.stringify({missionDom,startedCircuit}));
+ writeFileSync(resolve(DIR,'b365-real-player-source-circuit-armed.json'),
+  JSON.stringify({schema:'B365_TRUE_SOURCE_SHOOTER_CPU_CIRCUIT',
+   source:'25/17/26/0',selectedPhysicalShooter:true,
+   realCpuCount:started.cpuRejoined,
+   realNativeTick:started.tick,
+   liveOriginalDrop:actualDrop,
+   liveOriginalCircuit:startedCircuit,
+   realPlayerHud:missionDom,
+   fabricatedFootOrInk:false,forcedEnemyRoute:false,
+   realCircuitCompleted:false,
+   crossTeamRouteCertified:false,officialWinner:'NONE'},null,2)+'\n');
  // True original CPU health roster is visible, but opponents remain
  // separated by the uncertified 0/12 natural routes. Never fake damage.
  const cpuRoster=await wait(async()=>{
