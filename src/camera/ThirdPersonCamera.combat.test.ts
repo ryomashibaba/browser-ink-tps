@@ -55,8 +55,12 @@ describe('SOURCE combat center-ray distance',()=>{
   const point=view.getAimTarget(),hit=cpu.findNearestCombatHit(from,point.clone().add(new Vec3(0,0,.01)),Team.A);
   expect(point.z).toBeGreaterThan(9.6);expect(point.z).toBeLessThan(10);
   expect(hit?.botId).toBe(target.id);expect(target.hp).toBe(100);
+  expect(view.sourceCombatAimSnapshot()).toMatchObject({
+   id:target.id,guarded:false});
+  expect(view.sourceCombatAimSnapshot()!.distanceMeters).toBeGreaterThan(1);
   expect(stats.humanCpuDirectHits).toBe(0);
   target.position.x=2;expect(view.getAimTarget().z).toBeGreaterThan(70);
+  expect(view.sourceCombatAimSnapshot()).toBeNull();
   target.position.x=0;target.lifeState='SPLATTED';expect(view.getAimTarget().z).toBeGreaterThan(70);
   target.lifeState='ACTIVE';target.team=Team.A;expect(view.getAimTarget().z).toBeGreaterThan(70);
  });
@@ -65,6 +69,7 @@ describe('SOURCE combat center-ray distance',()=>{
   const {cpu}=fixtureCpu(new PerformanceStats());view.enableSourcePracticeControls();
   view.enableSourceCombatAim((a,b)=>cpu.findNearestCombatHit(a,b,Team.A));
   expect(view.getAimTarget().equals(block)).toBe(true);
+  expect(view.sourceCombatAimSnapshot()).toBeNull();
   const query:CombatAimQuery=(a,b)=>({point:b.clone(),distance:a.distance(b)});
   view.enableSourceCombatAim(query);expect(view.getAimTarget().equals(block)).toBe(true);
  });

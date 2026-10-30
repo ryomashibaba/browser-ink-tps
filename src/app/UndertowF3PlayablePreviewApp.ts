@@ -32,6 +32,7 @@ import {summarizeB165OriginalAllyPractice}
 import {getB166OriginalAllyRendezvous}
  from './B166OriginalAllyRendezvous';
 import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
+import {b364RealSourceCrosshair} from './B364RealSourceCrosshair';
 import {shouldPresentB168NativePractice} from './B168NativePracticePresentation';
 import {B183OriginalHumanDescent} from './B183OriginalHumanDescent';
 import {b185OriginalDropGuidance} from './B185OriginalDropGuidance';
@@ -5802,17 +5803,48 @@ export class UndertowF3PlayablePreviewApp{
     stopReason:state.stopReason,pointerLocked:true,
     hitKind:kind,rayDistanceMeters:distance
    });
+   const centerCpu=b364RealSourceCrosshair({
+    stage:[state.originalSourceSolids,state.originalPaintSurfaces,
+     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
+    nativeTick:state.tick,matchState:state.matchState,
+    paused:state.paused,stopReason:state.stopReason,
+    playerView:document.querySelector<HTMLElement>('#ui-root')?.dataset.t21B245Presentation==='PLAYER',
+    pointerLocked:document.pointerLockElement===this.canvas,
+    playerHp:state.player.hp,weaponId:this.projectiles.currentPlayerWeapon.id,
+    sourceCombatSelected:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+    productionAuthorized:state.productionAuthorized,
+    unrestricted4v4Certified:state.unrestricted4v4Certified,
+    actual:this.camera.sourceCombatAimSnapshot(),
+    cpu:state.cpu.cpu
+   });
+   this.b243AimLineNotice.dataset.t21B364Mode=
+    centerCpu?.state??'NO_EXACT_CPU_AIM';
+   this.b243AimLineNotice.dataset.t21B364CpuId=centerCpu?.id??'NONE';
+   this.b243AimLineNotice.dataset.t21B364RealHp=
+    String(centerCpu?.realHp??-1);
+   this.b243AimLineNotice.dataset.t21B364GameplayWrites='0';
+   this.b243AimLineNotice.dataset.t21B364ShotHitCertified='false';
    if(line){
     this.b243AimLineNotice.hidden=false;
     this.b243AimLineNotice.dataset.t21B243AimLineKind=line.kind;
     this.b243AimLineNotice.dataset.t21B243ActualTick=String(state.tick);
-    this.b243AimLineNotice.style.color=line.tint;
+    const tint=centerCpu?
+     (centerCpu.guarded?'#ffd48c':'#99ffe0'):line.tint;
+    this.b243AimLineNotice.style.color=tint;
     const caption=this.b243AimLineNotice.querySelector<HTMLElement>(
      '#t21-f3-b243-source-aim-caption')!;
-    caption.textContent=line.label+' · NO HIT CLAIM';
-    caption.style.borderColor=line.tint;
+    caption.textContent=centerCpu?centerCpu.text:
+     line.label+' · NO HIT CLAIM';
+    caption.style.borderColor=tint;
    }
-  }else this.b243AimLineNotice.dataset.t21B243AimLineKind='OFF';
+  }else{
+   this.b243AimLineNotice.dataset.t21B243AimLineKind='OFF';
+   this.b243AimLineNotice.dataset.t21B364Mode='NO_EXACT_CPU_AIM';
+   this.b243AimLineNotice.dataset.t21B364CpuId='NONE';
+   this.b243AimLineNotice.dataset.t21B364RealHp='-1';
+   this.b243AimLineNotice.dataset.t21B364GameplayWrites='0';
+   this.b243AimLineNotice.dataset.t21B364ShotHitCertified='false';
+  }
   // B211 reads only actual 60Hz CPU/HUMAN life state, never source authority.
   const nativeB211Roster=b211RealNativeRoster({
    selected:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',

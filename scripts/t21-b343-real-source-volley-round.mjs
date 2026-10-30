@@ -317,6 +317,41 @@ async function run(){
    {type:'mouseReleased',x:820,y:450,button:'left',clickCount:1});
  }
  const fired=await sample('FIRE');
+ // B364 is displayed ONLY for actual source CPU center-ray geometry,
+ // never for a fabricated enemy or a claimed projectile hit.
+ const aimHud=await read(`(() => {
+  const e=document.querySelector("#t21-f3-b243-source-aim-line");
+  return {shown:!!e&&!e.hidden,mode:e?.dataset.t21B364Mode,
+   cpuId:e?.dataset.t21B364CpuId,
+   hp:Number(e?.dataset.t21B364RealHp??-1),
+   writes:e?.dataset.t21B364GameplayWrites,
+   hits:e?.dataset.t21B364ShotHitCertified,
+   scoreable:e?.dataset.originalScoreable,
+   text:document.querySelector("#t21-f3-b243-source-aim-caption")?.textContent}
+ })()`);
+ if(!aimHud.shown||
+    !['NO_EXACT_CPU_AIM','REAL_CPU_BODY_CENTER_RAY',
+     'REAL_CPU_GUARD_CENTER_RAY'].includes(aimHud.mode)||
+    aimHud.writes!=='0'||aimHud.hits!=='false'||
+    aimHud.scoreable!=='0')
+  fail('B364_UNVERIFIED_NATIVE_CROSSHAIR_'+JSON.stringify(aimHud));
+ const nativeAim=verifyAuthority(await snapshot());
+ if(aimHud.mode==='NO_EXACT_CPU_AIM'&&
+    (aimHud.cpuId!=='NONE'||aimHud.hp!==-1))
+  fail('B364_FABRICATED_NO_TARGET_ID');
+ if(aimHud.mode!=='NO_EXACT_CPU_AIM'){
+  const actualCpu=nativeAim.cpu.cpu.find(x=>x.id===aimHud.cpuId);
+  if(!actualCpu||actualCpu.lifeState!=='ACTIVE'||
+     !actualCpu.rejoined||Math.abs(actualCpu.hp-aimHud.hp)>0.02||
+     !aimHud.text.includes('NO HIT GUARANTEE'))
+   fail('B364_NATIVE_CROSSHAIR_NOT_ACTUAL_CPU');
+ }
+ writeFileSync(resolve(DIR,'b364-native-real-cpu-center-crosshair.json'),
+  JSON.stringify({schema:'B364_REAL_SOURCE_COMBAT_CROSSHAIR',
+   source:'25/17/26/0',nativeTick:nativeAim.tick,
+   actualPlayerSelectedCpuCombat:true,reticle:aimHud,
+   syntheticTarget:false,forcedEnemyEncounter:false,
+   officialScoreable:0,shotHitCertified:false},null,2)+'\n');
  const fidelityAfterFire=verifyAuthority(await snapshot());
  if(fidelityAfterFire.b348SourceShooterAccuracy?.actualAcceptedCandidateShots<1||
     fidelityAfterFire.b346NativeShooterWitness?.totalActualShooterLaunches<1||

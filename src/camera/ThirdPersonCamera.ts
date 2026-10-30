@@ -14,7 +14,7 @@ export interface DebugInkClick {
 
 /** Read-only intersection with the same live hit volumes used by projectiles. */
 export type CombatAimQuery = (from: Vec3, to: Vec3) =>
-  { distance: number; point: Vec3 } | null;
+  { distance: number; point: Vec3; botId?:string; guarded?:boolean } | null;
 
 export class ThirdPersonCamera {
   private yaw = 0;
@@ -49,6 +49,14 @@ export class ThirdPersonCamera {
   private readonly lookAtPoint = new Vec3();
   private readonly rayEnd = new Vec3();
   private sourceCombatAimQuery: CombatAimQuery | null = null;
+  /** Only the last current center ray of an actual SOURCE camera; no
+   * target acquisition, damage, actor movement or new physics authority. */
+  private sourceCombatAimContact:{
+   id:string;guarded:boolean;distanceMeters:number
+  }|null=null;
+  public sourceCombatAimSnapshot(){
+   return this.sourceCombatAimContact?{...this.sourceCombatAimContact}:null;
+  }
 
   public enableSourceCombatAim(query: CombatAimQuery): void {
     if (!this.sourcePracticeControls) throw Error('SOURCE_PRACTICE_REQUIRED');
@@ -290,6 +298,7 @@ export class ThirdPersonCamera {
   }
 
   public getAimTarget(out = new Vec3(), fallbackDistance = 80): Vec3 {
+    this.sourceCombatAimContact=null;
     const camera = this.cameraEntity.camera;
     if (!camera) {
       return out.copy(this.cameraEntity.getPosition()).add(this.forward.clone().mulScalar(fallbackDistance));
@@ -333,6 +342,16 @@ export class ThirdPersonCamera {
         actor.distance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < from.distance(out) &&
         [actor.point.x, actor.point.y, actor.point.z].every(Number.isFinite)) {
       out.copy(actor.point);
+      // The native CpuAgentSystem returns the ACTUAL physical hit-volume
+      // actor ID and guarded status. A generic QA callback has no ID.
+      if(this.sourcePracticeControls&&typeof actor.botId==='string'&&
+         typeof actor.guarded==='boolean'&&
+         Number.isFinite(actor.distance)&&actor.distance>0){
+       this.sourceCombatAimContact={
+        id:actor.botId,guarded:actor.guarded,
+        distanceMeters:actor.distance
+       };
+      }
     }
     return out;
   }
