@@ -1,0 +1,49 @@
+name: T21 B348 real fixed-aim SOURCE shooter angular physics experiment
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b348-source-shooter-round.mjs'
+      - 'scripts/t21-b348-physical-shooter-accuracy-audit.mjs'
+      - 'scripts/t21-b348-physical-shooter-accuracy-audit.test.mjs'
+      - '.github/workflows/t21-b348-true-physical-accuracy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: b348-native-source-accuracy-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  genuine-original-shooter-physical-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b348-physical-shooter-accuracy-audit.test.mjs
+      - run: node --check scripts/t21-b348-source-shooter-round.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/projectile/B348SourceShooterAccuracyCandidate.test.ts src/projectile/B346NativeShooterWitness.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: True Chromium held aim SOURCE shooter physical angular deviation trial
+        env:
+          T21_B348_OUTPUT: /tmp/t21-b348
+        run: node scripts/t21-b348-source-shooter-round.mjs
+      - name: Independent B337 original human input real foot and owner paint
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b348
+      - name: Independent B344 physical input held-fire count and ink
+        run: node scripts/t21-b344-native-shooter-audit.mjs /tmp/t21-b348
+      - name: Independent B345 original shooter first-press cooldown
+        run: node scripts/t21-b345-native-shooter-audit.mjs /tmp/t21-b348
+      - name: Independent B346 exact original 3D projectile event ledger
+        run: node scripts/t21-b346-native-projectile-audit.mjs /tmp/t21-b348
+      - name: Independent B348 real fixed-aim bounded projectile dispersion
+        run: node scripts/t21-b348-physical-shooter-accuracy-audit.mjs /tmp/t21-b348
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b348-real-native-physical-shooter-accuracy-candidate
+          path: /tmp/t21-b348/
+          retention-days: 14
