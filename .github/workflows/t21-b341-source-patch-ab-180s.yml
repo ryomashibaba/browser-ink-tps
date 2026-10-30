@@ -1,0 +1,46 @@
+name: T21 B341 original SOURCE paint opportunity A-B genuine 180s
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/app/B193SourceCoopMode.ts'
+      - 'src/app/B193SourceCoopMode.test.ts'
+      - 'scripts/t21-b341-source-patch-ab-round.mjs'
+      - 'scripts/t21-b341-source-patch-ab-audit.mjs'
+      - 'scripts/t21-b341-source-patch-ab-audit.test.mjs'
+      - 'docs/qa/evidence/T21_B341_B340_FIXED_SOURCE_BASELINE.json'
+      - '.github/workflows/t21-b341-source-patch-ab-180s.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: b341-true-original-source-patch-ab-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  independent-original-source-patch-ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b340-real-180s-cpu-audit.test.mjs scripts/t21-b341-source-patch-ab-audit.test.mjs
+      - run: node --check scripts/t21-b341-source-patch-ab-round.mjs
+      - run: node --check scripts/t21-b341-source-patch-ab-audit.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/app/B193SourceCoopMode.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Real Chromium 180s ORIGINAL B64/B178/B180 SOURCE A-B experiment
+        env:
+          T21_B341_OUTPUT: /tmp/t21-b341
+        run: node scripts/t21-b341-source-patch-ab-round.mjs
+      - name: Compare same-source B340 fixed baseline against genuine experiment
+        run: node scripts/t21-b341-source-patch-ab-audit.mjs /tmp/t21-b341
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b341-genuine-original-180s-source-patch-ab
+          path: /tmp/t21-b341/
+          retention-days: 14
+          if-no-files-found: warn

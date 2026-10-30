@@ -56,3 +56,35 @@ describe('B193 original source cooperative play choice',()=>{
   expect(no.searchParams.has('t21W10B193')).toBe(false);
  });
 });
+
+describe('B341 exact research-only A/B source navigation',()=>{
+ const source='https://example.com/ink?t21Play=preview&t21QaDrive=source'+
+  '&t21W10B341=originalPatchAB&t21W10B64=inkAngleSweep'+
+  '&t21W10B178=sourceInkRecovery&t21W10B180=originalUnpaintedPatches';
+ it('retains exactly three original-source research flags only with the explicit B341 marker',()=>{
+  const next=new URL(sourceCoopNavigationUrl(source,true));
+  expect(next.searchParams.get('t21W10B193')).toBe('allyCoop');
+  expect(next.searchParams.get('t21W10B341')).toBe('originalPatchAB');
+  for(const [k,v] of [
+   ['t21W10B64','inkAngleSweep'],['t21W10B178','sourceInkRecovery'],
+   ['t21W10B180','originalUnpaintedPatches']
+  ])expect(next.searchParams.get(k)).toBe(v);
+  expect(next.searchParams.has('t21W10B93')).toBe(false);
+  expect(next.searchParams.has('t21W10B192')).toBe(false);
+ });
+ it('does not preserve incomplete, unmarked or corrupted opt-ins',()=>{
+  for(const changed of [
+   '&t21W10B341=notCertified',
+   '&t21W10B64=invalid',
+   '&t21W10B178=invalid',
+   '&t21W10B180=invalid'
+  ]){
+   const u=new URL(source);
+   const [key,v]=changed.substring(1).split('=');
+   u.searchParams.set(key,v);
+   const next=new URL(sourceCoopNavigationUrl(u.href,true));
+   for(const k of ['t21W10B341','t21W10B64','t21W10B178','t21W10B180'])
+    expect(next.searchParams.has(k)).toBe(false);
+  }
+ });
+});

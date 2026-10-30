@@ -1,0 +1,52 @@
+{
+  "schema": "B341_VERIFIED_B340_FIXED_SOURCE_REFERENCE",
+  "origin": "GITHUB_ACTIONS_TRUE_CHROMIUM_RUN_40988204871",
+  "runUrl": "https://github.com/ryomashibaba/browser-ink-tps/actions/runs/40988204871",
+  "originalArtifactId": 12949234359,
+  "originalIndependentVerdictSha256": "3724ef21e8128c593aa7db3d4a3a793b9a4fa57269fc1b5e48c73eba3fb7c37b",
+  "originalRealRoundSha256": "13f68447daca35330959a5eabefc621a3a7a4b19c8766d0a2c48e7dc514e4ab8",
+  "originalSource": "25/17/26/0",
+  "realNativeTicks": 10804,
+  "productionAuthorized": false,
+  "variant": "FIXED_PROVEN_EXISTING_SOURCE_GOALS_NO_B64_B178_B180",
+  "timeWindowsSeconds": [
+    0,
+    30,
+    60,
+    90,
+    120,
+    150,
+    180
+  ],
+  "cpuSourceShotRequests": [
+    86,
+    6,
+    8,
+    1,
+    1,
+    6
+  ],
+  "cpuActualImpactChangedCells": [
+    3147,
+    35,
+    19,
+    0,
+    0,
+    11
+  ],
+  "cpuChangedCells": [
+    10692,
+    427,
+    493,
+    14,
+    83,
+    64
+  ],
+  "b64Enabled": false,
+  "b178Enabled": false,
+  "b180Enabled": false,
+  "originalScoreable": 0,
+  "officialWinner": "NONE",
+  "gameplayCertified": false,
+  "artAccepted": false
+}
