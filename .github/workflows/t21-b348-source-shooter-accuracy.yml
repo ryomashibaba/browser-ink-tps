@@ -1,0 +1,25 @@
+name: T21 B348 source-only shooter reference research candidate
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/projectile/B348SourceShooterAccuracyCandidate.ts'
+      - 'src/projectile/B348SourceShooterAccuracyCandidate.test.ts'
+      - 'src/projectile/ProjectileSystem.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-b348-source-shooter-accuracy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only-angular-physics-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/projectile/B348SourceShooterAccuracyCandidate.test.ts src/projectile/B346NativeShooterWitness.test.ts src/projectile/B345SourceShooterOpeningCadence.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/

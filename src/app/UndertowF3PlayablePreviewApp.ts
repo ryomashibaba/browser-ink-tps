@@ -894,6 +894,9 @@ export class UndertowF3PlayablePreviewApp{
   if(b31Params.get('t21W10B346')==='nativeShooterPhysicsWitness'&&
      b31Params.get('t21QaDrive')==='source'&&this.b203FullRound)
     this.projectiles.enableB346NativeShooterWitness();
+  if(b31Params.get('t21W10B348')==='sourceShooterAccuracyCandidate'&&
+     b31Params.get('t21QaDrive')==='source'&&this.b203FullRound)
+    this.projectiles.enableB348SourceShooterAccuracyCandidate();
   // Reuse the already-shipped player sub weapon pipeline; this is not
   // a fabricated source Actor, collider, NavLink or scoreable surface.
   this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
@@ -5525,6 +5528,7 @@ export class UndertowF3PlayablePreviewApp{
      this.projectiles.b343OriginalSourceVolleyBudgetSnapshot(),
    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
    b346NativeShooterWitness:this.projectiles.b346NativeShooterWitnessSnapshot(),
+   b348SourceShooterAccuracy:this.projectiles.b348SourceShooterAccuracySnapshot(),
     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),

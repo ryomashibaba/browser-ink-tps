@@ -6,6 +6,7 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import {b343CanLaunchSourceVolley} from './B343OriginalSourceVolleyBudget';
 import {b345BoundOpeningCooldown} from './B345SourceShooterOpeningCadence';
 import {B346NativeShooterWitness, type B346ShooterExitKind} from './B346NativeShooterWitness';
+import {b348CandidateShooterAngles} from './B348SourceShooterAccuracyCandidate';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
@@ -78,6 +79,12 @@ export class ProjectileSystem {
   private b345SourceShooterOpeningEnabled=false;
   private b345RealOpeningClamps=0;
   private readonly b346ShooterWitness=new B346NativeShooterWitness();
+  private b348ShooterCandidateEnabled=false;
+  private b348AcceptedHumanShots=0;
+  private b348GroundShots=0;
+  private b348AirShots=0;
+  private b348LastYaw=0;
+  private b348LastPitch=0;
   private b152OriginalAllyAimProjectilesSpawned=0;
   private b152OriginalAllyAimSurfaceCollisions=0;
   private readonly cpuAimDirection = new Vec3();
@@ -212,6 +219,29 @@ export class ProjectileSystem {
     return this.b346ShooterWitness.snapshot();
   }
 
+  /** Nonproduction only: requires B343, B345 and real physics B346. */
+  public enableB348SourceShooterAccuracyCandidate():void{
+   if(!this.b343SourceVolleyAtomic||
+      !this.b345SourceShooterOpeningEnabled||
+      !this.b346ShooterWitness.snapshot().enabled||
+      this.surfaces.length!==17)
+    throw Error('B348_NONORIGINAL_SOURCE_ACCURACY_FORBIDDEN');
+   this.b348ShooterCandidateEnabled=true;
+  }
+  public b348SourceShooterAccuracySnapshot(){
+   return {enabled:this.b348ShooterCandidateEnabled,
+    actualAcceptedCandidateShots:this.b348AcceptedHumanShots,
+    actualGroundedCandidateShots:this.b348GroundShots,
+    actualAirborneCandidateShots:this.b348AirShots,
+    latestActualCandidateYawDegrees:this.b348LastYaw,
+    latestActualCandidatePitchDegrees:this.b348LastPitch,
+    originalReferenceModelCertified:false as const,
+    candidateResearchOnly:true as const,
+    syntheticShots:0 as const,syntheticInk:0 as const,
+    originalSource:'25/17/26/0' as const,
+    productionAuthorized:false as const};
+  }
+
   public setPlayerWeapon(id: WeaponId): void {
     if (id === this.playerWeaponId) return;
     this.playerWeaponId = id;
@@ -264,6 +294,11 @@ export class ProjectileSystem {
     this.b343RejectedVolleys=0;
     this.b345RealOpeningClamps=0;
     this.b346ShooterWitness.reset();
+    this.b348AcceptedHumanShots=0;
+    this.b348GroundShots=0;
+    this.b348AirShots=0;
+    this.b348LastYaw=0;
+    this.b348LastPitch=0;
     for (const slot of this.slots) this.deactivate(slot);
     this.delayedBursts.length = 0;
     this.fireCooldown = 0;
@@ -651,7 +686,32 @@ export class ProjectileSystem {
   ): void {
     this.stats.playerWeaponChargePercent = 0;
     if (!fireHeld || this.fireCooldown > 0) return;
-    if (this.fireProjectiles(profile, origin, direction, team, 1, profile.spreadDegrees, 0)) {
+    // B348 only the source-validated Pulse Sprayer research candidate.
+    // The physical projectile spawning/impact and ink cost stay original.
+    const hypothesis=this.b348ShooterCandidateEnabled&&
+     profile.id==='pulse-sprayer'
+      ?b348CandidateShooterAngles(
+        this.b348AcceptedHumanShots+1,this.stats.playerGrounded)
+      :null;
+    let physicalDirection=direction;
+    if(hypothesis){
+      const yaw=rotateYaw(direction,hypothesis.yawDegrees);
+      const h=Math.hypot(yaw.x,yaw.z);
+      const theta=Math.atan2(yaw.y,h)+
+       hypothesis.pitchDegrees*Math.PI/180;
+      physicalDirection=h>1e-8
+       ?new Vec3(yaw.x/h*Math.cos(theta),Math.sin(theta),
+          yaw.z/h*Math.cos(theta)).normalize()
+       :yaw;
+    }
+    if (this.fireProjectiles(profile, origin, physicalDirection, team, 1, profile.spreadDegrees, 0)) {
+      if(hypothesis){
+        this.b348AcceptedHumanShots++;
+        if(hypothesis.grounded)this.b348GroundShots++;
+        else this.b348AirShots++;
+        this.b348LastYaw=hypothesis.yawDegrees;
+        this.b348LastPitch=hypothesis.pitchDegrees;
+      }
       this.fireCooldown += profile.fireIntervalSeconds;
       this.stats.playerWeaponAction = 'AUTO_FIRE';
     } else {
