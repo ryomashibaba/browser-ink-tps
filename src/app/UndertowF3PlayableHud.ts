@@ -643,8 +643,7 @@ export function createF3PlayableHud(ui:HTMLElement){
    const resource=poolFull?
     'BULLET POOL FULL · WAIT FOR SLOT · SOURCE / NO SCORE':b355.label;
    b355InkNode.textContent=genuineShooter?
-    genuineShooter+'
-'+resource:resource;
+    genuineShooter+' · '+resource:resource;
    b355InkNode.style.borderColor=poolFull||b355.urgent?
     '#e9a260':'#4a7d91';
    b355InkNode.style.color=poolFull||b355.urgent?
