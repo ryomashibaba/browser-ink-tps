@@ -272,6 +272,8 @@ async function run(){
  // B344: real native tick and human resource sampling while the
  // genuine pointer-locked mouse stays held. No QA advancement/injection.
  const genuineSpaceEvents=[];
+ const b354ActualMoveEvents=[];
+ let b354KeyWDown=false;
  const trace={schema:'B344_ACTUAL_SOURCE_HUMAN_HELD_SHOOTER',
   source:'25/17/26/0',baselineTick:aimed.tick,
   fakeTicks:0,fakeShots:0,checkpoints:[]};
@@ -305,6 +307,7 @@ async function run(){
   const q={label,tick:n.tick,
    nativeActualKccGrounded:n.b349ActualKccGrounded,
    nativeActualPlayerBodyY:n.player.position[1],
+   nativeActualPlayerBody:[...n.player.position],
     nativeCandidateAcceptedShots:accuracy.actualAcceptedCandidateShots,
     nativeCandidateGroundShots:accuracy.actualGroundedCandidateShots,
     nativeCandidateAirShots:accuracy.actualAirborneCandidateShots,
@@ -333,6 +336,24 @@ async function run(){
     return n.tick>=aimed.tick+tickOffset?n:false;
    },120000);
    await traceFrame('HOLD_'+tickOffset);
+   if(tickOffset===12){
+    const s=verifyAuthority(await snapshot());
+    if(!s.b349ActualKccGrounded)fail('B354_NATIVE_KCC_NOT_GROUNDED');
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'w',
+     code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87});
+    b354KeyWDown=true;
+    b354ActualMoveEvents.push({kind:'realKeyWDown',tick:s.tick,
+     body:[...s.player.position],grounded:s.b349ActualKccGrounded});
+   }
+   if(tickOffset===36)await picture('B354_MOVING_AIR_FIRE');
+   if(tickOffset===48){
+    const s=verifyAuthority(await snapshot());
+    await send('Input.dispatchKeyEvent',{type:'keyUp',key:'w',
+     code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87});
+    b354KeyWDown=false;
+    b354ActualMoveEvents.push({kind:'realKeyWUp',tick:s.tick,
+     body:[...s.player.position],grounded:s.b349ActualKccGrounded});
+   }
    if(tickOffset===24){
     const v=verifyAuthority(await snapshot());
     if(v.b349ActualKccGrounded!==true)
@@ -355,6 +376,11 @@ async function run(){
    }
   }
  }finally{
+  if(b354KeyWDown){
+   await send('Input.dispatchKeyEvent',{type:'keyUp',key:'w',
+    code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87});
+   b354KeyWDown=false;
+  }
   await send('Input.dispatchMouseEvent',
    {type:'mouseReleased',x:820,y:450,button:'left',clickCount:1});
  }
@@ -509,6 +535,33 @@ async function run(){
   cueDelta:b353.genuineCueAfter-b353.genuineCueBefore,
   physicalCpuExits:realCpuExits,originalPaintExits,
   existingOpponentFeet:enemies(nativeFinal)}));
+ // B354 read-only evidence on the same actual CDP 180s shooter session.
+ const b354={
+  schema:'B354_REAL_SOURCE_MOVING_AIR_SHOOTER',source:'25/17/26/0',
+  realCdpKeyW:true,realSpace:true,realMouseHeldFire:true,
+  noTeleport:true,noFakeTicks:true,noFakeShots:true,noInkInjection:true,
+  originalScoreable:0,productionAuthorized:false,
+  movement:b354ActualMoveEvents,
+  checkpoints:trace.checkpoints.map(c=>({
+   label:c.label,tick:c.tick,body:c.nativeActualPlayerBody,
+   grounded:c.nativeActualKccGrounded,
+   physicalShooterLaunches:c.actualNativePhysicalLaunches,
+   changedInk:c.changedOriginalHumanCells,playerInk:c.realPlayerInk
+  })),
+  nativeFinalTick:nativeFinal.tick,
+  originalHumanPaintChangedCells:nativeFinal.b23HumanInkFeedback.humanChangedCells,
+  trueNativeShooterLaunches:shooterPhysics.totalActualShooterLaunches,
+  truePhysicalCpuHitExits:realCpuExits,
+  trueEnemyHpDamage:b353.humanCpuHpHitsAfter-b353.humanCpuHpHitsBefore,
+  screenshot:'B354_MOVING_AIR_FIRE.png',
+  NintendoExactWeaponCertified:false,artAccepted:false,
+  unrestricted4v4Certified:false};
+ writeFileSync(resolve(DIR,'b354-real-moving-air-fire.json'),
+  JSON.stringify(b354,null,2)+'\n');
+ console.log('B354_TRUE_NATIVE_MOVE_FIRE',JSON.stringify({
+  moveEvents:b354ActualMoveEvents,
+  genuineLaunches:shooterPhysics.totalActualShooterLaunches,
+  originalPaintChangedEvents:b354.originalHumanPaintChangedCells}));
  const verdict=b337AuditNative(proof);
  writeFileSync(resolve(DIR,'b337-driver-verdict.json'),
   JSON.stringify(verdict,null,2)+'\n');

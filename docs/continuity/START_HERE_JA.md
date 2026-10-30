@@ -52,3 +52,9 @@ QAブランチのpush時、[軽量自動索引CI](../../.github/workflows/t21-co
 ## B351 — 本物の敵CPU HP減少と連動した命中演出（研究候補）
 
 SOURCE 180秒のみ、既存のB343/B345/B346/B348をオプトインした状態で追加 `t21W10B351=realCpuHitCue` を指定。人間のpulse-sprayer物理弾が敵CPUのHPを実際に減らしたことを既存の `humanCpuDirectHits` の変化で確認した時だけ、短い視覚・音の命中反応を出す。盾吸収・壁・塗装・CPU射撃では偽の成功を発生させない。自然対戦での実証、ART、原作サウンド一致、正式4v4・得点は引き続きHOLD。[詳細](../qa/T21_B351_REAL_CPU_DAMAGE_CUE_CANDIDATE.md)。
+
+
+## B354 — 真正W移動＋Spaceジャンプ＋マウス射撃の同時操作（技術研究）
+2026-10-30 B353真正Chromium [CI 41067192264](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41067192264) 全CI SUCCESS。ただし「人間命中0・敵HP減少0・B351追加演出0」の限定HOLDが独立監査で確定。地上4＋空中6発、原作Paintable10着弾、塗装変化349は真正PASS。敵B1〜B4はZ−48m付近、人間はZ+68mで自然な対岸経路0/12、架空敵生成禁止。
+
+次のB354は既存B349同一真正Chromiumセッションで、Wキーを射撃継続中に実CDP入力、Spaceジャンプも併用し、KCCの真の水平変位＋移動中の実物理地上・空中発射と銃口座標変化、元Paintable塗装、実フレームバッファを一括保存。新規ワークフローは増やさず、原作境界25/17/26/0とHOLDを保持。新HEADで真正CI成功するまでB354 PASS認定不可。
