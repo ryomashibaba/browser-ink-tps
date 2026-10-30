@@ -20,8 +20,8 @@ describe('B345 native SHOOTER first-press idle cooldown',()=>{
   expect(ticks.length).toBeLessThanOrEqual(10);
  });
  it('rejects fabricated or missing fixed steps',()=>{
-  for(const [cd,dt] of [[NaN,1/60],[-.5,0],
-   [-.5,-1],[Infinity,1/60],[-.5,NaN],[-.5,.5]])
+  for(const [cd,dt] of ([[NaN,1/60],[-.5,0],
+   [-.5,-1],[Infinity,1/60],[-.5,NaN],[-.5,.5]] as const))
    expect(()=>bound(cd,dt)).toThrow('B345_INVALID_NATIVE_STEP');
  });
 });
