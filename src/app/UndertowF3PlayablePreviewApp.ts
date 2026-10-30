@@ -5529,6 +5529,7 @@ export class UndertowF3PlayablePreviewApp{
    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
    b346NativeShooterWitness:this.projectiles.b346NativeShooterWitnessSnapshot(),
    b348SourceShooterAccuracy:this.projectiles.b348SourceShooterAccuracySnapshot(),
+   b349ActualKccGrounded:this.stats.playerGrounded,
     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
