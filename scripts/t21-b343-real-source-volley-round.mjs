@@ -299,8 +299,7 @@ async function run(){
    source:'25/17/26/0',baseline,selectedSearch,
    nativeFiredTick:fired.tick,humanRealShots:fired.humanShots,
    originalPaintChangedEvents:fired.humanInk,realHud:b361Hud,
-   inferredCpuHit:false,officialScoreable:0,productionAuthorized:false},null,2)+'
-');
+   inferredCpuHit:false,officialScoreable:0,productionAuthorized:false},null,2)+'\n');
  for(const code of ['KeyW','KeyA','KeyS','KeyD']){
   const keys={KeyW:['w',87],KeyA:['a',65],KeyS:['s',83],KeyD:['d',68]};
   const [key,vk]=keys[code];
