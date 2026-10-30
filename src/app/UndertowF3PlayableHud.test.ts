@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
+import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
 function state():F3PlayableHudState{
@@ -212,5 +212,40 @@ describe('B338 actual native phase explanation, no fabricated result',()=>{
  it('preserves invisible QA and explicit safety stop',()=>{
   expect(g('PLAYING',false,101,null,false)).toEqual({phase:'QA',text:''});
   expect(g('PLAYING',false,101,'FAILED').phase).toBe('STOP');
+ });
+});
+
+describe('B361 genuine source practice player-facing shooter telemetry',()=>{
+ const valid=()=>{
+  const s=state();
+  s.matchState='PLAYING';
+  s.originalSourceSolids=25;s.originalPaintSurfaces=17;
+  s.originalSourceNavigationLinks=26;s.unrestricted4v4Certified=false;
+  s.b343OriginalSourceVolleyBudget={enabled:true,rejectedVolleys:0,
+   physicalPoolSize:128,actualFreeSlots:120};
+  s.b361NativePlayerWeapon={id:'pulse-sprayer',displayName:'Pulse Sprayer'};
+  s.b23HumanInkFeedback={originalSourceOnly:true,scoreablePromotionCount:0,
+   humanChangedImpactCount:3,humanChangedCells:91,
+   lastImpactTick:140,lastImpactChangedCells:12};
+  s.shotsFired=9;
+  return s;
+ };
+ it('displays only the actual chosen weapon and native shot/paint change counts',()=>{
+  const s=valid();
+  expect(b361GenuineShooterLine(s)).toBe(
+   'Pulse Sprayer · 9 REAL SHOTS · 91 SOURCE INK CHANGES');
+  s.b361NativePlayerWeapon!.displayName='Different Real Weapon';
+  expect(b361GenuineShooterLine(s)).toContain('Different Real Weapon');
+ });
+ it('refuses forged scoring, staging outside original source, or fake paint',()=>{
+  for(const change of [
+   (s:F3PlayableHudState)=>{s.b343OriginalSourceVolleyBudget!.enabled=false;},
+   (s:F3PlayableHudState)=>{s.originalSourceSolids=26;},
+   (s:F3PlayableHudState)=>{s.sourceScoreablePromotions=1;},
+   (s:F3PlayableHudState)=>{s.productionAuthorized=true;},
+   (s:F3PlayableHudState)=>{s.b23HumanInkFeedback!.originalSourceOnly=false;},
+   (s:F3PlayableHudState)=>{s.b23HumanInkFeedback!.humanChangedCells=-1;},
+   (s:F3PlayableHudState)=>{s.shotsFired=1.5;},
+  ]){const s=valid();change(s);expect(b361GenuineShooterLine(s)).toBeNull();}
  });
 });

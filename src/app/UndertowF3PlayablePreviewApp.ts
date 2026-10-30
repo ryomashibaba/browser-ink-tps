@@ -5561,6 +5561,10 @@ export class UndertowF3PlayablePreviewApp{
     sourceTagDoesNotGrantInkOrMovementAuthority:true,
     scoreablePromotions:0,full4v4Certified:false
    },
+   b361NativePlayerWeapon:{
+    id:this.projectiles.currentPlayerWeapon.id,
+    displayName:this.projectiles.currentPlayerWeapon.displayName
+   },
    b343OriginalSourceVolleyBudget:
      this.projectiles.b343OriginalSourceVolleyBudgetSnapshot(),
    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),

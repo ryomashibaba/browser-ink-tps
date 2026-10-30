@@ -108,28 +108,40 @@ async function run(){
  await send('Page.enable');await send('Runtime.enable');
  await send('Emulation.setDeviceMetricsOverride',
   {width:1600,height:900,deviceScaleFactor:1,mobile:false});
+ // Begin from the actual player's SOURCE page, not a preconfigured QA URL.
  await send('Page.navigate',{url:ROOT+
-  '?t21Play=preview&t21QaDrive=source&'+
-  't21W10B183=firstDropPlay&t21W10B193=allyCoop&'+
-  't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic'});
+  '?t21Play=preview&t21QaDrive=source'});
  const ready=()=>wait(async()=>{
   try{return await read('document.querySelector("#app-canvas")?.dataset.t21F3Ready==="READY"'+
    '&&document.querySelector("#app-canvas")?.dataset.t21F3Renderer==="webgl2"');}
   catch{return false;}
  },110000);
  await ready();
- // Start directly in the exact explicitly selected SOURCE QA full-round
- // session. No navigator backfill, fake start or hidden world mutation.
+ const baseline=await read('(() => ({
+  path:location.pathname,search:location.search,
+  button:document.querySelector("#t21-f3-source-shooter-practice")?.textContent,
+  mode:document.querySelector("#app-canvas")?.dataset.t21B203FullRound
+ }))()');
+ if(baseline?.search!=='?t21Play=preview&t21QaDrive=source'||
+    !baseline.button?.includes('PLAY REAL SHOOTER')||baseline.mode!=='OFF')
+  fail('PLAYER_SOURCE_ENTRY_NOT_READY_'+JSON.stringify(baseline));
+ // Real CDP mouse click on the user-facing launcher. This creates a
+ // fresh native stage and DOES NOT smuggle research flags into the round.
+ await clickButton('#t21-f3-source-shooter-practice');
+ const selectedSearch='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
+  't21W10B355=realInkHud&t21W10B356=realImpactReticle';
+ await wait(async()=>await read('location.search')===selectedSearch,45000);
+ await ready();
+ // Player-selected source shooter world; no fabricated clock/actor/stage.
  const mode=await wait(async()=>{
   const x=await read('(() => ({ready:document.querySelector("#app-canvas")?.dataset.t21F3Ready,'+
    'full:document.querySelector("#app-canvas")?.dataset.t21B203FullRound,'+
    'search:location.search}))()');
   return x?.ready==='READY'&&x?.full==='REAL_180S_SOURCE_PLAY'?x:false;
  },120000);
- if(mode.search!=='?t21Play=preview&t21QaDrive=source&'+
-  't21W10B183=firstDropPlay&t21W10B193=allyCoop&'+
-  't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic')
-   fail('EXPLICIT_FROZEN_SOURCE_URL_IDENTITY');
+ if(mode.search!==selectedSearch)
+   fail('EXPLICIT_PLAYER_SELECTED_SOURCE_URL_IDENTITY');
  const boot=verifyAuthority(await snapshot());
  if(boot.b343OriginalSourceVolleyBudget?.enabled!==true||
     boot.b343OriginalSourceVolleyBudget?.physicalPoolSize!==128||
@@ -257,7 +269,38 @@ async function run(){
   await send('Input.dispatchMouseEvent',
    {type:'mouseReleased',x:820,y:450,button:'left',clickCount:1});
  }
- await sample('FIRE');
+ const fired=await sample('FIRE');
+ // Verify an actual 3D world render has reached the player-facing
+ // weapon and paint HUD. No injected ticks, shots or invented score.
+ const b361Hud=await wait(async()=>{
+  const v=await read('(() => {
+   const e=document.querySelector("#t21-f3-b355-source-ink-readout");
+   const ui=document.querySelector("#ui-root");
+   const reticle=document.querySelector("#t21-f3-b356-real-source-reticle");
+   return {visible:!!e&&!e.hidden,text:e?.textContent??"",
+    weapon:e?.dataset.t21B361WeaponId,
+    shots:Number(e?.dataset.t21B361HumanShots??-1),
+    changes:Number(e?.dataset.t21B361OriginalChanges??-1),
+    writes:e?.dataset.t21B361GameplayWrites,
+    scoreable:e?.dataset.t21B355OriginalScoreable,
+    view:ui?.dataset.t21B245Presentation,
+    reticleScoreable:reticle?.dataset.t21B356Scoreable};
+  })()');
+  return v?.visible&&v.view==='PLAYER'&&
+   v.weapon==='pulse-sprayer'&&v.shots===fired.humanShots&&
+   v.changes===fired.humanInk&&v.writes==='0'&&
+   v.scoreable==='0'&&v.reticleScoreable==='0'&&
+   v.text.includes('Pulse Sprayer')&&
+   v.text.includes('SOURCE INK CHANGES')&&
+   v.text.includes('SOURCE / NO SCORE')?v:false;
+ },45000);
+ writeFileSync(resolve(DIR,'b361-real-player-selected-shooter-hud.json'),
+  JSON.stringify({schema:'B361_GENUINE_USER_LAUNCHED_SOURCE_SHOOTER',
+   source:'25/17/26/0',baseline,selectedSearch,
+   nativeFiredTick:fired.tick,humanRealShots:fired.humanShots,
+   originalPaintChangedEvents:fired.humanInk,realHud:b361Hud,
+   inferredCpuHit:false,officialScoreable:0,productionAuthorized:false},null,2)+'
+');
  for(const code of ['KeyW','KeyA','KeyS','KeyD']){
   const keys={KeyW:['w',87],KeyA:['a',65],KeyS:['s',83],KeyD:['d',68]};
   const [key,vk]=keys[code];

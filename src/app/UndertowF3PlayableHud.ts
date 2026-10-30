@@ -19,6 +19,7 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  humanCpuDirectHits?:number;
  humanCpuDirectSplats?:number;
  inkDryFireAttempts?:number;
+ b361NativePlayerWeapon?:{id:string;displayName:string};
  b343OriginalSourceVolleyBudget?:{
   enabled:boolean;rejectedVolleys:number;physicalPoolSize:number;
   actualFreeSlots:number;
@@ -107,6 +108,25 @@ export function sourceF3RealAimLineCue(x:{
  };
 }
 const clampPercent=(n:number)=>Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):0;
+
+/** B361 player-facing read-only SOURCE practice telemetry, NOT Turf scoring.
+ * Sources: actual chosen weapon, accepted native shots, original paint writes. */
+export function b361GenuineShooterLine(s:F3PlayableHudState):string|null{
+ const w=s.b361NativePlayerWeapon,p=s.b23HumanInkFeedback;
+ if(s.b343OriginalSourceVolleyBudget?.enabled!==true||
+    s.originalSourceSolids!==25||s.originalPaintSurfaces!==17||
+    s.originalSourceNavigationLinks!==26||
+    s.sourceScoreablePromotions!==0||s.productionAuthorized!==false||
+    s.unrestricted4v4Certified!==false||
+    p?.originalSourceOnly!==true||p.scoreablePromotionCount!==0||
+    !Number.isSafeInteger(s.shotsFired)||s.shotsFired<0||
+    !Number.isSafeInteger(p.humanChangedCells)||p.humanChangedCells<0||
+    !w||typeof w.id!=='string'||w.id.length===0||
+    typeof w.displayName!=='string'||w.displayName.length===0)
+  return null;
+ return w.displayName+' · '+s.shotsFired+' REAL SHOTS · '+
+  p.humanChangedCells+' SOURCE INK CHANGES';
+}
 export function formatF3PlayableHud(s:F3PlayableHudState){
  // Never turn this nonproduction lab into an inferred winner or a scored match.
  if(s.sourceScoreablePromotions!==0||s.productionAuthorized!==false)
@@ -231,7 +251,7 @@ export function createF3PlayableHud(ui:HTMLElement){
   '<div id="t21-f3-b355-source-ink-readout" hidden aria-live="off"'+
    ' style="margin-top:6px;padding:6px 8px;border-radius:6px;'+
    'background:rgba(7,35,49,.86);border:1px solid #4a7d91;'+
-   'font:750 10px/1.45 system-ui;color:#bff1ec"></div>'+
+   'font:750 10px/1.45 system-ui;color:#bff1ec;white-space:pre-line"></div>'+
   '<div id="t21-f3-b338-source-guide" hidden aria-live="off"'+
   ' style="margin-top:6px;padding-top:6px;border-top:1px solid #ffffff32;'+
   'color:#bdedf1;font:650 10px/1.4 system-ui"></div>'+
@@ -611,10 +631,20 @@ export function createF3PlayableHud(ui:HTMLElement){
    String(b355?.nativeTick??-1);
   b355InkNode.dataset.t21B355OriginalScoreable='0';
   b355InkNode.dataset.t21B355GameplayWrites='0';
+  const genuineShooter=!!b355?b361GenuineShooterLine(value):null;
+  b355InkNode.dataset.t21B361WeaponId=genuineShooter?
+   value.b361NativePlayerWeapon!.id:'UNVERIFIED';
+  b355InkNode.dataset.t21B361HumanShots=genuineShooter?
+   String(value.shotsFired):-1+'';
+  b355InkNode.dataset.t21B361OriginalChanges=genuineShooter?
+   String(value.b23HumanInkFeedback!.humanChangedCells):-1+'';
+  b355InkNode.dataset.t21B361GameplayWrites='0';
   if(b355){
-   b355InkNode.textContent=poolFull?
-    'BULLET POOL FULL · WAIT FOR SLOT · SOURCE / NO SCORE':
-    b355.label;
+   const resource=poolFull?
+    'BULLET POOL FULL · WAIT FOR SLOT · SOURCE / NO SCORE':b355.label;
+   b355InkNode.textContent=genuineShooter?
+    genuineShooter+'
+'+resource:resource;
    b355InkNode.style.borderColor=poolFull||b355.urgent?
     '#e9a260':'#4a7d91';
    b355InkNode.style.color=poolFull||b355.urgent?
