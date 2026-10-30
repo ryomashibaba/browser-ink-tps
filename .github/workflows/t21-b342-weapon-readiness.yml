@@ -1,0 +1,34 @@
+name: T21 B342 original main weapons structural foundation and gaps
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/weapons/**'
+      - 'src/projectile/ProjectileSystem.ts'
+      - 'scripts/t21-b342-weapon-readiness-audit.mjs'
+      - 'scripts/t21-b342-weapon-readiness-audit.test.mjs'
+      - '.github/workflows/t21-b342-weapon-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-weapon-source-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b342-weapon-readiness-audit.test.mjs
+      - run: node scripts/t21-b342-weapon-readiness-audit.mjs /tmp/t21-b342-weapon-readiness.json
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/weapons/B342OriginalMainWeaponContract.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b342-weapon-source-gaps-not-fidelity-pass
+          path: /tmp/t21-b342-weapon-readiness.json
+          retention-days: 14
+          if-no-files-found: warn
