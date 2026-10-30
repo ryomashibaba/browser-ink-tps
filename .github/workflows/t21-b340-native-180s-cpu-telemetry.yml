@@ -1,0 +1,42 @@
+name: T21 B340 REAL 180s seven CPU time-windowed source cause audit
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b340-real-180s-cpu-round.mjs'
+      - 'scripts/t21-b340-real-180s-cpu-audit.mjs'
+      - 'scripts/t21-b340-real-180s-cpu-audit.test.mjs'
+      - '.github/workflows/t21-b340-native-180s-cpu-telemetry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b340-genuine-180s-cpu-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  independent-native-source-cpu-round:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b335-real-180s-guard.test.mjs scripts/t21-b340-real-180s-cpu-audit.test.mjs
+      - run: node --check scripts/t21-b340-real-180s-cpu-round.mjs
+      - run: node --check scripts/t21-b340-real-180s-cpu-audit.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Genuine real-time 180-second WebGL2 seven CPU source match
+        env:
+          T21_B340_OUTPUT: /tmp/t21-b340
+        run: node scripts/t21-b340-real-180s-cpu-round.mjs
+      - name: Independently validate real original source shots and painted cells per 30s window
+        run: node scripts/t21-b340-real-180s-cpu-audit.mjs /tmp/t21-b340
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b340-genuine-native-180s-seven-cpu-source-economy
+          path: /tmp/t21-b340/
+          retention-days: 14
+          if-no-files-found: warn
