@@ -7,6 +7,8 @@ import {B75SourceInkActivity,type B75NativeInkFrame}
  from './UndertowF3LiveSourceInkActivity';
 import {B76HumanSourceCoach}
  from './UndertowF3HumanInkCoach';
+import {b355OriginalSourceInkReadout}
+ from './B355OriginalSourceInkReadout';
 
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string;inkRelation?:string};
@@ -214,6 +216,12 @@ export function createF3PlayableHud(ui:HTMLElement){
   '</div>'+
   '<div id="t21-f3-hud-practice" style="font-size:10px;margin-top:5px;color:#ffc59b">'+
    'UNSCORED / NO OFFICIAL RESULT</div>'+
+  // B355: a compact HUMAN ink-resource cue inside the PLAYER HUD.
+  // Reuses the authoritative B76 3-second ledger; NO game-state writes.
+  '<div id="t21-f3-b355-source-ink-readout" hidden aria-live="off"'+
+   ' style="margin-top:6px;padding:6px 8px;border-radius:6px;'+
+   'background:rgba(7,35,49,.86);border:1px solid #4a7d91;'+
+   'font:750 10px/1.45 system-ui;color:#bff1ec"></div>'+
   '<div id="t21-f3-b338-source-guide" hidden aria-live="off"'+
   ' style="margin-top:6px;padding-top:6px;border-top:1px solid #ffffff32;'+
   'color:#bdedf1;font:650 10px/1.4 system-ui"></div>'+
@@ -314,6 +322,14 @@ export function createF3PlayableHud(ui:HTMLElement){
  const humanHead=select('t21-f3-b76-head');
  const humanCounts=select('t21-f3-b76-counts');
  const humanHint=select('t21-f3-b76-hint');
+ const b355InkNode=select('t21-f3-b355-source-ink-readout');
+ const b355Selected=(()=>{
+  const q=new URLSearchParams(window.location.search);
+  return q.get('t21Play')==='preview'&&
+   q.get('t21QaDrive')==='source'&&
+   q.get('t21W10B203')==='fullRound'&&
+   q.get('t21W10B355')==='realInkHud';
+ })();
  function renderNativeCombat(p:F3NativeCombatPulse){
   // A native pulse is proof of the real source & native stats, NOT
   // authorization of scoreable Turf or unrestricted 4v4.
@@ -535,6 +551,26 @@ export function createF3PlayableHud(ui:HTMLElement){
     String(human.dryFireAttempts3s);
    humanBox.dataset.t21B76OriginalScoreable='0';
    humanBox.dataset.t21B76Original4v4='false';
+  }
+  // B355 never infers a paid shot, physical impact or new owner ink.
+  // PLAYER mode only; the existing B76 QA inspector stays unchanged.
+  const b355=b355OriginalSourceInkReadout(human,{
+   enabled:b355Selected,matchState:value.matchState,
+   paused:value.paused,stopReason:value.stopReason
+  });
+  b355InkNode.hidden=!b355||
+   ui.dataset.t21B245Presentation!=='PLAYER';
+  b355InkNode.dataset.t21B355Authoritative=
+   b355?'REAL_B76_NATIVE_PLAYER_RESOURCE':'HOLD_OR_DISABLED';
+  b355InkNode.dataset.t21B355Mode=b355?.mode??'HOLD';
+  b355InkNode.dataset.t21B355NativeTick=
+   String(b355?.nativeTick??-1);
+  b355InkNode.dataset.t21B355OriginalScoreable='0';
+  b355InkNode.dataset.t21B355GameplayWrites='0';
+  if(b355){
+   b355InkNode.textContent=b355.label;
+   b355InkNode.style.borderColor=b355.urgent?'#e9a260':'#4a7d91';
+   b355InkNode.style.color=b355.urgent?'#ffdaac':'#bff1ec';
   }
   root.dataset.matchState=value.matchState;
   root.dataset.cpuRecovered=String(v.cpuRecovered);

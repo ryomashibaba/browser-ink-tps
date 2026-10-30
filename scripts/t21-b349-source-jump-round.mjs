@@ -115,7 +115,8 @@ async function run(){
   't21W10B345=sourceShooterOpening&'+
   't21W10B346=nativeShooterPhysicsWitness&'+
   't21W10B348=sourceShooterAccuracyCandidate&'+
-  't21W10B351=realCpuHitCue'});
+  't21W10B351=realCpuHitCue&'+
+  't21W10B355=realInkHud'});
  const ready=()=>wait(async()=>{
   try{return await read('document.querySelector("#app-canvas")?.dataset.t21F3Ready==="READY"'+
    '&&document.querySelector("#app-canvas")?.dataset.t21F3Renderer==="webgl2"');}
@@ -136,7 +137,8 @@ async function run(){
   't21W10B345=sourceShooterOpening&'+
   't21W10B346=nativeShooterPhysicsWitness&'+
   't21W10B348=sourceShooterAccuracyCandidate&'+
-  't21W10B351=realCpuHitCue')
+  't21W10B351=realCpuHitCue&'+
+  't21W10B355=realInkHud')
    fail('EXPLICIT_FROZEN_SOURCE_URL_IDENTITY');
  const boot=verifyAuthority(await snapshot());
  if(boot.b351ActualHitCue?.enabled!==true||
@@ -393,6 +395,47 @@ async function run(){
  genuineSpaceEvents.push({kind:'realKccLanding',tick:landing.tick,
   kccGrounded:true,bodyY:landing.player.position[1]});
  await sample('FIRE');
+ // B355: real SOURCE player resource recovery, with physical firing stopped.
+ // The test does not change native tick, ink, reload speed or actor position.
+ const b355Release=verifyAuthority(await snapshot());
+ const b355Recovered=await wait(async()=>{
+  const n=verifyAuthority(await snapshot());
+  return n.tick>=b355Release.tick+65?n:false;
+ },120000);
+ const b355Hud=await read('(() => {const x=document.querySelector("'+
+  '#t21-f3-b355-source-ink-readout");return {exists:!!x,hidden:x?.hidden,'+
+  'text:x?.textContent,mode:x?.dataset.t21B355Mode,'+
+  'authority:x?.dataset.t21B355Authoritative,'+
+  'nativeTick:Number(x?.dataset.t21B355NativeTick??-1),'+
+  'gameplayWrites:x?.dataset.t21B355GameplayWrites}})()');
+ writeFileSync(resolve(DIR,'b355-source-native-ink-recovery.json'),
+  JSON.stringify({
+   schema:'B355_REAL_SOURCE_NATIVE_INK_RECOVERY',
+   source:'25/17/26/0',actualNativeCDP:true,
+   fakeShots:false,fakeTicks:false,fakeInk:false,
+   originalScoreable:0,productionAuthorized:false,
+   shotRelease:{tick:b355Release.tick,ink:b355Release.player.ink,
+    resourceState:b355Release.playerInkRecoveryState,
+    humanShots:b355Release.shotsFired,
+    nativePhysicalLaunches:
+     b355Release.b346NativeShooterWitness.totalActualShooterLaunches,
+    genuineOriginalChangedCells:
+     b355Release.b23HumanInkFeedback.humanChangedCells},
+   afterRealRecovery:{tick:b355Recovered.tick,ink:b355Recovered.player.ink,
+    resourceState:b355Recovered.playerInkRecoveryState,
+    humanShots:b355Recovered.shotsFired,
+    nativePhysicalLaunches:
+     b355Recovered.b346NativeShooterWitness.totalActualShooterLaunches,
+    genuineOriginalChangedCells:
+     b355Recovered.b23HumanInkFeedback.humanChangedCells},
+   truePlayerHud:b355Hud,
+   playerOnlyReadout:true,NintendoExactInkBalanceCertified:false
+  },null,2)+'\n');
+ console.log('B355_TRUE_SOURCE_INK_REFILL',JSON.stringify({
+  from:b355Release.player.ink,to:b355Recovered.player.ink,
+  nativeTicks:b355Recovered.tick-b355Release.tick,
+  mode:b355Recovered.playerInkRecoveryState,
+  shots:b355Recovered.shotsFired,display:b355Hud.mode}));
  // This image is taken after the real moving/jumping firing interval.
  // It must not be presented as a certified airborne instant.
  await picture('B354_POST_MOVING_FIRE');

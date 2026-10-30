@@ -10,6 +10,11 @@ on:
       - 'scripts/t21-b353-real-cpu-cue-audit.test.mjs'
       - 'scripts/t21-b354-moving-fire-audit.mjs'
       - 'scripts/t21-b354-moving-fire-audit.test.mjs'
+      - 'scripts/t21-b355-real-ink-recovery-audit.mjs'
+      - 'scripts/t21-b355-real-ink-recovery-audit.test.mjs'
+      - 'src/app/UndertowF3PlayableHud.ts'
+      - 'src/app/B355OriginalSourceInkReadout.ts'
+      - 'src/app/B355OriginalSourceInkReadout.test.ts'
       - '.github/workflows/t21-b349-real-ground-air-physical.yml'
   workflow_dispatch:
 permissions:
@@ -26,10 +31,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test scripts/t21-b349-physical-kcc-audit.test.mjs scripts/t21-b353-real-cpu-cue-audit.test.mjs scripts/t21-b354-moving-fire-audit.test.mjs
+      - run: node --test scripts/t21-b349-physical-kcc-audit.test.mjs scripts/t21-b353-real-cpu-cue-audit.test.mjs scripts/t21-b354-moving-fire-audit.test.mjs scripts/t21-b355-real-ink-recovery-audit.test.mjs
       - run: node --check scripts/t21-b349-source-jump-round.mjs
       - run: npm install --no-audit --no-fund --no-package-lock
-      - run: npx vitest run src/projectile/B349SourceGroundAirWitness.test.ts src/projectile/B348SourceShooterAccuracyCandidate.test.ts
+      - run: npx vitest run src/projectile/B349SourceGroundAirWitness.test.ts src/projectile/B348SourceShooterAccuracyCandidate.test.ts src/app/B355OriginalSourceInkReadout.test.ts
       - run: npm run build -- --base=/browser-ink-tps/
       - name: True Chromium source Space jump during physical shooter firing
         env:
@@ -51,6 +56,8 @@ jobs:
         run: node scripts/t21-b353-real-cpu-cue-audit.mjs /tmp/t21-b349
       - name: B354 genuine movement concurrent with held real shooter and Space jump
         run: node scripts/t21-b354-moving-fire-audit.mjs /tmp/t21-b349
+      - name: B355 real SOURCE human ink depletion, recovery and PLAYER HUD
+        run: node scripts/t21-b355-real-ink-recovery-audit.mjs /tmp/t21-b349
       - uses: actions/upload-artifact@v4
         if: always()
         with:

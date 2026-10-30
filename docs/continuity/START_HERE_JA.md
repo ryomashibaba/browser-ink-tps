@@ -66,3 +66,7 @@ SOURCE 180秒のみ、既存のB343/B345/B346/B348をオプトインした状態
 
 ### 2026-10-30 B354修正後の真正Chromium実測確定
 [修正後CI #41074157473](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41074157473) 全ジョブ・全ステップ **SUCCESS**（HEAD `b71a83537ea0205ba622e74c5fe10fec1cf1b813`）。`B354_INDEPENDENT_GENUINE_MOVE_FIRE_VERDICT` は `PASS_ACTUAL_SIMULTANEOUS_KEYW_SPACE_SHOOT_AND_SOURCE_PAINT`。W保持中の真の水平移動 **2.6477m**、実物理弾の発射銃口移動 **2.3799m**、W移動中の物理弾は地上 **2発＋空中4発**。全体では真の物理発射・Exit各10、B349地上4＋空中6、実Space KCC上昇 **1.0333m**、原作Paintable着弾10、塗装変化イベント449。画面 `B354_POST_MOVING_FIRE.png` は**操作後**にキャプチャされた実フレームバッファであり、空中瞬間を写した証拠とは主張しない。B353独立監査は原作敵B1〜B4実在だが、CPU衝突0・HP減少0・B351演出0のため**HOLD**。正式原作武器忠実度・ART・自然敵交戦・公式得点/4v4・productionは引き続き未認証。
+
+
+## B355 — 既存B76元SOURCEインク資源をPLAYERへ統合する限定実装
+B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41074157473) 技術PASS。B355は新武器パラメータや回復処理を作らず、既存 `PlayerResources` の実インク残量/回復状態、B76実塗装/空撃ちの情報から、PLAYER画面の既存HUD内部に小さなSOURCE専用インク回復表示を追加。オプトイン `t21W10B355=realInkHud`、SOURCE 180s限定。ゲーム状態の書込0、原作SOURCE 25/17/26/0、正式スコア/4v4/HOLD据え置き。B349真正Chromium同一セッションで、10発の実弾と塗装後、射撃停止したまま実60Hzでインクが増加・同じショット件数にとどまることを保存し、HUDにも読み出し権限を検査。原作インクパラメータ一致の認証ではない。新SHA CIの結果で初めてPASS/FAILを決める。
