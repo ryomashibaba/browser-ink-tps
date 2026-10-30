@@ -331,7 +331,8 @@ async function run(){
      fail('ACTUAL_PLAYER_NOT_GROUNDED_BEFORE_SPACE');
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:' ',
      code:'Space',windowsVirtualKeyCode:32,nativeVirtualKeyCode:32});
-    proof.actions.push('Space');store();
+    // Record actual Space input in B349 native events; preserve B337 canonical actions.
+    store();
     genuineSpaceEvents.push({kind:'realSpaceDown',tick:v.tick,
      kccGrounded:v.b349ActualKccGrounded,bodyY:v.player.position[1]});
    }
