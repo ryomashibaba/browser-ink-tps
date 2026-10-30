@@ -1,0 +1,43 @@
+name: T21 B344 genuine SOURCE shooter held fire native tick audit
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b344-native-shooter-round.mjs'
+      - 'scripts/t21-b344-native-shooter-audit.mjs'
+      - 'scripts/t21-b344-native-shooter-audit.test.mjs'
+      - '.github/workflows/t21-b344-native-shooter.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: b344-true-source-shooter-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-original-source-held-shooter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b344-native-shooter-audit.test.mjs
+      - run: node --check scripts/t21-b344-native-shooter-round.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Genuine Chromium pointer-locked SOURCE real human held fire
+        env:
+          T21_B344_OUTPUT: /tmp/t21-b344
+        run: node scripts/t21-b344-native-shooter-round.mjs
+      - name: Independent real B337 shooter input and original owner gate
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b344
+      - name: Independent B344 60Hz sampled human shooter audit
+        run: node scripts/t21-b344-native-shooter-audit.mjs /tmp/t21-b344
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b344-genuine-source-human-held-shooter-timeline
+          path: /tmp/t21-b344/
+          retention-days: 14
+          if-no-files-found: warn
