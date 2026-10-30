@@ -4329,6 +4329,14 @@ export class UndertowF3PlayablePreviewApp{
        String(circuit.realPostDropHumanImpactChangedCells);
       this.b183DropNotice.textContent+='\n'+
        circuitInstruction+'\n'+guidance.label;
+      // B365 selected physical shooter: compact mission in true PLAYER
+      // view; QA mode keeps all original source evidence lines.
+      if(this.b203FullRound&&
+         this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY'&&
+         new URL(location.href).searchParams.get('t21W10B343')==='sourceVolleyAtomic'&&
+         document.querySelector<HTMLElement>('#ui-root')?.dataset.t21B245Presentation==='PLAYER')
+       this.b183DropNotice.textContent=
+        circuitInstruction+' · 180s SOURCE PRACTICE · NO TURF WINNER';
      }
     }
     if(this.b27KineticEnabled)

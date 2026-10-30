@@ -268,6 +268,13 @@ async function run(){
   'actualInk:e?.dataset.b186RealImpactChangedCells,'+
   'text:e?.textContent}})()');
  const startedCircuit=verifyAuthority(await snapshot()).b186RealOriginalHumanCircuit;
+ const missionVisible=await read('(() => {const e=document.querySelector('+
+  '"#t21-f3-b183-real-first-drop");return !!e&&!e.hidden&&'+
+  'getComputedStyle(e).display!=="none"&&'+
+  'e.textContent.includes("ORIGINAL FIRST DROP")&&'+
+  'e.textContent.includes("NO TURF WINNER")})()');
+ if(missionVisible!==true)
+  fail('B365_GENUINE_PLAYER_MISSION_NOT_VISIBLE');
  if(!missionDom.exists||missionDom.source!=='true'||
     missionDom.scoring!=='0'||missionDom.clear!=='false'||
     !['WAIT_FIRST_DROP','MOVE_TO_ORIGINAL_RAISED'].includes(missionDom.status)||
@@ -282,7 +289,7 @@ async function run(){
    realNativeTick:started.tick,
    liveOriginalDrop:actualDrop,
    liveOriginalCircuit:startedCircuit,
-   realPlayerHud:missionDom,
+   realPlayerHud:missionDom,realMissionVisibleInPlayerMode:missionVisible,
    fabricatedFootOrInk:false,forcedEnemyRoute:false,
    realCircuitCompleted:false,
    crossTeamRouteCertified:false,officialWinner:'NONE'},null,2)+'\n');

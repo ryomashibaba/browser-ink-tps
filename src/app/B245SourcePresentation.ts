@@ -53,6 +53,18 @@ export function installB245SourcePresentation(
   '{top:8px;width:min(320px,calc(100vw - 24px));}',
   '}'
  ].join('');
+ // B365: unlike the full QA panel, the REAL original-circuit objective
+ // must be visible in normal PLAYER view. Source/CPU/gameplay untouched.
+ if(q.get('t21QaDrive')==='source'&&
+    q.get('t21W10B183')==='firstDropPlay'&&
+    q.get('t21W10B192')==='humanCombat'&&
+    q.get('t21W10B343')==='sourceVolleyAtomic'){
+  style.textContent+=
+   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b183-real-first-drop'+
+   '{display:block!important;max-width:min(300px,calc(100vw - 28px));'+
+   'padding:7px 10px;font:750 10px/1.45 system-ui;'+
+   'bottom:86px;right:14px;white-space:normal;}';
+ }
  ui.appendChild(style);
  const button=document.createElement('button');
  button.id='t21-f3-b245-view-toggle';
