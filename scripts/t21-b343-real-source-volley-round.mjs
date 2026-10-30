@@ -82,7 +82,7 @@ async function run(){
    catch{return false;}});
  if(!chrome)fail('CHROMIUM_REQUIRED');
  children.push(spawn('npm',['run','preview','--','--host','127.0.0.1',
-  '--port','4198','--strictPort','--base','/browser-ink-tps/'],{stdio:'ignore'}));
+  '--port','4195','--strictPort','--base','/browser-ink-tps/'],{stdio:'ignore'}));
  await wait(async()=>{try{return (await fetch(ROOT)).ok;}catch{return false;}},30000);
  const browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage',
   '--no-first-run','--disable-extensions','--enable-unsafe-swiftshader',
