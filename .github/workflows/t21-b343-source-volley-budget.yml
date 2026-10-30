@@ -5,10 +5,16 @@ on:
     paths:
       - 'src/projectile/B343OriginalSourceVolleyBudget.ts'
       - 'src/projectile/B343OriginalSourceVolleyBudget.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/UndertowF3PlayableHud.ts'
+      - 'src/app/UndertowF3PlayableHud.test.ts'
       - 'scripts/t21-b343-real-source-volley-round.mjs'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: b343-source-player-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   source-weapon-budget:
     runs-on: ubuntu-latest
