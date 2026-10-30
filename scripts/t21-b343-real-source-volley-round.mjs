@@ -117,11 +117,11 @@ async function run(){
   catch{return false;}
  },110000);
  await ready();
- const baseline=await read('(() => ({
+ const baseline=await read(`(() => ({
   path:location.pathname,search:location.search,
   button:document.querySelector("#t21-f3-source-shooter-practice")?.textContent,
   mode:document.querySelector("#app-canvas")?.dataset.t21B203FullRound
- }))()');
+ }))()`);
  if(baseline?.search!=='?t21Play=preview&t21QaDrive=source'||
     !baseline.button?.includes('PLAY REAL SHOOTER')||baseline.mode!=='OFF')
   fail('PLAYER_SOURCE_ENTRY_NOT_READY_'+JSON.stringify(baseline));
@@ -131,7 +131,7 @@ async function run(){
  const selectedSearch='?t21Play=preview&t21QaDrive=source&'+
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
   't21W10B355=realInkHud&t21W10B356=realImpactReticle';
- await wait(async()=>await read('location.search')===selectedSearch,45000);
+ await wait(async()=>{try{return await read('location.search')===selectedSearch;}catch{return false;}},45000);
  await ready();
  // Player-selected source shooter world; no fabricated clock/actor/stage.
  const mode=await wait(async()=>{
@@ -273,7 +273,7 @@ async function run(){
  // Verify an actual 3D world render has reached the player-facing
  // weapon and paint HUD. No injected ticks, shots or invented score.
  const b361Hud=await wait(async()=>{
-  const v=await read('(() => {
+  const v=await read(`(() => {
    const e=document.querySelector("#t21-f3-b355-source-ink-readout");
    const ui=document.querySelector("#ui-root");
    const reticle=document.querySelector("#t21-f3-b356-real-source-reticle");
@@ -285,7 +285,7 @@ async function run(){
     scoreable:e?.dataset.t21B355OriginalScoreable,
     view:ui?.dataset.t21B245Presentation,
     reticleScoreable:reticle?.dataset.t21B356Scoreable};
-  })()');
+  })()`);
   return v?.visible&&v.view==='PLAYER'&&
    v.weapon==='pulse-sprayer'&&v.shots===fired.humanShots&&
    v.changes===fired.humanInk&&v.writes==='0'&&
