@@ -82,3 +82,6 @@ B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashiba
 
 ## B356 — 照準付近のจริง実塗装 vs 発射確認を分離
 新規ルート・原作ステージ・弾・資源処理は変更せず、既存B23実`PaintCoordinator`による`humanChangedImpactCount`と`lastImpactChangedCells`および実`shotsFired`だけを表示に利用する。照準付近（視界中央の少し下）の小さな通知は、実弾発射のみなら `SHOT FIRED · PAINT UNCONFIRMED`、本当の原作ownerGrid変更なら `REAL SOURCE INK +N · NOT CPU HIT`。照準線B243の登録面までの予測を真正着弾・CPUダメージと取り違えない。SOURCE 180s PLAYER限定手動オプトイン `t21W10B356=realImpactReticle`。原作境界25/17/26/0、0 Scoreable、4v4/HOLD、ART HOLD、production不可。真正B349 Chromiumに独立物理Exit/ownerGrid/DOM監査を統合。見えるパルスをキャプチャできなければ検証はHOLDと明示し、偽のCPU命中表示を出さない。新HEAD CIの結果で限定判定。
+
+## B357 — 真正射撃中のSOURCE照準と実インクの同期記録
+前のB356 [CI 41081279142](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41081279142)は確認時点でGitHub Actions Queued。B356終盤の単発DOM読み出しだけでは、実SOURCEのImpactから27物理Tickで消える画面表示を取り逃す。B357は既存B344の6つのCDP frame読取で、同じ`Runtime.evaluate`にネイティブSOURCEのshot/impact/ownershipと実DOM reticleを同梱。追加スクリーンショット/人工時計/架空弾/HP/CPU座標なし。独立監査は単調増加イベント、物理Paintable衝突、SOURCE impact tick/個数/セルと画面の値が一致した場合のみ技術限定PASS、観測漏れはHOLD。原作25/17/26/0、自然対岸経路0/12、ART・敵命中・公式4v4・production HOLDは維持。新HEADの真正CI実測を要確認。

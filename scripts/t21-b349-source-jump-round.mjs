@@ -278,11 +278,24 @@ async function run(){
  const genuineSpaceEvents=[];
  const b354ActualMoveEvents=[];
  let b354KeyWDown=false;
+ // B357 samples real native ink and DOM within the existing single
+ // B344 CDP call: no new screenshot, physical tick or key injection.
+ const b357Samples=[];
  const trace={schema:'B344_ACTUAL_SOURCE_HUMAN_HELD_SHOOTER',
   source:'25/17/26/0',baselineTick:aimed.tick,
   fakeTicks:0,fakeShots:0,checkpoints:[]};
  const traceFrame=async label=>{
-  const n=verifyAuthority(await snapshot()),budget=n.b343OriginalSourceVolleyBudget;
+  const live=await read('(() => {const native=window.__t21F3.snapshot();'+
+   'const e=document.querySelector("#t21-f3-b356-real-source-reticle");'+
+   'return {native,reticle:{exists:!!e,hidden:e?.hidden,'+
+   'mode:e?.dataset.t21B356Mode??"OFF",'+
+   'nativeTick:Number(e?.dataset.t21B356NativeTick??-1),'+
+   'actualImpactTick:Number(e?.dataset.t21B356ActualImpactTick??-1),'+
+   'actualImpactCount:Number(e?.dataset.t21B356RealPaintEvents??-1),'+
+   'text:e?.textContent??"",scoreable:e?.dataset.t21B356Scoreable,'+
+   'enemyHitCertified:e?.dataset.t21B356EnemyHitCertified,'+
+   'gameplayWrites:e?.dataset.t21B356GameplayWrites}};})()');
+  const n=verifyAuthority(live.native),budget=n.b343OriginalSourceVolleyBudget;
   if(!Number.isFinite(n.player?.ink)||!Number.isSafeInteger(n.shotsFired)||
    !Number.isSafeInteger(n.b23HumanInkFeedback?.humanChangedCells)||
    budget?.enabled!==true||budget.physicalPoolSize!==128)
@@ -328,6 +341,13 @@ async function run(){
    actualDryFireAttempts:n.inkDryFireAttempts,scoreable:n.sourceScoreablePromotions,
    productionAuthorized:n.productionAuthorized};
   trace.checkpoints.push(q);
+  b357Samples.push({
+   label,tick:n.tick,nativeShots:n.shotsFired,
+   nativePaintEvents:n.b23HumanInkFeedback.humanChangedImpactCount,
+   nativeChangedCells:n.b23HumanInkFeedback.humanChangedCells,
+   nativeLastImpactTick:n.b23HumanInkFeedback.lastImpactTick,
+   nativeLastImpactChangedCells:n.b23HumanInkFeedback.lastImpactChangedCells,
+   reticle:live.reticle});
   writeFileSync(resolve(DIR,'b344-native-human-shooter-ticks.json'),
    JSON.stringify(trace,null,2)+'\n');
   console.log('B344_TRUE_SOURCE_SHOOTER_SAMPLE',JSON.stringify(q));
@@ -614,6 +634,25 @@ async function run(){
   physicalCpuExits:realCpuExits,originalPaintExits,
   existingOpponentFeet:enemies(nativeFinal)}));
  // B354 read-only evidence on the same actual CDP 180s shooter session.
+ const b357={
+  schema:'B357_GENUINE_NATIVE_RETICLE_TIMELINE',
+  source:'25/17/26/0',nativeChromium:true,
+  passiveSameCdpAsB344:true,extraScreenshotDuringShooter:false,
+  syntheticPaint:false,syntheticShots:false,syntheticNativeTicks:false,
+  originalScoreable:nativeFinal.sourceScoreablePromotions,
+  productionAuthorized:nativeFinal.productionAuthorized,
+  evidence:b357Samples,finalNativeTick:nativeFinal.tick,
+  finalNativeShots:nativeFinal.shotsFired,
+  finalNativeChangedCells:nativeFinal.b23HumanInkFeedback.humanChangedCells,
+  physicalLaunches:shooterPhysics.totalActualShooterLaunches,
+  physicalPaintableExits:originalPaintExits,
+  officialEnemyHitCertified:false,NintendoVisualParityCertified:false};
+ writeFileSync(resolve(DIR,'b357-genuine-native-reticle-timeline.json'),
+  JSON.stringify(b357,null,2)+'\n');
+ console.log('B357_NATIVE_RETICLE_TIMELINE',
+  JSON.stringify(b357Samples.map(x=>({frame:x.label,tick:x.tick,
+   shots:x.nativeShots,ink:x.nativeChangedCells,
+   reticle:x.reticle.mode,visible:x.reticle.hidden===false}))));
  const b354={
   schema:'B354_REAL_SOURCE_MOVING_AIR_SHOOTER',source:'25/17/26/0',
   realCdpKeyW:true,realSpace:true,realMouseHeldFire:true,

@@ -19,6 +19,8 @@ on:
       - 'src/app/B356RealSourceReticle.test.ts'
       - 'scripts/t21-b356-reticle-ink-audit.mjs'
       - 'scripts/t21-b356-reticle-ink-audit.test.mjs'
+      - 'scripts/t21-b357-reticle-timeline-audit.mjs'
+      - 'scripts/t21-b357-reticle-timeline-audit.test.mjs'
       - '.github/workflows/t21-b349-real-ground-air-physical.yml'
   workflow_dispatch:
 permissions:
@@ -35,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test scripts/t21-b349-physical-kcc-audit.test.mjs scripts/t21-b353-real-cpu-cue-audit.test.mjs scripts/t21-b354-moving-fire-audit.test.mjs scripts/t21-b355-real-ink-recovery-audit.test.mjs scripts/t21-b356-reticle-ink-audit.test.mjs
+      - run: node --test scripts/t21-b349-physical-kcc-audit.test.mjs scripts/t21-b353-real-cpu-cue-audit.test.mjs scripts/t21-b354-moving-fire-audit.test.mjs scripts/t21-b355-real-ink-recovery-audit.test.mjs scripts/t21-b356-reticle-ink-audit.test.mjs scripts/t21-b357-reticle-timeline-audit.test.mjs
       - run: node --check scripts/t21-b349-source-jump-round.mjs
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npx vitest run src/projectile/B349SourceGroundAirWitness.test.ts src/projectile/B348SourceShooterAccuracyCandidate.test.ts src/app/B355OriginalSourceInkReadout.test.ts src/app/B356RealSourceReticle.test.ts
@@ -64,6 +66,8 @@ jobs:
         run: node scripts/t21-b355-real-ink-recovery-audit.mjs /tmp/t21-b349
       - name: B356 native actual source paint vs shot reticle without enemy-hit forgery
         run: node scripts/t21-b356-reticle-ink-audit.mjs /tmp/t21-b349
+      - name: B357 same native B344 sample reticle and real paint timeline
+        run: node scripts/t21-b357-reticle-timeline-audit.mjs /tmp/t21-b349
       - uses: actions/upload-artifact@v4
         if: always()
         with:
