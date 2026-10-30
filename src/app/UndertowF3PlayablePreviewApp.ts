@@ -887,6 +887,10 @@ export class UndertowF3PlayablePreviewApp{
       scoreable:s.paintSurfaces.filter(p=>
        (p.flags&SurfaceFlags.Scoreable)!==0).length});
   }
+  // B345 is separate explicit frozen-SOURCE QA opt-in, requiring B343.
+  if(b31Params.get('t21W10B345')==='sourceShooterOpening'&&
+     b31Params.get('t21QaDrive')==='source'&&this.b203FullRound)
+    this.projectiles.enableB345SourceShooterOpening();
   // Reuse the already-shipped player sub weapon pipeline; this is not
   // a fabricated source Actor, collider, NavLink or scoreable surface.
   this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
@@ -5514,6 +5518,7 @@ export class UndertowF3PlayablePreviewApp{
    },
    b343OriginalSourceVolleyBudget:
      this.projectiles.b343OriginalSourceVolleyBudgetSnapshot(),
+   b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),

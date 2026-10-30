@@ -4,6 +4,7 @@ import type { CombatTargetSystem } from '../combat/CombatTargetSystem';
 import type { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import {b343CanLaunchSourceVolley} from './B343OriginalSourceVolleyBudget';
+import {b345BoundOpeningCooldown} from './B345SourceShooterOpeningCadence';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
@@ -71,6 +72,8 @@ export class ProjectileSystem {
   private readonly queuedCpuShots: CpuFireRequest[] = [];
   private b343SourceVolleyAtomic=false;
   private b343RejectedVolleys=0;
+  private b345SourceShooterOpeningEnabled=false;
+  private b345RealOpeningClamps=0;
   private b152OriginalAllyAimProjectilesSpawned=0;
   private b152OriginalAllyAimSurfaceCollisions=0;
   private readonly cpuAimDirection = new Vec3();
@@ -178,6 +181,19 @@ export class ProjectileSystem {
       scoreable:0 as const,productionAuthorized:false as const};
   }
 
+  public enableB345SourceShooterOpening():void{
+    if(!this.b343SourceVolleyAtomic||this.surfaces.length!==17)
+      throw Error('B345_NONORIGINAL_SOURCE_FORBIDDEN');
+    this.b345SourceShooterOpeningEnabled=true;
+  }
+  public b345SourceShooterOpeningSnapshot(){
+    return {enabled:this.b345SourceShooterOpeningEnabled,
+      realOpeningClamps:this.b345RealOpeningClamps,
+      fabricatedProjectiles:0 as const,
+      sourceScoreable:0 as const,
+      productionAuthorized:false as const};
+  }
+
   public setPlayerWeapon(id: WeaponId): void {
     if (id === this.playerWeaponId) return;
     this.playerWeaponId = id;
@@ -228,6 +244,7 @@ export class ProjectileSystem {
     this.b152OriginalAllyAimProjectilesSpawned=0;
     this.b152OriginalAllyAimSurfaceCollisions=0;
     this.b343RejectedVolleys=0;
+    this.b345RealOpeningClamps=0;
     for (const slot of this.slots) this.deactivate(slot);
     this.delayedBursts.length = 0;
     this.fireCooldown = 0;
@@ -330,6 +347,16 @@ export class ProjectileSystem {
     const fallingFire = !fireHeld && this.wasFireHeld;
 
     this.fireCooldown = Math.max(-0.5, this.fireCooldown - dt);
+    // B345 explicit genuine SOURCE only, SHOOTER initial press only.
+    // B344 real 12-tick samples were [7,2,2,2,2] due to idle -0.5s
+    // debt being added to the existing projectile fire interval.
+    if(this.b345SourceShooterOpeningEnabled&&
+       profile.weaponClass==='SHOOTER'&&risingFire&&
+       playerWeaponEnabled){
+      const bounded=b345BoundOpeningCooldown(this.fireCooldown,dt);
+      if(bounded>this.fireCooldown)this.b345RealOpeningClamps++;
+      this.fireCooldown=bounded;
+    }
     this.burstCooldown = Math.max(-0.5, this.burstCooldown - dt);
     this.rollPaintCooldown = Math.max(-0.5, this.rollPaintCooldown - dt);
     this.meleeCooldown = Math.max(-0.5, this.meleeCooldown - dt);
