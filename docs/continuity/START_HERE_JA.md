@@ -62,3 +62,7 @@ SOURCE 180秒のみ、既存のB343/B345/B346/B348をオプトインした状態
 
 ### B354初回実ブラウザ失敗の技術的原因と修正
 [初回CI 41068787657](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41068787657) **FAIL**。B354真正 `HOLD_36` にはreal KCC airborne=true、bodyY約9.428m、移動して6発が発射・インク変化193まで進行。だが直後のCDP screenshotを待ったあとでSpaceキーUp用の別スナップショットを読んだ時には着地しており、`B349_TRUE_CHROMIUM_ACTUAL_SPACE_DID_NOT_MAKE_PLAYER_AIRBORNE` で停止。この未認証をPASSとは扱わない。修正は**1回の60tickマウス保持/Space操作が完了してから**画像をキャプチャする方法とし、前後ソース検査で射撃ループ内に画像取得がないことを回帰監査。画像は「射撃後の本物の画面」であって「空中の瞬間」と偽らない。原作・スコア・actor・弾・ゲーム時計は変更しない。新SHAのCI確認が必要。
+
+
+### 2026-10-30 B354修正後の真正Chromium実測確定
+[修正後CI #41074157473](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41074157473) 全ジョブ・全ステップ **SUCCESS**（HEAD `b71a83537ea0205ba622e74c5fe10fec1cf1b813`）。`B354_INDEPENDENT_GENUINE_MOVE_FIRE_VERDICT` は `PASS_ACTUAL_SIMULTANEOUS_KEYW_SPACE_SHOOT_AND_SOURCE_PAINT`。W保持中の真の水平移動 **2.6477m**、実物理弾の発射銃口移動 **2.3799m**、W移動中の物理弾は地上 **2発＋空中4発**。全体では真の物理発射・Exit各10、B349地上4＋空中6、実Space KCC上昇 **1.0333m**、原作Paintable着弾10、塗装変化イベント449。画面 `B354_POST_MOVING_FIRE.png` は**操作後**にキャプチャされた実フレームバッファであり、空中瞬間を写した証拠とは主張しない。B353独立監査は原作敵B1〜B4実在だが、CPU衝突0・HP減少0・B351演出0のため**HOLD**。正式原作武器忠実度・ART・自然敵交戦・公式得点/4v4・productionは引き続き未認証。
