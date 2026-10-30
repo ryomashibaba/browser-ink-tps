@@ -116,7 +116,8 @@ async function run(){
   't21W10B346=nativeShooterPhysicsWitness&'+
   't21W10B348=sourceShooterAccuracyCandidate&'+
   't21W10B351=realCpuHitCue&'+
-  't21W10B355=realInkHud'});
+  't21W10B355=realInkHud&'+
+   't21W10B356=realImpactReticle'});
  const ready=()=>wait(async()=>{
   try{return await read('document.querySelector("#app-canvas")?.dataset.t21F3Ready==="READY"'+
    '&&document.querySelector("#app-canvas")?.dataset.t21F3Renderer==="webgl2"');}
@@ -138,7 +139,8 @@ async function run(){
   't21W10B346=nativeShooterPhysicsWitness&'+
   't21W10B348=sourceShooterAccuracyCandidate&'+
   't21W10B351=realCpuHitCue&'+
-  't21W10B355=realInkHud')
+  't21W10B355=realInkHud&'+
+   't21W10B356=realImpactReticle')
    fail('EXPLICIT_FROZEN_SOURCE_URL_IDENTITY');
  const boot=verifyAuthority(await snapshot());
  if(boot.b351ActualHitCue?.enabled!==true||
@@ -319,6 +321,9 @@ async function run(){
     realPlayerInk:n.player.ink,
    actualHumanShotRequests:n.shotsFired,
    changedOriginalHumanCells:n.b23HumanInkFeedback.humanChangedCells,
+   nativeHumanImpactCount:n.b23HumanInkFeedback.humanChangedImpactCount,
+   nativeLastImpactTick:n.b23HumanInkFeedback.lastImpactTick,
+   nativeLastImpactChangedCells:n.b23HumanInkFeedback.lastImpactChangedCells,
    actualFreePhysicalProjectileSlots:budget.actualFreeSlots,
    actualDryFireAttempts:n.inkDryFireAttempts,scoreable:n.sourceScoreablePromotions,
    productionAuthorized:n.productionAuthorized};
@@ -395,6 +400,31 @@ async function run(){
  genuineSpaceEvents.push({kind:'realKccLanding',tick:landing.tick,
   kccGrounded:true,bodyY:landing.player.position[1]});
  await sample('FIRE');
+ // Read the visual claim AFTER all real KCC Space/held-fire key events;
+ // no extra Chromium screenshot or pause inside the 60-tick action.
+ const b356Native=verifyAuthority(await snapshot());
+ const b356Visual=await read('(() => {const e=document.querySelector("'+
+  '#t21-f3-b356-real-source-reticle");return {exists:!!e,'+
+  'hidden:e?.hidden,mode:e?.dataset.t21B356Mode,'+
+  'nativeTick:Number(e?.dataset.t21B356NativeTick??-1),'+
+  'actualImpactTick:Number(e?.dataset.t21B356ActualImpactTick??-1),'+
+  'actualImpactCount:Number(e?.dataset.t21B356RealPaintEvents??-1),'+
+  'text:e?.textContent,scoreable:e?.dataset.t21B356Scoreable,'+
+  'enemyHitCertified:e?.dataset.t21B356EnemyHitCertified,'+
+  'gameplayWrites:e?.dataset.t21B356GameplayWrites}})()');
+ writeFileSync(resolve(DIR,'b356-real-native-reticle-ink.json'),
+  JSON.stringify({schema:'B356_REAL_SOURCE_HUMAN_RETICLE_FEEDBACK',
+   source:'25/17/26/0',nativeChromium:true,
+   actualNativeTick:b356Native.tick,
+   humanActualShotRequests:b356Native.shotsFired,
+   nativeHumanPaint:b356Native.b23HumanInkFeedback,
+   browserReticle:b356Visual,
+   actualPaintableExitWitnessFile:
+    'b346-genuine-physical-projectile-events.json',
+   noAimCorrection:true,noSyntheticPaint:true,
+   noSyntheticHit:true,scoreable:0,productionAuthorized:false,
+   NintendoReticleParityCertified:false},null,2)+'\n');
+ console.log('B356_ACTUAL_NATIVE_RETICLE',JSON.stringify(b356Visual));
  // B355: real SOURCE player resource recovery, with physical firing stopped.
  // The test does not change native tick, ink, reload speed or actor position.
  const b355Release=verifyAuthority(await snapshot());

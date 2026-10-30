@@ -9,6 +9,7 @@ import {B76HumanSourceCoach}
  from './UndertowF3HumanInkCoach';
 import {b355OriginalSourceInkReadout}
  from './B355OriginalSourceInkReadout';
+import {B356RealSourceReticle} from './B356RealSourceReticle';
 
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string;inkRelation?:string};
@@ -18,6 +19,11 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  humanCpuDirectHits?:number;
  humanCpuDirectSplats?:number;
  inkDryFireAttempts?:number;
+ b23HumanInkFeedback?:{
+  originalSourceOnly:boolean;scoreablePromotionCount:number;
+  humanChangedImpactCount:number;humanChangedCells:number;
+  lastImpactTick:number|null;lastImpactChangedCells:number;
+ };
  matchState:string;
  timeRemainingSeconds:number;
  cpu:{physicalRejoins:readonly string[];freeCombatEnabled:boolean};
@@ -254,6 +260,28 @@ export function createF3PlayableHud(ui:HTMLElement){
  ui.appendChild(root);
  // B82: visible native human hit/splat cues; source physics & gameplay unchanged.
  // Independent viewport layers avoid translated status-panel clipping.
+ // B356 sits OUTSIDE translated HUD root so fixed positioning is a
+ // genuine viewport reticle; never confuse real paint with a CPU hit.
+ const b356Enabled=(()=>{
+  const q=new URLSearchParams(window.location.search);
+  return q.get('t21Play')==='preview'&&q.get('t21QaDrive')==='source'&&
+   q.get('t21W10B203')==='fullRound'&&
+   q.get('t21W10B356')==='realImpactReticle';
+ })();
+ const b356Ledger=new B356RealSourceReticle();
+ const b356Cue=document.createElement('div');
+ b356Cue.id='t21-f3-b356-real-source-reticle';
+ b356Cue.hidden=true;b356Cue.setAttribute('aria-live','off');
+ b356Cue.dataset.t21B356GameplayWrites='0';
+ b356Cue.dataset.t21B356Scoreable='0';
+ b356Cue.dataset.t21B356EnemyHitCertified='false';
+ b356Cue.style.cssText='position:fixed;top:calc(50% + 29px);left:50%;'+
+  'transform:translateX(-50%);z-index:14;pointer-events:none;'+
+  'border:1px solid #83dbdf;border-radius:7px;'+
+  'background:rgba(5,28,43,.86);padding:4px 9px;'+
+  'font:800 10px/1.3 system-ui;letter-spacing:.2px;'+
+  'white-space:nowrap;color:#d9f8f7;text-shadow:0 1px 5px #001';
+ ui.appendChild(b356Cue);
  const damageVignette=document.createElement('div');
  damageVignette.id='t21-f3-b82-damage-vignette';
  damageVignette.setAttribute('aria-hidden','true');
@@ -571,6 +599,33 @@ export function createF3PlayableHud(ui:HTMLElement){
    b355InkNode.textContent=b355.label;
    b355InkNode.style.borderColor=b355.urgent?'#e9a260':'#4a7d91';
    b355InkNode.style.color=b355.urgent?'#ffdaac':'#bff1ec';
+  }
+  const b356=b356Ledger.observe({
+   enabled:b356Enabled,
+   playerView:ui.dataset.t21B245Presentation==='PLAYER',
+   nativeTick:value.tick??-1,
+   originalStage:[value.originalSourceSolids??-1,
+    value.originalPaintSurfaces??-1,
+    value.originalSourceNavigationLinks??-1,
+    value.sourceScoreablePromotions],
+   matchState:value.matchState,paused:value.paused,
+   stopReason:value.stopReason,productionAuthorized:value.productionAuthorized,
+   unrestricted4v4Certified:value.unrestricted4v4Certified,
+   playerHp:value.player.hp,shotsFired:value.shotsFired,
+   paint:value.b23HumanInkFeedback??null
+  });
+  b356Cue.hidden=!b356;
+  b356Cue.dataset.t21B356Mode=b356?.mode??'OFF';
+  b356Cue.dataset.t21B356NativeTick=String(value.tick??-1);
+  b356Cue.dataset.t21B356ActualImpactTick=
+   String(value.b23HumanInkFeedback?.lastImpactTick??-1);
+  b356Cue.dataset.t21B356RealPaintEvents=
+   String(value.b23HumanInkFeedback?.humanChangedImpactCount??-1);
+  b356Cue.dataset.t21B356OriginalOnly=String(!!b356);
+  if(b356){
+   b356Cue.textContent=b356.label;
+   b356Cue.style.color=b356.mode==='REAL_PAINT'?'#a2ffec':'#cfe6ef';
+   b356Cue.style.borderColor=b356.mode==='REAL_PAINT'?'#78e9c7':'#83a5b3';
   }
   root.dataset.matchState=value.matchState;
   root.dataset.cpuRecovered=String(v.cpuRecovered);

@@ -78,3 +78,7 @@ B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashiba
 注意：B355初回 `4b61d6f` では不正Scoreable入力を意図したVitest負のテストがTS2322（型リテラル0に1を代入）でbuild失敗。次の `bb315a2` でテスト専用の型キャストに修正済。旧HEADの複数CI失敗はこの型問題に由来しており、新HEADのB349本命CIは修正後全成功。先の7系統起動は共有HUD変更により発生し、以後は不要なCI再実行を控える。
 
 次の実プレイ価値のある機能は、基本シューターの照準・インク回復・命中時演出の「表示上のわかりやすさ/操作感」を真人間操作で比較し、原作ステージの未接続自然対戦をHOLDのまま、武器の独自研究パラメータと任天堂原作実測を分離すること。原作の未確認床/経路/得点は追加しない。
+
+
+## B356 — 照準付近のจริง実塗装 vs 発射確認を分離
+新規ルート・原作ステージ・弾・資源処理は変更せず、既存B23実`PaintCoordinator`による`humanChangedImpactCount`と`lastImpactChangedCells`および実`shotsFired`だけを表示に利用する。照準付近（視界中央の少し下）の小さな通知は、実弾発射のみなら `SHOT FIRED · PAINT UNCONFIRMED`、本当の原作ownerGrid変更なら `REAL SOURCE INK +N · NOT CPU HIT`。照準線B243の登録面までの予測を真正着弾・CPUダメージと取り違えない。SOURCE 180s PLAYER限定手動オプトイン `t21W10B356=realImpactReticle`。原作境界25/17/26/0、0 Scoreable、4v4/HOLD、ART HOLD、production不可。真正B349 Chromiumに独立物理Exit/ownerGrid/DOM監査を統合。見えるパルスをキャプチャできなければ検証はHOLDと明示し、偽のCPU命中表示を出さない。新HEAD CIの結果で限定判定。
