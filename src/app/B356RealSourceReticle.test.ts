@@ -34,14 +34,14 @@ describe('B356 truth-only viewport source reticle',()=>{
  it('refuses score, counterfeit timestamps, stage, paused state and old ticks',()=>{
   for(const change of [
    (a:B356RealReticleFrame)=>{a.originalStage=[25,17,25,0]},
-   a=>{a.productionAuthorized=true},
-   a=>{a.paint!.scoreablePromotionCount=1},
-   a=>{a.paint!.lastImpactTick=120},
-   a=>{a.playerView=false},
-   a=>{a.paused=true},
-   a=>{a.enabled=false},
-   a=>{a.originalStage=[25,17,26,1]},
-   a=>{a.paint!.originalSourceOnly=false}
+   (a:B356RealReticleFrame)=>{a.productionAuthorized=true},
+   (a:B356RealReticleFrame)=>{a.paint!.scoreablePromotionCount=1},
+   (a:B356RealReticleFrame)=>{a.paint!.lastImpactTick=120},
+   (a:B356RealReticleFrame)=>{a.playerView=false},
+   (a:B356RealReticleFrame)=>{a.paused=true},
+   (a:B356RealReticleFrame)=>{a.enabled=false},
+   (a:B356RealReticleFrame)=>{a.originalStage=[25,17,26,1]},
+   (a:B356RealReticleFrame)=>{a.paint!.originalSourceOnly=false}
   ]){
    const f=frame();change(f);
    const x=new B356RealSourceReticle();expect(x.observe(f)).toBeNull();
