@@ -26,10 +26,16 @@ describe('one-click genuine SOURCE shooter practice',()=>{
    ['t21Play','preview'],['t21QaDrive','source'],
    ['t21W10B192','humanCombat'],['t21W10B112','humanGround'],
    ['t21W10B203','fullRound'],
-   ['t21W10B343','sourceVolleyAtomic'],['t21W10B355','realInkHud'],
+   ['t21W10B343','sourceVolleyAtomic'],
+   ['t21W10B345','sourceShooterOpening'],
+   ['t21W10B346','nativeShooterPhysicsWitness'],
+   ['t21W10B348','sourceShooterAccuracyCandidate'],
+   ['t21W10B351','realCpuHitCue'],
+   ['t21W10B355','realInkHud'],
    ['t21W10B356','realImpactReticle']
   ] as [string,string][])expect(target.searchParams.get(k)).toBe(v);
-  expect(target.searchParams.has('t21W10B348')).toBe(false);
+  expect(target.searchParams.get('t21W10B348')).toBe('sourceShooterAccuracyCandidate');
+  expect(target.searchParams.get('t21W10B351')).toBe('realCpuHitCue');
   expect(target.searchParams.has('t21W10B193')).toBe(false);
   expect(target.searchParams.has('t21QaInput')).toBe(false);
   expect(target.searchParams.has('cpuWarp')).toBe(false);

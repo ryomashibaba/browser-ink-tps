@@ -131,6 +131,10 @@ async function run(){
  const selectedSearch='?t21Play=preview&t21QaDrive=source&'+
   't21W10B192=humanCombat&t21W10B112=humanGround&'+
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
+  't21W10B345=sourceShooterOpening&'+
+  't21W10B346=nativeShooterPhysicsWitness&'+
+  't21W10B348=sourceShooterAccuracyCandidate&'+
+  't21W10B351=realCpuHitCue&'+
   't21W10B355=realInkHud&t21W10B356=realImpactReticle';
  await wait(async()=>{try{return await read('location.search')===selectedSearch;}catch{return false;}},45000);
  await ready();
@@ -151,6 +155,22 @@ async function run(){
  if(combatUi?.source!=='REAL_SOURCE_ONLY'||!combatUi.roster||
     combatUi.score!=='0'||combatUi.routes!=='0')
   fail('REAL_CPU_COMBAT_NOT_SOURCE_GROUNDED_'+JSON.stringify(combatUi));
+ // B363: genuine source-only shooter physical angular model.
+ // Opening cadence, actual physical launches and true HP hit feedback
+ // are carried by existing implementations, not a fake target.
+ const fidelity={opening:boot.b345SourceShooterOpening,
+  physical:boot.b346NativeShooterWitness,
+  accuracy:boot.b348SourceShooterAccuracy,
+  hitCue:boot.b351ActualHitCue};
+ if(fidelity.opening?.enabled!==true||
+    fidelity.physical?.enabled!==true||
+    fidelity.physical.totalActualShooterLaunches!==0||
+    fidelity.accuracy?.enabled!==true||
+    fidelity.accuracy.actualAcceptedCandidateShots!==0||
+    fidelity.hitCue?.enabled!==true||
+    fidelity.hitCue.realDamageCues!==0||
+    fidelity.hitCue.syntheticHits!==0)
+  fail('B363_NATIVE_SHOOTER_GUARDS_NOT_ARMED_'+JSON.stringify(fidelity));
  if(boot.b343OriginalSourceVolleyBudget?.enabled!==true||
     boot.b343OriginalSourceVolleyBudget?.physicalPoolSize!==128||
     boot.b343OriginalSourceVolleyBudget?.syntheticShots!==0||
@@ -297,6 +317,25 @@ async function run(){
    {type:'mouseReleased',x:820,y:450,button:'left',clickCount:1});
  }
  const fired=await sample('FIRE');
+ const fidelityAfterFire=verifyAuthority(await snapshot());
+ if(fidelityAfterFire.b348SourceShooterAccuracy?.actualAcceptedCandidateShots<1||
+    fidelityAfterFire.b346NativeShooterWitness?.totalActualShooterLaunches<1||
+    fidelityAfterFire.b348SourceShooterAccuracy.actualAcceptedCandidateShots!==
+     fidelityAfterFire.b346NativeShooterWitness.totalActualShooterLaunches||
+    fidelityAfterFire.b348SourceShooterAccuracy.originalReferenceModelCertified!==false||
+    fidelityAfterFire.b351ActualHitCue?.syntheticHits!==0)
+  fail('B363_REAL_PHYSICAL_ACCURACY_OR_HIT_AUTHORITY_MISSING');
+ writeFileSync(resolve(DIR,'b363-native-player-shooter-physics.json'),
+  JSON.stringify({schema:'B363_REAL_SOURCE_SHOOTER_PHYSICAL_GAMEPLAY',
+   source:'25/17/26/0',tick:fidelityAfterFire.tick,
+   actualShooterShots:fidelityAfterFire.shotsFired,
+   physicalLaunches:fidelityAfterFire.b346NativeShooterWitness.totalActualShooterLaunches,
+   physicalGroundShots:fidelityAfterFire.b348SourceShooterAccuracy.actualGroundedCandidateShots,
+   physicalAirShots:fidelityAfterFire.b348SourceShooterAccuracy.actualAirborneCandidateShots,
+   realCpuHpDamageCue:fidelityAfterFire.b351ActualHitCue,
+   realInkChanges:fidelityAfterFire.b23HumanInkFeedback.humanChangedCells,
+   originalWeaponFidelityCertified:false,
+   inferredEnemyHits:false,forcedEncounter:false,officialScoreable:0},null,2)+'\n');
  // Verify an actual 3D world render has reached the player-facing
  // weapon and paint HUD. No injected ticks, shots or invented score.
  const b361Hud=await wait(async()=>{

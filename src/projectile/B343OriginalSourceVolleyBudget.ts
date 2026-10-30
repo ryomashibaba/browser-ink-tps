@@ -20,6 +20,13 @@ export function b343SourceShooterPracticeHref(href:string,enable:boolean):string
   next.searchParams.set('t21W10B112','humanGround');
   next.searchParams.set('t21W10B203','fullRound');
   next.searchParams.set('t21W10B343','sourceVolleyAtomic');
+  // Proven research modules are reused only in user-selected SOURCE
+  // play. B348 is a project angular hypothesis, NOT Nintendo parity.
+  // B351 feedback requires actual native projectile-induced CPU HP loss.
+  next.searchParams.set('t21W10B345','sourceShooterOpening');
+  next.searchParams.set('t21W10B346','nativeShooterPhysicsWitness');
+  next.searchParams.set('t21W10B348','sourceShooterAccuracyCandidate');
+  next.searchParams.set('t21W10B351','realCpuHitCue');
   next.searchParams.set('t21W10B355','realInkHud');
   next.searchParams.set('t21W10B356','realImpactReticle');
  }

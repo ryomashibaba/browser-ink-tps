@@ -1172,6 +1172,10 @@ export class UndertowF3PlayablePreviewApp{
    const active=this.b203FullRound&&
     b31Params.get('t21W10B192')==='humanCombat'&&
     b31Params.get('t21W10B343')==='sourceVolleyAtomic'&&
+    b31Params.get('t21W10B345')==='sourceShooterOpening'&&
+    b31Params.get('t21W10B346')==='nativeShooterPhysicsWitness'&&
+    b31Params.get('t21W10B348')==='sourceShooterAccuracyCandidate'&&
+    b31Params.get('t21W10B351')==='realCpuHitCue'&&
     b31Params.get('t21W10B355')==='realInkHud'&&
     b31Params.get('t21W10B356')==='realImpactReticle';
    const button=document.createElement('button');
@@ -1182,8 +1186,8 @@ export class UndertowF3PlayablePreviewApp{
    button.dataset.productionAuthorized='false';
    button.dataset.actorTeleports='0';
    button.textContent=active?
-    'EXIT SOURCE SHOOTER + CPU7 · FRESH BASELINE':
-    'PLAY REAL SHOOTER + CPU7 · 180s SOURCE PRACTICE';
+    'EXIT REAL SHOOTER + CPU7 · FRESH BASELINE':
+    'PLAY REAL SHOOTER + CPU7 · SOURCE SPREAD TEST (180s)';
    button.style.cssText='display:block;width:100%;margin:7px 0;'+
     'padding:12px 9px;border-radius:9px;border:1px solid #8fe6d1;'+
     'background:#145747;color:#e3fff4;cursor:pointer;'+
