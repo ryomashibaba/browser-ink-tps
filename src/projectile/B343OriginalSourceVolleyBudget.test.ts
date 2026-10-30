@@ -43,6 +43,16 @@ describe('one-click genuine SOURCE shooter practice',()=>{
   expect(target.searchParams.has('t21W10B193')).toBe(false);
   expect(target.searchParams.has('t21QaInput')).toBe(false);
  });
+ it('a true fresh-world circuit retry preserves every genuine shooter opt-in',()=>{
+  const selected=b343SourceShooterPracticeHref(url,true)!;
+  expect(b343SourceShooterPracticeHref(selected,true)).toBe(selected);
+  const query=new URL(selected).searchParams;
+  expect(query.get('t21W10B183')).toBe('firstDropPlay');
+  expect(query.get('t21W10B192')).toBe('humanCombat');
+  expect(query.get('t21W10B203')).toBe('fullRound');
+  expect(query.get('t21W10B351')).toBe('realCpuHitCue');
+  expect(query.has('t21W10B193')).toBe(false);
+ });
  it('returns to baseline without retaining research flags',()=>{
   const target=b343SourceShooterPracticeHref(url,true)!;
   const reset=new URL(b343SourceShooterPracticeHref(target,false)!);

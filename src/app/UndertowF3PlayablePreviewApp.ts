@@ -1011,7 +1011,9 @@ export class UndertowF3PlayablePreviewApp{
     't21-f3-b188-retry-source-circuit':'t21-f3-b183-start-descent';
    button.type='button';
    button.textContent=this.b183DropPlayEnabled?
-    'RETRY ORIGINAL DESCENT → RAMP → INK (NEW PHYSICAL SESSION)':
+    b31Params.get('t21W10B343')==='sourceVolleyAtomic'?
+     'RETRY SHOOTER + CPU7 + ORIGINAL CIRCUIT (FRESH WORLD)':
+     'RETRY ORIGINAL DESCENT → RAMP → INK (NEW PHYSICAL SESSION)':
     'PLAY ORIGINAL DESCENT → RAMP → INK (SOURCE QA)';
    button.dataset.originalSourceOnly='true';
    button.dataset.scoreablePromotions='0';
@@ -1027,8 +1029,17 @@ export class UndertowF3PlayablePreviewApp{
       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)||
       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status))
      return;
-    // Browser-initiated navigation reboots the existing authored QA stage
-    // through the normal PlayerController constructor and frozen sources.
+    // B365 selected shooter retry must NOT silently lose its physical
+    // bullet spread, genuine 7-CPU combat or real source-circuit goal.
+    // Construct a clean new SOURCE world; no previous physics or actors.
+    if(this.b183DropPlayEnabled&&this.b203FullRound&&
+       b192HumanCombatEnabled&&
+       b31Params.get('t21W10B343')==='sourceVolleyAtomic'){
+     const replay=b343SourceShooterPracticeHref(window.location.href,true);
+     if(replay)window.location.assign(replay);
+     return;
+    }
+    // Historical independent original-source descent mode unchanged.
     const dest=new URL(window.location.pathname,window.location.origin);
     dest.searchParams.set('t21Play','preview');
     dest.searchParams.set('t21QaDrive','source');
