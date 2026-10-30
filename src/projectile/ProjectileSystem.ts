@@ -88,6 +88,14 @@ export class ProjectileSystem {
   private b348LastPitch=0;
   private b351CueOn=false;
   private b351TrueDamageCues=0;
+  private b367Enabled=false;
+  private b367NativeFrame=0;
+  private b367RealHumanCpuHits=0;
+  private readonly b367PhysicalEvents:Array<{
+   sequence:number;nativeFrame:number;botId:string;weaponId:string;
+   hpBefore:number;hpAfter:number;actualHpLoss:number;lethalHpZero:boolean
+  }>=[];
+
   private b152OriginalAllyAimProjectilesSpawned=0;
   private b152OriginalAllyAimSurfaceCollisions=0;
   private readonly cpuAimDirection = new Vec3();
@@ -261,6 +269,26 @@ export class ProjectileSystem {
       productionAuthorized:false as const};
   }
 
+  /** B367 opt-in only after the genuine B351 physical projectile pipeline.
+   * Does not create an encounter, damage, impact, enemy, source floor or score. */
+  public enableB367RealCpuLifecycleEvidence():void {
+    if(!this.b351CueOn||!this.b343SourceVolleyAtomic||
+       this.surfaces.length!==17)
+     throw Error('B367_REQUIRES_GENUINE_SOURCE_SHOOTER');
+    this.b367Enabled=true;
+  }
+  public b367RealCpuLifecycleEvidenceSnapshot(){
+    return {enabled:this.b367Enabled,
+     physicalHumanCpuHpHits:this.b367RealHumanCpuHits,
+     events:this.b367PhysicalEvents.map(e=>({...e})),
+     source:'25/17/26/0' as const,
+     syntheticHits:0 as const,
+     actorRelocations:0 as const,
+     scoreable:0 as const,
+     opponentRoutesCertified:false as const,
+     productionAuthorized:false as const};
+  }
+
   public setPlayerWeapon(id: WeaponId): void {
     if (id === this.playerWeaponId) return;
     this.playerWeaponId = id;
@@ -319,6 +347,9 @@ export class ProjectileSystem {
     this.b348LastYaw=0;
     this.b348LastPitch=0;
     this.b351TrueDamageCues=0;
+    this.b367NativeFrame=0;
+    this.b367RealHumanCpuHits=0;
+    this.b367PhysicalEvents.length=0;
     for (const slot of this.slots) this.deactivate(slot);
     this.delayedBursts.length = 0;
     this.fireCooldown = 0;
@@ -416,6 +447,7 @@ export class ProjectileSystem {
     playerWeaponEnabled: boolean,
     playerDamageable: boolean
   ): void {
+    this.b367NativeFrame++;
     const profile = this.currentPlayerWeapon;
     const risingFire = fireHeld && !this.wasFireHeld;
     const fallingFire = !fireHeld && this.wasFireHeld;
@@ -586,8 +618,26 @@ export class ProjectileSystem {
           // Enemy HP may have absorbed this hit via guard: inspect actual
           // post-damage counter, never treat a ray match as a true hit.
           const beforeHit=this.stats.humanCpuDirectHits;
-          this.cpuAgents.applyProjectileHit(cpuHit,slot.damage,slot.sourceKind,
+          const resolved=this.cpuAgents.applyProjectileHit(
+             cpuHit,slot.damage,slot.sourceKind,
              slot.sourceKind==='CPU'?slot.sourceId:undefined);
+          if(this.b367Enabled&&slot.sourceKind==='HUMAN'&&
+             slot.weaponId==='pulse-sprayer'&&
+             resolved!==null&&resolved.realHpLoss>0&&
+             resolved.botId===cpuHit.botId&&
+             resolved.sourceKind==='HUMAN'){
+           this.b367RealHumanCpuHits++;
+           this.b367PhysicalEvents.push({
+            sequence:this.b367RealHumanCpuHits,
+            nativeFrame:this.b367NativeFrame,
+            botId:resolved.botId,weaponId:slot.weaponId,
+            hpBefore:resolved.hpBefore,hpAfter:resolved.hpAfter,
+            actualHpLoss:resolved.realHpLoss,
+            lethalHpZero:resolved.lethalHpZero
+           });
+           if(this.b367PhysicalEvents.length>32)
+            this.b367PhysicalEvents.shift();
+          }
           if(b351RealCpuDamageCue(this.b351CueOn,slot.sourceKind,
             slot.weaponId,beforeHit,this.stats.humanCpuDirectHits)){
             this.b351TrueDamageCues++;

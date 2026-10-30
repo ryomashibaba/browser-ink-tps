@@ -42,6 +42,32 @@ function fixtureCpu(stats:PerformanceStats){
  Object.assign(cpu,{bots:[target],stats,b213SourceCounterfireEnabled:false});
  return {cpu,target};
 }
+describe('B367 native projectile damage resolution is REAL CPU HP',()=>{
+ it('returns exact immutable observed HP reduction without inventing CPU splat',()=>{
+  const stats=new PerformanceStats(),{cpu,target}=fixtureCpu(stats);
+  const event={botId:target.id,distance:2,point:new Vec3(0,0,10),
+   guarded:false};
+  const first=cpu.applyProjectileHit(event,28,'HUMAN');
+  expect(first).toMatchObject({botId:target.id,sourceKind:'HUMAN',
+   hpBefore:100,hpAfter:72,realHpLoss:28,
+   shieldAbsorbed:false,lethalHpZero:false});
+  expect(target.hp).toBe(72);expect(stats.humanCpuDirectHits).toBe(1);
+  const lethal=cpu.applyProjectileHit(event,100,'HUMAN');
+  expect(lethal).toMatchObject({hpBefore:72,hpAfter:0,
+   realHpLoss:72,lethalHpZero:true});
+  expect(stats.humanCpuDirectHits).toBe(2);
+  // The 60Hz CpuAgentSystem native splat lifecycle has NOT run yet.
+  expect(target.lifeState).toBe('ACTIVE');
+  expect(cpu.applyProjectileHit(event,10,'HUMAN')).toBeNull();
+ });
+ it('never awards a HUMAN hit for an actual CPU projectile',()=>{
+  const stats=new PerformanceStats(),{cpu,target}=fixtureCpu(stats);
+  const result=cpu.applyProjectileHit({botId:target.id,
+   distance:1,point:new Vec3(),guarded:false},25,'CPU','A1');
+  expect(result?.realHpLoss).toBe(25);
+  expect(stats.humanCpuDirectHits).toBe(0);
+ });
+});
 describe('SOURCE combat center-ray distance',()=>{
  it('requires source controls and leaves the default camera unchanged',()=>{
   const {view}=camera();const query=vi.fn();

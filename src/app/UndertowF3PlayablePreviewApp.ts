@@ -45,6 +45,7 @@ import {isB152ExactAllySupportInkImpact}
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
+import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {B217ActualNativePaintTempo} from './B217ActualNativePaintTempo';
@@ -359,6 +360,8 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private readonly b205RoundClock:HTMLElement|null;
  private readonly b211Roster:ReturnType<typeof createB211RealBattleRoster>|null;
+ private readonly b367CombatNotice:HTMLElement|null;
+ private readonly b367Timeline=new B367RealCpuCombatTimeline();
  private readonly b286CompactTeam:ReturnType<typeof createB286CompactSourceTeam>|null;
  private readonly b217NativePaintTempo=new B217ActualNativePaintTempo();
  private readonly b160CpuInkActivityView:
@@ -902,6 +905,10 @@ export class UndertowF3PlayablePreviewApp{
   if(b31Params.get('t21W10B351')==='realCpuHitCue'&&
      b31Params.get('t21QaDrive')==='source'&&this.b203FullRound)
     this.projectiles.enableB351ActualHitCue();
+  if(b31Params.get('t21W10B367')==='realCpuLifecycle'&&
+     b192HumanCombatEnabled&&this.b203FullRound&&
+     b31Params.get('t21QaDrive')==='source')
+    this.projectiles.enableB367RealCpuLifecycleEvidence();
   // Reuse the already-shipped player sub weapon pipeline; this is not
   // a fabricated source Actor, collider, NavLink or scoreable surface.
   this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
@@ -1189,6 +1196,7 @@ export class UndertowF3PlayablePreviewApp{
     b31Params.get('t21W10B346')==='nativeShooterPhysicsWitness'&&
     b31Params.get('t21W10B348')==='sourceShooterAccuracyCandidate'&&
     b31Params.get('t21W10B351')==='realCpuHitCue'&&
+    b31Params.get('t21W10B367')==='realCpuLifecycle'&&
     b31Params.get('t21W10B355')==='realInkHud'&&
     b31Params.get('t21W10B356')==='realImpactReticle';
    const button=document.createElement('button');
@@ -1541,6 +1549,22 @@ export class UndertowF3PlayablePreviewApp{
   this.b205RoundClock=round;
   this.b211Roster=b192HumanCombatEnabled&&this.b203FullRound?
    createB211RealBattleRoster(ui):null;
+  if(b192HumanCombatEnabled&&this.b203FullRound&&
+     b31Params.get('t21W10B367')==='realCpuLifecycle'){
+   const n=document.createElement('aside');
+   n.id='t21-f3-b367-real-cpu-lifecycle';
+   n.hidden=true;
+   n.dataset.originalScoreable='0';
+   n.dataset.nativeEnemyRouteCertified='false';
+   n.dataset.gameplayWrites='0';
+   n.style.cssText='position:fixed;top:158px;left:50%;'+
+    'transform:translateX(-50%);z-index:39;pointer-events:none;'+
+    'max-width:min(340px,calc(100vw - 24px));padding:7px 10px;'+
+    'background:rgba(3,28,42,.91);border:1px solid #5a9b9b;'+
+    'border-radius:8px;color:#c8fff0;'+
+    'font:800 11px/1.4 system-ui;text-align:center';
+   ui.appendChild(n);this.b367CombatNotice=n;
+  }else this.b367CombatNotice=null;
   // B286: small genuine source team-state HUD in PLAYER presentation only.
   // QA/deterministic modes continue to use the full B211 evidence panel.
   this.b286CompactTeam=this.b211Roster&&
@@ -5604,6 +5628,8 @@ export class UndertowF3PlayablePreviewApp{
    b346NativeShooterWitness:this.projectiles.b346NativeShooterWitnessSnapshot(),
    b348SourceShooterAccuracy:this.projectiles.b348SourceShooterAccuracySnapshot(),
    b351ActualHitCue:this.projectiles.b351ActualHitCueSnapshot(),
+   b367RealCpuLifecycleEvidence:
+    this.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
    b349ActualKccGrounded:this.stats.playerGrounded,
     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
@@ -5880,6 +5906,35 @@ export class UndertowF3PlayablePreviewApp{
   const sourceOverlayHidden=this.survey.snapshot().active||this.galleryIndex>=0;
   this.b211Roster?.render(nativeB211Roster,sourceOverlayHidden);
   this.b286CompactTeam?.render(nativeB211Roster,sourceOverlayHidden);
+  if(this.b367CombatNotice){
+   const event=this.b367Timeline.observe({
+    enabled:true,nativeTick:state.tick,
+    stage:[state.originalSourceSolids,state.originalPaintSurfaces,
+     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
+    matchState:state.matchState,paused:state.paused,
+    stopReason:state.stopReason,
+    productionAuthorized:state.productionAuthorized,
+    unrestricted4v4Certified:state.unrestricted4v4Certified,
+    humanDirectHits:state.humanCpuDirectHits,
+    humanDirectSplats:state.humanCpuDirectSplats,
+    cpuSplats:state.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
+    source:state.b367RealCpuLifecycleEvidence,cpu:state.cpu.cpu
+   });
+   const visible=!!event&&!sourceOverlayHidden&&
+    document.querySelector<HTMLElement>('#ui-root')?.dataset.t21B245Presentation==='PLAYER';
+   this.b367CombatNotice.hidden=!visible;
+   this.b367CombatNotice.dataset.t21B367State=event?.state??'NO_REAL_CPU_HIT';
+   this.b367CombatNotice.dataset.t21B367Actor=event?.actorId??'NONE';
+   this.b367CombatNotice.dataset.t21B367NativeTick=
+    String(event?.actualNativeTick??-1);
+   this.b367CombatNotice.dataset.t21B367GameWrites='0';
+   if(event){
+    if(this.b367CombatNotice.textContent!==event.description)
+     this.b367CombatNotice.textContent=event.description;
+    this.b367CombatNotice.style.borderColor=
+     event.state==='ACTUAL_CPU_SPLAT'?'#78f5b0':'#5a9b9b';
+   }
+  }
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,

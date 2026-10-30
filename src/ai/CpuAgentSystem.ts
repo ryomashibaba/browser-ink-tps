@@ -45,6 +45,14 @@ export interface CpuCombatHit {
   point: Vec3;
   guarded: boolean;
 }
+/** B367: actual resolved physical projectile → actual CPU HP outcome.
+ * Source-only observers may READ this; the ordinary damage logic is unchanged.
+ * HP 0 is not called SPLATTED until the native CPU update runs. */
+export interface CpuProjectileHpResult {
+  botId:string;sourceKind:'HUMAN'|'CPU';
+  hpBefore:number;hpAfter:number;realHpLoss:number;
+  shieldAbsorbed:boolean;lethalHpZero:boolean;
+}
 
 export type CpuWeaponAction =
   | 'PROJECTILE'
@@ -1494,16 +1502,18 @@ export class CpuAgentSystem {
     hit: CpuCombatHit, damage: number,
     sourceKind: 'HUMAN' | 'CPU' = 'CPU',
     actualCpuAttackerId?:string
-  ): void {
+  ): CpuProjectileHpResult|null {
     const bot = this.bots.find((candidate) => candidate.id === hit.botId);
     if (
       !bot ||
       bot.lifeState !== 'ACTIVE' ||
       bot.hp <= 0 ||
       isCpuJumpAirborne(bot)
-    ) return;
-
-    if (hit.guarded && this.absorbCpuGuardDamage(bot, damage)) return;
+    ) return null;
+    if(!Number.isFinite(damage)||damage<=0)return null;
+    if (hit.guarded && this.absorbCpuGuardDamage(bot, damage))
+      return {botId:bot.id,sourceKind,hpBefore:bot.hp,hpAfter:bot.hp,
+       realHpLoss:0,shieldAbsorbed:true,lethalHpZero:false};
 
     const previous = bot.hp;
     bot.hp = Math.max(0, bot.hp - damage);
@@ -1527,6 +1537,9 @@ export class CpuAgentSystem {
       }
       if (bot.hp === 0) bot.lethalHumanDirect = sourceKind === 'HUMAN';
     }
+    return {botId:bot.id,sourceKind,hpBefore:previous,hpAfter:bot.hp,
+      realHpLoss:previous-bot.hp,shieldAbsorbed:false,
+      lethalHpZero:previous>0&&bot.hp===0};
   }
 
   public applyAreaDamage(

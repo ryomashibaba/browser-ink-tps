@@ -138,6 +138,7 @@ async function run(){
   't21W10B346=nativeShooterPhysicsWitness&'+
   't21W10B348=sourceShooterAccuracyCandidate&'+
   't21W10B351=realCpuHitCue&'+
+  't21W10B367=realCpuLifecycle&'+
   't21W10B355=realInkHud&t21W10B356=realImpactReticle';
  await wait(async()=>{try{return await read('location.search')===selectedSearch;}catch{return false;}},45000);
  await ready();
@@ -163,6 +164,16 @@ async function run(){
     actualDrop.originalFirstDropLocalPracticeClear!==false)
   fail('B365_ORIGINAL_SOURCE_CIRCUIT_NOT_PLAYER_ARMED_'+
    JSON.stringify({actualDrop,originalCircuit}));
+ const realCpuLifecycle=boot.b367RealCpuLifecycleEvidence;
+ if(realCpuLifecycle?.enabled!==true||
+    realCpuLifecycle.physicalHumanCpuHpHits!==0||
+    realCpuLifecycle.events?.length!==0||
+    realCpuLifecycle.syntheticHits!==0||
+    realCpuLifecycle.actorRelocations!==0||
+    realCpuLifecycle.opponentRoutesCertified!==false||
+    realCpuLifecycle.scoreable!==0)
+  fail('B367_TRUE_PHYSICAL_DAMAGE_LEDGER_NOT_EMPTY_AT_BOOT_'+
+   JSON.stringify(realCpuLifecycle));
  const combatUi=await read('(() => ({source:document.querySelector("#app-canvas")?.dataset.t21B192HumanCombat,'+
   'roster:!!document.querySelector("#t21-f3-b211-real-battle-roster"),'+
   'score:document.querySelector("#t21-f3-b211-real-battle-roster")?.dataset.scoreable,'+
@@ -370,6 +381,38 @@ async function run(){
    {type:'mouseReleased',x:820,y:450,button:'left',clickCount:1});
  }
  const fired=await sample('FIRE');
+ const combatEvidence=verifyAuthority(await snapshot());
+ const ledger=combatEvidence.b367RealCpuLifecycleEvidence;
+ const battleNotice=await read('(() => {const n=document.querySelector('+
+  '"#t21-f3-b367-real-cpu-lifecycle");return {exists:!!n,'+
+  'hidden:n?.hidden,state:n?.dataset.t21B367State,'+
+  'actor:n?.dataset.t21B367Actor,writes:n?.dataset.t21B367GameWrites,'+
+  'scoreable:n?.dataset.originalScoreable,'+
+  'route:n?.dataset.nativeEnemyRouteCertified,text:n?.textContent}})()');
+ if(!ledger?.enabled||ledger.syntheticHits!==0||
+    ledger.actorRelocations!==0||
+    ledger.physicalHumanCpuHpHits>combatEvidence.humanCpuDirectHits||
+    !battleNotice.exists||battleNotice.writes!=='0'||
+    battleNotice.scoreable!=='0'||battleNotice.route!=='false')
+  fail('B367_NATIVE_COMBAT_PROVENANCE_DRIFT');
+ if(ledger.physicalHumanCpuHpHits===0&&
+    (!battleNotice.hidden||battleNotice.actor!=='NONE'||
+     battleNotice.state!=='NO_REAL_CPU_HIT'))
+  fail('B367_FABRICATED_NATIVE_CPU_HIT_'+JSON.stringify(battleNotice));
+ if(ledger.physicalHumanCpuHpHits>0&&
+    ledger.events.some(e=>!['B1','B2','B3','B4'].includes(e.botId)||
+     e.weaponId!=='pulse-sprayer'||e.actualHpLoss<=0||
+     e.hpBefore<=e.hpAfter||e.lethalHpZero!==(e.hpAfter===0)))
+  fail('B367_UNVERIFIED_ACTUAL_CPU_HP_EVENT');
+ writeFileSync(resolve(DIR,'b367-real-native-cpu-hp-lifecycle.json'),
+  JSON.stringify({schema:'B367_ORIGINAL_PHYSICAL_CPU_LIFECYCLE',
+   originalSource:'25/17/26/0',nativeTick:combatEvidence.tick,
+   realCpuRoster:combatEvidence.cpu.cpu,
+   realHumanDirectHits:combatEvidence.humanCpuDirectHits,
+   physicalDamageEvents:ledger,
+   playerHud:battleNotice,syntheticTarget:false,
+   fabricatedEnemyEncounter:false,officialScoreable:0,
+   naturalOpponentRoutesCertified:0},null,2)+'\n');
  // B364 is displayed ONLY for actual source CPU center-ray geometry,
  // never for a fabricated enemy or a claimed projectile hit.
  const aimHud=await read(`(() => {
