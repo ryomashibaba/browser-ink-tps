@@ -123,7 +123,9 @@ async function run(){
   mode:document.querySelector("#app-canvas")?.dataset.t21B203FullRound
  }))()`);
  if(baseline?.search!=='?t21Play=preview&t21QaDrive=source'||
-    !baseline.button?.includes('PLAY REAL SHOOTER')||baseline.mode!=='OFF')
+    (!baseline.button?.includes('REAL SHOOTER + CPU7')||
+     !baseline.button.includes('ORIGINAL DROP / RAMP / INK'))||
+    baseline.mode!=='OFF')
   fail('PLAYER_SOURCE_ENTRY_NOT_READY_'+JSON.stringify(baseline));
  // Real CDP mouse click on the user-facing launcher. This creates a
  // fresh native stage and DOES NOT smuggle research flags into the round.
