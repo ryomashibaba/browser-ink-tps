@@ -58,3 +58,7 @@ SOURCE 180秒のみ、既存のB343/B345/B346/B348をオプトインした状態
 2026-10-30 B353真正Chromium [CI 41067192264](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41067192264) 全CI SUCCESS。ただし「人間命中0・敵HP減少0・B351追加演出0」の限定HOLDが独立監査で確定。地上4＋空中6発、原作Paintable10着弾、塗装変化349は真正PASS。敵B1〜B4はZ−48m付近、人間はZ+68mで自然な対岸経路0/12、架空敵生成禁止。
 
 次のB354は既存B349同一真正Chromiumセッションで、Wキーを射撃継続中に実CDP入力、Spaceジャンプも併用し、KCCの真の水平変位＋移動中の実物理地上・空中発射と銃口座標変化、元Paintable塗装、実フレームバッファを一括保存。新規ワークフローは増やさず、原作境界25/17/26/0とHOLDを保持。新HEADで真正CI成功するまでB354 PASS認定不可。
+
+
+### B354初回実ブラウザ失敗の技術的原因と修正
+[初回CI 41068787657](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41068787657) **FAIL**。B354真正 `HOLD_36` にはreal KCC airborne=true、bodyY約9.428m、移動して6発が発射・インク変化193まで進行。だが直後のCDP screenshotを待ったあとでSpaceキーUp用の別スナップショットを読んだ時には着地しており、`B349_TRUE_CHROMIUM_ACTUAL_SPACE_DID_NOT_MAKE_PLAYER_AIRBORNE` で停止。この未認証をPASSとは扱わない。修正は**1回の60tickマウス保持/Space操作が完了してから**画像をキャプチャする方法とし、前後ソース検査で射撃ループ内に画像取得がないことを回帰監査。画像は「射撃後の本物の画面」であって「空中の瞬間」と偽らない。原作・スコア・actor・弾・ゲーム時計は変更しない。新SHAのCI確認が必要。

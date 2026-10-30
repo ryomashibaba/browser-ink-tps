@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {auditB354MovingFire} from './t21-b354-moving-fire-audit.mjs';
 function sample(){
  const stages=['PRE_FIRE','HOLD_12','HOLD_24','HOLD_36','HOLD_48','HOLD_60'];
@@ -46,4 +47,15 @@ test('fake movement, fixed muzzle, fake ink, actor teleport fail closed',()=>{
   assert.throws(()=>auditB354MovingFire(s.w,s.physics,s.b353),
   /B354_REAL_SOURCE_MOVE_FIRE_/);
  }
+});
+
+test('B354: slow Chromium screenshot must never interrupt Space key release in active held-fire loop',()=>{
+ const source=readFileSync('scripts/t21-b349-source-jump-round.mjs','utf8');
+ const start=source.indexOf('for(const tickOffset of [12,24,36,48,60])');
+ const end=source.indexOf('}finally{',start);
+ assert.ok(start>=0&&end>start);
+ const active=source.slice(start,end);
+ assert.ok(!active.includes('await picture('),
+  'CDP screenshot blocks real-time native Space keyUp and invalidates KCC evidence');
+ assert.ok(source.includes("await picture('B354_POST_MOVING_FIRE');"));
 });

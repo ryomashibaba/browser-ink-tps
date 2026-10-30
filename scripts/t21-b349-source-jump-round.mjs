@@ -345,7 +345,9 @@ async function run(){
     b354ActualMoveEvents.push({kind:'realKeyWDown',tick:s.tick,
      body:[...s.player.position],grounded:s.b349ActualKccGrounded});
    }
-   if(tickOffset===36)await picture('B354_MOVING_AIR_FIRE');
+   // Keep the native 60-tick fire+Space interval free of slow CDP
+   // screenshots: in B354 trial #41068787657 rendering took long
+   // enough that a separately-read KCC stance had already landed.
    if(tickOffset===48){
     const s=verifyAuthority(await snapshot());
     await send('Input.dispatchKeyEvent',{type:'keyUp',key:'w',
@@ -391,6 +393,9 @@ async function run(){
  genuineSpaceEvents.push({kind:'realKccLanding',tick:landing.tick,
   kccGrounded:true,bodyY:landing.player.position[1]});
  await sample('FIRE');
+ // This image is taken after the real moving/jumping firing interval.
+ // It must not be presented as a certified airborne instant.
+ await picture('B354_POST_MOVING_FIRE');
  for(const code of ['KeyW','KeyA','KeyS','KeyD']){
   const keys={KeyW:['w',87],KeyA:['a',65],KeyS:['s',83],KeyD:['d',68]};
   const [key,vk]=keys[code];
@@ -553,7 +558,7 @@ async function run(){
   trueNativeShooterLaunches:shooterPhysics.totalActualShooterLaunches,
   truePhysicalCpuHitExits:realCpuExits,
   trueEnemyHpDamage:b353.humanCpuHpHitsAfter-b353.humanCpuHpHitsBefore,
-  screenshot:'B354_MOVING_AIR_FIRE.png',
+  screenshot:'B354_POST_MOVING_FIRE.png',
   NintendoExactWeaponCertified:false,artAccepted:false,
   unrestricted4v4Certified:false};
  writeFileSync(resolve(DIR,'b354-real-moving-air-fire.json'),

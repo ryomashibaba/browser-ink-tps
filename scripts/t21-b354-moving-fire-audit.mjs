@@ -74,7 +74,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const result=auditB354MovingFire(w,
  read('b346-genuine-physical-projectile-events.json'),
  read('b353-native-real-cpu-hit-cue.json'));
- need(w.screenshot==='B354_MOVING_AIR_FIRE.png','SCREENSHOT_NAME');
+ need(w.screenshot==='B354_POST_MOVING_FIRE.png','SCREENSHOT_NAME');
  const png=readFileSync(join(dir,w.screenshot));
  need(png.length>20000&&png.readUInt32BE(16)===1600&&
  png.readUInt32BE(20)===900,'TRUE_3D_CHROMIUM_FRAME');
