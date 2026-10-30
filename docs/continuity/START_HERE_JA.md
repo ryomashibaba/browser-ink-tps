@@ -70,3 +70,11 @@ SOURCE 180秒のみ、既存のB343/B345/B346/B348をオプトインした状態
 
 ## B355 — 既存B76元SOURCEインク資源をPLAYERへ統合する限定実装
 B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41074157473) 技術PASS。B355は新武器パラメータや回復処理を作らず、既存 `PlayerResources` の実インク残量/回復状態、B76実塗装/空撃ちの情報から、PLAYER画面の既存HUD内部に小さなSOURCE専用インク回復表示を追加。オプトイン `t21W10B355=realInkHud`、SOURCE 180s限定。ゲーム状態の書込0、原作SOURCE 25/17/26/0、正式スコア/4v4/HOLD据え置き。B349真正Chromium同一セッションで、10発の実弾と塗装後、射撃停止したまま実60Hzでインクが増加・同じショット件数にとどまることを保存し、HUDにも読み出し権限を検査。原作インクパラメータ一致の認証ではない。新SHA CIの結果で初めてPASS/FAILを決める。
+
+
+### B355確定実証 — インク資源とPLAYERの表示を真正Chromiumで一致確認
+2026-10-31 JST、実装HEAD `bb315a220a4a7b8486001dcd064c471f9d942921` [CI 41078648178](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41078648178) **全ステップSUCCESS**。B355独立監査 `PASS_NATIVE_CONSUMPTION_STOPPED_SHOOTER_REFILL_AND_HUD`：本物のシューター10発後、実インク90.5→66 native ticks後98.5、期間内の受理済ショット件数10→10（増加なし）、PLAYERのインク表示 `HUMAN_REFILL`、既存B76が真正SOURCE情報を承認。B354本物のW移動＋Spaceジャンプ＋物理弾は地上4/空中6、原作Paintable Exit10、塗装変化449を再現。B353独立監査は実CPU接触・HP減少・B351演出すべて0によりHOLD。Scoreable 0/経路0/12、原作パラメータ・ART・正式4v4・productionは未認証。オプトインは `t21W10B355=realInkHud`、SOURCE180sのみ、ゲーム資源の書込0。
+
+注意：B355初回 `4b61d6f` では不正Scoreable入力を意図したVitest負のテストがTS2322（型リテラル0に1を代入）でbuild失敗。次の `bb315a2` でテスト専用の型キャストに修正済。旧HEADの複数CI失敗はこの型問題に由来しており、新HEADのB349本命CIは修正後全成功。先の7系統起動は共有HUD変更により発生し、以後は不要なCI再実行を控える。
+
+次の実プレイ価値のある機能は、基本シューターの照準・インク回復・命中時演出の「表示上のわかりやすさ/操作感」を真人間操作で比較し、原作ステージの未接続自然対戦をHOLDのまま、武器の独自研究パラメータと任天堂原作実測を分離すること。原作の未確認床/経路/得点は追加しない。
