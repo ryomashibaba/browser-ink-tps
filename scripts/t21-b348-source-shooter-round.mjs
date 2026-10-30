@@ -6,7 +6,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {b337AuditNative} from './t21-b337-real-input-ink-audit.mjs';
-const ROOT='http://127.0.0.1:4190/browser-ink-tps/';
+const ROOT='http://127.0.0.1:4192/browser-ink-tps/';
 const DIR=process.env.T21_B348_OUTPUT||'/tmp/t21-b348';
 const children=[],calls=new Map();
 let socket=null,seq=0,clockStart=0;
@@ -82,17 +82,17 @@ async function run(){
    catch{return false;}});
  if(!chrome)fail('CHROMIUM_REQUIRED');
  children.push(spawn('npm',['run','preview','--','--host','127.0.0.1',
-  '--port','4190','--strictPort','--base','/browser-ink-tps/'],{stdio:'ignore'}));
+  '--port','4192','--strictPort','--base','/browser-ink-tps/'],{stdio:'inherit'}));
  await wait(async()=>{try{return (await fetch(ROOT)).ok;}catch{return false;}},30000);
  const browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage',
   '--no-first-run','--disable-extensions','--enable-unsafe-swiftshader',
   '--use-angle=swiftshader','--window-size=1600,900','--hide-scrollbars',
-  '--remote-debugging-port=9278','--remote-allow-origins=*',
+  '--remote-debugging-port=9276','--remote-allow-origins=*',
   '--user-data-dir=/tmp/t21-b348-profile','about:blank'],{stdio:'ignore'});
  children.push(browser);
  const tab=await wait(async()=>{
   if(browser.exitCode!==null)fail('CHROME_EXITED');
-  try{return (await (await fetch('http://127.0.0.1:9278/json')).json())
+  try{return (await (await fetch('http://127.0.0.1:9276/json')).json())
    .find(p=>p.type==='page'&&p.webSocketDebuggerUrl);}catch{return null;}
  });
  socket=new WebSocket(tab.webSocketDebuggerUrl);
