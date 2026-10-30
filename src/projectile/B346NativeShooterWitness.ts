@@ -9,6 +9,8 @@ export interface B346ShooterLaunch {
  kind:'LAUNCH';launchId:number;nativeTick:number;slotName:string;
  weaponId:string;worldPosition:V3;worldVelocity:V3;
  gravity:number;lifeSeconds:number;paintRadius:number;
+ /** B349 observed genuine KCC grounded value at native 3D shot spawn. */
+ nativeGroundedAtLaunch?:boolean;
 }
 export interface B346ShooterExit {
  kind:'EXIT';launchId:number;nativeTick:number;

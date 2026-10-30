@@ -1839,7 +1839,8 @@ export class ProjectileSystem {
         slotName:slot.entity.name,weaponId:profile.id,
         worldPosition:[slot.position.x,slot.position.y,slot.position.z],
         worldVelocity:[slot.velocity.x,slot.velocity.y,slot.velocity.z],
-        gravity:slot.gravity,lifeSeconds:slot.ttl,paintRadius:slot.paintRadius
+        gravity:slot.gravity,lifeSeconds:slot.ttl,paintRadius:slot.paintRadius,
+        nativeGroundedAtLaunch:this.stats.playerGrounded
       });
     }
 
