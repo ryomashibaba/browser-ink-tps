@@ -26,7 +26,7 @@ describe('B355 existing genuine B76 native resource presentation',()=>{
   expect(view(row(70,'HUMAN'),{...source,enabled:false})).toBeNull();
   expect(view(row(70,'HUMAN'),{...source,paused:true})).toBeNull();
   expect(view(row(70,'HUMAN'),{...source,matchState:'TIME_UP'})).toBeNull();
-  expect(view({...row(70,'HUMAN'),originalScoreableSurfaces:1},source)).toBeNull();
+  expect(view({...row(70,'HUMAN'),originalScoreableSurfaces:1} as unknown as B76HumanSourceView,source)).toBeNull();
   expect(view({...row(70,'HUMAN'),state:'HOLD'},source)).toBeNull();
   expect(view({...row(70,'HUMAN'),playerInkPercent:Infinity},source)).toBeNull();
  });
