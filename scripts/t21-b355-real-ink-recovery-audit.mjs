@@ -29,12 +29,17 @@ export function auditB355RealInkRecovery(e){
  const h=e.truePlayerHud;
  check(h?.exists===true&&h.hidden===false&&
  typeof h.text==='string'&&h.text.includes('SOURCE / NO SCORE')&&
- ['HUMAN_REFILL','READY'].includes(h.mode)&&
+ ['HUMAN_REFILL','READY','RECOVERY_DELAY'].includes(h.mode)&&
  h.authority==='REAL_B76_NATIVE_PLAYER_RESOURCE'&&
  nat(h.nativeTick)&&h.nativeTick>=a.tick&&
+ h.nativeTick<=b.tick+27&&
  h.gameplayWrites==='0','REAL_PLAYER_HUD');
+ // The native ink may have recovered while the last rendered HUD
+ // still reports a lock. This is a user-facing HOLD, never a PASS.
+ const hudStale=h.mode==='RECOVERY_DELAY';
  return {schema:'B355_GENUINE_SOURCE_INK_AND_PLAYER_READOUT',
- verdict:'PASS_NATIVE_CONSUMPTION_STOPPED_SHOOTER_REFILL_AND_HUD',
+ verdict:hudStale?'HOLD_REAL_REFILL_BUT_PLAYER_HUD_STILL_LOCKED':
+  'PASS_NATIVE_CONSUMPTION_STOPPED_SHOOTER_REFILL_AND_HUD',
  realNativeRecoveryTicks:b.tick-a.tick,
  observedInkAfterShot:Number(a.ink.toFixed(4)),
  observedInkAfterRecovery:Number(b.ink.toFixed(4)),

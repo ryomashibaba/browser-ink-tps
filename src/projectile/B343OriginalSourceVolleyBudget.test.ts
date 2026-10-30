@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {b343CanLaunchSourceVolley as allow} from './B343OriginalSourceVolleyBudget';
+import {b343CanLaunchSourceVolley as allow,b343SourceShooterPracticeHref} from './B343OriginalSourceVolleyBudget';
 describe('B343 real SOURCE volley capacity',()=>{
  it('rejects exhausted or partial physical pool without synthetic slots',()=>{
   expect(allow(0,1)).toBe(false);
@@ -14,5 +14,30 @@ describe('B343 real SOURCE volley capacity',()=>{
  it('real capacity conserves every 1 to 8 shot burst for 0 to 128 slots',()=>{
   for(let f=0;f<=128;f++)
    for(let n=1;n<=8;n++)expect(allow(f,n)).toBe(f>=n);
+ });
+});
+
+describe('one-click genuine SOURCE shooter practice',()=>{
+ const url='https://example.test/browser-ink-tps/?t21Play=preview&t21QaDrive=source&t21W10B348=sourceShooterAccuracyCandidate';
+ it('boots a clean new 180s round with real physical pool protection and ink cues',()=>{
+  const target=new URL(b343SourceShooterPracticeHref(url,true)!);
+  expect(target.pathname).toBe('/browser-ink-tps/');
+  for(const [k,v] of [
+   ['t21Play','preview'],['t21QaDrive','source'],['t21W10B203','fullRound'],
+   ['t21W10B343','sourceVolleyAtomic'],['t21W10B355','realInkHud'],
+   ['t21W10B356','realImpactReticle']
+  ])expect(target.searchParams.get(k)).toBe(v);
+  expect(target.searchParams.has('t21W10B348')).toBe(false);
+ });
+ it('returns to baseline without retaining research flags',()=>{
+  const target=b343SourceShooterPracticeHref(url,true)!;
+  const reset=new URL(b343SourceShooterPracticeHref(target,false)!);
+  expect(reset.searchParams.toString()).toBe('t21Play=preview&t21QaDrive=source');
+ });
+ it('rejects non-SOURCE or production pages',()=>{
+  for(const x of ['https://example.test/',
+   'https://example.test/?t21Play=preview',
+   'https://example.test/?t21Play=preview&t21QaDrive=other'])
+   expect(b343SourceShooterPracticeHref(x,true)).toBeNull();
  });
 });

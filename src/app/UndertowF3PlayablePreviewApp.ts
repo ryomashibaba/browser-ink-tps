@@ -98,6 +98,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud,sourceF3RealAimLineCue} from './UndertowF3PlayableHud';
+import {b343SourceShooterPracticeHref} from '../projectile/B343OriginalSourceVolleyBudget';
 import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
@@ -1163,6 +1164,39 @@ export class UndertowF3PlayablePreviewApp{
     window.location.assign(dest.href);
    });
    this.panel.querySelector('h2')!.insertAdjacentElement('afterend',button);
+  }
+
+  // A playable SOURCE-shooter slice, not another independent QA panel.
+  // Only explicit user navigation reboots the real source-backed physics.
+  if(b31Params.get('t21QaDrive')==='source'){
+   const active=this.b203FullRound&&
+    b31Params.get('t21W10B343')==='sourceVolleyAtomic'&&
+    b31Params.get('t21W10B355')==='realInkHud'&&
+    b31Params.get('t21W10B356')==='realImpactReticle';
+   const button=document.createElement('button');
+   button.id='t21-f3-source-shooter-practice';
+   button.type='button';
+   button.dataset.originalSourceOnly='true';
+   button.dataset.scoreable='0';
+   button.dataset.productionAuthorized='false';
+   button.dataset.actorTeleports='0';
+   button.textContent=active?
+    'EXIT SOURCE SHOOTER PRACTICE · FRESH BASELINE':
+    'PLAY REAL SHOOTER · 180s SOURCE PRACTICE';
+   button.style.cssText='display:block;width:100%;margin:7px 0;'+
+    'padding:12px 9px;border-radius:9px;border:1px solid #8fe6d1;'+
+    'background:#145747;color:#e3fff4;cursor:pointer;'+
+    'font:800 11px/1.45 system-ui';
+   button.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||
+       this.survey.snapshot().active||this.galleryIndex>=0||
+       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
+       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
+    const href=b343SourceShooterPracticeHref(window.location.href,!active);
+    if(href)window.location.assign(href);
+   });
+   this.panel.querySelector('#t21-f3-b203-full-round')!
+    .insertAdjacentElement('afterend',button);
   }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   // B69: an ordinary preview user can explicitly compare the already

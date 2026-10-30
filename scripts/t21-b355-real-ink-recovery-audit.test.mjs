@@ -31,3 +31,22 @@ test('no fabricated ink, shots, HUD, or score accepted',()=>{
  ]){const s=fixture();mutate(s);
   assert.throws(()=>run(s),/B355_NATIVE_INK_/);}
 });
+
+test('native refill with stale rendered recovery-delay warning stays HOLD',()=>{
+ const e=fixture();e.truePlayerHud.mode='RECOVERY_DELAY';
+ e.truePlayerHud.text='INK 97% · RECHARGE DELAY · SOURCE / NO SCORE';
+ e.truePlayerHud.nativeTick=1220;
+ const v=run(e);
+ assert.equal(v.verdict,'HOLD_REAL_REFILL_BUT_PLAYER_HUD_STILL_LOCKED');
+ assert.equal(v.observedInkAfterRecovery,97);
+});
+test('stale HUD cannot bypass native tick or authority',()=>{
+ for(const mutate of [
+  e=>e.truePlayerHud.nativeTick=1100,
+  e=>e.truePlayerHud.nativeTick=1400,
+  e=>e.truePlayerHud.authority='FAKE',
+  e=>e.truePlayerHud.gameplayWrites='1',
+  e=>e.truePlayerHud.text='WINNER',
+ ]){const e=fixture();e.truePlayerHud.mode='RECOVERY_DELAY';
+ mutate(e);assert.throws(()=>run(e),/B355_NATIVE_INK_REAL_PLAYER_HUD/);}
+});

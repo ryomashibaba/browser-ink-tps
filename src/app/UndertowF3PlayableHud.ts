@@ -19,6 +19,10 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  humanCpuDirectHits?:number;
  humanCpuDirectSplats?:number;
  inkDryFireAttempts?:number;
+ b343OriginalSourceVolleyBudget?:{
+  enabled:boolean;rejectedVolleys:number;physicalPoolSize:number;
+  actualFreeSlots:number;
+ };
  b23HumanInkFeedback?:{
   originalSourceOnly:boolean;scoreablePromotionCount:number;
   humanChangedImpactCount:number;humanChangedCells:number;
@@ -586,19 +590,35 @@ export function createF3PlayableHud(ui:HTMLElement){
    enabled:b355Selected,matchState:value.matchState,
    paused:value.paused,stopReason:value.stopReason
   });
+  // Real physical capacity is distinct from player ink and paint ownership.
+  // A full pool is not an invented failed shot or a CPU hit.
+  const pool=value.b343OriginalSourceVolleyBudget;
+  const poolFull=!!b355&&pool?.enabled===true&&
+   pool.physicalPoolSize===128&&pool.actualFreeSlots===0&&
+   value.originalSourceSolids===25&&value.originalPaintSurfaces===17&&
+   value.originalSourceNavigationLinks===26&&
+   value.sourceScoreablePromotions===0&&
+   value.productionAuthorized===false&&
+   value.unrestricted4v4Certified===false;
   b355InkNode.hidden=!b355||
    ui.dataset.t21B245Presentation!=='PLAYER';
-  b355InkNode.dataset.t21B355Authoritative=
-   b355?'REAL_B76_NATIVE_PLAYER_RESOURCE':'HOLD_OR_DISABLED';
-  b355InkNode.dataset.t21B355Mode=b355?.mode??'HOLD';
+  b355InkNode.dataset.t21B355Authoritative=poolFull?
+   'B343_REAL_PHYSICAL_POOL':b355?
+   'REAL_B76_NATIVE_PLAYER_RESOURCE':'HOLD_OR_DISABLED';
+  b355InkNode.dataset.t21B355Mode=poolFull?
+   'PHYSICAL_POOL_FULL':b355?.mode??'HOLD';
   b355InkNode.dataset.t21B355NativeTick=
    String(b355?.nativeTick??-1);
   b355InkNode.dataset.t21B355OriginalScoreable='0';
   b355InkNode.dataset.t21B355GameplayWrites='0';
   if(b355){
-   b355InkNode.textContent=b355.label;
-   b355InkNode.style.borderColor=b355.urgent?'#e9a260':'#4a7d91';
-   b355InkNode.style.color=b355.urgent?'#ffdaac':'#bff1ec';
+   b355InkNode.textContent=poolFull?
+    'BULLET POOL FULL · WAIT FOR SLOT · SOURCE / NO SCORE':
+    b355.label;
+   b355InkNode.style.borderColor=poolFull||b355.urgent?
+    '#e9a260':'#4a7d91';
+   b355InkNode.style.color=poolFull||b355.urgent?
+    '#ffdaac':'#bff1ec';
   }
   const b356=b356Ledger.observe({
    enabled:b356Enabled,
