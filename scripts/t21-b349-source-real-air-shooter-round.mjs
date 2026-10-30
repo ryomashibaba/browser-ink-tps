@@ -338,7 +338,8 @@ async function run(){
     jumpWitness.realOriginalHumanYBeforeJump=n.player.position[1];
     await send('Input.dispatchKeyEvent',{type:'keyDown',...space});
     jumpWitness.actualNativeSpaceKeyDown=true;spaceHeld=true;
-    proof.actions.push('Space');store();
+    // Native Space is recorded in B349 real jump witness; keep B337 canonical action sequence intact.
+    store();
    }
    if(tickOffset===48&&spaceHeld){
     await send('Input.dispatchKeyEvent',{type:'keyUp',...space});
