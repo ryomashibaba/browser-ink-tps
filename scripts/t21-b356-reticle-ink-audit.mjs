@@ -32,16 +32,29 @@ export function auditB356Reticle(w,physical){
   v.actualImpactCount<=p.humanChangedImpactCount&&
   v.nativeTick<=w.actualNativeTick&&v.nativeTick>=0,
   'NO_FAKE_VIEWPORT_PAINT_OR_CPU_HIT');
- if(!v.hidden&&v.mode==='REAL_PAINT'){
-  need(v.actualImpactTick===p.lastImpactTick&&
-   v.text.includes('NOT CPU HIT')&&
-   v.text.includes('REAL SOURCE INK +'),
+ // Browser DOM is last-rendered state, while the independent native
+ // snapshot may have advanced several 60Hz ticks and paint impacts.
+ // Compare causal history, not equality with the *latest* native impact.
+ // Reject future, invented, or excessively stale paint cue claims.
+ const visiblePaint=v.hidden===false&&v.mode==='REAL_PAINT';
+ if(visiblePaint){
+  const label=/^REAL SOURCE INK \+([1-9]\d*) · NOT CPU HIT$/.exec(v.text);
+  const stampedCells=label?Number(label[1]):0;
+  need(natural(v.actualImpactTick)&&v.actualImpactCount>0&&
+   v.actualImpactTick<=p.lastImpactTick&&
+   v.actualImpactTick<=v.nativeTick&&
+   v.actualImpactCount<=p.humanChangedImpactCount&&
+   w.actualNativeTick-v.nativeTick<=27&&
+   v.nativeTick-v.actualImpactTick<=27&&
+   label!==null&&Number.isSafeInteger(stampedCells)&&
+   stampedCells>0&&stampedCells<=p.humanChangedCells,
    'VISIBLE_TRUE_PAINT_MARKER');
  }
  return {schema:'B356_TRUE_SOURCE_RETICLE_CAUSALITY',
-  verdict:!v.hidden&&v.mode==='REAL_PAINT'?
+  verdict:visiblePaint?
    'PASS_VISIBLE_REAL_SOURCE_PAINT_RETICLE':
    'HOLD_REAL_PAINT_OBSERVED_BUT_VIEWPORT_PULSE_NOT_CAPTURED',
+  viewportRenderLagTicks:w.actualNativeTick-v.nativeTick,
   actualHumanShotRequests:w.humanActualShotRequests,
   observedHumanChangedOwnerCells:p.humanChangedCells,
   actualSourcePaintImpactTick:p.lastImpactTick,

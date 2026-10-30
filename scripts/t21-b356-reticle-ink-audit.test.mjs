@@ -41,3 +41,26 @@ test('fake camera success and unsupported source/paint evidence fail',()=>{
  ]){const s=sample();change(s);assert.throws(()=>
   auditB356Reticle(s.w,s.physical),/B356_NATIVE_RETICLE_/);}
 });
+
+test('rendered genuine paint may precede latest native impact by six ticks',()=>{
+ const {w,physical}=sample();
+ w.nativeHumanPaint.lastImpactTick=116;
+ w.nativeHumanPaint.humanChangedImpactCount=9;
+ w.browserReticle.nativeTick=110;
+ w.browserReticle.actualImpactCount=6;
+ const v=auditB356Reticle(w,physical);
+ assert.equal(v.verdict,'PASS_VISIBLE_REAL_SOURCE_PAINT_RETICLE');
+ assert.equal(v.viewportRenderLagTicks,6);
+});
+test('reject future, out-of-order, counterfeit, or stale paint cue',()=>{
+ for(const change of [
+  s=>{s.w.nativeHumanPaint.lastImpactTick=109;},
+  s=>{s.w.browserReticle.actualImpactTick=120;},
+  s=>{s.w.browserReticle.actualImpactCount=7;},
+  s=>{s.w.browserReticle.text='REAL SOURCE INK +9999 · NOT CPU HIT';},
+  s=>{s.w.browserReticle.text='REAL SOURCE INK +45 · CPU HIT';},
+  s=>{s.w.browserReticle.nativeTick=82;},
+  s=>{s.w.actualNativeTick=145;},
+ ]){const s=sample();change(s);assert.throws(()=>
+  auditB356Reticle(s.w,s.physical),/B356_NATIVE_RETICLE_/);}
+});
