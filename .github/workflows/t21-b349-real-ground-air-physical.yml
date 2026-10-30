@@ -6,6 +6,8 @@ on:
       - 'scripts/t21-b349-source-jump-round.mjs'
       - 'scripts/t21-b349-physical-kcc-audit.mjs'
       - 'scripts/t21-b349-physical-kcc-audit.test.mjs'
+      - 'scripts/t21-b353-real-cpu-cue-audit.mjs'
+      - 'scripts/t21-b353-real-cpu-cue-audit.test.mjs'
       - '.github/workflows/t21-b349-real-ground-air-physical.yml'
   workflow_dispatch:
 permissions:
@@ -22,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test scripts/t21-b349-physical-kcc-audit.test.mjs
+      - run: node --test scripts/t21-b349-physical-kcc-audit.test.mjs scripts/t21-b353-real-cpu-cue-audit.test.mjs
       - run: node --check scripts/t21-b349-source-jump-round.mjs
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npx vitest run src/projectile/B349SourceGroundAirWitness.test.ts src/projectile/B348SourceShooterAccuracyCandidate.test.ts
@@ -43,6 +45,8 @@ jobs:
         run: node scripts/t21-b348-physical-shooter-accuracy-audit.mjs /tmp/t21-b349
       - name: Independent B349 native KCC grounded/air shooter evidence
         run: node scripts/t21-b349-physical-kcc-audit.mjs /tmp/t21-b349
+      - name: B353 native actual CPU HP damage and hit-cue outcome (PASS or evidence HOLD)
+        run: node scripts/t21-b353-real-cpu-cue-audit.mjs /tmp/t21-b349
       - uses: actions/upload-artifact@v4
         if: always()
         with:

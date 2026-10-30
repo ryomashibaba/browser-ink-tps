@@ -24,3 +24,8 @@ no Scoreable, 4v4, winner and production HOLD.
 
 ## 2026-10-30 B351 CI検証更新
 [CI 41060649046](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41060649046): B351 negative Vitest, B349 witness tests and TypeScript/Vite build SUCCESS. Real original-CPU hit+HP loss+world cue in one native Chromium scene is NOT certified; no legitimate cross-team access (0/12). Unit success is not playtest success. ART and official 4v4 remain HOLD.
+
+
+## B353 — 同一真正ChromiumのCPU実HP/命中演出の結合確認
+
+既存B349の原作SOURCE・本物CDPマウス/Space/実弾ドライバーを使い、B351 QAオプトインを追加。既存Bチーム4人の物理足元・HP、プレイヤーの実物理弾CPU衝突Exit、`humanCpuDirectHits` の変化、命中エフェクト発生カウンター、インク塗装を**同じ真正セッション**で採取する。新たな架空CPU/床/HP変更/時計操作なし。独立B353監査はHP減少0ならHOLD、実ダメージがある場合のみ衝突Exitと演出カウンターの一致を要求する。既存の実フレームバッファ2枚も保存するが、演出の画面内確認・音の原作一致は別途ART HOLD。新ワークフロー追加なし。新HEAD CIの結果に基づいて合否判定。

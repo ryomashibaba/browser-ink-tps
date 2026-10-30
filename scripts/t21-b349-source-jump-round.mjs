@@ -114,7 +114,8 @@ async function run(){
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
   't21W10B345=sourceShooterOpening&'+
   't21W10B346=nativeShooterPhysicsWitness&'+
-  't21W10B348=sourceShooterAccuracyCandidate'});
+  't21W10B348=sourceShooterAccuracyCandidate&'+
+  't21W10B351=realCpuHitCue'});
  const ready=()=>wait(async()=>{
   try{return await read('document.querySelector("#app-canvas")?.dataset.t21F3Ready==="READY"'+
    '&&document.querySelector("#app-canvas")?.dataset.t21F3Renderer==="webgl2"');}
@@ -134,9 +135,14 @@ async function run(){
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
   't21W10B345=sourceShooterOpening&'+
   't21W10B346=nativeShooterPhysicsWitness&'+
-  't21W10B348=sourceShooterAccuracyCandidate')
+  't21W10B348=sourceShooterAccuracyCandidate&'+
+  't21W10B351=realCpuHitCue')
    fail('EXPLICIT_FROZEN_SOURCE_URL_IDENTITY');
  const boot=verifyAuthority(await snapshot());
+ if(boot.b351ActualHitCue?.enabled!==true||
+    boot.b351ActualHitCue.realDamageCues!==0||
+    boot.b351ActualHitCue.syntheticHits!==0)
+   fail('B353_SOURCE_CUE_NOT_ARMED');
  if(boot.b348SourceShooterAccuracy?.enabled!==true||
     boot.b348SourceShooterAccuracy.actualAcceptedCandidateShots!==0||
     boot.b348SourceShooterAccuracy.syntheticShots!==0||
@@ -261,6 +267,8 @@ async function run(){
   return Math.abs(v.cameraSourcePractice?.yawDegrees-started.cameraYawDegrees)>=0.1;
  },40000);
  const aimed=await sample('AIM');
+ // Read the native human and four real opponent positions/HP BEFORE fire.
+ const b353Before=verifyAuthority(await snapshot());
  // B344: real native tick and human resource sampling while the
  // genuine pointer-locked mouse stays held. No QA advancement/injection.
  const genuineSpaceEvents=[];
@@ -376,6 +384,10 @@ async function run(){
  }
  await picture('B337_END');
  const nativeFinal=verifyAuthority(await snapshot());
+ if(nativeFinal.b351ActualHitCue?.enabled!==true||
+    nativeFinal.b351ActualHitCue.syntheticHits!==0||
+    nativeFinal.b351ActualHitCue.productionAuthorized!==false)
+   fail('B353_SOURCE_CUE_AUTHORITY_CHANGED');
  const shooterPhysics=nativeFinal.b346NativeShooterWitness;
  if(shooterPhysics?.enabled!==true||
     shooterPhysics.droppedOldestEvents!==0||
@@ -456,6 +468,47 @@ async function run(){
    source:'25/17/26/0',actual,actualHumanShots:proof.samples.at(-1).humanShots,
    originalSourceNoMutation:true,
    originalWeaponFidelityCertified:false},null,2)+'\n');
+ // Independent B353: actual frozen world, real enemy foot/HP and actual
+ // human shot -> CPU damage -> B351 feedback in ONE genuine Chromium run.
+ const enemies=n=>n.cpu.cpu.filter(c=>/^B[1-4]$/.test(c.id))
+  .map(c=>({id:c.id,foot:[...c.physicalFoot],hp:c.hp,
+   lifeState:c.lifeState}));
+ const preCue=b353Before.b351ActualHitCue;
+ const postCue=nativeFinal.b351ActualHitCue;
+ const realCpuExits=shooterPhysics.events.filter(e=>
+  e.kind==='EXIT'&&e.reason==='REAL_CPU_HIT').length;
+ const originalPaintExits=shooterPhysics.events.filter(e=>
+  e.kind==='EXIT'&&e.reason==='ORIGINAL_PAINTABLE').length;
+ const b353={schema:'B353_REAL_NATIVE_CPU_HIT_CUE_WITNESS',
+  source:'25/17/26/0',nativeCdp:true,realActorsOnly:true,
+  syntheticHits:false,syntheticInk:false,syntheticTicks:false,
+  actorTeleports:0,startTick:b353Before.tick,endTick:nativeFinal.tick,
+  humanStart:[...b353Before.player.position],
+  humanEnd:[...nativeFinal.player.position],
+  originalEnemiesBefore:enemies(b353Before),
+  originalEnemiesAfter:enemies(nativeFinal),
+  humanCpuHpHitsBefore:b353Before.humanCpuDirectHits,
+  humanCpuHpHitsAfter:nativeFinal.humanCpuDirectHits,
+  genuineCueBefore:preCue.realDamageCues,
+  genuineCueAfter:postCue.realDamageCues,
+  physicalCpuHitExits:realCpuExits,
+  physicalPaintableExits:originalPaintExits,
+  physicalLaunches:shooterPhysics.totalActualShooterLaunches,
+  physicalExits:shooterPhysics.totalActualShooterExits,
+  actualHumanPaintChangedCells:nativeFinal.b23HumanInkFeedback.humanChangedCells,
+  humanInkBefore:b353Before.player.ink,
+  humanInkAfter:nativeFinal.player.ink,
+  originalScoreable:nativeFinal.sourceScoreablePromotions,
+  nativeScreenshotStart:'B337_START.png',nativeScreenshotEnd:'B337_END.png',
+  originalNintendoCueArtCertified:false,officialWinnerCertified:false,
+  productionAuthorized:false};
+ writeFileSync(resolve(DIR,'b353-native-real-cpu-hit-cue.json'),
+  JSON.stringify(b353,null,2)+'\n');
+ console.log('B353_NATIVE_REAL_CPU_DAMAGE_CUE',JSON.stringify({
+  hitDelta:b353.humanCpuHpHitsAfter-b353.humanCpuHpHitsBefore,
+  cueDelta:b353.genuineCueAfter-b353.genuineCueBefore,
+  physicalCpuExits:realCpuExits,originalPaintExits,
+  existingOpponentFeet:enemies(nativeFinal)}));
  const verdict=b337AuditNative(proof);
  writeFileSync(resolve(DIR,'b337-driver-verdict.json'),
   JSON.stringify(verdict,null,2)+'\n');
