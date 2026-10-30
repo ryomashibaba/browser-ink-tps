@@ -3,6 +3,8 @@ on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
+      - 'src/projectile/B345SourceShooterOpeningCadence.test.ts'
+      - 'src/projectile/B345SourceShooterOpeningCadence.ts'
       - 'scripts/t21-b345-native-shooter-round.mjs'
       - 'scripts/t21-b345-native-shooter-audit.mjs'
       - 'scripts/t21-b345-native-shooter-audit.test.mjs'
