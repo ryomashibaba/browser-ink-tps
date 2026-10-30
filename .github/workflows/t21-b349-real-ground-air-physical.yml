@@ -1,0 +1,51 @@
+name: T21 B349 genuine native Space KCC ground/air shooter physical QA
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b349-source-jump-round.mjs'
+      - 'scripts/t21-b349-physical-kcc-audit.mjs'
+      - 'scripts/t21-b349-physical-kcc-audit.test.mjs'
+      - '.github/workflows/t21-b349-real-ground-air-physical.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: b349-original-space-kcc-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  original-native-grounded-airborne-shooter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b349-physical-kcc-audit.test.mjs
+      - run: node --check scripts/t21-b349-source-jump-round.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/projectile/B349SourceGroundAirWitness.test.ts src/projectile/B348SourceShooterAccuracyCandidate.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: True Chromium source Space jump during physical shooter firing
+        env:
+          T21_B349_OUTPUT: /tmp/t21-b349
+        run: node scripts/t21-b349-source-jump-round.mjs
+      - name: Independent B337 source input and native foot ledger
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b349
+      - name: Independent B344 source held shooter/ink clock
+        run: node scripts/t21-b344-native-shooter-audit.mjs /tmp/t21-b349
+      - name: Independent B345 native first-shot bound
+        run: node scripts/t21-b345-native-shooter-audit.mjs /tmp/t21-b349
+      - name: Independent B346 physical native original bullet launch/exit
+        run: node scripts/t21-b346-native-projectile-audit.mjs /tmp/t21-b349
+      - name: Independent B348 real physical shooter accuracy research candidate
+        run: node scripts/t21-b348-physical-shooter-accuracy-audit.mjs /tmp/t21-b349
+      - name: Independent B349 native KCC grounded/air shooter evidence
+        run: node scripts/t21-b349-physical-kcc-audit.mjs /tmp/t21-b349
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b349-native-real-space-kcc-ground-air-shooter-evidence
+          path: /tmp/t21-b349/
+          retention-days: 14
