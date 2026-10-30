@@ -68,7 +68,7 @@ describe('B341 exact research-only A/B source navigation',()=>{
   for(const [k,v] of [
    ['t21W10B64','inkAngleSweep'],['t21W10B178','sourceInkRecovery'],
    ['t21W10B180','originalUnpaintedPatches']
-  ])expect(next.searchParams.get(k)).toBe(v);
+  ] as const)expect(next.searchParams.get(k)).toBe(v);
   expect(next.searchParams.has('t21W10B93')).toBe(false);
   expect(next.searchParams.has('t21W10B192')).toBe(false);
  });
@@ -81,6 +81,7 @@ describe('B341 exact research-only A/B source navigation',()=>{
   ]){
    const u=new URL(source);
    const [key,v]=changed.substring(1).split('=');
+   if(!key||!v)throw Error('B341_TEST_MUTATION_INVALID');
    u.searchParams.set(key,v);
    const next=new URL(sourceCoopNavigationUrl(u.href,true));
    for(const k of ['t21W10B341','t21W10B64','t21W10B178','t21W10B180'])
