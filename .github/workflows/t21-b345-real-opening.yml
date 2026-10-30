@@ -1,0 +1,46 @@
+name: T21 B345 original SOURCE genuine shooter opening 60Hz comparison
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b345-native-shooter-round.mjs'
+      - 'scripts/t21-b345-native-shooter-audit.mjs'
+      - 'scripts/t21-b345-native-shooter-audit.test.mjs'
+      - '.github/workflows/t21-b345-real-opening.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: b345-genuine-source-shooter-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  genuine-original-source-human-shooter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/t21-b344-native-shooter-audit.test.mjs scripts/t21-b345-native-shooter-audit.test.mjs
+      - run: node --check scripts/t21-b345-native-shooter-round.mjs
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/projectile/B345SourceShooterOpeningCadence.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Real Chromium human shooter opening with actual native 60Hz ticks
+        env:
+          T21_B345_OUTPUT: /tmp/t21-b345
+        run: node scripts/t21-b345-native-shooter-round.mjs
+      - name: Independent real human original source input paint and foot
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b345
+      - name: Independent actual held source shooter clock and ink
+        run: node scripts/t21-b344-native-shooter-audit.mjs /tmp/t21-b345
+      - name: Independent B345 early opening cadence and clamp comparison
+        run: node scripts/t21-b345-native-shooter-audit.mjs /tmp/t21-b345
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b345-original-source-genuine-opening-shooter-observations
+          path: /tmp/t21-b345/
+          retention-days: 14
+          if-no-files-found: warn
