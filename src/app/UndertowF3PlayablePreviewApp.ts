@@ -1170,6 +1170,7 @@ export class UndertowF3PlayablePreviewApp{
   // Only explicit user navigation reboots the real source-backed physics.
   if(b31Params.get('t21QaDrive')==='source'){
    const active=this.b203FullRound&&
+    b31Params.get('t21W10B192')==='humanCombat'&&
     b31Params.get('t21W10B343')==='sourceVolleyAtomic'&&
     b31Params.get('t21W10B355')==='realInkHud'&&
     b31Params.get('t21W10B356')==='realImpactReticle';
@@ -1181,8 +1182,8 @@ export class UndertowF3PlayablePreviewApp{
    button.dataset.productionAuthorized='false';
    button.dataset.actorTeleports='0';
    button.textContent=active?
-    'EXIT SOURCE SHOOTER PRACTICE · FRESH BASELINE':
-    'PLAY REAL SHOOTER · 180s SOURCE PRACTICE';
+    'EXIT SOURCE SHOOTER + CPU7 · FRESH BASELINE':
+    'PLAY REAL SHOOTER + CPU7 · 180s SOURCE PRACTICE';
    button.style.cssText='display:block;width:100%;margin:7px 0;'+
     'padding:12px 9px;border-radius:9px;border:1px solid #8fe6d1;'+
     'background:#145747;color:#e3fff4;cursor:pointer;'+
@@ -3197,9 +3198,16 @@ export class UndertowF3PlayablePreviewApp{
  private auditB312NativeHumanOwnerLedger(){
   const n=this.snapshot();
   const params=new URL(location.href).searchParams;
+  // Original A1 ally guard remains intact. Extend this READ-ONLY
+  // owner/foot audit only to a runtime-verified B343+B192 original
+  // source shooter battle. A URL flag alone is never sufficient.
+  const realShooterCombat=params.get('t21W10B192')==='humanCombat'&&
+   params.get('t21W10B343')==='sourceVolleyAtomic'&&
+   this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY'&&
+   this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().enabled===true;
   if(params.get('t21B312')!=='genuineSecondHumanPaint'||
    params.get('t21Play')!=='preview'||
-   params.get('t21W10B193')!=='allyCoop'||
+   (params.get('t21W10B193')!=='allyCoop'&&!realShooterCombat)||
    params.get('t21W10B203')!=='fullRound'||
    !this.b203FullRound||this.paused||this.stopReason||
    !['STAGING','PLAYING'].includes(this.matchState)||n.tick<1||

@@ -129,6 +129,7 @@ async function run(){
  // fresh native stage and DOES NOT smuggle research flags into the round.
  await clickButton('#t21-f3-source-shooter-practice');
  const selectedSearch='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B192=humanCombat&t21W10B112=humanGround&'+
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
   't21W10B355=realInkHud&t21W10B356=realImpactReticle';
  await wait(async()=>{try{return await read('location.search')===selectedSearch;}catch{return false;}},45000);
@@ -143,6 +144,13 @@ async function run(){
  if(mode.search!==selectedSearch)
    fail('EXPLICIT_PLAYER_SELECTED_SOURCE_URL_IDENTITY');
  const boot=verifyAuthority(await snapshot());
+ const combatUi=await read('(() => ({source:document.querySelector("#app-canvas")?.dataset.t21B192HumanCombat,'+
+  'roster:!!document.querySelector("#t21-f3-b211-real-battle-roster"),'+
+  'score:document.querySelector("#t21-f3-b211-real-battle-roster")?.dataset.scoreable,'+
+  'routes:document.querySelector("#t21-f3-b211-real-battle-roster")?.dataset.certifiedEnemyRoutes}))()');
+ if(combatUi?.source!=='REAL_SOURCE_ONLY'||!combatUi.roster||
+    combatUi.score!=='0'||combatUi.routes!=='0')
+  fail('REAL_CPU_COMBAT_NOT_SOURCE_GROUNDED_'+JSON.stringify(combatUi));
  if(boot.b343OriginalSourceVolleyBudget?.enabled!==true||
     boot.b343OriginalSourceVolleyBudget?.physicalPoolSize!==128||
     boot.b343OriginalSourceVolleyBudget?.syntheticShots!==0||
@@ -212,6 +220,25 @@ async function run(){
   return s;
  };
  const started=await sample('START');
+ // True original CPU health roster is visible, but opponents remain
+ // separated by the uncertified 0/12 natural routes. Never fake damage.
+ const cpuRoster=await wait(async()=>{
+  const z=await read('(() => {const el=document.querySelector("#t21-f3-b211-real-battle-roster");'+
+   'return {visible:!!el&&!el.hidden,rows:el?.dataset.realCpuCount,'+
+   'hits:el?.dataset.humanDirectHits,winner:el?.dataset.officialWinner,'+
+   'routes:el?.dataset.certifiedEnemyRoutes,encounter:el?.dataset.actualEnemyEncounterCertified,'+
+   'text:el?.textContent}})()');
+  return z?.visible&&z.rows==='7'&&z.winner==='NONE'&&
+   z.routes==='0'&&z.encounter==='false'&&
+   z.text?.includes('REAL 1 + 7 · SOURCE COMBAT')&&
+   z.text.includes('CROSS-TEAM ROUTES 0/12 HOLD')?z:false;
+ },30000);
+ writeFileSync(resolve(DIR,'b362-real-original-cpu-combat-roster.json'),
+  JSON.stringify({schema:'B362_ACTUAL_1_PLUS_7_SOURCE_COMBAT_SELECTED',
+   originalSource:'25/17/26/0',nativeTick:started.tick,
+   realCpuRoster:cpuRoster,sourceOnly:true,
+   certifiedEnemyRoutes:0,officialWinner:'NONE',
+   enemyEncounterCertified:false,productionAuthorized:false},null,2)+'\n');
  const b338Dom=await read('(() => {const ui=document.querySelector("#ui-root"),g=document.querySelector("#t21-f3-b338-source-guide"),card=document.querySelector("#t21-f3-b25-paint-run"),qa=document.querySelector("#t21-f3-b205-real-round");return {view:ui?.dataset.t21B245Presentation,phase:ui?.dataset.t21B338Phase,text:g?.textContent,guideShown:!!g&&getComputedStyle(g).display!=="none",cardVisible:!!card&&getComputedStyle(card).display!=="none",qaVisible:!!qa&&getComputedStyle(qa).display!=="none",scoreable:document.querySelector("#t21-f3-practice-hud")?.dataset.sourceScoreable}})()');
  if(b338Dom?.view!=='PLAYER'||b338Dom.phase!=='PLAYING'||
   !b338Dom.guideShown||!b338Dom.text?.includes('WASD MOVE')||
@@ -288,7 +315,7 @@ async function run(){
   })()`);
   return v?.visible&&v.view==='PLAYER'&&
    v.weapon==='pulse-sprayer'&&v.shots===fired.humanShots&&
-   v.changes===fired.humanInk&&v.writes==='0'&&
+   v.changes>=fired.humanInk&&v.writes==='0'&&
    v.scoreable==='0'&&v.reticleScoreable==='0'&&
    v.text.includes('Pulse Sprayer')&&
    v.text.includes('SOURCE INK CHANGES')&&
