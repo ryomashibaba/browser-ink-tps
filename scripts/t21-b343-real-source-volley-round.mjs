@@ -487,6 +487,169 @@ async function run(){
   JSON.stringify(verdict,null,2)+'\n');
  console.log('B343_REAL_PLAYER_VOLLEY_BUDGET_SUCCESS',
   JSON.stringify({verdict:verdict.verdict,budget:actual}));
+ // B366: in THIS user-selected native B365 shooter + CPU7 session,
+ // actually travel the original B123 25-solid same-team descent/ramp.
+ // Neither prior isolated original route nor the player mission UI
+ // is sufficient. Only live ordinary pointer-locked real CDP keyboard
+ // physics and this same world's B183/B186 witnesses may certify it.
+ const route={
+  schema:'B366_SAME_NATIVE_B365_ORIGINAL_CIRCUIT',
+  source:'25/17/26/0',originalNaturalOpposingRoutesCertified:0,
+  playerChosenShooter:true,cpuPhysicalCount:7,
+  keyEventsNative:true,syntheticTicks:false,syntheticFoot:false,
+  injectedInk:false,addedOriginalSolids:0,actorRelocations:0,
+  sourceScoring:0,originalWinner:'NONE',
+  distinctOriginalSupports:[],stages:[],
+  nativeMissionClear:false,finalOutcome:'NOT_YET_PROVEN'
+ };
+ const saveRoute=()=>writeFileSync(resolve(DIR,
+  'b366-same-session-real-original-circuit.json'),
+  JSON.stringify(route,null,2)+'\n');
+ const nativeFoot=n=>({
+  tick:n.tick,body:n.player.position,
+  physicalSourceId:n.b112OriginalHumanGround?.lastOriginalSourceHitId??null,
+  physicallyGrounded:n.b112OriginalHumanGround?.genuineKccGrounded??false,
+  actualDescent:n.b183OriginalHumanDescent,
+  actualCircuit:n.b186RealOriginalHumanCircuit,
+  realHumanShots:n.shotsFired,
+  originalHumanChangedCells:n.b23HumanInkFeedback.humanChangedCells,
+  nativeCpuCount:n.cpu.cpu.length,
+  actorRelocations:n.cpu.physicalFootRelocations,
+  status:n.matchState,scoreable:n.sourceScoreablePromotions
+ });
+ const stageCheck=(phase,n)=>{
+  route.stages.push({phase,...nativeFoot(n)});
+  if(n.b112OriginalHumanGround?.lastOriginalSourceHitId)
+   route.distinctOriginalSupports=[...new Set([...route.distinctOriginalSupports,
+    n.b112OriginalHumanGround.lastOriginalSourceHitId])];
+  route.finalOutcome='MEASURED_ORIGINAL_KEYBOARD_STAGES';
+  saveRoute();
+  console.log('B366_REAL_NATIVE_ORIGINAL_STAGE',JSON.stringify({
+   phase,tick:n.tick,foot:n.b112OriginalHumanGround?.lastOriginalSourceHitId,
+   grounded:n.b112OriginalHumanGround?.genuineKccGrounded,
+   descent:n.b183OriginalHumanDescent?.status,
+   circuit:n.b186RealOriginalHumanCircuit?.status,
+   body:n.player.position}));
+ };
+ saveRoute();
+ // Undo the genuine earlier 4.4-degree mouse look using the same real
+ // mouse input path. No camera setter, character position reset or warp.
+ await send('Input.dispatchMouseEvent',
+  {type:'mouseMoved',x:800,y:450,button:'none'});
+ const routeStart=verifyAuthority(await snapshot());
+ route.start=nativeFoot(routeStart);
+ route.nativeYawAtStart=routeStart.cameraSourcePractice?.yawDegrees;
+ saveRoute();
+ if(Math.abs(route.nativeYawAtStart)>1.0||
+    routeStart.b183OriginalHumanDescent?.enabled!==true||
+    routeStart.b186RealOriginalHumanCircuit?.enabled!==true)
+  fail('B366_REAL_NATIVE_SOURCE_START_INVALID_'+JSON.stringify(route.start));
+ const routeSteps=[
+  {name:'FIRST_DROP_W200',code:'KeyW',key:'w',vk:87,ticks:200},
+  {name:'LOWER_RIGHT_D12',code:'KeyD',key:'d',vk:68,ticks:12},
+  {name:'LOWER_FORWARD_W18',code:'KeyW',key:'w',vk:87,ticks:18},
+  {name:'ORIGINAL_UPHILL_D90_MAX',code:'KeyD',key:'d',vk:68,ticks:90}
+ ];
+ for(const step of routeSteps){
+  const before=verifyAuthority(await snapshot());
+  const ev={key:step.key,code:step.code,
+   windowsVirtualKeyCode:step.vk,nativeVirtualKeyCode:step.vk};
+  await send('Input.dispatchKeyEvent',{type:'keyDown',...ev});
+  try{
+   const after=await wait(async()=>{
+    const n=verifyAuthority(await snapshot());
+    const physicalRaised=step.name==='ORIGINAL_UPHILL_D90_MAX'&&
+     n.b112OriginalHumanGround?.genuineKccGrounded===true&&
+     n.b112OriginalHumanGround?.lastOriginalSourceHitId===
+      'UndertowT21D:right-low-team-a';
+    return n.tick>=before.tick+step.ticks||physicalRaised?n:false;
+   },180000);
+   route.stages.push({phase:step.name,
+    realCDPKeyDown:true,beforeTick:before.tick,
+    actualPhysicalDurationTicks:after.tick-before.tick,
+    ...nativeFoot(after)});
+   if(after.b112OriginalHumanGround?.lastOriginalSourceHitId)
+    route.distinctOriginalSupports=[...new Set([...route.distinctOriginalSupports,
+      after.b112OriginalHumanGround.lastOriginalSourceHitId])];
+   route.finalOutcome='MEASURED_ORIGINAL_KEYBOARD_STAGES';
+   saveRoute();
+   console.log('B366_REAL_NATIVE_ORIGINAL_STAGE',JSON.stringify({
+    phase:step.name,tick:after.tick,
+    actualTicks:after.tick-before.tick,
+    foot:after.b112OriginalHumanGround?.lastOriginalSourceHitId,
+    descent:after.b183OriginalHumanDescent?.status,
+    circuit:after.b186RealOriginalHumanCircuit?.status,
+    body:after.player.position}));
+  }finally{
+   await send('Input.dispatchKeyEvent',{type:'keyUp',...ev});
+  }
+ }
+ const raised=verifyAuthority(await snapshot());
+ const c=raised.b186RealOriginalHumanCircuit;
+ route.afterOriginalRamp=nativeFoot(raised);
+ route.finalOutcome='HOLD_ORIGINAL_RAMP_OR_DESCENT_UNPROVEN';
+ saveRoute();
+ if(raised.b183OriginalHumanDescent?.originalFirstDropLocalPracticeClear!==true||
+    raised.b183OriginalHumanDescent?.actualOriginalRapierLowerLandingId!==
+     'UndertowT21D:first-drop-landing-positive-z'||
+    c?.actualOriginalRampTouched!==true||
+    c?.actualOriginalRaisedFootColliderId!==
+     'UndertowT21D:right-low-team-a'||
+    c?.genuineGroundedTravelMeters<2||
+    raised.b112OriginalHumanGround?.genuineKccGrounded!==true||
+    raised.b112OriginalHumanGround?.lastOriginalSourceHitId!==
+     'UndertowT21D:right-low-team-a')
+  fail('B366_REAL_GROUNDED_ORIGINAL_CIRCUIT_ROUTE_HOLD_'+
+   JSON.stringify(route.afterOriginalRamp));
+ await picture('B366_RAISED_ORIGINAL_SOURCE');
+ // Fire ONLY the real player weapon from actual raised Rapier KCC pose.
+ // We may move the actual mouse to look downward, but NEVER move/aim
+ // an opponent or edit paint/HP/physics through test APIs.
+ const shotsBefore=nativeFoot(raised);
+ route.nativeRaisedStart=shotsBefore;
+ for(const angle of [510,565]){
+  const before=verifyAuthority(await snapshot());
+  await send('Input.dispatchMouseEvent',
+   {type:'mouseMoved',x:800,y:angle,button:'none'});
+  await send('Input.dispatchMouseEvent',
+   {type:'mousePressed',x:800,y:angle,button:'left',clickCount:1});
+  let after;
+  try{
+   after=await wait(async()=>{
+    const n=verifyAuthority(await snapshot());
+    return n.tick>=before.tick+42?n:false;
+   },150000);
+  }finally{
+   await send('Input.dispatchMouseEvent',
+    {type:'mouseReleased',x:800,y:angle,button:'left',clickCount:1});
+  }
+  route.stages.push({phase:'RAISED_REAL_MOUSE_FIRE_'+angle,
+   genuineMouseDown:true,actualNativeFireTicks:after.tick-before.tick,
+   ...nativeFoot(after)});
+  route.afterNativeSourceInk=nativeFoot(after);
+  saveRoute();
+  if(after.b186RealOriginalHumanCircuit?.sourceLocalPlayClear===true)break;
+ }
+ const finished=verifyAuthority(await snapshot()),mission=finished.b186RealOriginalHumanCircuit;
+ route.final=nativeFoot(finished);
+ route.nativeMissionClear=mission?.sourceLocalPlayClear===true;
+ route.finalOutcome=route.nativeMissionClear?
+  'PASS_TRUE_SAME_SESSION_DROP_RAMP_AND_ORIGINAL_HUMAN_INK':
+  'HOLD_NATIVE_RAISED_FLOOR_FRESH_PAINT_NOT_PROVEN';
+ saveRoute();
+ await picture('B366_REAL_CIRCUIT_FINAL');
+ if(!route.nativeMissionClear||
+    mission?.status!=='REAL_LOCAL_CIRCUIT_CLEAR'||
+    mission?.realPostDropHumanImpactChangedCells<60||
+    finished.sourceScoreablePromotions!==0)
+  fail('B366_TRUE_SAME_SESSION_LOCAL_CIRCUIT_NOT_YET_COMPLETE_'+
+   JSON.stringify(route.final));
+ console.log('B366_TRUE_REAL_SAME_SESSION_SOURCE_CIRCUIT',JSON.stringify({
+  verdict:route.finalOutcome,realPaint:mission.realPostDropHumanImpactChangedCells,
+  groundedTravel:mission.genuineGroundedTravelMeters,
+  originalRaisedFoot:mission.actualOriginalRaisedFootColliderId,
+  actualPhysicalShots:finished.shotsFired,
+  opponentPathsCertified:0,officialWinner:'NONE'}));
 }
 try{await run();}
 catch(error){console.error(error);process.exitCode=1;store();}
