@@ -1,0 +1,25 @@
+name: T21 B346 genuine shooter projectile physics witness foundation
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'src/projectile/B346NativeShooterWitness.ts'
+      - 'src/projectile/B346NativeShooterWitness.test.ts'
+      - 'src/projectile/ProjectileSystem.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - '.github/workflows/t21-b346-physical-projectile-witness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-projectile-witness-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npx vitest run src/projectile/B346NativeShooterWitness.test.ts src/projectile/B345SourceShooterOpeningCadence.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/

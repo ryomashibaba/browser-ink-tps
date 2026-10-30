@@ -5,6 +5,7 @@ import type { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import {b343CanLaunchSourceVolley} from './B343OriginalSourceVolleyBudget';
 import {b345BoundOpeningCooldown} from './B345SourceShooterOpeningCadence';
+import {B346NativeShooterWitness, type B346ShooterExitKind} from './B346NativeShooterWitness';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
@@ -42,6 +43,8 @@ interface ProjectileSlot {
   delayedBurstPaintRadius: number;
   trailPaintRadius: number;
   trailPaintCooldown: number;
+  /** B346 local source-only evidence ID; never affects collision or physics. */
+  b346LaunchId?:number;
 }
 
 interface DelayedBurst {
@@ -74,6 +77,7 @@ export class ProjectileSystem {
   private b343RejectedVolleys=0;
   private b345SourceShooterOpeningEnabled=false;
   private b345RealOpeningClamps=0;
+  private readonly b346ShooterWitness=new B346NativeShooterWitness();
   private b152OriginalAllyAimProjectilesSpawned=0;
   private b152OriginalAllyAimSurfaceCollisions=0;
   private readonly cpuAimDirection = new Vec3();
@@ -194,6 +198,20 @@ export class ProjectileSystem {
       productionAuthorized:false as const};
   }
 
+  /** B346 source-only read-only trace requires both validated B343/B345. */
+  public enableB346NativeShooterWitness():void{
+    if(!this.b343SourceVolleyAtomic||
+       !this.b345SourceShooterOpeningEnabled||this.surfaces.length!==17)
+      throw Error('B346_EXPLICIT_FROZEN_SOURCE_ONLY');
+    this.b346ShooterWitness.enable();
+  }
+  public b346SetRealSourceNativeTick(tick:number):void{
+    this.b346ShooterWitness.setNativeTick(tick);
+  }
+  public b346NativeShooterWitnessSnapshot(){
+    return this.b346ShooterWitness.snapshot();
+  }
+
   public setPlayerWeapon(id: WeaponId): void {
     if (id === this.playerWeaponId) return;
     this.playerWeaponId = id;
@@ -245,6 +263,7 @@ export class ProjectileSystem {
     this.b152OriginalAllyAimSurfaceCollisions=0;
     this.b343RejectedVolleys=0;
     this.b345RealOpeningClamps=0;
+    this.b346ShooterWitness.reset();
     for (const slot of this.slots) this.deactivate(slot);
     this.delayedBursts.length = 0;
     this.fireCooldown = 0;
@@ -432,7 +451,7 @@ export class ProjectileSystem {
       slot.trailPaintCooldown -= dt;
 
       if (slot.ttl <= 0) {
-        this.finishProjectile(slot, slot.position, null);
+        this.finishProjectile(slot, slot.position, null, 'TTL');
         continue;
       }
 
@@ -528,7 +547,9 @@ export class ProjectileSystem {
           }
         }
 
-        this.finishProjectile(slot, combatPoint, null);
+        this.finishProjectile(slot, combatPoint, null,
+          combatKind==='CPU'?'REAL_CPU_HIT':
+          combatKind==='PLAYER'?'REAL_PLAYER_HIT':'QA_TARGET_HIT');
         continue;
       }
 
@@ -541,12 +562,12 @@ export class ProjectileSystem {
           slot.sourceKind === 'CPU' ? slot.sourceId : undefined,
           slot.qaSourceAim
         );
-        this.finishProjectile(slot, paintHit.worldPoint, paintHit);
+        this.finishProjectile(slot, paintHit.worldPoint, paintHit, 'ORIGINAL_PAINTABLE');
         continue;
       }
 
       if (blockerHit) {
-        this.finishProjectile(slot, blockerHit.point, null);
+        this.finishProjectile(slot, blockerHit.point, null, 'ORIGINAL_SOLID');
         continue;
       }
 
@@ -1750,6 +1771,17 @@ export class ProjectileSystem {
     slot.position.copy(origin);
     slot.previousPosition.copy(origin);
     slot.velocity.copy(direction).normalize().mulScalar(speed);
+    slot.b346LaunchId=undefined;
+    // Only REAL human shooter sphere slots; this never spawns a second bullet.
+    if(sourceKind==='HUMAN'&&sourceId==='human'&&
+       profile.weaponClass==='SHOOTER'){
+      slot.b346LaunchId=this.b346ShooterWitness.launch({
+        slotName:slot.entity.name,weaponId:profile.id,
+        worldPosition:[slot.position.x,slot.position.y,slot.position.z],
+        worldVelocity:[slot.velocity.x,slot.velocity.y,slot.velocity.z],
+        gravity:slot.gravity,lifeSeconds:slot.ttl,paintRadius:slot.paintRadius
+      });
+    }
 
     const meshInstance = slot.entity.render?.meshInstances[0];
     if (meshInstance) meshInstance.material = team === Team.A ? this.materialA : this.materialB;
@@ -1762,8 +1794,17 @@ export class ProjectileSystem {
   private finishProjectile(
     slot: ProjectileSlot,
     point: Vec3,
-    paintHit: SurfaceRayHit | null
+    paintHit: SurfaceRayHit | null,
+    reason:B346ShooterExitKind='TTL'
   ): void {
+    if(slot.b346LaunchId!==undefined){
+      this.b346ShooterWitness.exit(slot.b346LaunchId,{
+        reason,
+        worldPosition:[point.x,point.y,point.z],
+        originalPaintSurfaceId:paintHit?.surface.id??null
+      });
+      slot.b346LaunchId=undefined;
+    }
     const profile = weaponProfile(slot.weaponId);
     const paintSource =
       slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu;
