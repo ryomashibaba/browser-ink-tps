@@ -336,6 +336,21 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
      q.originalWorldWitness.every(Number.isFinite))&&
     f.actualSourceCollisionAuthorityProven===false&&
     f.cpuNativeRouteCertified===false)).toBe(true);
+   // B369 measured 7/8 original center-ray misses, while actual
+   // peripheral rays are present every frame. Do not turn geometry
+   // proximity into a native CPU route: some KCC ticks have NO collision.
+   expect(b369.framesWithNearPerimeterRay).toBe(b369.countedFrames);
+   expect(b369.framesWithKccUpwardRealCollision).toBeGreaterThan(0);
+   expect(b369.framesWithKccUpwardRealCollision).toBeLessThan(
+    b369.countedFrames);
+   expect(b369.framesWhereNativeCollisionAndRayAgree).toBe(
+    b369.framesWithKccUpwardRealCollision);
+   expect(b369.ambiguousCenterRayFrames.every(f=>
+    f.centerFootRayId===null&&
+    f.nearSourceFootprintRayIds.length>0)).toBe(true);
+   expect(b369.ambiguousCenterRayFrames.some(f=>
+    f.actualKccContacts.length===0&&f.nearSourceFootprintRayIds.length>0))
+    .toBe(true);
    expect(b369.originalSourceCollisionSemanticsAuthenticated).toBe(false);
    expect(b369.authorizedCpuNavigation).toBe(false);
    // KCC computedGrounded is not proof of a raycast-confirmed exact
