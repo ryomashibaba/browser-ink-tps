@@ -74,6 +74,23 @@ function support(w:RapierStagePhysics,p:V3){
  * a synthetic walkable polygon. This reports source support width,
  * NOT proof that a capsule of that diameter can safely fit.
  */
+/** B369: 9 source-only downward ray observations inside the ACTUAL
+ * human capsule footprint, not a proxy collision or invented floor. */
+function b369Footprint(world:RapierStagePhysics,foot:V3){
+ const r=P.humanRadiusMeters*.78;
+ const directions:readonly (readonly [number,number])[]=[
+  [0,0],[r,0],[-r,0],[0,r],[0,-r],
+  [r/Math.SQRT2,r/Math.SQRT2],[r/Math.SQRT2,-r/Math.SQRT2],
+  [-r/Math.SQRT2,r/Math.SQRT2],[-r/Math.SQRT2,-r/Math.SQRT2]
+ ];
+ return directions.map(([dx,dz])=>{
+  const p:V3=[foot[0]+dx,foot[1],foot[2]+dz];
+  const hit=support(world,p);
+  const near=hit.id!==null&&hit.mismatch!==null&&hit.mismatch<=.20;
+  return {offsetXZ:[dx,dz] as const,realColliderId:hit.id,
+   heightErrorMeters:hit.mismatch,nearFoot:near};
+ });
+}
 function crossSection(c:SourceSide,portion:number){
  const v=c.triangles.flatMap(t=>t.vertices);
  const low=Math.min(...v.map(x=>x[1]));
@@ -134,14 +151,25 @@ function driven(side:Side,c:SourceSide,offset:number){
  const current=():V3=>{const p=body.translation();return[p.x,p.y-P.humanFootOffsetMeters,p.z];};
  let ticks=0,grounded=false;
  const collide=new Set<string>();
+ let b369LastKccContacts:Array<{
+  originalCollisionId:string|null;normalY:number;
+  originalWorldWitness:V3;timeOfImpact:number
+ }>=[];
  const step=(dx:number,dy:number,dz:number)=>{
   const before=body.translation();
   kcc.computeColliderMovement(collider,new Vec3(dx,dy,dz),undefined,undefined,
    col=>world.shouldCharacterCollide(col,'HUMAN'));
+  b369LastKccContacts=[];
   for(let i=0;i<kcc.numComputedCollisions();i++){
-   const hit=kcc.computedCollision(i)?.collider;
-   const id=hit?world.sourceSolidIdForCollider(hit):null;
+   const hit=kcc.computedCollision(i);
+   const id=hit?.collider?world.sourceSolidIdForCollider(hit.collider):null;
    if(id)collide.add(id);
+   if(hit) {
+    const n=hit.normal1,p=hit.witness1;
+    b369LastKccContacts.push({originalCollisionId:id,
+     normalY:n.y,originalWorldWitness:[p.x,p.y,p.z],
+     timeOfImpact:hit.toi});
+   }
   }
   const v=kcc.computedMovement();
   body.setNextKinematicTranslation({x:before.x+v.x,y:before.y+v.y,z:before.z+v.z});
@@ -153,6 +181,16 @@ function driven(side:Side,c:SourceSide,offset:number){
  let floorTicks=0,slopeTicks=0;
  let ungroundedWhileOnSource=0,unexpectedSupportTicks=0;
  const unexpectedSupportDetails:Array<{tick:number;solidId:string|null;foot:V3;rayHeightMismatchMeters:number|null}>=[];
+ const b369AmbiguousFrames:Array<{
+  tick:number;trueKccGrounded:boolean;centerFootRayId:string|null;
+  realBodyFoot:V3;actualKccContacts:typeof b369LastKccContacts;
+  actualFootprintRays:ReturnType<typeof b369Footprint>;
+  upwardSourceCollisionIds:string[];
+  nearSourceFootprintRayIds:string[];
+  collisionAndRayAgree:boolean;
+  actualSourceCollisionAuthorityProven:false;
+  cpuNativeRouteCertified:false
+ }>=[];
  let sourceEntered=false,firstEntry:number|null=null,firstSlope:number|null=null;
  let maxSourceSupportError=0,minDistanceToLast=Infinity;
  const frames:unknown[]=[];
@@ -185,6 +223,24 @@ function driven(side:Side,c:SourceSide,offset:number){
      if(unexpectedSupportDetails.length<24)
       unexpectedSupportDetails.push({tick:i,solidId:hit.id,foot:q,
        rayHeightMismatchMeters:hit.mismatch});
+     if(offset===0&&b369AmbiguousFrames.length<32){
+      const rays=b369Footprint(world,q);
+      const ids=[...new Set(rays.filter(r=>r.nearFoot&&r.realColliderId)
+       .map(r=>r.realColliderId!))];
+      const up=[...new Set(b369LastKccContacts.filter(c=>
+       c.originalCollisionId!==null&&c.normalY>=.5&&
+       Number.isFinite(c.timeOfImpact)&&c.timeOfImpact>=0
+      ).map(c=>c.originalCollisionId!))];
+      b369AmbiguousFrames.push({
+       tick:i,trueKccGrounded:grounded,centerFootRayId:hit.id,
+       realBodyFoot:q,actualKccContacts:b369LastKccContacts.map(x=>({...x})),
+       actualFootprintRays:rays,upwardSourceCollisionIds:up,
+       nearSourceFootprintRayIds:ids,
+       collisionAndRayAgree:up.some(id=>ids.includes(id)),
+       actualSourceCollisionAuthorityProven:false,
+       cpuNativeRouteCertified:false
+      });
+     }
    }
   }
   if(hit.mismatch!==null&&sourceEntered)
@@ -204,6 +260,21 @@ function driven(side:Side,c:SourceSide,offset:number){
   maxAirborneFrames:maxOffGround,ungroundedAfterFloorline:ungroundedWhileOnSource,
   unexpectedSupportAfterFloorline:unexpectedSupportTicks,
   unexpectedSupportDetails,
+  b369PhysicalContactWitness:{
+   ambiguousCenterRayFrames:b369AmbiguousFrames,
+   countedFrames:b369AmbiguousFrames.length,
+   framesWithKccUpwardRealCollision:b369AmbiguousFrames.filter(
+    f=>f.upwardSourceCollisionIds.length>0).length,
+   framesWithNearPerimeterRay:b369AmbiguousFrames.filter(
+    f=>f.nearSourceFootprintRayIds.length>0).length,
+   framesWhereNativeCollisionAndRayAgree:b369AmbiguousFrames.filter(
+    f=>f.collisionAndRayAgree).length,
+   realNativeRapierBody:true,realKccColliderWitness:true,
+   humanCapsuleRadiusMeters:P.humanRadiusMeters,
+   originalSourceCollisionSemanticsAuthenticated:false,
+   authorizedCpuNavigation:false,addedStageSolidCount:0,
+   officialTurfWinner:'NONE',productionAuthorized:false
+  },
   strictOriginalSourceFootRayContinuity:
    sourceEntered&&unexpectedSupportTicks===0&&ungroundedWhileOnSource===0,
   maxObservedSupportMismatchMeters:maxSourceSupportError,
@@ -253,6 +324,20 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
    expect(baseline.floorlineSupportedFrames).toBeGreaterThanOrEqual(3);
    expect(baseline.slopeSupportedFrames).toBeGreaterThanOrEqual(3);
    expect(baseline.maxAirborneFrames).toBe(0);
+   const b369=baseline.b369PhysicalContactWitness;
+   // This gate must remeasure B241's actual ambiguity instead of
+   // treating a missing center ray as either a fall or a safe crossing.
+   expect(b369.countedFrames).toBe(baseline.unexpectedSupportAfterFloorline);
+   expect(b369.countedFrames).toBeGreaterThan(0);
+   expect(b369.ambiguousCenterRayFrames.every(f=>
+    f.trueKccGrounded&&f.actualFootprintRays.length===9&&
+    f.actualKccContacts.every(q=>Number.isFinite(q.normalY)&&
+     Number.isFinite(q.timeOfImpact)&&q.originalWorldWitness.length===3&&
+     q.originalWorldWitness.every(Number.isFinite))&&
+    f.actualSourceCollisionAuthorityProven===false&&
+    f.cpuNativeRouteCertified===false)).toBe(true);
+   expect(b369.originalSourceCollisionSemanticsAuthenticated).toBe(false);
+   expect(b369.authorizedCpuNavigation).toBe(false);
    // KCC computedGrounded is not proof of a raycast-confirmed exact
    // original foot solid in every frame. Keep the ambiguous contact
    // witnessed in the result instead of inventing source support.
@@ -307,6 +392,8 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
       airborne:w.maxAirborneFrames,afterEnteredUngrounded:w.ungroundedAfterFloorline,
       unexpectedSupport:w.unexpectedSupportAfterFloorline,
       ambiguousSupportDetails:w.unexpectedSupportDetails,
+      b369NativeCapsuleContact:w.lateralDeviationMeters===0?
+       w.b369PhysicalContactWitness:undefined,
       strictSourceFootRayContinuity:w.strictOriginalSourceFootRayContinuity,
       firstFloorlineTick:w.firstFloorlineTick,firstSlopeTick:w.firstSlopeTick,
       lastGoalError:w.closestSlopeXZDistanceMeters}))})),
