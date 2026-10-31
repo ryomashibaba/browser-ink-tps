@@ -1244,7 +1244,7 @@ export class UndertowF3PlayablePreviewApp{
    this.panel.querySelector('#t21-f3-b203-full-round')!
     .insertAdjacentElement('afterend',button);
    // B384: source-only real 12-weapon circuit choice, no world edits.
-   const active=this.b384Circuit&&this.b183DropPlayEnabled&&
+   const b384Active=this.b384Circuit&&this.b183DropPlayEnabled&&
     this.b203FullRound&&b192HumanCombatEnabled;
    const multi=document.createElement('button');
    multi.id='t21-f3-b384-source-circuit';
@@ -1252,7 +1252,7 @@ export class UndertowF3PlayablePreviewApp{
    multi.dataset.originalSourceOnly='true';
    multi.dataset.scoreablePromotions='0';
    multi.dataset.actorRelocations='0';
-   multi.textContent=active?
+   multi.textContent=b384Active?
     'EXIT 12-WEAPON SOURCE CIRCUIT · FRESH WORLD':
     'PLAY 180s ORIGINAL CIRCUIT · CHOOSE 1 OF 12 WEAPONS';
    multi.style.cssText='display:block;width:100%;margin:6px 0;'+
@@ -1261,10 +1261,10 @@ export class UndertowF3PlayablePreviewApp{
     'font:800 11px/1.45 system-ui';
    multi.addEventListener('click',()=>{
     if(document.pointerLockElement===this.canvas||this.stopReason||
-       this.survey.snapshot().active||this.galleryIndex>=0||
+       this.survey.snapshot().b384Active||this.galleryIndex>=0||
        ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
        ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
-    const url=b384SourceCircuitHref(window.location.href,!active);
+    const url=b384SourceCircuitHref(window.location.href,!b384Active);
     if(url)window.location.assign(url);
    });
    button.insertAdjacentElement('afterend',multi);
