@@ -18,6 +18,8 @@ on:
       - 'scripts/t21-w10b32-compare-real-source.mjs'
       - 'src/input/PlayerInput.ts'
       - 'src/input/PlayerInput.qa.test.ts'
+      - 'scripts/t21-f3-browser-smoke.mjs'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/ink/GpuInkAtlas.ts'
       - 'scripts/t21-w10b15-pixel-diff.mjs'
@@ -57,6 +59,10 @@ jobs:
         run: node scripts/t21-f3-browser-smoke.mjs
       - name: Certify native CPU visible respawn from identical-camera real PNG pixels
         run: node scripts/t21-w10b15-pixel-diff.mjs /tmp/t21-f3-playable-webgl2
+      - name: B381 true Chrome user-selected Dualies physical Rapier slide and real shot
+        env:
+          T21_B381_REAL_DUALIE_CHROME: '1'
+        run: node scripts/t21-f3-browser-smoke.mjs
       - name: W10-B32 original source native fixed-patrol baseline at same 1080 physics ticks
         env:
           T21_W10B16_NATURAL_AI: '1'
