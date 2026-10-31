@@ -880,6 +880,12 @@ async function run(){
   fail('B373_SOURCE_SESSION_RECAP_NOT_ACTUAL_NATIVE_'+
    JSON.stringify({b373Recap,mission}));
  route.b373RealSourceRecap=b373Recap;
+ console.log('B373_ACTUAL_NATIVE_SOURCE_RECAP_SUCCESS',JSON.stringify({
+  actualShots:b373Recap.shots,actualHumanInkCells:b373Recap.ink,
+  currentLifeOriginalCircuit:mission.status,
+  trueHumanCpuHits:finished.humanCpuDirectHits,
+  officialWinner:b373Recap.winner,originalScoreable:b373Recap.score
+ }));
  route.b371RealPlayerMission=b371Final;
  route.finalOutcome=route.nativeMissionClear?
   'PASS_TRUE_SAME_SESSION_DROP_RAMP_AND_ORIGINAL_HUMAN_INK':
