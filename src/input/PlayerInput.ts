@@ -5,6 +5,8 @@ export class PlayerInput {
   private fire = false;
   // B374: actual human death drops weapon intent, never the real WASD state.
   private combatInputActive = true;
+  // Native splat cannot carry Space/jump or squid wall-surge charging into a new life.
+  private jumpRequiresRelease = false;
   // A press-and-release entirely between 60Hz ticks must still fire once.
   private primaryPressedQueued = false;
   public primaryPressSequence = 0;
@@ -21,6 +23,13 @@ export class PlayerInput {
   ) {
     window.addEventListener('keydown', (event) => {
       if (document.pointerLockElement !== this.canvas) return;
+      // Space is one physical jump/charge intent. A held key across death
+      // must be released before a new life can arm jump or wall surge.
+      if(event.code==='Space' &&
+         (!this.combatInputActive||this.jumpRequiresRelease)){
+        event.preventDefault();
+        return;
+      }
       this.keys.add(event.code);
       if (event.code === 'Space') {
         if (!event.repeat) this.jumpQueued = true;
@@ -35,7 +44,10 @@ export class PlayerInput {
         event.preventDefault();
       }
     });
-    window.addEventListener('keyup', (event) => this.keys.delete(event.code));
+    window.addEventListener('keyup', (event) => {
+      this.keys.delete(event.code);
+      if(event.code==='Space')this.jumpRequiresRelease=false;
+    });
 
     const clearPointerState = (): void => {
       this.fire = false;
@@ -50,6 +62,7 @@ export class PlayerInput {
       this.jumpQueued = false;
       this.subPressedQueued = false;
       this.specialPressedQueued = false;
+      this.jumpRequiresRelease = false;
     };
 
     window.addEventListener('blur', clearGameplayState);
@@ -109,6 +122,11 @@ export class PlayerInput {
     this.subPressedQueued=false;
     this.specialPressedQueued=false;
     this.primaryPressAtMs=Number.NaN;
+    this.jumpQueued=false;
+    this.keys.delete('Space');
+    // A physical Space keyup (not an automatic key repeat) rearms jump
+    // after death; no modification to Rapier, movement, CPU or ink.
+    this.jumpRequiresRelease=!active;
   }
 
   /** Applies only for opt-in, paused, nonproduction source QA tick stepping. */

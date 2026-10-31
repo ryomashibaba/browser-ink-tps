@@ -161,6 +161,30 @@ test('B374 actual splat clears held shots, kit taps and blocks rearming until ge
     input.consumeSpecialPressed()]).toEqual([true,true,true,true,true,true]);
 });
 
+test('B374 native splat discards delayed jump and prevents held Space surge after the true respawn',()=>{
+  const {input,emit}=lockedInput();
+  emit('window','keydown',{code:'KeyW',repeat:false});
+  emit('window','keydown',{code:'Space',repeat:false});
+  expect(input.consumeJump()).toBe(true);
+  emit('window','keydown',{code:'Space',repeat:false});
+  input.setCombatInputActive(false); // actual native death before jump consumption
+  expect(input.consumeJump()).toBe(false);
+  expect(input.jumpHeld).toBe(false);
+  expect(input.moveY).toBe(1); // native WASD remains available
+  emit('window','keydown',{code:'Space',repeat:true}); // dead held key repeat
+  emit('window','keydown',{code:'Space',repeat:false}); // dead fresh action
+  expect([input.jumpHeld,input.consumeJump()]).toEqual([false,false]);
+  input.setCombatInputActive(true); // genuine native 150-tick respawn
+  emit('window','keydown',{code:'Space',repeat:true}); // held before death
+  emit('window','keydown',{code:'Space',repeat:false}); // still no keyup
+  expect([input.jumpHeld,input.consumeJump()]).toEqual([false,false]);
+  emit('window','keyup',{code:'Space'}); // actually released
+  emit('window','keydown',{code:'Space',repeat:false});
+  expect([input.jumpHeld,input.consumeJump(),input.consumeJump()]).toEqual([true,true,false]);
+  emit('window','keyup',{code:'Space'});
+  expect(input.jumpHeld).toBe(false);
+});
+
 test('unlocked and alt-modified left clicks never queue primary fire',()=>{
   const {input,emit}=lockedInput();
   emit('canvas','pointerdown',{button:0,altKey:true});
