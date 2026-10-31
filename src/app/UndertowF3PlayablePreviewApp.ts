@@ -4824,7 +4824,7 @@ export class UndertowF3PlayablePreviewApp{
    .textContent=ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
    .textContent=actuallyPaused?(ready?
-    'WASD move · Mouse aim / fire · Shift squid · Space jump. Click Start when ready.':
+    'WASD move · Mouse aim / fire · Shift squid · Space jump · Q shoulder · [ / ] aim sensitivity. Click Start when ready.':
     Math.ceil(this.remainingSeconds)+'s left · CPU, ink and positions retained')+
     ' · UNSCORED / NO OFFICIAL RESULT':'';
   this.refreshB195CoopHud(run);
@@ -6080,6 +6080,8 @@ export class UndertowF3PlayablePreviewApp{
     (cleared&&phase==='PLAYING'?'A1 CLEAR · KEEP PLAYING\n':'')+
     'HP '+Math.round(state.player.hp)+' · INK '+Math.round(state.player.ink)+
     ' · CPU '+state.cpu.physicalRejoins.length+'/7\n'+
+    'AIM SENS '+this.camera.sourcePracticeViewSnapshot().
+     sourceAimSensitivityMultiplier.toFixed(2)+'x · [ / ] TO ADJUST\n'+
     'HUMAN INK '+state.b23HumanInkFeedback.humanChangedCells+
     ' · CPU INK '+state.cpuImpactInkCellsChanged+'\n'+
     'SPLATS '+state.humanSplats+' / '+state.cpuSplats+

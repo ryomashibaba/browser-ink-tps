@@ -32,7 +32,7 @@ function camera(blocker:Vec3|null=null){
  const physics={castStageSegment:()=>blocker?{
   point:blocker,distance:from.distance(blocker)}:null};
  const canvas={addEventListener:vi.fn(),getBoundingClientRect:()=>({width:1600,height:900})};
- return {view:new ThirdPersonCamera(canvas as never,entity as never,[],physics as never),from,direction};
+ return {view:new ThirdPersonCamera(canvas as never,entity as never,[],physics as never),from,direction,canvas};
 }
 function fixtureCpu(stats:PerformanceStats){
  const target={id:'UNIT_ONLY_B1',team:Team.B,position:new Vec3(0,0,10),
@@ -142,5 +142,55 @@ describe('SOURCE combat center-ray distance',()=>{
   }
   expect(shoot(false)).toEqual({hp:100,hits:0});
   const corrected=shoot(true);expect(corrected.hp).toBeLessThan(100);expect(corrected.hits).toBe(1);
+ });
+});
+
+describe('B375 actual source-only mouse sensitivity',()=>{
+ it('leaves frozen default camera at the 1.0x original look rate',()=>{
+  const {view,canvas}=camera();
+  const key=vi.mocked(window.addEventListener).mock.calls.find(q=>q[0]==='keydown')![1] as (e:any)=>void;
+  const move=vi.mocked(document.addEventListener).mock.calls.find(q=>q[0]==='mousemove')![1] as (e:any)=>void;
+  Object.assign(document,{pointerLockElement:canvas});
+  key({code:'BracketRight',repeat:false,altKey:false,ctrlKey:false,
+   metaKey:false,preventDefault:vi.fn()});
+  move({movementX:10,movementY:-10});
+  const s=view.sourcePracticeViewSnapshot();
+  expect(s.sourcePracticeOnly).toBe(false);
+  expect(s.sourceAimSensitivityMultiplier).toBe(1);
+  expect(s.sourceAimSensitivityAffectsPhysics).toBe(false);
+  expect(s.yawDegrees).toBeCloseTo(2.2,5);
+  expect(s.pitchDegrees).toBeCloseTo(-10.2,5);
+ });
+ it('requires genuine source pointer lock; ignores repeat/modifier and clamps sensitivity',()=>{
+  const {view,canvas}=camera();
+  const key=vi.mocked(window.addEventListener).mock.calls.find(q=>q[0]==='keydown')![1] as (e:any)=>void;
+  const move=vi.mocked(document.addEventListener).mock.calls.find(q=>q[0]==='mousemove')![1] as (e:any)=>void;
+  const event=(code:string,overrides:Record<string,unknown>={})=>({
+   code,repeat:false,altKey:false,ctrlKey:false,metaKey:false,
+   preventDefault:vi.fn(),...overrides
+  });
+  view.enableSourcePracticeControls();
+  key(event('BracketRight'));
+  expect(view.sourcePracticeViewSnapshot().sourceAimSensitivityMultiplier).toBe(1);
+  Object.assign(document,{pointerLockElement:canvas});
+  key(event('BracketRight',{repeat:true}));
+  key(event('BracketRight',{altKey:true}));
+  expect(view.sourcePracticeViewSnapshot().sourceAimSensitivityMultiplier).toBe(1);
+  const accepted=event('BracketRight');key(accepted);
+  expect(accepted.preventDefault).toHaveBeenCalledOnce();
+  expect(view.sourcePracticeViewSnapshot().sourceAimSensitivityMultiplier).toBe(1.25);
+  move({movementX:10,movementY:-10});
+  expect(view.sourcePracticeViewSnapshot()).toMatchObject({
+   sourceAimSensitivityMultiplier:1.25,sourceAimSensitivityAffectsPhysics:false});
+  expect(view.sourcePracticeViewSnapshot().yawDegrees).toBeCloseTo(2.75,5);
+  expect(view.sourcePracticeViewSnapshot().pitchDegrees).toBeCloseTo(-9.75,5);
+  for(let i=0;i<10;i++)key(event('BracketRight'));
+  expect(view.sourcePracticeViewSnapshot().sourceAimSensitivityMultiplier).toBe(1.75);
+  for(let i=0;i<10;i++)key(event('BracketLeft'));
+  expect(view.sourcePracticeViewSnapshot().sourceAimSensitivityMultiplier).toBe(.5);
+  key(event('KeyQ'));
+  expect(view.sourcePracticeViewSnapshot().shoulderSide).toBe('LEFT');
+  expect([originalStage.solids.length,originalStage.paintSurfaces.length,
+   originalStage.navigationLinks?.length]).toEqual([25,17,26]);
  });
 });

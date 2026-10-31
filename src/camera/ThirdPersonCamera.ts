@@ -24,6 +24,8 @@ export class ThirdPersonCamera {
   private currentCameraDistance = Number.NaN;
   /** Gameplay options are opt-in for the T21 source practice preview only. */
   private sourcePracticeControls = false;
+  // B375: source-practice camera aim only; T20 stays at the original 1x.
+  private sourceAimSensitivityMultiplier = 1;
   private sourceSmartOcclusionEnabled = false;
   private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
   private readonly alternateCameraPosition=new Vec3();
@@ -118,6 +120,9 @@ export class ThirdPersonCamera {
   public sourcePracticeViewSnapshot(){
     return {
       sourcePracticeOnly:this.sourcePracticeControls,
+      sourceAimSensitivityMultiplier:this.sourcePracticeControls?
+       this.sourceAimSensitivityMultiplier:1,
+      sourceAimSensitivityAffectsPhysics:false,
       b258OriginalCameraResearch:{
        enabled:this.b258ResearchEnabled,
        profile:this.b258ResearchProfile,
@@ -366,9 +371,17 @@ export class ThirdPersonCamera {
     // The Q shoulder button is a VIEW option, never a movement, aim-assist
     // or collision bypass. It is disabled for all non-F3 routes.
     window.addEventListener('keydown', event=>{
-      if(!this.sourcePracticeControls||event.code!=='KeyQ'||
+      if(!this.sourcePracticeControls||
          event.repeat||event.altKey||event.ctrlKey||event.metaKey||
          document.pointerLockElement!==this.canvas)return;
+      // A real user-only source camera setting, bounded and not persisted.
+      if(event.code==='BracketLeft'||event.code==='BracketRight'){
+        const step=event.code==='BracketLeft'?-.25:.25;
+        this.sourceAimSensitivityMultiplier=Math.max(.5,
+         Math.min(1.75,this.sourceAimSensitivityMultiplier+step));
+        event.preventDefault();return;
+      }
+      if(event.code!=='KeyQ')return;
       this.sourceShoulderSide=this.sourceShoulderSide==='RIGHT'?'LEFT':'RIGHT';
       this.shoulder=this.sourceShoulderSide==='RIGHT'?.72:-.72;
       this.sourceSmartOcclusion.manual(this.sourceShoulderSide);
@@ -395,8 +408,11 @@ export class ThirdPersonCamera {
 
     document.addEventListener('mousemove', (event) => {
       if (document.pointerLockElement !== this.canvas) return;
-      this.yaw += event.movementX * 0.22;
-      this.pitch = Math.max(-55, Math.min(28, this.pitch - event.movementY * 0.18));
+      const sensitivity=this.sourcePracticeControls?
+       this.sourceAimSensitivityMultiplier:1;
+      this.yaw += event.movementX * 0.22 * sensitivity;
+      this.pitch = Math.max(-55, Math.min(28,
+       this.pitch - event.movementY * 0.18 * sensitivity));
     });
 
     this.canvas.addEventListener('wheel', (event) => {
