@@ -139,6 +139,7 @@ async function run(){
   't21W10B348=sourceShooterAccuracyCandidate&'+
   't21W10B351=realCpuHitCue&'+
   't21W10B367=realCpuLifecycle&'+
+  't21W10B368=physicalEnemyFrontier&'+
   't21W10B355=realInkHud&t21W10B356=realImpactReticle';
  await wait(async()=>{try{return await read('location.search')===selectedSearch;}catch{return false;}},45000);
  await ready();
