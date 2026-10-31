@@ -8,17 +8,23 @@ export function chooseB181OriginalSourceSight(
   origin:B181SightPoint,
   opponents:readonly B181SightOpponent[],
   originalStageRayBlocked:(from:B181SightPoint,to:B181SightPoint)=>boolean,
-  preferActorId:string|null=null
+  preferActorId:string|null=null,
+  maxNativeWeaponRangeMeters=32
 ):{actorId:string|null;target:B181SightPoint|null;rays:number;coverRejects:number}{
   const valid=(p:B181SightPoint)=>[p.x,p.y,p.z].every(Number.isFinite);
   if(!valid(origin))return {actorId:null,target:null,rays:0,coverRejects:0};
+  // B383: only an actual weapon-reachable opponent can occupy the target
+  // slot. This is NOT an extra hit, projectile or original-source route.
+  // Old B181 (4-arg) callers keep the original 32m optical envelope.
+  const reachable=Number.isFinite(maxNativeWeaponRangeMeters)?
+   Math.min(32,Math.max(0,maxNativeWeaponRangeMeters)):0;
   let best:B181SightOpponent|null=null,bestSq=Infinity,rays=0,coverRejects=0;
   let preferred:B181SightOpponent|null=null;
   for(const enemy of opponents){
     if(!enemy.id||!valid(enemy.body))continue;
     const dx=enemy.body.x-origin.x,dz=enemy.body.z-origin.z;
     const ds=dx*dx+dz*dz;
-    if(!Number.isFinite(ds)||ds<.04||ds>32*32)continue;
+    if(!Number.isFinite(ds)||ds<.04||ds>reachable*reachable)continue;
     if(Math.abs(enemy.body.y-origin.y)>2.4)continue;
     rays++;
     if(originalStageRayBlocked(origin,enemy.body)){coverRejects++;continue;}
@@ -40,7 +46,8 @@ export function b182ReuseNativeSight(
   }>,
   currentFrame:number,
   currentOrigin:B181SightPoint,
-  currentOpponents:readonly B181SightOpponent[]
+  currentOpponents:readonly B181SightOpponent[],
+  maxNativeWeaponRangeMeters=32
 ):B181SightPoint|null{
   const valid=(p:B181SightPoint)=>[p.x,p.y,p.z].every(Number.isFinite);
   if(!Number.isSafeInteger(currentFrame)||currentFrame<cached.frame||
@@ -52,10 +59,12 @@ export function b182ReuseNativeSight(
   const d=(a:B181SightPoint,b:B181SightPoint)=>
     Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
   // Stricter cache invalidation is not a relaxed physics boundary.
+  const actualRange=Number.isFinite(maxNativeWeaponRangeMeters)?
+   Math.min(32,Math.max(0,maxNativeWeaponRangeMeters)):0;
   if(d(cached.origin,currentOrigin)>.20||
      d(cached.target,actor.body)>.20||
      Math.abs(actor.body.y-currentOrigin.y)>2.4||
-     Math.hypot(actor.body.x-currentOrigin.x,actor.body.z-currentOrigin.z)>32)
+     Math.hypot(actor.body.x-currentOrigin.x,actor.body.z-currentOrigin.z)>actualRange)
     return null;
   return actor.body;
 }

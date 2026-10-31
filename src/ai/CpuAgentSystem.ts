@@ -1943,7 +1943,7 @@ export class CpuAgentSystem {
     // original unbound underpass: without a target in weapon range, paint
     // the verified ORIGINAL floor instead of firing imaginary enemy shots.
     const combatTarget = this.chooseCombatTarget(
-      bot, humanTeam, humanPosition, humanActive, dt
+      bot, humanTeam, humanPosition, humanActive, dt, true
     );
     const canTurfPaint = this.phase14qF2RecoverableSteps &&
       this.phase14qGroundCollision &&
@@ -2507,7 +2507,8 @@ export class CpuAgentSystem {
     humanTeam: Team.A | Team.B,
     humanPosition: Vec3,
     humanActive: boolean,
-    dt:number
+    dt:number,
+    nativeMainWeaponOnly=false
   ): Vec3 | null {
     // Registered original-stage visibility from actual live actor bodies.
     // Only explicit B181 source QA takes this path; T20/default is frozen.
@@ -2523,6 +2524,11 @@ export class CpuAgentSystem {
             y:enemy.position.y+.68,z:enemy.position.z}}))
       ];
       const origin={x:bot.position.x,y:bot.position.y+.85,z:bot.position.z};
+      // B383: the main weapon must not lock on a visible enemy it
+      // cannot actually fire at. Kit targeting remains independent:
+      // specials/subs retain their previous B181 visibility semantics.
+      const maxMainRange=nativeMainWeaponOnly?
+        cpuWeaponRangeMeters(weaponProfile(bot.weaponId)):32;
       const hitAttacker=b213RealAttackerPreference({
         enabled:this.b213SourceCounterfireEnabled,
         tick:this.b181NativeFrame,hitTick:bot.b213ActualHitTick,
@@ -2534,7 +2540,8 @@ export class CpuAgentSystem {
          (!hitAttacker||old.actorId===hitAttacker)){
         if(old.actorId!==null){
           // Current candidates require real living grounded native actors.
-          const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,origin,candidates);
+          const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,
+            origin,candidates,maxMainRange);
           if(fresh){
             this.b182ReusedLiveNativeSight++;
             return this.b212AimAtMovingNativeActor(bot,old.actorId,fresh,dt);
@@ -2546,7 +2553,8 @@ export class CpuAgentSystem {
       }
       const result=chooseB181OriginalSourceSight(
         origin,candidates,this.b181OriginalCombatStageRay,
-        hitAttacker??(bot.role==='SKIRMISHER'?'HUMAN':null));
+        hitAttacker??(bot.role==='SKIRMISHER'?'HUMAN':null),
+        maxMainRange);
       this.b181ActualStageRays+=result.rays;
       this.b181ActualSourceOcclusions+=result.coverRejects;
       if(result.target)this.b181VisibleSelections++;
