@@ -869,8 +869,12 @@ async function run(){
    'score:e?.dataset.t21B58OriginalScoreable,'+
    'winner:e?.dataset.t21B58OfficialWinner,'+
    'text:e?.querySelector("#t21-f3-b58-counts")?.textContent}})()');
-  return n?.text?.includes('CURRENT LIFE SOURCE CIRCUIT')?n:false;
- },15000);
+  // Browser HUD refresh is frame-rate limited; never interpret a prior
+  // valid PAINT sample as a failure after the actual 60Hz source CLEAR.
+  return n?.text?.includes('REAL LOCAL CLEAR')&&
+    n.shots===finished.shotsFired&&
+    n.ink===finished.b23HumanInkFeedback.humanChangedCells?n:false;
+ },30000);
  if(b373Recap.state!=='PLAYING'||
     b373Recap.shots!==finished.shotsFired||
     b373Recap.ink!==finished.b23HumanInkFeedback.humanChangedCells||
