@@ -45,10 +45,12 @@ describe('B384 actual SOURCE local mission visible in PLAYER view',()=>{
   expect(b245InitialSourceView(b384)).toBe('PLAYER');
  });
  it('never exposes fake source circuit to incomplete or benchmark-mixed modes',()=>{
-  for(const suffix of ['&t21W10B183=off','&t21QaDrive=other',
-   '&t21W10B343=sourceVolleyAtomic','&t21QaInput=deterministic',
-   '&t21W10B384=off']){
-   expect(b245ShouldShowSourceCircuitGoal(b384+suffix)).toBe(false);
+  for(const [key,value] of [['t21W10B183','off'],['t21QaDrive','other'],
+   ['t21W10B343','sourceVolleyAtomic'],['t21QaInput','deterministic'],
+   ['t21W10B384','off']] as const){
+   const params=new URLSearchParams(b384);
+   params.set(key,value);
+   expect(b245ShouldShowSourceCircuitGoal('?'+params.toString())).toBe(false);
   }
   expect(b245ShouldShowSourceCircuitGoal('?t21Play=preview')).toBe(false);
  });

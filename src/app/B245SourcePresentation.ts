@@ -14,7 +14,8 @@ export function b245ShouldShowSourceCircuitGoal(search:string):boolean{
  return q.get('t21QaDrive')==='source'&&
   q.get('t21W10B183')==='firstDropPlay'&&
   q.get('t21W10B192')==='humanCombat'&&
-  (q.get('t21W10B343')==='sourceVolleyAtomic'||
+  ((q.get('t21W10B343')==='sourceVolleyAtomic'&&
+    q.get('t21W10B384')===null)||
    b384SourceCircuitSelected(q));
 }
 /** Presentation-only radar policy; undefined B245 data keeps legacy behavior. */
