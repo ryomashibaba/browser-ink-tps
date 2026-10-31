@@ -1,4 +1,5 @@
 import {describe,it,expect} from 'vitest';
+import {b371RealSourceMissionCue} from '../app/B371RealSourceMissionCue';
 import {b343CanLaunchSourceVolley as allow,b343SourceShooterPracticeHref} from './B343OriginalSourceVolleyBudget';
 describe('B343 real SOURCE volley capacity',()=>{
  it('rejects exhausted or partial physical pool without synthetic slots',()=>{
@@ -65,5 +66,32 @@ describe('one-click genuine SOURCE shooter practice',()=>{
    'https://example.test/?t21Play=preview',
    'https://example.test/?t21Play=preview&t21QaDrive=other'])
    expect(b343SourceShooterPracticeHref(x,true)).toBeNull();
+ });
+});
+
+describe('B372 actual SOURCE physical shooter HUD budget integration',()=>{
+ it('reflects the same real B343 free-slot contract with zero score authority',()=>{
+  const original={originalStage:[25,17,26,0] as [number,number,number,number],
+   genuineSourceShooterSelected:true,nativeTick:1550,
+   status:'PAINT_ON_RAISED' as const,originalSourceLocalClear:false,
+   realGroundedTravelMeters:11.2,requiredGroundedTravelMeters:2,
+   realFreshHumanImpactCells:0,requiredFreshHumanImpactCells:60,
+   actualHumanImpactEvents:0,sourceInkOnly:true,realAcceptedShots:9,
+   actualInkPercent:100,playerAlive:true,
+   matchState:'PLAYING' as const,stopped:false,
+   shooterResources:{inkUnits:100,shotInkCostUnits:8,
+    freePhysicalSlots:0,physicalPoolSize:128,
+    realDryFireAttempts:0,realPoolRejections:1}
+  };
+  expect(allow(original.shooterResources.freePhysicalSlots,1)).toBe(false);
+  expect(b371RealSourceMissionCue(original)).toMatchObject({
+   step:'PAINT',progress:2,resourceState:'PHYSICAL_POOL_FULL',
+   observedPoolRejections:1,crossTeamRouteCertified:false,
+   physicalEnemyHitCertified:false,scoreablePromotions:0,gameplayWrites:0});
+  original.shooterResources.freePhysicalSlots=1;
+  expect(allow(original.shooterResources.freePhysicalSlots,1)).toBe(true);
+  expect(b371RealSourceMissionCue(original)?.resourceState).toBe('INK_AND_SLOT_AVAILABLE');
+  original.shooterResources.inkUnits=4;
+  expect(b371RealSourceMissionCue(original)?.resourceState).toBe('LOW_INK');
  });
 });
