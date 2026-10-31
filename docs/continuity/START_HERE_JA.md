@@ -85,3 +85,16 @@ B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashiba
 
 ## B357 — 真正射撃中のSOURCE照準と実インクの同期記録
 前のB356 [CI 41081279142](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41081279142)は確認時点でGitHub Actions Queued。B356終盤の単発DOM読み出しだけでは、実SOURCEのImpactから27物理Tickで消える画面表示を取り逃す。B357は既存B344の6つのCDP frame読取で、同じ`Runtime.evaluate`にネイティブSOURCEのshot/impact/ownershipと実DOM reticleを同梱。追加スクリーンショット/人工時計/架空弾/HP/CPU座標なし。独立監査は単調増加イベント、物理Paintable衝突、SOURCE impact tick/個数/セルと画面の値が一致した場合のみ技術限定PASS、観測漏れはHOLD。原作25/17/26/0、自然対岸経路0/12、ART・敵命中・公式4v4・production HOLDは維持。新HEADの真正CI実測を要確認。
+
+
+## 2026-11-01 最新確認 — B383と次の統合工程
+
+これは**2026-11-01の確認時点**のスナップショット。次回必ずQAブランチの現行HEADを取り直し、この節のSHAを永続的な最新値と誤認しない。
+
+- QA branch: `dev/t21-f4e103w-qa-infra`; 確認HEAD `93fda2edde2273005fcc6564ccdab9bcab161366`（B383、2026-10-31 19:19 JSTにコミット）。旧B358/B381/B382記録は**歴史的証拠**であり現行HEADではない。
+- **同SHAの実行済みCIは5ワークフローすべてSUCCESS**： [B75 #41192281728](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41192281728)（build/関連Vitest、FIXED・SWEEP真正WebGL2インクHUD）、[7 CPU F3 readiness #41192281705](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41192281705)、[原作Rapier KCC #41192281691](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41192281691)、[QA launcher Win/Ubuntu #41192281733](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41192281733)、[Continuity #41192281665](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41192281665)。成功は各ジョブの**検査範囲だけ**を認証する。
+- B383の実変更は、CPU主武器で実射程外の可視敵を選んで射撃不能となる状況を減らす選択処理と8tick視線キャッシュの拒否。原作Rapier遮蔽、生存Actor、CPUキット別の射程は維持。B75 Unit/ビルド成功は**自然な同床の撃破を真正Chromeで実証したことではない**。B381の真のTwin Comets KCCスライド約1.665m＋6発、B382のユーザー実FキーSnap Bomb投擲・爆発は別工程の限定真正Chrome証拠であり、原作の全性能一致を保証しない。
+- 既にB371〜B374で原作first drop→真の下段KCC→既存坂→実弾のインクまでの局所回路が真正Chromeで実証されている。B81ではFIXEDとSWEEPの各180秒セッションを同一タブで完走。ただし**人間の自然な相手チーム交戦・公式Turf score・完全8人対戦は未認証**。
+- 不変の境界：**25 Rapier solids / 17 PaintSurface / 26 source NavLinks / 0 Scoreable / 自然な相手陣経路0/12**。F4中央アンダーパス±Zは原作ソース根拠が不足してHOLD。正式4v4・勝敗・ART承認・production有効化・T21のmainマージは禁止。 `activationReady=false` 維持。Draft PR #5は**別の歴史的研究ブランチ**であり、本QAブランチを勝手にPR #5へ移植しない。
+- **次の一括工程（F1〜F5の既存方針を保持）**：新B番号の単体QA追加ではなく、(1)今ある本物の7 CPUと人間、同一SOURCE 180秒、実主武器/サブ/塗装/HP/復活/ローカル回路を１つの遊べる導線で点検し、(2)実際の原作敵遭遇を阻む**0/12経路と二つの中央ソース間隙**の根拠を既存証拠と突合する。実接続が認証できなければ経路のみHOLDし、正直なSOURCE練習として遊べる機能・操作・視認性を先に統合改善する。架空床/敵のワープ/偽HP/偽塗装/公式勝敗への昇格は厳禁。新たな大量CI、長大ZIP/会話ログ再作成も避ける。
+- 現在のB383検証は**技術限定PASS / 完成判定HOLD**。新作業の成果報告はHEAD、CI URL、真正実測、未解決、次の遊べる機能を短く記す。
