@@ -124,6 +124,43 @@ test.each(['blur','visibilitychange','pointerlockchange'])('%s still clears all 
     input.consumeJump(),input.consumeSubPressed(),input.consumeSpecialPressed()]).toEqual([false,false,false,false,false]);
 });
 
+test('B374 actual splat clears held shots, kit taps and blocks rearming until genuine respawn',()=>{
+  const {input,emit}=lockedInput();
+  emit('window','keydown',{code:'KeyW',repeat:false});
+  emit('window','keydown',{code:'ShiftLeft',repeat:false});
+  emit('window','keydown',{code:'KeyF',repeat:false});
+  emit('window','keydown',{code:'KeyG',repeat:false});
+  emit('canvas','pointerdown',{button:0});
+  emit('canvas','pointerdown',{button:2});
+  expect([input.fireHeld,input.secondaryHeld]).toEqual([true,true]);
+  const sequence=input.primaryPressSequence;
+  input.setCombatInputActive(false);
+  input.setCombatInputActive(false);
+  expect([input.fireHeld,input.secondaryHeld,input.consumePrimaryPressed(),
+    input.consumeSecondaryPressed(),input.consumeSubPressed(),
+    input.consumeSpecialPressed()]).toEqual([false,false,false,false,false,false]);
+  expect([input.moveY,input.squidHeld]).toEqual([1,true]);
+  emit('canvas','pointerdown',{button:0});
+  emit('canvas','pointerdown',{button:2});
+  emit('window','keydown',{code:'KeyF',repeat:false});
+  emit('window','keydown',{code:'KeyG',repeat:false});
+  expect(input.primaryPressSequence).toBe(sequence);
+  input.setCombatInputActive(true);
+  expect([input.fireHeld,input.secondaryHeld,input.consumePrimaryPressed(),
+    input.consumeSecondaryPressed(),input.consumeSubPressed(),
+    input.consumeSpecialPressed()]).toEqual([false,false,false,false,false,false]);
+  emit('canvas','pointerup',{button:0});
+  emit('canvas','pointerup',{button:2});
+  emit('canvas','pointerdown',{button:0});
+  emit('canvas','pointerdown',{button:2});
+  emit('window','keydown',{code:'KeyF',repeat:false});
+  emit('window','keydown',{code:'KeyG',repeat:false});
+  expect(input.primaryPressSequence).toBe(sequence+1);
+  expect([input.fireHeld,input.secondaryHeld,input.consumePrimaryPressed(),
+    input.consumeSecondaryPressed(),input.consumeSubPressed(),
+    input.consumeSpecialPressed()]).toEqual([true,true,true,true,true,true]);
+});
+
 test('unlocked and alt-modified left clicks never queue primary fire',()=>{
   const {input,emit}=lockedInput();
   emit('canvas','pointerdown',{button:0,altKey:true});

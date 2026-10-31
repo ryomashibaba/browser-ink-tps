@@ -4248,6 +4248,8 @@ export class UndertowF3PlayablePreviewApp{
     this.b20ProfileStop('inkOwnershipTick',paintStart);
     if(this.resources.currentHp<=0){
      if(this.respawnFrames===0){
+      // B374: never replay an attack held through real native HP zero.
+      this.input.setCombatInputActive(false);
       this.humanSplats++;
       this.player.setLifecycleActive(false);
       this.feedback.splat(Team.A,this.player.getPosition(this.p));
@@ -4264,6 +4266,8 @@ export class UndertowF3PlayablePreviewApp{
        this.b186Circuit.resetForActualNativeHumanRespawn();
       }
       this.player.setLifecycleActive(true);
+      // Genuine restored life needs a fresh shot/sub press.
+      this.input.setCombatInputActive(true);
       this.humanRespawns++;
       this.respawnFrames=0;
      }

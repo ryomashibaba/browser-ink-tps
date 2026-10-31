@@ -3,6 +3,8 @@ export class PlayerInput {
   // QA-only synthetic axes. Never active during regular Pointer Lock play.
   private qaAxis: Readonly<{x:number;y:number}> | null = null;
   private fire = false;
+  // B374: actual human death drops weapon intent, never the real WASD state.
+  private combatInputActive = true;
   // A press-and-release entirely between 60Hz ticks must still fire once.
   private primaryPressedQueued = false;
   public primaryPressSequence = 0;
@@ -24,11 +26,11 @@ export class PlayerInput {
         if (!event.repeat) this.jumpQueued = true;
         event.preventDefault();
       }
-      if (event.code === 'KeyF' && !event.repeat) {
+      if (event.code === 'KeyF' && !event.repeat && this.combatInputActive) {
         this.subPressedQueued = true;
         event.preventDefault();
       }
-      if (event.code === 'KeyG' && !event.repeat) {
+      if (event.code === 'KeyG' && !event.repeat && this.combatInputActive) {
         this.specialPressedQueued = true;
         event.preventDefault();
       }
@@ -64,6 +66,7 @@ export class PlayerInput {
       if (
         event.button === 0 &&
         !event.altKey &&
+        this.combatInputActive &&
         document.pointerLockElement === this.canvas
       ) {
         if (!this.fire) {
@@ -73,7 +76,8 @@ export class PlayerInput {
         }
         this.fire = true;
       }
-      if (event.button === 2 && document.pointerLockElement === this.canvas) {
+      if (event.button === 2 && this.combatInputActive &&
+        document.pointerLockElement === this.canvas) {
         if (!this.secondary) this.secondaryPressedQueued = true;
         this.secondary = true;
         event.preventDefault();
@@ -91,6 +95,20 @@ export class PlayerInput {
     // and pending taps so the next physics tick cannot execute a stale action.
     // Keyboard movement remains valid while the canvas still owns Pointer Lock.
     canvas.addEventListener('pointercancel', clearPointerState);
+  }
+
+  /** Only the actual native human HP=0 and 150-tick life recovery call this.
+   * Preserve user movement, mouse lock and actual Rapier pose. */
+  public setCombatInputActive(active:boolean):void {
+    if(this.combatInputActive===active)return;
+    this.combatInputActive=active;
+    this.fire=false;
+    this.primaryPressedQueued=false;
+    this.secondary=false;
+    this.secondaryPressedQueued=false;
+    this.subPressedQueued=false;
+    this.specialPressedQueued=false;
+    this.primaryPressAtMs=Number.NaN;
   }
 
   /** Applies only for opt-in, paused, nonproduction source QA tick stepping. */
@@ -120,7 +138,7 @@ export class PlayerInput {
   }
 
   public get fireHeld(): boolean {
-    return this.fire;
+    return this.combatInputActive&&this.fire;
   }
 
   /** Consume once per physics tick, including short real pointer taps. */
@@ -131,7 +149,7 @@ export class PlayerInput {
   }
 
   public get secondaryHeld(): boolean {
-    return this.secondary;
+    return this.combatInputActive&&this.secondary;
   }
 
   public consumeSecondaryPressed(): boolean {
