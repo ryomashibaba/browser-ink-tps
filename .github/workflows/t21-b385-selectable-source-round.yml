@@ -1,0 +1,37 @@
+name: T21 B385 genuine selectable native SOURCE round
+on:
+  push:
+    branches: [dev/t21-f4e103w-qa-infra]
+    paths:
+      - 'scripts/t21-b385-native-selectable-circuit.mjs'
+      - '.github/workflows/t21-b385-selectable-source-round.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b385-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-b384-user-round:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run build -- --base=/browser-ink-tps/
+      - name: Validate existing B384 source gates and HUD without test duplication
+        run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
+      - run: node --check scripts/t21-b385-native-selectable-circuit.mjs
+      - name: Drive true Chromium user-selected 12-weapon source 180s round
+        run: node scripts/t21-b385-native-selectable-circuit.mjs
+      - name: Preserve actual screenshots, native ticks and honest HOLD evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b385-genuine-selected-source-round
+          path: /tmp/t21-b385/
+          retention-days: 14
+          if-no-files-found: warn
