@@ -1,4 +1,5 @@
 import {describe,expect,it} from 'vitest';
+import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
 import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
@@ -247,5 +248,65 @@ describe('B361 genuine source practice player-facing shooter telemetry',()=>{
    (s:F3PlayableHudState)=>{s.b23HumanInkFeedback!.humanChangedCells=-1;},
    (s:F3PlayableHudState)=>{s.shotsFired=1.5;},
   ]){const s=valid();change(s);expect(b361GenuineShooterLine(s)).toBeNull();}
+ });
+});
+
+describe('B371 real SOURCE practice: three verified local goals and native shooter/ink',()=>{
+ const frame=():B371SourceMissionFrame=>({
+  originalStage:[25,17,26,0],genuineSourceShooterSelected:true,
+  nativeTick:100,status:'WAIT_FIRST_DROP',
+  originalSourceLocalClear:false,
+  realGroundedTravelMeters:0,requiredGroundedTravelMeters:2,
+  realFreshHumanImpactCells:0,requiredFreshHumanImpactCells:60,
+  actualHumanImpactEvents:0,sourceInkOnly:true,
+  realAcceptedShots:0,actualInkPercent:100,
+  playerAlive:true,matchState:'PLAYING',stopped:false
+ });
+ it('shows genuine original first drop and no winner, never fake combat',()=>{
+  const x=b371RealSourceMissionCue(frame())!;
+  expect(x).toMatchObject({step:'DROP',progress:1,
+   scoreablePromotions:0,crossTeamRouteCertified:false,
+   officialWinner:'NONE',physicalEnemyHitCertified:false,gameplayWrites:0});
+  expect(x.text).toContain('ORIGINAL FIRST DROP');
+  expect(x.text).toContain('NO TURF WINNER');
+ });
+ it('only advances by REAL circuit state, with native movement and actual ink',()=>{
+  const f=frame();f.status='MOVE_TO_ORIGINAL_RAISED';
+  f.realGroundedTravelMeters=1.386;
+  expect(b371RealSourceMissionCue(f)?.text).toContain('1.4 / 2.0m');
+  f.status='PAINT_ON_RAISED';f.realFreshHumanImpactCells=37;
+  f.actualHumanImpactEvents=3;f.realAcceptedShots=9;
+  f.actualInkPercent=66.7;
+  const y=b371RealSourceMissionCue(f)!;
+  expect(y).toMatchObject({step:'PAINT',progress:3,completed:false});
+  expect(y.text).toContain('37 / 60');
+  expect(y.text).toContain('9 REAL SHOTS');
+  expect(y.text).toContain('67% INK');
+  f.status='REAL_LOCAL_CIRCUIT_CLEAR';
+  f.originalSourceLocalClear=true;f.realFreshHumanImpactCells=60;
+  expect(b371RealSourceMissionCue(f)).toMatchObject({step:'CLEAR',completed:true});
+ });
+ it('holds at source error and does not turn official scoring on',()=>{
+  const f=frame();f.status='INVALID_SOURCE_WITNESS';
+  expect(b371RealSourceMissionCue(f)).toMatchObject({step:'HOLD',completed:false});
+  f.status='WAIT_FIRST_DROP';f.stopped=true;
+  expect(b371RealSourceMissionCue(f)?.step).toBe('HOLD');
+  f.stopped=false;f.playerAlive=false;
+  expect(b371RealSourceMissionCue(f)?.text).toContain('PLAYER SPLATTED');
+  f.playerAlive=true;f.matchState='TIME_UP';
+  expect(b371RealSourceMissionCue(f)?.text).toContain('TIME UP');
+ });
+ it('fails closed when geometry, physical-source proof or resource stats drift',()=>{
+  for(const edit of [
+   (f:B371SourceMissionFrame)=>{f.originalStage=[25,17,26,1];},
+   (f:B371SourceMissionFrame)=>{f.originalStage=[26,17,26,0];},
+   (f:B371SourceMissionFrame)=>{f.sourceInkOnly=false;},
+   (f:B371SourceMissionFrame)=>{f.genuineSourceShooterSelected=false;},
+   (f:B371SourceMissionFrame)=>{f.realAcceptedShots=-1;},
+   (f:B371SourceMissionFrame)=>{f.actualInkPercent=Infinity;},
+   (f:B371SourceMissionFrame)=>{f.realFreshHumanImpactCells=NaN;},
+   (f:B371SourceMissionFrame)=>{f.requiredFreshHumanImpactCells=0;},
+   (f:B371SourceMissionFrame)=>{f.originalSourceLocalClear=true;}
+  ]){const x=frame();edit(x);expect(b371RealSourceMissionCue(x)).toBeNull();}
  });
 });
