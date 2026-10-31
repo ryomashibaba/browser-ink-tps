@@ -11,6 +11,7 @@ export function b380NativeWeaponGuidance(input:{
  readonly currentMode:'HUMAN'|'SQUID';
  readonly canShoot:boolean;
  readonly realSubEnabled:boolean;
+ readonly realSubName?:string;
 }):string{
  const p=input.profile;
  const finiteCharges=Number.isFinite(input.actualDodgeCharges)?
@@ -32,5 +33,6 @@ export function b380NativeWeaponGuidance(input:{
   control='LMB ROLL / SWIPE';
  }
  return 'WEAPON '+p.displayName+' · '+control+
-  (input.realSubEnabled?' · F SUB':'')+' · PRACTICE';
+  (input.realSubEnabled?' · F SUB'+
+   (input.realSubName?' '+input.realSubName:''):'')+' · PRACTICE';
 }

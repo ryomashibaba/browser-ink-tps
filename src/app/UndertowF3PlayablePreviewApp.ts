@@ -88,6 +88,7 @@ import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {WEAPON_ORDER,weaponProfile} from '../weapons/WeaponCatalog';
 import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
+import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -325,7 +326,8 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b38HumanSubEnabled=(()=>{
   const q=new URL(location.href).searchParams;
   return q.get('t21QaDrive')!=='source'||
-   q.get('t21W10B38')==='humanSub'||sourceCoopEligible(q);
+   q.get('t21W10B38')==='humanSub'||sourceCoopEligible(q)||
+   b382NativeSourceUserSubEnabled(q);
  })();
  private readonly feedback:GameFeedback;
  private readonly humanSpawn:Vec3;
@@ -1485,6 +1487,9 @@ export class UndertowF3PlayablePreviewApp{
     });
     if(approved){
      this.projectiles.setPlayerWeapon(approved);
+     // Show the chosen EXISTING real sub kit immediately, not the default
+     // pulse bomb stale label until the next actual physical F throw.
+     this.stats.playerSubWeaponName=subWeaponProfile(weaponKit(approved).sub).displayName;
      this.refresh();
     }else choose.value=this.projectiles.currentPlayerWeapon.id;
    });
@@ -4922,7 +4927,9 @@ export class UndertowF3PlayablePreviewApp{
      actualChargePercent:this.stats.playerWeaponChargePercent,
      currentMode:this.player.currentMode,
      canShoot:this.player.canShoot,
-     realSubEnabled:this.b38HumanSubEnabled
+     realSubEnabled:this.b38HumanSubEnabled,
+     realSubName:subWeaponProfile(weaponKit(
+      this.projectiles.currentPlayerWeapon.id).sub).displayName
     })+'. Click Start when ready.':
     Math.ceil(this.remainingSeconds)+'s left · CPU, ink and positions retained')+
     ' · UNSCORED / NO OFFICIAL RESULT':'';
@@ -6197,7 +6204,9 @@ export class UndertowF3PlayablePreviewApp{
      actualChargePercent:this.stats.playerWeaponChargePercent,
      currentMode:this.player.currentMode,
      canShoot:this.player.canShoot,
-     realSubEnabled:this.b38HumanSubEnabled
+     realSubEnabled:this.b38HumanSubEnabled,
+     realSubName:subWeaponProfile(weaponKit(
+      this.projectiles.currentPlayerWeapon.id).sub).displayName
     })+'\n'+
     'AIM SENS '+this.camera.sourcePracticeViewSnapshot().
      sourceAimSensitivityMultiplier.toFixed(2)+'x · [ / ] TO ADJUST\n'+

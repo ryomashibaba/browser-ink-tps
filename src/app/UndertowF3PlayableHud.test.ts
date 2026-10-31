@@ -3,6 +3,8 @@ import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEn
 import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
 import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
+import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
+import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {weaponProfile} from '../weapons/WeaponCatalog';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
@@ -541,5 +543,48 @@ describe('B380 real 180s weapon guidance never invents an action or a score',()=
    .toContain('CHARGE 0%');
   expect(view('rail-charger',{actualChargePercent:190}))
    .toContain('CHARGE 100%');
+ });
+});
+
+// B382: only an ordinary, genuine user-selected SOURCE 180s combat round
+// gains the already-implemented REAL F-key SubWeaponSystem. Scripted B343,
+// deterministic research, normal previews and frozen production stay intact.
+describe('B382 genuine SOURCE human 180s weapon kit sub selection',()=>{
+ const q=(extras:Record<string,string>={})=>{
+  const p=new URLSearchParams({
+   t21Play:'preview',t21QaDrive:'source',
+   t21W10B203:'fullRound',t21W10B192:'humanCombat',...extras});
+  return b382NativeSourceUserSubEnabled(p);
+ };
+ it('enables the real sub for a true non-deterministic human 180s combat',()=>{
+  expect(q()).toBe(true);
+ });
+ it('refuses all fake and benchmark source contexts',()=>{
+  for(const overrides of [
+   {t21Play:'normal'},{t21QaDrive:'normal'},
+   {t21W10B203:'off'},{t21W10B192:'off'},
+   {t21QaInput:'deterministic'},
+   {t21W10B343:'sourceVolleyAtomic'}
+  ])expect(q(overrides)).toBe(false);
+ });
+ it('guides the selected weapon physical kit, never the default pulse bomb',()=>{
+  for(const id of WEAPON_ORDER){
+   const profile=weaponProfile(id);
+   const sub=subWeaponProfile(weaponKit(id).sub);
+   const label=b380NativeWeaponGuidance({
+    profile,hp:100,actualDodgeCharges:2,actualChargePercent:0,
+    currentMode:'HUMAN',canShoot:true,realSubEnabled:true,
+    realSubName:sub.displayName
+   });
+   expect(label).toContain('F SUB '+sub.displayName);
+  }
+ });
+ it('does not advertise a physically disabled source sub',()=>{
+  expect(b380NativeWeaponGuidance({
+   profile:weaponProfile('twin-comets'),hp:100,
+   actualDodgeCharges:2,actualChargePercent:0,
+   currentMode:'HUMAN',canShoot:true,realSubEnabled:false,
+   realSubName:'Snap Bomb'
+  })).not.toContain('F SUB');
  });
 });

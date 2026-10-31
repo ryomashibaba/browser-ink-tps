@@ -582,6 +582,48 @@ async function main(){
    return x.shotsFired>after.shotsFired?x:false;
   },90000);
   await mouse('mouseReleased');
+  // B382: the genuine selected Twin Comets kit contains Snap Bomb.
+  // Use a REAL CDP F key press, not an app-level throw invocation;
+  // actual PlayerResources ink cost and physical bomb must resolve.
+  const subBefore=await get();
+  if(subBefore.b38HumanSub.enabled!==true||
+     subBefore.b38HumanSub.weapon!=='Snap Bomb')
+   reject('B382_REAL_SELECTED_DUALIES_KIT_NOT_ENABLED_'+
+    JSON.stringify(subBefore.b38HumanSub));
+  for(const type of ['keyDown','keyUp'])
+   await cmd('Input.dispatchKeyEvent',{type,key:'f',code:'KeyF',
+    windowsVirtualKeyCode:70,nativeVirtualKeyCode:70});
+  const thrown=await waitUntil(async()=>{
+   const x=await get();
+   if(x.stopReason)reject('B382_F_SUB_SOURCE_STOP_'+x.stopReason);
+   return x.b38HumanSub.throws>subBefore.b38HumanSub.throws?x:false;
+  },90000);
+  const exploded=await waitUntil(async()=>{
+   const x=await get();
+   if(x.stopReason)reject('B382_F_SUB_EXPLOSION_SOURCE_STOP_'+x.stopReason);
+   return x.b38HumanSub.explosions>subBefore.b38HumanSub.explosions?x:false;
+  },90000);
+  if(thrown.b38HumanSub.weapon!=='Snap Bomb'||
+     exploded.sourceScoreablePromotions!==0||
+     exploded.originalSourceSolids!==25||
+     exploded.originalPaintSurfaces!==17||
+     exploded.originalSourceNavigationLinks!==26||
+     exploded.productionAuthorized!==false)
+   reject('B382_SELECTED_SUB_REAL_SOURCE_AUTHORITY_DRIFT');
+  const b382={schema:'B382_CHROME_REAL_SOURCE_USER_SELECTED_SNAP_BOMB',
+   kitWeapon:'twin-comets',actualSub:'Snap Bomb',
+   truePhysicalFPresses:1,actualSubThrows:
+    thrown.b38HumanSub.throws-subBefore.b38HumanSub.throws,
+   actualSubExplosions:
+    exploded.b38HumanSub.explosions-subBefore.b38HumanSub.explosions,
+   nativePhysicalTickDelta:exploded.tick-subBefore.tick,
+   originalStage:'25/17/26/0',actualInkEconomy:true,
+   syntheticBombs:0,syntheticActorMoves:0,sourceScoreable:0,
+   naturalEnemyEngagementCertified:false,productionAuthorized:false};
+  writeFileSync(resolve(OUTPUT,'b382-selected-dualie-real-snap-bomb.json'),
+   JSON.stringify(b382,null,2));
+  console.log('B382_CHROME_REAL_SELECTED_WEAPON_KIT_SUB_PASS',
+   JSON.stringify(b382));
   const frame=await screenshot('B381_ACTUAL_DUALIES_RAPIER_AND_SHOT');
   const record={schema:'B381_REAL_CHROME_USER_POINTER_LOCKED_DUALIE',weapon:'twin-comets',
    realMouseSelect:true,realRightClick:true,realLeftFire:true,
