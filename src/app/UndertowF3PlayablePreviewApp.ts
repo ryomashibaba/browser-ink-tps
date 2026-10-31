@@ -106,6 +106,7 @@ import {b343SourceShooterPracticeHref} from '../projectile/B343OriginalSourceVol
 import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
+import {nativeSourceRoundActionWindow} from './NativeSourceRoundActionWindow';
 import {createB160SourceCpuActivityView}
  from './B160SourceCpuActivityView';
 import {b69PreviewAimView,b69NextSourcePreviewHref}
@@ -4166,10 +4167,21 @@ export class UndertowF3PlayablePreviewApp{
     const projectileStart=this.b20ProfileStart();
     // Actual native clock from the genuine fixed-step loop, read-only.
     this.projectiles.b346SetRealSourceNativeTick(this.clock.tick);
-    this.cpu.drainFireRequests(req=>this.projectiles.queueCpuShot(req));
+    // B376: after the actual CPU tick and 180s native clock, the last
+    // tick may resolve existing physical projectiles but cannot create
+    // new post-round CPU/human attacks or use a stale human HP flag.
+    const actionWindow=nativeSourceRoundActionWindow({
+     matchState:this.matchState,stopReason:this.stopReason,
+     actualHumanHp:this.resources.currentHp
+    });
+    this.cpu.drainFireRequests(req=>{
+     if(actionWindow.cpuCanStartNewActions)this.projectiles.queueCpuShot(req);
+    });
     // The default remains reject/rollback. Only opt-in QA uses the genuine
     // weapon execution path; 17 paintable surfaces remain UNSCORED.
-    this.cpu.drainKitRequests(request=>this.cpuKit?.queue(request)??false);
+    this.cpu.drainKitRequests(request=>
+     actionWindow.cpuCanStartNewActions&&
+     (this.cpuKit?.queue(request)??false));
     this.camera.update(this.player.getPosition(this.p));
     const primaryTap=this.input.consumePrimaryPressed();
     const realPointerFire=this.input.fireHeld||primaryTap;
@@ -4187,10 +4199,11 @@ export class UndertowF3PlayablePreviewApp{
       this.projectiles.solvePlayerLaunchDirection(
        this.muzzle,this.target,this.aim);
       this.projectiles.fixedUpdate(seconds,
-       alive&&w.armed&&!w.splatSeen&&realPointerFire&&this.player.canShoot&&
+       actionWindow.humanCanStartNewActions&&w.armed&&!w.splatSeen&&
+        realPointerFire&&this.player.canShoot&&
         document.pointerLockElement===this.canvas,
        false,this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
-       alive,alive);
+       actionWindow.humanCanStartNewActions,alive);
      }else{
      this.target.copy(w.target.position).add(new Vec3(0,.68,0));
      this.aim.copy(this.target).sub(this.player.getPosition(this.p)).normalize();
@@ -4199,9 +4212,10 @@ export class UndertowF3PlayablePreviewApp{
       this.muzzle,this.target,this.aim);
      // Real ProjectileSystem and CPU HP lifecycle. No damage injection.
      this.projectiles.fixedUpdate(seconds,
-      alive&&w.armed&&!w.splatSeen&&w.target.lifeState==='ACTIVE',
+      actionWindow.humanCanStartNewActions&&w.armed&&
+       !w.splatSeen&&w.target.lifeState==='ACTIVE',
       false,this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
-      alive,alive);
+      actionWindow.humanCanStartNewActions,alive);
      }
      if(w.target.lifeState==='SPLATTED')w.splatSeen=true;
     }else{
@@ -4211,10 +4225,12 @@ export class UndertowF3PlayablePreviewApp{
      this.projectiles.solvePlayerLaunchDirection(
       this.muzzle,this.target,this.aim);
      this.projectiles.fixedUpdate(seconds,
-      alive&&realPointerFire&&this.player.canShoot,
-      alive&&this.input.secondaryHeld&&this.player.canShoot,
+      actionWindow.humanCanStartNewActions&&
+       realPointerFire&&this.player.canShoot,
+      actionWindow.humanCanStartNewActions&&
+       this.input.secondaryHeld&&this.player.canShoot,
       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
-      alive,alive);
+      actionWindow.humanCanStartNewActions,alive);
     }
     if(this.stats.shotsFired>humanShotsBefore&&
        this.input.primaryPressSequence>this.lastRealFirePressMeasured){
@@ -4230,8 +4246,10 @@ export class UndertowF3PlayablePreviewApp{
     // F is a real keyboard sub throw, not CPU automation, free score or
     // a projectile injected by QA. Original Rapier/paint physics resolve it.
     // Consume even when disabled or splatted: never fire stale buffered F.
-    if(this.b38HumanSubEnabled&&subTap&&alive&&this.player.canShoot&&
-       document.pointerLockElement===this.canvas&&this.matchState!=='TIME_UP'){
+    if(this.b38HumanSubEnabled&&subTap&&
+       actionWindow.humanCanStartNewActions&&
+       this.resources.currentHp>0&&this.player.canShoot&&
+       document.pointerLockElement===this.canvas){
      this.humanSub.tryThrow(
       weaponKit(this.projectiles.currentPlayerWeapon.id).sub,Team.A,
       this.muzzle,this.aim);

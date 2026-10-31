@@ -1,4 +1,5 @@
 import {describe,expect,it} from 'vitest';
+import {nativeSourceRoundActionWindow} from './NativeSourceRoundActionWindow';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
 import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
@@ -360,5 +361,34 @@ describe('B372 real native SOURCE shooter resource feedback',()=>{
    (f:B371SourceMissionFrame)=>{f.shooterResources!.realPoolRejections=-1;},
    (f:B371SourceMissionFrame)=>{f.shooterResources!.realDryFireAttempts=1.5;}
   ]){const f=make();alter(f);expect(b371RealSourceMissionCue(f)).toBeNull();}
+ });
+});
+
+describe('B376 real 180-second end and genuine HP attack cutoff',()=>{
+ it('allows live source actors in staging or playing',()=>{
+  for(const matchState of ['STAGING','PLAYING'])
+   expect(nativeSourceRoundActionWindow({
+    matchState,actualHumanHp:100,stopReason:null})).toEqual({
+     humanCanStartNewActions:true,cpuCanStartNewActions:true});
+ });
+ it('blocks both teams from starting fresh shots/kits at actual time up',()=>{
+  expect(nativeSourceRoundActionWindow({
+   matchState:'TIME_UP',actualHumanHp:100,stopReason:null})).toEqual({
+    humanCanStartNewActions:false,cpuCanStartNewActions:false});
+ });
+ it('disallows new human actions at true lethal HP without turning CPU off',()=>{
+  for(const actualHumanHp of [0,-1,NaN])
+   expect(nativeSourceRoundActionWindow({
+    matchState:'PLAYING',actualHumanHp,stopReason:null})).toEqual({
+     humanCanStartNewActions:false,cpuCanStartNewActions:true});
+ });
+ it('SAFE STOP and unrecognized phases fail closed',()=>{
+  for(const matchState of ['STAGING','PLAYING','TIME_UP','INVALID'])
+   expect(nativeSourceRoundActionWindow({
+    matchState,actualHumanHp:100,stopReason:'SOURCE_PHYSICAL_STOP'})).toEqual({
+     humanCanStartNewActions:false,cpuCanStartNewActions:false});
+  expect(nativeSourceRoundActionWindow({
+   matchState:'UNKNOWN',actualHumanHp:100,stopReason:null})).toEqual({
+    humanCanStartNewActions:false,cpuCanStartNewActions:false});
  });
 });
