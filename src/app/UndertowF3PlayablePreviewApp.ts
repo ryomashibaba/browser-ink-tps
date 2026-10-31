@@ -1261,7 +1261,7 @@ export class UndertowF3PlayablePreviewApp{
     'font:800 11px/1.45 system-ui';
    multi.addEventListener('click',()=>{
     if(document.pointerLockElement===this.canvas||this.stopReason||
-       this.survey.snapshot().b384Active||this.galleryIndex>=0||
+       this.survey.snapshot().active||this.galleryIndex>=0||
        ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
        ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
     const url=b384SourceCircuitHref(window.location.href,!b384Active);
