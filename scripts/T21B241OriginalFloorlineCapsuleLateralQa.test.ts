@@ -155,7 +155,13 @@ function driven(side:Side,c:SourceSide,offset:number){
   originalCollisionId:string|null;normalY:number;
   originalWorldWitness:V3;timeOfImpact:number
  }>=[];
+ // B370: actual before/after KCC movement; this is measurement only.
+ let b370LastStep:{
+  actualPreStepFoot:V3;actualPostStepFoot:V3;
+  requestedMovement:V3;computedMovement:V3
+ }|null=null;
  const step=(dx:number,dy:number,dz:number)=>{
+  const actualPreStepFoot=current();
   const before=body.translation();
   kcc.computeColliderMovement(collider,new Vec3(dx,dy,dz),undefined,undefined,
    col=>world.shouldCharacterCollide(col,'HUMAN'));
@@ -173,7 +179,10 @@ function driven(side:Side,c:SourceSide,offset:number){
   }
   const v=kcc.computedMovement();
   body.setNextKinematicTranslation({x:before.x+v.x,y:before.y+v.y,z:before.z+v.z});
-  grounded=kcc.computedGrounded();world.step();ticks++;return grounded;
+  grounded=kcc.computedGrounded();world.step();ticks++;
+  b370LastStep={actualPreStepFoot,actualPostStepFoot:current(),
+   requestedMovement:[dx,dy,dz],computedMovement:[v.x,v.y,v.z]};
+  return grounded;
  };
  for(let i=0;i<30&&!grounded;i++)step(0,-.12,0);
  const initially=support(world,current());
@@ -191,6 +200,13 @@ function driven(side:Side,c:SourceSide,offset:number){
   actualSourceCollisionAuthorityProven:false;
   cpuNativeRouteCertified:false
  }>=[];
+ // Timeline is collected only on the zero-lateral-offset baseline.
+ // Contact events are from native Rapier KCC, never a synthetic support.
+ const b370NativeTimeline:Array<{
+  tick:number;actualPreStepFoot:V3;actualPostStepFoot:V3;
+  requestedMovement:V3;computedMovement:V3;computedGrounded:boolean;
+  realUpwardSourceContacts:typeof b369LastKccContacts
+ }>=[];
  let sourceEntered=false,firstEntry:number|null=null,firstSlope:number|null=null;
  let maxSourceSupportError=0,minDistanceToLast=Infinity;
  const frames:unknown[]=[];
@@ -207,6 +223,14 @@ function driven(side:Side,c:SourceSide,offset:number){
   step(d>1e-8?dx/d*speed*DT:0,vy*DT,d>1e-8?dz/d*speed*DT:0);
   if(grounded&&vy<0)vy=-.5;
   const q=current(),hit=support(world,q);
+  if(offset===0&&b370LastStep) {
+   b370NativeTimeline.push({tick:i,...b370LastStep,
+    computedGrounded:grounded,
+    realUpwardSourceContacts:b369LastKccContacts.filter(contact=>
+     contact.originalCollisionId!==null&&contact.normalY>=.5&&
+     Number.isFinite(contact.timeOfImpact)&&contact.timeOfImpact>=0)
+     .map(contact=>({...contact}))});
+  }
   const onFloor=grounded&&hit.id===physicalFloorline&&
    hit.mismatch!==null&&hit.mismatch<.20;
   const onSlope=grounded&&hit.id===physicalSlope&&
@@ -253,6 +277,40 @@ function driven(side:Side,c:SourceSide,offset:number){
   if(floorTicks>=3&&slopeTicks>=3)break;
   if(q[1]<-8)break;
  }
+ // B370: show the *real* nearest before/after source contacts around
+ // B369's silent frames. Neighbour contacts are not same-tick support.
+ const b370SilentFrames=b369AmbiguousFrames.filter(f=>
+  f.actualKccContacts.length===0).map(f=>{
+  const index=b370NativeTimeline.findIndex(x=>x.tick===f.tick);
+  if(index<0)throw Error('B370_REAL_KCC_TIMELINE_MISSING_'+side+'_'+f.tick);
+  const here=b370NativeTimeline[index]!;
+  const previous=b370NativeTimeline.slice(0,index).reverse()
+   .find(x=>x.realUpwardSourceContacts.length>0);
+  const next=b370NativeTimeline.slice(index+1)
+   .find(x=>x.realUpwardSourceContacts.length>0);
+  const realDelta:V3=[
+   here.actualPostStepFoot[0]-here.actualPreStepFoot[0],
+   here.actualPostStepFoot[1]-here.actualPreStepFoot[1],
+   here.actualPostStepFoot[2]-here.actualPreStepFoot[2]];
+  const witness=(x:typeof here|undefined)=>x?{
+   tick:x.tick,tickSeparation:Math.abs(x.tick-f.tick),
+   genuineNativeUpwardContacts:x.realUpwardSourceContacts}:null;
+  return {tick:f.tick,trueComputedGrounded:here.computedGrounded,
+   sameFrameKccContacts:f.actualKccContacts,
+   actualPreStepFoot:here.actualPreStepFoot,
+   actualPostStepFoot:here.actualPostStepFoot,
+   actualNativeBodyDisplacement:realDelta,
+   actualRequestedMovement:here.requestedMovement,
+   actualKccComputedMovement:here.computedMovement,
+   nearestPreviousOriginalContact:witness(previous),
+   nearestNextOriginalContact:witness(next),
+   observedSourceFootprintRays:f.actualFootprintRays,
+   configuredSnapToGroundMeters:P.snapToGroundMeters,
+   snapAppliedInThisFrameCertified:false,
+   sameFrameOriginalSourceContactCertified:false,
+   continuousOriginalSupportCertified:false,
+   autonomousCpuRouteCertified:false};
+ });
  return {side,lateralDeviationMeters:offset,registeredInitialSupport:initially.id,
   sameNativeRapierBody:true,initialSpawnOnly:true,teleportsAfterSpawn:0,
   kccSteps:ticks,firstFloorlineTick:firstEntry,firstSlopeTick:firstSlope,
@@ -260,6 +318,14 @@ function driven(side:Side,c:SourceSide,offset:number){
   maxAirborneFrames:maxOffGround,ungroundedAfterFloorline:ungroundedWhileOnSource,
   unexpectedSupportAfterFloorline:unexpectedSupportTicks,
   unexpectedSupportDetails,
+  b370TemporalKccAudit:{
+   silentFrames:b370SilentFrames,
+   recordedReal60HzBaselineSteps:b370NativeTimeline.length,
+   observedKccSilentGroundedCount:b370SilentFrames.length,
+   actualRapierWorldUnchanged:true,
+   newSourceCollidersAdded:0,liveCpuRouteCertified:false,
+   officialTurfWinner:'NONE',productionAuthorized:false
+  },
   b369PhysicalContactWitness:{
    ambiguousCenterRayFrames:b369AmbiguousFrames,
    countedFrames:b369AmbiguousFrames.length,
@@ -353,6 +419,30 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
     .toBe(true);
    expect(b369.originalSourceCollisionSemanticsAuthenticated).toBe(false);
    expect(b369.authorizedCpuNavigation).toBe(false);
+   // B370 records genuine temporal contact and actual motor displacement
+   // without manufacturing six solver contacts at ground=true silent ticks.
+   const b370=baseline.b370TemporalKccAudit;
+   expect(b370.silentFrames).toHaveLength(3);
+   expect(b370.recordedReal60HzBaselineSteps).toBeGreaterThan(100);
+   expect(b370.silentFrames.every(f=>
+    f.trueComputedGrounded&&f.sameFrameKccContacts.length===0&&
+    f.observedSourceFootprintRays.length===9&&
+    f.configuredSnapToGroundMeters===.24&&
+    !f.snapAppliedInThisFrameCertified&&
+    !f.sameFrameOriginalSourceContactCertified&&
+    !f.continuousOriginalSupportCertified&&
+    !f.autonomousCpuRouteCertified&&
+    [...f.actualPreStepFoot,...f.actualPostStepFoot,
+     ...f.actualRequestedMovement,...f.actualKccComputedMovement,
+     ...f.actualNativeBodyDisplacement].every(Number.isFinite)&&
+    f.actualNativeBodyDisplacement.every((v,j)=>
+     Math.abs(v-f.actualKccComputedMovement[j]!)<1e-4)&&
+    [f.nearestPreviousOriginalContact,f.nearestNextOriginalContact]
+     .filter(x=>x!==null).every(x=>
+      x!.tickSeparation>0&&
+      x!.genuineNativeUpwardContacts.length>0))).toBe(true);
+   expect(b370.newSourceCollidersAdded).toBe(0);
+   expect(b370.liveCpuRouteCertified).toBe(false);
    // KCC computedGrounded is not proof of a raycast-confirmed exact
    // original foot solid in every frame. Keep the ambiguous contact
    // witnessed in the result instead of inventing source support.
@@ -409,6 +499,8 @@ describe('B241 real physical original FloorLine width and guided capsule lateral
       ambiguousSupportDetails:w.unexpectedSupportDetails,
       b369NativeCapsuleContact:w.lateralDeviationMeters===0?
        w.b369PhysicalContactWitness:undefined,
+      b370NativeTemporalContact:w.lateralDeviationMeters===0?
+       w.b370TemporalKccAudit:undefined,
       strictSourceFootRayContinuity:w.strictOriginalSourceFootRayContinuity,
       firstFloorlineTick:w.firstFloorlineTick,firstSlopeTick:w.firstSlopeTick,
       lastGoalError:w.closestSlopeXZDistanceMeters}))})),
