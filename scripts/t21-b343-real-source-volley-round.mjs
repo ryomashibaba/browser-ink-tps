@@ -281,6 +281,7 @@ async function run(){
    .sort((a,b)=>a.distanceMeters-b.distanceMeters||
     a.id.localeCompare(b.id));
   if(enemies.length!==4||!enemies[0]||
+    n.cpu.cpu.length!==7||
     n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
     n.originalSourceNavigationLinks!==26||
     n.sourceScoreablePromotions!==0||

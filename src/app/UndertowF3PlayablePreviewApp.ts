@@ -5850,7 +5850,8 @@ export class UndertowF3PlayablePreviewApp{
     humanBody:state.player.position,humanHp:state.player.hp,
     humanGrounded:this.stats.playerGrounded,
     humanOriginalSupportId:
-     state.b112OriginalHumanGround.lastOriginalSourceHitId,
+     'lastOriginalSourceHitId' in state.b112OriginalHumanGround?
+      state.b112OriginalHumanGround.lastOriginalSourceHitId:null,
     cpu:state.cpu.cpu,
     stageRayBlocked:(from,to)=>!!this.physics.castStageSegment(
      new Vec3(...from),new Vec3(...to),'ink-projectile')
