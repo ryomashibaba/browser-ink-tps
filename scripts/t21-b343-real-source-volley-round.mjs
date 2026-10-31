@@ -858,6 +858,28 @@ async function run(){
     b371Final.text?.includes('REAL SHOTS')!==true)
   fail('B371_PLAYER_REAL_CLEAR_AND_SOURCE_SHOOTER_HUD_DRIFT_'+
    JSON.stringify(b371Final));
+ // B373: the existing 180s native session recap (not a new scoreboard)
+ // must use THIS actual source-local circuit and the true physical CPU HP
+ // ledger. The user's local mission never becomes an official Turf result.
+ const b373Recap=await wait(async()=>{
+  const n=await read('(() => {const e=document.querySelector('+
+   '"#t21-f3-b58-source-session");return {state:e?.dataset.t21B58State,'+
+   'shots:Number(e?.dataset.t21B58HumanShotCount??-1),'+
+   'ink:Number(e?.dataset.t21B58HumanChangedInk??-1),'+
+   'score:e?.dataset.t21B58OriginalScoreable,'+
+   'winner:e?.dataset.t21B58OfficialWinner,'+
+   'text:e?.querySelector("#t21-f3-b58-counts")?.textContent}})()');
+  return n?.text?.includes('CURRENT LIFE SOURCE CIRCUIT')?n:false;
+ },15000);
+ if(b373Recap.state!=='PLAYING'||
+    b373Recap.shots!==finished.shotsFired||
+    b373Recap.ink!==finished.b23HumanInkFeedback.humanChangedCells||
+    b373Recap.score!=='0'||b373Recap.winner!=='NONE'||
+    !b373Recap.text.includes('REAL LOCAL CLEAR')||
+    !b373Recap.text.includes('REAL HUMAN→CPU HITS 0'))
+  fail('B373_SOURCE_SESSION_RECAP_NOT_ACTUAL_NATIVE_'+
+   JSON.stringify({b373Recap,mission}));
+ route.b373RealSourceRecap=b373Recap;
  route.b371RealPlayerMission=b371Final;
  route.finalOutcome=route.nativeMissionClear?
   'PASS_TRUE_SAME_SESSION_DROP_RAMP_AND_ORIGINAL_HUMAN_INK':
