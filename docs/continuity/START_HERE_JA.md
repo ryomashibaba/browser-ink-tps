@@ -98,3 +98,12 @@ B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashiba
 - 不変の境界：**25 Rapier solids / 17 PaintSurface / 26 source NavLinks / 0 Scoreable / 自然な相手陣経路0/12**。F4中央アンダーパス±Zは原作ソース根拠が不足してHOLD。正式4v4・勝敗・ART承認・production有効化・T21のmainマージは禁止。 `activationReady=false` 維持。Draft PR #5は**別の歴史的研究ブランチ**であり、本QAブランチを勝手にPR #5へ移植しない。
 - **次の一括工程（F1〜F5の既存方針を保持）**：新B番号の単体QA追加ではなく、(1)今ある本物の7 CPUと人間、同一SOURCE 180秒、実主武器/サブ/塗装/HP/復活/ローカル回路を１つの遊べる導線で点検し、(2)実際の原作敵遭遇を阻む**0/12経路と二つの中央ソース間隙**の根拠を既存証拠と突合する。実接続が認証できなければ経路のみHOLDし、正直なSOURCE練習として遊べる機能・操作・視認性を先に統合改善する。架空床/敵のワープ/偽HP/偽塗装/公式勝敗への昇格は厳禁。新たな大量CI、長大ZIP/会話ログ再作成も避ける。
 - 現在のB383検証は**技術限定PASS / 完成判定HOLD**。新作業の成果報告はHEAD、CI URL、真正実測、未解決、次の遊べる機能を短く記す。
+
+
+## 2026-11-01 B384実装・検証の確定引き継ぎ
+
+- B384 QAコードHEAD: `ffeee57b66057540422e065036b54577a173447a`。既存F1〜F5優先と固定原作25 Rapier solids/17 PaintSurfaces/26 NavLinks/0 Scoreable/敵陣自然経路0/12/ART HOLD/正式4v4 HOLDを維持。新チャットでは必ず最新HEADを再取得。
+- **具体的に実装した機能:** 新しいボタンで12既存武器をREADY選択し、実SOURCE180秒・人間+7CPU・B183原作初落下→B186本物の下段/坂道→実物理弾による新インク局所課題をつなぐ。実ミッション0/3〜3/3と非得点結果画面、真の新セッション再挑戦が連動。既存B343固定シューター基準、T20/本番のコード権限を変更しない。B245 PLAYER viewではこの原作局所課題を表示する。B343専用の射撃スロット値は通常の12武器モードで未計測と記す。
+- [B75 #41221228783](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41221228783)の**同SHA preflight**でTypeScript/Vite build SUCCESS、**Vitest 64ファイル・314/314 SUCCESS**、旧CI trigger matrix SUCCESSを確認。B75真正WebGL2後半とB337短時間実Chromeはこの記録時点で進行中。ジョブ最終結論と別に判断する。
+- **B384自身のREADY武器選択→本物のゲーム操作→原作初落下/坂→実PaintEvent→180秒タイムアップまでの一本の真正Chrome検証は未実施/未認証。** Unit PASSを完全なプレイ/原作武器忠実度/人間操作の完成と誤認禁止。検証後に本当の失敗点のみ改修し、B番号だけの微小QA増殖は禁止。
+- [変更コード](https://github.com/ryomashibaba/browser-ink-tps/commit/ffeee57b66057540422e065036b54577a173447a) と [B384工程記録](../qa/T21_B384_NATIVE_SELECTED_CIRCUIT_JA.md)。次は実ブラウザ一気通貫の実測と、体験を阻む本物の視認/入力/敵遭遇の問題を優先。原作根拠のない中央通路・得点・無料スペシャルの追加禁止。
