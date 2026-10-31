@@ -7,6 +7,8 @@ import type {B186CircuitStatus} from './B186RealOriginalSourceCircuit';
 export interface B371SourceMissionFrame {
   originalStage:readonly [number,number,number,number];
   genuineSourceShooterSelected:boolean;
+  /** Ordinary selected original-source physical kit, never B343 benchmark. */
+  genuineSourceOpenLoadoutSelected?:boolean;
   nativeTick:number;
   status:B186CircuitStatus;
   originalSourceLocalClear:boolean;
@@ -32,7 +34,9 @@ export interface B371SourceMissionFrame {
 export type B371MissionStep='DROP'|'RAMP'|'PAINT'|'CLEAR'|'HOLD';
 export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
   if(x.originalStage.join(',')!=='25,17,26,0'||
-     x.genuineSourceShooterSelected!==true||x.sourceInkOnly!==true||
+     !(x.genuineSourceShooterSelected===true||x.genuineSourceOpenLoadoutSelected===true)||
+     (x.genuineSourceShooterSelected===true&&x.genuineSourceOpenLoadoutSelected===true)||
+     x.sourceInkOnly!==true||
      !Number.isSafeInteger(x.nativeTick)||x.nativeTick<0||
      !Number.isSafeInteger(x.realAcceptedShots)||x.realAcceptedShots<0||
      !Number.isSafeInteger(x.actualHumanImpactEvents)||x.actualHumanImpactEvents<0||
@@ -71,7 +75,7 @@ export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
    'REAL PROJECTILE SLOTS BUSY · WAIT':
    resourceState==='INK_AND_SLOT_AVAILABLE'?
    'INK + PHYSICAL SHOT SLOT AVAILABLE':
-   'NATIVE SHOOTER RESOURCES NOT MEASURED';
+   'PHYSICAL SHOT CAPACITY NOT MEASURED';
   const limitedGround=Math.min(x.realGroundedTravelMeters,
    x.requiredGroundedTravelMeters);
   const limitedInk=Math.min(x.realFreshHumanImpactCells,

@@ -89,6 +89,7 @@ import {WEAPON_ORDER,weaponProfile} from '../weapons/WeaponCatalog';
 import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
+import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -451,6 +452,7 @@ export class UndertowF3PlayablePreviewApp{
   const p=new URL(location.href).searchParams;
   return p.get('t21Play')==='preview'&&p.get('t21W10B203')==='fullRound';
  })();
+ private readonly b384Circuit=b384SourceCircuitSelected(new URL(location.href).searchParams);
  private b203EverLockedRealPointer=false;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
@@ -1056,6 +1058,13 @@ export class UndertowF3PlayablePreviewApp{
      if(replay)window.location.assign(replay);
      return;
     }
+    // B384 retry: genuine fresh 180s world, not the old shortened descent mode.
+    if(this.b183DropPlayEnabled&&this.b203FullRound&&
+       b192HumanCombatEnabled&&this.b384Circuit){
+     const url=b384SourceCircuitHref(window.location.href,true);
+     if(url)window.location.assign(url);
+     return;
+    }
     // Historical independent original-source descent mode unchanged.
     const dest=new URL(window.location.pathname,window.location.origin);
     dest.searchParams.set('t21Play','preview');
@@ -1234,6 +1243,31 @@ export class UndertowF3PlayablePreviewApp{
    });
    this.panel.querySelector('#t21-f3-b203-full-round')!
     .insertAdjacentElement('afterend',button);
+   // B384: source-only real 12-weapon circuit choice, no world edits.
+   const active=this.b384Circuit&&this.b183DropPlayEnabled&&
+    this.b203FullRound&&b192HumanCombatEnabled;
+   const multi=document.createElement('button');
+   multi.id='t21-f3-b384-source-circuit';
+   multi.type='button';
+   multi.dataset.originalSourceOnly='true';
+   multi.dataset.scoreablePromotions='0';
+   multi.dataset.actorRelocations='0';
+   multi.textContent=active?
+    'EXIT 12-WEAPON SOURCE CIRCUIT · FRESH WORLD':
+    'PLAY 180s ORIGINAL CIRCUIT · CHOOSE 1 OF 12 WEAPONS';
+   multi.style.cssText='display:block;width:100%;margin:6px 0;'+
+    'padding:11px;border-radius:9px;border:1px solid #85c9f1;'+
+    'background:#173d65;color:#ecf8ff;cursor:pointer;'+
+    'font:800 11px/1.45 system-ui';
+   multi.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||this.stopReason||
+       this.survey.snapshot().active||this.galleryIndex>=0||
+       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
+       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
+    const url=b384SourceCircuitHref(window.location.href,!active);
+    if(url)window.location.assign(url);
+   });
+   button.insertAdjacentElement('afterend',multi);
   }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   // B69: an ordinary preview user can explicitly compare the already
@@ -4475,13 +4509,15 @@ export class UndertowF3PlayablePreviewApp{
       // view; QA mode keeps all original source evidence lines.
       if(this.b203FullRound&&
          this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY'&&
-         new URL(location.href).searchParams.get('t21W10B343')==='sourceVolleyAtomic'&&
+         (new URL(location.href).searchParams.get('t21W10B343')==='sourceVolleyAtomic'||this.b384Circuit)&&
          document.querySelector<HTMLElement>('#ui-root')?.dataset.t21B245Presentation==='PLAYER'){
+       const shooterBenchmark=new URL(location.href).searchParams.get('t21W10B343')==='sourceVolleyAtomic';
        const cue=b371RealSourceMissionCue({
         originalStage:[this.rawStage.solids.length,
          this.rawStage.paintSurfaces.length,
          this.rawStage.navigationLinks?.length??0,0],
-        genuineSourceShooterSelected:true,nativeTick:frame,
+        genuineSourceShooterSelected:shooterBenchmark,
+        genuineSourceOpenLoadoutSelected:this.b384Circuit,nativeTick:frame,
         status:circuit.status,
         originalSourceLocalClear:circuit.sourceLocalPlayClear,
         realGroundedTravelMeters:circuit.genuineGroundedTravelMeters,
@@ -4492,14 +4528,15 @@ export class UndertowF3PlayablePreviewApp{
         sourceInkOnly:actualHumanInk.originalSourceOnly,
         realAcceptedShots:this.stats.shotsFired,
         actualInkPercent:this.stats.playerInkPercent,
-        shooterResources:{
+        // B343-only projectile-slot evidence does not exist in selected kit mode.
+        shooterResources:shooterBenchmark?{
          inkUnits:this.stats.playerInk,
          shotInkCostUnits:this.projectiles.currentPlayerWeapon.inkCost,
          freePhysicalSlots:this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().actualFreeSlots,
          physicalPoolSize:this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().physicalPoolSize,
          realDryFireAttempts:this.stats.inkDryFireAttempts,
          realPoolRejections:this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().rejectedVolleys
-        },
+        }:undefined,
         playerAlive:this.resources.currentHp>0,
         matchState:this.matchState,stopped:!!this.stopReason
        });
@@ -5822,6 +5859,9 @@ export class UndertowF3PlayablePreviewApp{
    },
    b343OriginalSourceVolleyBudget:
      this.projectiles.b343OriginalSourceVolleyBudgetSnapshot(),
+    b384OpenLoadoutCircuit:this.b384Circuit&&this.b183DropPlayEnabled&&
+      this.b203FullRound&&
+      this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
    b346NativeShooterWitness:this.projectiles.b346NativeShooterWitnessSnapshot(),
    b348SourceShooterAccuracy:this.projectiles.b348SourceShooterAccuracySnapshot(),

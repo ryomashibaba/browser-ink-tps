@@ -27,6 +27,8 @@ export interface SourceSessionMetrics {
  humanRespawns:number;
  /** Optional true physical shooter: no scripted enemy placement or Turf result. */
  b343OriginalSourceVolleyBudget?:{enabled:boolean};
+ /** B384 actual native selectable source circuit flag. */
+ b384OpenLoadoutCircuit?:boolean;
  humanCpuDirectHits?:number;
  humanCpuDirectSplats?:number;
  /** Existing B186 authentic CURRENT-LIFE source-only goal, resets on real death. */
@@ -58,9 +60,14 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
     new Set(s.cpu.physicalRejoins).size!==s.cpu.physicalRejoins.length)
   throw Error('W10_B58_INVALID_NATIVE_SESSION_VALUES');
  const selectedShooter=s.b343OriginalSourceVolleyBudget?.enabled===true;
+ if(s.b384OpenLoadoutCircuit!==undefined&&typeof s.b384OpenLoadoutCircuit!=='boolean')
+  throw Error('B384_INVALID_SOURCE_MODE');
+ if(selectedShooter&&s.b384OpenLoadoutCircuit===true)
+  throw Error('B384_BENCHMARK_CONFLICT');
+ const selectedCircuit=selectedShooter||s.b384OpenLoadoutCircuit===true;
  const mission=s.b186RealOriginalHumanCircuit;
  const validPositive=(n:number)=>Number.isFinite(n)&&n>=0;
- if(selectedShooter&&(
+ if(selectedCircuit&&(
     !mission||mission.enabled!==true||
     !['WAIT_FIRST_DROP','MOVE_TO_ORIGINAL_RAISED','PAINT_ON_RAISED',
       'REAL_LOCAL_CIRCUIT_CLEAR','INVALID_SOURCE_WITNESS'].includes(mission.status)||
@@ -76,7 +83,8 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
     s.humanCpuDirectHits!<0||s.humanCpuDirectSplats!<0||
     s.humanCpuDirectSplats!>s.humanCpuDirectHits!))
    throw Error('B373_UNTRUSTED_SOURCE_PRACTICE_RECAP');
- const sourceShooter=selectedShooter&&mission?{
+ // Historical field retained for B373: both modes use the same real-life B186 proof.
+ const sourceShooter=selectedCircuit&&mission?{
   currentLifeStatus:mission.status,
   currentLifeLocalClear:mission.sourceLocalPlayClear,
   originalRampContact:mission.actualOriginalRampTouched,

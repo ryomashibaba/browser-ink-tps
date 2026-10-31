@@ -4,6 +4,8 @@ import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelect
 import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
+import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
+import {sourceSessionSummary,type SourceSessionMetrics} from './UndertowF3SourceSessionBoard';
 import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {weaponProfile} from '../weapons/WeaponCatalog';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
@@ -592,5 +594,75 @@ describe('B382 genuine SOURCE human 180s weapon kit sub selection',()=>{
    currentMode:'HUMAN',canShoot:true,realSubEnabled:false,
    realSubName:'Snap Bomb'
   })).not.toContain('F SUB');
+ });
+});
+
+describe('B384 selected original-source 12-weapon physical circuit',()=>{
+ const root='https://example.test/?t21Play=preview&t21QaDrive=source';
+ it('uses a clean, real, source-only 180s world without B343 benchmark',()=>{
+  const url=b384SourceCircuitHref(root,true)!;const p=new URL(url).searchParams;
+  expect(b384SourceCircuitSelected(p)).toBe(true);
+  expect(p.get('t21W10B183')).toBe('firstDropPlay');
+  expect(p.get('t21W10B192')).toBe('humanCombat');
+  expect(p.get('t21W10B203')).toBe('fullRound');
+  expect(p.has('t21W10B343')).toBe(false);
+  expect(b384SourceCircuitHref(url,true)).toBe(url);
+  expect(b384SourceCircuitSelected(new URL(b384SourceCircuitHref(url,false)!).searchParams)).toBe(false);
+ });
+ it('rejects bogus original source, deterministic or benchmark flags',()=>{
+  expect(b384SourceCircuitHref('https://example.test/',true)).toBeNull();
+  const url=b384SourceCircuitHref(root,true)!;
+  for(const [k,v] of [['t21QaDrive','other'],['t21W10B112','off'],
+   ['t21W10B183','off'],['t21W10B192','off'],['t21W10B203','off'],
+   ['t21W10B384','off'],['t21QaInput','deterministic'],
+   ['t21W10B343','sourceVolleyAtomic']] as const){
+   const p=new URL(url).searchParams;p.set(k,v);
+   expect(b384SourceCircuitSelected(p)).toBe(false);
+  }
+ });
+ it('shows current-life B186 physical 3/3 in each original 12-weapon profile',()=>{
+  for(const id of WEAPON_ORDER){
+   expect(weaponProfile(id)).toBeTruthy();
+   const f:B371SourceMissionFrame={originalStage:[25,17,26,0],
+    genuineSourceShooterSelected:false,genuineSourceOpenLoadoutSelected:true,
+    nativeTick:960,status:'REAL_LOCAL_CIRCUIT_CLEAR',originalSourceLocalClear:true,
+    realGroundedTravelMeters:3.2,requiredGroundedTravelMeters:2,
+    realFreshHumanImpactCells:61,requiredFreshHumanImpactCells:60,
+    actualHumanImpactEvents:5,sourceInkOnly:true,realAcceptedShots:12,
+    actualInkPercent:70,playerAlive:true,matchState:'PLAYING',stopped:false};
+   expect(b371RealSourceMissionCue(f)).toMatchObject({step:'CLEAR',
+    progress:3,completed:true,officialWinner:'NONE',scoreablePromotions:0,
+    resourceState:'NOT_MEASURED',physicalEnemyHitCertified:false});
+   f.genuineSourceShooterSelected=true;
+   expect(b371RealSourceMissionCue(f)).toBeNull();
+   f.genuineSourceShooterSelected=false;f.originalStage=[25,17,26,1];
+   expect(b371RealSourceMissionCue(f)).toBeNull();
+  }
+ });
+ it('recaps native 180s actual local circuit, not a fake Turf win or CPU hits',()=>{
+  const s:SourceSessionMetrics={
+   matchState:'TIME_UP',timeRemainingSeconds:0,tick:10800,
+   originalSourceSolids:25,originalPaintSurfaces:17,originalSourceNavigationLinks:26,
+   sourceScoreablePromotions:0,productionAuthorized:false,unrestricted4v4Certified:false,
+   cpu:{physicalRejoins:['A1','B1']},
+   b23HumanInkFeedback:{humanChangedCells:61,humanChangedImpactCount:5},
+   shotsFired:12,cpuSourceTurfShots:23,cpuImpactInkCellsChanged:94,
+   cpuSplats:0,humanSplats:0,humanRespawns:0,stopReason:null,
+   b384OpenLoadoutCircuit:true,b343OriginalSourceVolleyBudget:{enabled:false},
+   humanCpuDirectHits:0,humanCpuDirectSplats:0,
+   b186RealOriginalHumanCircuit:{enabled:true,
+    status:'REAL_LOCAL_CIRCUIT_CLEAR',sourceLocalPlayClear:true,
+    actualOriginalRampTouched:true,realPostDropHumanImpactChangedCells:61,
+    genuineGroundedTravelMeters:3.2,naturalCrossTeamRouteProven:false,
+    sourceScoreablePromotions:0,officialWinner:'NONE'}
+  };
+  expect(sourceSessionSummary(s)).toMatchObject({finished:true,officialWinner:'NONE',
+   sourceShooter:{currentLifeLocalClear:true,trueHumanImpactCells:61,
+    actualHumanCpuDirectHits:0,certifiedNaturalOpponentRoute:false}});
+  s.b186RealOriginalHumanCircuit!.naturalCrossTeamRouteProven=true;
+  expect(()=>sourceSessionSummary(s)).toThrow('B373_UNTRUSTED');
+  s.b186RealOriginalHumanCircuit!.naturalCrossTeamRouteProven=false;
+  s.b343OriginalSourceVolleyBudget={enabled:true};
+  expect(()=>sourceSessionSummary(s)).toThrow('B384_BENCHMARK');
  });
 });
