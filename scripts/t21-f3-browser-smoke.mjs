@@ -535,6 +535,10 @@ async function main(){
   }
   for(const type of ['rawKeyDown','keyUp'])
    await cmd('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
+  // Commit the native SELECT change by leaving focus with another real
+  // keyboard event; never synthesize DOM change or call setPlayerWeapon.
+  for(const type of ['rawKeyDown','keyUp'])
+   await cmd('Input.dispatchKeyEvent',{type,key:'Tab',code:'Tab',windowsVirtualKeyCode:9,nativeVirtualKeyCode:9});
   const selected=await waitUntil(async()=>{
    const x=await get();
    const v=await evaluate('document.querySelector("#t21-f3-b378-weapon")?.value');
