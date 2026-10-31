@@ -351,6 +351,10 @@ async function run(){
   'status:e?.dataset.b186NativeStatus,'+
   'clear:e?.dataset.b186RealLocalPracticeClear,'+
   'actualInk:e?.dataset.b186RealImpactChangedCells,'+
+  'b371Step:e?.dataset.b371SourceStep,'+
+  'b371Scoring:e?.dataset.b371SourceScoreable,'+
+  'b371CrossTeam:e?.dataset.b371CrossTeamCertified,'+
+  'b371Shots:e?.dataset.b371RealShots,'+
   'text:e?.textContent}})()');
  const startedCircuit=verifyAuthority(await snapshot()).b186RealOriginalHumanCircuit;
  const missionVisible=await read('(() => {const e=document.querySelector('+
@@ -360,6 +364,15 @@ async function run(){
   'e.textContent.includes("NO TURF WINNER")})()');
  if(missionVisible!==true)
   fail('B365_GENUINE_PLAYER_MISSION_NOT_VISIBLE');
+ // B371: the PLAYER-view objective must be a genuine same-world
+ // first-drop/physical-shooter cue, not a separate fake quest counter.
+ if(missionDom.b371Step!=='DROP'||missionDom.b371Scoring!=='0'||
+    missionDom.b371CrossTeam!=='false'||
+    missionDom.text?.includes('REAL SHOTS')!==true||
+    missionDom.text?.includes('INK')!==true||
+    Number(missionDom.b371Shots)!==started.humanShots)
+  fail('B371_GENUINE_NATIVE_PLAYER_OBJECTIVE_NOT_ARMED_'+
+   JSON.stringify({missionDom,started}));
  if(!missionDom.exists||missionDom.source!=='true'||
     missionDom.scoring!=='0'||missionDom.clear!=='false'||
     !['WAIT_FIRST_DROP','MOVE_TO_ORIGINAL_RAISED'].includes(missionDom.status)||
@@ -796,6 +809,23 @@ async function run(){
    actualHitCertified:false,officialWinner:'NONE'}));
  route.final=nativeFoot(finished);
  route.nativeMissionClear=mission?.sourceLocalPlayClear===true;
+ const b371Final=await wait(async()=>{
+  const e=await read('(() => {const n=document.querySelector('+
+   '"#t21-f3-b183-real-first-drop");return {step:n?.dataset.b371SourceStep,'+
+   'scoring:n?.dataset.b371SourceScoreable,'+
+   'routes:n?.dataset.b371CrossTeamCertified,'+
+   'shots:Number(n?.dataset.b371RealShots??-1),'+
+   'text:n?.textContent,visible:!!n&&!n.hidden&&'+
+   'getComputedStyle(n).display!=="none"}})()');
+  return e?.step==='CLEAR'&&e.visible?e:false;
+ },20000);
+ if(b371Final.scoring!=='0'||b371Final.routes!=='false'||
+    b371Final.shots<0||b371Final.text?.includes('LOCAL CIRCUIT COMPLETE')!==true||
+    b371Final.text?.includes('NO TURF WINNER')!==true||
+    b371Final.text?.includes('REAL SHOTS')!==true)
+  fail('B371_PLAYER_REAL_CLEAR_AND_SOURCE_SHOOTER_HUD_DRIFT_'+
+   JSON.stringify(b371Final));
+ route.b371RealPlayerMission=b371Final;
  route.finalOutcome=route.nativeMissionClear?
   'PASS_TRUE_SAME_SESSION_DROP_RAMP_AND_ORIGINAL_HUMAN_INK':
   'HOLD_NATIVE_RAISED_FLOOR_FRESH_PAINT_NOT_PROVEN';
