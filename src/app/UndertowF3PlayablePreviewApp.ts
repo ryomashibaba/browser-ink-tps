@@ -109,6 +109,7 @@ import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
+import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
 import {createB160SourceCpuActivityView}
  from './B160SourceCpuActivityView';
 import {b69PreviewAimView,b69NextSourcePreviewHref}
@@ -4141,9 +4142,20 @@ export class UndertowF3PlayablePreviewApp{
     // CPU collision -> actual Recast/CpuAgentSystem -> projectiles and ink.
     const alive=this.resources.currentHp>0;
     const playerStart=this.b20ProfileStart();
+    // B379: genuine 60Hz player inputs and B378-selected weapon runtime
+    // act on the real Rapier KCC BEFORE the physical step, not a fake move.
+    applyB379NativePlayerWeaponMobility({
+     input:this.input,player:this.player,weapons:this.projectiles,
+     realPointerLocked:document.pointerLockElement===this.canvas,
+     humanAlive:alive,sourceRoundPhase:this.matchState,
+     stopped:Boolean(this.stopReason)
+    });
     if(alive)this.player.computeFixed(seconds);
     this.physics.step();
     this.player.syncAfterPhysics(seconds);
+    // Post-roll aim focus only after true native KCC dodge completion.
+    if(alive&&this.player.consumeWeaponDodgeCompleted())
+     this.projectiles.notifyDualieDodge();
     this.b20ProfileStop('rapierAndHumanKcc',playerStart);
     if(alive)this.resources.fixedUpdate(
      seconds,this.player.currentMode,this.player.currentInkRelation);

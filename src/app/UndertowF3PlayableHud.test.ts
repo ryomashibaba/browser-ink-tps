@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
 import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
+import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
 import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
@@ -447,5 +448,52 @@ describe('B378 pregame physical loadout selection, source 180s only',()=>{
  it('rejects unknown and forged weapon names',()=>{
   for(const id of ['','unknown','__proto__','constructor','pulse-sprayer2'])
    expect(eligibleB378SourcePracticeWeapon(ready(id))).toBeNull();
+ });
+});
+
+describe('B379 real weapon movement and dualie right-click',()=>{
+ const rig=(klass:string='DUALIES')=>{
+  let tap=false,held=false,secondary=false,accepted=true,count=0;
+  const movements:number[]=[];
+  const input={get fireHeld(){return held;},get secondaryHeld(){return secondary;},
+   consumeSecondaryPressed(){const t=tap;tap=false;return t;}};
+  const player={setWeaponMoveMultiplier(v:number){movements.push(v);},
+   requestWeaponDodge(){count++;return accepted;}};
+  const weapons={currentPlayerWeapon:{weaponClass:klass},
+   getMovementMultiplier:(f:boolean,s:boolean)=>f?
+    (klass==='CHARGER'?.66:klass==='BRUSH'?1.15:1):
+    s&&klass==='BRELLA'?.74:1};
+  const apply=(overrides:Record<string,boolean|string>={})=>
+   applyB379NativePlayerWeaponMobility({
+    input,player,weapons,humanAlive:true,realPointerLocked:true,
+    sourceRoundPhase:'PLAYING',stopped:false,...overrides});
+  return {apply,movements,fire(){held=true;},guard(){secondary=true;},
+   right(){tap=true;},reject(){accepted=false;},dodgeCount(){return count;}};
+ };
+ it('wires existing real weapon movement rate into KCC before its physical tick',()=>{
+  const c=rig('CHARGER');c.fire();c.apply();expect(c.movements).toEqual([.66]);
+  const b=rig('BRUSH');b.fire();b.apply();expect(b.movements).toEqual([1.15]);
+  const g=rig('BRELLA');g.guard();g.apply();expect(g.movements).toEqual([.74]);
+  const s=rig('SHOOTER');s.fire();s.apply();expect(s.movements).toEqual([1]);
+ });
+ it('one true secondary pointer press asks native dualie KCC for one dodge',()=>{
+  const d=rig();d.right();
+  expect(d.apply()).toMatchObject({realDodgeAccepted:true});
+  expect(d.apply().realDodgeAccepted).toBe(false);
+  expect(d.dodgeCount()).toBe(1);
+  d.right();d.reject();expect(d.apply().realDodgeAccepted).toBe(false);
+  expect(d.dodgeCount()).toBe(2);
+  const other=rig('SHOOTER');other.right();
+  expect(other.apply().realDodgeAccepted).toBe(false);
+  expect(other.dodgeCount()).toBe(0);
+ });
+ it('dead, unlocked, timed-out and safe-stopped human cannot dodge or inherit attack movement',()=>{
+  for(const invalid of [{humanAlive:false},{realPointerLocked:false},
+    {sourceRoundPhase:'TIME_UP'},{sourceRoundPhase:'UNKNOWN'},{stopped:true}]){
+   const d=rig('CHARGER');d.fire();d.right();
+   expect(d.apply(invalid)).toEqual({movementMultiplier:1,realDodgeAccepted:false});
+   expect(d.dodgeCount()).toBe(0);
+   expect(d.movements).toEqual([1]);
+  }
  });
 });
