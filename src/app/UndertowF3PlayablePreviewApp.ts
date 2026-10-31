@@ -85,6 +85,8 @@ import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {SubWeaponSystem,type SubWeaponNativeExplosionWitness}
  from '../subweapon/SubWeaponSystem';
 import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
+import {WEAPON_ORDER,weaponProfile} from '../weapons/WeaponCatalog';
+import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -1444,6 +1446,49 @@ export class UndertowF3PlayablePreviewApp{
        this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
     void this.canvas.requestPointerLock();
   });
+  // B378: Existing physical weapon profiles become playable in source
+  // 180s only before first pointer lock; never disturb genuine B343's
+  // immutable baseline shooter or the seven CPU loadouts.
+  if(this.b203FullRound&&
+     new URL(location.href).searchParams.get('t21W10B343')===null){
+   const kitLabel=document.createElement('label');
+   kitLabel.id='t21-f3-b378-native-practice-loadout';
+   kitLabel.style.cssText='display:block;margin:10px 0;text-align:left;'+
+    'color:#bff5e8;font:750 11px/1.5 system-ui;pointer-events:auto';
+   kitLabel.textContent='PRACTICE WEAPON · experimental profiles (not original-certified)';
+   const choose=document.createElement('select');
+   choose.id='t21-f3-b378-weapon';
+   choose.setAttribute('aria-label','Choose existing physical source practice weapon');
+   choose.dataset.originalWeaponParametersCertified='false';
+   choose.style.cssText='display:block;margin:5px 0 0;width:100%;'+
+    'padding:8px 9px;border-radius:8px;border:1px solid #6bcbb8;'+
+    'background:#0b3241;color:#e4fff8;font:700 12px system-ui;'+
+    'pointer-events:auto;cursor:pointer';
+   for(const id of WEAPON_ORDER){
+    const option=document.createElement('option');
+    option.value=id;
+    const profile=weaponProfile(id);
+    option.textContent=profile.classLabel+' · '+profile.displayName;
+    choose.appendChild(option);
+   }
+   choose.value=this.projectiles.currentPlayerWeapon.id;
+   choose.addEventListener('change',()=>{
+    const approved=eligibleB378SourcePracticeWeapon({
+     requestedId:choose.value,fullSource180Seconds:this.b203FullRound,
+     firstPointerAlreadyLocked:this.b203EverLockedRealPointer,
+     realPointerLocked:document.pointerLockElement===this.canvas,
+     matchState:this.matchState,stopReason:this.stopReason,
+     sourceShooterBenchmark:
+      new URL(location.href).searchParams.get('t21W10B343')!==null
+    });
+    if(approved){
+     this.projectiles.setPlayerWeapon(approved);
+     this.refresh();
+    }else choose.value=this.projectiles.currentPlayerWeapon.id;
+   });
+   kitLabel.appendChild(choose);
+   pauseOverlay.appendChild(kitLabel);
+  }
   const pauseHint=document.createElement('div');
   pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
   pauseHint.style.cssText='margin-top:9px;color:#b9d9e4;font:600 10px/1.5 system-ui';
@@ -4841,6 +4886,13 @@ export class UndertowF3PlayablePreviewApp{
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
+  const practiceWeapon=this.b202PauseOverlay.querySelector<HTMLSelectElement>(
+   '#t21-f3-b378-weapon');
+  if(practiceWeapon){
+   practiceWeapon.disabled=!ready;
+   const label=practiceWeapon.parentElement;
+   if(label){label.hidden=!ready;label.style.display=ready?'block':'none';}
+  }
   this.b202PauseOverlay.dataset.t21B202NativeState=
    actuallyPaused?(ready?'READY_TO_START':'NATIVE_PAUSED'):'INACTIVE';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b242-round-focus-title')!

@@ -1,5 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
+import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
+import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
 import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
@@ -420,5 +422,30 @@ describe('B377 CPU real 180s clock/ink/shot consistency',()=>{
   expect(gate('PLAYING',180,0)).toBe(false);
   expect(gate('PLAYING',180,NaN)).toBe(false);
   expect(gate('PLAYING',180,1/60,'SOURCE_STOP')).toBe(false);
+ });
+});
+
+describe('B378 pregame physical loadout selection, source 180s only',()=>{
+ const ready=(requestedId:string)=>({
+  requestedId,fullSource180Seconds:true,firstPointerAlreadyLocked:false,
+  realPointerLocked:false,matchState:'STAGING',stopReason:null,
+  sourceShooterBenchmark:false
+ });
+ it('permits all already implemented weapon profiles only before first pointer lock',()=>{
+  for(const id of WEAPON_ORDER)
+   expect(eligibleB378SourcePracticeWeapon(ready(id))).toBe(id);
+ });
+ it('cannot replace the genuine B343 benchmark or switch an ongoing or stopped match',()=>{
+  for(const changed of [
+   {sourceShooterBenchmark:true},{firstPointerAlreadyLocked:true},
+   {realPointerLocked:true},{matchState:'PLAYING'},
+   {matchState:'TIME_UP'},{fullSource180Seconds:false},
+   {stopReason:'SAFE_STOP'}
+  ])expect(eligibleB378SourcePracticeWeapon({
+   ...ready('needle-smg'),...changed})).toBeNull();
+ });
+ it('rejects unknown and forged weapon names',()=>{
+  for(const id of ['','unknown','__proto__','constructor','pulse-sprayer2'])
+   expect(eligibleB378SourcePracticeWeapon(ready(id))).toBeNull();
  });
 });
