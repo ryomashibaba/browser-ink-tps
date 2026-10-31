@@ -18,8 +18,6 @@ on:
       - 'scripts/t21-w10b32-compare-real-source.mjs'
       - 'src/input/PlayerInput.ts'
       - 'src/input/PlayerInput.qa.test.ts'
-      - 'scripts/t21-f3-browser-smoke.mjs'
-      - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/ink/GpuInkAtlas.ts'
       - 'scripts/t21-w10b15-pixel-diff.mjs'

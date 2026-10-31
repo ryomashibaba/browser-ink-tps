@@ -567,6 +567,11 @@ describe('B382 genuine SOURCE human 180s weapon kit sub selection',()=>{
    {t21W10B343:'sourceVolleyAtomic'}
   ];
   for(const overrides of invalidModes)expect(q(overrides)).toBe(false);
+  // Missing user opt-in must fail closed too, not only explicit "off".
+  const missingCombat=new URLSearchParams({
+   t21Play:'preview',t21QaDrive:'source',t21W10B203:'fullRound'
+  });
+  expect(b382NativeSourceUserSubEnabled(missingCombat)).toBe(false);
  });
  it('guides the selected weapon physical kit, never the default pulse bomb',()=>{
   for(const id of WEAPON_ORDER){
