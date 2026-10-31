@@ -4430,6 +4430,15 @@ export class UndertowF3PlayablePreviewApp{
         'SOURCE CIRCUIT HOLD · UNVERIFIED PHYSICAL EVIDENCE · NO TURF WINNER';
       }
      }
+     // Real local B186 completion must be visible in the 180s recap on
+     // the SAME native tick. A slow WebGL render can otherwise leave its
+     // last sampled PAINT and shot counts behind the genuine physics.
+     // One read-only refresh on the TRUE original-source transition only.
+     if(previousCircuit.status!=='REAL_LOCAL_CIRCUIT_CLEAR'&&
+        circuit.status==='REAL_LOCAL_CIRCUIT_CLEAR'&&
+        this.b203FullRound&&
+        this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY')
+      this.refresh();
     }
     if(this.b27KineticEnabled)
      this.b27KineticView.sampleNativeFoot({
