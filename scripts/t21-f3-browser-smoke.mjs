@@ -413,6 +413,7 @@ async function main(){
  });
  const w10b14=process.env.T21_W10B14_RENDER_QA==='1';
  const w10b15=process.env.T21_W10B15_TRUSTED_INPUT==='1';
+ const b381=process.env.T21_B381_REAL_DUALIE_CHROME==='1';
  const w10b38=process.env.T21_W10B38_SUB==='1';
  const w10b36=process.env.T21_W10B36_FOCUS==='1';
  const w10b16=process.env.T21_W10B16_NATURAL_AI==='1';
@@ -465,11 +466,12 @@ async function main(){
    process.env.T21_F3_BLOCKED_HUMAN==='1'))
   reject('W10B50_NEEDS_DEFAULT_SOURCE_FIXED_CPU_UNBLOCKED');
  const w10b21=process.env.T21_W10B21_RENDER_AB==='1';
- if([w10b14,w10b15,w10b16,w10b21,w10b54,w10b59,w10b64,w10b69].filter(Boolean).length>1)
+ if([w10b14,w10b15,w10b16,w10b21,w10b54,w10b59,w10b64,w10b69,b381].filter(Boolean).length>1)
   reject('CONFLICTING_QA_MODES');
  const kitQa=process.env.T21_F3_CPU_KITS_QA==='1';
  const longCpu=process.env.T21_F3_LONG_CPU==='1'||kitQa||w10b16;
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'+
+  (b381?'&t21QaDrive=source&t21W10B203=fullRound&t21W10B192=humanCombat':'')+
   ((w10b14||w10b15||w10b21)?'&t21QaDrive=source&t21QaInput=deterministic&'+
    't21KccAudit=readOnly&t21QaPauseOnBoot=1&t21W10B14=render'+
    (w10b15?'&t21W10B15=trustedMouse':''):'')+
@@ -512,6 +514,82 @@ async function main(){
   if(ready.error)reject('APP_BOOT '+ready.error.slice(0,1600));
   return ready.ready==='READY'&&ready.renderer==='webgl2';
  },65000);
+ if(b381){
+  // Real CDP physical UI and pointer only; no forced tick, fake KCC,
+  // direct weapon setter, synthetic hit, or source geometry modification.
+  const get=()=>evaluate('window.__t21F3.snapshot()');
+  const original=await get();
+  const ui=await evaluate('(() => {const e=document.querySelector("#t21-f3-b378-weapon"),r=e?.getBoundingClientRect();return {value:e?.value,count:e?.options?.length,disabled:e?.disabled,x:r?.left+r?.width/2,y:r?.top+r?.height/2,phase:document.querySelector("#t21-f3-b202-real-pause")?.dataset.t21B202NativeState}})()');
+  if(ui.value!=='pulse-sprayer'||ui.count!==12||ui.disabled||
+     ui.phase!=='READY_TO_START'||!(ui.x>0&&ui.x<1600&&ui.y>0&&ui.y<900)||
+     original.originalSourceSolids!==25||original.originalPaintSurfaces!==17||
+     original.originalSourceNavigationLinks!==26||original.sourceScoreablePromotions!==0||
+     original.b381RealNativeDodge.genuineDodgeStarts!==0)
+   reject('B381_UNTRUSTED_PREGAME_SOURCE_'+JSON.stringify(ui));
+  await cmd('Page.bringToFront');
+  for(const type of ['mousePressed','mouseReleased'])
+   await cmd('Input.dispatchMouseEvent',{type,x:ui.x,y:ui.y,button:'left',clickCount:1});
+  for(let i=0;i<2;i++){
+   await cmd('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40,nativeVirtualKeyCode:40});
+   await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40,nativeVirtualKeyCode:40});
+  }
+  for(const type of ['rawKeyDown','keyUp'])
+   await cmd('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
+  const selected=await waitUntil(async()=>{
+   const x=await get();
+   const v=await evaluate('document.querySelector("#t21-f3-b378-weapon")?.value');
+   return x.b381RealNativeDodge.realWeapon==='twin-comets'&&v==='twin-comets'?x:false;
+  },18000);
+  if(selected.tick!==original.tick||!selected.paused)
+   reject('B381_PREMATCH_SELECTED_BUT_NATIVE_ALREADY_MOVED');
+  const start=await evaluate('(() => {const e=document.querySelector("#t21-f3-b202-resume"),r=e?.getBoundingClientRect();return {x:r?.left+r?.width/2,y:r?.top+r?.height/2,text:e?.textContent}})()');
+  if(start.text!=='START 180s ROUND'||!(start.x>0&&start.x<1600&&start.y>0&&start.y<900))
+   reject('B381_REAL_START_CONTROL_MISSING');
+  for(const type of ['mousePressed','mouseReleased'])
+   await cmd('Input.dispatchMouseEvent',{type,x:start.x,y:start.y,button:'left',clickCount:1});
+  await waitUntil(async()=>await evaluate('document.pointerLockElement===document.querySelector("#app-canvas")'),15000);
+  const before=await waitUntil(async()=>{
+   const x=await get();if(x.stopReason)reject('B381_BOOT_STOP_'+x.stopReason);
+   return x.tick>=original.tick+8?x:false;
+  },90000);
+  for(const type of ['mousePressed','mouseReleased'])
+   await cmd('Input.dispatchMouseEvent',{type,x:800,y:450,button:'right',clickCount:1});
+  const accepted=await waitUntil(async()=>{
+   const x=await get();if(x.stopReason)reject('B381_DODGE_STOP_'+x.stopReason);
+   return x.b381RealNativeDodge.genuineDodgeStarts===1&&
+    x.b381RealNativeDodge.genuineRemainingCharges===1?x:false;
+  },90000);
+  const after=await waitUntil(async()=>{
+   const x=await get();if(x.stopReason)reject('B381_MOTION_STOP_'+x.stopReason);
+   return x.tick>=accepted.tick+21?x:false;
+  },90000);
+  const meters=Math.hypot(after.player.position[0]-before.player.position[0],
+    after.player.position[2]-before.player.position[2]);
+  if(!(meters>.4&&meters<5.5)||
+     after.b381RealNativeDodge.realWeapon!=='twin-comets'||
+     after.b381RealNativeDodge.genuineDodgeStarts!==1||
+     after.originalSourceSolids!==25||after.originalPaintSurfaces!==17||
+     after.originalSourceNavigationLinks!==26||after.sourceScoreablePromotions!==0||
+     after.productionAuthorized!==false)
+   reject('B381_NO_TRUE_RAPIER_MOTION_'+JSON.stringify({meters,before:before.player,after:after.player}));
+  await mouse('mousePressed');
+  const fired=await waitUntil(async()=>{
+   const x=await get();if(x.stopReason)reject('B381_FIRE_STOP_'+x.stopReason);
+   return x.shotsFired>after.shotsFired?x:false;
+  },90000);
+  await mouse('mouseReleased');
+  const frame=await screenshot('B381_ACTUAL_DUALIES_RAPIER_AND_SHOT');
+  const record={schema:'B381_REAL_CHROME_USER_POINTER_LOCKED_DUALIE',weapon:'twin-comets',
+   realMouseSelect:true,realRightClick:true,realLeftFire:true,
+   nativeRapierDodge:accepted.b381RealNativeDodge.genuineDodgeStarts,
+   realKccMeters:Number(meters.toFixed(5)),realShots:fired.shotsFired-after.shotsFired,
+   originalSolids:25,originalPaintable:17,originalNavLinks:26,scoreable:0,
+   simulatedEnemyHits:0,certifiedOriginalOpponentRoute:false,officialWinner:'NONE',
+   unrestricted4v4Certified:false,productionAuthorized:false,frame};
+  writeFileSync(resolve(OUTPUT,'b381-real-dualie-native-input.json'),JSON.stringify(record,null,2));
+  console.log('B381_ACTUAL_CHROME_DUALIE_RAPIER_DODGE_FIRE_PASS',JSON.stringify(record));
+  return;
+ }
  if(b206FullRound){
   // Real user click: B210 launches source combat AND the 180s match.
   const selector=b210SafeCombat?'#t21-f3-b207-combat-round':
