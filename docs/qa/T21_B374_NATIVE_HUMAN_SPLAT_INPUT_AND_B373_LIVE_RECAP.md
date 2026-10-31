@@ -1,0 +1,21 @@
+# B374 — Native human splat input carry-over isolation + B373 recap synchrony
+
+Date: 2026-10-31 JST. Existing T21 QA branch `dev/t21-f4e103w-qa-infra`.
+
+## Verified predecessor / failure
+- B372 [genuine Chromium #41180736237](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41180736237): all steps SUCCESS, 11 true accepted human shots, 90 fresh ink cells, 12.8334m real grounded movement and native original-source local CLEAR, no original opponent route (0/12).
+- B373 first two trials [#41181528331](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41181528331) (B352 trigger matrix self-path failure, fixed) and [#41181647068](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41181647068) (**FAIL at actual Chromium recap**). The latter independently reconfirmed real B366 first-drop, original raised foot and local CLEAR but B58 displayed a stale `PAINT_ON_RAISED` sample (3 shots / 93 cells) while the 60Hz B186 had already reached CLEAR. **This is not a B373 full PASS.**
+- Repair in `UndertowF3PlayablePreviewApp.ts`: exactly one live native recap refresh when the real B186 circuit transitions into `REAL_LOCAL_CIRCUIT_CLEAR`. Refresh reads snapshots only; no fake native tick, new projectile, stage write or source claim.
+- `scripts/t21-b343-real-source-volley-round.mjs`: wait up to a bounded 30 seconds until the *actual DOM* shows real local CLEAR **and** shot + original-source ink numbers match the same-session native snapshot. Old stale-but-valid PAINT sample is not treated as success or immediate mismatch failure. Evidence remains sourced entirely from the real browser.
+
+## Concrete playable B374 change
+The player already has real HP, 150 native ticks of splat and native spawn restoration, but mouse fire held just before native HP=0 could be retained and become accidental fire on restoring the player. Source 180s should not replay the previous life's attack input into the next physical life.
+
+- `PlayerInput.setCombatInputActive(false)` called only on the first **actual** `PlayerResources.currentHp<=0` fixed step, clears held/queued left and right mouse attacks and F/G kit presses, but **preserves** physical WASD and Shift, canvas Pointer Lock, player KCC, original CPU state and 180s clock. Any further pointer/kit press while dead is ignored.
+- `PlayerInput.setCombatInputActive(true)` called after actual 150-tick `resources.reset`, real `player.teleport(humanSpawn)`, B183/B186 life-state reset and native collider reactivation. A fresh user mouse-down / key press is needed after respawn, preventing unwanted ink expenditure or special use. This does NOT alter how the game creates a source human life or the existing genuine battle weapon.
+- `src/input/PlayerInput.qa.test.ts`: event delivery tests cover held source fire and right mouse, F/G, real splat, repeated splat, ignored dead presses, genuine respawn and fresh post-respawn presses; movement/squid retained. This test **does not prove natural enemy combat or full human death in Chromium**. Existing B15 native trusted-input suite is retained for regression.
+
+## Proof gates / preserved source truth
+Latest B373 retest script trigger [#41182370552](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41182370552) (this native run may be cancelled by successive app changes); B374 main-code build/QA [B15 #41182471327](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41182471327) and retained B75 [#41182471421](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41182471421). Await final CI results; **do not claim B373/B374 end-to-end PASS while runs remain unverified**. No new UI overlay, fabricated enemy, pseudo HP, source authority or duplicate expensive workflow is needed.
+
+Unchanged hard boundary **25 Rapier solids / 17 original PaintSurface / 26 source NavLinks / 0 Scoreable**. Actual opposing original routes **0/12**, official winner NONE; `activationReady=false`, `productionAuthorized=false`, `unrestricted4v4Certified=false`. No changes to `main`, frozen T19C/T20, public Pages, Draft PR #5 or private OBJ. Prioritize native human gameplay/real battle behavior next; don't reopen sub-meter KCC tangent for its own sake.
