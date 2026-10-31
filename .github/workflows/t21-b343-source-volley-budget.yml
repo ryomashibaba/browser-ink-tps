@@ -8,7 +8,6 @@ on:
       - 'src/app/UndertowF3SourceSessionBoard.ts'
       - 'src/app/UndertowF3SourceSessionBoard.test.ts'
       - 'scripts/t21-b343-real-source-volley-round.mjs'
-      - '.github/workflows/t21-b343-source-volley-budget.yml'
   workflow_dispatch:
 permissions:
   contents: read
