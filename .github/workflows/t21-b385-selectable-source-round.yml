@@ -1,4 +1,4 @@
-name: T21 B385 genuine selectable native SOURCE round
+name: T21 B385 selected-kit native original source circuit
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   native-b384-user-round:
     runs-on: ubuntu-latest
-    timeout-minutes: 27
+    timeout-minutes: 16
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,7 +25,7 @@ jobs:
       - name: Validate existing B384 source gates and HUD without test duplication
         run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
       - run: node --check scripts/t21-b385-native-selectable-circuit.mjs
-      - name: Drive true Chromium user-selected 12-weapon source 180s round
+      - name: Drive true Chrome Twin Comets original ramp and ink
         run: node scripts/t21-b385-native-selectable-circuit.mjs
       - name: Preserve actual screenshots, native ticks and honest HOLD evidence
         if: always()

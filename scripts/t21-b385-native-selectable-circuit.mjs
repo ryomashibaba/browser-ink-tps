@@ -185,67 +185,135 @@ async function run(){
   const s=original(await state(),'ACTUAL_POINTER_START');
   return !s.paused&&s.tick>0?s:false;
  },90000);
- await key('keyDown','w','KeyW',87);
- await cmd('Input.dispatchMouseEvent',{type:'mousePressed',x:800,y:450,button:'left',clickCount:1});
- const played=await until(async()=>{
-  const s=original(await state(),'LIVE_KCC_AND_SHOT');
-  return s.tick>=start.tick+90&&s.shotsFired>start.shotsFired?s:false;
- },150000);
- await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',x:800,y:450,button:'left',clickCount:1});
- await key('keyUp','w','KeyW',87);
- const moved=Math.hypot(...played.player.position.map((v,i)=>v-start.player.position[i]));
- if(moved<=0.15)fail('NO_REAL_KCC_POSITION_CHANGE',{start:start.player.position,end:played.player.position,moved});
- report.phases.push({phase:'ACTUAL_KCC_AND_TWIN_COMETS_SHOTS',
-  movedMeters:moved,shots:played.shotsFired-start.shotsFired,
-  sourceInk:played.b23HumanInkFeedback.humanChangedCells,
-  currentLifeCircuit:played.b186RealOriginalHumanCircuit.status,
-  missionGoal:await evalPage('document.querySelector("#t21-f3-b183-real-first-drop")?.dataset.b371SourceStep')});
- await picture('b385-real-native-playing');
- persist();console.log('B385_ACTUAL_CHROME_NATIVE_INPUT_PASS',JSON.stringify(report.phases.at(-2)));
- // The round must end through the ACTUAL fixed-step clock, not clock injection.
- let previousTick=played.tick,lastProgress=Date.now(),lastSaved=0;
- const startWall=Date.now();
- while(Date.now()-startWall<1150000){
-  await sleep(2500);
-  const s=original(await state(),'WAIT_NATIVE_180S');
-  if(s.tick>previousTick){previousTick=s.tick;lastProgress=Date.now()}
-  if(Date.now()-lastProgress>120000)fail('NATIVE_60HZ_STALLED',
-   {tick:s.tick,remaining:s.timeRemainingSeconds,paused:s.paused});
-  if(Date.now()-lastSaved>20000||s.matchState==='TIME_UP'){
-   const x={tick:s.tick,elapsedSeconds:180-s.timeRemainingSeconds,
-    stage:s.matchState,cpuRejoined:s.cpu.physicalRejoins.length,
-    humanShots:s.shotsFired,humanInk:s.b23HumanInkFeedback.humanChangedCells,
-    realCircuit:s.b186RealOriginalHumanCircuit.status};
-   observations.push(x);if(observations.length>120)observations.shift();
-   lastSaved=Date.now();persist();
-   console.log('B385_NATIVE_180S_HEARTBEAT',JSON.stringify(x));
+
+ // The prior 90 native ticks were still STAGING. B183 only trusts real
+ // source drop in PLAYING. Seven Rapier/Recast CPUs must rejoin naturally.
+ const playing=await until(async()=>{
+  const s=original(await state(),'WAIT_REAL_CPU_SEVEN');
+  if(s.matchState==='TIME_UP')fail('ROUND_ENDED_BEFORE_NATIVE_ROUTE');
+  return s.matchState==='PLAYING'&&s.cpu.physicalRejoins.length===7?s:false;
+ },300000);
+ const yaw=playing.cameraSourcePractice?.yawDegrees;
+ if(!Number.isFinite(yaw)||Math.abs(yaw)>1)
+  fail('ORIGINAL_ROUTE_REAL_CAMERA_YAW_DRIFT',{yaw});
+ report.phases.push({phase:'ACTUAL_SEVEN_CPU_PLAYING',tick:playing.tick,
+  actualNativeCpu:playing.cpu.physicalRejoins.length,body:playing.player.position});
+ persist();
+ // Already proven with real CDP source input in B366, NOT by altering KCC.
+ const stages=[
+  {name:'FIRST_DROP_W200',key:'w',code:'KeyW',vk:87,ticks:200},
+  {name:'LOWER_RIGHT_D12',key:'d',code:'KeyD',vk:68,ticks:12},
+  {name:'LOWER_FORWARD_W18',key:'w',code:'KeyW',vk:87,ticks:18},
+  {name:'ORIGINAL_RAMP_D90',key:'d',code:'KeyD',vk:68,ticks:90}
+ ];
+ for(const q of stages){
+  const before=original(await state(),'BEFORE_'+q.name);
+  await key('keyDown',q.key,q.code,q.vk);
+  let after;
+  try{
+   if(q.name==='FIRST_DROP_W200')
+    await cmd('Input.dispatchMouseEvent',{type:'mousePressed',
+     x:800,y:450,button:'left',clickCount:1});
+   after=await until(async()=>{
+    const x=original(await state(),q.name);
+    const raised=q.name==='ORIGINAL_RAMP_D90'&&
+     x.b112OriginalHumanGround?.genuineKccGrounded===true&&
+     x.b112OriginalHumanGround?.lastOriginalSourceHitId==='UndertowT21D:right-low-team-a';
+    return x.tick>=before.tick+q.ticks||raised?x:false;
+   },180000);
+  }finally{
+   if(q.name==='FIRST_DROP_W200')
+    await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
+     x:800,y:450,button:'left',clickCount:1});
+   await key('keyUp',q.key,q.code,q.vk);
   }
-  if(s.matchState==='TIME_UP'){
-   if(s.timeRemainingSeconds!==0||s.tick<=played.tick||
-      s.sourceScoreablePromotions!==0)fail('FALSE_TIME_UP',s);
-   const ui=await evalPage(`(()=>{
-    const p=document.querySelector('#t21-f3-b59-session-finished');
-    return {display:p?getComputedStyle(p).display:null,
-     hidden:p?.hidden,state:p?.dataset.t21B59State,
-     winner:p?.dataset.t21B59OriginalWinner,
-     score:p?.dataset.b373NoScoring,
-     circuit:p?.dataset.b373RealSourceCircuit,
-     humanHits:p?.dataset.b373RealHumanCpuHits};
-   })()`);
-   if(ui.state!=='FINISHED'||ui.winner!=='NONE'||ui.score!=='true'||
-      ui.hidden||ui.display==='none')fail('REAL_180S_RECAP_MISSING',ui);
-   report.phases.push({phase:'REAL_180S_END',actualTick:s.tick,
-    actualSeconds:180,recap:ui,actualHumanInkCells:s.b23HumanInkFeedback.humanChangedCells,
-    physicalCircuit:s.b186RealOriginalHumanCircuit.status,
-    localCircuitClear:s.b186RealOriginalHumanCircuit.sourceLocalPlayClear});
-   await picture('b385-native-180s-unscored-recap');
-   report.outcome='PASS_REAL_B384_USER_SELECT_AND_180S_SOURCE_PRACTICE';
-   report.note='Only native gameplay/clock and actual session recap certified. Physical 3/3 original ramp/impact clear and natural cross-team encounter remain independently unproven unless observed.';
-   persist();console.log('B385_REAL_NATIVE_SOURCE_ROUND_PASS',JSON.stringify(report.phases.at(-2)));
-   return;
-  }
+  const record={phase:q.name,actualTicks:after.tick-before.tick,
+   realBody:after.player.position,
+   foot:after.b112OriginalHumanGround?.lastOriginalSourceHitId,
+   nativeGrounded:after.b112OriginalHumanGround?.genuineKccGrounded,
+   nativeDescent:after.b183OriginalHumanDescent?.status,
+   nativeCircuit:after.b186RealOriginalHumanCircuit?.status,
+   trueShots:after.shotsFired,trueInk:after.b23HumanInkFeedback.humanChangedCells};
+  report.phases.push(record);persist();
+  console.log('B385_REAL_ORIGINAL_ROUTE',JSON.stringify(record));
  }
- fail('NATIVE_180S_TIMEOUT',{last:observations.at(-1)});
+ const raised=original(await state(),'ACTUAL_RAISED_SOURCE');
+ const circuit=raised.b186RealOriginalHumanCircuit,
+  drop=raised.b183OriginalHumanDescent,
+  foot=raised.b112OriginalHumanGround;
+ if(raised.shotsFired<=playing.shotsFired||
+    raised.b23HumanInkFeedback.humanChangedCells<=
+     playing.b23HumanInkFeedback.humanChangedCells)
+  fail('NO_REAL_TWIN_COMETS_SHOTS_OR_INK');
+ if(drop?.originalFirstDropLocalPracticeClear!==true||
+    drop?.actualOriginalRapierLowerLandingId!==
+     'UndertowT21D:first-drop-landing-positive-z'||
+    circuit?.actualOriginalRampTouched!==true||
+    circuit?.actualOriginalRaisedFootColliderId!=='UndertowT21D:right-low-team-a'||
+    circuit?.genuineGroundedTravelMeters<2||
+    foot?.genuineKccGrounded!==true||
+    foot?.lastOriginalSourceHitId!=='UndertowT21D:right-low-team-a')
+  fail('ACTUAL_TWIN_COMETS_ORIGINAL_ROUTE_HOLD',
+   {drop,circuit,foot,kitMobilityNotAssumedSameAsB343:true});
+ const ui2=await until(async()=>{
+  const u=await evalPage('(() => {const x=document.querySelector("#t21-f3-b183-real-first-drop");return {step:x?.dataset.b371SourceStep,complete:x?.dataset.b372VerifiedCompletedSteps,resources:x?.dataset.b372NativeShooterResources}})()');
+  return u?.step==='PAINT'&&u.complete==='2'?u:false;
+ },20000);
+ if(ui2.resources!=='NOT_MEASURED')
+  fail('B384_FAKE_B343_PROJECTILE_BUDGET',ui2);
+ await picture('b385-native-original-12-kit-ramp');
+ // Actual look down and hold fire on actual original raised KCC foot.
+ for(const y of [510,565]){
+  const before=original(await state(),'BEFORE_RAISED_FIRE');
+  await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y,button:'none'});
+  await cmd('Input.dispatchMouseEvent',{type:'mousePressed',
+   x:800,y,button:'left',clickCount:1});
+  let after;
+  try{after=await until(async()=>{
+   const z=original(await state(),'REAL_PHYSICAL_RAMP_FIRE');
+   return z.tick>=before.tick+42?z:false;
+  },100000)}
+  finally{await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',
+   x:800,y,button:'left',clickCount:1})}
+  const shot={phase:'NATIVE_POST_DROP_PHYSICAL_FIRE_'+y,
+   shots:after.shotsFired,
+   ink:after.b23HumanInkFeedback.humanChangedCells,
+   freshCells:after.b186RealOriginalHumanCircuit.realPostDropHumanImpactChangedCells,
+   circuit:after.b186RealOriginalHumanCircuit.status};
+  report.phases.push(shot);persist();
+  console.log('B385_REAL_SOURCE_PAINT',JSON.stringify(shot));
+  if(after.b186RealOriginalHumanCircuit.sourceLocalPlayClear)break;
+ }
+ const done=original(await state(),'NATIVE_SELECTED_SOURCE_GOAL');
+ const c=done.b186RealOriginalHumanCircuit;
+ if(!c.sourceLocalPlayClear||c.status!=='REAL_LOCAL_CIRCUIT_CLEAR'||
+    c.realPostDropHumanImpactChangedCells<60)
+  fail('REAL_SELECTED_KIT_SOURCE_INK_HOLD',
+   {circuit:c,trueShots:done.shotsFired,
+    trueInk:done.b23HumanInkFeedback.humanChangedCells});
+ const hud=await until(async()=>{
+  const x=await evalPage('(() => {const m=document.querySelector("#t21-f3-b183-real-first-drop"),s=document.querySelector("#t21-f3-b58-source-session");return {step:m?.dataset.b371SourceStep,steps:m?.dataset.b372VerifiedCompletedSteps,resources:m?.dataset.b372NativeShooterResources,notice:m?.textContent,text:s?.querySelector("#t21-f3-b58-counts")?.textContent,shots:Number(s?.dataset.t21B58HumanShotCount??-1),ink:Number(s?.dataset.t21B58HumanChangedInk??-1),score:s?.dataset.t21B58OriginalScoreable,winner:s?.dataset.t21B58OfficialWinner}})()');
+  return x?.step==='CLEAR'&&x.steps==='3'&&
+   x.text?.includes('REAL LOCAL CLEAR')&&
+   x.shots===done.shotsFired&&
+   x.ink===done.b23HumanInkFeedback.humanChangedCells?x:false;
+ },45000);
+ if(hud.resources!=='NOT_MEASURED'||hud.score!=='0'||
+    hud.winner!=='NONE'||!hud.notice?.includes('NO TURF WINNER'))
+  fail('B384_ACTUAL_LIVE_SOURCE_RECAP_NOT_NONSCORING',hud);
+ report.phases.push({phase:'REAL_NATIVE_TWIN_COMETS_ORIGINAL_3OF3',
+  actualWeapon:done.b381RealNativeDodge.realWeapon,
+  realShots:done.shotsFired,realInk:done.b23HumanInkFeedback.humanChangedCells,
+  freshAfterDrop:c.realPostDropHumanImpactChangedCells,
+  physicalTravel:c.genuineGroundedTravelMeters,
+  actualCpuRejoins:done.cpu.physicalRejoins.length,
+  liveHud:hud,officialScoreable:0,winner:'NONE'});
+ await picture('b385-native-real-12-kit-local-clear');
+ report.outcome='PASS_B384_REAL_CHROME_SELECTED_KIT_SOURCE_LOCAL_3OF3';
+ report.note='Real 180s SOURCE mode running; the entire 180s TIME_UP is untested, no formal 4v4 or score.';
+ persist();console.log('B385_TRUE_NATIVE_SELECTED_KIT_LOCAL_CLEAR',
+  JSON.stringify(report.phases.at(-2)));
+
 }
 try{await run()}catch(err){report.lastError=String(err);persist();console.error(err);process.exitCode=1}
 finally{socket?.close();for(const child of children)child.kill('SIGTERM')}
