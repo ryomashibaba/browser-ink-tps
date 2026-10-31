@@ -21,6 +21,13 @@ export interface B371SourceMissionFrame {
   playerAlive:boolean;
   matchState:'STAGING'|'PLAYING'|'TIME_UP';
   stopped:boolean;
+  /** B372: actual PlayerResources and B343 native projectile pool, never
+   * inferred from source paint cells or fabricated weapon simulation. */
+  shooterResources?:{
+    inkUnits:number;shotInkCostUnits:number;
+    freePhysicalSlots:number;physicalPoolSize:number;
+    realDryFireAttempts:number;realPoolRejections:number;
+  };
 }
 export type B371MissionStep='DROP'|'RAMP'|'PAINT'|'CLEAR'|'HOLD';
 export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
@@ -42,7 +49,29 @@ export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
    x.status==='REAL_LOCAL_CIRCUIT_CLEAR'?'CLEAR':
    x.status==='PAINT_ON_RAISED'?'PAINT':
    x.status==='MOVE_TO_ORIGINAL_RAISED'?'RAMP':'DROP';
-  const progress=step==='CLEAR'?3:step==='PAINT'?3:step==='RAMP'?2:1;
+  // Completed steps, NOT the current step number: paint is unfinished
+  // until B186's original physical impact proof reports CLEAR.
+  const progress=step==='CLEAR'?3:step==='PAINT'?2:step==='RAMP'?1:0;
+  const resources=x.shooterResources;
+  if(resources&&(
+     ![resources.inkUnits,resources.shotInkCostUnits].every(Number.isFinite)||
+     resources.inkUnits<0||resources.shotInkCostUnits<=0||
+     ![resources.freePhysicalSlots,resources.physicalPoolSize,
+       resources.realDryFireAttempts,resources.realPoolRejections].every(n=>
+        Number.isSafeInteger(n)&&n>=0)||
+     resources.physicalPoolSize<=0||
+     resources.freePhysicalSlots>resources.physicalPoolSize))return null;
+  const resourceState=!resources?'NOT_MEASURED':
+   resources.inkUnits+1e-6<resources.shotInkCostUnits?'LOW_INK':
+   resources.freePhysicalSlots===0?'PHYSICAL_POOL_FULL':
+   'INK_AND_SLOT_AVAILABLE';
+  const resourceText=resourceState==='LOW_INK'?
+   'LOW INK FOR SHOT · REFILL':
+   resourceState==='PHYSICAL_POOL_FULL'?
+   'REAL PROJECTILE SLOTS BUSY · WAIT':
+   resourceState==='INK_AND_SLOT_AVAILABLE'?
+   'INK + PHYSICAL SHOT SLOT AVAILABLE':
+   'NATIVE SHOOTER RESOURCES NOT MEASURED';
   const limitedGround=Math.min(x.realGroundedTravelMeters,
    x.requiredGroundedTravelMeters);
   const limitedInk=Math.min(x.realFreshHumanImpactCells,
@@ -63,7 +92,10 @@ export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
   const notice=x.matchState==='TIME_UP'?'TIME UP · ':!x.playerAlive?
    'PLAYER SPLATTED · ':x.matchState==='STAGING'?'READY · ':'';
   return {
-    step,progress,completed:step==='CLEAR',
+    step,progress,completed:step==='CLEAR',resourceState,
+    actualFreePhysicalSlots:resources?.freePhysicalSlots??null,
+    observedDryFireAttempts:resources?.realDryFireAttempts??null,
+    observedPoolRejections:resources?.realPoolRejections??null,
     nativeTick:x.nativeTick,
     originalSourceOnly:true as const,
     scoreablePromotions:0 as const,
@@ -72,7 +104,7 @@ export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
     physicalEnemyHitCertified:false as const,
     gameplayWrites:0 as const,
     text:notice+'SOURCE CIRCUIT '+progress+'/3 · '+status+'\n'+
-      shots+' · '+ink+' · NON-SCORING SOURCE PRACTICE'+'\n'+
-      'NO TURF WINNER · NO CROSS-TEAM PATH',
+      shots+' · '+ink+' · '+resourceText+'\n'+
+      'NON-SCORING SOURCE PRACTICE · NO TURF WINNER · NO CROSS-TEAM PATH',
   };
 }
