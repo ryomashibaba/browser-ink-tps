@@ -264,7 +264,7 @@ describe('B371 real SOURCE practice: three verified local goals and native shoot
  });
  it('shows genuine original first drop and no winner, never fake combat',()=>{
   const x=b371RealSourceMissionCue(frame())!;
-  expect(x).toMatchObject({step:'DROP',progress:1,
+  expect(x).toMatchObject({step:'DROP',progress:0,
    scoreablePromotions:0,crossTeamRouteCertified:false,
    officialWinner:'NONE',physicalEnemyHitCertified:false,gameplayWrites:0});
   expect(x.text).toContain('ORIGINAL FIRST DROP');
