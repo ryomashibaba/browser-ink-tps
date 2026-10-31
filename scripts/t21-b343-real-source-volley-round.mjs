@@ -355,6 +355,9 @@ async function run(){
   'b371Scoring:e?.dataset.b371SourceScoreable,'+
   'b371CrossTeam:e?.dataset.b371CrossTeamCertified,'+
   'b371Shots:e?.dataset.b371RealShots,'+
+  'b372Complete:e?.dataset.b372VerifiedCompletedSteps,'+
+  'b372Resources:e?.dataset.b372NativeShooterResources,'+
+  'b372ReadOnly:e?.dataset.b372ReadOnly,'+
   'text:e?.textContent}})()');
  const startedCircuit=verifyAuthority(await snapshot()).b186RealOriginalHumanCircuit;
  const missionVisible=await read('(() => {const e=document.querySelector('+
@@ -364,6 +367,11 @@ async function run(){
   'e.textContent.includes("NO TURF WINNER")})()');
  if(missionVisible!==true)
   fail('B365_GENUINE_PLAYER_MISSION_NOT_VISIBLE');
+ if(missionDom.b372Complete!=='0'||missionDom.b372ReadOnly!=='true'||
+    !['INK_AND_SLOT_AVAILABLE','LOW_INK','PHYSICAL_POOL_FULL'].includes(
+      missionDom.b372Resources)||missionDom.text?.includes('SOURCE CIRCUIT 0/3')!==true)
+  fail('B372_REAL_SOURCE_SHOOTER_BOOT_RESOURCE_OR_STEP_DRIFT_'+
+   JSON.stringify(missionDom));
  // B371: the PLAYER-view objective must be a genuine same-world
  // first-drop/physical-shooter cue, not a separate fake quest counter.
  if(missionDom.b371Step!=='DROP'||missionDom.b371Scoring!=='0'||
@@ -745,6 +753,23 @@ async function run(){
      'UndertowT21D:right-low-team-a')
   fail('B366_REAL_GROUNDED_ORIGINAL_CIRCUIT_ROUTE_HOLD_'+
    JSON.stringify(route.afterOriginalRamp));
+ // B372 must report only TWO completed source-local steps BEFORE
+ // any additional raised-floor impact ink. Do not count an unpainted
+ // third objective as a completed original mission.
+ const b372RaisedHud=await wait(async()=>{
+  const n=await read('(() => {const e=document.querySelector('+
+   '"#t21-f3-b183-real-first-drop");return {step:e?.dataset.b371SourceStep,'+
+   'completed:e?.dataset.b372VerifiedCompletedSteps,'+
+   'resources:e?.dataset.b372NativeShooterResources,'+
+   'readOnly:e?.dataset.b372ReadOnly,text:e?.textContent}})()');
+  return n?.step==='PAINT'&&n.completed==='2'?n:false;
+ },12000);
+ if(b372RaisedHud.readOnly!=='true'||
+    b372RaisedHud.text?.includes('SOURCE CIRCUIT 2/3')!==true||
+    !['INK_AND_SLOT_AVAILABLE','LOW_INK','PHYSICAL_POOL_FULL'].includes(
+     b372RaisedHud.resources))
+  fail('B372_PRE_INK_ORIGINAL_MISSION_PREMATURE_COMPLETE_'+
+   JSON.stringify(b372RaisedHud));
  await picture('B366_RAISED_ORIGINAL_SOURCE');
  // Fire ONLY the real player weapon from actual raised Rapier KCC pose.
  // We may move the actual mouse to look downward, but NEVER move/aim
@@ -815,12 +840,20 @@ async function run(){
    'scoring:n?.dataset.b371SourceScoreable,'+
    'routes:n?.dataset.b371CrossTeamCertified,'+
    'shots:Number(n?.dataset.b371RealShots??-1),'+
+   'completed:n?.dataset.b372VerifiedCompletedSteps,'+
+   'resources:n?.dataset.b372NativeShooterResources,'+
+   'readOnly:n?.dataset.b372ReadOnly,'+
    'text:n?.textContent,visible:!!n&&!n.hidden&&'+
    'getComputedStyle(n).display!=="none"}})()');
   return e?.step==='CLEAR'&&e.visible?e:false;
  },20000);
  if(b371Final.scoring!=='0'||b371Final.routes!=='false'||
-    b371Final.shots<0||b371Final.text?.includes('LOCAL CIRCUIT COMPLETE')!==true||
+    b371Final.shots<0||b371Final.completed!=='3'||
+    b371Final.readOnly!=='true'||
+    !['INK_AND_SLOT_AVAILABLE','LOW_INK','PHYSICAL_POOL_FULL'].includes(
+      b371Final.resources)||
+    b371Final.text?.includes('SOURCE CIRCUIT 3/3')!==true||
+    b371Final.text?.includes('LOCAL CIRCUIT COMPLETE')!==true||
     b371Final.text?.includes('NO TURF WINNER')!==true||
     b371Final.text?.includes('REAL SHOTS')!==true)
   fail('B371_PLAYER_REAL_CLEAR_AND_SOURCE_SHOOTER_HUD_DRIFT_'+
