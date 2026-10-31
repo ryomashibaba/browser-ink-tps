@@ -560,12 +560,13 @@ describe('B382 genuine SOURCE human 180s weapon kit sub selection',()=>{
   expect(q()).toBe(true);
  });
  it('refuses all fake and benchmark source contexts',()=>{
-  for(const overrides of [
+  const invalidModes:Record<string,string>[]=[
    {t21Play:'normal'},{t21QaDrive:'normal'},
    {t21W10B203:'off'},{t21W10B192:'off'},
    {t21QaInput:'deterministic'},
    {t21W10B343:'sourceVolleyAtomic'}
-  ])expect(q(overrides)).toBe(false);
+  ];
+  for(const overrides of invalidModes)expect(q(overrides)).toBe(false);
  });
  it('guides the selected weapon physical kit, never the default pulse bomb',()=>{
   for(const id of WEAPON_ORDER){
