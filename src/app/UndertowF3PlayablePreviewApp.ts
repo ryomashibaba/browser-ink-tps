@@ -87,6 +87,7 @@ import {SubWeaponSystem,type SubWeaponNativeExplosionWitness}
 import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {WEAPON_ORDER,weaponProfile} from '../weapons/WeaponCatalog';
 import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
+import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -4913,7 +4914,16 @@ export class UndertowF3PlayablePreviewApp{
    .textContent=ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
    .textContent=actuallyPaused?(ready?
-    'WASD move · Mouse aim / fire · Shift squid · Space jump · Q shoulder · [ / ] aim sensitivity. Click Start when ready.':
+    'WASD move · Mouse aim / fire · Shift squid · Space jump · Q shoulder · [ / ] aim sensitivity · '+
+    b380NativeWeaponGuidance({
+     profile:this.projectiles.currentPlayerWeapon,
+     hp:this.resources.currentHp,
+     actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
+     actualChargePercent:this.stats.playerWeaponChargePercent,
+     currentMode:this.player.currentMode,
+     canShoot:this.player.canShoot,
+     realSubEnabled:this.b38HumanSubEnabled
+    })+'. Click Start when ready.':
     Math.ceil(this.remainingSeconds)+'s left · CPU, ink and positions retained')+
     ' · UNSCORED / NO OFFICIAL RESULT':'';
   this.refreshB195CoopHud(run);
@@ -6169,6 +6179,15 @@ export class UndertowF3PlayablePreviewApp{
     (cleared&&phase==='PLAYING'?'A1 CLEAR · KEEP PLAYING\n':'')+
     'HP '+Math.round(state.player.hp)+' · INK '+Math.round(state.player.ink)+
     ' · CPU '+state.cpu.physicalRejoins.length+'/7\n'+
+    b380NativeWeaponGuidance({
+     profile:this.projectiles.currentPlayerWeapon,
+     hp:state.player.hp,
+     actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
+     actualChargePercent:this.stats.playerWeaponChargePercent,
+     currentMode:this.player.currentMode,
+     canShoot:this.player.canShoot,
+     realSubEnabled:this.b38HumanSubEnabled
+    })+'\n'+
     'AIM SENS '+this.camera.sourcePracticeViewSnapshot().
      sourceAimSensitivityMultiplier.toFixed(2)+'x · [ / ] TO ADJUST\n'+
     'HUMAN INK '+state.b23HumanInkFeedback.humanChangedCells+

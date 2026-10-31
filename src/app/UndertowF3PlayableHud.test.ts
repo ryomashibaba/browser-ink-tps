@@ -2,6 +2,8 @@ import {describe,expect,it} from 'vitest';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
 import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
 import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
+import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
+import {weaponProfile} from '../weapons/WeaponCatalog';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
 import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
@@ -495,5 +497,49 @@ describe('B379 real weapon movement and dualie right-click',()=>{
    expect(d.dodgeCount()).toBe(0);
    expect(d.movements).toEqual([1]);
   }
+ });
+});
+
+describe('B380 real 180s weapon guidance never invents an action or a score',()=>{
+ const view=(id:Parameters<typeof weaponProfile>[0],overrides:Record<string,unknown>={})=>
+  b380NativeWeaponGuidance({
+   profile:weaponProfile(id),hp:100,actualDodgeCharges:2,
+   actualChargePercent:0,currentMode:'HUMAN',canShoot:true,
+   realSubEnabled:false,...overrides
+  });
+ it('names the selected real physical weapon, not always a default shooter',()=>{
+  expect(view('pulse-sprayer')).toContain('Pulse Sprayer');
+  expect(view('needle-smg')).toContain('Needle SMG');
+  expect(view('pulse-sprayer')).not.toContain('RMB DODGE');
+ });
+ it('dualies show only actual KCC charges, mode and physical right-click',()=>{
+  const ready=view('twin-comets',{actualDodgeCharges:2});
+  expect(ready).toContain('RMB DODGE 2/2');
+  expect(view('twin-comets',{actualDodgeCharges:0})).toContain('RMB DODGE 0/2');
+  expect(view('twin-comets',{currentMode:'SQUID'})).toContain('HUMAN FORM');
+  expect(view('twin-comets',{hp:0})).toContain('SPLATTED');
+  expect(view('twin-comets',{canShoot:false})).toContain('RECOVERING');
+ });
+ it('uses existing guard and charge weapon classes without granting ability',()=>{
+  expect(view('canopy-guard')).toContain('RMB GUARD');
+  expect(view('rail-charger',{actualChargePercent:38.6}))
+   .toContain('CHARGE 39%');
+  expect(view('chord-stringer',{actualChargePercent:70}))
+   .toContain('CHARGE 70%');
+  expect(view('rotor-splatling',{actualChargePercent:0}))
+   .toContain('CHARGE 0%');
+  expect(view('metro-roller')).toContain('LMB');
+  expect(view('pulse-sprayer',{realSubEnabled:false})).not.toContain('F SUB');
+  expect(view('pulse-sprayer',{realSubEnabled:true})).toContain('F SUB');
+ });
+ it('clamps invalid visual numbers without corrupting game resources',()=>{
+  expect(view('twin-comets',{actualDodgeCharges:-5}))
+   .toContain('RMB DODGE 0/2');
+  expect(view('twin-comets',{actualDodgeCharges:Infinity}))
+   .toContain('RMB DODGE 0/2');
+  expect(view('rail-charger',{actualChargePercent:Infinity}))
+   .toContain('CHARGE 0%');
+  expect(view('rail-charger',{actualChargePercent:190}))
+   .toContain('CHARGE 100%');
  });
 });
