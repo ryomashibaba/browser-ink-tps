@@ -463,7 +463,7 @@ describe('B379 real weapon movement and dualie right-click',()=>{
    getMovementMultiplier:(f:boolean,s:boolean)=>f?
     (klass==='CHARGER'?.66:klass==='BRUSH'?1.15:1):
     s&&klass==='BRELLA'?.74:1};
-  const apply=(overrides:Record<string,boolean|string>={})=>
+  const apply=(overrides:Partial<{humanAlive:boolean;realPointerLocked:boolean;sourceRoundPhase:string;stopped:boolean}>={})=>
    applyB379NativePlayerWeaponMobility({
     input,player,weapons,humanAlive:true,realPointerLocked:true,
     sourceRoundPhase:'PLAYING',stopped:false,...overrides});
