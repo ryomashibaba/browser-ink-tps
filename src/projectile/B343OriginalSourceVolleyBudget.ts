@@ -32,6 +32,7 @@ export function b343SourceShooterPracticeHref(href:string,enable:boolean):string
   next.searchParams.set('t21W10B348','sourceShooterAccuracyCandidate');
   next.searchParams.set('t21W10B351','realCpuHitCue');
   next.searchParams.set('t21W10B367','realCpuLifecycle');
+  next.searchParams.set('t21W10B368','physicalEnemyFrontier');
   next.searchParams.set('t21W10B355','realInkHud');
   next.searchParams.set('t21W10B356','realImpactReticle');
  }

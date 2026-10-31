@@ -266,6 +266,62 @@ async function run(){
   return s;
  };
  const started=await sample('START');
+ // B368: physically read the real 7-CPU roster, not an invented target.
+ // Native CPU foot coordinates and native human body alone decide distances.
+ const b368PhysicalRead=(name,n)=>{
+  const enemies=n.cpu.cpu.filter(c=>
+   ['B1','B2','B3','B4'].includes(c.id)&&
+   c.lifeState==='ACTIVE'&&c.rejoined&&
+   c.mobilityState==='GROUND'&&
+   c.physicalFoot?.length===3&&c.physicalFoot.every(Number.isFinite))
+   .map(c=>({id:c.id,foot:c.physicalFoot,
+    hp:c.hp,distanceMeters:Number(Math.hypot(
+     c.physicalFoot[0]-n.player.position[0],
+     c.physicalFoot[2]-n.player.position[2]).toFixed(3))}))
+   .sort((a,b)=>a.distanceMeters-b.distanceMeters||
+    a.id.localeCompare(b.id));
+  if(enemies.length!==4||!enemies[0]||
+    n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
+    n.originalSourceNavigationLinks!==26||
+    n.sourceScoreablePromotions!==0||
+    n.cpu.physicalFootRelocations!==0)
+   fail('B368_NATIVE_OPPONENT_PHYSICAL_AUTHORITY_HOLD_'+name);
+  const value={stage:name,nativeTick:n.tick,
+   actualHumanBody:n.player.position,closest:enemies[0],
+   allPhysicalEnemies:enemies,realCpuCount:n.cpu.cpu.length,
+   generatedOpponentPositions:0,syntheticNavLinks:0,
+   actualOpponentRouteCertified:false,shotHitCertified:false,
+   officialWinner:'NONE'};
+  console.log('B368_REAL_PLAYER_OPPONENT_DISTANCE',JSON.stringify({
+   stage:name,tick:n.tick,nearest:value.closest.id,
+   genuineHorizontalMeters:value.closest.distanceMeters,
+   routeCertified:false}));
+  return value;
+ };
+ const b368Ui=()=>read('(() => {const e=document.querySelector('+
+  '"#t21-f3-b368-real-enemy-frontier");return {exists:!!e,'+
+  'visible:!!e&&!e.hidden&&getComputedStyle(e).display!=="none",'+
+  'actor:e?.dataset.nearestCpuId,distance:Number('+
+  'e?.dataset.nativeHorizontalMeters??-1),'+
+  'cpuCount:e?.dataset.cpuPhysicalCount,'+
+  'score:e?.dataset.sourceScoreable,'+
+  'route:e?.dataset.crossTeamRouteCertified,'+
+  'hit:e?.dataset.projectileHitCertified,'+
+  'writes:e?.dataset.gameplayWrites,'+
+  'relocations:e?.dataset.actorRelocations,text:e?.textContent}})()');
+ const b368Initial=b368PhysicalRead(
+  'INITIAL_ORIGINAL_HIGH_SPAWN',verifyAuthority(await snapshot()));
+ const b368InitialHud=await b368Ui();
+ if(!b368InitialHud.exists||!b368InitialHud.visible||
+    b368InitialHud.actor!==b368Initial.closest.id||
+    Math.abs(b368InitialHud.distance-
+     b368Initial.closest.distanceMeters)>1.5||
+    b368InitialHud.cpuCount!=='4'||b368InitialHud.score!=='0'||
+    b368InitialHud.route!=='false'||b368InitialHud.hit!=='false'||
+    b368InitialHud.relocations!=='0'||b368InitialHud.writes!=='0'||
+    !b368InitialHud.text?.includes('NO CROSS-TEAM PATH'))
+  fail('B368_NATIVE_PLAYER_HUD_NOT_PHYSICAL_'+
+   JSON.stringify({b368Initial,b368InitialHud}));
  // B365 is the genuine B183/B186 SOURCE-local gameplay challenge,
  // integrated with actual B192 CPU combat and B343 physical shooter.
  // The upper-floor start must not silently award lower-floor landing,
@@ -580,6 +636,18 @@ async function run(){
  await send('Input.dispatchMouseEvent',
   {type:'mouseMoved',x:800,y:450,button:'none'});
  const routeStart=verifyAuthority(await snapshot());
+ const b368Approach={schema:'B368_REAL_ORIGINAL_PLAYER_TO_CPU_APPROACH',
+  source:'25/17/26/0',initial:b368Initial,
+  routeStart:b368PhysicalRead('ROUTE_START_HIGH',routeStart),
+  stages:[],final:null,actualHorizontalClosingMeters:null,
+  minPhysicalSeparationMeters:null,realEncounterCertified:false,
+  certifiedOriginalCrossTeamRoutes:0,
+  syntheticActorPlacements:0,addedOriginalSourceSolids:0,
+  realHumanWASDOnly:true,gameplayWrites:0,officialWinner:'NONE'};
+ const writeB368=()=>writeFileSync(resolve(DIR,
+  'b368-real-native-enemy-proximity-frontier.json'),
+  JSON.stringify(b368Approach,null,2)+'\n');
+ writeB368();
  route.start=nativeFoot(routeStart);
  route.nativeYawAtStart=routeStart.cameraSourcePractice?.yawDegrees;
  saveRoute();
@@ -607,6 +675,8 @@ async function run(){
       'UndertowT21D:right-low-team-a';
     return n.tick>=before.tick+step.ticks||physicalRaised?n:false;
    },180000);
+   b368Approach.stages.push(
+    b368PhysicalRead(step.name,after));writeB368();
    route.stages.push({phase:step.name,
     realCDPKeyDown:true,beforeTick:before.tick,
     actualPhysicalDurationTicks:after.tick-before.tick,
@@ -674,6 +744,38 @@ async function run(){
   if(after.b186RealOriginalHumanCircuit?.sourceLocalPlayClear===true)break;
  }
  const finished=verifyAuthority(await snapshot()),mission=finished.b186RealOriginalHumanCircuit;
+ const b368Final=b368PhysicalRead('POST_REAL_RAMP_AND_INK',finished);
+ b368Approach.final=b368Final;
+ b368Approach.actualHorizontalClosingMeters=Number((
+  b368Initial.closest.distanceMeters-b368Final.closest.distanceMeters).toFixed(3));
+ b368Approach.minPhysicalSeparationMeters=Math.min(
+  b368Initial.closest.distanceMeters,
+  ...b368Approach.stages.map(s=>s.closest.distanceMeters),
+  b368Final.closest.distanceMeters);
+ writeB368();
+ const b368FinalHud=await b368Ui();
+ if(!b368FinalHud.exists||!b368FinalHud.visible||
+    b368FinalHud.actor!==b368Final.closest.id||
+    Math.abs(b368FinalHud.distance-b368Final.closest.distanceMeters)>1.5||
+    b368FinalHud.route!=='false'||b368FinalHud.hit!=='false'||
+    b368FinalHud.writes!=='0'||b368FinalHud.relocations!=='0'||
+    !b368FinalHud.text?.includes('NO CROSS-TEAM PATH'))
+  fail('B368_FINAL_PLAYER_HUD_SOURCE_DRIFT_'+
+   JSON.stringify({b368Final,b368FinalHud}));
+ if(b368Approach.actualHorizontalClosingMeters<10||
+    b368Final.closest.distanceMeters<32||
+    finished.humanCpuDirectHits!==0||
+    finished.b367RealCpuLifecycleEvidence?.physicalHumanCpuHpHits!==0)
+  fail('B368_REAL_APPROACH_UNPROVEN_OR_FALSE_ENCOUNTER_'+
+   JSON.stringify(b368Approach));
+ console.log('B368_REAL_PLAYER_CLOSES_PHYSICAL_ENEMY_DISTANCE',
+  JSON.stringify({actualHumanWASDPhysicalClosingMeters:
+   b368Approach.actualHorizontalClosingMeters,
+   startMeters:b368Initial.closest.distanceMeters,
+   finalMeters:b368Final.closest.distanceMeters,
+   closestNativeCpu:b368Final.closest.id,
+   sourceOriginalPathCertified:false,
+   actualHitCertified:false,officialWinner:'NONE'}));
  route.final=nativeFoot(finished);
  route.nativeMissionClear=mission?.sourceLocalPlayClear===true;
  route.finalOutcome=route.nativeMissionClear?

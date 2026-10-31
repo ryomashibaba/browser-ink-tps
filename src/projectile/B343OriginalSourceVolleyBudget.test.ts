@@ -33,6 +33,7 @@ describe('one-click genuine SOURCE shooter practice',()=>{
    ['t21W10B348','sourceShooterAccuracyCandidate'],
    ['t21W10B351','realCpuHitCue'],
    ['t21W10B367','realCpuLifecycle'],
+   ['t21W10B368','physicalEnemyFrontier'],
    ['t21W10B355','realInkHud'],
    ['t21W10B356','realImpactReticle']
   ] as [string,string][])expect(target.searchParams.get(k)).toBe(v);

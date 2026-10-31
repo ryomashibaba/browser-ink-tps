@@ -32,6 +32,7 @@ import {summarizeB165OriginalAllyPractice}
 import {getB166OriginalAllyRendezvous}
  from './B166OriginalAllyRendezvous';
 import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
+import {b368RealNativeEnemyFrontier} from './B368RealNativeEnemyFrontier';
 import {b364RealSourceCrosshair} from './B364RealSourceCrosshair';
 import {shouldPresentB168NativePractice} from './B168NativePracticePresentation';
 import {B183OriginalHumanDescent} from './B183OriginalHumanDescent';
@@ -340,6 +341,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly practiceHud:ReturnType<typeof createF3PlayableHud>;
  private readonly b202PauseOverlay:HTMLElement;
  private readonly b167CombatNotice:HTMLElement;
+ private readonly b368EnemyFrontierHud:HTMLElement|null;
  private readonly b243AimLineNotice:HTMLElement;
  // B183 original-source native first-drop game challenge, without route writes.
  private readonly b183DropNotice:HTMLElement;
@@ -1197,6 +1199,7 @@ export class UndertowF3PlayablePreviewApp{
     b31Params.get('t21W10B348')==='sourceShooterAccuracyCandidate'&&
     b31Params.get('t21W10B351')==='realCpuHitCue'&&
     b31Params.get('t21W10B367')==='realCpuLifecycle'&&
+    b31Params.get('t21W10B368')==='physicalEnemyFrontier'&&
     b31Params.get('t21W10B355')==='realInkHud'&&
     b31Params.get('t21W10B356')==='realImpactReticle';
    const button=document.createElement('button');
@@ -1461,6 +1464,28 @@ export class UndertowF3PlayablePreviewApp{
    'box-shadow:0 8px 22px #0019';
   combatNotice.hidden=true;ui.appendChild(combatNotice);
   this.b167CombatNotice=combatNotice;
+  // B368 is a single small PLAYER information row showing native physical
+  // CPU proximity only. No HUD element grants a new path or hit.
+  if(b192HumanCombatEnabled&&this.b203FullRound&&
+     b31Params.get('t21W10B368')==='physicalEnemyFrontier'){
+   const front=document.createElement('aside');
+   front.id='t21-f3-b368-real-enemy-frontier';
+   front.hidden=true;
+   front.dataset.sourceScoreable='0';
+   front.dataset.crossTeamRouteCertified='false';
+   front.dataset.actualEncounterCertified='false';
+   front.dataset.projectileHitCertified='false';
+   front.dataset.actorRelocations='0';
+   front.dataset.gameplayWrites='0';
+   front.setAttribute('aria-live','off');
+   front.style.cssText='position:fixed;right:14px;bottom:113px;'+
+    'z-index:37;pointer-events:none;width:min(278px,calc(100vw - 28px));'+
+    'box-sizing:border-box;padding:7px 10px;'+
+    'border:1px solid #5a9bba;border-radius:8px;'+
+    'background:rgba(4,28,40,.93);color:#d9f4ff;'+
+    'font:700 10px/1.4 system-ui;font-variant-numeric:tabular-nums';
+   ui.appendChild(front);this.b368EnemyFrontierHud=front;
+  }else this.b368EnemyFrontierHud=null;
   // B243 real full-round reticle. Never implies projectile hits or
   // a certified path to an opponent; the existing hit HUD remains authoritative.
   const aimLine=document.createElement('div');
@@ -5813,6 +5838,37 @@ export class UndertowF3PlayablePreviewApp{
    this.b167CombatNotice.style.borderColor=cue.state==='STAGE_RAY_CLEAR'?
     'rgba(103,235,212,.68)':'rgba(255,159,195,.56)';
   }else this.b167CombatNotice.dataset.t21B167ContactState='OFF';
+  if(this.b368EnemyFrontierHud){
+   const frontier=b368RealNativeEnemyFrontier({
+    enabled:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+    stage:[state.originalSourceSolids,state.originalPaintSurfaces,
+     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
+    nativeTick:state.tick,matchState:state.matchState,
+    paused:state.paused,stopReason:state.stopReason,
+    productionAuthorized:state.productionAuthorized,
+    unrestricted4v4Certified:state.unrestricted4v4Certified,
+    humanBody:state.player.position,humanHp:state.player.hp,
+    humanGrounded:this.stats.playerGrounded,
+    humanOriginalSupportId:
+     state.b112OriginalHumanGround.lastOriginalSourceHitId,
+    cpu:state.cpu.cpu,
+    stageRayBlocked:(from,to)=>!!this.physics.castStageSegment(
+     new Vec3(...from),new Vec3(...to),'ink-projectile')
+   });
+   const n=this.b368EnemyFrontierHud;
+   const playerMode=document.querySelector<HTMLElement>('#ui-root')?.
+    dataset.t21B245Presentation==='PLAYER';
+   n.hidden=!frontier||!playerMode||
+    this.survey.snapshot().active||this.galleryIndex>=0;
+   n.dataset.nativeTick=String(frontier?.nativeTick??-1);
+   n.dataset.nearestCpuId=frontier?.nearestId??'NONE';
+   n.dataset.nativeHorizontalMeters=String(frontier?.horizontalMeters??-1);
+   n.dataset.nativeOriginalFootId=frontier?.sourceHumanSupportId??'NONE';
+   n.dataset.nativeStageRayBlocked=String(
+    frontier?.originalStageRayBlocked??'UNVERIFIED');
+   n.dataset.cpuPhysicalCount=String(frontier?.measuredEnemies.length??0);
+   if(frontier&&n.textContent!==frontier.label)n.textContent=frontier.label;
+  }
   // Actual view target and original Rapier/paintable line from the HUMAN
   // muzzle. No target correction, autolock, gameplay write or hit claim.
   const aimActive=this.b203FullRound&&

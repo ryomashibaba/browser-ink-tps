@@ -23,7 +23,7 @@ jobs:
           node-version: '24'
       - run: node --test scripts/t21-w10b131-trigger-matrix.test.mjs
       - run: npm install --no-audit --no-fund --no-package-lock
-      - run: npx vitest run src/projectile/B343OriginalSourceVolleyBudget.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/B364RealSourceCrosshair.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/camera/ThirdPersonCamera.combat.test.ts
+      - run: npx vitest run src/projectile/B343OriginalSourceVolleyBudget.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/B364RealSourceCrosshair.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B368RealNativeEnemyFrontier.test.ts src/camera/ThirdPersonCamera.combat.test.ts
       - run: npm run build -- --base=/browser-ink-tps/
       - run: node --check scripts/t21-b343-real-source-volley-round.mjs
       - name: Real Chromium native player with explicit original source B343 weapon
