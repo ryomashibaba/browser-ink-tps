@@ -38,6 +38,7 @@ import {shouldPresentB168NativePractice} from './B168NativePracticePresentation'
 import {B183OriginalHumanDescent} from './B183OriginalHumanDescent';
 import {b185OriginalDropGuidance} from './B185OriginalDropGuidance';
 import {B186RealOriginalSourceCircuit} from './B186RealOriginalSourceCircuit';
+import {b371RealSourceMissionCue} from './B371RealSourceMissionCue';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
 import {PaintCoordinator} from '../ink/PaintCoordinator';
@@ -4383,9 +4384,38 @@ export class UndertowF3PlayablePreviewApp{
       if(this.b203FullRound&&
          this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY'&&
          new URL(location.href).searchParams.get('t21W10B343')==='sourceVolleyAtomic'&&
-         document.querySelector<HTMLElement>('#ui-root')?.dataset.t21B245Presentation==='PLAYER')
-       this.b183DropNotice.textContent=
-        circuitInstruction+' · 180s SOURCE PRACTICE · NO TURF WINNER';
+         document.querySelector<HTMLElement>('#ui-root')?.dataset.t21B245Presentation==='PLAYER'){
+       const cue=b371RealSourceMissionCue({
+        originalStage:[this.rawStage.solids.length,
+         this.rawStage.paintSurfaces.length,
+         this.rawStage.navigationLinks?.length??0,0],
+        genuineSourceShooterSelected:true,nativeTick:frame,
+        status:circuit.status,
+        originalSourceLocalClear:circuit.sourceLocalPlayClear,
+        realGroundedTravelMeters:circuit.genuineGroundedTravelMeters,
+        requiredGroundedTravelMeters:circuit.requiredNativeGroundTravelMeters,
+        realFreshHumanImpactCells:circuit.realPostDropHumanImpactChangedCells,
+        requiredFreshHumanImpactCells:circuit.requiredHumanImpactChangedCells,
+        actualHumanImpactEvents:actualHumanInk.humanChangedImpactCount,
+        sourceInkOnly:actualHumanInk.originalSourceOnly,
+        realAcceptedShots:this.stats.shotsFired,
+        actualInkPercent:this.stats.playerInkPercent,
+        playerAlive:this.resources.currentHp>0,
+        matchState:this.matchState,stopped:!!this.stopReason
+       });
+       // A forged source boundary must never become player mission progress.
+       this.b183DropNotice.dataset.b371SourceStep=cue?.step??'HOLD';
+       this.b183DropNotice.dataset.b371SourceScoreable='0';
+       this.b183DropNotice.dataset.b371CrossTeamCertified='false';
+       this.b183DropNotice.dataset.b371RealShots=
+        String(cue?this.stats.shotsFired:-1);
+       if(cue){
+        this.b183DropNotice.textContent=cue.text;
+        this.b183DropNotice.style.borderColor=
+         cue.completed?'#83ffd4':cue.step==='HOLD'?'#ffb68c':'#59d3e0';
+       }else this.b183DropNotice.textContent=
+        'SOURCE CIRCUIT HOLD · UNVERIFIED PHYSICAL EVIDENCE · NO TURF WINNER';
+      }
      }
     }
     if(this.b27KineticEnabled)
