@@ -1478,7 +1478,7 @@ export class UndertowF3PlayablePreviewApp{
    front.dataset.actorRelocations='0';
    front.dataset.gameplayWrites='0';
    front.setAttribute('aria-live','off');
-   front.style.cssText='position:fixed;right:14px;bottom:113px;'+
+   front.style.cssText='position:fixed;left:14px;bottom:84px;'+
     'z-index:37;pointer-events:none;width:min(278px,calc(100vw - 28px));'+
     'box-sizing:border-box;padding:7px 10px;'+
     'border:1px solid #5a9bba;border-radius:8px;'+

@@ -310,7 +310,13 @@ async function run(){
   'route:e?.dataset.crossTeamRouteCertified,'+
   'hit:e?.dataset.projectileHitCertified,'+
   'writes:e?.dataset.gameplayWrites,'+
-  'relocations:e?.dataset.actorRelocations,text:e?.textContent}})()');
+  'relocations:e?.dataset.actorRelocations,text:e?.textContent,'+
+  'overlapsMission:(()=>{const m=document.querySelector('+
+  '"#t21-f3-b183-real-first-drop");if(!e||!m||m.hidden||'+
+  'getComputedStyle(m).display==="none")return false;'+
+  'const a=e.getBoundingClientRect(),b=m.getBoundingClientRect();'+
+  'return a.left<b.right&&a.right>b.left&&'+
+  'a.top<b.bottom&&a.bottom>b.top})()}})()');
  // Native CPU positions keep moving between UI render and CDP snapshots.
  // The exact nearest ID can legitimately flip (B1/B2 were 0.040m apart).
  // Verify the HUD's named ACTUAL CPU by id, its true physical distance,
@@ -330,6 +336,7 @@ async function run(){
     b368InitialHud.cpuCount!=='4'||b368InitialHud.score!=='0'||
     b368InitialHud.route!=='false'||b368InitialHud.hit!=='false'||
     b368InitialHud.relocations!=='0'||b368InitialHud.writes!=='0'||
+    b368InitialHud.overlapsMission!==false||
     !b368InitialHud.text?.includes('NO CROSS-TEAM PATH'))
   fail('B368_NATIVE_PLAYER_HUD_NOT_PHYSICAL_'+
    JSON.stringify({b368Initial,b368InitialHud}));
@@ -769,6 +776,7 @@ async function run(){
     !b368HudMatches(b368FinalHud,b368Final)||
     b368FinalHud.route!=='false'||b368FinalHud.hit!=='false'||
     b368FinalHud.writes!=='0'||b368FinalHud.relocations!=='0'||
+    b368FinalHud.overlapsMission!==false||
     !b368FinalHud.text?.includes('NO CROSS-TEAM PATH'))
   fail('B368_FINAL_PLAYER_HUD_SOURCE_DRIFT_'+
    JSON.stringify({b368Final,b368FinalHud}));
