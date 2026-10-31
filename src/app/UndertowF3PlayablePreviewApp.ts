@@ -5802,6 +5802,17 @@ export class UndertowF3PlayablePreviewApp{
     id:this.projectiles.currentPlayerWeapon.id,
     displayName:this.projectiles.currentPlayerWeapon.displayName
    },
+   // B381 read-only true player Rapier/weapon state, never a QA control.
+   b381RealNativeDodge:{
+    realWeapon:this.projectiles.currentPlayerWeapon.id,
+    genuineDodgeStarts:this.stats.playerWeaponDodges,
+    genuineRemainingCharges:this.stats.playerWeaponDodgeCharges,
+    realLocomotion:this.stats.playerLocomotionState,
+    realHorizontalSpeed:this.stats.playerSpeedMetersPerSecond,
+    trueKccBody:[pos.x,pos.y,pos.z],
+    artificialActorMoves:0 as const,
+    officialScoreablePromotions:0 as const
+   },
    b343OriginalSourceVolleyBudget:
      this.projectiles.b343OriginalSourceVolleyBudgetSnapshot(),
    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
