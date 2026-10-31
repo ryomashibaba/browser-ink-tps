@@ -339,13 +339,13 @@ describe('B372 real native SOURCE shooter resource feedback',()=>{
   expect(x.gameplayWrites).toBe(0);
  });
  it('distinguishes actual insufficient ink, physical pool saturation, verified clear',()=>{
-  const f=make();f.shooterResources.inkUnits=7;
+  const f=make();f.shooterResources!.inkUnits=7;
   expect(b371RealSourceMissionCue(f)?.resourceState).toBe('LOW_INK');
-  f.shooterResources.inkUnits=40;f.shooterResources.freePhysicalSlots=0;
+  f.shooterResources!.inkUnits=40;f.shooterResources!.freePhysicalSlots=0;
   expect(b371RealSourceMissionCue(f)?.resourceState).toBe('PHYSICAL_POOL_FULL');
-  f.shooterResources.realPoolRejections=3;
+  f.shooterResources!.realPoolRejections=3;
   expect(b371RealSourceMissionCue(f)?.observedPoolRejections).toBe(3);
-  f.shooterResources.freePhysicalSlots=128;
+  f.shooterResources!.freePhysicalSlots=128;
   f.status='REAL_LOCAL_CIRCUIT_CLEAR' as typeof f.status;
   f.originalSourceLocalClear=true;
   // Literal status transition is tested with correctly typed model frame.
@@ -353,12 +353,12 @@ describe('B372 real native SOURCE shooter resource feedback',()=>{
  });
  it('rejects altered pool counts, fake consumption stats and negative resources',()=>{
   for(const alter of [
-   (f:B371SourceMissionFrame)=>{f.shooterResources.freePhysicalSlots=129;},
-   (f:B371SourceMissionFrame)=>{f.shooterResources.physicalPoolSize=0;},
-   (f:B371SourceMissionFrame)=>{f.shooterResources.inkUnits=-1;},
-   (f:B371SourceMissionFrame)=>{f.shooterResources.shotInkCostUnits=Infinity;},
-   (f:B371SourceMissionFrame)=>{f.shooterResources.realPoolRejections=-1;},
-   (f:B371SourceMissionFrame)=>{f.shooterResources.realDryFireAttempts=1.5;}
+   (f:B371SourceMissionFrame)=>{f.shooterResources!.freePhysicalSlots=129;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources!.physicalPoolSize=0;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources!.inkUnits=-1;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources!.shotInkCostUnits=Infinity;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources!.realPoolRejections=-1;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources!.realDryFireAttempts=1.5;}
   ]){const f=make();alter(f);expect(b371RealSourceMissionCue(f)).toBeNull();}
  });
 });
