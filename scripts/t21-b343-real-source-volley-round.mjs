@@ -311,13 +311,22 @@ async function run(){
   'hit:e?.dataset.projectileHitCertified,'+
   'writes:e?.dataset.gameplayWrites,'+
   'relocations:e?.dataset.actorRelocations,text:e?.textContent}})()');
+ // Native CPU positions keep moving between UI render and CDP snapshots.
+ // The exact nearest ID can legitimately flip (B1/B2 were 0.040m apart).
+ // Verify the HUD's named ACTUAL CPU by id, its true physical distance,
+ // and bounded nearest discrepancy, rather than requiring an atomic
+ // snapshot that the normal gameplay never exposes.
+ const b368HudMatches=(hud,truth)=>{
+  const real=truth.allPhysicalEnemies.find(x=>x.id===hud.actor);
+  return !!real&&Number.isFinite(hud.distance)&&
+   Math.abs(hud.distance-real.distanceMeters)<=1.5&&
+   real.distanceMeters-truth.closest.distanceMeters<=1.5;
+ };
  const b368Initial=b368PhysicalRead(
   'INITIAL_ORIGINAL_HIGH_SPAWN',verifyAuthority(await snapshot()));
  const b368InitialHud=await b368Ui();
  if(!b368InitialHud.exists||!b368InitialHud.visible||
-    b368InitialHud.actor!==b368Initial.closest.id||
-    Math.abs(b368InitialHud.distance-
-     b368Initial.closest.distanceMeters)>1.5||
+    !b368HudMatches(b368InitialHud,b368Initial)||
     b368InitialHud.cpuCount!=='4'||b368InitialHud.score!=='0'||
     b368InitialHud.route!=='false'||b368InitialHud.hit!=='false'||
     b368InitialHud.relocations!=='0'||b368InitialHud.writes!=='0'||
@@ -757,8 +766,7 @@ async function run(){
  writeB368();
  const b368FinalHud=await b368Ui();
  if(!b368FinalHud.exists||!b368FinalHud.visible||
-    b368FinalHud.actor!==b368Final.closest.id||
-    Math.abs(b368FinalHud.distance-b368Final.closest.distanceMeters)>1.5||
+    !b368HudMatches(b368FinalHud,b368Final)||
     b368FinalHud.route!=='false'||b368FinalHud.hit!=='false'||
     b368FinalHud.writes!=='0'||b368FinalHud.relocations!=='0'||
     !b368FinalHud.text?.includes('NO CROSS-TEAM PATH'))
