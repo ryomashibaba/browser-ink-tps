@@ -1,10 +1,21 @@
 /** B245: display-only reversible SOURCE round / diagnostic HUD. */
+import {b384SourceCircuitSelected} from './B384SourceCircuit';
 export type B245View='PLAYER'|'QA';
 export function b245InitialSourceView(search:string):B245View {
  const q=new URLSearchParams(search);
  return q.get('t21W10B203')!=='fullRound'||
   q.get('t21QaInput')==='deterministic'||
   q.get('t21Presentation')==='qa'?'QA':'PLAYER';
+}
+/** Physical original-circuit goal is shown in normal PLAYER view only
+ * for either the historical B343 real shooter or B384 selectable kit. */
+export function b245ShouldShowSourceCircuitGoal(search:string):boolean{
+ const q=new URLSearchParams(search);
+ return q.get('t21QaDrive')==='source'&&
+  q.get('t21W10B183')==='firstDropPlay'&&
+  q.get('t21W10B192')==='humanCombat'&&
+  (q.get('t21W10B343')==='sourceVolleyAtomic'||
+   b384SourceCircuitSelected(q));
 }
 /** Presentation-only radar policy; undefined B245 data keeps legacy behavior. */
 export function b247ShouldCompactSourceRadar(
@@ -55,10 +66,7 @@ export function installB245SourcePresentation(
  ].join('');
  // B365: unlike the full QA panel, the REAL original-circuit objective
  // must be visible in normal PLAYER view. Source/CPU/gameplay untouched.
- if(q.get('t21QaDrive')==='source'&&
-    q.get('t21W10B183')==='firstDropPlay'&&
-    q.get('t21W10B192')==='humanCombat'&&
-    q.get('t21W10B343')==='sourceVolleyAtomic'){
+ if(b245ShouldShowSourceCircuitGoal(window.location.search)){
   style.textContent+=
    '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b183-real-first-drop'+
    '{display:block!important;max-width:min(300px,calc(100vw - 28px));'+

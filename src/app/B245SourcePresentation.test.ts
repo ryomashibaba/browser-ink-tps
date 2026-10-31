@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {b245InitialSourceView,b247ShouldCompactSourceRadar} from './B245SourcePresentation';
+import {b245InitialSourceView,b247ShouldCompactSourceRadar,
+ b245ShouldShowSourceCircuitGoal} from './B245SourcePresentation';
 describe('B245 original-source player and QA view policy',()=>{
  it('defaults a human 180s SOURCE round to uncluttered player view',()=>{
   expect(b245InitialSourceView('?t21W10B203=fullRound')).toBe('PLAYER');
@@ -29,5 +30,26 @@ describe('B247 native radar focus must not be overwritten by 60Hz renders',()=>{
  it('retains legacy QA behavior in non-B245 source sessions',()=>{
   expect(b247ShouldCompactSourceRadar(false,false,false)).toBe(false);
   expect(b247ShouldCompactSourceRadar(true,false,false)).toBe(true);
+ });
+});
+
+describe('B384 actual SOURCE local mission visible in PLAYER view',()=>{
+ const b384='?t21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+
+  '&t21W10B183=firstDropPlay&t21W10B192=humanCombat'+
+  '&t21W10B203=fullRound&t21W10B384=loadoutCircuit';
+ it('preserves B343 established visibility and admits source-only B384',()=>{
+  expect(b245ShouldShowSourceCircuitGoal(
+   '?t21QaDrive=source&t21W10B183=firstDropPlay'+
+   '&t21W10B192=humanCombat&t21W10B343=sourceVolleyAtomic')).toBe(true);
+  expect(b245ShouldShowSourceCircuitGoal(b384)).toBe(true);
+  expect(b245InitialSourceView(b384)).toBe('PLAYER');
+ });
+ it('never exposes fake source circuit to incomplete or benchmark-mixed modes',()=>{
+  for(const suffix of ['&t21W10B183=off','&t21QaDrive=other',
+   '&t21W10B343=sourceVolleyAtomic','&t21QaInput=deterministic',
+   '&t21W10B384=off']){
+   expect(b245ShouldShowSourceCircuitGoal(b384+suffix)).toBe(false);
+  }
+  expect(b245ShouldShowSourceCircuitGoal('?t21Play=preview')).toBe(false);
  });
 });
