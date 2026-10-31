@@ -4400,6 +4400,14 @@ export class UndertowF3PlayablePreviewApp{
         sourceInkOnly:actualHumanInk.originalSourceOnly,
         realAcceptedShots:this.stats.shotsFired,
         actualInkPercent:this.stats.playerInkPercent,
+        shooterResources:{
+         inkUnits:this.stats.playerInk,
+         shotInkCostUnits:this.projectiles.currentPlayerWeapon.inkCost,
+         freePhysicalSlots:this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().actualFreeSlots,
+         physicalPoolSize:this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().physicalPoolSize,
+         realDryFireAttempts:this.stats.inkDryFireAttempts,
+         realPoolRejections:this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().rejectedVolleys
+        },
         playerAlive:this.resources.currentHp>0,
         matchState:this.matchState,stopped:!!this.stopReason
        });
@@ -4409,6 +4417,11 @@ export class UndertowF3PlayablePreviewApp{
        this.b183DropNotice.dataset.b371CrossTeamCertified='false';
        this.b183DropNotice.dataset.b371RealShots=
         String(cue?this.stats.shotsFired:-1);
+       this.b183DropNotice.dataset.b372VerifiedCompletedSteps=
+        String(cue?.progress??-1);
+       this.b183DropNotice.dataset.b372NativeShooterResources=
+        cue?.resourceState??'UNVERIFIED';
+       this.b183DropNotice.dataset.b372ReadOnly='true';
        if(cue){
         this.b183DropNotice.textContent=cue.text;
         this.b183DropNotice.style.borderColor=
