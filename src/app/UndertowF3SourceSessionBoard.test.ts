@@ -43,3 +43,71 @@ describe('W10-B58 actual source-local session recap gate',()=>{
   expect(()=>sourceSessionSummary(v)).toThrow('W10_B58_INVALID_NATIVE_SESSION_VALUES');
  });
 });
+
+describe('B373 real native 180s shooter circuit and combat recap',()=>{
+ const source=()=>{
+  const f=input();
+  f.matchState='PLAYING';f.tick=1621;f.timeRemainingSeconds=151;
+  f.cpu.physicalRejoins=['A1','A2','A3','B1','B2','B3','B4'];
+  f.shotsFired=11;f.b23HumanInkFeedback.humanChangedCells=90;
+  f.b343OriginalSourceVolleyBudget={enabled:true};
+  f.humanCpuDirectHits=0;f.humanCpuDirectSplats=0;
+  f.b186RealOriginalHumanCircuit={
+   enabled:true,status:'REAL_LOCAL_CIRCUIT_CLEAR',
+   sourceLocalPlayClear:true,actualOriginalRampTouched:true,
+   realPostDropHumanImpactChangedCells:90,
+   genuineGroundedTravelMeters:12.8334,
+   naturalCrossTeamRouteProven:false,
+   sourceScoreablePromotions:0,officialWinner:'NONE'};
+  return f;
+ };
+ it('projects only genuine current-life physics, impact-ink and physical CPU damage',()=>{
+  const f=source();const x=sourceSessionSummary(f);
+  expect(x).toMatchObject({state:'PLAYING',finished:false,
+   sourceShooter:{currentLifeStatus:'REAL_LOCAL_CIRCUIT_CLEAR',
+    currentLifeLocalClear:true,originalRampContact:true,
+    trueHumanImpactCells:90,physicalTravelMeters:12.8334,
+    actualHumanCpuDirectHits:0,actualHumanCpuDirectSplats:0,
+    officialWinner:'NONE',scoringPromotions:0,
+    certifiedNaturalOpponentRoute:false}});
+  f.matchState='TIME_UP';f.timeRemainingSeconds=0;f.tick=10800;
+  expect(sourceSessionSummary(f)).toMatchObject({
+   state:'COMPLETE',finished:true,sourceShooter:{currentLifeLocalClear:true},
+   officialWinner:'NONE',naturallyConnectedOpposingPathsCertified:0});
+ });
+ it('after actual human death, last-life circuit cannot be promoted from old CLEAR',()=>{
+  const f=source();
+  f.humanSplats=1;f.humanRespawns=1;
+  f.b186RealOriginalHumanCircuit!.status='WAIT_FIRST_DROP';
+  f.b186RealOriginalHumanCircuit!.sourceLocalPlayClear=false;
+  f.b186RealOriginalHumanCircuit!.actualOriginalRampTouched=false;
+  f.b186RealOriginalHumanCircuit!.genuineGroundedTravelMeters=0;
+  f.b186RealOriginalHumanCircuit!.realPostDropHumanImpactChangedCells=0;
+  const x=sourceSessionSummary(f);
+  expect(x.sourceShooter).toMatchObject({
+   currentLifeStatus:'WAIT_FIRST_DROP',currentLifeLocalClear:false,
+   trueHumanImpactCells:0,physicalTravelMeters:0});
+  expect(x.actualHumanRespawns).toBe(1);
+ });
+ it('source/route tampering and invented real CPU hit counters fail closed',()=>{
+  for(const edit of [
+   (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.officialWinner='TEAM_A';},
+   (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.naturalCrossTeamRouteProven=true;},
+   (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.sourceScoreablePromotions=1;},
+   (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.actualOriginalRampTouched=false;},
+   (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.realPostDropHumanImpactChangedCells=NaN;},
+   (f:SourceSessionMetrics)=>{f.humanCpuDirectHits=-1;},
+   (f:SourceSessionMetrics)=>{f.humanCpuDirectSplats=1;},
+   (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.status='INVENTED_CLEAR';},
+  ]){
+   const f=source();edit(f);
+   expect(()=>sourceSessionSummary(f)).toThrow('B373_UNTRUSTED_SOURCE_PRACTICE_RECAP');
+  }
+ });
+ it('preserves all non-shooter existing source session views',()=>{
+  const f=input();
+  expect(sourceSessionSummary(f).sourceShooter).toBeNull();
+  f.b343OriginalSourceVolleyBudget={enabled:false};
+  expect(sourceSessionSummary(f).sourceShooter).toBeNull();
+ });
+});
