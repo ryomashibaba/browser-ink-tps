@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {nativeSourceRoundActionWindow} from './NativeSourceRoundActionWindow';
+import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
 import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
@@ -390,5 +390,35 @@ describe('B376 real 180-second end and genuine HP attack cutoff',()=>{
   expect(nativeSourceRoundActionWindow({
    matchState:'UNKNOWN',actualHumanHp:100,stopReason:null})).toEqual({
     humanCanStartNewActions:false,cpuCanStartNewActions:false});
+ });
+});
+
+// B377: CPU used to spend real ink and increment source shots BEFORE
+// B376 discarded the queued projectile at 0:00. This is a true runtime
+// combat-decision gate, not an after-the-fact HUD or metric adjustment.
+describe('B377 CPU real 180s clock/ink/shot consistency',()=>{
+ const gate=(state:string,remaining:number,dt=1/60,stop:string|null=null)=>
+  nativeSourceCpuCanStartActionsBeforeTickEnd({
+   matchState:state,remainingSeconds:remaining,
+   nativeDtSeconds:dt,stopReason:stop});
+ it('keeps normal staging and any source playing tick strictly before 0:00',()=>{
+  expect(gate('STAGING',180)).toBe(true);
+  expect(gate('PLAYING',180)).toBe(true);
+  expect(gate('PLAYING',.5)).toBe(true);
+  expect(gate('PLAYING',2/60)).toBe(true);
+ });
+ it('prevents a charge or projectile at the final native physics tick',()=>{
+  expect(gate('PLAYING',1/60)).toBe(false);
+  expect(gate('PLAYING',.01)).toBe(false);
+  expect(gate('PLAYING',0)).toBe(false);
+  expect(gate('TIME_UP',0)).toBe(false);
+  expect(gate('UNKNOWN',180)).toBe(false);
+ });
+ it('invalid clock, stopped match and non-positive dt fail closed',()=>{
+  expect(gate('PLAYING',NaN)).toBe(false);
+  expect(gate('PLAYING',Infinity)).toBe(false);
+  expect(gate('PLAYING',180,0)).toBe(false);
+  expect(gate('PLAYING',180,NaN)).toBe(false);
+  expect(gate('PLAYING',180,1/60,'SOURCE_STOP')).toBe(false);
  });
 });

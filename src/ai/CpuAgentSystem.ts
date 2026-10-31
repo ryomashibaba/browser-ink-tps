@@ -679,7 +679,10 @@ export class CpuAgentSystem {
     humanTeam: Team.A | Team.B,
     humanPosition: Vec3,
     humanActive: boolean,
-    humanNativeGrounded = true
+    humanNativeGrounded = true,
+    // B377: explicit F3-only last native tick guard. Default true keeps
+    // frozen T20 and every existing CPU source caller byte-for-byte active.
+    canStartNewCombatActions = true
   ): void {
     if (!matchActive) {
       this.b212PriorHuman=null;
@@ -1102,24 +1105,31 @@ export class CpuAgentSystem {
       this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
 
       bot.paintRemaining -= dt;
-      if (bot.paintRemaining <= 0) {
+      if (bot.paintRemaining <= 0 && canStartNewCombatActions) {
         bot.paintRemaining += GAME_CONFIG.cpu.paintCadenceSeconds;
         this.paintAtBot(bot);
       }
 
-      this.updateCpuWeapon(
-        bot,
-        dt,
-        humanTeam,
-        humanPosition,
-        humanActive
-      );
-      this.updateCpuKit(
-        bot,
-        humanTeam,
-        humanPosition,
-        humanActive
-      );
+      // Source F3 last 180-second tick: keep genuine Recast/Rapier motion,
+      // CPU HP and recovery updates, but NEVER enqueue a projectile/kit
+      // after source time expires. The corresponding CPU ink cost, stats
+      // and cooldown are charged inside these calls, so dropping their
+      // requests later would create phantom shots and wasted ink.
+      if (canStartNewCombatActions) {
+        this.updateCpuWeapon(
+          bot,
+          dt,
+          humanTeam,
+          humanPosition,
+          humanActive
+        );
+        this.updateCpuKit(
+          bot,
+          humanTeam,
+          humanPosition,
+          humanActive
+        );
+      }
     }
 
     if (this.phase14qGroundCollision) {

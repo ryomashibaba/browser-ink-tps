@@ -106,7 +106,7 @@ import {b343SourceShooterPracticeHref} from '../projectile/B343OriginalSourceVol
 import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
-import {nativeSourceRoundActionWindow} from './NativeSourceRoundActionWindow';
+import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
 import {createB160SourceCpuActivityView}
  from './B160SourceCpuActivityView';
 import {b69PreviewAimView,b69NextSourcePreviewHref}
@@ -4118,9 +4118,16 @@ export class UndertowF3PlayablePreviewApp{
     // player.syncAfterPhysics), not a Recast projection/QA movement guess.
     // Only the eighth NONPHYSICAL passive-human Crowd steering proxy uses
     // this flag; actual seven CPUs and human Rapier collision remain intact.
+    // CPU generates ink/shot costs during its update, BEFORE the engine
+    // advances the 180s clock below. Predict the exact native clock
+    // boundary rather than dropping already-paid CPU projectiles later.
+    const cpuCanStartActions=nativeSourceCpuCanStartActionsBeforeTickEnd({
+     matchState:this.matchState,remainingSeconds:this.remainingSeconds,
+     nativeDtSeconds:seconds,stopReason:this.stopReason
+    });
     this.cpu.fixedUpdate(seconds,true,Team.A,
      this.player.getPosition(this.p),alive&&!this.w10b14,
-     this.stats.playerGrounded);
+     this.stats.playerGrounded,cpuCanStartActions);
     this.b20ProfileStop('sevenCpuFixed',cpuStart);
     // Only after real native 60Hz CPU physics; use ACTUAL shared Rapier
     // A1 collider identity and ACTUAL PlayerController KCC contacts.
