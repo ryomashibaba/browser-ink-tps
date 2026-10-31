@@ -62,7 +62,7 @@ export class PlayerInput {
       this.jumpQueued = false;
       this.subPressedQueued = false;
       this.specialPressedQueued = false;
-      this.jumpRequiresRelease = false;
+      this.jumpRequiresRelease = !this.combatInputActive;
     };
 
     window.addEventListener('blur', clearGameplayState);
@@ -126,7 +126,9 @@ export class PlayerInput {
     this.keys.delete('Space');
     // A physical Space keyup (not an automatic key repeat) rearms jump
     // after death; no modification to Rapier, movement, CPU or ink.
-    this.jumpRequiresRelease=!active;
+    if(!active)this.jumpRequiresRelease=true;
+    // On native respawn, preserve the release latch until a genuine keyup.
+    // Otherwise an OS repeat from Space held through death could rearm it.
   }
 
   /** Applies only for opt-in, paused, nonproduction source QA tick stepping. */
