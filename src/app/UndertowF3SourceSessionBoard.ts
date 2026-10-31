@@ -25,6 +25,20 @@ export interface SourceSessionMetrics {
  cpuSplats:number;
  humanSplats:number;
  humanRespawns:number;
+ /** Optional true physical shooter: no scripted enemy placement or Turf result. */
+ b343OriginalSourceVolleyBudget?:{enabled:boolean};
+ humanCpuDirectHits?:number;
+ humanCpuDirectSplats?:number;
+ /** Existing B186 authentic CURRENT-LIFE source-only goal, resets on real death. */
+ b186RealOriginalHumanCircuit?:{
+  enabled:boolean;status:string;sourceLocalPlayClear:boolean;
+  actualOriginalRampTouched:boolean;
+  realPostDropHumanImpactChangedCells:number;
+  genuineGroundedTravelMeters:number;
+  naturalCrossTeamRouteProven:boolean;
+  sourceScoreablePromotions:number;
+  officialWinner:string;
+ };
  stopReason:string|null;
 }
 export function sourceSessionSummary(s:SourceSessionMetrics){
@@ -43,8 +57,39 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
     s.cpu.physicalRejoins.length>7||
     new Set(s.cpu.physicalRejoins).size!==s.cpu.physicalRejoins.length)
   throw Error('W10_B58_INVALID_NATIVE_SESSION_VALUES');
+ const selectedShooter=s.b343OriginalSourceVolleyBudget?.enabled===true;
+ const mission=s.b186RealOriginalHumanCircuit;
+ const validPositive=(n:number)=>Number.isFinite(n)&&n>=0;
+ if(selectedShooter&&(
+    !mission||mission.enabled!==true||
+    !['WAIT_FIRST_DROP','MOVE_TO_ORIGINAL_RAISED','PAINT_ON_RAISED',
+      'REAL_LOCAL_CIRCUIT_CLEAR','INVALID_SOURCE_WITNESS'].includes(mission.status)||
+    mission.sourceLocalPlayClear!==(mission.status==='REAL_LOCAL_CIRCUIT_CLEAR')||
+    mission.naturalCrossTeamRouteProven!==false||
+    mission.sourceScoreablePromotions!==0||
+    mission.officialWinner!=='NONE'||
+    !validPositive(mission.realPostDropHumanImpactChangedCells)||
+    !validPositive(mission.genuineGroundedTravelMeters)||
+    (mission.sourceLocalPlayClear&&!mission.actualOriginalRampTouched)||
+    !Number.isSafeInteger(s.humanCpuDirectHits)||
+    !Number.isSafeInteger(s.humanCpuDirectSplats)||
+    s.humanCpuDirectHits!<0||s.humanCpuDirectSplats!<0||
+    s.humanCpuDirectSplats!>s.humanCpuDirectHits!))
+   throw Error('B373_UNTRUSTED_SOURCE_PRACTICE_RECAP');
+ const sourceShooter=selectedShooter&&mission?{
+  currentLifeStatus:mission.status,
+  currentLifeLocalClear:mission.sourceLocalPlayClear,
+  originalRampContact:mission.actualOriginalRampTouched,
+  physicalTravelMeters:mission.genuineGroundedTravelMeters,
+  trueHumanImpactCells:mission.realPostDropHumanImpactChangedCells,
+  actualHumanCpuDirectHits:s.humanCpuDirectHits!,
+  actualHumanCpuDirectSplats:s.humanCpuDirectSplats!,
+  certifiedNaturalOpponentRoute:false as const,
+  officialWinner:'NONE' as const,
+  scoringPromotions:0 as const
+ }:null;
  const done=s.matchState==='TIME_UP'&&!s.stopReason;
- return {
+ return {sourceShooter,
   state:s.stopReason?'SAFE_STOP' as const:
    done?'COMPLETE' as const:s.matchState,
   finished:done,
@@ -218,7 +263,11 @@ export function createF3SourceSessionBoard(
    v.actualCpuSourceShots+' source shots / '+
    v.actualCpuImpactInkCells+' changed impact cells\n'+
    'SPLATS · human '+v.actualHumanSplats+' / CPU '+v.actualCpuSplats+
-   ' · human returns '+v.actualHumanRespawns;
+   ' · human returns '+v.actualHumanRespawns+
+   (v.sourceShooter?'\nCURRENT LIFE SOURCE CIRCUIT · '+
+    (v.sourceShooter.currentLifeLocalClear?'REAL LOCAL CLEAR':
+     v.sourceShooter.currentLifeStatus)+
+    ' · REAL HUMAN→CPU HITS '+v.sourceShooter.actualHumanCpuDirectHits:'');
   restart.hidden=!v.finished;
   finish.hidden=!v.finished;
   finish.style.display=v.finished?'flex':'none';
@@ -229,10 +278,27 @@ export function createF3SourceSessionBoard(
    v.actualCpuSourceShots+' source shots · '+
    v.actualCpuImpactInkCells+' changed source cells\n'+
    'SPLATS   HUMAN '+v.actualHumanSplats+' / CPU '+v.actualCpuSplats+
-   ' · HUMAN RESPAWNS '+v.actualHumanRespawns;
+   ' · HUMAN RESPAWNS '+v.actualHumanRespawns+
+   (v.sourceShooter?'\n\nCURRENT LIFE ORIGINAL CIRCUIT: '+
+    (v.sourceShooter.currentLifeLocalClear?
+      'REAL DROP + RAMP + IMPACT-INK CLEAR':'NOT VERIFIED CLEAR')+
+    '\nACTUAL REGISTERED RAMP: '+
+    (v.sourceShooter.originalRampContact?'CONTACT OBSERVED':'NOT PROVEN')+
+    ' · TRUE GROUNDED TRAVEL '+
+    v.sourceShooter.physicalTravelMeters.toFixed(2)+'m'+
+    '\nFRESH SOURCE HUMAN IMPACT INK '+
+    v.sourceShooter.trueHumanImpactCells+' cells'+
+    '\nGENUINE HUMAN→CPU HP HITS '+v.sourceShooter.actualHumanCpuDirectHits+
+    ' · DIRECT SPLATS '+v.sourceShooter.actualHumanCpuDirectSplats+
+    '\nCIRCUIT RESETS ON ACTUAL DEATH · NO OPPOSING ROUTE OR TURF SCORE':'');
   finish.dataset.t21B59State=v.finished?'FINISHED':'HIDDEN';
   finish.dataset.t21B59OriginalWinner='NONE';
   finish.dataset.t21B59HumanInk=String(v.realHumanImpactInkCells);
+  finish.dataset.b373RealSourceCircuit=
+   v.sourceShooter?.currentLifeStatus??'UNSELECTED';
+  finish.dataset.b373RealHumanCpuHits=
+   String(v.sourceShooter?.actualHumanCpuDirectHits??-1);
+  finish.dataset.b373NoScoring='true';
   finish.dataset.t21B59CpuRejoined=String(v.cpuPhysicallyRejoined);
   root.style.pointerEvents=v.finished?'auto':'none';
   root.dataset.t21B58State=v.state;
