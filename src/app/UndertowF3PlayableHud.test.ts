@@ -278,7 +278,7 @@ describe('B371 real SOURCE practice: three verified local goals and native shoot
   f.actualHumanImpactEvents=3;f.realAcceptedShots=9;
   f.actualInkPercent=66.7;
   const y=b371RealSourceMissionCue(f)!;
-  expect(y).toMatchObject({step:'PAINT',progress:3,completed:false});
+  expect(y).toMatchObject({step:'PAINT',progress:2,completed:false});
   expect(y.text).toContain('37 / 60');
   expect(y.text).toContain('9 REAL SHOTS');
   expect(y.text).toContain('67% INK');
@@ -308,5 +308,57 @@ describe('B371 real SOURCE practice: three verified local goals and native shoot
    (f:B371SourceMissionFrame)=>{f.requiredFreshHumanImpactCells=0;},
    (f:B371SourceMissionFrame)=>{f.originalSourceLocalClear=true;}
   ]){const x=frame();edit(x);expect(b371RealSourceMissionCue(x)).toBeNull();}
+ });
+});
+
+// B372 native-physics shooter resource readout is a projection of
+// PlayerResources/B343 live state, never a fake reload or projectile.
+describe('B372 real native SOURCE shooter resource feedback',()=>{
+ const make=():B371SourceMissionFrame=>({
+  originalStage:[25,17,26,0] as [number,number,number,number],
+  genuineSourceShooterSelected:true,nativeTick:1100,
+  status:'PAINT_ON_RAISED' as const,originalSourceLocalClear:false,
+  realGroundedTravelMeters:3.2,requiredGroundedTravelMeters:2,
+  realFreshHumanImpactCells:45,requiredFreshHumanImpactCells:60,
+  actualHumanImpactEvents:7,sourceInkOnly:true,realAcceptedShots:10,
+  actualInkPercent:18,playerAlive:true,
+  matchState:'PLAYING' as const,stopped:false,
+  shooterResources:{inkUnits:18,shotInkCostUnits:8.5,
+   freePhysicalSlots:126,physicalPoolSize:128,
+   realDryFireAttempts:0,realPoolRejections:0}
+ });
+ it('counts only physically complete steps while showing authentic shot resources',()=>{
+  const x=b371RealSourceMissionCue(make())!;
+  expect(x).toMatchObject({step:'PAINT',progress:2,completed:false,
+   resourceState:'INK_AND_SLOT_AVAILABLE',actualFreePhysicalSlots:126,
+   observedDryFireAttempts:0,observedPoolRejections:0});
+  expect(x.text).toContain('SOURCE CIRCUIT 2/3');
+  expect(x.text).toContain('10 REAL SHOTS');
+  expect(x.text).toContain('INK + PHYSICAL SHOT SLOT AVAILABLE');
+  expect(x.physicalEnemyHitCertified).toBe(false);
+  expect(x.gameplayWrites).toBe(0);
+ });
+ it('distinguishes actual insufficient ink, physical pool saturation, verified clear',()=>{
+  const f=make();f.shooterResources.inkUnits=7;
+  expect(b371RealSourceMissionCue(f)?.resourceState).toBe('LOW_INK');
+  f.shooterResources.inkUnits=40;f.shooterResources.freePhysicalSlots=0;
+  expect(b371RealSourceMissionCue(f)?.resourceState).toBe('PHYSICAL_POOL_FULL');
+  f.shooterResources.realPoolRejections=3;
+  expect(b371RealSourceMissionCue(f)?.observedPoolRejections).toBe(3);
+  f.shooterResources.freePhysicalSlots=128;
+  f.status='REAL_LOCAL_CIRCUIT_CLEAR' as typeof f.status;
+  f.originalSourceLocalClear=true;
+  // Literal status transition is tested with correctly typed model frame.
+  expect(b371RealSourceMissionCue(f)).toMatchObject({progress:3,completed:true});
+ });
+ it('rejects altered pool counts, fake consumption stats and negative resources',()=>{
+  for(const alter of [
+   (f:B371SourceMissionFrame)=>{f.shooterResources.freePhysicalSlots=129;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources.physicalPoolSize=0;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources.inkUnits=-1;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources.shotInkCostUnits=Infinity;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources.realPoolRejections=-1;},
+   (f:B371SourceMissionFrame)=>{f.shooterResources.realDryFireAttempts=1.5;}
+  ]){const f=make();alter(f);expect(b371RealSourceMissionCue(f)).toBeNull();}
  });
 });
