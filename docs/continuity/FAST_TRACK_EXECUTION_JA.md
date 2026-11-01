@@ -73,3 +73,12 @@
 - **B394新規確定:** [Actions #41286556600](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41286556600) SUCCESS。B394単体込み5ファイル96テストPASS、実SOURCE Snap Bomb2爆発に対して原作スタンプ**7件**・実新規セル**0件**、native tick1500の`STAMP_ZERO_CHANGE`と実PLAYER DOMを厳密照合。0セルの原因・CPU命中・公式得点は認証しない。真正180秒TIME_UP tick11859、実人間94 shots/388 impactセル、CPU605 shots/13308 sourceセル、CPU7/7復帰、新世界同武器再開、Winner NONE。
 - **B395プレイヤー向け統合:** B58/B59通常活動・結果画面でpost-PaintCoordinator由来のサブ爆発、元sourceスタンプ、変更セル、0変化スタンプを明確に分けて表示する読み取り専用機能。初回の任意型検査エラーを`36968c0c`で修正。TypeScript/Vite、関連Vitest、Node事前チェックPASS。真正B210 180秒[Actions #41287579025](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41287579025)は最終判定まで未認証。
 - **不変:** 元25 Rapier solids/17 PaintSurfaces/26 NavLinks/0 Scoreable、自然対岸0/12。正式4v4・ART・公式Turf得点・公開/merge HOLD、main/T19C/T20/PR#5/Pages不変更。次の主要実戦課題は、原作接地権限を維持した本当の自然CPU遭遇/HP命中/復活。局所micro-QA番号の拡張は進捗代用にしない。
+
+## 2026-11-01 — B390 180秒CPU塗装射線A/B非対照比較・次の判定ゲート
+
+- **過去の真正基準:** B395 [#41288340735](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41288340735) (SHA `6cb1a3ff1318e931e67b2104edb57fc3bd7aeb27`) でTwin Cometsの真正180秒、CPU実射撃745発、原作塗装17,388セル、CPU7/7、真のTIME_UP。
+- **厳格化後の真正結果:** [#41296256707](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41296256707) (SHA `f17bb79b47bb0b7810f9bfb1470ebf878f8caba4`) はSUCCESS、実射撃515発・塗装15,843セル、原作支持と射線の検査3,831回・拒否941回、CPU7/7、真の180秒TIME_UP。過去の基準比で-230射撃・-1,545セル。ただし異なるコミットの比較であり、減少の因果原因や改善効果は**未確定**。拒否941件は実弾の壁衝突941件ではなく、足元/目標支持不一致等を含む**候補審査**の拒否。
+- **安全な修正仮説:** `3415998f7b0e290eddcae69564ac54c1a24d6a9a` はCPU塗装射撃に旧来の「同一登録済みsolidからのみ射撃可」という歩行条件を使う誤りを緩和した。足元と標的には各々実Rapier支持を必須とし、原作障害物に遮られない限り**異なる登録済み床への弾道**を許す。ただしCPU経路・NavLinks・弾/HP・得点は追加/変更しない。
+- **検証の到達点:** 修正SHAのB75事前ビルド・既存Vitest65ファイル393件PASS、B216新4件を含む。真正180秒統合 [#41299383601](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41299383601) の最終結果およびCPU塗装・拒否内訳は**未確認**。走行中の時点では「塗装回復PASS」と言わない。
+- **次の選択基準:** 同条件の真正180秒結果を読み、CPU7/7・無停止・実射撃・実塗装・拒否数・終了後再開をまず確認。性能が戻らなければ、登録済みsolid支持不一致・本物の遮蔽・既塗装/武器待機を別々に測り、推測で更なる通過許可を出さない。B75短時間試験は選択B214ルートを保証しないため、代替認証にしない。
+- **不変の正本:** F1–F5の機能優先、原作25 Rapier/17 Paintable/26 NavLinks/0 Scoreable、自然対岸0/12、公式勝者NONE。元7.2.0版の原作衝突認証不足とFloorLine00研究HOLDを維持。main/T19C/T20/Pages/PR#5、本番・正式4v4・ARTに変更なし。
