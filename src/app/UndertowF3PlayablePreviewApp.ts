@@ -5041,15 +5041,15 @@ export class UndertowF3PlayablePreviewApp{
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
-  const replay=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+  const b389ReplayButton=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
    '#t21-f3-b389-new-source-round');
-  if(replay){
+  if(b389ReplayButton){
    const eligible=this.b384Circuit&&actuallyPaused&&
     this.b203EverLockedRealPointer&&this.matchState==='PLAYING'&&
     this.paused&&!this.stopReason&&
     document.pointerLockElement!==this.canvas;
-   replay.hidden=!eligible;replay.disabled=!eligible;
-   replay.style.display=eligible?'block':'none';
+   b389ReplayButton.hidden=!eligible;b389ReplayButton.disabled=!eligible;
+   b389ReplayButton.style.display=eligible?'block':'none';
   }
   const practiceWeapon=this.b202PauseOverlay.querySelector<HTMLSelectElement>(
    '#t21-f3-b378-weapon');
