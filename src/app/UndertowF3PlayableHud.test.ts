@@ -521,7 +521,7 @@ describe('B380 real 180s weapon guidance never invents an action or a score',()=
   const ready=view('twin-comets',{actualDodgeCharges:2});
   expect(ready).toContain('RMB DODGE 2/2');
   expect(view('twin-comets',{actualDodgeCharges:0})).toContain('RMB DODGE 0/2');
-  expect(view('twin-comets',{currentMode:'SQUID'})).toContain('HUMAN FORM');
+  expect(view('twin-comets',{currentMode:'SQUID'})).toContain('SQUID FORM · RELEASE SHIFT TO FIRE');
   expect(view('twin-comets',{hp:0})).toContain('SPLATTED');
   expect(view('twin-comets',{canShoot:false})).toContain('RECOVERING');
  });
