@@ -154,10 +154,12 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
  const bombRecap=!hasBombLedger?null:(()=>{
   if(humanInk.source!=='REAL_HUMAN_ORIGINAL_PAINT_EVENT'||
      humanInk.originalSourceOnly!==true||humanInk.scoreablePromotionCount!==0||
-     bombFields.some(n=>!Number.isSafeInteger(n)||n!<0)||
-     humanInk.humanBombChangedEvents!+humanInk.humanBombZeroChangedEvents!==
-      humanInk.humanBombStampEvents!||
-     humanInk.humanBombChangedCells!<humanInk.humanBombChangedEvents!)
+     bombFields.some(n=>typeof n!=='number'||!Number.isSafeInteger(n)||n<0)||
+     (humanInk.humanBombChangedEvents??-1)+
+      (humanInk.humanBombZeroChangedEvents??-1)!==
+      (humanInk.humanBombStampEvents??-1)||
+     (humanInk.humanBombChangedCells??-1)<
+      (humanInk.humanBombChangedEvents??-1))
    throw Error('B395_UNTRUSTED_NATIVE_BOMB_LEDGER');
   return {actualHumanExplosions:humanInk.humanBombExplosionsObserved!,
    actualSourceBombStamps:humanInk.humanBombStampEvents!,
