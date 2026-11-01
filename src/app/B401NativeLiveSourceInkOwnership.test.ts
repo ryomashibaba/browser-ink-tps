@@ -16,7 +16,7 @@ describe('B401 live SOURCE-only grid ownership',()=>{
   expect(a).toMatchObject({status:'LIVE_REGISTERED_SOURCE_ONLY',
    totalActiveCells:68,teamA:2,teamB:1,neutral:65,
    officialTurfScore:false,winner:'NONE',gameplayWrites:0});
-  first.ownerGrid[2]=1;
+  (first.ownerGrid as Int8Array)[2]=1;
   expect(measure.observe(source,stage,100,'PLAYING',true)).toEqual(a);
   const b=measure.observe(source,stage,181,'PLAYING',true);
   expect(b.teamA).toBe(3);expect(b.neutral).toBe(64);
