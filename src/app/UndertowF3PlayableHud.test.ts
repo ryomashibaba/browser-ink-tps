@@ -206,6 +206,38 @@ describe('B290 no fictitious READY after real native source movement',()=>{
  });
 });
 
+describe('B338 actual native KCC ground/air feedback in player-only guide',()=>{
+ const original=(nativeKccGrounded:boolean|null,hp=100,phase='PLAYING',
+  playerView=true)=>{
+  const guidance=b380NativeWeaponGuidance({
+   profile:weaponProfile('twin-comets'),hp,
+   actualDodgeCharges:2,actualChargePercent:0,currentMode:'HUMAN',
+   canShoot:true,realSubEnabled:true,realSubName:'Snap Bomb',
+   actualRespawnTicksRemaining:hp===0?120:null,
+   sourceMatchState:'PLAYING'
+  });
+  return b338SourceRoundGuide({playerView,matchState:phase,
+   paused:false,tick:1115,stopReason:null,
+   nativeWeaponGuidance:guidance,nativeKccGrounded});
+ };
+ it('shows true 60Hz KCC stance without claiming original jump certification',()=>{
+  expect(original(true).text).toContain('SPACE JUMP');
+  expect(original(true).text).toContain('KCC GROUNDED');
+  expect(original(false).text).toContain('KCC AIRBORNE');
+  expect(original(false).text).not.toContain('KCC GROUNDED');
+  expect(original(null).text).not.toContain('KCC AIRBORNE');
+  expect(original(null).text).not.toContain('KCC GROUNDED');
+ });
+ it('does not suggest jumping, movement or shooting while splatted or finished',()=>{
+  const dead=original(false,0).text;
+  expect(dead).toContain('SPLATTED');
+  expect(dead).not.toContain('SPACE JUMP');
+  expect(dead).not.toContain('KCC AIRBORNE');
+  expect(original(false,100,'TIME_UP').text).toContain('NO WINNER');
+  expect(original(false,100,'STAGING').text).not.toContain('KCC AIRBORNE');
+  expect(original(false,100,'PLAYING',false).text).toBe('');
+ });
+});
 describe('B338 live weapon-aware source PLAYER HUD guidance',()=>{
  const actual=(id:Parameters<typeof weaponProfile>[0],extra:Record<string,unknown>={})=>
   b380NativeWeaponGuidance({profile:weaponProfile(id),hp:100,

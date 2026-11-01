@@ -22,6 +22,8 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  b361NativePlayerWeapon?:{id:string;displayName:string};
  /** The actual selected weapon, HP and form projected into PLAYER HUD. */
  nativeWeaponGuidance?:string;
+ /** Last REAL native Rapier KCC grounded state. False does not certify a jump. */
+ nativeKccGrounded?:boolean|null;
  b343OriginalSourceVolleyBudget?:{
   enabled:boolean;rejectedVolleys:number;physicalPoolSize:number;
   actualFreeSlots:number;
@@ -47,6 +49,7 @@ export interface F3NativeCombatPulse{
  tick:number;hp:number;ink:number;inkRelation:string;
  respawnTicks:number|null;hitCount:number;splatCount:number;
  nativeWeaponGuidance?:string;
+ nativeKccGrounded?:boolean|null;
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  paused:boolean;stopReason:string|null;
  originalSolids:number;originalPaint:number;originalLinks:number;
@@ -203,6 +206,7 @@ export function b338SourceRoundGuide(x:{
  playerView:boolean;matchState:string;
  paused:boolean;tick:number|undefined;stopReason:string|null;
  nativeWeaponGuidance?:string;
+ nativeKccGrounded?:boolean|null;
 }):{phase:'READY'|'STAGING'|'PLAYING'|'PAUSED'|'TIME_UP'|'STOP'|'QA';text:string}{
  if(!x.playerView)return {phase:'QA',text:''};
  if(x.stopReason)return {phase:'STOP',text:'SAFE STOP · NO OFFICIAL RESULT'};
@@ -225,11 +229,13 @@ export function b338SourceRoundGuide(x:{
   const blocked=actual.includes('SPLATTED · ')||
    actual.includes('SQUID FORM · ')||
    actual.includes('HP UNAVAILABLE')||actual.includes('SOURCE SAFE STOP');
+  const stance=x.nativeKccGrounded===true?' · KCC GROUNDED':
+   x.nativeKccGrounded===false?' · KCC AIRBORNE':'';
   return {phase:'PLAYING',text:blocked?actual:
-   'WASD MOVE · '+actual+' · ESC / P PAUSE'};
+   'WASD MOVE · SPACE JUMP · '+actual+stance+' · ESC / P PAUSE'};
  }
  return {phase:'PLAYING',
-  text:'WASD MOVE · MOUSE AIM · LEFT CLICK FIRE · ESC / P PAUSE'};
+  text:'WASD MOVE · SPACE JUMP · MOUSE AIM · LEFT CLICK FIRE · ESC / P PAUSE'};
 }
 export function createF3PlayableHud(ui:HTMLElement){
  const root=document.createElement('section');
@@ -421,7 +427,8 @@ export function createF3PlayableHud(ui:HTMLElement){
    playerView:ui.dataset.t21B245Presentation==='PLAYER',
    matchState:p.matchState,paused:p.paused,tick:p.tick,
    stopReason:legitimate?p.stopReason:'UNVERIFIED_NATIVE_SOURCE',
-   nativeWeaponGuidance:legitimate?p.nativeWeaponGuidance:undefined
+   nativeWeaponGuidance:legitimate?p.nativeWeaponGuidance:undefined,
+   nativeKccGrounded:legitimate?p.nativeKccGrounded:null
   });
   b338Guide.hidden=live.phase==='QA';
   if(!b338Guide.hidden&&b338Guide.textContent!==live.text)
@@ -535,7 +542,8 @@ export function createF3PlayableHud(ui:HTMLElement){
    playerView:ui.dataset.t21B245Presentation==='PLAYER',
    matchState:value.matchState,paused:value.paused,tick:value.tick,
    stopReason:value.stopReason,
-   nativeWeaponGuidance:value.nativeWeaponGuidance
+   nativeWeaponGuidance:value.nativeWeaponGuidance,
+   nativeKccGrounded:value.nativeKccGrounded
   });
   ui.dataset.t21B338Phase=b338.phase;
   b338Guide.hidden=b338.phase==='QA';
@@ -557,6 +565,7 @@ export function createF3PlayableHud(ui:HTMLElement){
    inkRelation:value.player.inkRelation??'UNVERIFIED',
    respawnTicks:value.humanRespawnTicksRemaining??null,
    nativeWeaponGuidance:value.nativeWeaponGuidance,
+   nativeKccGrounded:value.nativeKccGrounded,
    hitCount:value.humanCpuDirectHits??-1,
    splatCount:value.humanCpuDirectSplats??-1,
    matchState:value.matchState as F3NativeCombatPulse['matchState'],
