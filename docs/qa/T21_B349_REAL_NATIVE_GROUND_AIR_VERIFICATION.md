@@ -57,3 +57,9 @@ B349実ジャンプ中の本物の地面/空中射撃・元の25/17/26/0・元CP
 既存のB349真正Chrome実ジャンプ・移動・射撃試験へ、独立したPLAYER HUDの**同時実測**を追加した。同じ`Runtime.evaluate`で実`window.__t21F3.snapshot().b349ActualKccGrounded`と表示`#t21-f3-b338-source-guide`を読み、`KCC GROUNDED`／`KCC AIRBORNE`・SPACE案内・本物の武器案内が一致するか、PRE_FIREとHOLD_12～60で厳密にチェックする。違えばFAIL、`b338-native-kcc-player-guide.json`の小さな実tick証拠を既存artifactに保存。リアル物理・Actor・射撃・Paint・地形・ナビ・scoreを変更せず、held-fire中の遅いスクリーンショットも追加しない。
 
 コード投入のみで新たなChrome成功は保証しない。従来のB349接地4発/空中6発の独立真正ブラウザPASSは [#41276813715](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813715) に保持。今回の画面照合は、新しい同SHAジョブでSUCCESSを確認して初めて認証する。F4 FloorLine00原作衝突権限未確認、CPU自然接続0/12、正式4v4/ART/本番公開HOLD。
+
+## 2026-11-01 — 真正Chromium B338＋B349同フレームHUD照合：PASS
+
+同SHA `3f49d367202fc2c50c9bd1732285408582728cb7` の [Actions #41278709939](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41278709939) は **SUCCESS**。新しい厳格B338は、原作SOURCEの同一CDP readで実KCC接地・空中と画面`KCC GROUNDED/AIRBORNE`、`SPACE JUMP`、武器案内、PLAYER/PLAYING、書込み0を照合し、PRE_FIRE/HOLD_12～60の実tick証拠`b338-native-kcc-player-guide.json`をartifactに保存した（Artifact ID `13072262011`）。実射撃は地上4/空中6の10発、身体上昇1.0333m、移動射撃6発、実移動2.6477mで原作25/17/26/0を維持。
+
+**注意：** 同回のB357独立視覚サンプルは `HOLD_REAL_SHOOTER_AND_PAINT_BUT_NO_MATCHED_LIVE_RETICLE_CAPTURE`、着弾事実は実証してもレティクル表示の同一瞬間を捕捉できていない。B338表示一致PASSをB357の瞬間表示まで広げない。真正CPU HP被弾0/自然経路0/12・4v4/ART/公開HOLD維持。
