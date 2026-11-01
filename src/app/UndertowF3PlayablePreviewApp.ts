@@ -148,6 +148,8 @@ import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
 import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
  type B255ActorPresentation} from './B255SourceActorReview';
 import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
+import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY}
+ from './B399NativeCameraAimClearance';
 import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
  from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
@@ -458,6 +460,10 @@ export class UndertowF3PlayablePreviewApp{
   return p.get('t21Play')==='preview'&&p.get('t21W10B203')==='fullRound';
  })();
  private readonly b384Circuit=b384SourceCircuitSelected(new URL(location.href).searchParams);
+ // Opt-in, entirely visual F5 SOURCE 180s camera clearance study.
+ private b399ClearSightEnabled=new URL(location.href).searchParams
+  .get('t21W10B399')==='clearAim';
+ private readonly b399Hidden=new Set<string>();
  private b203EverLockedRealPointer=false;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
@@ -1175,6 +1181,29 @@ export class UndertowF3PlayablePreviewApp{
    });
   this.panel.querySelector('#t21-f3-b207-combat-round')!
    .insertAdjacentElement('beforebegin',multi);
+  // User-facing switch in the actual nonproduction 180s round menu.
+  if(this.b203FullRound&&b31Params.get('t21QaInput')!=='deterministic'){
+   const clear=document.createElement('button');
+   clear.id='t21-f3-b399-clear-aim';clear.type='button';
+   clear.dataset.sourceOnly='true';clear.dataset.productionAuthorized='false';
+   const label=()=>{
+    clear.textContent='CAMERA AIM CLEARANCE: '+
+     (this.b399ClearSightEnabled?'ON':'OFF')+
+     ' · VISUAL ONLY · F5 ART HOLD';
+    clear.dataset.t21B399Enabled=String(this.b399ClearSightEnabled);
+   };
+   clear.style.cssText='display:block;width:100%;margin:6px 0;'+
+    'padding:9px;border-radius:8px;border:1px solid #9aaec1;'+
+    'background:#173247;color:#e5f4ff;cursor:pointer;'+
+    'font:700 11px/1.5 system-ui';
+   clear.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||!this.paused||
+       this.stopReason||this.matchState==='TIME_UP')return;
+    this.b399ClearSightEnabled=!this.b399ClearSightEnabled;
+    this.b399UpdateCameraAimClearance();label();
+   });
+   label();multi.insertAdjacentElement('afterend',clear);
+  }
   // B193: real selected coop joins the preexisting native A1 rally,
   // projectile ink, human sub, and 60Hz ALLY_SYNC play objective.
   // The choice always boots a clean original world. No actor teleport.
@@ -4823,11 +4852,45 @@ export class UndertowF3PlayablePreviewApp{
         physical.y< -35)
      throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
  }
+ /** Opt-in F5, only existing real PLAYER and friendly A1/A2/A3 render.
+  * Enemy visibility, hit spheres, actor bodies, camera, ink and scoring
+  * are never modified. Unlocked/paused/ended source rounds restore draws. */
+ private b399UpdateCameraAimClearance():void{
+  const allowed=this.b399ClearSightEnabled&&this.b203FullRound&&
+   this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
+   document.pointerLockElement===this.canvas;
+  const eye=this.playerCameraEntity.getPosition();
+  const direction=this.playerCameraEntity.forward;
+  let hidden=0;
+  const update=(id:string,actor:Entity|null,active:boolean)=>{
+   const visual=actor?b248ExistingSourceActorVisual(actor):null;
+   if(!visual){this.b399Hidden.delete(id);return;}
+   const hide=allowed&&active&&b399ActorIntersectsCameraAim(
+    eye,direction,actor!.getPosition(),this.b399Hidden.has(id));
+   visual.setCameraLineHidden(hide);
+   if(hide){this.b399Hidden.add(id);hidden++;}
+   else this.b399Hidden.delete(id);
+  };
+  update('PLAYER',this.app.root.findByName('Player') as Entity|null,
+   this.resources.currentHp>0);
+  const native=(this.cpu as unknown as {bots:Array<{
+   id:string;entity:Entity;lifeState:string
+  }>}).bots;
+  for(const bot of native)
+   if(bot.id==='A1'||bot.id==='A2'||bot.id==='A3')
+    update(bot.id,bot.entity,bot.lifeState==='ACTIVE');
+  this.canvas.dataset.t21B399NativeAimClearance=allowed?
+   'SOURCE_RENDER_ONLY':'OFF';
+  this.canvas.dataset.t21B399HiddenOwnActors=String(hidden);
+  this.canvas.dataset.t21B399ProductionAuthorized=
+   String(B399_CLEAR_SIGHT_AUTHORITY.productionAuthorized);
+ }
  private update(dt:number){
   this.updateW10B22OwnerTrial();
   // A generic QA/UI pause toggle cannot consume the player's ready time.
   if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
   if(this.paused||this.stopReason){
+   this.b399UpdateCameraAimClearance();
    this.lastSourceFrameAtMs=Number.NaN;
    if(this.b27KineticEnabled)this.resetW10B27KineticLens();
    return;
@@ -4874,6 +4937,7 @@ export class UndertowF3PlayablePreviewApp{
    this.cpuKit?.render(report.alpha);
    this.feedback.update(cameraDt);
    this.camera.update(this.visual,cameraDt);
+   this.b399UpdateCameraAimClearance();
    if(this.b27KineticEnabled){
     const realPlayerInput=document.pointerLockElement===this.canvas;
     const gpuTrial=this.b22Trial.snapshot().status;
