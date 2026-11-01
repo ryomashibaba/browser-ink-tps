@@ -73,6 +73,40 @@ describe('Real SOURCE weapon controls follow native match and life',()=>{
   expect(ended).toContain('ROUND FINISHED');
   expect(ended).not.toContain('WAIT FOR NATIVE RESPAWN');
  });
+ it.each(classes)('%s cannot suggest active controls when native weapon is not ready',klass=>{
+  const guidance=b380NativeWeaponGuidance({
+   ...base,profile:{...base.profile,weaponClass:klass},canShoot:false
+  });
+  expect(guidance).toContain('NATIVE WEAPON RECOVERING');
+  expect(guidance).not.toContain('LMB');
+  expect(guidance).not.toContain('RMB');
+  expect(guidance).not.toContain('F SUB');
+ });
+ it.each(classes)('%s cannot suggest shooting or sub at zero real ink',klass=>{
+  const guidance=b380NativeWeaponGuidance({
+   ...base,profile:{...base.profile,weaponClass:klass},actualInkRemaining:0
+  });
+  expect(guidance).toContain('INK EMPTY');
+  expect(guidance).not.toContain('LMB');
+  expect(guidance).not.toContain('RMB');
+  expect(guidance).not.toContain('F SUB');
+ });
+ it('never invents an ammo count and rejects corrupted native ink',()=>{
+  expect(b380NativeWeaponGuidance({...base,actualInkRemaining:60}))
+   .toContain('LMB FIRE');
+  for(const bad of [-1,NaN,Infinity]){
+   const guidance=b380NativeWeaponGuidance({...base,actualInkRemaining:bad});
+   expect(guidance).toContain('INK UNAVAILABLE');
+   expect(guidance).not.toContain('LMB');
+  }
+ });
+ it('dualies show both real fire and physical dodge',()=>{
+  const guidance=b380NativeWeaponGuidance({...base,profile:{
+   weaponClass:'DUALIES',displayName:'Twin Comets'
+  },actualInkRemaining:81});
+  expect(guidance).toContain('LMB FIRE');
+  expect(guidance).toContain('RMB DODGE 2/2');
+ });
  it('refuses any fire claim when native HP is not finite',()=>{
   expect(b380NativeWeaponGuidance({...base,hp:NaN}))
    .toContain('HP UNAVAILABLE · NO FIRE CLAIM');

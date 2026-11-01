@@ -10,6 +10,8 @@ export function b380NativeWeaponGuidance(input:{
  readonly actualChargePercent:number;
  readonly currentMode:'HUMAN'|'SQUID';
  readonly canShoot:boolean;
+ /** Actual native human ink; undefined only for older source monitors. */
+ readonly actualInkRemaining?:number;
  readonly realSubEnabled:boolean;
  readonly realSubName?:string;
  readonly sourceMatchState?:'STAGING'|'PLAYING'|'TIME_UP';
@@ -35,7 +37,14 @@ export function b380NativeWeaponGuidance(input:{
   input.hp<=0?
   'SPLATTED · WAIT FOR NATIVE RESPAWN'+nativeCountdown:
   input.currentMode==='SQUID'?
-  'SQUID FORM · RELEASE SHIFT TO FIRE':null;
+  'SQUID FORM · RELEASE SHIFT TO FIRE':
+  input.actualInkRemaining!==undefined&&
+   (!Number.isFinite(input.actualInkRemaining)||input.actualInkRemaining<0)?
+  'INK UNAVAILABLE · NO FIRE CLAIM':
+  input.actualInkRemaining===0?
+  'INK EMPTY · NATIVE INK RECOVERY REQUIRED':
+  !input.canShoot?
+  'NATIVE WEAPON RECOVERING · FIRE AND SUB DISABLED':null;
  if(blocked)return 'WEAPON '+p.displayName+' · '+blocked+' · PRACTICE';
  const finiteCharges=Number.isFinite(input.actualDodgeCharges)?
   Math.max(0,Math.min(2,Math.floor(input.actualDodgeCharges))):0;
@@ -43,10 +52,7 @@ export function b380NativeWeaponGuidance(input:{
   Math.max(0,Math.min(100,Math.round(input.actualChargePercent))):0;
  let control='LMB FIRE';
  if(p.weaponClass==='DUALIES'){
-  control=input.hp<=0?'SPLATTED':
-   input.currentMode!=='HUMAN'?'HUMAN FORM TO DODGE':
-   !input.canShoot?'DODGE RECOVERING':
-   'RMB DODGE '+finiteCharges+'/2';
+  control='LMB FIRE · RMB DODGE '+finiteCharges+'/2';
  }else if(p.weaponClass==='BRELLA'){
   control='LMB FIRE · RMB GUARD';
  }else if(['CHARGER','SPLATLING','STRINGER','SPLATANA']

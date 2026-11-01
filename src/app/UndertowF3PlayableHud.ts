@@ -235,7 +235,7 @@ export function b338SourceRoundGuide(x:{
    'WASD MOVE · SPACE JUMP · '+actual+stance+' · ESC / P PAUSE'};
  }
  return {phase:'PLAYING',
-  text:'WASD MOVE · SPACE JUMP · MOUSE AIM · LEFT CLICK FIRE · ESC / P PAUSE'};
+  text:'WASD MOVE · SPACE JUMP · WEAPON CONTROLS UNVERIFIED · ESC / P PAUSE'};
 }
 export function createF3PlayableHud(ui:HTMLElement){
  const root=document.createElement('section');

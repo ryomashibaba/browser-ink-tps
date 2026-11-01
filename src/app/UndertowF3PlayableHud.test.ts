@@ -290,6 +290,8 @@ describe('B338 actual native phase explanation, no fabricated result',()=>{
  it('shows actual controls only in PLAYING and no winner at TIME_UP',()=>{
   expect(g('PLAYING',false,101).phase).toBe('PLAYING');
   expect(g('PLAYING',false,101).text).toContain('WASD MOVE');
+  expect(g('PLAYING',false,101).text).toContain('WEAPON CONTROLS UNVERIFIED');
+  expect(g('PLAYING',false,101).text).not.toContain('LEFT CLICK FIRE');
   expect(g('TIME_UP',true,10800).text).toContain('NO WINNER');
  });
  it('preserves invisible QA and explicit safety stop',()=>{

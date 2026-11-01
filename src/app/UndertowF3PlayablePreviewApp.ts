@@ -5080,6 +5080,7 @@ export class UndertowF3PlayablePreviewApp{
      actualChargePercent:this.stats.playerWeaponChargePercent,
      currentMode:this.player.currentMode,
      canShoot:this.player.canShoot,
+     actualInkRemaining:this.stats.playerInk,
      realSubEnabled:this.b38HumanSubEnabled,
      realSubName:subWeaponProfile(weaponKit(
       this.projectiles.currentPlayerWeapon.id).sub).displayName
@@ -6064,6 +6065,7 @@ export class UndertowF3PlayablePreviewApp{
    actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
    actualChargePercent:this.stats.playerWeaponChargePercent,
    currentMode:this.player.currentMode,canShoot:this.player.canShoot,
+   actualInkRemaining:this.stats.playerInk,
    realSubEnabled:this.b38HumanSubEnabled,
    realSubName:subWeaponProfile(weaponKit(
     this.projectiles.currentPlayerWeapon.id).sub).displayName
@@ -6393,6 +6395,7 @@ export class UndertowF3PlayablePreviewApp{
      actualChargePercent:this.stats.playerWeaponChargePercent,
      currentMode:this.player.currentMode,
      canShoot:this.player.canShoot,
+     actualInkRemaining:this.stats.playerInk,
      realSubEnabled:this.b38HumanSubEnabled,
      realSubName:subWeaponProfile(weaponKit(
       this.projectiles.currentPlayerWeapon.id).sub).displayName
