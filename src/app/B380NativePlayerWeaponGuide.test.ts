@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
-import type {WeaponClass} from '../weapons/WeaponCatalog';
+import {WEAPON_ORDER,weaponProfile,type WeaponClass} from '../weapons/WeaponCatalog';
+import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 
 const base={
  profile:{weaponClass:'SHOOTER' as WeaponClass,displayName:'Test weapon'},
@@ -106,6 +107,49 @@ describe('Real SOURCE weapon controls follow native match and life',()=>{
   },actualInkRemaining:81});
   expect(guidance).toContain('LMB FIRE');
   expect(guidance).toContain('RMB DODGE 2/2');
+ });
+ it.each(WEAPON_ORDER)('%s source practice F sub prompt follows the exact true native kit ink cost',id=>{
+  const sub=subWeaponProfile(weaponKit(id).sub);
+  const loadout={...base,profile:weaponProfile(id),
+   realSubName:sub.displayName,realSubInkCost:sub.inkCost};
+  const insufficient=b380NativeWeaponGuidance({
+   ...loadout,actualInkRemaining:sub.inkCost-0.1
+  });
+  expect(insufficient).toContain('SUB '+sub.displayName+' · NEED '+sub.inkCost+' INK');
+  expect(insufficient).not.toContain('F SUB');
+  const exact=b380NativeWeaponGuidance({
+   ...loadout,actualInkRemaining:sub.inkCost
+  });
+  expect(exact).toContain('F SUB '+sub.displayName);
+  const epsilon=b380NativeWeaponGuidance({
+   ...loadout,actualInkRemaining:sub.inkCost-0.0000005
+  });
+  expect(epsilon).toContain('F SUB '+sub.displayName);
+  const more=b380NativeWeaponGuidance({
+   ...loadout,actualInkRemaining:sub.inkCost+1
+  });
+  expect(more).toContain('F SUB '+sub.displayName);
+  const disabled=b380NativeWeaponGuidance({
+   ...loadout,actualInkRemaining:sub.inkCost+1,realSubEnabled:false
+  });
+  expect(disabled).not.toContain('F SUB');
+ });
+ it('unknown actual ink or malformed kit cost never claims the sub is affordable',()=>{
+  const valid={...base,realSubInkCost:70,actualInkRemaining:80};
+  expect(b380NativeWeaponGuidance({...valid,actualInkRemaining:undefined}))
+   .toContain('INK UNKNOWN');
+  expect(b380NativeWeaponGuidance({...valid,realSubInkCost:NaN}))
+   .toContain('SUB COST UNVERIFIED');
+  expect(b380NativeWeaponGuidance({...valid,realSubInkCost:-1}))
+   .not.toContain('F SUB');
+ });
+ it('native HP death, squid, safe stop take priority over sub affordability',()=>{
+  const rich={...base,realSubInkCost:70,actualInkRemaining:30};
+  for(const x of [{hp:0},{currentMode:'SQUID' as const},{nativeStopped:true}]){
+   const text=b380NativeWeaponGuidance({...rich,...x});
+   expect(text).not.toContain('F SUB');
+   expect(text).not.toContain('NEED 70 INK');
+  }
  });
  it('refuses any fire claim when native HP is not finite',()=>{
   expect(b380NativeWeaponGuidance({...base,hp:NaN}))

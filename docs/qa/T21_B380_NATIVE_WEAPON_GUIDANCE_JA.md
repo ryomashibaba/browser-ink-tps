@@ -10,3 +10,7 @@ B378では12既存研究武器が選べ、B379では実Pointer LockからRapier�
 - `UndertowF3PlayableHud.test.ts` に実カタログ参照の表示、スライド残量・撃破状態・チャージ境界を追加。最新CIが完了するまでは実ブラウザの描画PASSではない。
 
 原作25/17/26/0、敵陣接続0/12、正式4対4・得点・勝敗・本番HOLD。main、T19C/T20、公開Pages、Draft PR #5と非公開OBJは未変更。
+
+## 2026-11-01 — 実サブインク消費とHUDの一致（実装、CI未判定）
+
+PLAYER HUDのFサブ案内が実際の現在インク量とサブの消費量に一致しない問題を修正。既存の `weaponKit(actualWeapon.id).sub` → `subWeaponProfile(sub).inkCost` と `stats.playerInk` を読み取るだけで、インク不足時は `SUB <name> · NEED <cost> INK` として F 使用可能を示さない。十分な場合だけ `F SUB` を表示。判定には実 `PlayerResources.tryConsumeSubInk` の許容差 `1e-6` を使用する。全12武器キットの閾値を単体テストで検査し、壊れた消費量・不明インクはFail Closedとする。物理、実際のインク経済、試合時計、塗装、原作地形/CPU/得点は変更しない。追加後の真正ChromeとCI結果を待って初めて検証PASSとする。原作25/17/26/0、敵対自然経路0/12、4v4・本番公開HOLD。

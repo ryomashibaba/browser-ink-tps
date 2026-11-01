@@ -14,6 +14,8 @@ export function b380NativeWeaponGuidance(input:{
  readonly actualInkRemaining?:number;
  readonly realSubEnabled:boolean;
  readonly realSubName?:string;
+ /** Real SubWeaponProfile.inkCost; no inferred fixed or player-modified cost. */
+ readonly realSubInkCost?:number;
  readonly sourceMatchState?:'STAGING'|'PLAYING'|'TIME_UP';
  /** Native 60Hz recovery counter, never a predicted or forced respawn. */
  readonly actualRespawnTicksRemaining?:number|null;
@@ -61,7 +63,22 @@ export function b380NativeWeaponGuidance(input:{
  }else if(p.weaponClass==='ROLLER'||p.weaponClass==='BRUSH'){
   control='LMB ROLL / SWIPE';
  }
- return 'WEAPON '+p.displayName+' · '+control+
-  (input.realSubEnabled?' · F SUB'+
-   (input.realSubName?' '+input.realSubName:''):'')+' · PRACTICE';
+ const subName=input.realSubName?' '+input.realSubName:'';
+ const cost=input.realSubInkCost;
+ const ink=input.actualInkRemaining;
+ let subGuide='';
+ if(input.realSubEnabled){
+  if(cost!==undefined&&(!Number.isFinite(cost)||cost<=0)){
+   subGuide=' · SUB COST UNVERIFIED';
+  }else if(cost!==undefined&&ink===undefined){
+   subGuide=' · SUB'+subName+' · INK UNKNOWN';
+  }else if(cost!==undefined&&ink!==undefined&&ink+1e-6<cost){
+   // Exact PlayerResources.tryConsumeSubInk epsilon; a positive amount
+   // of ink is not evidence a real F throw can afford this weapon kit.
+   subGuide=' · SUB'+subName+' · NEED '+cost+' INK';
+  }else{
+   subGuide=' · F SUB'+subName;
+  }
+ }
+ return 'WEAPON '+p.displayName+' · '+control+subGuide+' · PRACTICE';
 }

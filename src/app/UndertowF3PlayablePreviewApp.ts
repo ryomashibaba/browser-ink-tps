@@ -5083,7 +5083,9 @@ export class UndertowF3PlayablePreviewApp{
      actualInkRemaining:this.stats.playerInk,
      realSubEnabled:this.b38HumanSubEnabled,
      realSubName:subWeaponProfile(weaponKit(
-      this.projectiles.currentPlayerWeapon.id).sub).displayName
+      this.projectiles.currentPlayerWeapon.id).sub).displayName,
+     realSubInkCost:subWeaponProfile(weaponKit(
+      this.projectiles.currentPlayerWeapon.id).sub).inkCost
     })+'. Click Start when ready.':
     Math.ceil(this.remainingSeconds)+'s left · CPU, ink and positions retained')+
     ' · UNSCORED / NO OFFICIAL RESULT':'';
@@ -6068,7 +6070,9 @@ export class UndertowF3PlayablePreviewApp{
    actualInkRemaining:this.stats.playerInk,
    realSubEnabled:this.b38HumanSubEnabled,
    realSubName:subWeaponProfile(weaponKit(
-    this.projectiles.currentPlayerWeapon.id).sub).displayName
+    this.projectiles.currentPlayerWeapon.id).sub).displayName,
+   realSubInkCost:subWeaponProfile(weaponKit(
+    this.projectiles.currentPlayerWeapon.id).sub).inkCost
   });
  }
  private refresh(){
@@ -6398,7 +6402,9 @@ export class UndertowF3PlayablePreviewApp{
      actualInkRemaining:this.stats.playerInk,
      realSubEnabled:this.b38HumanSubEnabled,
      realSubName:subWeaponProfile(weaponKit(
-      this.projectiles.currentPlayerWeapon.id).sub).displayName
+      this.projectiles.currentPlayerWeapon.id).sub).displayName,
+     realSubInkCost:subWeaponProfile(weaponKit(
+      this.projectiles.currentPlayerWeapon.id).sub).inkCost
     })+'\n'+
     'AIM SENS '+this.camera.sourcePracticeViewSnapshot().
      sourceAimSensitivityMultiplier.toFixed(2)+'x · [ / ] TO ADJUST\n'+
