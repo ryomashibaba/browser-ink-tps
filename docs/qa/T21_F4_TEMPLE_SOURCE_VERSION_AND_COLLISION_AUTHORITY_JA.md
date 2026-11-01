@@ -15,6 +15,8 @@
 - KiTrix当該OBJ・`StageLoader.swift` のGitHub履歴は共に `2026-04-04` の初期投入のみ。これは**レポジトリへ収録した日付**であって、元のゲームデータのVer.7.2.0との一致証明にはならない。コミット参照: https://github.com/kirakira-dev/KiTrix/commit/7b5a393766c5551aee063256ede95df44da9183e
 - KiTrix `StageCollider.swift` はロードされたSceneKitの表示用stageノードへ `hitTestWithSegment` を行う汎用**ビューア内ヒットテスト**であり、任天堂の公式衝突対象フラグやマッチ用Rapier登録権限を示す原作データではない。コード: https://github.com/kirakira-dev/KiTrix/blob/main/KiTrix/SceneKit/StageCollider.swift
 
+さらに `stages/Vss_Temple01/Vss_Temple01.obj` の公開Git LFS pointerを直接確認したところ、`oid sha256:a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046` / `size 43263289` と一致する。既存B239の外部元OBJ SHA/sizeの同一性は**独立のGitオブジェクト指紋でも裏付けられる**が、LFS pointerには抽出時のゲーム版・モード・個別Faceの衝突フラグはない（https://github.com/kirakira-dev/KiTrix/blob/main/stages/Vss_Temple01/Vss_Temple01.obj）。
+
 ## 3. 承認禁止条件と次の最短実証
 
 **まだ分からないこと：** (a) このOBJが7.2.0レギュラーマッチの地形版と一致するか、(b) `Fld_Temple01_FloorLine00`がゲーム本体で実際に当たり判定ありの通行面か、(c) 本物のCPU半径0.30m・カプセルで全区間が連続支持・接敵できるか。
