@@ -81,6 +81,44 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     report.phases.push(proof);persist();
     console.log('B401_REAL_NATIVE_LIVE_GRID_HUD_PASS',JSON.stringify(proof));
    }
+   const sourceRadar=await evalPage(`(() => {
+    const s=window.__t21F3?.snapshot?.();
+    const c=document.querySelector('#t21-f3-radar-canvas');
+    const d=s?.b402NativeOriginalInkRadar;
+    return {d,status:c?.dataset.t21B402SourceInk,
+     tick:Number(c?.dataset.t21B402NativeTick),
+     a:Number(c?.dataset.t21B402RealADots),
+     b:Number(c?.dataset.t21B402RealBDots),
+     notScore:c?.dataset.t21B402NotTurfScore,
+     originalSolids:c?.dataset.originalSourceSolids,
+     originalLinks:c?.dataset.originalSourceNavigationLinks};
+   })()`);
+   if(sourceRadar?.d?.status!=='SOURCE_PAINT_SAMPLES'||
+      sourceRadar.d.measuredOriginalSurfaces!==17||
+      sourceRadar.d.nativeTick>n.tick||
+      sourceRadar.d.realTeamADots!==sourceRadar.a||
+      sourceRadar.d.realTeamBDots!==sourceRadar.b||
+      sourceRadar.status!==sourceRadar.d.status||
+      sourceRadar.tick!==sourceRadar.d.nativeTick||
+      sourceRadar.notScore!=='true'||
+      sourceRadar.originalSolids!=='25'||
+      sourceRadar.originalLinks!=='26'||
+      sourceRadar.d.officialWinner!=='NONE'||
+      sourceRadar.d.paintWrites!==0||
+      sourceRadar.d.fullCoverageInferred!==false)
+    fail('B402_ACTUAL_NATIVE_RADAR_SOURCE_SAMPLES_INVALID',{
+     tick:n.tick,sourceRadar});
+   if(!report.phases.some(x=>x.phase==='B402_REAL_NATIVE_RADAR_SOURCE_PAINT')){
+    const proof={phase:'B402_REAL_NATIVE_RADAR_SOURCE_PAINT',
+     nativeTick:n.tick,sourceSampleTick:sourceRadar.d.nativeTick,
+     observedOriginalSurfaces:17,realSampledTeamA:sourceRadar.a,
+     realSampledTeamB:sourceRadar.b,
+     noAreaFillOrInferredCoverage:true,officialWinner:'NONE',
+     gameplayWrites:0,newGeometry:0};
+    report.phases.push(proof);persist();
+    console.log('B402_REAL_NATIVE_SOURCE_INK_RADAR_PASS',
+     JSON.stringify(proof));
+   }
    const sample={phase:'B390_REAL_20S_CHROME_CHECKPOINT',
     realNativeElapsedSeconds:Number(elapsed.toFixed(3)),tick:n.tick,
     originalHumanWeapon:n.b381RealNativeDodge.realWeapon,

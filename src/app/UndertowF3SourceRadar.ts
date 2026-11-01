@@ -4,16 +4,21 @@
  * paths are inferred from map strokes, no nav, paint or score authority.
  */
 import type {StageDefinition} from '../stage/StageDefinition';
+import type {PaintSurface} from '../ink/PaintSurface';
+import {b402OriginalSourceInkRadarSamples,
+ type B402RadarProof} from './B402NativeSourceInkRadarSamples';
 import {b247ShouldCompactSourceRadar} from './B245SourcePresentation';
 import {sourceRadarHeightBand} from './UndertowF3RadarElevation';
 
 type Actor={id:string;physicalFoot:[number,number,number];mobilityState:string;rejoined:boolean};
 type View={player:{position:number[]};cpu:{cpu:readonly Actor[];
- sourcePatrol:{activeTargets:readonly {id:string;position:readonly number[]}[]}};matchState:string};
+ sourcePatrol:{activeTargets:readonly {id:string;position:readonly number[]}[]}};matchState:string;tick:number};
 const WIDTH=300,HEIGHT=310,HALF=32,GRID=8;
-export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
+export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
+ actualPaintGrids:readonly PaintSurface[]=[]){
  if(stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
-    stage.solids.length!==25||stage.navigationLinks?.length!==26)
+    stage.solids.length!==25||stage.navigationLinks?.length!==26||
+    stage.paintSurfaces.length!==17)
   throw Error('T21_F3C_RADAR_ONLY_FROZEN_SOURCE');
  const shell=document.createElement('aside');
  shell.id='t21-f3-source-radar';
@@ -53,6 +58,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
   y:s.center[1]
  }));
  const font='11px ui-monospace,monospace';
+ let ink:B402RadarProof|null=null;
  let frame=0;
  let compact=false;
  function setPlayFocus(locked:boolean){
@@ -102,6 +108,30 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
    ctx.lineWidth=.75;ctx.beginPath();
    ctx.rect(-hw,-hh,2*hw,2*hh);ctx.fill();ctx.stroke();ctx.restore();
   }
+  // B402: one real cell dot per bounded original tile, at most every
+  // 180 native 60Hz simulation ticks. Draw under physical actor markers.
+  // We do not fill polygons or infer unverified source area/connectivity.
+  if(actualPaintGrids.length===17&&view.tick>=1&&
+     ['STAGING','PLAYING'].includes(view.matchState)&&
+     (!ink||view.tick-ink.nativeTick>=180)){
+   ink=b402OriginalSourceInkRadarSamples(actualPaintGrids,
+    [stage.solids.length,stage.paintSurfaces.length,
+     stage.navigationLinks?.length??0,0],
+    view.tick,[view.player.position[0]??0,
+     view.player.position[1]??0,view.player.position[2]??0],HALF);
+  }
+  if(ink?.status==='SOURCE_PAINT_SAMPLES'){
+   for(const dot of ink.dots){
+    ctx.fillStyle=dot.owner===1?'rgba(64,230,223,.72)':
+     'rgba(251,93,154,.72)';
+    ctx.fillRect(px(dot.x)-1.2,pz(dot.z)-1.2,2.4,2.4);
+   }
+  }
+  canvas.dataset.t21B402SourceInk=ink?.status??'OFF';
+  canvas.dataset.t21B402NativeTick=String(ink?.nativeTick??-1);
+  canvas.dataset.t21B402RealADots=String(ink?.realTeamADots??0);
+  canvas.dataset.t21B402RealBDots=String(ink?.realTeamBDots??0);
+  canvas.dataset.t21B402NotTurfScore='true';
   for(const link of linkStarts){
    const xx=px(link.start[0]),zz=pz(link.start[2]);
    ctx.fillStyle='rgba(255,195,101,.75)';
@@ -156,5 +186,14 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition){
   canvas.dataset.nativeActorCount=String(view.cpu.cpu.length+1);
   canvas.dataset.sourceFrame=String(frame);
  }
- return {render,canvas,setPlayFocus,sourceGeometryAdded:false as const};
+ return {render,canvas,setPlayFocus,
+  sourceInkSnapshot:()=>ink?{
+   status:ink.status,nativeTick:ink.nativeTick,
+   measuredOriginalSurfaces:ink.sampledOriginalSurfaces,
+   realTeamADots:ink.realTeamADots,realTeamBDots:ink.realTeamBDots,
+   fullCoverageInferred:false as const,officialWinner:'NONE' as const,
+   sourceScoreable:0 as const,paintWrites:0 as const,
+   productionAuthorized:false as const
+  }:null,
+  sourceGeometryAdded:false as const};
 }

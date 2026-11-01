@@ -2018,7 +2018,7 @@ export class UndertowF3PlayablePreviewApp{
   document.addEventListener('visibilitychange',()=>{
    if(document.hidden)this.pauseSourceRoundOnFocusLoss();
   });
-  this.radar=createF3SourceRadar(ui,stage);
+  this.radar=createF3SourceRadar(ui,stage,this.b45SourceSurfaces);
   // B245 player view preserves all QA nodes, snapshots, physics and controls.
   installB245SourcePresentation(ui,()=>this.refreshB36PlayFocus());
   window.addEventListener('keydown',ev=>{
@@ -5848,6 +5848,7 @@ export class UndertowF3PlayablePreviewApp{
    b20CpuPhaseProfile:this.b20ProfileSnapshot(),
    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
    radarVisible:this.radarVisible,
+   b402NativeOriginalInkRadar:this.radar.sourceInkSnapshot(),
    b234RealCpuGapReadiness:this.cpu.b234OriginalGapReadinessSnapshot(),
    originalSourceSolids:this.rawStage.solids.length,
    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
