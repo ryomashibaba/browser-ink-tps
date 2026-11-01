@@ -21,6 +21,9 @@ const mode=process.env.T21_W10B75_AIM||'FIXED';
 const b287ReadyOnly=process.env.T21_B287_READY_ONLY==='1';
 const b288ActorAb=process.env.T21_B288_ACTOR_AB==='1';
 const b289InPlayAb=process.env.T21_B289_INPLAY_ACTOR_AB==='1';
+const b399CameraAb=process.env.T21_B399_CAMERA_A_B==='1';
+if(b399CameraAb&&!b289InPlayAb)
+ throw Error('B399_REQUIRES_REAL_B289_LIVE_NATIVE_ROUND');
 const b179Recovery=process.env.T21_B179_NATIVE_SOURCE_RECOVERY==='1';
 const b180Patches=process.env.T21_B180_NATIVE_SOURCE_PATCH_AIM==='1';
 const b182NativeSight=process.env.T21_B182_NATIVE_ORIGINAL_COMBAT_SIGHT==='1';
@@ -1029,6 +1032,34 @@ async function run(){
       if(ready.tick!==0||ready.timeRemainingSeconds!==180||!ready.paused)
        fail('B289_ORIGINAL_NATIVE_READY_NOT_STABLE');
       const origin=ready.player.position;
+      if(b399CameraAb){
+       const before=JSON.stringify(stableRound(ready));
+       const actualControl=await evaluate(`(() => {
+        const el=document.querySelector('#t21-f3-b399-ready-toggle');
+        const r=el?.getBoundingClientRect();
+        return {enabled:el?.dataset.t21B399Enabled,
+         text:el?.textContent,
+         x:r?.left+r?.width/2,y:r?.top+r?.height/2};
+       })()`);
+       if(actualControl.enabled!=='false'||
+          !(actualControl.x>0&&actualControl.x<1600&&
+            actualControl.y>0&&actualControl.y<900))
+        fail('B399_REAL_PLAYER_READY_CONTROL_NOT_ACCESSIBLE_'+
+         JSON.stringify(actualControl));
+       await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+        x:actualControl.x,y:actualControl.y,button:'none'});
+       for(const type of ['mousePressed','mouseReleased'])
+        await cmd('Input.dispatchMouseEvent',{type,
+         x:actualControl.x,y:actualControl.y,
+         button:'left',clickCount:1});
+       const on=await snapshot();
+       if(on.b399NativeCameraClearance?.optedIn!==true||
+          on.b399NativeCameraClearance.active!==false||
+          on.b399NativeCameraClearance.hiddenActors.length!==0||
+          JSON.stringify(stableRound(on))!==before)
+        fail('B399_REAL_READY_SWITCH_CHANGED_SIMULATION_'+
+         JSON.stringify(on.b399NativeCameraClearance));
+      }
       const chosen=await evaluate(`(() => {
        const b=document.querySelector('#t21-f3-b202-resume');
        const r=b?.getBoundingClientRect();
@@ -1070,6 +1101,40 @@ async function run(){
         x:800,y:450,button:'left',clickCount:1});
        await cmd('Input.dispatchKeyEvent',{type:'keyUp',...forward});
       }
+      if(b399CameraAb){
+       // Real Chromium pointer-locked 60Hz runtime, without QA clock ticks.
+       const real=await until(async()=>{
+        const v=await evaluate(`(() => {
+         const n=window.__t21F3?.snapshot?.();
+         const c=document.querySelector('#app-canvas');
+         return n?{tick:n.tick,phase:n.matchState,paused:n.paused,
+          proof:n.b399NativeCameraClearance,
+          source:[n.originalSourceSolids,n.originalPaintSurfaces,
+           n.originalSourceNavigationLinks,n.sourceScoreablePromotions],
+          pointer:document.pointerLockElement===c}:null;
+        })()`);
+        return v?.phase==='PLAYING'&&v.pointer&&!v.paused&&
+         v.proof?.active&&v.proof?.hiddenActors.includes('PLAYER')?v:false;
+       },95000,500);
+       if(real.source.join('/')!=='25/17/26/0'||
+          real.proof.playerNativePrimitiveDrawEnabled!==false||
+          real.proof.playerNativeOutfitDrawEnabled!==false||
+          real.proof.hiddenActors.some(x=>!['PLAYER','A1','A2','A3'].includes(x)))
+        fail('B399_REAL_8_ACTOR_NATIVE_RENDER_AUTHORITY_DRIFT_'+
+         JSON.stringify(real));
+       const frame=await b246Screenshot('b399-real-playing-camera-clearance');
+       writeFileSync(resolve(OUTPUT,'b399-real-live-camera-aim.json'),
+        JSON.stringify({schema:'B399_TRUE_WEBGL2_SOURCE_PLAYER_AIM_CLEARANCE',
+         realNativeTick:real.tick,originalSource:real.source,
+         genuinePointerLock:real.pointer,realCameraActorDraw:real.proof,
+         screenshot:frame,virtualTicksInjected:0,
+         enemyActorsHidden:0,gameplayGeometryModified:false,
+         artAccepted:false,productionAuthorized:false},null,2));
+       console.log('B399_REAL_NATIVE_PLAYER_AIM_CLEARANCE_LIVE_PASS',
+        JSON.stringify({tick:real.tick,hidden:real.proof.hiddenActors,
+         renderOff:!real.proof.playerNativeOutfitDrawEnabled,
+         originalStage:real.source.join('/')}));
+      }
       // B291: genuine original-source paint notice must stay outside the aim zone.
       const b291Notice=await evaluate(`(() => {
        const m=document.querySelector('#t21-f3-b23-human-ink-confirmation');
@@ -1104,6 +1169,36 @@ async function run(){
       },30000);
       await sleep(300);
       const still=await snapshot();
+      if(b399CameraAb){
+       const off=still.b399NativeCameraClearance;
+       if(!off||off.active||off.hiddenActors.length!==0||
+          off.playerNativePrimitiveDrawEnabled!==false||
+          off.playerNativeOutfitDrawEnabled!==true)
+        fail('B399_REAL_PAUSED_ACTOR_DRAW_RESTORE_FAILED_'+JSON.stringify(off));
+       const toggle=await evaluate(`(() => {
+        const e=document.querySelector('#t21-f3-b399-ready-toggle');
+        const r=e?.getBoundingClientRect();
+        return {enabled:e?.dataset.t21B399Enabled,
+         x:r?.left+r?.width/2,y:r?.top+r?.height/2};
+       })()`);
+       if(toggle.enabled!=='true'||!(toggle.x>0&&toggle.x<1600&&toggle.y>0&&toggle.y<900))
+        fail('B399_PAUSED_TOGGLE_MISSING_'+JSON.stringify(toggle));
+       const frozen=JSON.stringify(stableRound(still));
+       await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+        x:toggle.x,y:toggle.y,button:'none'});
+       for(const type of ['mousePressed','mouseReleased'])
+        await cmd('Input.dispatchMouseEvent',{type,
+         x:toggle.x,y:toggle.y,button:'left',clickCount:1});
+       const restored=await snapshot();
+       if(restored.b399NativeCameraClearance?.optedIn!==false||
+          restored.b399NativeCameraClearance.hiddenActors.length!==0||
+          JSON.stringify(stableRound(restored))!==frozen)
+        fail('B399_REAL_PAUSED_AB_WORLD_DRIFT_'+
+         JSON.stringify(restored.b399NativeCameraClearance));
+       console.log('B399_ACTUAL_PLAYER_PAUSED_OFF_RESTORED',
+        JSON.stringify({tick:restored.tick,paused:restored.paused,
+         originalSource:'25/17/26/0',nativeActorsUnchanged:true}));
+      }
       // B290: actual post-input paused STAGING never says READY.
       const b290Hud=await until(async()=>{
        const label=await evaluate(`(() => {

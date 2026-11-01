@@ -1199,8 +1199,7 @@ export class UndertowF3PlayablePreviewApp{
    clear.addEventListener('click',()=>{
     if(document.pointerLockElement===this.canvas||!this.paused||
        this.stopReason||this.matchState==='TIME_UP')return;
-    this.b399ClearSightEnabled=!this.b399ClearSightEnabled;
-    this.b399UpdateCameraAimClearance();label();
+    this.b399SetEnabled(!this.b399ClearSightEnabled);
    });
    label();multi.insertAdjacentElement('afterend',clear);
   }
@@ -1588,6 +1587,29 @@ export class UndertowF3PlayablePreviewApp{
   pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
   pauseHint.style.cssText='margin-top:9px;color:#b9d9e4;font:600 10px/1.5 system-ui';
   pauseOverlay.append(pauseTitle,pauseInfo,resumeButton,pauseHint);
+  // The actual READY/PAUSE dialog is visible in PLAYER view (F8 not needed).
+  // Real user choice on the current SOURCE world; never changes the 60Hz clock.
+  if(this.b203FullRound){
+   const clear=document.createElement('button');
+   clear.id='t21-f3-b399-ready-toggle';
+   clear.type='button';
+   clear.dataset.sourceOnly='true';
+   clear.dataset.productionAuthorized='false';
+   clear.textContent='CAMERA AIM CLEARANCE: '+
+     (this.b399ClearSightEnabled?'ON':'OFF')+
+     ' · VISUAL ONLY / ART HOLD';
+   clear.dataset.t21B399Enabled=String(this.b399ClearSightEnabled);
+   clear.style.cssText='display:block;width:100%;margin:8px 0;'+
+    'padding:9px;border:1px solid #7db8c9;border-radius:8px;'+
+    'background:#173c53;color:#e5f8ff;cursor:pointer;'+
+    'pointer-events:auto;font:700 11px system-ui';
+   clear.addEventListener('click',()=>{
+    if(!this.paused||document.pointerLockElement===this.canvas||
+       this.stopReason||this.matchState==='TIME_UP')return;
+    this.b399SetEnabled(!this.b399ClearSightEnabled);
+   });
+   pauseOverlay.insertBefore(clear,resumeButton);
+  }
   // Paused player can explicitly choose a clean 180s SOURCE world,
   // preserving only the previously selected physical human weapon.
   if(this.b384Circuit){
@@ -4852,6 +4874,18 @@ export class UndertowF3PlayablePreviewApp{
         physical.y< -35)
      throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
  }
+ /** Synchronize BOTH actual READY dialog and advanced QA menu controls. */
+ private b399SetEnabled(enabled:boolean):void{
+  this.b399ClearSightEnabled=enabled;
+  this.b399UpdateCameraAimClearance();
+  const label='CAMERA AIM CLEARANCE: '+(enabled?'ON':'OFF');
+  for(const id of ['t21-f3-b399-ready-toggle','t21-f3-b399-clear-aim']){
+   const control=document.getElementById(id);
+   if(!control)continue;
+   control.dataset.t21B399Enabled=String(enabled);
+   control.textContent=label+' · VISUAL ONLY · F5 ART HOLD';
+  }
+ }
  /** Opt-in F5, only existing real PLAYER and friendly A1/A2/A3 render.
   * Enemy visibility, hit spheres, actor bodies, camera, ink and scoring
   * are never modified. Unlocked/paused/ended source rounds restore draws. */
@@ -4866,7 +4900,8 @@ export class UndertowF3PlayablePreviewApp{
    const visual=actor?b248ExistingSourceActorVisual(actor):null;
    if(!visual){this.b399Hidden.delete(id);return;}
    const hide=allowed&&active&&b399ActorIntersectsCameraAim(
-    eye,direction,actor!.getPosition(),this.b399Hidden.has(id));
+    eye,direction,actor!.getPosition(),this.b399Hidden.has(id),
+    id==='PLAYER'?'PLAYER':'ALLY');
    visual.setCameraLineHidden(hide);
    if(hide){this.b399Hidden.add(id);hidden++;}
    else this.b399Hidden.delete(id);
@@ -5946,6 +5981,19 @@ export class UndertowF3PlayablePreviewApp{
     sourceUVOnly:true,physicsSolidsAdded:0,scoreableSurfacesAdded:0,
     instanceMatricesRecovered:false,productionAuthorized:false,
     sourceError:this.texturedF3lError},
+   b399NativeCameraClearance:{
+    optedIn:this.b399ClearSightEnabled,
+    active:this.canvas.dataset.t21B399NativeAimClearance==='SOURCE_RENDER_ONLY',
+    hiddenActors:[...this.b399Hidden].sort(),
+    sourceOnly:true as const,renderOnly:true as const,
+    playerNativePrimitiveDrawEnabled:
+     (this.app.root.findByName('Player') as Entity|null)?.render?.enabled??null,
+    playerNativeOutfitDrawEnabled:
+     ((this.app.root.findByName('Player') as Entity|null)
+      ?.findByName('B248:GEAR_VISUAL') as Entity|null)?.enabled??null,
+    newActors:0 as const,newScoreable:0 as const,
+    stage:'25/17/26/0' as const,productionAuthorized:false as const
+   },
    sourceScoreablePromotions:0,sourceGeometryChanged:false,
    productionAuthorized:false,visualFreezeApproved:false,
    unrestricted4v4Certified:false,

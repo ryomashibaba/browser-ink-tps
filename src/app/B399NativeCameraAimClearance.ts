@@ -11,7 +11,8 @@ export const B399_CLEAR_SIGHT_AUTHORITY=Object.freeze({
 /** Actual near-lens PlayCanvas center-line test against a real actor
  * render center. Exit-only hysteresis avoids flicker at the sight edge. */
 export function b399ActorIntersectsCameraAim(
- eye:B399Point,forward:B399Point,actor:B399Point,previouslyHidden=false
+ eye:B399Point,forward:B399Point,actor:B399Point,
+ previouslyHidden=false,kind:'PLAYER'|'ALLY'='ALLY'
 ):boolean{
  if(![eye.x,eye.y,eye.z,forward.x,forward.y,forward.z,
       actor.x,actor.y,actor.z].every(Number.isFinite))return false;
@@ -19,7 +20,13 @@ export function b399ActorIntersectsCameraAim(
  if(len<1e-6)return false;
  const x=actor.x-eye.x,y=actor.y-eye.y,z=actor.z-eye.z;
  const along=(x*forward.x+y*forward.y+z*forward.z)/len;
- if(along<.22||along>3.8)return false;
- const radius=previouslyHidden ? .78 : .53;
+ // SOURCE TPS camera sits 6.4 m behind the actual player in open space.
+ // Never confuse this genuine optical distance with gameplay hit range.
+ // A close ally may be suppressed only inside a smaller 4.2 m envelope.
+ const maxDistance=kind==='PLAYER'?8.5:4.2;
+ if(along<.22||along>maxDistance)return false;
+ const radius=kind==='PLAYER'?
+  (previouslyHidden?1.04:.84):
+  (previouslyHidden?.80:.62);
  return Math.max(0,x*x+y*y+z*z-along*along)<=radius*radius;
 }
