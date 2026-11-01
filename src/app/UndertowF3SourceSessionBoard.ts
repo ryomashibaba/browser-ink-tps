@@ -4,6 +4,7 @@
  * opposing-team 4v4 contact claim. Zero gameplay writes.
  */
 import type {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
+import type {B400SourceRecap} from './B400RealOriginalSourceGridRecap';
 
 /** B387: native 60Hz source round achievement history, not game scoring. */
 export class B387RoundMilestones{
@@ -321,6 +322,9 @@ export function createF3SourceSessionBoard(
     'NO TURF WINNER · CROSS-TEAM ROUTES NOT CERTIFIED</div>'+
   '<div id="t21-f3-b59-final-stats" style="border-top:1px solid #ffffff2d;'+
     'border-bottom:1px solid #ffffff2d;padding:13px 0;white-space:pre-line"></div>'+
+  '<div id="t21-f3-b400-source-grid-recap" hidden style="margin-top:12px;'+
+   'padding:12px;border:1px solid #5a91ab;border-radius:10px;'+
+   'background:#123145;color:#d9f6ff;font:650 11px/1.5 system-ui"></div>'+
   '<div id="t21-f3-b63-source-paint-tempo" style="margin-top:12px;'+
    'padding:9px;border:1px solid #4a8d9b;border-radius:9px;'+
    'font:600 10px/1.5 system-ui;color:#c5eff4" hidden></div>'+
@@ -348,6 +352,51 @@ export function createF3SourceSessionBoard(
  finish.appendChild(panel);
  ui.appendChild(finish);
  const finalStats=finish.querySelector<HTMLElement>('#t21-f3-b59-final-stats')!;
+ const sourceGrid=finish.querySelector<HTMLElement>('#t21-f3-b400-source-grid-recap')!;
+ const setSourceGridRecap=(s:B400SourceRecap)=>{
+  if(finish.dataset.t21B59State!=='FINISHED')return;
+  sourceGrid.hidden=false;
+  sourceGrid.replaceChildren();
+  const label=document.createElement('div');
+  label.textContent='ORIGINAL SOURCE INK GRID · FINAL STATE / NOT A TURF SCORE';
+  label.style.cssText='font-weight:850;color:#b2edfb;margin-bottom:7px';
+  sourceGrid.appendChild(label);
+  if(s.status!=='FINAL_REGISTERED_SOURCE_ONLY'){
+   sourceGrid.append('UNAVAILABLE · '+s.cause+
+    ' · NO WINNER, NO INFERRED AREA');
+  }else{
+   const info=document.createElement('p');
+   info.style.cssText='margin:3px 0 9px;color:#afcfd8;font:600 10px/1.4 system-ui';
+   info.textContent=s.observedSurfaces+
+    ' original paint surfaces · '+s.activeOriginalGridCells+
+    ' active GRID CELLS only · incomplete source / no scoreable turf';
+   sourceGrid.appendChild(info);
+   const share=(title:string,count:number,pct:number,tint:string)=>{
+    const item=document.createElement('div');
+    item.style.cssText='margin:5px 0';
+    const caption=document.createElement('div');
+    caption.textContent=title+' · '+count+' cells ('+pct.toFixed(1)+'% OF SOURCE GRID)';
+    const track=document.createElement('div');
+    track.style.cssText='height:7px;margin-top:3px;background:#294554;'+
+     'border-radius:5px;overflow:hidden';
+    const fill=document.createElement('div');
+    fill.style.cssText='height:100%;background:'+tint+';width:'+
+     Math.max(0,Math.min(100,pct)).toFixed(2)+'%';
+    track.appendChild(fill);item.append(caption,track);
+    sourceGrid.appendChild(item);
+   };
+   share('TEAM A',s.teamACells,s.teamAPercentOfRegisteredCells,'#6adbd2');
+   share('TEAM B',s.teamBCells,s.teamBPercentOfRegisteredCells,'#d288c1');
+   share('NEUTRAL',s.neutralCells,s.neutralPercentOfRegisteredCells,'#91a9b5');
+  }
+  finish.dataset.t21B400Status=s.status;
+  finish.dataset.t21B400SourceOnly='true';
+  finish.dataset.t21B400NotTurfScore='true';
+  finish.dataset.t21B400OriginalGridCells=String(s.activeOriginalGridCells);
+  finish.dataset.t21B400TeamACells=String(s.teamACells);
+  finish.dataset.t21B400TeamBCells=String(s.teamBCells);
+  finish.dataset.t21B400NeutralCells=String(s.neutralCells);
+ };
  const tempo=finish.querySelector<HTMLElement>('#t21-f3-b63-source-paint-tempo')!;
  let lastTempoWritten=false;
  const setPaintTempo=(result:ReturnType<typeof sourceCpuInkTempo>|null)=>{
@@ -491,5 +540,5 @@ export function createF3SourceSessionBoard(
   root.dataset.t21B58OriginalScoreable='0';
   return v;
  };
- return {root,finish,render,setPaintTempo};
+ return {root,finish,render,setPaintTempo,setSourceGridRecap};
 }

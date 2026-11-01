@@ -150,6 +150,8 @@ import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
 import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
 import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY}
  from './B399NativeCameraAimClearance';
+import {b400RealOriginalSourceGridRecap,type B400SourceRecap}
+ from './B400RealOriginalSourceGridRecap';
 import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
  from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
@@ -464,6 +466,7 @@ export class UndertowF3PlayablePreviewApp{
  private b399ClearSightEnabled=new URL(location.href).searchParams
   .get('t21W10B399')==='clearAim';
  private readonly b399Hidden=new Set<string>();
+ private b400FinalOriginalGrid:B400SourceRecap|null=null;
  private b203EverLockedRealPointer=false;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
@@ -5982,6 +5985,7 @@ export class UndertowF3PlayablePreviewApp{
     sourceUVOnly:true,physicsSolidsAdded:0,scoreableSurfacesAdded:0,
     instanceMatricesRecovered:false,productionAuthorized:false,
     sourceError:this.texturedF3lError},
+   b400RegisteredSourceGrid:this.b400FinalOriginalGrid,
    b399NativeCameraClearance:{
     // Genuine renderer/actor spatial witness, not a simulated hit/splat.
     cameraOpticalWitness:(()=>{
@@ -6596,6 +6600,16 @@ export class UndertowF3PlayablePreviewApp{
   if(state.matchState==='TIME_UP')
    this.b70OwnerComparison?.render();
   if(state.matchState==='TIME_UP'){
+   // Once per ACTUAL stopped 180s round. Read original ownerGrid,
+   // not official Turf score or inferred area, without affecting simulation.
+   if(!this.b400FinalOriginalGrid){
+    this.b400FinalOriginalGrid=b400RealOriginalSourceGridRecap(
+     this.b45SourceSurfaces,true,[
+      this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,0
+     ]);
+    this.b58SessionBoard.setSourceGridRecap(this.b400FinalOriginalGrid);
+   }
    const completed=this.b62NativeEvidence.report();
    if(completed)this.b58SessionBoard.setPaintTempo(
     sourceCpuInkTempo(completed.timeline));
