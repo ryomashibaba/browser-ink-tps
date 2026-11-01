@@ -146,3 +146,14 @@ B388実測：Twin Comets実37発、人間の原作塗装変化354セル、落下
 本当のTwin Comets・37 shot・人間354変化セル・落下後65 fresh impact・接地11.3417m・7/7 CPU復帰・原作B183落下→B186右上段→3/3 clear、B387その試合の実達成数1を実ブラウザで証明。CDP Escape→本当の一時停止により `PLAYING`, `paused=true`, pointer unlock, old native tick **1446**、PLAYER画面でB389新試合ボタンが可視。人間が本当にクリック→ **新しい** PlayCanvas/Rapier/Recast世界が誕生。新ページ初期 `STAGING`, `tick=0`, `time=180`, `twin-comets` 自動選択、shot/人間ink/CPU shots/CPU physical rejoins/旧達成履歴すべて0。原作25/17/26/0、scoreable=0、winner NONE、無認証対岸経路なし。再び本当のSTARTをクリックし、同じ武器で `native tick=18` まで進行、実CPU7体あり、強制tick/ワープ0。
 
 **注意：** B389 PASSはゲーム途中の本物の新試合操作についてのみ。B384で180秒TIME_UPまで実際に走り切り、同じ武器で再挑戦する経路は**独立未検証HOLD**（一方B210通常SOURCE構成の実180秒TIME_UP→リプレイは [#41266517229](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41266517229) で先行PASS）。B387実死亡→復活のブラウザ試験、自然に対岸CPUと交戦する経路、正式得点・4v4、ART、productionは引き続きHOLD。次の大工程では、新たな物理床/スコアの創作や既存QA増殖をせず、B210既存の真正180秒統合をB384へ展開する。
+
+
+## 2026-11-01 B390→B391 継続・実死亡/復活の誠実なラウンド状態
+
+最新GitHub QA実装HEAD `0ca05868ad36b8372d6330d99b85e4191d4a1e61`。前のB390コード `85f1da1d782132b525c6e93a2c956c76a2d25fd2` の真正12武器3/3→実180秒TIME_UP→同武器リプレイは [CI #41271399268](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41271399268) で実走行中。TYPECHECK/関連Vitest/構文はPASS、**180秒終端そのものは未認証**。長時間CIをB391の合否に流用しない。
+
+B391でSOURCE B387ラウンド履歴の `nativeHumanAlive`、本当のHP-zeroを見たtick/回数、本当の150native-tick復活を見たtick/回数を導入。死亡した時は現在の命の3/3表示を `WAIT_NATIVE_RESPAWN` に変えて誤認を防ぐが、本当の過去の達成履歴 `realClearedLives` は保持。実死亡を観測せずに復帰数だけ増やした状態、149tick未満の復帰、原作stage/score/winnerの改変は拒否。既存の原作B186ライフごとの実落下→坂→インク認証と、死亡後150tickのリアルPlayerResourcesリセットは改造せず利用。
+
+B391の変更は `src/app/UndertowF3SourceSessionBoard.ts`、同テストと [B391資料](../qa/T21_B391_NATIVE_HUMAN_LIFE_CONTINUITY_JA.md)。B343 CI [#41272467660](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41272467660) の関連Vitest **SUCCESS**、TypeScript/Vite build **SUCCESS** を確認。実ブラウザ自然HPゼロ→150tick復活は **未認証HOLD**。実敵B1〜B4の自然交戦と原作対岸経路も依然 0/12認証。テスト専用人工HP変更・ワープ・偽物理を作らず、原作SOURCEのまま実プレイで認証を図る。
+
+前提を絶対不変更：25 Rapier solids、17 PaintSurface、26 NavLinks、0 Scoreable、winner NONE、activationReady=false、ART HOLD、正式4v4 HOLD、production HOLD、main/T19C/T20/PR#5/公開Pages不変更。次回はGitHubから最新CI/HEADを確認し、新たなB番号だけの細分化より遊べる本物のSOURCE試合全体・自然な接敵・確実な実180秒完走を優先する。
