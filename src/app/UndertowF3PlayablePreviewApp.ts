@@ -4756,6 +4756,7 @@ export class UndertowF3PlayablePreviewApp{
      ink:this.stats.playerInk,inkRelation:this.player.currentInkRelation,
      respawnTicks:this.resources.currentHp<=0?
       Math.max(0,150-this.respawnFrames):null,
+     nativeWeaponGuidance:this.readNativeSourceWeaponGuidance(),
      hitCount:this.stats.humanCpuDirectHits,
      splatCount:this.stats.humanCpuDirectSplats,
      matchState:this.matchState,paused:this.paused,stopReason:this.stopReason,
@@ -5956,6 +5957,7 @@ export class UndertowF3PlayablePreviewApp{
     sourceTagDoesNotGrantInkOrMovementAuthority:true,
     scoreablePromotions:0,full4v4Certified:false
    },
+   nativeWeaponGuidance:this.readNativeSourceWeaponGuidance(),
    b361NativePlayerWeapon:{
     id:this.projectiles.currentPlayerWeapon.id,
     displayName:this.projectiles.currentPlayerWeapon.displayName
@@ -6049,6 +6051,21 @@ export class UndertowF3PlayablePreviewApp{
    turfResult:'UNAVAILABLE_SOURCE_SCORE_MASK_NOT_AUTHORIZED' as const,
    stopReason:this.stopReason
   };
+ }
+ private readNativeSourceWeaponGuidance():string{
+  return b380NativeWeaponGuidance({
+   profile:this.projectiles.currentPlayerWeapon,
+   sourceMatchState:this.matchState,nativeStopped:Boolean(this.stopReason),
+   hp:this.resources.currentHp,
+   actualRespawnTicksRemaining:this.resources.currentHp<=0?
+    Math.max(0,150-this.respawnFrames):null,
+   actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
+   actualChargePercent:this.stats.playerWeaponChargePercent,
+   currentMode:this.player.currentMode,canShoot:this.player.canShoot,
+   realSubEnabled:this.b38HumanSubEnabled,
+   realSubName:subWeaponProfile(weaponKit(
+    this.projectiles.currentPlayerWeapon.id).sub).displayName
+  });
  }
  private refresh(){
   this.refreshB36PlayFocus();

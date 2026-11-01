@@ -20,6 +20,8 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  humanCpuDirectSplats?:number;
  inkDryFireAttempts?:number;
  b361NativePlayerWeapon?:{id:string;displayName:string};
+ /** The actual selected weapon, HP and form projected into PLAYER HUD. */
+ nativeWeaponGuidance?:string;
  b343OriginalSourceVolleyBudget?:{
   enabled:boolean;rejectedVolleys:number;physicalPoolSize:number;
   actualFreeSlots:number;
@@ -44,6 +46,7 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
 export interface F3NativeCombatPulse{
  tick:number;hp:number;ink:number;inkRelation:string;
  respawnTicks:number|null;hitCount:number;splatCount:number;
+ nativeWeaponGuidance?:string;
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  paused:boolean;stopReason:string|null;
  originalSolids:number;originalPaint:number;originalLinks:number;
@@ -199,6 +202,7 @@ export function b290SourcePlayerHudPhase(x:{
 export function b338SourceRoundGuide(x:{
  playerView:boolean;matchState:string;
  paused:boolean;tick:number|undefined;stopReason:string|null;
+ nativeWeaponGuidance?:string;
 }):{phase:'READY'|'STAGING'|'PLAYING'|'PAUSED'|'TIME_UP'|'STOP'|'QA';text:string}{
  if(!x.playerView)return {phase:'QA',text:''};
  if(x.stopReason)return {phase:'STOP',text:'SAFE STOP · NO OFFICIAL RESULT'};
@@ -212,6 +216,18 @@ export function b338SourceRoundGuide(x:{
   return {phase:'STAGING',text:'STAGING · 7 REAL CPU PREPARING'};
  if(x.matchState!=='PLAYING')
   return {phase:'STOP',text:'UNVERIFIED SOURCE PHASE · NO RESULT'};
+ const guide=x.nativeWeaponGuidance;
+ // The genuine native selected kit takes precedence over generic shooter
+ // instructions. HP0/SQUID never invite forbidden fire or dodge controls.
+ if(typeof guide==='string'&&guide.startsWith('WEAPON ')&&
+    guide.endsWith(' · PRACTICE')){
+  const actual=guide.slice(0,-' · PRACTICE'.length);
+  const blocked=actual.includes('SPLATTED · ')||
+   actual.includes('SQUID FORM · ')||
+   actual.includes('HP UNAVAILABLE')||actual.includes('SOURCE SAFE STOP');
+  return {phase:'PLAYING',text:blocked?actual:
+   'WASD MOVE · '+actual+' · ESC / P PAUSE'};
+ }
  return {phase:'PLAYING',
   text:'WASD MOVE · MOUSE AIM · LEFT CLICK FIRE · ESC / P PAUSE'};
 }
@@ -399,6 +415,18 @@ export function createF3PlayableHud(ui:HTMLElement){
   const hitCount=legitimate?p.hitCount:null;
   const splatCount=legitimate?p.splatCount:null;
   const splatted=legitimate&&hp===0;
+  // 60Hz read-only guidance prevents stale commands after actual native
+  // death/form changes between slower full-viewport HUD refreshes.
+  const live=b338SourceRoundGuide({
+   playerView:ui.dataset.t21B245Presentation==='PLAYER',
+   matchState:p.matchState,paused:p.paused,tick:p.tick,
+   stopReason:legitimate?p.stopReason:'UNVERIFIED_NATIVE_SOURCE',
+   nativeWeaponGuidance:legitimate?p.nativeWeaponGuidance:undefined
+  });
+  b338Guide.hidden=live.phase==='QA';
+  if(!b338Guide.hidden&&b338Guide.textContent!==live.text)
+   b338Guide.textContent=live.text;
+  b338Guide.dataset.t21B338GameplayWrites='0';
   if(!legitimate){
    // Always fail closed on source drift, even if previous HUD was visible.
    hitMarkerUntil=-1;lastHitCount=null;lastSplatCount=null;
@@ -506,7 +534,8 @@ export function createF3PlayableHud(ui:HTMLElement){
   const b338=b338SourceRoundGuide({
    playerView:ui.dataset.t21B245Presentation==='PLAYER',
    matchState:value.matchState,paused:value.paused,tick:value.tick,
-   stopReason:value.stopReason
+   stopReason:value.stopReason,
+   nativeWeaponGuidance:value.nativeWeaponGuidance
   });
   ui.dataset.t21B338Phase=b338.phase;
   b338Guide.hidden=b338.phase==='QA';
@@ -527,6 +556,7 @@ export function createF3PlayableHud(ui:HTMLElement){
    tick:value.tick??-1,hp:value.player.hp,ink:value.player.ink,
    inkRelation:value.player.inkRelation??'UNVERIFIED',
    respawnTicks:value.humanRespawnTicksRemaining??null,
+   nativeWeaponGuidance:value.nativeWeaponGuidance,
    hitCount:value.humanCpuDirectHits??-1,
    splatCount:value.humanCpuDirectSplats??-1,
    matchState:value.matchState as F3NativeCombatPulse['matchState'],

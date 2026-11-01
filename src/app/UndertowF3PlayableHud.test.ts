@@ -206,6 +206,45 @@ describe('B290 no fictitious READY after real native source movement',()=>{
  });
 });
 
+describe('B338 live weapon-aware source PLAYER HUD guidance',()=>{
+ const actual=(id:Parameters<typeof weaponProfile>[0],extra:Record<string,unknown>={})=>
+  b380NativeWeaponGuidance({profile:weaponProfile(id),hp:100,
+   actualDodgeCharges:2,actualChargePercent:35,currentMode:'HUMAN',
+   canShoot:true,realSubEnabled:true,realSubName:'Snap Bomb',
+   sourceMatchState:'PLAYING',...extra});
+ const display=(nativeWeaponGuidance:string,phase='PLAYING',paused=false,
+  playerView=true,stopReason:string|null=null)=>
+  b338SourceRoundGuide({playerView,matchState:phase,paused,tick:1800,
+   stopReason,nativeWeaponGuidance});
+ it('displays true selected weapon, real dodge/sub and charging, not generic fire',()=>{
+  const dual=display(actual('twin-comets')).text;
+  expect(dual).toContain('Twin Comets');
+  expect(dual).toContain('RMB DODGE 2/2');
+  expect(dual).toContain('F SUB Snap Bomb');
+  const charger=display(actual('rail-charger')).text;
+  expect(charger).toContain('CHARGE 35%');
+  expect(charger).not.toContain('LEFT CLICK FIRE');
+ });
+ it('never prompts fire/dodge/sub/move while splatted or squid',()=>{
+  for(const extra of [{hp:0,actualRespawnTicksRemaining:60},
+                       {currentMode:'SQUID'}]){
+   const text=display(actual('twin-comets',extra)).text;
+   expect(text).not.toContain('WASD MOVE');
+   expect(text).not.toContain('RMB DODGE');
+   expect(text).not.toContain('F SUB');
+  }
+  expect(display(actual('twin-comets',{hp:0,actualRespawnTicksRemaining:60})).text)
+   .toContain('60 NATIVE TICKS (1.0s)');
+ });
+ it('preserves pause, staging, TIME_UP, QA and SAFE_STOP precedence',()=>{
+  const d=actual('twin-comets');
+  expect(display(d,'STAGING').text).not.toContain('RMB DODGE');
+  expect(display(d,'PLAYING',true).text).not.toContain('RMB DODGE');
+  expect(display(d,'TIME_UP').text).toContain('NO WINNER');
+  expect(display(d,'PLAYING',false,false).text).toBe('');
+  expect(display(d,'PLAYING',false,true,'STOP').phase).toBe('STOP');
+ });
+});
 describe('B338 actual native phase explanation, no fabricated result',()=>{
  const g=(matchState:'STAGING'|'PLAYING'|'TIME_UP',paused:boolean,
   tick:number,stopReason:string|null=null,playerView=true)=>
