@@ -48,3 +48,10 @@
 - 生成するのは2.5/3.5m以内の**照準候補**だけ。既存 `GameplayInkSystem.sampleWorld` の実所有者・原作面・非Scoreable条件、実CPU接地状態、既存B216 Rapierの足元と射線審査を通るまで**発射も命中も認証しない**。0入力/不正な実向きならfail-closed。原作ジオメトリ/Actor/経路/HP/弾仕様/スコアを変更しない。
 - 同一変更にVitest回帰を追加。**真正Chromiumで塗装件数が増えた証拠はまだない。** 新HEADでのbuild・Vitest・原作180秒実測の結果を別途確認するまで、これはコード実装でありゲーム性能PASSではない。
 - 従来の25/17/26/0と自然対岸0/12、正式4v4/ART/公開HOLD、main/T19C/T20/PR#5/Pages凍結は継続。
+
+## 2026-11-02 — F3 実CPU装備射程と原作塗装候補の整合（新HEADの真正QA待ち）
+
+- **既存B390の未確定項目を実ログで確定:** [#41315948710](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41315948710)（実施SHA `998982f3`）ではB401 `B401_REAL_NATIVE_LIVE_GRID_HUD_PASS` とB402 `B402_REAL_NATIVE_SOURCE_INK_RADAR_PASS`。実SOURCE 169742セル、180秒 TIME_UP tick11859、CPU7/7復帰、CPU617発/13608実変更セル、人間94発/388実変更セル、HPヒット0。別SHAの現在ゲーム全体のPASSには流用しない。
+- **実装:** F3の既存CPU局所SOURCE塗装において、原作面・Rapier支持・物理弾射線の審査を維持したまま、既存の**実装備の主武器射程判定**を候補選択時にも適用。協力照準・B64局所探索・元の前方探索・B216後方/側方探索で射程外候補を捨て、もし同一探索に別の実SOURCE射程内候補があれば選択し直せる。以前は選択後のfire側で拒否され、他の候補を検討できない場合があった。新弾・新Actor・新地形・射程チューニング・見せかけの命中は0。
+- **厳格な判定:** この変更によるCPU射撃増加、所有セル増加、人間対CPU命中、正式4v4は**実測していない／HOLD**。最新HEADの同SHAビルド/既存Vitest/真正Chromiumの最終結果を必ず確認。B401/B402の既存実PASSも旧SHAの独立証拠に限定。
+- 25/17/26/0・自然な対岸経路0/12・正式勝敗/ART/本番/マージHOLD、main/PR#5/Pages/Windows原本不変更。

@@ -1980,7 +1980,10 @@ export class CpuAgentSystem {
       this.f3dSourceGoals?.chooseSourceAllySupportInkTarget?.(
        bot.id,bot.position,this.targetPoint)
       ? this.targetPoint.clone() : null;
+    // A SOURCE-verified ally suggestion must also be reachable by the
+    // actual equipped main weapon; otherwise try the other true floor aims.
     const allyInk=allyProposal&&
+      this.cpuTargetInRange(bot,allyProposal,profile)&&
       this.b216OriginalSourceTurfSightClear(bot,allyProposal)?
       allyProposal:null;
     // B215 (opt-in REAL B207): B64/B180 samples actual expensive
@@ -2367,6 +2370,10 @@ export class CpuAgentSystem {
          sample.owner===bot.team)continue;
       this.b64CandidatesUnowned++;
       const sourcePoint=sample.surface.localToWorld(sample.u,sample.v);
+      // Reject out-of-range genuine paint before choosing it, not AFTER
+      // the aim is selected: a nearer audited source pixel may still fire.
+      if(!this.cpuTargetInRange(
+        bot,sourcePoint,weaponProfile(bot.weaponId)))continue;
       // B216's already registered native Rapier foot + fire-line veto
       // also applies to the existing frontal B64 source aim. Seek another
       // REAL candidate instead of spending ink into original cover.
@@ -2418,7 +2425,9 @@ export class CpuAgentSystem {
        continue;
       const candidate=sample.surface.localToWorld(sample.u,sample.v);
       if(![candidate.x,candidate.y,candidate.z].every(Number.isFinite)||
-         Math.abs(candidate.y-bot.position.y)>.35)continue;
+         Math.abs(candidate.y-bot.position.y)>.35||
+         !this.cpuTargetInRange(
+           bot,candidate,weaponProfile(bot.weaponId)))continue;
       const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
       if(value<=opportunity)continue;
       this.b216RealOriginalFloorSightChecks++;
@@ -2453,6 +2462,10 @@ export class CpuAgentSystem {
       if (!sample || sample.owner === bot.team ||
           sample.surface.isScoreable) continue;
       const target=sample.surface.localToWorld(sample.u, sample.v);
+      // The existing real main-weapon range gate used at FIRE time must
+      // also apply while seeking: continue to a nearer real floor patch.
+      if(!this.cpuTargetInRange(
+        bot,target,weaponProfile(bot.weaponId)))continue;
       if(!this.b216OriginalSourceTurfSightClear(bot,target))continue;
       return target;
     }
