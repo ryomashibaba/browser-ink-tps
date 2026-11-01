@@ -5998,7 +5998,7 @@ export class UndertowF3PlayablePreviewApp{
       Math.sqrt(Math.max(0,dx*dx+dy*dy+dz*dz-along*along)):null;
      return {
       actorFound:true,realB248VisualInstalled:
-       !!b248ExistingSourceActorVisual(actor),
+       !!b248ExistingSourceActorVisual(actor!),
       actualNativePose:[native.x,native.y,native.z],
       realCameraEye:[eye.x,eye.y,eye.z],
       realCameraForward:[face.x,face.y,face.z],
