@@ -121,6 +121,21 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  report.phases.push(strictNativePaintGate);persist();
  console.log('B390_REAL_NATIVE_CPU_SOURCE_LINE_OF_SIGHT',
   JSON.stringify(strictNativePaintGate));
+ // Historical independently completed B395 180s same kit/route:
+ // SHA 6cb1a3ff; 745 true CPU shots / 17,388 real changed source cells.
+ // NOT a paired A/B experiment, and no such threshold grants source authority.
+ const historicalReference={sha:'6cb1a3ff1318e931e67b2104edb57fc3bd7aeb27',
+  actualCpuShots:745,changedOriginalSourceCells:17388};
+ const currentComparison={phase:'B390_HISTORICAL_NATIVE_CPU_PAINT_COMPARISON',
+  historicalReference,
+  currentRealCpuShots:final.cpuSourceTurfShots,
+  currentChangedOriginalSourceCells:acceptedSourceInk,
+  shotDelta:final.cpuSourceTurfShots-historicalReference.actualCpuShots,
+  sourceCellDelta:acceptedSourceInk-historicalReference.changedOriginalSourceCells,
+  causalAttributionCertified:false,officialTurfScoreCertified:false};
+ report.phases.push(currentComparison);persist();
+ console.log('B390_HISTORICAL_NATIVE_CPU_PAINT_COMPARISON',
+  JSON.stringify(currentComparison));
  if(!valid)fail('B390_REAL_CPU_ORIGINAL_PAINT_GATE_NOT_MEASURED',
   strictNativePaintGate);
  const endUi=await until(async()=>{

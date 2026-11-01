@@ -51,6 +51,7 @@ import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattl
 import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
+import {b216RealSourcePaintShotLineClear} from '../ai/B216OriginalSourceBackfillInk';
 import {B217ActualNativePaintTempo} from './B217ActualNativePaintTempo';
 import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209OriginalRampEdge';
 import {UNDERTOW_RIGHT_LOW_ROUTE_RAMPS} from '../stage/undertow/UndertowSpillwayRouteRampGeometry';
@@ -874,16 +875,18 @@ export class UndertowF3PlayablePreviewApp{
         const targetHit=this.physics.castStageSegment(
          new Vec3(t.x,t.y+.55,t.z),new Vec3(t.x,t.y-.55,t.z),
          'ink-projectile');
-        if(!footHit||!targetHit||
-           footHit.solidId!==targetHit.solidId||
-           Math.abs(footHit.point.y-f.y)>.25||
-           Math.abs(targetHit.point.y-t.y)>.25)return false;
+        if(!footHit||!targetHit)return false;
         const block=this.physics.castStageSegment(
          new Vec3(muzzle.x,muzzle.y,muzzle.z),
          new Vec3(t.x,t.y+.07,t.z),'ink-projectile');
-        // Reject original walls or solid boundaries BEFORE target.
-        return !block||Math.hypot(block.point.x-t.x,
-         block.point.y-t.y,block.point.z-t.z)<.22;
+        // Both endpoints require actual ORIGINAL registered Rapier support.
+        // Do not require the same support SOLID for a projectile: a genuine
+        // ink shot can reach another original floor without a walkable
+        // Recast link. Actual blocking cover still wins; no route granted.
+        return b216RealSourcePaintShotLineClear({
+         actualFoot:f,actualTarget:t,footSupport:footHit,
+         targetSupport:targetHit,firstStageBlock:block
+        });
        });
     }
   }

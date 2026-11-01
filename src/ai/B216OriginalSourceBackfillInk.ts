@@ -34,3 +34,37 @@ export function b216OriginalFootBackfillCandidates(
  }
  return result;
 }
+
+/** F3 REAL source-only projectile sight. Two DIFFERENT authentic registered
+ * solids may both be valid shooting endpoints: a bullet can cross a
+ * physical floor seam even when a CPU has NO certified walkable route.
+ * This does NOT certify navigation, target contact, combat damage or scoring.
+ * Both supports and first actual original Rapier ray are authoritative. */
+export interface B216RegisteredOriginalHit {
+ readonly solidId:string;
+ readonly point:B216SourcePoint;
+}
+export function b216RealSourcePaintShotLineClear(x:{
+ actualFoot:B216SourcePoint;actualTarget:B216SourcePoint;
+ footSupport:B216RegisteredOriginalHit|null;
+ targetSupport:B216RegisteredOriginalHit|null;
+ firstStageBlock:B216RegisteredOriginalHit|null;
+}):boolean{
+ const valid=(p:B216SourcePoint)=>[p.x,p.y,p.z].every(Number.isFinite);
+ const f=x.footSupport,t=x.targetSupport,b=x.firstStageBlock;
+ if(!valid(x.actualFoot)||!valid(x.actualTarget)||
+    !f||!t||!f.solidId||!t.solidId||
+    !valid(f.point)||!valid(t.point)||
+    Math.abs(f.point.y-x.actualFoot.y)>.25||
+    Math.abs(t.point.y-x.actualTarget.y)>.25)
+   return false;
+ // An earlier source collider blocks a real projectile. A hit on the
+ // ACTUAL target collider at the requested target is not a wall veto.
+ // Registered foot/target solid IDs are deliberately NOT required equal:
+ // that condition describes a walking seam, not a physical ink shot.
+ return !b||(Boolean(b.solidId)&&b.solidId===t.solidId&&
+    valid(b.point)&&Math.hypot(
+      b.point.x-x.actualTarget.x,
+      b.point.y-x.actualTarget.y,
+      b.point.z-x.actualTarget.z)<.22);
+}

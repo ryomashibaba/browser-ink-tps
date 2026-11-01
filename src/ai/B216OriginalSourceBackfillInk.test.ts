@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {b216OriginalFootBackfillCandidates as candidates}
+import {b216OriginalFootBackfillCandidates as candidates,
+ b216RealSourcePaintShotLineClear as safeShot}
  from './B216OriginalSourceBackfillInk';
 const foot={x:0,y:3.1,z:48};
 const goal={x:0,y:3.1,z:52};
@@ -28,5 +29,40 @@ describe('B216 existing ORIGINAL surface-oriented fallback aim proposals',()=>{
   expect(c[0]).not.toHaveProperty('navLink');
   expect(c[0]).not.toHaveProperty('damage');
   expect(c[0]).not.toHaveProperty('sourceScoreable');
+ });
+});
+
+describe('B216 genuine registered original-projectile shot vs route authority',()=>{
+ const foot={x:1,y:3.1,z:5},target={x:3,y:3.1,z:5};
+ const contact=(solidId:string,point:typeof foot)=>({solidId,point});
+ const state=()=>({actualFoot:foot,actualTarget:target,
+  footSupport:contact('original-a',foot),
+  targetSupport:contact('original-b',target),firstStageBlock:null});
+ it('allows an unobstructed real cross-solid INK SHOT, not a CPU walk',()=>{
+  expect(safeShot(state())).toBe(true);
+  expect(safeShot({...state(),targetSupport:contact('original-a',target)}))
+    .toBe(true);
+ });
+ it('refuses missing, distant or forged original Rapier support',()=>{
+  expect(safeShot({...state(),footSupport:null})).toBe(false);
+  expect(safeShot({...state(),targetSupport:null})).toBe(false);
+  expect(safeShot({...state(),footSupport:contact('',foot)})).toBe(false);
+  expect(safeShot({...state(),targetSupport:contact('original-b',
+   {...target,y:3.6})})).toBe(false);
+  expect(safeShot({...state(),actualFoot:{...foot,x:NaN}}))
+    .toBe(false);
+ });
+ it('rejects an original blocking solid between live muzzle and target',()=>{
+  const block=contact('original-wall',{x:2,y:3.1,z:5});
+  expect(safeShot({...state(),firstStageBlock:block})).toBe(false);
+  // A different solid EVEN CLOSE to the target cannot bypass cover.
+  expect(safeShot({...state(),firstStageBlock:
+   contact('original-wall',{...target,z:5.1})})).toBe(false);
+ });
+ it('permits only the actual target collider at its observed impact',()=>{
+  expect(safeShot({...state(),firstStageBlock:
+   contact('original-b',{...target,y:3.15})})).toBe(true);
+  expect(safeShot({...state(),firstStageBlock:
+   contact('original-b',{...target,z:5.5})})).toBe(false);
  });
 });
