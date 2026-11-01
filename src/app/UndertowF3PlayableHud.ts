@@ -302,6 +302,12 @@ export function createF3PlayableHud(ui:HTMLElement){
    ' style="margin-top:5px;padding:5px 8px;border-radius:6px;'+
    'border:1px solid #57969b;background:rgba(4,38,50,.88);'+
    'color:#a1eef1;font:700 10px/1.45 system-ui"></div>'+
+  '<div id="t21-f3-b396-bomb-raster-reason" hidden aria-live="off"'+
+   ' data-gameplay-writes="0" data-scoreable="0"'+
+   ' data-cpu-hit-certified="false"'+
+   ' style="margin-top:3px;padding:4px 8px;border-radius:5px;'+
+   'background:rgba(5,30,42,.88);border:1px solid #47778b;'+
+   'color:#d2f2e4;font:650 9px/1.4 system-ui"></div>'+
   // B84: display only a *real* original-surface enemy ink relation or
   // actual low player HP. This is practice guidance, never a Turf result.
   '<div id="t21-f3-b84-danger" hidden role="status" aria-live="off"'+
@@ -414,6 +420,7 @@ export function createF3PlayableHud(ui:HTMLElement){
  const b392Sub=select('t21-f3-b392-native-sub');
  const b392Events=new B392NativeSubFeedback();
  const b394Bomb=select('t21-f3-b394-bomb-source-paint');
+ const b396Reason=select('t21-f3-b396-bomb-raster-reason');
  const b394Model=new B394OriginalBombPaintNotice();
  const danger=select('t21-f3-b84-danger');
  const activity=new B75SourceInkActivity();
@@ -489,6 +496,19 @@ export function createF3PlayableHud(ui:HTMLElement){
   b394Bomb.hidden=!bombCue;
   b394Bomb.dataset.t21B394Kind=bombCue?.kind??'OFF';
   b394Bomb.dataset.t21B396ZeroCause=bombCue?.zeroCause??'NONE';
+  // Separate from B394's exact source-proof text for genuine Chrome replay.
+  const reason=bombCue?.zeroCause;
+  b396Reason.hidden=!bombCue||reason==='UNKNOWN'||reason===null||
+   reason===undefined;
+  b396Reason.dataset.t21B396ZeroCause=reason??'NONE';
+  if(!b396Reason.hidden){
+   const label=reason==='ALREADY_TEAM_INK'?
+    'REAL RASTER · ALL ELIGIBLE CELLS ALREADY YOUR INK':
+    reason==='NO_ACTIVE_PAINT_CELLS'?
+    'REAL RASTER · NO ACTIVE SOURCE CELLS INSIDE STAMPS':
+    'REAL RASTER · MIXED OWNED / NO-ACTIVE-CELL STAMPS';
+   if(b396Reason.textContent!==label)b396Reason.textContent=label;
+  }
   b394Bomb.title=bombCue?.zeroCause==='ALREADY_TEAM_INK'?
    'All eligible original-source cells already had your ink · try a fresh floor':
    bombCue?.zeroCause==='NO_ACTIVE_PAINT_CELLS'?
