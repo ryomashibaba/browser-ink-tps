@@ -11,6 +11,8 @@ import {b355OriginalSourceInkReadout}
  from './B355OriginalSourceInkReadout';
 import {B356RealSourceReticle} from './B356RealSourceReticle';
 import {B392NativeSubFeedback} from './B392NativeSubFeedback';
+import {B394OriginalBombPaintNotice} from './B394OriginalBombPaintNotice';
+import type {F3HumanInkContact} from './UndertowF3SourceInkFeedback';
 
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string;inkRelation?:string};
@@ -34,7 +36,7 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
   originalSourceOnly:boolean;scoreablePromotionCount:number;
   humanChangedImpactCount:number;humanChangedCells:number;
   lastImpactTick:number|null;lastImpactChangedCells:number;
- };
+ } & Partial<F3HumanInkContact>;
  matchState:string;
  timeRemainingSeconds:number;
  cpu:{physicalRejoins:readonly string[];freeCombatEnabled:boolean};
@@ -53,6 +55,7 @@ export interface F3NativeCombatPulse{
  nativeWeaponGuidance?:string;
  nativeKccGrounded?:boolean|null;
  nativeHumanSub?:{enabled:boolean;name:string;throws:number;explosions:number};
+ nativeBombInk?:Partial<F3HumanInkContact>|null;
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  paused:boolean;stopReason:string|null;
  originalSolids:number;originalPaint:number;originalLinks:number;
@@ -286,6 +289,12 @@ export function createF3PlayableHud(ui:HTMLElement){
    ' style="margin-top:5px;padding:5px 8px;border:1px solid #527f78;'+
    'border-radius:6px;background:rgba(4,39,42,.88);'+
    'color:#9bf4cf;font:750 10px/1.45 system-ui"></div>'+
+  '<div id="t21-f3-b394-bomb-source-paint" hidden aria-live="off"'+
+   ' data-gameplay-writes="0" data-scoreable="0"'+
+   ' data-cpu-hit-certified="false"'+
+   ' style="margin-top:5px;padding:5px 8px;border-radius:6px;'+
+   'border:1px solid #57969b;background:rgba(4,38,50,.88);'+
+   'color:#a1eef1;font:700 10px/1.45 system-ui"></div>'+
   // B84: display only a *real* original-surface enemy ink relation or
   // actual low player HP. This is practice guidance, never a Turf result.
   '<div id="t21-f3-b84-danger" hidden role="status" aria-live="off"'+
@@ -397,6 +406,8 @@ export function createF3PlayableHud(ui:HTMLElement){
  const b338Guide=select('t21-f3-b338-source-guide');
  const b392Sub=select('t21-f3-b392-native-sub');
  const b392Events=new B392NativeSubFeedback();
+ const b394Bomb=select('t21-f3-b394-bomb-source-paint');
+ const b394Model=new B394OriginalBombPaintNotice();
  const danger=select('t21-f3-b84-danger');
  const activity=new B75SourceInkActivity();
  const activityBox=select('t21-f3-b75-source-ink-live');
@@ -460,6 +471,22 @@ export function createF3PlayableHud(ui:HTMLElement){
    b392Sub.dataset.t21B392NativeTick=String(cue.tick);
    b392Sub.dataset.t21B392HumanThrows=String(cue.throws);
    b392Sub.dataset.t21B392HumanExplosions=String(cue.explosions);
+  }
+  const bombCue=b394Model.observe({
+   trustedSource:legitimate,
+   playerView:ui.dataset.t21B245Presentation==='PLAYER',
+   subEnabled:sub?.enabled===true,tick:p.tick,
+   phase:p.matchState,paused:p.paused,stopReason:p.stopReason,hp:p.hp,
+   humanExplosions:sub?.explosions??-1,ink:p.nativeBombInk??null
+  });
+  b394Bomb.hidden=!bombCue;
+  b394Bomb.dataset.t21B394Kind=bombCue?.kind??'OFF';
+  if(bombCue){
+   if(b394Bomb.textContent!==bombCue.text)
+    b394Bomb.textContent=bombCue.text;
+   b394Bomb.dataset.t21B394NativeTick=String(bombCue.tick);
+   b394Bomb.dataset.t21B394Cells=String(bombCue.changedCells);
+   b394Bomb.dataset.t21B394Stamps=String(bombCue.stamps);
   }
   if(!legitimate){
    // Always fail closed on source drift, even if previous HUD was visible.
@@ -597,6 +624,7 @@ export function createF3PlayableHud(ui:HTMLElement){
     enabled:value.b38HumanSub.enabled,name:value.b38HumanSub.weapon,
     throws:value.b38HumanSub.throws,explosions:value.b38HumanSub.explosions
    }:undefined,
+   nativeBombInk:value.b23HumanInkFeedback??null,
    hitCount:value.humanCpuDirectHits??-1,
    splatCount:value.humanCpuDirectSplats??-1,
    matchState:value.matchState as F3NativeCombatPulse['matchState'],

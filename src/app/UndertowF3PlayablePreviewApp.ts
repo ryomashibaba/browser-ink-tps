@@ -4765,6 +4765,7 @@ export class UndertowF3PlayablePreviewApp{
       throws:this.stats.playerSubThrows,
       explosions:this.stats.playerSubExplosions
      },
+     nativeBombInk:this.b23InkFeedback.snapshot(frame),
      hitCount:this.stats.humanCpuDirectHits,
      splatCount:this.stats.humanCpuDirectSplats,
      matchState:this.matchState,paused:this.paused,stopReason:this.stopReason,
