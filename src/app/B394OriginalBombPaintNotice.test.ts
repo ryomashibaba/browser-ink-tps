@@ -50,8 +50,8 @@ describe('B394 real authoritative B41 bomb ink results, not Turf',()=>{
  });
  it('rejected source, mismatched tick and corrupt counters never display',()=>{
   const mutations:Array<(f:B394BombFrame)=>void>=[
-   f=>{f.ink!.scoreablePromotionCount=1},
-   f=>{f.ink!.originalSourceOnly=false},
+   f=>{Object.assign(f.ink!,{scoreablePromotionCount:1})},
+   f=>{Object.assign(f.ink!,{originalSourceOnly:false})},
    f=>{f.ink!.source=undefined},
    f=>{f.ink!.humanBombExplosionsObserved=5},
    f=>{f.ink!.lastBombOutcomeTick=99},

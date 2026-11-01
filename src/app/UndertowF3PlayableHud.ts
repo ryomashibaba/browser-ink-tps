@@ -36,7 +36,13 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
   originalSourceOnly:boolean;scoreablePromotionCount:number;
   humanChangedImpactCount:number;humanChangedCells:number;
   lastImpactTick:number|null;lastImpactChangedCells:number;
- } & Partial<F3HumanInkContact>;
+  source?:F3HumanInkContact['source'];
+  humanBombExplosionsObserved?:number;
+  lastBombOutcome?:F3HumanInkContact['lastBombOutcome'];
+  lastBombOutcomeTick?:number|null;
+  lastBombOutcomeStamps?:number;
+  lastBombOutcomeChangedCells?:number;
+ };
  matchState:string;
  timeRemainingSeconds:number;
  cpu:{physicalRejoins:readonly string[];freeCombatEnabled:boolean};
