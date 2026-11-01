@@ -2543,8 +2543,19 @@ export class CpuAgentSystem {
           const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,
             origin,candidates,maxMainRange);
           if(fresh){
-            this.b182ReusedLiveNativeSight++;
-            return this.b212AimAtMovingNativeActor(bot,old.actorId,fresh,dt);
+            // The actor and muzzle can each move less than B182's cache
+            // tolerance while a THIN original collider comes between them.
+            // Recheck registered Rapier cover BEFORE authorizing a real CPU
+            // shot; never treat a cached optical line as current sight.
+            this.b181ActualStageRays++;
+            if(!this.b181OriginalCombatStageRay(origin,fresh)){
+              this.b182ReusedLiveNativeSight++;
+              return this.b212AimAtMovingNativeActor(bot,old.actorId,fresh,dt);
+            }
+            // A newly covered target must be selected again from current
+            // physical actors, not fired at or promoted to a phantom hit.
+            this.b181ActualSourceOcclusions++;
+            this.b181CachedCombat.delete(bot.id);
           }
           this.b182RecheckedStaleNativeSight++;
         }else if(candidates.length===0){
