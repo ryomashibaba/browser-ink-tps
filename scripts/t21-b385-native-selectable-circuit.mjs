@@ -406,6 +406,29 @@ async function run(){
   ...replay,physicsMovedFromOldWorld:0,historyCopied:0});persist();
  console.log('B389_TRUE_USER_REPLAY_NEW_WORLD',JSON.stringify(replay));
  await picture('b389-real-fresh-same-weapon-ready');
+ // A READY screenshot alone does not prove a playable SECOND session.
+ // Use a second actual CDP user click, native pointer lock, and genuinely
+ // progressed 60Hz frame in the freshly rebuilt source world.
+ await clickButton('#t21-f3-b202-resume');
+ await until(()=>evalPage('document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
+ const restarted=await until(async()=>{
+  const n=original(await state(),'B389_TRUE_SECOND_WORLD_NATIVE_START');
+  if(n.stopReason||!n.b387RealRoundMilestones?.valid||
+     n.b387RealRoundMilestones.realClearedLives!==0)
+   fail('B389_SECOND_SESSION_NOT_CLEAN',n.b387RealRoundMilestones);
+  return !n.paused&&n.tick>=16&&
+   n.b361NativePlayerWeapon.id==='twin-comets'&&
+   n.sourceScoreablePromotions===0?n:false;
+ },90000);
+ report.phases.push({phase:'B389_TRUE_SECOND_WORLD_NATIVE_STARTED',
+  nativeTick:restarted.tick,actualWeapon:restarted.b361NativePlayerWeapon.id,
+  currentSourceRound:restarted.matchState,
+  trueCpuBodies:restarted.cpu.cpu.length,
+  zeroPreviousLifeClears:restarted.b387RealRoundMilestones.realClearedLives,
+  realPointerLocked:true,artificialTicks:0,actorRelocations:0});
+ persist();console.log('B389_TRUE_SECOND_WORLD_NATIVE_STARTED',
+  JSON.stringify(report.phases.at(-1)));
+
  report.outcome='PASS_B389_REAL_USER_REPLAY_NEW_NATIVE_180S_WORLD';
  report.note='Genuine source local 3/3 and user-clicked paused replay to clean 180s world confirmed; 12-kit original TIME_UP still not independently tested.';
  persist();console.log('B385_TRUE_NATIVE_SELECTED_KIT_LOCAL_CLEAR',
