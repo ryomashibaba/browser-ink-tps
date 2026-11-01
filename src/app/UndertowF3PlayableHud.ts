@@ -10,6 +10,7 @@ import {B76HumanSourceCoach}
 import {b355OriginalSourceInkReadout}
  from './B355OriginalSourceInkReadout';
 import {B356RealSourceReticle} from './B356RealSourceReticle';
+import {B392NativeSubFeedback} from './B392NativeSubFeedback';
 
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string;inkRelation?:string};
@@ -24,6 +25,7 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
  nativeWeaponGuidance?:string;
  /** Last REAL native Rapier KCC grounded state. False does not certify a jump. */
  nativeKccGrounded?:boolean|null;
+ b38HumanSub?:{enabled:boolean;weapon:string;throws:number;explosions:number};
  b343OriginalSourceVolleyBudget?:{
   enabled:boolean;rejectedVolleys:number;physicalPoolSize:number;
   actualFreeSlots:number;
@@ -50,6 +52,7 @@ export interface F3NativeCombatPulse{
  respawnTicks:number|null;hitCount:number;splatCount:number;
  nativeWeaponGuidance?:string;
  nativeKccGrounded?:boolean|null;
+ nativeHumanSub?:{enabled:boolean;name:string;throws:number;explosions:number};
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  paused:boolean;stopReason:string|null;
  originalSolids:number;originalPaint:number;originalLinks:number;
@@ -277,6 +280,12 @@ export function createF3PlayableHud(ui:HTMLElement){
   '<div id="t21-f3-b338-source-guide" hidden aria-live="off"'+
   ' style="margin-top:6px;padding-top:6px;border-top:1px solid #ffffff32;'+
   'color:#bdedf1;font:650 10px/1.4 system-ui"></div>'+
+  // B392: 1.5 native-second status, only for real human throw/detonation.
+  '<div id="t21-f3-b392-native-sub" hidden aria-live="off"'+
+   ' data-gameplay-writes="0" data-scoreable="0" data-cpu-hit-certified="false"'+
+   ' style="margin-top:5px;padding:5px 8px;border:1px solid #527f78;'+
+   'border-radius:6px;background:rgba(4,39,42,.88);'+
+   'color:#9bf4cf;font:750 10px/1.45 system-ui"></div>'+
   // B84: display only a *real* original-surface enemy ink relation or
   // actual low player HP. This is practice guidance, never a Turf result.
   '<div id="t21-f3-b84-danger" hidden role="status" aria-live="off"'+
@@ -386,6 +395,8 @@ export function createF3PlayableHud(ui:HTMLElement){
  const cpu=select('t21-f3-hud-cpu');
  const practice=select('t21-f3-hud-practice');
  const b338Guide=select('t21-f3-b338-source-guide');
+ const b392Sub=select('t21-f3-b392-native-sub');
+ const b392Events=new B392NativeSubFeedback();
  const danger=select('t21-f3-b84-danger');
  const activity=new B75SourceInkActivity();
  const activityBox=select('t21-f3-b75-source-ink-live');
@@ -434,6 +445,22 @@ export function createF3PlayableHud(ui:HTMLElement){
   if(!b338Guide.hidden&&b338Guide.textContent!==live.text)
    b338Guide.textContent=live.text;
   b338Guide.dataset.t21B338GameplayWrites='0';
+  const sub=p.nativeHumanSub;
+  const cue=b392Events.observe({
+   trustedSource:legitimate,playerView:ui.dataset.t21B245Presentation==='PLAYER',
+   enabled:sub?.enabled===true,tick:p.tick,
+   matchState:p.matchState,paused:p.paused,stopReason:p.stopReason,hp:p.hp,
+   subName:sub?.name??'',throws:sub?.throws??-1,
+   explosions:sub?.explosions??-1
+  });
+  b392Sub.hidden=!cue;
+  b392Sub.dataset.t21B392Mode=cue?.mode??'OFF';
+  if(cue){
+   if(b392Sub.textContent!==cue.text)b392Sub.textContent=cue.text;
+   b392Sub.dataset.t21B392NativeTick=String(cue.tick);
+   b392Sub.dataset.t21B392HumanThrows=String(cue.throws);
+   b392Sub.dataset.t21B392HumanExplosions=String(cue.explosions);
+  }
   if(!legitimate){
    // Always fail closed on source drift, even if previous HUD was visible.
    hitMarkerUntil=-1;lastHitCount=null;lastSplatCount=null;
@@ -566,6 +593,10 @@ export function createF3PlayableHud(ui:HTMLElement){
    respawnTicks:value.humanRespawnTicksRemaining??null,
    nativeWeaponGuidance:value.nativeWeaponGuidance,
    nativeKccGrounded:value.nativeKccGrounded,
+   nativeHumanSub:value.b38HumanSub?{
+    enabled:value.b38HumanSub.enabled,name:value.b38HumanSub.weapon,
+    throws:value.b38HumanSub.throws,explosions:value.b38HumanSub.explosions
+   }:undefined,
    hitCount:value.humanCpuDirectHits??-1,
    splatCount:value.humanCpuDirectSplats??-1,
    matchState:value.matchState as F3NativeCombatPulse['matchState'],

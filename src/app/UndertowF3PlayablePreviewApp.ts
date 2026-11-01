@@ -4758,6 +4758,13 @@ export class UndertowF3PlayablePreviewApp{
       Math.max(0,150-this.respawnFrames):null,
      nativeWeaponGuidance:this.readNativeSourceWeaponGuidance(),
      nativeKccGrounded:this.stats.playerGrounded,
+     nativeHumanSub:{
+      enabled:this.b38HumanSubEnabled,
+      name:subWeaponProfile(weaponKit(
+       this.projectiles.currentPlayerWeapon.id).sub).displayName,
+      throws:this.stats.playerSubThrows,
+      explosions:this.stats.playerSubExplosions
+     },
      hitCount:this.stats.humanCpuDirectHits,
      splatCount:this.stats.humanCpuDirectSplats,
      matchState:this.matchState,paused:this.paused,stopReason:this.stopReason,
