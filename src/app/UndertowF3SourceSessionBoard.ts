@@ -5,6 +5,59 @@
  */
 import type {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 
+/** B387: native 60Hz source round achievement history, not game scoring. */
+export class B387RoundMilestones{
+ private tick=-1;
+ private life=0;
+ private completed=new Set<number>();
+ private clearTick:number|null=null;
+ private weapon:string|null=null;
+ private cells=0;
+ private valid=true;
+ observe(f:{tick:number;respawns:number;stage:readonly number[];
+  playing:boolean;alive:boolean;weapon:string;drop:boolean;
+  c:{status:string;sourceLocalPlayClear:boolean;
+   actualOriginalRampTouched:boolean;
+   actualOriginalRaisedFootColliderId:string|null;
+   realPostDropHumanImpactChangedCells:number;genuineGroundedTravelMeters:number;
+   naturalCrossTeamRouteProven:boolean;
+   sourceScoreablePromotions:number;officialWinner:string}}){
+  if(!this.valid)return this.snapshot();
+  const c=f.c;
+  if(!Number.isSafeInteger(f.tick)||f.tick<=this.tick||
+     !Number.isSafeInteger(f.respawns)||f.respawns<this.life||
+     f.respawns>this.life+1||f.stage.join(',')!=='25,17,26,0'||
+     !f.weapon||c.sourceScoreablePromotions!==0||
+     c.naturalCrossTeamRouteProven!==false||c.officialWinner!=='NONE'){
+   this.valid=false;return this.snapshot();
+  }
+  this.tick=f.tick;this.life=f.respawns;
+  if(f.playing&&f.alive&&f.drop&&
+     c.status==='REAL_LOCAL_CIRCUIT_CLEAR'&&c.sourceLocalPlayClear&&
+     c.actualOriginalRampTouched&&
+     c.actualOriginalRaisedFootColliderId==='UndertowT21D:right-low-team-a'&&
+     Number.isSafeInteger(c.realPostDropHumanImpactChangedCells)&&
+     c.realPostDropHumanImpactChangedCells>=60&&
+     Number.isFinite(c.genuineGroundedTravelMeters)&&
+     c.genuineGroundedTravelMeters>=2&&!this.completed.has(this.life)){
+   this.completed.add(this.life);this.clearTick=f.tick;this.weapon=f.weapon;
+   this.cells=c.realPostDropHumanImpactChangedCells;
+  }
+  return this.snapshot();
+ }
+ snapshot(){
+  return {enabled:true as const,valid:this.valid,
+   realClearedLives:this.completed.size,
+   currentLifeClear:this.completed.has(this.life),
+   currentLifeIndex:this.life,lastObservedNativeTick:this.tick,
+   lastTrueClearTick:this.clearTick,lastTrueWeapon:this.weapon,
+   lastTruePostDropCells:this.cells,sourceScoreable:0 as const,
+   enemyRoutesCertified:0 as const,officialWinner:'NONE' as const,
+   productionAuthorized:false as const};
+ }
+}
+
+
 export interface SourceSessionMetrics {
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  timeRemainingSeconds:number;
@@ -31,6 +84,7 @@ export interface SourceSessionMetrics {
  b384OpenLoadoutCircuit?:boolean;
  humanCpuDirectHits?:number;
  humanCpuDirectSplats?:number;
+ b387RealRoundMilestones?:ReturnType<B387RoundMilestones['snapshot']>|null;
  /** Existing B186 authentic CURRENT-LIFE source-only goal, resets on real death. */
  b186RealOriginalHumanCircuit?:{
   enabled:boolean;status:string;sourceLocalPlayClear:boolean;
@@ -83,6 +137,24 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
     s.humanCpuDirectHits!<0||s.humanCpuDirectSplats!<0||
     s.humanCpuDirectSplats!>s.humanCpuDirectHits!))
    throw Error('B373_UNTRUSTED_SOURCE_PRACTICE_RECAP');
+ const memory=s.b387RealRoundMilestones;
+ if(memory&&(!s.b384OpenLoadoutCircuit||!memory.enabled||!memory.valid||
+   !Number.isSafeInteger(memory.realClearedLives)||
+   memory.realClearedLives<0||
+   memory.realClearedLives>s.humanRespawns+1||
+   memory.currentLifeIndex!==s.humanRespawns||
+   !Number.isSafeInteger(memory.lastObservedNativeTick)||
+   memory.lastObservedNativeTick>s.tick||
+   memory.sourceScoreable!==0||memory.enemyRoutesCertified!==0||
+   memory.officialWinner!=='NONE'||memory.productionAuthorized!==false||
+   (memory.currentLifeClear&&!mission?.sourceLocalPlayClear)||
+   (memory.realClearedLives===0&&
+    (memory.lastTrueClearTick!==null||memory.lastTrueWeapon!==null))||
+   (memory.realClearedLives>0&&
+    (!Number.isSafeInteger(memory.lastTrueClearTick)||
+     memory.lastTrueClearTick!>s.tick||
+     !memory.lastTrueWeapon||memory.lastTruePostDropCells<60))))
+  throw Error('B387_UNTRUSTED_ROUND_MILESTONE');
  // Historical field retained for B373: both modes use the same real-life B186 proof.
  const sourceShooter=selectedCircuit&&mission?{
   currentLifeStatus:mission.status,
@@ -97,7 +169,7 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
   scoringPromotions:0 as const
  }:null;
  const done=s.matchState==='TIME_UP'&&!s.stopReason;
- return {sourceShooter,
+ return {sourceShooter,roundMilestones:memory??null,
   state:s.stopReason?'SAFE_STOP' as const:
    done?'COMPLETE' as const:s.matchState,
   finished:done,
@@ -275,7 +347,13 @@ export function createF3SourceSessionBoard(
    (v.sourceShooter?'\nCURRENT LIFE SOURCE CIRCUIT · '+
     (v.sourceShooter.currentLifeLocalClear?'REAL LOCAL CLEAR':
      v.sourceShooter.currentLifeStatus)+
-    ' · REAL HUMAN→CPU HITS '+v.sourceShooter.actualHumanCpuDirectHits:'');
+    ' · REAL HUMAN→CPU HITS '+v.sourceShooter.actualHumanCpuDirectHits:'')+
+   (v.roundMilestones?'\nROUND VERIFIED CLEARS · '+
+    v.roundMilestones.realClearedLives+
+    ' · LAST '+(v.roundMilestones.lastTrueWeapon??'NONE')+
+    ' · NO SCORE':'');
+  root.dataset.b387VerifiedClears=String(v.roundMilestones?.realClearedLives??0);
+  root.dataset.b387CurrentLife=String(v.roundMilestones?.currentLifeClear??false);
   restart.hidden=!v.finished;
   finish.hidden=!v.finished;
   finish.style.display=v.finished?'flex':'none';
@@ -298,7 +376,12 @@ export function createF3SourceSessionBoard(
     v.sourceShooter.trueHumanImpactCells+' cells'+
     '\nGENUINE HUMAN→CPU HP HITS '+v.sourceShooter.actualHumanCpuDirectHits+
     ' · DIRECT SPLATS '+v.sourceShooter.actualHumanCpuDirectSplats+
-    '\nCIRCUIT RESETS ON ACTUAL DEATH · NO OPPOSING ROUTE OR TURF SCORE':'');
+    '\nCIRCUIT RESETS ON ACTUAL DEATH · NO OPPOSING ROUTE OR TURF SCORE':'')+
+   (v.roundMilestones?'\n\nROUND VERIFIED CLEARS '+v.roundMilestones.realClearedLives+
+    ' · LAST '+(v.roundMilestones.lastTrueWeapon??'NONE')+
+    ' · '+v.roundMilestones.lastTruePostDropCells+' ACTUAL FRESH CELLS'+
+    ' · NO OFFICIAL WINNER':'');
+  finish.dataset.b387VerifiedClears=String(v.roundMilestones?.realClearedLives??0);
   finish.dataset.t21B59State=v.finished?'FINISHED':'HIDDEN';
   finish.dataset.t21B59OriginalWinner='NONE';
   finish.dataset.t21B59HumanInk=String(v.realHumanImpactInkCells);

@@ -323,6 +323,19 @@ async function run(){
  if(hud.resources!=='NOT_MEASURED'||hud.score!=='0'||
     hud.winner!=='NONE'||!hud.notice?.includes('NO TURF WINNER'))
   fail('B384_ACTUAL_LIVE_SOURCE_RECAP_NOT_NONSCORING',hud);
+ // B387 actual 60Hz record, displayed separately from current-life goal.
+ const round=done.b387RealRoundMilestones;
+ if(!round?.valid||round.realClearedLives!==1||!round.currentLifeClear||
+    round.lastTrueWeapon!=='twin-comets'||round.lastTruePostDropCells<60||
+    round.sourceScoreable!==0||round.officialWinner!=='NONE')
+  fail('B387_REAL_NATIVE_ROUND_CLEAR_MISSING',round);
+ const roundHud=await until(async()=>{
+  const x=await evalPage('(() => {const r=document.querySelector("#t21-f3-b58-source-session");return {clears:r?.dataset.b387VerifiedClears,life:r?.dataset.b387CurrentLife,text:r?.querySelector("#t21-f3-b58-counts")?.textContent}})()');
+  return x?.clears==='1'&&x.life==='true'&&
+   x.text?.includes('ROUND VERIFIED CLEARS')?x:false;
+ },20000);
+ report.phases.push({phase:'B387_REAL_NATIVE_ROUND_CLEAR_MEMORY',
+  native:round,visibleRoundHud:roundHud,noGameWrites:true});persist();
  // B386: original CPU positions only; not certified combat contact.
  const frontier=await until(async()=>{
   const x=await evalPage('(() => {const e=document.querySelector("#t21-f3-b368-real-enemy-frontier");return {visible:!!e&&!e.hidden&&getComputedStyle(e).display!=="none",enemy:e?.dataset.nearestCpuId,distance:Number(e?.dataset.nativeHorizontalMeters??-1),count:Number(e?.dataset.cpuPhysicalCount??-1),route:e?.dataset.crossTeamRouteCertified,encounter:e?.dataset.actualEncounterCertified,hit:e?.dataset.projectileHitCertified,actor:e?.dataset.actorRelocations,writes:e?.dataset.gameplayWrites,text:e?.textContent}})()');

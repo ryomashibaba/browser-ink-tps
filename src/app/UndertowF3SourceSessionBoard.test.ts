@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {sourceSessionSummary,type SourceSessionMetrics} from './UndertowF3SourceSessionBoard';
+import {sourceSessionSummary,type SourceSessionMetrics,B387RoundMilestones} from './UndertowF3SourceSessionBoard';
 const input=():SourceSessionMetrics=>({
  matchState:'STAGING',timeRemainingSeconds:180,tick:0,
  originalSourceSolids:25,originalPaintSurfaces:17,originalSourceNavigationLinks:26,
@@ -109,5 +109,67 @@ describe('B373 real native 180s shooter circuit and combat recap',()=>{
   expect(sourceSessionSummary(f).sourceShooter).toBeNull();
   f.b343OriginalSourceVolleyBudget={enabled:false};
   expect(sourceSessionSummary(f).sourceShooter).toBeNull();
+ });
+});
+
+describe('B387 genuine native 180s source history',()=>{
+ const input=()=>({tick:1000,respawns:0,stage:[25,17,26,0],
+  playing:true,alive:true,weapon:'twin-comets',drop:true,
+  c:{status:'REAL_LOCAL_CIRCUIT_CLEAR',sourceLocalPlayClear:true,
+   actualOriginalRampTouched:true,
+   actualOriginalRaisedFootColliderId:'UndertowT21D:right-low-team-a',
+   realPostDropHumanImpactChangedCells:65,genuineGroundedTravelMeters:11.17,
+   naturalCrossTeamRouteProven:false,sourceScoreablePromotions:0,
+   officialWinner:'NONE'}});
+ it('one physical clear once per life; genuine respawn does not carry current clear',()=>{
+  const h=new B387RoundMilestones(),f=input();
+  expect(h.observe(f)).toMatchObject({realClearedLives:1,currentLifeClear:true});
+  f.tick=1001;expect(h.observe(f).realClearedLives).toBe(1);
+  f.tick=1151;f.respawns=1;f.drop=false;
+  f.c.status='WAIT_FIRST_DROP';f.c.sourceLocalPlayClear=false;
+  expect(h.observe(f)).toMatchObject({realClearedLives:1,
+   currentLifeClear:false,lastTrueWeapon:'twin-comets'});
+ });
+ it('rejects fabricated stage, winner, natural paths and missing 60 cells',()=>{
+  for(const bad of [
+   (f:ReturnType<typeof input>)=>{f.stage=[25,17,26,1];},
+   (f:ReturnType<typeof input>)=>{f.c.officialWinner='A';},
+   (f:ReturnType<typeof input>)=>{f.c.sourceScoreablePromotions=1;},
+   (f:ReturnType<typeof input>)=>{f.c.naturalCrossTeamRouteProven=true;},
+   (f:ReturnType<typeof input>)=>{f.respawns=7;}
+  ]){const f=input(),h=new B387RoundMilestones();bad(f);
+   expect(h.observe(f)).toMatchObject({valid:false,realClearedLives:0});}
+  const f=input();f.c.realPostDropHumanImpactChangedCells=59;
+  expect(new B387RoundMilestones().observe(f).realClearedLives).toBe(0);
+ });
+ it('a previous-life success persists in unscored 180-second recap',()=>{
+  const s:SourceSessionMetrics={
+   matchState:'TIME_UP',timeRemainingSeconds:0,tick:10800,
+   originalSourceSolids:25,originalPaintSurfaces:17,originalSourceNavigationLinks:26,
+   sourceScoreablePromotions:0,productionAuthorized:false,unrestricted4v4Certified:false,
+   cpu:{physicalRejoins:['A1']},
+   b23HumanInkFeedback:{humanChangedCells:65,humanChangedImpactCount:1},
+   shotsFired:12,cpuSourceTurfShots:5,cpuImpactInkCellsChanged:7,
+   cpuSplats:0,humanSplats:1,humanRespawns:1,stopReason:null,
+   b384OpenLoadoutCircuit:true,b343OriginalSourceVolleyBudget:{enabled:false},
+   humanCpuDirectHits:0,humanCpuDirectSplats:0,
+   b186RealOriginalHumanCircuit:{
+    enabled:true,status:'WAIT_FIRST_DROP',sourceLocalPlayClear:false,
+    actualOriginalRampTouched:false,realPostDropHumanImpactChangedCells:0,
+    genuineGroundedTravelMeters:0,naturalCrossTeamRouteProven:false,
+    sourceScoreablePromotions:0,officialWinner:'NONE'},
+   b387RealRoundMilestones:{
+    enabled:true,valid:true,realClearedLives:1,currentLifeClear:false,
+    currentLifeIndex:1,lastObservedNativeTick:10800,
+    lastTrueClearTick:1900,lastTrueWeapon:'twin-comets',
+    lastTruePostDropCells:65,sourceScoreable:0,enemyRoutesCertified:0,
+    officialWinner:'NONE',productionAuthorized:false}
+  };
+  expect(sourceSessionSummary(s)).toMatchObject({finished:true,
+   sourceShooter:{currentLifeLocalClear:false},
+   roundMilestones:{realClearedLives:1,currentLifeClear:false},
+   officialWinner:'NONE'});
+  s.b387RealRoundMilestones!.sourceScoreable=1 as 0;
+  expect(()=>sourceSessionSummary(s)).toThrow('B387_UNTRUSTED_ROUND_MILESTONE');
  });
 });

@@ -38,6 +38,7 @@ import {shouldPresentB168NativePractice} from './B168NativePracticePresentation'
 import {B183OriginalHumanDescent} from './B183OriginalHumanDescent';
 import {b185OriginalDropGuidance} from './B185OriginalDropGuidance';
 import {B186RealOriginalSourceCircuit} from './B186RealOriginalSourceCircuit';
+import {B387RoundMilestones} from './UndertowF3SourceSessionBoard';
 import {b371RealSourceMissionCue} from './B371RealSourceMissionCue';
 import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
  from '../camera/UndertowF3KineticView';
@@ -356,6 +357,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b183DropNotice:HTMLElement;
  private readonly b183Drop=new B183OriginalHumanDescent();
  private readonly b186Circuit=new B186RealOriginalSourceCircuit();
+ private readonly b387Round=new B387RoundMilestones();
  private b185LatestOriginalDropCue:
   ReturnType<typeof b185OriginalDropGuidance>|null=null;
  private readonly b183DropPlayEnabled=(()=>{
@@ -4446,6 +4448,24 @@ export class UndertowF3PlayablePreviewApp{
       actualHumanImpactEvents:actualHumanInk.humanChangedImpactCount,
       lastActualHumanImpactTick:actualHumanInk.lastImpactTick
      });
+     // Real 60Hz B186 proof only; never changes native player or ink.
+     if(this.b384Circuit)this.b387Round.observe({
+      tick:frame,respawns:this.humanRespawns,
+      stage:[this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
+       this.rawStage.navigationLinks?.length??0,0],
+      playing:this.matchState==='PLAYING'&&!this.paused&&!this.stopReason,
+      alive:this.resources.currentHp>0,
+      weapon:this.projectiles.currentPlayerWeapon.id,
+      drop:drop.originalFirstDropLocalPracticeClear,
+      c:{status:circuit.status,sourceLocalPlayClear:circuit.sourceLocalPlayClear,
+       actualOriginalRampTouched:circuit.actualOriginalRampTouched,
+       actualOriginalRaisedFootColliderId:circuit.actualOriginalRaisedFootColliderId,
+       realPostDropHumanImpactChangedCells:circuit.realPostDropHumanImpactChangedCells,
+       genuineGroundedTravelMeters:circuit.genuineGroundedTravelMeters,
+       naturalCrossTeamRouteProven:circuit.naturalCrossTeamRouteProven,
+       sourceScoreablePromotions:circuit.sourceScoreablePromotions,
+       officialWinner:circuit.officialWinner}
+     });
      if(before.status!==drop.status||
         previousCircuit.status!==circuit.status||frame%6===0){
       // B185: observations of frozen *original* upper/lower polygons.
@@ -5891,6 +5911,7 @@ export class UndertowF3PlayablePreviewApp{
     realNativeSourceOnly:true as const
    },
    b185RealOriginalLandingFootprintCue:this.b185LatestOriginalDropCue,
+   b387RealRoundMilestones:this.b384Circuit?this.b387Round.snapshot():null,
    b186RealOriginalHumanCircuit:{
     ...this.b186Circuit.snapshot(),enabled:this.b183DropPlayEnabled,
     originalSourceOnly:true as const
