@@ -17,3 +17,12 @@ Original 25 Rapier solids / 17 PaintSurfaces / 26 NavLinks / 0 Scoreable, 0/12 n
 
 ## B210 first CI diagnostic (same-day correction)
 First SHA `8ec2e68274008a7e5b225abc151c51ddd8ae073c` produced B59 Actions #40193479494 **FAIL in pre-native Node tests**. Build, 13 Vitest tests and new B210-specific assertions passed; legacy B176 regression asserted that the *single existing B59 workflow* must permanently enable its unsafe B176 ramp descent, conflicting with the explicit B210-safe lane. Real Chromium was **SKIPPED**, not failed or passed. Correct the assertion to retain the B176 original route/code requirement while allowing ONLY the explicitly named B210 safe alternative, and also include B207 navigation unit tests in that same existing preflight. Next same-SHA true browser outcome remains pending. No geometry or actor movement changes.
+
+
+## 2026-11-01 — 真正B210長時間Chromeの結果を確認：限定PASS
+
+- GitHub Actions [#41272467681](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41272467681) の実ジョブは **SUCCESS**、実行SHA `0ca05868ad36b8372d6330d99b85e4191d4a1e61`。旧章の「PENDING」は当初の状態であり、この追加記録が結果を更新する。
+- 本物のプレイヤー選択 → REAL SOURCE COMBAT → PlayCanvas/Rapier/Recast/7 CPU → ユーザーCDP KeyS/KeyWの原作上段支持面7往復 → native tick **11,859** → TIME_UP **00:00** → 実UIから新規試合03:00を確認。最後の実KCC支持は `UndertowT21D:spawn-high-positive-z`、実CPU射撃 **816発**、CPU物理復帰 **7/7**。
+- B214同一ラウンド内の本物のCPUインク経済が記録した、20秒時229発／160秒時774発／180秒時816発は人工補填や時計短縮ではない。正式得点面は0、公式Winner NONE。
+- **PASS範囲:** SOURCE_ONLYでの人間入力・CPU7体と本物の180秒試合・タイムアップ・再挑戦。**未認証:** 原作下段への全経路、自然な対岸CPU接敵（0/12）、真の対人HP0→150tick復活、公式得点/勝敗、正式4v4、ART、production。上段の7往復は全域の自由移動を意味しない。
+- 別のB390 [#41271399268](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41271399268) は、Twin Comets選択・原作局所3/3・180秒TIME_UP・同武器リプレイの独立した限定PASSであり、混同しない。

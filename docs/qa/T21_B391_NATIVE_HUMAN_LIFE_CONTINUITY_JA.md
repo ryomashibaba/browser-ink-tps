@@ -7,3 +7,10 @@
 **禁止する実装**：テストのための人工HP低下、リスポーンの強制、床の追加、Actorワープ、時計の短縮、対岸経路/Scoreableの解禁。原作25 Rapier solids/17 PaintSurfaces/26 NavLinks/0 Scoreable、自然な敵陣経路0/12、正式4v4・ART・production全てHOLD。
 
 **今回の検証範囲**：B387の実入力型を使った単体テストが、(1) HPゼロになる前の3/3実クリア保持、(2) HPゼロのnative tickで当前命表示だけ落とす、(3) 正式な150tickの生体復帰後に旧実績は残し現在命をリセット、(4) 死亡履歴なしや149tick未満の架空復帰カウンタ増加を拒否することを検査。**実ブラウザで自然HPゼロ/150tick復帰の到達そのものは未確認**。原作CPU B1～B4まで約100mで自然経路0/12のため、人工的な死亡導線を作らず真の接敵認証/原作経路回復までHOLD。B390完走CIとは異なる種類の認証であることに注意。
+
+
+## 2026-11-01 — 実復活残りtickと安全停止のユーザー向け表示（検証中）
+
+コード変更 `51bb8fda8e74369c18575a7b34df3fbbfd3c2708` では、B380の実武器操作ガイドに既存Native 150tick復活カウンターを渡し、HP0の間だけ残りtickと60Hz換算秒数を表示する。自然数範囲0〜150の整数以外は数値を表示せず、復活を推測しない。実際のsafe-stopなら操作を促さない。TIME_UPでは「新しい試合へ」の案内を維持する。READY/PAUSEと本物の180秒試合時計で同じ実HP/残tickを使用する。
+
+変更範囲はUI read-only投影・Vitestのみ。Native入力、HP、PlayerController、復活実行、CLOCK、CPU、原作25/17/26/0に変更なし。**このコミットのActions結果を確認するまで新UIのブラウザPASSは未認証**。また、B15 Chrome [#41274739922](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41274739922) SUCCESSは「QA専用配置での実マウス・CPU撃破/復帰・Twin Comets/サブ」の証拠であり、自然接敵や人間の実死亡・復帰を証明しない。
