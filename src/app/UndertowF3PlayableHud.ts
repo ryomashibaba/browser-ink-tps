@@ -630,7 +630,11 @@ export function createF3PlayableHud(ui:HTMLElement){
     enabled:value.b38HumanSub.enabled,name:value.b38HumanSub.weapon,
     throws:value.b38HumanSub.throws,explosions:value.b38HumanSub.explosions
    }:undefined,
-   nativeBombInk:value.b23HumanInkFeedback??null,
+   nativeBombInk:value.b23HumanInkFeedback?.originalSourceOnly===true&&
+    value.b23HumanInkFeedback.scoreablePromotionCount===0?{
+     ...value.b23HumanInkFeedback,
+     originalSourceOnly:true as const,scoreablePromotionCount:0 as const
+    }:null,
    hitCount:value.humanCpuDirectHits??-1,
    splatCount:value.humanCpuDirectSplats??-1,
    matchState:value.matchState as F3NativeCombatPulse['matchState'],
