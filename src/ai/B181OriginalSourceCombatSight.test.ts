@@ -166,3 +166,31 @@ describe('Native original actor partial-cover engagement',()=>{
   expect(ray).not.toHaveBeenCalled();
  });
 });
+
+describe('Source-only physically exposed CPU aim cache',()=>{
+ const origin={x:0,y:4,z:0};
+ const cachedUpper={frame:100,actorId:'B1',
+  origin,target:{x:5,y:4.38,z:0}};
+ it('reuses the CURRENT upper physical hit sphere rather than silently switching to a covered torso',()=>{
+  const native=[{id:'B1',body:{x:5.06,y:4,z:0},
+   alternateHitPoints:[{x:5.06,y:4.38,z:0},{x:5.06,y:3.62,z:0}]}];
+  expect(reuse(cachedUpper,103,{x:0.04,y:4,z:0},native,9.8))
+   .toEqual({x:5.06,y:4.38,z:0});
+ });
+ it('fails closed on a dead or moved actor instead of preserving its old exposed point',()=>{
+  expect(reuse(cachedUpper,101,origin,[],9.8)).toBeNull();
+  expect(reuse(cachedUpper,101,origin,[{id:'B1',
+   body:{x:5.4,y:4,z:0},
+   alternateHitPoints:[{x:5.4,y:4.38,z:0}]}],9.8)).toBeNull();
+  expect(reuse(cachedUpper,101,origin,[{id:'B1',
+   body:{x:5,y:4,z:0}}],9.8)).toBeNull();
+ });
+ it('cannot reuse an invented non-native or unreachable upper point',()=>{
+  expect(reuse(cachedUpper,101,origin,[{id:'B1',
+   body:{x:5,y:4,z:0},
+   alternateHitPoints:[{x:5.1,y:4.38,z:0}]}],9.8)).toBeNull();
+  expect(reuse(cachedUpper,101,origin,[{id:'B1',
+   body:{x:10.2,y:4,z:0},
+   alternateHitPoints:[{x:10.2,y:4.38,z:0}]}],9.8)).toBeNull();
+ });
+});

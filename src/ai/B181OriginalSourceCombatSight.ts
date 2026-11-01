@@ -92,9 +92,21 @@ export function b182ReuseNativeSight(
   const actualRange=Number.isFinite(maxNativeWeaponRangeMeters)?
    Math.min(32,Math.max(0,maxNativeWeaponRangeMeters)):0;
   if(d(cached.origin,currentOrigin)>.20||
-     d(cached.target,actor.body)>.20||
      Math.abs(actor.body.y-currentOrigin.y)>2.4||
      Math.hypot(actor.body.x-currentOrigin.x,actor.body.z-currentOrigin.z)>actualRange)
     return null;
-  return actor.body;
+  // An optical cache may have selected an ACTUAL exposed upper/lower
+  // native hit sphere. Reuse the matching, CURRENT hit-sphere point,
+  // never silently snap to a different (possibly covered) body center.
+  // The calling CPU must STILL reray from its real projectile muzzle.
+  const livePoints=[actor.body,...(actor.alternateHitPoints??[])];
+  const match=livePoints.find((point,index)=>
+    valid(point)&&
+    (index===0||(
+      point.x===actor.body.x&&point.z===actor.body.z&&
+      Math.abs(point.y-actor.body.y)<=.4
+    ))&&d(cached.target!,point)<=.20&&
+    Math.abs(point.y-currentOrigin.y)<=2.4
+  );
+  return match??null;
 }

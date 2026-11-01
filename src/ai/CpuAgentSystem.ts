@@ -2485,7 +2485,9 @@ export class CpuAgentSystem {
     if(!now||!prior||enemy&&
        (enemy.lifeState!=='ACTIVE'||enemy.mobilityState!=='GROUND'))
       return fixed;
-    const origin={x:bot.position.x,y:bot.position.y+.85,z:bot.position.z};
+    const origin={x:bot.position.x,
+        y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,
+        z:bot.position.z};
     const candidate=b212NativeLead({
       muzzle:origin,actualBody:actual,
       currentFoot:now,previousFoot:prior,dt,
@@ -2511,6 +2513,8 @@ export class CpuAgentSystem {
     nativeMainWeaponOnly=false
   ): Vec3 | null {
     // Registered original-stage visibility from actual live actor bodies.
+    // Use the SAME native muzzle (not a higher optical proxy) as the actual
+    // CPU projectile origin. Original Rapier cover still owns every ray.
     // Only explicit B181 source QA takes this path; T20/default is frozen.
     if(this.b181OriginalCombatStageRay){
       const candidates=[
@@ -2540,7 +2544,9 @@ export class CpuAgentSystem {
                 z:enemy.position.z}
             ]}))
       ];
-      const origin={x:bot.position.x,y:bot.position.y+.85,z:bot.position.z};
+      const origin={x:bot.position.x,
+        y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,
+        z:bot.position.z};
       // B383: the main weapon must not lock on a visible enemy it
       // cannot actually fire at. Kit targeting remains independent:
       // specials/subs retain their previous B181 visibility semantics.
