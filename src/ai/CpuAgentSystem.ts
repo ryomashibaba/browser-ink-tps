@@ -264,6 +264,8 @@ export class CpuAgentSystem {
       actualFoot:B181SightPoint)=>boolean)|null=null;
   private b216RealOriginalFloorSightChecks=0;
   private b216ApprovedPhysicalSourceAimTargets=0;
+  private b216OriginalTurfSightChecks=0;
+  private b216OriginalTurfCoverVetoes=0;
   private b182RecheckedStaleNativeSight=0;
   private b182ReusedLiveNativeSight=0;
   private b180SelectedRealSourcePatches=0;
@@ -532,6 +534,8 @@ export class CpuAgentSystem {
       enabled:this.b216SourceStageAimValidated!==null,
       realRapierStageAimChecks:this.b216RealOriginalFloorSightChecks,
       originalSourceBackfillAims:this.b216ApprovedPhysicalSourceAimTargets,
+      verifiedFrontAndAllyPaintSightChecks:this.b216OriginalTurfSightChecks,
+      sourceBlockedTurfAimsRejected:this.b216OriginalTurfCoverVetoes,
       actorFootWrites:0 as const,newNavLinks:0 as const,
       fakeShots:0 as const,scoreableSourcePaint:0 as const,
       certifiedOpponentRoutes:0 as const,productionAuthorized:false as const
@@ -625,6 +629,8 @@ export class CpuAgentSystem {
     this.b215RealWeaponCooldownPaintScansDeferred=0;
     this.b216RealOriginalFloorSightChecks=0;
     this.b216ApprovedPhysicalSourceAimTargets=0;
+    this.b216OriginalTurfSightChecks=0;
+    this.b216OriginalTurfCoverVetoes=0;
     this.b181ActualStageRays=0;
     this.b181ActualSourceOcclusions=0;
     this.b181VisibleSelections=0;
@@ -1969,11 +1975,14 @@ export class CpuAgentSystem {
     // B151: A SOURCE AIM IS NOT A SHOT. Don't consume a scarce
     // floor candidate while the genuine weapon fire timer still blocks
     // a projectile; the original actual CPU weapon decides readiness.
-    const allyInk = canTurfPaint && !hasCombatInRange && cooldown <= 0 &&
+    const allyProposal = canTurfPaint && !hasCombatInRange && cooldown <= 0 &&
       bot.fireRemaining <= 0 &&
       this.f3dSourceGoals?.chooseSourceAllySupportInkTarget?.(
        bot.id,bot.position,this.targetPoint)
       ? this.targetPoint.clone() : null;
+    const allyInk=allyProposal&&
+      this.b216OriginalSourceTurfSightClear(bot,allyProposal)?
+      allyProposal:null;
     // B215 (opt-in REAL B207): B64/B180 samples actual expensive
     // original ownerGrid cells. Do not scan 7*60 times a second while
     // the REAL main weapon still cannot emit a physical shot. Keep
@@ -2318,6 +2327,22 @@ export class CpuAgentSystem {
     this.stats.cpuSourceTurfShots += 1;
   }
 
+  /** F3 opted-in only: validate an existing native original-floor paint
+   * target with the SAME source-foot and projectile-ray authority as B216.
+   * This never creates a floor, shot, target or paint cell.
+   * Disabled/default T20 behavior is unchanged. */
+  private b216OriginalSourceTurfSightClear(bot:CpuBot,target:Vec3):boolean{
+    if(!this.b216SourceStageAimValidated)return true;
+    const muzzle={x:bot.position.x,
+      y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,
+      z:bot.position.z};
+    this.b216OriginalTurfSightChecks++;
+    if(this.b216SourceStageAimValidated(muzzle,target,bot.position))
+      return true;
+    this.b216OriginalTurfCoverVetoes++;
+    return false;
+  }
+
   private chooseB64SourceLateralInkTarget(bot:CpuBot,dt:number):Vec3|null{
     if(!this.b64InkAngleSweepEnabled||!bot.agent||
        bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')
@@ -2341,14 +2366,19 @@ export class CpuAgentSystem {
       if(!sample||sample.surface.isScoreable||
          sample.owner===bot.team)continue;
       this.b64CandidatesUnowned++;
+      const sourcePoint=sample.surface.localToWorld(sample.u,sample.v);
+      // B216's already registered native Rapier foot + fire-line veto
+      // also applies to the existing frontal B64 source aim. Seek another
+      // REAL candidate instead of spending ink into original cover.
+      if(!this.b216OriginalSourceTurfSightClear(bot,sourcePoint))continue;
       if(!this.b180OriginalPatchAimEnabled){
         this.b64CandidatesChosen++;
-        return sample.surface.localToWorld(sample.u,sample.v);
+        return sourcePoint;
       }
       const opportunity=b180OriginalSourcePatchOpportunity(sample,bot.team);
       if(opportunity>bestOpportunity){
         bestOpportunity=opportunity;
-        bestPatch=sample.surface.localToWorld(sample.u,sample.v);
+        bestPatch=sourcePoint;
       }
     }
     if(this.b180OriginalPatchAimEnabled&&bestPatch){
@@ -2419,7 +2449,9 @@ export class CpuAgentSystem {
       );
       if (!sample || sample.owner === bot.team ||
           sample.surface.isScoreable) continue;
-      return sample.surface.localToWorld(sample.u, sample.v);
+      const target=sample.surface.localToWorld(sample.u, sample.v);
+      if(!this.b216OriginalSourceTurfSightClear(bot,target))continue;
+      return target;
     }
     return null;
   }
