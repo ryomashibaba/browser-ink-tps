@@ -6,6 +6,15 @@
 
 > Browser Ink TPSの開発を継続して。まず https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/continuity/START_HERE_JA.md を読み、最新HEAD・証拠・既存方針を照合して、次の実工程を進めて。
 
+## 現在の開発地点（GitHubのみで引き継ぐ）
+
+**[CURRENT_SESSION_JA.md — B399〜B402を含む最新実装・実測・未確認事項](CURRENT_SESSION_JA.md)**
+
+- 新チャットではこの固定URLを指定するだけ。ZIP・Markdownの添付、長文引き継ぎプロンプト、ユーザーによるファイル移動は不要。
+- 担当AIはQAブランチの現行HEADを取得し、上の現状ファイル、下記の永続方針、同じSHAのGitHub Actionsを照合する。文書内の古いSHAを現行と決めつけない。
+- `meta/t21-continuity`の自動索引は最新W10-B文書の**名前**の索引であり、B399〜B402など最新実装の判定を保証しない。GitHubの実コード・ActionsとCURRENT_SESSIONが優先。
+- 意味のある機能単位で実装・QAまで終えたら担当AIがCURRENT_SESSIONを短く更新する。固定入口は変えない。main/Pagesへの自動書き戻しは禁止。
+
 ## 新しい担当AIの起動手順
 
 1. QAブランチ `dev/t21-f4e103w-qa-infra` の**現在HEAD**をGitHubで取得する。以前の引き継ぎにあるHEADを今の値だと決めない。
