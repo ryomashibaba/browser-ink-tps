@@ -43,6 +43,44 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     rejoined:n.cpu.physicalRejoins.length});
   const elapsed=180-n.timeRemainingSeconds;
   if(elapsed>=nextSample){
+   // Real native match checkpoint -> actual on-screen live ownership.
+   const live=await evalPage(`(() => {
+    const s=window.__t21F3?.snapshot?.(),
+     h=document.querySelector('#t21-f3-b205-real-round');
+    const v=s?.b401NativeLiveSourceInk;
+    return {v,text:h?.textContent,
+     hudStatus:h?.dataset.t21B401SourceStatus,
+     hudTick:Number(h?.dataset.t21B401SampleNativeTick),
+     hudTotal:Number(h?.dataset.t21B401RegisteredCells),
+     hudA:Number(h?.dataset.t21B401TeamACells),
+     hudB:Number(h?.dataset.t21B401TeamBCells),
+     hudN:Number(h?.dataset.t21B401NeutralCells),
+     winner:h?.dataset.t21B401OfficialWinner};
+   })()`);
+   if(live?.v?.status!=='LIVE_REGISTERED_SOURCE_ONLY'||
+      live.v.sampleNativeTick<1||live.v.sampleNativeTick>n.tick||
+      live.v.registeredSurfaces!==17||live.v.totalActiveCells<1||
+      live.v.teamA+live.v.teamB+live.v.neutral!==live.v.totalActiveCells||
+      live.v.officialTurfScore!==false||live.v.winner!=='NONE'||
+      live.v.gameplayWrites!==0||live.hudStatus!==live.v.status||
+      live.hudTick!==live.v.sampleNativeTick||
+      live.hudTotal!==live.v.totalActiveCells||
+      live.hudA!==live.v.teamA||live.hudB!==live.v.teamB||
+      live.hudN!==live.v.neutral||live.winner!=='NONE'||
+      !live.text?.includes('LIVE SOURCE GRID')||
+      !live.text?.includes('NOT TURF SCORE'))
+    fail('B401_TRUE_NATIVE_HUD_SOURCE_GRID_MISMATCH',{tick:n.tick,live});
+   if(!report.phases.some(x=>x.phase==='B401_REAL_180S_NATIVE_LIVE_GRID')){
+    const proof={phase:'B401_REAL_180S_NATIVE_LIVE_GRID',
+     nativeTick:n.tick,actualSampleTick:live.v.sampleNativeTick,
+     originalSource:'25/17/26/0',
+     activeCells:live.v.totalActiveCells,teamA:live.v.teamA,
+     teamB:live.v.teamB,neutral:live.v.neutral,
+     playerHudMatchesNative:true,officialWinner:'NONE',
+     officialScoreable:0,physicsOrInkWrites:0};
+    report.phases.push(proof);persist();
+    console.log('B401_REAL_NATIVE_LIVE_GRID_HUD_PASS',JSON.stringify(proof));
+   }
    const sample={phase:'B390_REAL_20S_CHROME_CHECKPOINT',
     realNativeElapsedSeconds:Number(elapsed.toFixed(3)),tick:n.tick,
     originalHumanWeapon:n.b381RealNativeDodge.realWeapon,

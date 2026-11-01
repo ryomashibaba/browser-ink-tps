@@ -153,6 +153,8 @@ import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY}
 import {b400RealOriginalSourceGridRecap,b400Real180SourceEndGate,
  b400SourceGridDownloadRecap,type B400SourceRecap}
  from './B400RealOriginalSourceGridRecap';
+import {B401NativeLiveSourceInkOwnership}
+ from './B401NativeLiveSourceInkOwnership';
 import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
  from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
@@ -468,6 +470,7 @@ export class UndertowF3PlayablePreviewApp{
   .get('t21W10B399')==='clearAim';
  private readonly b399Hidden=new Set<string>();
  private b400FinalOriginalGrid:B400SourceRecap|null=null;
+ private readonly b401LiveSourceInk=new B401NativeLiveSourceInkOwnership();
  private b203EverLockedRealPointer=false;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
@@ -5992,6 +5995,7 @@ export class UndertowF3PlayablePreviewApp{
     instanceMatricesRecovered:false,productionAuthorized:false,
     sourceError:this.texturedF3lError},
    b400RegisteredSourceGrid:this.b400FinalOriginalGrid,
+   b401NativeLiveSourceInk:this.b401LiveSourceInk.get(),
    b399NativeCameraClearance:{
     // Genuine renderer/actor spatial witness, not a simulated hit/splat.
     cameraOpticalWitness:(()=>{
@@ -6524,6 +6528,19 @@ export class UndertowF3PlayablePreviewApp{
    this.survey.snapshot().active||this.galleryIndex>=0);
   this.b58SessionBoard.render(state);
   if(this.b205RoundClock){
+   // Read at most every 180 REAL native ticks, no synthetic match clock.
+   const b401=this.b401LiveSourceInk.observe(
+    this.b45SourceSurfaces,[
+     state.originalSourceSolids,state.originalPaintSurfaces,
+     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions
+    ],state.tick,state.matchState,this.b203FullRound);
+   this.b205RoundClock.dataset.t21B401SourceStatus=b401.status;
+   this.b205RoundClock.dataset.t21B401SampleNativeTick=String(b401.sampleNativeTick);
+   this.b205RoundClock.dataset.t21B401RegisteredCells=String(b401.totalActiveCells);
+   this.b205RoundClock.dataset.t21B401TeamACells=String(b401.teamA);
+   this.b205RoundClock.dataset.t21B401TeamBCells=String(b401.teamB);
+   this.b205RoundClock.dataset.t21B401NeutralCells=String(b401.neutral);
+   this.b205RoundClock.dataset.t21B401OfficialWinner='NONE';
    // B217 only observes B207 player's existing native counters. No
    // fake increment, paint-to-shot attribution or official Turf scoring.
    // Only measure actual PLAYING native simulation. The original
@@ -6581,6 +6598,13 @@ export class UndertowF3PlayablePreviewApp{
        'CPU ACTIVITY · WAITING FOR 5s REAL NATIVE SAMPLE\n')+
       'ENEMY SIGHT '+state.b181OriginalCombatSight.visibleEnemySelections+
       ' · DIRECT HITS '+state.humanCpuDirectHits+'\n':'')+
+    (b401.status==='LIVE_REGISTERED_SOURCE_ONLY'?
+      'LIVE SOURCE GRID · A '+b401.teamA.toLocaleString()+
+      ' / B '+b401.teamB.toLocaleString()+
+      ' / NEUTRAL '+b401.neutral.toLocaleString()+
+      ' · TICK '+b401.sampleNativeTick+' · NOT TURF SCORE\\n':
+     b401.status==='HOLD'?
+      'SOURCE GRID HOLD · '+b401.reason+'\\n':'')+
     'NO OFFICIAL WINNER';
    this.b205RoundClock.style.whiteSpace='pre-line';
    this.b205RoundClock.dataset.t21B205NativePhase=phase;
