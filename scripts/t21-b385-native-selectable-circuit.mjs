@@ -123,7 +123,8 @@ async function run(){
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
  // User starts from actual QA preview, NOT directly invented B384 flags.
- await cmd('Page.navigate',{url:ROOT+'?t21Play=preview&t21QaDrive=source'});
+ // B386 player launch begins at normal preview with no QA flag.
+ await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'});
  await until(()=>evalPage(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);
  const origin=await evalPage('performance.timeOrigin');
@@ -322,6 +323,23 @@ async function run(){
  if(hud.resources!=='NOT_MEASURED'||hud.score!=='0'||
     hud.winner!=='NONE'||!hud.notice?.includes('NO TURF WINNER'))
   fail('B384_ACTUAL_LIVE_SOURCE_RECAP_NOT_NONSCORING',hud);
+ // B386: original CPU positions only; not certified combat contact.
+ const frontier=await until(async()=>{
+  const x=await evalPage('(() => {const e=document.querySelector("#t21-f3-b368-real-enemy-frontier");return {visible:!!e&&!e.hidden&&getComputedStyle(e).display!=="none",enemy:e?.dataset.nearestCpuId,distance:Number(e?.dataset.nativeHorizontalMeters??-1),count:Number(e?.dataset.cpuPhysicalCount??-1),route:e?.dataset.crossTeamRouteCertified,encounter:e?.dataset.actualEncounterCertified,hit:e?.dataset.projectileHitCertified,actor:e?.dataset.actorRelocations,writes:e?.dataset.gameplayWrites,text:e?.textContent}})()');
+  return x?.visible&&x.count===4&&x.enemy?.startsWith('B')&&x.distance>0&&
+   x.route==='false'&&x.encounter==='false'&&x.hit==='false'&&
+   x.actor==='0'&&x.writes==='0'&&x.text?.includes('NO CROSS-TEAM PATH')?x:false;
+ },25000);
+ const enemy=done.cpu.cpu.find(x=>x.id===frontier.enemy);
+ if(!enemy||!enemy.rejoined||enemy.lifeState!=='ACTIVE'||
+    !Array.isArray(enemy.physicalFoot)||
+    Math.abs(frontier.distance-Math.hypot(
+      enemy.physicalFoot[0]-done.player.position[0],
+      enemy.physicalFoot[2]-done.player.position[2]))>2)
+  fail('B386_ACTUAL_ENEMY_DISTANCE_MISMATCH',{frontier,enemy});
+ report.phases.push({phase:'B386_ACTUAL_ENEMY_FRONTIER',...frontier,
+  realCpuFoot:enemy.physicalFoot,certifiedCrossTeamRoute:false,
+  certifiedNativeCpuHit:false});persist();
  report.phases.push({phase:'REAL_NATIVE_TWIN_COMETS_ORIGINAL_3OF3',
   actualWeapon:done.b381RealNativeDodge.realWeapon,
   realShots:done.shotsFired,realInk:done.b23HumanInkFeedback.humanChangedCells,

@@ -3,8 +3,12 @@
  * No authored floor/actor/scoring/clock permissions added. */
 export function b384SourceCircuitHref(href:string,enable:boolean):string|null{
  const url=new URL(href);
- if(url.searchParams.get('t21Play')!=='preview'||
-    url.searchParams.get('t21QaDrive')!=='source')return null;
+ // Ordinary preview can launch the same genuine source-only world.
+ if(!['http:','https:'].includes(url.protocol)||
+    url.searchParams.get('t21Play')!=='preview'||
+    (url.searchParams.has('t21QaDrive')&&
+     url.searchParams.get('t21QaDrive')!=='source')||
+    url.searchParams.get('t21QaInput')==='deterministic')return null;
  const next=new URL(url.pathname,url.origin);
  next.searchParams.set('t21Play','preview');
  next.searchParams.set('t21QaDrive','source');

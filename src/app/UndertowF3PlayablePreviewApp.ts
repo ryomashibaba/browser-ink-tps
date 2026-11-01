@@ -1142,6 +1142,32 @@ export class UndertowF3PlayablePreviewApp{
     round.insertAdjacentElement('afterend',note);
    }
   }
+  // B386: ordinary playable preview one-click 12-kit original SOURCE circuit.
+   const b384Active=this.b384Circuit&&this.b183DropPlayEnabled&&
+    this.b203FullRound&&b192HumanCombatEnabled;
+   const multi=document.createElement('button');
+   multi.id='t21-f3-b384-source-circuit';
+   multi.type='button';
+   multi.dataset.originalSourceOnly='true';
+   multi.dataset.scoreablePromotions='0';
+   multi.dataset.actorRelocations='0';
+   multi.textContent=b384Active?
+    'EXIT 12-WEAPON SOURCE CIRCUIT · FRESH WORLD':
+    'PLAY 180s ORIGINAL CIRCUIT · CHOOSE 1 OF 12 WEAPONS';
+   multi.style.cssText='display:block;width:100%;margin:6px 0;'+
+    'padding:11px;border-radius:9px;border:1px solid #85c9f1;'+
+    'background:#173d65;color:#ecf8ff;cursor:pointer;'+
+    'font:800 11px/1.45 system-ui';
+   multi.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||this.stopReason||
+       this.survey.snapshot().active||this.galleryIndex>=0||
+       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
+       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
+    const url=b384SourceCircuitHref(window.location.href,!b384Active);
+    if(url)window.location.assign(url);
+   });
+  this.panel.querySelector('#t21-f3-b207-combat-round')!
+   .insertAdjacentElement('beforebegin',multi);
   // B193: real selected coop joins the preexisting native A1 rally,
   // projectile ink, human sub, and 60Hz ALLY_SYNC play objective.
   // The choice always boots a clean original world. No actor teleport.
@@ -1243,31 +1269,7 @@ export class UndertowF3PlayablePreviewApp{
    });
    this.panel.querySelector('#t21-f3-b203-full-round')!
     .insertAdjacentElement('afterend',button);
-   // B384: source-only real 12-weapon circuit choice, no world edits.
-   const b384Active=this.b384Circuit&&this.b183DropPlayEnabled&&
-    this.b203FullRound&&b192HumanCombatEnabled;
-   const multi=document.createElement('button');
-   multi.id='t21-f3-b384-source-circuit';
-   multi.type='button';
-   multi.dataset.originalSourceOnly='true';
-   multi.dataset.scoreablePromotions='0';
-   multi.dataset.actorRelocations='0';
-   multi.textContent=b384Active?
-    'EXIT 12-WEAPON SOURCE CIRCUIT · FRESH WORLD':
-    'PLAY 180s ORIGINAL CIRCUIT · CHOOSE 1 OF 12 WEAPONS';
-   multi.style.cssText='display:block;width:100%;margin:6px 0;'+
-    'padding:11px;border-radius:9px;border:1px solid #85c9f1;'+
-    'background:#173d65;color:#ecf8ff;cursor:pointer;'+
-    'font:800 11px/1.45 system-ui';
-   multi.addEventListener('click',()=>{
-    if(document.pointerLockElement===this.canvas||this.stopReason||
-       this.survey.snapshot().active||this.galleryIndex>=0||
-       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
-       ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
-    const url=b384SourceCircuitHref(window.location.href,!b384Active);
-    if(url)window.location.assign(url);
-   });
-   button.insertAdjacentElement('afterend',multi);
+
   }
   this.status=this.panel.querySelector('#t21-f3-live') as HTMLElement;
   // B69: an ordinary preview user can explicitly compare the already
@@ -1555,7 +1557,8 @@ export class UndertowF3PlayablePreviewApp{
   // B368 is a single small PLAYER information row showing native physical
   // CPU proximity only. No HUD element grants a new path or hit.
   if(b192HumanCombatEnabled&&this.b203FullRound&&
-     b31Params.get('t21W10B368')==='physicalEnemyFrontier'){
+     (b31Params.get('t21W10B368')==='physicalEnemyFrontier'||
+      this.b384Circuit)){
    const front=document.createElement('aside');
    front.id='t21-f3-b368-real-enemy-frontier';
    front.hidden=true;

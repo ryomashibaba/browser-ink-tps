@@ -609,6 +609,17 @@ describe('B384 selected original-source 12-weapon physical circuit',()=>{
   expect(b384SourceCircuitHref(url,true)).toBe(url);
   expect(b384SourceCircuitSelected(new URL(b384SourceCircuitHref(url,false)!).searchParams)).toBe(false);
  });
+ it('offers the true original source world from ordinary preview',()=>{
+  const url=b384SourceCircuitHref('https://example.test/browser-ink-tps/?t21Play=preview',true)!;
+  const p=new URL(url).searchParams;
+  expect(b384SourceCircuitSelected(p)).toBe(true);
+  expect(p.get('t21QaDrive')).toBe('source');
+  expect(p.has('t21W10B343')).toBe(false);
+  expect(p.has('t21W10B368')).toBe(false);
+  expect(b384SourceCircuitHref('https://example.test/?t21Play=preview&t21QaInput=deterministic',true)).toBeNull();
+  expect(b384SourceCircuitHref('https://example.test/?t21Play=preview&t21QaDrive=other',true)).toBeNull();
+  expect(b384SourceCircuitHref('file:///tmp/?t21Play=preview',true)).toBeNull();
+ });
  it('rejects bogus original source, deterministic or benchmark flags',()=>{
   expect(b384SourceCircuitHref('https://example.test/',true)).toBeNull();
   const url=b384SourceCircuitHref(root,true)!;
