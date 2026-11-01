@@ -91,6 +91,7 @@ import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelect
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
+import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
@@ -1514,6 +1515,22 @@ export class UndertowF3PlayablePreviewApp{
     option.textContent=profile.classLabel+' · '+profile.displayName;
     choose.appendChild(option);
    }
+   // B389: apply only a legal existing B378 kit in a fresh STAGING
+   // world. This changes no CPU, stage, native tick, paint or clock.
+   const replayKit=b389NativeBootWeapon(new URLSearchParams(location.search));
+   const allowed=replayKit?eligibleB378SourcePracticeWeapon({
+    requestedId:replayKit,fullSource180Seconds:this.b203FullRound,
+    firstPointerAlreadyLocked:this.b203EverLockedRealPointer,
+    realPointerLocked:document.pointerLockElement===this.canvas,
+    matchState:this.matchState,stopReason:this.stopReason,
+    sourceShooterBenchmark:false
+   }):null;
+   if(allowed){
+    this.projectiles.setPlayerWeapon(allowed);
+    this.stats.playerSubWeaponName=subWeaponProfile(
+     weaponKit(allowed).sub).displayName;
+    choose.dataset.b389NativeReplayKit='VERIFIED_PREGAME_SELECTION';
+   }else choose.dataset.b389NativeReplayKit='NONE';
    choose.value=this.projectiles.currentPlayerWeapon.id;
    choose.addEventListener('change',()=>{
     const approved=eligibleB378SourcePracticeWeapon({
@@ -1539,6 +1556,33 @@ export class UndertowF3PlayablePreviewApp{
   pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
   pauseHint.style.cssText='margin-top:9px;color:#b9d9e4;font:600 10px/1.5 system-ui';
   pauseOverlay.append(pauseTitle,pauseInfo,resumeButton,pauseHint);
+  // Paused player can explicitly choose a clean 180s SOURCE world,
+  // preserving only the previously selected physical human weapon.
+  if(this.b384Circuit){
+   const replay=document.createElement('button');
+   replay.id='t21-f3-b389-new-source-round';
+   replay.type='button';replay.hidden=true;replay.disabled=true;
+   replay.dataset.originalScoreable='0';
+   replay.textContent='NEW 180s SOURCE ROUND · KEEP CURRENT WEAPON';
+   replay.style.cssText='display:none;width:100%;margin-top:10px;'+
+    'padding:10px;border-radius:8px;background:#19394a;'+
+    'border:1px solid #59aecd;color:#deffff;'+
+    'font:800 11px system-ui;cursor:pointer;pointer-events:auto';
+   replay.addEventListener('click',()=>{
+    if(!this.b203EverLockedRealPointer||!this.paused||
+       document.pointerLockElement===this.canvas||this.stopReason||
+       this.matchState!=='PLAYING')return;
+    const url=b389NativeNewRoundHref(window.location.href,{
+     paused:this.paused,pointerLocked:false,stopReason:this.stopReason,
+     matchState:this.matchState,weaponId:this.projectiles.currentPlayerWeapon.id,
+     sourceBoundary:[this.rawStage.solids.length,
+      this.rawStage.paintSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,0]
+    });
+    if(url){replay.disabled=true;window.location.assign(url)}
+   });
+   pauseOverlay.appendChild(replay);
+  }
   ui.appendChild(pauseOverlay);
   this.b202PauseOverlay=pauseOverlay;
   // B167 genuine opponent awareness, always read-only and scoreless.
@@ -1663,6 +1707,15 @@ export class UndertowF3PlayablePreviewApp{
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
    ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
+  if(this.b384Circuit){
+   const text='REPLAY SAME WEAPON · NEW ORIGINAL-SOURCE 180s WORLD';
+   const a=this.b58SessionBoard.root.querySelector<HTMLButtonElement>(
+    '#t21-f3-b58-restart');
+   const b=this.b58SessionBoard.finish.querySelector<HTMLButtonElement>(
+    '#t21-f3-b59-restart');
+   if(a)a.textContent=text;
+   if(b)b.textContent=text;
+  }
   // B205: genuine user-selected full 180s clock and native life activity.
   const round=this.b203FullRound?document.createElement('aside'):null;
   this.b205RoundClock=round;
@@ -4058,6 +4111,19 @@ export class UndertowF3PlayablePreviewApp{
   return true;
  }
  private restart(){
+  // Completed B384 sessions replay in a NEW Rapier/Recast/WebGL world.
+  // Preserve only the existing user-selected human weapon, no game state.
+  if(this.b384Circuit&&this.matchState==='TIME_UP'){
+   const url=b389NativeNewRoundHref(window.location.href,{
+    paused:true,pointerLocked:document.pointerLockElement===this.canvas,
+    stopReason:this.stopReason,matchState:this.matchState,
+    weaponId:this.projectiles.currentPlayerWeapon.id,
+    sourceBoundary:[this.rawStage.solids.length,
+     this.rawStage.paintSurfaces.length,
+     this.rawStage.navigationLinks?.length??0,0]
+   });
+   if(url){window.location.assign(url);return}
+  }
   this.stopReason=null;this.paused=false;this.respawnFrames=0;
   this.resources.reset();
   this.projectiles.reset();
@@ -4975,6 +5041,16 @@ export class UndertowF3PlayablePreviewApp{
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
+  const replay=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+   '#t21-f3-b389-new-source-round');
+  if(replay){
+   const eligible=this.b384Circuit&&actuallyPaused&&
+    this.b203EverLockedRealPointer&&this.matchState==='PLAYING'&&
+    this.paused&&!this.stopReason&&
+    document.pointerLockElement!==this.canvas;
+   replay.hidden=!eligible;replay.disabled=!eligible;
+   replay.style.display=eligible?'block':'none';
+  }
   const practiceWeapon=this.b202PauseOverlay.querySelector<HTMLSelectElement>(
    '#t21-f3-b378-weapon');
   if(practiceWeapon){

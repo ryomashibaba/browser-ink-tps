@@ -373,8 +373,41 @@ async function run(){
   actualCpuRejoins:done.cpu.physicalRejoins.length,
   liveHud:hud,officialScoreable:0,winner:'NONE'});
  await picture('b385-native-real-12-kit-local-clear');
- report.outcome='PASS_B384_REAL_CHROME_SELECTED_KIT_SOURCE_LOCAL_3OF3';
- report.note='Real 180s SOURCE mode running; the entire 180s TIME_UP is untested, no formal 4v4 or score.';
+
+ // B389: only genuine CDP Escape & real user click can discard the old
+ // session. The new browser world must have 0 ticks/ink/clears and retain
+ // precisely the selected existing human kit, not CPU or game state.
+ const oldTimeOrigin=await evalPage('performance.timeOrigin');
+ await key('keyDown','Escape','Escape',27);
+ await key('keyUp','Escape','Escape',27);
+ const pauseUi=await until(async()=>{
+  const x=await evalPage('(() => {const r=document.querySelector("#t21-f3-b389-new-source-round"),s=window.__t21F3.snapshot();return {unlocked:document.pointerLockElement===null,overlay:document.querySelector("#t21-f3-b202-real-pause")?.dataset.t21B202NativeState,visible:!!r&&!r.hidden&&!r.disabled&&getComputedStyle(r).display!=="none",state:s.matchState,paused:s.paused,weapon:s.b361NativePlayerWeapon.id,tick:s.tick}})()');
+  return x?.unlocked&&x.paused&&x.visible&&x.state==='PLAYING'&&
+   x.weapon==='twin-comets'?x:false;
+ },35000);
+ report.phases.push({phase:'B389_REAL_USER_PAUSED_REPLAY_VISIBLE',
+  ...pauseUi,originalUserRoundEnded:false});persist();
+ await picture('b389-native-source-real-pause-replay');
+ await clickButton('#t21-f3-b389-new-source-round');
+ const replay=await until(async()=>{
+  const x=await evalPage('(() => {const s=window.__t21F3?.snapshot?.(),u=document.querySelector("#app-canvas"),k=document.querySelector("#t21-f3-b378-weapon");return s?{timeOrigin:performance.timeOrigin,search:location.search,ready:u?.dataset.t21F3Ready,world:[s.originalSourceSolids,s.originalPaintSurfaces,s.originalSourceNavigationLinks,s.sourceScoreablePromotions],phase:s.matchState,paused:s.paused,tick:s.tick,time:s.timeRemainingSeconds,realHumanWeapon:s.b381RealNativeDodge.realWeapon,selected:k?.value,bootSource:k?.dataset.b389NativeReplayKit,shots:s.shotsFired,changedHuman:s.b23HumanInkFeedback.humanChangedCells,sourceCpuShots:s.cpuSourceTurfShots,realCpuRejoins:s.cpu.physicalRejoins.length,history:s.b387RealRoundMilestones,scoreable:s.sourceScoreablePromotions,winner:s.b186RealOriginalHumanCircuit?.officialWinner}:null})()');
+  return x?.timeOrigin>oldTimeOrigin&&x.ready==='READY'&&
+   x.search.endsWith('&t21W10B389=twin-comets')&&x.phase==='STAGING'&&
+   x.paused&&x.tick===0&&x.time===180&&
+   x.realHumanWeapon==='twin-comets'&&x.selected==='twin-comets'&&
+   x.bootSource==='VERIFIED_PREGAME_SELECTION'&&
+   x.shots===0&&x.changedHuman===0&&x.sourceCpuShots===0&&
+   x.realCpuRejoins===0&&x.history?.realClearedLives===0&&
+   x.scoreable===0&&x.winner==='NONE'?x:false;
+ },120000);
+ if(replay.world.join(',')!=='25,17,26,0')
+  fail('B389_FRESH_NATIVE_SOURCE_BOUNDARY_DRIFT',replay);
+ report.phases.push({phase:'B389_NEW_B384_REAL_WORLD_ZERO_OLD_STATE',
+  ...replay,physicsMovedFromOldWorld:0,historyCopied:0});persist();
+ console.log('B389_TRUE_USER_REPLAY_NEW_WORLD',JSON.stringify(replay));
+ await picture('b389-real-fresh-same-weapon-ready');
+ report.outcome='PASS_B389_REAL_USER_REPLAY_NEW_NATIVE_180S_WORLD';
+ report.note='Genuine source local 3/3 and user-clicked paused replay to clean 180s world confirmed; 12-kit original TIME_UP still not independently tested.';
  persist();console.log('B385_TRUE_NATIVE_SELECTED_KIT_LOCAL_CLEAR',
   JSON.stringify(report.phases.at(-2)));
 

@@ -5,6 +5,7 @@ import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobil
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
+import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourceSessionSummary,type SourceSessionMetrics} from './UndertowF3SourceSessionBoard';
 import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {weaponProfile} from '../weapons/WeaponCatalog';
@@ -675,5 +676,57 @@ describe('B384 selected original-source 12-weapon physical circuit',()=>{
   s.b186RealOriginalHumanCircuit!.naturalCrossTeamRouteProven=false;
   s.b343OriginalSourceVolleyBudget={enabled:true};
   expect(()=>sourceSessionSummary(s)).toThrow('B384_BENCHMARK');
+ });
+});
+
+describe('B389 real-source 12-kit next-round user navigation and fresh READY',()=>{
+ const root='https://example.test/browser-ink-tps/?t21Play=preview';
+ const current=b384SourceCircuitHref(root,true)!;
+ const action=()=>({paused:true,pointerLocked:false,stopReason:null,
+  matchState:'PLAYING',weaponId:'twin-comets',
+  sourceBoundary:[25,17,26,0]});
+ it('paused real source session creates same-origin, fresh B384 and only one kit field',()=>{
+  const url=b389NativeNewRoundHref(current,action())!;
+  const u=new URL(url);
+  expect(u.origin).toBe('https://example.test');
+  expect(b384SourceCircuitSelected(u.searchParams)).toBe(true);
+  expect(b389NativeBootWeapon(u.searchParams)).toBe('twin-comets');
+  expect(u.searchParams.get('t21W10B389')).toBe('twin-comets');
+  expect(u.searchParams.has('t21QaInput')).toBe(false);
+  expect(u.searchParams.has('t21W10B343')).toBe(false);
+  expect(WEAPON_ORDER.includes(b389NativeBootWeapon(u.searchParams)!)).toBe(true);
+ });
+ it('genuine TIME_UP permits explicit same-kit fresh-world replay',()=>{
+  const href=b389NativeNewRoundHref(current,{
+   ...action(),paused:false,matchState:'TIME_UP'});
+  expect(href).not.toBeNull();
+  expect(b389NativeBootWeapon(new URL(href!).searchParams)).toBe('twin-comets');
+ });
+ it('rejects active/unlocked race, incorrect world, benchmark, forged kit and STOP',()=>{
+  for(const p of [
+   {...action(),paused:false},
+   {...action(),pointerLocked:true},
+   {...action(),sourceBoundary:[25,17,26,1]},
+   {...action(),sourceBoundary:[25,17,25,0]},
+   {...action(),weaponId:'fake-gold-weapon'},
+   {...action(),stopReason:'SOURCE_PHYSICAL_STOP'},
+   {...action(),matchState:'STAGING'}
+  ])expect(b389NativeNewRoundHref(current,p)).toBeNull();
+  expect(b389NativeNewRoundHref(root,action())).toBeNull();
+  expect(b389NativeNewRoundHref(current+'&t21QaInput=deterministic',action())).toBeNull();
+  expect(b389NativeNewRoundHref('file:///tmp/?t21Play=preview',action())).toBeNull();
+ });
+ it('URL alone never becomes fake progress or stage authority',()=>{
+  const p=new URL(current).searchParams;
+  p.set('t21W10B389','twin-comets');
+  expect(b389NativeBootWeapon(p)).toBe('twin-comets');
+  p.set('t21W10B389','unknown-id');
+  expect(b389NativeBootWeapon(p)).toBeNull();
+  p.set('t21W10B389','twin-comets');
+  p.set('t21W10B384','off');
+  expect(b389NativeBootWeapon(p)).toBeNull();
+  p.set('t21W10B384','loadoutCircuit');
+  p.set('t21QaInput','deterministic');
+  expect(b389NativeBootWeapon(p)).toBeNull();
  });
 });
