@@ -433,6 +433,45 @@ async function run(){
     q.ink<45&&q.text.includes('SUB Snap Bomb · NEED 45 INK')&&
     !q.text.includes('F SUB')?q:false;
  },30000);
+
+ // B393: genuine original SubWeaponSystem explosions and a natural
+ // refill must occur during the SAME 180s USER round. Read-only.
+ const realDetonations=await until(async()=>{
+  const n=original(await state(),'B393_TRUE_NATIVE_SUB_EXPLOSIONS');
+  if(n.matchState!=='PLAYING'||n.paused||
+     n.b38HumanSub?.weapon!=='Snap Bomb')
+   fail('B393_SOURCE_SUB_INTERRUPTED',{tick:n.tick,sub:n.b38HumanSub});
+  return n.b38HumanSub.explosions>=
+   nativeSubReady.b38HumanSub.explosions+2?n:false;
+ },180000);
+ const naturallyRefilled=await until(async()=>{
+  const q=await trueSubHud();
+  return q?.view==='PLAYER'&&q.phase==='PLAYING'&&!q.hidden&&
+   q.writes==='0'&&q.throws===nativeSubReady.b38HumanSub.throws+2&&
+   q.ink>=45&&q.text.includes('F SUB Snap Bomb')?q:false;
+ },180000);
+ if(realDetonations.b38HumanSub.throws!==
+    nativeSubReady.b38HumanSub.throws+2||
+    realDetonations.b38HumanSub.explosions!==
+    nativeSubReady.b38HumanSub.explosions+2||
+    naturallyRefilled.tick<=insufficientHud.tick)
+  fail('B393_NATIVE_SUB_OR_REFILL_MISMATCH',{
+   before:nativeSubReady.b38HumanSub,
+   explosions:realDetonations.b38HumanSub,
+   insufficientHud,naturallyRefilled});
+ const realSubChain={phase:'B393_NATIVE_TWO_SUB_DETONATIONS_AND_INK_REFILL',
+  source:'25/17/26/0',
+  observedHumanSubExplosionsBefore:nativeSubReady.b38HumanSub.explosions,
+  observedHumanSubExplosionsAfter:realDetonations.b38HumanSub.explosions,
+  observedHumanSubThrowsAfter:realDetonations.b38HumanSub.throws,
+  nativeDetonationTick:realDetonations.tick,
+  trueLowInkHud:insufficientHud,trueRefilledHud:naturallyRefilled,
+  realNativePhysicsOnly:true,syntheticInk:0,syntheticSub:0,
+  cpuDamageNotInferred:true,paintChangesNotInferred:true,
+  originalScoreable:0,officialWinner:'NONE'};
+ report.phases.push(realSubChain);persist();
+ console.log('B393_REAL_NATIVE_SUB_EXPLOSIONS_REFILL',
+  JSON.stringify(realSubChain));
  const proof={phase:'B385_TRUE_NATIVE_F_SUB_TWICE_AND_PLAYER_INK_GATE',
   source:'25/17/26/0',actualWeapon:'twin-comets',
   realKitSub:'Snap Bomb',nativeKitCost:45,
