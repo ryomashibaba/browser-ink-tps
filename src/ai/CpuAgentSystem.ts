@@ -264,6 +264,7 @@ export class CpuAgentSystem {
       actualFoot:B181SightPoint)=>boolean)|null=null;
   private b216RealOriginalFloorSightChecks=0;
   private b216ApprovedPhysicalSourceAimTargets=0;
+  private b216ApprovedReachedGoalShortRadiusAims=0;
   private b216OriginalTurfSightChecks=0;
   private b216OriginalTurfCoverVetoes=0;
   private b182RecheckedStaleNativeSight=0;
@@ -534,6 +535,8 @@ export class CpuAgentSystem {
       enabled:this.b216SourceStageAimValidated!==null,
       realRapierStageAimChecks:this.b216RealOriginalFloorSightChecks,
       originalSourceBackfillAims:this.b216ApprovedPhysicalSourceAimTargets,
+      approvedReachedGoalShortRadiusAims:
+       this.b216ApprovedReachedGoalShortRadiusAims,
       verifiedFrontAndAllyPaintSightChecks:this.b216OriginalTurfSightChecks,
       sourceBlockedTurfAimsRejected:this.b216OriginalTurfCoverVetoes,
       actorFootWrites:0 as const,newNavLinks:0 as const,
@@ -629,6 +632,7 @@ export class CpuAgentSystem {
     this.b215RealWeaponCooldownPaintScansDeferred=0;
     this.b216RealOriginalFloorSightChecks=0;
     this.b216ApprovedPhysicalSourceAimTargets=0;
+    this.b216ApprovedReachedGoalShortRadiusAims=0;
     this.b216OriginalTurfSightChecks=0;
     this.b216OriginalTurfCoverVetoes=0;
     this.b181ActualStageRays=0;
@@ -2417,6 +2421,7 @@ export class CpuAgentSystem {
     const muzzle={x:bot.position.x,
       y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,z:bot.position.z};
     let best:Vec3|null=null,opportunity=0;
+    let bestReachedGoalShortRadius=false;
     for(const proposed of proposals){
       this.samplePoint.set(proposed.x,proposed.y,proposed.z);
       const sample=this.gameplayInk.sampleWorld(this.samplePoint,
@@ -2434,8 +2439,14 @@ export class CpuAgentSystem {
       if(!this.b216SourceStageAimValidated(muzzle,candidate,
         bot.position))continue;
       best=candidate;opportunity=value;
+      bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
     }
-    if(best)this.b216ApprovedPhysicalSourceAimTargets++;
+    if(best){
+      this.b216ApprovedPhysicalSourceAimTargets++;
+      // This is an audited AIM, not yet a projectile or changed ink cell.
+      if(bestReachedGoalShortRadius)
+        this.b216ApprovedReachedGoalShortRadiusAims++;
+    }
     return best;
   }
 

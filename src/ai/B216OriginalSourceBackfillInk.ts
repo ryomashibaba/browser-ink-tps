@@ -32,10 +32,14 @@ export function b216OriginalFootBackfillCandidates(
   Math.atan2(nativeWeaponFacing!.z,nativeWeaponFacing!.x):
   Math.atan2(dz,dx);
  const result:B216OriginalCandidate[]=[];
- // The original B64 12-angle frontal sweep is kept FIRST. These
- // 12 more local directions include lateral and rearward real ink.
- // Weapon range and original colliders still veto each proposal.
- for(const distance of [2.5,3.5] as const){
+ // The original B64 frontal sweep runs FIRST. At a REAL reached
+ // patrol goal its direction disappears, so search the already-existing
+ // B64 1.7m short radius as well as B216's 2.5/3.5m lateral/rear
+ // candidates. Every location remains just an untrusted proposal until
+ // ORIGINAL ownerGrid, Rapier supports, ray and weapon range approve it.
+ // No geometry, nav path, actor relocation or firing bypass is created.
+ const radii=atGoal?([1.7,2.5,3.5] as const):([2.5,3.5] as const);
+ for(const distance of radii){
   for(const offset of [
    Math.PI/2,-Math.PI/2,Math.PI,-3*Math.PI/4,3*Math.PI/4,
    Math.PI/4

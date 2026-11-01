@@ -135,7 +135,9 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
        n.b216RealNativePaintBackfill.verifiedFrontAndAllyPaintSightChecks,
       sourceBlockedTurfAimsRejected:
        n.b216RealNativePaintBackfill.sourceBlockedTurfAimsRejected,
-      realBackfillAims:n.b216RealNativePaintBackfill.originalSourceBackfillAims}:null};
+      realBackfillAims:n.b216RealNativePaintBackfill.originalSourceBackfillAims,
+      approvedReachedGoalShortRadiusAims:
+       n.b216RealNativePaintBackfill.approvedReachedGoalShortRadiusAims}:null};
    report.phases.push(sample);persist();
    console.log('B390_REAL_20S_NATIVE_CHECKPOINT',JSON.stringify(sample));
    nextSample+=20;
@@ -186,12 +188,16 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  const checked=gated?.verifiedFrontAndAllyPaintSightChecks;
  const vetoed=gated?.sourceBlockedTurfAimsRejected;
  const acceptedSourceInk=final.cpuImpactInkCellsChanged;
+ const shortReached=gated?.approvedReachedGoalShortRadiusAims;
  const valid=final.b214SustainedBattleInk?.enabled===true&&
    final.b215RealBattleAimPacing?.enabled===true&&
    gated?.enabled===true&&
    Number.isSafeInteger(checked)&&checked>0&&
    Number.isSafeInteger(vetoed)&&vetoed>=0&&vetoed<=checked&&
    Number.isSafeInteger(acceptedSourceInk)&&acceptedSourceInk>0&&
+   Number.isSafeInteger(shortReached)&&shortReached>=0&&
+   Number.isSafeInteger(gated.originalSourceBackfillAims)&&
+   shortReached<=gated.originalSourceBackfillAims&&
    final.sourceScoreablePromotions===0;
  const strictNativePaintGate={
   phase:'B390_TRUE_180S_CPU_SOURCE_SHOT_LINE_OF_SIGHT',
@@ -201,6 +207,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   actualSourceBlockedTurfAimsRejected:vetoed??null,
   originalFloorBackfillSightChecks:gated?.realRapierStageAimChecks??null,
   originalSourceBackfillAims:gated?.originalSourceBackfillAims??null,
+  approvedReachedGoalShortRadiusAims:shortReached??null,
   enabled:gated?.enabled??false,valid,
   artificialShots:0,artificialPaint:0,syntheticGround:0,
   navLinksAdded:0,originalSourceScoreable:0,productionAuthorized:false
@@ -353,6 +360,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   cpuSourceInk:final.cpuImpactInkCellsChanged,
   cpuOriginalSightGateChecks:strictNativePaintGate.verifiedFrontAndAllyPaintSightChecks,
   cpuOriginalSourceCoverVetoes:strictNativePaintGate.actualSourceBlockedTurfAimsRejected,
+  approvedReachedGoalShortRadiusAims:
+   strictNativePaintGate.approvedReachedGoalShortRadiusAims,
   nativeCpuRejoins:final.cpu.physicalRejoins.length,
   nativeHumanRespawns:final.humanRespawns,
   realMissionClearedLives:final.b387RealRoundMilestones.realClearedLives,

@@ -21,7 +21,11 @@ describe('B216 existing ORIGINAL surface-oriented fallback aim proposals',()=>{
  it('at a genuine reached goal, uses only LIVE native weapon facing to seek original ink',()=>{
   const actualFacing={x:0,y:0,z:-1};
   const c=candidates(foot,foot,actualFacing);
-  expect(c).toHaveLength(12);
+  expect(c).toHaveLength(18);
+  // Only a real reached goal gains the B64-established short radius.
+  expect(c.filter(x=>x.radiusMeters===1.7)).toHaveLength(6);
+  expect(c.filter(x=>x.radiusMeters===2.5)).toHaveLength(6);
+  expect(c.filter(x=>x.radiusMeters===3.5)).toHaveLength(6);
   expect(c.every(x=>Number.isFinite(x.x)&&Number.isFinite(x.z)&&
    Math.hypot(x.x-foot.x,x.z-foot.z)<=3.501)).toBe(true);
   expect(c.some(x=>x.z>foot.z)).toBe(true);
@@ -31,6 +35,8 @@ describe('B216 existing ORIGINAL surface-oriented fallback aim proposals',()=>{
   expect(c[0]).not.toHaveProperty('sourceScoreable');
   expect(candidates(foot,foot,{x:0,y:0,z:0})).toEqual([]);
   expect(candidates(foot,foot,{x:NaN,y:0,z:-1})).toEqual([]);
+  expect(candidates(foot,foot,{x:0,y:0,z:0.01})).toEqual([]);
+  expect(candidates(foot,{...foot,z:foot.z+0.5},actualFacing)).toHaveLength(12);
  });
  it('refuses invalid or missing real source foot heading',()=>{
   expect(candidates(foot,foot)).toEqual([]);
