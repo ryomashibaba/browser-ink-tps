@@ -5,6 +5,10 @@ on:
     paths:
       - 'scripts/t21-b385-native-selectable-circuit.mjs'
       - 'scripts/t21-b390-real-source-timeup.mjs'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/B400RealOriginalSourceGridRecap.ts'
+      - 'src/app/B401NativeLiveSourceInkOwnership.ts'
+      - 'src/app/B401NativeLiveSourceInkOwnership.test.ts'
       - '.github/workflows/t21-b385-selectable-source-round.yml'
   workflow_dispatch:
 permissions:

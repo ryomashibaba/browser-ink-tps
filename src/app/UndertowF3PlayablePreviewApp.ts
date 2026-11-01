@@ -6602,9 +6602,9 @@ export class UndertowF3PlayablePreviewApp{
       'LIVE SOURCE GRID · A '+b401.teamA.toLocaleString()+
       ' / B '+b401.teamB.toLocaleString()+
       ' / NEUTRAL '+b401.neutral.toLocaleString()+
-      ' · TICK '+b401.sampleNativeTick+' · NOT TURF SCORE\\n':
+      ' · TICK '+b401.sampleNativeTick+' · NOT TURF SCORE\n':
      b401.status==='HOLD'?
-      'SOURCE GRID HOLD · '+b401.reason+'\\n':'')+
+      'SOURCE GRID HOLD · '+b401.reason+'\n':'')+
     'NO OFFICIAL WINNER';
    this.b205RoundClock.style.whiteSpace='pre-line';
    this.b205RoundClock.dataset.t21B205NativePhase=phase;
