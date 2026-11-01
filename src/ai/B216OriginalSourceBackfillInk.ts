@@ -9,14 +9,28 @@ export interface B216OriginalCandidate extends B216SourcePoint{
  readonly radiusMeters:number;readonly angleRadians:number;
 }
 export function b216OriginalFootBackfillCandidates(
- foot:B216SourcePoint,realAuditedGoal:B216SourcePoint
+ foot:B216SourcePoint,realAuditedGoal:B216SourcePoint,
+ nativeWeaponFacing?:B216SourcePoint
 ):readonly B216OriginalCandidate[]{
  if(![foot.x,foot.y,foot.z,realAuditedGoal.x,realAuditedGoal.y,
   realAuditedGoal.z].every(Number.isFinite))return [];
  const dx=realAuditedGoal.x-foot.x,dz=realAuditedGoal.z-foot.z;
  const span=Math.hypot(dx,dz);
- if(!Number.isFinite(span)||span<.40)return [];
- const heading=Math.atan2(dz,dx);
+ if(!Number.isFinite(span))return [];
+ // Once the REAL Recast goal is reached, its foot-to-goal vector no
+ // longer supplies a heading. Only the already-live CPU weapon facing
+ // may orient local paint proposals. No authored fallback direction,
+ // new route, collision, target Actor or unverified ink cell is added.
+ // Every proposal still requires the caller's actual original-grid
+ // ownership sample and registered Rapier foot/shot-line approval.
+ const atGoal=span<.40;
+ if(atGoal&&(!nativeWeaponFacing||
+  ![nativeWeaponFacing.x,nativeWeaponFacing.y,nativeWeaponFacing.z]
+   .every(Number.isFinite)||
+  Math.hypot(nativeWeaponFacing.x,nativeWeaponFacing.z)<.05))return [];
+ const heading=atGoal?
+  Math.atan2(nativeWeaponFacing!.z,nativeWeaponFacing!.x):
+  Math.atan2(dz,dx);
  const result:B216OriginalCandidate[]=[];
  // The original B64 12-angle frontal sweep is kept FIRST. These
  // 12 more local directions include lateral and rearward real ink.

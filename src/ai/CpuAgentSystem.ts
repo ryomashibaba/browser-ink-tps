@@ -2402,7 +2402,10 @@ export class CpuAgentSystem {
        bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')return null;
     const goal=this.qaMotionGoals.get(bot.id);
     if(!goal)return null;
-    const proposals=b216OriginalFootBackfillCandidates(bot.position,goal);
+    // A real reached native goal has no forward displacement; use the
+    // existing live CPU weapon facing only for SOURCE-verified ink search.
+    const proposals=b216OriginalFootBackfillCandidates(
+      bot.position,goal,bot.weaponFacing);
     if(proposals.length===0)return null;
     const muzzle={x:bot.position.x,
       y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,z:bot.position.z};

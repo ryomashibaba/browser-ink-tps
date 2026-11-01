@@ -18,6 +18,20 @@ describe('B216 existing ORIGINAL surface-oriented fallback aim proposals',()=>{
   expect(c.some(x=>x.x>foot.x)).toBe(true);
   expect(c.some(x=>x.x<foot.x)).toBe(true);
  });
+ it('at a genuine reached goal, uses only LIVE native weapon facing to seek original ink',()=>{
+  const actualFacing={x:0,y:0,z:-1};
+  const c=candidates(foot,foot,actualFacing);
+  expect(c).toHaveLength(12);
+  expect(c.every(x=>Number.isFinite(x.x)&&Number.isFinite(x.z)&&
+   Math.hypot(x.x-foot.x,x.z-foot.z)<=3.501)).toBe(true);
+  expect(c.some(x=>x.z>foot.z)).toBe(true);
+  expect(c.some(x=>x.x>foot.x)).toBe(true);
+  expect(c.some(x=>x.x<foot.x)).toBe(true);
+  expect(c[0]).not.toHaveProperty('navLink');
+  expect(c[0]).not.toHaveProperty('sourceScoreable');
+  expect(candidates(foot,foot,{x:0,y:0,z:0})).toEqual([]);
+  expect(candidates(foot,foot,{x:NaN,y:0,z:-1})).toEqual([]);
+ });
  it('refuses invalid or missing real source foot heading',()=>{
   expect(candidates(foot,foot)).toEqual([]);
   expect(candidates({...foot,x:NaN},goal)).toEqual([]);
