@@ -6,6 +6,7 @@
 export type B402Surface=Readonly<{
  id:string;isScoreable:boolean;
  widthCells:number;heightCells:number;cellSize:number;
+ widthMeters:number;heightMeters:number;
  ownerGrid:Readonly<Int8Array>;
  isCellActive:(x:number,y:number)=>boolean;
  localToWorld:(u:number,v:number)=>Readonly<{x:number;y:number;z:number}>;
@@ -37,9 +38,11 @@ export function b402OriginalSourceInkRadarSamples(
  nativeTick:number,human:readonly [number,number,number],
  halfWidthMeters=32
 ):B402RadarProof{
- if(stage.join('/')!=='25/17/26/0'||surfaces.length!==17||
+ if(!Array.isArray(stage)||stage.join('/')!=='25/17/26/0'||
+    !Array.isArray(surfaces)||surfaces.length!==17||
     !Number.isSafeInteger(nativeTick)||nativeTick<1||
-    human.length!==3||human.some(v=>!Number.isFinite(v))||
+    !Array.isArray(human)||human.length!==3||
+    human.some(v=>!Number.isFinite(v))||
     !Number.isFinite(halfWidthMeters)||halfWidthMeters<=0)
   return output('HOLD','FROZEN_SOURCE_OR_NATIVE_POSITION_INVALID',nativeTick,surfaces.length);
  const used=new Set<string>();
@@ -49,6 +52,8 @@ export function b402OriginalSourceInkRadarSamples(
    !Number.isSafeInteger(s.widthCells)||s.widthCells<1||
    !Number.isSafeInteger(s.heightCells)||s.heightCells<1||
    !Number.isFinite(s.cellSize)||s.cellSize<=0||
+   !Number.isFinite(s.widthMeters)||s.widthMeters<=0||
+   !Number.isFinite(s.heightMeters)||s.heightMeters<=0||
    s.ownerGrid.length!==s.widthCells*s.heightCells)
    return output('HOLD','UNVERIFIED_OR_SCOREABLE_ORIGINAL_GRID',nativeTick,surfaces.length);
   used.add(s.id);
@@ -69,8 +74,8 @@ export function b402OriginalSourceInkRadarSamples(
       if(owner!==1&&owner!==-1)continue;
       if(!s.isCellActive(px,py))continue;
       const w=s.localToWorld(
-       Math.min((px+.5)*s.cellSize,s.widthCells*s.cellSize),
-       Math.min((py+.5)*s.cellSize,s.heightCells*s.cellSize));
+       Math.min((px+.5)*s.cellSize,s.widthMeters-1e-5),
+       Math.min((py+.5)*s.cellSize,s.heightMeters-1e-5));
       if(![w.x,w.y,w.z].every(Number.isFinite))continue;
       if(Math.abs(w.x-human[0])>halfWidthMeters||
          Math.abs(w.z-human[2])>halfWidthMeters||

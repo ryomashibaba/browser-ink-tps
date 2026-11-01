@@ -4,7 +4,8 @@ import {b402OriginalSourceInkRadarSamples,type B402Surface}
 const original=[25,17,26,0] as const;
 function surface(id:string,raw:number[]=[0,0,0,0],
  isActive=(x:number,y:number)=>true):B402Surface{
- return {id,isScoreable:false,widthCells:2,heightCells:2,cellSize:1,
+ return {id,isScoreable:false,widthCells:2,heightCells:2,
+  widthMeters:2,heightMeters:2,cellSize:1,
   ownerGrid:new Int8Array(raw),isCellActive:isActive,
   localToWorld:(u,v)=>({x:u,y:1,z:v})};
 }
@@ -40,9 +41,19 @@ describe('B402 actual original SOURCE paint radar points',()=>{
   expect(b402OriginalSourceInkRadarSamples(
    all(surface('first')),'bad-stage' as unknown as number[],1,[0,1,0]).status).toBe('HOLD');
  });
+ it('clips a painted partial end cell inside the EXACT original surface',()=>{
+  const s: B402Surface={...surface('edge',[0,0,0,1]),
+   widthMeters:1.2,heightMeters:1.2,
+   localToWorld:(u,v)=>({x:u,y:0,z:v})};
+  const r=b402OriginalSourceInkRadarSamples(all(s),original,60,[0,0,0]);
+  expect(r.status).toBe('SOURCE_PAINT_SAMPLES');
+  expect(r.dots).toHaveLength(1);
+  expect(r.dots[0]!.x).toBeLessThan(s.widthMeters);
+  expect(r.dots[0]!.z).toBeLessThan(s.heightMeters);
+ });
  it('bounded tile samples never claim complete ownerGrid coverage',()=>{
   const many={...surface('big',Array(1024).fill(1)),
-   widthCells:32,heightCells:32};
+   widthCells:32,heightCells:32,widthMeters:32,heightMeters:32};
   const r=b402OriginalSourceInkRadarSamples(
    all(many),original,60,[0,1,0]);
   expect(r.status).toBe('SOURCE_PAINT_SAMPLES');
