@@ -41,7 +41,8 @@ const buttonScript=selector=>'(() => {const el=document.querySelector('+
  'return {x,y,width:r.width,height:r.height,'+
  'display:style.display,visibility:style.visibility,'+
  'hitTarget:!!top&&(top===el||el.contains(top)),'+
- 'topId:top?.id??null,topTag:top?.tagName??null};})()';
+ 'topId:top?.id??null,topTag:top?.tagName??null,'+
+ 'bootError:document.querySelector("#boot-error")?.textContent?.slice(0,2400)??null};})()';
 async function clickButton(selector){
  const xy=await read(buttonScript(selector));
  if(!xy||xy.width<4||xy.height<4||xy.x<0||xy.y<0||
