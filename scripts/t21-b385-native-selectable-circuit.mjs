@@ -239,7 +239,44 @@ async function run(){
   report.phases.push(record);persist();
   console.log('B385_REAL_ORIGINAL_ROUTE',JSON.stringify(record));
  }
- const raised=original(await state(),'ACTUAL_RAISED_SOURCE');
+ // B390 native integration: a held D90 may leave the genuine KCC on the
+ // registered ramp rather than the registered raised floor. Never count
+ // ramp contact as a completed circuit or relax the grounded/source gate.
+ // Continue REAL CDP key input for at most 30 native ticks, and stop early
+ // only on an actually grounded, registered raised-floor KCC contact.
+ let raised=original(await state(),'ACTUAL_RAISED_SOURCE');
+ if(raised.b112OriginalHumanGround?.genuineKccGrounded===true&&
+    raised.b112OriginalHumanGround.lastOriginalSourceHitId===
+     'UndertowT21D:right-low-route-ramp-positive-z'){
+   const ramp=raised;
+   await key('keyDown','d','KeyD',68);
+   try{
+     raised=await until(async()=>{
+       const s=original(await state(),'REAL_RAMP_FINAL_APPROACH');
+       if(s.matchState!=='PLAYING'||s.paused)
+         fail('RAMP_EXTENSION_MATCH_NOT_PLAYING',
+          {tick:s.tick,matchState:s.matchState,paused:s.paused});
+       const foot=s.b112OriginalHumanGround;
+       const realRaised=foot?.genuineKccGrounded===true&&
+         foot.lastOriginalSourceHitId==='UndertowT21D:right-low-team-a';
+       return realRaised||s.tick>=ramp.tick+30?s:false;
+     },90000);
+   }finally{
+     await key('keyUp','d','KeyD',68);
+   }
+   const record={phase:'REAL_RAMP_TO_RAISED_PHYSICAL_CONTINUATION',
+     actualNativeTicks:raised.tick-ramp.tick,
+     beforeFoot:ramp.b112OriginalHumanGround.lastOriginalSourceHitId,
+     afterFoot:raised.b112OriginalHumanGround?.lastOriginalSourceHitId,
+     realKccGrounded:raised.b112OriginalHumanGround?.genuineKccGrounded,
+     realSourceRaisedConfirmed:
+       raised.b112OriginalHumanGround?.genuineKccGrounded===true&&
+       raised.b112OriginalHumanGround.lastOriginalSourceHitId===
+       'UndertowT21D:right-low-team-a',
+     injectedTicks:0,injectedActorPositions:0,addedGeometry:0};
+   report.phases.push(record);persist();
+   console.log('B385_REAL_RAMP_CONTINUATION',JSON.stringify(record));
+ }
  const circuit=raised.b186RealOriginalHumanCircuit,
   drop=raised.b183OriginalHumanDescent,
   foot=raised.b112OriginalHumanGround;
