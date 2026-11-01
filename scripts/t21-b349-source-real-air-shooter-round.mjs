@@ -110,7 +110,7 @@ async function run(){
   {width:1600,height:900,deviceScaleFactor:1,mobile:false});
  await send('Page.navigate',{url:ROOT+
   '?t21Play=preview&t21QaDrive=source&'+
-  't21W10B183=firstDropPlay&t21W10B193=allyCoop&'+
+  't21W10B183=firstDropPlay&t21W10B192=humanCombat&'+
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
   't21W10B345=sourceShooterOpening&'+
   't21W10B346=nativeShooterPhysicsWitness&'+
@@ -130,7 +130,7 @@ async function run(){
   return x?.ready==='READY'&&x?.full==='REAL_180S_SOURCE_PLAY'?x:false;
  },120000);
  if(mode.search!=='?t21Play=preview&t21QaDrive=source&'+
-  't21W10B183=firstDropPlay&t21W10B193=allyCoop&'+
+  't21W10B183=firstDropPlay&t21W10B192=humanCombat&'+
   't21W10B203=fullRound&t21W10B343=sourceVolleyAtomic&'+
   't21W10B345=sourceShooterOpening&'+
   't21W10B346=nativeShooterPhysicsWitness&'+

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as fs from 'node:fs';
 import {auditB349TrueGroundAir} from './t21-b349-physical-kcc-audit.mjs';
 const sample=()=>{
  const launches=Array.from({length:10},(_,i)=>({
@@ -46,5 +47,17 @@ test('fail closed for fake jump, absent KCC air and mismatched physical IDs',()=
  ]){
   const s=sample();mutate(s);
   assert.throws(()=>auditB349TrueGroundAir(s.w,s.p),/B349_NATIVE_KCC_/);
+ }
+});
+
+test('B349 true SOURCE shooting launcher uses the native human-combat circuit, not incompatible allyCoop',()=>{
+ const {readFileSync}=fs;
+ for(const name of ['t21-b349-source-jump-round.mjs',
+  't21-b349-source-real-air-shooter-round.mjs']){
+  const source=readFileSync(new URL('./'+name,import.meta.url),'utf8');
+  assert.equal(source.includes('t21W10B193=allyCoop'),false);
+  assert.equal(source.split('t21W10B192=humanCombat').length-1,2);
+  assert.ok(source.includes('t21W10B183=firstDropPlay'));
+  assert.ok(source.includes('t21W10B343=sourceVolleyAtomic'));
  }
 });
