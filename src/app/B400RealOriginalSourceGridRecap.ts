@@ -67,3 +67,33 @@ export function b400RealOriginalSourceGridRecap(
   scoreableCells:0,winner:'NONE',productionAuthorized:false,gameplayWrites:0
  };
 }
+
+// Only this compact aggregate is included when the owner voluntarily
+// downloads a B62 session JSON. No source geometry, position, ownerGrid
+// raster, source filenames, hardware identifiers or simulated Turf score.
+export function b400SourceGridDownloadRecap(
+ final:B400SourceRecap|null
+){
+ if(!final)return {
+  status:'NOT_MEASURED' as const,reason:'REAL_TIME_UP_GRID_NOT_CAPTURED',
+  officialTurfScoreIncluded:false as const,
+  originalMapGeometryIncluded:false as const,
+  playerOrCpuPositionsIncluded:false as const,
+  officialWinner:'NONE' as const,gameplayWrites:0 as const
+ };
+ return {
+  status:final.status,reason:final.cause,
+  originalRegisteredSurfaceCount:final.observedSurfaces,
+  totalActiveOriginalGridCells:final.activeOriginalGridCells,
+  realTeamACells:final.teamACells,
+  realTeamBCells:final.teamBCells,
+  realNeutralCells:final.neutralCells,
+  teamAPercentOfRegisteredGrid:final.teamAPercentOfRegisteredCells,
+  teamBPercentOfRegisteredGrid:final.teamBPercentOfRegisteredCells,
+  neutralPercentOfRegisteredGrid:final.neutralPercentOfRegisteredCells,
+  officialTurfScoreIncluded:false as const,
+  originalMapGeometryIncluded:false as const,
+  playerOrCpuPositionsIncluded:false as const,
+  officialWinner:'NONE' as const,gameplayWrites:0 as const
+ };
+}

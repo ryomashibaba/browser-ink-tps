@@ -150,8 +150,8 @@ import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
 import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
 import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY}
  from './B399NativeCameraAimClearance';
-import {b400RealOriginalSourceGridRecap,type B400SourceRecap}
- from './B400RealOriginalSourceGridRecap';
+import {b400RealOriginalSourceGridRecap,b400SourceGridDownloadRecap,
+ type B400SourceRecap} from './B400RealOriginalSourceGridRecap';
 import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
  from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
@@ -2303,7 +2303,12 @@ export class UndertowF3PlayablePreviewApp{
   if(this.matchState!=='TIME_UP'||this.stopReason)return;
   const report=this.b62NativeEvidence.report();
   if(!report)return;
-  const bytes=new Blob([JSON.stringify(report,null,2)+'\\n'],
+  // Owner-click only. Include final B400 counts, never original map mesh,
+  // grid cell raster, world coordinates, score, or private source records.
+  const evidence={...report,
+   originalSourceGridReadOnly:b400SourceGridDownloadRecap(
+    this.b400FinalOriginalGrid)};
+  const bytes=new Blob([JSON.stringify(evidence,null,2)+'\\n'],
    {type:'application/json'});
   const url=URL.createObjectURL(bytes);
   const a=document.createElement('a');

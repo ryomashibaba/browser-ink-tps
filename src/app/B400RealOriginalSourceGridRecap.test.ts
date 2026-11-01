@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {b400RealOriginalSourceGridRecap,type B400SourceGrid} from './B400RealOriginalSourceGridRecap';
+import {b400RealOriginalSourceGridRecap,b400SourceGridDownloadRecap,type B400SourceGrid} from './B400RealOriginalSourceGridRecap';
 const stage=[25,17,26,0] as const;
 const source=(name:string,owner:number[]= [1,-1,0,0],
  active=true):B400SourceGrid=>({
@@ -29,6 +29,23 @@ describe('B400 genuine 180s registered-source ownership (never official turf)',(
   expect(r.status).toBe('FINAL_REGISTERED_SOURCE_ONLY');
   expect(r.activeOriginalGridCells).toBe(65);
   expect(r.teamACells).toBe(1);
+ });
+ it('exports only real original-grid aggregates and never source geometry',()=>{
+  const owned=b400RealOriginalSourceGridRecap(
+   all(source('original',[1,1,-1,0])),true,stage);
+  const x=b400SourceGridDownloadRecap(owned);
+  expect(x).toMatchObject({status:'FINAL_REGISTERED_SOURCE_ONLY',
+   originalRegisteredSurfaceCount:17,totalActiveOriginalGridCells:68,
+   realTeamACells:2,realTeamBCells:1,realNeutralCells:65,
+   officialWinner:'NONE',gameplayWrites:0,
+   officialTurfScoreIncluded:false,originalMapGeometryIncluded:false,
+   playerOrCpuPositionsIncluded:false});
+  const json=JSON.stringify(x);
+  expect(json).not.toContain('ownerGrid');
+  expect(json).not.toContain('sourceFile');
+  expect(json).not.toContain('position');
+  expect(b400SourceGridDownloadRecap(null)).toMatchObject({
+   status:'NOT_MEASURED',officialWinner:'NONE',gameplayWrites:0});
  });
  it('fails closed on any untrusted source ownership or score surface',()=>{
   const allNeutral=all(source('original'));
