@@ -89,11 +89,12 @@ describe('B396 authoritative raster diagnostic, no scoring writes',()=>{
   co.enqueue(req);co.processTick(2);
   co.enqueue({...req,centerU:100,centerV:100});co.processTick(3);
   expect(observed).toHaveLength(3);
-  expect(observed[0].changed).toBeGreaterThan(0);
-  expect(observed[0].eligible).toBe(observed[0].changed);
-  expect(observed[1]).toEqual({changed:0,eligible:observed[0].eligible,
-   owned:observed[0].eligible});
-  expect(observed[2]).toEqual({changed:0,eligible:0,owned:0});
+  const first=observed[0]!,second=observed[1]!,third=observed[2]!;
+  expect(first.changed).toBeGreaterThan(0);
+  expect(first.eligible).toBe(first.changed);
+  expect(second).toEqual({changed:0,eligible:first.eligible,
+   owned:first.eligible});
+  expect(third).toEqual({changed:0,eligible:0,owned:0});
   expect(gameplay.snapshot().areaA).toBe(0);
   expect(gameplay.snapshot().areaB).toBe(0);
  });
