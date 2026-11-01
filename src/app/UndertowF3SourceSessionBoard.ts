@@ -96,6 +96,11 @@ export interface SourceSessionMetrics {
  cpu:{physicalRejoins:readonly string[]};
  b23HumanInkFeedback:{
   humanChangedCells:number;humanChangedImpactCount:number;
+  /** Optional actual post-PaintCoordinator B41 source evidence. */
+  source?:string;originalSourceOnly?:boolean;scoreablePromotionCount?:number;
+  humanBombExplosionsObserved?:number;humanBombStampEvents?:number;
+  humanBombChangedEvents?:number;humanBombChangedCells?:number;
+  humanBombZeroChangedEvents?:number;
  };
  shotsFired:number;
  cpuSourceTurfShots:number;
@@ -138,6 +143,29 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
     s.cpu.physicalRejoins.length>7||
     new Set(s.cpu.physicalRejoins).size!==s.cpu.physicalRejoins.length)
   throw Error('W10_B58_INVALID_NATIVE_SESSION_VALUES');
+
+ // B395: a native human bomb ledger is not an official score or CPU hit.
+ // Missing historical data stays UNKNOWN rather than a fabricated zero.
+ const humanInk=s.b23HumanInkFeedback;
+ const bombFields=[humanInk.humanBombExplosionsObserved,
+  humanInk.humanBombStampEvents,humanInk.humanBombChangedEvents,
+  humanInk.humanBombChangedCells,humanInk.humanBombZeroChangedEvents];
+ const hasBombLedger=bombFields.some(n=>n!==undefined);
+ const bombRecap=!hasBombLedger?null:(()=>{
+  if(humanInk.source!=='REAL_HUMAN_ORIGINAL_PAINT_EVENT'||
+     humanInk.originalSourceOnly!==true||humanInk.scoreablePromotionCount!==0||
+     bombFields.some(n=>!Number.isSafeInteger(n)||n!<0)||
+     humanInk.humanBombChangedEvents!+humanInk.humanBombZeroChangedEvents!==
+      humanInk.humanBombStampEvents!||
+     humanInk.humanBombChangedCells!<humanInk.humanBombChangedEvents!)
+   throw Error('B395_UNTRUSTED_NATIVE_BOMB_LEDGER');
+  return {actualHumanExplosions:humanInk.humanBombExplosionsObserved!,
+   actualSourceBombStamps:humanInk.humanBombStampEvents!,
+   actualChangedSourceCells:humanInk.humanBombChangedCells!,
+   actualZeroChangedStamps:humanInk.humanBombZeroChangedEvents!,
+   scoreable:0 as const,cpuHitCertified:false as const,
+   gameplayWrites:0 as const};
+ })();
  const selectedShooter=s.b343OriginalSourceVolleyBudget?.enabled===true;
  if(s.b384OpenLoadoutCircuit!==undefined&&typeof s.b384OpenLoadoutCircuit!=='boolean')
   throw Error('B384_INVALID_SOURCE_MODE');
@@ -207,7 +235,7 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
   scoringPromotions:0 as const
  }:null;
  const done=s.matchState==='TIME_UP'&&!s.stopReason;
- return {sourceShooter,roundMilestones:memory??null,
+ return {sourceShooter,roundMilestones:memory??null,bombRecap,
   state:s.stopReason?'SAFE_STOP' as const:
    done?'COMPLETE' as const:s.matchState,
   finished:done,
@@ -382,6 +410,10 @@ export function createF3SourceSessionBoard(
    v.actualCpuImpactInkCells+' changed impact cells\n'+
    'SPLATS · human '+v.actualHumanSplats+' / CPU '+v.actualCpuSplats+
    ' · human returns '+v.actualHumanRespawns+
+   (v.bombRecap?'\nHUMAN SUB · '+v.bombRecap.actualHumanExplosions+
+    ' native bursts / '+v.bombRecap.actualSourceBombStamps+
+    ' source stamps / '+v.bombRecap.actualChangedSourceCells+
+    ' changed cells · NOT TURF SCORE':'')+
    (v.sourceShooter?'\nCURRENT LIFE SOURCE CIRCUIT · '+
     (v.sourceShooter.currentLifeLocalClear?'REAL LOCAL CLEAR':
      v.sourceShooter.currentLifeStatus)+
@@ -405,6 +437,11 @@ export function createF3SourceSessionBoard(
    v.actualCpuImpactInkCells+' changed source cells\n'+
    'SPLATS   HUMAN '+v.actualHumanSplats+' / CPU '+v.actualCpuSplats+
    ' · HUMAN RESPAWNS '+v.actualHumanRespawns+
+   (v.bombRecap?'\nHUMAN SUB · '+v.bombRecap.actualHumanExplosions+
+    ' native bursts · '+v.bombRecap.actualSourceBombStamps+
+    ' source stamps · '+v.bombRecap.actualChangedSourceCells+
+    ' changed original cells · '+v.bombRecap.actualZeroChangedStamps+
+    ' unchanged stamps · NOT TURF SCORE · NOT CPU HITS':'')+
    (v.sourceShooter?'\n\nCURRENT LIFE ORIGINAL CIRCUIT: '+
     (v.sourceShooter.currentLifeLocalClear?
       'REAL DROP + RAMP + IMPACT-INK CLEAR':'NOT VERIFIED CLEAR')+
@@ -423,6 +460,15 @@ export function createF3SourceSessionBoard(
     ' · REAL NATIVE SPLATS '+v.roundMilestones.realNativeDeathWitnesses+
     ' / VERIFIED RETURNS '+v.roundMilestones.real150TickReturns+
     ' · NO OFFICIAL WINNER':'');
+  finish.dataset.t21B395BombExplosions=String(
+   v.bombRecap?.actualHumanExplosions??'NOT_MEASURED');
+  finish.dataset.t21B395BombStamps=String(
+   v.bombRecap?.actualSourceBombStamps??'NOT_MEASURED');
+  finish.dataset.t21B395BombCells=String(
+   v.bombRecap?.actualChangedSourceCells??'NOT_MEASURED');
+  finish.dataset.t21B395GameplayWrites='0';
+  finish.dataset.t21B395Scoreable='0';
+  finish.dataset.t21B395CpuHitCertified='false';
   finish.dataset.b387VerifiedClears=String(v.roundMilestones?.realClearedLives??0);
   finish.dataset.t21B59State=v.finished?'FINISHED':'HIDDEN';
   finish.dataset.t21B59OriginalWinner='NONE';

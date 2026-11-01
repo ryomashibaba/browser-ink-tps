@@ -220,3 +220,51 @@ describe('B391 real 150-native-tick human life continuity',()=>{
   }
  });
 });
+
+describe('B395 real native human bomb SOURCE session result, not score',()=>{
+ const actual=()=>{
+  const f=input();f.matchState='TIME_UP';f.timeRemainingSeconds=0;f.tick=10800;
+  f.b23HumanInkFeedback={
+   humanChangedCells:388,humanChangedImpactCount:93,
+   source:'REAL_HUMAN_ORIGINAL_PAINT_EVENT',originalSourceOnly:true,
+   scoreablePromotionCount:0,humanBombExplosionsObserved:2,
+   humanBombStampEvents:6,humanBombChangedEvents:4,
+   humanBombChangedCells:45,humanBombZeroChangedEvents:2
+  };return f;
+ };
+ it('keeps genuine source bomb cells separate from main shots and Turf',()=>{
+  expect(sourceSessionSummary(actual())).toMatchObject({
+   finished:true,realHumanImpactInkCells:388,
+   bombRecap:{actualHumanExplosions:2,actualSourceBombStamps:6,
+    actualChangedSourceCells:45,actualZeroChangedStamps:2,
+    scoreable:0,cpuHitCertified:false,gameplayWrites:0},
+   officialScoreableSurfaces:0,officialWinner:'NONE'});
+ });
+ it('zero registered stamps is not a CPU miss or guessed turf',()=>{
+  const f=actual();Object.assign(f.b23HumanInkFeedback,{
+   humanBombStampEvents:0,humanBombChangedEvents:0,
+   humanBombChangedCells:0,humanBombZeroChangedEvents:0});
+  expect(sourceSessionSummary(f).bombRecap).toMatchObject({
+   actualHumanExplosions:2,actualSourceBombStamps:0,actualChangedSourceCells:0});
+ });
+ it('legacy missing native sub evidence remains unknown',()=>{
+  expect(sourceSessionSummary(input()).bombRecap).toBeNull();
+ });
+ it('rejects forged provenance, incomplete or inconsistent counters',()=>{
+  const edits:Array<(f:SourceSessionMetrics)=>void>=[
+   f=>{f.b23HumanInkFeedback.source='FAKE';},
+   f=>{f.b23HumanInkFeedback.originalSourceOnly=false;},
+   f=>{f.b23HumanInkFeedback.scoreablePromotionCount=1;},
+   f=>{f.b23HumanInkFeedback.humanBombExplosionsObserved=NaN;},
+   f=>{f.b23HumanInkFeedback.humanBombStampEvents=-1;},
+   f=>{f.b23HumanInkFeedback.humanBombChangedCells=1;},
+   f=>{f.b23HumanInkFeedback.humanBombZeroChangedEvents=3;},
+   f=>{f.b23HumanInkFeedback.humanBombChangedEvents=undefined;}
+  ];
+  for(const edit of edits){
+   const f=actual();edit(f);
+   expect(()=>sourceSessionSummary(f))
+    .toThrow('B395_UNTRUSTED_NATIVE_BOMB_LEDGER');
+  }
+ });
+});
