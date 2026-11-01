@@ -5070,7 +5070,10 @@ export class UndertowF3PlayablePreviewApp{
     b380NativeWeaponGuidance({
      profile:this.projectiles.currentPlayerWeapon,
      sourceMatchState:this.matchState,
+     nativeStopped:Boolean(this.stopReason),
      hp:this.resources.currentHp,
+     actualRespawnTicksRemaining:this.resources.currentHp<=0?
+      Math.max(0,150-this.respawnFrames):null,
      actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
      actualChargePercent:this.stats.playerWeaponChargePercent,
      currentMode:this.player.currentMode,
@@ -6364,7 +6367,9 @@ export class UndertowF3PlayablePreviewApp{
     b380NativeWeaponGuidance({
      profile:this.projectiles.currentPlayerWeapon,
      sourceMatchState:this.matchState,
+     nativeStopped:Boolean(state.stopReason),
      hp:state.player.hp,
+     actualRespawnTicksRemaining:state.humanRespawnTicksRemaining,
      actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
      actualChargePercent:this.stats.playerWeaponChargePercent,
      currentMode:this.player.currentMode,

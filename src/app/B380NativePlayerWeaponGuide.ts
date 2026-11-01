@@ -13,17 +13,27 @@ export function b380NativeWeaponGuidance(input:{
  readonly realSubEnabled:boolean;
  readonly realSubName?:string;
  readonly sourceMatchState?:'STAGING'|'PLAYING'|'TIME_UP';
+ /** Native 60Hz recovery counter, never a predicted or forced respawn. */
+ readonly actualRespawnTicksRemaining?:number|null;
+ readonly nativeStopped?:boolean;
 }):string{
  const p=input.profile;
  // The displayed controls must never invite player action when the
  // actual native SOURCE match, HP or form makes weapon input unavailable.
  // This is purely read-only; no shot, clock, life or ink state is changed.
- const blocked=input.sourceMatchState==='TIME_UP'?
+ const ticks=input.actualRespawnTicksRemaining;
+ // Real tick countdown only: never fabricate HP loss or native respawn time.
+ const nativeCountdown=typeof ticks==='number'&&Number.isInteger(ticks)&&
+  ticks>=0&&ticks<=150?
+   ' · '+ticks+' NATIVE TICKS ('+(ticks/60).toFixed(1)+'s)':'';
+ const blocked=input.nativeStopped?
+  'SOURCE SAFE STOP · ACTIONS DISABLED':
+  input.sourceMatchState==='TIME_UP'?
   'ROUND FINISHED · REPLAY A NEW SOURCE ROUND':
   !Number.isFinite(input.hp)?
   'HP UNAVAILABLE · NO FIRE CLAIM':
   input.hp<=0?
-  'SPLATTED · WAIT FOR NATIVE RESPAWN':
+  'SPLATTED · WAIT FOR NATIVE RESPAWN'+nativeCountdown:
   input.currentMode==='SQUID'?
   'SQUID FORM · RELEASE SHIFT TO FIRE':null;
  if(blocked)return 'WEAPON '+p.displayName+' · '+blocked+' · PRACTICE';

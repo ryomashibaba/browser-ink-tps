@@ -44,6 +44,35 @@ describe('Real SOURCE weapon controls follow native match and life',()=>{
   expect(text).toContain('RMB DODGE 2/2');
   expect(text).toContain('F SUB Snap Bomb');
  });
+ it('shows native 150-tick respawn only from bounded actual evidence',()=>{
+  const dying=b380NativeWeaponGuidance({
+   ...base,hp:0,actualRespawnTicksRemaining:75
+  });
+  expect(dying).toContain('75 NATIVE TICKS (1.3s)');
+  expect(dying).not.toContain('LMB');
+  expect(dying).not.toContain('F SUB');
+  for(const invalid of [-1,151,1.5,Infinity,NaN]){
+   const blocked=b380NativeWeaponGuidance({
+    ...base,hp:0,actualRespawnTicksRemaining:invalid
+   });
+   expect(blocked).toContain('SPLATTED · WAIT FOR NATIVE RESPAWN');
+   expect(blocked).not.toContain('NATIVE TICKS (');
+  }
+  expect(b380NativeWeaponGuidance({
+   ...base,actualRespawnTicksRemaining:75
+  })).not.toContain('NATIVE TICKS');
+ });
+ it('safe stop takes priority over native weapon controls',()=>{
+  const stopped=b380NativeWeaponGuidance({...base,nativeStopped:true});
+  expect(stopped).toContain('SOURCE SAFE STOP · ACTIONS DISABLED');
+  expect(stopped).not.toContain('LMB');
+  expect(stopped).not.toContain('F SUB');
+  const ended=b380NativeWeaponGuidance({
+   ...base,hp:0,sourceMatchState:'TIME_UP',actualRespawnTicksRemaining:75
+  });
+  expect(ended).toContain('ROUND FINISHED');
+  expect(ended).not.toContain('WAIT FOR NATIVE RESPAWN');
+ });
  it('refuses any fire claim when native HP is not finite',()=>{
   expect(b380NativeWeaponGuidance({...base,hp:NaN}))
    .toContain('HP UNAVAILABLE · NO FIRE CLAIM');
