@@ -3,7 +3,14 @@
  * Only actual native actor positions from the caller may become candidates.
  */
 export interface B181SightPoint {readonly x:number;readonly y:number;readonly z:number}
-export interface B181SightOpponent {readonly id:string;readonly body:B181SightPoint}
+export interface B181SightOpponent {
+ readonly id:string;
+ readonly body:B181SightPoint;
+ /** Optional REAL native projectile-hit-sphere centers belonging to this
+  * same living actor. The caller alone must derive them from actual bodies.
+  * Never author a new opponent or a stage collider from these points. */
+ readonly alternateHitPoints?:readonly B181SightPoint[];
+}
 export function chooseB181OriginalSourceSight(
   origin:B181SightPoint,
   opponents:readonly B181SightOpponent[],
@@ -18,21 +25,44 @@ export function chooseB181OriginalSourceSight(
   // Old B181 (4-arg) callers keep the original 32m optical envelope.
   const reachable=Number.isFinite(maxNativeWeaponRangeMeters)?
    Math.min(32,Math.max(0,maxNativeWeaponRangeMeters)):0;
-  let best:B181SightOpponent|null=null,bestSq=Infinity,rays=0,coverRejects=0;
-  let preferred:B181SightOpponent|null=null;
+  let best:B181SightOpponent|null=null,bestPoint:B181SightPoint|null=null;
+  let bestSq=Infinity,rays=0,coverRejects=0;
+  let preferred:B181SightOpponent|null=null,preferredPoint:B181SightPoint|null=null;
   for(const enemy of opponents){
     if(!enemy.id||!valid(enemy.body))continue;
     const dx=enemy.body.x-origin.x,dz=enemy.body.z-origin.z;
     const ds=dx*dx+dz*dz;
     if(!Number.isFinite(ds)||ds<.04||ds>reachable*reachable)continue;
     if(Math.abs(enemy.body.y-origin.y)>2.4)continue;
-    rays++;
-    if(originalStageRayBlocked(origin,enemy.body)){coverRejects++;continue;}
-    if(ds<bestSq){best=enemy;bestSq=ds;}
-    if(enemy.id===preferActorId&&ds<=12*12)preferred=enemy;
+    // Try the original actor center first. Only when registered source
+    // cover blocks that line, consider a REAL exposed hit-sphere center.
+    // Every candidate is rechecked against the same original Rapier ray.
+    let visible:B181SightPoint|null=null;
+    const samples=[enemy.body,...(enemy.alternateHitPoints??[])];
+    for(const [index,point] of samples.entries()){
+      if(!valid(point))continue;
+      if(index>0&&(
+        point.x!==enemy.body.x||point.z!==enemy.body.z||
+        Math.abs(point.y-enemy.body.y)>.4
+      ))continue;
+      if(Math.abs(point.y-origin.y)>2.4)continue;
+      rays++;
+      if(originalStageRayBlocked(origin,point)){
+        coverRejects++;
+        continue;
+      }
+      visible=point;
+      break;
+    }
+    if(!visible)continue;
+    if(ds<bestSq){best=enemy;bestSq=ds;bestPoint=visible;}
+    if(enemy.id===preferActorId&&ds<=12*12){
+      preferred=enemy;preferredPoint=visible;
+    }
   }
   const chosen=preferred??best;
-  return {actorId:chosen?.id??null,target:chosen?.body??null,rays,coverRejects};
+  return {actorId:chosen?.id??null,
+    target:preferred?preferredPoint:bestPoint,rays,coverRejects};
 }
 
 // B182: only reuse a recent sight line while BOTH true native bodies

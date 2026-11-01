@@ -2516,12 +2516,29 @@ export class CpuAgentSystem {
       const candidates=[
         ...(humanActive&&humanTeam!==bot.team?
           [{id:'HUMAN',body:{x:humanPosition.x,
-            y:humanPosition.y,z:humanPosition.z}}]:[]),
+            y:humanPosition.y,z:humanPosition.z},
+            // Existing native player-hit sphere is centered on the real
+            // Rapier body (radius .42m). Both samples stay INSIDE it.
+            alternateHitPoints:[
+              {x:humanPosition.x,y:humanPosition.y+.25,z:humanPosition.z},
+              {x:humanPosition.x,y:humanPosition.y-.25,z:humanPosition.z}
+            ]}]:[]),
         ...this.bots.filter(enemy=>
           enemy.id!==bot.id&&enemy.team!==bot.team&&
           enemy.lifeState==='ACTIVE'&&enemy.mobilityState==='GROUND')
           .map(enemy=>({id:enemy.id,body:{x:enemy.position.x,
-            y:enemy.position.y+.68,z:enemy.position.z}}))
+            y:enemy.position.y+.68,z:enemy.position.z},
+            // Actual native CPU hit spheres already used by projectile
+            // collision: test exposed upper/lower centers only if the
+            // ordinary central line is blocked by original Rapier cover.
+            alternateHitPoints:[
+              {x:enemy.position.x,
+                y:enemy.position.y+GAME_CONFIG.cpu.hitSphereOffsetsMeters[2],
+                z:enemy.position.z},
+              {x:enemy.position.x,
+                y:enemy.position.y+GAME_CONFIG.cpu.hitSphereOffsetsMeters[0],
+                z:enemy.position.z}
+            ]}))
       ];
       const origin={x:bot.position.x,y:bot.position.y+.85,z:bot.position.z};
       // B383: the main weapon must not lock on a visible enemy it

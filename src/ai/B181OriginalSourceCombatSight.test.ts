@@ -120,3 +120,49 @@ describe('B383 actual native source weapon-reachable enemy prioritization',()=>{
   expect(reuse(old,31,origin,enemy,Infinity)).toBeNull();
  });
 });
+
+describe('Native original actor partial-cover engagement',()=>{
+ it('can aim at an exposed REAL upper hit sphere when the actual center is behind registered cover',()=>{
+  const origin={x:0,y:4,z:0};
+  const ray=vi.fn((_:unknown,to:{y:number})=>to.y<=4.0);
+  const target={id:'B1',body:{x:5,y:4,z:0},
+   alternateHitPoints:[{x:5,y:4.38,z:0},{x:5,y:3.62,z:0}]};
+  expect(choose(origin,[target],ray,null,9.8)).toMatchObject({
+   actorId:'B1',target:{x:5,y:4.38,z:0},rays:2,coverRejects:1
+  });
+  expect(ray).toHaveBeenCalledTimes(2);
+ });
+ it('never shoots at fully covered actors or replaces an actual actor with a fake hit',()=>{
+  const target={id:'B1',body:{x:5,y:4,z:0},
+   alternateHitPoints:[{x:5,y:4.38,z:0},{x:5,y:3.62,z:0}]};
+  const a=choose({x:0,y:4,z:0},[target],()=>true,null,9.8);
+  expect(a).toMatchObject({actorId:null,target:null,rays:3,coverRejects:3});
+ });
+ it('never accepts extra points outside the native hit-sphere corridor',()=>{
+  const ray=vi.fn(()=>false);
+  const result=choose({x:0,y:4,z:0},[{
+   id:'HUMAN',body:{x:5,y:4,z:0},
+   alternateHitPoints:[
+    {x:5.25,y:4,z:0},{x:5,y:4.5,z:0},
+    {x:5,y:4,z:0.2},{x:5,y:NaN,z:0}
+   ]
+  }],(_:unknown,to:{y:number})=>{
+   if(to.y===4) return true;
+   return ray();
+  },null,9.8);
+  expect(result).toMatchObject({actorId:null,target:null,rays:1,coverRejects:1});
+  expect(ray).not.toHaveBeenCalled();
+ });
+ it('does not expand actual weapon range, or bypass a higher-level height gate',()=>{
+  const ray=vi.fn(()=>false);
+  expect(choose({x:0,y:4,z:0},[{
+    id:'B1',body:{x:11,y:4,z:0},
+    alternateHitPoints:[{x:11,y:4.38,z:0}]
+  }],ray,null,9.8).actorId).toBeNull();
+  expect(choose({x:0,y:4,z:0},[{
+    id:'B2',body:{x:6,y:7,z:0},
+    alternateHitPoints:[{x:6,y:6.62,z:0}]
+  }],ray,null,9.8).actorId).toBeNull();
+  expect(ray).not.toHaveBeenCalled();
+ });
+});
