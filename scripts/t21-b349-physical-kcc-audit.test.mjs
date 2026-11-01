@@ -61,3 +61,17 @@ test('B349 true SOURCE shooting launcher uses the native human-combat circuit, n
   assert.ok(source.includes('t21W10B343=sourceVolleyAtomic'));
  }
 });
+
+test('B338 real KCC PLAYER guide is verified with the native shooter state in one CDP read',()=>{
+ const source=fs.readFileSync(new URL('./t21-b349-source-jump-round.mjs',import.meta.url),'utf8');
+ const start=source.indexOf('const traceFrame=async label=>');
+ const end=source.indexOf("await traceFrame('PRE_FIRE');",start);
+ assert.ok(start>=0&&end>start);
+ const active=source.slice(start,end);
+ assert.ok(active.includes('const g=document.querySelector("#t21-f3-b338-source-guide");'));
+ assert.ok(active.includes('B338_REAL_KCC_HUD_STANCE_MISMATCH_'));
+ assert.ok(active.includes("n.b349ActualKccGrounded?'KCC GROUNDED':'KCC AIRBORNE'"));
+ assert.ok(active.includes('b338-native-kcc-player-guide.json'));
+ assert.ok(!active.includes('await picture('),'do not delay genuine Space key release with a screenshot');
+ assert.ok(!active.includes('Input.dispatchKeyEvent'),'the read-only witness cannot inject input');
+});

@@ -51,3 +51,9 @@ B349実ジャンプ中の本物の地面/空中射撃・元の25/17/26/0・元CP
 
 **Scope limit:** This is true native-source human movement/fire verification, NOT source game weapon accuracy parity, natural enemy encounter, opponent CPU ground routes (still **0/12**), original FloorLine collision authority, official 4v4, winner, ART acceptance or production authorization. Frozen stage remains exactly **25 solids / 17 paint / 26 nav links / 0 scoreable**. No artificial geometry, native tick, actor teleport, score or fake hit was added.
 
+
+## 2026-11-01 — 同じ実Chrome物理フレームからPLAYERジャンプ表示を検証
+
+既存のB349真正Chrome実ジャンプ・移動・射撃試験へ、独立したPLAYER HUDの**同時実測**を追加した。同じ`Runtime.evaluate`で実`window.__t21F3.snapshot().b349ActualKccGrounded`と表示`#t21-f3-b338-source-guide`を読み、`KCC GROUNDED`／`KCC AIRBORNE`・SPACE案内・本物の武器案内が一致するか、PRE_FIREとHOLD_12～60で厳密にチェックする。違えばFAIL、`b338-native-kcc-player-guide.json`の小さな実tick証拠を既存artifactに保存。リアル物理・Actor・射撃・Paint・地形・ナビ・scoreを変更せず、held-fire中の遅いスクリーンショットも追加しない。
+
+コード投入のみで新たなChrome成功は保証しない。従来のB349接地4発/空中6発の独立真正ブラウザPASSは [#41276813715](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813715) に保持。今回の画面照合は、新しい同SHAジョブでSUCCESSを確認して初めて認証する。F4 FloorLine00原作衝突権限未確認、CPU自然接続0/12、正式4v4/ART/本番公開HOLD。

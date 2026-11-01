@@ -279,6 +279,8 @@ async function run(){
  const b338Dom=await read('(() => {const ui=document.querySelector("#ui-root"),g=document.querySelector("#t21-f3-b338-source-guide"),card=document.querySelector("#t21-f3-b25-paint-run"),qa=document.querySelector("#t21-f3-b205-real-round");return {view:ui?.dataset.t21B245Presentation,phase:ui?.dataset.t21B338Phase,text:g?.textContent,guideShown:!!g&&getComputedStyle(g).display!=="none",cardVisible:!!card&&getComputedStyle(card).display!=="none",qaVisible:!!qa&&getComputedStyle(qa).display!=="none",scoreable:document.querySelector("#t21-f3-practice-hud")?.dataset.sourceScoreable}})()');
  if(b338Dom?.view!=='PLAYER'||b338Dom.phase!=='PLAYING'||
   !b338Dom.guideShown||!b338Dom.text?.includes('WASD MOVE')||
+  !b338Dom.text.includes('SPACE JUMP')||
+  !b338Dom.text.includes('KCC GROUNDED')||
   b338Dom.cardVisible||b338Dom.qaVisible||b338Dom.scoreable!=='0')
   fail('B338_REAL_PLAYER_PHASE_NOT_ISOLATED_'+JSON.stringify(b338Dom));
  writeFileSync(resolve(DIR,'b338-real-playing-hud.json'),
@@ -335,7 +337,12 @@ async function run(){
  const traceFrame=async label=>{
   const live=await read('(() => {const native=window.__t21F3.snapshot();'+
    'const e=document.querySelector("#t21-f3-b356-real-source-reticle");'+
-   'return {native,reticle:{exists:!!e,hidden:e?.hidden,'+
+   'const g=document.querySelector("#t21-f3-b338-source-guide");'+
+   'const u=document.querySelector("#ui-root");'+
+   'return {native,playerGuide:{view:u?.dataset.t21B245Presentation,'+
+   'phase:u?.dataset.t21B338Phase,hidden:!g||g.hidden,'+
+   'text:g?.textContent??"",gameplayWrites:g?.dataset.t21B338GameplayWrites},'+
+   'reticle:{exists:!!e,hidden:e?.hidden,'+
    'mode:e?.dataset.t21B356Mode??"OFF",'+
    'nativeTick:Number(e?.dataset.t21B356NativeTick??-1),'+
    'actualImpactTick:Number(e?.dataset.t21B356ActualImpactTick??-1),'+
@@ -369,7 +376,20 @@ async function run(){
   if(typeof n.b349ActualKccGrounded!=='boolean'||
     !Array.isArray(n.player.position)||!Number.isFinite(n.player.position[1]))
    fail('ACTUAL_KCC_NOT_OBSERVED_'+label);
-  const q={label,tick:n.tick,
+  // The SAME real 60Hz JS state used to certify physical ground/air
+  // must agree with the actual PLAYER-visible guide, without new input,
+  // native tick manipulation or time-consuming screenshots.
+  const g=live.playerGuide;
+  const stance=n.b349ActualKccGrounded?'KCC GROUNDED':'KCC AIRBORNE';
+  if(n.player.hp<=0||g?.view!=='PLAYER'||g?.phase!=='PLAYING'||
+     g?.hidden||g?.gameplayWrites!=='0'||
+     !g?.text?.includes(stance)||!g.text.includes('SPACE JUMP')||
+     !g.text.includes('WEAPON ')||
+     g.text.includes(n.b349ActualKccGrounded?'KCC AIRBORNE':'KCC GROUNDED'))
+   fail('B338_REAL_KCC_HUD_STANCE_MISMATCH_'+label+'_'+
+    JSON.stringify({nativeTick:n.tick,actualGrounded:n.b349ActualKccGrounded,
+     hp:n.player.hp,guide:g}));
+  const q={label,tick:n.tick,nativePlayerHud:{...g},
    nativeActualKccGrounded:n.b349ActualKccGrounded,
    nativeActualPlayerBodyY:n.player.position[1],
    nativeActualPlayerBody:[...n.player.position],
@@ -389,6 +409,13 @@ async function run(){
    actualDryFireAttempts:n.inkDryFireAttempts,scoreable:n.sourceScoreablePromotions,
    productionAuthorized:n.productionAuthorized};
   trace.checkpoints.push(q);
+  writeFileSync(resolve(DIR,'b338-native-kcc-player-guide.json'),
+   JSON.stringify({schema:'B338_TRUE_NATIVE_KCC_VISIBLE_PLAYER_GUIDE',
+    source:'25/17/26/0',productionAuthorized:false,winner:'NONE',
+    allSamplesRealCdp:true,
+    samples:trace.checkpoints.map(x=>({label:x.label,tick:x.tick,
+     actualKccGrounded:x.nativeActualKccGrounded,
+     guide:x.nativePlayerHud}))},null,2)+'\n');
   b357Samples.push({
    label,tick:n.tick,nativeShots:n.shotsFired,
    nativePaintEvents:n.b23HumanInkFeedback.humanChangedImpactCount,
