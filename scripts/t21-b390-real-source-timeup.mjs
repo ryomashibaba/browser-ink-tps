@@ -192,6 +192,60 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
    return false;
   return u;
  },30000);
+ // B400: one actual 180s finished SOURCE ownerGrid readback.
+ // This is NOT a Turf percentage: only 17 registered ink grids are known.
+ const originalGrid=await until(async()=>{
+  const result=await evalPage(`(() => {
+   const s=window.__t21F3?.snapshot?.();
+   const root=document.querySelector('#t21-f3-b59-session-finished');
+   const panel=document.querySelector('#t21-f3-b400-source-grid-recap');
+   const grid=s?.b400RegisteredSourceGrid;
+   return {phase:s?.matchState,source:[
+     s?.originalSourceSolids,s?.originalPaintSurfaces,
+     s?.originalSourceNavigationLinks,s?.sourceScoreablePromotions],
+    originalWinner:root?.dataset.t21B59OriginalWinner,
+    actual:grid,view:{
+     status:root?.dataset.t21B400Status,
+     source:root?.dataset.t21B400SourceOnly,
+     notTurf:root?.dataset.t21B400NotTurfScore,
+     total:Number(root?.dataset.t21B400OriginalGridCells),
+     a:Number(root?.dataset.t21B400TeamACells),
+     b:Number(root?.dataset.t21B400TeamBCells),
+     neutral:Number(root?.dataset.t21B400NeutralCells),
+     visible:!!panel&&!panel.hidden,
+     label:panel?.textContent
+    }};
+  })()`);
+  const g=result?.actual,v=result?.view;
+  return result?.phase==='TIME_UP'&&
+   result.source.join('/')==='25/17/26/0'&&
+   result.originalWinner==='NONE'&&
+   g?.status==='FINAL_REGISTERED_SOURCE_ONLY'&&
+   g.observedSurfaces===17&&g.activeOriginalGridCells>0&&
+   g.teamACells+g.teamBCells+g.neutralCells===g.activeOriginalGridCells&&
+   g.scoreableCells===0&&g.winner==='NONE'&&g.gameplayWrites===0&&
+   g.countsAreNotOfficialTurfArea===true&&
+   g.productionAuthorized===false&&v?.visible===true&&
+   v.status===g.status&&v.source==='true'&&v.notTurf==='true'&&
+   v.total===g.activeOriginalGridCells&&v.a===g.teamACells&&
+   v.b===g.teamBCells&&v.neutral===g.neutralCells&&
+   v.label.includes('NOT A TURF SCORE')&&
+   v.label.includes('TEAM A')&&v.label.includes('TEAM B')&&
+   v.label.includes('NEUTRAL')?result:false;
+ },30000);
+ report.phases.push({
+  phase:'B400_GENUINE_FINAL_17_SOURCE_GRID_OWNERSHIP',
+  nativeTimeUp:true,originalSource:'25/17/26/0',
+  realRegisteredCells:originalGrid.actual.activeOriginalGridCells,
+  teamA:originalGrid.actual.teamACells,
+  teamB:originalGrid.actual.teamBCells,
+  neutral:originalGrid.actual.neutralCells,
+  actualFinalDomMatches:true,officialWinner:'NONE',
+  sourceScoreable:0,nativeGameplayWrites:0
+ });
+ persist();
+ console.log('B400_NATIVE_180S_END_SCREEN_SOURCE_GRID_PASS',
+  JSON.stringify(report.phases.at(-1)));
  report.phases.push({
   phase:'B395_REAL_180S_HUMAN_SUB_SOURCE_PAINT_FINAL_RECAP',
   source:'25/17/26/0',
