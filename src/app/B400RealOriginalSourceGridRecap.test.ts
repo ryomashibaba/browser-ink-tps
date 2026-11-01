@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {b400RealOriginalSourceGridRecap,b400SourceGridDownloadRecap,type B400SourceGrid} from './B400RealOriginalSourceGridRecap';
+import {b400RealOriginalSourceGridRecap,b400SourceGridDownloadRecap,
+ b400Real180SourceEndGate,type B400SourceGrid} from './B400RealOriginalSourceGridRecap';
 const stage=[25,17,26,0] as const;
 const source=(name:string,owner:number[]= [1,-1,0,0],
  active=true):B400SourceGrid=>({
@@ -29,6 +30,16 @@ describe('B400 genuine 180s registered-source ownership (never official turf)',(
   expect(r.status).toBe('FINAL_REGISTERED_SOURCE_ONLY');
   expect(r.activeOriginalGridCells).toBe(65);
   expect(r.teamACells).toBe(1);
+ });
+ it('rejects training timeout and fake or incomplete native 180s',()=>{
+  const real={fullRound:true,matchState:'TIME_UP',
+   timeRemainingSeconds:0,nativeTick:10805,stopReason:null};
+  expect(b400Real180SourceEndGate(real)).toBe(true);
+  expect(b400Real180SourceEndGate({...real,fullRound:false})).toBe(false);
+  expect(b400Real180SourceEndGate({...real,nativeTick:3599})).toBe(false);
+  expect(b400Real180SourceEndGate({...real,timeRemainingSeconds:1})).toBe(false);
+  expect(b400Real180SourceEndGate({...real,matchState:'PLAYING'})).toBe(false);
+  expect(b400Real180SourceEndGate({...real,stopReason:'SAFETY_STOP'})).toBe(false);
  });
  it('exports only real original-grid aggregates and never source geometry',()=>{
   const owned=b400RealOriginalSourceGridRecap(

@@ -97,3 +97,16 @@ export function b400SourceGridDownloadRecap(
   officialWinner:'NONE' as const,gameplayWrites:0 as const
  };
 }
+
+// A short source-training timeout must NEVER be presented as the genuine
+// 180 s native round. Caller passes only measured simulation state.
+export function b400Real180SourceEndGate(v:Readonly<{
+ fullRound:boolean;matchState:string;
+ timeRemainingSeconds:number;nativeTick:number;
+ stopReason:string|null;
+}>):boolean{
+ return v.fullRound&&v.matchState==='TIME_UP'&&!v.stopReason&&
+  Number.isSafeInteger(v.nativeTick)&&v.nativeTick>=10800&&
+  Number.isFinite(v.timeRemainingSeconds)&&
+  Math.abs(v.timeRemainingSeconds)<.001;
+}

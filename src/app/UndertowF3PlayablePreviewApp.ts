@@ -150,8 +150,9 @@ import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
 import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
 import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY}
  from './B399NativeCameraAimClearance';
-import {b400RealOriginalSourceGridRecap,b400SourceGridDownloadRecap,
- type B400SourceRecap} from './B400RealOriginalSourceGridRecap';
+import {b400RealOriginalSourceGridRecap,b400Real180SourceEndGate,
+ b400SourceGridDownloadRecap,type B400SourceRecap}
+ from './B400RealOriginalSourceGridRecap';
 import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
  from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
@@ -6609,7 +6610,11 @@ export class UndertowF3PlayablePreviewApp{
    // not official Turf score or inferred area, without affecting simulation.
    if(!this.b400FinalOriginalGrid){
     this.b400FinalOriginalGrid=b400RealOriginalSourceGridRecap(
-     this.b45SourceSurfaces,true,[
+     this.b45SourceSurfaces,b400Real180SourceEndGate({
+      fullRound:this.b203FullRound,matchState:state.matchState,
+      timeRemainingSeconds:state.timeRemainingSeconds,
+      nativeTick:state.tick,stopReason:state.stopReason
+     }),[
       this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
       this.rawStage.navigationLinks?.length??0,0
      ]);
