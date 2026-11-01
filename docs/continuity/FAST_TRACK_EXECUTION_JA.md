@@ -57,3 +57,13 @@
 - **重要な原作照合:** KiTrixの`StageLoader.swift`は`Vss_Temple01`をCamp Triggerfishに、`Vss_Nagasaki03`をUndertow Spillwayに対応付けているが、独立のInkipediaは**Undertowの内部名Temple／Camp Triggerfishの内部名Athletic**と記録。KiTrixの表示名テーブルだけを根拠に既存`Vss_Temple01`の原作地形を誤作品と判断・破棄しない。逆にステージ名だけで全Faceと衝突面の公式認証をしない。 https://splatoonwiki.org/wiki/Undertow_Spillway#Internal_names
 - **もっと重要な未確認:** 原作マテガイ放水路はVer.7.2.0で中央壁一部撤去・下側トンネル追加・ガラス等の大きな版変更を受けた。KiTrix OBJのGitHub初期収録日は2026-04-04だが、これは**元ゲームの抽出バージョンの証明ではない**。OBJ SHA照合＝7.2.0ナワバリモード一致・公式衝突フラグ認証ではない。 https://splatoonwiki.org/wiki/Undertow_Spillway#Version_7.2.0_onwards
 - **厳密な次のF4ゲート:** 元の7.2.0ナワバリ版と当前OBJのFace/中央トンネル等を照合し、実ゲームの物理衝突フラグとCPUサイズの連続接地を別々に証明する。詳細は `docs/qa/T21_F4_TEMPLE_SOURCE_VERSION_AND_COLLISION_AUTHORITY_JA.md`。QA31-solidを本番へ昇格させない。既存25/17/26/0、0/12対岸経路、正式4v4/ART/公開HOLD維持。**B385実Fキー2投擲+180秒SOURCE統合CI `#41279671286` は最終判定が出るまでPASS扱い禁止。**
+
+
+## 2026-11-01 — B393 SOURCEサブ実爆発PASS → B392/B394通常プレイ可視化
+
+- **F1–F5・真の達成境界を維持。** 元の25 Rapier solids /17 PaintSurfaces /26 NavLinks /0 Scoreable、対岸自然経路0/12のまま。正式4v4・ナワバリ得点・勝敗・ART・公開/mergeはHOLD。単体テスト増加をゲーム完成と混同しない。main/T19C/T20/公開Pages/PR#5不変更。
+- B393 [Actions #41282785196](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41282785196) は **真正Chromium SUCCESS**。実Twin CometsのFキーSnap Bomb2投擲、native tick 1482までに実爆発2回、インク9.3267→45.66までの自然回復後に F SUB案内が戻り、同一原作SOURCE世界で180秒TIME_UP (native tick11860)、CPU7/7実復帰、人間93 shots/388塗装変化セル、CPU745 shots/17388変化セル、公式勝者NONE。これはCPUへのHP命中や爆弾の原作塗装を意味しない。
+- B392 [実装60c7b2db2502](https://github.com/ryomashibaba/browser-ink-tps/commit/60c7b2db250263d8054f3cf50b8d4a3de75bedf5)：通常PLAYER HUDへ本物の人間サブ投擲／爆発を個別に通知（NOT CPU HIT）。既存真正B385に実DOM検査を組み込んだ [Actions #41284813246](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41284813246) は最終結論を必ず確認すること。実ブラウザPASSは同Run成功前には主張しない。
+- B394 [5aee533fa8d0](https://github.com/ryomashibaba/browser-ink-tps/commit/5aee533fa8d0b1b54b97966063ce97d12f15ddc3)：既存B41のPaintCoordinator後のsource-only bomb outcomeを通常PLAYER HUDに表示。「実爆発」「原作面にスタンプ」「本当に変更したsourceセル」を分離。NEW_CELLS / STAMP_ZERO_CHANGE / NO_CERTIFIED_STAMP / MULTIPLE_UNRESOLVEDを誤命中/誤得点なしで区別。追加したB394の単体専用6件の実行と新HUDの真正ブラウザ視認は**まだ未認証**。B75 [Actions #41285593705](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41285593705) の最新HEADで、TypeScript+Viteと既存65ファイル/382テストがPASS。ただしその382件はB394の単体専用6件を含まない。
+- B394初回のTypeScriptエラー（testの意図的な偽型1/false、既存HUDのoriginalSourceOnly booleanの不必要なliteral narrowing）を2回修正。現HEAD実装は型ビルド成功。原因修正のみで原作物理・インク経済・AI・正式スコアを変更していない。
+- **次の優先作業:** B392実Chromium最終結論とB394実塗装セルの現場値・実DOMを確認、必要なら修正を一括実施。F1/F2/F3の実CPU対人戦闘と連続移動を引き続き主目標とする。原作版・FloorLine00当たり判定のソース権限が不足するF4部分はHOLDし、仮設NavLink/ワープ/半径0経路や架空得点で前進したと扱わない。
