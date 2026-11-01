@@ -4891,7 +4891,8 @@ export class UndertowF3PlayablePreviewApp{
   * are never modified. Unlocked/paused/ended source rounds restore draws. */
  private b399UpdateCameraAimClearance():void{
   const allowed=this.b399ClearSightEnabled&&this.b203FullRound&&
-   this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
+   (this.matchState==='STAGING'||this.matchState==='PLAYING')&&
+   !this.paused&&!this.stopReason&&
    document.pointerLockElement===this.canvas;
   const eye=this.playerCameraEntity.getPosition();
   const direction=this.playerCameraEntity.forward;
@@ -5982,6 +5983,33 @@ export class UndertowF3PlayablePreviewApp{
     instanceMatricesRecovered:false,productionAuthorized:false,
     sourceError:this.texturedF3lError},
    b399NativeCameraClearance:{
+    // Genuine renderer/actor spatial witness, not a simulated hit/splat.
+    cameraOpticalWitness:(()=>{
+     const actor=this.app.root.findByName('Player') as Entity|null;
+     const eye=this.playerCameraEntity.getPosition();
+     const face=this.playerCameraEntity.forward;
+     const native=actor?.getPosition();
+     if(!native)return {actorFound:false,actualNativePose:null};
+     const dx=native.x-eye.x,dy=native.y-eye.y,dz=native.z-eye.z;
+     const size=Math.hypot(face.x,face.y,face.z);
+     const along=size>1e-6?
+      (dx*face.x+dy*face.y+dz*face.z)/size:null;
+     const lateral=along!==null?
+      Math.sqrt(Math.max(0,dx*dx+dy*dy+dz*dz-along*along)):null;
+     return {
+      actorFound:true,realB248VisualInstalled:
+       !!b248ExistingSourceActorVisual(actor),
+      actualNativePose:[native.x,native.y,native.z],
+      realCameraEye:[eye.x,eye.y,eye.z],
+      realCameraForward:[face.x,face.y,face.z],
+      opticalAlongMeters:along,
+      opticalLateralMeters:lateral,
+      actualCpuPhase:this.matchState,
+      realPointerLocked:document.pointerLockElement===this.canvas,
+      actualOpticalDecision:b399ActorIntersectsCameraAim(
+       eye,face,native,this.b399Hidden.has('PLAYER'),'PLAYER')
+     };
+    })(),
     optedIn:this.b399ClearSightEnabled,
     active:this.canvas.dataset.t21B399NativeAimClearance==='SOURCE_RENDER_ONLY',
     hiddenActors:[...this.b399Hidden].sort(),

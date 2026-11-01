@@ -1103,6 +1103,8 @@ async function run(){
       }
       if(b399CameraAb){
        // Real Chromium pointer-locked 60Hz runtime, without QA clock ticks.
+       let lastObserved=null;
+       let samples=0;
        const real=await until(async()=>{
         const v=await evaluate(`(() => {
          const n=window.__t21F3?.snapshot?.();
@@ -1113,7 +1115,17 @@ async function run(){
            n.originalSourceNavigationLinks,n.sourceScoreablePromotions],
           pointer:document.pointerLockElement===c}:null;
         })()`);
-        return v?.phase==='PLAYING'&&v.pointer&&!v.paused&&
+        if(v?.tick!==lastObserved?.tick&&v){
+         lastObserved=v;samples++;
+         if(samples<=8||samples%8===0)
+          console.log('B399_TRUE_NATIVE_OPTICAL_PROGRESS',JSON.stringify({
+           tick:v.tick,phase:v.phase,pointer:v.pointer,
+           paused:v.paused,enabled:v.proof?.optedIn,
+           active:v.proof?.active,hidden:v.proof?.hiddenActors,
+           optical:v.proof?.cameraOpticalWitness
+          }));
+        }
+        return ['STAGING','PLAYING'].includes(v?.phase)&&v.pointer&&!v.paused&&
          v.proof?.active&&v.proof?.hiddenActors.includes('PLAYER')?v:false;
        },95000,500);
        if(real.source.join('/')!=='25/17/26/0'||
@@ -1125,7 +1137,8 @@ async function run(){
        const frame=await b246Screenshot('b399-real-playing-camera-clearance');
        writeFileSync(resolve(OUTPUT,'b399-real-live-camera-aim.json'),
         JSON.stringify({schema:'B399_TRUE_WEBGL2_SOURCE_PLAYER_AIM_CLEARANCE',
-         realNativeTick:real.tick,originalSource:real.source,
+         realNativeTick:real.tick,actualNativePhase:real.phase,
+         originalSource:real.source,
          genuinePointerLock:real.pointer,realCameraActorDraw:real.proof,
          screenshot:frame,virtualTicksInjected:0,
          enemyActorsHidden:0,gameplayGeometryModified:false,
@@ -1133,7 +1146,7 @@ async function run(){
        console.log('B399_REAL_NATIVE_PLAYER_AIM_CLEARANCE_LIVE_PASS',
         JSON.stringify({tick:real.tick,hidden:real.proof.hiddenActors,
          renderOff:!real.proof.playerNativeOutfitDrawEnabled,
-         originalStage:real.source.join('/')}));
+         phase:real.phase,originalStage:real.source.join('/')}));
       }
       // B291: genuine original-source paint notice must stay outside the aim zone.
       const b291Notice=await evaluate(`(() => {
