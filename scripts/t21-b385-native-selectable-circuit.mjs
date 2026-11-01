@@ -389,7 +389,15 @@ async function run(){
   'return {tick:s.tick,ink:s.player.ink,throws:s.b38HumanSub?.throws,'+
   'view:u?.dataset.t21B245Presentation,phase:u?.dataset.t21B338Phase,'+
   'text:g?.textContent??"",hidden:!g||g.hidden,'+
-  'writes:g?.dataset.t21B338GameplayWrites};})()');
+  'writes:g?.dataset.t21B338GameplayWrites,'+
+  'sub:(()=>{const e=document.querySelector("#t21-f3-b392-native-sub");'+
+   'return {visible:!!e&&!e.hidden&&getComputedStyle(e).display!=="none",'+
+   'mode:e?.dataset.t21B392Mode??"OFF",'+
+   'text:e?.textContent??"",tick:Number(e?.dataset.t21B392NativeTick??-1),'+
+   'throws:Number(e?.dataset.t21B392HumanThrows??-1),'+
+   'explosions:Number(e?.dataset.t21B392HumanExplosions??-1),'+
+   'noWrites:e?.dataset.gameplayWrites,scoreable:e?.dataset.scoreable,'+
+   'cpuHit:e?.dataset.cpuHitCertified};})()};})()');
  const readyHud=await until(async()=>{
   const q=await trueSubHud();
   return q?.view==='PLAYER'&&q.phase==='PLAYING'&&!q.hidden&&
@@ -420,10 +428,20 @@ async function run(){
      ink:before.player.ink,shots:before.shotsFired},
     after:{tick:after.tick,throws:after.b38HumanSub.throws,
      ink:after.player.ink,shots:after.shotsFired}});
+  const b392Thrown=await until(async()=>{
+   const q=await trueSubHud();
+   const u=q?.sub;
+   return q?.view==='PLAYER'&&q.phase==='PLAYING'&&
+    u?.visible===true&&u.mode==='THROWN'&&
+    u.throws===after.b38HumanSub.throws&&
+    u.text==='REAL SUB THROWN · Snap Bomb · NOT CPU HIT'&&
+    u.noWrites==='0'&&u.scoreable==='0'&&u.cpuHit==='false'?u:false;
+  },45000);
   actualFEvents.push({nativeTick:after.tick,physicalFKey:true,
    actualThrowsBefore:before.b38HumanSub.throws,
    actualThrowsAfter:after.b38HumanSub.throws,
    actualInkBefore:before.player.ink,actualInkAfter:after.player.ink,
+   visibleB392RealThrow:b392Thrown,
    mainShotsUnchanged:true,originalScoreable:0});
  }
  const insufficientHud=await until(async()=>{
@@ -444,6 +462,15 @@ async function run(){
   return n.b38HumanSub.explosions>=
    nativeSubReady.b38HumanSub.explosions+2?n:false;
  },180000);
+ const b392Detonated=await until(async()=>{
+  const q=await trueSubHud();
+  const u=q?.sub;
+  return q?.view==='PLAYER'&&q.phase==='PLAYING'&&
+   u?.visible===true&&u.mode==='DETONATED'&&
+   u.explosions===realDetonations.b38HumanSub.explosions&&
+   u.text==='REAL SUB DETONATED · Snap Bomb · NOT CPU HIT'&&
+   u.noWrites==='0'&&u.scoreable==='0'&&u.cpuHit==='false'?u:false;
+ },45000);
  const naturallyRefilled=await until(async()=>{
   const q=await trueSubHud();
   return q?.view==='PLAYER'&&q.phase==='PLAYING'&&!q.hidden&&
@@ -465,6 +492,7 @@ async function run(){
   observedHumanSubExplosionsAfter:realDetonations.b38HumanSub.explosions,
   observedHumanSubThrowsAfter:realDetonations.b38HumanSub.throws,
   nativeDetonationTick:realDetonations.tick,
+  visibleB392RealDetonation:b392Detonated,
   trueLowInkHud:insufficientHud,trueRefilledHud:naturallyRefilled,
   realNativePhysicsOnly:true,syntheticInk:0,syntheticSub:0,
   cpuDamageNotInferred:true,paintChangesNotInferred:true,

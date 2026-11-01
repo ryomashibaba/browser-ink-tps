@@ -17,3 +17,7 @@
 ## 絶対維持
 
 自然な相手へのサブ物理爆発は、原作への塗装成功やCPUへのHP命中、公式得点を自動的に意味しない。原作25 Rapier solids /17 PaintSurface /26 NavLinks /0 scoreable、対岸自然経路0/12、原作 FloorLine00衝突権限未確認、正式4v4・ART・本番公開HOLD。main/T19C/T20/Pages/Draft PR #5を変更しない。
+
+## 2026-11-01 — B393真正完了結果
+
+[GitHub Actions #41282785196](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41282785196) の対象SHA `500f3da29222160a995decb40ebdbee624604a6f` は**SUCCESS**。ログ `B393_REAL_NATIVE_SUB_EXPLOSIONS_REFILL` で真の実サブ爆発0→2、投擲2、native tick 1482、インク9.3267（tick1464）→45.66（tick1698）とHUDの`F SUB Snap Bomb`復帰を確認。同じ真正SOURCEラウンドで180秒TIME_UP tick11860、人間93弾・388セル、CPU745弾・17388セル、CPU7/7実復帰、Winner NONE。CPUへの実命中／サブ塗装変化は未認証のまま。B392新HUDの実DOM認証とは別。

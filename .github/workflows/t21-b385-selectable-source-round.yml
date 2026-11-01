@@ -24,7 +24,7 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
       - name: Validate existing B384 source gates and HUD without test duplication
-        run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
+        run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B392NativeSubFeedback.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
       - run: node --check scripts/t21-b385-native-selectable-circuit.mjs
       - run: node --check scripts/t21-b390-real-source-timeup.mjs
       - name: Drive true Chrome 3-of-3, 180s TIME_UP and same-weapon replay

@@ -11,3 +11,7 @@
 [B385/B390 #41279671286](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41279671286) は実CDP FキーでSnap Bomb2投擲・実インク99.16→54.33→9.33、180秒TIME_UPと新世界同武器リプレイを真正WebGL2でPASS。新B392 HUD視認までのPASSを意味しない。B393別の真正Chrome #41282785196は新サブ爆発＋自然インク回復の検査であり、この新UIと混同しない。
 
 原作地形25/17/26/0、自然対岸ルート0/12、元FloorLine00公式衝突未認証、正式4v4/ART/得点/勝者/本番公開HOLD。
+
+## 2026-11-01 — 実ブラウザ可視性ゲートの追加
+
+既存B385実マウス・実Fキー操作に接続し、2回の投擲直後に表示された`REAL SUB THROWN`を両方とも実DOMで確認する。また、native `b38HumanSub.explosions`が2に達した直後に`REAL SUB DETONATED`を実DOMで確認。モード、累積人間カウンタ、非得点0、CPU HIT認定false、gameplayWrites=0を照合。既存B385/B390 CIに単体B392 5テストを加え、新しいCIワークフローは増やさない。CI完了まではこの新ゲートのブラウザPASSは未確認。
