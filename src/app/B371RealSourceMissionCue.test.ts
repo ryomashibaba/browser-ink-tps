@@ -50,6 +50,14 @@ describe('Real 180s source-life gameplay guidance',()=>{
   expect(cue?.step).toBe('CLEAR');
   expect(cue?.text).toContain('TIME UP');
   expect(cue?.text).not.toContain('KEEP PLAYING');
+  const deadAtEnd=b371RealSourceMissionCue({
+   ...ended,playerAlive:false
+  });
+  expect(deadAtEnd).toMatchObject({
+   step:'ROUND_END',progress:0,completed:false,officialWinner:'NONE'
+  });
+  expect(deadAtEnd?.text).toContain('NO RESPAWN AFTER TIME UP');
+  expect(deadAtEnd?.text).not.toContain('WAIT FOR NATIVE RESPAWN');
   expect(b371RealSourceMissionCue({
    ...ended,originalStage:[25,17,26,1] as const
   })).toBeNull();

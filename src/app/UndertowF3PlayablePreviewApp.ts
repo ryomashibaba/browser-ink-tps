@@ -5069,6 +5069,7 @@ export class UndertowF3PlayablePreviewApp{
     'WASD move · Mouse aim / fire · Shift squid · Space jump · Q shoulder · [ / ] aim sensitivity · '+
     b380NativeWeaponGuidance({
      profile:this.projectiles.currentPlayerWeapon,
+     sourceMatchState:this.matchState,
      hp:this.resources.currentHp,
      actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
      actualChargePercent:this.stats.playerWeaponChargePercent,
@@ -6362,6 +6363,7 @@ export class UndertowF3PlayablePreviewApp{
     ' · CPU '+state.cpu.physicalRejoins.length+'/7\n'+
     b380NativeWeaponGuidance({
      profile:this.projectiles.currentPlayerWeapon,
+     sourceMatchState:this.matchState,
      hp:state.player.hp,
      actualDodgeCharges:this.stats.playerWeaponDodgeCharges,
      actualChargePercent:this.stats.playerWeaponChargePercent,

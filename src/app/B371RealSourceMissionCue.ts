@@ -31,7 +31,7 @@ export interface B371SourceMissionFrame {
     realDryFireAttempts:number;realPoolRejections:number;
   };
 }
-export type B371MissionStep='DROP'|'RAMP'|'PAINT'|'CLEAR'|'RESPAWN'|'HOLD';
+export type B371MissionStep='DROP'|'RAMP'|'PAINT'|'CLEAR'|'RESPAWN'|'ROUND_END'|'HOLD';
 export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
   if(x.originalStage.join(',')!=='25,17,26,0'||
      !(x.genuineSourceShooterSelected===true||x.genuineSourceOpenLoadoutSelected===true)||
@@ -50,6 +50,7 @@ export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
     return null;
   const step:B371MissionStep=x.stopped||
    x.status==='INVALID_SOURCE_WITNESS'?'HOLD':
+   x.matchState==='TIME_UP'&&!x.playerAlive?'ROUND_END':
    !x.playerAlive?'RESPAWN':
    x.status==='REAL_LOCAL_CIRCUIT_CLEAR'?'CLEAR':
    x.status==='PAINT_ON_RAISED'?'PAINT':
@@ -86,6 +87,8 @@ export function b371RealSourceMissionCue(x:B371SourceMissionFrame){
     (x.matchState==='PLAYING'?' · KEEP PLAYING THE REAL 180s SOURCE ROUND':''):
    step==='RESPAWN'?
    'CURRENT LIFE ENDED · WAIT FOR NATIVE RESPAWN · PAST CLEARS STAY IN ROUND HISTORY':
+   step==='ROUND_END'?
+   'ROUND ENDED · NO RESPAWN AFTER TIME UP · REPLAY FOR A NEW ROUND':
    step==='PAINT'?
    'FIRE AT ORIGINAL PAINTABLE · '+limitedInk+' / '+
     x.requiredFreshHumanImpactCells+' FRESH HUMAN IMPACT CELLS':

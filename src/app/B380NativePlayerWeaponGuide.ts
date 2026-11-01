@@ -12,8 +12,21 @@ export function b380NativeWeaponGuidance(input:{
  readonly canShoot:boolean;
  readonly realSubEnabled:boolean;
  readonly realSubName?:string;
+ readonly sourceMatchState?:'STAGING'|'PLAYING'|'TIME_UP';
 }):string{
  const p=input.profile;
+ // The displayed controls must never invite player action when the
+ // actual native SOURCE match, HP or form makes weapon input unavailable.
+ // This is purely read-only; no shot, clock, life or ink state is changed.
+ const blocked=input.sourceMatchState==='TIME_UP'?
+  'ROUND FINISHED · REPLAY A NEW SOURCE ROUND':
+  !Number.isFinite(input.hp)?
+  'HP UNAVAILABLE · NO FIRE CLAIM':
+  input.hp<=0?
+  'SPLATTED · WAIT FOR NATIVE RESPAWN':
+  input.currentMode==='SQUID'?
+  'SQUID FORM · RELEASE SHIFT TO FIRE':null;
+ if(blocked)return 'WEAPON '+p.displayName+' · '+blocked+' · PRACTICE';
  const finiteCharges=Number.isFinite(input.actualDodgeCharges)?
   Math.max(0,Math.min(2,Math.floor(input.actualDodgeCharges))):0;
  const finiteCharge=Number.isFinite(input.actualChargePercent)?
