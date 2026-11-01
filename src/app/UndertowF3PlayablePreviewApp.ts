@@ -91,6 +91,7 @@ import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelect
 import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
+import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -4717,7 +4718,7 @@ export class UndertowF3PlayablePreviewApp{
      this.physics.castCharacterFootSupport(
       physical,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
       this.player.currentMode):null;
-    this.b209RampEdgeCoach.render(b209OriginalRampEdge({
+    const realRampEdge=b209OriginalRampEdge({
      nativeTick:frame,
      body:[physical.x,physical.y,physical.z],
      stage:[this.rawStage.solids.length,
@@ -4726,7 +4727,17 @@ export class UndertowF3PlayablePreviewApp{
      nativeKccGrounded:this.stats.playerGrounded,
      actualOriginalFootSupportId:rampRealRay?.solidId??null,
      matchState:this.matchState,paused:this.paused,stopReason:this.stopReason
-    }),this.b203FullRound||this.b183DropPlayEnabled);
+    });
+    const duplicate=b388SuppressDuplicateRampWarning({
+     source12Kit:this.b384Circuit,
+     playerView:document.querySelector<HTMLElement>('#ui-root')?.
+      dataset.t21B245Presentation==='PLAYER',
+     grounded:this.stats.playerGrounded,footId:rampRealRay?.solidId??null,
+     circuitCleared:this.b186Circuit.snapshot().sourceLocalPlayClear,
+     rampState:realRampEdge.state
+    });
+    this.b209RampEdgeCoach.render(realRampEdge,
+     (this.b203FullRound||this.b183DropPlayEnabled)&&!duplicate);
     // No guessed exterior kill threshold; out-of-world motion is a
     // visible fail-closed hold until the user intentionally restarts.
     if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
@@ -6026,8 +6037,20 @@ export class UndertowF3PlayablePreviewApp{
     line.dataset.realSuspicionCount=String(ground.suspicionCount);
    }
    if(this.b113FloorWarning){
-    const visible=ground.suspicionCount>0&&
-     !this.survey.snapshot().active&&this.galleryIndex<0;
+    const isPlayer=document.querySelector<HTMLElement>('#ui-root')?.
+     dataset.t21B245Presentation==='PLAYER';
+    const visible=b388VisibleNativeDescentWarning({
+     source12Kit:this.b384Circuit,playerView:isPlayer,
+     playing:state.matchState==='PLAYING',paused:state.paused,
+     tick:state.tick,kccGrounded:ground.genuineKccGrounded,
+     originalSupport:ground.lastOriginalSourceHitId,
+     unsupportedTicks:ground.currentUnsupportedNativeTicks,
+     recordedSuspicions:ground.suspicionCount,
+     lastDetectionTick:ground.suspicions.at(-1)?.detectedNativeTick??null
+    })&&!this.survey.snapshot().active&&this.galleryIndex<0;
+    this.b113FloorWarning.textContent=isPlayer&&this.b384Circuit?
+     'UNVERIFIED NATIVE DESCENT · ORIGINAL FLOOR HOLE NOT CERTIFIED':
+     'POSSIBLE UNSUPPORTED DESCENT · Esc → SAVE FLOOR TRACE (QA)';
     this.b113FloorWarning.hidden=!visible;
     this.b113FloorWarning.style.display=visible?'block':'none';
     this.b113FloorWarning.dataset.originalFloorHoleCertified='false';

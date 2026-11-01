@@ -336,6 +336,18 @@ async function run(){
  },20000);
  report.phases.push({phase:'B387_REAL_NATIVE_ROUND_CLEAR_MEMORY',
   native:round,visibleRoundHud:roundHud,noGameWrites:true});persist();
+ // B388: native supported raised-floor KCC means no LIVE unsupported
+ // descent warning; the historical B112 suspicion remains in F8 QA.
+ const hazard=await until(async()=>{
+  const x=await evalPage('(() => {const s=window.__t21F3.snapshot(),u=document.querySelector("#ui-root"),w=document.querySelector("#t21-f3-b113-ground-warning"),r=document.querySelector("#t21-f3-b209-original-ramp-edge");return {view:u?.dataset.t21B245Presentation,ground:s.b112OriginalHumanGround?.genuineKccGrounded,foot:s.b112OriginalHumanGround?.lastOriginalSourceHitId,historical:s.b112OriginalHumanGround?.suspicionCount,warningHidden:!!w&&(w.hidden||getComputedStyle(w).display==="none"),rampState:r?.dataset.t21B209State,rampHidden:!!r&&(r.hidden||getComputedStyle(r).display==="none"),floorHoleCertified:w?.dataset.originalFloorHoleCertified}})()');
+  return x?.view==='PLAYER'&&x.ground===true&&
+   x.foot==='UndertowT21D:right-low-team-a'&&x.warningHidden&&
+   (x.rampState!=='ADJACENT_TO_ORIGINAL_RAMP'||x.rampHidden)&&
+   x.floorHoleCertified==='false'?x:false;
+ },20000);
+ report.phases.push({phase:'B388_NATIVE_PLAYER_HAZARD_UX',
+  supportedOriginalFloor:hazard.foot,visibleNativeHud:hazard,
+  alteredPhysics:0,alteredOriginalGeometry:0});persist();
  // B386: original CPU positions only; not certified combat contact.
  const frontier=await until(async()=>{
   const x=await evalPage('(() => {const e=document.querySelector("#t21-f3-b368-real-enemy-frontier");return {visible:!!e&&!e.hidden&&getComputedStyle(e).display!=="none",enemy:e?.dataset.nearestCpuId,distance:Number(e?.dataset.nativeHorizontalMeters??-1),count:Number(e?.dataset.cpuPhysicalCount??-1),route:e?.dataset.crossTeamRouteCertified,encounter:e?.dataset.actualEncounterCertified,hit:e?.dataset.projectileHitCertified,actor:e?.dataset.actorRelocations,writes:e?.dataset.gameplayWrites,text:e?.textContent}})()');

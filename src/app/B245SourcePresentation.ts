@@ -100,3 +100,29 @@ export function installB245SourcePresentation(
   ev.preventDefault();toggle();
  });
 }
+
+/** B388: stored B112 floor suspicion does not mean current player danger. */
+export function b388VisibleNativeDescentWarning(f:{
+ source12Kit:boolean;playerView:boolean;playing:boolean;paused:boolean;
+ tick:number;kccGrounded:boolean|null;originalSupport:string|null;
+ unsupportedTicks:number;recordedSuspicions:number;lastDetectionTick:number|null;
+}):boolean {
+ if(!f.source12Kit||!f.playerView)return f.recordedSuspicions>0;
+ if(!f.playing||f.paused||f.kccGrounded!==false||
+  f.originalSupport!==null||f.unsupportedTicks<8||
+  f.recordedSuspicions<1||!Number.isSafeInteger(f.tick)||
+  !Number.isSafeInteger(f.lastDetectionTick))return false;
+ const age=f.tick-f.lastDetectionTick!;
+ return age>=0&&age<=90;
+}
+/** Hides a false "floor unverified" warning only when the player's
+ * real Rapier body is supported on registered original raised floor.
+ * Never hides a true critical or near original edge. */
+export function b388SuppressDuplicateRampWarning(f:{
+ source12Kit:boolean;playerView:boolean;grounded:boolean;
+ footId:string|null;circuitCleared:boolean;rampState:string;
+}):boolean{
+ return f.source12Kit&&f.playerView&&f.grounded&&
+  f.footId==='UndertowT21D:right-low-team-a'&&f.circuitCleared&&
+  f.rampState==='ADJACENT_TO_ORIGINAL_RAMP';
+}

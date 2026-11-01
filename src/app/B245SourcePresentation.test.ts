@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
- b245ShouldShowSourceCircuitGoal} from './B245SourcePresentation';
+ b245ShouldShowSourceCircuitGoal,b388VisibleNativeDescentWarning,
+ b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
 describe('B245 original-source player and QA view policy',()=>{
  it('defaults a human 180s SOURCE round to uncluttered player view',()=>{
   expect(b245InitialSourceView('?t21W10B203=fullRound')).toBe('PLAYER');
@@ -53,5 +54,34 @@ describe('B384 actual SOURCE local mission visible in PLAYER view',()=>{
    expect(b245ShouldShowSourceCircuitGoal('?'+params.toString())).toBe(false);
   }
   expect(b245ShouldShowSourceCircuitGoal('?t21Play=preview')).toBe(false);
+ });
+});
+
+describe('B388 live source warning vs persistent QA suspicion',()=>{
+ const f=()=>({source12Kit:true,playerView:true,playing:true,paused:false,
+  tick:1450,kccGrounded:true as boolean|null,
+  originalSupport:'UndertowT21D:right-low-team-a' as string|null,
+  unsupportedTicks:0,recordedSuspicions:2,lastDetectionTick:1300 as number|null});
+ it('real raised-floor support removes old false warning, F8 QA keeps evidence',()=>{
+  expect(b388VisibleNativeDescentWarning(f())).toBe(false);
+  expect(b388VisibleNativeDescentWarning({...f(),playerView:false})).toBe(true);
+ });
+ it('only recent native unsupported descent may warn a player',()=>{
+  const x={...f(),tick:1310,kccGrounded:false,
+   originalSupport:null,unsupportedTicks:12};
+  expect(b388VisibleNativeDescentWarning(x)).toBe(true);
+  expect(b388VisibleNativeDescentWarning({...x,tick:1430})).toBe(false);
+  expect(b388VisibleNativeDescentWarning({...x,paused:true})).toBe(false);
+  expect(b388VisibleNativeDescentWarning({...x,unsupportedTicks:0})).toBe(false);
+ });
+ it('only redundant adjacent ramp label suppressed, not true source edge',()=>{
+  const x={source12Kit:true,playerView:true,grounded:true,
+   footId:'UndertowT21D:right-low-team-a',
+   circuitCleared:true,rampState:'ADJACENT_TO_ORIGINAL_RAMP'};
+  expect(b388SuppressDuplicateRampWarning(x)).toBe(true);
+  for(const y of [{...x,playerView:false},
+   {...x,rampState:'CRITICAL_SOURCE_EDGE'},
+   {...x,grounded:false},{...x,circuitCleared:false}])
+   expect(b388SuppressDuplicateRampWarning(y)).toBe(false);
  });
 });
