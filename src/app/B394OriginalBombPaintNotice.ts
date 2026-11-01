@@ -2,7 +2,7 @@
  * B394: human bomb original-PaintSurface ink outcome from the existing
  * authoritative post-PaintCoordinator B41 observer, not explosion visuals.
  */
-import type {F3HumanInkContact,F3BombOutcome}
+import type {F3HumanInkContact,F3BombOutcome,F3BombZeroCause}
  from './UndertowF3SourceInkFeedback';
 export interface B394BombFrame{
  trustedSource:boolean;playerView:boolean;subEnabled:boolean;
@@ -12,6 +12,7 @@ export interface B394BombFrame{
 export interface B394BombCue{
  kind:F3BombOutcome;text:string;tick:number;
  explosions:number;stamps:number;changedCells:number;
+ zeroCause:F3BombZeroCause|null;
  gameplayWrites:0;scoreable:0;cpuHitCertified:false;
 }
 export class B394OriginalBombPaintNotice{
@@ -56,8 +57,12 @@ export class B394OriginalBombPaintNotice{
       f.humanExplosions-prev.explosions>1)
      text='BOMBS BURST · INDIVIDUAL PAINT UNKNOWN';
     if(text){
+     const rawCause=x.lastBombZeroCause;
+     const zeroCause:F3BombZeroCause|null=kind==='STAMP_ZERO_CHANGE'?
+      rawCause==='ALREADY_TEAM_INK'||rawCause==='NO_ACTIVE_PAINT_CELLS'||
+      rawCause==='MIXED_ZERO_STAMPS'?rawCause:'UNKNOWN':null;
      this.cue={kind,text,tick:f.tick,explosions:f.humanExplosions,
-      stamps,changedCells:cells,gameplayWrites:0,scoreable:0,
+      stamps,changedCells:cells,zeroCause,gameplayWrites:0,scoreable:0,
       cpuHitCertified:false};
      this.until=f.tick+120;
     }

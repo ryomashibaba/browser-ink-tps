@@ -5,6 +5,9 @@ import type { PaintSurface } from './PaintSurface';
 
 export interface PaintApplyResult {
   changedCells: number;
+  /** Diagnostics only, computed inside the existing authoritative raster. */
+  rasterEligibleCells: number;
+  rasterAlreadyTeamOwnedCells: number;
   testedCells: number;
   dirtyTilesTouched: number;
   scoreableAreaMeters2Changed: number;
@@ -81,7 +84,7 @@ export class GameplayInkSystem {
     const surface = this.surfaces.get(event.surfaceId);
     if (!surface) throw new Error(`PaintEvent references unknown surface '${event.surfaceId}'.`);
     if (!(event.radiusU > 0) || !(event.radiusV > 0) || !(event.strength > 0)) {
-      return { changedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
+      return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
     }
 
     const c = Math.cos(event.angle);
@@ -96,9 +99,11 @@ export class GameplayInkSystem {
     const minY = Math.max(0, Math.floor((event.centerV - boundV) / surface.cellSize));
     const maxY = Math.min(surface.heightCells - 1, Math.floor((event.centerV + boundV) / surface.cellSize));
 
-    if (minX > maxX || minY > maxY) return { changedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
+    if (minX > maxX || minY > maxY) return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
 
     let changedCells = 0;
+    let rasterEligibleCells = 0;
+    let rasterAlreadyTeamOwnedCells = 0;
     let testedCells = 0;
     let scoreableAreaMeters2Changed = 0;
     const touchedTiles = new Set<number>();
@@ -118,9 +123,13 @@ export class GameplayInkSystem {
 
         if (!surface.isCellActive(x, y)) continue;
 
+        rasterEligibleCells += 1;
         const index = surface.index(x, y);
         const oldOwner = surface.ownerGrid[index] as Team;
-        if (oldOwner === event.team) continue;
+        if (oldOwner === event.team) {
+          rasterAlreadyTeamOwnedCells += 1;
+          continue;
+        }
 
         surface.ownerGrid[index] = event.team;
         changedCells += 1;
@@ -141,6 +150,8 @@ export class GameplayInkSystem {
     for (const tileIndex of touchedTiles) surface.markTileChanged(tileIndex);
     return {
       changedCells,
+      rasterEligibleCells,
+      rasterAlreadyTeamOwnedCells,
       testedCells,
       dirtyTilesTouched: touchedTiles.size,
       scoreableAreaMeters2Changed

@@ -5,6 +5,10 @@
  * exploded mesh or GPU splat is not automatically changed authoritative ink.
  */
 import {PaintEventType,PaintSource,type PaintEvent} from '../ink/types';
+import type {PaintApplyResult} from '../ink/GameplayInkSystem';
+
+export type F3BombZeroCause='ALREADY_TEAM_INK'|'NO_ACTIVE_PAINT_CELLS'|
+ 'MIXED_ZERO_STAMPS'|'UNKNOWN';
 
 export type F3BombOutcome='NEW_CELLS'|'STAMP_ZERO_CHANGE'|'NO_CERTIFIED_STAMP'|'MULTIPLE_UNRESOLVED';
 export interface F3HumanInkContact {
@@ -36,6 +40,7 @@ export interface F3HumanInkContact {
  lastBombOutcomeTick:number|null;
  lastBombOutcomeStamps:number;
  lastBombOutcomeChangedCells:number;
+ lastBombZeroCause:F3BombZeroCause|null;
  showBombOutcome:boolean;
  bombOutcomeElapsedTicks:number|null;
 }
@@ -60,9 +65,15 @@ export class UndertowF3SourceInkFeedback {
  private lastOutcomeTick:number|null=null;
  private lastOutcomeStamps=0;
  private lastOutcomeCells=0;
+ private lastZeroCause:F3BombZeroCause|null=null;
+ private zeroStampTick=-1;
+ private zeroOwn=0;
+ private zeroNoCells=0;
+ private zeroUnknown=0;
  private readonly confirmationDurationTicks=27; // 0.45s at physical 60Hz
 
- public accept(event:PaintEvent,changedCells:number){
+ public accept(event:PaintEvent,changedCells:number,
+  raster?:Pick<PaintApplyResult,'rasterEligibleCells'|'rasterAlreadyTeamOwnedCells'>){
   if(event.source!==PaintSource.Human||
      !Number.isSafeInteger(changedCells)||changedCells<0)return;
   if(event.type===PaintEventType.Bomb){
@@ -73,7 +84,22 @@ export class UndertowF3SourceInkFeedback {
    // already have this team; it is never proof of a new ink change.
    this.lastBombStampedSurface=event.surfaceId;
    this.lastBombStampTick=event.tick;
-   if(changedCells===0){this.bombZeroEvents++;return;}
+   if(changedCells===0){
+    this.bombZeroEvents++;
+    if(this.zeroStampTick!==event.tick){
+     this.zeroStampTick=event.tick;
+     this.zeroOwn=0;this.zeroNoCells=0;this.zeroUnknown=0;
+    }
+    const n=raster?.rasterEligibleCells,owned=raster?.rasterAlreadyTeamOwnedCells;
+    if(n!==undefined&&owned!==undefined&&
+       Number.isSafeInteger(n)&&Number.isSafeInteger(owned)&&
+       n>=0&&owned>=0&&owned<=n){
+     if(n===0)this.zeroNoCells++;
+     else if(owned===n)this.zeroOwn++;
+     else this.zeroUnknown++;
+    }else this.zeroUnknown++;
+    return;
+   }
    if(this.lastBombTick===event.tick)this.lastBombCells+=changedCells;
    else this.lastBombCells=changedCells;
    this.lastBombTick=event.tick;
@@ -109,6 +135,17 @@ export class UndertowF3SourceInkFeedback {
   this.lastOutcomeTick=tick;
   this.lastOutcomeStamps=stamps;
   this.lastOutcomeCells=cells;
+  // Only this native tick's actual zero-cell raster stamps may classify cause.
+  this.lastZeroCause=null;
+  if(this.lastOutcome==='STAMP_ZERO_CHANGE'){
+   this.lastZeroCause=this.zeroStampTick===tick&&
+    this.zeroOwn+this.zeroNoCells+this.zeroUnknown===stamps&&
+    this.zeroUnknown===0?
+    this.zeroOwn>0&&this.zeroNoCells===0?'ALREADY_TEAM_INK':
+    this.zeroNoCells>0&&this.zeroOwn===0?'NO_ACTIVE_PAINT_CELLS':
+    this.zeroOwn>0&&this.zeroNoCells>0?'MIXED_ZERO_STAMPS':'UNKNOWN':
+    'UNKNOWN';
+  }
  }
  public snapshot(currentTick:number):F3HumanInkContact{
   const elapsed=this.lastTick===null?null:currentTick-this.lastTick;
@@ -145,6 +182,7 @@ export class UndertowF3SourceInkFeedback {
    lastBombOutcomeTick:this.lastOutcomeTick,
    lastBombOutcomeStamps:this.lastOutcomeStamps,
    lastBombOutcomeChangedCells:this.lastOutcomeCells,
+   lastBombZeroCause:this.lastZeroCause,
    showBombOutcome:outcomeVisible,
    bombOutcomeElapsedTicks:outcomeElapsed
   };

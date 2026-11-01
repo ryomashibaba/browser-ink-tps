@@ -42,6 +42,7 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
   lastBombOutcomeTick?:number|null;
   lastBombOutcomeStamps?:number;
   lastBombOutcomeChangedCells?:number;
+  lastBombZeroCause?:F3HumanInkContact['lastBombZeroCause'];
  };
  matchState:string;
  timeRemainingSeconds:number;
@@ -487,6 +488,13 @@ export function createF3PlayableHud(ui:HTMLElement){
   });
   b394Bomb.hidden=!bombCue;
   b394Bomb.dataset.t21B394Kind=bombCue?.kind??'OFF';
+  b394Bomb.dataset.t21B396ZeroCause=bombCue?.zeroCause??'NONE';
+  b394Bomb.title=bombCue?.zeroCause==='ALREADY_TEAM_INK'?
+   'All eligible original-source cells already had your ink · try a fresh floor':
+   bombCue?.zeroCause==='NO_ACTIVE_PAINT_CELLS'?
+   'No active original-source cells covered by bomb stamps':
+   bombCue?.zeroCause==='MIXED_ZERO_STAMPS'?
+   'Some stamps already owned, others covered no active original cells':'';
   if(bombCue){
    if(b394Bomb.textContent!==bombCue.text)
     b394Bomb.textContent=bombCue.text;

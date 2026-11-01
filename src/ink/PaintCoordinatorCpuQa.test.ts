@@ -67,3 +67,34 @@ describe('authoritative native CPU ink-cell QA witnesses',()=>{
     expect(stats.cpuImpactInkCellsChanged).toBe(0);
   });
 });
+
+describe('B396 authoritative raster diagnostic, no scoring writes',()=>{
+ it('distinguishes first change, fully owned, and out-of-range stamps',()=>{
+  const gameplay=new GameplayInkSystem();
+  const surface=new PaintSurface('original-unscored-floor',new Vec3(),
+   new Vec3(1,0,0),new Vec3(0,0,-1),5,5,.25,
+   SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  gameplay.registerSurface(surface);
+  const stats=new PerformanceStats();
+  const gpu={queue:vi.fn(),clear:vi.fn()} as unknown as GpuInkAtlas;
+  const observed:Array<{changed:number;eligible:number;owned:number}>=[];
+  const co=new PaintCoordinator(gameplay,gpu,stats,(_event,n,r)=>{
+   observed.push({changed:n,eligible:r.rasterEligibleCells,
+    owned:r.rasterAlreadyTeamOwnedCells});
+  });
+  const req:PaintRequest={source:PaintSource.Human,team:Team.A,
+   surfaceId:surface.id,centerU:2.5,centerV:2.5,radiusU:.7,
+   radiusV:.7,angle:0,type:PaintEventType.Bomb,strength:1};
+  co.enqueue(req);co.processTick(1);
+  co.enqueue(req);co.processTick(2);
+  co.enqueue({...req,centerU:100,centerV:100});co.processTick(3);
+  expect(observed).toHaveLength(3);
+  expect(observed[0].changed).toBeGreaterThan(0);
+  expect(observed[0].eligible).toBe(observed[0].changed);
+  expect(observed[1]).toEqual({changed:0,eligible:observed[0].eligible,
+   owned:observed[0].eligible});
+  expect(observed[2]).toEqual({changed:0,eligible:0,owned:0});
+  expect(gameplay.snapshot().areaA).toBe(0);
+  expect(gameplay.snapshot().areaB).toBe(0);
+ });
+});

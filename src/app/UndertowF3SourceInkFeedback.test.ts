@@ -135,3 +135,32 @@ describe('W10-B41 real explosion and ownership outcome',()=>{
   expect(m.snapshot(6).humanBombExplosionsObserved).toBe(2);
  });
 });
+
+// B396: derived only from real post-raster PaintCoordinator output.
+describe('B396 original human bomb zero-change cause',()=>{
+ const bomb=(tick:number)=>real(tick,PaintSource.Human,PaintEventType.Bomb);
+ it('distinguishes already owned original ink and no active paint cells',()=>{
+  const a=new UndertowF3SourceInkFeedback();
+  a.accept(bomb(100),0,{rasterEligibleCells:24,rasterAlreadyTeamOwnedCells:24});
+  a.accept(bomb(100),0,{rasterEligibleCells:5,rasterAlreadyTeamOwnedCells:5});
+  a.observeExplosion(100,1,0,0);
+  expect(a.snapshot(100)).toMatchObject({lastBombOutcome:'STAMP_ZERO_CHANGE',
+   lastBombZeroCause:'ALREADY_TEAM_INK',lastBombOutcomeStamps:2,
+   lastBombOutcomeChangedCells:0});
+  const b=new UndertowF3SourceInkFeedback();
+  b.accept(bomb(110),0,{rasterEligibleCells:0,rasterAlreadyTeamOwnedCells:0});
+  b.observeExplosion(110,1,0,0);
+  expect(b.snapshot(110).lastBombZeroCause).toBe('NO_ACTIVE_PAINT_CELLS');
+ });
+ it('mixed or missing evidence is never falsely attributed to team ink',()=>{
+  const mixed=new UndertowF3SourceInkFeedback();
+  mixed.accept(bomb(100),0,{rasterEligibleCells:6,rasterAlreadyTeamOwnedCells:6});
+  mixed.accept(bomb(100),0,{rasterEligibleCells:0,rasterAlreadyTeamOwnedCells:0});
+  mixed.observeExplosion(100,1,0,0);
+  expect(mixed.snapshot(100).lastBombZeroCause).toBe('MIXED_ZERO_STAMPS');
+  const unknown=new UndertowF3SourceInkFeedback();
+  unknown.accept(bomb(100),0);unknown.observeExplosion(100,1,0,0);
+  expect(unknown.snapshot(100).lastBombZeroCause).toBe('UNKNOWN');
+  expect(unknown.snapshot(100).scoreablePromotionCount).toBe(0);
+ });
+});

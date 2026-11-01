@@ -611,8 +611,8 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21F3eMassingMode=this.sourceCompletion.getVisualMode();
   // Read-only truth: fired shots alone are not proof of real ink impact.
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
-   (event,changedCells)=>{
-    this.b23InkFeedback.accept(event,changedCells);
+   (event,changedCells,raster)=>{
+    this.b23InkFeedback.accept(event,changedCells,raster);
     // B154: real rasterized changes from ALL seven native original CPUs.
     // A projectile request, candidate or a fake actor is never paint.
     if(event.source===PaintSource.Cpu&&event.actorId&&

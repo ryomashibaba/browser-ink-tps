@@ -86,3 +86,20 @@ describe('B394 real authoritative B41 bomb ink results, not Turf',()=>{
   expect(m.observe(f)).toBeNull();
  });
 });
+
+// B394 text stays unchanged for previously verified real Chrome contract.
+describe('B396 read-only B394 cause',()=>{
+ it('surfaces only authorized original raster classification without Turf',()=>{
+  const n=new B394OriginalBombPaintNotice(),frame0=frame();n.observe(frame0);
+  set(frame0,'STAMP_ZERO_CHANGE',7,0);
+  Object.assign(frame0.ink!,{lastBombZeroCause:'ALREADY_TEAM_INK'});
+  expect(n.observe(frame0)).toMatchObject({
+   zeroCause:'ALREADY_TEAM_INK',
+   text:'BOMB SOURCE STAMP · 0 NEW CELLS · NOT A MISS',
+   scoreable:0,cpuHitCertified:false,gameplayWrites:0});
+  const m=new B394OriginalBombPaintNotice(),f=frame();m.observe(f);
+  set(f,'STAMP_ZERO_CHANGE',7,0);
+  Object.assign(f.ink!,{lastBombZeroCause:'UNVERIFIED'});
+  expect(m.observe(f)?.zeroCause).toBe('UNKNOWN');
+ });
+});
