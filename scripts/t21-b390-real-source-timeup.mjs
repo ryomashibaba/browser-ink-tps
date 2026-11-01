@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+/** B390: real native 180-second continuation of the B384 human 3/3 clear.
+ * No injected ticks, time, CPU positions, ink, damage, floor or scoring.
+ * Called only by B385's genuine user-started Chromium world. */
+import {setTimeout as sleep} from 'node:timers/promises';
+export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
+ fail,report,persist,picture,clickButton}){
+ const began=Date.now(),maxWallMs=62*60*1000;
+ let prior=done,final=null,nextSample=20,lastTickWall=began;
+ const opening={phase:'B390_TRUE_180S_STARTED',tick:done.tick,
+  trueTimeRemaining:done.timeRemainingSeconds,
+  physicalHumanShots:done.shotsFired,
+  actualCpuShots:done.cpuSourceTurfShots,
+  nativeHumanWeapon:done.b381RealNativeDodge.realWeapon,
+  realPreviousClears:done.b387RealRoundMilestones.realClearedLives,
+  fakeTimeOrPositionWrites:0};
+ report.phases.push(opening);persist();
+ console.log('B390_TRUE_NATIVE_180S_STARTED',JSON.stringify(opening));
+ while(Date.now()-began<maxWallMs){
+  await sleep(850);
+  const n=original(await state(),'B390_TRUE_NATIVE_180S_PROGRESS');
+  if(n.tick<prior.tick||n.timeRemainingSeconds>prior.timeRemainingSeconds+.02||
+     n.b381RealNativeDodge.realWeapon!=='twin-comets'||
+     n.b387RealRoundMilestones?.valid!==true||
+     n.b387RealRoundMilestones.realClearedLives!==1||
+     n.cpu.physicalFootRelocations!==0)
+   fail('B390_SOURCE_180S_AUTHORITY_OR_CLOCK',{
+    tick:n.tick,prior:prior.tick,remaining:n.timeRemainingSeconds,
+    previousRemaining:prior.timeRemainingSeconds,
+    memory:n.b387RealRoundMilestones});
+  if(n.tick>prior.tick)lastTickWall=Date.now();
+  if(Date.now()-lastTickWall>240000)
+   fail('B390_NATIVE_TICK_STALLED',{tick:n.tick});
+  if(n.matchState==='TIME_UP'){
+   if(n.timeRemainingSeconds!==0||n.tick<10800)
+    fail('B390_FALSE_NATIVE_180S',{tick:n.tick,remaining:n.timeRemainingSeconds});
+   final=n;break;
+  }
+  if(n.matchState!=='PLAYING'||n.paused||
+     n.cpu.physicalRejoins.length!==7)
+   fail('B390_NATIVE_PLAY_INTERRUPTED',{
+    tick:n.tick,state:n.matchState,paused:n.paused,
+    rejoined:n.cpu.physicalRejoins.length});
+  const elapsed=180-n.timeRemainingSeconds;
+  if(elapsed>=nextSample){
+   const sample={phase:'B390_REAL_20S_CHROME_CHECKPOINT',
+    realNativeElapsedSeconds:Number(elapsed.toFixed(3)),tick:n.tick,
+    originalHumanWeapon:n.b381RealNativeDodge.realWeapon,
+    realHumanShots:n.shotsFired,changedHumanCells:n.b23HumanInkFeedback.humanChangedCells,
+    realCpuShots:n.cpuSourceTurfShots,changedCpuCells:n.cpuImpactInkCellsChanged,
+    genuineSevenCpuRejoined:n.cpu.physicalRejoins.length,
+    nativeRespawns:n.humanRespawns,
+    verifiedPreviousClears:n.b387RealRoundMilestones.realClearedLives,
+    originalScoreable:n.sourceScoreablePromotions};
+   report.phases.push(sample);persist();
+   console.log('B390_REAL_20S_NATIVE_CHECKPOINT',JSON.stringify(sample));
+   nextSample+=20;
+   // CDP mouse event is real player input in the same render-driven world.
+   if(n.player.hp>0&&elapsed<170&&
+      await evalPage('document.pointerLockElement===document.querySelector("#app-canvas")')){
+    await cmd('Input.dispatchMouseEvent',{
+     type:'mousePressed',x:800,y:450,button:'left',clickCount:1});
+    try{
+     await until(async()=>{
+      const r=original(await state(),'B390_REAL_HUMAN_MOUSE_HELD');
+      return r.tick>=n.tick+12||r.matchState==='TIME_UP'?r:false;
+     },90000);
+    }finally{
+     await cmd('Input.dispatchMouseEvent',{
+      type:'mouseReleased',x:800,y:450,button:'left',clickCount:1});
+    }
+   }
+  }
+  prior=n;
+ }
+ if(!final)fail('B390_REAL_180S_HOST_TIMEOUT',{
+  wallMs:Date.now()-began,lastTick:prior.tick,
+  secondsRemaining:prior.timeRemainingSeconds});
+ if(final.cpu.physicalRejoins.length!==7||final.shotsFired<37||
+    final.cpuSourceTurfShots<1||
+    final.b387RealRoundMilestones.realClearedLives!==1)
+  fail('B390_REAL_CPU_PLAYER_180S_NOT_CONFIRMED',{
+   realHumanShots:final.shotsFired,realCpuShots:final.cpuSourceTurfShots,
+   physicalRejoins:final.cpu.physicalRejoins.length,
+   realClearMemory:final.b387RealRoundMilestones});
+ const endUi=await until(async()=>{
+  const u=await evalPage('(() => {const s=window.__t21F3.snapshot(),f=document.querySelector("#t21-f3-b59-session-finished"),r=document.querySelector("#t21-f3-b59-restart"),c=document.querySelector("#t21-f3-b205-real-round");return {finished:!!f&&!f.hidden&&f.dataset.t21B59State==="FINISHED",replay:!!r&&!r.hidden&&!r.disabled,replayTitle:r?.textContent,clock:c?.dataset.t21B205RealClock,phase:c?.dataset.t21B205NativePhase,winner:f?.dataset.t21B59OriginalWinner,score:f?.dataset.originalScoreable,shownHumanInk:Number(f?.dataset.t21B59HumanInk),actualHumanInk:s.b23HumanInkFeedback.humanChangedCells,actualCpuRejoined:s.cpu.physicalRejoins.length,shownCpuRejoined:Number(f?.dataset.t21B59CpuRejoined),verifiedClears:Number(f?.dataset.b387VerifiedClears),recap:f?.querySelector("#t21-f3-b59-final-stats")?.textContent,paused:s.paused,pointerUnlocked:document.pointerLockElement===null}})()');
+  return u?.finished&&u.replay&&u.clock==='00:00'&&u.phase==='COMPLETE'&&
+   u.winner==='NONE'&&u.score==='0'&&
+   u.actualHumanInk===u.shownHumanInk&&
+   u.actualCpuRejoined===7&&u.shownCpuRejoined===7&&
+   u.verifiedClears===1&&u.recap?.includes('ROUND VERIFIED CLEARS 1')&&
+   u.replayTitle?.includes('REPLAY SAME WEAPON')&&
+   u.pointerUnlocked&&u.paused?u:false;
+ },30000);
+ const terminal={phase:'B390_GENUINE_180S_TIME_UP',
+  realNativeTick:final.tick,realElapsedNativeSeconds:180,
+  humanShots:final.shotsFired,humanSourceInk:final.b23HumanInkFeedback.humanChangedCells,
+  cpuSourceShots:final.cpuSourceTurfShots,
+  cpuSourceInk:final.cpuImpactInkCellsChanged,
+  nativeCpuRejoins:final.cpu.physicalRejoins.length,
+  nativeHumanRespawns:final.humanRespawns,
+  realMissionClearedLives:final.b387RealRoundMilestones.realClearedLives,
+  originalWinner:'NONE',scoreable:0,endUi,
+  noInjectedTimeOrActors:true};
+ report.phases.push(terminal);persist();
+ console.log('B390_TRUE_NATIVE_180S_TIME_UP',JSON.stringify(terminal));
+ await picture('b390-true-native-180s-source-timeup');
+ const oldOrigin=await evalPage('performance.timeOrigin');
+ await clickButton('#t21-f3-b59-restart');
+ const replay=await until(async()=>{
+  const p=await evalPage('(() => {const s=window.__t21F3?.snapshot?.(),c=document.querySelector("#app-canvas"),w=document.querySelector("#t21-f3-b378-weapon");return s?{origin:performance.timeOrigin,search:location.search,ready:c?.dataset.t21F3Ready,game:s.matchState,paused:s.paused,tick:s.tick,remaining:s.timeRemainingSeconds,stage:[s.originalSourceSolids,s.originalPaintSurfaces,s.originalSourceNavigationLinks,s.sourceScoreablePromotions],weapon:s.b381RealNativeDodge.realWeapon,select:w?.value,proof:w?.dataset.b389NativeReplayKit,shots:s.shotsFired,humanPaint:s.b23HumanInkFeedback.humanChangedCells,cpuShots:s.cpuSourceTurfShots,cpuRejoins:s.cpu.physicalRejoins.length,missionClears:s.b387RealRoundMilestones?.realClearedLives,winner:s.b186RealOriginalHumanCircuit?.officialWinner}:null})()');
+  return p?.origin>oldOrigin&&p.search.endsWith('&t21W10B389=twin-comets')&&
+   p.ready==='READY'&&p.game==='STAGING'&&p.paused&&
+   p.tick===0&&p.remaining===180&&p.stage.join(',')==='25,17,26,0'&&
+   p.weapon==='twin-comets'&&p.select==='twin-comets'&&
+   p.proof==='VERIFIED_PREGAME_SELECTION'&&
+   p.shots===0&&p.humanPaint===0&&p.cpuShots===0&&
+   p.cpuRejoins===0&&p.missionClears===0&&p.winner==='NONE'?p:false;
+ },120000);
+ report.phases.push({phase:'B390_REAL_USER_TIMEUP_CLICK_NEW_WORLD',
+  ...replay,gameStateInherited:false,realUserClick:true});persist();
+ console.log('B390_REAL_TIMEUP_REPLAY',JSON.stringify(replay));
+ await picture('b390-real-same-kit-new-180s-ready');
+ report.outcome='PASS_B390_TRUE_12_WEAPON_180S_TIMEUP_AND_REPLAY';
+ report.note='True native 180s after original 3/3, final 7 CPU, user-clicked TIME_UP same-kit replay. Natural opponent routes, original score, official 4v4 and production HOLD.';
+ persist();
+ return {terminal,replay};
+}

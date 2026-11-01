@@ -9,6 +9,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {createHash} from 'node:crypto';
+import {b390RunTrue180} from './t21-b390-real-source-timeup.mjs';
 
 const ROOT='http://127.0.0.1:4193/browser-ink-tps/';
 const OUT=process.env.T21_B385_OUTPUT||'/tmp/t21-b385';
@@ -373,6 +374,14 @@ async function run(){
   actualCpuRejoins:done.cpu.physicalRejoins.length,
   liveHud:hud,officialScoreable:0,winner:'NONE'});
  await picture('b385-native-real-12-kit-local-clear');
+ // B390: the same genuine original source world continues to native
+ // TIME_UP; unlike B389's already-PASS pause-and-replay mode.
+ if(process.env.T21_B390_TRUE_180S==='1'){
+  await b390RunTrue180({done,original,state,evalPage,cmd,until,
+   fail,report,persist,picture,clickButton});
+  return;
+ }
+
 
  // B389: only genuine CDP Escape & real user click can discard the old
  // session. The new browser world must have 0 ticks/ink/clears and retain

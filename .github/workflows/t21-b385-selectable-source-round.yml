@@ -1,9 +1,10 @@
-name: T21 B385 selected-kit native original source circuit
+name: T21 B385-B390 selected-kit original 180s SOURCE circuit
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra]
     paths:
       - 'scripts/t21-b385-native-selectable-circuit.mjs'
+      - 'scripts/t21-b390-real-source-timeup.mjs'
       - '.github/workflows/t21-b385-selectable-source-round.yml'
   workflow_dispatch:
 permissions:
@@ -14,7 +15,7 @@ concurrency:
 jobs:
   native-b384-user-round:
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,13 +26,16 @@ jobs:
       - name: Validate existing B384 source gates and HUD without test duplication
         run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
       - run: node --check scripts/t21-b385-native-selectable-circuit.mjs
-      - name: Drive true Chrome Twin Comets original ramp and ink
+      - run: node --check scripts/t21-b390-real-source-timeup.mjs
+      - name: Drive true Chrome 3-of-3, 180s TIME_UP and same-weapon replay
+        env:
+          T21_B390_TRUE_180S: '1'
         run: node scripts/t21-b385-native-selectable-circuit.mjs
       - name: Preserve actual screenshots, native ticks and honest HOLD evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: b385-genuine-selected-source-round
+          name: b390-genuine-selected-180s-source-round
           path: /tmp/t21-b385/
           retention-days: 14
           if-no-files-found: warn
