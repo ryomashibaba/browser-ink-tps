@@ -53,3 +53,20 @@ B58/B59の読み取り専用実サブ累積を追加し、TypeScript/Vite、
 B210真正180秒終了画面のB395実DOMは
 [Actions #41287579025](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41287579025)
 の最終結論を確認するまで未認証。
+
+## B395実画面の最終照合ゲート（B390既存CIに接続）
+
+B210の180秒試合は実サブ投擲が発生しなくても正常終了しうる。
+そのためB395のサブ内訳実証は、実CDP `F`2回・実サブ2爆発、
+本物のB41 `humanBomb...` 出典がある既存B385→B390の
+同一SOURCE180秒試合に接続する。
+新たなQAワークフローは作成しない。
+
+`B395_REAL_180S_HUMAN_SUB_RESULT` は本物のTIME_UPで
+native B41累積の爆発/原作面スタンプ/変更セル/0変更イベントを読み、
+B59の実DOM属性 `t21B395BombExplosions` /
+`t21B395BombStamps` / `t21B395BombCells` と
+画面テキストの完全一致を検証する。
+changedCells=0でも照合はPASS対象であり、正のセル変化・敵命中・
+正式Turf得点とは主張しない。元25/17/26/0、敵陣0/12、
+正式4v4・公開HOLDは不変。新CIの実行結果取得前は検証未認証。

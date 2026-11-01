@@ -93,6 +93,63 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
    u.replayTitle?.includes('REPLAY SAME WEAPON')&&
    u.pointerUnlocked&&u.paused?u:false;
  },30000);
+ // B395: the native F-key twin-sub round is the real acceptance path:
+ // the B210 default round may finish with no player sub-weapon activity.
+ // Compare B41's post-PaintCoordinator cumulative bomb ledger against
+ // the actual end-screen DOM; never require positive paint from a real
+ // source stamp because previously painted ownership can change 0 cells.
+ const b395RealEnd=await until(async()=>{
+  const u=await evalPage(`(()=>{
+   const s=window.__t21F3?.snapshot?.(),
+    f=document.querySelector('#t21-f3-b59-session-finished'),
+    p=f?.querySelector('#t21-f3-b59-final-stats')?.textContent??'',
+    x=s?.b23HumanInkFeedback;
+   return {phase:s?.matchState,source:x?.source,
+    originalOnly:x?.originalSourceOnly,scoreable:x?.scoreablePromotionCount,
+    humanExplosions:s?.b38HumanSub?.explosions,
+    b41Explosions:x?.humanBombExplosionsObserved,
+    stamps:x?.humanBombStampEvents,changedEvents:x?.humanBombChangedEvents,
+    zeroChangedStamps:x?.humanBombZeroChangedEvents,
+    changedCells:x?.humanBombChangedCells,
+    hudExplosions:f?.dataset.t21B395BombExplosions,
+    hudStamps:f?.dataset.t21B395BombStamps,
+    hudCells:f?.dataset.t21B395BombCells,
+    hudGameWrites:f?.dataset.t21B395GameplayWrites,
+    hudScoreable:f?.dataset.t21B395Scoreable,
+    hudCpuHit:f?.dataset.t21B395CpuHitCertified,recap:p};
+  })()`);
+  const ints=[u?.humanExplosions,u?.b41Explosions,u?.stamps,
+   u?.changedEvents,u?.zeroChangedStamps,u?.changedCells];
+  if(u?.phase!=='TIME_UP'||
+     u.source!=='REAL_HUMAN_ORIGINAL_PAINT_EVENT'||
+     u.originalOnly!==true||u.scoreable!==0||
+     ints.some(x=>!Number.isSafeInteger(x)||x<0)||
+     u.humanExplosions<2||u.b41Explosions!==u.humanExplosions||
+     u.stamps!==u.changedEvents+u.zeroChangedStamps||
+     u.changedCells<u.changedEvents||
+     u.hudExplosions!==String(u.b41Explosions)||
+     u.hudStamps!==String(u.stamps)||
+     u.hudCells!==String(u.changedCells)||
+     u.hudGameWrites!=='0'||u.hudScoreable!=='0'||
+     u.hudCpuHit!=='false'||!u.recap.includes(
+      'HUMAN SUB · '+u.b41Explosions+' native bursts · '+
+      u.stamps+' source stamps · '+u.changedCells+' changed original cells'))
+   return false;
+  return u;
+ },30000);
+ report.phases.push({
+  phase:'B395_REAL_180S_HUMAN_SUB_SOURCE_PAINT_FINAL_RECAP',
+  source:'25/17/26/0',
+  nativeExplosions:b395RealEnd.b41Explosions,
+  realOriginalPaintStamps:b395RealEnd.stamps,
+  changedOriginalCells:b395RealEnd.changedCells,
+  zeroChangedOriginalStamps:b395RealEnd.zeroChangedStamps,
+  exactNativeToPlayerEndDom:true,
+  sourceScoreable:0,cpuHitCertified:false,gameplayWrites:0
+ });
+ persist();
+ console.log('B395_REAL_180S_HUMAN_SUB_RESULT',
+  JSON.stringify(report.phases.at(-1)));
  const terminal={phase:'B390_GENUINE_180S_TIME_UP',
   realNativeTick:final.tick,realElapsedNativeSeconds:180,
   humanShots:final.shotsFired,humanSourceInk:final.b23HumanInkFeedback.humanChangedCells,
