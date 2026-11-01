@@ -42,3 +42,12 @@
 - **通常PLAYER HUDの実用改善:** `a067b7687a3245a81fe8086dc82cce8ab078f65f` は既存B380の実選択武器・Native HP/イカ状態/チャージ/回避・サブ案内をB338通常PLAYER HUDへ統合し、元の全クラス一律「LEFT CLICK FIRE」案内を置換。GPUフレーム間の実死亡/フォーム変更は既存の60Hz read-only native pulseを使用。CPU、操作入力、物理・射撃性能、インク、地形、スコアを一切変更しない。B75の新HEAD事前CI [#41275901752](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41275901752) は **64ファイル/325テスト成功**。B287/原作B75 FIXED+SWEEP真正Chromiumは該当CIのジョブ結論を確認するまでPASS未認証。差分はHUD+単体テスト+既存APP接続の3ファイル、CI新設なし。
 - **F4 原作物理の解決可能性とHOLDを混同しない:** B238元43MB SHA-pinned OBJから `FloorLine00` 本物の2原作Face×両鏡面が発見された。B239のQA31-solidだけで実KCC同一体が原作右下段からFloorLine00→Slope01を歩けたが、B240 CPU-safe Recast半径の入口接続は全ケースFAIL。B241真正FloorLine単独幅0.311m、元のCPU半径0.30mに対し安全な全身連続支持が未認証、元のソース物体のゲーム衝突権限も未認証。7/8 native tickのfoot-center ray欠落はKCC全体の浮遊と同義ではない。元登録25に昇格させず、半径0・架空橋・NavLink・Actorワープ・勝敗計算で穴埋めしない。
 - **次の成果ベース工程:** (1) 現HEAD B75真Chromium描画・HUDの実視認を評価（PASS scope限定）、(2) 原作FloorLine00の衝突権限と実CPU capsule接触法を根拠付きで判断、(3) 同一実CpuAgentSystem体の自然なリーチ・カバー・攻撃へ進む。原作接続根拠が確保できない範囲はSOURCE_AUTHORITY HOLDで止め、代わりに通常PLAYERの操作品質・パフォーマンスを改善する。原作不明部分を見た目で「完成」にしない。
+
+## 2026-11-01 — B349実射撃PASSと実KCC姿勢PLAYER HUD
+
+- B349真正Chrome 2系統 [#41276813715](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813715)・[#41276813748](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813748) **SUCCESS**。原因は旧`t21W10B193=allyCoop`で本物のB186原作回路がdisabledとなりB373の厳格recap検査に拒否されたこと。実`t21W10B192=humanCombat`へ修正、B373/時計/物理/Actor不変更。
+- 実Space押下・離し・KCC高度1.0333m上昇→着地、実Rapier物理弾10発（地上4／空中6）と元Source塗装面への実着弾10を確認。別実runで実W移動2.6477mと移動射撃6発、インク回復もPASS。自然な敵へのHPダメージは0、認定しない。
+- 前回のB75 64ファイル325件 + B287選択HUD + FIXED/SWEEP真正WebGL2四ジョブは [#41275901752](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41275901752) 全SUCCESS。
+- 今回`82819b5dd6979c6b33f984e26604eba780b36bcc`でSOURCE実60Hzの`stats.playerGrounded`のみを通常PLAYERの`KCC GROUNDED / KCC AIRBORNE`表示・Space案内へ接続。撃破・TIME_UP・QAで誤誘導不可。実ブラウザでの新HUD確認は新SHAに対するジョブ判定前なのでPASS未認証。
+- 原作FloorLine00は物理衝突権限未認証、CPU Recast安全幅不足、対岸自然経路0/12、正式4v4・ART・公開本番HOLD。ゲーム本体25/17/26/0維持、QA成果を原作接続へ誤昇格しない。
+

@@ -39,3 +39,15 @@ winner NONE, full 4v4 HOLD and production false must not change.
 
 B349実ジャンプ中の本物の地面/空中射撃・元の25/17/26/0・元CPU7体を評価する物理判定は未変更。新しい真正Chromium [#41276813715](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813715) と [#41276813748](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813748) の成功/失敗は、ジョブ完了・実ログ照合まで **PENDING**。元ステージCPU自然接敵0/12、原作FloorLine00の衝突権限、ART、正式4v4、Scoreableは一切認証していない。
 
+
+## 2026-11-01 — B349 root-cause correction, independent real browser PASS
+
+**AUTHENTIC B349 PASS** on the exact fix SHA `1b2c26c5dafd68b016b1dbdf8f7c01af4df2c5b6`. The prior boot error was traced to the incompatible original `allyCoop` flag and corrected to actual `humanCombat` without disabling B373 recap safety checks. Both independent genuine Chromium jobs finished SUCCESS (not just unit testing):
+
+- [B349 physical KCC + original shoot #41276813715](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813715): 10 genuine native physics bullets, four grounded and six airborne; actual Space key press/release, original Rapier KCC vertical rise **1.0333m** and genuine landing. All 10 physical bullet exits collided with original paintable source; native sample 466 original changed cells. Native simultaneous genuine W + jump + held-fire moved human horizontally **2.6477m**, generated six moving shots (two grounded/four airborne), muzzle horizontal travel **2.3799m**. Human ink genuinely recovered from 90.5 to 98.5 after firing. Independent B353 reported `HOLD_NO_GENUINE_CPU_HP_HIT_OBSERVED`, not a simulated enemy hit.
+- [Independent real CDP air shooter #41276813748](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41276813748): four grounded / six airborne genuine source projectiles, all 10 exited on original paintable source; native 7/7 CPU present, actual 405 source changed cell events. Different runner, starting positions & trials; identical scope.
+- [Complete B75 genuine WebGL2 SOURCE HUD #41275901752](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41275901752): preflight 64 test files / 325 tests PASS; B287 actual Chromium selected-weapon READY and F8 PLAYER/QA PASS; FIXED and SWEEP real native source HUD Chrome jobs both SUCCESS. These results apply to the earlier `a067b7687a3245a81fe8086dc82cce8ab078f65f` code SHA.
+- Subsequent user-facing actual KCC **ground/air** read-only HUD improvement `82819b5dd6979c6b33f984e26604eba780b36bcc` adds native `KCC GROUNDED / KCC AIRBORNE` and real Space jump hint to the standard 180s PLAYER display; it changes no physics or shooter abilities. Its fresh browser/code CI must be inspected separately before certifying that UI.
+
+**Scope limit:** This is true native-source human movement/fire verification, NOT source game weapon accuracy parity, natural enemy encounter, opponent CPU ground routes (still **0/12**), original FloorLine collision authority, official 4v4, winner, ART acceptance or production authorization. Frozen stage remains exactly **25 solids / 17 paint / 26 nav links / 0 scoreable**. No artificial geometry, native tick, actor teleport, score or fake hit was added.
+
