@@ -107,3 +107,12 @@ B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashiba
 - [B75 #41221228783](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41221228783)の**同SHA preflight**でTypeScript/Vite build SUCCESS、**Vitest 64ファイル・314/314 SUCCESS**、旧CI trigger matrix SUCCESSを確認。B75真正WebGL2後半とB337短時間実Chromeはこの記録時点で進行中。ジョブ最終結論と別に判断する。
 - **B384自身のREADY武器選択→本物のゲーム操作→原作初落下/坂→実PaintEvent→180秒タイムアップまでの一本の真正Chrome検証は未実施/未認証。** Unit PASSを完全なプレイ/原作武器忠実度/人間操作の完成と誤認禁止。検証後に本当の失敗点のみ改修し、B番号だけの微小QA増殖は禁止。
 - [変更コード](https://github.com/ryomashibaba/browser-ink-tps/commit/ffeee57b66057540422e065036b54577a173447a) と [B384工程記録](../qa/T21_B384_NATIVE_SELECTED_CIRCUIT_JA.md)。次は実ブラウザ一気通貫の実測と、体験を阻む本物の視認/入力/敵遭遇の問題を優先。原作根拠のない中央通路・得点・無料スペシャルの追加禁止。
+
+
+## 2026-11-01 B385 真正Chromium 12武器 SOURCE 局所3/3 — PASS
+
+- **検証正本:** [B385 Chromium #41254904779](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41254904779) は全ジョブ **SUCCESS**、テスト67/67、TypeScript/Vite build、実PlayCanvas WebGL2・実CDPクリック/キー入力/Pointer Lock・実Rapier/Recast走行・実Projectile/PaintEvent・B371/B58同一世界表示の合致を確認。対象コードHEAD `35f8def60627ed389eba0c39aca386a6df3f59ff`。
+- **実測:** B384ボタン→B378実12武器セレクトで Twin Comets を選択、原作 first-drop → 登録済み下段支持面 → 原作右低地ランプ → 上段支持面。実接地移動 **11.3417m**、人間実弾 **37**、人間の原作インク変化 **354セル**、下降後の本物の新規変化 **65セル**（要件60以上）、7/7本物のCPU復帰、CPU実弾 **68**、CPU原作インク変化 **2926セル**。B186は `REAL_LOCAL_CIRCUIT_CLEAR`、プレイヤー画面 `SOURCE CIRCUIT 3/3`、B58 RECENT LIFE `REAL LOCAL CLEAR`、実弾と人間インク数が一致。公式Winner `NONE`、Scoreable `0`、本物の人間→CPU命中 `0`。
+- **原因と対処:** 初回B385はSTAGING中のW90で原作下降認証が成立しなかった。修正版ではCPU7体実合流とPLAYING後、過去実証済み原作のW200/D12/W18/D90を実キー操作で実行。落下後に撃った真の弾で上段到達時点ですでに3/3となっていたため、次の修正で「必ず2/3を経由する」という誤テストを修正。SUCCESSは今回のB384選択武器経路に厳密限定。未選択の他11武器を全PASSとはしない。
+- **絶対HOLD:** 180秒の実際のTIME_UPまで完走した新B384は未確認。正式4v4、自然な敵陣経路 **0/12**、公式スコア/勝者、ART/F5、production/activationReadyはHOLD。物理原作登録 **25 solids / 17 PaintSurface / 26 NavLinks / 0 Scoreable** 不変。過去のT19C/T20、main、公開Pages、Draft PR #5不変更。
+- **次の統合工程:** 同じSOURCE実プレイで、CPUとの自然な相互遭遇を原作の地形/経路の権限だけで改善する。未証明の中央アンダーパスに人工足場やワープを追加しない。表示面では本物の実画面で視認性・過剰警告の重なりを評価し、ART採用は別の固定視点審査まで保留。既存CIを再利用して非必要な微小QA増殖は禁止。
