@@ -116,3 +116,13 @@ B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashiba
 - **原因と対処:** 初回B385はSTAGING中のW90で原作下降認証が成立しなかった。修正版ではCPU7体実合流とPLAYING後、過去実証済み原作のW200/D12/W18/D90を実キー操作で実行。落下後に撃った真の弾で上段到達時点ですでに3/3となっていたため、次の修正で「必ず2/3を経由する」という誤テストを修正。SUCCESSは今回のB384選択武器経路に厳密限定。未選択の他11武器を全PASSとはしない。
 - **絶対HOLD:** 180秒の実際のTIME_UPまで完走した新B384は未確認。正式4v4、自然な敵陣経路 **0/12**、公式スコア/勝者、ART/F5、production/activationReadyはHOLD。物理原作登録 **25 solids / 17 PaintSurface / 26 NavLinks / 0 Scoreable** 不変。過去のT19C/T20、main、公開Pages、Draft PR #5不変更。
 - **次の統合工程:** 同じSOURCE実プレイで、CPUとの自然な相互遭遇を原作の地形/経路の権限だけで改善する。未証明の中央アンダーパスに人工足場やワープを追加しない。表示面では本物の実画面で視認性・過剰警告の重なりを評価し、ART採用は別の固定視点審査まで保留。既存CIを再利用して非必要な微小QA増殖は禁止。
+
+
+## 2026-11-01 B386 — 通常プレビューから12武器実プレイ、敵B1～B4の実物理距離HUD
+
+- **実装:** `8625636edd579911bc4345092ce041ac117d25ff`。通常 `?t21Play=preview` のプレビューパネルからワンクリックでB384 SOURCE 180秒/12武器READYの**新しい原作物理世界**を起動できるようにした。旧SOURCE診断URLの手入力は不要。もともとのB368の**実CPU physicalFoot→水平距離・原作Rapierステージ遮蔽**表示を12武器SOURCEプレイで使えるようにしただけで、原作の足場・リンク・CPU座標・照準・HP・得点は変更なし。
+- **検証:** [B386本命：B385拡張真正Chromium #41263010880](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41263010880) **SUCCESS**、ビルドおよび関連Vitest **68/68 PASS**。本物の通常プレビューからCDPマウスでボタンをクリック、Twin Cometsを選び、本当のSOURCE 7CPUの合流後、原作下段落下→元の坂道→原作上段でB186の**3/3 CLEAR**。人間37実弾、354原作インク変更セル、うち**初回落下後65新規セル**、本物の接地移動 **11.1732m**、CPU7/7。B371画面3/3とB58同じセッションのShots/Ink数が一致。
+- **B386の新たな実証:** PLAYER画面の敵位置表示は **B1まで100.273m**、元CPU実座標 `[-15.655975,4.600000,-47.595318]` と整合。**実敵4体の計測・表示PASS**。DOM上で「DISTANT · NO CROSS-TEAM PATH」、`crossTeamRouteCertified=false`、`actualEncounterCertified=false`、`projectileHitCertified=false`、`actorRelocations=0`、`gameplayWrites=0` を確認。実際の敵への命中・対岸の自然通路を認証した意味ではない。
+- **変更禁止とHOLD:** 原作25 Rapier solids / 17 PaintSurface / 26 NavLinks / 0 Scoreable、自然敵陣接続 **0/12**、`activationReady=false`、`productionAuthorized=false`、`unrestricted4v4Certified=false`。公式winner NONE。180秒のTIME_UPまでのB384全完走、別の11武器の個別全ルート、自然対人/CPU交戦、正式4v4、ART/F5と公開本番は引き続き未認証/HOLD。元のmain、凍結T19C/T20、PR #5、公開Pagesは未変更。
+- **次の優先度:** 原作SOURCEの欠けた自然敵陣経路を捏造するのではなく、本人がゲームを操作して評価できる**操作ガイダンス、現実の敵との視界接続・原作面の認証、180秒の実体験と結果**の中で、独立した意義がある工程をまとめて実装・検証する。単なるB番号・QA増殖は行わない。
+
