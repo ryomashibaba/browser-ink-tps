@@ -471,6 +471,74 @@ async function run(){
    u.text==='REAL SUB DETONATED · Snap Bomb · NOT CPU HIT'&&
    u.noWrites==='0'&&u.scoreable==='0'&&u.cpuHit==='false'?u:false;
  },45000);
+
+ // B394: inspect actual post-PaintCoordinator human Bomb outcome in the
+ // SAME genuine Chrome session. An explosion is not automatically paint,
+ // and changed original cells are not official Turf score or CPU hits.
+ const realBombInk=await until(async()=>{
+  const x=await evalPage(`(()=>{
+   const s=window.__t21F3?.snapshot?.(),
+    u=document.querySelector('#ui-root'),
+    e=document.querySelector('#t21-f3-b394-bomb-source-paint'),
+    p=s?.b23HumanInkFeedback;
+   return {
+    view:u?.dataset.t21B245Presentation,phase:s?.matchState,
+    scoreable:s?.sourceScoreablePromotions,
+    explosions:s?.b38HumanSub?.explosions,
+    tick:s?.tick,
+    native:{source:p?.source,original:p?.originalSourceOnly,
+     scoreable:p?.scoreablePromotionCount,
+     explosions:p?.humanBombExplosionsObserved,
+     kind:p?.lastBombOutcome,tick:p?.lastBombOutcomeTick,
+     stamps:p?.lastBombOutcomeStamps,cells:p?.lastBombOutcomeChangedCells},
+    hud:{visible:!!e&&!e.hidden&&getComputedStyle(e).display!=='none',
+     kind:e?.dataset.t21B394Kind??'OFF',text:e?.textContent??'',
+     tick:Number(e?.dataset.t21B394NativeTick??-1),
+     stamps:Number(e?.dataset.t21B394Stamps??-1),
+     cells:Number(e?.dataset.t21B394Cells??-1),
+     writes:e?.dataset.gameplayWrites,scoreable:e?.dataset.scoreable,
+     cpuHit:e?.dataset.cpuHitCertified}
+   };
+  })()`);
+  const n=x?.native,h=x?.hud;
+  if(x?.view!=='PLAYER'||x?.phase!=='PLAYING'||x?.scoreable!==0||
+     x?.explosions!==realDetonations.b38HumanSub.explosions||
+     n?.source!=='REAL_HUMAN_ORIGINAL_PAINT_EVENT'||
+     n.original!==true||n.scoreable!==0||n.explosions!==x.explosions||
+     !Number.isSafeInteger(n.tick)||n.tick<0||n.tick>x.tick||
+     !Number.isSafeInteger(n.stamps)||n.stamps<0||
+     !Number.isSafeInteger(n.cells)||n.cells<0||
+     !h?.visible||h.kind!==n.kind||h.tick!==n.tick||
+     h.stamps!==n.stamps||h.cells!==n.cells||
+     h.writes!=='0'||h.scoreable!=='0'||h.cpuHit!=='false')return false;
+  const text={
+   NEW_CELLS:n.stamps>0&&n.cells>0?
+    'BOMB PAINT · +'+n.cells+' REAL SOURCE CELLS · NOT TURF SCORE':null,
+   STAMP_ZERO_CHANGE:n.stamps>0&&n.cells===0?
+    'BOMB SOURCE STAMP · 0 NEW CELLS · NOT A MISS':null,
+   NO_CERTIFIED_STAMP:n.stamps===0&&n.cells===0?
+    'BOMB BURST · NO REGISTERED SOURCE STAMP':null,
+   MULTIPLE_UNRESOLVED:'BOMBS BURST · INDIVIDUAL PAINT UNKNOWN'
+  }[n.kind]??null;
+  return text!==null&&h.text===text?x:false;
+ },45000);
+ const realBombInkProof={
+  phase:'B394_REAL_NATIVE_HUMAN_BOMB_ORIGINAL_PAINT_HUD',
+  source:'25/17/26/0',actualTick:realBombInk.tick,
+  actualExplosions:realBombInk.explosions,
+  nativeOutcome:realBombInk.native,
+  visiblePlayerHud:realBombInk.hud,
+  actualChangedSourceCells:realBombInk.native.cells,
+  actualSourceStamps:realBombInk.native.stamps,
+  actualOutcomeKind:realBombInk.native.kind,
+  certifiedPositiveSourceChange:realBombInk.native.kind==='NEW_CELLS',
+  inferredCpuHit:false,officialTurfScore:0,
+  injectedInk:0,injectedTicks:0,gameplayWrites:0
+ };
+ report.phases.push(realBombInkProof);persist();
+ console.log('B394_REAL_NATIVE_BOMB_SOURCE_PAINT_HUD',
+  JSON.stringify(realBombInkProof));
+ await picture('b394-real-native-bomb-source-paint');
  const naturallyRefilled=await until(async()=>{
   const q=await trueSubHud();
   return q?.view==='PLAYER'&&q.phase==='PLAYING'&&!q.hidden&&
