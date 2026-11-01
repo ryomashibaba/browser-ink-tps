@@ -51,3 +51,9 @@
 - 今回`82819b5dd6979c6b33f984e26604eba780b36bcc`でSOURCE実60Hzの`stats.playerGrounded`のみを通常PLAYERの`KCC GROUNDED / KCC AIRBORNE`表示・Space案内へ接続。撃破・TIME_UP・QAで誤誘導不可。実ブラウザでの新HUD確認は新SHAに対するジョブ判定前なのでPASS未認証。
 - 原作FloorLine00は物理衝突権限未認証、CPU Recast安全幅不足、対岸自然経路0/12、正式4v4・ART・公開本番HOLD。ゲーム本体25/17/26/0維持、QA成果を原作接続へ誤昇格しない。
 
+
+## 2026-11-01 — F4原作IDとVer.7.2.0版の切り分け（研究のみ）
+
+- **重要な原作照合:** KiTrixの`StageLoader.swift`は`Vss_Temple01`をCamp Triggerfishに、`Vss_Nagasaki03`をUndertow Spillwayに対応付けているが、独立のInkipediaは**Undertowの内部名Temple／Camp Triggerfishの内部名Athletic**と記録。KiTrixの表示名テーブルだけを根拠に既存`Vss_Temple01`の原作地形を誤作品と判断・破棄しない。逆にステージ名だけで全Faceと衝突面の公式認証をしない。 https://splatoonwiki.org/wiki/Undertow_Spillway#Internal_names
+- **もっと重要な未確認:** 原作マテガイ放水路はVer.7.2.0で中央壁一部撤去・下側トンネル追加・ガラス等の大きな版変更を受けた。KiTrix OBJのGitHub初期収録日は2026-04-04だが、これは**元ゲームの抽出バージョンの証明ではない**。OBJ SHA照合＝7.2.0ナワバリモード一致・公式衝突フラグ認証ではない。 https://splatoonwiki.org/wiki/Undertow_Spillway#Version_7.2.0_onwards
+- **厳密な次のF4ゲート:** 元の7.2.0ナワバリ版と当前OBJのFace/中央トンネル等を照合し、実ゲームの物理衝突フラグとCPUサイズの連続接地を別々に証明する。詳細は `docs/qa/T21_F4_TEMPLE_SOURCE_VERSION_AND_COLLISION_AUTHORITY_JA.md`。QA31-solidを本番へ昇格させない。既存25/17/26/0、0/12対岸経路、正式4v4/ART/公開HOLD維持。**B385実Fキー2投擲+180秒SOURCE統合CI `#41279671286` は最終判定が出るまでPASS扱い禁止。**
