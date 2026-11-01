@@ -16,3 +16,10 @@
 2026-11-01 JST。初回 [true Chromium #41222036452](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41222036452) FAIL。B384ボタンと12武器Twin Comets選択、7.0945m物理移動、15実弾、280原作塗装セル、CPU7体の合流は確認。旧W90入力はSTAGING中で、B183原作下降は未達のまま実測134.9秒で19分待機上限に到達（ゲーム自体の停止は未観測）。
 
 再実装ではB366実Chromeの成功したW200→D12→W18→D90を、本当の7CPU再合流とPLAYING開始後のCDPキー入力で実行。B183実登録下段への着地/B186原作坂・上昇床接触を確認後、実CDPマウスで塗装し本当の3/3、B58結果数字一致を検証する。Twin Cometsの実物理はB343固定シューターと同一とは仮定せず、違えばHOLD。CIは16分以内で長い180秒の無操作待機を廃止。今回PASSできるのはSOURCE局所3/3だけであり、180秒TIME_UP、原作敵陣0/12、正式4v4、公式得点、ARTとproductionは未認証のまま。
+
+
+## B385 真正Chromium再検証 #41254428367 (2026-11-01)
+
+実WebGL2の選択Twin Cometsで **原作下段への真正着地と原作坂→上段の物理踏破が成立**。実ログ：W200→native SOURCE_LOWER_LANDED、D12/W18後、上りD90の84 native ticks時点で登録床 UndertowT21D:right-low-team-a に着地し、B186内部ステータス REAL_LOCAL_CIRCUIT_CLEAR。実射撃37発、原作インク変更354セル。原作25/17/26/0維持。
+
+CI自体はFAILだが、**すでに本物の3/3が成立している場合にも2/3の途中表示を必須としたB385検証コードの不備**。次の修正は実B186の CLEAR と新規post-drop 60+セルの有無で2分岐し、すでにCLEARなら余計な射撃を追加せずB371/B58表示・数値一致をチェックする。実SOURCE 180秒終了までは依然未認証、自然敵経路0/12と正式4v4/ART/productionはHOLD。

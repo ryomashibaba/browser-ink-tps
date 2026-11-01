@@ -255,6 +255,26 @@ async function run(){
     foot?.lastOriginalSourceHitId!=='UndertowT21D:right-low-team-a')
   fail('ACTUAL_TWIN_COMETS_ORIGINAL_ROUTE_HOLD',
    {drop,circuit,foot,kitMobilityNotAssumedSameAsB343:true});
+ // Actual selected Twin Comets W200 fire can already paint >60 fresh
+ // cells AFTER genuine B183 landing; real B186 then completes on the
+ // authentic raised floor before the mouse-downward phase starts.
+ // In that case it is WRONG to require an intermediate 2/3 frame.
+ const nativeClearOnArrival=circuit.sourceLocalPlayClear===true&&
+  circuit.status==='REAL_LOCAL_CIRCUIT_CLEAR'&&
+  circuit.realPostDropHumanImpactChangedCells>=60;
+ if(nativeClearOnArrival){
+  const already={phase:'ACTUAL_NATIVE_CLEAR_BEFORE_EXTRA_RAMP_FIRE',
+   alreadyRealSourceClear:true,
+   originalRaisedFoot:circuit.actualOriginalRaisedFootColliderId,
+   nativeFreshPostDropCells:circuit.realPostDropHumanImpactChangedCells,
+   originalRampContact:circuit.actualOriginalRampTouched,
+   validOriginalDrop:drop.originalFirstDropLocalPracticeClear,
+   originalGroundedTravel:circuit.genuineGroundedTravelMeters,
+   actualShooterShots:raised.shotsFired};
+  report.phases.push(already);persist();
+  console.log('B385_PHYSICAL_NATIVE_MISSION_ALREADY_CLEAR',JSON.stringify(already));
+  await picture('b385-native-original-12-kit-ramp-already-clear');
+ }else{
  const ui2=await until(async()=>{
   const u=await evalPage('(() => {const x=document.querySelector("#t21-f3-b183-real-first-drop");return {step:x?.dataset.b371SourceStep,complete:x?.dataset.b372VerifiedCompletedSteps,resources:x?.dataset.b372NativeShooterResources}})()');
   return u?.step==='PAINT'&&u.complete==='2'?u:false;
@@ -283,6 +303,7 @@ async function run(){
   report.phases.push(shot);persist();
   console.log('B385_REAL_SOURCE_PAINT',JSON.stringify(shot));
   if(after.b186RealOriginalHumanCircuit.sourceLocalPlayClear)break;
+ }
  }
  const done=original(await state(),'NATIVE_SELECTED_SOURCE_GOAL');
  const c=done.b186RealOriginalHumanCircuit;
