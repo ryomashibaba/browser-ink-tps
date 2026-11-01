@@ -28,3 +28,49 @@
 ## 検証の意味
 
 本書は**資料比較の結論**であり、OBJの版を確認した検査PASSでも、CPU航行経路の物理認定でもない。KiTrix上の名前の矛盾を解消しても、7.2.0版と当たり判定の検証は未解決のまま。
+
+
+## 4. バージョン別SceneInfoで改修ステージIDを独立照合（2026-11-01）
+
+GitHub公開データ [Leanny/splat3](https://github.com/Leanny/splat3) の
+`data/mush/<version>/SceneInfo.json` をバージョン別に読み、単なるファンWikiの内部名ではなく
+`__RowId` と `PreloadResources` を比較した。
+
+| 資料版 | Versus行の原文Label / __RowId / PreloadResources | 読めること |
+| --- | --- | --- |
+| 700 | マテガイ放水路 / `Vss_Temple00` / `Model/Fld_Temple00.bfres` | 旧版IDがある |
+| 710 | マテガイ放水路 / `Vss_Temple00` / `Model/Fld_Temple00.bfres` | 旧版IDが継続 |
+| 720 | マテガイ放水路（改修後） / `Vss_Temple01` / `Model/Fld_Temple01.bfres` | 改修後IDが追加 |
+| 800 | マテガイ放水路（改修後） / `Vss_Temple01` / `Model/Fld_Temple01.bfres` | 改修後IDが維持 |
+
+直接参照：
+[700](https://github.com/Leanny/splat3/blob/main/data/mush/700/SceneInfo.json) /
+[710](https://github.com/Leanny/splat3/blob/main/data/mush/710/SceneInfo.json) /
+[720](https://github.com/Leanny/splat3/blob/main/data/mush/720/SceneInfo.json) /
+[800](https://github.com/Leanny/splat3/blob/main/data/mush/800/SceneInfo.json)。
+
+**新しく裏付けられたこと：** 公開されているバージョン別SceneInfoの720行で、
+`Vss_Temple01` は明示的に「マテガイ放水路（改修後）」のVersusシーンIDである。
+従来のKiTrixビューアの表示名テーブルがこれをCamp Triggerfishとする記述と衝突するが、
+この版別の原文行はT21で採用しているTemple01命名を強く支持する。
+
+**証明されていないこと：** (1) KiTrix `Vss_Temple01.obj` がSceneInfoの
+`Fld_Temple01.bfres` と同じ幾何・版・モードで抽出されたこと、
+(2) `FloorLine00` のゲーム内衝突有効フラグ、
+(3) 0.30m CPU半径の連続Recast/Rapier移動、
+(4) 25 solid/17 PaintSurface/26 NavLinks/0 Scoreableの変更権限。
+SceneInfoの行が読めることと、原作メッシュ/コリジョンを認証することは異なる。
+
+補助証拠として [Splatoon-3-Map-Editorの`Fld_Temple01` Actorクラス](https://github.com/OctoSquiddy/Splatoon-3-Map-Editor/blob/main/Plugins/SampleMapEditor/FileData/StageLayout/Common/Mu/ActorClasses/Fld_Temple01.cs)
+にはBYML Actor定義および`IsEventOnly`パラメータが実装されている。
+**これは特定のFloorLine00 Faceがゲーム内で支持判定を持つ証拠ではない。**
+また、Splatoon初代向けKCL改造チュートリアルをSplatoon 3の実際の
+衝突バイナリ形式の立証へ流用しない。
+
+**次のF4 SOURCE_AUTHORITYゲート：**
+1. 正当に入手できる同一版の改修後`Fld_Temple01`レンダーメッシュと当該OBJを頂点/面ごとに比較する。先に7.2.0 Turfのルール/ステージ選択を確定する。
+2. それとは独立に、ゲーム内のcollision mesh/actor collision属性を出典・バージョン・対応Face付きで得る。`FloorLine00`視覚マテリアル名のみでは接地面に昇格させない。
+3. 認証済み原作支持面についてだけ、実CPU半径0.30m、全身カプセル連続接地、Recast通路幅、実8Actor自然移動を同一世界で検証する。
+4. 以上の原作証拠が揃わなければ局所的にHOLDし、別系統のF1/F3実プレイ改善を継続する。仮設床/架空NavLink/半径0/ワープ/偽スコアは作らない。
+
+今回の更新は**版別Source IDの証拠改善のみ**で、ゲーム本体の物理、nav、描画、score、敵陣ルート0/12、正式4v4、公開/mergeの判定には一切変更を与えない。
