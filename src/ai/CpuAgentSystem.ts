@@ -271,6 +271,8 @@ export class CpuAgentSystem {
   private b182ReusedLiveNativeSight=0;
   private b180SelectedRealSourcePatches=0;
   private b180SelectedRealPatchOpportunity=0;
+  private b180OwnedCenterSourcePatchAims=0;
+  private b216OwnedCenterSourceBackfillAims=0;
   private b178OwnNativeTicks=0;
   private b178EnemyNativeTicks=0;
   private b178NeutralNativeTicks=0;
@@ -535,6 +537,8 @@ export class CpuAgentSystem {
       enabled:this.b216SourceStageAimValidated!==null,
       realRapierStageAimChecks:this.b216RealOriginalFloorSightChecks,
       originalSourceBackfillAims:this.b216ApprovedPhysicalSourceAimTargets,
+      ownedCenterWithTrueUnpaintedNeighborAims:
+       this.b216OwnedCenterSourceBackfillAims,
       approvedReachedGoalShortRadiusAims:
        this.b216ApprovedReachedGoalShortRadiusAims,
       verifiedFrontAndAllyPaintSightChecks:this.b216OriginalTurfSightChecks,
@@ -562,6 +566,7 @@ export class CpuAgentSystem {
     return {enabled:this.b180OriginalPatchAimEnabled,
       chosenRealUnpaintedSourcePatches:this.b180SelectedRealSourcePatches,
       actualRealOwnerGridOpportunitySum:this.b180SelectedRealPatchOpportunity,
+      ownedCenterWithTrueUnpaintedNeighborAims:this.b180OwnedCenterSourcePatchAims,
       cpuNavUnchanged:true as const,sourceScoreable:0 as const,
       productionAuthorized:false as const};
   }
@@ -625,6 +630,8 @@ export class CpuAgentSystem {
     this.b179ActualEnemyHpLost=0;
     this.b180SelectedRealSourcePatches=0;
     this.b180SelectedRealPatchOpportunity=0;
+    this.b180OwnedCenterSourcePatchAims=0;
+    this.b216OwnedCenterSourceBackfillAims=0;
     this.b181CachedCombat.clear();
     this.b181NativeFrame=0;
     this.b213RealAttackerDamageEvents=0;
@@ -2365,14 +2372,21 @@ export class CpuAgentSystem {
     // active original ownerGrid patch cells; do not alter physics or nav.
     // The entire original B64 first-valid sample is unchanged otherwise.
     let bestPatch:Vec3|null=null,bestOpportunity=0;
+    let bestCenterAlreadyOwned=false;
     for(const candidate of candidates){
       this.samplePoint.set(candidate.x,candidate.y,candidate.z);
       this.b64Samples++;
       const sample=this.gameplayInk.sampleWorld(
         this.samplePoint,.28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
-      if(!sample||sample.surface.isScoreable||
-         sample.owner===bot.team)continue;
-      this.b64CandidatesUnowned++;
+      if(!sample||sample.surface.isScoreable)continue;
+      // Real projectiles have a paint footprint, not a one-cell stamp.
+      // The already-authorized B180 mode may target an OWN center only
+      // where original ownerGrid neighbors provide a genuine opportunity.
+      const opportunity=this.b180OriginalPatchAimEnabled?
+        b180OriginalSourcePatchOpportunity(sample,bot.team):0;
+      if(sample.owner===bot.team&&opportunity<=0)continue;
+      if(this.b180OriginalPatchAimEnabled&&opportunity<=0)continue;
+      if(sample.owner!==bot.team)this.b64CandidatesUnowned++;
       const sourcePoint=sample.surface.localToWorld(sample.u,sample.v);
       // Reject out-of-range genuine paint before choosing it, not AFTER
       // the aim is selected: a nearer audited source pixel may still fire.
@@ -2386,15 +2400,16 @@ export class CpuAgentSystem {
         this.b64CandidatesChosen++;
         return sourcePoint;
       }
-      const opportunity=b180OriginalSourcePatchOpportunity(sample,bot.team);
       if(opportunity>bestOpportunity){
         bestOpportunity=opportunity;
         bestPatch=sourcePoint;
+        bestCenterAlreadyOwned=sample.owner===bot.team;
       }
     }
     if(this.b180OriginalPatchAimEnabled&&bestPatch){
       this.b180SelectedRealSourcePatches++;
       this.b180SelectedRealPatchOpportunity+=bestOpportunity;
+      if(bestCenterAlreadyOwned)this.b180OwnedCenterSourcePatchAims++;
       this.b64CandidatesChosen++;
       return bestPatch;
     }
@@ -2422,12 +2437,12 @@ export class CpuAgentSystem {
       y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,z:bot.position.z};
     let best:Vec3|null=null,opportunity=0;
     let bestReachedGoalShortRadius=false;
+    let bestCenterAlreadyOwned=false;
     for(const proposed of proposals){
       this.samplePoint.set(proposed.x,proposed.y,proposed.z);
       const sample=this.gameplayInk.sampleWorld(this.samplePoint,
        .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
-      if(!sample||sample.surface.isScoreable||sample.owner===bot.team)
-       continue;
+      if(!sample||sample.surface.isScoreable)continue;
       const candidate=sample.surface.localToWorld(sample.u,sample.v);
       if(![candidate.x,candidate.y,candidate.z].every(Number.isFinite)||
          Math.abs(candidate.y-bot.position.y)>.35||
@@ -2440,12 +2455,14 @@ export class CpuAgentSystem {
         bot.position))continue;
       best=candidate;opportunity=value;
       bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
+      bestCenterAlreadyOwned=sample.owner===bot.team;
     }
     if(best){
       this.b216ApprovedPhysicalSourceAimTargets++;
       // This is an audited AIM, not yet a projectile or changed ink cell.
       if(bestReachedGoalShortRadius)
         this.b216ApprovedReachedGoalShortRadiusAims++;
+      if(bestCenterAlreadyOwned)this.b216OwnedCenterSourceBackfillAims++;
     }
     return best;
   }

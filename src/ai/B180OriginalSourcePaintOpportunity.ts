@@ -14,6 +14,12 @@ export function b180OriginalSourcePatchOpportunity(
     ![sample.u,sample.v].every(Number.isFinite))return 0;
  const x=Math.min(s.widthCells-1,Math.max(0,Math.floor(sample.u/s.cellSize)));
  const y=Math.min(s.heightCells-1,Math.max(0,Math.floor(sample.v/s.cellSize)));
+ // SOURCE-neighbor opportunity must NEVER authorize an inactive center.
+ // Use the actual PaintSurface ownerGrid, not a guessed sampled owner.
+ const center=s.index(x,y),flags=s.flagsGrid[center]??0;
+ if(!s.isCellActive(x,y)||(flags & SurfaceFlags.Paintable)===0||
+    (flags & (SurfaceFlags.Wall|SurfaceFlags.Scoreable))!==0||
+    s.ownerGrid[center]!==sample.owner)return 0;
  // A compact patch inside the truly registered original footprint.
  // Scale offsets in real meters, never select an inactive mesh cell.
  const jump=Math.max(1,Math.round(.32/s.cellSize));

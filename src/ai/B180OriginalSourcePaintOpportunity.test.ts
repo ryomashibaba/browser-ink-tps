@@ -11,7 +11,9 @@ const floor=(flags=SurfaceFlags.Paintable|SurfaceFlags.Floor)=>{
  return s;
 };
 const sample=(s:PaintSurface,u=2,v=2)=>({
- surface:s,u,v,owner:Team.Neutral,flags:s.baseFlags,planeDistance:0
+ surface:s,u,v,owner:s.ownerGrid[s.index(
+  Math.floor(u/s.cellSize),Math.floor(v/s.cellSize))] as Team,
+ flags:s.baseFlags,planeDistance:0
 });
 describe('B180 real source patch aiming only on actual owner grid',()=>{
  it('selects a large unpainted native patch over tiny isolated blank cells',()=>{
@@ -27,6 +29,19 @@ describe('B180 real source patch aiming only on actual owner grid',()=>{
   expect(p(sample(floor(SurfaceFlags.Floor)),Team.A)).toBe(0);
   const f=floor();f.flagsGrid.fill(0);
   expect(p(sample(f),Team.A)).toBe(0);
+ });
+ it('accepts OWN center only when real original neighbors are unpainted',()=>{
+  const f=floor();f.ownerGrid.fill(Team.A);
+  expect(sample(f).owner).toBe(Team.A);
+  expect(p(sample(f),Team.A)).toBe(0);
+  f.ownerGrid[f.index(12,10)]=Team.Neutral;
+  expect(p(sample(f),Team.A)).toBe(1);
+  // True neighbors never make an inactive center shootable.
+  f.flagsGrid[f.index(10,10)]=0;
+  expect(p(sample(f),Team.A)).toBe(0);
+  f.flagsGrid[f.index(10,10)]=f.baseFlags;
+  f.ownerGrid[f.index(10,10)]=Team.B;
+  expect(p(sample(f),Team.A)).toBe(2.25);
  });
  it('respects real CPU owners and opposing ink while never claiming Turf score',()=>{
   const f=floor();
