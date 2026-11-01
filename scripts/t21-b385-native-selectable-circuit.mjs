@@ -373,6 +373,74 @@ async function run(){
   physicalTravel:c.genuineGroundedTravelMeters,
   actualCpuRejoins:done.cpu.physicalRejoins.length,
   liveHud:hud,officialScoreable:0,winner:'NONE'});
+ // B385 true F-key sub-weapon vertical slice. Actual Twin Comets kit
+ // equips Snap Bomb (native catalog cost 45 ink); no physics or tank writes.
+ const nativeSubReady=await until(async()=>{
+  const s=original(await state(),'REAL_NATIVE_SUB_READY');
+  if(s.matchState!=='PLAYING'||s.paused||s.player.hp<=0||
+     s.b38HumanSub?.enabled!==true||s.b38HumanSub.weapon!=='Snap Bomb'||
+     s.b361NativePlayerWeapon?.id!=='twin-comets')
+   fail('SOURCE_SUB_NOT_AVAILABLE',{tick:s.tick,sub:s.b38HumanSub,
+    weapon:s.b361NativePlayerWeapon,hp:s.player.hp});
+  return s.player.ink>=99?s:false;
+ },100000);
+ const trueSubHud=async()=>evalPage('(() => {const s=window.__t21F3.snapshot(),'+
+  'u=document.querySelector("#ui-root"),g=document.querySelector("#t21-f3-b338-source-guide");'+
+  'return {tick:s.tick,ink:s.player.ink,throws:s.b38HumanSub?.throws,'+
+  'view:u?.dataset.t21B245Presentation,phase:u?.dataset.t21B338Phase,'+
+  'text:g?.textContent??"",hidden:!g||g.hidden,'+
+  'writes:g?.dataset.t21B338GameplayWrites};})()');
+ const readyHud=await until(async()=>{
+  const q=await trueSubHud();
+  return q?.view==='PLAYER'&&q.phase==='PLAYING'&&!q.hidden&&
+   q.writes==='0'&&q.ink>=45&&
+   q.throws===nativeSubReady.b38HumanSub.throws&&
+   q.text.includes('F SUB Snap Bomb')?q:false;
+ },35000);
+ const actualFEvents=[];
+ for(let i=0;i<2;i++){
+  const before=original(await state(),'BEFORE_REAL_F_KEY_'+i);
+  if(before.player.ink<45||before.b38HumanSub?.enabled!==true)
+   fail('REAL_F_SUB_INSUFFICIENT_NATIVE_INK',{i,ink:before.player.ink});
+  await key('keyDown','f','KeyF',70);
+  let after;
+  try{
+   after=await until(async()=>{
+    const n=original(await state(),'ACTUAL_F_KEY_NATIVE_THROW_'+i);
+    return n.b38HumanSub?.throws===before.b38HumanSub.throws+1?n:false;
+   },35000);
+  }finally{
+   await key('keyUp','f','KeyF',70);
+  }
+  if(after.shotsFired!==before.shotsFired||
+     after.player.ink>=before.player.ink||
+     after.b38HumanSub.weapon!=='Snap Bomb')
+   fail('REAL_F_SUB_NATIVE_RESOURCE_OR_WEAPON_MISMATCH',{
+    before:{tick:before.tick,throws:before.b38HumanSub.throws,
+     ink:before.player.ink,shots:before.shotsFired},
+    after:{tick:after.tick,throws:after.b38HumanSub.throws,
+     ink:after.player.ink,shots:after.shotsFired}});
+  actualFEvents.push({nativeTick:after.tick,physicalFKey:true,
+   actualThrowsBefore:before.b38HumanSub.throws,
+   actualThrowsAfter:after.b38HumanSub.throws,
+   actualInkBefore:before.player.ink,actualInkAfter:after.player.ink,
+   mainShotsUnchanged:true,originalScoreable:0});
+ }
+ const insufficientHud=await until(async()=>{
+  const q=await trueSubHud();
+  return q?.view==='PLAYER'&&q.phase==='PLAYING'&&!q.hidden&&
+    q.writes==='0'&&q.throws===nativeSubReady.b38HumanSub.throws+2&&
+    q.ink<45&&q.text.includes('SUB Snap Bomb · NEED 45 INK')&&
+    !q.text.includes('F SUB')?q:false;
+ },30000);
+ const proof={phase:'B385_TRUE_NATIVE_F_SUB_TWICE_AND_PLAYER_INK_GATE',
+  source:'25/17/26/0',actualWeapon:'twin-comets',
+  realKitSub:'Snap Bomb',nativeKitCost:45,
+  readyHud,realKeyFThrows:actualFEvents,insufficientHud,
+  syntheticNativeTicks:0,syntheticInk:0,syntheticProjectileWrites:0,
+  certifiedCpuDamage:false,scoreable:0,productionAuthorized:false};
+ report.phases.push(proof);persist();
+ console.log('B385_TRUE_NATIVE_F_KEY_SUB_INK_HUD',JSON.stringify(proof));
  await picture('b385-native-real-12-kit-local-clear');
  // B390: the same genuine original source world continues to native
  // TIME_UP; unlike B389's already-PASS pause-and-replay mode.
