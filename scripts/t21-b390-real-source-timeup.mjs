@@ -51,7 +51,15 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     genuineSevenCpuRejoined:n.cpu.physicalRejoins.length,
     nativeRespawns:n.humanRespawns,
     verifiedPreviousClears:n.b387RealRoundMilestones.realClearedLives,
-    originalScoreable:n.sourceScoreablePromotions};
+    originalScoreable:n.sourceScoreablePromotions,
+    // Recorded from the SAME real source round, not a simulated paint pass.
+    originalCpuSightGate:n.b216RealNativePaintBackfill?
+     {enabled:n.b216RealNativePaintBackfill.enabled,
+      verifiedFrontAndAllyPaintSightChecks:
+       n.b216RealNativePaintBackfill.verifiedFrontAndAllyPaintSightChecks,
+      sourceBlockedTurfAimsRejected:
+       n.b216RealNativePaintBackfill.sourceBlockedTurfAimsRejected,
+      realBackfillAims:n.b216RealNativePaintBackfill.originalSourceBackfillAims}:null};
    report.phases.push(sample);persist();
    console.log('B390_REAL_20S_NATIVE_CHECKPOINT',JSON.stringify(sample));
    nextSample+=20;
@@ -83,6 +91,38 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
    realHumanShots:final.shotsFired,realCpuShots:final.cpuSourceTurfShots,
    physicalRejoins:final.cpu.physicalRejoins.length,
    realClearMemory:final.b387RealRoundMilestones});
+ // Existing SOURCE battle has B214/B215/B216 opted in. The B75 default
+ // browser smoke does NOT exercise that authority, so verify the actual
+ // native 180s CPU paint sight gate in this already-existing Chrome run.
+ // No new CPU shot, paint, native tick, map solid or player input.
+ const gated=final.b216RealNativePaintBackfill;
+ const checked=gated?.verifiedFrontAndAllyPaintSightChecks;
+ const vetoed=gated?.sourceBlockedTurfAimsRejected;
+ const acceptedSourceInk=final.cpuImpactInkCellsChanged;
+ const valid=final.b214SustainedBattleInk?.enabled===true&&
+   final.b215RealBattleAimPacing?.enabled===true&&
+   gated?.enabled===true&&
+   Number.isSafeInteger(checked)&&checked>0&&
+   Number.isSafeInteger(vetoed)&&vetoed>=0&&vetoed<=checked&&
+   Number.isSafeInteger(acceptedSourceInk)&&acceptedSourceInk>0&&
+   final.sourceScoreablePromotions===0;
+ const strictNativePaintGate={
+  phase:'B390_TRUE_180S_CPU_SOURCE_SHOT_LINE_OF_SIGHT',
+  nativeTick:final.tick,realCpuShots:final.cpuSourceTurfShots,
+  realChangedSourceCells:acceptedSourceInk,
+  verifiedFrontAndAllyPaintSightChecks:checked??null,
+  actualSourceBlockedTurfAimsRejected:vetoed??null,
+  originalFloorBackfillSightChecks:gated?.realRapierStageAimChecks??null,
+  originalSourceBackfillAims:gated?.originalSourceBackfillAims??null,
+  enabled:gated?.enabled??false,valid,
+  artificialShots:0,artificialPaint:0,syntheticGround:0,
+  navLinksAdded:0,originalSourceScoreable:0,productionAuthorized:false
+ };
+ report.phases.push(strictNativePaintGate);persist();
+ console.log('B390_REAL_NATIVE_CPU_SOURCE_LINE_OF_SIGHT',
+  JSON.stringify(strictNativePaintGate));
+ if(!valid)fail('B390_REAL_CPU_ORIGINAL_PAINT_GATE_NOT_MEASURED',
+  strictNativePaintGate);
  const endUi=await until(async()=>{
   const u=await evalPage('(() => {const s=window.__t21F3.snapshot(),f=document.querySelector("#t21-f3-b59-session-finished"),r=document.querySelector("#t21-f3-b59-restart"),c=document.querySelector("#t21-f3-b205-real-round");return {finished:!!f&&!f.hidden&&f.dataset.t21B59State==="FINISHED",replay:!!r&&!r.hidden&&!r.disabled,replayTitle:r?.textContent,clock:c?.dataset.t21B205RealClock,phase:c?.dataset.t21B205NativePhase,winner:f?.dataset.t21B59OriginalWinner,score:f?.dataset.originalScoreable,shownHumanInk:Number(f?.dataset.t21B59HumanInk),actualHumanInk:s.b23HumanInkFeedback.humanChangedCells,actualCpuRejoined:s.cpu.physicalRejoins.length,shownCpuRejoined:Number(f?.dataset.t21B59CpuRejoined),verifiedClears:Number(f?.dataset.b387VerifiedClears),recap:f?.querySelector("#t21-f3-b59-final-stats")?.textContent,paused:s.paused,pointerUnlocked:document.pointerLockElement===null}})()');
   return u?.finished&&u.replay&&u.clock==='00:00'&&u.phase==='COMPLETE'&&
@@ -155,6 +195,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   humanShots:final.shotsFired,humanSourceInk:final.b23HumanInkFeedback.humanChangedCells,
   cpuSourceShots:final.cpuSourceTurfShots,
   cpuSourceInk:final.cpuImpactInkCellsChanged,
+  cpuOriginalSightGateChecks:strictNativePaintGate.verifiedFrontAndAllyPaintSightChecks,
+  cpuOriginalSourceCoverVetoes:strictNativePaintGate.actualSourceBlockedTurfAimsRejected,
   nativeCpuRejoins:final.cpu.physicalRejoins.length,
   nativeHumanRespawns:final.humanRespawns,
   realMissionClearedLives:final.b387RealRoundMilestones.realClearedLives,
