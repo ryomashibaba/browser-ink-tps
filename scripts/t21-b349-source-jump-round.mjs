@@ -35,12 +35,19 @@ const snapshot=()=>read('window.__t21F3.snapshot()');
 const buttonScript=selector=>'(() => {const el=document.querySelector('+
  JSON.stringify(selector)+');if(!el||el.hidden||el.disabled)return null;'+
  'el.scrollIntoView({block:"center",behavior:"instant"});'+
- 'const r=el.getBoundingClientRect();return {x:r.left+r.width/2,'+
- 'y:r.top+r.height/2,width:r.width,height:r.height};})()';
+ 'const r=el.getBoundingClientRect(),style=getComputedStyle(el);'+
+ 'const x=r.left+r.width/2,y=r.top+r.height/2;'+
+ 'const top=document.elementFromPoint(x,y);'+
+ 'return {x,y,width:r.width,height:r.height,'+
+ 'display:style.display,visibility:style.visibility,'+
+ 'hitTarget:!!top&&(top===el||el.contains(top)),'+
+ 'topId:top?.id??null,topTag:top?.tagName??null};})()';
 async function clickButton(selector){
  const xy=await read(buttonScript(selector));
- if(!xy||xy.width<4||xy.height<4||xy.x<0||xy.y<0||xy.x>=1600||xy.y>=900)
-  fail('REAL_VISIBLE_BUTTON_MISSING_'+selector);
+ if(!xy||xy.width<4||xy.height<4||xy.x<0||xy.y<0||
+    xy.x>=1600||xy.y>=900||xy.display==='none'||
+    xy.visibility==='hidden'||!xy.hitTarget)
+  fail('REAL_BUTTON_NOT_HITTESTABLE_'+selector+'_'+JSON.stringify(xy));
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:xy.x,y:xy.y,button:'none'});
  for(const type of ['mousePressed','mouseReleased'])
   await send('Input.dispatchMouseEvent',{type,x:xy.x,y:xy.y,
@@ -168,8 +175,48 @@ async function run(){
   boot.timeRemainingSeconds!==180||boot.tick!==0||
   await read('document.querySelector("#t21-f3-b202-real-pause")?.dataset.t21B202NativeState')!=='READY_TO_START')
   fail('REAL_USER_180S_READY_NOT_PROVEN');
+ // B349: capture REAL pointer lock start failures without forcing DOM
+ // events, granting state, or modifying the actual native 60Hz clock.
+ const observedStarts=[];
+ const lockExpression='document.pointerLockElement===document.querySelector("#app-canvas")';
+ const recordStart=async(label)=>{
+  const ui=await read('(() => {const e=document.querySelector("#t21-f3-b202-resume");'+
+   'const r=e?.getBoundingClientRect(),top=r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2):null;'+
+   'return {focused:document.hasFocus(),hidden:document.hidden,'+
+   'pointerLocked:document.pointerLockElement===document.querySelector("#app-canvas"),'+
+   'topId:top?.id??null,buttonVisible:!!e&&!e.hidden&&!!r&&r.width>4&&r.height>4,'+
+   'pauseState:document.querySelector("#t21-f3-b202-real-pause")?.dataset.t21B202NativeState};})()');
+  const n=await snapshot();
+  const row={label,...ui,tick:n?.tick,paused:n?.paused,
+   matchState:n?.matchState,stopReason:n?.stopReason,
+   source:[n?.originalSourceSolids,n?.originalPaintSurfaces,
+    n?.originalSourceNavigationLinks,n?.sourceScoreablePromotions],
+   productionAuthorized:n?.productionAuthorized};
+  observedStarts.push(row);
+  writeFileSync(resolve(DIR,'b349-native-start-click-evidence.json'),
+   JSON.stringify(observedStarts,null,2)+'\n');
+  console.log('B349_NATIVE_POINTER_START',JSON.stringify(row));
+  return row;
+ };
  await clickButton('#t21-f3-b202-resume');
- await wait(()=>read('document.pointerLockElement===document.querySelector("#app-canvas")'),20000);
+ try{await wait(()=>read(lockExpression),20000);}
+ catch(first){
+  const state=await recordStart('FIRST_REAL_CDP_CLICK_NO_LOCK');
+  // At most ONE further authentic user click on the original visible
+  // start/resume control, and only in the safely paused source world.
+  if(state.source?.join('/')!=='25/17/26/0'||
+     state.stopReason||state.pointerLocked||!state.paused||
+     state.matchState==='TIME_UP'||!state.buttonVisible||
+     !['READY_TO_START','NATIVE_PAUSED'].includes(state.pauseState))
+   throw first;
+  await clickButton('#t21-f3-b202-resume');
+  try{await wait(()=>read(lockExpression),20000);}
+  catch(second){
+   await recordStart('SECOND_REAL_CDP_CLICK_NO_LOCK');
+   throw second;
+  }
+ }
+ await recordStart('GENUINE_SOURCE_POINTER_LOCK_CONFIRMED');
  const start=await wait(async()=>{
   const n=verifyAuthority(await snapshot());
   return n.matchState==='PLAYING'&&!n.paused&&
