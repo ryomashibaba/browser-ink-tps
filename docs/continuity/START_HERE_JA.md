@@ -126,3 +126,14 @@ B354真正Chromium `b71a835` は [CI #41074157473](https://github.com/ryomashiba
 - **変更禁止とHOLD:** 原作25 Rapier solids / 17 PaintSurface / 26 NavLinks / 0 Scoreable、自然敵陣接続 **0/12**、`activationReady=false`、`productionAuthorized=false`、`unrestricted4v4Certified=false`。公式winner NONE。180秒のTIME_UPまでのB384全完走、別の11武器の個別全ルート、自然対人/CPU交戦、正式4v4、ART/F5と公開本番は引き続き未認証/HOLD。元のmain、凍結T19C/T20、PR #5、公開Pagesは未変更。
 - **次の優先度:** 原作SOURCEの欠けた自然敵陣経路を捏造するのではなく、本人がゲームを操作して評価できる**操作ガイダンス、現実の敵との視界接続・原作面の認証、180秒の実体験と結果**の中で、独立した意義がある工程をまとめて実装・検証する。単なるB番号・QA増殖は行わない。
 
+
+
+## 2026-11-01 B387→B388 完了証拠 — 局所SOURCE試合履歴と実プレイ警告の整理
+
+B387実装HEAD 87eda231573c41bd63fe39330389e46e30350850、[真正Chromium CI #41266517150](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41266517150) **SUCCESS**。12武器B384の本当のTwin Comets／実CPU7世界で初回落下→元Ramp→実PaintEventによる3/3 CLEAR。同じnative tickとB58画面で「ROUND VERIFIED CLEARS=1、LAST twin-comets」一致。命別B186と試合全体B387を分離した。実ブラウザでの死亡→復活→履歴残存、およびこのB384構成での180秒TIME_UP完全完走は別件HOLD。
+
+B388実装HEAD c5466a58d4178d19ae442576132078cf45a1c345、[真正Chromium CI #41267445449](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41267445449) **SUCCESS**（ビルド、関連Vitest 74/74、真正CDP Chromium WebGL2、元SOURCE KCC、実塗装、native HUD検証）。同じゲーム画面でB112の過去suspicions=1であっても、元の右上段UndertowT21D:right-low-team-aに実接地した瞬間、過去の疑義に引っ張られていた中央のPOSSIBLE UNSUPPORTED DESCENT警告は非表示。登録RampのXZ外でも本物の右上段床に実接地した後の重複ALONGSIDE REGISTERED RAMP警告も非表示。B129本物の原作地形端接近警告は残る。QAモードF8では過去の実証記録を削除せず維持。原作の足場/Actor/ゲームTick/得点は一切変更なし。
+
+B388実測：Twin Comets実37発、人間の原作塗装変化354セル、落下後の新規変化65セル、実接地11.3417m、CPU7/7復帰、現命3/3 CLEAR、試合中の実達成履歴1回。実敵B1まで約99.982mで対岸自然通路は認証なし。原作25 solids /17 paint /26 nav links /0 Scoreable、自然対岸経路0/12、activationReady=false、productionAuthorized=false、unrestricted4v4Certified=false、winner NONE、正式4v4/ART/本番公開HOLDを厳守。
+
+**次の大きな実工程** はF1–F5の正本どおり、真正の180秒TIME_UPの完走とリトライ、実死亡/復活後の局所試合履歴、新しいSOURCE8人による相手への到達可能性、原作に忠実なステージ視認と性能改善に絞る。新しいB番号だけの小QA・偽物理・推測の中央NavLinkは増やさない。
