@@ -23,3 +23,33 @@ B392は本物の投擲と爆発を示す。B394はその次の大切なユーザ
 ゲーム本体の塗装/物理/カメラ/AI/得点/時計や原作25/17/26/0は変えない。
 既存B210統合CIおよびB58単体テストで実装検査する（CI結論前は実ブラウザPASS未認証）。
 正式4v4、自然対岸0/12、ART・公開・mergeはHOLD維持。
+
+## 2026-11-01 — B394真正Chromium表示・原作セル実測確定（PASS範囲限定）
+
+既存B385/B390実WebGL2/PlayCanvas/Rapier/Recast統合CI
+[Actions #41286556600](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41286556600)
+（対象SHA `823dfd7e30a524a99b660bb5bc40c787231b21fe`）はSUCCESS。
+事前TypeScript/Vite、B394を含む単体5ファイル/96テスト、実CDP入力と真正180秒SOURCE再試合に成功。
+
+同Runログ `B394_REAL_NATIVE_BOMB_SOURCE_PAINT_HUD`：
+native tick1507時点で人間サブ爆発2件、最後のB41 native outcome tick1500、
+原作human Bombスタンプ7件、**新規変更セル0件**、outcome
+`STAMP_ZERO_CHANGE`。実DOMも可視で
+`BOMB SOURCE STAMP · 0 NEW CELLS · NOT A MISS`、
+kind/tick/stamps/cells=STAMP_ZERO_CHANGE/1500/7/0の完全一致。
+DOM source専用 `gameplayWrites=0` / `scoreable=0` / `cpuHitCertified=false`。
+証拠画像 `b394-real-native-bomb-source-paint.png` を既存artifactに保存。
+
+同じ真正ラウンドでTIME_UP tick11859、実人間主射撃94発／
+impact変更388セル、CPU605 source shots／13308変更セル、
+7/7 CPU実復帰、本人実復活0、公式勝者NONE、Scoreable0、
+同武器新世界再開成功。0変更はすでに同色で塗装済みの可能性があるが
+**原因未認証**。爆発失敗、敵miss、無効物理、正式得点と同義ではない。
+新しい未塗装面への実サブ新規変化成功や実CPUへのBombダメージは未認証。
+
+B395は別の実装：`36968c0ce5f00bed94241a41612831eefaecfa2c`で
+B58/B59の読み取り専用実サブ累積を追加し、TypeScript/Vite、
+関連VitestとNode scriptチェックがPASS。
+B210真正180秒終了画面のB395実DOMは
+[Actions #41287579025](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41287579025)
+の最終結論を確認するまで未認証。

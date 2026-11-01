@@ -67,3 +67,9 @@
 - B394 [5aee533fa8d0](https://github.com/ryomashibaba/browser-ink-tps/commit/5aee533fa8d0b1b54b97966063ce97d12f15ddc3)：既存B41のPaintCoordinator後のsource-only bomb outcomeを通常PLAYER HUDに表示。「実爆発」「原作面にスタンプ」「本当に変更したsourceセル」を分離。NEW_CELLS / STAMP_ZERO_CHANGE / NO_CERTIFIED_STAMP / MULTIPLE_UNRESOLVEDを誤命中/誤得点なしで区別。追加したB394の単体専用6件の実行と新HUDの真正ブラウザ視認は**まだ未認証**。B75 [Actions #41285593705](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41285593705) の最新HEADで、TypeScript+Viteと既存65ファイル/382テストがPASS。ただしその382件はB394の単体専用6件を含まない。
 - B394初回のTypeScriptエラー（testの意図的な偽型1/false、既存HUDのoriginalSourceOnly booleanの不必要なliteral narrowing）を2回修正。現HEAD実装は型ビルド成功。原因修正のみで原作物理・インク経済・AI・正式スコアを変更していない。
 - **次の優先作業:** B392実Chromium最終結論とB394実塗装セルの現場値・実DOMを確認、必要なら修正を一括実施。F1/F2/F3の実CPU対人戦闘と連続移動を引き続き主目標とする。原作版・FloorLine00当たり判定のソース権限が不足するF4部分はHOLDし、仮設NavLink/ワープ/半径0経路や架空得点で前進したと扱わない。
+
+## 2026-11-01 — B394真正PASS・B395結果画面の限定導入
+
+- **B394新規確定:** [Actions #41286556600](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41286556600) SUCCESS。B394単体込み5ファイル96テストPASS、実SOURCE Snap Bomb2爆発に対して原作スタンプ**7件**・実新規セル**0件**、native tick1500の`STAMP_ZERO_CHANGE`と実PLAYER DOMを厳密照合。0セルの原因・CPU命中・公式得点は認証しない。真正180秒TIME_UP tick11859、実人間94 shots/388 impactセル、CPU605 shots/13308 sourceセル、CPU7/7復帰、新世界同武器再開、Winner NONE。
+- **B395プレイヤー向け統合:** B58/B59通常活動・結果画面でpost-PaintCoordinator由来のサブ爆発、元sourceスタンプ、変更セル、0変化スタンプを明確に分けて表示する読み取り専用機能。初回の任意型検査エラーを`36968c0c`で修正。TypeScript/Vite、関連Vitest、Node事前チェックPASS。真正B210 180秒[Actions #41287579025](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41287579025)は最終判定まで未認証。
+- **不変:** 元25 Rapier solids/17 PaintSurfaces/26 NavLinks/0 Scoreable、自然対岸0/12。正式4v4・ART・公式Turf得点・公開/merge HOLD、main/T19C/T20/PR#5/Pages不変更。次の主要実戦課題は、原作接地権限を維持した本当の自然CPU遭遇/HP命中/復活。局所micro-QA番号の拡張は進捗代用にしない。
