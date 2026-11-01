@@ -129,6 +129,17 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
    realHumanShots:final.shotsFired,realCpuShots:final.cpuSourceTurfShots,
    physicalRejoins:final.cpu.physicalRejoins.length,
    realClearMemory:final.b387RealRoundMilestones});
+ // Final native tick retains the last bounded genuinely live B401 read.
+ // This is never a substitute for the separately verified B400 TIME_UP grid.
+ const lastLive=final.b401NativeLiveSourceInk;
+ if(lastLive?.status!=='LIVE_REGISTERED_SOURCE_ONLY'||
+    lastLive.registeredSurfaces!==17||lastLive.sampleNativeTick<1||
+    lastLive.sampleNativeTick>final.tick||lastLive.totalActiveCells<1||
+    lastLive.teamA+lastLive.teamB+lastLive.neutral!==lastLive.totalActiveCells||
+    lastLive.winner!=='NONE'||lastLive.gameplayWrites!==0||
+    lastLive.officialTurfScore!==false)
+  fail('B401_TRUE_180S_FINAL_LIVE_SOURCE_GRID_INVALID',{
+   nativeTick:final.tick,lastLive});
  // Existing SOURCE battle has B214/B215/B216 opted in. The B75 default
  // browser smoke does NOT exercise that authority, so verify the actual
  // native 180s CPU paint sight gate in this already-existing Chrome run.
