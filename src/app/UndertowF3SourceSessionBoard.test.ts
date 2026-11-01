@@ -125,7 +125,13 @@ describe('B387 genuine native 180s source history',()=>{
   const h=new B387RoundMilestones(),f=input();
   expect(h.observe(f)).toMatchObject({realClearedLives:1,currentLifeClear:true});
   f.tick=1001;expect(h.observe(f).realClearedLives).toBe(1);
-  f.tick=1151;f.respawns=1;f.drop=false;
+  // First witness the genuine HP-zero native tick; the life marker
+  // cannot legally advance until 150 real native recovery frames.
+  f.tick=1002;f.alive=false;f.drop=false;
+  expect(h.observe(f)).toMatchObject({realClearedLives:1,
+   currentLifeClear:false,nativeHumanAlive:false,
+   realNativeDeathWitnesses:1,real150TickReturns:0});
+  f.tick=1151;f.alive=true;f.respawns=1;f.drop=false;
   f.c.status='WAIT_FIRST_DROP';f.c.sourceLocalPlayClear=false;
   expect(h.observe(f)).toMatchObject({realClearedLives:1,
    currentLifeClear:false,lastTrueWeapon:'twin-comets'});
@@ -161,6 +167,8 @@ describe('B387 genuine native 180s source history',()=>{
    b387RealRoundMilestones:{
     enabled:true,valid:true,realClearedLives:1,currentLifeClear:false,
     currentLifeIndex:1,lastObservedNativeTick:10800,
+    nativeHumanAlive:true,realNativeDeathWitnesses:1,real150TickReturns:1,
+    lastNativeDeathTick:null,lastNativeReturnTick:1151,
     lastTrueClearTick:1900,lastTrueWeapon:'twin-comets',
     lastTruePostDropCells:65,sourceScoreable:0,enemyRoutesCertified:0,
     officialWinner:'NONE',productionAuthorized:false}
@@ -171,5 +179,44 @@ describe('B387 genuine native 180s source history',()=>{
    officialWinner:'NONE'});
   s.b387RealRoundMilestones!.sourceScoreable=1 as 0;
   expect(()=>sourceSessionSummary(s)).toThrow('B387_UNTRUSTED_ROUND_MILESTONE');
+ });
+});
+
+describe('B391 real 150-native-tick human life continuity',()=>{
+ const a=()=>({tick:1000,respawns:0,stage:[25,17,26,0],
+  playing:true,alive:true,weapon:'twin-comets',drop:true,
+  c:{status:'REAL_LOCAL_CIRCUIT_CLEAR',sourceLocalPlayClear:true,
+   actualOriginalRampTouched:true,
+   actualOriginalRaisedFootColliderId:'UndertowT21D:right-low-team-a',
+   realPostDropHumanImpactChangedCells:65,genuineGroundedTravelMeters:11.2,
+   naturalCrossTeamRouteProven:false,sourceScoreablePromotions:0,
+   officialWinner:'NONE'}});
+ it('holds past genuine clear, but suppresses current-life clear at native death',()=>{
+  const f=a(),h=new B387RoundMilestones();
+  expect(h.observe(f).currentLifeClear).toBe(true);
+  f.tick=1100;f.alive=false;
+  const dead=h.observe(f);
+  expect(dead).toMatchObject({valid:true,realClearedLives:1,
+   currentLifeClear:false,nativeHumanAlive:false,realNativeDeathWitnesses:1,
+   real150TickReturns:0,lastNativeDeathTick:1100});
+  f.tick=1248;f.alive=false;expect(h.observe(f).valid).toBe(true);
+  f.tick=1249;f.alive=true;f.respawns=1;f.drop=false;
+  f.c.status='WAIT_FIRST_DROP';f.c.sourceLocalPlayClear=false;
+  const returned=h.observe(f);
+  expect(returned).toMatchObject({valid:true,realClearedLives:1,
+   currentLifeClear:false,nativeHumanAlive:true,
+   realNativeDeathWitnesses:1,real150TickReturns:1,
+   lastNativeReturnTick:1249,currentLifeIndex:1});
+ });
+ it('refuses fake return without a genuine HP-zero trace or too early',()=>{
+  for(const extra of [0,148]){
+   const h=new B387RoundMilestones(),f=a();
+   h.observe(f);
+   if(extra){
+    f.tick=1001;f.alive=false;h.observe(f);
+   }
+   f.tick=1001+extra;f.alive=true;f.respawns=1;f.drop=false;
+   expect(h.observe(f).valid).toBe(false);
+  }
  });
 });

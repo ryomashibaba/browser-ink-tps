@@ -9,6 +9,11 @@ import type {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 export class B387RoundMilestones{
  private tick=-1;
  private life=0;
+ private alive=true;
+ private deathNativeTick:number|null=null;
+ private realDeathWitnesses=0;
+ private real150TickReturns=0;
+ private lastReturnNativeTick:number|null=null;
  private completed=new Set<number>();
  private clearTick:number|null=null;
  private weapon:string|null=null;
@@ -31,7 +36,22 @@ export class B387RoundMilestones{
      c.naturalCrossTeamRouteProven!==false||c.officialWinner!=='NONE'){
    this.valid=false;return this.snapshot();
   }
-  this.tick=f.tick;this.life=f.respawns;
+  // The actual HP-zero death frame starts the genuine 150-frame respawn.
+  // No arbitrary increment to the respawn counter may establish a return.
+  const returned=f.respawns===this.life+1;
+  if(returned&&(!f.alive||this.alive||this.deathNativeTick===null||
+     f.tick-this.deathNativeTick<149)||
+     !returned&&this.tick>=0&&!this.alive&&f.alive){
+   this.valid=false;return this.snapshot();
+  }
+  if(this.tick>=0&&this.alive&&!f.alive){
+   this.realDeathWitnesses++;this.deathNativeTick=f.tick;
+  }
+  if(returned){
+   this.real150TickReturns++;this.lastReturnNativeTick=f.tick;
+   this.deathNativeTick=null;
+  }
+  this.tick=f.tick;this.life=f.respawns;this.alive=f.alive;
   if(f.playing&&f.alive&&f.drop&&
      c.status==='REAL_LOCAL_CIRCUIT_CLEAR'&&c.sourceLocalPlayClear&&
      c.actualOriginalRampTouched&&
@@ -48,8 +68,13 @@ export class B387RoundMilestones{
  snapshot(){
   return {enabled:true as const,valid:this.valid,
    realClearedLives:this.completed.size,
-   currentLifeClear:this.completed.has(this.life),
+   currentLifeClear:this.alive&&this.completed.has(this.life),
    currentLifeIndex:this.life,lastObservedNativeTick:this.tick,
+   nativeHumanAlive:this.alive,
+   realNativeDeathWitnesses:this.realDeathWitnesses,
+   real150TickReturns:this.real150TickReturns,
+   lastNativeDeathTick:this.deathNativeTick,
+   lastNativeReturnTick:this.lastReturnNativeTick,
    lastTrueClearTick:this.clearTick,lastTrueWeapon:this.weapon,
    lastTruePostDropCells:this.cells,sourceScoreable:0 as const,
    enemyRoutesCertified:0 as const,officialWinner:'NONE' as const,
@@ -148,6 +173,17 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
    memory.sourceScoreable!==0||memory.enemyRoutesCertified!==0||
    memory.officialWinner!=='NONE'||memory.productionAuthorized!==false||
    (memory.currentLifeClear&&!mission?.sourceLocalPlayClear)||
+    (memory.currentLifeClear&&!memory.nativeHumanAlive)||
+    !Number.isSafeInteger(memory.realNativeDeathWitnesses)||
+    memory.realNativeDeathWitnesses<memory.real150TickReturns||
+    !Number.isSafeInteger(memory.real150TickReturns)||
+    memory.real150TickReturns!==s.humanRespawns||
+    (memory.lastNativeDeathTick!==null&&
+     (!Number.isSafeInteger(memory.lastNativeDeathTick)||
+      memory.nativeHumanAlive||memory.lastNativeDeathTick>s.tick))||
+    (memory.lastNativeReturnTick!==null&&
+     (!Number.isSafeInteger(memory.lastNativeReturnTick)||
+      memory.lastNativeReturnTick>s.tick))||
    (memory.realClearedLives===0&&
     (memory.lastTrueClearTick!==null||memory.lastTrueWeapon!==null))||
    (memory.realClearedLives>0&&
@@ -157,8 +193,10 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
   throw Error('B387_UNTRUSTED_ROUND_MILESTONE');
  // Historical field retained for B373: both modes use the same real-life B186 proof.
  const sourceShooter=selectedCircuit&&mission?{
-  currentLifeStatus:mission.status,
-  currentLifeLocalClear:mission.sourceLocalPlayClear,
+  currentLifeStatus:memory?.nativeHumanAlive===false?
+   'WAIT_NATIVE_RESPAWN':mission.status,
+  currentLifeLocalClear:mission.sourceLocalPlayClear&&
+   memory?.nativeHumanAlive!==false,
   originalRampContact:mission.actualOriginalRampTouched,
   physicalTravelMeters:mission.genuineGroundedTravelMeters,
   trueHumanImpactCells:mission.realPostDropHumanImpactChangedCells,
@@ -351,7 +389,9 @@ export function createF3SourceSessionBoard(
    (v.roundMilestones?'\nROUND VERIFIED CLEARS · '+
     v.roundMilestones.realClearedLives+
     ' · LAST '+(v.roundMilestones.lastTrueWeapon??'NONE')+
-    ' · NO SCORE':'');
+    ' · NO SCORE'+
+    (v.roundMilestones.nativeHumanAlive?'':' · HUMAN SPLATTED')+
+    ' · REAL RETURNS '+v.roundMilestones.real150TickReturns:'');
   root.dataset.b387VerifiedClears=String(v.roundMilestones?.realClearedLives??0);
   root.dataset.b387CurrentLife=String(v.roundMilestones?.currentLifeClear??false);
   restart.hidden=!v.finished;
@@ -380,6 +420,8 @@ export function createF3SourceSessionBoard(
    (v.roundMilestones?'\n\nROUND VERIFIED CLEARS '+v.roundMilestones.realClearedLives+
     ' · LAST '+(v.roundMilestones.lastTrueWeapon??'NONE')+
     ' · '+v.roundMilestones.lastTruePostDropCells+' ACTUAL FRESH CELLS'+
+    ' · REAL NATIVE SPLATS '+v.roundMilestones.realNativeDeathWitnesses+
+    ' / VERIFIED RETURNS '+v.roundMilestones.real150TickReturns+
     ' · NO OFFICIAL WINNER':'');
   finish.dataset.b387VerifiedClears=String(v.roundMilestones?.realClearedLives??0);
   finish.dataset.t21B59State=v.finished?'FINISHED':'HIDDEN';
