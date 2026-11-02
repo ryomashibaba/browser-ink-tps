@@ -5010,8 +5010,16 @@ export class UndertowF3PlayablePreviewApp{
    // This draws read-only positions/ownerGrid: no simulation or score writes.
    const fullHudDue=this.matchState!==priorNativeRoundPhase||
       this.matchState==='TIME_UP'||this.renderedFrames%12===0;
-   if(this.radarVisible&&!fullHudDue&&this.renderedFrames%3===0)
-    this.radar.render(this.snapshot());
+   if(this.radarVisible&&!fullHudDue&&this.renderedFrames%3===0){
+    // Fast path must not repeatedly run the whole QA/HUD snapshot:
+    // use only measured KCC position and current native CPU traffic.
+    const nativeFoot=this.player.getPosition(this.p);
+    this.radar.render({
+     player:{position:[nativeFoot.x,nativeFoot.y,nativeFoot.z]},
+     cpu:this.traffic.snapshot(),matchState:this.matchState,
+     tick:this.clock.tick
+    });
+   }
    if(fullHudDue)this.refresh();
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
