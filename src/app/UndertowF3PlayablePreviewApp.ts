@@ -5005,10 +5005,14 @@ export class UndertowF3PlayablePreviewApp{
    if(this.renderedFrames%6===0)this.refreshB25PaintRun();
    this.stats.frame(dt*1000);
    this.renderedFrames++;
-   // B338: the first real native phase transition is immediately visible.
-   // The rest of the expensive HUD still renders every twelve visual frames.
-   if(this.matchState!==priorNativeRoundPhase||
-      this.matchState==='TIME_UP'||this.renderedFrames%12===0)this.refresh();
+   // B403: Keep the actual original-source radar fresh during slow
+   // SwiftShader frames without increasing full-HUD refresh frequency.
+   // This draws read-only positions/ownerGrid: no simulation or score writes.
+   const fullHudDue=this.matchState!==priorNativeRoundPhase||
+      this.matchState==='TIME_UP'||this.renderedFrames%12===0;
+   if(this.radarVisible&&!fullHudDue&&this.renderedFrames%3===0)
+    this.radar.render(this.snapshot());
+   if(fullHudDue)this.refresh();
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
    // The visible session freezes, preserving the exact failing actor foot.
