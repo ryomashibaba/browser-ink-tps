@@ -97,3 +97,9 @@
 - 読み取り専用のSOURCEレーダーに、前回試合よりnative tickが巻き戻った場合・sample ageが180実tickを超えた場合・不正tick時に古い原作塗装点を破棄する処理を追加。新試合の実ownerGridが読めるまで以前の塗装を現在地として描かない。
 - 真正TIME_UP画面でも必要なら元の17 PaintSurfaceの実ownerGridから最終サンプリングする。補間・推定塗装・Turf公式得点・Actor/物理/インク/時計書込は追加しない。既存B402のproofのみ利用する。
 - 前回B390 [#41428195956](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428195956) は別HEAD `a3ec0814` の長時間真正Chromium。結果を本変更のPASSと混同しない。新HEADのB75/真正180秒が未終了ならHOLD。main/T19C/T20/PR#5/Pages、原作25/17/26/0・自然対岸0/12・正式4v4・ART・公開HOLD維持。
+
+## 2026-11-02 — B403 実SOURCEレーダーの再戦分離・検証追加
+
+- 前HEAD `a3ec0814929e8e9fee513032241246db598cfa76` の [真正Chromium 180秒 #41428195956](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428195956) は全体SUCCESS。CPU実1053発・元SOURCE ownerGrid変更18810セル、原作7 CPU再合流7/7、TIME_UP実tick11860、実再試合（STAGING tick0）の実証。B402レーダーは20〜160秒の既存各チェックポイントでSOURCE実サンプルと描画を確認。**この旧SHAの成功を後続HEADの成功とはしない。**
+- 新しい再戦表示対策：同一レーダーがTIME_UPからSTAGINGに移った場合、過去試合のownerGridサンプルを先に破棄。不明なmatch phaseもfail-closed。原作地形・NavLink・ゲーム経過・PaintCoordinator・HP・Scoreableへ書き込まない。
+- 既存B390真正Chromiumの180秒TIME_UP後、実ユーザークリックで作られる次の新世界について、元レーダーcanvasの存在とSOURCE ink状態OFF、サンプルtickが非正、A/B表示点0、SOURCE snapshotの旧試合proof非継承を実際に検査する。**この新チェックのPASSは新HEADのActions完了まで未認証。** 新ワークフロー0、原作25/17/26/0と自然対岸0/12、正式4v4・ART・公開HOLD維持。

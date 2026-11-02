@@ -408,14 +408,18 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  const oldOrigin=await evalPage('performance.timeOrigin');
  await clickButton('#t21-f3-b59-restart');
  const replay=await until(async()=>{
-  const p=await evalPage('(() => {const s=window.__t21F3?.snapshot?.(),c=document.querySelector("#app-canvas"),w=document.querySelector("#t21-f3-b378-weapon");return s?{origin:performance.timeOrigin,search:location.search,ready:c?.dataset.t21F3Ready,game:s.matchState,paused:s.paused,tick:s.tick,remaining:s.timeRemainingSeconds,stage:[s.originalSourceSolids,s.originalPaintSurfaces,s.originalSourceNavigationLinks,s.sourceScoreablePromotions],weapon:s.b381RealNativeDodge.realWeapon,select:w?.value,proof:w?.dataset.b389NativeReplayKit,shots:s.shotsFired,humanPaint:s.b23HumanInkFeedback.humanChangedCells,cpuShots:s.cpuSourceTurfShots,cpuRejoins:s.cpu.physicalRejoins.length,missionClears:s.b387RealRoundMilestones?.realClearedLives,winner:s.b186RealOriginalHumanCircuit?.officialWinner}:null})()');
+  const p=await evalPage('(() => {const s=window.__t21F3?.snapshot?.(),c=document.querySelector("#app-canvas"),w=document.querySelector("#t21-f3-b378-weapon");return s?{origin:performance.timeOrigin,search:location.search,ready:c?.dataset.t21F3Ready,game:s.matchState,paused:s.paused,tick:s.tick,remaining:s.timeRemainingSeconds,stage:[s.originalSourceSolids,s.originalPaintSurfaces,s.originalSourceNavigationLinks,s.sourceScoreablePromotions],weapon:s.b381RealNativeDodge.realWeapon,select:w?.value,proof:w?.dataset.b389NativeReplayKit,shots:s.shotsFired,humanPaint:s.b23HumanInkFeedback.humanChangedCells,cpuShots:s.cpuSourceTurfShots,cpuRejoins:s.cpu.physicalRejoins.length,missionClears:s.b387RealRoundMilestones?.realClearedLives,winner:s.b186RealOriginalHumanCircuit?.officialWinner,radarCanvasPresent:!!document.querySelector("#t21-f3-radar-canvas"),radarSourceInkStatus:s.b402NativeOriginalInkRadar?.status??"OFF",radarPaintStatus:document.querySelector("#t21-f3-radar-canvas")?.dataset.t21B402SourceInk??"OFF",radarPaintTick:Number(document.querySelector("#t21-f3-radar-canvas")?.dataset.t21B402NativeTick??-1),radarADots:Number(document.querySelector("#t21-f3-radar-canvas")?.dataset.t21B402RealADots??0),radarBDots:Number(document.querySelector("#t21-f3-radar-canvas")?.dataset.t21B402RealBDots??0)}:null})()');
   return p?.origin>oldOrigin&&p.search.endsWith('&t21W10B389=twin-comets')&&
    p.ready==='READY'&&p.game==='STAGING'&&p.paused&&
    p.tick===0&&p.remaining===180&&p.stage.join(',')==='25,17,26,0'&&
    p.weapon==='twin-comets'&&p.select==='twin-comets'&&
    p.proof==='VERIFIED_PREGAME_SELECTION'&&
    p.shots===0&&p.humanPaint===0&&p.cpuShots===0&&
-   p.cpuRejoins===0&&p.missionClears===0&&p.winner==='NONE'?p:false;
+   p.cpuRejoins===0&&p.missionClears===0&&p.winner==='NONE'&&
+   // Genuine replay must not expose previous-match source ownerGrid ink.
+   p.radarCanvasPresent&&p.radarSourceInkStatus==='OFF'&&
+   p.radarPaintStatus==='OFF'&&p.radarPaintTick<=0&&
+   p.radarADots===0&&p.radarBDots===0?p:false;
  },120000);
  report.phases.push({phase:'B390_REAL_USER_TIMEUP_CLICK_NEW_WORLD',
   ...replay,gameStateInherited:false,realUserClick:true});persist();

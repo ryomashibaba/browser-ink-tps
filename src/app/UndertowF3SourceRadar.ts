@@ -59,6 +59,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
  }));
  const font='11px ui-monospace,monospace';
  let ink:B402RadarProof|null=null;
+ let lastNativePhase:string|null=null;
  let frame=0;
  let compact=false;
  function setPlayFocus(locked:boolean){
@@ -72,6 +73,13 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   canvas.style.height=compact?'190px':'310px';
  }
  function render(view:View){
+  // The same visible radar can outlive a native phase transition. A new
+  // STAGING phase must never inherit previous TIME_UP ownerGrid dots, even
+  // if a caller has not yet advanced (or rewound) the native clock.
+  if((view.matchState==='STAGING'&&lastNativePhase!==null&&
+      lastNativePhase!=='STAGING')||
+     !['STAGING','PLAYING','TIME_UP'].includes(view.matchState))ink=null;
+  lastNativePhase=view.matchState;
   // B247: native frame renders must respect PLAYER/QA inspection selection.
   // Earlier pointer-lock-only refresh overwrote B245's compact ready radar.
   const pointerLocked=document.pointerLockElement===document.querySelector('#app-canvas');
