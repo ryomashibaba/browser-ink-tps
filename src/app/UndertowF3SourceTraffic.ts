@@ -23,7 +23,8 @@ import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
  from './UndertowF3OriginalAllySupportInk';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
-import {eligibleB192SourceHumanPursuit} from './B192SourceHumanPursuit';
+import {eligibleB192SourceHumanPursuit,
+ chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -437,11 +438,24 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
        route.endSnapDistanceMeters<=.20&&
        this.hasSourceSupportedRoute(route,sign)){
-     this.patrolIndex.set(id,-1);
-     out.copy(h); // NO physical actor pose write or warp
-     this.realGoalRequests++;this.engagementGoalRequests++;
-     this.b192ApprovedHumanCombatGoals++;
-     return true;
+     // Existing native path-backed 2m combat standoff: the CPU must not
+     // collide head-on with the genuine HUMAN capsule. Not a new stage
+     // node, offmesh link, human warp, or guaranteed weapon hit.
+     const proposed=chooseB192OriginalEnemyStandoff(
+      route.nativePathPoints,h);
+     if(proposed&&this.hasSourceFootSupport(proposed)){
+      const combatGoal=new Vec3(proposed.x,proposed.y,proposed.z);
+      const toGoal=this.nav.auditPath(realFoot,combatGoal);
+      if(toGoal.reachedTarget&&toGoal.startSnapDistanceMeters<=.20&&
+         toGoal.endSnapDistanceMeters<=.20&&
+         this.hasSourceSupportedRoute(toGoal,sign)){
+       this.patrolIndex.set(id,-1);
+       out.copy(combatGoal); // genuine Crowd goal only; no actor pose write
+       this.realGoalRequests++;this.engagementGoalRequests++;
+       this.b192ApprovedHumanCombatGoals++;
+       return true;
+      }
+     }
     }
    }
    this.b192RejectedHumanCombatGoals++;

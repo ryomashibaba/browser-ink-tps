@@ -37,3 +37,29 @@ describe('B192 source-only actual HUMAN pursuit',()=>{
   expect(can({...v,humanFoot:{x:Infinity,y:4,z:-40}})).toBe(false);
  });
 });
+
+import {chooseB192OriginalEnemyStandoff as standoff}
+ from './B192SourceHumanPursuit';
+describe('B192 genuine path-based CPU combat standoff proposal',()=>{
+ const actualHuman={x:4,y:4,z:-40};
+ const originalRecastPath=[{x:0,y:4,z:-40},
+  {x:2,y:4,z:-40},actualHuman];
+ it('stops two meters before the living human on the supplied source path',()=>{
+  expect(standoff(originalRecastPath,actualHuman))
+   .toEqual({x:2,y:4,z:-40});
+ });
+ it('never targets an occupied real physics capsule or a too-short route',()=>{
+  expect(standoff([{x:2.3,y:4,z:-40},actualHuman],actualHuman))
+   .toBeNull();
+  expect(standoff([],actualHuman)).toBeNull();
+ });
+ it('refuses unverified cross-gap, vertical or fake path endpoints',()=>{
+  expect(standoff([{x:0,y:4,z:-32},{x:2,y:4,z:-32},
+   {x:4,y:4,z:-32}],{x:4,y:4,z:-32})).toBeNull();
+  expect(standoff([{x:0,y:6,z:-40},{x:2,y:6,z:-40},
+   {x:4,y:6,z:-40}],{x:4,y:6,z:-40})).toBeNull();
+  expect(standoff(originalRecastPath,{x:8,y:4,z:-40})).toBeNull();
+  expect(standoff([{x:0,y:NaN,z:-40},actualHuman],actualHuman))
+   .toBeNull();
+ });
+});

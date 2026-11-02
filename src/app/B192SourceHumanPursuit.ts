@@ -1,5 +1,7 @@
 /** Strict gameplay CPU→real HUMAN goal eligibility, NOT route authority. */
 import {Team} from '../ink/types';
+import {chooseB142OriginalAllyStandoff, type B142Foot}
+ from './UndertowF3OriginalAllyStandoff';
 export interface B192HumanCandidate{
  enabled:boolean;nativeTick:number;humanTick:number;
  cpuId:string;cpuTeam:Team.A|Team.B;
@@ -28,4 +30,19 @@ export function eligibleB192SourceHumanPursuit(p:B192HumanCandidate):boolean{
   return false;
  const d=Math.hypot(a.x-b.x,a.z-b.z);
  return d>=1.7&&d<=10;
+}
+
+/** F3 enemy pursuit must stop at an existing native path waypoint,
+ * rather than steering into the REAL player's occupied physics capsule.
+ * The existing 2m source-path standoff chooser is a proposal only:
+ * caller must recheck BOTH Rapier support and actual Recast route before
+ * submitting an agent goal, and original CPU projectiles still own hits. */
+export function chooseB192OriginalEnemyStandoff(
+ path:readonly B142Foot[],realHumanFoot:B142Foot
+):B142Foot|null{
+ const p=chooseB142OriginalAllyStandoff(path,realHumanFoot);
+ if(!p||p.z> -33||p.y<2.7||p.y>5.25||
+    realHumanFoot.z> -33||
+    Math.abs(p.y-realHumanFoot.y)>.30)return null;
+ return p;
 }

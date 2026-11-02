@@ -109,3 +109,10 @@
 - QA HEAD `39e724db9774767bf4374542cb1e5dab6dd2c6de` [B75 #41442964849](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41442964849) と[B15 #41442964779](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41442964779) は全ジョブSUCCESS。一方、[真正B390 #41442964780](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41442964780) は約120秒で **FAIL**。停止理由は `B385_B401_TRUE_NATIVE_HUD_SOURCE_GRID_MISMATCH`：先に保存した外側Tick8265より次のブラウザ読み込みの実ownerGridサンプルTick8271が6Tick進んだだけでも偽の失敗としていた。60秒時点などの原作HUD、CPU7/7、実塗装の成功は旧範囲だけ確認。
 - 既存B402の同CDP時刻比較方式と整合させ、`B401`でもページSnapshotのTickとHUD・SOURCE countersを**一回のRuntime.evaluate内**で同時取得。前のTickは下限とし、後の実Tickへの前進は許可する。新しい同一時点Snapshotより未来のsource tick、180tick超の古いサンプル、原作17面/169742等のセル総和不整合、HUD値相違、公式Scoreable/勝敗偽装は依然拒否。自然な180秒やレーダー再戦の新しいPASSは**後続真正CIまでHOLD**。
 - 既存B390 node:testに正常CDP進行・古さ・未来・偽スコアを一括回帰。物理/CPU/武器/原作25/17/26/0/ゲーム時計を変更せず、ワークフロー新設なし。main/Pages/T19C/T20/PR#5、対岸経路0/12・正式4v4/ART/公開HOLD維持。
+
+## 2026-11-02 — F3 原作同側の真正敵CPU接近を実戦向けに変更（新SHA CI待ち）
+
+- 既存B192の SOURCE-only 敵CPU追跡は、人間が現実にB側の原作支持床へ入ったときだけ成立し、CPUの実足→人間の実足の原作Rapier支持、全中間実Recastパス/原作床を要求する。ただし以前は最終Crowd goalが**生存する人間の物理足そのもの**であり、近接時に互いのカプセルが衝突してCPUが攻撃距離を維持できない恐れがあった。
+- 今回は既存B142の**実Recastパス上2m手前の既知standoff**を再利用。ただし相手は実敵人間であり、B側元原作床の支持、再度そのstandoffまでのRecast+全中間Rapier支持を個別審査。通らなければ従来の安全な原作巡回へ戻す。CPU position/physics/cooldown/武器性能/AI距離認証は直接変更しない。これは正式原作スタンスパラメータの認定ではない。
+- B192の正・負・短距離・原作中央未接続・高低差条件のVitestを追加し、既存B75統合CIで実行する。新ワークフローなし。**自然な敵人間との真正HP交戦・撃破・復活が増えたとの主張はしない。** これまでのSOURCE通常配置では対岸経路0/12のまま。
+- 直前B401 CDP tick同期の [真正B390 #41446701637](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41446701637) は現時点Queuedであり、旧HEAD結果を今回の実装PASSと混同しない。固定25 Rapier solids/17 PaintSurfaces/26 NavLinks/0 Scoreable、公式Winner NONE、正式4v4/ART/本番/マージHOLD、main/T19C/T20/Pages/PR#5保護継続。
