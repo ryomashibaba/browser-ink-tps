@@ -26,7 +26,7 @@ export class B401NativeLiveSourceInkOwnership{
   tick:number,phase:string,full180s:boolean):B401LiveState{
   if(!full180s||!['STAGING','PLAYING'].includes(phase)||
      !Number.isSafeInteger(tick)||tick<1)return this.current;
-  if(this.lastTick>=0&&tick-this.lastTick<180)return this.current;
+  if(this.lastTick>=0&&tick-this.lastTick<120)return this.current;
   this.lastTick=tick;
   if(stage.join('/')!=='25/17/26/0'||grids.length!==17)
    return this.current=make('HOLD','ORIGINAL_STAGE_NOT_REGISTERED',tick,grids.length);
@@ -55,4 +55,23 @@ export class B401NativeLiveSourceInkOwnership{
    make('LIVE_REGISTERED_SOURCE_ONLY','REAL_NATIVE_PAINT_SURFACE_OWNERS',tick,17,total,a,b,n):
    make('HOLD','NO_ACTIVE_ORIGINAL_INK_CELLS',tick,17);
  }
+}
+
+/** A read-only SOURCE ownership line, explicitly NOT official Turf. */
+export function b401SourceHudLine(s:B401LiveState):string{
+ if(s.status==='LIVE_REGISTERED_SOURCE_ONLY')
+  return 'LIVE SOURCE GRID · A '+s.teamA.toLocaleString()+
+   ' / B '+s.teamB.toLocaleString()+
+   ' / NEUTRAL '+s.neutral.toLocaleString()+
+   ' · TICK '+s.sampleNativeTick+' · NOT TURF SCORE\n';
+ return s.status==='HOLD'?'SOURCE GRID HOLD · '+s.reason+'\n':'';
+}
+
+/** Replace ONLY the B401 section of an existing real SOURCE round clock.
+ * Never forge a newer native tick or change gameplay counts. */
+export function b401ReplaceSourceGridFooter(text:string,s:B401LiveState):string{
+ if(!text.endsWith('NO OFFICIAL WINNER'))return text;
+ const old=text.replace(
+  /(?:LIVE SOURCE GRID ·[^\n]*|SOURCE GRID HOLD ·[^\n]*)\n(?=NO OFFICIAL WINNER$)/,'');
+ return old.replace(/NO OFFICIAL WINNER$/,b401SourceHudLine(s)+'NO OFFICIAL WINNER');
 }

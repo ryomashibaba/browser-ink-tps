@@ -153,8 +153,8 @@ import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY}
 import {b400RealOriginalSourceGridRecap,b400Real180SourceEndGate,
  b400SourceGridDownloadRecap,type B400SourceRecap}
  from './B400RealOriginalSourceGridRecap';
-import {B401NativeLiveSourceInkOwnership}
- from './B401NativeLiveSourceInkOwnership';
+import {B401NativeLiveSourceInkOwnership,b401SourceHudLine,
+ b401ReplaceSourceGridFooter} from './B401NativeLiveSourceInkOwnership';
 import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
  from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
@@ -4969,6 +4969,32 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21B399ProductionAuthorized=
    String(B399_CLEAR_SIGHT_AUTHORITY.productionAuthorized);
  }
+ private refreshB401SourceClockFast():void{
+  // Genuine low-FPS WebGL2 must not leave SOURCE ownership stale just
+  // because a full QA snapshot is expensive. Keep existing 12-frame
+  // snapshot cadence, while reading ONLY the real 17 owner grids and the
+  // native clock every third visible frame. No CPU, physics or ink writes.
+  const hud=this.b205RoundClock;
+  if(!hud||!this.b203FullRound||
+     !['STAGING','PLAYING'].includes(this.matchState)||
+     this.clock.tick<1)return;
+  const before=this.b401LiveSourceInk.get();
+  const next=this.b401LiveSourceInk.observe(this.b45SourceSurfaces,[
+   this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
+   this.rawStage.navigationLinks?.length??0,0
+  ],this.clock.tick,this.matchState,true);
+  if(next===before)return;
+  const old=hud.textContent??'';
+  if(!old.endsWith('NO OFFICIAL WINNER'))return;
+  hud.textContent=b401ReplaceSourceGridFooter(old,next);
+  hud.dataset.t21B401SourceStatus=next.status;
+  hud.dataset.t21B401SampleNativeTick=String(next.sampleNativeTick);
+  hud.dataset.t21B401RegisteredCells=String(next.totalActiveCells);
+  hud.dataset.t21B401TeamACells=String(next.teamA);
+  hud.dataset.t21B401TeamBCells=String(next.teamB);
+  hud.dataset.t21B401NeutralCells=String(next.neutral);
+  hud.dataset.t21B401OfficialWinner='NONE';
+ }
  private update(dt:number){
   this.updateW10B22OwnerTrial();
   // A generic QA/UI pause toggle cannot consume the player's ready time.
@@ -5056,6 +5082,8 @@ export class UndertowF3PlayablePreviewApp{
      tick:this.clock.tick
     });
    }
+   if(!fullHudDue&&this.renderedFrames%3===0)
+    this.refreshB401SourceClockFast();
    if(fullHudDue)this.refresh();
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
@@ -6639,13 +6667,7 @@ export class UndertowF3PlayablePreviewApp{
        'CPU ACTIVITY · WAITING FOR 5s REAL NATIVE SAMPLE\n')+
       'ENEMY SIGHT '+state.b181OriginalCombatSight.visibleEnemySelections+
       ' · DIRECT HITS '+state.humanCpuDirectHits+'\n':'')+
-    (b401.status==='LIVE_REGISTERED_SOURCE_ONLY'?
-      'LIVE SOURCE GRID · A '+b401.teamA.toLocaleString()+
-      ' / B '+b401.teamB.toLocaleString()+
-      ' / NEUTRAL '+b401.neutral.toLocaleString()+
-      ' · TICK '+b401.sampleNativeTick+' · NOT TURF SCORE\n':
-     b401.status==='HOLD'?
-      'SOURCE GRID HOLD · '+b401.reason+'\n':'')+
+    b401SourceHudLine(b401)+
     'NO OFFICIAL WINNER';
    this.b205RoundClock.style.whiteSpace='pre-line';
    this.b205RoundClock.dataset.t21B205NativePhase=phase;

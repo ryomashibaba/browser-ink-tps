@@ -147,3 +147,10 @@
 - B390実180秒試験はPLAYING中・終了画面で一律`physicalRejoins.length===7`を要求していた。前工程で実CPUが本当に撃破・150tick後に上段原作spawnへ復活すると**一時的に再着地者は6/7**となるのが正しいゲーム物理。旧B390は真の生命イベントを偽CI failure扱いする問題だった。
 - 証拠を安易に甘くせず、SOURCE原作CPU7人の固有ID・各本物`lifeState/hp`・rejoined IDs・実150tick CPU respawn数・SourceTraffic上段返還待ちID・実復活検出数・元F2再降下完了数・禁止Actor実足ワープ0を**相互照合**する既存B390内read-only検証を追加。不明な欠員、他者ID、偽counter、元地形外目標はHOLD。終了画面の実再合流数とDOM表示も同じ現在の数に一致させ、必ず7/7との偽認定はしない。
 - ゲームの`snapshot()`には本物の`stats.cpuRespawns`を読み取り専用で公開。20秒ごとの実ブラウザB390 checkpointにも復活数と実戻り待ちIDを保存。既存node:testを追加し、通常7/7の物理SOURCE試合は厳密維持。**自然な撃破が発生したとは認定しない。** 最新HEAD一致のCIと実Chromeが完了するまでHOLD。原作25/17/26/0、自然対岸0/12、正式4v4/ART/main/Pages/PR#5保護継続。
+
+## 2026-11-02 — B390実180秒の低FPS SOURCE所有HUD遅延を修正（新HEADの真正CI待ち）
+
+- 直前HEAD `464623f578a24f7d5d5a288d4d06ba9624156ff8`： [B75 #41452559787](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41452559787) は事前ビルド・Vitest・B287・FIXED・SWEEPが全SUCCESS。一方 [B390 #41452559893](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41452559893) は本物のChromium 180秒統合の120秒付近にFAILした。旧成功を新HEAD完走へ流用しない。
+- **失敗の直接原因:** `B385_B401_TRUE_NATIVE_HUD_SOURCE_GRID_MISMATCH`、実`pageNativeTick=8256`に対し原作17面実ownerGrid表示の`sampleNativeTick=8058`（差198 native ticks）。CIの鮮度要求180tickを超えた。100秒時点では実CPU射撃769・元SOURCE塗装変更18007セル・本物の再合流7/7・CPU復活0を確認したが、180秒TIME_UPと再戦は未達。
+- **ゲームの可視性改善:** B401 SOURCE所有セルの実読み取り周期を180→120 **native物理tick**に短縮。重い通常HUD・QA snapshotは従来12描画フレーム周期を守り、B403レーダーと同じ3描画フレーム周期に、原作17面の既存ownerGrid/実nativeTickだけを読む軽量B401 HUD更新を追加。SOURCEのA/B/中立セル数・sampleNativeTick・DOMデータを同じ実測値で更新し、元の表示欄以外は変更しない。画面のNO OFFICIAL WINNER、非得点と原作境界を維持。
+- **検証の厳格性:** B390の最大鮮度180tickは緩和せず、物理60Hz・Rapier/Recast・CPU生命・HP・弾・PaintCoordinator・元ステージ25/17/26/0・原作対岸経路0/12・公式得点0を変更しない。既存B401専用Vitestを更新・追加。**新HEADのbuild/真正180秒/再戦は同SHA CI結果を待って初めて判定する。** 正式4v4/ART/本番公開/main/T19C/T20/PR#5/PagesはHOLD・不変更。
