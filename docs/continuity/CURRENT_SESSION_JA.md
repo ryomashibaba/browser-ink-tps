@@ -130,3 +130,5 @@
 - 本工程はSOURCE 12武器B384または既存B367研究選択中に限り、`stepFixed()` の実CPU更新・真正弾HP処理・ペイント処理の後で毎native tickに実Actor7体の `lifeState/hp/physicallyRejoined` と本物の `ProjectileSystem` HPイベントをB367 ledgerへ読み取り。重いSourceTraffic全スナップショットを避け、7人分だけの新しい**読み取り専用**軽量readerを使用。UI刷新は単に `currentNotice()` を表示し、証拠イベント・寿命を進めない。
 - 本物のCPU被弾→HP 0→CPU側fixedUpdateで `SPLATTED`→既存150tick復帰を、遅いグラフィックスframeに左右されず保持する単体回帰。観測/表示が移動、武器射撃、Actor HPやリスポーン時間、original source 25/17/26/0、Scoreable・公式Winner・F4接続経路を変更しない。
 - 本工程は **本物の自然敵HPヒット/撃破・復活が起きたとのPASS宣言ではない**。通常の対岸経路は0/12、実戦条件未解決。ゲームの正式4v4・ART・本番・main/T19C/T20/PR #5 / Pages変更禁止継続。最新HEAD一致CI PASSまで統合認証HOLD。
+
+- **CIトリガー保全:** B367 60Hz観測と武器実HP証拠のSOURCE関連ファイル（本体・試験）とB192の追跡候補単体変更でも、既存B75のビルド+統合Vitestを起動するよう既存 paths に追加（新ワークフローなし）。回帰通知の120tick TTL正しい境界を再確認。数件の連続commitによる途中旧SHAのActionはキャンセルされたため、現在HEAD一致のCIのみ最終判定対象とする。
