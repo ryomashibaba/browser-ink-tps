@@ -82,3 +82,10 @@
 - これは照準**候補**のみの改修。既存の実SOURCE ownerGrid・Paintable・非Scoreable・Rapier足元支持・原作物理弾射線・実武器射程・cooldownを全て通った場合だけ既存CpuAgentSystemが照準を選択する。射撃数、塗装数、命中率の改善は真正Chromium実測前には未認証。
 - 原作25 solids /17 PaintSurfaces /26 NavLinks /0 Scoreable・対岸自然経路0/12を維持。既存の本物の180秒CIが走行中のため、旧SHAの結果を今回のゲーム改善PASSへ転用しない。新しい地形、Actor、経路、偽インク、HP、スコア、CIワークフローは追加しない。main / PR#5 / Pages、ART / 正式4v4 / 本番のHOLD維持。
 
+## 2026-11-02 — B403 真正SOURCEレーダーの低FPS下更新・180秒検証
+
+- 起点QA HEAD `abb068396e926e53df8c5764dd893efacdb81830`（CPUの実到達ゴール8方向SOURCE塗装）。旧B390真正 [#41422194231](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41422194231) は100秒時点で実CPU768発/原作塗装17,560セルを記録したが、120秒付近でレーダー描画サンプルがページnative tickより198tick古く、厳格な180tick鮮度ゲートでFAIL。試合完走・公式4v4の証拠ではない。
+- **ゲーム機能改善:** 低FPS/SwiftShaderでHUD全体は従来12可視フレーム更新のまま、SOURCEレーダーのみ3可視フレームごとに本物のCPU位置と原作ownerGrid表示を更新。元PaintSurfaceの本物の点サンプル周期を180→120 **native 60Hz ticks**へ短縮し、長時間プレイ中に古いレーダーを見る時間を抑える。PaintEvent/インク所有/HP/Actor/物理tick/得点/ステージへの書込なし。原作セルの周辺面積を推定しない。
+- コミット: `ddc6f3e4`（描画間隔）、`7a0a258f`（実SOURCEサンプリング）。`6b69d323`で既存の真正B390・20秒チェックポイントに同一Chromiumページのレーダーnative sample ageと本物の描画フレーム数の計測を追加。新ワークフロー追加なし。
+- **検証は限定・保留:** [B390最新SHA CI #41428008971](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428008971) は起動直後で結果未確認。B75・型ビルド・180秒TIME_UP・リプレイ・実人間対CPU HP命中・150tick復活の新SHA PASSは**認証前**。旧成功を流用しない。
+- F1〜F5と25 solids/17 PaintSurfaces/26 source NavLinks/0 Scoreable/自然対岸0/12、正式4v4・公式Winner・ART・公開・mainマージHOLD継続。次工程: B390の同一HEAD実測を確認し、レーダー鮮度と完走/再試合を独立判定。その後、原作ルート0/12を架空接続せず実敵遭遇→実弾HP減少→撃破・実150tick復活のF3実ゲーム統合へ戻る。
