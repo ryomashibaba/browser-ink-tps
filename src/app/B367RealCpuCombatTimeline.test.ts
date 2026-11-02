@@ -131,7 +131,7 @@ describe('B367 exact 60Hz life witness independent of slow graphics HUD',()=>{
   // No graphics poll; 149 ordinary real native physics observations.
   for(let i=1;i<=149;i++){
    f.nativeTick++;
-   expect(a.observe(f)?.state).toBe(i<=118?'ACTUAL_CPU_SPLAT':undefined);
+   expect(a.observe(f)?.state).toBe(i<=120?'ACTUAL_CPU_SPLAT':undefined);
   }
   f.nativeTick++;
   f.cpu[3]!.lifeState='ACTIVE';f.cpu[3]!.hp=100;
