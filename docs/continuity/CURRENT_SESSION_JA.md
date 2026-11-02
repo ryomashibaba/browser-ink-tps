@@ -103,3 +103,9 @@
 - 前HEAD `a3ec0814929e8e9fee513032241246db598cfa76` の [真正Chromium 180秒 #41428195956](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428195956) は全体SUCCESS。CPU実1053発・元SOURCE ownerGrid変更18810セル、原作7 CPU再合流7/7、TIME_UP実tick11860、実再試合（STAGING tick0）の実証。B402レーダーは20〜160秒の既存各チェックポイントでSOURCE実サンプルと描画を確認。**この旧SHAの成功を後続HEADの成功とはしない。**
 - 新しい再戦表示対策：同一レーダーがTIME_UPからSTAGINGに移った場合、過去試合のownerGridサンプルを先に破棄。不明なmatch phaseもfail-closed。原作地形・NavLink・ゲーム経過・PaintCoordinator・HP・Scoreableへ書き込まない。
 - 既存B390真正Chromiumの180秒TIME_UP後、実ユーザークリックで作られる次の新世界について、元レーダーcanvasの存在とSOURCE ink状態OFF、サンプルtickが非正、A/B表示点0、SOURCE snapshotの旧試合proof非継承を実際に検査する。**この新チェックのPASSは新HEADのActions完了まで未認証。** 新ワークフロー0、原作25/17/26/0と自然対岸0/12、正式4v4・ART・公開HOLD維持。
+
+## 2026-11-02 — B401実ブラウザ120秒のTick競合を修正（新CI検証待ち）
+
+- QA HEAD `39e724db9774767bf4374542cb1e5dab6dd2c6de` [B75 #41442964849](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41442964849) と[B15 #41442964779](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41442964779) は全ジョブSUCCESS。一方、[真正B390 #41442964780](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41442964780) は約120秒で **FAIL**。停止理由は `B385_B401_TRUE_NATIVE_HUD_SOURCE_GRID_MISMATCH`：先に保存した外側Tick8265より次のブラウザ読み込みの実ownerGridサンプルTick8271が6Tick進んだだけでも偽の失敗としていた。60秒時点などの原作HUD、CPU7/7、実塗装の成功は旧範囲だけ確認。
+- 既存B402の同CDP時刻比較方式と整合させ、`B401`でもページSnapshotのTickとHUD・SOURCE countersを**一回のRuntime.evaluate内**で同時取得。前のTickは下限とし、後の実Tickへの前進は許可する。新しい同一時点Snapshotより未来のsource tick、180tick超の古いサンプル、原作17面/169742等のセル総和不整合、HUD値相違、公式Scoreable/勝敗偽装は依然拒否。自然な180秒やレーダー再戦の新しいPASSは**後続真正CIまでHOLD**。
+- 既存B390 node:testに正常CDP進行・古さ・未来・偽スコアを一括回帰。物理/CPU/武器/原作25/17/26/0/ゲーム時計を変更せず、ワークフロー新設なし。main/Pages/T19C/T20/PR#5、対岸経路0/12・正式4v4/ART/公開HOLD維持。

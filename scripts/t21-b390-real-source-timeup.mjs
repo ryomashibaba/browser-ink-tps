@@ -30,6 +30,33 @@ export function b390NativeRadarSampleConsistent(checkpointTick,radar){
    d.fullCoverageInferred===false;
 }
 
+/** B401 original SOURCE ownership HUD: SAME-CDP snapshot + DOM. The
+ * earlier checkpoint is an observed lower bound, not an upper bound: a
+ * genuine 60 Hz page advances between separate CDP evaluations. */
+export function b390NativeLiveGridConsistent(checkpointTick,live){
+ const v=live?.v;
+ return Number.isSafeInteger(checkpointTick)&&checkpointTick>=1&&
+  Number.isSafeInteger(live?.pageNativeTick)&&
+  live.pageNativeTick>=checkpointTick&&
+  Number.isSafeInteger(v?.sampleNativeTick)&&v.sampleNativeTick>=1&&
+  v.sampleNativeTick<=live.pageNativeTick&&
+  live.pageNativeTick-v.sampleNativeTick<=180&&
+  v.status==='LIVE_REGISTERED_SOURCE_ONLY'&&
+  v.registeredSurfaces===17&&
+  Number.isSafeInteger(v.totalActiveCells)&&v.totalActiveCells>0&&
+  [v.teamA,v.teamB,v.neutral].every(n=>Number.isSafeInteger(n)&&n>=0)&&
+  v.teamA+v.teamB+v.neutral===v.totalActiveCells&&
+  v.originalSourceOnly===true&&v.officialTurfScore===false&&
+  v.winner==='NONE'&&v.gameplayWrites===0&&
+  v.productionAuthorized===false&&
+  live.hudStatus===v.status&&live.hudTick===v.sampleNativeTick&&
+  live.hudTotal===v.totalActiveCells&&live.hudA===v.teamA&&
+  live.hudB===v.teamB&&live.hudN===v.neutral&&
+  live.winner==='NONE'&&
+  live.text?.includes('LIVE SOURCE GRID')&&
+  live.text?.includes('NOT TURF SCORE');
+}
+
 export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  fail,report,persist,picture,clickButton}){
  const began=Date.now(),maxWallMs=62*60*1000;
@@ -75,7 +102,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     const s=window.__t21F3?.snapshot?.(),
      h=document.querySelector('#t21-f3-b205-real-round');
     const v=s?.b401NativeLiveSourceInk;
-    return {v,text:h?.textContent,
+    return {v,pageNativeTick:s?.tick,text:h?.textContent,
      hudStatus:h?.dataset.t21B401SourceStatus,
      hudTick:Number(h?.dataset.t21B401SampleNativeTick),
      hudTotal:Number(h?.dataset.t21B401RegisteredCells),
@@ -84,18 +111,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
      hudN:Number(h?.dataset.t21B401NeutralCells),
      winner:h?.dataset.t21B401OfficialWinner};
    })()`);
-   if(live?.v?.status!=='LIVE_REGISTERED_SOURCE_ONLY'||
-      live.v.sampleNativeTick<1||live.v.sampleNativeTick>n.tick||
-      live.v.registeredSurfaces!==17||live.v.totalActiveCells<1||
-      live.v.teamA+live.v.teamB+live.v.neutral!==live.v.totalActiveCells||
-      live.v.officialTurfScore!==false||live.v.winner!=='NONE'||
-      live.v.gameplayWrites!==0||live.hudStatus!==live.v.status||
-      live.hudTick!==live.v.sampleNativeTick||
-      live.hudTotal!==live.v.totalActiveCells||
-      live.hudA!==live.v.teamA||live.hudB!==live.v.teamB||
-      live.hudN!==live.v.neutral||live.winner!=='NONE'||
-      !live.text?.includes('LIVE SOURCE GRID')||
-      !live.text?.includes('NOT TURF SCORE'))
+   if(!b390NativeLiveGridConsistent(n.tick,live))
     fail('B401_TRUE_NATIVE_HUD_SOURCE_GRID_MISMATCH',{tick:n.tick,live});
    if(!report.phases.some(x=>x.phase==='B401_REAL_180S_NATIVE_LIVE_GRID')){
     const proof={phase:'B401_REAL_180S_NATIVE_LIVE_GRID',
