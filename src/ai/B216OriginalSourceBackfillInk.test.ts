@@ -21,11 +21,24 @@ describe('B216 existing ORIGINAL surface-oriented fallback aim proposals',()=>{
  it('at a genuine reached goal, uses only LIVE native weapon facing to seek original ink',()=>{
   const actualFacing={x:0,y:0,z:-1};
   const c=candidates(foot,foot,actualFacing);
-  expect(c).toHaveLength(18);
+  expect(c).toHaveLength(24);
   // Only a real reached goal gains the B64-established short radius.
-  expect(c.filter(x=>x.radiusMeters===1.7)).toHaveLength(6);
-  expect(c.filter(x=>x.radiusMeters===2.5)).toHaveLength(6);
-  expect(c.filter(x=>x.radiusMeters===3.5)).toHaveLength(6);
+  // Eight native-facing directions complete the full original-foot
+  // angular search, but cannot by themselves authorize a single shot.
+  expect(c.filter(x=>x.radiusMeters===1.7)).toHaveLength(8);
+  expect(c.filter(x=>x.radiusMeters===2.5)).toHaveLength(8);
+  expect(c.filter(x=>x.radiusMeters===3.5)).toHaveLength(8);
+  const short=c.filter(x=>x.radiusMeters===1.7);
+  const hasPoint=(dx:number,dz:number)=>short.some(p=>
+   Math.abs(p.x-foot.x-dx)<1e-9&&
+   Math.abs(p.z-foot.z-dz)<1e-9);
+  expect(hasPoint(0,-1.7)).toBe(true); // real forward
+  expect(hasPoint(-1.7/Math.SQRT2,-1.7/Math.SQRT2))
+   .toBe(true); // formerly missing forward-left
+  expect(new Set(short.map(p=>Math.round(
+   ((Math.atan2(p.z-foot.z,p.x-foot.x)+2*Math.PI)%
+     (2*Math.PI))*180/Math.PI)))).toEqual(
+   new Set([0,45,90,135,180,225,270,315]));
   expect(c.every(x=>Number.isFinite(x.x)&&Number.isFinite(x.z)&&
    Math.hypot(x.x-foot.x,x.z-foot.z)<=3.501)).toBe(true);
   expect(c.some(x=>x.z>foot.z)).toBe(true);

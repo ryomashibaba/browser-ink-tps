@@ -39,11 +39,18 @@ export function b216OriginalFootBackfillCandidates(
  // ORIGINAL ownerGrid, Rapier supports, ray and weapon range approve it.
  // No geometry, nav path, actor relocation or firing bypass is created.
  const radii=atGoal?([1.7,2.5,3.5] as const):([2.5,3.5] as const);
+ // Preserve the proven six offset proposals while en route. At a
+ // genuinely reached native goal B64's foot-to-goal forward vector
+ // vanishes, so complete all eight 45-degree directions around the
+ // ACTUAL finite weapon-facing vector (including forward and its
+ // previously omitted diagonal). These remain UNTRUSTED proposals.
+ const offsets=atGoal?
+  ([0,Math.PI/4,Math.PI/2,3*Math.PI/4,Math.PI,
+    -3*Math.PI/4,-Math.PI/2,-Math.PI/4] as const):
+  ([Math.PI/2,-Math.PI/2,Math.PI,-3*Math.PI/4,
+    3*Math.PI/4,Math.PI/4] as const);
  for(const distance of radii){
-  for(const offset of [
-   Math.PI/2,-Math.PI/2,Math.PI,-3*Math.PI/4,3*Math.PI/4,
-   Math.PI/4
-  ] as const){
+  for(const offset of offsets){
    const angle=heading+offset;
    result.push({x:foot.x+distance*Math.cos(angle),y:foot.y+.1,
     z:foot.z+distance*Math.sin(angle),radiusMeters:distance,

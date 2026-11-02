@@ -75,3 +75,10 @@
 - 修正: レーダー本体と同一のCDP `Runtime.evaluate` 内で取得した `snapshot.tick` を上限にし、検査済みの外側Tickより前に戻らないこと、実B402サンプルが最新ページから180 native ticksを超えて古くないこと、25/17/26/0とSOURCE・DOM・所有者件数・非得点権限が一致することを要求。両陣営の可視点は位置によりゼロでもよく、存在を捏造しない。
 - 現行B390統合CIに独立node:testの正常6Tick先行・未来時刻・古いレンダー・SOURCE権限不一致の回帰検査を追加。ゲームのKCC/CPU/塗装/原作当たり判定/時計/得点の実装は変更しない。
 - **未確認:** 新HEADの同一SHA真正Chromiumでの180秒TIME_UPと再戦、原作敵HP戦闘、自然対岸0/12・正式4v4・ART・本番公開は引き続きHOLD。CI完了前のPASS宣言は禁止。
+
+## 2026-11-02 — F3 原作ゴール到達時の8方向インク探索（新SHA認証待ち）
+
+- 本物のRecast patrol goalに0.40m未満まで接近したCPUは、既存の実weaponFacingを使ったSOURCE-only近接探索を6方向から8方向（45度間隔）にする。以前欠落していた真正の前方向と片側斜め前方向を補い、到達前の従来12候補は一切変更しない。
+- これは照準**候補**のみの改修。既存の実SOURCE ownerGrid・Paintable・非Scoreable・Rapier足元支持・原作物理弾射線・実武器射程・cooldownを全て通った場合だけ既存CpuAgentSystemが照準を選択する。射撃数、塗装数、命中率の改善は真正Chromium実測前には未認証。
+- 原作25 solids /17 PaintSurfaces /26 NavLinks /0 Scoreable・対岸自然経路0/12を維持。既存の本物の180秒CIが走行中のため、旧SHAの結果を今回のゲーム改善PASSへ転用しない。新しい地形、Actor、経路、偽インク、HP、スコア、CIワークフローは追加しない。main / PR#5 / Pages、ART / 正式4v4 / 本番のHOLD維持。
+
