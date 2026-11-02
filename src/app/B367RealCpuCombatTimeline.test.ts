@@ -18,7 +18,7 @@ const shot=(x:B367NativeCombatFrame,hpAfter=60)=>{
  x.humanDirectHits++;
  x.source.physicalHumanCpuHpHits++;
  x.cpu[3]!.hp=hpAfter;
- x.source.events=[...x.source.events,{sequence:x.humanDirectHits,
+ x.source.events=[...x.source.events,{sequence:x.source.physicalHumanCpuHpHits,
   nativeFrame:x.nativeTick,botId:'B1',weaponId:'pulse-sprayer',
   hpBefore:100,hpAfter,actualHpLoss:100-hpAfter,
   lethalHpZero:hpAfter===0}];
@@ -162,7 +162,8 @@ describe('B367 exact 60Hz life witness independent of slow graphics HUD',()=>{
 describe('Native actor-specific lifecycle and original return boundary',()=>{
  it('cannot certify an already-counted earlier splat of some other CPU',()=>{
   const t=new B367RealCpuCombatTimeline(),f=sample();
-  f.humanDirectSplats=1;f.cpuSplats=1;f.cpuRespawns=1;
+  f.humanDirectHits=1;f.humanDirectSplats=1;
+  f.cpuSplats=1;f.cpuRespawns=1;
   t.observe(f);shot(f,0);
   expect(t.observe(f)?.state).toBe('LETHAL_HP_ZERO_PENDING_SPLAT');
   f.nativeTick++;f.cpu[3]!.lifeState='SPLATTED';
