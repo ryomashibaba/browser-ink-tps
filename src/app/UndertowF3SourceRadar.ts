@@ -108,12 +108,14 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
    ctx.lineWidth=.75;ctx.beginPath();
    ctx.rect(-hw,-hh,2*hw,2*hh);ctx.fill();ctx.stroke();ctx.restore();
   }
-  // B402: one real cell dot per bounded original tile, at most every
-  // 180 native 60Hz simulation ticks. Draw under physical actor markers.
+  // B403: refresh genuine original ownerGrid samples every 120 native
+  // 60Hz ticks (2s), not every slow full-HUD pass. The 3-frame radar draw
+  // schedule keeps actual read-only paint dots current in SwiftShader.
+  // No polygon fill, inferred ownership, navigation or score authority.
   // We do not fill polygons or infer unverified source area/connectivity.
   if(actualPaintGrids.length===17&&view.tick>=1&&
      ['STAGING','PLAYING'].includes(view.matchState)&&
-     (!ink||view.tick-ink.nativeTick>=180)){
+     (!ink||view.tick-ink.nativeTick>=120)){
    ink=b402OriginalSourceInkRadarSamples(actualPaintGrids,
     [stage.solids.length,stage.paintSurfaces.length,
      stage.navigationLinks?.length??0,0],
