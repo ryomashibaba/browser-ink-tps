@@ -48,6 +48,7 @@ describe('B367 original physical CPU damage and native life',()=>{
   f.humanDirectSplats=1;f.cpuSplats=1;
   expect(a.observe(f)?.state).toBe('ACTUAL_CPU_SPLAT');
   f.nativeTick+=150;f.cpu[3]!.lifeState='ACTIVE';
+  f.cpu[3]!.rejoined=false; // actual native respawn is at original HIGH spawn
   f.cpu[3]!.hp=100;f.cpuRespawns=1;
   expect(a.observe(f)).toMatchObject({
    state:'ACTUAL_CPU_RESPAWN',actorId:'B1'});
@@ -135,6 +136,7 @@ describe('B367 exact 60Hz life witness independent of slow graphics HUD',()=>{
   }
   f.nativeTick++;
   f.cpu[3]!.lifeState='ACTIVE';f.cpu[3]!.hp=100;
+  f.cpu[3]!.rejoined=false;
   f.cpuRespawns=1;
   expect(a.observe(f)?.state).toBe('ACTUAL_CPU_RESPAWN');
   expect(a.currentNotice(f.nativeTick,true,false)).toMatchObject({
@@ -154,5 +156,40 @@ describe('B367 exact 60Hz life witness independent of slow graphics HUD',()=>{
   }
   f.nativeTick+=121;
   expect(a.currentNotice(f.nativeTick,true,false)).toBeNull();
+ });
+});
+
+describe('Native actor-specific lifecycle and original return boundary',()=>{
+ it('cannot certify an already-counted earlier splat of some other CPU',()=>{
+  const t=new B367RealCpuCombatTimeline(),f=sample();
+  f.humanDirectSplats=1;f.cpuSplats=1;f.cpuRespawns=1;
+  t.observe(f);shot(f,0);
+  expect(t.observe(f)?.state).toBe('LETHAL_HP_ZERO_PENDING_SPLAT');
+  f.nativeTick++;f.cpu[3]!.lifeState='SPLATTED';
+  // Counters belong to prior independent native splats.
+  expect(t.observe(f)?.state).toBe('LETHAL_HP_ZERO_PENDING_SPLAT');
+  f.humanDirectSplats++;f.cpuSplats++;
+  expect(t.observe(f)?.state).toBe('ACTUAL_CPU_SPLAT');
+  f.nativeTick+=150;f.cpu[3]!.hp=100;f.cpu[3]!.lifeState='ACTIVE';
+  f.cpu[3]!.rejoined=false;
+  expect(t.observe(f)?.state).not.toBe('ACTUAL_CPU_RESPAWN');
+  f.nativeTick++;f.cpuRespawns++;
+  expect(t.observe(f)?.state).toBe('ACTUAL_CPU_RESPAWN');
+ });
+ it('requires the real 150-tick CPU countdown and a fresh upper-spawn life',()=>{
+  const t=new B367RealCpuCombatTimeline(),f=sample();
+  t.observe(f);shot(f,0);t.observe(f);
+  f.nativeTick++;f.humanDirectSplats=1;f.cpuSplats=1;
+  f.cpu[3]!.lifeState='SPLATTED';f.cpu[3]!.hp=0;
+  t.observe(f);
+  const splat=f.nativeTick;
+  f.nativeTick=splat+149;f.cpuRespawns=1;
+  f.cpu[3]!.lifeState='ACTIVE';f.cpu[3]!.hp=100;
+  f.cpu[3]!.rejoined=false;
+  expect(t.observe(f)?.state).not.toBe('ACTUAL_CPU_RESPAWN');
+  f.nativeTick=splat+150;f.cpu[3]!.rejoined=true;
+  expect(t.observe(f)?.state).not.toBe('ACTUAL_CPU_RESPAWN');
+  f.nativeTick++;f.cpu[3]!.rejoined=false;
+  expect(t.observe(f)?.state).toBe('ACTUAL_CPU_RESPAWN');
  });
 });

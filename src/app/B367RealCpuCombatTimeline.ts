@@ -39,7 +39,12 @@ export class B367RealCpuCombatTimeline {
  private lastSequence=0;
  private lastNotice:B367CombatNotice|null=null;
  private noticeUntil=-1;
- private readonly pending=new Map<string,'HP_ZERO'|'SPLATTED'>();
+ private readonly pending=new Map<string,{
+  phase:'HP_ZERO'|'SPLATTED';
+  nativeLethalTick:number;nativeSplatTick:number|null;
+  humanSplatsBefore:number;cpuSplatsBefore:number;
+  cpuRespawnsBefore:number;
+ }>();
  public reset(){
   this.lastTick=-1;this.lastSequence=0;this.lastNotice=null;
   this.noticeUntil=-1;this.pending.clear();
@@ -101,26 +106,44 @@ export class B367RealCpuCombatTimeline {
    }
    this.lastSequence=e.sequence;
    if(e.lethalHpZero){
-    this.pending.set(e.botId,'HP_ZERO');
+    this.pending.set(e.botId,{
+     phase:'HP_ZERO',nativeLethalTick:x.nativeTick,
+     nativeSplatTick:null,
+     humanSplatsBefore:x.humanDirectSplats,
+     cpuSplatsBefore:x.cpuSplats,
+     cpuRespawnsBefore:x.cpuRespawns
+    });
     this.emit('LETHAL_HP_ZERO_PENDING_SPLAT',e.botId,x.nativeTick,
      'REAL CPU '+e.botId+' · HP 0 · WAIT FOR NATIVE SPLAT');
    }else this.emit('ACTUAL_HP_LOSS',e.botId,x.nativeTick,
     'REAL CPU '+e.botId+' · HP '+e.hpBefore.toFixed(0)+
     ' → '+e.hpAfter.toFixed(0)+' · REAL MAIN-WEAPON HP');
   }
-  for(const [id,phase]of this.pending){
+  for(const [id,prior]of this.pending){
    const c=x.cpu.find(e=>e.id===id);
    if(!c)continue;
-   if(phase==='HP_ZERO'&&c.lifeState==='SPLATTED'&&
-      x.humanDirectSplats>0&&x.cpuSplats>0){
-    this.pending.set(id,'SPLATTED');
+   // A global cumulative splat/respawn count can be positive because of
+   // ANOTHER CPU or an earlier life. Require a new count for this damage
+   // event AND the exact actor's actual native life-state transition.
+   if(prior.phase==='HP_ZERO'&&c.lifeState==='SPLATTED'&&
+      c.hp===0&&x.humanDirectSplats>prior.humanSplatsBefore&&
+      x.cpuSplats>prior.cpuSplatsBefore&&
+      x.nativeTick>prior.nativeLethalTick){
+    prior.phase='SPLATTED';
+    prior.nativeSplatTick=x.nativeTick;
     this.emit('ACTUAL_CPU_SPLAT',id,x.nativeTick,
      'REAL CPU '+id+' · NATIVE SPLAT CONFIRMED');
-   }else if(phase==='SPLATTED'&&c.lifeState==='ACTIVE'&&
-     c.rejoined&&c.hp===100&&x.cpuRespawns>0){
+   }else if(prior.phase==='SPLATTED'&&
+     prior.nativeSplatTick!==null&&
+     x.nativeTick-prior.nativeSplatTick>=150&&
+     c.lifeState==='ACTIVE'&&c.hp===100&&
+     // Native return is to the UPPER original spawn, not yet a new lower
+     // rejoin. Rejoining is tracked separately by original Rapier descent.
+     c.rejoined===false&&
+     x.cpuRespawns>prior.cpuRespawnsBefore){
     this.pending.delete(id);
     this.emit('ACTUAL_CPU_RESPAWN',id,x.nativeTick,
-     'REAL CPU '+id+' · NATIVE RESPAWN CONFIRMED');
+     'REAL CPU '+id+' · NATIVE RESPAWN AT ORIGINAL SPAWN');
    }
   }
   return this.currentNotice(x.nativeTick,x.matchState==='PLAYING',x.paused);

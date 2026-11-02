@@ -75,6 +75,12 @@ export interface F3TrafficSnapshot{
   readonly realGoalRequests:number;
   readonly heldRequests:number;
   readonly engagementGoalRequests:number;
+  /** Native original upper-spawn return, no synthetic respawns. */
+  readonly respawnOriginalDetected:number;
+  readonly respawnOriginalGoalRequests:number;
+  readonly respawnOriginalRejoins:number;
+  readonly respawnUnsafeReturnHolds:number;
+  readonly respawnPendingCpuIds:readonly string[];
   readonly b192ApprovedHumanCombatGoals:number;
   readonly b192RejectedHumanCombatGoals:number;
   readonly sameSourceEnemyCandidates:number;
@@ -203,6 +209,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private paintAwareUnknownInkGoalsAccepted=0;
  private readonly physicallyFalling=new Set<string>();
  private readonly physicallyRejoined=new Set<string>();
+ /** A post-splat CPU must earn a NEW native original first drop. */
+ private readonly respawnOriginalDrops=new Set<string>();
+ private readonly previousLife=new Map<string,'ACTIVE'|'SPLATTED'>();
+ private respawnOriginalDetected=0;
+ private respawnOriginalGoalRequests=0;
+ private respawnOriginalRejoins=0;
+ private respawnUnsafeReturnHolds=0;
  private readonly cleared=new Set<string>();
  private readonly released=new Set<string>();
  private readonly previous=new Map<string,string>();
@@ -285,6 +298,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.patrolIndex.set(bot.id,-1);
    this.auditedTargets+=targets.length;
    this.previous.set(bot.id,bot.mobilityState);
+   this.previousLife.set(bot.id,bot.lifeState??'ACTIVE');
    this.previousFeet.set(bot.id,bot.position.clone());
    bot.agent?.resetMoveTarget();
   }
@@ -407,6 +421,26 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  }
 
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
+  // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
+  // Reuse exactly the F2-assigned one-way offmesh FIRST DROP. The virtual
+  // Recast agent gets only a goal; real feet remain under Rapier KCC.
+  if(this.respawnOriginalDrops.has(id)){
+   const bot=this.bots.find(b=>b.id===id);
+   const route=this.routeFor(id);
+   const lower=new Vec3(...route.sourceGoal);
+   if(!this.freeCombat||bot?.lifeState!=='ACTIVE'||
+      bot.mobilityState!=='GROUND'||!this.hasSourceFootSupport(lower)){
+    this.heldRequests++;this.respawnUnsafeReturnHolds++;return false;
+   }
+   const nav=this.nav.auditPath(realFoot,lower);
+   if(!nav.reachedTarget||nav.startSnapDistanceMeters>.25||
+      nav.endSnapDistanceMeters>.22||nav.pointCount===0){
+    this.heldRequests++;this.respawnUnsafeReturnHolds++;return false;
+   }
+   out.copy(lower);
+   this.realGoalRequests++;this.respawnOriginalGoalRequests++;
+   return true;
+  }
   if(!this.freeCombat||!this.physicallyRejoined.has(id)){
    this.heldRequests++;return false;
   }
@@ -989,6 +1023,28 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
 
  observe(frame:number):void{
   for(const bot of this.bots){
+   // Native CpuAgentSystem.respawnBot restores the genuine original HIGH
+   // spawn after its real 150-tick death countdown. Historical first-drop
+   // completion is NOT evidence of this NEW life reaching the lower floor.
+   const priorLife=this.previousLife.get(bot.id);
+   if(this.freeCombat&&priorLife==='SPLATTED'&&
+      bot.lifeState==='ACTIVE'){
+    this.physicallyRejoined.delete(bot.id);
+    this.cleared.delete(bot.id);
+    this.physicallyFalling.delete(bot.id);
+    this.patrolIndex.set(bot.id,-1);
+    const originalStart=new Vec3(...this.routeFor(bot.id).start);
+    if(bot.mobilityState==='GROUND'&&
+       bot.position.distance(originalStart)<=.22){
+     this.respawnOriginalDrops.add(bot.id);
+     this.respawnOriginalDetected++;
+    }else{
+     // Non-original respawn feet must not receive an invented route.
+     this.respawnOriginalDrops.delete(bot.id);
+     this.respawnUnsafeReturnHolds++;
+    }
+   }
+   this.previousLife.set(bot.id,bot.lifeState??'ACTIVE');
    const oldFoot=this.previousFeet.get(bot.id)!;
    const step=oldFoot.distance(bot.position);
    if(step>.015)this.lastMoved.set(bot.id,frame);
@@ -1007,8 +1063,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(bot.mobilityState==='FIRST_DROP_FALL'||
       bot.mobilityState==='FIRST_DROP_REJOIN')
     this.physicallyFalling.add(bot.id);
-   if(previous==='FIRST_DROP_REJOIN'&&bot.mobilityState==='GROUND')
+   if(previous==='FIRST_DROP_REJOIN'&&bot.mobilityState==='GROUND'){
     this.physicallyRejoined.add(bot.id);
+    if(this.respawnOriginalDrops.delete(bot.id))
+     this.respawnOriginalRejoins++;
+   }
    this.previous.set(bot.id,bot.mobilityState);
   }
   for(const bot of this.bots){
@@ -1162,6 +1221,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     realGoalRequests:this.realGoalRequests,
     heldRequests:this.heldRequests,
     engagementGoalRequests:this.engagementGoalRequests,
+    respawnOriginalDetected:this.respawnOriginalDetected,
+    respawnOriginalGoalRequests:this.respawnOriginalGoalRequests,
+    respawnOriginalRejoins:this.respawnOriginalRejoins,
+    respawnUnsafeReturnHolds:this.respawnUnsafeReturnHolds,
+    respawnPendingCpuIds:[...this.respawnOriginalDrops],
     b192ApprovedHumanCombatGoals:this.b192ApprovedHumanCombatGoals,
     b192RejectedHumanCombatGoals:this.b192RejectedHumanCombatGoals,
     sameSourceEnemyCandidates:this.sameSourceEnemyCandidates,

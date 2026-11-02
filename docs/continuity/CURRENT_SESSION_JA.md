@@ -132,3 +132,10 @@
 - 本工程は **本物の自然敵HPヒット/撃破・復活が起きたとのPASS宣言ではない**。通常の対岸経路は0/12、実戦条件未解決。ゲームの正式4v4・ART・本番・main/T19C/T20/PR #5 / Pages変更禁止継続。最新HEAD一致CI PASSまで統合認証HOLD。
 
 - **CIトリガー保全:** B367 60Hz観測と武器実HP証拠のSOURCE関連ファイル（本体・試験）とB192の追跡候補単体変更でも、既存B75のビルド+統合Vitestを起動するよう既存 paths に追加（新ワークフローなし）。回帰通知の120tick TTL正しい境界を再確認。数件の連続commitによる途中旧SHAのActionはキャンセルされたため、現在HEAD一致のCIのみ最終判定対象とする。
+
+## 2026-11-02 — 実CPU死亡後のF2 original drop再合流修正（新HEAD CI検証待ち）
+
+- SOURCE通常設定で本物のCpuAgentSystem.splatBot→150tick後respawnBotは上段原作spawnにCPUを再生成するが、SourceTrafficが「前の命で一度着地した」という`physicallyRejoined`/clearedを残し、freeCombat下では新しい一方通行F2 first-drop goalを再要求しない問題を確認。
+- この工程ではSourceTrafficが**同一実ActorのSPLATTED→ACTIVE**と原作8Actor割当済み上段spawnの一致をnative observeで検証したときだけ、旧rejoinedをクリアして**既存のF2 original sourceGoal**をRecastへ再要求。毎回Rapier原作下段支持・本人の現在地→同じ既存sourceGoalのRecast到達・端点誤差を審査し、通らなければHOLD。Actorの実位置・物理衝突・元solid/ナビリンクやジャンプ速度・時計を変更しない。真正FIRST_DROP_REJOIN→GROUNDで初めて「この命の着地」再認定。freeCombatとほか6CPUは保持。
+- B367実生命台帳も、累積の`cpuSplats>0`等で別Actorや以前の命を誤認しないよう、被弾時の実カウンター基準からの増分、同一Actorの本当のSPLATTEDと150 native tick以降の本当の復活を個別確認する。復活は上段で`rejoined=false`、下段再合流とは別。旧HUDの偽「再着地」認証を禁止。
+- **まだ未実測:** 新SHAの同一真正Chromiumで実敵とのHP命中／splatted／本物の再降下／再合流を達成したわけではない。通常配置対岸0/12、元25 solids/17 PaintSurfaces/26 Links/0 Scoreable、公式score/4v4/ART/本番、main/PR#5/Pages/T19C/T20保護維持。GitHub Actions PASS前に新ゲーム成功認定禁止。
