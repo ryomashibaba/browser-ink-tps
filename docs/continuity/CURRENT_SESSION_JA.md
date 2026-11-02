@@ -89,3 +89,5 @@
 - コミット: `ddc6f3e4`（描画間隔）、`7a0a258f`（実SOURCEサンプリング）。`6b69d323`で既存の真正B390・20秒チェックポイントに同一Chromiumページのレーダーnative sample ageと本物の描画フレーム数の計測を追加。新ワークフロー追加なし。
 - **検証は限定・保留:** [B390最新SHA CI #41428008971](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428008971) は起動直後で結果未確認。B75・型ビルド・180秒TIME_UP・リプレイ・実人間対CPU HP命中・150tick復活の新SHA PASSは**認証前**。旧成功を流用しない。
 - F1〜F5と25 solids/17 PaintSurfaces/26 source NavLinks/0 Scoreable/自然対岸0/12、正式4v4・公式Winner・ART・公開・mainマージHOLD継続。次工程: B390の同一HEAD実測を確認し、レーダー鮮度と完走/再試合を独立判定。その後、原作ルート0/12を架空接続せず実敵遭遇→実弾HP減少→撃破・実150tick復活のF3実ゲーム統合へ戻る。
+
+- 追加の性能修正 `a3ec0814`: 3フレーム刻みのレーダー描画で巨大な全QA/HUD snapshotを再実行せず、真正Rapier KCC位置と `traffic.snapshot()` だけを使う。実CPU交通・実ownerGridの読み取りのみ。最新コード同一SHAの [B390 #41428195956](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428195956) と [B75 #41428196121](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428196121) は起動済み・検証結果待ち。前SHAのキャンセルをPASSと誤認しない。
