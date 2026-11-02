@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {b402OriginalSourceInkRadarSamples,type B402Surface}
+import {b402OriginalSourceInkRadarSamples,b402NativeRadarProofIsFresh,type B402Surface}
  from './B402NativeSourceInkRadarSamples';
 const original=[25,17,26,0] as const;
 function surface(id:string,raw:number[]=[0,0,0,0],
@@ -50,6 +50,18 @@ describe('B402 actual original SOURCE paint radar points',()=>{
   expect(r.dots).toHaveLength(1);
   expect(r.dots[0]!.x).toBeLessThan(s.widthMeters);
   expect(r.dots[0]!.z).toBeLessThan(s.heightMeters);
+ });
+ it('invalidates old-round ink on genuine tick rewind or stale native frames',()=>{
+  const real=b402OriginalSourceInkRadarSamples(
+   all(surface('real',[1,-1,0,0])),original,120,[0,1,0]);
+  expect(b402NativeRadarProofIsFresh(real,120)).toBe(true);
+  expect(b402NativeRadarProofIsFresh(real,300)).toBe(true);
+  expect(b402NativeRadarProofIsFresh(real,301)).toBe(false);
+  expect(b402NativeRadarProofIsFresh(real,0)).toBe(false);
+  expect(b402NativeRadarProofIsFresh(real,119)).toBe(false);
+  expect(b402NativeRadarProofIsFresh(null,300)).toBe(false);
+  expect(b402NativeRadarProofIsFresh(real,300,-1)).toBe(false);
+  expect(b402NativeRadarProofIsFresh(real,Number.NaN)).toBe(false);
  });
  it('bounded tile samples never claim complete ownerGrid coverage',()=>{
   const many={...surface('big',Array(1024).fill(1)),

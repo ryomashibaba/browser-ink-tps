@@ -91,3 +91,9 @@
 - F1〜F5と25 solids/17 PaintSurfaces/26 source NavLinks/0 Scoreable/自然対岸0/12、正式4v4・公式Winner・ART・公開・mainマージHOLD継続。次工程: B390の同一HEAD実測を確認し、レーダー鮮度と完走/再試合を独立判定。その後、原作ルート0/12を架空接続せず実敵遭遇→実弾HP減少→撃破・実150tick復活のF3実ゲーム統合へ戻る。
 
 - 追加の性能修正 `a3ec0814`: 3フレーム刻みのレーダー描画で巨大な全QA/HUD snapshotを再実行せず、真正Rapier KCC位置と `traffic.snapshot()` だけを使う。実CPU交通・実ownerGridの読み取りのみ。最新コード同一SHAの [B390 #41428195956](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428195956) と [B75 #41428196121](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428196121) は起動済み・検証結果待ち。前SHAのキャンセルをPASSと誤認しない。
+
+## 2026-11-02 — B403 レーダーのnative試合切替・終了時表示を正本化（CI待ち）
+
+- 読み取り専用のSOURCEレーダーに、前回試合よりnative tickが巻き戻った場合・sample ageが180実tickを超えた場合・不正tick時に古い原作塗装点を破棄する処理を追加。新試合の実ownerGridが読めるまで以前の塗装を現在地として描かない。
+- 真正TIME_UP画面でも必要なら元の17 PaintSurfaceの実ownerGridから最終サンプリングする。補間・推定塗装・Turf公式得点・Actor/物理/インク/時計書込は追加しない。既存B402のproofのみ利用する。
+- 前回B390 [#41428195956](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41428195956) は別HEAD `a3ec0814` の長時間真正Chromium。結果を本変更のPASSと混同しない。新HEADのB75/真正180秒が未終了ならHOLD。main/T19C/T20/PR#5/Pages、原作25/17/26/0・自然対岸0/12・正式4v4・ART・公開HOLD維持。

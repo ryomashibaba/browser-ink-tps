@@ -5,7 +5,7 @@
  */
 import type {StageDefinition} from '../stage/StageDefinition';
 import type {PaintSurface} from '../ink/PaintSurface';
-import {b402OriginalSourceInkRadarSamples,
+import {b402OriginalSourceInkRadarSamples,b402NativeRadarProofIsFresh,
  type B402RadarProof} from './B402NativeSourceInkRadarSamples';
 import {b247ShouldCompactSourceRadar} from './B245SourcePresentation';
 import {sourceRadarHeightBand} from './UndertowF3RadarElevation';
@@ -113,8 +113,13 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   // schedule keeps actual read-only paint dots current in SwiftShader.
   // No polygon fill, inferred ownership, navigation or score authority.
   // We do not fill polygons or infer unverified source area/connectivity.
+  // Never display the previous native round's real ink after a reset.
+  // Also clear any sample that is over 180 authentic ticks old.
+  if(ink&&!b402NativeRadarProofIsFresh(ink,view.tick))ink=null;
+  // TIME_UP may need one final genuinely owned-grid sample for the
+  // results view; it must not reuse or extrapolate earlier paint.
   if(actualPaintGrids.length===17&&view.tick>=1&&
-     ['STAGING','PLAYING'].includes(view.matchState)&&
+     ['STAGING','PLAYING','TIME_UP'].includes(view.matchState)&&
      (!ink||view.tick-ink.nativeTick>=120)){
    ink=b402OriginalSourceInkRadarSamples(actualPaintGrids,
     [stage.solids.length,stage.paintSurfaces.length,

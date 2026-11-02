@@ -91,3 +91,17 @@ export function b402OriginalSourceInkRadarSamples(
  return output('SOURCE_PAINT_SAMPLES',
   'ACTUAL_PAINT_OWNER_CELLS_ONLY_NOT_COVERAGE',nativeTick,17,dots);
 }
+
+/** Read-only live ownerGrid proof is usable only in the current native round.
+ * A replay/reset can rewind actual ticks; never display previous-round ink.
+ * No interpolation, team score or gameplay state is inferred here. */
+export function b402NativeRadarProofIsFresh(
+ proof:B402RadarProof|null,liveNativeTick:number,
+ maxSampleAgeNativeTicks=180
+):boolean{
+ return proof!==null&&proof.status==='SOURCE_PAINT_SAMPLES'&&
+  Number.isSafeInteger(proof.nativeTick)&&proof.nativeTick>=1&&
+  Number.isSafeInteger(liveNativeTick)&&liveNativeTick>=proof.nativeTick&&
+  Number.isSafeInteger(maxSampleAgeNativeTicks)&&maxSampleAgeNativeTicks>=0&&
+  liveNativeTick-proof.nativeTick<=maxSampleAgeNativeTicks;
+}
