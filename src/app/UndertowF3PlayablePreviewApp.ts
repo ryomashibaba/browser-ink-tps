@@ -941,6 +941,20 @@ export class UndertowF3PlayablePreviewApp{
      b192HumanCombatEnabled&&this.b203FullRound&&
      b31Params.get('t21QaDrive')==='source')
     this.projectiles.enableB367RealCpuLifecycleEvidence();
+  // The user-selected native B384 round uses the same real CPU HP system.
+  // Unlike historical B351, it is not a pulse-sprayer-only QA mode.
+  // The witness observes the actual attack; never creates one.
+  else if(this.b384Circuit&&b192HumanCombatEnabled&&
+     this.b203FullRound){
+    this.projectiles.enableB384SelectedSourceCpuLifeWitness({
+     id:this.rawStage.metadata.id,
+     solids:this.rawStage.solids.length,
+     paint:this.rawStage.paintSurfaces.length,
+     nav:this.rawStage.navigationLinks?.length??0,
+     scoreable:this.rawStage.paintSurfaces.filter(
+      s=>(s.flags&SurfaceFlags.Scoreable)!==0).length
+    });
+  }
   // Reuse the already-shipped player sub weapon pipeline; this is not
   // a fabricated source Actor, collider, NavLink or scoreable surface.
   this.humanSub=new SubWeaponSystem(app,surfaces,this.physics,
@@ -1783,7 +1797,8 @@ export class UndertowF3PlayablePreviewApp{
   this.b211Roster=b192HumanCombatEnabled&&this.b203FullRound?
    createB211RealBattleRoster(ui):null;
   if(b192HumanCombatEnabled&&this.b203FullRound&&
-     b31Params.get('t21W10B367')==='realCpuLifecycle'){
+     (b31Params.get('t21W10B367')==='realCpuLifecycle'||
+      this.b384Circuit)){
    const n=document.createElement('aside');
    n.id='t21-f3-b367-real-cpu-lifecycle';
    n.hidden=true;

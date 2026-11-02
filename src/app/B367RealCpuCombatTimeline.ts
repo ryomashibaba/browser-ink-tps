@@ -1,6 +1,7 @@
 /** Genuine physical-player CPU HP and SAME CPU splat/respawn timeline.
  * B367 is read-only and never awards score, projectile damage or route
  * completion. A zero-HP projectile impact is NOT itself a CPU splat. */
+import {WEAPON_ORDER,type WeaponId} from '../weapons/WeaponCatalog';
 export interface B367ProjectileEvent {
  sequence:number;nativeFrame:number;botId:string;weaponId:string;
  hpBefore:number;hpAfter:number;actualHpLoss:number;lethalHpZero:boolean;
@@ -90,7 +91,7 @@ export class B367RealCpuCombatTimeline {
    if(!validCount(e.sequence)||e.sequence!==this.lastSequence+1||
       !validCount(e.nativeFrame)||e.nativeFrame>x.nativeTick||
       !enemies.includes(e.botId as typeof enemies[number])||
-      e.weaponId!=='pulse-sprayer'||
+      !WEAPON_ORDER.includes(e.weaponId as WeaponId)||
       ![e.hpBefore,e.hpAfter,e.actualHpLoss].every(Number.isFinite)||
       e.hpBefore<=0||e.hpBefore>100||e.hpAfter<0||
       e.hpAfter>=e.hpBefore||e.actualHpLoss<=0||
@@ -105,7 +106,7 @@ export class B367RealCpuCombatTimeline {
      'REAL CPU '+e.botId+' · HP 0 · WAIT FOR NATIVE SPLAT');
    }else this.emit('ACTUAL_HP_LOSS',e.botId,x.nativeTick,
     'REAL CPU '+e.botId+' · HP '+e.hpBefore.toFixed(0)+
-    ' → '+e.hpAfter.toFixed(0)+' · REAL PROJECTILE');
+    ' → '+e.hpAfter.toFixed(0)+' · REAL MAIN-WEAPON HP');
   }
   for(const [id,phase]of this.pending){
    const c=x.cpu.find(e=>e.id===id);

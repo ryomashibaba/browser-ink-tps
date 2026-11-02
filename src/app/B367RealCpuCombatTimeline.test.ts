@@ -88,3 +88,31 @@ describe('B367 original physical CPU damage and native life',()=>{
   expect(a.observe(f)).toBeNull();
  });
 });
+
+describe('B384 selected native weapon REAL CPU lifecycle observability',()=>{
+ it('observes actual Dualies and Charger damage without inventing any hit',()=>{
+  for(const weaponId of ['twin-comets','rail-charger','canopy-guard']){
+   const w=new B367RealCpuCombatTimeline(),f=sample();
+   expect(w.observe(f)).toBeNull();
+   shot(f,35);f.source.events[0]!.weaponId=weaponId;
+   expect(w.observe(f)).toMatchObject({
+    state:'ACTUAL_HP_LOSS',actorId:'B1',gameplayWrites:0,
+    naturalEnemyRouteCertified:false
+   });
+   f.nativeTick++;f.source.events=[];
+   expect(w.observe(f)?.state).toBe('ACTUAL_HP_LOSS');
+  }
+ });
+ it('still demands physical post-shield HP, real identity and known weapons',()=>{
+  for(const mutate of [
+   (f:B367NativeCombatFrame)=>{f.source.events[0]!.weaponId='unregistered-weapon';},
+   (f:B367NativeCombatFrame)=>{f.source.events[0]!.actualHpLoss=0;},
+   (f:B367NativeCombatFrame)=>{f.source.events[0]!.botId='A1';},
+   (f:B367NativeCombatFrame)=>{f.source.events[0]!.hpAfter=100;}
+  ]){
+   const w=new B367RealCpuCombatTimeline(),f=sample();
+   w.observe(f);shot(f,35);mutate(f);
+   expect(w.observe(f)).toBeNull();
+  }
+ });
+});

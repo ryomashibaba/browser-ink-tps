@@ -116,3 +116,10 @@
 - 今回は既存B142の**実Recastパス上2m手前の既知standoff**を再利用。ただし相手は実敵人間であり、B側元原作床の支持、再度そのstandoffまでのRecast+全中間Rapier支持を個別審査。通らなければ従来の安全な原作巡回へ戻す。CPU position/physics/cooldown/武器性能/AI距離認証は直接変更しない。これは正式原作スタンスパラメータの認定ではない。
 - B192の正・負・短距離・原作中央未接続・高低差条件のVitestを追加し、既存B75統合CIで実行する。新ワークフローなし。**自然な敵人間との真正HP交戦・撃破・復活が増えたとの主張はしない。** これまでのSOURCE通常配置では対岸経路0/12のまま。
 - 直前B401 CDP tick同期の [真正B390 #41446701637](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41446701637) は現時点Queuedであり、旧HEAD結果を今回の実装PASSと混同しない。固定25 Rapier solids/17 PaintSurfaces/26 NavLinks/0 Scoreable、公式Winner NONE、正式4v4/ART/本番/マージHOLD、main/T19C/T20/Pages/PR#5保護継続。
+
+## 2026-11-02 — B384実12武器の敵CPU実HP・撃破・復活通知統合（本物の命中は未認証）
+
+- 正本B367は旧B351研究用pulse-sprayerの「実物理命中→CPU HP減少→SPLATTED→実復活」記録に限定され、ユーザーが選ぶ標準B384原作SOURCE 180秒（Twin Comets等）ではゲーム実ダメージが発生しても履歴通知は作れなかった。
+- 今回B384特有の厳密なSOURCE 25/17/26/0+全17面+非B343認証後だけ、**元々発生した実CPU HP減少の読み取り**を有効化。既存のProjectileSystem動的弾のHP結果だけでなく、CHARGERの原作Rapier衝突順による実ray HP結果も同じ録画台帳へ通す。被弾シールド吸収・Rayの見かけ重複・壁手前・CPU弾・自動生成イベントは記録しない。12武器のIDは既存WeaponCatalog正本からのみ受理。
+- B384 PLAYING時だけB367 overlayをプレイヤー向けに表示し、実HP減少、HP=0（撃破未確定）、本当にlifeState=SPLATTED、同じCPU本当にACTIVE+HP100+実復活数を段階的に表示。既存B351 pulse研究起動/視覚候補は従来のopt-in、現行武器挙動・弾・敵AI・HP/Scoreable/物理/地形はすべて変更しない。
+- B367の複数実武器識別・不正武器・偽HP・敵ID・失効のVitestを追加し、既存B75統合CIへ含める。**未認証:** SOURCE通常配置の対岸自然敵遭遇0/12は未解決、実HP命中0の可能性がある。本変更により命中自体が発生・増加したとの主張は厳禁。真正新SHAの60Hz/180秒/再戦はCI結果が出るまでHOLD。main, T20/T19C, PR#5, Pages, 正式4v4/ART/本番公開はHOLD。

@@ -89,6 +89,7 @@ export class ProjectileSystem {
   private b351CueOn=false;
   private b351TrueDamageCues=0;
   private b367Enabled=false;
+  private b367SelectedRealLoadout=false;
   private b367NativeFrame=0;
   private b367RealHumanCpuHits=0;
   private readonly b367PhysicalEvents:Array<{
@@ -287,6 +288,43 @@ export class ProjectileSystem {
      scoreable:0 as const,
      opponentRoutesCertified:false as const,
      productionAuthorized:false as const};
+  }
+
+  /** B384 native 12-weapon SOURCE session: evidence only, never damage. */
+  public enableB384SelectedSourceCpuLifeWitness(stage:{
+    id:string;solids:number;paint:number;nav:number;scoreable:number
+  }):void{
+    if(this.b343SourceVolleyAtomic||this.surfaces.length!==17||
+       stage.id!=='undertow-t21d-partial-connectivity-qa'||
+       stage.solids!==25||stage.paint!==17||stage.nav!==26||
+       stage.scoreable!==0)
+      throw Error('B384_NATIVE_SOURCE_LIFECYCLE_AUTHORITY_HOLD');
+    this.b367Enabled=true;
+    this.b367SelectedRealLoadout=true;
+  }
+
+  /** A genuine resolved HP reduction is the ONLY event author.
+   * Shield-only or missed attacks never enter the read-only life ledger.
+   * The selected 12-weapon B384 mode also covers native charger rays. */
+  private recordB367RealCpuDamage(
+    resolved:ReturnType<CpuAgentSystem['applyProjectileHit']>,
+    weaponId:WeaponId,expectedBotId:string,sourceKind:'HUMAN'|'CPU'
+  ):void{
+    if(!this.b367Enabled||sourceKind!=='HUMAN'||
+       (!this.b367SelectedRealLoadout&&weaponId!=='pulse-sprayer')||
+       !resolved||resolved.realHpLoss<=0||
+       resolved.shieldAbsorbed||resolved.botId!==expectedBotId||
+       resolved.sourceKind!=='HUMAN')return;
+    this.b367RealHumanCpuHits++;
+    this.b367PhysicalEvents.push({
+      sequence:this.b367RealHumanCpuHits,
+      nativeFrame:this.b367NativeFrame,
+      botId:resolved.botId,weaponId,
+      hpBefore:resolved.hpBefore,hpAfter:resolved.hpAfter,
+      actualHpLoss:resolved.realHpLoss,
+      lethalHpZero:resolved.lethalHpZero
+    });
+    if(this.b367PhysicalEvents.length>32)this.b367PhysicalEvents.shift();
   }
 
   public setPlayerWeapon(id: WeaponId): void {
@@ -621,23 +659,8 @@ export class ProjectileSystem {
           const resolved=this.cpuAgents.applyProjectileHit(
              cpuHit,slot.damage,slot.sourceKind,
              slot.sourceKind==='CPU'?slot.sourceId:undefined);
-          if(this.b367Enabled&&slot.sourceKind==='HUMAN'&&
-             slot.weaponId==='pulse-sprayer'&&
-             resolved!==null&&resolved.realHpLoss>0&&
-             resolved.botId===cpuHit.botId&&
-             resolved.sourceKind==='HUMAN'){
-           this.b367RealHumanCpuHits++;
-           this.b367PhysicalEvents.push({
-            sequence:this.b367RealHumanCpuHits,
-            nativeFrame:this.b367NativeFrame,
-            botId:resolved.botId,weaponId:slot.weaponId,
-            hpBefore:resolved.hpBefore,hpAfter:resolved.hpAfter,
-            actualHpLoss:resolved.realHpLoss,
-            lethalHpZero:resolved.lethalHpZero
-           });
-           if(this.b367PhysicalEvents.length>32)
-            this.b367PhysicalEvents.shift();
-          }
+          this.recordB367RealCpuDamage(
+           resolved,slot.weaponId,cpuHit.botId,slot.sourceKind);
           if(b351RealCpuDamageCue(this.b351CueOn,slot.sourceKind,
             slot.weaponId,beforeHit,this.stats.humanCpuDirectHits)){
             this.b351TrueDamageCues++;
@@ -1246,7 +1269,13 @@ export class ProjectileSystem {
       combatDistance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < worldDistance
     ) {
       if (combatKind === 'QA' && qaHit) this.combatTargets.applyProjectileHit(qaHit, damage);
-      if (combatKind === 'CPU' && cpuHit) this.cpuAgents.applyProjectileHit(cpuHit, damage, 'HUMAN');
+      if (combatKind === 'CPU' && cpuHit) {
+        const resolved=this.cpuAgents.applyProjectileHit(cpuHit,damage,'HUMAN');
+        // Native CHARGER uses a physical collision-ordered ray, not a
+        // projectile slot. Record only its REAL post-shield HP outcome.
+        this.recordB367RealCpuDamage(resolved,
+         this.currentPlayerWeapon.id,cpuHit.botId,'HUMAN');
+      }
       return {
         point: origin.clone().add(rayDirection.mulScalar(combatDistance)),
         paintHit: null,
