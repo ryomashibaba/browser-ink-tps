@@ -139,3 +139,5 @@
 - この工程ではSourceTrafficが**同一実ActorのSPLATTED→ACTIVE**と原作8Actor割当済み上段spawnの一致をnative observeで検証したときだけ、旧rejoinedをクリアして**既存のF2 original sourceGoal**をRecastへ再要求。毎回Rapier原作下段支持・本人の現在地→同じ既存sourceGoalのRecast到達・端点誤差を審査し、通らなければHOLD。Actorの実位置・物理衝突・元solid/ナビリンクやジャンプ速度・時計を変更しない。真正FIRST_DROP_REJOIN→GROUNDで初めて「この命の着地」再認定。freeCombatとほか6CPUは保持。
 - B367実生命台帳も、累積の`cpuSplats>0`等で別Actorや以前の命を誤認しないよう、被弾時の実カウンター基準からの増分、同一Actorの本当のSPLATTEDと150 native tick以降の本当の復活を個別確認する。復活は上段で`rejoined=false`、下段再合流とは別。旧HUDの偽「再着地」認証を禁止。
 - **まだ未実測:** 新SHAの同一真正Chromiumで実敵とのHP命中／splatted／本物の再降下／再合流を達成したわけではない。通常配置対岸0/12、元25 solids/17 PaintSurfaces/26 Links/0 Scoreable、公式score/4v4/ART/本番、main/PR#5/Pages/T19C/T20保護維持。GitHub Actions PASS前に新ゲーム成功認定禁止。
+
+- **同SHA実Chromium統合試験:** F3 CPU life/オリジナルF2再降下/実Projectile HPの変更を既存`t21-b385-selectable-source-round.yml`のpathsに追加。従来のB384同じ180秒/再戦/原作HUDテストへB367ライフテストも含め、単体PASSだけで実プレイPASSと取り違えない。元の重い実Chrome CIがqueueならその旨をHOLDと表示し、証拠未取得で「CPU復活再降下成功」「自然敵HP命中成功」とは書かない。追加のCIワークフローは0。
