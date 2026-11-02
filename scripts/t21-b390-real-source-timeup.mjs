@@ -113,6 +113,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     const c=document.querySelector('#t21-f3-radar-canvas');
     const d=s?.b402NativeOriginalInkRadar;
     return {d,pageNativeTick:s?.tick,status:c?.dataset.t21B402SourceInk,
+     drawFrames:Number(c?.dataset.sourceFrame),
      tick:Number(c?.dataset.t21B402NativeTick),
      a:Number(c?.dataset.t21B402RealADots),
      b:Number(c?.dataset.t21B402RealBDots),
@@ -143,6 +144,10 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     nativeRespawns:n.humanRespawns,
     verifiedPreviousClears:n.b387RealRoundMilestones.realClearedLives,
     originalScoreable:n.sourceScoreablePromotions,
+    // B403: age and draw count measured in this native browser checkpoint.
+    originalInkRadarNativeAgeTicks:sourceRadar.pageNativeTick-
+     sourceRadar.d.nativeTick,
+    actualInkRadarDrawFrames:sourceRadar.drawFrames,
     // Recorded from the SAME real source round, not a simulated paint pass.
     originalCpuSightGate:n.b216RealNativePaintBackfill?
      {enabled:n.b216RealNativePaintBackfill.enabled,
