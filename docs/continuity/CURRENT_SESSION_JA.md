@@ -123,3 +123,10 @@
 - 今回B384特有の厳密なSOURCE 25/17/26/0+全17面+非B343認証後だけ、**元々発生した実CPU HP減少の読み取り**を有効化。既存のProjectileSystem動的弾のHP結果だけでなく、CHARGERの原作Rapier衝突順による実ray HP結果も同じ録画台帳へ通す。被弾シールド吸収・Rayの見かけ重複・壁手前・CPU弾・自動生成イベントは記録しない。12武器のIDは既存WeaponCatalog正本からのみ受理。
 - B384 PLAYING時だけB367 overlayをプレイヤー向けに表示し、実HP減少、HP=0（撃破未確定）、本当にlifeState=SPLATTED、同じCPU本当にACTIVE+HP100+実復活数を段階的に表示。既存B351 pulse研究起動/視覚候補は従来のopt-in、現行武器挙動・弾・敵AI・HP/Scoreable/物理/地形はすべて変更しない。
 - B367の複数実武器識別・不正武器・偽HP・敵ID・失効のVitestを追加し、既存B75統合CIへ含める。**未認証:** SOURCE通常配置の対岸自然敵遭遇0/12は未解決、実HP命中0の可能性がある。本変更により命中自体が発生・増加したとの主張は厳禁。真正新SHAの60Hz/180秒/再戦はCI結果が出るまでHOLD。main, T20/T19C, PR#5, Pages, 正式4v4/ART/本番公開はHOLD。
+
+## 2026-11-02 — B384/B367 真正60HzのHP撃破・復活観測へ移行（新HEAD CI待ち）
+
+- 以前のB367通知は重いHUDの `refresh()` でだけ `timeline.observe(snapshot)` を実行していた。SwiftShaderなど実ブラウザ低FPSでは観測間隔が150 native ticks以上になる可能性があり、**現実にSPLATTED→復活した同じCPU**がHUD観測間で欠落してしまう。前工程12武器統合 `e830646ae1aef36a48bff1ea6c763f6c0ffd3939` ではこの時刻問題が未修正だった。
+- 本工程はSOURCE 12武器B384または既存B367研究選択中に限り、`stepFixed()` の実CPU更新・真正弾HP処理・ペイント処理の後で毎native tickに実Actor7体の `lifeState/hp/physicallyRejoined` と本物の `ProjectileSystem` HPイベントをB367 ledgerへ読み取り。重いSourceTraffic全スナップショットを避け、7人分だけの新しい**読み取り専用**軽量readerを使用。UI刷新は単に `currentNotice()` を表示し、証拠イベント・寿命を進めない。
+- 本物のCPU被弾→HP 0→CPU側fixedUpdateで `SPLATTED`→既存150tick復帰を、遅いグラフィックスframeに左右されず保持する単体回帰。観測/表示が移動、武器射撃、Actor HPやリスポーン時間、original source 25/17/26/0、Scoreable・公式Winner・F4接続経路を変更しない。
+- 本工程は **本物の自然敵HPヒット/撃破・復活が起きたとのPASS宣言ではない**。通常の対岸経路は0/12、実戦条件未解決。ゲームの正式4v4・ART・本番・main/T19C/T20/PR #5 / Pages変更禁止継続。最新HEAD一致CI PASSまで統合認証HOLD。

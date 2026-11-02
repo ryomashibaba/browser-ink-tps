@@ -123,8 +123,14 @@ export class B367RealCpuCombatTimeline {
      'REAL CPU '+id+' · NATIVE RESPAWN CONFIRMED');
    }
   }
-  return x.matchState==='PLAYING'&&!x.paused&&
-   this.lastNotice&&this.noticeUntil>=x.nativeTick?
+  return this.currentNotice(x.nativeTick,x.matchState==='PLAYING',x.paused);
+ }
+ /** Render-only read of the native-tick witness. The caller does NOT
+  * advance combat evidence on graphics/HUD frames, which may skip the
+  * entire 150-tick real CPU splat/respawn window under SwiftShader. */
+ public currentNotice(nativeTick:number,playing:boolean,paused:boolean):B367CombatNotice|null{
+  return validCount(nativeTick)&&nativeTick>=this.lastTick&&
+   playing&&!paused&&this.lastNotice&&this.noticeUntil>=nativeTick?
     this.lastNotice:null;
  }
 }

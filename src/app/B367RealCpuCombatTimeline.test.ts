@@ -116,3 +116,43 @@ describe('B384 selected native weapon REAL CPU lifecycle observability',()=>{
   }
  });
 });
+
+
+describe('B367 exact 60Hz life witness independent of slow graphics HUD',()=>{
+ it('retains real splat then respawn even if no display poll spans 150 native ticks',()=>{
+  const a=new B367RealCpuCombatTimeline(),f=sample();
+  expect(a.observe(f)).toBeNull();
+  shot(f,0);
+  expect(a.observe(f)?.state).toBe('LETHAL_HP_ZERO_PENDING_SPLAT');
+  f.nativeTick++;
+  f.humanDirectSplats=1;f.cpuSplats=1;
+  f.cpu[3]!.lifeState='SPLATTED';f.cpu[3]!.hp=0;
+  expect(a.observe(f)?.state).toBe('ACTUAL_CPU_SPLAT');
+  // No graphics poll; 149 ordinary real native physics observations.
+  for(let i=1;i<=149;i++){
+   f.nativeTick++;
+   expect(a.observe(f)?.state).toBe(i<=118?'ACTUAL_CPU_SPLAT':undefined);
+  }
+  f.nativeTick++;
+  f.cpu[3]!.lifeState='ACTIVE';f.cpu[3]!.hp=100;
+  f.cpuRespawns=1;
+  expect(a.observe(f)?.state).toBe('ACTUAL_CPU_RESPAWN');
+  expect(a.currentNotice(f.nativeTick,true,false)).toMatchObject({
+   state:'ACTUAL_CPU_RESPAWN',actorId:'B1',gameplayWrites:0
+  });
+  expect(a.currentNotice(f.nativeTick,false,false)).toBeNull();
+  expect(a.currentNotice(f.nativeTick,true,true)).toBeNull();
+ });
+ it('graphics polls do not consume, fabricate or advance physical hit sequences',()=>{
+  const a=new B367RealCpuCombatTimeline(),f=sample();
+  a.observe(f);
+  expect(a.currentNotice(f.nativeTick,true,false)).toBeNull();
+  shot(f,55);a.observe(f);
+  for(let i=0;i<30;i++){
+   expect(a.currentNotice(f.nativeTick,true,false)).toMatchObject({
+    state:'ACTUAL_HP_LOSS',actorId:'B1'});
+  }
+  f.nativeTick+=121;
+  expect(a.currentNotice(f.nativeTick,true,false)).toBeNull();
+ });
+});

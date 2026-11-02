@@ -23,6 +23,7 @@ import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
  from './UndertowF3OriginalAllySupportInk';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import type {B367NativeCpuState} from './B367RealCpuCombatTimeline';
 import {eligibleB192SourceHumanPursuit,
  chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
@@ -1108,6 +1109,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const route=this.routePlan.routes.find(r=>r.actorId===id);
   if(!route)throw Error('T21_F3_SOURCE_ROUTE_MISSING_'+id);
   return route;
+ }
+ /** Exact seven physical CPU HP/life states, read at native 60Hz.
+  * Avoid building the much larger sourcePatrol QA snapshot every physics tick.
+  * No inferred rejoin, teleport, Actor mutation, or opponent route. */
+ nativeCpuLifecycleFrames():B367NativeCpuState[]{
+  return this.bots.map(b=>({
+   id:b.id,
+   lifeState:b.lifeState??'UNKNOWN',
+   rejoined:this.physicallyRejoined.has(b.id),
+   hp:Number.isFinite(b.hp)?b.hp!:null
+  }));
  }
  snapshot():F3TrafficSnapshot{
   return {

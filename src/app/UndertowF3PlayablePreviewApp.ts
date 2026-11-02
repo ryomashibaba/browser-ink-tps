@@ -4517,6 +4517,27 @@ export class UndertowF3PlayablePreviewApp{
     this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
     const paintStart=this.b20ProfileStart();
     this.coordinator.processTick(frame);
+    // B384/B367: observe genuine post-projectile HP and post-CpuAgent
+    // splat/respawn on EVERY native physics tick. Heavy HUD refresh may
+    // skip 150 real ticks; it must not author or miss this life history.
+    // Seven original CPU states are read through the lightweight source
+    // observer, never via a fabricated combatant or full QA snapshot.
+    if(this.b367CombatNotice){
+     this.b367Timeline.observe({
+      enabled:true,nativeTick:frame,
+      stage:[this.rawStage.solids.length,
+       this.rawStage.paintSurfaces.length,
+       this.rawStage.navigationLinks?.length??0,0],
+      matchState:this.matchState,paused:this.paused,
+      stopReason:this.stopReason,
+      productionAuthorized:false,unrestricted4v4Certified:false,
+      humanDirectHits:this.stats.humanCpuDirectHits,
+      humanDirectSplats:this.stats.humanCpuDirectSplats,
+      cpuSplats:this.stats.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
+      source:this.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
+      cpu:this.traffic.nativeCpuLifecycleFrames()
+     });
+    }
     this.b23InkFeedback.observeExplosion(
      frame,this.stats.playerSubExplosions,
      b41PreExplosion.humanBombStampEvents,b41PreExplosion.humanBombChangedCells);
@@ -6522,19 +6543,10 @@ export class UndertowF3PlayablePreviewApp{
   this.b211Roster?.render(nativeB211Roster,sourceOverlayHidden);
   this.b286CompactTeam?.render(nativeB211Roster,sourceOverlayHidden);
   if(this.b367CombatNotice){
-   const event=this.b367Timeline.observe({
-    enabled:true,nativeTick:state.tick,
-    stage:[state.originalSourceSolids,state.originalPaintSurfaces,
-     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
-    matchState:state.matchState,paused:state.paused,
-    stopReason:state.stopReason,
-    productionAuthorized:state.productionAuthorized,
-    unrestricted4v4Certified:state.unrestricted4v4Certified,
-    humanDirectHits:state.humanCpuDirectHits,
-    humanDirectSplats:state.humanCpuDirectSplats,
-    cpuSplats:state.cpuSplats,cpuRespawns:this.stats.cpuRespawns,
-    source:state.b367RealCpuLifecycleEvidence,cpu:state.cpu.cpu
-   });
+   // DISPLAY ONLY: life transitions were already captured on actual 60Hz.
+   const event=this.b367Timeline.currentNotice(
+    state.tick,state.matchState==='PLAYING',
+    state.paused||!!state.stopReason);
    const visible=!!event&&!sourceOverlayHidden&&
     document.querySelector<HTMLElement>('#ui-root')?.dataset.t21B245Presentation==='PLAYER';
    this.b367CombatNotice.hidden=!visible;
