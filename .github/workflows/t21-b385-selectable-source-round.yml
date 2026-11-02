@@ -31,6 +31,7 @@ jobs:
         run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B392NativeSubFeedback.test.ts src/app/B394OriginalBombPaintNotice.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
       - run: node --check scripts/t21-b385-native-selectable-circuit.mjs
       - run: node --check scripts/t21-b390-real-source-timeup.mjs
+      - run: node --test scripts/t21-b390-native-radar-check.test.mjs
       - name: Drive true Chrome 3-of-3, 180s TIME_UP and same-weapon replay
         env:
           T21_B390_TRUE_180S: '1'

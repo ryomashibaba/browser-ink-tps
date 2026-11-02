@@ -3,6 +3,33 @@
  * No injected ticks, time, CPU positions, ink, damage, floor or scoring.
  * Called only by B385's genuine user-started Chromium world. */
 import {setTimeout as sleep} from 'node:timers/promises';
+/**
+ * Verify B402 against a SAME-CDP-evaluation native snapshot. The previous
+ * checkpoint tick was read before the next Runtime.evaluate and is not a
+ * valid upper bound for the later radar render tick.
+ * Radar dots are viewport-limited original ownerGrid samples, not a score.
+ */
+export function b390NativeRadarSampleConsistent(checkpointTick,radar){
+ const d=radar?.d;
+ return Number.isSafeInteger(checkpointTick)&&checkpointTick>=1&&
+   Number.isSafeInteger(radar?.pageNativeTick)&&
+   radar.pageNativeTick>=checkpointTick&&
+   Number.isSafeInteger(d?.nativeTick)&&d.nativeTick>=1&&
+   d.nativeTick<=radar.pageNativeTick&&
+   radar.pageNativeTick-d.nativeTick<=180&&
+   d.status==='SOURCE_PAINT_SAMPLES'&&
+   d.measuredOriginalSurfaces===17&&
+   Number.isSafeInteger(d.realTeamADots)&&d.realTeamADots>=0&&
+   Number.isSafeInteger(d.realTeamBDots)&&d.realTeamBDots>=0&&
+   d.realTeamADots===radar.a&&d.realTeamBDots===radar.b&&
+   radar.status===d.status&&radar.tick===d.nativeTick&&
+   radar.notScore==='true'&&
+   radar.originalSolids==='25'&&radar.originalLinks==='26'&&
+   d.sourceScoreable===0&&d.productionAuthorized===false&&
+   d.officialWinner==='NONE'&&d.paintWrites===0&&
+   d.fullCoverageInferred===false;
+}
+
 export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  fail,report,persist,picture,clickButton}){
  const began=Date.now(),maxWallMs=62*60*1000;
@@ -85,7 +112,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     const s=window.__t21F3?.snapshot?.();
     const c=document.querySelector('#t21-f3-radar-canvas');
     const d=s?.b402NativeOriginalInkRadar;
-    return {d,status:c?.dataset.t21B402SourceInk,
+    return {d,pageNativeTick:s?.tick,status:c?.dataset.t21B402SourceInk,
      tick:Number(c?.dataset.t21B402NativeTick),
      a:Number(c?.dataset.t21B402RealADots),
      b:Number(c?.dataset.t21B402RealBDots),
@@ -93,20 +120,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
      originalSolids:c?.dataset.originalSourceSolids,
      originalLinks:c?.dataset.originalSourceNavigationLinks};
    })()`);
-   if(sourceRadar?.d?.status!=='SOURCE_PAINT_SAMPLES'||
-      sourceRadar.d.measuredOriginalSurfaces!==17||
-      sourceRadar.d.nativeTick>n.tick||
-      sourceRadar.d.realTeamADots!==sourceRadar.a||
-      sourceRadar.d.realTeamBDots!==sourceRadar.b||
-      sourceRadar.status!==sourceRadar.d.status||
-      sourceRadar.tick!==sourceRadar.d.nativeTick||
-      sourceRadar.notScore!=='true'||
-      sourceRadar.originalSolids!=='25'||
-      sourceRadar.originalLinks!=='26'||
-      sourceRadar.d.officialWinner!=='NONE'||
-      sourceRadar.d.paintWrites!==0||
-      sourceRadar.d.fullCoverageInferred!==false)
-    fail('B402_ACTUAL_NATIVE_RADAR_SOURCE_SAMPLES_INVALID',{
+   if(!b390NativeRadarSampleConsistent(n.tick,sourceRadar))
+       fail('B402_ACTUAL_NATIVE_RADAR_SOURCE_SAMPLES_INVALID',{
      tick:n.tick,sourceRadar});
    if(!report.phases.some(x=>x.phase==='B402_REAL_NATIVE_RADAR_SOURCE_PAINT')){
     const proof={phase:'B402_REAL_NATIVE_RADAR_SOURCE_PAINT',
