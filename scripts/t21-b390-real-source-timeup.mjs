@@ -57,6 +57,47 @@ export function b390NativeLiveGridConsistent(checkpointTick,live){
   live.text?.includes('NOT TURF SCORE');
 }
 
+
+/** Real 180s native 7-actor inventory, including a genuinely splatted
+ * CPU's return to its EXISTING original one-way first-drop. Only the
+ * read-only F3 SourceTraffic evidence may explain a temporarily missing
+ * lower-side rejoin. Never invent an actor, route, HP hit or successful
+ * fall; every pending return remains unverified until Rapier rejoin. */
+export function b390NativeCpuLifeAndOriginalReturnConsistent(
+ sourceCpu,nativeRespawns
+){
+ const names=['A1','A2','A3','B1','B2','B3','B4'];
+ const actors=sourceCpu?.cpu;
+ const rejoined=sourceCpu?.physicalRejoins;
+ const patrol=sourceCpu?.sourcePatrol;
+ const pending=patrol?.respawnPendingCpuIds;
+ const nonnegative=n=>Number.isSafeInteger(n)&&n>=0;
+ if(!nonnegative(nativeRespawns)||!Array.isArray(actors)||
+    !Array.isArray(rejoined)||!Array.isArray(pending)||
+    actors.length!==7||new Set(actors.map(a=>a?.id)).size!==7||
+    actors.some(a=>!names.includes(a?.id)||
+      !['ACTIVE','SPLATTED'].includes(a?.lifeState)||
+      !Number.isFinite(a?.hp)||a.hp<0||a.hp>100||
+      typeof a.rejoined!=='boolean')||
+    new Set(rejoined).size!==rejoined.length||
+    new Set(pending).size!==pending.length||
+    [...rejoined,...pending].some(id=>!names.includes(id))||
+    ![patrol.respawnOriginalDetected,patrol.respawnOriginalGoalRequests,
+      patrol.respawnOriginalRejoins,patrol.respawnUnsafeReturnHolds]
+      .every(nonnegative)||
+    patrol.respawnOriginalDetected<nativeRespawns||
+    patrol.respawnOriginalRejoins>patrol.respawnOriginalDetected||
+    patrol.respawnOriginalRejoins>nativeRespawns||
+    patrol.respawnOriginalDetected>nativeRespawns||
+    rejoined.length+pending.length!==7)return false;
+ for(const actor of actors){
+  if(rejoined.includes(actor.id)!==actor.rejoined)return false;
+  if(pending.includes(actor.id)===actor.rejoined)return false;
+  if(!actor.rejoined&&nativeRespawns===0)return false;
+ }
+ return sourceCpu.physicalFootRelocations===0;
+}
+
 export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  fail,report,persist,picture,clickButton}){
  const began=Date.now(),maxWallMs=62*60*1000;
@@ -91,10 +132,13 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
    final=n;break;
   }
   if(n.matchState!=='PLAYING'||n.paused||
-     n.cpu.physicalRejoins.length!==7)
+     !b390NativeCpuLifeAndOriginalReturnConsistent(
+      n.cpu,n.cpuRespawns))
    fail('B390_NATIVE_PLAY_INTERRUPTED',{
     tick:n.tick,state:n.matchState,paused:n.paused,
-    rejoined:n.cpu.physicalRejoins.length});
+    rejoined:n.cpu.physicalRejoins.length,
+    genuineNativeCpuRespawns:n.cpuRespawns,
+    authenticOriginalReturn:n.cpu.sourcePatrol?.respawnPendingCpuIds});
   const elapsed=180-n.timeRemainingSeconds;
   if(elapsed>=nextSample){
    // Real native match checkpoint -> actual on-screen live ownership.
@@ -157,6 +201,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     realHumanShots:n.shotsFired,changedHumanCells:n.b23HumanInkFeedback.humanChangedCells,
     realCpuShots:n.cpuSourceTurfShots,changedCpuCells:n.cpuImpactInkCellsChanged,
     genuineSevenCpuRejoined:n.cpu.physicalRejoins.length,
+    nativeCpuRespawns:n.cpuRespawns,
+    realOriginalReturnPending:n.cpu.sourcePatrol.respawnPendingCpuIds,
     nativeRespawns:n.humanRespawns,
     verifiedPreviousClears:n.b387RealRoundMilestones.realClearedLives,
     originalScoreable:n.sourceScoreablePromotions,
@@ -202,7 +248,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  if(!final)fail('B390_REAL_180S_HOST_TIMEOUT',{
   wallMs:Date.now()-began,lastTick:prior.tick,
   secondsRemaining:prior.timeRemainingSeconds});
- if(final.cpu.physicalRejoins.length!==7||final.shotsFired<37||
+ if(!b390NativeCpuLifeAndOriginalReturnConsistent(
+    final.cpu,final.cpuRespawns)||final.shotsFired<37||
     final.cpuSourceTurfShots<1||
     final.b387RealRoundMilestones.realClearedLives!==1)
   fail('B390_REAL_CPU_PLAYER_180S_NOT_CONFIRMED',{
@@ -286,7 +333,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   return u?.finished&&u.replay&&u.clock==='00:00'&&u.phase==='COMPLETE'&&
    u.winner==='NONE'&&u.score==='0'&&
    u.actualHumanInk===u.shownHumanInk&&
-   u.actualCpuRejoined===7&&u.shownCpuRejoined===7&&
+   u.actualCpuRejoined===u.shownCpuRejoined&&
    u.verifiedClears===1&&u.recap?.includes('ROUND VERIFIED CLEARS 1')&&
    u.replayTitle?.includes('REPLAY SAME WEAPON')&&
    u.pointerUnlocked&&u.paused?u:false;
@@ -414,6 +461,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   verifiedOwnCenterPatchAims:strictNativePaintGate.verifiedOwnCenterPatchAims,
   verifiedOwnCenterBackfillAims:strictNativePaintGate.verifiedOwnCenterBackfillAims,
   nativeCpuRejoins:final.cpu.physicalRejoins.length,
+  nativeCpuRespawns:final.cpuRespawns,
+  authenticOriginalReturnPending:final.cpu.sourcePatrol.respawnPendingCpuIds,
   nativeHumanRespawns:final.humanRespawns,
   realMissionClearedLives:final.b387RealRoundMilestones.realClearedLives,
   originalWinner:'NONE',scoreable:0,endUi,

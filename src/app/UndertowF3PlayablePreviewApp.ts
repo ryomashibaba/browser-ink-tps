@@ -6156,6 +6156,7 @@ export class UndertowF3PlayablePreviewApp{
    humanCpuDirectHits:this.stats.humanCpuDirectHits,
    humanCpuDirectSplats:this.stats.humanCpuDirectSplats,
    cpuSplats:this.stats.cpuSplats,
+   cpuRespawns:this.stats.cpuRespawns,
    paintEventsPerSecond:this.stats.paintEventsPerSecond,
    cpuShots:this.stats.cpuShots,
    cpuSourceTurfShots:this.stats.cpuSourceTurfShots,

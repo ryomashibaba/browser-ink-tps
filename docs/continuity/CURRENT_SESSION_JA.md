@@ -141,3 +141,9 @@
 - **まだ未実測:** 新SHAの同一真正Chromiumで実敵とのHP命中／splatted／本物の再降下／再合流を達成したわけではない。通常配置対岸0/12、元25 solids/17 PaintSurfaces/26 Links/0 Scoreable、公式score/4v4/ART/本番、main/PR#5/Pages/T19C/T20保護維持。GitHub Actions PASS前に新ゲーム成功認定禁止。
 
 - **同SHA実Chromium統合試験:** F3 CPU life/オリジナルF2再降下/実Projectile HPの変更を既存`t21-b385-selectable-source-round.yml`のpathsに追加。従来のB384同じ180秒/再戦/原作HUDテストへB367ライフテストも含め、単体PASSだけで実プレイPASSと取り違えない。元の重い実Chrome CIがqueueならその旨をHOLDと表示し、証拠未取得で「CPU復活再降下成功」「自然敵HP命中成功」とは書かない。追加のCIワークフローは0。
+
+## 2026-11-02 — B390真正180秒試験の「実撃破→上段復活→元一方通行降下」判定を修正
+
+- B390実180秒試験はPLAYING中・終了画面で一律`physicalRejoins.length===7`を要求していた。前工程で実CPUが本当に撃破・150tick後に上段原作spawnへ復活すると**一時的に再着地者は6/7**となるのが正しいゲーム物理。旧B390は真の生命イベントを偽CI failure扱いする問題だった。
+- 証拠を安易に甘くせず、SOURCE原作CPU7人の固有ID・各本物`lifeState/hp`・rejoined IDs・実150tick CPU respawn数・SourceTraffic上段返還待ちID・実復活検出数・元F2再降下完了数・禁止Actor実足ワープ0を**相互照合**する既存B390内read-only検証を追加。不明な欠員、他者ID、偽counter、元地形外目標はHOLD。終了画面の実再合流数とDOM表示も同じ現在の数に一致させ、必ず7/7との偽認定はしない。
+- ゲームの`snapshot()`には本物の`stats.cpuRespawns`を読み取り専用で公開。20秒ごとの実ブラウザB390 checkpointにも復活数と実戻り待ちIDを保存。既存node:testを追加し、通常7/7の物理SOURCE試合は厳密維持。**自然な撃破が発生したとは認定しない。** 最新HEAD一致のCIと実Chromeが完了するまでHOLD。原作25/17/26/0、自然対岸0/12、正式4v4/ART/main/Pages/PR#5保護継続。

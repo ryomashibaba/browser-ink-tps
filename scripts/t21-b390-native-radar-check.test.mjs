@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {b390NativeRadarSampleConsistent as ok,
- b390NativeLiveGridConsistent as liveOk}
+ b390NativeLiveGridConsistent as liveOk,
+ b390NativeCpuLifeAndOriginalReturnConsistent as cpuLifeOk}
  from './t21-b390-real-source-timeup.mjs';
 const radar=(patch={},dotPatch={})=>({
  pageNativeTick:8270,status:'SOURCE_PAINT_SAMPLES',tick:8270,
@@ -71,4 +72,48 @@ test('B401 rejects false scores, forged readbacks or incoherent SOURCE cells',()
  assert.equal(liveOk(8265,realLive({}, {registeredSurfaces:16})),false);
  assert.equal(liveOk(8265,realLive({}, {teamA:15000})),false);
  assert.equal(liveOk(8265,realLive({hudB:15100})),false);
+});
+
+const cpuLife=(life={},patrol={})=>{
+ const ids=['A1','A2','A3','B1','B2','B3','B4'];
+ const returning=life.returning??[];
+ return {
+  physicalFootRelocations:0,
+  physicalRejoins:ids.filter(id=>!returning.includes(id)),
+  cpu:ids.map(id=>({id,rejoined:!returning.includes(id),
+   lifeState:'ACTIVE',hp:100})),
+  sourcePatrol:{respawnPendingCpuIds:returning,
+   respawnOriginalDetected:returning.length,
+   respawnOriginalGoalRequests:0,respawnOriginalRejoins:0,
+   respawnUnsafeReturnHolds:0,...patrol},
+  ...life
+ };
+};
+test('B390 validates all seven genuine first-drop rejoins with no respawn',()=>{
+ assert.equal(cpuLifeOk(cpuLife(),0),true);
+});
+test('B390 permits a genuine native CPU to be alive at its original upper spawn',()=>{
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']}),1),true);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1','B2']},
+  {respawnOriginalDetected:2}),2),true);
+});
+test('B390 refuses unexplained missing original CPU rejoin or fake respawn',()=>{
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']}),0),false);
+ assert.equal(cpuLifeOk(cpuLife({
+  physicalRejoins:['A1','A2','A3','B2','B3','B4']}),0),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{
+  respawnOriginalDetected:0}),1),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{
+  respawnOriginalRejoins:2}),1),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{
+  respawnOriginalDetected:2}),1),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1'],physicalFootRelocations:1}),1),false);
+});
+test('B390 rejects stolen original spawn return identities and duplicate actors',()=>{
+ assert.equal(cpuLifeOk(cpuLife({returning:['X1']}),1),false);
+ assert.equal(cpuLifeOk(cpuLife({
+  cpu:cpuLife().cpu.map((a,i)=>i===6?{...a,id:'B1'}:a)}),0),false);
+ assert.equal(cpuLifeOk(cpuLife({
+  sourcePatrol:{...cpuLife().sourcePatrol,
+   respawnPendingCpuIds:['B1']}}),0),false);
 });
