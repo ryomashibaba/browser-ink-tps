@@ -8,7 +8,7 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import {sampleB140RealSourcePhysicalTrace} from './t21-w10b140-real-physics-sample.mjs';
 import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
  from './t21-b313-actual-original-cell-aim.mjs';
-import {RAMP,planB316ActualOriginalRampApproach,auditB316RealMovement,
+import {RAMP,auditB316RealMovement,
  b316CanAttemptOriginalKccWithoutInkPromotion}
  from './t21-b316-native-human-ramp-walk.mjs';
 import {b318NativeOriginalRampInterior,b318OriginalQuadPlanarSignedMargin}
@@ -894,15 +894,21 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   // original-foot audits alone determine real physical route success.
   const first=b316LowerBody;
   const angle=(await snapshot()).cameraSourcePractice;
-  const plan=b318InteriorWalk?
-   b318NativeOriginalRampInterior({quad:first.originalPositiveRampSourceQuad,
-    body:first.actualBodyMeters,yaw:angle.yawDegrees}):
-   planB316ActualOriginalRampApproach({ledger:first,camera:angle});
+  // B316 standalone formerly aimed at a real B271 edge cell and lost
+  // Rapier support (#41571706735). B318/B322 genuinely reached this
+  // ORIGINAL FOUR-VERTEX ramp by guiding the native keyboard toward the
+  // existing interior point. This is an input hypothesis, not a collider.
+  const plan=b318NativeOriginalRampInterior({
+   quad:first.originalPositiveRampSourceQuad,
+   body:first.actualBodyMeters,yaw:angle.yawDegrees
+  });
   const steps=[];
   const saveB316=(status)=>{
    const result={schema:'B316_TRUE_CDP_LOWER_ORIGINAL_RAMP_WALK',
     status,first,angle,plan,steps,
     b318OriginalRampInteriorGuideOptIn:b318InteriorWalk,
+    b316OriginalAuthoredQuadInteriorGuideUsed:true,
+    b316RealInputPulseTicks:4,
     b315ThreeHumanPaintSurfacesIndependentlyProven:
      b316ThreeOriginalHumanSurfacesProven,
     physicalKccStartVerified:b316KccStart,
@@ -920,10 +926,10 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
     x:800,y:450,button:'none'});
    const cameraBefore=(await snapshot()).cameraSourcePractice;
-   const freshPlan=b318InteriorWalk?
-    b318NativeOriginalRampInterior({quad:first.originalPositiveRampSourceQuad,
-     body:first.actualBodyMeters,yaw:cameraBefore.yawDegrees}):
-    planB316ActualOriginalRampApproach({ledger:first,camera:cameraBefore});
+   const freshPlan=b318NativeOriginalRampInterior({
+    quad:first.originalPositiveRampSourceQuad,
+    body:first.actualBodyMeters,yaw:cameraBefore.yawDegrees
+   });
    const selected=freshPlan.candidate;
    if(selected){
     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
@@ -939,17 +945,14 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       if(prior.realHumanOriginalFootSupported!==true||
          prior.sourceActorRelocations!==0||
          prior.tick>=stoppedAtTick+240)break;
-      const step=b318InteriorWalk?
-       await b319TrueShortNativeKey('KeyW',4):
-       await nativeOriginalKeyboard({
-        name:'B316_REAL_RAMP_KCC_STEP_'+(i+1),
-        keys:['KeyW'],ticks:6
-       },()=>{});
+      // Native real 35ms polling prevents the previous 500ms
+      // overrun at the very narrow original source ramp lip.
+      const step=await b319TrueShortNativeKey('KeyW',4);
       const after=await b312Ledger();
       const seam=b318OriginalQuadPlanarSignedMargin(
        after.originalPositiveRampSourceQuad,after.actualBodyMeters);
       const witness={realKey:'KeyW',
-       nativeInputTicks:b318InteriorWalk?Math.min(4,after.tick-prior.tick):6,
+       nativeInputTicks:Math.min(4,after.tick-prior.tick),
        actualNativeTickDelta:after.tick-prior.tick,
        nativeOriginalRampQuadMargin:seam,
        actualGameTick:step.tick,after};
