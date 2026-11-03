@@ -40,3 +40,11 @@ Splatoon 3 v7.2.0マテガイ放水路通常ナワバリ。25 Rapier solids / 17
 - **最新B414コードSHA** `abac9422fa7f6772f286b0fafbea8d6f35353e32`、[GitHub Actions #41721892162](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41721892162) は記録時点 **queued・結果未確定**。監査の独立JavaScriptユニット実行では正常系2ケース/偽データ拒否8条件PASS。ただし真正Chrome・同SHA独立HUD監査はまだPASS未確認。旧B413真正PASSへ遡及的な変更なし。
 - **衝突回避・安全**：main/正式QA/T19C/T20/Draft PR#5/Pagesを無断変更しない。原作HP/資源/Actor/時計/地形/塗装を書き換えず、ユーザーPC操作不要、Work事前承認制。次回は新SHAの最新Actions最終result・artifactを最初に照合。B414真正FAILならphase別DOM native RAWを解析し、ゲーム判定を緩めずに修正。二重実装やCI乱発を避ける。
 
+
+## 2026-11-04 B416 実Chromium失敗の真正再調査・継続
+
+- **旧B413 SOURCE限定PASSは変更なし**：[run #41651119100](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41651119100)、[既存B414簡易HUD導入run #41654818533](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41654818533) だけがその各SHAで真正180秒・独立B409–B413 SUCCESS。元の25/17/26/0・自然対岸0/12、敵HP/正式4v4/得点・勝敗/ART/productionはHOLD。
+- **重要な失敗・取り消し禁止**：B415過渡run [#41721029557](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41721029557) は真正B413実Shot/OWN回復/再Shotが成立した後でも、HUDの実B415ステージが `REFILL` のままでFAIL。新B414 run [#41721892162](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41721892162) ではB412真正ヒト復帰の元上段位置差が1.14mになり、確定限界0.95mを超えたためFAIL。中間実足は元位置から0.78m以内に達しており、追加のKeySで行き過ぎ。別 run [#41721070651](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41721070651) は原作着弾native tickと旧先取りsnapshotの読み取り順序差によりFAIL。いずれも真正SUCCESSへ書き換えない。
+- **外部との並行変更を尊重**：研究SHA `49f9cdda3ac8d76eefcc17028030fdc831532d2e` はB412の本物のKeyS復帰中止位置を0.85mに改善（最終認証0.95m保持）し、B413の読取り専用の接触ledger先読みによる時刻整合を修正。こちらで重複上書きしない。[run #41724562943](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41724562943) の真正検証対象。
+- **今回B416新実装**：SHA `20ebfaddbd90fd65cbefaf5b0a02d195b53efcd8`。B415 read-onlyプレイ目標の状態遷移を遅いWebGL DOM描画から離し、既存真正SOURCE固定tick `b25Run.observe` と同じ60Hzで更新。元B414の実 `PlayerResources` インク数字・回復・バー・B415ラベルはゲーム書き込み無しの軽量毎render表示に変更。実Shot/OWN/refill/reshotを画面から個別観測する既存B414独立監査はそのまま厳格に維持。B412/B413は既存SHA49f9修正を維持。
+- **新SHA真正試験**：[Actions #41725404578](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41725404578) は本記録時点queued（未PASS）。従ってB414/B415は**正式SOURCE限定PASS未認証・ART HOLD**。次回はこの実際の最終結果（同SHA／ログ／RAW artifact）を確認し、F3達成判定の偽装や受理条件緩和は不可。
