@@ -79,6 +79,7 @@ import {b220AuditOriginalRecastSeamWitnesses} from './B220OriginalNativeRecastSe
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import {b415StepNativeInkLoop,b415ReadableInstruction,
  type B415InkLoop} from './B415LiveInkLoop';
+import {b417RealSourcePaintedCellView} from './B417SourcePaintedCellView';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
 import {PlayerInput} from '../input/PlayerInput';
@@ -5276,6 +5277,30 @@ export class UndertowF3PlayablePreviewApp{
   loop.style.cssText='margin-top:5px;color:#d8f8f1;'+
    'font:650 9px/1.4 system-ui;letter-spacing:.01em;';
   inkGauge.appendChild(loop);
+  // F3: an actual 17-grid painted-cell contest for human play. This is
+  // NOT the official Turf scoreboard: 0 source Scoreable surfaces.
+  const contest=document.createElement('div');
+  contest.id='t21-f3-b417-paint-contest';
+  contest.hidden=true;
+  contest.style.cssText='display:none;margin-top:7px;'+
+   'padding-top:5px;border-top:1px solid #ffffff35;'+
+   'font:600 9px/1.4 system-ui;color:#ddf5f3;';
+  const contestText=document.createElement('div');
+  contestText.id='t21-f3-b417-text';
+  contest.appendChild(contestText);
+  const contestBar=document.createElement('div');
+  contestBar.style.cssText='display:flex;margin-top:4px;height:7px;'+
+   'background:#ffffff24;border-radius:4px;overflow:hidden;';
+  const aPart=document.createElement('div');
+  aPart.id='t21-f3-b417-team-a';
+  aPart.style.cssText='width:0;height:100%;background:#47d8f1;';
+  const bPart=document.createElement('div');
+  bPart.id='t21-f3-b417-team-b';
+  bPart.style.cssText='width:0;height:100%;background:#ee76c7;';
+  contestBar.appendChild(aPart);
+  contestBar.appendChild(bPart);
+  contest.appendChild(contestBar);
+  inkGauge.appendChild(contest);
   root.appendChild(inkGauge);
   line('t21-f3-b195-time','margin-top:7px;font:600 9px system-ui;color:#9ccdc7');
   // Visible terminal game action, not a hidden left-side QA panel control.
@@ -5329,7 +5354,8 @@ export class UndertowF3PlayablePreviewApp{
   gauge.style.display=show?'block':'none';
   gauge.dataset.t21B414RealNativeSource=String(show);
   gauge.dataset.t21B414RenderTick=String(this.clock.tick);
-  if(!show)return;
+  const contest=root.querySelector<HTMLElement>('#t21-f3-b417-paint-contest')!;
+  if(!show){contest.hidden=true;contest.style.display='none';return;}
   gauge.dataset.t21B414ActualInk=String(ink);
   gauge.dataset.t21B414Recovery=String(rec);
   gauge.dataset.t21B414Mode=String(mode);
@@ -5350,6 +5376,30 @@ export class UndertowF3PlayablePreviewApp{
   loop.dataset.t21B415PracticeStage=stage;
   loop.dataset.t21B415SourceOnly='true';
   loop.dataset.t21B415OfficialTurfResult='false';
+  const owned=b417RealSourcePaintedCellView(
+   this.b401LiveSourceInk.get(),this.clock.tick,[
+    this.rawStage.solids.length,this.b45SourceSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,
+    this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+   ],live);
+  contest.hidden=owned===null;
+  contest.style.display=owned?'block':'none';
+  if(owned){
+   contest.dataset.t21B417OriginalOnly='true';
+   contest.dataset.t21B417OfficialTurfScore='false';
+   contest.dataset.t21B417SampleTick=String(owned.sampleNativeTick);
+   contest.dataset.t21B417TeamA=String(owned.teamA);
+   contest.dataset.t21B417TeamB=String(owned.teamB);
+   contest.dataset.t21B417Neutral=String(owned.neutral);
+   root.querySelector<HTMLElement>('#t21-f3-b417-text')!.textContent=
+    'SOURCE PAINTED CELLS · A '+owned.teamA.toLocaleString('en-US')+
+    ' / B '+owned.teamB.toLocaleString('en-US')+
+    ' · UNSCORED';
+   root.querySelector<HTMLElement>('#t21-f3-b417-team-a')!.style.width=
+    owned.aSharePaintedPercent.toFixed(2)+'%';
+   root.querySelector<HTMLElement>('#t21-f3-b417-team-b')!.style.width=
+    owned.bSharePaintedPercent.toFixed(2)+'%';
+  }
  }
  private refreshB195CoopHud(run:ReturnType<UndertowF3SourcePaintRun['snapshot']>){
   const root=this.b195CoopHud;if(!root)return;
