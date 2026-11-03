@@ -10,6 +10,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   offline-source-audit:
     name: "Actual B405 schema, source body proximity; no fake encounters"
@@ -25,3 +26,50 @@ jobs:
           node --test scripts/t21-b406-same-session-native-enemy-frontier.test.mjs \
             scripts/t21-b405-single-180s-human-7cpu-audit.test.mjs
           node --check scripts/t21-b406-same-session-native-enemy-frontier.mjs
+      - name: Download B405 true continuous Chromium 180s evidence by exact run ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/t21-b406-source
+          gh run download 41601683883 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name b405-real-full-180s-human-source-and-seven-cpu \
+            --dir /tmp/t21-b406-source
+          echo "97f1f3bd08d1fe38c58f9fa5ed566c2fc7228f6d771561948952e5ab281227a5  /tmp/t21-b406-source/b405-same-original-180s-round.json" | sha256sum --check
+      - name: True B406 same native world positions at seven real 60Hz samples
+        run: |
+          node scripts/t21-b406-same-session-native-enemy-frontier.mjs \
+            /tmp/t21-b406-source \
+            /tmp/t21-b406-source/b406-genuine-enemy-range-report.json
+      - name: Fail closed on synthetic same-game claim and preserve no-hit HOLD
+        run: |
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const p=JSON.parse(readFileSync("/tmp/t21-b406-source/b406-genuine-enemy-range-report.json","utf8"));
+            const ok=p.source==="25/17/26/0" &&
+              p.sameGenuineGameSessionHumanAndCpuBodies===true &&
+              p.sevenRealNativeCheckpoints===7 &&
+              p.nearestObservedLivingEnemyHorizontalMeters===116.991 &&
+              p.allSampledLivingRejoinedOpponentsOutsideB181Optical32m===true &&
+              p.nativeHumanCpuProjectileHitCertified===false &&
+              p.nativeHumanCpuHpLossCertified===false &&
+              p.naturalOpposingTeamRouteCertified===false &&
+              p.sourceScoreablePromotions===0 &&
+              p.productionAuthorized===false;
+            console.log("B406_PINNED_TRUE_CHROMIUM_SAME_SESSION_ENEMY_RANGE",JSON.stringify({
+              realNativeCheckpoints:p.sevenRealNativeCheckpoints,
+              nearestLivingEnemy:p.nearestObservedLivingEnemyHorizontalMeters,
+              realCpuProjectileHitCertified:false,
+              realCrossTeamRouteCertified:false,
+              verdict:ok?"PASS_SCOPED_SEVEN_REAL_FRAMES":"HOLD"
+            }));
+            if(!ok)process.exitCode=1;
+          '
+      - name: Preserve real source proximity, never certify official gameplay
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b406-verified-b405-same-world-opponent-positions
+          path: /tmp/t21-b406-source/b406-genuine-enemy-range-report.json
+          retention-days: 30
+          if-no-files-found: warn
