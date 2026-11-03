@@ -13,8 +13,8 @@ import {RAMP,auditB316RealMovement,
  from './t21-b316-native-human-ramp-walk.mjs';
 import {b318NativeOriginalRampInterior,b318OriginalQuadPlanarSignedMargin}
  from './t21-b318-original-ramp-interior.mjs';
-import {RAMP_SOLID,b320PlanOriginalTrueRampUphill,b320AuditActualNativeRampAscent}
- from './t21-b320-original-ramp-uphill-kcc.mjs';
+import {RAMP_SOLID,b320PlanOriginalTrueRampUphill,b320AuditActualNativeRampAscent,
+ b320SourceRampCoordinates} from './t21-b320-original-ramp-uphill-kcc.mjs';
 import {b321OriginalRampHighSectionPlan,b321AuditTrueOriginalHigherRamp}
  from './t21-b321-real-upper-ramp-kcc.mjs';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
@@ -1162,9 +1162,20 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
          if(!before.realHumanOriginalFootSupported||
           ![RAMP_SOLID,UPPER_FLOOR_SOLID].includes(
            before.genuineHumanOriginalFootSolid))break;
-         const actual=await b319TrueShortNativeKey('KeyW',2);
+         // Real B410 failure: on original ramp fraction .89328 the
+         // next 6-tick original KCC sample was already UPPER at .98101.
+         // Smaller REAL CDP pulses near the source crest retain the
+         // unchanged B322 original-ownerGrid and physical foot gates.
+         const crestSource=b320SourceRampCoordinates(
+          before.originalPositiveRampSourceQuad,before.actualBodyMeters);
+         const fine=b410RealUpperPlay&&phase==='RAMP'&&
+          before.genuineHumanOriginalFootSolid===RAMP_SOLID&&
+          crestSource.insideSourceQuadXZ&&
+          crestSource.originalUphillFraction>=.78;
+         const keyTicks=fine?1:2;
+         const actual=await b319TrueShortNativeKey('KeyW',keyTicks);
          const after=await b312Ledger();
-         steps.push({phase,realKey:'KeyW',nativeInputTicks:2,
+         steps.push({phase,realKey:'KeyW',nativeInputTicks:keyTicks,
           actualNativeTickDelta:after.tick-before.tick,
           actualTick:actual.tick,after});
          const report=save('REAL_ORIGINAL_CREST_KCC_RUNNING',plan);
@@ -1172,7 +1183,12 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
           JSON.stringify({i:i+1,phase,body:after.actualBodyMeters,
            solid:after.genuineHumanOriginalFootSolid,
            verdict:report.verdict}));
-         if(report.originalUpperFloorReached||
+         // Stop actual B410 if native upper-floor contact occurs before
+         // the real ramp crest was sampled. This is HOLD, not PASS.
+         if((b410RealUpperPlay&&
+             after.genuineHumanOriginalFootSolid===UPPER_FLOOR_SOLID&&
+             !report.crestProven)||
+           report.originalUpperFloorReached||
            report.firstUnsupportedNativeStep!==null||
            !after.realHumanOriginalFootSupported||
            ![RAMP_SOLID,UPPER_FLOOR_SOLID].includes(
@@ -1994,7 +2010,24 @@ async function run(){
   };
   const saveB410=()=>writeFileSync(resolve(OUTPUT,'b410-upper-genuine-live-human-waves.json'),
    JSON.stringify(b410,null,2)+'\n');
-  if(b410RealUpperPlay)saveB410();
+  if(b410RealUpperPlay){
+   // The already-certified B409 native upper-foot ledger included
+   // originalB337NearbyActiveCells=[]: URL-gated read-only local cells.
+   // Activate the existing B337 sample AFTER the real physical route,
+   // no actor, collision, projectile, ownerGrid or tick change.
+   const reader=await evaluate(`(() => {
+    const u=new URL(location.href);
+    if(u.searchParams.get('t21B312')!=='genuineSecondHumanPaint'||
+       u.searchParams.get('t21W10B203')!=='fullRound'||
+       u.searchParams.has('t21B337'))return 'INVALID_READER_CONTEXT';
+    u.searchParams.set('t21B337','localOriginalAim');
+    history.replaceState(null,'',u.href);
+    return new URL(location.href).searchParams.get('t21B337');
+   })()`);
+   if(reader!=='localOriginalAim')
+    fail('B410_ORIGINAL_OWNERGRID_READ_ONLY_UNAVAILABLE');
+   saveB410();
+  }
   const sample=async(label,n)=>{
    authority(n,'FIXED');
    const f=n.matchState==='PLAYING'?await b312Ledger():null;
