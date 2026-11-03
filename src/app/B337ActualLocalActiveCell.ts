@@ -30,6 +30,10 @@ export function b337NativeNearbyActiveSourceCells(input:{
   footGrid[1]!<0||footGrid[1]!>=s.heightCells||
   !Number.isFinite(yaw)||!Number.isFinite(pitch))
   throw Error('B337_LOCAL_NATIVE_SOURCE_GRID_INVALID');
+ // Runtime finite3() verifies exactly three finite source coordinates.
+ // In strict TS, narrow the indexed arrays to tuples only AFTER that guard.
+ const [bodyX,,bodyZ]=body as readonly [number,number,number];
+ const [cameraX,cameraY,cameraZ]=camera as readonly [number,number,number];
  const radius=Math.min(Math.ceil(9/s.cellSize),90);
  const [fx,fy]=footGrid as [number,number];
  const candidates:Array<B337LocalAimCell&{score:number}>=[];
@@ -45,13 +49,13 @@ export function b337NativeNearbyActiveSourceCells(input:{
    Math.min((gy+.5)*s.cellSize,s.heightMeters));
   const world:[number,number,number]=[point.x,point.y,point.z];
   if(!finite3(world))throw Error('B337_NONFINITE_NATIVE_SOURCE_GRID');
-  const plan=Math.hypot(world[0]-body[0],world[2]-body[2]);
+  const plan=Math.hypot(world[0]-bodyX,world[2]-bodyZ);
   if(plan<2.5||plan>8)continue;
-  const x=world[0]-camera[0],z=world[2]-camera[2];
+  const x=world[0]-cameraX,z=world[2]-cameraZ;
   const flat=Math.hypot(x,z);
   if(flat<=.15)continue;
   const targetYaw=Math.atan2(x,z)*180/Math.PI;
-  const targetPitch=Math.atan2(world[1]-camera[1],flat)*180/Math.PI;
+  const targetPitch=Math.atan2(world[1]-cameraY,flat)*180/Math.PI;
   const mouseX=Math.round(wrap(targetYaw-yaw)/.22);
   const mouseY=Math.round(-(targetPitch-pitch)/.18);
   if(targetPitch< -78||targetPitch>12||
