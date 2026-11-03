@@ -18,3 +18,9 @@ Repository ryomashibaba/browser-ink-tps、研究 branch research/t21-b406-single
 ## 永続HOLD
 
 Splatoon 3 v7.2.0マテガイ放水路通常ナワバリ。25 Rapier solids / 17 PaintSurfaces / 26 NavLinks / 0 Scoreable、対岸Recast自然経路0/12、activationReady=false。人間からCPUへの本物のHP命中・撃破・150tick復活、正式得点・勝敗、正式4v4、元7.2.0 FloorLine00衝突権威、ART、本番公開はHOLD。main/T20/正式QA/Draft PR#5/Pages不変更。Work事前承認。
+## 2026-11-03 B413初回の真正Chrome HOLD（原因未確定部分は明記）
+
+- [初回 GitHub Actions #41644833953](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41644833953) at **exact code SHA bed6ec5da1c72c65f4315639a909411371a7bbbb** は失敗。事前node unit・型/ビルドPASS、B322真の上段到達PASS、B411本当の実試合PLAYING表示PASS、120秒のB410実射撃**8shots／原作右上段94 original cells changed**、7元CPU稼働。本当の90秒sampleもPASS。直後の新B413最初の追加射撃で **B413_NATIVE_ORIGINAL_INK_ECONOMY_HOLD_TRUE_ORIGINAL_UPPER_PROJECTILE_IMPACT_BEFORE_SQUID** となり、同runのB413イカ補給・ヒト復帰・再射撃・TIME_UPを未認証。Original artifact **13234999159**。初回は B413 fragment JSON の途中保存がなかった。原作右上段へ新B413の本当のshotが着弾した証拠はなく、「着弾したが監査が誤判定した」と断定しない。
+- 初回のコードは「120秒のB408で成功したCDP x/y」をそのまま90秒とイカ復帰後に再利用した。ログと原本では120秒時点のB408 source cell grid[90,131]・world[12.4381,4.502,50.7800]・CDP[805,475]・本当の観測カメラ yaw71.5/pitch-40.62・元のUpperPaintSurface実impactTick4729を確認。一方で90秒時点の**現在の本物のカメラから**再照準した保証はなかった。これが原因である可能性が高いが、初回には新B413の個々の実SHOT/impact/カメラ観測原本がなく**原因を確定できない**。
+- 修正では既存B408の **read-only 原作ownerGrid＋実カメラの安全なCDP射撃計画を、B413各射撃（90秒、イカから戻った後）それぞれで新たに計算**、本当の `Input.dispatchMouseEvent(mouseMoved)` から `b408NativeMouseAligned` で現実のcamera yaw/pitchを照合してからメイン射撃する。SOURCE floor/support、原作17セル、実インク消費、元impactTick/Surface、cpu7/clock/Scoreable0の要求は減らさない。独立監査も各射撃の **B408原作surface provenance＋実CDP一致＋実camera alignment** をチェックする。
+- また再発HOLDでも `b413-real-original-ink-fire-refill-fire.json` に各段階の実nativeインク残量・shot count・current SOURCE aim・実カメラ・実impact/foot等を逐次保存する。テスト証拠はfake不可。**修正版の新しいCI同SHAで全パスするまではB413 HOLDを維持**する。B405〜B412の狭い真正PASSは保護。

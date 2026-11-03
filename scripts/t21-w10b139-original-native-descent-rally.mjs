@@ -2154,7 +2154,8 @@ async function run(){
    source:'25/17/26/0',officialWinner:'NONE',originalScoreable:0,
    syntheticResourceWrites:false,syntheticShotWrites:false,
    syntheticTimeWrites:false,syntheticActorWrites:false,
-   samples:[],pre:null,post:null,swimInitialShots:null,swimFinalShots:null
+   samples:[],probes:[],pre:null,post:null,
+   swimInitialShots:null,swimFinalShots:null
   };
   const saveB413=()=>writeFileSync(resolve(OUTPUT,
    'b413-real-original-ink-fire-refill-fire.json'),JSON.stringify(b413,null,2)+'\n');
@@ -2200,14 +2201,28 @@ async function run(){
       fail('B412_NEEDS_REAL_120S_UPPER_NATIVE_INK_TARGET');
      const sourceTrace=resolve(OUTPUT,
       'b412-original-upper-real-own-ink-swim.json');
-     const fireAim=b410.waves.find(w=>w.remaining===120)?.actualCdpMouse;
+     // The 120-second CDP pointer coordinates are historical only.
+     // B413 asks B408 for a FRESH true native ownerGrid + camera aim.
+     const observeB413=real=>{
+      b413.probes.push(real);
+      saveB413();
+      console.log('B413_TRUE_SOURCE_LIVE_FIRE_PROBE',JSON.stringify({
+       phase:real.phase,stage:real.stage,body:real.after?.body??real.before?.body,
+       inkBefore:real.before?.ink,inkAfter:real.after?.ink,
+       shotsBefore:real.before?.shots,shotsAfter:real.after?.shots,
+       impact:real.originalLastImpactSurface??null,
+       impactTick:real.originalLastImpactTick??null,
+       plannedSurface:real.aim?.surfaceId??null,
+       plannedCDP:real.aim?.cdp??null
+      }));
+     };
      if(b413NativeInkLoop){
       b413.pre=await b413RealOriginalMainFireBurst({
        phase:'BEFORE_SQUID',send:cmd,snapshot,ledger:b312Ledger,
        verify:n=>{authority(n,'FIXED');return n;},
        locked:()=>evaluate(
         'document.pointerLockElement===document.querySelector("#app-canvas")'),
-       wait:until,aimCDP:fireAim
+       wait:until,onEvidence:observeB413
       });
       saveB413();
       console.log('B413_TRUE_NATIVE_PRE_DIVE_FIRE_COST',
@@ -2240,7 +2255,7 @@ async function run(){
        verify:n=>{authority(n,'FIXED');return n;},
        locked:()=>evaluate(
         'document.pointerLockElement===document.querySelector("#app-canvas")'),
-       wait:until,aimCDP:fireAim
+       wait:until,onEvidence:observeB413
       });
       saveB413();
       console.log('B413_TRUE_NATIVE_POST_SWIM_RESHOT',

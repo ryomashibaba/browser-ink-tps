@@ -10,6 +10,16 @@ const good=(tick,shots,ink,mode='HUMAN',relation='NEUTRAL',recovery='LOCKED')=>(
 });
 const v=(phase,before,after)=>({
  phase,before,after,liveCdP:true,source:'25/17/26/0',
+ aim:{
+  schema:'B408_NATIVE_REAL_ORIGINAL_ACTIVE_GRID_AIM',
+  source:'25/17/26/0',
+  surfaceId:'UndertowT21D:right-low-team-a:paint',
+  simulatedInput:false,paintWrites:0,actorRelocations:0,
+  scoreable:0,actualPaintChangedCellsGuaranteed:false,
+  cdp:[805,475],yaw:71.4,pitch:-40.6
+ },
+ observedCamera:{yawDegrees:71.5,pitchDegrees:-40.62},
+ actualCdpMouse:[805,475],
  actualOriginalImpactSurface:'UndertowT21D:right-low-team-a:paint',
  actualOriginalImpactTick:after.tick-3,
  sourceInkDifference:before.ink-after.ink,
@@ -64,6 +74,10 @@ test('reject pretend ink refills, native time injection, unsupported nonoriginal
   x=>x.pre.after.ink=99,
   x=>x.post.after.ink=x.post.before.ink,
   x=>x.post.actualOriginalImpactSurface='FAKE',
+  x=>x.post.aim.source='FAKE',
+  x=>x.pre.aim.paintWrites=1,
+  x=>x.pre.observedCamera.yawDegrees=120,
+  x=>x.post.actualCdpMouse[0]=200,
   x=>x.post.before.shots+=1,
   x=>x.pre.before.shots+=1,
   x=>x.samples[2].original='26/17/26/0',

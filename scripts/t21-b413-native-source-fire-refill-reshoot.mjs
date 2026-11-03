@@ -1,3 +1,5 @@
+import {b408ChooseActiveOriginalCell,b408NativeMouseAligned}
+ from './t21-b408-native-original-active-aim.mjs';
 /** B413 — authentic human SOURCE shot consumption -> actual OWN-ink squid
  * refill -> human re-shot in ONE B412 real 180-second Chromium game.
  * CDP input + read-only native PlayerResources and original ledger ONLY.
@@ -58,23 +60,48 @@ const foot=async ledger=>{
  return g;
 };
 export async function b413RealOriginalMainFireBurst({
- phase,send,snapshot,ledger,verify,locked,wait,aimCDP
+ phase,send,snapshot,ledger,verify,locked,wait,
+ onEvidence=async()=>{}
 }){
  need(['BEFORE_SQUID','AFTER_SQUID'].includes(phase)&&
-  typeof send==='function'&&typeof snapshot==='function'&&
-  typeof ledger==='function'&&typeof verify==='function'&&
-  typeof locked==='function'&&typeof wait==='function'&&
-  Array.isArray(aimCDP)&&aimCDP.length===2&&aimCDP.every(num)&&
-  aimCDP[0]>=10&&aimCDP[0]<=1590&&aimCDP[1]>=10&&aimCDP[1]<=890,
+  [send,snapshot,ledger,verify,locked,wait,onEvidence].every(
+   fn=>typeof fn==='function'),
   'CDP_AUTHENTIC_INPUT_REQUIRED');
+ const first=verify(await snapshot());
+ native(actual(first));await foot(ledger);
+ need(await locked(),'GENUINE_POINTER_LOCK_REQUIRED');
+ // B413 can happen many native seconds after B410's previous shot, and
+ // B412 moves the real human. Reusing an OLD x/y does NOT prove impact.
+ // The existing B408 planner reads current original 17-surface ownerGrid
+ // and ACTUAL PlayCanvas camera; it never authors any aim or paint cell.
+ await send('Input.dispatchMouseEvent',{
+  type:'mouseMoved',x:800,y:450,button:'none'
+ });
+ const liveFrame=verify(await snapshot());
+ const liveGround=await foot(ledger);
+ const aim=b408ChooseActiveOriginalCell(liveGround,liveFrame,FLOOR);
+ need(aim?.source===SOURCE&&aim.surfaceId===SURFACE&&
+  Array.isArray(aim.cdp)&&aim.cdp.length===2&&
+  aim.cdp.every(num)&&aim.cdp[0]>=10&&aim.cdp[0]<=1590&&
+  aim.cdp[1]>=10&&aim.cdp[1]<=890&&
+  aim.simulatedInput===false&&aim.paintWrites===0&&
+  aim.actorRelocations===0&&aim.scoreable===0,
+  'NO_ACTUAL_LIVE_ORIGINAL_SOURCE_AIM_'+phase);
+ await send('Input.dispatchMouseEvent',{
+  type:'mouseMoved',x:aim.cdp[0],y:aim.cdp[1],button:'none'
+ });
+ const observedCamera=await wait(async()=>{
+  const n=verify(await snapshot());
+  return b408NativeMouseAligned(aim,n.cameraSourcePractice)?
+   n.cameraSourcePractice:false;
+ },30000);
  const before=actual(verify(await snapshot()));
  native(before);await foot(ledger);
- need(await locked(),'GENUINE_POINTER_LOCK_REQUIRED');
  const ticks=phase==='BEFORE_SQUID'?78:54;
- // B410 has already aligned the genuine original upper PaintSurface via
- // native CDP mouse and B408 real ownerGrid. No camera/aim/physics setter.
+ await onEvidence({phase,stage:'REAL_ORIGINAL_NATIVE_CAMERA_ALIGNED',
+  before,aim,observedCamera,readOnly:true});
  await send('Input.dispatchMouseEvent',{
-  type:'mousePressed',x:aimCDP[0],y:aimCDP[1],
+  type:'mousePressed',x:aim.cdp[0],y:aim.cdp[1],
   button:'left',clickCount:1
  });
  try{
@@ -84,11 +111,18 @@ export async function b413RealOriginalMainFireBurst({
   },30000);
  }finally{
   await send('Input.dispatchMouseEvent',{
-   type:'mouseReleased',x:aimCDP[0],y:aimCDP[1],
+   type:'mouseReleased',x:aim.cdp[0],y:aim.cdp[1],
    button:'left',clickCount:1
   });
  }
  const after=actual(verify(await snapshot())),ground=await foot(ledger);
+ await onEvidence({phase,stage:'REAL_NATIVE_MAIN_FIRE_OBSERVED',
+  before,after,aim,observedCamera,
+  originalLastImpactSurface:ground.humanLastPaintedSurface,
+  originalLastImpactTick:ground.humanLastImpactTick,
+  genuineSupportedFoot:ground.genuineHumanOriginalFootSolid,
+  genuineFootGap:ground.genuineOriginalFootGapMeters,
+  readOnly:true});
  native(after);
  need(after.tick>=before.tick+ticks&&
   after.shots>=before.shots+5&&
@@ -102,7 +136,8 @@ export async function b413RealOriginalMainFireBurst({
   ground.humanLastImpactTick>before.tick&&
   ground.humanLastImpactTick<=after.tick,
   'TRUE_ORIGINAL_UPPER_PROJECTILE_IMPACT_'+phase);
- return {phase,before,after,
+ return {phase,before,after,aim,observedCamera,
+  actualCdpMouse:[...aim.cdp],
   liveCdP:true,source:SOURCE,
   actualOriginalImpactSurface:ground.humanLastPaintedSurface,
   actualOriginalImpactTick:ground.humanLastImpactTick,
@@ -138,6 +173,16 @@ export function b413AuditFullOriginalShotRefillReshot(trace,route,swim,ui,round)
    v.syntheticClockWrites===false&&
    v.physicalPlayerRelocation===false&&
    v.actualOriginalUpperSupported===true&&
+   v.aim?.schema==='B408_NATIVE_REAL_ORIGINAL_ACTIVE_GRID_AIM'&&
+   v.aim.source===SOURCE&&v.aim.surfaceId===SURFACE&&
+   v.aim.simulatedInput===false&&v.aim.paintWrites===0&&
+   v.aim.actorRelocations===0&&v.aim.scoreable===0&&
+   v.aim.actualPaintChangedCellsGuaranteed===false&&
+   Array.isArray(v.actualCdpMouse)&&
+   v.actualCdpMouse.length===2&&
+   v.actualCdpMouse[0]===v.aim.cdp?.[0]&&
+   v.actualCdpMouse[1]===v.aim.cdp?.[1]&&
+   b408NativeMouseAligned(v.aim,v.observedCamera)&&
    v.actualOriginalImpactSurface===SURFACE&&
    nat(v.actualOriginalImpactTick)&&
    v.actualOriginalImpactTick>v.before?.tick&&
