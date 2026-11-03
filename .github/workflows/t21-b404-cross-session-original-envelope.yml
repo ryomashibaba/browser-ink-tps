@@ -1,0 +1,74 @@
+name: T21 B404 cross-session native corridor and opponent envelope
+on:
+  push:
+    branches:
+      - research/t21-b404-genuine-corridor-vs-opponent-envelope-20261103
+    paths:
+      - 'scripts/t21-b404-original-corridor-enemy-envelope.mjs'
+      - 'scripts/t21-b404-original-corridor-enemy-envelope.test.mjs'
+      - '.github/workflows/t21-b404-cross-session-original-envelope.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: t21-b404-evidence-replay-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  independent-pinned-proof:
+    name: "No forged single-session encounter: original KCC vs separate CPU source"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Strict read-only separate-sessions and fail-closed physics unit tests
+        run: |
+          node --test scripts/t21-b404-original-corridor-enemy-envelope.test.mjs
+          node --check scripts/t21-b404-original-corridor-enemy-envelope.mjs
+      - name: Fetch archived genuine B322 original CDP KCC and B340 native CPU
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/t21-b404/human /tmp/t21-b404/enemy
+          gh run download 41571706674 --repo "$GITHUB_REPOSITORY" --name b322-original-native-crest --dir /tmp/t21-b404/human
+          gh run download 40988204871 --repo "$GITHUB_REPOSITORY" --name b340-genuine-native-180s-seven-cpu-source-economy --dir /tmp/t21-b404/enemy
+      - name: Independently recompute 32 real human feet vs 28 separate-session enemy feet
+        run: |
+          node scripts/t21-b404-original-corridor-enemy-envelope.mjs \
+            /tmp/t21-b404/human \
+            /tmp/t21-b404/enemy/b340-real-round.json \
+            /tmp/t21-b404/b404-native-separated-envelope.json
+      - name: Only certify mathematical separation between real samples, NEVER true encounter or hit
+        run: |
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const p=JSON.parse(readFileSync("/tmp/t21-b404/b404-native-separated-envelope.json","utf8"));
+            const ok=p.humanOriginalObservedFootRecords===32 &&
+              p.enemyOriginalObservedFootRecords===28 &&
+              p.crossSessionCombinations===896 &&
+              p.mostOptimisticSampledCrossSessionHorizontalMeters>=97.5 &&
+              p.mostOptimisticSampledCrossSessionHorizontalMeters<97.6 &&
+              p.allCrossSessionSamplePairsOutsideB18132m===true &&
+              p.sameNativeSessionOrTick===false &&
+              p.realConcurrentOpponentProximityCertified===false &&
+              p.nativeHumanEnemyHitOrHpLossCertified===false &&
+              p.opponentNaturalRouteCertified===false &&
+              p.scoreable===0 && p.productionAuthorized===false;
+            console.log("B404_REAL_SOURCE_SEPARATE_SESSION_GAP",JSON.stringify({
+              closestObservedMeters:p.mostOptimisticSampledCrossSessionHorizontalMeters,
+              sameSession:false,projectileHpPass:false,
+              verdict:ok?"PASS_SCOPED_NONCONCURRENT_DISTANCE":"HOLD"
+            }));
+            if(!ok)process.exitCode=1;
+          '
+      - name: Preserve SHA-pinned limited original evidence replay
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b404-original-cross-session-nonconcurrent-envelope
+          path: /tmp/t21-b404/b404-native-separated-envelope.json
+          retention-days: 30
+          if-no-files-found: warn
