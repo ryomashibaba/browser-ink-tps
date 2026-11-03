@@ -1,5 +1,7 @@
 # Browser Ink TPS — START HERE / 新チャット固定入口
 
+> **B414最新監査（2026-11-04）**：真正B416 180秒試合+独立B409–B413 PASSは #41725404578 の同SHA `20ebfadd…` で証明済み。ただしB414 CSSOM `100%` vs `100.00%` 誤判定でActions FAIL。監査だけを修正した `25632c076cbd27ea383798f564790e10b09d68c2` を実元artifact `13274792229` で同一Git blob厳密照合RAW再実行しB414 replay PASS。**新SHA真正Actions #41728078065は別途検証中**。<Link placeholders omitted> 正本詳細は `docs/qa/T21_B414_CSSOM_REAL_NATIVE_REPLAY_20261104_JA.md`。元25/17/26/0、4v4/原作得点/ART/本番HOLDを維持。
+
 > **最新継続（2026-11-04）**：B413真正SOURCE限定PASSを維持。新B416（B414実HUD毎描画更新・B415進行真60Hz同期）実装SHA `20ebfaddbd90fd65cbefaf5b0a02d195b53efcd8` / [Actions #41725404578](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41725404578) は最終検証中でPASS未確定。B415旧run #41721029557、B414旧run #41721892162 のFAILを正式PASS扱い禁止。下記歴史上のB413「修正中」は古い時点の記録。main/正式QA/Draft PR5/Pages、本番・原作4v4/Scoreable0・ART HOLDを保持。
 
 > **最新工程（2026-11-04）**：B413真正PASS維持。B415実プレイ案内HUD実装済み・CI未確定。F5/B414の実インク残量・OWN補給・再射撃DOM独立監査実装済み、SHA `abac9422fa7f6772f286b0fafbea8d6f35353e32`、[Actions #41721892162](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41721892162) の最終結果を最優先で確認すること。以下の古い「B413修正中」は当時の経緯。正式4v4・Scoreable・ART・本番は継続HOLD。
