@@ -5231,6 +5231,27 @@ export class UndertowF3PlayablePreviewApp{
    grid.appendChild(cell);
   }
   root.appendChild(grid);
+  // B414: actual native PlayerResources ink, not a generated turf score.
+  // Compact live SOURCE play hides mission counters but still needs a readable
+  // shot-consumption / squid-recovery gauge without obstructing the reticle.
+  const inkGauge=document.createElement('div');
+  inkGauge.id='t21-f3-b414-native-ink';
+  inkGauge.hidden=true;
+  inkGauge.style.cssText='display:none;margin-top:7px;text-align:left;'+
+   'font:650 10px/1.4 system-ui;color:#d9fff2;';
+  inkGauge.setAttribute('aria-label','Real player ink resource');
+  const inkText=document.createElement('div');
+  inkText.id='t21-f3-b414-ink-text';
+  inkGauge.appendChild(inkText);
+  const inkTrack=document.createElement('div');
+  inkTrack.style.cssText='margin-top:4px;height:6px;background:#ffffff2b;'+
+   'border-radius:6px;overflow:hidden;';
+  const inkFill=document.createElement('div');
+  inkFill.id='t21-f3-b414-ink-fill';
+  inkFill.style.cssText='width:0;height:100%;background:#70eac8;';
+  inkTrack.appendChild(inkFill);
+  inkGauge.appendChild(inkTrack);
+  root.appendChild(inkGauge);
   line('t21-f3-b195-time','margin-top:7px;font:600 9px system-ui;color:#9ccdc7');
   // Visible terminal game action, not a hidden left-side QA panel control.
   const replayButton=document.createElement('button');
@@ -5320,6 +5341,30 @@ export class UndertowF3PlayablePreviewApp{
   const liveBars=root.querySelector<HTMLElement>(
    '#t21-f3-b195-human')?.parentElement?.parentElement;
   if(liveBars)liveBars.style.display=b411Live?'none':'grid';
+  const inkGauge=root.querySelector<HTMLElement>('#t21-f3-b414-native-ink')!;
+  // The source-of-truth is the SAME live resource and recovery state used
+  // by the real shooting/squid controller and B413 native snapshot.
+  // No ink change, simulated recovery, tick advance or game-state writes.
+  const ink=this.stats.playerInk;
+  const recovery=this.stats.playerInkRecoveryState;
+  const mode=this.player.currentMode;
+  const showInk=b411Live&&Number.isFinite(ink)&&ink>=0&&ink<=100;
+  inkGauge.hidden=!showInk;
+  inkGauge.style.display=showInk?'block':'none';
+  inkGauge.dataset.t21B414RealNativeSource=String(showInk);
+  if(showInk){
+   inkGauge.dataset.t21B414ActualInk=String(ink);
+   inkGauge.dataset.t21B414Recovery=String(recovery);
+   inkGauge.dataset.t21B414Mode=String(mode);
+   const recoveryLabel=recovery==='SQUID_OWN'?'OWN INK · RECOVERING':
+    recovery==='LOCKED'?'RECOVERY LOCKED':String(recovery);
+   root.querySelector<HTMLElement>('#t21-f3-b414-ink-text')!.textContent=
+    'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+recoveryLabel;
+   const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill')!;
+   fill.style.width=ink.toFixed(2)+'%';
+   fill.style.background=recovery==='SQUID_OWN'?'#72edc3':
+    recovery==='LOCKED'?'#ffcf81':'#70dce8';
+  }
   if(b411Live){
    root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
     'A1 PRACTICE CLEARED · SOURCE ONLY';
