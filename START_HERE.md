@@ -3,6 +3,7 @@
 **このファイルは研究ブランチ research/t21-b406-single-session-real-enemy-range-audit-20261103 の引き継ぎ入口。**
 実装・同SHA Actions・永続方針をGitHubだけで再開し、ZIPやチャット長文の再提出をユーザーへ依頼しない。
 
+0. **最新進捗・今回の優先入口**：[2026-11-03 B407真正5回追加操作PASS／B408原作liveセル再照準統合研究](docs/continuity/HANDOFF_20261103_B408_PROGRESS_JA.md) を先に読む。完了したB405/B406/B407は繰り返さない。B408真正試験は終了時点のGitHub Actions結論を必ず取り直し、未確認ならHOLD。
 1. **最優先**：[2026-11-03 B405真正180秒・B406までの完全統合引き継ぎ](docs/continuity/HANDOFF_20261103_B406_COMPLETE_JA.md) を全文読む。
 2. **過去から固定の永続方針**：[正本QAの固定入口](docs/continuity/START_HERE_JA.md)、[DECISIONS_JA.md](docs/continuity/DECISIONS_JA.md)、[FAST_TRACK_EXECUTION_JA.md](docs/continuity/FAST_TRACK_EXECUTION_JA.md)、[F1–F5](T21_FAST_TRACK_ROADMAP.md)、[T19C/T20凍結設計](CURRENT_CANONICAL.md)を継承。
 3. **GitHub実HEADの取り直し**：本研究ブランチ、QA dev/t21-f4e103w-qa-infra、mainおよび同SHAのGitHub Actions、Draft PR #5を照合。文書コミットでHEADが変わるので過去SHAを現在値と決めつけない。
