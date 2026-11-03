@@ -7,6 +7,8 @@ import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {b337AuditNative} from './t21-b337-real-input-ink-audit.mjs';
 import {b405AuditReal180SourceSession} from './t21-b405-single-180s-human-7cpu-audit.mjs';
+import {b407RunNativeHumanWave} from './t21-b407-native-human-wave.mjs';
+import {b407AuditRealHumanWaves} from './t21-b407-time-distributed-human-audit.mjs';
 import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
  from './t21-b313-actual-original-cell-aim.mjs';
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
@@ -439,6 +441,16 @@ async function run(){
    nativeHumanEnemyHits:row.humanCpuDirectHits
   }));
  };
+ const b407Enabled=process.env.T21_B407_ACTIVE_WAVES==='1';
+ const b407={
+  schema:'B407_SAME_REAL_180S_TIME_DISTRIBUTED_HUMAN_INPUT',
+  source:'25/17/26/0',enabled:b407Enabled,sameB405NativeGame:true,
+  injectedTime:false,injectedInk:false,injectedActorPositions:false,
+  officialWinner:'NONE',waves:[]
+ };
+ const saveB407=()=>writeFileSync(resolve(DIR,'b407-real-time-distributed-human.json'),
+  JSON.stringify(b407,null,2)+'\n');
+ if(b407Enabled)saveB407();
  const afterInput=verifyAuthority(await snapshot());
  if(afterInput.matchState!=='PLAYING'||afterInput.paused||
     afterInput.timeRemainingSeconds<=150||
@@ -452,6 +464,25 @@ async function run(){
    return x.timeRemainingSeconds<=remaining+.001?x:false;
   },9*60*1000);
   await recordB405(String(remaining),next);
+  if(b407Enabled&&remaining>0){
+   try {
+    const wave=await b407RunNativeHumanWave({
+     remaining,expectedFoot:footId,aimCDP:selected.actualCDP,
+     send,read,snapshot,verifyAuthority,wait
+    });
+    b407.waves.push(wave);saveB407();
+    console.log('B407_REAL_IN_MATCH_HUMAN_INPUT',JSON.stringify({
+     remaining,fromTick:wave.before.tick,toTick:wave.after.tick,
+     nativeKccMeters:wave.totalRealKccPlanarMeters,
+     genuineAdditionalShots:wave.after.humanShots-wave.before.humanShots,
+     actualExtraPaintCells:wave.after.humanChangedCells-wave.before.humanChangedCells
+    }));
+   }catch(error){
+    b407.hold={remaining,reason:String(error),
+     nativeObservedWaves:b407.waves.length};saveB407();
+    throw error;
+   }
+  }
   if(remaining===90)await picture('B405_MID');
  }
  const actualTimeUp=verifyAuthority(await snapshot());
@@ -464,6 +495,12 @@ async function run(){
   JSON.stringify(b405Result,null,2)+'\n');
  console.log('B405_ONE_REAL_180S_7CPU_HUMAN_PAINT_SHOOT',
   JSON.stringify(b405Result));
+ if(b407Enabled){
+  const v=b407AuditRealHumanWaves(b407,b405);
+  writeFileSync(resolve(DIR,'b407-driver-verdict.json'),JSON.stringify(v,null,2)+'\n');
+  console.log('B407_ONE_REAL_NATIVE_SOURCE_HUMAN_ACTIVE_MATCH',
+   JSON.stringify(v));
+ }
 }
 try{await run();}
 catch(error){console.error(error);process.exitCode=1;store();}

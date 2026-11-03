@@ -1,0 +1,48 @@
+name: T21 B407 dispersed real human input in one original 180s SOURCE match
+on:
+  push:
+    branches:
+      - research/t21-b406-single-session-real-enemy-range-audit-20261103
+    paths:
+      - 'scripts/t21-b405-single-real-180s-human-7cpu.mjs'
+      - 'scripts/t21-b407-*.mjs'
+      - '.github/workflows/t21-b407-time-distributed-real-human.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b407-real-one-source-game:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install frozen source runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Independent fail-closed gates and native gameplay compilation
+        run: |
+          node --check scripts/t21-b405-single-real-180s-human-7cpu.mjs
+          node --check scripts/t21-b407-native-human-wave.mjs
+          node --check scripts/t21-b407-time-distributed-human-audit.mjs
+          node --test scripts/t21-b407-time-distributed-human-audit.test.mjs scripts/t21-b405-single-180s-human-7cpu-audit.test.mjs scripts/t21-b337-real-input-ink-audit.test.mjs
+          npm exec -- vitest run src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/app/B367RealCpuCombatTimeline.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Genuine single 180s Chromium human plus 7 original-source CPUs
+        env:
+          T21_B405_OUTPUT: /tmp/t21-b407-original-game
+          T21_B407_ACTIVE_WAVES: '1'
+        run: node scripts/t21-b405-single-real-180s-human-7cpu.mjs
+      - name: Independently audit real B337, B405, and 5 genuine in-match B407 inputs
+        run: |
+          node scripts/t21-b405-single-180s-human-7cpu-audit.mjs /tmp/t21-b407-original-game
+          node scripts/t21-b407-time-distributed-human-audit.mjs /tmp/t21-b407-original-game
+      - name: Retain original screenshots and complete fail-closed live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b407-one-source-180s-genuine-human-multiphase
+          path: /tmp/t21-b407-original-game/
+          retention-days: 14
+          if-no-files-found: warn
