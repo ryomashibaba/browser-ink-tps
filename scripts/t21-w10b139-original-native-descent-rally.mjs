@@ -2258,6 +2258,38 @@ async function run(){
        wait:until,onEvidence:observeB413
       });
       saveB413();
+      // B415: independent actual DOM observation from THIS same Chromium
+      // source-only match. Never write stats, scene, ownerGrid, or native tick.
+      const b415Hud=await evaluate('(() => { '+
+       'const h=document.querySelector("#t21-f3-b195-native-coop"); '+
+       'const p=document.querySelector("#t21-f3-b415-ink-loop"); '+
+       'const g=document.querySelector("#t21-f3-b414-native-ink"); '+
+       'return {stage:p?.dataset.t21B415PracticeStage,'+
+       'label:p?.textContent,sourceOnly:p?.dataset.t21B415SourceOnly,'+
+       'official:p?.dataset.t21B415OfficialTurfResult,'+
+       'compact:h?.dataset.t21B411Active,'+
+       'visible:!g?.hidden,gaugeSource:g?.dataset.t21B414RealNativeSource};'+
+       '})()');
+      const b415Native=await snapshot();
+      writeFileSync(resolve(OUTPUT,'b415-real-source-ink-loop-hud.json'),
+       JSON.stringify({schema:'B415_NATIVE_REAL_SOURCE_ONLY_PLAY_GOAL',
+        source:'25/17/26/0',nativeTick:b415Native.tick,
+        sameSessionB413PostTick:b413.post.after.tick,
+        actualShots:b415Native.shotsFired,
+        actualInk:b415Native.player.ink,
+        hud:b415Hud,gameplayWrites:false,officialScorePromoted:false
+       },null,2)+'\n');
+      if(b415Hud?.stage!=='COMPLETE'||b415Hud?.sourceOnly!=='true'||
+         b415Hud?.official!=='false'||b415Hud?.compact!=='true'||
+         b415Hud?.visible!==true||b415Hud?.gaugeSource!=='true'||
+         !b415Hud?.label?.includes('UNSCORED'))
+       fail('B415_NATIVE_REAL_INK_LOOP_HUD_NOT_VERIFIED');
+      console.log('B415_REAL_NATIVE_INK_LOOP_GOAL',JSON.stringify({
+       stage:b415Hud.stage,label:b415Hud.label,
+       trueShots:b415Native.shotsFired,realInk:b415Native.player.ink,
+       nativeTick:b415Native.tick,source:'25/17/26/0',
+       officialWinner:'NONE',sourceScoreable:0
+      }));
       console.log('B413_TRUE_NATIVE_POST_SWIM_RESHOT',
        JSON.stringify({shots:b413.post.actualShotsPaid,
         inkSpent:b413.post.sourceInkDifference,tick:b413.post.after.tick,
