@@ -1,4 +1,4 @@
-name: T21 B412 real original 180s human 4-surface shooter with native squid ink swimming
+name: T21 B413 real 180s original human firing ink spend squid OWN recharge and resumed firing
 on:
   push:
     branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
@@ -8,6 +8,7 @@ on:
       - 'scripts/t21-b410-*.mjs'
       - 'scripts/t21-b411-*.mjs'
       - 'scripts/t21-b412-*.mjs'
+      - 'scripts/t21-b413-*.mjs'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - '.github/workflows/t21-b409-one-real-route-full-180s.yml'
   workflow_dispatch:
@@ -33,7 +34,9 @@ jobs:
           node --check scripts/t21-b411-native-hud-live-driver.mjs
           node --check scripts/t21-b412-native-original-squid-ink-swim.mjs
           node --check scripts/t21-b412-independent-real-squid-review.mjs
-          node --test scripts/t21-b412-native-original-squid-ink-swim.test.mjs scripts/t21-b411-native-active-round-hud-audit.test.mjs scripts/t21-b410-upper-original-activity-audit.test.mjs scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
+          node --check scripts/t21-b413-native-source-fire-refill-reshoot.mjs
+          node --check scripts/t21-b413-independent-ink-economy-review.mjs
+          node --test scripts/t21-b413-native-source-fire-refill-reshoot.test.mjs scripts/t21-b412-native-original-squid-ink-swim.test.mjs scripts/t21-b411-native-active-round-hud-audit.test.mjs scripts/t21-b410-upper-original-activity-audit.test.mjs scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
           npm run build -- --base=/browser-ink-tps/
       - name: One real native high-to-lower-to-ramp-to-upper 180s with 7 CPUs
         env:
@@ -56,6 +59,7 @@ jobs:
           T21_B410_LATE_UPPER_HUMAN: '1'
           T21_B411_COMPACT_SOURCE_HUD: '1'
           T21_B412_REAL_ORIGINAL_SQUID_SWIM: '1'
+          T21_B413_REAL_SOURCE_INK_LOOP: '1'
           T21_F3_SHOT_DIR: /tmp/t21-b409-original-180s
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Independently verify true original ink KCC and same native 180s
@@ -68,11 +72,12 @@ jobs:
           node scripts/t21-b410-upper-original-activity-audit.mjs /tmp/t21-b409-original-180s
           node scripts/t21-b411-native-active-round-hud-audit.mjs /tmp/t21-b409-original-180s
           node scripts/t21-b412-independent-real-squid-review.mjs /tmp/t21-b409-original-180s
+          node scripts/t21-b413-independent-ink-economy-review.mjs /tmp/t21-b409-original-180s
       - name: Preserve all genuine source route/ink/CPU/full-match evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: b412-original-native-squid-own-ink-and-four-surface-180s-game
+          name: b413-real-source-ink-consumption-own-refill-and-reshoot-full-180s
           path: /tmp/t21-b409-original-180s/
           retention-days: 14
           if-no-files-found: warn
