@@ -1891,6 +1891,15 @@ async function run(){
       console.log('B223_REAL_B207_REJOIN_PROGRESS',JSON.stringify({
        realNativeTick:s.tick,matchState:s.matchState,
        genuinelyRejoined:s.cpu.physicalRejoins.length,
+       // Read-only native evidence for a REAL 5/7 obstruction; report
+       // which original CPU is still upper, falling, or physically blocked.
+       // This does not weaken the 7/7 gate or move an actor.
+       realHumanKccFoot:s.player.position,
+       unrejoinedOriginalCpu:s.cpu.cpu.filter(a=>!a.rejoined).map(a=>({
+        id:a.id,mobility:a.mobilityState,released:a.released,
+        foot:a.physicalFoot,lastMovedTick:a.lastMovedTick,
+        lifeState:a.lifeState,hp:a.hp
+       })),
        realSourceInkChanges:s.cpuImpactInkCellsChanged,
        actorRelocations:s.cpu.physicalFootRelocations,
        originalSolids:s.originalSourceSolids,

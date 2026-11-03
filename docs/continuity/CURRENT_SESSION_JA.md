@@ -171,3 +171,13 @@
 - 本研究統合により、実native CPU ACTIVE→SPLATTED時の古いrejoined/cleared/falling履歴を失効し、死亡中は古いFIRST_DROP_FALL記録を残さず、本物のSPLATTED→ACTIVE上段復活時のFIRST_DROP_REJOIN→GROUNDを新しい物理着地と取り違えない。元original F2が新しい命で実証されたときのみ物理再合流認証。
 - B390に実cpuSplats・実cpuRespawns・個別lifeState/hp・上段返還待ち/下段再合流の相互監査およびNode回帰ケースを追加。SOURCEプレイヤーHUDにCPU ACTIVE、LOWER REJOIN、SPLATTED、RETURN PENDINGを区別し、旧『CPU 7/7』表示が死者まで含むと誤解されないよう改善。
 - **新HEAD同一SHAのビルド/単体テスト/B75 Chromium/B390 180秒は、実行結果が出るまで未認証。** main、T19C/T20、PR#5、Pages、25/17/26/0、対岸自然ルート0/12、正式4v4、公式得点、ART、本番公開は継続HOLD。
+
+## 2026-11-03 — B390 180秒CPU生命管理同HEAD実測PASS、B75 FIXED停滞診断準備
+
+- 現行SOURCE QA HEAD `95322c79a1b2af18e08719cb09f8e151b2018028` の [B390 #41552053294](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41552053294) は真正Chromium 180.000秒TIME_UP+同武器新世界再戦に **SUCCESS**。native tick11856、human 95 shots/実SOURCE 391 changed cells、CPU 1045 source shots/17842 changed cells、物理再合流7/7、実CPU splat 0/respawn 0、人間からCPUへの実HP命中0、scoreable0/winner NONE。生命状態読み取りとHUDの統合は成功したが、撃破→150tick復活→再降下の実戦認証は0件でHOLD。B120 / B112-B115 / B162 / F4E103W は同HEADでSUCCESS。
+- [B75 #41552053301](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41552053301)：同SHAのpreflight/B287/SWEEPはSUCCESS、FIXEDも後にSUCCESS、同HEADの4ジョブすべてSUCCESS（#41552053301）。元の原作CPU7/7再合流が実走行で成立。先行HEADのFIXED #41463623163 はSTAGING中5/7で壁時計270000ms超えFAIL。人間は本物のKeySで3.185m後退（x=-0.135,z=67.018）しており、『後退していないのが原因』とは断定できない。FIXEDの5/7根本原因は未解明。
+- 次の**診断準備**：既存B75 read-only progress heartbeatに未再合流CPUのID/原作実foot/実lifeState/実mobility/最終移動Tickと、人間本物KCC footを追加。7/7とactual changed ink>0というゲート、270秒壁時計期限、native tick、元25 solids/17 paint/26 links/0 scoreableは変更しない。
+- SourceTraffic単体テストは、本物の7/7走行fixture完了後に隔離されたCPUモックのlifeState遷移だけを検証する。死亡時に前世のrejoin/fallが消え、原作上段以外のACTIVEに虚偽rejoinを与えない。fixtureの観測tickは完走より後の単調増加時刻に合わせる。生ゲームへの死亡/HP書込みはゼロ。
+- 上記は準備内容としてレビュー済み。B75 FIXEDもSUCCESSとなったので、候補の追加KeyS操作は採用しない。原因が未特定の過去の5/7 FAILは残しつつ、read-only停滞診断と独立した死亡状態回帰テストのみを一括統合。新SHAのCIは再検証までPASS扱いしない。main/T19C/T20/PR#5/Pagesは不変更、正式4v4/対岸0/12/ART/本番公開/score certificationはHOLD。
+
+- QA採否監査：準備試行 `f2dcbe72a5728d2bcefd9c7f95b9457d900173da` のB207選択世界追加KeyS操作は**不採用・未統合**。B75 #41552053301 FIXED 7/7が原作入力のまま実成功したため、一度の5/7失敗を根拠に試験入力を改変しない。未証明の根本原因や不可視敵HP命中を認定しない。

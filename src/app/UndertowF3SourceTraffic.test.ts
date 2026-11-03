@@ -312,6 +312,34 @@ describe('F3B playable 8-actor original source runtime',()=>{
     expect(state.physicalRejoins).toHaveLength(7);
     expect(state.freeCombatEnabled).toBe(true);
    }
+   if(humanWalkTicks===0){
+    // Isolated native-geometry unit fixture only. Deliberately present
+    // inconsistent life-state inputs AFTER the real 7/7 physical run;
+    // never insert death, warp, or HP values in actual Chromium gameplay.
+    const actor=bots.find(b=>b.id==='B1')!;
+    expect(actor.lifeState).toBe('ACTIVE');
+    expect(state.physicalRejoins).toContain('B1');
+    actor.lifeState='SPLATTED';actor.hp=0;
+    actor.mobilityState='FIRST_DROP_FALL'; // stale prior-life motion
+    traffic.observe(done+361);
+    const splatted=traffic.snapshot();
+    expect(splatted.cpu.find(x=>x.id==='B1')).toMatchObject({
+     lifeState:'SPLATTED',hp:0,rejoined:false
+    });
+    expect(splatted.physicalRejoins).not.toContain('B1');
+    expect(splatted.physicalFirstDrops).not.toContain('B1');
+    expect(splatted.freeCombatEnabled).toBe(true);
+    // A fake on-floor ACTIVE recovery is NOT an original high-spawn
+    // respawn, must not get new lower-rejoin certification.
+    actor.lifeState='ACTIVE';actor.hp=100;
+    actor.mobilityState='GROUND';
+    traffic.observe(done+362);
+    const unsafe=traffic.snapshot();
+    expect(unsafe.physicalRejoins).not.toContain('B1');
+    expect(unsafe.sourcePatrol.respawnUnsafeReturnHolds).toBeGreaterThan(0);
+    expect(unsafe.sourcePatrol.respawnPendingCpuIds).not.toContain('B1');
+    expect(unsafe.sourcePatrol.respawnOriginalRejoins).toBe(0);
+   }
    expect(state.sourcePatrol.attemptsToCrossUnboundUnderpass).toBe(0);
    if(humanWalkTicks!==60)expect(done).toBeGreaterThan(0);
    expect(maxGroundStep).toBeLessThan(.10);
