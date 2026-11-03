@@ -1,0 +1,103 @@
+name: T21 F2+F3 ISOLATED genuine original KCC plus CPU lifecycle
+on:
+  push:
+    branches:
+      - research/t21-f2-f3-integrated-native-gate-20261103
+    paths:
+      - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b316-native-human-ramp-walk.test.mjs'
+      - '.github/workflows/t21-f2-f3-integrated-native-gate.yml'
+      - 'src/ai/CpuAgentSystem.ts'
+      - 'src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts'
+      - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts'
+      - 'src/app/B367RealCpuCombatTimeline.ts'
+      - 'src/app/B367RealCpuCombatTimeline.test.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-f2-f3-integration-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-original-ramp:
+    name: One native source: F3 immediate CPU lifecycle + F2 genuine human ramp
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Genuine F3 source CPU lethal, lifecycle, B367 and original sight regressions
+        run: |
+          npm exec -- vitest run \
+            src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts \
+            src/app/B367RealCpuCombatTimeline.test.ts \
+            src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts \
+            src/ai/B213NativeCounterfire.test.ts \
+            src/ai/B181OriginalSourceCombatSight.test.ts
+      - name: Exact original authored quad and fail-closed physical auditor
+        run: |
+          node --test \
+            scripts/t21-b316-native-human-ramp-walk.test.mjs \
+            scripts/t21-b318-original-ramp-interior.test.mjs \
+            scripts/t21-b313-actual-original-cell-aim.test.mjs \
+            scripts/t21-b315-verify-native-three-surface-ink.test.mjs
+          node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real combined F3-source CPU engine with human original 4-tick KeyW ramp KCC
+        env:
+          T21_B139_VARIANT: ALLY_RALLY
+          T21_B162_REAL_ALLY_SYNC: '1'
+          T21_B194_REAL_PLAYER_BUTTON: '1'
+          T21_B200_REAL_REPLAY: '0'
+          T21_B201_REAL_PAUSE_RESUME: '0'
+          T21_B202_REAL_CONTROLS: '0'
+          T21_B203_REAL_FULL_ROUND: '1'
+          T21_B312_SECOND_HUMAN_SURFACE: '1'
+          T21_B316_GENUINE_RAMP_WALK: '1'
+          T21_B318_INTERIOR_RAMP_WALK: '0'
+          T21_F3_SHOT_DIR: /tmp/t21-f2-f3-integrated
+        run: node scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Independent original 3-surface ink witness
+        run: node scripts/t21-b315-verify-native-three-surface-ink.mjs /tmp/t21-f2-f3-integrated/b312-real-original-lower-second-ink.json
+      - name: CI green insufficient; require actual native B316 ramp + source-only 7 CPU
+        run: |
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const e=JSON.parse(readFileSync("/tmp/t21-f2-f3-integrated/b316-genuine-original-human-ramp-walk.json","utf8"));
+            const real=e?.verdict==="GENUINE_ORIGINAL_RAMP_HUMAN_WALK_PASS"&&
+              e.reachedOriginalRampOnGenuineCharacterKcc===true&&
+              e.physicalKccStartVerified===true&&
+              e.b316OriginalAuthoredQuadInteriorGuideUsed===true&&
+              e.b318OriginalRampInteriorGuideOptIn===false&&
+              e.b316RealInputPulseTicks===4&&
+              e.first?.sourceActorRelocations===0&&
+              e.first?.realHumanOriginalFootSupported===true&&
+              e.original4v4Certified===false&&
+              e.productionAuthorized===false&&
+              Array.isArray(e.steps)&&e.steps.length>0&&
+              e.steps.some(x=>
+                x.after?.genuineHumanOriginalFootSolid===
+                 "UndertowT21D:right-low-route-ramp-positive-z"&&
+                x.after?.realHumanOriginalFootSupported===true&&
+                x.after?.originalRows?.some(r=>
+                  r.surfaceId==="UndertowT21D:right-low-route-ramp-positive-z:paint"&&
+                  r.actualHumanFootOnOriginalActiveSurface===true));
+            console.log("F2_STANDALONE_ORIGINAL_RAMP_TRUE_NATIVE_VERDICT",JSON.stringify({
+              actualVerdict:e?.verdict,realSteps:e?.steps?.length??0,
+              originalQuadInteriorGuide:e?.b316OriginalAuthoredQuadInteriorGuideUsed,
+              independentRampPass:real,official4v4Certified:false
+            }));
+            if(!real)process.exitCode=1;
+          '
+      - name: Preserve real Chromium input, source floor ledger and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: f2-f3-isolated-original-kcc-and-cpu-lifecycle
+          path: /tmp/t21-f2-f3-integrated/
+          retention-days: 14
+          if-no-files-found: warn

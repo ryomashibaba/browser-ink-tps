@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {RAMP,LANDING,planB316ActualOriginalRampApproach,
  auditB316RealMovement,b316CanAttemptOriginalKccWithoutInkPromotion as canWalk} from './t21-b316-native-human-ramp-walk.mjs';
+import {b318NativeOriginalRampInterior,b318OriginalQuadPlanarSignedMargin}
+ from './t21-b318-original-ramp-interior.mjs';
 const point=[.137,3.895,48.736];
 const real=(foot,body=point,tick=1700,ramp=false)=>({
  tick,source:'25/17/26/0',actualBodyMeters:body,
@@ -67,4 +69,31 @@ test('F2 source-grounded B316 walk is independent from unproven B315 ink',()=>{
  assert.equal(canWalk(null),false);
  // This start gate is NOT a B316 PASS: unchanged native KCC audit owns it.
  assert.throws(()=>auditB316RealMovement({first:source,steps:[]}));
+});
+
+test('B316 standalone candidate: genuine original quad interior is physically uncertified until real KCC',()=>{
+ const quad={id:'right-low-route-ramp-positive-z',
+  sourceObject:'Fld_Temple01_pCube21569_1__FloorConcrete03',
+  vertices:[[8.333487,4.5,52.203114],[5.046481,4.5,45.49824],
+   [4.142941,3,54.257493],[.855934,3,47.552619]]};
+ const first=real(LANDING,[.1367405802,3.8948045,48.73594284]);
+ const old=planB316ActualOriginalRampApproach({ledger:first,
+  camera:{yawDegrees:104.94,pitchDegrees:-18.84}}).candidate;
+ const candidate=b318NativeOriginalRampInterior({
+  quad,body:first.actualBodyMeters,yaw:104.94}).candidate;
+ assert.ok(old&&candidate?.safe);
+ assert.equal(candidate.physicallyCertified,false);
+ assert.equal(candidate.pointOnlyNotFootprintOrRoute,true);
+ const margin=b318OriginalQuadPlanarSignedMargin(
+  quad,candidate.targetSourceInteriorPoint);
+ assert.equal(margin.originalQuadInsideXZ,true);
+ assert.ok(margin.signedOriginalRampMarginMeters>.3);
+ const steps=[{realKey:'KeyW',nativeInputTicks:4,
+  after:real(LANDING,[.45,3.895,48.7],1704,false)}];
+ assert.equal(auditB316RealMovement({first,steps}).verdict,
+  'HOLD_NO_PHYSICAL_ORIGINAL_RAMP_WALK');
+ steps.push({realKey:'KeyW',nativeInputTicks:4,
+  after:real(RAMP,[1.6879,3.9866,48.7361],1712,true)});
+ assert.equal(auditB316RealMovement({first,steps}).verdict,
+  'GENUINE_ORIGINAL_RAMP_HUMAN_WALK_PASS');
 });
