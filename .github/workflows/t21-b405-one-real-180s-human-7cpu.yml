@@ -1,0 +1,45 @@
+name: T21 B405 one true native 180s human mouse paint and 7 CPU source session
+on:
+  push:
+    branches:
+      - research/t21-b405-one-real-180s-human-7cpu-source-round-20261103
+    paths:
+      - 'scripts/t21-b405-single-real-180s-human-7cpu.mjs'
+      - 'scripts/t21-b405-single-180s-human-7cpu-audit.mjs'
+      - 'scripts/t21-b405-single-180s-human-7cpu-audit.test.mjs'
+      - '.github/workflows/t21-b405-one-real-180s-human-7cpu.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-real-180s-one-source:
+    name: "Same real 180s CDP session: genuine human fire/WASD and seven CPU"
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install source runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Independent native 180s proof rejection and original B337 regression
+        run: |
+          node --test scripts/t21-b405-single-180s-human-7cpu-audit.test.mjs scripts/t21-b337-real-input-ink-audit.test.mjs scripts/t21-b313-actual-original-cell-aim.test.mjs
+          node --check scripts/t21-b405-single-real-180s-human-7cpu.mjs
+          npm exec -- vitest run src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B337ActualLocalActiveCell.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real full 180-second continuous original-source human and seven CPU game
+        env:
+          T21_B405_OUTPUT: /tmp/t21-b405-source
+        run: node scripts/t21-b405-single-real-180s-human-7cpu.mjs
+      - name: Independently verify same native session B337 actual shot/ink and 180s TIME_UP
+        run: node scripts/t21-b405-single-180s-human-7cpu-audit.mjs /tmp/t21-b405-source
+      - name: Record genuine native same-session proof including HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b405-real-full-180s-human-source-and-seven-cpu
+          path: /tmp/t21-b405-source/
+          retention-days: 14
+          if-no-files-found: warn
