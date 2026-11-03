@@ -200,3 +200,9 @@
 - 完了条件：異なる `performance.timeOrigin` の新ページ、元 `25/17/26/0`、本当のCPU7体、tick 0 / STAGING / PAUSED、WebGL2、`t21B193Coop=REAL_A1_ORIGINAL_SOURCE`、実 `START REAL A1 CO-OP` UI、正式得点なし、production false。B384 humanCombat URLが新世界へ漏れた場合はFAIL。
 - 既存B287の同一ジョブ内に追加するため、別のWorkflow追加・B390真正180秒の改造・他のChrome起動なし。B287 A/Bの本来のPASSを上書きしない。**既存CIの完了後に同SHAで認証予定**。新ワールドのA1が実際に塗装/撃破したことはこのクリック試験から主張しない。
 - 実B287はB384でなく通常B207 SOURCE 180sから開始する。旧ゲートのB384かB193だけではA1ボタンは表示されないため、通常B207を含む全SOURCE 180s PLAYER READY/PAUSEで出す機能本体の条件漏れを修正。決定論QA・通常短時間練習・非SOURCEには表示しない。許可/拒否の単体検査と実B287ユーザークリック検査を同一工程にまとめる。
+
+## 2026-11-03 — 同HEAD B337短時間入力FAILの原因未確定／CI重複起動整理
+
+- `d7283ba5dc62567386e167598b49c4015a9092a5` B337 [#41558592950](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41558592950) は**FAIL**。真正ChromiumのSTART tick1058/実KCC元支持、MOUSE yaw4.4° tick1096までは観測。次のリアルマウス射撃が `B337_TRUE_CHROMIUM_WAIT_EXPIRED_120000` で終了し、FIRE以降のshot/ownerGrid/移動実測が残っていない。CPU実HP命中やPAINTはPASS扱いしない。過去の同じyaw4.4°原作SOURCE実走行 [#41289865634](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41289865634) は9発/塗装93セルの限定成功。今回の原因がGPU負荷、pointer lock、入力断絶、物理射撃・描画のいずれかは現ログでは判定不能。無根拠に合格閾値・タイムアウト・実ゲームの弾を改変しない。
+- B245は**表示専用PLAYER/QA切替**で、B75 preflightとB287真正READY/F8がすでに同HEADを検査するため、B245表示専用ファイルから専用B337の**別Chromium WASD試験を自動起動するパスだけを除外**。専用B337スクリプト/監査の変更、HUDゲーム機能への変更、自明示`workflow_dispatch`は維持する。UI変更に伴う重複ブラウザ起動による不必要なCI資源競合を抑える措置で、過去FAILをSUCCESSへ書き換えない。
+- 進行中の同SHA B390真正180秒とB75 B287/FIXED/SWEEPが完了するまでは、候補コードを**非公開ブランチ未適用コミットとして準備し**、CI結果に必要な場合だけ統合する。正式4v4/25-17-26-0/対岸0-12/HOLD不変。

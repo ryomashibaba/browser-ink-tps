@@ -13,7 +13,10 @@ on:
       - 'scripts/t21-b339-native-cpu-activity-audit.mjs'
       - 'scripts/t21-b339-native-cpu-activity-audit.test.mjs'
       - 'src/app/UndertowF3PlayableHud.ts'
-      - 'src/app/B245SourcePresentation.ts'
+      # B245 PLAYER/QA display-only policy changes are covered by B75
+      # preflight + genuine B287 READY/F8. Do not launch a second native
+      # WASD/ink browser for presentation-only toggles.
+      # Manual workflow_dispatch and dedicated B337/logic changes remain.
   workflow_dispatch:
 permissions:
   contents: read
