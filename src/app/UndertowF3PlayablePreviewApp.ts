@@ -4873,6 +4873,20 @@ export class UndertowF3PlayablePreviewApp{
       scoreablePromotionCount:0
      }
     });
+    // B416 real player guidance: advance at fixed native 60Hz SOURCE frames,
+    // not infrequent SwiftShader DOM refreshes. No resources/ink/HP writes.
+    if(this.b411CompactGenuineSourceRound(afterNativePractice)){
+     this.b415InkLoop=b415StepNativeInkLoop(this.b415InkLoop,{
+      tick:frame,shots:this.stats.shotsFired,ink:this.stats.playerInk,
+      mode:this.player.currentMode,relation:this.player.currentInkRelation,
+      recovery:this.stats.playerInkRecoveryState,
+      source:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
+       this.rawStage.navigationLinks?.length??0,
+       this.b45SourceSurfaces.filter(s=>s.isScoreable).length].join('/'),
+      scoreable:0,officialWinner:afterNativePractice.officialWinner,
+      playing:this.matchState==='PLAYING',paused:this.paused
+     });
+    }
     // Authoritative 60Hz progress, not stale WebGL render-frame samples.
     // 10Hz running updates, immediate genuine A1 ink and terminal CLEAR.
     if(shouldPresentB168NativePractice(
@@ -5136,6 +5150,7 @@ export class UndertowF3PlayablePreviewApp{
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
    this.b20ProfileStop('inkAtlasMeshBuild',atlasStart);
    this.refreshB23PaintFeedback();
+   this.refreshB414RealtimeInkHud();
    if(this.renderedFrames%6===0)this.refreshB25PaintRun();
    this.stats.frame(dt*1000);
    this.renderedFrames++;
@@ -5300,6 +5315,42 @@ export class UndertowF3PlayablePreviewApp{
    run.originalA1CooperativeGoalSatisfied===true&&
    run.actualOriginalA1TaggedImpactEvents>0;
  }
+ /** B416: show true player tank every rendered frame, without B25 rescans. */
+ private refreshB414RealtimeInkHud():void{
+  const root=this.b195CoopHud;if(!root)return;
+  const gauge=root.querySelector<HTMLElement>('#t21-f3-b414-native-ink');
+  if(!gauge)return;
+  const live=root.dataset.t21B411Active==='true'&&
+   this.matchState==='PLAYING'&&!this.paused&&!this.stopReason;
+  const ink=this.stats.playerInk,rec=this.stats.playerInkRecoveryState;
+  const mode=this.player.currentMode;
+  const show=live&&Number.isFinite(ink)&&ink>=0&&ink<=100;
+  gauge.hidden=!show;
+  gauge.style.display=show?'block':'none';
+  gauge.dataset.t21B414RealNativeSource=String(show);
+  gauge.dataset.t21B414RenderTick=String(this.clock.tick);
+  if(!show)return;
+  gauge.dataset.t21B414ActualInk=String(ink);
+  gauge.dataset.t21B414Recovery=String(rec);
+  gauge.dataset.t21B414Mode=String(mode);
+  const state=ink>=99.95?'FULL':
+   rec==='SQUID_OWN'?'OWN INK · REFILLING':
+   rec==='LOCKED'?'RECOVERY LOCKED':
+   rec==='HUMAN'?'HUMAN RECOVERY':'NO OWN REFILL';
+  root.querySelector<HTMLElement>('#t21-f3-b414-ink-text')!.textContent=
+   'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+state;
+  const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill')!;
+  fill.style.width=ink.toFixed(2)+'%';
+  fill.style.background=rec==='SQUID_OWN'?'#72edc3':
+   rec==='LOCKED'?'#ffcf81':'#70dce8';
+  // B415 progression is counted on true 60Hz ticks, not in the DOM.
+  const loop=root.querySelector<HTMLElement>('#t21-f3-b415-ink-loop')!;
+  const stage=this.b415InkLoop?.stage??'HOLD';
+  loop.textContent=b415ReadableInstruction(stage);
+  loop.dataset.t21B415PracticeStage=stage;
+  loop.dataset.t21B415SourceOnly='true';
+  loop.dataset.t21B415OfficialTurfResult='false';
+ }
  private refreshB195CoopHud(run:ReturnType<UndertowF3SourcePaintRun['snapshot']>){
   const root=this.b195CoopHud;if(!root)return;
   const b411Live=this.b411CompactGenuineSourceRound(run);
@@ -5351,52 +5402,7 @@ export class UndertowF3PlayablePreviewApp{
   const liveBars=root.querySelector<HTMLElement>(
    '#t21-f3-b195-human')?.parentElement?.parentElement;
   if(liveBars)liveBars.style.display=b411Live?'none':'grid';
-  const inkGauge=root.querySelector<HTMLElement>('#t21-f3-b414-native-ink')!;
-  // The source-of-truth is the SAME live resource and recovery state used
-  // by the real shooting/squid controller and B413 native snapshot.
-  // No ink change, simulated recovery, tick advance or game-state writes.
-  const ink=this.stats.playerInk;
-  const recovery=this.stats.playerInkRecoveryState;
-  const mode=this.player.currentMode;
-  const showInk=b411Live&&Number.isFinite(ink)&&ink>=0&&ink<=100;
-  inkGauge.hidden=!showInk;
-  inkGauge.style.display=showInk?'block':'none';
-  inkGauge.dataset.t21B414RealNativeSource=String(showInk);
-  inkGauge.dataset.t21B414RenderTick=String(this.clock.tick);
-  if(showInk){
-   inkGauge.dataset.t21B414ActualInk=String(ink);
-   inkGauge.dataset.t21B414Recovery=String(recovery);
-   inkGauge.dataset.t21B414Mode=String(mode);
-   const recoveryLabel=ink>=99.95?'FULL':
-    recovery==='SQUID_OWN'?'OWN INK · REFILLING':
-    recovery==='LOCKED'?'RECOVERY LOCKED':
-    recovery==='HUMAN'?'HUMAN RECOVERY':'NO OWN REFILL';
-   root.querySelector<HTMLElement>('#t21-f3-b414-ink-text')!.textContent=
-    'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+recoveryLabel;
-   const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill')!;
-   fill.style.width=ink.toFixed(2)+'%';
-   fill.style.background=recovery==='SQUID_OWN'?'#72edc3':
-    recovery==='LOCKED'?'#ffcf81':'#70dce8';
-   // B415: native-60Hz current ink/shot/mode only, with physically bounded
-   // SOURCE authority. Does not touch resources, player, ink, clock or score.
-   const inkSource=[
-    this.rawStage.solids.length,this.b45SourceSurfaces.length,
-    this.rawStage.navigationLinks?.length??0,
-    this.b45SourceSurfaces.filter(s=>s.isScoreable).length
-   ].join('/');
-   this.b415InkLoop=b415StepNativeInkLoop(this.b415InkLoop,{
-    tick:this.clock.tick,shots:this.stats.shotsFired,
-    ink,mode:this.player.currentMode,relation:this.player.currentInkRelation,
-    recovery,source:inkSource,scoreable:0,
-    officialWinner:run.officialWinner,
-    playing:this.matchState==='PLAYING',paused:this.paused
-   });
-   const loop=root.querySelector<HTMLElement>('#t21-f3-b415-ink-loop')!;
-   loop.textContent=b415ReadableInstruction(this.b415InkLoop.stage);
-   loop.dataset.t21B415PracticeStage=this.b415InkLoop.stage;
-   loop.dataset.t21B415SourceOnly='true';
-   loop.dataset.t21B415OfficialTurfResult='false';
-  }
+  this.refreshB414RealtimeInkHud();
   if(b411Live){
    root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
     'A1 PRACTICE CLEARED · SOURCE ONLY';
