@@ -30,3 +30,13 @@
 - 最新 [Actions #41739563081](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41739563081) は記載時点で Node/Vitest・ビルド・preflight PASS、真正180秒は**in_progress**。結果が出るまではB322修正もB417同一SHA3時点一致も未認証。**次工程は最終Actions/RAWを確認して初めて合否を確定**する。
 
 固定方針：正式4v4・原作をまたぐ敵との自然交戦/HP撃破/150tick復活・Scoreable0の公式得点/勝敗・ART・releaseは未認証。main、正式QA、T19C/T20、PR5、Pagesに無断変更なし。
+
+## 2026-11-04 B418 本物の上段経路失敗原因と保存高速化
+
+- 最新の旧run [#41739563081](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41739563081) は全体**FAIL**、保存artifact `13281465260`（33ファイル）。元坂後退・再上昇は真正原作 `B322` PASS、B324 原作上段支持と連続KCCも PASS。人間112 shots / 1139 original paint changed cells、CPU144 shot requests /11974 changed cells、真正TIME_UP tick11860まで実行。**ゲーム全体B409独立PASSには達していない**。
+- **B326実失敗の正確な原因**：元 `b326-extended-original-upper-floor.json` では本物の6件CDP KeyWが発生。独立監査でstep1～5 は原作上段支持・無入力drift0、累計 **2.5131070325913005m**。step5後tick2212→step6直前tick2215に、入力なしの3tick間で実body位置が **0.1923316141078184m**進行。閾値 `idleDrift<=0.15m` に違反、`firstUnsupportedStep=6`・`realOriginalSupportedSteps=5`・`extendedUpperFloorProven=false`。**0.15mは一切緩めない**。上段床への接地をもってB326合格としない。
+- **B417生の3点**：同旧runの `b417-true-native-source-cells-hud.json` について元RAWをプログラムで照合。実90秒 tick6464：native sampled tick6414、A6295/B6133、画面棒50.65/49.35%。実再射撃後 tick6725：sampled tick6677、A6445/B6133、棒51.24/48.76%。真TIME_UP tick11860：native tick11775、A6925/B6188、棒52.81/47.19%だが実HUDは非表示。各時点の `source 25/17/26/0`、17-grid count・total A+B+neutral・DOM数字・文字・棒・native tick・UNSCORED・公式勝者NONEを**実元ファイルに対し全項目照合PASS**。これは **B417の実可視化限定証拠**であり、旧run全体のFAILを覆すものではない。
+- **B418修正SHA `99cab8bfdcb134104b9c895e24770b31e787852e`**：長い元SOURCE17-grid `b312Ledger`を1歩ごとに `JSON.stringify` + `writeFileSync` していた制御ループを、同じ `b326AuditExtendedUpperFloor` による即時メモリ審査のみに変え、走行区間終了後に同一の全実native before/after・監査判定・写真を保存。仮説はディスク書込/シリアライズが実キー入力の間隔を拡大し得ること。**まだ因果関係や真正PASSは未確定**。
+- 回帰：B326既存5試験に加え、元RAWで観測した `0.192331614m` 無操作driftは旧閾値で厳格REJECT、6歩かつ2.5m以上の正常例はPASS、5歩止まりはHOLDをunitで確認する設計。最新 [Actions #41741444484](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41741444484) の真正18０秒と独立QAは最終未確定。新SHA同一試行のログを確認すること。
+
+固定：原作25 Rapier solids/17 owner grids/26 NavLinks/0 scoreable、自然対岸0/12、真4v4敵HP撃破/150tick復活/公式勝敗・ART/公開**HOLD**。main/正式QA/PR5/Pages、T19C/T20不変更。
