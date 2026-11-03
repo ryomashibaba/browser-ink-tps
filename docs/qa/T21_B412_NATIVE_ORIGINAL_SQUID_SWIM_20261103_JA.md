@@ -23,3 +23,14 @@
 - 原本ではB412が戻りで失敗する前に、別のB412部分JSONを保存する仕組みがなかった。どの native original foot/gap、Squid/Human、InkRelation、CPU状態、実Shot数が原因か未確定。「原作床を離れた」と決めつけない。
 - 次の試験では各実CDP shift/key/原作足/インクの状態を **同一ワールドで逐次JSON保存**し、HOLDでも原因がartifactに残るよう変更。帰路は最初の8native tick要求より**短い3native tickの実KeyS**で元位置に接近し、安全支持・モード・インク判定は一切緩めない。独立監査はこの**実際の短い入力tick数のみ**を認め、原作上段solid、実KCC長、OWN泳ぎ、Shot非増加、CPU7体、帰還HUMAN、真TIME_UPを依然必須にする。
 - 研究ブランチ限定。F1〜F5不変、25/17/26/0、0/12、正式4v4/HP/ART/productionはHOLD。B411真正PASSは独立に維持。
+
+## 2026-11-03 B412最終：真正Chromium SOURCE泳ぎ＋同一180秒試合 PASS
+
+- 成功した真正Chrome [Actions #41638475997](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41638475997)、実コードSHA `7d31501c702b725dda730047cc47db379523a400`、生証拠 artifact **13233112543**。事前単体テスト、ビルド、真正ブラウザ実走、原作B315/B322/B324/B326/B409/B410/B411/B412の独立検証、PNG原本アップロード**全ジョブSUCCESS**。
+- ネイティブtick **6496**で本物の右上段HUMAN開始、**6502**でCDP ShiftLeft→本物のSQUID形態。実KeyW・KeyS合計**9区間、5.204981025377377m**の原作Rapier KCC連続移動。**3区間**が本物のCPU ownerGrid `OWN`かつネイティブPlayerController `SWIM_GROUND`。イカ中の人間shot数増加なし、原作右上段solid `UndertowT21D:right-low-team-a`支持維持・CPU7体維持。
+- KeySの短い3native tick入力と本物の慣性で減速・反転し、HUMANに戻ったtick **6574**の実位置は初期位置から水平約**0.461562m**。人工テレポート・インク所有変更・任意座標代入なし。スクリーンショット `B412_REAL_ORIGINAL_UPPER_OWN_INK_SWIM.png` と `b412-original-upper-real-own-ink-swim.json` が生証拠。
+- 同じソース180秒試合で原作4面の人間実射撃・塗装、7CPU、本物のB411 HUDとTIME_UP後再戦復帰、残り120/60/30秒の実入力もすべて独立PASS。**TIME_UP tick11856**、人間shot**85**発・原作ownerGrid変化**1025**セル、CPU実SOURCE shot要求**147**・実原作塗装変化**11846**セル。B410後半3実射撃区間は合計**25発**・追加実塗装**121**セル・上段KCC合計**9.51126067830809m**。値はこの成功runのものであり、過去のB410/B411成功runとは数字が異なるのが正常。
+- **限定範囲の重要な区別：** B412は原作右上段の実`OWN`インクで泳いだことを証明したが、事前に照準した**特定の120秒セル [12.8131,4.502,50.5300] そのものを踏んだ証明ではない**。W前進のOWN泳ぎはおよそ [13.38,5.40,45.49] などの既存原作OWNパッチで成立している。最近塗ったセルまで正しく誘導できたという主張は禁止。次の機能は実カメラ・原作インク所有の両方に基づく自然な移動／インク補給・射撃の一連の本物の操作を優先し、単なる距離QAの連発は避ける。
+- 先行 [B412初回FAIL #41635951998](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41635951998) とその再現原因（長い帰路KeyS操作で真の原作足元/状態ゲートHOLD）は**当該SHAの失敗履歴として保存**し、今回のPASSを過去実行に遡及させない。
+
+**未成立の重要項目：** 人間→CPUの実HP命中/撃破、真の150tick復活、自然対岸Recast到達（0/12）、公式Scoreable0のためナワバリ得点/勝敗NONE、原作Ver.7.2.0 FloorLine00衝突フラグ、正式4v4/ART/production。保護main・正式QA・Draft PR#5・Pagesは不変。次はロードマップF3の**人間による実射撃→本物のインク消費／OWN床での補給→人間の実射撃復帰を一つの可操作な試合で統合**する方向を優先候補とし、HP自然遭遇が成立するならそちらを優先。B412と同じChromeを毎回無駄に再試験しない。
