@@ -1,4 +1,15 @@
 # Browser Ink TPS — 現在の作業地点（GitHub引き継ぎ）
+## 最優先の2026-11-03統合引き継ぎ（これより下の過去記録のSHAより優先）
+
+**[HANDOFF_20261103_COMPLETE_JA.md — 固定方針・計画・実測・反省・未統合コミット・次工程の統合正本](HANDOFF_20261103_COMPLETE_JA.md)**
+
+- 文書作成前のQAゲーム／検証HEADは **d4db272226a6b60dd4bde4cf3956c63b4659b886**。この文書のみのコミット後はHEADが進むため、次回必ずGitHubの実HEADを再取得し、GAME/QA変更と文書変更を区別する。
+- 真正B162旧操作経路 [#41561600617](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41561600617) は実A1クリア2/2、しかし新READY予約 [#41564182033](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41564182033) は現在Queued・未認証。
+- 監査実装候補 **900d5001bdc86109d65bd443d3b3a1d3c015ec50 → abeef1658ccbadc398cdfa1cec8199b3ad2ed9db** は連続したGitHubコミットだが**QAブランチ未統合**。V8ロジック6/6の確認だけで、Node/真Chromium結果はない。docsのみの新HEADを親に移植するときは非強制・expected SHAを使用し、コードの直接FFを仮定しない。
+- 最大未解決は、原作自然対岸ルート0/12と実CPU敵遭遇→本物のHP命中→撃破→150tick復活。原作25/17/26/0、正式4v4/ART/得点/本番HOLD・main/PR#5/Pages保護を維持。CIがキュー待ちなら無駄な大量再Pushを避ける。
+
+---
+
 
 **更新時点：2026-11-01 JST。必ず現在HEADとCIを取り直すこと。** 添付ファイルなしでこの文書と固定入口だけで再開する。
 
