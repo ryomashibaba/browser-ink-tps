@@ -149,6 +149,32 @@ async function run(){
   't21W10B384=loadoutCircuit'||joined.tick!==0||!joined.paused||
   joined.matchState!=='STAGING'||joined.original!=='25/17/26/0')
   fail('NOT_FRESH_B384_NATIVE_WORLD',joined);
+ // In the existing real Chromium B384 READY screen, the human can
+ // select authentic A1 local co-op without first opening F8 QA.
+ // This is a DISPLAY assertion; do not click and disrupt this 180s trial.
+ const readyAlly=await evalPage(`(() => {
+  const button=document.querySelector('#t21-f3-ready-real-a1-coop');
+  const r=button?.getBoundingClientRect();
+  const style=button?getComputedStyle(button):null;
+  const ui=document.querySelector('#ui-root');
+  return {exists:!!button,text:button?.textContent,
+   width:r?.width??0,height:r?.height??0,display:style?.display,
+   presentation:ui?.dataset.t21B245Presentation,
+   sourceOnly:button?.dataset.originalSourceOnly,
+   scoreable:button?.dataset.scoreable,
+   actorTeleports:button?.dataset.actorTeleports,
+   productionAuthorized:button?.dataset.productionAuthorized};
+ })()`);
+ if(!readyAlly.exists||readyAlly.width<20||readyAlly.height<15||
+    readyAlly.display==='none'||readyAlly.presentation!=='PLAYER'||
+    !readyAlly.text?.includes('REAL ALLY A1')||
+    readyAlly.sourceOnly!=='true'||readyAlly.scoreable!=='0'||
+    readyAlly.actorTeleports!=='0'||
+    readyAlly.productionAuthorized!=='false')
+  fail('REAL_A1_COOP_READY_CONTROL_NOT_VISIBLE',readyAlly);
+ report.phases.push({phase:'REAL_A1_COOP_READY_VISIBLE_SOURCE_ONLY',
+  button:readyAlly,actualWorldTick:joined.tick});
+ persist();
  const before=original(await state(),'FRESH_SELECTED_SOURCE');
  report.phases.push({phase:'USER_NAVIGATED_TO_NEW_ORIGINAL_SOURCE_WORLD',
   newTimeOrigin:joined.origin,initialTick:joined.tick,

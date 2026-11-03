@@ -181,3 +181,9 @@
 - 上記は準備内容としてレビュー済み。B75 FIXEDもSUCCESSとなったので、候補の追加KeyS操作は採用しない。原因が未特定の過去の5/7 FAILは残しつつ、read-only停滞診断と独立した死亡状態回帰テストのみを一括統合。新SHAのCIは再検証までPASS扱いしない。main/T19C/T20/PR#5/Pagesは不変更、正式4v4/対岸0/12/ART/本番公開/score certificationはHOLD。
 
 - QA採否監査：準備試行 `f2dcbe72a5728d2bcefd9c7f95b9457d900173da` のB207選択世界追加KeyS操作は**不採用・未統合**。B75 #41552053301 FIXED 7/7が原作入力のまま実成功したため、一度の5/7失敗を根拠に試験入力を改変しない。未証明の根本原因や不可視敵HP命中を認定しない。
+
+## 2026-11-03 — F3/F5 SOURCE player-flow: 実A1共同プレイと敵位置秘匿（新HEAD CI待ち）
+
+- 研究ブランチの既存A1 SourceCoop (B193/B162) を再実装せず、普通の12武器SOURCEフルラウンドB384 READY/PAUSEオーバーレイからユーザーが明示的にクリックできる導線を追加する。F8 QAパネルを開かなくても「PLAY WITH REAL ALLY A1」を選べる。実クリックだけで既存 `sourceCoopNavigationUrl` を使用し、再起動は新しい原作25/17/26/0のRapier/Recast/CPU world。元のB384 12武器・相手CPU Pursuit・研究フラグは既存関数により排他除去し、ライブActorの位置・HP・時計・物理は書き換えない。SOURCE専用/通常人間の選択に限定し、決定的QA入力は不変更。
+- PLAYERレーダーは、元チームA1/A2/A3の実Rapier footだけを表示し、未発見の相手B1〜B4の正確な現在座標およびB側のnative path targetは表示しない。QA/旧SOURCE検証/F8では7体すべての既存元データを保持する。塗装ownerGridの真のA/Bサンプル・元support geometry・Radar history・Scoreable 0は変更しない。敵を発見したと推測する代替ロジックも作らない。
+- 固定F1〜F5、自然対岸0/12、正式4v4/勝敗/ART/本番HOLD不変。既存のB75/B390で検証するまで、コントロールが実ブラウザで使えるとのPASS宣言はしない。main/T19C/T20/PR#5/Pages不変更。研究目的のSOURCE試合としては実180秒/再戦既存PASS、実敵HP命中/撃破0の状態は不変。

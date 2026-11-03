@@ -24,6 +24,16 @@ export function b247ShouldCompactSourceRadar(
 ):boolean {
  return !inspectingQa&&(pointerLocked||playerView);
 }
+/** Normal PLAYER may see its original A1/A2/A3 teammate feet, never the
+ * unobserved enemy team's exact Rapier coordinates or navigation goals.
+ * F8 QA retains complete diagnostic witnesses. No enemy discovery is
+ * inferred from ownerGrid paint or a map projection. */
+export function b245VisibleNativeSourceRadarCpu(
+ actorId:string,playerView:boolean,inspectingQa:boolean
+):boolean {
+ return !playerView||inspectingQa||
+  actorId==='A1'||actorId==='A2'||actorId==='A3';
+}
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
 ):void {

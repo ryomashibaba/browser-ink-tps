@@ -1,7 +1,10 @@
 import {describe,expect,it} from 'vitest';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
- b245ShouldShowSourceCircuitGoal,b388VisibleNativeDescentWarning,
+ b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
+ b388VisibleNativeDescentWarning,
  b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
+import {sourceCoopEligible,sourceCoopNavigationUrl}
+ from './B193SourceCoopMode';
 describe('B245 original-source player and QA view policy',()=>{
  it('defaults a human 180s SOURCE round to uncluttered player view',()=>{
   expect(b245InitialSourceView('?t21W10B203=fullRound')).toBe('PLAYER');
@@ -83,5 +86,40 @@ describe('B388 live source warning vs persistent QA suspicion',()=>{
    {...x,rampState:'CRITICAL_SOURCE_EDGE'},
    {...x,grounded:false},{...x,circuitCleared:false}])
    expect(b388SuppressDuplicateRampWarning(y)).toBe(false);
+ });
+});
+
+describe('SOURCE real F3/F5 player radar keeps enemy locations secret',()=>{
+ it('normal PLAYER displays only physically observed A-team allies',()=>{
+  for(const id of ['A1','A2','A3'])
+   expect(b245VisibleNativeSourceRadarCpu(id,true,false)).toBe(true);
+  for(const id of ['B1','B2','B3','B4'])
+   expect(b245VisibleNativeSourceRadarCpu(id,true,false)).toBe(false);
+ });
+ it('explicit F8 QA and non-B245 lab preserve all genuine actor evidence',()=>{
+  for(const id of ['A1','A2','A3','B1','B2','B3','B4']){
+   expect(b245VisibleNativeSourceRadarCpu(id,false,true)).toBe(true);
+   expect(b245VisibleNativeSourceRadarCpu(id,true,true)).toBe(true);
+   expect(b245VisibleNativeSourceRadarCpu(id,false,false)).toBe(true);
+  }
+ });
+});
+describe('SOURCE READY launches genuine A1 cooperation with a NEW world',()=>{
+ it('takes 12-weapon combat session to original-only cooperative practice',()=>{
+  const old='https://example.com/game?t21Play=preview&t21QaDrive=source'+
+   '&t21W10B112=humanGround&t21W10B183=firstDropPlay'+
+   '&t21W10B192=humanCombat&t21W10B203=fullRound'+
+   '&t21W10B384=loadoutCircuit&t21W10B389=twin-comets';
+  const coop=new URL(sourceCoopNavigationUrl(old,true));
+  expect(sourceCoopEligible(coop.searchParams)).toBe(true);
+  expect(coop.searchParams.get('t21W10B203')).toBe('fullRound');
+  expect(coop.searchParams.get('t21W10B183')).toBe('firstDropPlay');
+  for(const incompatible of ['t21W10B192','t21W10B384','t21W10B389',
+   't21W10B112'])
+   expect(coop.searchParams.has(incompatible)).toBe(false);
+  const solo=new URL(sourceCoopNavigationUrl(coop.href,false));
+  expect(sourceCoopEligible(solo.searchParams)).toBe(false);
+  expect(solo.searchParams.get('t21W10B203')).toBe('fullRound');
+  expect(solo.searchParams.has('t21W10B193')).toBe(false);
  });
 });

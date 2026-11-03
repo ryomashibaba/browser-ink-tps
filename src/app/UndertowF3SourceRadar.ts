@@ -7,7 +7,8 @@ import type {StageDefinition} from '../stage/StageDefinition';
 import type {PaintSurface} from '../ink/PaintSurface';
 import {b402OriginalSourceInkRadarSamples,b402NativeRadarProofIsFresh,
  type B402RadarProof} from './B402NativeSourceInkRadarSamples';
-import {b247ShouldCompactSourceRadar} from './B245SourcePresentation';
+import {b247ShouldCompactSourceRadar,
+ b245VisibleNativeSourceRadarCpu} from './B245SourcePresentation';
 import {sourceRadarHeightBand} from './UndertowF3RadarElevation';
 
 type Actor={id:string;physicalFoot:[number,number,number];mobilityState:string;rejoined:boolean};
@@ -35,7 +36,8 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   '<canvas width="300" height="310" id="t21-f3-radar-canvas"'+
   ' style="width:100%;height:310px;display:block"'+
   ' aria-label="Real actor positions and original source bounds"></canvas>'+
-  '<div style="color:#a2bacb;font-size:10px;letter-spacing:.2px">'+
+  '<div id="t21-f3-radar-key" style="color:#a2bacb;font-size:10px;'+
+  'letter-spacing:.2px">'+
   '25 original solids · ● real feet / ◌ audited goals · no cross-gap route</div>';
  ui.appendChild(shell);
  shell.dataset.t21B52RadarMode='FULL';
@@ -45,6 +47,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
  heightStatus.style.cssText='color:#bcecf6;font:700 10px/1.4 ui-monospace,monospace;margin:4px 0';
  heightStatus.textContent='REAL FOOT Y · pending';
  shell.appendChild(heightStatus);
+ const radarKey=shell.querySelector<HTMLElement>('#t21-f3-radar-key')!;
  const canvas=shell.querySelector('canvas')!;
  canvas.dataset.originalSourceSolids='25';
  canvas.dataset.originalSourceNavigationLinks='26';
@@ -83,9 +86,18 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   // B247: native frame renders must respect PLAYER/QA inspection selection.
   // Earlier pointer-lock-only refresh overwrote B245's compact ready radar.
   const pointerLocked=document.pointerLockElement===document.querySelector('#app-canvas');
+  const playerView=ui.dataset.t21B245Presentation==='PLAYER';
+  const inspectingQa=ui.dataset.t21B245Inspect==='true';
   setPlayFocus(b247ShouldCompactSourceRadar(pointerLocked,
-   ui.dataset.t21B245Presentation==='PLAYER',
-   ui.dataset.t21B245Inspect==='true'));
+   playerView,inspectingQa));
+  const showActor=(id:string)=>
+   b245VisibleNativeSourceRadarCpu(id,playerView,inspectingQa);
+  radarKey.textContent=playerView&&!inspectingQa?
+   '25 original solids · ● real ALLIES only / ENEMY feet hidden · NO TURF SCORE':
+   '25 original solids · ● real feet / ◌ audited goals · no cross-gap route';
+  canvas.setAttribute('aria-label',playerView&&!inspectingQa?
+   'Real original source teammate positions and original floor bounds':
+   'Real original source actor positions and original floor bounds');
   frame++;
   const x=view.player.position[0]??0,z=view.player.position[2]??0;
   if(![x,z].every(Number.isFinite))return;
@@ -156,6 +168,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   // These hollow source-goal rings are actual audited Recast destinations,
   // never a straight-line route or an asserted connection across the gap.
   for(const goal of view.cpu.sourcePatrol.activeTargets){
+   if(!showActor(goal.id))continue;
    const gx=px(goal.position[0]!),gz=pz(goal.position[2]!);
    ctx.strokeStyle=goal.id.startsWith('A')?'rgba(41,238,243,.72)':
      'rgba(255,68,141,.72)';
@@ -165,7 +178,10 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   }
   const hy=view.player.position[1]??0;
   const bands={ABOVE:0,LEVEL:0,BELOW:0};
+  let visibleCpu=0;
   for(const a of view.cpu.cpu){
+   if(!showActor(a.id))continue;
+   visibleCpu++;
    const band=sourceRadarHeightBand(hy,a.physicalFoot[1]);
    bands[band]++;
    const xx=px(a.physicalFoot[0]),zz=pz(a.physicalFoot[2]);
@@ -193,8 +209,12 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   ctx.fillStyle='#8dc4d5';ctx.fillText('LOCAL ±32m',13,HEIGHT-10);
   ctx.textAlign='right';ctx.fillText('X '+x.toFixed(1)+' · Z '+z.toFixed(1)+
    ' · Y '+hy.toFixed(1),WIDTH-12,HEIGHT-10);ctx.textAlign='left';
-  heightStatus.textContent='REAL FOOT Y · ↑'+bands.ABOVE+' ABOVE / '+
+  heightStatus.textContent=(playerView&&!inspectingQa?
+   'ALLY FOOT Y · ':'REAL FOOT Y · ')+'↑'+bands.ABOVE+' ABOVE / '+
    bands.LEVEL+' LEVEL / ↓'+bands.BELOW+' BELOW · ±2m';
+  canvas.dataset.t21F3VisibleActorFootCount=String(visibleCpu);
+  canvas.dataset.t21F3EnemyFootPositionsHidden=String(
+   playerView&&!inspectingQa);
   canvas.dataset.t21B52Above=String(bands.ABOVE);
   canvas.dataset.t21B52Level=String(bands.LEVEL);
   canvas.dataset.t21B52Below=String(bands.BELOW);
