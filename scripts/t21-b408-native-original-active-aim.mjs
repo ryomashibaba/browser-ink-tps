@@ -23,8 +23,8 @@ export function b408ChooseActiveOriginalCell(ledger,frame,footId){
   !Number.isFinite(cam.yawDegrees)||!Number.isFinite(cam.pitchDegrees))
   fail('CURRENT_SOURCE_AND_KCC_REQUIRED');
  const surfaceId=footId+':paint';
- const cells=ground.originalRows.find(r=>r.surfaceId===surfaceId)?
-   .originalB337NearbyActiveCells;
+ const cells=ground.originalRows.find(r=>r.surfaceId===surfaceId)
+   ?.originalB337NearbyActiveCells;
  if(!Array.isArray(cells)||cells.length<1||cells.length>3||
   cells.some(c=>![-1,0,1].includes(c.originalOwner)||
    c.realCellProvenance!=='B337_NATIVE_LOCAL_ACTIVE_GRID'))
