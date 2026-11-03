@@ -15,8 +15,8 @@ function fixture(){
  }));
  // Observe the real class methods without constructing mock stage solids,
  // routes, Crowd or Rapier. No bot/physics/world state is advanced.
- const traffic=(Object.create(UndertowF3SourceTraffic.prototype)
-  as UndertowF3SourceTraffic);
+ const traffic:UndertowF3SourceTraffic=
+  Object.create(UndertowF3SourceTraffic.prototype);
  const historical=new Set(ids);
  Object.assign(traffic,{
   bots,physicallyRejoined:historical,physicallyFalling:new Set(),
