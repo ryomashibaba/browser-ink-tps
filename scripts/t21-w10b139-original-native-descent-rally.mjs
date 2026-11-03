@@ -430,6 +430,10 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  if(b312SecondInkTrial&&coopAttempt===1){
   await evaluate(`(() => {const u=new URL(location.href);
    u.searchParams.set('t21B312','genuineSecondHumanPaint');
+   // B410 needs genuine local ORIGINAL active-grid targets also on the
+   // first-drop lower landing. Read-only B337 ownerGrid source audit,
+   // never a state or projectile mutation. Plain B409 remains unchanged.
+   if(${b410RealUpperPlay})u.searchParams.set('t21B337','localOriginalAim');
    history.replaceState(null,'',u.href);return true;})()`);
   b312UpperBaseline=await b312Ledger();
   if(b312UpperBaseline.originalRows.length!==17||
@@ -784,10 +788,34 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      const aimFrame=await b312Ledger();
      const realAngle=(await snapshot()).cameraSourcePractice;
      const actualEntry=aimFrame.originalRows.find(r=>r.surfaceId===targetId);
-     const option=b313ChooseOriginalActiveAim({
+     let option=b313ChooseOriginalActiveAim({
       cells:actualEntry.originalSourceActiveProbeCells,
       body:aimFrame.actualBodyMeters,camera:aimFrame.actualCameraMeters,
       yaw:realAngle.yawDegrees,pitch:realAngle.pitchDegrees});
+     // Real B410 artifact #13225931324 proved B271 global THREE
+     // original landing cells had NO safe CDP aim (mouseX806, planar
+     // 1.16m and far corner). Do not fabricate/relocate the landing.
+     // When genuinely standing on that ORIGINAL lower PaintSurface,
+     // select exact local active cells from the existing READ-ONLY B337
+     // ownerGrid, with native camera and original footprint provenance.
+     // Keep the independent human original impact+ownerGrid B315 audit.
+     if(b410RealUpperPlay&&!option.selected&&
+       targetId==='UndertowT21D:first-drop-landing-positive-z:paint'&&
+       aimFrame.genuineHumanOriginalFootSolid===
+        'UndertowT21D:first-drop-landing-positive-z'&&
+       aimFrame.realHumanOriginalFootSupported===true&&
+       actualEntry.actualHumanFootOnOriginalActiveSurface===true&&
+       Array.isArray(actualEntry.originalB337NearbyActiveCells)&&
+       actualEntry.originalB337NearbyActiveCells.length>=1&&
+       actualEntry.originalB337NearbyActiveCells.length<=3&&
+       actualEntry.originalB337NearbyActiveCells.every(c=>
+        c.realCellProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
+        [-1,0,1].includes(c.originalOwner))){
+      option=b313ChooseOriginalActiveAim({
+       cells:actualEntry.originalB337NearbyActiveCells,
+       body:aimFrame.actualBodyMeters,camera:aimFrame.actualCameraMeters,
+       yaw:realAngle.yawDegrees,pitch:realAngle.pitchDegrees});
+     }
      const selected=option.selected;
      if(!selected||!aimFrame.realHumanOriginalFootSupported){
       observations.push({targetId,verdict:'HOLD_NO_SAFE_REAL_ACTIVE_SOURCE_CELL',
@@ -2019,7 +2047,9 @@ async function run(){
     const u=new URL(location.href);
     if(u.searchParams.get('t21B312')!=='genuineSecondHumanPaint'||
        u.searchParams.get('t21W10B203')!=='fullRound'||
-       u.searchParams.has('t21B337'))return 'INVALID_READER_CONTEXT';
+       (u.searchParams.has('t21B337')&&
+        u.searchParams.get('t21B337')!=='localOriginalAim'))
+      return 'INVALID_READER_CONTEXT';
     u.searchParams.set('t21B337','localOriginalAim');
     history.replaceState(null,'',u.href);
     return new URL(location.href).searchParams.get('t21B337');
