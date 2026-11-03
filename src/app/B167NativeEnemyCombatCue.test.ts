@@ -1,6 +1,6 @@
 import {describe,it,expect,vi} from 'vitest';
 import {sourceB167EnemyCombatCue as cue,
- type B167NativeCombatCueInput} from './B167NativeEnemyCombatCue';
+ b167PlayerVisibleEnemyCue as playerCue,type B167NativeCombatCueInput} from './B167NativeEnemyCombatCue';
 const sample=():B167NativeCombatCueInput=>({
  nativeTick:1200,sourceStage:[25,17,26,0],matchState:'PLAYING',
  paused:false,stopReason:null,
@@ -55,5 +55,30 @@ describe('B167 native CPU source contact awareness',()=>{
   f.matchState='PLAYING';f.paused=true;expect(cue(f)).toBeNull();
   f.paused=false;f.stopReason='HOLD';expect(cue(f)).toBeNull();
   f.stopReason=null;f.nativeTick=1.5;expect(cue(f)).toBeNull();
+ });
+});
+
+describe('PLAYER physical sight respects hidden original opponent data',()=>{
+ it('only shows forward, original-stage-clear contacts without enemy HP or ID',()=>{
+  const f=sample();f.aim=[3,0,-4];
+  expect(cue(f)?.direction).toBe('AHEAD');
+  const shown=playerCue(cue(f));
+  expect(shown).toMatchObject({gameplayWrites:0});
+  expect(shown!.label).toContain('STAGE RAY CLEAR');
+  expect(shown!.label).not.toContain('B1');
+  expect(shown!.label).not.toContain('67');
+  expect(shown!.label).not.toContain('5.0');
+  f.stageRayBlocked=()=>true;
+  expect(playerCue(cue(f))).toBeNull();
+  f.stageRayBlocked=()=>false;f.aim=[0,0,1];
+  expect(playerCue(cue(f))).toBeNull();
+ });
+ it('cannot reveal enemies on unsupported height bands or a stopped world',()=>{
+  const f=sample();f.aim=[3,0,-4];
+  f.cpu[0]!.physicalFoot=[3,12,44];
+  expect(playerCue(cue(f))).toBeNull();
+  f.cpu[0]!.physicalFoot=[3,3.1,44];f.matchState='TIME_UP';
+  expect(playerCue(cue(f))).toBeNull();
+  expect(playerCue(null)).toBeNull();
  });
 });

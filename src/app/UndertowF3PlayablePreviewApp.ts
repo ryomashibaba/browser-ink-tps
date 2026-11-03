@@ -31,7 +31,7 @@ import {summarizeB165OriginalAllyPractice}
  from './B165OriginalAllyPracticeProgress';
 import {getB166OriginalAllyRendezvous}
  from './B166OriginalAllyRendezvous';
-import {sourceB167EnemyCombatCue} from './B167NativeEnemyCombatCue';
+import {sourceB167EnemyCombatCue,b167PlayerVisibleEnemyCue} from './B167NativeEnemyCombatCue';
 import {b368RealNativeEnemyFrontier} from './B368RealNativeEnemyFrontier';
 import {b364RealSourceCrosshair} from './B364RealSourceCrosshair';
 import {shouldPresentB168NativePractice} from './B168NativePracticePresentation';
@@ -6490,17 +6490,28 @@ export class UndertowF3PlayablePreviewApp{
    stageRayBlocked:(from,to)=>!!this.physics.castStageSegment(
     new Vec3(...from),new Vec3(...to),'ink-projectile')
   });
-  this.b167CombatNotice.hidden=!cue;
-  if(cue){
-   this.b167CombatNotice.textContent=cue.label;
+  const playerSightMode=document.querySelector<HTMLElement>('#ui-root')?.
+   dataset.t21B245Presentation==='PLAYER';
+  // PLAYER gets genuine forward stage sight only, never omniscient CPU HP.
+  // QA keeps original F8 physical actor identity and cover diagnostics.
+  const presentedCue=playerSightMode?b167PlayerVisibleEnemyCue(cue):cue;
+  this.b167CombatNotice.hidden=!presentedCue||
+   this.survey.snapshot().active||this.galleryIndex>=0;
+  if(presentedCue&&cue){
+   this.b167CombatNotice.textContent=presentedCue.label;
    this.b167CombatNotice.dataset.t21B167ContactState=cue.state;
-   this.b167CombatNotice.dataset.t21B167Actor=cue.actorId;
+   this.b167CombatNotice.dataset.t21B167Actor=
+    playerSightMode?'REDACTED':cue.actorId;
    this.b167CombatNotice.dataset.t21B167NativeTick=String(cue.nativeTick);
    this.b167CombatNotice.dataset.t21B167PhysicalRayOnly='true';
    this.b167CombatNotice.dataset.t21B167CertifiedShot='false';
    this.b167CombatNotice.style.borderColor=cue.state==='STAGE_RAY_CLEAR'?
     'rgba(103,235,212,.68)':'rgba(255,159,195,.56)';
-  }else this.b167CombatNotice.dataset.t21B167ContactState='OFF';
+  }else{
+   this.b167CombatNotice.dataset.t21B167ContactState='OFF';
+   this.b167CombatNotice.dataset.t21B167Actor='NONE';
+   this.b167CombatNotice.textContent='';
+  }
   if(this.b368EnemyFrontierHud){
    const frontier=b368RealNativeEnemyFrontier({
     enabled:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
@@ -6520,18 +6531,24 @@ export class UndertowF3PlayablePreviewApp{
      new Vec3(...from),new Vec3(...to),'ink-projectile')
    });
    const n=this.b368EnemyFrontierHud;
-   const playerMode=document.querySelector<HTMLElement>('#ui-root')?.
-    dataset.t21B245Presentation==='PLAYER';
-   n.hidden=!frontier||!playerMode||
+   const qaMode=document.querySelector<HTMLElement>('#ui-root')?.
+    dataset.t21B245Presentation==='QA';
+   // The unrevealed B-team feet are QA evidence, not PLAYER radar data.
+   n.hidden=!frontier||!qaMode||
     this.survey.snapshot().active||this.galleryIndex>=0;
-   n.dataset.nativeTick=String(frontier?.nativeTick??-1);
-   n.dataset.nearestCpuId=frontier?.nearestId??'NONE';
-   n.dataset.nativeHorizontalMeters=String(frontier?.horizontalMeters??-1);
-   n.dataset.nativeOriginalFootId=frontier?.sourceHumanSupportId??'NONE';
-   n.dataset.nativeStageRayBlocked=String(
-    frontier?.originalStageRayBlocked??'UNVERIFIED');
-   n.dataset.cpuPhysicalCount=String(frontier?.measuredEnemies.length??0);
-   if(frontier&&n.textContent!==frontier.label)n.textContent=frontier.label;
+   n.dataset.nativeTick=String(qaMode?(frontier?.nativeTick??-1):-1);
+   n.dataset.nearestCpuId=qaMode?(frontier?.nearestId??'NONE'):'REDACTED';
+   n.dataset.nativeHorizontalMeters=String(
+    qaMode?(frontier?.horizontalMeters??-1):-1);
+   n.dataset.nativeOriginalFootId=qaMode?
+    (frontier?.sourceHumanSupportId??'NONE'):'REDACTED';
+   n.dataset.nativeStageRayBlocked=String(qaMode?
+    (frontier?.originalStageRayBlocked??'UNVERIFIED'):'UNVERIFIED');
+   n.dataset.cpuPhysicalCount=String(
+    qaMode?(frontier?.measuredEnemies.length??0):0);
+   if(qaMode&&frontier){
+    if(n.textContent!==frontier.label)n.textContent=frontier.label;
+   }else if(n.textContent)n.textContent='';
   }
   // Actual view target and original Rapier/paintable line from the HUMAN
   // muzzle. No target correction, autolock, gameplay write or hit claim.

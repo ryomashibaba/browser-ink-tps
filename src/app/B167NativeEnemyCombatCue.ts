@@ -74,3 +74,15 @@ export function sourceB167EnemyCombatCue(input:B167NativeCombatCueInput){
   gameplayWrites:0 as const
  };
 }
+
+/** PLAYER-only source sight: ordinary HUD never exposes hidden enemy ID,
+ * health or measured distance. F8 QA retains actual native evidence.
+ * A clear stage ray does not certify a projectile impact. */
+export function b167PlayerVisibleEnemyCue(
+ cue:ReturnType<typeof sourceB167EnemyCombatCue>
+):{label:string;nativeTick:number;gameplayWrites:0}|null{
+ if(!cue||cue.state!=='STAGE_RAY_CLEAR'||cue.direction!=='AHEAD')
+  return null;
+ return {label:'ENEMY AHEAD · ORIGINAL STAGE RAY CLEAR · HIT UNCONFIRMED',
+  nativeTick:cue.nativeTick,gameplayWrites:0};
+}
