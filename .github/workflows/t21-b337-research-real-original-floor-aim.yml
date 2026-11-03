@@ -1,0 +1,62 @@
+name: T21 B337 RESEARCH genuine original floor mouse aim and paint
+on:
+  push:
+    branches:
+      - research/t21-b337-real-native-floor-aim-20261103
+    paths:
+      - '.github/workflows/t21-b337-research-real-original-floor-aim.yml'
+      - 'scripts/t21-b337-real-input-ink-round.mjs'
+      - 'scripts/t21-b337-real-input-ink-audit.mjs'
+      - 'scripts/t21-b337-real-input-ink-audit.test.mjs'
+      - 'scripts/t21-b313-actual-original-cell-aim.mjs'
+      - 'scripts/t21-b313-actual-original-cell-aim.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b337-real-original-floor-research-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pure-gates:
+    name: Pure native provenance guards (NOT gameplay PASS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Source-cell aim and native proof unit regressions
+        run: |
+          node --test \
+            scripts/t21-b313-actual-original-cell-aim.test.mjs \
+            scripts/t21-b337-real-input-ink-audit.test.mjs
+      - run: node --check scripts/t21-b337-real-input-ink-round.mjs
+
+  genuine-native:
+    name: Real Chromium pointer-lock shot and original source owner
+    needs: pure-gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Typecheck and compile original gameplay world
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Genuine 7-CPU original source floor mouse shot and grounded WASD
+        env:
+          T21_B337_OUTPUT: /tmp/t21-b337-research
+        run: node scripts/t21-b337-real-input-ink-round.mjs
+      - name: Independently gate original shot/ink and image evidence
+        run: node scripts/t21-b337-real-input-ink-audit.mjs /tmp/t21-b337-research
+      - name: Preserve native PASS or factual HOLD evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b337-research-original-floor-real-chromium
+          path: /tmp/t21-b337-research/
+          retention-days: 14
+          if-no-files-found: warn
