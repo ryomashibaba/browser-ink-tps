@@ -257,7 +257,9 @@ async function run(){
  const preAim=verifyAuthority(await snapshot());
  const original=await read('window.__t21F3.auditB312NativeHumanOwnerLedger()');
  const footId=original?.genuineHumanOriginalFootSolid;
- const targetSurface=footId+':paint';
+ // Actual StageDefinition uses `paint:<backingSolidId>`, not
+ // `<backingSolidId>:paint`. Never invent SOURCE surface identities.
+ const targetSurface='paint:'+footId;
  const row=original?.originalRows?.find(r=>r.surfaceId===targetSurface);
  if(!original||original.source!=='25/17/26/0'||
     original.originalRows?.length!==17||
@@ -268,6 +270,8 @@ async function run(){
     footId!==started.footSolid||
     !row?.originalSourceActiveProbeCells?.length)
   fail('NO_GENUINE_ORIGINAL_GROUNDED_ACTIVE_FLOOR_AIM');
+ if(preAim.cameraSourcePractice.sourceAimSensitivityMultiplier!==1)
+  fail('REAL_CAMERA_SENSITIVITY_NONBASELINE');
  const selected=b313ChooseOriginalActiveAim({
   cells:row.originalSourceActiveProbeCells,
   body:original.actualBodyMeters,camera:original.actualCameraMeters,
@@ -290,6 +294,8 @@ async function run(){
   sourceFootId:footId,targetOriginalSurface:targetSurface,
   originalActiveCells:row.originalSourceActiveProbeCells,
   selectedCell:{grid:selected.grid,world:selected.world},
+  actualCameraMeters:original.actualCameraMeters,
+  actualBodyMeters:original.actualBodyMeters,
   targetYawDegrees:selected.targetYaw,
   targetPitchDegrees:selected.targetPitch,
   actualCDP:selected.actualCDP,

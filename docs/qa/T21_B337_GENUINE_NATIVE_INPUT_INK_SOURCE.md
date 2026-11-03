@@ -46,3 +46,22 @@ No new workflow file and no rerun of the heavy B335 180-second workflow.
 - Split native accepted HUMAN shot and actual source impact/owner-change waits. On HOLD, write a factual diagnostic with original impact source, real shot count, real ownership, pointer lock, and native tick.
 - Independent guard now requires original active cell provenance, physical source identity, native yaw/pitch agreement and true painted source. Existing 7 CPU, no-score/no-win, real WASD and immutable 25/17/26/0 assertions unchanged.
 - This study is an isolated **research branch**; the queued B316/B322/B162 F2 verification of the main QA branch must complete independently. No PASS until exact branch build, Node tests and genuine Chromium input + actual source paint succeed. Main, Draft PR #5, public Pages untouched; 0/12 opponent routes and production/ART/official 4v4 HOLD.
+
+## 2026-11-03 — Exact ORIGINAL paint ID correction
+
+Read-only cross-check: original StageDefinition anchor in
+`UndertowSpillwayConnectivityQa.ts` is
+`paint:UndertowT21D:spawn-high-positive-z`. `TestStage.defineTestSurfaces`
+retains `surface.id`, and B312's native owner rows read that actual ID.
+Earlier B337 research used the nonexistent `<backingSolidId>:paint`.
+This change fixes the real Chromium driver, independent auditor, and
+17-row fixtures to `paint:<backingSolidId>`, without ever adding a
+PaintSurface. Genuine supported Rapier foot and the exact B312 source
+owner-row are still required.
+
+The native driver now preserves real camera/body positions and requires
+unaltered 1x physical mouse look. Independent verification derives yaw and
+pitch from the actual B271 active grid cell and read-only camera position;
+a forged target or changed observed yaw/pitch must be HOLD. Only genuinely
+accepted human shots AND physically changed original owner cells count
+toward a PASS; queueing a workflow is not certification.

@@ -10,10 +10,12 @@ function fixture(){
   actions:['MOUSE_MOVED','FIRE','KeyW','KeyA','KeyS','KeyD'],
   originalAimWitness:{
    sourceFootId:'UndertowT21D:spawn-high-positive-z',
-   targetOriginalSurface:'UndertowT21D:spawn-high-positive-z:paint',
+   targetOriginalSurface:'paint:UndertowT21D:spawn-high-positive-z',
    originalActiveCells:[{grid:[2,3],world:[0,5.9,41]}],
    selectedCell:{grid:[2,3],world:[0,5.9,41]},
-   targetYawDegrees:0,targetPitchDegrees:-24,actualCDP:[800,580],
+   actualCameraMeters:[-0.7693,10.35,31],
+   actualBodyMeters:[0,6,40],
+   targetYawDegrees:4.4,targetPitchDegrees:-23.92,actualCDP:[800,580],
    observedYawDegrees:4.4,observedPitchDegrees:-24,
    beforeTick:100,afterTick:112,
    originalRapierFootSupported:true,artificialAimOrGameplayWrites:false
@@ -29,11 +31,11 @@ function fixture(){
    cpuCount:7,cpuRejoined:7,cpuRelocations:0,
    humanShots:i>=2?4:0,humanInk:i>=2?17:0,
    lastHumanImpactTick:i>=2?125:null,
-   lastHumanPaintedSurface:i>=2?'UndertowT21D:spawn-high-positive-z:paint':null,
+   lastHumanPaintedSurface:i>=2?'paint:UndertowT21D:spawn-high-positive-z':null,
    footSolid:'UndertowT21D:spawn-high-positive-z',
    footGap:0.02,footSupported:true,
    originalRows:Array.from({length:17},(_,j)=>({
-    surfaceId:j===1?'UndertowT21D:spawn-high-positive-z:paint':'original-'+j,
+    surfaceId:j===1?'paint:UndertowT21D:spawn-high-positive-z':'original-'+j,
     a:i>=2&&j===1?17:0,
     b:0,neutral:i>=2&&j===1?83:100,active:100
    }))
@@ -108,11 +110,18 @@ test('source floor mouse provenance must agree with observed genuine aim',()=>{
   assert.throws(()=>audit(x),/B337_SOURCE_GAMEPLAY_/);
  }
 });
-test('real mouse pitch alone counts as aim motion only with source cell witness',()=>{
- const x=fixture();
- x.samples[1].cameraYawDegrees=x.samples[0].cameraYawDegrees;
- x.samples[1].cameraPitchDegrees=-23;
- x.originalAimWitness.observedYawDegrees=x.samples[1].cameraYawDegrees;
- x.originalAimWitness.observedPitchDegrees=-23;
- assert.equal(audit(x).actualCameraPitchDeltaDegrees,-23);
+test('camera geometry and ORIGINAL source identity must be genuine',()=>{
+ for(const mutate of [
+  x=>{x.originalAimWitness.targetYawDegrees=175;},
+  x=>{x.originalAimWitness.targetPitchDegrees=10;},
+  x=>{x.originalAimWitness.actualCameraMeters=[10,10,10];},
+  x=>{x.samples[1].cameraPitchDegrees=15;
+      x.originalAimWitness.observedPitchDegrees=15;},
+  x=>{x.originalAimWitness.actualBodyMeters=[500,6,40];},
+  x=>{x.originalAimWitness.targetOriginalSurface=
+    'UndertowT21D:spawn-high-positive-z:paint';}
+ ]){
+  const x=fixture();mutate(x);
+  assert.throws(()=>audit(x),/B337_SOURCE_GAMEPLAY_/);
+ }
 });

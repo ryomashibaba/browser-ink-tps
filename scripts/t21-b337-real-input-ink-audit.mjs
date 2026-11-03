@@ -60,7 +60,8 @@ export function b337AuditNative(w){
   Math.abs(aim.cameraPitchDegrees-start.cameraPitchDegrees)>=0.1,
   'REAL_MOUSE_AIM_CHANGE_MISSING');
  const witness=w.originalAimWitness;
- const actualOriginalId=start.footSolid+':paint';
+ // Frozen original source ownerGrid uses paint:<backingSolidId>.
+ const actualOriginalId='paint:'+start.footSolid;
  const equalCell=(a,b)=>Array.isArray(a?.grid)&&
   Array.isArray(a?.world)&&Array.isArray(b?.grid)&&Array.isArray(b?.world)&&
   a.grid.length===2&&b.grid.length===2&&
@@ -76,6 +77,8 @@ export function b337AuditNative(w){
   witness.originalActiveCells.length>=1&&
   witness.originalActiveCells.length<=3&&
   witness.originalActiveCells.some(c=>equalCell(c,witness.selectedCell))&&
+  position(witness.actualBodyMeters)&&position(witness.actualCameraMeters)&&
+  horizontal(witness.actualBodyMeters,start.body)<.2&&
   Array.isArray(witness.actualCDP)&&witness.actualCDP.length===2&&
   witness.actualCDP.every(Number.isFinite)&&
   witness.actualCDP[0]>=10&&witness.actualCDP[0]<=1590&&
@@ -90,6 +93,17 @@ export function b337AuditNative(w){
   witness.originalRapierFootSupported===true&&
   witness.artificialAimOrGameplayWrites===false,
   'ORIGINAL_REAL_FLOOR_MOUSE_AIM_PROVENANCE_MISSING');
+ const sourceWorld=witness.selectedCell.world;
+ const camera=witness.actualCameraMeters;
+ const x=sourceWorld[0]-camera[0],z=sourceWorld[2]-camera[2];
+ const expectedYaw=Math.atan2(x,z)*180/Math.PI;
+ const expectedPitch=Math.atan2(sourceWorld[1]-camera[1],Math.hypot(x,z))*180/Math.PI;
+ const wrapDegrees=x=>((x+540)%360)-180;
+ need(Math.abs(wrapDegrees(expectedYaw-witness.targetYawDegrees))<=.2&&
+  Math.abs(expectedPitch-witness.targetPitchDegrees)<=.2&&
+  Math.abs(wrapDegrees(expectedYaw-aim.cameraYawDegrees))<=3&&
+  Math.abs(expectedPitch-aim.cameraPitchDegrees)<=3,
+  'ACTUAL_CAMERA_TO_ORIGINAL_SOURCE_AIM_UNPROVEN');
  // Actual original ink must hit the selected source: a mouse turn or a
  // launcher-count increment cannot claim painted source cells.
  need(fire.lastHumanPaintedSurface===actualOriginalId,
