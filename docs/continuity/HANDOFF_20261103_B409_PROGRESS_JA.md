@@ -19,3 +19,9 @@ Splatoon 3 v7.2.0 Undertow Spillway normal Turf War; original 25 Rapier solids /
 
 ## Next milestone
 After B409 genuine same-180s route proof: develop physically natural enemy proximity and source-authorized projectile/HP/lifecycle in one real same-frame 7 CPU match. Do not force opponent crossing or touch F4 FloorLine00 without true versioned original collision bphsh authority. If unreachable, continue genuinely valuable F3 player movement, camera and shot quality without pretending enemy killed or 4v4 certified.
+
+## B409: genuine full 180s original route same-world PASS (final, supersedes prior in-progress)
+- [Actions #41613268934](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41613268934) all SUCCESS at exact source SHA 94751a3bf3d6918a45dc77ef17611aa21dc557be. True raw artifact #13220217862.
+- In **one real Chromium SOURCE-only 180s game**, original human CDP KCC walked original first-drop landing, original positive-Z ramp, up to original right-upper `UndertowT21D:right-low-team-a` and stayed correctly supported at checkpoints to TIME_UP native tick **11860**. B324 upper floor KCC 2.0800241809909408m + B326 additional 3.120407972122572m (total **5.200432153113512m**). B315 actually painted original high/landing/ramp (3 real original surfaces), independent PASS.
+- Human native shots **63**, human changed original ownerGrid cells **955**, CPU 7 real SOURCE shot requests **127**, changed original CPU cells **12337**. Real objective CLEAR before native 150 seconds left (remaining 158.133s). Original source after-route to timeup had no additional HUMAN shots (same value at seven checkpoints); this is the exact B410 playability shortcoming.
+- Native player→enemy HP hits **0**, splats **0**, respawns unproven. No natural cross-bank connection, official Turf score or winner. 25/17/26/0, 0/12, formal 4v4/ART/production HOLD.
