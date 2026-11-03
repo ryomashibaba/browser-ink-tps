@@ -1,0 +1,63 @@
+name: T21 B409 true original ramp and 180s same native SOURCE game
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b409-*.mjs'
+      - '.github/workflows/t21-b409-one-real-route-full-180s.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-original-route-180s:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install exact SOURCE runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Independent physical route and game preflight
+        run: |
+          node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+          node --check scripts/t21-b409-original-route-full-native-game-audit.mjs
+          node --test scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: One real native high-to-lower-to-ramp-to-upper 180s with 7 CPUs
+        env:
+          T21_B139_VARIANT: ALLY_RALLY
+          T21_B162_REAL_ALLY_SYNC: '1'
+          T21_B194_REAL_PLAYER_BUTTON: '1'
+          T21_B200_REAL_REPLAY: '0'
+          T21_B201_REAL_PAUSE_RESUME: '0'
+          T21_B202_REAL_CONTROLS: '0'
+          T21_B203_REAL_FULL_ROUND: '1'
+          T21_B312_SECOND_HUMAN_SURFACE: '1'
+          T21_B316_GENUINE_RAMP_WALK: '1'
+          T21_B318_INTERIOR_RAMP_WALK: '1'
+          T21_B320_TRUE_SOURCE_RAMP_UPHILL: '1'
+          T21_B321_TRUE_UPPER_RAMP_KCC: '1'
+          T21_B322_TRUE_CREST_EXIT: '1'
+          T21_B324_REAL_UPPER_FLOOR_CONTINUATION: '1'
+          T21_B326_EXTENDED_UPPER_FLOOR: '1'
+          T21_B409_ONE_ROUTE_180S: '1'
+          T21_F3_SHOT_DIR: /tmp/t21-b409-original-180s
+        run: node scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Independently verify true original ink KCC and same native 180s
+        run: |
+          node scripts/t21-b315-verify-native-three-surface-ink.mjs /tmp/t21-b409-original-180s/b312-real-original-lower-second-ink.json
+          node scripts/t21-b322-original-ramp-crest.mjs /tmp/t21-b409-original-180s/b322-actual-original-ramp-crest.json
+          node scripts/t21-b324-original-upper-floor-continuation.mjs /tmp/t21-b409-original-180s/b322-actual-original-ramp-crest.json /tmp/t21-b409-original-180s/b324-real-original-upper-floor.json
+          node scripts/t21-b326-extended-original-upper-floor.mjs /tmp/t21-b409-original-180s/b322-actual-original-ramp-crest.json /tmp/t21-b409-original-180s/b324-real-original-upper-floor.json /tmp/t21-b409-original-180s/b326-extended-original-upper-floor.json
+          node scripts/t21-b409-original-route-full-native-game-audit.mjs /tmp/t21-b409-original-180s
+      - name: Preserve all genuine source route/ink/CPU/full-match evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b409-genuine-original-route-and-one-180s-source-game
+          path: /tmp/t21-b409-original-180s/
+          retention-days: 14
+          if-no-files-found: warn

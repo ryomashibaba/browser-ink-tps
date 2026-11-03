@@ -54,6 +54,7 @@ const b321HigherRamp=process.env.T21_B321_TRUE_UPPER_RAMP_KCC==='1';
 const b322RealCrest=process.env.T21_B322_TRUE_CREST_EXIT==='1';
 const b324UpperFloor=process.env.T21_B324_REAL_UPPER_FLOOR_CONTINUATION==='1';
 const b326ExtendedFloor=process.env.T21_B326_EXTENDED_UPPER_FLOOR==='1';
+const b409OneRoute180=process.env.T21_B409_ONE_ROUTE_180S==='1';
 if(b326ExtendedFloor&&!b324UpperFloor)
  throw Error('B326_REQUIRES_B324_GENUINE_UPPER_FLOOR');
 if(b324UpperFloor&&!b322RealCrest)
@@ -84,6 +85,11 @@ if(b162CoopTrial&&variant!=='ALLY_RALLY')
  throw Error('B162_ONLY_ORIGINAL_ALLY_RALLY_OPT_IN');
 if(b194ButtonTrial&&(!b162CoopTrial||variant!=='ALLY_RALLY'))
  throw Error('B194_REQUIRES_EXISTING_REAL_A1_NATIVE_TRIAL');
+if(b409OneRoute180&&(!b203FullRoundTrial||!b312SecondInkTrial||
+ !b316GenuineRampWalk||!b318InteriorWalk||!b320UphillStudy||
+ !b321HigherRamp||!b322RealCrest||!b324UpperFloor||
+ !b326ExtendedFloor||b200ReplayTrial||variant!=='ALLY_RALLY'))
+ throw Error('B409_REQUIRES_EXISTING_TRUE_B322_B326_FULL_ROUND');
 const children=[],pending=new Map(),history=[];
 let socket=null,sequence=0;
 const fail=reason=>{throw Error('B140_'+reason);};
@@ -1957,6 +1963,83 @@ async function run(){
   console.log('B203_REAL_FULL_ROUND_NATIVE_PAUSE_AFTER_CLEAR',JSON.stringify(proof));
  }
 
+
+ if(b409OneRoute180){
+  // Continue the SAME authentic B322/B326 real 7-CPU source round,
+  // preserving every original source geometry/score and native simulation.
+  const evidence={
+   schema:'B409_GENUINE_B322_ROUTE_AND_FULL_180S_ONE_SOURCE_GAME',
+   source:'25/17/26/0',nativeKeyboardMouse:true,sameBrowserWorld:true,
+   syntheticTicks:false,syntheticPlayerOrCpuMoves:false,
+   syntheticPaintOrScore:false,originalSourceStageModified:false,
+   officialWinner:'NONE',samples:[]
+  };
+  const persist=()=>writeFileSync(resolve(OUTPUT,'b409-one-original-route-180s.json'),
+    JSON.stringify(evidence,null,2)+'\n');
+  const sample=async(label,n)=>{
+   authority(n,'FIXED');
+   const f=n.matchState==='PLAYING'?await b312Ledger():null;
+   const s={
+    label,tick:n.tick,secondsRemaining:n.timeRemainingSeconds,
+    matchState:n.matchState,paused:n.paused,stopReason:n.stopReason,
+    browserWorldOrigin:await evaluate('performance.timeOrigin'),
+    player:n.player.position,
+    originalSourceSolids:n.originalSourceSolids,
+    originalPaintSurfaces:n.originalPaintSurfaces,
+    originalSourceNavigationLinks:n.originalSourceNavigationLinks,
+    scoreable:n.sourceScoreablePromotions,
+    productionAuthorized:n.productionAuthorized,
+    unrestricted4v4Certified:n.unrestricted4v4Certified,
+    turfResult:n.turfResult,
+    cpuRelocations:n.cpu.physicalFootRelocations,
+    cpuRejoined:n.cpu.physicalRejoins.length,
+    cpu:n.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
+     lifeState:c.lifeState,hp:c.hp,rejoined:c.rejoined})),
+    humanShots:n.shotsFired,
+    humanPaintCells:n.b23HumanInkFeedback.humanChangedCells,
+    cpuSourceShots:n.cpuSourceTurfShots,cpuPaintCells:n.cpuInkCellsChanged,
+    humanCpuDirectHits:n.humanCpuDirectHits,
+    humanCpuDirectSplats:n.humanCpuDirectSplats,
+    genuineOriginalFoot:f?{solid:f.genuineHumanOriginalFootSolid,
+     supported:f.realHumanOriginalFootSupported,
+     gap:f.genuineOriginalFootGapMeters}:null,
+    pointerLocked:await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")')
+   };
+   evidence.samples.push(s);persist();
+   console.log('B409_ORIGINAL_ROUTE_SINGLE_NATIVE_180S',JSON.stringify({
+    label,tick:s.tick,remaining:s.secondsRemaining,
+    originalFoot:s.genuineOriginalFoot?.solid??null,
+    humanShots:s.humanShots,humanCells:s.humanPaintCells,
+    cpuShotRequests:s.cpuSourceShots,cpuInkCells:s.cpuPaintCells,
+    realHumanEnemyHits:s.humanCpuDirectHits}));
+  };
+  persist();
+  const after=await snapshot();authority(after,'FIXED');
+  if(after.matchState!=='PLAYING'||after.paused||
+   after.timeRemainingSeconds<=150||after.timeRemainingSeconds>=180||
+   after.cpu.physicalRejoins.length!==7)
+   fail('B409_ROUTE_NOT_PLAYING_EARLY_ENOUGH_FOR_ONE_180S_GAME');
+  await sample('AFTER_ROUTE',after);
+  for(const remaining of [150,120,90,60,30,0]){
+   const next=await until(async()=>{
+    const n=await snapshot();authority(n,'FIXED');
+    return n.timeRemainingSeconds<=remaining+.001?n:false;
+   },10*60*1000);
+   await sample(String(remaining),next);
+   if(remaining===90)await picture('B409_REAL_ROUTE_MID');
+  }
+  const end=await snapshot();authority(end,'FIXED');
+  if(end.matchState!=='TIME_UP'||end.timeRemainingSeconds!==0)
+   fail('B409_GENUINE_SOURCE_MATCH_NO_REAL_TIME_UP');
+  await picture('B409_REAL_ROUTE_TIME_UP');
+  console.log('B409_ORIGINAL_ROUTE_AND_180S_GENUINE_TIME_UP',
+   JSON.stringify({nativeTick:end.tick,
+    actualHumanShots:end.shotsFired,
+    actualHumanCells:end.b23HumanInkFeedback.humanChangedCells,
+    cpuInkCells:end.cpuInkCellsChanged,
+    originalWinner:'NONE',scoreable:0}));
+ }
 
  if(b200ReplayTrial){
   // CDP REAL input. Two physically independent ALLY_SYNC CLEARs, then
