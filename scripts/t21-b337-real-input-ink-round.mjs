@@ -153,6 +153,7 @@ async function run(){
  // Parameter permits READ-ONLY original paint/foot ledger, not QA authority.
  await read('(() => {const u=new URL(location.href);'+
   'u.searchParams.set("t21B312","genuineSecondHumanPaint");'+
+  'u.searchParams.set("t21B337","localOriginalAim");'+
   'history.replaceState(null,"",u.href);return true;})()');
 
  clockStart=Date.now();
@@ -269,12 +270,12 @@ async function run(){
     original.sourceInkRewritten!==false||
     original.playerPositionRewritten!==false||
     footId!==started.footSolid||
-    !row?.originalSourceActiveProbeCells?.length)
+    !row?.originalB337NearbyActiveCells?.length)
   fail('NO_GENUINE_ORIGINAL_GROUNDED_ACTIVE_FLOOR_AIM');
  if(preAim.cameraSourcePractice.sourceAimSensitivityMultiplier!==1)
   fail('REAL_CAMERA_SENSITIVITY_NONBASELINE');
  const selected=b313ChooseOriginalActiveAim({
-  cells:row.originalSourceActiveProbeCells,
+  cells:row.originalB337NearbyActiveCells,
   body:original.actualBodyMeters,camera:original.actualCameraMeters,
   yaw:preAim.cameraSourcePractice.yawDegrees,
   pitch:preAim.cameraSourcePractice.pitchDegrees
@@ -293,7 +294,8 @@ async function run(){
  }))fail('GENUINE_MOUSE_AIM_DRIFTED_FROM_ORIGINAL_CELL');
  proof.originalAimWitness={
   sourceFootId:footId,targetOriginalSurface:targetSurface,
-  originalActiveCells:row.originalSourceActiveProbeCells,
+  originalActiveCells:row.originalB337NearbyActiveCells,
+  localCellSampleProvenance:'B337_NATIVE_LOCAL_ACTIVE_GRID',
   selectedCell:{grid:selected.grid,world:selected.world},
   actualCameraMeters:original.actualCameraMeters,
   actualBodyMeters:original.actualBodyMeters,

@@ -10,6 +10,9 @@ on:
       - 'scripts/t21-b337-real-input-ink-audit.test.mjs'
       - 'scripts/t21-b313-actual-original-cell-aim.mjs'
       - 'scripts/t21-b313-actual-original-cell-aim.test.mjs'
+      - 'src/app/B337ActualLocalActiveCell.ts'
+      - 'src/app/B337ActualLocalActiveCell.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
   workflow_dispatch:
 permissions:
   contents: read
@@ -44,8 +47,10 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
-      - name: Typecheck and compile original gameplay world
-        run: npm run build -- --base=/browser-ink-tps/
+      - name: Typecheck and validate native local SOURCE grid
+        run: |
+          npm exec -- vitest run src/app/B337ActualLocalActiveCell.test.ts
+          npm run build -- --base=/browser-ink-tps/
       - name: Genuine 7-CPU original source floor mouse shot and grounded WASD
         env:
           T21_B337_OUTPUT: /tmp/t21-b337-research

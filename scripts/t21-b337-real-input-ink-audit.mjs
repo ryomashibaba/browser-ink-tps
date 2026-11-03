@@ -75,12 +75,18 @@ export function b337AuditNative(w){
  need(witness?.sourceFootId===start.footSolid&&
   witness.targetOriginalSurface===actualOriginalId&&
   originalIds.has(actualOriginalId)&&
+  witness.localCellSampleProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
   Array.isArray(witness.originalActiveCells)&&
+  witness.originalActiveCells.every(c=>
+   c.realCellProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
+   [0,1,-1].includes(c.originalOwner))&&
   witness.originalActiveCells.length>=1&&
   witness.originalActiveCells.length<=3&&
   witness.originalActiveCells.some(c=>equalCell(c,witness.selectedCell))&&
   position(witness.actualBodyMeters)&&position(witness.actualCameraMeters)&&
   horizontal(witness.actualBodyMeters,start.body)<.2&&
+  horizontal(witness.selectedCell.world,witness.actualBodyMeters)>=2.5&&
+  horizontal(witness.selectedCell.world,witness.actualBodyMeters)<=8&&
   Array.isArray(witness.actualCDP)&&witness.actualCDP.length===2&&
   witness.actualCDP.every(Number.isFinite)&&
   witness.actualCDP[0]>=10&&witness.actualCDP[0]<=1590&&

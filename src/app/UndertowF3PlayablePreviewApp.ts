@@ -50,6 +50,7 @@ import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePau
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
 import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
+import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {b216RealSourcePaintShotLineClear} from '../ai/B216OriginalSourceBackfillInk';
@@ -3556,6 +3557,10 @@ export class UndertowF3PlayablePreviewApp{
     this.ink.getSurface(x.id)!==x))
    throw Error('B312_NOT_GENUINE_PLAYING_ORIGINAL_17_SOURCE');
   const body=this.player.getPosition(new Vec3());
+  // B337 experimental READ-ONLY grid sampling only when explicitly
+  // selected in the research runner; no change to B271 baseline probes.
+  const b337LocalCellRead=params.get('t21B337')==='localOriginalAim';
+  const b337Camera=this.playerCameraEntity.getPosition();
   const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
   const expectedFootY=body.y-footOffset;
   const originalFoot=this.physics.castCharacterFootSupport(
@@ -3599,6 +3604,17 @@ export class UndertowF3PlayablePreviewApp{
     humanFootGrid:[gx,gy],originalSourceActiveProbeWorld:sampleClosest.world,
     originalSourceActiveProbeCells:sample.probes.map(p=>({
      grid:p.grid,world:p.world,originalOwner:p.owner})),
+    // Optical B271 global 3 probes cannot certify an aim near THIS human.
+    // In B337 only, derive up to 3 truly ACTIVE local grid cells from the
+    // exact existing PaintSurface, under the verified original Rapier foot.
+    originalB337NearbyActiveCells:b337LocalCellRead&&
+     originalFoot?.solidId+':paint'===surface.id&&
+     footGap!==null&&footGap<=.4?
+      b337NativeNearbyActiveSourceCells({surface,
+       body:[body.x,body.y,body.z],
+       camera:[b337Camera.x,b337Camera.y,b337Camera.z],
+       footGrid:[gx,gy],yaw:n.cameraSourcePractice.yawDegrees,
+       pitch:n.cameraSourcePractice.pitchDegrees}):[],
     originalSourceSamplePlanarDistanceMeters:Math.hypot(
      sampleClosest.world[0]-body.x,sampleClosest.world[2]-body.z)};
   });
