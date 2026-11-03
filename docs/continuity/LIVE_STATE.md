@@ -3,7 +3,7 @@
 **QA現在HEADと一致しない場合は必ず破棄。** 文書由来のPASSは実CI認証を意味しない。
 
 - 同期元QAブランチ: `dev/t21-f4e103w-qa-infra`
-- 同期元QA HEAD: `d4db272226a6b60dd4bde4cf3956c63b4659b886`
+- 同期元QA HEAD: `8c104658a1842218bdfeff07792b3ab35576a0c4`
 - 最新番号のQAレポート: W10-B244 — https://github.com/ryomashibaba/browser-ink-tps/blob/dev/t21-f4e103w-qa-infra/docs/qa/W10-B244-cross-model-source-combat-reconciliation.md
 - レポート記載の判定: 明示判定なし（未確認） （CI・JSONと要照合）
 - 次工程候補: W10-B245 （着手・完了の保証ではない）
