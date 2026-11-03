@@ -1,6 +1,9 @@
 /** Genuine physical-player CPU HP and SAME CPU splat/respawn timeline.
  * B367 is read-only and never awards score, projectile damage or route
- * completion. A zero-HP projectile impact is NOT itself a CPU splat. */
+ * completion. Lethal HP zero is NOT alone a CPU splat: require the exact
+ * actual actor state AND a newly increased genuine native splat count.
+ * F3 source CPU may splat in the SAME tick as the lethal projectile;
+ * frozen T20's following-tick order remains supported. */
 import {WEAPON_ORDER,type WeaponId} from '../weapons/WeaponCatalog';
 export interface B367ProjectileEvent {
  sequence:number;nativeFrame:number;botId:string;weaponId:string;
@@ -39,6 +42,11 @@ export class B367RealCpuCombatTimeline {
  private lastSequence=0;
  private lastNotice:B367CombatNotice|null=null;
  private noticeUntil=-1;
+ /** Real prior physics frame totals: old accumulated splats cannot prove a
+  * fresh same-tick kill. Cleared on a new round or invalid source frame. */
+ private priorNativeCounts:{
+  tick:number;humanSplats:number;cpuSplats:number;cpuRespawns:number;
+ }|null=null;
  private readonly pending=new Map<string,{
   phase:'HP_ZERO'|'SPLATTED';
   nativeLethalTick:number;nativeSplatTick:number|null;
@@ -47,7 +55,7 @@ export class B367RealCpuCombatTimeline {
  }>();
  public reset(){
   this.lastTick=-1;this.lastSequence=0;this.lastNotice=null;
-  this.noticeUntil=-1;this.pending.clear();
+  this.noticeUntil=-1;this.pending.clear();this.priorNativeCounts=null;
  }
  private emit(state:B367CombatNoticeState,actorId:string,tick:number,
   message:string){
@@ -81,6 +89,14 @@ export class B367RealCpuCombatTimeline {
    this.reset();return null;
   }
   if(x.nativeTick<this.lastTick)this.reset();
+  const priorCounts=this.priorNativeCounts;
+  // Native totals are monotonic within one genuine round. A fabricated
+  // reset/mismatched lifecycle may not become a same-tick splat witness.
+  if(priorCounts&&(x.humanDirectSplats<priorCounts.humanSplats||
+     x.cpuSplats<priorCounts.cpuSplats||
+     x.cpuRespawns<priorCounts.cpuRespawns)){
+   this.reset();return null;
+  }
   this.lastTick=x.nativeTick;
   if(x.source.physicalHumanCpuHpHits<this.lastSequence||
      x.source.physicalHumanCpuHpHits>x.humanDirectHits){
@@ -106,14 +122,32 @@ export class B367RealCpuCombatTimeline {
    }
    this.lastSequence=e.sequence;
    if(e.lethalHpZero){
+    const actual=x.cpu.find(c=>c.id===e.botId);
+    // F3 source collision now calls native splatBot immediately on REAL
+    // projectile damage, before B367 samples this same physics tick.
+    // Only a NEW count delta since a preceding verified native frame,
+    // alongside this exact actor's observed SPLATTED + HP0, can certify
+    // an immediate splat. Existing cumulative splats are never enough.
+    const sameTickRealSplat=priorCounts!==null&&
+      x.nativeTick>priorCounts.tick&&
+      e.nativeFrame===x.nativeTick&&
+      actual?.lifeState==='SPLATTED'&&actual.hp===0&&
+      x.humanDirectSplats>priorCounts.humanSplats&&
+      x.cpuSplats>priorCounts.cpuSplats;
     this.pending.set(e.botId,{
-     phase:'HP_ZERO',nativeLethalTick:x.nativeTick,
-     nativeSplatTick:null,
-     humanSplatsBefore:x.humanDirectSplats,
-     cpuSplatsBefore:x.cpuSplats,
+     phase:sameTickRealSplat?'SPLATTED':'HP_ZERO',
+     nativeLethalTick:x.nativeTick,
+     nativeSplatTick:sameTickRealSplat?x.nativeTick:null,
+     humanSplatsBefore:sameTickRealSplat?
+      priorCounts.humanSplats:x.humanDirectSplats,
+     cpuSplatsBefore:sameTickRealSplat?
+      priorCounts.cpuSplats:x.cpuSplats,
      cpuRespawnsBefore:x.cpuRespawns
     });
-    this.emit('LETHAL_HP_ZERO_PENDING_SPLAT',e.botId,x.nativeTick,
+    if(sameTickRealSplat)
+     this.emit('ACTUAL_CPU_SPLAT',e.botId,x.nativeTick,
+      'REAL CPU '+e.botId+' · NATIVE SPLAT CONFIRMED');
+    else this.emit('LETHAL_HP_ZERO_PENDING_SPLAT',e.botId,x.nativeTick,
      'REAL CPU '+e.botId+' · HP 0 · WAIT FOR NATIVE SPLAT');
    }else this.emit('ACTUAL_HP_LOSS',e.botId,x.nativeTick,
     'REAL CPU '+e.botId+' · HP '+e.hpBefore.toFixed(0)+
@@ -146,6 +180,10 @@ export class B367RealCpuCombatTimeline {
      'REAL CPU '+id+' · NATIVE RESPAWN AT ORIGINAL SPAWN');
    }
   }
+  this.priorNativeCounts={
+   tick:x.nativeTick,humanSplats:x.humanDirectSplats,
+   cpuSplats:x.cpuSplats,cpuRespawns:x.cpuRespawns
+  };
   return this.currentNotice(x.nativeTick,x.matchState==='PLAYING',x.paused);
  }
  /** Render-only read of the native-tick witness. The caller does NOT

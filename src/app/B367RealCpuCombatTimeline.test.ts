@@ -194,3 +194,83 @@ describe('Native actor-specific lifecycle and original return boundary',()=>{
   expect(t.observe(f)?.state).toBe('ACTUAL_CPU_RESPAWN');
  });
 });
+
+
+describe('F3D immediate real SOURCE HP-zero splat integration (read-only)',()=>{
+ it('recognizes same-native-tick HP-zero only with fresh native splat totals',()=>{
+  const timeline=new B367RealCpuCombatTimeline(),frame=sample();
+  expect(timeline.observe(frame)).toBeNull();
+  shot(frame,0); // a REAL projectile-to-B1 HP event, not a score or warp
+  frame.cpu[3]!.lifeState='SPLATTED';
+  frame.cpu[3]!.hp=0;
+  frame.humanDirectSplats=1;
+  frame.cpuSplats=1;
+  expect(timeline.observe(frame)).toMatchObject({
+   state:'ACTUAL_CPU_SPLAT',actorId:'B1',
+   actualNativeTick:frame.nativeTick,
+   gameplayWrites:0,officialWinner:'NONE',
+   sourceScoreablePromotions:0,naturalEnemyRouteCertified:false
+  });
+  // Native 2.5s respawn (150 physics ticks) is not a result of the
+  // verified splat banner; it requires the actual new CPU source life.
+  const splatTick=frame.nativeTick;
+  frame.nativeTick=splatTick+149;
+  frame.cpu[3]!.lifeState='ACTIVE';
+  frame.cpu[3]!.hp=100;
+  frame.cpu[3]!.rejoined=false;
+  frame.cpuRespawns=1;
+  expect(timeline.observe(frame)?.state).not.toBe('ACTUAL_CPU_RESPAWN');
+  frame.nativeTick=splatTick+150;
+  expect(timeline.observe(frame)).toMatchObject({
+   state:'ACTUAL_CPU_RESPAWN',actorId:'B1'
+  });
+ });
+ it('cannot reuse previous native splat totals to fake a same-tick B1 kill',()=>{
+  const timeline=new B367RealCpuCombatTimeline(),frame=sample();
+  frame.humanDirectHits=1;
+  frame.humanDirectSplats=1;
+  frame.cpuSplats=1;
+  frame.cpuRespawns=1;
+  expect(timeline.observe(frame)).toBeNull();
+  shot(frame,0);
+  frame.cpu[3]!.lifeState='SPLATTED';
+  frame.cpu[3]!.hp=0;
+  // These existing totals could belong to an older CPU life or actor.
+  expect(timeline.observe(frame)?.state)
+   .toBe('LETHAL_HP_ZERO_PENDING_SPLAT');
+  // Real later physical-native counters and same actor can still
+  // independently certify delayed legacy lifecycle.
+  frame.nativeTick++;
+  frame.humanDirectSplats++;
+  frame.cpuSplats++;
+  expect(timeline.observe(frame)?.state).toBe('ACTUAL_CPU_SPLAT');
+ });
+ it('never promotes HP-zero without observed actor splat or both count deltas',()=>{
+  for(const edit of [
+   (f:B367NativeCombatFrame)=>{f.cpu[3]!.lifeState='ACTIVE';},
+   (f:B367NativeCombatFrame)=>{f.cpu[3]!.hp=1;},
+   (f:B367NativeCombatFrame)=>{f.humanDirectSplats=0;},
+   (f:B367NativeCombatFrame)=>{f.cpuSplats=0;},
+   (f:B367NativeCombatFrame)=>{f.source.events[0]!.nativeFrame=f.nativeTick-1;}
+  ]){
+   const timeline=new B367RealCpuCombatTimeline(),frame=sample();
+   timeline.observe(frame);
+   shot(frame,0);frame.cpu[3]!.lifeState='SPLATTED';
+   frame.humanDirectSplats=1;frame.cpuSplats=1;
+   edit(frame);
+   expect(timeline.observe(frame)?.state)
+    .toBe('LETHAL_HP_ZERO_PENDING_SPLAT');
+  }
+ });
+ it('rejects reducing cumulative splats within a single physical game',()=>{
+  const timeline=new B367RealCpuCombatTimeline(),frame=sample();
+  frame.humanDirectHits=1;frame.humanDirectSplats=1;
+  frame.cpuSplats=1;
+  timeline.observe(frame);
+  frame.nativeTick++;frame.humanDirectSplats=0;
+  expect(timeline.observe(frame)).toBeNull();
+  frame.nativeTick++;frame.humanDirectSplats=1;
+  // Once reset, a stale count increment alone cannot create an event.
+  expect(timeline.observe(frame)).toBeNull();
+ });
+});

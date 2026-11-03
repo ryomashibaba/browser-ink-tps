@@ -245,3 +245,9 @@
 - F3D（固定のoriginal SOURCEナビ経路を注入したQA条件）に限って、HP0になった**その射撃/範囲ダメージ処理内**で既存 `splatBot` を呼び、元のCPU生命状態・Recast Agent・共有Rapier Actor足元・撃破カウンタを同一native tickに更新。2度目は `SPLATTED` 排除。T20非SOURCE条件は既存next-update lifecycle維持。
 - new `src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts`: source human direct / T20 / nonlethal / real CPU kill / area damage / real shield guardの6系統。テスト自体はVitest fixtureであり、**実在自然CPU遭遇や同一Chromium真正成功の証拠ではない**。
 - main・Draft PR#5・公開Pages・本番、25/17/26/0、自然対岸0/12、公式スコア0、正式4v4、ART HOLDを維持。研究のみ。CI滞留中のため本修正は独立研究ブランチに保存し、F2・F3実試験合格前に本流統合/公開認定しない。
+
+## 2026-11-03 — F3 actual immediate splat / B367 SOURCE HUD native synchronization (研究・未実機認定)
+- 既存B367は `HP_ZERO` 取得「後」新しい `humanDirectSplats/cpuSplats` 増加と `nativeTick>lethalTick` の両方を要求。しかしF3研究の原作SOURCE実弾HP0は `splatBot` を命中処理内で即時呼ぶため、最初のB367観測時にはカウンターが**既に増加済み**で、永遠に `PENDING_SPLAT` のまま残る。
+- 修正は**読み取り専用B367**で直前の正常なnative frame累積カウンターを保持し、新しい実弾HP0 event（weapon/actor/HP/sequence検査継続）＋同じnative tickで該当CPU `SPLATTED/HP0`＋human direct & cpu splat両方の増分を同時観測した場合のみ `ACTUAL_CPU_SPLAT` を表示。過去の累積値、別チーム、別のステージ、fake scoreでは認証不可。旧来の次tickに撃破処理される経路も残す。
+- 実CPUの復活判定には引き続き実150 native tick、元CPUのHP100、原作upper spawn復帰、実respawnカウンターを必須とする。HUD表示はゲーム状態や実HPに書き込まない。
+- B367 regression + F3 native lethal test + B181/B213 回帰＋full TypeScript checkを独立F3 CIへ追加。GitHub Actions結果は別確認。**実弾で自然に敵を倒したこと／現SHAの真正Chromium PASS／正式4v4を認定しない**。F2 QA HEADとmain、PR#5、Pages、原作25/17/26/0、自然対岸0/12、ART/production HOLDは不変更。
