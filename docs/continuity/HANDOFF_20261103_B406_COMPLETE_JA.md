@@ -10,7 +10,7 @@
 - B405修正版の [GitHub Actions #41601683883](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41601683883) は全ジョブ・全ステップSUCCESS。真のartifactは **13215309208**、ファイル b405-same-original-180s-round.json のSHA256 **97f1f3bd08d1fe38c58f9fa5ed566c2fc7228f6d771561948952e5ab281227a5**。原本画像4枚とdriver / independent verdictあり。
 - 真の終了native tick **11855**。同一試合の人間実射撃 **9発**、人間実変化 **92原作セル**、CPU実変化 **11,773原作セル**、CPU SOURCE shot requests **108**、native人間→敵CPU HP命中 **0**、敵CPU撃破 **0**、復活 **0**。SOURCE-onlyの限定PASSであり、正式4v4・敵撃破・公式得点・勝利・本番のPASSではない。人間が180秒間ずっと能動的に操作した証拠でもない（実射撃/WASDは序盤、以降は同じ実試合の観測）。
 - B406は、同じB405の7枚のnative実座標サンプルについて人間とB1〜B4の水平距離・高さ・生命状態を独立再計算する**読取り専用監査**。Unit/Nodeの [#41603445518](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41603445518) はSUCCESS、B406最終Unit HEADは 74813b578fda41d09d28f5eb4cd80cf4f25b5467。
-- B406本物のB405 artifactをSHAで再取得して監査するコードは 9da6448e78c46f6ae2a7460261027effc3359508 に保存した。[真正証拠再計算CI #41604651650](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41604651650) は文書執筆時点では **Queued・未判定**。必ず最新状態を確認すること。**B406のUnit PASSを実証レポートPASSに読み替えない。**
+- B406本物のB405 artifactをSHAで再取得して監査するコードは 9da6448e78c46f6ae2a7460261027effc3359508 に保存した。[真正証拠再計算CI #41604651650](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41604651650) は **全ジョブ・全ステップSUCCESS（2026-11-03）**。真正B405 rawをSHAで検証後、同じ試合の7時点・敵B1〜B4の距離を独立計算した。本物の出力artifactは **13216270763**、ファイル b406-genuine-enemy-range-report.json。Unitだけでなく元JSON実証を確認済み。ただし真の敵HP命中、自然交戦、ステージRaycast、4v4等は継続HOLD。
 - B405原本からの別途独立座標計算で、同一試合7時点の最近敵は、入力直後B1 **116.991m**、150秒B4 **119.324m**、120秒B2 **117.479m**、90秒B2 **117.653m**、60秒B1 **117.658m**、30秒B2 **117.677m**、終了時B2 **117.630m**。これは時点間を補間しない。B181の**光学照準候補上限32m**より遠いが、32mは武器の真の射程やRaycast確認そのものではない。実被弾ゼロを超えて「どの位置からも敵が撃てない」と断定しない。
 
 ## 1. リポジトリ・ブランチ・保護対象
@@ -62,7 +62,7 @@ Nintendo『スプラトゥーン3』Ver.7.2.0の**改修後マテガイ放水路
 | B403 | B340の元180秒SOURCE証拠をSHA-pinで読み直し、固定高所人間から7時点の最近敵が116.824〜120.494m。B181光学候補上限32mの外。これは固定高所時点のみ | [#41597891974](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41597891974) |
 | B404 | B322実人間32足×別B340実敵28足＝896組の原作実座標の別試合比較。最小約97.553m。**同じ試合・同じtickではない** | [#41599352971](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41599352971) |
 | B405 | **同一真正180秒セッション**、人間9発/92セル、CPU塗装11,773/射撃要求108、真正TIME_UP tick11855、実HP命中/撃破/復活0。B337実入力後同一試合で全終了時点まで検証 | [#41601683883](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41601683883)、artifact 13215309208 |
-| B406 | B405証拠から同一試合7時点の人間↔生存・再合流B1〜B4距離を比較する独立Unit PASS。実原本artifactのSHA検証をCIへ追加し最終再計算を待つ | [Unit #41603445518](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41603445518)、[原本再検証 #41604651650](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41604651650)（執筆時未判定） |
+| B406 | 同一B405真正180秒の元artifact SHA256検証後、人間↔実B1〜B4の7native時点の距離を独立計算して **真正SOURCE限定PASS**。最近敵距離116.991〜119.324m、全てB181光学候補上限32m外、実HP命中は0。真正戦闘/4v4はHOLD | [Unit #41603445518](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41603445518) SUCCESS、[原本再計算 #41604651650](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41604651650) **SUCCESS**、artifact 13216270763 |
 
 特にB405で長時間のSOURCEプレイ可能性は一段進んだ。ただし**9発は試合序盤で発射したもので、180秒通して人間が撃ち続けた証拠ではない**。7 CPUと人間のSOURCE活動はあるが、本来の相手陣への自然な交戦が生じたわけではない。
 
@@ -90,8 +90,8 @@ Nintendo『スプラトゥーン3』Ver.7.2.0の**改修後マテガイ放水路
 
 ## 7. 次チャットで実際に行う工程（確認だけで終わらない）
 
-1. **最初に**研究branchの本物のHEAD / QA HEAD / main / Draft PR#5 / GitHub Actionsを照合。特にB406 **#41604651650** の真のアーカイブ再生を確認する。成功なら保存レポートで7時点の同一試合の敵距離・zero HP hitsを確定し、失敗ならログとartifactの本当の問題だけを研究branchで修正。B405 **#41601683883はすでに真正PASS**なので未完了扱いに巻き戻さない。
-2. もしB406実証成功なら、単純な距離研究をさらに増殖させず、**B405真正180秒のプレイ実価値の不足**（序盤に9発→その後人間操作なし、敵CPUとの交戦0）を改善する。**実SOURCE原作KCCの許された下段/ランプ/上段ルート**を同じ一つの真正180秒ゲームで人間が実WASD/マウス/実弾・本物ownerGrid変化を伴って進む、意味のある一続きの試合を優先。既存B316/B322/B337/B405のCDP/物理証拠を再利用し、新しい偽の道・WASD指示だけで移動認証・危険床通過・Actor座標操作は禁止。
+1. **最初に**研究branchの本物のHEAD / QA HEAD / main / Draft PR#5 / GitHub Actionsを照合。B405 **#41601683883 は真正180秒PASS**、B406 **#41604651650 は同一真正試合の7時点敵距離を元SHA固定artifactから再計算してPASS**である。新チャットでは両者のSUCCESS/対象SHAを確認し、完了工程を未完了に巻き戻さない。
+2. **B406実証は成功済み**。単純な距離研究をさらに増殖させず、**B405真正180秒のプレイ実価値の不足**（序盤に9発→その後人間操作なし、敵CPUとの交戦0）を改善する。**実SOURCE原作KCCの許された下段/ランプ/上段ルート**を同じ一つの真正180秒ゲームで人間が実WASD/マウス/実弾・本物ownerGrid変化を伴って進む、意味のある一続きの試合を優先。既存B316/B322/B337/B405のCDP/物理証拠を再利用し、新しい偽の道・WASD指示だけで移動認証・危険床通過・Actor座標操作は禁止。
 3. 本当に原作地形上で同時刻の生存CPUまで実武器射程/本物のRapierステージレイが通る時だけ、ProjectileSystemの**真正CPU HP削減→同じB actorのHP0→splat→150 native tick後の元spawn復帰**を一体検証。敵が遠方で交戦が不成立なら正直にHOLDし、射撃・照準・カメラ・インク回復・SOURCEのゲーム価値改善へ戻る。人為的な敵同床ワープや架空HP命中は禁止。
 4. 並行F4は **既存25 solidの原作出典・collision bphsh等の本物の権威**が新しく得られた時だけ中央切断を再研究。B370の沈黙フレーム・B285のflat gapや31.716mを数値追い直しして工程を消耗しない。original version 7.2.0 適合を確認できなければ明示HOLD。
 5. F3同一試合の実TIME_UP/再戦・PLAYER操作・HUD/敵視認、F5の本物のART/画面品質も、ゲーム全体に価値あるまとまりで改善する。画像だけの美化、SOURCE未認証を隠すUI、架空scoreなどは不可。
