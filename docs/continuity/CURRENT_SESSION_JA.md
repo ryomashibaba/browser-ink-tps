@@ -192,3 +192,11 @@
 
 - 初回実装 `49d2004263577a2d6c4f63b8d0d485ffdebbf115` の [B390 #41556776582](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41556776582)、[F4E103W #41556776639](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41556776639) および [B120 #41556776580](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41556776580) が、`UndertowF3PlayablePreviewApp.ts(1262)` の TS2448/TS2454（`pauseOverlay`/`resumeButton` を宣言前に使った）でFAIL。これは実ゲームの描画・ゲーム挙動のFAILではなく、ビルド時の誤挿入。初回SHAの認証は失敗扱い。
 - 新修正は新ボタンのコードを **既存B399 READY/PAUSE overlayで `pauseOverlay` / `resumeButton` を生成した直後**へ移動するのみ。A1協力の既存B193 URL生成、SOURCE 25/17/26/0、CPU7、元のB384セッション、QAゲートや真の物理は不変更。修正SHAのCIによる型チェック・READY可視性・180秒結果が出るまではPASSを主張しない。
+
+
+## 2026-11-03 — F3/F5 A1協力プレイの本物CDPクリック検証（CI待ち）
+
+- 既存B287 Chromium READY→F8→PLAYER、既存B289オプションAB検査の**最後**に、前HEADで実装したユーザー向け `#t21-f3-ready-real-a1-coop` をCDPで実際のマウス押下・離上によりクリックする。URL直接書換・物理Tick増加・actor/HP/Ink直書きはゼロ。
+- 完了条件：異なる `performance.timeOrigin` の新ページ、元 `25/17/26/0`、本当のCPU7体、tick 0 / STAGING / PAUSED、WebGL2、`t21B193Coop=REAL_A1_ORIGINAL_SOURCE`、実 `START REAL A1 CO-OP` UI、正式得点なし、production false。B384 humanCombat URLが新世界へ漏れた場合はFAIL。
+- 既存B287の同一ジョブ内に追加するため、別のWorkflow追加・B390真正180秒の改造・他のChrome起動なし。B287 A/Bの本来のPASSを上書きしない。**既存CIの完了後に同SHAで認証予定**。新ワールドのA1が実際に塗装/撃破したことはこのクリック試験から主張しない。
+- 実B287はB384でなく通常B207 SOURCE 180sから開始する。旧ゲートのB384かB193だけではA1ボタンは表示されないため、通常B207を含む全SOURCE 180s PLAYER READY/PAUSEで出す機能本体の条件漏れを修正。決定論QA・通常短時間練習・非SOURCEには表示しない。許可/拒否の単体検査と実B287ユーザークリック検査を同一工程にまとめる。

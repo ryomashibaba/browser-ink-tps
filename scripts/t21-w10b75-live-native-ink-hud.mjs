@@ -1735,6 +1735,90 @@ async function run(){
       if(JSON.stringify(stableRound(await snapshot()))!==cleanStable)
        fail('B289_NATIVE_WORLD_NOT_RESTORED_AFTER_STUDY');
      }
+     // Genuine user CLICK on the new READY/PAUSE A1 button, using
+     // the SAME Chromium tab AFTER all B287/B289 optional A/B trials.
+     // Prove a brand-new original SOURCE co-op world with 7 real
+     // CPU actors and zero tick; never write native state or direct URL.
+     const beforeA1=await snapshot();
+     if(!beforeA1.paused||beforeA1.stopReason||
+        beforeA1.originalSourceSolids!==25||
+        beforeA1.originalPaintSurfaces!==17||
+        beforeA1.originalSourceNavigationLinks!==26||
+        beforeA1.sourceScoreablePromotions!==0||
+        beforeA1.cpu.cpu.length!==7||
+        beforeA1.cpu.physicalFootRelocations!==0)
+      fail('B287_COOP_LAUNCH_ORIGINAL_WORLD_UNSAFE');
+     const beforeA1Origin=await evaluate('performance.timeOrigin');
+     const launchA1=await evaluate(`(() => {
+      const b=document.querySelector('#t21-f3-ready-real-a1-coop');
+      const bounds=b?.getBoundingClientRect(),style=b?getComputedStyle(b):null;
+      const parent=document.querySelector('#t21-f3-b202-real-pause');
+      return {exists:!!b,disabled:b?.disabled,
+       caption:b?.textContent,sourceOnly:b?.dataset.originalSourceOnly,
+       scoreable:b?.dataset.scoreable,actorTeleports:b?.dataset.actorTeleports,
+       production:b?.dataset.productionAuthorized,
+       pausedVisible:!parent?.hidden,x:bounds?.left+bounds?.width/2,
+       y:bounds?.top+bounds?.height/2,
+       width:bounds?.width,height:bounds?.height,
+       cssDisplay:style?.display,cssVisibility:style?.visibility};
+     })()`);
+     if(!launchA1.exists||launchA1.disabled||!launchA1.pausedVisible||
+        !launchA1.caption?.includes('REAL ALLY A1')||
+        launchA1.sourceOnly!=='true'||launchA1.scoreable!=='0'||
+        launchA1.actorTeleports!=='0'||launchA1.production!=='false'||
+        launchA1.cssDisplay==='none'||launchA1.cssVisibility==='hidden'||
+        !(launchA1.width>40&&launchA1.height>15&&
+          launchA1.x>0&&launchA1.x<1600&&
+          launchA1.y>0&&launchA1.y<900))
+      fail('B287_COOP_REAL_READY_BUTTON_INACCESSIBLE_'+JSON.stringify(launchA1));
+     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+      x:launchA1.x,y:launchA1.y,button:'none'});
+     for(const type of ['mousePressed','mouseReleased'])
+      await cmd('Input.dispatchMouseEvent',{type,
+       x:launchA1.x,y:launchA1.y,button:'left',clickCount:1});
+     const a1World=await until(async()=>{
+      try{
+       const proof=await evaluate(`(() => {
+        const s=window.__t21F3?.snapshot?.(),c=document.querySelector('#app-canvas'),
+         start=document.querySelector('#t21-f3-b25-start');
+        return s?{origin:performance.timeOrigin,search:location.search,
+         renderer:c?.dataset.t21F3Renderer,cooperative:c?.dataset.t21B193Coop,
+         begin:start?.textContent,extraHud:!!document.querySelector('#t21-f3-b195-native-coop'),
+         tick:s.tick,paused:s.paused,phase:s.matchState,
+         cpu:s.cpu?.cpu?.length,footWrites:s.cpu?.physicalFootRelocations,
+         original:[s.originalSourceSolids,s.originalPaintSurfaces,
+          s.originalSourceNavigationLinks,s.sourceScoreablePromotions],
+         production:s.productionAuthorized,winner:s.officialWinner}:null;
+       })()`);
+       return proof?.origin>beforeA1Origin&&
+        proof.renderer==='webgl2'&&
+        proof.cooperative==='REAL_A1_ORIGINAL_SOURCE'&&
+        proof.begin?.includes('START REAL A1 CO-OP')&&
+        proof.extraHud&&proof.tick===0&&proof.paused&&
+        proof.phase==='STAGING'&&proof.cpu===7&&
+        proof.footWrites===0&&
+        proof.original?.join('/')==='25/17/26/0'&&
+        proof.production===false&&
+        proof.search.includes('t21W10B193=allyCoop')&&
+        !proof.search.includes('t21W10B192=humanCombat')?proof:false;
+      }catch{return false}
+     },120000);
+     const a1Proof={schema:'B287_REAL_USER_A1_NEW_SOURCE_WORLD',
+      originalSource:'25/17/26/0',actualCdPMouseClick:true,
+      actualNewBrowserDocument:a1World.origin>beforeA1Origin,
+      originalWorldTickZero:a1World.tick===0,
+      genuineSourceCpuActors:a1World.cpu,
+      originalRealRapierFootRelocations:0,
+      originalSourceCoop:a1World.cooperative,
+      pausedReady:true,actualA1PracticeControl:a1World.begin,
+      sourceOnly:true,scoreablePromotions:0,
+      officialTurfWinner:'NONE',opponentRoutesCertified:'0/12',
+      testOnlyNoSyntheticTime:true,
+      productionAuthorized:false,unrestricted4v4Certified:false,
+      verifiedLiveBattleOrA1Ink:false};
+     writeFileSync(resolve(OUTPUT,'b287-real-a1-coop-user-click.json'),
+      JSON.stringify(a1Proof,null,2));
+     console.log('B287_REAL_USER_A1_COOP_FRESH_WORLD_PASS',JSON.stringify(a1Proof));
      return;
     }
     // B250: same Chromium camera and paused zero-tick world, with only

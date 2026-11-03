@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
+ b245SourceFullRoundA1Choice,
  b388VisibleNativeDescentWarning,
  b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
 import {sourceCoopEligible,sourceCoopNavigationUrl}
@@ -121,5 +122,22 @@ describe('SOURCE READY launches genuine A1 cooperation with a NEW world',()=>{
   expect(sourceCoopEligible(solo.searchParams)).toBe(false);
   expect(solo.searchParams.get('t21W10B203')).toBe('fullRound');
   expect(solo.searchParams.has('t21W10B193')).toBe(false);
+ });
+});
+describe('existing A1 co-op choice available on normal SOURCE 180s READY',()=>{
+ const base='t21Play=preview&t21QaDrive=source&t21W10B203=fullRound';
+ it('covers real B207 combat, B384 12-weapon and B193 A1 worlds',()=>{
+  for(const tail of ['&t21W10B192=humanCombat',
+   '&t21W10B384=loadoutCircuit&t21W10B192=humanCombat',
+   '&t21W10B193=allyCoop'])
+   expect(b245SourceFullRoundA1Choice(new URLSearchParams(base+tail))).toBe(true);
+ });
+ it('rejects deterministic and unrelated source/non-source configurations',()=>{
+  for(const s of [base+'&t21QaInput=deterministic',
+   base.replace('t21W10B203=fullRound','t21W10B203=off'),
+   base.replace('t21QaDrive=source','t21QaDrive=other'),
+   base.replace('t21Play=preview','t21Play=production'),
+   't21Play=preview'])
+   expect(b245SourceFullRoundA1Choice(new URLSearchParams(s))).toBe(false);
  });
 });

@@ -7,6 +7,14 @@ export function b245InitialSourceView(search:string):B245View {
   q.get('t21QaInput')==='deterministic'||
   q.get('t21Presentation')==='qa'?'QA':'PLAYER';
 }
+/** Only genuinely opted-in SOURCE 180s PLAYER (B207/B384/B193)
+ * may enter the existing A1 co-op new original world. No QA shortcut. */
+export function b245SourceFullRoundA1Choice(params:Pick<URLSearchParams,'get'>):boolean{
+ return params.get('t21Play')==='preview'&&
+  params.get('t21QaDrive')==='source'&&
+  params.get('t21W10B203')==='fullRound'&&
+  params.get('t21QaInput')!=='deterministic';
+}
 /** Physical original-circuit goal is shown in normal PLAYER view only
  * for either the historical B343 real shooter or B384 selectable kit. */
 export function b245ShouldShowSourceCircuitGoal(search:string):boolean{

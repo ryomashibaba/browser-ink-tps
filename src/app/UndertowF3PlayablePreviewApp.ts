@@ -93,7 +93,8 @@ import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
-import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
+import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
+ b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -1635,10 +1636,7 @@ export class UndertowF3PlayablePreviewApp{
   // in the normal READY dialog. The older QA-panel switch is not visible
   // from PLAYER view. Only a user click boots a FRESH original world
   // through the already source-gated B193 URL; no state/actor writes.
-  if(this.b203FullRound&&
-     b31Params.get('t21QaDrive')==='source'&&
-     b31Params.get('t21QaInput')!=='deterministic'&&
-     (this.b384Circuit||b193Coop)){
+  if(b245SourceFullRoundA1Choice(b31Params)){
    const allyChoice=document.createElement('button');
    allyChoice.id='t21-f3-ready-real-a1-coop';
    allyChoice.type='button';
