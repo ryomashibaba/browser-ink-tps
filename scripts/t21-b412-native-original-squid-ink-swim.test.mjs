@@ -74,3 +74,19 @@ test('B410 and B411 must be from same genuinely ended native game',()=>{
   {...b410,originalRoundTimeUpTick:11856},b411),
   /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
 });
+
+test('real RETURN uses smaller native KCC input WITHOUT weakening original support',()=>{
+ const w=witness();
+ const last=w.legs[2];
+ last.toTick=last.fromTick+3;
+ w.final.tick=last.toTick+6;
+ const passed=b412AuditNativeActualOriginalInkSwim(w,b410,b411);
+ assert.equal(passed.actualOwnInkSwimLegs,1);
+ last.toTick=last.fromTick+2;
+ assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
+ last.toTick=last.fromTick+3;
+ last.originalSupport=false;
+ assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
+});

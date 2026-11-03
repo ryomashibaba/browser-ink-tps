@@ -23,7 +23,8 @@ async function nativeUntil(fn,limit=20000){
  fail('REAL_CHROMIUM_NATIVE_WAIT_TIMEOUT');
 }
 export async function b412NativeSquidOwnInkRound({
- remaining,target,expectedFoot,snapshot,ledger,send,wait,verify,locked
+ remaining,target,expectedFoot,snapshot,ledger,send,wait,verify,locked,
+ onEvidence=async()=>{}
 }){
  need(remaining===90,'TRUE_90S_SOURCE_WINDOW');
  need(is3(target)&&expectedFoot==='UndertowT21D:right-low-team-a',
@@ -51,6 +52,8 @@ export async function b412NativeSquidOwnInkRound({
   originalFoot:expectedFoot,target,initial:{
    tick:f.tick,body:initialPos,mode:f.player.mode,ink:initialInk,
    humanShots:shots,cpuRejoined:7},legs:[],swimObserved:false};
+ const record=async(phase)=>{evidence.lastPhase=phase;await onEvidence(evidence);};
+ await record('REAL_ORIGINAL_HUMAN_BEFORE_SHIFT');
  const nativeLeg=async(code,direction)=>{
   const before=await frame();
   need(before.matchState==='PLAYING'&&!before.paused&&await locked()&&
@@ -59,12 +62,13 @@ export async function b412NativeSquidOwnInkRound({
   try{
    await nativeUntil(async()=>{
     const n=await frame();
-    return n.tick>=before.tick+8?n:false;
+    return n.tick>=before.tick+(direction==='RETURN_TO_ACTUAL_UPPER_BODY'?3:8)?n:false;
    },20000);
   }finally{await send('Input.dispatchKeyEvent',key(code,'keyUp'));}
   const after=await frame(),ground=await ledger();
   const distance=planar(before.player.position,after.player.position);
-  need(after.tick>=before.tick+8&&after.matchState==='PLAYING'&&
+  const realTickMin=direction==='RETURN_TO_ACTUAL_UPPER_BODY'?3:8;
+  const realNativeSupported=after.tick>=before.tick+realTickMin&&after.matchState==='PLAYING'&&
    !after.paused&&after.player.mode==='SQUID'&&
    ['SWIM_GROUND','SQUID_DRY'].includes(
     after.b381RealNativeDodge?.realLocomotion)&&
@@ -77,8 +81,23 @@ export async function b412NativeSquidOwnInkRound({
    is3(after.player.position)&&distance<=3&&
    after.cpu.physicalFootRelocations===0&&
    after.cpu.physicalRejoins.length===7&&
-   after.shotsFired===shots&&await locked(),
-   'REAL_SQUID_KCC_SOURCE_AND_NO_FIRE_'+direction);
+   after.shotsFired===shots&&await locked();
+  if(!realNativeSupported){
+   evidence.hold={stage:direction,code,
+    before:{tick:before.tick,body:before.player.position,mode:before.player.mode,
+     inkRelation:before.player.inkRelation,shots:before.shotsFired},
+    after:{tick:after.tick,body:after.player.position,mode:after.player.mode,
+     locomotion:after.b381RealNativeDodge?.realLocomotion,
+     inkRelation:after.player.inkRelation,shots:after.shotsFired,
+     gameState:after.matchState,cpuRejoined:after.cpu.physicalRejoins.length,
+     cpuRelocations:after.cpu.physicalFootRelocations},
+    ground:{solid:ground.genuineHumanOriginalFootSolid,
+     supported:ground.realHumanOriginalFootSupported,
+     gap:ground.genuineOriginalFootGapMeters,source:ground.source},
+    planarMeters:distance,pointerLocked:await locked()};
+   await record('PHYSICAL_SOURCE_HOLD_'+direction);
+   fail('REAL_SQUID_KCC_SOURCE_AND_NO_FIRE_'+direction);
+  }
   const row={direction,code,fromTick:before.tick,toTick:after.tick,
    from:before.player.position,to:after.player.position,
    planarMeters:distance,mode:after.player.mode,
@@ -89,8 +108,10 @@ export async function b412NativeSquidOwnInkRound({
    genuineGap:ground.genuineOriginalFootGapMeters,
    humanShots:after.shotsFired,cpuRejoined:after.cpu.physicalRejoins.length};
   evidence.legs.push(row);
+  await record('GENUINE_NATIVE_LEG_'+direction+'_'+evidence.legs.length);
   if(row.locomotion==='SWIM_GROUND'&&row.inkRelation==='OWN')
    evidence.swimObserved=true;
+  await record('REAL_OWNERGRID_INK_SWIM_WITNESSED');
   return row;
  };
  await send('Input.dispatchKeyEvent',key('ShiftLeft','keyDown'));
@@ -104,6 +125,7 @@ export async function b412NativeSquidOwnInkRound({
    n.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND',
    'ACTUAL_NATIVE_SQUID_COLLIDER_MODE');
   evidence.actualSqModeTick=n.tick;
+  await record('REAL_RAPIER_SQUID_COLLIDER');
   // Move toward the REAL already-painted original ownerGrid target from
   // the successful B410 120-second shot (4-5m away, same original floor).
   // Short native pulses and strict foot support, no arbitrary destination.
@@ -120,6 +142,7 @@ export async function b412NativeSquidOwnInkRound({
   const peak=await frame();
   evidence.peakBody=peak.player.position;
   evidence.peakRelation=peak.player.inkRelation;
+  await record('REAL_OWN_INK_SWIM_PEAK_BEFORE_RETURN');
   // Physically return near the real pre-dive pose with natural native S,
   // not a teleport or direct PlayerController position setter.
   for(let i=0;i<12;i++){
@@ -129,6 +152,7 @@ export async function b412NativeSquidOwnInkRound({
   }
  }finally{
   await send('Input.dispatchKeyEvent',key('ShiftLeft','keyUp'));
+  await record('NATIVE_SHIFT_RELEASED');
  }
  const returned=await nativeUntil(async()=>{
   const n=await frame();
@@ -148,6 +172,7 @@ export async function b412NativeSquidOwnInkRound({
   humanShots:returned.shotsFired,cpuRejoined:7,
   originalFoot:finalGround.genuineHumanOriginalFootSolid,netReturnMeters:net};
  evidence.totalRealKccMeters=evidence.legs.reduce((a,x)=>a+x.planarMeters,0);
+ await record('HUMAN_NATIVE_RETURNED_ON_ORIGINAL_SOURCE');
  need(evidence.totalRealKccMeters>.5,
   'NO_TRUE_SQUID_SOURCE_KCC_TRAVEL');
  return evidence;
@@ -179,7 +204,8 @@ export function b412AuditNativeActualOriginalInkSwim(v,b410,b411){
    leg.originalFoot===v.originalFoot&&leg.originalSupport===true&&
    Number.isFinite(leg.genuineGap)&&leg.genuineGap>=0&&leg.genuineGap<=.4&&
    Number.isSafeInteger(leg.fromTick)&&leg.fromTick>=tick&&
-   Number.isSafeInteger(leg.toTick)&&leg.toTick>=leg.fromTick+8&&
+   Number.isSafeInteger(leg.toTick)&&leg.toTick>=leg.fromTick+
+   (leg.direction==='RETURN_TO_ACTUAL_UPPER_BODY'?3:8)&&
    is3(leg.from)&&is3(leg.to)&&
    Number.isFinite(leg.planarMeters)&&leg.planarMeters>=0&&leg.planarMeters<=3&&
    Math.abs(planar(leg.from,leg.to)-leg.planarMeters)<.0001&&

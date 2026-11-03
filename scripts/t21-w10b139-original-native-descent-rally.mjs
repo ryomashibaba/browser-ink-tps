@@ -2183,15 +2183,18 @@ async function run(){
        target.surfaceId!==UPPER_FLOOR_SOLID+':paint'||
        !Array.isArray(target.world))
       fail('B412_NEEDS_REAL_120S_UPPER_NATIVE_INK_TARGET');
+     const sourceTrace=resolve(OUTPUT,
+      'b412-original-upper-real-own-ink-swim.json');
      b412Evidence=await b412NativeSquidOwnInkRound({
       remaining:90,target:target.world,expectedFoot:UPPER_FLOOR_SOLID,
       snapshot,ledger:b312Ledger,send:cmd,wait:until,
       locked:()=>evaluate(
        'document.pointerLockElement===document.querySelector("#app-canvas")'),
-      verify:n=>{authority(n,'FIXED');return n;}
+      verify:n=>{authority(n,'FIXED');return n;},
+      onEvidence:real=>writeFileSync(sourceTrace,
+       JSON.stringify(real,null,2)+'\n')
      });
-     writeFileSync(resolve(OUTPUT,'b412-original-upper-real-own-ink-swim.json'),
-      JSON.stringify(b412Evidence,null,2)+'\n');
+     writeFileSync(sourceTrace,JSON.stringify(b412Evidence,null,2)+'\n');
      console.log('B412_TRUE_NATIVE_ORIGINAL_SQUID_SWIM',JSON.stringify({
       actualNativeSqModeTick:b412Evidence.actualSqModeTick,
       realOwnInkSwim:b412Evidence.swimObserved,

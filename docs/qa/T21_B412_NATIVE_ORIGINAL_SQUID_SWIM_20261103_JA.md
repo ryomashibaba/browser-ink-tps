@@ -16,3 +16,10 @@
 
 ## 保護
 ゲームの目的はSplatoon 3 v7.2.0マテガイ放水路通常ナワバリ。原作25/17/26/0、natural cross-bank0/12、activationReady=false、原作FloorLine00 source collision authority未証明。正式4v4、原作得点/勝敗、ART、productionはHOLD。main・正式QA・T20・PR#5・Pages書換/マージ/公開禁止。Work事前許可。ユーザーのローカル操作不要。
+
+## B412初回真正Chromeの失敗と修正（2026-11-03）
+
+- 実コード `d264c16fba9d34608c92b46366073bae7429288d` の [Actions #41635951998](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41635951998) は **FAIL**。事前Node・型/ビルドはPASS、原作B322上段到達とB411試合HUDの初期/90秒表示は実ログで確認。残り120秒のB410実射撃は9発・原作右上段への実変更92セル、7CPU継続。失敗は**90秒イカ帰路KeyS**の原作Rapier/入力チェックで `B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_REAL_SQUID_KCC_SOURCE_AND_NO_FIRE_RETURN_TO_ACTUAL_UPPER_BODY`。原本artifact `13230988016`。前進後に帰路へ進むまでのコード上のOWN・SWIM要求は通過したが、**B412全体のイカ泳ぎ成功、ヒト復帰や180秒TIME_UPは認証されない**。
+- 原本ではB412が戻りで失敗する前に、別のB412部分JSONを保存する仕組みがなかった。どの native original foot/gap、Squid/Human、InkRelation、CPU状態、実Shot数が原因か未確定。「原作床を離れた」と決めつけない。
+- 次の試験では各実CDP shift/key/原作足/インクの状態を **同一ワールドで逐次JSON保存**し、HOLDでも原因がartifactに残るよう変更。帰路は最初の8native tick要求より**短い3native tickの実KeyS**で元位置に接近し、安全支持・モード・インク判定は一切緩めない。独立監査はこの**実際の短い入力tick数のみ**を認め、原作上段solid、実KCC長、OWN泳ぎ、Shot非増加、CPU7体、帰還HUMAN、真TIME_UPを依然必須にする。
+- 研究ブランチ限定。F1〜F5不変、25/17/26/0、0/12、正式4v4/HP/ART/productionはHOLD。B411真正PASSは独立に維持。
