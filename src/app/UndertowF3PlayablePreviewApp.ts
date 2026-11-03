@@ -77,6 +77,8 @@ import {b218OriginalRouteFaceChainSeams} from './B218OriginalRouteFaceChainSeams
 import {b219TriageOriginalNavmeshSourceFailure} from './B219OriginalUnderpassDisconnection';
 import {b220AuditOriginalRecastSeamWitnesses} from './B220OriginalNativeRecastSeamProbe';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
+import {b415StepNativeInkLoop,b415ReadableInstruction,
+ type B415InkLoop} from './B415LiveInkLoop';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
 import {PlayerInput} from '../input/PlayerInput';
@@ -503,6 +505,7 @@ export class UndertowF3PlayablePreviewApp{
  private b195PreviousA1ImpactCount=0;
  private b195PreviousA1ChangedCells=0;
  private b195A1PulseUntilTick=0;
+ private b415InkLoop:B415InkLoop|null=null;
  private b168LastPresentedNativeTick=-1;
  private readonly b25RunProgress:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
@@ -5251,6 +5254,13 @@ export class UndertowF3PlayablePreviewApp{
   inkFill.style.cssText='width:0;height:100%;background:#70eac8;';
   inkTrack.appendChild(inkFill);
   inkGauge.appendChild(inkTrack);
+  // Visible practice goal in the SAME low-footprint native resource area.
+  // It is not a match score or a substitute for actual PaintCoordinator hits.
+  const loop=document.createElement('div');
+  loop.id='t21-f3-b415-ink-loop';
+  loop.style.cssText='margin-top:5px;color:#d8f8f1;'+
+   'font:650 9px/1.4 system-ui;letter-spacing:.01em;';
+  inkGauge.appendChild(loop);
   root.appendChild(inkGauge);
   line('t21-f3-b195-time','margin-top:7px;font:600 9px system-ui;color:#9ccdc7');
   // Visible terminal game action, not a hidden left-side QA panel control.
@@ -5364,6 +5374,25 @@ export class UndertowF3PlayablePreviewApp{
    fill.style.width=ink.toFixed(2)+'%';
    fill.style.background=recovery==='SQUID_OWN'?'#72edc3':
     recovery==='LOCKED'?'#ffcf81':'#70dce8';
+   // B415: native-60Hz current ink/shot/mode only, with physically bounded
+   // SOURCE authority. Does not touch resources, player, ink, clock or score.
+   const inkSource=[
+    this.rawStage.solids.length,this.b45SourceSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,
+    this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+   ].join('/');
+   this.b415InkLoop=b415StepNativeInkLoop(this.b415InkLoop,{
+    tick:this.clock.tick,shots:this.stats.shotsFired,
+    ink,mode:this.player.currentMode,relation:this.player.currentInkRelation,
+    recovery,source:inkSource,scoreable:0,
+    officialWinner:run.officialWinner,
+    playing:this.matchState==='PLAYING',paused:this.paused
+   });
+   const loop=root.querySelector<HTMLElement>('#t21-f3-b415-ink-loop')!;
+   loop.textContent=b415ReadableInstruction(this.b415InkLoop.stage);
+   loop.dataset.t21B415PracticeStage=this.b415InkLoop.stage;
+   loop.dataset.t21B415SourceOnly='true';
+   loop.dataset.t21B415OfficialTurfResult='false';
   }
   if(b411Live){
    root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
