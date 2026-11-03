@@ -46,8 +46,8 @@ export interface CpuCombatHit {
   guarded: boolean;
 }
 /** B367: actual resolved physical projectile → actual CPU HP outcome.
- * Source-only observers may READ this; the ordinary damage logic is unchanged.
- * HP 0 is not called SPLATTED until the native CPU update runs. */
+ * Source-only observers may READ this. T20 retains its legacy next-tick
+ * splat transition; original F3 now removes an HP-zero actor immediately. */
 export interface CpuProjectileHpResult {
   botId:string;sourceKind:'HUMAN'|'CPU';
   hpBefore:number;hpAfter:number;realHpLoss:number;
@@ -1471,6 +1471,7 @@ export class CpuAgentSystem {
       if (
         bot.team === sourceTeam ||
         bot.lifeState !== 'ACTIVE' ||
+        (this.f3dSourceGoals !== null && bot.hp <= 0) ||
         isCpuJumpAirborne(bot)
       ) continue;
 
@@ -1562,7 +1563,16 @@ export class CpuAgentSystem {
           this.b213RealAttackerDamageEvents++;
         }
       }
-      if (bot.hp === 0) bot.lethalHumanDirect = sourceKind === 'HUMAN';
+      if (bot.hp === 0) {
+        bot.lethalHumanDirect = sourceKind === 'HUMAN';
+        // F3 SOURCE: real projectile HP-zero must remove the actual CPU
+        // hit-sphere, Rapier actor foot and Crowd agent THIS tick. Otherwise
+        // another genuine shot can collide with an already-dead opponent
+        // before the following CPU update and falsely absorb a projectile.
+        // F3D's existing constructor guard restricts this to the untouched
+        // Undertow T21D original-source QA world. T20 remains unchanged.
+        if (this.f3dSourceGoals) this.splatBot(bot);
+      }
     }
     return {botId:bot.id,sourceKind,hpBefore:previous,hpAfter:bot.hp,
       realHpLoss:previous-bot.hp,shieldAbsorbed:false,
@@ -1605,7 +1615,12 @@ export class CpuAgentSystem {
       bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
       if (bot.hp < previous) {
         this.stats.cpuCombatHits += 1;
-        if (bot.hp === 0) bot.lethalHumanDirect = false;
+        if (bot.hp === 0) {
+          bot.lethalHumanDirect = false;
+          // Same real F3 source HP lifecycle for native sub/special AoE.
+          // One actual dead body must never absorb a second projectile.
+          if (this.f3dSourceGoals) this.splatBot(bot);
+        }
         hits += 1;
       }
     }

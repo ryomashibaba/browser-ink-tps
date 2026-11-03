@@ -238,3 +238,10 @@
 - B322 #41564181990 では真正B312ランプ原作PaintSurface射撃が成立したが、B315の別の元塗装面が未証明という理由でB316→B322の**人間実KCC歩行入力自体が一度も開始されなかった**。このログは「物理ランプ登坂FAIL」ではない。
 - 新修正ではB316開始を原作着地solid・本物の足元支持・17 SOURCE rows・0 Actor移動・0原作Ink/player直接書込みの独立ゲートに切り分ける。B315 3面の合否は別欄に保持し、以前の未認証塗装をPASSへ変更しない。既存の短い本当のCDPキー移動とB316/B320/B321/B322の合格条件は不変更。
 - B322は本物の原作上段exit未到達なら関連のA1ミッションCLEAR有無と無関係にFAIL。真正Chromium未実施のため、ランプ到達・上段exit・自然な敵HP命中・正式4v4を新たにPASS認定しない。main/T19C/T20/PR #5/Pages・25/17/26/0・自然対岸0/12・正式Scoreable 0・ART/production HOLDは維持。
+
+## 2026-11-03 — F3 native CPU immediate lethal lifecycle (isolated research; 未実機証明)
+- GitHub ActionsのF2/B316/B322とB337は継続キュー待ち。メインQA開発ブランチには新しいpushを行わない。
+- 実コード検査: native CPU射撃とAreaDamageによりHP=0になっても、従来の `splatBot` 実行は次の `CpuAgentSystem.fixedUpdate` まで遅れる。新しいPROJECTILEがその間にHP0 botのhit sphereへ当たれば、正当なインク着弾も阻害する可能性がある。
+- F3D（固定のoriginal SOURCEナビ経路を注入したQA条件）に限って、HP0になった**その射撃/範囲ダメージ処理内**で既存 `splatBot` を呼び、元のCPU生命状態・Recast Agent・共有Rapier Actor足元・撃破カウンタを同一native tickに更新。2度目は `SPLATTED` 排除。T20非SOURCE条件は既存next-update lifecycle維持。
+- new `src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts`: source human direct / T20 / nonlethal / real CPU kill / area damage / real shield guardの6系統。テスト自体はVitest fixtureであり、**実在自然CPU遭遇や同一Chromium真正成功の証拠ではない**。
+- main・Draft PR#5・公開Pages・本番、25/17/26/0、自然対岸0/12、公式スコア0、正式4v4、ART HOLDを維持。研究のみ。CI滞留中のため本修正は独立研究ブランチに保存し、F2・F3実試験合格前に本流統合/公開認定しない。
