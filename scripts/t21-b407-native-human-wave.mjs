@@ -1,3 +1,5 @@
+import {b408ChooseActiveOriginalCell,b408NativeMouseAligned}
+ from './t21-b408-native-original-active-aim.mjs';
 /** B407: ordinary CDP input against the SAME source 180s game, not simulation injection.
  * The caller is the B405 genuine Chromium driver; no player/CPU/physics/ink setters. */
 const positionsEqual = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
@@ -11,7 +13,8 @@ const KEYS = [
   { code: 'KeyD', key: 'd', windowsVirtualKeyCode: 68, nativeVirtualKeyCode: 68 }
 ];
 export async function b407RunNativeHumanWave({
-  remaining, expectedFoot, aimCDP, send, read, snapshot, verifyAuthority, wait
+  remaining, expectedFoot, aimCDP, send, read, snapshot, verifyAuthority, wait,
+  b408ActiveAim=false
 }) {
   guard([150,120,90,60,30].includes(remaining), 'UNEXPECTED_TIME_MARKER');
   guard(typeof expectedFoot === 'string' && expectedFoot.startsWith('UndertowT21D:'),
@@ -76,14 +79,34 @@ export async function b407RunNativeHumanWave({
   guard(preFire.matchState === 'PLAYING' && !preFire.paused &&
     preFire.cpu.physicalRejoins.length === 7 && await locked(),
     'NO_LIVE_NATIVE_FIRE_WINDOW');
-  // Tiny REAL mouse motion, not a synthetic aim ray/impact. Preserve the
-  // B337 genuinely acquired active original-floor target and real pointer lock.
-  const mouseX = aimCDP[0] + (remaining === 120 || remaining === 60 ? -3 : 3);
-  const mouseY = aimCDP[1];
-  guard(mouseX >= 10 && mouseX <= 1590 && mouseY >= 10 && mouseY <= 890,
+  // B408 optional: use REAL ownerGrid and REAL camera after each key wave.
+  // Plain B407 retains its already-proven original behavior when opt-in is off.
+  let b408Aim=null;
+  let mouseX=aimCDP[0]+(remaining===120||remaining===60?-3:3);
+  let mouseY=aimCDP[1];
+  if(b408ActiveAim){
+    await send('Input.dispatchMouseEvent',
+      {type:'mouseMoved',x:800,y:450,button:'none'});
+    const liveFrame=verifyAuthority(await snapshot());
+    const liveGrid=await foot();
+    const plan=b408ChooseActiveOriginalCell(liveGrid,liveFrame,expectedFoot);
+    mouseX=plan.cdp[0];mouseY=plan.cdp[1];
+    b408Aim={plan,nativeMouseDispatched:false};
+  }
+  guard(mouseX>=10&&mouseX<=1590&&mouseY>=10&&mouseY<=890,
     'INVALID_REAL_CDP_MOUSE');
   await send('Input.dispatchMouseEvent',
-    { type: 'mouseMoved', x: mouseX, y: mouseY, button: 'none' });
+    {type:'mouseMoved',x:mouseX,y:mouseY,button:'none'});
+  if(b408Aim){
+    const aligned=await wait(async()=>{
+      const n=verifyAuthority(await snapshot());
+      return b408NativeMouseAligned(b408Aim.plan,n.cameraSourcePractice)?
+       n.cameraSourcePractice:false;
+    },30000);
+    b408Aim.realObservedCamera={
+     yawDegrees:aligned.yawDegrees,pitchDegrees:aligned.pitchDegrees};
+    b408Aim.nativeMouseDispatched=true;
+  }
   await send('Input.dispatchMouseEvent',
     { type: 'mousePressed', x: mouseX, y: mouseY, button: 'left', clickCount: 1 });
   try {
@@ -98,6 +121,19 @@ export async function b407RunNativeHumanWave({
   }
   const last = verifyAuthority(await snapshot());
   const lastFoot = await foot();
+  if(b408Aim){
+   b408Aim.impactTick=lastFoot?.humanLastImpactTick??null;
+   b408Aim.realLastPaintSurface=lastFoot?.humanLastPaintedSurface??null;
+   b408Aim.additionalShots=last.shotsFired-preFire.shotsFired;
+   b408Aim.realAddedCells=
+     last.b23HumanInkFeedback.humanChangedCells-
+     first.b23HumanInkFeedback.humanChangedCells;
+   guard(Number.isSafeInteger(b408Aim.impactTick)&&
+     b408Aim.impactTick>b408Aim.plan.nativeTick&&
+     b408Aim.realLastPaintSurface===b408Aim.plan.surfaceId&&
+     b408Aim.additionalShots>0,
+     'NO_REAL_ORIGINAL_IMPACT_AFTER_NATIVE_AIM_'+remaining);
+  }
   guard(last.matchState === 'PLAYING' && !last.paused &&
     last.tick > preFire.tick && last.shotsFired > preFire.shotsFired &&
     last.b23HumanInkFeedback.humanChangedCells >=
@@ -119,6 +155,7 @@ export async function b407RunNativeHumanWave({
       originalFootSupported: true, pointerLocked: true
     },
     legs, actualCdpMouse: [mouseX, mouseY], totalRealKccPlanarMeters: motion,
+    ...(b408Aim?{b408Aim}:{}),
     after: {
       tick: last.tick, seconds: last.timeRemainingSeconds,
       body: last.player.position, humanShots: last.shotsFired,

@@ -1,4 +1,4 @@
-name: T21 B407 dispersed real human input in one original 180s SOURCE match
+name: T21 B408 actual original ownerGrid re-aimed shots in one 180s match
 on:
   push:
     branches:
@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/t21-b405-single-real-180s-human-7cpu.mjs'
       - 'scripts/t21-b407-*.mjs'
+      - 'scripts/t21-b408-*.mjs'
       - '.github/workflows/t21-b407-time-distributed-real-human.yml'
   workflow_dispatch:
 permissions:
@@ -26,23 +27,27 @@ jobs:
           node --check scripts/t21-b405-single-real-180s-human-7cpu.mjs
           node --check scripts/t21-b407-native-human-wave.mjs
           node --check scripts/t21-b407-time-distributed-human-audit.mjs
-          node --test scripts/t21-b407-time-distributed-human-audit.test.mjs scripts/t21-b405-single-180s-human-7cpu-audit.test.mjs scripts/t21-b337-real-input-ink-audit.test.mjs
+          node --check scripts/t21-b408-native-original-active-aim.mjs
+          node --check scripts/t21-b408-native-original-aim-audit.mjs
+          node --test scripts/t21-b408-native-original-active-aim.test.mjs scripts/t21-b408-native-original-aim-audit.test.mjs scripts/t21-b407-time-distributed-human-audit.test.mjs scripts/t21-b405-single-180s-human-7cpu-audit.test.mjs scripts/t21-b337-real-input-ink-audit.test.mjs
           npm exec -- vitest run src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/app/B367RealCpuCombatTimeline.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: Genuine single 180s Chromium human plus 7 original-source CPUs
         env:
           T21_B405_OUTPUT: /tmp/t21-b407-original-game
           T21_B407_ACTIVE_WAVES: '1'
+          T21_B408_ACTIVE_AIM: '1'
         run: node scripts/t21-b405-single-real-180s-human-7cpu.mjs
       - name: Independently audit real B337, B405, and 5 genuine in-match B407 inputs
         run: |
           node scripts/t21-b405-single-180s-human-7cpu-audit.mjs /tmp/t21-b407-original-game
           node scripts/t21-b407-time-distributed-human-audit.mjs /tmp/t21-b407-original-game
+          node scripts/t21-b408-native-original-aim-audit.mjs /tmp/t21-b407-original-game
       - name: Retain original screenshots and complete fail-closed live evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: b407-one-source-180s-genuine-human-multiphase
+          name: b408-native-real-original-ownergrid-retarget-and-impact
           path: /tmp/t21-b407-original-game/
           retention-days: 14
           if-no-files-found: warn

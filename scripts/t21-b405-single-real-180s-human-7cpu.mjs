@@ -9,6 +9,7 @@ import {b337AuditNative} from './t21-b337-real-input-ink-audit.mjs';
 import {b405AuditReal180SourceSession} from './t21-b405-single-180s-human-7cpu-audit.mjs';
 import {b407RunNativeHumanWave} from './t21-b407-native-human-wave.mjs';
 import {b407AuditRealHumanWaves} from './t21-b407-time-distributed-human-audit.mjs';
+import {b408AuditLiveOriginalAim} from './t21-b408-native-original-aim-audit.mjs';
 import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
  from './t21-b313-actual-original-cell-aim.mjs';
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
@@ -442,6 +443,8 @@ async function run(){
   }));
  };
  const b407Enabled=process.env.T21_B407_ACTIVE_WAVES==='1';
+ const b408Enabled=process.env.T21_B408_ACTIVE_AIM==='1';
+ if(b408Enabled&&!b407Enabled)fail('B408_NEEDS_GENUINE_B407_WAVES');
  const b407={
   schema:'B407_SAME_REAL_180S_TIME_DISTRIBUTED_HUMAN_INPUT',
   source:'25/17/26/0',enabled:b407Enabled,sameB405NativeGame:true,
@@ -468,7 +471,8 @@ async function run(){
    try {
     const wave=await b407RunNativeHumanWave({
      remaining,expectedFoot:footId,aimCDP:selected.actualCDP,
-     send,read,snapshot,verifyAuthority,wait
+     send,read,snapshot,verifyAuthority,wait,
+     b408ActiveAim:b408Enabled
     });
     b407.waves.push(wave);saveB407();
     console.log('B407_REAL_IN_MATCH_HUMAN_INPUT',JSON.stringify({
@@ -500,6 +504,13 @@ async function run(){
   writeFileSync(resolve(DIR,'b407-driver-verdict.json'),JSON.stringify(v,null,2)+'\n');
   console.log('B407_ONE_REAL_NATIVE_SOURCE_HUMAN_ACTIVE_MATCH',
    JSON.stringify(v));
+  if(b408Enabled){
+   const newVerdict=b408AuditLiveOriginalAim(b407,b405);
+   writeFileSync(resolve(DIR,'b408-driver-verdict.json'),
+    JSON.stringify(newVerdict,null,2)+'\n');
+   console.log('B408_GENUINE_NATIVE_ACTIVE_ORIGINAL_AIM',
+    JSON.stringify(newVerdict));
+  }
  }
 }
 try{await run();}
