@@ -19,3 +19,14 @@
 - 新ゲーム統合ジョブ [#41732151648](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41732151648)、一世代前B417 [#41730182445](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41730182445) は本記録時点で**事前Node/Vitest/ビルドPASS、真正180秒/RAW結果まだ未確定**。合否・性能・ART・敵戦闘成功は本物の最終ログ/JSONで後から決める。
 - B414完全同SHAの真正 [#41728078065](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41728078065) は **全SUCCESS**、artifact `13277465598`、tick11860。B409–B414と物理移動・本物のshot/OWN補給/reshotを統合実証。人間115 shots / 1126 changed original cells、CPU147 shots /11970 changed original cells、敵直接Hit/Splat 0、得点/公式勝者なし。B414独立HUD：100→83.85、OWN補給3時点、復帰96.18、再射撃85.05、全DOM真正条件PASS。**B417・CPU修正のPASSを旧SHAから転用禁止**。
 - 固定方針：F1–F5、原作Ver.7.2.0通常ナワバリ、25/17/26/0、natural 0/12、正式4v4/HP戦闘/Official Turf/ART/production HOLD、main/T19C/T20/正式QA/PR5/Pages 保護。Workは別承認。
+
+
+## 2026-11-04 08時台 最新真正結果・実画面・修正詳細
+
+- **初回機能の成功**：SHA `6dd24e4e76dbd5283697ad625497b81e002202fb` の真正 [Actions #41730182445](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41730182445) は **全SUCCESS**。Artifact `13276274727`。本物の `B409_REAL_ROUTE_MID.png` には左上コンパクトHUDに原作A **6,431** / B **6,133** の `SOURCE PAINTED CELLS`、`UNSCORED` の表記と両チームの棒グラフが表示された。元のB401 live SOURCE 17-gridのみを参照する実装。**このSHAで専用のDOMとB401独立3時点一致監査を通したと主張してはいけない**（専用証拠を追加したのは次のSHA）。
+- **同一真正180秒実績**：TIME_UP tick **11856**、人間 **114 shots / 1158 changed original cells**、CPU **150 source shot requests / 12227 original changed cells**。B409–B414独立SOURCE限定PASS。実敵命中0・撃破0・原作SOURCE所有セル≠正式Turfスコア。
+- **新3時点DOM照合＋Splatana SOURCE追跡修正**：SHA `10ce04f6ab6ae60e7ea0367bd06356f7d94063c7`。新真正 [Actions #41732151648](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41732151648) は**FAIL**、artifact `13277011966`、本物の `b322-actual-original-ramp-crest.json` によれば、3つの本物の原作坂KCC支持時点と実上段 `UndertowT21D:right-low-team-a` 接地まで達したが、B322の独立認定に必要な原作坂内実上昇量が **0.31891632080078125m** で固定 **0.32m** に届かず `HOLD_NO_TRUE_ORIGINAL_CREST_SUPPORT`。単体検査/ビルドPASS、失敗はF2物理証拠のみ。したがってB417追加3時点DOM実証は**未実施・HOLD**（後段に到達していない）。既存原作支持床や物理閾値を変更しない。
+- **修正SHA `97d34a2b081aca3ab392fad042d7567806f571a6`**：B322直前に本物の `KeyS` 1 native tickリクエストで元登録坂上を短く後退し、本物の `b312Ledger` 両時点を独立安全審査する。実身体の後退後も元RAMP_SOLID支持、17 owner grid、実native tick、元source/actor非改変、0.60～0.77原作坂長手比率、物理移動幅・高度・足元ギャップに違反すれば**即HOLD**。正規の `KeyW` 上り直しで旧B322 **maxAscent>=0.32m、3 native KCC坂サンプル、長手率>=0.90、上段床実支持** をそのまま要求。元SRC geometry・weapon/AI・CPU足元・scoreableは不変更。Unit新実条件と違反ケースを追加。
+- 最新 [Actions #41739563081](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41739563081) は記載時点で Node/Vitest・ビルド・preflight PASS、真正180秒は**in_progress**。結果が出るまではB322修正もB417同一SHA3時点一致も未認証。**次工程は最終Actions/RAWを確認して初めて合否を確定**する。
+
+固定方針：正式4v4・原作をまたぐ敵との自然交戦/HP撃破/150tick復活・Scoreable0の公式得点/勝敗・ART・releaseは未認証。main、正式QA、T19C/T20、PR5、Pagesに無断変更なし。
