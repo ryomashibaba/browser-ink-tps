@@ -35,7 +35,7 @@ test('source, ground, native camera and active grid all fail closed',()=>{
  for(const change of [
   x=>{x.frame.sourceScoreablePromotions=1;},
   x=>{x.frame.cameraSourcePractice.sourceAimSensitivityMultiplier=1.2;},
-  x=>{x.ledger.genuineHumanOriginalFootGapMeters=.8;},
+  x=>{x.ledger.genuineOriginalFootGapMeters=.8;},
   x=>{x.ledger.playerPositionRewritten=true;},
   x=>{x.frame.cpu.physicalFootRelocations=1;},
   x=>{x.ledger.originalRows[0].originalB337NearbyActiveCells[0].originalOwner=8;},
