@@ -38,3 +38,11 @@ mark HOLD and preserve failed trace; do not weaken thresholds blindly.
 
 The existing B336 workflow now incorporates ONE short B337 real-browser job.
 No new workflow file and no rerun of the heavy B335 180-second workflow.
+
+## 2026-11-03 B337 actual original-floor aim study (research-only)
+
+- Historic genuine Chromium #41558592950 reached 7/7 CPU, actual camera yaw 4.4°, but combined accepted-human-shot + painted-cell wait expired after 120s. That trace cannot distinguish a physical gun input failure from an aim that never hits source floor.
+- B337 driver now reuses proven B313 native **B271 original active paint cell** targeting: actual original Rapier foot, the same original-source paint row, actual real camera/pitch, **real CDP mouse movement**, and native camera angle confirmation before mousePress. No camera/HP/ink/actor/route edits.
+- Split native accepted HUMAN shot and actual source impact/owner-change waits. On HOLD, write a factual diagnostic with original impact source, real shot count, real ownership, pointer lock, and native tick.
+- Independent guard now requires original active cell provenance, physical source identity, native yaw/pitch agreement and true painted source. Existing 7 CPU, no-score/no-win, real WASD and immutable 25/17/26/0 assertions unchanged.
+- This study is an isolated **research branch**; the queued B316/B322/B162 F2 verification of the main QA branch must complete independently. No PASS until exact branch build, Node tests and genuine Chromium input + actual source paint succeed. Main, Draft PR #5, public Pages untouched; 0/12 opponent routes and production/ART/official 4v4 HOLD.

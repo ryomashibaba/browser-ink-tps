@@ -8,21 +8,33 @@ function fixture(){
   injectedTicks:false,injectedInk:false,injectedActorPositions:false,
   officialWinner:'NONE',
   actions:['MOUSE_MOVED','FIRE','KeyW','KeyA','KeyS','KeyD'],
+  originalAimWitness:{
+   sourceFootId:'UndertowT21D:spawn-high-positive-z',
+   targetOriginalSurface:'UndertowT21D:spawn-high-positive-z:paint',
+   originalActiveCells:[{grid:[2,3],world:[0,5.9,41]}],
+   selectedCell:{grid:[2,3],world:[0,5.9,41]},
+   targetYawDegrees:0,targetPitchDegrees:-24,actualCDP:[800,580],
+   observedYawDegrees:4.4,observedPitchDegrees:-24,
+   beforeTick:100,afterTick:112,
+   originalRapierFootSupported:true,artificialAimOrGameplayWrites:false
+  },
   samples:labels.map((label,i)=>({
    label,source:'25/17/26/0',tick:100+i*12,remainingSeconds:178-i,
    matchState:'PLAYING',paused:false,stopReason:null,
    body:[0,6,40+(i>=3?.3:0)],cameraYawDegrees:i>0?4.4:0,
+   cameraPitchDegrees:i>0?-24:0,
    originalSolids:25,originalPaint:17,originalNavLinks:26,scoreable:0,
    productionAuthorized:false,unrestricted4v4Certified:false,
    turfResult:'UNAVAILABLE_SOURCE_SCORE_MASK_NOT_AUTHORIZED',
    cpuCount:7,cpuRejoined:7,cpuRelocations:0,
    humanShots:i>=2?4:0,humanInk:i>=2?17:0,
    lastHumanImpactTick:i>=2?125:null,
-   lastHumanPaintedSurface:i>=2?'original-1':null,
+   lastHumanPaintedSurface:i>=2?'UndertowT21D:spawn-high-positive-z:paint':null,
    footSolid:'UndertowT21D:spawn-high-positive-z',
    footGap:0.02,footSupported:true,
    originalRows:Array.from({length:17},(_,j)=>({
-    surfaceId:'original-'+j,a:i>=2&&j===1?17:0,
+    surfaceId:j===1?'UndertowT21D:spawn-high-positive-z:paint':'original-'+j,
+    a:i>=2&&j===1?17:0,
     b:0,neutral:i>=2&&j===1?83:100,active:100
    }))
   }))};
@@ -80,4 +92,27 @@ test('original active cell counts and 17 exact IDs cannot drift',()=>{
   const w=fixture();change(w);
   assert.throws(()=>audit(w),/B337_SOURCE_GAMEPLAY_/);
  }
+});
+
+test('source floor mouse provenance must agree with observed genuine aim',()=>{
+ for(const edit of [
+  w=>{delete w.originalAimWitness;},
+  w=>{w.originalAimWitness.targetOriginalSurface='fabricated';},
+  w=>{w.originalAimWitness.selectedCell.grid=[999,999];},
+  w=>{w.originalAimWitness.observedPitchDegrees=55;},
+  w=>{w.originalAimWitness.beforeTick=500;},
+  w=>{w.originalAimWitness.artificialAimOrGameplayWrites=true;},
+  w=>{w.samples[2].lastHumanPaintedSurface='original-2';}
+ ]){
+  const x=fixture();edit(x);
+  assert.throws(()=>audit(x),/B337_SOURCE_GAMEPLAY_/);
+ }
+});
+test('real mouse pitch alone counts as aim motion only with source cell witness',()=>{
+ const x=fixture();
+ x.samples[1].cameraYawDegrees=x.samples[0].cameraYawDegrees;
+ x.samples[1].cameraPitchDegrees=-23;
+ x.originalAimWitness.observedYawDegrees=x.samples[1].cameraYawDegrees;
+ x.originalAimWitness.observedPitchDegrees=-23;
+ assert.equal(audit(x).actualCameraPitchDeltaDegrees,-23);
 });

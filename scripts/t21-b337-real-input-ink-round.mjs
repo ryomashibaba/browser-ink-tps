@@ -6,6 +6,8 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {b337AuditNative} from './t21-b337-real-input-ink-audit.mjs';
+import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
+ from './t21-b313-actual-original-cell-aim.mjs';
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const DIR=process.env.T21_B337_OUTPUT||'/tmp/t21-b337';
 const children=[],calls=new Map();
@@ -160,12 +162,13 @@ async function run(){
   if(!ledger||ledger.source!=='25/17/26/0'||ledger.originalRows?.length!==17)
    fail('B312_REAL_ORIGINAL_LEDGER_MISSING_'+label);
   const yaw=n.cameraSourcePractice?.yawDegrees;
-  if(typeof yaw!=='number'||!Number.isFinite(yaw))
-   fail('CAMERA_NATIVE_YAW_UNAVAILABLE_'+label);
+  const pitch=n.cameraSourcePractice?.pitchDegrees;
+  if(!Number.isFinite(yaw)||!Number.isFinite(pitch))
+   fail('CAMERA_NATIVE_AIM_UNAVAILABLE_'+label);
   const s={label,source:'25/17/26/0',tick:n.tick,
    remainingSeconds:n.timeRemainingSeconds,matchState:n.matchState,
    paused:n.paused,stopReason:n.stopReason,
-   body:n.player.position,cameraYawDegrees:yaw,
+   body:n.player.position,cameraYawDegrees:yaw,cameraPitchDegrees:pitch,
    originalSolids:n.originalSourceSolids,
    originalPaint:n.originalPaintSurfaces,
    originalNavLinks:n.originalSourceNavigationLinks,
@@ -236,6 +239,12 @@ async function run(){
     nativeTickAfter:nativeAfterF8.tick,
     nativeOriginalAuthorityUnchanged:true}},null,2)+'\n');
  await picture('B337_START');
+ if(!await read('document.pointerLockElement===document.querySelector("#app-canvas")'))
+  fail('ACTUAL_SOURCE_POINTER_LOCK_LOST_AFTER_F8');
+ // A horizontal yaw-only mouse move did NOT prove that the original floor
+ // was ever under the crosshair (historic B337 Chrome timeout).
+ // Retain the real yaw probe but select a REAL B271 original active source
+ // cell and observe the genuine mouse pitch before clicking.
  await send('Input.dispatchMouseEvent',
   {type:'mouseMoved',x:820,y:450,button:'none'});
  proof.actions.push('MOUSE_MOVED');store();
@@ -243,20 +252,94 @@ async function run(){
   const v=verifyAuthority(await snapshot());
   return Math.abs(v.cameraSourcePractice?.yawDegrees-started.cameraYawDegrees)>=0.1;
  },40000);
- const aimed=await sample('AIM');
  await send('Input.dispatchMouseEvent',
-  {type:'mousePressed',x:820,y:450,button:'left',clickCount:1});
+  {type:'mouseMoved',x:800,y:450,button:'none'});
+ const preAim=verifyAuthority(await snapshot());
+ const original=await read('window.__t21F3.auditB312NativeHumanOwnerLedger()');
+ const footId=original?.genuineHumanOriginalFootSolid;
+ const targetSurface=footId+':paint';
+ const row=original?.originalRows?.find(r=>r.surfaceId===targetSurface);
+ if(!original||original.source!=='25/17/26/0'||
+    original.originalRows?.length!==17||
+    original.realHumanOriginalFootSupported!==true||
+    original.sourceActorRelocations!==0||
+    original.sourceInkRewritten!==false||
+    original.playerPositionRewritten!==false||
+    footId!==started.footSolid||
+    !row?.originalSourceActiveProbeCells?.length)
+  fail('NO_GENUINE_ORIGINAL_GROUNDED_ACTIVE_FLOOR_AIM');
+ const selected=b313ChooseOriginalActiveAim({
+  cells:row.originalSourceActiveProbeCells,
+  body:original.actualBodyMeters,camera:original.actualCameraMeters,
+  yaw:preAim.cameraSourcePractice.yawDegrees,
+  pitch:preAim.cameraSourcePractice.pitchDegrees
+ }).selected;
+ if(!selected)fail('NO_SAFE_REAL_ORIGINAL_ACTIVE_SOURCE_AIM');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',
+  x:selected.actualCDP[0],y:selected.actualCDP[1],button:'none'});
+ await wait(async()=>{
+  const a=(await snapshot()).cameraSourcePractice;
+  return b313ObservedRealAimMatch(selected,a)?a:false;
+ },40000);
+ const aimed=await sample('AIM');
+ if(!b313ObservedRealAimMatch(selected,{
+  yawDegrees:aimed.cameraYawDegrees,
+  pitchDegrees:aimed.cameraPitchDegrees
+ }))fail('GENUINE_MOUSE_AIM_DRIFTED_FROM_ORIGINAL_CELL');
+ proof.originalAimWitness={
+  sourceFootId:footId,targetOriginalSurface:targetSurface,
+  originalActiveCells:row.originalSourceActiveProbeCells,
+  selectedCell:{grid:selected.grid,world:selected.world},
+  targetYawDegrees:selected.targetYaw,
+  targetPitchDegrees:selected.targetPitch,
+  actualCDP:selected.actualCDP,
+  observedYawDegrees:aimed.cameraYawDegrees,
+  observedPitchDegrees:aimed.cameraPitchDegrees,
+  beforeTick:preAim.tick,afterTick:aimed.tick,
+  originalRapierFootSupported:true,
+  artificialAimOrGameplayWrites:false
+ };
+ store();
+ await send('Input.dispatchMouseEvent',
+  {type:'mousePressed',x:selected.actualCDP[0],
+   y:selected.actualCDP[1],button:'left',clickCount:1});
  proof.actions.push('FIRE');store();
  try{
+  // Separate REAL shot acceptance from original paint impact. A camera
+  // alignment or projectile counter alone is not a painted-cell PASS.
   await wait(async()=>{
    const v=verifyAuthority(await snapshot());
+   return v.tick>aimed.tick&&v.shotsFired>aimed.humanShots?v:false;
+  },45000);
+  await wait(async()=>{
+   const v=verifyAuthority(await snapshot());
+   const ledger=await read('window.__t21F3.auditB312NativeHumanOwnerLedger()');
    return v.tick>=aimed.tick+20&&
-    v.shotsFired>started.humanShots&&
-    v.b23HumanInkFeedback.humanChangedCells>started.humanInk?v:false;
-  },120000);
+    v.b23HumanInkFeedback.humanChangedCells>started.humanInk&&
+    ledger?.humanLastImpactTick>aimed.tick&&
+    ledger?.humanLastPaintedSurface===targetSurface?v:false;
+  },70000);
+ }catch(error){
+  // Keep an inspectable real world witness on HOLD, even if the gun fires
+  // but no actual original-source paint cell changes.
+  const live=verifyAuthority(await snapshot());
+  const shotLedger=await read('window.__t21F3.auditB312NativeHumanOwnerLedger()');
+  proof.fireHold={
+   reason:String(error),nativeTick:live.tick,
+   realHumanShots:live.shotsFired,
+   realHumanChangedCells:live.b23HumanInkFeedback.humanChangedCells,
+   actualHumanLastSource:shotLedger?.humanLastPaintedSurface??null,
+   actualHumanLastImpactTick:shotLedger?.humanLastImpactTick??null,
+   expectedOriginalSurface:targetSurface,
+   pointerLocked:await read('document.pointerLockElement===document.querySelector("#app-canvas")'),
+   stage:'25/17/26/0',fakeGameplayWrites:0
+  };
+  store();
+  throw error;
  }finally{
   await send('Input.dispatchMouseEvent',
-   {type:'mouseReleased',x:820,y:450,button:'left',clickCount:1});
+   {type:'mouseReleased',x:selected.actualCDP[0],
+    y:selected.actualCDP[1],button:'left',clickCount:1});
  }
  await sample('FIRE');
  for(const code of ['KeyW','KeyA','KeyS','KeyD']){
