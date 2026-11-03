@@ -60,8 +60,10 @@ export function b337AuditNative(w){
   Math.abs(aim.cameraPitchDegrees-start.cameraPitchDegrees)>=0.1,
   'REAL_MOUSE_AIM_CHANGE_MISSING');
  const witness=w.originalAimWitness;
- // Frozen original source ownerGrid uses paint:<backingSolidId>.
- const actualOriginalId='paint:'+start.footSolid;
+ // REAL StagePaintSurface.id is `<backingSolidId>:paint` (T21D
+ // buildFlatComponent), not the distinct navigation QA anchor
+ // `paint:<solidId>` used in UndertowSpillwayConnectivityQa.
+ const actualOriginalId=start.footSolid+':paint';
  const equalCell=(a,b)=>Array.isArray(a?.grid)&&
   Array.isArray(a?.world)&&Array.isArray(b?.grid)&&Array.isArray(b?.world)&&
   a.grid.length===2&&b.grid.length===2&&

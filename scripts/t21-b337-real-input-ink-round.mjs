@@ -257,9 +257,10 @@ async function run(){
  const preAim=verifyAuthority(await snapshot());
  const original=await read('window.__t21F3.auditB312NativeHumanOwnerLedger()');
  const footId=original?.genuineHumanOriginalFootSolid;
- // Actual StageDefinition uses `paint:<backingSolidId>`, not
- // `<backingSolidId>:paint`. Never invent SOURCE surface identities.
- const targetSurface='paint:'+footId;
+ // The REAL PaintSurface.id comes from buildFlatComponent:
+ // `<backingSolidId>:paint`. Navigation-only `paint:<solid>` anchor
+ // is NOT an ink ownerGrid surface identity.
+ const targetSurface=footId+':paint';
  const row=original?.originalRows?.find(r=>r.surfaceId===targetSurface);
  if(!original||original.source!=='25/17/26/0'||
     original.originalRows?.length!==17||

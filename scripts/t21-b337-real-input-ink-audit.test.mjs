@@ -10,7 +10,7 @@ function fixture(){
   actions:['MOUSE_MOVED','FIRE','KeyW','KeyA','KeyS','KeyD'],
   originalAimWitness:{
    sourceFootId:'UndertowT21D:spawn-high-positive-z',
-   targetOriginalSurface:'paint:UndertowT21D:spawn-high-positive-z',
+   targetOriginalSurface:'UndertowT21D:spawn-high-positive-z:paint',
    originalActiveCells:[{grid:[2,3],world:[0,5.9,41]}],
    selectedCell:{grid:[2,3],world:[0,5.9,41]},
    actualCameraMeters:[-0.7693,10.35,31],
@@ -31,11 +31,11 @@ function fixture(){
    cpuCount:7,cpuRejoined:7,cpuRelocations:0,
    humanShots:i>=2?4:0,humanInk:i>=2?17:0,
    lastHumanImpactTick:i>=2?125:null,
-   lastHumanPaintedSurface:i>=2?'paint:UndertowT21D:spawn-high-positive-z':null,
+   lastHumanPaintedSurface:i>=2?'UndertowT21D:spawn-high-positive-z:paint':null,
    footSolid:'UndertowT21D:spawn-high-positive-z',
    footGap:0.02,footSupported:true,
    originalRows:Array.from({length:17},(_,j)=>({
-    surfaceId:j===1?'paint:UndertowT21D:spawn-high-positive-z':'original-'+j,
+    surfaceId:j===1?'UndertowT21D:spawn-high-positive-z:paint':'original-'+j,
     a:i>=2&&j===1?17:0,
     b:0,neutral:i>=2&&j===1?83:100,active:100
    }))
@@ -119,7 +119,7 @@ test('camera geometry and ORIGINAL source identity must be genuine',()=>{
       x.originalAimWitness.observedPitchDegrees=15;},
   x=>{x.originalAimWitness.actualBodyMeters=[500,6,40];},
   x=>{x.originalAimWitness.targetOriginalSurface=
-    'UndertowT21D:spawn-high-positive-z:paint';}
+    'paint:UndertowT21D:spawn-high-positive-z';}
  ]){
   const x=fixture();mutate(x);
   assert.throws(()=>audit(x),/B337_SOURCE_GAMEPLAY_/);

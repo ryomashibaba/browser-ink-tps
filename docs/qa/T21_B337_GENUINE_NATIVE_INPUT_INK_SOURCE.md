@@ -47,21 +47,32 @@ No new workflow file and no rerun of the heavy B335 180-second workflow.
 - Independent guard now requires original active cell provenance, physical source identity, native yaw/pitch agreement and true painted source. Existing 7 CPU, no-score/no-win, real WASD and immutable 25/17/26/0 assertions unchanged.
 - This study is an isolated **research branch**; the queued B316/B322/B162 F2 verification of the main QA branch must complete independently. No PASS until exact branch build, Node tests and genuine Chromium input + actual source paint succeed. Main, Draft PR #5, public Pages untouched; 0/12 opponent routes and production/ART/official 4v4 HOLD.
 
-## 2026-11-03 — Exact ORIGINAL paint ID correction
+## 2026-11-03 — Actual authoring schema: paint SOURCE surface vs nav anchor
 
-Read-only cross-check: original StageDefinition anchor in
-`UndertowSpillwayConnectivityQa.ts` is
-`paint:UndertowT21D:spawn-high-positive-z`. `TestStage.defineTestSurfaces`
-retains `surface.id`, and B312's native owner rows read that actual ID.
-Earlier B337 research used the nonexistent `<backingSolidId>:paint`.
-This change fixes the real Chromium driver, independent auditor, and
-17-row fixtures to `paint:<backingSolidId>`, without ever adding a
-PaintSurface. Genuine supported Rapier foot and the exact B312 source
-owner-row are still required.
+**Correction of the preceding short-lived research-only SHA
+`671df2b785c21ea7f5ba6841eef074e84bb1afa9`:**
 
-The native driver now preserves real camera/body positions and requires
-unaltered 1x physical mouse look. Independent verification derives yaw and
-pitch from the actual B271 active grid cell and read-only camera position;
-a forged target or changed observed yaw/pitch must be HOLD. Only genuinely
-accepted human shots AND physically changed original owner cells count
-toward a PASS; queueing a workflow is not certification.
+Read the actual authoring function `buildFlatComponent` in
+`src/stage/undertow/UndertowSpillwayBlockoutGeometry.ts` rather than the
+navigation QA derived-anchor constant:
+- Genuine `StagePaintSurfaceDefinition.id` is
+  `\${solidId}:paint` (e.g.
+  `UndertowT21D:spawn-high-positive-z:paint`).
+- `undertowPass18bTraversableQaAnchors` in
+  `UndertowSpillwayConnectivityQa.ts` separately names its
+  **navigation audit node** `paint:\${backingSolidId}`.
+  That navigation anchor is NOT the paint surface ID, nor does it appear
+  in the 17 native B312 `originalRows` owner surface IDs.
+- `TestStage.defineTestSurfaces` passes actual `surface.id` through.
+
+Therefore the old `<backingSolidId>:paint` mapping in B337 driver/auditor
+was correct and is **restored** on this SHA. Unit fixture and explicit
+negative test now reject the false `paint:<backingSolidId>` nav-only
+alias. No geometry, collider, CPU, actor or ink source modified.
+
+Other useful B337 improvements are **retained**: real camera/body
+positions are recorded; the independent observer derives expected yaw
+and pitch geometrically from the actual B271 active painted cell and
+genuine camera snapshot. These remain unverified in real Chromium until
+GitHub Actions runs. The erroneous preceding study commit MUST NOT be
+used as a source ID specification.
