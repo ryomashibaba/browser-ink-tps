@@ -1,5 +1,7 @@
 # Browser Ink TPS — START HERE / 新チャット固定入口
 
+> **最新真正状況（2026-11-03）**：B413の修正版は [Actions #41651119100](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41651119100) にて本物のインク消費→OWNイカ補給→再射撃と同一SOURCE 180秒独立監査まで**限定PASS**（コードSHA `53839205a451…`、artifact `13238617827`）。B413の「修正中」は古い時点の経緯。F5 HUD研究は別SHAで独立検証中の場合があるため、そのPASSをB413から転用しない。正式4v4/原作Scoreable/敵HP/ART/本番はHOLD。
+
 **2026-11-03 JST。継続研究 branch: research/t21-b406-single-session-real-enemy-range-audit-20261103。**
 
 まず **[B412真正PASS・B413修正中・全体方針・実証・失敗・次工程の完全統合引き継ぎ](docs/continuity/HANDOFF_20261103_B413_TO_NEW_CHAT_COMPLETE_JA.md)** を全文読む。B405〜B412の成功を巻き戻さず、最新版のGitHub実HEADとActions・artifactを照合する。ユーザーへのZIP再提出やWindowsローカル操作を不要にする。

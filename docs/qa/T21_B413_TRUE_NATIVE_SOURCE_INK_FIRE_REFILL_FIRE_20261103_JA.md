@@ -31,3 +31,10 @@
 - 90秒 native tick6510→6588、実人間Shots 68→85（17）、実ink 100→83.85（16.15消費）、原作右上段支持、実カメラとCDP照準一致。従来 `humanLastImpactTick=4740` は120秒時点の古い実変化セルのtick、90秒の新しい着弾は未認証。候補の元セルは全てOWN（nonOwnCandidateCount=0）。
 - 原因を原本追跡：`UndertowF3SourceInkFeedback.accept` はHuman `Impact/WallImpact` のうち `changedCells<=0` を既存 `lastImpactTick` から除外。これは**実接触したが既にOWNで0変化**と**本当の弾外れ**を区別できない。90秒17発の実接触を現状RAWだけでは認証不可。
 - 修正は元 `PaintCoordinator` に受理されたHuman `Impact/WallImpact` のイベント数・target原作surface・native tick・changedCellsを別の読み取り専用証拠として追記するだけ。既存B23セル変化・原作ownerGrid・得点・HP・stage・試合時間・CPUは変更しない。B413は新しい実接触イベント＋本物shot/ink消費＋OWN補給＋ヒト復帰/再射撃＋180秒を要求したまま。**新SHAの真正同一試合・独立監査成功まではB413 HOLD**。
+
+## B413真正SOURCE限定PASS — 2026-11-03 最終監査
+
+- [Actions #41651119100](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41651119100) は全工程SUCCESS、実ゲームSHA `53839205a451192b125ca50f8693d157af8d9bf2`、真正artifact **13238617827**。ZIP SHA256 `b55ffc7d2ed0acc7c46e6b7eabee4b97a9cb768d5e0d94a6c68e49214f3c5e7c`。GitHubに保存された独立B409/B410/B411/B412/B413は**同じ真正Chromium180秒ゲーム**をPASS。
+- ネイティブ残り90秒で実人間17発・実タンク **16.15** 消費・原作右上段PaintCoordinator Human Impact/WallImpact **17件**。元OWNインクでSQUID_OWN回復が**実測6.8増**、ヒト形態に物理復帰後14発・実タンク **13.30** 消費・同原作右上段実Impact/WallImpact **13件**。既OWN再着弾でchangedCells=0のイベントは原作新規塗装セルと区別し、実接触と所有変化を混同しない。
+- 本物の元4 PaintSurfaces人間塗装、原作高所→下段→坂→上段KCC、イカOWN実泳ぎ5.237787514m、CPU7、実TIME_UP **tick11857**、人間総116shots/1112原作owner変化セル、CPU151shot requests/12014変化セル。人間→敵CPU HP命中/撃破/復活は **0**、正式4v4・Turf Scoreable0/公式勝敗・ART・productionはHOLD。元25/17/26/0、自然対岸0/12の固定を維持。
+- 初回失敗 [#41644833953](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41644833953) と２回目失敗 [#41647713309](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41647713309) は履歴から消さず、そのSHAも後付けPASS扱いにしない。今回の修正は真正受理されたPaintCoordinatorイベントを読み取り専用で記録し、実塗装所有変化の判定は一切緩めていない。

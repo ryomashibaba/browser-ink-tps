@@ -24,3 +24,10 @@ Splatoon 3 v7.2.0マテガイ放水路通常ナワバリ。25 Rapier solids / 17
 - 初回のコードは「120秒のB408で成功したCDP x/y」をそのまま90秒とイカ復帰後に再利用した。ログと原本では120秒時点のB408 source cell grid[90,131]・world[12.4381,4.502,50.7800]・CDP[805,475]・本当の観測カメラ yaw71.5/pitch-40.62・元のUpperPaintSurface実impactTick4729を確認。一方で90秒時点の**現在の本物のカメラから**再照準した保証はなかった。これが原因である可能性が高いが、初回には新B413の個々の実SHOT/impact/カメラ観測原本がなく**原因を確定できない**。
 - 修正では既存B408の **read-only 原作ownerGrid＋実カメラの安全なCDP射撃計画を、B413各射撃（90秒、イカから戻った後）それぞれで新たに計算**、本当の `Input.dispatchMouseEvent(mouseMoved)` から `b408NativeMouseAligned` で現実のcamera yaw/pitchを照合してからメイン射撃する。SOURCE floor/support、原作17セル、実インク消費、元impactTick/Surface、cpu7/clock/Scoreable0の要求は減らさない。独立監査も各射撃の **B408原作surface provenance＋実CDP一致＋実camera alignment** をチェックする。
 - また再発HOLDでも `b413-real-original-ink-fire-refill-fire.json` に各段階の実nativeインク残量・shot count・current SOURCE aim・実カメラ・実impact/foot等を逐次保存する。テスト証拠はfake不可。**修正版の新しいCI同SHAで全パスするまではB413 HOLDを維持**する。B405〜B412の狭い真正PASSは保護。
+
+## B413真正SOURCE限定PASS — 2026-11-03 最終監査
+
+- [Actions #41651119100](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41651119100) は全工程SUCCESS、実ゲームSHA `53839205a451192b125ca50f8693d157af8d9bf2`、真正artifact **13238617827**。ZIP SHA256 `b55ffc7d2ed0acc7c46e6b7eabee4b97a9cb768d5e0d94a6c68e49214f3c5e7c`。GitHubに保存された独立B409/B410/B411/B412/B413は**同じ真正Chromium180秒ゲーム**をPASS。
+- ネイティブ残り90秒で実人間17発・実タンク **16.15** 消費・原作右上段PaintCoordinator Human Impact/WallImpact **17件**。元OWNインクでSQUID_OWN回復が**実測6.8増**、ヒト形態に物理復帰後14発・実タンク **13.30** 消費・同原作右上段実Impact/WallImpact **13件**。既OWN再着弾でchangedCells=0のイベントは原作新規塗装セルと区別し、実接触と所有変化を混同しない。
+- 本物の元4 PaintSurfaces人間塗装、原作高所→下段→坂→上段KCC、イカOWN実泳ぎ5.237787514m、CPU7、実TIME_UP **tick11857**、人間総116shots/1112原作owner変化セル、CPU151shot requests/12014変化セル。人間→敵CPU HP命中/撃破/復活は **0**、正式4v4・Turf Scoreable0/公式勝敗・ART・productionはHOLD。元25/17/26/0、自然対岸0/12の固定を維持。
+- 初回失敗 [#41644833953](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41644833953) と２回目失敗 [#41647713309](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41647713309) は履歴から消さず、そのSHAも後付けPASS扱いにしない。今回の修正は真正受理されたPaintCoordinatorイベントを読み取り専用で記録し、実塗装所有変化の判定は一切緩めていない。
