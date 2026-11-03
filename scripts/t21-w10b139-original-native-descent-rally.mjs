@@ -8,7 +8,8 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import {sampleB140RealSourcePhysicalTrace} from './t21-w10b140-real-physics-sample.mjs';
 import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
  from './t21-b313-actual-original-cell-aim.mjs';
-import {RAMP,planB316ActualOriginalRampApproach,auditB316RealMovement}
+import {RAMP,planB316ActualOriginalRampApproach,auditB316RealMovement,
+ b316CanAttemptOriginalKccWithoutInkPromotion}
  from './t21-b316-native-human-ramp-walk.mjs';
 import {b318NativeOriginalRampInterior,b318OriginalQuadPlanarSignedMargin}
  from './t21-b318-original-ramp-interior.mjs';
@@ -246,6 +247,8 @@ async function b328ShortNativeKey(key,ticks){
  */
 async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  let b316ThreeOriginalHumanSurfacesProven=false;
+ let b316ActualRampWalkProven=false;
+ let b322ActualUpperExitProven=false;
  const checkpoint=await snapshot();authority(checkpoint,'FIXED');
  // Native B139 original successful entrance camera orientation.
  // Restore this through REAL mouse movement after human upper practice;
@@ -868,11 +871,28 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      'UndertowT21D:first-drop-landing-positive-z:paint'&&
     result.provenSecondPaintSources[1]===
      'UndertowT21D:right-low-route-ramp-positive-z:paint';
- if(b316GenuineRampWalk&&coopAttempt===1&&
-    b316ThreeOriginalHumanSurfacesProven){
-  // Run AFTER actual B162 first ally clear. It may fail KCC ramp traversal
-  // without losing the independently verified B315 3-source proof.
-  const first=await b312Ledger();
+ // B315's extra original PAINT surfaces remain independently unproven
+ // unless BOTH exact Human impact sources passed. A real B316 lower KCC
+ // is a different F2 acceptance contract and must not be suppressed by
+ // the unrelated absence of one successful paint stamp.
+ const b316LowerBody=b316GenuineRampWalk&&coopAttempt===1?
+  await b312Ledger():null;
+ const b316KccStart=!!b316LowerBody&&
+  b316CanAttemptOriginalKccWithoutInkPromotion(b316LowerBody);
+ if(b316GenuineRampWalk&&coopAttempt===1)
+  console.log('B316_INDEPENDENT_REAL_LOWER_KCC_START',JSON.stringify({
+   eligible:b316KccStart,
+   actualOriginalFoot:b316LowerBody?.genuineHumanOriginalFootSolid??null,
+   originalFootSupported:b316LowerBody?.realHumanOriginalFootSupported??false,
+   b315ThreeDistinctHumanSourcePaintSurfacesProven:
+    b316ThreeOriginalHumanSurfacesProven,
+   source:'25/17/26/0',actorRelocations:0,
+   officialWinner:'NONE',routeCertified:false
+  }));
+ if(b316KccStart){
+  // Real CDP camera/keys and the unchanged strict B316/B320/B321/B322
+  // original-foot audits alone determine real physical route success.
+  const first=b316LowerBody;
   const angle=(await snapshot()).cameraSourcePractice;
   const plan=b318InteriorWalk?
    b318NativeOriginalRampInterior({quad:first.originalPositiveRampSourceQuad,
@@ -883,6 +903,9 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    const result={schema:'B316_TRUE_CDP_LOWER_ORIGINAL_RAMP_WALK',
     status,first,angle,plan,steps,
     b318OriginalRampInteriorGuideOptIn:b318InteriorWalk,
+    b315ThreeHumanPaintSurfacesIndependentlyProven:
+     b316ThreeOriginalHumanSurfacesProven,
+    physicalKccStartVerified:b316KccStart,
     ...(steps.length?auditB316RealMovement({first,steps}):{
      verdict:'HOLD_NO_SAFE_ORIGINAL_RAMP_MOVEMENT_STARTED',
      reachedOriginalRampOnGenuineCharacterKcc:false}),
@@ -951,6 +974,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
   }
   const finalB316=saveB316(steps.length?'REAL_NATIVE_KCC_ROUTE_OBSERVED':
    'HOLD_UNSAFE_OR_UNREACHABLE_RAMP_APPROACH');
+  b316ActualRampWalkProven=finalB316.reachedOriginalRampOnGenuineCharacterKcc===true;
   await picture('B316_REAL_ORIGINAL_RAMP_KCC_AFTER_ATTEMPT');
   console.log('B316_REAL_ORIGINAL_RAMP_KCC_VERDICT',JSON.stringify({
    verdict:finalB316.verdict,
@@ -1147,6 +1171,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
      }
      const verdict=save(steps.length?'REAL_PHYSICAL_CREST_ATTEMPT':
       'HOLD_NO_PHYSICAL_CREST_INPUT');
+     b322ActualUpperExitProven=verdict.originalUpperFloorReached===true;
      console.log('B322_NATIVE_REAL_CREST_RESULT',JSON.stringify({
       verdict:verdict.verdict,crest:verdict.crestProven,
       nextOriginalFloor:verdict.originalUpperFloorReached,
@@ -1367,6 +1392,10 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  saveAttempt(final,actualClear?
   'B162_NATIVE_60HZ_GENUINE_COOPERATIVE_CLEAR':
   'B162_HOLD_REAL_SOURCE_COOPERATIVE_NOT_CLEARED');
+ // This F2 CI MUST NOT report success solely because A1 happened to CLEAR.
+ // A true B322 upper-floor exit still requires its independent KCC verdict.
+ if(b322RealCrest&&!b322ActualUpperExitProven)
+  fail('B322_REAL_ORIGINAL_RAMP_UPPER_EXIT_NOT_CERTIFIED');
  if(!actualClear){
   console.error('B162_REAL_SOURCE_COOPERATIVE_HOLD',JSON.stringify({
    humanCells:run.humanChangedImpactCells,
@@ -1379,13 +1408,14 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    b137ApprovedRallies:final.cpu.sourcePatrol.b137ApprovedNativeRallies,
    b150ApprovedInkAims:final.cpu.sourcePatrol.b150ApprovedInkAims,
    status:run.status,abort:run.abortReason,ui}));
-  if(b316GenuineRampWalk&&b316ThreeOriginalHumanSurfacesProven){
-   // B316's goal is *human KCC landing-to-ramp*, not the unrelated
-   // B200 two-ally-clear repeat. Keep this A1 miss as genuine HOLD.
-   console.log('B316_INDEPENDENT_RAMP_WALK_RETAINED_A1_MISSION_HOLD',
+  if(b316GenuineRampWalk&&b316ActualRampWalkProven){
+   // Keep A1's failed cooperative mission as a distinct genuine HOLD.
+   // A source-backed native KCC walk does not depend on two B315 paint hits.
+   console.log('B316_REAL_F2_RAMP_PASS_A1_MISSION_STILL_HOLD',
     JSON.stringify({A1Cells:run.actualOriginalA1ChangedImpactCells,
-     actualCoopStatus:run.status,
-     b316IsNotA1Clear:true,threeHumanSourceEvidence:true}));
+     actualCoopStatus:run.status,b316OriginalRampWalk:true,
+     b315ThreePaintSurfacesProven:b316ThreeOriginalHumanSurfacesProven,
+     source:'25/17/26/0',officialWinner:'NONE'}));
    return;
   }
   fail('B162_NATIVE_ORIGINAL_ALLY_SYNC_NOT_CLEARED');

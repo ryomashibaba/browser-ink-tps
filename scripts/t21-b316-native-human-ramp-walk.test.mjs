@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {RAMP,LANDING,planB316ActualOriginalRampApproach,
- auditB316RealMovement} from './t21-b316-native-human-ramp-walk.mjs';
+ auditB316RealMovement,b316CanAttemptOriginalKccWithoutInkPromotion as canWalk} from './t21-b316-native-human-ramp-walk.mjs';
 const point=[.137,3.895,48.736];
 const real=(foot,body=point,tick=1700,ramp=false)=>({
  tick,source:'25/17/26/0',actualBodyMeters:body,
@@ -45,4 +45,26 @@ test('B316 never accepts actor relocation or fabricated large jump',()=>{
   realKey:'KeyW',nativeInputTicks:5,
   after:{...real(RAMP,[.7,3.9,48],1705,true),
    sourceActorRelocations:1}}]}));
+});
+
+test('F2 source-grounded B316 walk is independent from unproven B315 ink',()=>{
+ const source=real(LANDING);
+ // No B315 multi-surface certificate in this genuine KCC ledger fixture:
+ // the original body and exact registered lower support are still known.
+ assert.equal(canWalk(source),true);
+ for(const mutate of [
+  x=>{x.source='UNKNOWN';},x=>{x.originalRows=[];},
+  x=>{x.realHumanOriginalFootSupported=false;},
+  x=>{x.genuineHumanOriginalFootSolid=RAMP;},
+  x=>{x.actualBodyMeters=[NaN,3.895,48];},
+  x=>{x.sourceActorRelocations=1;},
+  x=>{x.sourceInkRewritten=true;},
+  x=>{x.playerPositionRewritten=true;}
+ ]){
+  const damaged=structuredClone(source);mutate(damaged);
+  assert.equal(canWalk(damaged),false);
+ }
+ assert.equal(canWalk(null),false);
+ // This start gate is NOT a B316 PASS: unchanged native KCC audit owns it.
+ assert.throws(()=>auditB316RealMovement({first:source,steps:[]}));
 });

@@ -88,3 +88,19 @@ export function auditB316RealMovement({first,steps,targetId=RAMP}){
   stageSolidsChanged:0,original4v4Certified:false,
   artAccepted:false,productionAuthorized:false};
 }
+
+/** Independent F2 original physical ramp-entry eligibility. B312/B315
+ * ink provenance is deliberately NOT a KCC prerequisite; it stays HOLD
+ * unless its own exact human impact requirements succeed. This cannot
+ * grant original walking, collision, route or gameplay authorization.
+ * B316 still requires actual CDP keys and its unchanged per-step audit. */
+export function b316CanAttemptOriginalKccWithoutInkPromotion(ledger){
+ return ledger?.source==='25/17/26/0'&&
+  ledger.originalRows?.length===17&&
+  finiteTriplet(ledger.actualBodyMeters)&&
+  ledger.genuineHumanOriginalFootSolid===LANDING&&
+  ledger.realHumanOriginalFootSupported===true&&
+  ledger.sourceActorRelocations===0&&
+  ledger.sourceInkRewritten===false&&
+  ledger.playerPositionRewritten===false;
+}
