@@ -5241,13 +5241,13 @@ export class UndertowF3PlayablePreviewApp{
   inkGauge.id='t21-f3-b414-native-ink';
   inkGauge.hidden=true;
   inkGauge.style.cssText='display:none;margin-top:7px;text-align:left;'+
-   'font:650 10px/1.4 system-ui;color:#d9fff2;';
+   'font:700 11px/1.4 system-ui;color:#d9fff2;';
   inkGauge.setAttribute('aria-label','Real player ink resource');
   const inkText=document.createElement('div');
   inkText.id='t21-f3-b414-ink-text';
   inkGauge.appendChild(inkText);
   const inkTrack=document.createElement('div');
-  inkTrack.style.cssText='margin-top:4px;height:6px;background:#ffffff2b;'+
+  inkTrack.style.cssText='margin-top:5px;height:8px;background:#ffffff2b;'+
    'border-radius:6px;overflow:hidden;';
   const inkFill=document.createElement('div');
   inkFill.id='t21-f3-b414-ink-fill';
@@ -5362,12 +5362,15 @@ export class UndertowF3PlayablePreviewApp{
   inkGauge.hidden=!showInk;
   inkGauge.style.display=showInk?'block':'none';
   inkGauge.dataset.t21B414RealNativeSource=String(showInk);
+  inkGauge.dataset.t21B414RenderTick=String(this.clock.tick);
   if(showInk){
    inkGauge.dataset.t21B414ActualInk=String(ink);
    inkGauge.dataset.t21B414Recovery=String(recovery);
    inkGauge.dataset.t21B414Mode=String(mode);
-   const recoveryLabel=recovery==='SQUID_OWN'?'OWN INK · RECOVERING':
-    recovery==='LOCKED'?'RECOVERY LOCKED':String(recovery);
+   const recoveryLabel=ink>=99.95?'FULL':
+    recovery==='SQUID_OWN'?'OWN INK · REFILLING':
+    recovery==='LOCKED'?'RECOVERY LOCKED':
+    recovery==='HUMAN'?'HUMAN RECOVERY':'NO OWN REFILL';
    root.querySelector<HTMLElement>('#t21-f3-b414-ink-text')!.textContent=
     'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+recoveryLabel;
    const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill')!;

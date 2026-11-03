@@ -2155,10 +2155,39 @@ async function run(){
    syntheticResourceWrites:false,syntheticShotWrites:false,
    syntheticTimeWrites:false,syntheticActorWrites:false,
    samples:[],probes:[],pre:null,post:null,
-   swimInitialShots:null,swimFinalShots:null
+   swimInitialShots:null,swimFinalShots:null,
+   hud:{schema:'B414_READ_ONLY_REAL_CHROMIUM_DOM',samples:[]}
   };
   const saveB413=()=>writeFileSync(resolve(OUTPUT,
    'b413-real-original-ink-fire-refill-fire.json'),JSON.stringify(b413,null,2)+'\n');
+  const sampleB414=async label=>{
+   const data=await evaluate(`(() => {
+    const n=window.__t21F3.snapshot();
+    const g=document.querySelector('#t21-f3-b414-native-ink');
+    const root=document.querySelector('#t21-f3-b195-native-coop');
+    return {
+     tick:n.tick,phase:n.matchState,paused:n.paused,
+     original:[n.originalSourceSolids,n.originalPaintSurfaces,
+      n.originalSourceNavigationLinks,n.sourceScoreablePromotions].join('/'),
+     winner:n.b25SourcePaintRun.officialWinner,
+     cpu:n.cpu.physicalRejoins.length,
+     relocated:n.cpu.physicalFootRelocations,
+     ink:n.player.ink,mode:n.player.mode,
+     recovery:n.playerInkRecoveryState,relation:n.player.inkRelation,
+     focused:root?.dataset.t21B411Active,
+     scoreable:root?.dataset.originalScoreable,
+     hudWinner:root?.dataset.officialWinner,
+     visible:g?.hidden===false&&getComputedStyle(g).display!=='none',
+     hudInk:Number(g?.dataset.t21B414ActualInk),
+     hudMode:g?.dataset.t21B414Mode,
+     hudRecovery:g?.dataset.t21B414Recovery,
+     renderTick:Number(g?.dataset.t21B414RenderTick),
+     text:document.querySelector('#t21-f3-b414-ink-text')?.textContent,
+     width:document.querySelector('#t21-f3-b414-ink-fill')?.style.width
+    };
+   })()`);
+   b413.hud.samples.push({label,...data});saveB413();
+  };
   for(const remaining of [150,120,90,60,30,0]){
    const next=await until(async()=>{
     const n=await snapshot();authority(n,'FIXED');
@@ -2203,8 +2232,10 @@ async function run(){
       'b412-original-upper-real-own-ink-swim.json');
      // The 120-second CDP pointer coordinates are historical only.
      // B413 asks B408 for a FRESH true native ownerGrid + camera aim.
-     const observeB413=real=>{
+     const observeB413=async real=>{
       b413.probes.push(real);
+      if(b413NativeInkLoop)await sampleB414(real.phase+'_'+(
+       real.stage==='REAL_ORIGINAL_NATIVE_CAMERA_ALIGNED'?'BEFORE':'AFTER'));
       saveB413();
       console.log('B413_TRUE_SOURCE_LIVE_FIRE_PROBE',JSON.stringify({
        phase:real.phase,stage:real.stage,body:real.after?.body??real.before?.body,
@@ -2241,9 +2272,18 @@ async function run(){
       locked:()=>evaluate(
        'document.pointerLockElement===document.querySelector("#app-canvas")'),
       verify:n=>{authority(n,'FIXED');return n;},
-      onEvidence:real=>{
+      onEvidence:async real=>{
        writeFileSync(sourceTrace,JSON.stringify(real,null,2)+'\n');
-       if(b413NativeInkLoop)saveB413();
+       if(b413NativeInkLoop){
+        const leg=real.legs?.at(-1);
+        if(real.lastPhase?.startsWith('GENUINE_NATIVE_LEG_')&&
+           leg?.inkRelation==='OWN'&&leg?.locomotion==='SWIM_GROUND'&&
+           b413.hud.samples.filter(s=>s.label==='SQUID_OWN').length<8)
+         await sampleB414('SQUID_OWN');
+        if(real.lastPhase==='HUMAN_NATIVE_RETURNED_ON_ORIGINAL_SOURCE')
+         await sampleB414('HUMAN_RETURN');
+        saveB413();
+       }
       }
      });
      writeFileSync(sourceTrace,JSON.stringify(b412Evidence,null,2)+'\n');
@@ -2313,6 +2353,7 @@ async function run(){
    fail('B409_GENUINE_SOURCE_MATCH_NO_REAL_TIME_UP');
   await picture('B409_REAL_ROUTE_TIME_UP');
   if(b411SourceGameplayHud)await sampleB411('TIME_UP');
+  if(b413NativeInkLoop)await sampleB414('TIME_UP');
   console.log('B409_ORIGINAL_ROUTE_AND_180S_GENUINE_TIME_UP',
    JSON.stringify({nativeTick:end.tick,
     actualHumanShots:end.shotsFired,
