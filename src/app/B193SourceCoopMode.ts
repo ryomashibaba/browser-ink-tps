@@ -43,3 +43,20 @@ export function sourceFullRoundCanArmWhilePaused(v:{
   v.realPointerPreviouslyLocked&&v.matchState==='PLAYING'&&
   v.practiceStatus==='IDLE'&&!v.stopReason;
 }
+
+/** Real dedicated A1 cooperation can be ARMED at fresh native READY,
+ * before the player starts the SAME original 180s world. This is not a
+ * game-start transition or collision permission. All other READY
+ * challenges retain the existing pointer-lock/paused-play gate. */
+export function sourceOriginalCoopCanArmAtReady(v:{
+ fullRound:boolean;originalCoop:boolean;paused:boolean;
+ everLockedRealPointer:boolean;nativeTick:number;
+ matchState:'STAGING'|'PLAYING'|'TIME_UP';
+ practiceStatus:'IDLE'|'ARMED'|'RUNNING'|'CLEAR'|'TIME_UP'|'ABORTED';
+ stopReason:string|null;
+}):boolean{
+ return v.fullRound&&v.originalCoop&&v.paused&&
+  !v.everLockedRealPointer&&v.nativeTick===0&&
+  v.matchState==='STAGING'&&v.practiceStatus==='IDLE'&&
+  !v.stopReason;
+}

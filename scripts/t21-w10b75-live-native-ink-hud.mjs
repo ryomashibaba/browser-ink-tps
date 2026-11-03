@@ -1819,6 +1819,92 @@ async function run(){
      writeFileSync(resolve(OUTPUT,'b287-real-a1-coop-user-click.json'),
       JSON.stringify(a1Proof,null,2));
      console.log('B287_REAL_USER_A1_COOP_FRESH_WORLD_PASS',JSON.stringify(a1Proof));
+     // F3 practical one-click flow: authentic user CLICK on the
+     // co-op mission start in the NEW frozen A1 world (not after a
+     // confusing START-ESC-rearm dance). At native tick 0 it must be
+     // ARMED but NOT RUNNING; only seven genuinely rejoined CPUs and
+     // native PLAYING later can start this independent 60s mission.
+     const a1Start=await evaluate(`(() => {
+      const b=document.querySelector('#t21-f3-b25-start');
+      const card=document.querySelector('#t21-f3-b25-paint-run');
+      const rect=b?.getBoundingClientRect();
+      return {text:b?.textContent,disabled:b?.disabled,
+       cardHidden:card?.hidden,cardDisplay:card?getComputedStyle(card).display:null,
+       x:rect?.left+rect?.width/2,y:rect?.top+rect?.height/2,
+       width:rect?.width,height:rect?.height};
+     })()`);
+     if(!a1Start.text?.includes('START REAL A1 CO-OP')||
+        a1Start.disabled||a1Start.cardHidden||
+        a1Start.cardDisplay==='none'||a1Start.width<50||
+        a1Start.height<20||!(a1Start.x>0&&a1Start.x<1600&&
+        a1Start.y>0&&a1Start.y<900))
+      fail('B287_A1_READY_MISSION_BUTTON_INACCESSIBLE_'+JSON.stringify(a1Start));
+     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+      x:a1Start.x,y:a1Start.y,button:'none'});
+     for(const type of ['mousePressed','mouseReleased'])
+      await cmd('Input.dispatchMouseEvent',{type,
+       x:a1Start.x,y:a1Start.y,button:'left',clickCount:1});
+     const armedWorld=await snapshot();
+     const armedState=await evaluate(`(() => ({
+      tick:window.__t21F3?.snapshot?.()?.tick,
+      status:window.__t21F3?.snapshot?.()?.b25SourcePaintRun?.status,
+      variant:window.__t21F3?.snapshot?.()?.b25SourcePaintRun?.practiceVariant,
+      elapsed:window.__t21F3?.snapshot?.()?.b25SourcePaintRun?.elapsedTicks,
+      button:document.querySelector('#t21-f3-b25-start')?.textContent,
+      progress:document.querySelector('#t21-f3-b25-progress')?.textContent,
+      ready:document.querySelector('#t21-f3-b202-real-pause')
+       ?.dataset.t21B202NativeState
+     }))()`);
+     if(armedState.tick!==0||armedState.status!=='ARMED'||
+        armedState.variant!=='ALLY_SYNC'||armedState.elapsed!==0||
+        armedState.ready!=='READY_TO_START'||!armedState.progress?.includes('7/7')||
+        armedWorld.cpu.physicalRejoins.length!==0||
+        armedWorld.cpu.physicalFootRelocations!==0)
+      fail('B287_A1_READY_PREARM_INTEGRITY_'+JSON.stringify(armedState));
+     const begin=await evaluate(`(() => {
+      const b=document.querySelector('#t21-f3-b202-resume');
+      const bounds=b?.getBoundingClientRect();
+      return {text:b?.textContent,
+       x:bounds?.left+bounds?.width/2,
+       y:bounds?.top+bounds?.height/2};
+     })()`);
+     if(!begin.text?.includes('START 180s')||
+        !(begin.x>0&&begin.x<1600&&begin.y>0&&begin.y<900))
+      fail('B287_A1_REAL_ROUND_START_INACCESSIBLE_'+JSON.stringify(begin));
+     await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',
+      x:begin.x,y:begin.y,button:'none'});
+     for(const type of ['mousePressed','mouseReleased'])
+      await cmd('Input.dispatchMouseEvent',{type,
+       x:begin.x,y:begin.y,button:'left',clickCount:1});
+     const actualStaging=await until(async()=>{
+      const v=await snapshot();
+      return v.tick>=12&&v.matchState==='STAGING'&&
+       !v.paused&&v.cpu.physicalRejoins.length<7?v:false;
+     },90000);
+     const practice=actualStaging.b25SourcePaintRun;
+     if(practice.status!=='ARMED'||practice.elapsedTicks!==0||
+        practice.humanChangedImpactCells!==0||
+        practice.actualOriginalA1ChangedImpactCells!==0||
+        actualStaging.cpu.physicalFootRelocations!==0)
+      fail('B287_A1_PREMATURE_NATIVE_MISSION_'+JSON.stringify({
+       tick:actualStaging.tick,mission:practice,
+       nativeRejoins:actualStaging.cpu.physicalRejoins.length}));
+     const a1ReadyProof={schema:'B287_REAL_A1_ONE_CLICK_READY_TO_NATIVE_STAGING',
+      realUserMissionClick:true,missionArmedAtActualNativeTick:armedState.tick,
+      missionVariant:armedState.variant,realNativeRoundStarted:true,
+      nativeTick:actualStaging.tick,
+      actualNativePhase:actualStaging.matchState,
+      realSourceCpuRejoined:actualStaging.cpu.physicalRejoins.length,
+      nativeMissionStillArmed:true,actualMissionElapsedNativeTicks:0,
+      genuineCpuBodyRelocations:0,originalAuthority:'25/17/26/0',
+      scoreablePromotions:0,opponentRoutesCertified:'0/12',
+      officialWinner:'NONE',noInjectedTimeOrBodies:true,
+      genuine7of7AndA1MissionClearCertified:false,
+      productionAuthorized:false};
+     writeFileSync(resolve(OUTPUT,'b287-real-a1-ready-prearm-native-start.json'),
+      JSON.stringify(a1ReadyProof,null,2));
+     console.log('B287_REAL_USER_A1_READY_PREARM_NATIVE_START_PASS',
+      JSON.stringify(a1ReadyProof));
      return;
     }
     // B250: same Chromium camera and paused zero-tick world, with only

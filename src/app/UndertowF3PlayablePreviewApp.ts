@@ -45,7 +45,8 @@ import {UndertowF3KineticView,B27_SOURCE_BASE_FOV_DEGREES}
 import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
-import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
+import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused,
+ sourceOriginalCoopCanArmAtReady} from './B193SourceCoopMode';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
 import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
@@ -2005,6 +2006,12 @@ export class UndertowF3PlayablePreviewApp{
      this.b25RunProgress.textContent='Press ESC and close gallery/survey before replay.';
     return;
    }
+   const permittedReadyCoopArm=sourceOriginalCoopCanArmAtReady({
+    fullRound:this.b203FullRound,originalCoop:b193Coop,
+    paused:this.paused,everLockedRealPointer:this.b203EverLockedRealPointer,
+    nativeTick:this.clock.tick,matchState:this.matchState,
+    practiceStatus:this.b25Run.snapshot().status,stopReason:this.stopReason
+   });
    const permittedPausedArm=sourceFullRoundCanArmWhilePaused({
     enabled:this.b203FullRound,paused:this.paused,
     awaitingPointerRelock:this.resumeAfterRealPointerLock,
@@ -2014,7 +2021,7 @@ export class UndertowF3PlayablePreviewApp{
     stopReason:this.stopReason
    });
    if(document.pointerLockElement===this.canvas||
-      (this.paused&&!permittedPausedArm)||this.stopReason||
+      (this.paused&&!permittedPausedArm&&!permittedReadyCoopArm)||this.stopReason||
       this.matchState==='TIME_UP'||this.survey.snapshot().active||
       this.galleryIndex>=0||['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
     this.b25RunProgress.textContent='Exit pause/survey and unlock mouse before arming.';
@@ -2028,8 +2035,10 @@ export class UndertowF3PlayablePreviewApp{
      'ALLY SYNC requires explicit original A1 rally + ink opt-in.';
     return;
    }
-   if(this.b25Run.arm(this.b56NextVariant)){
-    this.b25RunProgress.textContent='ARMED · Click stage for real pointer lock and 60Hz resume.';
+   if(this.b25Run.arm(this.b56NextVariant,permittedReadyCoopArm)){
+    this.b25RunProgress.textContent=permittedReadyCoopArm?
+     'A1 CO-OP ARMED · Now press START 180s. The 60s mission begins after real CPU 7/7 rejoin.':
+     'ARMED · Click stage for real pointer lock and 60Hz resume.';
     this.b25RunButton.textContent='PAINT RUN ARMED';
     this.b25RunButton.disabled=true;
     // Real click updates the dual objective display immediately;
@@ -4810,6 +4819,9 @@ export class UndertowF3PlayablePreviewApp{
      tick:frame,paused:this.paused,stopReason:this.stopReason,
      inputLocked:document.pointerLockElement===this.canvas,
      sessionEnded:this.matchState==='TIME_UP',
+     realSourceMatchPlaying:this.matchState==='PLAYING',
+     allSevenSourceCpuPhysicallyRejoined:
+      this.traffic.snapshot().physicalRejoins.length===7,
      sourceSolids:this.rawStage.solids.length,
      paintableSurfaces:this.rawStage.paintSurfaces.length,
      originalNavLinks:this.rawStage.navigationLinks?.length??0,
@@ -5500,6 +5512,9 @@ export class UndertowF3PlayablePreviewApp{
   this.b25RunCard.dataset.t21B197ReplayReason=replay.reason;
   button.disabled=!replay.replay&&(run.status==='ARMED'||run.status==='RUNNING');
   button.textContent=replay.replay?replay.buttonText:
+   run.status==='ARMED'&&dedicatedCoop?
+    (this.clock.tick===0?
+     'A1 CO-OP ARMED · START 180s':'A1 CO-OP ARMED · WAIT REAL 7/7'):
    run.status==='CLEAR'||run.status==='TIME_UP'||run.status==='ABORTED'?
    'RETRY '+run.practiceVariant:'PAINT RUN ACTIVE';
   if(replay.replay){
@@ -5515,7 +5530,12 @@ export class UndertowF3PlayablePreviewApp{
    return;
   }
   if(run.status==='ARMED'){
-   this.b25RunProgress.textContent='ARMED · Click the stage to play.';
+   this.b25RunProgress.textContent=dedicatedCoop&&
+    this.matchState==='STAGING'?
+     (this.clock.tick===0?
+      'A1 CO-OP ARMED · Press START 180s. The real 60s mission waits for original CPU 7/7.':
+      'A1 CO-OP ARMED · Waiting for 7/7 original Rapier CPU rejoin. Mission time still 0.'):
+     'ARMED · Click the stage to play.';
    return;
   }
   const progress='PAINT '+run.humanChangedImpactCells+'/'+

@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
-import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused} from './B193SourceCoopMode';
+import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused,
+ sourceOriginalCoopCanArmAtReady} from './B193SourceCoopMode';
 describe('B204 native 180s paused user mission arming',()=>{
  const v={enabled:true,paused:true,awaitingPointerRelock:true,
   realPointerPreviouslyLocked:true,matchState:'PLAYING' as const,
@@ -87,5 +88,23 @@ describe('B341 exact research-only A/B source navigation',()=>{
    for(const k of ['t21W10B341','t21W10B64','t21W10B178','t21W10B180'])
     expect(next.searchParams.has(k)).toBe(false);
   }
+ });
+});
+
+describe('Real A1 co-op READY one-click mission arming',()=>{
+ const fresh={fullRound:true,originalCoop:true,paused:true,
+  everLockedRealPointer:false,nativeTick:0,matchState:'STAGING' as const,
+  practiceStatus:'IDLE' as const,stopReason:null};
+ it('permits only explicit fresh original A1 world at frozen tick 0',()=>{
+  expect(sourceOriginalCoopCanArmAtReady(fresh)).toBe(true);
+  for(const k of ['fullRound','originalCoop','paused'] as const)
+   expect(sourceOriginalCoopCanArmAtReady({...fresh,[k]:false})).toBe(false);
+  expect(sourceOriginalCoopCanArmAtReady({...fresh,everLockedRealPointer:true})).toBe(false);
+  expect(sourceOriginalCoopCanArmAtReady({...fresh,nativeTick:1})).toBe(false);
+  for(const matchState of ['PLAYING','TIME_UP'] as const)
+   expect(sourceOriginalCoopCanArmAtReady({...fresh,matchState})).toBe(false);
+  for(const practiceStatus of ['ARMED','RUNNING','CLEAR','TIME_UP','ABORTED'] as const)
+   expect(sourceOriginalCoopCanArmAtReady({...fresh,practiceStatus})).toBe(false);
+  expect(sourceOriginalCoopCanArmAtReady({...fresh,stopReason:'STOP'})).toBe(false);
  });
 });

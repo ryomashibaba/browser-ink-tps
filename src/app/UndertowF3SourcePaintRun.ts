@@ -36,6 +36,9 @@ export type B161AllyPhysicalInk=Readonly<{
 export type B25PracticeFrame=Readonly<{
  tick:number;paused:boolean;stopReason:string|null;
  inputLocked:boolean;sessionEnded:boolean;
+ /** Read-only authentic SOURCE stage/CPU evidence for pre-armed A1. */
+ realSourceMatchPlaying?:boolean;
+ allSevenSourceCpuPhysicallyRejoined?:boolean;
  sourceSolids:number;paintableSurfaces:number;originalNavLinks:number;
  scoreableSurfaces:number;foot:B25PracticeFoot;ink:B25PracticeInk;
  ally?:B161AllyPhysicalInk;
@@ -72,6 +75,7 @@ export class UndertowF3SourcePaintRun{
  private validClears=0;
  private newBest=false;
  private variant:B56PracticeVariant='CLASSIC';
+ private waitForPhysicalCoopStart=false;
  private routeStart:B25PracticeFoot|null=null;
  private routeOutReached=false;
  private routeReturned=false;
@@ -85,11 +89,14 @@ export class UndertowF3SourcePaintRun{
   CLASSIC:0,SWITCHBACK:0,PAINT_RELAY:0,ALLY_SYNC:0
  };
 
- public arm(variant:B56PracticeVariant='CLASSIC'){
+ public arm(variant:B56PracticeVariant='CLASSIC',
+  waitForPhysicalCoopStart=false){
+  if(waitForPhysicalCoopStart&&variant!=='ALLY_SYNC')return false;
   if(this.status==='ARMED'||this.status==='RUNNING'||
      (variant!=='CLASSIC'&&variant!=='SWITCHBACK'&&
       variant!=='PAINT_RELAY'&&variant!=='ALLY_SYNC'))return false;
   this.variant=variant;
+  this.waitForPhysicalCoopStart=waitForPhysicalCoopStart;
   this.status='ARMED';
   this.startTick=0;this.lastTick=-1;this.baseCells=0;this.baseImpacts=0;
   this.actualCells=0;this.actualImpacts=0;this.groundedMeters=0;
@@ -143,6 +150,13 @@ export class UndertowF3SourcePaintRun{
    return this.snapshot();
   }
   if(this.status==='ARMED'){
+   // The player may arm A1 before pressing START 180s. Do not consume
+   // the 60s mission before all 7 real original bodies have physically
+   // rejoined and the true native match has entered PLAYING.
+   if(this.waitForPhysicalCoopStart&&
+      (f.realSourceMatchPlaying!==true||
+       f.allSevenSourceCpuPhysicallyRejoined!==true))
+    return this.snapshot();
    if(!f.foot.alive)return this.snapshot();
    if((this.variant==='SWITCHBACK'||this.variant==='PAINT_RELAY')&&
       (!f.foot.grounded||!f.foot.realPhysicalOriginalStage)){

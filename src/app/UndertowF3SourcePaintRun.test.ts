@@ -262,3 +262,51 @@ describe('W10-B57 PAINT RELAY — distinct real impact ink in each physical leg'
   expect(r.snapshot().completedRealPracticeRuns).toBe(0);
  });
 });
+
+describe('A1 co-op pre-armed at SOURCE READY waits for real 7/7 physical start',()=>{
+ const a1=(t:number,playing:boolean,rejoined:boolean)=>tick(t,{
+  realSourceMatchPlaying:playing,
+  allSevenSourceCpuPhysicallyRejoined:rejoined,
+  ink:{changedHumanImpactCells:500,changedHumanImpactEvents:9,
+   sourceOnly:true,scoreablePromotionCount:0},
+  ally:{allyId:'A1',qaOptIn:true,realOriginalSourceOnly:true,
+   genuineOriginalA1AimChangedImpactCells:60,
+   genuineOriginalA1AimImpactEvents:3,scoreablePromotionCount:0}
+ });
+ it('does not count STAGING or six rejoined CPUs toward mission time',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.arm('ALLY_SYNC',true)).toBe(true);
+  for(const t of [1,60,1000])r.observe(a1(t,false,t>=1000));
+  r.observe(a1(1001,true,false));
+  expect(r.snapshot()).toMatchObject({status:'ARMED',elapsedTicks:0,
+   humanChangedImpactCells:0,actualOriginalA1ChangedImpactCells:0});
+  r.observe(a1(1002,true,true));
+  expect(r.snapshot()).toMatchObject({status:'RUNNING',elapsedTicks:0,
+   humanChangedImpactCells:0,actualOriginalA1ChangedImpactCells:0});
+  r.observe(a1(1003,true,true));
+  expect(r.snapshot().elapsedTicks).toBe(1);
+  expect(r.snapshot().originalA1CooperativeGoalSatisfied).toBe(false);
+ });
+ it('rejects pre-arming other variants and stops on real pause or authority drift',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.arm('CLASSIC',true)).toBe(false);
+  expect(r.snapshot().status).toBe('IDLE');
+  expect(r.arm('ALLY_SYNC',true)).toBe(true);
+  r.observe(a1(1,false,false));
+  r.observe(a1(2,false,false));
+  expect(r.snapshot().status).toBe('ARMED');
+  r.observe({...a1(3,false,false),paused:true});
+  expect(r.snapshot().status).toBe('ABORTED');
+  expect(r.arm('ALLY_SYNC',true)).toBe(true);
+  r.observe({...a1(4,true,true),scoreableSurfaces:1});
+  expect(r.snapshot().status).toBe('ABORTED');
+ });
+ it('does not depend on synthetic tick advancement or false pointer lock',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm('ALLY_SYNC',true);
+  r.observe({...a1(1,true,true),inputLocked:false});
+  expect(r.snapshot()).toMatchObject({status:'ARMED',elapsedTicks:0});
+  r.observe(a1(2,true,true));
+  expect(r.snapshot().status).toBe('RUNNING');
+  expect(r.snapshot().officialWinner).toBe('NONE');
+ });
+});
