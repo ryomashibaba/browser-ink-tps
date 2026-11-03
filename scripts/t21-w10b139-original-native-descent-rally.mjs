@@ -33,6 +33,10 @@ import {b407RunNativeHumanWave}
  from './t21-b407-native-human-wave.mjs';
 import {auditB410OneTrueUpperFloorActiveGame}
  from './t21-b410-upper-original-activity-audit.mjs';
+import {b411EnableAfterNativeRealClear,b411NativeHudSample}
+ from './t21-b411-native-hud-live-driver.mjs';
+import {auditB411RealNativeGameplayFocus}
+ from './t21-b411-native-active-round-hud-audit.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -60,6 +64,10 @@ const b324UpperFloor=process.env.T21_B324_REAL_UPPER_FLOOR_CONTINUATION==='1';
 const b326ExtendedFloor=process.env.T21_B326_EXTENDED_UPPER_FLOOR==='1';
 const b409OneRoute180=process.env.T21_B409_ONE_ROUTE_180S==='1';
 const b410RealUpperPlay=process.env.T21_B410_LATE_UPPER_HUMAN==='1';
+const b411SourceGameplayHud=
+ process.env.T21_B411_COMPACT_SOURCE_HUD==='1';
+if(b411SourceGameplayHud&&!b410RealUpperPlay)
+ throw Error('B411_REQUIRES_REAL_B410_ROUTE_AND_FOUR_SOURCE_PAINTS');
 if(b410RealUpperPlay&&!b409OneRoute180)
  throw Error('B410_REQUIRES_ORIGINAL_B409_TRUE_ROUTE_180S');
 if(b326ExtendedFloor&&!b324UpperFloor)
@@ -2058,6 +2066,30 @@ async function run(){
     fail('B410_ORIGINAL_OWNERGRID_READ_ONLY_UNAVAILABLE');
    saveB410();
   }
+  // B411 F5: enable only after B162 genuine objective CLEAR and actual
+  // B322 original upper-floor physical route. Original B168 and B200
+  // pre-clear/replay audits remain untouched.
+  if(b411SourceGameplayHud)
+   await b411EnableAfterNativeRealClear(evaluate,snapshot);
+  const b411={
+   schema:'B411_REAL_POST_CLEAR_NATIVE_FULL_ROUND_FOCUS',
+   source:'25/17/26/0',syntheticTime:false,syntheticInk:false,
+   syntheticActors:false,originalScoreable:0,officialWinner:'NONE',
+   samples:[]
+  };
+  const sampleB411=async label=>{
+   const row=await b411NativeHudSample(label,evaluate,until);
+   b411.samples.push(row);
+   writeFileSync(resolve(OUTPUT,'b411-real-native-source-round-hud.json'),
+    JSON.stringify(b411,null,2)+'\n');
+   console.log('B411_TRUE_SOURCE_NATIVE_GAMEPLAY_HUD',JSON.stringify({
+    label,tick:row.tick,remaining:row.remainingSeconds,
+    compact:row.b411Compact,toastHidden:row.clearToastHidden,
+    practiceCardHidden:row.paintCardHidden,
+    replayHidden:row.replayHidden,replayDisabled:row.replayDisabled,
+    originalScoreable:row.sourceScoreable,officialWinner:row.officialWinner
+   }));
+  };
   const sample=async(label,n)=>{
    authority(n,'FIXED');
    const f=n.matchState==='PLAYING'?await b312Ledger():null;
@@ -2103,6 +2135,7 @@ async function run(){
    after.cpu.physicalRejoins.length!==7)
    fail('B409_ROUTE_NOT_PLAYING_EARLY_ENOUGH_FOR_ONE_180S_GAME');
   await sample('AFTER_ROUTE',after);
+  if(b411SourceGameplayHud)await sampleB411('AFTER_ROUTE');
   for(const remaining of [150,120,90,60,30,0]){
    const next=await until(async()=>{
     const n=await snapshot();authority(n,'FIXED');
@@ -2134,12 +2167,16 @@ async function run(){
      saveB410();throw error;
     }
    }
-   if(remaining===90)await picture('B409_REAL_ROUTE_MID');
+   if(remaining===90){
+    if(b411SourceGameplayHud)await sampleB411('90');
+    await picture('B409_REAL_ROUTE_MID');
+   }
   }
   const end=await snapshot();authority(end,'FIXED');
   if(end.matchState!=='TIME_UP'||end.timeRemainingSeconds!==0)
    fail('B409_GENUINE_SOURCE_MATCH_NO_REAL_TIME_UP');
   await picture('B409_REAL_ROUTE_TIME_UP');
+  if(b411SourceGameplayHud)await sampleB411('TIME_UP');
   console.log('B409_ORIGINAL_ROUTE_AND_180S_GENUINE_TIME_UP',
    JSON.stringify({nativeTick:end.tick,
     actualHumanShots:end.shotsFired,
@@ -2160,6 +2197,13 @@ async function run(){
     JSON.stringify(r,null,2)+'\n');
    console.log('B410_GENUINE_FULL_180S_ORIGINAL_ROUTE_AND_UPPER_SHOOTER',
     JSON.stringify(r));
+   if(b411SourceGameplayHud){
+    const v=auditB411RealNativeGameplayFocus(b411,r);
+    writeFileSync(resolve(OUTPUT,'b411-driver-native-hud-verdict.json'),
+     JSON.stringify(v,null,2)+'\n');
+    console.log('B411_GENUINE_NATIVE_SOURCE_GAMEPLAY_HUD_RESULT',
+     JSON.stringify(v));
+   }
   }
  }
 

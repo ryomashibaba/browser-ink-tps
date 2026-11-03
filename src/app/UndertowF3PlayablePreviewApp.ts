@@ -5243,8 +5243,30 @@ export class UndertowF3PlayablePreviewApp{
   ui.appendChild(root);
   return root;
  }
+ /** B411 (opt-in) F5 gameplay focus. Presentation-only: original SOURCE
+  * collision, ownerGrid, 60Hz tick, health and all score authority unchanged.
+  * Never compact before true source A1 CLEAR + genuine playing 180s.
+  */
+ private b411CompactGenuineSourceRound(
+  run:ReturnType<UndertowF3SourcePaintRun['snapshot']>):boolean{
+  return new URL(location.href).searchParams.get('t21B411')==='sourceRoundFocus'&&
+   this.b203FullRound&&this.matchState==='PLAYING'&&
+   !this.paused&&!this.stopReason&&
+   this.rawStage.solids.length===25&&
+   this.b45SourceSurfaces.length===17&&
+   (this.rawStage.navigationLinks?.length??0)===26&&
+   this.b45SourceSurfaces.every(s=>!s.isScoreable)&&
+   run.status==='CLEAR'&&run.originalStageVerified===true&&
+   run.gameplaySource==='REAL_HUMAN_AUTHORITATIVE_INK_AND_RAPIER_FOOT'&&
+   run.sourceScoreablePromotions===0&&run.officialWinner==='NONE'&&
+   run.practiceVariant==='ALLY_SYNC'&&
+   run.originalA1CooperativeGoalSatisfied===true&&
+   run.actualOriginalA1TaggedImpactEvents>0;
+ }
  private refreshB195CoopHud(run:ReturnType<UndertowF3SourcePaintRun['snapshot']>){
   const root=this.b195CoopHud;if(!root)return;
+  const b411Live=this.b411CompactGenuineSourceRound(run);
+  root.dataset.t21B411Active=String(b411Live);
   const info=b195NativeCoopMissionView(run,
    this.matchState==='PLAYING'&&this.traffic.snapshot().freeCombatEnabled);
   if(info.a1Impacts>this.b195PreviousA1ImpactCount&&
@@ -5274,10 +5296,30 @@ export class UndertowF3PlayablePreviewApp{
    root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
     'SOURCE PRACTICE PAUSED · RESUME REAL PLAY';
   const direct=root.querySelector<HTMLButtonElement>('#t21-f3-b200-replay')!;
-  direct.hidden=!replay.replay;
-  direct.style.display=replay.replay?'block':'none';
-  direct.disabled=!replay.replay;
-  root.style.pointerEvents=replay.replay?'auto':'none';
+  const replayReady=replay.replay&&!b411Live;
+  direct.hidden=!replayReady;
+  direct.style.display=replayReady?'block':'none';
+  direct.disabled=!replayReady;
+  root.style.pointerEvents=replayReady?'auto':'none';
+  // A successful short practice is NOT the end of a genuine 180s match.
+  // Keep compact SOURCE-only status out of the original 3D aiming area.
+  // Restore all ordinary co-op/replay controls upon actual TIME_UP.
+  root.style.left=b411Live?'12px':'50%';
+  root.style.top=b411Live?'12px':'';
+  root.style.bottom=b411Live?'auto':'20px';
+  root.style.transform=b411Live?'none':'translateX(-50%)';
+  root.style.width=b411Live?
+   'min(300px,calc(100vw - 24px))':'min(445px,calc(100vw - 32px))';
+  root.style.padding=b411Live?'7px 10px':'10px 14px';
+  const liveBars=root.querySelector<HTMLElement>(
+   '#t21-f3-b195-human')?.parentElement?.parentElement;
+  if(liveBars)liveBars.style.display=b411Live?'none':'grid';
+  if(b411Live){
+   root.querySelector<HTMLElement>('#t21-f3-b195-head')!.textContent=
+    'A1 PRACTICE CLEARED · SOURCE ONLY';
+   root.querySelector<HTMLElement>('#t21-f3-b195-next')!.textContent=
+    '180s MATCH CONTINUES · NO OFFICIAL TURF RESULT';
+  }
   const fields=[
    ['human',info.human+'/'+info.humanGoal+' INK',info.humanPct],
    ['ground',info.grounded.toFixed(1)+'/'+info.groundGoal+' m',info.groundPct],
@@ -5296,6 +5338,11 @@ export class UndertowF3PlayablePreviewApp{
  }
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
+  const b411Live=this.b411CompactGenuineSourceRound(run);
+  this.b25RunCard.dataset.t21B411Focused=String(b411Live);
+  // Hide only the finished short-practice card, never the real match.
+  // Native source counters and callbacks remain in DOM for verification.
+  if(b411Live)this.b25RunCard.hidden=true;
   // The native round may pause even if the optional challenge is still IDLE.
   const ready=this.b203FullRound&&!this.b203EverLockedRealPointer&&
    !this.stopReason&&this.matchState!=='TIME_UP';
@@ -5361,7 +5408,9 @@ export class UndertowF3PlayablePreviewApp{
     run.actualOriginalA1TaggedImpactEvents>0));
   const clearVisible=authenticClear&&this.matchState==='PLAYING'&&
    !this.survey.snapshot().active&&this.galleryIndex<0;
-  this.b168PracticeClearToast.hidden=!clearVisible;
+  const b411Compact=this.b411CompactGenuineSourceRound(run);
+  this.b168PracticeClearToast.hidden=!clearVisible||b411Compact;
+  this.b168PracticeClearToast.dataset.t21B411Compact=String(b411Compact);
   this.b168PracticeClearToast.dataset.t21B168GenuineClear=String(authenticClear);
   this.b168PracticeClearToast.dataset.t21B168NativeTick=String(this.clock.tick);
   if(clearVisible)this.b168PracticeClearToast.textContent=
