@@ -29,6 +29,10 @@ import {b328Plan,b328AuditStep}
  from './t21-b328-genuine-a1-native-approach.mjs';
 import {b330AuditArmedReplayResume}
  from './t21-b330-replay-armed-resume-guard.mjs';
+import {b407RunNativeHumanWave}
+ from './t21-b407-native-human-wave.mjs';
+import {auditB410OneTrueUpperFloorActiveGame}
+ from './t21-b410-upper-original-activity-audit.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -55,6 +59,9 @@ const b322RealCrest=process.env.T21_B322_TRUE_CREST_EXIT==='1';
 const b324UpperFloor=process.env.T21_B324_REAL_UPPER_FLOOR_CONTINUATION==='1';
 const b326ExtendedFloor=process.env.T21_B326_EXTENDED_UPPER_FLOOR==='1';
 const b409OneRoute180=process.env.T21_B409_ONE_ROUTE_180S==='1';
+const b410RealUpperPlay=process.env.T21_B410_LATE_UPPER_HUMAN==='1';
+if(b410RealUpperPlay&&!b409OneRoute180)
+ throw Error('B410_REQUIRES_ORIGINAL_B409_TRUE_ROUTE_180S');
 if(b326ExtendedFloor&&!b324UpperFloor)
  throw Error('B326_REQUIRES_B324_GENUINE_UPPER_FLOOR');
 if(b324UpperFloor&&!b322RealCrest)
@@ -1976,6 +1983,18 @@ async function run(){
   };
   const persist=()=>writeFileSync(resolve(OUTPUT,'b409-one-original-route-180s.json'),
     JSON.stringify(evidence,null,2)+'\n');
+  // B410: interact with the REAL player after the B322 physical original
+  // crest. Reuse successful B407 genuine WASD and B408 live ownerGrid mouse
+  // retargeting, now on the genuinely reached upper original source floor.
+  const b410={
+   schema:'B410_GENUINE_NATIVE_LATE_UPPER_FLOOR_ACTIVE_PLAYER',
+   source:'25/17/26/0',sameB409BrowserWorld:true,
+   syntheticTickWrites:0,syntheticPositionWrites:0,syntheticPaintWrites:0,
+   officialWinner:'NONE',waves:[]
+  };
+  const saveB410=()=>writeFileSync(resolve(OUTPUT,'b410-upper-genuine-live-human-waves.json'),
+   JSON.stringify(b410,null,2)+'\n');
+  if(b410RealUpperPlay)saveB410();
   const sample=async(label,n)=>{
    authority(n,'FIXED');
    const f=n.matchState==='PLAYING'?await b312Ledger():null;
@@ -2027,6 +2046,31 @@ async function run(){
     return n.timeRemainingSeconds<=remaining+.001?n:false;
    },10*60*1000);
    await sample(String(remaining),next);
+   if(b410RealUpperPlay&&[120,60,30].includes(remaining)){
+    try{
+     const wave=await b407RunNativeHumanWave({
+      remaining,expectedFoot:UPPER_FLOOR_SOLID,
+      aimCDP:[800,450],
+      send:cmd,read:evaluate,snapshot,
+      verifyAuthority:n=>{authority(n,'FIXED');return n;},
+      wait:until,b408ActiveAim:true
+     });
+     b410.waves.push(wave);saveB410();
+     console.log('B410_NATIVE_ORIGINAL_UPPER_ACTIVE_PLAYER',JSON.stringify({
+      marker:remaining,nativeStart:wave.before.tick,
+      nativeEnd:wave.after.tick,
+      actualOriginalUpperKccMeters:wave.totalRealKccPlanarMeters,
+      liveRetargetedNativeShots:wave.b408Aim?.additionalShots??0,
+      authenticUpperPaintSurface:wave.b408Aim?.realLastPaintSurface??null,
+      originalHumanChangedCells:wave.b408Aim?.realAddedCells??0,
+      originalCpuRejoined:wave.after.sevenCpuRejoined
+     }));
+    }catch(error){
+     b410.hold={marker:remaining,reason:String(error),
+      previouslyGenuineWaves:b410.waves.length};
+     saveB410();throw error;
+    }
+   }
    if(remaining===90)await picture('B409_REAL_ROUTE_MID');
   }
   const end=await snapshot();authority(end,'FIXED');
@@ -2039,6 +2083,21 @@ async function run(){
     actualHumanCells:end.b23HumanInkFeedback.humanChangedCells,
     cpuInkCells:end.cpuInkCellsChanged,
     originalWinner:'NONE',scoreable:0}));
+  if(b410RealUpperPlay){
+   const load=p=>JSON.parse(readFileSync(resolve(OUTPUT,p),'utf8'));
+   const route={
+    b316:load('b316-genuine-original-human-ramp-walk.json'),
+    b312:load('b312-real-original-lower-second-ink.json'),
+    b322:load('b322-actual-original-ramp-crest.json'),
+    b324:load('b324-real-original-upper-floor.json'),
+    b326:load('b326-extended-original-upper-floor.json')
+   };
+   const r=auditB410OneTrueUpperFloorActiveGame(evidence,route,b410);
+   writeFileSync(resolve(OUTPUT,'b410-driver-real-upper-active-verdict.json'),
+    JSON.stringify(r,null,2)+'\n');
+   console.log('B410_GENUINE_FULL_180S_ORIGINAL_ROUTE_AND_UPPER_SHOOTER',
+    JSON.stringify(r));
+  }
  }
 
  if(b200ReplayTrial){
