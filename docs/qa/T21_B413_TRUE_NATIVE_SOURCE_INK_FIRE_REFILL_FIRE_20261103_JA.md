@@ -24,3 +24,10 @@
 - 初回のコードは「120秒のB408で成功したCDP x/y」をそのまま90秒とイカ復帰後に再利用した。ログと原本では120秒時点のB408 source cell grid[90,131]・world[12.4381,4.502,50.7800]・CDP[805,475]・本当の観測カメラ yaw71.5/pitch-40.62・元のUpperPaintSurface実impactTick4729を確認。一方で90秒時点の**現在の本物のカメラから**再照準した保証はなかった。これが原因である可能性が高いが、初回には新B413の個々の実SHOT/impact/カメラ観測原本がなく**原因を確定できない**。
 - 修正では既存B408の **read-only 原作ownerGrid＋実カメラの安全なCDP射撃計画を、B413各射撃（90秒、イカから戻った後）それぞれで新たに計算**、本当の `Input.dispatchMouseEvent(mouseMoved)` から `b408NativeMouseAligned` で現実のcamera yaw/pitchを照合してからメイン射撃する。SOURCE floor/support、原作17セル、実インク消費、元impactTick/Surface、cpu7/clock/Scoreable0の要求は減らさない。独立監査も各射撃の **B408原作surface provenance＋実CDP一致＋実camera alignment** をチェックする。
 - また再発HOLDでも `b413-real-original-ink-fire-refill-fire.json` に各段階の実nativeインク残量・shot count・current SOURCE aim・実カメラ・実impact/foot等を逐次保存する。テスト証拠はfake不可。**修正版の新しいCI同SHAで全パスするまではB413 HOLDを維持**する。B405〜B412の狭い真正PASSは保護。
+
+## 2026-11-03 B413修正版再試験 #41647713309 の真正FAIL
+
+- 同SHA `7fb9740ad50ebfc06fd139bac3a1146f1db2ce11` の [Actions #41647713309](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41647713309) はFAIL。Node/build/preflight PASS、Chromium本体FAIL、独立監査SKIPPED。真正artifact **13236443122**、ZIP SHA256 `ab745fac7bbf82ac8cbcbd5685e09df7e9a704fa027358a1809baa9708678835`。
+- 90秒 native tick6510→6588、実人間Shots 68→85（17）、実ink 100→83.85（16.15消費）、原作右上段支持、実カメラとCDP照準一致。従来 `humanLastImpactTick=4740` は120秒時点の古い実変化セルのtick、90秒の新しい着弾は未認証。候補の元セルは全てOWN（nonOwnCandidateCount=0）。
+- 原因を原本追跡：`UndertowF3SourceInkFeedback.accept` はHuman `Impact/WallImpact` のうち `changedCells<=0` を既存 `lastImpactTick` から除外。これは**実接触したが既にOWNで0変化**と**本当の弾外れ**を区別できない。90秒17発の実接触を現状RAWだけでは認証不可。
+- 修正は元 `PaintCoordinator` に受理されたHuman `Impact/WallImpact` のイベント数・target原作surface・native tick・changedCellsを別の読み取り専用証拠として追記するだけ。既存B23セル変化・原作ownerGrid・得点・HP・stage・試合時間・CPUは変更しない。B413は新しい実接触イベント＋本物shot/ink消費＋OWN補給＋ヒト復帰/再射撃＋180秒を要求したまま。**新SHAの真正同一試合・独立監査成功まではB413 HOLD**。

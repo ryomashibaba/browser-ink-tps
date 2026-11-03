@@ -3623,6 +3623,12 @@ export class UndertowF3PlayablePreviewApp{
    shots:n.shotsFired,humanChangedCells:event.humanChangedCells,
    humanLastImpactTick:event.lastImpactTick,
    humanLastPaintedSurface:event.lastPaintedSurface,
+   // B413 read-only native PaintCoordinator contact, not owner-change evidence.
+   humanOriginalImpactPaintEvents:event.humanOriginalImpactPaintEvents,
+   humanOriginalZeroChangedPaintEvents:event.humanOriginalZeroChangedPaintEvents,
+   lastHumanOriginalImpactPaintSurface:event.lastHumanOriginalImpactPaintSurface,
+   lastHumanOriginalImpactPaintTick:event.lastHumanOriginalImpactPaintTick,
+   lastHumanOriginalImpactPaintChangedCells:event.lastHumanOriginalImpactPaintChangedCells,
    originalRows};
   b312ValidateOriginalOwnerFrame(frame);
   return {...frame,actualBodyMeters:[body.x,body.y,body.z],

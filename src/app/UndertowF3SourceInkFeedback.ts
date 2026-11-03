@@ -20,6 +20,12 @@ export interface F3HumanInkContact {
  lastPaintedSurface:string|null;
  lastImpactChangedCells:number;
  lastImpactTick:number|null;
+ /** Actual accepted original projectile PaintCoordinator contact, even when no owner cells changed. */
+ humanOriginalImpactPaintEvents:number;
+ humanOriginalZeroChangedPaintEvents:number;
+ lastHumanOriginalImpactPaintSurface:string|null;
+ lastHumanOriginalImpactPaintTick:number|null;
+ lastHumanOriginalImpactPaintChangedCells:number;
  showPaintConfirmation:boolean;
  elapsedTicks:number|null;
  // Actual HUMAN Bomb events on certified source surfaces only. Unlike
@@ -51,6 +57,11 @@ export class UndertowF3SourceInkFeedback {
  private lastSurface:string|null=null;
  private lastCells=0;
  private lastTick:number|null=null;
+ private originalImpactPaintEvents=0;
+ private originalZeroChangedPaintEvents=0;
+ private originalLastImpactPaintSurface:string|null=null;
+ private originalLastImpactPaintTick:number|null=null;
+ private originalLastImpactPaintChangedCells=0;
  private bombStamps=0;
  private bombZeroEvents=0;
  private lastBombStampedSurface:string|null=null;
@@ -108,8 +119,16 @@ export class UndertowF3SourceInkFeedback {
    this.bombCells+=changedCells;
    return;
   }
-  if((event.type!==PaintEventType.Impact&&
-      event.type!==PaintEventType.WallImpact)||changedCells<=0)return;
+  if(event.type!==PaintEventType.Impact&&
+     event.type!==PaintEventType.WallImpact)return;
+  // Genuine accepted source projectile contact, not a scoring event.
+  // When already OWN, zero newly owned cells must not look like a miss.
+  this.originalImpactPaintEvents++;
+  this.originalLastImpactPaintSurface=event.surfaceId;
+  this.originalLastImpactPaintTick=event.tick;
+  this.originalLastImpactPaintChangedCells=changedCells;
+  if(changedCells===0){this.originalZeroChangedPaintEvents++;return;}
+  // Preserve original B23/B410 semantics: ownership changes only.
   if(this.lastTick===event.tick)this.lastCells+=changedCells;
   else this.lastCells=changedCells;
   this.lastTick=event.tick;
@@ -164,6 +183,11 @@ export class UndertowF3SourceInkFeedback {
    lastPaintedSurface:this.lastSurface,
    lastImpactChangedCells:this.lastCells,
    lastImpactTick:this.lastTick,
+   humanOriginalImpactPaintEvents:this.originalImpactPaintEvents,
+   humanOriginalZeroChangedPaintEvents:this.originalZeroChangedPaintEvents,
+   lastHumanOriginalImpactPaintSurface:this.originalLastImpactPaintSurface,
+   lastHumanOriginalImpactPaintTick:this.originalLastImpactPaintTick,
+   lastHumanOriginalImpactPaintChangedCells:this.originalLastImpactPaintChangedCells,
    showPaintConfirmation:visible,
    elapsedTicks:elapsed,
    humanBombStampEvents:this.bombStamps,

@@ -96,7 +96,10 @@ export async function b413RealOriginalMainFireBurst({
    n.cameraSourcePractice:false;
  },30000);
  const before=actual(verify(await snapshot()));
- native(before);await foot(ledger);
+ native(before);
+ const beforeGround=await foot(ledger);
+ need(nat(beforeGround.humanOriginalImpactPaintEvents),
+  'TRUE_ACCEPTED_ORIGINAL_IMPACT_BASELINE_'+phase);
  const ticks=phase==='BEFORE_SQUID'?78:54;
  await onEvidence({phase,stage:'REAL_ORIGINAL_NATIVE_CAMERA_ALIGNED',
   before,aim,observedCamera,readOnly:true});
@@ -116,10 +119,19 @@ export async function b413RealOriginalMainFireBurst({
   });
  }
  const after=actual(verify(await snapshot())),ground=await foot(ledger);
+ const contactsBefore=beforeGround.humanOriginalImpactPaintEvents;
+ const contactsAfter=ground.humanOriginalImpactPaintEvents;
+ const acceptedImpactTick=ground.lastHumanOriginalImpactPaintTick;
+ const acceptedImpactSurface=ground.lastHumanOriginalImpactPaintSurface;
  await onEvidence({phase,stage:'REAL_NATIVE_MAIN_FIRE_OBSERVED',
   before,after,aim,observedCamera,
   originalLastImpactSurface:ground.humanLastPaintedSurface,
   originalLastImpactTick:ground.humanLastImpactTick,
+  acceptedOriginalContactSurface:acceptedImpactSurface,
+  acceptedOriginalContactTick:acceptedImpactTick,
+  acceptedOriginalContactsBefore:contactsBefore,
+  acceptedOriginalContactsAfter:contactsAfter,
+  acceptedOriginalContactChangedCells:ground.lastHumanOriginalImpactPaintChangedCells,
   genuineSupportedFoot:ground.genuineHumanOriginalFootSolid,
   genuineFootGap:ground.genuineOriginalFootGapMeters,
   readOnly:true});
@@ -131,16 +143,23 @@ export async function b413RealOriginalMainFireBurst({
   after.inkRecovery==='LOCKED'&&
   await locked(),
   'TRUE_SHOT_COST_PAID_NOT_FAKE_INK_DEPLETION_'+phase);
- need(ground.humanLastPaintedSurface===SURFACE&&
-  nat(ground.humanLastImpactTick)&&
-  ground.humanLastImpactTick>before.tick&&
-  ground.humanLastImpactTick<=after.tick,
-  'TRUE_ORIGINAL_UPPER_PROJECTILE_IMPACT_'+phase);
+ // The B23 lastImpactTick only advances when OWNERSHIP cells change.
+ // Demand a NEW accepted native PaintCoordinator projectile contact.
+ need(nat(contactsAfter)&&contactsAfter>contactsBefore&&
+  acceptedImpactSurface===SURFACE&&nat(acceptedImpactTick)&&
+  acceptedImpactTick>before.tick&&acceptedImpactTick<=after.tick&&
+  nat(ground.lastHumanOriginalImpactPaintChangedCells),
+  'TRUE_ACCEPTED_ORIGINAL_UPPER_PROJECTILE_IMPACT_'+phase);
  return {phase,before,after,aim,observedCamera,
   actualCdpMouse:[...aim.cdp],
   liveCdP:true,source:SOURCE,
-  actualOriginalImpactSurface:ground.humanLastPaintedSurface,
-  actualOriginalImpactTick:ground.humanLastImpactTick,
+  actualOriginalImpactSurface:acceptedImpactSurface,
+  actualOriginalImpactTick:acceptedImpactTick,
+  actualOriginalImpactEvents:contactsAfter-contactsBefore,
+  actualOriginalImpactEventsBefore:contactsBefore,
+  actualOriginalImpactEventsAfter:contactsAfter,
+  actualOriginalImpactChangedCells:ground.lastHumanOriginalImpactPaintChangedCells,
+  actualOriginalPaintCoordinatorReadOnly:true,
   sourceInkDifference:before.ink-after.ink,
   actualShotsPaid:after.shots-before.shots,
   syntheticShotWrites:false,syntheticInkWrites:false,
@@ -184,6 +203,14 @@ export function b413AuditFullOriginalShotRefillReshot(trace,route,swim,ui,round)
    v.actualCdpMouse[1]===v.aim.cdp?.[1]&&
    b408NativeMouseAligned(v.aim,v.observedCamera)&&
    v.actualOriginalImpactSurface===SURFACE&&
+   v.actualOriginalPaintCoordinatorReadOnly===true&&
+   nat(v.actualOriginalImpactEventsBefore)&&
+   nat(v.actualOriginalImpactEventsAfter)&&
+   nat(v.actualOriginalImpactEvents)&&
+   v.actualOriginalImpactEvents>0&&
+   v.actualOriginalImpactEvents===v.actualOriginalImpactEventsAfter-
+    v.actualOriginalImpactEventsBefore&&
+   nat(v.actualOriginalImpactChangedCells)&&
    nat(v.actualOriginalImpactTick)&&
    v.actualOriginalImpactTick>v.before?.tick&&
    v.actualOriginalImpactTick<=v.after?.tick&&
