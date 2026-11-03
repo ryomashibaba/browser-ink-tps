@@ -1343,15 +1343,23 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
        // capture. Never relocate the actor or modify the game clock.
        const nextStart=stepsUpper.at(-1)?.after??firstUpper;
        const extended=[];
-       const saveB326=status=>{
+       // B418: preserve the FULL independent audit on each actual CDP
+       // step, but DO NOT stringify/write 17 original GRID rows after
+       // every short KeyW. The previous real native trial showed 3 idle
+       // ticks and 0.192m inertial drift between steps 5 and 6 while
+       // 0.15m remained the unchanged hard limit. Long synchronous file
+       // writes inside the movement chain can cause avoidable gaps.
+       // Save the complete native before/after evidence at the end.
+       const saveB326=(status,persist=true)=>{
         const data={schema:'B326_NATIVE_SOURCE_UPPER_FLOOR_EXTENSION',
          source:'25/17/26/0',status,first:nextStart,steps:extended,
          productionAuthorized:false,original4v4Certified:false,
          artAccepted:false};
         const verdict=b326AuditExtendedUpperFloor(
          priorB322,priorB324,data);
-        writeFileSync(resolve(OUTPUT,'b326-extended-original-upper-floor.json'),
-         JSON.stringify({...data,preliminary:verdict},null,2));
+        if(persist)
+         writeFileSync(resolve(OUTPUT,'b326-extended-original-upper-floor.json'),
+          JSON.stringify({...data,preliminary:verdict},null,2));
         return verdict;
        };
        if(report.continuousUpperFloor&&
@@ -1366,7 +1374,7 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
          extended.push({realKey:'KeyW',nativeInputTicks:2,
           actualNativeTickDelta:after.tick-before.tick,
           actualTick:pressed.tick,before,after});
-         const witness=saveB326('REAL_NATIVE_EXTENSION_OBSERVED');
+         const witness=saveB326('REAL_NATIVE_EXTENSION_OBSERVED',false);
          console.log('B326_ORIGINAL_UPPER_FLOOR_STEP',JSON.stringify({
           step:i+1,body:after.actualBodyMeters,
           nativeFoot:after.genuineHumanOriginalFootSolid,

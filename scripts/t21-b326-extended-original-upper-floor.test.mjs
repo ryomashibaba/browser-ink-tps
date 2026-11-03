@@ -102,3 +102,17 @@ test('an unobserved drift larger than 15cm is not continuous walking',()=>{
  assert.equal(b326AuditExtendedUpperFloor(d.prior,d.attempt,d.extended)
   .extendedUpperFloorProven,false);
 });
+
+test('B418: never waive the original 15cm drift or six-step proof to hide a slow writer',()=>{
+ const d=extension();d.extended.steps[5].before.actualBodyMeters[0]+=.192331614;
+ const r=b326AuditExtendedUpperFloor(d.prior,d.attempt,d.extended);
+ assert.equal(r.firstUnsupportedStep,6);
+ assert.equal(r.realOriginalSupportedSteps,5);
+ assert.equal(r.extendedUpperFloorProven,false);
+ const e=extension();e.extended.steps.splice(6);
+ assert.equal(b326AuditExtendedUpperFloor(e.prior,e.attempt,e.extended)
+  .extendedUpperFloorProven,true);
+ const f=extension();f.extended.steps.splice(5);
+ assert.equal(b326AuditExtendedUpperFloor(f.prior,f.attempt,f.extended)
+  .extendedUpperFloorProven,false);
+});
