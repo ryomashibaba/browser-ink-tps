@@ -1,0 +1,65 @@
+name: T21 B403 SHA-pinned original native 180s enemy distance replay
+on:
+  push:
+    branches:
+      - research/t21-b403-real-native-enemy-frontier-20261103
+    paths:
+      - 'scripts/t21-b403-original-enemy-distance.mjs'
+      - 'scripts/t21-b403-original-enemy-distance.test.mjs'
+      - '.github/workflows/t21-b403-original-enemy-distance.yml'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  actual-native-source-replay:
+    name: "No new Chromium: true original seven-actor SHA-pinned replay"
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Reproducible source-only validation
+        run: node --test scripts/t21-b403-original-enemy-distance.test.mjs
+      - name: Download preserved ORIGINAL native 180s seven CPU evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/t21-b403
+          gh run download 40988204871 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name b340-genuine-native-180s-seven-cpu-source-economy \
+            --dir /tmp/t21-b403
+          echo "13f68447daca35330959a5eabefc621a3a7a4b19c8766d0a2c48e7dc514e4ab8  /tmp/t21-b403/b340-real-round.json" | sha256sum --check
+      - name: Recompute original real human-to-enemy distance, no fake physics
+        run: |
+          node scripts/t21-b403-original-enemy-distance.mjs \
+            /tmp/t21-b403/b340-real-round.json \
+            /tmp/t21-b403/b403-enemy-distance-result.json
+      - name: Enforce narrow scoped original evidence
+        run: |
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const x=JSON.parse(readFileSync("/tmp/t21-b403/b403-enemy-distance-result.json","utf8"));
+            const pass=x.sampledMinimumNearestMeters>=116 &&
+              x.sampledMinimumNearestMeters<117 &&
+              x.sampledMaximumNearestMeters>=120 &&
+              x.sampledMaximumNearestMeters<121 &&
+              x.allSevenSamplesOutsideB18132m===true &&
+              x.realHumanProjectileCpuHitCertified===false &&
+              x.naturalOpponentRouteCertified===false &&
+              x.scoreable===0 &&
+              x.productionAuthorized===false;
+            console.log("B403_REAL_OPPONENT_DISTANCE_GATE",pass?"PASS_SCOPED":"HOLD");
+            if(!pass)process.exitCode=1;
+          '
+      - name: Save replay report (not a game completion claim)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b403-real-native-enemy-distance-audit
+          path: /tmp/t21-b403/b403-enemy-distance-result.json
+          retention-days: 30
+          if-no-files-found: warn
