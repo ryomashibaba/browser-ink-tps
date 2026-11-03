@@ -8,6 +8,8 @@ on:
       - 'src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts'
       - 'src/app/B367RealCpuCombatTimeline.ts'
       - 'src/app/B367RealCpuCombatTimeline.test.ts'
+      - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts'
       - '.github/workflows/t21-f3-research-native-lethal-cpu-offline.yml'
   workflow_dispatch:
 permissions:
@@ -31,6 +33,7 @@ jobs:
           npm exec -- vitest run \
             src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts \
             src/app/B367RealCpuCombatTimeline.test.ts \
+            src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts \
             src/ai/B213NativeCounterfire.test.ts \
             src/ai/B181OriginalSourceCombatSight.test.ts
       - name: Typecheck entire app and preserve frozen source stage contracts

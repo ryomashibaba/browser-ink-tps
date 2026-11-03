@@ -251,3 +251,9 @@
 - 修正は**読み取り専用B367**で直前の正常なnative frame累積カウンターを保持し、新しい実弾HP0 event（weapon/actor/HP/sequence検査継続）＋同じnative tickで該当CPU `SPLATTED/HP0`＋human direct & cpu splat両方の増分を同時観測した場合のみ `ACTUAL_CPU_SPLAT` を表示。過去の累積値、別チーム、別のステージ、fake scoreでは認証不可。旧来の次tickに撃破処理される経路も残す。
 - 実CPUの復活判定には引き続き実150 native tick、元CPUのHP100、原作upper spawn復帰、実respawnカウンターを必須とする。HUD表示はゲーム状態や実HPに書き込まない。
 - B367 regression + F3 native lethal test + B181/B213 回帰＋full TypeScript checkを独立F3 CIへ追加。GitHub Actions結果は別確認。**実弾で自然に敵を倒したこと／現SHAの真正Chromium PASS／正式4v4を認定しない**。F2 QA HEADとmain、PR#5、Pages、原作25/17/26/0、自然対岸0/12、ART/production HOLDは不変更。
+
+## 2026-11-03 — B367/F3 SOURCE instant splat / 7 real CPU live rejoin evidence (isolated research)
+- 実物の `stepFixed` 順を検証: 7 CPU `CpuAgentSystem.fixedUpdate` → `UndertowF3SourceTraffic.observe` → 真正 `ProjectileSystem.fixedUpdate` → `B367` 観測。従来の `traffic.physicallyRejoined` 集合は、この末尾の実射撃でCPUが瞬時に `SPLATTED` になった同一tickでは前tickの7/7を保持する。
+- F3専用のREAD-ONLY `sourceNativeLiveRejoinedCpu` では、既に原作で実認証された再合流集合に含まれ、かつ**現在の実CPU `lifeState==='ACTIVE'`** の場合にだけ「live rejoined」と表示。SPLATTED/UNKNOWNを真の7/7に数えない。即撃破後の `nativeCpuLifecycleFrames` / `snapshot().cpu[].rejoined` / `snapshot().physicalRejoins` / `sourcePatrol.activeTargets` の観測整合性を修正。
+- 本来の `traffic.observe` は次native tickで過去のrejoinを削除する既存動作を保持。ゲーム本体、Bot、NavLink、物理foot、Projectile、HP、PaintSurfaceを触らない。実150tickの復活後、原作高所復帰から実first-dropを再認証するまでlive rejoin=falseを保持。
+- 新規 unit test 4 case: genuine7/7活存、same tick B1 native splat後6/7、UNKNOWN fail closed、本物のrejoin再取得必要。独立F3 CIへ組込み。**現時点ではVitest/TypeScript CIおよび真正Chromiumは未実行、SOURCE正式戦闘PASSと宣言禁止**。原作25/17/26/0、0/12自然対岸、公式Winner NONE、ART/main/PR#5/Pages/prod HOLD継続。

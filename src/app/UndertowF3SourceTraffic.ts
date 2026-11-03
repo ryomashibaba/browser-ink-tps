@@ -40,6 +40,17 @@ export interface F3TrafficCpu{
  fireRemaining:number;jumpCooldownSeconds:number;
  lifeState?:'ACTIVE'|'SPLATTED';hp?:number;
 }
+/** Read-only SOURCE QA observation: a native splat may occur in the
+ * projectile phase AFTER traffic.observe() in the same physics tick.
+ * Historical F2 rejoin bookkeeping is NOT a live CPU while the actual
+ * native actor is SPLATTED (or its life state is unknown).
+ * Never clears or adds original navigation/physics authority. */
+export function sourceNativeLiveRejoinedCpu(
+ cpu:Pick<F3TrafficCpu,'id'|'lifeState'>,
+ genuinePriorRejoins:ReadonlySet<string>
+):boolean{
+ return cpu.lifeState==='ACTIVE'&&genuinePriorRejoins.has(cpu.id);
+}
 export interface F3TrafficSnapshot{
  readonly cpu:readonly {id:string;mobilityState:string;released:boolean;rejoined:boolean;lastMovedTick:number;physicalFoot:[number,number,number];lifeState:'ACTIVE'|'SPLATTED'|'UNKNOWN';hp:number|null}[];
  readonly physicalFirstDrops:readonly string[];
@@ -1191,19 +1202,23 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return this.bots.map(b=>({
    id:b.id,
    lifeState:b.lifeState??'UNKNOWN',
-   rejoined:this.physicallyRejoined.has(b.id),
+   rejoined:sourceNativeLiveRejoinedCpu(b,this.physicallyRejoined),
    hp:Number.isFinite(b.hp)?b.hp!:null
   }));
  }
  snapshot():F3TrafficSnapshot{
   return {
    cpu:this.bots.map(b=>({id:b.id,mobilityState:b.mobilityState,
-    released:this.released.has(b.id),rejoined:this.physicallyRejoined.has(b.id),
+    released:this.released.has(b.id),
+    rejoined:sourceNativeLiveRejoinedCpu(b,this.physicallyRejoined),
     lastMovedTick:this.lastMoved.get(b.id)??0,
     physicalFoot:[b.position.x,b.position.y,b.position.z] as [number,number,number],
      lifeState:b.lifeState??'UNKNOWN',hp:Number.isFinite(b.hp)?b.hp!:null})),
    physicalFirstDrops:[...this.physicallyFalling],
-   physicalRejoins:[...this.physicallyRejoined],
+   // An immediate projectile splat can occur after traffic.observe().
+   // Show only genuine rejoined AND presently alive original CPUs.
+   physicalRejoins:this.bots.filter(b=>
+    sourceNativeLiveRejoinedCpu(b,this.physicallyRejoined)).map(b=>b.id),
    landingCorridorsCleared:[...this.cleared],
    releasedCpuIds:[...this.released],
    freeCombatEnabled:this.freeCombat,
@@ -1289,7 +1304,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     activeTargets:this.bots.flatMap(bot=>{
      const index=this.patrolIndex.get(bot.id)??-1;
      const point=this.patrolGoals.get(bot.id)?.[index];
-     return index>=0&&point&&this.physicallyRejoined.has(bot.id)
+     return index>=0&&point&&
+      sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)
       ?[{id:bot.id,position:[point.x,point.y,point.z] as [number,number,number]}]:[];
     }),
     attemptsToCrossUnboundUnderpass:0,sourceOnly:true,
