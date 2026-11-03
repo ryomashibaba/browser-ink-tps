@@ -11,9 +11,11 @@ function fixture(){
   originalAimWitness:{
    sourceFootId:'UndertowT21D:spawn-high-positive-z',
    targetOriginalSurface:'UndertowT21D:spawn-high-positive-z:paint',
-   originalActiveCells:[{grid:[2,3],world:[0,5.9,41]}],
-   selectedCell:{grid:[2,3],world:[0,5.9,41]},
-   actualCameraMeters:[-0.7693,10.35,31],
+   localCellSampleProvenance:'B337_NATIVE_LOCAL_ACTIVE_GRID',
+   originalActiveCells:[{grid:[2,3],world:[0,5.9,44],
+    originalOwner:0,realCellProvenance:'B337_NATIVE_LOCAL_ACTIVE_GRID'}],
+   selectedCell:{grid:[2,3],world:[0,5.9,44]},
+   actualCameraMeters:[-0.7693,10.35,34],
    actualBodyMeters:[0,6,40],
    targetYawDegrees:4.4,targetPitchDegrees:-23.92,actualCDP:[800,580],
    observedYawDegrees:4.4,observedPitchDegrees:-24,
@@ -123,5 +125,18 @@ test('camera geometry and ORIGINAL source identity must be genuine',()=>{
  ]){
   const x=fixture();mutate(x);
   assert.throws(()=>audit(x),/B337_SOURCE_GAMEPLAY_/);
+ }
+});
+
+test('B337 recorded native local-cell proof is indispensable, not silently replaced by old B271 optical grid',()=>{
+ for(const mutate of [
+  x=>{delete x.originalAimWitness.localCellSampleProvenance;},
+  x=>{x.originalAimWitness.originalActiveCells[0].realCellProvenance='B271_GLOBAL_OPTICAL_ONLY';},
+  x=>{x.originalAimWitness.originalActiveCells[0].originalOwner=42;},
+  x=>{x.originalAimWitness.selectedCell.world=[0,5.9,41];},
+  x=>{x.originalAimWitness.selectedCell.world=[0,5.9,49];}
+ ]){
+  const witness=fixture();mutate(witness);
+  assert.throws(()=>audit(witness),/B337_SOURCE_GAMEPLAY_/);
  }
 });
