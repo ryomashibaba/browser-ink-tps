@@ -37,6 +37,38 @@ export function b322PlanActualOriginalCrest(ledger,camera){
    distance>.4&&distance<4&&Math.abs(mx)<=720&&
    800+mx>=10&&800+mx<=1590};
 }
+/** Real CDP KeyS before the crest: read only original native KCC proof.
+ * B322's >=.32m ascent threshold and genuine 17-grid owner gate unchanged. */
+export function b322AuditRealOriginalPreCrestBackstep(before,after,key){
+ const original=x=>x?.source==='25/17/26/0'&&
+  finite3(x.actualBodyMeters)&&
+  x.realHumanOriginalFootSupported===true&&
+  x.genuineHumanOriginalFootSolid===RAMP_SOLID&&
+  Number.isFinite(x.genuineOriginalFootGapMeters)&&
+  x.genuineOriginalFootGapMeters>=0&&x.genuineOriginalFootGapMeters<=.18&&
+  x.sourceActorRelocations===0&&x.sourceInkRewritten===false&&
+  x.playerPositionRewritten===false&&x.originalRows?.length===17&&
+  x.originalRows.some(r=>r.surfaceId===RAMP_PAINT&&
+   r.actualHumanFootOnOriginalActiveSurface===true);
+ if(key!=='KeyS'||!original(before)||!original(after)||
+  !Number.isSafeInteger(before.tick)||!Number.isSafeInteger(after.tick)||
+  after.tick<=before.tick||after.tick-before.tick>24)return false;
+ const b=b320SourceRampCoordinates(
+  before.originalPositiveRampSourceQuad,before.actualBodyMeters);
+ const a=b320SourceRampCoordinates(
+  before.originalPositiveRampSourceQuad,after.actualBodyMeters);
+ const horizontal=Math.hypot(
+  after.actualBodyMeters[0]-before.actualBodyMeters[0],
+  after.actualBodyMeters[2]-before.actualBodyMeters[2]);
+ const heightDelta=after.actualBodyMeters[1]-before.actualBodyMeters[1];
+ return b.insideSourceQuadXZ&&a.insideSourceQuadXZ&&
+  b.originalUphillFraction>=.70&&b.originalUphillFraction<.86&&
+  a.originalUphillFraction>=.60&&a.originalUphillFraction<=.77&&
+  b.originalUphillFraction-a.originalUphillFraction>=.02&&
+  b.originalUphillFraction-a.originalUphillFraction<=.14&&
+  horizontal>=.04&&horizontal<=.8&&
+  heightDelta>=-.35&&heightDelta<=.10;
+}
 export function b322AuditNativeOriginalCrestExit(d){
  check(d?.schema==='B322_REAL_NATIVE_CREST_EXIT'&&
   d.source==='25/17/26/0'&&d.productionAuthorized===false&&

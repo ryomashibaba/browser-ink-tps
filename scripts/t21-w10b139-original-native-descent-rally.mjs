@@ -18,6 +18,7 @@ import {RAMP_SOLID,b320PlanOriginalTrueRampUphill,b320AuditActualNativeRampAscen
 import {b321OriginalRampHighSectionPlan,b321AuditTrueOriginalHigherRamp}
  from './t21-b321-real-upper-ramp-kcc.mjs';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
+ b322AuditRealOriginalPreCrestBackstep,
  UPPER_FLOOR_SOLID} from './t21-b322-original-ramp-crest.mjs';
 import {b324AuditGenuineUpperFloor}
  from './t21-b324-original-upper-floor-continuation.mjs';
@@ -206,7 +207,7 @@ async function nativeOriginalKeyboard(stage,observe){
  * NOT a fake tick step. B316's 500ms polling overshot its first 6-tick
  * request to 24 actual native ticks on the ramp's sharp lower corner. */
 async function b319TrueShortNativeKey(key,wantedTicks){
- if(key!=='KeyW'||!Number.isSafeInteger(wantedTicks)||
+ if(!['KeyW','KeyS'].includes(key)||!Number.isSafeInteger(wantedTicks)||
   wantedTicks<1||wantedTicks>6)fail('B319_UNVERIFIED_REAL_INPUT_PLAN');
  const before=await snapshot();authority(before,'FIXED');
  if(before.paused||before.matchState!=='PLAYING'||
@@ -1179,12 +1180,45 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
       source:'25/17/26/0',artAccepted:false}));
 
     if(b322RealCrest){
-     const first=await b312Ledger(),steps=[];
+     let first=await b312Ledger();
+     const steps=[];
      const qualified=finalHigh.verdict===
       'PASS_GENUINE_ORIGINAL_RAMP_HIGH_SECTION_KCC';
+     // On real SwiftShader 35ms CDP polling, one short KeyW sometimes
+     // advances ~6 native ticks and skips the >=.32m rise between
+     // B322 ramp contact observations. Take ONE genuine KeyS reverse
+     // pulse on the already registered ramp to witness the full
+     // original physical rise, rather than relax any B322 threshold.
+     let realBackstep=null;
+     if(qualified&&b410RealUpperPlay&&first.realHumanOriginalFootSupported&&
+        first.genuineHumanOriginalFootSolid===RAMP_SOLID){
+      const current=b320SourceRampCoordinates(
+       first.originalPositiveRampSourceQuad,first.actualBodyMeters);
+      if(current.insideSourceQuadXZ&&
+         current.originalUphillFraction>=.70&&
+         current.originalUphillFraction<.86){
+       const old=first;
+       const key=await b319TrueShortNativeKey('KeyS',1);
+       const next=await b312Ledger();
+       const originalBackstep=b322AuditRealOriginalPreCrestBackstep(
+        old,next,'KeyS');
+       realBackstep={realKey:'KeyS',wantedTicks:1,
+        observedTickDelta:next.tick-old.tick,keyTick:key.tick,
+        before:old,after:next,originalBackstep};
+       writeFileSync(resolve(OUTPUT,'b322-native-real-crest-backstep.json'),
+        JSON.stringify({source:'25/17/26/0',...realBackstep},null,2));
+       console.log('B322_REAL_ORIGINAL_CREST_PREENTRY',
+        JSON.stringify({before:old.actualBodyMeters,
+         after:next.actualBodyMeters,tick:next.tick,originalBackstep}));
+       if(!originalBackstep)
+        fail('B322_REAL_SOURCE_PRECREST_KCC_UNSAFE_OR_UNOBSERVED');
+       first=next;
+      }
+     }
      const save=(status,plan=null)=>{
       const data={schema:'B322_REAL_NATIVE_CREST_EXIT',
        source:'25/17/26/0',status,first,plan,steps,
+       originalSourceRealEntryBackstep:realBackstep,
        prerequisiteB321Passed:qualified,productionAuthorized:false,
        original4v4Certified:false,artAccepted:false};
       const independent=b322AuditNativeOriginalCrestExit(data);

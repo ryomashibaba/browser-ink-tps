@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
- UPPER_FLOOR_SOLID,UPPER_FLOOR_PAINT}
+ UPPER_FLOOR_SOLID,UPPER_FLOOR_PAINT,
+ b322AuditRealOriginalPreCrestBackstep}
  from './t21-b322-original-ramp-crest.mjs';
 const ramp='UndertowT21D:right-low-route-ramp-positive-z';
 const quad={id:'right-low-route-ramp-positive-z',
@@ -56,4 +57,15 @@ test('never count geometry, teleport or unsupported interval as crest',()=>{
  assert.throws(()=>b322AuditNativeOriginalCrestExit(e));
  const f=example();f.prerequisiteB321Passed=false;
  assert.equal(b322AuditNativeOriginalCrestExit(f).crestProven,false);
+});
+
+test('true reverse key KCC stays on original ramp at verified native ticks',()=>{
+ const before=at(.419,.735,2100),after=at(.419,.655,2106);
+ assert.equal(b322AuditRealOriginalPreCrestBackstep(before,after,'KeyS'),true);
+ assert.equal(b322AuditRealOriginalPreCrestBackstep(before,after,'KeyW'),false);
+ assert.equal(b322AuditRealOriginalPreCrestBackstep(before,at(.419,.59,2106),'KeyS'),false);
+ assert.equal(b322AuditRealOriginalPreCrestBackstep(before,at(.419,.655,2130),'KeyS'),false);
+ assert.equal(b322AuditRealOriginalPreCrestBackstep(before,{...after,sourceActorRelocations:1},'KeyS'),false);
+ assert.equal(b322AuditRealOriginalPreCrestBackstep(before,{...after,realHumanOriginalFootSupported:false},'KeyS'),false);
+ assert.equal(b322AuditRealOriginalPreCrestBackstep(before,{...after,originalRows:[]},'KeyS'),false);
 });
