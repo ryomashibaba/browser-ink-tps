@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   source-original-ramp:
-    name: One native source: F3 immediate CPU lifecycle + F2 genuine human ramp
+    name: "One native source: F3 immediate CPU lifecycle + F2 genuine human ramp"
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
