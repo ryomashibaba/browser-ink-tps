@@ -28,7 +28,10 @@ export function b406AuditRealSameSessionFrontier(data){
  const observations=data.samples.map((s,i)=>{
   expect(realVec(s.player)&&
    Number.isSafeInteger(s.tick)&&
-   s.cpuActors.length===7,'NATIVE_BODY_'+i);
+   s.cpuActors.length===7&&
+   s.cpuActors.filter(c=>c.rejoined===true).length===
+    s.cpuPhysicalRejoinedCount,
+   'NATIVE_BODY_AND_ACTUAL_REJOIN_COUNT_'+i);
   const enemy=ENEMIES.map(id=>{
    const c=s.cpuActors.find(c=>c.id===id);
    expect(c&&realVec(c.foot)&&

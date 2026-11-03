@@ -15,3 +15,6 @@ At each genuine native sample, horizontal distance and vertical separation are i
 The B406 research CI tests the new auditor and existing B405 source contract **without running a second costly Chromium game**. Once B405 actual artifact exists, B406 CLI can be called on the genuine B405 artifact folder to generate a standalone 7-frame same-session report. A successful pure CI alone is not a real proximity result. If B405 native round is FAIL, B406 real witness stays HOLD. No new actor motion, geometry, collision, HP, score, ownerGrid or original world alteration.
 
 SOURCE 25 Rapier solids / 17 PaintSurfaces / 26 NavLinks / 0 scoreable; natural opponent paths 0/12, formal 4v4/ART/production HOLD, no QA/main/published changes.
+
+## Audit strength correction
+A real source frame's reported CPU physical rejoin count must equal the number of actual seven-actor rows with rejoined=true; B406 must reject count/actor contradictions even if an upstream global count is within 0–7. The controlled splatted B1 test now correctly uses six actual rejoined CPUs and rejects mismatched counters. This only tightens read-only evidence, without gameplay mutation or changed physical behavior.

@@ -65,6 +65,7 @@ test('real dead CPU cannot be silently used as a living encounter candidate',()=
  for(const s of x.samples){
   const c=s.cpuActors.find(c=>c.id==='B1');
   c.lifeState='SPLATTED';c.hp=0;c.rejoined=false;
+  s.cpuPhysicalRejoinedCount=6;
  }
  const r=audit(x);
  assert.equal(r.observations[0].livingRejoinedOpponents,3);
@@ -76,6 +77,7 @@ test('different-world provenance, forged body, time or score must fail closed',(
   x=>{x.source='25/18/26/0';},
   x=>{x.injectedActors=true;},
   x=>{x.samples[0].cpuActors[4].foot=[NaN,4,48];},
+  x=>{x.samples[0].cpuPhysicalRejoinedCount=5;},
   x=>{x.samples[1].cpuActors[3].id='FAKE_B1';},
   x=>{x.samples[2].originalSourceSolids=26;},
   x=>{x.samples[3].tick=x.samples[2].tick;},
