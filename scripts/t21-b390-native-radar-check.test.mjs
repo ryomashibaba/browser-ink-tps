@@ -77,11 +77,14 @@ test('B401 rejects false scores, forged readbacks or incoherent SOURCE cells',()
 const cpuLife=(life={},patrol={})=>{
  const ids=['A1','A2','A3','B1','B2','B3','B4'];
  const returning=life.returning??[];
+ const splatted=life.splatted??[];
+ const absent=[...returning,...splatted];
  return {
   physicalFootRelocations:0,
-  physicalRejoins:ids.filter(id=>!returning.includes(id)),
-  cpu:ids.map(id=>({id,rejoined:!returning.includes(id),
-   lifeState:'ACTIVE',hp:100})),
+  physicalRejoins:ids.filter(id=>!absent.includes(id)),
+  cpu:ids.map(id=>({id,rejoined:!absent.includes(id),
+   lifeState:splatted.includes(id)?'SPLATTED':'ACTIVE',
+   hp:splatted.includes(id)?0:100})),
   sourcePatrol:{respawnPendingCpuIds:returning,
    respawnOriginalDetected:returning.length,
    respawnOriginalGoalRequests:0,respawnOriginalRejoins:0,
@@ -90,30 +93,56 @@ const cpuLife=(life={},patrol={})=>{
  };
 };
 test('B390 validates all seven genuine first-drop rejoins with no respawn',()=>{
- assert.equal(cpuLifeOk(cpuLife(),0),true);
+ assert.equal(cpuLifeOk(cpuLife(),0,0),true);
 });
 test('B390 permits a genuine native CPU to be alive at its original upper spawn',()=>{
- assert.equal(cpuLifeOk(cpuLife({returning:['B1']}),1),true);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']}),1,1),true);
  assert.equal(cpuLifeOk(cpuLife({returning:['B1','B2']},
-  {respawnOriginalDetected:2}),2),true);
+  {respawnOriginalDetected:2}),2,2),true);
 });
 test('B390 refuses unexplained missing original CPU rejoin or fake respawn',()=>{
- assert.equal(cpuLifeOk(cpuLife({returning:['B1']}),0),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']}),0,0),false);
  assert.equal(cpuLifeOk(cpuLife({
-  physicalRejoins:['A1','A2','A3','B2','B3','B4']}),0),false);
+  physicalRejoins:['A1','A2','A3','B2','B3','B4']}),0,0),false);
  assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{
-  respawnOriginalDetected:0}),1),false);
+  respawnOriginalDetected:0}),1,1),false);
  assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{
-  respawnOriginalRejoins:2}),1),false);
+  respawnOriginalRejoins:2}),1,1),false);
  assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{
-  respawnOriginalDetected:2}),1),false);
- assert.equal(cpuLifeOk(cpuLife({returning:['B1'],physicalFootRelocations:1}),1),false);
+  respawnOriginalDetected:2}),1,1),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1'],physicalFootRelocations:1}),1,1),false);
 });
 test('B390 rejects stolen original spawn return identities and duplicate actors',()=>{
- assert.equal(cpuLifeOk(cpuLife({returning:['X1']}),1),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['X1']}),1,1),false);
  assert.equal(cpuLifeOk(cpuLife({
-  cpu:cpuLife().cpu.map((a,i)=>i===6?{...a,id:'B1'}:a)}),0),false);
+  cpu:cpuLife().cpu.map((a,i)=>i===6?{...a,id:'B1'}:a)}),0,0),false);
  assert.equal(cpuLifeOk(cpuLife({
   sourcePatrol:{...cpuLife().sourcePatrol,
-   respawnPendingCpuIds:['B1']}}),0),false);
+   respawnPendingCpuIds:['B1']}}),0,0),false);
+});
+
+test('B390 accounts for a genuinely SPLATTED native CPU before its 150-tick return',()=>{
+ assert.equal(cpuLifeOk(cpuLife({splatted:['B1']}),0,1),true);
+ assert.equal(cpuLifeOk(cpuLife({splatted:['B1','B2']}),0,2),true);
+ assert.equal(cpuLifeOk(cpuLife({splatted:['B1'],returning:['B2']},
+  {respawnOriginalDetected:1}),1,2),true);
+});
+test('B390 rejects dead bots with retained prior-life landing or fabricated counters',()=>{
+ const dead=cpuLife({splatted:['B1']});
+ assert.equal(cpuLifeOk(dead,0,0),false);
+ assert.equal(cpuLifeOk(dead,1,1),false);
+ assert.equal(cpuLifeOk({...dead,physicalRejoins:[
+  ...dead.physicalRejoins,'B1']},0,1),false);
+ assert.equal(cpuLifeOk({...dead,cpu:dead.cpu.map(b=>b.id==='B1'?
+  {...b,rejoined:true}:b)},0,1),false);
+ assert.equal(cpuLifeOk({...dead,cpu:dead.cpu.map(b=>b.id==='B1'?
+  {...b,hp:100}:b)},0,1),false);
+ assert.equal(cpuLifeOk({...dead,sourcePatrol:{
+  ...dead.sourcePatrol,respawnPendingCpuIds:['B1']}},0,1),false);
+});
+test('B390 rejects an unaccounted missing active CPU or an early fake rejoin',()=>{
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']}),0,0),false);
+ assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{respawnOriginalDetected:1}),0,1),false);
+ assert.equal(cpuLifeOk(cpuLife({splatted:['B1']},{
+  respawnOriginalDetected:1}),0,1),false);
 });

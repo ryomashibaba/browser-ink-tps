@@ -6635,7 +6635,10 @@ export class UndertowF3PlayablePreviewApp{
     clock+' · '+phase+'\n'+
     (cleared&&phase==='PLAYING'?'A1 CLEAR · KEEP PLAYING\n':'')+
     'HP '+Math.round(state.player.hp)+' · INK '+Math.round(state.player.ink)+
-    ' · CPU '+state.cpu.physicalRejoins.length+'/7\n'+
+    ' · CPU ACTIVE '+state.cpu.cpu.filter(b=>b.lifeState==='ACTIVE').length+'/7'+
+    ' · LOWER REJOIN '+state.cpu.physicalRejoins.length+'/7'+
+    ' · SPLATTED '+state.cpu.cpu.filter(b=>b.lifeState==='SPLATTED').length+
+    ' · RETURN PENDING '+state.cpu.sourcePatrol.respawnPendingCpuIds.length+'\n'+
     b380NativeWeaponGuidance({
      profile:this.projectiles.currentPlayerWeapon,
      sourceMatchState:this.matchState,

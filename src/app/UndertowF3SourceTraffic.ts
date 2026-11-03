@@ -1027,6 +1027,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // spawn after its real 150-tick death countdown. Historical first-drop
    // completion is NOT evidence of this NEW life reaching the lower floor.
    const priorLife=this.previousLife.get(bot.id);
+   // A REAL native splat immediately invalidates this actor's former
+   // physical first-drop/rejoin proof. An absent CPU is NOT still 7/7.
+   if(priorLife==='ACTIVE'&&bot.lifeState==='SPLATTED'){
+    this.physicallyRejoined.delete(bot.id);
+    this.cleared.delete(bot.id);
+    this.physicallyFalling.delete(bot.id);
+    this.respawnOriginalDrops.delete(bot.id);
+    this.patrolIndex.set(bot.id,-1);
+   }
    if(this.freeCombat&&priorLife==='SPLATTED'&&
       bot.lifeState==='ACTIVE'){
     this.physicallyRejoined.delete(bot.id);
@@ -1060,10 +1069,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
    oldFoot.copy(bot.position);
    const previous=this.previous.get(bot.id);
-   if(bot.mobilityState==='FIRST_DROP_FALL'||
-      bot.mobilityState==='FIRST_DROP_REJOIN')
+   if(bot.lifeState==='ACTIVE'&&
+      (bot.mobilityState==='FIRST_DROP_FALL'||
+       bot.mobilityState==='FIRST_DROP_REJOIN'))
     this.physicallyFalling.add(bot.id);
-   if(previous==='FIRST_DROP_REJOIN'&&bot.mobilityState==='GROUND'){
+   else if(bot.lifeState==='SPLATTED')
+    this.physicallyFalling.delete(bot.id);
+   // A former FIRST_DROP_REJOIN cannot grant a new landing to an actor
+   // whose 150-tick splat countdown just ended at the upper spawn.
+   if(previous==='FIRST_DROP_REJOIN'&&bot.mobilityState==='GROUND'&&
+      bot.lifeState==='ACTIVE'&&priorLife!=='SPLATTED'){
     this.physicallyRejoined.add(bot.id);
     if(this.respawnOriginalDrops.delete(bot.id))
      this.respawnOriginalRejoins++;

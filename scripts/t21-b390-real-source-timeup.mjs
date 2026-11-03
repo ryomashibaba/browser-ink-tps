@@ -64,7 +64,7 @@ export function b390NativeLiveGridConsistent(checkpointTick,live){
  * lower-side rejoin. Never invent an actor, route, HP hit or successful
  * fall; every pending return remains unverified until Rapier rejoin. */
 export function b390NativeCpuLifeAndOriginalReturnConsistent(
- sourceCpu,nativeRespawns
+ sourceCpu,nativeRespawns,nativeSplats
 ){
  const names=['A1','A2','A3','B1','B2','B3','B4'];
  const actors=sourceCpu?.cpu;
@@ -72,7 +72,12 @@ export function b390NativeCpuLifeAndOriginalReturnConsistent(
  const patrol=sourceCpu?.sourcePatrol;
  const pending=patrol?.respawnPendingCpuIds;
  const nonnegative=n=>Number.isSafeInteger(n)&&n>=0;
- if(!nonnegative(nativeRespawns)||!Array.isArray(actors)||
+ const splatted=Array.isArray(actors)?
+  actors.filter(a=>a?.lifeState==='SPLATTED'):[];
+ if(!nonnegative(nativeRespawns)||!nonnegative(nativeSplats)||
+    nativeSplats<nativeRespawns||
+    nativeSplats-nativeRespawns!==splatted.length||
+    !Array.isArray(actors)||
     !Array.isArray(rejoined)||!Array.isArray(pending)||
     actors.length!==7||new Set(actors.map(a=>a?.id)).size!==7||
     actors.some(a=>!names.includes(a?.id)||
@@ -89,9 +94,16 @@ export function b390NativeCpuLifeAndOriginalReturnConsistent(
     patrol.respawnOriginalRejoins>patrol.respawnOriginalDetected||
     patrol.respawnOriginalRejoins>nativeRespawns||
     patrol.respawnOriginalDetected>nativeRespawns||
-    rejoined.length+pending.length!==7)return false;
+    rejoined.length+pending.length+splatted.length!==7)return false;
  for(const actor of actors){
   if(rejoined.includes(actor.id)!==actor.rejoined)return false;
+  if(actor.lifeState==='SPLATTED'){
+   // Real 150-tick absence cannot count as an active lower-side rejoin
+   // or a completed original upper-spawn return.
+   if(actor.hp!==0||actor.rejoined||pending.includes(actor.id))return false;
+   continue;
+  }
+  if(!actor.rejoined&&!pending.includes(actor.id))return false;
   if(pending.includes(actor.id)===actor.rejoined)return false;
   if(!actor.rejoined&&nativeRespawns===0)return false;
  }
@@ -133,11 +145,12 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   }
   if(n.matchState!=='PLAYING'||n.paused||
      !b390NativeCpuLifeAndOriginalReturnConsistent(
-      n.cpu,n.cpuRespawns))
+      n.cpu,n.cpuRespawns,n.cpuSplats))
    fail('B390_NATIVE_PLAY_INTERRUPTED',{
     tick:n.tick,state:n.matchState,paused:n.paused,
     rejoined:n.cpu.physicalRejoins.length,
     genuineNativeCpuRespawns:n.cpuRespawns,
+    genuineNativeCpuSplats:n.cpuSplats,
     authenticOriginalReturn:n.cpu.sourcePatrol?.respawnPendingCpuIds});
   const elapsed=180-n.timeRemainingSeconds;
   if(elapsed>=nextSample){
@@ -201,7 +214,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     realHumanShots:n.shotsFired,changedHumanCells:n.b23HumanInkFeedback.humanChangedCells,
     realCpuShots:n.cpuSourceTurfShots,changedCpuCells:n.cpuImpactInkCellsChanged,
     genuineSevenCpuRejoined:n.cpu.physicalRejoins.length,
-    nativeCpuRespawns:n.cpuRespawns,
+    nativeCpuRespawns:n.cpuRespawns,nativeCpuSplats:n.cpuSplats,
+    nativeSplattedCpuIds:n.cpu.cpu.filter(a=>a.lifeState==='SPLATTED').map(a=>a.id),
     realOriginalReturnPending:n.cpu.sourcePatrol.respawnPendingCpuIds,
     nativeRespawns:n.humanRespawns,
     verifiedPreviousClears:n.b387RealRoundMilestones.realClearedLives,
@@ -249,7 +263,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   wallMs:Date.now()-began,lastTick:prior.tick,
   secondsRemaining:prior.timeRemainingSeconds});
  if(!b390NativeCpuLifeAndOriginalReturnConsistent(
-    final.cpu,final.cpuRespawns)||final.shotsFired<37||
+    final.cpu,final.cpuRespawns,final.cpuSplats)||final.shotsFired<37||
     final.cpuSourceTurfShots<1||
     final.b387RealRoundMilestones.realClearedLives!==1)
   fail('B390_REAL_CPU_PLAYER_180S_NOT_CONFIRMED',{
