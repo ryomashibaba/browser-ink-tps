@@ -1,0 +1,27 @@
+name: T21 B406 same-session native human-to-enemy 180s frontier tests
+on:
+  push:
+    branches:
+      - research/t21-b406-single-session-real-enemy-range-audit-20261103
+    paths:
+      - 'scripts/t21-b406-same-session-native-enemy-frontier.mjs'
+      - 'scripts/t21-b406-same-session-native-enemy-frontier.test.mjs'
+      - '.github/workflows/t21-b406-same-session-real-enemy-frontier.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-source-audit:
+    name: "Actual B405 schema, source body proximity; no fake encounters"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Independent B406 real-body, B405 time and B337 provenance regressions
+        run: |
+          node --test scripts/t21-b406-same-session-native-enemy-frontier.test.mjs \
+            scripts/t21-b405-single-180s-human-7cpu-audit.test.mjs
+          node --check scripts/t21-b406-same-session-native-enemy-frontier.mjs
