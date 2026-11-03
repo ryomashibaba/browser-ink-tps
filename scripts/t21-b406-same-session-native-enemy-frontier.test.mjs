@@ -62,14 +62,19 @@ test('within 32m is only a position candidate, NOT physics, ray or hit certifica
 });
 test('real dead CPU cannot be silently used as a living encounter candidate',()=>{
  const x=fixture(48);
- for(const s of x.samples){
+ // The genuine B405 checkpoint immediately after human input requires
+ // all seven original CPUs alive and source-rejoined. A later physical
+ // splat can reduce the actual roster to six without fake earlier state.
+ for(const s of x.samples.slice(1)){
   const c=s.cpuActors.find(c=>c.id==='B1');
   c.lifeState='SPLATTED';c.hp=0;c.rejoined=false;
   s.cpuPhysicalRejoinedCount=6;
+  s.cpuSplats=1;
  }
  const r=audit(x);
- assert.equal(r.observations[0].livingRejoinedOpponents,3);
- assert.equal(r.observations[0].actualFourOpponentBodies.length,4);
+ assert.equal(r.observations[0].livingRejoinedOpponents,4);
+ assert.equal(r.observations[1].livingRejoinedOpponents,3);
+ assert.equal(r.observations[1].actualFourOpponentBodies.length,4);
  assert.equal(r.naturalOpposingTeamRouteCertified,false);
 });
 test('different-world provenance, forged body, time or score must fail closed',()=>{
