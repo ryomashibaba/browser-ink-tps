@@ -13,3 +13,10 @@ B411 shares **the existing B410 full source session workflow**, requiring real B
 
 ## Immutable frozen boundaries
 Source stage 25/17/26/0, 0/12 natural enemy cross-bank paths, activationReady=false. No fake floors, bridge, NavLinks, masked Scoreable, actor teleport, enemy shot/HP/splat/respawn, clock injection, unsupported original collision bphsh or fake official victory. 7.2.0 normal Undertow Spillway identity kept, F1–F5 roadmap unchanged. Formal unrestricted4v4 / original scored Turf / ART / production remain HOLD. Protected main, formal QA branch, T19C/T20, original asset privacy, Draft PR#5, Pages not modified; Work needs advance user approval, Chat+GitHub centered, no local user operations. Next target after B411: source-consistent real weapon/HP engagement ONLY where physical real opponent same-frame is genuinely reachable; otherwise continue meaningful F3/F5 gameplay UX without inventing F4 geometry.
+
+## B411 実SOURCE 180秒UI真正PASS（旧文書内のB411 HOLDに優先）
+
+- [GitHub Actions #41630809201](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41630809201)、コードSHA bee39cd1310c77a18d081b3e4cd5af4ceba920c8、実証artifact 13229516996。**全ジョブSUCCESS、独立B315/B409/B410/B411全PASS。**
+- 同一真正Chromiumで、実原作4面に人間塗装、native TIME_UP tick **11855**、人間84ショット、原作ownerGrid変更1,130セル、CPU 145 SOURCEショット/実変更12,258セル。120/60/30秒の実人間上段24ショット・追加197セル・実4キーKCC合計8.740654452743925m。原作ルート/7CPU/原作SOURCE以外の脚色なし。
+- B411 UI監査が実プレイ中のAFTER_ROUTEと残り90秒で**HUD左上コンパクト・CLEAR大型通知非表示・練習カード非表示・再戦禁止**を確認。真のTIME_UPで通常HUDと再戦操作が復帰する。元CPU実HP命中0、0/12対岸自然経路、原作Scoreable0/公式勝敗NONE/4v4本番/ARTはHOLD。
+- 次のB412では**本来のPlayerController Shiftイカ形態、Rapierボールcollider、OWN原作InkRelation、SWIM_GROUND、ネイティブ移動とヒト復帰**を同じB411試合に組む。独立4面塗装・B410後半射撃・B411表示/再戦・180秒TIME_UPが一緒に成立しない限り B412をPASSと呼ばない。

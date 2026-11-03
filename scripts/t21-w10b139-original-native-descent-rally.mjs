@@ -37,6 +37,8 @@ import {b411EnableAfterNativeRealClear,b411NativeHudSample}
  from './t21-b411-native-hud-live-driver.mjs';
 import {auditB411RealNativeGameplayFocus}
  from './t21-b411-native-active-round-hud-audit.mjs';
+import {b412NativeSquidOwnInkRound,b412AuditNativeActualOriginalInkSwim}
+ from './t21-b412-native-original-squid-ink-swim.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -66,6 +68,10 @@ const b409OneRoute180=process.env.T21_B409_ONE_ROUTE_180S==='1';
 const b410RealUpperPlay=process.env.T21_B410_LATE_UPPER_HUMAN==='1';
 const b411SourceGameplayHud=
  process.env.T21_B411_COMPACT_SOURCE_HUD==='1';
+const b412NativeSquidSwim=
+ process.env.T21_B412_REAL_ORIGINAL_SQUID_SWIM==='1';
+if(b412NativeSquidSwim&&(!b411SourceGameplayHud||!b410RealUpperPlay))
+ throw Error('B412_REQUIRES_REAL_B411_AND_B410_SOURCE_ROUND');
 if(b411SourceGameplayHud&&!b410RealUpperPlay)
  throw Error('B411_REQUIRES_REAL_B410_ROUTE_AND_FOUR_SOURCE_PAINTS');
 if(b410RealUpperPlay&&!b409OneRoute180)
@@ -2136,6 +2142,7 @@ async function run(){
    fail('B409_ROUTE_NOT_PLAYING_EARLY_ENOUGH_FOR_ONE_180S_GAME');
   await sample('AFTER_ROUTE',after);
   if(b411SourceGameplayHud)await sampleB411('AFTER_ROUTE');
+  let b412Evidence=null;
   for(const remaining of [150,120,90,60,30,0]){
    const next=await until(async()=>{
     const n=await snapshot();authority(n,'FIXED');
@@ -2170,6 +2177,31 @@ async function run(){
    if(remaining===90){
     if(b411SourceGameplayHud)await sampleB411('90');
     await picture('B409_REAL_ROUTE_MID');
+    if(b412NativeSquidSwim){
+     const target=b410.waves.find(w=>w.remaining===120)?.b408Aim?.plan;
+     if(target?.source!=='25/17/26/0'||
+       target.surfaceId!==UPPER_FLOOR_SOLID+':paint'||
+       !Array.isArray(target.world))
+      fail('B412_NEEDS_REAL_120S_UPPER_NATIVE_INK_TARGET');
+     b412Evidence=await b412NativeSquidOwnInkRound({
+      remaining:90,target:target.world,expectedFoot:UPPER_FLOOR_SOLID,
+      snapshot,ledger:b312Ledger,send:cmd,wait:until,
+      locked:()=>evaluate(
+       'document.pointerLockElement===document.querySelector("#app-canvas")'),
+      verify:n=>{authority(n,'FIXED');return n;}
+     });
+     writeFileSync(resolve(OUTPUT,'b412-original-upper-real-own-ink-swim.json'),
+      JSON.stringify(b412Evidence,null,2)+'\n');
+     console.log('B412_TRUE_NATIVE_ORIGINAL_SQUID_SWIM',JSON.stringify({
+      actualNativeSqModeTick:b412Evidence.actualSqModeTick,
+      realOwnInkSwim:b412Evidence.swimObserved,
+      actualSquidKccMeters:b412Evidence.totalRealKccMeters,
+      sourceSwimLegs:b412Evidence.legs.length,
+      restoredHumanMode:b412Evidence.final.mode,
+      verifiedOriginalUpperFloor:b412Evidence.final.originalFoot
+     }));
+     await picture('B412_REAL_ORIGINAL_UPPER_OWN_INK_SWIM');
+    }
    }
   }
   const end=await snapshot();authority(end,'FIXED');
@@ -2203,6 +2235,13 @@ async function run(){
      JSON.stringify(v,null,2)+'\n');
     console.log('B411_GENUINE_NATIVE_SOURCE_GAMEPLAY_HUD_RESULT',
      JSON.stringify(v));
+    if(b412NativeSquidSwim){
+     const squid=b412AuditNativeActualOriginalInkSwim(b412Evidence,r,v);
+     writeFileSync(resolve(OUTPUT,'b412-driver-native-squid-verdict.json'),
+      JSON.stringify(squid,null,2)+'\n');
+     console.log('B412_TRUE_SOURCE_SQUID_SWIM_FULL_180S',
+      JSON.stringify(squid));
+    }
    }
   }
  }
