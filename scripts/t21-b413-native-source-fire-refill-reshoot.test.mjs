@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {b413AuditFullOriginalShotRefillReshot,b413ObserveNativeRefill}
+import {b413AuditFullOriginalShotRefillReshot,b413ObserveNativeRefill,b413ReadPostFireNativeSource}
  from './t21-b413-native-source-fire-refill-reshoot.mjs';
 const good=(tick,shots,ink,mode='HUMAN',relation='NEUTRAL',recovery='LOCKED')=>({
  tick,time:88-(tick-6460)/60,phase:'PLAYING',paused:false,stopReason:null,
@@ -119,4 +119,39 @@ test('native recovery samples never invent ticks and preserve observation values
  assert.equal(trace.samples[1].ink,86);
  assert.throws(()=>b413ObserveNativeRefill(trace,mock(6521,88)),
   /B413_NATIVE_ORIGINAL_INK_ECONOMY_HOLD_/);
+});
+
+test('native PaintCoordinator evidence is read before its corresponding later player tick',async()=>{
+ // Genuine run #41721070651 had accepted impact tick 6596 after the
+ // formerly sampled player tick 6593; neither value is rewritten.
+ const order=[];
+ const ledger=async()=>{order.push('ledger');return {
+  source:'25/17/26/0',realHumanOriginalFootSupported:true,
+  genuineHumanOriginalFootSolid:'UndertowT21D:right-low-team-a',
+  genuineOriginalFootGapMeters:.025,sourceActorRelocations:0,
+  sourceInkRewritten:false,playerPositionRewritten:false,
+  humanOriginalImpactPaintEvents:87,
+  lastHumanOriginalImpactPaintTick:6596,
+  lastHumanOriginalImpactPaintSurface:'UndertowT21D:right-low-team-a:paint'
+ };};
+ const frame=tick=>({
+  tick,timeRemainingSeconds:87.5,matchState:'PLAYING',paused:false,
+  stopReason:null,player:{position:[11.55,5.395,46.43],
+   mode:'HUMAN',inkRelation:'NEUTRAL',ink:82.9},
+  playerInkRecoveryState:'LOCKED',shotsFired:87,
+  originalSourceSolids:25,originalPaintSurfaces:17,
+  originalSourceNavigationLinks:26,sourceScoreablePromotions:0,
+  cpu:{physicalRejoins:Array.from({length:7}),physicalFootRelocations:0},
+  b25SourcePaintRun:{officialWinner:'NONE'}
+ });
+ const r=await b413ReadPostFireNativeSource({
+  ledger,snapshot:async()=>{order.push('snapshot');return frame(6597)},
+  verify:x=>x
+ });
+ assert.deepEqual(order,['ledger','snapshot']);
+ assert.equal(r.ground.lastHumanOriginalImpactPaintTick,6596);
+ assert.equal(r.after.tick,6597);
+ await assert.rejects(()=>b413ReadPostFireNativeSource({
+  ledger,snapshot:async()=>frame(6593),verify:x=>x
+ }),/B413_NATIVE_ORIGINAL_INK_ECONOMY_HOLD_READ_ONLY_CONTACT_TICK_AHEAD_OF_NATIVE_SNAPSHOT/);
 });

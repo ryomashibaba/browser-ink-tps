@@ -12,6 +12,12 @@ const key=(code,type)=>({
  nativeVirtualKeyCode:code==='ShiftLeft'?16:code==='KeyW'?87:83
 });
 const planar=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
+// The physical return acceptance remains <=0.95m. Stop CDP key pulses
+// earlier at <=0.85m to avoid native inertia overshooting that same gate.
+export function b412NativeReturnReady(position,initialPos){
+ need(is3(position)&&is3(initialPos),'ACTUAL_RETURN_COORDINATES_REQUIRED');
+ return planar(position,initialPos)<=.85;
+}
 // B319-style native 35ms observation; the general B139 500ms wait
 // overshoots a real SOURCE edge by dozens of 60Hz ticks.
 async function nativeUntil(fn,limit=20000){
@@ -147,7 +153,7 @@ export async function b412NativeSquidOwnInkRound({
   // not a teleport or direct PlayerController position setter.
   for(let i=0;i<12;i++){
    const now=await frame();
-   if(planar(now.player.position,initialPos)<=.75)break;
+   if(b412NativeReturnReady(now.player.position,initialPos))break;
    await nativeLeg('KeyS','RETURN_TO_ACTUAL_UPPER_BODY');
   }
  }finally{

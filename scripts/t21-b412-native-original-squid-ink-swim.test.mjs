@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {b412AuditNativeActualOriginalInkSwim}
+import {b412AuditNativeActualOriginalInkSwim,b412NativeReturnReady}
  from './t21-b412-native-original-squid-ink-swim.mjs';
 const b410={
  verdict:'PASS_ACTUAL_ORIGINAL_RAMP_UPPER_KCC_AND_THREE_LATE_NATIVE_SHOOT_WAVES',
@@ -88,5 +88,23 @@ test('real RETURN uses smaller native KCC input WITHOUT weakening original suppo
  last.toTick=last.fromTick+3;
  last.originalSupport=false;
  assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
+});
+
+test('B414 RAW return reaches a true 0.85m CDP stop window without loosening the 0.95m final source gate',()=>{
+ const initial=[11.62026596069336,5.395100116729736,46.45663070678711];
+ // Genuine failed run #41721892162, artifact 13272948512:
+ // continued KeyS after ~0.780m until net distance rose to ~1.144m.
+ const stillOutside=[12.31708812713623,5.395096778869629,46.95549774169922];
+ const reached=[12.03475570678711,5.395033359527588,47.117610931396484];
+ const overshot=[11.383871078491211,5.3951826095581055,47.57565689086914];
+ assert.equal(b412NativeReturnReady(stillOutside,initial),false);
+ assert.equal(b412NativeReturnReady(reached,initial),true);
+ assert.equal(b412NativeReturnReady(overshot,initial),false);
+ assert.throws(()=>b412NativeReturnReady(null,initial),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_ACTUAL_RETURN_COORDINATES_REQUIRED/);
+ // Independent post-return SOURCE audit still requires netReturnMeters <=0.95.
+ const bad=witness();bad.final.netReturnMeters=1.1437;
+ assert.throws(()=>b412AuditNativeActualOriginalInkSwim(bad,b410,b411),
   /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
 });

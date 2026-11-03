@@ -59,6 +59,21 @@ const foot=async ledger=>{
   'TRUE_ORIGINAL_UPPER_FOOT_AND_NO_WRITES');
  return g;
 };
+// Read the PaintCoordinator ledger FIRST, and the current native-player
+// snapshot SECOND. Both are read-only. A prior B415 run had a real impact
+// at tick 6596 but the player snapshot used for the <=after.tick check was
+// captured at tick 6593, an invalid cross-source observation order.
+export async function b413ReadPostFireNativeSource({snapshot,ledger,verify}){
+ need([snapshot,ledger,verify].every(fn=>typeof fn==='function'),
+  'READ_ONLY_NATIVE_SNAPSHOT_REQUIRED');
+ const ground=await foot(ledger);
+ const after=actual(verify(await snapshot()));
+ need(nat(after.tick)&&
+  (!nat(ground.lastHumanOriginalImpactPaintTick)||
+   ground.lastHumanOriginalImpactPaintTick<=after.tick),
+  'READ_ONLY_CONTACT_TICK_AHEAD_OF_NATIVE_SNAPSHOT');
+ return {after,ground};
+}
 export async function b413RealOriginalMainFireBurst({
  phase,send,snapshot,ledger,verify,locked,wait,
  onEvidence=async()=>{}
@@ -118,7 +133,7 @@ export async function b413RealOriginalMainFireBurst({
    button:'left',clickCount:1
   });
  }
- const after=actual(verify(await snapshot())),ground=await foot(ledger);
+ const {after,ground}=await b413ReadPostFireNativeSource({snapshot,ledger,verify});
  const contactsBefore=beforeGround.humanOriginalImpactPaintEvents;
  const contactsAfter=ground.humanOriginalImpactPaintEvents;
  const acceptedImpactTick=ground.lastHumanOriginalImpactPaintTick;
