@@ -53,7 +53,7 @@ export function b405AuditReal180SourceSession(data){
     ['ACTIVE','SPLATTED'].includes(c.lifeState)&&
     integer(c.hp)&&c.hp<=100&&
     typeof c.rejoined==='boolean')&&
-   s.actualPointerLocked===true,
+   s.actualPointerLocked===(i===6?false:true),
    'REAL_STAGE_SOURCE_SAMPLE_'+s.label);
   if(i<6){
    need(s.matchState==='PLAYING'&&s.paused===false&&

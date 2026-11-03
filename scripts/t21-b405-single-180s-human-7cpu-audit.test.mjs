@@ -32,7 +32,7 @@ function fixture(){
     foot:[0,4,id.startsWith('B')?-55:50]})),
    originalHumanFoot:i===6?null:{
     id:'UndertowT21D:spawn-high-positive-z',supported:true,gap:0.03},
-   actualPointerLocked:true
+   actualPointerLocked:i!==6
   }))};
 }
 test('one real full time-up source session only passes exact seven frame authority',()=>{
@@ -65,6 +65,8 @@ test('fake time, ink, CPU, original ground, source and win fail closed',()=>{
   x=>{x.samples[4].sourceScoreablePromotions=1;},
   x=>{x.samples[5].cpuPhysicalRelocations=1;},
   x=>{x.samples[6].matchState='PLAYING';},
+  x=>{x.samples[6].actualPointerLocked=true;},
+  x=>{x.samples[3].actualPointerLocked=false;},
   x=>{x.samples[6].remainingSeconds=.01;},
   x=>{x.samples[6].tick=x.samples[5].tick;}
  ]){
