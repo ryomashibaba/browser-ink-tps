@@ -27,7 +27,7 @@ test('true SOURCE ink HUD follows real spend OWN refill and re-shot',()=>{
 test('never grant bogus ink/status/source/timeUP to independent HUD',()=>{
  for(const edit of [
   x=>x.samples[1].hudInk=100,x=>x.samples[1].width='100%',
-  x=>x.samples[2].relation='ENEMY',x=>x.samples[3].hudMode='HUMAN',
+  x=>{x.samples[2].relation='ENEMY';x.samples[3].relation='ENEMY'},x=>{x.samples[2].hudMode='HUMAN';x.samples[3].hudMode='HUMAN'},
   x=>x.samples[4].hudInk=83,x=>x.samples[6].renderTick=20000,
   x=>x.samples[0].scoreable='1',x=>x.samples[7].visible=true
  ]){const d=fixture();edit(d);assert.throws(()=>auditB414(d,raw,p,ui,round),
