@@ -187,3 +187,8 @@
 - 研究ブランチの既存A1 SourceCoop (B193/B162) を再実装せず、普通の12武器SOURCEフルラウンドB384 READY/PAUSEオーバーレイからユーザーが明示的にクリックできる導線を追加する。F8 QAパネルを開かなくても「PLAY WITH REAL ALLY A1」を選べる。実クリックだけで既存 `sourceCoopNavigationUrl` を使用し、再起動は新しい原作25/17/26/0のRapier/Recast/CPU world。元のB384 12武器・相手CPU Pursuit・研究フラグは既存関数により排他除去し、ライブActorの位置・HP・時計・物理は書き換えない。SOURCE専用/通常人間の選択に限定し、決定的QA入力は不変更。
 - PLAYERレーダーは、元チームA1/A2/A3の実Rapier footだけを表示し、未発見の相手B1〜B4の正確な現在座標およびB側のnative path targetは表示しない。QA/旧SOURCE検証/F8では7体すべての既存元データを保持する。塗装ownerGridの真のA/Bサンプル・元support geometry・Radar history・Scoreable 0は変更しない。敵を発見したと推測する代替ロジックも作らない。
 - 固定F1〜F5、自然対岸0/12、正式4v4/勝敗/ART/本番HOLD不変。既存のB75/B390で検証するまで、コントロールが実ブラウザで使えるとのPASS宣言はしない。main/T19C/T20/PR#5/Pages不変更。研究目的のSOURCE試合としては実180秒/再戦既存PASS、実敵HP命中/撃破0の状態は不変。
+
+### 2026-11-03 同SHA CI初回型チェック失敗の修正
+
+- 初回実装 `49d2004263577a2d6c4f63b8d0d485ffdebbf115` の [B390 #41556776582](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41556776582)、[F4E103W #41556776639](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41556776639) および [B120 #41556776580](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41556776580) が、`UndertowF3PlayablePreviewApp.ts(1262)` の TS2448/TS2454（`pauseOverlay`/`resumeButton` を宣言前に使った）でFAIL。これは実ゲームの描画・ゲーム挙動のFAILではなく、ビルド時の誤挿入。初回SHAの認証は失敗扱い。
+- 新修正は新ボタンのコードを **既存B399 READY/PAUSE overlayで `pauseOverlay` / `resumeButton` を生成した直後**へ移動するのみ。A1協力の既存B193 URL生成、SOURCE 25/17/26/0、CPU7、元のB384セッション、QAゲートや真の物理は不変更。修正SHAのCIによる型チェック・READY可視性・180秒結果が出るまではPASSを主張しない。

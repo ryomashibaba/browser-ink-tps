@@ -1224,43 +1224,6 @@ export class UndertowF3PlayablePreviewApp{
    });
    label();multi.insertAdjacentElement('afterend',clear);
   }
-  // SOURCE F3/F5 playable flow: expose ALREADY AUTHENTIC A1 cooperation
-  // in the normal READY dialog. The older QA-panel switch is not visible
-  // from PLAYER view. Only a user click boots a FRESH original world
-  // through the already source-gated B193 URL; no state/actor writes.
-  if(this.b203FullRound&&
-     b31Params.get('t21QaDrive')==='source'&&
-     b31Params.get('t21QaInput')!=='deterministic'&&
-     (this.b384Circuit||b193Coop)){
-   const allyChoice=document.createElement('button');
-   allyChoice.id='t21-f3-ready-real-a1-coop';
-   allyChoice.type='button';
-   allyChoice.textContent=b193Coop?
-    'EXIT A1 CO-OP · NEW SOLO SOURCE WORLD':
-    'PLAY WITH REAL ALLY A1 · NEW SOURCE WORLD';
-   allyChoice.dataset.originalSourceOnly='true';
-   allyChoice.dataset.scoreable='0';
-   allyChoice.dataset.actorTeleports='0';
-   allyChoice.dataset.productionAuthorized='false';
-   allyChoice.style.cssText='display:block;width:100%;margin:8px 0;'+
-    'padding:10px;border-radius:8px;border:1px solid #70d6b2;'+
-    'background:#174c48;color:#e3fff0;cursor:pointer;'+
-    'pointer-events:auto;font:800 11px/1.45 system-ui';
-   allyChoice.addEventListener('click',()=>{
-    if(document.pointerLockElement===this.canvas||
-       this.matchState==='TIME_UP'||this.stopReason||
-       (this.matchState==='PLAYING'&&!this.paused)||
-       this.survey.snapshot().active||this.galleryIndex>=0||
-       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status))
-      return;
-    allyChoice.disabled=true;
-    // B193 generates a new clean Stage/Recast/Rapier session and
-    // explicitly strips incompatible B384 opponent-combat parameters.
-    window.location.assign(sourceCoopNavigationUrl(
-     window.location.href,!b193Coop));
-   });
-   pauseOverlay.insertBefore(allyChoice,resumeButton);
-  }
   // B193: real selected coop joins the preexisting native A1 rally,
   // projectile ink, human sub, and 60Hz ALLY_SYNC play objective.
   // The choice always boots a clean original world. No actor teleport.
@@ -1667,6 +1630,43 @@ export class UndertowF3PlayablePreviewApp{
     this.b399SetEnabled(!this.b399ClearSightEnabled);
    });
    pauseOverlay.insertBefore(clear,resumeButton);
+  }
+  // SOURCE F3/F5 playable flow: expose ALREADY AUTHENTIC A1 cooperation
+  // in the normal READY dialog. The older QA-panel switch is not visible
+  // from PLAYER view. Only a user click boots a FRESH original world
+  // through the already source-gated B193 URL; no state/actor writes.
+  if(this.b203FullRound&&
+     b31Params.get('t21QaDrive')==='source'&&
+     b31Params.get('t21QaInput')!=='deterministic'&&
+     (this.b384Circuit||b193Coop)){
+   const allyChoice=document.createElement('button');
+   allyChoice.id='t21-f3-ready-real-a1-coop';
+   allyChoice.type='button';
+   allyChoice.textContent=b193Coop?
+    'EXIT A1 CO-OP · NEW SOLO SOURCE WORLD':
+    'PLAY WITH REAL ALLY A1 · NEW SOURCE WORLD';
+   allyChoice.dataset.originalSourceOnly='true';
+   allyChoice.dataset.scoreable='0';
+   allyChoice.dataset.actorTeleports='0';
+   allyChoice.dataset.productionAuthorized='false';
+   allyChoice.style.cssText='display:block;width:100%;margin:8px 0;'+
+    'padding:10px;border-radius:8px;border:1px solid #70d6b2;'+
+    'background:#174c48;color:#e3fff0;cursor:pointer;'+
+    'pointer-events:auto;font:800 11px/1.45 system-ui';
+   allyChoice.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||
+       this.matchState==='TIME_UP'||this.stopReason||
+       (this.matchState==='PLAYING'&&!this.paused)||
+       this.survey.snapshot().active||this.galleryIndex>=0||
+       ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status))
+      return;
+    allyChoice.disabled=true;
+    // B193 generates a new clean Stage/Recast/Rapier session and
+    // explicitly strips incompatible B384 opponent-combat parameters.
+    window.location.assign(sourceCoopNavigationUrl(
+     window.location.href,!b193Coop));
+   });
+   pauseOverlay.insertBefore(allyChoice,resumeButton);
   }
   // Paused player can explicitly choose a clean 180s SOURCE world,
   // preserving only the previously selected physical human weapon.
