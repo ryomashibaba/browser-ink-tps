@@ -6,7 +6,7 @@ const mk=(label,tick,ink,mode='HUMAN',rec='HUMAN',relation='NEUTRAL')=>({
  winner:'NONE',scoreable:'0',hudWinner:'NONE',cpu:7,relocated:0,
  focused:'true',visible:true,ink,mode,recovery:rec,relation,hudInk:ink,
  hudMode:mode,hudRecovery:rec,renderTick:tick-1,
- width:ink.toFixed(2)+'%',text:'LIVE INK '+Math.round(ink)+'/100 · '+
+ width:Number(ink.toFixed(2))+'%',text:'LIVE INK '+Math.round(ink)+'/100 · '+
  (rec==='SQUID_OWN'?'OWN INK · REFILLING':'HUMAN')});
 function fixture(){return {schema:'B414_READ_ONLY_REAL_CHROMIUM_DOM',samples:[
  mk('BEFORE_SQUID_BEFORE',6500,100),
@@ -32,4 +32,20 @@ test('never grant bogus ink/status/source/timeUP to independent HUD',()=>{
   x=>x.samples[0].scoreable='1',x=>x.samples[7].visible=true
  ]){const d=fixture();edit(d);assert.throws(()=>auditB414(d,raw,p,ui,round),
  /B414_REAL_PLAYER_INK_HUD_HOLD_/);}
+});
+
+test('actual Chromium CSSOM normalized percentages keep true native HUD source checks exact',()=>{
+ const d=fixture();
+ assert.equal(d.samples[0].width,'100%');
+ const row=d.samples[1];
+ row.ink=82.9;row.hudInk=82.9;row.width='82.9%';
+ row.text='LIVE INK 83/100 · HUMAN';
+ assert.equal(auditB414(d,raw,p,ui,round).afterShotInk,82.9);
+ // A made-up unnormalized browser width or mismatched actual mode fails.
+ row.width='82.90%';
+ assert.throws(()=>auditB414(d,raw,p,ui,round),
+ /B414_REAL_PLAYER_INK_HUD_HOLD_/);
+ row.width='82.9%';row.hudMode='SQUID';
+ assert.throws(()=>auditB414(d,raw,p,ui,round),
+ /B414_REAL_PLAYER_INK_HUD_HOLD_/);
 });

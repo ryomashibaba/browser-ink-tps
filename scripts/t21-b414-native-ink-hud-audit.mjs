@@ -13,8 +13,11 @@ function visible(x,label){
   Number.isSafeInteger(x.tick)&&Number.isSafeInteger(x.renderTick)&&
   x.renderTick<=x.tick&&x.tick-x.renderTick<=120&&
   finite(x.ink)&&finite(x.hudInk)&&x.ink>=0&&x.ink<=100.01&&
-  x.hudInk>=0&&x.hudInk<=100.01&&Math.abs(x.ink-x.hudInk)<6&&
-  x.width===x.hudInk.toFixed(2)+'%'&&
+  x.hudInk>=0&&x.hudInk<=100.01&&Math.abs(x.ink-x.hudInk)<.25&&
+  x.mode===x.hudMode&&x.recovery===x.hudRecovery&&
+  // CSSStyleDeclaration serializes 100.00% as "100%" and 82.90% as
+  // "82.9%". Exact browser-normalized equality, not an error tolerance.
+  x.width===Number(x.hudInk.toFixed(2))+'%'&&
   x.text?.includes('LIVE INK '+Math.round(x.hudInk)+'/100'),
   'ORIGINAL_VISIBLE_'+label);
 }
