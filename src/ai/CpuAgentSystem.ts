@@ -2219,7 +2219,10 @@ export class CpuAgentSystem {
     }
 
     const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
-    if (distance <= 5.2 && distance > 1.05) {
+    if (distance <= 5.2 && distance > 1.05 && !this.f3dSourceGoals) {
+      // In F3 the normal CPU movement tick already calls chooseSourceGoal,
+      // which requires real registered Rapier feet and native Recast path.
+      // Preserve T20 pursuit but never bypass F3's original-source gate.
       bot.agent?.requestMoveTarget(this.navigation.closestPoint(target));
     }
     if (bot.fireRemaining > 0) return;

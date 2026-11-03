@@ -2102,6 +2102,66 @@ async function run(){
     originalScoreable:row.sourceScoreable,officialWinner:row.officialWinner
    }));
   };
+  // Actual native read-only 17-owner-grid playable scoreboard evidence.
+  const b417={schema:'B417_TRUE_NATIVE_SOURCE_CELLS',source:'25/17/26/0',
+   scoreable:0,winner:'NONE',samples:[]};
+  const sampleB417=async label=>{
+   const v=await evaluate(`(() => {
+    const n=window.__t21F3.snapshot(),s=n.b401NativeLiveSourceInk;
+    const h=document.querySelector('#t21-f3-b417-paint-contest');
+    const a=document.querySelector('#t21-f3-b417-team-a');
+    const b=document.querySelector('#t21-f3-b417-team-b');
+    return {tick:n.tick,phase:n.matchState,
+     source:[n.originalSourceSolids,n.originalPaintSurfaces,
+      n.originalSourceNavigationLinks,n.sourceScoreablePromotions].join('/'),
+     winner:n.b25SourcePaintRun.officialWinner,s,
+     ui:{visible:!!h&&!h.hidden&&getComputedStyle(h).display!=='none',
+      a:h?.dataset.t21B417TeamA,b:h?.dataset.t21B417TeamB,
+      n:h?.dataset.t21B417Neutral,
+      tick:h?.dataset.t21B417SampleTick,
+      source:h?.dataset.t21B417OriginalOnly,
+      official:h?.dataset.t21B417OfficialTurfScore,
+      label:document.querySelector('#t21-f3-b417-text')?.textContent,
+      aBar:a?.style.width,bBar:b?.style.width}};
+   })()`);
+   b417.samples.push({label,...v});
+   writeFileSync(resolve(OUTPUT,'b417-true-native-source-cells-hud.json'),
+    JSON.stringify(b417,null,2)+'\n');
+   const s=v.s,u=v.ui;
+   if(v.source!=='25/17/26/0'||v.winner!=='NONE')
+    fail('B417_GAME_SOURCE_CHANGED');
+   if(label==='TIME_UP'){
+    if(v.phase!=='TIME_UP'||u.visible)
+     fail('B417_HUD_VISIBLE_AFTER_TRUE_TIME_UP');
+    return;
+   }
+   const owned=s?.teamA+s?.teamB;
+   const percent=n=>Number(n.toFixed(2))+'%';
+   if(v.phase!=='PLAYING'||s?.status!=='LIVE_REGISTERED_SOURCE_ONLY'||
+      s.originalSourceOnly!==true||s.officialTurfScore!==false||
+      s.winner!=='NONE'||s.gameplayWrites!==0||
+      s.registeredSurfaces!==17||
+      !Number.isSafeInteger(s.sampleNativeTick)||
+      s.sampleNativeTick>v.tick||v.tick-s.sampleNativeTick>360||
+      ![s.totalActiveCells,s.teamA,s.teamB,s.neutral].every(
+       n=>Number.isSafeInteger(n)&&n>=0)||
+      s.totalActiveCells===0||
+      s.teamA+s.teamB+s.neutral!==s.totalActiveCells||
+      !u.visible||u.source!=='true'||u.official!=='false'||
+      u.tick!==String(s.sampleNativeTick)||
+      u.a!==String(s.teamA)||u.b!==String(s.teamB)||
+      u.n!==String(s.neutral)||
+      u.label!=='SOURCE PAINTED CELLS · A '+
+       s.teamA.toLocaleString('en-US')+' / B '+
+       s.teamB.toLocaleString('en-US')+' · UNSCORED'||
+      u.aBar!==percent(owned?100*s.teamA/owned:0)||
+      u.bBar!==percent(owned?100*s.teamB/owned:0))
+    fail('B417_NATIVE_ORIGINAL_OWNER_GRID_HUD_MISMATCH_'+label);
+   console.log('B417_REAL_NATIVE_SOURCE_PAINTED_CELL_HUD',JSON.stringify({
+    label,tick:v.tick,source:v.source,
+    sampledNativeTick:s.sampleNativeTick,A:s.teamA,B:s.teamB,
+    neutral:s.neutral,scoreable:0,officialWinner:'NONE'}));
+  };
   const sample=async(label,n)=>{
    authority(n,'FIXED');
    const f=n.matchState==='PLAYING'?await b312Ledger():null;
@@ -2221,6 +2281,7 @@ async function run(){
    }
    if(remaining===90){
     if(b411SourceGameplayHud)await sampleB411('90');
+    if(b411SourceGameplayHud)await sampleB417('90');
     await picture('B409_REAL_ROUTE_MID');
     if(b412NativeSquidSwim){
      const target=b410.waves.find(w=>w.remaining===120)?.b408Aim?.plan;
@@ -2298,6 +2359,7 @@ async function run(){
        wait:until,onEvidence:observeB413
       });
       saveB413();
+      if(b411SourceGameplayHud)await sampleB417('AFTER_RESHOT');
       // B415: independent actual DOM observation from THIS same Chromium
       // source-only match. Never write stats, scene, ownerGrid, or native tick.
       const b415Hud=await evaluate('(() => { '+
@@ -2353,6 +2415,7 @@ async function run(){
    fail('B409_GENUINE_SOURCE_MATCH_NO_REAL_TIME_UP');
   await picture('B409_REAL_ROUTE_TIME_UP');
   if(b411SourceGameplayHud)await sampleB411('TIME_UP');
+  if(b411SourceGameplayHud)await sampleB417('TIME_UP');
   if(b413NativeInkLoop)await sampleB414('TIME_UP');
   console.log('B409_ORIGINAL_ROUTE_AND_180S_GENUINE_TIME_UP',
    JSON.stringify({nativeTick:end.tick,

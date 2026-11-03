@@ -15,6 +15,7 @@ on:
       - 'src/app/B415LiveInkLoop.test.ts'
       - 'src/app/B417SourcePaintedCellView.ts'
       - 'src/app/B417SourcePaintedCellView.test.ts'
+      - 'src/ai/CpuAgentSystem.ts'
       - '.github/workflows/t21-b409-one-real-route-full-180s.yml'
   workflow_dispatch:
 permissions:
