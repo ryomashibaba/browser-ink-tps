@@ -39,6 +39,8 @@ if(!['FIXED_DEFAULT','ALLY_RALLY','TEAM_COVERAGE'].includes(variant))
 const allyOptIn=variant!=='FIXED_DEFAULT';
 const b154TeamCoverage=variant==='TEAM_COVERAGE';
 const b162CoopTrial=process.env.T21_B162_REAL_ALLY_SYNC==='1';
+// Reuse existing two authentic B162 playthroughs; first READY prearm only.
+const b162ReadyPrearm=process.env.T21_B162_READY_PREARM==='1';
 const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
 const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
 const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
@@ -252,6 +254,34 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  if(!Number.isFinite(originalCamera?.yawDegrees)||
     !Number.isFinite(originalCamera?.pitchDegrees))
   fail('B164_ORIGINAL_NATIVE_CAMERA_REFERENCE_MISSING');
+ const firstRealReadyPrearm=b162ReadyPrearm&&b162CoopTrial&&
+  b203FullRoundTrial&&coopAttempt===1;
+ let started;
+ if(firstRealReadyPrearm){
+  // Already clicked the authentic READY mission and START round before
+  // the real 7/7 Rapier rejoin in doPhysicalTrial. Never ESC/PAUSE/
+  // re-arm it here; those would invalidate the true sixty-second attempt.
+  const source=checkpoint;
+  const locked=await evaluate(
+   'document.pointerLockElement===document.querySelector("#app-canvas")');
+  if(!locked||source.matchState!=='PLAYING'||source.paused||
+     source.cpu.physicalRejoins.length!==7||
+     source.cpu.physicalFootRelocations!==0||
+     source.b25SourcePaintRun.status!=='RUNNING'||
+     source.b25SourcePaintRun.practiceVariant!=='ALLY_SYNC'||
+     source.b25SourcePaintRun.officialWinner!=='NONE')
+   fail('B162_READY_PREARM_GENUINE_7OF7_MISSION_NOT_RUNNING_'+
+    JSON.stringify({tick:source.tick,world:source.matchState,
+     practice:source.b25SourcePaintRun,lock:locked,
+     physicalRejoins:source.cpu.physicalRejoins.length}));
+  started=source;
+  console.log('B162_REAL_READY_PREARM_NATIVE_7OF7_STARTED',JSON.stringify({
+   tick:started.tick,mission:started.b25SourcePaintRun.status,
+   actualElapsedNativeTicks:started.b25SourcePaintRun.elapsedTicks,
+   nativeCpuFootRejoins:started.cpu.physicalRejoins.length,
+   nativeActorRelocations:0,authenticSource:'25/17/26/0',
+   officialWinner:'NONE',realPointerLock:true,qaWrites:0}));
+ }else{
  for(const type of ['keyDown','keyUp'])
   await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
    windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
@@ -270,7 +300,11 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  const choice=await evaluate(
   'document.querySelector("#t21-f3-b25-paint-run")?.dataset.t21B56NextVariant');
  if(choice!=='ALLY_SYNC')fail('B162_COOP_CHALLENGE_NOT_ACTUALLY_SELECTED');
- if(b203FullRoundTrial&&coopAttempt===1){
+ // Retain the original B205 genuine paused-IDLE witness on the
+ // second fresh replay when the first trial uses READY pre-arming.
+ if(b203FullRoundTrial&&(
+  (!b162ReadyPrearm&&coopAttempt===1)||
+  (b162ReadyPrearm&&coopAttempt===2))){
   const n=await snapshot();authority(n,'FIXED');
   const v=await evaluate(`(() => ({
    overlay:document.querySelector('#t21-f3-b202-real-pause')?.dataset.t21B202NativeState,
@@ -371,10 +405,11 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  }else await click(800,450);
  await until(()=>evaluate(
   'document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
- const started=await until(async()=>{
+ started=await until(async()=>{
   const n=await snapshot();authority(n,'FIXED');
   return n.b25SourcePaintRun.status==='RUNNING'?n:false;
  },100000);
+ }
  let b312UpperBaseline=null;
  if(b312SecondInkTrial&&coopAttempt===1){
   await evaluate(`(() => {const u=new URL(location.href);
@@ -1399,6 +1434,31 @@ async function doPhysicalTrial(coopAttempt=1){
   })()`);
   if(ready.state!=='READY_TO_START'||ready.visible!==true)
    fail('B242_FULL_COOP_ROUND_NOT_READY');
+  // In the FIRST full-round genuine B162 trial, arm the actual
+  // visible A1 mission BEFORE the real 180-second start. B200's second
+  // separate world intentionally retains its older B330 paused-arm
+  // verification path in playB162GenuineAllySync.
+  if(b162ReadyPrearm&&b162CoopTrial&&coopAttempt===1){
+   const beforeMission=await snapshot();authority(beforeMission,'FIXED');
+   if(beforeMission.tick!==0||beforeMission.matchState!=='STAGING'||
+      !beforeMission.paused||beforeMission.cpu.physicalRejoins.length!==0||
+      beforeMission.b25SourcePaintRun.status!=='IDLE')
+    fail('B162_READY_PREARM_SOURCE_BOOT_NOT_CLEAN');
+   await clickButton('#t21-f3-b25-start');
+   const readyMission=await snapshot();authority(readyMission,'FIXED');
+   if(readyMission.tick!==0||!readyMission.paused||
+      readyMission.b25SourcePaintRun.status!=='ARMED'||
+      readyMission.b25SourcePaintRun.practiceVariant!=='ALLY_SYNC'||
+      readyMission.b25SourcePaintRun.elapsedTicks!==0||
+      readyMission.cpu.physicalRejoins.length!==0||
+      readyMission.cpu.physicalFootRelocations!==0)
+    fail('B162_READY_PREARM_NOT_AUTHENTIC_'+JSON.stringify({
+     tick:readyMission.tick,mission:readyMission.b25SourcePaintRun}));
+   console.log('B162_TRUE_READY_A1_MISSION_ARMED_NATIVE_TICK_ZERO',
+    JSON.stringify({source:'25/17/26/0',tick:0,
+     practiceStatus:'ARMED',realActorRejoins:0,
+     realNativeTimeElapsed:0,syntheticCpuWrites:0}));
+  }
   await clickButton('#t21-f3-b202-resume');
  }else await click(800,450);
  await until(()=>evaluate('document.pointerLockElement===document.querySelector("#app-canvas")'),20000);

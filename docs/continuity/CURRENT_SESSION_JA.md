@@ -214,3 +214,10 @@
 - Implementation: exact B193 original coop + fullRound + STAGING + paused + tick0 + never-pointer-locked + IDLE can arm `ALLY_SYNC` on READY. Ordinary B207/B384/noncoop/QA stay on existing gate. A1 run is held in ARMED throughout real native STAGING and until original Recast/Rapier physical 7/7 & PLAYING; 60-second B25 timer and A1/human impact baselines begin on the real first eligible 60Hz tick, not at READY or a synthetic 7/7. Invalid stage/Scoreable/pause/pointer/HP provenance still fails closed.
 - Existing 25 solids/17 paint/26 links/0 Scoreable, cross-map 0/12, REAL HP combat unknown, official winner NONE, main/Pages/PR#5 protected; new SHA unit and genuine Chromium testing pending. This is a real SOURCE practice UX feature, not official 4v4 certification.
 - 同一B287真正Chromiumで新A1世界を開いた直後、実USERマウスクリックで `START REAL A1 CO-OP` を **tick0 / ARMED / ALLY_SYNC / 0秒**にする統合試験を追加。次に本物 `START 180s` をクリックして native Tickを最低12進めても、まだ実CPU7/7前のSTAGINGでミッションが誤開始しないことを検査。これは再合流後のMISSION RUNNING/60s CLEAR自体を証明する試験ではなく、既存B75/B390以外の新しいブラウザ起動は追加しない。B75 preflightにB193と本物B25計時の単体検証も追加。
+
+## 2026-11-03 — A1 READY予約→真正60秒協力ミッションクリア統合（準備コミット／未実行）
+
+- QA HEAD `098f90761a0b85fbf00eed1381ab54a46be12932` のA1 READY予約機能は、GitHub CI13件が同時QUEUEDで実ブラウザ未認証。B287の前段は旧HEAD `d7283ba5...` でA1新SOURCE世界への本物CDPクリックPASS。現在のREADY予約から本物A1クリアまでは未知。
+- 新たな実ブラウザジョブを増やさず、既存 `T21 W10-B162 real original A1 cooperative practice` の**1回目**だけ新しい操作経路へ：真正READYのnative tick0で実USERマウスが `START REAL A1 CO-OP` をクリック→B25は `ALLY_SYNC/ARMED/0ticks`→本物の `START 180s` CDPクリック→原作CPU7/7の実再合流とPLAYINGを待つ→`RUNNING` を証明→既存の実Human+実A1 original ink+12m床移動によるCLEARを保護された正規テストで追跡。HP/Actor/foot/paint/clockを直接改変しない。
+- **2回目**の本物の新SOURCE世界再戦は既存の `PAUSED IDLE→A1 mission ARM→B330 REAL PAUSED RESUME→本物のCLEAR` に保持。これによりREADY新導線と既存B205/B330回帰の双方を、既存B200の2試合で担保する。UI/元SOURCE地形/CPU/HUDコードには追加変更なし。
+- 動作エントリは既存B162 scriptに `T21_B162_READY_PREARM=1` を注入。直接の2主要JS関数のSyntax parseは成功。**GitHub Actions真正Chrome/単体テストは未実行**でありPASS宣言禁止。現HEADのCIを勝手にキャンセルしないため、これは未参照コミットとして保存し、未完了CIの結論確認後にのみブランチへ統合判断する。正式4v4、0/12自然対岸経路、25/17/26/0、ART、公式Winner、production/main/PR#5すべてHOLD/不変更。
