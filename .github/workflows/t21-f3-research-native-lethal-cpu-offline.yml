@@ -37,4 +37,5 @@ jobs:
             src/ai/B213NativeCounterfire.test.ts \
             src/ai/B181OriginalSourceCombatSight.test.ts
       - name: Typecheck entire app and preserve frozen source stage contracts
+        if: always()
         run: npm run typecheck
