@@ -29,6 +29,7 @@ export function b337AuditNative(w){
    Number.isSafeInteger(s.tick)&&s.tick>=1&&finite(s.remainingSeconds)&&
    s.remainingSeconds>0&&s.remainingSeconds<=180&&
    position(s.body)&&finite(s.cameraYawDegrees)&&
+   finite(s.cameraPitchDegrees)&&
    s.originalSolids===25&&s.originalPaint===17&&
    s.originalNavLinks===26&&s.scoreable===0&&
    s.productionAuthorized===false&&s.unrestricted4v4Certified===false&&
@@ -55,8 +56,66 @@ export function b337AuditNative(w){
  const [start,aim,fire,wMove,aMove,sMove,dMove]=w.samples;
  need(start.footSupported===true&&typeof start.footSolid==='string'&&
   finite(start.footGap)&&start.footGap<=0.4,'ACTUAL_ORIGINAL_START_FOOT');
- need(Math.abs(aim.cameraYawDegrees-start.cameraYawDegrees)>=0.1,
+ need(Math.abs(aim.cameraYawDegrees-start.cameraYawDegrees)>=0.1||
+  Math.abs(aim.cameraPitchDegrees-start.cameraPitchDegrees)>=0.1,
   'REAL_MOUSE_AIM_CHANGE_MISSING');
+ const witness=w.originalAimWitness;
+ // REAL StagePaintSurface.id is `<backingSolidId>:paint` (T21D
+ // buildFlatComponent), not the distinct navigation QA anchor
+ // `paint:<solidId>` used in UndertowSpillwayConnectivityQa.
+ const actualOriginalId=start.footSolid+':paint';
+ const equalCell=(a,b)=>Array.isArray(a?.grid)&&
+  Array.isArray(a?.world)&&Array.isArray(b?.grid)&&Array.isArray(b?.world)&&
+  a.grid.length===2&&b.grid.length===2&&
+  a.grid.every(Number.isSafeInteger)&&b.grid.every(Number.isSafeInteger)&&
+  a.world.length===3&&b.world.length===3&&
+  a.world.every(finite)&&b.world.every(finite)&&
+  a.grid.every((n,i)=>n===b.grid[i])&&
+  a.world.every((n,i)=>Math.abs(n-b.world[i])<1e-5);
+ need(witness?.sourceFootId===start.footSolid&&
+  witness.targetOriginalSurface===actualOriginalId&&
+  originalIds.has(actualOriginalId)&&
+  witness.localCellSampleProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
+  Array.isArray(witness.originalActiveCells)&&
+  witness.originalActiveCells.every(c=>
+   c.realCellProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
+   [0,1,-1].includes(c.originalOwner))&&
+  witness.originalActiveCells.length>=1&&
+  witness.originalActiveCells.length<=3&&
+  witness.originalActiveCells.some(c=>equalCell(c,witness.selectedCell))&&
+  position(witness.actualBodyMeters)&&position(witness.actualCameraMeters)&&
+  horizontal(witness.actualBodyMeters,start.body)<.2&&
+  horizontal(witness.selectedCell.world,witness.actualBodyMeters)>=2.5&&
+  horizontal(witness.selectedCell.world,witness.actualBodyMeters)<=8&&
+  Array.isArray(witness.actualCDP)&&witness.actualCDP.length===2&&
+  witness.actualCDP.every(Number.isFinite)&&
+  witness.actualCDP[0]>=10&&witness.actualCDP[0]<=1590&&
+  witness.actualCDP[1]>=10&&witness.actualCDP[1]<=890&&
+  finite(witness.targetYawDegrees)&&finite(witness.targetPitchDegrees)&&
+  finite(witness.observedYawDegrees)&&finite(witness.observedPitchDegrees)&&
+  Math.abs(witness.observedYawDegrees-aim.cameraYawDegrees)<.01&&
+  Math.abs(witness.observedPitchDegrees-aim.cameraPitchDegrees)<.01&&
+  Number.isSafeInteger(witness.beforeTick)&&
+  witness.beforeTick>=start.tick&&witness.beforeTick<=aim.tick&&
+  witness.afterTick===aim.tick&&
+  witness.originalRapierFootSupported===true&&
+  witness.artificialAimOrGameplayWrites===false,
+  'ORIGINAL_REAL_FLOOR_MOUSE_AIM_PROVENANCE_MISSING');
+ const sourceWorld=witness.selectedCell.world;
+ const camera=witness.actualCameraMeters;
+ const x=sourceWorld[0]-camera[0],z=sourceWorld[2]-camera[2];
+ const expectedYaw=Math.atan2(x,z)*180/Math.PI;
+ const expectedPitch=Math.atan2(sourceWorld[1]-camera[1],Math.hypot(x,z))*180/Math.PI;
+ const wrapDegrees=x=>((x+540)%360)-180;
+ need(Math.abs(wrapDegrees(expectedYaw-witness.targetYawDegrees))<=.2&&
+  Math.abs(expectedPitch-witness.targetPitchDegrees)<=.2&&
+  Math.abs(wrapDegrees(expectedYaw-aim.cameraYawDegrees))<=3&&
+  Math.abs(expectedPitch-aim.cameraPitchDegrees)<=3,
+  'ACTUAL_CAMERA_TO_ORIGINAL_SOURCE_AIM_UNPROVEN');
+ // Actual original ink must hit the selected source: a mouse turn or a
+ // launcher-count increment cannot claim painted source cells.
+ need(fire.lastHumanPaintedSurface===actualOriginalId,
+  'REAL_ORIGINAL_AIM_SOURCE_IMPACT_NOT_PROVEN');
  need(fire.tick>aim.tick&&fire.humanShots>start.humanShots&&
   fire.humanInk>start.humanInk&&
   Number.isSafeInteger(fire.lastHumanImpactTick)&&
@@ -77,6 +136,8 @@ export function b337AuditNative(w){
   actualHumanNewShots:fire.humanShots-start.humanShots,
   actualHumanChangedCells:fire.humanInk-start.humanInk,
   actualCameraYawDeltaDegrees:Number((aim.cameraYawDegrees-start.cameraYawDegrees).toFixed(3)),
+  actualCameraPitchDeltaDegrees:Number((aim.cameraPitchDegrees-start.cameraPitchDegrees).toFixed(3)),
+  actualSourceAimSurface:actualOriginalId,
   attemptedGenuineKeyboardDirections:['W','A','S','D'],
   fullyContinuousRouteCertified:false,
   naturalOpponentRouteCertified:false,scoreable:0,officialWinner:'NONE',

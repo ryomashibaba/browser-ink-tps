@@ -8,21 +8,37 @@ function fixture(){
   injectedTicks:false,injectedInk:false,injectedActorPositions:false,
   officialWinner:'NONE',
   actions:['MOUSE_MOVED','FIRE','KeyW','KeyA','KeyS','KeyD'],
+  originalAimWitness:{
+   sourceFootId:'UndertowT21D:spawn-high-positive-z',
+   targetOriginalSurface:'UndertowT21D:spawn-high-positive-z:paint',
+   localCellSampleProvenance:'B337_NATIVE_LOCAL_ACTIVE_GRID',
+   originalActiveCells:[{grid:[2,3],world:[0,5.9,44],
+    originalOwner:0,realCellProvenance:'B337_NATIVE_LOCAL_ACTIVE_GRID'}],
+   selectedCell:{grid:[2,3],world:[0,5.9,44]},
+   actualCameraMeters:[-0.7693,10.35,34],
+   actualBodyMeters:[0,6,40],
+   targetYawDegrees:4.4,targetPitchDegrees:-23.92,actualCDP:[800,580],
+   observedYawDegrees:4.4,observedPitchDegrees:-24,
+   beforeTick:100,afterTick:112,
+   originalRapierFootSupported:true,artificialAimOrGameplayWrites:false
+  },
   samples:labels.map((label,i)=>({
    label,source:'25/17/26/0',tick:100+i*12,remainingSeconds:178-i,
    matchState:'PLAYING',paused:false,stopReason:null,
    body:[0,6,40+(i>=3?.3:0)],cameraYawDegrees:i>0?4.4:0,
+   cameraPitchDegrees:i>0?-24:0,
    originalSolids:25,originalPaint:17,originalNavLinks:26,scoreable:0,
    productionAuthorized:false,unrestricted4v4Certified:false,
    turfResult:'UNAVAILABLE_SOURCE_SCORE_MASK_NOT_AUTHORIZED',
    cpuCount:7,cpuRejoined:7,cpuRelocations:0,
    humanShots:i>=2?4:0,humanInk:i>=2?17:0,
    lastHumanImpactTick:i>=2?125:null,
-   lastHumanPaintedSurface:i>=2?'original-1':null,
+   lastHumanPaintedSurface:i>=2?'UndertowT21D:spawn-high-positive-z:paint':null,
    footSolid:'UndertowT21D:spawn-high-positive-z',
    footGap:0.02,footSupported:true,
    originalRows:Array.from({length:17},(_,j)=>({
-    surfaceId:'original-'+j,a:i>=2&&j===1?17:0,
+    surfaceId:j===1?'UndertowT21D:spawn-high-positive-z:paint':'original-'+j,
+    a:i>=2&&j===1?17:0,
     b:0,neutral:i>=2&&j===1?83:100,active:100
    }))
   }))};
@@ -79,5 +95,48 @@ test('original active cell counts and 17 exact IDs cannot drift',()=>{
  ]){
   const w=fixture();change(w);
   assert.throws(()=>audit(w),/B337_SOURCE_GAMEPLAY_/);
+ }
+});
+
+test('source floor mouse provenance must agree with observed genuine aim',()=>{
+ for(const edit of [
+  w=>{delete w.originalAimWitness;},
+  w=>{w.originalAimWitness.targetOriginalSurface='fabricated';},
+  w=>{w.originalAimWitness.selectedCell.grid=[999,999];},
+  w=>{w.originalAimWitness.observedPitchDegrees=55;},
+  w=>{w.originalAimWitness.beforeTick=500;},
+  w=>{w.originalAimWitness.artificialAimOrGameplayWrites=true;},
+  w=>{w.samples[2].lastHumanPaintedSurface='original-2';}
+ ]){
+  const x=fixture();edit(x);
+  assert.throws(()=>audit(x),/B337_SOURCE_GAMEPLAY_/);
+ }
+});
+test('camera geometry and ORIGINAL source identity must be genuine',()=>{
+ for(const mutate of [
+  x=>{x.originalAimWitness.targetYawDegrees=175;},
+  x=>{x.originalAimWitness.targetPitchDegrees=10;},
+  x=>{x.originalAimWitness.actualCameraMeters=[10,10,10];},
+  x=>{x.samples[1].cameraPitchDegrees=15;
+      x.originalAimWitness.observedPitchDegrees=15;},
+  x=>{x.originalAimWitness.actualBodyMeters=[500,6,40];},
+  x=>{x.originalAimWitness.targetOriginalSurface=
+    'paint:UndertowT21D:spawn-high-positive-z';}
+ ]){
+  const x=fixture();mutate(x);
+  assert.throws(()=>audit(x),/B337_SOURCE_GAMEPLAY_/);
+ }
+});
+
+test('B337 recorded native local-cell proof is indispensable, not silently replaced by old B271 optical grid',()=>{
+ for(const mutate of [
+  x=>{delete x.originalAimWitness.localCellSampleProvenance;},
+  x=>{x.originalAimWitness.originalActiveCells[0].realCellProvenance='B271_GLOBAL_OPTICAL_ONLY';},
+  x=>{x.originalAimWitness.originalActiveCells[0].originalOwner=42;},
+  x=>{x.originalAimWitness.selectedCell.world=[0,5.9,41];},
+  x=>{x.originalAimWitness.selectedCell.world=[0,5.9,49];}
+ ]){
+  const witness=fixture();mutate(witness);
+  assert.throws(()=>audit(witness),/B337_SOURCE_GAMEPLAY_/);
  }
 });
