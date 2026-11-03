@@ -131,3 +131,12 @@ F1〜F5（固定ロードマップ）：
 **固定入口URL**： https://github.com/ryomashibaba/browser-ink-tps/blob/research/t21-b406-single-session-real-enemy-range-audit-20261103/START_HERE.md
 
 **この引き継ぎ文書自体も研究branchの文書コミットとして保存され、最新HEADが変わるため、次チャットではHEADを新しく取得すること。**
+
+## 2026-11-04 研究継続：B413真正PASS / F5・B414とB415の最新境界
+
+- **真正確定済み**：B413 [Actions #41651119100](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41651119100) SHA `53839205a451192b125ca50f8693d157af8d9bf2`、B413+F5既存HUD回帰 [#41654818533](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41654818533) SHA `18cd7f296d97bec9ffab266ae2ab057f6ef7e67e` が真正同一180秒SOURCE・B413までの独立監査 SUCCESS。元原作25 solids/17 PaintSurfaces/26 NavLinks/0 Scoreable、対岸自然経路0/12、正式4v4/得点/勝敗/敵HP/ART/productionはHOLD。
+- **研究F3・B415**：「実射撃消費→OWN SQUID補給→人間再射撃」の順をそのまま本物のプレイヤー向け小型HUDで案内する読取り専用プレイ課題 `src/app/B415LiveInkLoop.ts` が研究branchに追加された。別チャット並行開発との重複・変更上書きを避ける。B415の真正Chrome run [#41721070651](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41721070651) は本記録時点でqueued。Unit/Source候補≠現実のプレイヤー達成PASS。
+- **研究F5・B414**：本物のPlayerResourcesインクHUD表示をさらに読みやすくし、旧「HUMAN · HUMAN」表示を `FULL` / `HUMAN RECOVERY` / `RECOVERY LOCKED` / `OWN INK · REFILLING` に明確化。既存B413の1本の実Chrome試合から、実射撃前後・OWNイカ中・人間復帰・再射撃・TIME_UPのDOMインク残量/バー幅/native tick/モードを **読み取り専用**収集し、新 `scripts/t21-b414-native-ink-hud-audit.mjs` でB413本体判定と独立に検証。B415のプレイ案内機能を消さない。
+- **最新B414コードSHA** `abac9422fa7f6772f286b0fafbea8d6f35353e32`、[GitHub Actions #41721892162](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41721892162) は記録時点 **queued・結果未確定**。監査の独立JavaScriptユニット実行では正常系2ケース/偽データ拒否8条件PASS。ただし真正Chrome・同SHA独立HUD監査はまだPASS未確認。旧B413真正PASSへ遡及的な変更なし。
+- **衝突回避・安全**：main/正式QA/T19C/T20/Draft PR#5/Pagesを無断変更しない。原作HP/資源/Actor/時計/地形/塗装を書き換えず、ユーザーPC操作不要、Work事前承認制。次回は新SHAの最新Actions最終result・artifactを最初に照合。B414真正FAILならphase別DOM native RAWを解析し、ゲーム判定を緩めずに修正。二重実装やCI乱発を避ける。
+
