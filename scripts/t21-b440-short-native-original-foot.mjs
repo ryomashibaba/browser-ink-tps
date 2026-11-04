@@ -118,6 +118,70 @@ async function keyW(){
   if(pressed)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...v});
  }
 }
+/** Actual CDP keyboard input and live F3 camera snapshot — never actor/tick writes. */
+async function tapSourceCameraKey(key,code,keyCode){
+ const v={key,code,windowsVirtualKeyCode:keyCode,nativeVirtualKeyCode:keyCode};
+ await cdp('Input.dispatchKeyEvent',{type:'keyDown',...v});
+ await cdp('Input.dispatchKeyEvent',{type:'keyUp',...v});
+}
+async function checkRealSourceCameraControls(){
+ const before=await snap();authority(before);
+ if(!await locked()||before.matchState!=='PLAYING'||before.paused||
+    before.cameraSourcePractice?.sourcePracticeOnly!==true||
+    before.cameraSourcePractice?.sourceAimSensitivityMultiplier!==1||
+    before.cameraSourcePractice?.sourceAimInvertVertical!==false)
+  fail('CAMERA_NOT_ACTUAL_SOURCE_PLAYER_BASELINE');
+ const sameWorld=await origin();
+ const sameActorIds=before.cpu.cpu.map(x=>x.id).join(',');
+ await tapSourceCameraKey(']','BracketRight',221);
+ const speed=await snap();authority(speed);
+ if(speed.cameraSourcePractice?.sourceAimSensitivityMultiplier!==1.25||
+    speed.cameraSourcePractice?.sourceAimInvertVertical!==false)
+  fail('CAMERA_REAL_BRACKET_KEY_NOT_APPLIED');
+ await tapSourceCameraKey('i','KeyI',73);
+ const inverted=await snap();authority(inverted);
+ const realToast=await evaluate(`(() => {
+   const x=document.querySelector('#t21-f3-source-camera-controls');
+   return x?{visible:!x.hidden,content:x.textContent,
+    sourceOnly:x.dataset.sourceOnly,gameplayWrites:x.dataset.gameplayWrites,
+    productionAuthorized:x.dataset.productionAuthorized}:null;
+ })()`);
+ if(inverted.cameraSourcePractice?.sourceAimInvertVertical!==true||
+    inverted.cameraSourcePractice?.sourceAimSensitivityMultiplier!==1.25||
+    realToast?.visible!==true||realToast?.sourceOnly!=='true'||
+    realToast.gameplayWrites!=='0'||realToast.productionAuthorized!=='false'||
+    !realToast.content.includes('VERTICAL LOOK · INVERTED'))
+  fail('CAMERA_REAL_INVERSION_OR_PLAYER_FEEDBACK');
+ const picture=await cdp('Page.captureScreenshot',{
+  format:'png',captureBeyondViewport:false});
+ if(typeof picture?.data!=='string'||picture.data.length<100)
+  fail('CAMERA_REAL_CHROMIUM_SCREENSHOT_MISSING');
+ writeFileSync(resolve(out,'source-camera-inverted-real-chromium.png'),
+  Buffer.from(picture.data,'base64'));
+ await tapSourceCameraKey('\\','Backslash',220);
+ const reset=await snap();authority(reset);
+ const resetToast=await evaluate(`document.querySelector(
+   '#t21-f3-source-camera-controls')?.textContent??null`);
+ if(reset.cameraSourcePractice?.sourceAimSensitivityMultiplier!==1||
+    reset.cameraSourcePractice?.sourceAimInvertVertical!==false||
+    resetToast!=='CAMERA RESET · 1.00x · NORMAL Y'||
+    await origin()!==sameWorld||!await locked()||
+    reset.cpu.cpu.map(x=>x.id).join(',')!==sameActorIds||
+    reset.sourceScoreablePromotions!==0||
+    reset.productionAuthorized!==false)
+  fail('CAMERA_RESET_OR_ORIGINAL_SOURCE_AUTHORITY');
+ proof.realPlayerCameraControls={
+  status:'PASS_REAL_CDP_PLAYER_CAMERA_CONTROL_WITH_SCREENSHOT_NOT_ART_PASS',
+  originalSameNativeWorld:true,actualKeyboard:true,
+  rightBracketSensitivity:speed.cameraSourcePractice.sourceAimSensitivityMultiplier,
+  invertYConfirmed:inverted.cameraSourcePractice.sourceAimInvertVertical,
+  resetSensitivity:reset.cameraSourcePractice.sourceAimSensitivityMultiplier,
+  resetInverted:reset.cameraSourcePractice.sourceAimInvertVertical,
+  realToast,realChromiumScreenshot:'source-camera-inverted-real-chromium.png',
+  originalGeometryOrActorWrites:0,officialWinner:'NONE',
+  productionAuthorized:false,artApproved:false};
+ save();
+}
 async function main(){
  save();
  const chrome=process.env.T21_CHROME_PATH||
@@ -217,6 +281,7 @@ async function main(){
   proof.after.nativeTickDelta<6||proof.after.nativeTickDelta>36||
   !Number.isFinite(meters)||meters<.10||meters>2.2)
   fail('REAL_NATIVE_INPUT_OR_SOURCE_KCC');
+ await checkRealSourceCameraControls();
  if(b441Experiment){
   // B441 has to prove the actual SOURCE CPU goal selector, not merely
   // the candidate generator passing its pure unit tests. No fake route,
