@@ -11,6 +11,11 @@ describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  it('samples both original registered low floors inside all actual holes',()=>{
   const stage=make();
   for(const side of ['A','B'] as const){
+   const paint=stage.paintSurfaces.find(p=>p.id==='UndertowT21D:right-low-team-'+(side==='A'?'a':'b')+':paint')!;
+   const backing=stage.solids.find(s=>s.id===paint.backingSolidId)!;
+   // Original paint definitions inherit the exact geometric mask.
+   expect(paint.footprint).toBeUndefined();
+   expect(backing.footprint).toBeDefined();
    const points=proposeB441OriginalFrontline(stage,side);
    expect(points.length).toBeGreaterThan(0);
    expect(points.length).toBeLessThanOrEqual(32);

@@ -31,14 +31,18 @@ export function proposeB441OriginalFrontline(
  const source=stage.paintSurfaces.find(p=>p.backingSolidId===solidId&&
   p.id===solidId+':paint');
  const solid=stage.solids.find(s=>s.id===solidId);
- if(!source||!solid||!source.footprint||!solid.footprint||
+ // The frozen original BLOCKOUT intentionally declares the footprint
+ // on the backing SOLID; its PaintSurface inherits that mask at runtime.
+ // Never require an optional duplicate source.footprint to exist.
+ const footprint=source?.footprint??solid?.footprint;
+ if(!source||!solid||!footprint||!solid.footprint||
     !stageSolidCollisionEnabled(solid)||
     !stageSolidNavigationEnabled(solid)||
     solid.triangleMesh||solid.rotationEulerDegrees||
     (source.flags&SurfaceFlags.Paintable)===0)return [];
  const sign=side==='A'?1:-1;
  const selected:B441OriginalFrontierProposal[]=[];
- const viable=(u:number,v:number)=>pointInStageFootprint(u,v,source.footprint!)&&
+ const viable=(u:number,v:number)=>pointInStageFootprint(u,v,footprint)&&
   pointInStageFootprint(u,v,solid.footprint!);
  const all:StageVector3[]=[];
  // The canonical source footprints (including holes) are authoritative.
