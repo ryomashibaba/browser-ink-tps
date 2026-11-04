@@ -949,7 +949,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Recast query; it NEVER promotes that route to a Crowd goal.
    if(fronts.length===0&&!this.b446LiveFootProbes.has(id)&&
       bot.mobilityState==='GROUND'&&bot.lifeState==='ACTIVE'){
-    const report:B446RealFootDryRouteProbe={
+    const report:{-readonly [K in keyof B446RealFootDryRouteProbe]:B446RealFootDryRouteProbe[K]}={
      id,nativeTick:this.b137NativeTick,
      actualPhysicalFoot:[realFoot.x,realFoot.y,realFoot.z],
      inspectedOriginalGoals:0,deniedRapierOrBoundary:0,
