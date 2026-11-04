@@ -240,6 +240,10 @@ async function main(){
        g.inspectedProposals>g.originalFloorProposals||
        g.inspectedProposals!==g.rejectedOriginalRapierOrBoundary+
         g.rejectedNativeRecastOrOriginalPath+g.strictlyApprovedGoals||
+       g.rejectedNativeRecastOrOriginalPath!==
+        g.rejectedNativeUnreached+g.rejectedNativeStartSnap+
+        g.rejectedNativeEndSnap+
+        g.rejectedNativeIntermediateOriginalSupport||
        g.runtimeChooseInvocations<g.runtimeNoOriginalFrontGoals||
        g.runtimeChooseInvocations<0||g.runtimeTrueOriginalGoalRequests<0)
      fail('B445_FORGED_OR_UNACCOUNTED_CPU_GATE');
@@ -338,6 +342,8 @@ async function main(){
    ...proof.b441NativeEvidence,phase:'NATIVE_CPU_REAL_WALK_MEASURED',
    b442ActualApprovedNativeTargetsAtFinish:actualTargets,
    b445LastOriginalGateByCpu:validateB445(afterPatrol),
+   b446LiveActualCpuFootDryRouteProbes:
+    afterPatrol?.b446LivePhysicalFootDryRouteProbes,
    b442ClosestRealGoalDistances:closestById,
    b442ObservedUniqueGoalArrivals:observedArrivals,
    b442ArrivalWitnessVerdict:observedArrivals>0?

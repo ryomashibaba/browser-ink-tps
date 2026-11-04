@@ -63,6 +63,11 @@ export interface B445RealSourceGoalGate{
  inspectedProposals:number;
  rejectedOriginalRapierOrBoundary:number;
  rejectedNativeRecastOrOriginalPath:number;
+ /** B446: exact first failure among original Recast gates. */
+ rejectedNativeUnreached:number;
+ rejectedNativeStartSnap:number;
+ rejectedNativeEndSnap:number;
+ rejectedNativeIntermediateOriginalSupport:number;
  strictlyApprovedGoals:number;
  readonly approvedOriginalGoals:[number,number,number][];
  runtimeChooseInvocations:number;
@@ -71,6 +76,22 @@ export interface B445RealSourceGoalGate{
  runtimeUnsupportedGoalFoot:number;
  runtimeUnsupportedNativePath:number;
  runtimeTrueOriginalGoalRequests:number;
+}
+/** B446 original-source probe from the current REAL rejoined CPU foot.
+ * Never a target grant: changes no navigation, Actor, collision, or clock. */
+export interface B446RealFootDryRouteProbe{
+ readonly id:string;
+ readonly nativeTick:number;
+ readonly actualPhysicalFoot:[number,number,number];
+ readonly inspectedOriginalGoals:number;
+ readonly deniedRapierOrBoundary:number;
+ readonly nativeUnreached:number;
+ readonly nativeStartSnap:number;
+ readonly nativeEndSnap:number;
+ readonly nativeIntermediateSupport:number;
+ readonly passedAllOriginalChecks:number;
+ readonly firstPassingExistingGoal:[number,number,number]|null;
+ readonly probeOnlyNoActorOrGoalWrites:true;
 }
 export interface F3TrafficSnapshot{
  readonly cpu:readonly {id:string;mobilityState:string;released:boolean;rejoined:boolean;lastMovedTick:number;physicalFoot:[number,number,number];lifeState:'ACTIVE'|'SPLATTED'|'UNKNOWN';hp:number|null}[];
@@ -92,6 +113,8 @@ export interface F3TrafficSnapshot{
   readonly b441ClosestApprovedFrontAbsZ:number|null;
   /** B445: original real lower-landing rejection reasons per CPU. */
   readonly b445OriginalFrontlineGates:readonly B445RealSourceGoalGate[];
+  readonly b446LivePhysicalFootDryRouteProbes:
+   readonly B446RealFootDryRouteProbe[];
   readonly b443NativeGoalRetentions:number;
   readonly b443FirstActualFrontlineArrivals:number;
   readonly b443RotationsAfterDwell:number;
@@ -195,6 +218,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly patrolGoals=new Map<string,Vec3[]>();
  private readonly b441FrontGoals=new Map<string,Vec3[]>();
  private readonly b445FrontlineGates=new Map<string,B445RealSourceGoalGate>();
+ private readonly b446LiveFootProbes=
+  new Map<string,B446RealFootDryRouteProbe>();
  /** B442 evidence-only: no steering, Actor, or navigation side effects. */
  private readonly b442LastApprovedFront=new Map<string,{
   target:Vec3;nativeTick:number
@@ -382,6 +407,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      originalFloorProposals:proposals.length,inspectedProposals:0,
      rejectedOriginalRapierOrBoundary:0,
      rejectedNativeRecastOrOriginalPath:0,
+     rejectedNativeUnreached:0,rejectedNativeStartSnap:0,
+     rejectedNativeEndSnap:0,rejectedNativeIntermediateOriginalSupport:0,
      strictlyApprovedGoals:0,approvedOriginalGoals:[],
      runtimeChooseInvocations:0,runtimeNoOriginalFrontGoals:0,
      runtimeNearExistingGoal:0,runtimeUnsupportedGoalFoot:0,
@@ -408,10 +435,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b441UnsafeOrUnreachableHolds++;continue;
      }
      const route=this.nav.auditPath(start,goal);
-     if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
-        route.endSnapDistanceMeters>.20||
-        !this.hasSourceSupportedRoute(route,sideSign)){
+     // B446: keep every old safety cutoff EXACTLY the same, recording
+     // the FIRST rejection reason. The short circuit order is unchanged.
+     const nativeFailure=!route.reachedTarget?'UNREACHED':
+      route.startSnapDistanceMeters>.20?'START_SNAP':
+      route.endSnapDistanceMeters>.20?'END_SNAP':
+      !this.hasSourceSupportedRoute(route,sideSign)?'UNSUPPORTED_PATH':null;
+     if(nativeFailure){
       gate.rejectedNativeRecastOrOriginalPath++;
+      if(nativeFailure==='UNREACHED')gate.rejectedNativeUnreached++;
+      else if(nativeFailure==='START_SNAP')gate.rejectedNativeStartSnap++;
+      else if(nativeFailure==='END_SNAP')gate.rejectedNativeEndSnap++;
+      else gate.rejectedNativeIntermediateOriginalSupport++;
       this.b441UnsafeOrUnreachableHolds++;continue;
      }
      gate.strictlyApprovedGoals++;
@@ -907,6 +942,59 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(gate){
     gate.runtimeChooseInvocations++;
     if(fronts.length===0)gate.runtimeNoOriginalFrontGoals++;
+   }
+   // B446: one read-only pass from the actual, physically rejoined CPU
+   // location, not the cached original landing position. This can expose
+   // a strictly supported route that was absent from a landing-origin
+   // Recast query; it NEVER promotes that route to a Crowd goal.
+   if(fronts.length===0&&!this.b446LiveFootProbes.has(id)&&
+      bot.mobilityState==='GROUND'&&bot.lifeState==='ACTIVE'){
+    const report:B446RealFootDryRouteProbe={
+     id,nativeTick:this.b137NativeTick,
+     actualPhysicalFoot:[realFoot.x,realFoot.y,realFoot.z],
+     inspectedOriginalGoals:0,deniedRapierOrBoundary:0,
+     nativeUnreached:0,nativeStartSnap:0,nativeEndSnap:0,
+     nativeIntermediateSupport:0,passedAllOriginalChecks:0,
+     firstPassingExistingGoal:null,probeOnlyNoActorOrGoalWrites:true
+    };
+    const proposals=proposeB441OriginalFrontline(this.stage,
+     bot.team===Team.A?'A':'B');
+    for(const p of proposals){
+     report.inspectedOriginalGoals++;
+     const goal=new Vec3(...p.point);
+     const source=this.physics.castStageSegment(
+      new Vec3(goal.x,goal.y+.65,goal.z),
+      new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+     const flat=source?inspectB130OriginalFlatSource({
+      nativeTick:this.b137NativeTick,
+      actualRapierBody:[goal.x,goal.y+
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
+      actualRapierSupportId:source.solidId}):null;
+     if(!source||source.solidId!==p.sourceSolidId||
+       !flat?.insideRegisteredOriginalXZFootprint||
+       !flat.originalFlatVerticalBandWithin22cm||
+       flat.distanceToOriginalPolygonBoundaryMeters<.75||
+       !this.hasSourceFootSupport(realFoot)){
+      report.deniedRapierOrBoundary++;continue;
+     }
+     const route=this.nav.auditPath(realFoot,goal);
+     if(!route.reachedTarget){
+      report.nativeUnreached++;continue;
+     }
+     if(route.startSnapDistanceMeters>.20){
+      report.nativeStartSnap++;continue;
+     }
+     if(route.endSnapDistanceMeters>.20){
+      report.nativeEndSnap++;continue;
+     }
+     if(!this.hasSourceSupportedRoute(route,sign)){
+      report.nativeIntermediateSupport++;continue;
+     }
+     report.passedAllOriginalChecks++;
+     if(report.firstPassingExistingGoal===null)
+      report.firstPassingExistingGoal=[goal.x,goal.y,goal.z];
+    }
+    this.b446LiveFootProbes.set(id,report);
    }
    const lock=this.b443OriginalGoalLocks.get(id);
    let completed:Vec3|null=null;
@@ -1467,6 +1555,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        [number,number,number],
       approvedOriginalGoals:v.approvedOriginalGoals.map(p=>
        [...p] as [number,number,number])})),
+    b446LivePhysicalFootDryRouteProbes:
+     [...this.b446LiveFootProbes.values()].map(v=>({
+      ...v,actualPhysicalFoot:[...v.actualPhysicalFoot] as
+       [number,number,number],
+      firstPassingExistingGoal:v.firstPassingExistingGoal?
+       [...v.firstPassingExistingGoal] as [number,number,number]:null
+     })),
     b443NativeGoalRetentions:this.b443NativeGoalRetentions,
     b443FirstActualFrontlineArrivals:this.b443FirstActualFrontlineArrivals,
     b443RotationsAfterDwell:this.b443RotationsAfterDwell,
