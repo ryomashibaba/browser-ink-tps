@@ -11,6 +11,7 @@ on:
       - 'scripts/t21-b413-*.mjs'
       - 'scripts/t21-b414-*.mjs'
       - 'scripts/t21-b419-*.mjs'
+      - 'scripts/t21-b430-*.mjs'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/B193SourceCoopMode.ts'
       - 'src/app/B193SourceCoopMode.test.ts'
@@ -52,7 +53,8 @@ jobs:
           node --check scripts/t21-b413-independent-ink-economy-review.mjs
           node --check scripts/t21-b414-native-ink-hud-audit.mjs
           node --check scripts/t21-b419-real-full-round-fresh-replay.mjs
-          node --test scripts/t21-b419-real-full-round-fresh-replay.test.mjs scripts/t21-b414-native-ink-hud-audit.test.mjs scripts/t21-b413-native-source-fire-refill-reshoot.test.mjs scripts/t21-b412-native-original-squid-ink-swim.test.mjs scripts/t21-b411-native-active-round-hud-audit.test.mjs scripts/t21-b410-upper-original-activity-audit.test.mjs scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
+          node --check scripts/t21-b430-full-second-source-round.mjs
+          node --test scripts/t21-b430-full-second-source-round.test.mjs scripts/t21-b419-real-full-round-fresh-replay.test.mjs scripts/t21-b414-native-ink-hud-audit.test.mjs scripts/t21-b413-native-source-fire-refill-reshoot.test.mjs scripts/t21-b412-native-original-squid-ink-swim.test.mjs scripts/t21-b411-native-active-round-hud-audit.test.mjs scripts/t21-b410-upper-original-activity-audit.test.mjs scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
           npx vitest run src/app/B193SourceCoopMode.test.ts src/app/B415LiveInkLoop.test.ts src/app/B417SourcePaintedCellView.test.ts src/ai/B420SourceMeleePursuitAuthority.test.ts src/app/B421RealEnemyStandoff.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: One real native high-to-lower-to-ramp-to-upper 180s with 7 CPUs
@@ -78,6 +80,7 @@ jobs:
           T21_B412_REAL_ORIGINAL_SQUID_SWIM: '1'
           T21_B413_REAL_SOURCE_INK_LOOP: '1'
           T21_B419_REAL_REPLAY_SECOND_GAME: '1'
+          T21_B430_REAL_SECOND_FULL_180S: '1'
           T21_F3_SHOT_DIR: /tmp/t21-b409-original-180s
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Independently verify true original ink KCC and same native 180s
@@ -93,6 +96,7 @@ jobs:
           node scripts/t21-b413-independent-ink-economy-review.mjs /tmp/t21-b409-original-180s
           node scripts/t21-b414-native-ink-hud-audit.mjs /tmp/t21-b409-original-180s
           node scripts/t21-b419-real-full-round-fresh-replay.mjs /tmp/t21-b409-original-180s/b419-real-second-source-round.json
+          node scripts/t21-b430-full-second-source-round.mjs /tmp/t21-b409-original-180s/b430-two-authentic-source-180s.json
       - name: Preserve all genuine source route/ink/CPU/full-match evidence
         if: always()
         uses: actions/upload-artifact@v4

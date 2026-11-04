@@ -45,6 +45,8 @@ import {b413RealOriginalMainFireBurst,b413ObserveNativeRefill,
  from './t21-b413-native-source-fire-refill-reshoot.mjs';
 import {auditB419NativeReplay}
  from './t21-b419-real-full-round-fresh-replay.mjs';
+import {auditB430TrueSecond180s}
+ from './t21-b430-full-second-source-round.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -78,6 +80,9 @@ const b412NativeSquidSwim=
  process.env.T21_B412_REAL_ORIGINAL_SQUID_SWIM==='1';
 const b413NativeInkLoop=process.env.T21_B413_REAL_SOURCE_INK_LOOP==='1';
 const b419RealReplay=process.env.T21_B419_REAL_REPLAY_SECOND_GAME==='1';
+const b430FullSecond180=process.env.T21_B430_REAL_SECOND_FULL_180S==='1';
+if(b430FullSecond180&&!b419RealReplay)
+ throw Error('B430_REQUIRES_REAL_B419_FIRST_180S_AND_SECOND_SHOT');
 if(b419RealReplay&&(!b409OneRoute180||!b411SourceGameplayHud||
  !b413NativeInkLoop||b200ReplayTrial))
  throw Error('B419_ONE_TRUE_FULL_SOURCE_180S_REQUIRED');
@@ -2873,6 +2878,69 @@ async function run(){
   writeFileSync(resolve(OUTPUT,'b419-driver-native-replay-verdict.json'),
    JSON.stringify(result,null,2)+'\n');
   console.log('B419_TRUE_REAL_FRESH_SECOND_SOURCE_MATCH',JSON.stringify(result));
+  if(b430FullSecond180){
+   // B430: continue this ACTUAL new Rapier/CPU browser world past the
+   // genuine B419 second shot. Do not restart, fast-forward, inject ticks,
+   // seek or relock the browser. 2x 180s SOURCE play is distinct from a
+   // scoreable/full-4v4 Nintendo turf result.
+   const two={schema:'B430_TRUE_SECOND_SOURCE_180S',
+    base:proof,secondOrigin:newPage.origin,
+    syntheticTicks:false,actorWrites:0,scoreWrites:0,nativeClockWrites:0,
+    samples:[],secondEndUi:null};
+   const saveTwo=()=>writeFileSync(resolve(OUTPUT,
+    'b430-two-authentic-source-180s.json'),JSON.stringify(two,null,2)+'\n');
+   const sampleTwo=async (label,n)=>{
+    authority(n,'FIXED');
+    const originNow=await evaluate('performance.timeOrigin');
+    const locked=await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")');
+    const item={...meta(n,originNow),label,
+     cpuSourceShots:n.cpuSourceTurfShots,
+     cpuPaintCells:n.cpuInkCellsChanged,
+     humanPaintCells:n.b23HumanInkFeedback.humanChangedCells,
+     pointerLocked:locked};
+    two.samples.push(item);saveTwo();
+    console.log('B430_TRUE_SECOND_SOURCE_NATIVE_CLOCK',
+     JSON.stringify({label,tick:item.tick,remaining:item.remaining,
+      phase:item.phase,realCpu:item.rejoins,
+      shots:item.shots,cpuShots:item.cpuSourceShots,
+      cpuPaint:item.cpuPaintCells,source:item.source,
+      officialWinner:item.winner}));
+   };
+   saveTwo();
+   for(const remaining of [120,60,0]){
+    // Poll only the genuine browser snapshot; this wait is NOT gameplay
+    // acceleration. Stop on lost focus, CPU removal or source violation.
+    const n=await until(async()=>{
+     const curr=await snapshot();authority(curr,'FIXED');
+     if(curr.stopReason||curr.cpu.physicalRejoins.length!==7||
+        curr.cpu.physicalFootRelocations!==0||
+        (curr.paused&&curr.matchState!=='TIME_UP')||
+        (curr.matchState!=='PLAYING'&&curr.matchState!=='TIME_UP'))
+      fail('B430_SECOND_REAL_NATIVE_ROUND_INTERRUPTED');
+     return curr.timeRemainingSeconds<=remaining+.001&&
+      (remaining===0?curr.matchState==='TIME_UP':
+       curr.matchState==='PLAYING')?curr:false;
+    },17*60*1000);
+    await sampleTwo(remaining===0?'TIME_UP':String(remaining),n);
+   }
+   const endUi=await until(()=>evaluate(`(() => {
+    const modal=document.querySelector('#t21-f3-b59-session-finished');
+    const b=document.querySelector('#t21-f3-b59-restart');
+    return {visible:!!modal&&!modal.hidden&&
+     getComputedStyle(modal).display!=='none',
+     realModalFinished:modal?.dataset.t21B59State==='FINISHED',
+     buttonVisible:!!b&&!b.hidden&&getComputedStyle(b).display!=='none',
+     buttonDisabled:!!b?.disabled};
+   })()`).then(x=>x?.visible&&x?.realModalFinished&&
+    x?.buttonVisible&&!x.buttonDisabled?x:false),20000);
+   two.secondEndUi=endUi;saveTwo();
+   await picture('B430_TRUE_SECOND_SOURCE_TIME_UP');
+   const audited=auditB430TrueSecond180s(two);
+   writeFileSync(resolve(OUTPUT,'b430-driver-two-real-180s-verdict.json'),
+    JSON.stringify(audited,null,2)+'\n');
+   console.log('B430_TWO_SEPARATE_REAL_SOURCE_180S',JSON.stringify(audited));
+  }
  }
 
  if(b200ReplayTrial){
