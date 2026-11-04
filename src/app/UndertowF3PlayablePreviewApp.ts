@@ -5053,7 +5053,14 @@ export class UndertowF3PlayablePreviewApp{
      hits:this.stats.humanCpuDirectHits,
      cpuSplats:this.stats.humanCpuDirectSplats,
      damage:this.stats.playerDamageTaken,
-     humanSplats:this.humanSplats,respawns:this.humanRespawns
+     humanSplats:this.humanSplats,respawns:this.humanRespawns,
+     // Native motion, resource and original ink outcomes are observed
+     // after this 60Hz real physics/PaintCoordinator step, never simulated.
+     paintCells:actualHumanInk.humanChangedCells,
+     ink:this.stats.playerInk,inkRelation:this.player.currentInkRelation,
+     mode:this.player.currentMode,grounded:this.stats.playerGrounded,
+     body:[physical.x,physical.y,physical.z],
+     weaponId:this.projectiles.currentPlayerWeapon.id
     });
  }
  /** Synchronize BOTH actual READY dialog and advanced QA menu controls. */
