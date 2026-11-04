@@ -2514,6 +2514,7 @@ async function run(){
   // A new browser page creates the SECOND Rapier/Recast/CPU world.
   const proof={schema:'B419_REAL_NATIVE_ENDSCREEN_TWO_WORLDS',
    clicked:false,syntheticTicks:false,actorWrites:0,scoreWrites:0,
+   realEscapeInputSent:false,pointerExitMethod:null,pointerLockReleased:false,
    old:null,boot:null,armed:null,started:null,fired:null};
   const saveB419=()=>writeFileSync(resolve(OUTPUT,'b419-real-second-source-round.json'),
    JSON.stringify(proof,null,2)+'\n');
@@ -2542,12 +2543,37 @@ async function run(){
   saveB419();
   if(first.matchState!=='TIME_UP'||first.timeRemainingSeconds!==0||
    !proof.old.replayVisible)fail('B419_NO_REAL_FIRST_ENDSCREEN_REPLAY');
+  // Real #41743828860: true 180s TIME_UP, REPLAY visible,
+  // but headless browser-level Escape did not unlock pointer capture.
+  // First send real CDP Escape; fallback ONLY to the browser-standard
+  // pointer lock release (never writes native actor/tick/ink/score).
   if(ui.locked){
    for(const type of ['keyDown','keyUp'])
     await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
      windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
-   await until(()=>evaluate('document.pointerLockElement===null'),25000);
-  }
+   proof.realEscapeInputSent=true;
+   let escaped=false;
+   try{
+    await until(()=>evaluate('document.pointerLockElement===null'),3500);
+    escaped=true;
+   }catch(e){
+    if(!String(e).includes('B140_WAIT_TIMEOUT'))throw e;
+   }
+   if(!escaped){
+    await evaluate(`(async()=>{
+     if(document.pointerLockElement)await document.exitPointerLock();
+     return document.pointerLockElement===null;
+    })()`);
+    await until(()=>evaluate('document.pointerLockElement===null'),10000);
+   }
+   proof.pointerExitMethod=escaped?'CDP_ESCAPE':'BROWSER_EXIT_POINTER_LOCK';
+  }else proof.pointerExitMethod='ALREADY_UNLOCKED';
+  proof.pointerLockReleased=await evaluate('document.pointerLockElement===null');
+  saveB419();
+  if(!proof.pointerLockReleased)fail('B419_BROWSER_POINTER_STILL_LOCKED');
+  console.log('B419_ACTUAL_BROWSER_POINTER_RELEASE',JSON.stringify({
+   realEscape:proof.realEscapeInputSent,mode:proof.pointerExitMethod,
+   trueTimeUpTick:first.tick}));
   await clickButton('#t21-f3-b200-replay');
   proof.clicked=true;
   const newPage=await until(async()=>{try{

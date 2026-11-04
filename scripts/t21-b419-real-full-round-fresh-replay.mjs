@@ -12,7 +12,12 @@ const proper=(n,phase)=>n?.source==='25/17/26/0'&&
 export function auditB419NativeReplay(d){
  gate(d?.schema==='B419_REAL_NATIVE_ENDSCREEN_TWO_WORLDS'&&
   d.clicked===true&&d.syntheticTicks===false&&
-  d.actorWrites===0&&d.scoreWrites===0,'PROVENANCE');
+  d.actorWrites===0&&d.scoreWrites===0&&
+  d.pointerLockReleased===true&&
+  ['CDP_ESCAPE','BROWSER_EXIT_POINTER_LOCK','ALREADY_UNLOCKED'].includes(
+   d.pointerExitMethod)&&
+  (d.pointerExitMethod==='ALREADY_UNLOCKED'||d.realEscapeInputSent===true),
+  'PROVENANCE');
  const {old,boot,armed,started,fired}=d;
  gate(proper(old,'TIME_UP')&&old.tick>=10800&&old.remaining===0&&
   old.rejoins===7&&old.shots>0&&
@@ -40,6 +45,7 @@ export function auditB419NativeReplay(d){
  return {schema:'B419_INDEPENDENT_REAL_BROWSER_REPLAY',
   verdict:'PASS_REAL_180S_TO_NATIVE_FRESH_SECOND_ROUND_SHOT',
   originalTimeUpTick:old.tick,
+  browserPointerExitMethod:d.pointerExitMethod,
   firstBrowserTimeOrigin:old.origin,
   secondBrowserTimeOrigin:boot.origin,
   secondMatchShotTick:fired.tick,
