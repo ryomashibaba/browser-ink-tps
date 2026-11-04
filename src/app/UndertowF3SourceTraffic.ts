@@ -29,6 +29,8 @@ import {eligibleB192SourceHumanPursuit,
 import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
 import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
 import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
+import {b450FirstSourceDenial,type B450FailedOriginalGoal}
+ from './B450OriginalRouteWitness';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -91,6 +93,8 @@ export interface B446RealFootDryRouteProbe{
  readonly nativeIntermediateSupport:number;
  readonly passedAllOriginalChecks:number;
  readonly firstPassingExistingGoal:[number,number,number]|null;
+ /** B450 actual B2/B4 first original unsupported samples; never goals. */
+ readonly b450FailedOriginalGoals:B450FailedOriginalGoal[];
  readonly probeOnlyNoActorOrGoalWrites:true;
 }
 export interface F3TrafficSnapshot{
@@ -964,7 +968,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      inspectedOriginalGoals:0,deniedRapierOrBoundary:0,
      nativeUnreached:0,nativeStartSnap:0,nativeEndSnap:0,
      nativeIntermediateSupport:0,passedAllOriginalChecks:0,
-     firstPassingExistingGoal:null,probeOnlyNoActorOrGoalWrites:true
+     firstPassingExistingGoal:null,b450FailedOriginalGoals:[],
+     probeOnlyNoActorOrGoalWrites:true
     };
     const proposals=proposeB441OriginalFrontline(this.stage,
      bot.team===Team.A?'A':'B');
@@ -997,7 +1002,27 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       report.nativeEndSnap++;continue;
      }
      if(!this.hasSourceSupportedRoute(route,sign)){
-      report.nativeIntermediateSupport++;continue;
+      report.nativeIntermediateSupport++;
+      // B450 only replays REJECTED native routes with identical 0.30m
+      // sampling and original Rapier queries. No goal/actor/clock writes.
+      if(id==='B2'||id==='B4'){
+       const firstDenied=b450FirstSourceDenial(
+        route.nativePathPoints,sign,point=>{
+         const hit=this.physics!.castStageSegment(
+          new Vec3(point.x,point.y+.65,point.z),
+          new Vec3(point.x,point.y-.65,point.z),'ink-projectile');
+         const gap=hit?Math.abs(hit.point.y-point.y):null;
+         return {supported:!!hit&&gap!==null&&gap<=.25&&
+          this.stage.solids.some(s=>s.id===hit.solidId),
+          solidId:hit?.solidId??null,gapMeters:gap};
+        });
+       report.b450FailedOriginalGoals.push({
+        originalGoal:[goal.x,goal.y,goal.z],
+        originalGoalSolidId:p.sourceSolidId,
+        nativePathPointCount:route.nativePathPoints.length,firstDenied
+       });
+      }
+      continue;
      }
      report.passedAllOriginalChecks++;
      if(report.firstPassingExistingGoal===null)

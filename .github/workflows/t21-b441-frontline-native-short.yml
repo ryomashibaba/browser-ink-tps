@@ -5,6 +5,9 @@ on:
     paths:
       - 'scripts/t21-b440-short-native-original-foot.mjs'
       - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/B450OriginalRouteWitness.ts'
+      - 'src/app/B450OriginalRouteWitness.test.ts'
+      - 'scripts/t21-b450-real-b2-b4-gap-audit.mjs'
       - '.github/workflows/t21-b441-frontline-native-short.yml'
   workflow_dispatch:
 permissions:
@@ -26,7 +29,7 @@ jobs:
       - name: Verify true native runner source and compile game
         run: |
           node --check scripts/t21-b440-short-native-original-foot.mjs
-          npx vitest run src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts
+          npx vitest run src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/app/B450OriginalRouteWitness.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: One real native browser with 7 original CPU and B441 opt-in
         env:
@@ -34,6 +37,8 @@ jobs:
           T21_B441_NATIVE_OBSERVE_TICKS: '720'
           T21_B440_OUT: /tmp/t21-b441-short-native-frontline
         run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: B450 independent genuine CPU B2 B4 first original path denial audit
+        run: node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: Preserve real SOURCE evidence even if HOLD
         if: always()
         uses: actions/upload-artifact@v4
