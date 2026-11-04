@@ -11,7 +11,9 @@ import {resolve} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
-const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound';
+const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
+const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound'+
+ (b441Experiment?'&t21W10B441=sourceFrontline':'');
 const out=process.env.T21_B440_OUT||'/tmp/t21-b440-short-native-foot';
 const children=[],pending=new Map();
 let ws=null,seq=0;
@@ -20,6 +22,7 @@ const proof={schema:'B440_ORIGINAL_SHORT_CHROMIUM_FOOT_PROOF',
   source:'25/17/26/0',testKind:'SHORT_FRESH_SOURCE_ONLY',
   genuineReplayClickCertified:false,full180sCertified:false,
   realSourceRouteCertified:false,formal4v4Certified:false,
+  b441ResearchOnly:b441Experiment,b441NativeEvidence:null,
   officialWinner:'NONE',syntheticInput:false,actorWrites:0,
   scoreWrites:0,nativeClockWrites:0,sourceGeometryWrites:0,
   stage:'NOT_STARTED',before:null,after:null,verdict:'HOLD'};
@@ -205,7 +208,65 @@ async function main(){
   proof.after.nativeTickDelta<6||proof.after.nativeTickDelta>36||
   !Number.isFinite(meters)||meters<.10||meters>2.2)
   fail('REAL_NATIVE_INPUT_OR_SOURCE_KCC');
- proof.verdict='PASS_FRESH_SOURCE_REAL_HUMAN_KEYW_AND_ORIGINAL_FOOT_NOT_REPLAY';
+ if(b441Experiment){
+  // B441 has to prove the actual SOURCE CPU goal selector, not merely
+  // the candidate generator passing its pure unit tests. No fake route,
+  // hostile actor teleport, scoring or certified opposing-team encounter.
+  const startPatrol=after.cpu.sourcePatrol;
+  if(!startPatrol?.b441Enabled)fail('B441_NOT_ACTUALLY_SELECTED');
+  const firstRead={tick:after.tick,patrol:startPatrol,
+   actors:after.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
+    rejoined:c.rejoined,lifeState:c.lifeState}))};
+  proof.b441NativeEvidence={phase:'OBSERVING_REAL_CPU',firstRead,
+   realFrames:[],source:'25/17/26/0',
+   proposedOnlyNotCapsuleProof:true,actorWrites:0,scoreWrites:0,
+   nativeClockWrites:0,naturalOpposingTeamRouteCertified:false,
+   verdict:'HOLD'};save();
+  const baseline=Object.fromEntries(firstRead.actors.map(a=>[a.id,a.foot]));
+  const actual=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.paused||n.matchState!=='PLAYING'||
+      n.cpu.physicalRejoins.length!==7||await origin()!==proof.browserOrigin)
+    fail('B441_SOURCE_INTERRUPTED');
+   const data={tick:n.tick,available:n.cpu.sourcePatrol?.b441StrictGoalsAvailable,
+    requested:n.cpu.sourcePatrol?.b441ActualGoalRequests,
+    frontZ:n.cpu.sourcePatrol?.b441ClosestApprovedFrontAbsZ,
+    physicalFeet:n.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
+     rejoined:c.rejoined}))};
+   if(proof.b441NativeEvidence.realFrames.length<24&&
+     (!proof.b441NativeEvidence.realFrames.length||
+      n.tick-proof.b441NativeEvidence.realFrames.at(-1).tick>=20)){
+    proof.b441NativeEvidence.realFrames.push(data);save();
+   }
+   return n.tick>=after.tick+240?n:false;
+  },160000,500);
+  const afterPatrol=actual.cpu.sourcePatrol;
+  const observed=actual.cpu.cpu.map(c=>{
+   const from=baseline[c.id],p=c.physicalFoot;
+   return {id:c.id,from,to:p,
+    planarMeters:Array.isArray(from)&&Array.isArray(p)?
+     Math.hypot(p[0]-from[0],p[2]-from[2]):null,
+    frontAbsZ:Math.abs(p[2]),unchangedRealCpuId:true};
+  });
+  proof.b441NativeEvidence={
+   ...proof.b441NativeEvidence,phase:'NATIVE_CPU_REAL_WALK_MEASURED',
+   lastTick:actual.tick,realNativeTicks:actual.tick-after.tick,
+   realSevenCpu:true,actualGoalRequests:afterPatrol?.b441ActualGoalRequests,
+   strictOriginalGoalsAvailable:afterPatrol?.b441StrictGoalsAvailable,
+   closestApprovedFrontAbsZ:afterPatrol?.b441ClosestApprovedFrontAbsZ,
+   heldUnsupported:afterPatrol?.b441UnsafeOrUnreachableHolds,
+   originalActorFootObservations:observed,
+   verdict:afterPatrol?.b441StrictGoalsAvailable>0&&
+     afterPatrol?.b441ActualGoalRequests>0?
+    'PASS_REAL_FRONT_GOAL_REQUESTS_NOT_CROSSING_OR_COMBAT':
+    'HOLD_NO_GENUINE_ORIGINAL_FRONT_GOAL_PROVEN'};
+  save();
+  if(proof.b441NativeEvidence.verdict.startsWith('HOLD'))
+   fail('B441_NO_REAL_ORIGINAL_FRONT_GOAL_GRANTED');
+ }
+ proof.verdict=b441Experiment?
+  'PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING':
+  'PASS_FRESH_SOURCE_REAL_HUMAN_KEYW_AND_ORIGINAL_FOOT_NOT_REPLAY';
  proof.stage='TRUE_NATIVE_WALK_SUCCESS';save();
  console.log('B440_TRUE_SOURCE_NATIVE_HUMAN_WALK',JSON.stringify(proof));
 }

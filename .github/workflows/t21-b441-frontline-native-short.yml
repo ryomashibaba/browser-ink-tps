@@ -1,0 +1,42 @@
+name: T21 B441 true short original CPU frontline goal trial
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'scripts/t21-b440-short-native-original-foot.mjs'
+      - '.github/workflows/t21-b441-frontline-native-short.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b441-short-frontline-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-native-original-frontline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install exact SOURCE runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify true native runner source and compile game
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          npx vitest run src/app/B441OriginalSourceFrontline.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: One real native browser with 7 original CPU and B441 opt-in
+        env:
+          T21_B441_SOURCE_FRONTLINE: '1'
+          T21_B440_OUT: /tmp/t21-b441-short-native-frontline
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Preserve real SOURCE evidence even if HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b441-true-native-source-frontline-short
+          path: /tmp/t21-b441-short-native-frontline/
+          if-no-files-found: warn
+          retention-days: 14
