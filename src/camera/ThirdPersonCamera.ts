@@ -26,6 +26,11 @@ export class ThirdPersonCamera {
   private sourcePracticeControls = false;
   // B375: source-practice camera aim only; T20 stays at the original 1x.
   private sourceAimSensitivityMultiplier = 1;
+  // Source practice player-only camera preference. Never affects T20,
+  // Rapier, Recast, real actors, projectile collision or Turf authority.
+  private sourceAimInvertVertical = false;
+  private sourceControlToast:HTMLDivElement|null=null;
+  private sourceControlToastUntilMs=0;
   private sourceSmartOcclusionEnabled = false;
   private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
   private readonly alternateCameraPosition=new Vec3();
@@ -123,6 +128,9 @@ export class ThirdPersonCamera {
       sourceAimSensitivityMultiplier:this.sourcePracticeControls?
        this.sourceAimSensitivityMultiplier:1,
       sourceAimSensitivityAffectsPhysics:false,
+      sourceAimInvertVertical:this.sourcePracticeControls&&
+       this.sourceAimInvertVertical,
+      sourceCameraSettingsLocalOnly:true,
       b258OriginalCameraResearch:{
        enabled:this.b258ResearchEnabled,
        profile:this.b258ResearchProfile,
@@ -160,6 +168,10 @@ export class ThirdPersonCamera {
   }
 
   public update(playerPosition: Vec3, recoveryDtSeconds = 0): void {
+    if(this.sourceControlToast&&
+       (document.pointerLockElement!==this.canvas||
+        performance.now()>=this.sourceControlToastUntilMs))
+      this.sourceControlToast.hidden=true;
     const pitchRadians = this.pitch * Math.PI / 180;
     const yawRadians = this.yaw * Math.PI / 180;
     const cosPitch = Math.cos(pitchRadians);
@@ -367,7 +379,40 @@ export class ThirdPersonCamera {
     return out.normalize();
   }
 
+  /** Temporary in-game feedback for REAL user settings, not match events. */
+  private showSourceControlToast(message:string):void{
+    if(!this.sourcePracticeControls)return;
+    if(!this.sourceControlToast){
+      const toast=document.createElement('div');
+      toast.id='t21-f3-source-camera-controls';
+      toast.dataset.sourceOnly='true';
+      toast.dataset.gameplayWrites='0';
+      toast.dataset.productionAuthorized='false';
+      toast.setAttribute('role','status');
+      toast.setAttribute('aria-live','polite');
+      toast.style.cssText=
+       'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);'+
+       'z-index:40;max-width:calc(100vw - 32px);pointer-events:none;'+
+       'padding:8px 12px;border:1px solid #6dd9dc;border-radius:9px;'+
+       'background:rgba(4,29,43,.94);color:#ecfffc;'+
+       'font:700 11px/1.45 system-ui;text-align:center;'+
+       'box-shadow:0 8px 28px #0018';
+      document.body.appendChild(toast);
+      this.sourceControlToast=toast;
+    }
+    this.sourceControlToast.textContent=message;
+    this.sourceControlToast.hidden=false;
+    this.sourceControlToastUntilMs=performance.now()+2300;
+  }
+
   private bind(): void {
+    document.addEventListener('pointerlockchange',()=>{
+      if(this.sourcePracticeControls&&
+         document.pointerLockElement===this.canvas)
+        this.showSourceControlToast(
+         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER');
+      else if(this.sourceControlToast)this.sourceControlToast.hidden=true;
+    });
     // The Q shoulder button is a VIEW option, never a movement, aim-assist
     // or collision bypass. It is disabled for all non-F3 routes.
     window.addEventListener('keydown', event=>{
@@ -379,12 +424,28 @@ export class ThirdPersonCamera {
         const step=event.code==='BracketLeft'?-.25:.25;
         this.sourceAimSensitivityMultiplier=Math.max(.5,
          Math.min(1.75,this.sourceAimSensitivityMultiplier+step));
+        this.showSourceControlToast('CAMERA SENSITIVITY · '+
+         this.sourceAimSensitivityMultiplier.toFixed(2)+'x · [ / ]');
+        event.preventDefault();return;
+      }
+      if(event.code==='KeyI'){
+        this.sourceAimInvertVertical=!this.sourceAimInvertVertical;
+        this.showSourceControlToast('VERTICAL LOOK · '+
+         (this.sourceAimInvertVertical?'INVERTED':'NORMAL')+' · I');
+        event.preventDefault();return;
+      }
+      if(event.code==='Backslash'){
+        this.sourceAimSensitivityMultiplier=1;
+        this.sourceAimInvertVertical=false;
+        this.showSourceControlToast('CAMERA RESET · 1.00x · NORMAL Y');
         event.preventDefault();return;
       }
       if(event.code!=='KeyQ')return;
       this.sourceShoulderSide=this.sourceShoulderSide==='RIGHT'?'LEFT':'RIGHT';
       this.shoulder=this.sourceShoulderSide==='RIGHT'?.72:-.72;
       this.sourceSmartOcclusion.manual(this.sourceShoulderSide);
+      this.showSourceControlToast('CAMERA SHOULDER · '+
+       this.sourceShoulderSide+' · Q');
       event.preventDefault();
     });
     this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
@@ -412,7 +473,8 @@ export class ThirdPersonCamera {
        this.sourceAimSensitivityMultiplier:1;
       this.yaw += event.movementX * 0.22 * sensitivity;
       this.pitch = Math.max(-55, Math.min(28,
-       this.pitch - event.movementY * 0.18 * sensitivity));
+       this.pitch - event.movementY * 0.18 * sensitivity *
+        (this.sourcePracticeControls&&this.sourceAimInvertVertical?-1:1)));
     });
 
     this.canvas.addEventListener('wheel', (event) => {
