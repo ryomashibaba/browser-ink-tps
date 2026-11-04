@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {auditB430TrueSecond180s} from './t21-b430-full-second-source-round.mjs';
+import {auditB430TrueSecond180s,auditB438SecondRoundWalk}
+ from './t21-b430-full-second-source-round.mjs';
 const base={source:'25/17/26/0',scoreable:0,winner:'NONE',
  relocations:0,prod:false,fourvfour:false,cpuCount:7};
 const f=()=>{
@@ -51,6 +52,48 @@ test('two real 180s rounds preserve original source and no turf authority',()=>{
  assert.equal(result.officialScoreable,0);
  assert.equal(result.secondRealLateHumanFireBursts,2);
  assert.equal(result.secondRealLateHumanShots,10);
+});
+test('B438 real replay uses genuine original HUMAN KCC, never a synthetic walkway',()=>{
+ const t=f();
+ const m=(label,beforeTick,afterTick,from,to,shots)=>({
+  label,origin:5000,nativeKey:'KeyW',beforeTick,afterTick,from,to,
+  originalPlanarMeters:Math.hypot(to[0]-from[0],to[2]-from[2]),
+  shotsBefore:shots,shotsAfter:shots,
+  originalFootBefore:'UndertowT21D:spawn-high-positive-z',
+  originalFootAfter:'UndertowT21D:spawn-high-positive-z',
+  supportedBefore:true,supportedAfter:true,sourceGapAfterMeters:.04,
+  beforeMode:'HUMAN',afterMode:'HUMAN',
+  cpuBefore:7,cpuAfter:7,syntheticInput:false,
+  actorWrites:0,scoreWrites:0,nativeClockWrites:0
+ });
+ t.humanMovement=[
+  m('120',4730,4739,[1,3,45],[1.4,3,45.15],12),
+  m('60',8330,8339,[1.4,3,45.15],[1.8,3,45.3],17)];
+ const pass=auditB438SecondRoundWalk(t);
+ assert.ok(pass.realPlanarMeters>.8);
+ assert.equal(pass.full4v4Certified,false);
+ for(const mutate of [
+  x=>x.humanMovement.pop(),
+  x=>x.humanMovement[0].nativeKey='FAKE',
+  x=>x.humanMovement[0].originalFootAfter='FAKE_BRIDGE',
+  x=>x.humanMovement[0].supportedAfter=false,
+  x=>x.humanMovement[0].sourceGapAfterMeters=.5,
+  x=>x.humanMovement[0].shotsAfter=999,
+  x=>x.humanMovement[1].origin=9000,
+  x=>x.humanMovement[1].cpuAfter=6,
+  x=>x.humanMovement[1].beforeMode='SQUID',
+  x=>x.humanMovement[1].actorWrites=1,
+  x=>x.humanMovement[1].to=[900,3,45],
+  x=>x.humanMovement[1].afterTick=11890
+ ]){
+  const wrong=structuredClone(t);mutate(wrong);
+  assert.throws(()=>auditB438SecondRoundWalk(wrong),
+   /B430_TRUE_SECOND_180S_HOLD_B438_/);
+ }
+ // The prior already certified B430 file remains fully valid.
+ assert.equal(auditB430TrueSecond180s(f()).fullSecondMatch180s,true);
+ assert.throws(()=>auditB438SecondRoundWalk(f()),
+  /B430_TRUE_SECOND_180S_HOLD_B438_SECOND_ROUND_WALK_COUNT/);
 });
 test('fake second source, premature clock, broken CPU and forged score fail',()=>{
  const corrupt=[

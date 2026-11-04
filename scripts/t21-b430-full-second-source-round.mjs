@@ -87,6 +87,50 @@ export function auditB430TrueSecond180s(d){
   full4v4Certified:false,artAccepted:false,productionAuthorized:false,
   nativeClockWrites:0,actorWrites:0,scoreWrites:0};
 }
+/** B438: true original HUMAN movement during second fully native round.
+ * B430's prior two-real-180s artifact remains a valid independent pass. */
+export function auditB438SecondRoundWalk(d){
+ const old=auditB430TrueSecond180s(d);
+ gate(old.fullSecondMatch180s&&Array.isArray(d.humanMovement)&&
+  d.humanMovement.length===2,'B438_SECOND_ROUND_WALK_COUNT');
+ let meters=0;
+ for(let i=0;i<2;i++){
+  const m=d.humanMovement[i], s=d.samples[i], n=d.samples[i+1],
+   fired=d.humanActivity[i];
+  const coords=[...(Array.isArray(m?.from)?m.from:[]),
+   ...(Array.isArray(m?.to)?m.to:[])];
+  const real=coords.length===6&&coords.every(Number.isFinite)?
+   Math.hypot(m.to[0]-m.from[0],m.to[2]-m.from[2]):NaN;
+  gate(m?.label===s.label&&m.origin===d.secondOrigin&&
+   m.nativeKey==='KeyW'&&m.syntheticInput===false&&
+   m.actorWrites===0&&m.scoreWrites===0&&m.nativeClockWrites===0&&
+   isInt(m.beforeTick)&&isInt(m.afterTick)&&
+   m.beforeTick>=fired.afterTick&&m.afterTick>m.beforeTick&&
+   m.afterTick-m.beforeTick<=24&&m.afterTick<n.tick&&
+   m.shotsBefore===fired.afterShots&&m.shotsAfter===m.shotsBefore&&
+   typeof m.originalFootBefore==='string'&&
+   m.originalFootBefore.startsWith('UndertowT21D:')&&
+   m.originalFootAfter===m.originalFootBefore&&
+   m.supportedBefore===true&&m.supportedAfter===true&&
+   Number.isFinite(m.sourceGapAfterMeters)&&
+   m.sourceGapAfterMeters>=0&&m.sourceGapAfterMeters<=.4&&
+   m.beforeMode==='HUMAN'&&m.afterMode==='HUMAN'&&
+   m.cpuBefore===7&&m.cpuAfter===7&&
+   Number.isFinite(real)&&real>=.10&&real<=2.2&&
+   Number.isFinite(m.originalPlanarMeters)&&
+   Math.abs(real-m.originalPlanarMeters)<.00001,
+   'B438_TRUE_ORIGINAL_SOURCE_KCC_'+s.label);
+  meters+=real;
+ }
+ return {schema:'B438_INDEPENDENT_NATIVE_SECOND_SOURCE_HUMAN_KCC',
+  verdict:'PASS_ACTUAL_REPLAY_HUMAN_WALK_IN_SECOND_180S',
+  realNativeSourceStrideCount:2,realPlanarMeters:meters,
+  secondRoundNativeTimeUpTick:old.secondTimeUpTick,
+  secondWorldOrigin:d.secondOrigin,originalSource:'25/17/26/0',
+  scoreable:0,officialWinner:'NONE',sourceOrPlayerWrites:0,
+  enemyHitCertified:false,opponentRouteCertified:false,
+  full4v4Certified:false,artAccepted:false,productionAuthorized:false};
+}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const file=process.argv[2];gate(file?.endsWith('.json'),'FILE');
  const r=auditB430TrueSecond180s(JSON.parse(readFileSync(file,'utf8')));

@@ -45,7 +45,7 @@ import {b413RealOriginalMainFireBurst,b413ObserveNativeRefill,
  from './t21-b413-native-source-fire-refill-reshoot.mjs';
 import {auditB419NativeReplay}
  from './t21-b419-real-full-round-fresh-replay.mjs';
-import {auditB430TrueSecond180s}
+import {auditB430TrueSecond180s,auditB438SecondRoundWalk}
  from './t21-b430-full-second-source-round.mjs';
 import {b433CaptureReadOnlySourcePoll,b433AuditOriginalOpponentPolls}
  from './t21-b433-native-opponent-poll-audit.mjs';
@@ -2917,7 +2917,7 @@ async function run(){
    const two={schema:'B430_TRUE_SECOND_SOURCE_180S',
     base:proof,secondOrigin:newPage.origin,
     syntheticTicks:false,actorWrites:0,scoreWrites:0,nativeClockWrites:0,
-    samples:[],humanActivity:[],secondEndUi:null};
+    samples:[],humanActivity:[],humanMovement:[],secondEndUi:null};
    const saveTwo=()=>writeFileSync(resolve(OUTPUT,
     'b430-two-authentic-source-180s.json'),JSON.stringify(two,null,2)+'\n');
    const sampleTwo=async (label,n)=>{
@@ -2998,8 +2998,66 @@ async function run(){
        curr.matchState==='PLAYING')?curr:false;
     },17*60*1000);
     await sampleTwo(remaining===0?'TIME_UP':String(remaining),n);
-    if(remaining===120||remaining===60)
+    if(remaining===120||remaining===60){
      await secondRealFire(String(remaining));
+     // B438: actual HUMAN KCC on the second full round's original
+     // source pad, not stationary firing. Reuse short real CDP WASD:
+     // never set player pose, velocity, time, navigation or collision.
+     const walkBefore=await snapshot();authority(walkBefore,'FIXED');
+     const groundBefore=await b312Ledger();
+     const sourceOrigin=await evaluate('performance.timeOrigin');
+     const pointerLocked=await evaluate(
+      'document.pointerLockElement===document.querySelector("#app-canvas")');
+     if(sourceOrigin!==two.secondOrigin||!pointerLocked||
+       walkBefore.paused||walkBefore.matchState!=='PLAYING'||
+       walkBefore.player.mode!=='HUMAN'||
+       walkBefore.cpu.physicalRejoins.length!==7||
+       walkBefore.cpu.physicalFootRelocations!==0||
+       groundBefore.source!=='25/17/26/0'||
+       groundBefore.realHumanOriginalFootSupported!==true||
+       !groundBefore.genuineHumanOriginalFootSolid||
+       !Array.isArray(walkBefore.player.position))
+      fail('B438_REAL_REPLAY_HUMAN_SOURCE_FOOT_PRECONDITION');
+     await b319TrueShortNativeKey('KeyW',6,35);
+     const walkAfter=await snapshot();authority(walkAfter,'FIXED');
+     const groundAfter=await b312Ledger();
+     const from=walkBefore.player.position,to=walkAfter.player.position;
+     const meters=Array.isArray(to)&&[...from,...to].every(Number.isFinite)?
+       Math.hypot(to[0]-from[0],to[2]-from[2]):NaN;
+     const movement={
+      label:String(remaining),origin:sourceOrigin,nativeKey:'KeyW',
+      beforeTick:walkBefore.tick,afterTick:walkAfter.tick,
+      from:[...from],to:Array.isArray(to)?[...to]:null,
+      originalPlanarMeters:meters,
+      shotsBefore:walkBefore.shotsFired,shotsAfter:walkAfter.shotsFired,
+      originalFootBefore:groundBefore.genuineHumanOriginalFootSolid,
+      originalFootAfter:groundAfter.genuineHumanOriginalFootSolid,
+      supportedBefore:groundBefore.realHumanOriginalFootSupported,
+      supportedAfter:groundAfter.realHumanOriginalFootSupported,
+      sourceGapAfterMeters:groundAfter.genuineOriginalFootGapMeters,
+      beforeMode:walkBefore.player.mode,afterMode:walkAfter.player.mode,
+      cpuBefore:walkBefore.cpu.physicalRejoins.length,
+      cpuAfter:walkAfter.cpu.physicalRejoins.length,
+      syntheticInput:false,actorWrites:0,scoreWrites:0,nativeClockWrites:0};
+     // Preserve honest failure evidence, including native SOURCE support.
+     if(await evaluate('performance.timeOrigin')!==sourceOrigin||
+       groundAfter.source!=='25/17/26/0'||
+       movement.supportedAfter!==true||
+       movement.originalFootAfter!==movement.originalFootBefore||
+       !Number.isFinite(movement.sourceGapAfterMeters)||
+       movement.sourceGapAfterMeters<0||movement.sourceGapAfterMeters>.4||
+       walkAfter.matchState!=='PLAYING'||walkAfter.paused||
+       walkAfter.player.mode!=='HUMAN'||
+       walkAfter.cpu.physicalRejoins.length!==7||
+       walkAfter.cpu.physicalFootRelocations!==0||
+       walkAfter.shotsFired!==walkBefore.shotsFired||
+       !Number.isFinite(meters)||meters<.10||meters>2.2){
+      two.b438Hold=movement;saveTwo();
+      fail('B438_REAL_SECOND_SOURCE_KCC_WALK_HOLD');
+     }
+     two.humanMovement.push(movement);saveTwo();
+     console.log('B438_TRUE_SECOND_SOURCE_HUMAN_KCC',JSON.stringify(movement));
+    }
    }
    const endUi=await until(()=>evaluate(`(() => {
     const modal=document.querySelector('#t21-f3-b59-session-finished');
@@ -3017,6 +3075,10 @@ async function run(){
    writeFileSync(resolve(OUTPUT,'b430-driver-two-real-180s-verdict.json'),
     JSON.stringify(audited,null,2)+'\n');
    console.log('B430_TWO_SEPARATE_REAL_SOURCE_180S',JSON.stringify(audited));
+   const walking=auditB438SecondRoundWalk(two);
+   writeFileSync(resolve(OUTPUT,'b438-independent-native-second-human-walk.json'),
+    JSON.stringify(walking,null,2)+'\n');
+   console.log('B438_NATIVE_SECOND_REAL_HUMAN_WALK',JSON.stringify(walking));
   }
  }
 
