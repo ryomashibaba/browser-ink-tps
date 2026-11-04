@@ -45,6 +45,24 @@ export function auditB430TrueSecond180s(d){
   at60.cpuPaintCells<=end.cpuPaintCells&&
   end.cpuSourceShots>0&&end.cpuPaintCells>0,
   'NATIVE_SECOND_180S_TIMELINE');
+ gate(Array.isArray(d.humanActivity)&&d.humanActivity.length===2,
+  'SECOND_NATIVE_HUMAN_ACTIVITY_COUNT');
+ for(let i=0;i<2;i++){
+  const a=d.humanActivity[i],s=d.samples[i],next=d.samples[i+1];
+  gate(a?.label===s.label&&a.origin===d.secondOrigin&&
+   a.syntheticInput===false&&a.actorWrites===0&&
+   a.scoreWrites===0&&a.nativeClockWrites===0&&
+   a.nativeCpuCount===7&&isInt(a.beforeTick)&&
+   isInt(a.afterTick)&&a.beforeTick>=s.tick&&
+   a.afterTick>a.beforeTick&&a.afterTick<next.tick&&
+   isInt(a.beforeShots)&&isInt(a.afterShots)&&
+   a.beforeShots>=s.shots&&a.afterShots>=a.beforeShots+3&&
+   next.shots>=a.afterShots&&
+   Number.isFinite(a.beforeInk)&&a.beforeInk>=5&&
+   a.beforeInk<=100&&Number.isFinite(a.afterInk)&&
+   a.afterInk>=0&&a.beforeInk-a.afterInk>=1,
+   'SECOND_ACTUAL_HUMAN_FIRE_'+s.label);
+ }
  gate(d.secondEndUi?.visible===true&&
   d.secondEndUi.realModalFinished===true&&
   d.secondEndUi.buttonVisible===true&&
@@ -61,6 +79,9 @@ export function auditB430TrueSecond180s(d){
   secondCpuOriginalPaintedCells:end.cpuPaintCells,
   secondHumanOriginalPaintedCells:end.humanPaintCells,
   fullSecondMatch180s:true,nativeCpuCount:7,
+  secondRealLateHumanFireBursts:d.humanActivity.length,
+  secondRealLateHumanShots:d.humanActivity.reduce(
+   (sum,a)=>sum+a.afterShots-a.beforeShots,0),
   originalSource:'25/17/26/0',officialScoreable:0,officialWinner:'NONE',
   realNaturalEnemyRouteCertified:false,realEnemyHitCertified:false,
   full4v4Certified:false,artAccepted:false,productionAuthorized:false,

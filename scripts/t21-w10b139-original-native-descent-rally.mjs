@@ -2917,7 +2917,7 @@ async function run(){
    const two={schema:'B430_TRUE_SECOND_SOURCE_180S',
     base:proof,secondOrigin:newPage.origin,
     syntheticTicks:false,actorWrites:0,scoreWrites:0,nativeClockWrites:0,
-    samples:[],secondEndUi:null};
+    samples:[],humanActivity:[],secondEndUi:null};
    const saveTwo=()=>writeFileSync(resolve(OUTPUT,
     'b430-two-authentic-source-180s.json'),JSON.stringify(two,null,2)+'\n');
    const sampleTwo=async (label,n)=>{
@@ -2938,6 +2938,50 @@ async function run(){
       cpuPaint:item.cpuPaintCells,source:item.source,
       officialWinner:item.winner}));
    };
+   // Preserve genuine player participation after the B419 opening shot:
+   // real CDP firing in the SAME native second game at 120s and 60s.
+   const secondRealFire=async label=>{
+    const before=await snapshot();authority(before,'FIXED');
+    const origin=await evaluate('performance.timeOrigin');
+    const locked=await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")');
+    if(origin!==two.secondOrigin||!locked||before.paused||
+       before.matchState!=='PLAYING'||
+       before.cpu.physicalRejoins.length!==7||
+       before.cpu.physicalFootRelocations!==0||
+       before.player.ink<5)fail('B430_SECOND_REAL_FIRE_PRECONDITION');
+    let pressed=false,observed=null;
+    try{
+     await cmd('Input.dispatchMouseEvent',
+      {type:'mousePressed',x:800,y:450,button:'left',clickCount:1});
+     pressed=true;
+     observed=await until(async()=>{
+      const n=await snapshot();authority(n,'FIXED');
+      if(n.matchState!=='PLAYING'||n.paused||
+         n.cpu.physicalFootRelocations!==0)
+       fail('B430_SECOND_NATIVE_FIRE_INTERRUPTED');
+      return n.shotsFired>=before.shotsFired+3&&
+       n.player.ink<=before.player.ink-2.85?n:false;
+     },30000);
+    }finally{
+     if(pressed)await cmd('Input.dispatchMouseEvent',
+      {type:'mouseReleased',x:800,y:450,button:'left',clickCount:1});
+    }
+    const after=await snapshot();authority(after,'FIXED');
+    if(await evaluate('performance.timeOrigin')!==origin||
+       !observed||after.matchState!=='PLAYING'||after.paused||
+       after.tick<=before.tick||
+       after.shotsFired<before.shotsFired+3||
+       after.player.ink>=before.player.ink-1)
+     fail('B430_SECOND_REAL_FIRE_INK_OR_TICK_HOLD');
+    const proof={label,origin,beforeTick:before.tick,afterTick:after.tick,
+     beforeShots:before.shotsFired,afterShots:after.shotsFired,
+     beforeInk:before.player.ink,afterInk:after.player.ink,
+     nativeCpuCount:after.cpu.cpu.length,syntheticInput:false,
+     actorWrites:0,scoreWrites:0,nativeClockWrites:0};
+    two.humanActivity.push(proof);saveTwo();
+    console.log('B430_SECOND_REAL_CONTINUED_HUMAN_INPUT',JSON.stringify(proof));
+   };
    saveTwo();
    for(const remaining of [120,60,0]){
     // Poll only the genuine browser snapshot; this wait is NOT gameplay
@@ -2954,6 +2998,8 @@ async function run(){
        curr.matchState==='PLAYING')?curr:false;
     },17*60*1000);
     await sampleTwo(remaining===0?'TIME_UP':String(remaining),n);
+    if(remaining===120||remaining===60)
+     await secondRealFire(String(remaining));
    }
    const endUi=await until(()=>evaluate(`(() => {
     const modal=document.querySelector('#t21-f3-b59-session-finished');

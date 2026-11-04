@@ -29,9 +29,18 @@ const f=()=>{
   samples:[
    {...sample,label:'120',phase:'PLAYING',tick:4700,remaining:119.98},
    {...sample,label:'60',phase:'PLAYING',tick:8300,remaining:59.98,
-    cpuSourceShots:70,cpuPaintCells:800},
+    shots:12,cpuSourceShots:70,cpuPaintCells:800},
    {...sample,label:'TIME_UP',phase:'TIME_UP',tick:11859,remaining:0,
-    cpuSourceShots:100,cpuPaintCells:1200,paused:true,pointerLocked:false}],
+    shots:17,cpuSourceShots:100,cpuPaintCells:1200,paused:true,pointerLocked:false}],
+  humanActivity:[
+   {label:'120',origin:5000,beforeTick:4700,afterTick:4730,
+    beforeShots:7,afterShots:12,beforeInk:100,afterInk:95.25,
+    nativeCpuCount:7,syntheticInput:false,actorWrites:0,
+    scoreWrites:0,nativeClockWrites:0},
+   {label:'60',origin:5000,beforeTick:8300,afterTick:8330,
+    beforeShots:12,afterShots:17,beforeInk:100,afterInk:95.25,
+    nativeCpuCount:7,syntheticInput:false,actorWrites:0,
+    scoreWrites:0,nativeClockWrites:0}],
   secondEndUi:{visible:true,realModalFinished:true,buttonVisible:true,
    buttonDisabled:false}};
 };
@@ -40,6 +49,8 @@ test('two real 180s rounds preserve original source and no turf authority',()=>{
  assert.equal(result.fullSecondMatch180s,true);
  assert.equal(result.full4v4Certified,false);
  assert.equal(result.officialScoreable,0);
+ assert.equal(result.secondRealLateHumanFireBursts,2);
+ assert.equal(result.secondRealLateHumanShots,10);
 });
 test('fake second source, premature clock, broken CPU and forged score fail',()=>{
  const corrupt=[
@@ -55,7 +66,13 @@ test('fake second source, premature clock, broken CPU and forged score fail',()=
   d=>d.samples[2].phase='PLAYING',
   d=>d.secondEndUi.visible=false,
   d=>d.nativeClockWrites=1,
-  d=>d.base.actorWrites=1
+  d=>d.base.actorWrites=1,
+  d=>d.humanActivity.pop(),
+  d=>d.humanActivity[0].origin=1000,
+  d=>d.humanActivity[0].afterTick=8500,
+  d=>d.humanActivity[0].afterShots=7,
+  d=>d.humanActivity[1].beforeInk=1,
+  d=>d.humanActivity[1].syntheticInput=true
  ];
  for(const mut of corrupt){
   const d=f();mut(d);

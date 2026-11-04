@@ -17,7 +17,8 @@ export function b433CaptureReadOnlySourcePoll(n){
   n.originalSourceNavigationLinks===26&&n.sourceScoreablePromotions===0&&
   n.productionAuthorized===false&&n.unrestricted4v4Certified===false&&
   n.cpu?.physicalFootRelocations===0&&
-  n.cpu?.physicalRejoins?.length===7&&
+  Array.isArray(n.cpu?.physicalRejoins)&&
+  n.cpu.physicalRejoins.length<=7&&
   Array.isArray(n.cpu?.cpu)&&n.cpu.cpu.length===7&&
   Number.isSafeInteger(n.tick)&&n.tick>=0&&
   finite(n.timeRemainingSeconds)&&n.timeRemainingSeconds>=0&&
@@ -31,10 +32,17 @@ export function b433CaptureReadOnlySourcePoll(n){
   id:b.id,foot:b.physicalFoot,lifeState:b.lifeState,hp:b.hp,
   rejoined:b.rejoined
  }));
+ const trueLive=actors.filter(a=>a.lifeState==='ACTIVE'&&
+  a.rejoined===true).map(a=>a.id).sort().join(',');
+ const claimed=[...n.cpu.physicalRejoins].sort().join(',');
  gate(actors.map(a=>a.id).sort().join(',')===ids.join(',')&&
-  actors.every(a=>pos(a.foot)&&a.rejoined===true&&
+  actors.every(a=>pos(a.foot)&&typeof a.rejoined==='boolean'&&
    ['ACTIVE','SPLATTED'].includes(a.lifeState)&&finite(a.hp)&&
-   a.hp>=0),'TRUE_CPU_ACTORS');
+   a.hp>=0&&a.hp<=100&&
+   (a.lifeState!=='SPLATTED'||(a.hp===0&&a.rejoined===false)))&&
+  n.cpu.physicalRejoins.every(id=>ids.includes(id))&&
+  new Set(n.cpu.physicalRejoins).size===n.cpu.physicalRejoins.length&&
+  trueLive===claimed,'TRUE_CPU_ACTORS');
  return {tick:n.tick,remaining:n.timeRemainingSeconds,phase:n.matchState,
   paused:n.paused===true,player:n.player.position,actors,
   shots:n.shotsFired,cpuShotRequests:n.cpuSourceTurfShots,
@@ -56,7 +64,8 @@ export function b433AuditOriginalOpponentPolls(d){
  gate(finite(origin)&&origin>0,'BROWSER_ORIGIN');
  let lastTick=-1,prevRemaining=181,maximumTickGap=0;
  let closestHuman=null,closestCpuPair=null;
- let totalActiveOpposingPolls=0;
+ let totalActiveOpposingPolls=0,observedSplatPolls=0;
+ let minimumLiveRejoined=7;
  for(let i=0;i<d.polls.length;i++){
   const p=d.polls[i];
   gate(Number.isSafeInteger(p.tick)&&p.tick>lastTick&&
@@ -64,9 +73,10 @@ export function b433AuditOriginalOpponentPolls(d){
    p.remaining<=180&&p.remaining<=prevRemaining+.001&&
    pos(p.player)&&Array.isArray(p.actors)&&p.actors.length===7&&
    p.actors.map(a=>a.id).sort().join(',')===ids.join(',')&&
-   p.actors.every(a=>pos(a.foot)&&a.rejoined===true&&
+   p.actors.every(a=>pos(a.foot)&&typeof a.rejoined==='boolean'&&
     ['ACTIVE','SPLATTED'].includes(a.lifeState)&&
-    finite(a.hp)&&a.hp>=0)&&
+    finite(a.hp)&&a.hp>=0&&a.hp<=100&&
+    (a.lifeState!=='SPLATTED'||(a.hp===0&&a.rejoined===false)))&&
    Number.isSafeInteger(p.shots)&&p.shots>=0&&
    Number.isSafeInteger(p.cpuShotRequests)&&p.cpuShotRequests>=0&&
    Number.isSafeInteger(p.humanCpuDirectHits)&&p.humanCpuDirectHits>=0&&
@@ -76,6 +86,9 @@ export function b433AuditOriginalOpponentPolls(d){
   if(lastTick>=0)maximumTickGap=Math.max(maximumTickGap,p.tick-lastTick);
   lastTick=p.tick;prevRemaining=p.remaining;
   const active=p.actors.filter(x=>x.lifeState==='ACTIVE');
+  minimumLiveRejoined=Math.min(minimumLiveRejoined,
+   active.filter(x=>x.rejoined).length);
+  if(p.actors.some(x=>x.lifeState==='SPLATTED'))observedSplatPolls++;
   const friends=active.filter(x=>x.id.startsWith('A'));
   const opponents=active.filter(x=>x.id.startsWith('B'));
   if(opponents.length){
@@ -110,6 +123,8 @@ export function b433AuditOriginalOpponentPolls(d){
   actualHumanDirectSplatsAtTimeUp:end.humanCpuDirectSplats,
   actualHumanShotsAtTimeUp:end.shots,
   actualCpuShotRequestsAtTimeUp:end.cpuShotRequests,
+  observedSplatPolls,minimumLiveRejoinedCpu:minimumLiveRejoined,
+  originalSevenActorsObservedAtEveryPoll:true,
   allNativeTicksObserved:false,
   betweenPollsEnemyEncounterResolved:false,
   enemyRouteOrHitCertified:false,full4v4Certified:false,

@@ -45,6 +45,19 @@ test('B433 independent audit does not claim unobserved 60Hz ticks or traversal',
  assert.equal(v.enemyRouteOrHitCertified,false);
  assert.equal(v.originalScoreable,0);
 });
+test('actual native splat is recorded without inventing seven active CPUs',()=>{
+ const n=raw(6450,90);
+ n.cpu.cpu[6]={...n.cpu.cpu[6],lifeState:'SPLATTED',hp:0,rejoined:false};
+ n.cpu.physicalRejoins=ids.slice(0,6);
+ const genuine=b433CaptureReadOnlySourcePoll(n);
+ const d=fixture();
+ d.polls[3]=genuine;
+ const report=b433AuditOriginalOpponentPolls(d);
+ assert.equal(report.observedSplatPolls,1);
+ assert.equal(report.minimumLiveRejoinedCpu,6);
+ assert.equal(report.originalSevenActorsObservedAtEveryPoll,true);
+ assert.equal(report.enemyRouteOrHitCertified,false);
+});
 test('fake geometry, actor, game state, time and scores are rejected',()=>{
  for(const mutate of [
   x=>x.sourceScoreablePromotions=1,
@@ -52,6 +65,9 @@ test('fake geometry, actor, game state, time and scores are rejected',()=>{
   x=>x.cpu.cpu[0].physicalFoot=[Infinity,1,1],
   x=>x.player.position=[NaN,2,3],
   x=>x.cpu.cpu[6].rejoined=false,
+  x=>x.cpu.physicalRejoins.pop(),
+  x=>{x.cpu.cpu[6].lifeState='SPLATTED';x.cpu.cpu[6].hp=0;},
+  x=>{x.cpu.cpu[6].lifeState='SPLATTED';x.cpu.cpu[6].rejoined=false;},
   x=>x.cpu.cpu.pop(),
   x=>x.matchState='STAGING'
  ]){
