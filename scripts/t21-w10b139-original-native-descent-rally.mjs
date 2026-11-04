@@ -2701,12 +2701,16 @@ async function run(){
     buttonReceivesPointer:!!b&&(hit===b||b.contains(hit)),
     overlayState:b?.parentElement?.dataset.t21B202NativeState??null};
   })()`);
+  // B427: a true first-frame PLAYING state is NOT the same as the A1
+  // mission's RUNNING state. B25 explicitly remains ARMED until all
+  // seven genuine CPU bodies physically rejoin. Observe each separately.
   const observeSecond=ms=>until(async()=>{
    const n=await snapshot();authority(n,'FIXED');
    const locked=await evaluate(
     'document.pointerLockElement===document.querySelector("#app-canvas")');
    return locked&&n.matchState==='PLAYING'&&!n.paused&&
-    n.tick>=30&&n.b25SourcePaintRun.status==='RUNNING'?n:false;
+    n.tick>=30&&['ARMED','RUNNING'].includes(
+     n.b25SourcePaintRun.status)?n:false;
   },ms);
   proof.secondStart={firstClick:false,retryUsed:false,
    before:null,afterFirst:null,onFailure:null};
@@ -2755,6 +2759,32 @@ async function run(){
       final.b25SourcePaintRun.status!=='RUNNING'?'MISSION_NOT_RUNNING':
       'NO_PROVEN_REAL_START'));
    }
+  }
+  // B427: genuine first native world START has been proven; do not
+  // misreport A1 still ARMED as a failed click. Wait for the actual
+  // original CPU 7/7 physical rejoin, then the mission's native RUNNING.
+  // No source actor/tick/mission mutation or fabricated wall-clock speed.
+  const actualPlayTick=started.tick;
+  proof.secondStart.nativePlaying=meta(started,newPage.origin);
+  saveB419();
+  try{
+   started=await until(async()=>{
+    const n=await snapshot();authority(n,'FIXED');
+    if(n.stopReason||n.matchState==='TIME_UP')
+     fail('B427_REAL_SECOND_MISSION_STOPPED_BEFORE_CPU_REJOIN');
+    const locked=await evaluate(
+     'document.pointerLockElement===document.querySelector("#app-canvas")');
+    return locked&&!n.paused&&n.matchState==='PLAYING'&&
+     n.tick>=actualPlayTick&&n.cpu.physicalRejoins.length===7&&
+     n.b25SourcePaintRun.status==='RUNNING'?n:false;
+   },240000);
+  }catch(error){
+   const last=await snapshot();authority(last,'FIXED');
+   proof.secondStart.onMissionHold={
+    native:meta(last,newPage.origin),browser:await secondBrowser(),
+    reason:String(error)};
+   saveB419();
+   fail('B427_SECOND_TRUE_A1_MISSION_REJOIN_OR_POINTER_HOLD');
   }
   proof.started=meta(started,newPage.origin);
   saveB419();
