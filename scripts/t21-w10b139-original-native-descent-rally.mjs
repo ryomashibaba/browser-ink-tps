@@ -47,6 +47,8 @@ import {auditB419NativeReplay}
  from './t21-b419-real-full-round-fresh-replay.mjs';
 import {auditB430TrueSecond180s}
  from './t21-b430-full-second-source-round.mjs';
+import {b433CaptureReadOnlySourcePoll,b433AuditOriginalOpponentPolls}
+ from './t21-b433-native-opponent-poll-audit.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -2154,6 +2156,20 @@ async function run(){
 
 
  if(b409OneRoute180){
+  // B433 reuses EXISTING read-only snapshot polls from B409 (no extra
+  // CDP calls or native gameplay mutations). Poll gaps stay explicit.
+  const b433={schema:'B433_SOURCE_NATIVE_BROWSER_POLL_SAMPLES',
+   source:'25/17/26/0',nativeObserverOnly:true,
+   syntheticTicks:false,actorWrites:0,inkWrites:0,scoreWrites:0,
+   nativeClockWrites:0,pointerOrInputWrites:0,
+   originalScoreable:0,officialWinner:'NONE',
+   browserWorldOrigin:await evaluate('performance.timeOrigin'),polls:[]};
+  const b433Observe=n=>{
+   const prior=b433.polls.at(-1);
+   if(prior&&n.tick<=prior.tick)return;
+   if(b433.polls.length>=4096)fail('B433_POLL_SAMPLE_BOUND');
+   b433.polls.push(b433CaptureReadOnlySourcePoll(n));
+  };
   // Continue the SAME authentic B322/B326 real 7-CPU source round,
   // preserving every original source geometry/score and native simulation.
   const evidence={
@@ -2324,6 +2340,7 @@ async function run(){
    after.timeRemainingSeconds<=150||after.timeRemainingSeconds>=180||
    after.cpu.physicalRejoins.length!==7)
    fail('B409_ROUTE_NOT_PLAYING_EARLY_ENOUGH_FOR_ONE_180S_GAME');
+  b433Observe(after);
   await sample('AFTER_ROUTE',after);
   if(b411SourceGameplayHud)await sampleB411('AFTER_ROUTE');
   let b412Evidence=null;
@@ -2369,6 +2386,9 @@ async function run(){
   for(const remaining of [150,120,90,60,30,0]){
    const next=await until(async()=>{
     const n=await snapshot();authority(n,'FIXED');
+    // B433 in-memory read-only observation at every existing
+    // native B409 polling opportunity (nominal ~500ms, NOT 60Hz).
+    b433Observe(n);
     return n.timeRemainingSeconds<=remaining+.001?n:false;
    },10*60*1000);
    await sample(String(remaining),next);
@@ -2541,6 +2561,22 @@ async function run(){
     actualHumanCells:end.b23HumanInkFeedback.humanChangedCells,
     cpuInkCells:end.cpuInkCellsChanged,
     originalWinner:'NONE',scoreable:0}));
+  b433Observe(end);
+  if(await evaluate('performance.timeOrigin')!==b433.browserWorldOrigin)
+   fail('B433_SOURCE_BROWSER_ORIGIN_CHANGED');
+  writeFileSync(resolve(OUTPUT,'b433-real-source-opponent-polls.json'),
+   JSON.stringify(b433,null,2)+'\n');
+  const b433Report=b433AuditOriginalOpponentPolls(b433);
+  writeFileSync(resolve(OUTPUT,'b433-driver-opponent-poll-verdict.json'),
+   JSON.stringify(b433Report,null,2)+'\n');
+  console.log('B433_TRUE_SOURCE_OPPONENT_POLL_BASELINE',
+   JSON.stringify({verdict:b433Report.verdict,
+    samples:b433Report.polls,
+    nearestHumanEnemy:b433Report.closestSampledHumanEnemy,
+    nearestCpuEnemy:b433Report.closestSampledAllyCpuEnemyCpu,
+    largestUnobservedTickGap:b433Report.largestUnobservedNativeTickGap,
+    humanHits:b433Report.actualHumanDirectHitsAtTimeUp,
+    scoreable:0,officialWinner:'NONE'}));
   if(b410RealUpperPlay){
    const load=p=>JSON.parse(readFileSync(resolve(OUTPUT,p),'utf8'));
    const route={
