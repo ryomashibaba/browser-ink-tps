@@ -2149,6 +2149,8 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3SourceStage=stage.metadata.id;
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
+   // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
+   b454OriginalCpuFootTrace:()=>this.traffic.b454ReadOnlyOriginalNativeFootTrace(),
     setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
     setB251OpticalSeparation:(on:boolean)=>this.setB251OpticalSeparation(on),
     setB253SourceUvLiveInk:(on:boolean)=>this.setB253SourceUvLiveInk(on),

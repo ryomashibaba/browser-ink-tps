@@ -31,6 +31,7 @@ import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
 import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
  from './B450OriginalRouteWitness';
+import {B454NativeSourceFootRecorder} from './B454NativeSourceFootTrace';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -228,6 +229,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly b445FrontlineGates=new Map<string,B445RealSourceGoalGate>();
  private readonly b446LiveFootProbes=
   new Map<string,B446RealFootDryRouteProbe>();
+ /** B454 bounded read-only, 60Hz actual CPU physical foot observations. */
+ private readonly b454Trace=new B454NativeSourceFootRecorder();
  private b448A3FreshLiveOriginalGoalsAuthorized=0;
  private b448A3FreshLiveOriginalHolds=0;
  private b448A3RealNativeGoalRequests=0;
@@ -1521,6 +1524,29 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       bot.position.z-actualLanding[2])>1.7)
       this.cleared.add(bot.id);
   }
+  // B454: observe, NEVER steer. This executes after real CpuAgentSystem
+  // KCC, on the same native physics tick. Original static Rapier rays
+  // only; original source support/route authorization stays unchanged.
+  // Normal user preview never pays for these 2 extra rays.
+  if(this.enableB441SourceFrontline&&this.freeCombat&&this.physics&&
+     this.stage.solids.length===25&&this.stage.paintSurfaces.length===17&&
+     this.stage.navigationLinks?.length===26){
+   for(const id of ['B2','B4'] as const){
+    const bot=this.bots.find(b=>b.id===id)!;
+    const foot=bot.position;
+    const ray=this.physics.castStageSegment(
+     new Vec3(foot.x,foot.y+.65,foot.z),
+     new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    this.b454Trace.append({tick:frame,id,
+     foot:[foot.x,foot.y,foot.z],
+     mode:bot.mobilityState,life:bot.lifeState??'UNKNOWN',
+     rejoined:sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined),
+     originalRapierSolidId:ray?.solidId??null,
+     originalRapierHitY:ray?.point.y??null,
+     registeredOriginalHit:!!ray&&
+      this.stage.solids.some(s=>s.id===ray.solidId)});
+   }
+  }
   if(this.physicallyRejoined.size===7&&!this.freeCombat){
    this.freeCombat=true;
    for(const bot of this.bots){
@@ -1600,6 +1626,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  /** Exact seven physical CPU HP/life states, read at native 60Hz.
   * Avoid building the much larger sourcePatrol QA snapshot every physics tick.
   * No inferred rejoin, teleport, Actor mutation, or opponent route. */
+ /** B454 one-shot QA evidence export, research URL only; no actor writes. */
+ b454ReadOnlyOriginalNativeFootTrace(){
+  if(!this.enableB441SourceFrontline||!this.physics)
+   throw Error('B454_ORIGINAL_RESEARCH_OPT_IN_REQUIRED');
+  return this.b454Trace.snapshot();
+ }
  nativeCpuLifecycleFrames():B367NativeCpuState[]{
   return this.bots.map(b=>({
    id:b.id,

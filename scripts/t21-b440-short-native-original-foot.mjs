@@ -314,6 +314,31 @@ async function main(){
    }
    return n.tick>=after.tick+nativeFrontObservationTicks?n:false;
   },600000,500);
+  // B454: collect every *actual* native post-KCC B2/B4 foot once,
+  // rather than inferring continuous original contact from 24-tick polls.
+  // Do not add these large rows to B440 log; save one independent Artifact.
+  const b454Native=await evaluate('window.__t21F3.b454OriginalCpuFootTrace()');
+  if(b454Native?.schema!=='B454_TRUE_60HZ_B2_B4_SOURCE_STATIC_FOOT_TRACE_V1'||
+     b454Native.source!=='25/17/26/0'||
+     b454Native.originalKccOrGameWrites!==0||
+     b454Native.originalPathAuthorizationChanged!==false||
+     b454Native.continuousCapsuleContactCertified!==false||
+     b454Native.b2b4FrontlineGoalCertified!==false||
+     b454Native.dropped?.B2!==0||b454Native.dropped?.B4!==0||
+     !Array.isArray(b454Native.rows?.B2)||
+     !Array.isArray(b454Native.rows?.B4)||
+     b454Native.rows.B2.length<700||b454Native.rows.B4.length<700||
+     await origin()!==proof.browserOrigin)
+   fail('B454_FALSE_OR_MISSING_NATIVE_PER_TICK_FOOT_PROVENANCE');
+  const b454Report={...b454Native,browserWorldOrigin:proof.browserOrigin,
+    originalSourceGeometryWrites:0,actorWrites:0,scoreWrites:0,
+    nativeClockWrites:0};
+  writeFileSync(resolve(out,'b454-native-b2-b4-physical-60hz.json'),
+    JSON.stringify(b454Report,null,2)+'\n');
+  proof.b441NativeEvidence.b454FullRatePhysicalFootRecorded={
+    B2:b454Native.rows.B2.length,B4:b454Native.rows.B4.length,
+    dropped:{...b454Native.dropped},
+    continuousKccRouteCertified:false,originalScoreable:0};
   const afterPatrol=actual.cpu.sourcePatrol;
   const observed=actual.cpu.cpu.map(c=>{
    const from=baseline[c.id],p=c.physicalFoot;
