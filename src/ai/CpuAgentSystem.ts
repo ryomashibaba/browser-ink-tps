@@ -22,6 +22,7 @@ import {chooseB181OriginalSourceSight,b182ReuseNativeSight,type B181SightPoint}
 import {b212NativeLead} from './B212MovingNativeProjectileAim';
 import {b213RealAttackerPreference} from './B213NativeCounterfire';
 import {b215ShouldQueryNativePaintCandidate} from './B215SourceWeaponReadyPaintAim';
+import {b420MayLegacyMeleeChase} from './B420SourceMeleePursuitAuthority';
 import {b216OriginalFootBackfillCandidates} from './B216OriginalSourceBackfillInk';
 import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
@@ -2093,7 +2094,10 @@ export class CpuAgentSystem {
     if (!target) return;
 
     const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
-    if (distance <= 6.0) {
+    // F3 SOURCE: a target within range is NOT a native Recast path.
+    // The ordinary movement tick requests an original-floor-supported
+    // goal through SourceTraffic.chooseSourceGoal instead.
+    if (b420MayLegacyMeleeChase('ROLLER',!!this.f3dSourceGoals,distance)) {
       bot.agent?.requestMoveTarget(this.navigation.closestPoint(target));
     }
 
@@ -2123,7 +2127,7 @@ export class CpuAgentSystem {
     if (!target) return;
 
     const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
-    if (distance <= 6.0 && distance > 1.15) {
+    if (b420MayLegacyMeleeChase('BRUSH',!!this.f3dSourceGoals,distance)) {
       bot.agent?.requestMoveTarget(this.navigation.closestPoint(target));
     }
 
@@ -2219,10 +2223,9 @@ export class CpuAgentSystem {
     }
 
     const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
-    if (distance <= 5.2 && distance > 1.05 && !this.f3dSourceGoals) {
-      // In F3 the normal CPU movement tick already calls chooseSourceGoal,
-      // which requires real registered Rapier feet and native Recast path.
-      // Preserve T20 pursuit but never bypass F3's original-source gate.
+    if (b420MayLegacyMeleeChase('SPLATANA',!!this.f3dSourceGoals,distance)) {
+      // T20 still pursues at its legacy weapon distance; F3 SOURCE
+      // requires the same original-floor path used by all other CPUs.
       bot.agent?.requestMoveTarget(this.navigation.closestPoint(target));
     }
     if (bot.fireRemaining > 0) return;

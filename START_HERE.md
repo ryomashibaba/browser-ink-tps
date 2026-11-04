@@ -1,5 +1,7 @@
 # Browser Ink TPS — START HERE / 新チャット固定入口
 
+> **B420 F3原作移動安全性（2026-11-04）**：本物のF3 `CpuAgentSystem.updateCpuRoller`・`updateCpuBrush` が、可視敵が6m以内だと原作SOURCEの完全Recast/Rapier経路審査を通さず `navigation.closestPoint(target)` を直接Crowdに送っていた（旧Splatanaと同種の迂回）。新`B420SourceMeleePursuitAuthority.ts`でローラー/フデ/Splatanaの3クラスとも**SOURCEでは直接追跡禁止**、既存`SourceTraffic.chooseSourceGoal`の本物の原作経路だけ使用。T20の従来射程・攻撃挙動は維持。3武器のユニット試験＋既存ビルド/本物B419統合を同SHAで行う。自然の敵命中/撃破・対岸経路0/12は未認証。元25/17/26/0、main/QA/PR5/Pages/Work/本番の保護を保持。
+
 > **B419新工程（2026-11-04）**：前B418の真正Chrome [#41741444484](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41741444484) コード`99cab8bfdcb134104b9c895e24770b31e787852e` は **全SUCCESS**。B322/B324/B326上段移動6歩3.293m・B409–B414・真正180秒TIME_UP tick11860、人間119 shots /1194 original changes、CPU7/143 shot requests/12280 original changes、Scoreable0・Winner NONE。**B419では同じ本物の180秒終了後に実CDP REPLAYをクリックし、完全新SOURCE世界へ移動、2試合目で手動ARM/START/主武器射撃と実インク消費を観測する**。2試合目180秒完走や自然な敵HP撃破を認定するものではない。B419新SHAの真正Actionsが終わるまで成功扱い禁止。F1–F5・25/17/26/0・自然対岸0/12・正式4v4/ART/公開HOLD、main/QA/PR5/T19C/T20/Pages不変更。
 
 

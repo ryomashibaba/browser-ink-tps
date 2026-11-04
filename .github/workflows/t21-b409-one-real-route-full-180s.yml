@@ -17,6 +17,8 @@ on:
       - 'src/app/B417SourcePaintedCellView.ts'
       - 'src/app/B417SourcePaintedCellView.test.ts'
       - 'src/ai/CpuAgentSystem.ts'
+      - 'src/ai/B420SourceMeleePursuitAuthority.ts'
+      - 'src/ai/B420SourceMeleePursuitAuthority.test.ts'
       - '.github/workflows/t21-b409-one-real-route-full-180s.yml'
   workflow_dispatch:
 permissions:
@@ -46,7 +48,7 @@ jobs:
           node --check scripts/t21-b414-native-ink-hud-audit.mjs
           node --check scripts/t21-b419-real-full-round-fresh-replay.mjs
           node --test scripts/t21-b419-real-full-round-fresh-replay.test.mjs scripts/t21-b414-native-ink-hud-audit.test.mjs scripts/t21-b413-native-source-fire-refill-reshoot.test.mjs scripts/t21-b412-native-original-squid-ink-swim.test.mjs scripts/t21-b411-native-active-round-hud-audit.test.mjs scripts/t21-b410-upper-original-activity-audit.test.mjs scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
-          npx vitest run src/app/B415LiveInkLoop.test.ts src/app/B417SourcePaintedCellView.test.ts
+          npx vitest run src/app/B415LiveInkLoop.test.ts src/app/B417SourcePaintedCellView.test.ts src/ai/B420SourceMeleePursuitAuthority.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: One real native high-to-lower-to-ramp-to-upper 180s with 7 CPUs
         env:
