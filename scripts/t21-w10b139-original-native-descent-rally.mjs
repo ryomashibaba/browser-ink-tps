@@ -2701,16 +2701,17 @@ async function run(){
     buttonReceivesPointer:!!b&&(hit===b||b.contains(hit)),
     overlayState:b?.parentElement?.dataset.t21B202NativeState??null};
   })()`);
-  // B427: a true first-frame PLAYING state is NOT the same as the A1
-  // mission's RUNNING state. B25 explicitly remains ARMED until all
-  // seven genuine CPU bodies physically rejoin. Observe each separately.
+  // B428: B426 RAW native tick 648, true locked/paused=false, CPU 4/7
+  // and STAGING, with 180s unconsumed. SOURCE STAGING is the physical
+  // warmup itself; native PLAYING starts only AFTER the real 7/7 rejoin.
+  // Observe authentic resumed native ticks, then genuine round activation.
   const observeSecond=ms=>until(async()=>{
    const n=await snapshot();authority(n,'FIXED');
    const locked=await evaluate(
     'document.pointerLockElement===document.querySelector("#app-canvas")');
-   return locked&&n.matchState==='PLAYING'&&!n.paused&&
-    n.tick>=30&&['ARMED','RUNNING'].includes(
-     n.b25SourcePaintRun.status)?n:false;
+   return locked&&!n.paused&&n.tick>=30&&
+    ['STAGING','PLAYING'].includes(n.matchState)&&
+    ['ARMED','RUNNING'].includes(n.b25SourcePaintRun.status)?n:false;
   },ms);
   proof.secondStart={firstClick:false,retryUsed:false,
    before:null,afterFirst:null,onFailure:null};
@@ -2760,12 +2761,12 @@ async function run(){
       'NO_PROVEN_REAL_START'));
    }
   }
-  // B427: genuine first native world START has been proven; do not
-  // misreport A1 still ARMED as a failed click. Wait for the actual
-  // original CPU 7/7 physical rejoin, then the mission's native RUNNING.
-  // No source actor/tick/mission mutation or fabricated wall-clock speed.
-  const actualPlayTick=started.tick;
-  proof.secondStart.nativePlaying=meta(started,newPage.origin);
+  // B428: genuine second-world native physics now advances even while
+  // the round is STAGING; this is an authentic resumed SOURCE world, NOT
+  // a claim that the 180s match timer has begun.
+  // Wait separately for real 7/7 physical rejoin and PLAYING + RUNNING.
+  const actualResumeTick=started.tick;
+  proof.secondStart.nativeResumed=meta(started,newPage.origin);
   saveB419();
   try{
    started=await until(async()=>{
@@ -2775,7 +2776,7 @@ async function run(){
     const locked=await evaluate(
      'document.pointerLockElement===document.querySelector("#app-canvas")');
     return locked&&!n.paused&&n.matchState==='PLAYING'&&
-     n.tick>=actualPlayTick&&n.cpu.physicalRejoins.length===7&&
+     n.tick>=actualResumeTick&&n.cpu.physicalRejoins.length===7&&
      n.b25SourcePaintRun.status==='RUNNING'?n:false;
    },240000);
   }catch(error){
