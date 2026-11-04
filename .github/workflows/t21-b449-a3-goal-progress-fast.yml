@@ -1,0 +1,24 @@
+name: T21 B449 original-source A3 goal directional witness
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'scripts/t21-b449-a3-real-goal-progress.mjs'
+      - 'scripts/t21-b449-a3-real-goal-progress.test.mjs'
+      - '.github/workflows/t21-b449-a3-goal-progress-fast.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent-original-source-witness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify native SOURCE witness comparator and reject counterfeits
+        run: |
+          node --check scripts/t21-b449-a3-real-goal-progress.mjs
+          node --test scripts/t21-b449-a3-real-goal-progress.test.mjs
