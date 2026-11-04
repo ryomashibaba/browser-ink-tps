@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {sourceAudioCues,sourceShotTone,type SourceAudioFrame} from './SourcePracticeAudio';
+import {sourceAudioCues,sourceShotTone,sourceAudioMuteHotkey,type SourceAudioFrame} from './SourcePracticeAudio';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 const before:SourceAudioFrame={tick:10,phase:'PLAYING',locked:true,stopped:false,
  shots:1,dry:0,throws:0,explosions:0,hits:0,cpuSplats:0,damage:0,
@@ -75,5 +75,21 @@ describe('SOURCE 12-weapon true gameplay sound and actual physical feedback',()=
   expect(sourceShotTone('rail-charger').wave).toBe('sine');
   expect(sourceShotTone('arc-blaster').wave).toBe('sawtooth');
   expect(sourceShotTone('rotor-splatling').wave).toBe('square');
+ });
+});
+
+// M is the preserved player radar key; audio must never intercept it.
+describe('native SOURCE player keyboard bindings',()=>{
+ const key={code:'KeyN',repeat:false,altKey:false,ctrlKey:false,metaKey:false};
+ it('uses N for sound while M remains radar in real pointer-locked play',()=>{
+  expect(sourceAudioMuteHotkey(key,true)).toBe(true);
+  expect(sourceAudioMuteHotkey({...key,code:'KeyM'},true)).toBe(false);
+  expect(sourceAudioMuteHotkey(key,false)).toBe(false);
+ });
+ it('ignores repeat and modified keys',()=>{
+  expect(sourceAudioMuteHotkey({...key,repeat:true},true)).toBe(false);
+  expect(sourceAudioMuteHotkey({...key,altKey:true},true)).toBe(false);
+  expect(sourceAudioMuteHotkey({...key,ctrlKey:true},true)).toBe(false);
+  expect(sourceAudioMuteHotkey({...key,metaKey:true},true)).toBe(false);
  });
 });

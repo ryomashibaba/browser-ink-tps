@@ -91,7 +91,14 @@ export function sourceShotTone(id:WeaponId='pulse-sprayer'){
   p.weaponClass==='BRUSH'?0.7:1;
  return {pitch:p.audioPitch,wave,length,volume:Math.min(1.7,Math.max(.65,p.fxScale))};
 }
-/** Real pointer-lock only. M = mute. External SOUND/MUSIC files are not required. */
+/** Real pointer-lock only. N = audio mute; M is reserved for the existing radar. */
+export function sourceAudioMuteHotkey(
+ event:Pick<KeyboardEvent,'code'|'repeat'|'altKey'|'ctrlKey'|'metaKey'>,
+ pointerLocked:boolean
+):boolean{
+ return pointerLocked&&event.code==='KeyN'&&!event.repeat&&
+  !event.altKey&&!event.ctrlKey&&!event.metaKey;
+}
 export class SourcePracticeAudio {
  private ctx:AudioContext|null=null;
  private muted=false;
@@ -116,15 +123,13 @@ export class SourcePracticeAudio {
    if(!this.muted)this.unlock();
   });
   window.addEventListener('keydown',event=>{
-   if(event.code!=='KeyM'||event.repeat||event.altKey||
-    event.ctrlKey||event.metaKey||
-    document.pointerLockElement!==this.canvas)return;
+   if(!sourceAudioMuteHotkey(event,document.pointerLockElement===this.canvas))return;
    this.muted=!this.muted;
    if(!this.muted)this.unlock();
    this.canvas.dataset.t21SourceAudio=this.muted?'MUTED':
     this.ctx?'ENABLED':'UNAVAILABLE';
-   n.textContent=this.muted?'SOURCE SOUND OFF · M':
-    this.ctx?'SOURCE SOUND ON · M':'SOURCE SOUND UNAVAILABLE';
+   n.textContent=this.muted?'SOURCE SOUND OFF · N':
+    this.ctx?'SOURCE SOUND ON · N':'SOURCE SOUND UNAVAILABLE';
    n.hidden=false;this.noticeUntil=performance.now()+1800;
    event.preventDefault();
   });

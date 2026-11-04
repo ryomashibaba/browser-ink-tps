@@ -8,7 +8,7 @@ Continuation of the immutable F1–F5 Fast Track. Only research branch `research
 - After the actual 60Hz PaintCoordinator step, a new original SOURCE cell emits a low-volume ink-impact cue. Already-painted cells do not.
 - Genuine PlayerResources ink increase while SQUID in OWN ink yields refill feedback; actual grounded Rapier player movement in OWN ink yields squid movement feedback; a real airborne→grounded transition yields a landing cue.
 - Actual fractional damage (e.g., .25 HP) is supported. The previous integer-only validator could silence every subsequent sound after valid fractional damage.
-- All sounds are synthesized locally, unlocked only by a real canvas gesture. M mute and unsupported AudioContext fallback remain intact. Short cooldowns keep sound overhead bounded.
+- All sounds are synthesized locally, unlocked only by a real canvas gesture. N mute is now independent of the existing M radar toggle (regression fix); unsupported AudioContext fallback remains intact. Short cooldowns keep sound overhead bounded.
 
 ## Safety / acceptance
 

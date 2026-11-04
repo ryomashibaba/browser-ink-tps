@@ -281,6 +281,9 @@ export function createF3PlayableHud(ui:HTMLElement){
   '</div>'+
   '<div id="t21-f3-hud-practice" style="font-size:10px;margin-top:5px;color:#ffc59b">'+
    'UNSCORED / NO OFFICIAL RESULT</div>'+
+  '<div id="t21-f3-player-key-help" aria-label="Source practice controls"'+
+   ' style="font:650 9px/1.4 system-ui;color:#9adbdc;margin-top:4px">'+
+   'M RADAR · N SOUND · P PAUSE · R RESTART</div>'+
   // B355: a compact HUMAN ink-resource cue inside the PLAYER HUD.
   // Reuses the authoritative B76 3-second ledger; NO game-state writes.
   '<div id="t21-f3-b355-source-ink-readout" hidden aria-live="off"'+
