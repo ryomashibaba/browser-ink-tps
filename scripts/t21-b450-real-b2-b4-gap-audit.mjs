@@ -41,13 +41,18 @@ export function auditRealB450(d){
    if(!xyz(w?.originalGoal)||w.originalGoal[2]>-33||
     typeof w.originalGoalSolidId!=='string'||!w.originalGoalSolidId||
     !nat(w.nativePathPointCount)||!f||!nat(f.checked)||
-    !['EMPTY_NATIVE_PATH','INVALID_NATIVE_SEGMENT',
-     'OUTSIDE_ORIGINAL_REGION','NO_ORIGINAL_RAPIER_SUPPORT'].includes(f.cause)||
+    !['EMPTY_NATIVE_PATH','INVALID_NATIVE_SEGMENT','OUTSIDE_ORIGINAL_REGION',
+     'NO_RAPIER_HIT','NATIVE_PATH_RAPIER_HEIGHT_MISMATCH',
+     'UNREGISTERED_OR_UNSUPPORTED_RAPIER_SOLID'].includes(f.cause)||
     (f.xyz!==null&&!xyz(f.xyz))||
     (f.xyz===null&&!['EMPTY_NATIVE_PATH','INVALID_NATIVE_SEGMENT'].includes(f.cause))||
     (f.leg!==null&&!nat(f.leg))||(f.sample!==null&&!nat(f.sample))||
     (f.hitSolidId!==null&&typeof f.hitSolidId!=='string')||
-    (f.verticalGapMeters!==null&&!Number.isFinite(f.verticalGapMeters)))
+    (f.verticalGapMeters!==null&&!Number.isFinite(f.verticalGapMeters))||
+    (f.cause==='NATIVE_PATH_RAPIER_HEIGHT_MISMATCH'&&
+     (!f.hitSolidId||f.verticalGapMeters===null||
+      f.verticalGapMeters<=.25))||
+    (f.cause==='NO_RAPIER_HIT'&&f.hitSolidId!==null))
      fail('FORGED_OR_INCONSISTENT_ORIGINAL_DENIAL_'+id);
    reasonCounts[f.cause]=(reasonCounts[f.cause]??0)+1;
   }
@@ -60,7 +65,7 @@ export function auditRealB450(d){
    firstDenialReasonCounts:reasonCounts,
    rejectedOriginalRoutes:p.b450FailedOriginalGoals};
  }
- return {schema:'B450_REAL_B2_B4_FIRST_SOURCE_DENIAL_V1',
+ return {schema:'B451_REAL_B2_B4_ORIGINAL_CONTACT_GAP_CLASSIFICATION_V2',
   verdict:'PASS_REAL_FIRST_DENIAL_TELEMETRY_NOT_ROUTE_APPROVAL',
   browserOrigin:d.browserOrigin,originalSource:'25/17/26/0',
   realNativeTicks:e.realNativeTicks,perCpu:cpu,
