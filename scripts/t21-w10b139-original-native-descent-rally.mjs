@@ -2515,6 +2515,9 @@ async function run(){
   const proof={schema:'B419_REAL_NATIVE_ENDSCREEN_TWO_WORLDS',
    clicked:false,syntheticTicks:false,actorWrites:0,scoreWrites:0,
    realEscapeInputSent:false,pointerExitMethod:null,pointerLockReleased:false,
+   replayClickDispatched:false,
+   replayClickTarget:null,
+   navigationProbes:[],
    old:null,boot:null,armed:null,started:null,fired:null};
   const saveB419=()=>writeFileSync(resolve(OUTPUT,'b419-real-second-source-round.json'),
    JSON.stringify(proof,null,2)+'\n');
@@ -2574,15 +2577,83 @@ async function run(){
   console.log('B419_ACTUAL_BROWSER_POINTER_RELEASE',JSON.stringify({
    realEscape:proof.realEscapeInputSent,mode:proof.pointerExitMethod,
    trueTimeUpTick:first.tick}));
+  // B422 forensic replay: proof.clicked in earlier B419 runs was NOT
+  // flushed until AFTER new world READY. So clicked:false on disk could
+  // equally mean the real click was dispatched and navigation hung.
+  // Record the actual reachable DOM target BEFORE dispatch; persist the
+  // real CDP mouse gesture immediately after returning from clickButton.
+  proof.replayClickTarget=await evaluate(`(() => {
+   const b=document.querySelector('#t21-f3-b200-replay');
+   if(!b)return {present:false};
+   const rect=b.getBoundingClientRect();
+   const x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+   const top=document.elementFromPoint(x,y);
+   return {present:true,hidden:b.hidden,disabled:b.disabled,
+    inViewport:x>=0&&x<=innerWidth&&y>=0&&y<=innerHeight,
+    buttonReceivesPointer:top===b||b.contains(top),
+    display:getComputedStyle(b).display,
+    pointerEvents:getComputedStyle(b).pointerEvents,
+    center:[Number(x.toFixed(2)),Number(y.toFixed(2))]};
+  })()`);
+  saveB419();
+  if(!proof.replayClickTarget?.present||
+     proof.replayClickTarget?.hidden||
+     proof.replayClickTarget?.disabled||
+     !proof.replayClickTarget?.inViewport||
+     !proof.replayClickTarget?.buttonReceivesPointer)
+   fail('B422_REAL_REPLAY_CLICK_TARGET_BLOCKED');
   await clickButton('#t21-f3-b200-replay');
   proof.clicked=true;
-  const newPage=await until(async()=>{try{
-   const data=await evaluate(`(() => ({
-    origin:performance.timeOrigin,url:location.search,
-    ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready
-   }))()`);
-   return data.origin>origin&&data.ready==='READY'?data:false;
-  }catch{return false;}},100000);
+  proof.replayClickDispatched=true;
+  saveB419(); // immediately persisted, independent of a new-world boot
+  console.log('B422_GENUINE_REPLAY_CLICK_DISPATCHED',JSON.stringify({
+   stage:'25/17/26/0',oldTimeOrigin:origin,
+   target:proof.replayClickTarget,nativeFirstTimeUpTick:first.tick}));
+  const latest={origin:null,url:null,ready:null,load:null,
+   canvasPresent:false,realAppPresent:false,
+   lastError:null,attempts:0};
+  const newPage=await until(async()=>{
+   latest.attempts++;
+   try{
+    const data=await evaluate(`(() => ({
+     origin:performance.timeOrigin,url:location.search,
+     ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+     load:document.readyState,
+     canvasPresent:!!document.querySelector('#app-canvas'),
+     realAppPresent:!!window.__t21F3
+    }))()`);
+    Object.assign(latest,data,{lastError:null});
+    // Save only materially changed stage transitions, plus every
+    // 20th probe. Never fake stage READY or act on the page state.
+    const last=proof.navigationProbes.at(-1);
+    if(!last||last.origin!==data.origin||last.ready!==data.ready||
+       last.url!==data.url||latest.attempts%20===0){
+     proof.navigationProbes.push({...data,probeNumber:latest.attempts});
+     if(proof.navigationProbes.length>30)proof.navigationProbes.shift();
+     saveB419();
+    }
+    return data.origin>origin&&data.ready==='READY'?data:false;
+   }catch(e){
+    latest.lastError=String(e).slice(0,300);
+    if(latest.attempts%20===0){
+     proof.navigationProbes.push({
+      probeNumber:latest.attempts,observationError:latest.lastError});
+     if(proof.navigationProbes.length>30)proof.navigationProbes.shift();
+     saveB419();
+    }
+    return false;
+   }
+  },100000).catch(e=>{
+   proof.navigationProbes.push({final:true,
+    ...latest,stage:'REPLAY_DISPATCHED_BUT_NEW_WORLD_NOT_READY'});
+   saveB419();
+   const phase=latest.lastError?'EVALUATE_ERROR':
+    latest.origin===null?'NO_BROWSER_PROBE':
+    latest.origin===origin?'BROWSER_NOT_NAVIGATED':
+    latest.ready!=='READY'?'NAVIGATED_BUT_SOURCE_NOT_READY':
+    'UNKNOWN';
+   fail('B422_REAL_REPLAY_NEW_WORLD_'+phase);
+  });
   const ready=await snapshot();authority(ready,'FIXED');
   proof.boot=meta(ready,newPage.origin,{
    url:newPage.url,pageReady:newPage.ready==='READY'});
