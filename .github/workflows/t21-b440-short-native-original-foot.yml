@@ -1,0 +1,41 @@
+name: T21 B440 short true Chromium source human KCC preflight
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'scripts/t21-b440-short-native-original-foot.mjs'
+      - '.github/workflows/t21-b440-short-native-original-foot.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b440-short-native-original-foot-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  true-native-source-walk-short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install SOURCE browser runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Syntax and full bundle preflight
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          npm run build -- --base=/browser-ink-tps/
+      - name: Real fresh SOURCE 7-CPU plus native Chromium HUMAN KeyW
+        env:
+          T21_B440_OUT: /tmp/t21-b440-short-native-foot
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Keep genuine native result including failed real witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-b440-short-native-original-source-human-kcc
+          path: /tmp/t21-b440-short-native-foot/
+          if-no-files-found: warn
+          retention-days: 14
+
