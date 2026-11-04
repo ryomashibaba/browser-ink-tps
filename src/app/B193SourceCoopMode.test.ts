@@ -122,7 +122,7 @@ describe('B423 frontmost terminal UI cannot use an in-place source replay',()=>{
    ['t21QaDrive','other'],['t21Play','other'],
    ['t21W10B193','no'],['t21W10B203','practice'],
    ['t21W10B192','humanCombat']
-  ]){
+  ] as const){
    const p=fresh();p.set(k,val);
    expect(b423UseRealSourceWorldReplay(p,'TIME_UP')).toBe(false);
   }
