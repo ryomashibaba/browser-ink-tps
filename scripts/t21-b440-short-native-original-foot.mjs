@@ -219,7 +219,35 @@ async function main(){
   // hostile actor teleport, scoring or certified opposing-team encounter.
   const startPatrol=after.cpu.sourcePatrol;
   if(!startPatrol?.b441Enabled)fail('B441_NOT_ACTUALLY_SELECTED');
+  const validateB445=(patrol)=>{
+   const entries=patrol?.b445OriginalFrontlineGates;
+   if(!Array.isArray(entries)||entries.length!==6||
+      new Set(entries.map(x=>x.id)).size!==6)
+    fail('B445_MISSING_REAL_CPU_GATE_INVENTORY');
+   for(const g of entries){
+    if(!['A2','A3','B1','B2','B3','B4'].includes(g.id)||
+       !Array.isArray(g.actualOriginalLanding)||
+       g.actualOriginalLanding.length!==3||
+       !g.actualOriginalLanding.every(Number.isFinite)||
+       !Array.isArray(g.approvedOriginalGoals)||
+       g.approvedOriginalGoals.length!==g.strictlyApprovedGoals||
+       !g.approvedOriginalGoals.every(p=>Array.isArray(p)&&
+        p.length===3&&p.every(Number.isFinite)&&
+        Math.abs(p[2])>=33)||
+       !Number.isSafeInteger(g.originalFloorProposals)||
+       !Number.isSafeInteger(g.inspectedProposals)||
+       g.inspectedProposals<0||
+       g.inspectedProposals>g.originalFloorProposals||
+       g.inspectedProposals!==g.rejectedOriginalRapierOrBoundary+
+        g.rejectedNativeRecastOrOriginalPath+g.strictlyApprovedGoals||
+       g.runtimeChooseInvocations<g.runtimeNoOriginalFrontGoals||
+       g.runtimeChooseInvocations<0||g.runtimeTrueOriginalGoalRequests<0)
+     fail('B445_FORGED_OR_UNACCOUNTED_CPU_GATE');
+   }
+   return entries;
+  };
   const firstRead={tick:after.tick,patrol:startPatrol,
+   b445FirstOriginalGateByCpu:validateB445(startPatrol),
    actors:after.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
     rejoined:c.rejoined,lifeState:c.lifeState}))};
   const realApprovedTargets=n=>{
@@ -309,6 +337,7 @@ async function main(){
   proof.b441NativeEvidence={
    ...proof.b441NativeEvidence,phase:'NATIVE_CPU_REAL_WALK_MEASURED',
    b442ActualApprovedNativeTargetsAtFinish:actualTargets,
+   b445LastOriginalGateByCpu:validateB445(afterPatrol),
    b442ClosestRealGoalDistances:closestById,
    b442ObservedUniqueGoalArrivals:observedArrivals,
    b442ArrivalWitnessVerdict:observedArrivals>0?

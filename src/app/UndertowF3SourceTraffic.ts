@@ -54,6 +54,24 @@ export function sourceNativeLiveRejoinedCpu(
 ):boolean{
  return cpu.lifeState==='ACTIVE'&&genuinePriorRejoins.has(cpu.id);
 }
+/** B445 read-only per-CPU audit for existing B441 original SOURCE goals.
+ * A denial is not permission to relax physics or invent a link. */
+export interface B445RealSourceGoalGate{
+ readonly id:string;
+ readonly actualOriginalLanding:[number,number,number];
+ readonly originalFloorProposals:number;
+ inspectedProposals:number;
+ rejectedOriginalRapierOrBoundary:number;
+ rejectedNativeRecastOrOriginalPath:number;
+ strictlyApprovedGoals:number;
+ readonly approvedOriginalGoals:[number,number,number][];
+ runtimeChooseInvocations:number;
+ runtimeNoOriginalFrontGoals:number;
+ runtimeNearExistingGoal:number;
+ runtimeUnsupportedGoalFoot:number;
+ runtimeUnsupportedNativePath:number;
+ runtimeTrueOriginalGoalRequests:number;
+}
 export interface F3TrafficSnapshot{
  readonly cpu:readonly {id:string;mobilityState:string;released:boolean;rejoined:boolean;lastMovedTick:number;physicalFoot:[number,number,number];lifeState:'ACTIVE'|'SPLATTED'|'UNKNOWN';hp:number|null}[];
  readonly physicalFirstDrops:readonly string[];
@@ -72,6 +90,8 @@ export interface F3TrafficSnapshot{
   readonly b441ActualGoalRequests:number;
   readonly b441UnsafeOrUnreachableHolds:number;
   readonly b441ClosestApprovedFrontAbsZ:number|null;
+  /** B445: original real lower-landing rejection reasons per CPU. */
+  readonly b445OriginalFrontlineGates:readonly B445RealSourceGoalGate[];
   readonly b443NativeGoalRetentions:number;
   readonly b443FirstActualFrontlineArrivals:number;
   readonly b443RotationsAfterDwell:number;
@@ -174,6 +194,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly egress=new Map<string,StageVector3>();
  private readonly patrolGoals=new Map<string,Vec3[]>();
  private readonly b441FrontGoals=new Map<string,Vec3[]>();
+ private readonly b445FrontlineGates=new Map<string,B445RealSourceGoalGate>();
  /** B442 evidence-only: no steering, Actor, or navigation side effects. */
  private readonly b442LastApprovedFront=new Map<string,{
   target:Vec3;nativeTick:number
@@ -354,8 +375,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Neither a polygon vertex nor a Recast waypoint grants terrain.
    if(this.enableB441SourceFrontline&&this.physics&&bot.id!=='A1'){
     const verified:Vec3[]=[];
-    for(const proposal of proposeB441OriginalFrontline(stage,
-      bot.team===Team.A?'A':'B')){
+    const proposals=proposeB441OriginalFrontline(stage,
+      bot.team===Team.A?'A':'B');
+    const gate:B445RealSourceGoalGate={
+     id:bot.id,actualOriginalLanding:[start.x,start.y,start.z],
+     originalFloorProposals:proposals.length,inspectedProposals:0,
+     rejectedOriginalRapierOrBoundary:0,
+     rejectedNativeRecastOrOriginalPath:0,
+     strictlyApprovedGoals:0,approvedOriginalGoals:[],
+     runtimeChooseInvocations:0,runtimeNoOriginalFrontGoals:0,
+     runtimeNearExistingGoal:0,runtimeUnsupportedGoalFoot:0,
+     runtimeUnsupportedNativePath:0,runtimeTrueOriginalGoalRequests:0
+    };
+    this.b445FrontlineGates.set(bot.id,gate);
+    for(const proposal of proposals){
+     gate.inspectedProposals++;
      this.b441ProposalsChecked++;
      const goal=new Vec3(...proposal.point);
      const ray=this.physics.castStageSegment(
@@ -370,14 +404,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
         !flat?.insideRegisteredOriginalXZFootprint||
         !flat.originalFlatVerticalBandWithin22cm||
         flat.distanceToOriginalPolygonBoundaryMeters<.75){
+      gate.rejectedOriginalRapierOrBoundary++;
       this.b441UnsafeOrUnreachableHolds++;continue;
      }
      const route=this.nav.auditPath(start,goal);
      if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
         route.endSnapDistanceMeters>.20||
         !this.hasSourceSupportedRoute(route,sideSign)){
+      gate.rejectedNativeRecastOrOriginalPath++;
       this.b441UnsafeOrUnreachableHolds++;continue;
      }
+     gate.strictlyApprovedGoals++;
+     gate.approvedOriginalGoals.push([goal.x,goal.y,goal.z]);
      verified.push(goal);
      this.b441StrictGoalsAvailable++;
      const front=Math.abs(goal.z);
@@ -865,6 +903,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // A failed route always falls through to the legacy proven patrol.
   if(this.enableB441SourceFrontline&&id!=='A1'&&this.physics){
    const fronts=this.b441FrontGoals.get(id)??[];
+   const gate=this.b445FrontlineGates.get(id);
+   if(gate){
+    gate.runtimeChooseInvocations++;
+    if(fronts.length===0)gate.runtimeNoOriginalFrontGoals++;
+   }
    const lock=this.b443OriginalGoalLocks.get(id);
    let completed:Vec3|null=null;
    // B443: B442 real Chromium showed 8-13 target switches in 30 polls
@@ -897,6 +940,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        target:lock.target.clone(),nativeTick:this.b137NativeTick
       });
       this.b443NativeGoalRetentions++;
+      if(gate)gate.runtimeTrueOriginalGoalRequests++;
       this.realGoalRequests++;this.b441ActualGoalRequests++;
       return true;
      }
@@ -915,16 +959,22 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      ...fronts.filter(p=>p.distance(completed)<=.01)]:fronts;
    for(const goal of goals){
     const direct=Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z);
-    if(direct<1.5)continue;
+    if(direct<1.5){
+     if(gate)gate.runtimeNearExistingGoal++;
+     continue;
+    }
     if(goal.z*sign<33||!this.hasSourceFootSupport(goal)){
+     if(gate)gate.runtimeUnsupportedGoalFoot++;
      this.b441UnsafeOrUnreachableHolds++;continue;
     }
     const route=this.nav.auditPath(realFoot,goal);
     if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
        route.endSnapDistanceMeters>.20||
        !this.hasSourceSupportedRoute(route,sign)){
+     if(gate)gate.runtimeUnsupportedNativePath++;
      this.b441UnsafeOrUnreachableHolds++;continue;
     }
+    if(gate)gate.runtimeTrueOriginalGoalRequests++;
     out.copy(goal);
     this.b443OriginalGoalLocks.set(id,{target:goal.clone(),
      firstApprovedTick:this.b137NativeTick,arrivedSinceTick:null});
@@ -1412,6 +1462,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b441ActualGoalRequests:this.b441ActualGoalRequests,
     b441UnsafeOrUnreachableHolds:this.b441UnsafeOrUnreachableHolds,
     b441ClosestApprovedFrontAbsZ:this.b441ClosestApprovedFrontAbsZ,
+    b445OriginalFrontlineGates:[...this.b445FrontlineGates.values()]
+     .map(v=>({...v,actualOriginalLanding:[...v.actualOriginalLanding] as
+       [number,number,number],
+      approvedOriginalGoals:v.approvedOriginalGoals.map(p=>
+       [...p] as [number,number,number])})),
     b443NativeGoalRetentions:this.b443NativeGoalRetentions,
     b443FirstActualFrontlineArrivals:this.b443FirstActualFrontlineArrivals,
     b443RotationsAfterDwell:this.b443RotationsAfterDwell,
