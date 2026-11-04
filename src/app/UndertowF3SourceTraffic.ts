@@ -28,6 +28,7 @@ import {eligibleB192SourceHumanPursuit,
  chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
 import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
+import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -71,6 +72,10 @@ export interface F3TrafficSnapshot{
   readonly b441ActualGoalRequests:number;
   readonly b441UnsafeOrUnreachableHolds:number;
   readonly b441ClosestApprovedFrontAbsZ:number|null;
+  readonly b443NativeGoalRetentions:number;
+  readonly b443FirstActualFrontlineArrivals:number;
+  readonly b443RotationsAfterDwell:number;
+  readonly b443ReleasedUnsafeOrStalled:number;
   /** B442: last ACTUALLY GRANTED B441 goals and physical CPU-foot
    * distance. Read-only observation, not goal attainment certification. */
   readonly b442LastApprovedRealFrontTargets:readonly {
@@ -173,6 +178,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly b442LastApprovedFront=new Map<string,{
   target:Vec3;nativeTick:number
  }>();
+ private readonly b443OriginalGoalLocks=new Map<string,{
+  target:Vec3;firstApprovedTick:number;arrivedSinceTick:number|null
+ }>();
+ private b443NativeGoalRetentions=0;
+ private b443FirstActualFrontlineArrivals=0;
+ private b443RotationsAfterDwell=0;
+ private b443ReleasedUnsafeOrStalled=0;
  private b441ProposalsChecked=0;
  private b441StrictGoalsAvailable=0;
  private b441ActualGoalRequests=0;
@@ -506,6 +518,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Reuse exactly the F2-assigned one-way offmesh FIRST DROP. The virtual
   // Recast agent gets only a goal; real feet remain under Rapier KCC.
   if(this.respawnOriginalDrops.has(id)){
+   // New life cannot inherit a stale previously witnessed frontline goal.
+   this.b443OriginalGoalLocks.delete(id);
+   this.b442LastApprovedFront.delete(id);
    const bot=this.bots.find(b=>b.id===id);
    const route=this.routeFor(id);
    const lower=new Vec3(...route.sourceGoal);
@@ -523,6 +538,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    return true;
   }
   if(!this.freeCombat||!this.physicallyRejoined.has(id)){
+   this.b443OriginalGoalLocks.delete(id);
+   this.b442LastApprovedFront.delete(id);
    this.heldRequests++;return false;
   }
   const candidates=this.patrolGoals.get(id);
@@ -848,7 +865,55 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // A failed route always falls through to the legacy proven patrol.
   if(this.enableB441SourceFrontline&&id!=='A1'&&this.physics){
    const fronts=this.b441FrontGoals.get(id)??[];
-   for(const goal of fronts){
+   const lock=this.b443OriginalGoalLocks.get(id);
+   let completed:Vec3|null=null;
+   // B443: B442 real Chromium showed 8-13 target switches in 30 polls
+   // when CPU feet came within 1.5m of the first verified SOURCE goal.
+   // Keep an APPROVED goal through approach and for 120 authentic ticks
+   // after arrival; only then consider another ORIGINAL same-side goal.
+   if(lock&&fronts.some(p=>p.distance(lock.target)<.01)){
+    const distance=Math.hypot(
+     lock.target.x-realFoot.x,lock.target.z-realFoot.z);
+    const decision=decideB443OriginalFrontHold(
+     this.b137NativeTick,lock.firstApprovedTick,
+     lock.arrivedSinceTick,distance,fronts.length);
+    if(decision.decision==='KEEP_APPROACH'||
+       decision.decision==='KEEP_DWELL'){
+     // A stable lock is NOT a bypass. Recheck actual native CPU foot,
+     // endpoint and EVERY intermediate original-grounded Recast point.
+     const route=this.nav.auditPath(realFoot,lock.target);
+     if(lock.target.z*sign>=33&&
+        this.hasSourceFootSupport(realFoot)&&
+        this.hasSourceFootSupport(lock.target)&&
+        route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
+        route.endSnapDistanceMeters<=.20&&
+        this.hasSourceSupportedRoute(route,sign)){
+      if(lock.arrivedSinceTick===null&&
+         decision.arrivedSinceTick!==null)
+       this.b443FirstActualFrontlineArrivals++;
+      lock.arrivedSinceTick=decision.arrivedSinceTick;
+      out.copy(lock.target);
+      this.b442LastApprovedFront.set(id,{
+       target:lock.target.clone(),nativeTick:this.b137NativeTick
+      });
+      this.b443NativeGoalRetentions++;
+      this.realGoalRequests++;this.b441ActualGoalRequests++;
+      return true;
+     }
+     this.b441UnsafeOrUnreachableHolds++;
+     this.b443ReleasedUnsafeOrStalled++;
+    }else if(decision.decision==='ROTATE_AFTER_DWELL'){
+     completed=lock.target.clone();
+     this.b443RotationsAfterDwell++;
+    }else this.b443ReleasedUnsafeOrStalled++;
+    this.b443OriginalGoalLocks.delete(id);
+   }
+   // After an honest 120-tick dwell, prefer the other previously
+   // validated original goal, not an invented adjacent/cover position.
+   const goals=completed&&fronts.length>1?
+    [...fronts.filter(p=>p.distance(completed)>.01),
+     ...fronts.filter(p=>p.distance(completed)<=.01)]:fronts;
+   for(const goal of goals){
     const direct=Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z);
     if(direct<1.5)continue;
     if(goal.z*sign<33||!this.hasSourceFootSupport(goal)){
@@ -861,8 +926,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.b441UnsafeOrUnreachableHolds++;continue;
     }
     out.copy(goal);
-    // Record only ACTUALLY ACCEPTED native Crowd goals. The map does NOT
-    // grant a goal or change steering, timing, or body pose in any way.
+    this.b443OriginalGoalLocks.set(id,{target:goal.clone(),
+     firstApprovedTick:this.b137NativeTick,arrivedSinceTick:null});
+    // Store a witness only after native route checks truly passed.
     this.b442LastApprovedFront.set(id,{
      target:goal.clone(),nativeTick:this.b137NativeTick
     });
@@ -1346,6 +1412,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b441ActualGoalRequests:this.b441ActualGoalRequests,
     b441UnsafeOrUnreachableHolds:this.b441UnsafeOrUnreachableHolds,
     b441ClosestApprovedFrontAbsZ:this.b441ClosestApprovedFrontAbsZ,
+    b443NativeGoalRetentions:this.b443NativeGoalRetentions,
+    b443FirstActualFrontlineArrivals:this.b443FirstActualFrontlineArrivals,
+    b443RotationsAfterDwell:this.b443RotationsAfterDwell,
+    b443ReleasedUnsafeOrStalled:this.b443ReleasedUnsafeOrStalled,
     b442LastApprovedRealFrontTargets:this.bots.flatMap(bot=>{
      const last=this.b442LastApprovedFront.get(bot.id);
      if(!last||!sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined))

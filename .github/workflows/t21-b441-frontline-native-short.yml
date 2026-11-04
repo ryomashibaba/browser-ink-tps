@@ -25,7 +25,7 @@ jobs:
       - name: Verify true native runner source and compile game
         run: |
           node --check scripts/t21-b440-short-native-original-foot.mjs
-          npx vitest run src/app/B441OriginalSourceFrontline.test.ts
+          npx vitest run src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: One real native browser with 7 original CPU and B441 opt-in
         env:
