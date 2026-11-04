@@ -163,6 +163,7 @@ import {b400RealOriginalSourceGridRecap,b400Real180SourceEndGate,
  from './B400RealOriginalSourceGridRecap';
 import {B401NativeLiveSourceInkOwnership,b401SourceHudLine,
  b401ReplaceSourceGridFooter} from './B401NativeLiveSourceInkOwnership';
+import {createSourcePracticeInkBalance} from './SourcePracticeInkBalance';
 import {b289RealSourceInPlayArtEligible,B289_NATIVE_ART_AUTHORITY}
  from './B289NativeInPlayActorArtGate';
 import {b288FrozenVisualStudyEligible,B288_ART_RESEARCH_AUTHORITY}
@@ -480,6 +481,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b399Hidden=new Set<string>();
  private b400FinalOriginalGrid:B400SourceRecap|null=null;
  private readonly b401LiveSourceInk=new B401NativeLiveSourceInkOwnership();
+ private readonly sourcePracticeInkBalance:ReturnType<typeof createSourcePracticeInkBalance>;
  private b203EverLockedRealPointer=false;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
@@ -1526,6 +1528,9 @@ export class UndertowF3PlayablePreviewApp{
   this.obstructionNotice.textContent='CAMERA BLOCKED · Q: change shoulder';
   ui.appendChild(this.obstructionNotice);
   this.practiceHud=createF3PlayableHud(ui);
+  // A compact real-paint balance inside the normal full-round HUD.
+  // B401 remains the only SOURCE owner-grid authority, never Turf scoring.
+  this.sourcePracticeInkBalance=createSourcePracticeInkBalance(this.practiceHud.root);
   // B202: a real player-visible way to resume the existing frozen
   // Rapier/Recast/ink world, not a restart or fabricated native tick.
   const pauseOverlay=document.createElement('section');
@@ -5125,6 +5130,11 @@ export class UndertowF3PlayablePreviewApp{
    this.rawStage.navigationLinks?.length??0,0
   ],this.clock.tick,this.matchState,true);
   if(next===before)return;
+  this.sourcePracticeInkBalance.render(next,[
+   this.rawStage.solids.length,this.b45SourceSurfaces.length,
+   this.rawStage.navigationLinks?.length??0,
+   this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+  ],this.matchState,!!this.stopReason);
   const old=hud.textContent??'';
   if(!old.endsWith('NO OFFICIAL WINNER'))return;
   hud.textContent=b401ReplaceSourceGridFooter(old,next);
@@ -6944,6 +6954,10 @@ export class UndertowF3PlayablePreviewApp{
    this.b205RoundClock.dataset.t21B401TeamBCells=String(b401.teamB);
    this.b205RoundClock.dataset.t21B401NeutralCells=String(b401.neutral);
    this.b205RoundClock.dataset.t21B401OfficialWinner='NONE';
+   this.sourcePracticeInkBalance.render(b401,[
+    state.originalSourceSolids,state.originalPaintSurfaces,
+    state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions
+   ],state.matchState,!!state.stopReason);
    // B217 only observes B207 player's existing native counters. No
    // fake increment, paint-to-shot attribution or official Turf scoring.
    // Only measure actual PLAYING native simulation. The original
