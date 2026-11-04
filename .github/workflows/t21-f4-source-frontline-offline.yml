@@ -1,0 +1,29 @@
+name: T21 F4 SOURCE frontline audit - fast offline regression
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'scripts/t21-f4-real-cpu-frontline-audit.mjs'
+      - 'scripts/t21-f4-real-cpu-frontline-audit.test.mjs'
+      - '.github/workflows/t21-f4-source-frontline-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-f4-frontline-offline-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  offline-original-source-frontline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Confirm source read-only audit scripts parse
+        run: |
+          node --check scripts/t21-f4-real-cpu-frontline-audit.mjs
+          node --check scripts/t21-f4-real-cpu-frontline-audit.test.mjs
+      - name: Reject false SOURCE, actor, clock, score and route claims
+        run: node --test scripts/t21-f4-real-cpu-frontline-audit.test.mjs
