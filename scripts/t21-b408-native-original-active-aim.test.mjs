@@ -46,3 +46,19 @@ test('source, ground, native camera and active grid all fail closed',()=>{
    /B408_NATIVE_ORIGINAL_AIM_HOLD_/);
  }
 });
+
+test('bounded source retry excludes actually attempted live grids',()=>{
+ const x=f(),first=b408ChooseActiveOriginalCell(x.ledger,x.frame,x.foot);
+ const second=b408ChooseActiveOriginalCell(x.ledger,x.frame,x.foot,
+  {excludeGrids:[first.grid]});
+ assert.notDeepEqual(second.grid,first.grid);
+ assert.equal(second.surfaceId,first.surfaceId);
+ assert.equal(second.simulatedInput,false);
+ assert.equal(second.paintWrites,0);
+ assert.throws(()=>b408ChooseActiveOriginalCell(x.ledger,x.frame,x.foot,
+  {excludeGrids:[first.grid,second.grid]}),
+  /B408_NATIVE_ORIGINAL_AIM_HOLD_NO_DISTINCT_LIVE_ORIGINAL_TARGET/);
+ assert.throws(()=>b408ChooseActiveOriginalCell(x.ledger,x.frame,x.foot,
+  {excludeGrids:[[Infinity,7]]}),
+  /B408_NATIVE_ORIGINAL_AIM_HOLD_INVALID_REAL_AIM_EXCLUSIONS/);
+});

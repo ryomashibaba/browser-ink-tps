@@ -4,7 +4,7 @@ import {b313ChooseOriginalActiveAim,b313ObservedRealAimMatch}
  from './t21-b313-actual-original-cell-aim.mjs';
 const fail=s=>{throw Error('B408_NATIVE_ORIGINAL_AIM_HOLD_'+s);};
 const v3=x=>Array.isArray(x)&&x.length===3&&x.every(Number.isFinite);
-export function b408ChooseActiveOriginalCell(ledger,frame,footId){
+export function b408ChooseActiveOriginalCell(ledger,frame,footId,{excludeGrids=[]}={}){
  const cam=frame?.cameraSourcePractice,ground=ledger;
  if(!footId?.startsWith('UndertowT21D:')||
   ground?.source!=='25/17/26/0'||ground.originalRows?.length!==17||
@@ -31,12 +31,20 @@ export function b408ChooseActiveOriginalCell(ledger,frame,footId){
   fail('REAL_ACTIVE_ORIGINAL_GRID_UNAVAILABLE');
  const unowned=cells.filter(c=>c.originalOwner!==1);
  const pool=unowned.length?unowned:cells;
+ // Genuine CDP retries must use a different currently sourced nearby grid.
+ // A failed projectile or painted-own cell is NEVER credited as an impact.
+ if(!Array.isArray(excludeGrids)||excludeGrids.length>3||
+    excludeGrids.some(g=>!Array.isArray(g)||g.length!==2||
+      !g.every(Number.isSafeInteger)))fail('INVALID_REAL_AIM_EXCLUSIONS');
+ const available=pool.filter(c=>!excludeGrids.some(g=>
+   g[0]===c.grid[0]&&g[1]===c.grid[1]));
+ if(available.length<1)fail('NO_DISTINCT_LIVE_ORIGINAL_TARGET');
  const selected=b313ChooseOriginalActiveAim({
-  cells:pool,body:ground.actualBodyMeters,camera:ground.actualCameraMeters,
+  cells:available,body:ground.actualBodyMeters,camera:ground.actualCameraMeters,
   yaw:cam.yawDegrees,pitch:cam.pitchDegrees
  }).selected;
  if(!selected)fail('NO_SAFE_LIVE_MOUSE_TARGET');
- const sourceCell=pool.find(c=>c.grid[0]===selected.grid[0]&&
+ const sourceCell=available.find(c=>c.grid[0]===selected.grid[0]&&
   c.grid[1]===selected.grid[1]);
  if(!sourceCell||!v3(sourceCell.world))fail('REAL_ACTIVE_CELL_PROVENANCE');
  return {

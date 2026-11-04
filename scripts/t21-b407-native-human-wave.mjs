@@ -84,55 +84,89 @@ export async function b407RunNativeHumanWave({
   let b408Aim=null;
   let mouseX=aimCDP[0]+(remaining===120||remaining===60?-3:3);
   let mouseY=aimCDP[1];
-  if(b408ActiveAim){
+  let last,lastFoot;
+  const triedActualGrids=[];
+  // A single real hit may fail after a native movement wave: an active cell
+  // is not a guarantee of a projectile contact. Keep the ORIGINAL strict
+  // impact gate; only try at most two OTHER genuine cells with real CDP.
+  for(let attempt=0;attempt<(b408ActiveAim?3:1);attempt++){
+    if(b408ActiveAim){
+      await send('Input.dispatchMouseEvent',
+        {type:'mouseMoved',x:800,y:450,button:'none'});
+      const liveFrame=verifyAuthority(await snapshot());
+      const liveGrid=await foot();
+      const plan=b408ChooseActiveOriginalCell(liveGrid,liveFrame,expectedFoot,
+        {excludeGrids:triedActualGrids});
+      triedActualGrids.push([...plan.grid]);
+      mouseX=plan.cdp[0];mouseY=plan.cdp[1];
+      b408Aim={plan,nativeMouseDispatched:false,
+        genuineCdpAttempts:attempt+1,sourceAimRetryBound:3};
+    }
+    guard(mouseX>=10&&mouseX<=1590&&mouseY>=10&&mouseY<=890,
+      'INVALID_REAL_CDP_MOUSE');
     await send('Input.dispatchMouseEvent',
-      {type:'mouseMoved',x:800,y:450,button:'none'});
-    const liveFrame=verifyAuthority(await snapshot());
-    const liveGrid=await foot();
-    const plan=b408ChooseActiveOriginalCell(liveGrid,liveFrame,expectedFoot);
-    mouseX=plan.cdp[0];mouseY=plan.cdp[1];
-    b408Aim={plan,nativeMouseDispatched:false};
-  }
-  guard(mouseX>=10&&mouseX<=1590&&mouseY>=10&&mouseY<=890,
-    'INVALID_REAL_CDP_MOUSE');
-  await send('Input.dispatchMouseEvent',
-    {type:'mouseMoved',x:mouseX,y:mouseY,button:'none'});
-  if(b408Aim){
-    const aligned=await wait(async()=>{
-      const n=verifyAuthority(await snapshot());
-      return b408NativeMouseAligned(b408Aim.plan,n.cameraSourcePractice)?
-       n.cameraSourcePractice:false;
-    },30000);
-    b408Aim.realObservedCamera={
-     yawDegrees:aligned.yawDegrees,pitchDegrees:aligned.pitchDegrees};
-    b408Aim.nativeMouseDispatched=true;
-  }
-  await send('Input.dispatchMouseEvent',
-    { type: 'mousePressed', x: mouseX, y: mouseY, button: 'left', clickCount: 1 });
-  try {
-    await wait(async () => {
-      const s = verifyAuthority(await snapshot());
-      return s.tick >= preFire.tick + 30 && s.shotsFired > preFire.shotsFired
-        ? s : false;
-    }, 30000);
-  } finally {
+      {type:'mouseMoved',x:mouseX,y:mouseY,button:'none'});
+    if(b408Aim){
+      const aligned=await wait(async()=>{
+        const n=verifyAuthority(await snapshot());
+        return b408NativeMouseAligned(b408Aim.plan,n.cameraSourcePractice)?
+          n.cameraSourcePractice:false;
+      },30000);
+      b408Aim.realObservedCamera={
+       yawDegrees:aligned.yawDegrees,pitchDegrees:aligned.pitchDegrees};
+      b408Aim.nativeMouseDispatched=true;
+    }
+    const beforeAttempt=verifyAuthority(await snapshot());
+    const beforeGround=await foot();
+    guard(beforeAttempt.matchState==='PLAYING'&&!beforeAttempt.paused&&
+      beforeAttempt.cpu.physicalRejoins.length===7&&
+      beforeAttempt.cpu.physicalFootRelocations===0&&
+      beforeGround?.source==='25/17/26/0'&&
+      beforeGround?.realHumanOriginalFootSupported===true&&
+      beforeGround.genuineHumanOriginalFootSolid===expectedFoot&&
+      Number.isFinite(beforeGround.genuineOriginalFootGapMeters)&&
+      beforeGround.genuineOriginalFootGapMeters<=.4&&await locked(),
+      'RETRY_REQUIRES_REAL_ORIGINAL_ACTIVE_SOURCE');
     await send('Input.dispatchMouseEvent',
-      { type: 'mouseReleased', x: mouseX, y: mouseY, button: 'left', clickCount: 1 });
-  }
-  const last = verifyAuthority(await snapshot());
-  const lastFoot = await foot();
-  if(b408Aim){
-   b408Aim.impactTick=lastFoot?.humanLastImpactTick??null;
-   b408Aim.realLastPaintSurface=lastFoot?.humanLastPaintedSurface??null;
-   b408Aim.additionalShots=last.shotsFired-preFire.shotsFired;
-   b408Aim.realAddedCells=
-     last.b23HumanInkFeedback.humanChangedCells-
-     first.b23HumanInkFeedback.humanChangedCells;
-   guard(Number.isSafeInteger(b408Aim.impactTick)&&
-     b408Aim.impactTick>b408Aim.plan.nativeTick&&
-     b408Aim.realLastPaintSurface===b408Aim.plan.surfaceId&&
-     b408Aim.additionalShots>0,
-     'NO_REAL_ORIGINAL_IMPACT_AFTER_NATIVE_AIM_'+remaining);
+      {type:'mousePressed',x:mouseX,y:mouseY,button:'left',clickCount:1});
+    try {
+      await wait(async()=>{
+        const s=verifyAuthority(await snapshot());
+        return s.tick>=beforeAttempt.tick+30&&
+          s.shotsFired>beforeAttempt.shotsFired?s:false;
+      },30000);
+    } finally {
+      await send('Input.dispatchMouseEvent',
+        {type:'mouseReleased',x:mouseX,y:mouseY,button:'left',clickCount:1});
+    }
+    last=verifyAuthority(await snapshot());
+    lastFoot=await foot();
+    if(!b408Aim)break;
+    b408Aim.impactTick=lastFoot?.humanLastImpactTick??null;
+    b408Aim.realLastPaintSurface=
+      lastFoot?.humanLastPaintedSurface??null;
+    b408Aim.additionalShots=last.shotsFired-preFire.shotsFired;
+    b408Aim.realAddedCells=
+      last.b23HumanInkFeedback.humanChangedCells-
+      first.b23HumanInkFeedback.humanChangedCells;
+    // Both the original changed-cell evidence and the newer native
+    // PaintCoordinator accepted-contact witness must belong to THIS aim.
+    const genuineContact=
+      Number.isSafeInteger(beforeGround.humanOriginalImpactPaintEvents)&&
+      Number.isSafeInteger(lastFoot?.humanOriginalImpactPaintEvents)&&
+      lastFoot.humanOriginalImpactPaintEvents>
+        beforeGround.humanOriginalImpactPaintEvents&&
+      lastFoot.lastHumanOriginalImpactPaintSurface===b408Aim.plan.surfaceId&&
+      Number.isSafeInteger(lastFoot.lastHumanOriginalImpactPaintTick)&&
+      lastFoot.lastHumanOriginalImpactPaintTick>beforeAttempt.tick&&
+      lastFoot.lastHumanOriginalImpactPaintTick<=last.tick;
+    b408Aim.genuineAcceptedSourceContact=genuineContact;
+    if(genuineContact&&Number.isSafeInteger(b408Aim.impactTick)&&
+      b408Aim.impactTick>b408Aim.plan.nativeTick&&
+      b408Aim.impactTick<=last.tick&&
+      b408Aim.realLastPaintSurface===b408Aim.plan.surfaceId&&
+      b408Aim.additionalShots>0)break;
+    guard(attempt<2,'NO_REAL_ORIGINAL_IMPACT_AFTER_NATIVE_AIM_'+remaining);
   }
   guard(last.matchState === 'PLAYING' && !last.paused &&
     last.tick > preFire.tick && last.shotsFired > preFire.shotsFired &&
