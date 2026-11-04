@@ -26,6 +26,7 @@ import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import type {B367NativeCpuState} from './B367RealCpuCombatTimeline';
 import {eligibleB192SourceHumanPursuit,
  chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
+import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -539,8 +540,23 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(!this.hasSourceSupportedRoute(native,sign)){
      this.rejectedUnsupportedNativeRoutes++;continue;
     }
+    // B421: the previous goal was the live enemy CPU's actual occupied
+    // physical capsule. A true ~2m original Recast waypoint avoids trying
+    // to walk into it. Full source Rapier/Recast validation again required.
+    const standoff=b421RealEnemyStandoff(
+     native.nativePathPoints,other.position,sign as 1|-1);
+    if(!standoff||!this.hasSourceFootSupport(standoff)){
+     this.rejectedUnsupportedNativeRoutes++;continue;
+    }
+    const combatGoal=new Vec3(standoff.x,standoff.y,standoff.z);
+    const fresh=this.nav.auditPath(realFoot,combatGoal);
+    if(!fresh.reachedTarget||fresh.startSnapDistanceMeters>.20||
+       fresh.endSnapDistanceMeters>.20||
+       !this.hasSourceSupportedRoute(fresh,sign)){
+     this.rejectedUnsupportedNativeRoutes++;continue;
+    }
     this.patrolIndex.set(id,-1);
-    out.copy(other.position);
+    out.copy(combatGoal);
     this.realGoalRequests++;
     this.engagementGoalRequests++;
     return true;
