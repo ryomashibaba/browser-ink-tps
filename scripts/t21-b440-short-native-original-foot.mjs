@@ -14,6 +14,11 @@ const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
 const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound'+
  (b441Experiment?'&t21W10B441=sourceFrontline':'');
+const nativeFrontObservationTicks=b441Experiment?
+ Number(process.env.T21_B441_NATIVE_OBSERVE_TICKS??240):240;
+if(!Number.isSafeInteger(nativeFrontObservationTicks)||
+ nativeFrontObservationTicks<240||nativeFrontObservationTicks>900)
+ throw Error('B442_UNSAFE_NATIVE_OBSERVATION_WINDOW');
 const out=process.env.T21_B440_OUT||'/tmp/t21-b440-short-native-foot';
 const children=[],pending=new Map();
 let ws=null,seq=0;
@@ -217,8 +222,36 @@ async function main(){
   const firstRead={tick:after.tick,patrol:startPatrol,
    actors:after.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
     rejoined:c.rejoined,lifeState:c.lifeState}))};
+  const realApprovedTargets=n=>{
+   const targets=n.cpu.sourcePatrol?.b442LastApprovedRealFrontTargets;
+   if(!Array.isArray(targets)||targets.length>6)
+    fail('B442_NO_REAL_SOURCE_GOAL_WITNESS');
+   const seen=new Set();
+   const actorMap=new Map(n.cpu.cpu.map(c=>[c.id,c.physicalFoot]));
+   for(const v of targets){
+    const f=actorMap.get(v.id);
+    if(seen.has(v.id)||!f||!Array.isArray(v.target)||
+       v.target.length!==3||!v.target.every(Number.isFinite)||
+       !Array.isArray(v.physicalFoot)||v.physicalFoot.length!==3||
+       !v.physicalFoot.every(Number.isFinite)||
+       v.originalRegisteredSourceOnly!==true||
+       !Number.isSafeInteger(v.lastApprovedNativeTick)||
+       v.lastApprovedNativeTick>n.tick||
+       Math.abs(v.target[2])<33||
+       ![0,1,2].every(i=>Math.abs(v.physicalFoot[i]-f[i])<.001)||
+       !Number.isFinite(v.distanceXZ)||
+       Math.abs(v.distanceXZ-
+        Math.hypot(v.target[0]-f[0],v.target[2]-f[2]))>.001)
+     fail('B442_FAKE_OR_STALE_NATIVE_GOAL_WITNESS');
+    seen.add(v.id);
+   }
+   return targets;
+  };
   proof.b441NativeEvidence={phase:'OBSERVING_REAL_CPU',firstRead,
    realFrames:[],source:'25/17/26/0',
+   b442TargetObservationOnly:true,
+   b442TargetFramesWitnessed:0,
+   intendedRealNativeTicks:nativeFrontObservationTicks,
    proposedOnlyNotCapsuleProof:true,actorWrites:0,scoreWrites:0,
    nativeClockWrites:0,naturalOpposingTeamRouteCertified:false,
    verdict:'HOLD'};save();
@@ -228,18 +261,23 @@ async function main(){
    if(n.paused||n.matchState!=='PLAYING'||
       n.cpu.physicalRejoins.length!==7||await origin()!==proof.browserOrigin)
     fail('B441_SOURCE_INTERRUPTED');
+   const approvedGoals=realApprovedTargets(n);
    const data={tick:n.tick,available:n.cpu.sourcePatrol?.b441StrictGoalsAvailable,
     requested:n.cpu.sourcePatrol?.b441ActualGoalRequests,
     frontZ:n.cpu.sourcePatrol?.b441ClosestApprovedFrontAbsZ,
     physicalFeet:n.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
-     rejoined:c.rejoined}))};
-   if(proof.b441NativeEvidence.realFrames.length<24&&
+     rejoined:c.rejoined})),
+    b442RealApprovedOriginalGoals:approvedGoals};
+   if(proof.b441NativeEvidence.realFrames.length<40&&
      (!proof.b441NativeEvidence.realFrames.length||
-      n.tick-proof.b441NativeEvidence.realFrames.at(-1).tick>=20)){
-    proof.b441NativeEvidence.realFrames.push(data);save();
+      n.tick-proof.b441NativeEvidence.realFrames.at(-1).tick>=24)){
+    proof.b441NativeEvidence.realFrames.push(data);
+    if(approvedGoals.length)
+     proof.b441NativeEvidence.b442TargetFramesWitnessed++;
+    save();
    }
-   return n.tick>=after.tick+240?n:false;
-  },160000,500);
+   return n.tick>=after.tick+nativeFrontObservationTicks?n:false;
+  },600000,500);
   const afterPatrol=actual.cpu.sourcePatrol;
   const observed=actual.cpu.cpu.map(c=>{
    const from=baseline[c.id],p=c.physicalFoot;
@@ -248,8 +286,35 @@ async function main(){
      Math.hypot(p[0]-from[0],p[2]-from[2]):null,
     frontAbsZ:Math.abs(p[2]),unchangedRealCpuId:true};
   });
+  const actualTargets=realApprovedTargets(actual);
+  const rows=proof.b441NativeEvidence.realFrames.flatMap(frame=>
+   frame.b442RealApprovedOriginalGoals.map(v=>({
+    tick:frame.tick,id:v.id,target:v.target,distanceXZ:v.distanceXZ,
+    actualFoot:v.physicalFoot,lastApprovedTick:v.lastApprovedNativeTick
+   })));
+  // This is evidence of distance to a genuinely requested goal,
+  // NOT evidence that the CPU actually crossed the original gap.
+  const closestById=Object.fromEntries(
+   ['A2','A3','B1','B2','B3','B4'].map(id=>{
+    const owned=rows.filter(r=>r.id===id);
+    const best=owned.reduce((m,r)=>r.distanceXZ<m? r.distanceXZ:m,
+     Number.POSITIVE_INFINITY);
+    return [id,{minimumObservedGoalDistanceMeters:
+      Number.isFinite(best)?best:null,
+     closestObservationCount:owned.length,
+     arrivedAtRealGoalInSamples:Number.isFinite(best)&&best<=1.5}];
+   }));
+  const observedArrivals=Object.values(closestById).filter(x=>
+   x.arrivedAtRealGoalInSamples).length;
   proof.b441NativeEvidence={
    ...proof.b441NativeEvidence,phase:'NATIVE_CPU_REAL_WALK_MEASURED',
+   b442ActualApprovedNativeTargetsAtFinish:actualTargets,
+   b442ClosestRealGoalDistances:closestById,
+   b442ObservedUniqueGoalArrivals:observedArrivals,
+   b442ArrivalWitnessVerdict:observedArrivals>0?
+    'OBSERVED_AT_LEAST_ONE_TRUE_ORIGINAL_FRONT_GOAL_PROXIMITY':
+    'HOLD_NO_OBSERVED_TRUE_FRONT_GOAL_ARRIVAL',
+   b442Formal4v4Certified:false,
    lastTick:actual.tick,realNativeTicks:actual.tick-after.tick,
    realSevenCpu:true,actualGoalRequests:afterPatrol?.b441ActualGoalRequests,
    strictOriginalGoalsAvailable:afterPatrol?.b441StrictGoalsAvailable,

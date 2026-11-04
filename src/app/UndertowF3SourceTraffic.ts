@@ -71,6 +71,16 @@ export interface F3TrafficSnapshot{
   readonly b441ActualGoalRequests:number;
   readonly b441UnsafeOrUnreachableHolds:number;
   readonly b441ClosestApprovedFrontAbsZ:number|null;
+  /** B442: last ACTUALLY GRANTED B441 goals and physical CPU-foot
+   * distance. Read-only observation, not goal attainment certification. */
+  readonly b442LastApprovedRealFrontTargets:readonly {
+   id:string;
+   target:[number,number,number];
+   physicalFoot:[number,number,number];
+   distanceXZ:number;
+   lastApprovedNativeTick:number;
+   originalRegisteredSourceOnly:true;
+  }[];
   /** B137: opt-in true HUMAN + friendly A1 source-only tactical rally. */
   readonly b137AllyRallyOptIn:boolean;
   readonly b137RealCandidateChecks:number;
@@ -159,6 +169,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly egress=new Map<string,StageVector3>();
  private readonly patrolGoals=new Map<string,Vec3[]>();
  private readonly b441FrontGoals=new Map<string,Vec3[]>();
+ /** B442 evidence-only: no steering, Actor, or navigation side effects. */
+ private readonly b442LastApprovedFront=new Map<string,{
+  target:Vec3;nativeTick:number
+ }>();
  private b441ProposalsChecked=0;
  private b441StrictGoalsAvailable=0;
  private b441ActualGoalRequests=0;
@@ -847,6 +861,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.b441UnsafeOrUnreachableHolds++;continue;
     }
     out.copy(goal);
+    // Record only ACTUALLY ACCEPTED native Crowd goals. The map does NOT
+    // grant a goal or change steering, timing, or body pose in any way.
+    this.b442LastApprovedFront.set(id,{
+     target:goal.clone(),nativeTick:this.b137NativeTick
+    });
     this.realGoalRequests++;
     this.b441ActualGoalRequests++;
     return true;
@@ -1327,6 +1346,20 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b441ActualGoalRequests:this.b441ActualGoalRequests,
     b441UnsafeOrUnreachableHolds:this.b441UnsafeOrUnreachableHolds,
     b441ClosestApprovedFrontAbsZ:this.b441ClosestApprovedFrontAbsZ,
+    b442LastApprovedRealFrontTargets:this.bots.flatMap(bot=>{
+     const last=this.b442LastApprovedFront.get(bot.id);
+     if(!last||!sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined))
+      return [];
+     const target=last.target,foot=bot.position;
+     return [{
+      id:bot.id,
+      target:[target.x,target.y,target.z] as [number,number,number],
+      physicalFoot:[foot.x,foot.y,foot.z] as [number,number,number],
+      distanceXZ:Math.hypot(target.x-foot.x,target.z-foot.z),
+      lastApprovedNativeTick:last.nativeTick,
+      originalRegisteredSourceOnly:true as const
+     }];
+    }),
     b137AllyRallyOptIn:this.enableB137OriginalAllyRally,
     b137RealCandidateChecks:this.b137RealCandidateChecks,
     b137ApprovedNativeRallies:this.b137ApprovedNativeRallies,
