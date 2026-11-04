@@ -2684,14 +2684,78 @@ async function run(){
   saveB419();
   if(armed.tick!==0||armed.b25SourcePaintRun.status!=='ARMED')
    fail('B419_SECOND_REAL_MISSION_NOT_ARMED');
-  await clickButton('#t21-f3-b202-resume');
-  const started=await until(async()=>{
+  // B426: the first world already uses real Page.bringToFront + CDP
+  // resume-click recovery (B206). Apply it to the newly navigated page.
+  // B424 RAW proved true fresh boot and mission ARM; START was unobserved.
+  // Never inject a synthetic lock, native tick, actor or mission state.
+  const secondBrowser=()=>evaluate(`(() => {
+   const b=document.querySelector('#t21-f3-b202-resume');
+   const r=b?.getBoundingClientRect();
+   const x=r?r.left+r.width/2:null,y=r?r.top+r.height/2:null;
+   const hit=x===null||y===null?null:document.elementFromPoint(x,y);
+   return {focused:document.hasFocus(),hidden:document.hidden,
+    pointerLocked:document.pointerLockElement===
+     document.querySelector('#app-canvas'),
+    buttonPresent:!!b,buttonHidden:b?.hidden??true,
+    buttonDisabled:b?.disabled??true,
+    buttonReceivesPointer:!!b&&(hit===b||b.contains(hit)),
+    overlayState:b?.parentElement?.dataset.t21B202NativeState??null};
+  })()`);
+  const observeSecond=ms=>until(async()=>{
    const n=await snapshot();authority(n,'FIXED');
-   const lock=await evaluate(
+   const locked=await evaluate(
     'document.pointerLockElement===document.querySelector("#app-canvas")');
-   return lock&&n.matchState==='PLAYING'&&!n.paused&&
+   return locked&&n.matchState==='PLAYING'&&!n.paused&&
     n.tick>=30&&n.b25SourcePaintRun.status==='RUNNING'?n:false;
-  },80000);
+  },ms);
+  proof.secondStart={firstClick:false,retryUsed:false,
+   before:null,afterFirst:null,onFailure:null};
+  await cmd('Page.bringToFront');
+  proof.secondStart.before=await secondBrowser();
+  saveB419();
+  if(!proof.secondStart.before.buttonPresent||
+     proof.secondStart.before.buttonHidden||
+     proof.secondStart.before.buttonDisabled||
+     !proof.secondStart.before.buttonReceivesPointer)
+   fail('B426_SECOND_START_REAL_BUTTON_BLOCKED');
+  await clickButton('#t21-f3-b202-resume');
+  proof.secondStart.firstClick=true;
+  saveB419();
+  let started;
+  try{started=await observeSecond(15000);}
+  catch(firstError){
+   const n=await snapshot();authority(n,'FIXED');
+   proof.secondStart.afterFirst={
+    browser:await secondBrowser(),native:meta(n,newPage.origin)};
+   saveB419();
+   // A second true click is permitted only if the native world never
+   // started. Never disturb a live or already-running 180s match.
+   if(n.matchState==='STAGING'&&n.tick===0&&n.paused&&
+      n.b25SourcePaintRun.status==='ARMED'&&!n.stopReason&&
+      !proof.secondStart.afterFirst.browser.pointerLocked){
+    await cmd('Page.bringToFront');
+    const b=await secondBrowser();
+    if(!b.buttonPresent||b.buttonHidden||b.buttonDisabled||
+       !b.buttonReceivesPointer)
+     fail('B426_SECOND_RETRY_REAL_BUTTON_BLOCKED');
+    await clickButton('#t21-f3-b202-resume');
+    proof.secondStart.retryUsed=true;
+    saveB419();
+   }
+   try{started=await observeSecond(65000);}
+   catch(error){
+    const final=await snapshot();authority(final,'FIXED');
+    proof.secondStart.onFailure={
+     browser:await secondBrowser(),native:meta(final,newPage.origin),
+     reason:String(error)};
+    saveB419();
+    fail('B426_SECOND_ROUND_NATIVE_START_HOLD_'+
+     (final.matchState==='STAGING'?'STAGING':
+      final.paused?'PAUSED':
+      final.b25SourcePaintRun.status!=='RUNNING'?'MISSION_NOT_RUNNING':
+      'NO_PROVEN_REAL_START'));
+   }
+  }
   proof.started=meta(started,newPage.origin);
   saveB419();
   let held=false;
