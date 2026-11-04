@@ -212,9 +212,10 @@ async function nativeOriginalKeyboard(stage,observe){
 /** B319: short real human key press with 35ms native observation,
  * NOT a fake tick step. B316's 500ms polling overshot its first 6-tick
  * request to 24 actual native ticks on the ramp's sharp lower corner. */
-async function b319TrueShortNativeKey(key,wantedTicks){
+async function b319TrueShortNativeKey(key,wantedTicks,pollMs=35){
  if(!['KeyW','KeyS'].includes(key)||!Number.isSafeInteger(wantedTicks)||
-  wantedTicks<1||wantedTicks>6)fail('B319_UNVERIFIED_REAL_INPUT_PLAN');
+  wantedTicks<1||wantedTicks>6||![8,35].includes(pollMs))
+  fail('B319_UNVERIFIED_REAL_INPUT_PLAN');
  const before=await snapshot();authority(before,'FIXED');
  if(before.paused||before.matchState!=='PLAYING'||
     before.cpu.physicalFootRelocations!==0)
@@ -226,7 +227,7 @@ async function b319TrueShortNativeKey(key,wantedTicks){
   held=true;
   const deadline=Date.now()+6000;
   while(Date.now()<deadline){
-   await sleep(35);
+   await sleep(pollMs);
    const current=await snapshot();authority(current,'FIXED');
    if(current.cpu.physicalFootRelocations!==0)
     fail('B319_ACTOR_TELEPORT_OR_ORIGINAL_ACTOR_CHANGED');
@@ -1261,9 +1262,16 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
           crestSource.insideSourceQuadXZ&&
           crestSource.originalUphillFraction>=.78;
          const keyTicks=fine?1:2;
-         const actual=await b319TrueShortNativeKey('KeyW',keyTicks);
+         // B424: B418 observed an actual source crest on ramp step 3,
+         // but B423 passed to the upper floor before sampling the crest.
+         // Observe genuine 60Hz input more often ONLY near the crest.
+         // Original collision, height, provenance and owner gates remain.
+         const nativePollMs=fine?8:35;
+         const actual=await b319TrueShortNativeKey(
+          'KeyW',keyTicks,nativePollMs);
          const after=await b312Ledger();
          steps.push({phase,realKey:'KeyW',nativeInputTicks:keyTicks,
+          actualPollMs:nativePollMs,
           actualNativeTickDelta:after.tick-before.tick,
           actualTick:actual.tick,after});
          const report=save('REAL_ORIGINAL_CREST_KCC_RUNNING',plan);
