@@ -1,0 +1,24 @@
+name: T21 B444 offline native goal switch comparator
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'scripts/t21-b444-native-front-goal-comparator.mjs'
+      - 'scripts/t21-b444-native-front-goal-comparator.test.mjs'
+      - '.github/workflows/t21-b444-goal-comparator-fast.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent-source-comparator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Independent comparisons and adversarial source gate
+        run: |
+          node --check scripts/t21-b444-native-front-goal-comparator.mjs
+          node --test scripts/t21-b444-native-front-goal-comparator.test.mjs
