@@ -12,8 +12,11 @@ import {setTimeout as delay} from 'node:timers/promises';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
+const b448Experiment=b441Experiment&&
+ process.env.T21_B448_A3_REAL_ORIGINAL_FRONT==='1';
 const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound'+
- (b441Experiment?'&t21W10B441=sourceFrontline':'');
+ (b441Experiment?'&t21W10B441=sourceFrontline':'')+
+ (b448Experiment?'&t21W10B448=realA3Front':'');
 const nativeFrontObservationTicks=b441Experiment?
  Number(process.env.T21_B441_NATIVE_OBSERVE_TICKS??240):240;
 if(!Number.isSafeInteger(nativeFrontObservationTicks)||
@@ -27,7 +30,8 @@ const proof={schema:'B440_ORIGINAL_SHORT_CHROMIUM_FOOT_PROOF',
   source:'25/17/26/0',testKind:'SHORT_FRESH_SOURCE_ONLY',
   genuineReplayClickCertified:false,full180sCertified:false,
   realSourceRouteCertified:false,formal4v4Certified:false,
-  b441ResearchOnly:b441Experiment,b441NativeEvidence:null,
+  b441ResearchOnly:b441Experiment,b448A3ResearchOnly:b448Experiment,
+  b441NativeEvidence:null,
   officialWinner:'NONE',syntheticInput:false,actorWrites:0,
   scoreWrites:0,nativeClockWrites:0,sourceGeometryWrites:0,
   stage:'NOT_STARTED',before:null,after:null,verdict:'HOLD'};
@@ -344,6 +348,18 @@ async function main(){
    b445LastOriginalGateByCpu:validateB445(afterPatrol),
    b446LiveActualCpuFootDryRouteProbes:
     afterPatrol?.b446LivePhysicalFootDryRouteProbes,
+   b448A3RealEvidence:{
+    enabled:afterPatrol?.b448A3ResearchEnabled,
+    actualOriginalGoalsAuthorized:
+     afterPatrol?.b448A3FreshLiveOriginalGoalsAuthorized,
+    actualNativeGoalRequests:afterPatrol?.b448A3RealNativeGoalRequests,
+    deniedUnsafeOrNoFreshProof:afterPatrol?.b448A3FreshLiveOriginalHolds,
+    initialNativeFoot:baseline.A3,
+    endingNativeFoot:actual.cpu.cpu.find(c=>c.id==='A3')?.physicalFoot,
+    noActorPoseOrClockWrites:true,
+    crossTeamPathCertified:false,
+    formal4v4Certified:false
+   },
    b442ClosestRealGoalDistances:closestById,
    b442ObservedUniqueGoalArrivals:observedArrivals,
    b442ArrivalWitnessVerdict:observedArrivals>0?
@@ -361,6 +377,26 @@ async function main(){
     'PASS_REAL_FRONT_GOAL_REQUESTS_NOT_CROSSING_OR_COMBAT':
     'HOLD_NO_GENUINE_ORIGINAL_FRONT_GOAL_PROVEN'};
   save();
+  if(b448Experiment){
+   const evidence=proof.b441NativeEvidence.b448A3RealEvidence;
+   const a3=closestById.A3;
+   const initial=baseline.A3;
+   const end=actual.cpu.cpu.find(c=>c.id==='A3')?.physicalFoot;
+   const displacement=Array.isArray(initial)&&Array.isArray(end)?
+    Math.hypot(end[0]-initial[0],end[2]-initial[2]):null;
+   evidence.nativePlanarDisplacementMeters=displacement;
+   evidence.closestOriginalApprovedGoalMeters=
+    a3.minimumObservedGoalDistanceMeters;
+   evidence.realApprovedGoalSamples=a3.closestObservationCount;
+   evidence.verifiedSourceOnlyGoalPass=
+    evidence.enabled===true&&
+    evidence.actualOriginalGoalsAuthorized===1&&
+    evidence.actualNativeGoalRequests>0&&
+    a3.closestObservationCount>0&&
+    Number.isFinite(displacement)&&displacement>.5;
+   if(!evidence.verifiedSourceOnlyGoalPass)
+    fail('B448_REAL_A3_NATIVE_ORIGINAL_GOAL_OR_MOVEMENT_HOLD');
+  }
   if(proof.b441NativeEvidence.verdict.startsWith('HOLD'))
    fail('B441_NO_REAL_ORIGINAL_FRONT_GOAL_GRANTED');
  }

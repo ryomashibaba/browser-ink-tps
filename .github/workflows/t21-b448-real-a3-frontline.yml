@@ -1,0 +1,46 @@
+name: T21 B448 REAL A3 original SOURCE frontline controlled trial
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'scripts/t21-b440-short-native-original-foot.mjs'
+      - '.github/workflows/t21-b448-real-a3-frontline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-b448-a3-native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-a3-original-goal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install exact SOURCE runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Check true native browser script and source bundle
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          npx vitest run src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      - name: True seven-CPU SOURCE with separate opt-in live A3 reauthorization
+        env:
+          T21_B441_SOURCE_FRONTLINE: '1'
+          T21_B448_A3_REAL_ORIGINAL_FRONT: '1'
+          T21_B441_NATIVE_OBSERVE_TICKS: '720'
+          T21_B440_OUT: /tmp/t21-b448-a3-real-original-frontline
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Preserve genuine source report even on HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b448-real-a3-original-frontline-720ticks
+          path: /tmp/t21-b448-a3-real-original-frontline/
+          if-no-files-found: warn
+          retention-days: 14

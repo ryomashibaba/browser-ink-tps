@@ -115,6 +115,10 @@ export interface F3TrafficSnapshot{
   readonly b445OriginalFrontlineGates:readonly B445RealSourceGoalGate[];
   readonly b446LivePhysicalFootDryRouteProbes:
    readonly B446RealFootDryRouteProbe[];
+  readonly b448A3ResearchEnabled:boolean;
+  readonly b448A3FreshLiveOriginalGoalsAuthorized:number;
+  readonly b448A3FreshLiveOriginalHolds:number;
+  readonly b448A3RealNativeGoalRequests:number;
   readonly b443NativeGoalRetentions:number;
   readonly b443FirstActualFrontlineArrivals:number;
   readonly b443RotationsAfterDwell:number;
@@ -220,6 +224,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly b445FrontlineGates=new Map<string,B445RealSourceGoalGate>();
  private readonly b446LiveFootProbes=
   new Map<string,B446RealFootDryRouteProbe>();
+ private b448A3FreshLiveOriginalGoalsAuthorized=0;
+ private b448A3FreshLiveOriginalHolds=0;
+ private b448A3RealNativeGoalRequests=0;
  /** B442 evidence-only: no steering, Actor, or navigation side effects. */
  private readonly b442LastApprovedFront=new Map<string,{
   target:Vec3;nativeTick:number
@@ -340,7 +347,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableB150AllySupportInk=false,
   private readonly enableB192HumanCombat=false,
   private readonly enableB199PlayerCoopCollisionRecovery=false,
-  private readonly enableB441SourceFrontline=false
+  private readonly enableB441SourceFrontline=false,
+  /** B448 separate research-only, never enabled by B441 alone. */
+  private readonly enableB448A3LiveOriginalFront=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -937,7 +946,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // that goal in native Recast, every ~0.30m Rapier segment and endpoint.
   // A failed route always falls through to the legacy proven patrol.
   if(this.enableB441SourceFrontline&&id!=='A1'&&this.physics){
-   const fronts=this.b441FrontGoals.get(id)??[];
+   let fronts=this.b441FrontGoals.get(id)??[];
    const gate=this.b445FrontlineGates.get(id);
    if(gate){
     gate.runtimeChooseInvocations++;
@@ -996,6 +1005,52 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     }
     this.b446LiveFootProbes.set(id,report);
    }
+   // B448: the B446 real Chromium witness found 15 safe ORIGINAL
+   // right-low A-side routes from A3's live foot, but NONE from its
+   // frozen first-drop landing. Only under the SEPARATE B448 research
+   // opt-in, ask the existing Crowd to move toward that REAL original
+   // SOURCE goal. B446 itself remains read-only and never grants goals.
+   // Do not apply this to B2/B4: their live-foot proofs were 0/32.
+   if(this.enableB448A3LiveOriginalFront&&id==='A3'&&
+      fronts.length===0){
+    const dry=this.b446LiveFootProbes.get(id);
+    const proof=dry?.firstPassingExistingGoal;
+    if(dry&&proof&&dry.passedAllOriginalChecks>0&&
+       dry.probeOnlyNoActorOrGoalWrites===true&&
+       dry.nativeTick===this.b137NativeTick&&
+       this.physicallyRejoined.has(id)&&
+       bot.mobilityState==='GROUND'&&bot.lifeState==='ACTIVE'){
+     const proposal=proposeB441OriginalFrontline(this.stage,'A')
+      .find(p=>p.sourceSolidId==='UndertowT21D:right-low-team-a'&&
+       Math.hypot(p.point[0]-proof[0],p.point[1]-proof[1],
+        p.point[2]-proof[2])<.001);
+     const goal=new Vec3(...proof);
+     const hit=this.physics.castStageSegment(
+      new Vec3(goal.x,goal.y+.65,goal.z),
+      new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+     const flat=hit?inspectB130OriginalFlatSource({
+      nativeTick:this.b137NativeTick,
+      actualRapierBody:[goal.x,goal.y+
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
+      actualRapierSupportId:hit.solidId}):null;
+     const route=this.nav.auditPath(realFoot,goal);
+     if(proposal&&goal.z>=33&&
+        hit?.solidId===proposal.sourceSolidId&&
+        flat?.insideRegisteredOriginalXZFootprint&&
+        flat.originalFlatVerticalBandWithin22cm&&
+        flat.distanceToOriginalPolygonBoundaryMeters>=.75&&
+        this.hasSourceFootSupport(realFoot)&&
+        this.hasSourceFootSupport(goal)&&
+        route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
+        route.endSnapDistanceMeters<=.20&&
+        this.hasSourceSupportedRoute(route,sign)){
+      // Only an ORIGINAL already sampled polygon point, existing Recast
+      // and unmodified physical CPU KCC can realize this request.
+      fronts=[goal];this.b441FrontGoals.set('A3',fronts);
+      this.b448A3FreshLiveOriginalGoalsAuthorized++;
+     }else this.b448A3FreshLiveOriginalHolds++;
+    }else this.b448A3FreshLiveOriginalHolds++;
+   }
    const lock=this.b443OriginalGoalLocks.get(id);
    let completed:Vec3|null=null;
    // B443: B442 real Chromium showed 8-13 target switches in 30 polls
@@ -1028,6 +1083,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        target:lock.target.clone(),nativeTick:this.b137NativeTick
       });
       this.b443NativeGoalRetentions++;
+      if(id==='A3'&&this.enableB448A3LiveOriginalFront)
+       this.b448A3RealNativeGoalRequests++;
       if(gate)gate.runtimeTrueOriginalGoalRequests++;
       this.realGoalRequests++;this.b441ActualGoalRequests++;
       return true;
@@ -1063,6 +1120,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.b441UnsafeOrUnreachableHolds++;continue;
     }
     if(gate)gate.runtimeTrueOriginalGoalRequests++;
+    if(id==='A3'&&this.enableB448A3LiveOriginalFront)
+     this.b448A3RealNativeGoalRequests++;
     out.copy(goal);
     this.b443OriginalGoalLocks.set(id,{target:goal.clone(),
      firstApprovedTick:this.b137NativeTick,arrivedSinceTick:null});
@@ -1562,6 +1621,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       firstPassingExistingGoal:v.firstPassingExistingGoal?
        [...v.firstPassingExistingGoal] as [number,number,number]:null
      })),
+    b448A3ResearchEnabled:this.enableB448A3LiveOriginalFront,
+    b448A3FreshLiveOriginalGoalsAuthorized:
+     this.b448A3FreshLiveOriginalGoalsAuthorized,
+    b448A3FreshLiveOriginalHolds:this.b448A3FreshLiveOriginalHolds,
+    b448A3RealNativeGoalRequests:this.b448A3RealNativeGoalRequests,
     b443NativeGoalRetentions:this.b443NativeGoalRetentions,
     b443FirstActualFrontlineArrivals:this.b443FirstActualFrontlineArrivals,
     b443RotationsAfterDwell:this.b443RotationsAfterDwell,

@@ -808,6 +808,8 @@ export class UndertowF3PlayablePreviewApp{
   const b441OptIn=b31Params.get('t21Play')==='preview'&&
    b31Params.get('t21QaDrive')==='source'&&this.b203FullRound&&
    b31Params.get('t21W10B441')==='sourceFrontline';
+  const b448OptIn=b441OptIn&&
+   b31Params.get('t21W10B448')==='realA3Front';
   this.traffic=new UndertowF3SourceTraffic(
    stage,this.nav,slots,bots,this.physics,this.ink,
    b31Enabled,b33StableGoals,b34Recover,
@@ -816,7 +818,9 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally,
    b31Params.get('t21QaDrive')==='source'&&
    realAllyRally&&realAllyInk,
-   b192HumanCombatEnabled,b193Coop,b441OptIn);
+   b192HumanCombatEnabled,b193Coop,b441OptIn,b448OptIn);
+  this.canvas.dataset.t21B448RealA3OriginalGoal=b448OptIn?
+   'STRICT_REAL_CPU_A3_ORIGINAL_GOAL_REAUTHORIZATION':'OFF';
   this.canvas.dataset.t21B441OriginalFrontline=b441OptIn?
    'SOURCE_ONLY_INDEPENDENT_FRONTLINE_RESEARCH':'OFF';
   this.canvas.dataset.t21B150AllyInk=
