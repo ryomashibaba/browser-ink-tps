@@ -13,7 +13,7 @@
 - 版別SceneInfoの720版で『Vss_Temple01 / Model/Fld_Temple01.bfres』が改修後のマテガイ放水路Versusシーン名と確認済み。ただしKiTrixのOBJが7.2.0 Turfの元データそのものであるという原本幾何／モード／ゲーム衝突の証明はない。詳細：[版と衝突権限の監査](T21_F4_TEMPLE_SOURCE_VERSION_AND_COLLISION_AUTHORITY_JA.md)。
 - src/stage/undertow/UndertowSpillwayRouteRampGeometry.ts の FloorConcrete03 右低地スロープは原作メッシュ由来・鏡像ソース三角形／塗装根拠がある。ただし2.0.0で追加された敵陣侵入用スロープと同じFaceとは未認証。自動的に正式4v4経路として扱わない。
 - src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.ts の元OBJ由来5要素/片側の試行でも約31.716mのendpoint gapが残った。架空の橋やNavLinkで埋めない。
-- B441研究用のSOURCE前線巡回は登録済み原作右低地の内側を候補とし、RapierとRecastが支持・経路を確認した場合のみ目標にする。**敵陣横断、新規スロープ導入、正式4v4の解禁ではない。**
+- B441研究用のSOURCE前線巡回は登録済み原作右低地の内側を候補とし、RapierとRecastが支持・経路を確認した場合のみ目標にする。**敵陣横断、新規スロープ導入、正式4v4の解禁ではない。** [真正短時間 #41829596416](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41829596416) で原作目標6件・実native要求28件・7CPU前進を確認、詳細は [B441真正結果](T21_B441_REAL_CPU_FRONTLINE_RESULT_20261104_JA.md)。ただし7.2.0横断・自然交戦はHOLD。
 
 ## 次の承認ゲート
 
