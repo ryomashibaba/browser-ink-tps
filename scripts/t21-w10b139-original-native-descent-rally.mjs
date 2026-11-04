@@ -18,7 +18,7 @@ import {RAMP_SOLID,b320PlanOriginalTrueRampUphill,b320AuditActualNativeRampAscen
 import {b321OriginalRampHighSectionPlan,b321AuditTrueOriginalHigherRamp}
  from './t21-b321-real-upper-ramp-kcc.mjs';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
- b322AuditRealOriginalPreCrestBackstep,
+ b322AuditRealOriginalPreCrestBackstep,b431CanRefineOriginalPrecrest,
  UPPER_FLOOR_SOLID} from './t21-b322-original-ramp-crest.mjs';
 import {b324AuditGenuineUpperFloor}
  from './t21-b324-original-upper-floor-continuation.mjs';
@@ -1227,23 +1227,18 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
        first=next;
       }
      }
-     // B429: B427's last witnessed genuine ramp fraction .8793
-     // fell below the unchanged .90 crest requirement; passing B426
-     // started farther downhill (.6711 vs .6914). One real short
-     // KeyS down-ramp pulse can preserve the missing crest sample.
-     // Refine ONLY on native registered SOURCE ramp, never move an
-     // actor by writing coordinates or relax the independent B322 gate.
+     // B431: genuine B430 first ramp v=.697909 had NO B322 pre-step:
+     // B429 refinement incorrectly required realBackstep first.
+     // Permit another physical KeyS only via read-only genuine original
+     // support/ownerGrid/geometry. B322 independent proof stays strict.
      const refinements=[];
-     if(qualified&&b410RealUpperPlay&&realBackstep&&
-        first.realHumanOriginalFootSupported&&
-        first.genuineHumanOriginalFootSolid===RAMP_SOLID){
+     if(qualified&&b410RealUpperPlay&&
+        b431CanRefineOriginalPrecrest(first)){
       for(let i=0;i<2;i++){
        const before=first;
        const bc=b320SourceRampCoordinates(
         before.originalPositiveRampSourceQuad,before.actualBodyMeters);
-       if(!bc.insideSourceQuadXZ||
-          bc.originalUphillFraction<.68||
-          bc.originalUphillFraction>.77)break;
+       if(!b431CanRefineOriginalPrecrest(before))break;
        const key=await b319TrueShortNativeKey('KeyS',1,8);
        const after=await b312Ledger();
        const ac=b320SourceRampCoordinates(

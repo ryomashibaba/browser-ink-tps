@@ -37,6 +37,35 @@ export function b322PlanActualOriginalCrest(ledger,camera){
    distance>.4&&distance<4&&Math.abs(mx)<=720&&
    800+mx>=10&&800+mx<=1590};
 }
+/** B431: decide whether another real KeyS native pulse is permissible.
+ * B430 genuine SOURCE ramp entry was v=.697909 with no B322 backstep;
+ * it reached the original upper floor after ramp v=.901296 and only
+ * 0.311m true measured ascent (<.32m). This permits an additional
+ * real physical key pulse, not synthetic support or a softer crest gate.
+ */
+export function b431CanRefineOriginalPrecrest(ledger){
+ if(ledger?.source!=='25/17/26/0'||
+    !finite3(ledger.actualBodyMeters)||
+    ledger.realHumanOriginalFootSupported!==true||
+    ledger.genuineHumanOriginalFootSolid!==RAMP_SOLID||
+    !Number.isFinite(ledger.genuineOriginalFootGapMeters)||
+    ledger.genuineOriginalFootGapMeters<0||
+    ledger.genuineOriginalFootGapMeters>.18||
+    ledger.sourceActorRelocations!==0||
+    ledger.sourceInkRewritten!==false||
+    ledger.playerPositionRewritten!==false||
+    ledger.originalRows?.length!==17||
+    !ledger.originalRows.some(r=>r.surfaceId===RAMP_PAINT&&
+     r.actualHumanFootOnOriginalActiveSurface===true))
+  return false;
+ try{
+  const c=b320SourceRampCoordinates(
+   ledger.originalPositiveRampSourceQuad,ledger.actualBodyMeters);
+  return c.insideSourceQuadXZ&&
+   c.originalUphillFraction>=.685&&
+   c.originalUphillFraction<=.77;
+ }catch{return false;}
+}
 /** Real CDP KeyS before the crest: read only original native KCC proof.
  * B322's >=.32m ascent threshold and genuine 17-grid owner gate unchanged. */
 export function b322AuditRealOriginalPreCrestBackstep(before,after,key){

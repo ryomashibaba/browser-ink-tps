@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
  UPPER_FLOOR_SOLID,UPPER_FLOOR_PAINT,
- b322AuditRealOriginalPreCrestBackstep}
+ b322AuditRealOriginalPreCrestBackstep,
+ b431CanRefineOriginalPrecrest}
  from './t21-b322-original-ramp-crest.mjs';
 const ramp='UndertowT21D:right-low-route-ramp-positive-z';
 const quad={id:'right-low-route-ramp-positive-z',
@@ -68,4 +69,24 @@ test('true reverse key KCC stays on original ramp at verified native ticks',()=>
  assert.equal(b322AuditRealOriginalPreCrestBackstep(before,{...after,sourceActorRelocations:1},'KeyS'),false);
  assert.equal(b322AuditRealOriginalPreCrestBackstep(before,{...after,realHumanOriginalFootSupported:false},'KeyS'),false);
  assert.equal(b322AuditRealOriginalPreCrestBackstep(before,{...after,originalRows:[]},'KeyS'),false);
+});
+
+test('B431 genuine source v=.698 permits real backstep without prior B322 KeyS',()=>{
+ const genuine=at(.419,.697909,2100);
+ assert.equal(b431CanRefineOriginalPrecrest(genuine),true);
+ // Passing B429 initial v=.6767 did not need any new input.
+ assert.equal(b431CanRefineOriginalPrecrest(at(.419,.676654,2100)),false);
+ assert.equal(b431CanRefineOriginalPrecrest(at(.419,.81,2100)),false);
+ assert.equal(b431CanRefineOriginalPrecrest(at(.419,.685,2100,UPPER_FLOOR_SOLID)),false);
+ for(const patch of [
+  {sourceActorRelocations:1},
+  {sourceInkRewritten:true},
+  {playerPositionRewritten:true},
+  {realHumanOriginalFootSupported:false},
+  {genuineOriginalFootGapMeters:.2},
+  {originalRows:[]},
+  {source:'25/17/26/1'}
+ ]){
+  assert.equal(b431CanRefineOriginalPrecrest({...genuine,...patch}),false);
+ }
 });
