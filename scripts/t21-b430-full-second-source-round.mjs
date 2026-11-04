@@ -112,8 +112,15 @@ export function auditB438SecondRoundWalk(d){
    m.originalFootBefore.startsWith('UndertowT21D:')&&
    m.originalFootAfter===m.originalFootBefore&&
    m.supportedBefore===true&&m.supportedAfter===true&&
-   Number.isFinite(m.sourceGapAfterMeters)&&
-   m.sourceGapAfterMeters>=0&&m.sourceGapAfterMeters<=.4&&
+   m.originalSourceOnlyBefore===true&&m.originalSourceOnlyAfter===true&&
+   m.originalWitnessSchemaBefore===
+    'W10_B130_REGISTERED_ORIGINAL_FLAT_EDGE_HUD_V1'&&
+   m.originalWitnessSchemaAfter===
+    'W10_B130_REGISTERED_ORIGINAL_FLAT_EDGE_HUD_V1'&&
+   Number.isFinite(m.sourceBoundaryClearanceBefore)&&
+   Number.isFinite(m.sourceBoundaryClearanceAfter)&&
+   m.sourceBoundaryClearanceBefore>=.65&&
+   m.sourceBoundaryClearanceAfter>=.65&&
    m.beforeMode==='HUMAN'&&m.afterMode==='HUMAN'&&
    m.cpuBefore===7&&m.cpuAfter===7&&
    Number.isFinite(real)&&real>=.10&&real<=2.2&&

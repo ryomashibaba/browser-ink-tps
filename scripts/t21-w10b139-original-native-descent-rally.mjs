@@ -3004,7 +3004,12 @@ async function run(){
      // source pad, not stationary firing. Reuse short real CDP WASD:
      // never set player pose, velocity, time, navigation or collision.
      const walkBefore=await snapshot();authority(walkBefore,'FIXED');
-     const groundBefore=await b312Ledger();
+     // The fresh B419 replay has no t21B312 URL opt-in. The B312
+     // ledger intentionally throws there. Use the ALWAYS read-only
+     // player-facing B129/B130 witness already included in snapshot():
+     // it tests REAL Rapier character-foot support, KCC grounding,
+     // exact registered original flat-source polygon and Y band.
+     const groundBefore=walkBefore.b129OriginalRaisedEdgeGuidance;
      const sourceOrigin=await evaluate('performance.timeOrigin');
      const pointerLocked=await evaluate(
       'document.pointerLockElement===document.querySelector("#app-canvas")');
@@ -3013,14 +3018,24 @@ async function run(){
        walkBefore.player.mode!=='HUMAN'||
        walkBefore.cpu.physicalRejoins.length!==7||
        walkBefore.cpu.physicalFootRelocations!==0||
-       groundBefore.source!=='25/17/26/0'||
-       groundBefore.realHumanOriginalFootSupported!==true||
-       !groundBefore.genuineHumanOriginalFootSolid||
-       !Array.isArray(walkBefore.player.position))
+       groundBefore?.schema!=='W10_B130_REGISTERED_ORIGINAL_FLAT_EDGE_HUD_V1'||
+       groundBefore.originalSourceOnly!==true||
+       groundBefore.kccGroundedObserved!==true||
+       !groundBefore.authenticNamedOriginalSupport||
+       !Number.isFinite(groundBefore.originalRaisedFloorEdgeMeters)||
+       groundBefore.originalRaisedFloorEdgeMeters<.65||
+       !Array.isArray(walkBefore.player.position)){
+      two.b438Hold={stage:'BEFORE_KEYW_NATIVE_SOURCE_WITNESS',
+       tick:walkBefore.tick,origin:sourceOrigin,
+       gameState:walkBefore.matchState,paused:walkBefore.paused,
+       mode:walkBefore.player.mode,actualBody:walkBefore.player.position,
+       originalGround:groundBefore??null,cpuRejoined:walkBefore.cpu.physicalRejoins.length};
+      saveTwo();
       fail('B438_REAL_REPLAY_HUMAN_SOURCE_FOOT_PRECONDITION');
+     }
      await b319TrueShortNativeKey('KeyW',6,35);
      const walkAfter=await snapshot();authority(walkAfter,'FIXED');
-     const groundAfter=await b312Ledger();
+     const groundAfter=walkAfter.b129OriginalRaisedEdgeGuidance;
      const from=walkBefore.player.position,to=walkAfter.player.position;
      const meters=Array.isArray(to)&&[...from,...to].every(Number.isFinite)?
        Math.hypot(to[0]-from[0],to[2]-from[2]):NaN;
@@ -3030,22 +3045,29 @@ async function run(){
       from:[...from],to:Array.isArray(to)?[...to]:null,
       originalPlanarMeters:meters,
       shotsBefore:walkBefore.shotsFired,shotsAfter:walkAfter.shotsFired,
-      originalFootBefore:groundBefore.genuineHumanOriginalFootSolid,
-      originalFootAfter:groundAfter.genuineHumanOriginalFootSolid,
-      supportedBefore:groundBefore.realHumanOriginalFootSupported,
-      supportedAfter:groundAfter.realHumanOriginalFootSupported,
-      sourceGapAfterMeters:groundAfter.genuineOriginalFootGapMeters,
+      originalFootBefore:groundBefore.authenticNamedOriginalSupport,
+      originalFootAfter:groundAfter?.authenticNamedOriginalSupport??null,
+      supportedBefore:groundBefore.kccGroundedObserved,
+      supportedAfter:groundAfter?.kccGroundedObserved??false,
+      originalSourceOnlyBefore:groundBefore.originalSourceOnly,
+      originalSourceOnlyAfter:groundAfter?.originalSourceOnly??false,
+      originalWitnessSchemaBefore:groundBefore.schema,
+      originalWitnessSchemaAfter:groundAfter?.schema??null,
+      sourceBoundaryClearanceBefore:groundBefore.originalRaisedFloorEdgeMeters,
+      sourceBoundaryClearanceAfter:groundAfter?.originalRaisedFloorEdgeMeters??null,
       beforeMode:walkBefore.player.mode,afterMode:walkAfter.player.mode,
       cpuBefore:walkBefore.cpu.physicalRejoins.length,
       cpuAfter:walkAfter.cpu.physicalRejoins.length,
       syntheticInput:false,actorWrites:0,scoreWrites:0,nativeClockWrites:0};
      // Preserve honest failure evidence, including native SOURCE support.
      if(await evaluate('performance.timeOrigin')!==sourceOrigin||
-       groundAfter.source!=='25/17/26/0'||
+       movement.originalSourceOnlyAfter!==true||
+       movement.originalWitnessSchemaAfter!==
+        'W10_B130_REGISTERED_ORIGINAL_FLAT_EDGE_HUD_V1'||
        movement.supportedAfter!==true||
        movement.originalFootAfter!==movement.originalFootBefore||
-       !Number.isFinite(movement.sourceGapAfterMeters)||
-       movement.sourceGapAfterMeters<0||movement.sourceGapAfterMeters>.4||
+       !Number.isFinite(movement.sourceBoundaryClearanceAfter)||
+       movement.sourceBoundaryClearanceAfter<.65||
        walkAfter.matchState!=='PLAYING'||walkAfter.paused||
        walkAfter.player.mode!=='HUMAN'||
        walkAfter.cpu.physicalRejoins.length!==7||
