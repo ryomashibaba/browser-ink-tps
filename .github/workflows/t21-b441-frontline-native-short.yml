@@ -17,6 +17,8 @@ on:
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/camera/ThirdPersonCamera.test.ts'
+      - 'src/audio/SourcePracticeAudio.ts'
+      - 'src/audio/SourcePracticeAudio.test.ts'
       - '.github/workflows/t21-b441-frontline-native-short.yml'
   workflow_dispatch:
 permissions:
@@ -42,7 +44,7 @@ jobs:
           node --test scripts/t21-b452-native-foot-vs-recast-audit.test.mjs
           node --check scripts/t21-b454-real-native-full-rate-source-foot.mjs
           node --test scripts/t21-b454-real-native-full-rate-source-foot.test.mjs
-          npx vitest run src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/app/B450OriginalRouteWitness.test.ts src/app/B454NativeSourceFootTrace.test.ts src/camera/ThirdPersonCamera.test.ts
+          npx vitest run src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/app/B450OriginalRouteWitness.test.ts src/app/B454NativeSourceFootTrace.test.ts src/camera/ThirdPersonCamera.test.ts src/audio/SourcePracticeAudio.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: One real native browser with 7 original CPU and B441 opt-in
         env:

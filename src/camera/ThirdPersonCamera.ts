@@ -410,7 +410,7 @@ export class ThirdPersonCamera {
       if(this.sourcePracticeControls&&
          document.pointerLockElement===this.canvas)
         this.showSourceControlToast(
-         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER');
+         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · M SOUND');
       else if(this.sourceControlToast)this.sourceControlToast.hidden=true;
     });
     // The Q shoulder button is a VIEW option, never a movement, aim-assist

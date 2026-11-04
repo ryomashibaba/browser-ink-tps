@@ -20,6 +20,7 @@ import {GAME_CONFIG} from '../config/game/gameConfig';
 import {FixedStepClock} from '../core/FixedStepClock';
 import {PerformanceStats} from '../core/PerformanceStats';
 import {GameFeedback} from '../feedback/GameFeedback';
+import {SourcePracticeAudio} from '../audio/SourcePracticeAudio';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
@@ -332,6 +333,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly player:PlayerController;
  private readonly resources:PlayerResources;
  private readonly camera:ThirdPersonCamera;
+ private readonly sourceAudio:SourcePracticeAudio;
  private readonly playerCameraEntity:Entity;
  private readonly input:PlayerInput;
  private readonly coordinator:PaintCoordinator;
@@ -678,6 +680,7 @@ export class UndertowF3PlayablePreviewApp{
    qa.get('t21Play')==='preview'&&qa.get('t21QaDrive')==='source'&&
    qa.get('t21QaInput')==='deterministic'&&qa.get('t21KccAudit')==='readOnly');
   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
+  this.sourceAudio=new SourcePracticeAudio(canvas);
   this.camera.enableSourcePracticeControls();
   if(qa.get('t21B258')==='cameraStudy'&&
      qa.get('t21Play')==='preview'&&
@@ -5039,6 +5042,19 @@ export class UndertowF3PlayablePreviewApp{
     if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
         physical.y< -35)
      throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
+    // Live 60Hz accepted source events only; never writes to match or physics.
+    this.sourceAudio.observe({
+     tick:frame,phase:this.matchState,
+     locked:document.pointerLockElement===this.canvas,
+     stopped:!!this.stopReason,
+     shots:this.stats.shotsFired,dry:this.stats.inkDryFireAttempts,
+     throws:this.stats.playerSubThrows,
+     explosions:this.stats.playerSubExplosions,
+     hits:this.stats.humanCpuDirectHits,
+     cpuSplats:this.stats.humanCpuDirectSplats,
+     damage:this.stats.playerDamageTaken,
+     humanSplats:this.humanSplats,respawns:this.humanRespawns
+    });
  }
  /** Synchronize BOTH actual READY dialog and advanced QA menu controls. */
  private b399SetEnabled(enabled:boolean):void{
