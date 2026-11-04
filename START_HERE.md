@@ -1,5 +1,7 @@
 # Browser Ink TPS — START HERE / 新チャット固定入口
 
+> **B419新工程（2026-11-04）**：前B418の真正Chrome [#41741444484](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41741444484) コード`99cab8bfdcb134104b9c895e24770b31e787852e` は **全SUCCESS**。B322/B324/B326上段移動6歩3.293m・B409–B414・真正180秒TIME_UP tick11860、人間119 shots /1194 original changes、CPU7/143 shot requests/12280 original changes、Scoreable0・Winner NONE。**B419では同じ本物の180秒終了後に実CDP REPLAYをクリックし、完全新SOURCE世界へ移動、2試合目で手動ARM/START/主武器射撃と実インク消費を観測する**。2試合目180秒完走や自然な敵HP撃破を認定するものではない。B419新SHAの真正Actionsが終わるまで成功扱い禁止。F1–F5・25/17/26/0・自然対岸0/12・正式4v4/ART/公開HOLD、main/QA/PR5/T19C/T20/Pages不変更。
+
 
 > **B418最新（2026-11-04）**：[旧Actions #41739563081](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41739563081) SHA `97d34a2b081aca3ab392fad042d7567806f571a6` は**全体FAIL**。本物の元坂再前進B322 PASS、上段継続B324 PASS、B417 90秒・再射撃・TIME_UPの実SOURCE17-grid対DOM各3箇所一致をRAWで確認。一方B326は5歩目まで真上段支持＋計2.513107m、6歩目の直前に無入力で**0.192331614m**実移動（硬上限0.15m超過）→ `firstUnsupportedStep=6`でHOLD。ゲーム全体のB409は認証されていない。Artifact `13281465260` を元に確認。**本工程B418** `99cab8bfdcb134104b9c895e24770b31e787852e` は各入力後の**厳格なメモリ監査は維持**して大量元ownerGrid JSONの毎歩書き出しをやめ、元RAW全証拠を最終一括保存する。無入力0.15m/本物6歩・2.5m/原作支持・全時間等の合格条件は変更なし。[Actions #41741444484](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41741444484) は記載時点でUnit/ビルド/前段PASS、真Chromium最終結果未確定。これは実転送・FPSの改善を認証したものではなく仮説の研究検証。原作25/17/26/0・自然対岸0/12、真正敵HP命中/撃破・公式Turf・ART/production HOLD、main/正式QA/DraftPR5/Pages保護、Work事前承認。
 

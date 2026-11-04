@@ -43,6 +43,8 @@ import {b412NativeSquidOwnInkRound,b412AuditNativeActualOriginalInkSwim}
 import {b413RealOriginalMainFireBurst,b413ObserveNativeRefill,
  b413AuditFullOriginalShotRefillReshot}
  from './t21-b413-native-source-fire-refill-reshoot.mjs';
+import {auditB419NativeReplay}
+ from './t21-b419-real-full-round-fresh-replay.mjs';
 
 const ROOT='http://127.0.0.1:4198/browser-ink-tps/';
 const OUTPUT=process.env.T21_F3_SHOT_DIR||'/tmp/t21-w10b139';
@@ -75,6 +77,10 @@ const b411SourceGameplayHud=
 const b412NativeSquidSwim=
  process.env.T21_B412_REAL_ORIGINAL_SQUID_SWIM==='1';
 const b413NativeInkLoop=process.env.T21_B413_REAL_SOURCE_INK_LOOP==='1';
+const b419RealReplay=process.env.T21_B419_REAL_REPLAY_SECOND_GAME==='1';
+if(b419RealReplay&&(!b409OneRoute180||!b411SourceGameplayHud||
+ !b413NativeInkLoop||b200ReplayTrial))
+ throw Error('B419_ONE_TRUE_FULL_SOURCE_180S_REQUIRED');
 if(b413NativeInkLoop&&!b412NativeSquidSwim)
  throw Error('B413_REQUIRES_ACTUAL_B412_SOURCE_SQUID_SWIM');
 if(b412NativeSquidSwim&&(!b411SourceGameplayHud||!b410RealUpperPlay))
@@ -2501,6 +2507,103 @@ async function run(){
     }
    }
   }
+ }
+
+ if(b419RealReplay){
+  // Complete first real 180s THEN click the actual user-facing replay.
+  // A new browser page creates the SECOND Rapier/Recast/CPU world.
+  const proof={schema:'B419_REAL_NATIVE_ENDSCREEN_TWO_WORLDS',
+   clicked:false,syntheticTicks:false,actorWrites:0,scoreWrites:0,
+   old:null,boot:null,armed:null,started:null,fired:null};
+  const saveB419=()=>writeFileSync(resolve(OUTPUT,'b419-real-second-source-round.json'),
+   JSON.stringify(proof,null,2)+'\n');
+  const meta=(n,origin,extra={})=>({
+   source:[n.originalSourceSolids,n.originalPaintSurfaces,
+    n.originalSourceNavigationLinks,n.sourceScoreablePromotions].join('/'),
+   origin,phase:n.matchState,tick:n.tick,
+   remaining:n.timeRemainingSeconds,paused:n.paused,
+   mission:n.b25SourcePaintRun.status,
+   winner:n.b25SourcePaintRun.officialWinner,shots:n.shotsFired,
+   hp:n.player.hp,ink:n.player.ink,
+   cpuCount:n.cpu.cpu.length,rejoins:n.cpu.physicalRejoins.length,
+   relocations:n.cpu.physicalFootRelocations,
+   scoreable:n.sourceScoreablePromotions,
+   prod:n.productionAuthorized,fourvfour:n.unrestricted4v4Certified,
+   ...extra});
+  const first=await snapshot();authority(first,'FIXED');
+  const origin=await evaluate('performance.timeOrigin');
+  const ui=await evaluate(`(() => {
+   const el=document.querySelector('#t21-f3-b200-replay');
+   return {visible:!!el&&!el.hidden&&getComputedStyle(el).display!=='none',
+    disabled:!!el?.disabled,
+    locked:document.pointerLockElement===document.querySelector('#app-canvas')};
+  })()`);
+  proof.old=meta(first,origin,{replayVisible:ui.visible&&!ui.disabled});
+  saveB419();
+  if(first.matchState!=='TIME_UP'||first.timeRemainingSeconds!==0||
+   !proof.old.replayVisible)fail('B419_NO_REAL_FIRST_ENDSCREEN_REPLAY');
+  if(ui.locked){
+   for(const type of ['keyDown','keyUp'])
+    await cmd('Input.dispatchKeyEvent',{type,key:'Escape',code:'Escape',
+     windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
+   await until(()=>evaluate('document.pointerLockElement===null'),25000);
+  }
+  await clickButton('#t21-f3-b200-replay');
+  proof.clicked=true;
+  const newPage=await until(async()=>{try{
+   const data=await evaluate(`(() => ({
+    origin:performance.timeOrigin,url:location.search,
+    ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready
+   }))()`);
+   return data.origin>origin&&data.ready==='READY'?data:false;
+  }catch{return false;}},100000);
+  const ready=await snapshot();authority(ready,'FIXED');
+  proof.boot=meta(ready,newPage.origin,{
+   url:newPage.url,pageReady:newPage.ready==='READY'});
+  saveB419();
+  if(ready.tick!==0||ready.matchState!=='STAGING'||
+   ready.cpu.physicalRejoins.length!==0||ready.shotsFired!==0||
+   ready.b25SourcePaintRun.status!=='IDLE')
+   fail('B419_NEW_NATIVE_SOURCE_NOT_FRESH');
+  await picture('B419_REAL_NEW_SOURCE_STAGING');
+  await clickButton('#t21-f3-b25-start');
+  const armed=await snapshot();authority(armed,'FIXED');
+  proof.armed=meta(armed,newPage.origin);
+  saveB419();
+  if(armed.tick!==0||armed.b25SourcePaintRun.status!=='ARMED')
+   fail('B419_SECOND_REAL_MISSION_NOT_ARMED');
+  await clickButton('#t21-f3-b202-resume');
+  const started=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   const lock=await evaluate(
+    'document.pointerLockElement===document.querySelector("#app-canvas")');
+   return lock&&n.matchState==='PLAYING'&&!n.paused&&
+    n.tick>=30&&n.b25SourcePaintRun.status==='RUNNING'?n:false;
+  },80000);
+  proof.started=meta(started,newPage.origin);
+  saveB419();
+  let held=false;
+  try{
+   await cmd('Input.dispatchMouseEvent',
+    {type:'mousePressed',x:800,y:450,button:'left',clickCount:1});
+   held=true;
+   await until(async()=>{
+    const n=await snapshot();authority(n,'FIXED');
+    return n.shotsFired>started.shotsFired&&
+     n.player.ink<started.player.ink?n:false;
+   },60000);
+  }finally{
+   if(held)await cmd('Input.dispatchMouseEvent',
+    {type:'mouseReleased',x:800,y:450,button:'left',clickCount:1});
+  }
+  const fired=await snapshot();authority(fired,'FIXED');
+  proof.fired=meta(fired,newPage.origin);
+  saveB419();
+  await picture('B419_REAL_SECOND_SOURCE_PLAYER_SHOT');
+  const result=auditB419NativeReplay(proof);
+  writeFileSync(resolve(OUTPUT,'b419-driver-native-replay-verdict.json'),
+   JSON.stringify(result,null,2)+'\n');
+  console.log('B419_TRUE_REAL_FRESH_SECOND_SOURCE_MATCH',JSON.stringify(result));
  }
 
  if(b200ReplayTrial){
