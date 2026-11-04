@@ -5171,7 +5171,6 @@ export class UndertowF3PlayablePreviewApp{
    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
    this.b20ProfileStop('inkAtlasMeshBuild',atlasStart);
    this.refreshB23PaintFeedback();
-   this.refreshB414RealtimeInkHud();
    if(this.renderedFrames%6===0)this.refreshB25PaintRun();
    this.stats.frame(dt*1000);
    this.renderedFrames++;
@@ -5193,6 +5192,11 @@ export class UndertowF3PlayablePreviewApp{
    if(!fullHudDue&&this.renderedFrames%3===0)
     this.refreshB401SourceClockFast();
    if(fullHudDue)this.refresh();
+   // B425: always render the SOURCE paint contest AFTER the real 17-grid
+   // ownership sampler (fast or full HUD), otherwise its DOM sample tick
+   // can lag one B401 cycle even though the same-frame native data moved on.
+   // Never change paint owners, scoreable surfaces, or simulation ticks.
+   this.refreshB414RealtimeInkHud();
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
    // The visible session freezes, preserving the exact failing actor foot.
