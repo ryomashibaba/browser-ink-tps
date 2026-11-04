@@ -1458,7 +1458,16 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
           nativeFoot:after.genuineHumanOriginalFootSolid,
           verdict:witness.verdict,
           extraMeters:witness.actualAdditionalPlanarMeters??0}));
-         if(witness.extendedUpperFloorProven||
+         // B453: B326's genuine extra >=2.5m local success can finish
+         // before B409's independent >=5m COMBINED upper-floor requirement.
+         // Continue with actual CDP KeyW/KCC only for the genuine full
+         // 180s route; never weaken B326, B409 or any SOURCE support gate.
+         const fullRouteGroundedDistanceProven=
+          witness.extendedUpperFloorProven&&
+          Number.isFinite(witness.combinedVerifiedUpperFloorMeters)&&
+          witness.combinedVerifiedUpperFloorMeters>=5;
+         if((witness.extendedUpperFloorProven&&
+              (!b409OneRoute180||fullRouteGroundedDistanceProven))||
             witness.firstUnsupportedStep!==null||
             !after.realHumanOriginalFootSupported||
             after.genuineHumanOriginalFootSolid!==UPPER_FLOOR_SOLID)break;
