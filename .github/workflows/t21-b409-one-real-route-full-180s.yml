@@ -33,7 +33,9 @@ permissions:
 jobs:
   genuine-original-route-180s:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    # B431 reached second native 60s remaining, then the old 55m job cap cancelled it.
+    # Preserve all original SOURCE/physics/score gates; allow genuine second TIME_UP.
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
