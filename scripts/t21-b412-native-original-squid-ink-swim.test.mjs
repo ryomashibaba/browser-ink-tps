@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {b412AuditNativeActualOriginalInkSwim,b412NativeReturnReady}
+import {b412AuditNativeActualOriginalInkSwim,b412NativeReturnReady,
+ b412NativeReturnSteerKey}
  from './t21-b412-native-original-squid-ink-swim.mjs';
 const b410={
  verdict:'PASS_ACTUAL_ORIGINAL_RAMP_UPPER_KCC_AND_THREE_LATE_NATIVE_SHOOT_WAVES',
@@ -31,6 +32,7 @@ function witness(){
   originalFoot:'UndertowT21D:right-low-team-a',target:[11,4.5,47],
   initial:{tick:90,body:p,mode:'HUMAN',ink:'NEUTRAL',humanShots:50,cpuRejoined:7},
   actualSqModeTick:95,swimObserved:true,legs,
+  returnForwardWDelta:[q[0]-p[0],q[2]-p[2]],
   totalRealKccMeters:1.4,
   final:{tick:125,body:t,mode:'HUMAN',locomotion:'HUMAN',
    humanShots:50,cpuRejoined:7,
@@ -57,6 +59,7 @@ test('reject unproven ink, physical foot, virtual time or fabricated shots',()=>
   w=>{w.legs[2].planarMeters=9;},
   w=>{w.legs[2].originalFoot='FAKE';},
   w=>{w.initial.mode='SQUID';},
+  w=>{w.returnForwardWDelta=[1,0];},
   w=>{w.final.mode='SQUID';},
   w=>{w.final.netReturnMeters=3;},
   w=>{w.syntheticPlayerMoves=true;},
@@ -68,6 +71,35 @@ test('reject unproven ink, physical foot, virtual time or fabricated shots',()=>
   assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
    /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
  }
+});
+test('RAW #41798862838 missed the same original floor by lateral drift: choose native KeyA',()=>{
+ const original=[11.212295532226562,5.394896507263184,46.485633850097656];
+ const closest=[11.645665168762207,5.394955158233643,47.38397216796875];
+ const secondW=[1.178714752197266,-.399860382080078];
+ assert.equal(b412NativeReturnReady(closest,original),false);
+ assert.ok(Math.hypot(closest[0]-original[0],closest[2]-original[2])>.95);
+ assert.equal(b412NativeReturnSteerKey(closest,original,secondW),'KeyA');
+ assert.throws(()=>b412NativeReturnSteerKey(closest,original,[0,0]),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
+});
+test('independent audit accepts only genuine KCC source-supported perpendicular return correction',()=>{
+ const w=witness();
+ const last=w.legs.at(-1);
+ last.to=[11.3,5.39,46.2];
+ last.planarMeters=Math.hypot(last.to[0]-last.from[0],last.to[2]-last.from[2]);
+ w.legs.push({...last,direction:'REAL_NATIVE_RETURN_STEER',
+  code:'KeyD',from:last.to,to:[11,5.39,46.2],
+  fromTick:last.toTick,toTick:last.toTick+3,planarMeters:.3});
+ w.totalRealKccMeters=w.legs.reduce((sum,x)=>sum+x.planarMeters,0);
+ w.final.body=[11,5.39,46.2];
+ w.final.tick=w.legs.at(-1).toTick+6;
+ assert.equal(b412NativeReturnSteerKey(last.to,w.initial.body,
+  w.returnForwardWDelta),'KeyD');
+ assert.equal(b412AuditNativeActualOriginalInkSwim(w,b410,b411).
+  originalScoreable,0);
+ w.legs.at(-1).code='KeyA';
+ assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
 });
 test('B410 and B411 must be from same genuinely ended native game',()=>{
  assert.throws(()=>b412AuditNativeActualOriginalInkSwim(witness(),

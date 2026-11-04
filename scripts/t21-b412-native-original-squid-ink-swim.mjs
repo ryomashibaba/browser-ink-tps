@@ -6,10 +6,15 @@ import {setTimeout as nativeSleep} from 'node:timers/promises';
 const fail=s=>{throw Error('B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_'+s);};
 const need=(p,s)=>{if(!p)fail(s);};
 const is3=a=>Array.isArray(a)&&a.length===3&&a.every(Number.isFinite);
+// Exact real input codes from PlayerInput: no scripted axis or pose writes.
+const KEY_META={
+ ShiftLeft:{name:'Shift',vk:16},KeyW:{name:'w',vk:87},
+ KeyS:{name:'s',vk:83},KeyA:{name:'a',vk:65},KeyD:{name:'d',vk:68}
+};
 const key=(code,type)=>({
- type,key:code==='ShiftLeft'?'Shift':code==='KeyW'?'w':'s',code,
- windowsVirtualKeyCode:code==='ShiftLeft'?16:code==='KeyW'?87:83,
- nativeVirtualKeyCode:code==='ShiftLeft'?16:code==='KeyW'?87:83
+ type,key:KEY_META[code]?.name,code,
+ windowsVirtualKeyCode:KEY_META[code]?.vk,
+ nativeVirtualKeyCode:KEY_META[code]?.vk
 });
 const planar=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
 // The physical return acceptance remains <=0.95m. Stop CDP key pulses
@@ -17,6 +22,28 @@ const planar=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
 export function b412NativeReturnReady(position,initialPos){
  need(is3(position)&&is3(initialPos),'ACTUAL_RETURN_COORDINATES_REQUIRED');
  return planar(position,initialPos)<=.85;
+}
+/** Original W leg is a REAL KCC translation, so its observed horizontal
+ * direction is a local estimate of the unchanged camera flat-forward.
+ * PlayerController uses right=(-forward.z,forward.x). Choosing a genuine
+ * KeyA/KeyD here corrects sideways miss without relaxing the 0.95m gate.
+ * Never sets velocity, input axis, player position or source navigation. */
+export function b412NativeReturnSteerKey(position,initialPos,realWDelta){
+ need(is3(position)&&is3(initialPos)&&
+  Array.isArray(realWDelta)&&realWDelta.length===2&&
+  realWDelta.every(Number.isFinite),'REAL_NATIVE_STEERING_WITNESS');
+ const len=Math.hypot(...realWDelta);
+ need(len>.15,'NATIVE_FORWARD_LEG_TOO_SHORT_FOR_STEERING');
+ const fx=realWDelta[0]/len,fz=realWDelta[1]/len;
+ const dx=initialPos[0]-position[0],dz=initialPos[2]-position[2];
+ const forward=dx*fx+dz*fz;
+ const right=dx*(-fz)+dz*fx;
+ const scores=[
+  {code:'KeyW',score:forward},{code:'KeyS',score:-forward},
+  {code:'KeyD',score:right},{code:'KeyA',score:-right}
+ ];
+ scores.sort((a,b)=>b.score-a.score);
+ return scores[0].code;
 }
 // B319-style native 35ms observation; the general B139 500ms wait
 // overshoots a real SOURCE edge by dozens of 60Hz ticks.
@@ -68,12 +95,13 @@ export async function b412NativeSquidOwnInkRound({
   try{
    await nativeUntil(async()=>{
     const n=await frame();
-    return n.tick>=before.tick+(direction==='RETURN_TO_ACTUAL_UPPER_BODY'?3:8)?n:false;
+    return n.tick>=before.tick+
+     (direction==='TOWARD_REAL_120S_PAINT'?8:3)?n:false;
    },20000);
   }finally{await send('Input.dispatchKeyEvent',key(code,'keyUp'));}
   const after=await frame(),ground=await ledger();
   const distance=planar(before.player.position,after.player.position);
-  const realTickMin=direction==='RETURN_TO_ACTUAL_UPPER_BODY'?3:8;
+  const realTickMin=direction==='TOWARD_REAL_120S_PAINT'?8:3;
   const realNativeSupported=after.tick>=before.tick+realTickMin&&after.matchState==='PLAYING'&&
    !after.paused&&after.player.mode==='SQUID'&&
    ['SWIM_GROUND','SQUID_DRY'].includes(
@@ -149,12 +177,41 @@ export async function b412NativeSquidOwnInkRound({
   evidence.peakBody=peak.player.position;
   evidence.peakRelation=peak.player.inkRelation;
   await record('REAL_OWN_INK_SWIM_PEAK_BEFORE_RETURN');
-  // Physically return near the real pre-dive pose with natural native S,
-  // not a teleport or direct PlayerController position setter.
-  for(let i=0;i<12;i++){
+  // A genuine SOURCE artifact #13307074389 hit a 0.997m closest
+  // approach with twelve KeyS-only pulses: lateral residual remained.
+  // Infer the unchanged camera forward from THIS run's actual second W
+  // KCC leg. Use real WASD to turn toward the original physical foot.
+  // At every pulse the existing Rapier source foot and no-fire checks
+  // remain mandatory; no camera/axis/actor/clock writes.
+  const lastForwardLeg=evidence.legs.filter(x=>
+   x.direction==='TOWARD_REAL_120S_PAINT').at(-1);
+  need(lastForwardLeg?.planarMeters>.15,
+   'ACTUAL_FORWARD_KCC_REQUIRED_FOR_RETURN');
+  const realWDelta=[
+   lastForwardLeg.to[0]-lastForwardLeg.from[0],
+   lastForwardLeg.to[2]-lastForwardLeg.from[2]
+  ];
+  evidence.returnForwardWDelta=realWDelta;
+  await record('REAL_NATIVE_W_DIRECTION_FOR_SAFE_RETURN');
+  // Max 18 short authentic pulses. <=22 complete legs with the
+  // existing W phase, retaining independent audit hard caps.
+  for(let i=0;i<18;i++){
    const now=await frame();
    if(b412NativeReturnReady(now.player.position,initialPos))break;
-   await nativeLeg('KeyS','RETURN_TO_ACTUAL_UPPER_BODY');
+   const code=b412NativeReturnSteerKey(
+    now.player.position,initialPos,realWDelta);
+   await nativeLeg(code,code==='KeyS'?
+    'RETURN_TO_ACTUAL_UPPER_BODY':'REAL_NATIVE_RETURN_STEER');
+  }
+  const near=await frame();
+  if(!b412NativeReturnReady(near.player.position,initialPos)){
+   evidence.hold={stage:'ACTUAL_RETURN_NOT_REACHED',
+    original:initialPos,actual:near.player.position,tick:near.tick,
+    remainingMeters:planar(near.player.position,initialPos),
+    lastNativeInput:evidence.legs.at(-1),
+    originalSourceUnchanged:true,acceptanceMeters:.95};
+   await record('HOLD_REAL_RETURN_BODY_NOT_REACHED');
+   fail('REAL_KCC_RETURN_NOT_REACHED_WITH_NATIVE_STEERING');
   }
  }finally{
   await send('Input.dispatchKeyEvent',key('ShiftLeft','keyUp'));
@@ -166,11 +223,22 @@ export async function b412NativeSquidOwnInkRound({
    n.b381RealNativeDodge?.realLocomotion==='HUMAN'?n:false;
  },20000);
  const finalGround=await ledger(),net=planar(returned.player.position,initialPos);
- need(returned.matchState==='PLAYING'&&!returned.paused&&
+ const returnAuthorized=returned.matchState==='PLAYING'&&!returned.paused&&
   returned.shotsFired===shots&&returned.cpu.physicalRejoins.length===7&&
   finalGround.realHumanOriginalFootSupported===true&&
   finalGround.genuineHumanOriginalFootSolid===expectedFoot&&
-  net<=.95&&await locked(),
+  net<=.95&&await locked();
+ if(!returnAuthorized){
+  evidence.hold={stage:'ACTUAL_HUMAN_REENTRY',
+   original:initialPos,actual:returned.player.position,
+   tick:returned.tick,netReturnMeters:net,acceptanceMeters:.95,
+   sourceFoot:finalGround.genuineHumanOriginalFootSolid,
+   supported:finalGround.realHumanOriginalFootSupported,
+   matchState:returned.matchState,paused:returned.paused,
+   shots:returned.shotsFired,cpuRejoined:returned.cpu.physicalRejoins.length};
+  await record('HOLD_REAL_HUMAN_REENTRY_OR_SOURCE');
+ }
+ need(returnAuthorized,
   'REAL_HUMAN_AFTER_SQUID_RETURN_SAME_NATIVE_UPPER_SOURCE');
  evidence.final={tick:returned.tick,body:returned.player.position,
   mode:returned.player.mode,locomotion:returned.b381RealNativeDodge.realLocomotion,
@@ -198,12 +266,30 @@ export function b412AuditNativeActualOriginalInkSwim(v,b410,b411){
   v.initial.cpuRejoined===7&&
   Number.isSafeInteger(v.actualSqModeTick)&&
   v.actualSqModeTick>v.initial.tick&&v.swimObserved===true&&
-  Array.isArray(v.legs)&&v.legs.length>=2&&v.legs.length<=22,
+  Array.isArray(v.legs)&&v.legs.length>=2&&v.legs.length<=22&&
+  Array.isArray(v.returnForwardWDelta)&&
+  v.returnForwardWDelta.length===2&&
+  v.returnForwardWDelta.every(Number.isFinite),
   'GENUINE_NATIVE_PLAYER_SQUID_SOURCE_SCOPE');
+ const verifiedW=v.legs.filter(x=>
+  x.direction==='TOWARD_REAL_120S_PAINT').at(-1);
+ need(verifiedW&&is3(verifiedW.from)&&is3(verifiedW.to)&&
+  Math.abs(verifiedW.to[0]-verifiedW.from[0]-
+   v.returnForwardWDelta[0])<.0001&&
+  Math.abs(verifiedW.to[2]-verifiedW.from[2]-
+   v.returnForwardWDelta[1])<.0001&&
+  Math.hypot(...v.returnForwardWDelta)>.15,
+  'ACTUAL_NATIVE_FORWARD_VECTOR_MUST_MATCH_OBSERVED_KCC');
  let ownSwim=0,meters=0,tick=v.actualSqModeTick;
  for(const leg of v.legs){
-  need(['TOWARD_REAL_120S_PAINT','RETURN_TO_ACTUAL_UPPER_BODY'].includes(leg.direction)&&
-   (leg.code==='KeyW'||leg.code==='KeyS')&&
+  const outgoing=leg.direction==='TOWARD_REAL_120S_PAINT';
+  const returnLeg=leg.direction==='RETURN_TO_ACTUAL_UPPER_BODY';
+  const steerLeg=leg.direction==='REAL_NATIVE_RETURN_STEER';
+  need((outgoing&&leg.code==='KeyW'||
+   returnLeg&&leg.code==='KeyS'||
+   steerLeg&&['KeyW','KeyA','KeyD'].includes(leg.code))&&
+   (outgoing||b412NativeReturnSteerKey(
+    leg.from,v.initial.body,v.returnForwardWDelta)===leg.code)&&
    leg.mode==='SQUID'&&
    ['SQUID_DRY','SWIM_GROUND'].includes(leg.locomotion)&&
    ['OWN','ENEMY','NEUTRAL','NONE'].includes(leg.inkRelation)&&
@@ -211,7 +297,7 @@ export function b412AuditNativeActualOriginalInkSwim(v,b410,b411){
    Number.isFinite(leg.genuineGap)&&leg.genuineGap>=0&&leg.genuineGap<=.4&&
    Number.isSafeInteger(leg.fromTick)&&leg.fromTick>=tick&&
    Number.isSafeInteger(leg.toTick)&&leg.toTick>=leg.fromTick+
-   (leg.direction==='RETURN_TO_ACTUAL_UPPER_BODY'?3:8)&&
+   (outgoing?8:3)&&
    is3(leg.from)&&is3(leg.to)&&
    Number.isFinite(leg.planarMeters)&&leg.planarMeters>=0&&leg.planarMeters<=3&&
    Math.abs(planar(leg.from,leg.to)-leg.planarMeters)<.0001&&
