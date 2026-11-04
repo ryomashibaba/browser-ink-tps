@@ -216,6 +216,46 @@ async function main(){
  await cdp('Page.enable');await cdp('Runtime.enable');
  await cdp('Emulation.setDeviceMetricsOverride',{
   width:1600,height:900,deviceScaleFactor:1,mobile:false});
+ // Reuse this SAME genuine Chromium session to test the actual
+ // SOURCE game portal before entering the existing authoritative CPU trial.
+ // Portal is optical/navigation only; never edits simulation or actor state.
+ await cdp('Page.navigate',{url:root+'play-source.html'});
+ const portals=await until(()=>evaluate(`(() => {
+  const a=document.querySelector('#play-circuit');
+  const b=document.querySelector('#play-combat');
+  return document.querySelector('#portal-status')?.dataset.t21PortalReady==='SOURCE_ONLY'&&
+   a?.href&&b?.href?{circuit:a.href,combat:b.href}:null;
+ })()`),30000);
+ const url=new URL(portals.circuit),opponent=new URL(portals.combat);
+ if(url.origin!==new URL(root).origin||url.pathname!==new URL(root).pathname||
+  url.searchParams.get('t21W10B384')!=='loadoutCircuit'||
+  url.searchParams.get('t21W10B203')!=='fullRound'||
+  opponent.searchParams.get('t21W10B192')!=='humanCombat'||
+  opponent.searchParams.get('t21W10B203')!=='fullRound'||
+  url.searchParams.has('production')||url.searchParams.has('scoreable'))
+  fail('PORTAL_SOURCE_DESTINATION_AUTHORITY');
+ const portalPicture=await cdp('Page.captureScreenshot',{
+  format:'png',captureBeyondViewport:false});
+ if(typeof portalPicture?.data!=='string'||portalPicture.data.length<100)
+  fail('PORTAL_REAL_CHROMIUM_SCREENSHOT_MISSING');
+ writeFileSync(resolve(out,'source-play-portal-real-chromium.png'),
+  Buffer.from(portalPicture.data,'base64'));
+ await buttonClick('#play-circuit');
+ const clicked=await until(()=>evaluate(`location.search.includes(
+  't21W10B384=loadoutCircuit')&&
+  location.search.includes('t21W10B203=fullRound')`),20000);
+ if(!clicked||new URL(await evaluate('location.href')).pathname!==
+    new URL(root).pathname)
+  fail('PORTAL_REAL_CDP_CLICK_DID_NOT_START_EXISTING_SOURCE_GAME');
+ proof.realSourcePlayPortal={
+  verdict:'PASS_ACTUAL_CHROMIUM_PORTAL_TO_REAL_SOURCE_GAME_URL',
+  realCdpMouseClick:true,sourceOnly:true,existing12WeaponCircuit:true,
+  actualScreenshot:'source-play-portal-real-chromium.png',
+  scriptInjectedActors:0,nativeTickWrites:0,officialWinner:'NONE',
+  formal4v4Certified:false,productionAuthorized:false};
+ save();
+ // The existing B441 test retains its original URL and identical native
+ // proof thresholds; the portal does not alter those trusted trial inputs.
  await cdp('Page.navigate',{url:root+query});
  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);

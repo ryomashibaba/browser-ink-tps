@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>UNDERTOW · SOURCE PLAY — Browser Ink TPS</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#06121d;color:#f3fbff}
+    *{box-sizing:border-box}
+    html{min-height:100%;background:#06121d}
+    body{margin:0;min-height:100vh;background:
+      radial-gradient(ellipse 70% 60% at 92% 8%,#17586b70,transparent),
+      radial-gradient(ellipse 58% 52% at 0% 94%,#65185055,transparent),
+      linear-gradient(135deg,#06121d,#0a2133 56%,#091620)}
+    a{color:inherit}
+    .shell{max-width:1100px;padding:clamp(20px,4vw,48px);margin:auto}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:clamp(44px,8vh,90px)}
+    .brand{font-size:13px;font-weight:900;letter-spacing:.18em}
+    .research{border:1px solid #9dcbda66;border-radius:99px;padding:8px 12px;color:#a9dbe2;font-size:11px;font-weight:750;letter-spacing:.05em}
+    .eyebrow{font-size:12px;font-weight:850;color:#81ecdf;letter-spacing:.22em}
+    h1{margin:12px 0 16px;font-size:clamp(46px,8vw,104px);letter-spacing:-.065em;line-height:.95}
+    h1 span{color:#8ff7e8}
+    .lede{max-width:680px;color:#c4dce4;font-size:clamp(15px,1.8vw,19px);line-height:1.75;margin:24px 0 28px}
+    .stats{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 28px}
+    .stat{background:#123448ab;border:1px solid #77b1bd45;border-radius:12px;padding:12px 17px;min-width:132px}
+    .stat strong{display:block;font-size:21px;font-weight:900;color:white}
+    .stat small{display:block;color:#9ec9d3;font-size:11px;margin-top:2px}
+    .actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.75fr);gap:16px;align-items:stretch}
+    .mode{border:1px solid #ffffff35;border-radius:19px;padding:24px;display:flex;flex-direction:column;gap:12px;background:#0b2940c4;min-width:0}
+    .mode.primary{background:linear-gradient(148deg,#11635c,#073e5e 85%);border-color:#86ffe988;box-shadow:0 24px 75px #00192680}
+    .mode .tag{font-size:11px;font-weight:850;letter-spacing:.1em;color:#92e7dd}
+    .mode h2{font-size:25px;line-height:1.2;letter-spacing:-.03em;margin:0}
+    .mode p{margin:0;color:#b9e0e3;line-height:1.6;font-size:13px;flex:1}
+    .button{display:block;text-align:center;text-decoration:none;padding:17px 14px;border-radius:12px;font-weight:900;letter-spacing:.02em;background:#99ffe2;color:#052b32;transition:transform .12s,filter .12s}
+    .secondary .button{background:#1a4259;border:1px solid #89bcd8;color:#dffaff}
+    .button:hover{transform:translateY(-2px);filter:brightness(1.09)}
+    .button:focus-visible{outline:3px solid #fff;outline-offset:4px}
+    .limits{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:42px;border-top:1px solid #7db1ca3b;padding-top:27px}
+    .limits h3{font-size:13px;margin:0 0 9px;color:#8ad8df;letter-spacing:.06em}
+    .limits p{font-size:13px;color:#c1d5de;line-height:1.75;margin:0}
+    footer{font-size:11px;color:#8aaebb;margin-top:35px;line-height:1.7}
+    @media(max-width:740px){.actions,.limits{grid-template-columns:1fr}.top{margin-bottom:52px}.mode{padding:21px}.stat{min-width:100px;flex:1}.research{font-size:10px}}
+    @media(prefers-reduced-motion:reduce){.button{transition:none}}
+  </style>
+</head>
+<body>
+ <main class="shell">
+  <div class="top"><div class="brand">BROWSER INK TPS <span aria-hidden="true"> / </span> T21</div><div class="research">RESEARCH · SOURCE ONLY</div></div>
+  <div class="eyebrow">REAL SOURCE GAMEPLAY / NO OFFICIAL TURF RESULT</div>
+  <h1>UNDERTOW<br><span>SOURCE PLAY.</span></h1>
+  <p class="lede">本物のPlayCanvas・Rapier・Recastによる180秒のSOURCE練習試合。既存の原作地形上で移動し、武器を選び、射撃・塗装・インク回復と再戦を体験できます。</p>
+  <div class="stats" aria-label="SOURCE練習の範囲">
+   <div class="stat"><strong>180<span aria-hidden="true">s</span></strong><small>実ゲーム時計</small></div>
+   <div class="stat"><strong>1 + 7</strong><small>プレイヤー + 実CPU</small></div>
+   <div class="stat"><strong>12</strong><small>武器選択肢</small></div>
+   <div class="stat"><strong>0</strong><small>公式得点面（未認証）</small></div>
+  </div>
+  <section class="actions" aria-label="プレイモード選択">
+   <div class="mode primary">
+    <div class="tag">MAIN / SOURCE CIRCUIT</div>
+    <h2>原作SOURCEで180秒プレイ</h2>
+    <p>既存の12武器選択、実WASD・カメラ操作、物理移動、塗装、インク消費・回復を使った練習試合。READY画面で武器を選び、試合を開始できます。</p>
+    <a id="play-circuit" class="button" href="#" aria-label="実SOURCE 180秒プレイを開始">180秒プレイを開始</a>
+   </div>
+   <div class="mode secondary">
+    <div class="tag">RESEARCH / OPPONENT ROUTE HOLD</div>
+    <h2>実CPU戦闘研究モード</h2>
+    <p>本物の敵CPUとの交戦を試す研究モード。中央・対岸の自然な経路は未認証で、実際の敵遭遇・撃破を保証しません。</p>
+    <a id="play-combat" class="button" href="#" aria-label="原作SOURCE戦闘研究モードへ">戦闘研究モードへ</a>
+   </div>
+  </section>
+  <section class="limits" aria-label="操作と認証範囲">
+   <div><h3>基本操作</h3><p>WASD 移動 · マウス 照準 · 左クリック 射撃 · Shift イカ · Space ジャンプ · F サブ · Q 肩替え · M レーダー · N 音声 · P 一時停止 · R 再戦</p></div>
+   <div><h3>現在の認証範囲</h3><p>原作SOURCE 25衝突面・17塗装面・26リンク・公式得点面0。対岸自然ルート0/12、正式4v4・公式勝敗・最終ART・本番公開はHOLD。これは公式ゲームではなく研究中の練習版です。</p></div>
+  </section>
+  <footer id="portal-status" role="status">起動先はこの端末の同じゲームサーバーです。外部API・課金・データ送信は不要です。</footer>
+ </main>
+ <script type="module" src="/src/source-play-main.ts"></script>
+</body>
+</html>
