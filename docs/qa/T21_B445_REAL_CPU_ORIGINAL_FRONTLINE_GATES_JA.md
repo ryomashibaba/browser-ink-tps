@@ -25,3 +25,25 @@
 - 次回、A3/B2/B4の各段階の数値を**実Artifactから照合してはじめて**改修可否を決定する。Rapier/元Recastが現実に不成立なら**HOLD**。条件の緩和、偽床/NavLink、Actorワープ、偽の勝敗・射程を使用しない。
 
 **正式4v4/自然交戦/元7.2.0敵陣横断/HP/撃破/復活/公式scoreable/winner/ART/本番：すべてHOLD。**
+
+## 2026-11-04 JST — 真正720tick結果の確定
+
+- [B445真正Chromium #41840777818](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41840777818) **overall SUCCESS**、コードSHA `84268bc4d70b0c6e22c219bc9e943713d7a1af0a`、[実Artifact 13330170325](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41840777818/artifacts/13330170325) の `b440-short-real-original-human-foot.json` / `b441NativeEvidence.b445LastOriginalGateByCpu` の本物の6CPUフロント診断。
+- 研究用原本SOURCE 25 solids/17 paints/26 links/0 scoreable、7物理CPU実worldで720tick、B441真前線ゴール要求合計**112件**、Actor・native clock・score・stage改変**0**。
+
+| CPU | 提案数 | 検査数 | 元Rapier/床margin拒否 | Recast/中間原本ルート拒否 | 承認した元ゴール | 実選択呼出 | 元ゴール実要求 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| A2 | 32 | 11 | 0 | 9 | **2** | 43 | 43 |
+| A3 | 32 | 32 | 2 | 30 | **0** | 43 | 0 |
+| B1 | 32 | 12 | 2 | 8 | **2** | 43 | 35 |
+| B2 | 32 | 32 | 2 | 30 | **0** | 43 | 0 |
+| B3 | 32 | 12 | 2 | 8 | **2** | 43 | 34 |
+| B4 | 32 | 32 | 2 | 30 | **0** | 43 | 0 |
+
+検査数が32未満のA2/B1/B3は**2承認した時点で早期終了**する既存実装のため。拒否数+承認数と検査数の和は各CPUで一致。A3/B2/B4は32件全拒否。ここで「その場所に原作の道が一切存在しない」とはまだ言えない。初回DROPの登録着地点を起点としたroute失敗である。
+
+### B446 — 次の真正SOURCE検証（改善実装ではなく原本の精密再監査）
+
+- [B446研究実装コミット](https://github.com/ryomashibaba/browser-ink-tps/commit/038fffd510bb221c2a6388f221028edd8a737d45) ではB445 Recast/pathの拒否を **UNREACHED / START_SNAP / END_SNAP / INTERMEDIATE_ORIGINAL_SUPPORT** に四分する（同じ閾値・同じ短絡順序を維持）。
+- A3/B2/B4の**実際の7CPU合流後**、GROUND・ACTIVEで原本Rapier足を持つ真のCPU実foot起点で、候補32件を**読み取り専用かつ各CPU1回**だけ再検証。経路が認証されても移動目標への採用はしない。新 `snapshot().cpu.sourcePatrol.b446LivePhysicalFootDryRouteProbes` に本人座標と分類した拒否数・承認可能性を保存。
+- [B446真正試験 #41842046623](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41842046623) が出力する `b446LiveActualCpuFootDryRouteProbes` は、実Artifactが確定してから初めて合否を判定する。合格証拠前の前線への近接・敵陣横断・自然交戦・正式4v4は未証明。
