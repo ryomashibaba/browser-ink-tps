@@ -1,0 +1,25 @@
+name: T21 B441 original floor frontline candidate fast safety gate
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'src/app/B441OriginalSourceFrontline.ts'
+      - 'src/app/B441OriginalSourceFrontline.test.ts'
+      - '.github/workflows/t21-b441-frontline-fast-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b441-source-only-safe-proposals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Test original floor proposals and refuse fake authority
+        run: npx vitest run src/app/B441OriginalSourceFrontline.test.ts
+      - name: TypeScript and production bundle
+        run: npm run build -- --base=/browser-ink-tps/

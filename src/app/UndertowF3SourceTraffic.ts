@@ -27,6 +27,7 @@ import type {B367NativeCpuState} from './B367RealCpuCombatTimeline';
 import {eligibleB192SourceHumanPursuit,
  chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
+import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -63,6 +64,13 @@ export interface F3TrafficSnapshot{
  readonly b93ExperimentalEnabled:boolean;
  readonly sourcePatrol:{
   readonly auditedTargets:number;
+  /** Opt-in B441: REAL source-backed frontline goal attempts; still UNSCORED. */
+  readonly b441Enabled:boolean;
+  readonly b441ProposalsChecked:number;
+  readonly b441StrictGoalsAvailable:number;
+  readonly b441ActualGoalRequests:number;
+  readonly b441UnsafeOrUnreachableHolds:number;
+  readonly b441ClosestApprovedFrontAbsZ:number|null;
   /** B137: opt-in true HUMAN + friendly A1 source-only tactical rally. */
   readonly b137AllyRallyOptIn:boolean;
   readonly b137RealCandidateChecks:number;
@@ -150,6 +158,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  readonly routePlan:T21F2RoutePlan;
  private readonly egress=new Map<string,StageVector3>();
  private readonly patrolGoals=new Map<string,Vec3[]>();
+ private readonly b441FrontGoals=new Map<string,Vec3[]>();
+ private b441ProposalsChecked=0;
+ private b441StrictGoalsAvailable=0;
+ private b441ActualGoalRequests=0;
+ private b441UnsafeOrUnreachableHolds=0;
+ private b441ClosestApprovedFrontAbsZ:number|null=null;
  private readonly patrolIndex=new Map<string,number>();
  private auditedTargets=0;
  private realGoalRequests=0;
@@ -253,7 +267,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableB137OriginalAllyRally=false,
   private readonly enableB150AllySupportInk=false,
   private readonly enableB192HumanCombat=false,
-  private readonly enableB199PlayerCoopCollisionRecovery=false
+  private readonly enableB199PlayerCoopCollisionRecovery=false,
+  private readonly enableB441SourceFrontline=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -307,6 +322,46 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    targets.sort((a,b)=>b.z*sideSign-a.z*sideSign||
      a.x-b.x);
    this.patrolGoals.set(bot.id,targets);
+   // B441 is research-only. The ordinary F3 patrol is unchanged. Every
+   // proposed coordinate comes from an already REGISTERED original floor,
+   // then gets both real SOURCE Rapier + full native Recast verification.
+   // Neither a polygon vertex nor a Recast waypoint grants terrain.
+   if(this.enableB441SourceFrontline&&this.physics&&bot.id!=='A1'){
+    const verified:Vec3[]=[];
+    for(const proposal of proposeB441OriginalFrontline(stage,
+      bot.team===Team.A?'A':'B')){
+     this.b441ProposalsChecked++;
+     const goal=new Vec3(...proposal.point);
+     const ray=this.physics.castStageSegment(
+      new Vec3(goal.x,goal.y+.65,goal.z),
+      new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+     const flat=ray?inspectB130OriginalFlatSource({
+      nativeTick:0,
+      actualRapierBody:[goal.x,goal.y+
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
+      actualRapierSupportId:ray.solidId}):null;
+     if(!ray||ray.solidId!==proposal.sourceSolidId||
+        !flat?.insideRegisteredOriginalXZFootprint||
+        !flat.originalFlatVerticalBandWithin22cm||
+        flat.distanceToOriginalPolygonBoundaryMeters<.75){
+      this.b441UnsafeOrUnreachableHolds++;continue;
+     }
+     const route=this.nav.auditPath(start,goal);
+     if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
+        route.endSnapDistanceMeters>.20||
+        !this.hasSourceSupportedRoute(route,sideSign)){
+      this.b441UnsafeOrUnreachableHolds++;continue;
+     }
+     verified.push(goal);
+     this.b441StrictGoalsAvailable++;
+     const front=Math.abs(goal.z);
+     this.b441ClosestApprovedFrontAbsZ=
+      this.b441ClosestApprovedFrontAbsZ===null?front:
+       Math.min(this.b441ClosestApprovedFrontAbsZ,front);
+     if(verified.length===2)break;
+    }
+    this.b441FrontGoals.set(bot.id,verified);
+   }
    this.patrolIndex.set(bot.id,-1);
    this.auditedTargets+=targets.length;
    this.previous.set(bot.id,bot.mobilityState);
@@ -771,6 +826,30 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b137UnsafeOrUnsupportedRallies++;
      }else this.b137MissingSourceFloorProof++;
     }else this.b137MissingSourceFloorProof++;
+   }
+  }
+  // B441 opt-in: toward a frontward point on EXISTING original solid.
+  // Even after constructor proof, re-check the current true CPU foot to
+  // that goal in native Recast, every ~0.30m Rapier segment and endpoint.
+  // A failed route always falls through to the legacy proven patrol.
+  if(this.enableB441SourceFrontline&&id!=='A1'&&this.physics){
+   const fronts=this.b441FrontGoals.get(id)??[];
+   for(const goal of fronts){
+    const direct=Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z);
+    if(direct<1.5)continue;
+    if(goal.z*sign<33||!this.hasSourceFootSupport(goal)){
+     this.b441UnsafeOrUnreachableHolds++;continue;
+    }
+    const route=this.nav.auditPath(realFoot,goal);
+    if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
+       route.endSnapDistanceMeters>.20||
+       !this.hasSourceSupportedRoute(route,sign)){
+     this.b441UnsafeOrUnreachableHolds++;continue;
+    }
+    out.copy(goal);
+    this.realGoalRequests++;
+    this.b441ActualGoalRequests++;
+    return true;
    }
   }
   const active=this.patrolIndex.get(id)??-1;
@@ -1242,6 +1321,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     actorId,linkId:v.linkId,phase:v.phase,escapeFoot:v.escapeFoot})),
    b93ExperimentalEnabled:this.enableB93UpperDetour,
    sourcePatrol:{auditedTargets:this.auditedTargets,
+    b441Enabled:this.enableB441SourceFrontline,
+    b441ProposalsChecked:this.b441ProposalsChecked,
+    b441StrictGoalsAvailable:this.b441StrictGoalsAvailable,
+    b441ActualGoalRequests:this.b441ActualGoalRequests,
+    b441UnsafeOrUnreachableHolds:this.b441UnsafeOrUnreachableHolds,
+    b441ClosestApprovedFrontAbsZ:this.b441ClosestApprovedFrontAbsZ,
     b137AllyRallyOptIn:this.enableB137OriginalAllyRally,
     b137RealCandidateChecks:this.b137RealCandidateChecks,
     b137ApprovedNativeRallies:this.b137ApprovedNativeRallies,
