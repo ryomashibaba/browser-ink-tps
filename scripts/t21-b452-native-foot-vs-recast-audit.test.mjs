@@ -49,7 +49,7 @@ test('fails closed for fake provenance, goal authorization, loss of real foot sa
  d=>d.source='26/17/26/0',
  d=>d.scoreWrites=1,
  d=>d.b441NativeEvidence.realSevenCpu=false,
- d=>d.b441NativeEvidence.realFrames.pop(),
+ d=>{d.b441NativeEvidence.realFrames=[]},
  d=>d.b441NativeEvidence.realFrames[1].tick=1070,
  d=>d.b441NativeEvidence.realFrames[1].physicalFeet[4].rejoined=false,
  d=>d.b441NativeEvidence.b446LiveActualCpuFootDryRouteProbes[1]
