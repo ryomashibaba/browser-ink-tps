@@ -4,6 +4,7 @@ on:
     branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
     paths:
       - 'scripts/t21-b440-short-native-original-foot.mjs'
+      - 'src/app/UndertowF3SourceTraffic.ts'
       - '.github/workflows/t21-b441-frontline-native-short.yml'
   workflow_dispatch:
 permissions:
