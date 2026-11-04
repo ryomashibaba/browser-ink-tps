@@ -1222,10 +1222,72 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
        first=next;
       }
      }
+     // B429: B427's last witnessed genuine ramp fraction .8793
+     // fell below the unchanged .90 crest requirement; passing B426
+     // started farther downhill (.6711 vs .6914). One real short
+     // KeyS down-ramp pulse can preserve the missing crest sample.
+     // Refine ONLY on native registered SOURCE ramp, never move an
+     // actor by writing coordinates or relax the independent B322 gate.
+     const refinements=[];
+     if(qualified&&b410RealUpperPlay&&realBackstep&&
+        first.realHumanOriginalFootSupported&&
+        first.genuineHumanOriginalFootSolid===RAMP_SOLID){
+      for(let i=0;i<2;i++){
+       const before=first;
+       const bc=b320SourceRampCoordinates(
+        before.originalPositiveRampSourceQuad,before.actualBodyMeters);
+       if(!bc.insideSourceQuadXZ||
+          bc.originalUphillFraction<.68||
+          bc.originalUphillFraction>.77)break;
+       const key=await b319TrueShortNativeKey('KeyS',1,8);
+       const after=await b312Ledger();
+       const ac=b320SourceRampCoordinates(
+        before.originalPositiveRampSourceQuad,after.actualBodyMeters);
+       const planar=Math.hypot(
+        after.actualBodyMeters[0]-before.actualBodyMeters[0],
+        after.actualBodyMeters[2]-before.actualBodyMeters[2]);
+       const dy=after.actualBodyMeters[1]-before.actualBodyMeters[1];
+       const genuine=after.source==='25/17/26/0'&&
+        after.realHumanOriginalFootSupported===true&&
+        after.genuineHumanOriginalFootSolid===RAMP_SOLID&&
+        Number.isFinite(after.genuineOriginalFootGapMeters)&&
+        after.genuineOriginalFootGapMeters>=0&&
+        after.genuineOriginalFootGapMeters<=.18&&
+        after.sourceActorRelocations===0&&
+        after.sourceInkRewritten===false&&
+        after.playerPositionRewritten===false&&
+        after.originalRows?.length===17&&
+        after.originalRows.some(r=>
+         r.surfaceId===RAMP_SOLID+':paint'&&
+         r.actualHumanFootOnOriginalActiveSurface===true)&&
+        Number.isSafeInteger(after.tick)&&
+        after.tick>before.tick&&after.tick-before.tick<=24&&
+        ac.insideSourceQuadXZ&&
+        ac.originalUphillFraction>=.60&&
+        ac.originalUphillFraction<bc.originalUphillFraction-.015&&
+        bc.originalUphillFraction-ac.originalUphillFraction<=.14&&
+        planar>=.04&&planar<=.8&&dy>=-.35&&dy<=.10;
+       refinements.push({realKey:'KeyS',wantedTicks:1,
+        observedTickDelta:after.tick-before.tick,
+        fromOriginalFraction:bc.originalUphillFraction,
+        toOriginalFraction:ac.originalUphillFraction,
+        genuine,before,after,keyTick:key.tick});
+       writeFileSync(resolve(OUTPUT,
+        'b429-native-original-crest-entry-refinement.json'),
+        JSON.stringify({source:'25/17/26/0',refinements},null,2));
+       console.log('B429_GENUINE_ORIGINAL_RAMP_ENTRY_REFINEMENT',
+        JSON.stringify({index:i+1,from:bc.originalUphillFraction,
+         to:ac.originalUphillFraction,tick:after.tick,genuine}));
+       if(!genuine)
+        fail('B429_REFUSED_NONORIGINAL_RAMP_REFINEMENT');
+       first=after;
+      }
+     }
      const save=(status,plan=null)=>{
       const data={schema:'B322_REAL_NATIVE_CREST_EXIT',
        source:'25/17/26/0',status,first,plan,steps,
        originalSourceRealEntryBackstep:realBackstep,
+       additionalGenuineOriginalEntryBacksteps:refinements,
        prerequisiteB321Passed:qualified,productionAuthorized:false,
        original4v4Certified:false,artAccepted:false};
       const independent=b322AuditNativeOriginalCrestExit(data);
