@@ -1,28 +1,25 @@
-# T21 F4 — 任天堂公式7.2.0ナワバリ侵入用スロープとSOURCEの対応ゲート
+# T21 F4 — 原作の侵入用スロープ：Ver.2.0.0追加とVer.7.2.0全面改修を区別
 
-**調査日：2026-11-04。これは原作地形の承認ではなく、一次資料に基づく調査対象の優先順位です。**
+**2026-11-04 JST・公式一次資料を再照合し訂正。** 旧版の本資料は敵陣侵入ランプ追加をVer.7.2.0に誤帰属していた。公式ページの版見出しまで照合し、正しくは **Ver.2.0.0（2022年11月30日）** と確認した。旧記述を撤回する。
 
-## 任天堂の一次資料が明記していること
+## 任天堂公式に書かれた正しい版の違い
 
-任天堂公式 [英国版 Splatoon 3 Update History](https://www.nintendo.com/en-gb/Support/Nintendo-Switch/Game-Updates/Splatoon-3-Update-History-2358763.html) の Ver.7.2.0（2024-04-18）には、Undertow Spillway（マテガイ放水路）で全モードの地形が変更され、さらに **Turf War（ナワバリバトル）では開始位置から見た右側の地形の一部を除去し、敵側に侵入できるようスロープを追加した**と明記されている。米任天堂 [Ver.7.2.0更新履歴](https://en-americas-support.nintendo.com/app/answers/detail/a_id/61257/) も全モードの地形変更を明記。
+- **Ver.2.0.0（2022-11-30）**：マテガイ放水路の **Turf War / ナワバリバトル** 地形の一部を変更。開始地点から見た右側の地形一部を撤去し、敵陣へ侵入するスロープを追加した。
+- **Ver.7.2.0（2024-04-18）**：マテガイ放水路の **全ルール** で地形を改修した。公式7.2.0節は侵入用ランプの新規追加を明記していない。
+- 正式一次情報：[Nintendo UK Splatoon 3 Update History](https://www.nintendo.com/en-gb/Support/Nintendo-Switch/Game-Updates/Splatoon-3-Update-History-2358763.html)。同ページの見出し『Ver.2.0.0』と『Ver.7.2.0』を必ず独立に読むこと。
 
-このため「現行の左右陣営に原作通行可能な道がなくて当然」「唯一の道は中央アンダーパスである」という仮説は**公式のTurf版仕様と整合しない可能性がある**。ただし公式文面に座標や衝突面IDはなく、上記スロープと現行プロジェクトのどの面が一致するかは未認証。
+## SOURCEの既存事実と未認証事項
 
-## 既存の確定物との峻別
+- 版別SceneInfoの720版で『Vss_Temple01 / Model/Fld_Temple01.bfres』が改修後のマテガイ放水路Versusシーン名と確認済み。ただしKiTrixのOBJが7.2.0 Turfの元データそのものであるという原本幾何／モード／ゲーム衝突の証明はない。詳細：[版と衝突権限の監査](T21_F4_TEMPLE_SOURCE_VERSION_AND_COLLISION_AUTHORITY_JA.md)。
+- src/stage/undertow/UndertowSpillwayRouteRampGeometry.ts の FloorConcrete03 右低地スロープは原作メッシュ由来・鏡像ソース三角形／塗装根拠がある。ただし2.0.0で追加された敵陣侵入用スロープと同じFaceとは未認証。自動的に正式4v4経路として扱わない。
+- src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.ts の元OBJ由来5要素/片側の試行でも約31.716mのendpoint gapが残った。架空の橋やNavLinkで埋めない。
+- B441研究用のSOURCE前線巡回は登録済み原作右低地の内側を候補とし、RapierとRecastが支持・経路を確認した場合のみ目標にする。**敵陣横断、新規スロープ導入、正式4v4の解禁ではない。**
 
-- [版別SceneInfoの公知情報](T21_F4_TEMPLE_SOURCE_VERSION_AND_COLLISION_AUTHORITY_JA.md)：720以降の改修ステージIDは `Vss_Temple01` / `Model/Fld_Temple01.bfres`。ただしKiTrix `Vss_Temple01.obj` が当該モデルから同一モードで抽出されたことや衝突データ一致は未認証。
-- `src/stage/undertow/UndertowSpillwayRouteRampGeometry.ts`： `Fld_Temple01_pCube21569_1__FloorConcrete03` の二組の鏡像原作2三角形スロープを元OBJとTurf図面から確認済み。既存の**右低地の段差**であり、少なくとも表示上は横断する敵陣侵入路とは未同定。これを任天堂の追加スロープと同一視しない。
-- `src/stage/undertow/UndertowSpillwayUnderpassRouteGeometry.ts` の5 source components/片側はCI #691試験でも endpoint error **31.716m**、真Recast到達FAIL。これを架空リンクで接続しない。
+## 次の承認ゲート
 
-## 次の最短の実装判定
+1. 同じナワバリルールで2.0.0前後の追加侵入地点を特定し、7.2.0改修後にその経路がどこに位置するかを正規モデル・Face・Actorへ対応づける。
+2. 正規レンダーメッシュとは別に、衝突メッシュ／衝突有効フラグをバージョンと面ID付きで確認する。出典不明のままでは不明・HOLD。
+3. 既存CPU半径0.30m、物理カプセル、全経路の連続Rapier接地とRecast/Crowd到達を実測する。
+4. 正規証拠と追加承認が揃うまで、SOURCE 25 solids / 17 PaintSurfaces / 26 NavLinks / 0 scoreable、公式winner NONE、自然敵陣横断 0/12、ART/production/正式4v4 HOLDを厳守する。
 
-1. Ver.7.2.0 **Turf War** の場面（右側変更点・追加スロープ・中央壁・ガラス）を元OBJの物体名・面/座標へ対応させ、**旧版や他モードの混入を排除**。
-2. 見た目のBFRES/OBJとは独立した**ゲーム本体の衝突メッシュ/通行属性**を合法的・検証可能な出典から確認し、どの面が歩行・イカ移動をサポートするか特定。
-3. その面だけで、既存の半径0.30m CPUカプセルに安全な幅、原作Rapier連続接地、実Recast/Crowd到達、全8人間/CPU Actorを単一の真正時計で実証。初めて試験目的のSOURCE登録変更を別途判断。
-4. 認証が揃うまでは正式4v4 / 0 scoreable / winner NONE / NATURAL CROSS-TEAM 0/12 を維持。
-
-**この文書はSOURCEの solids 25 / paint 17 / links 26 / scoreable 0 の変更を許可しない。** 人工床、透明橋、仮設NavLink、Actor位置書込み、反則的な得点・勝者の合成は禁止。B430で認証された2回の真正180秒PASSは別の実績として維持する。
-
-## 待たずに進める別系統のF3実装
-
-B440はB419再戦後と同じSOURCEクエリで**新規の真正Chromium**を起動し、7CPUの物理合流→本人CDP KeyW→元SOURCEの本物のKCC足と位置変化を照合する最大15分の**短い検査**。これで失敗箇所を切り分けた後に、B438の真の連続2試合へ反映する。B440の単独PASSは再戦ボタン押下や2回180秒を証明しない。
+人工床、透明足場、仮設NavLink、敵や本人のActorワープ、偽の時計やスコアや勝者は作らない。B438の連続2試合180秒・再戦後本人移動の真正PASSは独立した実績として保存する。
