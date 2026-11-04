@@ -1,0 +1,24 @@
+name: T21 B447 original SOURCE 7CPU reject comparator
+on:
+  push:
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    paths:
+      - 'scripts/t21-b447-source-gate-comparator.mjs'
+      - 'scripts/t21-b447-source-gate-comparator.test.mjs'
+      - '.github/workflows/t21-b447-source-gate-fast.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent-read-only-comparator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Strict old/new native SOURCE gate unit tests
+        run: |
+          node --check scripts/t21-b447-source-gate-comparator.mjs
+          node --test scripts/t21-b447-source-gate-comparator.test.mjs
