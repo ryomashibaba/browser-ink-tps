@@ -2537,12 +2537,17 @@ async function run(){
   const first=await snapshot();authority(first,'FIXED');
   const origin=await evaluate('performance.timeOrigin');
   const ui=await evaluate(`(() => {
-   const el=document.querySelector('#t21-f3-b200-replay');
-   return {visible:!!el&&!el.hidden&&getComputedStyle(el).display!=='none',
+   const modal=document.querySelector('#t21-f3-b59-session-finished');
+   const el=document.querySelector('#t21-f3-b59-restart');
+   return {visible:!!el&&!!modal&&!modal.hidden&&
+     getComputedStyle(modal).display!=='none'&&
+     getComputedStyle(el).display!=='none',
     disabled:!!el?.disabled,
+    realModalFinished:modal?.dataset.t21B59State==='FINISHED',
     locked:document.pointerLockElement===document.querySelector('#app-canvas')};
   })()`);
-  proof.old=meta(first,origin,{replayVisible:ui.visible&&!ui.disabled});
+  proof.old=meta(first,origin,{
+   replayVisible:ui.visible&&!ui.disabled&&ui.realModalFinished});
   saveB419();
   if(first.matchState!=='TIME_UP'||first.timeRemainingSeconds!==0||
    !proof.old.replayVisible)fail('B419_NO_REAL_FIRST_ENDSCREEN_REPLAY');
@@ -2583,8 +2588,10 @@ async function run(){
   // Record the actual reachable DOM target BEFORE dispatch; persist the
   // real CDP mouse gesture immediately after returning from clickButton.
   proof.replayClickTarget=await evaluate(`(() => {
-   const b=document.querySelector('#t21-f3-b200-replay');
+   const b=document.querySelector('#t21-f3-b59-restart');
    if(!b)return {present:false};
+   // The real modal scrolls and its REPLAY can sit below the fold.
+   b.scrollIntoView({block:'center',behavior:'instant'});
    const rect=b.getBoundingClientRect();
    const x=rect.left+rect.width/2,y=rect.top+rect.height/2;
    const top=document.elementFromPoint(x,y);
@@ -2602,7 +2609,7 @@ async function run(){
      !proof.replayClickTarget?.inViewport||
      !proof.replayClickTarget?.buttonReceivesPointer)
    fail('B422_REAL_REPLAY_CLICK_TARGET_BLOCKED');
-  await clickButton('#t21-f3-b200-replay');
+  await clickButton('#t21-f3-b59-restart');
   proof.clicked=true;
   proof.replayClickDispatched=true;
   saveB419(); // immediately persisted, independent of a new-world boot

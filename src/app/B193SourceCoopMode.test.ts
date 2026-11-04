@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused,
- sourceOriginalCoopCanArmAtReady} from './B193SourceCoopMode';
+ sourceOriginalCoopCanArmAtReady,b423UseRealSourceWorldReplay} from './B193SourceCoopMode';
 describe('B204 native 180s paused user mission arming',()=>{
  const v={enabled:true,paused:true,awaitingPointerRelock:true,
   realPointerPreviouslyLocked:true,matchState:'PLAYING' as const,
@@ -106,5 +106,25 @@ describe('Real A1 co-op READY one-click mission arming',()=>{
   for(const practiceStatus of ['ARMED','RUNNING','CLEAR','TIME_UP','ABORTED'] as const)
    expect(sourceOriginalCoopCanArmAtReady({...fresh,practiceStatus})).toBe(false);
   expect(sourceOriginalCoopCanArmAtReady({...fresh,stopReason:'STOP'})).toBe(false);
+ });
+});
+
+describe('B423 frontmost terminal UI cannot use an in-place source replay',()=>{
+ const fresh=()=>new URLSearchParams('t21Play=preview&t21QaDrive=source&'+
+  't21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound');
+ it('requires true full-round co-op TIME_UP, never mid-game reset',()=>{
+  expect(b423UseRealSourceWorldReplay(fresh(),'TIME_UP')).toBe(true);
+  expect(b423UseRealSourceWorldReplay(fresh(),'PLAYING')).toBe(false);
+  expect(b423UseRealSourceWorldReplay(fresh(),'STAGING')).toBe(false);
+ });
+ it('does not route unrelated combat or legacy modes through co-op',()=>{
+  for(const [k,val] of [
+   ['t21QaDrive','other'],['t21Play','other'],
+   ['t21W10B193','no'],['t21W10B203','practice'],
+   ['t21W10B192','humanCombat']
+  ]){
+   const p=fresh();p.set(k,val);
+   expect(b423UseRealSourceWorldReplay(p,'TIME_UP')).toBe(false);
+  }
  });
 });

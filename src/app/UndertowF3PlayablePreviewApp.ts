@@ -46,7 +46,8 @@ import {PaintCoordinator} from '../ink/PaintCoordinator';
 import {isB152ExactAllySupportInkImpact}
  from './W10B152AllyPaintProvenance';
 import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePaused,
- sourceOriginalCoopCanArmAtReady} from './B193SourceCoopMode';
+ sourceOriginalCoopCanArmAtReady,b423UseRealSourceWorldReplay}
+ from './B193SourceCoopMode';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
 import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
@@ -1823,6 +1824,16 @@ export class UndertowF3PlayablePreviewApp{
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
    ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
+  if(b423UseRealSourceWorldReplay(
+    new URLSearchParams(window.location.search),'TIME_UP')){
+   const restart=this.b58SessionBoard.finish
+    .querySelector<HTMLButtonElement>('#t21-f3-b59-restart');
+   if(restart){
+    restart.textContent='REPLAY REAL A1 CO-OP · NEW SOURCE WORLD';
+    restart.dataset.t21B423FreshSourceWorld='true';
+    restart.dataset.officialWinner='NONE';
+   }
+  }
   if(this.b384Circuit){
    const text='REPLAY SAME WEAPON · NEW ORIGINAL-SOURCE 180s WORLD';
    const a=this.b58SessionBoard.root.querySelector<HTMLButtonElement>(
@@ -4262,6 +4273,15 @@ export class UndertowF3PlayablePreviewApp{
   return true;
  }
  private restart(){
+  // B423: the actual frontmost B59 SESSION COMPLETE restart may only
+  // navigate to a NEW SOURCE world. Never reset current CPU/ink/tick.
+  if(b423UseRealSourceWorldReplay(
+    new URLSearchParams(window.location.search),this.matchState)){
+   if(!this.requestFreshSourceCoopReplay())
+    this.b25RunProgress.textContent=
+     'REPLAY BLOCKED · UNLOCK MOUSE / CLOSE GALLERY OR SURVEY';
+   return; // no in-place mutation even when navigation is denied
+  }
   // Completed B384 sessions replay in a NEW Rapier/Recast/WebGL world.
   // Preserve only the existing user-selected human weapon, no game state.
   if(this.b384Circuit&&this.matchState==='TIME_UP'){

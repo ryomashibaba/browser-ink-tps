@@ -4,6 +4,14 @@ export function sourceCoopEligible(p:URLSearchParams):boolean{
    p.get('t21W10B193')==='allyCoop'&&
    p.get('t21W10B192')!=='humanCombat';
 }
+/** B423 actual 180-second source co-op replay must navigate to a
+ * NEW browser-native Rapier/Recast world, not locally reset actors. */
+export function b423UseRealSourceWorldReplay(
+ p:URLSearchParams,phase:'STAGING'|'PLAYING'|'TIME_UP'
+):boolean{
+ return phase==='TIME_UP'&&
+  p.get('t21W10B203')==='fullRound'&&sourceCoopEligible(p);
+}
 /** Full browser restart, no switching collision or opponent AI mid-tick. */
 export function sourceCoopNavigationUrl(current:string,enable:boolean):string{
  const old=new URL(current),dest=new URL(old.pathname,old.origin);
