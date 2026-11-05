@@ -32,3 +32,18 @@ F1〜F5 / Fast Track、SOURCE **25 Rapier solids /17 PaintSurfaces /26 NavLinks 
 - 新たな同一ゲームSHA `d6f7f96b14d9ff9522edd8ec07849552d0b29595` の既存 B441 [#42110441874](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42110441874) と B162/B200 [#42110442130](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42110442130) を実行。**本正本追記時点では最終結論を未確認とする**。完了後の同SHAの結果のみ採用し、過去のRAWから類推しない。
 - F4についてNintendo公式Ver 7.2.0注記はマテガイ放水路の**全モードでの地形変更**を裏付けるが、FloorLine00個別Faceの公式衝突・KCC体支持・同版Turf物理を認証しない。 https://www.nintendo.com/en-gb/Support/Nintendo-Switch/Game-Updates/Splatoon-3-Update-History-2358763.html 既存`T21_F4_TEMPLE_SOURCE_VERSION_AND_COLLISION_AUTHORITY_JA.md` のHOLDを維持。
 - 今後、R実機ゲートが再び失敗した場合はKeyR受信の有無・DOM判定・ブラウザ新世界遷移を分けて原因修正。**同条件の無意味な長時間再実行を増やさず**、止まれば実プレイ本線の完成に貢献する別機能へ。原作25/17/26/0、自然対岸0/12、正式4v4・公式得点・公式勝敗・ART・Pages公開HOLD不変。main、T19C/T20、正式QA、原本、Draft PR #5未変更、追加課金0、Work不使用。
+
+## 2026-11-06 06時台：真正KeyR原因確定／重い再試行停止／F3画面改善
+### Rキー未認証の正確な根拠
+- [#42110442130](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42110442130) `d6f7f96b`：TypeScript/Vitest/buildはPASS、B471 Cキー本物Goal要求1、同一ChromeでA1協力CLEAR（Human 808 / A1 34、接地35.74m）。その後、ESCでpause・mouse unlock、`document.hasFocus=true`、practice CLEAR、再戦ボタン有効、SOURCE 25/17/26/0を確認。しかし**捕捉された真正RキーDOM keydown=0件**、canvas read-only `t21B200RealKeyRDecision=NOT_RECEIVED`。新世界なし、workflow FAILURE。**ゲームのHotkey受理拒否より前のChrome CDP入力配送不成立**と限定評価。
+- [#42111873226](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42111873226) `c4497f80`：既存B201/B202重複早期Pauseを隔離し、本物CキーGoal1、協力CLEAR Human 808 / A1 36（実接地35.76m）を再現。キーボード前後のfocus=document BODY/true、pointerlock false、Chrome R DOM event0。さらに本物CDPマウスで**リプレイボタンではなく、何もしない既存HUDテキスト**を押してから`keyDown`+text指定の実Rキー入力を試したが、依然**R DOM event 0、ゲーム判定 NOT_RECEIVED、新世界未成立**。workflow FAILURE。**この環境では実RキーショートカットPASSを認定しない**。
+- 2度目の直接試行で原因の系統がキー入力配送だと判明したため、同条件の長時間CIを再実行しない。実Rキーを偽JS `dispatchEvent` で代替したり、試験からRチェックを削除してB200全面成功と報告しない。既存真正マウス・ミッションカードの新世界再戦は別SHAの限定成功として継承し、Rと区別する。
+### F3ゲーム画面の改善（研究・正式ARTではない）
+- 継続実装 `b6737044`→`88d83858` を研究branchへ**非force保存**。真正A1のread-only状態表示がクロスヘアに重なっていたため、照準から離れた左下へ配置。B471の`actualOriginalArrivals`実カウンタをread-only DOM datasetに追加（偽到着認定なし）。
+- 本物SOURCEミッションCLEARの大きな表示は**真正60Hzゲーム時刻の600 native tickのみ**。PAUSE中は時計も通知寿命も停止し、結果/再戦ボタンは残す。従来の180秒の残り約166秒まで中央の大きな通知が残る問題を改善。原作3D形状、当たり判定、Recast/Rapier、CPU/HP/Ink/Score、時計の進行自体には変更なし。
+- `src/app/UndertowF3PlayableHud.ts` では、**Rが未認証のため操作案内で成功と偽らず**、実A1協力CLEAR後に実ボタンが有効な場合のみ「ESC THEN REPLAY BUTTON」と案内するよう変更。通常SOURCEは旧R AFTER TIME UPを維持。既存テストへ分岐確認追加。
+- 本UI HEAD `88d83858671d4d6938dc8d48ff364996d0db09b7` の真正B441 [#42113141267](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42113141267) を起動。**本正本追記時点で最終結論未確認**。旧B441 `d6f7f96b` [#42110441874](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42110441874) はSUCCESSだが、UI新HEADの実機ART認定に流用しない。
+### 完成へ向けた保留・優先度
+- 7.2.0原作全モード改修の公式事実は既知だが、元FloorLine00の同版ゲーム衝突フラグ／CPU半径0.30m全身支持・自然対岸は**0/12未認証**。外部の正当な原作権限が得られない間はF4のみSOURCE_AUTHORITY HOLD。架空床/橋/NavLink/ワープ/敵/得点を追加して全4v4合格にはしない。
+- 次の重要作業は**真の原作SOURCE内のプレイ戦闘ループ・実CPU自然接近を阻害する原作根拠の精査**と、許可済み部位でのゲーム体験改善。Rホットキーは後日独立の真人間入力・対応Chrome証拠が得られた場合のみ再監査。QA番号・長時間ジョブを増やすだけの作業を避ける。
+- F1→F5 / Fast Track保護、原作25 solids/17 Paint/26 Nav/0 Scoreable、0/12、公式得点・勝敗NONE、正式4v4/ART/Pages/PR merge HOLD。main、T19C/T20、正式QA、非公開原本、Draft PR #5に変更なし。追加の有料API・Work未使用、ユーザー手動操作0。
