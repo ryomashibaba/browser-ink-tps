@@ -59,7 +59,8 @@ describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
 
 
 describe('B467 only rechecks real B2/B4 after native arrival on existing B low floor',()=>{
- const realFoot={id:'B2',nativeTick:1244,firstDeniedNativeTick:1066,
+ const realFoot:Parameters<typeof b467MayRetryOriginalBFrontFromRealFoot>[1]=
+  {id:'B2',nativeTick:1244,firstDeniedNativeTick:1066,
   lastRetryNativeTick:null,actualOriginalSolidId:
    'UndertowT21D:right-low-team-b',
   foot:[-6.387130260467529,4.676661491394043,-48.87943649291992] as const,
