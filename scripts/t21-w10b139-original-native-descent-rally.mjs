@@ -3349,14 +3349,41 @@ async function run(){
      !missionCard.label?.includes('REPLAY REAL A1 CO-OP'))
    fail('B200_MISSION_CARD_REPLAY_UNAVAILABLE');
   proof.cardReplayAvailable=true;
+  // Browser Escape may have moved keyboard focus away from the CDP tab.
+  // Restore the real page to the foreground, not actor/world state.
+  // Record real DOM/native eligibility BEFORE and AFTER actual KeyR.
+  await cmd('Page.bringToFront');
+  const keyRWitness=()=>evaluate(`(() => {
+   const c=document.querySelector('#app-canvas');
+   const b=document.querySelector('#t21-f3-b25-start');
+   const n=window.__t21F3?.snapshot();
+   return {origin:performance.timeOrigin,url:location.search,
+    matchState:n?.matchState,practiceStatus:n?.b25SourcePaintRun?.status,
+    paused:n?.paused,stopReason:n?.stopReason,
+    pointerLocked:document.pointerLockElement===c,
+    cardReplayText:b?.textContent,cardReplayDisabled:b?.disabled,
+    source:[n?.originalSourceSolids,n?.originalPaintSurfaces,
+     n?.originalSourceNavigationLinks,n?.sourceScoreablePromotions]};
+  })()`);
+  proof.realKeyRPreflight=await keyRWitness();
+  console.log('B200_REAL_KEY_R_BEFORE',JSON.stringify(proof.realKeyRPreflight));
+  persist();
+  if(proof.realKeyRPreflight.matchState!=='PLAYING'||
+     proof.realKeyRPreflight.practiceStatus!=='CLEAR'||
+     proof.realKeyRPreflight.pointerLocked||
+     proof.realKeyRPreflight.cardReplayDisabled||
+     proof.realKeyRPreflight.source?.join(',')!=='25,17,26,0')
+   fail('B200_REAL_CLEAR_KEYBOARD_PREFLIGHT_HOLD');
   // Previously independent B200 RAW already proved a real card click.
-  // Here the genuinely CLEARED first world uses the real KeyR while
-  // POINTER UNLOCKED, never in the fresh STAGING world after a HUD click.
+  // This trial sends the real R only from genuinely CLEARED PLAYING.
   const original1=await evaluate('performance.timeOrigin');
   await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'r',code:'KeyR',
    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
   await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',
    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
+  proof.realKeyRAfter=await keyRWitness();
+  console.log('B200_REAL_KEY_R_AFTER',JSON.stringify(proof.realKeyRAfter));
+  persist();
   proof.keyboardReplay=await verifyNewWorld(original1,'REAL_CDP_KEY_R_AFTER_COOP_CLEAR');
   persist();
   // A second full genuine session, not a screenshot/QA-state substitution.
