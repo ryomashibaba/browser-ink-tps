@@ -622,6 +622,10 @@ async function main(){
     afterPatrol?.b446LivePhysicalFootDryRouteProbes,
    b467RealB2B4LateNativeFootGoalEvidence:
     afterPatrol?.b467RealLateFoot,
+   // B470: serialize live gameplay patrol facts, not synthetic targets.
+   // These are ownerGrid-ranked, real native reauthorizations only.
+   b470RealSameSideInkCoverage:
+    afterPatrol?.b470NativeLocalCoverage,
    b448A3RealEvidence:{
     enabled:afterPatrol?.b448A3ResearchEnabled,
     actualOriginalGoalsAuthorized:
