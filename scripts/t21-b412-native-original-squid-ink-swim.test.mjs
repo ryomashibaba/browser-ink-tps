@@ -32,6 +32,7 @@ function witness(){
   originalFoot:'UndertowT21D:right-low-team-a',target:[11,4.5,47],
   initial:{tick:90,body:p,mode:'HUMAN',ink:'NEUTRAL',humanShots:50,cpuRejoined:7},
   actualSqModeTick:95,swimObserved:true,legs,
+  outboundForwardWDelta:[q[0]-p[0],q[2]-p[2]],
   returnForwardWDelta:[q[0]-p[0],q[2]-p[2]],
   totalRealKccMeters:1.4,
   final:{tick:125,body:t,mode:'HUMAN',locomotion:'HUMAN',
@@ -138,5 +139,26 @@ test('B414 RAW return reaches a true 0.85m CDP stop window without loosening the
  // Independent post-return SOURCE audit still requires netReturnMeters <=0.95.
  const bad=witness();bad.final.netReturnMeters=1.1437;
  assert.throws(()=>b412AuditNativeActualOriginalInkSwim(bad,b410,b411),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
+});
+
+test('RAW 13377715385: real W points AWAY from genuine B410 SOURCE paint, so choose D',()=>{
+ const start=[11.856943130493164,5.394997596740723,46.09151840209961];
+ const firstW=[12.415283203125,5.395761013031006,45.786407470703125];
+ const originalPaint=[13.438099288987395,4.502,50.280006688080206];
+ const delta=[firstW[0]-start[0],firstW[2]-start[2]];
+ assert.equal(b412NativeReturnSteerKey(firstW,originalPaint,delta),'KeyD');
+ assert.ok(Math.hypot(originalPaint[0]-firstW[0],originalPaint[2]-firstW[2])>
+  Math.hypot(originalPaint[0]-start[0],originalPaint[2]-start[2]));
+});
+test('B412 audit refuses outbound input contradicting actual native W calibration',()=>{
+ const w=witness();
+ assert.equal(b412AuditNativeActualOriginalInkSwim(w,b410,b411).originalScoreable,0);
+ w.legs[1].code='KeyD';
+ assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
+ w.legs[1].code='KeyW';
+ w.outboundForwardWDelta=[1,0];
+ assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
   /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
 });

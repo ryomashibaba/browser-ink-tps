@@ -160,16 +160,35 @@ export async function b412NativeSquidOwnInkRound({
    'ACTUAL_NATIVE_SQUID_COLLIDER_MODE');
   evidence.actualSqModeTick=n.tick;
   await record('REAL_RAPIER_SQUID_COLLIDER');
-  // Move toward the REAL already-painted original ownerGrid target from
-  // the successful B410 120-second shot (4-5m away, same original floor).
-  // Short native pulses and strict foot support, no arbitrary destination.
-  for(let i=0;i<10;i++){
+  // Actual B413 aim can face AWAY from the B410 previously painted cell.
+  // RAW artifact 13377715385: five genuine W legs moved >5m in the
+  // opposite direction, while every original Rapier floor remained safe.
+  // Calibrate real flat-forward from a native W KCC leg in THIS world.
+  // Then use real WASD to approach only the pre-certified SOURCE cell.
+  const calibration=await nativeLeg('KeyW','TOWARD_REAL_120S_PAINT');
+  const actualW=[
+   calibration.to[0]-calibration.from[0],
+   calibration.to[2]-calibration.from[2]
+  ];
+  need(Math.hypot(...actualW)>.15,
+   'REAL_ORIGINAL_FORWARD_CALIBRATION_REQUIRED');
+  evidence.outboundForwardWDelta=actualW;
+  await record('REAL_SOURCE_FORWARD_CALIBRATED_FOR_PAINT_TARGET');
+  for(let i=1;i<10;i++){
    const now=await frame();
    if(evidence.swimObserved&&evidence.legs.some(x=>x.planarMeters>.15))
     break;
-   if(planar(now.player.position,initialPos)>5.0)
+   if(planar(now.player.position,initialPos)>5.0){
+    evidence.hold={stage:'PAINT_TARGET_APPROACH_SOURCE_PERIMETER',
+     body:now.player.position,original:initialPos,target,
+     actualDistanceToTargetMeters:planar(now.player.position,target),
+     noActorRelocations:true};
+    await record('HOLD_ORIGINAL_PAINT_TARGET_REACHABILITY');
     fail('TRUE_ORIGINAL_SQUID_NO_SAFE_EXTENDED_MOVE');
-   await nativeLeg('KeyW','TOWARD_REAL_120S_PAINT');
+   }
+   const direction=b412NativeReturnSteerKey(
+    now.player.position,target,actualW);
+   await nativeLeg(direction,'TOWARD_REAL_120S_PAINT');
   }
   need(evidence.swimObserved,
    'REAL_OWN_PAINT_SWIM_GROUND_NOT_OBSERVED');
@@ -269,10 +288,23 @@ export function b412AuditNativeActualOriginalInkSwim(v,b410,b411){
   Array.isArray(v.legs)&&v.legs.length>=2&&v.legs.length<=22&&
   Array.isArray(v.returnForwardWDelta)&&
   v.returnForwardWDelta.length===2&&
-  v.returnForwardWDelta.every(Number.isFinite),
+  v.returnForwardWDelta.every(Number.isFinite)&&
+  Array.isArray(v.outboundForwardWDelta)&&
+  v.outboundForwardWDelta.length===2&&
+  v.outboundForwardWDelta.every(Number.isFinite),
   'GENUINE_NATIVE_PLAYER_SQUID_SOURCE_SCOPE');
  const verifiedW=v.legs.filter(x=>
-  x.direction==='TOWARD_REAL_120S_PAINT').at(-1);
+  x.direction==='TOWARD_REAL_120S_PAINT'&&x.code==='KeyW').at(-1);
+ const calibration=v.legs[0];
+ need(calibration?.direction==='TOWARD_REAL_120S_PAINT'&&
+  calibration.code==='KeyW'&&is3(calibration.from)&&
+  is3(calibration.to)&&
+  Math.abs(calibration.to[0]-calibration.from[0]-
+   v.outboundForwardWDelta[0])<.0001&&
+  Math.abs(calibration.to[2]-calibration.from[2]-
+   v.outboundForwardWDelta[1])<.0001&&
+  Math.hypot(...v.outboundForwardWDelta)>.15,
+  'REAL_SOURCE_OUTBOUND_FORWARD_CALIBRATION');
  need(verifiedW&&is3(verifiedW.from)&&is3(verifiedW.to)&&
   Math.abs(verifiedW.to[0]-verifiedW.from[0]-
    v.returnForwardWDelta[0])<.0001&&
@@ -285,7 +317,12 @@ export function b412AuditNativeActualOriginalInkSwim(v,b410,b411){
   const outgoing=leg.direction==='TOWARD_REAL_120S_PAINT';
   const returnLeg=leg.direction==='RETURN_TO_ACTUAL_UPPER_BODY';
   const steerLeg=leg.direction==='REAL_NATIVE_RETURN_STEER';
-  need((outgoing&&leg.code==='KeyW'||
+  const trueOutbound=outgoing&&(
+   leg===v.legs[0]?leg.code==='KeyW':
+    ['KeyW','KeyS','KeyA','KeyD'].includes(leg.code)&&
+    b412NativeReturnSteerKey(
+     leg.from,v.target,v.outboundForwardWDelta)===leg.code);
+  need((trueOutbound||
    returnLeg&&leg.code==='KeyS'||
    steerLeg&&['KeyW','KeyA','KeyD'].includes(leg.code))&&
    (outgoing||b412NativeReturnSteerKey(

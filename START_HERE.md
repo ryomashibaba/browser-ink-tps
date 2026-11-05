@@ -1,3 +1,5 @@
+> **2026-11-05 F3 実OWNインクへのSquid移動方向修正（新CI待ち）**：B413 run [#41941309489](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41941309489) のRAW Artifact #13377715385でKeyW連続5回が真の原作B410塗装セルから離れ、SQUID_DRYのまま安全5m上限を超えたことを確認。同じSOURCE世界の実W KCCから向きを測り、実WASDで真の既塗装セルに進む。元Rapier支持・7CPU・インク・Actor・時計・安全範囲を保持、実ブラウザ修正PASSはHOLD。[詳細](docs/qa/T21_F3_NATIVE_SQUID_REAL_PAINT_STEERING_20261105_JA.md)。
+
 > **2026-11-05 SOURCE 3モード入口の真正画像に基づく配置改良（新HEAD実Chromium結果待ち）**：前HEADのB441画像を直接開き、1600×900でA1協力と敵CPU研究のボタンが折り返し画面外に切れた事実を確認。見出し・カード間隔を調整し、同じB441真正Chromiumで3ボタンの実位置を検証する。CPU/Actor/時計/経路/原作25/17/26/0/得点0・公開HOLD維持。[詳細](docs/qa/T21_F3_SOURCE_PLAY_PORTAL_20261105_JA.md)。
 
 > **2026-11-05 F3 SOURCE実ゲームのモード選択（新CI確認待ち）**：既存B384 12武器180秒SOURCE回路・B193味方A1協力ALLY_SYNC・B207敵CPU研究を独立した3択入口へ統合。ゲームのREADY/PAUSED・本物TIME_UP後からモード選択へ戻る導線を追加。SOURCE25/17/26/0・0/12敵陣HOLD・正式得点0/勝者NONEを維持、T19C/T20/main/正式QA/PR#5/Pages保護。[詳細](docs/qa/T21_F3_SOURCE_PLAY_PORTAL_20261105_JA.md)。
