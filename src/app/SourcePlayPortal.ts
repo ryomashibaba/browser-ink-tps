@@ -75,30 +75,46 @@ export function sourcePlayFrontlineResearchUrl(portalUrl:string):string{
 }
 
 
-/** SOURCE-only 180s player R: never invoke the legacy in-world reset.
- * The visible real TIME_UP footer is the authority. This helper only
- * selects an existing real fresh-world action; it never edits game state. */
-export type SourceReplayHotkeyAction='UNRELATED'|'BLOCK'|
+/** Only a user-visible, genuinely finished SOURCE session can replay.
+ * The existing B384 / A1 routes already create a fresh physical world.
+ * SOURCE combat (incl. opt-in original frontline) must reload the page,
+ * never call the legacy in-world CPU/paint reset before navigation. */
+export type SourceFinishedReplayAction='BLOCK'|
  'CLICK_REAL_REPLAY'|'RELOAD_NATIVE_SOURCE_WORLD';
-export function sourceReplayHotkeyAction(input:{
- href:string;code:string;repeat:boolean;modified:boolean;editing:boolean;
- matchState?:string;stopped:boolean;pointerLocked:boolean;
+export interface SourceFinishedReplayEvidence {
+ href:string;matchState?:string;stopped:boolean;pointerLocked:boolean;
  originalSolids?:number;originalPaint?:number;originalLinks?:number;
  scoreable?:number;finishedVisible:boolean;canClick:boolean;
-}):SourceReplayHotkeyAction{
- if(input.code!=='KeyR'||sourcePlayPortalReturnUrl(input.href)===null)
-  return 'UNRELATED';
- if(input.repeat||input.modified||input.editing||
+}
+export function sourceFinishedReplayAction(
+ input:SourceFinishedReplayEvidence
+):SourceFinishedReplayAction{
+ if(sourcePlayPortalReturnUrl(input.href)===null||
     input.matchState!=='TIME_UP'||input.stopped||input.pointerLocked||
     input.originalSolids!==25||input.originalPaint!==17||
     input.originalLinks!==26||input.scoreable!==0||
     !input.finishedVisible||!input.canClick)return 'BLOCK';
- // The canonical A1/B384 paths already use their own fresh-world
- // button logic. Other SOURCE combat sessions also require a NEW
- // PlayCanvas/Rapier world, never the local restart/reset() path.
  const q=new URL(input.href).searchParams;
- if(q.has('production')||q.has('scoreable')||q.has('t21QaInput'))
-  return 'BLOCK';
- return sourceCoopEligible(q)||q.get('t21W10B384')==='loadoutCircuit'?
-  'CLICK_REAL_REPLAY':'RELOAD_NATIVE_SOURCE_WORLD';
+ if(q.has('production')||q.has('scoreable')||q.has('t21QaInput')||
+    q.get('t21W10B183')!=='firstDropPlay')return 'BLOCK';
+ const coop=sourceCoopEligible(q);
+ const circuit=q.get('t21W10B384')==='loadoutCircuit'&&
+    q.get('t21W10B192')==='humanCombat'&&!q.has('t21W10B193');
+ const combat=q.get('t21W10B192')==='humanCombat'&&
+    !q.has('t21W10B193')&&!q.has('t21W10B384');
+ if(coop||circuit)return 'CLICK_REAL_REPLAY';
+ return combat?'RELOAD_NATIVE_SOURCE_WORLD':'BLOCK';
+}
+/** Real keyboard R shares the same finished-session gate as clicking the
+ * real replay button. Never propagate R to legacy in-world reset(). */
+export type SourceReplayHotkeyAction='UNRELATED'|SourceFinishedReplayAction;
+export function sourceReplayHotkeyAction(
+ input:SourceFinishedReplayEvidence&{
+  code:string;repeat:boolean;modified:boolean;editing:boolean;
+ }
+):SourceReplayHotkeyAction{
+ if(input.code!=='KeyR'||sourcePlayPortalReturnUrl(input.href)===null)
+  return 'UNRELATED';
+ if(input.repeat||input.modified||input.editing)return 'BLOCK';
+ return sourceFinishedReplayAction(input);
 }

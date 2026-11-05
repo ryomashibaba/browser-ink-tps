@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {sourcePlayPortalDestinations,sourcePlayPortalReturnUrl,
- sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction}
+ sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
+ sourceFinishedReplayAction}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -143,5 +144,61 @@ describe('genuine SOURCE 180s R-key replay never resets the live native world',(
   expect(sourceReplayHotkeyAction({...q,href:'https://example.org/'}))
    .toBe('UNRELATED');
   expect(sourceReplayHotkeyAction({...q,code:'KeyW'})).toBe('UNRELATED');
+ });
+});
+
+
+describe('SOURCE real TIME_UP replay buttons never call legacy in-world reset',()=>{
+ const portal='https://example.org/browser-ink-tps/play-source.html';
+ const d=sourcePlayPortalDestinations(portal);
+ const genuine=(href:string)=>({
+  href,matchState:'TIME_UP',stopped:false,pointerLocked:false,
+  originalSolids:25,originalPaint:17,originalLinks:26,
+  scoreable:0,finishedVisible:true,canClick:true
+ });
+ it('keeps original genuine A1/weapon replay and reloads genuine enemy mode',()=>{
+  expect(sourceFinishedReplayAction(genuine(d.coop)))
+   .toBe('CLICK_REAL_REPLAY');
+  expect(sourceFinishedReplayAction(genuine(d.circuit)))
+   .toBe('CLICK_REAL_REPLAY');
+  expect(sourceFinishedReplayAction(genuine(d.combat)))
+   .toBe('RELOAD_NATIVE_SOURCE_WORLD');
+  expect(sourceFinishedReplayAction(genuine(
+   sourcePlayFrontlineResearchUrl(portal))))
+   .toBe('RELOAD_NATIVE_SOURCE_WORLD');
+ });
+ it('fails closed on live or invalid game evidence, never resets CPU/paint',()=>{
+  for(const url of Object.values(d)){
+   const v=genuine(url);
+   for(const state of ['STAGING','PLAYING']){
+    expect(sourceFinishedReplayAction({...v,matchState:state}))
+     .toBe('BLOCK');
+   }
+   expect(sourceFinishedReplayAction({...v,stopped:true})).toBe('BLOCK');
+   expect(sourceFinishedReplayAction({...v,pointerLocked:true})).toBe('BLOCK');
+   expect(sourceFinishedReplayAction({...v,scoreable:1})).toBe('BLOCK');
+   expect(sourceFinishedReplayAction({...v,originalLinks:25}))
+    .toBe('BLOCK');
+   expect(sourceFinishedReplayAction({...v,finishedVisible:false}))
+    .toBe('BLOCK');
+   expect(sourceFinishedReplayAction({...v,canClick:false}))
+    .toBe('BLOCK');
+   expect(sourceFinishedReplayAction({...v,href:v.href+'&t21QaInput=1'}))
+    .toBe('BLOCK');
+   expect(sourceFinishedReplayAction({...v,href:v.href+'&production=1'}))
+    .toBe('BLOCK');
+  }
+ });
+ it('does not permit unrelated preview or malformed enemy modes',()=>{
+  const v=genuine(d.combat);
+  expect(sourceFinishedReplayAction({...v,href:'https://example.org/'}))
+   .toBe('BLOCK');
+  expect(sourceFinishedReplayAction({...v,href:v.href.replace(
+   't21W10B183=firstDropPlay','t21W10B183=unknown')}))
+   .toBe('BLOCK');
+  expect(sourceFinishedReplayAction({...v,href:v.href+'&t21W10B384=unknown'}))
+   .toBe('BLOCK');
+  expect(sourceFinishedReplayAction({...v,href:v.href+'&t21W10B193=allyCoop'}))
+   .toBe('BLOCK');
  });
 });

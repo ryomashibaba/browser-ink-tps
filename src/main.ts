@@ -44,9 +44,9 @@ async function boot(): Promise<void> {
     // Capture before the legacy bubble listener without modifying
     // native controls, player/CPU state, the clock, or replay thresholds.
     if(q.get('t21QaDrive')==='source'&&q.get('t21W10B203')==='fullRound'){
-      const {sourceReplayHotkeyAction}=await import('./app/SourcePlayPortal');
-      window.addEventListener('keydown',ev=>{
-        if(ev.code!=='KeyR')return;
+      const {sourceReplayHotkeyAction,sourceFinishedReplayAction}=
+        await import('./app/SourcePlayPortal');
+      const liveReplay=()=>{
         const game=(window as unknown as {__t21F3?:{
           snapshot:()=>{matchState?:string;stopReason?:string|null;
             originalSourceSolids?:number;originalPaintSurfaces?:number;
@@ -58,11 +58,8 @@ async function boot(): Promise<void> {
           '#t21-f3-b59-session-finished');
         const replay=finish?.querySelector<HTMLButtonElement>(
           '#t21-f3-b59-restart');
-        const editable=ev.target instanceof HTMLElement&&Boolean(
-          ev.target.closest('input,textarea,select,[contenteditable="true"]'));
-        const action=sourceReplayHotkeyAction({
-          href:window.location.href,code:ev.code,repeat:ev.repeat,
-          modified:ev.ctrlKey||ev.altKey||ev.metaKey,editing:editable,
+        return {replay,evidence:{
+          href:window.location.href,
           matchState:state?.matchState,stopped:!!state?.stopReason,
           pointerLocked:document.pointerLockElement!==null,
           originalSolids:state?.originalSourceSolids,
@@ -73,6 +70,17 @@ async function boot(): Promise<void> {
             finish.hidden===false&&finish.style.display!=='none',
           canClick:!!replay&&!replay.hidden&&!replay.disabled&&
             replay.isConnected
+        }};
+      };
+      window.addEventListener('keydown',ev=>{
+        if(ev.code!=='KeyR')return;
+        const editable=ev.target instanceof HTMLElement&&Boolean(
+          ev.target.closest('input,textarea,select,[contenteditable="true"]'));
+        if(editable)return; // R in an actual text field stays text input.
+        const {replay,evidence}=liveReplay();
+        const action=sourceReplayHotkeyAction({
+          ...evidence,code:ev.code,repeat:ev.repeat,
+          modified:ev.ctrlKey||ev.altKey||ev.metaKey,editing:editable
         });
         if(action==='UNRELATED')return;
         ev.stopImmediatePropagation();
@@ -80,6 +88,22 @@ async function boot(): Promise<void> {
         ev.preventDefault();
         if(action==='CLICK_REAL_REPLAY')replay?.click();
         else if(action==='RELOAD_NATIVE_SOURCE_WORLD')
+          window.location.reload();
+      },true);
+      // The visible real TIME_UP button previously reached a legacy
+      // reset() in the opponent research mode. Capture it and perform
+      // a fresh browser/Rapier world reload instead. A1/B384 retain
+      // their existing fresh-world URL and weapon-selection actions.
+      appUiRoot.addEventListener('click',ev=>{
+        if(!(ev.target instanceof Element))return;
+        const button=ev.target.closest<HTMLButtonElement>(
+          '#t21-f3-b59-restart,#t21-f3-b58-restart');
+        if(!button||!appUiRoot.contains(button))return;
+        const action=sourceFinishedReplayAction(liveReplay().evidence);
+        if(action==='CLICK_REAL_REPLAY')return;
+        ev.stopImmediatePropagation();
+        ev.preventDefault();
+        if(action==='RELOAD_NATIVE_SOURCE_WORLD')
           window.location.reload();
       },true);
     }
