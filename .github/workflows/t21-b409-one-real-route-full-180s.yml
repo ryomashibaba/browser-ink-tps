@@ -4,6 +4,7 @@ on:
     branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
     paths:
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - 'scripts/t21-b313-*.mjs'
       - 'scripts/t21-b409-*.mjs'
       - 'scripts/t21-b410-*.mjs'
       - 'scripts/t21-b411-*.mjs'
@@ -61,7 +62,7 @@ jobs:
           node --check scripts/t21-b419-real-full-round-fresh-replay.mjs
           node --check scripts/t21-b430-full-second-source-round.mjs
           node --check scripts/t21-b433-native-opponent-poll-audit.mjs
-          node --test scripts/t21-b433-native-opponent-poll-audit.test.mjs scripts/t21-b430-full-second-source-round.test.mjs scripts/t21-b419-real-full-round-fresh-replay.test.mjs scripts/t21-b414-native-ink-hud-audit.test.mjs scripts/t21-b413-native-source-fire-refill-reshoot.test.mjs scripts/t21-b412-native-original-squid-ink-swim.test.mjs scripts/t21-b411-native-active-round-hud-audit.test.mjs scripts/t21-b410-upper-original-activity-audit.test.mjs scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b327-original-lower-post-clear-shot.test.mjs scripts/t21-b328-genuine-a1-native-approach.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
+          node --test scripts/t21-b313-actual-original-cell-aim.test.mjs scripts/t21-b433-native-opponent-poll-audit.test.mjs scripts/t21-b430-full-second-source-round.test.mjs scripts/t21-b419-real-full-round-fresh-replay.test.mjs scripts/t21-b414-native-ink-hud-audit.test.mjs scripts/t21-b413-native-source-fire-refill-reshoot.test.mjs scripts/t21-b412-native-original-squid-ink-swim.test.mjs scripts/t21-b411-native-active-round-hud-audit.test.mjs scripts/t21-b410-upper-original-activity-audit.test.mjs scripts/t21-b409-original-route-full-native-game-audit.test.mjs scripts/t21-b316-native-human-ramp-walk.test.mjs scripts/t21-b327-original-lower-post-clear-shot.test.mjs scripts/t21-b328-genuine-a1-native-approach.test.mjs scripts/t21-b322-original-ramp-crest.test.mjs scripts/t21-b324-original-upper-floor-continuation.test.mjs scripts/t21-b326-extended-original-upper-floor.test.mjs
           npx vitest run src/app/B193SourceCoopMode.test.ts src/app/B415LiveInkLoop.test.ts src/app/B417SourcePaintedCellView.test.ts src/ai/B420SourceMeleePursuitAuthority.test.ts src/app/B421RealEnemyStandoff.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: One real native high-to-lower-to-ramp-to-upper 180s with 7 CPUs

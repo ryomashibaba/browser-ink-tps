@@ -25,7 +25,11 @@ export function b313ChooseOriginalActiveAim({cells,body,camera,yaw,pitch}){
    safe:planar<=10&&flat>.15&&Math.abs(mouseX)<=720&&
     Math.abs(mouseY)<=440&&actualCDP[0]>=10&&actualCDP[0]<=1590&&
     actualCDP[1]>=10&&actualCDP[1]<=890&&
-    targetPitch>=-78&&targetPitch<=12};
+    // ThirdPersonCamera physically clamps pitch to [-55,+28].
+    // RAW B413 #13394750575: -60.9845 was wrongly marked safe,
+    // but the genuine Chromium camera stopped at -55 degrees.
+    // B312 may instead choose native B337 same-original-grid cells.
+    targetPitch>=-55&&targetPitch<=28};
  });
  const sorted=rows.filter(x=>x.safe).sort((a,b)=>
   Math.abs(a.mouseX)-Math.abs(b.mouseX)||a.planar-b.planar);
