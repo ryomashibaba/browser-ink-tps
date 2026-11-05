@@ -1,7 +1,7 @@
 name: T21 W10-B162 real original A1 cooperative practice
 on:
   push:
-    branches: [dev/t21-f4e103w-qa-infra]
+    branches: [dev/t21-f4e103w-qa-infra, research/t21-integrated-a1-c-patrol-four-mode-20261105]
     paths:
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
       - 'scripts/t21-b330-replay-armed-resume-guard.mjs'
@@ -43,7 +43,7 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
       - name: Prevent forged ally ink and protect previous source run behavior
-        run: npx vitest run src/app/B161OriginalAllySyncPractice.test.ts src/app/B193SourceCoopMode.test.ts src/app/B195NativeCoopMissionView.test.ts src/app/B209OriginalRampEdge.test.ts src/app/B169OriginalAllyAdvanceGuard.test.ts src/app/B199ActualAllyCollisionRelief.test.ts src/app/B197CoopReplayDecision.test.ts src/app/B165OriginalAllyPracticeProgress.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts src/app/B160SourceCpuActivityView.test.ts
+        run: npx vitest run src/app/B441OriginalSourceFrontline.test.ts src/app/SourcePlayPortal.test.ts src/app/B161OriginalAllySyncPractice.test.ts src/app/B193SourceCoopMode.test.ts src/app/B195NativeCoopMissionView.test.ts src/app/B209OriginalRampEdge.test.ts src/app/B169OriginalAllyAdvanceGuard.test.ts src/app/B199ActualAllyCollisionRelief.test.ts src/app/B197CoopReplayDecision.test.ts src/app/B165OriginalAllyPracticeProgress.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts src/app/B160SourceCpuActivityView.test.ts
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
       - run: node --test scripts/t21-w10b139-original-native-descent-rally.test.mjs scripts/t21-b330-replay-armed-resume-guard.test.mjs
       - name: Real player A1 co-op button then 60Hz authentic native challenge
@@ -51,13 +51,14 @@ jobs:
           T21_B139_VARIANT: ALLY_RALLY
           T21_B162_REAL_ALLY_SYNC: '1'
           T21_B194_REAL_PLAYER_BUTTON: '1'
-          T21_B200_REAL_REPLAY: '1'
+          T21_B200_REAL_REPLAY: '0'
           T21_B201_REAL_PAUSE_RESUME: '1'
           T21_B202_REAL_CONTROLS: '1'
           T21_B203_REAL_FULL_ROUND: '1'
           # First genuine B162 trial starts A1 mission at READY; second
           # replay retains B205/B330 native PAUSE/RESUME coverage.
           T21_B162_READY_PREARM: '1'
+          T21_B471_REAL_PLAYER_ORDER: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b162
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Preserve real A1 and human attempted trial whether CLEAR or HOLD
