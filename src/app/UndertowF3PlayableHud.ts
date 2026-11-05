@@ -214,6 +214,25 @@ export function b290SourcePlayerHudPhase(x:{
   return 'PAUSED · SOURCE REJOIN';
  return x.formattedState;
 }
+/** B465 source PLAYER controls must match the real replay gate.
+ * A full SOURCE 180s match cannot reset CPUs, ink or native clock with R.
+ * This never grants a new action or official result. */
+export function b465SourceRoundKeyHelp(v:{
+ sourceFullRound:boolean;matchState:string;
+ stopped:boolean;paused:boolean;
+}):string{
+ const base='M RADAR · N SOUND · P PAUSE';
+ if(!v.sourceFullRound)return base+' · R RESTART';
+ if(v.stopped)return base+' · SAFE STOP (R DISABLED)';
+ if(v.matchState==='TIME_UP')
+  return 'R REPLAY NEW SOURCE WORLD · NO OFFICIAL WINNER';
+ if(v.matchState==='STAGING')
+  return base+' · R AFTER TIME UP';
+ if(v.matchState==='PLAYING')
+  return base+' · R AFTER TIME UP';
+ return base+' · R DISABLED';
+}
+
 /** B338: only native-authoritative read-only source round guidance. */
 export function b338SourceRoundGuide(x:{
  playerView:boolean;matchState:string;
@@ -420,6 +439,22 @@ export function createF3PlayableHud(ui:HTMLElement){
  const cpu=select('t21-f3-hud-cpu');
  const practice=select('t21-f3-hud-practice');
  const b338Guide=select('t21-f3-b338-source-guide');
+ const replayKeyHelp=select('t21-f3-player-key-help');
+ // Use the actual SOURCE full-round opt-in, never the QA/legacy preview.
+ const replayQ=new URLSearchParams(window.location.search);
+ const nativeFullSourceRound=
+  replayQ.get('t21Play')==='preview'&&
+  replayQ.get('t21QaDrive')==='source'&&
+  replayQ.get('t21W10B203')==='fullRound'&&
+  replayQ.get('t21QaInput')!=='deterministic';
+ const refreshReplayKeyHelp=(phase:string,stopped:boolean,paused:boolean)=>{
+  const message=b465SourceRoundKeyHelp({
+   sourceFullRound:nativeFullSourceRound,matchState:phase,stopped,paused
+  });
+  if(replayKeyHelp.textContent!==message)replayKeyHelp.textContent=message;
+  replayKeyHelp.dataset.t21B465SourceOnly=String(nativeFullSourceRound);
+  replayKeyHelp.dataset.t21B465NoGameplayWrites='true';
+ };
  const b392Sub=select('t21-f3-b392-native-sub');
  const b392Events=new B392NativeSubFeedback();
  const b394Bomb=select('t21-f3-b394-bomb-source-paint');
@@ -473,6 +508,7 @@ export function createF3PlayableHud(ui:HTMLElement){
   if(!b338Guide.hidden&&b338Guide.textContent!==live.text)
    b338Guide.textContent=live.text;
   b338Guide.dataset.t21B338GameplayWrites='0';
+  refreshReplayKeyHelp(p.matchState,!legitimate||!!p.stopReason,p.paused);
   const sub=p.nativeHumanSub;
   const cue=b392Events.observe({
    trustedSource:legitimate,playerView:ui.dataset.t21B245Presentation==='PLAYER',
@@ -641,6 +677,7 @@ export function createF3PlayableHud(ui:HTMLElement){
   if(!b338Guide.hidden&&b338Guide.textContent!==b338.text)
    b338Guide.textContent=b338.text;
   b338Guide.dataset.t21B338GameplayWrites='0';
+  refreshReplayKeyHelp(value.matchState,!!value.stopReason,value.paused);
   danger.hidden=v.hazard==='NONE';
   const dangerText=v.hazard==='CRITICAL_ENEMY_INK'?
    'CRITICAL HP + ENEMY INK · ESCAPE & RECOVER':

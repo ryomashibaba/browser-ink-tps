@@ -76,7 +76,12 @@ async function boot(): Promise<void> {
         if(ev.code!=='KeyR')return;
         const editable=ev.target instanceof HTMLElement&&Boolean(
           ev.target.closest('input,textarea,select,[contenteditable="true"]'));
-        if(editable)return; // R in an actual text field stays text input.
+        if(editable){
+          // Keep ordinary text input, but never bubble R into the
+          // legacy F3 cpu.reset()/paint reset() keyboard shortcut.
+          ev.stopImmediatePropagation();
+          return;
+        }
         const {replay,evidence}=liveReplay();
         const action=sourceReplayHotkeyAction({
           ...evidence,code:ev.code,repeat:ev.repeat,

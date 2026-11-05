@@ -11,7 +11,7 @@ import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {weaponProfile} from '../weapons/WeaponCatalog';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
-import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
+import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,b465SourceRoundKeyHelp,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
 function state():F3PlayableHudState{
@@ -801,5 +801,29 @@ describe('B389 real-source 12-kit next-round user navigation and fresh READY',()
   p.set('t21W10B384','loadoutCircuit');
   p.set('t21QaInput','deterministic');
   expect(b389NativeBootWeapon(p)).toBeNull();
+ });
+});
+
+
+describe('B465 genuine SOURCE replay key labels match safe native controls',()=>{
+ const state={sourceFullRound:true,matchState:'PLAYING',
+  stopped:false,paused:false};
+ it('a genuine 180s match never invites in-world R reset',()=>{
+  const live=b465SourceRoundKeyHelp(state);
+  expect(live).toContain('R AFTER TIME UP');
+  expect(live).not.toContain('R RESTART');
+  expect(b465SourceRoundKeyHelp({...state,matchState:'STAGING'}))
+   .toContain('R AFTER TIME UP');
+  const done=b465SourceRoundKeyHelp({...state,matchState:'TIME_UP'});
+  expect(done).toContain('R REPLAY NEW SOURCE WORLD');
+  expect(done).toContain('NO OFFICIAL WINNER');
+ });
+ it('failure and old non-full-round QA retain their actual input semantics',()=>{
+  expect(b465SourceRoundKeyHelp({...state,stopped:true}))
+   .toContain('R DISABLED');
+  expect(b465SourceRoundKeyHelp({...state,matchState:'UNKNOWN'}))
+   .toContain('R DISABLED');
+  expect(b465SourceRoundKeyHelp({...state,sourceFullRound:false}))
+   .toContain('R RESTART');
  });
 });
