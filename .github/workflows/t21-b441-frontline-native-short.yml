@@ -5,6 +5,10 @@ on:
     paths:
       - 'scripts/t21-b440-short-native-original-foot.mjs'
       - 'PLAY_SOURCE_WINDOWS.cmd'
+      - 'play-source.html'
+      - 'src/source-play-main.ts'
+      - 'src/app/SourcePlayPortal.ts'
+      - 'src/app/SourcePlayPortal.test.ts'
       - 'scripts/t21-source-play-windows-launcher.test.mjs'
       - 'src/app/UndertowF3SourceTraffic.ts'
       - 'src/app/B450OriginalRouteWitness.ts'

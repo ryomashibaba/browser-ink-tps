@@ -226,10 +226,11 @@ async function main(){
   return document.querySelector('#portal-status')?.dataset.t21PortalReady==='SOURCE_ONLY'&&
    a?.href&&b?.href&&document.querySelector('#play-coop')?.href?
     {circuit:a.href,combat:b.href,
-     coop:document.querySelector('#play-coop').href}:null;
+     coop:document.querySelector('#play-coop').href,
+     frontline:document.querySelector('#play-combat-frontline')?.href}:null;
  })()`),30000);
  const url=new URL(portals.circuit),opponent=new URL(portals.combat),
-  ally=new URL(portals.coop);
+  ally=new URL(portals.coop),frontline=new URL(portals.frontline);
  if(url.origin!==new URL(root).origin||url.pathname!==new URL(root).pathname||
   url.searchParams.get('t21W10B384')!=='loadoutCircuit'||
   url.searchParams.get('t21W10B203')!=='fullRound'||
@@ -238,13 +239,21 @@ async function main(){
   ally.searchParams.get('t21W10B193')!=='allyCoop'||
   ally.searchParams.get('t21W10B203')!=='fullRound'||
   ally.searchParams.has('t21W10B192')||
+  frontline.origin!==url.origin||frontline.pathname!==url.pathname||
+  frontline.searchParams.get('t21W10B192')!=='humanCombat'||
+  frontline.searchParams.get('t21W10B203')!=='fullRound'||
+  frontline.searchParams.get('t21W10B441')!=='sourceFrontline'||
+  frontline.searchParams.get('t21W10B448')!=='realA3Front'||
+  frontline.searchParams.has('production')||
+  frontline.searchParams.has('scoreable')||
   url.searchParams.has('production')||url.searchParams.has('scoreable'))
   fail('PORTAL_SOURCE_DESTINATION_AUTHORITY');
  // Human-facing mode selection must be visible and clickable without
  // scrolling on a 1600x900 game display. Check ACTUAL Chromium layout,
  // not a synthetic CSS/viewport claim. No actor/score/clock writes.
  const realMenuButtons=await evaluate(`(() => {
-  const selectors=['#play-circuit','#play-coop','#play-combat'];
+  const selectors=['#play-circuit','#play-coop',
+   '#play-combat','#play-combat-frontline'];
   return selectors.map(selector=>{
    const button=document.querySelector(selector);
    const card=button?.closest('.mode');
@@ -255,7 +264,7 @@ async function main(){
     enabled:!!button?.href&&!button?.hasAttribute('disabled')};
   });
  })()`);
- if(!Array.isArray(realMenuButtons)||realMenuButtons.length!==3||
+ if(!Array.isArray(realMenuButtons)||realMenuButtons.length!==4||
   realMenuButtons.some(v=>!v.enabled||
    !Number.isFinite(v.buttonTop)||v.buttonTop<0||
    !Number.isFinite(v.buttonBottom)||v.buttonBottom>880||
@@ -264,6 +273,7 @@ async function main(){
   fail('REAL_1600x900_SOURCE_MODE_CHOICE_REQUIRES_SCROLL');
  proof.realSourceModeViewport={
   actualChromium1600x900:true,threeOptionsImmediatelyAccessible:true,
+  optionalFrontlineLinkImmediatelyAccessible:true,
   realMenuButtons,sourceOnly:true,gameplayWrites:0,officialWinner:'NONE'};
  save();
  const portalPicture=await cdp('Page.captureScreenshot',{
@@ -286,8 +296,47 @@ async function main(){
   scriptInjectedActors:0,nativeTickWrites:0,officialWinner:'NONE',
   formal4v4Certified:false,productionAuthorized:false};
  save();
- // The existing B441 test retains its original URL and identical native
- // proof thresholds; the portal does not alter those trusted trial inputs.
+ // Genuine optional USER click boots a new, separate original SOURCE
+ // physics world. Do not grant score, teleport, opponent hits or paths.
+ await cdp('Page.navigate',{url:root+'play-source.html'});
+ await until(()=>evaluate(`document.querySelector('#portal-status')
+  ?.dataset.t21PortalReady==='SOURCE_ONLY'`),30000);
+ await buttonClick('#play-combat-frontline');
+ await until(()=>evaluate(`document.querySelector('#app-canvas')
+  ?.dataset.t21F3Ready==='READY'&&
+  document.querySelector('#app-canvas')
+  ?.dataset.t21F3Renderer==='webgl2'`),120000);
+ const optionalBoot=await snap();authority(optionalBoot);
+ const optionalUI=await evaluate(`(() => {
+  const canvas=document.querySelector('#app-canvas');
+  const search=new URL(location.href).searchParams;
+  return {b192:canvas?.dataset.t21B192HumanCombat,
+   b441:canvas?.dataset.t21B441OriginalFrontline,
+   b448:canvas?.dataset.t21B448RealA3OriginalGoal,
+   route:search.get('t21W10B441'),a3:search.get('t21W10B448'),
+   origin:location.origin,path:location.pathname};
+ })()`);
+ if(optionalBoot.matchState!=='STAGING'||
+    optionalBoot.originalSourceSolids!==25||
+    optionalBoot.originalPaintSurfaces!==17||
+    optionalBoot.originalSourceNavigationLinks!==26||
+    optionalBoot.sourceScoreablePromotions!==0||
+    optionalBoot.cpu.cpu.length!==7||
+    optionalUI.b192!=='REAL_SOURCE_ONLY'||
+    optionalUI.b441!=='SOURCE_ONLY_INDEPENDENT_FRONTLINE_RESEARCH'||
+    optionalUI.b448!=='STRICT_REAL_CPU_A3_ORIGINAL_GOAL_REAUTHORIZATION'||
+    optionalUI.route!=='sourceFrontline'||
+    optionalUI.a3!=='realA3Front'||
+    optionalUI.origin!==url.origin||optionalUI.path!==url.pathname)
+  fail('OPTIONAL_REAL_FRONTLINE_SOURCE_WORLD_AUTHORITY_HOLD');
+ proof.optionalCpuFrontlinePortal={
+  verdict:'PASS_NATIVE_USER_CLICK_TO_REAL_SOURCE_FRONTLINE_MODE',
+  genuineCdpClick:true,realCpuCount:7,source:'25/17/26/0',
+  nativeStartState:'STAGING',officialScoreable:0,
+  realOpponentCrossSideCertified:false,opponentHitCertified:false,
+  productionAuthorized:false,officialWinner:'NONE'};
+ save();
+ // Existing B441 strict original 720tick trial keeps its own NEW world.
  await cdp('Page.navigate',{url:root+query});
  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);

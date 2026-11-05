@@ -10,3 +10,6 @@
 - オプションを押した本物のSOURCE 180秒対CPUプレイ自体は新たな実Chromium証拠が出るまで未認証。B441/B448既存研究試験のPASSを正式交戦PASSと混同しない。
 
 main、T19C/T20、正式QA、Draft PR#5、Pages、原作資料を保護。Work/Computer Use・追加有料APIなし。新規CIなし。
+
+## 追加の本物Chrome検査
+既存B441で1600×900の4リンクを実DOMで視認し、SOURCE PLAYからCPU前線任意ボタンを本物のCDPクリック。新WebGL2ゲームのREADYへ到達したら、原本25/17/26/0・実CPU7・非得点・B192 Human Combat・B441厳格FRONT・B448実A3原本足再監査フラグを取得する。**この起動が成功しても180秒の自然敵命中と公式4v4は主張しない**。直後に別新世界で元B441 720tick CPU/足物理を独立検証。新規CIなし。
