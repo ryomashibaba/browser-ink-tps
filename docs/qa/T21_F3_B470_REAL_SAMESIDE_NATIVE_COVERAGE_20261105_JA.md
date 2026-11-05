@@ -29,3 +29,8 @@ B470本体は `776389fc60f4aebcdc428b8b68e236b3b89d61ca`、旧統合候補 `195e
 
 ## F4で引き続き必要な外部根拠
 [版・衝突権限](T21_F4_TEMPLE_SOURCE_VERSION_AND_COLLISION_AUTHORITY_JA.md)、[B369物理接触](T21_B369_NATIVE_FLOORLINE_CAPSULE_COLLISION_PROVENANCE.md)のとおり、元7.2.0 Turf原作の衝突属性とFloorLine00同一Face対応は未認証。FloorLine00元Face幅約0.311mはCPU直径0.60mより狭く、既存CPU半径でのRecast完全接続はB240 FAIL。B369で中心ray欠損7/8フレームのうち同tick上方KCC接触4/5、残り各3フレームは不明。現状でF4へ衝突面追加・自然対岸0/12→12/12変更をしてはならない。真の版・物理権限が取得されるまでは今できる局所プレイ改善を優先する。
+
+## 追補：B412修正と同居する統合候補の真正検証
+- 統合候補 `e6a560d5ffa6a2924defcca594f0c696927dc2c3` を隔離で本物の既存B441/B448/fastに通した。[fast #42028613023](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42028613023) SUCCESS。[B448 #42028612732](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42028612732) SUCCESS・RAW #13414739380を直接検査。
+- 同RAW：B470追加厳格承認6・OwnerGrid順位探索6・異なる実Goal要求8、A3=4件/A2=1件/B1=1件/B3=2件。試合時計/Actor/Score書換0、公式勝者NONE。B2/B4 B454 60Hz RAWも別添。
+- [B441 #42028612604](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42028612604) と本線[B413 #42025456079](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42025456079)は本追記時点の最終結論未確認。B413途中キャンセル防止のため本線のHEAD更新はまだ行わない。
