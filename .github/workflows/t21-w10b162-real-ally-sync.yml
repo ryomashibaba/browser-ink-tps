@@ -4,6 +4,7 @@ on:
     branches: [dev/t21-f4e103w-qa-infra, research/t21-b471-real-ally-source-order-20261105]
     paths:
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
+      - '.github/workflows/t21-w10b162-real-ally-sync.yml'
       - 'scripts/t21-b330-replay-armed-resume-guard.mjs'
       - 'scripts/t21-b330-replay-armed-resume-guard.test.mjs'
       - 'src/app/UndertowF3SourcePaintRun.ts'
