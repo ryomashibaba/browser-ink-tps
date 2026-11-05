@@ -11,3 +11,6 @@
 B463 helperのVitestでRAW実値、異世界比較、偽TIME_UP、無効CPU数、偽official勝者、破損履歴を拒否する。既存B441真正7CPU Chromiumに同試験を追加し、ゲームビルドと新画面DOMの回帰を確認。**新HEADでの本物の2試合連続UI表示自体は後続の長時間Chromeで確認するまで未認証**。
 
 F1〜F5・Fast Track不変更。原作25 solids / 17 paint surfaces / 26 nav links / 0 scoreable、対岸0/12、正式4v4/ART/productionはHOLD。main/T19C/T20/正式QA/Draft PR#5/Pages/非公開SOURCE保護。Work/Computer Use未起動、追加課金なし。
+
+## 回帰検証の正規化（同日）
+B441の既存のpathフィルタを1行1pathとして維持し、新規B463 Vitestを**実際のnpx vitestコマンド**に追加。未来のworldOriginを持つ改ざんJSONの拒否fixtureはテストの対象となるcurrentOriginより後の値を明示し、時間比較が逆転しないように修正した。ゲーム実装や実SOURCE物理・時計・HP/Inkには追加変更なし。
