@@ -20,6 +20,33 @@ const authorized=(stage:StageDefinition)=>
  stage.solids.length===25&&stage.paintSurfaces.length===17&&
  stage.navigationLinks?.length===26&&
  stage.paintSurfaces.every(s=>(s.flags&SurfaceFlags.Scoreable)===0);
+/** B467 genuine late-foot retry gate: B2/B4 must FIRST physically
+ * reach the existing B-side low floor after their recorded early denial.
+ * No fake link, path correction, endpoint grant or height tolerance change.
+ * The caller must still verify current Rapier foot/goal and ALL native
+ * Recast path segments under the original <=0.25m support gate. */
+export function b467MayRetryOriginalBFrontFromRealFoot(
+ stage:StageDefinition, e:{
+  id:string;nativeTick:number;firstDeniedNativeTick:number|null;
+  lastRetryNativeTick:number|null;actualOriginalSolidId:string|null;
+  foot:readonly [number,number,number];rejoined:boolean;
+  active:boolean;grounded:boolean;
+ }):boolean{
+ const [x,y,z]=e.foot;
+ return authorized(stage)&&(e.id==='B2'||e.id==='B4')&&
+  e.rejoined&&e.active&&e.grounded&&
+  Number.isSafeInteger(e.nativeTick)&&
+  Number.isSafeInteger(e.firstDeniedNativeTick)&&
+  e.firstDeniedNativeTick!==null&&
+  e.nativeTick-e.firstDeniedNativeTick>=60&&
+  (e.lastRetryNativeTick===null||
+   Number.isSafeInteger(e.lastRetryNativeTick)&&
+   e.nativeTick-e.lastRetryNativeTick>=90)&&
+  e.actualOriginalSolidId==='UndertowT21D:right-low-team-b'&&
+  [x,y,z].every(Number.isFinite)&&y>=2.7&&y<=5.25&&
+  z<=-33&&z>=-63;
+}
+
 /** Returns conservative, interior samples of EXISTING SOURCE cells.
  * A real Rapier foot probe and whole native Recast path are still REQUIRED
  * by the calling CPU goal selector; they are never inferred from this list. */

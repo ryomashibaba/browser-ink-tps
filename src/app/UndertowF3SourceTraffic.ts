@@ -27,7 +27,8 @@ import type {B367NativeCpuState} from './B367RealCpuCombatTimeline';
 import {eligibleB192SourceHumanPursuit,
  chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
-import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
+import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot}
+ from './B441OriginalSourceFrontline';
 import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
  from './B450OriginalRouteWitness';
@@ -124,6 +125,20 @@ export interface F3TrafficSnapshot{
   readonly b448A3FreshLiveOriginalGoalsAuthorized:number;
   readonly b448A3FreshLiveOriginalHolds:number;
   readonly b448A3RealNativeGoalRequests:number;
+  /** B467: strictly late B2/B4 ORIGINAL goal trials, NO enemy crossing. */
+  readonly b467RealLateFoot:{
+   readonly sourceOnlyResearch:boolean;
+   readonly genuineNativeRetryAttempts:number;
+   readonly rejectedUnchangedOriginalChecks:number;
+   readonly strictlyApprovedLateGoals:number;
+   readonly actualNativeGoalRequests:number;
+   readonly nativeApprovalWitnesses:readonly {
+    id:string;nativeTick:number;actualFoot:[number,number,number];
+    actualOriginalSolidId:string;sourceGoal:[number,number,number];
+   }[];
+   readonly opposingRouteCertified:false;
+   readonly officialWinner:'NONE';
+  };
   readonly b443NativeGoalRetentions:number;
   readonly b443FirstActualFrontlineArrivals:number;
   readonly b443RotationsAfterDwell:number;
@@ -234,6 +249,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b448A3FreshLiveOriginalGoalsAuthorized=0;
  private b448A3FreshLiveOriginalHolds=0;
  private b448A3RealNativeGoalRequests=0;
+ /** B467: the INITIAL B446 HOLD is immutable; only LATER true KCC
+  * right-low B-foot observations may independently reauthorize a goal. */
+ private readonly b467LastLiveRetryTick=new Map<string,number>();
+ private readonly b467LiveSourceGoals=new Map<string,{
+  nativeTick:number;actualFoot:[number,number,number];
+  actualOriginalSolidId:string;sourceGoal:[number,number,number]
+ }>();
+ private b467LiveRetryAttempts=0;
+ private b467LiveRejectedCandidates=0;
+ private b467LateOriginalGoalsApproved=0;
+ private b467TrueNativeGoalRequests=0;
  /** B442 evidence-only: no steering, Actor, or navigation side effects. */
  private readonly b442LastApprovedFront=new Map<string,{
   target:Vec3;nativeTick:number
@@ -1079,6 +1105,82 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      }else this.b448A3FreshLiveOriginalHolds++;
     }else this.b448A3FreshLiveOriginalHolds++;
    }
+   // B467: on the EXPLICIT B441 SOURCE-front research path ONLY,
+   // retry B2/B4 once they have ACTUALLY traversed the original lower
+   // ramp on native Rapier KCC and stand on the registered right-low B
+   // floor. Their old first-drop Recast Y-mismatch HOLD is not erased.
+   // The late route uses the SAME <=0.20m snap, <=0.25m per-0.30m
+   // registered static floor check, untouched Recast and true Crowd.
+   if(fronts.length===0&&(id==='B2'||id==='B4')&&
+      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'){
+    const initial=this.b446LiveFootProbes.get(id);
+    const hit=this.physics.castStageSegment(
+     new Vec3(realFoot.x,realFoot.y+.65,realFoot.z),
+     new Vec3(realFoot.x,realFoot.y-.65,realFoot.z),'ink-projectile');
+    if(b467MayRetryOriginalBFrontFromRealFoot(this.stage,{
+      id,nativeTick:this.b137NativeTick,
+      firstDeniedNativeTick:initial?.nativeTick??null,
+      lastRetryNativeTick:this.b467LastLiveRetryTick.get(id)??null,
+      actualOriginalSolidId:hit?.solidId??null,
+      foot:[realFoot.x,realFoot.y,realFoot.z],
+      rejoined:this.physicallyRejoined.has(id),
+      active:bot.lifeState==='ACTIVE',grounded:bot.mobilityState==='GROUND'
+    })){
+     this.b467LastLiveRetryTick.set(id,this.b137NativeTick);
+     this.b467LiveRetryAttempts++;
+     const flat=hit?inspectB130OriginalFlatSource({
+      nativeTick:this.b137NativeTick,
+      actualRapierBody:[realFoot.x,realFoot.y+
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,realFoot.z],
+      actualRapierSupportId:hit.solidId
+     }):null;
+     if(flat?.insideRegisteredOriginalXZFootprint&&
+        flat.originalFlatVerticalBandWithin22cm&&
+        flat.distanceToOriginalPolygonBoundaryMeters>=.75&&
+        this.hasSourceFootSupport(realFoot)){
+      for(const proposal of proposeB441OriginalFrontline(this.stage,'B')){
+       const goal=new Vec3(...proposal.point);
+       if(proposal.sourceSolidId!=='UndertowT21D:right-low-team-b'||
+          goal.z>-33||!this.hasSourceFootSupport(goal)){
+        this.b467LiveRejectedCandidates++;continue;
+       }
+       const goalHit=this.physics.castStageSegment(
+        new Vec3(goal.x,goal.y+.65,goal.z),
+        new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+       const sourceFlat=goalHit?inspectB130OriginalFlatSource({
+        nativeTick:this.b137NativeTick,
+        actualRapierBody:[goal.x,goal.y+
+         PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
+        actualRapierSupportId:goalHit.solidId
+       }):null;
+       if(goalHit?.solidId!==proposal.sourceSolidId||
+          !sourceFlat?.insideRegisteredOriginalXZFootprint||
+          !sourceFlat.originalFlatVerticalBandWithin22cm||
+          sourceFlat.distanceToOriginalPolygonBoundaryMeters<.75){
+        this.b467LiveRejectedCandidates++;continue;
+       }
+       const native=this.nav.auditPath(realFoot,goal);
+       if(!native.reachedTarget||native.startSnapDistanceMeters>.20||
+          native.endSnapDistanceMeters>.20||
+          !this.hasSourceSupportedRoute(native,-1)){
+        this.b467LiveRejectedCandidates++;continue;
+       }
+       // Another original-native path, now starting at the REAL foot.
+       // It authorizes a Crowd GOAL request ONLY, not a capsule-route
+       // pass, opposing path, hit, artificial relocation or Turf win.
+       fronts=[goal];this.b441FrontGoals.set(id,fronts);
+       this.b467LiveSourceGoals.set(id,{
+        nativeTick:this.b137NativeTick,
+        actualFoot:[realFoot.x,realFoot.y,realFoot.z],
+        actualOriginalSolidId:hit!.solidId,
+        sourceGoal:[goal.x,goal.y,goal.z]
+       });
+       this.b467LateOriginalGoalsApproved++;
+       break;
+      }
+     }else this.b467LiveRejectedCandidates++;
+    }
+   }
    const lock=this.b443OriginalGoalLocks.get(id);
    let completed:Vec3|null=null;
    // B443: B442 real Chromium showed 8-13 target switches in 30 polls
@@ -1113,6 +1215,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b443NativeGoalRetentions++;
       if(id==='A3'&&this.enableB448A3LiveOriginalFront)
        this.b448A3RealNativeGoalRequests++;
+      if(this.b467LiveSourceGoals.has(id))
+       this.b467TrueNativeGoalRequests++;
       if(gate)gate.runtimeTrueOriginalGoalRequests++;
       this.realGoalRequests++;this.b441ActualGoalRequests++;
       return true;
@@ -1150,6 +1254,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(gate)gate.runtimeTrueOriginalGoalRequests++;
     if(id==='A3'&&this.enableB448A3LiveOriginalFront)
      this.b448A3RealNativeGoalRequests++;
+    if(this.b467LiveSourceGoals.has(id))
+     this.b467TrueNativeGoalRequests++;
     out.copy(goal);
     this.b443OriginalGoalLocks.set(id,{target:goal.clone(),
      firstApprovedTick:this.b137NativeTick,arrivedSinceTick:null});
@@ -1683,6 +1789,19 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.b448A3FreshLiveOriginalGoalsAuthorized,
     b448A3FreshLiveOriginalHolds:this.b448A3FreshLiveOriginalHolds,
     b448A3RealNativeGoalRequests:this.b448A3RealNativeGoalRequests,
+    b467RealLateFoot:{
+     sourceOnlyResearch:this.enableB441SourceFrontline,
+     genuineNativeRetryAttempts:this.b467LiveRetryAttempts,
+     rejectedUnchangedOriginalChecks:this.b467LiveRejectedCandidates,
+     strictlyApprovedLateGoals:this.b467LateOriginalGoalsApproved,
+     actualNativeGoalRequests:this.b467TrueNativeGoalRequests,
+     nativeApprovalWitnesses:[...this.b467LiveSourceGoals].map(([id,v])=>
+      ({id,nativeTick:v.nativeTick,
+       actualFoot:[...v.actualFoot] as [number,number,number],
+       actualOriginalSolidId:v.actualOriginalSolidId,
+       sourceGoal:[...v.sourceGoal] as [number,number,number]})),
+     opposingRouteCertified:false as const,officialWinner:'NONE' as const
+    },
     b443NativeGoalRetentions:this.b443NativeGoalRetentions,
     b443FirstActualFrontlineArrivals:this.b443FirstActualFrontlineArrivals,
     b443RotationsAfterDwell:this.b443RotationsAfterDwell,

@@ -5,7 +5,8 @@ import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {pointInStageFootprint} from '../stage/StageFootprint';
 import {SurfaceFlags} from '../ink/types';
-import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
+import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot}
+ from './B441OriginalSourceFrontline';
 describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  const make=()=>undertowT21dConnectivityQaStage();
  it('samples both original registered low floors inside all actual holes',()=>{
@@ -53,5 +54,45 @@ describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
    .toEqual([]);
   const fake={...base,metadata:{...base.metadata,id:'invented-stage'}};
   expect(proposeB441OriginalFrontline(fake,'B')).toEqual([]);
+ });
+});
+
+
+describe('B467 only rechecks real B2/B4 after native arrival on existing B low floor',()=>{
+ const realFoot={id:'B2',nativeTick:1244,firstDeniedNativeTick:1066,
+  lastRetryNativeTick:null,actualOriginalSolidId:
+   'UndertowT21D:right-low-team-b',
+  foot:[-6.387130260467529,4.676661491394043,-48.87943649291992] as const,
+  rejoined:true,active:true,grounded:true};
+ const eligible=(x:typeof realFoot,stage=undertowT21dConnectivityQaStage())=>
+  b467MayRetryOriginalBFrontFromRealFoot(stage,x);
+ it('accepts ONLY another strict path audit from native original B-side foot',()=>{
+  expect(eligible(realFoot)).toBe(true);
+  expect(eligible({...realFoot,id:'B4',nativeTick:1205,
+   firstDeniedNativeTick:1067,
+   foot:[-6.501399040222168,4.674306392669678,-49.08374786376953]}))
+   .toBe(true);
+ });
+ it('cannot grant a late retry from first-drop, wrong team, early tick, or stale interval',()=>{
+  for(const change of [
+   {id:'A3'},{id:'HUMAN'},{actualOriginalSolidId:
+    'UndertowT21D:first-drop-landing-negative-z'},
+   {actualOriginalSolidId:'FAKE_BRIDGE'},
+   {nativeTick:1100},{lastRetryNativeTick:1230},
+   {rejoined:false},{active:false},{grounded:false},
+   {foot:[0,4.6,-32] as const},
+   {foot:[0,4.6,32] as const},
+   {foot:[0,NaN,-49] as const},
+   {firstDeniedNativeTick:null}
+  ])expect(eligible({...realFoot,...change})).toBe(false);
+ });
+ it('rejects any source/score/geometry drift before Recast/Rapier checks',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  expect(eligible(realFoot,{...stage,solids:stage.solids.slice(1)})).toBe(false);
+  const changed=stage.paintSurfaces.map((s,i)=>i===0?
+   {...s,flags:s.flags|SurfaceFlags.Scoreable}:s);
+  expect(eligible(realFoot,{...stage,paintSurfaces:changed})).toBe(false);
+  expect(eligible(realFoot,{...stage,metadata:{...stage.metadata,
+   id:'FAKE_SOURCE'}})).toBe(false);
  });
 });

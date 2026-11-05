@@ -620,6 +620,8 @@ async function main(){
    b445LastOriginalGateByCpu:validateB445(afterPatrol),
    b446LiveActualCpuFootDryRouteProbes:
     afterPatrol?.b446LivePhysicalFootDryRouteProbes,
+   b467RealB2B4LateNativeFootGoalEvidence:
+    afterPatrol?.b467RealLateFoot,
    b448A3RealEvidence:{
     enabled:afterPatrol?.b448A3ResearchEnabled,
     actualOriginalGoalsAuthorized:
