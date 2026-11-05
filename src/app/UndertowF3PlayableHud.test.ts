@@ -812,6 +812,11 @@ describe('B465 genuine SOURCE replay key labels match safe native controls',()=>
   const live=b465SourceRoundKeyHelp(state);
   expect(live).toContain('R AFTER TIME UP');
   expect(live).not.toContain('R RESTART');
+  const cleared=b465SourceRoundKeyHelp({...state,coOpClearReplayReady:true});
+  expect(cleared).toContain('A1 CLEAR: ESC THEN REPLAY BUTTON');
+  expect(cleared).not.toContain('R REPLAY');
+  expect(b465SourceRoundKeyHelp({...state,matchState:'STAGING',
+   coOpClearReplayReady:true})).toContain('R AFTER TIME UP');
   expect(b465SourceRoundKeyHelp({...state,matchState:'STAGING'}))
    .toContain('R AFTER TIME UP');
   const done=b465SourceRoundKeyHelp({...state,matchState:'TIME_UP'});

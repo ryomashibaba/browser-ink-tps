@@ -219,7 +219,7 @@ export function b290SourcePlayerHudPhase(x:{
  * This never grants a new action or official result. */
 export function b465SourceRoundKeyHelp(v:{
  sourceFullRound:boolean;matchState:string;
- stopped:boolean;paused:boolean;
+ stopped:boolean;paused:boolean;coOpClearReplayReady?:boolean;
 }):string{
  const base='M RADAR · N SOUND · P PAUSE';
  if(!v.sourceFullRound)return base+' · R RESTART';
@@ -228,6 +228,10 @@ export function b465SourceRoundKeyHelp(v:{
   return 'R REPLAY NEW SOURCE WORLD · NO OFFICIAL WINNER';
  if(v.matchState==='STAGING')
   return base+' · R AFTER TIME UP';
+ // Objective CLEAR is not TIME_UP. Reflect the already genuine button;
+ // do not advertise an R shortcut until its real browser input is proven.
+ if(v.matchState==='PLAYING'&&v.coOpClearReplayReady)
+  return base+' · A1 CLEAR: ESC THEN REPLAY BUTTON';
  if(v.matchState==='PLAYING')
   return base+' · R AFTER TIME UP';
  return base+' · R DISABLED';
@@ -448,8 +452,15 @@ export function createF3PlayableHud(ui:HTMLElement){
   replayQ.get('t21W10B203')==='fullRound'&&
   replayQ.get('t21QaInput')!=='deterministic';
  const refreshReplayKeyHelp=(phase:string,stopped:boolean,paused:boolean)=>{
+  const a1Card=document.querySelector<HTMLElement>('#t21-f3-b25-paint-run');
+  const a1Button=document.querySelector<HTMLButtonElement>('#t21-f3-b25-start');
+  const coOpClearReplayReady=nativeFullSourceRound&&
+   replayQ.get('t21W10B193')==='allyCoop'&&
+   a1Card?.dataset.t21B197FreshWorldReplay==='true'&&
+   !!a1Button&&!a1Button.disabled;
   const message=b465SourceRoundKeyHelp({
-   sourceFullRound:nativeFullSourceRound,matchState:phase,stopped,paused
+   sourceFullRound:nativeFullSourceRound,matchState:phase,stopped,paused,
+   coOpClearReplayReady
   });
   if(replayKeyHelp.textContent!==message)replayKeyHelp.textContent=message;
   replayKeyHelp.dataset.t21B465SourceOnly=String(nativeFullSourceRound);
