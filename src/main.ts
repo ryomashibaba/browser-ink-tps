@@ -35,6 +35,24 @@ async function boot(): Promise<void> {
   if (new URL(window.location.href).searchParams.get('t21Play') === 'preview') {
     const { UndertowF3PlayablePreviewApp } = await import('./app/UndertowF3PlayablePreviewApp');
     await UndertowF3PlayablePreviewApp.boot(appCanvas, appUiRoot);
+    // B464 is only a read-only overlay for the user's explicit
+    // SOURCE combat + strict B441/B448 CPU research selection.
+    // The genuine 60Hz game, CPU goals and original score stay untouched.
+    const q=new URL(window.location.href).searchParams;
+    if(q.get('t21QaDrive')==='source'&&
+       q.get('t21W10B203')==='fullRound'&&
+       q.get('t21W10B192')==='humanCombat'&&
+       q.get('t21W10B441')==='sourceFrontline'&&
+       q.get('t21W10B448')==='realA3Front'){
+      const {mountB464SourceFrontlineHud}=
+       await import('./app/B464PlayableSourceFrontlineHud');
+      mountB464SourceFrontlineHud(appUiRoot,()=>{
+       const game=(window as unknown as {
+        __t21F3?:{snapshot:()=>unknown}
+       }).__t21F3;
+       return game?.snapshot();
+      });
+    }
     return;
   }
   if (['phase14i','phase14k','phase14l','phase14p'].includes(new URL(window.location.href).searchParams.get('t21Qa') ?? '')) {

@@ -329,6 +329,33 @@ async function main(){
     optionalUI.a3!=='realA3Front'||
     optionalUI.origin!==url.origin||optionalUI.path!==url.pathname)
   fail('OPTIONAL_REAL_FRONTLINE_SOURCE_WORLD_AUTHORITY_HOLD');
+ const optHud=await until(()=>evaluate(`(() => {
+  const root=document.querySelector('#t21-f3-b464-real-cpu-frontline');
+  const game=window.__t21F3?.snapshot();
+  const patrol=game?.cpu?.sourcePatrol;
+  if(!root||!patrol)return null;
+  return {state:root.dataset.t21B464State,
+   source:root.dataset.t21B464Authority,
+   score:root.dataset.t21B464OfficialScoreable,
+   routes:root.dataset.t21B464CrossTeamRoutes,
+   nativeGoalRequests:root.dataset.t21B464NativeGoalRequests,
+   actualRequests:patrol.b441ActualGoalRequests,
+   originalArrivals:root.dataset.t21B464OriginalArrivals,
+   actualArrivals:patrol.b443FirstActualFrontlineArrivals,
+   visible:getComputedStyle(root).display!=='none',
+   sourceVerified:game.originalSourceSolids===25&&
+    game.originalPaintSurfaces===17&&
+    game.originalSourceNavigationLinks===26&&
+    game.sourceScoreablePromotions===0,
+   noOfficialWinner:root.textContent?.includes('UNSCORED')===true};
+ })()`),16000);
+ if(optHud.state!=='READY'||optHud.source!=='25/17/26/0'||
+    optHud.score!=='0'||optHud.routes!=='0'||
+    optHud.nativeGoalRequests!==String(optHud.actualRequests)||
+    optHud.originalArrivals!==String(optHud.actualArrivals)||
+    !optHud.visible||!optHud.sourceVerified||!optHud.noOfficialWinner)
+  fail('REAL_SOURCE_FRONTLINE_PLAYER_HUD_MUST_MATCH_NATIVE_CPU');
+ proof.optionalCpuFrontlinePlayerHud=optHud;save();
  proof.optionalCpuFrontlinePortal={
   verdict:'PASS_NATIVE_USER_CLICK_TO_REAL_SOURCE_FRONTLINE_MODE',
   genuineCdpClick:true,realCpuCount:7,source:'25/17/26/0',
