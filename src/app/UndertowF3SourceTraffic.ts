@@ -28,7 +28,8 @@ import {eligibleB192SourceHumanPursuit,
  chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
- b468MayRetryDifferentOriginalBGoalAfterRealDwell}
+ b468MayRetryDifferentOriginalBGoalAfterRealDwell,
+ b470MayAuditRealInkRankedSameSideFront}
  from './B441OriginalSourceFrontline';
 import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
@@ -147,6 +148,19 @@ export interface F3TrafficSnapshot{
    }[];
    readonly opposingRouteCertified:false;
    readonly officialWinner:'NONE';
+  };
+  readonly b470NativeLocalCoverage:{
+   readonly strictlyApprovedAdditionalOriginalGoals:number;
+   readonly rankedOwnerGridAuditAttempts:number;
+   readonly actualDistinctOriginalGoalRequests:number;
+   readonly realNativeRetargetWitnesses:readonly {
+    id:string;nativeTick:number;
+    actualFoot:[number,number,number];
+    previousOriginalGoal:[number,number,number];
+    nextOriginalGoal:[number,number,number];
+   }[];
+   readonly opponentRouteCertified:false;
+   readonly scoreableSourcePromotions:0;
   };
   readonly b443NativeGoalRetentions:number;
   readonly b443FirstActualFrontlineArrivals:number;
@@ -272,6 +286,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b467SecondDistinctOriginalGoalsApproved=0;
  private b469AdditionalOriginalCoverageGoals=0;
  private b469NativeInkRankedExpansionAttempts=0;
+ private readonly b470LastNativeRetry=new Map<string,number>();
+ private b470LocalRealAdditionalGoals=0;
+ private b470RankedActualGoalAudits=0;
+ private b470RealDistinctGoalRequests=0;
+ private readonly b470NativeRetargetWitnesses:Array<{
+  id:string;nativeTick:number;actualFoot:[number,number,number];
+  previousOriginalGoal:[number,number,number];
+  nextOriginalGoal:[number,number,number]
+ }>=[];
  private readonly b467NativeRetargetWitnesses:Array<{
   id:string;nativeTick:number;actualFoot:[number,number,number];
   previousOriginalGoal:[number,number,number];
@@ -1236,6 +1259,76 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      }else this.b467LiveRejectedCandidates++;
     }
    }
+   // B470: expand actual A2/A3/B1/B3 ORIGINAL same-side patrol after
+   // genuine B443 120-tick arrival, not after an optical destination or
+   // hypothetical cross-team route. B2/B4 keep their proven B467-B469
+   // gates untouched. This only runs on the explicit B441 source research.
+   if(this.sourceInk&&this.physics&&
+      (id==='A2'||id==='A3'||id==='B1'||id==='B3')&&
+      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'){
+    const realHit=this.physics.castStageSegment(
+     new Vec3(realFoot.x,realFoot.y+.65,realFoot.z),
+     new Vec3(realFoot.x,realFoot.y-.65,realFoot.z),
+     'ink-projectile');
+    const nativeSide=bot.team===Team.A?'A':'B';
+    if(b470MayAuditRealInkRankedSameSideFront(this.stage,{
+      id,team:nativeSide,nativeTick:this.b137NativeTick,
+      lastRetryNativeTick:this.b470LastNativeRetry.get(id)??null,
+      approvedOriginalGoals:fronts.length,
+      arrivedSinceTick:nativeLock?.arrivedSinceTick??null,
+      realOriginalSolidId:realHit?.solidId??null,
+      heldGoal:nativeLock?[
+       nativeLock.target.x,nativeLock.target.y,nativeLock.target.z]:null,
+      realFoot:[realFoot.x,realFoot.y,realFoot.z]
+    })){
+     this.b470LastNativeRetry.set(id,this.b137NativeTick);
+     const actualFlat=realHit?inspectB130OriginalFlatSource({
+      nativeTick:this.b137NativeTick,
+      actualRapierBody:[realFoot.x,realFoot.y+
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,realFoot.z],
+      actualRapierSupportId:realHit.solidId
+     }):null;
+     if(actualFlat?.insideRegisteredOriginalXZFootprint&&
+        actualFlat.originalFlatVerticalBandWithin22cm&&
+        actualFlat.distanceToOriginalPolygonBoundaryMeters>=.75&&
+        this.hasSourceFootSupport(realFoot)){
+      const proposals=proposeB441OriginalFrontline(this.stage,nativeSide);
+      const ranked=rankOriginalSourcePatrolGoals(
+       proposals.map(p=>new Vec3(...p.point)),bot.team,this.sourceInk,0);
+      this.b470RankedActualGoalAudits++;
+      for(const choice of ranked){
+       const candidate=proposals[choice.index]!;
+       const goal=new Vec3(...candidate.point);
+       // Same exact ORIGINAL source polygon, and a DISTINCT next
+       // destination. Never add an unaudited Recast waypoint as terrain.
+       if(candidate.sourceSolidId!==realHit!.solidId||
+          fronts.some(p=>Math.hypot(p.x-goal.x,p.z-goal.z)<2))continue;
+       const goalHit=this.physics.castStageSegment(
+        new Vec3(goal.x,goal.y+.65,goal.z),
+        new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+       const goalFlat=goalHit?inspectB130OriginalFlatSource({
+        nativeTick:this.b137NativeTick,
+        actualRapierBody:[goal.x,goal.y+
+         PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
+        actualRapierSupportId:goalHit.solidId
+       }):null;
+       if(goalHit?.solidId!==candidate.sourceSolidId||
+          !goalFlat?.insideRegisteredOriginalXZFootprint||
+          !goalFlat.originalFlatVerticalBandWithin22cm||
+          goalFlat.distanceToOriginalPolygonBoundaryMeters<.75||
+          !this.hasSourceFootSupport(goal))continue;
+       const route=this.nav.auditPath(realFoot,goal);
+       if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
+          route.endSnapDistanceMeters>.20||
+          !this.hasSourceSupportedRoute(route,sign))continue;
+       fronts=[...fronts,goal];this.b441FrontGoals.set(id,fronts);
+       newlyExtendedNativeFront=goal.clone();
+       this.b470LocalRealAdditionalGoals++;
+       break;
+      }
+     }
+    }
+   }
    const lock=this.b443OriginalGoalLocks.get(id);
    let completed:Vec3|null=null;
    // B443: B442 real Chromium showed 8-13 target switches in 30 polls
@@ -1289,6 +1382,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    let goals=completed&&fronts.length>1?
     [...fronts.filter(p=>p.distance(completed)>.01),
      ...fronts.filter(p=>p.distance(completed)<=.01)]:fronts;
+   // B470: existing A/B local goals are also prioritized by actual
+   // unscored source ink when a native 120-tick dwell really completed.
+   if(completed&&fronts.length>2&&this.sourceInk&&
+      (id==='A2'||id==='A3'||id==='B1'||id==='B3')){
+    const other=goals.filter(p=>p.distance(completed!)>.01);
+    const ranked=rankOriginalSourcePatrolGoals(
+     other,bot.team,this.sourceInk,0);
+    goals=[...ranked.map(row=>other[row.index]!),
+     ...goals.filter(p=>p.distance(completed!)<=.01)];
+   }
    // Once third/fourth original B points are safely audited, use
    // genuine source-ink priority to move toward unpainted areas. Every
    // submitted goal is STILL rechecked by the identical native gates.
@@ -1339,6 +1442,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       previousOriginalGoal:[completed.x,completed.y,completed.z],
       nextOriginalGoal:[goal.x,goal.y,goal.z]
      });
+    }
+    if(completed&&
+       (id==='A2'||id==='A3'||id==='B1'||id==='B3')&&
+       Math.hypot(goal.x-completed.x,goal.z-completed.z)>=2){
+     this.b470RealDistinctGoalRequests++;
+     if(this.b470NativeRetargetWitnesses.length<24)
+      this.b470NativeRetargetWitnesses.push({
+       id,nativeTick:this.b137NativeTick,
+       actualFoot:[realFoot.x,realFoot.y,realFoot.z],
+       previousOriginalGoal:[completed.x,completed.y,completed.z],
+       nextOriginalGoal:[goal.x,goal.y,goal.z]
+      });
     }
     out.copy(goal);
     this.b443OriginalGoalLocks.set(id,{target:goal.clone(),
@@ -1897,6 +2012,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        actualOriginalSolidId:v.actualOriginalSolidId,
        sourceGoal:[...v.sourceGoal] as [number,number,number]})),
      opposingRouteCertified:false as const,officialWinner:'NONE' as const
+    },
+    b470NativeLocalCoverage:{
+     strictlyApprovedAdditionalOriginalGoals:
+      this.b470LocalRealAdditionalGoals,
+     rankedOwnerGridAuditAttempts:this.b470RankedActualGoalAudits,
+     actualDistinctOriginalGoalRequests:
+      this.b470RealDistinctGoalRequests,
+     realNativeRetargetWitnesses:this.b470NativeRetargetWitnesses.map(w=>({
+      id:w.id,nativeTick:w.nativeTick,
+      actualFoot:[...w.actualFoot] as [number,number,number],
+      previousOriginalGoal:[...w.previousOriginalGoal] as [number,number,number],
+      nextOriginalGoal:[...w.nextOriginalGoal] as [number,number,number]
+     })),
+     opponentRouteCertified:false as const,
+     scoreableSourcePromotions:0 as const
     },
     b443NativeGoalRetentions:this.b443NativeGoalRetentions,
     b443FirstActualFrontlineArrivals:this.b443FirstActualFrontlineArrivals,
