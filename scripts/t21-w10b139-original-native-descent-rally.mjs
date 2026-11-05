@@ -3363,7 +3363,8 @@ async function run(){
     pointerLocked:document.pointerLockElement===c,
     cardReplayText:b?.textContent,cardReplayDisabled:b?.disabled,
     source:[n?.originalSourceSolids,n?.originalPaintSurfaces,
-     n?.originalSourceNavigationLinks,n?.sourceScoreablePromotions]};
+     n?.originalSourceNavigationLinks,n?.sourceScoreablePromotions],
+    actualRKeyDecision:c?.dataset.t21B200RealKeyRDecision};
   })()`);
   proof.realKeyRPreflight=await keyRWitness();
   console.log('B200_REAL_KEY_R_BEFORE',JSON.stringify(proof.realKeyRPreflight));
@@ -3415,6 +3416,7 @@ async function run(){
   console.log('B200_TRUE_CHROME_KEY_R_EVENTS',JSON.stringify({
     beforeFocus,events:proof.actualKeyRDispatch??null,
     after:proof.realKeyRAfter??null,
+    runtimeDecision:proof.realKeyRAfter?.actualRKeyDecision??null,
     contextMoved:proof.postKeyRContextMoved??null
   }));
   persist();

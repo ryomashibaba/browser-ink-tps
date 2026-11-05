@@ -832,6 +832,9 @@ export class UndertowF3PlayablePreviewApp{
    'SOURCE_ONLY_INDEPENDENT_FRONTLINE_RESEARCH':'OFF';
   this.canvas.dataset.t21B471RealPlayerAllyOrder=
    b193Coop&&this.b203FullRound?'SOURCE_COOP_C_KEY':'OFF';
+  // Read-only evidence for genuine user R replay key acceptance.
+  // No key, CPU, physics, paint, tick, or scoring authority granted.
+  this.canvas.dataset.t21B200RealKeyRDecision='NOT_RECEIVED';
   this.canvas.dataset.t21B150AllyInk=
    b31Params.get('t21QaDrive')==='source'&&
    realAllyRally&&realAllyInk?'SOURCE_ONLY_OPT_IN':'OFF';
@@ -2198,13 +2201,19 @@ export class UndertowF3PlayablePreviewApp{
       editing,practiceStatus:this.b25Run.snapshot().status,
       coOpReplayVisible:visibleCoopReplay
      });
+     this.canvas.dataset.t21B200RealKeyRDecision=decision;
      if(decision==='CLICK_REAL_REPLAY'||
         decision==='RELOAD_NATIVE_SOURCE_WORLD'){
       ev.preventDefault();this.restart();
      }else if(decision==='NAVIGATE_FRESH_COOP_CLEAR'){
       // Same real new-world route as the already authorized mission button.
       // Never mutate current physics, actors, paint, clock or official score.
-      ev.preventDefault();this.requestFreshSourceCoopReplay();
+      ev.preventDefault();
+      if(!this.requestFreshSourceCoopReplay()){
+       this.canvas.dataset.t21B200RealKeyRDecision='REPLAY_UI_BLOCKED';
+       this.b25RunProgress.textContent=
+        'REPLAY BLOCKED · UNLOCK MOUSE / CLOSE GALLERY OR SURVEY';
+      }
      }
     }else if(b193Coop){
      window.location.assign(sourceCoopNavigationUrl(window.location.href,true));

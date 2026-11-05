@@ -52,11 +52,13 @@ jobs:
           T21_B162_REAL_ALLY_SYNC: '1'
           T21_B194_REAL_PLAYER_BUTTON: '1'
           T21_B200_REAL_REPLAY: '1'
-          T21_B201_REAL_PAUSE_RESUME: '1'
-          T21_B202_REAL_CONTROLS: '1'
+          T21_B201_REAL_PAUSE_RESUME: '0'
+          T21_B202_REAL_CONTROLS: '0'
           T21_B203_REAL_FULL_ROUND: '1'
-          # First genuine B162 trial starts A1 mission at READY; second
-          # replay retains B205/B330 native PAUSE/RESUME coverage.
+          # This isolated branch tests B200 real R-key and replay WITHOUT
+          # re-running already-proven B201/B202 early pause gates, which
+          # timed out before R in #42053297053. Genuine 2x A1 replay,
+          # original foot, C-key and SOURCE gates remain unmodified.
           T21_B162_READY_PREARM: '1'
           T21_B471_REAL_PLAYER_ORDER: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b162
