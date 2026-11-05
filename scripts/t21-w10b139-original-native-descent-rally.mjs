@@ -3306,7 +3306,7 @@ async function run(){
      windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
    await until(()=>evaluate('document.pointerLockElement===null'),25000);
   };
-  const verifyNewWorld=async(origin,via)=>{
+  const verifyNewWorld=async(origin,via,deadlineMs=100000)=>{
    const page=await until(async()=>{try{
     const p=await evaluate(`(() => ({
      origin:performance.timeOrigin,
@@ -3320,7 +3320,7 @@ async function run(){
       p.url===('?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop'+
        (b203FullRoundTrial?'&t21W10B203=fullRound':''))&&
       p.variant==='ALLY_SYNC'?p:false;
-   }catch{return false;}},100000);
+   }catch{return false;}},deadlineMs);
    const n=await snapshot();authority(n,'FIXED');
    if(n.matchState!=='STAGING'||n.cpu.physicalRejoins.length!==0||
       n.cpu.physicalFootRelocations!==0||
@@ -3374,17 +3374,51 @@ async function run(){
      proof.realKeyRPreflight.cardReplayDisabled||
      proof.realKeyRPreflight.source?.join(',')!=='25,17,26,0')
    fail('B200_REAL_CLEAR_KEYBOARD_PREFLIGHT_HOLD');
-  // Previously independent B200 RAW already proved a real card click.
-  // This trial sends the real R only from genuinely CLEARED PLAYING.
+  // Passive observation of ACTUAL Chrome keyboard events. The probe
+  // cannot synthesize keys, advance time, or alter gameplay/actor state.
+  await evaluate(`(() => {
+    window.__t21B200ActualKeys=[];
+    window.addEventListener('keydown',e=>{
+      if(e.code==='KeyR')window.__t21B200ActualKeys.push({
+        code:e.code,key:e.key,repeat:e.repeat,alt:e.altKey,
+        ctrl:e.ctrlKey,meta:e.metaKey,shift:e.shiftKey,
+        target:e.target?.tagName,active:document.activeElement?.tagName,
+        documentFocus:document.hasFocus(),defaultPrevented:e.defaultPrevented
+      });
+    },{capture:true,passive:true});
+    return true;
+  })()`);
+  const beforeFocus=await evaluate(`(() => ({
+    active:document.activeElement?.tagName,hasFocus:document.hasFocus(),
+    visibility:document.visibilityState,ready:document.readyState,
+    pointerLocked:document.pointerLockElement!==null
+  }))()`);
+  proof.keyRInputContext=beforeFocus;persist();
+  console.log('B200_TRUE_CHROME_KEYBOARD_FOCUS',JSON.stringify(beforeFocus));
+  // Previously independent B200 RAW proved the card click separately.
+  // This is a TRUE browser KeyR press after a genuine CLEAR. A 24-second
+  // cap records any failed input; never treat TIMEOUT as navigation PASS.
   const original1=await evaluate('performance.timeOrigin');
-  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'r',code:'KeyR',
+  await cmd('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'r',code:'KeyR',
    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
   await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',
    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
-  proof.realKeyRAfter=await keyRWitness();
-  console.log('B200_REAL_KEY_R_AFTER',JSON.stringify(proof.realKeyRAfter));
+  await sleep(150);
+  try{
+    proof.actualKeyRDispatch=await evaluate('window.__t21B200ActualKeys||[]');
+    proof.realKeyRAfter=await keyRWitness();
+  }catch(error){
+    // A real browser navigation can invalidate this execution context.
+    // Only the independent fresh-world gate below can certify success.
+    proof.postKeyRContextMoved=String(error);
+  }
+  console.log('B200_TRUE_CHROME_KEY_R_EVENTS',JSON.stringify({
+    beforeFocus,events:proof.actualKeyRDispatch??null,
+    after:proof.realKeyRAfter??null,
+    contextMoved:proof.postKeyRContextMoved??null
+  }));
   persist();
-  proof.keyboardReplay=await verifyNewWorld(original1,'REAL_CDP_KEY_R_AFTER_COOP_CLEAR');
+  proof.keyboardReplay=await verifyNewWorld(original1,'REAL_CDP_KEY_R_AFTER_COOP_CLEAR',24000);
   persist();
   // A second full genuine session, not a screenshot/QA-state substitution.
   await doPhysicalTrial(2);
