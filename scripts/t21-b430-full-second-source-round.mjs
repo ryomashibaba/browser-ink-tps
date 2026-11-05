@@ -14,6 +14,24 @@ const genuine=s=>s?.source==='25/17/26/0'&&
  isInt(s.shots)&&isInt(s.cpuSourceShots)&&isInt(s.cpuPaintCells)&&
  isInt(s.humanPaintCells)&&Number.isFinite(s.ink)&&
  s.ink>=0&&s.ink<=100;
+/** Parse the ACTUAL visible B463 SOURCE history, including its exact
+ * signed deltas. JSON/DOM text is observation only, never game evidence
+ * for time, score, actor position or native source authorization. */
+export function b430ParseRealSourceRoundHistory(text){
+ if(typeof text!=='string'||text.length>8192||
+    !text.startsWith('PREVIOUS LOCAL SOURCE ROUND • NOT AN OFFICIAL SCORE\n')||
+    !text.includes('WINNER NONE'))return null;
+ const shots=/^HUMAN SHOTS (\d+) → (\d+) \(([+-]?\d+)\)$/m.exec(text);
+ const ink=/^HUMAN INK CELLS (\d+) → (\d+) \(([+-]?\d+)\)$/m.exec(text);
+ if(!shots||!ink)return null;
+ const a=shots.slice(1).map(Number),b=ink.slice(1).map(Number);
+ if(![...a,...b].every(Number.isSafeInteger)||
+    a[0]<0||a[1]<0||b[0]<0||b[1]<0||
+    a[2]!==a[1]-a[0]||b[2]!==b[1]-b[0])return null;
+ return {previousTabHumanShots:a[0],currentRealHumanShots:a[1],
+  previousTabHumanInkCells:b[0],currentRealHumanInkCells:b[1]};
+}
+
 export function auditB430TrueSecond180s(d){
  gate(d?.schema==='B430_TRUE_SECOND_SOURCE_180S'&&
   d.syntheticTicks===false&&d.actorWrites===0&&d.scoreWrites===0&&

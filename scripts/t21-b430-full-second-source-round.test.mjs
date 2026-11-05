@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {auditB430TrueSecond180s,auditB438SecondRoundWalk}
+import {auditB430TrueSecond180s,auditB438SecondRoundWalk,
+ b430ParseRealSourceRoundHistory}
  from './t21-b430-full-second-source-round.mjs';
 const base={source:'25/17/26/0',scoreable:0,winner:'NONE',
  relocations:0,prod:false,fourvfour:false,cpuCount:7};
@@ -166,4 +167,29 @@ test('SOURCE sample may not fake already spent clock time to skip a match',()=>{
  genuine.samples[2].tick=11000;
  assert.throws(()=>auditB430TrueSecond180s(genuine),
   /B430_TRUE_SECOND_180S_HOLD_NATIVE_SECOND_180S_TIMELINE/);
+});
+
+
+test('B463 RAW #13401739247: real 2x180 SOURCE history parses genuine digits',()=>{
+ // Actual RAW first-round end: human shots 122, changed original cells 1123.
+ // Actual second-round TIME_UP tick11857: human shots 19, cells 112.
+ const observed='PREVIOUS LOCAL SOURCE ROUND • NOT AN OFFICIAL SCORE\n'+
+  'HUMAN SHOTS 122 → 19 (-103)\n'+
+  'HUMAN INK CELLS 1123 → 112 (-1011)\n'+
+  'CPU SOURCE SHOTS 90 → 112 (+22)\n'+
+  'LOCAL TAB DATA ONLY · DIFFERENT MODES ARE NOT RANKED · WINNER NONE';
+ assert.deepEqual(b430ParseRealSourceRoundHistory(observed),{
+  previousTabHumanShots:122,currentRealHumanShots:19,
+  previousTabHumanInkCells:1123,currentRealHumanInkCells:112});
+ for(const wrong of [
+  observed.replace('(-103)','(-102)'),
+  observed.replace('(-1011)','(+1011)'),
+  observed.replace('→ 19','→ -19'),
+  observed.replace('HUMAN SHOTS','FAKE SHOTS'),
+  observed.replace('WINNER NONE','WINNER TEAM_A'),
+  observed.replace('NOT AN OFFICIAL SCORE','OFFICIAL TURF SCORE'),
+  observed.replace('1123','999999999999999999999'),
+  observed.replace('→','=>')
+ ])assert.equal(b430ParseRealSourceRoundHistory(wrong),null);
+ assert.equal(b430ParseRealSourceRoundHistory(null),null);
 });

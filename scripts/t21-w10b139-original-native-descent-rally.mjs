@@ -46,7 +46,8 @@ import {b413RealOriginalMainFireBurst,b413ObserveNativeRefill,
  from './t21-b413-native-source-fire-refill-reshoot.mjs';
 import {auditB419NativeReplay}
  from './t21-b419-real-full-round-fresh-replay.mjs';
-import {auditB430TrueSecond180s,auditB438SecondRoundWalk}
+import {auditB430TrueSecond180s,auditB438SecondRoundWalk,
+ b430ParseRealSourceRoundHistory}
  from './t21-b430-full-second-source-round.mjs';
 import {b433CaptureReadOnlySourcePoll,b433AuditOriginalOpponentPolls}
  from './t21-b433-native-opponent-poll-audit.mjs';
@@ -3202,10 +3203,9 @@ async function run(){
     return data?.realFinished&&data.previousLocalVisible?data:false;
    },30000);
    const trueEnd=await snapshot();authority(trueEnd,'FIXED');
-   const human=/HUMAN SHOTS (\\d+) → (\\d+)/.exec(
-    historyUi.historyText??'');
-   const ink=/HUMAN INK CELLS (\\d+) → (\\d+)/.exec(
-    historyUi.historyText??'');
+   // Use the same independently tested visible-text parser as B430:
+   // regex literals require \d, never \\d (which matches literal "\d").
+   const history=b430ParseRealSourceRoundHistory(historyUi.historyText);
    if(historyUi.origin!==two.secondOrigin||
       historyUi.originalScoreable!=='0'||
       historyUi.officialWinner!=='NONE'||
@@ -3215,17 +3215,14 @@ async function run(){
       historyUi.viewport[0]!==1600||historyUi.viewport[1]!==900||
       !historyUi.historyText?.includes('NOT AN OFFICIAL SCORE')||
       !historyUi.historyText?.includes('WINNER NONE')||
-      !human||!ink||
-      Number(human[2])!==trueEnd.shotsFired||
-      Number(ink[2])!==trueEnd.b23HumanInkFeedback.humanChangedCells||
+      !history||
+      history.currentRealHumanShots!==trueEnd.shotsFired||
+      history.currentRealHumanInkCells!==
+       trueEnd.b23HumanInkFeedback.humanChangedCells||
       trueEnd.matchState!=='TIME_UP'||trueEnd.timeRemainingSeconds!==0)
     fail('B463_TRUE_REAL_TWO_ROUND_HISTORY_OR_REPLAY_FOOTER_HOLD');
    two.b463={...historyUi,trueSecondNativeTick:trueEnd.tick,
-    previousTabHumanShots:Number(human[1]),
-    currentRealHumanShots:trueEnd.shotsFired,
-    previousTabHumanInkCells:Number(ink[1]),
-    currentRealHumanInkCells:trueEnd.b23HumanInkFeedback.humanChangedCells,
-    noOfficialScoreAndNoGameWrites:true};
+    ...history,noOfficialScoreAndNoGameWrites:true};
    saveTwo();
    console.log('B463_TRUE_SECOND_180S_BROWSER_REPLAY_COMPARISON',
     JSON.stringify(two.b463));
