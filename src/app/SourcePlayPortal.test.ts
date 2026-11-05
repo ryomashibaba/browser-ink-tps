@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {sourcePlayPortalDestinations,sourcePlayPortalReturnUrl,
- sourcePlayFrontlineResearchUrl}
+ sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -90,5 +90,58 @@ describe('optional CPU B441/B448 original front game selection',()=>{
  it('rejects unsafe origin and an unrelated page',()=>{
   expect(()=>sourcePlayFrontlineResearchUrl('javascript:alert(1)')).toThrow();
   expect(()=>sourcePlayFrontlineResearchUrl('https://example.org/index.html')).toThrow();
+ });
+});
+
+
+describe('genuine SOURCE 180s R-key replay never resets the live native world',()=>{
+ const d=sourcePlayPortalDestinations(
+  'https://example.org/browser-ink-tps/play-source.html');
+ const valid=(href:string)=>({
+  href,code:'KeyR',repeat:false,modified:false,editing:false,
+  matchState:'TIME_UP',stopped:false,pointerLocked:false,
+  originalSolids:25,originalPaint:17,originalLinks:26,scoreable:0,
+  finishedVisible:true,canClick:true
+ });
+ it('uses existing genuine B384/A1 replay, combat gets only a new-world reload',()=>{
+  expect(sourceReplayHotkeyAction(valid(d.circuit))).toBe('CLICK_REAL_REPLAY');
+  expect(sourceReplayHotkeyAction(valid(d.coop))).toBe('CLICK_REAL_REPLAY');
+  expect(sourceReplayHotkeyAction(valid(d.combat))).toBe('RELOAD_NATIVE_SOURCE_WORLD');
+  expect(sourceReplayHotkeyAction(valid(
+   sourcePlayFrontlineResearchUrl(
+    'https://example.org/browser-ink-tps/play-source.html'))))
+   .toBe('RELOAD_NATIVE_SOURCE_WORLD');
+ });
+ it('never accepts R during STAGING, PLAYING, paused/review or stopped states',()=>{
+  for(const href of Object.values(d)){
+   for(const state of ['STAGING','PLAYING','INVALID']){
+    expect(sourceReplayHotkeyAction({...valid(href),matchState:state}))
+     .toBe('BLOCK');
+   }
+   for(const key of ['stopped','pointerLocked','editing','repeat',
+    'modified'] as const)
+    expect(sourceReplayHotkeyAction({...valid(href),[key]:true}))
+     .toBe('BLOCK');
+   expect(sourceReplayHotkeyAction({...valid(href),canClick:false}))
+    .toBe('BLOCK');
+   expect(sourceReplayHotkeyAction({...valid(href),finishedVisible:false}))
+    .toBe('BLOCK');
+  }
+ });
+ it('never treats missing/forged SOURCE geometry or score authority as replay',()=>{
+  const q=valid(d.circuit);
+  expect(sourceReplayHotkeyAction({...q,originalSolids:24})).toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...q,originalPaint:18})).toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...q,originalLinks:25})).toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...q,scoreable:1})).toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...q,originalSolids:undefined}))
+   .toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...q,href:q.href+'&production=1'}))
+   .toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...q,href:q.href+'&t21QaInput=warp'}))
+   .toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...q,href:'https://example.org/'}))
+   .toBe('UNRELATED');
+  expect(sourceReplayHotkeyAction({...q,code:'KeyW'})).toBe('UNRELATED');
  });
 });

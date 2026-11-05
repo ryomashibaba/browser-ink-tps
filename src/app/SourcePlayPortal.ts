@@ -73,3 +73,32 @@ export function sourcePlayFrontlineResearchUrl(portalUrl:string):string{
   throw Error('T21_FRONTLINE_RESEARCH_UNSAFE_URL');
  return mode.href;
 }
+
+
+/** SOURCE-only 180s player R: never invoke the legacy in-world reset.
+ * The visible real TIME_UP footer is the authority. This helper only
+ * selects an existing real fresh-world action; it never edits game state. */
+export type SourceReplayHotkeyAction='UNRELATED'|'BLOCK'|
+ 'CLICK_REAL_REPLAY'|'RELOAD_NATIVE_SOURCE_WORLD';
+export function sourceReplayHotkeyAction(input:{
+ href:string;code:string;repeat:boolean;modified:boolean;editing:boolean;
+ matchState?:string;stopped:boolean;pointerLocked:boolean;
+ originalSolids?:number;originalPaint?:number;originalLinks?:number;
+ scoreable?:number;finishedVisible:boolean;canClick:boolean;
+}):SourceReplayHotkeyAction{
+ if(input.code!=='KeyR'||sourcePlayPortalReturnUrl(input.href)===null)
+  return 'UNRELATED';
+ if(input.repeat||input.modified||input.editing||
+    input.matchState!=='TIME_UP'||input.stopped||input.pointerLocked||
+    input.originalSolids!==25||input.originalPaint!==17||
+    input.originalLinks!==26||input.scoreable!==0||
+    !input.finishedVisible||!input.canClick)return 'BLOCK';
+ // The canonical A1/B384 paths already use their own fresh-world
+ // button logic. Other SOURCE combat sessions also require a NEW
+ // PlayCanvas/Rapier world, never the local restart/reset() path.
+ const q=new URL(input.href).searchParams;
+ if(q.has('production')||q.has('scoreable')||q.has('t21QaInput'))
+  return 'BLOCK';
+ return sourceCoopEligible(q)||q.get('t21W10B384')==='loadoutCircuit'?
+  'CLICK_REAL_REPLAY':'RELOAD_NATIVE_SOURCE_WORLD';
+}

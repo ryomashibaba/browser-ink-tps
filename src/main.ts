@@ -39,6 +39,50 @@ async function boot(): Promise<void> {
     // SOURCE combat + strict B441/B448 CPU research selection.
     // The genuine 60Hz game, CPU goals and original score stay untouched.
     const q=new URL(window.location.href).searchParams;
+    // Genuine SOURCE full-round R is no longer allowed to reach the
+    // legacy F3 in-place cpu.reset()/ink reset() while a match is live.
+    // Capture before the legacy bubble listener without modifying
+    // native controls, player/CPU state, the clock, or replay thresholds.
+    if(q.get('t21QaDrive')==='source'&&q.get('t21W10B203')==='fullRound'){
+      const {sourceReplayHotkeyAction}=await import('./app/SourcePlayPortal');
+      window.addEventListener('keydown',ev=>{
+        if(ev.code!=='KeyR')return;
+        const game=(window as unknown as {__t21F3?:{
+          snapshot:()=>{matchState?:string;stopReason?:string|null;
+            originalSourceSolids?:number;originalPaintSurfaces?:number;
+            originalSourceNavigationLinks?:number;
+            sourceScoreablePromotions?:number}
+        }}).__t21F3;
+        const state=game?.snapshot();
+        const finish=appUiRoot.querySelector<HTMLElement>(
+          '#t21-f3-b59-session-finished');
+        const replay=finish?.querySelector<HTMLButtonElement>(
+          '#t21-f3-b59-restart');
+        const editable=ev.target instanceof HTMLElement&&Boolean(
+          ev.target.closest('input,textarea,select,[contenteditable="true"]'));
+        const action=sourceReplayHotkeyAction({
+          href:window.location.href,code:ev.code,repeat:ev.repeat,
+          modified:ev.ctrlKey||ev.altKey||ev.metaKey,editing:editable,
+          matchState:state?.matchState,stopped:!!state?.stopReason,
+          pointerLocked:document.pointerLockElement!==null,
+          originalSolids:state?.originalSourceSolids,
+          originalPaint:state?.originalPaintSurfaces,
+          originalLinks:state?.originalSourceNavigationLinks,
+          scoreable:state?.sourceScoreablePromotions,
+          finishedVisible:finish?.dataset.t21B59State==='FINISHED'&&
+            finish.hidden===false&&finish.style.display!=='none',
+          canClick:!!replay&&!replay.hidden&&!replay.disabled&&
+            replay.isConnected
+        });
+        if(action==='UNRELATED')return;
+        ev.stopImmediatePropagation();
+        if(action==='BLOCK')return;
+        ev.preventDefault();
+        if(action==='CLICK_REAL_REPLAY')replay?.click();
+        else if(action==='RELOAD_NATIVE_SOURCE_WORLD')
+          window.location.reload();
+      },true);
+    }
     if(q.get('t21QaDrive')==='source'&&
        q.get('t21W10B203')==='fullRound'&&
        q.get('t21W10B192')==='humanCombat'&&
