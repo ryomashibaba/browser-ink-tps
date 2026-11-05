@@ -1,7 +1,8 @@
 import {describe,it,expect,vi} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {Team,SurfaceFlags} from '../ink/types';
-import type {GameplayInkSystem,GameplayInkSample} from '../ink/GameplayInkSystem';
+import {GameplayInkSystem,type GameplayInkSample} from '../ink/GameplayInkSystem';
+import {PaintSurface} from '../ink/PaintSurface';
 import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,B34_GROUNDED_STALL_TICKS} from './UndertowF3PaintAwarePatrol';
 
 const goals=[new Vec3(1,3,40),new Vec3(2,3,41),
@@ -89,5 +90,61 @@ describe('W10-B34 genuine 36-tick original-foot stalled-goal escape gate',()=>{
   expect(mayReconsiderStalledOriginalGoal(100,0,Number.NaN)).toBe(false);
   expect(mayReconsiderStalledOriginalGoal(-1,0,8)).toBe(false);
   expect(mayReconsiderStalledOriginalGoal(36.5,0,8)).toBe(false);
+ });
+});
+
+describe('native original paint coverage priority improves actual CPU floor patrol',()=>{
+ it('prefers the genuinely unpainted neighborhood over an already fully painted source floor goal',()=>{
+  // A complete real owner-grid is the sole paint authority. Both existing
+  // candidates have an OWN center, but only the first has four fresh
+  // ORIGINAL source cells nearby. No extra CPU goal or scoreable surface.
+  const ink=new GameplayInkSystem();
+  const source=new PaintSurface(
+   'UndertowT21D:right-low-team-a:paint',
+   new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   20,20,.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8
+  );
+  ink.registerSurface(source);
+  source.ownerGrid.fill(Team.A);
+  const g=[new Vec3(-4,3,-4),new Vec3(4,3,4)];
+  for(const [dx,dz,owner] of [
+   [.75,0,Team.Neutral],[-.75,0,Team.B],
+   [0,.75,Team.Neutral],[0,-.75,Team.B]
+  ] as const){
+   const observed=ink.sampleWorld(
+    new Vec3(g[0]!.x+dx,3.06,g[0]!.z+dz),
+    .38,SurfaceFlags.Paintable
+   )!;
+   source.ownerGrid[source.index(
+    Math.floor(observed.u/source.cellSize),
+    Math.floor(observed.v/source.cellSize))]=owner;
+  }
+  const frozen=Array.from(source.ownerGrid);
+  const result=rankOriginalSourcePatrolGoals(g,Team.A,ink,1);
+  expect(result.map(r=>r.index)).toEqual([0,1]);
+  expect(result.every(r=>r.priority==='OWN')).toBe(true);
+  expect(result[0]!.neighborhoodOpportunity).toBeGreaterThan(
+   result[1]!.neighborhoodOpportunity);
+  expect(result.every(r=>r.sampledOriginalCells===5)).toBe(true);
+  expect(result.every(r=>!r.pathAuthorized&&r.sourceOnly)).toBe(true);
+  expect(Array.from(source.ownerGrid)).toEqual(frozen);
+  expect(ink.snapshot().areaA).toBe(0);
+ });
+ it('rejects inactive original footprint cells from coverage; never claims navigability',()=>{
+  const ink=new GameplayInkSystem();
+  const source=new PaintSurface(
+   'UndertowT21D:right-low-team-b:paint',
+   new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   6,6,.25,SurfaceFlags.Paintable,8
+  );
+  ink.registerSurface(source);
+  source.ownerGrid.fill(Team.B);
+  const p=new Vec3(-2.75,3,-2.75);
+  const result=rankOriginalSourcePatrolGoals([p],Team.B,ink,0)[0]!;
+  expect(result.priority).toBe('OWN');
+  expect(result.sampledOriginalCells).toBeLessThan(5);
+  expect(result.neighborhoodOpportunity).toBe(0);
+  expect(result.pathAuthorized).toBe(false);
+  expect(ink.snapshot().percentB).toBe(0);
  });
 });

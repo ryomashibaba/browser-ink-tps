@@ -11,6 +11,10 @@ import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 export type OriginalPatrolInkPriority='OTHER_TEAM'|'NEUTRAL'|'UNSAMPLED'|'OWN';
 export interface OriginalPatrolInkRank{
  index:number;priority:OriginalPatrolInkPriority;rank:number;
+ /** Relative opportunity on ACTUAL original owner-grid cells only.
+  * Higher means more enemy/neutral paint near an already-vetted goal. */
+ neighborhoodOpportunity:number;
+ sampledOriginalCells:number;
  sourceOnly:true;pathAuthorized:false;
 }
 const priorities:Readonly<Record<OriginalPatrolInkPriority,number>>={
@@ -19,7 +23,8 @@ const priorities:Readonly<Record<OriginalPatrolInkPriority,number>>={
 
 /** Actual authoritative GameplayInkSystem ownerGrid only.
  * Uses ORIGINAL patrol goal/physics world positions already vetted in
- * UndertowF3SourceTraffic. sampleWorld is read-only, never event/apply.
+ * UndertowF3SourceTraffic. Same-surface nearby ownership is used only
+ * for coverage priority; sampleWorld is read-only, never event/apply.
  */
 export function rankOriginalSourcePatrolGoals(
  goals:readonly Vec3[],team:Team.A|Team.B,ink:GameplayInkSystem,
@@ -28,15 +33,57 @@ export function rankOriginalSourcePatrolGoals(
  if(!Number.isSafeInteger(startIndex)||startIndex<0)
   throw Error('W10_B31_UNVERIFIED_START_INDEX');
  const count=goals.length;
+ const opportunity=(owner:Team):number=>
+  owner===team?0:owner===Team.Neutral?2:3;
  return goals.map((goal,index)=>{
   const sample=ink.sampleWorld(
    new Vec3(goal.x,goal.y+.06,goal.z),.38,SurfaceFlags.Paintable);
-  const priority:OriginalPatrolInkPriority=sample===null?'UNSAMPLED':
-   sample.owner===team?'OWN':
-   sample.owner===Team.Neutral?'NEUTRAL':'OTHER_TEAM';
+  const surface=sample?.surface;
+  const sourceOnlySurface=!!surface&&
+   surface.id.startsWith('UndertowT21D:')&&
+   !surface.isScoreable&&
+   (surface.baseFlags&SurfaceFlags.Paintable)!==0;
+  // The actual GameplayInkSystem sample can hit a masked (inactive)
+  // footprint pixel. Such a neutral owner is NOT real paint opportunity.
+  // Old test-only mocks have no surface, and preserve their center result.
+  const usable=sourceOnlySurface?
+   !!sample&&surface.isCellActive(
+    Math.min(surface.widthCells-1,Math.floor(sample.u/surface.cellSize)),
+    Math.min(surface.heightCells-1,Math.floor(sample.v/surface.cellSize))):
+   !surface;
+  const center=usable?sample:null;
+  const priority:OriginalPatrolInkPriority=center===null?'UNSAMPLED':
+   center.owner===team?'OWN':
+   center.owner===Team.Neutral?'NEUTRAL':'OTHER_TEAM';
+  let total=center?opportunity(center.owner)*2:priorities.UNSAMPLED;
+  let weight=center?2:1,activeCells=center?1:0;
+  if(sourceOnlySurface&&center){
+   // Use the SURFACE's genuine U/V basis (not synthetic XZ turf).
+   // Query four additional nearby existing owner-grid cells without
+   // adding goals, scoring, paint, traversal or terrain. Only the
+   // exact SAME ORIGINAL surface and active mask count as evidence.
+   for(const [du,dv] of [[.75,0],[-.75,0],[0,.75],[0,-.75]]){
+    const neighbor=ink.sampleWorld(new Vec3(
+     goal.x+surface.uAxis.x*du+surface.vAxis.x*dv,
+     goal.y+.06+surface.uAxis.y*du+surface.vAxis.y*dv,
+     goal.z+surface.uAxis.z*du+surface.vAxis.z*dv
+    ),.38,SurfaceFlags.Paintable);
+    if(!neighbor||neighbor.surface.id!==surface.id||
+       (neighbor.flags&SurfaceFlags.Paintable)===0)continue;
+    const cx=Math.min(surface.widthCells-1,
+      Math.floor(neighbor.u/surface.cellSize));
+    const cy=Math.min(surface.heightCells-1,
+      Math.floor(neighbor.v/surface.cellSize));
+    if(!surface.isCellActive(cx,cy))continue;
+    total+=opportunity(neighbor.owner);weight++;activeCells++;
+   }
+  }
   return {index,priority,rank:priorities[priority],
+   neighborhoodOpportunity:total/weight,
+   sampledOriginalCells:activeCells,
    sourceOnly:true as const,pathAuthorized:false as const};
- }).sort((a,b)=>b.rank-a.rank||
+ }).sort((a,b)=>b.neighborhoodOpportunity-a.neighborhoodOpportunity||
+  b.rank-a.rank||
   ((a.index-startIndex+count)%Math.max(1,count))-
   ((b.index-startIndex+count)%Math.max(1,count)));
 }
