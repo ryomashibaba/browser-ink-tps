@@ -1,7 +1,7 @@
 name: T21 B441 true short original CPU frontline goal trial
 on:
   push:
-    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103, research/t21-b469-isolated-patrol-qa-20261105]
     paths:
       - 'scripts/t21-b440-short-native-original-foot.mjs'
       - 'PLAY_SOURCE_WINDOWS.cmd'

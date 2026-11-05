@@ -1,7 +1,7 @@
 name: T21 B448 REAL A3 original SOURCE frontline controlled trial
 on:
   push:
-    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103, research/t21-b469-isolated-patrol-qa-20261105]
     paths:
       - 'src/app/UndertowF3SourceTraffic.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   real-a3-original-goal:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 23
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,7 +33,7 @@ jobs:
         env:
           T21_B441_SOURCE_FRONTLINE: '1'
           T21_B448_A3_REAL_ORIGINAL_FRONT: '1'
-          T21_B441_NATIVE_OBSERVE_TICKS: '720'
+          T21_B441_NATIVE_OBSERVE_TICKS: '1080'
           T21_B440_OUT: /tmp/t21-b448-a3-real-original-frontline
         run: node scripts/t21-b440-short-native-original-foot.mjs
       - name: Preserve genuine source report even on HOLD
