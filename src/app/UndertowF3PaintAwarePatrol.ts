@@ -62,7 +62,7 @@ export function rankOriginalSourcePatrolGoals(
    // Query four additional nearby existing owner-grid cells without
    // adding goals, scoring, paint, traversal or terrain. Only the
    // exact SAME ORIGINAL surface and active mask count as evidence.
-   for(const [du,dv] of [[.75,0],[-.75,0],[0,.75],[0,-.75]]){
+   for(const [du,dv] of [[.75,0],[-.75,0],[0,.75],[0,-.75]] as const){
     const neighbor=ink.sampleWorld(new Vec3(
      goal.x+surface.uAxis.x*du+surface.vAxis.x*dv,
      goal.y+.06+surface.uAxis.y*du+surface.vAxis.y*dv,
