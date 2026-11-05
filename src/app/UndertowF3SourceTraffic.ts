@@ -29,7 +29,8 @@ import {eligibleB192SourceHumanPursuit,
 import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
- b470MayAuditRealInkRankedSameSideFront}
+ b470MayAuditRealInkRankedSameSideFront,
+ b471MayRequestActualA1SourceOrder}
  from './B441OriginalSourceFrontline';
 import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
@@ -161,6 +162,19 @@ export interface F3TrafficSnapshot{
    }[];
    readonly opponentRouteCertified:false;
    readonly scoreableSourcePromotions:0;
+  };
+  readonly b471TruePlayerOrderedAlly:{
+   readonly status:'OFF'|'HOLD'|'REQUESTED'|'MOVING'|'ARRIVED'|'EXPIRED';
+   readonly genuineKeyRequests:number;
+   readonly strictlyApprovedOriginalGoals:number;
+   readonly actualNativeGoalRequests:number;
+   readonly rejectedOriginalRoutes:number;
+   readonly actualOriginalArrivals:number;
+   readonly requestedNativeTick:number|null;
+   readonly approvedRealAllyFoot:[number,number,number]|null;
+   readonly approvedOriginalGoal:[number,number,number]|null;
+   readonly officialWinner:'NONE';
+   readonly actorInkScoreClockWrites:0;
   };
   readonly b443NativeGoalRetentions:number;
   readonly b443FirstActualFrontlineArrivals:number;
@@ -330,6 +344,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b199RejectedUnsafeReliefPaths=0;
  private b169HumanUpperGrounded=false;
  private b171AllySyncPracticeRunning=false;
+ /** Real user C press only, existing SOURCE A1 co-op. */
+ private b471AllyOrder:{
+  requestedTick:number;goal:Vec3|null;
+  realAllyFootAtApproval:Vec3|null
+ }|null=null;
+ private b471OrderStatus:'OFF'|'HOLD'|'REQUESTED'|'MOVING'|'ARRIVED'|'EXPIRED'='OFF';
+ private b471GenuineKeyRequests=0;
+ private b471StrictlyApprovedOriginalGoals=0;
+ private b471ActualNativeGoalRequests=0;
+ private b471RejectedOriginalRoutes=0;
+ private b471ActualOriginalArrivals=0;
  private b137ApprovedNativeRallies=0;
  private b137UnsafeOrUnsupportedRallies=0;
  private b137MissingSourceFloorProof=0;
@@ -668,6 +693,51 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return false;
  }
 
+ /** Arms only an actual player key during a REAL native ALLY_SYNC round.
+  * Does not select a goal or write any actor / ink / clock. */
+ b471RequestTruePlayerOriginalAllyCoverage():boolean{
+  this.b471GenuineKeyRequests++;
+  const ally=this.bots.find(x=>x.id==='A1');
+  const foot=ally?.position;
+  const human=this.b137ActualHumanFoot;
+  const permitted=!!ally&&!!foot&&!!this.sourceInk&&!!this.physics&&
+   b471MayRequestActualA1SourceOrder(this.stage,{
+    id:ally.id,team:ally.team===Team.A?'A':'B',
+    nativeTick:this.b137NativeTick,
+    coOpActuallyRunning:this.b171AllySyncPracticeRunning&&
+     this.enableB137OriginalAllyRally&&this.enableB150AllySupportInk,
+    actualAllyRejoined:this.physicallyRejoined.has('A1'),
+    actualAllyActiveGrounded:ally.lifeState==='ACTIVE'&&
+     ally.mobilityState==='GROUND',
+    trueHumanAliveGrounded:this.b137HumanFootValid,
+    actualAllyFoot:[foot.x,foot.y,foot.z],
+    actualHumanFoot:[human.x,human.y,human.z]
+   })&&this.hasSourceFootSupport(foot);
+  if(!permitted){
+   this.b471OrderStatus='HOLD';
+   this.b471AllyOrder=null;
+   return false;
+  }
+  this.b471AllyOrder={requestedTick:this.b137NativeTick,
+   goal:null,realAllyFootAtApproval:null};
+  this.b471OrderStatus='REQUESTED';
+  return true;
+ }
+ b471ReadOnlyAllyCoverageOrder(){
+  return {
+   status:this.b471OrderStatus,genuineKeyRequests:this.b471GenuineKeyRequests,
+   strictlyApprovedOriginalGoals:this.b471StrictlyApprovedOriginalGoals,
+   actualNativeGoalRequests:this.b471ActualNativeGoalRequests,
+   rejectedOriginalRoutes:this.b471RejectedOriginalRoutes,
+   actualOriginalArrivals:this.b471ActualOriginalArrivals,
+   requestedNativeTick:this.b471AllyOrder?.requestedTick??null,
+   approvedRealAllyFoot:this.b471AllyOrder?.realAllyFootAtApproval?
+    this.b471AllyOrder.realAllyFootAtApproval.toArray() as [number,number,number]:null,
+   approvedOriginalGoal:this.b471AllyOrder?.goal?
+    this.b471AllyOrder.goal.toArray() as [number,number,number]:null,
+   officialWinner:'NONE' as const,actorInkScoreClockWrites:0 as const
+  };
+ }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
   // Reuse exactly the F2-assigned one-way offmesh FIRST DROP. The virtual
@@ -701,6 +771,65 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||!candidates?.length){this.heldRequests++;return false;}
   const sign=bot.team===Team.A?1:-1;
+  // B471: PLAYER-C-key native co-op. Rank ALREADY-vetted original
+  // A1 SOURCE patrol feet by true OwnerGrid ink; never invent a point.
+  // Request goal from real A1 foot ONLY after original Recast + Rapier
+  // certify both endpoints and every <=0.30m intermediate source point.
+  const playerOrder=this.b471AllyOrder;
+  if(id==='A1'&&playerOrder){
+   if(this.b137NativeTick-playerOrder.requestedTick>900||
+      bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
+      !this.physicallyRejoined.has('A1')||
+      !this.b171AllySyncPracticeRunning){
+    this.b471AllyOrder=null;this.b471OrderStatus='EXPIRED';
+   }else if(this.sourceInk&&this.physics){
+    if(!playerOrder.goal){
+     const ranked=rankOriginalSourcePatrolGoals(
+      candidates,Team.A,this.sourceInk,0);
+     for(const rank of ranked){
+      if(rank.priority==='OWN'||rank.priority==='UNSAMPLED')continue;
+      const goal=candidates[rank.index]!;
+      if(goal.z<33||goal.y<2.7||goal.y>5.25||
+         Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z)<2.5||
+         !this.hasSourceFootSupport(realFoot)||
+         !this.hasSourceFootSupport(goal))continue;
+      const path=this.nav.auditPath(realFoot,goal);
+      if(!path.reachedTarget||path.startSnapDistanceMeters>.20||
+         path.endSnapDistanceMeters>.20||
+         !this.hasSourceSupportedRoute(path,1)){
+       this.b471RejectedOriginalRoutes++;continue;
+      }
+      playerOrder.goal=goal.clone();
+      playerOrder.realAllyFootAtApproval=realFoot.clone();
+      this.b471StrictlyApprovedOriginalGoals++;
+      this.b471OrderStatus='MOVING';break;
+     }
+     if(!playerOrder.goal){
+      this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
+     }
+    }
+    if(playerOrder.goal){
+     if(Math.hypot(realFoot.x-playerOrder.goal.x,
+         realFoot.z-playerOrder.goal.z)<=1.5){
+      this.b471ActualOriginalArrivals++;
+      this.b471OrderStatus='ARRIVED';this.b471AllyOrder=null;
+     }else{
+      const path=this.nav.auditPath(realFoot,playerOrder.goal);
+      if(this.hasSourceFootSupport(realFoot)&&
+         this.hasSourceFootSupport(playerOrder.goal)&&
+         path.reachedTarget&&path.startSnapDistanceMeters<=.20&&
+         path.endSnapDistanceMeters<=.20&&
+         this.hasSourceSupportedRoute(path,1)){
+       out.copy(playerOrder.goal);
+       this.realGoalRequests++;this.b471ActualNativeGoalRequests++;
+       return true;
+      }
+      this.b471RejectedOriginalRoutes++;
+      this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
+     }
+    }
+   }
+  }
   // F3-B: in this opt-in source game only, real B-team CPUs can pursue
   // the real grounded HUMAN when the human actually occupies their
   // registered B-side source floor. Recast is a goal, never movement.
@@ -2028,6 +2157,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      opponentRouteCertified:false as const,
      scoreableSourcePromotions:0 as const
     },
+    b471TruePlayerOrderedAlly:this.b471ReadOnlyAllyCoverageOrder(),
     b443NativeGoalRetentions:this.b443NativeGoalRetentions,
     b443FirstActualFrontlineArrivals:this.b443FirstActualFrontlineArrivals,
     b443RotationsAfterDwell:this.b443RotationsAfterDwell,
