@@ -830,6 +830,8 @@ export class UndertowF3PlayablePreviewApp{
    'STRICT_REAL_CPU_A3_ORIGINAL_GOAL_REAUTHORIZATION':'OFF';
   this.canvas.dataset.t21B441OriginalFrontline=b441OptIn?
    'SOURCE_ONLY_INDEPENDENT_FRONTLINE_RESEARCH':'OFF';
+  this.canvas.dataset.t21B471RealPlayerAllyOrder=
+   b193Coop&&this.b203FullRound?'SOURCE_COOP_C_KEY':'OFF';
   this.canvas.dataset.t21B150AllyInk=
    b31Params.get('t21QaDrive')==='source'&&
    realAllyRally&&realAllyInk?'SOURCE_ONLY_OPT_IN':'OFF';
@@ -2195,6 +2197,16 @@ export class UndertowF3PlayablePreviewApp{
     }else if(b193Coop){
      window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
     }else this.restart();
+   }
+   if(ev.code==='KeyC'&&b193Coop&&this.b203FullRound&&
+      document.pointerLockElement===this.canvas&&
+      this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
+      this.resources.currentHp>0){
+    ev.preventDefault();
+    // Only a real player key can arm an A1 request. Traffic still needs
+    // actual 60Hz Rapier feet, native path checks, and non-owned real ink.
+    this.traffic.b471RequestTruePlayerOriginalAllyCoverage();
+    this.refresh();
    }
    if(ev.code==='KeyM'){
      this.radarVisible=!this.radarVisible;
@@ -6859,7 +6871,16 @@ export class UndertowF3PlayablePreviewApp{
     !this.survey.snapshot().active&&this.galleryIndex<0;
    this.b141RealAllyIndicator.hidden=!visible;
    this.b141RealAllyIndicator.style.display=visible?'block':'none';
-   this.b141RealAllyIndicator.textContent=info.text;
+   const order=this.traffic.b471ReadOnlyAllyCoverageOrder();
+   const cEnabled=this.canvas.dataset.t21B471RealPlayerAllyOrder===
+    'SOURCE_COOP_C_KEY';
+   this.b141RealAllyIndicator.textContent=info.text+
+    (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status:'');
+   this.b141RealAllyIndicator.style.whiteSpace='pre-line';
+   this.b141RealAllyIndicator.dataset.t21B471RealPlayerOrder=
+    order.status;
+   this.b141RealAllyIndicator.dataset.t21B471RealNativeGoalRequests=
+    String(order.actualNativeGoalRequests);
    this.b141RealAllyIndicator.dataset.t21B141State=info.code;
    this.b141RealAllyIndicator.dataset.t21B141CertifiedRoute='false';
   }
