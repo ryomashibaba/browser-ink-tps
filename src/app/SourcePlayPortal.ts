@@ -1,6 +1,9 @@
 import {b384SourceCircuitHref} from './B384SourceCircuit';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {sourceCoopNavigationUrl,sourceCoopEligible} from './B193SourceCoopMode';
+import {WEAPON_ORDER,DEFAULT_WEAPON_ID,type WeaponId}
+ from '../weapons/WeaponCatalog';
+import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 
 /** One-click T21 launcher. Keep original T20 index/game untouched.
  * Both modes boot a FRESH native SOURCE-only world. Never grant scoring,
@@ -39,6 +42,39 @@ export function sourcePlayPortalDestinations(portalUrl:string){
  }
  return {circuit,combat,coop};
 }
+
+/** B472: same deliberately selected original human kit in all four actual
+ * playable SOURCE entry modes. Defaults leave the old native URLs intact.
+ * The only addition is the EXISTING B389 pre-STAGING weapon ID.
+ * This is NOT permission for new CPU combat, paths or Turf scoring.
+ */
+export function sourcePlayWeaponModeDestinations(
+ portalUrl:string,requestedWeaponId:string
+):Readonly<{circuit:string;combat:string;coop:string;frontline:string}>{
+ if(!WEAPON_ORDER.includes(requestedWeaponId as WeaponId))
+  throw Error('T21_SOURCE_UNKNOWN_NATIVE_WEAPON');
+ const id=requestedWeaponId as WeaponId;
+ const base=sourcePlayPortalDestinations(portalUrl);
+ const frontend=new URL(portalUrl),root=new URL('./',frontend);
+ const safe=(href:string):string=>{
+  const u=new URL(href);
+  if(u.origin!==frontend.origin||u.pathname!==root.pathname||
+     u.searchParams.has('production')||
+     u.searchParams.has('scoreable')||
+     u.searchParams.has('t21QaInput')||u.hash)
+   throw Error('T21_SOURCE_LOADOUT_UNSAFE_TARGET');
+  if(id!==DEFAULT_WEAPON_ID){
+   u.searchParams.set('t21W10B389',id);
+   if(b389NativeBootWeapon(u.searchParams)!==id)
+    throw Error('T21_SOURCE_LOADOUT_NATIVE_AUTHORITY_REJECTED');
+  }
+  return u.href;
+ };
+ return {circuit:safe(base.circuit),combat:safe(base.combat),
+  coop:safe(base.coop),
+  frontline:safe(sourcePlayFrontlineResearchUrl(portalUrl))};
+}
+
 /** Existing true SOURCE 180s round -> a new mode selection, never
  * an in-world reset/actor relocation or fake official result. */
 export function sourcePlayPortalReturnUrl(href:string):string|null{
