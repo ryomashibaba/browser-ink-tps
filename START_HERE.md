@@ -1,3 +1,5 @@
+> **2026-11-05 F3 オプションSOURCE CPU前線プレイ選択（B441 Chrome検証待ち）**：F1〜F5不変更のまま、既存B441/B448のRecast/Rapier原本経路ゴール研究を「戦闘研究」カードから追加1クリックで起動できるようにした。既存3モード/固定CPU巡回は一切不変更、原本の敵自然対岸0/12・OfficialWinner NONE・正式4v4/ART/本番はHOLD。既存B441真正ChromeとUnitでURL/実選択のゲート検証。[詳細](docs/qa/T21_F3_REAL_OPTIONAL_CPU_FRONTLINE_20261105_JA.md)。
+
 > **2026-11-05 F3 本物のSOURCE3面射撃・物理カメラピッチ修正（新B413 CI待ち）**：Run [#41980851257](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41980851257) RAW #13394750575でB462実A1接近/B322登頂/OWNイカ回復・実再射撃までPASS。しかしB313が実カメラ限界-55°を超える-60.9845°の原本目標を誤って安全と認定し、B315独立3面実着弾はFAIL。実ThirdPersonCameraの可動域に合わせB313 safeを[-55°,28°]へ修正、既存原本B337近傍アクティブセルfallbackを利用。B313 RAW回帰をB413既存CIに組込む。元3面実着弾/Scoreable0・対岸0/12・正式4v4/ART/HOLDの基準は不変更。[詳細](docs/qa/T21_F3_B313_PHYSICAL_CAMERA_PITCH_20261105_JA.md)。
 
 > **2026-11-05 B463 実2×180秒SOURCE再戦比較を真正ChromiumでE2E検証（新B413結果待ち）**：旧HEADで真の2試合×180秒・独立B430/B438 PASS済み。SOURCE前回試合履歴UIを新設後、既存B413の本物2試合目TIME_UPで前回値/今回shot・元inkと本物snapshot一致、再戦固定footerが1600×900で実画面内にあるかを検証する。ゲーム時刻/CPU/Actor/score改変なし。結果未確定のためUI実プレイ最終PASSはHOLD。[B463記録](docs/qa/T21_F3_B463_REAL_SOURCE_REPLAY_HISTORY_20261105_JA.md)。

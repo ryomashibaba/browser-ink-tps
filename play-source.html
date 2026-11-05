@@ -36,6 +36,7 @@
     .mode p{margin:0;color:#b9e0e3;line-height:1.45;font-size:12px;flex:1}
     .button{display:block;text-align:center;text-decoration:none;padding:12px 12px;border-radius:12px;font-weight:900;letter-spacing:.02em;background:#99ffe2;color:#052b32;transition:transform .12s,filter .12s}
     .secondary .button{background:#1a4259;border:1px solid #89bcd8;color:#dffaff}
+    .secondary .button.experimental{padding:9px 10px;background:#153a45;border-color:#65baab;color:#d1fff1;font-size:11px;font-weight:800;letter-spacing:0}
     .button:hover{transform:translateY(-2px);filter:brightness(1.09)}
     .button:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .limits{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:22px;border-top:1px solid #7db1ca3b;padding-top:18px}
@@ -76,6 +77,8 @@
     <h2>実CPU戦闘研究モード</h2>
     <p>本物の敵CPUとの交戦を試す研究モード。中央・対岸の自然な経路は未認証で、実際の敵遭遇・撃破を保証しません。</p>
     <a id="play-combat" class="button" href="#" aria-label="原作SOURCE戦闘研究モードへ">戦闘研究モードへ</a>
+    <a id="play-combat-frontline" class="button experimental" href="#"
+       aria-label="原作床の物理経路を検証しながらCPU前線行動を試す任意研究ゲーム">CPU前線行動も試す · 任意研究</a>
    </div>
   </section>
   <section class="limits" aria-label="操作と認証範囲">

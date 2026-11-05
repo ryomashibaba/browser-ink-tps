@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
-import {sourcePlayPortalDestinations,sourcePlayPortalReturnUrl}
+import {sourcePlayPortalDestinations,sourcePlayPortalReturnUrl,
+ sourcePlayFrontlineResearchUrl}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -55,5 +56,39 @@ describe('T21 real playable SOURCE game entry',()=>{
    .toThrow('T21_SOURCE_PORTAL_INVALID_ORIGIN');
   expect(()=>sourcePlayPortalDestinations('https://example.org/index.html'))
    .toThrow('T21_SOURCE_PORTAL_INVALID_ORIGIN');
+ });
+});
+
+describe('optional CPU B441/B448 original front game selection',()=>{
+ it('adds only strict real existing CPU research flags to original combat URL',()=>{
+  const page='https://example.org/browser-ink-tps/play-source.html';
+  const mode=new URL(sourcePlayFrontlineResearchUrl(page));
+  const normal=new URL(sourcePlayPortalDestinations(page).combat);
+  expect(mode.origin).toBe(normal.origin);
+  expect(mode.pathname).toBe(normal.pathname);
+  for(const [key,value] of normal.searchParams)
+   expect(mode.searchParams.get(key)).toBe(value);
+  expect(mode.searchParams.get('t21W10B441')).toBe('sourceFrontline');
+  expect(mode.searchParams.get('t21W10B448')).toBe('realA3Front');
+  for(const name of ['production','scoreable','t21QaInput','t21W10B193'])
+   expect(mode.searchParams.has(name)).toBe(false);
+  expect(sourcePlayPortalReturnUrl(mode.href)).toBe(page);
+ });
+ it('default 3 game modes are untouched, user-injected params discarded',()=>{
+  const page='http://127.0.0.1:4173/browser-ink-tps/play-source.html';
+  const original=sourcePlayPortalDestinations(page);
+  expect(Object.keys(original).sort()).toEqual(['circuit','combat','coop']);
+  for(const u of Object.values(original)){
+   expect(new URL(u).searchParams.has('t21W10B441')).toBe(false);
+   expect(new URL(u).searchParams.has('t21W10B448')).toBe(false);
+  }
+  const opt=sourcePlayFrontlineResearchUrl(page+'?cpuWarp=1&scoreable=7#inject');
+  expect(opt).not.toContain('cpuWarp');
+  expect(opt).not.toContain('scoreable');
+  expect(opt).not.toContain('#inject');
+ });
+ it('rejects unsafe origin and an unrelated page',()=>{
+  expect(()=>sourcePlayFrontlineResearchUrl('javascript:alert(1)')).toThrow();
+  expect(()=>sourcePlayFrontlineResearchUrl('https://example.org/index.html')).toThrow();
  });
 });

@@ -52,3 +52,24 @@ export function sourcePlayPortalReturnUrl(href:string):string|null{
   return menu.origin===u.origin?menu.href:null;
  }catch{return null;}
 }
+
+/** Optional user-initiated REAL B441/B448 original-source CPU study.
+ * Default SOURCE game modes and original FIXED CPU patrol remain unchanged. */
+export function sourcePlayFrontlineResearchUrl(portalUrl:string):string{
+ const normal=sourcePlayPortalDestinations(portalUrl);
+ const mode=new URL(normal.combat);
+ if(mode.searchParams.get('t21W10B203')!=='fullRound'||
+    mode.searchParams.get('t21W10B192')!=='humanCombat'||
+    mode.searchParams.get('t21QaDrive')!=='source'||
+    mode.searchParams.has('t21W10B193'))
+  throw Error('T21_FRONTLINE_RESEARCH_REQUIRES_REAL_SOURCE_COMBAT');
+ mode.searchParams.set('t21W10B441','sourceFrontline');
+ mode.searchParams.set('t21W10B448','realA3Front');
+ if(mode.origin!==new URL(portalUrl).origin||
+    mode.pathname!==new URL('./',portalUrl).pathname||
+    mode.searchParams.has('t21QaInput')||
+    mode.searchParams.has('production')||
+    mode.searchParams.has('scoreable')||mode.hash)
+  throw Error('T21_FRONTLINE_RESEARCH_UNSAFE_URL');
+ return mode.href;
+}
