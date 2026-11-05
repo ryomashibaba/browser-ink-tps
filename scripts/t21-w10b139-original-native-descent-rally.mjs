@@ -507,6 +507,15 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
  };
  saveAttempt(started,'B162_ACTUALLY_ARMED_NATIVE_COOP_RUNNING');
  if(b471RealPlayerOrder&&coopAttempt===1){
+  // The genuine READY-prearmed source mode is RUNNING before the first
+  // post-start native fixed step. Observe 120 actual 60Hz KCC ticks with
+  // no held direction key before a human C command: source grounding,
+  // A1 rejoin, and ALLY_SYNC lifecycle must be current, not guessed.
+  const settled=await nativeOriginalKeyboard({
+   name:'B471_REAL_STATIONARY_NATIVE_PLAYER_AND_A1_READY',
+   keys:[],ticks:120
+  },()=>{});
+  authority(settled,'FIXED');
   // Genuine Chromium human KeyC only; no actor, ink, score or tick writes.
   const before=await snapshot();authority(before,'FIXED');
   if(before.matchState!=='PLAYING'||before.paused||
