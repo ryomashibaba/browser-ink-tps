@@ -100,7 +100,8 @@ import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
-import {sourcePlayPortalReturnUrl} from './SourcePlayPortal';
+import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
+ sourceReplayHotkeyAction} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -2173,11 +2174,27 @@ export class UndertowF3PlayablePreviewApp{
     this.paused=true;this.resumeAfterRealPointerLock=true;
     this.refreshB25PaintRun();
    }
-   // Source co-op R always starts a fresh true Rapier/Recast world,
-   // not the local PlayerController teleport used by legacy trial QA.
+   // Real full-round SOURCE R is an end-screen replay command only.
+   // Never reset live CPU, paint, physics or clock from a keypress.
    if(ev.code==='KeyR'){
-    if(b193Coop)window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
-    else this.restart();
+    if(this.b203FullRound){
+     const target=ev.target;
+     const editing=target instanceof HTMLElement&&
+      (target.isContentEditable||
+       target.closest('input,textarea,select,[contenteditable]')!==null);
+     const decision=sourceReplayHotkeyAction({
+      ...this.sourceFinishedReplayEvidence(),
+      code:ev.code,repeat:ev.repeat,
+      modified:ev.shiftKey||ev.altKey||ev.ctrlKey||ev.metaKey,
+      editing
+     });
+     if(decision==='CLICK_REAL_REPLAY'||
+        decision==='RELOAD_NATIVE_SOURCE_WORLD'){
+      ev.preventDefault();this.restart();
+     }
+    }else if(b193Coop){
+     window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
+    }else this.restart();
    }
    if(ev.code==='KeyM'){
      this.radarVisible=!this.radarVisible;
@@ -4340,7 +4357,55 @@ export class UndertowF3PlayablePreviewApp{
   window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
   return true;
  }
+ /** Only the actual finished native 180s overlay can authorize replay.
+  * Invalid URL, unseen end UI, live lock or source drift are HOLD. */
+ private sourceFinishedReplayEvidence(){
+  const finish=this.b58SessionBoard.finish;
+  const replay=finish.querySelector<HTMLButtonElement>(
+   '#t21-f3-b59-restart');
+  return {
+   href:window.location.href,matchState:this.matchState,
+   stopped:!!this.stopReason,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   originalSolids:this.rawStage.solids.length,
+   originalPaint:this.rawStage.paintSurfaces.length,
+   originalLinks:this.rawStage.navigationLinks?.length??0,
+   scoreable:this.b45SourceSurfaces.filter(s=>s.isScoreable).length,
+   finishedVisible:!finish.hidden&&finish.style.display!=='none'&&
+    finish.dataset.t21B59State==='FINISHED',
+   canClick:!!replay&&!replay.disabled&&!replay.hidden&&
+    !this.survey.snapshot().active&&this.galleryIndex<0
+  };
+ }
  private restart(){
+  // All genuine 180s SOURCE modes, including B441/B448 combat, must
+  // replay in a NEW Rapier/Recast world, never by resetting the live
+  // CPU/paint/clock/source actors before a page navigation.
+  if(this.b203FullRound){
+   const decision=sourceFinishedReplayAction(
+    this.sourceFinishedReplayEvidence());
+   if(decision==='BLOCK')return;
+   if(decision==='RELOAD_NATIVE_SOURCE_WORLD'){
+    window.location.reload();return;
+   }
+   if(b423UseRealSourceWorldReplay(
+      new URLSearchParams(window.location.search),this.matchState)){
+    this.requestFreshSourceCoopReplay();return;
+   }
+   if(this.b384Circuit){
+    const url=b389NativeNewRoundHref(window.location.href,{
+     paused:true,pointerLocked:document.pointerLockElement===this.canvas,
+     stopReason:this.stopReason,matchState:this.matchState,
+     weaponId:this.projectiles.currentPlayerWeapon.id,
+     sourceBoundary:[this.rawStage.solids.length,
+      this.rawStage.paintSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,0]
+    });
+    if(url)window.location.assign(url);
+   }
+   // Unknown SOURCE replay mode: HOLD, no in-world reset.
+   return;
+  }
   // B423: the actual frontmost B59 SESSION COMPLETE restart may only
   // navigate to a NEW SOURCE world. Never reset current CPU/ink/tick.
   if(b423UseRealSourceWorldReplay(
