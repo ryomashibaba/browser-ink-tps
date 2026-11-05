@@ -271,7 +271,11 @@ test('RAW #13396636729: real OWN refill into 100 plus 12 genuine plateau ticks',
  assert.equal(valid(),true);
  assert.equal(b412OwnInkDwellVerified(before,after,foot,
   'UndertowT21D:right-low-team-a',86),false);
- rest.samples[1].ink=90;assert.equal(valid(),false);
+ // 88.95 -> 90 -> 95.75 is still valid native monotonic recovery.
+ // Reject an actual decrease and a forged premature full tank instead.
+ rest.samples[1].ink=90;assert.equal(valid(),true);
+ rest.samples[1].ink=88;assert.equal(valid(),false);
+ rest.samples[1].ink=100;assert.equal(valid(),false);
  rest.samples[1].ink=ink[1];
  rest.samples[2].trueOriginalFoot='FAKE';
  assert.equal(valid(),false);
