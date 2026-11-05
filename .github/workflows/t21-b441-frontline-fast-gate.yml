@@ -1,7 +1,7 @@
 name: T21 B441 original floor frontline candidate fast safety gate
 on:
   push:
-    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103]
+    branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103, research/t21-b471-integrated-safety-20261105]
     paths:
       - 'src/app/B441OriginalSourceFrontline.ts'
       - 'src/app/B441OriginalSourceFrontline.test.ts'
