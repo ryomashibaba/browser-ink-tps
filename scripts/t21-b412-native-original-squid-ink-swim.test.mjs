@@ -214,3 +214,27 @@ test('RAW #13395157849: genuine OWN refill must last before KeyS',()=>{
  foot.sourceActorRelocations=0;
  after.cpu.physicalFootRelocations=1;assert.equal(ok(),false);
 });
+
+test('RAW #13395157849: native OWN resting cannot be mistaken for fake refill',()=>{
+ // At native tick6624 the actual player was on registered OWN upper
+ // source, SQUID+SWIM_GROUND with ink 84.033. The next native sampling
+ // must prove sustained OWN before B413 independent refill can pass.
+ const physical={tick:6624,ink:84.03333333333327,
+  inkRelation:'OWN',inkRecovery:'SQUID_OWN',
+  mode:'SQUID',foot:'UndertowT21D:right-low-team-a'};
+ assert.ok(physical.tick>6600&&physical.ink>82.9);
+ assert.equal(physical.inkRelation,'OWN');
+ assert.equal(physical.inkRecovery,'SQUID_OWN');
+ const trace={samples:[
+  {tick:6624,ink:physical.ink,relation:'OWN',mode:'SQUID',
+   inkRecovery:'SQUID_OWN'},
+  {tick:6628,ink:86.03333333333327,relation:'OWN',mode:'SQUID',
+   inkRecovery:'SQUID_OWN'}]};
+ const consecutive=trace.samples.every(x=>x.relation==='OWN'&&
+  x.mode==='SQUID'&&x.inkRecovery==='SQUID_OWN');
+ assert.equal(consecutive,true);
+ assert.ok(trace.samples[1].tick>trace.samples[0].tick);
+ assert.ok(trace.samples[1].ink>trace.samples[0].ink+.25);
+ trace.samples[1].relation='NEUTRAL';
+ assert.equal(trace.samples.every(x=>x.relation==='OWN'),false);
+});

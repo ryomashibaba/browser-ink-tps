@@ -1,3 +1,5 @@
+> **2026-11-05 F3 イカOWN静止回復（新B413実試験待ち）**：B413 [#41983232424](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41983232424) RAW #13395157849 はOWN上tick6624 ink84.033→すぐ実KeyS帰還tick6630 NEUTRALでB413連続OWN回復監査FAIL。実イカ移動後にShift保持・WASD解除で最大5回本当のnative 60Hz静止回復を観測し、同じ実原作床・連続OWN/実Ink増加のみで判定。Ink/Actor/clock書換や独立閾値緩和なし。2試合旧HEAD PASSは旧実績、新HEAD未認証。[記録](docs/qa/T21_F3_REAL_OWN_SQUID_STATIONARY_REFILL_20261105_JA.md)。
+
 > **2026-11-05 F3 SQUID OWN本物補給継続（次のB413実走行待ち）**：新B413 [#41983232424](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41983232424) RAW #13395157849 はB315原本3面・B322原本坂PASS、SQUID OWN tick6624の直後に本物KeySで離脱したためB413連続OWN回復条件は正当FAIL。実Shift保持・無方向キーで8native tick実補給し、source25/17/26/0・CPU7・Rapier実足・Ink+.25を証明してから帰還する修正。閾値不変更、正式4v4/ART/公開はHOLD。[詳細](docs/qa/T21_F3_B412_REAL_OWN_SQUID_DWELL_20261105_JA.md)。
 
 > **2026-11-05 F3 オプションSOURCE CPU前線プレイ選択（B441 Chrome検証待ち）**：F1〜F5不変更のまま、既存B441/B448のRecast/Rapier原本経路ゴール研究を「戦闘研究」カードから追加1クリックで起動できるようにした。既存3モード/固定CPU巡回は一切不変更、原本の敵自然対岸0/12・OfficialWinner NONE・正式4v4/ART/本番はHOLD。既存B441真正ChromeとUnitでURL/実選択のゲート検証。[詳細](docs/qa/T21_F3_REAL_OPTIONAL_CPU_FRONTLINE_20261105_JA.md)。

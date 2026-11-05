@@ -242,6 +242,57 @@ export async function b412NativeSquidOwnInkRound({
   evidence.peakBody=peak.player.position;
   evidence.peakRelation=peak.player.inkRelation;
   await record('REAL_OWN_INK_SWIM_PEAK_BEFORE_RETURN');
+  // Native Chromium #41983232424 actually reached OWN ink at tick6624,
+  // then immediately used KeyS to leave it. A REAL squid needs time
+  // resting on physical OWN ink to refill; never inject or simulate ink.
+  // The previous unchanged B413 independent gate demands two actual
+  // consecutive SQUID_OWN samples with increasing real ink.
+  evidence.stationaryOwnRefill={
+   schema:'B412_REAL_SOURCE_OWN_REST',nativeKeys:'SHIFT_ONLY',
+   source:'25/17/26/0',samples:[],gameplayWrites:0};
+  const lastOutgoing=evidence.legs.at(-1);
+  if(lastOutgoing?.inkRelation==='OWN'&&
+     lastOutgoing.locomotion==='SWIM_GROUND'){
+   let previous=peak;
+   for(let i=0;i<5;i++){
+    // No movement key held; the original 60Hz native world runs itself.
+    const next=await nativeUntil(async()=>{
+     const n=await frame();
+     return n.tick>=previous.tick+3?n:false;
+    },20000);
+    const original=await ledger();
+    const supported=original?.source==='25/17/26/0'&&
+     original.realHumanOriginalFootSupported===true&&
+     original.genuineHumanOriginalFootSolid===expectedFoot&&
+     Number.isFinite(original.genuineOriginalFootGapMeters)&&
+     original.genuineOriginalFootGapMeters>=0&&
+     original.genuineOriginalFootGapMeters<=.4&&
+     original.sourceActorRelocations===0&&
+     original.sourceInkRewritten===false&&
+     original.playerPositionRewritten===false;
+    need(supported&&next.matchState==='PLAYING'&&!next.paused&&
+     next.player.mode==='SQUID'&&next.shotsFired===shots&&
+     next.cpu.physicalRejoins.length===7&&
+     next.cpu.physicalFootRelocations===0&&
+     planar(next.player.position,initialPos)<=5&&await locked(),
+     'REAL_SOURCE_STATIONARY_OWN_INK_FOOT_OR_AUTHORITY');
+    const actualOwn=next.player.inkRelation==='OWN'&&
+     next.playerInkRecoveryState==='SQUID_OWN'&&
+     next.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND';
+    evidence.stationaryOwnRefill.samples.push({
+     tick:next.tick,position:next.player.position,
+     mode:next.player.mode,ink:next.player.ink,
+     inkRelation:next.player.inkRelation,
+     inkRecovery:next.playerInkRecoveryState,
+     trueOriginalFoot:original.genuineHumanOriginalFootSolid,
+     originalFootGap:original.genuineOriginalFootGapMeters,
+     squidOwnRecoveryObserved:actualOwn,source:'25/17/26/0',
+     cpuRejoined:7,humanShots:next.shotsFired});
+    await record('TRUE_SOURCE_OWN_INK_STATIONARY_NATIVE_TICK');
+    previous=next;
+    if(!actualOwn||next.player.ink>=99.9)break;
+   }
+  }
   // RAW #13395157849: true OWN/SWIM_GROUND at tick6624, but
   // immediate native KeyS returned off OWN by tick6630. Complete
   // real 60Hz refilling before physical steering back; no fake ink.
