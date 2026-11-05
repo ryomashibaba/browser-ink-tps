@@ -1,6 +1,6 @@
 import {readSourceCameraPreferences,writeSourceCameraPreferences,
  type SourceCameraPreferences} from './camera/SourceCameraPreferences';
-import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl} from './app/SourcePlayPortal';
+import {sourcePlayWeaponModeDestinations} from './app/SourcePlayPortal';
 import {WEAPON_ORDER,WEAPON_PROFILES,DEFAULT_WEAPON_ID,
  type WeaponId} from './weapons/WeaponCatalog';
 const circuit=document.querySelector<HTMLAnchorElement>('#play-circuit');
@@ -12,7 +12,7 @@ const weaponChoice=document.querySelector<HTMLSelectElement>('#source-weapon-pre
 if(!circuit||!combat||!coop||!front||!status||!weaponChoice)
  throw Error('T21_SOURCE_PORTAL_REQUIRED_UI_MISSING');
 try{
- const targets=sourcePlayPortalDestinations(window.location.href);
+ // Actual SOURCE modes are derived from the canonical source-only portal.
  // Use only the 12 real B378/B389 native weapons. The existing SOURCE
  // READY selector remains available; this is a one-click preselection.
  // Never inherit user-supplied QA, scoring or production URL flags.
@@ -28,20 +28,16 @@ try{
   const choice=WEAPON_ORDER.includes(weaponChoice.value as WeaponId)?
    weaponChoice.value as WeaponId:DEFAULT_WEAPON_ID;
   weaponChoice.value=choice;
-  const launch=new URL(targets.circuit);
-  if(choice!==DEFAULT_WEAPON_ID)
-   launch.searchParams.set('t21W10B389',choice);
-  // Native B389 validates the real 12-weapon ID again in STAGING.
-  // Only this sanitized circuit URL is changed; CPU modes are untouched.
-  if(launch.origin!==window.location.origin||
-     launch.pathname!==new URL(targets.circuit).pathname||
-     launch.searchParams.has('production')||
-     launch.searchParams.has('scoreable')||
-     launch.searchParams.has('t21QaInput'))
-   throw Error('T21_SOURCE_WEAPON_PRESET_UNSAFE_TARGET');
-  circuit.href=launch.href;
-  circuit.dataset.t21SourceInitialWeapon=choice;
-  circuit.dataset.t21SourceWeaponScoreable='0';
+  const all=sourcePlayWeaponModeDestinations(
+   window.location.href,choice);
+  for(const [link,href] of [
+   [circuit,all.circuit],[combat,all.combat],
+   [coop,all.coop],[front,all.frontline]
+  ] as const){
+   link.href=href;
+   link.dataset.t21SourceInitialWeapon=choice;
+   link.dataset.t21SourceWeaponScoreable='0';
+  }
  };
  // Persist only a player-chosen safe 12-weapon SOURCE loadout.
  // Unknown/blocked storage cannot introduce unapproved weapon IDs.
@@ -59,9 +55,6 @@ try{
   catch{/* Still applies to the next game without persistence. */}
  });
  updateStartWeapon();
- combat.href=targets.combat;
- coop.href=targets.coop;
- front.href=sourcePlayFrontlineResearchUrl(window.location.href);
  circuit.dataset.sourceAuthority='25/17/26/0';
  combat.dataset.sourceAuthority='25/17/26/0';
  coop.dataset.sourceAuthority='25/17/26/0';

@@ -31,12 +31,34 @@ export function b389NativeNewRoundHref(
  next.searchParams.set('t21W10B389',action.weaponId);
  return next.href;
 }
-/** A URL is not trusted evidence of previous play. This is only a legal
- * pre-pointer-lock, source-only B378 weapon selection; nothing auto-starts. */
+/** B472: source-ONLY real 12-weapon boot for all four existing portal
+ * modes. The legacy B384 circuit remains unchanged; every OTHER mode
+ * requires EXACT original launcher parameters and no unexpected QA or
+ * production flags. This grants only a native human weapon at STAGING.
+ * No mode, actor, path, score, clock or source authority is expanded.
+ */
 export function b389NativeBootWeapon(
  params:URLSearchParams
 ):WeaponId|null{
- if(!b384SourceCircuitSelected(params))return null;
  const id=params.get('t21W10B389');
- return id&&WEAPON_ORDER.includes(id as WeaponId)?id as WeaponId:null;
+ if(!id||!WEAPON_ORDER.includes(id as WeaponId))return null;
+ if(b384SourceCircuitSelected(params))return id as WeaponId;
+ const common=['t21Play','t21QaDrive','t21W10B183',
+  't21W10B203','t21W10B389'];
+ if(params.get('t21Play')!=='preview'||
+    params.get('t21QaDrive')!=='source'||
+    params.get('t21W10B183')!=='firstDropPlay'||
+    params.get('t21W10B203')!=='fullRound')return null;
+ const combat=params.get('t21W10B192')==='humanCombat';
+ const coop=params.get('t21W10B193')==='allyCoop';
+ if(combat===coop)return null;
+ const frontline=params.get('t21W10B441')==='sourceFrontline'&&
+  params.get('t21W10B448')==='realA3Front';
+ const required=coop?[...common,'t21W10B193']:
+  [...common,'t21W10B112','t21W10B192',
+   ...(frontline?['t21W10B441','t21W10B448']:[])];
+ if(combat&&params.get('t21W10B112')!=='humanGround')return null;
+ const actual=[...params.keys()].sort().join('|');
+ if(actual!==required.sort().join('|'))return null;
+ return id as WeaponId;
 }

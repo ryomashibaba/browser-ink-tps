@@ -1,10 +1,13 @@
 import {describe,it,expect} from 'vitest';
-import {sourcePlayPortalDestinations,sourcePlayPortalReturnUrl,
+import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
+ sourcePlayPortalReturnUrl,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
  sourceFinishedReplayAction}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
+import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
+import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 describe('T21 real playable SOURCE game entry',()=>{
  it('launches authentic existing 12-weapon 180s SOURCE circuit',()=>{
   const d=sourcePlayPortalDestinations('https://example.org/browser-ink-tps/play-source.html');
@@ -200,5 +203,73 @@ describe('SOURCE real TIME_UP replay buttons never call legacy in-world reset',(
    .toBe('BLOCK');
   expect(sourceFinishedReplayAction({...v,href:v.href+'&t21W10B193=allyCoop'}))
    .toBe('BLOCK');
+ });
+});
+
+describe('B472 genuine SOURCE-mode-wide initial human weapon, not new gameplay authority',()=>{
+ const page='https://example.org/browser-ink-tps/play-source.html';
+ it('every one of 12 real kits can enter every one of four SOURCE modes',()=>{
+  for(const id of WEAPON_ORDER){
+   const all=sourcePlayWeaponModeDestinations(page,id);
+   expect(Object.keys(all).sort()).toEqual(
+    ['circuit','combat','coop','frontline']);
+   for(const [mode,href] of Object.entries(all)){
+    const u=new URL(href);
+    expect(u.origin).toBe('https://example.org');
+    expect(u.pathname).toBe('/browser-ink-tps/');
+    expect(u.searchParams.get('t21W10B203')).toBe('fullRound');
+    expect(u.searchParams.has('production')).toBe(false);
+    expect(u.searchParams.has('scoreable')).toBe(false);
+    expect(u.searchParams.has('t21QaInput')).toBe(false);
+    expect(u.searchParams.get('t21W10B389')).toBe(
+     id==='pulse-sprayer'?null:id);
+    expect(b389NativeBootWeapon(u.searchParams)).toBe(
+     id==='pulse-sprayer'?null:id);
+    expect(u.searchParams.has('t21W10B441')).toBe(mode==='frontline');
+    expect(u.searchParams.has('t21W10B448')).toBe(mode==='frontline');
+   }
+  }
+ });
+ it('default mode URL is unchanged when no player changes kit',()=>{
+  const native=sourcePlayPortalDestinations(page);
+  const all=sourcePlayWeaponModeDestinations(page,'pulse-sprayer');
+  expect(all.circuit).toBe(native.circuit);
+  expect(all.combat).toBe(native.combat);
+  expect(all.coop).toBe(native.coop);
+  expect(all.frontline).toBe(sourcePlayFrontlineResearchUrl(page));
+  expect(()=>sourcePlayWeaponModeDestinations(page,'fake-unapproved-kit'))
+   .toThrow('T21_SOURCE_UNKNOWN_NATIVE_WEAPON');
+ });
+ it('rejects fake QA, conflicting modes, duplicates and mixed frontline flags',()=>{
+  const all=sourcePlayWeaponModeDestinations(page,'ink-saber');
+  const bad:Array<(p:URLSearchParams)=>void>=[
+   p=>p.append('t21W10B389','ink-saber'),
+   p=>p.set('t21QaInput','deterministic'),
+   p=>p.set('production','true'),
+   p=>p.set('scoreable','true'),
+   p=>p.set('cpuWarp','1'),
+   p=>p.set('t21W10B193','invalid-mixed-mode'),
+   p=>p.set('t21W10B192','fake'),
+   p=>p.delete('t21W10B183'),
+   p=>p.set('t21W10B203','notFull'),
+   p=>p.set('t21W10B389','made-up'),
+   p=>p.set('t21W10B441','untrusted-source-front'),
+  ];
+  for(const mode of ['combat','coop','frontline'] as const){
+   for(const corrupt of bad){
+    const p=new URL(all[mode]).searchParams;corrupt(p);
+    expect(b389NativeBootWeapon(p)).toBe(null);
+   }
+  }
+ });
+ it('circuit replay semantics remain B384, never start a fake new world',()=>{
+  const url=new URL(sourcePlayWeaponModeDestinations(page,'ink-saber').circuit);
+  expect(b384SourceCircuitSelected(url.searchParams)).toBe(true);
+  expect(b389NativeBootWeapon(url.searchParams)).toBe('ink-saber');
+  expect(sourceFinishedReplayAction({
+   href:url.href,matchState:'PLAYING',stopped:false,
+   pointerLocked:true,originalSolids:25,originalPaint:17,
+   originalLinks:26,scoreable:0,finishedVisible:true,canClick:true
+  })).toBe('BLOCK');
  });
 });
