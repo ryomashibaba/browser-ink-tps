@@ -2,6 +2,8 @@
 
 **方針変更ではない。** 最終目標はスプラトゥーン3 Ver.7.2.0以降マテガイ放水路で、人間1＋CPU7が自然に交戦し、180秒・塗装・HP・撃破・復活・得点・勝敗・再戦が成立する実ゲーム。F1〜F5と `T21_FAST_TRACK_ROADMAP.md`・`docs/continuity/FAST_TRACK_EXECUTION_JA.md` を不変とする。単なるQA数増加ではなく、実際に遊べる機能を優先する。
 
+**並行する正規研究ブランチ側のB472全履歴批判レビュー**：[B472全方針／全実績／全反省の引き継ぎ](https://github.com/ryomashibaba/browser-ink-tps/blob/research/t21-b406-single-session-real-enemy-range-audit-20261103/docs/continuity/BROWSER_INK_TPS_COMPLETE_HANDOFF_B472_CRITICAL_REVIEW_20261105_JA.md)。本書は追加のB471真正Chrome実績・安全統合の現況を補完する。二文書の古いHEAD表記が相違するときは実GitHub最新HEAD／CIを優先し、F1〜F5などの不変条件は厳守する。
+
 ## 固定安全条件
 
 研究SOURCE **25 Rapier solids /17 PaintSurfaces /26 NavLinks /0 Scoreable**、自然対岸経路 **0/12認証**。正式4v4・公式得点・勝敗・ART・公開はHOLD。元の衝突・版が未認証のFloorLine00・推測床／橋／NavLink／仮Actor／ワープ／半径0経路／偽命中／偽得点は禁止。main・T19C/T20・正式QA・原本／非公開資料・Pages・Draft PR #5（OPEN/DRAFT/UNMERGED）を保護する。Chat＋GitHub優先、Work/Computer Useは事前承認、追加課金原則0円、ユーザー作業最少。MinecraftAIBuilderと同格最重要。
