@@ -240,6 +240,32 @@ async function main(){
   ally.searchParams.has('t21W10B192')||
   url.searchParams.has('production')||url.searchParams.has('scoreable'))
   fail('PORTAL_SOURCE_DESTINATION_AUTHORITY');
+ // Human-facing mode selection must be visible and clickable without
+ // scrolling on a 1600x900 game display. Check ACTUAL Chromium layout,
+ // not a synthetic CSS/viewport claim. No actor/score/clock writes.
+ const realMenuButtons=await evaluate(`(() => {
+  const selectors=['#play-circuit','#play-coop','#play-combat'];
+  return selectors.map(selector=>{
+   const button=document.querySelector(selector);
+   const card=button?.closest('.mode');
+   const b=button?.getBoundingClientRect();
+   const c=card?.getBoundingClientRect();
+   return {selector,buttonTop:b?.top??null,buttonBottom:b?.bottom??null,
+    cardBottom:c?.bottom??null,buttonWidth:b?.width??null,
+    enabled:!!button?.href&&!button?.hasAttribute('disabled')};
+  });
+ })()`);
+ if(!Array.isArray(realMenuButtons)||realMenuButtons.length!==3||
+  realMenuButtons.some(v=>!v.enabled||
+   !Number.isFinite(v.buttonTop)||v.buttonTop<0||
+   !Number.isFinite(v.buttonBottom)||v.buttonBottom>880||
+   !Number.isFinite(v.cardBottom)||v.cardBottom>895||
+   !Number.isFinite(v.buttonWidth)||v.buttonWidth<160))
+  fail('REAL_1600x900_SOURCE_MODE_CHOICE_REQUIRES_SCROLL');
+ proof.realSourceModeViewport={
+  actualChromium1600x900:true,threeOptionsImmediatelyAccessible:true,
+  realMenuButtons,sourceOnly:true,gameplayWrites:0,officialWinner:'NONE'};
+ save();
  const portalPicture=await cdp('Page.captureScreenshot',{
   format:'png',captureBeyondViewport:false});
  if(typeof portalPicture?.data!=='string'||portalPicture.data.length<100)

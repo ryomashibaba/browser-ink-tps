@@ -1,3 +1,5 @@
+> **2026-11-05 SOURCE 3モード入口の真正画像に基づく配置改良（新HEAD実Chromium結果待ち）**：前HEADのB441画像を直接開き、1600×900でA1協力と敵CPU研究のボタンが折り返し画面外に切れた事実を確認。見出し・カード間隔を調整し、同じB441真正Chromiumで3ボタンの実位置を検証する。CPU/Actor/時計/経路/原作25/17/26/0/得点0・公開HOLD維持。[詳細](docs/qa/T21_F3_SOURCE_PLAY_PORTAL_20261105_JA.md)。
+
 > **2026-11-05 F3 SOURCE実ゲームのモード選択（新CI確認待ち）**：既存B384 12武器180秒SOURCE回路・B193味方A1協力ALLY_SYNC・B207敵CPU研究を独立した3択入口へ統合。ゲームのREADY/PAUSED・本物TIME_UP後からモード選択へ戻る導線を追加。SOURCE25/17/26/0・0/12敵陣HOLD・正式得点0/勝者NONEを維持、T19C/T20/main/正式QA/PR#5/Pages保護。[詳細](docs/qa/T21_F3_SOURCE_PLAY_PORTAL_20261105_JA.md)。
 
 > **2026-11-05 F3/F5 SOURCE再戦カメラ設定（研究・新HEAD CI確認待ち）**：SOURCE限定プレイヤー操作の感度[ / ]・I反転・Q肩をブラウザに保存し新しい実180秒ゲームに復元。T20と決定論的QAは保存値未使用、M=レーダー/N=音声の表示も整合。原作25/17/26/0と対岸0/12、正式4v4・勝敗/ART/公開はHOLD。詳細 [SOURCE再戦カメラ設定](docs/qa/T21_F3_SOURCE_CAMERA_REPLAY_PREFERENCES_20261105_JA.md)。
