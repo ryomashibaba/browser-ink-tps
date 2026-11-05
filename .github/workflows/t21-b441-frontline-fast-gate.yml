@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/app/B441OriginalSourceFrontline.ts'
       - 'src/app/B441OriginalSourceFrontline.test.ts'
+      - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/UndertowF3SourceTraffic.ts'
       - '.github/workflows/t21-b441-frontline-fast-gate.yml'
   workflow_dispatch:
 permissions:

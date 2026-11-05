@@ -354,18 +354,31 @@ async function main(){
  await cdp('Page.navigate',{url:root+'play-source.html'});
  await until(()=>evaluate(`(() => {
   const p=document.querySelector('#source-weapon-preselect');
-  const a=document.querySelector('#play-circuit');
+  const links=['#play-circuit','#play-combat','#play-coop',
+   '#play-combat-frontline'].map(q=>document.querySelector(q));
   return document.querySelector('#portal-status')
    ?.dataset.t21PortalReady==='SOURCE_ONLY'&&
-   p?.value==='ink-saber'&&
-   new URL(a.href).searchParams.get('t21W10B389')==='ink-saber';
+   p?.value==='ink-saber'&&links.every(a=>a?.href&&
+    new URL(a.href).searchParams.get('t21W10B389')==='ink-saber'&&
+    a.dataset.t21SourceInitialWeapon==='ink-saber');
  })()`),30000);
+ proof.realSourceAllModeLoadout={
+  samePlayerSelectedKitInAllFourLinks:true,
+  actualNativeSourcePortal:true,originalModeFlagsPreserved:true,
+  changedActorOrInkWrites:0,productionAuthorized:false
+ };
+ save();
  await buttonClick('#play-combat-frontline');
  await until(()=>evaluate(`document.querySelector('#app-canvas')
   ?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')
   ?.dataset.t21F3Renderer==='webgl2'`),120000);
  const optionalBoot=await snap();authority(optionalBoot);
+ if(optionalBoot.b361NativePlayerWeapon?.id!=='ink-saber'||
+    optionalBoot.matchState!=='STAGING')
+  fail('FRONTLINE_REAL_SOURCE_PRESELECTED_WEAPON_NOT_APPLIED');
+ proof.realSourceAllModeLoadout.frontlineNativeBootWeapon='ink-saber';
+ save();
  const optionalUI=await evaluate(`(() => {
   const canvas=document.querySelector('#app-canvas');
   const search=new URL(location.href).searchParams;
