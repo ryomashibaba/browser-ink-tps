@@ -118,6 +118,26 @@ export function b470MayAuditRealInkRankedSameSideFront(
   Math.abs(y-gy)<=.30&&Math.hypot(x-gx,z-gz)<=3;
 }
 
+/** B471 input gate only, never physics, path, actor or official score. */
+export function b471MayRequestActualA1SourceOrder(stage:StageDefinition,e:{
+ readonly id:string;readonly team:B441Side;readonly nativeTick:number;
+ readonly coOpActuallyRunning:boolean;readonly actualAllyRejoined:boolean;
+ readonly actualAllyActiveGrounded:boolean;
+ readonly trueHumanAliveGrounded:boolean;
+ readonly actualAllyFoot:readonly [number,number,number];
+ readonly actualHumanFoot:readonly [number,number,number];
+}):boolean{
+ if(!authorized(stage)||e.id!=='A1'||e.team!=='A'||
+  !Number.isSafeInteger(e.nativeTick)||e.nativeTick<0||
+  !e.coOpActuallyRunning||!e.actualAllyRejoined||
+  !e.actualAllyActiveGrounded||!e.trueHumanAliveGrounded||
+  !e.actualAllyFoot.every(Number.isFinite)||
+  !e.actualHumanFoot.every(Number.isFinite))return false;
+ const [,ay,az]=e.actualAllyFoot,[,hy,hz]=e.actualHumanFoot;
+ return az>=33&&az<=63&&ay>=2.7&&ay<=5.25&&
+  hz>=33&&hz<=63&&hy>=2.7&&hy<=9.5;
+}
+
 /** Returns conservative, interior samples of EXISTING SOURCE cells.
  * A real Rapier foot probe and whole native Recast path are still REQUIRED
  * by the calling CPU goal selector; they are never inferred from this list. */

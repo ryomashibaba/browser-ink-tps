@@ -7,7 +7,8 @@ import {pointInStageFootprint} from '../stage/StageFootprint';
 import {SurfaceFlags} from '../ink/types';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
- b470MayAuditRealInkRankedSameSideFront}
+ b470MayAuditRealInkRankedSameSideFront,
+ b471MayRequestActualA1SourceOrder}
  from './B441OriginalSourceFrontline';
 describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  const make=()=>undertowT21dConnectivityQaStage();
@@ -168,6 +169,40 @@ describe('B470 true 120-tick original SAME-SIDE dwell is only a route audit trig
   expect(gate(a,{...stage,solids:stage.solids.slice(1)})).toBe(false);
   expect(gate(a,{...stage,navigationLinks:[]})).toBe(false);
   expect(gate(a,{...stage,paintSurfaces:stage.paintSurfaces.map((p,i)=>
+   i===0?{...p,flags:p.flags|SurfaceFlags.Scoreable}:p)})).toBe(false);
+ });
+});
+
+describe('B471 true C-key A1 SOURCE co-op command input is fail closed',()=>{
+ const stage=undertowT21dConnectivityQaStage();
+ const truth:Parameters<typeof b471MayRequestActualA1SourceOrder>[1]={
+  id:'A1',team:'A',nativeTick:1550,coOpActuallyRunning:true,
+  actualAllyRejoined:true,actualAllyActiveGrounded:true,
+  trueHumanAliveGrounded:true,actualAllyFoot:[3.4,4.6,43],
+  actualHumanFoot:[4.2,7.5,46]
+ };
+ const gate=(p:typeof truth,s=stage)=>b471MayRequestActualA1SourceOrder(s,p);
+ it('accepts actual same-side A1 and grounded human on original floor',()=>{
+  expect(gate(truth)).toBe(true);
+  expect(gate({...truth,actualHumanFoot:[4,4.6,47]})).toBe(true);
+ });
+ it('rejects wrong actor, wrong mode, stale contact, forged positions',()=>{
+  for(const changed of [
+   {id:'A2'},{id:'B1'},{id:'HUMAN'},{team:'B' as const},
+   {coOpActuallyRunning:false},{actualAllyRejoined:false},
+   {actualAllyActiveGrounded:false},{trueHumanAliveGrounded:false},
+   {nativeTick:-1},{nativeTick:NaN},
+   {actualAllyFoot:[2,4.6,-43] as const},
+   {actualAllyFoot:[2,NaN,43] as const},
+   {actualHumanFoot:[4,7.5,-45] as const},
+   {actualHumanFoot:[4,NaN,45] as const},
+   {actualHumanFoot:[4,10.5,45] as const}
+  ])expect(gate({...truth,...changed})).toBe(false);
+ });
+ it('refuses source collision/nav/score drift',()=>{
+  expect(gate(truth,{...stage,solids:stage.solids.slice(1)})).toBe(false);
+  expect(gate(truth,{...stage,navigationLinks:[]})).toBe(false);
+  expect(gate(truth,{...stage,paintSurfaces:stage.paintSurfaces.map((p,i)=>
    i===0?{...p,flags:p.flags|SurfaceFlags.Scoreable}:p)})).toBe(false);
  });
 });
