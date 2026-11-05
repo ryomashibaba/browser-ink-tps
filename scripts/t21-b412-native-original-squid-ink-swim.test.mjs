@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {b412AuditNativeActualOriginalInkSwim,b412NativeReturnReady,
- b412NativeReturnSteerKey}
+ b412NativeReturnSteerKey,b412ObservedNativeForwardW}
  from './t21-b412-native-original-squid-ink-swim.mjs';
 const b410={
  verdict:'PASS_ACTUAL_ORIGINAL_RAMP_UPPER_KCC_AND_THREE_LATE_NATIVE_SHOOT_WAVES',
@@ -161,4 +161,26 @@ test('B412 audit refuses outbound input contradicting actual native W calibratio
  w.outboundForwardWDelta=[1,0];
  assert.throws(()=>b412AuditNativeActualOriginalInkSwim(w,b410,b411),
   /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_/);
+});
+
+test('RAW #13378648373: real KeyD displacement must never replace native KeyW forward',()=>{
+ const initial=[13.214171409606934,5.394931316375732,46.32919692993164];
+ const start=[13.214171409606934,5.394753456115723,46.32918930053711];
+ const wEnd=[13.772868156433105,5.395096302032471,46.03012466430664];
+ const dEnd=[14.326507568359375,5.394999980926514,46.26839065551758];
+ const diff=(a,b)=>[b[0]-a[0],b[2]-a[2]];
+ const w=diff(start,wEnd),d=diff(wEnd,dEnd);
+ const legs=[
+  {direction:'TOWARD_REAL_120S_PAINT',code:'KeyW',from:start,to:wEnd,
+   planarMeters:Math.hypot(...w)},
+  {direction:'TOWARD_REAL_120S_PAINT',code:'KeyD',from:wEnd,to:dEnd,
+   planarMeters:Math.hypot(...d)}
+ ];
+ assert.deepEqual(b412ObservedNativeForwardW(legs),w);
+ assert.notDeepEqual(w,d);
+ const lastBody=[14.11371898651123,5.3955793380737305,46.741703033447266];
+ assert.equal(b412NativeReturnSteerKey(lastBody,initial,w),'KeyA');
+ assert.equal(b412NativeReturnSteerKey(lastBody,initial,d),'KeyS');
+ assert.throws(()=>b412ObservedNativeForwardW([legs[1]]),
+  /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_REAL_NATIVE_KEYW_CALIBRATION_REQUIRED/);
 });

@@ -45,6 +45,22 @@ export function b412NativeReturnSteerKey(position,initialPos,realWDelta){
  scores.sort((a,b)=>b.score-a.score);
  return scores[0].code;
 }
+/** True original-world W KCC only. A KeyA/KeyD lateral correction
+ * cannot serve as the camera's physical flat-forward direction. */
+export function b412ObservedNativeForwardW(legs){
+ need(Array.isArray(legs)&&legs.length>=1&&legs.length<=22,
+  'REAL_NATIVE_KEYW_LEGS_REQUIRED');
+ const w=legs.filter(x=>x?.direction==='TOWARD_REAL_120S_PAINT'&&
+  x.code==='KeyW').at(-1);
+ need(w&&is3(w.from)&&is3(w.to)&&
+  Number.isFinite(w.planarMeters)&&w.planarMeters>.15,
+  'REAL_NATIVE_KEYW_CALIBRATION_REQUIRED');
+ const delta=[w.to[0]-w.from[0],w.to[2]-w.from[2]];
+ need(Math.hypot(...delta)>.15&&
+  Math.abs(Math.hypot(...delta)-w.planarMeters)<.0001,
+  'REAL_NATIVE_KEYW_DELTA_MISMATCH');
+ return delta;
+}
 // B319-style native 35ms observation; the general B139 500ms wait
 // overshoots a real SOURCE edge by dozens of 60Hz ticks.
 async function nativeUntil(fn,limit=20000){
@@ -198,18 +214,11 @@ export async function b412NativeSquidOwnInkRound({
   await record('REAL_OWN_INK_SWIM_PEAK_BEFORE_RETURN');
   // A genuine SOURCE artifact #13307074389 hit a 0.997m closest
   // approach with twelve KeyS-only pulses: lateral residual remained.
-  // Infer the unchanged camera forward from THIS run's actual second W
-  // KCC leg. Use real WASD to turn toward the original physical foot.
-  // At every pulse the existing Rapier source foot and no-fire checks
-  // remain mandatory; no camera/axis/actor/clock writes.
-  const lastForwardLeg=evidence.legs.filter(x=>
-   x.direction==='TOWARD_REAL_120S_PAINT').at(-1);
-  need(lastForwardLeg?.planarMeters>.15,
-   'ACTUAL_FORWARD_KCC_REQUIRED_FOR_RETURN');
-  const realWDelta=[
-   lastForwardLeg.to[0]-lastForwardLeg.from[0],
-   lastForwardLeg.to[2]-lastForwardLeg.from[2]
-  ];
+  // RAW 13378648373: the last outgoing actual KeyD was accidentally
+  // interpreted as forward W, causing post-TIME_UP independent audit FAIL.
+  // Calibrate from real native KeyW exclusively; preserve original
+  // Rapier/ink/CPU/return-radius gates and use real WASD for the return.
+  const realWDelta=b412ObservedNativeForwardW(evidence.legs);
   evidence.returnForwardWDelta=realWDelta;
   await record('REAL_NATIVE_W_DIRECTION_FOR_SAFE_RETURN');
   // Max 18 short authentic pulses. <=22 complete legs with the
