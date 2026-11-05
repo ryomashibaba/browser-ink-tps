@@ -15,6 +15,8 @@ on:
       - 'src/app/SourcePlayPortal.ts'
       - 'src/app/SourcePlayPortal.test.ts'
       - 'scripts/t21-source-play-windows-launcher.test.mjs'
+      - 'src/app/B441OriginalSourceFrontline.ts'
+      - 'src/app/B441OriginalSourceFrontline.test.ts'
       - 'src/app/UndertowF3SourceTraffic.ts'
       - 'src/app/B450OriginalRouteWitness.ts'
       - 'src/app/B450OriginalRouteWitness.test.ts'
