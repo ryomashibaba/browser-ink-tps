@@ -515,6 +515,8 @@ export class UndertowF3PlayablePreviewApp{
  private b195A1PulseUntilTick=0;
  private b415InkLoop:B415InkLoop|null=null;
  private b168LastPresentedNativeTick=-1;
+ // Read-only on-screen CLEAR cue expires after 600 genuine game ticks.
+ private b168AuthenticToastFirstTick:number|null=null;
  private readonly b25RunProgress:HTMLElement;
  private readonly b21QualityButton:HTMLButtonElement;
  private readonly b22Trial:UndertowF3OwnerGpuTrial;
@@ -1842,12 +1844,13 @@ export class UndertowF3PlayablePreviewApp{
    indicator.dataset.t21B141Scoreable='0';
    indicator.dataset.t21B141CertifiedRoute='false';
    indicator.setAttribute('role','status');
-   indicator.style.cssText='position:fixed;left:50%;top:calc(50% + 112px);'+
-    'transform:translateX(-50%);z-index:12;pointer-events:none;'+
-    'max-width:min(440px,calc(100vw - 28px));padding:7px 11px;'+
+   // Move physical A1 status off the actual player reticle and muzzle line.
+   indicator.style.cssText='position:fixed;left:16px;bottom:78px;'+
+    'z-index:12;pointer-events:none;'+
+    'max-width:min(370px,calc(100vw - 32px));padding:7px 11px;'+
     'border-radius:9px;border:1px solid #5fdfdb88;'+
     'background:rgba(4,29,40,.87);color:#e5fcff;'+
-    'font:700 11px/1.4 system-ui;text-align:center';
+    'font:700 11px/1.4 system-ui;text-align:left;overflow-wrap:anywhere';
    indicator.hidden=true;
    ui.appendChild(indicator);
    this.b141RealAllyIndicator=indicator;
@@ -5763,7 +5766,20 @@ export class UndertowF3PlayablePreviewApp{
   const clearVisible=authenticClear&&this.matchState==='PLAYING'&&
    !this.survey.snapshot().active&&this.galleryIndex<0;
   const b411Compact=this.b411CompactGenuineSourceRound(run);
-  this.b168PracticeClearToast.hidden=!clearVisible||b411Compact;
+  // Preserve genuine result and replay controls but never block the
+  // shooting view with an opaque CLEAR toast for the remaining 180s round.
+  // Lifespan is 600 genuine native ticks, freezing with the actual pause.
+  if(!authenticClear)this.b168AuthenticToastFirstTick=null;
+  else if(this.b168AuthenticToastFirstTick===null||
+          this.clock.tick<this.b168AuthenticToastFirstTick)
+   this.b168AuthenticToastFirstTick=this.clock.tick;
+  const showTimedToast=clearVisible&&
+   this.b168AuthenticToastFirstTick!==null&&
+   this.clock.tick-this.b168AuthenticToastFirstTick<600;
+  this.b168PracticeClearToast.hidden=!showTimedToast||b411Compact;
+  this.b168PracticeClearToast.dataset.t21B168ToastTimed='true';
+  this.b168PracticeClearToast.dataset.t21B168ToastVisible=String(
+   showTimedToast&&!b411Compact);
   this.b168PracticeClearToast.dataset.t21B411Compact=String(b411Compact);
   this.b168PracticeClearToast.dataset.t21B168GenuineClear=String(authenticClear);
   this.b168PracticeClearToast.dataset.t21B168NativeTick=String(this.clock.tick);
@@ -6902,6 +6918,8 @@ export class UndertowF3PlayablePreviewApp{
     order.status;
    this.b141RealAllyIndicator.dataset.t21B471RealNativeGoalRequests=
     String(order.actualNativeGoalRequests);
+   this.b141RealAllyIndicator.dataset.t21B471ActualOriginalArrivals=
+    String(order.actualOriginalArrivals);
    this.b141RealAllyIndicator.dataset.t21B141State=info.code;
    this.b141RealAllyIndicator.dataset.t21B141CertifiedRoute='false';
   }
