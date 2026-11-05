@@ -24,9 +24,12 @@ import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import type {B367NativeCpuState} from './B367RealCpuCombatTimeline';
-import {eligibleB192SourceHumanPursuit,
- chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
-import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
+import {eligibleB192SourceHumanPursuit} from './B192SourceHumanPursuit';
+import {b421RealEnemyStandoff,type B421OriginalWeaponLane}
+ from './B421RealEnemyStandoff';
+import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
+import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
+import {GAME_CONFIG} from '../config/game/gameConfig';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
  b470MayAuditRealInkRankedSameSideFront,
@@ -48,7 +51,7 @@ export interface F3TrafficCpu{
  id:string;team:Team.A|Team.B;position:Vec3;agent:CrowdAgent|null;
  mobilityState:string;thinkRemaining:number;paintRemaining:number;
  fireRemaining:number;jumpCooldownSeconds:number;
- lifeState?:'ACTIVE'|'SPLATTED';hp?:number;
+ lifeState?:'ACTIVE'|'SPLATTED';hp?:number;weaponId?:WeaponId;
 }
 /** Read-only SOURCE QA observation: a native splat may occur in the
  * projectile phase AFTER traffic.observe() in the same physics tick.
@@ -739,6 +742,33 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    officialWinner:'NONE' as const,actorInkScoreClockWrites:0 as const
   };
  }
+ /** Only user-selected original SOURCE combat may improve the genuine
+  * weapon-distance standoff. Other B421 callers retain the legacy 2m goal.
+  * Every candidate still passes the existing Rapier/Recast full-path gate
+  * in chooseSourceGoal; an optical ray alone grants NO movement authority. */
+ private chooseActualSourceCombatGoal(
+  path:Parameters<typeof b421RealEnemyStandoff>[0],
+  enemyFoot:Parameters<typeof b421RealEnemyStandoff>[1],
+  side:1|-1,bot:F3TrafficCpu
+ ){
+  const physics=this.physics;
+  if(!this.enableB192HumanCombat||!physics||!bot.weaponId)
+   return b421RealEnemyStandoff(path,enemyFoot,side);
+  const profile=weaponProfile(bot.weaponId);
+  // Ranged source weapon lanes only. Actual melee/roll actions remain
+  // bound by the previous true 2m source-foot standoff.
+  if(['ROLLER','BRUSH','SPLATANA'].includes(profile.weaponClass))
+   return b421RealEnemyStandoff(path,enemyFoot,side);
+  const lane:B421OriginalWeaponLane={
+   nativeWeaponRangeMeters:cpuWeaponRangeMeters(profile),
+   nativeMuzzleHeightMeters:GAME_CONFIG.cpu.muzzleHeightMeters,
+   enemyHitHeightMeters:.68,
+   originalStageRayBlocked:(from,to)=>!!physics.castStageSegment(
+    new Vec3(from.x,from.y,from.z),
+    new Vec3(to.x,to.y,to.z),'ink-projectile')
+  };
+  return b421RealEnemyStandoff(path,enemyFoot,side,lane);
+ }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
   // Reuse exactly the F2-assigned one-way offmesh FIRST DROP. The virtual
@@ -869,8 +899,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      // Existing native path-backed 2m combat standoff: the CPU must not
      // collide head-on with the genuine HUMAN capsule. Not a new stage
      // node, offmesh link, human warp, or guaranteed weapon hit.
-     const proposed=chooseB192OriginalEnemyStandoff(
-      route.nativePathPoints,h);
+     const proposed=this.chooseActualSourceCombatGoal(
+      route.nativePathPoints,h,-1,bot);
      if(proposed&&this.hasSourceFootSupport(proposed)){
       const combatGoal=new Vec3(proposed.x,proposed.y,proposed.z);
       const toGoal=this.nav.auditPath(realFoot,combatGoal);
@@ -902,7 +932,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     Math.abs(other.position.y-realFoot.y)<=.30)
     .map(other=>({other,distance:Math.hypot(
      other.position.x-realFoot.x,other.position.z-realFoot.z)}))
-    .filter(candidate=>candidate.distance>=1.7&&candidate.distance<=10)
+    .filter(candidate=>candidate.distance>=1.7&&candidate.distance<=
+     (this.enableB192HumanCombat?18:10))
     .sort((a,b)=>a.distance-b.distance);
    for(const {other} of opponents){
     this.sameSourceEnemyCandidates++;
@@ -924,8 +955,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     // B421: the previous goal was the live enemy CPU's actual occupied
     // physical capsule. A true ~2m original Recast waypoint avoids trying
     // to walk into it. Full source Rapier/Recast validation again required.
-    const standoff=b421RealEnemyStandoff(
-     native.nativePathPoints,other.position,sign as 1|-1);
+    const standoff=this.chooseActualSourceCombatGoal(
+     native.nativePathPoints,other.position,sign as 1|-1,bot);
     if(!standoff||!this.hasSourceFootSupport(standoff)){
      this.rejectedUnsupportedNativeRoutes++;continue;
     }

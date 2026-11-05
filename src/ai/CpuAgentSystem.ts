@@ -3364,7 +3364,7 @@ function cpuWeaponInkCost(
   return profile.inkCost;
 }
 
-function cpuWeaponRangeMeters(
+export function cpuWeaponRangeMeters(
   profile: ReturnType<typeof weaponProfile>
 ): number {
   switch (profile.weaponClass) {
