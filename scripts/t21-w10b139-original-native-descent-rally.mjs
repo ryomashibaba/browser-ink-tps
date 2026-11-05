@@ -3420,7 +3420,59 @@ async function run(){
     contextMoved:proof.postKeyRContextMoved??null
   }));
   persist();
-  proof.keyboardReplay=await verifyNewWorld(original1,'REAL_CDP_KEY_R_AFTER_COOP_CLEAR',24000);
+  // If the genuine first CDP key was not delivered at all, allow ONE real
+  // Chrome mouse click on inert co-op HUD text to restore keyboard focus.
+  // Never click the stage canvas, a replay button, or synthesize a JS event.
+  // An ungrounded click is HOLD, not a workaround or a gameplay mutation.
+  if(proof.actualKeyRDispatch?.length===0&&
+     proof.realKeyRAfter?.origin===original1){
+   const focusPoint=await evaluate(`(() => {
+     const el=document.querySelector('#t21-f3-b195-time');
+     const root=document.querySelector('#t21-f3-b195-native-coop');
+     if(!el||!root||root.hidden||
+        getComputedStyle(root).pointerEvents==='none')return null;
+     const box=el.getBoundingClientRect();
+     return {x:box.left+box.width/2,y:box.top+box.height/2,
+      width:box.width,height:box.height,
+      rootPointerEvents:getComputedStyle(root).pointerEvents};
+   })()`);
+   proof.actualRKeyFocusCandidate=focusPoint;persist();
+   if(!focusPoint||!(focusPoint.width>0&&focusPoint.height>0)||
+      !(focusPoint.x>0&&focusPoint.x<1600&&
+        focusPoint.y>0&&focusPoint.y<900))
+    fail('B200_NO_VISIBLE_INERT_NATIVE_HUD_FOCUS_TARGET');
+   await click(focusPoint.x,focusPoint.y);
+   const clickObserved=await keyRWitness();
+   proof.realKeyRFocusClick=clickObserved;
+   console.log('B200_TRUE_INERT_CDP_FOCUS_CLICK',
+     JSON.stringify(clickObserved));
+   persist();
+   if(clickObserved.origin!==original1||
+      clickObserved.matchState!=='PLAYING'||
+      clickObserved.practiceStatus!=='CLEAR'||
+      clickObserved.pointerLocked||clickObserved.stopReason||
+      clickObserved.source?.join(',')!=='25,17,26,0')
+    fail('B200_INERT_CDP_CLICK_CHANGED_NATIVE_WORLD_HOLD');
+   const key={key:'r',code:'KeyR',text:'r',unmodifiedText:'r',
+    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82};
+   await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
+   await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',
+    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
+   await sleep(200);
+   try{
+    proof.actualKeyRDispatchAfterFocus=
+     await evaluate('window.__t21B200ActualKeys||[]');
+    proof.realKeyRAfterFocus=await keyRWitness();
+   }catch(error){proof.realKeyRAfterFocusContextMoved=String(error);}
+   console.log('B200_TRUE_R_AFTER_REAL_MOUSE_FOCUS',JSON.stringify({
+    events:proof.actualKeyRDispatchAfterFocus??null,
+    state:proof.realKeyRAfterFocus??null,
+    moved:proof.realKeyRAfterFocusContextMoved??null
+   }));
+   persist();
+  }
+  proof.keyboardReplay=await verifyNewWorld(original1,
+   'REAL_CDP_KEY_R_AFTER_COOP_CLEAR',24000);
   persist();
   // A second full genuine session, not a screenshot/QA-state substitution.
   await doPhysicalTrial(2);
