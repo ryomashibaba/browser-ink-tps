@@ -5,7 +5,9 @@ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 
 /** Only the real T21 SOURCE player camera opts in. No simulated actor writes. */
 type EventListener=(event:Record<string,unknown>)=>void;
-function harness(){
+function harness(storage?:{
+  getItem:(key:string)=>string|null;setItem:(key:string,value:string)=>void
+ }){
  const windowListeners=new Map<string,EventListener[]>();
  const documentListeners=new Map<string,EventListener[]>();
  const elements:{id:string;hidden:boolean;textContent:string}[]=[];
@@ -28,7 +30,8 @@ function harness(){
   },
   body:{appendChild:()=>{}}
  };
- vi.stubGlobal('window',{addEventListener:add(windowListeners)});
+ vi.stubGlobal('window',{addEventListener:add(windowListeners),
+  location:{search:''},localStorage:storage});
  vi.stubGlobal('document',documentStub);
  const camera=new ThirdPersonCamera(canvas,{} as Entity,[],
   {} as RapierStagePhysics);
@@ -105,5 +108,30 @@ describe('F3 real SOURCE-only player camera controls',()=>{
   h.documentStub.pointerLockElement=null;
   h.pointerLock();
   expect(h.elements[0]?.hidden).toBe(true);
+ });
+});
+
+describe('SOURCE-only visual settings survive real 180-second replay',()=>{
+ it('persists user choices but never reads them into unchanged T20 default',()=>{
+  const saved=new Map<string,string>();
+  const storage={getItem:(k:string)=>saved.get(k)??null,
+   setItem:(k:string,v:string)=>{saved.set(k,v);}};
+  const first=harness(storage);first.camera.enableSourcePracticeControls();
+  expect(first.key('BracketRight')).toBe(true);
+  expect(first.key('KeyI')).toBe(true);
+  expect(first.key('KeyQ')).toBe(true);
+  const newRound=harness(storage);
+  expect(newRound.camera.sourcePracticeViewSnapshot()).toMatchObject({
+   sourcePracticeOnly:false,sourceAimSensitivityMultiplier:1,
+   sourceAimInvertVertical:false,shoulderSide:'RIGHT'});
+  newRound.camera.enableSourcePracticeControls();
+  expect(newRound.camera.sourcePracticeViewSnapshot()).toMatchObject({
+   sourcePracticeOnly:true,sourceAimSensitivityMultiplier:1.25,
+   sourceAimInvertVertical:true,shoulderSide:'LEFT'});
+  expect(newRound.key('Backslash')).toBe(true);
+  const replay=harness(storage);replay.camera.enableSourcePracticeControls();
+  expect(replay.camera.sourcePracticeViewSnapshot()).toMatchObject({
+   sourceAimSensitivityMultiplier:1,sourceAimInvertVertical:false,
+   shoulderSide:'LEFT'});
  });
 });

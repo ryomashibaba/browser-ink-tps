@@ -1,5 +1,7 @@
 import { Entity, Vec3 } from 'playcanvas';
 import {UndertowF3SmartOcclusion} from './UndertowF3SmartOcclusion';
+import {readSourceCameraPreferences,writeSourceCameraPreferences,
+ type SourceCameraPreferences} from './SourceCameraPreferences';
 import {b258Pose,type B258CameraProfile}
  from '../app/B258OriginalCameraComposition';
 import { GAME_CONFIG } from '../config/game/gameConfig';
@@ -29,6 +31,7 @@ export class ThirdPersonCamera {
   // Source practice player-only camera preference. Never affects T20,
   // Rapier, Recast, real actors, projectile collision or Turf authority.
   private sourceAimInvertVertical = false;
+  private sourcePreferencesEnabled = false;
   private sourceControlToast:HTMLDivElement|null=null;
   private sourceControlToastUntilMs=0;
   private sourceSmartOcclusionEnabled = false;
@@ -72,7 +75,35 @@ export class ThirdPersonCamera {
 
   /** Never enabled by the normal T20 camera or other stages. */
   public enableSourcePracticeControls(): void {
-    this.sourcePracticeControls = true;
+    if(this.sourcePracticeControls)return;
+    this.sourcePracticeControls=true;
+    // Source-only local player options must NEVER leak into T20 or
+    // deterministic tests. Missing/blocked storage keeps original defaults.
+    try {
+      this.sourcePreferencesEnabled=
+        new URLSearchParams(window.location?.search??'')
+          .get('t21QaInput')!=='deterministic';
+      if(!this.sourcePreferencesEnabled)return;
+      const saved=readSourceCameraPreferences(window.localStorage);
+      if(!saved)return;
+      this.sourceAimSensitivityMultiplier=saved.sensitivity;
+      this.sourceAimInvertVertical=saved.invertY;
+      this.sourceShoulderSide=saved.shoulder;
+      this.shoulder=saved.shoulder==='RIGHT'?.72:-.72;
+      this.currentShoulderOffset=this.shoulder;
+      this.sourceSmartOcclusion.manual(saved.shoulder);
+    }catch{
+      this.sourcePreferencesEnabled=false;
+    }
+  }
+  private saveSourcePracticePreference():void{
+    if(!this.sourcePracticeControls||!this.sourcePreferencesEnabled)return;
+    const settings:SourceCameraPreferences={
+      version:1,sensitivity:this.sourceAimSensitivityMultiplier,
+      invertY:this.sourceAimInvertVertical,shoulder:this.sourceShoulderSide
+    };
+    try {writeSourceCameraPreferences(window.localStorage,settings);}
+    catch { /* private browser storage disabled: camera remains playable */ }
   }
 
   /** Only the explicitly source-only F3 preview may opt into auto
@@ -410,7 +441,7 @@ export class ThirdPersonCamera {
       if(this.sourcePracticeControls&&
          document.pointerLockElement===this.canvas)
         this.showSourceControlToast(
-         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · M SOUND');
+         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · M RADAR · N SOUND');
       else if(this.sourceControlToast)this.sourceControlToast.hidden=true;
     });
     // The Q shoulder button is a VIEW option, never a movement, aim-assist
@@ -419,17 +450,19 @@ export class ThirdPersonCamera {
       if(!this.sourcePracticeControls||
          event.repeat||event.altKey||event.ctrlKey||event.metaKey||
          document.pointerLockElement!==this.canvas)return;
-      // A real user-only source camera setting, bounded and not persisted.
+      // Source-player camera settings are bounded and kept in this browser.
       if(event.code==='BracketLeft'||event.code==='BracketRight'){
         const step=event.code==='BracketLeft'?-.25:.25;
         this.sourceAimSensitivityMultiplier=Math.max(.5,
          Math.min(1.75,this.sourceAimSensitivityMultiplier+step));
+        this.saveSourcePracticePreference();
         this.showSourceControlToast('CAMERA SENSITIVITY · '+
          this.sourceAimSensitivityMultiplier.toFixed(2)+'x · [ / ]');
         event.preventDefault();return;
       }
       if(event.code==='KeyI'){
         this.sourceAimInvertVertical=!this.sourceAimInvertVertical;
+        this.saveSourcePracticePreference();
         this.showSourceControlToast('VERTICAL LOOK · '+
          (this.sourceAimInvertVertical?'INVERTED':'NORMAL')+' · I');
         event.preventDefault();return;
@@ -437,6 +470,7 @@ export class ThirdPersonCamera {
       if(event.code==='Backslash'){
         this.sourceAimSensitivityMultiplier=1;
         this.sourceAimInvertVertical=false;
+        this.saveSourcePracticePreference();
         this.showSourceControlToast('CAMERA RESET · 1.00x · NORMAL Y');
         event.preventDefault();return;
       }
@@ -444,6 +478,7 @@ export class ThirdPersonCamera {
       this.sourceShoulderSide=this.sourceShoulderSide==='RIGHT'?'LEFT':'RIGHT';
       this.shoulder=this.sourceShoulderSide==='RIGHT'?.72:-.72;
       this.sourceSmartOcclusion.manual(this.sourceShoulderSide);
+      this.saveSourcePracticePreference();
       this.showSourceControlToast('CAMERA SHOULDER · '+
        this.sourceShoulderSide+' · Q');
       event.preventDefault();
