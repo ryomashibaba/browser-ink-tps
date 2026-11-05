@@ -879,8 +879,12 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    // HOLD_REAL_LOWER_FOOT_NOT_PROVEN solely because the objective cleared.
    // Keep the stage/match, source foot and no-mutation checks strict;
    // do NOT invent projectile impact or bypass B315 evidence.
+   // B462 may move the REAL human after actualLower was captured.
+   // Match latest native player pose to SAME-TIME B312 original foot.
+   // B327 unchanged: KCC body <=.15m, 17 surfaces and no writes.
+   const currentLower=await snapshot();authority(currentLower,'FIXED');
    const lowerShotGate=b327CheckGenuinePostClearLowerShot(
-    actualLower,lowerInitial);
+    currentLower,lowerInitial);
    console.log('B327_TRUE_ORIGINAL_LOWER_SHOT_ELIGIBILITY',
     JSON.stringify(lowerShotGate));
    if(lowerShotGate.eligible){

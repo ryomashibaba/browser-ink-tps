@@ -45,3 +45,17 @@ test('original lower world guard and mismatching real bodies remain HOLD',()=>{
  const b=evidence('CLEAR');b.ledger.actualBodyMeters[0]+=.2;
  assert.equal(check(b.snap,b.ledger).eligible,false);
 });
+
+test('B462 real lower motion rejects stale pose, accepts only fresh native KCC',()=>{
+ const {snap,ledger}=evidence();
+ const old=structuredClone(snap);
+ snap.player.position=[.619898796081543,3.8949975967407227,48.981787109375];
+ ledger.actualBodyMeters=[...snap.player.position];
+ assert.equal(check(old,ledger).eligible,false);
+ assert.equal(check(old,ledger).reason,'TRUE_CDP_AND_KCC_BODY_DIVERGED');
+ const verified=check(snap,ledger);
+ assert.equal(verified.eligible,true);
+ assert.equal(verified.noShootingOrPaintProofGranted,true);
+ ledger.sourceActorRelocations=1;
+ assert.equal(check(snap,ledger).eligible,false);
+});
