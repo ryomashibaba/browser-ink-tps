@@ -14,3 +14,9 @@ F1〜F5・Fast Track不変更。原作25 solids / 17 paint surfaces / 26 nav lin
 
 ## 回帰検証の正規化（同日）
 B441の既存のpathフィルタを1行1pathとして維持し、新規B463 Vitestを**実際のnpx vitestコマンド**に追加。未来のworldOriginを持つ改ざんJSONの拒否fixtureはテストの対象となるcurrentOriginより後の値を明示し、時間比較が逆転しないように修正した。ゲーム実装や実SOURCE物理・時計・HP/Inkには追加変更なし。
+
+## B463 本物の2試合目の終了画面で独立DOM実測を追加
+
+既存の **B413 2×180秒真正Chromium** の最終TIME_UP（`B430_TWO_SEPARATE_REAL_SOURCE_180S` 監査直前）のみ、実DOMから `#t21-f3-b463-previous-source-round` を取得し、前回・今回のHuman shots/source changed cellsが表示されることを確認する。2試合目の本物の `window.__t21F3.snapshot()` の射撃数・原作塗装セルと表示上の今回値の一致を審査。真正1600×900のB59固定footer・restartボタンは画面内表示を要件とする。最新の本物の `B430_TRUE_SECOND_SOURCE_TIME_UP.png` に新UIを記録し `b430-two-authentic-source-180s.json` へread-only証拠 `b463` を保存。時刻進行・Actor・インク・物理・得点は操作しない。追加workflowsなし、既存B413の一回の長時間CIでゲームとしての再戦UIを独立実測する。
+
+新HEADの真正B413がPASSするまで **今回の新しい比較UIの実2試合動作は未認証**。旧成功Run #41966021991が証明するのは前のSHAでの2×180秒（今回の履歴UI未搭載）であり、混同しない。

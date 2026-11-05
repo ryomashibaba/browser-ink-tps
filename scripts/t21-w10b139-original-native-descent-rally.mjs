@@ -3174,6 +3174,61 @@ async function run(){
    })()`).then(x=>x?.visible&&x?.realModalFinished&&
     x?.buttonVisible&&!x.buttonDisabled?x:false),20000);
    two.secondEndUi=endUi;saveTwo();
+   // B463: validate user-visible real two-round feedback on the ACTUAL
+   // second SOURCE 180s TIME_UP, not a mocked clock or fake browser DOM.
+   const historyUi=await until(async()=>{
+    const data=await evaluate(`(() => {
+     const modal=document.querySelector('#t21-f3-b59-session-finished');
+     const history=modal?.querySelector('#t21-f3-b463-previous-source-round');
+     const footer=modal?.querySelector('#t21-f3-b59-footer-actions');
+     const stats=modal?.querySelector('#t21-f3-b59-scroll-stats');
+     const restart=modal?.querySelector('#t21-f3-b59-restart');
+     const btn=restart?.getBoundingClientRect();
+     const foot=footer?.getBoundingClientRect();
+     return {origin:performance.timeOrigin,
+      realFinished:modal?.dataset.t21B59State==='FINISHED',
+      originalScoreable:modal?.dataset.originalScoreable,
+      officialWinner:modal?.dataset.t21B59OriginalWinner,
+      previousLocalVisible:!!history&&!history.hidden,
+      historyText:history?.textContent??null,
+      statsScrollable:stats?getComputedStyle(stats).overflowY:null,
+      restartInFixedFooter:!!footer&&footer.contains(restart),
+      restartOnscreen:!!btn&&btn.height>0&&btn.top>=0&&
+       btn.bottom<=innerHeight,
+      fixedFooterOnscreen:!!foot&&foot.height>0&&
+       foot.top>=0&&foot.bottom<=innerHeight,
+      viewport:[innerWidth,innerHeight]};
+    })()`);
+    return data?.realFinished&&data.previousLocalVisible?data:false;
+   },30000);
+   const trueEnd=await snapshot();authority(trueEnd,'FIXED');
+   const human=/HUMAN SHOTS (\\d+) → (\\d+)/.exec(
+    historyUi.historyText??'');
+   const ink=/HUMAN INK CELLS (\\d+) → (\\d+)/.exec(
+    historyUi.historyText??'');
+   if(historyUi.origin!==two.secondOrigin||
+      historyUi.originalScoreable!=='0'||
+      historyUi.officialWinner!=='NONE'||
+      historyUi.statsScrollable!=='auto'||
+      !historyUi.restartInFixedFooter||
+      !historyUi.restartOnscreen||!historyUi.fixedFooterOnscreen||
+      historyUi.viewport[0]!==1600||historyUi.viewport[1]!==900||
+      !historyUi.historyText?.includes('NOT AN OFFICIAL SCORE')||
+      !historyUi.historyText?.includes('WINNER NONE')||
+      !human||!ink||
+      Number(human[2])!==trueEnd.shotsFired||
+      Number(ink[2])!==trueEnd.b23HumanInkFeedback.humanChangedCells||
+      trueEnd.matchState!=='TIME_UP'||trueEnd.timeRemainingSeconds!==0)
+    fail('B463_TRUE_REAL_TWO_ROUND_HISTORY_OR_REPLAY_FOOTER_HOLD');
+   two.b463={...historyUi,trueSecondNativeTick:trueEnd.tick,
+    previousTabHumanShots:Number(human[1]),
+    currentRealHumanShots:trueEnd.shotsFired,
+    previousTabHumanInkCells:Number(ink[1]),
+    currentRealHumanInkCells:trueEnd.b23HumanInkFeedback.humanChangedCells,
+    noOfficialScoreAndNoGameWrites:true};
+   saveTwo();
+   console.log('B463_TRUE_SECOND_180S_BROWSER_REPLAY_COMPARISON',
+    JSON.stringify(two.b463));
    await picture('B430_TRUE_SECOND_SOURCE_TIME_UP');
    const audited=auditB430TrueSecond180s(two);
    writeFileSync(resolve(OUTPUT,'b430-driver-two-real-180s-verdict.json'),
