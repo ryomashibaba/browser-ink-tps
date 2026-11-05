@@ -43,8 +43,21 @@ try{
   circuit.dataset.t21SourceInitialWeapon=choice;
   circuit.dataset.t21SourceWeaponScoreable='0';
  };
- weaponChoice.value=DEFAULT_WEAPON_ID;
- weaponChoice.addEventListener('change',updateStartWeapon);
+ // Persist only a player-chosen safe 12-weapon SOURCE loadout.
+ // Unknown/blocked storage cannot introduce unapproved weapon IDs.
+ const sourceWeaponStorageKey='t21-source-weapon-selection-v1';
+ let remembered:WeaponId=DEFAULT_WEAPON_ID;
+ try{
+  const stored=window.localStorage.getItem(sourceWeaponStorageKey);
+  if(stored&&WEAPON_ORDER.includes(stored as WeaponId))
+   remembered=stored as WeaponId;
+ }catch{/* Private browsing may block storage. */}
+ weaponChoice.value=remembered;
+ weaponChoice.addEventListener('change',()=>{
+  updateStartWeapon();
+  try{window.localStorage.setItem(sourceWeaponStorageKey,weaponChoice.value)}
+  catch{/* Still applies to the next game without persistence. */}
+ });
  updateStartWeapon();
  combat.href=targets.combat;
  coop.href=targets.coop;

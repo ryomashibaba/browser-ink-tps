@@ -282,25 +282,84 @@ async function main(){
   fail('PORTAL_REAL_CHROMIUM_SCREENSHOT_MISSING');
  writeFileSync(resolve(out,'source-play-portal-real-chromium.png'),
   Buffer.from(portalPicture.data,'base64'));
+ // Native keyboard/mouse choice, never DOM-value injection: this proves
+ // the human-facing selector and B389 original fresh-world boot jointly.
+ const catalog=await evaluate(`(() => {
+  const p=document.querySelector('#source-weapon-preselect');
+  return p?{id:p.value,options:[...p.options].map(o=>o.value),
+   bottom:p.getBoundingClientRect().bottom}:null;
+ })()`);
+ if(!catalog||catalog.options.length!==12||
+  catalog.id!=='pulse-sprayer'||catalog.options.at(-1)!=='ink-saber'||
+  catalog.bottom>880)fail('REAL_SOURCE_LOADOUT_CATALOG_AND_LAYOUT');
+ await buttonClick('#source-weapon-preselect');
+ for(const [type,key,code,n] of [
+  ['keyDown','End','End',35],['keyUp','End','End',35],
+  ['keyDown','Enter','Enter',13],['keyUp','Enter','Enter',13]
+ ]){
+  await cdp('Input.dispatchKeyEvent',{
+   type,key,code,windowsVirtualKeyCode:n,nativeVirtualKeyCode:n
+  });
+ }
+ const actualChoice=await until(()=>evaluate(`(() => {
+  const p=document.querySelector('#source-weapon-preselect');
+  const a=document.querySelector('#play-circuit');
+  const href=a?.href?new URL(a.href):null;
+  return p?.value==='ink-saber'&&
+   href?.searchParams.get('t21W10B389')==='ink-saber'&&
+   localStorage.getItem('t21-source-weapon-selection-v1')==='ink-saber'?
+   {value:p.value,safeUrl:a.href}:null;
+ })()`),15000);
+ if(!actualChoice)fail('REAL_CDP_PLAYER_LOADOUT_CHOICE_NOT_SAVED');
+ const loadoutImage=await cdp('Page.captureScreenshot',{
+  format:'png',captureBeyondViewport:false});
+ if(typeof loadoutImage?.data!=='string'||loadoutImage.data.length<100)
+  fail('REAL_NATIVE_WEAPON_MENU_IMAGE_MISSING');
+ writeFileSync(resolve(out,'source-play-selected-ink-saber.png'),
+  Buffer.from(loadoutImage.data,'base64'));
  await buttonClick('#play-circuit');
  const clicked=await until(()=>evaluate(`location.search.includes(
   't21W10B384=loadoutCircuit')&&
-  location.search.includes('t21W10B203=fullRound')`),20000);
+  location.search.includes('t21W10B203=fullRound')&&
+  location.search.includes('t21W10B389=ink-saber')`),20000);
  if(!clicked||new URL(await evaluate('location.href')).pathname!==
     new URL(root).pathname)
   fail('PORTAL_REAL_CDP_CLICK_DID_NOT_START_EXISTING_SOURCE_GAME');
+ // Wait for the genuine PlayCanvas/Rapier world to initialize before
+ // querying its snapshot: incomplete boot is not negative weapon evidence.
+ await until(()=>evaluate(`document.querySelector('#app-canvas')
+  ?.dataset.t21F3Ready==='READY'&&
+  document.querySelector('#app-canvas')
+  ?.dataset.t21F3Renderer==='webgl2'`),120000);
+ const native=await until(async()=>{
+  const s=await evaluate('window.__t21F3?.snapshot?.()??null');
+  return s?.b361NativePlayerWeapon?.id==='ink-saber'?s:null;
+ },30000);
+ authority(native);
+ if(native.matchState!=='STAGING'||native.b384OpenLoadoutCircuit!==true)
+  fail('REAL_NATIVE_PRESELECT_WEAPON_NOT_STAGING');
  proof.realSourcePlayPortal={
-  verdict:'PASS_ACTUAL_CHROMIUM_PORTAL_TO_REAL_SOURCE_GAME_URL',
-  realCdpMouseClick:true,sourceOnly:true,existing12WeaponCircuit:true,
-  actualScreenshot:'source-play-portal-real-chromium.png',
+  verdict:'PASS_ACTUAL_CDP_SOURCE_LOADOUT_TO_NATIVE_PLAYCANVAS_WEAPON',
+  realCdpMouseClick:true,realCdpWeaponKeyboard:true,
+  nativeWeaponId:native.b361NativePlayerWeapon.id,
+  nativeWeaponDisplay:native.b361NativePlayerWeapon.displayName,
+  nativeWeaponInStaging:true,persistedPreference:actualChoice.value,
+  sourceOnly:true,existing12WeaponCircuit:true,
+  actualScreenshot:'source-play-selected-ink-saber.png',
   scriptInjectedActors:0,nativeTickWrites:0,officialWinner:'NONE',
   formal4v4Certified:false,productionAuthorized:false};
  save();
- // Genuine optional USER click boots a new, separate original SOURCE
- // physics world. Do not grant score, teleport, opponent hits or paths.
+ // Returning to the portal retains ONLY the selected weapon, never the
+ // native actors, ink or game tick from the previous SOURCE world.
  await cdp('Page.navigate',{url:root+'play-source.html'});
- await until(()=>evaluate(`document.querySelector('#portal-status')
-  ?.dataset.t21PortalReady==='SOURCE_ONLY'`),30000);
+ await until(()=>evaluate(`(() => {
+  const p=document.querySelector('#source-weapon-preselect');
+  const a=document.querySelector('#play-circuit');
+  return document.querySelector('#portal-status')
+   ?.dataset.t21PortalReady==='SOURCE_ONLY'&&
+   p?.value==='ink-saber'&&
+   new URL(a.href).searchParams.get('t21W10B389')==='ink-saber';
+ })()`),30000);
  await buttonClick('#play-combat-frontline');
  await until(()=>evaluate(`document.querySelector('#app-canvas')
   ?.dataset.t21F3Ready==='READY'&&
