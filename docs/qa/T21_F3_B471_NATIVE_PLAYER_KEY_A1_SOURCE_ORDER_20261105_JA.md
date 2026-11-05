@@ -37,3 +37,7 @@ B470既存実証は[真正B441/B448](https://github.com/ryomashibaba/browser-ink
 - 同じ試行の `w10b162-real-ally-sync-practice.json` は `B162_NATIVE_60HZ_GENUINE_COOPERATIVE_CLEAR`：人間実塗装808セル、A1実塗装38セル、実接地移動37.04m、公式勝者NONE、元SOURCE 25/17/26/0。不正な架空の対岸移動・撃破・勝利は0。
 - この試行の真のブラウザ画面 `W10B162_GENUINE_ORIGINAL_COOPERATIVE_CLEAR.png` にはB471 A1指示HUDの **ARRIVED** 表示が残る。ただし到着カウンタそのもののRAW書き出しは未実装で、連続全身カプセル経路の独立認証や公式敵遭遇の証拠とはしない。
 - 正規研究HEAD上のB413長時間真Chromeと並行開発を保護するため、B471本線pushは本記録時点 **未実施**。現行B470＋実OwnerGrid rankerを含む統合候補 `9cd37a6f07b580f7f48de43af712cfc56590b5f3` は別branch `research/t21-b471-ready-20261105` に保存。最新並行差分確認後の非force統合が必要。対応する組合せTypeScript/Vitest/build [fast #42037692550](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42037692550) は SUCCESS。
+
+## 現行並行コードの最終軽量統合PASS
+- [B471＋B470＋現行武器選択統合 fast gate #42039715852](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42039715852) **SUCCESS**。統合候補 `ce09dadf60a3ddc2d24ed0d5fdf65e0d6f19a0c7` を親として持つ隔離検証HEAD `c4b70268df53ae06893f27c3ded79728db11a090` で B471 gate Vitest・TypeScript・本番ビルド成功。隔離QAワークフロー変更は正規研究branchへ移さない。
+- B471専用実機 [#42038173618](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42038173618) は SUCCESS。公式正式B200再戦全経路のPASSとは区別する。B413長時間試験が進行中の限り正規研究branchへのpushは禁止し、すべて安全な研究branchで保存する。
