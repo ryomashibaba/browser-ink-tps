@@ -61,6 +61,36 @@ export function b412ObservedNativeForwardW(legs){
   'REAL_NATIVE_KEYW_DELTA_MISMATCH');
  return delta;
 }
+/** Real Shift-held, key-released SQUID OWN replenishment gate. */
+export function b412OwnInkDwellVerified(before,after,foot,solid,shots){
+ return before?.player?.mode==='SQUID'&&
+  before.player.inkRelation==='OWN'&&
+  after?.player?.mode==='SQUID'&&
+  after.player.inkRelation==='OWN'&&
+  after.playerInkRecoveryState==='SQUID_OWN'&&
+  after.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND'&&
+  Number.isSafeInteger(before.tick)&&Number.isSafeInteger(after.tick)&&
+  after.tick>=before.tick+6&&
+  Number.isFinite(before.player.ink)&&Number.isFinite(after.player.ink)&&
+  after.player.ink>before.player.ink+.25&&
+  is3(before.player.position)&&is3(after.player.position)&&
+  planar(before.player.position,after.player.position)<=.5&&
+  after.matchState==='PLAYING'&&!after.paused&&!after.stopReason&&
+  after.shotsFired===shots&&
+  after.cpu?.physicalRejoins?.length===7&&
+  after.cpu.physicalFootRelocations===0&&
+  after.originalSourceSolids===25&&after.originalPaintSurfaces===17&&
+  after.originalSourceNavigationLinks===26&&
+  after.sourceScoreablePromotions===0&&
+  foot?.source==='25/17/26/0'&&foot.realHumanOriginalFootSupported&&
+  foot.genuineHumanOriginalFootSolid===solid&&
+  Number.isFinite(foot.genuineOriginalFootGapMeters)&&
+  foot.genuineOriginalFootGapMeters>=0&&
+  foot.genuineOriginalFootGapMeters<=.4&&
+  foot.sourceActorRelocations===0&&
+  foot.sourceInkRewritten===false&&
+  foot.playerPositionRewritten===false;
+}
 // B319-style native 35ms observation; the general B139 500ms wait
 // overshoots a real SOURCE edge by dozens of 60Hz ticks.
 async function nativeUntil(fn,limit=20000){
@@ -212,6 +242,33 @@ export async function b412NativeSquidOwnInkRound({
   evidence.peakBody=peak.player.position;
   evidence.peakRelation=peak.player.inkRelation;
   await record('REAL_OWN_INK_SWIM_PEAK_BEFORE_RETURN');
+  // RAW #13395157849: true OWN/SWIM_GROUND at tick6624, but
+  // immediate native KeyS returned off OWN by tick6630. Complete
+  // real 60Hz refilling before physical steering back; no fake ink.
+  const dwellBefore=await frame();
+  const dwellAfter=await nativeUntil(async()=>{
+   const n=await frame();
+   return n.tick>=dwellBefore.tick+8?n:false;
+  },20000);
+  const dwellFoot=await ledger();
+  const refill=b412OwnInkDwellVerified(
+   dwellBefore,dwellAfter,dwellFoot,expectedFoot,shots)&&await locked();
+  evidence.ownDwell={
+   action:'SHIFT_HELD_NO_DIRECTION_KEY',beforeTick:dwellBefore.tick,
+   afterTick:dwellAfter.tick,inkBefore:dwellBefore.player.ink,
+   inkAfter:dwellAfter.player.ink,
+   relationBefore:dwellBefore.player.inkRelation,
+   relationAfter:dwellAfter.player.inkRelation,
+   recoveryAfter:dwellAfter.playerInkRecoveryState,
+   realKccDriftMeters:planar(
+    dwellBefore.player.position,dwellAfter.player.position),
+   originalFoot:dwellFoot.genuineHumanOriginalFootSolid,
+   sourceSupported:dwellFoot.realHumanOriginalFootSupported,
+   syntheticInkWrites:0,actorWrites:0,nativeClockWrites:0,
+   physicallyVerified:refill};
+  await record(refill?'REAL_OWN_SQUID_REFILL_BEFORE_RETURN':
+   'HOLD_REAL_SQUID_OWN_REFILL_BEFORE_RETURN');
+  need(refill,'REAL_NATIVE_OWN_REFILL_NOT_SUSTAINED');
   // A genuine SOURCE artifact #13307074389 hit a 0.997m closest
   // approach with twelve KeyS-only pulses: lateral residual remained.
   // RAW 13378648373: the last outgoing actual KeyD was accidentally

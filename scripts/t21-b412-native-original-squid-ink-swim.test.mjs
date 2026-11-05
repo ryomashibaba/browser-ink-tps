@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {b412AuditNativeActualOriginalInkSwim,b412NativeReturnReady,
- b412NativeReturnSteerKey,b412ObservedNativeForwardW}
+ b412NativeReturnSteerKey,b412ObservedNativeForwardW,b412OwnInkDwellVerified}
  from './t21-b412-native-original-squid-ink-swim.mjs';
 const b410={
  verdict:'PASS_ACTUAL_ORIGINAL_RAMP_UPPER_KCC_AND_THREE_LATE_NATIVE_SHOOT_WAVES',
@@ -183,4 +183,34 @@ test('RAW #13378648373: real KeyD displacement must never replace native KeyW fo
  assert.equal(b412NativeReturnSteerKey(lastBody,initial,d),'KeyS');
  assert.throws(()=>b412ObservedNativeForwardW([legs[1]]),
   /B412_NATIVE_ORIGINAL_SQUID_SWIM_HOLD_REAL_NATIVE_KEYW_CALIBRATION_REQUIRED/);
+});
+
+test('RAW #13395157849: genuine OWN refill must last before KeyS',()=>{
+ const before={tick:6624,player:{mode:'SQUID',inkRelation:'OWN',
+  ink:84.03333333333327,position:[13.0295763,5.3962,46.3705]}};
+ const after={tick:6632,matchState:'PLAYING',paused:false,stopReason:null,
+  player:{mode:'SQUID',inkRelation:'OWN',ink:87.5,
+   position:[13.04,5.395,46.39]},
+  playerInkRecoveryState:'SQUID_OWN',
+  b381RealNativeDodge:{realLocomotion:'SWIM_GROUND'},
+  shotsFired:88,cpu:{physicalRejoins:['A1','A2','A3','B1','B2','B3','B4'],
+   physicalFootRelocations:0},originalSourceSolids:25,
+  originalPaintSurfaces:17,originalSourceNavigationLinks:26,
+  sourceScoreablePromotions:0};
+ const foot={source:'25/17/26/0',realHumanOriginalFootSupported:true,
+  genuineHumanOriginalFootSolid:'UndertowT21D:right-low-team-a',
+  genuineOriginalFootGapMeters:.025,sourceActorRelocations:0,
+  sourceInkRewritten:false,playerPositionRewritten:false};
+ const ok=()=>b412OwnInkDwellVerified(before,after,foot,
+  'UndertowT21D:right-low-team-a',88);
+ assert.equal(ok(),true);
+ after.tick=6630;after.player.inkRelation='NEUTRAL';
+ after.playerInkRecoveryState='NONE';assert.equal(ok(),false);
+ after.tick=6632;after.player.inkRelation='OWN';
+ after.playerInkRecoveryState='SQUID_OWN';after.player.ink=84;
+ assert.equal(ok(),false);
+ after.player.ink=87.5;foot.sourceActorRelocations=1;
+ assert.equal(ok(),false);
+ foot.sourceActorRelocations=0;
+ after.cpu.physicalFootRelocations=1;assert.equal(ok(),false);
 });
