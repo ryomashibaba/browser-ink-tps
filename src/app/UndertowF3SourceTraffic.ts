@@ -134,6 +134,8 @@ export interface F3TrafficSnapshot{
    readonly strictlyApprovedLateGoals:number;
    readonly actualNativeGoalRequests:number;
    readonly secondDistinctOriginalGoalsApproved:number;
+   readonly additionalStrictOriginalCoverageGoalsApproved:number;
+   readonly nativeOriginalInkRankedExpansionAttempts:number;
    readonly nativeRetargetWitnesses:readonly {
     id:string;nativeTick:number;actualFoot:[number,number,number];
     previousOriginalGoal:[number,number,number];
@@ -268,6 +270,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b467LateOriginalGoalsApproved=0;
  private b467TrueNativeGoalRequests=0;
  private b467SecondDistinctOriginalGoalsApproved=0;
+ private b469AdditionalOriginalCoverageGoals=0;
+ private b469NativeInkRankedExpansionAttempts=0;
  private readonly b467NativeRetargetWitnesses:Array<{
   id:string;nativeTick:number;actualFoot:[number,number,number];
   previousOriginalGoal:[number,number,number];
@@ -1129,6 +1133,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // recheck a DIFFERENT existing SOURCE candidate from today's REAL
    // Rapier foot. A second goal is never inferred from the first route.
    const nativeLock=this.b443OriginalGoalLocks.get(id);
+   let newlyExtendedNativeFront:Vec3|null=null;
    const mayExtendBFront=b468MayRetryDifferentOriginalBGoalAfterRealDwell({
     id,nativeTick:this.b137NativeTick,
     approvedOriginalGoals:fronts.length,
@@ -1166,7 +1171,20 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
         flat.originalFlatVerticalBandWithin22cm&&
         flat.distanceToOriginalPolygonBoundaryMeters>=.75&&
         this.hasSourceFootSupport(realFoot)){
-      for(const proposal of proposeB441OriginalFrontline(this.stage,'B')){
+      // Beyond the two B468 goal waypoints, try genuinely unpainted
+      // SOURCE cells first. Ranking reads the ACTUAL source OwnerGrid;
+      // it is a preference, NOT a route/geometry or score authorization.
+      // The first B467 and second B468 audits are unchanged.
+      const originalProposals=proposeB441OriginalFrontline(this.stage,'B');
+      let prioritized=originalProposals;
+      if(fronts.length>=2&&this.sourceInk){
+       const ranked=rankOriginalSourcePatrolGoals(
+        originalProposals.map(p=>new Vec3(...p.point)),
+        bot.team,this.sourceInk,0);
+       prioritized=ranked.map(row=>originalProposals[row.index]!);
+       this.b469NativeInkRankedExpansionAttempts++;
+      }
+      for(const proposal of prioritized){
        const goal=new Vec3(...proposal.point);
        // Revisit of the old original point is NOT a second destination.
        if(fronts.some(previous=>previous.distance(goal)<2.0))continue;
@@ -1210,6 +1228,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
          sourceGoal:[goal.x,goal.y,goal.z]
         });
        if(secondDistinct)this.b467SecondDistinctOriginalGoalsApproved++;
+       if(fronts.length>2)this.b469AdditionalOriginalCoverageGoals++;
+       newlyExtendedNativeFront=goal.clone();
        this.b467LateOriginalGoalsApproved++;
        break;
       }
@@ -1266,9 +1286,25 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
    // After an honest 120-tick dwell, prefer the other previously
    // validated original goal, not an invented adjacent/cover position.
-   const goals=completed&&fronts.length>1?
+   let goals=completed&&fronts.length>1?
     [...fronts.filter(p=>p.distance(completed)>.01),
      ...fronts.filter(p=>p.distance(completed)<=.01)]:fronts;
+   // Once third/fourth original B points are safely audited, use
+   // genuine source-ink priority to move toward unpainted areas. Every
+   // submitted goal is STILL rechecked by the identical native gates.
+   if(completed&&fronts.length>2&&(id==='B2'||id==='B4')&&
+      this.b467LiveSourceGoals.has(id)&&this.sourceInk){
+    const nonCompleted=goals.filter(p=>p.distance(completed!)>.01);
+    const ranked=rankOriginalSourcePatrolGoals(
+     nonCompleted,bot.team,this.sourceInk,0);
+    goals=[...ranked.map(row=>nonCompleted[row.index]!),
+     ...goals.filter(p=>p.distance(completed!)<=.01)];
+   }
+   // If an additional ORIGINAL point was just approved from the live
+   // current CPU foot, give that fresh audited route one actual try.
+   if(newlyExtendedNativeFront&&completed)
+    goals=[newlyExtendedNativeFront,
+     ...goals.filter(p=>p.distance(newlyExtendedNativeFront!)>.01)];
    for(const goal of goals){
     const direct=Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z);
     if(direct<1.5){
@@ -1845,6 +1881,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      actualNativeGoalRequests:this.b467TrueNativeGoalRequests,
      secondDistinctOriginalGoalsApproved:
       this.b467SecondDistinctOriginalGoalsApproved,
+     additionalStrictOriginalCoverageGoalsApproved:
+      this.b469AdditionalOriginalCoverageGoals,
+     nativeOriginalInkRankedExpansionAttempts:
+      this.b469NativeInkRankedExpansionAttempts,
      nativeRetargetWitnesses:this.b467NativeRetargetWitnesses.map(w=>({
       id:w.id,nativeTick:w.nativeTick,
       actualFoot:[...w.actualFoot] as [number,number,number],

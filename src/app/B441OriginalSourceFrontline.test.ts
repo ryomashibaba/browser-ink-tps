@@ -109,12 +109,15 @@ describe('B468 genuine dwell schedules a second SOURCE audit, never a goal grant
  it('permits a NEW strict native audit only after 120 actual dwell ticks',()=>{
   expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell(live)).toBe(true);
   expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,id:'B4'})).toBe(true);
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,approvedOriginalGoals:2})).toBe(true);
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,approvedOriginalGoals:3})).toBe(true);
   expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,nativeTick:1699})).toBe(false);
  });
  it('holds unapproved, wrong-side, stale, forged and more-than-one goals',()=>{
   for(const change of [
    {id:'A2'},{id:'B1'},{originallyAuthorized:false},
-   {approvedOriginalGoals:0},{approvedOriginalGoals:2},
+   {approvedOriginalGoals:0},{approvedOriginalGoals:4},
+   {approvedOriginalGoals:NaN},
    {arrivedSinceTick:null},{arrivedSinceTick:1701},
    {heldGoal:null},{heldGoal:[0,4.5,37] as const},
    {realFoot:[0,4.6,-31] as const},
