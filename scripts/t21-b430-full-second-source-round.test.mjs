@@ -128,3 +128,42 @@ test('fake second source, premature clock, broken CPU and forged score fail',()=
   assert.throws(()=>auditB430TrueSecond180s(d),/B4(19|30)_/);
  }
 });
+
+test('RAW #13383758500: 5 SOURCE countdown ticks before first PLAYING sample count',()=>{
+ const real=f();
+ real.base.started.tick=1060;
+ real.base.started.remaining=179.9166666666666;
+ real.base.fired.tick=1072;
+ real.base.fired.remaining=179.71666666666644;
+ real.samples[0]={...real.samples[0],tick:4655,
+  remaining:119.99999999995909,shots:7};
+ real.samples[1]={...real.samples[1],tick:8257,
+  remaining:59.966666666629166,shots:13};
+ real.samples[2]={...real.samples[2],tick:11857,shots:19};
+ real.humanActivity[0]={...real.humanActivity[0],
+  beforeTick:4655,afterTick:4661,beforeShots:7,afterShots:13};
+ real.humanActivity[1]={...real.humanActivity[1],
+  beforeTick:8257,afterTick:8263,beforeShots:13,afterShots:19};
+ const accepted=auditB430TrueSecond180s(real);
+ assert.equal(accepted.fullSecondMatch180s,true);
+ assert.equal(accepted.secondTimeUpTick,11857);
+ assert.equal(accepted.observedNativeTicksAfterFirstPlaying,10797);
+ assert.ok(accepted.originalSourceCountdownTicksBeforeFirstPlaying>=5);
+ assert.ok(accepted.verifiedFullOriginalSourceCountdownTicks>=10800);
+ assert.equal(accepted.officialScoreable,0);
+ assert.equal(accepted.officialWinner,'NONE');
+ // The SAME real first PLAYING sample and 5 tick lead cannot certify
+ // a counterfeited second match ended before 10800 countdown ticks.
+ real.samples[2].tick=11852;
+ assert.throws(()=>auditB430TrueSecond180s(real),
+  /B430_TRUE_SECOND_180S_HOLD_NATIVE_SECOND_180S_TIMELINE/);
+});
+test('SOURCE sample may not fake already spent clock time to skip a match',()=>{
+ const broken=f();
+ broken.base.started.remaining=180;
+ assert.throws(()=>auditB430TrueSecond180s(broken),/B4(19|30)_/);
+ const genuine=f();
+ genuine.samples[2].tick=11000;
+ assert.throws(()=>auditB430TrueSecond180s(genuine),
+  /B430_TRUE_SECOND_180S_HOLD_NATIVE_SECOND_180S_TIMELINE/);
+});

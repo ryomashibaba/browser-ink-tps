@@ -24,6 +24,27 @@ export function auditB430TrueSecond180s(d){
  gate(prior.verdict==='PASS_REAL_180S_TO_NATIVE_FRESH_SECOND_ROUND_SHOT'&&
   d.secondOrigin===d.base.boot.origin,'B419_AND_SECOND_ORIGIN');
  const [at120,at60,end]=d.samples;
+ // Real B413 2x180s artifact #13383758500: the first PLAYING snapshot
+ // arrived at tick 1060 with 179.9166667s remaining, i.e. the native
+ // countdown had already consumed 5 genuine 60Hz ticks before observation.
+ // Requiring 10800 MORE ticks after that delayed sample falsely rejected
+ // genuine end tick 11857 (10797 later). Reconcile actual observed native
+ // ticks and the remaining value on the already-authenticated SOURCE clock.
+ // No native tick writes, time skips, actor movement or gate relaxation.
+ const started=d.base.started;
+ const genuineCountdownTicksBeforeFirstPlaying=
+  (180-started.remaining)*60;
+ const genuineElapsedNativeTicksAfterFirstPlaying=
+  end.tick-started.tick;
+ const genuineTotalSourceCountdownTicks=
+  genuineCountdownTicksBeforeFirstPlaying+
+  genuineElapsedNativeTicksAfterFirstPlaying;
+ const fullRealCountdown=
+  Number.isFinite(genuineCountdownTicksBeforeFirstPlaying)&&
+  started.remaining>0&&started.remaining<180&&
+  Number.isSafeInteger(genuineElapsedNativeTicksAfterFirstPlaying)&&
+  genuineElapsedNativeTicksAfterFirstPlaying>0&&
+  genuineTotalSourceCountdownTicks>=10800;
  for(const [s,phase] of [[at120,'PLAYING'],[at60,'PLAYING'],[end,'TIME_UP']]){
   gate(genuine(s)&&s.phase===phase&&s.origin===d.secondOrigin&&
    s.shots>=d.base.fired.shots&&s.tick>d.base.fired.tick&&
@@ -38,7 +59,7 @@ export function auditB430TrueSecond180s(d){
   end.remaining===0&&end.paused===true&&
   at120.tick<at60.tick&&at60.tick<end.tick&&
   at120.tick>=d.base.fired.tick&&
-  end.tick>=d.base.started.tick+10800&&
+  fullRealCountdown&&
   at120.cpuSourceShots<=at60.cpuSourceShots&&
   at60.cpuSourceShots<=end.cpuSourceShots&&
   at120.cpuPaintCells<=at60.cpuPaintCells&&
@@ -73,6 +94,13 @@ export function auditB430TrueSecond180s(d){
   firstTimeUpTick:d.base.old.tick,
   genuineNewBrowserOrigin:d.secondOrigin,
   secondStartedTick:d.base.started.tick,
+  secondStartedRemainingSeconds:d.base.started.remaining,
+  observedNativeTicksAfterFirstPlaying:
+   genuineElapsedNativeTicksAfterFirstPlaying,
+  originalSourceCountdownTicksBeforeFirstPlaying:
+   genuineCountdownTicksBeforeFirstPlaying,
+  verifiedFullOriginalSourceCountdownTicks:
+   genuineTotalSourceCountdownTicks,
   secondTimeUpTick:end.tick,
   secondPlayerShots:end.shots,
   secondCpuSourceShotRequests:end.cpuSourceShots,
