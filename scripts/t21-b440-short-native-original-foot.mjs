@@ -224,14 +224,20 @@ async function main(){
   const a=document.querySelector('#play-circuit');
   const b=document.querySelector('#play-combat');
   return document.querySelector('#portal-status')?.dataset.t21PortalReady==='SOURCE_ONLY'&&
-   a?.href&&b?.href?{circuit:a.href,combat:b.href}:null;
+   a?.href&&b?.href&&document.querySelector('#play-coop')?.href?
+    {circuit:a.href,combat:b.href,
+     coop:document.querySelector('#play-coop').href}:null;
  })()`),30000);
- const url=new URL(portals.circuit),opponent=new URL(portals.combat);
+ const url=new URL(portals.circuit),opponent=new URL(portals.combat),
+  ally=new URL(portals.coop);
  if(url.origin!==new URL(root).origin||url.pathname!==new URL(root).pathname||
   url.searchParams.get('t21W10B384')!=='loadoutCircuit'||
   url.searchParams.get('t21W10B203')!=='fullRound'||
   opponent.searchParams.get('t21W10B192')!=='humanCombat'||
   opponent.searchParams.get('t21W10B203')!=='fullRound'||
+  ally.searchParams.get('t21W10B193')!=='allyCoop'||
+  ally.searchParams.get('t21W10B203')!=='fullRound'||
+  ally.searchParams.has('t21W10B192')||
   url.searchParams.has('production')||url.searchParams.has('scoreable'))
   fail('PORTAL_SOURCE_DESTINATION_AUTHORITY');
  const portalPicture=await cdp('Page.captureScreenshot',{
@@ -260,6 +266,16 @@ async function main(){
  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);
  if(await evaluate('location.search')!==query)fail('WRONG_SOURCE_URL');
+ const modeButton=await evaluate(`(() => {
+  const b=document.querySelector('#t21-f3-source-mode-menu-ready');
+  return b?{source:b.dataset.originalSourceOnly,
+   scoreable:b.dataset.scoreable,
+   actors:b.dataset.actorRelocations}:null;
+ })()`);
+ if(!modeButton||modeButton.source!=='true'||
+   modeButton.scoreable!=='0'||modeButton.actors!=='0')
+  fail('SOURCE_NATIVE_READY_MODE_MENU_MISSING');
+ proof.sourcePlayerModeMenu=modeButton;save();
  const boot=await snap();authority(boot);
  if(boot.matchState!=='STAGING'||boot.cpu.physicalRejoins.length!==0)
   fail('NOT_FRESH_NATIVE_SOURCE_WORLD');

@@ -1,3 +1,5 @@
+> **2026-11-05 F3 SOURCE実ゲームのモード選択（新CI確認待ち）**：既存B384 12武器180秒SOURCE回路・B193味方A1協力ALLY_SYNC・B207敵CPU研究を独立した3択入口へ統合。ゲームのREADY/PAUSED・本物TIME_UP後からモード選択へ戻る導線を追加。SOURCE25/17/26/0・0/12敵陣HOLD・正式得点0/勝者NONEを維持、T19C/T20/main/正式QA/PR#5/Pages保護。[詳細](docs/qa/T21_F3_SOURCE_PLAY_PORTAL_20261105_JA.md)。
+
 > **2026-11-05 F3/F5 SOURCE再戦カメラ設定（研究・新HEAD CI確認待ち）**：SOURCE限定プレイヤー操作の感度[ / ]・I反転・Q肩をブラウザに保存し新しい実180秒ゲームに復元。T20と決定論的QAは保存値未使用、M=レーダー/N=音声の表示も整合。原作25/17/26/0と対岸0/12、正式4v4・勝敗/ART/公開はHOLD。詳細 [SOURCE再戦カメラ設定](docs/qa/T21_F3_SOURCE_CAMERA_REPLAY_PREFERENCES_20261105_JA.md)。
 
 > **2026-11-05 F3実プレイヤー入口・SOURCE 180秒一クリック起動（研究・CI確認待ち）**：T20原本 index.html / InkLabApp を変更せず、新しい `play-source.html` とVite第2HTMLエントリを追加。既存B384の12武器SOURCE回路／B207の真正CPU研究へ同じローカルサーバーから遷移、独自Actor・経路・得点なし。既存B441真正Chromiumで実ポータル画面PNG・実CDPクリック→本物のSOURCEゲームURLを検証後、従来の真正7CPU基準で回帰。公式25/17/26/0、敵対岸0/12、official winner NONE・正式4v4/ART/公開HOLD。詳細 [プレイ入口記録](docs/qa/T21_F3_SOURCE_PLAY_PORTAL_20261105_JA.md)。main/正式QA/T19C/T20/Draft PR#5/Pages不変更、Work起動なし。

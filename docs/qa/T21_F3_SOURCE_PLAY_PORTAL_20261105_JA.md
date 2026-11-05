@@ -9,3 +9,9 @@
 - 正式4v4、対岸0/12、公式Scoreable0/winner NONE、ART、本番はHOLD。実画面の見た目は人間ARTの承認ではない。
 
 検証：`src/app/SourcePlayPortal.test.ts` を既存のB441 Vitestへ統合し、2HTMLをVite buildの入力へ追加。新SHA CIの成功と実PNG/URLを確認するまで真正PASSは未認証。main/正式QA/T19C/T20/Draft PR #5/Pages・Work/Computer Use保護。
+
+## 2026-11-05 既存A1協力ゲームとモード復帰動線（新CI確認待ち）
+
+- 入口3モードは既存B384（12武器SOURCE原作回路）、B193（真正味方A1 ALLY_SYNC協力）、B207（自然敵遭遇未認証の対人研究）の**既存ゲーム経路**。物理Actor・ステージ、CPU攻撃、公式得点は追加していない。
+- 元の180秒SOURCE STAGING/PAUSED画面からモード選択へ戻る。実TIME_UP後のみ結果画面からモード選択へ戻る。現在の世界のCPU移動やNative Tickを書き換えず、新規原作SOURCEセッションを明示起動する。
+- 同じB441 Chromiumでブラウザ内の3つのURLと既存真正7CPU SOURCE READY画面のボタンを点検。真TIME_UP結果画面での押下は、長時間の独立真正検証前にPASS扱いしない。main、T19C/T20、正式QA、PR#5、Pages、本番は変更しない。

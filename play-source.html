@@ -26,7 +26,9 @@
     .stat{background:#123448ab;border:1px solid #77b1bd45;border-radius:12px;padding:12px 17px;min-width:132px}
     .stat strong{display:block;font-size:21px;font-weight:900;color:white}
     .stat small{display:block;color:#9ec9d3;font-size:11px;margin-top:2px}
-    .actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.75fr);gap:16px;align-items:stretch}
+    .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
+    .actions>.primary{grid-column:1/-1}
+    .actions>.cooperative{border-color:#6bdbaa88;background:linear-gradient(145deg,#10483f,#12364b)}
     .mode{border:1px solid #ffffff35;border-radius:19px;padding:24px;display:flex;flex-direction:column;gap:12px;background:#0b2940c4;min-width:0}
     .mode.primary{background:linear-gradient(148deg,#11635c,#073e5e 85%);border-color:#86ffe988;box-shadow:0 24px 75px #00192680}
     .mode .tag{font-size:11px;font-weight:850;letter-spacing:.1em;color:#92e7dd}
@@ -40,7 +42,7 @@
     .limits h3{font-size:13px;margin:0 0 9px;color:#8ad8df;letter-spacing:.06em}
     .limits p{font-size:13px;color:#c1d5de;line-height:1.75;margin:0}
     footer{font-size:11px;color:#8aaebb;margin-top:35px;line-height:1.7}
-    @media(max-width:740px){.actions,.limits{grid-template-columns:1fr}.top{margin-bottom:52px}.mode{padding:21px}.stat{min-width:100px;flex:1}.research{font-size:10px}}
+    @media(max-width:740px){.actions,.limits{grid-template-columns:1fr}.actions>.primary{grid-column:auto}.top{margin-bottom:52px}.mode{padding:21px}.stat{min-width:100px;flex:1}.research{font-size:10px}}
     @media(prefers-reduced-motion:reduce){.button{transition:none}}
   </style>
 </head>
@@ -62,6 +64,12 @@
     <h2>原作SOURCEで180秒プレイ</h2>
     <p>既存の12武器選択、実WASD・カメラ操作、物理移動、塗装、インク消費・回復を使った練習試合。READY画面で武器を選び、試合を開始できます。</p>
     <a id="play-circuit" class="button" href="#" aria-label="実SOURCE 180秒プレイを開始">180秒プレイを開始</a>
+   </div>
+   <div class="mode cooperative secondary">
+    <div class="tag">CO-OP / REAL ALLY A1</div>
+    <h2>A1と協力してSOURCEを塗る</h2>
+    <p>本物の味方CPU A1と原作床上で合流し、実着弾と移動を合わせるALLY_SYNC練習。原作SOURCEの180秒試合で挑戦できます。</p>
+    <a id="play-coop" class="button" href="#" aria-label="本物の味方A1とのSOURCE協力練習を開始">A1協力プレイを開始</a>
    </div>
    <div class="mode secondary">
     <div class="tag">RESEARCH / OPPONENT ROUTE HOLD</div>

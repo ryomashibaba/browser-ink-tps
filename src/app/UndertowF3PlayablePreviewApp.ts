@@ -100,6 +100,7 @@ import {b380NativeWeaponGuidance} from './B380NativePlayerWeaponGuide';
 import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
+import {sourcePlayPortalReturnUrl} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -1717,6 +1718,32 @@ export class UndertowF3PlayablePreviewApp{
    });
    pauseOverlay.appendChild(replay);
   }
+  // Switching real SOURCE mode starts a completely new physics world.
+  // Actor/CPU positions, score, game clock, stage never mutated here.
+  const sourceModeMenu=this.b203FullRound?
+   sourcePlayPortalReturnUrl(window.location.href):null;
+  if(sourceModeMenu){
+   const menu=document.createElement('button');
+   menu.id='t21-f3-source-mode-menu-ready';
+   menu.type='button';
+   menu.textContent='CHOOSE SOURCE GAME MODE · NEW ROUND';
+   menu.dataset.originalSourceOnly='true';
+   menu.dataset.scoreable='0';
+   menu.dataset.actorRelocations='0';
+   menu.dataset.productionAuthorized='false';
+   menu.style.cssText='display:block;width:100%;margin-top:10px;'+
+    'padding:10px;border-radius:8px;background:#123047;'+
+    'border:1px solid #83ccdb;color:#e2fdff;'+
+    'font:800 11px/1.4 system-ui;cursor:pointer;pointer-events:auto';
+   menu.addEventListener('click',()=>{
+    if(document.pointerLockElement===this.canvas||this.stopReason||
+       this.matchState==='TIME_UP'||
+       this.matchState==='PLAYING'&&!this.paused||
+       this.survey.snapshot().active||this.galleryIndex>=0)return;
+    menu.disabled=true;window.location.assign(sourceModeMenu);
+   });
+   pauseOverlay.appendChild(menu);
+  }
   ui.appendChild(pauseOverlay);
   this.b202PauseOverlay=pauseOverlay;
   // B167 genuine opponent awareness, always read-only and scoreless.
@@ -1841,6 +1868,28 @@ export class UndertowF3PlayablePreviewApp{
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
    ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
+  if(sourceModeMenu){
+   const endMenu=document.createElement('button');
+   endMenu.id='t21-f3-source-mode-menu-after-match';
+   endMenu.type='button';
+   endMenu.textContent='CHANGE SOURCE GAME MODE · BACK TO MENU';
+   endMenu.dataset.originalSourceOnly='true';
+   endMenu.dataset.scoreable='0';
+   endMenu.dataset.officialWinner='NONE';
+   endMenu.dataset.actorRelocations='0';
+   endMenu.style.cssText='display:block;width:100%;margin-top:9px;'+
+    'padding:12px;border-radius:9px;background:#17394d;'+
+    'color:#e5faff;border:1px solid #75cbd9;cursor:pointer;'+
+    'font:800 12px system-ui';
+   endMenu.addEventListener('click',()=>{
+    if(this.matchState!=='TIME_UP'||this.stopReason||
+       document.pointerLockElement===this.canvas||
+       this.survey.snapshot().active||this.galleryIndex>=0)return;
+    endMenu.disabled=true;window.location.assign(sourceModeMenu);
+   });
+   this.b58SessionBoard.finish.querySelector('#t21-f3-b59-restart')
+    ?.parentElement?.appendChild(endMenu);
+  }
   if(b423UseRealSourceWorldReplay(
     new URLSearchParams(window.location.search),'TIME_UP')){
    const restart=this.b58SessionBoard.finish

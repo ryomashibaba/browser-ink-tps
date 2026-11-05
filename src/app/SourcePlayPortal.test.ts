@@ -1,5 +1,7 @@
 import {describe,it,expect} from 'vitest';
-import {sourcePlayPortalDestinations} from './SourcePlayPortal';
+import {sourcePlayPortalDestinations,sourcePlayPortalReturnUrl}
+ from './SourcePlayPortal';
+import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
 describe('T21 real playable SOURCE game entry',()=>{
  it('launches authentic existing 12-weapon 180s SOURCE circuit',()=>{
@@ -16,6 +18,23 @@ describe('T21 real playable SOURCE game entry',()=>{
   expect(combat.searchParams.get('t21W10B192')).toBe('humanCombat');
   expect(combat.searchParams.get('t21W10B183')).toBe('firstDropPlay');
   expect(combat.searchParams.has('t21W10B384')).toBe(false);
+ });
+ it('includes the existing actual 180s A1 cooperative SOURCE mission',()=>{
+  const d=sourcePlayPortalDestinations('https://example.org/browser-ink-tps/play-source.html');
+  const coop=new URL(d.coop);
+  expect(sourceCoopEligible(coop.searchParams)).toBe(true);
+  expect(coop.searchParams.get('t21W10B183')).toBe('firstDropPlay');
+  expect(coop.searchParams.get('t21W10B203')).toBe('fullRound');
+  expect(coop.searchParams.has('t21W10B192')).toBe(false);
+ });
+ it('lets authentic SOURCE players leave for menu without inherited QA',()=>{
+  const d=sourcePlayPortalDestinations('https://example.org/browser-ink-tps/play-source.html');
+  for(const u of Object.values(d))
+   expect(sourcePlayPortalReturnUrl(u+'&production=1#inject'))
+    .toBe('https://example.org/browser-ink-tps/play-source.html');
+  expect(sourcePlayPortalReturnUrl('https://example.org/browser-ink-tps/'))
+   .toBe(null);
+  expect(sourcePlayPortalReturnUrl('javascript:alert(1)')).toBe(null);
  });
  it('discards injected QA shortcuts and never enables official turf',()=>{
   const d=sourcePlayPortalDestinations(
