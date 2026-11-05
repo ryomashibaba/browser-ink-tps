@@ -6,7 +6,8 @@ import {undertowT21dConnectivityQaStage}
 import {pointInStageFootprint} from '../stage/StageFootprint';
 import {SurfaceFlags} from '../ink/types';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
- b468MayRetryDifferentOriginalBGoalAfterRealDwell}
+ b468MayRetryDifferentOriginalBGoalAfterRealDwell,
+ b470MayAuditRealInkRankedSameSideFront}
  from './B441OriginalSourceFrontline';
 describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  const make=()=>undertowT21dConnectivityQaStage();
@@ -126,5 +127,47 @@ describe('B468 genuine dwell schedules a second SOURCE audit, never a goal grant
    {realFoot:[-12,4.6,-48] as const}
   ])expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell(
    {...live,...change})).toBe(false);
+ });
+});
+
+describe('B470 true 120-tick original SAME-SIDE dwell is only a route audit trigger',()=>{
+ const stage=undertowT21dConnectivityQaStage();
+ const a:Parameters<typeof b470MayAuditRealInkRankedSameSideFront>[1]={
+  id:'A3',team:'A',nativeTick:1800,lastRetryNativeTick:1600,
+  approvedOriginalGoals:1,arrivedSinceTick:1680,
+  realOriginalSolidId:'UndertowT21D:right-low-team-a',
+  heldGoal:[3.375599289,4.502,37.992506688],
+  realFoot:[3.38,4.6,38.01]
+ };
+ const gate=(p:typeof a,s=stage)=>b470MayAuditRealInkRankedSameSideFront(s,p);
+ it('opens A2/A3/B1/B3 another REAL audit only, up to four actual goals',()=>{
+  expect(gate(a)).toBe(true);
+  expect(gate({...a,id:'A2',approvedOriginalGoals:3})).toBe(true);
+  const b={...a,id:'B3',team:'B' as const,
+   realOriginalSolidId:'UndertowT21D:right-low-team-b',
+   heldGoal:[-6.185263365,4.502,-37.321323812] as const,
+   realFoot:[-6.18,4.6,-37.33] as const};
+  expect(gate(b)).toBe(true);
+  expect(gate({...b,id:'B1'})).toBe(true);
+ });
+ it('refuses early dwell, stale physical foot and unauthorized actors and floor',()=>{
+  for(const change of [
+   {id:'A1'},{id:'B2'},{id:'B4'},{id:'HUMAN'},
+   {team:'B' as const},{approvedOriginalGoals:0},
+   {approvedOriginalGoals:4},{approvedOriginalGoals:NaN},
+   {nativeTick:1799},{arrivedSinceTick:1681},
+   {lastRetryNativeTick:1750},{realOriginalSolidId:'FAKE_BRIDGE'},
+   {heldGoal:null},{heldGoal:[0,4.5,-38] as const},
+   {realFoot:[3.38,4.6,-38] as const},
+   {realFoot:[3.38,NaN,38] as const},
+   {realFoot:[9,4.6,38] as const},
+   {realFoot:[3.38,5.2,38] as const}
+  ])expect(gate({...a,...change})).toBe(false);
+ });
+ it('refuses any source stage/score authority drift',()=>{
+  expect(gate(a,{...stage,solids:stage.solids.slice(1)})).toBe(false);
+  expect(gate(a,{...stage,navigationLinks:[]})).toBe(false);
+  expect(gate(a,{...stage,paintSurfaces:stage.paintSurfaces.map((p,i)=>
+   i===0?{...p,flags:p.flags|SurfaceFlags.Scoreable}:p)})).toBe(false);
  });
 });
