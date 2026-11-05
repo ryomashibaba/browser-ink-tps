@@ -47,6 +47,33 @@ export function b467MayRetryOriginalBFrontFromRealFoot(
   z<=-33&&z>=-63;
 }
 
+/** B468 is a RETRY SCHEDULER, not route/physics/goal authority.
+ * After a genuine B467 first goal and >=120 real native dwell ticks,
+ * the same B2/B4 body may request a DIFFERENT original B-floor candidate.
+ * Caller must repeat every frozen B467 Recast/Rapier/0.30m check. */
+export function b468MayRetryDifferentOriginalBGoalAfterRealDwell(e:{
+ readonly id:string;readonly nativeTick:number;
+ readonly approvedOriginalGoals:number;
+ readonly originallyAuthorized:boolean;
+ readonly arrivedSinceTick:number|null;
+ readonly heldGoal:readonly [number,number,number]|null;
+ readonly realFoot:readonly [number,number,number];
+}):boolean{
+ if((e.id!=='B2'&&e.id!=='B4')||
+    !e.originallyAuthorized||e.approvedOriginalGoals!==1||
+    !Number.isSafeInteger(e.nativeTick)||
+    e.arrivedSinceTick===null||
+    !Number.isSafeInteger(e.arrivedSinceTick)||
+    e.arrivedSinceTick<0||e.arrivedSinceTick>e.nativeTick-120||
+    !e.heldGoal||
+    !e.heldGoal.every(Number.isFinite)||
+    !e.realFoot.every(Number.isFinite))return false;
+ const [x,y,z]=e.realFoot,[gx,gy,gz]=e.heldGoal;
+ return z>=-63&&z<=-33&&y>=2.7&&y<=5.25&&
+  gz<=-33&&gz>=-63&&gy>=2.7&&gy<=5.25&&
+  Math.hypot(x-gx,z-gz)<=3;
+}
+
 /** Returns conservative, interior samples of EXISTING SOURCE cells.
  * A real Rapier foot probe and whole native Recast path are still REQUIRED
  * by the calling CPU goal selector; they are never inferred from this list. */

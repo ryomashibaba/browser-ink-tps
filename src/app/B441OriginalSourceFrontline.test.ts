@@ -5,7 +5,8 @@ import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {pointInStageFootprint} from '../stage/StageFootprint';
 import {SurfaceFlags} from '../ink/types';
-import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot}
+import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
+ b468MayRetryDifferentOriginalBGoalAfterRealDwell}
  from './B441OriginalSourceFrontline';
 describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  const make=()=>undertowT21dConnectivityQaStage();
@@ -95,5 +96,32 @@ describe('B467 only rechecks real B2/B4 after native arrival on existing B low f
   expect(eligible(realFoot,{...stage,paintSurfaces:changed})).toBe(false);
   expect(eligible(realFoot,{...stage,metadata:{...stage.metadata,
    id:'FAKE_SOURCE'}})).toBe(false);
+ });
+});
+
+describe('B468 genuine dwell schedules a second SOURCE audit, never a goal grant',()=>{
+ const live:Parameters<typeof b468MayRetryDifferentOriginalBGoalAfterRealDwell>[0]={
+  id:'B2',nativeTick:1700,approvedOriginalGoals:1,
+  originallyAuthorized:true,arrivedSinceTick:1580,
+  heldGoal:[-6.185263365,4.502,-37.321323812],
+  realFoot:[-6.22,4.6,-37.40]
+ };
+ it('permits a NEW strict native audit only after 120 actual dwell ticks',()=>{
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell(live)).toBe(true);
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,id:'B4'})).toBe(true);
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,nativeTick:1699})).toBe(false);
+ });
+ it('holds unapproved, wrong-side, stale, forged and more-than-one goals',()=>{
+  for(const change of [
+   {id:'A2'},{id:'B1'},{originallyAuthorized:false},
+   {approvedOriginalGoals:0},{approvedOriginalGoals:2},
+   {arrivedSinceTick:null},{arrivedSinceTick:1701},
+   {heldGoal:null},{heldGoal:[0,4.5,37] as const},
+   {realFoot:[0,4.6,-31] as const},
+   {realFoot:[0,4.6,31] as const},
+   {realFoot:[-6,Number.NaN,-37] as const},
+   {realFoot:[-12,4.6,-48] as const}
+  ])expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell(
+   {...live,...change})).toBe(false);
  });
 });

@@ -27,7 +27,8 @@ import type {B367NativeCpuState} from './B367RealCpuCombatTimeline';
 import {eligibleB192SourceHumanPursuit,
  chooseB192OriginalEnemyStandoff} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
-import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot}
+import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
+ b468MayRetryDifferentOriginalBGoalAfterRealDwell}
  from './B441OriginalSourceFrontline';
 import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
@@ -132,6 +133,12 @@ export interface F3TrafficSnapshot{
    readonly rejectedUnchangedOriginalChecks:number;
    readonly strictlyApprovedLateGoals:number;
    readonly actualNativeGoalRequests:number;
+   readonly secondDistinctOriginalGoalsApproved:number;
+   readonly nativeRetargetWitnesses:readonly {
+    id:string;nativeTick:number;actualFoot:[number,number,number];
+    previousOriginalGoal:[number,number,number];
+    nextOriginalGoal:[number,number,number];
+   }[];
    readonly nativeApprovalWitnesses:readonly {
     id:string;nativeTick:number;actualFoot:[number,number,number];
     actualOriginalSolidId:string;sourceGoal:[number,number,number];
@@ -260,6 +267,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b467LiveRejectedCandidates=0;
  private b467LateOriginalGoalsApproved=0;
  private b467TrueNativeGoalRequests=0;
+ private b467SecondDistinctOriginalGoalsApproved=0;
+ private readonly b467NativeRetargetWitnesses:Array<{
+  id:string;nativeTick:number;actualFoot:[number,number,number];
+  previousOriginalGoal:[number,number,number];
+  nextOriginalGoal:[number,number,number]
+ }>=[];
  /** B442 evidence-only: no steering, Actor, or navigation side effects. */
  private readonly b442LastApprovedFront=new Map<string,{
   target:Vec3;nativeTick:number
@@ -1111,7 +1124,22 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // floor. Their old first-drop Recast Y-mismatch HOLD is not erased.
    // The late route uses the SAME <=0.20m snap, <=0.25m per-0.30m
    // registered static floor check, untouched Recast and true Crowd.
-   if(fronts.length===0&&(id==='B2'||id==='B4')&&
+   // B468: B2/B4 reached the first genuinely granted B-side goal
+   // in the same native world. Only after 120 genuine dwell ticks do we
+   // recheck a DIFFERENT existing SOURCE candidate from today's REAL
+   // Rapier foot. A second goal is never inferred from the first route.
+   const nativeLock=this.b443OriginalGoalLocks.get(id);
+   const mayExtendBFront=b468MayRetryDifferentOriginalBGoalAfterRealDwell({
+    id,nativeTick:this.b137NativeTick,
+    approvedOriginalGoals:fronts.length,
+    originallyAuthorized:this.b467LiveSourceGoals.has(id),
+    arrivedSinceTick:nativeLock?.arrivedSinceTick??null,
+    heldGoal:nativeLock?[
+     nativeLock.target.x,nativeLock.target.y,nativeLock.target.z]:null,
+    realFoot:[realFoot.x,realFoot.y,realFoot.z]
+   });
+   if((fronts.length===0||mayExtendBFront)&&
+      (id==='B2'||id==='B4')&&
       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'){
     const initial=this.b446LiveFootProbes.get(id);
     const hit=this.physics.castStageSegment(
@@ -1140,6 +1168,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
         this.hasSourceFootSupport(realFoot)){
       for(const proposal of proposeB441OriginalFrontline(this.stage,'B')){
        const goal=new Vec3(...proposal.point);
+       // Revisit of the old original point is NOT a second destination.
+       if(fronts.some(previous=>previous.distance(goal)<2.0))continue;
        if(proposal.sourceSolidId!=='UndertowT21D:right-low-team-b'||
           goal.z>-33||!this.hasSourceFootSupport(goal)){
         this.b467LiveRejectedCandidates++;continue;
@@ -1168,13 +1198,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        // Another original-native path, now starting at the REAL foot.
        // It authorizes a Crowd GOAL request ONLY, not a capsule-route
        // pass, opposing path, hit, artificial relocation or Turf win.
-       fronts=[goal];this.b441FrontGoals.set(id,fronts);
-       this.b467LiveSourceGoals.set(id,{
-        nativeTick:this.b137NativeTick,
-        actualFoot:[realFoot.x,realFoot.y,realFoot.z],
-        actualOriginalSolidId:hit!.solidId,
-        sourceGoal:[goal.x,goal.y,goal.z]
-       });
+       const secondDistinct=fronts.length===1;
+       fronts=[...fronts,goal];this.b441FrontGoals.set(id,fronts);
+       // Retain the first actual-foot witness. A later goal is a NEW
+       // strictly audited route, never retrospective approval of it.
+       if(!this.b467LiveSourceGoals.has(id))
+        this.b467LiveSourceGoals.set(id,{
+         nativeTick:this.b137NativeTick,
+         actualFoot:[realFoot.x,realFoot.y,realFoot.z],
+         actualOriginalSolidId:hit!.solidId,
+         sourceGoal:[goal.x,goal.y,goal.z]
+        });
+       if(secondDistinct)this.b467SecondDistinctOriginalGoalsApproved++;
        this.b467LateOriginalGoalsApproved++;
        break;
       }
@@ -1256,6 +1291,19 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.b448A3RealNativeGoalRequests++;
     if(this.b467LiveSourceGoals.has(id))
      this.b467TrueNativeGoalRequests++;
+    if(completed&&(id==='B2'||id==='B4')&&
+       this.b467LiveSourceGoals.has(id)&&
+       this.b467NativeRetargetWitnesses.length<16&&
+       Math.hypot(goal.x-completed.x,goal.z-completed.z)>=2){
+     // Proof of a second REAL Crowd goal request, NOT proof of a
+     // capsule walking the route, enemy hit, or source crossing.
+     this.b467NativeRetargetWitnesses.push({
+      id,nativeTick:this.b137NativeTick,
+      actualFoot:[realFoot.x,realFoot.y,realFoot.z],
+      previousOriginalGoal:[completed.x,completed.y,completed.z],
+      nextOriginalGoal:[goal.x,goal.y,goal.z]
+     });
+    }
     out.copy(goal);
     this.b443OriginalGoalLocks.set(id,{target:goal.clone(),
      firstApprovedTick:this.b137NativeTick,arrivedSinceTick:null});
@@ -1795,6 +1843,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      rejectedUnchangedOriginalChecks:this.b467LiveRejectedCandidates,
      strictlyApprovedLateGoals:this.b467LateOriginalGoalsApproved,
      actualNativeGoalRequests:this.b467TrueNativeGoalRequests,
+     secondDistinctOriginalGoalsApproved:
+      this.b467SecondDistinctOriginalGoalsApproved,
+     nativeRetargetWitnesses:this.b467NativeRetargetWitnesses.map(w=>({
+      id:w.id,nativeTick:w.nativeTick,
+      actualFoot:[...w.actualFoot] as [number,number,number],
+      previousOriginalGoal:[...w.previousOriginalGoal] as [number,number,number],
+      nextOriginalGoal:[...w.nextOriginalGoal] as [number,number,number]
+     })),
      nativeApprovalWitnesses:[...this.b467LiveSourceGoals].map(([id,v])=>
       ({id,nativeTick:v.nativeTick,
        actualFoot:[...v.actualFoot] as [number,number,number],
