@@ -47,3 +47,8 @@ F1〜F5 / Fast Track、SOURCE **25 Rapier solids /17 PaintSurfaces /26 NavLinks 
 - 7.2.0原作全モード改修の公式事実は既知だが、元FloorLine00の同版ゲーム衝突フラグ／CPU半径0.30m全身支持・自然対岸は**0/12未認証**。外部の正当な原作権限が得られない間はF4のみSOURCE_AUTHORITY HOLD。架空床/橋/NavLink/ワープ/敵/得点を追加して全4v4合格にはしない。
 - 次の重要作業は**真の原作SOURCE内のプレイ戦闘ループ・実CPU自然接近を阻害する原作根拠の精査**と、許可済み部位でのゲーム体験改善。Rホットキーは後日独立の真人間入力・対応Chrome証拠が得られた場合のみ再監査。QA番号・長時間ジョブを増やすだけの作業を避ける。
 - F1→F5 / Fast Track保護、原作25 solids/17 Paint/26 Nav/0 Scoreable、0/12、公式得点・勝敗NONE、正式4v4/ART/Pages/PR merge HOLD。main、T19C/T20、正式QA、非公開原本、Draft PR #5に変更なし。追加の有料API・Work未使用、ユーザー手動操作0。
+
+## UI実装HEADの最終真正短時間QA（2026-11-06 JST）
+- [既存B441 Chromium #42113141267](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42113141267)：`88d83858671d4d6938dc8d48ff364996d0db09b7` に対し **completed/SUCCESS**。TypeScript/Vite・関連既存Vitest・本物のPlayCanvas/Rapier/Recast＋7 CPU原作SOURCEの短時間実行・B450/B452/B454独立Native監査が成功。RAW Artifact `13455805494` `b440-short-real-original-human-foot.json` の判定は `PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING`、旧B470同側追加厳格Goal **2件**、OwnerGrid順位監査 **2件**、実native別Goal要求 **3件**（A2/B1/B3）を維持。0 score writes、自然対岸ルート認証false、公式Winner NONE。
+- これは同一UI SHAの**B441実機回帰成功**であり、600 native tick CLEAR後の実Co-op UI画像評価、B200真正Rキー再戦、180秒2連続、正式4v4のPASSではない。特にB162/B200最終実機は `c4497f80` でFAIL（DOM R keydown0件）、本UX改修HEADへ成功と流用禁止。
+- これ以上のKeyR配送同条件再試行・無断のSOURCE変更を禁止。ボタンUIの既存原作再戦導線を維持し、F1→F5の真正戦闘・原作権限課題に集中。main/原本/正式QA/T19C/T20/Pages/PR #5保護、25/17/26/0・自然対岸0/12・正式4v4/得点/勝敗/公開HOLD維持。
