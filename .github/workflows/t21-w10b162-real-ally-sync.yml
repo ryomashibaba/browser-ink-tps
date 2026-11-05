@@ -1,7 +1,7 @@
 name: T21 W10-B162 real original A1 cooperative practice
 on:
   push:
-    branches: [dev/t21-f4e103w-qa-infra]
+    branches: [dev/t21-f4e103w-qa-infra, research/t21-b471-real-ally-source-order-20261105]
     paths:
       - 'scripts/t21-w10b139-original-native-descent-rally.mjs'
       - 'scripts/t21-b330-replay-armed-resume-guard.mjs'
@@ -42,6 +42,8 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
+      - name: B471 authentic source-only co-op key gate tests
+        run: npx vitest run src/app/B441OriginalSourceFrontline.test.ts
       - name: Prevent forged ally ink and protect previous source run behavior
         run: npx vitest run src/app/B161OriginalAllySyncPractice.test.ts src/app/B193SourceCoopMode.test.ts src/app/B195NativeCoopMissionView.test.ts src/app/B209OriginalRampEdge.test.ts src/app/B169OriginalAllyAdvanceGuard.test.ts src/app/B199ActualAllyCollisionRelief.test.ts src/app/B197CoopReplayDecision.test.ts src/app/B165OriginalAllyPracticeProgress.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/app/UndertowF3PracticeObjectiveView.test.ts src/app/B160SourceCpuActivityView.test.ts
       - run: node --check scripts/t21-w10b139-original-native-descent-rally.mjs
@@ -58,6 +60,7 @@ jobs:
           # First genuine B162 trial starts A1 mission at READY; second
           # replay retains B205/B330 native PAUSE/RESUME coverage.
           T21_B162_READY_PREARM: '1'
+          T21_B471_REAL_PLAYER_ORDER: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b162
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Preserve real A1 and human attempted trial whether CLEAR or HOLD

@@ -62,6 +62,7 @@ if(!['FIXED_DEFAULT','ALLY_RALLY','TEAM_COVERAGE'].includes(variant))
 const allyOptIn=variant!=='FIXED_DEFAULT';
 const b154TeamCoverage=variant==='TEAM_COVERAGE';
 const b162CoopTrial=process.env.T21_B162_REAL_ALLY_SYNC==='1';
+const b471RealPlayerOrder=process.env.T21_B471_REAL_PLAYER_ORDER==='1';
 // Reuse existing two authentic B162 playthroughs; first READY prearm only.
 const b162ReadyPrearm=process.env.T21_B162_READY_PREARM==='1';
 const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
@@ -126,6 +127,9 @@ if(b200ReplayTrial&&!b194ButtonTrial)
  throw Error('B200_REQUIRES_REAL_PLAYER_SELECTED_A1_COOP');
 if(b162CoopTrial&&variant!=='ALLY_RALLY')
  throw Error('B162_ONLY_ORIGINAL_ALLY_RALLY_OPT_IN');
+if(b471RealPlayerOrder&&(!b162CoopTrial||!b162ReadyPrearm||
+ !b203FullRoundTrial||!b194ButtonTrial||variant!=='ALLY_RALLY'))
+ throw Error('B471_ONLY_REAL_SOURCE_A1_READY_PREARM');
 if(b194ButtonTrial&&(!b162CoopTrial||variant!=='ALLY_RALLY'))
  throw Error('B194_REQUIRES_EXISTING_REAL_A1_NATIVE_TRIAL');
 if(b409OneRoute180&&(!b203FullRoundTrial||!b312SecondInkTrial||
@@ -502,6 +506,43 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
    JSON.stringify({...output,coopAttempt},null,2));
  };
  saveAttempt(started,'B162_ACTUALLY_ARMED_NATIVE_COOP_RUNNING');
+ if(b471RealPlayerOrder&&coopAttempt===1){
+  // Genuine Chromium human KeyC only; no actor, ink, score or tick writes.
+  const before=await snapshot();authority(before,'FIXED');
+  if(before.matchState!=='PLAYING'||before.paused||
+     before.cpu.physicalRejoins.length!==7||
+     before.b25SourcePaintRun.status!=='RUNNING'||
+     before.b25SourcePaintRun.practiceVariant!=='ALLY_SYNC')
+   fail('B471_NOT_A_REAL_SEVEN_CPU_RUNNING_SOURCE_MISSION');
+  const key={key:'c',code:'KeyC',
+   windowsVirtualKeyCode:67,nativeVirtualKeyCode:67};
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',...key});
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',...key});
+  const observed=await until(async()=>{
+   const n=await snapshot();authority(n,'FIXED');
+   const p=n.cpu.sourcePatrol?.b471TruePlayerOrderedAlly;
+   return p?.genuineKeyRequests>0&&
+    (p.actualNativeGoalRequests>0||p.status==='HOLD')?n:false;
+  },25000);
+  const order=observed.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+  const report={
+   schema:'B471_TRUE_PLAYER_C_NATIVE_A1_ORIGINAL_SOURCE_ORDER',
+   input:'ACTUAL_CHROMIUM_CDP_KEYC',
+   stage:'25/17/26/0',officialWinner:'NONE',
+   noSyntheticMovementInkClockOrScore:true,
+   beforeTick:before.tick,actualObservedTick:observed.tick,
+   actualOriginalA1Foot:observed.cpu.cpu.find(b=>b.id==='A1')?.physicalFoot,
+   actualOrder:order,originalOpposingRoutesCertified:false,
+   result:order.strictlyApprovedOriginalGoals>0&&
+    order.actualNativeGoalRequests>0?'TRUE_NATIVE_GOAL_REQUEST':
+    'HOLD_UNAPPROVED_REAL_SOURCE_GOAL'
+  };
+  writeFileSync(resolve(OUTPUT,'b471-real-player-c-original-a1.json'),
+   JSON.stringify(report,null,2));
+  if(report.result!=='TRUE_NATIVE_GOAL_REQUEST')
+   fail('B471_REAL_C_KEY_OR_A1_NATIVE_SOURCE_GOAL_NOT_PROVEN');
+  console.log('B471_TRUE_NATIVE_PLAYER_C_A1_ORDER',JSON.stringify(report));
+ }
  if(b201PauseTrial&&coopAttempt===1){
   // Real CDP ESC + real mouse click; no fake simulation step.
   for(const type of ['keyDown','keyUp'])
