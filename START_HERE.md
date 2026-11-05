@@ -1,3 +1,5 @@
+> **2026-11-05 F3 SOURCE本物の180秒終了後の再戦UI改善（新B441 Chrome実判定待ち）**：旧真2試合TIME_UPの実1600×900 PNG #13383758500 を直接開き、縦長SOURCE統計が再戦/モード変更の操作を画面外に押し下げる問題を確認。B59統計本文だけスクロール、元ボタン＋モード選択＋LOCAL JSONを非スクロールの固定footerに移動し、実ゲームの再戦操作を改善。物理/CPU7/HP/弾/OwnerGrid/Native180秒/Score0/原本/本番HOLDはすべて不変更。B441真正Chrome内で実SOURCE READY画面DOMを検証、最終TIME_UP実視認は継続HOLD。[記録](docs/qa/T21_F3_SOURCE_END_REPLAY_ACCESSIBILITY_20261105_JA.md)。
+
 > **2026-11-05 B462追補・真正射撃の座標整合性（新CI待ち）**：B462の実KCC接近後にB327が旧Human snapshotと新original17 ledgerを比較して誤HOLDする問題を修正。両方を実移動後の同時点から取得し、既存B327足支持・0.15m/scoreable0基準維持。既存B413にB327/B328 Node回帰・長時間重複防止を追加。[記録](docs/qa/T21_F3_B462_REAL_HUMAN_APPROACH_STALLED_A1_20261105_JA.md)。
 
 > **2026-11-05 B462 実A1協力の物理停滞をプレイヤーの真正KCC操作で改善（新HEAD CI待ち）**：Run [#41959438127](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41959438127) は原本坂〜上段物理PASSながら、原本下段A1実弾0・Human↔A1距離3.326mで協力未CLEAR。B328既存厳格監査を下段時点に再利用し、本物のHuman CDP WASDのみ最大8短パルスでA1実足へ接近、足支持と実距離減少・本物A1発砲を確認。実A1弾が塗らなければCLEARしない。従来の物理/HP/時計/17 PaintSurface/正式スコア条件はすべて維持。[記録](docs/qa/T21_F3_B462_REAL_HUMAN_APPROACH_STALLED_A1_20261105_JA.md)。

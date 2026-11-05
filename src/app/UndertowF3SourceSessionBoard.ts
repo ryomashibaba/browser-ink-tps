@@ -307,13 +307,21 @@ export function createF3SourceSessionBoard(
  // precedence over the hidden UA stylesheet.
  finish.style.display='none';
  const panel=document.createElement('div');
- panel.style.cssText='width:min(570px,100%);padding:28px;'+
+ // Source real Chromium #13383758500: long statistics pushed replay
+ // and mode controls below the actual 1600x900 TIME_UP viewport.
+ // Preserve authentic stats in their own scroll region; pin actions.
+ panel.style.cssText='width:min(570px,100%);padding:0;'+
+  'box-sizing:border-box;display:flex;flex-direction:column;'+
   'background:linear-gradient(145deg,#092a38,#081722);'+
   'color:#ecfcff;border:1px solid #5ed6e5;border-radius:20px;'+
   'box-shadow:0 25px 90px #000b;font:600 13px/1.7 system-ui;'+
-  'max-height:calc(100vh - 40px);overflow-y:auto;'+
+  'max-height:calc(100vh - 40px);overflow:hidden;'+
   'font-variant-numeric:tabular-nums;text-align:left';
  panel.innerHTML=
+  '<div id="t21-f3-b59-scroll-stats" role="region" tabindex="0" '+
+   'aria-label="Detailed genuine SOURCE gameplay statistics" style="'+
+   'min-height:0;overflow-y:auto;overscroll-behavior:contain;'+
+   'padding:22px 24px 12px;box-sizing:border-box">'+
   '<div style="font-size:11px;font-weight:850;letter-spacing:2px;color:#95e6ee">'+
     'ORIGINAL-SOURCE PRACTICE · UNSCORED</div>'+
   '<div style="font-size:28px;font-weight:900;letter-spacing:.4px;margin:5px 0 2px">'+
@@ -330,10 +338,15 @@ export function createF3SourceSessionBoard(
    'font:600 10px/1.5 system-ui;color:#c5eff4" hidden></div>'+
   '<p style="font-size:11px;color:#aacfd7">'+
    'Real source-floor input, ink and CPU activity only. This is not an original 4v4 battle result.</p>'+
+  '</div>'+
+  '<div id="t21-f3-b59-footer-actions" style="'+
+   'flex:none;padding:11px 24px 16px;box-sizing:border-box;'+
+   'background:#0a2635;border-top:1px solid #5ed6e555">'+
   '<button id="t21-f3-b59-restart" type="button" style="'+
    'width:100%;padding:12px;margin-top:6px;background:#56d9de;'+
    'color:#05202a;border:0;border-radius:9px;cursor:pointer;'+
-   'font:850 14px system-ui">RESTART ORIGINAL-SOURCE SESSION</button>';
+   'font:850 14px system-ui">RESTART ORIGINAL-SOURCE SESSION</button>'+
+  '</div>';
  if(onSaveEvidence){
   const save=document.createElement('button');
   save.id='t21-f3-b62-save-evidence';
@@ -347,7 +360,9 @@ export function createF3SourceSessionBoard(
    if(!finish.hidden&&finish.dataset.t21B59State==='FINISHED')
     onSaveEvidence();
   });
-  panel.appendChild(save);
+  // Existing SOURCE mode-switch appends beside restart in this footer.
+  panel.querySelector<HTMLElement>('#t21-f3-b59-footer-actions')!
+   .appendChild(save);
  }
  finish.appendChild(panel);
  ui.appendChild(finish);

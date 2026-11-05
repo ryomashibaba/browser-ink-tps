@@ -302,6 +302,30 @@ async function main(){
    modeButton.scoreable!=='0'||modeButton.actors!=='0')
   fail('SOURCE_NATIVE_READY_MODE_MENU_MISSING');
  proof.sourcePlayerModeMenu=modeButton;save();
+ // Real Chrome inspects REAL SOURCE game DOM at READY, without
+ // fabricating TIME_UP or any stats. Later 180s ART remains separate.
+ const footer=await evaluate(`(() => {
+  const modal=document.querySelector('#t21-f3-b59-session-finished');
+  const card=modal?.firstElementChild;
+  const stats=modal?.querySelector('#t21-f3-b59-scroll-stats');
+  const actions=modal?.querySelector('#t21-f3-b59-footer-actions');
+  const restart=modal?.querySelector('#t21-f3-b59-restart');
+  const change=modal?.querySelector('#t21-f3-source-mode-menu-after-match');
+  return {originalScoreable:modal?.dataset.originalScoreable,
+   hidden:modal?.hidden===true,
+   cardDisplay:card?getComputedStyle(card).display:null,
+   statsOverflow:stats?getComputedStyle(stats).overflowY:null,
+   footerShrink:actions?getComputedStyle(actions).flexShrink:null,
+   restartPinned:!!actions&&actions.contains(restart),
+   modePinned:!!actions&&actions.contains(change),
+   statsSeparate:!!stats&&!!actions&&!actions.contains(stats)};
+ })()`);
+ if(footer?.originalScoreable!=='0'||footer.hidden!==true||
+    footer.cardDisplay!=='flex'||footer.statsOverflow!=='auto'||
+    footer.footerShrink!=='0'||!footer.restartPinned||
+    !footer.modePinned||!footer.statsSeparate)
+  fail('REAL_SOURCE_REPLAY_AND_MODE_ACTIONS_MUST_BE_PINNED');
+ proof.sourceFinishUiLayout=footer;save();
  const boot=await snap();authority(boot);
  if(boot.matchState!=='STAGING'||boot.cpu.physicalRejoins.length!==0)
   fail('NOT_FRESH_NATIVE_SOURCE_WORLD');
