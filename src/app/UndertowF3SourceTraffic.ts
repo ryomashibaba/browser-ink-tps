@@ -12,7 +12,7 @@ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
-import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
 import {rankB169OriginalAdvanceGuardGoals} from './B169OriginalAllyAdvanceGuard';
 import {b199ActualAllyCollisionReliefCandidates} from './B199ActualAllyCollisionRelief';
@@ -742,6 +742,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    officialWinner:'NONE' as const,actorInkScoreClockWrites:0 as const
   };
  }
+ /** Two teammates may already be moving to the same truly approved
+  * original SOURCE foot. Live actual actor positions and still-valid
+  * B443 locks are preference only; the next source-goal approval retains
+  * the unchanged native Rapier/Recast full-path and Actor collision veto. */
+ private actualTeamCoveragePositions(id:string,team:Team.A|Team.B):Vec3[]{
+  const existing:Vec3[]=[];
+  for(const mate of this.bots){
+   if(mate.id===id||mate.team!==team||
+      mate.lifeState!=='ACTIVE'||mate.mobilityState!=='GROUND')continue;
+   existing.push(mate.position);
+   const locked=this.b443OriginalGoalLocks.get(mate.id);
+   if(locked)existing.push(locked.target);
+  }
+  return existing;
+ }
  /** Only user-selected original SOURCE combat may improve the genuine
   * weapon-distance standoff. Other B421 callers retain the legacy 2m goal.
   * Every candidate still passes the existing Rapier/Recast full-path gate
@@ -1464,8 +1479,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
         actualFlat.distanceToOriginalPolygonBoundaryMeters>=.75&&
         this.hasSourceFootSupport(realFoot)){
       const proposals=proposeB441OriginalFrontline(this.stage,nativeSide);
-      const ranked=rankOriginalSourcePatrolGoals(
-       proposals.map(p=>new Vec3(...p.point)),bot.team,this.sourceInk,0);
+      const originalPoints=proposals.map(p=>new Vec3(...p.point));
+      const ranked=distributeOriginalSourceGoalCoverage(
+       rankOriginalSourcePatrolGoals(
+        originalPoints,bot.team,this.sourceInk,0),
+       originalPoints,this.actualTeamCoveragePositions(id,bot.team));
       this.b470RankedActualGoalAudits++;
       for(const choice of ranked){
        const candidate=proposals[choice.index]!;
@@ -1558,8 +1576,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(completed&&fronts.length>2&&this.sourceInk&&
       (id==='A2'||id==='A3'||id==='B1'||id==='B3')){
     const other=goals.filter(p=>p.distance(completed!)>.01);
-    const ranked=rankOriginalSourcePatrolGoals(
-     other,bot.team,this.sourceInk,0);
+    const ranked=distributeOriginalSourceGoalCoverage(
+     rankOriginalSourcePatrolGoals(other,bot.team,this.sourceInk,0),
+     other,this.actualTeamCoveragePositions(id,bot.team));
     goals=[...ranked.map(row=>other[row.index]!),
      ...goals.filter(p=>p.distance(completed!)<=.01)];
    }
@@ -1569,8 +1588,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(completed&&fronts.length>2&&(id==='B2'||id==='B4')&&
       this.b467LiveSourceGoals.has(id)&&this.sourceInk){
     const nonCompleted=goals.filter(p=>p.distance(completed!)>.01);
-    const ranked=rankOriginalSourcePatrolGoals(
-     nonCompleted,bot.team,this.sourceInk,0);
+    const ranked=distributeOriginalSourceGoalCoverage(
+     rankOriginalSourcePatrolGoals(nonCompleted,bot.team,this.sourceInk,0),
+     nonCompleted,this.actualTeamCoveragePositions(id,bot.team));
     goals=[...ranked.map(row=>nonCompleted[row.index]!),
      ...goals.filter(p=>p.distance(completed!)<=.01)];
    }

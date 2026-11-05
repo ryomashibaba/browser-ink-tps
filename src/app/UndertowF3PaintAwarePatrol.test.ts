@@ -3,7 +3,7 @@ import {Vec3} from 'playcanvas';
 import {Team,SurfaceFlags} from '../ink/types';
 import {GameplayInkSystem,type GameplayInkSample} from '../ink/GameplayInkSystem';
 import {PaintSurface} from '../ink/PaintSurface';
-import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,B34_GROUNDED_STALL_TICKS} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,B34_GROUNDED_STALL_TICKS,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
 
 const goals=[new Vec3(1,3,40),new Vec3(2,3,41),
  new Vec3(3,3,42),new Vec3(4,3,43)];
@@ -146,5 +146,34 @@ describe('native original paint coverage priority improves actual CPU floor patr
   expect(result.neighborhoodOpportunity).toBe(0);
   expect(result.pathAuthorized).toBe(false);
   expect(ink.snapshot().percentB).toBe(0);
+ });
+});
+
+describe('genuine source CPU teammates distribute already-authorized goals',()=>{
+ it('diversifies equally useful existing paint goals, never invents another',()=>{
+  const ranked=rankOriginalSourcePatrolGoals(goals,Team.A,
+   ownerInk([Team.Neutral,Team.Neutral,Team.Neutral,Team.Neutral]).system,0);
+  const before=ranked.map(x=>x.index);
+  const output=distributeOriginalSourceGoalCoverage(
+   ranked,goals,[new Vec3(1,3,40),new Vec3(2,3,41)]);
+  expect(before).toEqual([0,1,2,3]);
+  expect(output.map(x=>x.index)).toEqual([3,0,1,2]);
+  expect(output.every(x=>x.sourceOnly&&!x.pathAuthorized)).toBe(true);
+  expect(ranked.map(x=>x.index)).toEqual(before);
+ });
+ it('actual ownerGrid opportunity wins over spacing, not vice versa',()=>{
+  const ranked=rankOriginalSourcePatrolGoals(goals,Team.A,
+   ownerInk([Team.B,Team.A,Team.Neutral,Team.A]).system,0);
+  const out=distributeOriginalSourceGoalCoverage(ranked,goals,
+   [new Vec3(1,3,40)]);
+  expect(out.map(x=>x.index)[0]).toBe(0);
+ });
+ it('ignores invalid or cross-height actor positions without adding routes',()=>{
+  const ranked=rankOriginalSourcePatrolGoals(goals,Team.A,
+   ownerInk([Team.Neutral,Team.Neutral,Team.Neutral,Team.Neutral]).system,0);
+  expect(distributeOriginalSourceGoalCoverage(ranked,goals,
+   [{x:1,y:Number.NaN,z:40},{x:1,y:30,z:40}])).toEqual(ranked);
+  expect(distributeOriginalSourceGoalCoverage(ranked,goals,
+   [new Vec3(1,3,40)],Number.NaN)).toEqual(ranked);
  });
 });

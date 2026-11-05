@@ -124,3 +124,38 @@ export function mayReconsiderStalledOriginalGoal(
   Number.isFinite(sourceFootDistanceToOldGoal)&&
   sourceFootDistanceToOldGoal>=1.5;
 }
+
+// One native SOURCE gameplay behavior: CPUs may split coverage rather than
+// selecting an identical LIVE teammate goal when the actual original ink
+// opportunity is otherwise equal. Existing real source-foot goal lists
+// are merely reordered; NO navigation, movement, aim, hit or score is
+// authorized here. The original Recast/Rapier full-route gate still owns
+// every eventual move request.
+export function distributeOriginalSourceGoalCoverage(
+ sorted:readonly OriginalPatrolInkRank[],
+ originalGoals:readonly Vec3[],
+ actualTeammateFeetAndApprovedGoals:readonly Readonly<{
+  x:number;y:number;z:number
+ }>[],
+ separationMeters=2.4
+):OriginalPatrolInkRank[]{
+ if(!Number.isFinite(separationMeters)||separationMeters<=0||
+    sorted.length<2)return [...sorted];
+ const realPositions=actualTeammateFeetAndApprovedGoals.filter(p=>
+  [p.x,p.y,p.z].every(Number.isFinite));
+ if(!realPositions.length)return [...sorted];
+ const crowded=(entry:OriginalPatrolInkRank):number=>{
+  const g=originalGoals[entry.index];
+  if(!g||![g.x,g.y,g.z].every(Number.isFinite))return 1;
+  return realPositions.some(p=>
+   Math.abs(p.y-g.y)<=.6&&
+   Math.hypot(p.x-g.x,p.z-g.z)<separationMeters)?1:0;
+ };
+ const oldOrder=new Map(sorted.map((item,i)=>[item.index,i]));
+ return [...sorted].sort((a,b)=>
+  // Never trade away a better actually sampled unscored ink opportunity.
+  b.neighborhoodOpportunity-a.neighborhoodOpportunity||
+  b.rank-a.rank||
+  crowded(a)-crowded(b)||
+  (oldOrder.get(a.index)??0)-(oldOrder.get(b.index)??0));
+}
