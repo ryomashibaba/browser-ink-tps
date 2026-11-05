@@ -795,6 +795,77 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
     actualLower.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests
   };
   history162.push(lowerReport);
+  // B462 genuine game movement: RAW B413 #13384029779 found human 3.326m
+  // from an actually stalled CPU A1 on the original lower source. Prior
+  // true CLEAR #13383758500 saw A1 move nearer to 2.09m and fire real
+  // paint shots. Reuse strict B328 player WASD to approach the observed
+  // REAL A1 foot while still on the unchanged original lower collider.
+  // Never move CPU, inject ticks/ink, grant a new route or force CLEAR.
+  if(b410RealUpperPlay&&b203FullRoundTrial&&coopAttempt===1&&
+     b312SecondInkTrial&&
+     lowerReport.acceptedRealA1AimShots===0&&
+     Number.isFinite(lowerReport.actualA1HumanPlanarGap)&&
+     lowerReport.actualA1HumanPlanarGap>=3&&
+     lowerReport.actualA1HumanPlanarGap<=8){
+   const steps462=[];
+   const save462=status=>writeFileSync(resolve(OUTPUT,
+    'b462-real-pre-ramp-a1-player-approach.json'),
+    JSON.stringify({schema:'B462_NATIVE_EARLY_HUMAN_TO_ACTUAL_A1',
+     source:'25/17/26/0',status,steps:steps462,
+     actorWrites:0,cpuGoalWrites:0,originalSolidWrites:0,
+     nativeClockWrites:0,syntheticInput:false,
+     realA1InkRequiredForMissionClear:true,
+     originalOpponentRouteCertified:false,
+     officialWinner:'NONE',productionAuthorized:false},null,2));
+   save462('REAL_LOWER_SOURCE_A1_APPROACH_STARTED');
+   for(let i=0;i<8;i++){
+    const before=await snapshot();authority(before,'FIXED');
+    if(before.b25SourcePaintRun.status!=='RUNNING'||
+       before.matchState!=='PLAYING'||before.paused||
+       before.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests>0)
+     break;
+    const original=await b312Ledger();
+    const plan=b328Plan(before,original);
+    if(!plan.eligible){
+     steps462.push({kind:'HOLD_NO_REGISTERED_LOWER_FOOT',
+      actualTick:before.tick,plan});save462('HOLD_NATIVE_SAFE_GOAL');
+     break;
+    }
+    const after=await b328ShortNativeKey(plan.key,2);
+    const afterLedger=await b312Ledger();
+    const proof=b328AuditStep(before,original,after,afterLedger,plan);
+    steps462.push({kind:'REAL_CDP_KEY_AND_RAPIER_KCC',
+     key:plan.key,beforeTick:before.tick,afterTick:after.tick,
+     from:[...before.player.position],to:[...after.player.position],
+     actualA1Foot:after.cpu.cpu.find(x=>x.id==='A1')?.physicalFoot,
+     priorGap:plan.gap,realKccMeters:proof.actualHumanMeters,
+     realGapReduction:proof.measuredA1GapReductionMeters,
+     originalSupportingSolid:afterLedger.genuineHumanOriginalFootSolid,
+     supported:afterLedger.realHumanOriginalFootSupported,
+     verdict:proof.verdict});
+    save462('REAL_CDP_INPUT_OBSERVED');
+    console.log('B462_GENUINE_PRE_RAMP_A1_CLOSING',
+     JSON.stringify(steps462.at(-1)));
+    if(!proof.passes)break;
+   }
+   if(steps462.some(x=>x.verdict==='PASS_REAL_GROUNDED_HUMAN_A1_CLOSING')){
+    let observed=await snapshot();authority(observed,'FIXED');
+    const deadline=observed.tick+90;
+    while(observed.tick<deadline&&
+     observed.matchState==='PLAYING'&&
+     observed.b25SourcePaintRun.status==='RUNNING'&&
+     observed.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests===0){
+     await sleep(250);
+     observed=await snapshot();authority(observed,'FIXED');
+    }
+    steps462.push({kind:'POST_APPROACH_REAL_A1_OBSERVATION',
+     tick:observed.tick,
+     realSourceAimRequests:observed.b152ExactAllyAimPaintProvenance.acceptedSourceAimShotRequests,
+     realTaggedA1ChangedCells:observed.b25SourcePaintRun.actualOriginalA1ChangedImpactCells,
+     realMissionStatus:observed.b25SourcePaintRun.status});
+   }
+   save462('REAL_NATIVE_APPROACH_AND_OBSERVATION_RECORDED');
+  }
   // B312: strict follow-up research is genuinely fired only on the
   // original KCC-verified lower body, not by a fake hit/ownership write.
   if(b312SecondInkTrial&&coopAttempt===1){

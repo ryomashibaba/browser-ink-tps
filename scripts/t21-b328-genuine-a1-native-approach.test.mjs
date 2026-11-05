@@ -47,3 +47,22 @@ test('CLEAR, wrong source, teleport and overly long input fail closed',()=>{
  assert.throws(()=>b328AuditStep(d.n,d.l,e.n,e.l,b328Plan(d.n,d.l)),
   /MISSING_TRUE_NATIVE/);
 });
+test('RAW #13384029779 stalled A1 permits only native original-foot player approach',()=>{
+ const {n,l}=sample();
+ n.player.position=[.619898796081543,3.8949975967407227,48.581787109375];
+ l.actualBodyMeters=[...n.player.position];
+ n.cpu.cpu[0].physicalFoot=[2.848548650741577,3.236225128173828,51.051055908203125];
+ const gap=Math.hypot(n.cpu.cpu[0].physicalFoot[0]-n.player.position[0],
+  n.cpu.cpu[0].physicalFoot[2]-n.player.position[2]);
+ assert.ok(gap>=3&&gap<3.5);
+ const plan=b328Plan(n,l);
+ assert.equal(plan.eligible,true);
+ assert.equal(plan.sourceRouteCertified,false);
+ assert.ok(['KeyW','KeyS','KeyA','KeyD'].includes(plan.key));
+ const after=structuredClone(n),read=structuredClone(l);
+ after.tick+=6;after.player.position[2]+=.35;
+ read.actualBodyMeters=[...after.player.position];
+ assert.equal(b328AuditStep(n,l,after,read,plan).passes,true);
+ read.genuineHumanOriginalFootSolid='FAKE_BRIDGE';
+ assert.equal(b328AuditStep(n,l,after,read,plan).passes,false);
+});
