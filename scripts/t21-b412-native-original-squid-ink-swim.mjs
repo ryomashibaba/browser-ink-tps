@@ -249,10 +249,15 @@ export async function b412NativeSquidOwnInkRound({
    'REAL_ORIGINAL_FORWARD_CALIBRATION_REQUIRED');
   evidence.outboundForwardWDelta=actualW;
   await record('REAL_SOURCE_FORWARD_CALIBRATED_FOR_PAINT_TARGET');
+  // B413 RAW #13412099647: OWN at tick 6618 was only a boundary
+  // crossing. Letting go coasted into NEUTRAL at 6624, then native ink
+  // stopped recovering. A single OWN leg is NOT a safe place to refill.
+  // Continue normal source-supported CDP KCC toward the already-authored
+  // original paint target. Require real no-key coast to stay OWN before
+  // performing the existing independent multi-sample refill proof.
+  let genuinelySettledOnOwn=false;
   for(let i=1;i<10;i++){
    const now=await frame();
-   if(evidence.swimObserved&&evidence.legs.some(x=>x.planarMeters>.15))
-    break;
    if(planar(now.player.position,initialPos)>5.0){
     evidence.hold={stage:'PAINT_TARGET_APPROACH_SOURCE_PERIMETER',
      body:now.player.position,original:initialPos,target,
@@ -263,10 +268,43 @@ export async function b412NativeSquidOwnInkRound({
    }
    const direction=b412NativeReturnSteerKey(
     now.player.position,target,actualW);
-   await nativeLeg(direction,'TOWARD_REAL_120S_PAINT');
+   const leg=await nativeLeg(direction,'TOWARD_REAL_120S_PAINT');
+   if(leg.inkRelation!=='OWN'||leg.locomotion!=='SWIM_GROUND')
+    continue;
+   // No directional key is held. Verify the real moving body has
+   // finished its KCC drift without losing the OWN owner-grid relation.
+   const coast=await nativeUntil(async()=>{
+    const n=await frame();
+    return n.tick>=leg.toTick+6?n:false;
+   },20000);
+   genuinelySettledOnOwn=
+    coast.player.mode==='SQUID'&&
+    coast.player.inkRelation==='OWN'&&
+    coast.playerInkRecoveryState==='SQUID_OWN'&&
+    coast.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND'&&
+    planar(coast.player.position,initialPos)<=5;
+   evidence.ownCoastCheck={afterLegTick:leg.toTick,
+    observedNativeTick:coast.tick,realBody:coast.player.position,
+    trueOriginalInkRelation:coast.player.inkRelation,
+    actualRecoveryState:coast.playerInkRecoveryState,
+    settled:genuinelySettledOnOwn,actorWrites:0,inkWrites:0};
+   await record(genuinelySettledOnOwn?
+    'TRUE_ORIGINAL_SQUID_OWN_AFTER_NO_KEY_COAST':
+    'REAL_OWN_EDGE_EXIT_CONTINUE_SOURCE_MOVEMENT');
+   if(genuinelySettledOnOwn)break;
   }
   need(evidence.swimObserved,
    'REAL_OWN_PAINT_SWIM_GROUND_NOT_OBSERVED');
+  if(!genuinelySettledOnOwn){
+   const n=await frame();
+   evidence.hold={stage:'NO_STABLE_ORIGINAL_OWN_AFTER_REAL_KCC',
+    lastNativeTick:n.tick,realBody:n.player.position,
+    originalInkRelation:n.player.inkRelation,
+    actualRecoveryState:n.playerInkRecoveryState,
+    originalSourceUnchanged:true};
+   await record('HOLD_NO_STABLE_OWN_SOURCE_FOOT');
+   fail('REAL_NATIVE_OWN_STABLE_FOOT_NOT_OBSERVED');
+  }
   const peak=await frame();
   evidence.peakBody=peak.player.position;
   evidence.peakRelation=peak.player.inkRelation;
@@ -361,7 +399,9 @@ export async function b412NativeSquidOwnInkRound({
   await record('REAL_NATIVE_W_DIRECTION_FOR_SAFE_RETURN');
   // Max 18 short authentic pulses. <=22 complete legs with the
   // existing W phase, retaining independent audit hard caps.
-  for(let i=0;i<18;i++){
+  // Preserve the original independent 22-leg cap, including any extra
+  // *real* attempts needed to reach interior OWN ink. Never relax it.
+  for(let i=0;i<18&&evidence.legs.length<22;i++){
    const now=await frame();
    if(b412NativeReturnReady(now.player.position,initialPos))break;
    const code=b412NativeReturnSteerKey(
