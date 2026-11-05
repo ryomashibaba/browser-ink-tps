@@ -1,3 +1,5 @@
+> **2026-11-05 Windows SOURCE PLAY 1クリックローカル起動（新B441 CI待ち）**：研究ブランチの `PLAY_SOURCE_WINDOWS.cmd` を追加。ダブルクリックで既存Node/npm検査→初回依存確認→SOURCEゲームと3モード入口をビルド→Vite `127.0.0.1:4173` で既定ブラウザへ自動表示。main/T19C/T20/Pages/原作の変更や有料APIはなし。Windows実機動作は未認証、Ubuntuの既存B441 Chromiumで本物の3モード入口＋7CPUゲームを引き続き検証。前HEAD長時間B413は独立して進行中。[説明](docs/qa/T21_F3_SOURCE_PLAY_ONE_CLICK_WINDOWS_20261105_JA.md)。
+
 > **2026-11-05 F2/F3 実坂頂点を1tickパルスで先行採録（新HEAD真正試験待ち）**：B413 [#41950597184](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41950597184) RAW #13380308657 で実人間は原作坂v=.7669→.8825（高さ+.313m）→原作上段床v=.975へ進んだが、B322厳格原本crest v≥.90＋+.32mの途中サンプル欠落でHOLD。source支持確認済みv≥.74から真CDP KeyW短パルスを開始、元物理/閾値/勝者NONE変更なし。[記録](docs/qa/T21_F2_F3_REAL_CREST_CADENCE_20261105_JA.md)。
 
 > **2026-11-05 B412真正180秒完走後の前進ベクトル不一致修正（新CI待ち）**：B413 [実走行 #41944309332](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/41944309332) はOWNイカ回復→HUMAN再射撃14発→原本180秒TIME_UP tick11859まで実際に成功。ただし独立B412監査はFAIL：横移動KeyDを前進Wとして記録していた。KeyWの原本Rapier実測区間のみから前進向きを決める修正とRAW座標回帰テストを研究branchに限定して実装。過去Artifact PASS格上げせず、2試合連続・正式4v4/経路・ART・公開はHOLD。[記録](docs/qa/T21_F3_B412_REAL_RETURN_VECTOR_20261105_JA.md)。
