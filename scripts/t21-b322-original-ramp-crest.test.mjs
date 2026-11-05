@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
  UPPER_FLOOR_SOLID,UPPER_FLOOR_PAINT,
  b322AuditRealOriginalPreCrestBackstep,
- b431CanRefineOriginalPrecrest}
+ b431CanRefineOriginalPrecrest,b322UseFineNativeCrestCadence}
  from './t21-b322-original-ramp-crest.mjs';
 const ramp='UndertowT21D:right-low-route-ramp-positive-z';
 const quad={id:'right-low-route-ramp-positive-z',
@@ -89,4 +89,21 @@ test('B431 genuine source v=.698 permits real backstep without prior B322 KeyS',
  ]){
   assert.equal(b431CanRefineOriginalPrecrest({...genuine,...patch}),false);
  }
+});
+
+test('RAW 13380308657: real precrest v=.7669 uses genuine fine CDP cadence',()=>{
+ const valid=at(.419,.7668967228815188,2139);
+ assert.equal(b322UseFineNativeCrestCadence(valid),true);
+ assert.equal(b322UseFineNativeCrestCadence(at(.419,.6874319565,2133)),false);
+ assert.equal(b322UseFineNativeCrestCadence(at(.419,.8825227374,2149)),true);
+ assert.equal(b322UseFineNativeCrestCadence(
+  at(.419,.9749939322,2155,UPPER_FLOOR_SOLID)),false);
+ for(const altered of [
+  {source:'25/17/26/1'},{sourceActorRelocations:1},
+  {sourceInkRewritten:true},{playerPositionRewritten:true},
+  {realHumanOriginalFootSupported:false},
+  {genuineOriginalFootGapMeters:.3},{originalRows:[]}
+ ])assert.equal(b322UseFineNativeCrestCadence({...valid,...altered}),false);
+ const under=example();under.steps=under.steps.slice(0,2);
+ assert.equal(b322AuditNativeOriginalCrestExit(under).crestProven,false);
 });

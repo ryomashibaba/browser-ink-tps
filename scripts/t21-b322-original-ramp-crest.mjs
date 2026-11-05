@@ -66,6 +66,35 @@ export function b431CanRefineOriginalPrecrest(ledger){
    c.originalUphillFraction<=.77;
  }catch{return false;}
 }
+/** Require actual original ramp physics and registered paint surface
+ * before choosing the earlier short native input pulse. This never
+ * authorizes a route or weakens the independent crest/exit audit.
+ * RAW original B413 #13380308657 was v=.7668967 with 2-tick coarse
+ * input and next sampled v=.8825; the following sample was upper floor. */
+export function b322UseFineNativeCrestCadence(ledger){
+ if(ledger?.source!=='25/17/26/0'||
+    !finite3(ledger.actualBodyMeters)||
+    ledger.realHumanOriginalFootSupported!==true||
+    ledger.genuineHumanOriginalFootSolid!==RAMP_SOLID||
+    !Number.isFinite(ledger.genuineOriginalFootGapMeters)||
+    ledger.genuineOriginalFootGapMeters<0||
+    ledger.genuineOriginalFootGapMeters>.18||
+    ledger.sourceActorRelocations!==0||
+    ledger.sourceInkRewritten!==false||
+    ledger.playerPositionRewritten!==false||
+    ledger.originalRows?.length!==17||
+    !ledger.originalRows.some(r=>
+     r.surfaceId===RAMP_PAINT&&
+     r.actualHumanFootOnOriginalActiveSurface===true))
+  return false;
+ try{
+  const physical=b320SourceRampCoordinates(
+   ledger.originalPositiveRampSourceQuad,ledger.actualBodyMeters);
+  return physical.insideSourceQuadXZ&&
+   physical.originalUphillFraction>=.74&&
+   physical.originalUphillFraction<1;
+ }catch{return false;}
+}
 /** Real CDP KeyS before the crest: read only original native KCC proof.
  * B322's >=.32m ascent threshold and genuine 17-grid owner gate unchanged. */
 export function b322AuditRealOriginalPreCrestBackstep(before,after,key){

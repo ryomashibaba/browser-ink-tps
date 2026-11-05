@@ -19,6 +19,7 @@ import {b321OriginalRampHighSectionPlan,b321AuditTrueOriginalHigherRamp}
  from './t21-b321-real-upper-ramp-kcc.mjs';
 import {b322PlanActualOriginalCrest,b322AuditNativeOriginalCrestExit,
  b322AuditRealOriginalPreCrestBackstep,b431CanRefineOriginalPrecrest,
+ b322UseFineNativeCrestCadence,
  UPPER_FLOOR_SOLID} from './t21-b322-original-ramp-crest.mjs';
 import {b324AuditGenuineUpperFloor}
  from './t21-b324-original-upper-floor-continuation.mjs';
@@ -1315,16 +1316,13 @@ async function playB162GenuineAllySync(routeSteps,coopAttempt=1){
          if(!before.realHumanOriginalFootSupported||
           ![RAMP_SOLID,UPPER_FLOOR_SOLID].includes(
            before.genuineHumanOriginalFootSolid))break;
-         // Real B410 failure: on original ramp fraction .89328 the
-         // next 6-tick original KCC sample was already UPPER at .98101.
-         // Smaller REAL CDP pulses near the source crest retain the
-         // unchanged B322 original-ownerGrid and physical foot gates.
-         const crestSource=b320SourceRampCoordinates(
-          before.originalPositiveRampSourceQuad,before.actualBodyMeters);
+         // B413 true Chromium RAW #13380308657: real supported ramp
+         // v=.7669 was still using a coarse 10-tick input observation.
+         // Next ramp v=.8825 rise .313m, then upper floor v=.975:
+         // too late to witness v>=.90 with >=.32m native ramp rise.
+         // Choose earlier short *real* CDP input, never loosen B322.
          const fine=b410RealUpperPlay&&phase==='RAMP'&&
-          before.genuineHumanOriginalFootSolid===RAMP_SOLID&&
-          crestSource.insideSourceQuadXZ&&
-          crestSource.originalUphillFraction>=.78;
+          b322UseFineNativeCrestCadence(before);
          const keyTicks=fine?1:2;
          // B424: B418 observed an actual source crest on ramp step 3,
          // but B423 passed to the upper floor before sampling the crest.
