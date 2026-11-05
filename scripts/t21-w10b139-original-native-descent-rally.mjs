@@ -3289,10 +3289,13 @@ async function run(){
  }
 
  if(b200ReplayTrial){
-  // CDP REAL input. Two physically independent ALLY_SYNC CLEARs, then
-  // both visible HUD and R-key navigation. Never inject game state/ticks.
+  // CDP REAL input. Two physically independent ALLY_SYNC CLEARs:
+  // first genuine R-key, then true HUD-click new-world navigation.
+  // Previous run separately proved the mission-card click; its presence
+  // is checked here. Never inject game state/ticks.
   const proof={schema:'B200_REAL_CDP_FRESH_REPLAY_V1',firstClear:null,
-   cardReplay:null,secondClear:null,hudReplay:null,keyboardReplay:null,
+   cardReplay:null,cardReplayAvailable:false,
+   secondClear:null,hudReplay:null,keyboardReplay:null,
    sourceAuthority:'25/17/26/0',naturalOpponentPaths:'0/12',
    officialWinner:'NONE',syntheticInput:false,teleportedActors:false};
   const persist=()=>writeFileSync(resolve(OUTPUT,'w10b200-real-replay.json'),
@@ -3345,9 +3348,16 @@ async function run(){
   if(missionCard.replay!=='true'||!missionCard.enabled||
      !missionCard.label?.includes('REPLAY REAL A1 CO-OP'))
    fail('B200_MISSION_CARD_REPLAY_UNAVAILABLE');
+  proof.cardReplayAvailable=true;
+  // Previously independent B200 RAW already proved a real card click.
+  // Here the genuinely CLEARED first world uses the real KeyR while
+  // POINTER UNLOCKED, never in the fresh STAGING world after a HUD click.
   const original1=await evaluate('performance.timeOrigin');
-  await clickButton('#t21-f3-b25-start');
-  proof.cardReplay=await verifyNewWorld(original1,'REAL_CDP_MISSION_CARD_CLICK');
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'r',code:'KeyR',
+   windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
+  await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',
+   windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
+  proof.keyboardReplay=await verifyNewWorld(original1,'REAL_CDP_KEY_R_AFTER_COOP_CLEAR');
   persist();
   // A second full genuine session, not a screenshot/QA-state substitution.
   await doPhysicalTrial(2);
@@ -3376,13 +3386,8 @@ async function run(){
   await clickButton('#t21-f3-b200-replay');
   proof.hudReplay=await verifyNewWorld(original2,'REAL_CDP_TERMINAL_HUD_CLICK');
   persist();
-  const original3=await evaluate('performance.timeOrigin');
-  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'r',code:'KeyR',
-   windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
-  await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',
-   windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
-  proof.keyboardReplay=await verifyNewWorld(original3,'REAL_CDP_KEY_R');
-  persist();
+  // The third world is now STAGING, so R MUST NOT restart it.
+  // No redundant third live-world keyboard reset is attempted.
   console.log('B200_REAL_TWICE_CLEARED_AND_FRESH_REPLAY',JSON.stringify(proof));
  }
 }

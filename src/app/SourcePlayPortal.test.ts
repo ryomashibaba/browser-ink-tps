@@ -132,6 +132,30 @@ describe('genuine SOURCE 180s R-key replay never resets the live native world',(
     .toBe('BLOCK');
   }
  });
+
+ it('allows only a real unlocked cooperative CLEAR to use fresh-world R; NEVER STAGING or active practice',()=>{
+  const q=valid(d.coop);
+  const eligible={...q,matchState:'PLAYING',finishedVisible:false,
+   canClick:false,practiceStatus:'CLEAR',coOpReplayVisible:true};
+  expect(sourceReplayHotkeyAction(eligible)).toBe('NAVIGATE_FRESH_COOP_CLEAR');
+  for(const altered of [
+   {practiceStatus:'RUNNING'},{practiceStatus:'ARMED'},
+   {practiceStatus:'IDLE'},{matchState:'STAGING'},
+   {coOpReplayVisible:false},{pointerLocked:true},{stopped:true},
+   {originalSolids:24},{originalPaint:16},{originalLinks:25},
+   {scoreable:1},{repeat:true},{modified:true},{editing:true}
+  ])expect(sourceReplayHotkeyAction({...eligible,...altered})).toBe('BLOCK');
+  for(const suffix of ['&production=1','&t21QaInput=1',
+   '&t21W10B389=unapproved','&t21W10B389=ink-saber&t21W10B389=ink-saber',
+   '&t21W10B441=sourceFrontline'])
+   expect(sourceReplayHotkeyAction({...eligible,href:q.href+suffix})).toBe('BLOCK');
+  const selected=sourcePlayWeaponModeDestinations(
+   'https://example.org/browser-ink-tps/play-source.html','ink-saber');
+  expect(sourceReplayHotkeyAction({...eligible,href:selected.coop}))
+   .toBe('NAVIGATE_FRESH_COOP_CLEAR');
+  expect(sourceReplayHotkeyAction({...eligible,href:d.combat})).toBe('BLOCK');
+  expect(sourceReplayHotkeyAction({...eligible,href:d.circuit})).toBe('BLOCK');
+ });
  it('never treats missing/forged SOURCE geometry or score authority as replay',()=>{
   const q=valid(d.circuit);
   expect(sourceReplayHotkeyAction({...q,originalSolids:24})).toBe('BLOCK');

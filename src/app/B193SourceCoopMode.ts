@@ -1,3 +1,5 @@
+import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
+
 /** Explicit genuine original-source cooperation. No actor mutations. */
 export function sourceCoopEligible(p:URLSearchParams):boolean{
  return p.get('t21Play')==='preview'&&p.get('t21QaDrive')==='source'&&
@@ -22,6 +24,13 @@ export function sourceCoopNavigationUrl(current:string,enable:boolean):string{
  // Preserve the explicit 180s play choice across true clean-world replays.
  if(old.searchParams.get('t21W10B203')==='fullRound')
   dest.searchParams.set('t21W10B203','fullRound');
+ // Preserve ONLY a previously validated B472 human weapon on a fresh
+ // A1 co-op world. No CPU loadout, ink, time or untrusted QA parameter.
+ // For a disabled co-op URL, do not carry an unusable weapon parameter.
+ if(enable){
+  const selected=b389NativeBootWeapon(old.searchParams);
+  if(selected)dest.searchParams.set('t21W10B389',selected);
+ }
  // B341: only an exact triple opt-in in the isolated SOURCE QA route may
  // survive the required B193 clean-world reboot. The individual research
  // flags are still stripped without this explicit comparison experiment.

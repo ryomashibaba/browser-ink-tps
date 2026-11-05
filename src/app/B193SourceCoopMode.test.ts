@@ -43,6 +43,24 @@ describe('B193 original source cooperative play choice',()=>{
   expect(solo.searchParams.get('t21W10B203')).toBe('fullRound');
   expect(sourceCoopEligible(solo.searchParams)).toBe(false);
  });
+
+ it('keeps the already-authorized real 12-weapon choice across fresh co-op replay only',()=>{
+  const base='https://example.com/browser-ink-tps/?t21Play=preview&t21QaDrive=source'+
+   '&t21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound';
+  for(const kit of ['ink-saber','twin-comets']){
+   const u=new URL(sourceCoopNavigationUrl(base+'&t21W10B389='+kit,true));
+   expect(u.searchParams.get('t21W10B389')).toBe(kit);
+   expect(u.searchParams.get('t21W10B193')).toBe('allyCoop');
+   expect(u.searchParams.get('t21W10B203')).toBe('fullRound');
+   expect(u.searchParams.has('scoreable')).toBe(false);
+  }
+  for(const suspect of ['fake-kit','ink-saber&t21W10B389=ink-saber']){
+   const u=new URL(sourceCoopNavigationUrl(base+'&t21W10B389='+suspect,true));
+   expect(u.searchParams.has('t21W10B389')).toBe(false);
+  }
+  const switchOff=new URL(sourceCoopNavigationUrl(base+'&t21W10B389=ink-saber',false));
+  expect(switchOff.searchParams.has('t21W10B389')).toBe(false);
+ });
  it('reboots original stage and excludes experimental flags',()=>{
   const source='https://example.com/ink?t21Play=preview&t21QaDrive=source'+
    '&t21W10B192=humanCombat&t21W10B137=allyRally';

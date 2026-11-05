@@ -143,14 +143,37 @@ export function sourceFinishedReplayAction(
 }
 /** Real keyboard R shares the same finished-session gate as clicking the
  * real replay button. Never propagate R to legacy in-world reset(). */
-export type SourceReplayHotkeyAction='UNRELATED'|SourceFinishedReplayAction;
+export type SourceReplayHotkeyAction='UNRELATED'|SourceFinishedReplayAction|
+ 'NAVIGATE_FRESH_COOP_CLEAR';
 export function sourceReplayHotkeyAction(
  input:SourceFinishedReplayEvidence&{
   code:string;repeat:boolean;modified:boolean;editing:boolean;
+  practiceStatus?:string;coOpReplayVisible?:boolean;
  }
 ):SourceReplayHotkeyAction{
  if(input.code!=='KeyR'||sourcePlayPortalReturnUrl(input.href)===null)
   return 'UNRELATED';
  if(input.repeat||input.modified||input.editing)return 'BLOCK';
- return sourceFinishedReplayAction(input);
+ const terminal=sourceFinishedReplayAction(input);
+ if(terminal!=='BLOCK')return terminal;
+ // User-visible co-op CLEAR may happen long before the true 180s TIME_UP.
+ // The existing A1 replay BUTTON already creates a fresh world at CLEAR;
+ // give R exactly that action, never reset a live native world in-place.
+ // Require every original SOURCE key to match the genuine launcher schema.
+ const q=new URL(input.href).searchParams;
+ const required=['t21Play','t21QaDrive','t21W10B183',
+  't21W10B193','t21W10B203'];
+ const allowed=new Set([...required,'t21W10B389']);
+ const count=required.length+(q.has('t21W10B389')?1:0);
+ if(input.matchState!=='PLAYING'||input.practiceStatus!=='CLEAR'||
+    input.coOpReplayVisible!==true||input.stopped||input.pointerLocked||
+    input.originalSolids!==25||input.originalPaint!==17||
+    input.originalLinks!==26||input.scoreable!==0||
+    !sourceCoopEligible(q)||q.get('t21W10B183')!=='firstDropPlay'||
+    q.get('t21W10B203')!=='fullRound'||
+    [...q.keys()].length!==count||
+    required.some(key=>!q.has(key))||
+    [...q.keys()].some(key=>!allowed.has(key))||
+    (q.has('t21W10B389')&&!b389NativeBootWeapon(q)))return 'BLOCK';
+ return 'NAVIGATE_FRESH_COOP_CLEAR';
 }

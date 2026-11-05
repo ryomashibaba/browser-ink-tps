@@ -2184,15 +2184,27 @@ export class UndertowF3PlayablePreviewApp{
      const editing=target instanceof HTMLElement&&
       (target.isContentEditable||
        target.closest('input,textarea,select,[contenteditable]')!==null);
+     const nativeReplay=this.b195CoopHud?.querySelector<HTMLButtonElement>(
+      '#t21-f3-b200-replay');
+     const visibleCoopReplay=!!b193Coop&&(
+      (!this.b25RunButton.disabled&&
+       this.b25RunButton.textContent?.includes('REPLAY REAL A1 CO-OP')===true)||
+      (!!nativeReplay&&!nativeReplay.hidden&&!nativeReplay.disabled&&
+       nativeReplay.style.display!=='none'));
      const decision=sourceReplayHotkeyAction({
       ...this.sourceFinishedReplayEvidence(),
       code:ev.code,repeat:ev.repeat,
       modified:ev.shiftKey||ev.altKey||ev.ctrlKey||ev.metaKey,
-      editing
+      editing,practiceStatus:this.b25Run.snapshot().status,
+      coOpReplayVisible:visibleCoopReplay
      });
      if(decision==='CLICK_REAL_REPLAY'||
         decision==='RELOAD_NATIVE_SOURCE_WORLD'){
       ev.preventDefault();this.restart();
+     }else if(decision==='NAVIGATE_FRESH_COOP_CLEAR'){
+      // Same real new-world route as the already authorized mission button.
+      // Never mutate current physics, actors, paint, clock or official score.
+      ev.preventDefault();this.requestFreshSourceCoopReplay();
      }
     }else if(b193Coop){
      window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
