@@ -51,6 +51,9 @@
     .mode{border:1px solid #ffffff35;border-radius:17px;padding:18px;display:flex;flex-direction:column;gap:8px;background:#0b2940c4;min-width:0}
     .mode.primary{background:linear-gradient(148deg,#11635c,#073e5e 85%);border-color:#86ffe988;box-shadow:0 24px 75px #00192680}
     .mode .tag{font-size:11px;font-weight:850;letter-spacing:.1em;color:#92e7dd}
+    .source-weapon-choice{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:3px;color:#d8f5ee;font:750 12px system-ui}
+    .source-weapon-choice select{min-height:39px;max-width:100%;min-width:255px;flex:1;border:1px solid #9aeadd;border-radius:10px;background:#0b3445;color:#eafff7;padding:8px 10px;font:750 12px system-ui;cursor:pointer}
+    .source-weapon-choice select:focus-visible{outline:3px solid white;outline-offset:3px}
     .mode h2{font-size:21px;line-height:1.2;letter-spacing:-.03em;margin:0}
     .mode p{margin:0;color:#b9e0e3;line-height:1.45;font-size:12px;flex:1}
     .button{display:block;text-align:center;text-decoration:none;padding:12px 12px;border-radius:12px;font-weight:900;letter-spacing:.02em;background:#99ffe2;color:#052b32;transition:transform .12s,filter .12s}
@@ -109,7 +112,13 @@
    <div class="mode primary">
     <div class="tag">MAIN / SOURCE CIRCUIT</div>
     <h2>原作SOURCEで180秒プレイ</h2>
-    <p>既存の12武器選択、実WASD・カメラ操作、物理移動、塗装、インク消費・回復を使った練習試合。READY画面で武器を選び、試合を開始できます。</p>
+    <p>12種類の実装済み武器、実WASD・カメラ操作、物理移動、塗装、インク消費・回復。武器を選んで180秒の原作SOURCE試合を起動します。READY画面でも変更できます。</p>
+    <label class="source-weapon-choice" for="source-weapon-preselect">開始時の武器
+     <select id="source-weapon-preselect" data-source-only="true" data-scoreable="0"
+       aria-label="180秒SOURCE試合の開始武器">
+      <option value="pulse-sprayer">Pulse Sprayer · 標準</option>
+     </select>
+    </label>
     <a id="play-circuit" class="button" href="#" aria-label="実SOURCE 180秒プレイを開始">180秒プレイを開始</a>
    </div>
    <div class="mode cooperative secondary">

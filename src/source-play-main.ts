@@ -1,16 +1,51 @@
 import {readSourceCameraPreferences,writeSourceCameraPreferences,
  type SourceCameraPreferences} from './camera/SourceCameraPreferences';
 import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl} from './app/SourcePlayPortal';
+import {WEAPON_ORDER,WEAPON_PROFILES,DEFAULT_WEAPON_ID,
+ type WeaponId} from './weapons/WeaponCatalog';
 const circuit=document.querySelector<HTMLAnchorElement>('#play-circuit');
 const combat=document.querySelector<HTMLAnchorElement>('#play-combat');
 const coop=document.querySelector<HTMLAnchorElement>('#play-coop');
 const front=document.querySelector<HTMLAnchorElement>('#play-combat-frontline');
 const status=document.querySelector<HTMLElement>('#portal-status');
-if(!circuit||!combat||!coop||!front||!status)
+const weaponChoice=document.querySelector<HTMLSelectElement>('#source-weapon-preselect');
+if(!circuit||!combat||!coop||!front||!status||!weaponChoice)
  throw Error('T21_SOURCE_PORTAL_REQUIRED_UI_MISSING');
 try{
  const targets=sourcePlayPortalDestinations(window.location.href);
- circuit.href=targets.circuit;
+ // Use only the 12 real B378/B389 native weapons. The existing SOURCE
+ // READY selector remains available; this is a one-click preselection.
+ // Never inherit user-supplied QA, scoring or production URL flags.
+ weaponChoice.replaceChildren();
+ for(const id of WEAPON_ORDER){
+  const option=document.createElement('option');
+  option.value=id;
+  const profile=WEAPON_PROFILES[id];
+  option.textContent=profile.classLabel+' · '+profile.displayName;
+  weaponChoice.appendChild(option);
+ }
+ const updateStartWeapon=()=>{
+  const choice=WEAPON_ORDER.includes(weaponChoice.value as WeaponId)?
+   weaponChoice.value as WeaponId:DEFAULT_WEAPON_ID;
+  weaponChoice.value=choice;
+  const launch=new URL(targets.circuit);
+  if(choice!==DEFAULT_WEAPON_ID)
+   launch.searchParams.set('t21W10B389',choice);
+  // Native B389 validates the real 12-weapon ID again in STAGING.
+  // Only this sanitized circuit URL is changed; CPU modes are untouched.
+  if(launch.origin!==window.location.origin||
+     launch.pathname!==new URL(targets.circuit).pathname||
+     launch.searchParams.has('production')||
+     launch.searchParams.has('scoreable')||
+     launch.searchParams.has('t21QaInput'))
+   throw Error('T21_SOURCE_WEAPON_PRESET_UNSAFE_TARGET');
+  circuit.href=launch.href;
+  circuit.dataset.t21SourceInitialWeapon=choice;
+  circuit.dataset.t21SourceWeaponScoreable='0';
+ };
+ weaponChoice.value=DEFAULT_WEAPON_ID;
+ weaponChoice.addEventListener('change',updateStartWeapon);
+ updateStartWeapon();
  combat.href=targets.combat;
  coop.href=targets.coop;
  front.href=sourcePlayFrontlineResearchUrl(window.location.href);
