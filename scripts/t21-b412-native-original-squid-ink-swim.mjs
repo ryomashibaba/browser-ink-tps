@@ -61,8 +61,37 @@ export function b412ObservedNativeForwardW(legs){
   'REAL_NATIVE_KEYW_DELTA_MISMATCH');
  return delta;
 }
-/** Real Shift-held, key-released SQUID OWN replenishment gate. */
-export function b412OwnInkDwellVerified(before,after,foot,solid,shots){
+/** Genuine Shift-only OWN recovery. Native RAW #13396636729 reached
+ * 100 ink with real positive 60Hz gain before a final 12-tick plateau.
+ * Requiring additional ink beyond physical max 100 is impossible.
+ * Reject forged 100: plateau needs registered uninterrupted real OWN
+ * SQUID native samples proving positive refill up to saturation. */
+export function b412OwnInkDwellVerified(before,after,foot,solid,shots,rest=null){
+ const samples=rest?.samples;
+ const fullAfterRealGain=before?.player?.ink>=99.9&&
+  after?.player?.ink>=99.9&&after.player.ink<=100&&
+  rest?.source==='25/17/26/0'&&
+  rest?.nativeKeys==='SHIFT_ONLY'&&rest?.gameplayWrites===0&&
+  Array.isArray(samples)&&samples.length>=2&&samples.length<=8&&
+  samples.at(-1)?.ink>=99.9&&
+  samples.at(-1)?.tick<=before.tick&&
+  before.tick-samples.at(-1).tick<=6&&
+  samples[0]?.ink<samples.at(-1).ink-.25&&
+  samples.every((s,i)=>{
+   const p=samples[i-1];
+   return Number.isSafeInteger(s?.tick)&&
+    Number.isFinite(s.ink)&&s.ink>=0&&s.ink<=100&&
+    s.mode==='SQUID'&&s.inkRelation==='OWN'&&
+    s.inkRecovery==='SQUID_OWN'&&
+    s.squidOwnRecoveryObserved===true&&
+    s.source==='25/17/26/0'&&s.trueOriginalFoot===solid&&
+    Number.isFinite(s.originalFootGap)&&
+    s.originalFootGap>=0&&s.originalFootGap<=.4&&
+    s.cpuRejoined===7&&s.humanShots===shots&&
+    is3(s.position)&&(!p||(
+     s.tick>p.tick&&s.ink>=p.ink-.0001&&
+     planar(s.position,p.position)<=.5));
+  });
  return before?.player?.mode==='SQUID'&&
   before.player.inkRelation==='OWN'&&
   after?.player?.mode==='SQUID'&&
@@ -72,7 +101,7 @@ export function b412OwnInkDwellVerified(before,after,foot,solid,shots){
   Number.isSafeInteger(before.tick)&&Number.isSafeInteger(after.tick)&&
   after.tick>=before.tick+6&&
   Number.isFinite(before.player.ink)&&Number.isFinite(after.player.ink)&&
-  after.player.ink>before.player.ink+.25&&
+  (after.player.ink>before.player.ink+.25||fullAfterRealGain)&&
   is3(before.player.position)&&is3(after.player.position)&&
   planar(before.player.position,after.player.position)<=.5&&
   after.matchState==='PLAYING'&&!after.paused&&!after.stopReason&&
@@ -303,7 +332,8 @@ export async function b412NativeSquidOwnInkRound({
   },20000);
   const dwellFoot=await ledger();
   const refill=b412OwnInkDwellVerified(
-   dwellBefore,dwellAfter,dwellFoot,expectedFoot,shots)&&await locked();
+   dwellBefore,dwellAfter,dwellFoot,expectedFoot,shots,
+   evidence.stationaryOwnRefill)&&await locked();
   evidence.ownDwell={
    action:'SHIFT_HELD_NO_DIRECTION_KEY',beforeTick:dwellBefore.tick,
    afterTick:dwellAfter.tick,inkBefore:dwellBefore.player.ink,

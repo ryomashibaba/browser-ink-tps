@@ -238,3 +238,47 @@ test('RAW #13395157849: native OWN resting cannot be mistaken for fake refill',(
  trace.samples[1].relation='NEUTRAL';
  assert.equal(trace.samples.every(x=>x.relation==='OWN'),false);
 });
+
+test('RAW #13396636729: real OWN refill into 100 plus 12 genuine plateau ticks',()=>{
+ const body=[13.383576393127441,5.395099639892578,49.15566635131836];
+ const ink=[88.94999999999992,92.3499999999999,95.74999999999987,
+  99.14999999999985,100];
+ const foot={source:'25/17/26/0',realHumanOriginalFootSupported:true,
+  genuineHumanOriginalFootSolid:'UndertowT21D:right-low-team-a',
+  genuineOriginalFootGapMeters:.025,sourceActorRelocations:0,
+  sourceInkRewritten:false,playerPositionRewritten:false};
+ const rest={source:'25/17/26/0',nativeKeys:'SHIFT_ONLY',gameplayWrites:0,
+  samples:ink.map((amount,i)=>({
+   tick:6652+6*i,position:i===0?
+    [13.383503913879395,5.394999980926514,49.04030990600586]:body,
+   mode:'SQUID',ink:amount,inkRelation:'OWN',
+   inkRecovery:'SQUID_OWN',squidOwnRecoveryObserved:true,
+   source:'25/17/26/0',trueOriginalFoot:'UndertowT21D:right-low-team-a',
+   originalFootGap:.025,cpuRejoined:7,humanShots:86
+  }))};
+ const before={tick:6676,player:{mode:'SQUID',inkRelation:'OWN',
+  ink:100,position:body}};
+ const after={tick:6688,matchState:'PLAYING',paused:false,stopReason:null,
+  player:{mode:'SQUID',inkRelation:'OWN',ink:100,position:body},
+  playerInkRecoveryState:'SQUID_OWN',
+  b381RealNativeDodge:{realLocomotion:'SWIM_GROUND'},
+  shotsFired:86,cpu:{physicalRejoins:['A1','A2','A3','B1','B2','B3','B4'],
+   physicalFootRelocations:0},originalSourceSolids:25,
+  originalPaintSurfaces:17,originalSourceNavigationLinks:26,
+  sourceScoreablePromotions:0};
+ const valid=()=>b412OwnInkDwellVerified(before,after,foot,
+  'UndertowT21D:right-low-team-a',86,rest);
+ assert.equal(valid(),true);
+ assert.equal(b412OwnInkDwellVerified(before,after,foot,
+  'UndertowT21D:right-low-team-a',86),false);
+ rest.samples[1].ink=90;assert.equal(valid(),false);
+ rest.samples[1].ink=ink[1];
+ rest.samples[2].trueOriginalFoot='FAKE';
+ assert.equal(valid(),false);
+ rest.samples[2].trueOriginalFoot='UndertowT21D:right-low-team-a';
+ rest.samples[3].inkRelation='NEUTRAL';assert.equal(valid(),false);
+ rest.samples[3].inkRelation='OWN';
+ after.player.ink=99;assert.equal(valid(),false);
+ after.player.ink=100;
+ foot.sourceInkRewritten=true;assert.equal(valid(),false);
+});

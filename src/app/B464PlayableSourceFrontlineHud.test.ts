@@ -4,7 +4,7 @@ const evidence=()=>({
  originalSourceSolids:25,originalPaintSurfaces:17,
  originalSourceNavigationLinks:26,sourceScoreablePromotions:0,
  productionAuthorized:false,unrestricted4v4Certified:false,
- matchState:'PLAYING',stopReason:null,
+ matchState:'PLAYING',stopReason:null as string|null,
  cpu:{cpu:['A1','A2','A3','B1','B2','B3','B4'].map(id=>({id})),
   sourcePatrol:{
    b441Enabled:true,b448A3ResearchEnabled:true,
@@ -41,7 +41,7 @@ describe('B464 real player-visible optional native CPU frontline',()=>{
    s=>{s.productionAuthorized=true},
    s=>{s.unrestricted4v4Certified=true},
    s=>{s.cpu.cpu.pop()},
-   s=>{s.cpu.cpu[0].id='A2'},
+   s=>{s.cpu.cpu[0]!.id='A2'},
    s=>{s.cpu.sourcePatrol.b441Enabled=false},
    s=>{s.cpu.sourcePatrol.b448A3ResearchEnabled=false},
    s=>{s.cpu.sourcePatrol.b441ActualGoalRequests=-1},
