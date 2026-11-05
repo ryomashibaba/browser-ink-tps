@@ -5,6 +5,8 @@
  */
 import type {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import type {B400SourceRecap} from './B400RealOriginalSourceGridRecap';
+import {B463_LOCAL_KEY,b463FromRealTimeUp,b463ReadPreviousSourceRound,
+ b463FormatSourceRoundComparison} from './B463SourceReplayMemory';
 
 /** B387: native 60Hz source round achievement history, not game scoring. */
 export class B387RoundMilestones{
@@ -367,6 +369,25 @@ export function createF3SourceSessionBoard(
  finish.appendChild(panel);
  ui.appendChild(finish);
  const finalStats=finish.querySelector<HTMLElement>('#t21-f3-b59-final-stats')!;
+ // Only client-side tab history. Never forward to original score, physics,
+ // official winner, CPU agents, native clock or any network endpoint.
+ const currentOrigin=window.performance.timeOrigin;
+ const previous=(()=>{
+  try{return b463ReadPreviousSourceRound(
+   window.sessionStorage.getItem(B463_LOCAL_KEY),currentOrigin)}
+  catch{return null}
+ })();
+ let localRecorded=false;
+ const priorRecap=document.createElement('div');
+ priorRecap.id='t21-f3-b463-previous-source-round';
+ priorRecap.hidden=true;
+ priorRecap.dataset.originalScoreable='0';
+ priorRecap.dataset.productionAuthority='NONE';
+ priorRecap.style.cssText='white-space:pre-line;margin-top:12px;'+
+  'padding:12px;border:1px solid #61989e;border-radius:10px;'+
+  'background:#102f3c;color:#d5faff;font:650 11px/1.6 system-ui';
+ finish.querySelector<HTMLElement>('#t21-f3-b59-scroll-stats')!
+  .appendChild(priorRecap);
  const sourceGrid=finish.querySelector<HTMLElement>('#t21-f3-b400-source-grid-recap')!;
  const setSourceGridRecap=(s:B400SourceRecap)=>{
   if(finish.dataset.t21B59State!=='FINISHED')return;
@@ -495,6 +516,18 @@ export function createF3SourceSessionBoard(
   restart.hidden=!v.finished;
   finish.hidden=!v.finished;
   finish.style.display=v.finished?'flex':'none';
+  if(v.finished&&!localRecorded){
+   localRecorded=true;
+   const fresh=b463FromRealTimeUp(v,s.tick,currentOrigin);
+   if(fresh){
+    if(previous){
+     priorRecap.textContent=b463FormatSourceRoundComparison(previous,fresh);
+     priorRecap.hidden=false;
+    }
+    try{window.sessionStorage.setItem(B463_LOCAL_KEY,
+     JSON.stringify(fresh))}catch{/* storage unavailable: game stays playable */}
+   }
+  }
   if(v.finished)finalStats.textContent=
    'HUMAN   '+v.genuineHumanShots+' shots · '+
    v.realHumanImpactInkCells+' changed source cells\n'+
