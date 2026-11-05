@@ -50,6 +50,8 @@ export function b467MayRetryOriginalBFrontFromRealFoot(
 /** B468 is a RETRY SCHEDULER, not route/physics/goal authority.
  * After a genuine B467 first goal and >=120 real native dwell ticks,
  * the same B2/B4 body may request a DIFFERENT original B-floor candidate.
+ * Allow at most FOUR distinct truly audited goals per CPU; no synthetic
+ * scoreable surface, floor, movement, enemy, or path certificate.
  * Caller must repeat every frozen B467 Recast/Rapier/0.30m check. */
 export function b468MayRetryDifferentOriginalBGoalAfterRealDwell(e:{
  readonly id:string;readonly nativeTick:number;
@@ -60,7 +62,8 @@ export function b468MayRetryDifferentOriginalBGoalAfterRealDwell(e:{
  readonly realFoot:readonly [number,number,number];
 }):boolean{
  if((e.id!=='B2'&&e.id!=='B4')||
-    !e.originallyAuthorized||e.approvedOriginalGoals!==1||
+    !e.originallyAuthorized||(!Number.isSafeInteger(e.approvedOriginalGoals)||
+     e.approvedOriginalGoals<1||e.approvedOriginalGoals>=4)||
     !Number.isSafeInteger(e.nativeTick)||
     e.arrivedSinceTick===null||
     !Number.isSafeInteger(e.arrivedSinceTick)||
