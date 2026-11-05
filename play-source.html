@@ -26,6 +26,18 @@
     .stat{background:#123448ab;border:1px solid #77b1bd45;border-radius:12px;padding:8px 12px;min-width:110px}
     .stat strong{display:block;font-size:20px;font-weight:900;color:white}
     .stat small{display:block;color:#9ec9d3;font-size:11px;margin-top:2px}
+
+    .camera-setup{background:#102d40cc;border:1px solid #78c9c76b;border-radius:16px;padding:15px 18px;margin:0 0 20px}
+    .camera-setup h2{font-size:16px;margin:0 0 5px}
+    .camera-setup>p{font-size:12px;color:#bedce1;line-height:1.5;margin:0 0 12px}
+    .camera-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+    .camera-controls label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:750;color:#d8f4f5}
+    .camera-controls select,.camera-controls button{font:700 13px system-ui;border:1px solid #82bbca75;border-radius:9px;background:#173d52;color:#eefaff;padding:9px 12px;min-height:40px}
+    .camera-controls .camera-invert{flex-direction:row;align-items:center;min-height:40px;gap:9px}
+    .camera-controls input{width:18px;height:18px;accent-color:#78e9cf}
+    .camera-controls button{cursor:pointer}
+    .camera-controls select:focus-visible,.camera-controls button:focus-visible,.camera-controls input:focus-visible{outline:3px solid #fff;outline-offset:3px}
+    .camera-setup #source-camera-message{font-size:11px;color:#a3d5d6;margin:11px 0 0}
     .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
     .actions>.primary{grid-column:1/-1}
     .actions>.cooperative{border-color:#6bdbaa88;background:linear-gradient(145deg,#10483f,#12364b)}
@@ -59,6 +71,30 @@
    <div class="stat"><strong>12</strong><small>武器選択肢</small></div>
    <div class="stat"><strong>0</strong><small>公式得点面（未認証）</small></div>
   </div>
+
+  <section class="camera-setup" aria-labelledby="source-camera-heading" data-source-only="true" data-official-scoreable="0">
+   <h2 id="source-camera-heading">プレイ前のカメラ設定</h2>
+   <p>照準操作を自分に合わせてから開始できます。このブラウザにのみ保存し、次のSOURCE試合に適用します。物理・CPU・得点は変更しません。</p>
+   <div class="camera-controls">
+    <label for="source-camera-sensitivity">マウス感度
+     <select id="source-camera-sensitivity">
+      <option value="0.5">0.50×</option><option value="0.75">0.75×</option>
+      <option value="1">1.00×</option><option value="1.25">1.25×</option>
+      <option value="1.5">1.50×</option><option value="1.75">1.75×</option>
+     </select>
+    </label>
+    <label class="camera-invert" for="source-camera-invert">
+     <input id="source-camera-invert" type="checkbox">上下反転
+    </label>
+    <label for="source-camera-shoulder">カメラの肩位置
+     <select id="source-camera-shoulder">
+      <option value="RIGHT">右肩</option><option value="LEFT">左肩</option>
+     </select>
+    </label>
+    <button id="source-camera-reset" type="button">初期設定に戻す</button>
+   </div>
+   <p id="source-camera-message" role="status" aria-live="polite">ゲーム中も [ / ] で感度、I で上下反転、Q で肩位置を調整できます。</p>
+  </section>
   <section class="actions" aria-label="プレイモード選択">
    <div class="mode primary">
     <div class="tag">MAIN / SOURCE CIRCUIT</div>

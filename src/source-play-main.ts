@@ -1,3 +1,5 @@
+import {readSourceCameraPreferences,writeSourceCameraPreferences,
+ type SourceCameraPreferences} from './camera/SourceCameraPreferences';
 import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl} from './app/SourcePlayPortal';
 const circuit=document.querySelector<HTMLAnchorElement>('#play-circuit');
 const combat=document.querySelector<HTMLAnchorElement>('#play-combat');
@@ -33,3 +35,45 @@ try{
  status.dataset.t21PortalReady='HOLD';
  console.error(error);
 }
+
+/** Real SOURCE-only pre-match camera controls. Uses the same bounded local
+ * preference contract loaded by ThirdPersonCamera at the next game boot.
+ * Never touches simulation, actor movement, scoring, production or URL flags.
+ */
+const cameraSensitivity=document.querySelector<HTMLSelectElement>('#source-camera-sensitivity');
+const cameraInvert=document.querySelector<HTMLInputElement>('#source-camera-invert');
+const cameraShoulder=document.querySelector<HTMLSelectElement>('#source-camera-shoulder');
+const cameraReset=document.querySelector<HTMLButtonElement>('#source-camera-reset');
+const cameraNotice=document.querySelector<HTMLElement>('#source-camera-message');
+if(!cameraSensitivity||!cameraInvert||!cameraShoulder||!cameraReset||!cameraNotice)
+ throw Error('T21_SOURCE_CAMERA_SETUP_REQUIRED_UI_MISSING');
+const cameraDefaults:SourceCameraPreferences={
+ version:1,sensitivity:1,invertY:false,shoulder:'RIGHT'
+};
+let cameraStore:Storage|null=null;
+try{cameraStore=window.localStorage;}catch{/* Private storage can be blocked. */}
+let cameraSaved=cameraStore?readSourceCameraPreferences(cameraStore):null;
+const showCamera=(p:SourceCameraPreferences)=>{
+ cameraSensitivity.value=String(p.sensitivity);
+ cameraInvert.checked=p.invertY;
+ cameraShoulder.value=p.shoulder;
+};
+showCamera(cameraSaved??cameraDefaults);
+const saveCamera=()=>{
+ const candidate:SourceCameraPreferences={
+  version:1,sensitivity:Number(cameraSensitivity.value),
+  invertY:cameraInvert.checked,
+  shoulder:cameraShoulder.value as SourceCameraPreferences['shoulder']
+ };
+ if(cameraStore&&writeSourceCameraPreferences(cameraStore,candidate)){
+  cameraSaved=candidate;
+  cameraNotice.textContent='カメラ設定をこのブラウザに保存しました。次のSOURCE試合で適用されます。';
+ }else{
+  showCamera(cameraSaved??cameraDefaults);
+  cameraNotice.textContent='ブラウザに保存できません。ゲーム中の [ / ]、I、Q キーで調整してください。';
+ }
+};
+cameraSensitivity.addEventListener('change',saveCamera);
+cameraInvert.addEventListener('change',saveCamera);
+cameraShoulder.addEventListener('change',saveCamera);
+cameraReset.addEventListener('click',()=>{showCamera(cameraDefaults);saveCamera();});
