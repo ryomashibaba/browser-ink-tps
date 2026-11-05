@@ -77,6 +77,47 @@ export function b468MayRetryDifferentOriginalBGoalAfterRealDwell(e:{
   Math.hypot(x-gx,z-gz)<=3;
 }
 
+/** B470 real same-side pursuit scheduler: every non-A1 CPU with an
+ * already-approved original-frontline goal can explore a THIRD/FOURTH
+ * SOURCE goal only after 120 true native arrival ticks. The boolean is
+ * NEVER a path permit: caller must check native Rapier endpoints and each
+ * <=0.30m Recast segment, untouched Crowd, and original source footprints.
+ * The original B2/B4 late admission remains independent/unchanged. */
+export function b470MayAuditRealInkRankedSameSideFront(
+ stage:StageDefinition,e:{
+ readonly id:string;readonly team:B441Side;
+ readonly nativeTick:number;readonly lastRetryNativeTick:number|null;
+ readonly approvedOriginalGoals:number;readonly arrivedSinceTick:number|null;
+ readonly realOriginalSolidId:string|null;
+ readonly heldGoal:readonly [number,number,number]|null;
+ readonly realFoot:readonly [number,number,number];
+}):boolean{
+ const expected=e.team==='A'?'UndertowT21D:right-low-team-a':
+  e.team==='B'?'UndertowT21D:right-low-team-b':null;
+ if(!authorized(stage)||
+    !(e.team==='A'?(e.id==='A2'||e.id==='A3'):
+      e.team==='B'?(e.id==='B1'||e.id==='B3'):false)||
+    e.realOriginalSolidId!==expected||
+    !Number.isSafeInteger(e.nativeTick)||e.nativeTick<120||
+    !Number.isSafeInteger(e.approvedOriginalGoals)||
+    e.approvedOriginalGoals<1||e.approvedOriginalGoals>=4||
+    e.arrivedSinceTick===null||
+    !Number.isSafeInteger(e.arrivedSinceTick)||
+    e.arrivedSinceTick<0||e.nativeTick-e.arrivedSinceTick<120||
+    (e.lastRetryNativeTick!==null&&
+     (!Number.isSafeInteger(e.lastRetryNativeTick)||
+      e.lastRetryNativeTick<0||
+      e.nativeTick-e.lastRetryNativeTick<90))||
+    !e.heldGoal||
+    !e.realFoot.every(Number.isFinite)||
+    !e.heldGoal.every(Number.isFinite))return false;
+ const sign=e.team==='A'?1:-1;
+ const [x,y,z]=e.realFoot,[gx,gy,gz]=e.heldGoal;
+ return z*sign>=33&&z*sign<=63&&gz*sign>=33&&gz*sign<=63&&
+  y>=2.7&&y<=5.25&&gy>=2.7&&gy<=5.25&&
+  Math.abs(y-gy)<=.30&&Math.hypot(x-gx,z-gz)<=3;
+}
+
 /** Returns conservative, interior samples of EXISTING SOURCE cells.
  * A real Rapier foot probe and whole native Recast path are still REQUIRED
  * by the calling CPU goal selector; they are never inferred from this list. */
