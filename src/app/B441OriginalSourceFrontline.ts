@@ -134,8 +134,11 @@ export function b471MayRequestActualA1SourceOrder(stage:StageDefinition,e:{
   !e.actualAllyFoot.every(Number.isFinite)||
   !e.actualHumanFoot.every(Number.isFinite))return false;
  const [,ay,az]=e.actualAllyFoot,[,hy,hz]=e.actualHumanFoot;
+ // Genuine SOURCE human upper spawn is beyond z=63; do not reject its
+ // independently registered Rapier floor by clipping to a low-floor band.
+ // The caller also checks the ACTUAL human/source foot collision ID.
  return az>=33&&az<=63&&ay>=2.7&&ay<=5.25&&
-  hz>=33&&hz<=63&&hy>=2.7&&hy<=9.5;
+  hz>=33&&hy>=2.7&&hy<=9.5;
 }
 
 /** Returns conservative, interior samples of EXISTING SOURCE cells.

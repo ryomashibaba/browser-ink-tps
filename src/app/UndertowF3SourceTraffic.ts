@@ -712,7 +712,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     trueHumanAliveGrounded:this.b137HumanFootValid,
     actualAllyFoot:[foot.x,foot.y,foot.z],
     actualHumanFoot:[human.x,human.y,human.z]
-   })&&this.hasSourceFootSupport(foot);
+   })&&this.hasSourceFootSupport(foot)&&
+   this.hasSourceFootSupport(human);
   if(!permitted){
    this.b471OrderStatus='HOLD';
    this.b471AllyOrder=null;
@@ -811,8 +812,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(playerOrder.goal){
      if(Math.hypot(realFoot.x-playerOrder.goal.x,
          realFoot.z-playerOrder.goal.z)<=1.5){
-      this.b471ActualOriginalArrivals++;
-      this.b471OrderStatus='ARRIVED';this.b471AllyOrder=null;
+      // Arrival is TRUE only if the actual same-tick KCC foot and
+      // existing source goal are BOTH supported by registered Rapier.
+      if(this.hasSourceFootSupport(realFoot)&&
+         this.hasSourceFootSupport(playerOrder.goal)&&
+         Math.abs(realFoot.y-playerOrder.goal.y)<=.25){
+       this.b471ActualOriginalArrivals++;
+       this.b471OrderStatus='ARRIVED';
+      }else{
+       this.b471RejectedOriginalRoutes++;
+       this.b471OrderStatus='HOLD';
+      }
+      this.b471AllyOrder=null;
      }else{
       const path=this.nav.auditPath(realFoot,playerOrder.goal);
       if(this.hasSourceFootSupport(realFoot)&&

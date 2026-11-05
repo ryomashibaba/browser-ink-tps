@@ -179,7 +179,8 @@ describe('B471 true C-key A1 SOURCE co-op command input is fail closed',()=>{
   id:'A1',team:'A',nativeTick:1550,coOpActuallyRunning:true,
   actualAllyRejoined:true,actualAllyActiveGrounded:true,
   trueHumanAliveGrounded:true,actualAllyFoot:[3.4,4.6,43],
-  actualHumanFoot:[4.2,7.5,46]
+  actualHumanFoot:[stage.metadata.teamASpawn[0],
+   stage.metadata.teamASpawn[1],stage.metadata.teamASpawn[2]]
  };
  const gate=(p:typeof truth,s=stage)=>b471MayRequestActualA1SourceOrder(s,p);
  it('accepts actual same-side A1 and grounded human on original floor',()=>{
