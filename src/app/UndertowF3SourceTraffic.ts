@@ -42,6 +42,7 @@ import {B454NativeSourceFootRecorder} from './B454NativeSourceFootTrace';
 import {b485MayIssueNativeA1OriginalOrder} from './B485RealRepeatA1Command';
 import {B484TrueNativeA1FollowThrough} from './B484TrueNativeA1FollowThrough';
 import {B486NativeSourceEncounterTrace} from './B486NativeSourceEncounterTrace';
+import {b487ActualOriginalCrossTeamTopology} from './B487TrueOriginalCrossTeamTopology';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -2203,6 +2204,48 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * Avoid building the much larger sourcePatrol QA snapshot every physics tick.
   * No inferred rejoin, teleport, Actor mutation, or opponent route. */
  /** B454 one-shot QA evidence export, research URL only; no actor writes. */
+ /** B487 native cross-side audit; real physical CPU feet + actual
+  * human KCC foot. On-demand only; never issues a Crowd target.
+  * Original link count does NOT independently prove lack of floor paths.
+  */
+ b487ReadOnlyOriginalCrossTeamConnectivity(){
+  if(!this.enableB441SourceFrontline||!this.freeCombat||
+     this.physicallyRejoined.size!==7||
+     this.b192HumanAliveGrounded||
+     this.bots.length!==7||
+     this.stage.solids.length!==25||
+     this.stage.paintSurfaces.length!==17||
+     this.stage.navigationLinks?.length!==26||
+     this.stage.paintSurfaces.some(s=>
+      (s.flags&SurfaceFlags.Scoreable)!==0))return null;
+  const existing=this.auditW10B16NaturalEnemyAccess();
+  const b=this.bots.filter(bot=>bot.team===Team.B);
+  const humanPaths=b.map(bot=>{
+   const p=this.nav.auditPath(this.b192NativeHumanFoot,bot.position);
+   return {actors:['HUMAN',bot.id] as [string,string],
+    nativePathReported:p.reachedTarget,
+    credibleNativeEndpoints:p.reachedTarget&&p.pointCount>0&&
+     p.startSnapDistanceMeters<=.20&&p.endSnapDistanceMeters<=.20,
+    nativeStartSnapMeters:p.startSnapDistanceMeters,
+    nativeEndSnapMeters:p.endSnapDistanceMeters,
+    nativePointCount:p.pointCount};
+  });
+  const distances=this.b486Encounter.summary();
+  if(!distances)return null;
+  return b487ActualOriginalCrossTeamTopology({
+   originalStage:[25,17,26,0],nativeTick:this.b137NativeTick,
+   authenticSevenCpu:true,nativeHumanGrounded:true,
+   links:this.stage.navigationLinks,
+   pairs:[...existing.pairs.map(p=>({
+    actors:p.actors,nativePathReported:p.nativePathReported,
+    credibleNativeEndpoints:p.credibleNativeEndpoints,
+    nativeStartSnapMeters:p.nativeStartSnapMeters,
+    nativeEndSnapMeters:p.nativeEndSnapMeters,
+    nativePointCount:p.nativePointCount})),...humanPaths],
+   nearestHumanEnemy3dMeters:distances.nearestHumanToEnemy3dMeters,
+   nearestAllyEnemy3dMeters:distances.nearestAllyToEnemy3dMeters
+  });
+ }
  b486ReadOnlyTrueNativeOriginalEncounter(){
   if(!this.enableB441SourceFrontline)return null;
   return this.b486Encounter.snapshot();

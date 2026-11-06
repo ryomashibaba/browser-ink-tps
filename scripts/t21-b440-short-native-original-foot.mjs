@@ -1088,6 +1088,43 @@ async function main(){
    sourceMotionUntouched:true,enemyContactCertified:false,
    nativeRouteNotGranted:true,officialWinner:'NONE'};
   save();
+  // B487: 26 original one-way same-side links cannot be promoted into
+  // central access. Query current native Recast for each real 3x4 CPU
+  // opposing pair PLUS original human foot to 4 opposing actors.
+  const b487=await evaluate(
+   'window.__t21F3.b487ActualOriginalCrossTeamTopology()');
+  if(!b487||
+     b487.schema!=='B487_TRUE_ORIGINAL_NATIVE_CROSS_TEAM_TOPOLOGY_V1'||
+     b487.source!=='25/17/26/0'||
+     b487.originalOneWayDropLinks!==26||
+     b487.originalFirstDropLinks!==12||
+     b487.originalRightSmallDropLinks!==14||
+     b487.originalExplicitCrossSideLinks!==0||
+     b487.totalOriginalNativePathQueries!==16||
+     b487.liveOriginalCpuOpposingPairs!==12||
+     b487.liveHumanOpponentPairs!==4||
+     b487.naturalCrossTeamPathCertified!==false||
+     b487.physicalCapsuleRouteCertified!==false||
+     b487.full4v4Certified!==false||
+     b487.sourceGeometryOrNavMutations!==0||
+     b487.botGoalOrActorWrites!==0||
+     b487.inkHitScoreOrClockWrites!==0||
+     b487.officialWinner!=='NONE'||
+     !Array.isArray(b487.pairs)||b487.pairs.length!==16||
+     !b487.pairs.every(x=>x.physicalCapsuleRouteCertified===false)||
+     Math.abs(b487.nearestHumanEnemy3dMeters-
+       b486.nearestHumanToEnemy3dMeters)>.001||
+     Math.abs(b487.nearestAllyEnemy3dMeters-
+       b486.nearestAllyToEnemy3dMeters)>.001)
+   fail('B487_ORIGINAL_CENTRAL_NATIVE_CONNECTIVITY_NOT_GROUNDED');
+  writeFileSync(resolve(out,'b487-real-original-16-cross-team-route-audit.json'),
+   JSON.stringify(b487,null,2)+'\n');
+  proof.b487OriginalCrossTeamTopology={
+   ...Object.fromEntries(Object.entries(b487).filter(
+    ([key])=>key!=='pairs')),
+   fullEvidenceFile:'b487-real-original-16-cross-team-route-audit.json',
+   nativeActorKccOrNavChanged:false,officialWinner:'NONE'};
+  save();
   // B474: require measured original native Crowd requests AND bounded
   // duplicate suppression in THIS true 720-tick browser, not a pure test.
   // This is research behavior only; no original route or hit promotion.
