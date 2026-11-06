@@ -361,6 +361,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   realAllyFootAtApproval:Vec3|null
  }|null=null;
  private b471OrderStatus:'OFF'|'HOLD'|'REQUESTED'|'MOVING'|'ARRIVED'|'EXPIRED'='OFF';
+ /** Authoritative cause of the LAST genuine B471 decision. A key request
+  * is not proof that an original Recast/Rapier route was granted. */
+ private b471SourceDecision:
+  'NOT_REQUESTED'|'REQUESTED_ORIGINAL_CHECK'|'ORIGINAL_GOAL_GRANTED'|
+  'ORIGINAL_ARRIVAL'|'PHYSICAL_SOURCE_HOLD'|
+  'NO_VERIFIED_FRESH_SOURCE_TARGET'|'NO_VERIFIED_ORIGINAL_PATH'|
+  'ORIGINAL_ARRIVAL_UNSUPPORTED'|'ORIGINAL_PATH_LOST'|
+  'SOURCE_ORDER_EXPIRED'='NOT_REQUESTED';
  private b471GenuineKeyRequests=0;
  /** B485 only for true B441 player-C-key: never a fake Crowd order. */
  private b485LastRealB441KeyTick:number|null=null;
@@ -745,17 +753,20 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.hasSourceFootSupport(human);
   if(!permitted){
    this.b471OrderStatus='HOLD';
+   this.b471SourceDecision='PHYSICAL_SOURCE_HOLD';
    this.b471AllyOrder=null;
    return false;
   }
   this.b471AllyOrder={requestedTick:this.b137NativeTick,
    goal:null,realAllyFootAtApproval:null};
   this.b471OrderStatus='REQUESTED';
+  this.b471SourceDecision='REQUESTED_ORIGINAL_CHECK';
   return true;
  }
  b471ReadOnlyAllyCoverageOrder(){
   return {
-   status:this.b471OrderStatus,genuineKeyRequests:this.b471GenuineKeyRequests,
+   status:this.b471OrderStatus,sourceDecision:this.b471SourceDecision,
+   genuineKeyRequests:this.b471GenuineKeyRequests,
    b485LastRealB441KeyTick:this.b485LastRealB441KeyTick,
    b485RepeatReady:b485MayIssueNativeA1OriginalOrder({
     selected:this.enableB441SourceFrontline&&
@@ -863,12 +874,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       !this.physicallyRejoined.has('A1')||
       !this.b171AllySyncPracticeRunning){
     this.b471AllyOrder=null;this.b471OrderStatus='EXPIRED';
+    this.b471SourceDecision='SOURCE_ORDER_EXPIRED';
    }else if(this.sourceInk&&this.physics){
     if(!playerOrder.goal){
      const ranked=rankOriginalSourcePatrolGoals(
       candidates,Team.A,this.sourceInk,0);
+     let freshEligibleOriginalGoals=0;
      for(const rank of ranked){
       if(rank.priority==='OWN'||rank.priority==='UNSAMPLED')continue;
+      freshEligibleOriginalGoals++;
       const goal=candidates[rank.index]!;
       if(goal.z<33||goal.y<2.7||goal.y>5.25||
          Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z)<2.5||
@@ -883,10 +897,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       playerOrder.goal=goal.clone();
       playerOrder.realAllyFootAtApproval=realFoot.clone();
       this.b471StrictlyApprovedOriginalGoals++;
-      this.b471OrderStatus='MOVING';break;
+      this.b471OrderStatus='MOVING';
+      this.b471SourceDecision='ORIGINAL_GOAL_GRANTED';break;
      }
      if(!playerOrder.goal){
       this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
+      this.b471SourceDecision=freshEligibleOriginalGoals===0?
+       'NO_VERIFIED_FRESH_SOURCE_TARGET':'NO_VERIFIED_ORIGINAL_PATH';
      }
     }
     if(playerOrder.goal){
@@ -899,9 +916,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
          Math.abs(realFoot.y-playerOrder.goal.y)<=.25){
        this.b471ActualOriginalArrivals++;
        this.b471OrderStatus='ARRIVED';
+       this.b471SourceDecision='ORIGINAL_ARRIVAL';
       }else{
        this.b471RejectedOriginalRoutes++;
        this.b471OrderStatus='HOLD';
+       this.b471SourceDecision='ORIGINAL_ARRIVAL_UNSUPPORTED';
       }
       this.b471AllyOrder=null;
      }else{
@@ -917,6 +936,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       }
       this.b471RejectedOriginalRoutes++;
       this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
+      this.b471SourceDecision='ORIGINAL_PATH_LOST';
      }
     }
    }

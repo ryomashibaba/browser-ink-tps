@@ -61,7 +61,8 @@ import {b476OriginalFrontlineObjectiveLayout}
 import {b477ActualSourceCpuJoinCue} from './B477ActualSourceCpuJoinCue';
 import {b483RealFrontlineTeammateCommandSelected,
  b483MayRequestTrueFrontlineA1Order,
- b483ClassicPracticeAllowsLiveA1Order} from './B483RealFrontlineTeammateCommand';
+ b483ClassicPracticeAllowsLiveA1Order,
+ b483OriginalAllyCommandFeedback} from './B483RealFrontlineTeammateCommand';
 import {b481ActualSourcePaintOpportunity} from './B481ActualSourcePaintOpportunity';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
@@ -7078,6 +7079,14 @@ export class UndertowF3PlayablePreviewApp{
    const b484=this.canvas.dataset.t21B483RealFrontlineAlly===
     'REAL_SOURCE_A1_PLAYER_C_KEY'?
     this.traffic.b484RealOriginalA1OrderProgress():null;
+   const realFeedback=this.canvas.dataset.t21B483RealFrontlineAlly===
+    'REAL_SOURCE_A1_PLAYER_C_KEY'?
+    b483OriginalAllyCommandFeedback({
+     status:order.status,sourceDecision:order.sourceDecision,
+     repeatReady:order.b485RepeatReady,nativeTick:state.tick,
+     lastRealKeyTick:order.b485LastRealB441KeyTick,
+     genuineKeyRequests:order.genuineKeyRequests
+    }):null;
    const realCommand=b484?
     '\nA1 C ORDER '+b484.currentOrderKeyRequest+' · '+
     b484.finalCommandStatus+
@@ -7086,8 +7095,7 @@ export class UndertowF3PlayablePreviewApp{
      ' · this order closest '+
       b484.currentOrderClosestPhysicalGoalDistanceXZ.toFixed(2)+'m')+
     ' · verified arrivals total '+b484.originalB471VerifiedArrivals+
-    (b484.finalCommandStatus==='HOLD'?
-     ' · C to retry if safe':' · route not certified'):'';
+    ' · route not certified':'';
    const practiceTimedOutWithLiveMatch=
     this.canvas.dataset.t21B483RealFrontlineAlly===
      'REAL_SOURCE_A1_PLAYER_C_KEY'&&
@@ -7099,11 +7107,16 @@ export class UndertowF3PlayablePreviewApp{
      (order.b485RepeatReady?' · Cで安全な再指示':
       order.status==='MOVING'?' · 移動中の上書き禁止':''):'')+
     realCommand+
+    (realFeedback?'\n'+realFeedback.line:'')+
     (practiceTimedOutWithLiveMatch?
      '\n60s PRACTICE TIME UP · 180s SOURCE MATCH CONTINUES · C WHEN SAFE':'');
    this.b141RealAllyIndicator.style.whiteSpace='pre-line';
    this.b141RealAllyIndicator.dataset.t21B471RealPlayerOrder=
     order.status;
+   this.b141RealAllyIndicator.dataset.t21B471NativeDecision=
+    order.sourceDecision;
+   this.b141RealAllyIndicator.dataset.t21B471RepeatEnabled=
+    String(realFeedback?.canRepeatNow??false);
    this.b141RealAllyIndicator.dataset.t21B471RealNativeGoalRequests=
     String(order.actualNativeGoalRequests);
    this.b141RealAllyIndicator.dataset.t21B471ActualOriginalArrivals=
