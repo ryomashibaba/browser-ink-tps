@@ -1,3 +1,19 @@
+/** Only an actual human SOURCE 180s world, never deterministic or
+ * synthetic QA, is eligible for ordinary gameplay's genuine impact cue.
+ * This selects VISIBILITY only; B356RealSourceReticle still checks native
+ * tick, actual shot, changed original owner cells and player health.
+ * No extra B356 experiment flag is required for real SOURCE gameplay.
+ */
+export function b356NativeSourceImpactCueEnabled(search:string):boolean{
+ const p=new URLSearchParams(search);
+ return p.get('t21Play')==='preview'&&
+  p.get('t21QaDrive')==='source'&&
+  p.get('t21W10B183')==='firstDropPlay'&&
+  p.get('t21W10B203')==='fullRound'&&
+  p.get('t21QaInput')!=='deterministic'&&
+  !p.has('production')&&!p.has('scoreable');
+}
+
 /** B356 native human aim presentation: a shot is never a confirmed paint
  * impact and a paint impact is never a CPU HP hit. Zero gameplay writes. */
 export interface B356RealPaintFrame{

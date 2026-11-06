@@ -9,7 +9,7 @@ import {B76HumanSourceCoach}
  from './UndertowF3HumanInkCoach';
 import {b355OriginalSourceInkReadout}
  from './B355OriginalSourceInkReadout';
-import {B356RealSourceReticle} from './B356RealSourceReticle';
+import {B356RealSourceReticle,b356NativeSourceImpactCueEnabled} from './B356RealSourceReticle';
 import {B392NativeSubFeedback} from './B392NativeSubFeedback';
 import {B394OriginalBombPaintNotice} from './B394OriginalBombPaintNotice';
 import type {F3HumanInkContact} from './UndertowF3SourceInkFeedback';
@@ -365,12 +365,9 @@ export function createF3PlayableHud(ui:HTMLElement){
  // Independent viewport layers avoid translated status-panel clipping.
  // B356 sits OUTSIDE translated HUD root so fixed positioning is a
  // genuine viewport reticle; never confuse real paint with a CPU hit.
- const b356Enabled=(()=>{
-  const q=new URLSearchParams(window.location.search);
-  return q.get('t21Play')==='preview'&&q.get('t21QaDrive')==='source'&&
-   q.get('t21W10B203')==='fullRound'&&
-   q.get('t21W10B356')==='realImpactReticle';
- })();
+ // B356's true paint-only feedback is now part of all authentic SOURCE
+ // 180s player sessions. It NEVER claims CPU hits or a scored Turf point.
+ const b356Enabled=b356NativeSourceImpactCueEnabled(window.location.search);
  const b356Ledger=new B356RealSourceReticle();
  const b356Cue=document.createElement('div');
  b356Cue.id='t21-f3-b356-real-source-reticle';
@@ -378,6 +375,7 @@ export function createF3PlayableHud(ui:HTMLElement){
  b356Cue.dataset.t21B356GameplayWrites='0';
  b356Cue.dataset.t21B356Scoreable='0';
  b356Cue.dataset.t21B356EnemyHitCertified='false';
+ b356Cue.dataset.t21B356NativeSourceFeedbackEnabled=String(b356Enabled);
  b356Cue.style.cssText='position:fixed;top:calc(50% + 29px);left:50%;'+
   'transform:translateX(-50%);z-index:14;pointer-events:none;'+
   'border:1px solid #83dbdf;border-radius:7px;'+
@@ -859,6 +857,11 @@ export function createF3PlayableHud(ui:HTMLElement){
    String(value.b23HumanInkFeedback?.humanChangedImpactCount??-1);
   b356Cue.dataset.t21B356OriginalOnly=String(!!b356);
   if(b356){
+   // Persistent read-only last REAL event for external Chromium witness:
+   // the visible 14/27 native-tick pulse may expire before CDP snapshots.
+   // Neither an event count nor a timestamp is authored by the test.
+   b356Cue.dataset.t21B356LastRealCueNativeTick=String(b356.nativeTick);
+   b356Cue.dataset.t21B356LastRealCueMode=b356.mode;
    b356Cue.textContent=b356.label;
    b356Cue.style.color=b356.mode==='REAL_PAINT'?'#a2ffec':'#cfe6ef';
    b356Cue.style.borderColor=b356.mode==='REAL_PAINT'?'#78e9c7':'#83a5b3';

@@ -1,3 +1,4 @@
+import {b356NativeSourceImpactCueEnabled} from './B356RealSourceReticle';
 import {describe,expect,it} from 'vitest';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
 import {eligibleB378SourcePracticeWeapon} from './B378SourcePracticeWeaponSelection';
@@ -830,5 +831,33 @@ describe('B465 genuine SOURCE replay key labels match safe native controls',()=>
    .toContain('R DISABLED');
   expect(b465SourceRoundKeyHelp({...state,sourceFullRound:false}))
    .toContain('R RESTART');
+ });
+});
+
+describe('REAL 180s original SOURCE shot vs actually changed ink feedback',()=>{
+ const native='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B183=firstDropPlay&t21W10B203=fullRound';
+ it('activates the actual human 4 SOURCE games without experimental URL flags',()=>{
+  for(const suffix of [
+   '&t21W10B384=loadoutCircuit',
+   '&t21W10B193=allyCoop',
+   '&t21W10B192=humanCombat',
+   '&t21W10B192=humanCombat&t21W10B441=sourceFrontline'
+  ])expect(b356NativeSourceImpactCueEnabled(native+suffix)).toBe(true);
+ });
+ it('rejects deterministic, invalid or production game worlds',()=>{
+  for(const [name,value] of [
+   ['t21Play','production'],['t21QaDrive','other'],
+   ['t21W10B183','other'],['t21W10B203','off'],
+   ['t21QaInput','deterministic']
+  ] as const){
+   const params=new URLSearchParams(native);params.set(name,value);
+   expect(b356NativeSourceImpactCueEnabled('?'+params.toString())).toBe(false);
+  }
+  for(const k of ['production','scoreable']){
+   const params=new URLSearchParams(native);params.set(k,'true');
+   expect(b356NativeSourceImpactCueEnabled('?'+params.toString())).toBe(false);
+  }
+  expect(b356NativeSourceImpactCueEnabled('?t21Play=preview')).toBe(false);
  });
 });
