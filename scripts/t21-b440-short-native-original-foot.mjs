@@ -383,16 +383,46 @@ async function main(){
   changedActorOrInkWrites:0,productionAuthorized:false
  };
  save();
+ // In the long user-flow the human now deliberately selects a compatible
+ // AUTO weapon: the 45s held-primary projectile test is not valid for
+ // Ink Saber (SPLATANA executes its slash only on mouse RELEASE).
+ // The historical short B441 case and original Ink Saber portal test stay.
+ const fullReplayHumanKit=proveFullSourceReplay?'needle-smg':'ink-saber';
+ if(proveFullSourceReplay){
+  await buttonClick('#source-weapon-preselect');
+  for(const [type,key,code,n] of [
+    ['keyDown','Home','Home',36],['keyUp','Home','Home',36],
+    ['keyDown','ArrowDown','ArrowDown',40],
+    ['keyUp','ArrowDown','ArrowDown',40],
+    ['keyDown','Enter','Enter',13],['keyUp','Enter','Enter',13]
+  ])await cdp('Input.dispatchKeyEvent',{
+   type,key,code,windowsVirtualKeyCode:n,nativeVirtualKeyCode:n
+  });
+  const choice=await until(()=>evaluate(`(() => {
+   const p=document.querySelector('#source-weapon-preselect');
+   const links=['#play-circuit','#play-combat','#play-coop',
+    '#play-combat-frontline'].map(q=>{
+     const a=document.querySelector(q);
+     return a?.href?new URL(a.href).searchParams.get('t21W10B389'):null;
+   });
+   return p?.value==='needle-smg'&&
+    links.every(v=>v==='needle-smg')&&
+    localStorage.getItem('t21-source-weapon-selection-v1')==='needle-smg'?
+    {selected:'needle-smg',linksVerified:4,realKeyboard:true,
+     directGameWrites:0}:null;
+  })()`),18000,200);
+  proof.fullReplayRealHumanPortalWeaponChoice=choice;save();
+ }
  await buttonClick('#play-combat-frontline');
  await until(()=>evaluate(`document.querySelector('#app-canvas')
   ?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')
   ?.dataset.t21F3Renderer==='webgl2'`),120000);
  const optionalBoot=await snap();authority(optionalBoot);
- if(optionalBoot.b361NativePlayerWeapon?.id!=='ink-saber'||
+ if(optionalBoot.b361NativePlayerWeapon?.id!==fullReplayHumanKit||
     optionalBoot.matchState!=='STAGING')
   fail('FRONTLINE_REAL_SOURCE_PRESELECTED_WEAPON_NOT_APPLIED');
- proof.realSourceAllModeLoadout.frontlineNativeBootWeapon='ink-saber';
+ proof.realSourceAllModeLoadout.frontlineNativeBootWeapon=fullReplayHumanKit;
  save();
  const optionalUI=await evaluate(`(() => {
   const canvas=document.querySelector('#app-canvas');
@@ -456,7 +486,7 @@ async function main(){
  // destination, and cannot acquire an authorized human B389 boot by
  // appending one query parameter. Ordinary short trial is unchanged.
  const fullReplayQuery=proveFullSourceReplay?
-  query+'&t21W10B389=ink-saber':query;
+  query+'&t21W10B389='+fullReplayHumanKit:query;
  if(!proveFullSourceReplay)
   await cdp('Page.navigate',{url:root+query});
  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
@@ -473,7 +503,7 @@ async function main(){
  if(proveFullSourceReplay){
   const boot=await snap();authority(boot);
   proof.fullReplayActualSourceBoot={
-   originalSource:'25/17/26/0',selectedUserKit:'ink-saber',
+   originalSource:'25/17/26/0',selectedUserKit:fullReplayHumanKit,
    reusedActualClickedFrontlineWorld:true,
    nativeBootKit:boot.b361NativePlayerWeapon?.id??null,
    realNativeTick:boot.tick,matchState:boot.matchState,
@@ -483,7 +513,7 @@ async function main(){
    originalActorWrites:0,nativeClockWrites:0,scoreWrites:0
   };
   save();
-  if(boot.b361NativePlayerWeapon?.id!=='ink-saber'||
+  if(boot.b361NativePlayerWeapon?.id!==fullReplayHumanKit||
      boot.matchState!=='STAGING'||boot.tick!==0||
      boot.cpu.cpu.length!==7||boot.sourceScoreablePromotions!==0)
    fail('FULL_REAL_SELECTED_HUMAN_WEAPON_NATIVE_BOOT_HOLD');
@@ -1622,9 +1652,9 @@ async function main(){
    NO_CPU_RELOCATIONS:first.cpu.physicalFootRelocations===0,
    NATIVE_180_SECOND_CLOCK:first.timeRemainingSeconds<180&&
     first.timeRemainingSeconds>0,
-   SAME_SELECTED_HUMAN_KIT:weapon==='ink-saber',
+   SAME_SELECTED_HUMAN_KIT:weapon===fullReplayHumanKit,
    EXACT_SELECTED_NATIVE_URL:new URL(initialHref).searchParams.get(
-    't21W10B389')==='ink-saber'
+    't21W10B389')===fullReplayHumanKit
   };
   proof.oneShotFullReplayPreflight={
    checks:preflightChecks,observed:{
