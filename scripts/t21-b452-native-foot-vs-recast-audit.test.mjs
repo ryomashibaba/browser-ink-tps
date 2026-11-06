@@ -65,3 +65,52 @@ test('fails closed for fake provenance, goal authorization, loss of real foot sa
   assert.throws(()=>audit(d),/B452_REAL_SOURCE_FOOT_TRACE_HOLD/);
  }
 });
+
+function fullRoundFixture(){
+ const d=fixture();
+ d.verdict='PASS_REAL_NATIVE_180S_TIME_UP_REPLAY_NEW_WORLD_SAME_HUMAN_WEAPON';
+ d.testKind='FULL_REAL_180S_FRESH_SOURCE_WORLD_SAME_WEAPON';
+ d.stage='REAL_180_NATIVE_NEW_WORLD_SAME_WEAPON_CERTIFIED';
+ d.full180sCertified=true;
+ d.genuineReplayClickCertified=true;
+ d.oneShotFullReplay={
+  schema:'T21_ONE_SHOT_REAL_SOURCE_180_REPLAY_V1',
+  source:'25/17/26/0',initialOrigin:d.browserOrigin,
+  clicked:true,newWorldConfirmed:true,actualCountdownNativeTicks:10804,
+  weapon:'needle-smg',
+  samples:[{label:'120',phase:'PLAYING',remaining:120},
+   {label:'60',phase:'PLAYING',remaining:60},
+   {label:'TIME_UP',phase:'TIME_UP',remaining:0}],
+  realEndScreen:{button:true,mouseUnlocked:true,scoreable:'0'},
+  secondWorld:{origin:d.browserOrigin+10,n:{tick:0,phase:'STAGING',
+   seconds:180,cpu:7,kit:'needle-smg',
+   solids:25,paint:17,links:26,scoreable:0}}
+ };
+ return d;
+}
+test('accepts genuine full 180s + replay as same physical SOURCE foot witness',()=>{
+ const d=audit(fullRoundFixture());
+ assert.equal(d.verdict,'PASS_SAME_WORLD_SAMPLED_PHYSICAL_PROXIMITY_NOT_A_ROUTE_PASS');
+ assert.equal(d.physicalContinuousRouteCertified,false);
+ assert.equal(d.unrestricted4v4Certified,false);
+});
+test('never permits spoofed full-run label to bypass B452 native SOURCE gates',()=>{
+ const changes=[
+  d=>{delete d.oneShotFullReplay},
+  d=>{d.full180sCertified=false},
+  d=>{d.genuineReplayClickCertified=false},
+  d=>{d.oneShotFullReplay.actualCountdownNativeTicks=10799},
+  d=>{d.oneShotFullReplay.samples[2].remaining=1},
+  d=>{d.oneShotFullReplay.secondWorld.origin=d.browserOrigin},
+  d=>{d.oneShotFullReplay.secondWorld.n.kit='ink-saber'},
+  d=>{d.oneShotFullReplay.secondWorld.n.scoreable=1},
+  d=>{d.b441NativeEvidence.realSevenCpu=false},
+  d=>{d.b441NativeEvidence.realFrames=[]},
+  d=>{d.b441NativeEvidence.b446LiveActualCpuFootDryRouteProbes[1]
+    .b450FailedOriginalGoals[0].firstDenied.verticalGapMeters=.25}
+ ];
+ for(const f of changes){
+  const d=fullRoundFixture();f(d);
+  assert.throws(()=>audit(d),/B452_REAL_SOURCE_FOOT_TRACE_HOLD/);
+ }
+});

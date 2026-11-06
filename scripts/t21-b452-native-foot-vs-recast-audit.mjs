@@ -14,9 +14,45 @@ const ids=['A1','A2','A3','B1','B2','B3','B4'];
 /** Strictly inspect original native witnesses; does not assign actor goals. */
 export function inspectB452NativeFootAgainstRejectedRecast(d){
  const e=d?.b441NativeEvidence;
+ // Earlier B441 short proof and the later real native 180s+replay proof
+ // are different legitimate verdicts of the SAME first SOURCE world.
+ // Accept neither a bare "PASS" nor a forged full-run label; the latter
+ // must include the independently inspectable real TIME_UP/replay witnesses.
+ const shortNativePass=d?.verdict===
+  'PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING';
+ const full=d?.oneShotFullReplay;
+ const realFullReplayPass=d?.verdict===
+  'PASS_REAL_NATIVE_180S_TIME_UP_REPLAY_NEW_WORLD_SAME_HUMAN_WEAPON'&&
+  d?.testKind==='FULL_REAL_180S_FRESH_SOURCE_WORLD_SAME_WEAPON'&&
+  d?.stage==='REAL_180_NATIVE_NEW_WORLD_SAME_WEAPON_CERTIFIED'&&
+  d?.full180sCertified===true&&d?.genuineReplayClickCertified===true&&
+  full?.schema==='T21_ONE_SHOT_REAL_SOURCE_180_REPLAY_V1'&&
+  full.source==='25/17/26/0'&&
+  full.initialOrigin===d.browserOrigin&&
+  full.clicked===true&&full.newWorldConfirmed===true&&
+  Number.isSafeInteger(full.actualCountdownNativeTicks)&&
+  full.actualCountdownNativeTicks>=10800&&
+  Array.isArray(full.samples)&&full.samples.length===3&&
+  full.samples[2]?.label==='TIME_UP'&&
+  full.samples[2].phase==='TIME_UP'&&
+  full.samples[2].remaining===0&&
+  full.realEndScreen?.button===true&&
+  full.realEndScreen?.mouseUnlocked===true&&
+  full.realEndScreen?.scoreable==='0'&&
+  Number.isFinite(full.secondWorld?.origin)&&
+  full.secondWorld.origin>full.initialOrigin&&
+  full.secondWorld.n?.tick===0&&
+  full.secondWorld.n?.phase==='STAGING'&&
+  full.secondWorld.n?.seconds===180&&
+  full.secondWorld.n?.cpu===7&&
+  full.secondWorld.n?.kit===full.weapon&&
+  full.secondWorld.n?.solids===25&&
+  full.secondWorld.n?.paint===17&&
+  full.secondWorld.n?.links===26&&
+  full.secondWorld.n?.scoreable===0;
  if(d?.schema!=='B440_ORIGINAL_SHORT_CHROMIUM_FOOT_PROOF'||
-  d.source!=='25/17/26/0'||d.verdict!==
-   'PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING'||
+  d.source!=='25/17/26/0'||
+  !(shortNativePass||realFullReplayPass)||
   d.syntheticInput!==false||d.actorWrites!==0||
   d.sourceGeometryWrites!==0||d.scoreWrites!==0||
   d.nativeClockWrites!==0||d.officialWinner!=='NONE'||
