@@ -2298,15 +2298,20 @@ export class UndertowF3PlayablePreviewApp{
     practiceVariant:this.b25Run.snapshot().practiceVariant,
     practiceStatus:this.b25Run.snapshot().status
    });
-   if(ev.code==='KeyC'&&(b193Coop&&this.b203FullRound||
-      b483ActualReady)&&
+   if(ev.code==='KeyC'&&(!b483ActualSelected||!ev.repeat)&&
+      (b193Coop&&this.b203FullRound||b483ActualReady)&&
       document.pointerLockElement===this.canvas&&
       this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
       this.resources.currentHp>0){
     ev.preventDefault();
     // Only a real player key can arm an A1 request. Traffic still needs
     // actual 60Hz Rapier feet, native path checks, and non-owned real ink.
-    this.traffic.b471RequestTruePlayerOriginalAllyCoverage();
+    const accepted=this.traffic.b471RequestTruePlayerOriginalAllyCoverage(
+     b483ActualSelected);
+    if(b483ActualSelected)
+     this.canvas.dataset.t21B485RealCKeyResult=accepted?
+      'REAL_ORDER_PENDING_ORIGINAL_RECAST':
+      'HOLD_UNSAFE_OR_ALREADY_MOVING';
     this.refresh();
    }
    if(ev.code==='KeyM'){
@@ -7071,7 +7076,9 @@ export class UndertowF3PlayablePreviewApp{
     (b484.finalCommandStatus==='HOLD'?
      ' · C to retry if safe':' · path not certified'):'';
    this.b141RealAllyIndicator.textContent=info.text+
-    (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status:'')+
+    (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status+
+     (order.b485RepeatReady?' · Cで安全な再指示':
+      order.status==='MOVING'?' · 移動中の上書き禁止':''):'')+
     realCommand;
    this.b141RealAllyIndicator.style.whiteSpace='pre-line';
    this.b141RealAllyIndicator.dataset.t21B471RealPlayerOrder=

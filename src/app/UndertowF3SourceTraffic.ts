@@ -39,6 +39,7 @@ import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
  from './B450OriginalRouteWitness';
 import {B454NativeSourceFootRecorder} from './B454NativeSourceFootTrace';
+import {b485MayIssueNativeA1OriginalOrder} from './B485RealRepeatA1Command';
 import {B484TrueNativeA1FollowThrough} from './B484TrueNativeA1FollowThrough';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
@@ -356,6 +357,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  }|null=null;
  private b471OrderStatus:'OFF'|'HOLD'|'REQUESTED'|'MOVING'|'ARRIVED'|'EXPIRED'='OFF';
  private b471GenuineKeyRequests=0;
+ /** B485 only for true B441 player-C-key: never a fake Crowd order. */
+ private b485LastRealB441KeyTick:number|null=null;
  private b471StrictlyApprovedOriginalGoals=0;
  private b471ActualNativeGoalRequests=0;
  private b471RejectedOriginalRoutes=0;
@@ -700,7 +703,23 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
 
  /** Arms only an actual player key during a REAL native ALLY_SYNC round.
   * Does not select a goal or write any actor / ink / clock. */
- b471RequestTruePlayerOriginalAllyCoverage():boolean{
+ b471RequestTruePlayerOriginalAllyCoverage(
+  b485StrictActualB441Repeat=false
+ ):boolean{
+  // Separate B193 ALLY_SYNC retains its identical original B471 flow.
+  // Only B441 real player commands enforce a 30-tick completed-order
+  // cooldown. A key while MOVING cannot overwrite genuine A1 motion.
+  if(b485StrictActualB441Repeat){
+   if(!b485MayIssueNativeA1OriginalOrder({
+    selected:this.enableB441SourceFrontline&&
+     this.enableB137OriginalAllyRally&&this.enableB150AllySupportInk,
+    nativeTick:this.b137NativeTick,
+    lastRealKeyTick:this.b485LastRealB441KeyTick,
+    genuineKeyRequests:this.b471GenuineKeyRequests,
+    lastOrder:this.b471OrderStatus
+   }))return false;
+   this.b485LastRealB441KeyTick=this.b137NativeTick;
+  }
   this.b471GenuineKeyRequests++;
   const ally=this.bots.find(x=>x.id==='A1');
   const foot=ally?.position;
@@ -732,6 +751,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  b471ReadOnlyAllyCoverageOrder(){
   return {
    status:this.b471OrderStatus,genuineKeyRequests:this.b471GenuineKeyRequests,
+   b485LastRealB441KeyTick:this.b485LastRealB441KeyTick,
+   b485RepeatReady:b485MayIssueNativeA1OriginalOrder({
+    selected:this.enableB441SourceFrontline&&
+     this.enableB137OriginalAllyRally&&this.enableB150AllySupportInk,
+    nativeTick:this.b137NativeTick,
+    lastRealKeyTick:this.b485LastRealB441KeyTick,
+    genuineKeyRequests:this.b471GenuineKeyRequests,
+    lastOrder:this.b471OrderStatus
+   }),
    strictlyApprovedOriginalGoals:this.b471StrictlyApprovedOriginalGoals,
    actualNativeGoalRequests:this.b471ActualNativeGoalRequests,
    rejectedOriginalRoutes:this.b471RejectedOriginalRoutes,

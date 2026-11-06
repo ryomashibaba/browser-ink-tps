@@ -846,6 +846,58 @@ async function main(){
    actorInkScoreClockWrites:0,syntheticCombatWrites:0,
    distinctFromCoopMission:true};
   save();
+  // B485: actual first native B471 ARRIVED must precede a second
+  // physical player key. Never spam C or overwrite the moving Crowd.
+  const firstArrival=await until(async()=>{
+   const n=await snap();authority(n);
+   const o=n.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+   if(n.paused||n.matchState!=='PLAYING'||
+      n.cpu.physicalRejoins.length!==7||!await locked())
+    fail('B485_ORIGINAL_PLAYER_INTERRUPTED_BEFORE_ARRIVAL');
+   return o?.status==='ARRIVED'&&o.actualOriginalArrivals>=1&&
+    o.b485RepeatReady===true?{n,o}:null;
+  },60000,200);
+  // Real CDP C key UP/DOWN with actual pointer-lock input, no synthetic
+  // goal or tick injection. A1's previous B471 status is ARRIVED.
+  await tapSourceCameraKey('c','KeyC',67);
+  const secondKey=await until(async()=>{
+   const n=await snap();authority(n);
+   const o=n.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+   if(n.paused||n.matchState!=='PLAYING'||!await locked())
+    fail('B485_SECOND_ORIGINAL_PLAYER_INTERRUPTED');
+   return o?.genuineKeyRequests===2?{n,o}:null;
+  },15000,150);
+  // A second audited goal is a separate achievement; if none can pass,
+  // retain the genuine HOLD instead of inventing a path or arrival.
+  const secondDecision=await until(async()=>{
+   const n=await snap();authority(n);
+   const o=n.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+   return o?.strictlyApprovedOriginalGoals>=2&&
+    o.actualNativeGoalRequests>=2?{n,o,outcome:'SECOND_ORIGINAL_CROWD_GRANTED'}:
+    o?.status==='HOLD'||o?.status==='EXPIRED'?
+    {n,o,outcome:'SECOND_ORIGINAL_SAFETY_HOLD'}:null;
+  },30000,250);
+  if(secondDecision.n.sourceScoreablePromotions!==0||
+     secondDecision.o.officialWinner!=='NONE'||
+     secondDecision.o.actorInkScoreClockWrites!==0||
+     secondKey.o.genuineKeyRequests!==2||
+     firstArrival.o.actualOriginalArrivals<1)
+    fail('B485_REPEATED_A1_ORDER_AUTHORITY_CORRUPTED');
+  proof.b485TrueSecondPlayerA1Command={
+   realChromeCKeyCount:2,actualFirstArrivalTick:firstArrival.n.tick,
+   firstArrivalOriginalCounter:firstArrival.o.actualOriginalArrivals,
+   secondCKeyTick:secondKey.n.tick,
+   realNativeSecondOutcome:secondDecision.outcome,
+   secondDecisionNativeTick:secondDecision.n.tick,
+   actualB471KeyRequests:secondDecision.o.genuineKeyRequests,
+   originalApprovedGoalCount:secondDecision.o.strictlyApprovedOriginalGoals,
+   actualOriginalCrowdGoalRequests:secondDecision.o.actualNativeGoalRequests,
+   secondOriginalGoal:secondDecision.outcome==='SECOND_ORIGINAL_CROWD_GRANTED'?
+    secondDecision.o.approvedOriginalGoal:null,
+   fakeEnemyHits:0,officialWinner:'NONE',originalCrossTeamCertified:false,
+   actorInkPhysicsClockWrites:0
+  };
+  save();
   proof.b475ActualSourceUserCombat={
    ...proof.b475ActualSourceUserCombat,
    actualChromeMousePressed:true,actualRealSourceWeaponShotCount:
@@ -984,7 +1036,7 @@ async function main(){
   const b483=proof.b483RealPlayerCKeyNativeA1;
   if(!b484||b484.schema!=='B484_TRUE_NATIVE_A1_FOLLOW_THROUGH_V1'||
      b484.source!=='25/17/26/0'||b484.nativeRows<100||
-     b484.genuineKeyRequests!==1||b484.approvedOriginalGoals<1||
+     b484.genuineKeyRequests!==2||b484.approvedOriginalGoals<1||
      b484.actualNativeGoalRequests<1||b484.officialWinner!=='NONE'||
      b484.actorInkPhysicsClockWrites!==0||
      b484.crossTeamRouteCertified!==false||
@@ -993,12 +1045,14 @@ async function main(){
      b484.trueArrivalOnlyFromB471!==true||
      !Array.isArray(b484.originalApprovedGoal)||
      !b484.originalApprovedGoal.every((v,i)=>
-      Number.isFinite(v)&&Math.abs(v-b483.actualSourceGoal[i])<.001)||
+      Number.isFinite(v)&&Math.abs(v-
+       (proof.b485TrueSecondPlayerA1Command.secondOriginalGoal||
+        b483.actualSourceGoal)[i])<.001)||
      !Array.isArray(b484.rows)||b484.rows.length!==b484.nativeRows||
      !b484.rows.every((r,i)=>i===0||r.tick===b484.rows[i-1].tick+1))
     fail('B484_ORIGINAL_A1_NATIVE_FOLLOW_THROUGH_HOLD');
   writeFileSync(resolve(out,'b484-real-source-a1-foot-60hz.json'),
-   JSON.stringify(b484,null,2)+'\\n');
+   JSON.stringify(b484,null,2)+'\n');
   proof.b484RealNativeA1CKeyFollowThrough={
    ...Object.fromEntries(Object.entries(b484).filter(([k])=>k!=='rows')),
    file:'b484-real-source-a1-foot-60hz.json',
