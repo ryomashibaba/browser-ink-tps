@@ -1059,6 +1059,35 @@ async function main(){
    nativeActorPositionWrites:0,originalRouteAuthorizationChanged:false,
    officialWinner:'NONE'};
   save();
+  // B486 independent real 60Hz HUMAN and 3-vs-4 CPU proximity proof.
+  // Distance is never shot contact, opponent native path or certified 4v4.
+  const b486=await evaluate('window.__t21F3.b486ActualOriginalEnemyDistances()');
+  if(!b486||
+     b486.schema!=='B486_TRUE_ORIGINAL_NATIVE_60HZ_ENCOUNTER_DISTANCE_V1'||
+     b486.source!=='25/17/26/0'||b486.rows<100||
+     b486.scoreableOriginalSurfaces!==0||
+     b486.officialWinner!=='NONE'||
+     b486.noActorNavInkPhysicsClockWrites!==true||
+     b486.naturalOpponentRouteCertified!==false||
+     b486.actualEnemyHpDamageCertified!==false||
+     b486.physicallyCloseIsNotAHit!==true||
+     b486.physicallyCloseIsNotANativeRoute!==true||
+     !Number.isFinite(b486.nearestHumanToEnemy3dMeters)||
+     !Number.isFinite(b486.nearestAllyToEnemy3dMeters)||
+     !Array.isArray(b486.rows60Hz)||
+     b486.rows60Hz.length!==b486.rows||
+     !b486.rows60Hz.every((row,i)=>i===0||
+      row.tick===b486.rows60Hz[i-1].tick+1))
+    fail('B486_ACTUAL_7CPU_SOURCE_PROXIMITY_EVIDENCE_HOLD');
+  writeFileSync(resolve(out,'b486-original-human-7cpu-enemy-distance-60hz.json'),
+   JSON.stringify(b486,null,2)+'\\n');
+  proof.b486TrueSourceNaturalEncounterDistance={
+   ...Object.fromEntries(Object.entries(b486).filter(([key])=>
+    key!=='rows60Hz')),
+   raw:'b486-original-human-7cpu-enemy-distance-60hz.json',
+   sourceMotionUntouched:true,enemyContactCertified:false,
+   nativeRouteNotGranted:true,officialWinner:'NONE'};
+  save();
   // B474: require measured original native Crowd requests AND bounded
   // duplicate suppression in THIS true 720-tick browser, not a pure test.
   // This is research behavior only; no original route or hit promotion.

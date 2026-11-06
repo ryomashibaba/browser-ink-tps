@@ -41,6 +41,7 @@ import {b450FirstSourceDenial,type B450FailedOriginalGoal}
 import {B454NativeSourceFootRecorder} from './B454NativeSourceFootTrace';
 import {b485MayIssueNativeA1OriginalOrder} from './B485RealRepeatA1Command';
 import {B484TrueNativeA1FollowThrough} from './B484TrueNativeA1FollowThrough';
+import {B486NativeSourceEncounterTrace} from './B486NativeSourceEncounterTrace';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -289,6 +290,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  /** B454 bounded read-only, 60Hz actual CPU physical foot observations. */
  private readonly b454Trace=new B454NativeSourceFootRecorder();
  private readonly b484A1Trace=new B484TrueNativeA1FollowThrough();
+ private readonly b486Encounter=new B486NativeSourceEncounterTrace();
  private b448A3FreshLiveOriginalGoalsAuthorized=0;
  private b448A3FreshLiveOriginalHolds=0;
  private b448A3RealNativeGoalRequests=0;
@@ -2097,6 +2099,30 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     });
    }
   }
+  // B486: true post-KCC CPU feet and same-frame actual player Rapier
+  // foot; research-only physics DISTANCES, never encounters/route proof.
+  if(this.enableB441SourceFrontline&&this.freeCombat&&
+     this.physicallyRejoined.size===7&&this.b192HumanAliveGrounded&&
+     this.b192HumanTick===frame&&this.stage.solids.length===25&&
+     this.stage.paintSurfaces.length===17&&
+     this.stage.navigationLinks?.length===26&&
+     this.stage.paintSurfaces.every(s=>
+      (s.flags&SurfaceFlags.Scoreable)===0)){
+   this.b486Encounter.record({
+    tick:frame,source:[25,17,26,0],
+    humanFoot:[this.b192NativeHumanFoot.x,this.b192NativeHumanFoot.y,
+     this.b192NativeHumanFoot.z],
+    humanAliveGrounded:true,
+    cpu:this.bots.map(bot=>({
+     id:bot.id,team:bot.team===Team.A?'A' as const:'B' as const,
+     foot:[bot.position.x,bot.position.y,bot.position.z],
+     active:bot.lifeState==='ACTIVE',
+     grounded:bot.mobilityState==='GROUND',
+     physicallyRejoined:sourceNativeLiveRejoinedCpu(
+      bot,this.physicallyRejoined)
+    }))
+   });
+  }
   if(this.physicallyRejoined.size===7&&!this.freeCombat){
    this.freeCombat=true;
    for(const bot of this.bots){
@@ -2177,6 +2203,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * Avoid building the much larger sourcePatrol QA snapshot every physics tick.
   * No inferred rejoin, teleport, Actor mutation, or opponent route. */
  /** B454 one-shot QA evidence export, research URL only; no actor writes. */
+ b486ReadOnlyTrueNativeOriginalEncounter(){
+  if(!this.enableB441SourceFrontline)return null;
+  return this.b486Encounter.snapshot();
+ }
  b484RealOriginalA1OrderTrace(){
   if(!this.enableB441SourceFrontline||
      !this.enableB137OriginalAllyRally||!this.enableB150AllySupportInk)

@@ -2344,6 +2344,7 @@ export class UndertowF3PlayablePreviewApp{
    // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
    b454OriginalCpuFootTrace:()=>this.traffic.b454ReadOnlyOriginalNativeFootTrace(),
    b484ActualA1CKeyFollowThrough:()=>this.traffic.b484RealOriginalA1OrderTrace(),
+   b486ActualOriginalEnemyDistances:()=>this.traffic.b486ReadOnlyTrueNativeOriginalEncounter(),
     setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
     setB251OpticalSeparation:(on:boolean)=>this.setB251OpticalSeparation(on),
     setB253SourceUvLiveInk:(on:boolean)=>this.setB253SourceUvLiveInk(on),
