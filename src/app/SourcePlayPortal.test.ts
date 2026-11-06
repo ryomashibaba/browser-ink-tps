@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourcePlayPortalReturnUrl,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
- sourceFinishedReplayAction}
+ sourceFinishedReplayAction,sourceFinishedReplayHref}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -295,5 +295,60 @@ describe('B472 genuine SOURCE-mode-wide initial human weapon, not new gameplay a
    pointerLocked:true,originalSolids:25,originalPaint:17,
    originalLinks:26,scoreable:0,finishedVisible:true,canClick:true
   })).toBe('BLOCK');
+ });
+});
+
+describe('Sprint A genuine four-mode 180s same-kit new-world replay',()=>{
+ const portal='https://example.org/browser-ink-tps/play-source.html';
+ const finished=(href:string,weaponId:string)=>({
+  href,weaponId,matchState:'TIME_UP',stopped:false,
+  pointerLocked:false,originalSolids:25,originalPaint:17,
+  originalLinks:26,scoreable:0,finishedVisible:true,canClick:true
+ });
+ it('uses the ACTUAL READY weapon for all 12 kits and 4 original SOURCE modes',()=>{
+  for(const initial of WEAPON_ORDER){
+   const all=sourcePlayWeaponModeDestinations(portal,initial);
+   for(const current of WEAPON_ORDER){
+    const next=sourcePlayWeaponModeDestinations(portal,current);
+    for(const mode of Object.keys(all) as Array<keyof typeof all>){
+     const newWorld=sourceFinishedReplayHref(finished(all[mode],current));
+     expect(newWorld).toBe(next[mode]);
+     const params=new URL(newWorld!).searchParams;
+     expect(params.get('t21W10B203')).toBe('fullRound');
+     expect(params.has('scoreable')).toBe(false);
+     expect(params.has('production')).toBe(false);
+    }
+   }
+  }
+ });
+ it('cannot replay while live, stopped, locked or SOURCE authority differs',()=>{
+  const all=sourcePlayWeaponModeDestinations(portal,'ink-saber');
+  for(const url of Object.values(all)){
+   const good=finished(url,'pulse-sprayer');
+   for(const altered of [
+    {matchState:'PLAYING'},{stopped:true},{pointerLocked:true},
+    {originalSolids:24},{originalPaint:16},{originalLinks:25},
+    {scoreable:1},{finishedVisible:false},{canClick:false},
+    {weaponId:'unapproved-weapon'}
+   ])expect(sourceFinishedReplayHref({...good,...altered})).toBe(null);
+   for(const tail of ['&production=1','&scoreable=1',
+    '&t21QaInput=deterministic','&cpuWarp=1',
+    '&t21W10B389=ink-saber','#unsafe']){
+    expect(sourceFinishedReplayHref(
+     finished(url+tail,'ink-saber'))).toBe(null);
+   }
+  }
+ });
+ it('never promotes incomplete B441/B448 frontline or combined game flags',()=>{
+  const original=sourcePlayWeaponModeDestinations(portal,'ink-saber').frontline;
+  const played=sourceFinishedReplayHref(finished(original,'pulse-sprayer'));
+  const q=new URL(played!).searchParams;
+  expect(q.get('t21W10B441')).toBe('sourceFrontline');
+  expect(q.get('t21W10B448')).toBe('realA3Front');
+  expect(q.has('t21W10B389')).toBe(false);
+  expect(sourceFinishedReplayHref(finished(
+   original.replace('&t21W10B448=realA3Front',''),'ink-saber'))).toBe(null);
+  expect(sourceFinishedReplayHref(finished(
+   original+'&t21W10B193=allyCoop','ink-saber'))).toBe(null);
  });
 });

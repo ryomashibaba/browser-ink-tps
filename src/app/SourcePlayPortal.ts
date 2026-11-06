@@ -141,6 +141,42 @@ export function sourceFinishedReplayAction(
  if(coop||circuit)return 'CLICK_REAL_REPLAY';
  return combat?'RELOAD_NATIVE_SOURCE_WORLD':'BLOCK';
 }
+/**
+ * Sprint A: the real TIME_UP button starts a new physical SOURCE world in
+ * the SAME existing game mode with the player's actual READY-selected kit.
+ * Recognize only the four canonical portal modes. Never copy QA, world
+ * state, actor positions, score authority or arbitrary URL flags.
+ */
+export function sourceFinishedReplayHref(
+ input:SourceFinishedReplayEvidence&{weaponId:string}
+):string|null{
+ if(sourceFinishedReplayAction(input)==='BLOCK'||
+    !WEAPON_ORDER.includes(input.weaponId as WeaponId))return null;
+ const menu=sourcePlayPortalReturnUrl(input.href);
+ if(!menu)return null;
+ try{
+  const current=new URL(input.href);
+  const bootKit=current.searchParams.get('t21W10B389');
+  if(bootKit!==null&&
+     b389NativeBootWeapon(current.searchParams)!==bootKit)return null;
+  const initial=sourcePlayWeaponModeDestinations(
+   menu,bootKit??DEFAULT_WEAPON_ID);
+  const sameNativeUrl=(a:string,b:string):boolean=>{
+   const x=new URL(a),y=new URL(b);
+   if(x.origin!==y.origin||x.pathname!==y.pathname||
+      x.hash!==''||y.hash!=='')return false;
+   const pairs=(u:URL)=>[...u.searchParams.entries()]
+    .map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).sort();
+   const one=pairs(x),two=pairs(y);
+   return one.length===two.length&&one.every((v,i)=>v===two[i]);
+  };
+  const mode=(Object.keys(initial) as Array<keyof typeof initial>)
+   .find(key=>sameNativeUrl(current.href,initial[key]));
+  if(!mode)return null;
+  return sourcePlayWeaponModeDestinations(menu,input.weaponId)[mode];
+ }catch{return null;}
+}
+
 /** Real keyboard R shares the same finished-session gate as clicking the
  * real replay button. Never propagate R to legacy in-world reset(). */
 export type SourceReplayHotkeyAction='UNRELATED'|SourceFinishedReplayAction|

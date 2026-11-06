@@ -113,7 +113,7 @@ import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
- sourceReplayHotkeyAction} from './SourcePlayPortal';
+ sourceFinishedReplayHref,sourceReplayHotkeyAction} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -4507,9 +4507,20 @@ export class UndertowF3PlayablePreviewApp{
   // replay in a NEW Rapier/Recast world, never by resetting the live
   // CPU/paint/clock/source actors before a page navigation.
   if(this.b203FullRound){
-   const decision=sourceFinishedReplayAction(
-    this.sourceFinishedReplayEvidence());
+   const evidence=this.sourceFinishedReplayEvidence();
+   const decision=sourceFinishedReplayAction(evidence);
    if(decision==='BLOCK')return;
+   // Retain the user's actual current weapon, not the stale launch URL.
+   // A true navigation always builds a fresh Rapier/Recast native world.
+   const fresh=sourceFinishedReplayHref({
+    ...evidence,weaponId:this.projectiles.currentPlayerWeapon.id
+   });
+   if(fresh){
+    if(fresh===window.location.href)window.location.reload();
+    else window.location.assign(fresh);
+    return;
+   }
+   // Keep independently gated historical non-portal SOURCE research.
    if(decision==='RELOAD_NATIVE_SOURCE_WORLD'){
     window.location.reload();return;
    }
