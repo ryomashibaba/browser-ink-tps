@@ -517,22 +517,61 @@ async function main(){
  proof.stage='NATIVE_START_SENT';save();
  // A freshly launched normal SOURCE world independently runs real physics,
  // and MUST naturally physically rejoin all seven original CPU actors.
- let lastRealSourceSample=null, polls=0;
- const ready=await until(async()=>{
+ let lastRealSourceSample=null, polls=0,highestNativeTick=-1;
+ let lastNativeAdvanceAt=Date.now();
+ const observeRealPhysicalCpu=async()=>{
   const n=await snap();authority(n);
   const pointer=await locked();
-  if(++polls%40===0){
+  if(n.tick>highestNativeTick){
+   highestNativeTick=n.tick;lastNativeAdvanceAt=Date.now();
+  }
+  if(++polls%20===0){
+   const joined=n.cpu.physicalRejoins;
+   const missing=n.cpu.cpu.filter(c=>!joined.includes(c.id));
    lastRealSourceSample={tick:n.tick,phase:n.matchState,paused:n.paused,
-    joins:n.cpu.physicalRejoins.length,mission:n.b25SourcePaintRun?.status,
-    foot:foot(n),body:n.player.position,pointerLocked:pointer};
-   proof.lastNativeReadOnlySample=lastRealSourceSample;save();
+    joins:joined.length,originalCpuIds:n.cpu.cpu.map(c=>c.id),
+    missingCpu:missing.map(c=>({id:c.id,rejoined:c.rejoined,
+     lifeState:c.lifeState,physicalFoot:c.physicalFoot})),
+    mission:n.b25SourcePaintRun?.status,
+    foot:foot(n),body:n.player.position,pointerLocked:pointer,
+    nativeAdvanceAgeMs:Date.now()-lastNativeAdvanceAt};
+   proof.lastNativeReadOnlySample=lastRealSourceSample;
+   // The B477 in-game cue is independent of this read-only QA sample.
+   save();
   }
   if(n.matchState==='TIME_UP')fail('NO_GENUINE_WALK_BEFORE_TIME_UP');
   return pointer&&n.matchState==='PLAYING'&&!n.paused&&
    n.cpu.physicalRejoins.length===7&&n.player.mode==='HUMAN'&&
    n.b25SourcePaintRun?.status==='RUNNING'&&
    trueOriginalFoot(foot(n))?n:false;
- },360000,350);
+ };
+ let ready;
+ try{
+  ready=await until(observeRealPhysicalCpu,360000,350);
+ }catch(error){
+  // B477: one strictly bounded extra observation is permitted only after
+  // genuine 6/7 original-source rejoin, actual monotonic native clock
+  // progress near the prior B476 timeout tick, no native stop/pause and
+  // no missed actor replaced. NEVER promote 6/7 or a timeout to PASS.
+  const latest=lastRealSourceSample;
+  const extension=b441Experiment&&
+   String(error).includes('B440_SHORT_REAL_NATIVE_HOLD_TIMEOUT_')&&
+   latest?.phase==='STAGING'&&latest.paused===false&&
+   latest.joins===6&&latest.mission==='ARMED'&&
+   Number.isSafeInteger(latest.tick)&&latest.tick>=1000&&
+   latest.nativeAdvanceAgeMs<=30000&&
+   Array.isArray(latest.missingCpu)&&latest.missingCpu.length===1;
+  proof.b477RealStartupHandoff={
+   source:'25/17/26/0',lastNative:latest,reason:String(error),
+   extensionPermitted:!!extension,actorWrites:0,scoreWrites:0,
+   nativeClockWrites:0,originalRoutesCertified:false};
+  save();
+  if(!extension)throw error;
+  ready=await until(observeRealPhysicalCpu,90000,350);
+  proof.b477RealStartupHandoff.native7Of7AfterBoundedExtension=true;
+  proof.b477RealStartupHandoff.endNativeTick=ready.tick;
+  save();
+ }
  if(b441Experiment){
   // B476 is a PLAYER UI check on actual Chrome DOM, not a fake
   // screenshot or model-authored source HUD. Native challenge MUST

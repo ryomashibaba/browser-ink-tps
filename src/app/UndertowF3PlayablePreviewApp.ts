@@ -58,6 +58,7 @@ import {b475RealFrontlineReadyMode,b475MayArmRealSourceFrontlineReady}
  from './B475RealFrontlineReadyChallenge';
 import {b476OriginalFrontlineObjectiveLayout}
  from './B476OriginalFrontlineObjectiveLayout';
+import {b477ActualSourceCpuJoinCue} from './B477ActualSourceCpuJoinCue';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
@@ -6049,6 +6050,24 @@ export class UndertowF3PlayablePreviewApp{
    return;
   }
   if(run.status==='ARMED'){
+   // B477: the actual stage/CPU roster, never a fabricated countdown.
+   // Remains visibly ARMED at native 6/7: only physical 7/7 plus
+   // real PLAYING unlocks the B25 native tick mission (B475).
+   const b477=b477ActualSourceCpuJoinCue({
+    selected:genuineB475,
+    stage:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
+     this.rawStage.navigationLinks?.length??0,
+     this.b45SourceSurfaces.filter(s=>s.isScoreable).length],
+    nativeTick:this.clock.tick,matchState:this.matchState,
+    practiceStatus:run.status,stopReason:this.stopReason,
+    physicallyRejoined:this.traffic.snapshot().physicalRejoins
+   });
+   if(b477){
+    this.b25RunCard.dataset.t21B477RealSourceCpuJoined=String(b477.joined);
+    this.b25RunCard.dataset.t21B477ActualMissingIds=b477.missing.join(',');
+    this.b25RunCard.dataset.t21B477OfficialWinner='NONE';
+    this.b25RunProgress.textContent=b477.label;return;
+   }
    this.b25RunProgress.textContent=dedicatedCoop&&
     this.matchState==='STAGING'?
      (this.clock.tick===0?
