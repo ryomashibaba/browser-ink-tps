@@ -474,7 +474,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableB199PlayerCoopCollisionRecovery=false,
   private readonly enableB441SourceFrontline=false,
   /** B448 separate research-only, never enabled by B441 alone. */
-  private readonly enableB448A3LiveOriginalFront=false
+  private readonly enableB448A3LiveOriginalFront=false,
+  /** True ONLY when the real original-source B214 native paint/HP economy is enabled. */
+  private readonly enableOriginalSourceBattleRecovery=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
@@ -958,9 +960,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // OWN ink -> safely remain until native regeneration reaches 70% -> resume
   // ordinary combat. No source geometry, real Actor, health, shots or clock
   // are written here. Every move still passes native Rapier/Recast authority.
-  if(this.enableB192HumanCombat&&this.sourceInk&&this.physics&&
-     bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
-     this.physicallyRejoined.has(id)&&Number.isFinite(bot.hp)&&
+  // Zero costly ownerGrid lookups for healthy 7/7 CPUs. The selected F3
+  // battle must ALREADY use the actual source OWN-ink HP economy (B178).
+  // Other SOURCE practice modes and all T20/default games remain untouched.
+  if(this.enableB192HumanCombat&&this.enableOriginalSourceBattleRecovery&&
+     this.sourceInk&&this.physics&&bot.lifeState==='ACTIVE'&&
+     bot.mobilityState==='GROUND'&&this.physicallyRejoined.has(id)&&
+     Number.isFinite(bot.hp)&&
+     (bot.hp!<=GAME_CONFIG.combat.playerMaxHp*.35||
+      this.originalSourceRecoveryIntent.has(id))&&
      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'){
    const ink=this.sourceInk;
    const source=[
@@ -981,6 +989,42 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      sample.owner===bot.team&&cx>=0&&cx<surface.widthCells&&
      cy>=0&&cy<surface.heightCells&&surface.isCellActive(cx,cy);
    };
+   // Only CURRENT, living, genuinely grounded original actors may be
+   // tactical threats. This registered Rapier ray is a cover *preference*,
+   // never a damage, path, actor-spawn or artificial enemy authorization.
+   const exposedToRealEnemy=(foot:Vec3):boolean=>{
+    const victim=new Vec3(foot.x,
+     foot.y+GAME_CONFIG.cpu.hitSphereOffsetsMeters[1],foot.z);
+    for(const enemy of this.bots){
+     if(enemy.id===id||enemy.team===bot.team||
+        enemy.lifeState!=='ACTIVE'||enemy.mobilityState!=='GROUND'||
+        !this.physicallyRejoined.has(enemy.id)||!enemy.weaponId||
+        !Number.isFinite(enemy.hp)||enemy.hp!<=0)continue;
+     const range=Math.min(32,
+      cpuWeaponRangeMeters(weaponProfile(enemy.weaponId)));
+     if(Math.hypot(foot.x-enemy.position.x,
+        foot.z-enemy.position.z)>range)continue;
+     const origin=new Vec3(enemy.position.x,
+      enemy.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,
+      enemy.position.z);
+     if(!this.physics!.castStageSegment(
+        origin,victim,'ink-projectile'))return true;
+    }
+    // Human is never manufactured as a bot. Only its SAME-TICK real KCC
+    // grounded foot is evaluated in the existing 32m combat sight envelope.
+    if(bot.team===Team.B&&this.b192HumanAliveGrounded&&
+       this.b192HumanTick===this.b137NativeTick&&
+       Math.hypot(foot.x-this.b192NativeHumanFoot.x,
+        foot.z-this.b192NativeHumanFoot.z)<=32){
+     const p=this.b192NativeHumanFoot;
+     const origin=new Vec3(p.x,
+      p.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,p.z);
+     if(!this.physics!.castStageSegment(
+        origin,victim,'ink-projectile'))return true;
+    }
+    return false;
+   };
+   const exposedHere=exposedToRealEnemy(realFoot);
    const recovery={
     source,selectedOriginalCombat:true,activeGroundedRejoined:true,
     team:bot.team===Team.A?'A' as const:'B' as const,
@@ -989,7 +1033,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     recoveringFromRealDamage:this.originalSourceRecoveryIntent.has(id),
     originalCandidates:candidates.map((goal,index)=>({
      index,foot:[goal.x,goal.y,goal.z] as [number,number,number],
-     actualOwnOriginalPaintCell:actualOriginalOwnInk(goal)
+     actualOwnOriginalPaintCell:actualOriginalOwnInk(goal),
+     exposedToRealEnemy:exposedToRealEnemy(goal)
     }))
    };
    if(originalSourceCpuWoundedRecoveryActive(recovery)){
@@ -1002,7 +1047,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.originalSourceRecoveryIntent.add(id);
     }
     if(originalSourceCpuMayHoldOwnInk(
-       recovery,actualOriginalOwnInk(realFoot))&&
+       recovery,actualOriginalOwnInk(realFoot),exposedHere)&&
        this.hasSourceFootSupport(realFoot)){
      const nativeFoot=this.nav.closestPoint(realFoot);
      if(Math.hypot(nativeFoot.x-realFoot.x,

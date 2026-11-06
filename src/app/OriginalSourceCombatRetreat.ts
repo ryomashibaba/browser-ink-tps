@@ -5,6 +5,8 @@ export interface OriginalSourceRetreatCandidate {
  readonly index:number;
  readonly foot:readonly [number,number,number];
  readonly actualOwnOriginalPaintCell:boolean;
+ /** True only after real living actor and registered SOURCE Rapier LOS. */
+ readonly exposedToRealEnemy?:boolean;
 }
 export interface OriginalSourceRetreatInput {
  readonly source:readonly [number,number,number,number];
@@ -32,11 +34,12 @@ export function originalSourceCpuWoundedRecoveryActive(x:OriginalSourceRetreatIn
    x.hp<x.maxHp*.70:x.hp<=x.maxHp*.35;
 }
 export function originalSourceCpuMayHoldOwnInk(
- x:OriginalSourceRetreatInput, actualOwnOriginalPaintCell:boolean
+ x:OriginalSourceRetreatInput, actualOwnOriginalPaintCell:boolean,
+ exposedToRealEnemy=false
 ):boolean{
  // The caller must independently verify both actual registered Rapier foot
  // support and an active native GameplayInkSystem OWN source cell.
- return actualOwnOriginalPaintCell===true&&
+ return actualOwnOriginalPaintCell===true&&!exposedToRealEnemy&&
   originalSourceCpuWoundedRecoveryActive(x);
 }
 export function rankOriginalSourceCombatRetreatGoals(x:OriginalSourceRetreatInput):number[]{
@@ -54,6 +57,7 @@ export function rankOriginalSourceCombatRetreatGoals(x:OriginalSourceRetreatInpu
  }).sort((a,b)=>{
   const d=(g:OriginalSourceRetreatCandidate)=>
    Math.hypot(g.foot[0]-x.realFoot[0],g.foot[2]-x.realFoot[2]);
-  return d(a)-d(b)||a.index-b.index;
+  return Number(a.exposedToRealEnemy===true)-
+   Number(b.exposedToRealEnemy===true)||d(a)-d(b)||a.index-b.index;
  }).map(g=>g.index);
 }

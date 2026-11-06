@@ -41,6 +41,7 @@ describe('F3 original SOURCE low-HP survival goal preference',()=>{
   expect(wounded(genuine())).toBe(true);
   expect(hold(genuine(),true)).toBe(true);
   expect(hold(genuine(),false)).toBe(false);
+  expect(hold(genuine(),true,true)).toBe(false);
   expect(wounded({...genuine(),hp:55})).toBe(false);
   expect(wounded({...genuine(),hp:55,
    recoveringFromRealDamage:true})).toBe(true);
@@ -50,6 +51,20 @@ describe('F3 original SOURCE low-HP survival goal preference',()=>{
    recoveringFromRealDamage:true},true)).toBe(true);
   expect(hold({...genuine(),hp:70,
    recoveringFromRealDamage:true},true)).toBe(false);
+ });
+ it('prefers registered-source cover instead of standing in actual enemy fire',()=>{
+  const x={...genuine(),originalCandidates:[
+   {index:0,foot:[0,3,47] as const,actualOwnOriginalPaintCell:true,
+    exposedToRealEnemy:true},
+   {index:1,foot:[1,3,50] as const,actualOwnOriginalPaintCell:true,
+    exposedToRealEnemy:false},
+   {index:2,foot:[0,3,48] as const,actualOwnOriginalPaintCell:true,
+    exposedToRealEnemy:false}
+  ]};
+  // Actual source/ink/route authority is STILL required by caller.
+  expect(rank(x)).toEqual([2,1,0]);
+  expect(rank({...x,source:[25,17,26,1]})).toEqual([]);
+  expect(rank({...x,hp:75,recoveringFromRealDamage:true})).toEqual([]);
  });
  it('a death, counterfeit source, detached CPU or invented ink cannot hold',()=>{
   for(const patch of [

@@ -849,7 +849,8 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally,
    b31Params.get('t21QaDrive')==='source'&&
    realAllyRally&&realAllyInk,
-   b192HumanCombatEnabled,b193Coop,b441OptIn,b448OptIn);
+   b192HumanCombatEnabled,b193Coop,b441OptIn,b448OptIn,
+   b214BattleInk);
   this.canvas.dataset.t21B448RealA3OriginalGoal=b448OptIn?
    'STRICT_REAL_CPU_A3_ORIGINAL_GOAL_REAUTHORIZATION':'OFF';
   this.canvas.dataset.t21B441OriginalFrontline=b441OptIn?
