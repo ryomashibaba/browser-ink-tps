@@ -30,6 +30,7 @@ import {b421RealEnemyStandoff,type B421OriginalWeaponLane}
 import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
 import {GAME_CONFIG} from '../config/game/gameConfig';
+import {rankOriginalSourceCombatRetreatGoals} from './OriginalSourceCombatRetreat';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
  b470MayAuditRealInkRankedSameSideFront,
@@ -949,6 +950,59 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b471SourceDecision='ORIGINAL_PATH_LOST';
      }
     }
+   }
+  }
+  // A genuinely wounded source CPU may recover by returning to ACTUAL OWN
+  // original paint along an already registered same-side native route.
+  // This changes ONLY the next Crowd goal; real Rapier KCC owns every step,
+  // existing GameplayInkSystem owns HP regeneration, and false crossings,
+  // new floors, invented enemy actors, score and HP injection remain forbidden.
+  // An explicit player C order above retains its previous priority.
+  if(this.enableB192HumanCombat&&this.sourceInk&&this.physics&&
+     bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+     this.physicallyRejoined.has(id)&&Number.isFinite(bot.hp)&&
+     this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'){
+   const ink=this.sourceInk;
+   const actualOriginalSource=[
+    this.stage.solids.length,this.stage.paintSurfaces.length,
+    this.stage.navigationLinks?.length??-1,
+    this.stage.paintSurfaces.filter(
+     p=>(p.flags&SurfaceFlags.Scoreable)!==0).length
+   ] as const;
+   const originalCells=candidates.map((goal,index)=>{
+    const sample=ink.sampleWorld(new Vec3(
+     goal.x,goal.y+.06,goal.z),.38,SurfaceFlags.Paintable);
+    const surface=sample?.surface;
+    const cx=sample&&surface?Math.floor(sample.u/surface.cellSize):-1;
+    const cy=sample&&surface?Math.floor(sample.v/surface.cellSize):-1;
+    const ownVerified=!!sample&&!!surface&&
+     surface.id.startsWith('UndertowT21D:')&&!surface.isScoreable&&
+     (surface.baseFlags&SurfaceFlags.Paintable)!==0&&
+     sample.owner===bot.team&&
+     cx>=0&&cx<surface.widthCells&&cy>=0&&cy<surface.heightCells&&
+     surface.isCellActive(cx,cy);
+    return {index,foot:[goal.x,goal.y,goal.z] as [number,number,number],
+     actualOwnOriginalPaintCell:ownVerified};
+   });
+   const recoveryIndices=rankOriginalSourceCombatRetreatGoals({
+    source:actualOriginalSource,selectedOriginalCombat:true,
+    activeGroundedRejoined:true,team:bot.team===Team.A?'A':'B',
+    hp:bot.hp??NaN,maxHp:GAME_CONFIG.combat.playerMaxHp,
+    realFoot:[realFoot.x,realFoot.y,realFoot.z],
+    originalCandidates:originalCells
+   });
+   for(const index of recoveryIndices){
+    const safeGoal=candidates[index];
+    if(!safeGoal||!this.hasSourceFootSupport(realFoot)||
+       !this.hasSourceFootSupport(safeGoal))continue;
+    const native=this.nav.auditPath(realFoot,safeGoal);
+    if(!native.reachedTarget||native.pointCount===0||
+       native.startSnapDistanceMeters>.20||
+       native.endSnapDistanceMeters>.20||
+       !this.hasSourceSupportedRoute(native,sign))continue;
+    out.copy(safeGoal);
+    this.realGoalRequests++;
+    return true;
    }
   }
   // F3-B: in this opt-in source game only, real B-team CPUs can pursue
