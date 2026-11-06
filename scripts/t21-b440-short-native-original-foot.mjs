@@ -1043,6 +1043,24 @@ async function main(){
      b484.originalCapsuleRouteCertified!==false||
      b484.commandCausedAllMovementCertified!==false||
      b484.trueArrivalOnlyFromB471!==true||
+     // Both C events are genuine; per-order progress must never inherit
+     // the first order's near-zero distance on the second actual key.
+     b484.currentOrderKeyRequest!==2||
+     !Number.isSafeInteger(b484.currentOrderNativeRows)||
+     b484.currentOrderNativeRows<1||
+     b484.currentOrderNativeRows>=b484.nativeRows||
+     b484.currentOrderArrivalOnlyFromOriginalB471!==true||
+     !Array.isArray(b484.currentOrderFirstObservedFoot)||
+     b484.currentOrderFirstObservedFoot.length!==3||
+     !b484.currentOrderFirstObservedFoot.every(Number.isFinite)||
+     !Number.isFinite(b484.currentOrderObservedFootTravelMeters)||
+     b484.currentOrderObservedFootTravelMeters<0||
+     (b484.currentOrderClosestPhysicalGoalDistanceXZ!==null&&
+      (!Number.isFinite(b484.currentOrderClosestPhysicalGoalDistanceXZ)||
+       b484.currentOrderClosestPhysicalGoalDistanceXZ<0))||
+     (b484.currentOrderApprovedOriginalGoal!==null&&
+      (!Array.isArray(b484.currentOrderApprovedOriginalGoal)||
+       !b484.currentOrderApprovedOriginalGoal.every(Number.isFinite)))||
      !Array.isArray(b484.originalApprovedGoal)||
      !b484.originalApprovedGoal.every((v,i)=>
       Number.isFinite(v)&&Math.abs(v-
@@ -1058,6 +1076,47 @@ async function main(){
    file:'b484-real-source-a1-foot-60hz.json',
    nativeActorPositionWrites:0,originalRouteAuthorizationChanged:false,
    officialWinner:'NONE'};
+  save();
+  // The PLAYER sees the same genuine second C-order progress in the
+  // existing actual browser HUD. Do not dispatch synthetic DOM events or
+  // claim a route/arrival from the UI text alone.
+  const playerOrderHud=await until(async()=>evaluate(`(() => {
+   const e=document.querySelector('#t21-f3-b141-real-ally');
+   const n=window.__t21F3?.snapshot?.();
+   const trace=window.__t21F3?.b484ActualA1CKeyFollowThrough?.();
+   if(!e||!n||!trace)return null;
+   return {nativeTick:n.tick,matchState:n.matchState,paused:n.paused,
+    playerVisible:!e.hidden&&getComputedStyle(e).display!=='none',
+    text:e.textContent,
+    originalRouteClaim:e.dataset.t21B141CertifiedRoute,
+    actualOriginalArrivals:e.dataset.t21B471ActualOriginalArrivals,
+    genuineRequests:trace.genuineKeyRequests,
+    currentOrderKeyRequest:trace.currentOrderKeyRequest,
+    currentOrderClosestPhysicalGoalDistanceXZ:
+     trace.currentOrderClosestPhysicalGoalDistanceXZ,
+    nativeCpuRejoins:n.cpu?.physicalRejoins?.length,
+    sourceScoreable:n.sourceScoreablePromotions};
+  })()`),20000,250);
+  if(playerOrderHud?.matchState!=='PLAYING'||
+     playerOrderHud.paused!==false||
+     playerOrderHud.playerVisible!==true||
+     playerOrderHud.originalRouteClaim!=='false'||
+     playerOrderHud.nativeCpuRejoins!==7||
+     playerOrderHud.sourceScoreable!==0||
+     playerOrderHud.genuineRequests!==2||
+     playerOrderHud.currentOrderKeyRequest!==2||
+     !playerOrderHud.text?.includes('A1 C ORDER 2 · ')||
+     !playerOrderHud.text.includes('verified arrivals total ')||
+     !(
+      playerOrderHud.text.includes('this order closest ')||
+      playerOrderHud.text.includes('original goal pending / HOLD')
+     ))
+   fail('B484_GENUINE_SECOND_C_ORDER_PLAYER_HUD_NOT_VERIFIED');
+  proof.b484RealSecondOrderPlayerHud={
+   ...playerOrderHud,
+   genuineChromiumPlayerText:true,perOrderCounterFromNativePhysics:true,
+   certifiedOfficialEnemyEngagement:false,
+   certifiedOriginalCrossTeamPath:false,officialWinner:'NONE'};
   save();
   // B486 independent real 60Hz HUMAN and 3-vs-4 CPU proximity proof.
   // Distance is never shot contact, opponent native path or certified 4v4.
