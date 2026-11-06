@@ -533,6 +533,49 @@ async function main(){
    n.b25SourcePaintRun?.status==='RUNNING'&&
    trueOriginalFoot(foot(n))?n:false;
  },360000,350);
+ if(b441Experiment){
+  // B476 is a PLAYER UI check on actual Chrome DOM, not a fake
+  // screenshot or model-authored source HUD. Native challenge MUST
+  // already be RUNNING after 7 original Rapier CPU joins.
+  const compact=await until(()=>evaluate(`(() => {
+   const c=document.querySelector('#t21-f3-b25-paint-run');
+   const f=document.querySelector('#t21-f3-b464-real-cpu-frontline');
+   const n=window.__t21F3?.snapshot?.();
+   if(!c||!f||!n)return null;
+   const a=c.getBoundingClientRect(),b=f.getBoundingClientRect();
+   return {nativeTick:n.tick,realMission:n.b25SourcePaintRun?.status,
+    missionPaint:n.b25SourcePaintRun?.humanChangedImpactCells,
+    missionGround:n.b25SourcePaintRun?.realGroundedTravelMeters,
+    visible:!c.hidden&&getComputedStyle(c).display!=='none',
+    actualB476State:c.dataset.t21B476State,
+    compact:c.dataset.t21B476Compact,
+    originalSource:c.dataset.t21B476OriginalSource,
+    officialWinner:c.dataset.t21B476OfficialWinner,
+    b25:{left:a.left,right:a.right,top:a.top,bottom:a.bottom},
+    frontline:{left:b.left,right:b.right,top:b.top,bottom:b.bottom},
+    actualProgressVisible:
+     getComputedStyle(document.querySelector(
+      '#t21-f3-b53-objectives')).display!=='none',
+    onlyActualPractice:
+     document.querySelector('#t21-f3-b53-paint-label')?.textContent,
+    realFrontlinePanel:f.dataset.t21B464Authority};
+  })()`),15000,200);
+  if(compact.realMission!=='RUNNING'||!compact.visible||
+     compact.actualB476State!=='LIVE'||compact.compact!=='true'||
+     compact.originalSource!=='25/17/26/0'||
+     compact.officialWinner!=='NONE'||
+     compact.realFrontlinePanel!=='25/17/26/0'||
+     !compact.actualProgressVisible||
+     !Number.isFinite(compact.missionGround)||
+     !Number.isSafeInteger(compact.missionPaint)||
+     compact.b25.left>25||compact.b25.right>350||
+     compact.b25.right>=compact.frontline.left-15)
+    fail('B476_REAL_PLAYER_PRACTICE_HUD_OBSCURES_CPU_FRONTLINE');
+  proof.b476RealPlayerFocusedObjective={
+   ...compact,actualOriginalPlayerNoSyntheticInk:true,
+   gameplayWrites:0,scoreable:0,officialWinner:'NONE'};
+  save();
+ }
  proof.stage='TRUE_SEVEN_CPU_READY';proof.before={
   tick:ready.tick,body:ready.player.position,sourceFoot:foot(ready),
   cpuRejoins:ready.cpu.physicalRejoins.length,shots:ready.shotsFired,

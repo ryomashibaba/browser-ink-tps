@@ -56,6 +56,8 @@ import {b473RealSourceCombatLifeReadoutSelected} from './B473RealSourceCombatLif
 import {b474OriginalFrontSteeringRefreshSelected} from './B474OriginalFrontSteeringRefresh';
 import {b475RealFrontlineReadyMode,b475MayArmRealSourceFrontlineReady}
  from './B475RealFrontlineReadyChallenge';
+import {b476OriginalFrontlineObjectiveLayout}
+ from './B476OriginalFrontlineObjectiveLayout';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
@@ -2090,7 +2092,9 @@ export class UndertowF3PlayablePreviewApp{
     const state=this.b25Run.snapshot().status;
     // A dedicated co-op world always runs a genuine ALLY_SYNC mission;
     // changing to CLASSIC would lose the actual A1 objective silently.
-    if(b193Coop||state==='ARMED'||state==='RUNNING')return;
+    if(b193Coop||this.canvas.dataset.t21B475RealFrontlineReady===
+       'ACTUAL_SOURCE_CLASSIC_PREARM'||
+       state==='ARMED'||state==='RUNNING')return;
     const genuineAllyPracticeAvailable=
      this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
      this.canvas.dataset.t21B137AllyRally===
@@ -5734,6 +5738,43 @@ export class UndertowF3PlayablePreviewApp{
  }
  private refreshB25PaintRun(){
   const run=this.b25Run.snapshot();
+  // B476: B475 user-selected SOURCE only, real native status only.
+  // Keep the original READY button reachable, then put the compact
+  // legitimate B25 paint/ground progress away from the B464 right HUD.
+  const b476=b476OriginalFrontlineObjectiveLayout({
+   selected:this.canvas.dataset.t21B475RealFrontlineReady===
+    'ACTUAL_SOURCE_CLASSIC_PREARM',
+   originalStage:[this.rawStage.solids.length,
+    this.rawStage.paintSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,
+    this.b45SourceSurfaces.filter(s=>s.isScoreable).length],
+   nativeTick:this.clock.tick,matchState:this.matchState,
+   paused:this.paused,
+   pointerLocked:document.pointerLockElement===this.canvas,
+   practiceStatus:run.status,stopReason:this.stopReason
+  });
+  if(b476){
+   const card=this.b25RunCard;
+   card.style.left='12px';card.style.right='auto';
+   card.style.bottom='16px';
+   card.style.width=b476.compact?
+    'min(230px,calc(100vw - 24px))':
+    'min(256px,calc(100vw - 24px))';
+   card.style.padding=b476.compact?'7px 9px':'10px 12px';
+   card.style.pointerEvents=b476.compact?'none':'auto';
+   card.dataset.t21B476State=b476.phase;
+   card.dataset.t21B476Compact=String(b476.compact);
+   card.dataset.t21B476OriginalSource='25/17/26/0';
+   card.dataset.t21B476OfficialWinner='NONE';
+   // No fake progress: the existing B53 bars still use the B25
+   // genuine post-PaintCoordinator cells and grounded Rapier travel.
+   const record=card.querySelector<HTMLElement>('#t21-f3-b55-record');
+   const mode=card.querySelector<HTMLElement>('#t21-f3-b56-variant');
+   if(record)record.hidden=b476.compact;
+   if(mode)mode.hidden=b476.compact;
+   this.b25RunButton.hidden=b476.compact;
+   this.b25RunButton.style.display=b476.compact?'none':'';
+  }
   const b411Live=this.b411CompactGenuineSourceRound(run);
   this.b25RunCard.dataset.t21B411Focused=String(b411Live);
   // Hide only the finished short-practice card, never the real match.
@@ -5846,8 +5887,12 @@ export class UndertowF3PlayablePreviewApp{
   const modeButton=this.b25RunCard.querySelector<HTMLButtonElement>(
    '#t21-f3-b56-variant')!;
   const dedicatedCoop=this.canvas.dataset.t21B193Coop==='REAL_A1_ORIGINAL_SOURCE';
-  modeButton.disabled=dedicatedCoop||run.status==='ARMED'||run.status==='RUNNING';
+  const genuineB475=this.canvas.dataset.t21B475RealFrontlineReady===
+   'ACTUAL_SOURCE_CLASSIC_PREARM';
+  modeButton.disabled=dedicatedCoop||genuineB475||
+   run.status==='ARMED'||run.status==='RUNNING';
   modeButton.textContent=dedicatedCoop?'ALLY SYNC · TRUE A1 IMPACT GOAL':
+   genuineB475?'REAL FRONTLINE · CLASSIC SOURCE CHALLENGE':
    'NEXT RUN · '+this.b56NextVariant+
    (modeButton.disabled?' · LOCKED':' · click to switch');
   this.b25RunCard.dataset.t21B56NextVariant=this.b56NextVariant;
