@@ -113,7 +113,8 @@ import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
- sourceFinishedReplayHref,sourceReplayHotkeyAction} from './SourcePlayPortal';
+ sourceFinishedReplayHref,sourceReplayHotkeyAction,
+ sourcePlayStoreWeaponSelection} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -1665,6 +1666,13 @@ export class UndertowF3PlayablePreviewApp{
      // Show the chosen EXISTING real sub kit immediately, not the default
      // pulse bomb stale label until the next actual physical F throw.
      this.stats.playerSubWeaponName=subWeaponProfile(weaponKit(approved).sub).displayName;
+     // Source-only menu return must remember the CURRENT READY kit.
+     // Store no actors, CPU, physics, clock, painting, or scoring data.
+     if(sourcePlayPortalReturnUrl(window.location.href)&&
+        !new URLSearchParams(window.location.search).has('t21QaInput')){
+      try{sourcePlayStoreWeaponSelection(window.localStorage,approved);}
+      catch{/* Storage is optional; actual native kit stays selected. */}
+     }
      this.refresh();
     }else choose.value=this.projectiles.currentPlayerWeapon.id;
    });

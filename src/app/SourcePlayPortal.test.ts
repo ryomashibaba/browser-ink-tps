@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourcePlayPortalReturnUrl,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
- sourceFinishedReplayAction,sourceFinishedReplayHref}
+ sourceFinishedReplayAction,sourceFinishedReplayHref,
+ sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -350,5 +351,25 @@ describe('Sprint A genuine four-mode 180s same-kit new-world replay',()=>{
    original.replace('&t21W10B448=realA3Front',''),'ink-saber'))).toBe(null);
   expect(sourceFinishedReplayHref(finished(
    original+'&t21W10B193=allyCoop','ink-saber'))).toBe(null);
+ });
+});
+
+describe('Sprint A SOURCE selected READY kit returns through the same portal',()=>{
+ it('remembers only the existing twelve physical player kits',()=>{
+  const writes:string[][]=[];
+  const storage={setItem:(key:string,value:string)=>{writes.push([key,value]);}};
+  for(const id of WEAPON_ORDER)
+   expect(sourcePlayStoreWeaponSelection(storage,id)).toBe(true);
+  expect(writes).toHaveLength(WEAPON_ORDER.length);
+  expect(writes.map(([key])=>key)).toEqual(
+   Array(WEAPON_ORDER.length).fill(SOURCE_PLAY_WEAPON_STORAGE_KEY));
+  expect(writes.map(([,value])=>value)).toEqual(WEAPON_ORDER);
+  expect(sourcePlayStoreWeaponSelection(storage,'unapproved')).toBe(false);
+  expect(sourcePlayStoreWeaponSelection(null,'ink-saber')).toBe(false);
+  expect(writes).toHaveLength(WEAPON_ORDER.length);
+ });
+ it('leaves the running game usable when storage access is forbidden',()=>{
+  const blocked={setItem:()=>{throw Error('private storage');}};
+  expect(sourcePlayStoreWeaponSelection(blocked,'ink-saber')).toBe(false);
  });
 });

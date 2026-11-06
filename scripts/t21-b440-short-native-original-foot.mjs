@@ -789,16 +789,39 @@ async function main(){
   // projectile, enemy movement, hit, score or simulation clock injection.
   const beforeShot=await snap();authority(beforeShot);
   const pressedAtTick=beforeShot.tick;
-  let pressed=false,shot=null;
+  let pressed=false,shot=null,latestRealMouseSample=null;
   try{
    await cdp('Input.dispatchMouseEvent',{
     type:'mousePressed',x:800,y:450,button:'left',buttons:1,clickCount:1});
    pressed=true;
-   shot=await until(async()=>{
-    const n=await snap();authority(n);
-    return n.tick>=pressedAtTick+6&&
-     n.shotsFired>beforeShot.shotsFired?n:false;
-   },25000,250);
+   try{
+    shot=await until(async()=>{
+     const n=await snap();authority(n);
+     const pointerLocked=await locked();
+     latestRealMouseSample={
+      nativeTick:n.tick,realTickDelta:n.tick-pressedAtTick,
+      actualHumanShots:n.shotsFired,realCpuCount:n.cpu.physicalRejoins.length,
+      nativeState:n.matchState,paused:n.paused,pointerLocked
+     };
+     // Genuine SwiftShader may be slow. Original native +6 and real
+     // projectile acceptance remain mandatory, never synthesize a shot.
+     if(n.tick<pressedAtTick||n.matchState!=='PLAYING'||n.paused||
+        !pointerLocked||n.cpu.physicalRejoins.length!==7)
+      fail('B475_REAL_NATIVE_MOUSE_INPUT_INTERRUPTED');
+     return n.tick>=pressedAtTick+6&&
+      n.shotsFired>beforeShot.shotsFired?n:false;
+    },45000,250);
+   }catch(error){
+    proof.b475NativeMouseShotHold={
+     source:'25/17/26/0',input:'REAL_CDP_MOUSE_PRESSED',
+     firstNativeTick:pressedAtTick,
+     initialHumanShots:beforeShot.shotsFired,
+     lastObserved:latestRealMouseSample,
+     nativeClockWrites:0,actorWrites:0,scoreWrites:0,
+     syntheticShots:0,reason:String(error)
+    };
+    save();throw error;
+   }
   }finally{
    if(pressed)await cdp('Input.dispatchMouseEvent',{
     type:'mouseReleased',x:800,y:450,button:'left',buttons:0,clickCount:1});

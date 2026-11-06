@@ -5,6 +5,16 @@ import {WEAPON_ORDER,DEFAULT_WEAPON_ID,type WeaponId}
  from '../weapons/WeaponCatalog';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 
+/** Shared SOURCE-only human weapon preference. Never stores game state. */
+export const SOURCE_PLAY_WEAPON_STORAGE_KEY='t21-source-weapon-selection-v1';
+export function sourcePlayStoreWeaponSelection(
+ storage:Pick<Storage,'setItem'>|null,weaponId:string
+):boolean{
+ if(!storage||!WEAPON_ORDER.includes(weaponId as WeaponId))return false;
+ try{storage.setItem(SOURCE_PLAY_WEAPON_STORAGE_KEY,weaponId);return true;}
+ catch{return false;}
+}
+
 /** One-click T21 launcher. Keep original T20 index/game untouched.
  * Both modes boot a FRESH native SOURCE-only world. Never grant scoring,
  * actor teleport, geometry, production, or unaudited 4v4 authority. */

@@ -1,6 +1,7 @@
 import {readSourceCameraPreferences,writeSourceCameraPreferences,
  type SourceCameraPreferences} from './camera/SourceCameraPreferences';
-import {sourcePlayWeaponModeDestinations} from './app/SourcePlayPortal';
+import {sourcePlayWeaponModeDestinations,SOURCE_PLAY_WEAPON_STORAGE_KEY,
+ sourcePlayStoreWeaponSelection} from './app/SourcePlayPortal';
 import {WEAPON_ORDER,WEAPON_PROFILES,DEFAULT_WEAPON_ID,
  type WeaponId} from './weapons/WeaponCatalog';
 const circuit=document.querySelector<HTMLAnchorElement>('#play-circuit');
@@ -41,7 +42,7 @@ try{
  };
  // Persist only a player-chosen safe 12-weapon SOURCE loadout.
  // Unknown/blocked storage cannot introduce unapproved weapon IDs.
- const sourceWeaponStorageKey='t21-source-weapon-selection-v1';
+ const sourceWeaponStorageKey=SOURCE_PLAY_WEAPON_STORAGE_KEY;
  let remembered:WeaponId=DEFAULT_WEAPON_ID;
  try{
   const stored=window.localStorage.getItem(sourceWeaponStorageKey);
@@ -51,7 +52,7 @@ try{
  weaponChoice.value=remembered;
  weaponChoice.addEventListener('change',()=>{
   updateStartWeapon();
-  try{window.localStorage.setItem(sourceWeaponStorageKey,weaponChoice.value)}
+  try{sourcePlayStoreWeaponSelection(window.localStorage,weaponChoice.value);}
   catch{/* Still applies to the next game without persistence. */}
  });
  updateStartWeapon();
