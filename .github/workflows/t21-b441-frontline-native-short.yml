@@ -109,6 +109,24 @@ jobs:
         run: node scripts/t21-b452-native-foot-vs-recast-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B454 independent every-native-tick B2 B4 original Rapier SOURCE physical foot audit
         run: node scripts/t21-b454-real-native-full-rate-source-foot.mjs /tmp/t21-b441-short-native-frontline/
+      - name: Validate stored genuine native JSON evidence files
+        run: |
+          node --input-type=module -e '
+            import {readdirSync,readFileSync} from "node:fs";
+            const root="/tmp/t21-b441-short-native-frontline";
+            const files=readdirSync(root).filter(file=>file.endsWith(".json"));
+            for(const required of [
+              "b486-original-human-7cpu-enemy-distance-60hz.json",
+              "b487-real-original-16-cross-team-route-audit.json",
+              "b488-real-original-f4-gap-authority-hold.json"
+            ])if(!files.includes(required))throw Error("REQUIRED_NATIVE_JSON_MISSING_"+required);
+            for(const file of files){
+              const parsed=JSON.parse(readFileSync(root+"/"+file,"utf8"));
+              if(!parsed||typeof parsed!=="object")
+                throw Error("NATIVE_JSON_OBJECT_INVALID_"+file);
+              console.log("VALIDATED_NATIVE_JSON "+file);
+            }
+          '
       - name: Preserve real SOURCE evidence even if HOLD
         if: always()
         uses: actions/upload-artifact@v4

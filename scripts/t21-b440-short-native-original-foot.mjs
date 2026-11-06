@@ -1080,7 +1080,7 @@ async function main(){
       row.tick===b486.rows60Hz[i-1].tick+1))
     fail('B486_ACTUAL_7CPU_SOURCE_PROXIMITY_EVIDENCE_HOLD');
   writeFileSync(resolve(out,'b486-original-human-7cpu-enemy-distance-60hz.json'),
-   JSON.stringify(b486,null,2)+'\\n');
+   JSON.stringify(b486,null,2)+'\n');
   proof.b486TrueSourceNaturalEncounterDistance={
    ...Object.fromEntries(Object.entries(b486).filter(([key])=>
     key!=='rows60Hz')),

@@ -47,3 +47,9 @@ B454の60Hzでは、拒否されたRecast点の平面近傍（B2 0.029m、B4 0.0
 5. 証拠が足りなければ他の真正操作・原作塗装・A1協力を保全して停止し、無意味な小HUD修正や同一条件の反復試行へ戻らない。
 
 **結論：B487はTECH/QA PASS、原作SOURCEの中央経路と正式4v4はART/SOURCE AUTHORITY HOLD。** 次の主工程は中央の原作資料に裏付けられた安全なステージ完成であり、同じ局所CPUゴールだけを量産しない。
+
+## 2026-11-06 17時台 JST追補 — B488同一Chromium原作ギャップ判断 / RAW形式の独立確認
+- 保護研究branch: `research/t21-integrated-a1-c-patrol-four-mode-20261105`。新B488読取専用ゲートは `84d5100bd7a300fce022a1da617ea3dc9415ad6b` で [既存B441真正Chrome #42187486215](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42187486215) **SUCCESS**。TypeScript/Vitest/build、実7CPU・Recast/Rapier、B450/B452/B454独立物理監査は同runで成功。
+- 真正Artifact `13488422870` 内 `b488-real-original-f4-gap-authority-hold.json` を独立にJSON.parse確認：実native tick **1782**、人間/CPU現在位置からの原作Recast **0/16**、元26リンクは全て同側一方通行、実人間↔敵最短 **104.586172m**、味方CPU↔敵最短 **78.852567m**。過去2026-09-30監査との一致は **8局所ギャップ（各陣地4）**、独立に衝突認証されたgap Face **0**。判定 `HOLD_REFERENCE_REQUIRED_NO_AUTHORIZED_CROSSING`。**これは自然な中央経路完成、相手HPヒット、原作Collision権限、正式4v4のPASSではない**。
+- 同Artifactの `b486-original-human-7cpu-enemy-distance-60hz.json` だけ、末尾にリテラル `\\n` が追加されJSON.parseが失敗した。実距離測定自体・ブラウザー試験結果を否定するものではないが、そのまま機械可読なRAWと呼ばない。今回の後続候補でB486出力を正しい改行に修正し、既存B441にJSONパーサー独立検証を追加。**修正後の真正CI結果が出るまでは、この修正をPASSとしない**。
+- 원本の25 Rapier solids /17 PaintSurfaces /26 NavLinks /0 Scoreableを変えない。個別8箇所のVer7.2.0 Turf collision/mesh Face認証と全身0.30m CPUカプセル経路は未入手。B488はread-only証拠レーンの結果として完了し、同じ8件を小監査で繰り返さず、**次の主バッチは許可済みSOURCEでのF3本物プレイ機能（実射撃・Ink・A1協力、必要時だけ敵HP自然交戦）へ戻す**。main/T19C/T20/原本/Pages/正式QA/Draft PR #5/本番/ART全て保護。
