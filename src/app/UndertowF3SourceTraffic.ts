@@ -1005,7 +1005,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        recovery,actualOriginalOwnInk(realFoot))&&
        this.hasSourceFootSupport(realFoot)){
      const nativeFoot=this.nav.closestPoint(realFoot);
-     if(nativeFoot.distance(realFoot)<=.20){
+     if(Math.hypot(nativeFoot.x-realFoot.x,
+      nativeFoot.y-realFoot.y,nativeFoot.z-realFoot.z)<=.20){
       out.copy(realFoot);
       this.realGoalRequests++;
       return true;
