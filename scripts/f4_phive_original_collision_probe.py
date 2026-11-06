@@ -25,6 +25,22 @@ EXPECTED_IDS = {
     "POSITIVE_Z": (37118, 37119),
     "NEGATIVE_Z": (37112, 37113),
 }
+# The actual original OBJ vertex IDs are pinned by the prior B239 extractor.
+# A face index alone is insufficient evidence of the right original triangle.
+EXPECTED_VERTICES = {
+    "POSITIVE_Z": ((320413, 320414, 320415),
+                   (320414, 320416, 320415)),
+    "NEGATIVE_Z": ((320401, 320402, 320403),
+                   (320402, 320404, 320403)),
+}
+EXPECTED_SIDE_AREA_M2 = 1.52523399523421
+# Negative-only gate: explicit native-layer disable means NOT human support.
+# Absence of these strings is not a positive walking/collision certificate.
+HUMAN_COLLISION_DISABLED = frozenset({
+    "SplPlayer", "SplPlayerHuman", "SplPlayerSquid_Visible",
+    "SplPlayerSquid_Invisible", "SplPlayerSquid_NoThroughFence",
+})
+UNRIDABLE_MATERIAL = frozenset({"Unridable", "GameUnridable"})
 
 
 def digest(path: Path) -> str:
@@ -48,13 +64,25 @@ def pinned_original_faces(data: dict) -> dict[str, list[tuple]]:
     for side, ids in EXPECTED_IDS.items():
         row = data.get("sides", {}).get(side)
         if not isinstance(row, dict) or row.get("sourceObject") != EXPECTED_OBJECT \
-                or row.get("realCpuTraversalsCertified", 0) != 0:
+                or row.get("realCpuTraversalsCertified") != 0 \
+                or row.get("actualRapierSupportCertified") is not False \
+                or not isinstance(row.get("sourceAreaSquareMeters"), (int, float)) \
+                or not math.isfinite(row["sourceAreaSquareMeters"]) \
+                or abs(row["sourceAreaSquareMeters"] - EXPECTED_SIDE_AREA_M2) > 1e-5:
             raise ValueError("B239_FLOORLINE_PROVENANCE_MISSING_" + side)
         faces = row.get("triangles", [])
         if len(faces) != 2 or tuple(f.get("originalFaceIndex") for f in faces) != ids:
             raise ValueError("B239_ORIGINAL_FACE_IDS_DRIFT_" + side)
         triangles = []
-        for face in faces:
+        if not isinstance(row.get("sourceMaterial"), str) or not row["sourceMaterial"]:
+            raise ValueError("B239_MISSING_ORIGINAL_SOURCE_MATERIAL_" + side)
+        for face_index, face in enumerate(faces):
+            if (not isinstance(face, dict)
+                or tuple(face.get("originalOBJVertexIDs", ())) != EXPECTED_VERTICES[side][face_index]
+                or face.get("sourceMaterial") != row["sourceMaterial"]
+                or not isinstance(face.get("sourceAreaSquareMeters"), (int, float))
+                or not math.isfinite(face["sourceAreaSquareMeters"])):
+                raise ValueError("B239_ORIGINAL_MATERIAL_VERTEX_OR_AREA_DRIFT_" + side)
             raw = face.get("vertices")
             if not isinstance(raw, list) or len(raw) != 3 or any(
                 not isinstance(v, list) or len(v) != 3 or
@@ -62,7 +90,22 @@ def pinned_original_faces(data: dict) -> dict[str, list[tuple]]:
                 for v in raw
             ):
                 raise ValueError("B239_INVALID_SOURCE_TRIANGLE_" + side)
-            triangles.append(tuple(tuple(float(x) for x in v) for v in raw))
+            tri = tuple(tuple(float(x) for x in v) for v in raw)
+            a, b, c = tri
+            ab = tuple(b[i] - a[i] for i in range(3))
+            ac = tuple(c[i] - a[i] for i in range(3))
+            normal = (ab[1]*ac[2]-ab[2]*ac[1],
+                      ab[2]*ac[0]-ab[0]*ac[2],
+                      ab[0]*ac[1]-ab[1]*ac[0])
+            magnitude = math.sqrt(sum(x*x for x in normal))
+            area = magnitude / 2
+            if (magnitude < 1e-9 or abs(normal[1])/magnitude < .5
+                or abs(area - face["sourceAreaSquareMeters"]) > 1e-6):
+                raise ValueError("B239_ORIGINAL_TRIANGLE_AREA_OR_NORMAL_DRIFT_" + side)
+            triangles.append(tri)
+        if abs(sum(f["sourceAreaSquareMeters"] for f in faces) -
+               EXPECTED_SIDE_AREA_M2) > 1e-5:
+            raise ValueError("B239_SIDE_SUM_AREA_DRIFT_" + side)
         out[side] = triangles
     return out
 
@@ -152,12 +195,30 @@ def parse_collision_obj(path: Path, target_bounds: list[tuple], margin: float = 
             "skippedNontriangular": skipped_nontriangular, "selected": selected}
 
 
+def parse_materials(materials: object) -> dict:
+    """Strictly parse PhiveConverter's documented per-usemtl JSON structure.
+
+    Flags are kept as raw names, not interpreted as positive stage authority.
+    """
+    if not isinstance(materials, dict) or not materials:
+        raise ValueError("PHIVE_MATERIAL_TABLE_MISSING")
+    for key, value in materials.items():
+        if not isinstance(key, str) or not key or not isinstance(value, dict):
+            raise ValueError("PHIVE_MATERIAL_ROW_NOT_OBJECT")
+        if "mat_name" in value and not isinstance(value["mat_name"], str):
+            raise ValueError("PHIVE_MATERIAL_NAME_INVALID")
+        for prop in ("mat_flags", "col_disable_flags"):
+            flags = value.get(prop, [])
+            if (not isinstance(flags, list) or
+                any(not isinstance(flag, str) or not flag for flag in flags)):
+                raise ValueError("PHIVE_MATERIAL_FLAGS_INVALID_" + prop)
+    return materials
+
+
 def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
     src = json.loads(b239.read_text(encoding="utf-8"))
     faces = pinned_original_faces(src)
-    materials = json.loads(materials_json.read_text(encoding="utf-8"))
-    if not isinstance(materials, dict) or not materials:
-        raise ValueError("PHIVE_MATERIAL_TABLE_MISSING")
+    materials = parse_materials(json.loads(materials_json.read_text(encoding="utf-8")))
     prepared = {}
     bounds = []
     for frame in ("stageProject", "originalObj"):
@@ -168,6 +229,14 @@ def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
                 bounds.append((tuple(min(p[c] for p in pts) for c in range(3)),
                                tuple(max(p[c] for p in pts) for c in range(3))))
     scanned = parse_collision_obj(collision_obj, bounds)
+    # A skipped n-gon in an independently converted collision mesh is a
+    # completeness gap, never silent evidence that there is no floor there.
+    # Only referenced materials near the target are checked; other materials
+    # may legitimately belong to far-away objects.
+    unknown = {name for name, _ in scanned["selected"] if name not in materials}
+    if unknown:
+        raise ValueError("PHIVE_TARGET_COLLIDER_MATERIAL_MISSING_" +
+                         ",".join(sorted(unknown)))
     out = {}
     for (frame,side,k), points in prepared.items():
         hits = defaultdict(set)
@@ -183,9 +252,19 @@ def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
             "materialCandidates": [{
                 "name": name,
                 "samplePoints": len(indices),
-                "materialMetadataPresent": name in materials,
-                "materialFlags": materials.get(name, {}).get("mat_flags"),
-                "collisionDisableFlags": materials.get(name, {}).get("col_disable_flags"),
+                "materialMetadataPresent": True,
+                "materialName": materials[name].get("mat_name"),
+                "materialFlags": materials[name].get("mat_flags", []),
+                "collisionDisableFlags": materials[name].get("col_disable_flags", []),
+                "explicitHumanCollisionLayerDisabled": bool(
+                    HUMAN_COLLISION_DISABLED.intersection(
+                        materials[name].get("col_disable_flags", []))),
+                "explicitUnridableMaterial": bool(
+                    UNRIDABLE_MATERIAL.intersection(
+                        materials[name].get("mat_flags", []))),
+                # Four inner probes are not continuous contact, so this
+                # flag must never be named a confirmed walkable surface.
+                "allFourInteriorSamplesOnThisMaterial": len(indices) == 4,
             } for name, indices in sorted(hits.items())]
         })
     return {
@@ -199,7 +278,10 @@ def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
         "candidateCollisionObjVertices": scanned["vertices"],
         "candidateCollisionObjFaces": scanned["faces"],
         "candidateNontriangularObjFacesSkipped": scanned["skippedNontriangular"],
+        "collisionObjTriangulationComplete": scanned["skippedNontriangular"] == 0,
         "comparisonCoordinateFrames": out,
+        "explicitHumanCollisionLayerDisableIsVetoOnly": True,
+        "originalFaceCoverageIsNotContinuousKccSupport": True,
         "collisionAssetSourceVersion": "UNVERIFIED_EXTERNAL_PROVENANCE_REQUIRED",
         "original7_2_0TurfCollisionFlagsVerified": False,
         "floorlinePlayerCollisionAuthorized": False,
