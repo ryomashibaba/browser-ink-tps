@@ -638,6 +638,19 @@ async function main(){
      return {left:s.left,right:s.right,top:s.top,bottom:s.bottom,
       visible:getComputedStyle(h).display!=='none'};
     })(),
+    nativeTeam:(()=>{
+     const t=document.querySelector('#t21-f3-b286-source-team');
+     if(!t)return null;
+     const r=t.getBoundingClientRect();
+     return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,
+      placement:t.dataset.t21B482NativeSourceTeamPlacement,
+      visible:!t.hidden&&getComputedStyle(t).display!=='none',
+      sourceScoreable:t.dataset.scoreable,
+      officialWinner:t.dataset.officialWinner,
+      enemyContactCertified:t.dataset.enemyContactCertified,
+      realAllyCount:t.dataset.allyActive,
+      realEnemyCount:t.dataset.enemyActive};
+    })(),
     focusedCssRestoration:!!document.querySelector(
      '#t21-f3-b245-layer-style')?.textContent?.includes(
       '#t21-f3-b25-paint-run[data-t21-b476-compact="true"]')};
@@ -662,6 +675,16 @@ async function main(){
      observed.b25.right<observed.frontline.left-15&&
      observed.focusedCssRestoration===true&&
      observed.f8?.visible===true&&
+     observed.nativeTeam?.visible===true&&
+     observed.nativeTeam.placement==='TOP_LEFT'&&
+     observed.nativeTeam.left<=30&&observed.nativeTeam.top<=30&&
+     observed.nativeTeam.bottom<observed.b25.top-20&&
+     observed.nativeTeam.right<observed.frontline.left-20&&
+     observed.nativeTeam.sourceScoreable==='0'&&
+     observed.nativeTeam.officialWinner==='NONE'&&
+     observed.nativeTeam.enemyContactCertified==='false'&&
+     observed.nativeTeam.realAllyCount==='3'&&
+     observed.nativeTeam.realEnemyCount==='4'&&
      (observed.f8.left>=observed.b25.right+5||
       observed.f8.bottom<=observed.b25.top-5||
       observed.f8.top>=observed.b25.bottom+5)&&

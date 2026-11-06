@@ -4,6 +4,7 @@
  * proximity, attack targets, or route/encounter certification.
  */
 import {type b211RealNativeRoster} from './B211NativeBattleRoster';
+import {b475RealFrontlineReadyMode} from './B475RealFrontlineReadyChallenge';
 
 type NativeRoster=NonNullable<ReturnType<typeof b211RealNativeRoster>>;
 export function b286CompactNativeRoster(v:NativeRoster|null){
@@ -38,6 +39,16 @@ export function b286CompactNativeRoster(v:NativeRoster|null){
  };
 }
 
+/** B482: in genuine B441 PLAYER study, the B464 frontline occupies the
+ * lower-right. Put the existing real B286 7-CPU team status at upper-left
+ * where the genuine original 1600x900 screenshot shows free view space.
+ * Normal three source modes, QA, native Actor, nav, ink and score stay
+ * unchanged. Never opt into B441/B448 by virtue of this UI choice. */
+export function b482NativeFrontlineTeamPlacement(
+ query:Pick<URLSearchParams,'get'>
+):'TOP_LEFT'|'BOTTOM_RIGHT'{
+ return b475RealFrontlineReadyMode(query)?'TOP_LEFT':'BOTTOM_RIGHT';
+}
 export function createB286CompactSourceTeam(ui:HTMLElement){
  const root=document.createElement('aside');
  root.id='t21-f3-b286-source-team';
@@ -48,10 +59,16 @@ export function createB286CompactSourceTeam(ui:HTMLElement){
  root.dataset.officialWinner='NONE';
  root.dataset.enemyContactCertified='false';
  root.dataset.gameplayWrites='0';
+ const placement=b482NativeFrontlineTeamPlacement(
+  new URLSearchParams(window.location.search));
+ root.dataset.t21B482NativeSourceTeamPlacement=placement;
  root.style.cssText=
-  // F3 radar occupies top-right (up to Y~326 in real Chromium).
-  // Put compact team at bottom-right: no radar overlap or ghost text.
-  'position:fixed;right:14px;bottom:18px;z-index:37;pointer-events:none;'+
+  // B441 genuine research HUD goes top-left, away from B464/reticle.
+  // Other three source modes preserve the established lower-right.
+  'position:fixed;'+(placement==='TOP_LEFT'?
+   'left:14px;top:14px;right:auto;bottom:auto;':
+   'right:14px;bottom:18px;left:auto;top:auto;')+
+  'z-index:37;pointer-events:none;'+
   'width:min(278px,calc(100vw - 28px));box-sizing:border-box;'+
   'padding:10px 12px;border-radius:11px;border:1px solid #65c8d4;'+
   'color:#edfcff;background:rgba(5,28,42,.97);'+

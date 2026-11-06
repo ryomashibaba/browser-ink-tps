@@ -1,6 +1,9 @@
 import {describe,expect,it} from 'vitest';
 import {b211RealNativeRoster,type B211NativeInput} from './B211NativeBattleRoster';
-import {b286CompactNativeRoster} from './B286SourceCompactTeam';
+import {b286CompactNativeRoster,b482NativeFrontlineTeamPlacement}
+ from './B286SourceCompactTeam';
+import {sourcePlayFrontlineResearchUrl,sourcePlayPortalDestinations}
+ from './SourcePlayPortal';
 
 function input():B211NativeInput{
  return {
@@ -13,6 +16,29 @@ function input():B211NativeInput{
   }))
  };
 }
+describe('B482 player 7CPU status does not cover the B441 frontier',()=>{
+ const base='https://example.org/browser-ink-tps/play-source.html';
+ it('moves only actual B441 SOURCE combat research to upper left',()=>{
+  const front=new URL(sourcePlayFrontlineResearchUrl(base));
+  expect(b482NativeFrontlineTeamPlacement(front.searchParams)).toBe('TOP_LEFT');
+  const other=sourcePlayPortalDestinations(base);
+  for(const url of Object.values(other))
+   expect(b482NativeFrontlineTeamPlacement(new URL(url).searchParams))
+    .toBe('BOTTOM_RIGHT');
+ });
+ it('cannot reveal this positioning for production, coerced QA or co-op',()=>{
+  const q=new URL(sourcePlayFrontlineResearchUrl(base)).searchParams;
+  for(const [k,v] of [
+   ['t21Play','production'],['t21QaInput','deterministic'],
+   ['t21QaDrive','bad'],['t21W10B441','off'],
+   ['t21W10B203','off'],['t21W10B192','off'],
+   ['t21W10B193','allyCoop'],['t21W10B384','loadoutCircuit']
+  ] as const){
+   const s=new URLSearchParams(q);s.set(k,v);
+   expect(b482NativeFrontlineTeamPlacement(s)).toBe('BOTTOM_RIGHT');
+  }
+ });
+});
 describe('B286 source team compact HUD, native read-only roster',()=>{
  it('reports real no-rejoin READY condition instead of invented 4v4',()=>{
   const v=b286CompactNativeRoster(b211RealNativeRoster(input()));
