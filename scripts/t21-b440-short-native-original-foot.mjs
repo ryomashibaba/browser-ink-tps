@@ -552,15 +552,33 @@ async function main(){
     hasB441:n.cpu?.sourcePatrol?.b441Enabled,
     actualNativeTick:n.tick};
   })()`),15000,250);
-  if(b478Hud.state!=='READY'||b478Hud.source!=='25/17/26/0'||
-     b478Hud.requests==='NOT_VERIFIED'||b478Hud.noScore!=='0'||
-     b478Hud.crossTeam!=='0'||b478Hud.hasB441!==true||
-     b478Hud.a3OptIn!==false||b478Hud.a3Requests!==0)
+  const originalHudValid=b478Hud.state==='READY'&&
+   b478Hud.source==='25/17/26/0'&&
+   b478Hud.requests!=='NOT_VERIFIED'&&
+   b478Hud.noScore==='0'&&b478Hud.crossTeam==='0'&&
+   b478Hud.hasB441===true;
+  if(!originalHudValid)
+   fail('B478_REAL_SOURCE_NATIVE_FRONTLINE_HUD_UNAUTHORIZED_OR_STALE');
+  if(b448Experiment){
+   // Real four-mode FRONTLINE portal explicitly enables B448. Never
+   // mislabel it as the historical B441-only native research mode.
+   if(b478Hud.a3OptIn!==true||
+      !Number.isSafeInteger(b478Hud.a3Requests)||
+      b478Hud.a3Requests<0)
+    fail('FULL_REAL_CANONICAL_B448_NATIVE_READY_HUD_NOT_PROVEN');
+   proof.b478RealB441B448NativeHud={
+    ...b478Hud,canonicalUserFrontline:true,
+    b448ActuallyEnabled:true,originalSourceResearchOnly:true,
+    sourceWrites:0,actorWrites:0,officialWinner:'NONE'};
+  }else{
+   // Keep the old B441-only absence-of-B448 safety gate unchanged.
+   if(b478Hud.a3OptIn!==false||b478Hud.a3Requests!==0)
     fail('B478_B441_ONLY_NATIVE_HUD_UNAUTHORIZED_OR_STALE');
-  proof.b478RealB441OnlyNativeHud={
-   ...b478Hud,originalSourceResearchOnly:true,
-   a3WasNotAuthorized:true,sourceWrites:0,actorWrites:0,
-   officialWinner:'NONE'};
+   proof.b478RealB441OnlyNativeHud={
+    ...b478Hud,originalSourceResearchOnly:true,
+    a3WasNotAuthorized:true,sourceWrites:0,actorWrites:0,
+    officialWinner:'NONE'};
+  }
   save();
   proof.b475ActualSourceUserCombat={
    realUserCombatMode:true,originalReadyTick:boot.tick,
