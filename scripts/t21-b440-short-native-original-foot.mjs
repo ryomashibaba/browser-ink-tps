@@ -808,6 +808,47 @@ async function main(){
      shot.shotsFired<=beforeShot.shotsFired||
      shot.sourceScoreablePromotions!==0)
     fail('B475_ACTUAL_PLAYER_POINTER_SHOT_NOT_NATIVE');
+  // F3 genuine player feedback acceptance in the SAME real Chromium
+  // world. This validates the real B356 reader, not the scripted act of
+  // shooting, and never credits a shot as paint or an opponent HP hit.
+  const impactCue=await until(async()=>evaluate(`(() => {
+   const e=document.querySelector('#t21-f3-b356-real-source-reticle');
+   const n=window.__t21F3?.snapshot?.();
+   if(!e||!n)return null;
+   const mode=e.dataset.t21B356LastRealCueMode??'';
+   const eventTick=Number(e.dataset.t21B356LastRealCueNativeTick);
+   if(!mode||!Number.isSafeInteger(eventTick))return null;
+   return {enabled:e.dataset.t21B356NativeSourceFeedbackEnabled,
+    lastMode:mode,lastNativeTick:eventTick,
+    gameTick:n.tick,actualShotCount:n.shotsFired,
+    humanChangedImpactCount:n.b23HumanInkFeedback?.humanChangedImpactCount,
+    lastImpactChangedCells:n.b23HumanInkFeedback?.lastImpactChangedCells,
+    genuineHumanCpuHits:n.humanCpuDirectHits,
+    sourceSolids:n.originalSourceSolids,
+    originalPaint:n.originalPaintSurfaces,
+    originalLinks:n.originalSourceNavigationLinks,
+    originalScoreable:n.sourceScoreablePromotions,
+    actualVisible:!e.hidden&&getComputedStyle(e).display!=='none',
+    officialWinner:n.officialWinner??'NONE'};
+  })()`),5000,80);
+  if(!impactCue||impactCue.enabled!=='true'||
+     !['ACTUAL_SHOT_ONLY','REAL_PAINT'].includes(impactCue.lastMode)||
+     impactCue.lastNativeTick<pressedAtTick||
+     impactCue.lastNativeTick>impactCue.gameTick||
+     impactCue.actualShotCount<=beforeShot.shotsFired||
+     impactCue.sourceSolids!==25||impactCue.originalPaint!==17||
+     impactCue.originalLinks!==26||impactCue.originalScoreable!==0||
+     (impactCue.lastMode==='REAL_PAINT'&&
+      !(impactCue.humanChangedImpactCount>0&&
+        impactCue.lastImpactChangedCells>0)))
+    fail('F3_REAL_NATIVE_PLAYER_SHOT_PAINT_CUE_NOT_OBSERVED');
+  proof.nativePlayerShotPaintHud={
+   ...impactCue,realMouseInput:true,
+   paintIsNotCpuHpHit:true,notOfficialScoring:true,
+   originalPhysicsAndTickWrites:0,
+   appliedOnNormalSourceUrlWithoutB356Experiment:
+    !query.includes('t21W10B356='),officialWinner:'NONE'};
+  save();
   // B483: genuine real Chromium C key in the SAME B441 human game.
   // Observe pre-existing B471 original Recast/Rapier-approved A1 goal.
   const baselineOrder=shot.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
