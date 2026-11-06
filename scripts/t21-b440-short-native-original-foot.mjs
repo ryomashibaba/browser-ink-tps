@@ -630,7 +630,17 @@ async function main(){
       '#t21-f3-b53-objectives')).display!=='none',
     onlyActualPractice:
      document.querySelector('#t21-f3-b53-paint-label')?.textContent,
-    realFrontlinePanel:f.dataset.t21B464Authority};
+    realFrontlinePanel:f.dataset.t21B464Authority,
+    f8:(()=>{
+     const h=document.querySelector('#t21-f3-b245-view-toggle');
+     if(!h)return null;
+     const s=h.getBoundingClientRect();
+     return {left:s.left,right:s.right,top:s.top,bottom:s.bottom,
+      visible:getComputedStyle(h).display!=='none'};
+    })(),
+    focusedCssRestoration:!!document.querySelector(
+     '#t21-f3-b245-layer-style')?.textContent?.includes(
+      '#t21-f3-b25-paint-run[data-t21-b476-compact="true"]')};
   })()`);
     if(!observed)return null;
     b479Last=observed;b479Polls++;
@@ -649,7 +659,16 @@ async function main(){
      Number.isFinite(observed.missionGround)&&
      Number.isSafeInteger(observed.missionPaint)&&
      observed.b25.left<=25&&observed.b25.right<=350&&
-     observed.b25.right<observed.frontline.left-15;
+     observed.b25.right<observed.frontline.left-15&&
+     observed.focusedCssRestoration===true&&
+     observed.f8?.visible===true&&
+     (observed.f8.left>=observed.b25.right+5||
+      observed.f8.bottom<=observed.b25.top-5||
+      observed.f8.top>=observed.b25.bottom+5)&&
+     (observed.f8.left>=observed.frontline.right+5||
+      observed.f8.right<=observed.frontline.left-5||
+      observed.f8.bottom<=observed.frontline.top-5||
+      observed.f8.top>=observed.frontline.bottom+5);
     return verified?observed:null;
    },20000,250);
   }catch(error){

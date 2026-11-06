@@ -1,5 +1,6 @@
 /** B245: display-only reversible SOURCE round / diagnostic HUD. */
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
+import {b475RealFrontlineReadyMode} from './B475RealFrontlineReadyChallenge';
 export type B245View='PLAYER'|'QA';
 export function b245InitialSourceView(search:string):B245View {
  const q=new URLSearchParams(search);
@@ -41,6 +42,24 @@ export function b245VisibleNativeSourceRadarCpu(
 ):boolean {
  return !playerView||inspectingQa||
   actorId==='A1'||actorId==='A2'||actorId==='A3';
+}
+/** B480: undo B338's global PLAYER "display:none!important" ONLY
+ * for actual B441 SOURCE focused B476 player practice.
+ * No QA/ordinary B207/B384/A1/production change; this is CSS only.
+ * The B476 compact dataset is authored from genuine native B25 state.
+ */
+export function b480FocusedSourcePracticeCss(search:string):string{
+ if(!b475RealFrontlineReadyMode(new URLSearchParams(search)))return '';
+ return [
+  '#ui-root[data-t21-b245-presentation="PLAYER"][data-t21-b338-phase="PLAYING"]',
+  '#t21-f3-b25-paint-run[data-t21-b476-compact="true"]',
+  '{display:block!important;}',
+  // The existing F8 button at bottom-left otherwise covers the newly
+  // exposed left-side practice bars. Keep F8 accessible away from them.
+  '#ui-root[data-t21-b245-presentation="PLAYER"][data-t21-b338-phase="PLAYING"]',
+  '#t21-f3-b245-view-toggle',
+  '{left:auto!important;right:14px!important;bottom:200px!important;}'
+ ].join(' ');
 }
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
@@ -92,6 +111,9 @@ export function installB245SourcePresentation(
    'padding:7px 10px;font:750 10px/1.45 system-ui;'+
    'bottom:86px;right:14px;white-space:normal;}';
  }
+ // B480: authored after B338's historical hide rule, more specific,
+ // and only for a verified B475 B441 research URL.
+ style.textContent+=b480FocusedSourcePracticeCss(window.location.search);
  ui.appendChild(style);
  const button=document.createElement('button');
  button.id='t21-f3-b245-view-toggle';
