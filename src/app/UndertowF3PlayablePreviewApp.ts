@@ -2346,6 +2346,7 @@ export class UndertowF3PlayablePreviewApp{
    b484ActualA1CKeyFollowThrough:()=>this.traffic.b484RealOriginalA1OrderTrace(),
    b486ActualOriginalEnemyDistances:()=>this.traffic.b486ReadOnlyTrueNativeOriginalEncounter(),
    b487ActualOriginalCrossTeamTopology:()=>this.traffic.b487ReadOnlyOriginalCrossTeamConnectivity(),
+   b488OriginalCrossTeamGapDecision:()=>this.traffic.b488ReadOnlyOriginalCrossTeamGapDecision(),
     setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
     setB251OpticalSeparation:(on:boolean)=>this.setB251OpticalSeparation(on),
     setB253SourceUvLiveInk:(on:boolean)=>this.setB253SourceUvLiveInk(on),

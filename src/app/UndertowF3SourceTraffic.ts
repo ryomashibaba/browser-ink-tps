@@ -43,8 +43,10 @@ import {b485MayIssueNativeA1OriginalOrder} from './B485RealRepeatA1Command';
 import {B484TrueNativeA1FollowThrough} from './B484TrueNativeA1FollowThrough';
 import {B486NativeSourceEncounterTrace} from './B486NativeSourceEncounterTrace';
 import {b487ActualOriginalCrossTeamTopology} from './B487TrueOriginalCrossTeamTopology';
+import {b488OriginalCrossTeamGapDecision} from './B488OriginalCrossTeamGapDecision';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
-import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
+import {UNDERTOW_T21D_CONNECTIVITY_PROBES,
+ UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import type {SourceSpawnPlan}
  from '../stage/undertow/UndertowPhase14QSourceSpawnPlan';
@@ -2245,6 +2247,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    nearestHumanEnemy3dMeters:distances.nearestHumanToEnemy3dMeters,
    nearestAllyEnemy3dMeters:distances.nearestAllyToEnemy3dMeters
   });
+ }
+ /** B488 uses only the real B487 query and the immutable historical
+  * source gap ledger; its result is never a route or collision grant. */
+ b488ReadOnlyOriginalCrossTeamGapDecision(){
+  const live=this.b487ReadOnlyOriginalCrossTeamConnectivity();
+  if(!live)return null;
+  return b488OriginalCrossTeamGapDecision(live,
+   UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT.sourceNativeRouteGapAudit);
  }
  b486ReadOnlyTrueNativeOriginalEncounter(){
   if(!this.enableB441SourceFrontline)return null;
