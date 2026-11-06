@@ -602,7 +602,14 @@ async function main(){
   // B476 is a PLAYER UI check on actual Chrome DOM, not a fake
   // screenshot or model-authored source HUD. Native challenge MUST
   // already be RUNNING after 7 original Rapier CPU joins.
-  const compact=await until(()=>evaluate(`(() => {
+  // B479: the real native tick can reach 7/7 between slow WebGL frames.
+  // Wait for the DOM to catch up without modifying native simulation.
+  // Save the exact last observed DOM even when the UI never converges.
+  let b479Last=null,b479Polls=0;
+  let compact;
+  try{
+   compact=await until(async()=>{
+    const observed=await evaluate(`(() => {
    const c=document.querySelector('#t21-f3-b25-paint-run');
    const f=document.querySelector('#t21-f3-b464-real-cpu-frontline');
    const n=window.__t21F3?.snapshot?.();
@@ -624,7 +631,39 @@ async function main(){
     onlyActualPractice:
      document.querySelector('#t21-f3-b53-paint-label')?.textContent,
     realFrontlinePanel:f.dataset.t21B464Authority};
-  })()`),15000,200);
+  })()`);
+    if(!observed)return null;
+    b479Last=observed;b479Polls++;
+    if(b479Polls%5===0){
+     proof.b479LatestNativeDomProbe={
+      sample:b479Last,observations:b479Polls,source:'25/17/26/0',
+      gameplayWrites:0,scoreWrites:0,artApproved:false};
+     save();
+    }
+    const verified=observed.realMission==='RUNNING'&&observed.visible&&
+     observed.actualB476State==='LIVE'&&observed.compact==='true'&&
+     observed.originalSource==='25/17/26/0'&&
+     observed.officialWinner==='NONE'&&
+     observed.realFrontlinePanel==='25/17/26/0'&&
+     observed.actualProgressVisible&&
+     Number.isFinite(observed.missionGround)&&
+     Number.isSafeInteger(observed.missionPaint)&&
+     observed.b25.left<=25&&observed.b25.right<=350&&
+     observed.b25.right<observed.frontline.left-15;
+    return verified?observed:null;
+   },20000,250);
+  }catch(error){
+   proof.b479LatestNativeDomProbe={
+    sample:b479Last,observations:b479Polls,source:'25/17/26/0',
+    reason:String(error),gameplayWrites:0,scoreWrites:0,
+    originalRouteGranted:false,artApproved:false};
+   save();throw error;
+  }
+  proof.b479LatestNativeDomProbe={
+   sample:compact,observations:b479Polls,source:'25/17/26/0',
+   verdict:'PASS_SAME_REAL_NATIVE_GAME_AND_SOURCE_DOM',
+   gameplayWrites:0,scoreWrites:0,artApproved:false};
+  save();
   if(compact.realMission!=='RUNNING'||!compact.visible||
      compact.actualB476State!=='LIVE'||compact.compact!=='true'||
      compact.originalSource!=='25/17/26/0'||
