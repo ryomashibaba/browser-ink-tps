@@ -33,6 +33,35 @@ describe('B484 real native C-key A1 source foot witness',()=>{
   expect(s.summary()?.originalB471VerifiedArrivals).toBe(1);
   expect(s.summary()?.trueArrivalOnlyFromB471).toBe(true);
  });
+ it('resets physical progress for a second genuine C command, not lifetime travel',()=>{
+  const s=new B484TrueNativeA1FollowThrough();
+  s.observe(frame(100,[.31,3.1,56.45]));
+  s.observe({...frame(101,[.31,3.1,56.45]),
+   status:'ARRIVED' as const,existingB471Goal:null,verifiedArrivals:1});
+  expect(s.summary()?.currentOrderClosestPhysicalGoalDistanceXZ).toBe(0);
+  s.observe({...frame(140,[5,3.1,53]),
+   keyRequests:2,approvedGoals:1,nativeGoalRequests:1,
+   verifiedArrivals:1,existingB471Goal:null,status:'REQUESTED' as const});
+  expect(s.summary()).toMatchObject({
+   genuineKeyRequests:2,currentOrderKeyRequest:2,
+   currentOrderNativeRows:1,currentOrderApprovedOriginalGoal:null,
+   currentOrderClosestPhysicalGoalDistanceXZ:null,
+   originalB471VerifiedArrivals:1
+  });
+  s.observe({...frame(141,[5,3.1,52.8]),
+   keyRequests:2,approvedGoals:2,nativeGoalRequests:2,
+   verifiedArrivals:1,existingB471Goal:[8,3.1,48] as const,
+   status:'MOVING' as const});
+  const second=s.summary()!;
+  expect(second.currentOrderInitialGoalDistanceXZ).toBeGreaterThan(5);
+  expect(second.currentOrderClosestPhysicalGoalDistanceXZ).toBeGreaterThan(5);
+  expect(second.currentOrderObservedFootTravelMeters).toBeCloseTo(.2,5);
+  expect(second.currentOrderArrivalOnlyFromOriginalB471).toBe(true);
+  expect(second.originalB471VerifiedArrivals).toBe(1);
+  // A replayed/stale first-key observation cannot rewrite current progress.
+  s.observe({...frame(142,[8,3.1,48]),keyRequests:1});
+  expect(s.summary()?.lastTick).toBe(141);
+ });
  it('does not accept fake key, foot, actor or duplicate physical tick',()=>{
   const s=new B484TrueNativeA1FollowThrough();
   for(const change of [

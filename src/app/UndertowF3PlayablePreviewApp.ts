@@ -7073,11 +7073,15 @@ export class UndertowF3PlayablePreviewApp{
     'REAL_SOURCE_A1_PLAYER_C_KEY'?
     this.traffic.b484RealOriginalA1OrderProgress():null;
    const realCommand=b484?
-    '\nA1 ACTUAL FOOT · '+b484.finalCommandStatus+
-    ' · closest '+(b484.closestPhysicalGoalDistanceXZ??0).toFixed(2)+'m'+
-    ' · real arrivals '+b484.originalB471VerifiedArrivals+
+    '\nA1 C ORDER '+b484.currentOrderKeyRequest+' · '+
+    b484.finalCommandStatus+
+    (b484.currentOrderClosestPhysicalGoalDistanceXZ===null?
+     ' · original goal pending / HOLD':
+     ' · this order closest '+
+      b484.currentOrderClosestPhysicalGoalDistanceXZ.toFixed(2)+'m')+
+    ' · verified arrivals total '+b484.originalB471VerifiedArrivals+
     (b484.finalCommandStatus==='HOLD'?
-     ' · C to retry if safe':' · path not certified'):'';
+     ' · C to retry if safe':' · route not certified'):'';
    this.b141RealAllyIndicator.textContent=info.text+
     (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status+
      (order.b485RepeatReady?' · Cで安全な再指示':

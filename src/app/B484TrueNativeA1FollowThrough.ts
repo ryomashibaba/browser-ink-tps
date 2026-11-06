@@ -22,6 +22,15 @@ export class B484TrueNativeA1FollowThrough{
  private keys=0;private approvals=0;private requests=0;
  private arrivals=0;private status:B484Status='OFF';
  private supported=0;private unsupported=0;
+ // Per-C-key observation remains independent of lifetime physical history.
+ // A second genuine order must not inherit the first order's closest foot.
+ private currentOrderFirstFoot:B484Foot|null=null;
+ private currentOrderLastFoot:B484Foot|null=null;
+ private currentOrderGoal:B484Foot|null=null;
+ private currentOrderInitialGoalDistanceXZ:number|null=null;
+ private currentOrderClosestGoalDistanceXZ:number|null=null;
+ private currentOrderTravelMeters=0;
+ private currentOrderRows=0;
  observe(x:B484NativeInput):void{
   if(!Number.isSafeInteger(x.tick)||x.tick<=this.lastTick||
    x.tick<0||x.keyRequests<1||!x.rejoined||x.mode!=='GROUND'||
@@ -31,10 +40,48 @@ export class B484TrueNativeA1FollowThrough{
      x.existingB471Goal[2]<33))||
    ![x.keyRequests,x.approvedGoals,x.nativeGoalRequests,
      x.verifiedArrivals].every(n=>Number.isSafeInteger(n)&&n>=0)||
-   x.verifiedArrivals>x.approvedGoals)return;
+   x.verifiedArrivals>x.approvedGoals||
+   x.keyRequests<this.keys||x.approvedGoals<this.approvals||
+   x.nativeGoalRequests<this.requests||
+   x.verifiedArrivals<this.arrivals)return;
   const foot=[...x.foot] as [number,number,number];
-  if(x.existingB471Goal)
-   this.goal=[...x.existingB471Goal] as [number,number,number];
+  if(x.keyRequests!==this.keys){
+   // The request itself is real, but an original goal may be pending/HOLD.
+   this.currentOrderFirstFoot=foot;
+   this.currentOrderLastFoot=null;
+   this.currentOrderGoal=null;
+   this.currentOrderInitialGoalDistanceXZ=null;
+   this.currentOrderClosestGoalDistanceXZ=null;
+   this.currentOrderTravelMeters=0;
+   this.currentOrderRows=0;
+  }
+  if(x.existingB471Goal){
+   const approvedGoal=[...x.existingB471Goal] as [number,number,number];
+   if(this.currentOrderGoal===null){
+    this.currentOrderGoal=approvedGoal;
+    this.currentOrderInitialGoalDistanceXZ=Math.hypot(
+     foot[0]-approvedGoal[0],foot[2]-approvedGoal[2]);
+   }else if(Math.hypot(this.currentOrderGoal[0]-approvedGoal[0],
+     this.currentOrderGoal[1]-approvedGoal[1],
+     this.currentOrderGoal[2]-approvedGoal[2])>.0001){
+    // An unrecorded goal replacement cannot be the same genuine order.
+    return;
+   }
+   this.goal=approvedGoal;
+  }
+  const currentDist=this.currentOrderGoal?Math.hypot(
+   foot[0]-this.currentOrderGoal[0],
+   foot[2]-this.currentOrderGoal[2]):null;
+  if(currentDist!==null)this.currentOrderClosestGoalDistanceXZ=
+   this.currentOrderClosestGoalDistanceXZ===null?currentDist:
+   Math.min(this.currentOrderClosestGoalDistanceXZ,currentDist);
+  if(this.currentOrderLastFoot)this.currentOrderTravelMeters+=Math.hypot(
+   foot[0]-this.currentOrderLastFoot[0],
+   foot[1]-this.currentOrderLastFoot[1],
+   foot[2]-this.currentOrderLastFoot[2]);
+  this.currentOrderFirstFoot??=foot;
+  this.currentOrderLastFoot=foot;
+  this.currentOrderRows++;
   const dist=this.goal?
    Math.hypot(foot[0]-this.goal[0],foot[2]-this.goal[2]):null;
   if(dist!==null)
@@ -66,6 +113,17 @@ export class B484TrueNativeA1FollowThrough{
    originalB471VerifiedArrivals:this.arrivals,
    firstPhysicalFoot:f,lastPhysicalFoot:l,
    originalApprovedGoal:g,
+   currentOrderKeyRequest:this.keys,
+   currentOrderNativeRows:this.currentOrderRows,
+   currentOrderFirstObservedFoot:this.currentOrderFirstFoot,
+   currentOrderApprovedOriginalGoal:this.currentOrderGoal,
+   currentOrderInitialGoalDistanceXZ:this.currentOrderInitialGoalDistanceXZ,
+   currentOrderClosestPhysicalGoalDistanceXZ:this.currentOrderClosestGoalDistanceXZ,
+   currentOrderLastPhysicalGoalDistanceXZ:this.currentOrderGoal?
+    Math.hypot(l[0]-this.currentOrderGoal[0],
+     l[2]-this.currentOrderGoal[2]):null,
+   currentOrderObservedFootTravelMeters:this.currentOrderTravelMeters,
+   currentOrderArrivalOnlyFromOriginalB471:true as const,
    initialGoalDistanceXZ:g?Math.hypot(f[0]-g[0],f[2]-g[2]):null,
    closestPhysicalGoalDistanceXZ:this.shortest,
    lastPhysicalGoalDistanceXZ:g?Math.hypot(l[0]-g[0],l[2]-g[2]):null,
