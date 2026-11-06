@@ -20,11 +20,26 @@ describe('B464 real player-visible optional native CPU frontline',()=>{
   const v=b464RealSourceFrontlineView(evidence());
   expect(v).toMatchObject({status:'LIVE',nativeGoalsRequested:12,
    safeOriginalCandidates:6,heldUnreachableOrUnsafe:125,
-   actualOriginalArrivals:3,actualA3Requests:4,
+   actualOriginalArrivals:3,actualA3Requests:4,a3ResearchSelected:true,
    originalOpponentRoutesCertified:0,originalOfficialScoreable:0,
    officialWinner:'NONE',productionAuthorized:false});
   expect(v?.lines).toContain('REQUEST ≠ ARRIVAL');
   expect(v?.lines).toContain('0/12');
+  expect(v?.lines).not.toContain('TEAM_A_WINS');
+ });
+ it('shows genuine B441-only source readout without authorizing B448',()=>{
+  const s=evidence();
+  s.cpu.sourcePatrol.b448A3ResearchEnabled=false;
+  s.cpu.sourcePatrol.b448A3FreshLiveOriginalGoalsAuthorized=0;
+  s.cpu.sourcePatrol.b448A3RealNativeGoalRequests=0;
+  const v=b464RealSourceFrontlineView(s);
+  expect(v).toMatchObject({
+   status:'LIVE',nativeGoalsRequested:12,actualA3Requests:0,
+   a3ResearchSelected:false,originalOpponentRoutesCertified:0,
+   officialWinner:'NONE'
+  });
+  expect(v?.lines).toContain('A3 OPTIONAL B448 OFF');
+  expect(v?.lines).toContain('CROSS-TEAM ROUTES 0/12');
   expect(v?.lines).not.toContain('TEAM_A_WINS');
  });
  it('preserves true STAGING and TIME_UP modes, and stop HOLD',()=>{
@@ -43,7 +58,8 @@ describe('B464 real player-visible optional native CPU frontline',()=>{
    s=>{s.cpu.cpu.pop()},
    s=>{s.cpu.cpu[0]!.id='A2'},
    s=>{s.cpu.sourcePatrol.b441Enabled=false},
-   s=>{s.cpu.sourcePatrol.b448A3ResearchEnabled=false},
+   s=>{s.cpu.sourcePatrol.b448A3ResearchEnabled=false;
+    s.cpu.sourcePatrol.b448A3RealNativeGoalRequests=4},
    s=>{s.cpu.sourcePatrol.b441ActualGoalRequests=-1},
    s=>{s.cpu.sourcePatrol.b443FirstActualFrontlineArrivals=NaN},
    s=>{s.cpu.sourcePatrol.b441UnsafeOrUnreachableHolds=Infinity}

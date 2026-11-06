@@ -492,6 +492,32 @@ async function main(){
      boot.b367RealCpuLifecycleEvidence?.enabled!==true||
      boot.b474NativeSteeringEvidence?.enabled!==true)
     fail('B475_REAL_PLAYER_MODE_NATIVE_PIPELINES_NOT_ENABLED');
+  // B478: native B441-only play does not carry the separate B448 flag.
+  // Require genuine B464 DOM at actual READY before expensive 720 tick.
+  const b478Hud=await until(()=>evaluate(`(() => {
+   const h=document.querySelector('#t21-f3-b464-real-cpu-frontline');
+   const n=window.__t21F3?.snapshot?.();
+   if(!h||!n)return null;
+   return {state:h.dataset.t21B464State,
+    source:h.dataset.t21B464Authority,
+    requests:h.dataset.t21B464NativeGoalRequests,
+    noScore:h.dataset.t21B464OfficialScoreable,
+    crossTeam:h.dataset.t21B464CrossTeamRoutes,
+    a3OptIn:n.cpu?.sourcePatrol?.b448A3ResearchEnabled,
+    a3Requests:n.cpu?.sourcePatrol?.b448A3RealNativeGoalRequests,
+    hasB441:n.cpu?.sourcePatrol?.b441Enabled,
+    actualNativeTick:n.tick};
+  })()`),15000,250);
+  if(b478Hud.state!=='READY'||b478Hud.source!=='25/17/26/0'||
+     b478Hud.requests==='NOT_VERIFIED'||b478Hud.noScore!=='0'||
+     b478Hud.crossTeam!=='0'||b478Hud.hasB441!==true||
+     b478Hud.a3OptIn!==false||b478Hud.a3Requests!==0)
+    fail('B478_B441_ONLY_NATIVE_HUD_UNAUTHORIZED_OR_STALE');
+  proof.b478RealB441OnlyNativeHud={
+   ...b478Hud,originalSourceResearchOnly:true,
+   a3WasNotAuthorized:true,sourceWrites:0,actorWrites:0,
+   officialWinner:'NONE'};
+  save();
   proof.b475ActualSourceUserCombat={
    realUserCombatMode:true,originalReadyTick:boot.tick,
    realSevenCpuNativeActors:boot.cpu.cpu.length,

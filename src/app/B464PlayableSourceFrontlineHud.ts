@@ -25,6 +25,7 @@ export interface B464FrontlineView {
  readonly heldUnreachableOrUnsafe:number;
  readonly actualOriginalArrivals:number;
  readonly actualA3Requests:number;
+ readonly a3ResearchSelected:boolean;
  readonly nativeProposalChecks:number;
  readonly source:'25/17/26/0';
  readonly cpuCount:7;
@@ -47,7 +48,14 @@ export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|nul
     new Set(n.cpu.cpu.map(x=>x?.id)).size!==7||
     !['A1','A2','A3','B1','B2','B3','B4']
       .every(id=>n.cpu!.cpu.some(x=>x?.id===id))||
-    !p||p.b441Enabled!==true||p.b448A3ResearchEnabled!==true||
+    !p||p.b441Enabled!==true||
+    // B478: the B441-only frontline is a valid read-only overlay.
+    // B448 A3 remains a separately selected original-source study.
+    (p.b448A3ResearchEnabled!==true&&
+     p.b448A3ResearchEnabled!==false)||
+    (p.b448A3ResearchEnabled===false&&
+     (p.b448A3FreshLiveOriginalGoalsAuthorized!==0||
+      p.b448A3RealNativeGoalRequests!==0))||
     ![p.b441ProposalsChecked,p.b441StrictGoalsAvailable,
       p.b441ActualGoalRequests,p.b441UnsafeOrUnreachableHolds,
       p.b443FirstActualFrontlineArrivals,
@@ -65,6 +73,7 @@ export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|nul
   heldUnreachableOrUnsafe:p.b441UnsafeOrUnreachableHolds,
   actualOriginalArrivals:p.b443FirstActualFrontlineArrivals,
   actualA3Requests:p.b448A3RealNativeGoalRequests,
+  a3ResearchSelected:p.b448A3ResearchEnabled,
   nativeProposalChecks:p.b441ProposalsChecked,
   source:'25/17/26/0',cpuCount:7,
   originalOpponentRoutesCertified:0,originalOfficialScoreable:0,
@@ -73,7 +82,9 @@ export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|nul
    'NATIVE GOAL REQUESTS '+count+
    ' · SAFE CANDIDATES '+p.b441StrictGoalsAvailable+'\n'+
    'REAL GOAL ARRIVALS '+p.b443FirstActualFrontlineArrivals+
-   ' · A3 REQUESTS '+p.b448A3RealNativeGoalRequests+'\n'+
+   (p.b448A3ResearchEnabled?
+    ' · A3 REQUESTS '+p.b448A3RealNativeGoalRequests:
+    ' · A3 OPTIONAL B448 OFF')+'\n'+
    'UNSAFE / UNREACHABLE HELD '+p.b441UnsafeOrUnreachableHolds+'\n'+
    'REQUEST ≠ ARRIVAL · CROSS-TEAM ROUTES 0/12 · UNSCORED'
  };
