@@ -25,6 +25,11 @@ describe('B483 live native B441 A1 command, reuses B471 existing authority',()=>
  });
  it('requires real 7/7 native, PLAYING, player and original running practice',()=>{
   expect(may(frame())).toBe(true);
+  // Genuine C input stays legal after CLASSIC mission CLEAR during PLAYING.
+  expect(may({...frame(),practiceStatus:'CLEAR'})).toBe(true);
+  expect(may({...frame(),practiceStatus:'CLEAR',matchState:'TIME_UP'})).toBe(false);
+  expect(may({...frame(),practiceStatus:'CLEAR',paused:true})).toBe(false);
+  expect(may({...frame(),practiceStatus:'CLEAR',originalCpuRejoins:6})).toBe(false);
   for(const delta of [
    {selected:false},{stage:[25,17,26,1]},
    {stage:[24,17,26,0]},{stage:[25,17,25,0]},
@@ -32,7 +37,7 @@ describe('B483 live native B441 A1 command, reuses B471 existing authority',()=>
    {matchState:'TIME_UP'},{paused:true},{stopReason:'PHYSICAL_HOLD'},
    {pointerLocked:false},{playerHp:0},{originalCpuRejoins:6},
    {originalCpuRejoins:8},{practiceVariant:'ALLY_SYNC'},
-   {practiceStatus:'ARMED'}, {practiceStatus:'CLEAR'}
+   {practiceStatus:'ARMED'}, {practiceStatus:'IDLE'}
   ])expect(may({...frame(),...delta})).toBe(false);
  });
 });

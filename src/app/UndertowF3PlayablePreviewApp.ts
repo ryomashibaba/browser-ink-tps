@@ -4704,13 +4704,18 @@ export class UndertowF3PlayablePreviewApp{
      this.traffic.prepare(frame,{
       x:foot.x,y:foot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
       z:foot.z,grounded:this.stats.playerGrounded,active:alive,
-      allySyncPracticeRunning:actualPractice.status==='RUNNING'&&
-       (actualPractice.practiceVariant==='ALLY_SYNC'||
-        // This boolean is the pre-existing SOURCE A1 native support
-        // session guard, not an assertion of ALLY_SYNC mission CLEAR.
-        this.canvas.dataset.t21B483RealFrontlineAlly===
+      allySyncPracticeRunning:
+       // The separately selected B193 ALLY_SYNC never runs after CLEAR.
+       (actualPractice.practiceVariant==='ALLY_SYNC'&&
+        actualPractice.status==='RUNNING')||
+       // B441's genuine CLASSIC objective CLEAR does not end the 180s
+       // match. Preserve real C→A1 cooperation for the active remainder.
+       // Traffic still independently requires original Rapier/Recast
+       // floor, actual alive grounded human/A1 and C-key cooldown.
+       (this.canvas.dataset.t21B483RealFrontlineAlly===
         'REAL_SOURCE_A1_PLAYER_C_KEY'&&
         actualPractice.practiceVariant==='CLASSIC'&&
+        (actualPractice.status==='RUNNING'||actualPractice.status==='CLEAR')&&
         this.matchState==='PLAYING'&&!this.paused&&!this.stopReason)
      });
     }

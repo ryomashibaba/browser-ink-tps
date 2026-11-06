@@ -19,5 +19,7 @@ export function b483MayRequestTrueFrontlineA1Order(input:{
   Number.isFinite(input.playerHp)&&input.playerHp>0&&
   input.originalCpuRejoins===7&&
   input.practiceVariant==='CLASSIC'&&
-  input.practiceStatus==='RUNNING';
+  // Completing the genuine B25 ink objective does not end the 180s match.
+  // New C orders still require real pointer/HP/7CPU and original A1 path.
+  (input.practiceStatus==='RUNNING'||input.practiceStatus==='CLEAR');
 }
