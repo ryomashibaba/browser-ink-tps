@@ -80,7 +80,7 @@ jobs:
   real-native-original-frontline:
     runs-on: ubuntu-latest
     # One explicit genuine >3600 native-tick case; ordinary pushes stay short.
-    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-expiry]') && 30 || 15 }}
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || (contains(github.event.head_commit.message, '[true-expiry]') && 30 || 15) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -104,6 +104,7 @@ jobs:
           T21_B441_NATIVE_OBSERVE_TICKS: '720'
           # Enabled only for one deliberate source-expiry proof commit.
           T21_B441_PROVE_60S_EXPIRY: ${{ contains(github.event.head_commit.message, '[true-expiry]') && '1' || '0' }}
+          T21_B441_PROVE_FULL_180S_REPLAY: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && '1' || '0' }}
           T21_B440_OUT: /tmp/t21-b441-short-native-frontline
         run: node scripts/t21-b440-short-native-original-foot.mjs
       - name: B450 independent genuine CPU B2 B4 first original path denial audit

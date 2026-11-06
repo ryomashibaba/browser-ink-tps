@@ -20,6 +20,10 @@ const b448Experiment=b441Experiment&&
 // Ordinary pushes keep the original short real-Chromium smoke.
 const proveSourcePracticeExpiry=b441Experiment&&
  process.env.T21_B441_PROVE_60S_EXPIRY==='1';
+const proveFullSourceReplay=b441Experiment&&
+ process.env.T21_B441_PROVE_FULL_180S_REPLAY==='1';
+if(proveFullSourceReplay&&proveSourcePracticeExpiry)
+ throw Error('B441_ONE_SHOT_FULL_AND_60S_CONFLICT');
 const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay'+
  (b441Experiment?'&t21W10B112=humanGround&t21W10B192=humanCombat':
   '&t21W10B193=allyCoop')+'&t21W10B203=fullRound'+
@@ -1549,7 +1553,138 @@ async function main(){
    JSON.stringify(proof.realPracticeExpiryLiveC,null,2)+'\n');
   save();
  }
- proof.verdict=b441Experiment?
+ if(proveFullSourceReplay){
+  // Read-only 180-second native clock, SAME original 7 CPU SOURCE world.
+  // No virtual-time tricks, position/tick/actor/ink/score writes, or warps.
+  const first=await snap();authority(first);
+  const initialOrigin=await origin();
+  const initialHref=await evaluate('location.href');
+  const weapon=first.b361NativePlayerWeapon?.id;
+  if(first.matchState!=='PLAYING'||first.paused||!await locked()||
+     first.cpu.physicalRejoins.length!==7||
+     first.cpu.physicalFootRelocations!==0||
+     first.timeRemainingSeconds>=180||first.timeRemainingSeconds<=0||
+     weapon!=='ink-saber'||
+     !initialHref.includes('t21W10B389=ink-saber'))
+   fail('FULL_REAL_NATIVE_FIRST_ROUND_PRECONDITION');
+  const full={schema:'T21_ONE_SHOT_REAL_SOURCE_180_REPLAY_V1',
+   source:'25/17/26/0',initialOrigin,initialHref,weapon,
+   initialTick:first.tick,initialRemaining:first.timeRemainingSeconds,
+   nativeClockWrites:0,actorWrites:0,scoreWrites:0,syntheticInput:false,
+   officialWinner:'NONE',samples:[],clicked:false,newWorldConfirmed:false};
+  proof.oneShotFullReplay=full;
+  proof.stage='WAIT_REAL_180_NATIVE_TIME_UP';save();
+  let previousTick=first.tick;
+  for(const [threshold,label] of [[120,'120'],[60,'60'],[0,'TIME_UP']]){
+   let last=null;
+   const frame=await until(async()=>{
+    const n=await snap();authority(n);
+    last={tick:n.tick,remaining:n.timeRemainingSeconds,
+     phase:n.matchState,paused:n.paused,
+     cpuRejoined:n.cpu.physicalRejoins.length,
+     shots:n.shotsFired};
+    if(n.tick<previousTick||n.cpu.physicalRejoins.length!==7||
+       n.cpu.physicalFootRelocations!==0||
+       n.timeRemainingSeconds<0||n.timeRemainingSeconds>180)
+     fail('FULL_REAL_NATIVE_SOURCE_TICK_OR_CPU_INVARIANT');
+    previousTick=n.tick;
+    if(n.timeRemainingSeconds>threshold+.001)return null;
+    if(n.matchState!==(threshold===0?'TIME_UP':'PLAYING')||
+       (threshold!==0&&n.paused))
+     fail('FULL_REAL_NATIVE_CLOCK_PHASE_'+label);
+    return n;
+   },22*60*1000,1400).catch(error=>{
+    full.lastNative=last;full.hold=String(error);save();throw error;
+   });
+   full.samples.push({label,tick:frame.tick,
+    remaining:frame.timeRemainingSeconds,phase:frame.matchState,
+    shots:frame.shotsFired,cpuRejoined:frame.cpu.physicalRejoins.length,
+    cpuPaint:frame.cpuInkCellsChanged,
+    humanPaint:frame.b23HumanInkFeedback?.humanChangedCells??null});
+   save();
+  }
+  const terminal=await snap();authority(terminal);
+  full.actualCountdownNativeTicks=
+   Math.round((180-first.timeRemainingSeconds)*60)+
+   terminal.tick-first.tick;
+  if(terminal.matchState!=='TIME_UP'||
+     terminal.timeRemainingSeconds!==0||
+     full.actualCountdownNativeTicks<10800||
+     terminal.cpu.physicalRejoins.length!==7||
+     terminal.b361NativePlayerWeapon?.id!==weapon)
+   fail('FULL_REAL_TIME_UP_AND_10800_NATIVE_TICKS_NOT_PROVEN');
+  proof.stage='REAL_180_TIME_UP_VISIBLE_REPLAY_PENDING';save();
+  const visible=await until(async()=>{
+   const v=await evaluate(`(() => {
+    const modal=document.querySelector('#t21-f3-b59-session-finished');
+    const b=document.querySelector('#t21-f3-b59-restart');
+    if(!modal||!b)return null;
+    const box=b.getBoundingClientRect(),cx=box.left+box.width/2,
+     cy=box.top+box.height/2;
+    const target=document.elementFromPoint(cx,cy);
+    return {modal:!modal.hidden&&getComputedStyle(modal).display!=='none',
+     state:modal.dataset.t21B59State,
+     button:!b.hidden&&!b.disabled&&getComputedStyle(b).display!=='none',
+     hit:target===b||b.contains(target),
+     onScreen:box.width>0&&box.height>0&&box.top>=0&&
+      box.bottom<=innerHeight,
+     mouseUnlocked:document.pointerLockElement===null,
+     officialWinner:modal.dataset.t21B59OriginalWinner,
+     scoreable:modal.dataset.originalScoreable};
+   })()`);
+   return v?.modal&&v.state==='FINISHED'&&v.button&&v.hit&&
+    v.onScreen&&v.mouseUnlocked&&v.officialWinner==='NONE'&&
+    v.scoreable==='0'?v:null;
+  },45000,280);
+  full.realEndScreen=visible;save();
+  const beforeImage=await cdp('Page.captureScreenshot',{
+   format:'png',captureBeyondViewport:false});
+  if(typeof beforeImage?.data!=='string'||beforeImage.data.length<100)
+   fail('FULL_REAL_180_SCREENSHOT_UNAVAILABLE');
+  writeFileSync(resolve(out,'real-180s-time-up-visible-replay.png'),
+   Buffer.from(beforeImage.data,'base64'));
+  await buttonClick('#t21-f3-b59-restart');
+  full.clicked=true;proof.stage='CLICKED_REAL_B59_REPLAY';save();
+  let lastPage=null;
+  const fresh=await until(async()=>{
+   try{
+    const v=await evaluate(`(() => {
+     const n=window.__t21F3?.snapshot?.();
+     return {origin:performance.timeOrigin,href:location.href,
+      ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+      n:n?{tick:n.tick,phase:n.matchState,
+       seconds:n.timeRemainingSeconds,shots:n.shotsFired,
+       cpu:n.cpu.cpu.length,joins:n.cpu.physicalRejoins.length,
+       kit:n.b361NativePlayerWeapon?.id,
+       solids:n.originalSourceSolids,paint:n.originalPaintSurfaces,
+       links:n.originalSourceNavigationLinks,
+       scoreable:n.sourceScoreablePromotions}:null};
+    })()`);
+    lastPage=v;
+    return v?.origin>initialOrigin&&v.href===initialHref&&
+     v.ready==='READY'&&v.n?.tick===0&&
+     v.n?.phase==='STAGING'&&v.n?.seconds===180&&
+     v.n?.shots===0&&v.n?.cpu===7&&v.n?.joins===0&&
+     v.n?.kit===weapon&&v.n?.solids===25&&v.n?.paint===17&&
+     v.n?.links===26&&v.n?.scoreable===0?v:null;
+   }catch{return null;}
+  },150000,500).catch(error=>{
+   full.lastReloadProbe=lastPage;full.hold=String(error);save();
+   throw error;
+  });
+  full.secondWorld=fresh;full.newWorldConfirmed=true;
+  proof.full180sCertified=true;proof.genuineReplayClickCertified=true;
+  proof.stage='REAL_180_NATIVE_NEW_WORLD_SAME_WEAPON_CERTIFIED';save();
+  const afterImage=await cdp('Page.captureScreenshot',{
+   format:'png',captureBeyondViewport:false});
+  if(typeof afterImage?.data!=='string'||afterImage.data.length<100)
+   fail('FULL_REAL_REPLAY_NEW_WORLD_SCREENSHOT_UNAVAILABLE');
+  writeFileSync(resolve(out,'real-replay-fresh-world-same-weapon.png'),
+   Buffer.from(afterImage.data,'base64'));
+ }
+ proof.verdict=proveFullSourceReplay?
+  'PASS_REAL_NATIVE_180S_TIME_UP_REPLAY_NEW_WORLD_SAME_HUMAN_WEAPON':
+  b441Experiment?
   'PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING':
   'PASS_FRESH_SOURCE_REAL_HUMAN_KEYW_AND_ORIGINAL_FOOT_NOT_REPLAY';
  proof.stage='TRUE_NATIVE_WALK_SUCCESS';save();
