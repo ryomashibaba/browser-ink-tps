@@ -1392,7 +1392,8 @@ async function main(){
     acceptance==='REAL_ORDER_PENDING_ORIGINAL_RECAST'?
     {n,order,acceptance}:null;
   },15000,180);
-  const observable=await until(async()=>evaluate(`(() => {
+  const observable=await until(async()=>{
+   const v=await evaluate(`(() => {
    const n=window.__t21F3?.snapshot?.();
    const t=window.__t21F3?.b484ActualA1CKeyFollowThrough?.();
    const h=document.querySelector('#t21-f3-b141-real-ally');
@@ -1415,7 +1416,14 @@ async function main(){
     text:h.textContent,
     visible:!h.hidden&&getComputedStyle(h).display!=='none',
     certifiedRoute:h.dataset.t21B141CertifiedRoute};
-  })()`),15000,250);
+  })()`);
+   // The app updates the native trace on the following genuine fixed tick.
+   // A non-null snapshot is not yet proof that the displayed C order is 3.
+   return v?.tick>beforeTick&&v.traceOrder===3&&v.traceRows>=1&&
+    v.text?.includes('A1 C ORDER 3 · ')&&
+    v.text?.includes(
+     '60s PRACTICE TIME UP · 180s SOURCE MATCH CONTINUES')?v:null;
+  },15000,250);
   if(!observable||observable.tick<=beforeTick||
      observable.matchState!=='PLAYING'||
      observable.missionStatus!=='TIME_UP'||
@@ -1445,7 +1453,7 @@ async function main(){
    ...observable,sourceCollisionWrites:0,sourceNavigationWrites:0,
    actorWrites:0,syntheticClockAdvances:0,officialWinner:'NONE',
    opponentNativeCrossingCertified:false,officialTurfScoreCertified:false,
-   180SecondRoundCompletedCertified:false};
+   full180SecondRoundCompletedCertified:false};
   writeFileSync(resolve(out,'real-60s-expiry-third-c-original-180s.json'),
    JSON.stringify(proof.realPracticeExpiryLiveC,null,2)+'\n');
   save();
