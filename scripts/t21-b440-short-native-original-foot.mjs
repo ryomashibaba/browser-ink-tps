@@ -1159,7 +1159,7 @@ async function main(){
      b488.verdict!=='HOLD_REFERENCE_REQUIRED_NO_AUTHORIZED_CROSSING')
    fail('B488_REAL_NATIVE_GAP_SOURCE_AUTHORITY_PROOF_HOLD');
   writeFileSync(resolve(out,'b488-real-original-f4-gap-authority-hold.json'),
-   JSON.stringify(b488,null,2)+'\\n');
+   JSON.stringify(b488,null,2)+'\n');
   proof.b488OriginalCentralGapAuthority={
    ...b488,raw:'b488-real-original-f4-gap-authority-hold.json',
    actualBrowserSource:true,collisionAndNavigationWrites:0,
