@@ -1125,6 +1125,46 @@ async function main(){
    fullEvidenceFile:'b487-real-original-16-cross-team-route-audit.json',
    nativeActorKccOrNavChanged:false,officialWinner:'NONE'};
   save();
+  // B488: evidence gate applied to the SAME actual 7-CPU native SOURCE
+  // as B486/B487. The archived four local gaps on each side have no
+  // individual 7.2.0 Turf collision authority. This is NOT a route grant.
+  const b488=await evaluate(
+   'window.__t21F3.b488OriginalCrossTeamGapDecision()');
+  if(!b488||
+     b488.schema!=='B488_ORIGINAL_CROSS_TEAM_GAP_AUTHORITY_DECISION_V1'||
+     b488.originalSource!=='25/17/26/0'||
+     !Number.isSafeInteger(b488.observedNativeTick)||
+     b488.observedNativeTick<b487.nativeTick||
+     b488.currentNativeOpposingQueries!==16||
+     b488.currentNativeReportedPaths!==b487.nativePathReportedPairs||
+     b488.currentNativeCredibleEndpointPairs!==
+       b487.nativeCredibleEndpointPairs||
+     Math.abs(b488.nearestHumanEnemy3dMeters-
+       b486.nearestHumanToEnemy3dMeters)>.001||
+     Math.abs(b488.nearestAllyEnemy3dMeters-
+       b486.nearestAllyToEnemy3dMeters)>.001||
+     b488.archivedAuditCompatible!==true||
+     b488.archivedUnresolvedLocalGaps!==8||
+     b488.archivedUnresolvedGapsPerSide!==4||
+     b488.individuallyProvenOriginalGapCollisionFaces!==0||
+     b488.candidateRuntimeStagePromotionAuthorized!==false||
+     b488.sourceCollisionFlagFor7_2TurfVerified!==false||
+     b488.originalCpuCapsuleContinuousTraversalVerified!==false||
+     b488.originalFull4v4Certified!==false||
+     b488.officialScoreable!==0||
+     b488.officialWinner!=='NONE'||
+     b488.actorPhysicsNavMeshInkClockScoreWrites!==0||
+     !Array.isArray(b488.nextRequiredEvidence)||
+     b488.nextRequiredEvidence.length!==4||
+     b488.verdict!=='HOLD_REFERENCE_REQUIRED_NO_AUTHORIZED_CROSSING')
+   fail('B488_REAL_NATIVE_GAP_SOURCE_AUTHORITY_PROOF_HOLD');
+  writeFileSync(resolve(out,'b488-real-original-f4-gap-authority-hold.json'),
+   JSON.stringify(b488,null,2)+'\\n');
+  proof.b488OriginalCentralGapAuthority={
+   ...b488,raw:'b488-real-original-f4-gap-authority-hold.json',
+   actualBrowserSource:true,collisionAndNavigationWrites:0,
+   certifiedNativeEnemyCrossing:false,officialWinner:'NONE'};
+  save();
   // B474: require measured original native Crowd requests AND bounded
   // duplicate suppression in THIS true 720-tick browser, not a pure test.
   // This is research behavior only; no original route or hit promotion.
