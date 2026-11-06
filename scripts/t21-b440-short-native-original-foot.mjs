@@ -979,6 +979,32 @@ async function main(){
     B2:b454Native.rows.B2.length,B4:b454Native.rows.B4.length,
     dropped:{...b454Native.dropped},
     continuousKccRouteCertified:false,originalScoreable:0};
+  // B484: 60 Hz genuine post-C-key A1 physics, not a guessed route.
+  const b484=await evaluate('window.__t21F3.b484ActualA1CKeyFollowThrough()');
+  const b483=proof.b483RealPlayerCKeyNativeA1;
+  if(!b484||b484.schema!=='B484_TRUE_NATIVE_A1_FOLLOW_THROUGH_V1'||
+     b484.source!=='25/17/26/0'||b484.nativeRows<100||
+     b484.genuineKeyRequests!==1||b484.approvedOriginalGoals<1||
+     b484.actualNativeGoalRequests<1||b484.officialWinner!=='NONE'||
+     b484.actorInkPhysicsClockWrites!==0||
+     b484.crossTeamRouteCertified!==false||
+     b484.originalCapsuleRouteCertified!==false||
+     b484.commandCausedAllMovementCertified!==false||
+     b484.trueArrivalOnlyFromB471!==true||
+     !Array.isArray(b484.originalApprovedGoal)||
+     !b484.originalApprovedGoal.every((v,i)=>
+      Number.isFinite(v)&&Math.abs(v-b483.actualSourceGoal[i])<.001)||
+     !Array.isArray(b484.rows)||b484.rows.length!==b484.nativeRows||
+     !b484.rows.every((r,i)=>i===0||r.tick===b484.rows[i-1].tick+1))
+    fail('B484_ORIGINAL_A1_NATIVE_FOLLOW_THROUGH_HOLD');
+  writeFileSync(resolve(out,'b484-real-source-a1-foot-60hz.json'),
+   JSON.stringify(b484,null,2)+'\\n');
+  proof.b484RealNativeA1CKeyFollowThrough={
+   ...Object.fromEntries(Object.entries(b484).filter(([k])=>k!=='rows')),
+   file:'b484-real-source-a1-foot-60hz.json',
+   nativeActorPositionWrites:0,originalRouteAuthorizationChanged:false,
+   officialWinner:'NONE'};
+  save();
   // B474: require measured original native Crowd requests AND bounded
   // duplicate suppression in THIS true 720-tick browser, not a pure test.
   // This is research behavior only; no original route or hit promotion.

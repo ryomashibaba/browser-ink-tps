@@ -2338,6 +2338,7 @@ export class UndertowF3PlayablePreviewApp{
   const api={snapshot:()=>this.snapshot(),
    // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
    b454OriginalCpuFootTrace:()=>this.traffic.b454ReadOnlyOriginalNativeFootTrace(),
+   b484ActualA1CKeyFollowThrough:()=>this.traffic.b484RealOriginalA1OrderTrace(),
     setB250StageReadability:(on:boolean)=>this.setB250StageReadability(on),
     setB251OpticalSeparation:(on:boolean)=>this.setB251OpticalSeparation(on),
     setB253SourceUvLiveInk:(on:boolean)=>this.setB253SourceUvLiveInk(on),
@@ -7060,8 +7061,18 @@ export class UndertowF3PlayablePreviewApp{
    const order=this.traffic.b471ReadOnlyAllyCoverageOrder();
    const cEnabled=this.canvas.dataset.t21B471RealPlayerAllyOrder===
     'SOURCE_COOP_C_KEY';
+   const b484=this.canvas.dataset.t21B483RealFrontlineAlly===
+    'REAL_SOURCE_A1_PLAYER_C_KEY'?
+    this.traffic.b484RealOriginalA1OrderProgress():null;
+   const realCommand=b484?
+    '\nA1 ACTUAL FOOT · '+b484.finalCommandStatus+
+    ' · closest '+(b484.closestPhysicalGoalDistanceXZ??0).toFixed(2)+'m'+
+    ' · real arrivals '+b484.originalB471VerifiedArrivals+
+    (b484.finalCommandStatus==='HOLD'?
+     ' · C to retry if safe':' · path not certified'):'';
    this.b141RealAllyIndicator.textContent=info.text+
-    (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status:'');
+    (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status:'')+
+    realCommand;
    this.b141RealAllyIndicator.style.whiteSpace='pre-line';
    this.b141RealAllyIndicator.dataset.t21B471RealPlayerOrder=
     order.status;

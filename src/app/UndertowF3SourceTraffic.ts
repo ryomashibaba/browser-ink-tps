@@ -39,6 +39,7 @@ import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
  from './B450OriginalRouteWitness';
 import {B454NativeSourceFootRecorder} from './B454NativeSourceFootTrace';
+import {B484TrueNativeA1FollowThrough} from './B484TrueNativeA1FollowThrough';
 import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -286,6 +287,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   new Map<string,B446RealFootDryRouteProbe>();
  /** B454 bounded read-only, 60Hz actual CPU physical foot observations. */
  private readonly b454Trace=new B454NativeSourceFootRecorder();
+ private readonly b484A1Trace=new B484TrueNativeA1FollowThrough();
  private b448A3FreshLiveOriginalGoalsAuthorized=0;
  private b448A3FreshLiveOriginalHolds=0;
  private b448A3RealNativeGoalRequests=0;
@@ -2043,6 +2045,30 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.stage.solids.some(s=>s.id===ray.solidId)});
    }
   }
+  // B484: after a GENUINE C key, native post-KCC A1 foot every tick.
+  // Observation does not grant original path or modify real CPU motion.
+  if(this.enableB441SourceFrontline&&this.enableB137OriginalAllyRally&&
+    this.enableB150AllySupportInk&&this.freeCombat&&this.physics&&
+    this.b471GenuineKeyRequests>0){
+   const a1=this.bots.find(b=>b.id==='A1');
+   if(a1){
+    const foot=a1.position,g=this.b471AllyOrder?.goal;
+    const ray=this.physics.castStageSegment(
+     new Vec3(foot.x,foot.y+.65,foot.z),
+     new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    this.b484A1Trace.observe({
+     tick:frame,foot:[foot.x,foot.y,foot.z],mode:a1.mobilityState,
+     rejoined:sourceNativeLiveRejoinedCpu(a1,this.physicallyRejoined),
+     originalSolidId:ray?.solidId??null,
+     existingB471Goal:g?[g.x,g.y,g.z]:null,
+     keyRequests:this.b471GenuineKeyRequests,
+     approvedGoals:this.b471StrictlyApprovedOriginalGoals,
+     nativeGoalRequests:this.b471ActualNativeGoalRequests,
+     verifiedArrivals:this.b471ActualOriginalArrivals,
+     status:this.b471OrderStatus
+    });
+   }
+  }
   if(this.physicallyRejoined.size===7&&!this.freeCombat){
    this.freeCombat=true;
    for(const bot of this.bots){
@@ -2123,6 +2149,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * Avoid building the much larger sourcePatrol QA snapshot every physics tick.
   * No inferred rejoin, teleport, Actor mutation, or opponent route. */
  /** B454 one-shot QA evidence export, research URL only; no actor writes. */
+ b484RealOriginalA1OrderTrace(){
+  if(!this.enableB441SourceFrontline||
+     !this.enableB137OriginalAllyRally||!this.enableB150AllySupportInk)
+   return null;
+  return this.b484A1Trace.snapshot();
+ }
+ b484RealOriginalA1OrderProgress(){
+  if(!this.enableB441SourceFrontline||
+     !this.enableB137OriginalAllyRally||!this.enableB150AllySupportInk)
+   return null;
+  return this.b484A1Trace.summary();
+ }
  b454ReadOnlyOriginalNativeFootTrace(){
   if(!this.enableB441SourceFrontline||!this.physics)
    throw Error('B454_ORIGINAL_RESEARCH_OPT_IN_REQUIRED');
