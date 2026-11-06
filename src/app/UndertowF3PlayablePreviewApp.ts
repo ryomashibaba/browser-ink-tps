@@ -59,6 +59,8 @@ import {b475RealFrontlineReadyMode,b475MayArmRealSourceFrontlineReady}
 import {b476OriginalFrontlineObjectiveLayout}
  from './B476OriginalFrontlineObjectiveLayout';
 import {b477ActualSourceCpuJoinCue} from './B477ActualSourceCpuJoinCue';
+import {b483RealFrontlineTeammateCommandSelected,
+ b483MayRequestTrueFrontlineA1Order} from './B483RealFrontlineTeammateCommand';
 import {b481ActualSourcePaintOpportunity} from './B481ActualSourcePaintOpportunity';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
@@ -823,9 +825,14 @@ export class UndertowF3PlayablePreviewApp{
    b192HumanCombatEnabled&&this.b203FullRound;
   this.canvas.dataset.t21B214NativeBattleInk=b214BattleInk?
    'REAL_SOURCE_INK_ECONOMY':'OFF';
-  const realAllyRally=b193Coop||
+  // B483 uses existing B471/B150 ally support in the same native B441
+  // player session. The original B193 separate ALLY_SYNC remains intact.
+  const b483FrontlineA1=b483RealFrontlineTeammateCommandSelected(b31Params);
+  this.canvas.dataset.t21B483RealFrontlineAlly=b483FrontlineA1?
+   'REAL_SOURCE_A1_PLAYER_C_KEY':'OFF';
+  const realAllyRally=b193Coop||b483FrontlineA1||
    b31Params.get('t21W10B137')==='allyRally';
-  const realAllyInk=b193Coop||
+  const realAllyInk=b193Coop||b483FrontlineA1||
    b31Params.get('t21W10B150')==='allyInk';
   const b441OptIn=b31Params.get('t21Play')==='preview'&&
    b31Params.get('t21QaDrive')==='source'&&this.b203FullRound&&
@@ -849,7 +856,8 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21B475RealFrontlineReady=b475RealFrontlineReadyMode(b31Params)?
    'ACTUAL_SOURCE_CLASSIC_PREARM':'OFF';
   this.canvas.dataset.t21B471RealPlayerAllyOrder=
-   b193Coop&&this.b203FullRound?'SOURCE_COOP_C_KEY':'OFF';
+   (b193Coop||b483FrontlineA1)&&this.b203FullRound?
+    'SOURCE_COOP_C_KEY':'OFF';
   // Read-only evidence for genuine user R replay key acceptance.
   // No key, CPU, physics, paint, tick, or scoring authority granted.
   this.canvas.dataset.t21B200RealKeyRDecision='NOT_RECEIVED';
@@ -1873,6 +1881,14 @@ export class UndertowF3PlayablePreviewApp{
     'border-radius:9px;border:1px solid #5fdfdb88;'+
     'background:rgba(4,29,40,.87);color:#e5fcff;'+
     'font:700 11px/1.4 system-ui;text-align:left;overflow-wrap:anywhere';
+   // B483: left-side practice occupies the lower-left; show the
+   // actual A1 order/status above it rather than obscuring the player.
+   if(b483FrontlineA1){
+    indicator.style.top='104px';
+    indicator.style.bottom='auto';
+    indicator.style.left='14px';
+    indicator.dataset.t21B483RealAllyStatus='REAL_SOURCE_COMMAND_ONLY';
+   }
    indicator.hidden=true;
    ui.appendChild(indicator);
    this.b141RealAllyIndicator=indicator;
@@ -2265,7 +2281,25 @@ export class UndertowF3PlayablePreviewApp{
      window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
     }else this.restart();
    }
-   if(ev.code==='KeyC'&&b193Coop&&this.b203FullRound&&
+   const b483ActualSelected=this.canvas.dataset.t21B483RealFrontlineAlly===
+    'REAL_SOURCE_A1_PLAYER_C_KEY';
+   const b483ActualReady=b483MayRequestTrueFrontlineA1Order({
+    selected:b483ActualSelected,
+    stage:[this.rawStage.solids.length,
+     this.rawStage.paintSurfaces.length,
+     this.rawStage.navigationLinks?.length??0,
+     this.rawStage.paintSurfaces.filter(x=>
+      (x.flags&SurfaceFlags.Scoreable)!==0).length],
+    nativeTick:this.clock.tick,matchState:this.matchState,
+    paused:this.paused,stopReason:this.stopReason,
+    pointerLocked:document.pointerLockElement===this.canvas,
+    playerHp:this.resources.currentHp,
+    originalCpuRejoins:this.traffic.snapshot().physicalRejoins.length,
+    practiceVariant:this.b25Run.snapshot().practiceVariant,
+    practiceStatus:this.b25Run.snapshot().status
+   });
+   if(ev.code==='KeyC'&&(b193Coop&&this.b203FullRound||
+      b483ActualReady)&&
       document.pointerLockElement===this.canvas&&
       this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
       this.resources.currentHp>0){
@@ -4662,7 +4696,13 @@ export class UndertowF3PlayablePreviewApp{
       x:foot.x,y:foot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
       z:foot.z,grounded:this.stats.playerGrounded,active:alive,
       allySyncPracticeRunning:actualPractice.status==='RUNNING'&&
-       actualPractice.practiceVariant==='ALLY_SYNC'
+       (actualPractice.practiceVariant==='ALLY_SYNC'||
+        // This boolean is the pre-existing SOURCE A1 native support
+        // session guard, not an assertion of ALLY_SYNC mission CLEAR.
+        this.canvas.dataset.t21B483RealFrontlineAlly===
+        'REAL_SOURCE_A1_PLAYER_C_KEY'&&
+        actualPractice.practiceVariant==='CLASSIC'&&
+        this.matchState==='PLAYING'&&!this.paused&&!this.stopReason)
      });
     }
     const cpuStart=this.b20ProfileStart();

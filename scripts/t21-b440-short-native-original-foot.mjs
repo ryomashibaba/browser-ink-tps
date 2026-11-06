@@ -804,6 +804,48 @@ async function main(){
      shot.shotsFired<=beforeShot.shotsFired||
      shot.sourceScoreablePromotions!==0)
     fail('B475_ACTUAL_PLAYER_POINTER_SHOT_NOT_NATIVE');
+  // B483: genuine real Chromium C key in the SAME B441 human game.
+  // Observe pre-existing B471 original Recast/Rapier-approved A1 goal.
+  const baselineOrder=shot.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+  if(!baselineOrder||baselineOrder.genuineKeyRequests!==0||
+     shot.cpu.sourcePatrol.b137AllyRallyOptIn!==true||
+     shot.cpu.sourcePatrol.b150AllySupportInkOptIn!==true)
+   fail('B483_TRUE_SOURCE_A1_SUPPORT_NOT_ENABLED');
+  await tapSourceCameraKey('c','KeyC',67);
+  const realKey=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.matchState!=='PLAYING'||n.paused||
+      n.cpu.physicalRejoins.length!==7||!await locked())
+    fail('B483_ACTUAL_SOURCE_PLAYER_INTERRUPTED');
+   const order=n.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+   return order?.genuineKeyRequests>baselineOrder.genuineKeyRequests?
+    {n,order}:null;
+  },15000,120);
+  const realGoal=await until(async()=>{
+   const n=await snap();authority(n);
+   const o=n.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+   return o?.strictlyApprovedOriginalGoals>=1&&
+     o?.actualNativeGoalRequests>=1?{n,o}:null;
+  },25000,300);
+  if(realGoal.o.officialWinner!=='NONE'||
+     realGoal.o.actorInkScoreClockWrites!==0||
+     realGoal.o.strictlyApprovedOriginalGoals<1||
+     realGoal.o.actualNativeGoalRequests<1||
+     realGoal.n.sourceScoreablePromotions!==0)
+    fail('B483_FALSE_NATIVE_C_KEY_GOAL_CERTIFICATION');
+  proof.b483RealPlayerCKeyNativeA1={
+   actualChromeKeyC:true,genuineKeyRequests:realKey.order.genuineKeyRequests,
+   firstActualNativeTick:realKey.n.tick,
+   approvedGoals:realGoal.o.strictlyApprovedOriginalGoals,
+   issuedTrueOriginalCrowdGoals:realGoal.o.actualNativeGoalRequests,
+   originalAllyFoot:realGoal.o.approvedRealAllyFoot,
+   actualSourceGoal:realGoal.o.approvedOriginalGoal,
+   goalObservedNativeTick:realGoal.n.tick,
+   originalArrivalAlreadyCertified:false,
+   originalOpponentRoutesCertified:false,officialWinner:'NONE',
+   actorInkScoreClockWrites:0,syntheticCombatWrites:0,
+   distinctFromCoopMission:true};
+  save();
   proof.b475ActualSourceUserCombat={
    ...proof.b475ActualSourceUserCombat,
    actualChromeMousePressed:true,actualRealSourceWeaponShotCount:
