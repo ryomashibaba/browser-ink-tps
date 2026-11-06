@@ -39,9 +39,11 @@ export class B484TrueNativeA1FollowThrough{
    Math.hypot(foot[0]-this.goal[0],foot[2]-this.goal[2]):null;
   if(dist!==null)
    this.shortest=this.shortest===null?dist:Math.min(this.shortest,dist);
-  if(this.lastFoot)
-   this.footMeters+=Math.hypot(...(foot.map((v,i)=>
-    v-this.lastFoot![i]) as [number,number,number]));
+  if(this.lastFoot){
+   const previous=this.lastFoot;
+   this.footMeters+=Math.hypot(foot[0]-previous[0],
+    foot[1]-previous[1],foot[2]-previous[2]);
+  }
   this.firstFoot??=foot;this.lastFoot=foot;this.lastTick=x.tick;
   this.keys=x.keyRequests;this.approvals=x.approvedGoals;
   this.requests=x.nativeGoalRequests;this.arrivals=x.verifiedArrivals;
