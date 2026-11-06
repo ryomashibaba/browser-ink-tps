@@ -2211,7 +2211,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  b487ReadOnlyOriginalCrossTeamConnectivity(){
   if(!this.enableB441SourceFrontline||!this.freeCombat||
      this.physicallyRejoined.size!==7||
-     this.b192HumanAliveGrounded||
+     !this.b192HumanAliveGrounded||
      this.bots.length!==7||
      this.stage.solids.length!==25||
      this.stage.paintSurfaces.length!==17||
