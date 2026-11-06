@@ -726,6 +726,38 @@ async function main(){
   fail('REAL_NATIVE_INPUT_OR_SOURCE_KCC');
  await checkRealSourceCameraControls();
  if(b441Experiment){
+  // The real player crosshair now reads existing SOURCE ownerGrid,
+  // never certifies a bullet hit or creates scored paint. Capture an
+  // actual Chromium sight-line after genuine native PLAYING and 7/7.
+  const b481=await evaluate(`(() => {
+   const n=document.querySelector('#t21-f3-b243-source-aim-line');
+   const game=window.__t21F3?.snapshot?.();
+   if(!n||!game)return null;
+   return {nativeTick:game.tick,
+    aimKind:n.dataset.t21B243AimLineKind,
+    actualSourceOwner:n.dataset.t21B481OriginalOwner??'OFF',
+    originalOwnerTick:n.dataset.t21B481NativeTick??'-1',
+    aimingNotImpact:n.dataset.t21B481AimingNotImpact,
+    officialWinner:n.dataset.t21B481OfficialWinner,
+    displayed:n.textContent,
+    sourceScoreable:game.sourceScoreablePromotions,
+    productionAuthorized:game.productionAuthorized,
+    nativeCpu7:game.cpu?.physicalRejoins?.length};
+  })()`);
+  if(!b481||!['OFF','OWN','NEUTRAL','OPPONENT'].includes(
+      b481.actualSourceOwner)||b481.aimingNotImpact!=='true'||
+     b481.officialWinner!=='NONE'||b481.sourceScoreable!==0||
+     b481.productionAuthorized!==false||b481.nativeCpu7!==7||
+     (b481.actualSourceOwner!=='OFF'&&
+      (b481.aimKind!=='SOURCE_PAINT'||
+       !b481.displayed.includes('AIM ONLY / UNSCORED'))))
+    fail('B481_REAL_SOURCE_CROSSHAIR_OWNER_CANNOT_BE_FABRICATED');
+  proof.b481RealSourceAimInkReadOnly={
+   ...b481,gameplayWrites:0,certifiedPaintImpacts:0,
+   certifiedOriginalOpponentCrossings:0,officialWinner:'NONE'};
+  save();
+ }
+ if(b441Experiment){
   // B475: CDP mouse is real human pointer-locked input, never a scripted
   // projectile, enemy movement, hit, score or simulation clock injection.
   const beforeShot=await snap();authority(beforeShot);

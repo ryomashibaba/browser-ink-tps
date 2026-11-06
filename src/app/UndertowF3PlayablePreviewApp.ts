@@ -59,6 +59,7 @@ import {b475RealFrontlineReadyMode,b475MayArmRealSourceFrontlineReady}
 import {b476OriginalFrontlineObjectiveLayout}
  from './B476OriginalFrontlineObjectiveLayout';
 import {b477ActualSourceCpuJoinCue} from './B477ActualSourceCpuJoinCue';
+import {b481ActualSourcePaintOpportunity} from './B481ActualSourcePaintOpportunity';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
@@ -7140,6 +7141,40 @@ export class UndertowF3PlayablePreviewApp{
     stopReason:state.stopReason,pointerLocked:true,
     hitKind:kind,rayDistanceMeters:distance
    });
+   // B481: actual owner of the EXISTING 17-floor raster under this
+   // exact physical muzzle line. No AI targeting, ink event or score.
+   const actualOwner=paintFirst&&paintHit?
+    this.ink.sampleWorld(paintHit.worldPoint,.20,SurfaceFlags.Paintable,
+     SurfaceFlags.Scoreable):null;
+   const surface=actualOwner?.surface;
+   const cellX=surface&&actualOwner?
+    Math.min(surface.widthCells-1,Math.max(0,
+     Math.floor(actualOwner.u/surface.cellSize))):-1;
+   const cellY=surface&&actualOwner?
+    Math.min(surface.heightCells-1,Math.max(0,
+     Math.floor(actualOwner.v/surface.cellSize))):-1;
+   const b481=b481ActualSourcePaintOpportunity({
+    selected:this.canvas.dataset.t21B475RealFrontlineReady===
+     'ACTUAL_SOURCE_CLASSIC_PREARM',
+    playerView:document.querySelector<HTMLElement>('#ui-root')?.
+     dataset.t21B245Presentation==='PLAYER',
+    stage:[state.originalSourceSolids,state.originalPaintSurfaces,
+     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
+    nativeTick:state.tick,matchState:state.matchState,paused:state.paused,
+    pointerLocked:document.pointerLockElement===this.canvas,
+    stopReason:state.stopReason,playerHp:state.player.hp,
+    paintRayFirst:paintFirst,raySurfaceId:paintHit?.surface.id??null,
+    ownerSurfaceId:surface?.id??null,surfaceScoreable:surface?.isScoreable??false,
+    surfaceFlags:actualOwner?.flags??0,
+    cellActive:surface&&cellX>=0&&cellY>=0?
+     surface.isCellActive(cellX,cellY):false,
+    observedOwner:actualOwner?.owner??null
+   });
+   this.b243AimLineNotice.dataset.t21B481OriginalOwner=b481?.owner??'OFF';
+   this.b243AimLineNotice.dataset.t21B481NativeTick=
+    String(b481?.nativeTick??-1);
+   this.b243AimLineNotice.dataset.t21B481AimingNotImpact='true';
+   this.b243AimLineNotice.dataset.t21B481OfficialWinner='NONE';
    const centerCpu=b364RealSourceCrosshair({
     stage:[state.originalSourceSolids,state.originalPaintSurfaces,
      state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
@@ -7166,15 +7201,19 @@ export class UndertowF3PlayablePreviewApp{
     this.b243AimLineNotice.dataset.t21B243AimLineKind=line.kind;
     this.b243AimLineNotice.dataset.t21B243ActualTick=String(state.tick);
     const tint=centerCpu?
-     (centerCpu.guarded?'#ffd48c':'#99ffe0'):line.tint;
+     (centerCpu.guarded?'#ffd48c':'#99ffe0'):(b481?.tint??line.tint);
     this.b243AimLineNotice.style.color=tint;
     const caption=this.b243AimLineNotice.querySelector<HTMLElement>(
      '#t21-f3-b243-source-aim-caption')!;
     caption.textContent=centerCpu?centerCpu.text:
-     line.label+' · NO HIT CLAIM';
+     b481?b481.label:line.label+' · NO HIT CLAIM';
     caption.style.borderColor=tint;
    }
   }else{
+   this.b243AimLineNotice.dataset.t21B481OriginalOwner='OFF';
+   this.b243AimLineNotice.dataset.t21B481NativeTick='-1';
+   this.b243AimLineNotice.dataset.t21B481AimingNotImpact='true';
+   this.b243AimLineNotice.dataset.t21B481OfficialWinner='NONE';
    this.b243AimLineNotice.dataset.t21B243AimLineKind='OFF';
    this.b243AimLineNotice.dataset.t21B364Mode='NO_EXACT_CPU_AIM';
    this.b243AimLineNotice.dataset.t21B364CpuId='NONE';
