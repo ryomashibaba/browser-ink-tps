@@ -1,3 +1,5 @@
+> **2026-11-07 最優先・唯一の現行状態入口：** [Browser Ink TPS 完全統合・批判的再評価・新チャット継承正本（2026-11-07）](docs/continuity/BROWSER_INK_TPS_COMPLETE_HANDOFF_CRITICAL_REVIEW_20261107_JA.md) を最初に全文読む。F1〜F5/FAST TRACKの最上位仕様は不変更。真正ゲーム基準は bca40f70204a1cdc8894d18a7419c2dc10303bf6、B441 [#42296521946](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42296521946) は短時間SOURCE限定SUCCESS、敵味方原作経路0/16・正式4v4/得点/勝敗/公開HOLD。下に残る旧「最新HEAD」「次工程」「CI実行中」は歴史的記録。新チャットではこの最上段の正本から始め、研究ブランチの現在HEADを再取得する。
+
 > **2026-11-06 現行継承入口／再批判後の実行正本**：最新の固定F1〜F5、実証SHA 9f5fa6faafacb217f33b46ce66f620b5c4be6898、原作SOURCE安全境界、同SHA B441 #42214652579 SUCCESSと未認証を正確に区別した [完全統合引き継ぎ・批判的再評価 2026-11-06](docs/continuity/BROWSER_INK_TPS_COMPLETE_HANDOFF_CRITICAL_REVIEW_20261106_LATEST_JA.md)。研究コードとPR/本番は別。**この行が以前の履歴見出しより新しい再開入口**であり、実HEADは毎回取り直す。
 
 > **2026-11-05 統合隔離研究候補（未認証）**：`research/t21-integrated-a1-c-patrol-four-mode-20261105` にB470同側CPU巡回＋B471本物C→A1協力指示＋B472 4モード武器選択を1つのゲームとして保全。B413正規研究HEADの進行中CIを保護するため、非forceで隔離保存。真正Chromium/RAWはこの統合SHAで別途要確認。原作25/17/26/0、対岸0/12、正式4v4・公式勝敗・公開HOLD。詳細 [統合検証正本](docs/continuity/T21_INTEGRATED_A1_C_PATROL_FOUR_MODE_20261105_JA.md)。
