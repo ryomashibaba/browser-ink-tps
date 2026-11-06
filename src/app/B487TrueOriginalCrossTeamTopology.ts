@@ -40,16 +40,17 @@ export function b487ActualOriginalCrossTeamTopology(input:Readonly<{
  for(const l of input.links){
   if(used.has(l.id)||!l.start||!l.end||
      l.start.length!==3||l.end.length!==3||
-     ![...l.start,...l.end].every(Number.isFinite)||
-     l.start[2]===0||l.end[2]===0||
-     l.start[2]*l.end[2]<0||
-     l.bidirectional!==false||l.start[1]<=l.end[1])return null;
+     ![...l.start,...l.end].every(Number.isFinite))return null;
+  // noUncheckedIndexedAccess: these are 3-element finite arrays above.
+  const sx=l.start[2]!,ex=l.end[2]!;
+  if(sx===0||ex===0||sx*ex<0||
+     l.bidirectional!==false||l.start[1]!<=l.end[1]!)return null;
   used.add(l.id);oneWay++;
   if(/^first-drop-(positive-z|negative-z)-\d+$/.test(l.id))firstDrop++;
   else if(/^right-small-drop-(positive-z|negative-z)-\d+$/.test(l.id))
    smallDrop++;
   else return null;
-  if(Math.sign(l.start[2])!==Math.sign(l.end[2]))crossSide++;
+  if(Math.sign(sx)!==Math.sign(ex))crossSide++;
  }
  if(firstDrop!==12||smallDrop!==14||oneWay!==26)return null;
  const order=[
