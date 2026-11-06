@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
  * B440: SHORT TRUE Chromium source-floor human-input gate.
- * Uses the exact previously exercised B419 SECOND-WORLD URL, but is NOT
+ * B475 B441 variant exercises the actual user-selected SOURCE human combat;
+ * the historical non-B441 variant retains its A1 cooperative QA world.
+ * This is NOT
  * itself a clicked-replay/2x180s proof. Real browser, real 7 CPU first drops,
  * real player KCC, real CDP W-key; no actor/tick/score/navigation writes.
  */
@@ -14,7 +16,9 @@ const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
 const b448Experiment=b441Experiment&&
  process.env.T21_B448_A3_REAL_ORIGINAL_FRONT==='1';
-const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay&t21W10B193=allyCoop&t21W10B203=fullRound'+
+const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay'+
+ (b441Experiment?'&t21W10B112=humanGround&t21W10B192=humanCombat':
+  '&t21W10B193=allyCoop')+'&t21W10B203=fullRound'+
  (b441Experiment?'&t21W10B441=sourceFrontline':'')+
  (b448Experiment?'&t21W10B448=realA3Front':'');
 const nativeFrontObservationTicks=b441Experiment?
@@ -477,6 +481,25 @@ async function main(){
  const boot=await snap();authority(boot);
  if(boot.matchState!=='STAGING'||boot.cpu.physicalRejoins.length!==0)
   fail('NOT_FRESH_NATIVE_SOURCE_WORLD');
+ if(b441Experiment){
+  const q=new URL(await evaluate('location.href')).searchParams;
+  const mode=await evaluate(`document.querySelector('#app-canvas')?.dataset.t21B475RealFrontlineReady`);
+  if(q.get('t21W10B192')!=='humanCombat'||q.has('t21W10B193')||
+     mode!=='ACTUAL_SOURCE_CLASSIC_PREARM'||
+     boot.b214SustainedBattleInk?.enabled!==true||
+     boot.b215RealBattleAimPacing?.enabled!==true||
+     boot.b216RealNativePaintBackfill?.enabled!==true||
+     boot.b367RealCpuLifecycleEvidence?.enabled!==true||
+     boot.b474NativeSteeringEvidence?.enabled!==true)
+    fail('B475_REAL_PLAYER_MODE_NATIVE_PIPELINES_NOT_ENABLED');
+  proof.b475ActualSourceUserCombat={
+   realUserCombatMode:true,originalReadyTick:boot.tick,
+   realSevenCpuNativeActors:boot.cpu.cpu.length,
+   nativeBattleInk:true,realHpWitnessEnabled:true,
+   boundedNativeCpuSteering:true,syntheticShots:0,sourceScoreable:0,
+   certifiedEnemyRoutes:false,officialWinner:'NONE'};
+  save();
+ }
  proof.stage='FRESH_NATIVE_SOURCE';proof.browserOrigin=await origin();save();
  await buttonClick('#t21-f3-b25-start');
  await until(async()=>{
@@ -536,6 +559,41 @@ async function main(){
   !Number.isFinite(meters)||meters<.10||meters>2.2)
   fail('REAL_NATIVE_INPUT_OR_SOURCE_KCC');
  await checkRealSourceCameraControls();
+ if(b441Experiment){
+  // B475: CDP mouse is real human pointer-locked input, never a scripted
+  // projectile, enemy movement, hit, score or simulation clock injection.
+  const beforeShot=await snap();authority(beforeShot);
+  const pressedAtTick=beforeShot.tick;
+  let pressed=false,shot=null;
+  try{
+   await cdp('Input.dispatchMouseEvent',{
+    type:'mousePressed',x:800,y:450,button:'left',buttons:1,clickCount:1});
+   pressed=true;
+   shot=await until(async()=>{
+    const n=await snap();authority(n);
+    return n.tick>=pressedAtTick+6&&
+     n.shotsFired>beforeShot.shotsFired?n:false;
+   },25000,250);
+  }finally{
+   if(pressed)await cdp('Input.dispatchMouseEvent',{
+    type:'mouseReleased',x:800,y:450,button:'left',buttons:0,clickCount:1});
+  }
+  if(!shot||shot.paused||shot.matchState!=='PLAYING'||
+     !await locked()||shot.b367RealCpuLifecycleEvidence?.enabled!==true||
+     shot.shotsFired<=beforeShot.shotsFired||
+     shot.sourceScoreablePromotions!==0)
+    fail('B475_ACTUAL_PLAYER_POINTER_SHOT_NOT_NATIVE');
+  proof.b475ActualSourceUserCombat={
+   ...proof.b475ActualSourceUserCombat,
+   actualChromeMousePressed:true,actualRealSourceWeaponShotCount:
+    shot.shotsFired-beforeShot.shotsFired,
+   actualShotNativeTick:shot.tick,originalPlayerKccUnchanged:true,
+   actualPhysicalCpuPatrol:true,syntheticCombatEvents:0,
+   humanCpuHitsNotFabricated:true,
+   sourceCpuHitsObservedNotRequired:shot.humanCpuDirectHits,
+   officialWinner:'NONE'};
+  save();
+ }
  if(b441Experiment){
   // B441 has to prove the actual SOURCE CPU goal selector, not merely
   // the candidate generator passing its pure unit tests. No fake route,

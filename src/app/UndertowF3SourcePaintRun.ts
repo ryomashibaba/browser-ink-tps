@@ -111,6 +111,15 @@ export class UndertowF3SourcePaintRun{
   // A retry keeps only a real previous in-page practice best.
   return true;
  }
+ /** B475 original B441 player READY only: prepare CLASSIC without
+  * advancing its timer until the SAME real 180s world is PLAYING and
+  * all seven actual source CPUs physically rejoined. The caller must
+  * independently enforce the exact 25/17/26/0 READY eligibility. */
+ public armNativeFrontlineReady():boolean{
+  if(!this.arm('CLASSIC',false))return false;
+  this.waitForPhysicalCoopStart=true;
+  return true;
+ }
  public abort(reason:string){
   if(this.status==='ARMED'||this.status==='RUNNING'){
    this.status='ABORTED';

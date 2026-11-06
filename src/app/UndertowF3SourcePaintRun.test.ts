@@ -76,6 +76,33 @@ describe('W10-B25 real human ink + real original grounded foot practice',()=>{
  });
 });
 
+describe('B475 source-native CLASSIC challenge pre-arm, not synthetic paint',()=>{
+ it('stays ARMED until real PLAYING AND actual seven original CPU rejoin',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.armNativeFrontlineReady()).toBe(true);
+  expect(r.snapshot().status).toBe('ARMED');
+  r.observe(tick(1,{realSourceMatchPlaying:false,
+   allSevenSourceCpuPhysicallyRejoined:false}));
+  expect(r.snapshot().status).toBe('ARMED');
+  r.observe(tick(2,{realSourceMatchPlaying:true,
+   allSevenSourceCpuPhysicallyRejoined:false}));
+  expect(r.snapshot().status).toBe('ARMED');
+  r.observe(tick(3,{realSourceMatchPlaying:true,
+   allSevenSourceCpuPhysicallyRejoined:true}));
+  expect(r.snapshot().status).toBe('RUNNING');
+  expect(r.snapshot().humanChangedImpactCells).toBe(0);
+  expect(r.snapshot().officialWinner).toBe('NONE');
+ });
+ it('rejects invalid original SOURCE and never gives practice completion',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.armNativeFrontlineReady()).toBe(true);
+  r.observe(tick(1,{sourceSolids:24,realSourceMatchPlaying:true,
+   allSevenSourceCpuPhysicallyRejoined:true}));
+  expect(r.snapshot().status).toBe('ABORTED');
+  expect(r.snapshot().completedRealPracticeRuns).toBe(0);
+ });
+});
+
 describe('B55 real in-page source-local practice records',()=>{
  const complete=(r:UndertowF3SourcePaintRun,end:number)=>{
   expect(r.arm()).toBe(true);r.observe(tick(1));

@@ -54,6 +54,8 @@ import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattl
 import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
 import {b473RealSourceCombatLifeReadoutSelected} from './B473RealSourceCombatLifeReadout';
 import {b474OriginalFrontSteeringRefreshSelected} from './B474OriginalFrontSteeringRefresh';
+import {b475RealFrontlineReadyMode,b475MayArmRealSourceFrontlineReady}
+ from './B475RealFrontlineReadyChallenge';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
@@ -839,6 +841,9 @@ export class UndertowF3PlayablePreviewApp{
    'STRICT_REAL_CPU_A3_ORIGINAL_GOAL_REAUTHORIZATION':'OFF';
   this.canvas.dataset.t21B441OriginalFrontline=b441OptIn?
    'SOURCE_ONLY_INDEPENDENT_FRONTLINE_RESEARCH':'OFF';
+  // B475 grants only the user-selected B441 CLASSIC mission READY UI.
+  this.canvas.dataset.t21B475RealFrontlineReady=b475RealFrontlineReadyMode(b31Params)?
+   'ACTUAL_SOURCE_CLASSIC_PREARM':'OFF';
   this.canvas.dataset.t21B471RealPlayerAllyOrder=
    b193Coop&&this.b203FullRound?'SOURCE_COOP_C_KEY':'OFF';
   // Read-only evidence for genuine user R replay key acceptance.
@@ -2116,6 +2121,20 @@ export class UndertowF3PlayablePreviewApp{
     nativeTick:this.clock.tick,matchState:this.matchState,
     practiceStatus:this.b25Run.snapshot().status,stopReason:this.stopReason
    });
+   const permittedReadyFrontline=b475MayArmRealSourceFrontlineReady(
+    b31Params,{
+     stage:[this.rawStage.solids.length,
+      this.rawStage.paintSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,
+      this.rawStage.paintSurfaces.filter(s=>
+       (s.flags&SurfaceFlags.Scoreable)!==0).length],
+     nativeTick:this.clock.tick,paused:this.paused,
+     fullRound:this.b203FullRound,
+     everLockedPointer:this.b203EverLockedRealPointer,
+     pointerLocked:document.pointerLockElement===this.canvas,
+     matchState:this.matchState,practiceStatus:this.b25Run.snapshot().status,
+     variant:this.b56NextVariant,stopReason:this.stopReason
+    });
    const permittedPausedArm=sourceFullRoundCanArmWhilePaused({
     enabled:this.b203FullRound,paused:this.paused,
     awaitingPointerRelock:this.resumeAfterRealPointerLock,
@@ -2125,7 +2144,8 @@ export class UndertowF3PlayablePreviewApp{
     stopReason:this.stopReason
    });
    if(document.pointerLockElement===this.canvas||
-      (this.paused&&!permittedPausedArm&&!permittedReadyCoopArm)||this.stopReason||
+      (this.paused&&!permittedPausedArm&&!permittedReadyCoopArm&&
+       !permittedReadyFrontline)||this.stopReason||
       this.matchState==='TIME_UP'||this.survey.snapshot().active||
       this.galleryIndex>=0||['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
     this.b25RunProgress.textContent='Exit pause/survey and unlock mouse before arming.';
@@ -2139,10 +2159,14 @@ export class UndertowF3PlayablePreviewApp{
      'ALLY SYNC requires explicit original A1 rally + ink opt-in.';
     return;
    }
-   if(this.b25Run.arm(this.b56NextVariant,permittedReadyCoopArm)){
-    this.b25RunProgress.textContent=permittedReadyCoopArm?
-     'A1 CO-OP ARMED · Now press START 180s. The 60s mission begins after real CPU 7/7 rejoin.':
-     'ARMED · Click stage for real pointer lock and 60Hz resume.';
+   if(permittedReadyFrontline?
+      this.b25Run.armNativeFrontlineReady():
+      this.b25Run.arm(this.b56NextVariant,permittedReadyCoopArm)){
+    this.b25RunProgress.textContent=permittedReadyFrontline?
+     'REAL B441 SOURCE CLASSIC ARMED · START 180s · 7/7 PHYSICAL CPU JOIN REQUIRED':
+     permittedReadyCoopArm?
+      'A1 CO-OP ARMED · Now press START 180s. The 60s mission begins after real CPU 7/7 rejoin.':
+      'ARMED · Click stage for real pointer lock and 60Hz resume.';
     this.b25RunButton.textContent='PAINT RUN ARMED';
     this.b25RunButton.disabled=true;
     // Real click updates the dual objective display immediately;
@@ -5440,8 +5464,10 @@ export class UndertowF3PlayablePreviewApp{
   // A1 co-op uses this card as its real user-start control even at READY.
   // Hiding it would prevent B162 native co-op from being armed.
   const dedicatedCoop=this.canvas.dataset.t21B193Coop==='REAL_A1_ORIGINAL_SOURCE';
+  const b475Ready=this.canvas.dataset.t21B475RealFrontlineReady===
+   'ACTUAL_SOURCE_CLASSIC_PREARM'&&this.matchState==='STAGING';
   this.b25RunCard.hidden=(focus||playerView)&&
-   this.b25Run.snapshot().status==='IDLE'&&!dedicatedCoop;
+   this.b25Run.snapshot().status==='IDLE'&&!dedicatedCoop&&!b475Ready;
   this.canvas.dataset.t21W10B36PlayFocus=focus?'ON':'OFF';
  }
  private createB195CoopHud(ui:HTMLElement){

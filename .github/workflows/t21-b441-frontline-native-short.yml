@@ -33,6 +33,10 @@ on:
       - 'src/app/B473RealSourceCombatLifeReadout.test.ts'
       - 'src/app/B474OriginalFrontSteeringRefresh.ts'
       - 'src/app/B474OriginalFrontSteeringRefresh.test.ts'
+      - 'src/app/B475RealFrontlineReadyChallenge.ts'
+      - 'src/app/B475RealFrontlineReadyChallenge.test.ts'
+      - 'src/app/UndertowF3SourcePaintRun.ts'
+      - 'src/app/UndertowF3SourcePaintRun.test.ts'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
       - 'src/app/UndertowF3SourceSessionBoard.ts'
       - 'src/app/UndertowF3SourceSessionBoard.test.ts'
@@ -68,7 +72,7 @@ jobs:
           node --test scripts/t21-b452-native-foot-vs-recast-audit.test.mjs
           node --check scripts/t21-b454-real-native-full-rate-source-foot.mjs
           node --test scripts/t21-b454-real-native-full-rate-source-foot.test.mjs
-          npx vitest run src/app/UndertowF3PaintAwarePatrol.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B421RealEnemyStandoff.test.ts src/app/B473RealSourceCombatLifeReadout.test.ts src/app/B474OriginalFrontSteeringRefresh.test.ts src/ai/OriginalSourceNativeTargetRefresh.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B443OriginalFrontHold.test.ts src/app/B450OriginalRouteWitness.test.ts src/app/B454NativeSourceFootTrace.test.ts src/camera/ThirdPersonCamera.test.ts src/audio/SourcePracticeAudio.test.ts src/app/SourcePlayPortal.test.ts src/app/B464PlayableSourceFrontlineHud.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B463SourceReplayMemory.test.ts
+          npx vitest run src/app/UndertowF3PaintAwarePatrol.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B421RealEnemyStandoff.test.ts src/app/B473RealSourceCombatLifeReadout.test.ts src/app/B474OriginalFrontSteeringRefresh.test.ts src/app/B475RealFrontlineReadyChallenge.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/ai/OriginalSourceNativeTargetRefresh.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B443OriginalFrontHold.test.ts src/app/B450OriginalRouteWitness.test.ts src/app/B454NativeSourceFootTrace.test.ts src/camera/ThirdPersonCamera.test.ts src/audio/SourcePracticeAudio.test.ts src/app/SourcePlayPortal.test.ts src/app/B464PlayableSourceFrontlineHud.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B463SourceReplayMemory.test.ts
           npm run build -- --base=/browser-ink-tps/
       - name: One real native browser with 7 original CPU and B441 opt-in
         env:
