@@ -52,6 +52,7 @@ import {sourceCoopEligible,sourceCoopNavigationUrl,sourceFullRoundCanArmWhilePau
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
 import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
+import {b473RealSourceCombatLifeReadoutSelected} from './B473RealSourceCombatLifeReadout';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
@@ -804,6 +805,11 @@ export class UndertowF3PlayablePreviewApp{
    b31Params.get('t21Play')==='preview'&&
    b31Params.get('t21QaDrive')==='source'&&
    b31Params.get('t21W10B192')==='humanCombat';
+  // B473: only the existing user-selected B207 ORIGINAL-SOURCE mode.
+  // This merely observes physical HUMAN projectile -> genuine CPU life.
+  const b473NativeLifeReadout=b473RealSourceCombatLifeReadoutSelected(b31Params);
+  this.canvas.dataset.t21B473NativeLifeReadout=b473NativeLifeReadout?
+   'ACTUAL_HUMAN_CPU_HP_ONLY':'OFF';
   this.canvas.dataset.t21B192HumanCombat=
    b192HumanCombatEnabled?'REAL_SOURCE_ONLY':'OFF';
   const b214BattleInk=b214EligibleSourceBattleInk(b31Params)&&
@@ -972,11 +978,11 @@ export class UndertowF3PlayablePreviewApp{
      b192HumanCombatEnabled&&this.b203FullRound&&
      b31Params.get('t21QaDrive')==='source')
     this.projectiles.enableB367RealCpuLifecycleEvidence();
-  // The user-selected native B384 round uses the same real CPU HP system.
-  // Unlike historical B351, it is not a pulse-sprayer-only QA mode.
-  // The witness observes the actual attack; never creates one.
-  else if(this.b384Circuit&&b192HumanCombatEnabled&&
-     this.b203FullRound){
+  // B384 plus the ordinary B207 readout use the SAME proven native HP
+  // system. Unlike historical B351, both observe actual selected-weapon
+  // physical hits only; neither creates an attack, route or score.
+  else if((this.b384Circuit||b473NativeLifeReadout)&&
+     b192HumanCombatEnabled&&this.b203FullRound){
     this.projectiles.enableB384SelectedSourceCpuLifeWitness({
      id:this.rawStage.metadata.id,
      solids:this.rawStage.solids.length,
@@ -1925,7 +1931,7 @@ export class UndertowF3PlayablePreviewApp{
    createB211RealBattleRoster(ui):null;
   if(b192HumanCombatEnabled&&this.b203FullRound&&
      (b31Params.get('t21W10B367')==='realCpuLifecycle'||
-      this.b384Circuit)){
+      this.b384Circuit||b473NativeLifeReadout)){
    const n=document.createElement('aside');
    n.id='t21-f3-b367-real-cpu-lifecycle';
    n.hidden=true;
@@ -4776,7 +4782,7 @@ export class UndertowF3PlayablePreviewApp{
     this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
     const paintStart=this.b20ProfileStart();
     this.coordinator.processTick(frame);
-    // B384/B367: observe genuine post-projectile HP and post-CpuAgent
+    // B473/B384/B367: observe genuine post-projectile HP and post-CpuAgent
     // splat/respawn on EVERY native physics tick. Heavy HUD refresh may
     // skip 150 real ticks; it must not author or miss this life history.
     // Seven original CPU states are read through the lightweight source
