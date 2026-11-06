@@ -658,6 +658,22 @@ async function main(){
     B2:b454Native.rows.B2.length,B4:b454Native.rows.B4.length,
     dropped:{...b454Native.dropped},
     continuousKccRouteCertified:false,originalScoreable:0};
+  // B474: require measured original native Crowd requests AND bounded
+  // duplicate suppression in THIS true 720-tick browser, not a pure test.
+  // This is research behavior only; no original route or hit promotion.
+  const steering=actual.b474NativeSteeringEvidence;
+  if(!steering||steering.enabled!==true||
+     !Number.isSafeInteger(steering.nativeRequestIssued)||
+     steering.nativeRequestIssued<1||
+     !Number.isSafeInteger(steering.redundantUnchangedRequestsSuppressed)||
+     steering.redundantUnchangedRequestsSuppressed<1||
+     steering.noExtraNavOrGameplayAuthority!==true||
+     steering.sourceOnly!==true||steering.productionAuthorized!==false)
+    fail('B474_NATIVE_SOURCE_DUPLICATE_REQUEST_REDUCTION_UNPROVEN');
+  proof.b441NativeEvidence.b474TrueNativeCrowdGoalRefresh={...steering,
+   actualNativeTick:actual.tick,
+   originalCollisionAuthorizationChanged:false,
+   scoreableSurfacePromotions:0};
   const afterPatrol=actual.cpu.sourcePatrol;
   const observed=actual.cpu.cpu.map(c=>{
    const from=baseline[c.id],p=c.physicalFoot;

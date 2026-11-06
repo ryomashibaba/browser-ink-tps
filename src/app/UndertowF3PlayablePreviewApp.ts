@@ -53,6 +53,7 @@ import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b211RealNativeRoster,createB211RealBattleRoster} from './B211NativeBattleRoster';
 import {B367RealCpuCombatTimeline} from './B367RealCpuCombatTimeline';
 import {b473RealSourceCombatLifeReadoutSelected} from './B473RealSourceCombatLifeReadout';
+import {b474OriginalFrontSteeringRefreshSelected} from './B474OriginalFrontSteeringRefresh';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
@@ -945,8 +946,14 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21B68NormalPreviewSweep=
    b68NormalPreviewSweep?'EXPERIMENTAL_ONLY':'NOT_ENABLED';
   // Original T21 preview retains the verified fixed native steering.
-  // Suppress repeated same-goal Recast requests in the explicit B35 lab only.
-  if(b31Params.get('t21W10B35')==='nativeTargetRefresh')
+  // B474: B441 explicitly selected original-frontline CPU (and its real
+  // B440 co-op browser witness) reuse the already guarded B35 same-agent
+  // duplicate-target suppression. Changed original goals reissue promptly.
+  // Normal source modes, original T20 and physical KCC remain unchanged.
+  const b474NativeSteering=b474OriginalFrontSteeringRefreshSelected(b31Params);
+  this.canvas.dataset.t21B474NativeSteering=b474NativeSteering?
+   'BOUNDED_REAL_SOURCE_GOAL_REISSUE':'OFF';
+  if(b474NativeSteering||b31Params.get('t21W10B35')==='nativeTargetRefresh')
    this.cpu.enableB35SourceNativeRetargetSuppression();
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
@@ -6728,6 +6735,11 @@ export class UndertowF3PlayablePreviewApp{
    b351ActualHitCue:this.projectiles.b351ActualHitCueSnapshot(),
    b367RealCpuLifecycleEvidence:
     this.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
+   // B474: actual native Crowd submit/suppress counts, never an AI route
+   // permit or a replacement for the original Rapier physical foot.
+   b474NativeSteeringEvidence:this.canvas.dataset.t21B474NativeSteering===
+    'BOUNDED_REAL_SOURCE_GOAL_REISSUE'?
+    this.cpu.b35NativeSourceRetargetSnapshot():null,
    b349ActualKccGrounded:this.stats.playerGrounded,
     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
    b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
