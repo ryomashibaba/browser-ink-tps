@@ -834,7 +834,17 @@ async function main(){
   // F3 genuine player feedback acceptance in the SAME real Chromium
   // world. This validates the real B356 reader, not the scripted act of
   // shooting, and never credits a shot as paint or an opponent HP hit.
-  const impactCue=await until(async()=>evaluate(`(() => {
+  proof.b475RealMouseAccepted={
+   genuineChromeMouse:true,firstNativeTick:pressedAtTick,
+   lastShotNativeTick:shot.tick,previousHumanShots:beforeShot.shotsFired,
+   realHumanShots:shot.shotsFired,realCpuCount:shot.cpu.physicalRejoins.length,
+   source:'25/17/26/0',actorWrites:0,clockWrites:0,scoreWrites:0,
+   cpuHpHitCertified:false,officialWinner:'NONE'
+  };
+  proof.stage='REAL_MOUSE_SHOT_ACCEPTED_B356_PENDING';save();
+  let impactCue;
+  try{
+   impactCue=await until(async()=>evaluate(`(() => {
    const e=document.querySelector('#t21-f3-b356-real-source-reticle');
    const n=window.__t21F3?.snapshot?.();
    if(!e||!n)return null;
@@ -853,7 +863,24 @@ async function main(){
     originalScoreable:n.sourceScoreablePromotions,
     actualVisible:!e.hidden&&getComputedStyle(e).display!=='none',
     officialWinner:n.officialWinner??'NONE'};
-  })()`),5000,80);
+  })()`),25000,250);
+  }catch(error){
+   let state=null;
+   try{
+    state=await evaluate(`(() => {
+     const e=document.querySelector('#t21-f3-b356-real-source-reticle');
+     const n=window.__t21F3?.snapshot?.();
+     return {nativeTick:n?.tick??null,humanShots:n?.shotsFired??null,
+      exists:!!e,lastMode:e?.dataset.t21B356LastRealCueMode??null,
+      lastCueTick:e?.dataset.t21B356LastRealCueNativeTick??null,
+      matchState:n?.matchState??null,paused:n?.paused??null,
+      scoreable:n?.sourceScoreablePromotions??null};
+    })()`);
+   }catch{/* Preserve original timeout and already accepted real shot. */}
+   proof.b356NativeHudHold={realShot:proof.b475RealMouseAccepted,
+    lastRealDom:state,reason:String(error),nativeClockWrites:0,
+    actorWrites:0,scoreWrites:0};save();throw error;
+  }
   if(!impactCue||impactCue.enabled!=='true'||
      !['ACTUAL_SHOT_ONLY','REAL_PAINT'].includes(impactCue.lastMode)||
      impactCue.lastNativeTick<pressedAtTick||

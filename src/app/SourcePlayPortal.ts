@@ -187,6 +187,61 @@ export function sourceFinishedReplayHref(
  }catch{return null;}
 }
 
+
+export type SourcePlayableMode='circuit'|'combat'|'coop'|'frontline';
+/** Only one of the four actual SOURCE launcher URLs can switch modes.
+ * Rejects injected parameters, duplicate keys and mixed research flags.
+ */
+export function sourceCanonicalPlayableMode(href:string):SourcePlayableMode|null{
+ const menu=sourcePlayPortalReturnUrl(href);
+ if(!menu)return null;
+ try{
+  const u=new URL(href),initial=u.searchParams.get('t21W10B389');
+  if(initial!==null&&b389NativeBootWeapon(u.searchParams)!==initial)
+   return null;
+  const options=sourcePlayWeaponModeDestinations(menu,initial??DEFAULT_WEAPON_ID);
+  const same=(a:string,b:string):boolean=>{
+   const x=new URL(a),y=new URL(b);
+   if(x.origin!==y.origin||x.pathname!==y.pathname||x.hash||y.hash)
+    return false;
+   const pairs=(z:URL)=>[...z.searchParams.entries()]
+    .map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).sort();
+   const left=pairs(x),right=pairs(y);
+   return left.length===right.length&&left.every((v,i)=>v===right[i]);
+  };
+  return (Object.keys(options) as SourcePlayableMode[])
+   .find(mode=>same(u.href,options[mode]))??null;
+ }catch{return null;}
+}
+/** A clean NEW SOURCE world retaining only the current human weapon and
+ * the explicitly selected one of the four existing modes, not game state.
+ */
+export function sourceFreshSelectedModeHref(
+ href:string,weaponId:string,target:SourcePlayableMode
+):string|null{
+ if(sourceCanonicalPlayableMode(href)===null||
+    !WEAPON_ORDER.includes(weaponId as WeaponId))return null;
+ const menu=sourcePlayPortalReturnUrl(href);
+ if(!menu)return null;
+ try{return sourcePlayWeaponModeDestinations(menu,weaponId)[target]??null}
+ catch{return null;}
+}
+/** A genuine A1 mission can CLEAR before the 180s world reaches TIME_UP.
+ * Exact original physical SOURCE, true paused/unlocked user replay required.
+ */
+export function sourceCoopPracticeFreshReplayHref(input:{
+ href:string;weaponId:string;matchState:string;practiceStatus:string;
+ stopped:boolean;pointerLocked:boolean;originalSolids:number;
+ originalPaint:number;originalLinks:number;scoreable:number;
+}):string|null{
+ if(sourceCanonicalPlayableMode(input.href)!=='coop'||
+    input.matchState!=='PLAYING'||input.stopped||input.pointerLocked||
+    !['CLEAR','TIME_UP','ABORTED'].includes(input.practiceStatus)||
+    input.originalSolids!==25||input.originalPaint!==17||
+    input.originalLinks!==26||input.scoreable!==0)return null;
+ return sourceFreshSelectedModeHref(input.href,input.weaponId,'coop');
+}
+
 /** Real keyboard R shares the same finished-session gate as clicking the
  * real replay button. Never propagate R to legacy in-world reset(). */
 export type SourceReplayHotkeyAction='UNRELATED'|SourceFinishedReplayAction|

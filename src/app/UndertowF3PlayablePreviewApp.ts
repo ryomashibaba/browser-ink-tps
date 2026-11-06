@@ -114,7 +114,8 @@ import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircu
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourceFinishedReplayHref,sourceReplayHotkeyAction,
- sourcePlayStoreWeaponSelection} from './SourcePlayPortal';
+ sourcePlayStoreWeaponSelection,sourceCanonicalPlayableMode,
+ sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -1311,8 +1312,10 @@ export class UndertowF3PlayablePreviewApp{
     if(document.pointerLockElement===this.canvas||
        this.survey.snapshot().active||this.galleryIndex>=0||
        ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status))return;
-    window.location.assign(sourceCoopNavigationUrl(
-      window.location.href,!b193Coop));
+    window.location.assign(sourceFreshSelectedModeHref(
+     window.location.href,this.projectiles.currentPlayerWeapon.id,
+     b193Coop?'combat':'coop')??sourceCoopNavigationUrl(
+     window.location.href,!b193Coop));
    });
    this.panel.querySelector('h2')!.insertAdjacentElement('afterend',coop);
    if(b193Coop){
@@ -1735,7 +1738,9 @@ export class UndertowF3PlayablePreviewApp{
     allyChoice.disabled=true;
     // B193 generates a new clean Stage/Recast/Rapier session and
     // explicitly strips incompatible B384 opponent-combat parameters.
-    window.location.assign(sourceCoopNavigationUrl(
+    window.location.assign(sourceFreshSelectedModeHref(
+     window.location.href,this.projectiles.currentPlayerWeapon.id,
+     b193Coop?'combat':'coop')??sourceCoopNavigationUrl(
      window.location.href,!b193Coop));
    });
    pauseOverlay.insertBefore(allyChoice,resumeButton);
@@ -4476,18 +4481,38 @@ export class UndertowF3PlayablePreviewApp{
  }
  /** B200: one shared TRUE new-world action. No live actor/ink/tick reset. */
  private requestFreshSourceCoopReplay():boolean{
+  const status=this.b25Run.snapshot().status;
   const decision=b197CoopReplayDecision({
    originalSourceCoop:sourceCoopEligible(new URLSearchParams(window.location.search)),
-   practiceStatus:this.b25Run.snapshot().status,
+   practiceStatus:status,
    sessionEnded:this.matchState==='TIME_UP',nativeStopped:!!this.stopReason
   });
   if(!decision.replay||document.pointerLockElement===this.canvas||
      this.survey.snapshot().active||this.galleryIndex>=0)return false;
+  let next:string|null;
+  if(sourceCanonicalPlayableMode(window.location.href)==='coop'){
+   const evidence=this.sourceFinishedReplayEvidence();
+   const weaponId=this.projectiles.currentPlayerWeapon.id;
+   next=this.matchState==='TIME_UP'?
+    sourceFinishedReplayHref({...evidence,weaponId}):
+    sourceCoopPracticeFreshReplayHref({
+     href:window.location.href,weaponId,matchState:this.matchState,
+     practiceStatus:status,stopped:!!this.stopReason,
+     pointerLocked:document.pointerLockElement===this.canvas,
+     originalSolids:evidence.originalSolids??-1,
+     originalPaint:evidence.originalPaint??-1,
+     originalLinks:evidence.originalLinks??-1,scoreable:evidence.scoreable??-1
+    });
+   if(!next)return false;
+  }else{
+   // Non-menu SOURCE research keeps its existing independent reset policy.
+   next=sourceCoopNavigationUrl(window.location.href,true);
+  }
   this.b25RunButton.disabled=true;
   const hud=this.b195CoopHud?.querySelector<HTMLButtonElement>('#t21-f3-b200-replay');
   if(hud)hud.disabled=true;
   this.b25RunProgress.textContent='RESTARTING ORIGINAL A1 SOURCE WORLD · NO ACTOR WARP';
-  window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
+  window.location.assign(next);
   return true;
  }
  /** Only the actual finished native 180s overlay can authorize replay.

@@ -3,7 +3,9 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourcePlayPortalReturnUrl,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
  sourceFinishedReplayAction,sourceFinishedReplayHref,
- sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY}
+ sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY,
+ sourceCanonicalPlayableMode,sourceFreshSelectedModeHref,
+ sourceCoopPracticeFreshReplayHref}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -371,5 +373,46 @@ describe('Sprint A SOURCE selected READY kit returns through the same portal',()
  it('leaves the running game usable when storage access is forbidden',()=>{
   const blocked={setItem:()=>{throw Error('private storage');}};
   expect(sourcePlayStoreWeaponSelection(blocked,'ink-saber')).toBe(false);
+ });
+});
+
+describe('Sprint A real 4-mode transitions and genuine A1 mission replay',()=>{
+ const menu='https://example.org/browser-ink-tps/play-source.html';
+ it('carries the CURRENT READY kit across all existing game modes',()=>{
+  for(const first of WEAPON_ORDER){
+   const from=sourcePlayWeaponModeDestinations(menu,first);
+   for(const current of WEAPON_ORDER){
+    const to=sourcePlayWeaponModeDestinations(menu,current);
+    for(const source of Object.keys(from) as Array<keyof typeof from>){
+     expect(sourceCanonicalPlayableMode(from[source])).toBe(source);
+     for(const target of Object.keys(to) as Array<keyof typeof to>)
+      expect(sourceFreshSelectedModeHref(from[source],current,target))
+       .toBe(to[target]);
+    }
+   }
+  }
+ });
+ it('only replays real co-op mission terminal on original SOURCE 25/17/26/0',()=>{
+  for(const initial of WEAPON_ORDER){
+   const href=sourcePlayWeaponModeDestinations(menu,initial).coop;
+   const proof={href,weaponId:'ink-saber',matchState:'PLAYING',
+    practiceStatus:'CLEAR',stopped:false,pointerLocked:false,
+    originalSolids:25,originalPaint:17,originalLinks:26,scoreable:0};
+   for(const status of ['CLEAR','TIME_UP','ABORTED'])
+    expect(sourceCoopPracticeFreshReplayHref({...proof,practiceStatus:status}))
+     .toBe(sourcePlayWeaponModeDestinations(menu,'ink-saber').coop);
+   for(const bad of [{matchState:'STAGING'},{matchState:'TIME_UP'},
+    {practiceStatus:'ARMED'},{practiceStatus:'RUNNING'},{stopped:true},
+    {pointerLocked:true},{originalSolids:24},{originalPaint:16},
+    {originalLinks:25},{scoreable:1},{weaponId:'fake'}])
+    expect(sourceCoopPracticeFreshReplayHref({...proof,...bad})).toBe(null);
+   for(const suffix of ['&production=1','&t21QaInput=warp',
+    '&scoreable=1','&cpuWarp=1','&t21W10B389=ink-saber',
+    '&t21W10B441=sourceFrontline','#injected'])
+    expect(sourceCoopPracticeFreshReplayHref({...proof,href:href+suffix}))
+     .toBe(null);
+   expect(sourceCoopPracticeFreshReplayHref({...proof,
+    href:sourcePlayWeaponModeDestinations(menu,initial).combat})).toBe(null);
+  }
  });
 });
