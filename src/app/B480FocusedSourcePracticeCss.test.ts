@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {b480FocusedSourcePracticeCss} from './B245SourcePresentation';
+import {b480FocusedSourcePracticeCss,b245PlayerSightlineCss} from './B245SourcePresentation';
 
 describe('B480 restore REAL B441 practice only, no source authority change',()=>{
  const genuine='?t21Play=preview&t21QaDrive=source&'+
@@ -28,5 +28,52 @@ describe('B480 restore REAL B441 practice only, no source authority change',()=>
    expect(b480FocusedSourcePracticeCss('?'+p.toString())).toBe('');
   }
   expect(b480FocusedSourcePracticeCss('?t21Play=preview')).toBe('');
+ });
+});
+
+describe('original SOURCE F3/F5 PLAYER sightline, without F8/score authority',()=>{
+ const genuine='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B192=humanCombat&t21W10B203=fullRound&'+
+  't21W10B441=sourceFrontline';
+ it('reduces active PLAYER panel area while preserving actual source HUD',()=>{
+  const css=b245PlayerSightlineCss(genuine);
+  expect(css).toContain('data-t21-b245-presentation="PLAYER"');
+  expect(css).toContain('data-t21-b338-phase="PLAYING"');
+  expect(css).toContain('#t21-f3-practice-hud');
+  expect(css).toContain('width:min(306px');
+  expect(css).toContain('#t21-f3-hud-clock');
+  expect(css).toContain('#t21-f3-b464-real-cpu-frontline');
+  expect(css).toContain('height:27px');
+  expect(css).toContain('#t21-f3-b25-paint-run');
+  expect(css).not.toContain('data-t21-b245-presentation="QA"');
+  for(const critical of ['t21-f3-hud-hp-bar','t21-f3-hud-ink-bar',
+   't21-f3-hud-cpu','t21-f3-b84-danger','t21-f3-b82-splat-notice',
+   't21-f3-b245-view-toggle']){
+   expect(css).not.toContain('#'+critical+'{display:none');
+  }
+ });
+ it('never applies to pinned deterministic, non-source or production UI',()=>{
+  for(const [k,v] of [
+   ['t21QaInput','deterministic'],['t21Play','production'],
+   ['t21W10B203','off'],['t21QaDrive','other']
+  ] as const){
+   const q=new URLSearchParams(genuine);q.set(k,v);
+   expect(b245PlayerSightlineCss('?'+q.toString())).toBe('');
+  }
+  for(const k of ['production','scoreable']){
+   const q=new URLSearchParams(genuine);q.set(k,'true');
+   expect(b245PlayerSightlineCss('?'+q.toString())).toBe('');
+  }
+  expect(b245PlayerSightlineCss('?t21Play=preview')).toBe('');
+ });
+ it('applies to original 12-kit, A1 co-op and existing B448 study',()=>{
+  for(const [k,v] of [
+    ['t21W10B384','loadoutCircuit'],
+    ['t21W10B193','allyCoop'],['t21W10B448','realA3Front']
+   ] as const){
+   const q=new URLSearchParams(genuine);q.set(k,v);
+   expect(b245PlayerSightlineCss('?'+q.toString()))
+    .toContain('#t21-f3-practice-hud');
+  }
  });
 });

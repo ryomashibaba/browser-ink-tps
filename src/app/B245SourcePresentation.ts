@@ -61,6 +61,48 @@ export function b480FocusedSourcePracticeCss(search:string):string{
   '{left:auto!important;right:14px!important;bottom:200px!important;}'
  ].join(' ');
 }
+/** F3/F5 original-SOURCE PLAYER sightline, never an ART/source authority.
+ * The existing F8 QA mode and native snapshot still expose complete data.
+ * Only visual CSS, no event, clock, Actor, projectile, HP, ink or path writes.
+ */
+export function b245PlayerSightlineCss(search:string):string{
+ const q=new URLSearchParams(search);
+ if(q.get('t21Play')!=='preview'||q.get('t21QaDrive')!=='source'||
+    q.get('t21W10B203')!=='fullRound'||
+    q.get('t21QaInput')==='deterministic'||
+    q.has('production')||q.has('scoreable'))return '';
+ const on='#ui-root[data-t21-b245-presentation="PLAYER"]'+
+  '[data-t21-b338-phase="PLAYING"] ';
+ return [
+  // Real timer, HP/ink bars, native CPU count, no-score warning and
+  // critical native danger/splat remain visible throughout actual play.
+  on+'#t21-f3-practice-hud',
+  '{width:min(306px,calc(100vw - 24px))!important;'+
+  'padding:7px 10px 6px!important;box-shadow:0 5px 18px #00162475!important;}',
+  on+'#t21-f3-hud-clock','{font-size:20px!important;}',
+  // B338 already gives the actual selected weapon controls during play.
+  // Old extra keyboard line duplicates these and names unsupported R.
+  on+'#t21-f3-player-key-help','{display:none!important;}',
+  on+'#t21-f3-b338-source-guide',
+  '{max-height:1.45em!important;overflow:hidden!important;'+
+  'white-space:nowrap!important;text-overflow:ellipsis!important;'+
+  'font-size:9px!important;}',
+  // The native ink gauge remains fully live; detailed B355 in F8 QA.
+  on+'#t21-f3-b355-source-ink-readout','{display:none!important;}',
+  // B464 still renders every real value/dataset. Keep an unobtrusive
+  // one-line LIVE badge in PLAYER; F8 restores the complete four lines.
+  on+'#t21-f3-b464-real-cpu-frontline',
+  '{width:min(196px,calc(100vw - 24px))!important;'+
+  'height:27px!important;max-height:27px!important;'+
+  'padding:5px 9px!important;overflow:hidden!important;'+
+  'white-space:nowrap!important;text-overflow:ellipsis!important;'+
+  'font-size:9px!important;line-height:1.4!important;}',
+  // Keep the genuine B25 progress visible and interactive in source play.
+  on+'#t21-f3-b25-paint-run[data-t21-b476-compact="true"]',
+  '{width:min(222px,calc(100vw - 24px))!important;'+
+  'padding:7px 9px!important;}'
+ ].join('');
+}
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
 ):void {
@@ -114,6 +156,8 @@ export function installB245SourcePresentation(
  // B480: authored after B338's historical hide rule, more specific,
  // and only for a verified B475 B441 research URL.
  style.textContent+=b480FocusedSourcePracticeCss(window.location.search);
+ // Last source-only style: PLAYER sightline while PLAYING, F8 QA unaltered.
+ style.textContent+=b245PlayerSightlineCss(window.location.search);
  ui.appendChild(style);
  const button=document.createElement('button');
  button.id='t21-f3-b245-view-toggle';
