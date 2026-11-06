@@ -16,6 +16,10 @@ const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
 const b448Experiment=b441Experiment&&
  process.env.T21_B448_A3_REAL_ORIGINAL_FRONT==='1';
+// An explicitly selected ONE-SHOT, genuine >3600-tick browser case.
+// Ordinary pushes keep the original short real-Chromium smoke.
+const proveSourcePracticeExpiry=b441Experiment&&
+ process.env.T21_B441_PROVE_60S_EXPIRY==='1';
 const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay'+
  (b441Experiment?'&t21W10B112=humanGround&t21W10B192=humanCombat':
   '&t21W10B193=allyCoop')+'&t21W10B203=fullRound'+
@@ -1331,6 +1335,120 @@ async function main(){
   }
   if(proof.b441NativeEvidence.verdict.startsWith('HOLD'))
    fail('B441_NO_REAL_ORIGINAL_FRONT_GOAL_GRANTED');
+ }
+ if(proveSourcePracticeExpiry){
+  // Same genuinely clicked 180-second Chromium round, AFTER the genuine
+  // original 720+ tick proof. No clock/actor/paint/DOM injection.
+  // The independent 60s objective must naturally TIME_UP at native 60Hz.
+  proof.stage='WAITING_REAL_60S_PRACTICE_EXPIRY';save();
+  const expiry=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.matchState!=='PLAYING'||n.paused||!await locked()||
+      n.cpu.physicalRejoins.length!==7||n.player.hp<=0)
+    fail('EXPIRY_OBSERVATION_REAL_MATCH_INTERRUPTED');
+   const mission=n.b25SourcePaintRun;
+   if(mission?.practiceVariant!=='CLASSIC'||
+      !['RUNNING','TIME_UP'].includes(mission.status))
+    fail('EXPIRY_NOT_REAL_UNFINISHED_CLASSIC');
+   if(n.tick>=10500)
+    fail('EXPIRY_NO_60S_IN_NATIVE_MATCH');
+   return mission.status==='TIME_UP'&&n.timeRemainingSeconds>0&&
+      trueOriginalFoot(foot(n))?n:null;
+  },720000,800);
+  const originalOrder=expiry.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+  if(originalOrder?.genuineKeyRequests!==2||
+     expiry.b25SourcePaintRun.elapsedTicks<3600||
+     expiry.timeRemainingSeconds<=0||expiry.matchState!=='PLAYING')
+   fail('EXPIRY_NOT_SEPARATE_FROM_180S_ROUND');
+  const ready=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.matchState!=='PLAYING'||n.b25SourcePaintRun?.status!=='TIME_UP'||
+      n.paused||!await locked()||n.player.hp<=0||
+      n.cpu.physicalRejoins.length!==7)
+    fail('EXPIRY_C_INPUT_AUTHORITY_INTERRUPTED');
+   const o=n.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+   return o?.genuineKeyRequests===2&&o.b485RepeatReady===true&&
+    trueOriginalFoot(foot(n))?n:null;
+  },30000,250);
+  const beforeTick=ready.tick;
+  const screenshot=await cdp('Page.captureScreenshot',{
+   format:'png',captureBeyondViewport:false});
+  if(typeof screenshot?.data!=='string'||screenshot.data.length<100)
+   fail('EXPIRY_REAL_SOURCE_SCREENSHOT_MISSING');
+  writeFileSync(resolve(out,'real-practice-60s-timeout-180s-active.png'),
+   Buffer.from(screenshot.data,'base64'));
+  // Actual pointer-locked Chromium C key, never a test API callback.
+  await tapSourceCameraKey('c','KeyC',67);
+  const after=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.matchState!=='PLAYING'||n.paused||!await locked()||
+      n.b25SourcePaintRun?.status!=='TIME_UP'||
+      n.cpu.physicalRejoins.length!==7)
+    fail('EXPIRY_POST_C_REAL_MATCH_INTERRUPTED');
+   const order=n.cpu.sourcePatrol.b471TruePlayerOrderedAlly;
+   const acceptance=await evaluate(
+    "document.querySelector('#app-canvas')?.dataset.t21B485RealCKeyResult");
+   return order?.genuineKeyRequests===3&&
+    acceptance==='REAL_ORDER_PENDING_ORIGINAL_RECAST'?
+    {n,order,acceptance}:null;
+  },15000,180);
+  const observable=await until(async()=>evaluate(`(() => {
+   const n=window.__t21F3?.snapshot?.();
+   const t=window.__t21F3?.b484ActualA1CKeyFollowThrough?.();
+   const h=document.querySelector('#t21-f3-b141-real-ally');
+   if(!n||!t||!h)return null;
+   return {tick:n.tick,matchState:n.matchState,
+    missionStatus:n.b25SourcePaintRun?.status,
+    missionElapsed:n.b25SourcePaintRun?.elapsedTicks,
+    remainingSeconds:n.timeRemainingSeconds,
+    sourceScoreable:n.sourceScoreablePromotions,
+    nativeCpuRejoins:n.cpu?.physicalRejoins?.length,
+    acceptedOriginalGoals:n.cpu?.sourcePatrol?.
+      b471TruePlayerOrderedAlly?.strictlyApprovedOriginalGoals,
+    requestCount:n.cpu?.sourcePatrol?.
+      b471TruePlayerOrderedAlly?.genuineKeyRequests,
+    traceOrder:t.currentOrderKeyRequest,
+    traceRows:t.currentOrderNativeRows,
+    traceNativeRequests:t.actualNativeGoalRequests,
+    traceArrivalOnlyOriginal:t.currentOrderArrivalOnlyFromOriginalB471,
+    traceClockWrites:t.actorInkPhysicsClockWrites,
+    text:h.textContent,
+    visible:!h.hidden&&getComputedStyle(h).display!=='none',
+    certifiedRoute:h.dataset.t21B141CertifiedRoute};
+  })()`),15000,250);
+  if(!observable||observable.tick<=beforeTick||
+     observable.matchState!=='PLAYING'||
+     observable.missionStatus!=='TIME_UP'||
+     observable.missionElapsed<3600||
+     observable.remainingSeconds<=0||
+     observable.sourceScoreable!==0||
+     observable.nativeCpuRejoins!==7||
+     observable.requestCount!==3||
+     observable.traceOrder!==3||observable.traceRows<1||
+     observable.traceArrivalOnlyOriginal!==true||
+     observable.traceClockWrites!==0||
+     observable.visible!==true||
+     observable.certifiedRoute!=='false'||
+     !observable.text?.includes('A1 C ORDER 3 · ')||
+     !observable.text.includes(
+      '60s PRACTICE TIME UP · 180s SOURCE MATCH CONTINUES'))
+   fail('EXPIRY_GENUINE_C_THIRD_ORDER_PLAYER_HUD_NOT_PROVEN');
+  proof.realPracticeExpiryLiveC={
+   source:'25/17/26/0',sameBrowserOrigin:await origin(),
+   naturalObjectiveStatus:expiry.b25SourcePaintRun.status,
+   realObjectiveElapsedNativeTicks:expiry.b25SourcePaintRun.elapsedTicks,
+   originalPlayerRemainingSecondsAtExpiry:expiry.timeRemainingSeconds,
+   realNativeTickBefore:beforeTick,
+   realNativeTickAfter:observable.tick,
+   thirdGenuineChromiumCKey:true,
+   acceptedExistingB471NativeRequest:after.acceptance,
+   ...observable,sourceCollisionWrites:0,sourceNavigationWrites:0,
+   actorWrites:0,syntheticClockAdvances:0,officialWinner:'NONE',
+   opponentNativeCrossingCertified:false,officialTurfScoreCertified:false,
+   180SecondRoundCompletedCertified:false};
+  writeFileSync(resolve(out,'real-60s-expiry-third-c-original-180s.json'),
+   JSON.stringify(proof.realPracticeExpiryLiveC,null,2)+'\n');
+  save();
  }
  proof.verdict=b441Experiment?
   'PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING':
