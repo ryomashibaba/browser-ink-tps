@@ -169,12 +169,17 @@ describe('actual source PLAYER C-order neighbor ink eligibility',()=>{
   expect(existingOriginalSourceInkOpportunity({
    ...r,neighborhoodOpportunity:1,sampledOriginalCells:1
   })).toBe(false);
-  expect(existingOriginalSourceInkOpportunity({
-   ...r,neighborhoodOpportunity:1,sampledOriginalCells:2,sourceOnly:false
-  })).toBe(false);
-  expect(existingOriginalSourceInkOpportunity({
-   ...r,neighborhoodOpportunity:1,sampledOriginalCells:2,pathAuthorized:true
-  })).toBe(false);
+  // The real rank type intentionally encodes true/false authority as
+  // literals. Forge an untrusted runtime payload through an explicit cast
+  // to verify that the defensive source gate still fails closed.
+  const forged=(delta:Record<string,unknown>)=>
+   ({...r,...delta}) as Parameters<typeof existingOriginalSourceInkOpportunity>[0];
+  expect(existingOriginalSourceInkOpportunity(forged({
+   neighborhoodOpportunity:1,sampledOriginalCells:2,sourceOnly:false
+  }))).toBe(false);
+  expect(existingOriginalSourceInkOpportunity(forged({
+   neighborhoodOpportunity:1,sampledOriginalCells:2,pathAuthorized:true
+  }))).toBe(false);
   expect(existingOriginalSourceInkOpportunity({
    ...r,neighborhoodOpportunity:Number.NaN,sampledOriginalCells:2
   })).toBe(false);
