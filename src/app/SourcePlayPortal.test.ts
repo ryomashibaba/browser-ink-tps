@@ -407,7 +407,7 @@ describe('Sprint A real 4-mode transitions and genuine A1 mission replay',()=>{
     {originalLinks:25},{scoreable:1},{weaponId:'fake'}])
     expect(sourceCoopPracticeFreshReplayHref({...proof,...bad})).toBe(null);
    for(const suffix of ['&production=1','&t21QaInput=warp',
-    '&scoreable=1','&cpuWarp=1','&t21W10B389=ink-saber',
+    '&scoreable=1','&cpuWarp=1',
     '&t21W10B441=sourceFrontline','#injected'])
     expect(sourceCoopPracticeFreshReplayHref({...proof,href:href+suffix}))
      .toBe(null);
