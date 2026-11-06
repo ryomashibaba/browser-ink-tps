@@ -447,11 +447,34 @@ async function main(){
   realOpponentCrossSideCertified:false,opponentHitCertified:false,
   productionAuthorized:false,officialWinner:'NONE'};
  save();
- // Existing B441 strict original 720tick trial keeps its own NEW world.
- await cdp('Page.navigate',{url:root+query});
+ // This is a NEW real physical SOURCE world. Only the one-shot complete
+ // replay preserves the actual chosen human Ink Saber via the EXISTING B389
+ // native pre-STAGING boot parameter. B441's ordinary short gate is unchanged.
+ // Do not load the selected weapon and then silently replace it with default.
+ const fullReplayQuery=proveFullSourceReplay?
+  query+'&t21W10B389=ink-saber':query;
+ await cdp('Page.navigate',{url:root+fullReplayQuery});
  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);
- if(await evaluate('location.search')!==query)fail('WRONG_SOURCE_URL');
+ if(await evaluate('location.search')!==fullReplayQuery)
+  fail('WRONG_SOURCE_URL');
+ if(proveFullSourceReplay){
+  const boot=await snap();authority(boot);
+  proof.fullReplayActualSourceBoot={
+   originalSource:'25/17/26/0',selectedUserKit:'ink-saber',
+   nativeBootKit:boot.b361NativePlayerWeapon?.id??null,
+   realNativeTick:boot.tick,matchState:boot.matchState,
+   url:await evaluate('location.href'),
+   nativeSevenCpuActors:boot.cpu.cpu.length,
+   sourceScoreablePromotions:boot.sourceScoreablePromotions,
+   originalActorWrites:0,nativeClockWrites:0,scoreWrites:0
+  };
+  save();
+  if(boot.b361NativePlayerWeapon?.id!=='ink-saber'||
+     boot.matchState!=='STAGING'||boot.tick!==0||
+     boot.cpu.cpu.length!==7||boot.sourceScoreablePromotions!==0)
+   fail('FULL_REAL_SELECTED_HUMAN_WEAPON_NATIVE_BOOT_HOLD');
+ }
  const modeButton=await evaluate(`(() => {
   const b=document.querySelector('#t21-f3-source-mode-menu-ready');
   return b?{source:b.dataset.originalSourceOnly,
@@ -1560,13 +1583,33 @@ async function main(){
   const initialOrigin=await origin();
   const initialHref=await evaluate('location.href');
   const weapon=first.b361NativePlayerWeapon?.id;
-  if(first.matchState!=='PLAYING'||first.paused||!await locked()||
-     first.cpu.physicalRejoins.length!==7||
-     first.cpu.physicalFootRelocations!==0||
-     first.timeRemainingSeconds>=180||first.timeRemainingSeconds<=0||
-     weapon!=='ink-saber'||
-     !initialHref.includes('t21W10B389=ink-saber'))
-   fail('FULL_REAL_NATIVE_FIRST_ROUND_PRECONDITION');
+  const preflightChecks={
+   REAL_PLAYING:first.matchState==='PLAYING',
+   REAL_UNPAUSED:!first.paused,
+   REAL_POINTER_LOCKED:await locked(),
+   REAL_7_CPU:first.cpu.physicalRejoins.length===7,
+   NO_CPU_RELOCATIONS:first.cpu.physicalFootRelocations===0,
+   NATIVE_180_SECOND_CLOCK:first.timeRemainingSeconds<180&&
+    first.timeRemainingSeconds>0,
+   SAME_SELECTED_HUMAN_KIT:weapon==='ink-saber',
+   EXACT_SELECTED_NATIVE_URL:new URL(initialHref).searchParams.get(
+    't21W10B389')==='ink-saber'
+  };
+  proof.oneShotFullReplayPreflight={
+   checks:preflightChecks,observed:{
+    source:'25/17/26/0',nativeTick:first.tick,
+    remaining:first.timeRemainingSeconds,phase:first.matchState,
+    paused:first.paused,cpuRejoins:first.cpu.physicalRejoins.length,
+    cpuPhysicalRelocations:first.cpu.physicalFootRelocations,
+    realHumanWeapon:weapon,currentUrl:initialHref,
+    currentWorldOrigin:initialOrigin
+   },actorWrites:0,nativeClockWrites:0,scoreWrites:0
+  };
+  save();
+  const missing=Object.entries(preflightChecks).filter(([,ok])=>!ok)
+   .map(([name])=>name);
+  if(missing.length)
+   fail('FULL_REAL_NATIVE_FIRST_ROUND_PRECONDITION_'+missing.join('_'));
   const full={schema:'T21_ONE_SHOT_REAL_SOURCE_180_REPLAY_V1',
    source:'25/17/26/0',initialOrigin,initialHref,weapon,
    initialTick:first.tick,initialRemaining:first.timeRemainingSeconds,
@@ -1674,6 +1717,7 @@ async function main(){
   });
   full.secondWorld=fresh;full.newWorldConfirmed=true;
   proof.full180sCertified=true;proof.genuineReplayClickCertified=true;
+  proof.testKind='FULL_REAL_180S_FRESH_SOURCE_WORLD_SAME_WEAPON';
   proof.stage='REAL_180_NATIVE_NEW_WORLD_SAME_WEAPON_CERTIFIED';save();
   const afterImage=await cdp('Page.captureScreenshot',{
    format:'png',captureBeyondViewport:false});
@@ -1687,7 +1731,8 @@ async function main(){
   b441Experiment?
   'PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING':
   'PASS_FRESH_SOURCE_REAL_HUMAN_KEYW_AND_ORIGINAL_FOOT_NOT_REPLAY';
- proof.stage='TRUE_NATIVE_WALK_SUCCESS';save();
+ if(!proveFullSourceReplay)proof.stage='TRUE_NATIVE_WALK_SUCCESS';
+ save();
  console.log('B440_TRUE_SOURCE_NATIVE_HUMAN_WALK',JSON.stringify(proof));
 }
 try{await main();}catch(e){
