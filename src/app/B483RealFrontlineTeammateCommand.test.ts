@@ -1,6 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {b483RealFrontlineTeammateCommandSelected as selected,
- b483MayRequestTrueFrontlineA1Order as may} from './B483RealFrontlineTeammateCommand';
+ b483MayRequestTrueFrontlineA1Order as may,
+ b483ClassicPracticeAllowsLiveA1Order as practiceAllowsA1}
+ from './B483RealFrontlineTeammateCommand';
 import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl}
  from './SourcePlayPortal';
 const portal='https://example.org/browser-ink-tps/play-source.html';
@@ -27,7 +29,17 @@ describe('B483 live native B441 A1 command, reuses B471 existing authority',()=>
   expect(may(frame())).toBe(true);
   // Genuine C input stays legal after CLASSIC mission CLEAR during PLAYING.
   expect(may({...frame(),practiceStatus:'CLEAR'})).toBe(true);
+  // Objective TIME_UP occurs after 60s while match remains PLAYING (180s).
+  expect(may({...frame(),practiceStatus:'TIME_UP'})).toBe(true);
+  expect(practiceAllowsA1('CLASSIC','TIME_UP')).toBe(true);
+  expect(practiceAllowsA1('ALLY_SYNC','TIME_UP')).toBe(false);
+  expect(practiceAllowsA1('CLASSIC','ABORTED')).toBe(false);
   expect(may({...frame(),practiceStatus:'CLEAR',matchState:'TIME_UP'})).toBe(false);
+  expect(may({...frame(),practiceStatus:'TIME_UP',matchState:'TIME_UP'})).toBe(false);
+  expect(may({...frame(),practiceStatus:'TIME_UP',paused:true})).toBe(false);
+  expect(may({...frame(),practiceStatus:'TIME_UP',playerHp:0})).toBe(false);
+  expect(may({...frame(),practiceStatus:'TIME_UP',originalCpuRejoins:6})).toBe(false);
+  expect(may({...frame(),practiceStatus:'TIME_UP',stopReason:'PHYSICAL_HOLD'})).toBe(false);
   expect(may({...frame(),practiceStatus:'CLEAR',paused:true})).toBe(false);
   expect(may({...frame(),practiceStatus:'CLEAR',originalCpuRejoins:6})).toBe(false);
   for(const delta of [
@@ -37,7 +49,8 @@ describe('B483 live native B441 A1 command, reuses B471 existing authority',()=>
    {matchState:'TIME_UP'},{paused:true},{stopReason:'PHYSICAL_HOLD'},
    {pointerLocked:false},{playerHp:0},{originalCpuRejoins:6},
    {originalCpuRejoins:8},{practiceVariant:'ALLY_SYNC'},
-   {practiceStatus:'ARMED'}, {practiceStatus:'IDLE'}
+   {practiceStatus:'ARMED'}, {practiceStatus:'IDLE'},
+   {practiceStatus:'ABORTED'}
   ])expect(may({...frame(),...delta})).toBe(false);
  });
 });

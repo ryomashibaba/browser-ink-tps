@@ -60,7 +60,8 @@ import {b476OriginalFrontlineObjectiveLayout}
  from './B476OriginalFrontlineObjectiveLayout';
 import {b477ActualSourceCpuJoinCue} from './B477ActualSourceCpuJoinCue';
 import {b483RealFrontlineTeammateCommandSelected,
- b483MayRequestTrueFrontlineA1Order} from './B483RealFrontlineTeammateCommand';
+ b483MayRequestTrueFrontlineA1Order,
+ b483ClassicPracticeAllowsLiveA1Order} from './B483RealFrontlineTeammateCommand';
 import {b481ActualSourcePaintOpportunity} from './B481ActualSourcePaintOpportunity';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
@@ -4708,14 +4709,14 @@ export class UndertowF3PlayablePreviewApp{
        // The separately selected B193 ALLY_SYNC never runs after CLEAR.
        (actualPractice.practiceVariant==='ALLY_SYNC'&&
         actualPractice.status==='RUNNING')||
-       // B441's genuine CLASSIC objective CLEAR does not end the 180s
-       // match. Preserve real C→A1 cooperation for the active remainder.
-       // Traffic still independently requires original Rapier/Recast
-       // floor, actual alive grounded human/A1 and C-key cooldown.
+       // B441 CLASSIC's independent 60s practice can CLEAR or TIME_UP
+       // before the native 180s round ends. Keep genuine teammate C orders
+       // enabled during real PLAYING only. All original Rapier/Recast
+       // floor, alive-grounded, seven-CPU and C cooldown gates still apply.
        (this.canvas.dataset.t21B483RealFrontlineAlly===
         'REAL_SOURCE_A1_PLAYER_C_KEY'&&
-        actualPractice.practiceVariant==='CLASSIC'&&
-        (actualPractice.status==='RUNNING'||actualPractice.status==='CLEAR')&&
+        b483ClassicPracticeAllowsLiveA1Order(
+         actualPractice.practiceVariant,actualPractice.status)&&
         this.matchState==='PLAYING'&&!this.paused&&!this.stopReason)
      });
     }
@@ -7087,11 +7088,19 @@ export class UndertowF3PlayablePreviewApp{
     ' · verified arrivals total '+b484.originalB471VerifiedArrivals+
     (b484.finalCommandStatus==='HOLD'?
      ' · C to retry if safe':' · route not certified'):'';
+   const practiceTimedOutWithLiveMatch=
+    this.canvas.dataset.t21B483RealFrontlineAlly===
+     'REAL_SOURCE_A1_PLAYER_C_KEY'&&
+    this.b25Run.snapshot().practiceVariant==='CLASSIC'&&
+    this.b25Run.snapshot().status==='TIME_UP'&&
+    state.matchState==='PLAYING';
    this.b141RealAllyIndicator.textContent=info.text+
     (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status+
      (order.b485RepeatReady?' · Cで安全な再指示':
       order.status==='MOVING'?' · 移動中の上書き禁止':''):'')+
-    realCommand;
+    realCommand+
+    (practiceTimedOutWithLiveMatch?
+     '\n60s PRACTICE TIME UP · 180s SOURCE MATCH CONTINUES · C WHEN SAFE':'');
    this.b141RealAllyIndicator.style.whiteSpace='pre-line';
    this.b141RealAllyIndicator.dataset.t21B471RealPlayerOrder=
     order.status;
