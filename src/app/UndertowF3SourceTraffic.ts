@@ -30,7 +30,7 @@ import {b421RealEnemyStandoff,type B421OriginalWeaponLane}
 import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
 import {GAME_CONFIG} from '../config/game/gameConfig';
-import {rankOriginalSourceCombatRetreatGoals} from './OriginalSourceCombatRetreat';
+import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryActive,originalSourceCpuMayHoldOwnInk} from './OriginalSourceCombatRetreat';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
  b470MayAuditRealInkRankedSameSideFront,
@@ -343,6 +343,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b441UnsafeOrUnreachableHolds=0;
  private b441ClosestApprovedFrontAbsZ:number|null=null;
  private readonly patrolIndex=new Map<string,number>();
+ /** Original-source CPU recovery intent; based only on its native HP. */
+ private readonly originalSourceRecoveryIntent=new Set<string>();
  private auditedTargets=0;
  private realGoalRequests=0;
  private heldRequests=0;
@@ -952,59 +954,78 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     }
    }
   }
-  // A genuinely wounded source CPU may recover by returning to ACTUAL OWN
-  // original paint along an already registered same-side native route.
-  // This changes ONLY the next Crowd goal; real Rapier KCC owns every step,
-  // existing GameplayInkSystem owns HP regeneration, and false crossings,
-  // new floors, invented enemy actors, score and HP injection remain forbidden.
-  // An explicit player C order above retains its previous priority.
+  // Original F3 combat survival: genuine low native HP -> actual original
+  // OWN ink -> safely remain until native regeneration reaches 70% -> resume
+  // ordinary combat. No source geometry, real Actor, health, shots or clock
+  // are written here. Every move still passes native Rapier/Recast authority.
   if(this.enableB192HumanCombat&&this.sourceInk&&this.physics&&
      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
      this.physicallyRejoined.has(id)&&Number.isFinite(bot.hp)&&
      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'){
    const ink=this.sourceInk;
-   const actualOriginalSource=[
+   const source=[
     this.stage.solids.length,this.stage.paintSurfaces.length,
     this.stage.navigationLinks?.length??-1,
     this.stage.paintSurfaces.filter(
      p=>(p.flags&SurfaceFlags.Scoreable)!==0).length
-   ] as const;
-   const originalCells=candidates.map((goal,index)=>{
-    const sample=ink.sampleWorld(new Vec3(
-     goal.x,goal.y+.06,goal.z),.38,SurfaceFlags.Paintable);
+   ] as [number,number,number,number];
+   const actualOriginalOwnInk=(foot:Vec3)=>{
+    const sample=ink.sampleWorld(
+     new Vec3(foot.x,foot.y+.06,foot.z),.38,SurfaceFlags.Paintable);
     const surface=sample?.surface;
     const cx=sample&&surface?Math.floor(sample.u/surface.cellSize):-1;
     const cy=sample&&surface?Math.floor(sample.v/surface.cellSize):-1;
-    const ownVerified=!!sample&&!!surface&&
+    return !!sample&&!!surface&&
      surface.id.startsWith('UndertowT21D:')&&!surface.isScoreable&&
      (surface.baseFlags&SurfaceFlags.Paintable)!==0&&
-     sample.owner===bot.team&&
-     cx>=0&&cx<surface.widthCells&&cy>=0&&cy<surface.heightCells&&
-     surface.isCellActive(cx,cy);
-    return {index,foot:[goal.x,goal.y,goal.z] as [number,number,number],
-     actualOwnOriginalPaintCell:ownVerified};
-   });
-   const recoveryIndices=rankOriginalSourceCombatRetreatGoals({
-    source:actualOriginalSource,selectedOriginalCombat:true,
-    activeGroundedRejoined:true,team:bot.team===Team.A?'A':'B',
+     sample.owner===bot.team&&cx>=0&&cx<surface.widthCells&&
+     cy>=0&&cy<surface.heightCells&&surface.isCellActive(cx,cy);
+   };
+   const recovery={
+    source,selectedOriginalCombat:true,activeGroundedRejoined:true,
+    team:bot.team===Team.A?'A' as const:'B' as const,
     hp:bot.hp??NaN,maxHp:GAME_CONFIG.combat.playerMaxHp,
-    realFoot:[realFoot.x,realFoot.y,realFoot.z],
-    originalCandidates:originalCells
-   });
-   for(const index of recoveryIndices){
-    const safeGoal=candidates[index];
-    if(!safeGoal||!this.hasSourceFootSupport(realFoot)||
-       !this.hasSourceFootSupport(safeGoal))continue;
-    const native=this.nav.auditPath(realFoot,safeGoal);
-    if(!native.reachedTarget||native.pointCount===0||
-       native.startSnapDistanceMeters>.20||
-       native.endSnapDistanceMeters>.20||
-       !this.hasSourceSupportedRoute(native,sign))continue;
-    out.copy(safeGoal);
-    this.realGoalRequests++;
-    return true;
-   }
-  }
+    realFoot:[realFoot.x,realFoot.y,realFoot.z] as [number,number,number],
+    recoveringFromRealDamage:this.originalSourceRecoveryIntent.has(id),
+    originalCandidates:candidates.map((goal,index)=>({
+     index,foot:[goal.x,goal.y,goal.z] as [number,number,number],
+     actualOwnOriginalPaintCell:actualOriginalOwnInk(goal)
+    }))
+   };
+   if(originalSourceCpuWoundedRecoveryActive(recovery)){
+    if(!this.originalSourceRecoveryIntent.has(id)){
+     // Discard the previous in-flight frontline preference, not the CPU
+     // physical foot. A later normal combat selection must be freshly
+     // approved by the existing source-only gates.
+     this.b443OriginalGoalLocks.delete(id);
+     this.b442LastApprovedFront.delete(id);
+     this.originalSourceRecoveryIntent.add(id);
+    }
+    if(originalSourceCpuMayHoldOwnInk(
+       recovery,actualOriginalOwnInk(realFoot))&&
+       this.hasSourceFootSupport(realFoot)){
+     const nativeFoot=this.nav.closestPoint(realFoot);
+     if(nativeFoot.distance(realFoot)<=.20){
+      out.copy(realFoot);
+      this.realGoalRequests++;
+      return true;
+     }
+    }
+    for(const index of rankOriginalSourceCombatRetreatGoals(recovery)){
+     const safeGoal=candidates[index];
+     if(!safeGoal||!this.hasSourceFootSupport(realFoot)||
+        !this.hasSourceFootSupport(safeGoal))continue;
+     const native=this.nav.auditPath(realFoot,safeGoal);
+     if(!native.reachedTarget||native.pointCount===0||
+        native.startSnapDistanceMeters>.20||
+        native.endSnapDistanceMeters>.20||
+        !this.hasSourceSupportedRoute(native,sign))continue;
+     out.copy(safeGoal);
+     this.realGoalRequests++;
+     return true;
+    }
+   }else this.originalSourceRecoveryIntent.delete(id);
+  }else this.originalSourceRecoveryIntent.delete(id);
   // F3-B: in this opt-in source game only, real B-team CPUs can pursue
   // the real grounded HUMAN when the human actually occupies their
   // registered B-side source floor. Recast is a goal, never movement.
@@ -2062,6 +2083,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // physical first-drop/rejoin proof. An absent CPU is NOT still 7/7.
    if(priorLife==='ACTIVE'&&bot.lifeState==='SPLATTED'){
     this.physicallyRejoined.delete(bot.id);
+    this.originalSourceRecoveryIntent.delete(bot.id);
     this.cleared.delete(bot.id);
     this.physicallyFalling.delete(bot.id);
     this.respawnOriginalDrops.delete(bot.id);
