@@ -14,8 +14,11 @@ import {setTimeout as delay} from 'node:timers/promises';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
-const b448Experiment=b441Experiment&&
- process.env.T21_B448_A3_REAL_ORIGINAL_FRONT==='1';
+// One-shot full replay uses the EXACT real frontline portal mode, which
+// includes B448. The ordinary B441 short trial remains unchanged.
+const b448Experiment=b441Experiment&&(
+ process.env.T21_B448_A3_REAL_ORIGINAL_FRONT==='1'||
+ process.env.T21_B441_PROVE_FULL_180S_REPLAY==='1');
 // An explicitly selected ONE-SHOT, genuine >3600-tick browser case.
 // Ordinary pushes keep the original short real-Chromium smoke.
 const proveSourcePracticeExpiry=b441Experiment&&
@@ -447,21 +450,31 @@ async function main(){
   realOpponentCrossSideCertified:false,opponentHitCertified:false,
   productionAuthorized:false,officialWinner:'NONE'};
  save();
- // This is a NEW real physical SOURCE world. Only the one-shot complete
- // replay preserves the actual chosen human Ink Saber via the EXISTING B389
- // native pre-STAGING boot parameter. B441's ordinary short gate is unchanged.
- // Do not load the selected weapon and then silently replace it with default.
+ // The explicitly selected FULL REPLAY must continue the REAL world
+ // created by the actual user's visible FRONTLINE menu click ABOVE.
+ // The old B441-only synthetic research URL is not a canonical portal
+ // destination, and cannot acquire an authorized human B389 boot by
+ // appending one query parameter. Ordinary short trial is unchanged.
  const fullReplayQuery=proveFullSourceReplay?
   query+'&t21W10B389=ink-saber':query;
- await cdp('Page.navigate',{url:root+fullReplayQuery});
+ if(!proveFullSourceReplay)
+  await cdp('Page.navigate',{url:root+query});
  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
   document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);
- if(await evaluate('location.search')!==fullReplayQuery)
-  fail('WRONG_SOURCE_URL');
+ const actualQuery=await evaluate('location.search');
+ if(proveFullSourceReplay){
+  const a=new URLSearchParams(actualQuery);
+  const expected=new URLSearchParams(fullReplayQuery);
+  if([...a.entries()].length!==[...expected.entries()].length||
+     [...expected.entries()].some(([k,v])=>
+      a.getAll(k).length!==1||a.get(k)!==v))
+   fail('FULL_REPLAY_REAL_PORTAL_CANONICAL_MODE_QUERY_HOLD');
+ }else if(actualQuery!==query)fail('WRONG_SOURCE_URL');
  if(proveFullSourceReplay){
   const boot=await snap();authority(boot);
   proof.fullReplayActualSourceBoot={
    originalSource:'25/17/26/0',selectedUserKit:'ink-saber',
+   reusedActualClickedFrontlineWorld:true,
    nativeBootKit:boot.b361NativePlayerWeapon?.id??null,
    realNativeTick:boot.tick,matchState:boot.matchState,
    url:await evaluate('location.href'),
