@@ -3,7 +3,7 @@ import {Vec3} from 'playcanvas';
 import {Team,SurfaceFlags} from '../ink/types';
 import {GameplayInkSystem,type GameplayInkSample} from '../ink/GameplayInkSystem';
 import {PaintSurface} from '../ink/PaintSurface';
-import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,B34_GROUNDED_STALL_TICKS,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,existingOriginalSourceInkOpportunity,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,B34_GROUNDED_STALL_TICKS,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
 
 const goals=[new Vec3(1,3,40),new Vec3(2,3,41),
  new Vec3(3,3,42),new Vec3(4,3,43)];
@@ -127,6 +127,10 @@ describe('native original paint coverage priority improves actual CPU floor patr
    result[1]!.neighborhoodOpportunity);
   expect(result.every(r=>r.sampledOriginalCells===5)).toBe(true);
   expect(result.every(r=>!r.pathAuthorized&&r.sourceOnly)).toBe(true);
+  // Existing B471 C-order used to drop BOTH because their centers OWN.
+  // Only first has actual same-surface enemy/neutral original neighbors.
+  expect(existingOriginalSourceInkOpportunity(result[0]!)).toBe(true);
+  expect(existingOriginalSourceInkOpportunity(result[1]!)).toBe(false);
   expect(Array.from(source.ownerGrid)).toEqual(frozen);
   expect(ink.snapshot().areaA).toBe(0);
  });
@@ -144,11 +148,38 @@ describe('native original paint coverage priority improves actual CPU floor patr
   expect(result.priority).toBe('OWN');
   expect(result.sampledOriginalCells).toBeLessThan(5);
   expect(result.neighborhoodOpportunity).toBe(0);
+  expect(existingOriginalSourceInkOpportunity(result)).toBe(false);
   expect(result.pathAuthorized).toBe(false);
   expect(ink.snapshot().percentB).toBe(0);
  });
 });
 
+describe('actual source PLAYER C-order neighbor ink eligibility',()=>{
+ it('keeps measured neutral and opposing owner-grid centers only',()=>{
+  const ranks=rankOriginalSourcePatrolGoals(goals,Team.A,
+   ownerInk([Team.A,Team.Neutral,Team.B,Team.A]).system,0);
+  expect(ranks.map(existingOriginalSourceInkOpportunity))
+   .toEqual([true,true,false,false]);
+ });
+ it('rejects unobserved, fake-scoreable or non-original neighbor evidence',()=>{
+  const ranks=rankOriginalSourcePatrolGoals(goals,Team.A,
+   ownerInk([Team.A,null,Team.A,Team.A]).system,0);
+  expect(ranks.every(r=>!existingOriginalSourceInkOpportunity(r))).toBe(true);
+  const r=ranks.find(x=>x.priority==='OWN')!;
+  expect(existingOriginalSourceInkOpportunity({
+   ...r,neighborhoodOpportunity:1,sampledOriginalCells:1
+  })).toBe(false);
+  expect(existingOriginalSourceInkOpportunity({
+   ...r,neighborhoodOpportunity:1,sampledOriginalCells:2,sourceOnly:false
+  })).toBe(false);
+  expect(existingOriginalSourceInkOpportunity({
+   ...r,neighborhoodOpportunity:1,sampledOriginalCells:2,pathAuthorized:true
+  })).toBe(false);
+  expect(existingOriginalSourceInkOpportunity({
+   ...r,neighborhoodOpportunity:Number.NaN,sampledOriginalCells:2
+  })).toBe(false);
+ });
+});
 describe('genuine source CPU teammates distribute already-authorized goals',()=>{
  it('diversifies equally useful existing paint goals, never invents another',()=>{
   const ranked=rankOriginalSourcePatrolGoals(goals,Team.A,

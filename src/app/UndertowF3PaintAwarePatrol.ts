@@ -88,6 +88,23 @@ export function rankOriginalSourcePatrolGoals(
   ((b.index-startIndex+count)%Math.max(1,count)));
 }
 
+/** A source-owned CENTER can still be a genuine paint opportunity when
+ * neighboring ACTIVE owner-grid cells of the SAME ORIGINAL source floor
+ * remain neutral/enemy ink. This does not grant physics or Recast movement.
+ */
+export function existingOriginalSourceInkOpportunity(
+ rank:OriginalPatrolInkRank
+):boolean{
+ if(rank.sourceOnly!==true||rank.pathAuthorized!==false||
+    !Number.isSafeInteger(rank.sampledOriginalCells)||
+    rank.sampledOriginalCells<1||
+    !Number.isFinite(rank.neighborhoodOpportunity)||
+    rank.neighborhoodOpportunity<=0)return false;
+ if(rank.priority==='NEUTRAL'||rank.priority==='OTHER_TEAM')return true;
+ // OWN center requires separately observed, same-surface source neighbors.
+ return rank.priority==='OWN'&&rank.sampledOriginalCells>=2;
+}
+
 /** B33 experimental: original-source goal hysteresis. Keep the PREVIOUSLY
  * Rapier/Recast-approved goal during an actual trip, then rerank ownerGrid
  * after coming within the already established 1.5m arrival radius.

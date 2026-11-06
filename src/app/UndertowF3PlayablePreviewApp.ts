@@ -7108,6 +7108,10 @@ export class UndertowF3PlayablePreviewApp{
       order.status==='MOVING'?' · 移動中の上書き禁止':''):'')+
     realCommand+
     (realFeedback?'\n'+realFeedback.line:'')+
+    (order.approvedOriginalNeighborhoodInkGoals>0?
+     '\nA1 VERIFIED ORIGINAL NEARBY INK GOALS '+
+      order.approvedOriginalNeighborhoodInkGoals+
+      ' · ROUTE APPROVAL ONLY · UNSCORED':'')+
     (practiceTimedOutWithLiveMatch?
      '\n60s PRACTICE TIME UP · 180s SOURCE MATCH CONTINUES · C WHEN SAFE':'');
    this.b141RealAllyIndicator.style.whiteSpace='pre-line';
@@ -7117,6 +7121,8 @@ export class UndertowF3PlayablePreviewApp{
     order.sourceDecision;
    this.b141RealAllyIndicator.dataset.t21B471RepeatEnabled=
     String(realFeedback?.canRepeatNow??false);
+   this.b141RealAllyIndicator.dataset.t21B471OriginalNeighborhoodApprovals=
+    String(order.approvedOriginalNeighborhoodInkGoals);
    this.b141RealAllyIndicator.dataset.t21B471RealNativeGoalRequests=
     String(order.actualNativeGoalRequests);
    this.b141RealAllyIndicator.dataset.t21B471ActualOriginalArrivals=

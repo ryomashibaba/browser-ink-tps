@@ -12,7 +12,7 @@ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
-import {rankOriginalSourcePatrolGoals,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
+import {rankOriginalSourcePatrolGoals,existingOriginalSourceInkOpportunity,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
 import {rankB169OriginalAdvanceGuardGoals} from './B169OriginalAllyAdvanceGuard';
 import {b199ActualAllyCollisionReliefCandidates} from './B199ActualAllyCollisionRelief';
@@ -376,6 +376,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b471ActualNativeGoalRequests=0;
  private b471RejectedOriginalRoutes=0;
  private b471ActualOriginalArrivals=0;
+ /** Genuine Recast/Rapier approvals for OWN-center goals with fresh SOURCE
+  * neighbor ink. Never a claimed ink impact or official Turf score. */
+ private b471ApprovedOriginalNeighborhoodInkGoals=0;
  private b137ApprovedNativeRallies=0;
  private b137UnsafeOrUnsupportedRallies=0;
  private b137MissingSourceFloorProof=0;
@@ -780,6 +783,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    actualNativeGoalRequests:this.b471ActualNativeGoalRequests,
    rejectedOriginalRoutes:this.b471RejectedOriginalRoutes,
    actualOriginalArrivals:this.b471ActualOriginalArrivals,
+   approvedOriginalNeighborhoodInkGoals:
+    this.b471ApprovedOriginalNeighborhoodInkGoals,
    requestedNativeTick:this.b471AllyOrder?.requestedTick??null,
    approvedRealAllyFoot:this.b471AllyOrder?.realAllyFootAtApproval?
     this.b471AllyOrder.realAllyFootAtApproval.toArray() as [number,number,number]:null,
@@ -881,7 +886,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       candidates,Team.A,this.sourceInk,0);
      let freshEligibleOriginalGoals=0;
      for(const rank of ranked){
-      if(rank.priority==='OWN'||rank.priority==='UNSAMPLED')continue;
+      // The center may be already ours while real SAME-SURFACE
+      // neighbor owner-grid cells still need ink. Keep original-foot,
+      // full-path Rapier/Recast and 0 Scoreable authority unchanged.
+      if(!existingOriginalSourceInkOpportunity(rank))continue;
       freshEligibleOriginalGoals++;
       const goal=candidates[rank.index]!;
       if(goal.z<33||goal.y<2.7||goal.y>5.25||
@@ -897,6 +905,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       playerOrder.goal=goal.clone();
       playerOrder.realAllyFootAtApproval=realFoot.clone();
       this.b471StrictlyApprovedOriginalGoals++;
+      if(rank.priority==='OWN')
+       this.b471ApprovedOriginalNeighborhoodInkGoals++;
       this.b471OrderStatus='MOVING';
       this.b471SourceDecision='ORIGINAL_GOAL_GRANTED';break;
      }
