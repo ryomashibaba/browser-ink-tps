@@ -1,8 +1,9 @@
 /**
  * B415 — real source-only playable ink economy practice, no gameplay writes.
  *
- * After a genuine A1 CLEAR during the native 180s trial, the player may
- * complete shoot -> own squid refill -> shoot. This is a voluntary practice
+ * After a genuine A1 CLEAR or in one of four strictly canonical 180s
+ * SOURCE modes, the player may complete shoot -> own squid refill -> shoot.
+ * This is a voluntary practice
  * progression, NOT Turf points, hits, real 4v4, or an ART certification.
  * Only consecutive observed 60Hz snapshots can advance a step.
  */
@@ -18,6 +19,27 @@ export type B415InkLoop=Readonly<{
  reshotCount:number;reshotInkSpent:number;
  completedTick:number|null;sourceOnly:true;officialTurfResult:false;
 }>;
+
+/** The existing B415 ink-economy lesson may also follow any of the four
+ * canonical selectable SOURCE worlds. Callers MUST use the stricter
+ * sourceCanonicalPlayableMode URL validator; this does not select a mode.
+ * The real ink loop still requires 60Hz paid shots and genuine OWN refill.
+ * No collision, navigation, ownerGrid, HP or clock permission is granted.
+ */
+export function b415CanonicalOriginalRoundEnabled(v:{
+ readonly canonicalMode:string|null;
+ readonly fullRound:boolean;
+ readonly source:readonly number[];
+ readonly matchState:string;
+ readonly paused:boolean;
+ readonly stopped:boolean;
+ readonly officialWinner:string;
+}):boolean{
+ return v.fullRound&&v.matchState==='PLAYING'&&!v.paused&&!v.stopped&&
+  v.source.length===4&&v.source.join('/')==='25/17/26/0'&&
+  v.officialWinner==='NONE'&&
+  ['combat','circuit','coop','frontline'].includes(v.canonicalMode??'');
+}
 
 const valid=(f:B415NativeFrame):boolean=>
  f.source==='25/17/26/0'&&f.scoreable===0&&f.officialWinner==='NONE'&&

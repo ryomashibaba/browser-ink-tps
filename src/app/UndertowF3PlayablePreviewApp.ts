@@ -92,7 +92,7 @@ import {b219TriageOriginalNavmeshSourceFailure} from './B219OriginalUnderpassDis
 import {b220AuditOriginalRecastSeamWitnesses} from './B220OriginalNativeRecastSeamProbe';
 import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import {b415StepNativeInkLoop,b415ReadableInstruction,
- type B415InkLoop} from './B415LiveInkLoop';
+ b415CanonicalOriginalRoundEnabled,type B415InkLoop} from './B415LiveInkLoop';
 import {b417RealSourcePaintedCellView} from './B417SourcePaintedCellView';
 import type {PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
@@ -5283,16 +5283,27 @@ export class UndertowF3PlayablePreviewApp{
       scoreablePromotionCount:0
      }
     });
-    // B416 real player guidance: advance at fixed native 60Hz SOURCE frames,
-    // not infrequent SwiftShader DOM refreshes. No resources/ink/HP writes.
-    if(this.b411CompactGenuineSourceRound(afterNativePractice)){
+    // B415: the original A1-focused lesson remains available. All four
+    // strict canonical SOURCE 180s worlds may now run the SAME genuine
+    // 60Hz shoot -> OWN squid refill -> re-shoot playable lesson.
+    // No extra gameplay ink/actor/collision/CPU/clock writes.
+    const b415FrozenSource=[
+     this.rawStage.solids.length,this.b45SourceSurfaces.length,
+     this.rawStage.navigationLinks?.length??0,
+     this.b45SourceSurfaces.filter(s=>s.isScoreable).length];
+    if(this.b411CompactGenuineSourceRound(afterNativePractice)||
+       b415CanonicalOriginalRoundEnabled({
+        canonicalMode:sourceCanonicalPlayableMode(location.href),
+        fullRound:this.b203FullRound,source:b415FrozenSource,
+        matchState:this.matchState,paused:this.paused,
+        stopped:Boolean(this.stopReason),
+        officialWinner:afterNativePractice.officialWinner
+       })){
      this.b415InkLoop=b415StepNativeInkLoop(this.b415InkLoop,{
       tick:frame,shots:this.stats.shotsFired,ink:this.stats.playerInk,
       mode:this.player.currentMode,relation:this.player.currentInkRelation,
       recovery:this.stats.playerInkRecoveryState,
-      source:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
-       this.rawStage.navigationLinks?.length??0,
-       this.b45SourceSurfaces.filter(s=>s.isScoreable).length].join('/'),
+      source:b415FrozenSource.join('/'),
       scoreable:0,officialWinner:afterNativePractice.officialWinner,
       playing:this.matchState==='PLAYING',paused:this.paused
      });
@@ -7515,6 +7526,30 @@ export class UndertowF3PlayablePreviewApp{
   }
   if(this.radarVisible)this.radar.render(state);
   this.practiceHud.render(state);
+  // Existing small practice line, no new floating HUD. Live B415 stages
+  // only from real native shots, original OWN ink and true tank recovery.
+  const b415Status=this.practiceHud.root.querySelector<HTMLElement>(
+   '#t21-f3-hud-practice');
+  if(b415Status){
+   const show=b415CanonicalOriginalRoundEnabled({
+    canonicalMode:sourceCanonicalPlayableMode(location.href),
+    fullRound:this.b203FullRound,
+    source:[state.originalSourceSolids,state.originalPaintSurfaces,
+     state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions],
+    matchState:state.matchState,paused:state.paused,
+    stopped:Boolean(state.stopReason),
+    officialWinner:state.b25SourcePaintRun.officialWinner
+   })&&this.b415InkLoop!==null&&this.b415InkLoop.stage!=='HOLD'&&
+    this.b415InkLoop.last.tick<=state.tick;
+   const stage=show?this.b415InkLoop!.stage:null;
+   b415Status.dataset.t21B415CanonicalNativeStage=stage??'OFF';
+   b415Status.dataset.t21B415NativeTick=show?
+    String(this.b415InkLoop!.last.tick):'-1';
+   b415Status.dataset.t21B415SourceScoreable='0';
+   b415Status.dataset.t21B415OfficialTurfScore='false';
+   if(stage)b415Status.textContent=
+    b415ReadableInstruction(stage)+' · UNSCORED · NO OFFICIAL RESULT';
+  }
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
    this.survey.snapshot().active||this.galleryIndex>=0);
   this.b58SessionBoard.render(state);

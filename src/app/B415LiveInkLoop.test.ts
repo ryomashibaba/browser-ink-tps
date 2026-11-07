@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {b415StartNativeInkLoop,b415StepNativeInkLoop,
- b415ReadableInstruction,type B415NativeFrame}
+ b415ReadableInstruction,b415CanonicalOriginalRoundEnabled,type B415NativeFrame}
  from './B415LiveInkLoop';
 
 const frame=(tick:number,shots:number,ink:number,
@@ -10,6 +10,24 @@ const frame=(tick:number,shots:number,ink:number,
  playing:true,paused:false
 });
 describe('B415 real native source-only practice ink economy',()=>{
+ it.each(['combat','circuit','coop','frontline'])(
+  'allows existing native ink lesson in canonical %s with frozen source',
+  mode=>{
+   const base={canonicalMode:mode,fullRound:true,source:[25,17,26,0],
+    matchState:'PLAYING',paused:false,stopped:false,officialWinner:'NONE'};
+   expect(b415CanonicalOriginalRoundEnabled(base)).toBe(true);
+   for(const invalid of [
+    {...base,source:[25,17,27,0]},
+    {...base,source:[25,17,26,1]},
+    {...base,fullRound:false},{...base,paused:true},
+    {...base,stopped:true},{...base,matchState:'TIME_UP'},
+    {...base,officialWinner:'TEAM_A'}
+   ])expect(b415CanonicalOriginalRoundEnabled(invalid)).toBe(false);
+   expect(b415CanonicalOriginalRoundEnabled({...base,canonicalMode:null}))
+    .toBe(false);
+  }
+ );
+
  it('requires real consecutive shots + consumption, OWN squid gain and human re-shot',()=>{
   const first=frame(2400,60,100);
   const original=structuredClone(first);
