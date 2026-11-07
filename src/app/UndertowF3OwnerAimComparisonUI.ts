@@ -50,8 +50,16 @@ export function createB70OwnerAimComparisonUI(
   'background:transparent;border:0;color:#9ccbd4;'+
   'font:600 10px system-ui;cursor:pointer';
  section.append(headline,details,status,compare,save,reset);
- const before=panel.querySelector<HTMLElement>('#t21-f3-b59-restart');
- panel.insertBefore(section,before);
+ // B59 keeps REPLAY in a pinned footer nested under panel. The earlier
+ // panel.insertBefore(section, restartButton) passed a grandchild anchor
+ // and threw NotFoundError before the normal F3 preview could reach READY.
+ // The comparison belongs inside the existing scrolling stats region;
+ // moving neither the fixed replay footer nor any native game state.
+ const statsScroll=panel.querySelector<HTMLElement>(
+  '#t21-f3-b59-scroll-stats');
+ if(!statsScroll||statsScroll.parentElement!==panel)
+  throw Error('B70_REAL_STATS_SCROLL_REQUIRED');
+ statsScroll.appendChild(section);
  function render(){
   let raw:string|null=null,storageOkay=true;
   try{raw=sessionStorage.getItem(B70_STORAGE_KEY);}
