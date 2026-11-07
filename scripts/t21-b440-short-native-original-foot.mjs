@@ -273,8 +273,14 @@ async function main(){
   proof.stage='REAL_CANONICAL_COMBAT_SOURCE_SWEEP_PENDING';save();
   await cdp('Page.navigate',{url:portals.combat});
   const boot=await until(async()=>{
-   const n=await snap();return n?.originalSourceSolids===25&&
-    n.originalPaintSurfaces===17&&n.matchState==='STAGING'?n:null;
+   // The actual browser can expose the canvas before SOURCE snapshot
+   // is installed. Poll only initial boot; never swallow later authority
+   // or physical-source failures.
+   try{
+    const n=await evaluate('window.__t21F3?.snapshot?.()??null');
+    return n?.originalSourceSolids===25&&
+     n.originalPaintSurfaces===17&&n.matchState==='STAGING'?n:null;
+   }catch{return null;}
   },120000,400);
   authority(boot);
   if(boot.tick!==0||boot.timeRemainingSeconds!==180||
