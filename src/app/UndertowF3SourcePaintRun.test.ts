@@ -382,3 +382,38 @@ describe('F3 in-world Q native practice repeat, never restart real 180s',()=>{
   expect(r.snapshot().physicalStageModifications).toBe(0);
  });
 });
+
+
+describe('F3 genuine original SOURCE_SWEEP paint-on-three-surfaces mission',()=>{
+ const f=(i:number,s:string|null,n:number,verified=true):B25PracticeFrame=>tick(i,{
+  foot:{x:i*.16,y:1,z:0,grounded:true,alive:true,realPhysicalOriginalStage:true},
+  ink:{changedHumanImpactCells:i===1?0:300,changedHumanImpactEvents:n,
+   sourceOnly:true,scoreablePromotionCount:0,
+   lastChangedSourceSurfaceId:s,lastChangedSourceImpactTick:i,
+   lastChangedSourceSurfaceCertified:verified}
+ });
+ it('needs three different registered impact surfaces plus 12m; no Turf award',()=>{
+  const r=new UndertowF3SourcePaintRun();expect(r.arm('SOURCE_SWEEP')).toBe(true);
+  r.observe(f(1,null,0));
+  for(let i=2;i<=95;i++)r.observe(f(i,
+   i<30?'UndertowT21D:spawn-high-positive-z:paint':
+   i<60?'UndertowT21D:first-drop-landing-positive-z:paint':
+   'UndertowT21D:right-low-team-a:paint',i-1));
+  expect(r.snapshot()).toMatchObject({status:'CLEAR',
+   originalSweepSurfaces:3,officialWinner:'NONE',sourceScoreablePromotions:0,
+   physicalStageModifications:0});
+  expect(r.arm('SOURCE_SWEEP')).toBe(true);
+  expect(r.snapshot()).toMatchObject({originalSweepSurfaces:0,completedRealPracticeRuns:1});
+ });
+ it('rejects repeated original surface, uncertified label and old count',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm('SOURCE_SWEEP');r.observe(f(1,null,0));
+  for(let i=2;i<=95;i++)r.observe(f(i,'UndertowT21D:source-a:paint',i-1));
+  expect(r.snapshot()).toMatchObject({status:'RUNNING',originalSweepSurfaces:1});
+  r.observe(f(96,'UndertowT21D:unknown:paint',95,false));
+  r.observe(f(97,'UndertowT21D:source-b:paint',95));
+  expect(r.snapshot().originalSweepSurfaces).toBe(1);
+  r.observe(f(98,'UndertowT21D:source-b:paint',96));
+  r.observe(f(99,'UndertowT21D:source-c:paint',97));
+  expect(r.snapshot()).toMatchObject({status:'CLEAR',originalSweepSurfaces:3});
+ });
+});

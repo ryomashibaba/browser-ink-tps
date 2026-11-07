@@ -2135,7 +2135,8 @@ export class UndertowF3PlayablePreviewApp{
       'ORIGINAL_GROUNDED_ALLY_EXPERIMENT';
     this.b56NextVariant=this.b56NextVariant==='CLASSIC'?'SWITCHBACK':
      this.b56NextVariant==='SWITCHBACK'?'PAINT_RELAY':
-     this.b56NextVariant==='PAINT_RELAY'&&genuineAllyPracticeAvailable?
+     this.b56NextVariant==='PAINT_RELAY'?'SOURCE_SWEEP':
+     this.b56NextVariant==='SOURCE_SWEEP'&&genuineAllyPracticeAvailable?
       'ALLY_SYNC':'CLASSIC';
     this.refreshB25PaintRun();
    });
@@ -5223,7 +5224,13 @@ export class UndertowF3PlayablePreviewApp{
      ink:{changedHumanImpactCells:actualHumanInk.humanChangedCells,
       changedHumanImpactEvents:actualHumanInk.humanChangedImpactCount,
       sourceOnly:actualHumanInk.originalSourceOnly,
-      scoreablePromotionCount:0},
+      scoreablePromotionCount:0,
+      lastChangedSourceSurfaceId:actualHumanInk.lastPaintedSurface,
+      lastChangedSourceImpactTick:actualHumanInk.lastImpactTick,
+      lastChangedSourceSurfaceCertified:
+       actualHumanInk.lastPaintedSurface!==null&&
+       this.b45SourceSurfaces.some(s=>
+        s.id===actualHumanInk.lastPaintedSurface&&!s.isScoreable)},
      // B161: exact B152 A1 real source aim -> projectile ->
      // registered original impact -> accepted changed ink.
      ally:{
@@ -6134,6 +6141,8 @@ export class UndertowF3PlayablePreviewApp{
     'ALLY SYNC (explicit QA ally-ink only): paint 180 HUMAN real cells,'+
     ' move 12m on original floor and receive 30 FRESH actual A1'+
     ' source-impact changed cells AFTER arming. No score or winner.':
+    this.b56NextVariant==='SOURCE_SWEEP'?
+    'SOURCE SWEEP: repaint THREE different registered original surfaces with genuine human projectile ink, 180 changed cells and 12m real grounded travel in 60s. No official result.':
     this.b56NextVariant==='PAINT_RELAY'?
     'PAINT RELAY: paint 60 new cells per leg. Move 1.8m out, return to 0.8m, then finish at 12m original-ground travel.':
     this.b56NextVariant==='SWITCHBACK'?
@@ -6212,11 +6221,13 @@ export class UndertowF3PlayablePreviewApp{
   }
   const qRetryInstruction=this.b203FullRound&&
    ['combat','circuit'].includes(sourceCanonicalPlayableMode(location.href)??'')&&
-   ['CLASSIC','SWITCHBACK','PAINT_RELAY'].includes(run.practiceVariant)&&
+   ['CLASSIC','SWITCHBACK','PAINT_RELAY','SOURCE_SWEEP'].includes(run.practiceVariant)&&
    this.matchState==='PLAYING'&&this.remainingSeconds>=60&&
    ['CLEAR','TIME_UP','ABORTED'].includes(run.status)?
    '\nQ · RETRY LOCAL PRACTICE IN THIS SAME WORLD':'';
-  const progress='PAINT '+run.humanChangedImpactCells+'/'+
+  const progress=(run.practiceVariant==='SOURCE_SWEEP'?
+   'ORIGINAL PAINT SURFACES '+run.originalSweepSurfaces+'/3 · HUMAN ONLY\n':'')+
+   'PAINT '+run.humanChangedImpactCells+'/'+
    run.requiredHumanChangedCells+' real cells\nGROUND '+
    run.realGroundedTravelMeters.toFixed(1)+'/'+
    run.requiredRealGroundedTravelMeters+' m';

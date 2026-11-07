@@ -81,7 +81,7 @@ jobs:
   real-native-original-frontline:
     runs-on: ubuntu-latest
     # One explicit genuine >3600 native-tick case; ordinary pushes stay short.
-    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || (contains(github.event.head_commit.message, '[true-expiry]') && 30 || 15) }}
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]')) && 35 || 15) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -139,12 +139,38 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[audit-only]') }}
         env:
           T21_B441_SOURCE_FRONTLINE: '1'
+          T21_B441_REAL_Q_ONCE: ${{ contains(github.event.head_commit.message, '[real-q-once]') && '1' || '0' }}
           T21_B441_NATIVE_OBSERVE_TICKS: '720'
           # Enabled only for one deliberate source-expiry proof commit.
           T21_B441_PROVE_60S_EXPIRY: ${{ contains(github.event.head_commit.message, '[true-expiry]') && '1' || '0' }}
           T21_B441_PROVE_FULL_180S_REPLAY: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && '1' || '0' }}
           T21_B440_OUT: /tmp/t21-b441-short-native-frontline
         run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Verify exactly one real canonical combat KeyQ and native screenshots
+        if: ${{ contains(github.event.head_commit.message, '[real-q-once]') }}
+        run: |
+          node --input-type=module <<'Q_REAL'
+          import {readFileSync,statSync} from 'node:fs';
+          const path='/tmp/t21-b441-short-native-frontline/';
+          const q=JSON.parse(readFileSync(path+'q-real-combat-once.json','utf8'));
+          if(q.verdict!=='PASS_REAL_CDP_KEYQ_SAME_SOURCE_WORLD'||
+           q.source!=='25/17/26/0'||q.realKey!=='KeyQ'||
+           q.practiceBefore!=='TIME_UP'||q.practiceAfter!=='RUNNING'||
+           q.practiceElapsedBefore<3600||q.remainingBefore<60||
+           q.remainingAfter>q.remainingBefore||q.tickAfter<=q.tickBefore||
+           q.sameBrowserWorld!==true||q.sameSevenCpu!==true||
+           q.actorWrites!==0||q.inkWrites!==0||q.clockWrites!==0||
+           q.scoreWrites!==0||q.officialWinner!=='NONE'||
+           q.formal4v4Certified!==false||q.images?.length!==2)
+            throw Error('Q_GENUINE_CANONICAL_COMBAT_ONE_SHOT_HOLD');
+          for(const file of q.images){
+           const b=readFileSync(path+file);
+           if(statSync(path+file).size<10000||
+            b.readUInt32BE(16)!==1600||b.readUInt32BE(20)!==900)
+             throw Error('Q_GENUINE_REAL_CHROME_PNG_HOLD');
+          }
+          console.log('Q_REAL_KEY_SAME_WORLD_PASS');
+          Q_REAL
       - name: B450 independent genuine CPU B2 B4 first original path denial audit
         run: node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B452 read-only actual B2 B4 physical-foot vs rejected Recast coordinates in SAME original native world

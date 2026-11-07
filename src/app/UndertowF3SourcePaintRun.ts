@@ -9,7 +9,7 @@ export const B25_SOURCE_PAINT_RUN_TICKS=60*60;
 export const B25_SOURCE_PAINT_RUN_REQUIRED_CELLS=180;
 export const B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS=12;
 const MAX_GROUNDED_TRAVEL_PER_TICK=.38;
-export type B56PracticeVariant='CLASSIC'|'SWITCHBACK'|'PAINT_RELAY'|'ALLY_SYNC';
+export type B56PracticeVariant='CLASSIC'|'SWITCHBACK'|'PAINT_RELAY'|'SOURCE_SWEEP'|'ALLY_SYNC';
 /** Only actual B152 tagged source-aim -> projectile -> original impact ink. */
 export const B161_ALLY_REAL_IMPACT_CELLS=30;
 export const B57_RELAY_CELLS_PER_LEG=60;
@@ -26,6 +26,9 @@ export type B25PracticeFoot=Readonly<{
 export type B25PracticeInk=Readonly<{
  changedHumanImpactCells:number;changedHumanImpactEvents:number;
  sourceOnly:boolean;scoreablePromotionCount:0;
+ lastChangedSourceSurfaceId?:string|null;
+ lastChangedSourceImpactTick?:number|null;
+ lastChangedSourceSurfaceCertified?:boolean;
 }>;
 /** Optional for prior run variants. Mandatory A1 native provenance for ALLY_SYNC. */
 export type B161AllyPhysicalInk=Readonly<{
@@ -75,7 +78,7 @@ export function b25MayQuickRetryInRealSourceWorld(f:Readonly<{
   Number.isFinite(f.hp)&&f.hp>0&&f.grounded&&f.registeredOriginalFoot&&
   f.cpuRejoined===7&&f.stage.join('/')==='25/17/26/0'&&
   ['CLEAR','TIME_UP','ABORTED'].includes(f.practiceStatus)&&
-  ['CLASSIC','SWITCHBACK','PAINT_RELAY'].includes(f.practiceVariant)&&
+  ['CLASSIC','SWITCHBACK','PAINT_RELAY','SOURCE_SWEEP'].includes(f.practiceVariant)&&
   !f.surveyActive&&!f.galleryActive;
 }
 
@@ -106,11 +109,13 @@ export class UndertowF3SourcePaintRun{
  private routeOutAtGroundMeters=0;
  private relayTurnPaintCells=0;
  private relayReturnPaintCells=0;
+ private readonly originalSweepSurfaces=new Set<string>();
+ private lastOriginalSweepImpactCount=0;
  private readonly bestByVariant:Record<B56PracticeVariant,number|null>={
-  CLASSIC:null,SWITCHBACK:null,PAINT_RELAY:null,ALLY_SYNC:null
+  CLASSIC:null,SWITCHBACK:null,PAINT_RELAY:null,SOURCE_SWEEP:null,ALLY_SYNC:null
  };
  private readonly clearsByVariant:Record<B56PracticeVariant,number>={
-  CLASSIC:0,SWITCHBACK:0,PAINT_RELAY:0,ALLY_SYNC:0
+  CLASSIC:0,SWITCHBACK:0,PAINT_RELAY:0,SOURCE_SWEEP:0,ALLY_SYNC:0
  };
 
  public arm(variant:B56PracticeVariant='CLASSIC',
@@ -118,7 +123,8 @@ export class UndertowF3SourcePaintRun{
   if(waitForPhysicalCoopStart&&variant!=='ALLY_SYNC')return false;
   if(this.status==='ARMED'||this.status==='RUNNING'||
      (variant!=='CLASSIC'&&variant!=='SWITCHBACK'&&
-      variant!=='PAINT_RELAY'&&variant!=='ALLY_SYNC'))return false;
+      variant!=='PAINT_RELAY'&&variant!=='SOURCE_SWEEP'&&
+      variant!=='ALLY_SYNC'))return false;
   this.variant=variant;
   this.waitForPhysicalCoopStart=waitForPhysicalCoopStart;
   this.status='ARMED';
@@ -130,6 +136,7 @@ export class UndertowF3SourcePaintRun{
   this.routeStart=null;this.routeOutReached=false;this.routeReturned=false;
   this.routeOutAtGroundMeters=0;
   this.relayTurnPaintCells=0;this.relayReturnPaintCells=0;
+  this.originalSweepSurfaces.clear();this.lastOriginalSweepImpactCount=0;
   this.bestTicks=this.bestByVariant[this.variant];
   this.validClears=this.clearsByVariant[this.variant];
   // A retry keeps only a real previous in-page practice best.
@@ -201,6 +208,7 @@ export class UndertowF3SourcePaintRun{
    this.startTick=f.tick;this.lastTick=f.tick;
    this.baseCells=f.ink.changedHumanImpactCells;
    this.baseImpacts=f.ink.changedHumanImpactEvents;
+   this.lastOriginalSweepImpactCount=this.baseImpacts;
    if(this.variant==='ALLY_SYNC'&&ally){
     this.initialRealA1Cells=ally.genuineOriginalA1AimChangedImpactCells;
     this.initialRealA1Impacts=ally.genuineOriginalA1AimImpactEvents;
@@ -229,6 +237,19 @@ export class UndertowF3SourcePaintRun{
     ally.genuineOriginalA1AimChangedImpactCells-this.initialRealA1Cells;
    this.realA1OriginalImpactEvents=
     ally.genuineOriginalA1AimImpactEvents-this.initialRealA1Impacts;
+  }
+  // Count only accepted human projectile CHANGED cells on registered SOURCE
+  // paintables. A synthetic shot, bomb or repeated last-surface snapshot
+  // cannot meet this goal. Multiple contacts in one tick count conservatively.
+  if(this.variant==='SOURCE_SWEEP'){
+   const ink=f.ink;
+   if(ink.changedHumanImpactEvents>this.lastOriginalSweepImpactCount&&
+      ink.lastChangedSourceSurfaceCertified===true&&
+      typeof ink.lastChangedSourceSurfaceId==='string'&&
+      ink.lastChangedSourceSurfaceId.startsWith('UndertowT21D:')&&
+      ink.lastChangedSourceImpactTick===f.tick)
+    this.originalSweepSurfaces.add(ink.lastChangedSourceSurfaceId);
+   this.lastOriginalSweepImpactCount=ink.changedHumanImpactEvents;
   }
   const routeMode=this.variant==='SWITCHBACK'||this.variant==='PAINT_RELAY';
   // No credit for jumping, falling, respawn, teleport or out-of-map.
@@ -284,7 +305,8 @@ export class UndertowF3SourcePaintRun{
   if(this.actualCells>=B25_SOURCE_PAINT_RUN_REQUIRED_CELLS&&
      this.groundedMeters>=B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS&&
      (this.variant==='CLASSIC'||this.variant==='ALLY_SYNC'||
-      this.routeReturned)&&
+      this.variant==='SOURCE_SWEEP'||this.routeReturned)&&
+     (this.variant!=='SOURCE_SWEEP'||this.originalSweepSurfaces.size>=3)&&
      (this.variant!=='ALLY_SYNC'||(
       this.realA1ChangedImpactCells>=B161_ALLY_REAL_IMPACT_CELLS&&
       this.realA1OriginalImpactEvents>0))&&
@@ -330,10 +352,13 @@ export class UndertowF3SourcePaintRun{
     Math.max(0,this.actualCells-this.relayReturnPaintCells),
    routeOutMeters:B56_SWITCHBACK_OUT_METERS,
    routeHomeRadiusMeters:B56_SWITCHBACK_HOME_RADIUS_METERS,
-   routePhase:this.variant==='CLASSIC'||this.variant==='ALLY_SYNC'?
+   routePhase:this.variant==='CLASSIC'||this.variant==='ALLY_SYNC'||
+    this.variant==='SOURCE_SWEEP'?
     'NOT_REQUIRED' as const:
     !this.routeOutReached?'OUTBOUND' as const:
     !this.routeReturned?'RETURN' as const:'COMPLETE' as const,
+   originalSweepSurfaces:this.originalSweepSurfaces.size,
+   requiredOriginalSweepSurfaces:3 as const,
    mode:'OPTIONAL_NONSCORING_SOURCE_PAINT_RUN' as const,
    originalStageVerified:true as const,
    gameplaySource:'REAL_HUMAN_AUTHORITATIVE_INK_AND_RAPIER_FOOT' as const,

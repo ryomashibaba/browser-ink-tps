@@ -10,9 +10,13 @@ export function sourcePracticeObjectiveView(run:SourceRun){
     run.requiredHumanChangedCells!==180||
     run.requiredRealGroundedTravelMeters!==12||
     (run.practiceVariant!=='CLASSIC'&&run.practiceVariant!=='SWITCHBACK'&&
-     run.practiceVariant!=='PAINT_RELAY'&&run.practiceVariant!=='ALLY_SYNC')||
+     run.practiceVariant!=='PAINT_RELAY'&&
+     run.practiceVariant!=='SOURCE_SWEEP'&&run.practiceVariant!=='ALLY_SYNC')||
     run.routeOutMeters!==1.8||run.routeHomeRadiusMeters!==.8||
     run.relayCellsPerLeg!==60||
+    run.requiredOriginalSweepSurfaces!==3||
+    !Number.isSafeInteger(run.originalSweepSurfaces)||
+    run.originalSweepSurfaces<0||run.originalSweepSurfaces>17||
     !Number.isSafeInteger(run.relayStagePaintCells)||
     run.relayStagePaintCells<0||
     ![run.humanChangedImpactCells,run.realGroundedTravelMeters].every(
@@ -29,7 +33,9 @@ export function sourcePracticeObjectiveView(run:SourceRun){
  const allyNext=run.practiceVariant==='ALLY_SYNC'&&
   !run.originalA1CooperativeGoalSatisfied&&
   paint>=100&&ground>=100?'ALLY_INK':null;
- const next=relayNext??routeNext??allyNext??(paint<100&&ground<100?
+ const sweepNext=run.practiceVariant==='SOURCE_SWEEP'&&
+  run.originalSweepSurfaces<3?'ORIGINAL_SURFACES':null;
+ const next=relayNext??routeNext??allyNext??sweepNext??(paint<100&&ground<100?
   (paint<=ground?'PAINT':'GROUND'):paint<100?'PAINT':ground<100?'GROUND':'DONE');
  const headline=run.status==='CLEAR'?'PRACTICE CLEAR · NOT TURF':
   run.status==='TIME_UP'?'PRACTICE TIME UP · NO WINNER':
@@ -43,10 +49,14 @@ export function sourcePracticeObjectiveView(run:SourceRun){
    next==='OUTBOUND'?'NEXT · MOVE 1.8m AWAY ON ORIGINAL GROUND':
    next==='RETURN'?'NEXT · RETURN WITHIN 0.8m OF START':
    next==='ALLY_INK'?'WAIT FOR A1 GENUINE ORIGINAL IMPACT INK · NO SHOT REQUEST CREDIT':
+   next==='ORIGINAL_SURFACES'?'NEXT · PAINT '+(3-run.originalSweepSurfaces)+
+    ' MORE DISTINCT ORIGINAL SURFACES WITH HUMAN PROJECTILES':
    next==='PAINT'?'NEXT · PAINT REAL SOURCE SURFACES':
    next==='GROUND'?'NEXT · MOVE ON ORIGINAL GROUND':
    'BOTH OBJECTIVES COMPLETE'):
-  run.status==='CLEAR'?(run.practiceVariant==='PAINT_RELAY'?'THREE REAL PAINT LEGS COMPLETE':
+  run.status==='CLEAR'?(run.practiceVariant==='SOURCE_SWEEP'?
+   'THREE DISTINCT GENUINE ORIGINAL SURFACES COMPLETE':
+   run.practiceVariant==='PAINT_RELAY'?'THREE REAL PAINT LEGS COMPLETE':
    run.practiceVariant==='ALLY_SYNC'?'HUMAN + REAL A1 COOPERATIVE PAINT COMPLETE':'TWO REAL OBJECTIVES COMPLETE'):
   run.status==='TIME_UP'?'TRY AGAIN · NO OFFICIAL RESULT':
   run.status==='ABORTED'?'UNLOCKED / INTERRUPTED · RETRY':
@@ -54,6 +64,7 @@ export function sourcePracticeObjectiveView(run:SourceRun){
    '180 HUMAN changed cells + 12m REAL grounded travel + 30 fresh genuine A1 impact cells':
    '180 changed cells + 12m real grounded travel';
  return {paint,ground,next,headline,hint,
+  sweptOriginalSurfaces:run.originalSweepSurfaces,requiredOriginalSurfaces:3 as const,
   state:run.status,officialWinner:'NONE' as const,
   scoring:'UNSCORED' as const};
 }

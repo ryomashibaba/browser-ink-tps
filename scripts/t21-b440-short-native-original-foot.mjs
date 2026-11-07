@@ -25,8 +25,10 @@ const proveSourcePracticeExpiry=b441Experiment&&
  process.env.T21_B441_PROVE_60S_EXPIRY==='1';
 const proveFullSourceReplay=b441Experiment&&
  process.env.T21_B441_PROVE_FULL_180S_REPLAY==='1';
-if(proveFullSourceReplay&&proveSourcePracticeExpiry)
- throw Error('B441_ONE_SHOT_FULL_AND_60S_CONFLICT');
+const proveRealQ=b441Experiment&&process.env.T21_B441_REAL_Q_ONCE==='1';
+if((proveFullSourceReplay&&proveSourcePracticeExpiry)||
+ (proveRealQ&&(proveFullSourceReplay||proveSourcePracticeExpiry)))
+ throw Error('B441_ONE_SHOT_Q_MODE_CONFLICT');
 const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay'+
  (b441Experiment?'&t21W10B112=humanGround&t21W10B192=humanCombat':
   '&t21W10B193=allyCoop')+'&t21W10B203=fullRound'+
@@ -1787,7 +1789,96 @@ async function main(){
   writeFileSync(resolve(out,'real-replay-fresh-world-same-weapon.png'),
    Buffer.from(afterImage.data,'base64'));
  }
- proof.verdict=proveFullSourceReplay?
+ 
+ if(proveRealQ){
+  // The B441 frontline correctly forbids Q. First preserve its genuine
+  // short evidence, then open a NEW canonical combat world to test KeyQ.
+  proof.stage='REAL_CANONICAL_COMBAT_Q_PENDING';save();
+  await cdp('Page.navigate',{url:portals.combat});
+  const first=await until(async()=>{
+   try{const n=await snap();return n?.originalSourceSolids===25&&
+    n.originalPaintSurfaces===17&&n.matchState==='STAGING'?n:null}
+   catch{return null}
+  },120000,400);
+  authority(first);
+  if(first.tick!==0||first.timeRemainingSeconds!==180||
+     first.cpu.cpu.length!==7)fail('Q_FRESH_COMBAT_WORLD_INVALID');
+  const born=await origin(),kit=first.b361NativePlayerWeapon?.id;
+  await buttonClick('#t21-f3-b25-start');
+  await until(async()=>{const n=await snap();authority(n);
+   return n.b25SourcePaintRun?.status==='ARMED'?n:null;},20000);
+  await buttonClick('#t21-f3-b202-resume');
+  const started=await until(async()=>{const n=await snap();authority(n);
+   return n.matchState==='PLAYING'&&!n.paused&&await locked()&&
+    n.cpu.physicalRejoins.length===7&&n.b25SourcePaintRun?.status==='RUNNING'?n:null;
+  },360000,500);
+  if(started.b25SourcePaintRun?.practiceVariant!=='CLASSIC')
+   fail('Q_WRONG_VARIANT');
+  // No time/actor/ink writes: actual native 3,600-tick practice TIME_UP.
+  const expired=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.matchState!=='PLAYING'||n.paused||!await locked()||
+      n.cpu.physicalRejoins.length!==7||n.player.hp<=0)
+    fail('Q_REAL_NATIVE_MATCH_STOPPED');
+   if(['CLEAR','ABORTED'].includes(n.b25SourcePaintRun?.status))
+    fail('Q_NO_NATURAL_TIMEOUT');
+   return n.b25SourcePaintRun?.status==='TIME_UP'&&
+    n.b25SourcePaintRun.elapsedTicks>=3600&&n.timeRemainingSeconds>=60?n:null;
+  },900000,900);
+  const screenshot=async(file)=>{
+   const p=await cdp('Page.captureScreenshot',{
+    format:'png',captureBeyondViewport:false});
+   if(typeof p?.data!=='string'||p.data.length<100)fail('Q_MISSING_TRUE_PNG');
+   writeFileSync(resolve(out,file),Buffer.from(p.data,'base64'));
+  };
+  await screenshot('q-true-chromium-before.png');
+  const priorOrigin=await origin(),priorTick=expired.tick,
+   priorSeconds=expired.timeRemainingSeconds,
+   priorCells=expired.b23HumanInkFeedback?.humanChangedCells??0,
+   priorCpuIds=expired.cpu.cpu.map(x=>x.id).join(',');
+  await tapSourceCameraKey('q','KeyQ',81);
+  const observed=await until(async()=>{
+   const n=await snap();authority(n);
+   const mark=await evaluate(`(() => {
+    const c=document.querySelector('#app-canvas');
+    return {state:c?.dataset.t21F3QuickPractice,
+     tick:c?.dataset.t21F3QuickPracticeTick};
+   })()`);
+   return mark?.state==='GENUINE_LOCAL_REARM'&&
+    n.b25SourcePaintRun?.status==='RUNNING'&&n.tick>priorTick?{n,mark}:null;
+  },30000,250);
+  const a=observed.n;
+  if(priorOrigin!==born||await origin()!==born||a.matchState!=='PLAYING'||
+     a.paused||!await locked()||a.cpu.physicalRejoins.length!==7||
+     a.cpu.cpu.map(x=>x.id).join(',')!==priorCpuIds||
+     a.b361NativePlayerWeapon?.id!==kit||
+     a.b25SourcePaintRun.practiceVariant!=='CLASSIC'||
+     a.b25SourcePaintRun.humanChangedImpactCells!==0||
+     a.b25SourcePaintRun.elapsedTicks>90||
+     a.timeRemainingSeconds>priorSeconds+.001||
+     a.timeRemainingSeconds<60||a.tick<=priorTick||
+     (a.b23HumanInkFeedback?.humanChangedCells??0)<priorCells||
+     a.sourceScoreablePromotions!==0)
+   fail('Q_NOT_REAL_SAME_WORLD_LOCAL_REARM');
+  await screenshot('q-true-chromium-after.png');
+  proof.realQOneShot={schema:'T21_REAL_CANONICAL_COMBAT_KEYQ_ONCE',
+   verdict:'PASS_REAL_CDP_KEYQ_SAME_SOURCE_WORLD',
+   source:'25/17/26/0',realKey:'KeyQ',
+   practiceBefore:expired.b25SourcePaintRun.status,
+   practiceElapsedBefore:expired.b25SourcePaintRun.elapsedTicks,
+   practiceAfter:a.b25SourcePaintRun.status,
+   tickBefore:priorTick,tickAfter:a.tick,
+   remainingBefore:priorSeconds,remainingAfter:a.timeRemainingSeconds,
+   sameBrowserWorld:true,sameSevenCpu:true,
+   humanCellsBefore:priorCells,humanCellsAfter:a.b23HumanInkFeedback?.humanChangedCells,
+   acceptedMarker:observed.mark,actorWrites:0,inkWrites:0,clockWrites:0,
+   scoreWrites:0,officialWinner:'NONE',formal4v4Certified:false,
+   images:['q-true-chromium-before.png','q-true-chromium-after.png']};
+  writeFileSync(resolve(out,'q-real-combat-once.json'),
+   JSON.stringify(proof.realQOneShot,null,2)+'\n');
+  proof.stage='REAL_Q_ONE_SHOT_PASS';save();
+ }
+proof.verdict=proveFullSourceReplay?
   'PASS_REAL_NATIVE_180S_TIME_UP_REPLAY_NEW_WORLD_SAME_HUMAN_WEAPON':
   b441Experiment?
   'PASS_FRESH_SOURCE_HUMAN_AND_ACTUAL_CPU_FRONT_GOAL_NOT_CROSSING':
