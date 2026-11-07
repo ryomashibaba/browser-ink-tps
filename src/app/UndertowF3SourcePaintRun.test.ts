@@ -384,36 +384,87 @@ describe('F3 in-world Q native practice repeat, never restart real 180s',()=>{
 });
 
 
-describe('F3 genuine original SOURCE_SWEEP paint-on-three-surfaces mission',()=>{
- const f=(i:number,s:string|null,n:number,verified=true):B25PracticeFrame=>tick(i,{
-  foot:{x:i*.16,y:1,z:0,grounded:true,alive:true,realPhysicalOriginalStage:true},
-  ink:{changedHumanImpactCells:i===1?0:300,changedHumanImpactEvents:n,
-   sourceOnly:true,scoreablePromotionCount:0,
-   lastChangedSourceSurfaceId:s,lastChangedSourceImpactTick:i,
-   lastChangedSourceSurfaceCertified:verified}
- });
- it('needs three different registered impact surfaces plus 12m; no Turf award',()=>{
+describe('F3 SOURCE_SWEEP: real per-original-surface projectile ink quotas',()=>{
+ const ids=[
+  'UndertowT21D:spawn-high-positive-z:paint',
+  'UndertowT21D:first-drop-landing-positive-z:paint',
+  'UndertowT21D:right-low-route-ramp-positive-z:paint'
+ ];
+ const frame=(t:number,counts:readonly number[],extra:Partial<B25PracticeFrame>={})=>
+  tick(t,{
+   foot:{x:t*.16,y:1,z:0,grounded:true,alive:true,
+    realPhysicalOriginalStage:true},
+   ink:{changedHumanImpactCells:counts.reduce((a,b)=>a+b,0),
+    changedHumanImpactEvents:counts.reduce((a,b)=>a+b,0)>0?3:0,
+    sourceOnly:true,scoreablePromotionCount:0,
+    originalImpactChangedCellsBySurface:counts.map((n,i)=>({
+     surfaceId:ids[i],changedCells:n,certifiedOriginal:true
+    }))},
+   ...extra
+  });
+ it('CLEAR requires 60 fresh cells EACH on three source surfaces and 12m ground',()=>{
   const r=new UndertowF3SourcePaintRun();expect(r.arm('SOURCE_SWEEP')).toBe(true);
-  r.observe(f(1,null,0));
-  for(let i=2;i<=95;i++)r.observe(f(i,
-   i<30?'UndertowT21D:spawn-high-positive-z:paint':
-   i<60?'UndertowT21D:first-drop-landing-positive-z:paint':
-   'UndertowT21D:right-low-team-a:paint',i-1));
-  expect(r.snapshot()).toMatchObject({status:'CLEAR',
-   originalSweepSurfaces:3,officialWinner:'NONE',sourceScoreablePromotions:0,
-   physicalStageModifications:0});
+  r.observe(frame(1,[0,0,0]));
+  for(let i=2;i<=95;i++)
+   r.observe(frame(i,i<32?[60,0,0]:i<62?[60,60,0]:[60,60,60]));
+  expect(r.snapshot()).toMatchObject({
+   status:'CLEAR',originalSweepSurfaces:3,
+   qualifiedOriginalSweepSurfaces:3,sweepCellsPerOriginalSurface:60,
+   humanChangedImpactCells:180,officialWinner:'NONE',
+   sourceScoreablePromotions:0,physicalStageModifications:0
+  });
   expect(r.arm('SOURCE_SWEEP')).toBe(true);
-  expect(r.snapshot()).toMatchObject({originalSweepSurfaces:0,completedRealPracticeRuns:1});
+  expect(r.snapshot()).toMatchObject({
+   originalSweepSurfaces:0,qualifiedOriginalSweepSurfaces:0,
+   completedRealPracticeRuns:1
+  });
  });
- it('rejects repeated original surface, uncertified label and old count',()=>{
-  const r=new UndertowF3SourcePaintRun();r.arm('SOURCE_SWEEP');r.observe(f(1,null,0));
-  for(let i=2;i<=95;i++)r.observe(f(i,'UndertowT21D:source-a:paint',i-1));
-  expect(r.snapshot()).toMatchObject({status:'RUNNING',originalSweepSurfaces:1});
-  r.observe(f(96,'UndertowT21D:unknown:paint',95,false));
-  r.observe(f(97,'UndertowT21D:source-b:paint',95));
-  expect(r.snapshot().originalSweepSurfaces).toBe(1);
-  r.observe(f(98,'UndertowT21D:source-b:paint',96));
-  r.observe(f(99,'UndertowT21D:source-c:paint',97));
-  expect(r.snapshot()).toMatchObject({status:'CLEAR',originalSweepSurfaces:3});
+ it('178+1+1 cannot win even with 180 real cells and 12m grounded travel',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm('SOURCE_SWEEP');
+  r.observe(frame(1,[0,0,0]));
+  for(let i=2;i<=95;i++)r.observe(frame(i,[178,1,1]));
+  expect(r.snapshot()).toMatchObject({
+   status:'RUNNING',originalSweepSurfaces:3,
+   qualifiedOriginalSweepSurfaces:1,humanChangedImpactCells:180,
+   completedRealPracticeRuns:0,officialWinner:'NONE'
+  });
+  expect(r.snapshot().realGroundedTravelMeters).toBeGreaterThanOrEqual(12);
+ });
+ it('only new post-arm source ink counts; original preexisting paint is not credit',()=>{
+  const r=new UndertowF3SourcePaintRun();r.arm('SOURCE_SWEEP');
+  r.observe(frame(1,[200,120,60]));
+  for(let i=2;i<=95;i++)r.observe(frame(i,[260,180,119]));
+  expect(r.snapshot()).toMatchObject({
+   status:'RUNNING',qualifiedOriginalSweepSurfaces:2,
+   humanChangedImpactCells:179,officialWinner:'NONE'
+  });
+  r.observe(frame(96,[260,180,120]));
+  expect(r.snapshot()).toMatchObject({status:'CLEAR',
+   qualifiedOriginalSweepSurfaces:3});
+ });
+ it('rejects fabricated, duplicated, uncertified, absent or resetting source ledger',()=>{
+  const changed=(value:number,rows:NonNullable<B25PracticeFrame['ink']['originalImpactChangedCellsBySurface']>)=>
+   ({changedHumanImpactCells:value,changedHumanImpactEvents:1,
+    sourceOnly:true as const,scoreablePromotionCount:0 as const,
+    originalImpactChangedCellsBySurface:rows});
+  const variants=[
+   changed(100,[{surfaceId:ids[0],changedCells:60,certifiedOriginal:true}]),
+   changed(60,[{surfaceId:ids[0],changedCells:60,certifiedOriginal:true},
+    {surfaceId:ids[0],changedCells:0,certifiedOriginal:true}]),
+   changed(60,[{surfaceId:'UndertowT21D:unknown:paint',
+    changedCells:60,certifiedOriginal:false}]),
+   changed(60,[])
+  ];
+  for(const invalidInk of variants){
+   const r=new UndertowF3SourcePaintRun();r.arm('SOURCE_SWEEP');
+   r.observe(frame(1,[0,0,0]));
+   r.observe(frame(2,[60,0,0],{ink:invalidInk}));
+   expect(r.snapshot().status).toBe('ABORTED');
+   expect(r.snapshot().completedRealPracticeRuns).toBe(0);
+  }
+  const r=new UndertowF3SourcePaintRun();r.arm('SOURCE_SWEEP');
+  r.observe(frame(1,[0,0,0]));
+  r.observe(frame(2,[80,0,0]));r.observe(frame(3,[79,0,0]));
+  expect(r.snapshot().status).toBe('ABORTED');
  });
 });

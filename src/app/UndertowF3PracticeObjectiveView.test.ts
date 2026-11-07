@@ -12,6 +12,13 @@ describe('B53 player-visible real source practice dual objective',()=>{
   expect(view({...sample(),status:'RUNNING',humanChangedImpactCells:180,
    realGroundedTravelMeters:3})).toMatchObject({
     paint:100,ground:25,next:'GROUND'});
+  const sweep={...sample(),practiceVariant:'SOURCE_SWEEP' as const,
+   status:'RUNNING' as const,humanChangedImpactCells:180,
+   realGroundedTravelMeters:12,originalSweepSurfaces:3,
+   qualifiedOriginalSweepSurfaces:1};
+  expect(view(sweep)).toMatchObject({next:'ORIGINAL_SURFACES',
+   qualifiedOriginalSurfaces:1});
+  expect(view({...sweep,qualifiedOriginalSweepSurfaces:3}).next).toBe('DONE');
  });
  it('clamps real counter overflows and distinguishes completed and failed practice',()=>{
   expect(view({...sample(),status:'CLEAR',humanChangedImpactCells:220,

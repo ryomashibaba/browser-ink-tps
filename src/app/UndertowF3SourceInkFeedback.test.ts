@@ -25,6 +25,8 @@ describe('W10-B23 no fictional human paint or turf scoring',()=>{
   const data=m.snapshot(60);
   expect(data).toMatchObject({humanChangedImpactCount:2,humanChangedCells:8,
    lastImpactChangedCells:8,lastPaintedSurface:'ORIGINAL_SOURCE_FLOOR',
+   originalImpactChangedCellsBySurface:[
+    {surfaceId:'ORIGINAL_SOURCE_FLOOR',changedCells:8}],
    originalSourceOnly:true,scoreablePromotionCount:0,showPaintConfirmation:true
   });
   expect(m.snapshot(87).showPaintConfirmation).toBe(true);
@@ -95,7 +97,9 @@ describe('W10-B39 authentic, non-scoring human bomb raster result',()=>{
   expect(m.snapshot(12)).toMatchObject({
    humanChangedImpactCount:2,humanChangedCells:12,
    humanBombChangedEvents:1,humanBombChangedCells:72,
-   lastBombTick:11,lastImpactTick:12
+   lastBombTick:11,lastImpactTick:12,
+   originalImpactChangedCellsBySurface:[
+    {surfaceId:'ORIGINAL_SOURCE_FLOOR',changedCells:12}]
   });
  });
 });

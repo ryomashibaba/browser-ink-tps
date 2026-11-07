@@ -20,6 +20,11 @@ export interface F3HumanInkContact {
  lastPaintedSurface:string|null;
  lastImpactChangedCells:number;
  lastImpactTick:number|null;
+ /** Cumulative accepted HUMAN Impact/WallImpact changed cells per source;
+  * never bombs, CPU paint, or an unaccepted projectile request. */
+ originalImpactChangedCellsBySurface:readonly Readonly<{
+  surfaceId:string;changedCells:number;
+ }>[];
  /** Actual accepted original projectile PaintCoordinator contact, even when no owner cells changed. */
  humanOriginalImpactPaintEvents:number;
  humanOriginalZeroChangedPaintEvents:number;
@@ -57,6 +62,7 @@ export class UndertowF3SourceInkFeedback {
  private lastSurface:string|null=null;
  private lastCells=0;
  private lastTick:number|null=null;
+ private readonly impactCellsBySurface=new Map<string,number>();
  private originalImpactPaintEvents=0;
  private originalZeroChangedPaintEvents=0;
  private originalLastImpactPaintSurface:string|null=null;
@@ -135,6 +141,8 @@ export class UndertowF3SourceInkFeedback {
   this.lastSurface=event.surfaceId;
   this.count++;
   this.cells+=changedCells;
+  this.impactCellsBySurface.set(event.surfaceId,
+   (this.impactCellsBySurface.get(event.surfaceId)??0)+changedCells);
  }
  /** Called after actual human SubWeaponSystem explosion and same fixed-tick
   * authoritative PaintCoordinator raster; zero stamp is NOT proof of a miss.
@@ -183,6 +191,8 @@ export class UndertowF3SourceInkFeedback {
    lastPaintedSurface:this.lastSurface,
    lastImpactChangedCells:this.lastCells,
    lastImpactTick:this.lastTick,
+   originalImpactChangedCellsBySurface:[...this.impactCellsBySurface].map(
+    ([surfaceId,changedCells])=>({surfaceId,changedCells})),
    humanOriginalImpactPaintEvents:this.originalImpactPaintEvents,
    humanOriginalZeroChangedPaintEvents:this.originalZeroChangedPaintEvents,
    lastHumanOriginalImpactPaintSurface:this.originalLastImpactPaintSurface,

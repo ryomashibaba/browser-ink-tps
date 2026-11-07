@@ -5251,7 +5251,14 @@ export class UndertowF3PlayablePreviewApp{
       lastChangedSourceSurfaceCertified:
        actualHumanInk.lastPaintedSurface!==null&&
        this.b45SourceSurfaces.some(s=>
-        s.id===actualHumanInk.lastPaintedSurface&&!s.isScoreable)},
+        s.id===actualHumanInk.lastPaintedSurface&&!s.isScoreable),
+      // Frozen original registered source surfaces only; real post-raster
+      // cumulative Human impact ink, never bomb or CPU paint.
+      originalImpactChangedCellsBySurface:
+       actualHumanInk.originalImpactChangedCellsBySurface.map(row=>({
+        ...row,certifiedOriginal:this.b45SourceSurfaces.some(
+         s=>s.id===row.surfaceId&&!s.isScoreable)
+       }))},
      // B161: exact B152 A1 real source aim -> projectile ->
      // registered original impact -> accepted changed ink.
      ally:{
@@ -6168,7 +6175,7 @@ export class UndertowF3PlayablePreviewApp{
     ' move 12m on original floor and receive 30 FRESH actual A1'+
     ' source-impact changed cells AFTER arming. No score or winner.':
     this.b56NextVariant==='SOURCE_SWEEP'?
-    'SOURCE SWEEP: repaint THREE different registered original surfaces with genuine human projectile ink, 180 changed cells and 12m real grounded travel in 60s. No official result.':
+    'SOURCE SWEEP: paint 60 NEW genuine human projectile cells EACH on THREE registered original surfaces, plus 12m real grounded travel in 60s. No official Turf result.':
     this.b56NextVariant==='PAINT_RELAY'?
     'PAINT RELAY: paint 60 new cells per leg. Move 1.8m out, return to 0.8m, then finish at 12m original-ground travel.':
     this.b56NextVariant==='SWITCHBACK'?
