@@ -5,7 +5,7 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourceFinishedReplayAction,sourceFinishedReplayHref,
  sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY,
  sourceCanonicalPlayableMode,sourceFreshSelectedModeHref,
- sourceCoopPracticeFreshReplayHref}
+ sourceCoopPracticeFreshReplayHref,sourcePausedFreshRoundHref}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -414,5 +414,34 @@ describe('Sprint A real 4-mode transitions and genuine A1 mission replay',()=>{
    expect(sourceCoopPracticeFreshReplayHref({...proof,
     href:sourcePlayWeaponModeDestinations(menu,initial).combat})).toBe(null);
   }
+ });
+});
+
+describe('user mid-round restart: four real SOURCE game modes',()=>{
+ const portal='https://example.org/browser-ink-tps/play-source.html';
+ const before=sourcePlayWeaponModeDestinations(portal,'rail-charger');
+ const after=sourcePlayWeaponModeDestinations(portal,'twin-comets');
+ const valid=(href:string)=>({
+  href,weaponId:'twin-comets',matchState:'PLAYING',paused:true,
+  everLockedRealPointer:true,pointerLocked:false,stopped:false,
+  originalSolids:25,originalPaint:17,originalLinks:26,scoreable:0
+ });
+ it('makes a fresh same-mode world with the real currently selected kit',()=>{
+  for(const mode of ['circuit','combat','coop','frontline'] as const){
+   const next=sourcePausedFreshRoundHref(valid(before[mode]));
+   expect(next).toBe(after[mode]);
+   expect(b389NativeBootWeapon(new URL(next!).searchParams)).toBe('twin-comets');
+  }
+ });
+ it('blocks live play, unstarted rounds, modified source and unauthorized flags',()=>{
+  const e=valid(before.combat);
+  for(const diff of [
+   {paused:false},{matchState:'TIME_UP'},{matchState:'STAGING'},
+   {everLockedRealPointer:false},{pointerLocked:true},{stopped:true},
+   {originalSolids:24},{originalPaint:16},{originalLinks:25},{scoreable:1},
+   {weaponId:'invalid'},{href:before.combat+'&cpuWarp=1'},
+   {href:before.combat+'&t21QaInput=deterministic'},
+   {href:before.combat+'&t21W10B389=rail-charger'}
+  ])expect(sourcePausedFreshRoundHref({...e,...diff})).toBe(null);
  });
 });

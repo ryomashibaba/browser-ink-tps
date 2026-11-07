@@ -115,7 +115,8 @@ import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRou
 import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourceFinishedReplayHref,sourceReplayHotkeyAction,
  sourcePlayStoreWeaponSelection,sourceCanonicalPlayableMode,
- sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref} from './SourcePlayPortal';
+ sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref,
+ sourcePausedFreshRoundHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -1745,30 +1746,34 @@ export class UndertowF3PlayablePreviewApp{
    });
    pauseOverlay.insertBefore(allyChoice,resumeButton);
   }
-  // Paused player can explicitly choose a clean 180s SOURCE world,
-  // preserving only the previously selected physical human weapon.
-  if(this.b384Circuit){
+  // Actual user-initiated clean restart in ALL FOUR canonical SOURCE modes.
+  // Keep the selected real human kit, never reset live CPU/paint/clock.
+  if(this.b203FullRound&&sourceCanonicalPlayableMode(window.location.href)!==null){
    const replay=document.createElement('button');
    replay.id='t21-f3-b389-new-source-round';
    replay.type='button';replay.hidden=true;replay.disabled=true;
    replay.dataset.originalScoreable='0';
-   replay.textContent='NEW 180s SOURCE ROUND · KEEP CURRENT WEAPON';
+   replay.textContent='RESTART SAME SOURCE MODE · SAME WEAPON · FRESH WORLD';
    replay.style.cssText='display:none;width:100%;margin-top:10px;'+
     'padding:10px;border-radius:8px;background:#19394a;'+
     'border:1px solid #59aecd;color:#deffff;'+
     'font:800 11px system-ui;cursor:pointer;pointer-events:auto';
    replay.addEventListener('click',()=>{
-    if(!this.b203EverLockedRealPointer||!this.paused||
-       document.pointerLockElement===this.canvas||this.stopReason||
-       this.matchState!=='PLAYING')return;
-    const url=b389NativeNewRoundHref(window.location.href,{
-     paused:this.paused,pointerLocked:false,stopReason:this.stopReason,
-     matchState:this.matchState,weaponId:this.projectiles.currentPlayerWeapon.id,
-     sourceBoundary:[this.rawStage.solids.length,
-      this.rawStage.paintSurfaces.length,
-      this.rawStage.navigationLinks?.length??0,0]
+    if(this.survey.snapshot().active||this.galleryIndex>=0)return;
+    const url=sourcePausedFreshRoundHref({
+     href:window.location.href,weaponId:this.projectiles.currentPlayerWeapon.id,
+     matchState:this.matchState,paused:this.paused,
+     everLockedRealPointer:this.b203EverLockedRealPointer,
+     pointerLocked:document.pointerLockElement===this.canvas,
+     stopped:!!this.stopReason,originalSolids:this.rawStage.solids.length,
+     originalPaint:this.rawStage.paintSurfaces.length,
+     originalLinks:this.rawStage.navigationLinks?.length??0,
+     scoreable:this.b45SourceSurfaces.filter(s=>s.isScoreable).length
     });
-    if(url){replay.disabled=true;window.location.assign(url)}
+    if(!url)return;
+    replay.disabled=true;
+    if(url===window.location.href)window.location.reload();
+    else window.location.assign(url);
    });
    pauseOverlay.appendChild(replay);
   }
@@ -5971,10 +5976,15 @@ export class UndertowF3PlayablePreviewApp{
   const b389ReplayButton=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
    '#t21-f3-b389-new-source-round');
   if(b389ReplayButton){
-   const eligible=this.b384Circuit&&actuallyPaused&&
+   const eligible=this.b203FullRound&&actuallyPaused&&
+    sourceCanonicalPlayableMode(window.location.href)!==null&&
     this.b203EverLockedRealPointer&&this.matchState==='PLAYING'&&
     this.paused&&!this.stopReason&&
-    document.pointerLockElement!==this.canvas;
+    document.pointerLockElement!==this.canvas&&
+    this.rawStage.solids.length===25&&
+    this.rawStage.paintSurfaces.length===17&&
+    (this.rawStage.navigationLinks?.length??0)===26&&
+    this.b45SourceSurfaces.every(s=>!s.isScoreable);
    b389ReplayButton.hidden=!eligible;b389ReplayButton.disabled=!eligible;
    b389ReplayButton.style.display=eligible?'block':'none';
   }

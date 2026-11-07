@@ -226,6 +226,22 @@ export function sourceFreshSelectedModeHref(
  try{return sourcePlayWeaponModeDestinations(menu,weaponId)[target]??null}
  catch{return null;}
 }
+/** User-selected mid-round restart: only an already played, genuinely paused
+ * and pointer-unlocked SOURCE-only world. Nothing is reset in place.
+ */
+export function sourcePausedFreshRoundHref(input:{
+ href:string;weaponId:string;matchState:string;paused:boolean;
+ everLockedRealPointer:boolean;pointerLocked:boolean;stopped:boolean;
+ originalSolids:number;originalPaint:number;originalLinks:number;scoreable:number;
+}):string|null{
+ if(input.matchState!=='PLAYING'||!input.paused||!input.everLockedRealPointer||
+    input.pointerLocked||input.stopped||input.originalSolids!==25||
+    input.originalPaint!==17||input.originalLinks!==26||input.scoreable!==0)
+  return null;
+ const mode=sourceCanonicalPlayableMode(input.href);
+ return mode===null?null:sourceFreshSelectedModeHref(input.href,input.weaponId,mode);
+}
+
 /** A genuine A1 mission can CLEAR before the 180s world reaches TIME_UP.
  * Exact original physical SOURCE, true paused/unlocked user replay required.
  */
