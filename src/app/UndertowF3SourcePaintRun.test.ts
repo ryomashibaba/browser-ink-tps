@@ -389,7 +389,7 @@ describe('F3 SOURCE_SWEEP: real per-original-surface projectile ink quotas',()=>
   'UndertowT21D:spawn-high-positive-z:paint',
   'UndertowT21D:first-drop-landing-positive-z:paint',
   'UndertowT21D:right-low-route-ramp-positive-z:paint'
- ];
+ ] as const;
  const frame=(t:number,counts:readonly number[],extra:Partial<B25PracticeFrame>={})=>
   tick(t,{
    foot:{x:t*.16,y:1,z:0,grounded:true,alive:true,
@@ -398,7 +398,7 @@ describe('F3 SOURCE_SWEEP: real per-original-surface projectile ink quotas',()=>
     changedHumanImpactEvents:counts.reduce((a,b)=>a+b,0)>0?3:0,
     sourceOnly:true,scoreablePromotionCount:0,
     originalImpactChangedCellsBySurface:counts.map((n,i)=>({
-     surfaceId:ids[i],changedCells:n,certifiedOriginal:true
+     surfaceId:ids[i]!,changedCells:n,certifiedOriginal:true
     }))},
    ...extra
   });
