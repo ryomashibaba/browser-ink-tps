@@ -2345,9 +2345,11 @@ export class UndertowF3PlayablePreviewApp{
    if(ev.code==='KeyQ'&&!ev.shiftKey){
     const previous=this.b25Run.snapshot();
     const foot=this.player.getPosition(this.p);
-    const hit=this.physics.castStageSegment(
-     new Vec3(foot.x,foot.y+.65,foot.z),
-     new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    // The real HUMAN capsule foot is 0.87 m below its center.
+    // The old +/-0.65 m projectile ray misses genuine KCC floor support.
+    // Use existing character-mode original Rapier support, not new terrain.
+    const hit=this.physics.castCharacterFootSupport(
+     foot,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
     const physicalOriginal=!!hit&&this.rawStage.solids.some(
      s=>s.id===hit.solidId);
     const allowed=b25MayQuickRetryInRealSourceWorld({
