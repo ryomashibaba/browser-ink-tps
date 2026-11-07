@@ -45,6 +45,17 @@ describe('original SOURCE F3/F5 PLAYER sightline, without F8/score authority',()
   expect(css).toContain('#t21-f3-b464-real-cpu-frontline');
   expect(css).toContain('height:27px');
   expect(css).toContain('#t21-f3-b25-paint-run');
+  // A1 genuine CLEAR: the left practice card duplicates the 180s timer
+  // in the real 1600x900 screenshot. Its DATA and live ink/paint panels
+  // must survive; only redundant text should collapse in PLAYER.
+  expect(css).toContain('[data-t21-b411-active="true"]');
+  expect(css).toContain('[data-t21-b195-real-source-clear="true"]');
+  expect(css).toContain('#t21-f3-b195-next');
+  expect(css).toContain('#t21-f3-b195-time');
+  expect(css).toContain('#t21-f3-b414-native-ink');
+  expect(css).toContain('#t21-f3-b417-paint-contest');
+  expect(css).not.toContain('#t21-f3-b414-native-ink{display:none');
+  expect(css).not.toContain('#t21-f3-b417-paint-contest{display:none');
   expect(css).not.toContain('data-t21-b245-presentation="QA"');
   for(const critical of ['t21-f3-hud-hp-bar','t21-f3-hud-ink-bar',
    't21-f3-hud-cpu','t21-f3-b84-danger','t21-f3-b82-splat-notice',

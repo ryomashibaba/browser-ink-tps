@@ -100,7 +100,27 @@ export function b245PlayerSightlineCss(search:string):string{
   // Keep the genuine B25 progress visible and interactive in source play.
   on+'#t21-f3-b25-paint-run[data-t21-b476-compact="true"]',
   '{width:min(222px,calc(100vw - 24px))!important;'+
-  'padding:7px 9px!important;}'
+  'padding:7px 9px!important;}',
+  // A3: real 1600x900 co-op image shows redundant "180s continues"
+  // and "90s LEFT" around the native clock. ONLY after a genuine
+  // original A1 CLEAR, collapse those two text lines in PLAYER.
+  // Native B414 ink/OWN gauge, B415 practice outcome and B417 original
+  // painted-cell grid remain live and visible; F8 QA stays complete.
+  on+'#t21-f3-b195-native-coop[data-t21-b411-active="true"]'+
+   '[data-t21-b195-real-source-clear="true"]',
+  '{width:min(258px,calc(100vw - 24px))!important;'+
+   'padding:6px 9px!important;}',
+  on+'#t21-f3-b195-native-coop[data-t21-b411-active="true"]'+
+   '[data-t21-b195-real-source-clear="true"] #t21-f3-b195-next,',
+  on+'#t21-f3-b195-native-coop[data-t21-b411-active="true"]'+
+   '[data-t21-b195-real-source-clear="true"] #t21-f3-b195-time',
+  '{display:none!important;}',
+  on+'#t21-f3-b195-native-coop[data-t21-b411-active="true"]'+
+   '[data-t21-b195-real-source-clear="true"] #t21-f3-b414-native-ink',
+  '{margin-top:4px!important;}',
+  on+'#t21-f3-b195-native-coop[data-t21-b411-active="true"]'+
+   '[data-t21-b195-real-source-clear="true"] #t21-f3-b417-paint-contest',
+  '{margin-top:5px!important;}'
  ].join('');
 }
 export function installB245SourcePresentation(
