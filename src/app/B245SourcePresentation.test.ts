@@ -4,6 +4,7 @@ import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245SourceFullRoundA1Choice,
  b388VisibleNativeDescentWarning,
  b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
+import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourceCoopEligible,sourceCoopNavigationUrl}
  from './B193SourceCoopMode';
 describe('B245 original-source player and QA view policy',()=>{
