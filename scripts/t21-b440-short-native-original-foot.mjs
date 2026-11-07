@@ -27,6 +27,8 @@ const proveFullSourceReplay=b441Experiment&&
  process.env.T21_B441_PROVE_FULL_180S_REPLAY==='1';
 const proveRealQ=b441Experiment&&process.env.T21_B441_REAL_Q_ONCE==='1';
 const proveRealSweep=b441Experiment&&process.env.T21_B441_REAL_SWEEP_ONCE==='1';
+const proveRealSweepClear=proveRealSweep&&
+ process.env.T21_B441_REAL_SWEEP_CLEAR==='1';
 if([proveFullSourceReplay,proveSourcePracticeExpiry,proveRealQ,
  proveRealSweep].filter(Boolean).length>1)
  throw Error('B441_ONE_SHOT_TEST_MODES_MUTUALLY_EXCLUSIVE');
@@ -200,6 +202,191 @@ async function checkRealSourceCameraControls(){
   productionAuthorized:false,artApproved:false};
  save();
 }
+
+/** B58 separate one-shot: use only genuine CDP mouse/keyboard inputs, and
+ * post-PaintCoordinator human projectile counters. Never mutate app state.
+ * Prior B139/B413 exact real-world route is a precedent, NOT evidence that
+ * this new canonical 60s SOURCE_SWEEP world reached any stage. */
+async function b58AttemptActualThreeSurfaceClear({world,start,firstAim}){
+ const surface=[
+  'UndertowT21D:spawn-high-positive-z:paint',
+  'UndertowT21D:first-drop-landing-positive-z:paint',
+  'UndertowT21D:right-low-route-ramp-positive-z:paint'
+ ];
+ const attempt={schema:'T21_B58_TRUE_CANONICAL_SOURCE_SWEEP_PHYSICAL_ROUTE',
+  source:'25/17/26/0',phase:'REAL_UPPER_ORIGINAL_KCC',
+  evidence:[],verdict:'HOLD',firstPaintCells:firstAim,
+  originalSourceWrites:0,actorWrites:0,inkWrites:0,clockWrites:0,
+  scoreWrites:0,syntheticKeyboard:false,officialWinner:'NONE',
+  threeSurfaceClearCertified:false};
+ const persist=()=>writeFileSync(
+  resolve(out,'b58-real-full-source-sweep-route.json'),
+  JSON.stringify(attempt,null,2)+'\n');
+ const guard=async(n)=>{
+  authority(n);
+  if(await origin()!==world||n.matchState!=='PLAYING'||n.paused||
+     !await locked()||n.cpu.physicalRejoins.length!==7||
+     n.sourceScoreablePromotions!==0||n.player.hp<=0||
+     n.b25SourcePaintRun?.practiceVariant!=='SOURCE_SWEEP'||
+     !['RUNNING','CLEAR'].includes(n.b25SourcePaintRun?.status))
+   fail('SWEEP_PHYSICAL_NATIVE_WORLD_OR_MISSION_INTERRUPTED');
+  return n;
+ };
+ const add=(phase,n,extra={})=>{
+  const run=n.b25SourcePaintRun;
+  attempt.phase=phase;
+  attempt.evidence.push({phase,nativeTick:n.tick,player:n.player.position,
+   realGroundMeters:run.realGroundedTravelMeters,
+   realPracticeElapsed:run.elapsedTicks,status:run.status,
+   humanNewSourceCells:run.humanChangedImpactCells,
+   surfaces:run.sweptOriginalSurfaceCellProgress,
+   qualified:run.qualifiedOriginalSweepSurfaces,...extra});
+  persist();
+ };
+ const wrap=x=>((x+540)%360)-180;
+ const aim=async(yaw,pitch)=>{
+  // Real source CAMERA mouse device events. Physics/camera properties are
+  // only READ; no JS camera setter, no synthetic collision or actor step.
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450});
+  const before=(await guard(await snap())).cameraSourcePractice;
+  if(!Number.isFinite(before?.yawDegrees)||
+     !Number.isFinite(before?.pitchDegrees))fail('SWEEP_CAMERA_NATIVE_AIM_MISSING');
+  const dx=Math.round(wrap(yaw-before.yawDegrees)/.22);
+  const dy=Math.round(-(pitch-before.pitchDegrees)/.18);
+  if(Math.abs(dx)>720||Math.abs(dy)>440||
+     800+dx<10||800+dx>1590||450+dy<10||450+dy>890||
+     pitch< -55||pitch>28)fail('SWEEP_UNSAFE_REAL_CDP_CAMERA_PLAN');
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',
+   x:800+dx,y:450+dy});
+  const after=(await guard(await snap())).cameraSourcePractice;
+  if(Math.abs(wrap(after.yawDegrees-yaw))>3||
+     Math.abs(after.pitchDegrees-pitch)>3)
+   fail('SWEEP_MOUSE_AIM_DID_NOT_REACH_TRUE_SOURCE_TARGET');
+  return {yaw:after.yawDegrees,pitch:after.pitchDegrees};
+ };
+ const keyData={KeyW:['w',87],KeyS:['s',83],KeyA:['a',65],KeyD:['d',68]};
+ const keyHold=async(key,ticks)=>{
+  const before=await guard(await snap());
+  if(!Number.isSafeInteger(ticks)||ticks<1||ticks>220||
+     (key!==null&&!Object.hasOwn(keyData,key)))
+   fail('SWEEP_UNSAFE_HUMAN_REAL_KEY_STAGE');
+  let pressed=false;
+  try{
+   if(key){
+    const [value,vk]=keyData[key];
+    await cdp('Input.dispatchKeyEvent',{type:'keyDown',key:value,code:key,
+     windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk});
+    pressed=true;
+   }
+   return await until(async()=>{
+    const n=await guard(await snap());
+    if(n.b25SourcePaintRun.status==='CLEAR'||
+       n.tick>=before.tick+ticks)return n;
+    return null;
+   },180000,120);
+  }finally{
+   if(pressed){
+    const [value,vk]=keyData[key];
+    await cdp('Input.dispatchKeyEvent',{type:'keyUp',key:value,code:key,
+     windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk});
+   }
+  }
+ };
+ const burst=async(ticks)=>{
+  const before=await guard(await snap());
+  let pressed=false;
+  try{
+   await cdp('Input.dispatchMouseEvent',{type:'mousePressed',
+    x:800,y:450,button:'left',buttons:1,clickCount:1});
+   pressed=true;
+   return await until(async()=>{
+    const n=await guard(await snap());
+    return n.b25SourcePaintRun.status==='CLEAR'||
+     n.tick>=before.tick+ticks?n:null;
+   },120000,150);
+  }finally{
+   if(pressed)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
+    x:800,y:450,button:'left',buttons:0,clickCount:1});
+  }
+ };
+ // Reuse the previously PASSed native B163 W/S orbit on the upper original
+ // ledge. Six full pairs accumulate >=12m on Rapier source geometry.
+ for(let i=0;i<12;i++){
+  const n=await keyHold(i%2===0?'KeyW':'KeyS',34);
+  if(!trueOriginalFoot(foot(n)))
+   fail('SWEEP_REAL_ORIGINAL_UPPER_FOOT_LOST');
+  add('REAL_UPPER_W_S_'+(i+1),n,{trueOriginalFoot:foot(n)});
+  if(n.b25SourcePaintRun.realGroundedTravelMeters>=12&&i%2===1)break;
+ }
+ const afterUpper=await guard(await snap());
+ if(afterUpper.b25SourcePaintRun.realGroundedTravelMeters<12)
+  fail('SWEEP_REAL_UPPER_KCC_UNDER_12M');
+ // Original B139 native crossing; restore the original physical heading
+ // only through real CDP mouse. 200 genuine W ticks includes the first drop.
+ await aim(start.cameraSourcePractice.yawDegrees,
+  start.cameraSourcePractice.pitchDegrees);
+ for(const [name,key,ticks] of [
+  ['ORIGINAL_FIRST_DROP','KeyW',200],
+  ['ORIGINAL_LOWER_INSET_D','KeyD',12],
+  ['ORIGINAL_LOWER_FORWARD','KeyW',18],
+  ['ORIGINAL_LOWER_INWARD','KeyA',12],
+  ['ORIGINAL_LOWER_COAST',null,60]
+ ]){
+  const n=await keyHold(key,ticks);
+  add('REAL_'+name,n,{originalFoot:foot(n)});
+  if(n.b25SourcePaintRun.status==='CLEAR')break;
+ }
+ const lower=await guard(await snap());
+ const pos=lower.player.position,sourceFoot=foot(lower);
+ if(!Array.isArray(pos)||pos.length!==3||
+    pos[1]<3.5||pos[1]>4.7||
+    pos[0]<-1.2||pos[0]>4.8||
+    pos[2]<46.8||pos[2]>52.5||
+    !sourceFoot.physicalKccGrounded||
+    sourceFoot.originalSolid!=='UndertowT21D:first-drop-landing-positive-z')
+  fail('SWEEP_REAL_LOWER_AUTHENTIC_SOURCE_FOOT_NOT_REACHED');
+ // Compare real post-raster human changes BY exact original surface; old
+ // owner-grid samples are not trusted as fresh projectiles in this world.
+ const targetPlan=[
+  {id:surface[1],aims:[[-14.61,-51.13],[-17,-49],[-12,-50]]},
+  {id:surface[2],aims:[[105.05,-18.89],[99,-22],[111,-18],[105,-25],[95,-16]]}
+ ];
+ for(const target of targetPlan){
+  for(const [yaw,pitch] of target.aims){
+   const already=(await guard(await snap())).b25SourcePaintRun
+    .sweptOriginalSurfaceCellProgress.find(x=>x.surfaceId===target.id)
+    ?.changedCells??0;
+   if(already>=60)break;
+   const actualAim=await aim(yaw,pitch);
+   const n=await burst(38);
+   const cells=n.b25SourcePaintRun.sweptOriginalSurfaceCellProgress
+    .find(x=>x.surfaceId===target.id)?.changedCells??0;
+   add('REAL_SOURCE_SHOOT_'+target.id,n,{actualAim,
+    requestedNativeHumanInputTicks:38,realOriginalTargetCells:cells,
+    targetId:target.id});
+   if(n.b25SourcePaintRun.status==='CLEAR')break;
+  }
+ }
+ const final=await guard(await snap());
+ add('REAL_FINAL_SOURCE_SWEEP',final);
+ const run=final.b25SourcePaintRun;
+ attempt.final={tick:final.tick,practice:run,sourceOnly:true,
+  genuineSevenCpu:final.cpu.physicalRejoins.length===7,
+  originalHumanImpactLedger:
+   final.b23HumanInkFeedback.originalImpactChangedCellsBySurface};
+ attempt.threeSurfaceClearCertified=run.status==='CLEAR'&&
+  run.qualifiedOriginalSweepSurfaces>=3&&run.realGroundedTravelMeters>=12&&
+  surface.every(id=>run.sweptOriginalSurfaceCellProgress.some(
+   x=>x.surfaceId===id&&x.changedCells>=60));
+ attempt.verdict=attempt.threeSurfaceClearCertified?
+  'PASS_REAL_CDP_THREE_DIFFERENT_ORIGINAL_SURFACES_AND_12M':
+  'HOLD_REAL_SOURCE_SWEEP_QUOTAS_OR_ROUTE_NOT_CLEARED';
+ persist();
+ if(!attempt.threeSurfaceClearCertified)
+  fail('SWEEP_TRUE_THREE_SURFACE_60_EACH_AND_12M_NOT_YET_PROVEN');
+ return attempt;
+}
+
 async function main(){
  save();
  const chrome=process.env.T21_CHROME_PATH||
@@ -395,11 +582,22 @@ async function main(){
      after.sourceScoreablePromotions!==0)
    fail('SWEEP_REAL_SOURCE_PAINT_LEDGER_OR_PLAYER_AUTHORITY_INVALID');
   await img('source-sweep-real-after-human-shot.png');
+  if(proveRealSweepClear){
+   proof.stage='B58_NATIVE_ORIGINAL_UPPER_AND_LOWER_CLEAR_ATTEMPT';save();
+   proof.b58TruePhysicalClearAttempt=
+    await b58AttemptActualThreeSurfaceClear({
+     world,start:started,firstAim:ink.humanChangedCells});
+   await img('source-sweep-real-three-surface-clear.png');
+   proof.stage='B58_THREE_SURFACE_NATIVE_CLEAR_PASS';save();
+  }
   proof.realSweepOneShot={
    schema:'T21_B58_CANONICAL_REAL_CDP_SOURCE_SWEEP_ENTRY_V1',
-   verdict:'PASS_REAL_PLAYER_SOURCE_SWEEP_FIRST_ORIGINAL_HUMAN_PAINT',
+   verdict:proveRealSweepClear?
+    'PASS_REAL_SOURCE_SWEEP_3_SURFACES_60_EACH_AND_12M':
+    'PASS_REAL_PLAYER_SOURCE_SWEEP_FIRST_ORIGINAL_HUMAN_PAINT',
    source:'25/17/26/0',actualThreeSurfaceClearCertified:
-    run.status==='CLEAR'&&run.qualifiedOriginalSweepSurfaces>=3,
+    proveRealSweepClear&&
+     proof.b58TruePhysicalClearAttempt?.threeSurfaceClearCertified===true,
    physicalCpuBefore:0,physicalCpuAfter:after.cpu.physicalRejoins.length,
    realModeClicks:3,selectedRealMode:selected,
    genuinePointerLockedMouseAim:true,
@@ -420,7 +618,8 @@ async function main(){
     'source-sweep-real-after-human-shot.png']};
   writeFileSync(resolve(out,'b58-real-source-sweep-once.json'),
    JSON.stringify(proof.realSweepOneShot,null,2)+'\n');
-  proof.stage='REAL_SWEEP_7CPU_AND_FIRST_ORIGINAL_HUMAN_PAINT';
+  proof.stage=proveRealSweepClear?'B58_THREE_SURFACE_NATIVE_CLEAR_PASS':
+   'REAL_SWEEP_7CPU_AND_FIRST_ORIGINAL_HUMAN_PAINT';
   proof.testKind='REAL_CANONICAL_PLAYER_SOURCE_SWEEP_INPUT';
   proof.verdict=proof.realSweepOneShot.verdict;
   save();
