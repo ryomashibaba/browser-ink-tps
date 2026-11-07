@@ -115,7 +115,15 @@ export async function b413RealOriginalMainFireBurst({
  const beforeGround=await foot(ledger);
  need(nat(beforeGround.humanOriginalImpactPaintEvents),
   'TRUE_ACCEPTED_ORIGINAL_IMPACT_BASELINE_'+phase);
- const ticks=phase==='BEFORE_SQUID'?78:54;
+ // Real RAW #42377302287: 78 ticks paid only 17.1 ink. Genuine
+ // Rapier/SQUID_OWN movement fully restored 82.9 -> 100 *before* the
+ // no-direction dwell, so the strict stationary positive-gain gate
+ // correctly HOLDs at the physical 100 cap. Spend more by holding the
+ // actual CDP mouse button longer; never change native ink/refill rates,
+ // actor/paint/tick writes, the 45-ink max-spend guard or B412 thresholds.
+ // 140 native ticks at the observed 18 shots/78 ticks is ~32 real shots,
+ // ~30 ink spent, leaving room to measure actual stationary OWN gain.
+ const ticks=phase==='BEFORE_SQUID'?140:54;
  await onEvidence({phase,stage:'REAL_ORIGINAL_NATIVE_CAMERA_ALIGNED',
   before,aim,observedCamera,readOnly:true});
  await send('Input.dispatchMouseEvent',{
