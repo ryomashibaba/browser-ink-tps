@@ -297,7 +297,7 @@ async function run(){
     source:[s.originalSourceSolids,s.originalPaintSurfaces,
      s.originalSourceNavigationLinks,s.sourceScoreablePromotions].join('/'),
     phase:s.matchState,paused:s.paused,
-    optIn:s.b399NativeCameraAimClearance?.optedIn,
+    optIn:s.b399NativeCameraClearance?.optedIn,
     live:c?.dataset.t21B399NativeAimClearance??'OFF',
     key:c?.dataset.t21B399RealVHotkey??'UNSET',
     vTick:Number(c?.dataset.t21B399RealVHotkeyTick??-1),
