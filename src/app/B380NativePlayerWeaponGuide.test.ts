@@ -30,6 +30,35 @@ describe('Real SOURCE weapon controls follow native match and life',()=>{
   expect(text).not.toContain('LMB');
   expect(text).not.toContain('F SUB');
  });
+ it('reports OWN SQUID refill only from matching real native owner and recovery',()=>{
+  const native={...base,currentMode:'SQUID' as const,
+   actualInkRemaining:33,actualInkRelation:'OWN' as const,
+   actualInkRecoveryState:'SQUID_OWN'};
+  const active=b380NativeWeaponGuidance(native);
+  expect(active).toContain('OWN PAINT · REFILLING');
+  expect(active).toContain('RELEASE SHIFT TO FIRE');
+  expect(active).not.toContain('LMB');
+  expect(active).not.toContain('F SUB');
+  expect(b380NativeWeaponGuidance({...native,actualInkRemaining:100}))
+   .toContain('INK FULL');
+  expect(b380NativeWeaponGuidance({...native,actualInkRecoveryState:'LOCKED'}))
+   .toContain('RECOVERY LOCKED');
+  const noOwn=b380NativeWeaponGuidance({...native,
+   actualInkRelation:'NEUTRAL',actualInkRecoveryState:'NONE'});
+  expect(noOwn).toContain('NO OWN REFILL · FIND OWN PAINT');
+  expect(noOwn).not.toContain('OWN PAINT · REFILLING');
+  for(const incomplete of [
+   {...native,actualInkRelation:'NONE' as const},
+   {...native,actualInkRecoveryState:'READY'},
+   {...native,actualInkRemaining:NaN},
+   {...native,sourceMatchState:'STAGING' as const}
+  ])expect(b380NativeWeaponGuidance(incomplete))
+   .not.toContain('OWN PAINT · REFILLING');
+  expect(b380NativeWeaponGuidance({...native,hp:0}))
+   .toContain('SPLATTED');
+  expect(b380NativeWeaponGuidance({...native,nativeStopped:true}))
+   .not.toContain('OWN PAINT · REFILLING');
+ });
  it('time up takes precedence over life status and offers real replay',()=>{
   const text=b380NativeWeaponGuidance({
    ...base,hp:0,sourceMatchState:'TIME_UP'

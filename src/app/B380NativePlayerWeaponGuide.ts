@@ -12,6 +12,10 @@ export function b380NativeWeaponGuidance(input:{
  readonly canShoot:boolean;
  /** Actual native human ink; undefined only for older source monitors. */
  readonly actualInkRemaining?:number;
+ /** Actual 60Hz Rapier-player/ownerGrid relation; no predicted floor. */
+ readonly actualInkRelation?:'OWN'|'ENEMY'|'NEUTRAL'|'NONE';
+ /** From PlayerResources.fixedUpdate, not a guessed ink award. */
+ readonly actualInkRecoveryState?:string;
  readonly realSubEnabled:boolean;
  readonly realSubName?:string;
  /** Real SubWeaponProfile.inkCost; no inferred fixed or player-modified cost. */
@@ -30,6 +34,23 @@ export function b380NativeWeaponGuidance(input:{
  const nativeCountdown=typeof ticks==='number'&&Number.isInteger(ticks)&&
   ticks>=0&&ticks<=150?
    ' · '+ticks+' NATIVE TICKS ('+(ticks/60).toFixed(1)+'s)':'';
+ // The existing native weapon line is the ONLY gameplay hint: no new HUD.
+ // A squid gets the fast refill solely after genuine OWN ink membership AND
+ // PlayerResources has reported SQUID_OWN at the current real native tick.
+ const realInk=input.actualInkRemaining;
+ const validInk=typeof realInk==='number'&&Number.isFinite(realInk)&&
+  realInk>=0&&realInk<=100;
+ const realSquid=input.currentMode==='SQUID'&&
+  input.sourceMatchState==='PLAYING'&&validInk;
+ const squidRefillHint=!realSquid?'':(
+  input.actualInkRelation==='OWN'&&
+  input.actualInkRecoveryState==='SQUID_OWN'?
+   (realInk>=99.95?' · INK FULL':' · OWN PAINT · REFILLING'):
+  input.actualInkRecoveryState==='LOCKED'?
+   ' · RECOVERY LOCKED':
+  input.actualInkRecoveryState==='NONE'&&
+   ['ENEMY','NEUTRAL','NONE'].includes(input.actualInkRelation??'')?
+    ' · NO OWN REFILL · FIND OWN PAINT':'');
  const blocked=input.nativeStopped?
   'SOURCE SAFE STOP · ACTIONS DISABLED':
   input.sourceMatchState==='TIME_UP'?
@@ -39,7 +60,7 @@ export function b380NativeWeaponGuidance(input:{
   input.hp<=0?
   'SPLATTED · WAIT FOR NATIVE RESPAWN'+nativeCountdown:
   input.currentMode==='SQUID'?
-  'SQUID FORM · RELEASE SHIFT TO FIRE':
+  'SQUID FORM · RELEASE SHIFT TO FIRE'+squidRefillHint:
   input.actualInkRemaining!==undefined&&
    (!Number.isFinite(input.actualInkRemaining)||input.actualInkRemaining<0)?
   'INK UNAVAILABLE · NO FIRE CLAIM':

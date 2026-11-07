@@ -7123,6 +7123,8 @@ export class UndertowF3PlayablePreviewApp{
    actualChargePercent:this.stats.playerWeaponChargePercent,
    currentMode:this.player.currentMode,canShoot:this.player.canShoot,
    actualInkRemaining:this.stats.playerInk,
+   actualInkRelation:this.player.currentInkRelation,
+   actualInkRecoveryState:this.stats.playerInkRecoveryState,
    realSubEnabled:this.b38HumanSubEnabled,
    realSubName:subWeaponProfile(weaponKit(
     this.projectiles.currentPlayerWeapon.id).sub).displayName,
