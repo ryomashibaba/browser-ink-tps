@@ -2256,6 +2256,50 @@ export class UndertowF3PlayablePreviewApp{
   this.radar=createF3SourceRadar(ui,stage,this.b45SourceSurfaces);
   // B245 player view preserves all QA nodes, snapshots, physics and controls.
   installB245SourcePresentation(ui,()=>this.refreshB36PlayFocus());
+  // KeyQ also belongs to source-only camera shoulder. Capture only a
+  // legitimately accepted in-world practice retry before camera bubble
+  // listeners; when Q is not eligible, the usual shoulder toggle remains.
+  window.addEventListener('keydown',ev=>{
+   if(ev.code!=='KeyQ'||ev.repeat||ev.shiftKey||ev.altKey||
+      ev.ctrlKey||ev.metaKey)return;
+   // F3/F5 actual Q restarts only the native 60s local challenge.
+   // Do not reset live 180s clock, ink, CPU, Player, stage or score.
+   if(ev.code==='KeyQ'&&!ev.shiftKey){
+    const previous=this.b25Run.snapshot();
+    const foot=this.player.getPosition(this.p);
+    // The real HUMAN capsule foot is 0.87 m below its center.
+    // The old +/-0.65 m projectile ray misses genuine KCC floor support.
+    // Use existing character-mode original Rapier support, not new terrain.
+    const hit=this.physics.castCharacterFootSupport(
+     foot,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+    const physicalOriginal=!!hit&&this.rawStage.solids.some(
+     s=>s.id===hit.solidId);
+    const allowed=b25MayQuickRetryInRealSourceWorld({
+     mode:sourceCanonicalPlayableMode(location.href),
+     phase:this.matchState,paused:this.paused,stopReason:this.stopReason,
+     pointerLocked:document.pointerLockElement===this.canvas,
+     nativeTick:this.clock.tick,remainingSeconds:this.remainingSeconds,
+     hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
+     registeredOriginalFoot:physicalOriginal,
+     cpuRejoined:this.traffic.snapshot().physicalRejoins.length,
+     stage:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,
+      this.b45SourceSurfaces.filter(s=>s.isScoreable).length],
+     practiceStatus:previous.status,practiceVariant:previous.practiceVariant,
+     surveyActive:this.survey.snapshot().active,
+     galleryActive:this.galleryIndex>=0
+    });
+    if(allowed&&this.b25Run.arm(previous.practiceVariant)){
+     ev.preventDefault();
+     // A successful genuine practice retry owns this Q input: do not
+     // also switch the live camera shoulder or change saved preferences.
+     ev.stopImmediatePropagation();
+     this.canvas.dataset.t21F3QuickPractice='GENUINE_LOCAL_REARM';
+     this.canvas.dataset.t21F3QuickPracticeTick=String(this.clock.tick);
+     this.refreshB25PaintRun();
+    }
+   }
+  },true);
   window.addEventListener('keydown',ev=>{
    if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
    if(ev.code==='KeyP')this.togglePause();
@@ -2339,40 +2383,6 @@ export class UndertowF3PlayablePreviewApp{
       'REAL_ORDER_PENDING_ORIGINAL_RECAST':
       'HOLD_UNSAFE_OR_ALREADY_MOVING';
     this.refresh();
-   }
-   // F3/F5 actual Q restarts only the native 60s local challenge.
-   // Do not reset live 180s clock, ink, CPU, Player, stage or score.
-   if(ev.code==='KeyQ'&&!ev.shiftKey){
-    const previous=this.b25Run.snapshot();
-    const foot=this.player.getPosition(this.p);
-    // The real HUMAN capsule foot is 0.87 m below its center.
-    // The old +/-0.65 m projectile ray misses genuine KCC floor support.
-    // Use existing character-mode original Rapier support, not new terrain.
-    const hit=this.physics.castCharacterFootSupport(
-     foot,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
-    const physicalOriginal=!!hit&&this.rawStage.solids.some(
-     s=>s.id===hit.solidId);
-    const allowed=b25MayQuickRetryInRealSourceWorld({
-     mode:sourceCanonicalPlayableMode(location.href),
-     phase:this.matchState,paused:this.paused,stopReason:this.stopReason,
-     pointerLocked:document.pointerLockElement===this.canvas,
-     nativeTick:this.clock.tick,remainingSeconds:this.remainingSeconds,
-     hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
-     registeredOriginalFoot:physicalOriginal,
-     cpuRejoined:this.traffic.snapshot().physicalRejoins.length,
-     stage:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
-      this.rawStage.navigationLinks?.length??0,
-      this.b45SourceSurfaces.filter(s=>s.isScoreable).length],
-     practiceStatus:previous.status,practiceVariant:previous.practiceVariant,
-     surveyActive:this.survey.snapshot().active,
-     galleryActive:this.galleryIndex>=0
-    });
-    if(allowed&&this.b25Run.arm(previous.practiceVariant)){
-     ev.preventDefault();
-     this.canvas.dataset.t21F3QuickPractice='GENUINE_LOCAL_REARM';
-     this.canvas.dataset.t21F3QuickPracticeTick=String(this.clock.tick);
-     this.refreshB25PaintRun();
-    }
    }
    if(ev.code==='KeyM'){
      this.radarVisible=!this.radarVisible;

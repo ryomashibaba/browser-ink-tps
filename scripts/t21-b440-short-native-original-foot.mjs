@@ -306,6 +306,9 @@ async function main(){
    writeFileSync(resolve(out,file),Buffer.from(p.data,'base64'));
   };
   await screenshot('q-true-chromium-before.png');
+  const shoulderBefore=expired.cameraSourcePractice?.shoulderSide;
+  if(shoulderBefore!=='RIGHT'&&shoulderBefore!=='LEFT')
+   fail('Q_REAL_CAMERA_SHOULDER_BEFORE_MISSING');
   const priorOrigin=await origin(),priorTick=expired.tick,
    priorSeconds=expired.timeRemainingSeconds,
    priorCells=expired.b23HumanInkFeedback?.humanChangedCells??0,
@@ -334,6 +337,11 @@ async function main(){
      (a.b23HumanInkFeedback?.humanChangedCells??0)<priorCells||
      a.sourceScoreablePromotions!==0)
    fail('Q_NOT_REAL_SAME_WORLD_LOCAL_REARM');
+  // A real local retry must not accidentally execute Q's camera toggle.
+  // This is input precedence, NOT a claim about the F4 collision HOLD.
+  const shoulderAfter=a.cameraSourcePractice?.shoulderSide;
+  if(shoulderAfter!==shoulderBefore)
+   fail('Q_UNINTENDED_CAMERA_SHOULDER_TOGGLE');
   await screenshot('q-true-chromium-after.png');
   proof.realQOneShot={schema:'T21_REAL_CANONICAL_COMBAT_KEYQ_ONCE',
    verdict:'PASS_REAL_CDP_KEYQ_SAME_SOURCE_WORLD',
@@ -344,6 +352,8 @@ async function main(){
    tickBefore:priorTick,tickAfter:a.tick,
    remainingBefore:priorSeconds,remainingAfter:a.timeRemainingSeconds,
    sameBrowserWorld:true,sameSevenCpu:true,
+   cameraShoulderBefore:shoulderBefore,cameraShoulderAfter:shoulderAfter,
+   cameraShoulderPreserved:true,
    humanCellsBefore:priorCells,humanCellsAfter:a.b23HumanInkFeedback?.humanChangedCells,
    acceptedMarker:observed.mark,actorWrites:0,inkWrites:0,clockWrites:0,
    scoreWrites:0,officialWinner:'NONE',formal4v4Certified:false,
