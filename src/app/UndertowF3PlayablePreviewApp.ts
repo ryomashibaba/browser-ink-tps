@@ -2209,12 +2209,16 @@ export class UndertowF3PlayablePreviewApp{
    }
    if(permittedReadyFrontline?
       this.b25Run.armNativeFrontlineReady():
+      permittedReadyCanonicalArm?
+      this.b25Run.armNativeCanonicalReady(this.b56NextVariant):
       this.b25Run.arm(this.b56NextVariant,permittedReadyCoopArm)){
     this.b25RunProgress.textContent=permittedReadyFrontline?
      'REAL B441 SOURCE CLASSIC ARMED · START 180s · 7/7 PHYSICAL CPU JOIN REQUIRED':
      permittedReadyCoopArm?
       'A1 CO-OP ARMED · Now press START 180s. The 60s mission begins after real CPU 7/7 rejoin.':
-      'ARMED · Click stage for real pointer lock and 60Hz resume.';
+      permittedReadyCanonicalArm?
+       'SOURCE CHALLENGE ARMED · START 180s · WAIT REAL 7/7 CPU':
+       'ARMED · Click stage for real pointer lock and 60Hz resume.';
     this.b25RunButton.textContent='PAINT RUN ARMED';
     this.b25RunButton.disabled=true;
     // Real click updates the dual objective display immediately;

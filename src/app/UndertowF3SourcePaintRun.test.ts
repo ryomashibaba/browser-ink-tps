@@ -103,6 +103,40 @@ describe('B475 source-native CLASSIC challenge pre-arm, not synthetic paint',()=
  });
 });
 
+describe('B58 canonical SOURCE_SWEEP READY: wait for real seven CPU',()=>{
+ const frame=(i:number,playing:boolean,joined:boolean)=>tick(i,{
+  realSourceMatchPlaying:playing,
+  allSevenSourceCpuPhysicallyRejoined:joined,
+  ink:{changedHumanImpactCells:0,changedHumanImpactEvents:0,
+   sourceOnly:true,scoreablePromotionCount:0,
+   originalImpactChangedCellsBySurface:[]}
+ });
+ it('does not burn the 60s practice during STAGING or physical 6/7 rejoin',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.armNativeCanonicalReady('SOURCE_SWEEP')).toBe(true);
+  for(const i of [1,10,50])expect(r.observe(frame(i,false,false)))
+   .toMatchObject({status:'ARMED',elapsedTicks:0});
+  expect(r.observe(frame(51,true,false))).toMatchObject({
+   status:'ARMED',elapsedTicks:0});
+  r.observe(frame(52,true,false));
+  expect(r.observe(frame(53,true,true))).toMatchObject({
+   status:'RUNNING',elapsedTicks:0,
+   practiceVariant:'SOURCE_SWEEP',originalSweepSurfaces:0});
+  expect(r.observe(frame(54,true,true))).toMatchObject({
+   status:'RUNNING',elapsedTicks:1,officialWinner:'NONE'});
+ });
+ it('does not turn ALLY_SYNC into canonical and preserves original variants',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.armNativeCanonicalReady('ALLY_SYNC')).toBe(false);
+  for(const v of ['CLASSIC','SWITCHBACK','PAINT_RELAY'] as const){
+   expect(r.armNativeCanonicalReady(v)).toBe(true);
+   expect(r.observe(frame(1,false,false))).toMatchObject({
+    status:'ARMED',elapsedTicks:0,practiceVariant:v});
+   r.abort('TEST');
+  }
+ });
+});
+
 describe('B55 real in-page source-local practice records',()=>{
  const complete=(r:UndertowF3SourcePaintRun,end:number)=>{
   expect(r.arm()).toBe(true);r.observe(tick(1));

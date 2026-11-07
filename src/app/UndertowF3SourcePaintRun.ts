@@ -177,6 +177,15 @@ export class UndertowF3SourcePaintRun{
   this.waitForPhysicalCoopStart=true;
   return true;
  }
+ /** A canonical player-selected SOURCE challenge arms at fresh READY,
+  * but native 60s practice must wait for true PLAYING plus 7/7 physically
+  * rejoined original CPU. No synthetic actor, timer or score mutation. */
+ public armNativeCanonicalReady(variant:B56PracticeVariant):boolean{
+  if(!['CLASSIC','SWITCHBACK','PAINT_RELAY','SOURCE_SWEEP'].includes(variant)||
+     !this.arm(variant,false))return false;
+  this.waitForPhysicalCoopStart=true;
+  return true;
+ }
  public abort(reason:string){
   if(this.status==='ARMED'||this.status==='RUNNING'){
    this.status='ABORTED';

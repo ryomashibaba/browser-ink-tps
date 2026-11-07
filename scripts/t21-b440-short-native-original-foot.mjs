@@ -26,9 +26,10 @@ const proveSourcePracticeExpiry=b441Experiment&&
 const proveFullSourceReplay=b441Experiment&&
  process.env.T21_B441_PROVE_FULL_180S_REPLAY==='1';
 const proveRealQ=b441Experiment&&process.env.T21_B441_REAL_Q_ONCE==='1';
-if((proveFullSourceReplay&&proveSourcePracticeExpiry)||
- (proveRealQ&&(proveFullSourceReplay||proveSourcePracticeExpiry)))
- throw Error('B441_ONE_SHOT_Q_MODE_CONFLICT');
+const proveRealSweep=b441Experiment&&process.env.T21_B441_REAL_SWEEP_ONCE==='1';
+if([proveFullSourceReplay,proveSourcePracticeExpiry,proveRealQ,
+ proveRealSweep].filter(Boolean).length>1)
+ throw Error('B441_ONE_SHOT_TEST_MODES_MUTUALLY_EXCLUSIVE');
 const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay'+
  (b441Experiment?'&t21W10B112=humanGround&t21W10B192=humanCombat':
   '&t21W10B193=allyCoop')+'&t21W10B203=fullRound'+
@@ -265,6 +266,140 @@ async function main(){
   frontline.searchParams.has('scoreable')||
   url.searchParams.has('production')||url.searchParams.has('scoreable'))
   fail('PORTAL_SOURCE_DESTINATION_AUTHORITY');
+ if(proveRealSweep){
+  // Real player-facing SOURCE_SWEEP ingress in canonical combat, using
+  // exactly the same actual CDP clicks, browser world and Rapier actors.
+  // This does NOT claim 3-surface CLEAR or official 4v4 score.
+  proof.stage='REAL_CANONICAL_COMBAT_SOURCE_SWEEP_PENDING';save();
+  await cdp('Page.navigate',{url:portals.combat});
+  const boot=await until(async()=>{
+   const n=await snap();return n?.originalSourceSolids===25&&
+    n.originalPaintSurfaces===17&&n.matchState==='STAGING'?n:null;
+  },120000,400);
+  authority(boot);
+  if(boot.tick!==0||boot.timeRemainingSeconds!==180||
+     boot.cpu.cpu.length!==7||boot.cpu.physicalRejoins.length!==0)
+   fail('SWEEP_FRESH_ORIGINAL_SOURCE_WORLD_MISSING');
+  const world=await origin();
+  const camera=boot.cameraSourcePractice?.shoulderSide;
+  // Three genuine visible mode-button mouse clicks: CLASSIC ->
+  // SWITCHBACK -> PAINT_RELAY -> SOURCE_SWEEP. No JS programmatic click.
+  for(let i=0;i<3;i++)await buttonClick('#t21-f3-b56-variant');
+  const selected=await evaluate(
+   "document.querySelector('#t21-f3-b25-paint-run')?.dataset.t21B56NextVariant");
+  if(selected!=='SOURCE_SWEEP')fail('SWEEP_GENUINE_PLAYER_MODE_SELECTION_HOLD');
+  await buttonClick('#t21-f3-b25-start');
+  const armed=await until(async()=>{
+   const n=await snap();authority(n);
+   return n.b25SourcePaintRun?.status==='ARMED'?n:null;
+  },20000);
+  if(armed.b25SourcePaintRun.practiceVariant!=='SOURCE_SWEEP'||
+     armed.b25SourcePaintRun.elapsedTicks!==0||
+     armed.b25SourcePaintRun.originalSweepSurfaces!==0||
+     armed.matchState!=='STAGING'||armed.tick!==0)
+   fail('SWEEP_ARMED_BEFORE_ACTUAL_START_HOLD');
+  await buttonClick('#t21-f3-b202-resume');
+  const started=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.b25SourcePaintRun?.status==='RUNNING'&&
+      (n.matchState!=='PLAYING'||n.cpu.physicalRejoins.length!==7))
+    fail('SWEEP_TIMER_BEGAN_WITHOUT_ACTUAL_7_CPU');
+   return n.matchState==='PLAYING'&&!n.paused&&
+    n.cpu.physicalRejoins.length===7&&await locked()&&
+    n.b25SourcePaintRun?.status==='RUNNING'?n:null;
+  },360000,350);
+  if(started.b25SourcePaintRun.practiceVariant!=='SOURCE_SWEEP'||
+     started.b25SourcePaintRun.elapsedTicks>15||
+     started.b25SourcePaintRun.originalSweepSurfaces!==0||
+     started.b25SourcePaintRun.humanChangedImpactCells!==0||
+     await origin()!==world||!trueOriginalFoot(foot(started)))
+   fail('SWEEP_TRUE_SEVEN_CPU_START_HANDOFF_INVALID');
+  const img=async(name)=>{
+   const p=await cdp('Page.captureScreenshot',{
+    format:'png',captureBeyondViewport:false});
+   if(typeof p?.data!=='string'||p.data.length<100)
+    fail('SWEEP_REAL_CHROMIUM_SCREENSHOT_MISSING');
+   writeFileSync(resolve(out,name),Buffer.from(p.data,'base64'));
+  };
+  await img('source-sweep-real-selected-before-shot.png');
+  // No fabricated ink or shot; one held authentic Chrome mouse input.
+  // Accept real mouse shot separately from proof of changed owner cells.
+  const firstTick=started.tick;
+  let held=false,shot;
+  try{
+   await cdp('Input.dispatchMouseEvent',{type:'mousePressed',
+    x:800,y:450,button:'left',buttons:1,clickCount:1});
+   held=true;
+   shot=await until(async()=>{
+    const n=await snap();authority(n);
+    if(n.matchState!=='PLAYING'||n.paused||!await locked()||
+       n.cpu.physicalRejoins.length!==7)
+     fail('SWEEP_REAL_SOURCE_MOUSE_OR_CPU_INTERRUPTED');
+    return n.tick>=firstTick+20&&n.shotsFired>started.shotsFired?n:null;
+   },60000,250);
+  }finally{
+   if(held)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
+    x:800,y:450,button:'left',buttons:0,clickCount:1});
+  }
+  const after=await until(async()=>{
+   const n=await snap();authority(n);
+   return n.tick>shot.tick+4?n:null;
+  },25000,300);
+  const ink=after.b23HumanInkFeedback;
+  const raw=ink?.originalImpactChangedCellsBySurface;
+  const run=after.b25SourcePaintRun;
+  if(!Array.isArray(raw)||
+     raw.some(x=>typeof x.surfaceId!=='string'||
+      !x.surfaceId.startsWith('UndertowT21D:')||
+      !Number.isSafeInteger(x.changedCells)||x.changedCells<0)||
+     raw.reduce((sum,x)=>sum+x.changedCells,0)!==ink.humanChangedCells||
+     run.practiceVariant!=='SOURCE_SWEEP'||
+     !['RUNNING','CLEAR'].includes(run.status)||
+     run.elapsedTicks<=0||run.elapsedTicks>=3600||
+     run.humanChangedImpactCells!==ink.humanChangedCells||
+     run.originalSweepSurfaces!==raw.filter(x=>x.changedCells>0).length||
+     run.qualifiedOriginalSweepSurfaces!==
+      raw.filter(x=>x.changedCells>=60).length||
+     run.sweptOriginalSurfaceCellProgress.reduce(
+      (sum,x)=>sum+x.changedCells,0)!==run.humanChangedImpactCells||
+     after.shotsFired<=started.shotsFired||
+     after.cpu.physicalRejoins.length!==7||
+     after.matchState!=='PLAYING'||after.paused||
+     await origin()!==world||
+     after.cameraSourcePractice?.shoulderSide!==camera||
+     after.sourceScoreablePromotions!==0)
+   fail('SWEEP_REAL_SOURCE_PAINT_LEDGER_OR_PLAYER_AUTHORITY_INVALID');
+  await img('source-sweep-real-after-human-shot.png');
+  proof.realSweepOneShot={
+   schema:'T21_B58_CANONICAL_REAL_CDP_SOURCE_SWEEP_ENTRY_V1',
+   verdict:'PASS_REAL_PLAYER_SOURCE_SWEEP_ARM_7CPU_AND_NATIVE_SHOT',
+   source:'25/17/26/0',actualThreeSurfaceClearCertified:
+    run.status==='CLEAR'&&run.qualifiedOriginalSweepSurfaces>=3,
+   physicalCpuBefore:0,physicalCpuAfter:after.cpu.physicalRejoins.length,
+   realModeClicks:3,selectedRealMode:selected,
+   readyTick:boot.tick,firstRunTick:started.tick,
+   afterShotTick:after.tick,initialSourceCells:0,
+   realHumanShots:after.shotsFired-started.shotsFired,
+   nativeOriginalHumanChangedCells:ink.humanChangedCells,
+   certifiedOriginalSurfaceInk:raw,
+   actualQualifiedOriginalSurfaces:run.qualifiedOriginalSweepSurfaces,
+   actualGroundedMeters:run.realGroundedTravelMeters,
+   remainingPracticeSeconds:run.secondsRemaining,
+   sameBrowserWorld:true,originalCameraShoulderPreserved:true,
+   syntheticTicks:0,actorWrites:0,inkWrites:0,scoreWrites:0,
+   nativeClockWrites:0,officialWinner:'NONE',formal4v4Certified:false,
+   screenshots:['source-sweep-real-selected-before-shot.png',
+    'source-sweep-real-after-human-shot.png']};
+  writeFileSync(resolve(out,'b58-real-source-sweep-once.json'),
+   JSON.stringify(proof.realSweepOneShot,null,2)+'\n');
+  proof.stage='REAL_SWEEP_7CPU_AND_NATIVE_SHOT_WITNESSED';
+  proof.testKind='REAL_CANONICAL_PLAYER_SOURCE_SWEEP_INPUT';
+  proof.verdict=proof.realSweepOneShot.verdict;
+  save();
+  console.log('B58_REAL_SOURCE_SWEEP_ONE_SHOT',
+   JSON.stringify(proof.realSweepOneShot));
+  return;
+ }
  if(proveRealQ){
   // Validate genuine canonical combat KeyQ independently of F4 B487 HOLD.
   proof.stage='REAL_CANONICAL_COMBAT_Q_PENDING';save();

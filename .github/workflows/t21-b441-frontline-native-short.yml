@@ -81,7 +81,7 @@ jobs:
   real-native-original-frontline:
     runs-on: ubuntu-latest
     # One explicit genuine >3600 native-tick case; ordinary pushes stay short.
-    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]')) && 35 || 15) }}
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]') || contains(github.event.head_commit.message, '[real-sweep-once]')) && 35 || 15) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -140,6 +140,7 @@ jobs:
         env:
           T21_B441_SOURCE_FRONTLINE: '1'
           T21_B441_REAL_Q_ONCE: ${{ contains(github.event.head_commit.message, '[real-q-once]') && '1' || '0' }}
+          T21_B441_REAL_SWEEP_ONCE: ${{ contains(github.event.head_commit.message, '[real-sweep-once]') && '1' || '0' }}
           T21_B441_NATIVE_OBSERVE_TICKS: '720'
           # Enabled only for one deliberate source-expiry proof commit.
           T21_B441_PROVE_60S_EXPIRY: ${{ contains(github.event.head_commit.message, '[true-expiry]') && '1' || '0' }}
@@ -171,17 +172,56 @@ jobs:
           }
           console.log('Q_REAL_KEY_SAME_WORLD_PASS');
           Q_REAL
+      - name: Independently verify real canonical SOURCE_SWEEP selection, native CPU 7/7 and untouched score
+        if: ${{ contains(github.event.head_commit.message, '[real-sweep-once]') }}
+        run: |
+          node --input-type=module <<'REAL_SWEEP'
+          import {readFileSync,statSync} from 'node:fs';
+          const dir='/tmp/t21-b441-short-native-frontline/';
+          const d=JSON.parse(readFileSync(dir+'b58-real-source-sweep-once.json','utf8'));
+          const rows=d.certifiedOriginalSurfaceInk;
+          if(d.schema!=='T21_B58_CANONICAL_REAL_CDP_SOURCE_SWEEP_ENTRY_V1'||
+             d.verdict!=='PASS_REAL_PLAYER_SOURCE_SWEEP_ARM_7CPU_AND_NATIVE_SHOT'||
+             d.source!=='25/17/26/0'||d.selectedRealMode!=='SOURCE_SWEEP'||
+             d.realModeClicks!==3||d.readyTick!==0||
+             d.physicalCpuBefore!==0||d.physicalCpuAfter!==7||
+             !Number.isSafeInteger(d.firstRunTick)||d.firstRunTick<1||
+             d.afterShotTick<=d.firstRunTick||d.realHumanShots<1||
+             !Number.isSafeInteger(d.nativeOriginalHumanChangedCells)||
+             d.nativeOriginalHumanChangedCells<0||
+             !Array.isArray(rows)||rows.length>17||
+             rows.some(x=>typeof x.surfaceId!=='string'||
+              !x.surfaceId.startsWith('UndertowT21D:')||
+              !Number.isSafeInteger(x.changedCells)||x.changedCells<0)||
+             rows.reduce((n,x)=>n+x.changedCells,0)!==d.nativeOriginalHumanChangedCells||
+             d.actualQualifiedOriginalSurfaces!==
+              rows.filter(x=>x.changedCells>=60).length||
+             d.sameBrowserWorld!==true||
+             d.originalCameraShoulderPreserved!==true||
+             d.syntheticTicks!==0||d.actorWrites!==0||d.inkWrites!==0||
+             d.scoreWrites!==0||d.nativeClockWrites!==0||
+             d.officialWinner!=='NONE'||d.formal4v4Certified!==false||
+             d.screenshots?.length!==2)
+           throw Error('B58_FALSE_REAL_SOURCE_SWEEP_ENTRY_OR_NATIVE_INK');
+          for(const file of d.screenshots){
+           const p=readFileSync(dir+file);
+           if(statSync(dir+file).size<10000||
+              p.readUInt32BE(16)!==1600||p.readUInt32BE(20)!==900)
+            throw Error('B58_TRUE_CHROMIUM_SCREENSHOT_NOT_REAL');
+          }
+          console.log('B58_REAL_SOURCE_SWEEP_7CPU_PLAYER_INPUT_PASS');
+          REAL_SWEEP
       - name: B450 independent genuine CPU B2 B4 first original path denial audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') }}
         run: node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B452 read-only actual B2 B4 physical-foot vs rejected Recast coordinates in SAME original native world
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') }}
         run: node scripts/t21-b452-native-foot-vs-recast-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B454 independent every-native-tick B2 B4 original Rapier SOURCE physical foot audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') }}
         run: node scripts/t21-b454-real-native-full-rate-source-foot.mjs /tmp/t21-b441-short-native-frontline/
       - name: Validate stored genuine native JSON evidence files
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') }}
         run: |
           node --input-type=module -e '
             import {readdirSync,readFileSync} from "node:fs";
