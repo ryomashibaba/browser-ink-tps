@@ -25,8 +25,8 @@ import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
 import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
-import {UndertowF3SourcePaintRun,type B56PracticeVariant}
- from './UndertowF3SourcePaintRun';
+import {UndertowF3SourcePaintRun,b25MayQuickRetryInRealSourceWorld,
+ type B56PracticeVariant} from './UndertowF3SourcePaintRun';
 import {sourcePracticeObjectiveView} from './UndertowF3PracticeObjectiveView';
 import {summarizeB165OriginalAllyPractice}
  from './B165OriginalAllyPracticeProgress';
@@ -2329,6 +2329,38 @@ export class UndertowF3PlayablePreviewApp{
       'REAL_ORDER_PENDING_ORIGINAL_RECAST':
       'HOLD_UNSAFE_OR_ALREADY_MOVING';
     this.refresh();
+   }
+   // F3/F5 actual Q restarts only the native 60s local challenge.
+   // Do not reset live 180s clock, ink, CPU, Player, stage or score.
+   if(ev.code==='KeyQ'&&!ev.shiftKey){
+    const previous=this.b25Run.snapshot();
+    const foot=this.player.getPosition(this.p);
+    const hit=this.physics.castStageSegment(
+     new Vec3(foot.x,foot.y+.65,foot.z),
+     new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    const physicalOriginal=!!hit&&this.rawStage.solids.some(
+     s=>s.id===hit.solidId);
+    const allowed=b25MayQuickRetryInRealSourceWorld({
+     mode:sourceCanonicalPlayableMode(location.href),
+     phase:this.matchState,paused:this.paused,stopReason:this.stopReason,
+     pointerLocked:document.pointerLockElement===this.canvas,
+     nativeTick:this.clock.tick,remainingSeconds:this.remainingSeconds,
+     hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
+     registeredOriginalFoot:physicalOriginal,
+     cpuRejoined:this.traffic.snapshot().physicalRejoins.length,
+     stage:[this.rawStage.solids.length,this.b45SourceSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,
+      this.b45SourceSurfaces.filter(s=>s.isScoreable).length],
+     practiceStatus:previous.status,practiceVariant:previous.practiceVariant,
+     surveyActive:this.survey.snapshot().active,
+     galleryActive:this.galleryIndex>=0
+    });
+    if(allowed&&this.b25Run.arm(previous.practiceVariant)){
+     ev.preventDefault();
+     this.canvas.dataset.t21F3QuickPractice='GENUINE_LOCAL_REARM';
+     this.canvas.dataset.t21F3QuickPracticeTick=String(this.clock.tick);
+     this.refreshB25PaintRun();
+    }
    }
    if(ev.code==='KeyM'){
      this.radarVisible=!this.radarVisible;
@@ -6178,14 +6210,20 @@ export class UndertowF3PlayablePreviewApp{
      'ARMED · Click the stage to play.';
    return;
   }
+  const qRetryInstruction=this.b203FullRound&&
+   ['combat','circuit'].includes(sourceCanonicalPlayableMode(location.href)??'')&&
+   ['CLASSIC','SWITCHBACK','PAINT_RELAY'].includes(run.practiceVariant)&&
+   this.matchState==='PLAYING'&&this.remainingSeconds>=60&&
+   ['CLEAR','TIME_UP','ABORTED'].includes(run.status)?
+   '\nQ · RETRY LOCAL PRACTICE IN THIS SAME WORLD':'';
   const progress='PAINT '+run.humanChangedImpactCells+'/'+
    run.requiredHumanChangedCells+' real cells\nGROUND '+
    run.realGroundedTravelMeters.toFixed(1)+'/'+
    run.requiredRealGroundedTravelMeters+' m';
   this.b25RunProgress.textContent=
-   run.status==='CLEAR'?'PRACTICE CLEAR · NOT A MATCH WIN\n'+progress:
-   run.status==='TIME_UP'?'PRACTICE TIME UP · NO WINNER\n'+progress:
-   run.status==='ABORTED'?'INTERRUPTED · '+run.abortReason+'\n'+progress:
+   run.status==='CLEAR'?'PRACTICE CLEAR · NOT A MATCH WIN\n'+progress+qRetryInstruction:
+   run.status==='TIME_UP'?'PRACTICE TIME UP · NO WINNER\n'+progress+qRetryInstruction:
+   run.status==='ABORTED'?'INTERRUPTED · '+run.abortReason+'\n'+progress+qRetryInstruction:
    run.secondsRemaining+'s LEFT · '+progress;
  }
  private refreshB23PaintFeedback(){

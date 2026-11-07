@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {UndertowF3SourcePaintRun,B25_SOURCE_PAINT_RUN_TICKS,
  B25_SOURCE_PAINT_RUN_REQUIRED_CELLS,
  B25_SOURCE_PAINT_RUN_REQUIRED_GROUNDED_METERS,
- type B25PracticeFrame} from './UndertowF3SourcePaintRun';
+ type B25PracticeFrame,b25MayQuickRetryInRealSourceWorld} from './UndertowF3SourcePaintRun';
 
 const tick=(t:number,patch:Partial<B25PracticeFrame>={}):B25PracticeFrame=>({
  tick:t,paused:false,stopReason:null,inputLocked:true,sessionEnded:false,
@@ -335,5 +335,50 @@ describe('A1 co-op pre-armed at SOURCE READY waits for real 7/7 physical start',
   r.observe(a1(2,true,true));
   expect(r.snapshot().status).toBe('RUNNING');
   expect(r.snapshot().officialWinner).toBe('NONE');
+ });
+});
+
+describe('F3 in-world Q native practice repeat, never restart real 180s',()=>{
+ const safe=()=>({mode:'combat' as const,phase:'PLAYING',paused:false,
+  stopReason:null,pointerLocked:true,nativeTick:5200,remainingSeconds:90,
+  hp:100,grounded:true,registeredOriginalFoot:true,cpuRejoined:7,
+  stage:[25,17,26,0],practiceStatus:'CLEAR' as const,
+  practiceVariant:'CLASSIC' as const,surveyActive:false,galleryActive:false});
+ it('accepts only terminal genuine source circuit/combat missions',()=>{
+  expect(b25MayQuickRetryInRealSourceWorld(safe())).toBe(true);
+  expect(b25MayQuickRetryInRealSourceWorld({...safe(),mode:'circuit',
+   practiceStatus:'TIME_UP',practiceVariant:'PAINT_RELAY'})).toBe(true);
+ });
+ it('rejects wrong mode, authority, physical foot, CPU, timer and state',()=>{
+  const bad=[
+   {mode:null},{mode:'coop'},{mode:'frontline'},
+   {phase:'TIME_UP'},{paused:true},{stopReason:'STOP'},
+   {pointerLocked:false},{nativeTick:0},{remainingSeconds:59},
+   {hp:0},{grounded:false},{registeredOriginalFoot:false},
+   {cpuRejoined:6},{stage:[25,17,26,1]},
+   {practiceStatus:'RUNNING'},{practiceStatus:'ARMED'},
+   {practiceVariant:'ALLY_SYNC'},{surveyActive:true},{galleryActive:true}
+  ];
+  for(const patch of bad)
+   expect(b25MayQuickRetryInRealSourceWorld({
+    ...safe(),...patch
+   } as Parameters<typeof b25MayQuickRetryInRealSourceWorld>[0])).toBe(false);
+ });
+ it('local restart resets only mission baseline, not original match counters',()=>{
+  const r=new UndertowF3SourcePaintRun();
+  expect(r.arm()).toBe(true);
+  r.observe(tick(10));
+  r.observe(tick(3610));
+  expect(r.snapshot().status).toBe('TIME_UP');
+  expect(r.arm('CLASSIC')).toBe(true);
+  r.observe(tick(3611,{ink:{changedHumanImpactCells:600,
+   changedHumanImpactEvents:9,sourceOnly:true,scoreablePromotionCount:0}}));
+  expect(r.snapshot().status).toBe('RUNNING');
+  expect(r.snapshot().humanChangedImpactCells).toBe(0);
+  expect(r.snapshot().officialWinner).toBe('NONE');
+  r.observe(tick(3612,{ink:{changedHumanImpactCells:605,
+   changedHumanImpactEvents:10,sourceOnly:true,scoreablePromotionCount:0}}));
+  expect(r.snapshot().humanChangedImpactCells).toBe(5);
+  expect(r.snapshot().physicalStageModifications).toBe(0);
  });
 });

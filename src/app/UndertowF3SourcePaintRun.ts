@@ -55,6 +55,30 @@ function validFrame(f:B25PracticeFrame){
   f.ink.changedHumanImpactEvents>=0&&
   [f.foot.x,f.foot.y,f.foot.z].every(Number.isFinite);
 }
+/** F3 real Q-key repeats a finished LOCAL practice within the SAME
+ * 180s SOURCE world. Actor/ink/clock/score remain untouched.
+ * Original A1 co-op retains its mandatory fresh-world replay.
+ */
+export function b25MayQuickRetryInRealSourceWorld(f:Readonly<{
+ mode:'circuit'|'combat'|'coop'|'frontline'|null;
+ phase:string;paused:boolean;stopReason:string|null;
+ pointerLocked:boolean;nativeTick:number;remainingSeconds:number;
+ hp:number;grounded:boolean;registeredOriginalFoot:boolean;
+ cpuRejoined:number;stage:readonly number[];
+ practiceStatus:B25RunStatus;practiceVariant:B56PracticeVariant;
+ surveyActive:boolean;galleryActive:boolean;
+}>):boolean{
+ return (f.mode==='circuit'||f.mode==='combat')&&
+  f.phase==='PLAYING'&&!f.paused&&f.stopReason===null&&
+  f.pointerLocked&&Number.isSafeInteger(f.nativeTick)&&f.nativeTick>0&&
+  Number.isFinite(f.remainingSeconds)&&f.remainingSeconds>=60&&
+  Number.isFinite(f.hp)&&f.hp>0&&f.grounded&&f.registeredOriginalFoot&&
+  f.cpuRejoined===7&&f.stage.join('/')==='25/17/26/0'&&
+  ['CLEAR','TIME_UP','ABORTED'].includes(f.practiceStatus)&&
+  ['CLASSIC','SWITCHBACK','PAINT_RELAY'].includes(f.practiceVariant)&&
+  !f.surveyActive&&!f.galleryActive;
+}
+
 export class UndertowF3SourcePaintRun{
  private status:B25RunStatus='IDLE';
  private startTick=0;
