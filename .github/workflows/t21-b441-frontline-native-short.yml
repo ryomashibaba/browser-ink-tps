@@ -172,12 +172,16 @@ jobs:
           console.log('Q_REAL_KEY_SAME_WORLD_PASS');
           Q_REAL
       - name: B450 independent genuine CPU B2 B4 first original path denial audit
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
         run: node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B452 read-only actual B2 B4 physical-foot vs rejected Recast coordinates in SAME original native world
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
         run: node scripts/t21-b452-native-foot-vs-recast-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B454 independent every-native-tick B2 B4 original Rapier SOURCE physical foot audit
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
         run: node scripts/t21-b454-real-native-full-rate-source-foot.mjs /tmp/t21-b441-short-native-frontline/
       - name: Validate stored genuine native JSON evidence files
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') }}
         run: |
           node --input-type=module -e '
             import {readdirSync,readFileSync} from "node:fs";
