@@ -302,19 +302,30 @@ async function run(){
     key:c?.dataset.t21B399RealVHotkey??'UNSET',
     vTick:Number(c?.dataset.t21B399RealVHotkeyTick??-1),
     pointerLock:document.pointerLockElement===c,
-    playerView:document.querySelector('#ui-root')?.dataset.t21B245Presentation};
+    playerView:document.querySelector('#ui-root')?.dataset.t21B245Presentation,
+    hiddenActors:s.b399NativeCameraClearance?.hiddenActors??[],
+    cameraOpticalWitness:s.b399NativeCameraClearance?.cameraOpticalWitness??null};
   })()`);
   const beforeV=await vState();
   if(beforeV.optIn!==false||beforeV.live!=='OFF')
    fail('B399_V_INITIAL_RENDER_NOT_OFF',beforeV);
+  // Independent rendered-image proof. Preserve the real fixed camera,
+  // 1600x900 Chromium viewport and one native SOURCE world. No new actors,
+  // fake navigation, clock injection, pause or score. The actual render
+  // needs several natural ticks AFTER a V key, not a stale WebGL frame.
+  await picture('b399-real-same-camera-off-before');
   await key('keyDown','v','KeyV',86);await key('keyUp','v','KeyV',86);
   const on=await until(async()=>{const v=await vState();
-   return v.optIn===true&&v.live==='SOURCE_RENDER_ONLY'&&v.key==='ON'?v:false;
-  },15000);
+   return v.optIn===true&&v.live==='SOURCE_RENDER_ONLY'&&v.key==='ON'&&
+    v.tick>=beforeV.tick+4?v:false;
+  },20000);
+  await picture('b399-real-same-camera-on');
   await key('keyDown','v','KeyV',86);await key('keyUp','v','KeyV',86);
   const off=await until(async()=>{const v=await vState();
-   return v.optIn===false&&v.live==='OFF'&&v.key==='OFF'?v:false;
-  },15000);
+   return v.optIn===false&&v.live==='OFF'&&v.key==='OFF'&&
+    v.tick>=on.tick+4?v:false;
+  },20000);
+  await picture('b399-real-same-camera-off-after');
   for(const v of [on,off])
    if(v.shots!==beforeV.shots||Math.abs(v.ink-beforeV.ink)>.001||
     v.source!=='25/17/26/0'||v.cpu!==7||v.phase!=='PLAYING'||
@@ -322,6 +333,11 @@ async function run(){
     fail('B399_NATIVE_V_STATE_WRITE_OR_DRIFT',{beforeV,v});
   report.phases.push({phase:'B399_TRUE_PLAYER_KEYV_CAMERA_CLEARANCE',
    before:beforeV,on,off,officialWinner:'NONE',scoreable:0,
+   pictures:['b399-real-same-camera-off-before.png',
+    'b399-real-same-camera-on.png',
+    'b399-real-same-camera-off-after.png'],
+   actuallyHiddenActorsOn:on.hiddenActors,
+   visualEffectMustBeReviewedFromRawPng:true,
    cameraAimWrites:0,inkWrites:0,actorWrites:0,clockWrites:0});
   persist();console.log('B399_REAL_NATIVE_V_ON_OFF_PASS',JSON.stringify({on,off}));
  }
