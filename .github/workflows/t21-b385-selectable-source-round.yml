@@ -1,7 +1,7 @@
 name: T21 B385-B390 selected-kit original 180s SOURCE circuit
 on:
   push:
-    branches: [dev/t21-f4e103w-qa-infra]
+    branches: [dev/t21-f4e103w-qa-infra, research/t21-integrated-a1-c-patrol-four-mode-20261105]
     paths:
       - 'scripts/t21-b385-native-selectable-circuit.mjs'
       - 'scripts/t21-b390-real-source-timeup.mjs'
@@ -24,6 +24,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   native-b384-user-round:
+    # V15 P1 on the research branch: one real 180s milestone only.
+    # Do not re-run this expensive workflow on subsequent game commits.
+    if: github.ref != 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p1-180s-once]')
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
