@@ -2174,6 +2174,15 @@ export class UndertowF3PlayablePreviewApp{
      matchState:this.matchState,practiceStatus:this.b25Run.snapshot().status,
      variant:this.b56NextVariant,stopReason:this.stopReason
     });
+   // Real canonical SOURCE combat/circuit may arm a local challenge at
+   // genuine fresh READY before the same 180-second round begins.
+   // This neither starts a match nor changes its clock, actors or ink.
+   const permittedReadyCanonicalArm=this.b203FullRound&&
+    !b193Coop&&!permittedReadyFrontline&&this.paused&&
+    !this.b203EverLockedRealPointer&&this.clock.tick===0&&
+    this.matchState==='STAGING'&&this.b25Run.snapshot().status==='IDLE'&&
+    !this.stopReason&&
+    ['combat','circuit'].includes(sourceCanonicalPlayableMode(location.href)??'');
    const permittedPausedArm=sourceFullRoundCanArmWhilePaused({
     enabled:this.b203FullRound,paused:this.paused,
     awaitingPointerRelock:this.resumeAfterRealPointerLock,
@@ -2184,7 +2193,7 @@ export class UndertowF3PlayablePreviewApp{
    });
    if(document.pointerLockElement===this.canvas||
       (this.paused&&!permittedPausedArm&&!permittedReadyCoopArm&&
-       !permittedReadyFrontline)||this.stopReason||
+       !permittedReadyFrontline&&!permittedReadyCanonicalArm)||this.stopReason||
       this.matchState==='TIME_UP'||this.survey.snapshot().active||
       this.galleryIndex>=0||['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status)){
     this.b25RunProgress.textContent='Exit pause/survey and unlock mouse before arming.';
@@ -5612,8 +5621,13 @@ export class UndertowF3PlayablePreviewApp{
   const dedicatedCoop=this.canvas.dataset.t21B193Coop==='REAL_A1_ORIGINAL_SOURCE';
   const b475Ready=this.canvas.dataset.t21B475RealFrontlineReady===
    'ACTUAL_SOURCE_CLASSIC_PREARM'&&this.matchState==='STAGING';
+  const canonicalReady=this.b203FullRound&&
+   this.matchState==='STAGING'&&this.clock.tick===0&&this.paused&&
+   !this.b203EverLockedRealPointer&&!this.stopReason&&
+   ['combat','circuit'].includes(sourceCanonicalPlayableMode(location.href)??'');
   this.b25RunCard.hidden=(focus||playerView)&&
-   this.b25Run.snapshot().status==='IDLE'&&!dedicatedCoop&&!b475Ready;
+   this.b25Run.snapshot().status==='IDLE'&&!dedicatedCoop&&
+   !b475Ready&&!canonicalReady;
   this.canvas.dataset.t21W10B36PlayFocus=focus?'ON':'OFF';
  }
  private createB195CoopHud(ui:HTMLElement){
