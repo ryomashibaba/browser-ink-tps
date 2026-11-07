@@ -450,23 +450,54 @@ async function run(){
  report.phases.push({phase:'B388_NATIVE_PLAYER_HAZARD_UX',
   supportedOriginalFloor:hazard.foot,visibleNativeHud:hazard,
   alteredPhysics:0,alteredOriginalGeometry:0});persist();
- // B386: original CPU positions only; not certified combat contact.
- const frontier=await until(async()=>{
-  const x=await evalPage('(() => {const e=document.querySelector("#t21-f3-b368-real-enemy-frontier");return {visible:!!e&&!e.hidden&&getComputedStyle(e).display!=="none",enemy:e?.dataset.nearestCpuId,distance:Number(e?.dataset.nativeHorizontalMeters??-1),count:Number(e?.dataset.cpuPhysicalCount??-1),route:e?.dataset.crossTeamRouteCertified,encounter:e?.dataset.actualEncounterCertified,hit:e?.dataset.projectileHitCertified,actor:e?.dataset.actorRelocations,writes:e?.dataset.gameplayWrites,text:e?.textContent}})()');
-  return x?.visible&&x.count===4&&x.enemy?.startsWith('B')&&x.distance>0&&
-   x.route==='false'&&x.encounter==='false'&&x.hit==='false'&&
-   x.actor==='0'&&x.writes==='0'&&x.text?.includes('NO CROSS-TEAM PATH')?x:false;
- },25000);
- const enemy=done.cpu.cpu.find(x=>x.id===frontier.enemy);
- if(!enemy||!enemy.rejoined||enemy.lifeState!=='ACTIVE'||
-    !Array.isArray(enemy.physicalFoot)||
-    Math.abs(frontier.distance-Math.hypot(
-      enemy.physicalFoot[0]-done.player.position[0],
-      enemy.physicalFoot[2]-done.player.position[2]))>2)
-  fail('B386_ACTUAL_ENEMY_DISTANCE_MISMATCH',{frontier,enemy});
- report.phases.push({phase:'B386_ACTUAL_ENEMY_FRONTIER',...frontier,
-  realCpuFoot:enemy.physicalFoot,certifiedCrossTeamRoute:false,
-  certifiedNativeCpuHit:false});persist();
+ // B368 intentionally hides unrevealed enemy feet in PLAYER view.
+ // The old runner waited for those PRIVATE QA values while in PLAYER;
+ // that timed out despite a genuine 3/3 native CLEAR. Real F8 only:
+ // inspect actual QA DOM, then return to PLAYER before throwing F sub.
+ const frontierRead=()=>evalPage('(() => {const e=document.querySelector("#t21-f3-b368-real-enemy-frontier"),u=document.querySelector("#ui-root");return {view:u?.dataset.t21B245Presentation,visible:!!e&&!e.hidden&&getComputedStyle(e).display!=="none",enemy:e?.dataset.nearestCpuId,distance:Number(e?.dataset.nativeHorizontalMeters??-1),count:Number(e?.dataset.cpuPhysicalCount??-1),route:e?.dataset.crossTeamRouteCertified,encounter:e?.dataset.actualEncounterCertified,hit:e?.dataset.projectileHitCertified,actor:e?.dataset.actorRelocations,writes:e?.dataset.gameplayWrites,text:e?.textContent}})()');
+ const playerPrivate=await frontierRead();
+ if(playerPrivate.view!=='PLAYER'||playerPrivate.visible||
+    playerPrivate.enemy!=='REDACTED'||playerPrivate.count!==0||
+    !!playerPrivate.text)
+  fail('B368_PLAYER_ENEMY_LOCATION_PRIVACY_BROKEN',playerPrivate);
+ await key('keyDown','F8','F8',119);
+ await key('keyUp','F8','F8',119);
+ let frontier;
+ try{
+  frontier=await until(async()=>{
+   const x=await frontierRead();
+   return x?.view==='QA'&&x.visible&&x.count===4&&
+    x.enemy?.startsWith('B')&&x.distance>0&&
+    x.route==='false'&&x.encounter==='false'&&x.hit==='false'&&
+    x.actor==='0'&&x.writes==='0'&&
+    /NO CROSS-TEAM PATH|NO PATH CERTIFIED/.test(x.text??'')?x:false;
+  },45000);
+  const actual=original(await state(),'B368_LIVE_QA_NATIVE_MATCH');
+  const enemy=actual.cpu.cpu.find(x=>x.id===frontier.enemy);
+  if(!enemy||!enemy.rejoined||enemy.lifeState!=='ACTIVE'||
+     !Array.isArray(enemy.physicalFoot)||
+     Math.abs(frontier.distance-Math.hypot(
+       enemy.physicalFoot[0]-actual.player.position[0],
+       enemy.physicalFoot[2]-actual.player.position[2]))>2)
+   fail('B386_ACTUAL_ENEMY_DISTANCE_MISMATCH',{frontier,enemy,
+    nativeTick:actual.tick});
+  report.phases.push({phase:'B386_ACTUAL_ENEMY_FRONTIER',
+   ...frontier,realCpuFoot:enemy.physicalFoot,
+   genuineF8QaOnly:true,certifiedCrossTeamRoute:false,
+   certifiedNativeCpuHit:false});persist();
+ }finally{
+  await key('keyDown','F8','F8',119);
+  await key('keyUp','F8','F8',119);
+ }
+ const privateAgain=await until(async()=>{
+  const x=await frontierRead();
+  return x?.view==='PLAYER'&&!x.visible&&
+   x.enemy==='REDACTED'&&x.count===0&&!x.text?x:false;
+ },20000);
+ report.phases.push({phase:'B368_REAL_F8_QA_TO_PLAYER_PRIVACY',
+  before:playerPrivate,after:privateAgain,
+  syntheticEnemyFootDisclosure:0,actorWrites:0,scoreWrites:0});
+ persist();
  report.phases.push({phase:'REAL_NATIVE_TWIN_COMETS_ORIGINAL_3OF3',
   actualWeapon:done.b381RealNativeDodge.realWeapon,
   realShots:done.shotsFired,realInk:done.b23HumanInkFeedback.humanChangedCells,
