@@ -36,6 +36,10 @@ permissions:
   contents: read
 jobs:
   genuine-original-route-180s:
+    # V15 research: full 180s only on an explicit acceptance milestone.
+    # Keep historical development branch default, allow manual dispatch.
+    # Avoid duplicate B413 on every small player UX or short Chrome push.
+    if: github.ref != 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[b413-full]')
     runs-on: ubuntu-latest
     # B431 reached second native 60s remaining, then the old 55m job cap cancelled it.
     # Preserve all original SOURCE/physics/score gates; allow genuine second TIME_UP.
