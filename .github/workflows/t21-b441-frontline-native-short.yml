@@ -81,7 +81,7 @@ jobs:
   real-native-original-frontline:
     runs-on: ubuntu-latest
     # One explicit genuine >3600 native-tick case; ordinary pushes stay short.
-    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]') || contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]')) && 35 || 15) }}
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]') || contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]') || contains(github.event.head_commit.message, '[real-charger-once]')) && 35 || 15) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -151,6 +151,7 @@ jobs:
           T21_B441_REAL_Q_ONCE: ${{ contains(github.event.head_commit.message, '[real-q-once]') && '1' || '0' }}
           T21_B441_REAL_SWEEP_ONCE: ${{ (contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]')) && '1' || '0' }}
           T21_B441_REAL_SWEEP_CLEAR: ${{ contains(github.event.head_commit.message, '[real-sweep-clear]') && '1' || '0' }}
+          T21_B441_REAL_CHARGER_ONCE: ${{ contains(github.event.head_commit.message, '[real-charger-once]') && '1' || '0' }}
           T21_B441_NATIVE_OBSERVE_TICKS: '720'
           # Enabled only for one deliberate source-expiry proof commit.
           T21_B441_PROVE_60S_EXPIRY: ${{ contains(github.event.head_commit.message, '[true-expiry]') && '1' || '0' }}
@@ -331,17 +332,58 @@ jobs:
            console.log('B58_REAL_SOURCE_SWEEP_GENUINE_FIRST_ORIGINAL_PAINT_PASS');
           }
           REAL_SWEEP
+      - name: Independently verify genuine Rail Charger held mouse, release and SOURCE paint
+        if: ${{ contains(github.event.head_commit.message, '[real-charger-once]') }}
+        run: |
+          node --input-type=module <<'CHARGER'
+          import {readFileSync,statSync} from 'node:fs';
+          const dir='/tmp/t21-b441-short-native-frontline/';
+          const d=JSON.parse(readFileSync(dir+'f3-real-charger.json','utf8'));
+          const ledger=d.genuineOriginalImpactLedger;
+          if(d.schema!=='F3_CANONICAL_RAIL_CHARGER_REAL_SOURCE_INPUT_V1'||
+             d.verdict!=='PASS_REAL_CHARGER_HOLD_RELEASE_HUMAN_PAINT'||
+             d.source!=='25/17/26/0'||d.actualPlayerWeapon!=='rail-charger'||
+             d.realMenuKeyboardSelected!==true||d.physicalCpuRejoins!==7||
+             d.tickChargedTo-d.tickHeldFrom<57||
+             d.tickReleasedPaint<=d.tickChargedTo||
+             d.shotsBefore!==0||d.shotsHeld!==d.shotsBefore||
+             d.shotsAfter!==d.shotsBefore+1||
+             !Number.isSafeInteger(d.realHumanSourceCells)||
+             d.realHumanSourceCells<1||
+             !Array.isArray(ledger)||ledger.length>17||
+             ledger.reduce((n,x)=>n+x.changedCells,0)!==d.realHumanSourceCells||
+             !ledger.some(x=>
+              x.surfaceId==='UndertowT21D:spawn-high-positive-z:paint'&&
+              Number.isSafeInteger(x.changedCells)&&x.changedCells>0)||
+             d.sameWorld!==true||d.officialWinner!=='NONE'||
+             d.scoreable!==0||d.formal4v4Certified!==false||
+             Object.keys(d.writes??{}).length!==5||
+             Object.values(d.writes).some(x=>x!==0)||
+             d.screenshots?.length!==3)
+           throw Error('F3_GENUINE_CHARGED_BEAM_ORIGINAL_SOURCE_HOLD');
+          for(const file of ['real-charger-before.png',
+           'real-charger-charged.png','real-charger-after-paint.png']){
+           if(!d.screenshots.includes(file))
+            throw Error('F3_CHARGER_NATIVE_SCREENSHOT_REFERENCE_HOLD');
+           const b=readFileSync(dir+file);
+           if(statSync(dir+file).size<10000||
+              b.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||
+              b.readUInt32BE(16)!==1600||b.readUInt32BE(20)!==900)
+             throw Error('F3_CHARGER_REAL_BROWSER_PNG_HOLD');
+          }
+          console.log('F3_TRUE_CANONICAL_RAIL_CHARGER_SOURCE_PAINT_PASS');
+          CHARGER
       - name: B450 independent genuine CPU B2 B4 first original path denial audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') }}
         run: node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B452 read-only actual B2 B4 physical-foot vs rejected Recast coordinates in SAME original native world
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') }}
         run: node scripts/t21-b452-native-foot-vs-recast-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B454 independent every-native-tick B2 B4 original Rapier SOURCE physical foot audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') }}
         run: node scripts/t21-b454-real-native-full-rate-source-foot.mjs /tmp/t21-b441-short-native-frontline/
       - name: Validate stored genuine native JSON evidence files
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') }}
         run: |
           node --input-type=module -e '
             import {readdirSync,readFileSync} from "node:fs";

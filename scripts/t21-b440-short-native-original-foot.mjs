@@ -29,8 +29,9 @@ const proveRealQ=b441Experiment&&process.env.T21_B441_REAL_Q_ONCE==='1';
 const proveRealSweep=b441Experiment&&process.env.T21_B441_REAL_SWEEP_ONCE==='1';
 const proveRealSweepClear=proveRealSweep&&
  process.env.T21_B441_REAL_SWEEP_CLEAR==='1';
+const proveRealCharger=b441Experiment&&process.env.T21_B441_REAL_CHARGER_ONCE==='1';
 if([proveFullSourceReplay,proveSourcePracticeExpiry,proveRealQ,
- proveRealSweep].filter(Boolean).length>1)
+ proveRealSweep,proveRealCharger].filter(Boolean).length>1)
  throw Error('B441_ONE_SHOT_TEST_MODES_MUTUALLY_EXCLUSIVE');
 const query='?t21Play=preview&t21QaDrive=source&t21W10B183=firstDropPlay'+
  (b441Experiment?'&t21W10B112=humanGround&t21W10B192=humanCombat':
@@ -453,6 +454,132 @@ async function main(){
   frontline.searchParams.has('scoreable')||
   url.searchParams.has('production')||url.searchParams.has('scoreable'))
   fail('PORTAL_SOURCE_DESTINATION_AUTHORITY');
+
+ if(proveRealCharger){
+  // Real SOURCE portal: select fourth kit by actual Chrome keyboard,
+  // navigate using the visible combat link, charge by held pointer-lock
+  // mouse, and only fire on genuine mouse release.
+  proof.stage='REAL_CHARGER_SOURCE_PORTAL';save();
+  await buttonClick('#source-weapon-preselect');
+  for(const [key,vk] of [['Home',36],['ArrowDown',40],
+     ['ArrowDown',40],['ArrowDown',40],['Enter',13]]){
+   for(const type of ['keyDown','keyUp'])
+    await cdp('Input.dispatchKeyEvent',{
+     type,key,code:key,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk});
+  }
+  const selected=await until(()=>evaluate(`(() => {
+   const p=document.querySelector('#source-weapon-preselect');
+   const b=document.querySelector('#play-combat');
+   return p?.value==='rail-charger'&&
+    new URL(b?.href).searchParams.get('t21W10B389')==='rail-charger'&&
+    localStorage.getItem('t21-source-weapon-selection-v1')==='rail-charger';
+  })()`),18000,160);
+  if(!selected)fail('RAIL_CHARGER_NOT_GENUINELY_SELECTED');
+  await buttonClick('#play-combat');
+  const boot=await until(async()=>{
+   try{
+    const n=await evaluate('window.__t21F3?.snapshot?.()??null');
+    return n?.matchState==='STAGING'&&
+     n.b361NativePlayerWeapon?.id==='rail-charger'?n:null;
+   }catch{return null}
+  },120000,300);
+  authority(boot);
+  if(boot.tick!==0||boot.timeRemainingSeconds!==180||
+     boot.cpu.physicalRejoins.length!==0)
+   fail('CHARGER_FRESH_WORLD_NOT_STAGING');
+  const born=await origin();
+  await buttonClick('#t21-f3-b25-start');
+  await until(async()=>{
+   const n=await snap();return n.b25SourcePaintRun?.status==='ARMED'?n:null;
+  },20000);
+  await buttonClick('#t21-f3-b202-resume');
+  const start=await until(async()=>{
+   const n=await snap();authority(n);
+   return n.matchState==='PLAYING'&&!n.paused&&
+    n.cpu.physicalRejoins.length===7&&await locked()&&
+    n.b25SourcePaintRun?.status==='RUNNING'?n:null;
+  },360000,300);
+  if(start.shotsFired!==0||!trueOriginalFoot(foot(start))||
+     start.b361NativePlayerWeapon?.id!=='rail-charger'||await origin()!==born)
+   fail('CHARGER_NATIVE_7CPU_AND_REAL_HUMAN_NOT_READY');
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450});
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:650});
+  const before=await snap();authority(before);
+  if(before.cameraSourcePractice.pitchDegrees> -30||
+     before.cameraSourcePractice.pitchDegrees< -55)
+   fail('CHARGER_REAL_MOUSE_NOT_AIMED_AT_ORIGINAL_UPPER_FLOOR');
+  const shotImage=async name=>{
+   const data=(await cdp('Page.captureScreenshot',{
+    format:'png',captureBeyondViewport:false})).data;
+   const buf=Buffer.from(data||'','base64');
+   if(buf.length<10000||buf.readUInt32BE(16)!==1600||
+     buf.readUInt32BE(20)!==900)fail('CHARGER_NATIVE_SCREENSHOT_HOLD');
+   writeFileSync(resolve(out,name),buf);
+  };
+  await shotImage('real-charger-before.png');
+  let hold;
+  let down=false;
+  try{
+   await cdp('Input.dispatchMouseEvent',{type:'mousePressed',
+    x:800,y:450,button:'left',buttons:1,clickCount:1});down=true;
+   hold=await until(async()=>{
+    const n=await snap();authority(n);
+    if(n.matchState!=='PLAYING'||n.paused||!await locked()||
+       n.cpu.physicalRejoins.length!==7||await origin()!==born)
+     fail('CHARGER_REAL_NATIVE_CHARGE_INTERRUPTED');
+    return n.tick>=before.tick+70?n:null;
+   },105000,160);
+   if(hold.shotsFired!==before.shotsFired||
+      hold.b23HumanInkFeedback.humanChangedCells!==
+       before.b23HumanInkFeedback.humanChangedCells)
+    fail('CHARGER_FIRED_WHILE_PHYSICAL_MOUSE_HELD');
+   await shotImage('real-charger-charged.png');
+  }finally{
+   if(down)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
+    x:800,y:450,button:'left',buttons:0,clickCount:1});
+  }
+  const after=await until(async()=>{
+   const n=await snap();authority(n);
+   if(n.matchState!=='PLAYING'||n.paused||!await locked()||
+      n.cpu.physicalRejoins.length!==7||await origin()!==born)
+    fail('CHARGER_NATIVE_RELEASE_INTERRUPTED');
+   return n.shotsFired>hold.shotsFired&&
+    n.b23HumanInkFeedback.humanChangedCells>
+     hold.b23HumanInkFeedback.humanChangedCells?n:null;
+  },60000,130);
+  const ledger=after.b23HumanInkFeedback.originalImpactChangedCellsBySurface;
+  if(after.shotsFired!==before.shotsFired+1||
+     !Array.isArray(ledger)||!ledger.some(v=>
+      v.surfaceId==='UndertowT21D:spawn-high-positive-z:paint'&&
+      v.changedCells>0)||
+     ledger.reduce((n,v)=>n+v.changedCells,0)!==
+      after.b23HumanInkFeedback.humanChangedCells||
+     after.sourceScoreablePromotions!==0||!trueOriginalFoot(foot(after)))
+   fail('CHARGER_REAL_RELEASE_NO_AUTHORITATIVE_SOURCE_IMPACT');
+  await shotImage('real-charger-after-paint.png');
+  proof.realCharger={
+   schema:'F3_CANONICAL_RAIL_CHARGER_REAL_SOURCE_INPUT_V1',
+   verdict:'PASS_REAL_CHARGER_HOLD_RELEASE_HUMAN_PAINT',
+   source:'25/17/26/0',actualPlayerWeapon:after.b361NativePlayerWeapon.id,
+   realMenuKeyboardSelected:true,physicalCpuRejoins:7,
+   tickStart:start.tick,tickHeldFrom:before.tick,
+   tickChargedTo:hold.tick,tickReleasedPaint:after.tick,
+   shotsBefore:before.shotsFired,shotsHeld:hold.shotsFired,
+   shotsAfter:after.shotsFired,
+   realHumanSourceCells:after.b23HumanInkFeedback.humanChangedCells,
+   genuineOriginalImpactLedger:ledger,
+   sameWorld:true,officialWinner:'NONE',scoreable:0,
+   writes:{actors:0,source:0,ink:0,clock:0,score:0},
+   formal4v4Certified:false,
+   screenshots:['real-charger-before.png','real-charger-charged.png',
+    'real-charger-after-paint.png']};
+  writeFileSync(resolve(out,'f3-real-charger.json'),
+   JSON.stringify(proof.realCharger,null,2)+'\n');
+  proof.stage='REAL_CHARGER_SOURCE_PAINT_PROVEN';
+  proof.verdict=proof.realCharger.verdict;save();
+  console.log('F3_REAL_CHARGER_HOLD_RELEASE',JSON.stringify(proof.realCharger));
+  return;
+ }
  if(proveRealSweep){
   // Real player-facing SOURCE_SWEEP ingress in canonical combat, using
   // exactly the same actual CDP clicks, browser world and Rapier actors.
