@@ -5958,6 +5958,22 @@ export class UndertowF3PlayablePreviewApp{
    if(mode)mode.hidden=b476.compact;
    this.b25RunButton.hidden=b476.compact;
    this.b25RunButton.style.display=b476.compact?'none':'';
+  }else if(this.b203FullRound&&
+      sourceCanonicalPlayableMode(location.href)!==null&&
+      this.rawStage.solids.length===25&&
+      this.rawStage.paintSurfaces.length===17&&
+      (this.rawStage.navigationLinks?.length??0)===26&&
+      this.b45SourceSurfaces.every(surface=>!surface.isScoreable)){
+   // Real 1600x900 READY and post-TIME_UP fresh-world PNGs showed the
+   // actionable B25 card covering BOTH the original descent notice and
+   // live SOURCE TEAM at bottom-right. Put it on the free left side,
+   // above the real F8 button. B476 frontline keeps its own fixed dock.
+   // This is presentation only: same challenge, inputs, CPU, ink & clock.
+   const card=this.b25RunCard;
+   card.style.left='14px';card.style.right='auto';
+   card.style.bottom='64px';
+   card.style.width='min(256px,calc(100vw - 28px))';
+   card.dataset.t21SourcePracticeDock='LEFT_ABOVE_REAL_F8';
   }
   const b411Live=this.b411CompactGenuineSourceRound(run);
   this.b25RunCard.dataset.t21B411Focused=String(b411Live);
