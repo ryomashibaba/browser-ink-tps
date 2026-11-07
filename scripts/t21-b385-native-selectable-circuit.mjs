@@ -13,6 +13,8 @@ import {b390RunTrue180} from './t21-b390-real-source-timeup.mjs';
 
 const ROOT='http://127.0.0.1:4193/browser-ink-tps/';
 const OUT=process.env.T21_B385_OUTPUT||'/tmp/t21-b385';
+// Genuine short native test, no 180s/replay/official result claim.
+const shortB415=process.env.T21_B415_SHORT_CANONICAL==='1';
 const children=[],pending=new Map(),observations=[];
 let socket=null,sequence=0;
 const report={schema:'B385_REAL_CHROMIUM_NATIVE_SOURCE_SELECTABLE_ROUND',
@@ -266,6 +268,29 @@ async function run(){
   actualNativeCpu:playing.cpu.physicalRejoins.length,body:playing.player.position});
  persist();
  // Already proven with real CDP source input in B366, NOT by altering KCC.
+ const b415Read=()=>evalPage(`(()=>{
+ const s=window.__t21F3.snapshot(),e=document.querySelector('#t21-f3-hud-practice'),u=document.querySelector('#ui-root');
+ return {tick:s.tick,phase:s.matchState,paused:s.paused,shots:s.shotsFired,
+ ink:s.player.ink,cells:s.b23HumanInkFeedback.humanChangedCells,
+ cpu:s.cpu.physicalRejoins.length,mode:u?.dataset.t21B245Presentation,
+ source:[s.originalSourceSolids,s.originalPaintSurfaces,s.originalSourceNavigationLinks,s.sourceScoreablePromotions].join('/'),
+ stage:e?.dataset.t21B415CanonicalNativeStage??'OFF',
+ observedTick:Number(e?.dataset.t21B415NativeTick??-1),
+ text:e?.textContent??'',official:e?.dataset.t21B415OfficialTurfScore,
+ scoreable:e?.dataset.t21B415SourceScoreable,
+ visible:!!e&&!!e.getClientRects().length};
+})()`);
+ const beforeB415=shortB415?await until(async()=>{
+  const x=await b415Read();
+  return x?.stage==='SPEND'&&x.phase==='PLAYING'&&!x.paused&&
+   x.shots===0&&x.cpu===7&&x.source==='25/17/26/0'&&
+   x.visible&&x.mode==='PLAYER'&&x.text.includes('1/3')&&
+   x.official==='false'&&x.observedTick<=x.tick?x:false;
+ },30000):null;
+ if(shortB415){
+  report.phases.push({phase:'REAL_CANONICAL_STAGE_ONE',before:beforeB415});
+  persist();await picture('b415-real-circuit-before-actual-shot');
+ }
  const stages=[
   {name:'FIRST_DROP_W200',key:'w',code:'KeyW',vk:87,ticks:200},
   {name:'LOWER_RIGHT_D12',key:'d',code:'KeyD',vk:68,ticks:12},
@@ -302,6 +327,30 @@ async function run(){
    trueShots:after.shotsFired,trueInk:after.b23HumanInkFeedback.humanChangedCells};
   report.phases.push(record);persist();
   console.log('B385_REAL_ORIGINAL_ROUTE',JSON.stringify(record));
+  if(shortB415&&q.name==='FIRST_DROP_W200'){
+   const after=await until(async()=>{
+    const x=await b415Read();
+    return x?.stage==='REFILL'&&x.visible&&x.mode==='PLAYER'&&
+     x.text.includes('2/3')?x:false;
+   },30000);
+   if(after.phase!=='PLAYING'||after.paused||after.cpu!==7||
+    after.source!=='25/17/26/0'||after.shots-beforeB415.shots<5||
+    after.cells<=beforeB415.cells||after.ink>=beforeB415.ink||
+    after.official!=='false'||after.scoreable!=='0'||
+    after.observedTick<=beforeB415.observedTick||
+    after.observedTick>after.tick)
+    fail('B415_CANONICAL_STAGE_ONE_TO_TWO_NOT_NATIVE',{beforeB415,after});
+   report.phases.push({phase:'B415_REAL_SOURCE_SHOT_SPEND_VISIBLE',
+    before:beforeB415,after,foot:record.foot,
+    realKeyboard:true,realMouseFire:true,actorWrites:0,
+    clockWrites:0,inkWrites:0,sourceScoreable:0,
+    full180sCertified:false,ownRefillCertified:false});
+   report.outcome='PASS_B415_SHORT_CANONICAL_REAL_SHOOT_TO_REFILL_HUD';
+   report.note='Real 1600x900 Chromium; native W200 + mouse fire + 7 CPU; no 180s, OWN refill or 3/3 claim.';
+   persist();await picture('b415-real-circuit-after-actual-shot');
+   console.log('B415_CANONICAL_NATIVE_STAGE_1_TO_2_PASS',JSON.stringify(after));
+   return;
+  }
  }
  // B390 native integration: a held D90 may leave the genuine KCC on the
  // registered ramp rather than the registered raised floor. Never count

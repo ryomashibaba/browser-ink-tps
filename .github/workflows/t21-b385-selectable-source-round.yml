@@ -28,9 +28,9 @@ jobs:
   native-b384-user-round:
     # V15 P1 on the research branch: one real 180s milestone only.
     # Do not re-run this expensive workflow on subsequent game commits.
-    if: github.ref != 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p1-180s-once]')
+    if: github.ref != 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' || github.event_name == 'workflow_dispatch' || (contains(github.event.head_commit.message, '[p1-180s-once]') || contains(github.event.head_commit.message, '[b415-short]'))
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[b415-short]') && 20 || 75 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,19 +39,20 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
       - name: Validate existing B384 source gates and HUD without test duplication
-        run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B392NativeSubFeedback.test.ts src/app/B394OriginalBombPaintNotice.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B367RealCpuCombatTimeline.test.ts
+        run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B392NativeSubFeedback.test.ts src/app/B394OriginalBombPaintNotice.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B415LiveInkLoop.test.ts src/app/B380NativePlayerWeaponGuide.test.ts
       - run: node --check scripts/t21-b385-native-selectable-circuit.mjs
       - run: node --check scripts/t21-b390-real-source-timeup.mjs
       - run: node --test scripts/t21-b390-native-radar-check.test.mjs
-      - name: Drive true Chrome 3-of-3, 180s TIME_UP and same-weapon replay
+      - name: Drive actual source Chrome (short B415 or full B390)
         env:
-          T21_B390_TRUE_180S: '1'
+          T21_B390_TRUE_180S: ${{ contains(github.event.head_commit.message, '[b415-short]') && '0' || '1' }}
+          T21_B415_SHORT_CANONICAL: ${{ contains(github.event.head_commit.message, '[b415-short]') && '1' || '0' }}
         run: node scripts/t21-b385-native-selectable-circuit.mjs
       - name: Preserve actual screenshots, native ticks and honest HOLD evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: b390-genuine-selected-180s-source-round
+          name: ${{ contains(github.event.head_commit.message, '[b415-short]') && 'b415-genuine-short-canonical-circuit' || 'b390-genuine-selected-180s-source-round' }}
           path: /tmp/t21-b385/
           retention-days: 14
           if-no-files-found: warn
