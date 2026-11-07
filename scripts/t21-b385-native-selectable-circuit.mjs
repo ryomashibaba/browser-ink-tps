@@ -118,7 +118,18 @@ async function run(){
  await new Promise((ok,no)=>{socket.addEventListener('open',ok,{once:true});
   socket.addEventListener('error',no,{once:true})});
  socket.addEventListener('message',ev=>{
-  const msg=JSON.parse(String(ev.data)),p=pending.get(msg.id);if(!p)return;
+  const msg=JSON.parse(String(ev.data));
+  // Preserve genuine Chrome boot exceptions; diagnostic only, never a
+  // synthetic READY or a change to actor/paint/camera/clock input.
+  if(msg.method==='Runtime.exceptionThrown'){
+   const details=msg.params?.exceptionDetails;
+   const errors=report.browserBootExceptions??=[];
+   if(errors.length<6)errors.push({
+    text:String(details?.exception?.description??details?.text??'UNKNOWN').slice(0,900),
+    line:details?.lineNumber??null,column:details?.columnNumber??null
+   });
+  }
+  const p=pending.get(msg.id);if(!p)return;
   pending.delete(msg.id);msg.error?p.no(Error(JSON.stringify(msg.error))):p.ok(msg.result??{});
  });
  await cmd('Page.enable');await cmd('Runtime.enable');
@@ -126,8 +137,35 @@ async function run(){
  // User starts from actual QA preview, NOT directly invented B384 flags.
  // B386 player launch begins at normal preview with no QA flag.
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'});
- await until(()=>evalPage(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
-  document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);
+ // The research branch once timed out before the first READY event with
+ // 0 actual inputs. Inspect the REAL page and boot-error text instead
+ // of silently calling an ambiguous 120s hang a gameplay regression.
+ let initialReady;
+ try{
+  initialReady=await until(async()=>{
+   const x=await evalPage(`(()=>{
+    const c=document.querySelector('#app-canvas');
+    const e=document.querySelector('#boot-error');
+    return {url:location.pathname+location.search,
+     documentState:document.readyState,canvasExists:!!c,
+     ready:c?.dataset.t21F3Ready??null,
+     renderer:c?.dataset.t21F3Renderer??null,
+     nativeSnapshotAvailable:!!window.__t21F3?.snapshot,
+     bootError:e?.textContent?.slice(0,1200)??null,
+     lastNativeStop:c?.dataset.t21F3StopReason??null};
+   })()`);
+   report.lastRealPreviewBootState=x;
+   return x.bootError||(x.ready==='READY'&&x.renderer==='webgl2')?x:false;
+  },120000);
+ }catch(err){
+  try{await picture('b385-original-preview-boot-hold')}catch{/* original HOLD remains */}
+  throw err;
+ }
+ if(initialReady.bootError){
+  try{await picture('b385-original-preview-boot-error')}catch{/* retain real error */}
+  fail('REAL_INITIAL_PREVIEW_BOOT_EXCEPTION',initialReady);
+ }
+ report.phases.push({phase:'B385_NATIVE_WEBGL2_PREVIEW_READY',...initialReady});persist();
  const origin=await evalPage('performance.timeOrigin');
  const control=await clickButton('#t21-f3-b384-source-circuit');
  if(!control.text.includes('CHOOSE 1 OF 12 WEAPONS'))fail('BUTTON_LABEL',control);
