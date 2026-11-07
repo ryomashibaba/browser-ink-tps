@@ -614,8 +614,12 @@ async function main(){
    sameBrowserWorld:true,originalCameraShoulderPreserved:true,
    syntheticTicks:0,actorWrites:0,inkWrites:0,scoreWrites:0,
    nativeClockWrites:0,officialWinner:'NONE',formal4v4Certified:false,
-   screenshots:['source-sweep-real-selected-before-shot.png',
-    'source-sweep-real-after-human-shot.png']};
+   screenshots:proveRealSweepClear?
+    ['source-sweep-real-selected-before-shot.png',
+     'source-sweep-real-after-human-shot.png',
+     'source-sweep-real-three-surface-clear.png']:
+    ['source-sweep-real-selected-before-shot.png',
+     'source-sweep-real-after-human-shot.png']};
   writeFileSync(resolve(out,'b58-real-source-sweep-once.json'),
    JSON.stringify(proof.realSweepOneShot,null,2)+'\n');
   proof.stage=proveRealSweepClear?'B58_THREE_SURFACE_NATIVE_CLEAR_PASS':

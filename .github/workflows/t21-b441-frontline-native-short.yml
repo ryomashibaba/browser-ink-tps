@@ -111,6 +111,15 @@ jobs:
           run-id: 42309574066
           github-token: ${{ github.token }}
           path: /tmp/t21-b441-short-native-frontline
+      # Reuse immutable actual Chromium RAW; no new native game or 7-CPU run.
+      - name: Retrieve exact B58 3-surface native CLEAR RAW for read-only re-audit
+        if: ${{ contains(github.event.head_commit.message, '[sweep-audit-only]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: b441-true-native-source-frontline-short
+          run-id: 42363774075
+          github-token: ${{ github.token }}
+          path: /tmp/t21-b441-short-native-frontline
       - name: Verify only B452 evidence-gate changes and original run provenance
         if: ${{ contains(github.event.head_commit.message, '[audit-only]') }}
         run: |
@@ -136,7 +145,7 @@ jobs:
           console.log('FROZEN_TRUE_CHROMIUM_ARTIFACT_SOURCE_APPROVED_FOR_READ_ONLY_AUDIT');
           AUDIT
       - name: One real native browser with 7 original CPU and B441 opt-in
-        if: ${{ !contains(github.event.head_commit.message, '[audit-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[audit-only]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         env:
           T21_B441_SOURCE_FRONTLINE: '1'
           T21_B441_REAL_Q_ONCE: ${{ contains(github.event.head_commit.message, '[real-q-once]') && '1' || '0' }}
@@ -174,13 +183,30 @@ jobs:
           console.log('Q_REAL_KEY_SAME_WORLD_PASS');
           Q_REAL
       - name: Independently verify real canonical SOURCE_SWEEP selection, native CPU 7/7 and untouched score
-        if: ${{ contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]') }}
+        if: ${{ contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]') || contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         env:
-          T21_B58_EXPECT_REAL_CLEAR: ${{ contains(github.event.head_commit.message, '[real-sweep-clear]') && '1' || '0' }}
+          T21_B58_EXPECT_REAL_CLEAR: ${{ (contains(github.event.head_commit.message, '[real-sweep-clear]') || contains(github.event.head_commit.message, '[sweep-audit-only]')) && '1' || '0' }}
+          T21_B58_READ_ONLY_PINNED: ${{ contains(github.event.head_commit.message, '[sweep-audit-only]') && '1' || '0' }}
         run: |
           node --input-type=module <<'REAL_SWEEP'
           import {readFileSync,statSync} from 'node:fs';
+          import {execFileSync} from 'node:child_process';
           const dir='/tmp/t21-b441-short-native-frontline/';
+          if(process.env.T21_B58_READ_ONLY_PINNED==='1'){
+           // The native run comes from the previous exact immutable SHA.
+           // Allow ONLY this workflow and the future screenshot-manifest
+           // metadata patch since that real gameplay implementation.
+           const native='d8f39f91e1fe840c76c5f5abaca8ea6ce57aae7e';
+           const parent=execFileSync('git',['rev-parse','HEAD^'],{
+            encoding:'utf8'}).trim();
+           const changed=execFileSync('git',['diff','--name-only',native,'HEAD'],{
+            encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
+           const allowed=[
+            '.github/workflows/t21-b441-frontline-native-short.yml',
+            'scripts/t21-b440-short-native-original-foot.mjs'];
+           if(parent!==native||JSON.stringify(changed)!==JSON.stringify(allowed))
+            throw Error('B58_PINNED_NATIVE_SHA_OR_UNAUTHORIZED_GAME_CHANGE');
+          }
           const d=JSON.parse(readFileSync(dir+'b58-real-source-sweep-once.json','utf8'));
           const rows=d.certifiedOriginalSurfaceInk;
           const full=process.env.T21_B58_EXPECT_REAL_CLEAR==='1';
@@ -249,9 +275,56 @@ jobs:
               ![...exact].every(id=>parts.some(x=>
                x.surfaceId===id&&Number.isSafeInteger(x.changedCells)&&
                x.changedCells>=60))||
-              d.screenshots?.length!==3)
+              ![2,3].includes(d.screenshots?.length))
             throw Error('B58_FALSE_THREE_ORIGINAL_SURFACE_60_EACH_REAL_CLEAR');
-           console.log('B58_TRUE_NATIVE_THREE_ORIGINAL_SURFACES_60_EACH_12M_PASS');
+           // Original actual RUN had all three true PNGs, but the B58
+           // summary contained only the two startup images. Verify the
+           // third REAL CLEAR screenshot from actual retained file bytes.
+           const requiredImages=[
+            'source-sweep-real-selected-before-shot.png',
+            'source-sweep-real-after-human-shot.png',
+            'source-sweep-real-three-surface-clear.png'];
+           if(!d.screenshots.every((f,i)=>f===requiredImages[i]))
+            throw Error('B58_NONCANONICAL_REAL_SOURCE_PNG_MANIFEST');
+           for(const file of requiredImages){
+            const png=readFileSync(dir+file);
+            if(statSync(dir+file).size<10000||
+               png.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||
+               png.readUInt32BE(16)!==1600||png.readUInt32BE(20)!==900)
+             throw Error('B58_MISSING_TRUE_NATIVE_CLEAR_PNG');
+           }
+           // Check sequential genuine KCC and native owner-grid witnesses
+           // instead of trusting only the self-declared practice verdict.
+           const steps=f.evidence;
+           if(!Array.isArray(steps)||steps.length<8||
+              steps.some((row,i)=>
+               !Number.isSafeInteger(row.nativeTick)||
+               !Number.isFinite(row.realGroundMeters)||
+               !Number.isSafeInteger(row.humanNewSourceCells)||
+               (i>0&&(
+                steps[i-1].nativeTick>row.nativeTick||
+                steps[i-1].realGroundMeters>row.realGroundMeters+.03||
+                steps[i-1].humanNewSourceCells>row.humanNewSourceCells)))||
+              !steps.some(row=>row.phase==='REAL_ORIGINAL_FIRST_DROP'&&
+               row.originalFoot?.physicalKccGrounded===true&&
+               row.originalFoot?.originalSolid===
+                'UndertowT21D:first-drop-landing-positive-z')||
+              ![...exact].slice(1).every(id=>steps.some(row=>
+               row.phase==='REAL_SOURCE_SHOOT_'+id&&
+               row.realOriginalTargetCells>=60&&
+               Number.isFinite(row.actualAim?.yaw)&&
+               Number.isFinite(row.actualAim?.pitch)))||
+              steps.at(-1)?.status!=='CLEAR'||
+              steps.at(-1)?.nativeTick!==f.final.tick||
+              steps.at(-1)?.humanNewSourceCells!==p.humanChangedImpactCells||
+              steps.at(-1)?.realGroundMeters!==p.realGroundedTravelMeters||
+              !Array.isArray(f.final.originalHumanImpactLedger)||
+              f.final.originalHumanImpactLedger.reduce(
+               (total,row)=>total+row.changedCells,0)!==p.humanChangedImpactCells)
+            throw Error('B58_TRUE_NATIVE_ROUTE_OR_OWNER_LEDGER_CONFLICT');
+           console.log(process.env.T21_B58_READ_ONLY_PINNED==='1'?
+            'B58_IMMUTABLE_ORIGINAL_3_SURFACE_60_EACH_12M_READONLY_PASS':
+            'B58_TRUE_NATIVE_THREE_ORIGINAL_SURFACES_60_EACH_12M_PASS');
           }else{
            if(d.screenshots?.length!==2)
             throw Error('B58_ONE_SHOT_PNG_COUNT_HOLD');
@@ -259,16 +332,16 @@ jobs:
           }
           REAL_SWEEP
       - name: B450 independent genuine CPU B2 B4 first original path denial audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         run: node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B452 read-only actual B2 B4 physical-foot vs rejected Recast coordinates in SAME original native world
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         run: node scripts/t21-b452-native-foot-vs-recast-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B454 independent every-native-tick B2 B4 original Rapier SOURCE physical foot audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         run: node scripts/t21-b454-real-native-full-rate-source-foot.mjs /tmp/t21-b441-short-native-frontline/
       - name: Validate stored genuine native JSON evidence files
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         run: |
           node --input-type=module -e '
             import {readdirSync,readFileSync} from "node:fs";
@@ -287,7 +360,7 @@ jobs:
             }
           '
       - name: Preserve real SOURCE evidence even if HOLD
-        if: always()
+        if: ${{ always() && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         uses: actions/upload-artifact@v4
         with:
           name: b441-true-native-source-frontline-short
