@@ -30,3 +30,16 @@ export function b399ActorIntersectsCameraAim(
   (previouslyHidden?.80:.62);
  return Math.max(0,x*x+y*y+z*z-along*along)<=radius*radius;
 }
+
+/** Genuine SOURCE player V, render-only existing B399 toggle; not survey. */
+export function b399NativeRealVAllowed(x:Readonly<{
+ code:string;mode:string|null;fullRound:boolean;stage:readonly number[];
+ phase:string;paused:boolean;stopped:boolean;locked:boolean;hp:number;
+ repeat:boolean;modified:boolean;editing:boolean;
+}>):boolean{
+ return x.code==='KeyV'&&!x.repeat&&!x.modified&&!x.editing&&
+  x.fullRound&&x.locked&&x.phase==='PLAYING'&&!x.paused&&
+  !x.stopped&&Number.isFinite(x.hp)&&x.hp>0&&
+  x.stage.length===4&&x.stage.join('/')==='25/17/26/0'&&
+  ['circuit','combat','coop','frontline'].includes(x.mode??'');
+}

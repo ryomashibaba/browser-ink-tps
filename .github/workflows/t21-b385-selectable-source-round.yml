@@ -39,7 +39,7 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run build -- --base=/browser-ink-tps/
       - name: Validate existing B384 source gates and HUD without test duplication
-        run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B392NativeSubFeedback.test.ts src/app/B394OriginalBombPaintNotice.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B415LiveInkLoop.test.ts src/app/B380NativePlayerWeaponGuide.test.ts
+        run: npx vitest run src/app/UndertowF3PlayableHud.test.ts src/app/B392NativeSubFeedback.test.ts src/app/B394OriginalBombPaintNotice.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B415LiveInkLoop.test.ts src/app/B380NativePlayerWeaponGuide.test.ts src/app/B399NativeCameraAimClearance.test.ts
       - run: node --check scripts/t21-b385-native-selectable-circuit.mjs
       - run: node --check scripts/t21-b390-real-source-timeup.mjs
       - run: node --test scripts/t21-b390-native-radar-check.test.mjs

@@ -173,7 +173,8 @@ import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
 import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
  type B255ActorPresentation} from './B255SourceActorReview';
 import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
-import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY}
+import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY,
+ b399NativeRealVAllowed}
  from './B399NativeCameraAimClearance';
 import {b400RealOriginalSourceGridRecap,b400Real180SourceEndGate,
  b400SourceGridDownloadRecap,type B400SourceRecap}
@@ -2398,6 +2399,29 @@ export class UndertowF3PlayablePreviewApp{
      this.radar.canvas.parentElement!.style.display=
        this.radarVisible?'':'none';
      this.canvas.dataset.t21F3RadarVisible=this.radarVisible?'true':'false';
+   }
+   // Genuine PLAYER V controls existing B399 near-lens friendly visual
+   // clearance DURING gameplay. Unlocked V keeps historical survey.
+   // Physical actor collision, camera direction and score never change.
+   if(ev.code==='KeyV'){
+    const target=ev.target,editing=target instanceof HTMLElement&&
+     (target.isContentEditable||
+      target.closest('input,textarea,select,[contenteditable]')!==null);
+    if(b399NativeRealVAllowed({
+     code:ev.code,mode:sourceCanonicalPlayableMode(location.href),
+     fullRound:this.b203FullRound,stage:[
+      this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
+      this.rawStage.navigationLinks?.length??0,
+      this.b45SourceSurfaces.filter(s=>s.isScoreable).length],
+     phase:this.matchState,paused:this.paused,stopped:Boolean(this.stopReason),
+     locked:document.pointerLockElement===this.canvas,
+     hp:this.resources.currentHp,repeat:ev.repeat,
+     modified:ev.shiftKey||ev.altKey||ev.ctrlKey||ev.metaKey,editing
+    })){
+     ev.preventDefault();this.b399SetEnabled(!this.b399ClearSightEnabled);
+     this.canvas.dataset.t21B399RealVHotkey=this.b399ClearSightEnabled?'ON':'OFF';
+     this.canvas.dataset.t21B399RealVHotkeyTick=String(this.clock.tick);
+    }
    }
    // Do not let gameplay G (special request in PlayerInput) open the
    // gallery and disable the camera while actual pointer-locked play runs.

@@ -290,6 +290,40 @@ async function run(){
  if(shortB415){
   report.phases.push({phase:'REAL_CANONICAL_STAGE_ONE',before:beforeB415});
   persist();await picture('b415-real-circuit-before-actual-shot');
+  const vState=()=>evalPage(`(()=>{
+   const s=window.__t21F3.snapshot(),c=document.querySelector('#app-canvas');
+   return {tick:s.tick,shots:s.shotsFired,ink:s.player.ink,
+    cpu:s.cpu.physicalRejoins.length,
+    source:[s.originalSourceSolids,s.originalPaintSurfaces,
+     s.originalSourceNavigationLinks,s.sourceScoreablePromotions].join('/'),
+    phase:s.matchState,paused:s.paused,
+    optIn:s.b399NativeCameraAimClearance?.optedIn,
+    live:c?.dataset.t21B399NativeAimClearance??'OFF',
+    key:c?.dataset.t21B399RealVHotkey??'UNSET',
+    vTick:Number(c?.dataset.t21B399RealVHotkeyTick??-1),
+    pointerLock:document.pointerLockElement===c,
+    playerView:document.querySelector('#ui-root')?.dataset.t21B245Presentation};
+  })()`);
+  const beforeV=await vState();
+  if(beforeV.optIn!==false||beforeV.live!=='OFF')
+   fail('B399_V_INITIAL_RENDER_NOT_OFF',beforeV);
+  await key('keyDown','v','KeyV',86);await key('keyUp','v','KeyV',86);
+  const on=await until(async()=>{const v=await vState();
+   return v.optIn===true&&v.live==='SOURCE_RENDER_ONLY'&&v.key==='ON'?v:false;
+  },15000);
+  await key('keyDown','v','KeyV',86);await key('keyUp','v','KeyV',86);
+  const off=await until(async()=>{const v=await vState();
+   return v.optIn===false&&v.live==='OFF'&&v.key==='OFF'?v:false;
+  },15000);
+  for(const v of [on,off])
+   if(v.shots!==beforeV.shots||Math.abs(v.ink-beforeV.ink)>.001||
+    v.source!=='25/17/26/0'||v.cpu!==7||v.phase!=='PLAYING'||
+    v.paused||!v.pointerLock||v.playerView!=='PLAYER')
+    fail('B399_NATIVE_V_STATE_WRITE_OR_DRIFT',{beforeV,v});
+  report.phases.push({phase:'B399_TRUE_PLAYER_KEYV_CAMERA_CLEARANCE',
+   before:beforeV,on,off,officialWinner:'NONE',scoreable:0,
+   cameraAimWrites:0,inkWrites:0,actorWrites:0,clockWrites:0});
+  persist();console.log('B399_REAL_NATIVE_V_ON_OFF_PASS',JSON.stringify({on,off}));
  }
  const stages=[
   {name:'FIRST_DROP_W200',key:'w',code:'KeyW',vk:87,ticks:200},
