@@ -115,13 +115,18 @@ describe('SOURCE READY launches genuine A1 cooperation with a NEW world',()=>{
   expect(sourceCoopEligible(coop.searchParams)).toBe(true);
   expect(coop.searchParams.get('t21W10B203')).toBe('fullRound');
   expect(coop.searchParams.get('t21W10B183')).toBe('firstDropPlay');
-  for(const incompatible of ['t21W10B192','t21W10B384','t21W10B389',
+  // B472 preserved an explicitly VERIFIED real weapon in the fresh
+  // cooperative SOURCE world; stale B245 must not erase that selection.
+  for(const incompatible of ['t21W10B192','t21W10B384',
    't21W10B112'])
    expect(coop.searchParams.has(incompatible)).toBe(false);
+  expect(coop.searchParams.get('t21W10B389')).toBe('twin-comets');
+  expect(b389NativeBootWeapon(coop.searchParams)).toBe('twin-comets');
   const solo=new URL(sourceCoopNavigationUrl(coop.href,false));
   expect(sourceCoopEligible(solo.searchParams)).toBe(false);
   expect(solo.searchParams.get('t21W10B203')).toBe('fullRound');
   expect(solo.searchParams.has('t21W10B193')).toBe(false);
+  expect(solo.searchParams.has('t21W10B389')).toBe(false);
  });
 });
 describe('existing A1 co-op choice available on normal SOURCE 180s READY',()=>{

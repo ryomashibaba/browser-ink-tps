@@ -6,6 +6,7 @@ on:
       - 'scripts/t21-b385-native-selectable-circuit.mjs'
       - 'scripts/t21-b390-real-source-timeup.mjs'
       - 'src/app/UndertowF3PlayablePreviewApp.ts'
+      - 'src/app/B245SourcePresentation.test.ts'
       # Original-source CPU life, F2 re-entry and physical HP changes
       # must re-run the SAME genuine native 180s world, not unit QA alone.
       - 'src/app/UndertowF3SourceTraffic.ts'
