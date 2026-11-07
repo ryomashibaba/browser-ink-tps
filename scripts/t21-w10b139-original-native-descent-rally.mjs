@@ -84,6 +84,8 @@ const b411SourceGameplayHud=
 const b412NativeSquidSwim=
  process.env.T21_B412_REAL_ORIGINAL_SQUID_SWIM==='1';
 const b413NativeInkLoop=process.env.T21_B413_REAL_SOURCE_INK_LOOP==='1';
+// Read-only A3 genuine A1 CLEAR screen audit; never an 180s certification.
+const a3ActualClearVisual=process.env.T21_A3_REAL_CLEAR_VISUAL==='1';
 const b419RealReplay=process.env.T21_B419_REAL_REPLAY_SECOND_GAME==='1';
 const b430FullSecond180=process.env.T21_B430_REAL_SECOND_FULL_180S==='1';
 if(b430FullSecond180&&!b419RealReplay)
@@ -91,6 +93,9 @@ if(b430FullSecond180&&!b419RealReplay)
 if(b419RealReplay&&(!b409OneRoute180||!b411SourceGameplayHud||
  !b413NativeInkLoop||b200ReplayTrial))
  throw Error('B419_ONE_TRUE_FULL_SOURCE_180S_REQUIRED');
+if(a3ActualClearVisual&&(!b409OneRoute180||!b411SourceGameplayHud||
+ !b413NativeInkLoop||!b412NativeSquidSwim||b419RealReplay||b430FullSecond180))
+ throw Error('A3_REAL_CLEAR_ONLY_EXISTING_AUTHENTIC_A1_180S_SOURCE_RUNNER');
 if(b413NativeInkLoop&&!b412NativeSquidSwim)
  throw Error('B413_REQUIRES_ACTUAL_B412_SOURCE_SQUID_SWIM');
 if(b412NativeSquidSwim&&(!b411SourceGameplayHud||!b410RealUpperPlay))
@@ -2476,6 +2481,105 @@ async function run(){
   b433Observe(after);
   await sample('AFTER_ROUTE',after);
   if(b411SourceGameplayHud)await sampleB411('AFTER_ROUTE');
+  // A3: Existing true A1 co-op is already CLEAR on genuine original
+  // ownerGrid. Review native SOURCE PLAYER/F8 layouts without changing
+  // game, actor, stage, score, ink, tick or camera; stop this opt-in
+  // SHORT visual audit here, before the old 180-second B413 sequence.
+  if(a3ActualClearVisual){
+   const inspect=()=>evaluate('(() => {'+
+    'const n=window.__t21F3.snapshot();'+
+    'const ui=document.querySelector("#ui-root");'+
+    'const card=document.querySelector("#t21-f3-b195-native-coop");'+
+    'const check=id=>{const e=document.querySelector("#"+id);'+
+    'if(!e)return null;const cs=getComputedStyle(e);'+
+    'return {display:cs.display,hidden:e.hidden,'+
+    'visible:!e.hidden&&cs.display!=="none"&&cs.visibility!=="hidden",'+
+    'text:e.textContent?.trim().slice(0,160)};};'+
+    'return {tick:n.tick,phase:n.matchState,paused:n.paused,'+
+    'original:[n.originalSourceSolids,n.originalPaintSurfaces,'+
+    'n.originalSourceNavigationLinks,n.sourceScoreablePromotions].join("/"),'+
+    'winner:n.b25SourcePaintRun?.officialWinner,'+
+    'cpu:n.cpu?.physicalRejoins?.length,relocated:n.cpu?.physicalFootRelocations,'+
+    'shots:n.shotsFired,ink:n.player?.ink,'+
+    'view:ui?.dataset.t21B245Presentation,phaseUi:ui?.dataset.t21B338Phase,'+
+    'realA1Clear:card?.dataset.t21B195RealSourceClear,'+
+    'compact:card?.dataset.t21B411Active,'+
+    'pointerLocked:document.pointerLockElement===document.querySelector("#app-canvas"),'+
+    'next:check("t21-f3-b195-next"),'+
+    'time:check("t21-f3-b195-time"),'+
+    'header:check("t21-f3-b195-head"),'+
+    'nativeInk:check("t21-f3-b414-native-ink"),'+
+    'ownerCells:check("t21-f3-b417-paint-contest"),'+
+    'hudClock:check("t21-f3-hud-clock"),'+
+    'viewToggle:check("t21-f3-b245-view-toggle")};'+
+    '})()');
+   const valid=n=>n&&n.original==='25/17/26/0'&&
+    n.phase==='PLAYING'&&n.paused===false&&n.cpu===7&&
+    n.relocated===0&&n.winner==='NONE'&&n.pointerLocked===true&&
+    n.realA1Clear==='true'&&n.compact==='true'&&
+    n.phaseUi==='PLAYING'&&Number.isSafeInteger(n.tick)&&
+    n.ink>=0&&n.ink<=100&&n.shots>0;
+   const first=await until(async()=>{
+    const n=await inspect();
+    return valid(n)&&n.view==='PLAYER'?n:false;
+   },15000);
+   if(!first||first.next?.display!=='none'||
+    first.time?.display!=='none'||first.header?.visible!==true||
+    first.nativeInk?.visible!==true||
+    first.ownerCells?.visible!==true||
+    first.hudClock?.visible!==true||
+    first.viewToggle?.visible!==true)
+    fail('A3_NATIVE_CLEAR_PLAYER_CSS_OR_LIVE_HUD_UNPROVEN_'+JSON.stringify(first));
+   await picture('A3_REAL_SOURCE_A1_CLEAR_PLAYER_1600x900');
+   const f8=async()=>{
+    for(const type of ['keyDown','keyUp'])
+     await cmd('Input.dispatchKeyEvent',{type,key:'F8',code:'F8',
+      windowsVirtualKeyCode:119,nativeVirtualKeyCode:119});
+   };
+   await f8();
+   const qa=await until(async()=>{
+    const n=await inspect();
+    return valid(n)&&n.view==='QA'?n:false;
+   },15000);
+   if(qa.next?.visible!==true||qa.time?.visible!==true||
+    qa.nativeInk?.visible!==true||qa.ownerCells?.visible!==true||
+    qa.hudClock?.visible!==true)
+    fail('A3_REAL_F8_QA_LAYOUT_OR_NATIVE_DATA_LOST_'+JSON.stringify(qa));
+   await picture('A3_REAL_SOURCE_A1_CLEAR_F8_QA_1600x900');
+   await f8();
+   const restored=await until(async()=>{
+    const n=await inspect();
+    return valid(n)&&n.view==='PLAYER'?n:false;
+   },15000);
+   if(restored.next?.display!=='none'||restored.time?.display!=='none'||
+    restored.nativeInk?.visible!==true||
+    restored.ownerCells?.visible!==true)
+    fail('A3_REAL_PLAYER_RESTORE_DATA_OR_LAYOUT_LOST_'+JSON.stringify(restored));
+   await picture('A3_REAL_SOURCE_A1_CLEAR_PLAYER_RESTORED_1600x900');
+   const proof={schema:'T21_A3_GENUINE_SOURCE_A1_CLEAR_PLAYER_F8_V1',
+    verdict:'PASS_REAL_A1_CLEAR_PLAYER_COMPACT_F8_QA_RESTORED',
+    source:'25/17/26/0',originalScoreable:0,winner:'NONE',
+    genuineNativeA1Clear:true,realCpu:7,
+    originalTickProgression:[first.tick,qa.tick,restored.tick],
+    screenshots:[
+     'A3_REAL_SOURCE_A1_CLEAR_PLAYER_1600x900.png',
+     'A3_REAL_SOURCE_A1_CLEAR_F8_QA_1600x900.png',
+     'A3_REAL_SOURCE_A1_CLEAR_PLAYER_RESTORED_1600x900.png'],
+    first,qa,restored,
+    nativeActorWrites:0,inkWrites:0,scoreWrites:0,clockWrites:0,
+    originalSourceCollisionChanges:0,
+    full180ReplayedThisRun:false,formal4v4Certified:false,
+    artAccepted:false,productionAuthorized:false};
+   if(proof.originalTickProgression.some((n,i,a)=>i>0&&n<a[i-1]))
+    fail('A3_REAL_NATIVE_CLOCK_NONMONOTONIC');
+   writeFileSync(resolve(OUTPUT,'a3-real-a1-clear-player-f8.json'),
+    JSON.stringify(proof,null,2)+'\n');
+   console.log('A3_REAL_SOURCE_A1_CLEAR_PLAYER_F8',JSON.stringify({
+    verdict:proof.verdict,ticks:proof.originalTickProgression,
+    ink:restored.ink,shots:restored.shots,realCpu:7,
+    noOfficialScore:true}));
+   return;
+  }
   let b412Evidence=null;
   const b413={
    schema:'B413_AUTHENTIC_ORIGINAL_INK_SPEND_OWN_REFILL_RESUME',

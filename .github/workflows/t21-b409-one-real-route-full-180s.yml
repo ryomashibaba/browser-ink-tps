@@ -39,7 +39,11 @@ jobs:
     runs-on: ubuntu-latest
     # B431 reached second native 60s remaining, then the old 55m job cap cancelled it.
     # Preserve all original SOURCE/physics/score gates; allow genuine second TIME_UP.
-    timeout-minutes: 80
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[a3-visual-smoke]') && 30 || 80 }}
+    env:
+      # This is a genuine native first-source A1 CLEAR optical check, not a
+      # re-run of the previously certified full B413 180s ink cycle.
+      T21_A3_REAL_CLEAR_VISUAL: ${{ github.ref_name == 'research/t21-integrated-a1-c-patrol-four-mode-20261105' && contains(github.event.head_commit.message, '[a3-visual-smoke]') && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -93,7 +97,42 @@ jobs:
           T21_B430_REAL_SECOND_FULL_180S: ${{ github.ref_name == 'research/t21-integrated-a1-c-patrol-four-mode-20261105' && '0' || '1' }}
           T21_F3_SHOT_DIR: /tmp/t21-b409-original-180s
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Independently verify genuine A1 CLEAR native PLAYER-F8 layout and three actual PNG frames
+        if: ${{ env.T21_A3_REAL_CLEAR_VISUAL == '1' }}
+        run: |
+          node --input-type=module <<'A3'
+          import {readFileSync,statSync} from 'node:fs';
+          const dir='/tmp/t21-b409-original-180s/';
+          const d=JSON.parse(readFileSync(dir+'a3-real-a1-clear-player-f8.json','utf8'));
+          const good=x=>x&&x.original==='25/17/26/0'&&
+           x.phase==='PLAYING'&&x.realA1Clear==='true'&&
+           x.compact==='true'&&x.cpu===7&&x.relocated===0&&
+           x.pointerLocked===true;
+          if(d.schema!=='T21_A3_GENUINE_SOURCE_A1_CLEAR_PLAYER_F8_V1'||
+           d.verdict!=='PASS_REAL_A1_CLEAR_PLAYER_COMPACT_F8_QA_RESTORED'||
+           d.source!=='25/17/26/0'||d.originalScoreable!==0||
+           d.winner!=='NONE'||!good(d.first)||!good(d.qa)||!good(d.restored)||
+           d.first.view!=='PLAYER'||d.qa.view!=='QA'||
+           d.restored.view!=='PLAYER'||d.first.next.display!=='none'||
+           d.first.time.display!=='none'||d.qa.next.visible!==true||
+           d.qa.time.visible!==true||d.restored.next.display!=='none'||
+           d.restored.time.display!=='none'||d.first.nativeInk.visible!==true||
+           d.qa.nativeInk.visible!==true||d.restored.ownerCells.visible!==true||
+           d.nativeActorWrites!==0||d.inkWrites!==0||
+           d.scoreWrites!==0||d.clockWrites!==0||d.full180ReplayedThisRun!==false||
+           d.formal4v4Certified!==false||
+           d.screenshots?.length!==3)
+           throw Error('A3_TRUE_NATIVE_PLAYER_F8_CSS_OR_SOURCE_PROVENANCE_HOLD');
+          for(const file of d.screenshots){
+           const f=readFileSync(dir+file);
+           if(statSync(dir+file).size<10000||
+            f.readUInt32BE(16)!==1600||f.readUInt32BE(20)!==900)
+            throw Error('A3_REAL_CHROMIUM_IMAGE_INVALID_'+file);
+          }
+          console.log('A3_INDEPENDENT_REAL_NATIVE_F8_PLAYER_IMAGES_PASS');
+          A3
       - name: Independently verify true original ink KCC and same native 180s
+        if: ${{ env.T21_A3_REAL_CLEAR_VISUAL != '1' }}
         run: |
           node scripts/t21-b315-verify-native-three-surface-ink.mjs /tmp/t21-b409-original-180s/b312-real-original-lower-second-ink.json
           node scripts/t21-b322-original-ramp-crest.mjs /tmp/t21-b409-original-180s/b322-actual-original-ramp-crest.json
@@ -107,7 +146,7 @@ jobs:
           node scripts/t21-b414-native-ink-hud-audit.mjs /tmp/t21-b409-original-180s
           node scripts/t21-b433-native-opponent-poll-audit.mjs /tmp/t21-b409-original-180s/b433-real-source-opponent-polls.json
       - name: Preserve historical two-match independent replay audits only on historical branch
-        if: ${{ github.ref_name != 'research/t21-integrated-a1-c-patrol-four-mode-20261105' }}
+        if: ${{ github.ref_name != 'research/t21-integrated-a1-c-patrol-four-mode-20261105' && env.T21_A3_REAL_CLEAR_VISUAL != '1' }}
         run: |
           node scripts/t21-b419-real-full-round-fresh-replay.mjs /tmp/t21-b409-original-180s/b419-real-second-source-round.json
           node scripts/t21-b430-full-second-source-round.mjs /tmp/t21-b409-original-180s/b430-two-authentic-source-180s.json
