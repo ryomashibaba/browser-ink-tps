@@ -328,6 +328,22 @@ async function main(){
    writeFileSync(resolve(out,name),Buffer.from(p.data,'base64'));
   };
   await img('source-sweep-real-selected-before-shot.png');
+  // Genuine pointer-locked CDP mouse motion: source camera starts at
+  // approximately -12 degrees, too flat to contact the original upper
+  // spawn paint surface. Physical mouseY +200 pitches toward the floor.
+  // Never assign camera yaw/pitch in the game or page.
+  const cameraPitchBefore=started.cameraSourcePractice?.pitchDegrees;
+  if(!Number.isFinite(cameraPitchBefore))
+   fail('SWEEP_NO_ACTUAL_SOURCE_CAMERA_BEFORE_AIM');
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450});
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:650});
+  const aimed=await snap();authority(aimed);
+  const cameraPitchAfter=aimed.cameraSourcePractice?.pitchDegrees;
+  if(!Number.isFinite(cameraPitchAfter)||
+     cameraPitchAfter>=cameraPitchBefore-10||
+     cameraPitchAfter>-30||cameraPitchAfter< -55||
+     await origin()!==world||!await locked())
+   fail('SWEEP_REAL_CDP_MOUSE_AIM_DID_NOT_FACE_ORIGINAL_FLOOR');
   // No fabricated ink or shot; one held authentic Chrome mouse input.
   // Accept real mouse shot separately from proof of changed owner cells.
   const firstTick=started.tick;
@@ -341,8 +357,10 @@ async function main(){
     if(n.matchState!=='PLAYING'||n.paused||!await locked()||
        n.cpu.physicalRejoins.length!==7)
      fail('SWEEP_REAL_SOURCE_MOUSE_OR_CPU_INTERRUPTED');
-    return n.tick>=firstTick+20&&n.shotsFired>started.shotsFired?n:null;
-   },60000,250);
+    return n.tick>=firstTick+30&&
+     n.shotsFired>started.shotsFired&&
+     n.b23HumanInkFeedback?.humanChangedCells>0?n:null;
+   },90000,250);
   }finally{
    if(held)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
     x:800,y:450,button:'left',buttons:0,clickCount:1});
@@ -363,6 +381,7 @@ async function main(){
      !['RUNNING','CLEAR'].includes(run.status)||
      run.elapsedTicks<=0||run.elapsedTicks>=3600||
      run.humanChangedImpactCells!==ink.humanChangedCells||
+     ink.humanChangedCells<1||run.originalSweepSurfaces<1||
      run.originalSweepSurfaces!==raw.filter(x=>x.changedCells>0).length||
      run.qualifiedOriginalSweepSurfaces!==
       raw.filter(x=>x.changedCells>=60).length||
@@ -378,16 +397,19 @@ async function main(){
   await img('source-sweep-real-after-human-shot.png');
   proof.realSweepOneShot={
    schema:'T21_B58_CANONICAL_REAL_CDP_SOURCE_SWEEP_ENTRY_V1',
-   verdict:'PASS_REAL_PLAYER_SOURCE_SWEEP_ARM_7CPU_AND_NATIVE_SHOT',
+   verdict:'PASS_REAL_PLAYER_SOURCE_SWEEP_FIRST_ORIGINAL_HUMAN_PAINT',
    source:'25/17/26/0',actualThreeSurfaceClearCertified:
     run.status==='CLEAR'&&run.qualifiedOriginalSweepSurfaces>=3,
    physicalCpuBefore:0,physicalCpuAfter:after.cpu.physicalRejoins.length,
    realModeClicks:3,selectedRealMode:selected,
+   genuinePointerLockedMouseAim:true,
+   cameraPitchBefore,cameraPitchAfter,
    readyTick:boot.tick,firstRunTick:started.tick,
    afterShotTick:after.tick,initialSourceCells:0,
    realHumanShots:after.shotsFired-started.shotsFired,
    nativeOriginalHumanChangedCells:ink.humanChangedCells,
    certifiedOriginalSurfaceInk:raw,
+   actualPaintedOriginalSurfaces:run.originalSweepSurfaces,
    actualQualifiedOriginalSurfaces:run.qualifiedOriginalSweepSurfaces,
    actualGroundedMeters:run.realGroundedTravelMeters,
    remainingPracticeSeconds:run.secondsRemaining,
@@ -398,7 +420,7 @@ async function main(){
     'source-sweep-real-after-human-shot.png']};
   writeFileSync(resolve(out,'b58-real-source-sweep-once.json'),
    JSON.stringify(proof.realSweepOneShot,null,2)+'\n');
-  proof.stage='REAL_SWEEP_7CPU_AND_NATIVE_SHOT_WITNESSED';
+  proof.stage='REAL_SWEEP_7CPU_AND_FIRST_ORIGINAL_HUMAN_PAINT';
   proof.testKind='REAL_CANONICAL_PLAYER_SOURCE_SWEEP_INPUT';
   proof.verdict=proof.realSweepOneShot.verdict;
   save();

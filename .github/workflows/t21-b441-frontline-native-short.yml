@@ -181,19 +181,27 @@ jobs:
           const d=JSON.parse(readFileSync(dir+'b58-real-source-sweep-once.json','utf8'));
           const rows=d.certifiedOriginalSurfaceInk;
           if(d.schema!=='T21_B58_CANONICAL_REAL_CDP_SOURCE_SWEEP_ENTRY_V1'||
-             d.verdict!=='PASS_REAL_PLAYER_SOURCE_SWEEP_ARM_7CPU_AND_NATIVE_SHOT'||
+             d.verdict!=='PASS_REAL_PLAYER_SOURCE_SWEEP_FIRST_ORIGINAL_HUMAN_PAINT'||
              d.source!=='25/17/26/0'||d.selectedRealMode!=='SOURCE_SWEEP'||
              d.realModeClicks!==3||d.readyTick!==0||
              d.physicalCpuBefore!==0||d.physicalCpuAfter!==7||
              !Number.isSafeInteger(d.firstRunTick)||d.firstRunTick<1||
              d.afterShotTick<=d.firstRunTick||d.realHumanShots<1||
+             d.genuinePointerLockedMouseAim!==true||
+             !Number.isFinite(d.cameraPitchBefore)||
+             !Number.isFinite(d.cameraPitchAfter)||
+             d.cameraPitchAfter>=d.cameraPitchBefore-10||
+             d.cameraPitchAfter> -30||
              !Number.isSafeInteger(d.nativeOriginalHumanChangedCells)||
-             d.nativeOriginalHumanChangedCells<0||
+             d.nativeOriginalHumanChangedCells<1||
+             !Number.isSafeInteger(d.actualPaintedOriginalSurfaces)||
+             d.actualPaintedOriginalSurfaces<1||
              !Array.isArray(rows)||rows.length>17||
              rows.some(x=>typeof x.surfaceId!=='string'||
               !x.surfaceId.startsWith('UndertowT21D:')||
               !Number.isSafeInteger(x.changedCells)||x.changedCells<0)||
              rows.reduce((n,x)=>n+x.changedCells,0)!==d.nativeOriginalHumanChangedCells||
+             d.actualPaintedOriginalSurfaces!==rows.filter(x=>x.changedCells>0).length||
              d.actualQualifiedOriginalSurfaces!==
               rows.filter(x=>x.changedCells>=60).length||
              d.sameBrowserWorld!==true||
@@ -209,7 +217,7 @@ jobs:
               p.readUInt32BE(16)!==1600||p.readUInt32BE(20)!==900)
             throw Error('B58_TRUE_CHROMIUM_SCREENSHOT_NOT_REAL');
           }
-          console.log('B58_REAL_SOURCE_SWEEP_7CPU_PLAYER_INPUT_PASS');
+          console.log('B58_REAL_SOURCE_SWEEP_GENUINE_FIRST_ORIGINAL_PAINT_PASS');
           REAL_SWEEP
       - name: B450 independent genuine CPU B2 B4 first original path denial audit
         if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') }}
