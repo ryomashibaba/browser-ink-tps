@@ -301,6 +301,35 @@ describe('B472 genuine SOURCE-mode-wide initial human weapon, not new gameplay a
  });
 });
 
+describe('P1 finished SOURCE replay rejects noncanonical round URLs',()=>{
+ const portal='https://example.org/browser-ink-tps/play-source.html';
+ const selected=sourcePlayWeaponModeDestinations(portal,'twin-comets');
+ const evidence=(href:string)=>({
+  href,matchState:'TIME_UP',stopped:false,pointerLocked:false,
+  originalSolids:25,originalPaint:17,originalLinks:26,scoreable:0,
+  finishedVisible:true,canClick:true
+ });
+ it('keeps the four canonical player-selected game replay paths',()=>{
+  expect(sourceFinishedReplayAction(evidence(selected.circuit)))
+   .toBe('CLICK_REAL_REPLAY');
+  expect(sourceFinishedReplayAction(evidence(selected.coop)))
+   .toBe('CLICK_REAL_REPLAY');
+  for(const href of [selected.combat,selected.frontline])
+   expect(sourceFinishedReplayAction(evidence(href)))
+    .toBe('RELOAD_NATIVE_SOURCE_WORLD');
+ });
+ it('fails closed instead of reloading untrusted game URL flags',()=>{
+  for(const href of Object.values(selected)){
+   for(const tail of ['&cpuWarp=1','&t21W10B38=humanSub',
+    '&t21W10B389=twin-comets','&t21W10B448=realA3Front','#unsafe']){
+    expect(sourceFinishedReplayAction(evidence(href+tail))).toBe('BLOCK');
+    expect(sourceFinishedReplayHref({...evidence(href+tail),
+     weaponId:'twin-comets'})).toBe(null);
+   }
+  }
+ });
+});
+
 describe('Sprint A genuine four-mode 180s same-kit new-world replay',()=>{
  const portal='https://example.org/browser-ink-tps/play-source.html';
  const finished=(href:string,weaponId:string)=>({

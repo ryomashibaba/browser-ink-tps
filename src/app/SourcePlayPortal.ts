@@ -143,13 +143,13 @@ export function sourceFinishedReplayAction(
  const q=new URL(input.href).searchParams;
  if(q.has('production')||q.has('scoreable')||q.has('t21QaInput')||
     q.get('t21W10B183')!=='firstDropPlay')return 'BLOCK';
- const coop=sourceCoopEligible(q);
- const circuit=q.get('t21W10B384')==='loadoutCircuit'&&
-    q.get('t21W10B192')==='humanCombat'&&!q.has('t21W10B193');
- const combat=q.get('t21W10B192')==='humanCombat'&&
-    !q.has('t21W10B193')&&!q.has('t21W10B384');
- if(coop||circuit)return 'CLICK_REAL_REPLAY';
- return combat?'RELOAD_NATIVE_SOURCE_WORLD':'BLOCK';
+ // P1: replay a completed SOURCE-only round only from a canonical
+ // user-selected playable mode. Unknown URL flags must never be carried
+ // to the next physical world by a fallback same-URL reload.
+ const mode=sourceCanonicalPlayableMode(input.href);
+ if(mode==='coop'||mode==='circuit')return 'CLICK_REAL_REPLAY';
+ return mode==='combat'||mode==='frontline'?
+  'RELOAD_NATIVE_SOURCE_WORLD':'BLOCK';
 }
 /**
  * Sprint A: the real TIME_UP button starts a new physical SOURCE world in
