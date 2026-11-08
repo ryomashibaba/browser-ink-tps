@@ -186,6 +186,32 @@ describe('actual source PLAYER C-order neighbor ink eligibility',()=>{
  });
 });
 describe('genuine source CPU teammates distribute already-authorized goals',()=>{
+ it('real PLAYER C-ordered A1 and same-side teammates avoid goal crowding without inventing paths',()=>{
+  const candidates=[new Vec3(1,3,40),new Vec3(5,3,40),
+   new Vec3(9,3,40)];
+  const ink={sampleWorld:vi.fn((_p:Vec3,range:number,flag:number)=>{
+   expect(range).toBe(.38);expect(flag).toBe(SurfaceFlags.Paintable);
+   return {owner:Team.Neutral,planeDistance:0} as GameplayInkSample;
+  })} as unknown as GameplayInkSystem;
+  const original=candidates.map(p=>p.clone());
+  const ranked=rankOriginalSourcePatrolGoals(
+   candidates,Team.A,ink,0);
+  expect(ranked.map(x=>x.index)).toEqual([0,1,2]);
+  // Actual A2 has the first real target reserved as a B443 lock.
+  // The PLAYER C-ordered A1 must prefer an equally unpainted 2nd goal.
+  const a1=distributeOriginalSourceGoalCoverage(
+   ranked,candidates,[candidates[0]!]);
+  expect(a1.map(x=>x.index)).toEqual([1,2,0]);
+  // Once native B471 approves A1's real goal, the next A2/A3
+  // destination ranking accounts for it (and another teammate's foot).
+  const other=distributeOriginalSourceGoalCoverage(
+   ranked,candidates,[candidates[1]!,candidates[0]!]);
+  expect(other.map(x=>x.index)).toEqual([2,0,1]);
+  expect(original.every((p,i)=>p.equals(candidates[i]!))).toBe(true);
+  expect(a1.every(x=>x.sourceOnly&&!x.pathAuthorized)).toBe(true);
+  expect(other.every(x=>x.sourceOnly&&!x.pathAuthorized)).toBe(true);
+  expect(ink.sampleWorld).toHaveBeenCalledTimes(3);
+ });
  it('diversifies equally useful existing paint goals, never invents another',()=>{
   const ranked=rankOriginalSourcePatrolGoals(goals,Team.A,
    ownerInk([Team.Neutral,Team.Neutral,Team.Neutral,Team.Neutral]).system,0);

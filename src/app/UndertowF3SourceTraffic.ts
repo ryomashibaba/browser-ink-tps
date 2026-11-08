@@ -811,6 +811,22 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const locked=this.b443OriginalGoalLocks.get(mate.id);
    if(locked)existing.push(locked.target);
   }
+  // F1/F2 original same-side teamwork: an actual PLAYER C order is
+  // an in-flight, NATIVE-APPROVED destination too, not only A1's current
+  // physical foot. Reserve it while A1 is genuinely moving, so A2/A3
+  // can prefer other equally useful, already-authored source paint goals.
+  // It grants no new route; every chosen CPU goal still goes through the
+  // existing per-foot Recast/Rapier veto downstream.
+  const a1=this.bots.find(m=>m.id==='A1');
+  const actualA1Goal=this.b471AllyOrder?.goal;
+  if(team===Team.A&&id!=='A1'&&
+     this.b471OrderStatus==='MOVING'&&
+     a1?.team===Team.A&&a1.lifeState==='ACTIVE'&&
+     a1.mobilityState==='GROUND'&&this.physicallyRejoined.has('A1')&&
+     actualA1Goal&&
+     [actualA1Goal.x,actualA1Goal.y,actualA1Goal.z].every(Number.isFinite)&&
+     actualA1Goal.z>=33)
+   existing.push(actualA1Goal);
   return existing;
  }
  /** Only user-selected original SOURCE combat may improve the genuine
@@ -887,8 +903,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.b471SourceDecision='SOURCE_ORDER_EXPIRED';
    }else if(this.sourceInk&&this.physics){
     if(!playerOrder.goal){
-     const ranked=rankOriginalSourcePatrolGoals(
-      candidates,Team.A,this.sourceInk,0);
+     // The genuine player-directed A1 also avoids crowding A2/A3's
+     // current physically observed feet AND their B443 in-flight ORIGINAL
+     // goal locks when native owner-grid opportunities are equal.
+     // Stronger real unpainted SOURCE opportunity still wins. The exact
+     // existing physical Recast/Rapier approval remains below.
+     const ranked=distributeOriginalSourceGoalCoverage(
+      rankOriginalSourcePatrolGoals(
+       candidates,Team.A,this.sourceInk,0),
+      candidates,this.actualTeamCoveragePositions('A1',Team.A));
      let freshEligibleOriginalGoals=0;
      for(const rank of ranked){
       // The center may be already ours while real SAME-SURFACE
