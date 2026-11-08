@@ -721,11 +721,15 @@ export class UndertowF3PlayablePreviewApp{
     if(document.pointerLockElement!==this.canvas)
      this.resetW10B27KineticLens();
    });
-  // The real source-only practice has adaptive original-collider camera
-  // visibility by default. Deterministic B18 camera regression retains its
-  // exact old one-ray budget unless explicitly testing B26.
+  // In a genuine human-operated SOURCE full round, allow the existing
+  // camera to recover its sightline around ORIGINAL registered blockers.
+  // This only selects a camera shoulder through real Rapier camera casts:
+  // no walkability, floor, actor, KCC, nav or scoring authority changes.
+  // Pinned deterministic SOURCE QA retains its one-ray baseline unless
+  // it explicitly opts into the legacy B26 smartVisibility comparison.
   if(qa.get('t21QaDrive')!=='source'||
-     qa.get('t21W10B26')==='smartVisibility')
+     qa.get('t21W10B26')==='smartVisibility'||
+     (this.b203FullRound&&qa.get('t21QaInput')!=='deterministic'))
    this.camera.enableSourcePracticeSmartOcclusion();
   this.player=new PlayerController(app,this.physics,this.input,
    this.camera,this.ink,this.stats);
