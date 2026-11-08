@@ -263,6 +263,10 @@ export class CpuAgentSystem {
   private b216SourceStageAimValidated:
     ((muzzle:B181SightPoint,target:B181SightPoint,
       actualFoot:B181SightPoint)=>boolean)|null=null;
+  // P2: separately selected B441 SOURCE only; normal SOURCE stays fixed.
+  private p2OuterOriginalBackfill=false;
+  private p2OuterOriginalSearches=0;
+  private p2OuterOriginalApprovedAims=0;
   private b216RealOriginalFloorSightChecks=0;
   private b216ApprovedPhysicalSourceAimTargets=0;
   private b216ApprovedReachedGoalShortRadiusAims=0;
@@ -533,9 +537,28 @@ export class CpuAgentSystem {
       throw Error('B216_NONORIGINAL_SOURCE_BACKFILL_FORBIDDEN');
     this.b216SourceStageAimValidated=sourceStageAimValidated;
   }
+  /** SOURCE-only research, authorized only after the existing B216
+   * real Rapier+range+ownerGrid paint fallback is enabled. It cannot
+   * grant navigation, projectile contact, synthetic ink or Turf score. */
+  public enableP2OriginalOuterSourceBackfill():void{
+   if(!this.b216SourceStageAimValidated||
+      !this.b215SelectedBattlePaintPacing||
+      !this.b180OriginalPatchAimEnabled||
+      !this.phase14qF2RecoverableSteps||
+      this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+      this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
+      this.stage.navigationLinks?.length!==26||
+      this.stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0))
+    throw Error('P2_OUTER_PAINT_ORIGINAL_SOURCE_HOLD');
+   this.p2OuterOriginalBackfill=true;
+  }
   public b216OriginalSourceBackfillSnapshot(){
     return {
       enabled:this.b216SourceStageAimValidated!==null,
+      p2OriginalOuterSelected:this.p2OuterOriginalBackfill,
+      p2OriginalOuterSearches:this.p2OuterOriginalSearches,
+      p2NativeSightApprovedOuterAims:this.p2OuterOriginalApprovedAims,
+      p2ActualShotOrInkIncreaseCertified:false as const,
       realRapierStageAimChecks:this.b216RealOriginalFloorSightChecks,
       originalSourceBackfillAims:this.b216ApprovedPhysicalSourceAimTargets,
       ownedCenterWithTrueUnpaintedNeighborAims:
@@ -2459,7 +2482,17 @@ export class CpuAgentSystem {
     let best:Vec3|null=null,opportunity=0;
     let bestReachedGoalShortRadius=false;
     let bestCenterAlreadyOwned=false;
-    for(const proposed of proposals){
+    // Only AFTER the pre-existing, locally validated 1.7–3.5m ink
+    // search finds no target, inspect bounded 4.5–5.5m ORIGINAL floor
+    // paint proposals. All the same native weapon range, ownerGrid,
+    // physical foot, Rapier first-blocker and 0-Scoreable checks apply.
+    for(const pass of [0,1] as const){
+     if(pass===1&&(!this.p2OuterOriginalBackfill||best))break;
+     const current=pass===0?proposals:
+      b216OriginalFootBackfillCandidates(
+       bot.position,goal,bot.weaponFacing,'DISTANT_ORIGINAL_ONLY');
+     if(pass===1)this.p2OuterOriginalSearches++;
+     for(const proposed of current){
       this.samplePoint.set(proposed.x,proposed.y,proposed.z);
       const sample=this.gameplayInk.sampleWorld(this.samplePoint,
        .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
@@ -2477,6 +2510,9 @@ export class CpuAgentSystem {
       best=candidate;opportunity=value;
       bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
       bestCenterAlreadyOwned=sample.owner===bot.team;
+     }
+     if(pass===1&&best)this.p2OuterOriginalApprovedAims++;
+     if(best)break;
     }
     if(best){
       this.b216ApprovedPhysicalSourceAimTargets++;

@@ -99,3 +99,34 @@ describe('B216 genuine registered original-projectile shot vs route authority',(
    contact('original-b',{...target,z:5.5})})).toBe(false);
  });
 });
+
+describe('P2 outer source-ink aim proposals stay untrusted and opt-in',()=>{
+ it('retains identical default LOCAL sequence and candidate bounds',()=>{
+  const old=candidates(foot,goal);
+  expect(candidates(foot,goal,undefined,'LOCAL')).toEqual(old);
+  expect(old).toHaveLength(12);
+  expect(old.every(v=>v.radiusMeters<=3.5)).toBe(true);
+ });
+ it('proposes real-foot 4.5m and 5.5m only, without path or hit authority',()=>{
+  const x=candidates(foot,goal,undefined,'DISTANT_ORIGINAL_ONLY');
+  expect(x).toHaveLength(12);
+  expect(new Set(x.map(v=>v.radiusMeters))).toEqual(new Set([4.5,5.5]));
+  expect(x.every(v=>Number.isFinite(v.x)&&Number.isFinite(v.z)&&
+   Math.hypot(v.x-foot.x,v.z-foot.z)<=5.501)).toBe(true);
+  expect(x[0]).not.toHaveProperty('navLink');
+  expect(x[0]).not.toHaveProperty('damage');
+  expect(x[0]).not.toHaveProperty('sourceScoreable');
+  expect(candidates(foot,foot,{x:0,y:0,z:-1},
+   'DISTANT_ORIGINAL_ONLY')).toHaveLength(16);
+  expect(candidates(foot,foot,undefined,
+   'DISTANT_ORIGINAL_ONLY')).toEqual([]);
+ });
+ it('rejects invalid heading, position or untrusted band',()=>{
+  expect(candidates(foot,goal,undefined,
+   'WRONG' as 'LOCAL')).toEqual([]);
+  expect(candidates({...foot,x:NaN},goal,undefined,
+   'DISTANT_ORIGINAL_ONLY')).toEqual([]);
+  expect(candidates(foot,foot,{x:0,y:0,z:0},
+   'DISTANT_ORIGINAL_ONLY')).toEqual([]);
+ });
+});

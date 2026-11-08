@@ -963,6 +963,9 @@ export class UndertowF3PlayablePreviewApp{
          targetSupport:targetHit,firstStageBlock:block
         });
        });
+      // P2 single SOURCE research opt-in; never touches the canonical
+      // P1 player circuit, normal fixed patrol, Actor, original map or Ink.
+      if(b441OptIn)this.cpu.enableP2OriginalOuterSourceBackfill();
     }
   }
   this.canvas.dataset.t21B154TeamCoverage=

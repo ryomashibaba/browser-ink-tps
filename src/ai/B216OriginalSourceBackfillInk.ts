@@ -10,8 +10,10 @@ export interface B216OriginalCandidate extends B216SourcePoint{
 }
 export function b216OriginalFootBackfillCandidates(
  foot:B216SourcePoint,realAuditedGoal:B216SourcePoint,
- nativeWeaponFacing?:B216SourcePoint
+ nativeWeaponFacing?:B216SourcePoint,
+ distanceBand:'LOCAL'|'DISTANT_ORIGINAL_ONLY'='LOCAL'
 ):readonly B216OriginalCandidate[]{
+ if(distanceBand!=='LOCAL'&&distanceBand!=='DISTANT_ORIGINAL_ONLY')return [];
  if(![foot.x,foot.y,foot.z,realAuditedGoal.x,realAuditedGoal.y,
   realAuditedGoal.z].every(Number.isFinite))return [];
  const dx=realAuditedGoal.x-foot.x,dz=realAuditedGoal.z-foot.z;
@@ -38,7 +40,12 @@ export function b216OriginalFootBackfillCandidates(
  // candidates. Every location remains just an untrusted proposal until
  // ORIGINAL ownerGrid, Rapier supports, ray and weapon range approve it.
  // No geometry, nav path, actor relocation or firing bypass is created.
- const radii=atGoal?([1.7,2.5,3.5] as const):([2.5,3.5] as const);
+ // Research-only OUTER proposals are not accepted aims, paths, ink or hits.
+ // The caller must separately verify the real source grid, actual weapon
+ // range and both original Rapier support and first blocking ray.
+ const radii=distanceBand==='DISTANT_ORIGINAL_ONLY'?
+  ([4.5,5.5] as const):
+  atGoal?([1.7,2.5,3.5] as const):([2.5,3.5] as const);
  // Preserve the proven six offset proposals while en route. At a
  // genuinely reached native goal B64's foot-to-goal forward vector
  // vanishes, so complete all eight 45-degree directions around the
