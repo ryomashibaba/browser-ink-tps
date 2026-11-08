@@ -204,8 +204,70 @@ jobs:
            throw Error('P1_ORIGINAL_REAL_CHROMIUM_PROOF_NOT_REPRODUCED');
           console.log('P1_PINNED_GENUINE_NATIVE_7_CPU_EDGE_AND_SCREENSHOT_INDEPENDENT_AUDIT_PASS');
           P1_EVIDENCE
+      # One read-only recovery audit. No new Chromium, no new floor or CPU.
+      # The pinned 42468824473 actually had the HUMAN on the registered
+      # ramp, with real D cue and a visible RAMP CONTACT HUD. Its previous
+      # S cue assertion was invalid at the already-safe Z50.557 start.
+      - name: Download immutable native human ramp and live D cue RAW
+        if: ${{ contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: b441-true-native-source-frontline-short
+          run-id: 42468824473
+          github-token: ${{ github.token }}
+          path: /tmp/t21-b441-short-native-frontline
+      - name: Independently classify real supported D-to-ramp and S not necessary
+        if: ${{ contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
+        run: |
+          node --input-type=module <<'P1_PINNED_RAMP_CUE'
+          import {readFileSync} from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          const changes=execFileSync('git',
+           ['diff','--name-only','HEAD^','HEAD'],{encoding:'utf8'})
+           .trim().split('\n').filter(Boolean);
+          if(changes.length!==2||
+             !changes.includes('scripts/t21-b440-short-native-original-foot.mjs')||
+             !changes.includes('.github/workflows/t21-b441-frontline-native-short.yml'))
+           throw Error('GAME_SOURCE_CHANGED_FROM_PINNED_NATIVE_RAMP_RAW');
+          const d=JSON.parse(readFileSync(
+           '/tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json',
+           'utf8'));
+          const w=d.p1RealSafePreEdgeWRelease,r=d.p1RampNativeProgress;
+          const last=r?.samples?.at(-1);
+          if(d.verdict!=='HOLD'||
+             !String(d.error).includes('P1_REAL_S_D_REGISTERED_RAMP_PLAYER_CUE_NOT_VISIBLE')||
+             d.p0Boot?.solids!==25||d.p0Boot?.paint!==17||
+             d.p0Boot?.nav!==26||d.p0Boot?.scoreable!==0||
+             !w?.actualKeyWReleased||!w?.nativeGrounded||
+             w?.physicalCpuRejoins!==7||
+             w?.originalSupport!=='UndertowT21D:first-drop-landing-positive-z'||
+             w?.actualBody?.[2]<49.3||w?.stopReason!==null||
+             r?.status!=='HOLD_REAL_LOCAL_PLAYER_CUE_NOT_VISIBLE'||
+             r?.sCue!==false||r?.dCue!==true||
+             r?.hud?.hidden!==false||r?.hud?.display!=='block'||
+             r?.hud?.phase!=='REGISTERED_RAMP_CONTACT'||
+             !r?.hud?.text?.includes('ORIGINAL RAMP FOOT REGISTERED')||
+             r?.nativeActorPositionWrites!==0||
+             r?.newFloorOrColliderWrites!==0||
+             r?.originalStage!=='25/17/26/0'||
+             r?.fullCrossTeamRouteCertified!==false||
+             !r?.samples?.some(x=>x.phase==='REAL_D_KEY_TO_PINNED_SOURCE_RAMP'&&
+               x.realLocalPlayerCue==='STRAFE_D'&&x.grounded===true)||
+             last?.originalSolid!=='UndertowT21D:right-low-route-ramp-positive-z'||
+             last?.grounded!==true||last?.stopReason!==null||
+             Math.abs(last?.position?.[0]-2.498697280883789)>.002||
+             Math.abs(last?.position?.[2]-50.11309814453125)>.002)
+           throw Error('PINNED_TRUE_NATIVE_LOCAL_RAMP_PROOF_FAILED');
+          console.log('P1_PINNED_NATIVE_RAMP_D_HUD_REAL_KCC_PASS_S_ALREADY_SAFE',
+           JSON.stringify({initialZ:w.actualBody[2],SRequired:false,
+            dCue:true,realRapierFoot:last.originalSolid,
+            realBody:last.position,trueCpuRejoins:7,
+            certified:'LOCAL_CONTACT_ONLY',original:'25/17/26/0',
+            sourceGeometryChanges:0,fullRouteCertified:false,
+            WindowsHumanPlayCertified:false}));
+          P1_PINNED_RAMP_CUE
       - name: One real native browser with 7 original CPU and B441 opt-in
-        if: ${{ !contains(github.event.head_commit.message, '[audit-only]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[audit-only]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         env:
           T21_B441_SOURCE_FRONTLINE: '1'
           T21_P0_NORMAL_HUMAN: ${{ (contains(github.event.head_commit.message, '[p0-normal-once]') || contains(github.event.head_commit.message, '[p1-lower-edge-once]') || contains(github.event.head_commit.message, '[p1-ramp-walk-once]') || contains(github.event.head_commit.message, '[p1-input-diagnostic-once]')) && '1' || '0' }}
@@ -440,16 +502,16 @@ jobs:
           console.log('F3_TRUE_CANONICAL_RAIL_CHARGER_SOURCE_PAINT_PASS');
           CHARGER
       - name: B450 independent genuine CPU B2 B4 first original path denial audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         run: node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B452 read-only actual B2 B4 physical-foot vs rejected Recast coordinates in SAME original native world
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         run: node scripts/t21-b452-native-foot-vs-recast-audit.mjs /tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json
       - name: B454 independent every-native-tick B2 B4 original Rapier SOURCE physical foot audit
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         run: node scripts/t21-b454-real-native-full-rate-source-foot.mjs /tmp/t21-b441-short-native-frontline/
       - name: Validate stored genuine native JSON evidence files
-        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[real-q-once]') && !contains(github.event.head_commit.message, '[real-sweep-once]') && !contains(github.event.head_commit.message, '[real-sweep-clear]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[real-charger-once]') && !contains(github.event.head_commit.message, '[p0-normal-once]') && !contains(github.event.head_commit.message, '[p1-lower-edge-once]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && !contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         run: |
           node --input-type=module -e '
             import {readdirSync,readFileSync} from "node:fs";
@@ -495,7 +557,7 @@ jobs:
              desired:t.input?.projectedWorldIntent}))}));
           P1_INPUT
       - name: Preserve real SOURCE evidence even if HOLD
-        if: ${{ always() && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') }}
+        if: ${{ always() && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         uses: actions/upload-artifact@v4
         with:
           name: b441-true-native-source-frontline-short

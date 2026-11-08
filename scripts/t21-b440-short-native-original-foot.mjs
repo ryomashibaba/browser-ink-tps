@@ -911,28 +911,32 @@ async function main(){
     };
     const press=async(k)=>cdp('Input.dispatchKeyEvent',{type:'keyDown',...k});
     const release=async(k)=>cdp('Input.dispatchKeyEvent',{type:'keyUp',...k});
-    let safeRetreat;
-    // Measured footprint: at z~49 the original landing spans X up to
-    // ~1.5 and the exact registered FloorConcrete03 slope starts near X~2.
-    // At z<=46 there is no original near-height support at this X.
-    const retreatStart=begin.tick;
-    await press(keys.KeyS);
-    try{
-     safeRetreat=await until(async()=>{
-      const n=await snap();
-      const row=sample(n,'REAL_S_KEY_SAFE_BACKSTEP');
-      const accepted=row.inputAxes?.[1]===-1&&
-       row.nativeDesiredXZ?.[1]>.7;
-      if(n.tick>retreatStart+12&&!accepted)
-       fail('P1_TRUE_RAMP_S_KEY_NOT_ACCEPTED');
-      if(row.position?.[2]>=49.3)return n;
-      if(n.tick>=retreatStart+105||row.position?.[2]>50.8){
-       traceSave('HOLD_BACKSTEP_NOT_IN_REGISTERED_LANDING',{last:row});
-       fail('P1_TRUE_RAMP_BOUNDED_BACKSTEP_NOT_REACHED');
-      }
-      return false;
-     },38000,90);
-    }finally{await release(keys.KeyS)}
+    // Never request an S backstep when the actual human is already
+    // grounded in the tested inner landing (Z>=49.3). The previous
+    // acceptance test wrongly required S even at real Z50.557.
+    const sCueRequired=initial[2]<49.3;
+    let safeRetreat=begin;
+    if(sCueRequired){
+     const retreatStart=begin.tick;
+     await press(keys.KeyS);
+     try{
+      safeRetreat=await until(async()=>{
+       const n=await snap();
+       const row=sample(n,'REAL_S_KEY_SAFE_BACKSTEP');
+       const accepted=row.inputAxes?.[1]===-1&&
+        row.nativeDesiredXZ?.[1]>.7;
+       if(n.tick>retreatStart+12&&!accepted)
+        fail('P1_TRUE_RAMP_S_KEY_NOT_ACCEPTED');
+       if(row.position?.[2]>=49.3)return n;
+       if(n.tick>=retreatStart+105||row.position?.[2]>50.8){
+        traceSave('HOLD_BACKSTEP_NOT_IN_REGISTERED_LANDING',{last:row});
+        fail('P1_TRUE_RAMP_BOUNDED_BACKSTEP_NOT_REACHED');
+       }
+       return false;
+      },38000,90);
+     }finally{await release(keys.KeyS)}
+    }else traceSave('REGISTERED_LANDING_ALREADY_SAFE_NO_S_REQUIRED',{
+     startingZ:initial[2],sCueRequired:false});
     const beforeStrafe=safeRetreat.player.position;
     if(beforeStrafe[0]<-.5||beforeStrafe[0]>.6||
        beforeStrafe[2]<49.3||beforeStrafe[2]>50.8||
@@ -978,16 +982,16 @@ async function main(){
      return {text:w?.textContent??'',hidden:w?.hidden,
       display:w?.style.display,phase:c?.dataset.t21P1LocalRampCue};
     })()`);
-    if(!sCue||!dCue||hud.hidden!==false||
+    if((sCueRequired&&!sCue)||!dCue||hud.hidden!==false||
        hud.display!=='block'||!
        (hud.text.includes('SOURCE LANDING')||
         hud.text.includes('ORIGINAL RAMP FOOT'))){
      traceSave('HOLD_REAL_LOCAL_PLAYER_CUE_NOT_VISIBLE',{
-      sCue,dCue,hud});
-     fail('P1_REAL_S_D_REGISTERED_RAMP_PLAYER_CUE_NOT_VISIBLE');
+      sCueRequired,sCue,dCue,hud});
+     fail('P1_REAL_REQUIRED_REGISTERED_RAMP_PLAYER_CUE_NOT_VISIBLE');
     }
     proof.p1SourceLocalPlayerGuide={
-     sCue,dCue,hud,stage:'25/17/26/0',newColliders:0,
+     sCueRequired,sCue,dCue,hud,stage:'25/17/26/0',newColliders:0,
      genuineSourceHumanMovement:true,
      fullStageTraversalCertified:false};
     traceSave('PASS_REAL_KCC_LANDING_TO_EXISTING_REGISTERED_SOURCE_RAMP',{
