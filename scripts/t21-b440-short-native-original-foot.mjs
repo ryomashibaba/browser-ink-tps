@@ -3448,6 +3448,41 @@ proof.verdict=proveFullSourceReplay?
  console.log('B440_TRUE_SOURCE_NATIVE_HUMAN_WALK',JSON.stringify(proof));
 }
 try{await main();}catch(e){
+ // For K3 only: capture exact first native failure, without restarting
+ // the round, changing the actor world, or retrying prior certified K1/K2.
+ if(k3IntegratedSource180){
+  try{
+   const n=await snap();
+   proof.k3FirstFailureRealNative={
+    firstError:String(e),tick:n.tick,
+    phase:n.matchState,remainingSeconds:n.timeRemainingSeconds,
+    stopReason:n.stopReason,
+    immutableOriginalSource:[
+     n.originalSourceSolids,n.originalPaintSurfaces,
+     n.originalSourceNavigationLinks,n.sourceScoreablePromotions],
+    human:n.player?.position,
+    grounded:n.nativeKccGrounded,
+    originalRapierSupport:n.b112OriginalHumanGround?.lastOriginalSourceHitId??null,
+    nativeCpuActors:n.cpu?.cpu?.map(c=>({
+     id:c.id,lifeState:c.lifeState,rejoined:c.rejoined,
+     actualFoot:c.physicalFoot
+    }))??[],currentlyActiveRejoins:n.cpu?.physicalRejoins?.length??null,
+    genuineCombatReleased:n.cpu?.freeCombatEnabled??null,
+    actualShots:n.shotsFired,
+    realCpuPaint:n.b154NativeSevenCpuInk?.byActor??null,
+    readOnly:true,geometryWrites:0,actorWrites:0,scoreWrites:0,clockWrites:0
+   };
+  }catch(readError){proof.k3ReadOnlyCaptureError=String(readError).slice(0,350);}
+  try{
+   const frame=await cdp('Page.captureScreenshot',{
+    format:'png',captureBeyondViewport:false});
+   if(typeof frame?.data==='string'&&frame.data.length>100){
+    writeFileSync(resolve(out,'k3-first-error-original-native.png'),
+     Buffer.from(frame.data,'base64'));
+    proof.k3FirstFailurePng='k3-first-error-original-native.png';
+   }
+  }catch(imageError){proof.k3ScreenshotCaptureError=String(imageError).slice(0,350);}
+ }
  proof.verdict='HOLD';proof.error=String(e);save();
  console.error('B440_REAL_SOURCE_HOLD',String(e));process.exitCode=1;
 }finally{
