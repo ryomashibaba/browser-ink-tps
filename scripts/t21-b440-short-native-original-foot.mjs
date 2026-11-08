@@ -528,12 +528,19 @@ async function runK3CanonicalOneWorld(actualHref){
  for(const threshold of [120,60,0]){
   let last=null;
   const n=await until(async()=>{
-   const current=await validate(await snap(),
-    threshold===0?'TIME_UP':'PLAYING');
+   const actual=await snap();
+   // During the final countdown, PLAYING is the expected real native
+   // state until the genuine 0-second TIME_UP transition. Do not fail
+   // merely because we observed an unfinished 180-second world.
+   if(threshold===0&&!['PLAYING','TIME_UP'].includes(actual.matchState))
+    fail('K3_INVALID_REAL_NATIVE_ENDGAME_PHASE');
+   const current=await validate(actual,
+    threshold===0?actual.matchState:'PLAYING');
    last={tick:current.tick,phase:current.matchState,
     remaining:current.timeRemainingSeconds,
     cpu:current.cpu.physicalRejoins.length};
-   return current.timeRemainingSeconds<=threshold+.001?current:false;
+   return current.timeRemainingSeconds<=threshold+.001&&
+    (threshold!==0||current.matchState==='TIME_UP')?current:false;
   },24*60*1000,1300).catch(e=>{k.lastNative=last;persist();throw e;});
   sample(threshold===0?'TIME_UP':String(threshold),n);
  }
