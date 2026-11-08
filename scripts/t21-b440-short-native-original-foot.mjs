@@ -16,12 +16,15 @@ const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
 const p0NormalHuman=process.env.T21_P0_NORMAL_HUMAN==='1';
 const p1RampOnce=p0NormalHuman&&process.env.T21_P1_TRUE_RAMP_WALK_ONCE==='1';
+const k3IntegratedSource180=process.env.T21_K3_ONE_REAL_180S==='1';
 const p1InputDiagnosticOnce=p0NormalHuman&&
  process.env.T21_P1_INPUT_DIAGNOSTIC_ONCE==='1';
 const p1LowerOnce=p0NormalHuman&&
  (process.env.T21_P1_LOWER_EDGE_ONCE==='1'||p1RampOnce||p1InputDiagnosticOnce);
 
-// One-shot full replay uses the EXACT real frontline portal mode, which
+if(k3IntegratedSource180&&(!p0NormalHuman||!p1RampOnce||p1InputDiagnosticOnce||
+   b441Experiment))throw Error('K3_REQUIRES_NORMAL_P0_AND_TRUE_P1_RAMP');
+ // One-shot full replay uses the EXACT real frontline portal mode, which
 // includes B448. The ordinary B441 short trial remains unchanged.
 const b448Experiment=b441Experiment&&(
  process.env.T21_B448_A3_REAL_ORIGINAL_FRONT==='1'||
@@ -395,6 +398,205 @@ async function b58AttemptActualThreeSurfaceClear({world,start,firstAim}){
  return attempt;
 }
 
+
+/** K3: strictly opt-in continuation of the existing P0/P1 genuine SOURCE
+ * trial. A real user world, no synthetic native tick, actor or paint. */
+async function runK3CanonicalOneWorld(actualHref){
+ const start=await snap();authority(start);
+ const born=await origin(),ids=['A1','A2','A3','B1','B2','B3','B4'];
+ const ramp='UndertowT21D:right-low-route-ramp-positive-z';
+ const k={schema:'K3_ONE_GENUINE_CANONICAL_SOURCE_WORLD',
+  verdict:'HOLD',source:'25/17/26/0',origin:born,url:actualHref,
+  firstNativeTick:start.tick,firstRemaining:start.timeRemainingSeconds,
+  humanActions:[],samples:[],cpuImpactDeltas:null,
+  actorTeleports:0,syntheticTicks:0,syntheticInk:0,
+  scoreablePromotions:0,officialWinner:'NONE',formal4v4:false};
+ proof.k3SingleSourceWorld=k;
+ const persist=()=>{proof.stage='K3_'+k.verdict;save();};
+ const readCpu=n=>Object.fromEntries(ids.map(id=>{
+  const a=n.b154NativeSevenCpuInk?.byActor?.[id];
+  const shots=n.cpuSourceTurfShotsByActor?.[id];
+  if(!a||![shots,a.impactEvents,a.impactChangedCells].every(v=>
+    Number.isSafeInteger(v)&&v>=0))
+   fail('K3_ORIGINAL_CPU_REAL_PAINT_MISSING_'+id);
+  return [id,{shots,impacts:a.impactEvents,impactCells:a.impactChangedCells}];
+ }));
+ const validate=async(n,phase='PLAYING')=>{
+  authority(n);
+  if(await origin()!==born||await evaluate('location.href')!==actualHref||
+     n.matchState!==phase||n.cpu.physicalRejoins.length!==7||
+     n.cpu.physicalFootRelocations!==0||
+     (phase==='PLAYING'&&(n.paused||!await locked()))||
+     n.b25SourcePaintRun?.officialWinner!=='NONE')
+   fail('K3_NATIVE_SOURCE_SAME_WORLD_HOLD_'+phase);
+  return n;
+ };
+ const sample=(tag,n)=>{
+  k.samples.push({tag,tick:n.tick,phase:n.matchState,
+   remaining:n.timeRemainingSeconds,
+   foot:n.b112OriginalHumanGround?.lastOriginalSourceHitId??null,
+   grounded:n.nativeKccGrounded,actorRejoins:n.cpu.physicalRejoins.length,
+   shots:n.shotsFired,ink:n.player.ink,
+   playerImpactCells:n.b23HumanInkFeedback?.humanChangedCells,
+   relation:n.player.inkRelation,recovery:n.playerInkRecoveryState,
+   actualCpu:readCpu(n)});
+  persist();
+ };
+ if(proof.p1RampNativeProgress?.status!==
+     'PASS_REAL_KCC_LANDING_TO_EXISTING_REGISTERED_SOURCE_RAMP'||
+    start.matchState!=='PLAYING'||start.paused||!await locked()||
+    start.b112OriginalHumanGround?.genuineKccGrounded!==true||
+    start.b112OriginalHumanGround?.lastOriginalSourceHitId!==ramp||
+    start.b361NativePlayerWeapon?.id!=='needle-smg'||
+    start.b38HumanSub?.enabled!==true||
+    start.timeRemainingSeconds<125)
+  fail('K3_GENUINE_P1_RAMP_NATIVE_USER_MODE_PRECONDITION');
+ const firstCpu=readCpu(start);
+ k.verdict='PHYSICAL_RAMP_SAME_WORLD_READY';sample('P1_RAMP',start);
+ await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:450,button:'none'});
+ await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:800,y:660,button:'none'});
+ const aimed=await validate(await snap());
+ if(!Number.isFinite(aimed.cameraSourcePractice?.pitchDegrees))
+  fail('K3_CAMERA_REAL_POINTER_AIM_UNAVAILABLE');
+ const shoot=async(tag)=>{
+  const before=await validate(await snap());
+  if(before.player.mode!=='HUMAN'||before.player.ink<6)
+   fail('K3_HUMAN_SHOT_REAL_INK_NOT_AVAILABLE_'+tag);
+  let held=false,accepted=null;
+  try{
+   await cdp('Input.dispatchMouseEvent',{type:'mousePressed',
+    x:800,y:660,button:'left',buttons:1,clickCount:1});
+   held=true;
+   accepted=await until(async()=>{
+    const n=await validate(await snap());
+    if(n.tick>=before.tick+150)
+     fail('K3_REAL_SHOT_AND_PAINT_WINDOW_EXPIRED_'+tag);
+    return n.shotsFired>=before.shotsFired+3&&
+     before.player.ink-n.player.ink>=1&&
+     n.b23HumanInkFeedback?.humanChangedCells>
+      before.b23HumanInkFeedback?.humanChangedCells?n:false;
+   },80000,160);
+  }finally{
+   if(held)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
+    x:800,y:660,button:'left',buttons:0,clickCount:1});
+  }
+  const after=await validate(await snap());
+  k.humanActions.push({tag,from:before.tick,to:after.tick,
+   actualShots:after.shotsFired-before.shotsFired,
+   paidInk:before.player.ink-accepted.player.ink,
+   realPaintImpactCells:after.b23HumanInkFeedback.humanChangedCells-
+    before.b23HumanInkFeedback.humanChangedCells});
+  sample(tag,after);
+ };
+ await shoot('FIRST_REAL_HUMAN_PAINT_SHOTS');
+ const diveBefore=await validate(await snap());
+ if(diveBefore.player.ink>=98)fail('K3_INK_REFILL_HEADROOM_NOT_PROVEN');
+ let shifted=false;
+ try{
+  await cdp('Input.dispatchKeyEvent',{type:'keyDown',
+   key:'Shift',code:'ShiftLeft',windowsVirtualKeyCode:16,nativeVirtualKeyCode:16});
+  shifted=true;
+  const own=await until(async()=>{
+   const n=await validate(await snap());
+   if(n.tick>diveBefore.tick+260)fail('K3_ACTUAL_OWN_REFILL_WINDOW_EXPIRED');
+   return n.player.mode==='SQUID'&&n.player.inkRelation==='OWN'&&
+    n.playerInkRecoveryState==='SQUID_OWN'&&
+    n.player.ink>diveBefore.player.ink+1?n:false;
+  },90000,160);
+  k.humanActions.push({tag:'GENUINE_SHIFT_SQUID_OWN_REFILL',
+   from:diveBefore.tick,to:own.tick,
+   fromInk:diveBefore.player.ink,toInk:own.player.ink,
+   recovery:own.playerInkRecoveryState});
+  sample('SQUID_OWN',own);
+ }finally{
+  if(shifted)await cdp('Input.dispatchKeyEvent',{type:'keyUp',
+   key:'Shift',code:'ShiftLeft',windowsVirtualKeyCode:16,nativeVirtualKeyCode:16});
+ }
+ await until(async()=>{
+  const n=await validate(await snap());return n.player.mode==='HUMAN'?n:false;
+ },20000,180);
+ await shoot('ACTUAL_POST_OWN_REFILL_RESHOT');
+ const preSub=await validate(await snap());
+ await tapSourceCameraKey('f','KeyF',70);
+ const postSub=await until(async()=>{
+  const n=await validate(await snap());
+  return n.b38HumanSub?.throws>preSub.b38HumanSub?.throws?n:false;
+ },30000,180);
+ k.humanActions.push({tag:'REAL_F_KEY_SUB',from:preSub.tick,
+  to:postSub.tick,throws:postSub.b38HumanSub.throws-preSub.b38HumanSub.throws});
+ sample('GENUINE_SUB',postSub);
+ for(const threshold of [120,60,0]){
+  let last=null;
+  const n=await until(async()=>{
+   const current=await validate(await snap(),
+    threshold===0?'TIME_UP':'PLAYING');
+   last={tick:current.tick,phase:current.matchState,
+    remaining:current.timeRemainingSeconds,
+    cpu:current.cpu.physicalRejoins.length};
+   return current.timeRemainingSeconds<=threshold+.001?current:false;
+  },24*60*1000,1300).catch(e=>{k.lastNative=last;persist();throw e;});
+  sample(threshold===0?'TIME_UP':String(threshold),n);
+ }
+ const end=await validate(await snap(),'TIME_UP');
+ const finalCpu=readCpu(end);
+ k.actualNativeElapsedTicks=end.tick-start.tick;
+ k.cpuImpactDeltas=Object.fromEntries(ids.map(id=>[id,{
+  shotRequests:finalCpu[id].shots-firstCpu[id].shots,
+  projectileImpacts:finalCpu[id].impacts-firstCpu[id].impacts,
+  impactedOwnerCells:finalCpu[id].impactCells-firstCpu[id].impactCells
+ }]));
+ if(end.timeRemainingSeconds!==0||
+    k.actualNativeElapsedTicks<Math.floor(start.timeRemainingSeconds*60)-3||
+    k.humanActions.length!==4||
+    ids.some(id=>Object.values(k.cpuImpactDeltas[id]).some(v=>v<=0)))
+  fail('K3_180S_SAME_NATIVE_WORLD_REAL_SEVEN_CPU_IMPACTS_NOT_PROVEN');
+ k.verdict='TRUE_NATIVE_180S_TIME_UP';persist();
+ const visible=await until(async()=>evaluate(`(() => {
+  const m=document.querySelector('#t21-f3-b59-session-finished');
+  const b=document.querySelector('#t21-f3-b59-restart');
+  if(!m||!b)return false;
+  const r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+  const hit=document.elementFromPoint(x,y);
+  return !m.hidden&&m.dataset.t21B59State==='FINISHED'&&
+   !b.hidden&&!b.disabled&&r.width>0&&r.height>0&&
+   (hit===b||b.contains(hit))&&document.pointerLockElement===null&&
+   m.dataset.originalScoreable==='0'&&m.dataset.t21B59OriginalWinner==='NONE';
+ })()`),45000,200);
+ if(!visible)fail('K3_REAL_END_SCREEN_UNAVAILABLE');
+ await buttonClick('#t21-f3-b59-restart');
+ k.actualUserReplayClicked=true;persist();
+ // Wait for a DIFFERENT page time origin and the SAME canonical URL.
+ // A stale old-world CDP response must never be accepted as a new match.
+ const replay=await until(async()=>{
+  try{
+   const n=await evaluate(`(() => {
+    const s=window.__t21F3?.snapshot?.();
+    return s?{born:performance.timeOrigin,href:location.href,
+     ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+     tick:s.tick,phase:s.matchState,seconds:s.timeRemainingSeconds,
+     cpu:s.cpu.cpu.length,rejoined:s.cpu.physicalRejoins.length,
+     kit:s.b361NativePlayerWeapon?.id,shots:s.shotsFired,
+     source:[s.originalSourceSolids,s.originalPaintSurfaces,
+      s.originalSourceNavigationLinks,s.sourceScoreablePromotions].join('/')}:
+     null;
+   })()`);
+   return n?.born>born&&n.href===actualHref&&n.ready==='READY'&&
+    n.tick===0&&n.phase==='STAGING'&&n.seconds===180&&
+    n.cpu===7&&n.rejoined===0&&n.kit==='needle-smg'&&
+    n.shots===0&&n.source==='25/17/26/0'?n:false;
+  }catch{return false}
+ },130000,350);
+ k.replayFreshWorld=replay;
+ k.verdict='PASS_LIMITED_K3_NATIVE_SINGLE_SOURCE_180S_AND_REAL_REPLAY';
+ proof.verdict=k.verdict;
+ proof.testKind='K3_GENUINE_CANONICAL_ONE_SOURCE_WORLD';
+ proof.stage='K3_INTEGRATED_LIMITED_PASS';save();
+ console.log('K3_REAL_NATIVE_CANONICAL_INTEGRATION',JSON.stringify({
+  verdict:k.verdict,from:start.tick,to:end.tick,
+  cpuInk:k.cpuImpactDeltas,human:k.humanActions,replay,
+  source:'25/17/26/0',winner:'NONE'}));
+}
+
 async function main(){
  save();
  const chrome=process.env.T21_CHROME_PATH||
@@ -477,6 +679,30 @@ async function main(){
   // V18 P0: follow the actual STANDARD SOURCE GAME portal, not B441 QA
   // navigation. A real CDP click starts the same 25/17/26/0 world used
   // by human play. No artificial clock, Actor, ink, stage or nav writes.
+  if(k3IntegratedSource180){
+   // Select the existing Needle SMG through the genuine source portal,
+   // never by writing game state or changing an actor/weapon in JS.
+   let currentKit=await evaluate(
+    "document.querySelector('#source-weapon-preselect')?.value");
+   if(currentKit!=='needle-smg'){
+    await buttonClick('#source-weapon-preselect');
+    for(const [type,key,vk] of [
+     ['keyDown','Home',36],['keyUp','Home',36],
+     ['keyDown','ArrowDown',40],['keyUp','ArrowDown',40],
+     ['keyDown','Enter',13],['keyUp','Enter',13]
+    ])await cdp('Input.dispatchKeyEvent',{
+     type,key,code:key,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk});
+   }
+   portals.circuit=await until(async()=>evaluate(`(() => {
+    const s=document.querySelector('#source-weapon-preselect');
+    const a=document.querySelector('#play-circuit');
+    return s?.value==='needle-smg'&&a?.href&&
+     new URL(a.href).searchParams.get('t21W10B389')==='needle-smg'?
+     a.href:null;
+   })()`),18000,180);
+   proof.k3RealPortalWeaponSelection='GENUINE_CDP_USER_SELECT_NEEDLE_SMG';
+   save();
+  }
   proof.stage='P0_REAL_STANDARD_SOURCE_PORTAL_CLICK';save();
   await buttonClick('#play-circuit');
   await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'`),120000);
@@ -1040,6 +1266,10 @@ async function main(){
     console.log('P1_NATIVE_REAL_SOURCE_RAMP_ROUTE',
      JSON.stringify(proof.p1RampNativeProgress));
    }
+  }
+  if(k3IntegratedSource180){
+   await runK3CanonicalOneWorld(actualHref);
+   return;
   }
   proof.p0Verdict='PASS_CANONICAL_SOURCE_PRESTART_W_BLOCKED_AND_7CPU_POSTJOIN_W';
   proof.stage=p1InputDiagnosticOnce?'P1_REAL_D_KEY_INPUT_WITNESS':
