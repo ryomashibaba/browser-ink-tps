@@ -655,6 +655,12 @@ export class UndertowF3PlayablePreviewApp{
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
   this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
+  // K1 human SOURCE only: do not let unregistered optical reference faces
+  // imitate real walkable registered floor. No new actors or colliders.
+  if(this.b203FullRound&&
+     new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'&&
+     sourceCanonicalPlayableMode(location.href)!==null)
+   this.sourceCompletion.setRegisteredFloorPriority(true);
   // B251 only applies to actual 180s source player rounds. Optical
   // vertices stay pinned and no Rapier/NavMesh/ink authority is changed.
   if(this.b203FullRound&&

@@ -186,7 +186,9 @@ export function auditF3eSourceCoverage(stage:StageDefinition){
 export const F3E_SOURCE_MASSING_MODES=['ARCHITECTURE','HOLOGRAM'] as const;
 export type F3eSourceMassingMode=typeof F3E_SOURCE_MASSING_MODES[number];
 
-export function f3eSourceMassingStyle(shade:Shade,mode:F3eSourceMassingMode){
+export function f3eSourceMassingStyle(
+ shade:Shade,mode:F3eSourceMassingMode,registeredFloorPriority=false
+){
  const reference:Record<Shade,{opacity:number;rgb:[number,number,number]}>={
   CONCRETE:{opacity:.28,rgb:[.42,.66,.79]},
   SLOPE:{opacity:.33,rgb:[.90,.66,.39]},
@@ -211,13 +213,26 @@ export function f3eSourceMassingStyle(shade:Shade,mode:F3eSourceMassingMode){
   return {opacity:original.opacity,rgb:original.rgb,
    opaque:false,depthWrite:false};
  }
+ // K1 real SOURCE player: visual-only original floor-like faces must not
+ // read as the same safe native Rapier support as registered 25 solids.
+ // Exact source mesh, draw batches and all collision/paint/nav are unchanged.
+ // Keep the pinned legacy art/QA architecture style as the default.
+ if(registeredFloorPriority){
+  const unresolved:Partial<Record<Shade,{opacity:number;rgb:[number,number,number]}>>={
+   CONCRETE:{opacity:.14,rgb:[.34,.61,.77]},
+   SLOPE:{opacity:.14,rgb:[.76,.55,.31]},
+   DETAIL:{opacity:.12,rgb:[.90,.77,.37]}
+  };
+  const ghost=unresolved[shade];
+  if(ghost)return {...ghost,opaque:false,depthWrite:false};
+ }
  const style=mass[shade];
  return {opacity:style.opacity,rgb:style.rgb,
   opaque:style.opaque,depthWrite:style.opaque};
 }
 function updateSourceMaterial(m:StandardMaterial,shade:Shade,
- mode:F3eSourceMassingMode){
- const style=f3eSourceMassingStyle(shade,mode);
+ mode:F3eSourceMassingMode,registeredFloorPriority=false){
+ const style=f3eSourceMassingStyle(shade,mode,registeredFloorPriority);
  const [r,g,b]=style.rgb;
  m.diffuse=new Color(r,g,b);
  m.emissive=new Color(r*.10,g*.11,b*.12);
@@ -243,6 +258,7 @@ export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition
  const root=new Entity('T21F3E:EXACT_ORIGINAL_REFERENCE_ONLY_NO_COLLISION');
  app.root.addChild(root);
  let visualMode:F3eSourceMassingMode='ARCHITECTURE';
+ let registeredFloorPriority=false;
  const materials=new Map<Shade,StandardMaterial>();
  const categories=Object.keys(manifest.categories) as Shade[];
  for(const kind of categories){
@@ -274,9 +290,18 @@ export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition
     throw Error('T21_W10B28_UNAUTHORIZED_SOURCE_VISUAL_MODE');
    if(mode===visualMode)return visualMode;
    for(const [shade,material] of materials)
-    updateSourceMaterial(material,shade,mode);
+    updateSourceMaterial(material,shade,mode,registeredFloorPriority);
    visualMode=mode;
    return visualMode;
+  },
+  setRegisteredFloorPriority(on:boolean){
+   // Only existing materials change; never source geometry or simulation.
+   if(typeof on!=='boolean')
+    throw Error('T21_K1_REGISTERED_FLOOR_VISUAL_FLAG_INVALID');
+   if(on===registeredFloorPriority)return;
+   for(const [shade,material] of materials)
+    updateSourceMaterial(material,shade,visualMode,on);
+   registeredFloorPriority=on;
   },
   renderAuthority:{
    source:'EXACT_PINNED_ORIGINAL_TRIANGLES_ONLY' as const,

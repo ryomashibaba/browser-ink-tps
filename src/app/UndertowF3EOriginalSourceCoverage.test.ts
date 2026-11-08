@@ -61,6 +61,17 @@ describe('W10-B28 visual massing on actual source-only architecture',()=>{
   }
   expect(f3eSourceMassingStyle('GLASS','ARCHITECTURE').opacity)
    .toBeLessThan(.25);
+  // K1 actual-source opacity is not a collision promotion or new QA mode.
+  for(const kind of ['CONCRETE','SLOPE','DETAIL'] as const){
+   const before=f3eSourceMassingStyle(kind,'ARCHITECTURE');
+   const actual=f3eSourceMassingStyle(kind,'ARCHITECTURE',true);
+   expect(actual.opacity).toBeLessThan(.2);
+   expect(actual.opacity).toBeLessThan(before.opacity);
+   expect(actual).toMatchObject({opaque:false,depthWrite:false});
+  }
+  for(const kind of ['WALL','SUPPORT','HIGH','GLASS'] as const)
+   expect(f3eSourceMassingStyle(kind,'ARCHITECTURE',true))
+    .toEqual(f3eSourceMassingStyle(kind,'ARCHITECTURE'));
  });
  it('exact same source mesh audit and 25/17/26 original authority across both styles',()=>{
   const stage=undertowT21dConnectivityQaStage();
