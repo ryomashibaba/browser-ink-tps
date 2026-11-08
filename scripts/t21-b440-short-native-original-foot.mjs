@@ -16,8 +16,10 @@ const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
 const p0NormalHuman=process.env.T21_P0_NORMAL_HUMAN==='1';
 const p1RampOnce=p0NormalHuman&&process.env.T21_P1_TRUE_RAMP_WALK_ONCE==='1';
+const p1InputDiagnosticOnce=p0NormalHuman&&
+ process.env.T21_P1_INPUT_DIAGNOSTIC_ONCE==='1';
 const p1LowerOnce=p0NormalHuman&&
- (process.env.T21_P1_LOWER_EDGE_ONCE==='1'||p1RampOnce);
+ (process.env.T21_P1_LOWER_EDGE_ONCE==='1'||p1RampOnce||p1InputDiagnosticOnce);
 
 // One-shot full replay uses the EXACT real frontline portal mode, which
 // includes B448. The ordinary B441 short trial remains unchanged.
@@ -757,6 +759,54 @@ async function main(){
     ui:found.ui,stopReason:n.stopReason,geometryWrites:0,actorWrites:0};
    save();
    console.log('P1_REAL_LANDING_EDGE_WARNING',JSON.stringify(proof.p1NativeLowerEdge));
+   if(p1InputDiagnosticOnce){
+    // Same true seven-CPU world: one bounded physical CDP D-key.
+    // Observe accepted native axes, yaw and real pointer lock, not just
+    // body X/Z drift from the earlier W key.
+    const start=await snap();
+    const k={key:'d',code:'KeyD',
+     windowsVirtualKeyCode:68,nativeVirtualKeyCode:68};
+    const trace=[{phase:'BEFORE_D',tick:start.tick,body:start.player.position,
+     input:start.sourceNativeHumanInputProjection}];
+    await cdp('Input.dispatchKeyEvent',{type:'keyDown',...k});
+    try{
+     await until(async()=>{
+      const n=await snap();
+      if(n.stopReason)fail('P1_NATIVE_D_DIAGNOSTIC_SAFE_STOP_'+n.stopReason);
+      const input=n.sourceNativeHumanInputProjection;
+      if(!input||input.nativeTick!==n.tick)
+       fail('P1_NATIVE_D_DIAGNOSTIC_SOURCE_WITNESS_MISSING');
+      trace.push({phase:'D_HELD',tick:n.tick,body:n.player.position,input});
+      if(trace.length>16)trace.splice(1,1);
+      return n.tick>=start.tick+12?n:false;
+     },25000,100);
+    }finally{
+     await cdp('Input.dispatchKeyEvent',{type:'keyUp',...k});
+    }
+    const after=await snap();
+    trace.push({phase:'D_RELEASED',tick:after.tick,
+     body:after.player.position,input:after.sourceNativeHumanInputProjection});
+    const accepted=trace.slice(1,-1).find(t=>
+     t.input?.nativeInputAxes[0]===1&&
+     t.input.realPointerLockAtSampling===true);
+    const delta=[after.player.position[0]-start.player.position[0],
+     after.player.position[2]-start.player.position[2]];
+    const classification=!accepted?'HOLD_D_NOT_OBSERVED_IN_NATIVE_AXES':
+     Math.abs(accepted.input.projectedWorldIntent[0])<.15?
+      'HOLD_CAMERA_D_INTENT_POINTS_ALONG_Z':
+     Math.abs(delta[0])<.15?
+      'HOLD_D_ACCEPTED_BUT_WORLD_X_DISPLACEMENT_UNPROVEN':
+     'D_ACCEPTED_AND_WORLD_X_DISPLACEMENT_OBSERVED';
+    proof.p1NativeInputDiagnostic={
+     classification,trace,actualBodyXZDelta:delta,
+     realKeyDDispatched:true,
+     nativeHumanTeleportWrites:0,stageGeometryWrites:0,
+     sourceAuthority:'25/17/26/0',sourceRampWalkCertified:false,
+     officialCrossTeamRouteCertified:false};
+    save();
+    console.log('P1_REAL_SOURCE_D_KEY_CAMERA_AND_MOVEMENT_WITNESS',
+     JSON.stringify(proof.p1NativeInputDiagnostic));
+   }
    if(p1RampOnce){
     // Same real seven-CPU native SOURCE world. Test genuine keyboard strafe
     // from the actual edge back across authorized lower landing into the
@@ -844,10 +894,12 @@ async function main(){
    }
   }
   proof.p0Verdict='PASS_CANONICAL_SOURCE_PRESTART_W_BLOCKED_AND_7CPU_POSTJOIN_W';
-  proof.stage=p1RampOnce?'P1_NATIVE_REGISTERED_LANDING_TO_RAMP':
+  proof.stage=p1InputDiagnosticOnce?'P1_REAL_D_KEY_INPUT_WITNESS':
+   p1RampOnce?'P1_NATIVE_REGISTERED_LANDING_TO_RAMP':
    p1LowerOnce?'P1_REAL_FIRST_LANDING_EDGE_WARNING':
    'P0_NO_SAFE_STOP_IN_BOUNDED_HEADLESS_PATH';
-  proof.verdict=p1RampOnce?'PASS_TRUE_NATIVE_GROUNDED_LANDING_TO_RAMP':
+  proof.verdict=p1InputDiagnosticOnce?'PASS_DIAGNOSTIC_CAPTURED_ROUTE_STILL_HOLD':
+   p1RampOnce?'PASS_TRUE_NATIVE_GROUNDED_LANDING_TO_RAMP':
    p1LowerOnce?'PASS_NATIVE_LOWER_EDGE_WARNING_BEFORE_FALL':
    proof.p0Verdict;
   save();

@@ -153,6 +153,7 @@ import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {W10B112HumanGroundLedger} from './W10B112HumanGroundLedger';
 import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 import {inspectB120OriginalFirstDropBoundary} from './W10B120OriginalSourceBoundary';
+import {sourceNativeInputProjection} from './SourceNativeInputProjection';
 import {inspectB124ActualRaisedSourceBoundary}
  from './W10B124OriginalRaisedSourceBoundary';
 import {createF3OriginalRaisedEdgeCoach,originalRaisedSourceEdgeStatus}
@@ -6901,10 +6902,20 @@ export class UndertowF3PlayablePreviewApp{
     actualRapierBody:[pos.x,pos.y,pos.z],
     actualRapierSupportId:b146Foot.lastOriginalSourceHitId
    }):null;
+  const nativeCamera=this.camera.sourcePracticeViewSnapshot();
+  // Read-only SOURCE witness; actual native held axes and current real yaw.
+  const nativeInput=this.nativeCanonicalPrestart?
+   sourceNativeInputProjection({
+    nativeTick:this.clock.tick,
+    axes:[this.input.moveX,this.input.moveY],
+    yawDegrees:nativeCamera.yawDegrees,
+    pointerLocked:document.pointerLockElement===this.canvas
+   }):null;
   return {
    phase:'F3',renderer:'webgl2',stageId:this.rawStage.metadata.id,
    playableSandbox:true,actualPlayerInput:true,
-   cameraSourcePractice:this.camera.sourcePracticeViewSnapshot(),
+   cameraSourcePractice:nativeCamera,
+   sourceNativeHumanInputProjection:nativeInput,
    sourceFrameQuality:this.sourceFrameQualitySnapshot(),
    b21RenderProbe:this.b21ProbeSnapshot(),
    b22OwnerGpuTrial:this.b22Trial.snapshot(performance.now()),
