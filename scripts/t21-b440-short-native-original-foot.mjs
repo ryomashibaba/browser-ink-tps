@@ -503,6 +503,8 @@ async function runK3CanonicalOneWorld(actualHref){
  const beforeOwnerWalk=await validate(await snap());
  const ownerWalk={tag:'REAL_KEYW_TO_GENUINE_OWN_INK',from:beforeOwnerWalk.tick,
   before:beforeOwnerWalk.player.position,realKeyW:false,samples:[]};
+ // Preserve partial real W progress even on the first unsafe STOP.
+ k.ownerWalkProgress=ownerWalk;persist();
  if(beforeOwnerWalk.player.inkRelation!=='OWN'){
   const w={key:'w',code:'KeyW',windowsVirtualKeyCode:87,
    nativeVirtualKeyCode:87};
@@ -521,7 +523,9 @@ async function runK3CanonicalOneWorld(actualHref){
     if(ownerWalk.samples.length===0||
        n.tick-ownerWalk.samples[ownerWalk.samples.length-1].tick>=4){
      ownerWalk.samples.push({tick:n.tick,position:n.player.position,
-      relation:n.player.inkRelation,originalSolid:f.lastOriginalSourceHitId});
+      relation:n.player.inkRelation,originalSolid:f.lastOriginalSourceHitId,
+      nativeAxes:n.sourceNativeHumanInputProjection?.nativeInputAxes??null});
+     persist();
      if(ownerWalk.samples.length>12)ownerWalk.samples.shift();
     }
     if(elapsed>=24&&n.player.inkRelation!=='OWN')
