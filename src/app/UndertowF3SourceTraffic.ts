@@ -1595,12 +1595,30 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       // The first B467 and second B468 audits are unchanged.
       const originalProposals=proposeB441OriginalFrontline(this.stage,'B');
       let prioritized=originalProposals;
-      if(fronts.length>=2&&this.sourceInk){
+      // B2/B4 both physically reached the SAME original B-side goal
+      // in real B441 #42433069608. When the OTHER real B2/B4 already
+      // has a B443 APPROVED in-flight goal, do not blindly repeat that
+      // first candidate. Prefer another equally useful existing
+      // ORIGINAL source-ink proposal, subject to the unchanged full
+      // Rapier/Recast checks below. If no alternative is genuinely
+      // reachable, keep the old safe first candidate: never fake a
+      // route, move an actor, or override a better real ink opportunity.
+      const otherB=id==='B2'?'B4':'B2';
+      const otherNativeBFront=this.b443OriginalGoalLocks.get(otherB);
+      const distributeFirstSourceBGoal=fronts.length===0&&
+       !!otherNativeBFront&&this.physicallyRejoined.has(otherB)&&
+       this.bots.some(m=>m.id===otherB&&m.team===bot.team&&
+        m.lifeState==='ACTIVE'&&m.mobilityState==='GROUND');
+      if(this.sourceInk&&(fronts.length>=2||distributeFirstSourceBGoal)){
+       const points=originalProposals.map(p=>new Vec3(...p.point));
        const ranked=rankOriginalSourcePatrolGoals(
-        originalProposals.map(p=>new Vec3(...p.point)),
-        bot.team,this.sourceInk,0);
-       prioritized=ranked.map(row=>originalProposals[row.index]!);
-       this.b469NativeInkRankedExpansionAttempts++;
+        points,bot.team,this.sourceInk,0);
+       const separated=distributeOriginalSourceGoalCoverage(
+        ranked,points,this.actualTeamCoveragePositions(id,bot.team));
+       prioritized=separated.map(row=>originalProposals[row.index]!);
+       // Older B469 metric is specifically for 3rd/4th goal
+       // owner-grid expansion, not the new initial B2/B4 tie-break.
+       if(fronts.length>=2)this.b469NativeInkRankedExpansionAttempts++;
       }
       for(const proposal of prioritized){
        const goal=new Vec3(...proposal.point);

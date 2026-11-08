@@ -186,6 +186,31 @@ describe('actual source PLAYER C-order neighbor ink eligibility',()=>{
  });
 });
 describe('genuine source CPU teammates distribute already-authorized goals',()=>{
+ it('prioritizes an alternate already-existing SOURCE B2/B4 original goal when the first is occupied',()=>{
+  // Real native B441 #42433069608 ended with both B2/B4 within 0.5m
+  // of the SAME strictly approved SOURCE goal. This is a preference
+  // regression guard, NOT evidence that the alternate path is passable.
+  const existingBGoals=[
+   new Vec3(-3.385263365007795,4.502,-37.32132381225935),
+   new Vec3(-6.185263365007792,4.502,-37.32132381225935)
+  ];
+  const ink={sampleWorld:vi.fn((_p:Vec3,_r:number,_f:number)=>
+   ({owner:Team.Neutral,planeDistance:0} as GameplayInkSample)
+  )} as unknown as GameplayInkSystem;
+  const ranks=rankOriginalSourcePatrolGoals(existingBGoals,Team.B,ink,0);
+  expect(ranks.map(x=>x.index)).toEqual([0,1]);
+  const otherNativeBApprovedGoal=existingBGoals[0]!;
+  const shared=distributeOriginalSourceGoalCoverage(
+   ranks,existingBGoals,[otherNativeBApprovedGoal]);
+  expect(shared.map(x=>x.index)).toEqual([1,0]);
+  expect(shared.every(x=>x.pathAuthorized===false&&x.sourceOnly)).toBe(true);
+  expect(existingBGoals[0]!.x).toBe(-3.385263365007795);
+  // Better actual ink opportunity always wins; spacing is only a tie.
+  const sorted=[{...ranks[0]!,neighborhoodOpportunity:3},
+   {...ranks[1]!,neighborhoodOpportunity:2}];
+  expect(distributeOriginalSourceGoalCoverage(
+   sorted,existingBGoals,[otherNativeBApprovedGoal])[0]!.index).toBe(0);
+ });
  it('real PLAYER C-ordered A1 and same-side teammates avoid goal crowding without inventing paths',()=>{
   const candidates=[new Vec3(1,3,40),new Vec3(5,3,40),
    new Vec3(9,3,40)];
