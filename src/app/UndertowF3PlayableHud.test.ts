@@ -868,6 +868,6 @@ describe('original source FAIL CLOSED recovery text',()=>{
    stopped:true,paused:true};
   expect(b465SourceRoundKeyHelp(x)).toContain('R DISABLED');
   expect(b465SourceRoundKeyHelp({...x,fallRecoveryAvailable:true}))
-   .toContain('R NEW SOURCE WORLD (OLD WORLD REMAINS STOPPED)');
+   .toContain('ESC THEN CLICK RESTART SOURCE (NEW WORLD ONLY)');
  });
 });

@@ -226,7 +226,7 @@ export function b465SourceRoundKeyHelp(v:{
  const base='M RADAR · N SOUND · P PAUSE';
  if(!v.sourceFullRound)return base+' · R RESTART';
  if(v.stopped)return v.fallRecoveryAvailable?
-  'SAFE STOP · R NEW SOURCE WORLD (OLD WORLD REMAINS STOPPED)':
+  'SAFE STOP · ESC THEN CLICK RESTART SOURCE (NEW WORLD ONLY)':
   base+' · SAFE STOP (R DISABLED)';
  if(v.matchState==='TIME_UP')
   return 'R REPLAY NEW SOURCE WORLD · NO OFFICIAL WINNER';
