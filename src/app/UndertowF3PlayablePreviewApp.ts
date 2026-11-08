@@ -4990,8 +4990,15 @@ export class UndertowF3PlayablePreviewApp{
      }
     }
     if(!this.w10b14)this.traffic.observe(frame);
-    if(this.matchState==='STAGING'&&this.traffic.snapshot().freeCombatEnabled)
+    if(this.matchState==='STAGING'&&this.traffic.snapshot().freeCombatEnabled){
      this.matchState='PLAYING';
+     // CPU 7/7 truly joined on THIS native tick. Release the canonical
+     // prestart key latch immediately, not on the next fixed tick: a real
+     // KeyW between ticks must be accepted as normal PLAYING input.
+     // Held keys from STAGING remain blocked until a physical keyup.
+     if(this.nativeCanonicalPrestart)
+      this.input.setSourcePrestartMovementBlocked(false);
+    }
     if(this.matchState==='PLAYING'){
      this.remainingSeconds=Math.max(0,this.remainingSeconds-seconds);
      if(this.remainingSeconds===0)this.matchState='TIME_UP';
