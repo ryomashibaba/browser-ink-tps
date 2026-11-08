@@ -1752,6 +1752,17 @@ async function main(){
     footChangedCells:actor.footChangedCells};
   };
   const firstA3Paint=b448Experiment?realA3Paint(after):null;
+  // P2 is genuine B441-only player experience. Read-only BEFORE and
+  // AFTER snapshots: helper proposal, native accepted aim and an actual
+  // projectile/changed ownerGrid are separate and must never be conflated.
+  const firstP2Outer=b441Experiment?
+   after.b216RealNativePaintBackfill:null;
+  if(b441Experiment&&(
+    firstP2Outer?.enabled!==true||
+    firstP2Outer.p2OriginalOuterSelected!==true||
+    !Number.isSafeInteger(firstP2Outer.p2OriginalOuterSearches)||
+    !Number.isSafeInteger(firstP2Outer.p2NativeSightApprovedOuterAims)))
+   fail('P2_NATIVE_ORIGINAL_OUTER_AIM_NOT_ACTUALLY_ENABLED');
   const firstRead={tick:after.tick,patrol:startPatrol,
    b445FirstOriginalGateByCpu:validateB445(startPatrol),
    actors:after.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
@@ -2047,6 +2058,49 @@ async function main(){
    originalCollisionAuthorizationChanged:false,
    scoreableSurfacePromotions:0};
   const afterPatrol=actual.cpu.sourcePatrol;
+  if(b441Experiment){
+   const late=actual.b216RealNativePaintBackfill;
+   if(!late||late.enabled!==true||
+      late.p2OriginalOuterSelected!==true||
+      !Number.isSafeInteger(late.p2OriginalOuterSearches)||
+      !Number.isSafeInteger(late.p2NativeSightApprovedOuterAims)||
+      late.p2OriginalOuterSearches<firstP2Outer.p2OriginalOuterSearches||
+      late.p2NativeSightApprovedOuterAims<
+       firstP2Outer.p2NativeSightApprovedOuterAims||
+      late.p2NativeSightApprovedOuterAims>late.p2OriginalOuterSearches||
+      actual.cpu.physicalRejoins.length!==7||
+      actual.originalSourceSolids!==25||
+      actual.originalPaintSurfaces!==17||
+      actual.originalSourceNavigationLinks!==26||
+      actual.sourceScoreablePromotions!==0)
+    fail('P2_TRUE_NATIVE_OUTER_SOURCE_EVIDENCE_INVALID');
+   const searches=late.p2OriginalOuterSearches-
+    firstP2Outer.p2OriginalOuterSearches;
+   const approved=late.p2NativeSightApprovedOuterAims-
+    firstP2Outer.p2NativeSightApprovedOuterAims;
+   proof.p2OriginalOuterSourceInk={
+    schema:'P2_NATIVE_ORIGINAL_OUTER_PAINT_AIM_ACTUAL_WINDOW_V1',
+    source:'25/17/26/0',
+    genuineNativeBeforeTick:after.tick,genuineNativeAfterTick:actual.tick,
+    nativeTickInterval:actual.tick-after.tick,
+    actualSevenOriginalCpu:actual.cpu.physicalRejoins.length,
+    before:firstP2Outer,after:late,
+    delta:{originalOuterSearches:searches,
+      nativeRapierAndRangeApprovedAims:approved},
+    verdict:approved>0?
+     'PASS_REAL_NATIVE_SOURCE_OUTER_AIM_APPROVAL_ONLY_NOT_SHOT':
+     searches>0?
+      'HOLD_REAL_OUTER_SEARCH_NO_APPROVED_ORIGINAL_AIM':
+      'HOLD_NO_ACTUAL_OUTER_SEARCH_IN_SHORT_SESSION',
+    realShotAndChangedInkNotAttributedToOuterAim:true,
+    gameplayPositionInkClockShotScoreWrites:0,
+    originalGeometryOrNavWrites:0,officialScoreable:0,
+    formalOpposing4v4Certified:false,officialWinner:'NONE'
+   };
+   save();
+   console.log('P2_ACTUAL_NATIVE_OUTER_SOURCE_AIM',
+    JSON.stringify(proof.p2OriginalOuterSourceInk));
+  }
   if(b448Experiment){
    const endA3Paint=realA3Paint(actual);
    if(!firstA3Paint||endA3Paint.tick<=firstA3Paint.tick)
