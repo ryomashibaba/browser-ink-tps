@@ -3,6 +3,7 @@
  * No source positions, collision meshes, gameplay paint, physics or nav. */
 import {BLEND_NORMAL,CULLFACE_NONE,calculateNormals,Color,Entity,Mesh,
  MeshInstance,StandardMaterial,type AppBase,type Material} from 'playcanvas';
+import {GAME_CONFIG} from '../config/game/gameConfig';
 import type {StageDefinition,StageMaterialKey,StageSolidDefinition,
  StageTriangleMeshGeometry,StageVector3}
  from '../stage/StageDefinition';
@@ -73,6 +74,11 @@ function b250OpticalOnlyMaterial():StandardMaterial{
  m.update();
  return m;
 }
+/** Existing registered inkable surfaces only; purely visual SOURCE neutral.
+ * No new polygons, collision roles, ink ownership or Turf scoreability. */
+export const B250_REGISTERED_SOURCE_NEUTRAL=
+ Object.freeze([.42,.49,.54] as const);
+
 export type B250Band='LOWER'|'MIDDLE'|'UPPER';
 export function b250SolidTone(
  s:Pick<StageSolidDefinition,'center'|'material'>,min:number,max:number
@@ -109,6 +115,23 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  const originalAmbient=app.scene.ambientLight.clone();
  const originalClear=camera.camera.clearColor.clone();
  const bindings:{mesh:MeshInstance;before:Material;after:StandardMaterial}[]=[];
+ // The opaque ink shader draws over the registered floor's StandardMaterial:
+ // tinting ONLY that underneath material cannot improve SOURCE walkability
+ // readability. Recolor the existing exact PaintSurface shaders instead.
+ // Only original paint backings with registered collision are eligible.
+ const sourcePaintMeshes:MeshInstance[]=[];
+ for(const paint of stage.paintSurfaces){
+  const backing=stage.solids.find(s=>s.id===paint.backingSolidId);
+  if(!backing||backing.collisionEnabled===false)continue;
+  const paintEntity=root.findByName('PaintSurface:'+paint.id) as Entity|null;
+  const meshes=paintEntity?.render?.meshInstances;
+  if(!meshes||meshes.length!==1)
+   throw Error('B250_REGISTERED_PAINT_RENDER_MISSING_'+paint.id);
+  sourcePaintMeshes.push(meshes[0]!);
+ }
+ if(!sourcePaintMeshes.length)throw Error('B250_NO_REGISTERED_PAINT_RENDER');
+ const originalNeutral=new Float32Array(GAME_CONFIG.visual.neutral);
+ const legibleNeutral=new Float32Array(B250_REGISTERED_SOURCE_NEUTRAL);
  const excludedOptical=new Set<MeshInstance>();
  let glassRegisteredCollisionTriangles=0;
  let glassExcludedOpticalTriangles=0;
@@ -151,6 +174,9 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  const setEnabled=(on:boolean)=>{
   enabled=on;
   for(const b of bindings)b.mesh.material=on?b.after:b.before;
+  for(const mesh of sourcePaintMeshes)
+   mesh.material.setParameter('uNeutralColor',
+    on?legibleNeutral:originalNeutral);
   app.scene.ambientLight=on?new Color(.71,.77,.83):originalAmbient;
   camera.camera!.clearColor=on?new Color(.10,.15,.20,1):originalClear;
  };

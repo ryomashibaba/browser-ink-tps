@@ -1,10 +1,31 @@
 import {describe,expect,it} from 'vitest';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
-import {b250SolidTone,b250GlassSourceVisibilityPartition}
+import {b250SolidTone,b250GlassSourceVisibilityPartition,
+ B250_REGISTERED_SOURCE_NEUTRAL}
  from './B250SourceStageReadability';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
+describe('SOURCE registered paint-floor visual contrast without physical promotion',()=>{
+ it('brightens only the neutral shader color of existing registered floor renderings',()=>{
+  const original=[.24,.27,.31] as const;
+  expect(B250_REGISTERED_SOURCE_NEUTRAL).toHaveLength(3);
+  for(let i=0;i<3;i++){
+   expect(B250_REGISTERED_SOURCE_NEUTRAL[i]).toBeGreaterThan(original[i]!);
+   expect(B250_REGISTERED_SOURCE_NEUTRAL[i]).toBeLessThan(.6);
+  }
+  const source=undertowT21dConnectivityQaStage();
+  const approved=source.paintSurfaces.filter(p=>{
+   const solid=source.solids.find(s=>s.id===p.backingSolidId);
+   return solid&&solid.collisionEnabled!==false;
+  });
+  expect(approved.length).toBeGreaterThan(0);
+  expect(source.solids).toBe(stage.solids);
+  expect(source.paintSurfaces).toBe(stage.paintSurfaces);
+  expect(source.navigationLinks).toBe(stage.navigationLinks);
+ });
+});
+
 describe('B250 material-only existing registered geometry',()=>{
  it('retains 25/17/26 identity while classifying actual solid elevations',()=>{
   const before=[stage.solids,stage.paintSurfaces,stage.navigationLinks];
