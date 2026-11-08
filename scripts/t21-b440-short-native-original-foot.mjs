@@ -847,10 +847,37 @@ async function main(){
     // ends centreward; retreat S toward supported +Z before pressing D.
     // No actor teleport, modified collider, nav link, invented floor,
     // KCC threshold change, view yaw override, synthetic world ticking.
-    const begin=await snap();
-    const initial=begin.player?.position;
+    let begin=await snap();
     const originId='UndertowT21D:first-drop-landing-positive-z';
     const slopeId='UndertowT21D:right-low-route-ramp-positive-z';
+    // A genuine held-W release can be sampled at Z50.903 while still
+    // grounded on the original landing (#42472564745). D at that Z was
+    // never verified. Do not invent a wider passable route: release every
+    // key and observe real KCC/coasting into the already-proven band.
+    // Never write actor position or run a synthetic physics tick.
+    if(begin.player?.position?.[2]>50.8){
+     const from=begin.player.position,releaseTick=begin.tick;
+     begin=await until(async()=>{
+      const n=await snap(),z=n.player?.position?.[2];
+      if(n.stopReason||n.matchState!=='PLAYING'||
+         n.cpu?.physicalRejoins?.length!==7||
+         n.b112OriginalHumanGround?.genuineKccGrounded!==true||
+         n.b112OriginalHumanGround?.lastOriginalSourceHitId!==originId)
+       fail('P1_REAL_W_RELEASE_COAST_LOST_ORIGINAL_SUPPORT_OR_STOP');
+      if(Number.isFinite(z)&&z>=49.3&&z<=50.8)return n;
+      if(!Number.isFinite(z)||z<49.3||n.tick>releaseTick+24)
+       fail('P1_REAL_W_RELEASE_COAST_DID_NOT_REACH_PROVEN_LANDING');
+      return false;
+     },20000,60);
+     proof.p1OriginalSupportOnlyReleaseCoast={
+      releasedAtTick:releaseTick,fromZ:from[2],
+      settledAtTick:begin.tick,toZ:begin.player.position[2],
+      registeredOriginalFoot:originId,realKccGrounded:true,
+      userKeyInputsDuringCoast:0,actorPositionWrites:0
+     };
+     save();
+    }
+    const initial=begin.player?.position;
     const keys={
      KeyS:{key:'s',code:'KeyS',windowsVirtualKeyCode:83,nativeVirtualKeyCode:83},
      KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
