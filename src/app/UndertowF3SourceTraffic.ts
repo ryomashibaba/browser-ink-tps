@@ -112,7 +112,7 @@ export interface B446RealFootDryRouteProbe{
   * Every one already passed the identical original Rapier + full Recast
   * checks, but this list grants NO Actor move and NO navigation authority.
   * B448 alone may later select/reapprove one for real A3. */
- readonly passingExistingGoals:readonly [number,number,number][];
+ readonly passingExistingGoals:[number,number,number][];
  /** B450 actual B2/B4 first original unsupported samples; never goals. */
  readonly b450FailedOriginalGoals:B450FailedOriginalGoal[];
  readonly probeOnlyNoActorOrGoalWrites:true;
