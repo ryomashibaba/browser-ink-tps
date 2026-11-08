@@ -422,6 +422,8 @@ export class UndertowF3PlayablePreviewApp{
  // W10-B112 read-only source-foot forensic witness, QA opt-in only.
  private readonly b112GroundLedger=new W10B112HumanGroundLedger();
  private b113FloorWarning:HTMLElement|null=null;
+ // Observed native lower landing boundary; read-only visual truth.
+ private p1LowerEdgeRisk:{distance:number;solidId:string}|null=null;
  private readonly b112GroundEnabled=(()=>{
   const q=new URL(location.href).searchParams;
   return q.get('t21QaDrive')==='source'&&
@@ -1935,7 +1937,7 @@ export class UndertowF3PlayablePreviewApp{
   }
   this.b129EdgeCoach=createF3OriginalRaisedEdgeCoach(ui);
   this.b209RampEdgeCoach=createB209OriginalRampEdgeCoach(ui);
-  if(this.b112GroundEnabled){
+  if(this.b112GroundEnabled||this.nativeCanonicalPrestart){
    const warning=document.createElement('div');
    warning.id='t21-f3-b113-ground-warning';
    warning.hidden=true;
@@ -5519,6 +5521,58 @@ export class UndertowF3PlayablePreviewApp{
      this.physics.castCharacterFootSupport(
       physical,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
       this.player.currentMode):null;
+    // One real original Rapier ray toward the centre from the EXISTING
+    // first-drop landing. An absent near-height hit is a WARNING, not
+    // evidence that a whole floor is missing, and not a new collision.
+    if(this.nativeCanonicalPrestart&&frame%6===0){
+     const id=rampRealRay?.solidId??null;
+     const onLanding=id==='UndertowT21D:first-drop-landing-positive-z'||
+      id==='UndertowT21D:first-drop-landing-negative-z';
+     this.p1LowerEdgeRisk=null;
+     if(onLanding&&this.matchState==='PLAYING'&&!this.paused&&
+        !this.stopReason&&this.stats.playerGrounded&&
+        this.player.currentMode==='HUMAN'&&
+        this.rawStage.solids.length===25&&
+        this.rawStage.paintSurfaces.length===17&&
+        this.rawStage.navigationLinks?.length===26){
+      const foot=physical.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+      const original=inspectB120OriginalFirstDropBoundary({
+       nativeTick:frame,actualRapierBody:[physical.x,physical.y,physical.z],
+       side:physical.z>=0?'positive-z':'negative-z'
+      });
+      if(rampRealRay&&Math.abs(foot-rampRealRay.point.y)<=.22&&
+         original.originalFootInsideXZ&&
+         original.actualHorizontalDistanceToOriginalPolygonEdgeMeters<=1.8){
+       const next=this.physics.castCharacterFootSupport(new Vec3(
+        physical.x,physical.y,physical.z+(physical.z>=0?-1.5:1.5)),
+        PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+       if(!next||Math.abs(foot-next.point.y)>.22)
+        this.p1LowerEdgeRisk={
+         distance:Number(original.actualHorizontalDistanceToOriginalPolygonEdgeMeters.toFixed(3)),
+         solidId:id!
+        };
+      }
+     }
+     const risk=this.p1LowerEdgeRisk;
+     this.canvas.dataset.t21P1LowerLandingEdge=risk?
+      'REGISTERED_EDGE_NO_NEAR_HEIGHT_NEXT_RAY':'OFF';
+     this.canvas.dataset.t21P1LowerLandingEdgeMeters=
+      String(risk?.distance??'UNAVAILABLE');
+     if(this.b113FloorWarning){
+      this.b113FloorWarning.dataset.t21P1NativeLandingEdge=
+       this.canvas.dataset.t21P1LowerLandingEdge;
+      if(risk){
+       this.b113FloorWarning.textContent=
+        'REGISTERED LOWER LANDING EDGE · '+risk.distance+
+        'm TO BOUNDARY · NO VERIFIED FLOOR AT THIS HEIGHT 1.5m AHEAD · STOP / TURN';
+       this.b113FloorWarning.hidden=false;
+       this.b113FloorWarning.style.display='block';
+      }else if(!this.b112GroundEnabled){
+       this.b113FloorWarning.hidden=true;
+       this.b113FloorWarning.style.display='none';
+      }
+     }
+    }
     const realRampEdge=b209OriginalRampEdge({
      nativeTick:frame,
      body:[physical.x,physical.y,physical.z],
@@ -7335,7 +7389,9 @@ export class UndertowF3PlayablePreviewApp{
    if(this.b113FloorWarning){
     const isPlayer=document.querySelector<HTMLElement>('#ui-root')?.
      dataset.t21B245Presentation==='PLAYER';
-    const visible=b388VisibleNativeDescentWarning({
+    const p1Warning=!!this.p1LowerEdgeRisk&&
+     state.matchState==='PLAYING'&&!state.paused&&!state.stopReason;
+    const visible=p1Warning||b388VisibleNativeDescentWarning({
      source12Kit:this.b384Circuit,playerView:isPlayer,
      playing:state.matchState==='PLAYING',paused:state.paused,
      tick:state.tick,kccGrounded:ground.genuineKccGrounded,
@@ -7344,7 +7400,11 @@ export class UndertowF3PlayablePreviewApp{
      recordedSuspicions:ground.suspicionCount,
      lastDetectionTick:ground.suspicions.at(-1)?.detectedNativeTick??null
     })&&!this.survey.snapshot().active&&this.galleryIndex<0;
-    this.b113FloorWarning.textContent=isPlayer&&this.b384Circuit?
+    this.b113FloorWarning.textContent=p1Warning?
+     'REGISTERED LOWER LANDING EDGE · '+
+      this.p1LowerEdgeRisk!.distance+
+      'm TO BOUNDARY · NO VERIFIED FLOOR AT THIS HEIGHT 1.5m AHEAD · STOP / TURN':
+     isPlayer&&this.b384Circuit?
      'UNVERIFIED NATIVE DESCENT · ORIGINAL FLOOR HOLE NOT CERTIFIED':
      'POSSIBLE UNSUPPORTED DESCENT · Esc → SAVE FLOOR TRACE (QA)';
     this.b113FloorWarning.hidden=!visible;

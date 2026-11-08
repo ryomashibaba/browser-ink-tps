@@ -15,6 +15,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
 const p0NormalHuman=process.env.T21_P0_NORMAL_HUMAN==='1';
+const p1LowerOnce=p0NormalHuman&&process.env.T21_P1_LOWER_EDGE_ONCE==='1';
 
 // One-shot full replay uses the EXACT real frontline portal mode, which
 // includes B448. The ordinary B441 short trial remains unchanged.
@@ -704,9 +705,62 @@ async function main(){
   if(!proof.p0BlockedStagingRealWVerified||actualMovement<.3)
    fail('P0_PRESTART_BLOCK_OR_POSTJOIN_GENUINE_MOVEMENT_NOT_PROVEN');
   proof.p0PostJoinActualHumanTravelMeters=actualMovement;
+  if(p1LowerOnce){
+   // Keep the SAME real 7-CPU world and advance a real W into the
+   // already-authenticated first-drop landing. Never drive into the fall.
+   const w={key:'w',code:'KeyW',windowsVirtualKeyCode:87,
+    nativeVirtualKeyCode:87};
+   await cdp('Input.dispatchKeyEvent',{type:'keyDown',...w});
+   let found;
+   try{
+    found=await until(async()=>{
+     const n=await snap();
+     if(n.stopReason)fail('P1_FELL_BEFORE_READ_ONLY_WARNING_'+n.stopReason);
+     await inspect(n,'P1_TRUE_FIRST_LANDING_EDGE');
+     const ui=await evaluate(`(() => {
+      const canvas=document.querySelector('#app-canvas');
+      const w=document.querySelector('#t21-f3-b113-ground-warning');
+      return {state:canvas?.dataset.t21P1LowerLandingEdge,
+       meters:canvas?.dataset.t21P1LowerLandingEdgeMeters,
+       text:w?.textContent??'',hidden:w?.hidden,
+       display:w?.style.display};
+     })()`);
+     if(ui.state==='REGISTERED_EDGE_NO_NEAR_HEIGHT_NEXT_RAY'&&
+        ui.hidden===false&&ui.display==='block'&&
+        ui.text.includes('STOP / TURN')&&
+        n.b112OriginalHumanGround?.genuineKccGrounded===true&&
+        n.b112OriginalHumanGround?.lastOriginalSourceHitId===
+         'UndertowT21D:first-drop-landing-positive-z')
+      return {n,ui};
+     if(n.tick>=real.tick+420)
+      fail('P1_NO_NATIVE_GROUNDED_EDGE_WARNING_WITHIN_BOUND');
+     return false;
+    },150000,120);
+   }finally{
+    await cdp('Input.dispatchKeyEvent',{type:'keyUp',...w});
+   }
+   const n=found.n,z=n.player?.position?.[2];
+   if(!Number.isFinite(z)||z<46||z>53||
+      n.cpu?.physicalRejoins?.length!==7||n.matchState!=='PLAYING')
+    fail('P1_LOWER_EDGE_NATIVE_PROVENANCE_INVALID');
+   const png=await cdp('Page.captureScreenshot',{
+    format:'png',captureBeyondViewport:false});
+   if(typeof png?.data==='string'&&png.data.length>100)
+    writeFileSync(resolve(out,'p1-genuine-lower-edge-warning.png'),
+     Buffer.from(png.data,'base64'));
+   proof.p1NativeLowerEdge={tick:n.tick,actualBody:n.player?.position,
+    grounded:n.b112OriginalHumanGround.genuineKccGrounded,
+    actualOriginalId:n.b112OriginalHumanGround.lastOriginalSourceHitId,
+    physicalCpuRejoins:n.cpu.physicalRejoins.length,
+    ui:found.ui,stopReason:n.stopReason,geometryWrites:0,actorWrites:0};
+   save();
+   console.log('P1_REAL_LANDING_EDGE_WARNING',JSON.stringify(proof.p1NativeLowerEdge));
+  }
   proof.p0Verdict='PASS_CANONICAL_SOURCE_PRESTART_W_BLOCKED_AND_7CPU_POSTJOIN_W';
-  proof.stage='P0_NO_SAFE_STOP_IN_BOUNDED_HEADLESS_PATH';
-  proof.verdict=proof.p0Verdict;
+  proof.stage=p1LowerOnce?'P1_REAL_FIRST_LANDING_EDGE_WARNING':
+   'P0_NO_SAFE_STOP_IN_BOUNDED_HEADLESS_PATH';
+  proof.verdict=p1LowerOnce?'PASS_NATIVE_LOWER_EDGE_WARNING_BEFORE_FALL':
+   proof.p0Verdict;
   save();
   console.log('P0_REAL_CANONICAL_USER_SOURCE',JSON.stringify({
    verdict:proof.verdict,firstTick:boot.tick,finalTick:real.tick,
