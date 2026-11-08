@@ -79,6 +79,11 @@ function b250OpticalOnlyMaterial():StandardMaterial{
  * No new polygons, collision roles, ink ownership or Turf scoreability. */
 export const B250_REGISTERED_SOURCE_NEUTRAL=
  Object.freeze([.42,.49,.54] as const);
+/** K1 already registered Rapier triangle-ramp paint: increase the
+ * neutral, unpainted shading contrast, without changing original mesh,
+ * collision flags, paint owners, or source scoreability. */
+export const B250_REGISTERED_SOURCE_RAMP_NEUTRAL=
+ Object.freeze([.51,.60,.65] as const);
 
 /** Registered zero-thickness source collision triangles can be hit from
  * either side by Rapier, but the default opaque material back-face culls.
@@ -148,7 +153,7 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  // tinting ONLY that underneath material cannot improve SOURCE walkability
  // readability. Recolor the existing exact PaintSurface shaders instead.
  // Only original paint backings with registered collision are eligible.
- const sourcePaintMeshes:MeshInstance[]=[];
+ const sourcePaintMeshes:{mesh:MeshInstance;originalRamp:boolean}[]=[];
  for(const paint of stage.paintSurfaces){
   const backing=stage.solids.find(s=>s.id===paint.backingSolidId);
   if(!backing||backing.collisionEnabled===false)continue;
@@ -156,11 +161,16 @@ export function installB250SourceView(app:AppBase,camera:Entity,
   const meshes=paintEntity?.render?.meshInstances;
   if(!meshes||meshes.length!==1)
    throw Error('B250_REGISTERED_PAINT_RENDER_MISSING_'+paint.id);
-  sourcePaintMeshes.push(meshes[0]!);
+  // Existing original collision-backed triangle ramps only. Optical-only
+  // source triangles are never eligible for supported-ramp presentation.
+  sourcePaintMeshes.push({
+   mesh:meshes[0]!,originalRamp:!!backing.triangleMesh
+  });
  }
  if(!sourcePaintMeshes.length)throw Error('B250_NO_REGISTERED_PAINT_RENDER');
  const originalNeutral=new Float32Array(GAME_CONFIG.visual.neutral);
  const legibleNeutral=new Float32Array(B250_REGISTERED_SOURCE_NEUTRAL);
+ const rampNeutral=new Float32Array(B250_REGISTERED_SOURCE_RAMP_NEUTRAL);
  const excludedOptical=new Set<MeshInstance>();
  let glassRegisteredCollisionTriangles=0;
  let glassExcludedOpticalTriangles=0;
@@ -209,9 +219,9 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  const setEnabled=(on:boolean)=>{
   enabled=on;
   for(const b of bindings)b.mesh.material=on?b.after:b.before;
-  for(const mesh of sourcePaintMeshes)
-   mesh.material.setParameter('uNeutralColor',
-    on?legibleNeutral:originalNeutral);
+  for(const surface of sourcePaintMeshes)
+   surface.mesh.material.setParameter('uNeutralColor',
+    !on?originalNeutral:surface.originalRamp?rampNeutral:legibleNeutral);
   app.scene.ambientLight=on?new Color(.71,.77,.83):originalAmbient;
   camera.camera!.clearColor=on?new Color(.10,.15,.20,1):originalClear;
  };

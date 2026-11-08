@@ -2,7 +2,8 @@ import {describe,expect,it} from 'vitest';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {b250SolidTone,b250GlassSourceVisibilityPartition,
- B250_REGISTERED_SOURCE_NEUTRAL,b250CollisionFaceNeedsTwoSidedDraw,
+ B250_REGISTERED_SOURCE_NEUTRAL,B250_REGISTERED_SOURCE_RAMP_NEUTRAL,
+ b250CollisionFaceNeedsTwoSidedDraw,
  b250SolidVisualElevationMeters}
  from './B250SourceStageReadability';
 import {undertowT21dConnectivityQaStage}
@@ -21,6 +22,17 @@ describe('SOURCE registered paint-floor visual contrast without physical promoti
    return solid&&solid.collisionEnabled!==false;
   });
   expect(approved.length).toBeGreaterThan(0);
+  // The color is only for existing collision-backed source triangle faces,
+  // not inferred scenery or a new Rapier/NavMesh surface.
+  const sourceRamps=approved.filter(p=>
+   source.solids.find(s=>s.id===p.backingSolidId)?.triangleMesh);
+  expect(sourceRamps.length).toBeGreaterThan(0);
+  expect(B250_REGISTERED_SOURCE_RAMP_NEUTRAL).toHaveLength(3);
+  for(let i=0;i<3;i++){
+   expect(B250_REGISTERED_SOURCE_RAMP_NEUTRAL[i])
+    .toBeGreaterThan(B250_REGISTERED_SOURCE_NEUTRAL[i]!);
+   expect(B250_REGISTERED_SOURCE_RAMP_NEUTRAL[i]).toBeLessThan(.75);
+  }
   expect(source.solids).toBe(stage.solids);
   expect(source.paintSurfaces).toBe(stage.paintSurfaces);
   expect(source.navigationLinks).toBe(stage.navigationLinks);
