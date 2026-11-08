@@ -655,12 +655,8 @@ export class UndertowF3PlayablePreviewApp{
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
   this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
-  // K1 human SOURCE only: do not let unregistered optical reference faces
-  // imitate real walkable registered floor. No new actors or colliders.
-  if(this.b203FullRound&&
-     new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'&&
-     sourceCanonicalPlayableMode(location.href)!==null)
-   this.sourceCompletion.setRegisteredFloorPriority(true);
+  // K1 optics are activated by the existing B245 REAL PLAYER/QA view
+  // change below; never silently alter an original QA/ART comparison.
   // B251 only applies to actual 180s source player rounds. Optical
   // vertices stay pinned and no Rapier/NavMesh/ink authority is changed.
   if(this.b203FullRound&&
@@ -2314,7 +2310,22 @@ export class UndertowF3PlayablePreviewApp{
   });
   this.radar=createF3SourceRadar(ui,stage,this.b45SourceSurfaces);
   // B245 player view preserves all QA nodes, snapshots, physics and controls.
-  installB245SourcePresentation(ui,()=>this.refreshB36PlayFocus());
+  installB245SourcePresentation(ui,()=>{
+   // The existing B441 SOURCE browser runner is a real 7-CPU human mode
+   // but may lack B448's optional portal parameter. Accept its independently
+   // constrained B475 gate without changing gameplay or source authority.
+   const query=new URL(location.href).searchParams;
+   const nativeHumanMode=this.b203FullRound&&
+    query.get('t21QaInput')!=='deterministic'&&
+    (sourceCanonicalPlayableMode(location.href)!==null||
+     b475RealFrontlineReadyMode(query));
+   // F8 QA displays the original exact-source architectural references.
+   // Real PLAYER displays reference-only floor shapes as faint optics,
+   // while approved stage Rapier colliders keep their original rendering.
+   this.sourceCompletion.setRegisteredFloorPriority(
+    nativeHumanMode&&ui.dataset.t21B245Presentation==='PLAYER');
+   this.refreshB36PlayFocus();
+  });
   // KeyQ also belongs to source-only camera shoulder. Capture only a
   // legitimately accepted in-world practice retry before camera bubble
   // listeners; when Q is not eligible, the usual shoulder toggle remains.
