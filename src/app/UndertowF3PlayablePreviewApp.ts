@@ -1613,6 +1613,17 @@ export class UndertowF3PlayablePreviewApp{
    'border:1px solid #bcffe9;background:#14604f;color:#edfff8;'+
    'font:850 12px/1.45 system-ui;cursor:pointer;pointer-events:auto';
   resumeButton.addEventListener('click',()=>{
+   if(this.stopReason){
+    // Exact source-fall STOP never resumes the old native physics.
+    // The existing resume UI can only navigate to a wholly fresh world.
+    const fresh=this.sourcePhysicalFallRecoveryHref();
+    if(fresh){
+     this.canvas.dataset.t21SourceFallButton='NEW_WORLD_OLD_STOP_PRESERVED';
+     if(fresh===window.location.href)window.location.reload();
+     else window.location.assign(fresh);
+    }
+    return;
+   }
    if(!this.stopReason&&this.matchState!=='TIME_UP'&&
       (this.b203FullRound||
        this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
@@ -4651,6 +4662,22 @@ export class UndertowF3PlayablePreviewApp{
  }
  /** Only the actual finished native 180s overlay can authorize replay.
   * Invalid URL, unseen end UI, live lock or source drift are HOLD. */
+ /** Source-only explicit NEW WORLD after the exact proven physical fall.
+  * No CPU/HP/clock reset, floor authority, death-plane or score change. */
+ private sourcePhysicalFallRecoveryHref():string|null{
+  if(!this.b203FullRound)return null;
+  return sourceOriginalFallFreshWorldHref({
+   href:window.location.href,
+   weaponId:this.projectiles.currentPlayerWeapon.id,
+   stopReason:this.stopReason,matchState:this.matchState,
+   paused:this.paused,nativeTick:this.clock.tick,
+   originalSolids:this.rawStage.solids.length,
+   originalPaint:this.rawStage.paintSurfaces.length,
+   originalLinks:this.rawStage.navigationLinks?.length??0,
+   scoreable:this.b45SourceSurfaces.filter(s=>s.isScoreable).length,
+   repeat:false,modified:false,editing:false
+  });
+ }
  private sourceFinishedReplayEvidence(){
   const finish=this.b58SessionBoard.finish;
   const replay=finish.querySelector<HTMLButtonElement>(
@@ -6065,9 +6092,11 @@ export class UndertowF3PlayablePreviewApp{
   // The native round may pause even if the optional challenge is still IDLE.
   const ready=this.b203FullRound&&!this.b203EverLockedRealPointer&&
    !this.stopReason&&this.matchState!=='TIME_UP';
-  const actuallyPaused=(ready||this.resumeAfterRealPointerLock&&
+  const sourceFallRecovery=this.sourcePhysicalFallRecoveryHref()!==null;
+  const ordinaryPause=(ready||this.resumeAfterRealPointerLock&&
    (this.b203FullRound||run.status==='RUNNING'))&&
-   this.matchState!=='TIME_UP'&&!this.stopReason&&
+   this.matchState!=='TIME_UP'&&!this.stopReason;
+  const actuallyPaused=(ordinaryPause||sourceFallRecovery)&&
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
@@ -6094,13 +6123,18 @@ export class UndertowF3PlayablePreviewApp{
    if(label){label.hidden=!ready;label.style.display=ready?'block':'none';}
   }
   this.b202PauseOverlay.dataset.t21B202NativeState=
-   actuallyPaused?(ready?'READY_TO_START':'NATIVE_PAUSED'):'INACTIVE';
+   actuallyPaused?(sourceFallRecovery?'FALL_STOP_NEW_WORLD_ONLY':
+    ready?'READY_TO_START':'NATIVE_PAUSED'):'INACTIVE';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b242-round-focus-title')!
-   .textContent=ready?'READY · 180s SOURCE ROUND':'PAUSED · REAL SOURCE WORLD';
+   .textContent=sourceFallRecovery?'SOURCE FALL · ORIGINAL WORLD SAFELY STOPPED':
+    ready?'READY · 180s SOURCE ROUND':'PAUSED · REAL SOURCE WORLD';
   this.b202PauseOverlay.querySelector<HTMLButtonElement>('#t21-f3-b202-resume')!
-   .textContent=ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
+   .textContent=sourceFallRecovery?'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
+    ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
-   .textContent=actuallyPaused?(ready?
+   .textContent=sourceFallRecovery?
+    'Original floor support lost. Safety stop is preserved. Click to start a NEW unscored SOURCE world; the missing original floor remains HOLD.':
+    actuallyPaused?(ready?
     'WASD move · Mouse aim / fire · Shift squid · Space jump · Q shoulder · [ / ] aim sensitivity · '+
     b380NativeWeaponGuidance({
      profile:this.projectiles.currentPlayerWeapon,

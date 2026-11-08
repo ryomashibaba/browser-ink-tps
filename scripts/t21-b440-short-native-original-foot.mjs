@@ -556,10 +556,27 @@ async function main(){
      // event must navigate to a NEW, fresh canonical source world.
      const previousOrigin=await origin();
      const previousHref=await evaluate('location.href');
-     const key={key:'r',code:'KeyR',windowsVirtualKeyCode:82,
-      nativeVirtualKeyCode:82};
-     await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});
-     await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
+     // Pointer lock must be released by real Escape before a genuine
+     // Chromium click on the existing STOP/restart control.
+     const escape={key:'Escape',code:'Escape',windowsVirtualKeyCode:27,
+      nativeVirtualKeyCode:27};
+     await cdp('Input.dispatchKeyEvent',{type:'keyDown',...escape});
+     await cdp('Input.dispatchKeyEvent',{type:'keyUp',...escape});
+     const stopUi=await until(async()=>{
+      return await evaluate(`(() => {
+       const b=document.querySelector('#t21-f3-b202-resume');
+       const panel=document.querySelector('#t21-f3-b202-pause-overlay');
+       const r=b?.getBoundingClientRect();
+       const top=r?document.elementFromPoint(r.x+r.width/2,r.y+r.height/2):null;
+       return b&&r&&r.width>0&&r.height>0&&
+        document.pointerLockElement===null&&
+        (top===b||b.contains(top))&&
+        b.textContent?.includes('NEW WORLD')?
+        {label:b.textContent,pause:panel?.dataset.t21B202NativeState}:null;
+      })()`);
+     },30000,180);
+     proof.p0RealStopRecoveryButton=stopUi;save();
+     await buttonClick('#t21-f3-b202-resume');
      let lastRecoveryProbe=null;
      const fresh=await until(async()=>{
       try{
@@ -587,12 +604,12 @@ async function main(){
         fresh.actors!==7||fresh.rejoins!==0||
         JSON.stringify(fresh.stage)!=='[25,17,26,0]')
       fail('P0_REAL_KEYR_FRESH_WORLD_NOT_PROVEN');
-     proof.p0FallRecovery={realKey:'KeyR',oldWorldWasStopped:true,
+     proof.p0FallRecovery={realAction:'REAL_CDP_STOP_BUTTON_CLICK',oldWorldWasStopped:true,
       stoppedTick:n.tick,stoppedReason:n.stopReason,
       stoppedCpuRejoins:n.cpu?.physicalRejoins?.length,
       freshWorld:fresh,actorWrites:0,scoreWrites:0,nativeClockWrites:0,
       officialWinner:'NONE',productionAuthorized:false};
-     proof.verdict='PASS_NATIVE_SOURCE_FALL_STOP_AND_KEYR_NEW_WORLD_ONLY';
+     proof.verdict='PASS_NATIVE_SOURCE_FALL_STOP_AND_CLICK_NEW_WORLD_ONLY';
      proof.p0Verdict=proof.verdict;
      proof.stage='P0_SOURCE_FALL_EXPLICIT_REENTRY';save();
      console.log('P0_SOURCE_FALL_RECOVERY',JSON.stringify(proof.p0FallRecovery));
