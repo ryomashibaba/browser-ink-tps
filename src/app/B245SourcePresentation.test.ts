@@ -194,6 +194,28 @@ describe('B245 original registered source landing-to-ramp PLAYER cue',()=>{
   expect(d.geometryOrActorWrites).toBe(0);
   expect(d.fullStageTraversalCertified).toBe(false);
  });
+ it('verified Z50.557 landing and X2.043 D steps show cue without new floor',()=>{
+  // True native RAW 42468824473, grounded on the *registered* original
+  // landing; the old 50.2m/1.8m bounds hid an otherwise useful D cue.
+  const start=b245RealSourceLocalRampGuide({...base(),tick:1267,
+   body:[-.07938151061534882,3.8949952125549316,50.55711364746094],
+   footGap:.024995});
+  expect(start.state).toBe('STRAFE_D');
+  const nearRamp=b245RealSourceLocalRampGuide({...base(),tick:1297,
+   body:[2.043227434158325,3.8974015712738037,50.081546783447266],
+   footGap:.027402});
+  expect(nearRamp.state).toBe('STRAFE_D');
+  // Nearby coordinates alone never authorize guidance without a real
+  // registered physical foot; yaw/stage safety checks remain active.
+  expect(b245RealSourceLocalRampGuide({...base(),
+   body:[-.07938151061534882,3.8949952125549316,50.55711364746094],
+   supportId:null,footGap:null}).state).toBe('OFF');
+  expect(b245RealSourceLocalRampGuide({...base(),
+   body:[-.07938151061534882,3.8949952125549316,50.55711364746094],
+   yawDegrees:90}).state).toBe('ALIGN_CAMERA');
+  expect(b245RealSourceLocalRampGuide({...base(),
+   body:[-.079,3.895,50.9]}).state).toBe('OFF');
+ });
  it('one true registered ramp foot contact does not certify onward route',()=>{
   const c=b245RealSourceLocalRampGuide({...base(),tick:1372,
    body:[2.0517,3.9383,49.8099],

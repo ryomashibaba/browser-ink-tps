@@ -259,7 +259,13 @@ export function b245RealSourceLocalRampGuide(f:{
  if(f.supportId===ramp&&x>=1.7&&x<=4&&z>=45&&z<=54)
   return {...off,state:'REGISTERED_RAMP_CONTACT',
    text:'ORIGINAL RAMP FOOT REGISTERED · local contact only · onward route NOT CERTIFIED'};
- if(f.supportId!==lower||x<-.5||x>1.8||z<47||z>50.2)return off;
+  // The genuine #42468824473 SOURCE run released W on the already-
+ // grounded landing at Z50.557 and reached the registered ramp through
+ // X2.043 while still on that same registered landing. Prior bounds
+ // hid the PLAYER guidance on those physically witnessed steps.
+ // This changes only read-only cue visibility: it does not certify a
+ // rectangle as walkable; the real original Rapier foot is still required.
+if(f.supportId!==lower||x<-.5||x>2.1||z<47||z>50.8)return off;
  const yaw=((f.yawDegrees+180)%360+360)%360-180;
  if(Math.abs(yaw)>8)return {...off,state:'ALIGN_CAMERA',
   text:'SOURCE LANDING · camera not aligned: face centre (-Z) before tested S → D · avoid unsupported edge'};
