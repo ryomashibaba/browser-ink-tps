@@ -5032,7 +5032,7 @@ export class UndertowF3PlayablePreviewApp{
      }
     }
     if(!this.w10b14)this.traffic.observe(frame);
-    if(this.matchState==='STAGING'&&this.traffic.snapshot().freeCombatEnabled){
+    if(this.matchState==='STAGING'&&this.traffic.nativeSourceFreeCombatEnabled()){
      this.matchState='PLAYING';
      // CPU 7/7 truly joined on THIS native tick. Release the canonical
      // prestart key latch immediately, not on the next fixed tick: a real
@@ -5401,7 +5401,7 @@ export class UndertowF3PlayablePreviewApp{
      sessionEnded:this.matchState==='TIME_UP',
      realSourceMatchPlaying:this.matchState==='PLAYING',
      allSevenSourceCpuPhysicallyRejoined:
-      this.traffic.snapshot().physicalRejoins.length===7,
+      this.traffic.nativeSourceAllSevenLiveRejoined(),
      sourceSolids:this.rawStage.solids.length,
      paintableSurfaces:this.rawStage.paintSurfaces.length,
      originalNavLinks:this.rawStage.navigationLinks?.length??0,

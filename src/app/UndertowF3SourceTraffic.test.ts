@@ -203,6 +203,9 @@ describe('F3B playable 8-actor original source runtime',()=>{
     if(done&&frame>=done+360)break;
    }
    const state=traffic.snapshot();
+   expect(traffic.nativeSourceFreeCombatEnabled()).toBe(state.freeCombatEnabled);
+   expect(traffic.nativeSourceAllSevenLiveRejoined())
+    .toBe(state.physicalRejoins.length===7);
    console.log('T21_F3B_NATIVE_PLAYABLE_8_ACTOR_DIAGNOSTIC',JSON.stringify({
     done,stop,overlap,minimumSeparation,maxGroundStep,
     physicalFirstDrops:state.physicalFirstDrops,
@@ -323,6 +326,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     actor.mobilityState='FIRST_DROP_FALL'; // stale prior-life motion
     traffic.observe(done+361);
     const splatted=traffic.snapshot();
+    expect(traffic.nativeSourceAllSevenLiveRejoined()).toBe(false);
     expect(splatted.cpu.find(x=>x.id==='B1')).toMatchObject({
      lifeState:'SPLATTED',hp:0,rejoined:false
     });
@@ -335,6 +339,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     actor.mobilityState='GROUND';
     traffic.observe(done+362);
     const unsafe=traffic.snapshot();
+    expect(traffic.nativeSourceAllSevenLiveRejoined()).toBe(false);
     expect(unsafe.physicalRejoins).not.toContain('B1');
     expect(unsafe.sourcePatrol.respawnUnsafeReturnHolds).toBeGreaterThan(0);
     expect(unsafe.sourcePatrol.respawnPendingCpuIds).not.toContain('B1');

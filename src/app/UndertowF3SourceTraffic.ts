@@ -2502,6 +2502,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    hp:Number.isFinite(b.hp)?b.hp!:null
   }));
  }
+ /** Read the genuine native SOURCE staging phase without cloning a
+  * historical QA telemetry ledger at each 60Hz physics step. */
+ nativeSourceFreeCombatEnabled():boolean{
+  return this.freeCombat;
+ }
+ /** Read-only equivalent of snapshot().physicalRejoins.length===7.
+  * An old rejoin never counts a genuine current SPLATTED actor as active. */
+ nativeSourceAllSevenLiveRejoined():boolean{
+  return this.bots.length===7&&this.bots.every(bot=>
+   sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined));
+ }
  snapshot():F3TrafficSnapshot{
   return {
    cpu:this.bots.map(b=>({id:b.id,mobilityState:b.mobilityState,
