@@ -114,6 +114,22 @@ export function b390NativeCpuLifeAndOriginalReturnConsistent(
  return sourceCpu.physicalFootRelocations===0;
 }
 
+/** P1 native-player steering only: choose a *real* WASD key based on
+ * the current native camera and original paint-cell world coordinates.
+ * No movement/position/ownerGrid writes, no inferred nav links. */
+export function b390ActualSourceOwnSteerKey(body,target,yaw,blocked=[]){
+ const finite3=v=>Array.isArray(v)&&v.length===3&&v.every(Number.isFinite);
+ if(!finite3(body)||!finite3(target)||!Number.isFinite(yaw)||
+    !Array.isArray(blocked))return null;
+ const dx=target[0]-body[0],dz=target[2]-body[2],rad=yaw*Math.PI/180;
+ const fx=Math.sin(rad),fz=Math.cos(rad);
+ const variants=[['KeyW',fx,fz],['KeyD',-fz,fx],
+  ['KeyS',-fx,-fz],['KeyA',fz,-fx]];
+ return variants.filter(([k])=>!blocked.includes(k))
+  .map(([key,x,z])=>({key,score:dx*x+dz*z}))
+  .sort((a,b)=>b.score-a.score)[0]?.key??null;
+}
+
 export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  fail,report,persist,picture,clickButton}){
  const began=Date.now(),maxWallMs=62*60*1000;
@@ -207,22 +223,130 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     ...bridge,phase:'BEFORE_SQUID'
    });
    report.p1ActualPreRefillShot=pre;persist();
-   // P1: do not force the user to swim AWAY from true OWN ink
-   // merely to pass a separate B412 KCC navigation audit. RAW
-   // #42440512855: real shot 28, paid ink 22.96, OWN under human foot.
-   // Actual Shift-only player input is sufficient for genuine recovery.
-   const ownStart=verify(await state());
-   const ownFoot=await nativeLedger();
+   // RAW #42440512855: this original upper foot was OWN.
+   // RAW #42443156696: almost identical true foot was NEUTRAL.
+   // Neither the previous successful OWN nor a projectile contact means
+   // THIS world's human is on OWN. Move only with genuine WASD input
+   // toward a LIVE read-only original-ownerGrid OWN cell, checking Rapier
+   // support after every short real native KCC pulse. No actor/ink writes.
+   const approach={phase:'P1_TRUE_SOURCE_ORIGINAL_OWN_FOOT_APPROACH',
+    source:'25/17/26/0',originalFoot:floor,
+    nativeInputOnly:true,syntheticPositionWrites:0,
+    syntheticInkWrites:0,syntheticClockWrites:0,legs:[]};
+   let ownStart=verify(await state()),ownFoot=await nativeLedger();
+   const startingPosition=ownStart.player.position;
    if(ownStart.player.mode!=='HUMAN'||
-      ownStart.player.inkRelation!=='OWN'||
       ownStart.player.ink>=pre.before.ink||
+      !['NEUTRAL','OWN'].includes(ownStart.player.inkRelation)||
       ownFoot.source!=='25/17/26/0'||
       ownFoot.genuineHumanOriginalFootSolid!==floor||
       ownFoot.realHumanOriginalFootSupported!==true||
       !(await locked()))
-    fail('P1_TRUE_OWN_ORIGINAL_FOOT_REQUIRED',{
-     source:ownFoot.source,foot:ownFoot.genuineHumanOriginalFootSolid,
+    fail('P1_TRUE_ORIGINAL_PLAYER_INK_SOURCE_REQUIRED',{
      tick:ownStart.tick,relation:ownStart.player.inkRelation,
+     source:ownFoot.source,foot:ownFoot.genuineHumanOriginalFootSolid,
+     ink:ownStart.player.ink});
+   if(ownStart.player.inkRelation!=='OWN'){
+    const cells=ownFoot.originalRows?.find(row=>
+     row.surfaceId===floor+':paint')?.originalB337NearbyActiveCells;
+    const owned=cells?.filter(c=>c.originalOwner===1&&
+     c.realCellProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
+     Array.isArray(c.world)&&c.world.length===3&&
+     c.world.every(Number.isFinite))??[];
+    owned.sort((a,b)=>Math.hypot(
+     a.world[0]-startingPosition[0],a.world[2]-startingPosition[2])-
+     Math.hypot(b.world[0]-startingPosition[0],
+      b.world[2]-startingPosition[2]));
+    const target=owned[0]?.world;
+    if(!target)fail('P1_NO_REAL_ORIGINAL_OWN_CELL_TO_WALK_TOWARD',{
+     tick:ownStart.tick,actualOwnerCells:cells??null});
+    approach.targetOriginalOwnedWorld=target;
+    approach.targetOriginalOwnedGrid=owned[0].grid;
+    const meta={KeyW:['w',87],KeyD:['d',68],KeyS:['s',83],KeyA:['a',65]};
+    const blocked=new Set();
+    let reached=false;
+    for(let i=0;i<18;i++){
+     const before=verify(await state());
+     if(before.matchState!=='PLAYING'||before.paused||
+        before.player.mode!=='HUMAN'||before.timeRemainingSeconds<=65||
+        before.cpu.physicalRejoins.length!==7||!(await locked()))
+      fail('P1_OWN_NATIVE_WALK_AUTHORITY_HOLD',{tick:before.tick});
+     const step=b390ActualSourceOwnSteerKey(before.player.position,
+      target,before.cameraSourcePractice?.yawDegrees,[...blocked]);
+     if(!step)break;
+     const key={type:'keyDown',key:meta[step][0],code:step,
+      windowsVirtualKeyCode:meta[step][1],
+      nativeVirtualKeyCode:meta[step][1]};
+     await cmd('Input.dispatchKeyEvent',key);
+     try{
+      await until(async()=>{
+       const n=verify(await state());
+       return n.tick>=before.tick+6?n:false;
+      },20000);
+     }finally{
+      await cmd('Input.dispatchKeyEvent',{...key,type:'keyUp'});
+     }
+     const coast=await until(async()=>{
+      const n=verify(await state());
+      return n.tick>=before.tick+12?n:false;
+     },20000);
+     const ground=await nativeLedger();
+     const planar=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
+     const moved=planar(coast.player.position,before.player.position);
+     const fromStart=planar(coast.player.position,startingPosition);
+     const beforeTarget=planar(before.player.position,target);
+     const afterTarget=planar(coast.player.position,target);
+     const leg={tickFrom:before.tick,tickTo:coast.tick,
+      actualNativeKey:step,actualHumanMeters:moved,
+      actualBody:coast.player.position,
+      originalOwnedTargetMeters:afterTarget,
+      actualFoot:ground.genuineHumanOriginalFootSolid,
+      supported:ground.realHumanOriginalFootSupported,
+      actualInkRelation:coast.player.inkRelation,
+      noGameplayWrites:true};
+     approach.legs.push(leg);report.p1ActualOwnApproach=approach;persist();
+     if(ground.source!=='25/17/26/0'||
+        ground.genuineHumanOriginalFootSolid!==floor||
+        ground.realHumanOriginalFootSupported!==true||
+        ground.sourceActorRelocations!==0||
+        ground.sourceInkRewritten!==false||
+        ground.playerPositionRewritten!==false||
+        coast.shotsFired!==ownStart.shotsFired||
+        coast.matchState!=='PLAYING'||coast.paused||
+        fromStart>5.0||!(await locked()))
+      fail('P1_TRUE_KCC_WALK_LEFT_ORIGINAL_SOURCE_HOLD',leg);
+     if(coast.player.inkRelation==='OWN'){
+      const steady=await until(async()=>{
+       const n=verify(await state());
+       return n.tick>=coast.tick+6?n:false;
+      },20000);
+      if(steady.player.inkRelation==='OWN'&&
+         planar(steady.player.position,startingPosition)<=5){
+       reached=true;ownStart=steady;ownFoot=await nativeLedger();break;
+      }
+     }
+     if(moved<.04||afterTarget>beforeTarget+.05)blocked.add(step);
+    }
+    if(!reached)
+     fail('P1_NO_STABLE_TRUE_OWN_FOOT_AFTER_BOUNDED_REAL_WASD',{
+      target,legs:approach.legs});
+   }
+   ownStart=verify(await state());ownFoot=await nativeLedger();
+   approach.arrivedTick=ownStart.tick;
+   approach.actualInkRelation=ownStart.player.inkRelation;
+   approach.actualNativeHumanPosition=ownStart.player.position;
+   report.p1ActualOwnApproach=approach;persist();
+   if(ownStart.player.mode!=='HUMAN'||
+      ownStart.player.inkRelation!=='OWN'||
+      ownStart.player.ink>=pre.before.ink||
+      ownStart.timeRemainingSeconds<=65||
+      ownFoot.source!=='25/17/26/0'||
+      ownFoot.genuineHumanOriginalFootSolid!==floor||
+      ownFoot.realHumanOriginalFootSupported!==true||
+      !(await locked()))
+    fail('P1_NATIVE_ORIGINAL_OWN_FOOT_NOT_STABLE',{
+     tick:ownStart.tick,relation:ownStart.player.inkRelation,
+     source:ownFoot.source,foot:ownFoot.genuineHumanOriginalFootSolid,
      ink:ownStart.player.ink});
    const shiftEvent=type=>({
     type,key:'Shift',code:'ShiftLeft',

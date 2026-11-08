@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {b390NativeRadarSampleConsistent as ok,
  b390NativeLiveGridConsistent as liveOk,
- b390NativeCpuLifeAndOriginalReturnConsistent as cpuLifeOk}
+ b390NativeCpuLifeAndOriginalReturnConsistent as cpuLifeOk,
+ b390ActualSourceOwnSteerKey as chooseFootKey}
  from './t21-b390-real-source-timeup.mjs';
 const radar=(patch={},dotPatch={})=>({
  pageNativeTick:8270,status:'SOURCE_PAINT_SAMPLES',tick:8270,
@@ -145,4 +146,20 @@ test('B390 rejects an unaccounted missing active CPU or an early fake rejoin',()
  assert.equal(cpuLifeOk(cpuLife({returning:['B1']},{respawnOriginalDetected:1}),0,1),false);
  assert.equal(cpuLifeOk(cpuLife({splatted:['B1']},{
   respawnOriginalDetected:1}),0,1),false);
+});
+
+// P1: genuine native-camera headings choose WASD toward an actual
+// original-ownerGrid target; no fabricated movement or ink authority.
+test('P1 uses real camera yaw to choose the nearest native WASD key',()=>{
+ assert.equal(chooseFootKey([7.24,5.39,49.54],[11.06,4.5,51.90],141),
+  'KeyD');
+ assert.equal(chooseFootKey([0,0,0],[0,0,3],0),'KeyW');
+ assert.equal(chooseFootKey([0,0,0],[3,0,0],0),'KeyA');
+ assert.equal(chooseFootKey([0,0,0],[0,0,3],0,['KeyW']),'KeyD');
+});
+test('P1 steering refuses invalid positions and exhausted native keys',()=>{
+ assert.equal(chooseFootKey([NaN,0,0],[0,0,3],0),null);
+ assert.equal(chooseFootKey([0,0,0],[0,0,3],Infinity),null);
+ assert.equal(chooseFootKey([0,0,0],[0,0,3],0,
+  ['KeyW','KeyD','KeyS','KeyA']),null);
 });
