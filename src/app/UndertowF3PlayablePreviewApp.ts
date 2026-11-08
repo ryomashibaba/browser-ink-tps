@@ -6074,7 +6074,20 @@ export class UndertowF3PlayablePreviewApp{
   gauge.style.display=show?'block':'none';
   gauge.dataset.t21B414RealNativeSource=String(show);
   gauge.dataset.t21B414RenderTick=String(this.clock.tick);
-  const contest=root.querySelector<HTMLElement>('#t21-f3-b417-paint-contest')!;
+  // Optional co-op DOM loss must not freeze real 60Hz SOURCE/CPU play.
+  // Original collision, authority and PaintCoordinator failures still STOP.
+  const contest=root.querySelector<HTMLElement>('#t21-f3-b417-paint-contest');
+  const inkText=root.querySelector<HTMLElement>('#t21-f3-b414-ink-text');
+  const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill');
+  const loop=root.querySelector<HTMLElement>('#t21-f3-b415-ink-loop');
+  const contestText=root.querySelector<HTMLElement>('#t21-f3-b417-text');
+  const teamAFill=root.querySelector<HTMLElement>('#t21-f3-b417-team-a');
+  const teamBFill=root.querySelector<HTMLElement>('#t21-f3-b417-team-b');
+  if(!contest||!inkText||!fill||!loop||!contestText||!teamAFill||
+     !teamBFill){
+   gauge.hidden=true;gauge.style.display='none';
+   return;
+  }
   if(!show){contest.hidden=true;contest.style.display='none';return;}
   gauge.dataset.t21B414ActualInk=String(ink);
   gauge.dataset.t21B414Recovery=String(rec);
@@ -6083,14 +6096,12 @@ export class UndertowF3PlayablePreviewApp{
    rec==='SQUID_OWN'?'OWN INK · REFILLING':
    rec==='LOCKED'?'RECOVERY LOCKED':
    rec==='HUMAN'?'HUMAN RECOVERY':'NO OWN REFILL';
-  root.querySelector<HTMLElement>('#t21-f3-b414-ink-text')!.textContent=
+  inkText.textContent=
    'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+state;
-  const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill')!;
   fill.style.width=ink.toFixed(2)+'%';
   fill.style.background=rec==='SQUID_OWN'?'#72edc3':
    rec==='LOCKED'?'#ffcf81':'#70dce8';
   // B415 progression is counted on true 60Hz ticks, not in the DOM.
-  const loop=root.querySelector<HTMLElement>('#t21-f3-b415-ink-loop')!;
   const stage=this.b415InkLoop?.stage??'HOLD';
   loop.textContent=b415ReadableInstruction(stage);
   loop.dataset.t21B415PracticeStage=stage;
@@ -6111,13 +6122,13 @@ export class UndertowF3PlayablePreviewApp{
    contest.dataset.t21B417TeamA=String(owned.teamA);
    contest.dataset.t21B417TeamB=String(owned.teamB);
    contest.dataset.t21B417Neutral=String(owned.neutral);
-   root.querySelector<HTMLElement>('#t21-f3-b417-text')!.textContent=
+   contestText.textContent=
     'SOURCE PAINTED CELLS · A '+owned.teamA.toLocaleString('en-US')+
     ' / B '+owned.teamB.toLocaleString('en-US')+
     ' · UNSCORED';
-   root.querySelector<HTMLElement>('#t21-f3-b417-team-a')!.style.width=
+   teamAFill.style.width=
     owned.aSharePaintedPercent.toFixed(2)+'%';
-   root.querySelector<HTMLElement>('#t21-f3-b417-team-b')!.style.width=
+   teamBFill.style.width=
     owned.bSharePaintedPercent.toFixed(2)+'%';
   }
  }
