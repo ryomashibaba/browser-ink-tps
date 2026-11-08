@@ -546,9 +546,17 @@ async function main(){
   };
   let real=await until(async()=>{
    const n=await snap();await inspect(n,'NATIVE_REJOIN');
-   return n.tick>=720?n:false;
-  },190000,280);
-  record(real,'AFTER_720_NATIVE_TICKS');
+   // Native source first-drop is intentionally staggered: 4/7 at tick
+   // 720 is observable PROGRESS, not a CPU failure. Wait for the true
+   // original physical seven-rejoin event, never free-advance the clock.
+   if(n.tick>=2400&&n.cpu?.physicalRejoins?.length!==7){
+    proof.p0Verdict='HOLD_REAL_2400_TICKS_WITHOUT_SEVEN_REJOINS';save();
+    fail('P0_REAL_SEVEN_CPU_ORIGINAL_ROUTE_NOT_COMPLETED');
+   }
+   return n.cpu?.physicalRejoins?.length===7&&
+      n.matchState==='PLAYING'&&n.paused===false?n:false;
+  },540000,280);
+  record(real,'AFTER_GENUINE_SEVEN_NATIVE_REJOINS');
   // Seven authentic drop -> rejoin prerequisites are checked BEFORE any
   // ordinary W movement; no CPU is snapped or unblocked by this script.
   if(real.cpu.physicalRejoins.length!==7||real.matchState!=='PLAYING'||
