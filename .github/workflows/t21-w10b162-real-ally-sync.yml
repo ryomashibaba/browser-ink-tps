@@ -33,6 +33,10 @@ permissions:
 jobs:
   genuine-original-ally-sync:
     name: True CDP human plus A1 source physical cooperative clear
+    # Already genuine PASS on prior HEAD. Run one B448-only short A3
+    # research case without redundantly repeating the unrelated A1
+    # cooperative 5-minute browser run; manual dispatch still allowed.
+    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 48
     steps:

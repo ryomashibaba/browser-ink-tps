@@ -186,6 +186,32 @@ describe('actual source PLAYER C-order neighbor ink eligibility',()=>{
  });
 });
 describe('genuine source CPU teammates distribute already-authorized goals',()=>{
+ it('A3 ranks true native-approved A-side options by ink and existing teammate locks',()=>{
+  // This helper is preference only. B448 still independently replays
+  // all real A3-foot Rapier/Recast/registered-footprint source gates.
+  const sourceGoals=[new Vec3(1,3,40),new Vec3(5,3,40),
+   new Vec3(9,3,40)];
+  const ink={sampleWorld:vi.fn((p:Vec3)=>
+   ({owner:p.x<8?Team.Neutral:Team.B,planeDistance:0} as GameplayInkSample)
+  )} as unknown as GameplayInkSystem;
+  const ranks=rankOriginalSourcePatrolGoals(sourceGoals,Team.A,ink,0);
+  // Enemy-owner native ink opportunity outranks all physical spacing.
+  const top=distributeOriginalSourceGoalCoverage(
+   ranks,sourceGoals,[sourceGoals[2]!,sourceGoals[0]!]);
+  expect(top[0]!.index).toBe(2);
+  // On equal source paint opportunity, existing A2 goal reservation
+  // avoids choosing the exact same destination for the real A3.
+  const sameInk={sampleWorld:vi.fn(()=>
+   ({owner:Team.Neutral,planeDistance:0} as GameplayInkSample)
+  )} as unknown as GameplayInkSystem;
+  const peers=distributeOriginalSourceGoalCoverage(
+   rankOriginalSourcePatrolGoals(sourceGoals,Team.A,sameInk,0),
+   sourceGoals,[sourceGoals[0]!,sourceGoals[2]!]);
+  expect(peers[0]!.index).toBe(1);
+  expect(peers.every(p=>!p.pathAuthorized&&p.sourceOnly)).toBe(true);
+  expect(sourceGoals.map(p=>[p.x,p.y,p.z])).toEqual(
+   [[1,3,40],[5,3,40],[9,3,40]]);
+ });
  it('prioritizes an alternate already-existing SOURCE B2/B4 original goal when the first is occupied',()=>{
   // Real native B441 #42433069608 ended with both B2/B4 within 0.5m
   // of the SAME strictly approved SOURCE goal. This is a preference

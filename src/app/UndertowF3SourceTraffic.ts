@@ -108,6 +108,11 @@ export interface B446RealFootDryRouteProbe{
  readonly nativeIntermediateSupport:number;
  readonly passedAllOriginalChecks:number;
  readonly firstPassingExistingGoal:[number,number,number]|null;
+ /** Native B446 success candidates from the same physical CPU foot.
+  * Every one already passed the identical original Rapier + full Recast
+  * checks, but this list grants NO Actor move and NO navigation authority.
+  * B448 alone may later select/reapprove one for real A3. */
+ readonly passingExistingGoals:readonly [number,number,number][];
  /** B450 actual B2/B4 first original unsupported samples; never goals. */
  readonly b450FailedOriginalGoals:B450FailedOriginalGoal[];
  readonly probeOnlyNoActorOrGoalWrites:true;
@@ -1432,8 +1437,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      inspectedOriginalGoals:0,deniedRapierOrBoundary:0,
      nativeUnreached:0,nativeStartSnap:0,nativeEndSnap:0,
      nativeIntermediateSupport:0,passedAllOriginalChecks:0,
-     firstPassingExistingGoal:null,b450FailedOriginalGoals:[],
-     probeOnlyNoActorOrGoalWrites:true
+     firstPassingExistingGoal:null,passingExistingGoals:[],
+     b450FailedOriginalGoals:[],probeOnlyNoActorOrGoalWrites:true
     };
     const proposals=proposeB441OriginalFrontline(this.stage,
      bot.team===Team.A?'A':'B');
@@ -1489,55 +1494,74 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       continue;
      }
      report.passedAllOriginalChecks++;
+     // Only store coordinates that ALREADY survived all B446 checks,
+     // not arbitrary Nav corners, future actor positions or guessed paint.
+     if(report.passingExistingGoals.length<32)
+      report.passingExistingGoals.push([goal.x,goal.y,goal.z]);
      if(report.firstPassingExistingGoal===null)
       report.firstPassingExistingGoal=[goal.x,goal.y,goal.z];
     }
     this.b446LiveFootProbes.set(id,report);
    }
-   // B448: the B446 real Chromium witness found 15 safe ORIGINAL
-   // right-low A-side routes from A3's live foot, but NONE from its
-   // frozen first-drop landing. Only under the SEPARATE B448 research
-   // opt-in, ask the existing Crowd to move toward that REAL original
-   // SOURCE goal. B446 itself remains read-only and never grants goals.
-   // Do not apply this to B2/B4: their live-foot proofs were 0/32.
+   // B448 strict and SEPARATELY selected player FRONTLINE only.
+   // The B446 dry route pass observed multiple real SOURCE A3 candidates
+   // from the native A3 foot (none from the frozen first-drop landing).
+   // Choose among those *same-foot fully checked* original source goals
+   // using actual ownerGrid opportunity and real A1/A2 positions/locks.
+   // Every chosen candidate is independently rechecked below with the
+   // identical Rapier footprint and full 0.30m native Recast route gate.
+   // B441 alone cannot enable this. No fake goal or physical teleport.
    if(this.enableB448A3LiveOriginalFront&&id==='A3'&&
       fronts.length===0){
     const dry=this.b446LiveFootProbes.get(id);
-    const proof=dry?.firstPassingExistingGoal;
-    if(dry&&proof&&dry.passedAllOriginalChecks>0&&
+    if(dry&&dry.firstPassingExistingGoal&&
+       dry.passedAllOriginalChecks>0&&
+       dry.passingExistingGoals.length>0&&
        dry.probeOnlyNoActorOrGoalWrites===true&&
        dry.nativeTick===this.b137NativeTick&&
        this.physicallyRejoined.has(id)&&
        bot.mobilityState==='GROUND'&&bot.lifeState==='ACTIVE'){
-     const proposal=proposeB441OriginalFrontline(this.stage,'A')
-      .find(p=>p.sourceSolidId==='UndertowT21D:right-low-team-a'&&
-       Math.hypot(p.point[0]-proof[0],p.point[1]-proof[1],
-        p.point[2]-proof[2])<.001);
-     const goal=new Vec3(...proof);
-     const hit=this.physics.castStageSegment(
-      new Vec3(goal.x,goal.y+.65,goal.z),
-      new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
-     const flat=hit?inspectB130OriginalFlatSource({
-      nativeTick:this.b137NativeTick,
-      actualRapierBody:[goal.x,goal.y+
-       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
-      actualRapierSupportId:hit.solidId}):null;
-     const route=this.nav.auditPath(realFoot,goal);
-     if(proposal&&goal.z>=33&&
-        hit?.solidId===proposal.sourceSolidId&&
-        flat?.insideRegisteredOriginalXZFootprint&&
-        flat.originalFlatVerticalBandWithin22cm&&
-        flat.distanceToOriginalPolygonBoundaryMeters>=.75&&
-        this.hasSourceFootSupport(realFoot)&&
-        this.hasSourceFootSupport(goal)&&
-        route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
-        route.endSnapDistanceMeters<=.20&&
-        this.hasSourceSupportedRoute(route,sign)){
-      // Only an ORIGINAL already sampled polygon point, existing Recast
-      // and unmodified physical CPU KCC can realize this request.
+     const proofPoints=dry.passingExistingGoals.map(p=>new Vec3(...p));
+     const ranked=this.sourceInk?
+      distributeOriginalSourceGoalCoverage(
+       rankOriginalSourcePatrolGoals(
+        proofPoints,Team.A,this.sourceInk,0),
+       proofPoints,this.actualTeamCoveragePositions('A3',Team.A)):
+      null;
+     const ordered=ranked?
+      ranked.map(row=>proofPoints[row.index]!):proofPoints;
+     const proposals=proposeB441OriginalFrontline(this.stage,'A');
+     for(const goal of ordered){
+      const proposal=proposals.find(p=>
+       p.sourceSolidId==='UndertowT21D:right-low-team-a'&&
+       Math.hypot(p.point[0]-goal.x,p.point[1]-goal.y,
+        p.point[2]-goal.z)<.001);
+      if(!proposal||goal.z<33)continue;
+      const hit=this.physics.castStageSegment(
+       new Vec3(goal.x,goal.y+.65,goal.z),
+       new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+      const flat=hit?inspectB130OriginalFlatSource({
+       nativeTick:this.b137NativeTick,
+       actualRapierBody:[goal.x,goal.y+
+        PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
+       actualRapierSupportId:hit.solidId}):null;
+      if(hit?.solidId!==proposal.sourceSolidId||
+         !flat?.insideRegisteredOriginalXZFootprint||
+         !flat.originalFlatVerticalBandWithin22cm||
+         flat.distanceToOriginalPolygonBoundaryMeters<.75||
+         !this.hasSourceFootSupport(realFoot)||
+         !this.hasSourceFootSupport(goal))continue;
+      const route=this.nav.auditPath(realFoot,goal);
+      if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
+         route.endSnapDistanceMeters>.20||
+         !this.hasSourceSupportedRoute(route,sign))continue;
+      // Only an existing fully reapproved SOURCE goal, not a new
+      // physical path, is submitted to the actual native Crowd agent.
       fronts=[goal];this.b441FrontGoals.set('A3',fronts);
       this.b448A3FreshLiveOriginalGoalsAuthorized++;
-     }else this.b448A3FreshLiveOriginalHolds++;
+      break;
+     }
+     if(fronts.length===0)this.b448A3FreshLiveOriginalHolds++;
     }else this.b448A3FreshLiveOriginalHolds++;
    }
    // B467: on the EXPLICIT B441 SOURCE-front research path ONLY,

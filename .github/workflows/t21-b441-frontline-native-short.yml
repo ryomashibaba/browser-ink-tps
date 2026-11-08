@@ -150,6 +150,8 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[audit-only]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') }}
         env:
           T21_B441_SOURCE_FRONTLINE: '1'
+          # Separate single-run A3 opt-in; ordinary B441 never enables it.
+          T21_B448_A3_REAL_ORIGINAL_FRONT: ${{ contains(github.event.head_commit.message, '[a3-native-once]') && '1' || '0' }}
           T21_B441_REAL_Q_ONCE: ${{ contains(github.event.head_commit.message, '[real-q-once]') && '1' || '0' }}
           T21_B441_REAL_SWEEP_ONCE: ${{ (contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]')) && '1' || '0' }}
           T21_B441_REAL_SWEEP_CLEAR: ${{ contains(github.event.head_commit.message, '[real-sweep-clear]') && '1' || '0' }}
