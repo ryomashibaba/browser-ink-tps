@@ -538,7 +538,18 @@ async function main(){
    if(n.tick>=sampledTick+30||n.stopReason)record(n,stage);
    if(n.stopReason){
     proof.p0NativeStop={tick:n.tick,reason:n.stopReason,
-     phase:n.matchState,joins:n.cpu?.physicalRejoins?.length};
+     phase:n.matchState,joins:n.cpu?.physicalRejoins?.length,
+     humanFoot:n.player?.position,
+     humanOriginalSupport:n.b112OriginalHumanGround?.lastOriginalSourceHitId??null,
+     originalSourceCount:[n.originalSourceSolids,n.originalPaintSurfaces,
+      n.originalSourceNavigationLinks,n.sourceScoreablePromotions]};
+    try{
+     const shot=await cdp('Page.captureScreenshot',{
+      format:'png',captureBeyondViewport:false});
+     if(typeof shot?.data==='string'&&shot.data.length>100)
+      writeFileSync(resolve(out,'p0-genuine-safe-stop-native.png'),
+       Buffer.from(shot.data,'base64'));
+    }catch{}
     save();
     fail('P0_GENUINE_SOURCE_SAFE_STOP_'+n.stopReason);
    }
@@ -554,12 +565,12 @@ async function main(){
    nativeVirtualKeyCode:87};
   await cdp('Input.dispatchKeyEvent',{type:'keyDown',...earlyKey});
   let earlyHeld=true;
-  proof.p0EarlyUserMovement='REAL_KEYW_DURING_CPU_STAGING_NO_QA_TICKS';save();
+  proof.p0EarlyUserMovement='REAL_KEYW_DURING_CPU_STAGING_TO_ORIGINAL_EDGE_480_NATIVE_TICKS';save();
   let real;
   try{
    real=await until(async()=>{
    const n=await snap();await inspect(n,'CPU_STAGING_REAL_USER_W');
-   if(earlyHeld&&n.tick>=240){
+   if(earlyHeld&&n.tick>=480){
     await cdp('Input.dispatchKeyEvent',{type:'keyUp',...earlyKey});
     earlyHeld=false;proof.p0EarlyPlayerWReleasedAtTick=n.tick;
     record(n,'EARLY_NATIVE_W_RELEASED');
