@@ -37,7 +37,10 @@ describe('B245 real source PLAYER weapon guidance not clipped',()=>{
   expect(rule).toContain('white-space:normal!important');
   expect(rule).toContain('line-height:1.4!important');
   expect(rule).not.toContain('text-overflow:ellipsis');
-  expect(css).toContain('#t21-f3-player-key-help {display:none!important;}');
+  const keyHelp=css.indexOf('#t21-f3-player-key-help');
+  expect(keyHelp).toBeGreaterThan(0);
+  expect(css.slice(keyHelp,css.indexOf('}',keyHelp)))
+   .toContain('display:none!important');
  });
  it('never applies full-round player CSS to QA, lab or production',()=>{
   for(const q of [
