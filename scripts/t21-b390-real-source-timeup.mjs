@@ -5,7 +5,7 @@
 import {setTimeout as sleep} from 'node:timers/promises';
 import {b413RealOriginalMainFireBurst}
  from './t21-b413-native-source-fire-refill-reshoot.mjs';
-import {b412NativeSquidOwnInkRound}
+import {b412OwnInkDwellVerified}
  from './t21-b412-native-original-squid-ink-swim.mjs';
 /**
  * Verify B402 against a SAME-CDP-evaluation native snapshot. The previous
@@ -207,43 +207,100 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     ...bridge,phase:'BEFORE_SQUID'
    });
    report.p1ActualPreRefillShot=pre;persist();
-   // Only ORIGINAL B337 ownerGrid=OWN cells are permissible targets.
-   // No authored ink, relocation, aim teleport or inferred source floor.
-   const beforeSwimLedger=await nativeLedger();
-   const nearby=beforeSwimLedger.originalRows?.find(row=>
-    row.surfaceId===floor+':paint')?.originalB337NearbyActiveCells;
-   const own=nearby?.find(cell=>cell.originalOwner===1&&
-    cell.realCellProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
-    Array.isArray(cell.world)&&cell.world.length===3&&
-    cell.world.every(Number.isFinite));
-   if(!own)fail('P1_NO_REAL_OWN_SOURCE_CELL_NEAR_ACTUAL_FOOT',{
-    tick:pre.after.tick,originalCellWitnesses:nearby??null});
-   const swim=await b412NativeSquidOwnInkRound({
-    remaining:90,target:own.world,expectedFoot:floor,
-    ...bridge,
-    onEvidence:async evidence=>{
-     if(String(evidence.lastPhase).startsWith('HOLD')){
-      report.p1RealSourceHold=evidence;persist();
-     }
-    }
+   // P1: do not force the user to swim AWAY from true OWN ink
+   // merely to pass a separate B412 KCC navigation audit. RAW
+   // #42440512855: real shot 28, paid ink 22.96, OWN under human foot.
+   // Actual Shift-only player input is sufficient for genuine recovery.
+   const ownStart=verify(await state());
+   const ownFoot=await nativeLedger();
+   if(ownStart.player.mode!=='HUMAN'||
+      ownStart.player.inkRelation!=='OWN'||
+      ownStart.player.ink>=pre.before.ink||
+      ownFoot.source!=='25/17/26/0'||
+      ownFoot.genuineHumanOriginalFootSolid!==floor||
+      ownFoot.realHumanOriginalFootSupported!==true||
+      !(await locked()))
+    fail('P1_TRUE_OWN_ORIGINAL_FOOT_REQUIRED',{
+     source:ownFoot.source,foot:ownFoot.genuineHumanOriginalFootSolid,
+     tick:ownStart.tick,relation:ownStart.player.inkRelation,
+     ink:ownStart.player.ink});
+   const shiftEvent=type=>({
+    type,key:'Shift',code:'ShiftLeft',
+    windowsVirtualKeyCode:16,nativeVirtualKeyCode:16
    });
-   report.p1ActualOwnSquidSwim=swim;persist();
+   let refill=null;
+   await cmd('Input.dispatchKeyEvent',shiftEvent('keyDown'));
+   try{
+    const squid=await until(async()=>{
+     const n=verify(await state());
+     return n.player.mode==='SQUID'&&
+      n.player.inkRelation==='OWN'&&
+      n.playerInkRecoveryState==='SQUID_OWN'&&
+      n.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND'?n:false;
+    },20000);
+    const after=await until(async()=>{
+     const n=verify(await state());
+     return n.tick>=squid.tick+12?n:false;
+    },20000);
+    const realFoot=await nativeLedger();
+    const verified=b412OwnInkDwellVerified(
+     squid,after,realFoot,floor,ownStart.shotsFired)&&await locked();
+    const drift=Math.hypot(
+     after.player.position[0]-squid.player.position[0],
+     after.player.position[2]-squid.player.position[2]);
+    refill={source:'25/17/26/0',entryTick:ownStart.tick,
+     squidBeginTick:squid.tick,squidAfterTick:after.tick,
+     actualInkBefore:squid.player.ink,actualInkAfter:after.player.ink,
+     genuineObservedOwnInkGain:after.player.ink-squid.player.ink,
+     actualOwnRelation:squid.player.inkRelation,
+     actualRecoveryState:after.playerInkRecoveryState,
+     originalFoot:realFoot.genuineHumanOriginalFootSolid,
+     physicalFootSupported:realFoot.realHumanOriginalFootSupported,
+     noDirectionalKeysHeld:true,actualPlayerDriftMeters:drift,
+     nativeShotsUnchanged:after.shotsFired===ownStart.shotsFired,
+     independentlyVerified:verified,
+     syntheticInkWrites:0,syntheticShotWrites:0,
+     syntheticClockWrites:0,syntheticActorWrites:0};
+    report.p1ActualOwnSquidDwell=refill;persist();
+    if(!verified)fail('P1_REAL_OWN_SQUID_RECOVERY_NOT_OBSERVED',refill);
+   }finally{
+    await cmd('Input.dispatchKeyEvent',shiftEvent('keyUp'));
+   }
+   const returned=await until(async()=>{
+    const n=verify(await state());
+    return n.player.mode==='HUMAN'&&
+     n.b381RealNativeDodge?.realLocomotion==='HUMAN'?n:false;
+   },20000);
+   const humanFoot=await nativeLedger();
+   const bodyDrift=Math.hypot(
+    returned.player.position[0]-ownStart.player.position[0],
+    returned.player.position[2]-ownStart.player.position[2]);
+   refill={...refill,finalHumanTick:returned.tick,
+    finalHumanShots:returned.shotsFired,
+    actualOriginalHumanFoot:humanFoot.genuineHumanOriginalFootSolid,
+    actualNativeHumanBodyDriftMeters:bodyDrift};
+   report.p1ActualOwnSquidDwell=refill;persist();
+   if(returned.shotsFired!==ownStart.shotsFired||
+      humanFoot.genuineHumanOriginalFootSolid!==floor||
+      humanFoot.realHumanOriginalFootSupported!==true||
+      bodyDrift>.5||!(await locked()))
+    fail('P1_SQUID_TO_HUMAN_ORIGINAL_FOOT_HOLD',refill);
    const post=await b413RealOriginalMainFireBurst({
     ...bridge,phase:'AFTER_SQUID'
    });
    const current=verify(await state());
    const sameWorld=await evalPage('performance.timeOrigin')===origin;
-   if(!sameWorld||swim.ownDwell?.physicallyVerified!==true||
+   if(!sameWorld||refill?.independentlyVerified!==true||
       pre.actualShotsPaid<5||post.actualShotsPaid<5||
       pre.actualOriginalImpactEvents<1||post.actualOriginalImpactEvents<1||
-      post.before.shots!==swim.final?.humanShots||
-      swim.initial?.tick<pre.after.tick||
+      post.before.shots!==refill.finalHumanShots||
+      refill.entryTick<pre.after.tick||
       current.tick<post.after.tick||
       current.matchState!=='PLAYING'||current.player.mode!=='HUMAN'||
       current.cpu.physicalRejoins.length!==7)
     fail('P1_REAL_SHOT_OWN_REFILL_RESHOT_SAME_WORLD_HOLD',{
      sameWorld,preShots:pre.actualShotsPaid,
-     postShots:post.actualShotsPaid,ownDwell:swim.ownDwell,
+     postShots:post.actualShotsPaid,ownDwell:refill,
      currentTick:current.tick,realCpu:current.cpu.physicalRejoins.length});
    const playerHud=await evalPage(`(()=>{
     const e=document.querySelector('#t21-f3-hud-practice');
@@ -256,11 +313,12 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     originalFoot:floor,preShotNativeInkSpent:pre.sourceInkDifference,
     preRealHumanShots:pre.actualShotsPaid,
     preOriginalProjectileImpactEvents:pre.actualOriginalImpactEvents,
-    ownGridCell:own.grid,actualSquidInkBefore:swim.ownDwell.inkBefore,
-    actualSquidInkAfter:swim.ownDwell.inkAfter,
-    ownDwellVerified:swim.ownDwell.physicallyVerified,
-    actualKccSquidTravelMeters:swim.totalRealKccMeters,
-    originalHumanReturnMeters:swim.final.netReturnMeters,
+    actualSquidInkBefore:refill.actualInkBefore,
+    actualSquidInkAfter:refill.actualInkAfter,
+    genuineOwnInkGain:refill.genuineObservedOwnInkGain,
+    ownDwellVerified:refill.independentlyVerified,
+    actualStationaryShiftOnlyRecovery:true,
+    actualHumanFootDriftMeters:refill.actualNativeHumanBodyDriftMeters,
     postRealHumanShots:post.actualShotsPaid,
     postShotNativeInkSpent:post.sourceInkDifference,
     postOriginalProjectileImpactEvents:post.actualOriginalImpactEvents,
