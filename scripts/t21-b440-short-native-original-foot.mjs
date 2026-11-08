@@ -747,11 +747,16 @@ async function main(){
    if(!Number.isFinite(z)||z<46||z>53||
       n.cpu?.physicalRejoins?.length!==7||n.matchState!=='PLAYING')
     fail('P1_LOWER_EDGE_NATIVE_PROVENANCE_INVALID');
+   // Preserve native movement time when studying the genuine escape route.
+   // A screenshot at this edge would let residual forward velocity drift
+   // into the unsupported gap before the real S key is pressed.
+   if(!p1RampOnce){
    const png=await cdp('Page.captureScreenshot',{
     format:'png',captureBeyondViewport:false});
    if(typeof png?.data==='string'&&png.data.length>100)
     writeFileSync(resolve(out,'p1-genuine-lower-edge-warning.png'),
      Buffer.from(png.data,'base64'));
+   }
    proof.p1NativeLowerEdge={tick:n.tick,actualBody:n.player?.position,
     grounded:n.b112OriginalHumanGround.genuineKccGrounded,
     actualOriginalId:n.b112OriginalHumanGround.lastOriginalSourceHitId,
@@ -808,88 +813,145 @@ async function main(){
      JSON.stringify(proof.p1NativeInputDiagnostic));
    }
    if(p1RampOnce){
-    // Same real seven-CPU native SOURCE world. Test genuine keyboard strafe
-    // from the actual edge back across authorized lower landing into the
-    // already registered FloorConcrete03 right-low slope. Never teleport.
-    const beginning=found.n.player?.position;
-    if(!Array.isArray(beginning)||beginning.length!==3)
-     fail('P1_RAMP_ACTUAL_PLAYER_BODY_UNKNOWN');
-    const dKey={key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68};
-    const aKey={key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65};
-    const down=async(k)=>cdp('Input.dispatchKeyEvent',{type:'keyDown',...k});
-    const up=async(k)=>cdp('Input.dispatchKeyEvent',{type:'keyUp',...k});
-    const history=[];let lastRecorded=-1;
-    const recordRamp=(n,step)=>{
-     if(n.stopReason)fail('P1_RAMP_ACTUAL_SOURCE_SAFE_STOP_'+n.stopReason);
-     if(n.matchState!=='PLAYING'||n.cpu?.physicalRejoins?.length!==7)
-      fail('P1_RAMP_ACTUAL_SEVEN_CPU_WORLD_LOST');
-     if(n.tick===lastRecorded)return null;
-     lastRecorded=n.tick;
-     const row={step,tick:n.tick,body:n.player?.position,
-      grounded:n.b112OriginalHumanGround?.genuineKccGrounded??null,
-      support:n.b112OriginalHumanGround?.lastOriginalSourceHitId??null,
-      stopReason:n.stopReason};
-     history.push(row);if(history.length>32)history.shift();
-     proof.p1RampNativeProgress={status:'OBSERVING',history};save();
+    // Native exact-F3 SOURCE path experiment. The real original landing
+    // ends centreward; retreat S toward supported +Z before pressing D.
+    // No actor teleport, modified collider, nav link, invented floor,
+    // KCC threshold change, view yaw override, synthetic world ticking.
+    const begin=await snap();
+    const initial=begin.player?.position;
+    const originId='UndertowT21D:first-drop-landing-positive-z';
+    const slopeId='UndertowT21D:right-low-route-ramp-positive-z';
+    const keys={
+     KeyS:{key:'s',code:'KeyS',windowsVirtualKeyCode:83,nativeVirtualKeyCode:83},
+     KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
+    };
+    const trace=[];
+    const traceSave=(status,extra={})=>{
+     proof.p1RampNativeProgress={
+      status,world:'SAME_NATIVE_7_CPU_CANONICAL_SOURCE',
+      originalStage:'25/17/26/0',originalLandingId:originId,
+      originalRegisteredRampId:slopeId,initial,
+      nativeInputKeys:['KeyS','KeyD'],
+      nativeActorPositionWrites:0,newFloorOrColliderWrites:0,
+      inferredSourceNavLinks:0,fullCrossTeamRouteCertified:false,
+      samples:trace,...extra
+     };save();
+    };
+    const beginInput=begin.sourceNativeHumanInputProjection;
+    if(!Array.isArray(initial)||begin.matchState!=='PLAYING'||
+       begin.cpu.physicalRejoins.length!==7||
+       begin.b112OriginalHumanGround?.genuineKccGrounded!==true||
+       begin.b112OriginalHumanGround?.lastOriginalSourceHitId!==originId||
+       !beginInput?.realPointerLockAtSampling||
+       Math.abs(beginInput.yawDegrees)>5){
+     traceSave('HOLD_UNVERIFIED_NATIVE_START_OR_YAW',{
+      nativeBeginning:begin});fail('P1_TRUE_RAMP_START_NOT_VERIFIED');
+    }
+    const sample=(n,phase)=>{
+     if(n.stopReason){
+      traceSave('HOLD_ACTUAL_SOURCE_SAFE_STOP',{stopReason:n.stopReason});
+      fail('P1_TRUE_RAMP_SAFE_STOP_'+n.stopReason);
+     }
+     authority(n);
+     if(n.cpu.physicalRejoins.length!==7||n.matchState!=='PLAYING')
+      fail('P1_TRUE_RAMP_SEVEN_CPU_OR_PLAYING_LOST');
+     const foot=n.b112OriginalHumanGround;
+     const position=n.player?.position;
+     const input=n.sourceNativeHumanInputProjection;
+     const row={phase,nativeTick:n.tick,position,
+      grounded:foot?.genuineKccGrounded??null,
+      originalSolid:foot?.lastOriginalSourceHitId??null,
+      sourceFootGapMeters:foot?.lastOriginalSourceGapMeters??null,
+      inputAxes:input?.nativeInputAxes??null,
+      yawDegrees:input?.yawDegrees??null,
+      cameraPointerLocked:input?.realPointerLockAtSampling??false,
+      nativeDesiredXZ:input?.projectedWorldIntent??null};
+     if(!trace.some(t=>t.nativeTick===n.tick&&t.phase===phase)){
+      trace.push(row);traceSave('IN_PROGRESS');
+     }
+     if(!foot?.genuineKccGrounded||![originId,slopeId].includes(
+       foot.lastOriginalSourceHitId??'')){
+      traceSave('HOLD_REAL_KCC_UNSUPPORTED_BEFORE_RAMP',{
+       rejectedAt:row});fail('P1_RAMP_LOST_GENUINE_SOURCE_FOOT');
+     }
+     if(!input?.realPointerLockAtSampling)
+      fail('P1_TRUE_RAMP_NATIVE_POINTER_LOCK_LOST');
      return row;
     };
-    const pilotTick=found.n.tick+9;
-    await down(dKey);
-    let pilot;
+    const press=async(k)=>cdp('Input.dispatchKeyEvent',{type:'keyDown',...k});
+    const release=async(k)=>cdp('Input.dispatchKeyEvent',{type:'keyUp',...k});
+    let safeRetreat;
+    // Measured footprint: at z~49 the original landing spans X up to
+    // ~1.5 and the exact registered FloorConcrete03 slope starts near X~2.
+    // At z<=46 there is no original near-height support at this X.
+    const retreatStart=begin.tick;
+    await press(keys.KeyS);
     try{
-     pilot=await until(async()=>{
-      const n=await snap();recordRamp(n,'REAL_STRAFE_D_PILOT');
-      return n.tick>=pilotTick?n:false;
-     },25000,80);
-    }finally{await up(dKey)}
-    const dx=pilot.player.position[0]-beginning[0];
-    const dz=pilot.player.position[2]-beginning[2];
-    if(Math.abs(dx)<.15||Math.abs(dz)>.9||
-       pilot.b112OriginalHumanGround?.genuineKccGrounded!==true){
-     proof.p1RampNativeProgress={status:'HOLD_PILOT',history,dx,dz};save();
-     fail('P1_REAL_STRAFE_DIRECTION_OR_ORIGINAL_SUPPORT_UNPROVEN');
+     safeRetreat=await until(async()=>{
+      const n=await snap();
+      const row=sample(n,'REAL_S_KEY_SAFE_BACKSTEP');
+      const accepted=row.inputAxes?.[1]===-1&&
+       row.nativeDesiredXZ?.[1]>.7;
+      if(n.tick>retreatStart+12&&!accepted)
+       fail('P1_TRUE_RAMP_S_KEY_NOT_ACCEPTED');
+      if(row.position?.[2]>=49.3)return n;
+      if(n.tick>=retreatStart+105||row.position?.[2]>50.8){
+       traceSave('HOLD_BACKSTEP_NOT_IN_REGISTERED_LANDING',{last:row});
+       fail('P1_TRUE_RAMP_BOUNDED_BACKSTEP_NOT_REACHED');
+      }
+      return false;
+     },38000,90);
+    }finally{await release(keys.KeyS)}
+    const beforeStrafe=safeRetreat.player.position;
+    if(beforeStrafe[0]<-.5||beforeStrafe[0]>.6||
+       beforeStrafe[2]<49.3||beforeStrafe[2]>50.8||
+       safeRetreat.b112OriginalHumanGround?.lastOriginalSourceHitId!==originId){
+     traceSave('HOLD_SAFE_RETREAT_LANDING_NOT_PROVEN',{beforeStrafe});
+     fail('P1_RAMP_RETRACED_SOURCE_LANDING_NOT_PROVEN');
     }
-    const correctKey=dx>0?dKey:aKey;
-    const finalTick=pilot.tick+45;
-    let genuineRamp=null;
-    await down(correctKey);
+    let registeredRamp=null;
+    const strafeStart=safeRetreat.tick;
+    await press(keys.KeyD);
     try{
      await until(async()=>{
       const n=await snap();
-      const row=recordRamp(n,'REAL_STRAFE_TOWARD_RIGHT_LOW_RAMP');
-      if(row?.grounded===true&&
-         row.support==='UndertowT21D:right-low-route-ramp-positive-z'&&
-         row.body?.[0]>beginning[0]+.4&&
-         row.body?.[2]>46&&row.body?.[2]<54){
-       genuineRamp=n;return true;
+      const row=sample(n,'REAL_D_KEY_TO_PINNED_SOURCE_RAMP');
+      const accepted=row.inputAxes?.[0]===1&&
+       row.nativeDesiredXZ?.[0]>.7;
+      if(n.tick>strafeStart+12&&!accepted)
+       fail('P1_TRUE_RAMP_D_KEY_NOT_ACCEPTED');
+      if(row.grounded&&row.originalSolid===slopeId&&
+         row.position?.[0]>1.25&&
+         row.position?.[2]>48&&row.position?.[2]<51.5){
+       registeredRamp=n;return true;
       }
-      return n.tick>=finalTick;
-     },40000,70);
-    }finally{await up(correctKey)}
-    if(!genuineRamp){
-     proof.p1RampNativeProgress={status:'HOLD_NO_REGISTERED_SLOPE_FOOT',
-      beginning,pilot:pilot.player.position,dx,dz,history,
-      actorWrites:0,geometryWrites:0};save();
-     fail('P1_NATIVE_RAMP_ACTUAL_HUMAN_FOOT_NOT_PROVEN');
-    }
-    proof.p1RampNativeProgress={
-     status:'PASS_GROUNDED_EXISTING_SOURCE_RAMP_KCC',
-     originalLandingId:found.n.b112OriginalHumanGround.lastOriginalSourceHitId,
-     sourceRampId:genuineRamp.b112OriginalHumanGround.lastOriginalSourceHitId,
-     firstNativeTick:found.n.tick,finalNativeTick:genuineRamp.tick,
-     firstBody:beginning,rampBody:genuineRamp.player.position,
-     grounded:genuineRamp.b112OriginalHumanGround.genuineKccGrounded,
-     cpuPhysicalRejoins:genuineRamp.cpu.physicalRejoins.length,
-     realStrafeKey:correctKey.code,stopReason:genuineRamp.stopReason,
-     actorWrites:0,geometryWrites:0,stage:'25/17/26/0',
-     fullCrossTeamRouteCertified:false,history};
-    const image=await cdp('Page.captureScreenshot',{
+      if(row.position?.[0]>3.25||n.tick>strafeStart+115){
+       traceSave('HOLD_NO_ACTUAL_SOURCE_RAMP_ENTRY',{last:row});
+       fail('P1_RAMP_NOT_REACHED_BEFORE_REGISTERED_PATH_BOUND');
+      }
+      return false;
+     },42000,80);
+    }finally{await release(keys.KeyD)}
+    if(!registeredRamp)
+     fail('P1_RAMP_UNOBSERVED_REAL_RAPIER_GROUNDED_ENTRY');
+    const final=registeredRamp.player.position;
+    traceSave('PASS_REAL_KCC_LANDING_TO_EXISTING_REGISTERED_SOURCE_RAMP',{
+     originalLandingSample:initial,
+     registeredLandingBackstep:beforeStrafe,
+     finalNativeBody:final,
+     firstNativeTick:begin.tick,lastNativeTick:registeredRamp.tick,
+     lastNativeSolid:registeredRamp.b112OriginalHumanGround.lastOriginalSourceHitId,
+     actualGrounded:registeredRamp.b112OriginalHumanGround.genuineKccGrounded,
+     truePhysicalCpuRejoins:registeredRamp.cpu.physicalRejoins.length,
+     stopReason:registeredRamp.stopReason
+    });
+    const png=await cdp('Page.captureScreenshot',{
      format:'png',captureBeyondViewport:false});
-    if(typeof image?.data==='string'&&image.data.length>100)
-     writeFileSync(resolve(out,'p1-native-original-landing-to-ramp.png'),
-      Buffer.from(image.data,'base64'));
+    if(typeof png?.data==='string'&&png.data.length>100)
+     writeFileSync(resolve(out,'p1-real-original-landing-to-registered-ramp.png'),
+      Buffer.from(png.data,'base64'));
     save();
-    console.log('P1_REAL_NATIVE_HUMAN_LANDING_TO_SOURCE_RAMP',
+    console.log('P1_NATIVE_REAL_SOURCE_RAMP_ROUTE',
      JSON.stringify(proof.p1RampNativeProgress));
    }
   }
