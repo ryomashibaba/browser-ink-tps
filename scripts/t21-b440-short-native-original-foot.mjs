@@ -2428,6 +2428,82 @@ async function main(){
    }
    return n.tick>=after.tick+nativeFrontObservationTicks?n:false;
   },600000,500);
+  // K2: per-actor outcome from the EXISTING genuine PaintCoordinator and
+  // actual CPU shot requests, observed in this SAME untouched 7-CPU world.
+  // A proposed aim, accepted request, foot ink and projectile-impact ink
+  // are separate outcomes; never count one as proof of another.
+  const k2Ids=['A1','A2','A3','B1','B2','B3','B4'];
+  const k2Read=(n)=>{
+    const ink=n.b154NativeSevenCpuInk;
+    const shots=n.cpuSourceTurfShotsByActor;
+    if(n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
+       n.originalSourceNavigationLinks!==26||
+       n.sourceScoreablePromotions!==0||n.matchState!=='PLAYING'||
+       n.stopReason||n.cpu.physicalRejoins.length!==7||
+       ink?.source!=='REAL_PAINT_COORDINATOR_GAMEPLAY_INK_ACCEPTED_CHANGES'||
+       !shots||!ink.byActor)
+      fail('K2_ACTUAL_SEVEN_CPU_PAINT_PROVENANCE_NOT_AVAILABLE');
+    const byActor={};
+    for(const id of k2Ids){
+      const a=ink.byActor[id],shot=shots[id];
+      if(!a||![shot,a.stampEvents,a.changedCells,a.impactEvents,
+        a.impactChangedCells,a.footChangedCells].every(x=>
+         Number.isSafeInteger(x)&&x>=0)||
+         a.impactChangedCells+a.footChangedCells>a.changedCells)
+        fail('K2_INVALID_OR_MISSING_REAL_CPU_INK_COUNTER_'+id);
+      byActor[id]={sourceTurfShotRequests:shot,
+       acceptedPaintEvents:a.stampEvents,changedCells:a.changedCells,
+       impactEvents:a.impactEvents,
+       impactChangedCells:a.impactChangedCells,
+       footChangedCells:a.footChangedCells};
+    }
+    return {tick:n.tick,byActor,
+     nativeCpuShots:n.cpuShots,nativeCpuProjectilePaintHits:
+      n.cpuProjectilePaintHits,allCpuChangedCells:n.cpuInkCellsChanged,
+     cpuImpactChangedCells:n.cpuImpactInkCellsChanged};
+  };
+  const k2First=k2Read(after),k2Last=k2Read(actual);
+  if(k2Last.tick<=k2First.tick||k2Last.tick-k2First.tick<600||
+     await origin()!==proof.browserOrigin)
+    fail('K2_NOT_SAME_LIVE_NATIVE_OBSERVATION_WINDOW');
+  const k2Actors=Object.fromEntries(k2Ids.map(id=>{
+    const initial=k2First.byActor[id],final=k2Last.byActor[id];
+    const delta=Object.fromEntries(Object.keys(initial).map(k=>
+     [k,final[k]-initial[k]]));
+    if(Object.values(delta).some(v=>v<0))
+      fail('K2_REAL_CPU_COUNTER_WENT_BACKWARDS_'+id);
+    return [id,delta];
+  }));
+  const k2Sum=(name)=>k2Ids.reduce((n,id)=>n+k2Actors[id][name],0);
+  const k2TotalImpacts=k2Sum('impactChangedCells');
+  const k2TotalPaint=k2Sum('changedCells');
+  proof.k2PerActorNativeShotAndInk={
+    source:'25/17/26/0',sameUnmodifiedSourceWorld:true,
+    originalActorOrColliderWrites:0,syntheticShots:0,
+    beforeNativeTick:k2First.tick,afterNativeTick:k2Last.tick,
+    nativeTicksObserved:k2Last.tick-k2First.tick,
+    byActor:k2Actors,
+    actualPaintByActors:k2Ids.filter(id=>k2Actors[id].changedCells>0),
+    actualProjectileImpactInkByActors:k2Ids.filter(id=>
+     k2Actors[id].impactChangedCells>0),
+    realSourceTurfShotRequestActors:k2Ids.filter(id=>
+     k2Actors[id].sourceTurfShotRequests>0),
+    totalCpuShotRequests:k2Sum('sourceTurfShotRequests'),
+    totalCpuAcceptedPaintChangedCells:k2TotalPaint,
+    totalCpuActualImpactChangedCells:k2TotalImpacts,
+    zeroProjectileInkActors:k2Ids.filter(id=>
+     k2Actors[id].impactChangedCells===0),
+    verdict:k2Ids.every(id=>k2Actors[id].impactChangedCells>0)?
+     'PASS_SEVEN_REAL_CPU_PROJECTILE_INK':
+     'HOLD_NOT_ALL_SEVEN_HAVE_REAL_PROJECTILE_INK',
+    nativeCountersStart:k2First,nativeCountersEnd:k2Last,
+    enemyContactCertified:false,sourceScoreable:0,
+    officialWinner:'NONE',formal4v4Certified:false
+  };
+  save();
+  console.log('K2_NATIVE_SEVEN_ACTUAL_CPU_PAINT_OUTCOME',
+   JSON.stringify({verdict:proof.k2PerActorNativeShotAndInk.verdict,
+    byActor:k2Actors,from:k2First.tick,to:k2Last.tick}));
   // B454: collect every *actual* native post-KCC B2/B4 foot once,
   // rather than inferring continuous original contact from 24-tick polls.
   // Do not add these large rows to B440 log; save one independent Artifact.
