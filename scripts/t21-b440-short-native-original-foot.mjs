@@ -1726,6 +1726,32 @@ async function main(){
    }
    return entries;
   };
+  // B489 one existing real 720-tick A3 paint outcome. The native
+  // PaintCoordinator's ACCEPTED per-CPU raster outcomes are already
+  // recorded by the actual game in B154 (even when coordinatedMode=false).
+  // No fake CPU paint, inferred projectile or scoring event is possible.
+  const realA3Paint=n=>{
+   const actor=n.b154NativeSevenCpuInk?.byActor?.A3;
+   const shots=n.cpuSourceTurfShotsByActor?.A3;
+   const keys=['stampEvents','changedCells','impactEvents',
+    'impactChangedCells','footChangedCells'];
+   if(n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
+      n.originalSourceNavigationLinks!==26||
+      n.sourceScoreablePromotions!==0||
+      n.b154NativeSevenCpuInk?.source!==
+       'REAL_PAINT_COORDINATOR_GAMEPLAY_INK_ACCEPTED_CHANGES'||
+      !actor||!keys.every(k=>
+       Number.isSafeInteger(actor[k])&&actor[k]>=0)||
+      !Number.isSafeInteger(shots)||shots<0||
+      actor.impactChangedCells>actor.changedCells||
+      actor.footChangedCells>actor.changedCells)
+    fail('B489_REAL_A3_ACCEPTED_PAINT_PROVENANCE_UNAVAILABLE');
+   return {tick:n.tick,shots,stampEvents:actor.stampEvents,
+    changedCells:actor.changedCells,impactEvents:actor.impactEvents,
+    impactChangedCells:actor.impactChangedCells,
+    footChangedCells:actor.footChangedCells};
+  };
+  const firstA3Paint=b448Experiment?realA3Paint(after):null;
   const firstRead={tick:after.tick,patrol:startPatrol,
    b445FirstOriginalGateByCpu:validateB445(startPatrol),
    actors:after.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
@@ -2021,6 +2047,37 @@ async function main(){
    originalCollisionAuthorizationChanged:false,
    scoreableSurfacePromotions:0};
   const afterPatrol=actual.cpu.sourcePatrol;
+  if(b448Experiment){
+   const endA3Paint=realA3Paint(actual);
+   if(!firstA3Paint||endA3Paint.tick<=firstA3Paint.tick)
+    fail('B489_STALE_REAL_A3_PAINT_INTERVAL');
+   const keys=['shots','stampEvents','changedCells','impactEvents',
+    'impactChangedCells','footChangedCells'];
+   const delta=Object.fromEntries(keys.map(k=>[
+    k,endA3Paint[k]-firstA3Paint[k]]));
+   if(!Object.values(delta).every(v=>
+      Number.isSafeInteger(v)&&v>=0))
+    fail('B489_NONMONOTONIC_ACTUAL_A3_PAINT_ACCOUNTING');
+   const actualInkImpact=delta.impactEvents>0&&
+     delta.impactChangedCells>0;
+   proof.b489ActualSourceA3Paint={
+    schema:'B489_REAL_NATIVE_A3_ACCEPTED_UNSCORED_INK_DELTA_V1',
+    authority:'ACTUAL_CPU_A3_PAINT_COORDINATOR_ACCEPTED_OWNERGRID',
+    before:firstA3Paint,after:endA3Paint,delta,
+    realNativeIntervalTicks:endA3Paint.tick-firstA3Paint.tick,
+    actualImpactInkProduced:actualInkImpact,
+    verdict:actualInkImpact?
+     'PASS_REAL_A3_PROJECTILE_IMPACT_CHANGED_ORIGINAL_INK':
+     'HOLD_NO_A3_PROJECTILE_IMPACT_CHANGED_ORIGINAL_INK',
+    cpuPoseWrites:0,syntheticShotWrites:0,gameplayInkWrites:0,
+    originalStageWrites:0,officialScoreable:0,
+    officialWinner:'NONE',crossTeamRouteCertified:false,
+    sourcePaintOpportunityNotFormalTurfScore:true
+   };
+   save();
+   console.log('B489_GENUINE_NATIVE_A3_INK_OUTCOME',
+    JSON.stringify(proof.b489ActualSourceA3Paint));
+  }
   const observed=actual.cpu.cpu.map(c=>{
    const from=baseline[c.id],p=c.physicalFoot;
    return {id:c.id,from,to:p,
