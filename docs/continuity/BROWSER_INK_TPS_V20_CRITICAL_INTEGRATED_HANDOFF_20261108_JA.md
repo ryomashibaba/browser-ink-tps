@@ -33,7 +33,7 @@ Splatoon 3 **Ver.7.2.0以降のマテガイ放水路（Undertow Spillway）通�
 ### 直近の失敗と未検証の新HEAD
 - #42486348414、HEAD a6ab11b09d5795433ceadce9f9000ac51e3d82f8 は **completed/FAILURE**。37ファイル362 Unit PASSとtsc/Vite build PASSの後、真正Chromiumで B488_REAL_NATIVE_GAP_SOURCE_AUTHORITY_PROOF_HOLD。保存されたRAWではB486/B487がどちらもnative tick 1787、0/16経路・Scoreable0・CPU実活動/実塗装を示すが、B488取得直前の失敗判定値は保存されていなかった。**B488の時刻差・移動差によるミリメートル厳密比較の偽FAILが疑われるが未確定**。このFAILを「原作未登録床を追加してよい」根拠にも「描画実装が根本的に壊れた」証拠にも使わない。
 - 同HEAD a6ab11b0 の描画高度バンドは、三角形メッシュで local origin Y=0なのに実頂点Y=3〜4.5となる原作坂を、実ワールド頂点高の中間約3.75で着色するよう修正。**Unit/buildはPASS、改善の同一条件実画像・本人視認は未認証**。材質の再調整を増殖させず、現有の安全床と危険な光学面の識別にだけ使用する。
-- 直近研究ゲーム/runner HEAD 87086f8abcdb919dc077f23a257c4c8885bdd426 は #42486348414のB486/B487/B488を1回の同期read-onlyブラウザー評価で取得し、B488不一致時もRAWを保存する修正。直近 [Actions #42487525658](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42487525658) は、本書最終読込時点で **SUCCESS / completed**。**次チャット最初に再取得**。結果がSUCCESSでも、通常Windowsの本人試遊やF4跨ぎを証明しない。FAILなら**初めに新しいB488 RAWの実値と失敗箇所**を確認し、原因が同じ条件の再RUNを禁じる。
+- 直近研究ゲーム/runner HEAD 87086f8abcdb919dc077f23a257c4c8885bdd426 は #42486348414のB486/B487/B488を1回の同期read-onlyブラウザー評価で取得し、B488不一致時もRAWを保存する修正。直近 [Actions #42487525658](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/42487525658) は **SUCCESS / completed**。Artifact 13620431059 の B486/B487/B488を独立取得し、全てnative tick **1785**、人間敵最短**104.9101826626387m**・味方敵最短**79.22702472744068m**で一致、0/16経路・8ギャップ・原作Face0・Scoreable0/Winner NONEのHOLDを再確認。**K0終了**。このRUNは通常Windows本人試遊やF4跨ぎを証明しない。次チャットでは最新SHA保護を軽く再確認したら、同条件B488再試験ではなくK1へ直接着手する。
 - B487の真正敵味方Recast path 0/16、B488の8ギャップ・Face個別根拠0、敵HP本物命中と公式勝敗は、どのRUNの緑/赤判定でもHOLD。
 - **2026-11-08本人Windows通常試遊はFAIL**: 広範囲の暗い/未表示床、すり抜け、CPUが1体程度に見える、普通の操作でSAFE STOP。表示時計3:00/1-of-7は画像で確認できるが、本人ローカルGit SHA、URL末尾、最初のnative tick/例外名/stackは未確定。早期STOP後に残りCPU更新が止まった可能性はあるが、恒久的AIバグとも完全な環境差とも断定不可。**手動受入を新RUNから捏造禁止**。
 
@@ -56,9 +56,9 @@ Splatoon 3 **Ver.7.2.0以降のマテガイ放水路（Undertow Spillway）通�
 
 ## 4. 次チャットの実行順と停止条件（後戻りを減らす）
 
-**K0: 直近1RUNを確定し、分かっている失敗の無駄な再試行を止める（最初の作業）**
-- 最初に現在HEAD/main/PR #5を再取得し、#42487525658の最終conclusion・step・RAW・B488を取得。SUCCESSならローカルブラウザーのB486/B487/B488の一致（native tick/最小距離/0/16/8 gap）を独立確認。FAILならまず保存B488 JSONを読み、旧B486/B487の真距離と比較。あらかじめFAILしたからと言ってB488のHOLD条件や1mm許容を緩めない。
-- PASSしても監査のノイズ抑制のみ。新たに原作衝突/敵自然経路を認証した扱いはしない。差分が不明ならK0=HOLD、同一CIを再起動せず原因候補を短く1件に絞る。
+**K0: 完了（2026-11-08）／原作F4権限はHOLDのまま。K1へ移行する**
+- **2026-11-08 K0完了**: #42487525658（ゲーム/runner SHA 87086f8abcdb919dc077f23a257c4c8885bdd426）は completed/SUCCESS、Actions内Unit/build/真正Chromium全成功。Artifact 13620431059 の B486/B487/B488生JSONを独立取得・読取。**3値のnative tick 1785で完全一致**し、B486/B487/B488の最小距離も人間→敵104.9101826626387m、味方→敵79.22702472744068mで同一。真正Recast path 0/16、未解決原作ギャップ8/Side4、個別真正衝突Face0、Scoreable0、Winner NONE、F4未解禁は従来通り。真正SOURCE7 CPU・人間射撃6発・同側研究は限定PASS。**前回FAILは監査時刻の不整合が原因であった可能性が高いが、決定的な1要素の因果分解は未実施**。不要な同条件CIは再起動せず、ゲーム実装変更なしでK1へ進む。
+- **K0のPASSは監査方法の信頼性に限る。** 同一原作25/17/26/0・敵自然経路0/16・F4 HOLDのまま。本ゲームの本人Windows品質/ARTの採用証拠ではない。次は**K1の本体床表示×真Rapier支持×プレイヤー操作**を1まとまりの価値として検証・修正する。
 
 **K1: 人間が歩く真正 SOURCE 1本を、見える物理床と一致させる（最優先ゲーム本体）**
 - 通常のSOURCE PLAYER起動モードを既存ポータルから1つ選び、STAGING→7CPU真正再合流→PLAYINGのあと実WASD/視点を持ったまま、元上段→真DROP→元着地点→登録済み坂へ進む。実P1安全性を先に見てから原作中央側の停止位置を観測。KCCやactor位置を動かす偽診断は禁止。
@@ -104,6 +104,6 @@ Splatoon 3 **Ver.7.2.0以降のマテガイ放水路（Undertow Spillway）通�
 
 ## 7. 新チャットに貼り付けるのはこの1通だけ
 
-> Browser Ink TPS / T21の既存開発を継続。GitHub ryomashibaba/browser-ink-tps の START_HERE.md 最上段の V20.0 批判的全統合正本を全文読み、V19/V18と固定F1〜F5/Fast Track/永続決定を継承。最新研究HEAD、main、Draft PR #5、#42487525658の最終RAWを確認。本人通常Windows試遊の床欠落・CPU少数・SAFE STOPは未解決。V20のK0を1回確定→K1の見える床×Rapier衝突一致→同一worldでCPU7と実プレイループへ。不要なHUD/B番号/Docs/CIを増やさず、原作25/17/26/0・自然敵味方0/16・8ギャップ権限0・Scoreable0・公式Winner NONE、正式4v4/公開HOLD。main/PR5/Pages/原本/正式QA保護、研究branch非force CASのみ。本人操作・追加費用を最小にし、1まとまりの実ゲーム改善と真正証拠まで進めてください。
+> Browser Ink TPS / T21の既存開発を継続。GitHub ryomashibaba/browser-ink-tps の START_HERE.md 最上段の V20.0 批判的全統合正本を全文読み、V19/V18と固定F1〜F5/Fast Track/永続決定を継承。最新研究HEAD、main、Draft PR #5を再確認。#42487525658の真正RAWはtick1785で同期K0 PASS済み、再RUN禁止。本人通常Windows試遊の床欠落・CPU少数・SAFE STOPは未解決。**次はK1の見える床×本物Rapier支持×本人に見える通常PLAYERルートの実ゲーム改善**→同一worldでCPU7と実プレイループへ。不要なHUD/B番号/Docs/CIを増やさず、原作25/17/26/0・自然敵味方0/16・8ギャップ権限0・Scoreable0・公式Winner NONE、正式4v4/公開HOLD。main/PR5/Pages/原本/正式QA保護、研究branch非force CASのみ。本人操作・追加費用を最小にし、1まとまりの実ゲーム改善と真正証拠まで進めてください。
 
 **このV20は現在把握できる材料に対する最善の実行統合版であり、未取得のWindows実証や原作Face/flagsまで「完全に証明済み」とは主張しない。**
