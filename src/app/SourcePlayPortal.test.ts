@@ -4,7 +4,8 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
  sourceFinishedReplayAction,sourceFinishedReplayHref,
  sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY,
- sourceCanonicalPlayableMode,sourceFreshSelectedModeHref,
+ sourceCanonicalPlayableMode,sourceHumanFullRoundPrestartGuard,
+ sourceFreshSelectedModeHref,
  sourceCoopPracticeFreshReplayHref,sourcePausedFreshRoundHref,
  sourceOriginalFallFreshWorldHref,SOURCE_ORIGINAL_FALL_STOP}
  from './SourcePlayPortal';
@@ -12,6 +13,34 @@ import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
+describe('SOURCE prestart guard for live human research-flag URLs',()=>{
+ const menu='https://example.org/browser-ink-tps/play-source.html';
+ const options=sourcePlayWeaponModeDestinations(menu,'ink-saber');
+ it('keeps original 7/7 staging interlock for all four live modes with view flags',()=>{
+  for(const href of Object.values(options)){
+   expect(sourceHumanFullRoundPrestartGuard(href)).toBe(true);
+   const extra=new URL(href);
+   extra.searchParams.set('t21W10B26','smartVisibility');
+   expect(sourceCanonicalPlayableMode(extra.href)).toBeNull();
+   expect(sourceHumanFullRoundPrestartGuard(extra.href)).toBe(true);
+  }
+ });
+ it('excludes deterministic QA, unsafe modes, missing authority and duplicates',()=>{
+  for(const [key,val] of [
+   ['t21QaInput','deterministic'],['production','1'],['scoreable','1'],
+   ['t21W10B193','allyCoop'],['t21W10B192','invalid'],
+   ['t21W10B203','notFull']
+  ]){
+   const u=new URL(options.combat);u.searchParams.set(key,val);
+   expect(sourceHumanFullRoundPrestartGuard(u.href)).toBe(false);
+  }
+  const duplicate=new URL(options.combat);
+  duplicate.searchParams.append('t21QaDrive','source');
+  expect(sourceHumanFullRoundPrestartGuard(duplicate.href)).toBe(false);
+  expect(sourceHumanFullRoundPrestartGuard('/invalid')).toBe(false);
+ });
+});
+
 describe('T21 real playable SOURCE game entry',()=>{
  it('launches authentic existing 12-weapon 180s SOURCE circuit',()=>{
   const d=sourcePlayPortalDestinations('https://example.org/browser-ink-tps/play-source.html');

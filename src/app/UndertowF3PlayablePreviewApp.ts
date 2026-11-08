@@ -115,6 +115,7 @@ import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRou
 import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourceFinishedReplayHref,sourceReplayHotkeyAction,
  sourcePlayStoreWeaponSelection,sourceCanonicalPlayableMode,
+ sourceHumanFullRoundPrestartGuard,
  sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref,
  sourcePausedFreshRoundHref,sourceOriginalFallFreshWorldHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
@@ -496,10 +497,10 @@ export class UndertowF3PlayablePreviewApp{
   const p=new URL(location.href).searchParams;
   return p.get('t21Play')==='preview'&&p.get('t21W10B203')==='fullRound';
  })();
- // Strictly the four existing SOURCE portal destinations; no effect on
- // research flags, deterministic QA, or other live PREVIEW configurations.
- private readonly nativeCanonicalPrestart=
-  this.b203FullRound&&sourceCanonicalPlayableMode(location.href)!==null;
+ // Keep 7/7 physical staging movement safety for genuine human
+ // full-round URLs with opt-in research/view flags. No QA or replay grant.
+ private readonly nativeLiveSourcePrestart=
+  this.b203FullRound&&sourceHumanFullRoundPrestartGuard(location.href);
  private readonly b384Circuit=b384SourceCircuitSelected(new URL(location.href).searchParams);
  // Opt-in, entirely visual F5 SOURCE 180s camera clearance study.
  private b399ClearSightEnabled=new URL(location.href).searchParams
@@ -1943,7 +1944,7 @@ export class UndertowF3PlayablePreviewApp{
   }
   this.b129EdgeCoach=createF3OriginalRaisedEdgeCoach(ui);
   this.b209RampEdgeCoach=createB209OriginalRampEdgeCoach(ui);
-  if(this.b112GroundEnabled||this.nativeCanonicalPrestart){
+  if(this.b112GroundEnabled||this.nativeLiveSourcePrestart){
    const warning=document.createElement('div');
    warning.id='t21-f3-b113-ground-warning';
    warning.hidden=true;
@@ -4906,7 +4907,7 @@ export class UndertowF3PlayablePreviewApp{
     // collision, movement threshold, CPU, spawn, actor pose or native time.
     // Normal non-SOURCE and deterministic QA paths remain unchanged.
     this.input.setSourcePrestartMovementBlocked(
-     this.nativeCanonicalPrestart&&this.matchState==='STAGING');
+     this.nativeLiveSourcePrestart&&this.matchState==='STAGING');
     // B379: genuine 60Hz player inputs and B378-selected weapon runtime
     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
     applyB379NativePlayerWeaponMobility({
@@ -5004,7 +5005,7 @@ export class UndertowF3PlayablePreviewApp{
      // prestart key latch immediately, not on the next fixed tick: a real
      // KeyW between ticks must be accepted as normal PLAYING input.
      // Held keys from STAGING remain blocked until a physical keyup.
-     if(this.nativeCanonicalPrestart)
+     if(this.nativeLiveSourcePrestart)
       this.input.setSourcePrestartMovementBlocked(false);
     }
     if(this.matchState==='PLAYING'){
@@ -5530,7 +5531,7 @@ export class UndertowF3PlayablePreviewApp{
     // One real original Rapier ray toward the centre from the EXISTING
     // first-drop landing. An absent near-height hit is a WARNING, not
     // evidence that a whole floor is missing, and not a new collision.
-    if(this.nativeCanonicalPrestart&&frame%6===0){
+    if(this.nativeLiveSourcePrestart&&frame%6===0){
      const id=rampRealRay?.solidId??null;
      const onLanding=id==='UndertowT21D:first-drop-landing-positive-z'||
       id==='UndertowT21D:first-drop-landing-negative-z';
@@ -6930,7 +6931,7 @@ export class UndertowF3PlayablePreviewApp{
    }):null;
   const nativeCamera=this.camera.sourcePracticeViewSnapshot();
   // Read-only SOURCE witness; actual native held axes and current real yaw.
-  const nativeInput=this.nativeCanonicalPrestart?
+  const nativeInput=this.nativeLiveSourcePrestart?
    sourceNativeInputProjection({
     nativeTick:this.clock.tick,
     axes:[this.input.moveX,this.input.moveY],

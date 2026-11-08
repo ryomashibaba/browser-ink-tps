@@ -188,6 +188,28 @@ export function sourceFinishedReplayHref(
 }
 
 
+/** Genuine SOURCE human full-round staging movement guard.
+ * Extra display/research flags must not disable the physical 7/7 CPU latch
+ * just because the stricter canonical replay URL check rejects them.
+ * This does NOT grant a game mode, replay, stage or scoring authority. */
+export function sourceHumanFullRoundPrestartGuard(href:string):boolean{
+ try{
+  const u=new URL(href),q=u.searchParams;
+  if(!['http:','https:'].includes(u.protocol)||
+     !(u.pathname.endsWith('/')||u.pathname.endsWith('/index.html'))||
+     u.hash!==''||q.has('production')||q.has('scoreable')||
+     q.has('t21QaInput')||q.get('t21Play')!=='preview'||
+     q.get('t21QaDrive')!=='source'||
+     q.get('t21W10B183')!=='firstDropPlay'||
+     q.get('t21W10B203')!=='fullRound')return false;
+  for(const k of ['t21Play','t21QaDrive','t21W10B183',
+     't21W10B203','t21W10B192','t21W10B193'])
+   if(q.getAll(k).length>1)return false;
+  return (q.get('t21W10B192')==='humanCombat'&&!q.has('t21W10B193'))||
+   (q.get('t21W10B193')==='allyCoop'&&!q.has('t21W10B192'));
+ }catch{return false;}
+}
+
 export type SourcePlayableMode='circuit'|'combat'|'coop'|'frontline';
 /** Only one of the four actual SOURCE launcher URLs can switch modes.
  * Rejects injected parameters, duplicate keys and mixed research flags.
