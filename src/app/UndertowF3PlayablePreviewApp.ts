@@ -116,7 +116,7 @@ import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourceFinishedReplayHref,sourceReplayHotkeyAction,
  sourcePlayStoreWeaponSelection,sourceCanonicalPlayableMode,
  sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref,
- sourcePausedFreshRoundHref} from './SourcePlayPortal';
+ sourcePausedFreshRoundHref,sourceOriginalFallFreshWorldHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -2327,6 +2327,33 @@ export class UndertowF3PlayablePreviewApp{
    // Real full-round SOURCE R is an end-screen replay command only.
    // Never reset live CPU, paint, physics or clock from a keypress.
    if(ev.code==='KeyR'){
+    // Keep native physics STOP unchanged. Only a previously verified
+    // original-floor fallout permits explicit NEW-WORLD SOURCE re-entry.
+    if(this.b203FullRound&&this.stopReason){
+     const target=ev.target;
+     const editing=target instanceof HTMLElement&&
+      (target.isContentEditable||
+       target.closest('input,textarea,select,[contenteditable]')!==null);
+     const fresh=sourceOriginalFallFreshWorldHref({
+      href:window.location.href,
+      weaponId:this.projectiles.currentPlayerWeapon.id,
+      stopReason:this.stopReason,matchState:this.matchState,
+      paused:this.paused,nativeTick:this.clock.tick,
+      originalSolids:this.rawStage.solids.length,
+      originalPaint:this.rawStage.paintSurfaces.length,
+      originalLinks:this.rawStage.navigationLinks?.length??0,
+      scoreable:this.b45SourceSurfaces.filter(s=>s.isScoreable).length,
+      repeat:ev.repeat,
+      modified:ev.shiftKey||ev.altKey||ev.ctrlKey||ev.metaKey,editing
+     });
+     if(fresh){
+      ev.preventDefault();ev.stopImmediatePropagation();
+      this.canvas.dataset.t21SourceFallKeyR='NEW_WORLD_ONLY_OLD_STOP_PRESERVED';
+      if(fresh===window.location.href)window.location.reload();
+      else window.location.assign(fresh);
+      return;
+     }
+    }
     if(this.b203FullRound){
      const target=ev.target;
      const editing=target instanceof HTMLElement&&

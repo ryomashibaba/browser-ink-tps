@@ -294,3 +294,24 @@ export function sourceReplayHotkeyAction(
     (q.has('t21W10B389')&&!b389NativeBootWeapon(q)))return 'BLOCK';
  return 'NAVIGATE_FRESH_COOP_CLEAR';
 }
+
+
+/** Real out-of-original-source-fall STOP remains frozen. Only explicit R may
+ * open a wholly new canonical SOURCE world; NEVER a collision/death grant. */
+export const SOURCE_ORIGINAL_FALL_STOP=
+ 'T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED';
+export function sourceOriginalFallFreshWorldHref(x:{
+ href:string;weaponId:string;stopReason:string|null;
+ matchState:string;paused:boolean;nativeTick:number;
+ originalSolids:number;originalPaint:number;originalLinks:number;scoreable:number;
+ repeat:boolean;modified:boolean;editing:boolean;
+}):string|null{
+ if(x.stopReason!==SOURCE_ORIGINAL_FALL_STOP||
+    !['STAGING','PLAYING'].includes(x.matchState)||!x.paused||
+    !Number.isSafeInteger(x.nativeTick)||x.nativeTick<1||
+    x.originalSolids!==25||x.originalPaint!==17||
+    x.originalLinks!==26||x.scoreable!==0||
+    x.repeat||x.modified||x.editing)return null;
+ const mode=sourceCanonicalPlayableMode(x.href);
+ return mode?sourceFreshSelectedModeHref(x.href,x.weaponId,mode):null;
+}

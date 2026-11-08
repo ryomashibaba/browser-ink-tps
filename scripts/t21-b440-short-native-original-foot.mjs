@@ -551,6 +551,43 @@ async function main(){
        Buffer.from(shot.data,'base64'));
     }catch{}
     save();
+    if(n.stopReason==='T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED'){
+     // Verify the stopped old world is never reset. The actual CDP R
+     // event must navigate to a NEW, fresh canonical source world.
+     const previousOrigin=await origin();
+     const previousHref=await evaluate('location.href');
+     const key={key:'r',code:'KeyR',windowsVirtualKeyCode:82,
+      nativeVirtualKeyCode:82};
+     await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});
+     await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
+     const fresh=await until(async()=>{
+      try{return await evaluate(`(() => {
+       const n=window.__t21F3?.snapshot?.();
+       return n?{origin:performance.timeOrigin,href:location.href,
+        ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+        tick:n.tick,phase:n.matchState,stopReason:n.stopReason,
+        actors:n.cpu?.cpu?.length,rejoins:n.cpu?.physicalRejoins?.length,
+        stage:[n.originalSourceSolids,n.originalPaintSurfaces,
+         n.originalSourceNavigationLinks,n.sourceScoreablePromotions]}:null;
+      })()`);}catch{return null;}
+     },120000,350);
+     if(!fresh||fresh.origin<=previousOrigin||
+        fresh.href!==previousHref||fresh.ready!=='READY'||
+        fresh.tick!==0||fresh.phase!=='STAGING'||fresh.stopReason||
+        fresh.actors!==7||fresh.rejoins!==0||
+        JSON.stringify(fresh.stage)!=='[25,17,26,0]')
+      fail('P0_REAL_KEYR_FRESH_WORLD_NOT_PROVEN');
+     proof.p0FallRecovery={realKey:'KeyR',oldWorldWasStopped:true,
+      stoppedTick:n.tick,stoppedReason:n.stopReason,
+      stoppedCpuRejoins:n.cpu?.physicalRejoins?.length,
+      freshWorld:fresh,actorWrites:0,scoreWrites:0,nativeClockWrites:0,
+      officialWinner:'NONE',productionAuthorized:false};
+     proof.verdict='PASS_NATIVE_SOURCE_FALL_STOP_AND_KEYR_NEW_WORLD_ONLY';
+     proof.p0Verdict=proof.verdict;
+     proof.stage='P0_SOURCE_FALL_EXPLICIT_REENTRY';save();
+     console.log('P0_SOURCE_FALL_RECOVERY',JSON.stringify(proof.p0FallRecovery));
+     return 'RECOVERED';
+    }
     fail('P0_GENUINE_SOURCE_SAFE_STOP_'+n.stopReason);
    }
    if(n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
@@ -569,7 +606,9 @@ async function main(){
   let real;
   try{
    real=await until(async()=>{
-   const n=await snap();await inspect(n,'CPU_STAGING_REAL_USER_W');
+   const n=await snap();
+   const outcome=await inspect(n,'CPU_STAGING_REAL_USER_W');
+   if(outcome==='RECOVERED')return {recovered:true};
    if(earlyHeld&&n.tick>=480){
     await cdp('Input.dispatchKeyEvent',{type:'keyUp',...earlyKey});
     earlyHeld=false;proof.p0EarlyPlayerWReleasedAtTick=n.tick;
@@ -595,6 +634,7 @@ async function main(){
    if(earlyHeld)await cdp('Input.dispatchKeyEvent',{
     type:'keyUp',...earlyKey}).catch(()=>{});
   }
+  if(real?.recovered)return;
   record(real,'AFTER_GENUINE_SEVEN_NATIVE_REJOINS');
   // Seven authentic drop -> rejoin prerequisites are checked BEFORE any
   // ordinary W movement; no CPU is snapped or unblocked by this script.

@@ -5,7 +5,8 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourceFinishedReplayAction,sourceFinishedReplayHref,
  sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY,
  sourceCanonicalPlayableMode,sourceFreshSelectedModeHref,
- sourceCoopPracticeFreshReplayHref,sourcePausedFreshRoundHref}
+ sourceCoopPracticeFreshReplayHref,sourcePausedFreshRoundHref,
+ sourceOriginalFallFreshWorldHref,SOURCE_ORIGINAL_FALL_STOP}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
@@ -472,5 +473,37 @@ describe('user mid-round restart: four real SOURCE game modes',()=>{
    {href:before.combat+'&t21QaInput=deterministic'},
    {href:before.combat+'&t21W10B389=rail-charger'}
   ])expect(sourcePausedFreshRoundHref({...e,...diff})).toBe(null);
+ });
+});
+
+describe('genuine SOURCE original fall R recovery',()=>{
+ const urls=sourcePlayWeaponModeDestinations(
+  'http://127.0.0.1:4173/browser-ink-tps/play-source.html','pulse-sprayer');
+ const valid=(href:string)=>({
+  href,weaponId:'pulse-sprayer',stopReason:SOURCE_ORIGINAL_FALL_STOP,
+  matchState:'STAGING',paused:true,nativeTick:389,
+  originalSolids:25,originalPaint:17,originalLinks:26,scoreable:0,
+  repeat:false,modified:false,editing:false
+ });
+ it('keeps every existing canonical SOURCE selection in a fresh world',()=>{
+  for(const href of Object.values(urls)){
+   expect(sourceOriginalFallFreshWorldHref(valid(href))).toBe(href);
+   const next=sourceOriginalFallFreshWorldHref({
+    ...valid(href),weaponId:'rail-charger'});
+   expect(new URL(next!).searchParams.get('t21W10B389')).toBe('rail-charger');
+  }
+ });
+ it('rejects arbitrary STOP and unaudited or untrusted session flags',()=>{
+  const x=valid(urls.circuit);
+  for(const y of [
+   {stopReason:'UNKNOWN'},{stopReason:null},{matchState:'TIME_UP'},
+   {paused:false},{nativeTick:0},{originalSolids:26},
+   {originalPaint:18},{originalLinks:27},{scoreable:1},
+   {repeat:true},{modified:true},{editing:true},
+   {weaponId:'not-an-original-weapon'},
+   {href:urls.circuit+'&t21QaInput=deterministic'},
+   {href:urls.circuit+'&production=1'},
+   {href:urls.circuit+'&cpuWarp=1'}
+  ])expect(sourceOriginalFallFreshWorldHref({...x,...y})).toBeNull();
  });
 });

@@ -13,6 +13,7 @@ import {B356RealSourceReticle,b356NativeSourceImpactCueEnabled} from './B356Real
 import {B392NativeSubFeedback} from './B392NativeSubFeedback';
 import {B394OriginalBombPaintNotice} from './B394OriginalBombPaintNotice';
 import type {F3HumanInkContact} from './UndertowF3SourceInkFeedback';
+import {sourceCanonicalPlayableMode,SOURCE_ORIGINAL_FALL_STOP} from './SourcePlayPortal';
 
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string;inkRelation?:string};
@@ -220,10 +221,13 @@ export function b290SourcePlayerHudPhase(x:{
 export function b465SourceRoundKeyHelp(v:{
  sourceFullRound:boolean;matchState:string;
  stopped:boolean;paused:boolean;coOpClearReplayReady?:boolean;
+ fallRecoveryAvailable?:boolean;
 }):string{
  const base='M RADAR · N SOUND · P PAUSE';
  if(!v.sourceFullRound)return base+' · R RESTART';
- if(v.stopped)return base+' · SAFE STOP (R DISABLED)';
+ if(v.stopped)return v.fallRecoveryAvailable?
+  'SAFE STOP · R NEW SOURCE WORLD (OLD WORLD REMAINS STOPPED)':
+  base+' · SAFE STOP (R DISABLED)';
  if(v.matchState==='TIME_UP')
   return 'R REPLAY NEW SOURCE WORLD · NO OFFICIAL WINNER';
  if(v.matchState==='STAGING')
@@ -449,7 +453,8 @@ export function createF3PlayableHud(ui:HTMLElement){
   replayQ.get('t21QaDrive')==='source'&&
   replayQ.get('t21W10B203')==='fullRound'&&
   replayQ.get('t21QaInput')!=='deterministic';
- const refreshReplayKeyHelp=(phase:string,stopped:boolean,paused:boolean)=>{
+ const refreshReplayKeyHelp=(phase:string,stopped:boolean,paused:boolean,
+  stopReason:string|null,originalAuthority:boolean)=>{
   const a1Card=document.querySelector<HTMLElement>('#t21-f3-b25-paint-run');
   const a1Button=document.querySelector<HTMLButtonElement>('#t21-f3-b25-start');
   const coOpClearReplayReady=nativeFullSourceRound&&
@@ -458,7 +463,10 @@ export function createF3PlayableHud(ui:HTMLElement){
    !!a1Button&&!a1Button.disabled;
   const message=b465SourceRoundKeyHelp({
    sourceFullRound:nativeFullSourceRound,matchState:phase,stopped,paused,
-   coOpClearReplayReady
+   coOpClearReplayReady,
+   fallRecoveryAvailable:stopped&&paused&&originalAuthority&&
+    stopReason===SOURCE_ORIGINAL_FALL_STOP&&
+    sourceCanonicalPlayableMode(window.location.href)!==null
   });
   if(replayKeyHelp.textContent!==message)replayKeyHelp.textContent=message;
   replayKeyHelp.dataset.t21B465SourceOnly=String(nativeFullSourceRound);
@@ -517,7 +525,8 @@ export function createF3PlayableHud(ui:HTMLElement){
   if(!b338Guide.hidden&&b338Guide.textContent!==live.text)
    b338Guide.textContent=live.text;
   b338Guide.dataset.t21B338GameplayWrites='0';
-  refreshReplayKeyHelp(p.matchState,!legitimate||!!p.stopReason,p.paused);
+  refreshReplayKeyHelp(p.matchState,!legitimate||!!p.stopReason,p.paused,
+   p.stopReason,legitimate);
   const sub=p.nativeHumanSub;
   const cue=b392Events.observe({
    trustedSource:legitimate,playerView:ui.dataset.t21B245Presentation==='PLAYER',
@@ -686,7 +695,12 @@ export function createF3PlayableHud(ui:HTMLElement){
   if(!b338Guide.hidden&&b338Guide.textContent!==b338.text)
    b338Guide.textContent=b338.text;
   b338Guide.dataset.t21B338GameplayWrites='0';
-  refreshReplayKeyHelp(value.matchState,!!value.stopReason,value.paused);
+  refreshReplayKeyHelp(value.matchState,!!value.stopReason,value.paused,
+   value.stopReason,value.originalSourceSolids===25&&
+   value.originalPaintSurfaces===17&&
+   value.originalSourceNavigationLinks===26&&
+   value.sourceScoreablePromotions===0&&
+   value.productionAuthorized===false);
   danger.hidden=v.hazard==='NONE';
   const dangerText=v.hazard==='CRITICAL_ENEMY_INK'?
    'CRITICAL HP + ENEMY INK · ESCAPE & RECOVER':

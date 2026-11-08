@@ -861,3 +861,13 @@ describe('REAL 180s original SOURCE shot vs actually changed ink feedback',()=>{
   expect(b356NativeSourceImpactCueEnabled('?t21Play=preview')).toBe(false);
  });
 });
+
+describe('original source FAIL CLOSED recovery text',()=>{
+ it('keeps unrelated STOP disabled and announces only new-world R',()=>{
+  const x={sourceFullRound:true,matchState:'STAGING',
+   stopped:true,paused:true};
+  expect(b465SourceRoundKeyHelp(x)).toContain('R DISABLED');
+  expect(b465SourceRoundKeyHelp({...x,fallRecoveryAvailable:true}))
+   .toContain('R NEW SOURCE WORLD (OLD WORLD REMAINS STOPPED)');
+ });
+});
