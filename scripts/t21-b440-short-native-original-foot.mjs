@@ -2542,7 +2542,22 @@ async function main(){
   save();
   // B486 independent real 60Hz HUMAN and 3-vs-4 CPU proximity proof.
   // Distance is never shot contact, opponent native path or certified 4v4.
-  const b486=await evaluate('window.__t21F3.b486ActualOriginalEnemyDistances()');
+  // One JS task freezes the browser's native 60Hz state while all three
+  // independent READ-ONLY authority queries are taken. Three separate
+  // CDP evaluations let real moving CPUs change the nearest distance by
+  // >1mm between B486, B487 and B488, falsely failing strict provenance.
+  // This does NOT pause/advance the actual native clock or modify an actor.
+  const synchronizedOriginal=await evaluate(`(() => {
+   const api=window.__t21F3;
+   if(!api)return null;
+   const b486=api.b486ActualOriginalEnemyDistances();
+   const b487=api.b487ActualOriginalCrossTeamTopology();
+   const b488=api.b488OriginalCrossTeamGapDecision();
+   return {b486,b487,b488};
+  })()`);
+  if(!synchronizedOriginal)
+   fail('B486_B487_B488_SAME_NATIVE_WORLD_NOT_AVAILABLE');
+  const {b486,b487,b488}=synchronizedOriginal;
   if(!b486||
      b486.schema!=='B486_TRUE_ORIGINAL_NATIVE_60HZ_ENCOUNTER_DISTANCE_V1'||
      b486.source!=='25/17/26/0'||b486.rows<100||
@@ -2572,11 +2587,12 @@ async function main(){
   // B487: 26 original one-way same-side links cannot be promoted into
   // central access. Query current native Recast for each real 3x4 CPU
   // opposing pair PLUS original human foot to 4 opposing actors.
-  const b487=await evaluate(
-   'window.__t21F3.b487ActualOriginalCrossTeamTopology()');
+  // The B487 native Recast result was captured above in the SAME
+  // browser JS task as the real B486 60Hz proximity evidence.
   if(!b487||
      b487.schema!=='B487_TRUE_ORIGINAL_NATIVE_CROSS_TEAM_TOPOLOGY_V1'||
      b487.source!=='25/17/26/0'||
+     b486.lastNativeTick!==b487.nativeTick||
      b487.originalOneWayDropLinks!==26||
      b487.originalFirstDropLinks!==12||
      b487.originalRightSmallDropLinks!==14||
@@ -2609,13 +2625,15 @@ async function main(){
   // B488: evidence gate applied to the SAME actual 7-CPU native SOURCE
   // as B486/B487. The archived four local gaps on each side have no
   // individual 7.2.0 Turf collision authority. This is NOT a route grant.
-  const b488=await evaluate(
-   'window.__t21F3.b488OriginalCrossTeamGapDecision()');
+  // Retain exact B488 evidence EVEN on FAIL; an unresolved F4 gap
+  // remains HOLD, never an implicitly accepted original floor.
+  if(b488)writeFileSync(resolve(out,'b488-real-original-f4-gap-authority-hold.json'),
+   JSON.stringify(b488,null,2)+'\n');
   if(!b488||
      b488.schema!=='B488_ORIGINAL_CROSS_TEAM_GAP_AUTHORITY_DECISION_V1'||
      b488.originalSource!=='25/17/26/0'||
      !Number.isSafeInteger(b488.observedNativeTick)||
-     b488.observedNativeTick<b487.nativeTick||
+     b488.observedNativeTick!==b487.nativeTick||
      b488.currentNativeOpposingQueries!==16||
      b488.currentNativeReportedPaths!==b487.nativePathReportedPairs||
      b488.currentNativeCredibleEndpointPairs!==
@@ -2639,8 +2657,6 @@ async function main(){
      b488.nextRequiredEvidence.length!==4||
      b488.verdict!=='HOLD_REFERENCE_REQUIRED_NO_AUTHORIZED_CROSSING')
    fail('B488_REAL_NATIVE_GAP_SOURCE_AUTHORITY_PROOF_HOLD');
-  writeFileSync(resolve(out,'b488-real-original-f4-gap-authority-hold.json'),
-   JSON.stringify(b488,null,2)+'\n');
   proof.b488OriginalCentralGapAuthority={
    ...b488,raw:'b488-real-original-f4-gap-authority-hold.json',
    actualBrowserSource:true,collisionAndNavigationWrites:0,
