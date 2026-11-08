@@ -6279,7 +6279,9 @@ export class UndertowF3PlayablePreviewApp{
    'CHOOSE SOURCE GAME MODE · NEW ROUND';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
    .textContent=sourceFallRecovery?
-    'Original floor support lost. Safety stop is preserved. Click to start a NEW unscored SOURCE world; the missing original floor remains HOLD.':
+    'BOUNDARY STOP · TICK '+this.clock.tick+' · '+
+    (this.stopReason??'UNKNOWN').slice(0,160)+
+    '. Native physics remains stopped. Click only to create a NEW, unscored SOURCE world. Whether original floor collision is absent remains HOLD.':
     stoppedMenuOnly?'FAIL-CLOSED · '+this.stopReason+
      ' · tick '+this.clock.tick+
      '. No in-place reset. Choose SOURCE MODE MENU to open a clean world.':
@@ -7872,8 +7874,15 @@ export class UndertowF3PlayablePreviewApp{
     state.matchState==='TIME_UP'?'COMPLETE':
     state.paused?'PAUSED':state.matchState;
    const cleared=state.b25SourcePaintRun.status==='CLEAR';
+   // Reuse the existing full-round readout. A genuine fail-closed
+   // exception must show its ACTUAL native reason and tick to the human,
+   // not merely "SAFE STOP" with an unchanged 3:00 clock. No new HUD,
+   // position/physics rescue, synthetic evidence or normal-play overhead.
+   const actualStop=state.stopReason?
+    'NATIVE STOP · TICK '+state.tick+' · '+
+    state.stopReason.slice(0,160)+'\n':'';
    this.b205RoundClock.textContent='FULL SOURCE ROUND · UNSCORED\n'+
-    clock+' · '+phase+'\n'+
+    clock+' · '+phase+'\n'+actualStop+
     (cleared&&phase==='PLAYING'?'A1 CLEAR · KEEP PLAYING\n':'')+
     'HP '+Math.round(state.player.hp)+' · INK '+Math.round(state.player.ink)+
     ' · CPU ACTIVE '+state.cpu.cpu.filter(b=>b.lifeState==='ACTIVE').length+'/7'+
