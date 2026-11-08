@@ -46,7 +46,7 @@ export function stageSolidTriangleMeshErrors(
 }
 
 export function stageSolidTriangleWorldVertices(
-  solid: StageSolidDefinition
+  solid: Pick<StageSolidDefinition, 'center' | 'triangleMesh' | 'rotationEulerDegrees'>
 ): readonly StageVector3[] {
   const mesh = solid.triangleMesh;
   if (!mesh) return [];

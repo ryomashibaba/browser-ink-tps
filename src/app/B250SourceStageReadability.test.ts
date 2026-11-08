@@ -2,7 +2,8 @@ import {describe,expect,it} from 'vitest';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {b250SolidTone,b250GlassSourceVisibilityPartition,
- B250_REGISTERED_SOURCE_NEUTRAL,b250CollisionFaceNeedsTwoSidedDraw}
+ B250_REGISTERED_SOURCE_NEUTRAL,b250CollisionFaceNeedsTwoSidedDraw,
+ b250SolidVisualElevationMeters}
  from './B250SourceStageReadability';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -45,6 +46,33 @@ describe('original SOURCE two-sided physical-face visibility',()=>{
   const landing=full.solids.find(s=>s.id.includes('first-drop-landing-positive-z'))!;
   expect(b250CollisionFaceNeedsTwoSidedDraw(landing,false)).toBe(false);
   expect([full.solids,full.paintSurfaces,full.navigationLinks]).toEqual(originals);
+ });
+});
+
+describe('registered ramp height is read from actual original triangle vertices',()=>{
+ it('does not shade true Y=3..4.5 original ramp as its zero-valued local origin',()=>{
+  const full=undertowT21dConnectivityQaStage();
+  const before=[full.solids,full.paintSurfaces,full.navigationLinks];
+  const positive=full.solids.find(s=>s.id==='UndertowT21D:right-low-route-ramp-positive-z')!;
+  const negative=full.solids.find(s=>s.id==='UndertowT21D:right-low-route-ramp-negative-z')!;
+  expect(positive.center[1]).toBe(0);
+  expect(negative.center[1]).toBe(0);
+  expect(b250SolidVisualElevationMeters(positive)).toBeCloseTo(3.75,6);
+  expect(b250SolidVisualElevationMeters(negative)).toBeCloseTo(3.75,6);
+  const flat=full.solids.find(s=>s.id.includes('first-drop-landing-positive-z'))!;
+  expect(flat.triangleMesh).toBeUndefined();
+  expect(b250SolidVisualElevationMeters(flat)).toBe(flat.center[1]);
+  const elevations=full.solids.filter(s=>s.render).map(b250SolidVisualElevationMeters);
+  const rampTone=b250SolidTone(positive,Math.min(...elevations),Math.max(...elevations));
+  expect(rampTone.rgb.every(Number.isFinite)).toBe(true);
+  expect([full.solids,full.paintSurfaces,full.navigationLinks]).toEqual(before);
+ });
+ it('classifies a rotated source triangle mesh using its true world Y',()=>{
+  const rotated={center:[0,0,0] as const,material:'medium' as const,
+   rotationEulerDegrees:[0,0,90] as const,
+   triangleMesh:{vertices:[[2,0,0],[4,0,0],[3,0,2]] as const,
+    indices:[0,1,2] as const}};
+  expect(b250SolidVisualElevationMeters(rotated)).toBeCloseTo(3,6);
  });
 });
 

@@ -7,6 +7,7 @@ import {GAME_CONFIG} from '../config/game/gameConfig';
 import type {StageDefinition,StageMaterialKey,StageSolidDefinition,
  StageTriangleMeshGeometry,StageVector3}
  from '../stage/StageDefinition';
+import {stageSolidTriangleWorldVertices} from '../stage/StageTriangleMesh';
 /**
  * The pinned upper-glass visual shell is 102 triangles/side, but only 94
  * triangles/side are in the registered Rapier collision role. Never display
@@ -93,10 +94,24 @@ export function b250CollisionFaceNeedsTwoSidedDraw(
 }
 
 export type B250Band='LOWER'|'MIDDLE'|'UPPER';
+/** Actual world-space vertical band of an EXISTING source render mesh.
+ * A registered slope can have center.y===0 despite vertices at Y=3..4.5.
+ * The center transform is still used for ordinary frozen footprint boxes.
+ * This is visual classification only, never a collision / support claim. */
+export function b250SolidVisualElevationMeters(
+ s:Pick<StageSolidDefinition,'center'|'triangleMesh'|'rotationEulerDegrees'>
+):number{
+ if(!s.triangleMesh)return s.center[1];
+ const world=stageSolidTriangleWorldVertices(s);
+ if(!world.length)return s.center[1];
+ const y=world.map(vertex=>vertex[1]);
+ return (Math.min(...y)+Math.max(...y))*.5;
+}
 export function b250SolidTone(
- s:Pick<StageSolidDefinition,'center'|'material'>,min:number,max:number
+ s:Pick<StageSolidDefinition,'center'|'material'|'triangleMesh'|'rotationEulerDegrees'>,
+ min:number,max:number
 ):{band:B250Band;rgb:readonly [number,number,number]}{
- const y=s.center[1];
+ const y=b250SolidVisualElevationMeters(s);
  if(![y,min,max].every(Number.isFinite))throw Error('B250_BAD_SOURCE_Y');
  const r=max-min>1e-5?Math.max(0,Math.min(1,(y-min)/(max-min))):.5;
  const band:B250Band=r<.34?'LOWER':r<.68?'MIDDLE':'UPPER';
@@ -123,8 +138,9 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  const root=app.root.findByName('StageRoot');
  if(!root||!camera.camera)throw Error('B250_REGISTERED_RENDER_ROOT_MISSING');
  const visible=stage.solids.filter(s=>s.render);
- const min=Math.min(...visible.map(s=>s.center[1]));
- const max=Math.max(...visible.map(s=>s.center[1]));
+ const elevations=visible.map(b250SolidVisualElevationMeters);
+ const min=Math.min(...elevations);
+ const max=Math.max(...elevations);
  const originalAmbient=app.scene.ambientLight.clone();
  const originalClear=camera.camera.clearColor.clone();
  const bindings:{mesh:MeshInstance;before:Material;after:StandardMaterial}[]=[];
