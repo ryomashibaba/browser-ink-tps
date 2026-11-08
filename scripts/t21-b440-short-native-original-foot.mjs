@@ -421,10 +421,15 @@ async function runK3CanonicalOneWorld(actualHref){
    fail('K3_ORIGINAL_CPU_REAL_PAINT_MISSING_'+id);
   return [id,{shots,impacts:a.impactEvents,impactCells:a.impactChangedCells}];
  }));
+ /** The native CPU roster persists across genuine SPLATTED/respawn.
+  * physicalRejoins counts currently ACTIVE actors, and can temporarily
+  * fall below seven without a CPU disappearing. Preserve a genuine 7-actor
+  * roster + fully unlocked SOURCE combat; never revive or move actors. */
  const validate=async(n,phase='PLAYING')=>{
   authority(n);
   if(await origin()!==born||await evaluate('location.href')!==actualHref||
-     n.matchState!==phase||n.cpu.physicalRejoins.length!==7||
+     n.matchState!==phase||n.cpu.cpu.length!==7||
+     n.cpu.freeCombatEnabled!==true||
      n.cpu.physicalFootRelocations!==0||
      (phase==='PLAYING'&&(n.paused||!await locked()))||
      n.b25SourcePaintRun?.officialWinner!=='NONE')
@@ -435,7 +440,9 @@ async function runK3CanonicalOneWorld(actualHref){
   k.samples.push({tag,tick:n.tick,phase:n.matchState,
    remaining:n.timeRemainingSeconds,
    foot:n.b112OriginalHumanGround?.lastOriginalSourceHitId??null,
-   grounded:n.nativeKccGrounded,actorRejoins:n.cpu.physicalRejoins.length,
+   grounded:n.nativeKccGrounded,rosterCount:n.cpu.cpu.length,
+   nativeFreeCombat:n.cpu.freeCombatEnabled,
+   currentActiveRejoins:n.cpu.physicalRejoins.length,
    shots:n.shotsFired,ink:n.player.ink,
    playerImpactCells:n.b23HumanInkFeedback?.humanChangedCells,
    relation:n.player.inkRelation,recovery:n.playerInkRecoveryState,
