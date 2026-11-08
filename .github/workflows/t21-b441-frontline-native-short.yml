@@ -91,7 +91,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          # P1 evidence-only audit pins the fourth ancestor, never reruns Chrome.
+          fetch-depth: 4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
