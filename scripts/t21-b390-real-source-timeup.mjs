@@ -122,6 +122,21 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  const p1OwnOnce=process.env.T21_P1_OWN_ONCE==='1';
  let p1OwnDone=false;
  let prior=done,final=null,nextSample=20,lastTickWall=began;
+ // P1 retry: prove the canonical read-only bridge at the beginning.
+ // Failure must HOLD immediately, not waste 90 native source seconds.
+ if(p1OwnOnce){
+  const live=await evalPage(
+   'window.__t21F3.auditB312NativeHumanOwnerLedger()');
+  if(live?.source!=='25/17/26/0'||
+     live.sourceActorRelocations!==0||live.sourceInkRewritten!==false||
+     live.playerPositionRewritten!==false||
+     live.originalRows?.length!==17)
+   fail('P1_CANONICAL_READ_ONLY_SOURCE_PREFLIGHT');
+  report.phases.push({phase:'P1_GENUINE_CANONICAL_READ_ONLY_PREFLIGHT',
+   nativeTick:live.tick,originalSurfaces:17,source:live.source,
+   noGameplayWrites:true});
+  persist();
+ }
  const opening={phase:'B390_TRUE_180S_STARTED',tick:done.tick,
   trueTimeRemaining:done.timeRemainingSeconds,
   physicalHumanShots:done.shotsFired,

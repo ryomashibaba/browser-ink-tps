@@ -3869,9 +3869,24 @@ export class UndertowF3PlayablePreviewApp{
    params.get('t21W10B343')==='sourceVolleyAtomic'&&
    this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY'&&
    this.projectiles.b343OriginalSourceVolleyBudgetSnapshot().enabled===true;
-  if(params.get('t21B312')!=='genuineSecondHumanPaint'||
+  // P1: canonical SOURCE play never carries old B312/B337 QA flags.
+  // Admit this READ-ONLY audit only after native, physical seven-CPU
+  // and real locked human play. Legacy study gates remain unchanged.
+  const canonicalPlayerReadOnly=
+   sourceCanonicalPlayableMode(location.href)!==null&&
+   this.b203FullRound&&this.b203EverLockedRealPointer&&
+   document.pointerLockElement===this.canvas&&
+   this.matchState==='PLAYING'&&
+   n.cpu.physicalRejoins.length===7&&
+   n.cpu.physicalFootRelocations===0&&
+   n.productionAuthorized===false&&
+   n.unrestricted4v4Certified===false&&
+   n.sourceScoreablePromotions===0;
+  const legacyStudyReadOnly=
+   params.get('t21B312')==='genuineSecondHumanPaint'&&
+   (params.get('t21W10B193')==='allyCoop'||realShooterCombat);
+  if((!legacyStudyReadOnly&&!canonicalPlayerReadOnly)||
    params.get('t21Play')!=='preview'||
-   (params.get('t21W10B193')!=='allyCoop'&&!realShooterCombat)||
    params.get('t21W10B203')!=='fullRound'||
    !this.b203FullRound||this.paused||this.stopReason||
    !['STAGING','PLAYING'].includes(this.matchState)||n.tick<1||
@@ -3884,7 +3899,9 @@ export class UndertowF3PlayablePreviewApp{
   const body=this.player.getPosition(new Vec3());
   // B337 experimental READ-ONLY grid sampling only when explicitly
   // selected in the research runner; no change to B271 baseline probes.
-  const b337LocalCellRead=params.get('t21B337')==='localOriginalAim';
+  // B337 existing native source-cell samples; never author ink/geometry.
+  const b337LocalCellRead=
+   params.get('t21B337')==='localOriginalAim'||canonicalPlayerReadOnly;
   const b337Camera=this.playerCameraEntity.getPosition();
   const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
   const expectedFootY=body.y-footOffset;

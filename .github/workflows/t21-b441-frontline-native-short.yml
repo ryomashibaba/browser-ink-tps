@@ -80,7 +80,7 @@ concurrency:
 jobs:
   real-native-original-frontline:
     # B385 already runs real 7CPU for this one camera-input milestone.
-    if: ${{ !contains(github.event.head_commit.message, '[b415-short]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[b415-short]') && !contains(github.event.head_commit.message, '[p1-own-retry]') }}
     runs-on: ubuntu-latest
     # One explicit genuine >3600 native-tick case; ordinary pushes stay short.
     timeout-minutes: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]') || contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]') || contains(github.event.head_commit.message, '[real-charger-once]')) && 35 || 15) }}
