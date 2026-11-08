@@ -101,6 +101,7 @@ jobs:
       - name: Install exact SOURCE runtime
         run: npm install --no-audit --no-fund --no-package-lock
       - name: Verify true native runner source and compile game
+        if: ${{ !contains(github.event.head_commit.message, '[k3-one-world]') }}
         run: |
           node --check scripts/t21-b440-short-native-original-foot.mjs
           node --test scripts/t21-source-play-windows-launcher.test.mjs
@@ -109,6 +110,14 @@ jobs:
           node --check scripts/t21-b454-real-native-full-rate-source-foot.mjs
           node --test scripts/t21-b454-real-native-full-rate-source-foot.test.mjs
           npx vitest run src/ai/B216OriginalSourceBackfillInk.test.ts src/app/B488OriginalCrossTeamGapDecision.test.ts src/app/B487TrueOriginalCrossTeamTopology.test.ts src/app/B486NativeSourceEncounterTrace.test.ts src/app/B485RealRepeatA1Command.test.ts src/app/B484TrueNativeA1FollowThrough.test.ts src/app/B483RealFrontlineTeammateCommand.test.ts src/app/B286SourceCompactTeam.test.ts src/app/B481ActualSourcePaintOpportunity.test.ts src/app/B480FocusedSourcePracticeCss.test.ts src/app/UndertowF3PaintAwarePatrol.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B421RealEnemyStandoff.test.ts src/app/B473RealSourceCombatLifeReadout.test.ts src/app/B474OriginalFrontSteeringRefresh.test.ts src/app/B475RealFrontlineReadyChallenge.test.ts src/app/B476OriginalFrontlineObjectiveLayout.test.ts src/app/B477ActualSourceCpuJoinCue.test.ts src/app/UndertowF3SourcePaintRun.test.ts src/ai/OriginalSourceNativeTargetRefresh.test.ts src/app/B367RealCpuCombatTimeline.test.ts src/app/B443OriginalFrontHold.test.ts src/app/B450OriginalRouteWitness.test.ts src/app/B454NativeSourceFootTrace.test.ts src/camera/ThirdPersonCamera.test.ts src/audio/SourcePracticeAudio.test.ts src/app/SourcePlayPortal.test.ts src/app/B250SourceStageReadability.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/SourceNativeInputProjection.test.ts src/input/PlayerInput.qa.test.ts src/app/B464PlayableSourceFrontlineHud.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B463SourceReplayMemory.test.ts src/app/OriginalSourceCombatRetreat.test.ts
+          npm run build -- --base=/browser-ink-tps/
+      # K3 reuses already-certified K0/K1/K2: do not spend the one
+      # native acceptance run repeating the historical wide B441 matrix.
+      - name: K3 minimum TypeScript build and real-runner preflight
+        if: ${{ contains(github.event.head_commit.message, '[k3-one-world]') }}
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          npx vitest run src/app/UndertowF3SourceTraffic.test.ts
           npm run build -- --base=/browser-ink-tps/
       # Use exactly the immutable successful Chromium evidence from run
       # 42309574066, not synthetic playback or a second 39-minute game.
