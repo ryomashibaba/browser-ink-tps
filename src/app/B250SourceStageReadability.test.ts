@@ -1,7 +1,8 @@
 import {describe,expect,it} from 'vitest';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
-import {b250SolidTone} from './B250SourceStageReadability';
+import {b250SolidTone,b250GlassSourceVisibilityPartition}
+ from './B250SourceStageReadability';
 describe('B250 material-only existing registered geometry',()=>{
  it('retains 25/17/26 identity while classifying actual solid elevations',()=>{
   const before=[stage.solids,stage.paintSurfaces,stage.navigationLinks];
@@ -28,5 +29,50 @@ describe('B250 material-only existing registered geometry',()=>{
    .toThrow('B250_BAD_SOURCE_Y');
   expect(b250SolidTone({center:[0,1,0],material:'light'},1,1).band)
    .toBe('MIDDLE');
+ });
+});
+
+describe('P1 actual native SOURCE Glass01 visible/physical triangle parity',()=>{
+ it('keeps 188 registered broad faces and ghosts only 16 excluded faces',()=>{
+  const originals=[stage.solids,stage.paintSurfaces,stage.navigationLinks];
+  const visuals=stage.solids.filter(s=>s.id.endsWith(':visual')&&
+   s.id.includes('upper-glass-'));
+  expect(visuals).toHaveLength(2);
+  let registered=0,excluded=0;
+  for(const s of visuals){
+   const x=b250GlassSourceVisibilityPartition({
+    metadata:{...stage.metadata,id:'undertow-t21d-partial-connectivity-qa'},
+    solids:stage.solids,paintSurfaces:stage.paintSurfaces,
+    navigationLinks:stage.navigationLinks
+   },s);
+   expect(x).not.toBeNull();
+   const source=s.triangleMesh!;
+   expect(x!.registered.vertices).toBe(source.vertices);
+   expect(x!.opticalOnly.vertices).toBe(source.vertices);
+   expect([...x!.registered.indices,...x!.opticalOnly.indices])
+    .toEqual(source.indices);
+   registered+=x!.registered.indices.length/3;
+   excluded+=x!.opticalOnly.indices.length/3;
+  }
+  expect([registered,excluded]).toEqual([188,16]);
+  expect([stage.solids,stage.paintSurfaces,stage.navigationLinks])
+   .toEqual(originals);
+ });
+ it('fails closed on mismatched immutable collision indices or stage authority',()=>{
+  const s=stage.solids.find(x=>x.id.endsWith('upper-glass-positive-z:visual'))!;
+  const metadata={...stage.metadata,id:'undertow-t21d-partial-connectivity-qa'};
+  const full={metadata,solids:stage.solids,paintSurfaces:stage.paintSurfaces,
+   navigationLinks:stage.navigationLinks};
+  expect(()=>b250GlassSourceVisibilityPartition({
+   ...full,metadata:{...metadata,id:'unknown-stage'}
+  },s)).toThrow('B250_GLASS_PINNED_SOURCE_STAGE_REQUIRED');
+  const modified=stage.solids.map(x=>
+   x.id.endsWith('upper-glass-positive-z:pass15d-broad-collision-query-runtime')?
+   {...x,triangleMesh:{vertices:x.triangleMesh!.vertices,
+    indices:[999,...x.triangleMesh!.indices.slice(1)]}}:x);
+  expect(()=>b250GlassSourceVisibilityPartition({...full,solids:modified},s))
+   .toThrow('B250_GLASS_COLLISION_TRIANGLE_AUTHORITY_MISMATCH');
+  expect(b250GlassSourceVisibilityPartition(full,
+   stage.solids.find(x=>x.id.includes('first-drop-landing-'))!)).toBeNull();
  });
 });
