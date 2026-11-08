@@ -14,6 +14,8 @@ import {setTimeout as delay} from 'node:timers/promises';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
+const p0NormalHuman=process.env.T21_P0_NORMAL_HUMAN==='1';
+
 // One-shot full replay uses the EXACT real frontline portal mode, which
 // includes B448. The ordinary B441 short trial remains unchanged.
 const b448Experiment=b441Experiment&&(
@@ -416,6 +418,17 @@ async function main(){
  });
  ws.addEventListener('message',e=>{
   const x=JSON.parse(String(e.data)),p=pending.get(x.id);
+  if(p0NormalHuman&&(x.method==='Runtime.consoleAPICalled'&&
+     x.params?.type==='error'||x.method==='Runtime.exceptionThrown')){
+   proof.p0BrowserErrors??=[];
+   if(proof.p0BrowserErrors.length<12)proof.p0BrowserErrors.push({
+    method:x.method,
+    arguments:x.params?.args?.map(a=>String(a.description??a.value??a.type).slice(0,450))??[],
+    exception:x.params?.exceptionDetails?.exception?.description?.slice(0,700)??null,
+    stack:(x.params?.stackTrace?.callFrames??x.params?.exceptionDetails?.stackTrace?.callFrames??[])
+     .slice(0,8).map(c=>({functionName:c.functionName,url:c.url,lineNumber:c.lineNumber}))
+   });
+  }
   if(!p)return;pending.delete(x.id);
   x.error?p.bad(Error(JSON.stringify(x.error))):p.ok(x.result||{});
  });
@@ -454,6 +467,120 @@ async function main(){
   frontline.searchParams.has('scoreable')||
   url.searchParams.has('production')||url.searchParams.has('scoreable'))
   fail('PORTAL_SOURCE_DESTINATION_AUTHORITY');
+
+ if(p0NormalHuman){
+  // V18 P0: follow the actual STANDARD SOURCE GAME portal, not B441 QA
+  // navigation. A real CDP click starts the same 25/17/26/0 world used
+  // by human play. No artificial clock, Actor, ink, stage or nav writes.
+  proof.stage='P0_REAL_STANDARD_SOURCE_PORTAL_CLICK';save();
+  await buttonClick('#play-circuit');
+  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'`),120000);
+  const actualHref=await evaluate('location.href');
+  const actualUrl=new URL(actualHref);
+  if(actualHref!==portals.circuit||
+     actualUrl.searchParams.get('t21W10B384')!=='loadoutCircuit'||
+     actualUrl.searchParams.has('t21QaInput')||
+     actualUrl.searchParams.has('t21FullSource')||
+     actualUrl.searchParams.has('production')||
+     actualUrl.searchParams.has('scoreable'))
+   fail('P0_NONCANONICAL_OR_UNAUTHORIZED_PLAY_URL');
+  proof.p0CanonicalUrl=actualHref;
+  const boot=await snap();
+  proof.p0Boot={tick:boot.tick,phase:boot.matchState,
+   stopReason:boot.stopReason,joins:boot.cpu?.physicalRejoins?.length,
+   actorIds:boot.cpu?.cpu?.map(c=>c.id),
+   solids:boot.originalSourceSolids,paint:boot.originalPaintSurfaces,
+   nav:boot.originalSourceNavigationLinks,scoreable:boot.sourceScoreablePromotions};
+  save();
+  if(boot.stopReason||boot.tick!==0||boot.matchState!=='STAGING'||
+     boot.cpu?.cpu?.length!==7||boot.originalSourceSolids!==25||
+     boot.originalPaintSurfaces!==17||
+     boot.originalSourceNavigationLinks!==26||
+     boot.sourceScoreablePromotions!==0)
+   fail('P0_REAL_BOOT_AUTHORITY_OR_READY_FAILURE');
+  await buttonClick('#t21-f3-b25-start');
+  await until(async()=>{
+   const n=await snap();
+   if(n.stopReason)fail('P0_ARMED_SAFE_STOP_'+n.stopReason);
+   return n.b25SourcePaintRun?.status==='ARMED'?n:false;
+  },20000);
+  await until(()=>evaluate(`(() => {
+   const b=document.querySelector('#t21-f3-b202-resume');
+   const r=b?.getBoundingClientRect();
+   const hit=r?document.elementFromPoint(r.x+r.width/2,r.y+r.height/2):null;
+   return !!b&&!b.hidden&&!b.disabled&&r?.width>0&&r?.height>0&&
+    (hit===b||b.contains(hit));
+  })()`),25000);
+  await buttonClick('#t21-f3-b202-resume');
+  proof.stage='P0_NATIVE_STANDARD_HUMAN_BOOT';save();
+  let sampledTick=-30;
+  const record=(n,stage)=>{
+   const row={stage,tick:n.tick,phase:n.matchState,paused:n.paused,
+    stopReason:n.stopReason,remainingSeconds:n.timeRemainingSeconds,
+    pointerLocked:undefined,joins:n.cpu?.physicalRejoins?.length??-1,
+    rejoinedIds:n.cpu?.physicalRejoins??[],
+    actors:n.cpu?.cpu?.map(c=>({
+     id:c.id,lifeState:c.lifeState,mobilityState:c.mobilityState,
+     rejoined:c.rejoined,physicalFoot:c.physicalFoot
+    }))??[],humanFoot:n.player?.position,
+    originalStage:[n.originalSourceSolids,n.originalPaintSurfaces,
+     n.originalSourceNavigationLinks,n.sourceScoreablePromotions]};
+   proof.p0Timeline??=[];
+   proof.p0Timeline.push(row);
+   if(proof.p0Timeline.length>50)proof.p0Timeline.shift();
+   sampledTick=n.tick;save();
+   return row;
+  };
+  const inspect=async(n,stage)=>{
+   if(n.tick>=sampledTick+30||n.stopReason)record(n,stage);
+   if(n.stopReason){
+    proof.p0NativeStop={tick:n.tick,reason:n.stopReason,
+     phase:n.matchState,joins:n.cpu?.physicalRejoins?.length};
+    save();
+    fail('P0_GENUINE_SOURCE_SAFE_STOP_'+n.stopReason);
+   }
+   if(n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
+      n.originalSourceNavigationLinks!==26||
+      n.sourceScoreablePromotions!==0||n.cpu?.cpu?.length!==7)
+    fail('P0_ORIGINAL_SOURCE_AUTHORITY_CHANGED');
+  };
+  let real=await until(async()=>{
+   const n=await snap();await inspect(n,'NATIVE_REJOIN');
+   return n.tick>=720?n:false;
+  },190000,280);
+  record(real,'AFTER_720_NATIVE_TICKS');
+  // Seven authentic drop -> rejoin prerequisites are checked BEFORE any
+  // ordinary W movement; no CPU is snapped or unblocked by this script.
+  if(real.cpu.physicalRejoins.length!==7||real.matchState!=='PLAYING'||
+     real.paused||!await locked()){
+   proof.p0Verdict='HOLD_SEVEN_TRUE_PHYSICAL_REJOINS_NOT_PROVEN';
+   save();fail('P0_SEVEN_REAL_REJOINS_NOT_PROVEN');
+  }
+  const key={key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
+  let held=false;
+  try{
+   await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});held=true;
+   const target=real.tick+18;
+   real=await until(async()=>{
+    const n=await snap();await inspect(n,'GENUINE_PLAYER_KEYW');
+    return n.tick>=target?n:false;
+   },30000,180);
+  }finally{
+   if(held)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
+  }
+  record(real,'AFTER_REAL_KEYW');
+  proof.p0Verdict='PASS_HEADLESS_CANONICAL_SOURCE_FIRST_720_AND_REAL_W_ONLY';
+  proof.stage='P0_NO_SAFE_STOP_IN_BOUNDED_HEADLESS_PATH';
+  proof.verdict=proof.p0Verdict;
+  save();
+  console.log('P0_REAL_CANONICAL_USER_SOURCE',JSON.stringify({
+   verdict:proof.verdict,firstTick:boot.tick,finalTick:real.tick,
+   truePhysicalRejoins:real.cpu.physicalRejoins.length,
+   stopReason:real.stopReason,realKeyW:true,
+   originalStage:'25/17/26/0',personallyPlayed:false,
+   normalWindowsRenderingCertified:false}));
+  return;
+ }
 
  if(proveRealCharger){
   // Real SOURCE portal: select fourth kit by actual Chrome keyboard,
