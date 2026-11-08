@@ -83,10 +83,14 @@ export function b245PlayerSightlineCss(search:string):string{
   // B338 already gives the actual selected weapon controls during play.
   // Old extra keyboard line duplicates these and names unsupported R.
   on+'#t21-f3-player-key-help','{display:none!important;}',
+  // Actual native 1600x900 screenshot: 1.45em MAX-HEIGHT clipped
+  // B338's padded first line and concealed genuine weapon controls.
+  // Let this SAME authoritative guide wrap inside its compact HUD.
+  // No QA, physics, Actor, ownerGrid or score changes.
   on+'#t21-f3-b338-source-guide',
-  '{max-height:1.45em!important;overflow:hidden!important;'+
-  'white-space:nowrap!important;text-overflow:ellipsis!important;'+
-  'font-size:9px!important;}',
+  '{max-height:none!important;overflow:visible!important;'+
+  'white-space:normal!important;overflow-wrap:break-word!important;'+
+  'font-size:9px!important;line-height:1.4!important;}',
   // The native ink gauge remains fully live; detailed B355 in F8 QA.
   on+'#t21-f3-b355-source-ink-readout','{display:none!important;}',
   // B464 still renders every real value/dataset. Keep an unobtrusive

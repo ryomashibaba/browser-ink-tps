@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
- b245SourceFullRoundA1Choice,
+ b245SourceFullRoundA1Choice,b245PlayerSightlineCss,
  b388VisibleNativeDescentWarning,
  b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
@@ -21,6 +21,32 @@ describe('B245 original-source player and QA view policy',()=>{
   expect(b245InitialSourceView(
    '?t21W10B203=fullRound&t21Presentation=qa'
   )).toBe('QA');
+ });
+});
+
+describe('B245 real source PLAYER weapon guidance not clipped',()=>{
+ const live='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B203=fullRound&t21W10B384=loadoutCircuit';
+ it('keeps actual B338 weapon text wrapped without hiding the controls',()=>{
+  const css=b245PlayerSightlineCss(live);
+  const start=css.indexOf('#t21-f3-b338-source-guide');
+  expect(start).toBeGreaterThan(0);
+  const rule=css.slice(start,css.indexOf('}',start));
+  expect(rule).toContain('max-height:none!important');
+  expect(rule).toContain('overflow:visible!important');
+  expect(rule).toContain('white-space:normal!important');
+  expect(rule).toContain('line-height:1.4!important');
+  expect(rule).not.toContain('text-overflow:ellipsis');
+  expect(css).toContain('#t21-f3-player-key-help {display:none!important;}');
+ });
+ it('never applies full-round player CSS to QA, lab or production',()=>{
+  for(const q of [
+   live.replace('t21QaDrive=source','t21QaDrive=lab'),
+   live.replace('t21Play=preview','t21Play=production'),
+   live.replace('t21W10B203=fullRound','t21W10B203=off'),
+   live+'&t21QaInput=deterministic',live+'&production=true',
+   live+'&scoreable=true'
+  ])expect(b245PlayerSightlineCss(q)).toBe('');
  });
 });
 

@@ -289,7 +289,39 @@ async function run(){
  },30000):null;
  if(shortB415){
   report.phases.push({phase:'REAL_CANONICAL_STAGE_ONE',before:beforeB415});
-  persist();await picture('b415-real-circuit-before-actual-shot');
+  // Validate actual B338 geometry on native, unpaused 7-CPU SOURCE.
+  // The old 1.45em line clipped its top padding; never infer from
+  // complete DOM text that it is actually visible on the PLAYER screen.
+  const guide=await evalPage(`(()=>{
+   const e=document.querySelector('#t21-f3-b338-source-guide');
+   const hud=document.querySelector('#t21-f3-practice-hud');
+   if(!e||!hud)return {missing:true};
+   const style=getComputedStyle(e),rect=e.getBoundingClientRect();
+   return {missing:false,text:e.textContent??'',hidden:e.hidden,
+    whiteSpace:style.whiteSpace,maxHeight:style.maxHeight,
+    overflowY:style.overflowY,lineHeight:style.lineHeight,
+    scrollHeight:e.scrollHeight,clientHeight:e.clientHeight,
+    top:rect.top,bottom:rect.bottom,
+    hudBottom:hud.getBoundingClientRect().bottom,
+    viewportHeight:innerHeight,sourceOnly:true};
+  })()`);
+  if(guide.missing||guide.hidden||
+     guide.whiteSpace!=='normal'||guide.maxHeight!=='none'||
+     guide.overflowY==='hidden'||guide.overflowY==='clip'||
+     guide.scrollHeight>guide.clientHeight+2||
+     guide.hudBottom>guide.viewportHeight*.43||
+     !guide.text.includes('WASD MOVE')||
+     !guide.text.includes('LMB FIRE')||
+     !guide.text.includes('RMB DODGE'))
+    fail('B245_GENUINE_SOURCE_PLAYER_CONTROL_TEXT_CLIPPED',guide);
+  report.phases.push({phase:'B245_NATIVE_PLAYER_CONTROLS_UNCLIPPED',
+   source:'25/17/26/0',cpu:beforeB415.cpu,
+   actualSelectedKit:'Twin Comets',guide,
+   officialWinner:'NONE',scoreable:0,gameplayWrites:0});
+  persist();
+  console.log('B245_REAL_NATIVE_CONTROL_TEXT_READABLE_PASS',
+   JSON.stringify(guide));
+  await picture('b415-real-circuit-before-actual-shot');
   const vState=()=>evalPage(`(()=>{
    const s=window.__t21F3.snapshot(),c=document.querySelector('#app-canvas');
    return {tick:s.tick,shots:s.shotsFired,ink:s.player.ink,
