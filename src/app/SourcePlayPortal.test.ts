@@ -30,7 +30,7 @@ describe('SOURCE prestart guard for live human research-flag URLs',()=>{
    ['t21QaInput','deterministic'],['production','1'],['scoreable','1'],
    ['t21W10B193','allyCoop'],['t21W10B192','invalid'],
    ['t21W10B203','notFull']
-  ]){
+  ] as const){
    const u=new URL(options.combat);u.searchParams.set(key,val);
    expect(sourceHumanFullRoundPrestartGuard(u.href)).toBe(false);
   }
