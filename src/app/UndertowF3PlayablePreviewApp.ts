@@ -492,6 +492,10 @@ export class UndertowF3PlayablePreviewApp{
   const p=new URL(location.href).searchParams;
   return p.get('t21Play')==='preview'&&p.get('t21W10B203')==='fullRound';
  })();
+ // Strictly the four existing SOURCE portal destinations; no effect on
+ // research flags, deterministic QA, or other live PREVIEW configurations.
+ private readonly nativeCanonicalPrestart=
+  this.b203FullRound&&sourceCanonicalPlayableMode(location.href)!==null;
  private readonly b384Circuit=b384SourceCircuitSelected(new URL(location.href).searchParams);
  // Opt-in, entirely visual F5 SOURCE 180s camera clearance study.
  private b399ClearSightEnabled=new URL(location.href).searchParams
@@ -4894,7 +4898,7 @@ export class UndertowF3PlayablePreviewApp{
     // collision, movement threshold, CPU, spawn, actor pose or native time.
     // Normal non-SOURCE and deterministic QA paths remain unchanged.
     this.input.setSourcePrestartMovementBlocked(
-     this.b203FullRound&&this.matchState==='STAGING');
+     this.nativeCanonicalPrestart&&this.matchState==='STAGING');
     // B379: genuine 60Hz player inputs and B378-selected weapon runtime
     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
     applyB379NativePlayerWeaponMobility({
