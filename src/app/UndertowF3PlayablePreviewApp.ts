@@ -5839,7 +5839,7 @@ export class UndertowF3PlayablePreviewApp{
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
    // The visible session freezes, preserving the exact failing actor foot.
-   this.stopReason=error instanceof Error?error.message:String(error);
+   this.stopReason??=error instanceof Error?error.message:String(error);
    this.paused=true;
    console.error('T21_F3_FAIL_CLOSED',error);
    // A fail-closed STOP cannot stay pointer-locked with no clickable exit.
@@ -5848,7 +5848,51 @@ export class UndertowF3PlayablePreviewApp{
     if(document.pointerLockElement===this.canvas)
      void document.exitPointerLock();
    }catch{/* original STOP is retained, never resumed */}
-   this.refresh();
+   // A snapshot/HUD failure can itself be the reason for SAFE STOP.
+   // Calling the same broken refresh unguarded would throw out of the
+   // fail-closed handler and leave the player pointer-locked or trapped.
+   // Keep the FIRST native error and frozen world authoritative.
+   try{this.refresh();}
+   catch(displayError){
+    console.error('T21_F3_STOP_PRESENTATION_FAILED',displayError);
+    if(this.b205RoundClock){
+     this.b205RoundClock.textContent=
+      'SOURCE SAFE STOP · NATIVE TICK '+this.clock.tick+'\n'+
+      (this.stopReason??'UNKNOWN').slice(0,220)+
+      '\nSOURCE GEOMETRY UNCHANGED · NO OFFICIAL RESULT';
+     this.b205RoundClock.hidden=false;
+    }
+    // Use only the pre-existing dialog/menu from a genuine human
+    // SOURCE round. The clicked menu action independently rechecks
+    // authority and never resets CPU/physics/paint in this world.
+    const clean=sourceStoppedWorldMenuHref({
+     href:window.location.href,stopReason:this.stopReason,
+     paused:this.paused,pointerLocked:false,
+     matchState:this.matchState,originalSolids:this.rawStage.solids.length,
+     originalPaint:this.rawStage.paintSurfaces.length,
+     originalLinks:this.rawStage.navigationLinks?.length??0,
+     scoreable:this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+    });
+    if(clean){
+     const overlay=this.b202PauseOverlay;
+     overlay.hidden=false;overlay.style.display='block';
+     const title=overlay.querySelector<HTMLElement>(
+      '#t21-f3-b242-round-focus-title');
+     if(title)title.textContent='SAFE STOP · ORIGINAL WORLD PRESERVED';
+     const detail=overlay.querySelector<HTMLElement>(
+      '#t21-f3-b202-remaining');
+     if(detail)detail.textContent=
+      'NATIVE TICK '+this.clock.tick+' · '+
+      (this.stopReason??'UNKNOWN').slice(0,220)+
+      ' · world frozen; only leave via SOURCE MODE MENU';
+     const resume=overlay.querySelector<HTMLButtonElement>(
+      '#t21-f3-b202-resume');
+     if(resume){resume.disabled=true;resume.textContent='STOPPED · NO IN-PLACE RESTART';}
+     const menu=overlay.querySelector<HTMLButtonElement>(
+      '#t21-f3-source-mode-menu-ready');
+     if(menu){menu.disabled=false;menu.textContent='LEAVE STOPPED WORLD · SOURCE MODE MENU';}
+    }
+   }
   }
  }
  private resetW10B27KineticLens(){
