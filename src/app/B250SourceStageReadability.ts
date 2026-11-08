@@ -79,6 +79,19 @@ function b250OpticalOnlyMaterial():StandardMaterial{
 export const B250_REGISTERED_SOURCE_NEUTRAL=
  Object.freeze([.42,.49,.54] as const);
 
+/** Registered zero-thickness source collision triangles can be hit from
+ * either side by Rapier, but the default opaque material back-face culls.
+ * Display exactly those existing faces from both sides in human SOURCE.
+ * Glass is eligible ONLY after B250 proves the 94-face/side partition.
+ * Never two-side an optical-only face as though it were registered. */
+export function b250CollisionFaceNeedsTwoSidedDraw(
+ solid:Pick<StageSolidDefinition,'triangleMesh'|'collisionEnabled'>,
+ verifiedRegisteredGlassSubset:boolean
+):boolean{
+ return !!solid.triangleMesh&&(
+  solid.collisionEnabled!==false||verifiedRegisteredGlassSubset);
+}
+
 export type B250Band='LOWER'|'MIDDLE'|'UPPER';
 export function b250SolidTone(
  s:Pick<StageSolidDefinition,'center'|'material'>,min:number,max:number
@@ -167,6 +180,12 @@ export function installB250SourceView(app:AppBase,camera:Entity,
   const m=new StandardMaterial();
   m.diffuse=new Color(...tone.rgb);
   m.emissive=new Color(tone.rgb[0]*.07,tone.rgb[1]*.08,tone.rgb[2]*.09);
+  // P1: the exact original ramp / approved glass collision triangles are
+  // zero thickness in the render mesh. Rapier can block the character
+  // from either side, so never make its registered underside invisible.
+  // The separate 8/side optical-only glass faces stay faint and separate.
+  if(b250CollisionFaceNeedsTwoSidedDraw(s,glass!==null))
+   m.cull=CULLFACE_NONE;
   m.useMetalness=true;m.metalness=.12;m.gloss=.40;m.update();
   for(const mesh of meshes)bindings.push({mesh,before:mesh.material,after:m});
  }

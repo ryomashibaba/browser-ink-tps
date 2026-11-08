@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {b250SolidTone,b250GlassSourceVisibilityPartition,
- B250_REGISTERED_SOURCE_NEUTRAL}
+ B250_REGISTERED_SOURCE_NEUTRAL,b250CollisionFaceNeedsTwoSidedDraw}
  from './B250SourceStageReadability';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -23,6 +23,28 @@ describe('SOURCE registered paint-floor visual contrast without physical promoti
   expect(source.solids).toBe(stage.solids);
   expect(source.paintSurfaces).toBe(stage.paintSurfaces);
   expect(source.navigationLinks).toBe(stage.navigationLinks);
+ });
+});
+
+describe('original SOURCE two-sided physical-face visibility',()=>{
+ it('draws approved source ramp / proven glass collision subset both ways, never optical-only source',()=>{
+  const full=undertowT21dConnectivityQaStage();
+  const originals=[full.solids,full.paintSurfaces,full.navigationLinks];
+  const ramp=full.solids.find(s=>s.id==='UndertowT21D:right-low-route-ramp-positive-z')!;
+  const glass=full.solids.find(s=>s.id==='UndertowT21D:upper-glass-positive-z:visual')!;
+  const opticalOnly=full.solids.find(s=>s.id.endsWith(':pass15d-broad-navigation-runtime'))!;
+  expect(ramp.triangleMesh).toBeDefined();
+  expect(b250CollisionFaceNeedsTwoSidedDraw(ramp,false)).toBe(true);
+  expect(glass.collisionEnabled).toBe(false);
+  // The partition has to be independently verified before this subset
+  // can be rendered as the registered broad collision face.
+  expect(b250GlassSourceVisibilityPartition(full,glass)).not.toBeNull();
+  expect(b250CollisionFaceNeedsTwoSidedDraw(glass,true)).toBe(true);
+  expect(b250CollisionFaceNeedsTwoSidedDraw(glass,false)).toBe(false);
+  expect(b250CollisionFaceNeedsTwoSidedDraw(opticalOnly,false)).toBe(false);
+  const landing=full.solids.find(s=>s.id.includes('first-drop-landing-positive-z'))!;
+  expect(b250CollisionFaceNeedsTwoSidedDraw(landing,false)).toBe(false);
+  expect([full.solids,full.paintSurfaces,full.navigationLinks]).toEqual(originals);
  });
 });
 
