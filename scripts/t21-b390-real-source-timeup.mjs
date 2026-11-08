@@ -122,7 +122,9 @@ export function b390ActualSourceOwnSteerKey(body,target,yaw,blocked=[]){
  if(!finite3(body)||!finite3(target)||!Number.isFinite(yaw)||
     !Array.isArray(blocked))return null;
  const dx=target[0]-body[0],dz=target[2]-body[2],rad=yaw*Math.PI/180;
- const fx=Math.sin(rad),fz=Math.cos(rad);
+ // ThirdPersonCamera.forward.z is -cos(yaw), and PlayerController
+ // uses right=(-forward.z, forward.x). Match the ACTUAL native KCC axes.
+ const fx=Math.sin(rad),fz=-Math.cos(rad);
  const variants=[['KeyW',fx,fz],['KeyD',-fz,fx],
   ['KeyS',-fx,-fz],['KeyA',fz,-fx]];
  return variants.filter(([k])=>!blocked.includes(k))
