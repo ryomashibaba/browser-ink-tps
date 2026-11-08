@@ -496,8 +496,63 @@ async function runK3CanonicalOneWorld(actualHref){
   sample(tag,after);
  };
  await shoot('FIRST_REAL_HUMAN_PAINT_SHOTS');
- const diveBefore=await validate(await snap());
- if(diveBefore.player.ink>=98)fail('K3_INK_REFILL_HEADROOM_NOT_PROVEN');
+ // Real K3 #42530565403: the initial human shot painted 42 cells but
+ // the unchanged SOURCE ramp foot remained NEUTRAL. Holding Shift in
+ // place cannot prove owned-ink recovery. Use bounded true KeyW travel
+ // along the previously witnessed real Rapier original ramp.
+ const beforeOwnerWalk=await validate(await snap());
+ const ownerWalk={tag:'REAL_KEYW_TO_GENUINE_OWN_INK',from:beforeOwnerWalk.tick,
+  before:beforeOwnerWalk.player.position,realKeyW:false,samples:[]};
+ if(beforeOwnerWalk.player.inkRelation!=='OWN'){
+  const w={key:'w',code:'KeyW',windowsVirtualKeyCode:87,
+   nativeVirtualKeyCode:87};
+  let held=false;
+  try{
+   await cdp('Input.dispatchKeyEvent',{type:'keyDown',...w});
+   held=true;ownerWalk.realKeyW=true;
+   await until(async()=>{
+    const n=await validate(await snap());
+    const f=n.b112OriginalHumanGround;
+    if(n.player.mode!=='HUMAN'||n.player.hp<=0||
+       !n.nativeKccGrounded||f?.genuineKccGrounded!==true||
+       f.lastOriginalSourceHitId!==ramp)
+     fail('K3_REAL_PLAYER_W_LOST_GENUINE_ORIGINAL_RAMP_SUPPORT');
+    const elapsed=n.tick-beforeOwnerWalk.tick;
+    if(ownerWalk.samples.length===0||
+       n.tick-ownerWalk.samples[ownerWalk.samples.length-1].tick>=4){
+     ownerWalk.samples.push({tick:n.tick,position:n.player.position,
+      relation:n.player.inkRelation,originalSolid:f.lastOriginalSourceHitId});
+     if(ownerWalk.samples.length>12)ownerWalk.samples.shift();
+    }
+    if(elapsed>=24&&n.player.inkRelation!=='OWN')
+     fail('K3_REAL_W_BOUNDED_RAMP_OWN_INK_NOT_REACHED');
+    return n.player.inkRelation==='OWN'?n:false;
+   },18000,65);
+  }finally{
+   if(held)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...w});
+  }
+ }
+ const contact=await validate(await snap());
+ if(contact.player.inkRelation!=='OWN'||!contact.nativeKccGrounded||
+    contact.b112OriginalHumanGround?.genuineKccGrounded!==true||
+    contact.b112OriginalHumanGround?.lastOriginalSourceHitId!==ramp||
+    Math.hypot(contact.player.position[0]-beforeOwnerWalk.player.position[0],
+     contact.player.position[2]-beforeOwnerWalk.player.position[2])>2.6)
+  fail('K3_REAL_OWNER_CONTACT_AND_RAMP_STABILITY_NOT_PROVEN');
+ ownerWalk.to=contact.tick;ownerWalk.after=contact.player.position;
+ ownerWalk.actualOwnRelation=contact.player.inkRelation;
+ k.humanActions.push(ownerWalk);
+ k.verdict='REAL_NATIVE_OWNER_CONTACT_ON_REGISTERED_RAMP';
+ sample('REAL_OWNER_RAMP_CONTACT',contact);
+ let diveBefore=await validate(await snap());
+ // Human recovery is genuine and may restore a small first burst before
+ // reaching the ink. If so, spend actual ammo via the real mouse again.
+ if(diveBefore.player.ink>=98){
+  await shoot('REAL_OWNER_INK_SPEND_BEFORE_SQUID_REFILL');
+  diveBefore=await validate(await snap());
+ }
+ if(diveBefore.player.ink>=98||diveBefore.player.inkRelation!=='OWN')
+  fail('K3_REAL_OWN_INK_REFILL_HEADROOM_NOT_PROVEN');
  let shifted=false;
  try{
   await cdp('Input.dispatchKeyEvent',{type:'keyDown',
@@ -505,11 +560,15 @@ async function runK3CanonicalOneWorld(actualHref){
   shifted=true;
   const own=await until(async()=>{
    const n=await validate(await snap());
-   if(n.tick>diveBefore.tick+260)fail('K3_ACTUAL_OWN_REFILL_WINDOW_EXPIRED');
+   k.lastRealSquid={tick:n.tick,mode:n.player.mode,
+    inkRelation:n.player.inkRelation,resourceState:n.playerInkRecoveryState,
+    ink:n.player.ink,position:n.player.position,
+    grounded:n.nativeKccGrounded};
+   if(n.tick>diveBefore.tick+150)fail('K3_ACTUAL_OWN_REFILL_WINDOW_EXPIRED');
    return n.player.mode==='SQUID'&&n.player.inkRelation==='OWN'&&
     n.playerInkRecoveryState==='SQUID_OWN'&&
     n.player.ink>diveBefore.player.ink+1?n:false;
-  },90000,160);
+  },55000,160);
   k.humanActions.push({tag:'GENUINE_SHIFT_SQUID_OWN_REFILL',
    from:diveBefore.tick,to:own.tick,
    fromInk:diveBefore.player.ink,toInk:own.player.ink,
@@ -561,7 +620,7 @@ async function runK3CanonicalOneWorld(actualHref){
  }]));
  if(end.timeRemainingSeconds!==0||
     k.actualNativeElapsedTicks<Math.floor(start.timeRemainingSeconds*60)-3||
-    k.humanActions.length!==4||
+    (k.humanActions.length!==5&&k.humanActions.length!==6)||
     ids.some(id=>Object.values(k.cpuImpactDeltas[id]).some(v=>v<=0)))
   fail('K3_180S_SAME_NATIVE_WORLD_REAL_SEVEN_CPU_IMPACTS_NOT_PROVEN');
  k.verdict='TRUE_NATIVE_180S_TIME_UP';persist();
