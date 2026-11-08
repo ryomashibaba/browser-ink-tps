@@ -117,7 +117,8 @@ import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourcePlayStoreWeaponSelection,sourceCanonicalPlayableMode,
  sourceHumanFullRoundPrestartGuard,
  sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref,
- sourcePausedFreshRoundHref,sourceOriginalFallFreshWorldHref} from './SourcePlayPortal';
+ sourcePausedFreshRoundHref,sourceOriginalFallFreshWorldHref,
+ sourceStoppedWorldMenuHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice,b245RealSourceLocalRampGuide} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -1823,10 +1824,25 @@ export class UndertowF3PlayablePreviewApp{
     'border:1px solid #83ccdb;color:#e2fdff;'+
     'font:800 11px/1.4 system-ui;cursor:pointer;pointer-events:auto';
    menu.addEventListener('click',()=>{
-    if(document.pointerLockElement===this.canvas||this.stopReason||
+    if(this.survey.snapshot().active||this.galleryIndex>=0)return;
+    if(this.stopReason){
+     // The stopped world stays frozen. A user click only goes to the
+     // already-existing clean SOURCE launcher; no in-place physics reset.
+     const safe=sourceStoppedWorldMenuHref({
+      href:window.location.href,stopReason:this.stopReason,
+      paused:this.paused,
+      pointerLocked:document.pointerLockElement===this.canvas,
+      matchState:this.matchState,originalSolids:this.rawStage.solids.length,
+      originalPaint:this.rawStage.paintSurfaces.length,
+      originalLinks:this.rawStage.navigationLinks?.length??0,
+      scoreable:this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+     });
+     if(!safe)return;
+     menu.disabled=true;window.location.assign(safe);return;
+    }
+    if(document.pointerLockElement===this.canvas||
        this.matchState==='TIME_UP'||
-       this.matchState==='PLAYING'&&!this.paused||
-       this.survey.snapshot().active||this.galleryIndex>=0)return;
+       this.matchState==='PLAYING'&&!this.paused)return;
     menu.disabled=true;window.location.assign(sourceModeMenu);
    });
    pauseOverlay.appendChild(menu);
@@ -5826,6 +5842,12 @@ export class UndertowF3PlayablePreviewApp{
    this.stopReason=error instanceof Error?error.message:String(error);
    this.paused=true;
    console.error('T21_F3_FAIL_CLOSED',error);
+   // A fail-closed STOP cannot stay pointer-locked with no clickable exit.
+   // Preserve the original reason even if the browser refuses unlock.
+   try{
+    if(document.pointerLockElement===this.canvas)
+     void document.exitPointerLock();
+   }catch{/* original STOP is retained, never resumed */}
    this.refresh();
   }
  }
@@ -6193,10 +6215,22 @@ export class UndertowF3PlayablePreviewApp{
   const ready=this.b203FullRound&&!this.b203EverLockedRealPointer&&
    !this.stopReason&&this.matchState!=='TIME_UP';
   const sourceFallRecovery=this.sourcePhysicalFallRecoveryHref()!==null;
+  // Non-canonical human research URLs may safely STOP on original terrain,
+  // yet cannot use the strict canonical replay. Show the EXISTING pause
+  // dialog with only a clean menu exit; never resume the stopped world.
+  const stoppedSourceMenu=!!sourceStoppedWorldMenuHref({
+   href:window.location.href,stopReason:this.stopReason,paused:this.paused,
+   pointerLocked:false,matchState:this.matchState,
+   originalSolids:this.rawStage.solids.length,
+   originalPaint:this.rawStage.paintSurfaces.length,
+   originalLinks:this.rawStage.navigationLinks?.length??0,
+   scoreable:this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+  });
   const ordinaryPause=(ready||this.resumeAfterRealPointerLock&&
    (this.b203FullRound||run.status==='RUNNING'))&&
    this.matchState!=='TIME_UP'&&!this.stopReason;
-  const actuallyPaused=(ordinaryPause||sourceFallRecovery)&&
+  const actuallyPaused=(ordinaryPause||sourceFallRecovery||
+   stoppedSourceMenu)&&
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
@@ -6222,18 +6256,33 @@ export class UndertowF3PlayablePreviewApp{
    const label=practiceWeapon.parentElement;
    if(label){label.hidden=!ready;label.style.display=ready?'block':'none';}
   }
+  const stoppedMenuOnly=stoppedSourceMenu&&!sourceFallRecovery;
   this.b202PauseOverlay.dataset.t21B202NativeState=
    actuallyPaused?(sourceFallRecovery?'FALL_STOP_NEW_WORLD_ONLY':
+    stoppedMenuOnly?'STOPPED_MENU_ONLY':
     ready?'READY_TO_START':'NATIVE_PAUSED'):'INACTIVE';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b242-round-focus-title')!
    .textContent=sourceFallRecovery?'SOURCE FALL · ORIGINAL WORLD SAFELY STOPPED':
+    stoppedMenuOnly?'SAFE STOP · ORIGINAL WORLD PRESERVED':
     ready?'READY · 180s SOURCE ROUND':'PAUSED · REAL SOURCE WORLD';
-  this.b202PauseOverlay.querySelector<HTMLButtonElement>('#t21-f3-b202-resume')!
-   .textContent=sourceFallRecovery?'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
-    ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
+  const stopResume=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+   '#t21-f3-b202-resume')!;
+  stopResume.disabled=stoppedMenuOnly;
+  stopResume.textContent=sourceFallRecovery?
+   'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
+   stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
+   ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
+  const stopMenu=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+   '#t21-f3-source-mode-menu-ready');
+  if(stopMenu)stopMenu.textContent=stoppedSourceMenu?
+   'LEAVE STOPPED WORLD · SOURCE MODE MENU':
+   'CHOOSE SOURCE GAME MODE · NEW ROUND';
   this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f3-b202-remaining')!
    .textContent=sourceFallRecovery?
     'Original floor support lost. Safety stop is preserved. Click to start a NEW unscored SOURCE world; the missing original floor remains HOLD.':
+    stoppedMenuOnly?'FAIL-CLOSED · '+this.stopReason+
+     ' · tick '+this.clock.tick+
+     '. No in-place reset. Choose SOURCE MODE MENU to open a clean world.':
     actuallyPaused?(ready?
     'WASD move · Mouse aim / fire · Shift squid · Space jump · Q shoulder · [ / ] aim sensitivity · '+
     b380NativeWeaponGuidance({

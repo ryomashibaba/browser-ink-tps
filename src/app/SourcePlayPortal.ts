@@ -210,6 +210,22 @@ export function sourceHumanFullRoundPrestartGuard(href:string):boolean{
  }catch{return false;}
 }
 
+/** Explicit escape from a stopped human SOURCE session to the existing menu.
+ * This never resumes/reset actors, geometry, score, physics or clock in place.
+ * Extra research/view flags are NOT carried into the fresh mode launcher. */
+export function sourceStoppedWorldMenuHref(x:{
+ href:string;stopReason:string|null;paused:boolean;pointerLocked:boolean;
+ matchState:string;originalSolids:number;originalPaint:number;
+ originalLinks:number;scoreable:number;
+}):string|null{
+ if(!x.stopReason||!x.paused||x.pointerLocked||
+    !['STAGING','PLAYING'].includes(x.matchState)||
+    x.originalSolids!==25||x.originalPaint!==17||
+    x.originalLinks!==26||x.scoreable!==0||
+    !sourceHumanFullRoundPrestartGuard(x.href))return null;
+ return sourcePlayPortalReturnUrl(x.href);
+}
+
 export type SourcePlayableMode='circuit'|'combat'|'coop'|'frontline';
 /** Only one of the four actual SOURCE launcher URLs can switch modes.
  * Rejects injected parameters, duplicate keys and mixed research flags.

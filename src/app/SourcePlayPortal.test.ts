@@ -7,12 +7,48 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourceCanonicalPlayableMode,sourceHumanFullRoundPrestartGuard,
  sourceFreshSelectedModeHref,
  sourceCoopPracticeFreshReplayHref,sourcePausedFreshRoundHref,
- sourceOriginalFallFreshWorldHref,SOURCE_ORIGINAL_FALL_STOP}
+ sourceOriginalFallFreshWorldHref,SOURCE_ORIGINAL_FALL_STOP,
+ sourceStoppedWorldMenuHref}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
+describe('fail-closed human SOURCE world can exit only to a clean mode menu',()=>{
+ const root='https://example.org/browser-ink-tps/play-source.html';
+ const urls=sourcePlayWeaponModeDestinations(root,'ink-saber');
+ const valid=(href:string)=>({
+  href,stopReason:'T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED',
+  paused:true,pointerLocked:false,matchState:'PLAYING',
+  originalSolids:25,originalPaint:17,originalLinks:26,scoreable:0
+ });
+ it('offers a fresh mode menu on canonical and view-flag human STOPs',()=>{
+  for(const href of Object.values(urls)){
+   const extra=new URL(href);extra.searchParams.set('t21W10B26','smartVisibility');
+   expect(sourceCanonicalPlayableMode(extra.href)).toBeNull();
+   expect(sourceStoppedWorldMenuHref(valid(extra.href))).toBe(root);
+   expect(sourceStoppedWorldMenuHref({...valid(extra.href),
+    stopReason:'T21_F3_UNEXPECTED_RUNTIME_FAIL_CLOSED'})).toBe(root);
+  }
+ });
+ it('keeps live, QA, malformed and original-boundary-invalid worlds blocked',()=>{
+  const x=valid(urls.combat);
+  for(const changed of [
+   {stopReason:null},{paused:false},{pointerLocked:true},
+   {matchState:'TIME_UP'},{originalSolids:24},{originalPaint:16},
+   {originalLinks:25},{scoreable:1}
+  ])expect(sourceStoppedWorldMenuHref({...x,...changed})).toBeNull();
+  for(const [key,value] of [
+   ['production','true'],['scoreable','true'],
+   ['t21QaInput','deterministic'],['t21W10B192','invalid'],
+   ['t21W10B203','notFull']
+  ] as const){
+   const unsafe=new URL(urls.combat);unsafe.searchParams.set(key,value);
+   expect(sourceStoppedWorldMenuHref(valid(unsafe.href))).toBeNull();
+  }
+ });
+});
+
 describe('SOURCE prestart guard for live human research-flag URLs',()=>{
  const menu='https://example.org/browser-ink-tps/play-source.html';
  const options=sourcePlayWeaponModeDestinations(menu,'ink-saber');
